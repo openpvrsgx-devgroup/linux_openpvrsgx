@@ -82,4 +82,5 @@ enum PVRSRV_ERROR MMU_BIFResetPDAlloc(struct PVRSRV_SGXDEV_INFO *psDevInfo);
 
 void MMU_BIFResetPDFree(struct PVRSRV_SGXDEV_INFO *psDevInfo);
 
+u32 mmu_get_page_dir(struct MMU_CONTEXT *pMMUContext);
 #endif

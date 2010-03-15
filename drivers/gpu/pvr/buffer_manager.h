@@ -166,4 +166,6 @@ struct PVRSRV_DEVICE_NODE *BM_GetDeviceNode(void *hDevMemContext);
 
 void *BM_GetMappingHandle(struct PVRSRV_KERNEL_MEM_INFO *psMemInfo);
 
+struct BM_CONTEXT *bm_find_context(struct BM_CONTEXT *head_context,
+				    u32 page_dir);
 #endif

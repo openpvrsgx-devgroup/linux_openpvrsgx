@@ -29,6 +29,7 @@
 #include "hash.h"
 #include "ra.h"
 #include "pdump_km.h"
+#include "mmu.h"
 
 #define MIN(a, b)       (a > b ? b : a)
 
@@ -1483,4 +1484,18 @@ void *BM_GetMappingHandle(struct PVRSRV_KERNEL_MEM_INFO *psMemInfo)
 
 	return ((struct BM_BUF *)
 			psMemInfo->sMemBlk.hBuffer)->pMapping->hOSMemHandle;
+}
+
+struct BM_CONTEXT *bm_find_context(struct BM_CONTEXT *head_context,
+				    u32 page_dir)
+{
+	struct BM_CONTEXT *context = head_context;
+
+	/* Walk all the contexts until we find the right one */
+	while (context) {
+		if (mmu_get_page_dir(context->psMMUContext) == page_dir)
+				break;
+		context = context->psNext;
+	}
+	return context;
 }

@@ -1439,3 +1439,8 @@ void MMU_BIFResetPDFree(struct PVRSRV_SGXDEV_INFO *psDevInfo)
 		RA_Free(psLocalDevMemArena, sPDSysPAddr.uiAddr, IMG_FALSE);
 	}
 }
+
+u32 mmu_get_page_dir(struct MMU_CONTEXT *psMMUContext)
+{
+	return psMMUContext->sPDDevPAddr.uiAddr;
+}

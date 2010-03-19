@@ -162,7 +162,7 @@ static int __devinit pvr_probe(struct platform_device *pdev)
 	PVR_TRACE("pvr_probe(pdev=%p)", pdev);
 
 	if (SysAcquireData(&sysdata) != PVRSRV_OK &&
-	    SysInitialise() != PVRSRV_OK) {
+	    SysInitialise(pdev) != PVRSRV_OK) {
 		ret = -ENODEV;
 		goto err_exit;
 	}

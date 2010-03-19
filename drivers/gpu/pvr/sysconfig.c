@@ -24,6 +24,8 @@
  *
  ******************************************************************************/
 
+#include <linux/platform_device.h>
+
 #include "services_headers.h"
 #include "kerneldisplay.h"
 #include "oemfuncs.h"
@@ -138,6 +140,17 @@ u32 sgx_get_rev(void)
 
 unsigned long sgx_get_max_freq(void)
 {
+	struct SYS_SPECIFIC_DATA *sysd = gpsSysSpecificData;
+
+	BUG_ON(!sysd);
+
+	if (sysd->sgx_fck_max)
+		return sysd->sgx_fck_max;
+
+	/*
+	 * In case there's no board specific setting for this, return
+	 * some revision specific defaults.
+	 */
 	if (sgx_is_530()) {
 		switch (sgx_get_rev()) {
 		case EUR_CR_CORE_MAKE_REV(1, 2, 1):
@@ -238,18 +251,23 @@ void sgx_ocp_write_reg(u32 reg, u32 val)
 	OSWriteHWReg(ocp_base, reg, val);
 }
 
-enum PVRSRV_ERROR SysInitialise(void)
+enum PVRSRV_ERROR SysInitialise(struct platform_device *pdev)
 {
 	u32 i;
 	enum PVRSRV_ERROR eError;
 	struct PVRSRV_DEVICE_NODE *psDeviceNode;
 	struct IMG_CPU_PHYADDR TimerRegPhysBase;
+	struct sgx_platform_data *spd;
 
 	gpsSysData = &gsSysData;
 
 	gpsSysSpecificData = &gsSysSpecificData;
 
 	gpsSysData->pvSysSpecificData = gpsSysSpecificData;
+
+	spd = pdev->dev.platform_data;
+	if (spd)
+		gpsSysSpecificData->sgx_fck_max = spd->fclock_max;
 
 	eError = OSInitEnvData(&gpsSysData->pvEnvSpecificData);
 	if (eError != PVRSRV_OK) {

@@ -91,6 +91,8 @@ struct SYS_SPECIFIC_DATA {
 	void __iomem *gpt_base;
 #endif
 	struct constraint_handle *pVdd2Handle;
+
+	unsigned long sgx_fck_max;
 };
 
 extern struct SYS_SPECIFIC_DATA *gpsSysSpecificData;

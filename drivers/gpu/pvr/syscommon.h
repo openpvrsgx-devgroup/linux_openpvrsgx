@@ -37,6 +37,9 @@
 #include "device.h"
 #include "buffer_manager.h"
 
+#include <linux/platform_device.h>
+#include <linux/pvr.h>
+
 #if defined(NO_HARDWARE) && defined(__KERNEL__)
 #include <linux/io.h>
 #endif
@@ -83,7 +86,7 @@ struct SYS_DATA {
 #endif
 };
 
-enum PVRSRV_ERROR SysInitialise(void);
+enum PVRSRV_ERROR SysInitialise(struct platform_device *spd);
 enum PVRSRV_ERROR SysFinalise(void);
 
 enum PVRSRV_ERROR SysDeinitialise(struct SYS_DATA *psSysData);

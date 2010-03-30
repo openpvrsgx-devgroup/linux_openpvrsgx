@@ -453,38 +453,46 @@ static void FreeResourceByPtr(struct RESMAN_ITEM *psItem,
 		  NULL);
 }
 
+static struct RESMAN_ITEM *find_res_by_crit(struct RESMAN_CONTEXT *res_ctx,
+					    u32 crit, u32 res_type,
+					    void *ppar, u32 upar)
+{
+	struct RESMAN_ITEM *item;
+
+	for (item = res_ctx->psResItemList; item; item = item->psNext) {
+		if ((crit & RESMAN_CRITERIA_RESTYPE) &&
+		    item->ui32ResType != res_type)
+			continue;
+		else if ((crit & RESMAN_CRITERIA_PVOID_PARAM) &&
+			 item->pvParam != ppar)
+			continue;
+		else if ((crit & RESMAN_CRITERIA_UI32_PARAM) &&
+			 item->ui32Param != upar)
+			continue;
+
+		break;
+	}
+
+	return item;
+}
+
 static int FreeResourceByCriteria(struct RESMAN_CONTEXT *psResManContext,
 				u32 ui32SearchCriteria, u32 ui32ResType,
 				void *pvParam, u32 ui32Param,
 				IMG_BOOL bExecuteCallback)
 {
-	struct RESMAN_ITEM *psCurItem;
-	bool bMatch;
+	struct RESMAN_ITEM *item;
 	int freed = 0;
 
-	psCurItem = psResManContext->psResItemList;
-
-	while (psCurItem != NULL) {
-		bMatch = IMG_TRUE;
-
-		if (((ui32SearchCriteria & RESMAN_CRITERIA_RESTYPE) != 0UL) &&
-		    (psCurItem->ui32ResType != ui32ResType))
-			bMatch = IMG_FALSE;
-		else if (((ui32SearchCriteria & RESMAN_CRITERIA_PVOID_PARAM) !=
-			  0UL) && (psCurItem->pvParam != pvParam))
-			bMatch = IMG_FALSE;
-		else if (((ui32SearchCriteria & RESMAN_CRITERIA_UI32_PARAM) !=
-			  0UL) && (psCurItem->ui32Param != ui32Param))
-			bMatch = IMG_FALSE;
-
-		if (!bMatch) {
-			psCurItem = psCurItem->psNext;
-		} else {
-			FreeResourceByPtr(psCurItem, bExecuteCallback);
-			psCurItem = psResManContext->psResItemList;
+	do {
+		item = find_res_by_crit(psResManContext,
+					ui32SearchCriteria, ui32ResType,
+					pvParam, ui32Param);
+		if (item) {
+			FreeResourceByPtr(item, bExecuteCallback);
 			freed++;
 		}
-	}
+	} while (item);
 
 	return freed;
 }

@@ -476,6 +476,26 @@ static struct RESMAN_ITEM *find_res_by_crit(struct RESMAN_CONTEXT *res_ctx,
 	return item;
 }
 
+struct RESMAN_CONTEXT *pvr_get_resman_ctx(void *resource)
+{
+	struct RESMAN_CONTEXT *ctx;
+
+	for (ctx = gpsResList->psContextList; ctx; ctx = ctx->psNext) {
+		struct RESMAN_ITEM *item;
+
+		item = find_res_by_crit(ctx, RESMAN_CRITERIA_PVOID_PARAM,
+					0, resource, 0);
+		if (item)
+			return ctx;
+	}
+	return NULL;
+}
+
+struct PVRSRV_PER_PROCESS_DATA *pvr_get_proc_by_ctx(struct RESMAN_CONTEXT *ctx)
+{
+	return ctx->psPerProc;
+}
+
 static int FreeResourceByCriteria(struct RESMAN_CONTEXT *psResManContext,
 				u32 ui32SearchCriteria, u32 ui32ResType,
 				void *pvParam, u32 ui32Param,

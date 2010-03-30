@@ -83,6 +83,9 @@ enum PVRSRV_ERROR ResManDissociateRes(struct RESMAN_ITEM *psResItem,
 enum PVRSRV_ERROR ResManFindResourceByPtr(struct RESMAN_CONTEXT *hResManContext,
 		struct RESMAN_ITEM *psItem);
 
+struct RESMAN_CONTEXT *pvr_get_resman_ctx(void *resource);
+struct PVRSRV_PER_PROCESS_DATA *pvr_get_proc_by_ctx(struct RESMAN_CONTEXT *ctx);
+
 enum PVRSRV_ERROR PVRSRVResManConnect(void *hPerProc,
 		struct RESMAN_CONTEXT **phResManContext);
 

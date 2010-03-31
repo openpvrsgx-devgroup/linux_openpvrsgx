@@ -44,6 +44,11 @@ static inline void pvr_unlock(void)
 	mutex_unlock(&gPVRSRVLock);
 }
 
+static inline int pvr_is_locked(void)
+{
+	return mutex_is_locked(&gPVRSRVLock);
+}
+
 static inline void pvr_init_lock(void)
 {
 	mutex_init(&gPVRSRVLock);

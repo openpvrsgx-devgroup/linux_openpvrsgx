@@ -636,7 +636,7 @@ static void dump_sgx_registers(struct PVRSRV_SGXDEV_INFO *psDevInfo)
 		readl(psDevInfo->pvRegsBaseKM + EUR_CR_CLKGATECTL));
 }
 
-
+/* Should be called with pvr_lock held */
 void HWRecoveryResetSGX(struct PVRSRV_DEVICE_NODE *psDeviceNode,
 				u32 ui32Component, u32 ui32CallerID)
 {
@@ -648,6 +648,8 @@ void HWRecoveryResetSGX(struct PVRSRV_DEVICE_NODE *psDeviceNode,
 	u32 l;
 
 	PVR_UNREFERENCED_PARAMETER(ui32Component);
+
+	BUG_ON(!pvr_is_locked());
 
 	/* SGXOSTimer already has the lock as it needs to read SGX registers */
 	if (ui32CallerID != TIMER_ID) {

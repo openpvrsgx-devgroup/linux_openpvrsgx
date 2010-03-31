@@ -40,6 +40,7 @@
 #include "syscommon.h"
 #include "sgxinfokm.h"
 #include "sgxutils.h"
+#include "pvr_bridge_km.h"
 
 u32 gPVRDebugLevel = DBGPRIV_WARNING;
 
@@ -274,19 +275,26 @@ static int pvr_dbg_reset(void *data, u64 val)
 {
 	struct PVRSRV_DEVICE_NODE *node;
 	enum PVRSRV_ERROR err;
+	int r = 0;
 
 	if (val != 1)
 		return 0;
 
+	pvr_lock();
+
 	node = get_sgx_node();
-	if (!node)
-		return -ENODEV;
+	if (!node) {
+		r =  -ENODEV;
+		goto exit;
+	}
 
 	err = PVRSRVSetDevicePowerStateKM(node->sDevId.ui32DeviceIndex,
 					     PVRSRV_POWER_STATE_D0,
 					     KERNEL_ID, IMG_TRUE);
-	if (err != PVRSRV_OK)
-		return -EIO;
+	if (err != PVRSRV_OK) {
+		r = -EIO;
+		goto exit;
+	}
 
 	/*
 	 * Yes, this is kinda braindead. KERNEL_ID, IMG_TRUE above means
@@ -299,8 +307,10 @@ static int pvr_dbg_reset(void *data, u64 val)
 	HWRecoveryResetSGX(node, 0, TIMER_ID);
 
 	SGXTestActivePowerEvent(node, KERNEL_ID);
+exit:
+	pvr_unlock();
 
-	return 0;
+	return r;
 }
 
 static int pvr_dbg_set(void *data, u64 val)

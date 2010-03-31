@@ -497,7 +497,7 @@ static IMG_BOOL ProcessFlip(void *hCmdCookie, u32 ui32DataSize, void *pvData)
 	psBuffer = (struct OMAPLFB_BUFFER *)psFlipCmd->hExtBuffer;
 	psSwapChain = (struct OMAPLFB_SWAPCHAIN *)psFlipCmd->hExtSwapChain;
 
-       psSwapChain->psPVRJTable->pfnPVRSRVCmdComplete(hCmdCookie, IMG_TRUE);
+	psSwapChain->psPVRJTable->pfnPVRSRVCmdComplete(hCmdCookie, IMG_TRUE);
 
 	return IMG_TRUE;
 }

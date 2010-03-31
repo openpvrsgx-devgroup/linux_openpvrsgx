@@ -29,7 +29,6 @@
 #include "pvr_bridge.h"
 #include "pvr_bridge_km.h"
 #include "perproc.h"
-#include "mutex.h"
 #include "syscommon.h"
 #include "pvr_debug.h"
 #include "proc.h"
@@ -39,6 +38,8 @@
 
 #include "bridged_pvr_bridge.h"
 
+/* Global driver lock protecting all HW and SW state tracking objects. */
+struct mutex gPVRSRVLock;
 
 #if defined(DEBUG_BRIDGE_KM)
 static off_t printLinuxBridgeStats(char *buffer, size_t size, off_t off);
@@ -71,7 +72,7 @@ static off_t printLinuxBridgeStats(char *buffer, size_t count, off_t off)
 	struct PVRSRV_BRIDGE_DISPATCH_TABLE_ENTRY *psEntry;
 	off_t Ret;
 
-	mutex_lock(&gPVRSRVLock);
+	pvr_lock();
 
 	if (!off) {
 		if (count < 500) {
@@ -116,7 +117,8 @@ static off_t printLinuxBridgeStats(char *buffer, size_t count, off_t off)
 			  psEntry->ui32CopyToUserTotalBytes);
 
 unlock_and_return:
-	mutex_unlock(&gPVRSRVLock);
+	pvr_unlock();
+
 	return Ret;
 }
 #endif
@@ -132,7 +134,7 @@ long PVRSRV_BridgeDispatchKM(struct file *file, unsigned int cmd,
 	struct PVRSRV_PER_PROCESS_DATA *psPerProc;
 	int err = -EFAULT;
 
-	mutex_lock(&gPVRSRVLock);
+	pvr_lock();
 
 	if (!OSAccessOK(PVR_VERIFY_WRITE, psBridgePackageUM,
 			sizeof(struct PVRSRV_BRIDGE_PACKAGE))) {
@@ -186,6 +188,7 @@ long PVRSRV_BridgeDispatchKM(struct file *file, unsigned int cmd,
 		goto unlock_and_return;
 
 unlock_and_return:
-	mutex_unlock(&gPVRSRVLock);
+	pvr_unlock();
+
 	return err;
 }

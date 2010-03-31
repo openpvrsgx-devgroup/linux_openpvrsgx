@@ -37,7 +37,6 @@
 #include "servicesext.h"
 #include "pvr_debug.h"
 #include "proc.h"
-#include "mutex.h"
 #include "syscommon.h"
 #include "sgxinfokm.h"
 #include "sgxutils.h"

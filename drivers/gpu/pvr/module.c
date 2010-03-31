@@ -43,7 +43,6 @@
 #include "mutils.h"
 #include "mm.h"
 #include "mmap.h"
-#include "mutex.h"
 #include "pvr_debug.h"
 #include "srvkm.h"
 #include "perproc.h"
@@ -53,7 +52,6 @@
 #include "proc.h"
 #include "pvrmodule.h"
 #include "private_data.h"
-#include "lock.h"
 
 #define DRVNAME		"pvrsrvkm"
 
@@ -63,8 +61,6 @@ static int debug = DBGPRIV_WARNING;
 module_param(debug, int, 0);
 #endif
 
-struct mutex gPVRSRVLock;
-
 static int pvr_open(struct inode unref__ * inode, struct file *filp)
 {
 	struct PVRSRV_FILE_PRIVATE_DATA *priv;
@@ -73,7 +69,7 @@ static int pvr_open(struct inode unref__ * inode, struct file *filp)
 	enum PVRSRV_ERROR err;
 	u32 pid;
 
-	mutex_lock(&gPVRSRVLock);
+	pvr_lock();
 
 	pid = OSGetCurrentProcessIDKM();
 
@@ -93,7 +89,8 @@ static int pvr_open(struct inode unref__ * inode, struct file *filp)
 
 	ret = 0;
 err_unlock:
-	mutex_unlock(&gPVRSRVLock);
+	pvr_unlock();
+
 	return ret;
 }
 
@@ -101,7 +98,7 @@ static int pvr_release(struct inode unref__ * inode, struct file *filp)
 {
 	struct PVRSRV_FILE_PRIVATE_DATA *priv;
 
-	mutex_lock(&gPVRSRVLock);
+	pvr_lock();
 
 	priv = filp->private_data;
 
@@ -111,7 +108,8 @@ static int pvr_release(struct inode unref__ * inode, struct file *filp)
 		  sizeof(*priv),
 		  priv, priv->hBlockAlloc);
 
-	mutex_unlock(&gPVRSRVLock);
+	pvr_unlock();
+
 	return 0;
 }
 
@@ -218,7 +216,7 @@ static int __init pvr_init(void)
 
 	PVR_TRACE("pvr_init");
 
-	mutex_init(&gPVRSRVLock);
+	pvr_init_lock();
 
 #ifdef DEBUG
 	PVRDebugSetLevel(debug);

@@ -50,9 +50,8 @@
 #include "mmap.h"
 #include "env_data.h"
 #include "proc.h"
-#include "mutex.h"
-#include "lock.h"
 #include "event.h"
+#include "pvr_bridge_km.h"
 
 struct PVRSRV_LINUX_EVENT_OBJECT_LIST {
 	rwlock_t sLock;
@@ -249,12 +248,12 @@ enum PVRSRV_ERROR LinuxEventObjectWait(void *hOSEventObject, u32 ui32MSTimeout)
 		if (psLinuxEventObject->ui32TimeStampPrevious != ui32TimeStamp)
 			break;
 
-		mutex_unlock(&gPVRSRVLock);
+		pvr_unlock();
 
 		ui32TimeOutJiffies =
 		    (u32) schedule_timeout((s32) ui32TimeOutJiffies);
 
-		mutex_lock(&gPVRSRVLock);
+		pvr_lock();
 #if defined(DEBUG)
 		psLinuxEventObject->ui32Stats++;
 #endif

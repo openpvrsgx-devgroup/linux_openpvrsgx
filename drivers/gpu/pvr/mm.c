@@ -44,8 +44,6 @@
 #include "osfunc.h"
 #include "pvr_debug.h"
 #include "proc.h"
-#include "mutex.h"
-#include "lock.h"
 
 #if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
 enum DEBUG_MEM_ALLOC_TYPE {

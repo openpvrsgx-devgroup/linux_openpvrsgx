@@ -52,7 +52,6 @@
 #include "mmap.h"
 #include "env_data.h"
 #include "proc.h"
-#include "mutex.h"
 #include "event.h"
 
 #define EVENT_OBJECT_TIMEOUT_MS		(100)

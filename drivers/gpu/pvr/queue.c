@@ -530,12 +530,8 @@ enum PVRSRV_ERROR PVRSRVProcessQueues(u32 ui32CallerID, IMG_BOOL bFlush)
 	if (eError != PVRSRV_OK)
 		return eError;
 
-	psSysData->bReProcessQueues = IMG_FALSE;
-
 	eError = OSLockResource(&psSysData->sQProcessResource, ui32CallerID);
 	if (eError != PVRSRV_OK) {
-		psSysData->bReProcessQueues = IMG_TRUE;
-
 		if (ui32CallerID == ISR_ID) {
 			if (bFlush) {
 				PVR_DPF(PVR_DBG_ERROR, "PVRSRVProcessQueues: "
@@ -600,9 +596,6 @@ enum PVRSRV_ERROR PVRSRVProcessQueues(u32 ui32CallerID, IMG_BOOL bFlush)
 	}
 
 	OSUnlockResource(&psSysData->sQProcessResource, ui32CallerID);
-
-	if (psSysData->bReProcessQueues)
-		return PVRSRV_ERROR_PROCESSING_BLOCKED;
 
 	return PVRSRV_OK;
 }

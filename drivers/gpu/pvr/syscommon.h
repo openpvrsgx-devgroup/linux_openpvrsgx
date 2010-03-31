@@ -75,8 +75,6 @@ struct SYS_DATA {
 
 	struct COMMAND_COMPLETE_DATA **ppsCmdCompleteData[SYS_DEVICE_COUNT];
 
-	IMG_BOOL bReProcessQueues;
-
 	struct RA_ARENA *apsLocalDevMemArena[SYS_MAX_LOCAL_DEVMEM_ARENAS];
 
 	char *pszVersionString;

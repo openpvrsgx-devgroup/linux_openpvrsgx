@@ -704,8 +704,11 @@ static void SGXOSTimer(struct work_struct *work)
 	IMG_BOOL bPoweredDown;
 	enum PVRSRV_ERROR eError;
 
-	if (!data->armed)
+	pvr_lock();
+	if (!data->armed) {
+		pvr_unlock();
 		return;
+	}
 
 	psDevInfo->ui32TimeStamp++;
 
@@ -772,6 +775,8 @@ static void SGXOSTimer(struct work_struct *work)
  rearm:
 	queue_delayed_work(data->work_queue, &data->work,
 			   msecs_to_jiffies(data->interval));
+
+	pvr_unlock();
 }
 
 struct timer_work_data *

@@ -704,6 +704,9 @@ static void SGXOSTimer(struct work_struct *work)
 	IMG_BOOL bPoweredDown;
 	enum PVRSRV_ERROR eError;
 
+	if (!data->armed)
+		return;
+
 	psDevInfo->ui32TimeStamp++;
 
 	eError = PVRSRVPowerLock(TIMER_ID, IMG_FALSE);
@@ -795,6 +798,7 @@ SGXOSTimerInit(struct PVRSRV_DEVICE_NODE *psDeviceNode)
 
 void SGXOSTimerDeInit(struct timer_work_data *data)
 {
+	data->armed = false;
 	destroy_workqueue(data->work_queue);
 	kfree(data);
 }
@@ -818,8 +822,8 @@ enum PVRSRV_ERROR SGXOSTimerCancel(struct timer_work_data *data)
 	if (!data)
 		return PVRSRV_ERROR_GENERIC;
 
-	cancel_delayed_work_sync(&data->work);
 	data->armed = false;
+	cancel_delayed_work_sync(&data->work);
 
 	return PVRSRV_OK;
 }

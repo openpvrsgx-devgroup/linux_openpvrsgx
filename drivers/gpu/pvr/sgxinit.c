@@ -823,7 +823,7 @@ enum PVRSRV_ERROR SGXOSTimerCancel(struct timer_work_data *data)
 		return PVRSRV_ERROR_GENERIC;
 
 	data->armed = false;
-	cancel_delayed_work_sync(&data->work);
+	cancel_delayed_work(&data->work);
 
 	return PVRSRV_OK;
 }

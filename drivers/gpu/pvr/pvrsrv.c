@@ -791,6 +791,8 @@ void PVRSRVMISR(void *pvSysData)
 		return;
 	}
 
+	pvr_lock();
+
 	psDeviceNode = psSysData->psDeviceNodeList;
 	while (psDeviceNode != NULL) {
 		if (psDeviceNode->pfnDeviceMISR != NULL)
@@ -809,6 +811,8 @@ void PVRSRVMISR(void *pvSysData)
 		if (hOSEventKM)
 			OSEventObjectSignal(hOSEventKM);
 	}
+
+	pvr_unlock();
 }
 
 enum PVRSRV_ERROR PVRSRVProcessConnect(u32 ui32PID)

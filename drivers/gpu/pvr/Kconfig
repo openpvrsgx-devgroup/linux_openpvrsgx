@@ -15,6 +15,15 @@ config PVR_TIMING
 	bool "Timing"
 endchoice
 
+config PVR_DEBUG_EXTRA
+	bool "Extra debugging info"
+	depends on PVR_DEBUG
+	help
+	    This enables extra debugging facilities on top of what you
+	    get with setting debug build type above. This effectively
+	    changes the driver's ABI, so the user space clients using
+	    the driver need to be built in debug mode as well.
+
 config PVR_DEBUG_PDUMP
 	tristate "PDUMP debug support"
 	depends on PVR

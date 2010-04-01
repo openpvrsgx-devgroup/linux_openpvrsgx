@@ -85,7 +85,7 @@ struct SYS_SPECIFIC_DATA {
 	struct clk *psSGX_FCK;
 	struct clk *psSGX_ICK;
 	struct clk *psMPU_CK;
-#if defined(DEBUG) || defined(TIMING)
+#if defined(CONFIG_PVR_DEBUG_EXTRA) || defined(TIMING)
 	struct clk *psGPT11_FCK;
 	struct clk *psGPT11_ICK;
 	void __iomem *gpt_base;

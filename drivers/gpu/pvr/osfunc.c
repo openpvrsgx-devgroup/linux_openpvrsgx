@@ -1237,7 +1237,7 @@ struct sWrapMemInfo {
 	struct IMG_SYS_PHYADDR *psPhysAddr;
 	int iPageOffset;
 	int iContiguous;
-#if defined(DEBUG)
+#if defined(CONFIG_PVR_DEBUG_EXTRA)
 	u32 ulStartAddr;
 	u32 ulBeyondEndAddr;
 	struct vm_area_struct *psVMArea;
@@ -1384,7 +1384,7 @@ enum PVRSRV_ERROR OSAcquirePhysPageAddr(void *pvCPUVAddr, u32 ui32Bytes,
 	}
 	memset(psInfo, 0, sizeof(*psInfo));
 
-#if defined(DEBUG)
+#if defined(CONFIG_PVR_DEBUG_EXTRA)
 	psInfo->ulStartAddr = ulStartAddrOrig;
 	psInfo->ulBeyondEndAddr = ulBeyondEndAddrOrig;
 #endif
@@ -1462,7 +1462,7 @@ enum PVRSRV_ERROR OSAcquirePhysPageAddr(void *pvCPUVAddr, u32 ui32Bytes,
 
 		goto error_release_mmap_sem;
 	}
-#if defined(DEBUG)
+#if defined(CONFIG_PVR_DEBUG_EXTRA)
 	psInfo->psVMArea = psVMArea;
 #endif
 

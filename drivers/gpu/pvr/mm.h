@@ -260,7 +260,7 @@ static inline enum LINUX_MEM_AREA_TYPE LinuxMemAreaRootType(struct LinuxMemArea
 
 const char *LinuxMemAreaTypeToString(enum LINUX_MEM_AREA_TYPE eMemAreaType);
 
-#if defined(DEBUG) || defined(DEBUG_LINUX_MEM_AREAS)
+#if defined(CONFIG_PVR_DEBUG_EXTRA) || defined(DEBUG_LINUX_MEM_AREAS)
 const char *HAPFlagsToString(u32 ui32Flags);
 #endif
 

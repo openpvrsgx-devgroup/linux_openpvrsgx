@@ -2464,7 +2464,7 @@ static int MMU_GetPDDevPAddrBW(u32 ui32BridgeID,
 int DummyBW(u32 ui32BridgeID, void *psBridgeIn, void *psBridgeOut,
 	    struct PVRSRV_PER_PROCESS_DATA *psPerProc)
 {
-#if !defined(DEBUG)
+#if !defined(CONFIG_PVR_DEBUG_EXTRA)
 	PVR_UNREFERENCED_PARAMETER(ui32BridgeID);
 #endif
 	PVR_UNREFERENCED_PARAMETER(psBridgeIn);
@@ -2493,7 +2493,7 @@ void _SetDispatchTableEntry(u32 ui32Index, const char *pszIOCName,
 			    const char *pszFunctionName)
 {
 	static u32 ui32PrevIndex = ~0UL;
-#if !defined(DEBUG)
+#if !defined(CONFIG_PVR_DEBUG_EXTRA)
 	PVR_UNREFERENCED_PARAMETER(pszIOCName);
 #endif
 #if !defined(DEBUG_BRIDGE_KM_DISPATCH_TABLE) && !defined(DEBUG_BRIDGE_KM)

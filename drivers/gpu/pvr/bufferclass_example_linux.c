@@ -168,7 +168,7 @@ static int __init BC_Example_ModInit(void)
 
 		goto ExitDisable;
 	}
-#if defined(DEBUG)
+#if defined(CONFIG_PVR_DEBUG_EXTRA)
 	printk(KERN_ERR DRVNAME ": BC_Example_ModInit: major device %d\n",
 	       AssignedMajorNumber);
 #endif

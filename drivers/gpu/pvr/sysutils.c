@@ -90,7 +90,7 @@ static int vdd2_post_func(struct notifier_block *n, unsigned long event,
 
 	if (atomic_read(&gpsSysSpecificData->sSGXClocksEnabled) != 0 &&
 	    gpsSysSpecificData->bSGXInitComplete) {
-#if defined(DEBUG)
+#if defined(CONFIG_PVR_DEBUG_EXTRA)
 		unsigned long rate;
 
 		rate = clk_get_rate(gpsSysSpecificData->psSGX_FCK);
@@ -520,7 +520,7 @@ static void CleanupSgxClocks(struct SYS_DATA *psSysData)
 	}
 }
 
-#if defined(DEBUG) || defined(TIMING)
+#if defined(CONFIG_PVR_DEBUG_EXTRA) || defined(TIMING)
 static inline u32 gpt_read_reg(struct SYS_DATA *psSysData, u32 reg)
 {
 	struct SYS_SPECIFIC_DATA *psSysSpecData = psSysData->pvSysSpecificData;

@@ -62,7 +62,7 @@ struct PVRSRV_LINUX_EVENT_OBJECT_LIST {
 struct PVRSRV_LINUX_EVENT_OBJECT {
 	atomic_t sTimeStamp;
 	u32 ui32TimeStampPrevious;
-#if defined(DEBUG)
+#if defined(CONFIG_PVR_DEBUG_EXTRA)
 	unsigned ui32Stats;
 #endif
 	wait_queue_head_t sWait;
@@ -118,7 +118,7 @@ enum PVRSRV_ERROR LinuxEventObjectDelete(void *hOSEventObjectList,
 		if (hOSEventObject) {
 			struct PVRSRV_LINUX_EVENT_OBJECT *psLinuxEventObject =
 			    (struct PVRSRV_LINUX_EVENT_OBJECT *)hOSEventObject;
-#if defined(DEBUG)
+#if defined(CONFIG_PVR_DEBUG_EXTRA)
 			PVR_DPF(PVR_DBG_MESSAGE,
 			"LinuxEventObjectListDelete: Event object waits: %lu",
 				 psLinuxEventObject->ui32Stats);
@@ -144,7 +144,7 @@ static enum PVRSRV_ERROR LinuxEventObjectDeleteCallback(void *pvParam,
 	list_del(&psLinuxEventObject->sList);
 	write_unlock_bh(&psLinuxEventObjectList->sLock);
 
-#if defined(DEBUG)
+#if defined(CONFIG_PVR_DEBUG_EXTRA)
 	PVR_DPF(PVR_DBG_MESSAGE,
 		 "LinuxEventObjectDeleteCallback: Event object waits: %lu",
 		 psLinuxEventObject->ui32Stats);
@@ -186,7 +186,7 @@ enum PVRSRV_ERROR LinuxEventObjectAdd(void *hOSEventObjectList,
 	atomic_set(&psLinuxEventObject->sTimeStamp, 0);
 	psLinuxEventObject->ui32TimeStampPrevious = 0;
 
-#if defined(DEBUG)
+#if defined(CONFIG_PVR_DEBUG_EXTRA)
 	psLinuxEventObject->ui32Stats = 0;
 #endif
 	init_waitqueue_head(&psLinuxEventObject->sWait);
@@ -254,7 +254,7 @@ enum PVRSRV_ERROR LinuxEventObjectWait(void *hOSEventObject, u32 ui32MSTimeout)
 		    (u32) schedule_timeout((s32) ui32TimeOutJiffies);
 
 		pvr_lock();
-#if defined(DEBUG)
+#if defined(CONFIG_PVR_DEBUG_EXTRA)
 		psLinuxEventObject->ui32Stats++;
 #endif
 

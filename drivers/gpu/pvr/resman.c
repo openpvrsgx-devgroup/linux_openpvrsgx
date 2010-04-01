@@ -48,7 +48,7 @@ static DEFINE_SEMAPHORE(lock);
 #define RESMAN_SIGNATURE 0x12345678
 
 struct RESMAN_ITEM {
-#ifdef DEBUG
+#ifdef CONFIG_PVR_DEBUG_EXTRA
 	u32 ui32Signature;
 #endif
 	struct RESMAN_ITEM **ppsThis;
@@ -64,7 +64,7 @@ struct RESMAN_ITEM {
 };
 
 struct RESMAN_CONTEXT {
-#ifdef DEBUG
+#ifdef CONFIG_PVR_DEBUG_EXTRA
 	u32 ui32Signature;
 #endif
 	struct RESMAN_CONTEXT **ppsThis;
@@ -91,7 +91,7 @@ static int FreeResourceByCriteria(struct RESMAN_CONTEXT *psContext,
 					   u32 ui32Param,
 					   IMG_BOOL bExecuteCallback);
 
-#ifdef DEBUG
+#ifdef CONFIG_PVR_DEBUG_EXTRA
 static void ValidateResList(struct RESMAN_LIST *psResList);
 #define VALIDATERESLIST() ValidateResList(gpsResList)
 #else
@@ -144,7 +144,7 @@ enum PVRSRV_ERROR PVRSRVResManConnect(void *hPerProc,
 
 		return eError;
 	}
-#ifdef DEBUG
+#ifdef CONFIG_PVR_DEBUG_EXTRA
 	psResManContext->ui32Signature = RESMAN_SIGNATURE;
 #endif
 	psResManContext->psResItemList = NULL;
@@ -274,7 +274,7 @@ struct RESMAN_ITEM *ResManRegisterRes(struct RESMAN_CONTEXT *psResManContext,
 		return (struct RESMAN_ITEM *)NULL;
 	}
 
-#ifdef DEBUG
+#ifdef CONFIG_PVR_DEBUG_EXTRA
 	psNewResItem->ui32Signature = RESMAN_SIGNATURE;
 #endif
 	psNewResItem->ui32ResType = ui32ResType;
@@ -349,7 +349,7 @@ enum PVRSRV_ERROR ResManDissociateRes(struct RESMAN_ITEM *psResItem,
 		PVR_DBG_BREAK;
 		return PVRSRV_ERROR_INVALID_PARAMS;
 	}
-#ifdef DEBUG
+#ifdef CONFIG_PVR_DEBUG_EXTRA
 	PVR_ASSERT(psResItem->ui32Signature == RESMAN_SIGNATURE);
 #endif
 
@@ -385,7 +385,7 @@ enum PVRSRV_ERROR ResManFindResourceByPtr(
 		PVR_DBG_BREAK;
 		return PVRSRV_ERROR_INVALID_PARAMS;
 	}
-#ifdef DEBUG
+#ifdef CONFIG_PVR_DEBUG_EXTRA
 	PVR_ASSERT(psItem->ui32Signature == RESMAN_SIGNATURE);
 #endif
 
@@ -517,7 +517,7 @@ static int FreeResourceByCriteria(struct RESMAN_CONTEXT *psResManContext,
 	return freed;
 }
 
-#ifdef DEBUG
+#ifdef CONFIG_PVR_DEBUG_EXTRA
 static void ValidateResList(struct RESMAN_LIST *psResList)
 {
 	struct RESMAN_ITEM *psCurItem, **ppsThisItem;

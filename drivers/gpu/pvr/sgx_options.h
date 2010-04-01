@@ -24,7 +24,7 @@
  *
  ******************************************************************************/
 
-#if defined(DEBUG) || defined(INTERNAL_TEST)
+#if defined(CONFIG_PVR_DEBUG_EXTRA) || defined(INTERNAL_TEST)
 #define DEBUG_SET_OFFSET				OPTIONS_BIT0
 #define OPTIONS_BIT0					0x1
 #else

@@ -29,7 +29,7 @@
 #include "services_headers.h"
 #include "handle.h"
 
-#ifdef	DEBUG
+#ifdef	CONFIG_PVR_DEBUG_EXTRA
 #define	HANDLE_BLOCK_SIZE		1
 #else
 #define	HANDLE_BLOCK_SIZE		256
@@ -187,7 +187,7 @@ static inline IMG_BOOL HandleListIsEmpty(u32 ui32Index,
 
 	bIsEmpty = (IMG_BOOL) (psList->ui32Next == ui32Index);
 
-#ifdef	DEBUG
+#ifdef	CONFIG_PVR_DEBUG_EXTRA
 	{
 		IMG_BOOL bIsEmpty2;
 
@@ -199,7 +199,7 @@ static inline IMG_BOOL HandleListIsEmpty(u32 ui32Index,
 	return bIsEmpty;
 }
 
-#ifdef DEBUG
+#ifdef CONFIG_PVR_DEBUG_EXTRA
 static inline IMG_BOOL NoChildren(struct PVRSRV_HANDLE_BASE *psBase,
 				  struct sHandle *psHandle)
 {
@@ -1200,7 +1200,7 @@ static enum PVRSRV_ERROR PVRSRVHandleBatchCommitOrRelease(
 		ui32IndexPlusOne = ui32NextIndexPlusOne;
 	}
 
-#ifdef DEBUG
+#ifdef CONFIG_PVR_DEBUG_EXTRA
 	if (psBase->ui32TotalHandCountPreBatch != psBase->ui32TotalHandCount) {
 		u32 ui32Delta =
 		    psBase->ui32TotalHandCount -

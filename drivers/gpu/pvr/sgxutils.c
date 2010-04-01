@@ -703,7 +703,7 @@ enum PVRSRV_ERROR SGX2DQueryBlitsCompleteKM(
 	PVR_DPF(PVR_DBG_ERROR,
 		 "SGX2DQueryBlitsCompleteKM: Timed out. Ops pending.");
 
-#if defined(DEBUG)
+#if defined(CONFIG_PVR_DEBUG_EXTRA)
 	{
 		struct PVRSRV_SYNC_DATA *psSyncData = psSyncInfo->psSyncData;
 

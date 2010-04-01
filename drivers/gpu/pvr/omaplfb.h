@@ -115,7 +115,7 @@ struct OMAPLFB_DEVINFO {
 
 #define	OMAPLFB_PAGE_ROUNDUP(x) (((x) + OMAPLFB_PAGE_MASK) & OMAPLFB_PAGE_TRUNC)
 
-#ifdef	DEBUG
+#ifdef	CONFIG_PVR_DEBUG_EXTRA
 #define	DEBUG_PRINTK(x) printk x
 #else
 #define	DEBUG_PRINTK(x)

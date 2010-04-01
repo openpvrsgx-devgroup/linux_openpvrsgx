@@ -232,7 +232,7 @@ static enum PVRSRV_ERROR SGXCleanupSharedPBDescCallback(void *pvParam,
 static enum PVRSRV_ERROR SGXCleanupSharedPBDescCreateLockCallback(void *pvParam,
 							     u32 ui32Param)
 {
-#ifdef DEBUG
+#ifdef CONFIG_PVR_DEBUG_EXTRA
 	struct PVRSRV_PER_PROCESS_DATA *psPerProc =
 	    (struct PVRSRV_PER_PROCESS_DATA *)pvParam;
 	PVR_ASSERT(psPerProc == psPerProcCreateSharedPB);

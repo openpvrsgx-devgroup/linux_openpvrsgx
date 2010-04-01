@@ -73,7 +73,7 @@ struct RA_ARENA {
 #ifdef RA_STATS
 	struct RA_STATISTICS sStatistics;
 #endif
-#if defined(CONFIG_PROC_FS) && defined(DEBUG)
+#if defined(CONFIG_PROC_FS) && defined(CONFIG_PVR_DEBUG_EXTRA)
 #define PROC_NAME_SIZE		32
 	char szProcInfoName[PROC_NAME_SIZE];
 	char szProcSegsName[PROC_NAME_SIZE];
@@ -81,14 +81,14 @@ struct RA_ARENA {
 #endif
 };
 
-#if defined(CONFIG_PROC_FS) && defined(DEBUG)
+#if defined(CONFIG_PROC_FS) && defined(CONFIG_PVR_DEBUG_EXTRA)
 static int RA_DumpSegs(char *page, char **start, off_t off, int count, int *eof,
 		       void *data);
 static int RA_DumpInfo(char *page, char **start, off_t off, int count, int *eof,
 		       void *data);
 #endif
 
-#if defined(CONFIG_PROC_FS) && defined(DEBUG)
+#if defined(CONFIG_PROC_FS) && defined(CONFIG_PVR_DEBUG_EXTRA)
 static char *ReplaceSpaces(char *const pS)
 {
 	char *pT;
@@ -641,7 +641,7 @@ struct RA_ARENA *RA_Create(char *name, u32 base, size_t uSize,
 	pArena->sStatistics.uExportCount = 0;
 #endif
 
-#if defined(CONFIG_PROC_FS) && defined(DEBUG)
+#if defined(CONFIG_PROC_FS) && defined(CONFIG_PVR_DEBUG_EXTRA)
 	if (strcmp(pArena->name, "") != 0) {
 		int ret;
 		int (*pfnCreateProcEntry) (const char *, read_proc_t,
@@ -732,7 +732,7 @@ void RA_Delete(struct RA_ARENA *pArena)
 		pArena->sStatistics.uSpanCount--;
 #endif
 	}
-#if defined(CONFIG_PROC_FS) && defined(DEBUG)
+#if defined(CONFIG_PROC_FS) && defined(CONFIG_PVR_DEBUG_EXTRA)
 	{
 		void (*pfnRemoveProcEntry) (const char *);
 
@@ -924,7 +924,8 @@ IMG_BOOL RA_GetNextLiveSegment(void *hArena,
 	return IMG_FALSE;
 }
 
-#if (defined(CONFIG_PROC_FS) && defined(DEBUG)) || defined(RA_STATS)
+#if (defined(CONFIG_PROC_FS) && defined(CONFIG_PVR_DEBUG_EXTRA)) || \
+     defined(RA_STATS)
 static char *_BTType(int eType)
 {
 	switch (eType) {
@@ -968,7 +969,7 @@ void RA_Dump(struct RA_ARENA *pArena)
 }
 #endif
 
-#if defined(CONFIG_PROC_FS) && defined(DEBUG)
+#if defined(CONFIG_PROC_FS) && defined(CONFIG_PVR_DEBUG_EXTRA)
 static int RA_DumpSegs(char *page, char **start, off_t off, int count, int *eof,
 		       void *data)
 {

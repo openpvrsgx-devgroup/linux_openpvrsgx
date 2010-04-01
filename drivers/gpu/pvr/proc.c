@@ -241,7 +241,7 @@ int CreateProcEntries(void)
 
 		return -ENOMEM;
 	}
-#ifdef DEBUG
+#ifdef CONFIG_PVR_DEBUG_EXTRA
 	if (CreateProcEntry
 	    ("debug_level", PVRDebugProcGetLevel, PVRDebugProcSetLevel, NULL)) {
 		PVR_DPF(PVR_DBG_ERROR,
@@ -301,7 +301,7 @@ void RemovePerProcessProcDir(struct PVRSRV_ENV_PER_PROCESS_DATA *psPerProc)
 
 void RemoveProcEntries(void)
 {
-#ifdef DEBUG
+#ifdef CONFIG_PVR_DEBUG_EXTRA
 	RemoveProcEntry("debug_level");
 #endif
 	RemoveProcEntry("queue");

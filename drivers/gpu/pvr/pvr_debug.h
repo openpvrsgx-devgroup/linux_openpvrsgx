@@ -52,7 +52,7 @@
 #define PVR_DBG_CALLTRACE		DBGPRIV_CALLTRACE
 #define PVR_DBG_ALLOC			DBGPRIV_ALLOC
 
-#if defined(DEBUG)
+#if defined(CONFIG_PVR_DEBUG_EXTRA)
 
 #define PVR_ASSERT(EXPR)						     \
 	do {								     \

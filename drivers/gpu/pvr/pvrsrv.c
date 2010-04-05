@@ -795,9 +795,7 @@ void PVRSRVMISR(void *pvSysData)
 		psDeviceNode = psDeviceNode->psNext;
 	}
 
-	if (PVRSRVProcessQueues(IMG_FALSE) ==
-	    PVRSRV_ERROR_PROCESSING_BLOCKED)
-		PVRSRVProcessQueues(IMG_FALSE);
+	PVRSRVProcessQueues(IMG_FALSE);
 
 	if (psSysData->psGlobalEventObject) {
 		void *hOSEventKM =

@@ -296,8 +296,6 @@ enum PVRSRV_ERROR SGXScheduleCCBCommandKM(
 	eError = SGXScheduleCCBCommand(psDevInfo, eCommandType, psCommandData,
 				  ui32CallerID, ui32PDumpFlags);
 
-	PVRSRVPowerUnlock(ui32CallerID);
-
 	if (ui32CallerID != ISR_ID)
 		SGXTestActivePowerEvent(psDeviceNode, ui32CallerID);
 

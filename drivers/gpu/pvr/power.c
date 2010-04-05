@@ -89,23 +89,6 @@ static IMG_BOOL _IsSystemStatePowered(enum PVR_POWER_STATE eSystemPowerState)
 	return (IMG_BOOL)(eSystemPowerState < PVRSRV_POWER_STATE_D2);
 }
 
-enum PVRSRV_ERROR PVRSRVPowerLock(u32 ui32CallerID, IMG_BOOL bSystemPowerEvent)
-{
-	if (ui32CallerID == TIMER_ID) {
-		if (!mutex_trylock(&hPowerAndFreqLock))
-			return PVRSRV_ERROR_RETRY;
-	} else {
-		mutex_lock(&hPowerAndFreqLock);
-	}
-
-	return PVRSRV_OK;
-}
-
-void PVRSRVPowerUnlock(u32 ui32CallerID)
-{
-	mutex_unlock(&hPowerAndFreqLock);
-}
-
 static enum PVRSRV_ERROR PVRSRVDevicePrePowerStateKM(IMG_BOOL bAllDevices,
 					 u32 ui32DeviceIndex,
 					 enum PVR_POWER_STATE eNewPowerState)
@@ -235,9 +218,6 @@ enum PVRSRV_ERROR PVRSRVSetDevicePowerStateKM(u32 ui32DeviceIndex,
 	if (eError != PVRSRV_OK)
 		return eError;
 
-	eError = PVRSRVPowerLock(ui32CallerID, IMG_FALSE);
-	if (eError != PVRSRV_OK)
-		return eError;
 #if defined(PDUMP)
 	if (eNewPowerState == PVRSRV_POWER_Unspecified) {
 		eError =
@@ -277,9 +257,6 @@ Exit:
 			 eNewPowerState, eError);
 	}
 
-	if (!bRetainMutex || (eError != PVRSRV_OK))
-		PVRSRVPowerUnlock(ui32CallerID);
-
 	return eError;
 }
 
@@ -291,10 +268,6 @@ enum PVRSRV_ERROR PVRSRVSystemPrePowerStateKM(
 	enum PVR_POWER_STATE eNewDevicePowerState;
 
 	eError = SysAcquireData(&psSysData);
-	if (eError != PVRSRV_OK)
-		return eError;
-
-	eError = PVRSRVPowerLock(KERNEL_ID, IMG_TRUE);
 	if (eError != PVRSRV_OK)
 		return eError;
 
@@ -326,8 +299,6 @@ ErrorExit:
 		 psSysData->eCurrentPowerState, eNewPowerState, eError);
 
 	psSysData->eFailedPowerState = eNewPowerState;
-
-	PVRSRVPowerUnlock(KERNEL_ID);
 
 	return eError;
 }
@@ -370,8 +341,6 @@ enum PVRSRV_ERROR PVRSRVSystemPostPowerStateKM(
 	psSysData->eCurrentPowerState = eNewPowerState;
 
 Exit:
-
-	PVRSRVPowerUnlock(KERNEL_ID);
 
 	if (_IsSystemStatePowered(eNewPowerState) &&
 	    PVRSRVGetInitServerState(PVRSRV_INIT_SERVER_SUCCESSFUL))
@@ -553,9 +522,6 @@ enum PVRSRV_ERROR PVRSRVDevicePreClockSpeedChange(u32 ui32DeviceIndex,
 			}
 		psPowerDevice = psPowerDevice->psNext;
 	}
-
-	if (bIdleDevice && eError != PVRSRV_OK)
-		PVRSRVPowerUnlock(KERNEL_ID);
 
 	return eError;
 }

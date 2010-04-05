@@ -679,16 +679,6 @@ void HWRecoveryResetSGX(struct PVRSRV_DEVICE_NODE *psDeviceNode,
 
 	BUG_ON(!pvr_is_locked());
 
-	/* SGXOSTimer already has the lock as it needs to read SGX registers */
-	if (ui32CallerID != TIMER_ID) {
-		eError = PVRSRVPowerLock(ui32CallerID, IMG_FALSE);
-		if (eError != PVRSRV_OK) {
-			PVR_DPF(PVR_DBG_WARNING, "HWRecoveryResetSGX: "
-				"Power transition in progress");
-			return;
-		}
-	}
-
 	l = readl(&psSGXHostCtl->ui32InterruptClearFlags);
 	l |= PVRSRV_USSE_EDM_INTERRUPT_HWR;
 	writel(l, &psSGXHostCtl->ui32InterruptClearFlags);
@@ -711,8 +701,6 @@ void HWRecoveryResetSGX(struct PVRSRV_DEVICE_NODE *psDeviceNode,
 
 	PDUMPRESUME();
 
-	PVRSRVPowerUnlock(ui32CallerID);
-
 	SGXScheduleProcessQueuesKM(psDeviceNode);
 
 	PVRSRVProcessQueues(ui32CallerID, IMG_TRUE);
@@ -733,7 +721,6 @@ static void SGXOSTimer(struct work_struct *work)
 	u32 ui32CurrentEDMTasks;
 	IMG_BOOL bLockup = IMG_FALSE;
 	IMG_BOOL bPoweredDown;
-	enum PVRSRV_ERROR eError;
 
 	pvr_lock();
 	if (!data->armed) {
@@ -742,17 +729,6 @@ static void SGXOSTimer(struct work_struct *work)
 	}
 
 	psDevInfo->ui32TimeStamp++;
-
-	eError = PVRSRVPowerLock(TIMER_ID, IMG_FALSE);
-	if (eError != PVRSRV_OK) {
-		/*
-		 * If a power transition is in progress then we're not really
-		 * sure what the state of world is going to be after, so we
-		 * just "pause" HW recovery and hopefully next time around we
-		 * get the lock and can decide what to do
-		 */
-		goto rearm;
-	}
 
 #if defined(NO_HARDWARE)
 	bPoweredDown = IMG_TRUE;
@@ -800,10 +776,8 @@ static void SGXOSTimer(struct work_struct *work)
 
 		/* Note: This will release the lock when done */
 		HWRecoveryResetSGX(psDeviceNode, 0, TIMER_ID);
-	} else
-		PVRSRVPowerUnlock(TIMER_ID);
+	}
 
- rearm:
 	queue_delayed_work(data->work_queue, &data->work,
 			   msecs_to_jiffies(data->interval));
 
@@ -1534,7 +1508,6 @@ enum PVRSRV_ERROR SGXReadDiffCountersKM(void *hDevHandle, u32 ui32Reg,
 				   u32 *pui32Time, IMG_BOOL *pbActive,
 				   struct PVRSRV_SGXDEV_DIFF_INFO *psDiffs)
 {
-	enum PVRSRV_ERROR eError;
 	struct SYS_DATA *psSysData;
 	struct PVRSRV_POWER_DEV *psPowerDevice;
 	IMG_BOOL bPowered = IMG_FALSE;
@@ -1544,10 +1517,6 @@ enum PVRSRV_ERROR SGXReadDiffCountersKM(void *hDevHandle, u32 ui32Reg,
 	if (bNew)
 		psDevInfo->ui32HWGroupRequested = ui32New;
 	psDevInfo->ui32HWReset |= ui32NewReset;
-
-	eError = PVRSRVPowerLock(KERNEL_ID, IMG_FALSE);
-	if (eError != PVRSRV_OK)
-		return eError;
 
 	SysAcquireData(&psSysData);
 
@@ -1632,11 +1601,9 @@ enum PVRSRV_ERROR SGXReadDiffCountersKM(void *hDevHandle, u32 ui32Reg,
 		}
 	}
 
-	PVRSRVPowerUnlock(KERNEL_ID);
-
 	SGXTestActivePowerEvent(psDeviceNode, KERNEL_ID);
 
-	return eError;
+	return PVRSRV_OK;
 }
 
 enum PVRSRV_ERROR SGXReadHWPerfCBKM(void *hDevHandle, u32 ui32ArraySize,

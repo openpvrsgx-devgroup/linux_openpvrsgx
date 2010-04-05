@@ -485,7 +485,7 @@ static enum PVRSRV_ERROR PVRSRVProcessCommand(struct SYS_DATA *psSysData,
 	return eError;
 }
 
-enum PVRSRV_ERROR PVRSRVProcessQueues(u32 ui32CallerID, IMG_BOOL bFlush)
+enum PVRSRV_ERROR PVRSRVProcessQueues(IMG_BOOL bFlush)
 {
 	struct PVRSRV_QUEUE_INFO *psQueue;
 	struct SYS_DATA *psSysData;

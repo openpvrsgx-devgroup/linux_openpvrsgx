@@ -703,7 +703,7 @@ void HWRecoveryResetSGX(struct PVRSRV_DEVICE_NODE *psDeviceNode,
 
 	SGXScheduleProcessQueuesKM(psDeviceNode);
 
-	PVRSRVProcessQueues(ui32CallerID, IMG_TRUE);
+	PVRSRVProcessQueues(IMG_TRUE);
 }
 
 static unsigned long sgx_reset_forced;

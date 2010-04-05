@@ -41,7 +41,7 @@ struct COMMAND_COMPLETE_DATA {
 	u32 ui32AllocSize;
 };
 
-enum PVRSRV_ERROR PVRSRVProcessQueues(u32 ui32CallerID, IMG_BOOL bFlush);
+enum PVRSRV_ERROR PVRSRVProcessQueues(IMG_BOOL bFlush);
 
 #if defined(__KERNEL__)
 #include <linux/types.h>

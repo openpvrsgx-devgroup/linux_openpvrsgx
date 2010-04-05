@@ -1055,7 +1055,7 @@ enum PVRSRV_ERROR PVRSRVSwapToDCBufferKM(void *hDeviceKM, void *hBuffer,
 	}
 
 	LOOP_UNTIL_TIMEOUT(MAX_HW_TIME_US) {
-		if (PVRSRVProcessQueues(KERNEL_ID, IMG_FALSE) !=
+		if (PVRSRVProcessQueues(IMG_FALSE) !=
 		    PVRSRV_ERROR_PROCESSING_BLOCKED) {
 			goto ProcessedQueues;
 		}
@@ -1139,7 +1139,7 @@ enum PVRSRV_ERROR PVRSRVSwapToDCSystemKM(void *hDeviceKM, void *hSwapChain)
 	}
 
 	LOOP_UNTIL_TIMEOUT(MAX_HW_TIME_US) {
-		if (PVRSRVProcessQueues(KERNEL_ID, IMG_FALSE) !=
+		if (PVRSRVProcessQueues(IMG_FALSE) !=
 		    PVRSRV_ERROR_PROCESSING_BLOCKED) {
 			goto ProcessedQueues;
 		}

@@ -34,8 +34,6 @@ static IMG_BOOL gbInitServerRunning;
 static IMG_BOOL gbInitServerRan;
 static IMG_BOOL gbInitSuccessful;
 static DEFINE_MUTEX(hPowerAndFreqLock);
-static DECLARE_WAIT_QUEUE_HEAD(hDvfsWq);
-static IMG_BOOL gbDvfsActive;
 
 enum PVRSRV_ERROR PVRSRVSetInitServerState(enum PVRSRV_INIT_SERVER_STATE
 					  eInitServerState, IMG_BOOL bState)
@@ -91,42 +89,15 @@ static IMG_BOOL _IsSystemStatePowered(enum PVR_POWER_STATE eSystemPowerState)
 	return (IMG_BOOL)(eSystemPowerState < PVRSRV_POWER_STATE_D2);
 }
 
-void PVRSRVDvfsLock(void)
-{
-	mutex_lock(&hPowerAndFreqLock);
-	gbDvfsActive = 1;
-	mutex_unlock(&hPowerAndFreqLock);
-}
-
-void PVRSRVDvfsUnlock(void)
-{
-	mutex_lock(&hPowerAndFreqLock);
-	gbDvfsActive = 0;
-	wake_up(&hDvfsWq);
-	mutex_unlock(&hPowerAndFreqLock);
-}
-
 enum PVRSRV_ERROR PVRSRVPowerLock(u32 ui32CallerID, IMG_BOOL bSystemPowerEvent)
 {
 	if (ui32CallerID == TIMER_ID) {
 		if (!mutex_trylock(&hPowerAndFreqLock))
 			return PVRSRV_ERROR_RETRY;
-
-		if (gbDvfsActive) {
-			mutex_unlock(&hPowerAndFreqLock);
-			return PVRSRV_ERROR_RETRY;
-		}
-	} else
+	} else {
 		mutex_lock(&hPowerAndFreqLock);
-
-	while (gbDvfsActive) {
-		DEFINE_WAIT(__wait);
-		prepare_to_wait(&hDvfsWq, &__wait, TASK_UNINTERRUPTIBLE);
-		mutex_unlock(&hPowerAndFreqLock);
-		schedule();
-		mutex_lock(&hPowerAndFreqLock);
-		finish_wait(&hDvfsWq, &__wait);
 	}
+
 	return PVRSRV_OK;
 }
 

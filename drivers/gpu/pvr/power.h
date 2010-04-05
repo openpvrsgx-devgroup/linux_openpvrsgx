@@ -63,8 +63,6 @@ enum PVRSRV_ERROR PVRSRVSetInitServerState(enum PVRSRV_INIT_SERVER_STATE
 enum PVRSRV_ERROR PVRSRVPowerLock(u32 ui32CallerID,
 		IMG_BOOL bSystemPowerEvent);
 void PVRSRVPowerUnlock(u32 ui32CallerID);
-void PVRSRVDvfsLock(void);
-void PVRSRVDvfsUnlock(void);
 
 enum PVRSRV_ERROR PVRSRVSetDevicePowerStateKM(u32 ui32DeviceIndex,
 		enum PVR_POWER_STATE eNewPowerState, u32 ui32CallerID,

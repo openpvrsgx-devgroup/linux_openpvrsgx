@@ -57,7 +57,6 @@ struct SYS_DATA {
 	struct SYS_DEVICE_ID sDeviceID[SYS_DEVICE_COUNT];
 	struct PVRSRV_DEVICE_NODE *psDeviceNodeList;
 	struct PVRSRV_POWER_DEV *psPowerDeviceList;
-	struct PVRSRV_RESOURCE sPowerStateChangeResource;
 	enum PVR_POWER_STATE eCurrentPowerState;
 	enum PVR_POWER_STATE eFailedPowerState;
 	u32 ui32CurrentOSPowerState;
@@ -153,7 +152,6 @@ static inline enum PVRSRV_ERROR SysInitialiseCommon(struct SYS_DATA *psSysData)
 static inline void SysDeinitialiseCommon(struct SYS_DATA *psSysData)
 {
 	PVRSRVDeInit(psSysData);
-	OSDestroyResource(&psSysData->sPowerStateChangeResource);
 }
 
 #if !(defined(NO_HARDWARE) && defined(__KERNEL__))

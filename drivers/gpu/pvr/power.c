@@ -469,11 +469,6 @@ IMG_BOOL PVRSRVIsDevicePowered(u32 ui32DeviceIndex)
 	if (eError != PVRSRV_OK)
 		return IMG_FALSE;
 
-	if (OSIsResourceLocked(&psSysData->sPowerStateChangeResource,
-								KERNEL_ID) ||
-	    OSIsResourceLocked(&psSysData->sPowerStateChangeResource, ISR_ID))
-		return IMG_FALSE;
-
 	psPowerDevice = psSysData->psPowerDeviceList;
 	while (psPowerDevice) {
 		if (psPowerDevice->ui32DeviceIndex == ui32DeviceIndex)

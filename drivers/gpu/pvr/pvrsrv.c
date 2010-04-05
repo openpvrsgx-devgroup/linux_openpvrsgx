@@ -140,10 +140,6 @@ enum PVRSRV_ERROR PVRSRVInit(struct SYS_DATA *psSysData)
 	if (eError != PVRSRV_OK)
 		goto Error;
 
-	eError = OSCreateResource(&psSysData->sPowerStateChangeResource);
-	if (eError != PVRSRV_OK)
-		goto Error;
-
 	psSysData->eCurrentPowerState = PVRSRV_POWER_STATE_D0;
 	psSysData->eFailedPowerState = PVRSRV_POWER_Unspecified;
 

@@ -41,6 +41,7 @@
 #include "syslocal.h"
 #include "env_data.h"
 #include "ocpdefs.h"
+#include "pvr_bridge_km.h"
 
 #define	HZ_TO_MHZ(m) ((m) / 1000000)
 
@@ -265,7 +266,9 @@ static void sgx_lock_perf(struct work_struct *work)
 	struct ENV_DATA *psEnvData =
 	    container_of(d_work, struct ENV_DATA, sPerfWork);
 
+	pvr_lock();
 	load = sgx_current_load();
+	pvr_unlock();
 	if (load) {
 		vdd1 = 500000000;
 		vdd2 = 400000;

@@ -295,14 +295,6 @@ static int pvr_dbg_reset(void *data, u64 val)
 		goto exit;
 	}
 
-	/*
-	 * Yes, this is kinda braindead. KERNEL_ID, IMG_TRUE above means
-	 * take the power lock - not just try lock - and keep it. TIMER_ID
-	 * here means that we have already the power lock, so don't take it.
-	 * Also - regardless of the ID - the following will release the lock.
-	 * Finally we pass KERNEL_ID again to take and release the lock.
-	 * Yay!
-	 */
 	HWRecoveryResetSGX(node);
 
 	SGXTestActivePowerEvent(node);

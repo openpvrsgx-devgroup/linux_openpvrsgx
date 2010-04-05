@@ -895,16 +895,6 @@ static void SGX_MISRHandler(void *pvData)
 	int dev_idx;
 	enum PVRSRV_ERROR err;
 
-	/*
-	 * Yet again we have to cope with the caller ID argument, which
-	 * determines whether the power lock is properly locked or just
-	 * trylock'd. If trylock fails we just get back here with an error
-	 * so we need a proper lock. Actually trylock should never fail
-	 * either because of the next assumption.
-	 * The code afterwards depends on noone turning off the power and
-	 * also the power lock to be released, so ask for the lock to be
-	 * released when returning from the function.
-	 */
 	dev_idx = psDeviceNode->sDevId.ui32DeviceIndex;
 	err = PVRSRVSetDevicePowerStateKM(dev_idx, PVRSRV_POWER_STATE_D0);
 	BUG_ON(err != PVRSRV_OK);

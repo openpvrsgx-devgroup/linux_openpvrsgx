@@ -665,8 +665,7 @@ static void dump_sgx_registers(struct PVRSRV_SGXDEV_INFO *psDevInfo)
 }
 
 /* Should be called with pvr_lock held */
-void HWRecoveryResetSGX(struct PVRSRV_DEVICE_NODE *psDeviceNode,
-				u32 ui32Component, u32 ui32CallerID)
+void HWRecoveryResetSGX(struct PVRSRV_DEVICE_NODE *psDeviceNode)
 {
 	enum PVRSRV_ERROR eError;
 	struct PVRSRV_SGXDEV_INFO *psDevInfo =
@@ -674,8 +673,6 @@ void HWRecoveryResetSGX(struct PVRSRV_DEVICE_NODE *psDeviceNode,
 	struct SGXMKIF_HOST_CTL __iomem *psSGXHostCtl =
 					psDevInfo->psSGXHostCtl;
 	u32 l;
-
-	PVR_UNREFERENCED_PARAMETER(ui32Component);
 
 	BUG_ON(!pvr_is_locked());
 
@@ -774,8 +771,7 @@ static void SGXOSTimer(struct work_struct *work)
 		l++;
 		writel(l, &psSGXHostCtl->ui32HostDetectedLockups);
 
-		/* Note: This will release the lock when done */
-		HWRecoveryResetSGX(psDeviceNode, 0, TIMER_ID);
+		HWRecoveryResetSGX(psDeviceNode);
 	}
 
 	queue_delayed_work(data->work_queue, &data->work,
@@ -918,7 +914,7 @@ static void SGX_MISRHandler(void *pvData)
 	l2 = readl(&psSGXHostCtl->ui32InterruptClearFlags);
 	if ((l1 & PVRSRV_USSE_EDM_INTERRUPT_HWR) &&
 	    !(l2 & PVRSRV_USSE_EDM_INTERRUPT_HWR))
-		HWRecoveryResetSGX(psDeviceNode, 0, ISR_ID);
+		HWRecoveryResetSGX(psDeviceNode);
 
 	if (psDeviceNode->bReProcessDeviceCommandComplete)
 		SGXScheduleProcessQueuesKM(psDeviceNode);

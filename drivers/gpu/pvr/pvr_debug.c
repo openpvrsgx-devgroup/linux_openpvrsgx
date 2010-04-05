@@ -303,7 +303,7 @@ static int pvr_dbg_reset(void *data, u64 val)
 	 * Finally we pass KERNEL_ID again to take and release the lock.
 	 * Yay!
 	 */
-	HWRecoveryResetSGX(node, 0, TIMER_ID);
+	HWRecoveryResetSGX(node);
 
 	SGXTestActivePowerEvent(node, KERNEL_ID);
 exit:

@@ -146,22 +146,8 @@ enum PVRSRV_ERROR PVRSRVCreateCommandQueueKM(u32 ui32QueueSize,
 
 	psQueueInfo->ui32QueueSize = ui32Power2QueueSize;
 
-	if (psSysData->psQueueList == NULL) {
-		eError = OSCreateResource(&psSysData->sQProcessResource);
-		if (eError != PVRSRV_OK)
-			goto ErrorExit;
-	}
-
-	if (OSLockResource(&psSysData->sQProcessResource,
-			   KERNEL_ID) != PVRSRV_OK)
-		goto ErrorExit;
-
 	psQueueInfo->psNextKM = psSysData->psQueueList;
 	psSysData->psQueueList = psQueueInfo;
-
-	if (OSUnlockResource(&psSysData->sQProcessResource, KERNEL_ID) !=
-	    PVRSRV_OK)
-		goto ErrorExit;
 
 	*ppsQueueInfo = psQueueInfo;
 
@@ -215,10 +201,6 @@ enum PVRSRV_ERROR PVRSRVDestroyCommandQueueKM(
 		goto ErrorExit;
 	}
 
-	eError = OSLockResource(&psSysData->sQProcessResource, KERNEL_ID);
-	if (eError != PVRSRV_OK)
-		goto ErrorExit;
-
 	if (psQueue == psQueueInfo) {
 		psSysData->psQueueList = psQueueInfo->psNextKM;
 
@@ -247,24 +229,9 @@ enum PVRSRV_ERROR PVRSRVDestroyCommandQueueKM(
 		}
 
 		if (!psQueue) {
-			eError =
-			    OSUnlockResource(&psSysData->sQProcessResource,
-					     KERNEL_ID);
-			if (eError != PVRSRV_OK)
-				goto ErrorExit;
 			eError = PVRSRV_ERROR_INVALID_PARAMS;
 			goto ErrorExit;
 		}
-	}
-
-	eError = OSUnlockResource(&psSysData->sQProcessResource, KERNEL_ID);
-	if (eError != PVRSRV_OK)
-		goto ErrorExit;
-
-	if (psSysData->psQueueList == NULL) {
-		eError = OSDestroyResource(&psSysData->sQProcessResource);
-		if (eError != PVRSRV_OK)
-			goto ErrorExit;
 	}
 
 ErrorExit:
@@ -530,31 +497,6 @@ enum PVRSRV_ERROR PVRSRVProcessQueues(u32 ui32CallerID, IMG_BOOL bFlush)
 	if (eError != PVRSRV_OK)
 		return eError;
 
-	eError = OSLockResource(&psSysData->sQProcessResource, ui32CallerID);
-	if (eError != PVRSRV_OK) {
-		if (ui32CallerID == ISR_ID) {
-			if (bFlush) {
-				PVR_DPF(PVR_DBG_ERROR, "PVRSRVProcessQueues: "
-					"Couldn't acquire queue processing "
-					"lock for FLUSH");
-			} else {
-				PVR_DPF(PVR_DBG_MESSAGE,
-						"PVRSRVProcessQueues: "
-						"Couldn't acquire queue "
-						"processing lock");
-			}
-		} else {
-			PVR_DPF(PVR_DBG_MESSAGE, "PVRSRVProcessQueues: "
-				"Queue processing lock-acquire failed "
-				"when called from the Services driver.");
-			PVR_DPF(PVR_DBG_MESSAGE,
-				"This is due to MISR queue processing "
-				"being interrupted by the Services driver.");
-		}
-
-		return PVRSRV_OK;
-	}
-
 	psQueue = psSysData->psQueueList;
 
 	if (!psQueue) {
@@ -594,8 +536,6 @@ enum PVRSRV_ERROR PVRSRVProcessQueues(u32 ui32CallerID, IMG_BOOL bFlush)
 		}
 		psDeviceNode = psDeviceNode->psNext;
 	}
-
-	OSUnlockResource(&psSysData->sQProcessResource, ui32CallerID);
 
 	return PVRSRV_OK;
 }

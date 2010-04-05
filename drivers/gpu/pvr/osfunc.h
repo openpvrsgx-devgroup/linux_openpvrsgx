@@ -171,14 +171,6 @@ enum PVRSRV_ERROR OSMapPhysToUserSpace(void *hDevCookie,
 enum PVRSRV_ERROR OSUnmapPhysToUserSpace(void *hDevCookie, void *pvUserAddr,
 		void *pvProcess);
 
-enum PVRSRV_ERROR OSLockResource(struct PVRSRV_RESOURCE *psResource,
-		u32 ui32ID);
-enum PVRSRV_ERROR OSUnlockResource(struct PVRSRV_RESOURCE *psResource,
-		u32 ui32ID);
-IMG_BOOL OSIsResourceLocked(struct PVRSRV_RESOURCE *psResource, u32 ui32ID);
-enum PVRSRV_ERROR OSCreateResource(struct PVRSRV_RESOURCE *psResource);
-enum PVRSRV_ERROR OSDestroyResource(struct PVRSRV_RESOURCE *psResource);
-void OSBreakResourceLock(struct PVRSRV_RESOURCE *psResource, u32 ui32ID);
 void OSWaitus(u32 ui32Timeus);
 void OSReleaseThreadQuanta(void);
 

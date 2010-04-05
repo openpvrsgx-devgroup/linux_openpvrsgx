@@ -307,37 +307,6 @@ s32 OSSNPrintf(char *pStr, u32 ui32Size, const char *pszFormat, ...)
 	return iCount;
 }
 
-void OSBreakResourceLock(struct PVRSRV_RESOURCE *psResource, u32 ui32ID)
-{
-	volatile u32 *pui32Access = (volatile u32 *)&psResource->ui32Lock;
-
-	if (*pui32Access)
-		if (psResource->ui32ID == ui32ID) {
-			psResource->ui32ID = 0;
-			*pui32Access = 0;
-		} else {
-			PVR_DPF(PVR_DBG_MESSAGE, "OSBreakResourceLock: "
-				"Resource is not locked for this process.");
-	} else
-		PVR_DPF(PVR_DBG_MESSAGE, "OSBreakResourceLock: "
-					"Resource is not locked");
-}
-
-enum PVRSRV_ERROR OSCreateResource(struct PVRSRV_RESOURCE *psResource)
-{
-	psResource->ui32ID = 0;
-	psResource->ui32Lock = 0;
-
-	return PVRSRV_OK;
-}
-
-enum PVRSRV_ERROR OSDestroyResource(struct PVRSRV_RESOURCE *psResource)
-{
-	OSBreakResourceLock(psResource, psResource->ui32ID);
-
-	return PVRSRV_OK;
-}
-
 enum PVRSRV_ERROR OSInitEnvData(void **ppvEnvSpecificData)
 {
 	struct ENV_DATA *psEnvData;
@@ -560,55 +529,6 @@ enum PVRSRV_ERROR OSScheduleMISR(void *pvSysData)
 	return PVRSRV_OK;
 }
 
-
-#define	OS_TAS(p)	xchg((p), 1)
-enum PVRSRV_ERROR OSLockResource(struct PVRSRV_RESOURCE *psResource, u32 ui32ID)
-{
-	enum PVRSRV_ERROR eError = PVRSRV_OK;
-
-	if (!OS_TAS(&psResource->ui32Lock))
-		psResource->ui32ID = ui32ID;
-	else
-		eError = PVRSRV_ERROR_GENERIC;
-
-	return eError;
-}
-
-enum PVRSRV_ERROR OSUnlockResource(struct PVRSRV_RESOURCE *psResource,
-				   u32 ui32ID)
-{
-	volatile u32 *pui32Access = (volatile u32 *)&psResource->ui32Lock;
-	enum PVRSRV_ERROR eError = PVRSRV_OK;
-
-	if (*pui32Access) {
-		if (psResource->ui32ID == ui32ID) {
-			psResource->ui32ID = 0;
-			*pui32Access = 0;
-		} else {
-			PVR_DPF(PVR_DBG_ERROR, "OSUnlockResource: "
-			       "Resource %p is not locked with expected value.",
-				psResource);
-			PVR_DPF(PVR_DBG_MESSAGE, "Should be %x is actually %x",
-				 ui32ID, psResource->ui32ID);
-			eError = PVRSRV_ERROR_GENERIC;
-		}
-	} else {
-		PVR_DPF(PVR_DBG_ERROR,
-			 "OSUnlockResource: Resource %p is not locked",
-			 psResource);
-		eError = PVRSRV_ERROR_GENERIC;
-	}
-
-	return eError;
-}
-
-IMG_BOOL OSIsResourceLocked(struct PVRSRV_RESOURCE *psResource, u32 ui32ID)
-{
-	volatile u32 *pui32Access = (volatile u32 *)&psResource->ui32Lock;
-
-	return (*(volatile u32 *)pui32Access == 1) &&
-		(psResource->ui32ID == ui32ID) ? IMG_TRUE : IMG_FALSE;
-}
 
 struct IMG_CPU_PHYADDR OSMapLinToCPUPhys(void *pvLinAddr)
 {

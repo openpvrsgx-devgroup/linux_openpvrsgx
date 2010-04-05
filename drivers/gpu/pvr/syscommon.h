@@ -64,7 +64,6 @@ struct SYS_DATA {
 	struct PVRSRV_KERNEL_SYNC_INFO *psSharedSyncInfoList;
 	void *pvEnvSpecificData;
 	void *pvSysSpecificData;
-	struct PVRSRV_RESOURCE sQProcessResource;
 	void *pvSOCRegsBase;
 	void *hSOCTimerRegisterOSMemHandle;
 	u32 *pvSOCTimerRegisterKM;

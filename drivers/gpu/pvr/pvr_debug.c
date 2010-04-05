@@ -289,8 +289,7 @@ static int pvr_dbg_reset(void *data, u64 val)
 	}
 
 	err = PVRSRVSetDevicePowerStateKM(node->sDevId.ui32DeviceIndex,
-					     PVRSRV_POWER_STATE_D0,
-					     KERNEL_ID, IMG_TRUE);
+					     PVRSRV_POWER_STATE_D0);
 	if (err != PVRSRV_OK) {
 		r = -EIO;
 		goto exit;

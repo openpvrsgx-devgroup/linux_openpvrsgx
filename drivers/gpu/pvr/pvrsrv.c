@@ -316,10 +316,9 @@ enum PVRSRV_ERROR PVRSRVFinaliseSystem(IMG_BOOL bInitSuccessful)
 		psDeviceNode = psSysData->psDeviceNodeList;
 		while (psDeviceNode) {
 			eError =
-			    PVRSRVSetDevicePowerStateKM(psDeviceNode->sDevId.
-						ui32DeviceIndex,
-						PVRSRV_POWER_Unspecified,
-						KERNEL_ID, IMG_FALSE);
+			    PVRSRVSetDevicePowerStateKM(
+					psDeviceNode->sDevId.ui32DeviceIndex,
+					PVRSRV_POWER_Unspecified);
 			if (eError != PVRSRV_OK)
 				PVR_DPF(PVR_DBG_ERROR, "PVRSRVFinaliseSystem: "
 					"Failed PVRSRVSetDevicePowerStateKM "
@@ -439,8 +438,7 @@ enum PVRSRV_ERROR PVRSRVDeinitialiseDevice(u32 ui32DevIndex)
 FoundDevice:
 
 	eError = PVRSRVSetDevicePowerStateKM(ui32DevIndex,
-					     PVRSRV_POWER_STATE_D3,
-					     KERNEL_ID, IMG_FALSE);
+					     PVRSRV_POWER_STATE_D3);
 	if (eError != PVRSRV_OK) {
 		PVR_DPF(PVR_DBG_ERROR, "PVRSRVDeinitialiseDevice: "
 				"Failed PVRSRVSetDevicePowerStateKM call");

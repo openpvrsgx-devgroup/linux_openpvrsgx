@@ -61,8 +61,7 @@ enum PVRSRV_ERROR PVRSRVSetInitServerState(enum PVRSRV_INIT_SERVER_STATE
 		IMG_BOOL bState);
 
 enum PVRSRV_ERROR PVRSRVSetDevicePowerStateKM(u32 ui32DeviceIndex,
-		enum PVR_POWER_STATE eNewPowerState, u32 ui32CallerID,
-		IMG_BOOL bRetainMutex);
+		enum PVR_POWER_STATE eNewPowerState);
 
 enum PVRSRV_ERROR PVRSRVSystemPrePowerStateKM(
 		enum PVR_POWER_STATE eNewPowerState);

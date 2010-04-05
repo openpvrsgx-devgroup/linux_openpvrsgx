@@ -208,8 +208,7 @@ static enum PVRSRV_ERROR PVRSRVDevicePostPowerStateKM(IMG_BOOL bAllDevices,
 }
 
 enum PVRSRV_ERROR PVRSRVSetDevicePowerStateKM(u32 ui32DeviceIndex,
-				     enum PVR_POWER_STATE eNewPowerState,
-				     u32 ui32CallerID, IMG_BOOL bRetainMutex)
+				     enum PVR_POWER_STATE eNewPowerState)
 {
 	enum PVRSRV_ERROR eError;
 	struct SYS_DATA *psSysData;

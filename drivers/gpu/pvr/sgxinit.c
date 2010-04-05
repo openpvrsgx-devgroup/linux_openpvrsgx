@@ -911,8 +911,7 @@ static void SGX_MISRHandler(void *pvData)
 	 * released when returning from the function.
 	 */
 	dev_idx = psDeviceNode->sDevId.ui32DeviceIndex;
-	err = PVRSRVSetDevicePowerStateKM(dev_idx, PVRSRV_POWER_STATE_D0,
-					  ISR_ID, IMG_FALSE);
+	err = PVRSRVSetDevicePowerStateKM(dev_idx, PVRSRV_POWER_STATE_D0);
 	BUG_ON(err != PVRSRV_OK);
 
 	l1 = readl(&psSGXHostCtl->ui32InterruptFlags);

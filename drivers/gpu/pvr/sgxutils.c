@@ -89,10 +89,9 @@ void SGXTestActivePowerEvent(struct PVRSRV_DEVICE_NODE *psDeviceNode,
 
 	PDUMPSUSPEND();
 
-	eError = PVRSRVSetDevicePowerStateKM(psDeviceNode->sDevId.
-					ui32DeviceIndex,
-					PVRSRV_POWER_STATE_D3,
-					ui32CallerID, IMG_FALSE);
+	eError = PVRSRVSetDevicePowerStateKM(
+					psDeviceNode->sDevId.ui32DeviceIndex,
+					PVRSRV_POWER_STATE_D3);
 	if (eError == PVRSRV_OK)
 		SGXPostActivePowerEvent(psDeviceNode, ui32CallerID);
 	if (eError == PVRSRV_ERROR_RETRY) {
@@ -269,8 +268,7 @@ enum PVRSRV_ERROR SGXScheduleCCBCommandKM(
 
 	eError =
 	    PVRSRVSetDevicePowerStateKM(psDeviceNode->sDevId.ui32DeviceIndex,
-					PVRSRV_POWER_STATE_D0, ui32CallerID,
-					IMG_TRUE);
+					PVRSRV_POWER_STATE_D0);
 
 	PDUMPRESUME();
 

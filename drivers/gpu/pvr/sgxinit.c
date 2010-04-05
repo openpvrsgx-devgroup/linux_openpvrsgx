@@ -918,7 +918,7 @@ static void SGX_MISRHandler(void *pvData)
 	if (psDeviceNode->bReProcessDeviceCommandComplete)
 		SGXScheduleProcessQueuesKM(psDeviceNode);
 
-	SGXTestActivePowerEvent(psDeviceNode, ISR_ID);
+	SGXTestActivePowerEvent(psDeviceNode);
 }
 
 enum PVRSRV_ERROR SGXRegisterDevice(struct PVRSRV_DEVICE_NODE *psDeviceNode)
@@ -1595,7 +1595,7 @@ enum PVRSRV_ERROR SGXReadDiffCountersKM(void *hDevHandle, u32 ui32Reg,
 		}
 	}
 
-	SGXTestActivePowerEvent(psDeviceNode, KERNEL_ID);
+	SGXTestActivePowerEvent(psDeviceNode);
 
 	return PVRSRV_OK;
 }

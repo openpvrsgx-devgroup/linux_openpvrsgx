@@ -305,7 +305,7 @@ static int pvr_dbg_reset(void *data, u64 val)
 	 */
 	HWRecoveryResetSGX(node);
 
-	SGXTestActivePowerEvent(node, KERNEL_ID);
+	SGXTestActivePowerEvent(node);
 exit:
 	pvr_unlock();
 

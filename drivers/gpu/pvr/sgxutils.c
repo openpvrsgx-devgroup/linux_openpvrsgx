@@ -60,8 +60,7 @@ static void SGXPostActivePowerEvent(struct PVRSRV_DEVICE_NODE *psDeviceNode)
 		SGXScheduleProcessQueuesKM(psDeviceNode);
 }
 
-void SGXTestActivePowerEvent(struct PVRSRV_DEVICE_NODE *psDeviceNode,
-				 u32 ui32CallerID)
+void SGXTestActivePowerEvent(struct PVRSRV_DEVICE_NODE *psDeviceNode)
 {
 	enum PVRSRV_ERROR eError = PVRSRV_OK;
 	struct PVRSRV_SGXDEV_INFO *psDevInfo = psDeviceNode->pvDevice;
@@ -272,7 +271,7 @@ enum PVRSRV_ERROR SGXScheduleCCBCommandKM(
 				  ui32CallerID, ui32PDumpFlags);
 
 	if (ui32CallerID != ISR_ID)
-		SGXTestActivePowerEvent(psDeviceNode, ui32CallerID);
+		SGXTestActivePowerEvent(psDeviceNode);
 
 	return eError;
 }

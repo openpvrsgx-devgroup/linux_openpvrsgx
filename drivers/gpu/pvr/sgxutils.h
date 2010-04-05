@@ -34,8 +34,7 @@
 	((type *)(((char *)(psCCBMemInfo)->pvLinAddrKM) +		\
 		(psCCBKick)->offset))
 
-void SGXTestActivePowerEvent(struct PVRSRV_DEVICE_NODE *psDeviceNode,
-				     u32 ui32CallerID);
+void SGXTestActivePowerEvent(struct PVRSRV_DEVICE_NODE *psDeviceNode);
 
 enum PVRSRV_ERROR SGXScheduleCCBCommand(
 				struct PVRSRV_SGXDEV_INFO *psDevInfo,

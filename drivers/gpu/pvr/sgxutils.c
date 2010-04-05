@@ -44,8 +44,7 @@
 #include <linux/tty.h>
 #include <linux/io.h>
 
-static void SGXPostActivePowerEvent(struct PVRSRV_DEVICE_NODE *psDeviceNode,
-				     u32 ui32CallerID)
+static void SGXPostActivePowerEvent(struct PVRSRV_DEVICE_NODE *psDeviceNode)
 {
 	struct PVRSRV_SGXDEV_INFO *psDevInfo = psDeviceNode->pvDevice;
 	struct SGXMKIF_HOST_CTL __iomem *psSGXHostCtl =
@@ -88,7 +87,7 @@ void SGXTestActivePowerEvent(struct PVRSRV_DEVICE_NODE *psDeviceNode,
 					psDeviceNode->sDevId.ui32DeviceIndex,
 					PVRSRV_POWER_STATE_D3);
 	if (eError == PVRSRV_OK)
-		SGXPostActivePowerEvent(psDeviceNode, ui32CallerID);
+		SGXPostActivePowerEvent(psDeviceNode);
 
 	PDUMPRESUME();
 

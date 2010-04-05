@@ -275,19 +275,8 @@ enum PVRSRV_ERROR SGXScheduleCCBCommandKM(
 	if (eError == PVRSRV_OK) {
 		psDeviceNode->bReProcessDeviceCommandComplete = IMG_FALSE;
 	} else {
-		if (eError == PVRSRV_ERROR_RETRY) {
-			if (ui32CallerID == ISR_ID) {
-				psDeviceNode->bReProcessDeviceCommandComplete =
-				    IMG_TRUE;
-				eError = PVRSRV_OK;
-			} else {
-
-			}
-		} else
-			PVR_DPF(PVR_DBG_ERROR, "SGXScheduleCCBCommandKM "
-					"failed to acquire lock - "
-					 "ui32CallerID:%ld eError:%lu",
-					 ui32CallerID, eError);
+		PVR_DPF(PVR_DBG_ERROR, "%s: can't power on device (%d)",
+					__func__, eError);
 		return eError;
 	}
 

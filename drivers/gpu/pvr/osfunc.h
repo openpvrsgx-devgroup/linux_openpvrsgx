@@ -213,12 +213,4 @@ enum PVRSRV_ERROR OSAcquirePhysPageAddr(void *pvCPUVAddr, u32 ui32Bytes,
 					void **phOSWrapMem);
 enum PVRSRV_ERROR OSReleasePhysPageAddr(void *hOSWrapMem);
 
-#if defined(__KERNEL__)
-#define	OS_SUPPORTS_IN_LISR
-static inline IMG_BOOL OSInLISR(void unref__ * pvSysData)
-{
-	return in_irq();
-}
-#endif
-
 #endif

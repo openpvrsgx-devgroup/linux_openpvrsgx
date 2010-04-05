@@ -63,10 +63,9 @@ static enum PVRSRV_ERROR SGXGetBuildInfoKM(struct PVRSRV_SGXDEV_INFO *psDevInfo,
 
 static void SGXCommandComplete(struct PVRSRV_DEVICE_NODE *psDeviceNode)
 {
-	if (OSInLISR(psDeviceNode->psSysData))
-		psDeviceNode->bReProcessDeviceCommandComplete = IMG_TRUE;
-	else
-		SGXScheduleProcessQueuesKM(psDeviceNode);
+	BUG_ON(in_irq());
+
+	SGXScheduleProcessQueuesKM(psDeviceNode);
 }
 
 static u32 DeinitDevInfo(struct PVRSRV_SGXDEV_INFO *psDevInfo)

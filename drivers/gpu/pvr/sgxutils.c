@@ -57,13 +57,8 @@ static void SGXPostActivePowerEvent(struct PVRSRV_DEVICE_NODE *psDeviceNode,
 	writel(l, &psSGXHostCtl->ui32NumActivePowerEvents);
 
 	l = readl(&psSGXHostCtl->ui32PowerStatus);
-	if (l & PVRSRV_USSE_EDM_POWMAN_POWEROFF_RESTART_IMMEDIATE) {
-		if (ui32CallerID == ISR_ID)
-			psDeviceNode->bReProcessDeviceCommandComplete =
-			    IMG_TRUE;
-		else
-			SGXScheduleProcessQueuesKM(psDeviceNode);
-	}
+	if (l & PVRSRV_USSE_EDM_POWMAN_POWEROFF_RESTART_IMMEDIATE)
+		SGXScheduleProcessQueuesKM(psDeviceNode);
 }
 
 void SGXTestActivePowerEvent(struct PVRSRV_DEVICE_NODE *psDeviceNode,

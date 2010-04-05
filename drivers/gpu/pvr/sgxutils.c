@@ -94,12 +94,6 @@ void SGXTestActivePowerEvent(struct PVRSRV_DEVICE_NODE *psDeviceNode,
 					PVRSRV_POWER_STATE_D3);
 	if (eError == PVRSRV_OK)
 		SGXPostActivePowerEvent(psDeviceNode, ui32CallerID);
-	if (eError == PVRSRV_ERROR_RETRY) {
-		l = readl(&psSGXHostCtl->ui32InterruptClearFlags);
-		l &= ~PVRSRV_USSE_EDM_INTERRUPT_ACTIVE_POWER;
-		writel(l, &psSGXHostCtl->ui32InterruptClearFlags);
-		eError = PVRSRV_OK;
-	}
 
 	PDUMPRESUME();
 

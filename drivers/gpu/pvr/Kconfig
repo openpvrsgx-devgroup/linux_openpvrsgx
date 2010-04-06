@@ -1,0 +1,45 @@
+menuconfig PVR
+	tristate "PowerVR Services"
+	depends on OMAP2_DSS
+
+if PVR
+
+choice
+	prompt "Build type"
+	default PVR_RELEASE
+config PVR_RELEASE
+	bool "Release"
+config PVR_DEBUG
+	bool "Debug"
+config PVR_TIMING
+	bool "Timing"
+endchoice
+
+config PVR_DEBUG_PDUMP
+	tristate "PDUMP debug support"
+	depends on PVR
+	default n
+
+config PVR_EDM_DEBUG
+	depends on PVR
+	bool "Enable EDM trace"
+	default n
+	help
+	    EDM trace helps to track down some HW recovery events. You _must_
+	    also enabled EDM (PVRSRV_USSE_EDM_STATUS_DEBUG) in the userland
+	    libraries otherwise the drivers won't start
+
+config PVR_NO_HARDWARE
+	bool
+	default n
+
+config PVR_FORCE_CLOCKS_ON
+	bool "Force clocks on"
+	depends on !PVR_NO_HARDWARE
+	default n
+
+config PVR_EXAMPLES
+	tristate "Example code"
+	default n
+
+endif

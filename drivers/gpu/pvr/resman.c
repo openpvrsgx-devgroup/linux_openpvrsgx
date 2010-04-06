@@ -48,7 +48,7 @@ static DEFINE_SEMAPHORE(lock);
 #define RESMAN_SIGNATURE 0x12345678
 
 struct RESMAN_ITEM {
-#ifdef CONFIG_PVR_DEBUG_EXTRA
+#ifdef CONFIG_PVR_DEBUG
 	u32 ui32Signature;
 #endif
 	struct RESMAN_ITEM **ppsThis;
@@ -64,7 +64,7 @@ struct RESMAN_ITEM {
 };
 
 struct RESMAN_CONTEXT {
-#ifdef CONFIG_PVR_DEBUG_EXTRA
+#ifdef CONFIG_PVR_DEBUG
 	u32 ui32Signature;
 #endif
 	struct RESMAN_CONTEXT **ppsThis;
@@ -144,7 +144,7 @@ enum PVRSRV_ERROR PVRSRVResManConnect(void *hPerProc,
 
 		return eError;
 	}
-#ifdef CONFIG_PVR_DEBUG_EXTRA
+#ifdef CONFIG_PVR_DEBUG
 	psResManContext->ui32Signature = RESMAN_SIGNATURE;
 #endif
 	psResManContext->psResItemList = NULL;
@@ -274,7 +274,7 @@ struct RESMAN_ITEM *ResManRegisterRes(struct RESMAN_CONTEXT *psResManContext,
 		return (struct RESMAN_ITEM *)NULL;
 	}
 
-#ifdef CONFIG_PVR_DEBUG_EXTRA
+#ifdef CONFIG_PVR_DEBUG
 	psNewResItem->ui32Signature = RESMAN_SIGNATURE;
 #endif
 	psNewResItem->ui32ResType = ui32ResType;
@@ -349,7 +349,7 @@ enum PVRSRV_ERROR ResManDissociateRes(struct RESMAN_ITEM *psResItem,
 		PVR_DBG_BREAK;
 		return PVRSRV_ERROR_INVALID_PARAMS;
 	}
-#ifdef CONFIG_PVR_DEBUG_EXTRA
+#ifdef CONFIG_PVR_DEBUG
 	PVR_ASSERT(psResItem->ui32Signature == RESMAN_SIGNATURE);
 #endif
 
@@ -385,7 +385,7 @@ enum PVRSRV_ERROR ResManFindResourceByPtr(
 		PVR_DBG_BREAK;
 		return PVRSRV_ERROR_INVALID_PARAMS;
 	}
-#ifdef CONFIG_PVR_DEBUG_EXTRA
+#ifdef CONFIG_PVR_DEBUG
 	PVR_ASSERT(psItem->ui32Signature == RESMAN_SIGNATURE);
 #endif
 

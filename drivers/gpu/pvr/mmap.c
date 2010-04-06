@@ -118,7 +118,7 @@ static struct KV_OFFSET_STRUCT *CreateOffsetStruct(struct LinuxMemArea
 						   u32 ui32RealByteSize)
 {
 	struct KV_OFFSET_STRUCT *psOffsetStruct;
-#if defined(CONFIG_PVR_DEBUG_EXTRA) || defined(DEBUG_LINUX_MMAP_AREAS)
+#if defined(CONFIG_PVR_DEBUG) || defined(DEBUG_LINUX_MMAP_AREAS)
 	const char *pszName =
 	    LinuxMemAreaTypeToString(LinuxMemAreaRootType(psLinuxMemArea));
 #endif
@@ -714,7 +714,7 @@ unlock_and_return:
 enum PVRSRV_ERROR PVRMMapRegisterArea(struct LinuxMemArea *psLinuxMemArea)
 {
 	enum PVRSRV_ERROR eError = PVRSRV_ERROR_GENERIC;
-#if defined(CONFIG_PVR_DEBUG_EXTRA) || defined(DEBUG_LINUX_MMAP_AREAS)
+#if defined(CONFIG_PVR_DEBUG) || defined(DEBUG_LINUX_MMAP_AREAS)
 	const char *pszName =
 	    LinuxMemAreaTypeToString(LinuxMemAreaRootType(psLinuxMemArea));
 #endif

@@ -199,7 +199,7 @@ static inline IMG_BOOL HandleListIsEmpty(u32 ui32Index,
 	return bIsEmpty;
 }
 
-#ifdef CONFIG_PVR_DEBUG_EXTRA
+#ifdef CONFIG_PVR_DEBUG
 static inline IMG_BOOL NoChildren(struct PVRSRV_HANDLE_BASE *psBase,
 				  struct sHandle *psHandle)
 {

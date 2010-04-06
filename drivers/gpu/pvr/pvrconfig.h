@@ -22,12 +22,11 @@
 # define DEBUG_LINUX_MEM_AREAS		1
 # define DEBUG_LINUX_MMAP_AREAS		1
 # define DEBUG_BRIDGE_KM		1
+#endif
 
 # if (defined CONFIG_PVR_DEBUG_PDUMP) || (defined CONFIG_PVR_DEBUG_PDUMP_MODULE)
 #  define PDUMP				1
 # endif
-
-#endif
 
 #ifdef CONFIG_PVR_EDM_DEBUG
 # define PVRSRV_USSE_EDM_STATUS_DEBUG	1

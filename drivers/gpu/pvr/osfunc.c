@@ -183,8 +183,6 @@ enum PVRSRV_ERROR OSAllocPages(u32 ui32AllocFlags, u32 ui32Size,
 	*ppvCpuVAddr = LinuxMemAreaToCpuVAddr(psLinuxMemArea);
 	*phOSMemHandle = psLinuxMemArea;
 
-	LinuxMemAreaRegister(psLinuxMemArea);
-
 	return PVRSRV_OK;
 }
 
@@ -634,8 +632,6 @@ static enum PVRSRV_ERROR RegisterExternalMem(struct IMG_SYS_PHYADDR *pBasePAddr,
 
 	*phOSMemHandle = (void *) psLinuxMemArea;
 
-	LinuxMemAreaRegister(psLinuxMemArea);
-
 	return PVRSRV_OK;
 }
 
@@ -750,8 +746,6 @@ enum PVRSRV_ERROR OSReservePhys(struct IMG_CPU_PHYADDR BasePAddr,
 
 	*phOSMemHandle = (void *) psLinuxMemArea;
 	*ppvCpuVAddr = LinuxMemAreaToCpuVAddr(psLinuxMemArea);
-
-	LinuxMemAreaRegister(psLinuxMemArea);
 
 	return PVRSRV_OK;
 }

@@ -223,12 +223,6 @@ struct LinuxMemArea *NewSubLinuxMemArea(
 
 void LinuxMemAreaDeepFree(struct LinuxMemArea *psLinuxMemArea);
 
-#if defined(LINUX_MEM_AREAS_DEBUG)
-void LinuxMemAreaRegister(struct LinuxMemArea *psLinuxMemArea);
-#else
-#define LinuxMemAreaRegister(X)
-#endif
-
 void *LinuxMemAreaToCpuVAddr(struct LinuxMemArea *psLinuxMemArea);
 
 struct IMG_CPU_PHYADDR LinuxMemAreaToCpuPAddr(

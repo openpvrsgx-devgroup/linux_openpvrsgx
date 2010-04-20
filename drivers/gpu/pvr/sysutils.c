@@ -457,6 +457,7 @@ static enum PVRSRV_ERROR InitSgxClocks(struct SYS_DATA *psSysData)
 	struct SYS_SPECIFIC_DATA *psSysSpecData = psSysData->pvSysSpecificData;
 	struct clk *psCLK;
 	struct clk *core_ck = NULL;
+	unsigned long rate;
 	int r;
 
 	psCLK = clk_get(NULL, "sgx_fck");
@@ -478,17 +479,18 @@ static enum PVRSRV_ERROR InitSgxClocks(struct SYS_DATA *psSysData)
 	}
 	clk_put(core_ck);
 
-	r = clk_set_rate(psSysSpecData->psSGX_FCK,
-			 sgx_get_max_freq());
+	/* +1 to account for rounding errors */
+	rate = clk_round_rate(psSysSpecData->psSGX_FCK, sgx_get_max_freq() + 1);
+	r = clk_set_rate(psSysSpecData->psSGX_FCK, rate);
 	if (r < 0) {
-		unsigned long rate;
-
 		rate = clk_get_rate(psSysSpecData->psSGX_FCK);
 		rate /= 1000000;
 		pr_warning("error %d when setting SGX fclk to %luMHz, "
 			   "falling back to %luMHz\n",
 			   r, sgx_get_max_freq() / 1000000, rate);
-	}
+	} else {
+		pr_info("SGX clock rate %lu MHz\n", rate / 1000000);
+	};
 
 	RegisterConstraintNotifications(psSysSpecData);
 	return PVRSRV_OK;

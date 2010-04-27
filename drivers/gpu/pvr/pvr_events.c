@@ -66,6 +66,19 @@ ssize_t pvr_read(struct file *filp, char __user *buf, size_t count, loff_t *off)
 	return total;
 }
 
+unsigned int pvr_poll(struct file *filp, struct poll_table_struct *wait)
+{
+	struct PVRSRV_FILE_PRIVATE_DATA *priv = filp->private_data;
+	unsigned int mask = 0;
+
+	poll_wait(filp, &priv->event_wait, wait);
+
+	if (!list_empty(&priv->event_list))
+		mask |= POLLIN | POLLRDNORM;
+
+	return mask;
+}
+
 void pvr_release_events(struct PVRSRV_FILE_PRIVATE_DATA *priv)
 {
 	struct pvr_pending_event *w;

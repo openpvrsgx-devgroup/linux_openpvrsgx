@@ -6,6 +6,7 @@
 #include "private_data.h"
 #include <linux/list.h>
 #include <linux/file.h>
+#include <linux/poll.h>
 
 /*
  * Header for events written back to userspace on the drm fd. The
@@ -33,6 +34,7 @@ void pvr_init_events(void);
 
 ssize_t pvr_read(struct file *filp, char __user *buf, size_t count,
 		loff_t *off);
+unsigned int pvr_poll(struct file *filp, struct poll_table_struct *wait);
 void pvr_release_events(struct PVRSRV_FILE_PRIVATE_DATA *priv);
 
 #endif /* PVR_EVENTS_H */

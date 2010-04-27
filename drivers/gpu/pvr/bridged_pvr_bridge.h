@@ -151,7 +151,8 @@ extern struct PVRSRV_BRIDGE_GLOBAL_STATS g_BridgeGlobalStats;
 
 enum PVRSRV_ERROR CommonBridgeInit(void);
 
-int BridgedDispatchKM(struct PVRSRV_PER_PROCESS_DATA *psPerProc,
-		      struct PVRSRV_BRIDGE_PACKAGE *psBridgePackageKM);
+int BridgedDispatchKM(struct file *filp,
+			struct PVRSRV_PER_PROCESS_DATA *psPerProc,
+			struct PVRSRV_BRIDGE_PACKAGE *psBridgePackageKM);
 
 #endif

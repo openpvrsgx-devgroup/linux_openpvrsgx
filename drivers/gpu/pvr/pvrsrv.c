@@ -33,6 +33,7 @@
 #include "perproc.h"
 #include "pdump_km.h"
 #include "ra.h"
+#include "pvr_events.h"
 
 #include "pvrversion.h"
 enum PVRSRV_ERROR AllocateDeviceID(struct SYS_DATA *psSysData, u32 *pui32DevID)
@@ -803,6 +804,8 @@ void PVRSRVMISR(void *pvSysData)
 		if (hOSEventKM)
 			OSEventObjectSignal(hOSEventKM);
 	}
+
+	pvr_handle_sync_events();
 
 	pvr_unlock();
 }

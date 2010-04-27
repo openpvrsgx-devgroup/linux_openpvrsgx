@@ -112,7 +112,7 @@ int SGXFlushHWRenderTargetBW(u32 ui32BridgeID,
        struct PVRSRV_BRIDGE_RETURN *psRetOUT,
        struct PVRSRV_PER_PROCESS_DATA *psPerProc);
 
-int SGX2DQueryBlitsCompleteBW(u32 ui32BridgeID,
+int SGX2DQueryBlitsCompleteBW(struct file *filp, u32 ui32BridgeID,
        struct PVRSRV_BRIDGE_IN_2DQUERYBLTSCOMPLETE *ps2DQueryBltsCompleteIN,
        struct PVRSRV_BRIDGE_RETURN *psRetOUT,
        struct PVRSRV_PER_PROCESS_DATA *psPerProc);

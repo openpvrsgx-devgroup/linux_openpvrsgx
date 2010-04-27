@@ -2919,7 +2919,7 @@ static int bridged_check_cmd(u32 cmd_id)
 	return 0;
 }
 
-static int bridged_ioctl(u32 cmd, void *in, void *out,
+static int bridged_ioctl(struct file *filp, u32 cmd, void *in, void *out,
 			 struct PVRSRV_PER_PROCESS_DATA *per_proc)
 {
 	int err = -EFAULT;
@@ -3208,7 +3208,7 @@ static int bridged_ioctl(u32 cmd, void *in, void *out,
 		break;
 
 	case PVRSRV_BRIDGE_SGX_2DQUERYBLTSCOMPLETE:
-		err = SGX2DQueryBlitsCompleteBW(cmd, in, out, per_proc);
+		err = SGX2DQueryBlitsCompleteBW(filp, cmd, in, out, per_proc);
 		break;
 
 	case PVRSRV_BRIDGE_SGX_GETMMUPDADDR:
@@ -3290,7 +3290,7 @@ static int bridged_ioctl(u32 cmd, void *in, void *out,
        return err;
 }
 
-int BridgedDispatchKM(struct PVRSRV_PER_PROCESS_DATA *pd,
+int BridgedDispatchKM(struct file *filp, struct PVRSRV_PER_PROCESS_DATA *pd,
 		      struct PVRSRV_BRIDGE_PACKAGE *pkg)
 {
 
@@ -3325,7 +3325,7 @@ int BridgedDispatchKM(struct PVRSRV_PER_PROCESS_DATA *pd,
 		goto return_fault;
 	}
 
-	err = bridged_ioctl(bid, in, out, pd);
+	err = bridged_ioctl(filp, bid, in, out, pd);
 
 	if (err < 0)
 		goto return_fault;

@@ -123,7 +123,7 @@ unlock_and_return:
 }
 #endif
 
-long PVRSRV_BridgeDispatchKM(struct file *file, unsigned int cmd,
+long PVRSRV_BridgeDispatchKM(struct file *filp, unsigned int cmd,
 			     unsigned long arg)
 {
 	u32 ui32BridgeID = PVRSRV_GET_BRIDGE_ID(cmd);
@@ -183,7 +183,7 @@ long PVRSRV_BridgeDispatchKM(struct file *file, unsigned int cmd,
 	sBridgePackageKM.ui32BridgeID = PVRSRV_GET_BRIDGE_ID(
 						sBridgePackageKM.ui32BridgeID);
 
-	err = BridgedDispatchKM(psPerProc, &sBridgePackageKM);
+	err = BridgedDispatchKM(filp, psPerProc, &sBridgePackageKM);
 	if (err != PVRSRV_OK)
 		goto unlock_and_return;
 

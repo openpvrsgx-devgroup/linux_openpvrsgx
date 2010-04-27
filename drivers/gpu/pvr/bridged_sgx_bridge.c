@@ -42,6 +42,7 @@
 #include "bridged_sgx_bridge.h"
 #include "sgxutils.h"
 #include "pdump_km.h"
+#include "pvr_events.h"
 
 int SGXGetClientInfoBW(u32 ui32BridgeID,
 	      struct PVRSRV_BRIDGE_IN_GETCLIENTINFO *psGetClientInfoIN,
@@ -996,7 +997,7 @@ int SGXFlushHWRenderTargetBW(u32 ui32BridgeID,
 	return 0;
 }
 
-int SGX2DQueryBlitsCompleteBW(u32 ui32BridgeID,
+int SGX2DQueryBlitsCompleteBW(struct file *filp, u32 ui32BridgeID,
      struct PVRSRV_BRIDGE_IN_2DQUERYBLTSCOMPLETE *ps2DQueryBltsCompleteIN,
      struct PVRSRV_BRIDGE_RETURN *psRetOUT,
      struct PVRSRV_PER_PROCESS_DATA *psPerProc)
@@ -1025,6 +1026,16 @@ int SGX2DQueryBlitsCompleteBW(u32 ui32BridgeID,
 	psDevInfo =
 	    (struct PVRSRV_SGXDEV_INFO *)((struct PVRSRV_DEVICE_NODE *)
 					  hDevCookieInt)->pvDevice;
+
+	if (ps2DQueryBltsCompleteIN->type == _PVR_SYNC_WAIT_EVENT) {
+		struct PVRSRV_FILE_PRIVATE_DATA *priv = filp->private_data;
+
+		if (pvr_sync_event_req(priv,
+				(struct PVRSRV_KERNEL_SYNC_INFO *)pvSyncInfo))
+			psRetOUT->eError = PVRSRV_ERROR_OUT_OF_MEMORY;
+
+		return 0;
+	}
 
 	psRetOUT->eError =
 	    SGX2DQueryBlitsCompleteKM(psDevInfo,

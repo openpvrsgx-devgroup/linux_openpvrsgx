@@ -52,6 +52,7 @@
 #include "proc.h"
 #include "pvrmodule.h"
 #include "private_data.h"
+#include "pvr_events.h"
 
 #define DRVNAME		"pvrsrvkm"
 
@@ -106,6 +107,8 @@ static int pvr_release(struct inode unref__ * inode, struct file *filp)
 
 	priv = filp->private_data;
 
+	pvr_release_events(priv);
+
 	PVRSRVProcessDisconnect(priv->ui32OpenPID);
 
 	OSFreeMem(PVRSRV_OS_NON_PAGEABLE_HEAP,
@@ -123,6 +126,8 @@ static const struct file_operations pvr_fops = {
 	.open		= pvr_open,
 	.release	= pvr_release,
 	.mmap		= PVRMMap,
+	.poll           = pvr_poll,
+	.read           = pvr_read,
 };
 
 static void pvr_shutdown(struct platform_device *pdev)
@@ -242,6 +247,8 @@ static int __init pvr_init(void)
 	error = platform_driver_register(&pvr_driver);
 	if (error < 0)
 		goto err4;
+
+	pvr_init_events();
 
 	return 0;
 

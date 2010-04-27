@@ -216,11 +216,16 @@ struct PVRSRV_BRIDGE_IN_SGXDEVINITPART2 {
 	struct SGX_BRIDGE_INIT_INFO sInitInfo;
 };
 
+enum pvr_sync_wait_seq_type {
+	_PVR_SYNC_WAIT_BLOCK,
+	_PVR_SYNC_WAIT_NONBLOCK,
+};
+
 struct PVRSRV_BRIDGE_IN_2DQUERYBLTSCOMPLETE {
 	u32 ui32BridgeFlags;
 	void *hDevCookie;
 	void *hKernSyncInfo;
-	IMG_BOOL bWaitForComplete;
+	enum pvr_sync_wait_seq_type type;
 };
 
 #define PVRSRV_BRIDGE_SGX_SHAREDPBDESC_MAX_SUBMEMINFOS 10

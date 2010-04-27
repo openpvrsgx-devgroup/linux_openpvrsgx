@@ -1030,8 +1030,7 @@ int SGX2DQueryBlitsCompleteBW(u32 ui32BridgeID,
 	    SGX2DQueryBlitsCompleteKM(psDevInfo,
 				      (struct PVRSRV_KERNEL_SYNC_INFO *)
 							      pvSyncInfo,
-				      ps2DQueryBltsCompleteIN->
-							      bWaitForComplete);
+			ps2DQueryBltsCompleteIN->type == _PVR_SYNC_WAIT_BLOCK);
 
 	return 0;
 }

@@ -27,9 +27,16 @@
 #ifndef __INCLUDED_PRIVATE_DATA_H_
 #define __INCLUDED_PRIVATE_DATA_H_
 
+#include <linux/wait.h>
+#include <linux/list.h>
+
 struct PVRSRV_FILE_PRIVATE_DATA {
 	u32 ui32OpenPID;
 	void *hBlockAlloc;
+
+	wait_queue_head_t event_wait;
+	struct list_head event_list;
+	int event_space;
 };
 
 #endif

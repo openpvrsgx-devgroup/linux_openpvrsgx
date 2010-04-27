@@ -22,6 +22,31 @@ struct pvr_event {
 	__u32 length;
 };
 
+#define PVR_EVENT_SYNC 0x01
+
+/*
+ * Every buffer used as a render target has a 'PVRSRV_KERNEL_SYNC_INFO'
+ * associated with it. This structure simply contains four counters, number of
+ * pending and completed read and write operations. Counters for pending
+ * operations are modified (incremented) by the kernel driver while the
+ * counters for completed operations are directly updated by the SGX micro
+ * kernel. Once both the read counters and the write counters mutually match,
+ * one has completed a full frame.
+ *
+ * Micro kernel issues interrupts whenever TA or 3D phases are completed. These
+ * interrupts, however, as such do not tell if any particular frame is
+ * completed. It is the responsibility of the kerner driver to determine this.
+ * Hence the core interrupt handler calls 'pvr_handle_sync_events' to check if
+ * one of the monitored render operations are finished. This is accomplished by
+ * examining the before-mentioned counters designated by the pending events.
+ */
+struct pvr_event_sync {
+	struct pvr_event base;
+	const struct PVRSRV_KERNEL_SYNC_INFO *sync_info;
+	__u32 tv_sec;
+	__u32 tv_usec;
+};
+
 /* Event queued up for userspace to read */
 struct pvr_pending_event {
 	struct pvr_event *event;
@@ -30,11 +55,20 @@ struct pvr_pending_event {
 	void (*destroy)(struct pvr_pending_event *event);
 };
 
+struct pvr_pending_sync_event {
+	struct pvr_pending_event base;
+	struct pvr_event_sync event;
+};
+
 void pvr_init_events(void);
 
+int pvr_sync_event_req(struct PVRSRV_FILE_PRIVATE_DATA *priv,
+			const struct PVRSRV_KERNEL_SYNC_INFO *sync_info);
 ssize_t pvr_read(struct file *filp, char __user *buf, size_t count,
 		loff_t *off);
 unsigned int pvr_poll(struct file *filp, struct poll_table_struct *wait);
 void pvr_release_events(struct PVRSRV_FILE_PRIVATE_DATA *priv);
+
+void pvr_handle_sync_events(void);
 
 #endif /* PVR_EVENTS_H */

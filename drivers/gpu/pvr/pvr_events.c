@@ -10,6 +10,63 @@
 #include <linux/fs.h>
 
 static spinlock_t event_lock;
+static struct list_head sync_wait_list;
+
+static inline bool is_render_complete(const struct PVRSRV_SYNC_DATA *sync)
+{
+	return sync->ui32ReadOpsComplete == sync->ui32ReadOpsPending &&
+		sync->ui32WriteOpsComplete == sync->ui32WriteOpsPending;
+}
+
+static void pvr_signal_sync_event(struct pvr_pending_sync_event *e,
+					const struct timeval *now)
+{
+	e->event.tv_sec = now->tv_sec;
+	e->event.tv_usec = now->tv_usec;
+
+	list_add_tail(&e->base.link, &e->base.file_priv->event_list);
+
+	wake_up_interruptible(&e->base.file_priv->event_wait);
+}
+
+int pvr_sync_event_req(struct PVRSRV_FILE_PRIVATE_DATA *priv,
+			const struct PVRSRV_KERNEL_SYNC_INFO *sync_info)
+{
+	struct pvr_pending_sync_event *e;
+	struct timeval now;
+	unsigned long flags;
+
+	e = kzalloc(sizeof(*e), GFP_KERNEL);
+	if (e == NULL)
+		return -ENOMEM;
+
+	e->event.base.type = PVR_EVENT_SYNC;
+	e->event.base.length = sizeof(e->event);
+	e->event.sync_info = sync_info;
+	e->base.event = &e->event.base;
+	e->base.file_priv = priv;
+	e->base.destroy = (void (*)(struct pvr_pending_event *))kfree;
+
+	do_gettimeofday(&now);
+	spin_lock_irqsave(&event_lock, flags);
+
+	if (priv->event_space < sizeof(e->event)) {
+		spin_unlock_irqrestore(&event_lock, flags);
+		kfree(e);
+		return -ENOMEM;
+	}
+
+	priv->event_space -= sizeof(e->event);
+
+	if (is_render_complete(sync_info->psSyncData))
+		pvr_signal_sync_event(e, &now);
+	else
+		list_add_tail(&e->base.link, &sync_wait_list);
+
+	spin_unlock_irqrestore(&event_lock, flags);
+
+	return 0;
+}
 
 static bool pvr_dequeue_event(struct PVRSRV_FILE_PRIVATE_DATA *priv,
 		size_t total, size_t max, struct pvr_pending_event **out)
@@ -79,13 +136,48 @@ unsigned int pvr_poll(struct file *filp, struct poll_table_struct *wait)
 	return mask;
 }
 
+void pvr_handle_sync_events(void)
+{
+	struct pvr_pending_sync_event *e;
+	struct pvr_pending_sync_event *t;
+	struct timeval now;
+	unsigned long flags;
+
+	do_gettimeofday(&now);
+
+	spin_lock_irqsave(&event_lock, flags);
+
+	list_for_each_entry_safe(e, t, &sync_wait_list, base.link) {
+		if (!is_render_complete(e->event.sync_info->psSyncData))
+			continue;
+
+		e->event.tv_sec = now.tv_sec;
+		e->event.tv_usec = now.tv_usec;
+
+		list_move_tail(&e->base.link, &e->base.file_priv->event_list);
+
+		wake_up_interruptible(&e->base.file_priv->event_wait);
+	}
+
+	spin_unlock_irqrestore(&event_lock, flags);
+}
+
 void pvr_release_events(struct PVRSRV_FILE_PRIVATE_DATA *priv)
 {
 	struct pvr_pending_event *w;
 	struct pvr_pending_event *z;
+	struct pvr_pending_sync_event *e;
+	struct pvr_pending_sync_event *t;
 	unsigned long flags;
 
 	spin_lock_irqsave(&event_lock, flags);
+
+	/* Remove pending waits */
+	list_for_each_entry_safe(e, t, &sync_wait_list, base.link)
+		if (e->base.file_priv == priv) {
+			list_del(&e->base.link);
+			e->base.destroy(&e->base);
+		}
 
 	/* Remove unconsumed events */
 	list_for_each_entry_safe(w, z, &priv->event_list, link)
@@ -97,4 +189,5 @@ void pvr_release_events(struct PVRSRV_FILE_PRIVATE_DATA *priv)
 void pvr_init_events(void)
 {
 	spin_lock_init(&event_lock);
+	INIT_LIST_HEAD(&sync_wait_list);
 }

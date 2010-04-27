@@ -1031,7 +1031,8 @@ int SGX2DQueryBlitsCompleteBW(struct file *filp, u32 ui32BridgeID,
 		struct PVRSRV_FILE_PRIVATE_DATA *priv = filp->private_data;
 
 		if (pvr_sync_event_req(priv,
-				(struct PVRSRV_KERNEL_SYNC_INFO *)pvSyncInfo))
+				(struct PVRSRV_KERNEL_SYNC_INFO *)pvSyncInfo,
+				ps2DQueryBltsCompleteIN->user_data))
 			psRetOUT->eError = PVRSRV_ERROR_OUT_OF_MEMORY;
 
 		return 0;

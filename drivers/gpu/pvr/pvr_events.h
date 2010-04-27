@@ -43,6 +43,7 @@ struct pvr_event {
 struct pvr_event_sync {
 	struct pvr_event base;
 	const struct PVRSRV_KERNEL_SYNC_INFO *sync_info;
+	__u64 user_data;
 	__u32 tv_sec;
 	__u32 tv_usec;
 };
@@ -63,7 +64,8 @@ struct pvr_pending_sync_event {
 void pvr_init_events(void);
 
 int pvr_sync_event_req(struct PVRSRV_FILE_PRIVATE_DATA *priv,
-			const struct PVRSRV_KERNEL_SYNC_INFO *sync_info);
+			const struct PVRSRV_KERNEL_SYNC_INFO *sync_info,
+			u64 user_data);
 ssize_t pvr_read(struct file *filp, char __user *buf, size_t count,
 		loff_t *off);
 unsigned int pvr_poll(struct file *filp, struct poll_table_struct *wait);

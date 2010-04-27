@@ -30,7 +30,8 @@ static void pvr_signal_sync_event(struct pvr_pending_sync_event *e,
 }
 
 int pvr_sync_event_req(struct PVRSRV_FILE_PRIVATE_DATA *priv,
-			const struct PVRSRV_KERNEL_SYNC_INFO *sync_info)
+			const struct PVRSRV_KERNEL_SYNC_INFO *sync_info,
+			u64 user_data)
 {
 	struct pvr_pending_sync_event *e;
 	struct timeval now;
@@ -43,6 +44,7 @@ int pvr_sync_event_req(struct PVRSRV_FILE_PRIVATE_DATA *priv,
 	e->event.base.type = PVR_EVENT_SYNC;
 	e->event.base.length = sizeof(e->event);
 	e->event.sync_info = sync_info;
+	e->event.user_data = user_data;
 	e->base.event = &e->event.base;
 	e->base.file_priv = priv;
 	e->base.destroy = (void (*)(struct pvr_pending_event *))kfree;

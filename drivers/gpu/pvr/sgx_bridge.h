@@ -226,6 +226,7 @@ struct PVRSRV_BRIDGE_IN_2DQUERYBLTSCOMPLETE {
 	u32 ui32BridgeFlags;
 	void *hDevCookie;
 	void *hKernSyncInfo;
+	u64 user_data;
 	enum pvr_sync_wait_seq_type type;
 };
 

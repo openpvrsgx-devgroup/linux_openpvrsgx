@@ -483,11 +483,11 @@ static enum PVRSRV_ERROR InitSgxClocks(struct SYS_DATA *psSysData)
 	rate = clk_round_rate(psSysSpecData->psSGX_FCK, sgx_get_max_freq() + 1);
 	r = clk_set_rate(psSysSpecData->psSGX_FCK, rate);
 	if (r < 0) {
-		rate = clk_get_rate(psSysSpecData->psSGX_FCK);
-		rate /= 1000000;
-		pr_warning("error %d when setting SGX fclk to %luMHz, "
-			   "falling back to %luMHz\n",
-			   r, sgx_get_max_freq() / 1000000, rate);
+		unsigned long current_rate;
+
+		current_rate = clk_get_rate(psSysSpecData->psSGX_FCK);
+		pr_warning("error %d when setting SGX fclk to %lu Hz, "
+			   "falling back to %lu Hz\n", r, rate, current_rate);
 	} else {
 		pr_info("SGX clock rate %lu MHz\n", rate / 1000000);
 	};

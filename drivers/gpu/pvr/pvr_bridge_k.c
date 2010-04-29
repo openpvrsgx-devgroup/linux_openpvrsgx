@@ -24,6 +24,8 @@
  *
  ******************************************************************************/
 
+#include <linux/sched.h>
+
 #include "img_defs.h"
 #include "services.h"
 #include "pvr_bridge.h"
@@ -39,7 +41,77 @@
 #include "bridged_pvr_bridge.h"
 
 /* Global driver lock protecting all HW and SW state tracking objects. */
-struct mutex gPVRSRVLock;
+static struct mutex gPVRSRVLock;
+static int pvr_dvfs_active;
+static DECLARE_WAIT_QUEUE_HEAD(pvr_dvfs_wq);
+
+/*
+ * The pvr_dvfs_* interface is needed to suppress a lockdep warning in
+ * the following situation during a clock rate change:
+ * On the CLK_PRE_RATE_CHANGE:
+ * 1. lock A           <- __blocking_notifier_call_chain:nh->rwsem
+ * 2. lock B           <- vdd2_pre_post_func:gPVRSRVLock
+ * 3. unlock A
+ *
+ * On the CLK_POST_RATE_CHANGE/CLK_ABORT_RATE_CHANGE:
+ * 4. lock A
+ * 5. unlock B
+ * 6. unlock A
+ *
+ * The above has an ABA lock pattern which triggers the warning. This can't
+ * lead to a dead lock though since at 3. we always release A, before it's
+ * again acquired at 4. To avoid the warning use a wait queue based approach
+ * so that we can unlock B before 3.
+ */
+void pvr_dvfs_lock(void)
+{
+	mutex_lock(&gPVRSRVLock);
+	pvr_dvfs_active = 1;
+	mutex_unlock(&gPVRSRVLock);
+}
+
+void pvr_dvfs_unlock(void)
+{
+	mutex_lock(&gPVRSRVLock);
+	pvr_dvfs_active = 0;
+	wake_up(&pvr_dvfs_wq);
+	mutex_unlock(&gPVRSRVLock);
+}
+
+static void pvr_dvfs_wait_active(void)
+{
+	while (pvr_dvfs_active) {
+		DEFINE_WAIT(pvr_dvfs_wait);
+		prepare_to_wait(&pvr_dvfs_wq, &pvr_dvfs_wait,
+				TASK_UNINTERRUPTIBLE);
+		mutex_unlock(&gPVRSRVLock);
+		schedule();
+		mutex_lock(&gPVRSRVLock);
+		finish_wait(&pvr_dvfs_wq, &pvr_dvfs_wait);
+	}
+}
+
+void pvr_lock(void)
+{
+	mutex_lock(&gPVRSRVLock);
+	pvr_dvfs_wait_active();
+}
+
+void pvr_unlock(void)
+{
+	mutex_unlock(&gPVRSRVLock);
+}
+
+int pvr_is_locked(void)
+{
+	return mutex_is_locked(&gPVRSRVLock);
+}
+
+void pvr_init_lock(void)
+{
+	mutex_init(&gPVRSRVLock);
+}
+
 
 #if defined(DEBUG_BRIDGE_KM)
 static off_t printLinuxBridgeStats(char *buffer, size_t size, off_t off);

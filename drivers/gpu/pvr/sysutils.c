@@ -144,16 +144,16 @@ static int vdd2_pre_post_func(struct notifier_block *n, unsigned long event,
 		  cnd->rate);
 
 	if (CLK_PRE_RATE_CHANGE == event) {
-		pvr_lock();
+		pvr_dvfs_lock();
 		PVR_TRACE("vdd2_pre_post_func: CLK_PRE_RATE_CHANGE event");
 		vdd2_pre_func(n, event, ptr);
 	} else if (CLK_POST_RATE_CHANGE == event) {
 		PVR_TRACE("vdd2_pre_post_func: CLK_POST_RATE_CHANGE event");
 		vdd2_post_func(n, event, ptr);
-		pvr_unlock();
+		pvr_dvfs_unlock();
 	} else if (CLK_ABORT_RATE_CHANGE == event) {
 		PVR_TRACE("vdd2_pre_post_func: CLK_ABORT_RATE_CHANGE event");
-		pvr_unlock();
+		pvr_dvfs_unlock();
 	} else {
 		printk(KERN_ERR "vdd2_pre_post_func: unexpected event (%lu)\n",
 			event);

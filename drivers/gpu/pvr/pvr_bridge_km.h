@@ -32,27 +32,12 @@
 #include "pvr_bridge.h"
 #include "perproc.h"
 
-extern struct mutex gPVRSRVLock;
-
-static inline void pvr_lock(void)
-{
-	mutex_lock(&gPVRSRVLock);
-}
-
-static inline void pvr_unlock(void)
-{
-	mutex_unlock(&gPVRSRVLock);
-}
-
-static inline int pvr_is_locked(void)
-{
-	return mutex_is_locked(&gPVRSRVLock);
-}
-
-static inline void pvr_init_lock(void)
-{
-	mutex_init(&gPVRSRVLock);
-}
+void pvr_lock(void);
+void pvr_unlock(void);
+int pvr_is_locked(void);
+void pvr_init_lock(void);
+void pvr_dvfs_lock(void);
+void pvr_dvfs_unlock(void);
 
 enum PVRSRV_ERROR LinuxBridgeInit(void);
 void LinuxBridgeDeInit(void);

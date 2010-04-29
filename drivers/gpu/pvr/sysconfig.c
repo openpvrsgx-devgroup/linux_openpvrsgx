@@ -514,8 +514,6 @@ enum PVRSRV_ERROR SysDeinitialise(struct SYS_DATA *psSysData)
 		}
 	}
 
-	sgx_ocp_cleanup();
-
 	if (SYS_SPECIFIC_DATA_TEST
 	    (gpsSysSpecificData, SYS_SPECIFIC_DATA_ENABLE_INITDEV)) {
 		PVR_ASSERT(SYS_SPECIFIC_DATA_TEST
@@ -555,6 +553,8 @@ enum PVRSRV_ERROR SysDeinitialise(struct SYS_DATA *psSysData)
 			return eError;
 		}
 	}
+
+	sgx_ocp_cleanup();
 
 	if (SYS_SPECIFIC_DATA_TEST
 	    (gpsSysSpecificData, SYS_SPECIFIC_DATA_ENABLE_ENVDATA)) {

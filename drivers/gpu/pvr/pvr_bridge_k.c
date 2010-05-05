@@ -44,6 +44,7 @@
 DEFINE_MUTEX(gPVRSRVLock);
 int pvr_dvfs_active;
 DECLARE_WAIT_QUEUE_HEAD(pvr_dvfs_wq);
+int pvr_disabled;
 
 /*
  * The pvr_dvfs_* interface is needed to suppress a lockdep warning in
@@ -172,6 +173,11 @@ long PVRSRV_BridgeDispatchKM(struct file *filp, unsigned int cmd,
 	int err = -EFAULT;
 
 	pvr_lock();
+
+	if (pvr_is_disabled()) {
+		pvr_unlock();
+		return -ENODEV;
+	}
 
 	if (!OSAccessOK(PVR_VERIFY_WRITE, psBridgePackageUM,
 			sizeof(struct PVRSRV_BRIDGE_PACKAGE))) {

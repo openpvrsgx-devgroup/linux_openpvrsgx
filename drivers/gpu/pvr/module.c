@@ -72,6 +72,11 @@ static int pvr_open(struct inode unref__ * inode, struct file *filp)
 
 	pvr_lock();
 
+	if (pvr_is_disabled()) {
+		ret = -ENODEV;
+		goto err_unlock;
+	}
+
 	pid = OSGetCurrentProcessIDKM();
 
 	if (PVRSRVProcessConnect(pid) != PVRSRV_OK)

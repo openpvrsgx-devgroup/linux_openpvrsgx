@@ -788,6 +788,11 @@ void PVRSRVMISR(void *pvSysData)
 
 	pvr_lock();
 
+	if (pvr_is_disabled()) {
+		pvr_unlock();
+		return;
+	}
+
 	psDeviceNode = psSysData->psDeviceNodeList;
 	while (psDeviceNode != NULL) {
 		if (psDeviceNode->pfnDeviceMISR != NULL)

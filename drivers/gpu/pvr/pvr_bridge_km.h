@@ -37,6 +37,7 @@
 extern int pvr_dvfs_active;
 extern struct mutex gPVRSRVLock;
 extern wait_queue_head_t pvr_dvfs_wq;
+extern int pvr_disabled;
 
 void pvr_dvfs_wait_active(void);
 
@@ -70,6 +71,16 @@ static inline void pvr_unlock(void)
 static inline int pvr_is_locked(void)
 {
 	return mutex_is_locked(&gPVRSRVLock);
+}
+
+static inline void pvr_disable(void)
+{
+	pvr_disabled = 1;
+}
+
+static inline int pvr_is_disabled(void)
+{
+	return unlikely(pvr_disabled);
 }
 
 enum PVRSRV_ERROR LinuxBridgeInit(void);

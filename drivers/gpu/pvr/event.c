@@ -254,6 +254,11 @@ enum PVRSRV_ERROR LinuxEventObjectWait(void *hOSEventObject, u32 ui32MSTimeout)
 		    (u32) schedule_timeout((s32) ui32TimeOutJiffies);
 
 		pvr_lock();
+
+		if (pvr_is_disabled()) {
+			ui32TimeOutJiffies = 1;
+			break;
+		}
 #if defined(CONFIG_PVR_DEBUG_EXTRA)
 		psLinuxEventObject->ui32Stats++;
 #endif

@@ -267,8 +267,16 @@ static void sgx_lock_perf(struct work_struct *work)
 	    container_of(d_work, struct ENV_DATA, sPerfWork);
 
 	pvr_lock();
+
+	if (pvr_is_disabled()) {
+		pvr_unlock();
+		return;
+	}
+
 	load = sgx_current_load();
+
 	pvr_unlock();
+
 	if (load) {
 		vdd1 = 500000000;
 		vdd2 = 400000;

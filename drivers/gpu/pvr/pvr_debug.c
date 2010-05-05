@@ -282,6 +282,11 @@ static int pvr_dbg_reset(void *data, u64 val)
 
 	pvr_lock();
 
+	if (pvr_is_disabled()) {
+		r = -ENODEV;
+		goto exit;
+	}
+
 	node = get_sgx_node();
 	if (!node) {
 		r =  -ENODEV;

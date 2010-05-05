@@ -672,6 +672,7 @@ void HWRecoveryResetSGX(struct PVRSRV_DEVICE_NODE *psDeviceNode)
 	struct SGXMKIF_HOST_CTL __iomem *psSGXHostCtl =
 					psDevInfo->psSGXHostCtl;
 	u32 l;
+	int max_retries = 10;
 
 	BUG_ON(!pvr_is_locked());
 
@@ -679,7 +680,7 @@ void HWRecoveryResetSGX(struct PVRSRV_DEVICE_NODE *psDeviceNode)
 	l |= PVRSRV_USSE_EDM_INTERRUPT_HWR;
 	writel(l, &psSGXHostCtl->ui32InterruptClearFlags);
 
-	pr_err("HWRecoveryResetSGX: SGX Hardware Recovery triggered\n");
+	pr_err("%s: SGX Hardware Recovery triggered\n", __func__);
 
 	dump_process_info(psDeviceNode);
 	dump_sgx_registers(psDevInfo);
@@ -689,11 +690,19 @@ void HWRecoveryResetSGX(struct PVRSRV_DEVICE_NODE *psDeviceNode)
 
 	do {
 		eError = SGXInitialise(psDevInfo, IMG_TRUE);
-	} while (eError == PVRSRV_ERROR_RETRY);
-	if (eError != PVRSRV_OK)
-		PVR_DPF(PVR_DBG_ERROR,
-			 "HWRecoveryResetSGX: SGXInitialise failed (%d)",
-			 eError);
+		if (eError != PVRSRV_ERROR_RETRY)
+			break;
+	} while (max_retries--);
+
+	if (eError != PVRSRV_OK) {
+		pr_err("%s: recovery failed (%d). Disabling the driver",
+			__func__, eError);
+		pvr_disable();
+
+		PDUMPRESUME();
+
+		return;
+	}
 
 	PDUMPRESUME();
 
@@ -719,7 +728,8 @@ static void SGXOSTimer(struct work_struct *work)
 	IMG_BOOL bPoweredDown;
 
 	pvr_lock();
-	if (!data->armed) {
+
+	if (!data->armed || pvr_is_disabled()) {
 		pvr_unlock();
 		return;
 	}

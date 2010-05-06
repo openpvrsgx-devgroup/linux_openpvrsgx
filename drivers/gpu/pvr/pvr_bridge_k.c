@@ -41,9 +41,9 @@
 #include "bridged_pvr_bridge.h"
 
 /* Global driver lock protecting all HW and SW state tracking objects. */
-static struct mutex gPVRSRVLock;
-static int pvr_dvfs_active;
-static DECLARE_WAIT_QUEUE_HEAD(pvr_dvfs_wq);
+DEFINE_MUTEX(gPVRSRVLock);
+int pvr_dvfs_active;
+DECLARE_WAIT_QUEUE_HEAD(pvr_dvfs_wq);
 
 /*
  * The pvr_dvfs_* interface is needed to suppress a lockdep warning in
@@ -62,23 +62,10 @@ static DECLARE_WAIT_QUEUE_HEAD(pvr_dvfs_wq);
  * lead to a dead lock though since at 3. we always release A, before it's
  * again acquired at 4. To avoid the warning use a wait queue based approach
  * so that we can unlock B before 3.
+ *
+ * Must be called with gPVRSRVLock held.
  */
-void pvr_dvfs_lock(void)
-{
-	mutex_lock(&gPVRSRVLock);
-	pvr_dvfs_active = 1;
-	mutex_unlock(&gPVRSRVLock);
-}
-
-void pvr_dvfs_unlock(void)
-{
-	mutex_lock(&gPVRSRVLock);
-	pvr_dvfs_active = 0;
-	wake_up(&pvr_dvfs_wq);
-	mutex_unlock(&gPVRSRVLock);
-}
-
-static void pvr_dvfs_wait_active(void)
+void pvr_dvfs_wait_active(void)
 {
 	while (pvr_dvfs_active) {
 		DEFINE_WAIT(pvr_dvfs_wait);
@@ -90,28 +77,6 @@ static void pvr_dvfs_wait_active(void)
 		finish_wait(&pvr_dvfs_wq, &pvr_dvfs_wait);
 	}
 }
-
-void pvr_lock(void)
-{
-	mutex_lock(&gPVRSRVLock);
-	pvr_dvfs_wait_active();
-}
-
-void pvr_unlock(void)
-{
-	mutex_unlock(&gPVRSRVLock);
-}
-
-int pvr_is_locked(void)
-{
-	return mutex_is_locked(&gPVRSRVLock);
-}
-
-void pvr_init_lock(void)
-{
-	mutex_init(&gPVRSRVLock);
-}
-
 
 #if defined(DEBUG_BRIDGE_KM)
 static off_t printLinuxBridgeStats(char *buffer, size_t size, off_t off);

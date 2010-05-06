@@ -225,8 +225,6 @@ static int __init pvr_init(void)
 
 	PVR_TRACE("pvr_init");
 
-	pvr_init_lock();
-
 #ifdef CONFIG_PVR_DEBUG_EXTRA
 	PVRDebugSetLevel(debug);
 #endif

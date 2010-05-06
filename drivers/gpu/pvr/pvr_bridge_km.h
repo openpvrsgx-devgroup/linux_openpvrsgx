@@ -28,16 +28,49 @@
 #define __PVR_BRIDGE_KM_H_
 
 #include <linux/fs.h>			/* for struct file */
+#include <linux/wait.h>
+#include <linux/sched.h>
 
 #include "pvr_bridge.h"
 #include "perproc.h"
 
-void pvr_lock(void);
-void pvr_unlock(void);
-int pvr_is_locked(void);
-void pvr_init_lock(void);
-void pvr_dvfs_lock(void);
-void pvr_dvfs_unlock(void);
+extern int pvr_dvfs_active;
+extern struct mutex gPVRSRVLock;
+extern wait_queue_head_t pvr_dvfs_wq;
+
+void pvr_dvfs_wait_active(void);
+
+static inline void pvr_dvfs_lock(void)
+{
+	mutex_lock(&gPVRSRVLock);
+	pvr_dvfs_active = 1;
+	mutex_unlock(&gPVRSRVLock);
+}
+
+static inline void pvr_dvfs_unlock(void)
+{
+	mutex_lock(&gPVRSRVLock);
+	pvr_dvfs_active = 0;
+	wake_up(&pvr_dvfs_wq);
+	mutex_unlock(&gPVRSRVLock);
+}
+
+static inline void pvr_lock(void)
+{
+	mutex_lock(&gPVRSRVLock);
+	if (pvr_dvfs_active)
+		pvr_dvfs_wait_active();
+}
+
+static inline void pvr_unlock(void)
+{
+	mutex_unlock(&gPVRSRVLock);
+}
+
+static inline int pvr_is_locked(void)
+{
+	return mutex_is_locked(&gPVRSRVLock);
+}
 
 enum PVRSRV_ERROR LinuxBridgeInit(void);
 void LinuxBridgeDeInit(void);

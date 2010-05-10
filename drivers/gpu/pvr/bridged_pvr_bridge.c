@@ -952,7 +952,7 @@ static int PVRSRVWrapExtMemoryBW(u32 ui32BridgeID,
 							       hKernelSyncInfo,
 			       (void *)psMemInfo->psKernelSyncInfo,
 			       PVRSRV_HANDLE_TYPE_SYNC_INFO,
-			       PVRSRV_HANDLE_ALLOC_FLAG_NONE,
+			       PVRSRV_HANDLE_ALLOC_FLAG_MULTI,
 			       psWrapExtMemOUT->sClientMemInfo.hKernelMemInfo);
 
 	COMMIT_HANDLE_BATCH_OR_ERROR(psWrapExtMemOUT->eError, psPerProc);

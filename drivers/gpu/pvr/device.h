@@ -158,6 +158,7 @@ struct PVRSRV_DEVICE_NODE {
 	struct SYS_DATA *psSysData;
 	struct RA_ARENA *psLocalDevMemArena;
 	u32 ui32Flags;
+	struct HASH_TABLE *sync_table;
 	struct PVRSRV_DEVICE_NODE *psNext;
 };
 

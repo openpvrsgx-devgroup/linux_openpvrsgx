@@ -425,6 +425,66 @@ enum PVRSRV_ERROR PVRSRVFreeSyncInfoKM(
 	return PVRSRV_OK;
 }
 
+static inline
+void get_syncinfo(struct PVRSRV_KERNEL_SYNC_INFO *syncinfo)
+{
+	syncinfo->refcount++;
+}
+
+static inline
+void put_syncinfo(struct PVRSRV_KERNEL_SYNC_INFO *syncinfo)
+{
+	struct PVRSRV_DEVICE_NODE *dev = syncinfo->dev_cookie;
+
+	syncinfo->refcount--;
+
+	if (!syncinfo->refcount) {
+		HASH_Remove(dev->sync_table,
+			    syncinfo->phys_addr.uiAddr);
+		PVRSRVFreeSyncInfoKM(syncinfo);
+	}
+}
+
+static inline
+enum PVRSRV_ERROR alloc_or_reuse_syncinfo(void *dev_cookie,
+		    void *mem_context_handle,
+		    struct PVRSRV_KERNEL_SYNC_INFO **syncinfo,
+		    struct IMG_SYS_PHYADDR *phys_addr)
+{
+	enum PVRSRV_ERROR error;
+	struct PVRSRV_DEVICE_NODE *dev;
+
+	dev = (struct PVRSRV_DEVICE_NODE *) dev_cookie;
+
+	*syncinfo = (struct PVRSRV_KERNEL_SYNC_INFO *)
+					HASH_Retrieve(dev->sync_table,
+						      phys_addr->uiAddr);
+
+	if (!*syncinfo) {
+		/* Dont' have one so create one */
+		error = PVRSRVAllocSyncInfoKM(dev_cookie, mem_context_handle,
+					       syncinfo);
+
+		if (error != PVRSRV_OK)
+			return error;
+
+		/* Setup our extra data */
+		(*syncinfo)->phys_addr.uiAddr = phys_addr->uiAddr;
+		(*syncinfo)->dev_cookie = dev_cookie;
+		(*syncinfo)->refcount = 1;
+
+		if (!HASH_Insert(dev->sync_table, phys_addr->uiAddr,
+			    (u32) *syncinfo)) {
+			PVR_DPF(PVR_DBG_ERROR, "alloc_or_reuse_syncinfo: "
+				"Failed to add syncobject to hash table");
+			return PVRSRV_ERROR_GENERIC;
+		}
+	} else
+		get_syncinfo(*syncinfo);
+
+	return PVRSRV_OK;
+}
+
 static enum PVRSRV_ERROR FreeDeviceMemCallBack(void *pvParam, u32 ui32Param)
 {
 	enum PVRSRV_ERROR eError = PVRSRV_OK;
@@ -601,7 +661,7 @@ static enum PVRSRV_ERROR UnwrapExtMemoryCallBack(void *pvParam, u32 ui32Param)
 	hOSWrapMem = psMemInfo->sMemBlk.hOSWrapMem;
 
 	if (psMemInfo->psKernelSyncInfo)
-		eError = PVRSRVFreeSyncInfoKM(psMemInfo->psKernelSyncInfo);
+		put_syncinfo(psMemInfo->psKernelSyncInfo);
 
 	if (psMemInfo->sMemBlk.psIntSysPAddr) {
 		int page_count;
@@ -754,9 +814,10 @@ enum PVRSRV_ERROR PVRSRVWrapExtMemoryKM(void *hDevCookie,
 
 	psBMHeap = (struct BM_HEAP *)hDevMemHeap;
 	hDevMemContext = (void *) psBMHeap->pBMContext;
-	eError = PVRSRVAllocSyncInfoKM(hDevCookie,
-				       hDevMemContext,
-					       &psMemInfo->psKernelSyncInfo);
+	eError = alloc_or_reuse_syncinfo(hDevCookie,
+					 hDevMemContext,
+					 &psMemInfo->psKernelSyncInfo,
+					 psExtSysPAddr);
 	if (eError != PVRSRV_OK)
 		goto ErrorExitPhase4;
 

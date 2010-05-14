@@ -36,6 +36,8 @@
 #include "pvr_events.h"
 
 #include "pvrversion.h"
+
+#define HASH_TAB_INIT_SIZE	32
 enum PVRSRV_ERROR AllocateDeviceID(struct SYS_DATA *psSysData, u32 *pui32DevID)
 {
 	struct SYS_DEVICE_ID *psDeviceWalker;
@@ -287,6 +289,14 @@ FoundDevice:
 		}
 	}
 
+	psDeviceNode->sync_table = HASH_Create(HASH_TAB_INIT_SIZE);
+	if (psDeviceNode->sync_table == NULL) {
+		PVR_DPF(PVR_DBG_ERROR, "InitDevInfo: "
+				"Couldn't create syncobject hash table");
+		eError = PVRSRV_ERROR_GENERIC;
+		return eError;
+	}
+
 	return PVRSRV_OK;
 }
 
@@ -445,6 +455,8 @@ FoundDevice:
 				"Failed PVRSRVSetDevicePowerStateKM call");
 		return eError;
 	}
+
+	HASH_Delete(psDeviceNode->sync_table);
 
 	ResManFreeResByCriteria(psDeviceNode->hResManContext,
 					 RESMAN_CRITERIA_RESTYPE,

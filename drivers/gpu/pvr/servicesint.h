@@ -55,6 +55,14 @@ struct PVRSRV_KERNEL_SYNC_INFO {
 	struct IMG_DEV_VIRTADDR sWriteOpsCompleteDevVAddr;
 	struct IMG_DEV_VIRTADDR sReadOpsCompleteDevVAddr;
 	struct PVRSRV_KERNEL_MEM_INFO *psSyncDataMemInfoKM;
+
+	/*
+	 * This stores the physical address of the buffer that
+	 * this syncobject manages (if provided)
+	 */
+	struct IMG_SYS_PHYADDR phys_addr;
+	void *dev_cookie;
+	u32 refcount;
 };
 
 struct PVRSRV_DEVICE_SYNC_OBJECT {

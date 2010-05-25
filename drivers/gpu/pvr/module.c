@@ -276,6 +276,8 @@ static void __exit pvr_cleanup(void)
 
 	SysAcquireData(&sysdata);
 
+	pvr_exit_events();
+
 	platform_driver_unregister(&pvr_driver);
 
 	PVRMMapCleanup();

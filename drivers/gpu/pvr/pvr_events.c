@@ -8,10 +8,14 @@
 #include <linux/time.h>
 #include <linux/uaccess.h>
 #include <linux/fs.h>
+#include <linux/notifier.h>
+
+#include <plat/display.h>
 
 static spinlock_t event_lock;
 static struct list_head sync_wait_list;
 static struct list_head flip_wait_list;
+static struct notifier_block dss_nb;
 
 static inline bool is_render_complete(const struct PVRSRV_SYNC_DATA *sync)
 {
@@ -112,11 +116,10 @@ int pvr_flip_event_req(struct PVRSRV_FILE_PRIVATE_DATA *priv,
 	priv->event_space -= sizeof(e->event);
 
 	list_add_tail(&e->base.link, &flip_wait_list);
-	pvr_signal_flip_event(e, &now);
 
 	spin_unlock_irqrestore(&event_lock, flags);
 
-	return 0;
+	return omap_dss_request_notify(OMAP_DSS_NOTIFY_GO_OVL, overlay);
 }
 
 static bool pvr_dequeue_event(struct PVRSRV_FILE_PRIVATE_DATA *priv,
@@ -208,6 +211,34 @@ void pvr_handle_sync_events(void)
 	spin_unlock_irqrestore(&event_lock, flags);
 }
 
+static int dss_notifier_callback(struct notifier_block *nb,
+				 unsigned long event, void *data)
+{
+	struct pvr_pending_flip_event *e;
+	struct pvr_pending_flip_event *t;
+	struct timeval now;
+	unsigned long flags;
+	long overlay = (long) data;
+
+	if (event != OMAP_DSS_NOTIFY_GO_OVL)
+		return 0;
+
+	do_gettimeofday(&now);
+
+	spin_lock_irqsave(&event_lock, flags);
+
+	list_for_each_entry_safe(e, t, &flip_wait_list, base.link) {
+		if (e->event.overlay != overlay)
+			continue;
+
+		pvr_signal_flip_event(e, &now);
+	}
+
+	spin_unlock_irqrestore(&event_lock, flags);
+
+	return 0;
+}
+
 void pvr_release_events(struct PVRSRV_FILE_PRIVATE_DATA *priv)
 {
 	struct pvr_pending_event *w;
@@ -245,4 +276,12 @@ void pvr_init_events(void)
 	spin_lock_init(&event_lock);
 	INIT_LIST_HEAD(&sync_wait_list);
 	INIT_LIST_HEAD(&flip_wait_list);
+
+	dss_nb.notifier_call = dss_notifier_callback;
+	omap_dss_register_notifier(&dss_nb);
+}
+
+void pvr_exit_events(void)
+{
+	omap_dss_unregister_notifier(&dss_nb);
 }

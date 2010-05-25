@@ -76,6 +76,7 @@ struct pvr_pending_flip_event {
 };
 
 void pvr_init_events(void);
+void pvr_exit_events(void);
 
 int pvr_sync_event_req(struct PVRSRV_FILE_PRIVATE_DATA *priv,
 			const struct PVRSRV_KERNEL_SYNC_INFO *sync_info,

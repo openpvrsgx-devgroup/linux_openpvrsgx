@@ -11,6 +11,7 @@
 
 static spinlock_t event_lock;
 static struct list_head sync_wait_list;
+static struct list_head flip_wait_list;
 
 static inline bool is_render_complete(const struct PVRSRV_SYNC_DATA *sync)
 {
@@ -64,6 +65,55 @@ int pvr_sync_event_req(struct PVRSRV_FILE_PRIVATE_DATA *priv,
 		pvr_signal_sync_event(e, &now);
 	else
 		list_add_tail(&e->base.link, &sync_wait_list);
+
+	spin_unlock_irqrestore(&event_lock, flags);
+
+	return 0;
+}
+
+static void pvr_signal_flip_event(struct pvr_pending_flip_event *e,
+					const struct timeval *now)
+{
+	e->event.tv_sec = now->tv_sec;
+	e->event.tv_usec = now->tv_usec;
+
+	list_move_tail(&e->base.link, &e->base.file_priv->event_list);
+
+	wake_up_interruptible(&e->base.file_priv->event_wait);
+}
+
+int pvr_flip_event_req(struct PVRSRV_FILE_PRIVATE_DATA *priv,
+			 unsigned int overlay, u64 user_data)
+{
+	struct pvr_pending_flip_event *e;
+	struct timeval now;
+	unsigned long flags;
+
+	e = kzalloc(sizeof(*e), GFP_KERNEL);
+	if (e == NULL)
+		return -ENOMEM;
+
+	e->event.base.type = PVR_EVENT_FLIP;
+	e->event.base.length = sizeof(e->event);
+	e->base.event = &e->event.base;
+	e->event.overlay = overlay;
+	e->event.user_data = user_data;
+	e->base.file_priv = priv;
+	e->base.destroy = (void (*)(struct pvr_pending_event *))kfree;
+
+	do_gettimeofday(&now);
+	spin_lock_irqsave(&event_lock, flags);
+
+	if (priv->event_space < sizeof(e->event)) {
+		spin_unlock_irqrestore(&event_lock, flags);
+		kfree(e);
+		return -ENOMEM;
+	}
+
+	priv->event_space -= sizeof(e->event);
+
+	list_add_tail(&e->base.link, &flip_wait_list);
+	pvr_signal_flip_event(e, &now);
 
 	spin_unlock_irqrestore(&event_lock, flags);
 
@@ -170,6 +220,8 @@ void pvr_release_events(struct PVRSRV_FILE_PRIVATE_DATA *priv)
 	struct pvr_pending_event *z;
 	struct pvr_pending_sync_event *e;
 	struct pvr_pending_sync_event *t;
+	struct pvr_pending_flip_event *e2;
+	struct pvr_pending_flip_event *t2;
 	unsigned long flags;
 
 	spin_lock_irqsave(&event_lock, flags);
@@ -179,6 +231,12 @@ void pvr_release_events(struct PVRSRV_FILE_PRIVATE_DATA *priv)
 		if (e->base.file_priv == priv) {
 			list_del(&e->base.link);
 			e->base.destroy(&e->base);
+		}
+
+	list_for_each_entry_safe(e2, t2, &flip_wait_list, base.link)
+		if (e2->base.file_priv == priv) {
+			list_del(&e2->base.link);
+			e2->base.destroy(&e2->base);
 		}
 
 	/* Remove unconsumed events */
@@ -192,4 +250,5 @@ void pvr_init_events(void)
 {
 	spin_lock_init(&event_lock);
 	INIT_LIST_HEAD(&sync_wait_list);
+	INIT_LIST_HEAD(&flip_wait_list);
 }

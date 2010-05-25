@@ -1005,6 +1005,7 @@ int SGX2DQueryBlitsCompleteBW(struct file *filp, u32 ui32BridgeID,
 	void *hDevCookieInt;
 	void *pvSyncInfo;
 	struct PVRSRV_SGXDEV_INFO *psDevInfo;
+	struct PVRSRV_FILE_PRIVATE_DATA *priv = filp->private_data;
 
 	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID,
 				 PVRSRV_BRIDGE_SGX_2DQUERYBLTSCOMPLETE);
@@ -1015,6 +1016,16 @@ int SGX2DQueryBlitsCompleteBW(struct file *filp, u32 ui32BridgeID,
 			       PVRSRV_HANDLE_TYPE_DEV_NODE);
 	if (psRetOUT->eError != PVRSRV_OK)
 		return 0;
+
+	if (ps2DQueryBltsCompleteIN->type == _PVR_SYNC_WAIT_FLIP) {
+		if (pvr_flip_event_req(priv,
+				       (long)ps2DQueryBltsCompleteIN->
+						       hKernSyncInfo,
+				       ps2DQueryBltsCompleteIN->user_data))
+			psRetOUT->eError = PVRSRV_ERROR_OUT_OF_MEMORY;
+
+		return 0;
+	}
 
 	psRetOUT->eError =
 	    PVRSRVLookupHandle(psPerProc->psHandleBase, &pvSyncInfo,
@@ -1028,8 +1039,6 @@ int SGX2DQueryBlitsCompleteBW(struct file *filp, u32 ui32BridgeID,
 					  hDevCookieInt)->pvDevice;
 
 	if (ps2DQueryBltsCompleteIN->type == _PVR_SYNC_WAIT_EVENT) {
-		struct PVRSRV_FILE_PRIVATE_DATA *priv = filp->private_data;
-
 		if (pvr_sync_event_req(priv,
 				(struct PVRSRV_KERNEL_SYNC_INFO *)pvSyncInfo,
 				ps2DQueryBltsCompleteIN->user_data))

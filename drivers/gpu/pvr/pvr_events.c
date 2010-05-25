@@ -25,7 +25,7 @@ static void pvr_signal_sync_event(struct pvr_pending_sync_event *e,
 	e->event.tv_sec = now->tv_sec;
 	e->event.tv_usec = now->tv_usec;
 
-	list_add_tail(&e->base.link, &e->base.file_priv->event_list);
+	list_move_tail(&e->base.link, &e->base.file_priv->event_list);
 
 	wake_up_interruptible(&e->base.file_priv->event_wait);
 }
@@ -61,10 +61,9 @@ int pvr_sync_event_req(struct PVRSRV_FILE_PRIVATE_DATA *priv,
 
 	priv->event_space -= sizeof(e->event);
 
+	list_add_tail(&e->base.link, &sync_wait_list);
 	if (is_render_complete(sync_info->psSyncData))
 		pvr_signal_sync_event(e, &now);
-	else
-		list_add_tail(&e->base.link, &sync_wait_list);
 
 	spin_unlock_irqrestore(&event_lock, flags);
 
@@ -203,12 +202,7 @@ void pvr_handle_sync_events(void)
 		if (!is_render_complete(e->event.sync_info->psSyncData))
 			continue;
 
-		e->event.tv_sec = now.tv_sec;
-		e->event.tv_usec = now.tv_usec;
-
-		list_move_tail(&e->base.link, &e->base.file_priv->event_list);
-
-		wake_up_interruptible(&e->base.file_priv->event_wait);
+		pvr_signal_sync_event(e, &now);
 	}
 
 	spin_unlock_irqrestore(&event_lock, flags);

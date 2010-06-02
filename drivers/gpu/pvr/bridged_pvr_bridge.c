@@ -667,8 +667,7 @@ static int FlushCacheDRI(u32 ui32Type, u32 ui32Virt, u32 ui32Length)
 			 "DRM_PVR2D_CFLUSH_FROM_GPU 0x%08x, length 0x%08x\n",
 			 ui32Virt, ui32Length);
 #ifdef CONFIG_ARM
-		dmac_inv_range((const void *)ui32Virt,
-			       (const void *)(ui32Virt + ui32Length));
+		dmac_map_area((const void *)ui32Virt, ui32Length, DMA_FROM_DEVICE);
 #endif
 		return 0;
 	case DRM_PVR2D_CFLUSH_TO_GPU:
@@ -676,8 +675,7 @@ static int FlushCacheDRI(u32 ui32Type, u32 ui32Virt, u32 ui32Length)
 			 "DRM_PVR2D_CFLUSH_TO_GPU 0x%08x, length 0x%08x\n",
 			 ui32Virt, ui32Length);
 #ifdef CONFIG_ARM
-		dmac_clean_range((const void *)ui32Virt,
-				 (const void *)(ui32Virt + ui32Length));
+		dmac_map_area((const void *)ui32Virt, ui32Length, DMA_TO_DEVICE);
 #endif
 		return 0;
 	default:

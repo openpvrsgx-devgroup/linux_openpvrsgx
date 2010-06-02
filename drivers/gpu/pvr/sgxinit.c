@@ -28,6 +28,7 @@
 
 #include <linux/workqueue.h>
 #include <linux/io.h>
+#include <linux/slab.h>
 
 #include "sgxdefs.h"
 #include "sgxmmu.h"

@@ -33,7 +33,7 @@
 #include "services_headers.h"
 #include "resman.h"
 
-static DECLARE_MUTEX(lock);
+static DEFINE_SEMAPHORE(lock);
 
 #define ACQUIRE_SYNC_OBJ  do {						   \
 		if (in_interrupt()) {					   \

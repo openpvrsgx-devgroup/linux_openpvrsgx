@@ -75,28 +75,11 @@ static int FrameBufferEvents(struct notifier_block *psNotif,
 	return 0;
 }
 
-static enum PVRSRV_ERROR UnblankDisplay(struct OMAPLFB_DEVINFO *psDevInfo)
-{
-	int res;
-
-	acquire_console_sem();
-	res = fb_blank(psDevInfo->psLINFBInfo, 0);
-	release_console_sem();
-	if (res != 0) {
-		printk(KERN_WARNING DRIVER_PREFIX
-		       ": fb_blank failed (%d)", res);
-		return PVRSRV_ERROR_GENERIC;
-	}
-
-	return PVRSRV_OK;
-}
-
 static enum PVRSRV_ERROR EnableLFBEventNotification(struct OMAPLFB_DEVINFO
 								   *psDevInfo)
 {
 	int res;
 	struct OMAPLFB_SWAPCHAIN *psSwapChain = psDevInfo->psSwapChain;
-	enum PVRSRV_ERROR eError;
 
 	memset(&psDevInfo->sLINNotifBlock, 0,
 	       sizeof(psDevInfo->sLINNotifBlock));
@@ -111,13 +94,6 @@ static enum PVRSRV_ERROR EnableLFBEventNotification(struct OMAPLFB_DEVINFO
 		       ": fb_register_client failed (%d)", res);
 
 		return PVRSRV_ERROR_GENERIC;
-	}
-
-	eError = UnblankDisplay(psDevInfo);
-	if (eError != PVRSRV_OK) {
-		DEBUG_PRINTK((KERN_WARNING DRIVER_PREFIX
-			      ": UnblankDisplay failed (%d)", eError));
-		return eError;
 	}
 
 	return PVRSRV_OK;
@@ -142,20 +118,12 @@ static enum PVRSRV_ERROR OpenDCDevice(u32 ui32DeviceID, void **phDevice,
 				struct PVRSRV_SYNC_DATA *psSystemBufferSyncData)
 {
 	struct OMAPLFB_DEVINFO *psDevInfo;
-	enum PVRSRV_ERROR eError;
 
 	PVR_UNREFERENCED_PARAMETER(ui32DeviceID);
 
 	psDevInfo = GetAnchorPtr();
 
 	psDevInfo->sSystemBuffer.psSyncData = psSystemBufferSyncData;
-
-	eError = UnblankDisplay(psDevInfo);
-	if (eError != PVRSRV_OK) {
-		DEBUG_PRINTK((KERN_WARNING DRIVER_PREFIX
-			      ": UnblankDisplay failed (%d)", eError));
-		return eError;
-	}
 
 	*phDevice = (void *) psDevInfo;
 

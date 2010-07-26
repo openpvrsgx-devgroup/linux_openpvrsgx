@@ -34,33 +34,14 @@
 #include "pvr_bridge.h"
 #include "perproc.h"
 
-extern int pvr_dvfs_active;
+extern void pvr_dvfs_lock(void);
+extern void pvr_dvfs_unlock(void);
 extern struct mutex gPVRSRVLock;
-extern wait_queue_head_t pvr_dvfs_wq;
 extern int pvr_disabled;
-
-void pvr_dvfs_wait_active(void);
-
-static inline void pvr_dvfs_lock(void)
-{
-	mutex_lock(&gPVRSRVLock);
-	pvr_dvfs_active = 1;
-	mutex_unlock(&gPVRSRVLock);
-}
-
-static inline void pvr_dvfs_unlock(void)
-{
-	mutex_lock(&gPVRSRVLock);
-	pvr_dvfs_active = 0;
-	wake_up(&pvr_dvfs_wq);
-	mutex_unlock(&gPVRSRVLock);
-}
 
 static inline void pvr_lock(void)
 {
 	mutex_lock(&gPVRSRVLock);
-	if (pvr_dvfs_active)
-		pvr_dvfs_wait_active();
 }
 
 static inline void pvr_unlock(void)

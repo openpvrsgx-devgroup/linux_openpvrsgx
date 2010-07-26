@@ -42,8 +42,8 @@
 
 /* Global driver lock protecting all HW and SW state tracking objects. */
 DEFINE_MUTEX(gPVRSRVLock);
-int pvr_dvfs_active;
-DECLARE_WAIT_QUEUE_HEAD(pvr_dvfs_wq);
+static int pvr_dvfs_active;
+static DECLARE_WAIT_QUEUE_HEAD(pvr_dvfs_wq);
 int pvr_disabled;
 
 /*
@@ -63,20 +63,24 @@ int pvr_disabled;
  * lead to a dead lock though since at 3. we always release A, before it's
  * again acquired at 4. To avoid the warning use a wait queue based approach
  * so that we can unlock B before 3.
- *
- * Must be called with gPVRSRVLock held.
  */
-void pvr_dvfs_wait_active(void)
+void pvr_dvfs_lock(void)
 {
-	while (pvr_dvfs_active) {
+	while (cmpxchg(&pvr_dvfs_active, 0, 1)) {
 		DEFINE_WAIT(pvr_dvfs_wait);
 		prepare_to_wait(&pvr_dvfs_wq, &pvr_dvfs_wait,
 				TASK_UNINTERRUPTIBLE);
-		mutex_unlock(&gPVRSRVLock);
-		schedule();
-		mutex_lock(&gPVRSRVLock);
+		if (pvr_dvfs_active)
+			schedule();
 		finish_wait(&pvr_dvfs_wq, &pvr_dvfs_wait);
 	}
+}
+
+void pvr_dvfs_unlock(void)
+{
+	BUG_ON(!pvr_dvfs_active);
+	pvr_dvfs_active = 0;
+	wake_up(&pvr_dvfs_wq);
 }
 
 #if defined(DEBUG_BRIDGE_KM)

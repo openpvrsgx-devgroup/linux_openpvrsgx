@@ -452,9 +452,11 @@ enum PVRSRV_ERROR DevInitSGXPart2KM(struct PVRSRV_PER_PROCESS_DATA *psPerProc,
 
 	PVR_ASSERT(psDeviceNode->pfnDeviceISR == SGX_ISRHandler);
 
+	pvr_dvfs_lock();
 	l = readl(&psDevInfo->psSGXHostCtl->ui32PowerStatus);
 	l |= PVRSRV_USSE_EDM_POWMAN_NO_WORK;
 	writel(l, &psDevInfo->psSGXHostCtl->ui32PowerStatus);
+	pvr_dvfs_unlock();
 	eDefaultPowerState = PVRSRV_POWER_STATE_D3;
 
 	eError = PVRSRVRegisterPowerDevice(psDeviceNode->sDevId.ui32DeviceIndex,
@@ -676,6 +678,7 @@ void HWRecoveryResetSGX(struct PVRSRV_DEVICE_NODE *psDeviceNode)
 
 	BUG_ON(!pvr_is_locked());
 
+	pvr_dvfs_lock();
 	l = readl(&psSGXHostCtl->ui32InterruptClearFlags);
 	l |= PVRSRV_USSE_EDM_INTERRUPT_HWR;
 	writel(l, &psSGXHostCtl->ui32InterruptClearFlags);
@@ -700,6 +703,7 @@ void HWRecoveryResetSGX(struct PVRSRV_DEVICE_NODE *psDeviceNode)
 		pvr_disable();
 
 		PDUMPRESUME();
+		pvr_dvfs_unlock();
 
 		return;
 	}
@@ -707,6 +711,8 @@ void HWRecoveryResetSGX(struct PVRSRV_DEVICE_NODE *psDeviceNode)
 	PDUMPRESUME();
 
 	SGXScheduleProcessQueues(psDeviceNode);
+
+	pvr_dvfs_unlock();
 
 	PVRSRVProcessQueues(IMG_TRUE);
 }
@@ -745,6 +751,7 @@ static void SGXOSTimer(struct work_struct *work)
 	if (bPoweredDown) {
 		ui32LockupCounter = 0;
 	} else {
+		pvr_dvfs_lock();
 		ui32CurrentEDMTasks = OSReadHWReg(psDevInfo->pvRegsBaseKM,
 						psDevInfo->ui32EDMTaskReg0);
 		if (psDevInfo->ui32EDMTaskReg1 != 0)
@@ -767,6 +774,7 @@ static void SGXOSTimer(struct work_struct *work)
 			ui32EDMTasks = ui32CurrentEDMTasks;
 			ui32NumResets = psDevInfo->ui32NumResets;
 		}
+		pvr_dvfs_unlock();
 	}
 
 	bLockup |= cmpxchg(&sgx_reset_forced, 1, 0);
@@ -776,9 +784,11 @@ static void SGXOSTimer(struct work_struct *work)
 						psDevInfo->psSGXHostCtl;
 		u32 l;
 
+		pvr_dvfs_lock();
 		l = readl(&psSGXHostCtl->ui32HostDetectedLockups);
 		l++;
 		writel(l, &psSGXHostCtl->ui32HostDetectedLockups);
+		pvr_dvfs_unlock();
 
 		HWRecoveryResetSGX(psDeviceNode);
 	}
@@ -906,6 +916,9 @@ static void SGX_MISRHandler(void *pvData)
 	enum PVRSRV_ERROR err;
 
 	dev_idx = psDeviceNode->sDevId.ui32DeviceIndex;
+
+	pvr_dvfs_lock();
+
 	err = PVRSRVSetDevicePowerStateKM(dev_idx, PVRSRV_POWER_STATE_D0);
 	BUG_ON(err != PVRSRV_OK);
 
@@ -919,6 +932,8 @@ static void SGX_MISRHandler(void *pvData)
 		SGXScheduleProcessQueues(psDeviceNode);
 
 	SGXTestActivePowerEvent(psDeviceNode);
+
+	pvr_dvfs_unlock();
 }
 
 enum PVRSRV_ERROR SGXRegisterDevice(struct PVRSRV_DEVICE_NODE *psDeviceNode)
@@ -1394,6 +1409,7 @@ enum PVRSRV_ERROR SGXGetMiscInfoKM(struct PVRSRV_SGXDEV_INFO *psDevInfo,
 				return PVRSRV_ERROR_INVALID_PARAMS;
 			}
 
+			pvr_dvfs_lock();
 			ui32MatchingFlags = readl(&psDevInfo->
 						 psSGXHostCtl->ui32HWPerfFlags);
 			ui32MatchingFlags &=
@@ -1411,6 +1427,7 @@ enum PVRSRV_ERROR SGXGetMiscInfoKM(struct PVRSRV_SGXDEV_INFO *psDevInfo,
 
 			writel(psMiscInfo->uData.ui32NewHWPerfStatus,
 				&psDevInfo->psSGXHostCtl->ui32HWPerfFlags);
+			pvr_dvfs_unlock();
 #if defined(PDUMP)
 			PDUMPCOMMENTWITHFLAGS(PDUMP_FLAGS_CONTINUOUS,
 					      "SGX ukernel HWPerf status %u\n",
@@ -1437,15 +1454,19 @@ enum PVRSRV_ERROR SGXGetMiscInfoKM(struct PVRSRV_SGXDEV_INFO *psDevInfo,
 
 			psHWPerfCB->ui32OrdinalGRAPHICS = 0xffffffffUL;
 
+			pvr_dvfs_lock();;
 			l = readl(&psDevInfo->psSGXHostCtl->ui32HWPerfFlags);
 			l |= PVRSRV_SGX_HWPERF_GRAPHICS_ON;
 			writel(l, &psDevInfo->psSGXHostCtl->ui32HWPerfFlags);
+			pvr_dvfs_unlock();
 
 			return PVRSRV_OK;
 		}
 	case SGX_MISC_INFO_REQUEST_HWPERF_CB_OFF:
 		{
+			pvr_dvfs_lock();
 			writel(0, &psDevInfo->psSGXHostCtl->ui32HWPerfFlags);
+			pvr_dvfs_unlock();
 
 			return PVRSRV_OK;
 		}
@@ -1529,6 +1550,8 @@ enum PVRSRV_ERROR SGXReadDiffCountersKM(void *hDevHandle, u32 ui32Reg,
 
 	*pbActive = bPowered;
 
+	pvr_dvfs_lock();
+
 	{
 		struct PVRSRV_SGXDEV_DIFF_INFO sNew,
 					       *psPrev = &psDevInfo->sDiffInfo;
@@ -1596,6 +1619,8 @@ enum PVRSRV_ERROR SGXReadDiffCountersKM(void *hDevHandle, u32 ui32Reg,
 	}
 
 	SGXTestActivePowerEvent(psDeviceNode);
+
+	pvr_dvfs_unlock();
 
 	return PVRSRV_OK;
 }

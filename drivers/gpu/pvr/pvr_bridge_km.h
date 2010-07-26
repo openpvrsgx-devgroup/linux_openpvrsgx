@@ -34,8 +34,8 @@
 #include "pvr_bridge.h"
 #include "perproc.h"
 
-extern void pvr_dvfs_lock(void);
-extern void pvr_dvfs_unlock(void);
+extern void pvr_dev_lock(void);
+extern void pvr_dev_unlock(void);
 extern struct mutex gPVRSRVLock;
 extern int pvr_disabled;
 

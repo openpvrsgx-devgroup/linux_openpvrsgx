@@ -253,7 +253,7 @@ enum PVRSRV_ERROR SGXScheduleCCBCommandKM(
 
 	PDUMPSUSPEND();
 
-	pvr_dvfs_lock();
+	pvr_dev_lock();
 
 	eError =
 	    PVRSRVSetDevicePowerStateKM(psDeviceNode->sDevId.ui32DeviceIndex,
@@ -266,7 +266,7 @@ enum PVRSRV_ERROR SGXScheduleCCBCommandKM(
 	} else {
 		PVR_DPF(PVR_DBG_ERROR, "%s: can't power on device (%d)",
 					__func__, eError);
-		pvr_dvfs_unlock();
+		pvr_dev_unlock();
 		return eError;
 	}
 
@@ -276,7 +276,7 @@ enum PVRSRV_ERROR SGXScheduleCCBCommandKM(
 	if (ui32CallerID != ISR_ID)
 		SGXTestActivePowerEvent(psDeviceNode);
 
-	pvr_dvfs_unlock();
+	pvr_dev_unlock();
 
 	return eError;
 }
@@ -319,9 +319,9 @@ enum PVRSRV_ERROR SGXScheduleProcessQueuesKM(struct PVRSRV_DEVICE_NODE
 {
 	enum PVRSRV_ERROR eError;
 
-	pvr_dvfs_lock();
+	pvr_dev_lock();
 	eError = SGXScheduleProcessQueues(psDeviceNode);
-	pvr_dvfs_unlock();
+	pvr_dev_unlock();
 
 	return eError;
 }
@@ -367,7 +367,7 @@ void SGXCleanupRequest(struct PVRSRV_DEVICE_NODE *psDeviceNode,
 #endif
 	u32 l;
 
-	pvr_dvfs_lock();
+	pvr_dev_lock();
 	if (readl(&psSGXHostCtl->ui32PowerStatus) &
 	     PVRSRV_USSE_EDM_POWMAN_NO_WORK) {
 		;
@@ -456,7 +456,7 @@ void SGXCleanupRequest(struct PVRSRV_DEVICE_NODE *psDeviceNode,
 			 sizeof(u32), 0, hUniqueTag);
 #endif
 	}
-	pvr_dvfs_unlock();
+	pvr_dev_unlock();
 }
 
 struct SGX_HW_RENDER_CONTEXT_CLEANUP {

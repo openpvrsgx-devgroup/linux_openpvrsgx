@@ -706,7 +706,7 @@ void HWRecoveryResetSGX(struct PVRSRV_DEVICE_NODE *psDeviceNode)
 
 	PDUMPRESUME();
 
-	SGXScheduleProcessQueuesKM(psDeviceNode);
+	SGXScheduleProcessQueues(psDeviceNode);
 
 	PVRSRVProcessQueues(IMG_TRUE);
 }
@@ -916,7 +916,7 @@ static void SGX_MISRHandler(void *pvData)
 		HWRecoveryResetSGX(psDeviceNode);
 
 	if (psDeviceNode->bReProcessDeviceCommandComplete)
-		SGXScheduleProcessQueuesKM(psDeviceNode);
+		SGXScheduleProcessQueues(psDeviceNode);
 
 	SGXTestActivePowerEvent(psDeviceNode);
 }

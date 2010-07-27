@@ -47,6 +47,8 @@ enum PVRSRV_ERROR SGXScheduleCCBCommandKM(
 				struct SGXMKIF_COMMAND *psCommandData,
 				u32 ui32CallerID, u32 ui32PDumpFlags);
 
+enum PVRSRV_ERROR SGXScheduleProcessQueues(
+				struct PVRSRV_DEVICE_NODE *psDeviceNode);
 enum PVRSRV_ERROR SGXScheduleProcessQueuesKM(
 				struct PVRSRV_DEVICE_NODE *psDeviceNode);
 

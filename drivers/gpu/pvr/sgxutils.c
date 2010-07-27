@@ -57,7 +57,7 @@ static void SGXPostActivePowerEvent(struct PVRSRV_DEVICE_NODE *psDeviceNode)
 
 	l = readl(&psSGXHostCtl->ui32PowerStatus);
 	if (l & PVRSRV_USSE_EDM_POWMAN_POWEROFF_RESTART_IMMEDIATE)
-		SGXScheduleProcessQueuesKM(psDeviceNode);
+		SGXScheduleProcessQueues(psDeviceNode);
 }
 
 void SGXTestActivePowerEvent(struct PVRSRV_DEVICE_NODE *psDeviceNode)
@@ -276,8 +276,8 @@ enum PVRSRV_ERROR SGXScheduleCCBCommandKM(
 	return eError;
 }
 
-enum PVRSRV_ERROR SGXScheduleProcessQueuesKM(struct PVRSRV_DEVICE_NODE
-					     *psDeviceNode)
+enum PVRSRV_ERROR SGXScheduleProcessQueues(struct PVRSRV_DEVICE_NODE
+					   *psDeviceNode)
 {
 	enum PVRSRV_ERROR eError;
 	struct PVRSRV_SGXDEV_INFO *psDevInfo = psDeviceNode->pvDevice;
@@ -290,18 +290,33 @@ enum PVRSRV_ERROR SGXScheduleProcessQueuesKM(struct PVRSRV_DEVICE_NODE
 	if ((ui32PowerStatus & PVRSRV_USSE_EDM_POWMAN_NO_WORK) != 0)
 		return PVRSRV_OK;
 
-	sCommand.ui32Data[0] = PVRSRV_CCBFLAGS_PROCESS_QUEUESCMD;
 	eError =
-	    SGXScheduleCCBCommandKM(psDeviceNode, SGXMKIF_COMMAND_EDM_KICK,
-				    &sCommand, ISR_ID, 0);
+	    PVRSRVSetDevicePowerStateKM(psDeviceNode->sDevId.ui32DeviceIndex,
+					PVRSRV_POWER_STATE_D0);
+	if (eError != PVRSRV_OK)
+		return eError;
+
+	sCommand.ui32Data[0] = PVRSRV_CCBFLAGS_PROCESS_QUEUESCMD;
+	eError = SGXScheduleCCBCommand(psDeviceNode->pvDevice,
+				       SGXMKIF_COMMAND_EDM_KICK, &sCommand,
+				       ISR_ID, 0);
 	if (eError != PVRSRV_OK) {
-		PVR_DPF(PVR_DBG_ERROR, "SGXScheduleProcessQueuesKM failed "
-					"to schedule CCB command: %lu",
-			 eError);
+		PVR_DPF(PVR_DBG_ERROR, "%s failed to schedule CCB command: %lu",
+			 __func__, eError);
 		return PVRSRV_ERROR_GENERIC;
 	}
 
 	return PVRSRV_OK;
+}
+
+enum PVRSRV_ERROR SGXScheduleProcessQueuesKM(struct PVRSRV_DEVICE_NODE
+					   *psDeviceNode)
+{
+	enum PVRSRV_ERROR eError;
+
+	eError = SGXScheduleProcessQueues(psDeviceNode);
+
+	return eError;
 }
 
 IMG_BOOL SGXIsDevicePowered(struct PVRSRV_DEVICE_NODE *psDeviceNode)
@@ -393,7 +408,7 @@ void SGXCleanupRequest(struct PVRSRV_DEVICE_NODE *psDeviceNode,
 		PDUMPCOMMENTWITHFLAGS(0, "Clean-up event on uKernel disabled");
 #endif
 
-		SGXScheduleProcessQueuesKM(psDeviceNode);
+		SGXScheduleProcessQueues(psDeviceNode);
 
 #if !defined(NO_HARDWARE)
 		if (PollForValueKM(&psSGXHostCtl->ui32ResManFlags,

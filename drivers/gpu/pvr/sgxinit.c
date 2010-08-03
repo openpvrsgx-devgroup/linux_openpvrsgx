@@ -678,8 +678,6 @@ void HWRecoveryResetSGX(struct PVRSRV_DEVICE_NODE *psDeviceNode)
 
 	BUG_ON(!pvr_is_locked());
 
-	pvr_dev_lock();
-
 	l = readl(&psSGXHostCtl->ui32InterruptClearFlags);
 	l |= PVRSRV_USSE_EDM_INTERRUPT_HWR;
 	writel(l, &psSGXHostCtl->ui32InterruptClearFlags);
@@ -712,8 +710,6 @@ void HWRecoveryResetSGX(struct PVRSRV_DEVICE_NODE *psDeviceNode)
 	PDUMPRESUME();
 
 	SGXScheduleProcessQueues(psDeviceNode);
-
-	pvr_dev_unlock();
 
 	PVRSRVProcessQueues(IMG_TRUE);
 }
@@ -789,9 +785,9 @@ static void SGXOSTimer(struct work_struct *work)
 		l = readl(&psSGXHostCtl->ui32HostDetectedLockups);
 		l++;
 		writel(l, &psSGXHostCtl->ui32HostDetectedLockups);
-		pvr_dev_unlock();
 
 		HWRecoveryResetSGX(psDeviceNode);
+		pvr_dev_unlock();
 	}
 
 	queue_delayed_work(data->work_queue, &data->work,

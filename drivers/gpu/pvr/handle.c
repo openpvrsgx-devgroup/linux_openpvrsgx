@@ -582,10 +582,9 @@ static enum PVRSRV_ERROR ReallocMem(void **ppvMem, void **phBlockAlloc,
 				 eError);
 			return eError;
 		}
+		if (ui32OldSize != 0)
+			OSMemCopy(pvNewMem, pvOldMem, ui32CopySize);
 	}
-
-	if (ui32CopySize != 0)
-		OSMemCopy(pvNewMem, pvOldMem, ui32CopySize);
 
 	if (ui32OldSize != 0)
 		OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, ui32OldSize, pvOldMem,

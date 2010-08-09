@@ -202,11 +202,9 @@ struct HASH_TABLE *HASH_Create_Extended(u32 uInitialLen, size_t uKeySize,
 	pHash->pfnHashFunc = pfnHashFunc;
 	pHash->pfnKeyComp = pfnKeyComp;
 
-	OSAllocMem(PVRSRV_PAGEABLE_SELECT,
+	if (OSAllocMem(PVRSRV_PAGEABLE_SELECT,
 		   sizeof(struct BUCKET *) * pHash->uSize,
-		   (void **) &pHash->ppBucketTable, NULL);
-
-	if (pHash->ppBucketTable == NULL) {
+		   (void **) &pHash->ppBucketTable, NULL) != PVRSRV_OK) {
 		OSFreeMem(PVRSRV_PAGEABLE_SELECT, sizeof(struct HASH_TABLE),
 			  pHash, NULL);
 		return NULL;

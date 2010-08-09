@@ -1531,7 +1531,8 @@ enum PVRSRV_ERROR SGXReadDiffCountersKM(void *hDevHandle, u32 ui32Reg,
 		psDevInfo->ui32HWGroupRequested = ui32New;
 	psDevInfo->ui32HWReset |= ui32NewReset;
 
-	SysAcquireData(&psSysData);
+	if (SysAcquireData(&psSysData) != PVRSRV_OK)
+		return PVRSRV_ERROR_GENERIC;
 
 	psPowerDevice = psSysData->psPowerDeviceList;
 	while (psPowerDevice) {

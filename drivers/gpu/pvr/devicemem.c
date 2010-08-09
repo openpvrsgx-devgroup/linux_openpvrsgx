@@ -833,11 +833,8 @@ enum PVRSRV_ERROR PVRSRVWrapExtMemoryKM(void *hDevCookie,
 	return PVRSRV_OK;
 
 ErrorExitPhase4:
-	if (psMemInfo) {
-		FreeDeviceMem(psMemInfo);
-
-		psMemInfo = NULL;
-	}
+	FreeDeviceMem(psMemInfo);
+	psMemInfo = NULL;
 
 ErrorExitPhase3:
 	if (psMemInfo) {

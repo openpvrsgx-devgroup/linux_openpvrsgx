@@ -815,9 +815,9 @@ struct MMU_HEAP *MMU_Create(struct MMU_CONTEXT *psMMUContext,
 		return NULL;
 	}
 
-	OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
-		   sizeof(struct MMU_HEAP), (void **)&pMMUHeap, NULL);
-	if (pMMUHeap == NULL) {
+	if (OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
+		   sizeof(struct MMU_HEAP), (void **)&pMMUHeap, NULL)
+			!= PVRSRV_OK) {
 		PVR_DPF(PVR_DBG_ERROR,
 			 "MMU_Create: ERROR call to OSAllocMem failed");
 		return NULL;

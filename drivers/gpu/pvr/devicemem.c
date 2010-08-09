@@ -844,7 +844,7 @@ ErrorExitPhase3:
 	}
 
 ErrorExitPhase2:
-	if (psIntSysPAddr)
+	if (hOSWrapMem)
 		OSReleasePhysPageAddr(hOSWrapMem);
 
 ErrorExitPhase1:

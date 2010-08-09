@@ -696,9 +696,6 @@ void *BM_CreateHeap(void *hBMContext,
 
 	PVR_DPF(PVR_DBG_MESSAGE, "BM_CreateHeap");
 
-	if (!pBMContext)
-		return NULL;
-
 	if (pBMContext->ui32RefCount > 0) {
 		psBMHeap = pBMContext->psBMHeap;
 

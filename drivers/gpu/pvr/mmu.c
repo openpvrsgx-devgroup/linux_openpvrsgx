@@ -499,9 +499,9 @@ enum PVRSRV_ERROR MMU_Initialise(struct PVRSRV_DEVICE_NODE *psDeviceNode,
 		return PVRSRV_ERROR_GENERIC;
 	}
 
-	OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
-		   sizeof(struct MMU_CONTEXT), (void **) &psMMUContext, NULL);
-	if (psMMUContext == NULL) {
+	if (OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
+		   sizeof(struct MMU_CONTEXT), (void **) &psMMUContext, NULL)
+			!= PVRSRV_OK) {
 		PVR_DPF(PVR_DBG_ERROR,
 			 "MMU_Initialise: ERROR call to OSAllocMem failed");
 		return PVRSRV_ERROR_GENERIC;

@@ -324,7 +324,7 @@ fail_cleanup:
 	if (ui32BaseOffset && pBuf->hOSMemHandle)
 		OSReleaseSubMemHandle(pBuf->hOSMemHandle, uFlags);
 
-	if (pMapping && (pMapping->CpuVAddr || pMapping->hOSMemHandle))
+	if (pMapping->CpuVAddr || pMapping->hOSMemHandle)
 		switch (pMapping->eCpuMemoryOrigin) {
 		case hm_wrapped:
 			OSUnReservePhys(pMapping->CpuVAddr, pMapping->uSize,

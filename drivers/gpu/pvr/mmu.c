@@ -311,10 +311,10 @@ static IMG_BOOL _DeferredAllocPagetables(struct MMU_HEAP *pMMUHeap,
 
 	for (i = 0; i < ui32PTPageCount; i++) {
 		if (ppsPTInfoList[i] == NULL) {
-			OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
+			if (OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
 				   sizeof(struct MMU_PT_INFO),
-				   (void **) &ppsPTInfoList[i], NULL);
-			if (ppsPTInfoList[i] == NULL) {
+				   (void **) &ppsPTInfoList[i], NULL)
+					!= PVRSRV_OK) {
 				PVR_DPF(PVR_DBG_ERROR,
 					"_DeferredAllocPagetables: "
 					"ERROR call to OSAllocMem failed");

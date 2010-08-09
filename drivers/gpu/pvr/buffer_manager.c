@@ -1317,7 +1317,7 @@ static IMG_BOOL BM_ImportMemory(void *pH, size_t uRequestSize,
 	return IMG_TRUE;
 
 fail_dev_mem_alloc:
-	if (pMapping && (pMapping->CpuVAddr || pMapping->hOSMemHandle)) {
+	if (pMapping->CpuVAddr || pMapping->hOSMemHandle) {
 		if (pMapping->ui32Flags & PVRSRV_MEM_INTERLEAVED)
 			pMapping->uSize /= 2;
 

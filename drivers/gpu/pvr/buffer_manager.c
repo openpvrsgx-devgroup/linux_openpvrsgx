@@ -784,35 +784,34 @@ void BM_DestroyHeap(void *hDevMemHeap)
 	struct BM_HEAP *psBMHeap = (struct BM_HEAP *)hDevMemHeap;
 	struct PVRSRV_DEVICE_NODE *psDeviceNode =
 					psBMHeap->pBMContext->psDeviceNode;
+	struct BM_HEAP **ppsBMHeap;
 
 	PVR_DPF(PVR_DBG_MESSAGE, "BM_DestroyHeap");
 
-		struct BM_HEAP **ppsBMHeap;
-
-		if (psBMHeap->ui32Attribs &
-		    (PVRSRV_BACKINGSTORE_SYSMEM_NONCONTIG |
-		      PVRSRV_BACKINGSTORE_LOCALMEM_CONTIG)) {
-			if (psBMHeap->pImportArena)
-				RA_Delete(psBMHeap->pImportArena);
-		} else {
-			PVR_DPF(PVR_DBG_ERROR,
+	if (psBMHeap->ui32Attribs &
+			(PVRSRV_BACKINGSTORE_SYSMEM_NONCONTIG |
+			 PVRSRV_BACKINGSTORE_LOCALMEM_CONTIG)) {
+		if (psBMHeap->pImportArena)
+			RA_Delete(psBMHeap->pImportArena);
+	} else {
+		PVR_DPF(PVR_DBG_ERROR,
 			"BM_DestroyHeap: backing store type unsupported");
-			return;
-		}
+		return;
+	}
 
-		psDeviceNode->pfnMMUDelete(psBMHeap->pMMUHeap);
+	psDeviceNode->pfnMMUDelete(psBMHeap->pMMUHeap);
 
-		ppsBMHeap = &psBMHeap->pBMContext->psBMHeap;
-		while (*ppsBMHeap) {
-			if (*ppsBMHeap == psBMHeap) {
-				*ppsBMHeap = psBMHeap->psNext;
-				OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP,
-					  sizeof(struct BM_HEAP), psBMHeap,
-					  NULL);
-				break;
-			}
-			ppsBMHeap = &((*ppsBMHeap)->psNext);
+	ppsBMHeap = &psBMHeap->pBMContext->psBMHeap;
+	while (*ppsBMHeap) {
+		if (*ppsBMHeap == psBMHeap) {
+			*ppsBMHeap = psBMHeap->psNext;
+			OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP,
+					sizeof(struct BM_HEAP), psBMHeap,
+					NULL);
+			break;
 		}
+		ppsBMHeap = &((*ppsBMHeap)->psNext);
+	}
 }
 
 IMG_BOOL BM_Reinitialise(struct PVRSRV_DEVICE_NODE *psDeviceNode)

@@ -1354,14 +1354,7 @@ enum PVRSRV_ERROR MMU_BIFResetPDAlloc(struct PVRSRV_SGXDEV_INFO *psDevInfo)
 					"ERROR call to OSAllocPages failed");
 			return eError;
 		}
-
-		if (pui8MemBlock) {
-			sMemBlockCpuPAddr = OSMapLinToCPUPhys(pui8MemBlock);
-		} else {
-
-			sMemBlockCpuPAddr =
-			    OSMemHandleToCpuPAddr(hOSMemHandle, 0);
-		}
+		sMemBlockCpuPAddr = OSMapLinToCPUPhys(pui8MemBlock);
 	} else {
 		if (RA_Alloc(psLocalDevMemArena, 3 * SGX_MMU_PAGE_SIZE,
 			     NULL, 0, SGX_MMU_PAGE_SIZE,

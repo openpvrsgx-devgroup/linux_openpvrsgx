@@ -61,7 +61,6 @@ static u32 g_ui32RegisteredAreas;
 static u32 g_ui32TotalByteSize;
 #endif
 
-#define	FIRST_PHYSICAL_PFN	0
 #define	LAST_PHYSICAL_PFN	0x7ffffffful
 #define	FIRST_SPECIAL_PFN	(LAST_PHYSICAL_PFN + 1)
 #define	LAST_SPECIAL_PFN	0xfffffffful
@@ -70,7 +69,7 @@ static u32 g_ui32TotalByteSize;
 
 static inline IMG_BOOL PFNIsPhysical(u32 pfn)
 {
-	return pfn >= FIRST_PHYSICAL_PFN && pfn <= LAST_PHYSICAL_PFN;
+	return pfn <= LAST_PHYSICAL_PFN;
 }
 
 static inline IMG_BOOL PFNIsSpecial(u32 pfn)

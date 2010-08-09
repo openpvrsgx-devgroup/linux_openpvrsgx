@@ -155,10 +155,9 @@ static IMG_BOOL _Resize(struct HASH_TABLE *pHash, u32 uNewSize)
 			 "HASH_Resize: oldsize=0x%x  newsize=0x%x  count=0x%x",
 			 pHash->uSize, uNewSize, pHash->uCount);
 
-		OSAllocMem(PVRSRV_PAGEABLE_SELECT,
+		if (OSAllocMem(PVRSRV_PAGEABLE_SELECT,
 			   sizeof(struct BUCKET *) * uNewSize,
-			   (void **) &ppNewTable, NULL);
-		if (ppNewTable == NULL)
+			   (void **) &ppNewTable, NULL) != PVRSRV_OK)
 			return IMG_FALSE;
 
 		for (uIndex = 0; uIndex < uNewSize; uIndex++)

@@ -787,7 +787,6 @@ void BM_DestroyHeap(void *hDevMemHeap)
 
 	PVR_DPF(PVR_DBG_MESSAGE, "BM_DestroyHeap");
 
-	if (psBMHeap) {
 		struct BM_HEAP **ppsBMHeap;
 
 		if (psBMHeap->ui32Attribs &
@@ -814,9 +813,6 @@ void BM_DestroyHeap(void *hDevMemHeap)
 			}
 			ppsBMHeap = &((*ppsBMHeap)->psNext);
 		}
-	} else {
-		PVR_DPF(PVR_DBG_ERROR, "BM_DestroyHeap: invalid heap handle");
-	}
 }
 
 IMG_BOOL BM_Reinitialise(struct PVRSRV_DEVICE_NODE *psDeviceNode)

@@ -270,11 +270,7 @@ err1:
 
 static void __exit pvr_cleanup(void)
 {
-	struct SYS_DATA *sysdata;
-
 	PVR_TRACE("pvr_cleanup");
-
-	SysAcquireData(&sysdata);
 
 	pvr_exit_events();
 

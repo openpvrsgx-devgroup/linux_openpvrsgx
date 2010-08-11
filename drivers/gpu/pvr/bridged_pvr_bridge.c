@@ -705,16 +705,15 @@ static int PVRSRVCacheFlushDRIBW(u32 ui32BridgeID,
 	down_read(&current->mm->mmap_sem);
 	vma = find_vma(current->mm, start);
 	if (vma == NULL || vma->vm_start > start ||
-	    vma->vm_end < start + len) {
+	    vma->vm_end < start + len)
 		pr_err("PVR: %s: invalid address %08lx %zu %c\n",
 				__func__, start, len,
 				type == DRM_PVR2D_CFLUSH_TO_GPU ? 'c' :
 				type == DRM_PVR2D_CFLUSH_FROM_GPU ? 'i' :
 				'?');
-		return 0;
-	}
+	else
+		psRetOUT->eError = FlushCacheDRI(type, start, len);
 
-	psRetOUT->eError = FlushCacheDRI(type, start, len);
 	up_read(&current->mm->mmap_sem);
 
 	return 0;

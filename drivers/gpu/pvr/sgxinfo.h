@@ -246,6 +246,10 @@ struct SGXMKIF_CMDTA_SHARED {
 	struct PVRSRV_DEVICE_SYNC_OBJECT asSrcSyncs[SGX_MAX_SRC_SYNCS];
 
 	struct CTL_STATUS sCtlTAStatusInfo[SGX_MAX_TA_STATUS_VALS];
+	/*
+	 * Note that the actual size of sCtl3DStatusInfo changes based
+	 * on the IOCTL ABI version used.
+	 */
 	struct CTL_STATUS sCtl3DStatusInfo[SGX_MAX_3D_STATUS_VALS];
 
 	struct PVRSRV_DEVICE_SYNC_OBJECT sTA3DDependency;

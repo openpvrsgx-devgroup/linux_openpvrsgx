@@ -39,8 +39,8 @@ enum PVRSRV_ERROR SGXSubmitTransferKM(void *hDevHandle,
 		struct PVRSRV_TRANSFER_SGX_KICK *psKick);
 
 
-enum PVRSRV_ERROR SGXDoKickKM(void *hDevHandle,
-				  struct SGX_CCB_KICK *psCCBKick);
+enum PVRSRV_ERROR SGXDoKickKM(void *hDevHandle, struct SGX_CCB_KICK *psCCBKick,
+			      int max_3dstat_val);
 
 enum PVRSRV_ERROR SGXGetPhysPageAddrKM(void *hDevMemHeap,
 		struct IMG_DEV_VIRTADDR sDevVAddr,

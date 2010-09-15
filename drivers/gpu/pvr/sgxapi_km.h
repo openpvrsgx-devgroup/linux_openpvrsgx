@@ -50,7 +50,8 @@
 #define SGX_MAX_HEAP_ID					10
 
 #define SGX_MAX_TA_STATUS_VALS				32
-#define SGX_MAX_3D_STATUS_VALS				2
+#define SGX_MAX_3D_STATUS_VALS_OLD			2
+#define SGX_MAX_3D_STATUS_VALS				4
 
 #define SGX_MAX_SRC_SYNCS				4
 

@@ -129,6 +129,30 @@ int SGXGetInternalDevInfoBW(u32 ui32BridgeID,
 	return 0;
 }
 
+/* Convert the IOCTL parameter from "old" to "new" format. */
+static int kick_compat_conv(struct PVRSRV_BRIDGE_IN_DOKICK *kick,
+			    size_t in_size)
+{
+	struct SGX_CCB_KICK *ccb;
+	size_t diff;
+
+	ccb = &kick->sCCBKick;
+
+	diff = sizeof(ccb->ah3DStatusSyncInfo[0]) *
+		(SGX_MAX_3D_STATUS_VALS - SGX_MAX_3D_STATUS_VALS_OLD);
+	if (sizeof(*kick) - in_size != diff)
+		return -EINVAL;
+
+	/* Trailing size at the end of struct to move. */
+	diff = sizeof(*kick) - offsetof(typeof(*kick),
+			sCCBKick.ah3DStatusSyncInfo[SGX_MAX_3D_STATUS_VALS]);
+	memmove(&kick->sCCBKick.ah3DStatusSyncInfo[SGX_MAX_3D_STATUS_VALS],
+		&kick->sCCBKick.ah3DStatusSyncInfo[SGX_MAX_3D_STATUS_VALS_OLD],
+		diff);
+
+	return 0;
+}
+
 int SGXDoKickBW(u32 ui32BridgeID,
 		       struct PVRSRV_BRIDGE_IN_DOKICK *psDoKickIN,
 		       struct PVRSRV_BRIDGE_RETURN *psRetOUT,
@@ -136,10 +160,20 @@ int SGXDoKickBW(u32 ui32BridgeID,
 		       struct PVRSRV_PER_PROCESS_DATA *psPerProc)
 {
 	void *hDevCookieInt;
+	int max_3dstat_vals;
 	u32 i;
 
 	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID, PVRSRV_BRIDGE_SGX_DOKICK);
 
+	max_3dstat_vals = SGX_MAX_3D_STATUS_VALS;
+	if (unlikely(in_size) != sizeof(*psDoKickIN)) {
+		max_3dstat_vals = SGX_MAX_3D_STATUS_VALS_OLD;
+		if (kick_compat_conv(psDoKickIN, in_size) != 0) {
+			psRetOUT->eError = PVRSRV_ERROR_INVALID_PARAMS;
+			return -EINVAL;
+		}
+
+	}
 	psRetOUT->eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
 					      &hDevCookieInt,
 					      psDoKickIN->hDevCookie,
@@ -255,7 +289,8 @@ int SGXDoKickBW(u32 ui32BridgeID,
 			return 0;
 	}
 
-	psRetOUT->eError = SGXDoKickKM(hDevCookieInt, &psDoKickIN->sCCBKick);
+	psRetOUT->eError = SGXDoKickKM(hDevCookieInt, &psDoKickIN->sCCBKick,
+					max_3dstat_vals);
 
 	return 0;
 }

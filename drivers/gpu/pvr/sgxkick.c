@@ -37,8 +37,8 @@
 #include "pvr_debug.h"
 #include "sgxutils.h"
 
-enum PVRSRV_ERROR SGXDoKickKM(void *hDevHandle,
-				  struct SGX_CCB_KICK *psCCBKick)
+enum PVRSRV_ERROR SGXDoKickKM(void *hDevHandle, struct SGX_CCB_KICK *psCCBKick,
+			      int max_3dstat_vals)
 {
 	enum PVRSRV_ERROR eError;
 	struct PVRSRV_KERNEL_SYNC_INFO *psSyncInfo;
@@ -67,12 +67,26 @@ enum PVRSRV_ERROR SGXDoKickKM(void *hDevHandle,
 				 psCCBKick, ui32CCBOffset);
 
 	if (psCCBKick->hTA3DSyncInfo) {
+		struct PVRSRV_DEVICE_SYNC_OBJECT *ta3d_dep;
+
 		psSyncInfo =
 		    (struct PVRSRV_KERNEL_SYNC_INFO *)psCCBKick->hTA3DSyncInfo;
-		psTACmd->sTA3DDependency.sWriteOpsCompleteDevVAddr =
+
+		ta3d_dep = &psTACmd->sTA3DDependency;
+		/*
+		 * Ugly hack to account for the two possible sizes of
+		 * struct SGXMKIF_CMDTA_SHARED which is based on the
+		 * corresponding IOCTL ABI version used.
+		 */
+		if (max_3dstat_vals != SGX_MAX_3D_STATUS_VALS)
+			ta3d_dep =  (struct PVRSRV_DEVICE_SYNC_OBJECT *)
+				((u8 *)ta3d_dep - sizeof(struct CTL_STATUS) *
+				 (SGX_MAX_3D_STATUS_VALS - max_3dstat_vals));
+
+		ta3d_dep->sWriteOpsCompleteDevVAddr =
 		    psSyncInfo->sWriteOpsCompleteDevVAddr;
 
-		psTACmd->sTA3DDependency.ui32WriteOpsPendingVal =
+		ta3d_dep->ui32WriteOpsPendingVal =
 		    psSyncInfo->psSyncData->ui32WriteOpsPending;
 
 		if (psCCBKick->bTADependency)

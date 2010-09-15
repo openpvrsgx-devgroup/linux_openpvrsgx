@@ -45,9 +45,9 @@ int SGXGetInternalDevInfoBW(u32 ui32BridgeID,
        struct PVRSRV_PER_PROCESS_DATA *psPerProc);
 
 int SGXDoKickBW(u32 ui32BridgeID,
-       struct PVRSRV_BRIDGE_IN_DOKICK *psDoKickIN,
-       struct PVRSRV_BRIDGE_RETURN *psRetOUT,
-       struct PVRSRV_PER_PROCESS_DATA *psPerProc);
+	struct PVRSRV_BRIDGE_IN_DOKICK *psDoKickIN,
+	struct PVRSRV_BRIDGE_RETURN *psRetOUT, size_t in_size,
+	struct PVRSRV_PER_PROCESS_DATA *psPerProc);
 
 int SGXScheduleProcessQueuesBW(u32 ui32BridgeID,
        struct PVRSRV_BRIDGE_IN_SGX_SCHEDULE_PROCESS_QUEUES *psScheduleProcQIN,

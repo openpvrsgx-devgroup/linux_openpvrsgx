@@ -2920,6 +2920,7 @@ static int bridged_check_cmd(u32 cmd_id)
 }
 
 static int bridged_ioctl(struct file *filp, u32 cmd, void *in, void *out,
+			 size_t in_size,
 			 struct PVRSRV_PER_PROCESS_DATA *per_proc)
 {
 	int err = -EFAULT;
@@ -3198,7 +3199,7 @@ static int bridged_ioctl(struct file *filp, u32 cmd, void *in, void *out,
 		err = SGXGetInternalDevInfoBW(cmd, in, out, per_proc);
 		break;
 	case PVRSRV_BRIDGE_SGX_DOKICK:
-		err = SGXDoKickBW(cmd, in, out, per_proc);
+		err = SGXDoKickBW(cmd, in, out, in_size, per_proc);
 		break;
 
 	case PVRSRV_BRIDGE_SGX_GETPHYSPAGEADDR:
@@ -3325,7 +3326,7 @@ int BridgedDispatchKM(struct file *filp, struct PVRSRV_PER_PROCESS_DATA *pd,
 		goto return_fault;
 	}
 
-	err = bridged_ioctl(filp, bid, in, out, pd);
+	err = bridged_ioctl(filp, bid, in, out, pkg->ui32InBufferSize, pd);
 
 	if (err < 0)
 		goto return_fault;

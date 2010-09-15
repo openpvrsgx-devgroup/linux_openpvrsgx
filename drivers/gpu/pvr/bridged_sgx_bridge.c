@@ -132,6 +132,7 @@ int SGXGetInternalDevInfoBW(u32 ui32BridgeID,
 int SGXDoKickBW(u32 ui32BridgeID,
 		       struct PVRSRV_BRIDGE_IN_DOKICK *psDoKickIN,
 		       struct PVRSRV_BRIDGE_RETURN *psRetOUT,
+		       size_t in_size,
 		       struct PVRSRV_PER_PROCESS_DATA *psPerProc)
 {
 	void *hDevCookieInt;

@@ -702,7 +702,6 @@ void HWRecoveryResetSGX(struct PVRSRV_DEVICE_NODE *psDeviceNode)
 		pvr_disable();
 
 		PDUMPRESUME();
-		pvr_dev_unlock();
 
 		return;
 	}

@@ -495,7 +495,6 @@ enum PVRSRV_ERROR PollForValueKM(u32 __iomem *pui32LinMemAddr,
 	LOOP_UNTIL_TIMEOUT(uiMaxTime) {
 		if ((readl(pui32LinMemAddr) & ui32Mask) == ui32Value)
 			return PVRSRV_OK;
-		OSWaitus(ui32Waitus);
 	}
 	END_LOOP_UNTIL_TIMEOUT();
 

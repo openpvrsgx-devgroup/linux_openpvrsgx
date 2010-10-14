@@ -166,7 +166,7 @@ int SGXDoKickBW(u32 ui32BridgeID,
 	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID, PVRSRV_BRIDGE_SGX_DOKICK);
 
 	max_3dstat_vals = SGX_MAX_3D_STATUS_VALS;
-	if (unlikely(in_size) != sizeof(*psDoKickIN)) {
+	if (unlikely(in_size != sizeof(*psDoKickIN))) {
 		max_3dstat_vals = SGX_MAX_3D_STATUS_VALS_OLD;
 		if (kick_compat_conv(psDoKickIN, in_size) != 0) {
 			psRetOUT->eError = PVRSRV_ERROR_INVALID_PARAMS;
@@ -254,7 +254,7 @@ int SGXDoKickBW(u32 ui32BridgeID,
 			return 0;
 	}
 
-	if (psDoKickIN->sCCBKick.ui32Num3DStatusVals > SGX_MAX_3D_STATUS_VALS) {
+	if (psDoKickIN->sCCBKick.ui32Num3DStatusVals > max_3dstat_vals) {
 		psRetOUT->eError = PVRSRV_ERROR_INVALID_PARAMS;
 		return 0;
 	}

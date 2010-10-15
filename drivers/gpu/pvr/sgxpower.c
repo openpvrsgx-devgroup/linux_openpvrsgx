@@ -198,7 +198,7 @@ static void SGXGetTimingInfo(struct PVRSRV_DEVICE_NODE *psDeviceNode)
 		sSGXTimingInfo.ui32uKernelFreq;
 
 	sgx_set_pwrdown_delay(psDeviceNode, sSGXTimingInfo.ui32uKernelFreq,
-			      sSGXTimingInfo.ui32ActivePowManLatencyms);
+			      sgx_calc_power_down_delay(psDeviceNode));
 }
 
 void SGXStartTimer(struct PVRSRV_SGXDEV_INFO *psDevInfo, IMG_BOOL bStartOSTimer)

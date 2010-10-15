@@ -410,6 +410,9 @@ enum PVRSRV_ERROR SGXDoKickKM(void *hDevHandle, struct SGX_CCB_KICK *psCCBKick,
 	}
 #endif
 
+	/* to aid in determining the next power down delay */
+	sgx_mark_new_command(psDeviceNode);
+
 	eError = SGXScheduleCCBCommandKM(hDevHandle, psCCBKick->eCommand,
 				    &psCCBKick->sCommand, KERNEL_ID, 0);
 	if (eError == PVRSRV_ERROR_RETRY) {

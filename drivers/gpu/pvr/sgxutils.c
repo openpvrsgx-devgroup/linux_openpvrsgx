@@ -51,6 +51,9 @@ static void SGXPostActivePowerEvent(struct PVRSRV_DEVICE_NODE *psDeviceNode)
 					     psDevInfo->psSGXHostCtl;
 	u32 l;
 
+	/* To aid in calculating the next power down delay */
+	sgx_mark_power_down(psDeviceNode);
+
 	l = readl(&psSGXHostCtl->ui32NumActivePowerEvents);
 	l++;
 	writel(l, &psSGXHostCtl->ui32NumActivePowerEvents);

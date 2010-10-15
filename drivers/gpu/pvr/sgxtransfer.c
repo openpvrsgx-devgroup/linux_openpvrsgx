@@ -241,6 +241,9 @@ enum PVRSRV_ERROR SGXSubmitTransferKM(void *hDevHandle,
 	sCommand.ui32Data[0] = PVRSRV_CCBFLAGS_TRANSFERCMD;
 	sCommand.ui32Data[1] = psKick->sHWTransferContextDevVAddr.uiAddr;
 
+	/* To aid in determining the next power down delay */
+	sgx_mark_new_command(hDevHandle);
+
 	eError = SGXScheduleCCBCommandKM(hDevHandle, SGXMKIF_COMMAND_EDM_KICK,
 				    &sCommand, KERNEL_ID,
 				    psKick->ui32PDumpFlags);

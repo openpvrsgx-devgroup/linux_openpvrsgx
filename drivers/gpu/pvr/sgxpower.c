@@ -26,6 +26,7 @@
 
 #include <stddef.h>
 #include <linux/io.h>
+#include <linux/sched.h>
 
 #include "sgxdefs.h"
 #include "services_headers.h"
@@ -33,6 +34,12 @@
 #include "sgxinfokm.h"
 #include "sgxutils.h"
 #include "pdump_km.h"
+
+#define MS_TO_NS(x)			((x) * 1000000ULL)
+#define SGX_CMD_BURST_THRESHOLD_NS	MS_TO_NS(3)
+#define SGX_CMD_BURST_MAX_SIZE		4
+#define SGX_POWER_DOWN_DELAY_LONG_MS	4
+#define SGX_POWER_DOWN_DELAY_SHORT_MS	0
 
 enum PVR_DEVICE_POWER_STATE {
 
@@ -84,6 +91,80 @@ static void sgx_set_pwrdown_delay(struct PVRSRV_DEVICE_NODE *node,
 			&dev_info->psSGXHostCtl->ui32ActivePowManSampleRate);
 		dev_info->power_down_delay = delay;
 	}
+}
+
+static int sgx_calc_power_down_delay(struct PVRSRV_DEVICE_NODE *node)
+{
+	struct PVRSRV_SGXDEV_INFO *info = node->pvDevice;
+
+	/*
+	 * Set the power down delay to short if the command to be executed is
+	 * the last one in the burst, except if the burst size is at the
+	 * maximum.
+	 */
+	if (info->burst_size < SGX_CMD_BURST_MAX_SIZE &&
+	    info->burst_cnt == info->burst_size)
+		return SGX_POWER_DOWN_DELAY_SHORT_MS;
+	else
+		return SGX_POWER_DOWN_DELAY_LONG_MS;
+
+}
+
+void sgx_mark_new_command(struct PVRSRV_DEVICE_NODE *node)
+{
+	struct PVRSRV_SGXDEV_INFO *info = node->pvDevice;
+	struct SGX_TIMING_INFORMATION tinfo = { 0 };
+	unsigned long long cmd_start;
+	bool new_burst = false;
+
+	cmd_start = cpu_clock(smp_processor_id());
+
+	if (unlikely(info->last_idle == info->burst_start)) {
+		/*
+		 * This is the initial case, when we haven't yet any commands
+		 * issued.
+		 */
+		new_burst = true;
+	} else {
+		/*
+		 * If the last idle occurred after the current burst started
+		 * and the time since the idle is greater than the threshold
+		 * allowed for delays within a burst then this is a new burst.
+		 */
+		if (time_after64(info->last_idle, info->burst_start) &&
+		    cmd_start - info->last_idle > SGX_CMD_BURST_THRESHOLD_NS)
+			new_burst = true;
+	}
+
+	if (new_burst) {
+		info->burst_start = cmd_start;
+		/*
+		 * We predict the length of this new burst to be that of the
+		 * previous burst.
+		 */
+		info->burst_size = info->burst_cnt;
+		info->burst_cnt = 0;
+	} else if (info->burst_cnt < SGX_CMD_BURST_MAX_SIZE) {
+		info->burst_cnt++;
+	}
+
+	SysGetSGXTimingInformation(&tinfo);
+	sgx_set_pwrdown_delay(node, tinfo.ui32uKernelFreq,
+			      sgx_calc_power_down_delay(node));
+}
+
+void sgx_mark_power_down(struct PVRSRV_DEVICE_NODE *node)
+{
+	struct PVRSRV_SGXDEV_INFO *info = node->pvDevice;
+
+	info->last_idle = cpu_clock(smp_processor_id());
+	/*
+	 * After the last command completes power down happens in a delayed
+	 * manner. The current value of this delay is in power_down_delay.
+	 * To get the command complete time - which is the actual idle start
+	 * time - we have to deduct the amount of delay from the current time.
+	 */
+	info->last_idle -= MS_TO_NS(info->power_down_delay);
 }
 
 static void SGXGetTimingInfo(struct PVRSRV_DEVICE_NODE *psDeviceNode)

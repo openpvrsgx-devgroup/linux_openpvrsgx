@@ -130,6 +130,10 @@ struct PVRSRV_SGXDEV_INFO {
 	u32 ui32TimeStamp;
 	u32 ui32NumResets;
 
+	unsigned long long last_idle;
+	unsigned long long burst_start;
+	int burst_size;
+	int burst_cnt;
 	int power_down_delay;
 
 	struct PVRSRV_KERNEL_MEM_INFO *psKernelSGXHostCtlMemInfo;
@@ -216,6 +220,9 @@ void SGXReset(struct PVRSRV_SGXDEV_INFO *psDevInfo, u32 ui32PDUMPFlags);
 enum PVRSRV_ERROR SGXInitialise(struct PVRSRV_SGXDEV_INFO *psDevInfo,
 				IMG_BOOL bHardwareRecovery);
 enum PVRSRV_ERROR SGXDeinitialise(void *hDevCookie);
+
+void sgx_mark_new_command(struct PVRSRV_DEVICE_NODE *node);
+void sgx_mark_power_down(struct PVRSRV_DEVICE_NODE *node);
 
 void SGXStartTimer(struct PVRSRV_SGXDEV_INFO *psDevInfo,
 		   IMG_BOOL bStartOSTimer);

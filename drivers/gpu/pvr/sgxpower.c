@@ -72,11 +72,24 @@ static enum PVR_DEVICE_POWER_STATE MapDevicePowerState(enum PVR_POWER_STATE
 	return eDevicePowerState;
 }
 
+static void sgx_set_pwrdown_delay(struct PVRSRV_DEVICE_NODE *node,
+				  unsigned ukernel_freq, int msec)
+{
+	struct PVRSRV_SGXDEV_INFO *dev_info = node->pvDevice;
+	unsigned delay;
+
+	delay = ukernel_freq * msec / 1000 + 1;
+	if (dev_info->power_down_delay != delay) {
+		writel(delay,
+			&dev_info->psSGXHostCtl->ui32ActivePowManSampleRate);
+		dev_info->power_down_delay = delay;
+	}
+}
+
 static void SGXGetTimingInfo(struct PVRSRV_DEVICE_NODE *psDeviceNode)
 {
 	struct PVRSRV_SGXDEV_INFO *psDevInfo = psDeviceNode->pvDevice;
 	struct SGX_TIMING_INFORMATION sSGXTimingInfo = { 0 };
-	u32 ui32ActivePowManSampleRate;
 	struct timer_work_data *data = psDevInfo->hTimer;
 
 	SysGetSGXTimingInformation(&sSGXTimingInfo);
@@ -103,12 +116,8 @@ static void SGXGetTimingInfo(struct PVRSRV_DEVICE_NODE *psDeviceNode)
 		sSGXTimingInfo.ui32CoreClockSpeed /
 		sSGXTimingInfo.ui32uKernelFreq;
 
-	ui32ActivePowManSampleRate =
-		sSGXTimingInfo.ui32uKernelFreq *
-		sSGXTimingInfo.ui32ActivePowManLatencyms / 1000;
-	ui32ActivePowManSampleRate += 1;
-	writel(ui32ActivePowManSampleRate,
-		&psDevInfo->psSGXHostCtl->ui32ActivePowManSampleRate);
+	sgx_set_pwrdown_delay(psDeviceNode, sSGXTimingInfo.ui32uKernelFreq,
+			      sSGXTimingInfo.ui32ActivePowManLatencyms);
 }
 
 void SGXStartTimer(struct PVRSRV_SGXDEV_INFO *psDevInfo, IMG_BOOL bStartOSTimer)

@@ -130,6 +130,8 @@ struct PVRSRV_SGXDEV_INFO {
 	u32 ui32TimeStamp;
 	u32 ui32NumResets;
 
+	int power_down_delay;
+
 	struct PVRSRV_KERNEL_MEM_INFO *psKernelSGXHostCtlMemInfo;
 	struct SGXMKIF_HOST_CTL __iomem *psSGXHostCtl;
 

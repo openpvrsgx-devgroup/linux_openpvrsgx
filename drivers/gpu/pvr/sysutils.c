@@ -68,8 +68,6 @@ void SysGetSGXTimingInformation(struct SGX_TIMING_INFORMATION *psTimingInfo)
 #if defined(NO_HARDWARE)
 	rate = SYS_SGX_MAX_FREQ_NO_HW;
 #else
-	PVR_ASSERT(atomic_read(&gpsSysSpecificData->sSGXClocksEnabled) != 0);
-
 	rate = clk_get_rate(gpsSysSpecificData->psSGX_FCK);
 	PVR_ASSERT(rate != 0);
 #endif

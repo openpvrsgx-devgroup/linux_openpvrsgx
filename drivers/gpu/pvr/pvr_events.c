@@ -1,6 +1,7 @@
 
 #include "pvr_events.h"
 #include "servicesint.h"
+#include "sgx_bridge.h"
 
 #include <linux/wait.h>
 #include <linux/sched.h>
@@ -86,7 +87,8 @@ static void pvr_signal_flip_event(struct pvr_pending_flip_event *e,
 }
 
 int pvr_flip_event_req(struct PVRSRV_FILE_PRIVATE_DATA *priv,
-			 unsigned int overlay, u64 user_data)
+			 unsigned int overlay,
+			 enum pvr_sync_wait_seq_type type, u64 user_data)
 {
 	struct pvr_pending_flip_event *e;
 	struct timeval now;
@@ -96,7 +98,18 @@ int pvr_flip_event_req(struct PVRSRV_FILE_PRIVATE_DATA *priv,
 	if (e == NULL)
 		return -ENOMEM;
 
-	e->event.base.type = PVR_EVENT_FLIP;
+	switch (type) {
+	case _PVR_SYNC_WAIT_FLIP:
+		e->event.base.type = PVR_EVENT_FLIP;
+		e->dss_event = OMAP_DSS_NOTIFY_GO_OVL;
+		break;
+	case _PVR_SYNC_WAIT_UPDATE:
+		e->event.base.type = PVR_EVENT_UPDATE;
+		e->dss_event = OMAP_DSS_NOTIFY_UPDATE_OVL;
+		break;
+	default:
+		BUG();
+	}
 	e->event.base.length = sizeof(e->event);
 	e->base.event = &e->event.base;
 	e->event.overlay = overlay;
@@ -119,7 +132,7 @@ int pvr_flip_event_req(struct PVRSRV_FILE_PRIVATE_DATA *priv,
 
 	spin_unlock_irqrestore(&event_lock, flags);
 
-	return omap_dss_request_notify(OMAP_DSS_NOTIFY_GO_OVL, overlay);
+	return omap_dss_request_notify(e->dss_event, overlay);
 }
 
 static bool pvr_dequeue_event(struct PVRSRV_FILE_PRIVATE_DATA *priv,
@@ -220,14 +233,13 @@ static int dss_notifier_callback(struct notifier_block *nb,
 	unsigned long flags;
 	long overlay = (long) data;
 
-	if (event != OMAP_DSS_NOTIFY_GO_OVL)
-		return 0;
-
 	do_gettimeofday(&now);
 
 	spin_lock_irqsave(&event_lock, flags);
 
 	list_for_each_entry_safe(e, t, &flip_wait_list, base.link) {
+		if (!(e->dss_event & event))
+			continue;
 		if (e->event.overlay != overlay)
 			continue;
 

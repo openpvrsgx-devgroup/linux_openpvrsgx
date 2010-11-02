@@ -24,6 +24,7 @@ struct pvr_event {
 
 #define PVR_EVENT_SYNC 0x01
 #define PVR_EVENT_FLIP 0x02
+#define PVR_EVENT_UPDATE 0x03 /* also uses struct pvr_event_flip */
 
 /*
  * Every buffer used as a render target has a 'PVRSRV_KERNEL_SYNC_INFO'
@@ -73,7 +74,10 @@ struct pvr_pending_sync_event {
 struct pvr_pending_flip_event {
 	struct pvr_pending_event base;
 	struct pvr_event_flip event;
+	unsigned int dss_event;
 };
+
+enum pvr_sync_wait_seq_type;
 
 void pvr_init_events(void);
 void pvr_exit_events(void);
@@ -82,7 +86,8 @@ int pvr_sync_event_req(struct PVRSRV_FILE_PRIVATE_DATA *priv,
 			const struct PVRSRV_KERNEL_SYNC_INFO *sync_info,
 			u64 user_data);
 int pvr_flip_event_req(struct PVRSRV_FILE_PRIVATE_DATA *priv,
-			 unsigned int overlay, u64 user_data);
+			 unsigned int overlay,
+			 enum pvr_sync_wait_seq_type type, u64 user_data);
 ssize_t pvr_read(struct file *filp, char __user *buf, size_t count,
 		loff_t *off);
 unsigned int pvr_poll(struct file *filp, struct poll_table_struct *wait);

@@ -1053,10 +1053,12 @@ int SGX2DQueryBlitsCompleteBW(struct file *filp, u32 ui32BridgeID,
 	if (psRetOUT->eError != PVRSRV_OK)
 		return 0;
 
-	if (ps2DQueryBltsCompleteIN->type == _PVR_SYNC_WAIT_FLIP) {
+	if (ps2DQueryBltsCompleteIN->type == _PVR_SYNC_WAIT_FLIP ||
+	    ps2DQueryBltsCompleteIN->type == _PVR_SYNC_WAIT_UPDATE) {
 		if (pvr_flip_event_req(priv,
 				       (long)ps2DQueryBltsCompleteIN->
 						       hKernSyncInfo,
+				       ps2DQueryBltsCompleteIN->type,
 				       ps2DQueryBltsCompleteIN->user_data))
 			psRetOUT->eError = PVRSRV_ERROR_OUT_OF_MEMORY;
 

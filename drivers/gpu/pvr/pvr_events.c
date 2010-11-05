@@ -18,10 +18,10 @@ static struct list_head sync_wait_list;
 static struct list_head flip_wait_list;
 static struct notifier_block dss_nb;
 
-static inline bool is_render_complete(const struct PVRSRV_SYNC_DATA *sync)
+static inline bool is_render_complete(const struct PVRSRV_SYNC_DATA *sync,
+				      u32 write_ops_pending)
 {
-	return sync->ui32ReadOpsComplete == sync->ui32ReadOpsPending &&
-		sync->ui32WriteOpsComplete == sync->ui32WriteOpsPending;
+	return (int)sync->ui32WriteOpsComplete - (int)write_ops_pending >= 0;
 }
 
 static void pvr_signal_sync_event(struct pvr_pending_sync_event *e,
@@ -54,6 +54,7 @@ int pvr_sync_event_req(struct PVRSRV_FILE_PRIVATE_DATA *priv,
 	e->base.event = &e->event.base;
 	e->base.file_priv = priv;
 	e->base.destroy = (void (*)(struct pvr_pending_event *))kfree;
+	e->base.write_ops_pending = sync_info->psSyncData->ui32WriteOpsPending;
 
 	do_gettimeofday(&now);
 	spin_lock_irqsave(&event_lock, flags);
@@ -67,7 +68,8 @@ int pvr_sync_event_req(struct PVRSRV_FILE_PRIVATE_DATA *priv,
 	priv->event_space -= sizeof(e->event);
 
 	list_add_tail(&e->base.link, &sync_wait_list);
-	if (is_render_complete(sync_info->psSyncData))
+	if (is_render_complete(sync_info->psSyncData,
+			       e->base.write_ops_pending))
 		pvr_signal_sync_event(e, &now);
 
 	spin_unlock_irqrestore(&event_lock, flags);
@@ -215,7 +217,8 @@ void pvr_handle_sync_events(void)
 	spin_lock_irqsave(&event_lock, flags);
 
 	list_for_each_entry_safe(e, t, &sync_wait_list, base.link) {
-		if (!is_render_complete(e->event.sync_info->psSyncData))
+		if (!is_render_complete(e->event.sync_info->psSyncData,
+					e->base.write_ops_pending))
 			continue;
 
 		pvr_signal_sync_event(e, &now);

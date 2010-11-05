@@ -64,6 +64,7 @@ struct pvr_pending_event {
 	struct list_head link;
 	struct PVRSRV_FILE_PRIVATE_DATA *file_priv;
 	void (*destroy)(struct pvr_pending_event *event);
+	u32 write_ops_pending;
 };
 
 struct pvr_pending_sync_event {

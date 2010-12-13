@@ -1247,8 +1247,7 @@ enum PVRSRV_ERROR SGXDevInitCompatCheck(struct PVRSRV_DEVICE_NODE *psDeviceNode)
 
 	eError = SGXGetBuildInfoKM(psDevInfo, psDeviceNode);
 	if (eError != PVRSRV_OK) {
-		PVR_DPF(PVR_DBG_ERROR, "SGXDevInitCompatCheck: "
-				"Unable to validate device DDK version");
+		pr_err("pvr: unable to validate device DDK version\n");
 		goto exit;
 	}
 	psSGXFeatures =
@@ -1258,9 +1257,8 @@ enum PVRSRV_ERROR SGXDevInitCompatCheck(struct PVRSRV_DEVICE_NODE *psDeviceNode)
 	     ((PVRVERSION_MAJ << 16) | (PVRVERSION_MIN << 8) |
 	      PVRVERSION_BRANCH)) ||
 	     (psSGXFeatures->ui32DDKBuild != PVRVERSION_BUILD)) {
-		PVR_DPF(PVR_DBG_ERROR, "SGXDevInitCompatCheck: "
-			"Incompatible driver DDK revision (%ld)"
-			"/device DDK revision (%ld).",
+		pr_err("pvr: incompatible driver DDK revision (%d)"
+			"/device DDK revision (%d).\n",
 			 PVRVERSION_BUILD, psSGXFeatures->ui32DDKBuild);
 		eError = PVRSRV_ERROR_DDK_VERSION_MISMATCH;
 		goto exit;
@@ -1276,16 +1274,14 @@ enum PVRSRV_ERROR SGXDevInitCompatCheck(struct PVRSRV_DEVICE_NODE *psDeviceNode)
 	opt_mismatch &= ~PVRSRV_USSE_EDM_STATUS_DEBUG_SET_OFFSET;
 	if (opt_mismatch) {
 		if (SGX_BUILD_OPTIONS & opt_mismatch)
-			PVR_DPF(PVR_DBG_ERROR, "SGXInit: "
-				"Mismatch in driver and microkernel build "
+			pr_err("pvr: mismatch in driver and microkernel build "
 				"options; extra options present in driver: "
-				"(0x%lx)", SGX_BUILD_OPTIONS & opt_mismatch);
+				"(0x%x)", SGX_BUILD_OPTIONS & opt_mismatch);
 
 		if (opts & opt_mismatch)
-			PVR_DPF(PVR_DBG_ERROR, "SGXInit: "
-				"Mismatch in driver and microkernel build "
+			pr_err("pvr: Mismatch in driver and microkernel build "
 				"options; extra options present in "
-				"microkernel: (0x%lx)", opts & opt_mismatch);
+				"microkernel: (0x%x)", opts & opt_mismatch);
 		eError = PVRSRV_ERROR_BUILD_MISMATCH;
 		goto exit;
 	} else {

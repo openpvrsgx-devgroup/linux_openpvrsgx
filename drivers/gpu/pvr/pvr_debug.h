@@ -77,9 +77,6 @@ int PVRDebugProcGetLevel(char *page, char **start, off_t off, int count,
 			 int *eof, void *data);
 void PVRDebugSetLevel(u32 uDebugLevel);
 
-void pvr_dbg_init(void);
-void pvr_dbg_cleanup(void);
-
 #define PVR_DBG_BREAK
 
 #else
@@ -101,10 +98,20 @@ void PVRSRVTrace(const char *pszFormat, ...);
 #define PVR_TRACE(fmt, ...)		do { } while (0)
 #define PVR_DBG_BREAK			do { } while (0)
 
+#endif		/* TIMING */
+
+#endif		/* CONFIG_PVR_DEBUG */
+
+#if defined(CONFIG_PVR_DEBUG) || defined(TIMING) || defined(CONFIG_DEBUG_FS)
+
+void pvr_dbg_init(void);
+void pvr_dbg_cleanup(void);
+
+#else
+
 static inline void pvr_dbg_init(void) {};
 static inline void pvr_dbg_cleanup(void) {};
 
-#endif
 #endif
 
 #endif

@@ -42,6 +42,8 @@
 #include "sgxutils.h"
 #include "pvr_bridge_km.h"
 
+#ifdef CONFIG_PVR_DEBUG
+
 u32 gPVRDebugLevel = DBGPRIV_WARNING;
 
 #define	PVR_MAX_MSG_LEN PVR_MAX_DEBUG_MESSAGE_LEN
@@ -251,6 +253,8 @@ int PVRDebugProcGetLevel(char *page, char **start, off_t off, int count,
 	return 0;
 }
 
+#endif
+
 #ifdef CONFIG_DEBUG_FS
 
 static struct dentry *debugfs_dir;
@@ -354,7 +358,9 @@ static void pvr_cleanup_debugfs(void) { }
 
 void pvr_dbg_init(void)
 {
+#if defined(CONFIG_PVR_DEBUG) || defined(TIMING)
 	mutex_init(&gsDebugMutexNonIRQ);
+#endif
 	pvr_init_debugfs();
 }
 

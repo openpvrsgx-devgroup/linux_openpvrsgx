@@ -34,9 +34,9 @@ config PVR_EDM_DEBUG
 	bool "Enable EDM trace"
 	default n
 	help
-	    EDM trace helps to track down some HW recovery events. You _must_
-	    also enabled EDM (PVRSRV_USSE_EDM_STATUS_DEBUG) in the userland
-	    libraries otherwise the drivers won't start
+	    This will print the micro kernel (EDM) tracing buffer in case
+	    of a HW recovery event. You also need a micro kernel that was
+	    configured to generate this trace.
 
 config PVR_NO_HARDWARE
 	bool

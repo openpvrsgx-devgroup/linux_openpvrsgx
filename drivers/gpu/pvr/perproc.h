@@ -45,6 +45,11 @@ struct PVRSRV_PER_PROCESS_DATA {
 	IMG_BOOL bInitProcess;
 
 	void *hOsPrivateData;
+
+	int edm_compat_abi;		/*
+					 * set if old ABI is used to pass the
+					 * EDM trace buffer address.
+					 */
 };
 
 struct PVRSRV_PER_PROCESS_DATA *PVRSRVPerProcessData(u32 ui32PID);

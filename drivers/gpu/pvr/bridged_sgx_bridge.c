@@ -519,7 +519,8 @@ int SGXReadDiffCountersBW(u32 ui32BridgeID,
 				psSGXReadDiffCountersIN->ui32CountersReg,
 				&psSGXReadDiffCountersOUT->ui32Time,
 				&psSGXReadDiffCountersOUT->bActive,
-				&psSGXReadDiffCountersOUT->sDiffs);
+				&psSGXReadDiffCountersOUT->sDiffs,
+				psPerProc->edm_compat_abi);
 
 	return 0;
 }
@@ -571,9 +572,38 @@ int SGXReadHWPerfCBBW(u32 ui32BridgeID,
 	return 0;
 }
 
+static int fixup_compat_format(struct PVRSRV_PER_PROCESS_DATA *psPerProc,
+			       struct PVRSRV_BRIDGE_IN_SGXDEVINITPART2 *info,
+			       size_t size)
+{
+	void **edm_buf;
+
+	if (size == sizeof(*info)) {
+		psPerProc->edm_compat_abi = 0;
+		return 0;
+	}
+
+	edm_buf = &info->sInitInfo.hKernelEDMStatusBufferMemInfo;
+
+	if (size + sizeof(*edm_buf) != sizeof(*info))
+		return -EFAULT;
+
+	/*
+	 * remainder of the compat struct size after the
+	 * hKernelEDMStatusBufferMemInfo field
+	 */
+	size -= offsetof(struct PVRSRV_BRIDGE_IN_SGXDEVINITPART2,
+			 sInitInfo.hKernelEDMStatusBufferMemInfo);
+	memmove(edm_buf + 1, edm_buf, size);
+	*edm_buf = NULL;
+	psPerProc->edm_compat_abi = 1;
+
+	return 0;
+}
+
 int SGXDevInitPart2BW(u32 ui32BridgeID,
 		struct PVRSRV_BRIDGE_IN_SGXDEVINITPART2 *psSGXDevInitPart2IN,
-		struct PVRSRV_BRIDGE_RETURN *psRetOUT,
+		struct PVRSRV_BRIDGE_RETURN *psRetOUT, size_t in_size,
 		struct PVRSRV_PER_PROCESS_DATA *psPerProc)
 {
 	void *hDevCookieInt;
@@ -589,6 +619,11 @@ int SGXDevInitPart2BW(u32 ui32BridgeID,
 
 	if (!psPerProc->bInitProcess) {
 		psRetOUT->eError = PVRSRV_ERROR_GENERIC;
+		return 0;
+	}
+
+	if (fixup_compat_format(psPerProc, psSGXDevInitPart2IN, in_size) < 0) {
+		psRetOUT->eError = PVRSRV_ERROR_INVALID_PARAMS;
 		return 0;
 	}
 

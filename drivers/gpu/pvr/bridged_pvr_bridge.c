@@ -3225,7 +3225,7 @@ static int bridged_ioctl(struct file *filp, u32 cmd, void *in, void *out,
 		err = SGXGetInfoForSrvinitBW(cmd, in, out, per_proc);
 		break;
 	case PVRSRV_BRIDGE_SGX_DEVINITPART2:
-		err = SGXDevInitPart2BW(cmd, in, out, per_proc);
+		err = SGXDevInitPart2BW(cmd, in, out, in_size, per_proc);
 		break;
 
 	case PVRSRV_BRIDGE_SGX_FINDSHAREDPBDESC:

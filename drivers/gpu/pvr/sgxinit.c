@@ -586,37 +586,67 @@ static enum PVRSRV_ERROR DevDeInitSGX(void *pvDeviceNode)
 	return PVRSRV_OK;
 }
 
-#ifdef PVRSRV_USSE_EDM_STATUS_DEBUG
+#if defined(PVRSRV_USSE_EDM_STATUS_DEBUG) || defined(CONFIG_DEBUG_FS)
 
-#define SGXMK_TRACE_BUFFER_SIZE		512
-
-static void dump_edm(struct PVRSRV_SGXDEV_INFO *psDevInfo)
+static size_t __print_edm_trace(struct PVRSRV_SGXDEV_INFO *sdev, char *dst,
+				size_t dst_len)
 {
-	u32 *trace_buffer =
-		psDevInfo->psKernelEDMStatusBufferMemInfo->pvLinAddrKM;
-	u32 last_code, write_offset;
+	u32 *buf_start;
+	u32 *buf_end;
+	u32 *buf;
+	size_t p = 0;
+	size_t wr_ofs;
 	int i;
 
-	last_code = *trace_buffer;
-	trace_buffer++;
-	write_offset = *trace_buffer;
+#define _PR(fmt, ...) do {						   \
+	if (dst)							   \
+		p += snprintf(dst + p, dst_len - p, fmt, ## __VA_ARGS__);  \
+	else								   \
+		pr_err(fmt, ## __VA_ARGS__);				   \
+} while (0)
 
-	pr_err("Last SGX microkernel status code: 0x%x\n", last_code);
+	if (!sdev->psKernelEDMStatusBufferMemInfo)
+		return 0;
 
-	trace_buffer++;
+	buf = sdev->psKernelEDMStatusBufferMemInfo->pvLinAddrKM;
+
+	_PR("Last SGX microkernel status code: 0x%x\n", *buf);
+	buf++;
+	wr_ofs = *buf;
+	buf++;
+
+	buf_start = buf;
+	buf_end = buf + SGXMK_TRACE_BUFFER_SIZE * 4;
+
+	buf += wr_ofs * 4;
+
 	/* Dump the status values */
-
 	for (i = 0; i < SGXMK_TRACE_BUFFER_SIZE; i++) {
-		u32     *buf;
-		buf = trace_buffer + (((write_offset + i) %
-					SGXMK_TRACE_BUFFER_SIZE) * 4);
-		pr_err("(MKT%u) %8.8X %8.8X %8.8X %8.8X\n", i,
-				buf[2], buf[3], buf[1], buf[0]);
+		_PR("%3d %08X %08X %08X %08X\n",
+		    i, buf[2], buf[3], buf[1], buf[0]);
+		buf += 4;
+		if (buf >= buf_end)
+			buf = buf_start;
 	}
+
+	return p > dst_len ? dst_len : p;
+#undef _PR
 }
-#else
-static void dump_edm(struct PVRSRV_SGXDEV_INFO *psDevInfo) {}
+
+size_t snprint_edm_trace(struct PVRSRV_SGXDEV_INFO *sdev, char *buf,
+			 size_t buf_size)
+{
+	return __print_edm_trace(sdev, buf, buf_size);
+}
+
 #endif
+
+static void dump_edm(struct PVRSRV_SGXDEV_INFO *sdev)
+{
+#ifdef PVRSRV_USSE_EDM_STATUS_DEBUG
+	__print_edm_trace(sdev, NULL, 0);
+#endif
+}
 
 static void dump_process_info(struct PVRSRV_DEVICE_NODE *dev)
 {

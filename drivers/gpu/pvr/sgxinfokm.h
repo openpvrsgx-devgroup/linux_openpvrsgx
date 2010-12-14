@@ -56,6 +56,9 @@
 
 #define PVRSRV_USSE_MISCINFO_READY				0x1UL
 
+#define SGXMK_TRACE_BUFFER_SIZE					512
+#define SGXMK_TRACE_BUF_STR_LEN					80
+
 struct PVRSRV_SGX_CCB_INFO;
 
 struct PVRSRV_SGXDEV_INFO {
@@ -248,6 +251,19 @@ enum PVRSRV_ERROR SGXDevInitCompatCheck(struct PVRSRV_DEVICE_NODE
 					*psDeviceNode);
 
 void SysGetSGXTimingInformation(struct SGX_TIMING_INFORMATION *psSGXTimingInfo);
+
+#if defined(PVRSRV_USSE_EDM_STATUS_DEBUG) || defined(CONFIG_DEBUG_FS)
+size_t snprint_edm_trace(struct PVRSRV_SGXDEV_INFO *sdev, char *buf,
+			 size_t buf_size);
+#else
+static inline size_t snprint_edm_trace(struct PVRSRV_SGXDEV_INFO *sdev,
+					char *buf, size_t buf_size)
+{
+	return 0;
+}
+#endif
+
+
 
 #if defined(NO_HARDWARE)
 static inline void NoHardwareGenerateEvent(struct PVRSRV_SGXDEV_INFO *psDevInfo,

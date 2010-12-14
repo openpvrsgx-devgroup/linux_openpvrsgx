@@ -99,10 +99,9 @@ struct PVRSRV_SGXDEV_INFO {
 	struct PVRSRV_SGXDEV_DIFF_INFO sDiffInfo;
 	u32 ui32HWGroupRequested;
 	u32 ui32HWReset;
-#ifdef PVRSRV_USSE_EDM_STATUS_DEBUG
+
 	/*!< Meminfo for EDM status buffer */
 	struct PVRSRV_KERNEL_MEM_INFO *psKernelEDMStatusBufferMemInfo;
-#endif
 
 	u32 ui32ClientRefCount;
 

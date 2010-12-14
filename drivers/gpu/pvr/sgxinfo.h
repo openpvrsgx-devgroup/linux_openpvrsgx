@@ -56,9 +56,7 @@ struct SGX_BRIDGE_INIT_INFO {
 	u32 ui32HostKickAddress;
 	u32 ui32GetMiscInfoAddress;
 	void *hKernelHWPerfCBMemInfo;
-#if defined(PVRSRV_USSE_EDM_STATUS_DEBUG)
 	void *hKernelEDMStatusBufferMemInfo;
-#endif
 
 	u32 ui32EDMTaskReg0;
 	u32 ui32EDMTaskReg1;
@@ -198,10 +196,8 @@ struct SGXMKIF_HOST_CTL {
 
 	u32 ui32HWPerfFlags;
 
-#if defined(PVRSRV_USSE_EDM_STATUS_DEBUG)
 	/* !< See SGXMK_STATUS_BUFFER */
 	struct IMG_DEV_VIRTADDR sEDMStatusBuffer;
-#endif
 
 	/*< to count time wraps in the Timer task */
 	u32 ui32TimeWraps;

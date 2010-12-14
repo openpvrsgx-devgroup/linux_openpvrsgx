@@ -582,6 +582,7 @@ int SGXDevInitPart2BW(u32 ui32BridgeID,
 	IMG_BOOL bLookupFailed = IMG_FALSE;
 	IMG_BOOL bReleaseFailed = IMG_FALSE;
 	void *hDummy;
+	void **edm_mi;
 	u32 i;
 
 	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID, PVRSRV_BRIDGE_SGX_DEVINITPART2);
@@ -640,13 +641,12 @@ int SGXDevInitPart2BW(u32 ui32BridgeID,
 				    PVRSRV_HANDLE_TYPE_MEM_INFO);
 	bLookupFailed |= (IMG_BOOL) (eError != PVRSRV_OK);
 
-#if defined(PVRSRV_USSE_EDM_STATUS_DEBUG)
-	eError = PVRSRVLookupHandle(psPerProc->psHandleBase, &hDummy,
-				    psSGXDevInitPart2IN->sInitInfo.
-					    hKernelEDMStatusBufferMemInfo,
-				    PVRSRV_HANDLE_TYPE_MEM_INFO);
-	bLookupFailed |= (IMG_BOOL) (eError != PVRSRV_OK);
-#endif
+	edm_mi = &psSGXDevInitPart2IN->sInitInfo.hKernelEDMStatusBufferMemInfo;
+	if (*edm_mi) {
+		eError = PVRSRVLookupHandle(psPerProc->psHandleBase, &hDummy,
+					  *edm_mi, PVRSRV_HANDLE_TYPE_MEM_INFO);
+		bLookupFailed |= eError != PVRSRV_OK;
+	}
 
 	for (i = 0; i < SGX_MAX_INIT_MEM_HANDLES; i++) {
 		void *hHandle =
@@ -724,15 +724,12 @@ int SGXDevInitPart2BW(u32 ui32BridgeID,
 					      PVRSRV_HANDLE_TYPE_MEM_INFO);
 	bReleaseFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
 
-#if defined(PVRSRV_USSE_EDM_STATUS_DEBUG)
-	eError = PVRSRVLookupAndReleaseHandle(psPerProc->psHandleBase,
-					      &psSGXDevInitPart2IN->sInitInfo.
-						  hKernelEDMStatusBufferMemInfo,
-					      psSGXDevInitPart2IN->sInitInfo.
-						  hKernelEDMStatusBufferMemInfo,
+	if (*edm_mi) {
+		eError = PVRSRVLookupAndReleaseHandle(psPerProc->psHandleBase,
+					      edm_mi, *edm_mi,
 					      PVRSRV_HANDLE_TYPE_MEM_INFO);
-	bReleaseFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
-#endif
+		bReleaseFailed |= eError != PVRSRV_OK;
+	}
 
 	for (i = 0; i < SGX_MAX_INIT_MEM_HANDLES; i++) {
 		void **phHandle =
@@ -791,12 +788,10 @@ int SGXDevInitPart2BW(u32 ui32BridgeID,
 						hKernelHWPerfCBMemInfo);
 	bDissociateFailed |= (IMG_BOOL) (eError != PVRSRV_OK);
 
-#if defined(PVRSRV_USSE_EDM_STATUS_DEBUG)
-	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt,
-					psSGXDevInitPart2IN->sInitInfo.
-						hKernelEDMStatusBufferMemInfo);
-	bDissociateFailed |= (IMG_BOOL) (eError != PVRSRV_OK);
-#endif
+	if (*edm_mi) {
+		eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, *edm_mi);
+		bDissociateFailed |= eError != PVRSRV_OK;
+	}
 
 	for (i = 0; i < SGX_MAX_INIT_MEM_HANDLES; i++) {
 		void *hHandle =

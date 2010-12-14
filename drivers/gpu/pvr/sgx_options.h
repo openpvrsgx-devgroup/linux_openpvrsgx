@@ -38,12 +38,8 @@
 #define OPTIONS_BIT1					0x0
 #endif
 
-#if defined(PVRSRV_USSE_EDM_STATUS_DEBUG) || defined(INTERNAL_TEST)
 #define PVRSRV_USSE_EDM_STATUS_DEBUG_SET_OFFSET		OPTIONS_BIT2
 #define OPTIONS_BIT2					(0x1 << 2)
-#else
-#define OPTIONS_BIT2					0x0
-#endif
 
 #define SUPPORT_HW_RECOVERY_SET_OFFSET			OPTIONS_BIT3
 #define OPTIONS_BIT3					(0x1 << 3)

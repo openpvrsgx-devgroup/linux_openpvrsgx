@@ -32,6 +32,8 @@
 #include <linux/spinlock.h>
 #include <linux/tty.h>
 #include <linux/debugfs.h>
+#include <linux/vmalloc.h>
+
 #include <stdarg.h>
 #include "img_types.h"
 #include "servicesext.h"
@@ -325,6 +327,54 @@ static int pvr_dbg_set(void *data, u64 val)
 
 DEFINE_SIMPLE_ATTRIBUTE(pvr_dbg_fops, NULL, pvr_dbg_set, "%llu\n");
 
+struct edm_buf_info {
+	size_t len;
+	char data[1];
+};
+
+static int pvr_dbg_edm_open(struct inode *inode, struct file *file)
+{
+	struct PVRSRV_DEVICE_NODE *node;
+	struct PVRSRV_SGXDEV_INFO *sgx_info;
+	struct edm_buf_info *bi;
+	size_t size;
+
+	/* Take a snapshot of the EDM trace buffer */
+	size = SGXMK_TRACE_BUFFER_SIZE * SGXMK_TRACE_BUF_STR_LEN;
+	bi = vmalloc(sizeof(*bi) + size);
+	if (!bi)
+		return -ENOMEM;
+
+	node = get_sgx_node();
+	sgx_info = node->pvDevice;
+	bi->len = snprint_edm_trace(sgx_info, bi->data, size);
+	file->private_data = bi;
+
+	return 0;
+}
+
+static int pvr_dbg_edm_release(struct inode *inode, struct file *file)
+{
+	vfree(file->private_data);
+
+	return 0;
+}
+
+static ssize_t pvr_dbg_edm_read(struct file *file, char __user *buffer,
+				size_t count, loff_t *ppos)
+{
+	struct edm_buf_info *bi = file->private_data;
+
+	return simple_read_from_buffer(buffer, count, ppos, bi->data, bi->len);
+}
+
+static const struct file_operations pvr_dbg_edm_fops = {
+	.owner		= THIS_MODULE,
+	.open		= pvr_dbg_edm_open,
+	.read		= pvr_dbg_edm_read,
+	.release	= pvr_dbg_edm_release,
+};
+
 static int pvr_init_debugfs(void)
 {
 	debugfs_dir = debugfs_create_dir("pvr", NULL);
@@ -334,6 +384,12 @@ static int pvr_init_debugfs(void)
 	if (!debugfs_create_file("reset_sgx", S_IWUGO, debugfs_dir, &pvr_reset,
 				 &pvr_dbg_fops)) {
 		debugfs_remove(debugfs_dir);
+		return -ENODEV;
+	}
+
+	if (!debugfs_create_file("edm_trace", S_IRUGO, debugfs_dir, NULL,
+				 &pvr_dbg_edm_fops)) {
+		debugfs_remove_recursive(debugfs_dir);
 		return -ENODEV;
 	}
 

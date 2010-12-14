@@ -253,7 +253,7 @@ int PVRDebugProcGetLevel(char *page, char **start, off_t off, int count,
 
 #ifdef CONFIG_DEBUG_FS
 
-static struct dentry *debugfs_dentry;
+static struct dentry *debugfs_dir;
 static u32 pvr_reset;
 
 static struct PVRSRV_DEVICE_NODE *get_sgx_node(void)
@@ -323,15 +323,22 @@ DEFINE_SIMPLE_ATTRIBUTE(pvr_dbg_fops, NULL, pvr_dbg_set, "%llu\n");
 
 static int pvr_init_debugfs(void)
 {
-	debugfs_dentry = debugfs_create_file("reset_sgx", S_IWUGO, NULL,
-			&pvr_reset, &pvr_dbg_fops);
+	debugfs_dir = debugfs_create_dir("pvr", NULL);
+	if (!debugfs_dir)
+		return -ENODEV;
 
-	return debugfs_dentry ? 0 : -ENODEV;
+	if (!debugfs_create_file("reset_sgx", S_IWUGO, debugfs_dir, &pvr_reset,
+				 &pvr_dbg_fops)) {
+		debugfs_remove(debugfs_dir);
+		return -ENODEV;
+	}
+
+	return 0;
 }
 
 static void pvr_cleanup_debugfs(void)
 {
-	debugfs_remove(debugfs_dentry);
+	debugfs_remove_recursive(debugfs_dir);
 }
 
 #else		/* !CONFIG_DEBUG_FS */

@@ -1199,7 +1199,8 @@ enum PVRSRV_ERROR SGXDevInitCompatCheck(struct PVRSRV_DEVICE_NODE *psDeviceNode)
 	struct PVRSRV_KERNEL_MEM_INFO *psMemInfo;
 	enum PVRSRV_ERROR eError;
 #if !defined(NO_HARDWARE)
-	u32 ui32BuildOptions, ui32BuildOptionsMismatch;
+	u32 opts;
+	u32 opt_mismatch;
 	struct PVRSRV_SGX_MISCINFO_FEATURES *psSGXFeatures;
 #endif
 
@@ -1239,24 +1240,22 @@ enum PVRSRV_ERROR SGXDevInitCompatCheck(struct PVRSRV_DEVICE_NODE *psDeviceNode)
 			 PVRVERSION_BUILD, psSGXFeatures->ui32DDKBuild);
 	}
 
-	ui32BuildOptions = psSGXFeatures->ui32BuildOptions;
-	if (ui32BuildOptions != (SGX_BUILD_OPTIONS)) {
-		ui32BuildOptionsMismatch =
-		    ui32BuildOptions ^ (SGX_BUILD_OPTIONS);
-		if (((SGX_BUILD_OPTIONS) & ui32BuildOptionsMismatch) != 0)
+	opts = psSGXFeatures->ui32BuildOptions;
+	opt_mismatch = opts ^ SGX_BUILD_OPTIONS;
+	/* we support the ABIs both with and without EDM tracing option */
+	opt_mismatch &= ~PVRSRV_USSE_EDM_STATUS_DEBUG_SET_OFFSET;
+	if (opt_mismatch) {
+		if (SGX_BUILD_OPTIONS & opt_mismatch)
 			PVR_DPF(PVR_DBG_ERROR, "SGXInit: "
 				"Mismatch in driver and microkernel build "
 				"options; extra options present in driver: "
-				"(0x%lx)",
-				 (SGX_BUILD_OPTIONS) &
-				 ui32BuildOptionsMismatch);
+				"(0x%lx)", SGX_BUILD_OPTIONS & opt_mismatch);
 
-		if ((ui32BuildOptions & ui32BuildOptionsMismatch) != 0)
+		if (opts & opt_mismatch)
 			PVR_DPF(PVR_DBG_ERROR, "SGXInit: "
 				"Mismatch in driver and microkernel build "
 				"options; extra options present in "
-				"microkernel: (0x%lx)",
-				 ui32BuildOptions & ui32BuildOptionsMismatch);
+				"microkernel: (0x%lx)", opts & opt_mismatch);
 		eError = PVRSRV_ERROR_BUILD_MISMATCH;
 		goto exit;
 	} else {

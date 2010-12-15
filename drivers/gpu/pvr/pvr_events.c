@@ -13,6 +13,7 @@
 #include <linux/uaccess.h>
 #include <linux/fs.h>
 #include <linux/notifier.h>
+#include <linux/slab.h>
 
 #include <plat/display.h>
 

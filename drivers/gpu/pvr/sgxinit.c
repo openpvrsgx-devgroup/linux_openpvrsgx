@@ -29,6 +29,7 @@
 #include <linux/workqueue.h>
 #include <linux/io.h>
 #include <linux/slab.h>
+#include <linux/sched.h>
 
 #include "sgxdefs.h"
 #include "sgxmmu.h"
@@ -41,6 +42,7 @@
 #include "sysconfig.h"
 #include "pvr_bridge_km.h"
 #include "sgx_bridge_km.h"
+#include "resman.h"
 
 #include "pdump_km.h"
 #include "ra.h"
@@ -618,6 +620,32 @@ static void dump_edm(struct PVRSRV_SGXDEV_INFO *psDevInfo)
 static void dump_edm(struct PVRSRV_SGXDEV_INFO *psDevInfo) {}
 #endif
 
+static void dump_process_info(struct PVRSRV_DEVICE_NODE *dev)
+{
+	struct PVRSRV_SGXDEV_INFO *dev_info = dev->pvDevice;
+	u32 page_dir = readl(dev_info->pvRegsBaseKM +
+				EUR_CR_BIF_DIR_LIST_BASE0);
+	struct BM_CONTEXT *bm_ctx;
+	struct RESMAN_CONTEXT *res_ctx = NULL;
+
+	bm_ctx = bm_find_context(dev->sDevMemoryInfo.pBMContext, page_dir);
+	if (bm_ctx)
+		res_ctx = pvr_get_resman_ctx(bm_ctx);
+
+	if (res_ctx) {
+		struct task_struct *tsk;
+		struct PVRSRV_PER_PROCESS_DATA *proc;
+		int pid;
+
+		proc = pvr_get_proc_by_ctx(res_ctx);
+		pid = proc->ui32PID;
+		rcu_read_lock();
+		tsk = pid_task(find_vpid(pid), PIDTYPE_PID);
+		pr_err("PID = %d, process name = %s\n", pid, tsk->comm);
+		rcu_read_unlock();
+	}
+}
+
 static void dump_sgx_registers(struct PVRSRV_SGXDEV_INFO *psDevInfo)
 {
 	pr_err("EVENT_STATUS =     0x%08X\n"
@@ -667,6 +695,7 @@ void HWRecoveryResetSGX(struct PVRSRV_DEVICE_NODE *psDeviceNode,
 
 	pr_err("HWRecoveryResetSGX: SGX Hardware Recovery triggered\n");
 
+	dump_process_info(psDeviceNode);
 	dump_sgx_registers(psDevInfo);
 	dump_edm(psDevInfo);
 

@@ -148,19 +148,6 @@ static int pvr_resume(struct platform_device *pdev)
 	return 0;
 }
 
-static void pvr_dev_release(struct device *pdev)
-{
-	PVR_DPF(PVR_DBG_WARNING, "pvr_dev_release(pdev=%p)", pdev);
-}
-
-static struct platform_device pvr_device = {
-	.name = DRVNAME,
-	.id = -1,
-	.dev = {
-		.release = pvr_dev_release
-	}
-};
-
 static struct miscdevice pvr_miscdevice = {
 	.minor = MISC_DYNAMIC_MINOR,
 	.name = DRVNAME,
@@ -254,14 +241,8 @@ static int __init pvr_init(void)
 	if (error < 0)
 		goto err4;
 
-	error = platform_device_register(&pvr_device);
-	if (error)
-		goto err5;
-
 	return 0;
 
-err5:
-	platform_driver_unregister(&pvr_driver);
 err4:
 	PVRMMapCleanup();
 	LinuxBridgeDeInit();
@@ -283,7 +264,6 @@ static void __exit pvr_cleanup(void)
 
 	SysAcquireData(&sysdata);
 
-	platform_device_unregister(&pvr_device);
 	platform_driver_unregister(&pvr_driver);
 
 	PVRMMapCleanup();

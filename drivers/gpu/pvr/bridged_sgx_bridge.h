@@ -77,7 +77,7 @@ int SGXReadHWPerfCBBW(u32 ui32BridgeID,
 
 int SGXDevInitPart2BW(u32 ui32BridgeID,
 	struct PVRSRV_BRIDGE_IN_SGXDEVINITPART2 *psSGXDevInitPart2IN,
-	struct PVRSRV_BRIDGE_RETURN *psRetOUT, size_t in_size,
+	struct PVRSRV_BRIDGE_RETURN *psRetOUT,
 	struct PVRSRV_PER_PROCESS_DATA *psPerProc);
 
 int SGXRegisterHWRenderContextBW(u32 ui32BridgeID,

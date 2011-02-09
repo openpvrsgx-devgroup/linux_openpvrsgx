@@ -61,8 +61,7 @@ enum PVRSRV_ERROR SGXReadDiffCountersKM(void *hDevHandle, u32 ui32Reg,
 			    u32 *pui32Old, IMG_BOOL bNew, u32 ui32New,
 			    u32 ui32NewReset, u32 ui32CountersReg,
 			    u32 *pui32Time, IMG_BOOL *pbActive,
-			    struct PVRSRV_SGXDEV_DIFF_INFO *psDiffs,
-			    int edm_compat_abi);
+			    struct PVRSRV_SGXDEV_DIFF_INFO *psDiffs);
 enum PVRSRV_ERROR SGXReadHWPerfCBKM(void *hDevHandle, u32 ui32ArraySize,
 			    struct PVRSRV_SGX_HWPERF_CB_ENTRY *psHWPerfCBData,
 			    u32 *pui32DataCount, u32 *pui32ClockSpeed,

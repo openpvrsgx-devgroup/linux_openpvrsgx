@@ -1540,8 +1540,7 @@ enum PVRSRV_ERROR SGXReadDiffCountersKM(void *hDevHandle, u32 ui32Reg,
 				   u32 *pui32Old, IMG_BOOL bNew, u32 ui32New,
 				   u32 ui32NewReset, u32 ui32CountersReg,
 				   u32 *pui32Time, IMG_BOOL *pbActive,
-				   struct PVRSRV_SGXDEV_DIFF_INFO *psDiffs,
-				   int edm_compat_abi)
+				   struct PVRSRV_SGXDEV_DIFF_INFO *psDiffs)
 {
 	struct SYS_DATA *psSysData;
 	struct PVRSRV_POWER_DEV *psPowerDevice;
@@ -1581,7 +1580,6 @@ enum PVRSRV_ERROR SGXReadDiffCountersKM(void *hDevHandle, u32 ui32Reg,
 		sNew.ui32Time[0] = OSClockus();
 		*pui32Time = sNew.ui32Time[0];
 		if (sNew.ui32Time[0] != psPrev->ui32Time[0] && bPowered) {
-			u32 __iomem *time_wraps;
 
 			*pui32Old =
 			    OSReadHWReg(psDevInfo->pvRegsBaseKM, ui32Reg);
@@ -1608,10 +1606,8 @@ enum PVRSRV_ERROR SGXReadDiffCountersKM(void *hDevHandle, u32 ui32Reg,
 			sNew.ui32Marker[0] = psDevInfo->ui32KickTACounter;
 			sNew.ui32Marker[1] = psDevInfo->ui32KickTARenderCounter;
 
-			time_wraps = &psDevInfo->psSGXHostCtl->ui32TimeWraps;
-			if (edm_compat_abi)
-				time_wraps -= 1;
-			sNew.ui32Time[1] = readl(time_wraps);
+			sNew.ui32Time[1] = readl(
+				&psDevInfo->psSGXHostCtl->ui32TimeWraps);
 
 			for (i = 0; i < PVRSRV_SGX_DIFF_NUM_COUNTERS; ++i) {
 				psDiffs->aui32Counters[i] =

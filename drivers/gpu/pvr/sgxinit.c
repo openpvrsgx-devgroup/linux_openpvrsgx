@@ -648,24 +648,36 @@ static void dump_edm(struct PVRSRV_SGXDEV_INFO *sdev)
 #endif
 }
 
-static void dump_process_info(struct PVRSRV_DEVICE_NODE *dev)
+static struct PVRSRV_PER_PROCESS_DATA *find_cur_proc_data(
+					struct PVRSRV_DEVICE_NODE *dev)
 {
 	struct PVRSRV_SGXDEV_INFO *dev_info = dev->pvDevice;
 	u32 page_dir = readl(dev_info->pvRegsBaseKM +
 				EUR_CR_BIF_DIR_LIST_BASE0);
 	struct BM_CONTEXT *bm_ctx;
 	struct RESMAN_CONTEXT *res_ctx = NULL;
+	struct PVRSRV_PER_PROCESS_DATA *proc_data = NULL;
 
 	bm_ctx = bm_find_context(dev->sDevMemoryInfo.pBMContext, page_dir);
 	if (bm_ctx)
 		res_ctx = pvr_get_resman_ctx(bm_ctx);
 
-	if (res_ctx) {
+	if (res_ctx)
+		proc_data = pvr_get_proc_by_ctx(res_ctx);
+
+	return proc_data;
+}
+
+static void dump_process_info(struct PVRSRV_DEVICE_NODE *dev)
+{
+	struct PVRSRV_PER_PROCESS_DATA *proc;
+
+	proc = find_cur_proc_data(dev);
+
+	if (proc) {
 		struct task_struct *tsk;
-		struct PVRSRV_PER_PROCESS_DATA *proc;
 		int pid;
 
-		proc = pvr_get_proc_by_ctx(res_ctx);
 		pid = proc->ui32PID;
 		rcu_read_lock();
 		tsk = pid_task(find_vpid(pid), PIDTYPE_PID);

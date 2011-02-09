@@ -152,6 +152,7 @@ struct PVRSRV_SGXDEV_INFO {
 
 	u32 asSGXDevData[SGX_MAX_DEV_DATA];
 
+	u32 state_buf_ofs;
 };
 
 struct SGX_TIMING_INFORMATION {

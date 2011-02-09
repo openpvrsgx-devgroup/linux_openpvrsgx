@@ -71,6 +71,7 @@ struct SGX_BRIDGE_INIT_INFO {
 
 	struct SGX_INIT_SCRIPTS sScripts;
 
+	u32 state_buf_ofs;
 };
 
 struct SGXMKIF_COMMAND {
@@ -201,6 +202,9 @@ struct SGXMKIF_HOST_CTL {
 
 	/*< to count time wraps in the Timer task */
 	u32 ui32TimeWraps;
+
+	u32 render_state_buf_ta_handle;
+	u32 render_state_buf_3d_handle;
 };
 
 struct SGX_CLIENT_INFO {

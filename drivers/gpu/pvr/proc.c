@@ -138,12 +138,60 @@ int CreateProcEntry(const char *name, read_proc_t rhandler,
 	return CreateProcEntryInDir(dir, name, rhandler, whandler, data);
 }
 
-int CreatePerProcessProcEntry(const char *name, read_proc_t rhandler,
-			      write_proc_t whandler, void *data)
+static struct proc_dir_entry *
+ProcessProcDirCreate(u32 pid)
 {
 	struct PVRSRV_ENV_PER_PROCESS_DATA *psPerProc;
-	u32 ui32PID;
+	char dirname[16];
+	int ret;
 
+	psPerProc = PVRSRVPerProcessPrivateData(pid);
+	if (!psPerProc) {
+		pr_err("%s: no per process data for %d\n", __func__, pid);
+		return NULL;
+	}
+
+	if (psPerProc->psProcDir)
+		return psPerProc->psProcDir;
+
+	ret = snprintf(dirname, sizeof(dirname), "%u", pid);
+	if (ret <= 0 || ret >= sizeof(dirname)) {
+		pr_err("%s: couldn't generate per process proc dir for %d\n",
+		       __func__, pid);
+		return NULL;
+	}
+
+	psPerProc->psProcDir = proc_mkdir(dirname, dir);
+	if (!psPerProc->psProcDir)
+		pr_err("%s: couldn't create /proc/%s/%u\n",
+		       __func__, PVRProcDirRoot, pid);
+
+	return psPerProc->psProcDir;
+}
+
+static struct proc_dir_entry *
+ProcessProcDirGet(u32 pid)
+{
+	struct PVRSRV_ENV_PER_PROCESS_DATA *psPerProc;
+
+	psPerProc = PVRSRVPerProcessPrivateData(pid);
+	if (!psPerProc) {
+		pr_err("%s: no per process data for %d\n", __func__, pid);
+		return NULL;
+	}
+
+	if (!psPerProc->psProcDir) {
+		pr_err("%s: couldn't retrieve /proc/%s/%u\n", __func__,
+		       PVRProcDirRoot, pid);
+		return NULL;
+	}
+
+	return psPerProc->psProcDir;
+}
+
+int CreatePerProcessProcEntry(u32 pid, const char *name, read_proc_t rhandler,
+			      void *data)
+{
 	if (!dir) {
 		PVR_DPF(PVR_DBG_ERROR,
 			 "CreatePerProcessProcEntries: /proc/%s doesn't exist",
@@ -152,45 +200,16 @@ int CreatePerProcessProcEntry(const char *name, read_proc_t rhandler,
 		return -ENOMEM;
 	}
 
-	ui32PID = OSGetCurrentProcessIDKM();
+	if (pid) {
+		struct proc_dir_entry *pid_dir = ProcessProcDirCreate(pid);
 
-	psPerProc = PVRSRVPerProcessPrivateData(ui32PID);
-	if (!psPerProc) {
-		PVR_DPF(PVR_DBG_ERROR,
-			 "CreatePerProcessProcEntries: no per process data");
-
-		return -ENOMEM;
-	}
-
-	if (!psPerProc->psProcDir) {
-		char dirname[16];
-		int ret;
-
-		ret = snprintf(dirname, sizeof(dirname), "%u", ui32PID);
-
-		if (ret <= 0 || ret >= sizeof(dirname)) {
-			PVR_DPF(PVR_DBG_ERROR, "CreatePerProcessProcEntries: "
-					"couldn't generate per process proc "
-					"directory name \"%u\"",
-					 ui32PID);
-
+		if (!pid_dir)
 			return -ENOMEM;
-		} else {
-			psPerProc->psProcDir = proc_mkdir(dirname, dir);
-			if (!psPerProc->psProcDir) {
-				PVR_DPF(PVR_DBG_ERROR,
-					"CreatePerProcessProcEntries: "
-					"couldn't create per process proc "
-					"directory /proc/%s/%u",
-					 PVRProcDirRoot, ui32PID);
 
-				return -ENOMEM;
-			}
-		}
-	}
-
-	return CreateProcEntryInDir(psPerProc->psProcDir, name, rhandler,
-				    whandler, data);
+		return CreateProcEntryInDir(pid_dir, name, rhandler, NULL,
+					    data);
+	} else
+		return CreateProcEntryInDir(dir, name, rhandler, NULL, data);
 }
 
 int CreateProcReadEntry(const char *name,
@@ -264,24 +283,20 @@ void RemoveProcEntry(const char *name)
 	}
 }
 
-void RemovePerProcessProcEntry(const char *name)
+void RemovePerProcessProcEntry(u32 pid, const char *name)
 {
-	struct PVRSRV_ENV_PER_PROCESS_DATA *psPerProc =
-	    PVRSRVFindPerProcessPrivateData();
+	if (pid) {
+		struct proc_dir_entry *pid_dir = ProcessProcDirGet(pid);
 
-	if (!psPerProc) {
-		PVR_DPF(PVR_DBG_ERROR, "CreatePerProcessProcEntries: "
-					"can't remove %s, no per process data",
-			 name);
-		return;
-	}
+		if (!pid_dir)
+			return;
 
-	if (psPerProc->psProcDir) {
-		remove_proc_entry(name, psPerProc->psProcDir);
+		remove_proc_entry(name, pid_dir);
 
 		PVR_DPF(PVR_DBG_MESSAGE, "Removing proc entry %s from %s",
-			 name, psPerProc->psProcDir->name);
-	}
+			 name, pid_dir->name);
+	} else
+		RemoveProcEntry(name);
 }
 
 void RemovePerProcessProcDir(struct PVRSRV_ENV_PER_PROCESS_DATA *psPerProc)

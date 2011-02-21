@@ -42,12 +42,12 @@ int CreateProcReadEntry(const char *name,
 int CreateProcEntry(const char *name, read_proc_t rhandler,
 		    write_proc_t whandler, void *data);
 
-int CreatePerProcessProcEntry(const char *name, read_proc_t rhandler,
-			      write_proc_t whandler, void *data);
+int CreatePerProcessProcEntry(u32 pid, const char *name, read_proc_t rhandler,
+			      void *data);
 
 void RemoveProcEntry(const char *name);
 
-void RemovePerProcessProcEntry(const char *name);
+void RemovePerProcessProcEntry(u32 pid, const char *name);
 
 void RemoveProcEntries(void);
 

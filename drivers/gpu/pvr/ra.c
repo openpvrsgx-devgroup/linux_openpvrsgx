@@ -77,7 +77,7 @@ struct RA_ARENA {
 #define PROC_NAME_SIZE		32
 	char szProcInfoName[PROC_NAME_SIZE];
 	char szProcSegsName[PROC_NAME_SIZE];
-	IMG_BOOL bInitProcEntry;
+	u32 ui32PID;
 #endif
 };
 
@@ -644,41 +644,44 @@ struct RA_ARENA *RA_Create(char *name, u32 base, size_t uSize,
 #if defined(CONFIG_PROC_FS) && defined(CONFIG_PVR_DEBUG_EXTRA)
 	if (strcmp(pArena->name, "") != 0) {
 		int ret;
-		int (*pfnCreateProcEntry) (const char *, read_proc_t,
-					   write_proc_t, void *);
 
-		pArena->bInitProcEntry =
-		    !PVRSRVGetInitServerState(PVRSRV_INIT_SERVER_SUCCESSFUL);
-
-		pfnCreateProcEntry = pArena->bInitProcEntry ? CreateProcEntry :
-					    CreatePerProcessProcEntry;
+		if (PVRSRVGetInitServerState(PVRSRV_INIT_SERVER_SUCCESSFUL))
+			pArena->ui32PID = OSGetCurrentProcessIDKM();
+		else
+			pArena->ui32PID = 0;
 
 		ret = snprintf(pArena->szProcInfoName,
 			     sizeof(pArena->szProcInfoName), "ra_info_%s",
 			     pArena->name);
-		if (ret > 0 && ret < sizeof(pArena->szProcInfoName)) {
-			(void)pfnCreateProcEntry(ReplaceSpaces
-					       (pArena->szProcInfoName),
-					       RA_DumpInfo, NULL, pArena);
-		} else {
+		if ((ret > 0) && (ret < sizeof(pArena->szProcInfoName))) {
+			ReplaceSpaces(pArena->szProcInfoName);
+			ret = CreatePerProcessProcEntry(pArena->ui32PID,
+							pArena->szProcInfoName,
+							RA_DumpInfo, pArena);
+		} else
 			pArena->szProcInfoName[0] = 0;
-			PVR_DPF(PVR_DBG_ERROR, "RA_Create: "
-			      "couldn't create ra_info proc entry for arena %s",
-				 pArena->name);
+
+		if (ret) {
+			pArena->szProcInfoName[0] = 0;
+			pr_err("%s: couldn't create ra_info proc entry for "
+			       "arena %s", __func__, pArena->name);
 		}
 
 		ret = snprintf(pArena->szProcSegsName,
 			     sizeof(pArena->szProcSegsName), "ra_segs_%s",
 			     pArena->name);
-		if (ret > 0 && ret < sizeof(pArena->szProcInfoName)) {
-			(void)pfnCreateProcEntry(ReplaceSpaces
-					       (pArena->szProcSegsName),
-					       RA_DumpSegs, NULL, pArena);
-		} else {
+		if ((ret > 0) && (ret < sizeof(pArena->szProcSegsName))) {
+			ReplaceSpaces(pArena->szProcSegsName);
+			ret = CreatePerProcessProcEntry(pArena->ui32PID,
+							pArena->szProcSegsName,
+							RA_DumpSegs, pArena);
+		} else
+			ret = -1;
+
+		if (ret) {
 			pArena->szProcSegsName[0] = 0;
-			PVR_DPF(PVR_DBG_ERROR, "RA_Create: "
-			      "couldn't create ra_segs proc entry for arena %s",
-				 pArena->name);
+			pr_err("%s: couldn't create ra_segs proc entry for "
+			       "arena %s", __func__, pArena->name);
 		}
 	}
 #endif
@@ -734,18 +737,13 @@ void RA_Delete(struct RA_ARENA *pArena)
 	}
 #if defined(CONFIG_PROC_FS) && defined(CONFIG_PVR_DEBUG_EXTRA)
 	{
-		void (*pfnRemoveProcEntry) (const char *);
-
-		pfnRemoveProcEntry =
-		    pArena->
-		    bInitProcEntry ? RemoveProcEntry :
-		    RemovePerProcessProcEntry;
-
 		if (pArena->szProcInfoName[0] != 0)
-			pfnRemoveProcEntry(pArena->szProcInfoName);
+			RemovePerProcessProcEntry(pArena->ui32PID,
+						  pArena->szProcInfoName);
 
 		if (pArena->szProcSegsName[0] != 0)
-			pfnRemoveProcEntry(pArena->szProcSegsName);
+			RemovePerProcessProcEntry(pArena->ui32PID,
+						  pArena->szProcSegsName);
 	}
 #endif
 	HASH_Delete(pArena->pSegmentHash);

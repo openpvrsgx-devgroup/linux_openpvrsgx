@@ -106,4 +106,7 @@ enum PVRSRV_ERROR SGXGetInternalDevInfoKM(void *hDevCookie,
 
 int sgx_force_reset(void);
 
+IMG_BOOL isSGXPerfServerActive(void);
+void	   SGXPerfServerMonitor(u32 u32TimeStamp);
+
 #endif

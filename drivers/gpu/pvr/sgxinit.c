@@ -1785,6 +1785,38 @@ enum PVRSRV_ERROR SGXGetMiscInfoKM(struct PVRSRV_SGXDEV_INFO *psDevInfo,
 	}
 }
 
+
+
+static bool sgxps_active;
+static unsigned long sgxps_timeout;
+
+IMG_BOOL isSGXPerfServerActive(void)
+{
+	if (!sgxps_active)
+		return 0;
+
+	if (time_before_eq((unsigned long)OSClockus(), sgxps_timeout))
+		return 1;
+
+	sgxps_active = false;
+	PVR_DPF(DBGPRIV_WARNING, "pvr: perf server inactive\n");
+
+	return 0;
+}
+
+
+void SGXPerfServerMonitor(u32 u32TimeStamp)
+{
+	if (!sgxps_active) {
+		PVR_DPF(DBGPRIV_WARNING, "pvr: perf server active\n");
+		sgxps_active = true;
+	}
+
+	/* turn off after 1 second of inactivity */
+	sgxps_timeout = u32TimeStamp + 1000000;
+}
+
+
 enum PVRSRV_ERROR SGXReadDiffCountersKM(void *hDevHandle, u32 ui32Reg,
 				   u32 *pui32Old, IMG_BOOL bNew, u32 ui32New,
 				   u32 ui32NewReset, u32 ui32CountersReg,
@@ -1829,6 +1861,8 @@ enum PVRSRV_ERROR SGXReadDiffCountersKM(void *hDevHandle, u32 ui32Reg,
 		sNew.ui32Time[0] = OSClockus();
 		*pui32Time = sNew.ui32Time[0];
 		if (sNew.ui32Time[0] != psPrev->ui32Time[0] && bPowered) {
+
+			SGXPerfServerMonitor(*pui32Time);
 
 			*pui32Old =
 			    OSReadHWReg(psDevInfo->pvRegsBaseKM, ui32Reg);

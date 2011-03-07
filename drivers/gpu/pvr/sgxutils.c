@@ -70,6 +70,9 @@ void SGXTestActivePowerEvent(struct PVRSRV_DEVICE_NODE *psDeviceNode)
 	struct SGXMKIF_HOST_CTL __iomem *psSGXHostCtl = psDevInfo->psSGXHostCtl;
 	u32 l;
 
+	if (isSGXPerfServerActive())
+		return;
+
 	l = readl(&psSGXHostCtl->ui32InterruptFlags);
 	if (!(l & PVRSRV_USSE_EDM_INTERRUPT_ACTIVE_POWER))
 		return;

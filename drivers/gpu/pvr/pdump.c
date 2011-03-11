@@ -138,12 +138,6 @@ DbgDrvIsCaptureFrame(struct DBG_STREAM *psStream, IMG_BOOL bCheckPreviousFrame)
 	return 1;
 }
 
-static u32
-DbgDrvGetStreamOffset(struct DBG_STREAM *psStream)
-{
-	return 0;
-}
-
 static enum PVRSRV_ERROR
 pdump_write(struct DBG_STREAM *psStream, u8 *pui8Data, u32 ui32Count,
 	    u32 ui32Flags)
@@ -611,7 +605,6 @@ PDumpMemKM(void *pvAltLinAddr, struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 	struct IMG_DEV_VIRTADDR sDevVAddr;
 	struct IMG_DEV_PHYADDR sDevPAddr;
 	struct IMG_CPU_PHYADDR CpuPAddr;
-	u32 ui32ParamOutPos;
 	u32 ui32CurrentOffset;
 	u32 ui32BytesRemaining;
 	enum PVRSRV_ERROR eError;
@@ -635,18 +628,15 @@ PDumpMemKM(void *pvAltLinAddr, struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 
 	PVR_ASSERT(pui8DataLinAddr);
 
-	ui32ParamOutPos =
-	    DbgDrvGetStreamOffset(gpsStream[PDUMP_STREAM_PARAM2]);
-
 	eError = pdump_write(gpsStream[PDUMP_STREAM_PARAM2], pui8DataLinAddr,
 			     ui32Bytes, ui32Flags);
 	if (eError != PVRSRV_OK)
 		return eError;
 
 	PDumpCommentWithFlags(ui32Flags, "LDB :SGXMEM:VA_%8.8X:0x%8.8X "
-			      "0x%8.8X 0x%8.8X %%0%%.prm\r\n",
+			      "0x%8.8X\r\n",
 			      psMemInfo->sDevVAddr.uiAddr, ui32Offset,
-			      ui32Bytes, ui32ParamOutPos);
+			      ui32Bytes);
 
 	CpuPAddr =
 	    OSMemHandleToCpuPAddr(psMemInfo->sMemBlk.hOSMemHandle, ui32Offset);
@@ -681,14 +671,13 @@ PDumpMemKM(void *pvAltLinAddr, struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 		}
 
 		pdump_print(ui32Flags, "LDB :SGXMEM:PA_%8.8X%8.8lX:0x%8.8lX"
-			    " 0x%8.8X 0x%8.8X %%0%%.prm\r\n", (u32) hUniqueTag,
+			    " 0x%8.8X\r\n", (u32) hUniqueTag,
 			    sDevPAddr.uiAddr & ~(SGX_MMU_PAGE_SIZE - 1),
 			    sDevPAddr.uiAddr & (SGX_MMU_PAGE_SIZE - 1),
-			    ui32BlockBytes, ui32ParamOutPos);
+			    ui32BlockBytes);
 
 		ui32BytesRemaining -= ui32BlockBytes;
 		ui32CurrentOffset += ui32BlockBytes;
-		ui32ParamOutPos += ui32BlockBytes;
 	}
 	PVR_ASSERT(ui32BytesRemaining == 0);
 
@@ -707,7 +696,6 @@ PDumpMem2KM(enum PVRSRV_DEVICE_TYPE eDeviceType, void *pvLinAddr,
 	struct IMG_DEV_PHYADDR sDevPAddr;
 	struct IMG_CPU_PHYADDR sCpuPAddr;
 	u32 ui32Offset;
-	u32 ui32ParamOutPos;
 	enum PVRSRV_ERROR eError;
 
 	if (PDumpSuspended())
@@ -715,9 +703,6 @@ PDumpMem2KM(enum PVRSRV_DEVICE_TYPE eDeviceType, void *pvLinAddr,
 
 	if (!pvLinAddr)
 		return PVRSRV_ERROR_GENERIC;
-
-	ui32ParamOutPos =
-	    DbgDrvGetStreamOffset(gpsStream[PDUMP_STREAM_PARAM2]);
 
 	if (bInitialisePages) {
 		eError = pdump_write(gpsStream[PDUMP_STREAM_PARAM2], pvLinAddr,
@@ -743,11 +728,11 @@ PDumpMem2KM(enum PVRSRV_DEVICE_TYPE eDeviceType, void *pvLinAddr,
 
 		if (bInitialisePages) {
 			pdump_print(PDUMP_FLAGS_CONTINUOUS, "LDB :SGXMEM:"
-				    "PA_%8.8X%8.8lX:0x%8.8lX 0x%8.8X 0x%8.8X "
-				    "%%0%%.prm\r\n", (u32) hUniqueTag1,
+				    "PA_%8.8X%8.8lX:0x%8.8lX 0x%8.8X\r\n",
+				    (u32) hUniqueTag1,
 				    sDevPAddr.uiAddr & ~(SGX_MMU_PAGE_SIZE - 1),
 				    sDevPAddr.uiAddr & (SGX_MMU_PAGE_SIZE - 1),
-				    ui32BlockBytes, ui32ParamOutPos);
+				    ui32BlockBytes);
 		} else {
 			for (ui32Offset = 0; ui32Offset < ui32BlockBytes;
 			     ui32Offset += sizeof(u32)) {
@@ -791,7 +776,6 @@ PDumpMem2KM(enum PVRSRV_DEVICE_TYPE eDeviceType, void *pvLinAddr,
 		ui32PageOffset = 0;
 		ui32Bytes -= ui32BlockBytes;
 		pui8LinAddr += ui32BlockBytes;
-		ui32ParamOutPos += ui32BlockBytes;
 	}
 
 	return PVRSRV_OK;

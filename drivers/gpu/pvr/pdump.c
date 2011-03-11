@@ -27,17 +27,13 @@
 #if defined(PDUMP)
 #include <asm/atomic.h>
 #include <stdarg.h>
+
 #include "sgxdefs.h"
 #include "services_headers.h"
-
 #include "pvrversion.h"
-#include "pvr_debug.h"
-
 #include "sgxmmu.h"
 #include "mm.h"
 #include "pdump_km.h"
-
-#include <linux/tty.h>
 
 /*
  * There is no sense in having SGX_MMU_PAGE_SIZE differ from PAGE_SIZE.
@@ -49,31 +45,7 @@
 #error Host page size differs from GPU page size!
 #endif
 
-#define DEBUG_CAPMODE_FRAMED            0x00000001
-#define DEBUG_CAPMODE_CONTINUOUS        0x00000002
-#define DEBUG_CAPMODE_HOTKEY            0x00000004
-#define DEBUG_CAPMODE_POSTMORTEM        0x00000008
-
-#define DEBUG_OUTMODE_STREAMENABLE      0x00000004
-
-struct DBG_STREAM {
-	u32 ui32CapMode;
-	u32 ui32Start;
-	u32 ui32End;
-	IMG_BOOL bInitPhaseComplete;
-};
-
 static atomic_t gsPDumpSuspended = ATOMIC_INIT(0);
-
-#define PDUMP_STREAM_PARAM2			0
-#define PDUMP_STREAM_SCRIPT2			1
-#define PDUMP_NUM_STREAMS			2
-
-static char *pszStreamName[PDUMP_NUM_STREAMS] = { "ParamStream2",
-	"ScriptStream2"
-};
-
-static struct DBG_STREAM *gpsStream[PDUMP_NUM_STREAMS] = {NULL};
 
 #define SZ_COMMENT_SIZE_MAX		PVRSRV_PDUMP_MAX_COMMENT_SIZE
 #define SZ_SCRIPT_SIZE_MAX		(SZ_COMMENT_SIZE_MAX + 5)
@@ -81,6 +53,13 @@ static struct DBG_STREAM *gpsStream[PDUMP_NUM_STREAMS] = {NULL};
 static char *gpszComment;
 static char *gpszScript;
 static char *gpszFile;
+
+#define DEBUG_MODE_DISABLED   0
+#define DEBUG_MODE_STANDARD   1
+#define DEBUG_MODE_FULL       2
+
+static u32 dbgdrv_mode = DEBUG_MODE_DISABLED;
+static u32 dbgdrv_frame_number;
 
 void PDumpSuspendKM(void)
 {
@@ -100,89 +79,74 @@ static inline IMG_BOOL PDumpSuspended(void)
 /*
  * empty pdump backend.
  */
-static void *
-DbgDrvCreateStream(char *pszName, u32 ui32CapMode, u32 ui32OutMode,
-		   u32 ui32Flags, u32 ui32Pages)
-{
-	return NULL;
-}
-
 static void
-DbgDrvDestroyStream(struct DBG_STREAM *psStream)
+dbgdrv_frame_set(u32 frame)
 {
-
-}
-
-static void
-DbgDrvSetCaptureMode(struct DBG_STREAM *psStream, u32 ui32CapMode,
-		     u32 ui32Start, u32 ui32Stop, u32 ui32SampleRate)
-{
-
-}
-
-static void
-DbgDrvSetFrame(struct DBG_STREAM *psStream, u32 ui32Frame)
-{
-
-}
-
-static void
-DbgDrvDBGDrivWrite2(struct DBG_STREAM *psStream, u8 *pui8InBuf,
-		    u32 ui32InBuffSize, u32 ui32Level)
-{
-
-}
-
-static void
-DbgDrvWriteBINCM(struct DBG_STREAM *psStream, u8 *pui8InBuf,
-		 u32 ui32InBuffSize, u32 ui32Level)
-{
-
-}
-
-static u32
-DbgDrvIsCaptureFrame(struct DBG_STREAM *psStream, IMG_BOOL bCheckPreviousFrame)
-{
-	return 1;
+	dbgdrv_frame_number = frame;
 }
 
 static enum PVRSRV_ERROR
-pdump_write(struct DBG_STREAM *psStream, void *pui8Data, u32 ui32Count,
-	    u32 ui32Flags)
+dbgdrv_write_data(void *buffer, int size)
 {
-	if (!psStream) /* will always hit with the empty backend. */
-		return PVRSRV_OK;
-
-	if (PDumpSuspended() || (ui32Flags & PDUMP_FLAGS_NEVER))
-		return PVRSRV_OK;
-
-	if (ui32Flags & PDUMP_FLAGS_CONTINUOUS) {
-		if ((psStream->ui32CapMode & DEBUG_CAPMODE_FRAMED) &&
-		    (psStream->ui32Start == 0xFFFFFFFF) &&
-		    (psStream->ui32End == 0xFFFFFFFF) &&
-		    psStream->bInitPhaseComplete)
-			return PVRSRV_OK;
-		else
-			DbgDrvDBGDrivWrite2(psStream, pui8Data,
-					    ui32Count, 1);
-	} else
-		DbgDrvWriteBINCM(psStream, pui8Data, ui32Count, 1);
-
-	/* placeholder, will get proper error handling later. */
 	return PVRSRV_OK;
 }
 
 static void
-pdump_print(u32 flags, char *pszFormat, ...)
+dbgdrv_write_string(char *string)
+{
+
+}
+
+static bool
+dbgdrv_capturing(void)
+{
+	if (dbgdrv_mode == DEBUG_MODE_FULL)
+		return true;
+	else
+		return false;
+}
+
+static bool dbgdrv_flags_check(u32 flags)
+{
+	if (flags & PDUMP_FLAGS_NEVER)
+		return false;
+	else if (dbgdrv_mode == DEBUG_MODE_FULL)
+		return true;
+	else if ((dbgdrv_mode == DEBUG_MODE_STANDARD) &&
+		 (flags & PDUMP_FLAGS_CONTINUOUS))
+		return true;
+	else
+		return false;
+}
+
+static void
+pdump_print(u32 flags, char *format, ...)
 {
 	va_list ap;
 
-	va_start(ap, pszFormat);
-	vsnprintf(gpszScript, SZ_SCRIPT_SIZE_MAX, pszFormat, ap);
+	if (PDumpSuspended())
+		return;
+
+	if (!dbgdrv_flags_check(flags))
+		return;
+
+	va_start(ap, format);
+	vsnprintf(gpszScript, SZ_SCRIPT_SIZE_MAX, format, ap);
 	va_end(ap);
 
-	(void) pdump_write(gpsStream[PDUMP_STREAM_SCRIPT2],
-			   gpszScript, strlen(gpszScript), flags);
+	dbgdrv_write_string(gpszScript);
+}
+
+static enum PVRSRV_ERROR
+pdump_dump(u32 flags, void *buffer, u32 size)
+{
+	if (PDumpSuspended())
+		return PVRSRV_OK;
+
+	if (!dbgdrv_flags_check(flags))
+		return PVRSRV_OK;
+
+	return dbgdrv_write_data(buffer, size);
 }
 
 void PDumpCommentKM(char *pszComment, u32 ui32Flags)
@@ -222,28 +186,22 @@ void PDumpCommentWithFlags(u32 ui32Flags, char *pszFormat, ...)
 
 void PDumpSetFrameKM(u32 ui32Frame)
 {
-	u32 ui32Stream;
-
 	if (PDumpSuspended())
 		return;
 
-	for (ui32Stream = 0; ui32Stream < PDUMP_NUM_STREAMS; ui32Stream++)
-		if (gpsStream[ui32Stream])
-			DbgDrvSetFrame(gpsStream[ui32Stream], ui32Frame);
+	dbgdrv_frame_set(ui32Frame);
 }
 
 IMG_BOOL PDumpIsCaptureFrameKM(void)
 {
 	if (PDumpSuspended())
 		return IMG_FALSE;
-	return DbgDrvIsCaptureFrame(gpsStream[PDUMP_STREAM_SCRIPT2],
-				    IMG_FALSE);
+
+	return dbgdrv_capturing();
 }
 
 void PDumpInit(void)
 {
-	u32 i = 0;
-
 	if (!gpszFile)
 		if (OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
 			       SZ_FILENAME_SIZE_MAX,
@@ -264,19 +222,6 @@ void PDumpInit(void)
 			       (void **)&gpszScript,
 			       NULL) != PVRSRV_OK)
 			goto init_failed;
-
-	for (i = 0; i < PDUMP_NUM_STREAMS; i++) {
-		gpsStream[i] =
-			DbgDrvCreateStream(pszStreamName[i],
-					   DEBUG_CAPMODE_FRAMED,
-					   DEBUG_OUTMODE_STREAMENABLE,
-					   0, 10);
-
-		DbgDrvSetCaptureMode(gpsStream[i],
-				     DEBUG_CAPMODE_FRAMED,
-				     0xFFFFFFFF, 0xFFFFFFFF, 1);
-		DbgDrvSetFrame(gpsStream[i], 0);
-	}
 
 	PDumpComment("Driver Product Name: %s", VS_PRODUCT_NAME);
 	PDumpComment("Driver Product Version: %s (%s)",
@@ -308,11 +253,6 @@ void PDumpInit(void)
 
 void PDumpDeInit(void)
 {
-	u32 i = 0;
-
-	for (i = 0; i < PDUMP_NUM_STREAMS; i++)
-		DbgDrvDestroyStream(gpsStream[i]);
-
 	if (gpszFile) {
 		OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, SZ_FILENAME_SIZE_MAX,
 			  (void *)gpszFile, NULL);
@@ -523,12 +463,11 @@ PDumpMemKM(void *pvAltLinAddr, struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 		return PVRSRV_ERROR_GENERIC;
 
 	if (pvAltLinAddr)
-		eError = pdump_write(gpsStream[PDUMP_STREAM_PARAM2],
-				     pvAltLinAddr, ui32Bytes, ui32Flags);
+		eError = pdump_dump(ui32Flags, pvAltLinAddr, ui32Bytes);
 	else if (psMemInfo->pvLinAddrKM)
-		eError = pdump_write(gpsStream[PDUMP_STREAM_PARAM2],
-				     psMemInfo->pvLinAddrKM + ui32Offset,
-				     ui32Bytes, ui32Flags);
+		eError = pdump_dump(ui32Flags,
+				    psMemInfo->pvLinAddrKM + ui32Offset,
+				    ui32Bytes);
 	else
 		return PVRSRV_ERROR_GENERIC;
 
@@ -577,8 +516,8 @@ PDumpMem2KM(enum PVRSRV_DEVICE_TYPE eDeviceType, void *pvLinAddr,
 		return PVRSRV_ERROR_GENERIC;
 
 	if (bInitialisePages) {
-		eError = pdump_write(gpsStream[PDUMP_STREAM_PARAM2], pvLinAddr,
-				     ui32Bytes, PDUMP_FLAGS_CONTINUOUS);
+		eError = pdump_dump(PDUMP_FLAGS_CONTINUOUS, pvLinAddr,
+				    ui32Bytes);
 		if (eError != PVRSRV_OK)
 			return eError;
 	}

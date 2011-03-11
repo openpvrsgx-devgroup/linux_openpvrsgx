@@ -1187,42 +1187,6 @@ static int PDumpBitmapBW(u32 ui32BridgeID,
 	return 0;
 }
 
-static int PDumpReadRegBW(u32 ui32BridgeID,
-	       struct PVRSRV_BRIDGE_IN_PDUMP_READREG *psPDumpReadRegIN,
-	       struct PVRSRV_BRIDGE_RETURN *psRetOUT,
-	       struct PVRSRV_PER_PROCESS_DATA *psPerProc)
-{
-	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID, PVRSRV_BRIDGE_PDUMP_DUMPREADREG);
-	PVR_UNREFERENCED_PARAMETER(psPerProc);
-
-	psRetOUT->eError = PDumpReadRegKM(&psPDumpReadRegIN->szFileName[0],
-			   psPDumpReadRegIN->ui32FileOffset,
-			   psPDumpReadRegIN->ui32Address,
-			   psPDumpReadRegIN->ui32Size,
-			   psPDumpReadRegIN->ui32Flags);
-
-	return 0;
-}
-
-static int PDumpDriverInfoBW(u32 ui32BridgeID,
-		  struct PVRSRV_BRIDGE_IN_PDUMP_DRIVERINFO *psPDumpDriverInfoIN,
-		  struct PVRSRV_BRIDGE_RETURN *psRetOUT,
-		  struct PVRSRV_PER_PROCESS_DATA *psPerProc)
-{
-	u32 ui32PDumpFlags;
-
-	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID, PVRSRV_BRIDGE_PDUMP_DRIVERINFO);
-	PVR_UNREFERENCED_PARAMETER(psPerProc);
-
-	ui32PDumpFlags = 0;
-	if (psPDumpDriverInfoIN->bContinuous)
-		ui32PDumpFlags |= PDUMP_FLAGS_CONTINUOUS;
-	psRetOUT->eError = PDumpDriverInfoKM(&psPDumpDriverInfoIN->szString[0],
-					     ui32PDumpFlags);
-
-	return 0;
-}
-
 static int PDumpSyncDumpBW(u32 ui32BridgeID,
 		struct PVRSRV_BRIDGE_IN_PDUMP_DUMPSYNC *psPDumpSyncDumpIN,
 		struct PVRSRV_BRIDGE_RETURN *psRetOUT,
@@ -1342,34 +1306,6 @@ static int PDumpPDDevPAddrBW(u32 ui32BridgeID,
 			      psPDumpPDDevPAddrIN->ui32Offset,
 			      psPDumpPDDevPAddrIN->sPDDevPAddr,
 			      MAKEUNIQUETAG(pvMemInfo), PDUMP_PD_UNIQUETAG);
-	return 0;
-}
-
-static int PDumpStartInitPhaseBW(u32 ui32BridgeID, void *psBridgeIn,
-		       struct PVRSRV_BRIDGE_RETURN *psRetOUT,
-		       struct PVRSRV_PER_PROCESS_DATA *psPerProc)
-{
-	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID,
-				 PVRSRV_BRIDGE_PDUMP_STARTINITPHASE);
-	PVR_UNREFERENCED_PARAMETER(psBridgeIn);
-	PVR_UNREFERENCED_PARAMETER(psPerProc);
-
-	psRetOUT->eError = PDumpStartInitPhaseKM();
-
-	return 0;
-}
-
-static int PDumpStopInitPhaseBW(u32 ui32BridgeID, void *psBridgeIn,
-	struct PVRSRV_BRIDGE_RETURN *psRetOUT,
-	struct PVRSRV_PER_PROCESS_DATA *psPerProc)
-{
-	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID,
-				 PVRSRV_BRIDGE_PDUMP_STOPINITPHASE);
-	PVR_UNREFERENCED_PARAMETER(psBridgeIn);
-	PVR_UNREFERENCED_PARAMETER(psPerProc);
-
-	psRetOUT->eError = PDumpStopInitPhaseKM();
-
 	return 0;
 }
 
@@ -2763,20 +2699,17 @@ enum PVRSRV_ERROR CommonBridgeInit(void)
 	SetDispatchTableEntry(PVRSRV_BRIDGE_PDUMP_ISCAPTURING,
 			      PDumpIsCaptureFrameBW);
 	SetDispatchTableEntry(PVRSRV_BRIDGE_PDUMP_DUMPBITMAP, PDumpBitmapBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_PDUMP_DUMPREADREG, PDumpReadRegBW);
+	SetDispatchTableEntry(PVRSRV_BRIDGE_PDUMP_DUMPREADREG, DummyBW);
 	SetDispatchTableEntry(PVRSRV_BRIDGE_PDUMP_SYNCPOL, PDumpSyncPolBW);
 	SetDispatchTableEntry(PVRSRV_BRIDGE_PDUMP_DUMPSYNC, PDumpSyncDumpBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_PDUMP_DRIVERINFO,
-			      PDumpDriverInfoBW);
+	SetDispatchTableEntry(PVRSRV_BRIDGE_PDUMP_DRIVERINFO, DummyBW);
 	SetDispatchTableEntry(PVRSRV_BRIDGE_PDUMP_PDREG, PDumpPDRegBW);
 	SetDispatchTableEntry(PVRSRV_BRIDGE_PDUMP_DUMPPDDEVPADDR,
 			      PDumpPDDevPAddrBW);
 	SetDispatchTableEntry(PVRSRV_BRIDGE_PDUMP_CYCLE_COUNT_REG_READ,
 			      PDumpCycleCountRegReadBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_PDUMP_STARTINITPHASE,
-			      PDumpStartInitPhaseBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_PDUMP_STOPINITPHASE,
-			      PDumpStopInitPhaseBW);
+	SetDispatchTableEntry(PVRSRV_BRIDGE_PDUMP_STARTINITPHASE, DummyBW);
+	SetDispatchTableEntry(PVRSRV_BRIDGE_PDUMP_STOPINITPHASE, DummyBW);
 #endif
 
 	SetDispatchTableEntry(PVRSRV_BRIDGE_GET_OEMJTABLE, DummyBW);
@@ -3042,7 +2975,7 @@ static int bridged_ioctl(struct file *filp, u32 cmd, void *in, void *out,
 		err = PDumpBitmapBW(cmd, in, out, per_proc);
 		break;
 	case PVRSRV_BRIDGE_PDUMP_DUMPREADREG:
-		err = PDumpReadRegBW(cmd, in, out, per_proc);
+		err = DummyBW(cmd, in, out, per_proc);
 		break;
 	case PVRSRV_BRIDGE_PDUMP_SYNCPOL:
 		err = PDumpSyncPolBW(cmd, in, out, per_proc);
@@ -3051,7 +2984,7 @@ static int bridged_ioctl(struct file *filp, u32 cmd, void *in, void *out,
 		err = PDumpSyncDumpBW(cmd, in, out, per_proc);
 		break;
 	case PVRSRV_BRIDGE_PDUMP_DRIVERINFO:
-		err = PDumpDriverInfoBW(cmd, in, out, per_proc);
+		err = DummyBW(cmd, in, out, per_proc);
 		break;
 	case PVRSRV_BRIDGE_PDUMP_PDREG:
 		err = PDumpPDRegBW(cmd, in, out, per_proc);
@@ -3063,10 +2996,8 @@ static int bridged_ioctl(struct file *filp, u32 cmd, void *in, void *out,
 		err = PDumpCycleCountRegReadBW(cmd, in, out, per_proc);
 		break;
 	case PVRSRV_BRIDGE_PDUMP_STARTINITPHASE:
-		err = PDumpStartInitPhaseBW(cmd, in, out, per_proc);
-		break;
 	case PVRSRV_BRIDGE_PDUMP_STOPINITPHASE:
-		err = PDumpStopInitPhaseBW(cmd, in, out, per_proc);
+		err = DummyBW(cmd, in, out, per_proc);
 		break;
 #endif
 

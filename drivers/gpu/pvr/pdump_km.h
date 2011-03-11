@@ -80,11 +80,8 @@ void PDumpInitCommon(void);
 void PDumpDeInitCommon(void);
 void PDumpInit(void);
 void PDumpDeInit(void);
-enum PVRSRV_ERROR PDumpStartInitPhaseKM(void);
-enum PVRSRV_ERROR PDumpStopInitPhaseKM(void);
 enum PVRSRV_ERROR PDumpSetFrameKM(u32 ui32Frame);
 enum PVRSRV_ERROR PDumpCommentKM(char *pszComment, u32 ui32Flags);
-enum PVRSRV_ERROR PDumpDriverInfoKM(char *pszString, u32 ui32Flags);
 enum PVRSRV_ERROR PDumpRegWithFlagsKM(u32 ui32RegAddr, u32 ui32RegValue,
 		u32 ui32Flags);
 
@@ -96,8 +93,6 @@ enum PVRSRV_ERROR PDumpBitmapKM(char *pszFileName, u32 ui32FileOffset,
 void PDumpHWPerfCBKM(char *pszFileName, u32 ui32FileOffset,
 		struct IMG_DEV_VIRTADDR sDevBaseAddr,
 		u32 ui32Size, u32 ui32PDumpFlags);
-enum PVRSRV_ERROR PDumpReadRegKM(char *pszFileName, u32 ui32FileOffset,
-		u32 ui32Address, u32 ui32Size, u32 ui32PDumpFlags);
 void PDUMP_REG_FUNC_NAME(u32 dwReg, u32 dwData);
 
 void PDumpMsvdxRegRead(const char *const pRegRegion, const u32 dwRegOffset);
@@ -205,13 +200,11 @@ void PDumpResumeKM(void);
 #define PDUMPPDREGWITHFLAGS			PDumpPDRegWithFlags
 #define PDUMPCBP				PDumpCBP
 #define PDUMPMALLOCPAGESPHYS			PDumpMallocPagesPhys
-#define PDUMPENDINITPHASE			PDumpStopInitPhaseKM
 #define PDUMPMSVDXREGWRITE			PDumpMsvdxRegWrite
 #define PDUMPMSVDXREGREAD			PDumpMsvdxRegRead
 #define PDUMPMSVDXPOL				PDumpMsvdxRegPol
 #define PDUMPMSVDXWRITEREF			PDumpMsvdxWriteRef
 #define PDUMPBITMAPKM				PDumpBitmapKM
-#define PDUMPDRIVERINFO				PDumpDriverInfoKM
 #define PDUMPIDLWITHFLAGS			PDumpIDLWithFlags
 #define PDUMPIDL				PDumpIDL
 #define PDUMPSUSPEND				PDumpSuspendKM
@@ -249,14 +242,12 @@ void PDumpResumeKM(void);
 #define PDUMPCBP(args...)
 #define PDUMPCOMMENTWITHFLAGS(args...)
 #define PDUMPMALLOCPAGESPHYS(args...)
-#define PDUMPENDINITPHASE(args...)
 #define PDUMPMSVDXREG(args...)
 #define PDUMPMSVDXREGWRITE(args...)
 #define PDUMPMSVDXREGREAD(args...)
 #define PDUMPMSVDXPOLEQ(args...)
 #define PDUMPMSVDXPOL(args...)
 #define PDUMPBITMAPKM(args...)
-#define PDUMPDRIVERINFO(args...)
 #define PDUMPIDLWITHFLAGS(args...)
 #define PDUMPIDL(args...)
 #define PDUMPSUSPEND(args...)

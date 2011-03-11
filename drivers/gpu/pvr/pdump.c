@@ -61,12 +61,10 @@ static struct DBGKM_SERVICE_TABLE *gpfnDbgDrv;
 
 #define PDUMP_STREAM_PARAM2			0
 #define PDUMP_STREAM_SCRIPT2			1
-#define PDUMP_STREAM_DRIVERINFO			2
-#define PDUMP_NUM_STREAMS			3
+#define PDUMP_NUM_STREAMS			2
 
 static char *pszStreamName[PDUMP_NUM_STREAMS] = { "ParamStream2",
-	"ScriptStream2",
-	"DriverInfoStream"
+	"ScriptStream2"
 };
 
 #define __PDBG_PDUMP_STATE_GET_MSG_STRING(ERROR)	\
@@ -211,33 +209,6 @@ void PDumpDeInit(void)
 	}
 
 	gpfnDbgDrv = NULL;
-}
-
-enum PVRSRV_ERROR PDumpStartInitPhaseKM(void)
-{
-	u32 i;
-
-	if (gpfnDbgDrv) {
-		PDUMPCOMMENT("Start Init Phase");
-		for (i = 0; i < PDUMP_NUM_STREAMS; i++)
-			gpfnDbgDrv->pfnStartInitPhase(gsDBGPdumpState.
-						      psStream[i]);
-	}
-	return PVRSRV_OK;
-}
-
-enum PVRSRV_ERROR PDumpStopInitPhaseKM(void)
-{
-	u32 i;
-
-	if (gpfnDbgDrv) {
-		PDUMPCOMMENT("Stop Init Phase");
-
-		for (i = 0; i < PDUMP_NUM_STREAMS; i++)
-			gpfnDbgDrv->pfnStopInitPhase(gsDBGPdumpState.
-						     psStream[i]);
-	}
-	return PVRSRV_OK;
 }
 
 void PDumpComment(char *pszFormat, ...)
@@ -907,39 +878,6 @@ enum PVRSRV_ERROR PDumpCommentKM(char *pszComment, u32 ui32Flags)
 	return PVRSRV_OK;
 }
 
-enum PVRSRV_ERROR PDumpDriverInfoKM(char *pszString, u32 ui32Flags)
-{
-	u32 ui32Count = 0;
-	__PDBG_PDUMP_STATE_GET_MSG_STRING(PVRSRV_ERROR_GENERIC);
-
-	snprintf(pszMsg, SZ_MSG_SIZE_MAX, "%s", pszString);
-
-	while ((pszMsg[ui32Count] != 0) && (ui32Count < SZ_MSG_SIZE_MAX))
-		ui32Count++;
-
-	if ((pszMsg[ui32Count - 1] != '\n') && (ui32Count < SZ_MSG_SIZE_MAX)) {
-		pszMsg[ui32Count] = '\n';
-		ui32Count++;
-		pszMsg[ui32Count] = '\0';
-	}
-	if ((pszMsg[ui32Count - 2] != '\r') && (ui32Count < SZ_MSG_SIZE_MAX)) {
-		pszMsg[ui32Count - 1] = '\r';
-		pszMsg[ui32Count] = '\n';
-		ui32Count++;
-		pszMsg[ui32Count] = '\0';
-	}
-
-	if (!PDumpWriteILock(gsDBGPdumpState.psStream[PDUMP_STREAM_DRIVERINFO],
-			     (u8 *) pszMsg, ui32Count, ui32Flags)) {
-		if (ui32Flags & PDUMP_FLAGS_CONTINUOUS)
-			return PVRSRV_ERROR_GENERIC;
-		else
-			return PVRSRV_ERROR_CMD_NOT_PROCESSED;
-	}
-
-	return PVRSRV_OK;
-}
-
 enum PVRSRV_ERROR PDumpBitmapKM(char *pszFileName, u32 ui32FileOffset,
 			   u32 ui32Width, u32 ui32Height, u32 ui32StrideInBytes,
 			   struct IMG_DEV_VIRTADDR sDevBaseAddr,
@@ -962,8 +900,9 @@ enum PVRSRV_ERROR PDumpBitmapKM(char *pszFileName, u32 ui32FileOffset,
 	return PVRSRV_OK;
 }
 
-enum PVRSRV_ERROR PDumpReadRegKM(char *pszFileName, u32 ui32FileOffset,
-			    u32 ui32Address, u32 ui32Size, u32 ui32PDumpFlags)
+static enum PVRSRV_ERROR PDumpReadRegKM(char *pszFileName, u32 ui32FileOffset,
+					u32 ui32Address, u32 ui32Size,
+					u32 ui32PDumpFlags)
 {
 	__PDBG_PDUMP_STATE_GET_SCRIPT_STRING(PVRSRV_ERROR_GENERIC);
 

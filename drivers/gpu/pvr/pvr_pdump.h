@@ -59,9 +59,9 @@ enum PVRSRV_ERROR PDumpMemKM(void *pvAltLinAddr,
 			     u32 ui32Offset, u32 ui32Bytes,
 			     u32 ui32Flags, void *hUniqueTag);
 
-enum PVRSRV_ERROR PDumpMem2KM(void *pvLinAddr, u32 ui32Bytes,
-			      IMG_BOOL bInitialisePages,
-			      void *hUniqueTag1, void *hUniqueTag2);
+enum PVRSRV_ERROR PDumpPageTableKM(void *pvLinAddr, u32 ui32Bytes,
+				   IMG_BOOL bInitialisePages,
+				   void *hUniqueTag1, void *hUniqueTag2);
 void PDumpInit(void);
 void PDumpDeInit(void);
 void PDumpSetFrameKM(u32 ui32Frame);
@@ -129,7 +129,7 @@ void PDumpResumeKM(void);
 
 #define PDUMPMEMPOL				PDumpMemPolKM
 #define PDUMPMEM				PDumpMemKM
-#define PDUMPMEM2				PDumpMem2KM
+#define PDUMPPAGETABLE				PDumpPageTableKM
 #define PDUMPMEMUM				PDumpMemUM
 #define PDUMPINIT				PDumpInit
 #define PDUMPDEINIT				PDumpDeInit
@@ -155,7 +155,7 @@ void PDumpResumeKM(void);
 
 #define PDUMPMEMPOL(args...)
 #define PDUMPMEM(args...)
-#define PDUMPMEM2(args...)
+#define PDUMPPAGETABLE(args...)
 #define PDUMPMEMUM(args...)
 #define PDUMPINIT(args...)
 #define PDUMPDEINIT(args...)

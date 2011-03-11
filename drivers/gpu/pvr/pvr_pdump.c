@@ -538,8 +538,8 @@ PDumpMemUM(void *pvAltLinAddrUM, void *pvLinAddrUM,
 }
 
 enum PVRSRV_ERROR
-PDumpMem2KM(void *pvLinAddr, u32 ui32Bytes, IMG_BOOL bInitialisePages,
-	    void *hUniqueTag1, void *hUniqueTag2)
+PDumpPageTableKM(void *pvLinAddr, u32 ui32Bytes, IMG_BOOL bInitialisePages,
+		 void *hUniqueTag1, void *hUniqueTag2)
 {
 	struct IMG_DEV_PHYADDR sDevPAddr;
 	struct IMG_CPU_PHYADDR sCpuPAddr;

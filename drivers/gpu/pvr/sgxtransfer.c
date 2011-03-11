@@ -32,7 +32,7 @@
 #include "buffer_manager.h"
 #include "sgxinfo.h"
 #include "sysconfig.h"
-#include "pdump_km.h"
+#include "pvr_pdump.h"
 #include "mmu.h"
 #include "pvr_bridge.h"
 #include "sgx_bridge_km.h"

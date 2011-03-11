@@ -24,8 +24,8 @@
  *
  ******************************************************************************/
 
-#ifndef _PDUMP_KM_H_
-#define _PDUMP_KM_H_
+#ifndef _PVR_PDUMP_H_
+#define _PVR_PDUMP_H_
 
 
 #define PDUMP_FLAGS_NEVER		0x08000000
@@ -183,4 +183,4 @@ void PDumpResumeKM(void);
 #define PDUMPRESUME(args...)
 #endif
 
-#endif
+#endif /* _PVR_PDUMP_H_ */

@@ -24,7 +24,7 @@
  *
  ******************************************************************************/
 #include "services_headers.h"
-#include "pdump_km.h"
+#include "pvr_pdump.h"
 #include <linux/kernel.h>
 #include <linux/mutex.h>
 #include <linux/sched.h>

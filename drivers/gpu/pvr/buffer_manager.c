@@ -28,7 +28,7 @@
 #include "sysconfig.h"
 #include "hash.h"
 #include "ra.h"
-#include "pdump_km.h"
+#include "pvr_pdump.h"
 #include "mmu.h"
 
 #define MIN(a, b)       (a > b ? b : a)

@@ -28,7 +28,7 @@
 
 #include "services_headers.h"
 #include "buffer_manager.h"
-#include "pdump_km.h"
+#include "pvr_pdump.h"
 #include "pvr_bridge_km.h"
 
 #include <linux/pagemap.h>

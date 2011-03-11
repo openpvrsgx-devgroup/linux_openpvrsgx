@@ -37,7 +37,7 @@
 #include "device.h"
 #include "buffer_manager.h"
 
-#include "pdump_km.h"
+#include "pvr_pdump.h"
 #include "syscommon.h"
 
 #include "bridged_pvr_bridge.h"

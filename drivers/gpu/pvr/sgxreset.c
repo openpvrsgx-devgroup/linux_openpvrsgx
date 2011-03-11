@@ -30,7 +30,7 @@
 #include "sgxinfokm.h"
 #include "sgxconfig.h"
 
-#include "pdump_km.h"
+#include "pvr_pdump.h"
 
 static void SGXResetSoftReset(struct PVRSRV_SGXDEV_INFO *psDevInfo,
 				  IMG_BOOL bResetBIF, u32 ui32PDUMPFlags,

@@ -32,7 +32,7 @@
 #include "sgxinfokm.h"
 #include "pvr_bridge_km.h"
 #include "sgx_bridge_km.h"
-#include "pdump_km.h"
+#include "pvr_pdump.h"
 #include "sgxutils.h"
 
 static struct RESMAN_ITEM *psResItemCreateSharedPB;

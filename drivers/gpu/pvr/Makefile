@@ -2,7 +2,7 @@ obj-$(CONFIG_PVR)	+= omaplfb.o pvrsrvkm.o
 
 omaplfb-objs		:= omaplfb_displayclass.o omaplfb_linux.o
 
-pvrsrvkm-objs		:= osfunc.o mmap.o module.o pdump.o proc.o	   \
+pvrsrvkm-objs		:= osfunc.o mmap.o module.o proc.o	   \
 			   pvr_bridge_k.o mm.o event.o	   \
 			   buffer_manager.o devicemem.o deviceclass.o	   \
 			   handle.o hash.o pvrsrv.o queue.o ra.o	   \
@@ -15,6 +15,7 @@ pvrsrvkm-objs		:= osfunc.o mmap.o module.o pdump.o proc.o	   \
 pvrsrvkm-objs-$(CONFIG_PVR_DEBUG) += pvr_debug.o
 pvrsrvkm-objs-$(CONFIG_DEBUG_FS) += pvr_debugfs.o
 pvrsrvkm-objs-$(CONFIG_PVR_TIMING) += pvr_debug.o
+pvrsrvkm-objs-$(CONFIG_PVR_DEBUG_PDUMP) += pvr_pdump.o
 
 pvrsrvkm-objs		+= $(pvrsrvkm-objs-y) $(pvrsrvkm-objs-m)
 

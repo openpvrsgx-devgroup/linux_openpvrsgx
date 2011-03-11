@@ -31,7 +31,7 @@
 #include "pvr_bridge_km.h"
 #include "handle.h"
 #include "perproc.h"
-#include "pdump_km.h"
+#include "pvr_pdump.h"
 #include "ra.h"
 #include "pvr_events.h"
 

@@ -41,7 +41,7 @@
 #include "bridged_pvr_bridge.h"
 #include "bridged_sgx_bridge.h"
 #include "sgxutils.h"
-#include "pdump_km.h"
+#include "pvr_pdump.h"
 #include "pvr_events.h"
 
 int SGXGetClientInfoBW(u32 ui32BridgeID,

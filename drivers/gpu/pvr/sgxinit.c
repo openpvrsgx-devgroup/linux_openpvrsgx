@@ -47,7 +47,7 @@
 #include "resman.h"
 #include "bridged_support.h"
 
-#include "pdump_km.h"
+#include "pvr_pdump.h"
 #include "ra.h"
 #include "mmu.h"
 #include "mm.h"

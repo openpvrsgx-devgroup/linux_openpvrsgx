@@ -33,7 +33,7 @@
 #include "sgxapi_km.h"
 #include "sgxinfokm.h"
 #include "sgxutils.h"
-#include "pdump_km.h"
+#include "pvr_pdump.h"
 
 #define MS_TO_NS(x)			((x) * 1000000ULL)
 #define SGX_CMD_BURST_THRESHOLD_NS	MS_TO_NS(3)

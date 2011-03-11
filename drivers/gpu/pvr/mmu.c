@@ -30,7 +30,7 @@
 #include "buffer_manager.h"
 #include "hash.h"
 #include "ra.h"
-#include "pdump_km.h"
+#include "pvr_pdump.h"
 #include "sgxapi_km.h"
 #include "sgx_bridge_km.h"
 #include "sgxinfo.h"

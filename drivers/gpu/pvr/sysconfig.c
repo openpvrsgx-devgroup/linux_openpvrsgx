@@ -30,7 +30,7 @@
 #include "kerneldisplay.h"
 #include "oemfuncs.h"
 #include "sgxinfo.h"
-#include "pdump_km.h"
+#include "pvr_pdump.h"
 #include "sgxinfokm.h"
 #include "syslocal.h"
 #include "sysconfig.h"

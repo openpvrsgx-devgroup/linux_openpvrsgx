@@ -30,7 +30,7 @@
 #include "sgxinfokm.h"
 #if defined(PDUMP)
 #include "sgxapi_km.h"
-#include "pdump_km.h"
+#include "pvr_pdump.h"
 #endif
 #include "sgx_bridge_km.h"
 #include "osfunc.h"

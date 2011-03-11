@@ -1,4 +1,4 @@
-/**********************************************************************
+/*
  *
  * Copyright(c) 2008 Imagination Technologies Ltd. All rights reserved.
  *
@@ -22,9 +22,8 @@
  * Imagination Technologies Ltd. <gpl-support@imgtec.com>
  * Home Park Estate, Kings Langley, Herts, WD4 8LZ, UK
  *
- ******************************************************************************/
+ */
 
-#if defined(PDUMP)
 #include <asm/atomic.h>
 #include <stdarg.h>
 
@@ -33,7 +32,7 @@
 #include "pvrversion.h"
 #include "sgxmmu.h"
 #include "mm.h"
-#include "pdump_km.h"
+#include "pvr_pdump.h"
 
 /*
  * There is no sense in having SGX_MMU_PAGE_SIZE differ from PAGE_SIZE.
@@ -762,5 +761,3 @@ void PDumpIDLWithFlags(u32 ui32Clocks, u32 ui32Flags)
 {
 	pdump_print(ui32Flags, "IDL %u\r\n", ui32Clocks);
 }
-
-#endif

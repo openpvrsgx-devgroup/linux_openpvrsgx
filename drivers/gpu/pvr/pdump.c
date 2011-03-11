@@ -57,17 +57,13 @@ static IMG_BOOL PDumpWriteString2(char *pszString, u32 ui32Flags);
 static IMG_BOOL PDumpWriteILock(struct DBG_STREAM *psStream, u8 *pui8Data,
 				u32 ui32Count, u32 ui32Flags);
 static void DbgSetFrame(struct DBG_STREAM *psStream, u32 ui32Frame);
-static void DbgSetMarker(struct DBG_STREAM *psStream, u32 ui32Marker);
 static u32 DbgWrite(struct DBG_STREAM *psStream, u8 *pui8Data,
 			   u32 ui32BCount, u32 ui32Flags);
 
 #define MIN(a, b)				(a > b ? b : a)
 
-#define MAX_FILE_SIZE				0x40000000
-
 static atomic_t gsPDumpSuspended = ATOMIC_INIT(0);
 
-static u32 gui32ParamFileNum;
 static char *gpszMsg;
 static char *gpszScript;
 static char *gpszFile;
@@ -132,12 +128,6 @@ DbgDrvWriteBINCM(struct DBG_STREAM *psStream, u8 *pui8InBuf,
 		 u32 ui32InBuffSize, u32 ui32Level)
 {
 	return ui32InBuffSize;
-}
-
-static void
-DbgDrvSetMarker(struct DBG_STREAM *psStream, u32 ui32Marker)
-{
-
 }
 
 static u32
@@ -540,12 +530,6 @@ enum PVRSRV_ERROR PDumpMemPolKM(struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 	PVR_ASSERT((ui32Offset + sizeof(u32)) <=
 		   psMemInfo->ui32AllocSize);
 
-	if (gui32ParamFileNum == 0)
-		snprintf(gpszFile, SZ_FILENAME_SIZE_MAX, "%%0%%.prm");
-	else
-		snprintf(gpszFile, SZ_FILENAME_SIZE_MAX, "%%0%%%u.prm",
-			 gui32ParamFileNum);
-
 	CpuPAddr =
 	    OSMemHandleToCpuPAddr(psMemInfo->sMemBlk.hOSMemHandle, ui32Offset);
 	ui32PageOffset = CpuPAddr.uiAddr & (PAGE_SIZE - 1);
@@ -609,18 +593,11 @@ enum PVRSRV_ERROR PDumpMemKM(void *pvAltLinAddr,
 			     pui8DataLinAddr, ui32Bytes, ui32Flags))
 		return PVRSRV_ERROR_GENERIC;
 
-	if (gui32ParamFileNum == 0) {
-		snprintf(gpszFile, SZ_FILENAME_SIZE_MAX, "%%0%%.prm");
-	} else {
-		snprintf(gpszFile, SZ_FILENAME_SIZE_MAX, "%%0%%%u.prm",
-			 gui32ParamFileNum);
-	}
-
 	snprintf(gpszScript,
 		 SZ_SCRIPT_SIZE_MAX,
-		 "-- LDB :SGXMEM:VA_%8.8X:0x%8.8X 0x%8.8X 0x%8.8X %s\r\n",
+	       "-- LDB :SGXMEM:VA_%8.8X:0x%8.8X 0x%8.8X 0x%8.8X %%0%%.prm\r\n",
 		 psMemInfo->sDevVAddr.uiAddr,
-		 ui32Offset, ui32Bytes, ui32ParamOutPos, gpszFile);
+		 ui32Offset, ui32Bytes, ui32ParamOutPos);
 	PDumpWriteString2(gpszScript, ui32Flags);
 
 	CpuPAddr =
@@ -657,11 +634,11 @@ enum PVRSRV_ERROR PDumpMemKM(void *pvAltLinAddr,
 
 		snprintf(gpszScript,
 			 SZ_SCRIPT_SIZE_MAX, "LDB :SGXMEM:"
-			 "PA_%8.8X%8.8lX:0x%8.8lX 0x%8.8X 0x%8.8X %s\r\n",
+		       "PA_%8.8X%8.8lX:0x%8.8lX 0x%8.8X 0x%8.8X %%0%%.prm\r\n",
 			 (u32) hUniqueTag,
 			 sDevPAddr.uiAddr & ~(SGX_MMU_PAGE_SIZE - 1),
 			 sDevPAddr.uiAddr & (SGX_MMU_PAGE_SIZE - 1),
-			 ui32BlockBytes, ui32ParamOutPos, gpszFile);
+			 ui32BlockBytes, ui32ParamOutPos);
 		PDumpWriteString2(gpszScript, ui32Flags);
 
 		ui32BytesRemaining -= ui32BlockBytes;
@@ -699,19 +676,11 @@ enum PVRSRV_ERROR PDumpMem2KM(enum PVRSRV_DEVICE_TYPE eDeviceType,
 	ui32ParamOutPos =
 	    DbgDrvGetStreamOffset(gpsStream[PDUMP_STREAM_PARAM2]);
 
-	if (bInitialisePages) {
-
+	if (bInitialisePages)
 		if (!PDumpWriteILock
 		    (gpsStream[PDUMP_STREAM_PARAM2], pvLinAddr,
 		     ui32Bytes, PDUMP_FLAGS_CONTINUOUS))
 			return PVRSRV_ERROR_GENERIC;
-
-		if (gui32ParamFileNum == 0)
-			snprintf(gpszFile, SZ_FILENAME_SIZE_MAX, "%%0%%.prm");
-		else
-			snprintf(gpszFile, SZ_FILENAME_SIZE_MAX, "%%0%%%u.prm",
-				 gui32ParamFileNum);
-	}
 
 	ui32PageOffset = (u32) pvLinAddr & (HOST_PAGESIZE() - 1);
 	ui32NumPages =
@@ -732,11 +701,11 @@ enum PVRSRV_ERROR PDumpMem2KM(enum PVRSRV_DEVICE_TYPE eDeviceType,
 			snprintf(gpszScript,
 				 SZ_SCRIPT_SIZE_MAX, "LDB :SGXMEM:"
 				 "PA_%8.8X%8.8lX:0x%8.8lX 0x%8.8X "
-				 "0x%8.8X %s\r\n",
+				 "0x%8.8X %%0%%.prm\r\n",
 				 (u32) hUniqueTag1,
 				 sDevPAddr.uiAddr & ~(SGX_MMU_PAGE_SIZE - 1),
 				 sDevPAddr.uiAddr & (SGX_MMU_PAGE_SIZE - 1),
-				 ui32BlockBytes, ui32ParamOutPos, gpszFile);
+				 ui32BlockBytes, ui32ParamOutPos);
 			PDumpWriteString2(gpszScript, PDUMP_FLAGS_CONTINUOUS);
 		} else {
 			for (ui32Offset = 0; ui32Offset < ui32BlockBytes;
@@ -812,12 +781,6 @@ enum PVRSRV_ERROR PDumpPDDevPAddrKM(struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 			     (u8 *)&sPDDevPAddr, sizeof(struct IMG_DEV_PHYADDR),
 			     PDUMP_FLAGS_CONTINUOUS))
 		return PVRSRV_ERROR_GENERIC;
-
-	if (gui32ParamFileNum == 0)
-		snprintf(gpszFile, SZ_FILENAME_SIZE_MAX, "%%0%%.prm");
-	else
-		snprintf(gpszFile, SZ_FILENAME_SIZE_MAX, "%%0%%%u.prm",
-			 gui32ParamFileNum);
 
 	CpuPAddr =
 	    OSMemHandleToCpuPAddr(psMemInfo->sMemBlk.hOSMemHandle, ui32Offset);
@@ -960,22 +923,6 @@ static IMG_BOOL PDumpWriteILock(struct DBG_STREAM *psStream, u8 *pui8Data,
 	if (!psStream || PDumpSuspended() || (ui32Flags & PDUMP_FLAGS_NEVER))
 		return IMG_TRUE;
 
-	if (psStream == gpsStream[PDUMP_STREAM_PARAM2]) {
-		u32 ui32ParamOutPos =
-		    DbgDrvGetStreamOffset(gpsStream[PDUMP_STREAM_PARAM2]);
-
-		if (ui32ParamOutPos + ui32Count > MAX_FILE_SIZE)
-			if ((gpsStream[PDUMP_STREAM_SCRIPT2]
-			     &&
-			     PDumpWriteString2
-			     ("\r\n-- Splitting pdump output file\r\n\r\n",
-			      ui32Flags))) {
-				DbgSetMarker(gpsStream[PDUMP_STREAM_PARAM2],
-					     ui32ParamOutPos);
-				gui32ParamFileNum++;
-			}
-	}
-
 	while (((u32) ui32Count > 0) && (ui32Written != 0xFFFFFFFF)) {
 		ui32Written =
 		    DbgWrite(psStream, &pui8Data[ui32Off], ui32Count,
@@ -999,11 +946,6 @@ static IMG_BOOL PDumpWriteILock(struct DBG_STREAM *psStream, u8 *pui8Data,
 static void DbgSetFrame(struct DBG_STREAM *psStream, u32 ui32Frame)
 {
 	DbgDrvSetFrame(psStream, ui32Frame);
-}
-
-static void DbgSetMarker(struct DBG_STREAM *psStream, u32 ui32Marker)
-{
-	DbgDrvSetMarker(psStream, ui32Marker);
 }
 
 static u32 DbgWrite(struct DBG_STREAM *psStream, u8 *pui8Data,

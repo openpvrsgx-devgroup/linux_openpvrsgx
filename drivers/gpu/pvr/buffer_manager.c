@@ -1404,8 +1404,6 @@ enum PVRSRV_ERROR BM_GetPhysPageAddr(struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 		return PVRSRV_ERROR_INVALID_PARAMS;
 	}
 
-	PVR_ASSERT((sDevVPageAddr.uiAddr & 0xFFF) == 0);
-
 	psDeviceNode =
 	    ((struct BM_BUF *)psMemInfo->sMemBlk.hBuffer)->pMapping->pBMHeap->
 	    pBMContext->psDeviceNode;

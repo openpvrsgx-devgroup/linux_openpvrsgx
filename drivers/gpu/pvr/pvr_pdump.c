@@ -32,7 +32,9 @@
 #include "pvrversion.h"
 #include "sgxmmu.h"
 #include "mm.h"
+
 #include "pvr_pdump.h"
+#include "pvr_pdumpfs.h"
 
 /*
  * There is no sense in having SGX_MMU_PAGE_SIZE differ from PAGE_SIZE.
@@ -53,13 +55,6 @@ static char *gpszComment;
 static char *gpszScript;
 static char *gpszFile;
 
-#define DEBUG_MODE_DISABLED   0
-#define DEBUG_MODE_STANDARD   1
-#define DEBUG_MODE_FULL       2
-
-static u32 dbgdrv_mode = DEBUG_MODE_DISABLED;
-static u32 dbgdrv_frame_number;
-
 void PDumpSuspendKM(void)
 {
 	atomic_inc(&gsPDumpSuspended);
@@ -75,49 +70,6 @@ static inline IMG_BOOL PDumpSuspended(void)
 	return atomic_read(&gsPDumpSuspended) != 0;
 }
 
-/*
- * empty pdump backend.
- */
-static void
-dbgdrv_frame_set(u32 frame)
-{
-	dbgdrv_frame_number = frame;
-}
-
-static enum PVRSRV_ERROR
-dbgdrv_write_data(void *buffer, int size, bool from_user)
-{
-	return PVRSRV_OK;
-}
-
-static void
-dbgdrv_write_string(char *string)
-{
-
-}
-
-static bool
-dbgdrv_capturing(void)
-{
-	if (dbgdrv_mode == DEBUG_MODE_FULL)
-		return true;
-	else
-		return false;
-}
-
-static bool dbgdrv_flags_check(u32 flags)
-{
-	if (flags & PDUMP_FLAGS_NEVER)
-		return false;
-	else if (dbgdrv_mode == DEBUG_MODE_FULL)
-		return true;
-	else if ((dbgdrv_mode == DEBUG_MODE_STANDARD) &&
-		 (flags & PDUMP_FLAGS_CONTINUOUS))
-		return true;
-	else
-		return false;
-}
-
 static void
 pdump_print(u32 flags, char *format, ...)
 {
@@ -126,14 +78,14 @@ pdump_print(u32 flags, char *format, ...)
 	if (PDumpSuspended())
 		return;
 
-	if (!dbgdrv_flags_check(flags))
+	if (!pdumpfs_flags_check(flags))
 		return;
 
 	va_start(ap, format);
 	vsnprintf(gpszScript, SZ_SCRIPT_SIZE_MAX, format, ap);
 	va_end(ap);
 
-	dbgdrv_write_string(gpszScript);
+	pdumpfs_write_string(gpszScript);
 }
 
 static enum PVRSRV_ERROR
@@ -142,10 +94,10 @@ pdump_dump(u32 flags, void *buffer, u32 size, bool from_user)
 	if (PDumpSuspended())
 		return PVRSRV_OK;
 
-	if (!dbgdrv_flags_check(flags))
+	if (!pdumpfs_flags_check(flags))
 		return PVRSRV_OK;
 
-	return dbgdrv_write_data(buffer, size, from_user);
+	return pdumpfs_write_data(buffer, size, from_user);
 }
 
 void PDumpCommentKM(char *pszComment, u32 ui32Flags)
@@ -188,7 +140,7 @@ void PDumpSetFrameKM(u32 ui32Frame)
 	if (PDumpSuspended())
 		return;
 
-	dbgdrv_frame_set(ui32Frame);
+	pdumpfs_frame_set(ui32Frame);
 }
 
 IMG_BOOL PDumpIsCaptureFrameKM(void)
@@ -196,7 +148,7 @@ IMG_BOOL PDumpIsCaptureFrameKM(void)
 	if (PDumpSuspended())
 		return IMG_FALSE;
 
-	return dbgdrv_capturing();
+	return pdumpfs_capture_enabled();
 }
 
 void PDumpInit(void)

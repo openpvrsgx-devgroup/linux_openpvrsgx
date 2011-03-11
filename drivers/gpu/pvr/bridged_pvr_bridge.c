@@ -1264,7 +1264,7 @@ static int PDumpPDRegBW(u32 ui32BridgeID,
 	PVR_UNREFERENCED_PARAMETER(psPerProc);
 
 	PDumpPDReg(psPDumpPDRegDumpIN->sHWReg.ui32RegAddr,
-		   psPDumpPDRegDumpIN->sHWReg.ui32RegVal, PDUMP_PD_UNIQUETAG);
+		   psPDumpPDRegDumpIN->sHWReg.ui32RegVal);
 
 	psRetOUT->eError = PVRSRV_OK;
 	return 0;

@@ -205,7 +205,7 @@ void SGXReset(struct PVRSRV_SGXDEV_INFO *psDevInfo, u32 ui32PDUMPFlags)
 			     psDevInfo->sKernelPDDevPAddr.uiAddr);
 		PDUMPPDREGWITHFLAGS(ui32EDMDirListReg,
 				    psDevInfo->sKernelPDDevPAddr.uiAddr,
-				    ui32PDUMPFlags, PDUMP_PD_UNIQUETAG);
+				    ui32PDUMPFlags);
 	}
 
 	SGXResetInvalDC(psDevInfo, ui32PDUMPFlags, IMG_TRUE);

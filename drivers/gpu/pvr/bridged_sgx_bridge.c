@@ -1465,7 +1465,7 @@ static void DumpBufferArray(struct PVRSRV_PER_PROCESS_DATA *psPerProc,
 				PDUMPCBP(psCtrlMemInfoKM, ui32Offset,
 					 psBuffer->ui32Start,
 					 psBuffer->ui32SpaceUsed,
-					 psBuffer->ui32BufferSize, 0,
+					 psBuffer->ui32BufferSize,
 					 MAKEUNIQUETAG(psCtrlMemInfoKM));
 			}
 
@@ -1485,7 +1485,7 @@ static void DumpBufferArray(struct PVRSRV_PER_PROCESS_DATA *psPerProc,
 				PDUMPCBP(psCtrlMemInfoKM, ui32Offset,
 					 psBuffer->ui32Start,
 					 psBuffer->ui32BackEndLength,
-					 psBuffer->ui32BufferSize, 0,
+					 psBuffer->ui32BufferSize,
 					 MAKEUNIQUETAG(psCtrlMemInfoKM));
 			}
 			PDUMPCOMMENTWITHFLAGS(0, "%s (part 1)\r\n", pszName);
@@ -1506,7 +1506,7 @@ static void DumpBufferArray(struct PVRSRV_PER_PROCESS_DATA *psPerProc,
 						      pszName);
 				PDUMPCBP(psCtrlMemInfoKM, ui32Offset, 0,
 					 psBuffer->ui32End,
-					 psBuffer->ui32BufferSize, 0,
+					 psBuffer->ui32BufferSize,
 					 MAKEUNIQUETAG(psCtrlMemInfoKM));
 			}
 			PDUMPCOMMENTWITHFLAGS(0, "%s (part 2)\r\n", pszName);

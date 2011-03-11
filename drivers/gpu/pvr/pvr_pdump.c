@@ -312,15 +312,12 @@ void PDumpRegPolKM(u32 ui32RegAddr, u32 ui32RegValue, u32 ui32Mask)
 			       PDUMP_FLAGS_CONTINUOUS);
 }
 
-void PDumpMallocPages(enum PVRSRV_DEVICE_TYPE eDeviceType, u32 ui32DevVAddr,
-		      void *pvLinAddr, void *hOSMemHandle, u32 ui32NumBytes,
-		      void *hUniqueTag)
+void PDumpMallocPages(u32 ui32DevVAddr, void *hOSMemHandle,
+		      u32 ui32NumBytes, void *hUniqueTag)
 {
 	struct IMG_CPU_PHYADDR sCpuPAddr;
 	struct IMG_DEV_PHYADDR sDevPAddr;
 	u32 ui32Offset;
-
-	PVR_UNREFERENCED_PARAMETER(pvLinAddr);
 
 	PVR_ASSERT(((u32) ui32DevVAddr & ~PAGE_MASK) == 0);
 	PVR_ASSERT(hOSMemHandle);
@@ -332,7 +329,7 @@ void PDumpMallocPages(enum PVRSRV_DEVICE_TYPE eDeviceType, u32 ui32DevVAddr,
 	for (ui32Offset = 0; ui32Offset < ui32NumBytes;
 	     ui32Offset += PAGE_SIZE) {
 		sCpuPAddr = OSMemHandleToCpuPAddr(hOSMemHandle, ui32Offset);
-		sDevPAddr = SysCpuPAddrToDevPAddr(eDeviceType, sCpuPAddr);
+		sDevPAddr = SysCpuPAddrToDevPAddr(0, sCpuPAddr);
 
 		pdump_print(PDUMP_FLAGS_CONTINUOUS,
 			    "MALLOC :SGXMEM:PA_%8.8X%8.8X %u %u 0x%8.8X\r\n",
@@ -341,8 +338,7 @@ void PDumpMallocPages(enum PVRSRV_DEVICE_TYPE eDeviceType, u32 ui32DevVAddr,
 	}
 }
 
-void PDumpMallocPageTable(enum PVRSRV_DEVICE_TYPE eDeviceType,
-			  void *pvLinAddr, void *hUniqueTag)
+void PDumpMallocPageTable(void *pvLinAddr, void *hUniqueTag)
 {
 	struct IMG_CPU_PHYADDR sCpuPAddr;
 	struct IMG_DEV_PHYADDR sDevPAddr;
@@ -353,7 +349,7 @@ void PDumpMallocPageTable(enum PVRSRV_DEVICE_TYPE eDeviceType,
 		     PAGE_SIZE, PAGE_SIZE);
 
 	sCpuPAddr = OSMapLinToCPUPhys(pvLinAddr);
-	sDevPAddr = SysCpuPAddrToDevPAddr(eDeviceType, sCpuPAddr);
+	sDevPAddr = SysCpuPAddrToDevPAddr(0, sCpuPAddr);
 
 	pdump_print(PDUMP_FLAGS_CONTINUOUS, "MALLOC :SGXMEM:PA_%8.8X%8.8lX "
 		    "0x%lX %lu 0x%8.8lX\r\n", (u32)hUniqueTag,
@@ -389,8 +385,7 @@ void PDumpFreePages(struct BM_HEAP *psBMHeap, struct IMG_DEV_VIRTADDR sDevVAddr,
 	}
 }
 
-void PDumpFreePageTable(enum PVRSRV_DEVICE_TYPE eDeviceType,
-			void *pvLinAddr, void *hUniqueTag)
+void PDumpFreePageTable(void *pvLinAddr)
 {
 	struct IMG_CPU_PHYADDR sCpuPAddr;
 	struct IMG_DEV_PHYADDR sDevPAddr;
@@ -400,26 +395,24 @@ void PDumpFreePageTable(enum PVRSRV_DEVICE_TYPE eDeviceType,
 	PDumpComment("FREE :SGXMEM:PAGE_TABLE\r\n");
 
 	sCpuPAddr = OSMapLinToCPUPhys(pvLinAddr);
-	sDevPAddr = SysCpuPAddrToDevPAddr(eDeviceType, sCpuPAddr);
+	sDevPAddr = SysCpuPAddrToDevPAddr(0, sCpuPAddr);
 
 	pdump_print(PDUMP_FLAGS_CONTINUOUS, "FREE :SGXMEM:PA_%8.8X%8.8lX\r\n",
-		    (u32)hUniqueTag, sDevPAddr.uiAddr);
+		    PDUMP_PT_UNIQUETAG, sDevPAddr.uiAddr);
 }
 
-void PDumpPDRegWithFlags(u32 ui32Reg, u32 ui32Data, u32 ui32Flags,
-			 void *hUniqueTag)
+void PDumpPDRegWithFlags(u32 ui32Reg, u32 ui32Data, u32 ui32Flags)
 {
 	pdump_print(ui32Flags,
 		    "WRW :SGXREG:0x%8.8X :SGXMEM:PA_%8.8X%8.8lX:0x%8.8lX\r\n",
-		    ui32Reg, (u32)hUniqueTag,
+		    ui32Reg, PDUMP_PD_UNIQUETAG,
 		    ui32Data & PAGE_MASK,
 		    ui32Data & ~PAGE_MASK);
 }
 
-void PDumpPDReg(u32 ui32Reg, u32 ui32Data, void *hUniqueTag)
+void PDumpPDReg(u32 ui32Reg, u32 ui32Data)
 {
-	PDumpPDRegWithFlags(ui32Reg, ui32Data, PDUMP_FLAGS_CONTINUOUS,
-			    hUniqueTag);
+	PDumpPDRegWithFlags(ui32Reg, ui32Data, PDUMP_FLAGS_CONTINUOUS);
 }
 
 void PDumpMemPolKM(struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
@@ -545,8 +538,7 @@ PDumpMemUM(void *pvAltLinAddrUM, void *pvLinAddrUM,
 }
 
 enum PVRSRV_ERROR
-PDumpMem2KM(enum PVRSRV_DEVICE_TYPE eDeviceType, void *pvLinAddr,
-	    u32 ui32Bytes, u32 ui32Flags, IMG_BOOL bInitialisePages,
+PDumpMem2KM(void *pvLinAddr, u32 ui32Bytes, IMG_BOOL bInitialisePages,
 	    void *hUniqueTag1, void *hUniqueTag2)
 {
 	struct IMG_DEV_PHYADDR sDevPAddr;
@@ -569,7 +561,7 @@ PDumpMem2KM(enum PVRSRV_DEVICE_TYPE eDeviceType, void *pvLinAddr,
 			    (u32)(PAGE_SIZE - ((u32)pvLinAddr & ~PAGE_MASK)));
 
 		sCpuPAddr = OSMapLinToCPUPhys(pvLinAddr);
-		sDevPAddr = SysCpuPAddrToDevPAddr(eDeviceType, sCpuPAddr);
+		sDevPAddr = SysCpuPAddrToDevPAddr(0, sCpuPAddr);
 
 		if (bInitialisePages) {
 			pdump_print(PDUMP_FLAGS_CONTINUOUS, "LDB :SGXMEM:"
@@ -665,8 +657,8 @@ void PDumpBitmapKM(char *pszFileName, u32 ui32FileOffset,
 		    ui32StrideInBytes, eMemFormat);
 }
 
-static void
-PDumpReadRegKM(char *pszFileName, u32 ui32FileOffset, u32 ui32Address)
+static void PDumpReadRegKM(char *pszFileName, u32 ui32FileOffset,
+			   u32 ui32Address)
 {
 	pdump_print(0, "SAB :SGXREG:0x%08X 0x%08X %s\r\n",
 		    ui32Address, ui32FileOffset, pszFileName);
@@ -737,7 +729,7 @@ void PDumpHWPerfCBKM(char *pszFileName, u32 ui32FileOffset,
 
 void PDumpCBP(struct PVRSRV_KERNEL_MEM_INFO *psROffMemInfo,
 	      u32 ui32ROffOffset, u32 ui32WPosVal, u32 ui32PacketSize,
-	      u32 ui32BufferSize, u32 ui32Flags, void *hUniqueTag)
+	      u32 ui32BufferSize, void *hUniqueTag)
 {
 	struct IMG_DEV_PHYADDR sDevPAddr;
 	struct IMG_DEV_VIRTADDR sDevVPageAddr;
@@ -751,7 +743,7 @@ void PDumpCBP(struct PVRSRV_KERNEL_MEM_INFO *psROffMemInfo,
 	ui32PageOffset = sDevVPageAddr.uiAddr & ~PAGE_MASK;
 	BM_GetPhysPageAddr(psROffMemInfo, sDevVPageAddr, &sDevPAddr);
 
-	pdump_print(ui32Flags, "CBP :SGXMEM:PA_%8.8X%8.8lX:0x%8.8lX 0x%8.8X"
+	pdump_print(0, "CBP :SGXMEM:PA_%8.8X%8.8lX:0x%8.8lX 0x%8.8X"
 		    " 0x%8.8X 0x%8.8X\r\n", (u32) hUniqueTag,
 		    sDevPAddr.uiAddr, ui32PageOffset,
 		    ui32WPosVal, ui32PacketSize, ui32BufferSize);

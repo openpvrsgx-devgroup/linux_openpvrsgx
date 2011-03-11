@@ -59,10 +59,7 @@ enum PVRSRV_ERROR PDumpMemKM(void *pvAltLinAddr,
 			     u32 ui32Offset, u32 ui32Bytes,
 			     u32 ui32Flags, void *hUniqueTag);
 
-enum PVRSRV_ERROR PDumpMem2KM(enum PVRSRV_DEVICE_TYPE eDeviceType,
-			      void *pvLinAddr,
-			      u32 ui32Bytes,
-			      u32 ui32Flags,
+enum PVRSRV_ERROR PDumpMem2KM(void *pvLinAddr, u32 ui32Bytes,
 			      IMG_BOOL bInitialisePages,
 			      void *hUniqueTag1, void *hUniqueTag2);
 void PDumpInit(void);
@@ -92,19 +89,15 @@ void PDumpRegPolWithFlagsKM(u32 ui32RegAddr, u32 ui32RegValue,
 
 IMG_BOOL PDumpIsCaptureFrameKM(void);
 
-void PDumpMallocPages(enum PVRSRV_DEVICE_TYPE eDeviceType,
-		      u32 ui32DevVAddr, void *pvLinAddr, void *hOSMemHandle,
+void PDumpMallocPages(u32 ui32DevVAddr, void *hOSMemHandle,
 		      u32 ui32NumBytes, void *hUniqueTag);
-void PDumpMallocPageTable(enum PVRSRV_DEVICE_TYPE eDeviceType,
-			  void *pvLinAddr, void *hUniqueTag);
+void PDumpMallocPageTable(void *pvLinAddr, void *hUniqueTag);
 void PDumpFreePages(struct BM_HEAP *psBMHeap,
 		    struct IMG_DEV_VIRTADDR sDevVAddr, u32 ui32NumBytes,
 		    void *hUniqueTag, IMG_BOOL bInterleaved);
-void PDumpFreePageTable(enum PVRSRV_DEVICE_TYPE eDeviceType,
-			void *pvLinAddr, void *hUniqueTag);
-void PDumpPDReg(u32 ui32Reg, u32 ui32dwData, void *hUniqueTag);
-void PDumpPDRegWithFlags(u32 ui32Reg, u32 ui32Data, u32 ui32Flags,
-			 void *hUniqueTag);
+void PDumpFreePageTable(void *pvLinAddr);
+void PDumpPDReg(u32 ui32Reg, u32 ui32dwData);
+void PDumpPDRegWithFlags(u32 ui32Reg, u32 ui32Data, u32 ui32Flags);
 
 void PDumpPDDevPAddrKM(struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 		       u32 ui32Offset, struct IMG_DEV_PHYADDR sPDDevPAddr,
@@ -127,7 +120,7 @@ void PDumpCBP(struct PVRSRV_KERNEL_MEM_INFO *psROffMemInfo,
 	      u32 ui32ROffOffset,
 	      u32 ui32WPosVal,
 	      u32 ui32PacketSize,
-	      u32 ui32BufferSize, u32 ui32Flags, void *hUniqueTag);
+	      u32 ui32BufferSize, void *hUniqueTag);
 
 void PDumpIDLWithFlags(u32 ui32Clocks, u32 ui32Flags);
 

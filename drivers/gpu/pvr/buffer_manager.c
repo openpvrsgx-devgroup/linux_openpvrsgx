@@ -1110,8 +1110,7 @@ static IMG_BOOL DevMemoryAlloc(struct BM_CONTEXT *pBMContext,
 			ui32PDumpSize =
 				pMapping->pBMHeap->sDevArena.ui32DataPageSize;
 
-		PDUMPMALLOCPAGES(psDeviceNode->sDevId.eDeviceType,
-				 pMapping->DevVAddr.uiAddr, pMapping->CpuVAddr,
+		PDUMPMALLOCPAGES(pMapping->DevVAddr.uiAddr,
 				 pMapping->hOSMemHandle, ui32PDumpSize,
 				 (void *)pMapping);
 	}

@@ -215,7 +215,8 @@ pdumpfs_capture_enabled(void)
 
 	mutex_lock(pdumpfs_mutex);
 
-	if (pdumpfs_mode == PDUMPFS_MODE_FULL)
+	if ((pdumpfs_mode == PDUMPFS_MODE_FULL) &&
+	    (frame_current != frame_init)) /* simulator bails otherwise */
 		ret = true;
 	else
 		ret = false;
@@ -235,10 +236,12 @@ pdumpfs_flags_check(u32 flags)
 
 	mutex_lock(pdumpfs_mutex);
 
-	if (pdumpfs_mode == PDUMPFS_MODE_FULL)
+	if (pdumpfs_mode == PDUMPFS_MODE_DISABLED)
+		ret = false;
+	else if ((pdumpfs_mode == PDUMPFS_MODE_FULL) &&
+		 (frame_current != frame_init)) /* simulator bails otherwise */
 		ret = true;
-	else if ((pdumpfs_mode == PDUMPFS_MODE_STANDARD) &&
-		 (flags & PDUMP_FLAGS_CONTINUOUS))
+	else if (flags & PDUMP_FLAGS_CONTINUOUS)
 		ret = true;
 	else
 		ret = false;

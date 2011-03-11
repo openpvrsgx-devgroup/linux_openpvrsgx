@@ -43,11 +43,17 @@ static enum pdumpfs_mode pdumpfs_mode =
 #endif
 	;
 
+#define FRAME_PAGE_COUNT 2040
+
 struct pdumpfs_frame {
 	struct pdumpfs_frame *next;
 
 	u32 pid;
 	u32 number;
+
+	size_t offset;
+	int page_count;
+	unsigned long pages[FRAME_PAGE_COUNT];
 };
 
 static u32 frame_count_max = CONFIG_PVR_PDUMP_INITIAL_MAX_FRAME_COUNT;
@@ -72,8 +78,13 @@ frame_create(void)
 static void
 frame_destroy(struct pdumpfs_frame *frame)
 {
+	int i;
+
 	if (!frame)
 		return;
+
+	for (i = 0; i < frame->page_count; i++)
+		free_page(frame->pages[i]);
 
 	kfree(frame);
 }
@@ -180,20 +191,109 @@ pdumpfs_flags_check(u32 flags)
 	return ret;
 }
 
+static size_t
+pdumpfs_frame_write_low(void *buffer, size_t size, bool from_user)
+{
+	struct pdumpfs_frame *frame = frame_current;
+	size_t ret = 0;
+
+	while (size) {
+		size_t count = size;
+		size_t offset = frame->offset & ~PAGE_MASK;
+		unsigned long page;
+
+		if (!offset) {
+			if (frame->page_count >= FRAME_PAGE_COUNT) {
+				pr_err("%s: Frame size overrun.\n", __func__);
+				return -ENOMEM;
+			}
+
+			page = __get_free_page(GFP_KERNEL);
+			if (!page) {
+				pr_err("%s: failed to get free page.\n",
+				       __func__);
+				return -ENOMEM;
+			}
+
+			frame->pages[frame->page_count] = page;
+			frame->page_count++;
+		} else
+			page =
+				frame->pages[frame->page_count - 1];
+
+		if (count > (PAGE_SIZE - offset))
+			count = PAGE_SIZE - offset;
+
+		if (from_user) {
+			if (copy_from_user(((u8 *) page) + offset,
+					   (void __user __force *) buffer,
+					   count))
+				return -EINVAL;
+		} else
+			memcpy(((u8 *) page) + offset, buffer, count);
+
+		buffer += count;
+		size -= count;
+		ret += count;
+		frame->offset += count;
+	}
+	return ret;
+}
+
+static size_t
+pdumpfs_frame_write(void *buffer, size_t size, bool from_user)
+{
+	size_t ret;
+
+	if ((frame_current->offset + size) > (PAGE_SIZE * FRAME_PAGE_COUNT)) {
+		u32 pid = OSGetCurrentProcessIDKM();
+		struct task_struct *task;
+
+		pr_err("Frame overrun!!!\n");
+
+		ret = frame_new(pid, -1);
+		if (ret)
+			return ret;
+
+		rcu_read_lock();
+		task = pid_task(find_vpid(pid), PIDTYPE_PID);
+
+#define FRAME_OVERRUN_MESSAGE "-- Starting forced frame caused by "
+		pdumpfs_frame_write_low(FRAME_OVERRUN_MESSAGE,
+					sizeof(FRAME_OVERRUN_MESSAGE), false);
+		pdumpfs_frame_write_low(task->comm, strlen(task->comm), false);
+		pdumpfs_frame_write_low("\r\n", 2, false);
+
+		pr_err("%s: Frame size overrun, caused by %d (%s)\n",
+		       __func__, pid, task->comm);
+
+		rcu_read_unlock();
+	}
+
+	return pdumpfs_frame_write_low(buffer, size, from_user);
+}
+
 enum PVRSRV_ERROR
 pdumpfs_write_data(void *buffer, size_t size, bool from_user)
 {
 	mutex_lock(pdumpfs_mutex);
 
+	size = pdumpfs_frame_write(buffer, size, from_user);
+
 	mutex_unlock(pdumpfs_mutex);
 
-	return PVRSRV_OK;
+	if ((size >= 0) || (size == -ENOMEM))
+		return PVRSRV_OK;
+	else
+		return PVRSRV_ERROR_GENERIC;
 }
 
 void
 pdumpfs_write_string(char *string)
 {
 	mutex_lock(pdumpfs_mutex);
+
+	pdumpfs_frame_write(string, strlen(string), false);
 
 	mutex_unlock(pdumpfs_mutex);
 }

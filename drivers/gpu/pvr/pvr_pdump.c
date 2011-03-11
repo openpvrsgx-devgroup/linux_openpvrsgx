@@ -91,13 +91,21 @@ pdump_print(u32 flags, char *format, ...)
 static enum PVRSRV_ERROR
 pdump_dump(u32 flags, void *buffer, u32 size, bool from_user)
 {
+	enum PVRSRV_ERROR eError;
+
 	if (PDumpSuspended())
 		return PVRSRV_OK;
 
 	if (!pdumpfs_flags_check(flags))
 		return PVRSRV_OK;
 
-	return pdumpfs_write_data(buffer, size, from_user);
+	pdump_print(flags, "BIN 0x%08X:", size);
+
+	eError = pdumpfs_write_data(buffer, size, from_user);
+
+	pdump_print(flags, "-- BIN END\r\n");
+
+	return eError;
 }
 
 void PDumpCommentKM(char *pszComment, u32 ui32Flags)

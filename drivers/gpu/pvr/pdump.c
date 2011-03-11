@@ -169,9 +169,6 @@ pdump_print(u32 flags, char *pszFormat, ...)
 {
 	va_list ap;
 
-	if (PDumpSuspended())
-		return;
-
 	va_start(ap, pszFormat);
 	vsnprintf(gpszScript, SZ_SCRIPT_SIZE_MAX, pszFormat, ap);
 	va_end(ap);
@@ -182,12 +179,7 @@ pdump_print(u32 flags, char *pszFormat, ...)
 
 void PDumpCommentKM(char *pszComment, u32 ui32Flags)
 {
-	int len;
-
-	if (PDumpSuspended())
-		return;
-
-	len = strlen(pszComment);
+	int len = strlen(pszComment);
 
 	if ((len > 1) && (pszComment[len - 1] == '\n'))
 		pszComment[len - 1] = 0;
@@ -202,9 +194,6 @@ void PDumpComment(char *pszFormat, ...)
 {
 	va_list ap;
 
-	if (PDumpSuspended())
-		return;
-
 	va_start(ap, pszFormat);
 	vsnprintf(gpszComment, SZ_COMMENT_SIZE_MAX, pszFormat, ap);
 	va_end(ap);
@@ -216,9 +205,6 @@ void PDumpCommentWithFlags(u32 ui32Flags, char *pszFormat, ...)
 {
 	va_list ap;
 
-	if (PDumpSuspended())
-		return;
-
 	va_start(ap, pszFormat);
 	vsnprintf(gpszComment, SZ_COMMENT_SIZE_MAX, pszFormat, ap);
 	va_end(ap);
@@ -229,6 +215,9 @@ void PDumpCommentWithFlags(u32 ui32Flags, char *pszFormat, ...)
 void PDumpSetFrameKM(u32 ui32Frame)
 {
 	u32 ui32Stream;
+
+	if (PDumpSuspended())
+		return;
 
 	for (ui32Stream = 0; ui32Stream < PDUMP_NUM_STREAMS; ui32Stream++)
 		if (gpsStream[ui32Stream])
@@ -337,18 +326,12 @@ void PDumpDeInit(void)
 
 void PDumpRegWithFlagsKM(u32 ui32Reg, u32 ui32Data, u32 ui32Flags)
 {
-	if (PDumpSuspended())
-		return;
-
 	pdump_print(ui32Flags,
 		    "WRW :SGXREG:0x%8.8X 0x%8.8X\r\n", ui32Reg, ui32Data);
 }
 
 void PDumpReg(u32 ui32Reg, u32 ui32Data)
 {
-	if (PDumpSuspended())
-		return;
-
 	pdump_print(PDUMP_FLAGS_CONTINUOUS,
 		    "WRW :SGXREG:0x%8.8X 0x%8.8X\r\n", ui32Reg, ui32Data);
 }
@@ -361,9 +344,6 @@ void PDumpRegPolWithFlagsKM(u32 ui32RegAddr, u32 ui32RegValue,
 #define POLL_COUNT_SHORT	(1000000 / POLL_DELAY)
 
 	u32 ui32PollCount;
-
-	if (PDumpSuspended())
-		return;
 
 	if (((ui32RegAddr == EUR_CR_EVENT_STATUS) &&
 	     (ui32RegValue & ui32Mask &
@@ -400,9 +380,6 @@ void PDumpMallocPages(enum PVRSRV_DEVICE_TYPE eDeviceType, u32 ui32DevVAddr,
 	struct IMG_DEV_PHYADDR sDevPAddr;
 	u32 ui32Page;
 
-	if (PDumpSuspended())
-		return;
-
 	PVR_UNREFERENCED_PARAMETER(pvLinAddr);
 
 	PVR_ASSERT(((u32) ui32DevVAddr & (ui32PageSize - 1)) == 0);
@@ -438,9 +415,6 @@ void PDumpMallocPageTable(enum PVRSRV_DEVICE_TYPE eDeviceType,
 	struct IMG_DEV_PHYADDR sDevPAddr;
 	u32 ui32Page;
 
-	if (PDumpSuspended())
-		return;
-
 	PVR_ASSERT(((u32) pvLinAddr & (ui32PTSize - 1)) == 0);
 
 	PDumpComment("MALLOC :SGXMEM:PAGE_TABLE 0x%8.8X %lu\r\n",
@@ -472,9 +446,6 @@ void PDumpFreePages(struct BM_HEAP *psBMHeap, struct IMG_DEV_VIRTADDR sDevVAddr,
 	u32 ui32NumPages, ui32PageCounter;
 	struct IMG_DEV_PHYADDR sDevPAddr;
 	struct PVRSRV_DEVICE_NODE *psDeviceNode;
-
-	if (PDumpSuspended())
-		return;
 
 	PVR_ASSERT(((u32) sDevVAddr.uiAddr & (ui32PageSize - 1)) == 0);
 	PVR_ASSERT(((u32) ui32NumBytes & (ui32PageSize - 1)) == 0);
@@ -510,9 +481,6 @@ void PDumpFreePageTable(enum PVRSRV_DEVICE_TYPE eDeviceType,
 	struct IMG_DEV_PHYADDR sDevPAddr;
 	u32 ui32Page;
 
-	if (PDumpSuspended())
-		return;
-
 	PVR_ASSERT(((u32) pvLinAddr & (ui32PTSize - 1)) == 0);
 
 	PDumpComment("FREE :SGXMEM:PAGE_TABLE\r\n");
@@ -535,9 +503,6 @@ void PDumpFreePageTable(enum PVRSRV_DEVICE_TYPE eDeviceType,
 
 void PDumpPDReg(u32 ui32Reg, u32 ui32Data, void *hUniqueTag)
 {
-	if (PDumpSuspended())
-		return;
-
 	pdump_print(PDUMP_FLAGS_CONTINUOUS,
 		    "WRW :SGXREG:0x%8.8X :SGXMEM:PA_%8.8X%8.8lX:0x%8.8lX\r\n",
 		    ui32Reg, (u32)hUniqueTag,
@@ -548,9 +513,6 @@ void PDumpPDReg(u32 ui32Reg, u32 ui32Data, void *hUniqueTag)
 void PDumpPDRegWithFlags(u32 ui32Reg, u32 ui32Data, u32 ui32Flags,
 			 void *hUniqueTag)
 {
-	if (PDumpSuspended())
-		return;
-
 	pdump_print(ui32Flags,
 		    "WRW :SGXREG:0x%8.8X :SGXMEM:PA_%8.8X%8.8lX:0x%8.8lX\r\n",
 		    ui32Reg, (u32)hUniqueTag,
@@ -569,9 +531,6 @@ void PDumpMemPolKM(struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 	struct IMG_DEV_PHYADDR sDevPAddr;
 	struct IMG_DEV_VIRTADDR sDevVPageAddr;
 	struct IMG_CPU_PHYADDR CpuPAddr;
-
-	if (PDumpSuspended())
-		return;
 
 	PVR_ASSERT((ui32Offset + sizeof(u32)) <=
 		   psMemInfo->ui32AllocSize);
@@ -608,9 +567,6 @@ PDumpMemKM(void *pvAltLinAddr, struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 	u32 ui32CurrentOffset;
 	u32 ui32BytesRemaining;
 	enum PVRSRV_ERROR eError;
-
-	if (PDumpSuspended())
-		return PVRSRV_OK;
 
 	PVR_ASSERT((ui32Offset + ui32Bytes) <= psMemInfo->ui32AllocSize);
 
@@ -697,9 +653,6 @@ PDumpMem2KM(enum PVRSRV_DEVICE_TYPE eDeviceType, void *pvLinAddr,
 	struct IMG_CPU_PHYADDR sCpuPAddr;
 	u32 ui32Offset;
 	enum PVRSRV_ERROR eError;
-
-	if (PDumpSuspended())
-		return PVRSRV_OK;
 
 	if (!pvLinAddr)
 		return PVRSRV_ERROR_GENERIC;
@@ -792,9 +745,6 @@ PDumpPDDevPAddrKM(struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 	struct IMG_DEV_VIRTADDR sDevVPageAddr;
 	struct IMG_DEV_PHYADDR sDevPAddr;
 
-	if (PDumpSuspended())
-		return;
-
 	CpuPAddr =
 	    OSMemHandleToCpuPAddr(psMemInfo->sMemBlk.hOSMemHandle, ui32Offset);
 	ui32PageByteOffset = CpuPAddr.uiAddr & (PAGE_SIZE - 1);
@@ -832,9 +782,6 @@ void PDumpBitmapKM(char *pszFileName, u32 ui32FileOffset,
 		   u32 ui32Size, enum PDUMP_PIXEL_FORMAT ePixelFormat,
 		   enum PDUMP_MEM_FORMAT eMemFormat, u32 ui32PDumpFlags)
 {
-	if (PDumpSuspended())
-		return;
-
 	PDumpCommentWithFlags(ui32PDumpFlags, "Dump bitmap of render\r\n");
 
 	pdump_print(ui32PDumpFlags,
@@ -848,9 +795,6 @@ void PDumpBitmapKM(char *pszFileName, u32 ui32FileOffset,
 static void PDumpReadRegKM(char *pszFileName, u32 ui32FileOffset,
 			   u32 ui32Address, u32 ui32Size, u32 ui32PDumpFlags)
 {
-	if (PDumpSuspended())
-		return;
-
 	pdump_print(ui32PDumpFlags, "SAB :SGXREG:0x%08X 0x%08X %s\r\n",
 		    ui32Address, ui32FileOffset, pszFileName);
 }
@@ -860,9 +804,6 @@ void PDump3DSignatureRegisters(u32 ui32DumpFrameNum,
 {
 	u32 ui32FileOffset;
 	u32 i;
-
-	if (PDumpSuspended())
-		return;
 
 	ui32FileOffset = 0;
 
@@ -880,9 +821,6 @@ void PDump3DSignatureRegisters(u32 ui32DumpFrameNum,
 static void PDumpCountRead(char *pszFileName, u32 ui32Address, u32 ui32Size,
 			   u32 *pui32FileOffset)
 {
-	if (PDumpSuspended())
-		return;
-
 	pdump_print(0, "SAB :SGXREG:0x%08X 0x%08X %s\r\n", ui32Address,
 		    *pui32FileOffset, pszFileName);
 
@@ -894,9 +832,6 @@ void PDumpCounterRegisters(u32 ui32DumpFrameNum,
 {
 	u32 ui32FileOffset;
 	u32 i;
-
-	if (PDumpSuspended())
-		return;
 
 	PDumpCommentWithFlags(0, "Dump counter registers\r\n");
 	snprintf(gpszFile, SZ_FILENAME_SIZE_MAX, "out%u.perf",
@@ -914,9 +849,6 @@ void PDumpTASignatureRegisters(u32 ui32DumpFrameNum, u32 ui32TAKickCount,
 	u32 ui32FileOffset;
 	u32 i;
 
-	if (PDumpSuspended())
-		return;
-
 	PDumpCommentWithFlags(0, "Dump TA signature registers\r\n");
 	snprintf(gpszFile, SZ_FILENAME_SIZE_MAX, "out%u_ta.sig",
 		 ui32DumpFrameNum);
@@ -932,17 +864,11 @@ void PDumpTASignatureRegisters(u32 ui32DumpFrameNum, u32 ui32TAKickCount,
 
 void PDumpRegRead(const u32 ui32RegOffset, u32 ui32Flags)
 {
-	if (PDumpSuspended())
-		return;
-
 	pdump_print(ui32Flags, "RDW :SGXREG:0x%X\r\n", ui32RegOffset);
 }
 
 void PDumpCycleCountRegRead(const u32 ui32RegOffset)
 {
-	if (PDumpSuspended())
-		return;
-
 	pdump_print(0, "RDW :SGXREG:0x%X\r\n", ui32RegOffset);
 }
 
@@ -950,9 +876,6 @@ void PDumpHWPerfCBKM(char *pszFileName, u32 ui32FileOffset,
 		     struct IMG_DEV_VIRTADDR sDevBaseAddr, u32 ui32Size,
 		     u32 ui32PDumpFlags)
 {
-	if (PDumpSuspended())
-		return;
-
 	PDumpCommentWithFlags(ui32PDumpFlags,
 			      "Dump Hardware Performance Circular Buffer\r\n");
 	pdump_print(ui32PDumpFlags,
@@ -969,9 +892,6 @@ void PDumpCBP(struct PVRSRV_KERNEL_MEM_INFO *psROffMemInfo,
 	struct IMG_DEV_PHYADDR sDevPAddr;
 	struct IMG_DEV_VIRTADDR sDevVPageAddr;
 	struct IMG_CPU_PHYADDR CpuPAddr;
-
-	if (PDumpSuspended())
-		return;
 
 	PVR_ASSERT((ui32ROffOffset + sizeof(u32)) <=
 		   psROffMemInfo->ui32AllocSize);
@@ -1001,9 +921,6 @@ void PDumpCBP(struct PVRSRV_KERNEL_MEM_INFO *psROffMemInfo,
 
 void PDumpIDLWithFlags(u32 ui32Clocks, u32 ui32Flags)
 {
-	if (PDumpSuspended())
-		return;
-
 	pdump_print(ui32Flags, "IDL %u\r\n", ui32Clocks);
 }
 

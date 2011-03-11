@@ -41,7 +41,7 @@
 #include "bridged_support.h"
 #include "mm.h"
 
-static struct dentry *debugfs_dir;
+struct dentry *pvr_debugfs_dir;
 static u32 pvr_reset;
 
 /*
@@ -1049,61 +1049,61 @@ int pvr_debugfs_init(void)
 {
 	mutex_init(hwrec_mutex);
 
-	debugfs_dir = debugfs_create_dir("pvr", NULL);
-	if (!debugfs_dir)
+	pvr_debugfs_dir = debugfs_create_dir("pvr", NULL);
+	if (!pvr_debugfs_dir)
 		return -ENODEV;
 
-	if (!debugfs_create_file("reset_sgx", S_IWUSR, debugfs_dir, &pvr_reset,
-				 &pvr_debugfs_fops)) {
-		debugfs_remove(debugfs_dir);
+	if (!debugfs_create_file("reset_sgx", S_IWUSR, pvr_debugfs_dir,
+				 &pvr_reset, &pvr_debugfs_fops)) {
+		debugfs_remove(pvr_debugfs_dir);
 		return -ENODEV;
 	}
 
 #ifdef PVRSRV_USSE_EDM_STATUS_DEBUG
-	if (!debugfs_create_file("edm_trace", S_IRUGO, debugfs_dir, NULL,
+	if (!debugfs_create_file("edm_trace", S_IRUGO, pvr_debugfs_dir, NULL,
 				 &pvr_debugfs_edm_fops)) {
-		debugfs_remove_recursive(debugfs_dir);
+		debugfs_remove_recursive(pvr_debugfs_dir);
 		return -ENODEV;
 	}
 #endif
 
-	if (!debugfs_create_file("hwrec_event", S_IRUSR, debugfs_dir, NULL,
+	if (!debugfs_create_file("hwrec_event", S_IRUSR, pvr_debugfs_dir, NULL,
 				 &hwrec_event_fops)) {
-		debugfs_remove_recursive(debugfs_dir);
+		debugfs_remove_recursive(pvr_debugfs_dir);
 		return -ENODEV;
 	}
 
-	if (!debugfs_create_file("hwrec_time", S_IRUSR, debugfs_dir, NULL,
+	if (!debugfs_create_file("hwrec_time", S_IRUSR, pvr_debugfs_dir, NULL,
 				 &hwrec_time_fops)) {
-		debugfs_remove_recursive(debugfs_dir);
+		debugfs_remove_recursive(pvr_debugfs_dir);
 		return -ENODEV;
 	}
 
-	if (!debugfs_create_file("hwrec_regs", S_IRUSR, debugfs_dir, NULL,
+	if (!debugfs_create_file("hwrec_regs", S_IRUSR, pvr_debugfs_dir, NULL,
 				 &hwrec_regs_fops)) {
-		debugfs_remove_recursive(debugfs_dir);
+		debugfs_remove_recursive(pvr_debugfs_dir);
 		return -ENODEV;
 	}
 
 #ifdef CONFIG_PVR_DEBUG
-	if (!debugfs_create_file("hwrec_mem", S_IRUSR, debugfs_dir, NULL,
+	if (!debugfs_create_file("hwrec_mem", S_IRUSR, pvr_debugfs_dir, NULL,
 				 &hwrec_mem_fops)) {
-		debugfs_remove_recursive(debugfs_dir);
+		debugfs_remove_recursive(pvr_debugfs_dir);
 		return -ENODEV;
 	}
 #endif /* CONFIG_PVR_DEBUG */
 
 #ifdef PVRSRV_USSE_EDM_STATUS_DEBUG
-	if (!debugfs_create_file("hwrec_edm", S_IRUSR, debugfs_dir, NULL,
+	if (!debugfs_create_file("hwrec_edm", S_IRUSR, pvr_debugfs_dir, NULL,
 				 &hwrec_edm_fops)) {
-		debugfs_remove_recursive(debugfs_dir);
+		debugfs_remove_recursive(pvr_debugfs_dir);
 		return -ENODEV;
 	}
 #endif
 
-	if (!debugfs_create_file("hwrec_status", S_IRUSR, debugfs_dir, NULL,
+	if (!debugfs_create_file("hwrec_status", S_IRUSR, pvr_debugfs_dir, NULL,
 				 &hwrec_status_fops)) {
-		debugfs_remove_recursive(debugfs_dir);
+		debugfs_remove_recursive(pvr_debugfs_dir);
 		return -ENODEV;
 	}
 
@@ -1112,7 +1112,7 @@ int pvr_debugfs_init(void)
 
 void pvr_debugfs_cleanup(void)
 {
-	debugfs_remove_recursive(debugfs_dir);
+	debugfs_remove_recursive(pvr_debugfs_dir);
 
 	if (hwrec_registers)
 		free_page((u32) hwrec_registers);

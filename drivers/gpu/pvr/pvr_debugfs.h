@@ -24,6 +24,8 @@
 #error Error: debugfs header included but CONFIG_DEBUG_FS is not defined!
 #endif
 
+extern struct dentry *pvr_debugfs_dir;
+
 int pvr_debugfs_init(void);
 void pvr_debugfs_cleanup(void);
 

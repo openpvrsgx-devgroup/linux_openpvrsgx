@@ -114,4 +114,8 @@ static inline void pvr_dbg_cleanup(void) {};
 
 #endif
 
+#ifdef CONFIG_DEBUG_FS
+extern struct dentry *pvr_debugfs_dir;
+#endif
+
 #endif

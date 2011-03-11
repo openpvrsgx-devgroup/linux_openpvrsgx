@@ -53,13 +53,6 @@ struct DBG_STREAM {
 	IMG_BOOL bInitPhaseComplete;
 };
 
-static IMG_BOOL PDumpWriteString2(char *pszString, u32 ui32Flags);
-static IMG_BOOL PDumpWriteILock(struct DBG_STREAM *psStream, u8 *pui8Data,
-				u32 ui32Count, u32 ui32Flags);
-static void DbgSetFrame(struct DBG_STREAM *psStream, u32 ui32Frame);
-static u32 DbgWrite(struct DBG_STREAM *psStream, u8 *pui8Data,
-			   u32 ui32BCount, u32 ui32Flags);
-
 #define MIN(a, b)				(a > b ? b : a)
 
 static atomic_t gsPDumpSuspended = ATOMIC_INIT(0);
@@ -81,6 +74,17 @@ static struct DBG_STREAM *gpsStream[PDUMP_NUM_STREAMS] = {NULL};
 #define SZ_MSG_SIZE_MAX			(PVRSRV_PDUMP_MAX_COMMENT_SIZE - 1)
 #define SZ_SCRIPT_SIZE_MAX		(PVRSRV_PDUMP_MAX_COMMENT_SIZE - 1)
 #define SZ_FILENAME_SIZE_MAX		(PVRSRV_PDUMP_MAX_COMMENT_SIZE - 1)
+
+
+void PDumpSuspendKM(void)
+{
+	atomic_inc(&gsPDumpSuspended);
+}
+
+void PDumpResumeKM(void)
+{
+	atomic_dec(&gsPDumpSuspended);
+}
 
 static inline IMG_BOOL PDumpSuspended(void)
 {
@@ -142,6 +146,148 @@ DbgDrvGetStreamOffset(struct DBG_STREAM *psStream)
 	return 0;
 }
 
+static u32 DbgWrite(struct DBG_STREAM *psStream, u8 *pui8Data,
+			   u32 ui32BCount, u32 ui32Flags)
+{
+	u32 ui32BytesWritten;
+
+	if (ui32Flags & PDUMP_FLAGS_CONTINUOUS) {
+		if ((psStream->ui32CapMode & DEBUG_CAPMODE_FRAMED) &&
+		    (psStream->ui32Start == 0xFFFFFFFF) &&
+		    (psStream->ui32End == 0xFFFFFFFF) &&
+		    psStream->bInitPhaseComplete)
+			ui32BytesWritten = ui32BCount;
+		else
+			ui32BytesWritten =
+				DbgDrvDBGDrivWrite2(psStream, pui8Data,
+						    ui32BCount, 1);
+	} else
+		ui32BytesWritten = DbgDrvWriteBINCM(psStream, pui8Data,
+						    ui32BCount, 1);
+
+	return ui32BytesWritten;
+}
+
+static IMG_BOOL PDumpWriteILock(struct DBG_STREAM *psStream, u8 *pui8Data,
+				u32 ui32Count, u32 ui32Flags)
+{
+	u32 ui32Written = 0;
+	u32 ui32Off = 0;
+
+	if (!psStream || PDumpSuspended() || (ui32Flags & PDUMP_FLAGS_NEVER))
+		return IMG_TRUE;
+
+	while (((u32) ui32Count > 0) && (ui32Written != 0xFFFFFFFF)) {
+		ui32Written =
+		    DbgWrite(psStream, &pui8Data[ui32Off], ui32Count,
+			     ui32Flags);
+
+		if (ui32Written == 0)
+			OSReleaseThreadQuanta();
+
+		if (ui32Written != 0xFFFFFFFF) {
+			ui32Off += ui32Written;
+			ui32Count -= ui32Written;
+		}
+	}
+
+	if (ui32Written == 0xFFFFFFFF)
+		return IMG_FALSE;
+
+	return IMG_TRUE;
+}
+
+static IMG_BOOL PDumpWriteString2(char *pszString, u32 ui32Flags)
+{
+	return PDumpWriteILock(gpsStream[PDUMP_STREAM_SCRIPT2],
+			      (u8 *)pszString, strlen(pszString), ui32Flags);
+}
+
+enum PVRSRV_ERROR PDumpCommentKM(char *pszComment, u32 ui32Flags)
+{
+	u32 ui32Count = 0;
+	enum PVRSRV_ERROR eError;
+
+	if (PDumpSuspended())
+		return PVRSRV_ERROR_GENERIC;
+
+	if (ui32Flags & PDUMP_FLAGS_CONTINUOUS)
+		eError = PVRSRV_ERROR_GENERIC;
+	else
+		eError = PVRSRV_ERROR_CMD_NOT_PROCESSED;
+
+	if (!PDumpWriteString2("-- ", ui32Flags))
+		return eError;
+
+	snprintf(gpszMsg, SZ_MSG_SIZE_MAX, "%s", pszComment);
+
+	while ((gpszMsg[ui32Count] != 0) && (ui32Count < SZ_MSG_SIZE_MAX))
+		ui32Count++;
+
+	if ((gpszMsg[ui32Count - 1] != '\n') && (ui32Count < SZ_MSG_SIZE_MAX)) {
+		gpszMsg[ui32Count] = '\n';
+		ui32Count++;
+		gpszMsg[ui32Count] = '\0';
+	}
+	if ((gpszMsg[ui32Count - 2] != '\r') && (ui32Count < SZ_MSG_SIZE_MAX)) {
+		gpszMsg[ui32Count - 1] = '\r';
+		gpszMsg[ui32Count] = '\n';
+		ui32Count++;
+		gpszMsg[ui32Count] = '\0';
+	}
+
+	PDumpWriteString2(gpszMsg, ui32Flags);
+
+	return PVRSRV_OK;
+}
+
+void PDumpComment(char *pszFormat, ...)
+{
+	va_list ap;
+
+	if (PDumpSuspended())
+		return;
+
+	va_start(ap, pszFormat);
+	vsnprintf(gpszMsg, SZ_MSG_SIZE_MAX, pszFormat, ap);
+	va_end(ap);
+
+	PDumpCommentKM(gpszMsg, PDUMP_FLAGS_CONTINUOUS);
+}
+
+void PDumpCommentWithFlags(u32 ui32Flags, char *pszFormat, ...)
+{
+	va_list ap;
+
+	if (PDumpSuspended())
+		return;
+
+	va_start(ap, pszFormat);
+	vsnprintf(gpszMsg, SZ_MSG_SIZE_MAX, pszFormat, ap);
+	va_end(ap);
+
+	PDumpCommentKM(gpszMsg, ui32Flags);
+}
+
+enum PVRSRV_ERROR PDumpSetFrameKM(u32 ui32Frame)
+{
+	u32 ui32Stream;
+
+	for (ui32Stream = 0; ui32Stream < PDUMP_NUM_STREAMS; ui32Stream++)
+		if (gpsStream[ui32Stream])
+			DbgDrvSetFrame(gpsStream[ui32Stream], ui32Frame);
+
+	return PVRSRV_OK;
+}
+
+IMG_BOOL PDumpIsCaptureFrameKM(void)
+{
+	if (PDumpSuspended())
+		return IMG_FALSE;
+	return DbgDrvIsCaptureFrame(gpsStream[PDUMP_STREAM_SCRIPT2],
+				    IMG_FALSE);
+}
+
 void PDumpInit(void)
 {
 	u32 i = 0;
@@ -180,10 +326,10 @@ void PDumpInit(void)
 		DbgDrvSetFrame(gpsStream[i], 0);
 	}
 
-	PDUMPCOMMENT("Driver Product Name: %s", VS_PRODUCT_NAME);
-	PDUMPCOMMENT("Driver Product Version: %s (%s)",
+	PDumpComment("Driver Product Name: %s", VS_PRODUCT_NAME);
+	PDumpComment("Driver Product Version: %s (%s)",
 		     PVRVERSION_STRING, PVRVERSION_FILE);
-	PDUMPCOMMENT("Start of Init Phase");
+	PDumpComment("Start of Init Phase");
 
 	return;
 
@@ -232,42 +378,6 @@ void PDumpDeInit(void)
 			  (void *)gpszMsg, NULL);
 		gpszMsg = NULL;
 	}
-}
-
-void PDumpComment(char *pszFormat, ...)
-{
-	va_list ap;
-
-	if (PDumpSuspended())
-		return;
-
-	va_start(ap, pszFormat);
-	vsnprintf(gpszMsg, SZ_MSG_SIZE_MAX, pszFormat, ap);
-	va_end(ap);
-
-	PDumpCommentKM(gpszMsg, PDUMP_FLAGS_CONTINUOUS);
-}
-
-void PDumpCommentWithFlags(u32 ui32Flags, char *pszFormat, ...)
-{
-	va_list ap;
-
-	if (PDumpSuspended())
-		return;
-
-	va_start(ap, pszFormat);
-	vsnprintf(gpszMsg, SZ_MSG_SIZE_MAX, pszFormat, ap);
-	va_end(ap);
-
-	PDumpCommentKM(gpszMsg, ui32Flags);
-}
-
-IMG_BOOL PDumpIsCaptureFrameKM(void)
-{
-	if (PDumpSuspended())
-		return IMG_FALSE;
-	return DbgDrvIsCaptureFrame(gpsStream[PDUMP_STREAM_SCRIPT2],
-				    IMG_FALSE);
 }
 
 enum PVRSRV_ERROR PDumpRegWithFlagsKM(u32 ui32Reg, u32 ui32Data, u32 ui32Flags)
@@ -818,55 +928,6 @@ enum PVRSRV_ERROR PDumpPDDevPAddrKM(struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 	return PVRSRV_OK;
 }
 
-enum PVRSRV_ERROR PDumpSetFrameKM(u32 ui32Frame)
-{
-	u32 ui32Stream;
-
-	for (ui32Stream = 0; ui32Stream < PDUMP_NUM_STREAMS; ui32Stream++)
-		if (gpsStream[ui32Stream])
-			DbgSetFrame(gpsStream[ui32Stream], ui32Frame);
-
-	return PVRSRV_OK;
-}
-
-enum PVRSRV_ERROR PDumpCommentKM(char *pszComment, u32 ui32Flags)
-{
-	u32 ui32Count = 0;
-	enum PVRSRV_ERROR eError;
-
-	if (PDumpSuspended())
-		return PVRSRV_ERROR_GENERIC;
-
-	if (ui32Flags & PDUMP_FLAGS_CONTINUOUS)
-		eError = PVRSRV_ERROR_GENERIC;
-	else
-		eError = PVRSRV_ERROR_CMD_NOT_PROCESSED;
-
-	if (!PDumpWriteString2("-- ", ui32Flags))
-		return eError;
-
-	snprintf(gpszMsg, SZ_MSG_SIZE_MAX, "%s", pszComment);
-
-	while ((gpszMsg[ui32Count] != 0) && (ui32Count < SZ_MSG_SIZE_MAX))
-		ui32Count++;
-
-	if ((gpszMsg[ui32Count - 1] != '\n') && (ui32Count < SZ_MSG_SIZE_MAX)) {
-		gpszMsg[ui32Count] = '\n';
-		ui32Count++;
-		gpszMsg[ui32Count] = '\0';
-	}
-	if ((gpszMsg[ui32Count - 2] != '\r') && (ui32Count < SZ_MSG_SIZE_MAX)) {
-		gpszMsg[ui32Count - 1] = '\r';
-		gpszMsg[ui32Count] = '\n';
-		ui32Count++;
-		gpszMsg[ui32Count] = '\0';
-	}
-
-	PDumpWriteString2(gpszMsg, ui32Flags);
-
-	return PVRSRV_OK;
-}
-
 enum PVRSRV_ERROR PDumpBitmapKM(char *pszFileName, u32 ui32FileOffset,
 			   u32 ui32Width, u32 ui32Height, u32 ui32StrideInBytes,
 			   struct IMG_DEV_VIRTADDR sDevBaseAddr,
@@ -876,7 +937,7 @@ enum PVRSRV_ERROR PDumpBitmapKM(char *pszFileName, u32 ui32FileOffset,
 	if (PDumpSuspended())
 		return PVRSRV_ERROR_GENERIC;
 
-	PDUMPCOMMENTWITHFLAGS(ui32PDumpFlags,
+	PDumpCommentWithFlags(ui32PDumpFlags,
 			      "\r\n-- Dump bitmap of render\r\n");
 
 	snprintf(gpszScript,
@@ -908,69 +969,6 @@ static enum PVRSRV_ERROR PDumpReadRegKM(char *pszFileName, u32 ui32FileOffset,
 	return PVRSRV_OK;
 }
 
-static IMG_BOOL PDumpWriteString2(char *pszString, u32 ui32Flags)
-{
-	return PDumpWriteILock(gpsStream[PDUMP_STREAM_SCRIPT2],
-			      (u8 *)pszString, strlen(pszString), ui32Flags);
-}
-
-static IMG_BOOL PDumpWriteILock(struct DBG_STREAM *psStream, u8 *pui8Data,
-				u32 ui32Count, u32 ui32Flags)
-{
-	u32 ui32Written = 0;
-	u32 ui32Off = 0;
-
-	if (!psStream || PDumpSuspended() || (ui32Flags & PDUMP_FLAGS_NEVER))
-		return IMG_TRUE;
-
-	while (((u32) ui32Count > 0) && (ui32Written != 0xFFFFFFFF)) {
-		ui32Written =
-		    DbgWrite(psStream, &pui8Data[ui32Off], ui32Count,
-			     ui32Flags);
-
-		if (ui32Written == 0)
-			OSReleaseThreadQuanta();
-
-		if (ui32Written != 0xFFFFFFFF) {
-			ui32Off += ui32Written;
-			ui32Count -= ui32Written;
-		}
-	}
-
-	if (ui32Written == 0xFFFFFFFF)
-		return IMG_FALSE;
-
-	return IMG_TRUE;
-}
-
-static void DbgSetFrame(struct DBG_STREAM *psStream, u32 ui32Frame)
-{
-	DbgDrvSetFrame(psStream, ui32Frame);
-}
-
-static u32 DbgWrite(struct DBG_STREAM *psStream, u8 *pui8Data,
-			   u32 ui32BCount, u32 ui32Flags)
-{
-	u32 ui32BytesWritten;
-
-	if (ui32Flags & PDUMP_FLAGS_CONTINUOUS) {
-		if ((psStream->ui32CapMode & DEBUG_CAPMODE_FRAMED) &&
-		    (psStream->ui32Start == 0xFFFFFFFF) &&
-		    (psStream->ui32End == 0xFFFFFFFF) &&
-		    psStream->bInitPhaseComplete)
-			ui32BytesWritten = ui32BCount;
-		else
-			ui32BytesWritten =
-				DbgDrvDBGDrivWrite2(psStream, pui8Data,
-						    ui32BCount, 1);
-	} else {
-		ui32BytesWritten = DbgDrvWriteBINCM(psStream, pui8Data,
-						    ui32BCount, 1);
-	}
-
-	return ui32BytesWritten;
-}
-
 void PDump3DSignatureRegisters(u32 ui32DumpFrameNum,
 			       u32 *pui32Registers, u32 ui32NumRegisters)
 {
@@ -982,7 +980,7 @@ void PDump3DSignatureRegisters(u32 ui32DumpFrameNum,
 
 	ui32FileOffset = 0;
 
-	PDUMPCOMMENTWITHFLAGS(0, "\r\n-- Dump 3D signature registers\r\n");
+	PDumpCommentWithFlags(0, "\r\n-- Dump 3D signature registers\r\n");
 	snprintf(gpszFile, SZ_FILENAME_SIZE_MAX, "out%u_3d.sig",
 		 ui32DumpFrameNum);
 
@@ -1017,7 +1015,7 @@ void PDumpCounterRegisters(u32 ui32DumpFrameNum,
 	if (PDumpSuspended())
 		return;
 
-	PDUMPCOMMENTWITHFLAGS(0, "\r\n-- Dump counter registers\r\n");
+	PDumpCommentWithFlags(0, "\r\n-- Dump counter registers\r\n");
 	snprintf(gpszFile, SZ_FILENAME_SIZE_MAX, "out%u.perf",
 		 ui32DumpFrameNum);
 	ui32FileOffset = 0;
@@ -1036,7 +1034,7 @@ void PDumpTASignatureRegisters(u32 ui32DumpFrameNum, u32 ui32TAKickCount,
 	if (PDumpSuspended())
 		return;
 
-	PDUMPCOMMENTWITHFLAGS(0, "\r\n-- Dump TA signature registers\r\n");
+	PDumpCommentWithFlags(0, "\r\n-- Dump TA signature registers\r\n");
 	snprintf(gpszFile, SZ_FILENAME_SIZE_MAX, "out%u_ta.sig",
 		 ui32DumpFrameNum);
 
@@ -1076,7 +1074,7 @@ void PDumpHWPerfCBKM(char *pszFileName, u32 ui32FileOffset,
 	if (PDumpSuspended())
 		return;
 
-	PDUMPCOMMENTWITHFLAGS(ui32PDumpFlags,
+	PDumpCommentWithFlags(ui32PDumpFlags,
 			"\r\n-- Dump Hardware Performance Circular Buffer\r\n");
 
 	snprintf(gpszScript,
@@ -1135,16 +1133,6 @@ void PDumpIDLWithFlags(u32 ui32Clocks, u32 ui32Flags)
 
 	sprintf(gpszScript, "IDL %u\r\n", ui32Clocks);
 	PDumpWriteString2(gpszScript, ui32Flags);
-}
-
-void PDumpSuspendKM(void)
-{
-	atomic_inc(&gsPDumpSuspended);
-}
-
-void PDumpResumeKM(void)
-{
-	atomic_dec(&gsPDumpSuspended);
 }
 
 #endif

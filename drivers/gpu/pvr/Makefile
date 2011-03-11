@@ -10,8 +10,7 @@ pvrsrvkm-objs		:= osfunc.o mmap.o module.o pdump.o proc.o	   \
 			   sgxinit.o sgxreset.o sgxutils.o sgxkick.o	   \
 			   sgxtransfer.o mmu.o pb.o perproc.o sysconfig.o  \
 			   sysutils.o osperproc.o bridged_support.o	   \
-			   bridged_sgx_bridge.o	sgxpower.o pdump_common.o  \
-			   pvr_events.o
+			   bridged_sgx_bridge.o	sgxpower.o pvr_events.o
 
 pvrsrvkm-objs-$(CONFIG_PVR_DEBUG) += pvr_debug.o
 pvrsrvkm-objs-$(CONFIG_DEBUG_FS) += pvr_debugfs.o

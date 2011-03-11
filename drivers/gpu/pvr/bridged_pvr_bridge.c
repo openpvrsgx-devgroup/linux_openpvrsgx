@@ -1159,7 +1159,7 @@ static int PDumpMemBW(u32 ui32BridgeID,
 	if (psRetOUT->eError != PVRSRV_OK)
 		return 0;
 
-	psRetOUT->eError = PDumpMemUM(psPerProc, psPDumpMemDumpIN->pvAltLinAddr,
+	psRetOUT->eError = PDumpMemUM(psPDumpMemDumpIN->pvAltLinAddr,
 				      psPDumpMemDumpIN->pvLinAddr,
 				      pvMemInfo, psPDumpMemDumpIN->ui32Offset,
 				      psPDumpMemDumpIN->ui32Bytes,
@@ -1211,7 +1211,7 @@ static int PDumpSyncDumpBW(u32 ui32BridgeID,
 		return 0;
 
 	psRetOUT->eError =
-		PDumpMemUM(psPerProc, psPDumpSyncDumpIN->pvAltLinAddr, NULL,
+		PDumpMemUM(psPDumpSyncDumpIN->pvAltLinAddr, NULL,
 			   ((struct PVRSRV_KERNEL_SYNC_INFO *)pvSyncInfo)->
 			   psSyncDataMemInfoKM,
 			   psPDumpSyncDumpIN->ui32Offset, ui32Bytes, 0,

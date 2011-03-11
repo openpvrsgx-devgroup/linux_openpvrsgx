@@ -49,8 +49,7 @@ void PDumpMemPolKM(struct PVRSRV_KERNEL_MEM_INFO
 					   enum PDUMP_POLL_OPERATOR eOperator,
 					   void *hUniqueTag);
 
-enum PVRSRV_ERROR PDumpMemUM(struct PVRSRV_PER_PROCESS_DATA *psProcData,
-			     void *pvAltLinAddr, void *pvLinAddr,
+enum PVRSRV_ERROR PDumpMemUM(void *pvAltLinAddr, void *pvLinAddr,
 			     struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 			     u32 ui32Offset, u32 ui32Bytes, u32 ui32Flags,
 			     void *hUniqueTag);
@@ -66,8 +65,6 @@ enum PVRSRV_ERROR PDumpMem2KM(enum PVRSRV_DEVICE_TYPE eDeviceType,
 			      u32 ui32Flags,
 			      IMG_BOOL bInitialisePages,
 			      void *hUniqueTag1, void *hUniqueTag2);
-void PDumpInitCommon(void);
-void PDumpDeInitCommon(void);
 void PDumpInit(void);
 void PDumpDeInit(void);
 void PDumpSetFrameKM(u32 ui32Frame);
@@ -141,8 +138,8 @@ void PDumpResumeKM(void);
 #define PDUMPMEM				PDumpMemKM
 #define PDUMPMEM2				PDumpMem2KM
 #define PDUMPMEMUM				PDumpMemUM
-#define PDUMPINIT				PDumpInitCommon
-#define PDUMPDEINIT				PDumpDeInitCommon
+#define PDUMPINIT				PDumpInit
+#define PDUMPDEINIT				PDumpDeInit
 #define PDUMPREGWITHFLAGS			PDumpRegWithFlagsKM
 #define PDUMPREG				PDumpReg
 #define PDUMPCOMMENT				PDumpComment

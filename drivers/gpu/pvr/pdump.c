@@ -86,7 +86,7 @@ dbgdrv_frame_set(u32 frame)
 }
 
 static enum PVRSRV_ERROR
-dbgdrv_write_data(void *buffer, int size)
+dbgdrv_write_data(void *buffer, int size, bool from_user)
 {
 	return PVRSRV_OK;
 }
@@ -138,7 +138,7 @@ pdump_print(u32 flags, char *format, ...)
 }
 
 static enum PVRSRV_ERROR
-pdump_dump(u32 flags, void *buffer, u32 size)
+pdump_dump(u32 flags, void *buffer, u32 size, bool from_user)
 {
 	if (PDumpSuspended())
 		return PVRSRV_OK;
@@ -146,7 +146,7 @@ pdump_dump(u32 flags, void *buffer, u32 size)
 	if (!dbgdrv_flags_check(flags))
 		return PVRSRV_OK;
 
-	return dbgdrv_write_data(buffer, size);
+	return dbgdrv_write_data(buffer, size, from_user);
 }
 
 void PDumpCommentKM(char *pszComment, u32 ui32Flags)
@@ -448,31 +448,13 @@ void PDumpMemPolKM(struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 		    MEMPOLL_COUNT, MEMPOLL_DELAY);
 }
 
-enum PVRSRV_ERROR
-PDumpMemKM(void *pvAltLinAddr, struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
-	   u32 ui32Offset, u32 ui32Bytes, u32 ui32Flags, void *hUniqueTag)
+static void
+pdump_mem_print(u32 ui32Flags, struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
+		u32 ui32Offset, u32 ui32Bytes, void *hUniqueTag)
 {
 	struct IMG_DEV_VIRTADDR sDevVPageAddr;
 	struct IMG_DEV_PHYADDR sDevPAddr;
 	u32 ui32PageOffset;
-	enum PVRSRV_ERROR eError;
-
-	PVR_ASSERT((ui32Offset + ui32Bytes) <= psMemInfo->ui32AllocSize);
-
-	if (ui32Bytes == 0)
-		return PVRSRV_ERROR_GENERIC;
-
-	if (pvAltLinAddr)
-		eError = pdump_dump(ui32Flags, pvAltLinAddr, ui32Bytes);
-	else if (psMemInfo->pvLinAddrKM)
-		eError = pdump_dump(ui32Flags,
-				    psMemInfo->pvLinAddrKM + ui32Offset,
-				    ui32Bytes);
-	else
-		return PVRSRV_ERROR_GENERIC;
-
-	if (eError != PVRSRV_OK)
-		return eError;
 
 	PDumpCommentWithFlags(ui32Flags, "LDB :SGXMEM:VA_%8.8X:0x%8.8X "
 			      "0x%8.8X\r\n",
@@ -499,6 +481,66 @@ PDumpMemKM(void *pvAltLinAddr, struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 		ui32Bytes -= ui32BlockBytes;
 		ui32Offset += ui32BlockBytes;
 	}
+}
+
+enum PVRSRV_ERROR
+PDumpMemKM(void *pvAltLinAddr, struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
+	   u32 ui32Offset, u32 ui32Bytes, u32 ui32Flags, void *hUniqueTag)
+{
+	enum PVRSRV_ERROR eError;
+
+	PVR_ASSERT((ui32Offset + ui32Bytes) <= psMemInfo->ui32AllocSize);
+
+	if (!ui32Bytes)
+		return PVRSRV_ERROR_GENERIC;
+
+	if (pvAltLinAddr)
+		eError = pdump_dump(ui32Flags, pvAltLinAddr, ui32Bytes, false);
+	else if (psMemInfo->pvLinAddrKM)
+		eError = pdump_dump(ui32Flags,
+				    psMemInfo->pvLinAddrKM + ui32Offset,
+				    ui32Bytes, false);
+	else
+		return PVRSRV_ERROR_GENERIC;
+
+	if (eError != PVRSRV_OK)
+		return eError;
+
+	pdump_mem_print(ui32Flags, psMemInfo, ui32Offset, ui32Bytes,
+			hUniqueTag);
+
+	return PVRSRV_OK;
+}
+
+enum PVRSRV_ERROR
+PDumpMemUM(void *pvAltLinAddrUM, void *pvLinAddrUM,
+	   struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
+	   u32 ui32Offset, u32 ui32Bytes, u32 ui32Flags, void *hUniqueTag)
+{
+	enum PVRSRV_ERROR eError;
+
+	PVR_ASSERT((ui32Offset + ui32Bytes) <= psMemInfo->ui32AllocSize);
+
+	if (!ui32Bytes)
+		return PVRSRV_ERROR_GENERIC;
+
+	if (pvAltLinAddrUM)
+		eError = pdump_dump(ui32Flags, pvAltLinAddrUM, ui32Bytes, true);
+	else if (psMemInfo->pvLinAddrKM)
+		eError = pdump_dump(ui32Flags,
+				    psMemInfo->pvLinAddrKM + ui32Offset,
+				    ui32Bytes, false);
+	else if (pvLinAddrUM)
+		eError = pdump_dump(ui32Flags, pvLinAddrUM + ui32Offset,
+				    ui32Bytes, true);
+	else
+		return PVRSRV_ERROR_GENERIC;
+
+	if (eError != PVRSRV_OK)
+		return eError;
+
+	pdump_mem_print(ui32Flags, psMemInfo, ui32Offset, ui32Bytes,
+			hUniqueTag);
 
 	return PVRSRV_OK;
 }
@@ -517,7 +559,7 @@ PDumpMem2KM(enum PVRSRV_DEVICE_TYPE eDeviceType, void *pvLinAddr,
 
 	if (bInitialisePages) {
 		eError = pdump_dump(PDUMP_FLAGS_CONTINUOUS, pvLinAddr,
-				    ui32Bytes);
+				    ui32Bytes, false);
 		if (eError != PVRSRV_OK)
 			return eError;
 	}

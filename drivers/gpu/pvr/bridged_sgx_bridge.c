@@ -1470,8 +1470,7 @@ static void DumpBufferArray(struct PVRSRV_PER_PROCESS_DATA *psPerProc,
 			}
 
 			PDUMPCOMMENTWITHFLAGS(0, "%s\r\n", pszName);
-			PDUMPMEMUM(psPerProc,
-				   NULL, psBuffer->pvLinAddr,
+			PDUMPMEMUM(NULL, psBuffer->pvLinAddr,
 				   (struct PVRSRV_KERNEL_MEM_INFO *)psBuffer->
 							   hKernelMemInfo,
 				   psBuffer->ui32Start,
@@ -1490,8 +1489,7 @@ static void DumpBufferArray(struct PVRSRV_PER_PROCESS_DATA *psPerProc,
 					 MAKEUNIQUETAG(psCtrlMemInfoKM));
 			}
 			PDUMPCOMMENTWITHFLAGS(0, "%s (part 1)\r\n", pszName);
-			PDUMPMEMUM(psPerProc,
-				   NULL, psBuffer->pvLinAddr,
+			PDUMPMEMUM(NULL, psBuffer->pvLinAddr,
 				   (struct PVRSRV_KERNEL_MEM_INFO *)psBuffer->
 							   hKernelMemInfo,
 				   psBuffer->ui32Start,
@@ -1512,7 +1510,7 @@ static void DumpBufferArray(struct PVRSRV_PER_PROCESS_DATA *psPerProc,
 					 MAKEUNIQUETAG(psCtrlMemInfoKM));
 			}
 			PDUMPCOMMENTWITHFLAGS(0, "%s (part 2)\r\n", pszName);
-			PDUMPMEMUM(psPerProc, NULL, psBuffer->pvLinAddr,
+			PDUMPMEMUM(NULL, psBuffer->pvLinAddr,
 				   (struct PVRSRV_KERNEL_MEM_INFO *)psBuffer->
 						   hKernelMemInfo,
 				   0, psBuffer->ui32End, 0, hUniqueTag);

@@ -1481,15 +1481,6 @@ static int PVRSRVConnectBW(u32 ui32BridgeID, void *psBridgeIn,
 	psConnectServicesOUT->hKernelServices = psPerProc->hPerProcData;
 	psConnectServicesOUT->eError = PVRSRV_OK;
 
-#if defined(PDUMP)
-
-	{
-		struct SYS_DATA *psSysData;
-		SysAcquireData(&psSysData);
-		psSysData->bPowerUpPDumped = IMG_FALSE;
-	}
-#endif
-
 	return 0;
 }
 

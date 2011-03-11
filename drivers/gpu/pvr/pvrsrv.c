@@ -146,10 +146,6 @@ enum PVRSRV_ERROR PVRSRVInit(struct SYS_DATA *psSysData)
 	psSysData->eCurrentPowerState = PVRSRV_POWER_STATE_D0;
 	psSysData->eFailedPowerState = PVRSRV_POWER_Unspecified;
 
-#if defined(PDUMP)
-	psSysData->bPowerUpPDumped = IMG_FALSE;
-#endif
-
 	if (OSAllocMem(PVRSRV_PAGEABLE_SELECT,
 		       sizeof(struct PVRSRV_EVENTOBJECT),
 		       (void **) &psSysData->psGlobalEventObject,

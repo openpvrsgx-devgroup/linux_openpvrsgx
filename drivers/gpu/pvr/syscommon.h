@@ -78,7 +78,7 @@ struct SYS_DATA {
 	char *pszVersionString;
 	struct PVRSRV_EVENTOBJECT *psGlobalEventObject;
 #if defined(PDUMP)
-	IMG_BOOL bPowerUpPDumped;
+	IMG_BOOL Unused;
 #endif
 };
 

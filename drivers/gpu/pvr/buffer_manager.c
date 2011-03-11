@@ -1090,21 +1090,10 @@ static IMG_BOOL DevMemoryAlloc(struct BM_CONTEXT *pBMContext,
 	       struct BM_MAPPING *pMapping, u32 uFlags, u32 dev_vaddr_alignment,
 	       struct IMG_DEV_VIRTADDR *pDevVAddr)
 {
-	struct PVRSRV_DEVICE_NODE *psDeviceNode;
-#ifdef PDUMP
-	u32 ui32PDumpSize = pMapping->uSize;
-#endif
-
-	psDeviceNode = pBMContext->psDeviceNode;
+	struct PVRSRV_DEVICE_NODE *psDeviceNode = pBMContext->psDeviceNode;
 
 	if (uFlags & PVRSRV_MEM_INTERLEAVED)
-
 		pMapping->uSize *= 2;
-#ifdef PDUMP
-	if (uFlags & PVRSRV_MEM_DUMMY)
-
-		ui32PDumpSize = pMapping->pBMHeap->sDevArena.ui32DataPageSize;
-#endif
 
 	if (!psDeviceNode->pfnMMUAlloc(pMapping->pBMHeap->pMMUHeap,
 				       pMapping->uSize, 0, dev_vaddr_alignment,
@@ -1113,11 +1102,21 @@ static IMG_BOOL DevMemoryAlloc(struct BM_CONTEXT *pBMContext,
 		return IMG_FALSE;
 	}
 
-	PDUMPMALLOCPAGES(psDeviceNode->sDevId.eDeviceType,
-			 pMapping->DevVAddr.uiAddr, pMapping->CpuVAddr,
-			 pMapping->hOSMemHandle, ui32PDumpSize,
-			 pMapping->pBMHeap->sDevArena.ui32DataPageSize,
-			 (void *)pMapping);
+#ifdef PDUMP
+	{
+		u32 ui32PDumpSize = pMapping->uSize;
+
+		if (uFlags & PVRSRV_MEM_DUMMY)
+			ui32PDumpSize =
+				pMapping->pBMHeap->sDevArena.ui32DataPageSize;
+
+		PDUMPMALLOCPAGES(psDeviceNode->sDevId.eDeviceType,
+				 pMapping->DevVAddr.uiAddr, pMapping->CpuVAddr,
+				 pMapping->hOSMemHandle, ui32PDumpSize,
+				 pMapping->pBMHeap->sDevArena.ui32DataPageSize,
+				 (void *)pMapping);
+	}
+#endif
 
 	switch (pMapping->eCpuMemoryOrigin) {
 	case hm_wrapped:
@@ -1176,9 +1175,6 @@ static void DevMemoryFree(struct BM_MAPPING *pMapping)
 	struct PVRSRV_DEVICE_NODE *psDeviceNode;
 #ifdef PDUMP
 	u32 ui32PSize;
-#endif
-
-#ifdef PDUMP
 
 	if (pMapping->ui32Flags & PVRSRV_MEM_DUMMY)
 		ui32PSize = pMapping->pBMHeap->sDevArena.ui32DataPageSize;

@@ -37,10 +37,6 @@
 #define PDUMP_PD_UNIQUETAG		((void *)0)
 #define PDUMP_PT_UNIQUETAG		((void *)0)
 
-#ifndef PDUMP
-#define MAKEUNIQUETAG(hMemInfo)	(0)
-#endif
-
 #ifdef PDUMP
 
 #define MAKEUNIQUETAG(hMemInfo)						\
@@ -222,6 +218,9 @@ void PDumpResumeKM(void);
 #define PDUMPRESUME				PDumpResumeKM
 
 #else
+
+#define MAKEUNIQUETAG(hMemInfo)	(0)
+
 #define PDUMPMEMPOL(args...)
 #define PDUMPMEM(args...)
 #define PDUMPMEM2(args...)

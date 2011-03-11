@@ -72,13 +72,6 @@ struct MMU_HEAP {
 	struct DEV_ARENA_DESCRIPTOR *psDevArena;
 };
 
-
-#if defined(PDUMP)
-static void MMU_PDumpPageTables(struct MMU_HEAP *pMMUHeap,
-		    struct IMG_DEV_VIRTADDR DevVAddr, size_t uSize,
-		    IMG_BOOL bForUnmap, void *hUniqueTag);
-#endif
-
 #define PAGE_TEST					0
 
 
@@ -698,6 +691,58 @@ void MMU_InsertHeap(struct MMU_CONTEXT *psMMUContext,
 		MMU_InvalidateDirectoryCache(psMMUContext->psDevInfo);
 }
 
+#if defined(PDUMP)
+static void MMU_PDumpPageTables(struct MMU_HEAP *pMMUHeap,
+		    struct IMG_DEV_VIRTADDR DevVAddr,
+		    size_t uSize, IMG_BOOL bForUnmap, void *hUniqueTag)
+{
+	u32 ui32NumPTEntries;
+	u32 ui32PTIndex;
+	u32 *pui32PTEntry;
+
+	struct MMU_PT_INFO **ppsPTInfoList;
+	u32 ui32PDIndex;
+	u32 ui32PTDumpCount;
+
+	ui32NumPTEntries =
+	    (uSize + SGX_MMU_PAGE_SIZE - 1) >> SGX_MMU_PAGE_SHIFT;
+
+	ui32PDIndex =
+	    DevVAddr.uiAddr >> (SGX_MMU_PAGE_SHIFT + SGX_MMU_PT_SHIFT);
+
+	ppsPTInfoList = &pMMUHeap->psMMUContext->apsPTInfoList[ui32PDIndex];
+
+	ui32PTIndex = (DevVAddr.uiAddr & SGX_MMU_PT_MASK) >> SGX_MMU_PAGE_SHIFT;
+
+	PDUMPCOMMENT("Page table mods (num entries == %08X) %s",
+		     ui32NumPTEntries, bForUnmap ? "(for unmap)" : "");
+
+	while (ui32NumPTEntries > 0) {
+		struct MMU_PT_INFO *psPTInfo = *ppsPTInfoList++;
+
+		if (ui32NumPTEntries <= 1024 - ui32PTIndex)
+			ui32PTDumpCount = ui32NumPTEntries;
+		else
+			ui32PTDumpCount = 1024 - ui32PTIndex;
+
+		if (psPTInfo) {
+			pui32PTEntry = (u32 *)psPTInfo->PTPageCpuVAddr;
+			PDUMPMEM2(PVRSRV_DEVICE_TYPE_SGX,
+				  (void *)&pui32PTEntry[ui32PTIndex],
+				  ui32PTDumpCount * sizeof(u32), 0,
+				  IMG_FALSE, PDUMP_PT_UNIQUETAG, hUniqueTag);
+		}
+
+		ui32NumPTEntries -= ui32PTDumpCount;
+
+		ui32PTIndex = 0;
+	}
+
+	PDUMPCOMMENT("Finished page table mods %s",
+		     bForUnmap ? "(for unmap)" : "");
+}
+#endif
+
 static void MMU_UnmapPagesAndFreePTs(struct MMU_HEAP *psMMUHeap,
 			 struct IMG_DEV_VIRTADDR sDevVAddr,
 			 u32 ui32PageCount, void *hUniqueTag)
@@ -947,58 +992,6 @@ void MMU_Disable(struct MMU_HEAP *pMMUHeap)
 	PVR_UNREFERENCED_PARAMETER(pMMUHeap);
 
 }
-
-#if defined(PDUMP)
-static void MMU_PDumpPageTables(struct MMU_HEAP *pMMUHeap,
-		    struct IMG_DEV_VIRTADDR DevVAddr,
-		    size_t uSize, IMG_BOOL bForUnmap, void *hUniqueTag)
-{
-	u32 ui32NumPTEntries;
-	u32 ui32PTIndex;
-	u32 *pui32PTEntry;
-
-	struct MMU_PT_INFO **ppsPTInfoList;
-	u32 ui32PDIndex;
-	u32 ui32PTDumpCount;
-
-	ui32NumPTEntries =
-	    (uSize + SGX_MMU_PAGE_SIZE - 1) >> SGX_MMU_PAGE_SHIFT;
-
-	ui32PDIndex =
-	    DevVAddr.uiAddr >> (SGX_MMU_PAGE_SHIFT + SGX_MMU_PT_SHIFT);
-
-	ppsPTInfoList = &pMMUHeap->psMMUContext->apsPTInfoList[ui32PDIndex];
-
-	ui32PTIndex = (DevVAddr.uiAddr & SGX_MMU_PT_MASK) >> SGX_MMU_PAGE_SHIFT;
-
-	PDUMPCOMMENT("Page table mods (num entries == %08X) %s",
-		     ui32NumPTEntries, bForUnmap ? "(for unmap)" : "");
-
-	while (ui32NumPTEntries > 0) {
-		struct MMU_PT_INFO *psPTInfo = *ppsPTInfoList++;
-
-		if (ui32NumPTEntries <= 1024 - ui32PTIndex)
-			ui32PTDumpCount = ui32NumPTEntries;
-		else
-			ui32PTDumpCount = 1024 - ui32PTIndex;
-
-		if (psPTInfo) {
-			pui32PTEntry = (u32 *)psPTInfo->PTPageCpuVAddr;
-			PDUMPMEM2(PVRSRV_DEVICE_TYPE_SGX,
-				  (void *)&pui32PTEntry[ui32PTIndex],
-				  ui32PTDumpCount * sizeof(u32), 0,
-				  IMG_FALSE, PDUMP_PT_UNIQUETAG, hUniqueTag);
-		}
-
-		ui32NumPTEntries -= ui32PTDumpCount;
-
-		ui32PTIndex = 0;
-	}
-
-	PDUMPCOMMENT("Finished page table mods %s",
-		     bForUnmap ? "(for unmap)" : "");
-}
-#endif
 
 static void MMU_MapPage(struct MMU_HEAP *pMMUHeap,
 	    struct IMG_DEV_VIRTADDR DevVAddr,

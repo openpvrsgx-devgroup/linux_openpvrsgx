@@ -50,7 +50,7 @@ struct pdumpfs_frame {
 	u32 number;
 };
 
-static u32 frame_count_max = 16;
+static u32 frame_count_max = CONFIG_PVR_PDUMP_INITIAL_MAX_FRAME_COUNT;
 static u32 frame_count;
 
 static struct pdumpfs_frame *frame_stream;
@@ -327,6 +327,72 @@ static const struct file_operations pdumpfs_modes_possible_fops = {
 	.read = pdumpfs_modes_possible_read,
 };
 
+static ssize_t
+pdumpfs_frame_count_max_read(struct file *filp, char __user *buf, size_t size,
+			     loff_t *f_pos)
+{
+	char tmp[16];
+
+	tmp[0] = 0;
+
+	mutex_lock(pdumpfs_mutex);
+	snprintf(tmp, sizeof(tmp), "%d", frame_count_max);
+	mutex_unlock(pdumpfs_mutex);
+
+	if (strlen(tmp) < *f_pos)
+		return 0;
+
+	if ((strlen(tmp) + 1) < (*f_pos + size))
+		size = strlen(tmp) + 1 - *f_pos;
+
+	if (copy_to_user(buf, tmp + *f_pos, size))
+		return -EFAULT;
+
+	*f_pos += size;
+	return size;
+}
+
+static ssize_t
+pdumpfs_frame_count_max_write(struct file *filp, const char __user *buf,
+			      size_t size, loff_t *f_pos)
+{
+	static char tmp[16];
+	unsigned long result = 0;
+
+	if (*f_pos > sizeof(tmp))
+		return -EINVAL;
+
+	if (size > (sizeof(tmp) - *f_pos))
+		size = sizeof(tmp) - *f_pos;
+
+	if (copy_from_user(tmp + *f_pos, buf, size))
+		return -EFAULT;
+
+	tmp[size] = 0;
+
+	mutex_lock(pdumpfs_mutex);
+
+	if (!strict_strtoul(tmp, 0, &result)) {
+		if (result > 1024)
+			result = 1024;
+		if (!result)
+			result = 1;
+		frame_count_max = result;
+	}
+
+	mutex_unlock(pdumpfs_mutex);
+
+	*f_pos += size;
+	return size;
+}
+
+static const struct file_operations pdumpfs_frame_count_max_fops = {
+	.owner = THIS_MODULE,
+	.llseek = no_llseek,
+	.read = pdumpfs_frame_count_max_read,
+	.write = pdumpfs_frame_count_max_write,
+};
+
 static struct dentry *pdumpfs_dir;
 
 static void
@@ -360,6 +426,9 @@ pdumpfs_fs_init(void)
 			    &pdumpfs_mode_fops);
 	pdumpfs_file_create("modes_possible", S_IRUSR,
 			    &pdumpfs_modes_possible_fops);
+
+	pdumpfs_file_create("frame_count_max", S_IRUSR | S_IWUSR,
+			    &pdumpfs_frame_count_max_fops);
 
 	return 0;
 }

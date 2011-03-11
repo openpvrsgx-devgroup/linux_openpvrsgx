@@ -56,6 +56,15 @@ config PVR_PDUMP_MODE_FULL
 
 endchoice
 
+config PVR_PDUMP_INITIAL_MAX_FRAME_COUNT
+	int "Pdump max frame count"
+	range 1 1024
+	default 16
+	depends on PVR_DEBUG_PDUMP
+	help
+	    This value sets how many frames will be retained at any time; the oldest
+	    frames will be removed first. This value can be set from 1 to 1024.
+
 config PVR_EDM_DEBUG
 	depends on PVR
 	bool "Enable EDM trace"

@@ -25,19 +25,10 @@ bc_example-objs		:= bufferclass_example.o bufferclass_example_linux.o \
 			   bufferclass_example_private.o
 
 
-obj-$(CONFIG_PVR_DEBUG_PDUMP)	+= pvrdbg.o
-
-pvrdbg-objs		:= tools/main.o tools/dbgdriv.o tools/ioctl.o	     \
-			   tools/hostfunc.o tools/hotkey.o
-
-
 DATE			:= $(shell date "+%a %B %d %Z %Y" )
 CBUILD			:= -O2						\
 			   -DPVR_BUILD_DIR="\"$(PVR_BUILD_DIR)\""	\
 			   -DPVR_BUILD_DATE="\"$(DATE)\""
 
 ccflags-y		+= $(CBUILD) -include $(srctree)/$(src)/pvrconfig.h
-
-ccflags-$(CONFIG_PVR_DEBUG_PDUMP) += -I $(srctree)/$(src)/tools		\
-				     -I $(srctree)/$(src)
 ccflags-y		+= $(ccflags-m)

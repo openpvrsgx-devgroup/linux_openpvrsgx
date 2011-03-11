@@ -25,7 +25,7 @@ config PVR_DEBUG_EXTRA
 	    the driver need to be built in debug mode as well.
 
 config PVR_DEBUG_PDUMP
-	tristate "PDUMP debug support"
+	bool "PDUMP debug support"
 	depends on PVR
 	default n
 

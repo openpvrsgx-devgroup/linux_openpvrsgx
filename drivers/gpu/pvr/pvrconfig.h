@@ -24,7 +24,7 @@
 # define DEBUG_BRIDGE_KM		1
 #endif
 
-# if (defined CONFIG_PVR_DEBUG_PDUMP) || (defined CONFIG_PVR_DEBUG_PDUMP_MODULE)
+# ifdef CONFIG_PVR_DEBUG_PDUMP
 #  define PDUMP				1
 # endif
 

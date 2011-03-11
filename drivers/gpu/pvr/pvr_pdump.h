@@ -64,7 +64,7 @@ enum PVRSRV_ERROR PDumpPageTableKM(void *pvLinAddr, u32 ui32Bytes,
 				   void *hUniqueTag1, void *hUniqueTag2);
 void PDumpInit(void);
 void PDumpDeInit(void);
-void PDumpSetFrameKM(u32 ui32Frame);
+void PDumpSetFrameKM(u32 ui32PID, u32 ui32Frame);
 void PDumpCommentKM(char *pszComment, u32 ui32Flags);
 void PDumpRegWithFlagsKM(u32 ui32RegAddr, u32 ui32RegValue,
 			 u32 ui32Flags);

@@ -1073,9 +1073,8 @@ static int PDumpSetFrameBW(u32 ui32BridgeID,
 		struct PVRSRV_PER_PROCESS_DATA *psPerProc)
 {
 	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID, PVRSRV_BRIDGE_PDUMP_SETFRAME);
-	PVR_UNREFERENCED_PARAMETER(psPerProc);
 
-	PDumpSetFrameKM(psPDumpSetFrameIN->ui32Frame);
+	PDumpSetFrameKM(psPerProc->ui32PID, psPDumpSetFrameIN->ui32Frame);
 
 	psRetOUT->eError = PVRSRV_OK;
 

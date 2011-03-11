@@ -43,14 +43,99 @@ static enum pdumpfs_mode pdumpfs_mode =
 #endif
 	;
 
-static u32 pdumpfs_frame_number;
+struct pdumpfs_frame {
+	struct pdumpfs_frame *next;
+
+	u32 pid;
+	u32 number;
+};
+
+static u32 frame_count_max = 16;
+static u32 frame_count;
+
+static struct pdumpfs_frame *frame_stream;
+static struct pdumpfs_frame *frame_current;
+
+static struct pdumpfs_frame *
+frame_create(void)
+{
+	struct pdumpfs_frame *frame =
+		kmalloc(sizeof(struct pdumpfs_frame), GFP_KERNEL);
+	if (!frame)
+		return NULL;
+
+	memset(frame, 0, sizeof(struct pdumpfs_frame));
+
+	return frame;
+}
+
+static void
+frame_destroy(struct pdumpfs_frame *frame)
+{
+	if (!frame)
+		return;
+
+	kfree(frame);
+}
+
+static void
+frame_destroy_all(void)
+{
+	frame_current = NULL;
+
+	while (frame_stream) {
+		struct pdumpfs_frame *frame = frame_stream;
+
+		frame_stream = frame->next;
+
+		frame_destroy(frame);
+		frame_count--;
+	}
+}
+
+static void
+frame_cull(void)
+{
+	while (frame_count > frame_count_max) {
+		struct pdumpfs_frame *frame = frame_stream;
+
+		frame_stream = frame->next;
+		frame->next = NULL;
+
+		frame_destroy(frame);
+		frame_count--;
+	}
+}
+
+static int
+frame_new(u32 pid, u32 number)
+{
+	struct pdumpfs_frame *frame = frame_create();
+
+	if (!frame) {
+		pr_err("%s: Failed to create frame.\n", __func__);
+		return -ENOMEM;
+	}
+
+	frame->pid = pid;
+	frame->number = number;
+
+	if (frame_current)
+		frame_current->next = frame;
+	frame_current = frame;
+	frame_count++;
+
+	frame_cull();
+
+	return 0;
+}
 
 void
-pdumpfs_frame_set(u32 frame)
+pdumpfs_frame_set(u32 pid, u32 frame)
 {
 	mutex_lock(pdumpfs_mutex);
 
-	pdumpfs_frame_number = frame;
+	frame_new(pid, frame);
 
 	mutex_unlock(pdumpfs_mutex);
 }
@@ -289,7 +374,13 @@ pdumpfs_fs_destroy(void)
 int
 pdumpfs_init(void)
 {
+	int ret;
+
 	mutex_init(pdumpfs_mutex);
+
+	ret = frame_new(0, 0);
+	if (ret < 0)
+		return ret;
 
 	pdumpfs_fs_init();
 
@@ -300,4 +391,6 @@ void
 pdumpfs_cleanup(void)
 {
 	pdumpfs_fs_destroy();
+
+	frame_destroy_all();
 }

@@ -135,12 +135,14 @@ void PDumpCommentWithFlags(u32 ui32Flags, char *pszFormat, ...)
 	PDumpCommentKM(gpszComment, ui32Flags);
 }
 
-void PDumpSetFrameKM(u32 ui32Frame)
+void PDumpSetFrameKM(u32 ui32PID, u32 ui32Frame)
 {
 	if (PDumpSuspended())
 		return;
 
-	pdumpfs_frame_set(ui32Frame);
+	PDumpComment("Ending current Frame\r\n");
+	pdumpfs_frame_set(ui32PID, ui32Frame);
+	PDumpComment("PID %d: Starting Frame %d\r\n", ui32PID, ui32Frame);
 }
 
 IMG_BOOL PDumpIsCaptureFrameKM(void)

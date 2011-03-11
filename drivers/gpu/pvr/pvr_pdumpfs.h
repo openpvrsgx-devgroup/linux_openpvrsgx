@@ -19,7 +19,7 @@
 #ifndef _PVR_PDUMPFS_H_
 #define _PVR_PDUMPFS_H_
 
-void pdumpfs_frame_set(u32 frame);
+void pdumpfs_frame_set(u32 pid, u32 frame);
 bool pdumpfs_capture_enabled(void);
 bool pdumpfs_flags_check(u32 flags);
 enum PVRSRV_ERROR pdumpfs_write_data(void *buffer, size_t size, bool from_user);

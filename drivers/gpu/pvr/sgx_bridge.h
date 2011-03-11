@@ -290,7 +290,7 @@ struct PVRSRV_BRIDGE_IN_PDUMP_3D_SIGNATURE_REGISTERS {
 	u32 ui32BridgeFlags;
 	u32 ui32DumpFrameNum;
 	IMG_BOOL bLastFrame;
-	u32 *pui32Registers;
+	u32 __user *pui32Registers;
 	u32 ui32NumRegisters;
 };
 
@@ -298,7 +298,7 @@ struct PVRSRV_BRIDGE_IN_PDUMP_COUNTER_REGISTERS {
 	u32 ui32BridgeFlags;
 	u32 ui32DumpFrameNum;
 	IMG_BOOL bLastFrame;
-	u32 *pui32Registers;
+	u32 __user *pui32Registers;
 	u32 ui32NumRegisters;
 };
 
@@ -307,7 +307,7 @@ struct PVRSRV_BRIDGE_IN_PDUMP_TA_SIGNATURE_REGISTERS {
 	u32 ui32DumpFrameNum;
 	u32 ui32TAKickCount;
 	IMG_BOOL bLastFrame;
-	u32 *pui32Registers;
+	u32 __user *pui32Registers;
 	u32 ui32NumRegisters;
 };
 

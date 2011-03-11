@@ -33,12 +33,25 @@
 #include "pvrversion.h"
 #include "pvr_debug.h"
 
-#include "dbgdrvif.h"
 #include "sgxmmu.h"
 #include "mm.h"
 #include "pdump_km.h"
 
 #include <linux/tty.h>
+
+#define DEBUG_CAPMODE_FRAMED            0x00000001
+#define DEBUG_CAPMODE_CONTINUOUS        0x00000002
+#define DEBUG_CAPMODE_HOTKEY            0x00000004
+#define DEBUG_CAPMODE_POSTMORTEM        0x00000008
+
+#define DEBUG_OUTMODE_STREAMENABLE      0x00000004
+
+struct DBG_STREAM {
+	u32 ui32CapMode;
+	u32 ui32Start;
+	u32 ui32End;
+	IMG_BOOL bInitPhaseComplete;
+};
 
 static IMG_BOOL PDumpWriteString2(char *pszString, u32 ui32Flags);
 static IMG_BOOL PDumpWriteILock(struct DBG_STREAM *psStream, u8 *pui8Data,
@@ -53,8 +66,6 @@ static u32 DbgWrite(struct DBG_STREAM *psStream, u8 *pui8Data,
 #define MAX_FILE_SIZE				0x40000000
 
 static atomic_t gsPDumpSuspended = ATOMIC_INIT(0);
-
-static struct DBGKM_SERVICE_TABLE *gpfnDbgDrv;
 
 #define PDUMP_STREAM_PARAM2			0
 #define PDUMP_STREAM_SCRIPT2			1
@@ -103,61 +114,115 @@ static inline IMG_BOOL PDumpSuspended(void)
 	return atomic_read(&gsPDumpSuspended) != 0;
 }
 
+/*
+ * empty pdump backend.
+ */
+static void *
+DbgDrvCreateStream(char *pszName, u32 ui32CapMode, u32 ui32OutMode,
+		   u32 ui32Flags, u32 ui32Pages)
+{
+	return NULL;
+}
+
+static void
+DbgDrvDestroyStream(struct DBG_STREAM *psStream)
+{
+
+}
+
+static void
+DbgDrvSetCaptureMode(struct DBG_STREAM *psStream, u32 ui32CapMode,
+		     u32 ui32Start, u32 ui32Stop, u32 ui32SampleRate)
+{
+
+}
+
+static void
+DbgDrvSetFrame(struct DBG_STREAM *psStream, u32 ui32Frame)
+{
+
+}
+
+static u32
+DbgDrvDBGDrivWrite2(struct DBG_STREAM *psStream, u8 *pui8InBuf,
+		    u32 ui32InBuffSize, u32 ui32Level)
+{
+	return ui32InBuffSize;
+}
+
+static u32
+DbgDrvWriteBINCM(struct DBG_STREAM *psStream, u8 *pui8InBuf,
+		 u32 ui32InBuffSize, u32 ui32Level)
+{
+	return ui32InBuffSize;
+}
+
+static void
+DbgDrvSetMarker(struct DBG_STREAM *psStream, u32 ui32Marker)
+{
+
+}
+
+static u32
+DbgDrvIsCaptureFrame(struct DBG_STREAM *psStream, IMG_BOOL bCheckPreviousFrame)
+{
+	return 1;
+}
+
+static u32
+DbgDrvGetStreamOffset(struct DBG_STREAM *psStream)
+{
+	return 0;
+}
+
 void PDumpInit(void)
 {
 	u32 i = 0;
 
-	if (!gpfnDbgDrv) {
-		DBGDrvGetServiceTable((void **) &gpfnDbgDrv);
+	if (!gsDBGPdumpState.pszFile)
+		if (OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
+			       SZ_FILENAME_SIZE_MAX,
+			       (void **)&gsDBGPdumpState.pszFile,
+			       NULL) != PVRSRV_OK)
+			goto init_failed;
 
-		if (gpfnDbgDrv == NULL)
-			return;
+	if (!gsDBGPdumpState.pszMsg)
+		if (OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
+			       SZ_MSG_SIZE_MAX,
+			       (void **)&gsDBGPdumpState.pszMsg,
+			       NULL) != PVRSRV_OK)
+			goto init_failed;
 
-		if (!gsDBGPdumpState.pszFile)
-			if (OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
-				       SZ_FILENAME_SIZE_MAX,
-				       (void **)&gsDBGPdumpState.pszFile,
-				       NULL) != PVRSRV_OK)
-				goto init_failed;
+	if (!gsDBGPdumpState.pszScript)
+		if (OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
+			       SZ_SCRIPT_SIZE_MAX,
+			       (void **)&gsDBGPdumpState.pszScript,
+			       NULL) != PVRSRV_OK)
+			goto init_failed;
 
-		if (!gsDBGPdumpState.pszMsg)
-			if (OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
-				       SZ_MSG_SIZE_MAX,
-				       (void **)&gsDBGPdumpState.pszMsg,
-				       NULL) != PVRSRV_OK)
-				goto init_failed;
+	for (i = 0; i < PDUMP_NUM_STREAMS; i++) {
+		gsDBGPdumpState.psStream[i] =
+			DbgDrvCreateStream(pszStreamName[i],
+					   DEBUG_CAPMODE_FRAMED,
+					   DEBUG_OUTMODE_STREAMENABLE,
+					   0, 10);
 
-		if (!gsDBGPdumpState.pszScript)
-			if (OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
-				       SZ_SCRIPT_SIZE_MAX,
-				       (void **)&gsDBGPdumpState.pszScript,
-				       NULL) != PVRSRV_OK)
-				goto init_failed;
-
-		for (i = 0; i < PDUMP_NUM_STREAMS; i++) {
-			gsDBGPdumpState.psStream[i] =
-			    gpfnDbgDrv->pfnCreateStream(pszStreamName[i],
-						DEBUG_CAPMODE_FRAMED,
-						DEBUG_OUTMODE_STREAMENABLE,
-						0, 10);
-
-			gpfnDbgDrv->pfnSetCaptureMode(gsDBGPdumpState.
-						      psStream[i],
-						      DEBUG_CAPMODE_FRAMED,
-						      0xFFFFFFFF, 0xFFFFFFFF,
-						      1);
-			gpfnDbgDrv->pfnSetFrame(gsDBGPdumpState.psStream[i], 0);
-		}
-
-		PDUMPCOMMENT("Driver Product Name: %s", VS_PRODUCT_NAME);
-		PDUMPCOMMENT("Driver Product Version: %s (%s)",
-			     PVRVERSION_STRING, PVRVERSION_FILE);
-		PDUMPCOMMENT("Start of Init Phase");
+		DbgDrvSetCaptureMode(gsDBGPdumpState.
+				     psStream[i],
+				     DEBUG_CAPMODE_FRAMED,
+				     0xFFFFFFFF, 0xFFFFFFFF,
+				     1);
+		DbgDrvSetFrame(gsDBGPdumpState.psStream[i], 0);
 	}
+
+	PDUMPCOMMENT("Driver Product Name: %s", VS_PRODUCT_NAME);
+	PDUMPCOMMENT("Driver Product Version: %s (%s)",
+		     PVRVERSION_STRING, PVRVERSION_FILE);
+	PDUMPCOMMENT("Start of Init Phase");
 
 	return;
 
-init_failed:
+ init_failed:
 
 	if (gsDBGPdumpState.pszFile) {
 		OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, SZ_FILENAME_SIZE_MAX,
@@ -176,8 +241,6 @@ init_failed:
 			  (void *)gsDBGPdumpState.pszMsg, NULL);
 		gsDBGPdumpState.pszMsg = NULL;
 	}
-
-	gpfnDbgDrv = NULL;
 }
 
 void PDumpDeInit(void)
@@ -185,7 +248,7 @@ void PDumpDeInit(void)
 	u32 i = 0;
 
 	for (i = 0; i < PDUMP_NUM_STREAMS; i++)
-		gpfnDbgDrv->pfnDestroyStream(gsDBGPdumpState.psStream[i]);
+		DbgDrvDestroyStream(gsDBGPdumpState.psStream[i]);
 
 	if (gsDBGPdumpState.pszFile) {
 		OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, SZ_FILENAME_SIZE_MAX,
@@ -204,8 +267,6 @@ void PDumpDeInit(void)
 			  (void *)gsDBGPdumpState.pszMsg, NULL);
 		gsDBGPdumpState.pszMsg = NULL;
 	}
-
-	gpfnDbgDrv = NULL;
 }
 
 void PDumpComment(char *pszFormat, ...)
@@ -238,7 +299,7 @@ IMG_BOOL PDumpIsCaptureFrameKM(void)
 {
 	if (PDumpSuspended())
 		return IMG_FALSE;
-	return gpfnDbgDrv->pfnIsCaptureFrame(gsDBGPdumpState.
+	return DbgDrvIsCaptureFrame(gsDBGPdumpState.
 						psStream[PDUMP_STREAM_SCRIPT2],
 					     IMG_FALSE);
 }
@@ -550,7 +611,7 @@ enum PVRSRV_ERROR PDumpMemKM(void *pvAltLinAddr,
 	PVR_ASSERT(pui8DataLinAddr);
 
 	ui32ParamOutPos =
-	    gpfnDbgDrv->pfnGetStreamOffset(gsDBGPdumpState.
+	    DbgDrvGetStreamOffset(gsDBGPdumpState.
 					   psStream[PDUMP_STREAM_PARAM2]);
 
 	if (!PDumpWriteILock(gsDBGPdumpState.psStream[PDUMP_STREAM_PARAM2],
@@ -644,7 +705,7 @@ enum PVRSRV_ERROR PDumpMem2KM(enum PVRSRV_DEVICE_TYPE eDeviceType,
 		return PVRSRV_ERROR_GENERIC;
 
 	ui32ParamOutPos =
-	    gpfnDbgDrv->pfnGetStreamOffset(gsDBGPdumpState.
+	    DbgDrvGetStreamOffset(gsDBGPdumpState.
 					   psStream[PDUMP_STREAM_PARAM2]);
 
 	if (bInitialisePages) {
@@ -753,7 +814,7 @@ enum PVRSRV_ERROR PDumpPDDevPAddrKM(struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 	__PDBG_PDUMP_STATE_GET_SCRIPT_AND_FILE_STRING(PVRSRV_ERROR_GENERIC);
 
 	ui32ParamOutPos =
-	    gpfnDbgDrv->pfnGetStreamOffset(gsDBGPdumpState.
+	    DbgDrvGetStreamOffset(gsDBGPdumpState.
 					   psStream[PDUMP_STREAM_PARAM2]);
 
 	if (!PDumpWriteILock(gsDBGPdumpState.psStream[PDUMP_STREAM_PARAM2],
@@ -906,7 +967,7 @@ static IMG_BOOL PDumpWriteILock(struct DBG_STREAM *psStream, u8 *pui8Data,
 
 	if (psStream == gsDBGPdumpState.psStream[PDUMP_STREAM_PARAM2]) {
 		u32 ui32ParamOutPos =
-		    gpfnDbgDrv->pfnGetStreamOffset(gsDBGPdumpState.
+		    DbgDrvGetStreamOffset(gsDBGPdumpState.
 						   psStream
 						   [PDUMP_STREAM_PARAM2]);
 
@@ -945,12 +1006,12 @@ static IMG_BOOL PDumpWriteILock(struct DBG_STREAM *psStream, u8 *pui8Data,
 
 static void DbgSetFrame(struct DBG_STREAM *psStream, u32 ui32Frame)
 {
-	gpfnDbgDrv->pfnSetFrame(psStream, ui32Frame);
+	DbgDrvSetFrame(psStream, ui32Frame);
 }
 
 static void DbgSetMarker(struct DBG_STREAM *psStream, u32 ui32Marker)
 {
-	gpfnDbgDrv->pfnSetMarker(psStream, ui32Marker);
+	DbgDrvSetMarker(psStream, ui32Marker);
 }
 
 static u32 DbgWrite(struct DBG_STREAM *psStream, u8 *pui8Data,
@@ -966,12 +1027,11 @@ static u32 DbgWrite(struct DBG_STREAM *psStream, u8 *pui8Data,
 			ui32BytesWritten = ui32BCount;
 		else
 			ui32BytesWritten =
-			    gpfnDbgDrv->pfnDBGDrivWrite2(psStream, pui8Data,
-							 ui32BCount, 1);
+				DbgDrvDBGDrivWrite2(psStream, pui8Data,
+						    ui32BCount, 1);
 	} else {
-		ui32BytesWritten =
-			gpfnDbgDrv->pfnWriteBINCM(psStream, pui8Data,
-						  ui32BCount, 1);
+		ui32BytesWritten = DbgDrvWriteBINCM(psStream, pui8Data,
+						    ui32BCount, 1);
 	}
 
 	return ui32BytesWritten;

@@ -66,6 +66,9 @@ static struct pdumpfs_frame *frame_current;
 static struct pdumpfs_frame *frame_current_debugfs;
 static int frame_current_open_count;
 
+static loff_t stream_start;
+static loff_t stream_end;
+
 static struct pdumpfs_frame *
 frame_create(void)
 {
@@ -119,6 +122,9 @@ frame_destroy_all(void)
 		frame_destroy(frame);
 		frame_count--;
 	}
+
+	stream_start = 0;
+	stream_end = 0;
 }
 
 static void
@@ -129,6 +135,8 @@ frame_cull(void)
 
 		frame_stream = frame->next;
 		frame->next = NULL;
+
+		stream_end -= frame->offset;
 
 		/*
 		 * we cannot have frames vanish in the middle of reading
@@ -309,6 +317,8 @@ pdumpfs_write_data(void *buffer, size_t size, bool from_user)
 	mutex_lock(pdumpfs_mutex);
 
 	size = pdumpfs_frame_write(buffer, size, from_user);
+	if ((size > 0) && (frame_current != frame_init))
+		stream_end += size;
 
 	mutex_unlock(pdumpfs_mutex);
 
@@ -321,9 +331,13 @@ pdumpfs_write_data(void *buffer, size_t size, bool from_user)
 void
 pdumpfs_write_string(char *string)
 {
+	size_t size;
+
 	mutex_lock(pdumpfs_mutex);
 
-	pdumpfs_frame_write(string, strlen(string), false);
+	size = pdumpfs_frame_write(string, strlen(string), false);
+	if ((size > 0) && (frame_current != frame_init))
+		stream_end += size;
 
 	mutex_unlock(pdumpfs_mutex);
 }

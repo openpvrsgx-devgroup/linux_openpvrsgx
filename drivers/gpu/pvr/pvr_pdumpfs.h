@@ -25,4 +25,7 @@ bool pdumpfs_flags_check(u32 flags);
 enum PVRSRV_ERROR pdumpfs_write_data(void *buffer, size_t size, bool from_user);
 void pdumpfs_write_string(char *string);
 
+int pdumpfs_init(void);
+void pdumpfs_cleanup(void);
+
 #endif /* _PVR_PDUMPFS_H_ */

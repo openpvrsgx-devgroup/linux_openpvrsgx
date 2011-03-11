@@ -16,10 +16,14 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
+#include <linux/mutex.h>
+
 #include "img_defs.h"
 #include "services_headers.h"
 #include "pvr_pdump.h"
 #include "pvr_pdumpfs.h"
+
+static struct mutex pdumpfs_mutex[1];
 
 enum pdumpfs_mode {
 	PDUMPFS_MODE_DISABLED,
@@ -33,40 +37,81 @@ static u32 pdumpfs_frame_number;
 void
 pdumpfs_frame_set(u32 frame)
 {
+	mutex_lock(pdumpfs_mutex);
+
 	pdumpfs_frame_number = frame;
+
+	mutex_unlock(pdumpfs_mutex);
 }
 
 bool
 pdumpfs_capture_enabled(void)
 {
+	bool ret;
+
+	mutex_lock(pdumpfs_mutex);
+
 	if (pdumpfs_mode == PDUMPFS_MODE_FULL)
-		return true;
+		ret = true;
 	else
-		return false;
+		ret = false;
+
+	mutex_unlock(pdumpfs_mutex);
+
+	return ret;
 }
 
 bool
 pdumpfs_flags_check(u32 flags)
 {
+	bool ret;
+
 	if (flags & PDUMP_FLAGS_NEVER)
 		return false;
-	else if (pdumpfs_mode == PDUMPFS_MODE_FULL)
-		return true;
+
+	mutex_lock(pdumpfs_mutex);
+
+	if (pdumpfs_mode == PDUMPFS_MODE_FULL)
+		ret = true;
 	else if ((pdumpfs_mode == PDUMPFS_MODE_STANDARD) &&
 		 (flags & PDUMP_FLAGS_CONTINUOUS))
-		return true;
+		ret = true;
 	else
-		return false;
+		ret = false;
+
+	mutex_unlock(pdumpfs_mutex);
+
+	return ret;
 }
 
 enum PVRSRV_ERROR
 pdumpfs_write_data(void *buffer, size_t size, bool from_user)
 {
+	mutex_lock(pdumpfs_mutex);
+
+	mutex_unlock(pdumpfs_mutex);
+
 	return PVRSRV_OK;
 }
 
 void
 pdumpfs_write_string(char *string)
+{
+	mutex_lock(pdumpfs_mutex);
+
+	mutex_unlock(pdumpfs_mutex);
+}
+
+int
+pdumpfs_init(void)
+{
+	mutex_init(pdumpfs_mutex);
+
+	return 0;
+}
+
+void
+pdumpfs_cleanup(void)
 {
 
 }

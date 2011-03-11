@@ -174,6 +174,11 @@ void PDumpInit(void)
 			       NULL) != PVRSRV_OK)
 			goto init_failed;
 
+	if (pdumpfs_init()) {
+		pr_err("%s: pdumpfs_init failed.\n", __func__);
+		goto init_failed;
+	}
+
 	PDumpComment("Driver Product Name: %s", VS_PRODUCT_NAME);
 	PDumpComment("Driver Product Version: %s (%s)",
 		     PVRVERSION_STRING, PVRVERSION_FILE);
@@ -204,6 +209,8 @@ void PDumpInit(void)
 
 void PDumpDeInit(void)
 {
+	pdumpfs_cleanup();
+
 	if (gpszFile) {
 		OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, SZ_FILENAME_SIZE_MAX,
 			  (void *)gpszFile, NULL);

@@ -63,6 +63,9 @@ static struct pdumpfs_frame *frame_init;
 static struct pdumpfs_frame *frame_stream;
 static struct pdumpfs_frame *frame_current;
 
+static struct pdumpfs_frame *frame_current_debugfs;
+static int frame_current_open_count;
+
 static struct pdumpfs_frame *
 frame_create(void)
 {
@@ -93,10 +96,20 @@ frame_destroy(struct pdumpfs_frame *frame)
 static void
 frame_destroy_all(void)
 {
+	/* detach from possible clones */
+	if (frame_current_debugfs &&
+	    ((frame_current_debugfs == frame_init) ||
+	     (frame_current_debugfs == frame_current) ||
+	     frame_current_debugfs->next))
+		frame_current_debugfs = NULL;
+
 	frame_current = NULL;
 
 	frame_destroy(frame_init);
 	frame_init = NULL;
+
+	frame_destroy(frame_current_debugfs);
+	frame_current_debugfs = NULL;
 
 	while (frame_stream) {
 		struct pdumpfs_frame *frame = frame_stream;
@@ -117,7 +130,13 @@ frame_cull(void)
 		frame_stream = frame->next;
 		frame->next = NULL;
 
-		frame_destroy(frame);
+		/*
+		 * we cannot have frames vanish in the middle of reading
+		 * them through debugfs
+		 */
+		if (frame != frame_current_debugfs)
+			frame_destroy(frame);
+
 		frame_count--;
 	}
 }
@@ -602,6 +621,85 @@ static const struct file_operations pdumpfs_init_fops = {
 	.read = pdumpfs_init_read,
 };
 
+/*
+ * We need to make sure that our frame doesn't vanish while we are still
+ * reading it: so reference this frame again.
+ */
+static int
+pdumpfs_current_open(struct inode *inode, struct file *filp)
+{
+	mutex_lock(pdumpfs_mutex);
+
+	if (!frame_current_open_count)
+		frame_current_debugfs = frame_current;
+
+	frame_current_open_count++;
+
+	mutex_unlock(pdumpfs_mutex);
+	return 0;
+}
+
+static int
+pdumpfs_current_release(struct inode *inode, struct file *filp)
+{
+	mutex_lock(pdumpfs_mutex);
+
+	frame_current_open_count--;
+
+	if (!frame_current_open_count) {
+		if ((frame_current_debugfs != frame_init) &&
+		    (frame_current_debugfs != frame_current) &&
+		    !frame_current_debugfs->next)
+			frame_destroy(frame_current_debugfs);
+		frame_current_debugfs = NULL;
+	}
+
+	mutex_unlock(pdumpfs_mutex);
+	return 0;
+}
+
+static loff_t
+pdumpfs_current_llseek(struct file *filp, loff_t offset, int whence)
+{
+	loff_t f_pos;
+
+	mutex_lock(pdumpfs_mutex);
+
+	f_pos = pdumpfs_llseek_helper(filp, offset, whence,
+				      frame_current_debugfs->offset);
+
+	mutex_unlock(pdumpfs_mutex);
+
+	return f_pos;
+}
+
+static ssize_t
+pdumpfs_current_read(struct file *filp, char __user *buf, size_t size,
+		     loff_t *f_pos)
+{
+	mutex_lock(pdumpfs_mutex);
+
+	if (frame_current_debugfs->offset)
+		size = pdumpfs_frame_read_single(frame_current_debugfs,
+						 buf, size, *f_pos);
+	else
+		size = 0;
+
+	mutex_unlock(pdumpfs_mutex);
+
+	if (size > 0)
+		*f_pos += size;
+	return size;
+}
+
+static const struct file_operations pdumpfs_current_fops = {
+	.owner = THIS_MODULE,
+	.llseek = pdumpfs_current_llseek,
+	.read = pdumpfs_current_read,
+	.open = pdumpfs_current_open,
+	.release = pdumpfs_current_release,
+};
+
 static struct dentry *pdumpfs_dir;
 
 static void
@@ -641,6 +739,8 @@ pdumpfs_fs_init(void)
 
 	pdumpfs_file_create("init_frame", S_IRUSR,
 			    &pdumpfs_init_fops);
+	pdumpfs_file_create("current_frame", S_IRUSR,
+			    &pdumpfs_current_fops);
 
 	return 0;
 }

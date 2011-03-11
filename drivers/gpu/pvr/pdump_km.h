@@ -43,23 +43,22 @@
 	(((struct BM_BUF *)(((struct PVRSRV_KERNEL_MEM_INFO *)		\
 			     hMemInfo)->sMemBlk.hBuffer))->pMapping)
 
-enum PVRSRV_ERROR PDumpMemPolKM(struct PVRSRV_KERNEL_MEM_INFO
+void PDumpMemPolKM(struct PVRSRV_KERNEL_MEM_INFO
 					   *psMemInfo, u32 ui32Offset,
 					   u32 ui32Value, u32 ui32Mask,
 					   enum PDUMP_POLL_OPERATOR eOperator,
 					   void *hUniqueTag);
 
-enum PVRSRV_ERROR PDumpMemUM(struct PVRSRV_PER_PROCESS_DATA
-					*psProcData, void *pvAltLinAddr,
-					void *pvLinAddr,
-					struct PVRSRV_KERNEL_MEM_INFO
-					*psMemInfo, u32 ui32Offset,
-					u32 ui32Bytes, u32 ui32Flags,
-					void *hUniqueTag);
+enum PVRSRV_ERROR PDumpMemUM(struct PVRSRV_PER_PROCESS_DATA *psProcData,
+			     void *pvAltLinAddr, void *pvLinAddr,
+			     struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
+			     u32 ui32Offset, u32 ui32Bytes, u32 ui32Flags,
+			     void *hUniqueTag);
 
 enum PVRSRV_ERROR PDumpMemKM(void *pvAltLinAddr,
-		struct PVRSRV_KERNEL_MEM_INFO *psMemInfo, u32 ui32Offset,
-		u32 ui32Bytes, u32 ui32Flags, void *hUniqueTag);
+			     struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
+			     u32 ui32Offset, u32 ui32Bytes,
+			     u32 ui32Flags, void *hUniqueTag);
 
 enum PVRSRV_ERROR PDumpMem2KM(enum PVRSRV_DEVICE_TYPE eDeviceType,
 			      void *pvLinAddr,
@@ -71,28 +70,28 @@ void PDumpInitCommon(void);
 void PDumpDeInitCommon(void);
 void PDumpInit(void);
 void PDumpDeInit(void);
-enum PVRSRV_ERROR PDumpSetFrameKM(u32 ui32Frame);
-enum PVRSRV_ERROR PDumpCommentKM(char *pszComment, u32 ui32Flags);
-enum PVRSRV_ERROR PDumpRegWithFlagsKM(u32 ui32RegAddr, u32 ui32RegValue,
-		u32 ui32Flags);
+void PDumpSetFrameKM(u32 ui32Frame);
+void PDumpCommentKM(char *pszComment, u32 ui32Flags);
+void PDumpRegWithFlagsKM(u32 ui32RegAddr, u32 ui32RegValue,
+			 u32 ui32Flags);
 
-enum PVRSRV_ERROR PDumpBitmapKM(char *pszFileName, u32 ui32FileOffset,
-		u32 ui32Width, u32 ui32Height, u32 ui32StrideInBytes,
-		struct IMG_DEV_VIRTADDR sDevBaseAddr, u32 ui32Size,
-		enum PDUMP_PIXEL_FORMAT ePixelFormat,
-		enum PDUMP_MEM_FORMAT eMemFormat, u32 ui32PDumpFlags);
+void PDumpBitmapKM(char *pszFileName, u32 ui32FileOffset,
+		   u32 ui32Width, u32 ui32Height, u32 ui32StrideInBytes,
+		   struct IMG_DEV_VIRTADDR sDevBaseAddr, u32 ui32Size,
+		   enum PDUMP_PIXEL_FORMAT ePixelFormat,
+		   enum PDUMP_MEM_FORMAT eMemFormat, u32 ui32PDumpFlags);
 void PDumpHWPerfCBKM(char *pszFileName, u32 ui32FileOffset,
-		struct IMG_DEV_VIRTADDR sDevBaseAddr,
-		u32 ui32Size, u32 ui32PDumpFlags);
+		     struct IMG_DEV_VIRTADDR sDevBaseAddr,
+		     u32 ui32Size, u32 ui32PDumpFlags);
 void PDumpReg(u32 dwReg, u32 dwData);
 
 void PDumpComment(char *pszFormat, ...);
 
 void PDumpCommentWithFlags(u32 ui32Flags, char *pszFormat, ...);
-enum PVRSRV_ERROR PDumpRegPolKM(u32 ui32RegAddr, u32 ui32RegValue,
-				u32 ui32Mask);
-enum PVRSRV_ERROR PDumpRegPolWithFlagsKM(u32 ui32RegAddr, u32 ui32RegValue,
-				u32 ui32Mask, u32 ui32Flags);
+void PDumpRegPolKM(u32 ui32RegAddr, u32 ui32RegValue,
+		   u32 ui32Mask);
+void PDumpRegPolWithFlagsKM(u32 ui32RegAddr, u32 ui32RegValue,
+			    u32 ui32Mask, u32 ui32Flags);
 
 IMG_BOOL PDumpIsCaptureFrameKM(void);
 
@@ -100,19 +99,19 @@ void PDumpMallocPages(enum PVRSRV_DEVICE_TYPE eDeviceType,
 		      u32 ui32DevVAddr, void *pvLinAddr, void *hOSMemHandle,
 		      u32 ui32NumBytes, u32 ui32PageSize, void *hUniqueTag);
 void PDumpMallocPageTable(enum PVRSRV_DEVICE_TYPE eDeviceType,
-		void *pvLinAddr, u32 ui32NumBytes, void *hUniqueTag);
+			  void *pvLinAddr, u32 ui32NumBytes, void *hUniqueTag);
 void PDumpFreePages(struct BM_HEAP *psBMHeap,
 		struct IMG_DEV_VIRTADDR sDevVAddr, u32 ui32NumBytes,
-		 u32 ui32PageSize, void *hUniqueTag, IMG_BOOL bInterleaved);
+		    u32 ui32PageSize, void *hUniqueTag, IMG_BOOL bInterleaved);
 void PDumpFreePageTable(enum PVRSRV_DEVICE_TYPE eDeviceType,
-		void *pvLinAddr, u32 ui32NumBytes, void *hUniqueTag);
+			void *pvLinAddr, u32 ui32NumBytes, void *hUniqueTag);
 void PDumpPDReg(u32 ui32Reg, u32 ui32dwData, void *hUniqueTag);
 void PDumpPDRegWithFlags(u32 ui32Reg, u32 ui32Data, u32 ui32Flags,
-		void *hUniqueTag);
+			 void *hUniqueTag);
 
-enum PVRSRV_ERROR PDumpPDDevPAddrKM(struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
-		u32 ui32Offset, struct IMG_DEV_PHYADDR sPDDevPAddr,
-		void *hUniqueTag1, void *hUniqueTag2);
+void PDumpPDDevPAddrKM(struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
+		       u32 ui32Offset, struct IMG_DEV_PHYADDR sPDDevPAddr,
+		       void *hUniqueTag1, void *hUniqueTag2);
 
 void PDumpTASignatureRegisters(u32 ui32DumpFrameNum, u32 ui32TAKickCount,
 			       u32 *pui32Registers, u32 ui32NumRegisters);

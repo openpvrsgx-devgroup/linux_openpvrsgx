@@ -77,20 +77,22 @@ void PDumpDeInitCommon(void)
 	PDumpDeInit();
 }
 
-enum PVRSRV_ERROR PDumpMemUM(struct PVRSRV_PER_PROCESS_DATA *psPerProc,
-			     void *pvAltLinAddrUM, void *pvLinAddrUM,
-			     struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
-			     u32 ui32Offset, u32 ui32Bytes, u32 ui32Flags,
-			     void *hUniqueTag)
+enum PVRSRV_ERROR
+PDumpMemUM(struct PVRSRV_PER_PROCESS_DATA *psPerProc,
+	   void *pvAltLinAddrUM, void *pvLinAddrUM,
+	   struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
+	   u32 ui32Offset, u32 ui32Bytes, u32 ui32Flags,
+	   void *hUniqueTag)
 {
 	void *pvAddrUM;
 	void *pvAddrKM;
 	u32 ui32BytesDumped;
 	u32 ui32CurrentOffset;
 
-	if (psMemInfo->pvLinAddrKM != NULL && pvAltLinAddrUM == NULL)
+	if (psMemInfo->pvLinAddrKM != NULL && pvAltLinAddrUM == NULL) {
 		return PDumpMemKM(NULL, psMemInfo, ui32Offset, ui32Bytes,
 				  ui32Flags, hUniqueTag);
+	}
 
 	pvAddrUM = (pvAltLinAddrUM != NULL) ? pvAltLinAddrUM :
 			((pvLinAddrUM != NULL) ? VPTR_PLUS(pvLinAddrUM,
@@ -119,21 +121,14 @@ enum PVRSRV_ERROR PDumpMemUM(struct PVRSRV_PER_PROCESS_DATA *psPerProc,
 					pvAddrKM, pvAddrUM, ui32BytesToDump);
 		if (eError != PVRSRV_OK) {
 			PVR_DPF(PVR_DBG_ERROR,
-			"PDumpMemUM: OSCopyFromUser failed (%d), eError");
-			return PVRSRV_ERROR_GENERIC;
+			"PDumpMemUM: OSCopyFromUser failed (%d)", eError);
+			return eError;
 		}
 
 		eError = PDumpMemKM(pvAddrKM, psMemInfo, ui32CurrentOffset,
 				    ui32BytesToDump, ui32Flags, hUniqueTag);
-
-		if (eError != PVRSRV_OK) {
-			if (ui32BytesDumped != 0)
-				PVR_DPF(PVR_DBG_ERROR,
-					 "PDumpMemUM: PDumpMemKM failed (%d)",
-					 eError);
-			PVR_ASSERT(ui32BytesDumped == 0);
+		if (eError != PVRSRV_OK)
 			return eError;
-		}
 
 		VPTR_INC(pvAddrUM, ui32BytesToDump);
 		ui32CurrentOffset += ui32BytesToDump;

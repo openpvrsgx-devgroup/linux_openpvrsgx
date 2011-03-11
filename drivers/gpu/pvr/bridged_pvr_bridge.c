@@ -1059,8 +1059,11 @@ static int PDumpCommentBW(u32 ui32BridgeID,
 	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID, PVRSRV_BRIDGE_PDUMP_COMMENT);
 	PVR_UNREFERENCED_PARAMETER(psPerProc);
 
-	psRetOUT->eError = PDumpCommentKM(&psPDumpCommentIN->szComment[0],
-					  psPDumpCommentIN->ui32Flags);
+	PDumpCommentKM(&psPDumpCommentIN->szComment[0],
+		       psPDumpCommentIN->ui32Flags);
+
+	psRetOUT->eError = PVRSRV_OK;
+
 	return 0;
 }
 
@@ -1072,7 +1075,9 @@ static int PDumpSetFrameBW(u32 ui32BridgeID,
 	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID, PVRSRV_BRIDGE_PDUMP_SETFRAME);
 	PVR_UNREFERENCED_PARAMETER(psPerProc);
 
-	psRetOUT->eError = PDumpSetFrameKM(psPDumpSetFrameIN->ui32Frame);
+	PDumpSetFrameKM(psPDumpSetFrameIN->ui32Frame);
+
+	psRetOUT->eError = PVRSRV_OK;
 
 	return 0;
 }
@@ -1085,10 +1090,11 @@ static int PDumpRegWithFlagsBW(u32 ui32BridgeID,
 	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID, PVRSRV_BRIDGE_PDUMP_REG);
 	PVR_UNREFERENCED_PARAMETER(psPerProc);
 
-	psRetOUT->eError =
-	    PDumpRegWithFlagsKM(psPDumpRegDumpIN->sHWReg.ui32RegAddr,
-				psPDumpRegDumpIN->sHWReg.ui32RegVal,
-				psPDumpRegDumpIN->ui32Flags);
+	PDumpRegWithFlagsKM(psPDumpRegDumpIN->sHWReg.ui32RegAddr,
+			    psPDumpRegDumpIN->sHWReg.ui32RegVal,
+			    psPDumpRegDumpIN->ui32Flags);
+
+	psRetOUT->eError = PVRSRV_OK;
 
 	return 0;
 }
@@ -1101,11 +1107,12 @@ static int PDumpRegPolBW(u32 ui32BridgeID,
 	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID, PVRSRV_BRIDGE_PDUMP_REGPOL);
 	PVR_UNREFERENCED_PARAMETER(psPerProc);
 
-	psRetOUT->eError =
-	    PDumpRegPolWithFlagsKM(psPDumpRegPolIN->sHWReg.ui32RegAddr,
-				   psPDumpRegPolIN->sHWReg.ui32RegVal,
-				   psPDumpRegPolIN->ui32Mask,
-				   psPDumpRegPolIN->ui32Flags);
+	PDumpRegPolWithFlagsKM(psPDumpRegPolIN->sHWReg.ui32RegAddr,
+			       psPDumpRegPolIN->sHWReg.ui32RegVal,
+			       psPDumpRegPolIN->ui32Mask,
+			       psPDumpRegPolIN->ui32Flags);
+
+	psRetOUT->eError = PVRSRV_OK;
 
 	return 0;
 }
@@ -1126,13 +1133,12 @@ static int PDumpMemPolBW(u32 ui32BridgeID,
 	if (psRetOUT->eError != PVRSRV_OK)
 		return 0;
 
-	psRetOUT->eError =
-	    PDumpMemPolKM(((struct PVRSRV_KERNEL_MEM_INFO *)pvMemInfo),
-			  psPDumpMemPolIN->ui32Offset,
-			  psPDumpMemPolIN->ui32Value,
-			  psPDumpMemPolIN->ui32Mask,
-			  PDUMP_POLL_OPERATOR_EQUAL,
-			  MAKEUNIQUETAG(pvMemInfo));
+	PDumpMemPolKM(((struct PVRSRV_KERNEL_MEM_INFO *)pvMemInfo),
+		      psPDumpMemPolIN->ui32Offset,
+		      psPDumpMemPolIN->ui32Value,
+		      psPDumpMemPolIN->ui32Mask,
+		      PDUMP_POLL_OPERATOR_EQUAL,
+		      MAKEUNIQUETAG(pvMemInfo));
 
 	return 0;
 }
@@ -1154,11 +1160,11 @@ static int PDumpMemBW(u32 ui32BridgeID,
 		return 0;
 
 	psRetOUT->eError = PDumpMemUM(psPerProc, psPDumpMemDumpIN->pvAltLinAddr,
-				       psPDumpMemDumpIN->pvLinAddr,
-				       pvMemInfo, psPDumpMemDumpIN->ui32Offset,
-				       psPDumpMemDumpIN->ui32Bytes,
-				       psPDumpMemDumpIN->ui32Flags,
-						      MAKEUNIQUETAG(pvMemInfo));
+				      psPDumpMemDumpIN->pvLinAddr,
+				      pvMemInfo, psPDumpMemDumpIN->ui32Offset,
+				      psPDumpMemDumpIN->ui32Bytes,
+				      psPDumpMemDumpIN->ui32Flags,
+				      MAKEUNIQUETAG(pvMemInfo));
 
 	return 0;
 }
@@ -1171,16 +1177,18 @@ static int PDumpBitmapBW(u32 ui32BridgeID,
 	PVR_UNREFERENCED_PARAMETER(psPerProc);
 	PVR_UNREFERENCED_PARAMETER(ui32BridgeID);
 
-	psRetOUT->eError = PDumpBitmapKM(&psPDumpBitmapIN->szFileName[0],
-			  psPDumpBitmapIN->ui32FileOffset,
-			  psPDumpBitmapIN->ui32Width,
-			  psPDumpBitmapIN->ui32Height,
-			  psPDumpBitmapIN->ui32StrideInBytes,
-			  psPDumpBitmapIN->sDevBaseAddr,
-			  psPDumpBitmapIN->ui32Size,
-			  psPDumpBitmapIN->ePixelFormat,
-			  psPDumpBitmapIN->eMemFormat,
-			  psPDumpBitmapIN->ui32Flags);
+	PDumpBitmapKM(&psPDumpBitmapIN->szFileName[0],
+		      psPDumpBitmapIN->ui32FileOffset,
+		      psPDumpBitmapIN->ui32Width,
+		      psPDumpBitmapIN->ui32Height,
+		      psPDumpBitmapIN->ui32StrideInBytes,
+		      psPDumpBitmapIN->sDevBaseAddr,
+		      psPDumpBitmapIN->ui32Size,
+		      psPDumpBitmapIN->ePixelFormat,
+		      psPDumpBitmapIN->eMemFormat,
+		      psPDumpBitmapIN->ui32Flags);
+
+	psRetOUT->eError = PVRSRV_OK;
 
 	return 0;
 }
@@ -1203,12 +1211,12 @@ static int PDumpSyncDumpBW(u32 ui32BridgeID,
 		return 0;
 
 	psRetOUT->eError =
-	    PDumpMemUM(psPerProc, psPDumpSyncDumpIN->pvAltLinAddr, NULL,
-			((struct PVRSRV_KERNEL_SYNC_INFO *)pvSyncInfo)->
-							psSyncDataMemInfoKM,
-			psPDumpSyncDumpIN->ui32Offset, ui32Bytes, 0,
-			MAKEUNIQUETAG(((struct PVRSRV_KERNEL_SYNC_INFO *)
-					    pvSyncInfo)->psSyncDataMemInfoKM));
+		PDumpMemUM(psPerProc, psPDumpSyncDumpIN->pvAltLinAddr, NULL,
+			   ((struct PVRSRV_KERNEL_SYNC_INFO *)pvSyncInfo)->
+			   psSyncDataMemInfoKM,
+			   psPDumpSyncDumpIN->ui32Offset, ui32Bytes, 0,
+			   MAKEUNIQUETAG(((struct PVRSRV_KERNEL_SYNC_INFO *)
+					  pvSyncInfo)->psSyncDataMemInfoKM));
 
 	return 0;
 }
@@ -1237,13 +1245,12 @@ static int PDumpSyncPolBW(u32 ui32BridgeID,
 		ui32Offset = offsetof(struct PVRSRV_SYNC_DATA,
 				      ui32WriteOpsComplete);
 
-	psRetOUT->eError =
-	    PDumpMemPolKM(((struct PVRSRV_KERNEL_SYNC_INFO *)pvSyncInfo)->
-			  psSyncDataMemInfoKM, ui32Offset,
-			  psPDumpSyncPolIN->ui32Value,
-			  psPDumpSyncPolIN->ui32Mask, PDUMP_POLL_OPERATOR_EQUAL,
-			  MAKEUNIQUETAG(((struct PVRSRV_KERNEL_SYNC_INFO *)
-					  pvSyncInfo)->psSyncDataMemInfoKM));
+	PDumpMemPolKM(((struct PVRSRV_KERNEL_SYNC_INFO *)pvSyncInfo)->
+		      psSyncDataMemInfoKM, ui32Offset,
+		      psPDumpSyncPolIN->ui32Value,
+		      psPDumpSyncPolIN->ui32Mask, PDUMP_POLL_OPERATOR_EQUAL,
+		      MAKEUNIQUETAG(((struct PVRSRV_KERNEL_SYNC_INFO *)
+				     pvSyncInfo)->psSyncDataMemInfoKM));
 
 	return 0;
 }
@@ -1297,11 +1304,11 @@ static int PDumpPDDevPAddrBW(u32 ui32BridgeID,
 	if (psRetOUT->eError != PVRSRV_OK)
 		return 0;
 
-	psRetOUT->eError =
-	    PDumpPDDevPAddrKM((struct PVRSRV_KERNEL_MEM_INFO *)pvMemInfo,
-			      psPDumpPDDevPAddrIN->ui32Offset,
-			      psPDumpPDDevPAddrIN->sPDDevPAddr,
-			      MAKEUNIQUETAG(pvMemInfo), PDUMP_PD_UNIQUETAG);
+	PDumpPDDevPAddrKM((struct PVRSRV_KERNEL_MEM_INFO *)pvMemInfo,
+			  psPDumpPDDevPAddrIN->ui32Offset,
+			  psPDumpPDDevPAddrIN->sPDDevPAddr,
+			  MAKEUNIQUETAG(pvMemInfo), PDUMP_PD_UNIQUETAG);
+
 	return 0;
 }
 

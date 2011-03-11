@@ -144,7 +144,7 @@ static void _DeferredFreePageTable(struct MMU_HEAP *pMMUHeap, u32 ui32PTIndex)
 	    && ppsPTInfoList[ui32PTIndex]->PTPageCpuVAddr)
 		PDUMPFREEPAGETABLE(PVRSRV_DEVICE_TYPE_SGX,
 				   ppsPTInfoList[ui32PTIndex]->PTPageCpuVAddr,
-				   SGX_MMU_PAGE_SIZE, PDUMP_PT_UNIQUETAG);
+				   PDUMP_PT_UNIQUETAG);
 
 	switch (pMMUHeap->psDevArena->DevMemHeapType) {
 	case DEVICE_MEMORY_HEAP_SHARED:
@@ -400,7 +400,6 @@ static IMG_BOOL _DeferredAllocPagetables(struct MMU_HEAP *pMMUHeap,
 
 			PDUMPMALLOCPAGETABLE(PVRSRV_DEVICE_TYPE_SGX,
 					     ppsPTInfoList[i]->PTPageCpuVAddr,
-					     SGX_MMU_PAGE_SIZE,
 					     PDUMP_PT_UNIQUETAG);
 
 			PDUMPMEM2(PVRSRV_DEVICE_TYPE_SGX,
@@ -555,7 +554,7 @@ enum PVRSRV_ERROR MMU_Initialise(struct PVRSRV_DEVICE_NODE *psDeviceNode,
 	PDUMPCOMMENT("Alloc page directory");
 
 	PDUMPMALLOCPAGETABLE(PVRSRV_DEVICE_TYPE_SGX, pvPDCpuVAddr,
-			     SGX_MMU_PAGE_SIZE, PDUMP_PD_UNIQUETAG);
+			     PDUMP_PD_UNIQUETAG);
 
 	if (pvPDCpuVAddr) {
 		pui32Tmp = (u32 *) pvPDCpuVAddr;
@@ -602,7 +601,7 @@ void MMU_Finalise(struct MMU_CONTEXT *psMMUContext)
 
 	PDUMPCOMMENT("Free page directory");
 	PDUMPFREEPAGETABLE(PVRSRV_DEVICE_TYPE_SGX, psMMUContext->pvPDCpuVAddr,
-			   SGX_MMU_PAGE_SIZE, PDUMP_PT_UNIQUETAG);
+			   PDUMP_PT_UNIQUETAG);
 
 	pui32Tmp = (u32 *) psMMUContext->pvPDCpuVAddr;
 

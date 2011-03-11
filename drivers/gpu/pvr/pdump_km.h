@@ -97,14 +97,14 @@ IMG_BOOL PDumpIsCaptureFrameKM(void);
 
 void PDumpMallocPages(enum PVRSRV_DEVICE_TYPE eDeviceType,
 		      u32 ui32DevVAddr, void *pvLinAddr, void *hOSMemHandle,
-		      u32 ui32NumBytes, u32 ui32PageSize, void *hUniqueTag);
+		      u32 ui32NumBytes, void *hUniqueTag);
 void PDumpMallocPageTable(enum PVRSRV_DEVICE_TYPE eDeviceType,
-			  void *pvLinAddr, u32 ui32NumBytes, void *hUniqueTag);
+			  void *pvLinAddr, void *hUniqueTag);
 void PDumpFreePages(struct BM_HEAP *psBMHeap,
-		struct IMG_DEV_VIRTADDR sDevVAddr, u32 ui32NumBytes,
-		    u32 ui32PageSize, void *hUniqueTag, IMG_BOOL bInterleaved);
+		    struct IMG_DEV_VIRTADDR sDevVAddr, u32 ui32NumBytes,
+		    void *hUniqueTag, IMG_BOOL bInterleaved);
 void PDumpFreePageTable(enum PVRSRV_DEVICE_TYPE eDeviceType,
-			void *pvLinAddr, u32 ui32NumBytes, void *hUniqueTag);
+			void *pvLinAddr, void *hUniqueTag);
 void PDumpPDReg(u32 ui32Reg, u32 ui32dwData, void *hUniqueTag);
 void PDumpPDRegWithFlags(u32 ui32Reg, u32 ui32Data, u32 ui32Flags,
 			 void *hUniqueTag);

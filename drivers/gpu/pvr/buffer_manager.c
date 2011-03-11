@@ -1113,7 +1113,6 @@ static IMG_BOOL DevMemoryAlloc(struct BM_CONTEXT *pBMContext,
 		PDUMPMALLOCPAGES(psDeviceNode->sDevId.eDeviceType,
 				 pMapping->DevVAddr.uiAddr, pMapping->CpuVAddr,
 				 pMapping->hOSMemHandle, ui32PDumpSize,
-				 pMapping->pBMHeap->sDevArena.ui32DataPageSize,
 				 (void *)pMapping);
 	}
 #endif
@@ -1182,7 +1181,6 @@ static void DevMemoryFree(struct BM_MAPPING *pMapping)
 		ui32PSize = pMapping->uSize;
 
 	PDUMPFREEPAGES(pMapping->pBMHeap, pMapping->DevVAddr, ui32PSize,
-		       pMapping->pBMHeap->sDevArena.ui32DataPageSize,
 		       (void *)pMapping, (IMG_BOOL)(pMapping->
 				   ui32Flags & PVRSRV_MEM_INTERLEAVED));
 #endif

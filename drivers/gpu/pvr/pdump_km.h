@@ -47,8 +47,6 @@ enum PVRSRV_ERROR PDumpMemPolKM(struct PVRSRV_KERNEL_MEM_INFO
 					   *psMemInfo, u32 ui32Offset,
 					   u32 ui32Value, u32 ui32Mask,
 					   enum PDUMP_POLL_OPERATOR eOperator,
-					   IMG_BOOL bLastFrame,
-					   IMG_BOOL bOverwrite,
 					   void *hUniqueTag);
 
 enum PVRSRV_ERROR PDumpMemUM(struct PVRSRV_PER_PROCESS_DATA
@@ -116,19 +114,18 @@ enum PVRSRV_ERROR PDumpPDDevPAddrKM(struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 		u32 ui32Offset, struct IMG_DEV_PHYADDR sPDDevPAddr,
 		void *hUniqueTag1, void *hUniqueTag2);
 
-void PDumpTASignatureRegisters(u32 ui32DumpFrameNum,
-		u32 ui32TAKickCount, IMG_BOOL bLastFrame,
-		u32 *pui32Registers, u32 ui32NumRegisters);
+void PDumpTASignatureRegisters(u32 ui32DumpFrameNum, u32 ui32TAKickCount,
+			       u32 *pui32Registers, u32 ui32NumRegisters);
 
-void PDump3DSignatureRegisters(u32 ui32DumpFrameNum, IMG_BOOL bLastFrame,
-		u32 *pui32Registers, u32 ui32NumRegisters);
+void PDump3DSignatureRegisters(u32 ui32DumpFrameNum,
+			       u32 *pui32Registers, u32 ui32NumRegisters);
 
 void PDumpRegRead(const u32 dwRegOffset, u32 ui32Flags);
 
-void PDumpCycleCountRegRead(const u32 dwRegOffset, IMG_BOOL bLastFrame);
+void PDumpCycleCountRegRead(const u32 dwRegOffset);
 
-void PDumpCounterRegisters(u32 ui32DumpFrameNum, IMG_BOOL bLastFrame,
-		u32 *pui32Registers, u32 ui32NumRegisters);
+void PDumpCounterRegisters(u32 ui32DumpFrameNum,
+			   u32 *pui32Registers, u32 ui32NumRegisters);
 
 void PDumpCBP(struct PVRSRV_KERNEL_MEM_INFO *psROffMemInfo,
 	      u32 ui32ROffOffset,

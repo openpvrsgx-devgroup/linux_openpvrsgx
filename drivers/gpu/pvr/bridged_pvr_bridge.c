@@ -1132,8 +1132,6 @@ static int PDumpMemPolBW(u32 ui32BridgeID,
 			  psPDumpMemPolIN->ui32Value,
 			  psPDumpMemPolIN->ui32Mask,
 			  PDUMP_POLL_OPERATOR_EQUAL,
-			  psPDumpMemPolIN->bLastFrame,
-			  psPDumpMemPolIN->bOverwrite,
 			  MAKEUNIQUETAG(pvMemInfo));
 
 	return 0;
@@ -1244,7 +1242,6 @@ static int PDumpSyncPolBW(u32 ui32BridgeID,
 			  psSyncDataMemInfoKM, ui32Offset,
 			  psPDumpSyncPolIN->ui32Value,
 			  psPDumpSyncPolIN->ui32Mask, PDUMP_POLL_OPERATOR_EQUAL,
-			  IMG_FALSE, IMG_FALSE,
 			  MAKEUNIQUETAG(((struct PVRSRV_KERNEL_SYNC_INFO *)
 					  pvSyncInfo)->psSyncDataMemInfoKM));
 
@@ -1276,8 +1273,7 @@ static int PDumpCycleCountRegReadBW(u32 ui32BridgeID,
 				 PVRSRV_BRIDGE_PDUMP_CYCLE_COUNT_REG_READ);
 	PVR_UNREFERENCED_PARAMETER(psPerProc);
 
-	PDumpCycleCountRegRead(psPDumpCycleCountRegReadIN->ui32RegOffset,
-			       psPDumpCycleCountRegReadIN->bLastFrame);
+	PDumpCycleCountRegRead(psPDumpCycleCountRegReadIN->ui32RegOffset);
 
 	psRetOUT->eError = PVRSRV_OK;
 

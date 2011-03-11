@@ -175,7 +175,7 @@ enum PVRSRV_ERROR SGXScheduleCCBCommand(struct PVRSRV_SGXDEV_INFO *psDevInfo,
 		PDUMPMEMPOL(psKernelCCB->psCCBCtlMemInfo,
 			    offsetof(struct PVRSRV_SGX_CCB_CTL, ui32ReadOffset),
 			    (psKernelCCB->ui32CCBDumpWOff + 1) & 0xff, 0xff,
-			    PDUMP_POLL_OPERATOR_NOTEQUAL, IMG_FALSE, IMG_FALSE,
+			    PDUMP_POLL_OPERATOR_NOTEQUAL,
 			    MAKEUNIQUETAG(psKernelCCB->psCCBCtlMemInfo));
 
 		PDUMPCOMMENTWITHFLAGS(0, "Kernel CCB command\r\n");
@@ -444,8 +444,7 @@ void SGXCleanupRequest(struct PVRSRV_DEVICE_NODE *psDeviceNode,
 			    offsetof(struct SGXMKIF_HOST_CTL, ui32ResManFlags),
 			    PVRSRV_USSE_EDM_RESMAN_CLEANUP_COMPLETE,
 			    PVRSRV_USSE_EDM_RESMAN_CLEANUP_COMPLETE,
-			    PDUMP_POLL_OPERATOR_EQUAL, IMG_FALSE, IMG_FALSE,
-			    hUniqueTag);
+			    PDUMP_POLL_OPERATOR_EQUAL, hUniqueTag);
 #endif
 
 		l = readl(&psSGXHostCtl->ui32ResManFlags);

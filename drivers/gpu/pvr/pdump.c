@@ -474,7 +474,6 @@ void PDumpPDRegWithFlags(u32 ui32Reg, u32 ui32Data, u32 ui32Flags,
 enum PVRSRV_ERROR PDumpMemPolKM(struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 			   u32 ui32Offset, u32 ui32Value, u32 ui32Mask,
 			   enum PDUMP_POLL_OPERATOR eOperator,
-			   IMG_BOOL bLastFrame, IMG_BOOL bOverwrite,
 			   void *hUniqueTag)
 {
 #define MEMPOLL_DELAY		(1000)
@@ -484,7 +483,6 @@ enum PVRSRV_ERROR PDumpMemPolKM(struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 	struct IMG_DEV_PHYADDR sDevPAddr;
 	struct IMG_DEV_VIRTADDR sDevVPageAddr;
 	struct IMG_CPU_PHYADDR CpuPAddr;
-	u32 ui32Flags;
 	__PDBG_PDUMP_STATE_GET_SCRIPT_AND_FILE_STRING(PVRSRV_ERROR_GENERIC);
 
 	PVR_ASSERT((ui32Offset + sizeof(u32)) <=
@@ -495,14 +493,6 @@ enum PVRSRV_ERROR PDumpMemPolKM(struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 	else
 		snprintf(pszFile, SZ_FILENAME_SIZE_MAX, "%%0%%%u.prm",
 			 gsDBGPdumpState.ui32ParamFileNum);
-
-	ui32Flags = 0;
-
-	if (bLastFrame)
-		ui32Flags |= PDUMP_FLAGS_LASTFRAME;
-
-	if (bOverwrite)
-		ui32Flags |= PDUMP_FLAGS_RESETLFBUFFER;
 
 	CpuPAddr =
 	    OSMemHandleToCpuPAddr(psMemInfo->sMemBlk.hOSMemHandle, ui32Offset);
@@ -521,7 +511,7 @@ enum PVRSRV_ERROR PDumpMemPolKM(struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 		 (u32)hUniqueTag, sDevPAddr.uiAddr & ~(SGX_MMU_PAGE_SIZE - 1),
 		 sDevPAddr.uiAddr & (SGX_MMU_PAGE_SIZE - 1),
 		 ui32Value, ui32Mask, eOperator, MEMPOLL_COUNT, MEMPOLL_DELAY);
-	PDumpWriteString2(pszScript, ui32Flags);
+	PDumpWriteString2(pszScript, 0);
 
 	return PVRSRV_OK;
 }
@@ -978,62 +968,16 @@ static u32 DbgWrite(struct DBG_STREAM *psStream, u8 *pui8Data,
 			ui32BytesWritten =
 			    gpfnDbgDrv->pfnDBGDrivWrite2(psStream, pui8Data,
 							 ui32BCount, 1);
-	} else if (ui32Flags & PDUMP_FLAGS_LASTFRAME) {
-		u32 ui32DbgFlags;
-
-		ui32DbgFlags = 0;
-		if (ui32Flags & PDUMP_FLAGS_RESETLFBUFFER)
-			ui32DbgFlags |= WRITELF_FLAGS_RESETBUF;
-
-		ui32BytesWritten =
-		    gpfnDbgDrv->pfnWriteLF(psStream, pui8Data,
-						   ui32BCount, 1, ui32DbgFlags);
 	} else {
-			ui32BytesWritten =
-			    gpfnDbgDrv->pfnWriteBINCM(psStream, pui8Data,
-						      ui32BCount, 1);
+		ui32BytesWritten =
+			gpfnDbgDrv->pfnWriteBINCM(psStream, pui8Data,
+						  ui32BCount, 1);
 	}
 
 	return ui32BytesWritten;
 }
 
-void PDump3DSignatureRegisters(u32 ui32DumpFrameNum, IMG_BOOL bLastFrame,
-				   u32 *pui32Registers, u32 ui32NumRegisters)
-{
-	u32 ui32FileOffset, ui32Flags;
-	u32 i;
-
-	__PDBG_PDUMP_STATE_GET_SCRIPT_AND_FILE_STRING();
-
-	ui32Flags = bLastFrame ? PDUMP_FLAGS_LASTFRAME : 0;
-	ui32FileOffset = 0;
-
-	PDUMPCOMMENTWITHFLAGS(ui32Flags,
-			      "\r\n-- Dump 3D signature registers\r\n");
-	snprintf(pszFile, SZ_FILENAME_SIZE_MAX, "out%u_3d.sig",
-		 ui32DumpFrameNum);
-
-	for (i = 0; i < ui32NumRegisters; i++) {
-		PDumpReadRegKM(pszFile, ui32FileOffset, pui32Registers[i],
-			       sizeof(u32), ui32Flags);
-		ui32FileOffset += sizeof(u32);
-	}
-}
-
-static void PDumpCountRead(char *pszFileName, u32 ui32Address, u32 ui32Size,
-			   u32 *pui32FileOffset, IMG_BOOL bLastFrame)
-{
-	__PDBG_PDUMP_STATE_GET_SCRIPT_STRING();
-
-	snprintf(pszScript, SZ_SCRIPT_SIZE_MAX,
-		 "SAB :SGXREG:0x%08X 0x%08X %s\r\n", ui32Address,
-		 *pui32FileOffset, pszFileName);
-	PDumpWriteString2(pszScript, bLastFrame ? PDUMP_FLAGS_LASTFRAME : 0);
-
-	*pui32FileOffset += ui32Size;
-}
-
-void PDumpCounterRegisters(u32 ui32DumpFrameNum, IMG_BOOL bLastFrame,
+void PDump3DSignatureRegisters(u32 ui32DumpFrameNum,
 			       u32 *pui32Registers, u32 ui32NumRegisters)
 {
 	u32 ui32FileOffset;
@@ -1041,29 +985,59 @@ void PDumpCounterRegisters(u32 ui32DumpFrameNum, IMG_BOOL bLastFrame,
 
 	__PDBG_PDUMP_STATE_GET_SCRIPT_AND_FILE_STRING();
 
-	PDUMPCOMMENTWITHFLAGS(bLastFrame ? PDUMP_FLAGS_LASTFRAME : 0,
-			      "\r\n-- Dump counter registers\r\n");
+	ui32FileOffset = 0;
+
+	PDUMPCOMMENTWITHFLAGS(0, "\r\n-- Dump 3D signature registers\r\n");
+	snprintf(pszFile, SZ_FILENAME_SIZE_MAX, "out%u_3d.sig",
+		 ui32DumpFrameNum);
+
+	for (i = 0; i < ui32NumRegisters; i++) {
+		PDumpReadRegKM(pszFile, ui32FileOffset, pui32Registers[i],
+			       sizeof(u32), 0);
+		ui32FileOffset += sizeof(u32);
+	}
+}
+
+static void PDumpCountRead(char *pszFileName, u32 ui32Address, u32 ui32Size,
+			   u32 *pui32FileOffset)
+{
+	__PDBG_PDUMP_STATE_GET_SCRIPT_STRING();
+
+	snprintf(pszScript, SZ_SCRIPT_SIZE_MAX,
+		 "SAB :SGXREG:0x%08X 0x%08X %s\r\n", ui32Address,
+		 *pui32FileOffset, pszFileName);
+	PDumpWriteString2(pszScript, 0);
+
+	*pui32FileOffset += ui32Size;
+}
+
+void PDumpCounterRegisters(u32 ui32DumpFrameNum,
+			   u32 *pui32Registers, u32 ui32NumRegisters)
+{
+	u32 ui32FileOffset;
+	u32 i;
+
+	__PDBG_PDUMP_STATE_GET_SCRIPT_AND_FILE_STRING();
+
+	PDUMPCOMMENTWITHFLAGS(0, "\r\n-- Dump counter registers\r\n");
 	snprintf(pszFile, SZ_FILENAME_SIZE_MAX, "out%u.perf",
 		 ui32DumpFrameNum);
 	ui32FileOffset = 0;
 
 	for (i = 0; i < ui32NumRegisters; i++)
 		PDumpCountRead(pszFile, pui32Registers[i], sizeof(u32),
-			       &ui32FileOffset, bLastFrame);
+			       &ui32FileOffset);
 }
 
 void PDumpTASignatureRegisters(u32 ui32DumpFrameNum, u32 ui32TAKickCount,
-				   IMG_BOOL bLastFrame, u32 *pui32Registers,
-				   u32 ui32NumRegisters)
+			       u32 *pui32Registers, u32 ui32NumRegisters)
 {
-	u32 ui32FileOffset, ui32Flags;
+	u32 ui32FileOffset;
 	u32 i;
 
 	__PDBG_PDUMP_STATE_GET_SCRIPT_AND_FILE_STRING();
 
-	ui32Flags = bLastFrame ? PDUMP_FLAGS_LASTFRAME : 0;
-	PDUMPCOMMENTWITHFLAGS(ui32Flags,
-			      "\r\n-- Dump TA signature registers\r\n");
+	PDUMPCOMMENTWITHFLAGS(0, "\r\n-- Dump TA signature registers\r\n");
 	snprintf(pszFile, SZ_FILENAME_SIZE_MAX, "out%u_ta.sig",
 		 ui32DumpFrameNum);
 
@@ -1071,7 +1045,7 @@ void PDumpTASignatureRegisters(u32 ui32DumpFrameNum, u32 ui32TAKickCount,
 
 	for (i = 0; i < ui32NumRegisters; i++) {
 		PDumpReadRegKM(pszFile, ui32FileOffset, pui32Registers[i],
-			       sizeof(u32), ui32Flags);
+			       sizeof(u32), 0);
 		ui32FileOffset += sizeof(u32);
 	}
 }
@@ -1085,13 +1059,13 @@ void PDumpRegRead(const u32 ui32RegOffset, u32 ui32Flags)
 	PDumpWriteString2(pszScript, ui32Flags);
 }
 
-void PDumpCycleCountRegRead(const u32 ui32RegOffset, IMG_BOOL bLastFrame)
+void PDumpCycleCountRegRead(const u32 ui32RegOffset)
 {
 	__PDBG_PDUMP_STATE_GET_SCRIPT_STRING();
 
 	snprintf(pszScript, SZ_SCRIPT_SIZE_MAX, "RDW :SGXREG:0x%X\r\n",
 		 ui32RegOffset);
-	PDumpWriteString2(pszScript, bLastFrame ? PDUMP_FLAGS_LASTFRAME : 0);
+	PDumpWriteString2(pszScript, 0);
 }
 
 void PDumpHWPerfCBKM(char *pszFileName, u32 ui32FileOffset,

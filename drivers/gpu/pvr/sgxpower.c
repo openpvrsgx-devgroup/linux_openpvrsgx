@@ -309,7 +309,7 @@ static enum PVRSRV_ERROR SGXPrePowerState(void *hDevHandle,
 		PDUMPMEMPOL(psDevInfo->psKernelSGXHostCtlMemInfo,
 			    offsetof(struct SGXMKIF_HOST_CTL, ui32PowerStatus),
 			    ui32CompleteStatus, ui32CompleteStatus,
-			    PDUMP_POLL_OPERATOR_EQUAL, IMG_FALSE, IMG_FALSE,
+			    PDUMP_POLL_OPERATOR_EQUAL,
 			    MAKEUNIQUETAG(psDevInfo->
 					  psKernelSGXHostCtlMemInfo));
 #endif

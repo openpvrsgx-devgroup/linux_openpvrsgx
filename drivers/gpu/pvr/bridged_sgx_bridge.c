@@ -1501,7 +1501,6 @@ static void DumpBufferArray(struct PVRSRV_PER_PROCESS_DATA *psPerProc,
 				PDUMPMEMPOL(psCtrlMemInfoKM, ui32Offset,
 					    0, 0xFFFFFFFF,
 					    PDUMP_POLL_OPERATOR_NOTEQUAL,
-					    IMG_FALSE, IMG_FALSE,
 					    MAKEUNIQUETAG(psCtrlMemInfoKM));
 
 				PDUMPCOMMENTWITHFLAGS(0,
@@ -1615,7 +1614,6 @@ int SGXPDump3DSignatureRegistersBW(u32 ui32BridgeID,
 
 	PDump3DSignatureRegisters(psPDump3DSignatureRegistersIN->
 							  ui32DumpFrameNum,
-				  psPDump3DSignatureRegistersIN->bLastFrame,
 				  pui32Registers,
 				  psPDump3DSignatureRegistersIN->
 							  ui32NumRegisters);
@@ -1665,7 +1663,6 @@ int SGXPDumpCounterRegistersBW(u32 ui32BridgeID,
 	}
 
 	PDumpCounterRegisters(psPDumpCounterRegistersIN->ui32DumpFrameNum,
-			      psPDumpCounterRegistersIN->bLastFrame,
 			      pui32Registers,
 			      psPDumpCounterRegistersIN->ui32NumRegisters);
 
@@ -1718,7 +1715,6 @@ int SGXPDumpTASignatureRegistersBW(u32 ui32BridgeID,
 							  ui32DumpFrameNum,
 				  psPDumpTASignatureRegistersIN->
 							  ui32TAKickCount,
-				  psPDumpTASignatureRegistersIN->bLastFrame,
 				  pui32Registers,
 				  psPDumpTASignatureRegistersIN->
 							  ui32NumRegisters);

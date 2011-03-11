@@ -172,10 +172,20 @@ pdump_write(struct DBG_STREAM *psStream, u8 *pui8Data, u32 ui32Count,
 	return PVRSRV_OK;
 }
 
-static void PDumpWriteString2(char *pszString, u32 ui32Flags)
+static void
+pdump_print(u32 flags, char *pszFormat, ...)
 {
+	va_list ap;
+
+	if (PDumpSuspended())
+		return;
+
+	va_start(ap, pszFormat);
+	vsnprintf(gpszScript, SZ_MSG_SIZE_MAX, pszFormat, ap);
+	va_end(ap);
+
 	(void) pdump_write(gpsStream[PDUMP_STREAM_SCRIPT2],
-			   (u8 *)pszString, strlen(pszString), ui32Flags);
+			   (u8 *)gpszScript, strlen(gpszScript), flags);
 }
 
 void PDumpCommentKM(char *pszComment, u32 ui32Flags)
@@ -185,9 +195,7 @@ void PDumpCommentKM(char *pszComment, u32 ui32Flags)
 	if (PDumpSuspended())
 		return;
 
-	PDumpWriteString2("-- ", ui32Flags);
-
-	snprintf(gpszMsg, SZ_MSG_SIZE_MAX, "%s", pszComment);
+	snprintf(gpszMsg, SZ_MSG_SIZE_MAX, "-- %s", pszComment);
 
 	while ((gpszMsg[ui32Count] != 0) && (ui32Count < SZ_MSG_SIZE_MAX))
 		ui32Count++;
@@ -204,7 +212,8 @@ void PDumpCommentKM(char *pszComment, u32 ui32Flags)
 		gpszMsg[ui32Count] = '\0';
 	}
 
-	PDumpWriteString2(gpszMsg, ui32Flags);
+	pdump_write(gpsStream[PDUMP_STREAM_SCRIPT2],
+		    (u8 *)gpszMsg, strlen(gpszMsg), ui32Flags);
 }
 
 void PDumpComment(char *pszFormat, ...)
@@ -349,9 +358,8 @@ void PDumpRegWithFlagsKM(u32 ui32Reg, u32 ui32Data, u32 ui32Flags)
 	if (PDumpSuspended())
 		return;
 
-	snprintf(gpszScript, SZ_SCRIPT_SIZE_MAX,
-		 "WRW :SGXREG:0x%8.8X 0x%8.8X\r\n", ui32Reg, ui32Data);
-	PDumpWriteString2(gpszScript, ui32Flags);
+	pdump_print(ui32Flags,
+		    "WRW :SGXREG:0x%8.8X 0x%8.8X\r\n", ui32Reg, ui32Data);
 }
 
 void PDumpReg(u32 ui32Reg, u32 ui32Data)
@@ -359,9 +367,8 @@ void PDumpReg(u32 ui32Reg, u32 ui32Data)
 	if (PDumpSuspended())
 		return;
 
-	snprintf(gpszScript, SZ_SCRIPT_SIZE_MAX,
-		 "WRW :SGXREG:0x%8.8X 0x%8.8X\r\n", ui32Reg, ui32Data);
-	PDumpWriteString2(gpszScript, PDUMP_FLAGS_CONTINUOUS);
+	pdump_print(PDUMP_FLAGS_CONTINUOUS,
+		    "WRW :SGXREG:0x%8.8X 0x%8.8X\r\n", ui32Reg, ui32Data);
 }
 
 void PDumpRegPolWithFlagsKM(u32 ui32RegAddr, u32 ui32RegValue,
@@ -389,11 +396,10 @@ void PDumpRegPolWithFlagsKM(u32 ui32RegAddr, u32 ui32RegValue,
 	else
 		ui32PollCount = POLL_COUNT_SHORT;
 
-	snprintf(gpszScript, SZ_SCRIPT_SIZE_MAX,
-		 "POL :SGXREG:0x%8.8X 0x%8.8X 0x%8.8X %d %u %d\r\n",
-		 ui32RegAddr, ui32RegValue, ui32Mask, 0, ui32PollCount,
-		 POLL_DELAY);
-	PDumpWriteString2(gpszScript, ui32Flags);
+	pdump_print(ui32Flags,
+		    "POL :SGXREG:0x%8.8X 0x%8.8X 0x%8.8X %d %u %d\r\n",
+		    ui32RegAddr, ui32RegValue, ui32Mask, 0, ui32PollCount,
+		    POLL_DELAY);
 }
 
 void PDumpRegPolKM(u32 ui32RegAddr, u32 ui32RegValue, u32 ui32Mask)
@@ -421,10 +427,8 @@ void PDumpMallocPages(enum PVRSRV_DEVICE_TYPE eDeviceType, u32 ui32DevVAddr,
 	PVR_ASSERT(hOSMemHandle);
 	PVR_ASSERT(((u32) ui32NumBytes & (ui32PageSize - 1)) == 0);
 
-	snprintf(gpszScript, SZ_SCRIPT_SIZE_MAX,
-		 "-- MALLOC :SGXMEM:VA_%8.8X 0x%8.8X %u\r\n", ui32DevVAddr,
-		 ui32NumBytes, ui32PageSize);
-	PDumpWriteString2(gpszScript, PDUMP_FLAGS_CONTINUOUS);
+	pdump_print(PDUMP_FLAGS_CONTINUOUS, "-- MALLOC :SGXMEM:VA_%8.8X 0x%8.8X"
+		    " %u\r\n", ui32DevVAddr, ui32NumBytes, ui32PageSize);
 
 	ui32Offset = 0;
 	ui32NumPages = ui32NumBytes / ui32PageSize;
@@ -435,11 +439,11 @@ void PDumpMallocPages(enum PVRSRV_DEVICE_TYPE eDeviceType, u32 ui32DevVAddr,
 		sDevPAddr = SysCpuPAddrToDevPAddr(eDeviceType, sCpuPAddr);
 		ui32Page = sDevPAddr.uiAddr / ui32PageSize;
 
-		snprintf(gpszScript, SZ_SCRIPT_SIZE_MAX,
-			 "MALLOC :SGXMEM:PA_%8.8X%8.8X %u %u 0x%8.8X\r\n",
-			 (u32)hUniqueTag, ui32Page * ui32PageSize,
-			 ui32PageSize, ui32PageSize, ui32Page * ui32PageSize);
-		PDumpWriteString2(gpszScript, PDUMP_FLAGS_CONTINUOUS);
+		pdump_print(PDUMP_FLAGS_CONTINUOUS,
+			    "MALLOC :SGXMEM:PA_%8.8X%8.8X %u %u 0x%8.8X\r\n",
+			    (u32)hUniqueTag, ui32Page * ui32PageSize,
+			    ui32PageSize, ui32PageSize,
+			    ui32Page * ui32PageSize);
 	}
 }
 
@@ -457,10 +461,9 @@ void PDumpMallocPageTable(enum PVRSRV_DEVICE_TYPE eDeviceType,
 
 	PVR_ASSERT(((u32) pvLinAddr & (ui32PTSize - 1)) == 0);
 
-	snprintf(gpszScript, SZ_SCRIPT_SIZE_MAX,
-		 "-- MALLOC :SGXMEM:PAGE_TABLE 0x%8.8X %lu\r\n", ui32PTSize,
-		 SGX_MMU_PAGE_SIZE);
-	PDumpWriteString2(gpszScript, PDUMP_FLAGS_CONTINUOUS);
+	pdump_print(PDUMP_FLAGS_CONTINUOUS,
+		    "-- MALLOC :SGXMEM:PAGE_TABLE 0x%8.8X %lu\r\n",
+		    ui32PTSize, SGX_MMU_PAGE_SIZE);
 
 	pui8LinAddr = (u8 *) pvLinAddr;
 
@@ -471,12 +474,12 @@ void PDumpMallocPageTable(enum PVRSRV_DEVICE_TYPE eDeviceType,
 		sDevPAddr = SysCpuPAddrToDevPAddr(eDeviceType, sCpuPAddr);
 		ui32Page = sDevPAddr.uiAddr >> SGX_MMU_PAGE_SHIFT;
 
-		snprintf(gpszScript, SZ_SCRIPT_SIZE_MAX,
-			"MALLOC :SGXMEM:PA_%8.8X%8.8lX 0x%lX %lu 0x%8.8lX\r\n",
-			 (u32)hUniqueTag, ui32Page * SGX_MMU_PAGE_SIZE,
-			 SGX_MMU_PAGE_SIZE, SGX_MMU_PAGE_SIZE,
-			 ui32Page * SGX_MMU_PAGE_SIZE);
-		PDumpWriteString2(gpszScript, PDUMP_FLAGS_CONTINUOUS);
+		pdump_print(PDUMP_FLAGS_CONTINUOUS, "MALLOC "
+			    ":SGXMEM:PA_%8.8X%8.8lX 0x%lX %lu 0x%8.8lX\r\n",
+			    (u32)hUniqueTag,
+			    ui32Page * SGX_MMU_PAGE_SIZE, SGX_MMU_PAGE_SIZE,
+			    SGX_MMU_PAGE_SIZE, ui32Page * SGX_MMU_PAGE_SIZE);
+
 		pui8LinAddr += SGX_MMU_PAGE_SIZE;
 	}
 }
@@ -495,9 +498,8 @@ void PDumpFreePages(struct BM_HEAP *psBMHeap, struct IMG_DEV_VIRTADDR sDevVAddr,
 	PVR_ASSERT(((u32) sDevVAddr.uiAddr & (ui32PageSize - 1)) == 0);
 	PVR_ASSERT(((u32) ui32NumBytes & (ui32PageSize - 1)) == 0);
 
-	snprintf(gpszScript, SZ_SCRIPT_SIZE_MAX, "-- FREE :SGXMEM:VA_%8.8X\r\n",
-		 sDevVAddr.uiAddr);
-	PDumpWriteString2(gpszScript, PDUMP_FLAGS_CONTINUOUS);
+	pdump_print(PDUMP_FLAGS_CONTINUOUS, "-- FREE :SGXMEM:VA_%8.8X\r\n",
+		    sDevVAddr.uiAddr);
 
 	ui32NumPages = ui32NumBytes / ui32PageSize;
 	psDeviceNode = psBMHeap->pBMContext->psDeviceNode;
@@ -508,11 +510,9 @@ void PDumpFreePages(struct BM_HEAP *psBMHeap, struct IMG_DEV_VIRTADDR sDevVAddr,
 			    psDeviceNode->pfnMMUGetPhysPageAddr(psBMHeap->
 								pMMUHeap,
 								sDevVAddr);
-
-			snprintf(gpszScript, SZ_SCRIPT_SIZE_MAX,
-				 "FREE :SGXMEM:PA_%8.8X%8.8X\r\n",
-				 (u32)hUniqueTag, sDevPAddr.uiAddr);
-			PDumpWriteString2(gpszScript, PDUMP_FLAGS_CONTINUOUS);
+			pdump_print(PDUMP_FLAGS_CONTINUOUS,
+				    "FREE :SGXMEM:PA_%8.8X%8.8X\r\n",
+				    (u32)hUniqueTag, sDevPAddr.uiAddr);
 		} else {
 
 		}
@@ -535,9 +535,7 @@ void PDumpFreePageTable(enum PVRSRV_DEVICE_TYPE eDeviceType,
 
 	PVR_ASSERT(((u32) pvLinAddr & (ui32PTSize - 1)) == 0);
 
-	snprintf(gpszScript, SZ_SCRIPT_SIZE_MAX,
-		 "-- FREE :SGXMEM:PAGE_TABLE\r\n");
-	PDumpWriteString2(gpszScript, PDUMP_FLAGS_CONTINUOUS);
+	pdump_print(PDUMP_FLAGS_CONTINUOUS, "-- FREE :SGXMEM:PAGE_TABLE\r\n");
 
 	pui8LinAddr = (u8 *) pvLinAddr;
 
@@ -549,10 +547,9 @@ void PDumpFreePageTable(enum PVRSRV_DEVICE_TYPE eDeviceType,
 		ui32Page = sDevPAddr.uiAddr >> SGX_MMU_PAGE_SHIFT;
 		pui8LinAddr += SGX_MMU_PAGE_SIZE;
 
-		snprintf(gpszScript, SZ_SCRIPT_SIZE_MAX,
-			 "FREE :SGXMEM:PA_%8.8X%8.8lX\r\n", (u32)hUniqueTag,
-			 ui32Page * SGX_MMU_PAGE_SIZE);
-		PDumpWriteString2(gpszScript, PDUMP_FLAGS_CONTINUOUS);
+		pdump_print(PDUMP_FLAGS_CONTINUOUS,
+			    "FREE :SGXMEM:PA_%8.8X%8.8lX\r\n", (u32)hUniqueTag,
+			    ui32Page * SGX_MMU_PAGE_SIZE);
 	}
 }
 
@@ -561,11 +558,11 @@ void PDumpPDReg(u32 ui32Reg, u32 ui32Data, void *hUniqueTag)
 	if (PDumpSuspended())
 		return;
 
-	snprintf(gpszScript, SZ_SCRIPT_SIZE_MAX,
-		 "WRW :SGXREG:0x%8.8X :SGXMEM:PA_%8.8X%8.8lX:0x%8.8lX\r\n",
-		 ui32Reg, (u32)hUniqueTag, ui32Data & ~(SGX_MMU_PAGE_SIZE - 1),
-		 ui32Data & (SGX_MMU_PAGE_SIZE - 1));
-	PDumpWriteString2(gpszScript, PDUMP_FLAGS_CONTINUOUS);
+	pdump_print(PDUMP_FLAGS_CONTINUOUS,
+		    "WRW :SGXREG:0x%8.8X :SGXMEM:PA_%8.8X%8.8lX:0x%8.8lX\r\n",
+		    ui32Reg, (u32)hUniqueTag,
+		    ui32Data & ~(SGX_MMU_PAGE_SIZE - 1),
+		    ui32Data & (SGX_MMU_PAGE_SIZE - 1));
 }
 
 void PDumpPDRegWithFlags(u32 ui32Reg, u32 ui32Data, u32 ui32Flags,
@@ -574,11 +571,11 @@ void PDumpPDRegWithFlags(u32 ui32Reg, u32 ui32Data, u32 ui32Flags,
 	if (PDumpSuspended())
 		return;
 
-	snprintf(gpszScript, SZ_SCRIPT_SIZE_MAX,
-		 "WRW :SGXREG:0x%8.8X :SGXMEM:PA_%8.8X%8.8lX:0x%8.8lX\r\n",
-		 ui32Reg, (u32) hUniqueTag, ui32Data & ~(SGX_MMU_PAGE_SIZE - 1),
-		 ui32Data & (SGX_MMU_PAGE_SIZE - 1));
-	PDumpWriteString2(gpszScript, ui32Flags);
+	pdump_print(ui32Flags,
+		    "WRW :SGXREG:0x%8.8X :SGXMEM:PA_%8.8X%8.8lX:0x%8.8lX\r\n",
+		    ui32Reg, (u32)hUniqueTag,
+		    ui32Data & ~(SGX_MMU_PAGE_SIZE - 1),
+		    ui32Data & (SGX_MMU_PAGE_SIZE - 1));
 }
 
 void PDumpMemPolKM(struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
@@ -610,13 +607,12 @@ void PDumpMemPolKM(struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 
 	sDevPAddr.uiAddr += ui32PageOffset;
 
-	snprintf(gpszScript, SZ_SCRIPT_SIZE_MAX, "POL :SGXMEM:"
-		 "PA_%8.8X%8.8lX:0x%8.8lX 0x%8.8X 0x%8.8X %d %d %d\r\n",
-		 (u32)hUniqueTag, sDevPAddr.uiAddr & ~(SGX_MMU_PAGE_SIZE - 1),
-		 sDevPAddr.uiAddr & (SGX_MMU_PAGE_SIZE - 1),
-		 ui32Value, ui32Mask, eOperator, MEMPOLL_COUNT, MEMPOLL_DELAY);
-
-	PDumpWriteString2(gpszScript, 0);
+	pdump_print(0, "POL :SGXMEM:PA_%8.8X%8.8lX:0x%8.8lX 0x%8.8X "
+		    "0x%8.8X %d %d %d\r\n", (u32)hUniqueTag,
+		    sDevPAddr.uiAddr & ~(SGX_MMU_PAGE_SIZE - 1),
+		    sDevPAddr.uiAddr & (SGX_MMU_PAGE_SIZE - 1),
+		    ui32Value, ui32Mask, eOperator,
+		    MEMPOLL_COUNT, MEMPOLL_DELAY);
 }
 
 enum PVRSRV_ERROR
@@ -661,12 +657,9 @@ PDumpMemKM(void *pvAltLinAddr, struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 	if (eError != PVRSRV_OK)
 		return eError;
 
-	snprintf(gpszScript,
-		 SZ_SCRIPT_SIZE_MAX,
-	       "-- LDB :SGXMEM:VA_%8.8X:0x%8.8X 0x%8.8X 0x%8.8X %%0%%.prm\r\n",
-		 psMemInfo->sDevVAddr.uiAddr,
-		 ui32Offset, ui32Bytes, ui32ParamOutPos);
-	PDumpWriteString2(gpszScript, ui32Flags);
+	pdump_print(ui32Flags, "-- LDB :SGXMEM:VA_%8.8X:0x%8.8X 0x%8.8X "
+		    "0x%8.8X %%0%%.prm\r\n", psMemInfo->sDevVAddr.uiAddr,
+		    ui32Offset, ui32Bytes, ui32ParamOutPos);
 
 	CpuPAddr =
 	    OSMemHandleToCpuPAddr(psMemInfo->sMemBlk.hOSMemHandle, ui32Offset);
@@ -700,14 +693,11 @@ PDumpMemKM(void *pvAltLinAddr, struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 			ui32PageByteOffset = 0;
 		}
 
-		snprintf(gpszScript,
-			 SZ_SCRIPT_SIZE_MAX, "LDB :SGXMEM:"
-		       "PA_%8.8X%8.8lX:0x%8.8lX 0x%8.8X 0x%8.8X %%0%%.prm\r\n",
-			 (u32) hUniqueTag,
-			 sDevPAddr.uiAddr & ~(SGX_MMU_PAGE_SIZE - 1),
-			 sDevPAddr.uiAddr & (SGX_MMU_PAGE_SIZE - 1),
-			 ui32BlockBytes, ui32ParamOutPos);
-		PDumpWriteString2(gpszScript, ui32Flags);
+		pdump_print(ui32Flags, "LDB :SGXMEM:PA_%8.8X%8.8lX:0x%8.8lX"
+			    " 0x%8.8X 0x%8.8X %%0%%.prm\r\n", (u32) hUniqueTag,
+			    sDevPAddr.uiAddr & ~(SGX_MMU_PAGE_SIZE - 1),
+			    sDevPAddr.uiAddr & (SGX_MMU_PAGE_SIZE - 1),
+			    ui32BlockBytes, ui32ParamOutPos);
 
 		ui32BytesRemaining -= ui32BlockBytes;
 		ui32CurrentOffset += ui32BlockBytes;
@@ -735,9 +725,6 @@ PDumpMem2KM(enum PVRSRV_DEVICE_TYPE eDeviceType, void *pvLinAddr,
 
 	if (PDumpSuspended())
 		return PVRSRV_OK;
-
-	if (ui32Flags)
-		;
 
 	if (!pvLinAddr)
 		return PVRSRV_ERROR_GENERIC;
@@ -768,15 +755,12 @@ PDumpMem2KM(enum PVRSRV_DEVICE_TYPE eDeviceType, void *pvLinAddr,
 			ui32BlockBytes = ui32Bytes;
 
 		if (bInitialisePages) {
-			snprintf(gpszScript,
-				 SZ_SCRIPT_SIZE_MAX, "LDB :SGXMEM:"
-				 "PA_%8.8X%8.8lX:0x%8.8lX 0x%8.8X "
-				 "0x%8.8X %%0%%.prm\r\n",
-				 (u32) hUniqueTag1,
-				 sDevPAddr.uiAddr & ~(SGX_MMU_PAGE_SIZE - 1),
-				 sDevPAddr.uiAddr & (SGX_MMU_PAGE_SIZE - 1),
-				 ui32BlockBytes, ui32ParamOutPos);
-			PDumpWriteString2(gpszScript, PDUMP_FLAGS_CONTINUOUS);
+			pdump_print(PDUMP_FLAGS_CONTINUOUS, "LDB :SGXMEM:"
+				    "PA_%8.8X%8.8lX:0x%8.8lX 0x%8.8X 0x%8.8X "
+				    "%%0%%.prm\r\n", (u32) hUniqueTag1,
+				    sDevPAddr.uiAddr & ~(SGX_MMU_PAGE_SIZE - 1),
+				    sDevPAddr.uiAddr & (SGX_MMU_PAGE_SIZE - 1),
+				    ui32BlockBytes, ui32ParamOutPos);
 		} else {
 			for (ui32Offset = 0; ui32Offset < ui32BlockBytes;
 			     ui32Offset += sizeof(u32)) {
@@ -785,8 +769,7 @@ PDumpMem2KM(enum PVRSRV_DEVICE_TYPE eDeviceType, void *pvLinAddr,
 						      ui32Offset));
 
 				if ((ui32PTE & SGX_MMU_PDE_ADDR_MASK) != 0) {
-					snprintf(gpszScript,
-						 SZ_SCRIPT_SIZE_MAX,
+					pdump_print(PDUMP_FLAGS_CONTINUOUS,
 "WRW :SGXMEM:PA_%8.8X%8.8lX:0x%8.8lX :SGXMEM:PA_%8.8X%8.8lX:0x%8.8lX\r\n",
 						 (u32)hUniqueTag1,
 						 (sDevPAddr.uiAddr +
@@ -804,7 +787,7 @@ PDumpMem2KM(enum PVRSRV_DEVICE_TYPE eDeviceType, void *pvLinAddr,
 					PVR_ASSERT(!
 						   (ui32PTE &
 						    SGX_MMU_PTE_VALID));
-					snprintf(gpszScript, SZ_SCRIPT_SIZE_MAX,
+					pdump_print(PDUMP_FLAGS_CONTINUOUS,
 		"WRW :SGXMEM:PA_%8.8X%8.8lX:0x%8.8lX 0x%8.8X%8.8X\r\n",
 						 (u32) hUniqueTag1,
 						 (sDevPAddr.uiAddr +
@@ -815,8 +798,6 @@ PDumpMem2KM(enum PVRSRV_DEVICE_TYPE eDeviceType, void *pvLinAddr,
 							(SGX_MMU_PAGE_SIZE - 1),
 						 ui32PTE, (u32)hUniqueTag2);
 				}
-				PDumpWriteString2(gpszScript,
-						  PDUMP_FLAGS_CONTINUOUS);
 			}
 		}
 
@@ -855,26 +836,23 @@ PDumpPDDevPAddrKM(struct PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 	sDevPAddr.uiAddr += ui32PageByteOffset;
 
 	if ((sPDDevPAddr.uiAddr & SGX_MMU_PDE_ADDR_MASK) != 0) {
-		snprintf(gpszScript,
-			 SZ_SCRIPT_SIZE_MAX,
+		pdump_print(PDUMP_FLAGS_CONTINUOUS,
 "WRW :SGXMEM:PA_%8.8X%8.8lX:0x%8.8lX :SGXMEM:PA_%8.8X%8.8lX:0x%8.8lX\r\n",
-			 (u32) hUniqueTag1,
-			 sDevPAddr.uiAddr & ~(SGX_MMU_PAGE_SIZE - 1),
-			 sDevPAddr.uiAddr & (SGX_MMU_PAGE_SIZE - 1),
-			 (u32)hUniqueTag2,
-			 sPDDevPAddr.uiAddr & SGX_MMU_PDE_ADDR_MASK,
-			 sPDDevPAddr.uiAddr & ~SGX_MMU_PDE_ADDR_MASK);
+			    (u32) hUniqueTag1,
+			    sDevPAddr.uiAddr & ~(SGX_MMU_PAGE_SIZE - 1),
+			    sDevPAddr.uiAddr & (SGX_MMU_PAGE_SIZE - 1),
+			    (u32)hUniqueTag2,
+			    sPDDevPAddr.uiAddr & SGX_MMU_PDE_ADDR_MASK,
+			    sPDDevPAddr.uiAddr & ~SGX_MMU_PDE_ADDR_MASK);
 	} else {
 		PVR_ASSERT(!(sDevPAddr.uiAddr & SGX_MMU_PTE_VALID));
-		snprintf(gpszScript,
-			 SZ_SCRIPT_SIZE_MAX,
-			 "WRW :SGXMEM:PA_%8.8X%8.8lX:0x%8.8lX 0x%8.8X\r\n",
-			 (u32)hUniqueTag1,
-			 sDevPAddr.uiAddr & ~(SGX_MMU_PAGE_SIZE - 1),
-			 sDevPAddr.uiAddr & (SGX_MMU_PAGE_SIZE - 1),
-			 sPDDevPAddr.uiAddr);
+		pdump_print(PDUMP_FLAGS_CONTINUOUS,
+			    "WRW :SGXMEM:PA_%8.8X%8.8lX:0x%8.8lX 0x%8.8X\r\n",
+			    (u32)hUniqueTag1,
+			    sDevPAddr.uiAddr & ~(SGX_MMU_PAGE_SIZE - 1),
+			    sDevPAddr.uiAddr & (SGX_MMU_PAGE_SIZE - 1),
+			    sPDDevPAddr.uiAddr);
 	}
-	PDumpWriteString2(gpszScript, PDUMP_FLAGS_CONTINUOUS);
 }
 
 void PDumpBitmapKM(char *pszFileName, u32 ui32FileOffset,
@@ -889,15 +867,12 @@ void PDumpBitmapKM(char *pszFileName, u32 ui32FileOffset,
 	PDumpCommentWithFlags(ui32PDumpFlags,
 			      "\r\n-- Dump bitmap of render\r\n");
 
-	snprintf(gpszScript,
-		 SZ_SCRIPT_SIZE_MAX,
-		"SII %s %s.bin :SGXMEM:v:0x%08X 0x%08X "
-		"0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X\r\n",
-		 pszFileName, pszFileName, sDevBaseAddr.uiAddr, ui32Size,
-		 ui32FileOffset, ePixelFormat, ui32Width, ui32Height,
-		 ui32StrideInBytes, eMemFormat);
-
-	PDumpWriteString2(gpszScript, ui32PDumpFlags);
+	pdump_print(ui32PDumpFlags,
+		    "SII %s %s.bin :SGXMEM:v:0x%08X 0x%08X "
+		    "0x%08X 0x%08X 0x%08X 0x%08X 0x%08X 0x%08X\r\n",
+		    pszFileName, pszFileName, sDevBaseAddr.uiAddr, ui32Size,
+		    ui32FileOffset, ePixelFormat, ui32Width, ui32Height,
+		    ui32StrideInBytes, eMemFormat);
 }
 
 static void PDumpReadRegKM(char *pszFileName, u32 ui32FileOffset,
@@ -906,12 +881,8 @@ static void PDumpReadRegKM(char *pszFileName, u32 ui32FileOffset,
 	if (PDumpSuspended())
 		return;
 
-	snprintf(gpszScript,
-		 SZ_SCRIPT_SIZE_MAX,
-		 "SAB :SGXREG:0x%08X 0x%08X %s\r\n",
-		 ui32Address, ui32FileOffset, pszFileName);
-
-	PDumpWriteString2(gpszScript, ui32PDumpFlags);
+	pdump_print(ui32PDumpFlags, "SAB :SGXREG:0x%08X 0x%08X %s\r\n",
+		    ui32Address, ui32FileOffset, pszFileName);
 }
 
 void PDump3DSignatureRegisters(u32 ui32DumpFrameNum,
@@ -942,11 +913,8 @@ static void PDumpCountRead(char *pszFileName, u32 ui32Address, u32 ui32Size,
 	if (PDumpSuspended())
 		return;
 
-	snprintf(gpszScript, SZ_SCRIPT_SIZE_MAX,
-		 "SAB :SGXREG:0x%08X 0x%08X %s\r\n", ui32Address,
-		 *pui32FileOffset, pszFileName);
-
-	PDumpWriteString2(gpszScript, 0);
+	pdump_print(0, "SAB :SGXREG:0x%08X 0x%08X %s\r\n", ui32Address,
+		    *pui32FileOffset, pszFileName);
 
 	*pui32FileOffset += ui32Size;
 }
@@ -997,9 +965,7 @@ void PDumpRegRead(const u32 ui32RegOffset, u32 ui32Flags)
 	if (PDumpSuspended())
 		return;
 
-	snprintf(gpszScript, SZ_SCRIPT_SIZE_MAX, "RDW :SGXREG:0x%X\r\n",
-		 ui32RegOffset);
-	PDumpWriteString2(gpszScript, ui32Flags);
+	pdump_print(ui32Flags, "RDW :SGXREG:0x%X\r\n", ui32RegOffset);
 }
 
 void PDumpCycleCountRegRead(const u32 ui32RegOffset)
@@ -1007,9 +973,7 @@ void PDumpCycleCountRegRead(const u32 ui32RegOffset)
 	if (PDumpSuspended())
 		return;
 
-	snprintf(gpszScript, SZ_SCRIPT_SIZE_MAX, "RDW :SGXREG:0x%X\r\n",
-		 ui32RegOffset);
-	PDumpWriteString2(gpszScript, 0);
+	pdump_print(0, "RDW :SGXREG:0x%X\r\n", ui32RegOffset);
 }
 
 void PDumpHWPerfCBKM(char *pszFileName, u32 ui32FileOffset,
@@ -1021,13 +985,9 @@ void PDumpHWPerfCBKM(char *pszFileName, u32 ui32FileOffset,
 
 	PDumpCommentWithFlags(ui32PDumpFlags,
 			"\r\n-- Dump Hardware Performance Circular Buffer\r\n");
-
-	snprintf(gpszScript,
-		 SZ_SCRIPT_SIZE_MAX,
-		 "SAB :SGXMEM:v:0x%08X 0x%08X 0x%08X %s.bin\r\n",
-		 sDevBaseAddr.uiAddr, ui32Size, ui32FileOffset, pszFileName);
-
-	PDumpWriteString2(gpszScript, ui32PDumpFlags);
+	pdump_print(ui32PDumpFlags,
+		    "SAB :SGXMEM:v:0x%08X 0x%08X 0x%08X %s.bin\r\n",
+		    sDevBaseAddr.uiAddr, ui32Size, ui32FileOffset, pszFileName);
 }
 
 void PDumpCBP(struct PVRSRV_KERNEL_MEM_INFO *psROffMemInfo,
@@ -1061,14 +1021,12 @@ void PDumpCBP(struct PVRSRV_KERNEL_MEM_INFO *psROffMemInfo,
 
 	sDevPAddr.uiAddr += ui32PageOffset;
 
-	snprintf(gpszScript,
-		 SZ_SCRIPT_SIZE_MAX,
+	pdump_print(ui32Flags,
 	"CBP :SGXMEM:PA_%8.8X%8.8lX:0x%8.8lX 0x%8.8X 0x%8.8X 0x%8.8X\r\n",
-		 (u32) hUniqueTag,
-		 sDevPAddr.uiAddr & ~(SGX_MMU_PAGE_SIZE - 1),
-		 sDevPAddr.uiAddr & (SGX_MMU_PAGE_SIZE - 1),
-		 ui32WPosVal, ui32PacketSize, ui32BufferSize);
-	PDumpWriteString2(gpszScript, ui32Flags);
+		    (u32) hUniqueTag,
+		    sDevPAddr.uiAddr & ~(SGX_MMU_PAGE_SIZE - 1),
+		    sDevPAddr.uiAddr & (SGX_MMU_PAGE_SIZE - 1),
+		    ui32WPosVal, ui32PacketSize, ui32BufferSize);
 }
 
 void PDumpIDLWithFlags(u32 ui32Clocks, u32 ui32Flags)
@@ -1076,8 +1034,7 @@ void PDumpIDLWithFlags(u32 ui32Clocks, u32 ui32Flags)
 	if (PDumpSuspended())
 		return;
 
-	sprintf(gpszScript, "IDL %u\r\n", ui32Clocks);
-	PDumpWriteString2(gpszScript, ui32Flags);
+	pdump_print(ui32Flags, "IDL %u\r\n", ui32Clocks);
 }
 
 #endif

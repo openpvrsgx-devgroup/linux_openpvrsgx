@@ -59,6 +59,7 @@ struct pdumpfs_frame {
 static u32 frame_count_max = CONFIG_PVR_PDUMP_INITIAL_MAX_FRAME_COUNT;
 static u32 frame_count;
 
+static struct pdumpfs_frame *frame_init;
 static struct pdumpfs_frame *frame_stream;
 static struct pdumpfs_frame *frame_current;
 
@@ -93,6 +94,9 @@ static void
 frame_destroy_all(void)
 {
 	frame_current = NULL;
+
+	frame_destroy(frame_init);
+	frame_init = NULL;
 
 	while (frame_stream) {
 		struct pdumpfs_frame *frame = frame_stream;
@@ -131,10 +135,17 @@ frame_new(u32 pid, u32 number)
 	frame->pid = pid;
 	frame->number = number;
 
-	if (frame_current)
-		frame_current->next = frame;
+	if (!frame_init)
+		frame_init = frame;
+	else {
+		if (frame_current != frame_init)
+			frame_current->next = frame;
+		else
+			frame_stream = frame;
+		frame_count++;
+	}
+
 	frame_current = frame;
-	frame_count++;
 
 	frame_cull();
 
@@ -493,6 +504,104 @@ static const struct file_operations pdumpfs_frame_count_max_fops = {
 	.write = pdumpfs_frame_count_max_write,
 };
 
+static ssize_t
+pdumpfs_frame_read_single(struct pdumpfs_frame *frame, char __user *buf,
+			  size_t size, loff_t f_pos)
+{
+	int page;
+	size_t offset;
+
+	if (f_pos >= frame->offset)
+		return 0;
+
+	if (size > (frame->offset - f_pos))
+		size = frame->offset - f_pos;
+
+	page = f_pos / PAGE_SIZE;
+	offset = f_pos % PAGE_SIZE;
+
+	if (size > (PAGE_SIZE - offset))
+		size = PAGE_SIZE - offset;
+
+	if (copy_to_user(buf, ((u8 *) frame->pages[page]) + offset, size))
+		return -EFAULT;
+
+	return size;
+}
+
+static loff_t
+pdumpfs_llseek_helper(struct file *filp, loff_t offset, int whence, loff_t max)
+{
+	loff_t f_pos;
+
+	switch (whence) {
+	case SEEK_SET:
+		if ((offset > max) || (offset < 0))
+			f_pos = -EINVAL;
+		else
+			f_pos = offset;
+		break;
+	case SEEK_CUR:
+		if (((filp->f_pos + offset) > max) ||
+		    ((filp->f_pos + offset) < 0))
+			f_pos = -EINVAL;
+		else
+			f_pos = filp->f_pos + offset;
+		break;
+	case SEEK_END:
+		if ((offset > 0) ||
+		    (offset < -max))
+			f_pos = -EINVAL;
+		else
+			f_pos = max + offset;
+		break;
+	default:
+		f_pos = -EINVAL;
+		break;
+	}
+
+	if (f_pos >= 0)
+		filp->f_pos = f_pos;
+
+	return f_pos;
+}
+
+static loff_t
+pdumpfs_init_llseek(struct file *filp, loff_t offset, int whence)
+{
+	loff_t f_pos;
+
+	mutex_lock(pdumpfs_mutex);
+
+	f_pos = pdumpfs_llseek_helper(filp, offset, whence, frame_init->offset);
+
+	mutex_unlock(pdumpfs_mutex);
+
+	return f_pos;
+}
+
+static ssize_t
+pdumpfs_init_read(struct file *filp, char __user *buf, size_t size,
+		  loff_t *f_pos)
+{
+	mutex_lock(pdumpfs_mutex);
+
+	size = pdumpfs_frame_read_single(frame_init,
+					 buf, size, *f_pos);
+
+	mutex_unlock(pdumpfs_mutex);
+
+	if (size > 0)
+		*f_pos += size;
+	return size;
+}
+
+static const struct file_operations pdumpfs_init_fops = {
+	.owner = THIS_MODULE,
+	.llseek = pdumpfs_init_llseek,
+	.read = pdumpfs_init_read,
+};
+
 static struct dentry *pdumpfs_dir;
 
 static void
@@ -529,6 +638,9 @@ pdumpfs_fs_init(void)
 
 	pdumpfs_file_create("frame_count_max", S_IRUSR | S_IWUSR,
 			    &pdumpfs_frame_count_max_fops);
+
+	pdumpfs_file_create("init_frame", S_IRUSR,
+			    &pdumpfs_init_fops);
 
 	return 0;
 }

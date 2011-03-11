@@ -44,12 +44,9 @@ static IMG_BOOL PDumpWriteString2(char *pszString, u32 ui32Flags);
 static IMG_BOOL PDumpWriteILock(struct DBG_STREAM *psStream, u8 *pui8Data,
 				u32 ui32Count, u32 ui32Flags);
 static void DbgSetFrame(struct DBG_STREAM *psStream, u32 ui32Frame);
-static u32 DbgGetFrame(struct DBG_STREAM *psStream);
 static void DbgSetMarker(struct DBG_STREAM *psStream, u32 ui32Marker);
 static u32 DbgWrite(struct DBG_STREAM *psStream, u8 *pui8Data,
 			   u32 ui32BCount, u32 ui32Flags);
-
-#define PDUMP_DATAMASTER_PIXEL			1
 
 #define MIN(a, b)				(a > b ? b : a)
 
@@ -235,12 +232,6 @@ void PDumpCommentWithFlags(u32 ui32Flags, char *pszFormat, ...)
 	va_end(ap);
 
 	PDumpCommentKM(pszMsg, ui32Flags);
-}
-
-IMG_BOOL PDumpIsLastCaptureFrameKM(void)
-{
-	return gpfnDbgDrv->pfnIsLastCaptureFrame(
-				gsDBGPdumpState.psStream[PDUMP_STREAM_SCRIPT2]);
 }
 
 IMG_BOOL PDumpIsCaptureFrameKM(void)
@@ -834,14 +825,6 @@ enum PVRSRV_ERROR PDumpSetFrameKM(u32 ui32Frame)
 	return PVRSRV_OK;
 }
 
-static enum PVRSRV_ERROR PDumpGetFrameKM(u32 *pui32Frame)
-{
-	*pui32Frame =
-	    DbgGetFrame(gsDBGPdumpState.psStream[PDUMP_STREAM_SCRIPT2]);
-
-	return PVRSRV_OK;
-}
-
 enum PVRSRV_ERROR PDumpCommentKM(char *pszComment, u32 ui32Flags)
 {
 	u32 ui32Count = 0;
@@ -975,11 +958,6 @@ static void DbgSetFrame(struct DBG_STREAM *psStream, u32 ui32Frame)
 	gpfnDbgDrv->pfnSetFrame(psStream, ui32Frame);
 }
 
-static u32 DbgGetFrame(struct DBG_STREAM *psStream)
-{
-	return gpfnDbgDrv->pfnGetFrame(psStream);
-}
-
 static void DbgSetMarker(struct DBG_STREAM *psStream, u32 ui32Marker)
 {
 	gpfnDbgDrv->pfnSetMarker(psStream, ui32Marker);
@@ -1017,18 +995,6 @@ static u32 DbgWrite(struct DBG_STREAM *psStream, u8 *pui8Data,
 	}
 
 	return ui32BytesWritten;
-}
-
-IMG_BOOL PDumpTestNextFrame(u32 ui32CurrentFrame)
-{
-	IMG_BOOL bFrameDumped;
-
-	bFrameDumped = IMG_FALSE;
-	PDumpSetFrameKM(ui32CurrentFrame + 1);
-	bFrameDumped = PDumpIsCaptureFrameKM();
-	PDumpSetFrameKM(ui32CurrentFrame);
-
-	return bFrameDumped;
 }
 
 void PDump3DSignatureRegisters(u32 ui32DumpFrameNum, IMG_BOOL bLastFrame,
@@ -1190,11 +1156,6 @@ void PDumpIDLWithFlags(u32 ui32Clocks, u32 ui32Flags)
 
 	sprintf(pszScript, "IDL %u\r\n", ui32Clocks);
 	PDumpWriteString2(pszScript, ui32Flags);
-}
-
-void PDumpIDL(u32 ui32Clocks)
-{
-	PDumpIDLWithFlags(ui32Clocks, PDUMP_FLAGS_CONTINUOUS);
 }
 
 void PDumpSuspendKM(void)

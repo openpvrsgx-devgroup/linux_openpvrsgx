@@ -284,7 +284,7 @@ struct DBGKM_SERVICE_TABLE {
 			u32 ui32DebugLevel);
 	void  (*pfnSetFrame)(struct DBG_STREAM *psStream,
 			u32 ui32Frame);
-	u32   (*pfnGetFrame)(struct DBG_STREAM *psStream);
+	u32   (*pfnGetFrame)(struct DBG_STREAM *psStream); /* unused */
 	void  (*pfnOverrideMode)(struct DBG_STREAM *psStream,
 			u32 ui32Mode);
 	void  (*pfnDefaultMode)(struct DBG_STREAM *psStream);

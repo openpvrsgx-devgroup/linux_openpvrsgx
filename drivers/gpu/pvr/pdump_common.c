@@ -36,10 +36,9 @@
 #define	PTR_PLUS(t, p, x)	((t *)(((char *)(p)) + (x)))
 #define	VPTR_PLUS(p, x)		PTR_PLUS(void, p, x)
 #define	VPTR_INC(p, x)		(p = VPTR_PLUS(p, x))
-#define MAX_PDUMP_MMU_CONTEXTS	10
+
 static void *gpvTempBuffer;
 static void *ghTempBufferBlockAlloc;
-static u16 gui16MMUContextUsage;
 
 static void *GetTempBuffer(void)
 {
@@ -139,96 +138,6 @@ enum PVRSRV_ERROR PDumpMemUM(struct PVRSRV_PER_PROCESS_DATA *psPerProc,
 		VPTR_INC(pvAddrUM, ui32BytesToDump);
 		ui32CurrentOffset += ui32BytesToDump;
 		ui32BytesDumped += ui32BytesToDump;
-	}
-
-	return PVRSRV_OK;
-}
-
-static enum PVRSRV_ERROR _PdumpAllocMMUContext(u32 *pui32MMUContextID)
-{
-	u32 i;
-
-	for (i = 0; i < MAX_PDUMP_MMU_CONTEXTS; i++)
-		if ((gui16MMUContextUsage & (1UL << i)) == 0) {
-			gui16MMUContextUsage |= 1UL << i;
-			*pui32MMUContextID = i;
-			return PVRSRV_OK;
-		}
-
-	PVR_DPF(PVR_DBG_ERROR,
-		 "_PdumpAllocMMUContext: no free MMU context ids");
-
-	return PVRSRV_ERROR_GENERIC;
-}
-
-static enum PVRSRV_ERROR _PdumpFreeMMUContext(u32 ui32MMUContextID)
-{
-	if (ui32MMUContextID < MAX_PDUMP_MMU_CONTEXTS) {
-
-		gui16MMUContextUsage &= ~(1UL << ui32MMUContextID);
-		return PVRSRV_OK;
-	}
-
-	PVR_DPF(PVR_DBG_ERROR,
-		 "_PdumpFreeMMUContext: MMU context ids invalid");
-
-	return PVRSRV_ERROR_GENERIC;
-}
-
-enum PVRSRV_ERROR PDumpSetMMUContext(enum PVRSRV_DEVICE_TYPE eDeviceType,
-				     char *pszMemSpace, u32 *pui32MMUContextID,
-				     u32 ui32MMUType, void *hUniqueTag1,
-				     void *pvPDCPUAddr)
-{
-	u8 *pui8LinAddr = (u8 *) pvPDCPUAddr;
-	struct IMG_CPU_PHYADDR sCpuPAddr;
-	struct IMG_DEV_PHYADDR sDevPAddr;
-	u32 ui32MMUContextID;
-	enum PVRSRV_ERROR eError;
-
-	eError = _PdumpAllocMMUContext(&ui32MMUContextID);
-	if (eError != PVRSRV_OK) {
-		PVR_DPF(PVR_DBG_ERROR,
-			 "PDumpSetMMUContext: _PdumpAllocMMUContext failed: %d",
-			 eError);
-		return eError;
-	}
-
-	sCpuPAddr = OSMapLinToCPUPhys(pui8LinAddr);
-	sDevPAddr = SysCpuPAddrToDevPAddr(eDeviceType, sCpuPAddr);
-
-	sDevPAddr.uiAddr &= ~PVRSRV_4K_PAGE_SIZE;
-
-	PDumpComment("Set MMU Context\r\n");
-
-	PDumpComment("MMU :%s:v%d %d :%s:PA_%8.8lX%8.8lX\r\n",
-		     pszMemSpace, ui32MMUContextID, ui32MMUType, pszMemSpace,
-		     hUniqueTag1, sDevPAddr.uiAddr);
-
-	*pui32MMUContextID = ui32MMUContextID;
-
-	return PVRSRV_OK;
-}
-
-enum PVRSRV_ERROR PDumpClearMMUContext(enum PVRSRV_DEVICE_TYPE eDeviceType,
-				       char *pszMemSpace,
-				       u32 ui32MMUContextID, u32 ui32MMUType)
-{
-	enum PVRSRV_ERROR eError;
-
-	PVR_UNREFERENCED_PARAMETER(eDeviceType);
-
-	PDumpComment("Clear MMU Context\r\n");
-
-	PDumpComment("MMU :%s:v%d %d\r\n",
-		     pszMemSpace, ui32MMUContextID, ui32MMUType);
-
-	eError = _PdumpFreeMMUContext(ui32MMUContextID);
-	if (eError != PVRSRV_OK) {
-		PVR_DPF(PVR_DBG_ERROR,
-			"PDumpClearMMUContext: _PdumpFreeMMUContext failed: %d",
-			 eError);
-		return eError;
 	}
 
 	return PVRSRV_OK;

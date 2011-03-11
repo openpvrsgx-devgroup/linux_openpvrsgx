@@ -56,6 +56,7 @@ struct pdumpfs_frame {
 	unsigned long pages[FRAME_PAGE_COUNT];
 };
 
+#define MAX_FRAME_COUNT_HARD 1024
 static u32 frame_count_max = CONFIG_PVR_PDUMP_INITIAL_MAX_FRAME_COUNT;
 static u32 frame_count;
 
@@ -65,8 +66,10 @@ static struct pdumpfs_frame *frame_current;
 
 static struct pdumpfs_frame *frame_current_debugfs;
 static int frame_current_open_count;
+static int frame_stream_open_count;
 
 static loff_t stream_start;
+static loff_t stream_f_pos;
 static loff_t stream_end;
 
 static struct pdumpfs_frame *
@@ -124,28 +127,44 @@ frame_destroy_all(void)
 	}
 
 	stream_start = 0;
+	stream_f_pos = 0;
 	stream_end = 0;
+}
+
+static void
+frame_cull_first(void)
+{
+	struct pdumpfs_frame *frame = frame_stream;
+
+	frame_stream = frame->next;
+	frame->next = NULL;
+
+	if (frame_stream_open_count)
+		stream_start += frame->offset;
+	else
+		stream_end -= frame->offset;
+
+	/*
+	 * we cannot have frames vanish in the middle of reading
+	 * them through debugfs
+	 */
+	if (frame != frame_current_debugfs)
+		frame_destroy(frame);
+
+	frame_count--;
 }
 
 static void
 frame_cull(void)
 {
-	while (frame_count > frame_count_max) {
-		struct pdumpfs_frame *frame = frame_stream;
 
-		frame_stream = frame->next;
-		frame->next = NULL;
-
-		stream_end -= frame->offset;
-
-		/*
-		 * we cannot have frames vanish in the middle of reading
-		 * them through debugfs
-		 */
-		if (frame != frame_current_debugfs)
-			frame_destroy(frame);
-
-		frame_count--;
+	if (!frame_stream_open_count) {
+		while (frame_count > frame_count_max)
+			frame_cull_first();
+	} else {
+		while (((stream_start + frame_stream->offset) < stream_f_pos) ||
+		       (frame_count > MAX_FRAME_COUNT_HARD))
+			frame_cull_first();
 	}
 }
 
@@ -714,6 +733,174 @@ static const struct file_operations pdumpfs_current_fops = {
 	.release = pdumpfs_current_release,
 };
 
+/*
+ * So we can track when we can alter stream offsets.
+ */
+static int
+pdumpfs_stream_open(struct inode *inode, struct file *filp)
+{
+	int ret;
+
+	mutex_lock(pdumpfs_mutex);
+
+	if (frame_stream_open_count)
+		ret = -EUSERS;
+	else {
+		frame_stream_open_count++;
+		ret = 0;
+	}
+
+	mutex_unlock(pdumpfs_mutex);
+	return ret;
+}
+
+static int
+pdumpfs_stream_release(struct inode *inode, struct file *filp)
+{
+	mutex_lock(pdumpfs_mutex);
+
+	frame_stream_open_count--;
+
+	/* fix the damage done while it was open */
+	if (!frame_stream_open_count) {
+		stream_end -= stream_start;
+		stream_start = 0;
+		stream_f_pos = 0;
+	}
+
+	mutex_unlock(pdumpfs_mutex);
+	return 0;
+}
+
+static ssize_t
+pdumpfs_stream_buffer_clear(char __user *buf, size_t size)
+{
+	char tmp[80];
+
+	memset(tmp, '.', sizeof(tmp) - 1);
+	tmp[sizeof(tmp) - 1] = '\n';
+
+	if (size >= sizeof(tmp)) {
+		int i;
+
+		for (i = 0; (i  + sizeof(tmp)) < size; i += sizeof(tmp))
+			if (copy_to_user(buf + i, tmp, sizeof(tmp)))
+				return -EFAULT;
+		return i;
+	} else {
+		if (copy_to_user(buf, tmp + sizeof(tmp) - size, size))
+			return -EFAULT;
+		return size;
+	}
+}
+
+static ssize_t
+pdumpfs_stream_buffer_fill(struct pdumpfs_frame *frame,
+			   char __user *buf, size_t offset, size_t size)
+{
+	int page = offset / PAGE_SIZE;
+
+	if (size > (frame->offset - offset))
+		size = frame->offset - offset;
+
+	offset %= PAGE_SIZE;
+
+	if (size > (PAGE_SIZE - offset))
+		size = PAGE_SIZE - offset;
+
+	if (copy_to_user(buf, ((u8 *) frame->pages[page]) + offset, size))
+		return -EFAULT;
+
+	stream_f_pos += size;
+
+	return size;
+}
+
+static loff_t
+pdumpfs_stream_llseek(struct file *filp, loff_t offset, int whence)
+{
+	loff_t f_pos;
+
+	mutex_lock(pdumpfs_mutex);
+
+	switch (whence) {
+	case SEEK_SET:
+		if ((offset > stream_end) || (offset < stream_start))
+			f_pos = -EINVAL;
+		else
+			f_pos = offset;
+		break;
+	case SEEK_CUR:
+		if (((filp->f_pos + offset) > stream_end) ||
+		    ((filp->f_pos + offset) < stream_start))
+			f_pos = -EINVAL;
+		else
+			f_pos = filp->f_pos + offset;
+		break;
+	case SEEK_END:
+		if ((offset > 0) ||
+		    (offset < (stream_start - stream_end)))
+			f_pos = -EINVAL;
+		else
+			f_pos = stream_end + offset;
+		break;
+	default:
+		f_pos = -EINVAL;
+		break;
+	}
+
+	if (f_pos >= 0) {
+		filp->f_pos = f_pos;
+		stream_f_pos = f_pos;
+	}
+
+	mutex_unlock(pdumpfs_mutex);
+
+	return f_pos;
+}
+
+static ssize_t
+pdumpfs_stream_read(struct file *filp, char __user *buf, size_t size,
+		    loff_t *f_pos)
+{
+	size_t ret = 0;
+
+	mutex_lock(pdumpfs_mutex);
+
+	if ((stream_end <= 0) || (*f_pos >= stream_end))
+		ret = 0;
+	else if (*f_pos < stream_start) {
+		if (size > (stream_start - *f_pos))
+			size = stream_start - *f_pos;
+		ret = pdumpfs_stream_buffer_clear(buf, size);
+	} else {
+		loff_t start = stream_start;
+		struct pdumpfs_frame *frame = frame_stream;
+
+		/* skip frames that are before our offset */
+		while ((start + frame->offset) <= *f_pos) {
+			start += frame->offset;
+			frame = frame->next;
+		}
+
+		ret = pdumpfs_stream_buffer_fill(frame, buf, *f_pos - start,
+						 size);
+	}
+
+	if (ret > 0)
+		*f_pos += ret;
+	mutex_unlock(pdumpfs_mutex);
+	return ret;
+}
+
+static const struct file_operations pdumpfs_stream_fops = {
+	.owner = THIS_MODULE,
+	.llseek = pdumpfs_stream_llseek,
+	.read = pdumpfs_stream_read,
+	.open = pdumpfs_stream_open,
+	.release = pdumpfs_stream_release,
+};
+
 static struct dentry *pdumpfs_dir;
 
 static void
@@ -755,6 +942,8 @@ pdumpfs_fs_init(void)
 			    &pdumpfs_init_fops);
 	pdumpfs_file_create("current_frame", S_IRUSR,
 			    &pdumpfs_current_fops);
+	pdumpfs_file_create("stream_frames", S_IRUSR,
+			    &pdumpfs_stream_fops);
 
 	return 0;
 }

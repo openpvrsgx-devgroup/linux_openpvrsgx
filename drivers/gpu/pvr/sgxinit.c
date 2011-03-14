@@ -345,6 +345,8 @@ static enum PVRSRV_ERROR DevInitSGXPart1(void *pvDeviceNode)
 
 	hKernelDevMemContext = BM_CreateContext(psDeviceNode, &sPDDevPAddr,
 						NULL, NULL);
+	if (!hKernelDevMemContext)
+		goto err1;
 
 	psDevInfo->sKernelPDDevPAddr = sPDDevPAddr;
 
@@ -360,6 +362,9 @@ static enum PVRSRV_ERROR DevInitSGXPart1(void *pvDeviceNode)
 				    BM_CreateHeap(hKernelDevMemContext,
 						  &psDeviceMemoryHeap[i]);
 
+				if (!hDevMemHeap)
+					goto err2;
+
 				psDeviceMemoryHeap[i].hDevMemHeap = hDevMemHeap;
 				break;
 			}
@@ -370,10 +375,28 @@ static enum PVRSRV_ERROR DevInitSGXPart1(void *pvDeviceNode)
 	if (eError != PVRSRV_OK) {
 		PVR_DPF(PVR_DBG_ERROR,
 			 "DevInitSGX : Failed to alloc memory for BIF reset");
-		return PVRSRV_ERROR_GENERIC;
+		goto err2;
 	}
 
 	return PVRSRV_OK;
+err2:
+	while (i) {
+		int type;
+
+		i--;
+		type = psDeviceMemoryHeap[i].DevMemHeapType;
+		if (type != DEVICE_MEMORY_HEAP_KERNEL &&
+		    type != DEVICE_MEMORY_HEAP_SHARED &&
+		    type != DEVICE_MEMORY_HEAP_SHARED_EXPORTED)
+			continue;
+		BM_DestroyHeap(psDeviceMemoryHeap[i].hDevMemHeap);
+	}
+	BM_DestroyContext(hKernelDevMemContext);
+err1:
+	OSFreeMem(PVRSRV_OS_NON_PAGEABLE_HEAP,
+		  sizeof(struct PVRSRV_SGXDEV_INFO), psDevInfo, NULL);
+
+	return PVRSRV_ERROR_GENERIC;
 }
 
 enum PVRSRV_ERROR SGXGetInfoForSrvinitKM(void *hDevHandle,

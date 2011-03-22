@@ -37,6 +37,7 @@
 #include "pvr_bridge_km.h"
 #include "sgxutils.h"
 #include "pvr_debugfs.h"
+#include "mmu.h"
 
 static struct dentry *debugfs_dir;
 static u32 pvr_reset;
@@ -184,6 +185,12 @@ static int hwrec_event_file_lock;
  */
 static u32 *hwrec_registers;
 
+#ifdef CONFIG_PVR_DEBUG
+static size_t hwrec_mem_size;
+#define HWREC_MEM_PAGES (4 * PAGE_SIZE)
+static unsigned long hwrec_mem_pages[HWREC_MEM_PAGES];
+#endif /* CONFIG_PVR_DEBUG */
+
 static void
 hwrec_registers_dump(struct PVRSRV_SGXDEV_INFO *psDevInfo)
 {
@@ -201,6 +208,90 @@ hwrec_registers_dump(struct PVRSRV_SGXDEV_INFO *psDevInfo)
 		hwrec_registers[i] = readl(psDevInfo->pvRegsBaseKM + 4 * i);
 }
 
+static void
+hwrec_pages_free(size_t *size, u32 *pages)
+{
+	int i;
+
+	if (!(*size))
+		return;
+
+	for (i = 0; (i * PAGE_SIZE) < *size; i++) {
+		free_page(pages[i]);
+		pages[i] = 0;
+	}
+
+	*size = 0;
+}
+
+static int
+hwrec_pages_write(u8 *buffer, size_t size, size_t *current_size, u32 *pages,
+		  int array_size)
+{
+	size_t ret = 0;
+
+	while (size) {
+		size_t count = size;
+		size_t offset = *current_size & ~PAGE_MASK;
+		int page = *current_size / PAGE_SIZE;
+
+		if (!offset) {
+			if (((*current_size) / PAGE_SIZE) >= array_size) {
+				pr_err("%s: Size overrun!\n", __func__);
+				return -ENOMEM;
+			}
+
+			pages[page] = __get_free_page(GFP_KERNEL);
+			if (!pages[page]) {
+				pr_err("%s: failed to get free page.\n",
+				       __func__);
+				return -ENOMEM;
+			}
+		}
+
+		if (count > (PAGE_SIZE - offset))
+			count = PAGE_SIZE - offset;
+
+		memcpy(((u8 *) pages[page]) + offset, buffer, count);
+
+		buffer += count;
+		size -= count;
+		ret += count;
+		*current_size += count;
+	}
+
+	return ret;
+}
+
+#ifdef CONFIG_PVR_DEBUG
+static void
+hwrec_mem_free(void)
+{
+	hwrec_pages_free(&hwrec_mem_size, hwrec_mem_pages);
+}
+
+int
+hwrec_mem_write(u8 *buffer, size_t size)
+{
+	return hwrec_pages_write(buffer, size, &hwrec_mem_size,
+				 hwrec_mem_pages, ARRAY_SIZE(hwrec_mem_pages));
+}
+
+int
+hwrec_mem_print(char *format, ...)
+{
+	char tmp[25];
+	va_list ap;
+	size_t size;
+
+	va_start(ap, format);
+	size = vscnprintf(tmp, sizeof(tmp), format, ap);
+	va_end(ap);
+
+	return hwrec_mem_write(tmp, size);
+}
+#endif /* CONFIG_PVR_DEBUG */
+
 void
 pvr_hwrec_dump(struct PVRSRV_SGXDEV_INFO *psDevInfo)
 {
@@ -217,6 +308,11 @@ pvr_hwrec_dump(struct PVRSRV_SGXDEV_INFO *psDevInfo)
 		hwrec_time.tv_sec, hwrec_time.tv_usec);
 
 	hwrec_registers_dump(psDevInfo);
+
+#ifdef CONFIG_PVR_DEBUG
+	hwrec_mem_free();
+	mmu_hwrec_mem_dump(psDevInfo);
+#endif /* CONFIG_PVR_DEBUG */
 
 	hwrec_event = 1;
 
@@ -446,6 +542,69 @@ static const struct file_operations hwrec_regs_fops = {
 	.release = hwrec_file_release,
 };
 
+#ifdef CONFIG_PVR_DEBUG
+/*
+ * Provides a full context dump: page directory, page tables, and all mapped
+ * pages.
+ */
+static loff_t
+hwrec_mem_llseek(struct file *filp, loff_t offset, int whence)
+{
+	loff_t f_pos;
+
+	mutex_lock(hwrec_mutex);
+
+	if (hwrec_mem_size)
+		f_pos = hwrec_llseek_helper(filp, offset, whence,
+					    hwrec_mem_size);
+	else
+		f_pos = 0;
+
+	mutex_unlock(hwrec_mutex);
+
+	return f_pos;
+}
+
+static ssize_t
+hwrec_mem_read(struct file *filp, char __user *buf, size_t size,
+	       loff_t *f_pos)
+{
+	mutex_lock(hwrec_mutex);
+
+	if ((*f_pos >= 0) && (*f_pos < hwrec_mem_size)) {
+		int page, offset;
+
+		size = min(size, (size_t) hwrec_mem_size - (size_t) *f_pos);
+
+		page = (*f_pos) / PAGE_SIZE;
+		offset = (*f_pos) & ~PAGE_MASK;
+
+		size = min(size, (size_t) PAGE_SIZE - offset);
+
+		if (copy_to_user(buf,
+				 ((u8 *) hwrec_mem_pages[page]) + offset,
+				 size)) {
+			mutex_unlock(hwrec_mutex);
+			return -EFAULT;
+		}
+	} else
+		size = 0;
+
+	mutex_unlock(hwrec_mutex);
+
+	*f_pos += size;
+	return size;
+}
+
+static const struct file_operations hwrec_mem_fops = {
+	.owner = THIS_MODULE,
+	.llseek = hwrec_mem_llseek,
+	.read = hwrec_mem_read,
+	.open = hwrec_file_open,
+	.release = hwrec_file_release,
+};
+#endif /* CONFIG_PVR_DEBUG */
+
 /*
  *
  */
@@ -487,6 +646,14 @@ int pvr_debugfs_init(void)
 		return -ENODEV;
 	}
 
+#ifdef CONFIG_PVR_DEBUG
+	if (!debugfs_create_file("hwrec_mem", S_IRUSR, debugfs_dir, NULL,
+				 &hwrec_mem_fops)) {
+		debugfs_remove_recursive(debugfs_dir);
+		return -ENODEV;
+	}
+#endif /* CONFIG_PVR_DEBUG */
+
 	return 0;
 }
 
@@ -496,4 +663,9 @@ void pvr_debugfs_cleanup(void)
 
 	if (hwrec_registers)
 		free_page((u32) hwrec_registers);
+
+#ifdef CONFIG_PVR_DEBUG
+	hwrec_mem_free();
+#endif /* CONFIG_PVR_DEBUG */
+
 }

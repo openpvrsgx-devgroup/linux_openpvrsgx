@@ -37,6 +37,11 @@
 #include "sgxinfokm.h"
 #include "mmu.h"
 
+#if defined(CONFIG_DEBUG_FS) && defined(CONFIG_PVR_DEBUG)
+#include "pvr_debugfs.h"
+#include <linux/io.h>
+#endif
+
 #define UINT32_MAX_VALUE	0xFFFFFFFFUL
 
 struct MMU_PT_INFO {
@@ -1437,3 +1442,103 @@ u32 mmu_get_page_dir(struct MMU_CONTEXT *psMMUContext)
 {
 	return psMMUContext->sPDDevPAddr.uiAddr;
 }
+
+
+#if defined(CONFIG_DEBUG_FS) && defined(CONFIG_PVR_DEBUG)
+
+static int
+hwrec_mem_dump_page(u32 dev_p_addr)
+{
+	void __iomem *page;
+
+	page = ioremap_nocache(dev_p_addr, SGX_MMU_PAGE_SIZE);
+	if (!page)
+		return -EFAULT;
+
+	/* Loop through all the pages and dump them */
+	hwrec_mem_print("<PAGE PA:0x%08X>\n", dev_p_addr);
+	hwrec_mem_write((void __force *) page, PAGE_SIZE);
+	hwrec_mem_print("</PAGE>\n");
+
+	iounmap(page);
+
+	return 0;
+}
+
+static int
+hwrec_mem_dump_table(u32 dev_p_addr)
+{
+	void __iomem *pt;
+	u32 i;
+
+	pt = ioremap_nocache(dev_p_addr, SGX_MMU_PAGE_SIZE);
+	if (!pt)
+		return -EFAULT;
+
+	/* Loop through all the page tables and dump them */
+	hwrec_mem_print("<TABLE PA:0x%08X>\n", dev_p_addr);
+	for (i = 0 ; i < 1024 ; i++)
+		hwrec_mem_print("0x%08X\n", readl(pt + 4 * i));
+	hwrec_mem_print("</TABLE>\n");
+
+	for (i = 0; i < 1024; i++) {
+		u32 addr = readl(pt + 4 * i);
+
+		if (addr & SGX_MMU_PDE_VALID)
+			hwrec_mem_dump_page(addr & SGX_MMU_PDE_ADDR_MASK);
+	}
+
+	iounmap(pt);
+
+	return 0;
+}
+
+static int
+hwrec_mem_dump_dir(struct MMU_CONTEXT *context)
+{
+	void __iomem *pd = (void __force __iomem *) context->pvPDCpuVAddr;
+
+	int i;
+
+	hwrec_mem_print("<DIR PA:0x%08X>\n", context->sPDDevPAddr);
+
+	for (i = 0; i < 1024; i++)
+		hwrec_mem_print("0x%08X\n", readl(pd + 4 * i));
+
+	hwrec_mem_print("</DIR>\n");
+
+	for (i = 0; i < 1024; i++) {
+		u32 addr = readl(pd + 4 * i);
+
+		if (addr & SGX_MMU_PDE_VALID)
+			hwrec_mem_dump_table(addr & SGX_MMU_PDE_ADDR_MASK);
+	}
+
+	return 0;
+}
+
+int
+mmu_hwrec_mem_dump(struct PVRSRV_SGXDEV_INFO *psDevInfo)
+{
+	struct MMU_CONTEXT *context = psDevInfo->pvMMUContextList;
+	u32 page_dir;
+
+	page_dir = readl(psDevInfo->pvRegsBaseKM + EUR_CR_BIF_DIR_LIST_BASE0);
+
+	while (context) {
+		if (context->sPDDevPAddr.uiAddr == page_dir)
+			break;
+
+		context = context->psNext;
+	}
+
+	if (!context) {
+		pr_err("Unable to find matching context for page directory"
+		       " 0x%08X\n", page_dir);
+		return -EFAULT;
+	}
+
+	return hwrec_mem_dump_dir(context);
+}
+
+#endif /* CONFIG_DEBUG_FS && CONFIG_PVR_DEBUG */

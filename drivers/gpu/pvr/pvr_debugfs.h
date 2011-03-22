@@ -29,4 +29,10 @@ void pvr_debugfs_cleanup(void);
 
 void pvr_hwrec_dump(struct PVRSRV_SGXDEV_INFO *psDevInfo);
 
+#ifdef CONFIG_PVR_DEBUG
+/* to be used for memory dumping from mmu.c */
+int hwrec_mem_write(u8 *buffer, size_t size);
+int hwrec_mem_print(char *format, ...);
+#endif
+
 #endif /* _PVR_DEBUGFS_H_ */

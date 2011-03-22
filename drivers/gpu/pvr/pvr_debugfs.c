@@ -124,7 +124,7 @@ struct edm_buf_info {
 	char data[1];
 };
 
-static size_t
+size_t
 edm_trace_print(struct PVRSRV_SGXDEV_INFO *sdev, char *dst, size_t dst_len)
 {
 	u32 *buf_start;
@@ -139,8 +139,12 @@ edm_trace_print(struct PVRSRV_SGXDEV_INFO *sdev, char *dst, size_t dst_len)
 
 	buf = sdev->psKernelEDMStatusBufferMemInfo->pvLinAddrKM;
 
-	p += scnprintf(dst + p, dst_len - p,
-		      "Last SGX microkernel status code: 0x%x\n", *buf);
+	if (dst)
+		p += scnprintf(dst + p, dst_len - p,
+			      "Last SGX microkernel status code: 0x%x\n", *buf);
+	else
+		printk(KERN_DEBUG "Last SGX microkernel status code: 0x%x\n",
+				*buf);
 	buf++;
 	wr_ofs = *buf;
 	buf++;
@@ -152,9 +156,13 @@ edm_trace_print(struct PVRSRV_SGXDEV_INFO *sdev, char *dst, size_t dst_len)
 
 	/* Dump the status values */
 	for (i = 0; i < SGXMK_TRACE_BUFFER_SIZE; i++) {
-		p += scnprintf(dst + p, dst_len - p,
-			      "%3d %08X %08X %08X %08X\n",
-			      i, buf[2], buf[3], buf[1], buf[0]);
+		if (dst)
+			p += scnprintf(dst + p, dst_len - p,
+				      "%3d %08X %08X %08X %08X\n",
+				      i, buf[2], buf[3], buf[1], buf[0]);
+		else
+			printk(KERN_DEBUG "%3d %08X %08X %08X %08X\n",
+				      i, buf[2], buf[3], buf[1], buf[0]);
 		buf += 4;
 		if (buf >= buf_end)
 			buf = buf_start;

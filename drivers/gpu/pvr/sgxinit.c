@@ -697,6 +697,9 @@ HWRecoveryResetSGX(struct PVRSRV_DEVICE_NODE *psDeviceNode, const char *caller)
 
 	pr_err_process_info(proc);
 	pr_err_sgx_registers(psDevInfo);
+#ifdef PVRSRV_USSE_EDM_STATUS_DEBUG
+	edm_trace_print(psDevInfo, NULL, 0);
+#endif
 
 #ifdef CONFIG_DEBUG_FS
 	pvr_hwrec_dump(proc, psDevInfo);

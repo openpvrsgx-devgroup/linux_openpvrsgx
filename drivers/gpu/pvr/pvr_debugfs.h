@@ -20,10 +20,6 @@
 #ifndef _PVR_DEBUGFS_H_
 #define _PVR_DEBUGFS_H_ 1
 
-#ifndef CONFIG_DEBUG_FS
-#error Error: debugfs header included but CONFIG_DEBUG_FS is not defined!
-#endif
-
 extern struct dentry *pvr_debugfs_dir;
 
 int pvr_debugfs_init(void);
@@ -31,6 +27,9 @@ void pvr_debugfs_cleanup(void);
 
 void pvr_hwrec_dump(struct PVRSRV_PER_PROCESS_DATA *proc_data,
 		    struct PVRSRV_SGXDEV_INFO *psDevInfo);
+
+size_t edm_trace_print(struct PVRSRV_SGXDEV_INFO *sdev, char *dst,
+		       size_t dst_len);
 
 #ifdef CONFIG_PVR_DEBUG
 /* to be used for memory dumping from mmu.c */

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2010-2011 Imre Deak <imre.deak@nokia.com>
+ * Copyright (c) 2010-2011 Luc Verhaegen <libv@codethink.co.uk>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -24,6 +25,8 @@
 #include <linux/kernel.h>
 #include <linux/debugfs.h>
 #include <linux/vmalloc.h>
+#include <linux/mutex.h>
+#include <linux/uaccess.h>
 
 #include "img_types.h"
 #include "servicesext.h"
@@ -159,9 +162,166 @@ static const struct file_operations pvr_debugfs_edm_fops = {
 
 /*
  *
+ * HW Recovery dumping support.
+ *
+ */
+static struct mutex hwrec_mutex[1];
+static struct timeval hwrec_time;
+static int hwrec_open_count;
+static DECLARE_WAIT_QUEUE_HEAD(hwrec_wait_queue);
+static int hwrec_event;
+
+/* add extra locking to keep us from overwriting things during dumping. */
+static int hwrec_event_open_count;
+static int hwrec_event_file_lock;
+
+void
+pvr_hwrec_dump(void)
+{
+	mutex_lock(hwrec_mutex);
+
+	if (hwrec_open_count || hwrec_event_file_lock) {
+		pr_err("%s: previous hwrec dump is still locked!\n", __func__);
+		mutex_unlock(hwrec_mutex);
+		return;
+	}
+
+	do_gettimeofday(&hwrec_time);
+	pr_info("HW Recovery dump generated at %010ld%06ld\n",
+		hwrec_time.tv_sec, hwrec_time.tv_usec);
+
+	hwrec_event = 1;
+
+	mutex_unlock(hwrec_mutex);
+
+	wake_up_interruptible(&hwrec_wait_queue);
+}
+
+/*
+ * helpers.
+ */
+static int
+hwrec_file_open(struct inode *inode, struct file *filp)
+{
+	mutex_lock(hwrec_mutex);
+
+	hwrec_open_count++;
+
+	mutex_unlock(hwrec_mutex);
+	return 0;
+}
+
+static int
+hwrec_file_release(struct inode *inode, struct file *filp)
+{
+	mutex_lock(hwrec_mutex);
+
+	hwrec_open_count--;
+
+	mutex_unlock(hwrec_mutex);
+	return 0;
+}
+
+/*
+ * Provides a hwrec timestamp for unique dumping.
+ */
+static ssize_t
+hwrec_time_read(struct file *filp, char __user *buf, size_t size,
+		loff_t *f_pos)
+{
+	char tmp[20];
+
+	mutex_lock(hwrec_mutex);
+	snprintf(tmp, sizeof(tmp), "%010ld%06ld",
+		 hwrec_time.tv_sec, hwrec_time.tv_usec);
+	mutex_unlock(hwrec_mutex);
+
+	return simple_read_from_buffer(buf, size, f_pos, tmp, strlen(tmp));
+}
+
+static const struct file_operations hwrec_time_fops = {
+	.owner = THIS_MODULE,
+	.llseek = no_llseek,
+	.read = hwrec_time_read,
+	.open = hwrec_file_open,
+	.release = hwrec_file_release,
+};
+
+/*
+ * Blocks the reader until a HWRec happens.
+ */
+static int
+hwrec_event_open(struct inode *inode, struct file *filp)
+{
+	int ret;
+
+	mutex_lock(hwrec_mutex);
+
+	if (hwrec_event_open_count)
+		ret = -EUSERS;
+	else {
+		hwrec_event_open_count++;
+		ret = 0;
+	}
+
+	mutex_unlock(hwrec_mutex);
+
+	return ret;
+}
+
+static int
+hwrec_event_release(struct inode *inode, struct file *filp)
+{
+	mutex_lock(hwrec_mutex);
+
+	hwrec_event_open_count--;
+
+	mutex_unlock(hwrec_mutex);
+
+	return 0;
+}
+
+
+static ssize_t
+hwrec_event_read(struct file *filp, char __user *buf, size_t size,
+		 loff_t *f_pos)
+{
+	int ret = 0;
+
+	mutex_lock(hwrec_mutex);
+
+	hwrec_event_file_lock = 0;
+
+	mutex_unlock(hwrec_mutex);
+
+	ret = wait_event_interruptible(hwrec_wait_queue, hwrec_event);
+	if (!ret) {
+		mutex_lock(hwrec_mutex);
+
+		hwrec_event = 0;
+		hwrec_event_file_lock = 1;
+
+		mutex_unlock(hwrec_mutex);
+	}
+
+	return ret;
+}
+
+static const struct file_operations hwrec_event_fops = {
+	.owner = THIS_MODULE,
+	.llseek = no_llseek,
+	.read = hwrec_event_read,
+	.open = hwrec_event_open,
+	.release = hwrec_event_release,
+};
+
+/*
+ *
  */
 int pvr_debugfs_init(void)
 {
+	mutex_init(hwrec_mutex);
+
 	debugfs_dir = debugfs_create_dir("pvr", NULL);
 	if (!debugfs_dir)
 		return -ENODEV;
@@ -174,6 +334,18 @@ int pvr_debugfs_init(void)
 
 	if (!debugfs_create_file("edm_trace", S_IRUGO, debugfs_dir, NULL,
 				 &pvr_debugfs_edm_fops)) {
+		debugfs_remove_recursive(debugfs_dir);
+		return -ENODEV;
+	}
+
+	if (!debugfs_create_file("hwrec_event", S_IRUSR, debugfs_dir, NULL,
+				 &hwrec_event_fops)) {
+		debugfs_remove_recursive(debugfs_dir);
+		return -ENODEV;
+	}
+
+	if (!debugfs_create_file("hwrec_time", S_IRUSR, debugfs_dir, NULL,
+				 &hwrec_time_fops)) {
 		debugfs_remove_recursive(debugfs_dir);
 		return -ENODEV;
 	}

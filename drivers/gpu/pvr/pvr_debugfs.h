@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2010-2011 Imre Deak <imre.deak@nokia.com>
+ * Copyright (c) 2010-2011 Luc Verhaegen <libv@codethink.co.uk>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -25,5 +26,7 @@
 
 int pvr_debugfs_init(void);
 void pvr_debugfs_cleanup(void);
+
+void pvr_hwrec_dump(void);
 
 #endif /* _PVR_DEBUGFS_H_ */

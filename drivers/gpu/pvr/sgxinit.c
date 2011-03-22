@@ -58,6 +58,10 @@
 #include "pvrversion.h"
 #include "sgx_options.h"
 
+#ifdef CONFIG_DEBUG_FS
+#include "pvr_debugfs.h"
+#endif
+
 static IMG_BOOL SGX_ISRHandler(void *pvData);
 
 static u32 gui32EventStatusServicesByISR;
@@ -986,6 +990,10 @@ void HWRecoveryResetSGX(struct PVRSRV_DEVICE_NODE *psDeviceNode)
 	dump_sgx_registers(psDevInfo);
 	dump_edm(psDevInfo);
 	dump_sgx_state_bufs(psDeviceNode);
+
+#ifdef CONFIG_DEBUG_FS
+	pvr_hwrec_dump();
+#endif
 
 	PDUMPSUSPEND();
 

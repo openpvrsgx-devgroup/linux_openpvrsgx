@@ -27,7 +27,8 @@
 int pvr_debugfs_init(void);
 void pvr_debugfs_cleanup(void);
 
-void pvr_hwrec_dump(struct PVRSRV_SGXDEV_INFO *psDevInfo);
+void pvr_hwrec_dump(struct PVRSRV_PER_PROCESS_DATA *proc_data,
+		    struct PVRSRV_SGXDEV_INFO *psDevInfo);
 
 #ifdef CONFIG_PVR_DEBUG
 /* to be used for memory dumping from mmu.c */

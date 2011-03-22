@@ -38,6 +38,8 @@
 #include "sgxutils.h"
 #include "pvr_debugfs.h"
 #include "mmu.h"
+#include "bridged_support.h"
+#include "mm.h"
 
 static struct dentry *debugfs_dir;
 static u32 pvr_reset;
@@ -89,7 +91,7 @@ static int pvr_debugfs_reset(void *data, u64 val)
 		goto exit;
 	}
 
-	HWRecoveryResetSGX(node);
+	HWRecoveryResetSGX(node, __func__);
 
 	SGXTestActivePowerEvent(node);
 exit:
@@ -355,8 +357,260 @@ hwrec_mem_print(char *format, ...)
 }
 #endif /* CONFIG_PVR_DEBUG */
 
+/*
+ * Render status buffer dumping.
+ */
+static size_t hwrec_status_size;
+static u32 hwrec_status_pages[1024];
+
+static int
+hwrec_status_write(char *buffer, size_t size)
+{
+	return hwrec_pages_write(buffer, size, &hwrec_status_size,
+				 hwrec_status_pages,
+				 ARRAY_SIZE(hwrec_status_pages));
+}
+
+static void
+hwrec_status_free(void)
+{
+	hwrec_pages_free(&hwrec_status_size, hwrec_status_pages);
+}
+
+static int
+hwrec_status_print(char *format, ...)
+{
+	char tmp[25];
+	va_list ap;
+	size_t size;
+
+	va_start(ap, format);
+	size = vscnprintf(tmp, sizeof(tmp), format, ap);
+	va_end(ap);
+
+	return hwrec_status_write(tmp, size);
+}
+
+#define BUF_DESC_CORRUPT	(1 << 31)
+
+static void add_uniq_items(struct render_state_buf_list *dst,
+			   const struct render_state_buf_list *src)
+{
+	int i;
+
+	for (i = 0; i < src->cnt; i++) {
+		const struct render_state_buf_info *sbinf = &src->info[i];
+		int j;
+
+		for (j = 0; j < dst->cnt; j++) {
+			if (sbinf->buf_id == dst->info[j].buf_id) {
+				if (memcmp(sbinf, &dst->info[j], sizeof(sbinf)))
+					dst->info[j].type |= BUF_DESC_CORRUPT;
+				break;
+			}
+		}
+		if (j == dst->cnt) {
+			/* Bound for cnt is guaranteed by the caller */
+			dst->info[dst->cnt] = *sbinf;
+			dst->cnt++;
+		}
+	}
+}
+
+static struct render_state_buf_list *create_merged_uniq_list(
+		struct render_state_buf_list **bl_set, int set_size)
+{
+	int i;
+	struct render_state_buf_list *dbl;
+	size_t size;
+
+	/*
+	 * Create a buf list big enough to contain all elements from each
+	 * list in bl_set.
+	 */
+	size = offsetof(struct render_state_buf_list, info[0]);
+	for (i = 0; i < set_size; i++) {
+		if (!bl_set[i])
+			continue;
+		size += bl_set[i]->cnt * sizeof(bl_set[i]->info[0]);
+	}
+	if (!size)
+		return NULL;
+	dbl = kmalloc(size, GFP_KERNEL);
+	if (!dbl)
+		return NULL;
+
+	dbl->cnt = 0;
+	for (i = 0; i < set_size; i++) {
+		if (bl_set[i])
+			add_uniq_items(dbl, bl_set[i]);
+	}
+
+	return dbl;
+}
+
+static void *vmap_buf(struct PVRSRV_PER_PROCESS_DATA *proc,
+			u32 handle, off_t offset, size_t size)
+{
+	struct PVRSRV_KERNEL_MEM_INFO *minfo;
+	struct LinuxMemArea *mem_area;
+	enum PVRSRV_ERROR err;
+	unsigned start_ofs;
+	unsigned end_ofs;
+	int pg_cnt;
+	struct page **pages;
+	void *map = NULL;
+	int i;
+
+	if (offset & PAGE_MASK)
+		return NULL;
+
+	err = PVRSRVLookupHandle(proc->psHandleBase, (void **)&minfo,
+				(void *)handle, PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (err != PVRSRV_OK)
+		return NULL;
+	if (minfo->pvLinAddrKM)
+		return minfo->pvLinAddrKM;
+
+	err = PVRSRVLookupOSMemHandle(proc->psHandleBase, (void *)&mem_area,
+					(void *)handle);
+	if (err != PVRSRV_OK)
+		return NULL;
+
+	start_ofs = offset & PAGE_MASK;
+	end_ofs = PAGE_ALIGN(offset + size);
+	pg_cnt = (end_ofs - start_ofs) >> PAGE_SHIFT;
+	pages = kmalloc(pg_cnt * sizeof(pages[0]), GFP_KERNEL);
+	if (!pages)
+		return NULL;
+	for (i = 0; i < pg_cnt; i++) {
+		unsigned pfn;
+
+		pfn = LinuxMemAreaToCpuPFN(mem_area, start_ofs);
+		if (!pfn_valid(pfn))
+			goto err;
+		pages[i] = pfn_to_page(pfn);
+		start_ofs += PAGE_SIZE;
+	}
+	map = vmap(pages, pg_cnt, VM_MAP, PAGE_KERNEL);
+	map += offset;
+err:
+	kfree(pages);
+
+	return map;
+}
+
+static void vunmap_buf(struct PVRSRV_PER_PROCESS_DATA *proc,
+			u32 handle, void *map)
+{
+	struct PVRSRV_KERNEL_MEM_INFO *minfo;
+	enum PVRSRV_ERROR err;
+
+	err = PVRSRVLookupHandle(proc->psHandleBase, (void **)&minfo,
+				(void *)handle, PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (err != PVRSRV_OK)
+		return;
+	if (minfo->pvLinAddrKM)
+		return;
+	vunmap((void *)(((unsigned long)map) & PAGE_MASK));
+}
+
+static void dump_buf(void *start, size_t size, u32 type)
+{
+	char *corr = "";
+
+	if (type & BUF_DESC_CORRUPT) {
+		type &= ~BUF_DESC_CORRUPT;
+		corr = "(corrupt)";
+	}
+	hwrec_status_print("<type %d%s size %d>\n", type, corr, size);
+	hwrec_status_write(start, size);
+}
+
+static struct render_state_buf_list *get_state_buf_list(
+			struct PVRSRV_PER_PROCESS_DATA *proc,
+			u32 handle, off_t offset)
+{
+	struct PVRSRV_KERNEL_MEM_INFO *container;
+	struct render_state_buf_list *buf;
+	enum PVRSRV_ERROR err;
+
+	err = PVRSRVLookupHandle(proc->psHandleBase, (void **)&container,
+				(void *)handle, PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (err != PVRSRV_OK)
+		return NULL;
+	if (!container->pvLinAddrKM)
+		return NULL;
+	if (offset + sizeof(*buf) > container->ui32AllocSize)
+		return NULL;
+
+	buf = container->pvLinAddrKM + offset;
+
+	if (buf->cnt > ARRAY_SIZE(buf->info))
+		return NULL;
+
+	return buf;
+}
+
+static void dump_state_buf_list(struct PVRSRV_PER_PROCESS_DATA *proc,
+				struct render_state_buf_list *bl)
+{
+	int i;
+
+	if (!bl->cnt)
+		return;
+
+	pr_info("Dumping %d render state buffers\n", bl->cnt);
+	for (i = 0; i < bl->cnt; i++) {
+		struct render_state_buf_info *binfo;
+		void *map;
+
+		binfo = &bl->info[i];
+
+		map = vmap_buf(proc, binfo->buf_id, binfo->offset, binfo->size);
+		if (!map)
+			continue;
+		dump_buf(map, binfo->size, binfo->type);
+
+		vunmap_buf(proc, binfo->buf_id, map);
+	}
+}
+
+static void dump_sgx_state_bufs(struct PVRSRV_PER_PROCESS_DATA *proc,
+				struct PVRSRV_SGXDEV_INFO *dev_info)
+{
+	struct SGXMKIF_HOST_CTL __iomem *hctl = dev_info->psSGXHostCtl;
+	struct render_state_buf_list *bl_set[2] = { NULL };
+	struct render_state_buf_list *mbl;
+	u32 handle_ta;
+	u32 handle_3d;
+
+	if (!proc)
+		return;
+
+	handle_ta = readl(&hctl->render_state_buf_ta_handle);
+	handle_3d = readl(&hctl->render_state_buf_3d_handle);
+	bl_set[0] = get_state_buf_list(proc, handle_ta,
+					dev_info->state_buf_ofs);
+	/*
+	 * The two buf list can be the same if the TA and 3D phases used the
+	 * same context at the time of the HWrec. In this case just ignore
+	 * one of them.
+	 */
+	if (handle_ta != handle_3d)
+		bl_set[1] = get_state_buf_list(proc, handle_3d,
+					dev_info->state_buf_ofs);
+	mbl = create_merged_uniq_list(bl_set, ARRAY_SIZE(bl_set));
+	if (!mbl)
+		return;
+
+	dump_state_buf_list(proc, mbl);
+	kfree(mbl);
+}
+
 void
-pvr_hwrec_dump(struct PVRSRV_SGXDEV_INFO *psDevInfo)
+pvr_hwrec_dump(struct PVRSRV_PER_PROCESS_DATA *proc_data,
+	       struct PVRSRV_SGXDEV_INFO *psDevInfo)
 {
 	mutex_lock(hwrec_mutex);
 
@@ -382,6 +636,9 @@ pvr_hwrec_dump(struct PVRSRV_SGXDEV_INFO *psDevInfo)
 		pvr_edm_buffer_destroy(hwrec_edm_buf);
 	hwrec_edm_buf = pvr_edm_buffer_create(psDevInfo);
 #endif
+
+	hwrec_status_free();
+	dump_sgx_state_bufs(proc_data, psDevInfo);
 
 	hwrec_event = 1;
 
@@ -726,6 +983,66 @@ static const struct file_operations hwrec_edm_fops = {
 #endif /* PVRSRV_USSE_EDM_STATUS_DEBUG */
 
 /*
+ * Provides a dump of the TA and 3D status buffers.
+ */
+static loff_t
+hwrec_status_llseek(struct file *filp, loff_t offset, int whence)
+{
+	loff_t f_pos;
+
+	mutex_lock(hwrec_mutex);
+
+	if (hwrec_status_size)
+		f_pos = hwrec_llseek_helper(filp, offset, whence,
+					    hwrec_status_size);
+	else
+		f_pos = 0;
+
+	mutex_unlock(hwrec_mutex);
+
+	return f_pos;
+}
+
+static ssize_t
+hwrec_status_read(struct file *filp, char __user *buf, size_t size,
+	       loff_t *f_pos)
+{
+	mutex_lock(hwrec_mutex);
+
+	if ((*f_pos >= 0) && (*f_pos < hwrec_status_size)) {
+		int page, offset;
+
+		size = min(size, (size_t) hwrec_status_size - (size_t) *f_pos);
+
+		page = (*f_pos) / PAGE_SIZE;
+		offset = (*f_pos) & ~PAGE_MASK;
+
+		size = min(size, (size_t) PAGE_SIZE - offset);
+
+		if (copy_to_user(buf,
+				 ((u8 *) hwrec_status_pages[page]) + offset,
+				 size)) {
+			mutex_unlock(hwrec_mutex);
+			return -EFAULT;
+		}
+	} else
+		size = 0;
+
+	mutex_unlock(hwrec_mutex);
+
+	*f_pos += size;
+	return size;
+}
+
+static const struct file_operations hwrec_status_fops = {
+	.owner = THIS_MODULE,
+	.llseek = hwrec_status_llseek,
+	.read = hwrec_status_read,
+	.open = hwrec_file_open,
+	.release = hwrec_file_release,
+};
+
+/*
  *
  */
 int pvr_debugfs_init(void)
@@ -784,6 +1101,12 @@ int pvr_debugfs_init(void)
 	}
 #endif
 
+	if (!debugfs_create_file("hwrec_status", S_IRUSR, debugfs_dir, NULL,
+				 &hwrec_status_fops)) {
+		debugfs_remove_recursive(debugfs_dir);
+		return -ENODEV;
+	}
+
 	return 0;
 }
 
@@ -802,4 +1125,6 @@ void pvr_debugfs_cleanup(void)
 	if (hwrec_edm_buf)
 		pvr_edm_buffer_destroy(hwrec_edm_buf);
 #endif
+
+	hwrec_status_free();
 }

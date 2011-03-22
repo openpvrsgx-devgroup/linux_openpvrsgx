@@ -214,7 +214,8 @@ struct timer_work_data *
 SGXOSTimerInit(struct PVRSRV_DEVICE_NODE *psDeviceNode);
 void SGXOSTimerDeInit(struct timer_work_data *data);
 
-void HWRecoveryResetSGX(struct PVRSRV_DEVICE_NODE *psDeviceNode);
+void HWRecoveryResetSGX(struct PVRSRV_DEVICE_NODE *psDeviceNode,
+			const char *caller);
 void SGXReset(struct PVRSRV_SGXDEV_INFO *psDevInfo, u32 ui32PDUMPFlags);
 
 enum PVRSRV_ERROR SGXInitialise(struct PVRSRV_SGXDEV_INFO *psDevInfo,

@@ -102,7 +102,7 @@ void PVRSRVTrace(const char *pszFormat, ...);
 
 #endif		/* CONFIG_PVR_DEBUG */
 
-#if defined(CONFIG_PVR_DEBUG) || defined(TIMING) || defined(CONFIG_DEBUG_FS)
+#if defined(CONFIG_PVR_DEBUG) || defined(TIMING)
 
 void pvr_dbg_init(void);
 void pvr_dbg_cleanup(void);

@@ -54,6 +54,10 @@
 #include "private_data.h"
 #include "pvr_events.h"
 
+#ifdef CONFIG_DEBUG_FS
+#include "pvr_debugfs.h"
+#endif
+
 #define DRVNAME		"pvrsrvkm"
 
 #ifdef CONFIG_PVR_DEBUG_EXTRA
@@ -234,6 +238,10 @@ static int __init pvr_init(void)
 	PVRDebugSetLevel(debug);
 #endif
 
+#ifdef CONFIG_DEBUG_FS
+	pvr_debugfs_init();
+#endif
+
 	error = CreateProcEntries();
 	if (error < 0)
 		goto err1;
@@ -283,6 +291,9 @@ static void __exit pvr_cleanup(void)
 
 	PVR_TRACE("pvr_cleanup: unloading");
 
+#ifdef CONFIG_DEBUG_FS
+	pvr_debugfs_cleanup();
+#endif
 	pvr_dbg_cleanup();
 }
 

@@ -14,7 +14,7 @@ pvrsrvkm-objs		:= osfunc.o mmap.o module.o pdump.o proc.o	   \
 			   pvr_events.o
 
 pvrsrvkm-objs-$(CONFIG_PVR_DEBUG) += pvr_debug.o
-pvrsrvkm-objs-$(CONFIG_DEBUG_FS) += pvr_debug.o
+pvrsrvkm-objs-$(CONFIG_DEBUG_FS) += pvr_debugfs.o
 pvrsrvkm-objs-$(CONFIG_PVR_TIMING) += pvr_debug.o
 
 pvrsrvkm-objs		+= $(pvrsrvkm-objs-y) $(pvrsrvkm-objs-m)

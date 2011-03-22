@@ -110,38 +110,97 @@ static int pvr_debugfs_set(void *data, u64 val)
 
 DEFINE_SIMPLE_ATTRIBUTE(pvr_debugfs_fops, NULL, pvr_debugfs_set, "%llu\n");
 
+#ifdef PVRSRV_USSE_EDM_STATUS_DEBUG
 /*
  *
  */
+#define SGXMK_TRACE_BUFFER_SIZE					512
+#define SGXMK_TRACE_BUF_STR_LEN					80
+
 struct edm_buf_info {
 	size_t len;
 	char data[1];
 };
 
-static int pvr_debugfs_edm_open(struct inode *inode, struct file *file)
+static size_t
+edm_trace_print(struct PVRSRV_SGXDEV_INFO *sdev, char *dst, size_t dst_len)
 {
-	struct PVRSRV_DEVICE_NODE *node;
-	struct PVRSRV_SGXDEV_INFO *sgx_info;
+	u32 *buf_start;
+	u32 *buf_end;
+	u32 *buf;
+	size_t p = 0;
+	size_t wr_ofs;
+	int i;
+
+	if (!sdev->psKernelEDMStatusBufferMemInfo)
+		return 0;
+
+	buf = sdev->psKernelEDMStatusBufferMemInfo->pvLinAddrKM;
+
+	p += snprintf(dst + p, dst_len - p,
+		      "Last SGX microkernel status code: 0x%x\n", *buf);
+	buf++;
+	wr_ofs = *buf;
+	buf++;
+
+	buf_start = buf;
+	buf_end = buf + SGXMK_TRACE_BUFFER_SIZE * 4;
+
+	buf += wr_ofs * 4;
+
+	/* Dump the status values */
+	for (i = 0; i < SGXMK_TRACE_BUFFER_SIZE; i++) {
+		p += snprintf(dst + p, dst_len - p, "%3d %08X %08X %08X %08X\n",
+			      i, buf[2], buf[3], buf[1], buf[0]);
+		buf += 4;
+		if (buf >= buf_end)
+			buf = buf_start;
+	}
+
+	return p > dst_len ? dst_len : p;
+}
+
+static struct edm_buf_info *
+pvr_edm_buffer_create(struct PVRSRV_SGXDEV_INFO *sgx_info)
+{
 	struct edm_buf_info *bi;
 	size_t size;
 
 	/* Take a snapshot of the EDM trace buffer */
 	size = SGXMK_TRACE_BUFFER_SIZE * SGXMK_TRACE_BUF_STR_LEN;
 	bi = vmalloc(sizeof(*bi) + size);
-	if (!bi)
-		return -ENOMEM;
+	if (!bi) {
+		pr_err("%s: vmalloc failed!\n", __func__);
+		return NULL;
+	}
+
+	bi->len = edm_trace_print(sgx_info, bi->data, size);
+
+	return bi;
+}
+
+static void
+pvr_edm_buffer_destroy(struct edm_buf_info *edm)
+{
+	vfree(edm);
+}
+
+static int pvr_debugfs_edm_open(struct inode *inode, struct file *file)
+{
+	struct PVRSRV_DEVICE_NODE *node;
 
 	node = get_sgx_node();
-	sgx_info = node->pvDevice;
-	bi->len = snprint_edm_trace(sgx_info, bi->data, size);
-	file->private_data = bi;
+
+	file->private_data = pvr_edm_buffer_create(node->pvDevice);
+	if (!file->private_data)
+		return -ENOMEM;
 
 	return 0;
 }
 
 static int pvr_debugfs_edm_release(struct inode *inode, struct file *file)
 {
-	vfree(file->private_data);
+	pvr_edm_buffer_destroy(file->private_data);
 
 	return 0;
 }
@@ -160,7 +219,7 @@ static const struct file_operations pvr_debugfs_edm_fops = {
 	.read		= pvr_debugfs_edm_read,
 	.release	= pvr_debugfs_edm_release,
 };
-
+#endif /* PVRSRV_USSE_EDM_STATUS_DEBUG */
 
 /*
  *
@@ -190,6 +249,10 @@ static size_t hwrec_mem_size;
 #define HWREC_MEM_PAGES (4 * PAGE_SIZE)
 static unsigned long hwrec_mem_pages[HWREC_MEM_PAGES];
 #endif /* CONFIG_PVR_DEBUG */
+
+#ifdef PVRSRV_USSE_EDM_STATUS_DEBUG
+static struct edm_buf_info *hwrec_edm_buf;
+#endif
 
 static void
 hwrec_registers_dump(struct PVRSRV_SGXDEV_INFO *psDevInfo)
@@ -313,6 +376,12 @@ pvr_hwrec_dump(struct PVRSRV_SGXDEV_INFO *psDevInfo)
 	hwrec_mem_free();
 	mmu_hwrec_mem_dump(psDevInfo);
 #endif /* CONFIG_PVR_DEBUG */
+
+#ifdef PVRSRV_USSE_EDM_STATUS_DEBUG
+	if (hwrec_edm_buf)
+		pvr_edm_buffer_destroy(hwrec_edm_buf);
+	hwrec_edm_buf = pvr_edm_buffer_create(psDevInfo);
+#endif
 
 	hwrec_event = 1;
 
@@ -606,6 +675,57 @@ static const struct file_operations hwrec_mem_fops = {
 #endif /* CONFIG_PVR_DEBUG */
 
 /*
+ * Read out edm trace created before HW recovery reset.
+ */
+#ifdef PVRSRV_USSE_EDM_STATUS_DEBUG
+static loff_t
+hwrec_edm_llseek(struct file *filp, loff_t offset, int whence)
+{
+	loff_t f_pos;
+
+	mutex_lock(hwrec_mutex);
+
+	if (hwrec_edm_buf)
+		f_pos = hwrec_llseek_helper(filp, offset, whence,
+					    hwrec_edm_buf->len);
+	else
+		f_pos = 0;
+
+	mutex_unlock(hwrec_mutex);
+
+	return f_pos;
+}
+
+static ssize_t
+hwrec_edm_read(struct file *filp, char __user *buf, size_t size,
+	       loff_t *f_pos)
+{
+	ssize_t ret;
+
+	mutex_lock(hwrec_mutex);
+
+	if (hwrec_edm_buf)
+		ret = simple_read_from_buffer(buf, size, f_pos,
+					      hwrec_edm_buf->data,
+					      hwrec_edm_buf->len);
+	else
+		ret = 0;
+
+	mutex_unlock(hwrec_mutex);
+
+	return ret;
+}
+
+static const struct file_operations hwrec_edm_fops = {
+	.owner = THIS_MODULE,
+	.llseek = hwrec_edm_llseek,
+	.read = hwrec_edm_read,
+	.open = hwrec_file_open,
+	.release = hwrec_file_release,
+};
+#endif /* PVRSRV_USSE_EDM_STATUS_DEBUG */
+
+/*
  *
  */
 int pvr_debugfs_init(void)
@@ -622,11 +742,13 @@ int pvr_debugfs_init(void)
 		return -ENODEV;
 	}
 
+#ifdef PVRSRV_USSE_EDM_STATUS_DEBUG
 	if (!debugfs_create_file("edm_trace", S_IRUGO, debugfs_dir, NULL,
 				 &pvr_debugfs_edm_fops)) {
 		debugfs_remove_recursive(debugfs_dir);
 		return -ENODEV;
 	}
+#endif
 
 	if (!debugfs_create_file("hwrec_event", S_IRUSR, debugfs_dir, NULL,
 				 &hwrec_event_fops)) {
@@ -654,6 +776,14 @@ int pvr_debugfs_init(void)
 	}
 #endif /* CONFIG_PVR_DEBUG */
 
+#ifdef PVRSRV_USSE_EDM_STATUS_DEBUG
+	if (!debugfs_create_file("hwrec_edm", S_IRUSR, debugfs_dir, NULL,
+				 &hwrec_edm_fops)) {
+		debugfs_remove_recursive(debugfs_dir);
+		return -ENODEV;
+	}
+#endif
+
 	return 0;
 }
 
@@ -668,4 +798,8 @@ void pvr_debugfs_cleanup(void)
 	hwrec_mem_free();
 #endif /* CONFIG_PVR_DEBUG */
 
+#ifdef PVRSRV_USSE_EDM_STATUS_DEBUG
+	if (hwrec_edm_buf)
+		pvr_edm_buffer_destroy(hwrec_edm_buf);
+#endif
 }

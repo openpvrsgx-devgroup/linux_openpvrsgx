@@ -619,68 +619,6 @@ static enum PVRSRV_ERROR DevDeInitSGX(void *pvDeviceNode)
 	return PVRSRV_OK;
 }
 
-#if defined(PVRSRV_USSE_EDM_STATUS_DEBUG) || defined(CONFIG_DEBUG_FS)
-
-static size_t __print_edm_trace(struct PVRSRV_SGXDEV_INFO *sdev, char *dst,
-				size_t dst_len)
-{
-	u32 *buf_start;
-	u32 *buf_end;
-	u32 *buf;
-	size_t p = 0;
-	size_t wr_ofs;
-	int i;
-
-#define _PR(fmt, ...) do {						   \
-	if (dst)							   \
-		p += snprintf(dst + p, dst_len - p, fmt, ## __VA_ARGS__);  \
-	else								   \
-		printk(KERN_DEBUG fmt, ## __VA_ARGS__);			   \
-} while (0)
-
-	if (!sdev->psKernelEDMStatusBufferMemInfo)
-		return 0;
-
-	buf = sdev->psKernelEDMStatusBufferMemInfo->pvLinAddrKM;
-
-	_PR("Last SGX microkernel status code: 0x%x\n", *buf);
-	buf++;
-	wr_ofs = *buf;
-	buf++;
-
-	buf_start = buf;
-	buf_end = buf + SGXMK_TRACE_BUFFER_SIZE * 4;
-
-	buf += wr_ofs * 4;
-
-	/* Dump the status values */
-	for (i = 0; i < SGXMK_TRACE_BUFFER_SIZE; i++) {
-		_PR("%3d %08X %08X %08X %08X\n",
-		    i, buf[2], buf[3], buf[1], buf[0]);
-		buf += 4;
-		if (buf >= buf_end)
-			buf = buf_start;
-	}
-
-	return p > dst_len ? dst_len : p;
-#undef _PR
-}
-
-size_t snprint_edm_trace(struct PVRSRV_SGXDEV_INFO *sdev, char *buf,
-			 size_t buf_size)
-{
-	return __print_edm_trace(sdev, buf, buf_size);
-}
-
-#endif
-
-static void dump_edm(struct PVRSRV_SGXDEV_INFO *sdev)
-{
-#ifdef PVRSRV_USSE_EDM_STATUS_DEBUG
-	__print_edm_trace(sdev, NULL, 0);
-#endif
-}
-
 static struct PVRSRV_PER_PROCESS_DATA *find_cur_proc_data(
 					struct PVRSRV_DEVICE_NODE *dev)
 {
@@ -988,7 +926,6 @@ void HWRecoveryResetSGX(struct PVRSRV_DEVICE_NODE *psDeviceNode)
 
 	dump_process_info(psDeviceNode);
 	dump_sgx_registers(psDevInfo);
-	dump_edm(psDevInfo);
 	dump_sgx_state_bufs(psDeviceNode);
 
 #ifdef CONFIG_DEBUG_FS

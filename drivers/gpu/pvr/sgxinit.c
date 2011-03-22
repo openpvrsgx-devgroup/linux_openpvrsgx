@@ -992,7 +992,7 @@ void HWRecoveryResetSGX(struct PVRSRV_DEVICE_NODE *psDeviceNode)
 	dump_sgx_state_bufs(psDeviceNode);
 
 #ifdef CONFIG_DEBUG_FS
-	pvr_hwrec_dump();
+	pvr_hwrec_dump(psDevInfo);
 #endif
 
 	PDUMPSUSPEND();

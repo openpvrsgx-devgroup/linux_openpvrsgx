@@ -27,6 +27,7 @@
 #include <linux/vmalloc.h>
 #include <linux/mutex.h>
 #include <linux/uaccess.h>
+#include <linux/io.h>
 
 #include "img_types.h"
 #include "servicesext.h"
@@ -175,8 +176,33 @@ static int hwrec_event;
 static int hwrec_event_open_count;
 static int hwrec_event_file_lock;
 
+/* While these could get moved into PVRSRV_SGXDEV_INFO, the more future-proof
+ * way of handling hw recovery events is by providing 1 single hwrecovery dump
+ * at a time, and adding a hwrec_info debugfs file with: process information,
+ * general driver information, and the instance of the (then multicore) pvr
+ * where the hwrec event happened.
+ */
+static u32 *hwrec_registers;
+
+static void
+hwrec_registers_dump(struct PVRSRV_SGXDEV_INFO *psDevInfo)
+{
+	int i;
+
+	if (!hwrec_registers) {
+		hwrec_registers = (u32 *) __get_free_page(GFP_KERNEL);
+		if (!hwrec_registers) {
+			pr_err("%s: failed to get free page.\n", __func__);
+			return;
+		}
+	}
+
+	for (i = 0; i < 1024; i++)
+		hwrec_registers[i] = readl(psDevInfo->pvRegsBaseKM + 4 * i);
+}
+
 void
-pvr_hwrec_dump(void)
+pvr_hwrec_dump(struct PVRSRV_SGXDEV_INFO *psDevInfo)
 {
 	mutex_lock(hwrec_mutex);
 
@@ -189,6 +215,8 @@ pvr_hwrec_dump(void)
 	do_gettimeofday(&hwrec_time);
 	pr_info("HW Recovery dump generated at %010ld%06ld\n",
 		hwrec_time.tv_sec, hwrec_time.tv_usec);
+
+	hwrec_registers_dump(psDevInfo);
 
 	hwrec_event = 1;
 
@@ -220,6 +248,43 @@ hwrec_file_release(struct inode *inode, struct file *filp)
 
 	mutex_unlock(hwrec_mutex);
 	return 0;
+}
+
+static loff_t
+hwrec_llseek_helper(struct file *filp, loff_t offset, int whence, loff_t max)
+{
+	loff_t f_pos;
+
+	switch (whence) {
+	case SEEK_SET:
+		if ((offset > max) || (offset < 0))
+			f_pos = -EINVAL;
+		else
+			f_pos = offset;
+		break;
+	case SEEK_CUR:
+		if (((filp->f_pos + offset) > max) ||
+		    ((filp->f_pos + offset) < 0))
+			f_pos = -EINVAL;
+		else
+			f_pos = filp->f_pos + offset;
+		break;
+	case SEEK_END:
+		if ((offset > 0) ||
+		    (offset < -max))
+			f_pos = -EINVAL;
+		else
+			f_pos = max + offset;
+		break;
+	default:
+		f_pos = -EINVAL;
+		break;
+	}
+
+	if (f_pos >= 0)
+		filp->f_pos = f_pos;
+
+	return f_pos;
 }
 
 /*
@@ -316,6 +381,72 @@ static const struct file_operations hwrec_event_fops = {
 };
 
 /*
+ * Reads out all readable registers.
+ */
+#define HWREC_REGS_LINE_SIZE 17
+
+static loff_t
+hwrec_regs_llseek(struct file *filp, loff_t offset, int whence)
+{
+	loff_t f_pos;
+
+	mutex_lock(hwrec_mutex);
+
+	if (hwrec_registers)
+		f_pos = hwrec_llseek_helper(filp, offset, whence,
+					    1024 * HWREC_REGS_LINE_SIZE);
+	else
+		f_pos = 0;
+
+	mutex_unlock(hwrec_mutex);
+
+	return f_pos;
+}
+
+static ssize_t
+hwrec_regs_read(struct file *filp, char __user *buf, size_t size,
+		loff_t *f_pos)
+{
+	char tmp[HWREC_REGS_LINE_SIZE + 1];
+	int i;
+
+	if ((*f_pos < 0) || (size < (sizeof(tmp) - 1)))
+		return 0;
+
+	i = ((int) *f_pos) / (sizeof(tmp) - 1);
+	if (i >= 1024)
+		return 0;
+
+	mutex_lock(hwrec_mutex);
+
+	if (!hwrec_registers)
+		size = 0;
+	else
+		size = snprintf(tmp, sizeof(tmp), "0x%03X 0x%08X\n", i * 4,
+				hwrec_registers[i]);
+
+	mutex_unlock(hwrec_mutex);
+
+	if (size > 0) {
+		if (copy_to_user(buf, tmp + *f_pos - (i * (sizeof(tmp) - 1)),
+				 size))
+			return -EFAULT;
+
+		*f_pos += size;
+		return size;
+	} else
+		return 0;
+}
+
+static const struct file_operations hwrec_regs_fops = {
+	.owner = THIS_MODULE,
+	.llseek = hwrec_regs_llseek,
+	.read = hwrec_regs_read,
+	.open = hwrec_file_open,
+	.release = hwrec_file_release,
+};
+
+/*
  *
  */
 int pvr_debugfs_init(void)
@@ -350,10 +481,19 @@ int pvr_debugfs_init(void)
 		return -ENODEV;
 	}
 
+	if (!debugfs_create_file("hwrec_regs", S_IRUSR, debugfs_dir, NULL,
+				 &hwrec_regs_fops)) {
+		debugfs_remove_recursive(debugfs_dir);
+		return -ENODEV;
+	}
+
 	return 0;
 }
 
 void pvr_debugfs_cleanup(void)
 {
 	debugfs_remove_recursive(debugfs_dir);
+
+	if (hwrec_registers)
+		free_page((u32) hwrec_registers);
 }

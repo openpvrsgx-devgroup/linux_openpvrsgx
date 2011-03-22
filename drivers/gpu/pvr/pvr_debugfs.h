@@ -27,6 +27,6 @@
 int pvr_debugfs_init(void);
 void pvr_debugfs_cleanup(void);
 
-void pvr_hwrec_dump(void);
+void pvr_hwrec_dump(struct PVRSRV_SGXDEV_INFO *psDevInfo);
 
 #endif /* _PVR_DEBUGFS_H_ */

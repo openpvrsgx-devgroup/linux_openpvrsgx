@@ -355,11 +355,10 @@ ErrorExit:
 
 	if (psBCInfo->psFuncTable)
 		OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP,
-			  sizeof(struct PVRSRV_BC_SRV2BUFFER_KMJTABLE *),
-			  psBCInfo->psFuncTable, NULL);
+			  sizeof(*psBCInfo->psFuncTable), psBCInfo->psFuncTable,
+			  NULL);
 
-	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP,
-		  sizeof(struct PVRSRV_BUFFERCLASS_INFO), psBCInfo, NULL);
+	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, sizeof(*psBCInfo), psBCInfo, NULL);
 
 	return PVRSRV_ERROR_OUT_OF_MEMORY;
 }

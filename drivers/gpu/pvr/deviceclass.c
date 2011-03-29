@@ -486,8 +486,10 @@ enum PVRSRV_ERROR PVRSRVOpenDCDeviceKM(
 {
 	struct PVRSRV_DISPLAYCLASS_INFO *psDCInfo;
 	struct PVRSRV_DISPLAYCLASS_PERCONTEXT_INFO *psDCPerContextInfo;
+	struct PVRSRV_DC_SRV2DISP_KMJTABLE *jtbl;
 	struct PVRSRV_DEVICE_NODE *psDeviceNode;
 	struct SYS_DATA *psSysData;
+	enum PVRSRV_ERROR eError;
 
 	if (!phDeviceKM || !hDevCookie) {
 		PVR_DPF(PVR_DBG_ERROR,
@@ -531,15 +533,14 @@ FoundDevice:
 	OSMemSet(psDCPerContextInfo, 0, sizeof(*psDCPerContextInfo));
 
 	if (psDCInfo->ui32RefCount++ == 0) {
-		enum PVRSRV_ERROR eError;
-		struct PVRSRV_DC_SRV2DISP_KMJTABLE *jtbl;
-
 		psDeviceNode = (struct PVRSRV_DEVICE_NODE *)hDevCookie;
 
 		jtbl = psDCInfo->psFuncTable;
 		if (!try_module_get(jtbl->owner)) {
 			PVR_DPF(PVR_DBG_ERROR, "%s: can't get DC module");
-			return PVRSRV_ERROR_INVALID_DEVICE;
+			eError = PVRSRV_ERROR_INVALID_DEVICE;
+
+			goto err1;
 		}
 
 		psDCInfo->hDevMemContext =
@@ -554,9 +555,8 @@ FoundDevice:
 		if (eError != PVRSRV_OK) {
 			PVR_DPF(PVR_DBG_ERROR,
 			       "PVRSRVOpenDCDeviceKM: Failed sync info alloc");
-			psDCInfo->ui32RefCount--;
-			module_put(jtbl->owner);
-			return eError;
+
+			goto err2;
 		}
 
 		eError = jtbl->pfnOpenDCDevice(ui32DeviceID,
@@ -567,11 +567,7 @@ FoundDevice:
 		if (eError != PVRSRV_OK) {
 			PVR_DPF(PVR_DBG_ERROR, "PVRSRVOpenDCDeviceKM: "
 					"Failed to open external DC device");
-			psDCInfo->ui32RefCount--;
-			module_put(jtbl->owner);
-			PVRSRVFreeSyncInfoKM(psDCInfo->sSystemBuffer.
-					   sDeviceClassBuffer.psKernelSyncInfo);
-			return eError;
+			goto err3;
 		}
 	}
 
@@ -584,6 +580,14 @@ FoundDevice:
 	*phDeviceKM = (void *) psDCPerContextInfo;
 
 	return PVRSRV_OK;
+err3:
+	PVRSRVFreeSyncInfoKM(psDCInfo->sSystemBuffer.
+			     sDeviceClassBuffer.psKernelSyncInfo);
+err2:
+	module_put(jtbl->owner);
+	psDCInfo->ui32RefCount--;
+err1:
+	return eError;
 }
 
 enum PVRSRV_ERROR PVRSRVEnumDCFormatsKM(void *hDeviceKM,

@@ -413,7 +413,8 @@ static void add_uniq_items(struct render_state_buf_list *dst,
 
 		for (j = 0; j < dst->cnt; j++) {
 			if (sbinf->buf_id == dst->info[j].buf_id) {
-				if (memcmp(sbinf, &dst->info[j], sizeof(sbinf)))
+				if (memcmp(sbinf, &dst->info[j],
+					   sizeof(*sbinf)))
 					dst->info[j].type |= BUF_DESC_CORRUPT;
 				break;
 			}

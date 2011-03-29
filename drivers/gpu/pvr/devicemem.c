@@ -713,7 +713,7 @@ enum PVRSRV_ERROR PVRSRVWrapExtMemoryKM(void *hDevCookie,
 	psDeviceNode = (struct PVRSRV_DEVICE_NODE *)hDevCookie;
 	PVR_ASSERT(psDeviceNode != NULL);
 
-	if (psDeviceNode == NULL) {
+	if (!psDeviceNode || (!pvLinAddr && !psExtSysPAddr)) {
 		PVR_DPF(PVR_DBG_ERROR,
 			 "PVRSRVWrapExtMemoryKM: invalid parameter");
 		return PVRSRV_ERROR_INVALID_PARAMS;

@@ -474,6 +474,7 @@ enum PVRSRV_ERROR MMU_Initialise(struct PVRSRV_DEVICE_NODE *psDeviceNode,
 	void *pvPDCpuVAddr;
 	struct IMG_DEV_PHYADDR sPDDevPAddr;
 	struct IMG_CPU_PHYADDR sCpuPAddr;
+	struct IMG_SYS_PHYADDR sSysPAddr;
 	struct MMU_CONTEXT *psMMUContext;
 	void *hPDOSMemHandle;
 	struct SYS_DATA *psSysData;
@@ -508,7 +509,7 @@ enum PVRSRV_ERROR MMU_Initialise(struct PVRSRV_DEVICE_NODE *psDeviceNode,
 		     &hPDOSMemHandle) != PVRSRV_OK) {
 			PVR_DPF(PVR_DBG_ERROR, "MMU_Initialise: "
 					"ERROR call to OSAllocPages failed");
-			return PVRSRV_ERROR_GENERIC;
+			goto err1;
 		}
 
 		if (pvPDCpuVAddr)
@@ -518,14 +519,13 @@ enum PVRSRV_ERROR MMU_Initialise(struct PVRSRV_DEVICE_NODE *psDeviceNode,
 		sPDDevPAddr =
 		    SysCpuPAddrToDevPAddr(PVRSRV_DEVICE_TYPE_SGX, sCpuPAddr);
 	} else {
-		struct IMG_SYS_PHYADDR sSysPAddr;
-
 		if (RA_Alloc(psDeviceNode->psLocalDevMemArena,
 			     SGX_MMU_PAGE_SIZE, NULL, 0, SGX_MMU_PAGE_SIZE,
 			     &(sSysPAddr.uiAddr)) != IMG_TRUE) {
 			PVR_DPF(PVR_DBG_ERROR, "MMU_Initialise: "
 					"ERROR call to RA_Alloc failed");
-			return PVRSRV_ERROR_GENERIC;
+
+			goto err1;
 		}
 
 		sCpuPAddr = SysSysPAddrToCpuPAddr(sSysPAddr);
@@ -538,7 +538,8 @@ enum PVRSRV_ERROR MMU_Initialise(struct PVRSRV_DEVICE_NODE *psDeviceNode,
 		if (!pvPDCpuVAddr) {
 			PVR_DPF(PVR_DBG_ERROR, "MMU_Initialise: "
 					"ERROR failed to map page tables");
-			return PVRSRV_ERROR_GENERIC;
+
+			goto err2;
 		}
 	}
 
@@ -551,7 +552,7 @@ enum PVRSRV_ERROR MMU_Initialise(struct PVRSRV_DEVICE_NODE *psDeviceNode,
 	} else {
 		PVR_DPF(PVR_DBG_ERROR,
 			 "MMU_Initialise: pvPDCpuVAddr invalid");
-		return PVRSRV_ERROR_GENERIC;
+		goto err3;
 	}
 
 	for (i = 0; i < SGX_MMU_PD_SIZE; i++)
@@ -575,6 +576,24 @@ enum PVRSRV_ERROR MMU_Initialise(struct PVRSRV_DEVICE_NODE *psDeviceNode,
 
 
 	return PVRSRV_OK;
+err3:
+	if (psDeviceNode->psLocalDevMemArena)
+		OSUnMapPhysToLin((void __iomem __force *)pvPDCpuVAddr,
+				 SGX_MMU_PAGE_SIZE, PVRSRV_HAP_WRITECOMBINE |
+					PVRSRV_HAP_KERNEL_ONLY,
+				 hPDOSMemHandle);
+err2:
+	if (!psDeviceNode->psLocalDevMemArena)
+		OSFreePages(PVRSRV_HAP_WRITECOMBINE | PVRSRV_HAP_KERNEL_ONLY,
+			    SGX_MMU_PAGE_SIZE, pvPDCpuVAddr, hPDOSMemHandle);
+	else
+		RA_Free(psDeviceNode->psLocalDevMemArena,
+			sSysPAddr.uiAddr, IMG_FALSE);
+err1:
+	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, sizeof(struct MMU_CONTEXT),
+		  psMMUContext, NULL);
+
+	return PVRSRV_ERROR_GENERIC;
 }
 
 void MMU_Finalise(struct MMU_CONTEXT *psMMUContext)

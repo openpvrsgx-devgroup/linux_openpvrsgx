@@ -587,6 +587,9 @@ err2:
 	module_put(jtbl->owner);
 	psDCInfo->ui32RefCount--;
 err1:
+	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, sizeof(*psDCPerContextInfo),
+		  psDCPerContextInfo, NULL);
+
 	return eError;
 }
 

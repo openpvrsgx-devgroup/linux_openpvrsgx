@@ -150,13 +150,14 @@ static IMG_BOOL _Resize(struct HASH_TABLE *pHash, u32 uNewSize)
 	if (uNewSize != pHash->uSize) {
 		struct BUCKET **ppNewTable;
 		u32 uIndex;
+		size_t table_size;
 
 		PVR_DPF(PVR_DBG_MESSAGE,
 			 "HASH_Resize: oldsize=0x%x  newsize=0x%x  count=0x%x",
 			 pHash->uSize, uNewSize, pHash->uCount);
 
-		if (OSAllocMem(PVRSRV_PAGEABLE_SELECT,
-			   sizeof(struct BUCKET *) * uNewSize,
+		table_size = sizeof(struct BUCKET *) * uNewSize;
+		if (OSAllocMem(PVRSRV_PAGEABLE_SELECT, table_size,
 			   (void **) &ppNewTable, NULL) != PVRSRV_OK)
 			return IMG_FALSE;
 
@@ -164,8 +165,11 @@ static IMG_BOOL _Resize(struct HASH_TABLE *pHash, u32 uNewSize)
 			ppNewTable[uIndex] = NULL;
 
 		if (_Rehash(pHash, pHash->ppBucketTable, pHash->uSize,
-			    ppNewTable, uNewSize) != PVRSRV_OK)
+			    ppNewTable, uNewSize) != PVRSRV_OK) {
+			OSFreeMem(PVRSRV_PAGEABLE_SELECT, table_size,
+				  ppNewTable, NULL);
 			return IMG_FALSE;
+		}
 
 		OSFreeMem(PVRSRV_PAGEABLE_SELECT,
 			  sizeof(struct BUCKET *) * pHash->uSize,

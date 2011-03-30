@@ -1448,7 +1448,12 @@ err3:
 		  sizeof(struct PVRSRV_BC_BUFFER) * sBufferInfo.ui32BufferCount,
 		  psBCInfo->psBuffer, NULL);
 err2:
+	psBCInfo->psFuncTable->pfnCloseBCDevice(psBCInfo->hExtDevice);
 err1:
+	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, sizeof(*psBCPerContextInfo),
+		  psBCPerContextInfo, NULL);
+	psBCInfo->ui32RefCount--;
+
 	return eError;
 }
 

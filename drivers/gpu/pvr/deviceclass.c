@@ -1364,7 +1364,7 @@ FoundDevice:
 		if (eError != PVRSRV_OK) {
 			PVR_DPF(PVR_DBG_ERROR, "PVRSRVOpenBCDeviceKM: "
 					"Failed to open external BC device");
-			return eError;
+			goto err1;
 		}
 
 		eError =
@@ -1373,7 +1373,7 @@ FoundDevice:
 		if (eError != PVRSRV_OK) {
 			PVR_DPF(PVR_DBG_ERROR,
 				"PVRSRVOpenBCDeviceKM : Failed to get BC Info");
-			return eError;
+			goto err2;
 		}
 
 		psBCInfo->ui32BufferCount = sBufferInfo.ui32BufferCount;
@@ -1386,7 +1386,7 @@ FoundDevice:
 		if (eError != PVRSRV_OK) {
 			PVR_DPF(PVR_DBG_ERROR, "PVRSRVOpenBCDeviceKM: "
 					"Failed to allocate BC buffers");
-			return eError;
+			goto err2;
 		}
 		OSMemSet(psBCInfo->psBuffer, 0,
 			 sizeof(struct PVRSRV_BC_BUFFER) *
@@ -1401,7 +1401,7 @@ FoundDevice:
 			if (eError != PVRSRV_OK) {
 				PVR_DPF(PVR_DBG_ERROR, "PVRSRVOpenBCDeviceKM: "
 						"Failed sync info alloc");
-				goto ErrorExit;
+				goto err3;
 			}
 
 			eError = psBCInfo->psFuncTable->pfnGetBCBuffer(
@@ -1414,7 +1414,7 @@ FoundDevice:
 			if (eError != PVRSRV_OK) {
 				PVR_DPF(PVR_DBG_ERROR, "PVRSRVOpenBCDeviceKM: "
 						"Failed to get BC buffers");
-				goto ErrorExit;
+				goto err3;
 			}
 
 			psBCInfo->psBuffer[i].sDeviceClassBuffer.
@@ -1437,8 +1437,7 @@ FoundDevice:
 
 	return PVRSRV_OK;
 
-ErrorExit:
-
+err3:
 	for (i = 0; i < psBCInfo->ui32BufferCount; i++) {
 		if (psBCInfo->psBuffer[i].sDeviceClassBuffer.psKernelSyncInfo) {
 			PVRSRVFreeSyncInfoKM(psBCInfo->psBuffer[i].
@@ -1452,7 +1451,8 @@ ErrorExit:
 			  sizeof(struct PVRSRV_BC_BUFFER), psBCInfo->psBuffer,
 			  NULL);
 	}
-
+err2:
+err1:
 	return eError;
 }
 

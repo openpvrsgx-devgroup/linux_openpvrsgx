@@ -149,7 +149,6 @@ static IMG_BOOL _Resize(struct HASH_TABLE *pHash, u32 uNewSize)
 {
 	if (uNewSize != pHash->uSize) {
 		struct BUCKET **ppNewTable;
-		u32 uIndex;
 		size_t table_size;
 
 		PVR_DPF(PVR_DBG_MESSAGE,
@@ -161,8 +160,7 @@ static IMG_BOOL _Resize(struct HASH_TABLE *pHash, u32 uNewSize)
 			   (void **) &ppNewTable, NULL) != PVRSRV_OK)
 			return IMG_FALSE;
 
-		for (uIndex = 0; uIndex < uNewSize; uIndex++)
-			ppNewTable[uIndex] = NULL;
+		memset(ppNewTable, 0, table_size);
 
 		if (_Rehash(pHash, pHash->ppBucketTable, pHash->uSize,
 			    ppNewTable, uNewSize) != PVRSRV_OK) {

@@ -1304,6 +1304,7 @@ enum PVRSRV_ERROR PVRSRVOpenBCDeviceKM(
 	struct PVRSRV_BUFFERCLASS_INFO *psBCInfo;
 	struct PVRSRV_BUFFERCLASS_PERCONTEXT_INFO *psBCPerContextInfo;
 	struct PVRSRV_DEVICE_NODE *psDeviceNode;
+	struct BUFFER_INFO sBufferInfo;
 	struct SYS_DATA *psSysData;
 	u32 i;
 	enum PVRSRV_ERROR eError;
@@ -1351,8 +1352,6 @@ FoundDevice:
 	OSMemSet(psBCPerContextInfo, 0, sizeof(*psBCPerContextInfo));
 
 	if (psBCInfo->ui32RefCount++ == 0) {
-		struct BUFFER_INFO sBufferInfo;
-
 		psDeviceNode = (struct PVRSRV_DEVICE_NODE *)hDevCookie;
 
 		psBCInfo->hDevMemContext =
@@ -1445,12 +1444,9 @@ err3:
 							     psKernelSyncInfo);
 		}
 	}
-
-	if (psBCInfo->psBuffer) {
-		OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP,
-			  sizeof(struct PVRSRV_BC_BUFFER), psBCInfo->psBuffer,
-			  NULL);
-	}
+	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP,
+		  sizeof(struct PVRSRV_BC_BUFFER) * sBufferInfo.ui32BufferCount,
+		  psBCInfo->psBuffer, NULL);
 err2:
 err1:
 	return eError;

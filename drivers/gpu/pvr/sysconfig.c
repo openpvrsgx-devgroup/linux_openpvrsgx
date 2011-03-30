@@ -303,10 +303,16 @@ enum PVRSRV_ERROR SysInitialise(struct platform_device *pdev)
 	    SYS_OMAP3430_GP11TIMER_PHYS_BASE + SYS_OMAP3430_GPTIMER_REGS;
 	gpsSysData->pvSOCTimerRegisterKM = NULL;
 	gpsSysData->hSOCTimerRegisterOSMemHandle = NULL;
-	OSReservePhys(TimerRegPhysBase, 4,
+	eError = OSReservePhys(TimerRegPhysBase, 4,
 		      PVRSRV_HAP_MULTI_PROCESS | PVRSRV_HAP_UNCACHED,
 		      (void **)&gpsSysData->pvSOCTimerRegisterKM,
 		      &gpsSysData->hSOCTimerRegisterOSMemHandle);
+	if (eError != PVRSRV_OK) {
+		PVR_DPF(PVR_DBG_ERROR, "%s: OSReservePhys failed");
+		SysDeinitialise(gpsSysData);
+		gpsSysData = NULL;
+		return eError;
+	}
 
 	gpsSysSpecificData->ui32SrcClockDiv = 3;
 

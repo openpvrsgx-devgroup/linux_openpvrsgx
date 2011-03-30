@@ -698,25 +698,6 @@ enum PVRSRV_ERROR PVRSRVGetMiscInfoKM(struct PVRSRV_MISC_INFO *psMiscInfo)
 	return PVRSRV_OK;
 }
 
-enum PVRSRV_ERROR PVRSRVGetFBStatsKM(u32 *pui32Total, u32 *pui32Available)
-{
-	u32 ui32Total = 0, i = 0;
-	u32 ui32Available = 0;
-
-	*pui32Total = 0;
-	*pui32Available = 0;
-
-	while (BM_ContiguousStatistics(i, &ui32Total, &ui32Available) ==
-	       IMG_TRUE) {
-		*pui32Total += ui32Total;
-		*pui32Available += ui32Available;
-
-		i++;
-	}
-
-	return PVRSRV_OK;
-}
-
 IMG_BOOL PVRSRVDeviceLISR(struct PVRSRV_DEVICE_NODE *psDeviceNode)
 {
 	struct SYS_DATA *psSysData;

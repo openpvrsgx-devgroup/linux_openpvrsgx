@@ -1078,14 +1078,6 @@ void *BM_HandleToOSMemHandle(void *hBuf)
 	return pBuf->hOSMemHandle;
 }
 
-IMG_BOOL BM_ContiguousStatistics(u32 uFlags, u32 *pTotalBytes,
-				 u32 *pAvailableBytes)
-{
-	if (pAvailableBytes || pTotalBytes || uFlags)
-		;
-	return IMG_FALSE;
-}
-
 static IMG_BOOL DevMemoryAlloc(struct BM_CONTEXT *pBMContext,
 	       struct BM_MAPPING *pMapping, u32 uFlags, u32 dev_vaddr_alignment,
 	       struct IMG_DEV_VIRTADDR *pDevVAddr)

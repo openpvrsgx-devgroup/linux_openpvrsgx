@@ -205,8 +205,6 @@ enum PVRSRV_ERROR PVRSRVFreeSyncInfoKM(
 
 enum PVRSRV_ERROR PVRSRVGetMiscInfoKM(struct PVRSRV_MISC_INFO *psMiscInfo);
 
-enum PVRSRV_ERROR PVRSRVGetFBStatsKM(u32 *pui32Total, u32 *pui32Available);
-
 enum PVRSRV_ERROR PVRSRVAllocSharedSysMemoryKM(
 		struct PVRSRV_PER_PROCESS_DATA *psPerProc, u32 ui32Flags,
 		u32 ui32Size, struct PVRSRV_KERNEL_MEM_INFO **ppsKernelMemInfo);

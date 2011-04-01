@@ -95,6 +95,7 @@ static int pvr_open(struct inode unref__ * inode, struct file *filp)
 
 	priv->ui32OpenPID = pid;
 	priv->hBlockAlloc = block_alloc;
+	priv->proc = PVRSRVPerProcessData(pid);
 	filp->private_data = priv;
 
 	INIT_LIST_HEAD(&priv->event_list);

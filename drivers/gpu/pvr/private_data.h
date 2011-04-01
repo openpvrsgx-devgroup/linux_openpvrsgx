@@ -33,6 +33,7 @@
 struct PVRSRV_FILE_PRIVATE_DATA {
 	u32 ui32OpenPID;
 	void *hBlockAlloc;
+	struct PVRSRV_PER_PROCESS_DATA *proc;
 
 	wait_queue_head_t event_wait;
 	struct list_head event_list;

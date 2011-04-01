@@ -173,6 +173,7 @@ long PVRSRV_BridgeDispatchKM(struct file *filp, unsigned int cmd,
 	    (struct PVRSRV_BRIDGE_PACKAGE __user *)arg;
 	struct PVRSRV_BRIDGE_PACKAGE sBridgePackageKM;
 	u32 ui32PID = OSGetCurrentProcessIDKM();
+	struct PVRSRV_FILE_PRIVATE_DATA *priv;
 	struct PVRSRV_PER_PROCESS_DATA *psPerProc;
 	int err = -EFAULT;
 
@@ -196,33 +197,17 @@ long PVRSRV_BridgeDispatchKM(struct file *filp, unsigned int cmd,
 			   sizeof(struct PVRSRV_BRIDGE_PACKAGE)) != PVRSRV_OK)
 		goto unlock_and_return;
 
+	priv = filp->private_data;
+	psPerProc = priv->proc;
+	BUG_ON(!psPerProc);
+
 	if (ui32BridgeID !=
 	    PVRSRV_GET_BRIDGE_ID(PVRSRV_BRIDGE_CONNECT_SERVICES)) {
-		enum PVRSRV_ERROR eError;
-
-		eError = PVRSRVLookupHandle(KERNEL_HANDLE_BASE,
-					    (void **)&psPerProc,
-					    sBridgePackageKM.hKernelServices,
-					    PVRSRV_HANDLE_TYPE_PERPROC_DATA);
-		if (eError != PVRSRV_OK) {
-			PVR_DPF(PVR_DBG_ERROR,
-				 "%s: Invalid kernel services handle (%d)",
-				 __func__, eError);
-			goto unlock_and_return;
-		}
-
 		if (psPerProc->ui32PID != ui32PID) {
 			PVR_DPF(PVR_DBG_ERROR,
 				 "%s: Process %d tried to access data "
 				 "belonging to process %d", __func__,
 				 ui32PID, psPerProc->ui32PID);
-			goto unlock_and_return;
-		}
-	} else {
-		psPerProc = PVRSRVPerProcessData(ui32PID);
-		if (psPerProc == NULL) {
-			PVR_DPF(PVR_DBG_ERROR, "PVRSRV_BridgeDispatchKM: "
-				 "Couldn't create per-process data area");
 			goto unlock_and_return;
 		}
 	}

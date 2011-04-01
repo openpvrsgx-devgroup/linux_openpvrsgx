@@ -58,6 +58,8 @@
 #include "pvrversion.h"
 #include "sgx_options.h"
 
+#include "pvr_trace_cmd.h"
+
 #ifdef CONFIG_DEBUG_FS
 #include "pvr_debugfs.h"
 #endif
@@ -665,6 +667,47 @@ static void pr_err_sgx_registers(struct PVRSRV_SGXDEV_INFO *psDevInfo)
 		readl(psDevInfo->pvRegsBaseKM + EUR_CR_CLKGATECTL));
 }
 
+#ifdef CONFIG_PVR_TRACE_CMD
+static void pr_err_cmd_trace(void)
+{
+	u8 *snapshot;
+	size_t snapshot_size;
+	loff_t snapshot_ofs;
+	char *str_buf;
+	size_t str_len;
+	int r;
+
+	str_buf = kmalloc(PAGE_SIZE, GFP_KERNEL);
+	if (!str_buf) {
+		pr_err("%s: out of mem\n", __func__);
+		return;
+	}
+
+	pvr_trcmd_lock();
+
+	r = pvr_trcmd_create_snapshot(&snapshot, &snapshot_size);
+	if (r < 0) {
+		pvr_trcmd_unlock();
+		kfree(str_buf);
+		pr_err("%s: can't create snapshot (%d)\n", __func__, r);
+
+		return;
+	}
+
+	pvr_trcmd_unlock();
+
+	snapshot_ofs = 0;
+	do {
+		str_len = pvr_trcmd_print(str_buf, PAGE_SIZE, snapshot,
+					snapshot_size, &snapshot_ofs);
+		printk(KERN_DEBUG "%s", str_buf);
+	} while (str_len);
+
+	pvr_trcmd_destroy_snapshot(snapshot);
+	kfree(str_buf);
+}
+#endif
+
 /* Should be called with pvr_lock held */
 void
 HWRecoveryResetSGX(struct PVRSRV_DEVICE_NODE *psDeviceNode, const char *caller)
@@ -692,6 +735,9 @@ HWRecoveryResetSGX(struct PVRSRV_DEVICE_NODE *psDeviceNode, const char *caller)
 	pr_err_sgx_registers(psDevInfo);
 #ifdef PVRSRV_USSE_EDM_STATUS_DEBUG
 	edm_trace_print(psDevInfo, NULL, 0);
+#endif
+#ifdef CONFIG_PVR_TRACE_CMD
+	pr_err_cmd_trace();
 #endif
 
 #ifdef CONFIG_DEBUG_FS

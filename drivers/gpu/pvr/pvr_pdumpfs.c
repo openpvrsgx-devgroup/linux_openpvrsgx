@@ -786,7 +786,7 @@ pdumpfs_stream_buffer_clear(char __user *buf, size_t size)
 	if (size >= sizeof(tmp)) {
 		int i;
 
-		for (i = 0; (i  + sizeof(tmp)) < size; i += sizeof(tmp))
+		for (i = 0; (i  + sizeof(tmp)) <= size; i += sizeof(tmp))
 			if (copy_to_user(buf + i, tmp, sizeof(tmp)))
 				return -EFAULT;
 		return i;

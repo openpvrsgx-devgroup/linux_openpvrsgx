@@ -37,6 +37,7 @@
 #include "pvr_debug.h"
 #include "sgxutils.h"
 #include "perproc.h"
+#include "pvr_trace_cmd.h"
 
 enum PVRSRV_ERROR SGXDoKickKM(void *hDevHandle, struct SGX_CCB_KICK *psCCBKick,
 			      struct PVRSRV_PER_PROCESS_DATA *proc)
@@ -49,6 +50,8 @@ enum PVRSRV_ERROR SGXDoKickKM(void *hDevHandle, struct SGX_CCB_KICK *psCCBKick,
 	u32 i;
 	struct PVRSRV_DEVICE_NODE *psDeviceNode;
 	struct PVRSRV_SGXDEV_INFO *psDevInfo;
+	struct pvr_trcmd_sgxkick *ktrace;
+	int trcmd_type;
 
 	psDeviceNode = (struct PVRSRV_DEVICE_NODE *)hDevHandle;
 	psDevInfo = (struct PVRSRV_SGXDEV_INFO *)psDeviceNode->pvDevice;
@@ -67,6 +70,12 @@ enum PVRSRV_ERROR SGXDoKickKM(void *hDevHandle, struct SGX_CCB_KICK *psCCBKick,
 	    CCB_DATA_FROM_OFFSET(struct SGXMKIF_CMDTA_SHARED, psCCBMemInfo,
 				 psCCBKick, ui32CCBOffset);
 
+	trcmd_type = psCCBKick->bFirstKickOrResume ?
+				PVR_TRCMD_SGX_FIRSTKICK : PVR_TRCMD_SGX_KICK;
+	pvr_trcmd_lock();
+	ktrace = pvr_trcmd_alloc(trcmd_type, proc->ui32PID, proc->name,
+				 sizeof(*ktrace));
+
 	if (psCCBKick->hTA3DSyncInfo) {
 		psSyncInfo =
 		    (struct PVRSRV_KERNEL_SYNC_INFO *)psCCBKick->hTA3DSyncInfo;
@@ -78,6 +87,10 @@ enum PVRSRV_ERROR SGXDoKickKM(void *hDevHandle, struct SGX_CCB_KICK *psCCBKick,
 
 		if (psCCBKick->bTADependency)
 			psSyncInfo->psSyncData->ui32WriteOpsPending++;
+
+		pvr_trcmd_set_syn(&ktrace->ta3d_syn, psSyncInfo);
+	} else {
+		pvr_trcmd_clear_syn(&ktrace->ta3d_syn);
 	}
 
 	if (psCCBKick->hTASyncInfo != NULL) {
@@ -93,6 +106,10 @@ enum PVRSRV_ERROR SGXDoKickKM(void *hDevHandle, struct SGX_CCB_KICK *psCCBKick,
 		    psSyncInfo->psSyncData->ui32ReadOpsPending++;
 		psTACmd->ui32TATQSyncWriteOpsPendingVal =
 		    psSyncInfo->psSyncData->ui32WriteOpsPending;
+
+		pvr_trcmd_set_syn(&ktrace->tatq_syn, psSyncInfo);
+	} else {
+		pvr_trcmd_clear_syn(&ktrace->tatq_syn);
 	}
 
 	if (psCCBKick->h3DSyncInfo != NULL) {
@@ -108,6 +125,10 @@ enum PVRSRV_ERROR SGXDoKickKM(void *hDevHandle, struct SGX_CCB_KICK *psCCBKick,
 		    psSyncInfo->psSyncData->ui32ReadOpsPending++;
 		psTACmd->ui323DTQSyncWriteOpsPendingVal =
 		    psSyncInfo->psSyncData->ui32WriteOpsPending;
+
+		pvr_trcmd_set_syn(&ktrace->_3dtq_syn, psSyncInfo);
+	} else {
+		pvr_trcmd_clear_syn(&ktrace->_3dtq_syn);
 	}
 
 	psTACmd->ui32NumTAStatusVals = psCCBKick->ui32NumTAStatusVals;
@@ -140,7 +161,12 @@ enum PVRSRV_ERROR SGXDoKickKM(void *hDevHandle, struct SGX_CCB_KICK *psCCBKick,
 	}
 
 	psTACmd->ui32NumSrcSyncs = psCCBKick->ui32NumSrcSyncs;
-	for (i = 0; i < psCCBKick->ui32NumSrcSyncs; i++) {
+	for (i = 0; i < SGX_MAX_SRC_SYNCS; i++) {
+		if (i >= psCCBKick->ui32NumSrcSyncs) {
+			pvr_trcmd_clear_syn(&ktrace->src_syn[i]);
+			continue;
+		}
+
 		psSyncInfo =
 		    (struct PVRSRV_KERNEL_SYNC_INFO *)psCCBKick->
 		    ahSrcKernelSyncInfo[i];
@@ -156,6 +182,7 @@ enum PVRSRV_ERROR SGXDoKickKM(void *hDevHandle, struct SGX_CCB_KICK *psCCBKick,
 		psTACmd->asSrcSyncs[i].ui32WriteOpsPendingVal =
 			psSyncInfo->psSyncData->ui32WriteOpsPending;
 
+		pvr_trcmd_set_syn(&ktrace->src_syn[i], psSyncInfo);
 	}
 
 	if (psCCBKick->bFirstKickOrResume &&
@@ -203,6 +230,8 @@ enum PVRSRV_ERROR SGXDoKickKM(void *hDevHandle, struct SGX_CCB_KICK *psCCBKick,
 			    ui32WriteOpsPendingVal =
 				    psSyncInfo->psSyncData->
 							ui32WriteOpsPending++;
+
+			pvr_trcmd_set_syn(&ktrace->dst_syn, psSyncInfo);
 
 #if defined(PDUMP)
 			if (PDumpIsCaptureFrameKM()) {
@@ -294,7 +323,11 @@ enum PVRSRV_ERROR SGXDoKickKM(void *hDevHandle, struct SGX_CCB_KICK *psCCBKick,
 			    ui32ReadOpsPendingVal = 0;
 			psHWDeviceSyncList->asSyncData[i].
 			    ui32WriteOpsPendingVal = 0;
+
+			pvr_trcmd_clear_syn(&ktrace->dst_syn);
 		}
+	} else {
+		pvr_trcmd_clear_syn(&ktrace->dst_syn);
 	}
 #if defined(PDUMP)
 	if (PDumpIsCaptureFrameKM()) {
@@ -396,6 +429,9 @@ enum PVRSRV_ERROR SGXDoKickKM(void *hDevHandle, struct SGX_CCB_KICK *psCCBKick,
 		}
 	}
 #endif
+
+	pvr_trcmd_set_data(&ktrace->ctx, psCCBKick->sCommand.ui32Data[1]);
+	pvr_trcmd_unlock();
 
 	/* to aid in determining the next power down delay */
 	sgx_mark_new_command(psDeviceNode);

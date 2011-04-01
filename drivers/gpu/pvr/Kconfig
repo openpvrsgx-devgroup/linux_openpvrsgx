@@ -74,6 +74,35 @@ config PVR_EDM_DEBUG
 	    of a HW recovery event. You also need a micro kernel that was
 	    configured to generate this trace.
 
+config PVR_TRACE_CMD
+	depends on PVR
+	bool "Enable GPU command tracing"
+	default n
+	help
+	    This will enable a lightweight tracer of commands submitted
+	    to the GPU.
+
+	    Besides the command type the trace output will provide the
+	    timestamp, id and name of the submitting process and a
+	    a snapshots of the synchronization counters related to the
+	    given command.
+
+	    The trace can help for example in debugging dead-lock
+	    situations caused by circular lock dependencies.
+
+config PVR_TRACE_CMD_BUF_SHIFT
+	int "Command tracing buf size"
+	range 1 10
+	default 3
+	depends on PVR_TRACE_CMD
+	help
+	    Select the number of pages (as a power of 2) set aside for
+	    the command trace buffer.
+	    Examples:
+		    1  -> 4kB
+		    3  -> 32kB
+		    10 -> 4MB
+
 config PVR_NO_HARDWARE
 	bool
 	default n

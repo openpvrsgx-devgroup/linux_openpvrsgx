@@ -134,6 +134,9 @@ enum PVRSRV_ERROR PVRSRVPerProcessDataConnect(u32 ui32PID)
 		OSMemSet(psPerProc, 0, sizeof(*psPerProc));
 		psPerProc->hBlockAlloc = hBlockAlloc;
 
+		get_proc_name(ui32PID, psPerProc->name,
+			      sizeof(psPerProc->name));
+
 		if (!HASH_Insert(psHashTab, (u32) ui32PID, (u32)psPerProc)) {
 			PVR_DPF(PVR_DBG_ERROR, "PVRSRVPerProcessDataConnect: "
 			   "Couldn't insert per-process data into hash table");

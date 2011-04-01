@@ -27,6 +27,8 @@
 #ifndef __PERPROC_H__
 #define __PERPROC_H__
 
+#include <linux/sched.h>
+
 #include "img_types.h"
 #include "resman.h"
 
@@ -34,6 +36,7 @@
 
 struct PVRSRV_PER_PROCESS_DATA {
 	u32 ui32PID;
+	char name[TASK_COMM_LEN];
 	void *hBlockAlloc;
 	struct RESMAN_CONTEXT *hResManContext;
 	void *hPerProcData;

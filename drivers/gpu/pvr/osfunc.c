@@ -1122,6 +1122,16 @@ enum PVRSRV_ERROR OSCopyFromUser(void *pvProcess, void *pvDest,
 		return PVRSRV_ERROR_GENERIC;
 }
 
+void get_proc_name(int pid, char *buf, size_t buf_size)
+{
+	struct task_struct *tsk;
+
+	rcu_read_lock();
+	tsk = pid_task(find_vpid(pid), PIDTYPE_PID);
+	strlcpy(buf, tsk->comm, buf_size);
+	rcu_read_unlock();
+}
+
 IMG_BOOL OSAccessOK(enum IMG_VERIFY_TEST eVerification,
 		    const void __user *pvUserPtr, u32 ui32Bytes)
 {

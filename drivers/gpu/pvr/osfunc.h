@@ -216,4 +216,6 @@ enum PVRSRV_ERROR OSAcquirePhysPageAddr(void *pvCPUVAddr, u32 ui32Bytes,
 					void **phOSWrapMem);
 enum PVRSRV_ERROR OSReleasePhysPageAddr(void *hOSWrapMem);
 
+void get_proc_name(int pid, char *buf, size_t buf_size);
+
 #endif

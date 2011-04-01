@@ -101,7 +101,7 @@ exit:
 	return r;
 }
 
-static int pvr_debugfs_set(void *data, u64 val)
+static int pvr_debugfs_reset_wrapper(void *data, u64 val)
 {
 	u32 *var = data;
 
@@ -111,7 +111,8 @@ static int pvr_debugfs_set(void *data, u64 val)
 	BUG();
 }
 
-DEFINE_SIMPLE_ATTRIBUTE(pvr_debugfs_fops, NULL, pvr_debugfs_set, "%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(pvr_debugfs_reset_fops, NULL,
+			pvr_debugfs_reset_wrapper, "%llu\n");
 
 #ifdef PVRSRV_USSE_EDM_STATUS_DEBUG
 /*
@@ -301,6 +302,156 @@ static const struct file_operations pvr_dbg_trcmd_fops = {
 	.read		= pvr_dbg_trcmd_read,
 };
 #endif
+
+/*
+ * llseek helper.
+ */
+static loff_t
+pvr_debugfs_llseek_helper(struct file *filp, loff_t offset, int whence,
+			  loff_t max)
+{
+	loff_t f_pos;
+
+	switch (whence) {
+	case SEEK_SET:
+		if ((offset > max) || (offset < 0))
+			f_pos = -EINVAL;
+		else
+			f_pos = offset;
+		break;
+	case SEEK_CUR:
+		if (((filp->f_pos + offset) > max) ||
+		    ((filp->f_pos + offset) < 0))
+			f_pos = -EINVAL;
+		else
+			f_pos = filp->f_pos + offset;
+		break;
+	case SEEK_END:
+		if ((offset > 0) ||
+		    (offset < -max))
+			f_pos = -EINVAL;
+		else
+			f_pos = max + offset;
+		break;
+	default:
+		f_pos = -EINVAL;
+		break;
+	}
+
+	if (f_pos >= 0)
+		filp->f_pos = f_pos;
+
+	return f_pos;
+}
+
+/*
+ * One shot register dump.
+ *
+ * Only in D0 can we read all registers. Our driver currently only does either
+ * D0 or D3. In D3 any register read results in a SIGBUS. There is a possibility
+ * that in D1 or possibly D2 all registers apart from [0xA08:0xA4C] can be read.
+ */
+static int
+pvr_debugfs_regs_open(struct inode *inode, struct file *filp)
+{
+	struct PVRSRV_DEVICE_NODE *node;
+	struct PVRSRV_SGXDEV_INFO *dev;
+	enum PVRSRV_ERROR error;
+	u32 *regs;
+	int i, ret = 0;
+
+	regs = (u32 *) __get_free_page(GFP_KERNEL);
+	if (!regs)
+		return -ENOMEM;
+
+	pvr_lock();
+
+	if (pvr_is_disabled()) {
+		ret = -ENODEV;
+		goto exit;
+	}
+
+	node = get_sgx_node();
+	if (!node) {
+		ret = -ENODEV;
+		goto exit;
+	}
+	dev = node->pvDevice;
+
+	error = PVRSRVSetDevicePowerStateKM(node->sDevId.ui32DeviceIndex,
+					    PVRSRV_POWER_STATE_D0);
+	if (error != PVRSRV_OK) {
+		ret = -EIO;
+		goto exit;
+	}
+
+	for (i = 0; i < 1024; i++)
+		regs[i] = readl(dev->pvRegsBaseKM + 4 * i);
+
+	filp->private_data = regs;
+
+	SGXTestActivePowerEvent(node);
+
+ exit:
+	pvr_unlock();
+
+	return ret;
+}
+
+static int
+pvr_debugfs_regs_release(struct inode *inode, struct file *filp)
+{
+	free_page((unsigned long) filp->private_data);
+
+	return 0;
+}
+
+#define REGS_DUMP_LINE_SIZE 17
+#define REGS_DUMP_FORMAT "0x%03X 0x%08X\n"
+
+static loff_t
+pvr_debugfs_regs_llseek(struct file *filp, loff_t offset, int whence)
+{
+	return pvr_debugfs_llseek_helper(filp, offset, whence,
+					 1024 * REGS_DUMP_LINE_SIZE);
+}
+
+static ssize_t
+pvr_debugfs_regs_read(struct file *filp, char __user *buf, size_t size,
+		      loff_t *f_pos)
+{
+	char tmp[REGS_DUMP_LINE_SIZE + 1];
+	u32 *regs = filp->private_data;
+	int i;
+
+	if ((*f_pos < 0) || (size < (sizeof(tmp) - 1)))
+		return 0;
+
+	i = ((int) *f_pos) / (sizeof(tmp) - 1);
+	if (i >= 1024)
+		return 0;
+
+	size = snprintf(tmp, sizeof(tmp), REGS_DUMP_FORMAT, i * 4, regs[i]);
+
+	if (size > 0) {
+		if (copy_to_user(buf, tmp + *f_pos - (i * (sizeof(tmp) - 1)),
+				 size))
+			return -EFAULT;
+
+		*f_pos += size;
+		return size;
+	} else
+		return 0;
+}
+
+static const struct file_operations pvr_debugfs_regs_fops = {
+	.owner = THIS_MODULE,
+	.llseek = pvr_debugfs_regs_llseek,
+	.read = pvr_debugfs_regs_read,
+	.open = pvr_debugfs_regs_open,
+	.release = pvr_debugfs_regs_release,
+};
+
 
 /*
  *
@@ -752,43 +903,6 @@ hwrec_file_release(struct inode *inode, struct file *filp)
 	return 0;
 }
 
-static loff_t
-hwrec_llseek_helper(struct file *filp, loff_t offset, int whence, loff_t max)
-{
-	loff_t f_pos;
-
-	switch (whence) {
-	case SEEK_SET:
-		if ((offset > max) || (offset < 0))
-			f_pos = -EINVAL;
-		else
-			f_pos = offset;
-		break;
-	case SEEK_CUR:
-		if (((filp->f_pos + offset) > max) ||
-		    ((filp->f_pos + offset) < 0))
-			f_pos = -EINVAL;
-		else
-			f_pos = filp->f_pos + offset;
-		break;
-	case SEEK_END:
-		if ((offset > 0) ||
-		    (offset < -max))
-			f_pos = -EINVAL;
-		else
-			f_pos = max + offset;
-		break;
-	default:
-		f_pos = -EINVAL;
-		break;
-	}
-
-	if (f_pos >= 0)
-		filp->f_pos = f_pos;
-
-	return f_pos;
-}
-
 /*
  * Provides a hwrec timestamp for unique dumping.
  */
@@ -885,8 +999,6 @@ static const struct file_operations hwrec_event_fops = {
 /*
  * Reads out all readable registers.
  */
-#define HWREC_REGS_LINE_SIZE 17
-
 static loff_t
 hwrec_regs_llseek(struct file *filp, loff_t offset, int whence)
 {
@@ -895,8 +1007,8 @@ hwrec_regs_llseek(struct file *filp, loff_t offset, int whence)
 	mutex_lock(hwrec_mutex);
 
 	if (hwrec_registers)
-		f_pos = hwrec_llseek_helper(filp, offset, whence,
-					    1024 * HWREC_REGS_LINE_SIZE);
+		f_pos = pvr_debugfs_llseek_helper(filp, offset, whence,
+						  1024 * REGS_DUMP_LINE_SIZE);
 	else
 		f_pos = 0;
 
@@ -909,7 +1021,7 @@ static ssize_t
 hwrec_regs_read(struct file *filp, char __user *buf, size_t size,
 		loff_t *f_pos)
 {
-	char tmp[HWREC_REGS_LINE_SIZE + 1];
+	char tmp[REGS_DUMP_LINE_SIZE + 1];
 	int i;
 
 	if ((*f_pos < 0) || (size < (sizeof(tmp) - 1)))
@@ -924,7 +1036,7 @@ hwrec_regs_read(struct file *filp, char __user *buf, size_t size,
 	if (!hwrec_registers)
 		size = 0;
 	else
-		size = snprintf(tmp, sizeof(tmp), "0x%03X 0x%08X\n", i * 4,
+		size = snprintf(tmp, sizeof(tmp), REGS_DUMP_FORMAT, i * 4,
 				hwrec_registers[i]);
 
 	mutex_unlock(hwrec_mutex);
@@ -961,8 +1073,8 @@ hwrec_mem_llseek(struct file *filp, loff_t offset, int whence)
 	mutex_lock(hwrec_mutex);
 
 	if (hwrec_mem_size)
-		f_pos = hwrec_llseek_helper(filp, offset, whence,
-					    hwrec_mem_size);
+		f_pos = pvr_debugfs_llseek_helper(filp, offset, whence,
+						  hwrec_mem_size);
 	else
 		f_pos = 0;
 
@@ -1023,8 +1135,8 @@ hwrec_edm_llseek(struct file *filp, loff_t offset, int whence)
 	mutex_lock(hwrec_mutex);
 
 	if (hwrec_edm_buf)
-		f_pos = hwrec_llseek_helper(filp, offset, whence,
-					    hwrec_edm_buf->len);
+		f_pos = pvr_debugfs_llseek_helper(filp, offset, whence,
+						  hwrec_edm_buf->len);
 	else
 		f_pos = 0;
 
@@ -1073,8 +1185,8 @@ hwrec_status_llseek(struct file *filp, loff_t offset, int whence)
 	mutex_lock(hwrec_mutex);
 
 	if (hwrec_status_size)
-		f_pos = hwrec_llseek_helper(filp, offset, whence,
-					    hwrec_status_size);
+		f_pos = pvr_debugfs_llseek_helper(filp, offset, whence,
+						  hwrec_status_size);
 	else
 		f_pos = 0;
 
@@ -1134,7 +1246,7 @@ int pvr_debugfs_init(void)
 		return -ENODEV;
 
 	if (!debugfs_create_file("reset_sgx", S_IWUSR, pvr_debugfs_dir,
-				 &pvr_reset, &pvr_debugfs_fops)) {
+				 &pvr_reset, &pvr_debugfs_reset_fops)) {
 		debugfs_remove(pvr_debugfs_dir);
 		return -ENODEV;
 	}
@@ -1153,6 +1265,13 @@ int pvr_debugfs_init(void)
 		return -ENODEV;
 	}
 #endif
+
+	if (!debugfs_create_file("registers", S_IRUSR, pvr_debugfs_dir, NULL,
+				 &pvr_debugfs_regs_fops)) {
+		debugfs_remove(pvr_debugfs_dir);
+		return -ENODEV;
+	}
+
 	if (!debugfs_create_file("hwrec_event", S_IRUSR, pvr_debugfs_dir, NULL,
 				 &hwrec_event_fops)) {
 		debugfs_remove_recursive(pvr_debugfs_dir);

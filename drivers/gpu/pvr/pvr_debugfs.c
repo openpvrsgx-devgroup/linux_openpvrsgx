@@ -40,6 +40,7 @@
 #include "mmu.h"
 #include "bridged_support.h"
 #include "mm.h"
+#include "pvr_trace_cmd.h"
 
 struct dentry *pvr_debugfs_dir;
 static u32 pvr_reset;
@@ -231,6 +232,75 @@ static const struct file_operations pvr_debugfs_edm_fops = {
 	.release	= pvr_debugfs_edm_release,
 };
 #endif /* PVRSRV_USSE_EDM_STATUS_DEBUG */
+
+#ifdef CONFIG_PVR_TRACE_CMD
+
+static void *trcmd_str_buf;
+static u8 *trcmd_snapshot;
+static size_t trcmd_snapshot_size;
+static int trcmd_open_cnt;
+
+static int pvr_dbg_trcmd_open(struct inode *inode, struct file *file)
+{
+	int r;
+
+	if (trcmd_open_cnt)
+		return -EBUSY;
+
+	trcmd_open_cnt++;
+
+	trcmd_str_buf = kmalloc(PAGE_SIZE, GFP_KERNEL);
+	if (!trcmd_str_buf) {
+		trcmd_open_cnt--;
+
+		return -ENOMEM;
+	}
+
+	pvr_trcmd_lock();
+
+	r = pvr_trcmd_create_snapshot(&trcmd_snapshot, &trcmd_snapshot_size);
+	if (r < 0) {
+		pvr_trcmd_unlock();
+		kfree(trcmd_str_buf);
+		trcmd_open_cnt--;
+
+		return r;
+	}
+
+	pvr_trcmd_unlock();
+
+	return 0;
+}
+
+static int pvr_dbg_trcmd_release(struct inode *inode, struct file *file)
+{
+	pvr_trcmd_destroy_snapshot(trcmd_snapshot);
+	kfree(trcmd_str_buf);
+	trcmd_open_cnt--;
+
+	return 0;
+}
+
+static ssize_t pvr_dbg_trcmd_read(struct file *file, char __user *buffer,
+				  size_t count, loff_t *ppos)
+{
+	ssize_t ret;
+
+	ret = pvr_trcmd_print(trcmd_str_buf, max_t(size_t, PAGE_SIZE, count),
+			      trcmd_snapshot, trcmd_snapshot_size, ppos);
+	if (copy_to_user(buffer, trcmd_str_buf, ret))
+		return -EFAULT;
+
+	return ret;
+}
+
+static const struct file_operations pvr_dbg_trcmd_fops = {
+	.owner		= THIS_MODULE,
+	.open		= pvr_dbg_trcmd_open,
+	.release	= pvr_dbg_trcmd_release,
+	.read		= pvr_dbg_trcmd_read,
+};
+#endif
 
 /*
  *
@@ -1076,7 +1146,13 @@ int pvr_debugfs_init(void)
 		return -ENODEV;
 	}
 #endif
-
+#ifdef CONFIG_PVR_TRACE_CMD
+	if (!debugfs_create_file("command_trace", S_IRUGO, pvr_debugfs_dir,
+				 NULL, &pvr_dbg_trcmd_fops)) {
+		debugfs_remove_recursive(pvr_debugfs_dir);
+		return -ENODEV;
+	}
+#endif
 	if (!debugfs_create_file("hwrec_event", S_IRUSR, pvr_debugfs_dir, NULL,
 				 &hwrec_event_fops)) {
 		debugfs_remove_recursive(pvr_debugfs_dir);

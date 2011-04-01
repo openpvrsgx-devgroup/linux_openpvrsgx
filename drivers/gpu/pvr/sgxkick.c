@@ -36,9 +36,10 @@
 #include "osfunc.h"
 #include "pvr_debug.h"
 #include "sgxutils.h"
+#include "perproc.h"
 
-enum PVRSRV_ERROR SGXDoKickKM(void *hDevHandle,
-				  struct SGX_CCB_KICK *psCCBKick)
+enum PVRSRV_ERROR SGXDoKickKM(void *hDevHandle, struct SGX_CCB_KICK *psCCBKick,
+			      struct PVRSRV_PER_PROCESS_DATA *proc)
 {
 	enum PVRSRV_ERROR eError;
 	struct PVRSRV_KERNEL_SYNC_INFO *psSyncInfo;

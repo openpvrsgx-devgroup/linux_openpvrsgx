@@ -255,7 +255,8 @@ int SGXDoKickBW(u32 ui32BridgeID,
 			return 0;
 	}
 
-	psRetOUT->eError = SGXDoKickKM(hDevCookieInt, &psDoKickIN->sCCBKick);
+	psRetOUT->eError = SGXDoKickKM(hDevCookieInt, &psDoKickIN->sCCBKick,
+					psPerProc);
 
 	return 0;
 }
@@ -357,7 +358,8 @@ int SGXSubmitTransferBW(u32 ui32BridgeID,
 			return 0;
 	}
 
-	psRetOUT->eError = SGXSubmitTransferKM(hDevCookieInt, psKick);
+	psRetOUT->eError = SGXSubmitTransferKM(hDevCookieInt, psKick,
+						psPerProc);
 
 	return 0;
 }

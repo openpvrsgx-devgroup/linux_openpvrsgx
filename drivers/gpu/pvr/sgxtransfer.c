@@ -40,9 +40,11 @@
 #include "osfunc.h"
 #include "pvr_debug.h"
 #include "sgxutils.h"
+#include "perproc.h"
 
 enum PVRSRV_ERROR SGXSubmitTransferKM(void *hDevHandle,
-				struct PVRSRV_TRANSFER_SGX_KICK *psKick)
+					struct PVRSRV_TRANSFER_SGX_KICK *psKick,
+					struct PVRSRV_PER_PROCESS_DATA *proc)
 {
 	struct PVRSRV_KERNEL_MEM_INFO *psCCBMemInfo =
 	    (struct PVRSRV_KERNEL_MEM_INFO *)psKick->hCCBMemInfo;

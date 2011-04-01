@@ -504,7 +504,7 @@ hwrec_registers_dump(struct PVRSRV_SGXDEV_INFO *psDevInfo)
 }
 
 static void
-hwrec_pages_free(size_t *size, u32 *pages)
+hwrec_pages_free(size_t *size, unsigned long *pages)
 {
 	int i;
 
@@ -520,8 +520,8 @@ hwrec_pages_free(size_t *size, u32 *pages)
 }
 
 static int
-hwrec_pages_write(u8 *buffer, size_t size, size_t *current_size, u32 *pages,
-		  int array_size)
+hwrec_pages_write(u8 *buffer, size_t size, size_t *current_size,
+		  unsigned long *pages, int array_size)
 {
 	size_t ret = 0;
 
@@ -591,7 +591,7 @@ hwrec_mem_print(char *format, ...)
  * Render status buffer dumping.
  */
 static size_t hwrec_status_size;
-static u32 hwrec_status_pages[1024];
+static unsigned long hwrec_status_pages[1024];
 
 static int
 hwrec_status_write(char *buffer, size_t size)

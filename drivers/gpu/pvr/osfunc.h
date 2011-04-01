@@ -33,6 +33,9 @@
 #include <linux/string.h>
 #endif
 
+#include "services.h"
+#include "servicesext.h"
+
 #define PVRSRV_PAGEABLE_SELECT		PVRSRV_OS_PAGEABLE_HEAP
 
 #define KERNEL_ID			0xffffffffL

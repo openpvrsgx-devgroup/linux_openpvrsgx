@@ -2,6 +2,9 @@
 #include "pvr_events.h"
 #include "servicesint.h"
 #include "sgx_bridge.h"
+#include "perproc.h"
+#include "pvr_bridge_km.h"
+#include "pvr_trace_cmd.h"
 
 #include <linux/wait.h>
 #include <linux/sched.h>
@@ -165,6 +168,40 @@ err:
 	return ret;
 }
 
+static void trace_pvr_event(struct pvr_pending_event *e)
+{
+	struct PVRSRV_PER_PROCESS_DATA *proc;
+
+	proc = e->file_priv->proc;
+	pvr_trcmd_lock();
+
+	switch (e->event->type) {
+	case PVR_EVENT_SYNC:
+	{
+		struct pvr_event_sync *evsync;
+		struct pvr_trcmd_syn *ts;
+
+		evsync = (struct pvr_event_sync *)e->event;
+		ts = pvr_trcmd_alloc(PVR_TRCMD_SGX_QBLT_SYNCOMP,
+				     proc->ui32PID, proc->name, sizeof(*ts));
+		pvr_trcmd_set_syn(ts, evsync->sync_info);
+		break;
+	}
+	case PVR_EVENT_FLIP:
+		pvr_trcmd_alloc(PVR_TRCMD_SGX_QBLT_FLPCOMP,
+				proc->ui32PID, proc->name, 0);
+		break;
+	case PVR_EVENT_UPDATE:
+		pvr_trcmd_alloc(PVR_TRCMD_SGX_QBLT_UPDCOMP,
+				proc->ui32PID, proc->name, 0);
+		break;
+	default:
+		__WARN();
+	}
+
+	pvr_trcmd_unlock();
+}
+
 ssize_t pvr_read(struct file *filp, char __user *buf, size_t count, loff_t *off)
 {
 	struct PVRSRV_FILE_PRIVATE_DATA *priv = filp->private_data;
@@ -184,6 +221,8 @@ ssize_t pvr_read(struct file *filp, char __user *buf, size_t count, loff_t *off)
 			total = -EFAULT;
 			break;
 		}
+
+		trace_pvr_event(e);
 
 		total += e->event->length;
 		e->destroy(e);

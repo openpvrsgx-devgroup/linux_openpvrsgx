@@ -43,6 +43,7 @@
 #include "sgxutils.h"
 #include "pvr_pdump.h"
 #include "pvr_events.h"
+#include "pvr_trace_cmd.h"
 
 int SGXGetClientInfoBW(u32 ui32BridgeID,
 	      struct PVRSRV_BRIDGE_IN_GETCLIENTINFO *psGetClientInfoIN,
@@ -995,6 +996,22 @@ int SGXFlushHWRenderTargetBW(u32 ui32BridgeID,
 	return 0;
 }
 
+static void trace_query_cmd(struct PVRSRV_PER_PROCESS_DATA *proc, int type,
+			     struct PVRSRV_KERNEL_SYNC_INFO *si)
+{
+	struct pvr_trcmd_syn *ts;
+	size_t size;
+
+	size = si ? sizeof(*ts) : 0;
+	pvr_trcmd_lock();
+
+	ts = pvr_trcmd_alloc(type, proc->ui32PID, proc->name, size);
+	if (si)
+		pvr_trcmd_set_syn(ts, si);
+
+	pvr_trcmd_unlock();
+}
+
 int SGX2DQueryBlitsCompleteBW(struct file *filp, u32 ui32BridgeID,
      struct PVRSRV_BRIDGE_IN_2DQUERYBLTSCOMPLETE *ps2DQueryBltsCompleteIN,
      struct PVRSRV_BRIDGE_RETURN *psRetOUT,
@@ -1017,6 +1034,15 @@ int SGX2DQueryBlitsCompleteBW(struct file *filp, u32 ui32BridgeID,
 
 	if (ps2DQueryBltsCompleteIN->type == _PVR_SYNC_WAIT_FLIP ||
 	    ps2DQueryBltsCompleteIN->type == _PVR_SYNC_WAIT_UPDATE) {
+		int	cmd_type;
+
+		if (ps2DQueryBltsCompleteIN->type == _PVR_SYNC_WAIT_FLIP)
+			cmd_type = PVR_TRCMD_SGX_QBLT_FLPREQ;
+		else
+			cmd_type = PVR_TRCMD_SGX_QBLT_UPDREQ;
+
+		trace_query_cmd(psPerProc, cmd_type, NULL);
+
 		if (pvr_flip_event_req(priv,
 				       (long)ps2DQueryBltsCompleteIN->
 						       hKernSyncInfo,
@@ -1043,6 +1069,10 @@ int SGX2DQueryBlitsCompleteBW(struct file *filp, u32 ui32BridgeID,
 				(struct PVRSRV_KERNEL_SYNC_INFO *)pvSyncInfo,
 				ps2DQueryBltsCompleteIN->user_data))
 			psRetOUT->eError = PVRSRV_ERROR_OUT_OF_MEMORY;
+		else
+			trace_query_cmd(psPerProc,
+					 PVR_TRCMD_SGX_QBLT_SYNREQ,
+					 pvSyncInfo);
 
 		return 0;
 	}
@@ -1052,6 +1082,8 @@ int SGX2DQueryBlitsCompleteBW(struct file *filp, u32 ui32BridgeID,
 				      (struct PVRSRV_KERNEL_SYNC_INFO *)
 							      pvSyncInfo,
 			ps2DQueryBltsCompleteIN->type == _PVR_SYNC_WAIT_BLOCK);
+
+	trace_query_cmd(psPerProc, PVR_TRCMD_SGX_QBLT_SYNCHK, pvSyncInfo);
 
 	return 0;
 }

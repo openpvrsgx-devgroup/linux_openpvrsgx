@@ -641,17 +641,10 @@ static struct PVRSRV_PER_PROCESS_DATA *find_cur_proc_data(
 
 static void pr_err_process_info(struct PVRSRV_PER_PROCESS_DATA *proc)
 {
-	struct task_struct *tsk;
-	int pid;
-
 	if (!proc)
 		return;
 
-	pid = proc->ui32PID;
-	rcu_read_lock();
-	tsk = pid_task(find_vpid(pid), PIDTYPE_PID);
-	pr_err("PID = %d, process name = %s\n", pid, tsk->comm);
-	rcu_read_unlock();
+	pr_err("PID = %d, process name = %s\n", proc->ui32PID, proc->name);
 }
 
 static void pr_err_sgx_registers(struct PVRSRV_SGXDEV_INFO *psDevInfo)

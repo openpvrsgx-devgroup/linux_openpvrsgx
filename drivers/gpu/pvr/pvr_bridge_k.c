@@ -98,7 +98,7 @@ enum PVRSRV_ERROR LinuxBridgeInit(void)
 			return PVRSRV_ERROR_OUT_OF_MEMORY;
 	}
 #endif
-	return CommonBridgeInit();
+	return PVRSRV_OK;
 }
 
 void LinuxBridgeDeInit(void)
@@ -126,13 +126,13 @@ static off_t printLinuxBridgeStats(char *buffer, size_t count, off_t off)
 			"Total number of bytes copied via copy_from_user = %u\n"
 			"Total number of bytes copied via copy_to_user = %u\n"
 			"Total number of bytes copied via copy_*_user = %u\n\n"
-			"%-45s | %-40s | %10s | %20s | %10s\n",
+			"%-2s | %-40s | %10s | %20s | %10s\n",
 		  g_BridgeGlobalStats.ui32IOCTLCount,
 		  g_BridgeGlobalStats.ui32TotalCopyFromUserBytes,
 		  g_BridgeGlobalStats.ui32TotalCopyToUserBytes,
 		  g_BridgeGlobalStats.ui32TotalCopyFromUserBytes +
 			  g_BridgeGlobalStats.ui32TotalCopyToUserBytes,
-		  "Bridge Name", "Wrapper Function",
+		  "ID", "Wrapper Function",
 		  "Call Count", "copy_from_user Bytes",
 		  "copy_to_user Bytes");
 
@@ -151,9 +151,8 @@ static off_t printLinuxBridgeStats(char *buffer, size_t count, off_t off)
 
 	psEntry = &g_BridgeDispatchTable[off - 1];
 	Ret = printAppend(buffer, count, 0,
-			  "%-45s   %-40s   %-10u   %-20u   %-10u\n",
-			  psEntry->pszIOCName,
-			  psEntry->pszFunctionName,
+			  "%02lX   %-40s   %-10u   %-20u   %-10u\n",
+			  off - 1, psEntry->pszFunctionName,
 			  psEntry->ui32CallCount,
 			  psEntry->ui32CopyFromUserTotalBytes,
 			  psEntry->ui32CopyToUserTotalBytes);

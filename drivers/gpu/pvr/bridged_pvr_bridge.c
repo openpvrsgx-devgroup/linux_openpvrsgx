@@ -51,10 +51,9 @@
 #include <linux/mm.h>
 #include <linux/sched.h>
 
+#if defined(DEBUG_BRIDGE_KM)
 struct PVRSRV_BRIDGE_DISPATCH_TABLE_ENTRY
     g_BridgeDispatchTable[BRIDGE_DISPATCH_TABLE_ENTRY_COUNT];
-
-#if defined(DEBUG_BRIDGE_KM)
 struct PVRSRV_BRIDGE_GLOBAL_STATS g_BridgeGlobalStats;
 #endif
 
@@ -82,7 +81,25 @@ enum PVRSRV_ERROR CopyToUserWrapper(struct PVRSRV_PER_PROCESS_DATA *pProcData,
 	g_BridgeGlobalStats.ui32TotalCopyToUserBytes += ui32Size;
 	return OSCopyToUser(pProcData, pvDest, pvSrc, ui32Size);
 }
-#endif
+
+/*
+ * This is not a real sanity check. Entries cannot overlap as the compiler
+ * catches this in the switch statement. It does however  construct a list
+ * of which calls are mapped to which id, as needed by /proc/pvr/bridge_stats.
+ */
+void
+PVRSRVBridgeIDCheck(u32 id, const char *function)
+{
+	if (id != PVRSRV_GET_BRIDGE_ID(id))
+		pr_err("PVR: IOCTL %d out of range! (%s)\n", id, function);
+	else if (!g_BridgeDispatchTable[id].pszFunctionName)
+		g_BridgeDispatchTable[id].pszFunctionName = function;
+	else if (g_BridgeDispatchTable[id].pszFunctionName != function)
+		pr_err("PVR: IOCTL %d mismatch: %s != %s\n", id,
+		       g_BridgeDispatchTable[id].pszFunctionName, function);
+}
+
+#endif /* DEBUG_BRIDGE_KM */
 
 static int PVRSRVEnumerateDevicesBW(u32 ui32BridgeID, void *psBridgeIn,
 			 struct PVRSRV_BRIDGE_OUT_ENUMDEVICE *psEnumDeviceOUT,
@@ -2397,93 +2414,18 @@ static int MMU_GetPDDevPAddrBW(u32 ui32BridgeID,
 int DummyBW(u32 ui32BridgeID, void *psBridgeIn, void *psBridgeOut,
 	    struct PVRSRV_PER_PROCESS_DATA *psPerProc)
 {
-#if !defined(CONFIG_PVR_DEBUG_EXTRA)
-	PVR_UNREFERENCED_PARAMETER(ui32BridgeID);
+#if defined(DEBUG_BRIDGE_KM)
+	PVRSRVBridgeIDCheck(ui32BridgeID, __func__);
 #endif
 	PVR_UNREFERENCED_PARAMETER(psBridgeIn);
 	PVR_UNREFERENCED_PARAMETER(psBridgeOut);
 	PVR_UNREFERENCED_PARAMETER(psPerProc);
 
-#if defined(DEBUG_BRIDGE_KM)
-	PVR_DPF(PVR_DBG_ERROR, "%s: BRIDGE ERROR: BridgeID %lu (%s) mapped to "
-		 "Dummy Wrapper (probably not what you want!)",
-		 __func__, ui32BridgeID,
-		 g_BridgeDispatchTable[ui32BridgeID].pszIOCName);
-#else
 	PVR_DPF(PVR_DBG_ERROR, "%s: BRIDGE ERROR: BridgeID %lu mapped to "
-		 "Dummy Wrapper (probably not what you want!)",
-		 __func__, ui32BridgeID);
-#endif
+		"Dummy Wrapper (probably not what you want!)",
+		__func__, ui32BridgeID);
+
 	return -ENOTTY;
-}
-
-void _SetDispatchTableEntry(u32 ui32Index, const char *pszIOCName,
-			    int (*pfFunction)(u32 ui32BridgeID,
-					      void *psBridgeIn,
-					      void *psBridgeOut,
-					      struct PVRSRV_PER_PROCESS_DATA
-								   *psPerProc),
-			    const char *pszFunctionName)
-{
-	static u32 ui32PrevIndex = ~0UL;
-#if !defined(CONFIG_PVR_DEBUG_EXTRA)
-	PVR_UNREFERENCED_PARAMETER(pszIOCName);
-#endif
-#if !defined(DEBUG_BRIDGE_KM_DISPATCH_TABLE) && !defined(DEBUG_BRIDGE_KM)
-	PVR_UNREFERENCED_PARAMETER(pszFunctionName);
-#endif
-
-
-	if (g_BridgeDispatchTable[ui32Index].pfFunction) {
-#if defined(DEBUG_BRIDGE_KM)
-		PVR_DPF(PVR_DBG_ERROR, "%s: BUG!: "
-			"Adding dispatch table entry for %s "
-			"clobbers an existing entry for %s",
-			 __func__, pszIOCName,
-			 g_BridgeDispatchTable[ui32Index].pszIOCName);
-#else
-		PVR_DPF(PVR_DBG_ERROR, "%s: BUG!: "
-			"Adding dispatch table entry for %s "
-			"clobbers an existing entry (index=%lu)",
-			 __func__, pszIOCName, ui32Index);
-#endif
-		PVR_DPF(PVR_DBG_ERROR,
-"NOTE: Enabling DEBUG_BRIDGE_KM_DISPATCH_TABLE may help debug this issue.",
-			 __func__);
-	}
-
-	if ((ui32PrevIndex != ~0UL) &&
-	    ((ui32Index >= ui32PrevIndex + DISPATCH_TABLE_GAP_THRESHOLD) ||
-	     (ui32Index <= ui32PrevIndex))) {
-#if defined(DEBUG_BRIDGE_KM)
-		PVR_DPF(PVR_DBG_WARNING,
-			 "%s: There is a gap in the dispatch table "
-			 "between indices %lu (%s) and %lu (%s)",
-			 __func__, ui32PrevIndex,
-			 g_BridgeDispatchTable[ui32PrevIndex].pszIOCName,
-			 ui32Index, pszIOCName);
-#else
-		PVR_DPF(PVR_DBG_WARNING,
-			 "%s: There is a gap in the dispatch table "
-			"between indices %u and %u (%s)",
-			 __func__, (unsigned)ui32PrevIndex, (unsigned)ui32Index,
-			 pszIOCName);
-#endif
-		PVR_DPF(PVR_DBG_ERROR,
-			"NOTE: Enabling DEBUG_BRIDGE_KM_DISPATCH_TABLE "
-			"may help debug this issue.",
-			 __func__);
-	}
-
-	g_BridgeDispatchTable[ui32Index].pfFunction = pfFunction;
-#if defined(DEBUG_BRIDGE_KM)
-	g_BridgeDispatchTable[ui32Index].pszIOCName = pszIOCName;
-	g_BridgeDispatchTable[ui32Index].pszFunctionName = pszFunctionName;
-	g_BridgeDispatchTable[ui32Index].ui32CallCount = 0;
-	g_BridgeDispatchTable[ui32Index].ui32CopyFromUserTotalBytes = 0;
-#endif
-
-	ui32PrevIndex = ui32Index;
 }
 
 static int PVRSRVInitSrvConnectBW(u32 ui32BridgeID, void *psBridgeIn,
@@ -2628,187 +2570,6 @@ static int PVRSRVEventObjectCloseBW(u32 ui32BridgeID,
 	    OSEventObjectClose(&psEventObjectCloseIN->sEventObject, hOSEventKM);
 
 	return 0;
-}
-
-enum PVRSRV_ERROR CommonBridgeInit(void)
-{
-	u32 i;
-
-	SetDispatchTableEntry(PVRSRV_BRIDGE_ENUM_DEVICES,
-			      PVRSRVEnumerateDevicesBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_ACQUIRE_DEVICEINFO,
-			      PVRSRVAcquireDeviceDataBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_RELEASE_DEVICEINFO, DummyBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_CREATE_DEVMEMCONTEXT,
-			      PVRSRVCreateDeviceMemContextBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_DESTROY_DEVMEMCONTEXT,
-			      PVRSRVDestroyDeviceMemContextBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_GET_DEVMEM_HEAPINFO,
-			      PVRSRVGetDeviceMemHeapInfoBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_ALLOC_DEVICEMEM,
-			      PVRSRVAllocDeviceMemBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_FREE_DEVICEMEM,
-			      PVRSRVFreeDeviceMemBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_GETFREE_DEVICEMEM,
-			      PVRSRVGetFreeDeviceMemBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_CREATE_COMMANDQUEUE, DummyBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_DESTROY_COMMANDQUEUE, DummyBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_MHANDLE_TO_MMAP_DATA,
-			      PVRMMapOSMemHandleToMMapDataBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_CONNECT_SERVICES, PVRSRVConnectBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_DISCONNECT_SERVICES,
-			      PVRSRVDisconnectBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_WRAP_DEVICE_MEM, DummyBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_GET_DEVICEMEMINFO, DummyBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_RESERVE_DEV_VIRTMEM, DummyBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_FREE_DEV_VIRTMEM, DummyBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_MAP_EXT_MEMORY, DummyBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_UNMAP_EXT_MEMORY, DummyBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_MAP_DEV_MEMORY,
-			      PVRSRVMapDeviceMemoryBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_UNMAP_DEV_MEMORY,
-			      PVRSRVUnmapDeviceMemoryBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_MAP_DEVICECLASS_MEMORY,
-			      PVRSRVMapDeviceClassMemoryBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_UNMAP_DEVICECLASS_MEMORY,
-			      PVRSRVUnmapDeviceClassMemoryBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_MAP_MEM_INFO_TO_USER, DummyBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_UNMAP_MEM_INFO_FROM_USER, DummyBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_EXPORT_DEVICEMEM,
-			      PVRSRVExportDeviceMemBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_RELEASE_MMAP_DATA,
-			      PVRMMapReleaseMMapDataBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_CACHE_FLUSH_DRM,
-			      PVRSRVCacheFlushDRIBW);
-
-	SetDispatchTableEntry(PVRSRV_BRIDGE_PROCESS_SIMISR_EVENT, DummyBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_REGISTER_SIM_PROCESS, DummyBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_UNREGISTER_SIM_PROCESS, DummyBW);
-
-	SetDispatchTableEntry(PVRSRV_BRIDGE_MAPPHYSTOUSERSPACE, DummyBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_UNMAPPHYSTOUSERSPACE, DummyBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_GETPHYSTOUSERSPACEMAP, DummyBW);
-
-	SetDispatchTableEntry(PVRSRV_BRIDGE_GET_FB_STATS, DummyBW);
-
-	SetDispatchTableEntry(PVRSRV_BRIDGE_GET_MISC_INFO, PVRSRVGetMiscInfoBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_RELEASE_MISC_INFO, DummyBW);
-
-
-#if defined(PDUMP)
-	SetDispatchTableEntry(PVRSRV_BRIDGE_PDUMP_INIT, DummyBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_PDUMP_MEMPOL, PDumpMemPolBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_PDUMP_DUMPMEM, PDumpMemBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_PDUMP_REG, PDumpRegWithFlagsBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_PDUMP_REGPOL, PDumpRegPolBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_PDUMP_COMMENT, PDumpCommentBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_PDUMP_SETFRAME, PDumpSetFrameBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_PDUMP_ISCAPTURING,
-			      PDumpIsCaptureFrameBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_PDUMP_DUMPBITMAP, PDumpBitmapBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_PDUMP_DUMPREADREG, DummyBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_PDUMP_SYNCPOL, PDumpSyncPolBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_PDUMP_DUMPSYNC, PDumpSyncDumpBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_PDUMP_DRIVERINFO, DummyBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_PDUMP_PDREG, PDumpPDRegBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_PDUMP_DUMPPDDEVPADDR,
-			      PDumpPDDevPAddrBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_PDUMP_CYCLE_COUNT_REG_READ,
-			      PDumpCycleCountRegReadBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_PDUMP_STARTINITPHASE, DummyBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_PDUMP_STOPINITPHASE, DummyBW);
-#endif
-
-	SetDispatchTableEntry(PVRSRV_BRIDGE_GET_OEMJTABLE, DummyBW);
-
-	SetDispatchTableEntry(PVRSRV_BRIDGE_ENUM_CLASS, PVRSRVEnumerateDCBW);
-
-	SetDispatchTableEntry(PVRSRV_BRIDGE_OPEN_DISPCLASS_DEVICE,
-			      PVRSRVOpenDCDeviceBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_CLOSE_DISPCLASS_DEVICE,
-			      PVRSRVCloseDCDeviceBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_ENUM_DISPCLASS_FORMATS,
-			      PVRSRVEnumDCFormatsBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_ENUM_DISPCLASS_DIMS,
-			      PVRSRVEnumDCDimsBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_GET_DISPCLASS_SYSBUFFER,
-			      PVRSRVGetDCSystemBufferBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_GET_DISPCLASS_INFO,
-			      PVRSRVGetDCInfoBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_CREATE_DISPCLASS_SWAPCHAIN,
-			      PVRSRVCreateDCSwapChainBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_DESTROY_DISPCLASS_SWAPCHAIN,
-			      PVRSRVDestroyDCSwapChainBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_SET_DISPCLASS_DSTRECT,
-			      PVRSRVSetDCDstRectBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_SET_DISPCLASS_SRCRECT,
-			      PVRSRVSetDCSrcRectBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_SET_DISPCLASS_DSTCOLOURKEY,
-			      PVRSRVSetDCDstColourKeyBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_SET_DISPCLASS_SRCCOLOURKEY,
-			      PVRSRVSetDCSrcColourKeyBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_GET_DISPCLASS_BUFFERS,
-			      PVRSRVGetDCBuffersBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_SWAP_DISPCLASS_TO_BUFFER,
-			      PVRSRVSwapToDCBufferBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_SWAP_DISPCLASS_TO_SYSTEM,
-			      PVRSRVSwapToDCSystemBW);
-
-	SetDispatchTableEntry(PVRSRV_BRIDGE_OPEN_BUFFERCLASS_DEVICE,
-			      PVRSRVOpenBCDeviceBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_CLOSE_BUFFERCLASS_DEVICE,
-			      PVRSRVCloseBCDeviceBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_GET_BUFFERCLASS_INFO,
-			      PVRSRVGetBCInfoBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_GET_BUFFERCLASS_BUFFER,
-			      PVRSRVGetBCBufferBW);
-
-	SetDispatchTableEntry(PVRSRV_BRIDGE_WRAP_EXT_MEMORY,
-			      PVRSRVWrapExtMemoryBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_UNWRAP_EXT_MEMORY,
-			      PVRSRVUnwrapExtMemoryBW);
-
-	SetDispatchTableEntry(PVRSRV_BRIDGE_ALLOC_SHARED_SYS_MEM,
-			      PVRSRVAllocSharedSysMemoryBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_FREE_SHARED_SYS_MEM,
-			      PVRSRVFreeSharedSysMemoryBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_MAP_MEMINFO_MEM,
-			      PVRSRVMapMemInfoMemBW);
-
-	SetDispatchTableEntry(PVRSRV_BRIDGE_GETMMU_PD_DEVPADDR,
-			      MMU_GetPDDevPAddrBW);
-
-	SetDispatchTableEntry(PVRSRV_BRIDGE_INITSRV_CONNECT,
-			      PVRSRVInitSrvConnectBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_INITSRV_DISCONNECT,
-			      PVRSRVInitSrvDisconnectBW);
-
-	SetDispatchTableEntry(PVRSRV_BRIDGE_EVENT_OBJECT_WAIT,
-			      PVRSRVEventObjectWaitBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_EVENT_OBJECT_OPEN,
-			      PVRSRVEventObjectOpenBW);
-	SetDispatchTableEntry(PVRSRV_BRIDGE_EVENT_OBJECT_CLOSE,
-			      PVRSRVEventObjectCloseBW);
-
-	SetDispatchTableEntry(PVRSRV_BRIDGE_MODIFY_SYNC_OPS,
-			      PVRSRVModifySyncOpsBW);
-
-	SetSGXDispatchTableEntry();
-
-	for (i = 0; i < BRIDGE_DISPATCH_TABLE_ENTRY_COUNT; i++)
-		if (!g_BridgeDispatchTable[i].pfFunction) {
-			g_BridgeDispatchTable[i].pfFunction = DummyBW;
-#if defined(DEBUG_BRIDGE_KM)
-			g_BridgeDispatchTable[i].pszIOCName =
-						    "_PVRSRV_BRIDGE_DUMMY";
-			g_BridgeDispatchTable[i].pszFunctionName = "DummyBW";
-			g_BridgeDispatchTable[i].ui32CallCount = 0;
-			g_BridgeDispatchTable[i].ui32CopyFromUserTotalBytes = 0;
-			g_BridgeDispatchTable[i].ui32CopyToUserTotalBytes = 0;
-#endif
-		}
-
-	return PVRSRV_OK;
 }
 
 static int bridged_check_cmd(u32 cmd_id)
@@ -3284,7 +3045,7 @@ int BridgedDispatchKM(struct file *filp, struct PVRSRV_PER_PROCESS_DATA *pd,
 				pkg->ui32InBufferSize) != PVRSRV_OK)
 		goto return_fault;
 
-	if (bid >= (BRIDGE_DISPATCH_TABLE_ENTRY_COUNT)) {
+	if (bid >= (PVRSRV_BRIDGE_LAST_SGX_CMD)) {
 		PVR_DPF(PVR_DBG_ERROR,
 			 "%s: ui32BridgeID = %d is out if range!", __func__,
 			 bid);

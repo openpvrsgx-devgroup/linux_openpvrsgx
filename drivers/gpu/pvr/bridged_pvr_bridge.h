@@ -99,57 +99,38 @@ static inline void ReleaseHandleBatch(struct PVRSRV_PER_PROCESS_DATA *psPerProc)
 int DummyBW(u32 ui32BridgeID, void *psBridgeIn, void *psBridgeOut,
 	    struct PVRSRV_PER_PROCESS_DATA *psPerProc);
 
-struct PVRSRV_BRIDGE_DISPATCH_TABLE_ENTRY {
-	int (*pfFunction)(u32 ui32BridgeID, void *psBridgeIn, void *psBridgeOut,
-			  struct PVRSRV_PER_PROCESS_DATA *psPerProc);
 #if defined(DEBUG_BRIDGE_KM)
-	const char *pszIOCName;
+#define BRIDGE_DISPATCH_TABLE_ENTRY_COUNT (1 << _IOC_NRBITS)
+
+struct PVRSRV_BRIDGE_DISPATCH_TABLE_ENTRY {
 	const char *pszFunctionName;
 	u32 ui32CallCount;
 	u32 ui32CopyFromUserTotalBytes;
 	u32 ui32CopyToUserTotalBytes;
-#endif
 };
-
-#define BRIDGE_DISPATCH_TABLE_ENTRY_COUNT (PVRSRV_BRIDGE_LAST_SGX_CMD+1)
-#define PVRSRV_BRIDGE_LAST_DEVICE_CMD	   PVRSRV_BRIDGE_LAST_SGX_CMD
 
 extern struct PVRSRV_BRIDGE_DISPATCH_TABLE_ENTRY
 	    g_BridgeDispatchTable[BRIDGE_DISPATCH_TABLE_ENTRY_COUNT];
 
-void _SetDispatchTableEntry(u32 ui32Index,
-			    const char *pszIOCName,
-			    int (*pfFunction) (u32 ui32BridgeID,
-					       void *psBridgeIn,
-					       void *psBridgeOut,
-					       struct PVRSRV_PER_PROCESS_DATA *
-					       psPerProc),
-			    const char *pszFunctionName);
+void PVRSRVBridgeIDCheck(u32 id, const char *function);
 
-#define SetDispatchTableEntry(ui32Index, pfFunction) \
-	_SetDispatchTableEntry(PVRSRV_GET_BRIDGE_ID(ui32Index), #ui32Index, \
-	   (int (*)(u32 ui32BridgeID, void *psBridgeIn, void *psBridgeOut,  \
-	   struct PVRSRV_PER_PROCESS_DATA *psPerProc))pfFunction, #pfFunction)
+#define PVRSRV_BRIDGE_ASSERT_CMD(X, Y) do { \
+	PVR_ASSERT(X == PVRSRV_GET_BRIDGE_ID(Y)); \
+	PVRSRVBridgeIDCheck((X), __func__);	  \
+	} while (0)
 
-#define DISPATCH_TABLE_GAP_THRESHOLD 5
-
-#if defined(CONFIG_PVR_DEBUG_EXTRA)
-#define PVRSRV_BRIDGE_ASSERT_CMD(X, Y) PVR_ASSERT(X == PVRSRV_GET_BRIDGE_ID(Y))
-#else
-#define PVRSRV_BRIDGE_ASSERT_CMD(X, Y) PVR_UNREFERENCED_PARAMETER(X)
-#endif
-
-#if defined(DEBUG_BRIDGE_KM)
 struct PVRSRV_BRIDGE_GLOBAL_STATS {
 	u32 ui32IOCTLCount;
 	u32 ui32TotalCopyFromUserBytes;
 	u32 ui32TotalCopyToUserBytes;
 };
-
 extern struct PVRSRV_BRIDGE_GLOBAL_STATS g_BridgeGlobalStats;
-#endif
 
-enum PVRSRV_ERROR CommonBridgeInit(void);
+#else
+
+#define PVRSRV_BRIDGE_ASSERT_CMD(X, Y) PVR_UNREFERENCED_PARAMETER(X)
+
+#endif /* DEBUG_BRIDGE_KM */
 
 int BridgedDispatchKM(struct file *filp,
 			struct PVRSRV_PER_PROCESS_DATA *psPerProc,

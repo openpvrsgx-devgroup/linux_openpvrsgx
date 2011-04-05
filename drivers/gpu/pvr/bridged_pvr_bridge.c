@@ -2576,16 +2576,14 @@ static int bridged_check_cmd(u32 cmd_id)
 {
 	if (PVRSRVGetInitServerState(PVRSRV_INIT_SERVER_RAN)) {
 		if (!PVRSRVGetInitServerState(PVRSRV_INIT_SERVER_SUCCESSFUL)) {
-			PVR_DPF(PVR_DBG_ERROR,
-			"%s: Initialisation failed.  Driver unusable.",
-				 __func__);
+			pr_err("PVR: ERROR: Initialisation failed. "
+			       "Driver unusable.\n");
 			return 1;
 		}
 	} else {
 		if (PVRSRVGetInitServerState(PVRSRV_INIT_SERVER_RUNNING)) {
-			PVR_DPF(PVR_DBG_ERROR,
-				 "%s: Initialisation is in progress",
-				 __func__);
+			pr_err("PVR: ERROR: Initialisation still in "
+			       "progress.\n");
 			return 1;
 		} else {
 			switch (cmd_id) {
@@ -2599,9 +2597,8 @@ static int bridged_check_cmd(u32 cmd_id)
 				PVRSRV_BRIDGE_INITSRV_DISCONNECT):
 				break;
 			default:
-				PVR_DPF(PVR_DBG_ERROR,
-			"%s: Driver initialisation not completed yet.",
-					 __func__);
+				pr_err("PVR: ERROR: initialisation not "
+				       "completed yet.\n");
 				return 1;
 			}
 		}
@@ -3008,8 +3005,7 @@ static int bridged_ioctl(struct file *filp, u32 cmd, void *in, void *out,
 #endif
 
 	default:
-		PVR_DPF(PVR_DBG_ERROR, "%s: cmd = %d is out if range!",
-			__func__, cmd);
+		pr_err("PVR: Error: Unhandled IOCTL %d.\n", cmd);
        }
 
 	pr_ioctl_error(cmd, per_proc->name, err, out, out_err_ofs);
@@ -3020,7 +3016,6 @@ static int bridged_ioctl(struct file *filp, u32 cmd, void *in, void *out,
 int BridgedDispatchKM(struct file *filp, struct PVRSRV_PER_PROCESS_DATA *pd,
 		      struct PVRSRV_BRIDGE_PACKAGE *pkg)
 {
-
 	void *in;
 	void *out;
 	u32 bid = pkg->ui32BridgeID;
@@ -3045,15 +3040,7 @@ int BridgedDispatchKM(struct file *filp, struct PVRSRV_PER_PROCESS_DATA *pd,
 				pkg->ui32InBufferSize) != PVRSRV_OK)
 		goto return_fault;
 
-	if (bid >= (PVRSRV_BRIDGE_LAST_SGX_CMD)) {
-		PVR_DPF(PVR_DBG_ERROR,
-			 "%s: ui32BridgeID = %d is out if range!", __func__,
-			 bid);
-		goto return_fault;
-	}
-
 	err = bridged_ioctl(filp, bid, in, out, pkg->ui32InBufferSize, pd);
-
 	if (err < 0)
 		goto return_fault;
 

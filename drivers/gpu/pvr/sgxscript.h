@@ -34,10 +34,9 @@
 enum SGX_INIT_OPERATION {
 	SGX_INIT_OP_ILLEGAL = 0,
 	SGX_INIT_OP_WRITE_HW_REG,
-#if defined(PDUMP)
+	/* Do not move this halt, especially not for something like PDUMP. */
+	SGX_INIT_OP_HALT,
 	SGX_INIT_OP_PDUMP_HW_REG,
-#endif
-	SGX_INIT_OP_HALT
 };
 
 union SGX_INIT_COMMAND {

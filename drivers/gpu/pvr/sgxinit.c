@@ -192,35 +192,47 @@ static enum PVRSRV_ERROR SGXRunScript(struct PVRSRV_SGXDEV_INFO *psDevInfo,
 	     ui32PC < ui32NumInitCommands; ui32PC++, psComm++) {
 		switch (psComm->eOp) {
 		case SGX_INIT_OP_WRITE_HW_REG:
-			{
-				OSWriteHWReg(psDevInfo->pvRegsBaseKM,
-					     psComm->sWriteHWReg.ui32Offset,
-					     psComm->sWriteHWReg.ui32Value);
-				PDUMPREG(psComm->sWriteHWReg.ui32Offset,
-					 psComm->sWriteHWReg.ui32Value);
-				break;
-			}
-#if defined(PDUMP)
-		case SGX_INIT_OP_PDUMP_HW_REG:
-			{
-				PDUMPREG(psComm->sPDumpHWReg.ui32Offset,
-					 psComm->sPDumpHWReg.ui32Value);
-				break;
-			}
-#endif
+			OSWriteHWReg(psDevInfo->pvRegsBaseKM,
+				     psComm->sWriteHWReg.ui32Offset,
+				     psComm->sWriteHWReg.ui32Value);
+			PDUMPREG(psComm->sWriteHWReg.ui32Offset,
+				 psComm->sWriteHWReg.ui32Value);
+			break;
 		case SGX_INIT_OP_HALT:
-			{
-				return PVRSRV_OK;
+			/* Old OP_PDUMP_HW_REG masked OP_HALT */
+			if (psComm->sWriteHWReg.ui32Offset) {
+				pr_warning("%s: Init Script HALT command "
+					   "contains data!\n", __func__);
+				pr_warning("PVR: Is userspace built with "
+					   "incompatible PDUMP support?\n");
 			}
-		case SGX_INIT_OP_ILLEGAL:
+			return PVRSRV_OK;
+		case SGX_INIT_OP_PDUMP_HW_REG:
+#if defined(PDUMP)
+			if (!psComm->sPDumpHWReg.ui32Offset &&
+			    !psComm->sPDumpHWReg.ui32Value) {
+				pr_warning("%s: Init Script PDUMP command "
+					   "contains no offset/value!\n",
+					   __func__);
+				pr_warning("PVR: Is userspace built without "
+					   "PDUMP support?\n");
+			}
 
+			PDUMPREG(psComm->sPDumpHWReg.ui32Offset,
+				 psComm->sPDumpHWReg.ui32Value);
+			break;
+#else
+			pr_err("%s: Init Script contains PDUMP writes!\n",
+			       __func__);
+			pr_err("PVR: ERROR: Userspace built with PDUMP "
+			       "support!\n");
+			return PVRSRV_ERROR_GENERIC;
+#endif /* PDUMP */
+		case SGX_INIT_OP_ILLEGAL:
 		default:
-			{
-				PVR_DPF(PVR_DBG_ERROR,
-				     "SGXRunScript: PC %d: Illegal command: %d",
-				      ui32PC, psComm->eOp);
-				return PVRSRV_ERROR_GENERIC;
-			}
+			pr_err("PVR: ERROR: %s: PC %d: Illegal operation: "
+			       "0x%02X\n", __func__, ui32PC, psComm->eOp);
+			return PVRSRV_ERROR_GENERIC;
 		}
 
 	}

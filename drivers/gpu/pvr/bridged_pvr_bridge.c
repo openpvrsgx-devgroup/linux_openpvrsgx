@@ -2738,61 +2738,6 @@ static int bridged_ioctl(struct file *filp, u32 cmd, void *in, void *out,
 		err = DummyBW(cmd, in, out, per_proc);
 		break;
 
-#if defined(PDUMP)
-	case PVRSRV_BRIDGE_PDUMP_INIT:
-		err = DummyBW(cmd, in, out, per_proc);
-		break;
-	case PVRSRV_BRIDGE_PDUMP_MEMPOL:
-		err = PDumpMemPolBW(cmd, in, out, per_proc);
-		break;
-	case PVRSRV_BRIDGE_PDUMP_DUMPMEM:
-		err = PDumpMemBW(cmd, in, out, per_proc);
-		break;
-	case PVRSRV_BRIDGE_PDUMP_REG:
-		err = PDumpRegWithFlagsBW(cmd, in, out, per_proc);
-		break;
-	case PVRSRV_BRIDGE_PDUMP_REGPOL:
-		err = PDumpRegPolBW(cmd, in, out, per_proc);
-		break;
-	case PVRSRV_BRIDGE_PDUMP_COMMENT:
-		err = PDumpCommentBW(cmd, in, out, per_proc);
-		break;
-	case PVRSRV_BRIDGE_PDUMP_SETFRAME:
-		err = PDumpSetFrameBW(cmd, in, out, per_proc);
-		break;
-	case PVRSRV_BRIDGE_PDUMP_ISCAPTURING:
-		err = PDumpIsCaptureFrameBW(cmd, in, out, per_proc);
-		break;
-	case PVRSRV_BRIDGE_PDUMP_DUMPBITMAP:
-		err = PDumpBitmapBW(cmd, in, out, per_proc);
-		break;
-	case PVRSRV_BRIDGE_PDUMP_DUMPREADREG:
-		err = DummyBW(cmd, in, out, per_proc);
-		break;
-	case PVRSRV_BRIDGE_PDUMP_SYNCPOL:
-		err = PDumpSyncPolBW(cmd, in, out, per_proc);
-		break;
-	case PVRSRV_BRIDGE_PDUMP_DUMPSYNC:
-		err = PDumpSyncDumpBW(cmd, in, out, per_proc);
-		break;
-	case PVRSRV_BRIDGE_PDUMP_DRIVERINFO:
-		err = DummyBW(cmd, in, out, per_proc);
-		break;
-	case PVRSRV_BRIDGE_PDUMP_PDREG:
-		err = PDumpPDRegBW(cmd, in, out, per_proc);
-		break;
-	case PVRSRV_BRIDGE_PDUMP_DUMPPDDEVPADDR:
-		err = PDumpPDDevPAddrBW(cmd, in, out, per_proc);
-		break;
-	case PVRSRV_BRIDGE_PDUMP_CYCLE_COUNT_REG_READ:
-		err = PDumpCycleCountRegReadBW(cmd, in, out, per_proc);
-		break;
-	case PVRSRV_BRIDGE_PDUMP_STARTINITPHASE:
-	case PVRSRV_BRIDGE_PDUMP_STOPINITPHASE:
-		err = DummyBW(cmd, in, out, per_proc);
-		break;
-#endif
-
 	case PVRSRV_BRIDGE_GET_OEMJTABLE:
 		err = DummyBW(cmd, in, out, per_proc);
 		break;
@@ -2987,6 +2932,61 @@ static int bridged_ioctl(struct file *filp, u32 cmd, void *in, void *out,
 		break;
 
 #if defined(PDUMP)
+	/* PDUMP IOCTLs live in a separate range */
+	case PVRSRV_BRIDGE_PDUMP_INIT:
+		err = DummyBW(cmd, in, out, per_proc);
+		break;
+	case PVRSRV_BRIDGE_PDUMP_MEMPOL:
+		err = PDumpMemPolBW(cmd, in, out, per_proc);
+		break;
+	case PVRSRV_BRIDGE_PDUMP_DUMPMEM:
+		err = PDumpMemBW(cmd, in, out, per_proc);
+		break;
+	case PVRSRV_BRIDGE_PDUMP_REG:
+		err = PDumpRegWithFlagsBW(cmd, in, out, per_proc);
+		break;
+	case PVRSRV_BRIDGE_PDUMP_REGPOL:
+		err = PDumpRegPolBW(cmd, in, out, per_proc);
+		break;
+	case PVRSRV_BRIDGE_PDUMP_COMMENT:
+		err = PDumpCommentBW(cmd, in, out, per_proc);
+		break;
+	case PVRSRV_BRIDGE_PDUMP_SETFRAME:
+		err = PDumpSetFrameBW(cmd, in, out, per_proc);
+		break;
+	case PVRSRV_BRIDGE_PDUMP_ISCAPTURING:
+		err = PDumpIsCaptureFrameBW(cmd, in, out, per_proc);
+		break;
+	case PVRSRV_BRIDGE_PDUMP_DUMPBITMAP:
+		err = PDumpBitmapBW(cmd, in, out, per_proc);
+		break;
+	case PVRSRV_BRIDGE_PDUMP_DUMPREADREG:
+		err = DummyBW(cmd, in, out, per_proc);
+		break;
+	case PVRSRV_BRIDGE_PDUMP_SYNCPOL:
+		err = PDumpSyncPolBW(cmd, in, out, per_proc);
+		break;
+	case PVRSRV_BRIDGE_PDUMP_DUMPSYNC:
+		err = PDumpSyncDumpBW(cmd, in, out, per_proc);
+		break;
+	case PVRSRV_BRIDGE_PDUMP_DRIVERINFO:
+		err = DummyBW(cmd, in, out, per_proc);
+		break;
+	case PVRSRV_BRIDGE_PDUMP_PDREG:
+		err = PDumpPDRegBW(cmd, in, out, per_proc);
+		break;
+	case PVRSRV_BRIDGE_PDUMP_DUMPPDDEVPADDR:
+		err = PDumpPDDevPAddrBW(cmd, in, out, per_proc);
+		break;
+	case PVRSRV_BRIDGE_PDUMP_CYCLE_COUNT_REG_READ:
+		err = PDumpCycleCountRegReadBW(cmd, in, out, per_proc);
+		break;
+	case PVRSRV_BRIDGE_PDUMP_STARTINITPHASE:
+	case PVRSRV_BRIDGE_PDUMP_STOPINITPHASE:
+		err = DummyBW(cmd, in, out, per_proc);
+		break;
+
+	/* bridged_sgx_bridge */
 	case PVRSRV_BRIDGE_SGX_PDUMP_BUFFER_ARRAY:
 		err = SGXPDumpBufferArrayBW(cmd, in, out, per_proc);
 		break;

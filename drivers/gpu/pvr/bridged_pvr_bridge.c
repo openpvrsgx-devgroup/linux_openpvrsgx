@@ -132,7 +132,7 @@ static int PVRSRVCreateDeviceMemContextBW(u32 ui32BridgeID,
        struct PVRSRV_PER_PROCESS_DATA *psPerProc)
 {
 	void *hDevCookieInt;
-	void *hDevMemContextInt;
+	struct BM_CONTEXT *ctx;
 	u32 i;
 	IMG_BOOL bCreated;
 
@@ -151,8 +151,7 @@ static int PVRSRVCreateDeviceMemContextBW(u32 ui32BridgeID,
 		return 0;
 
 	psCreateDevMemContextOUT->eError = PVRSRVCreateDeviceMemContextKM(
-				hDevCookieInt, psPerProc,
-				&hDevMemContextInt,
+				hDevCookieInt, psPerProc, (void *)&ctx,
 				&psCreateDevMemContextOUT->ui32ClientHeapCount,
 				&psCreateDevMemContextOUT->sHeapInfo[0],
 				&bCreated, pbSharedDeviceMemHeap);
@@ -162,18 +161,20 @@ static int PVRSRVCreateDeviceMemContextBW(u32 ui32BridgeID,
 
 	if (bCreated) {
 		PVRSRVAllocHandleNR(psPerProc->psHandleBase,
-				&psCreateDevMemContextOUT->hDevMemContext,
-				hDevMemContextInt,
+				&psCreateDevMemContextOUT->hDevMemContext, ctx,
 				PVRSRV_HANDLE_TYPE_DEV_MEM_CONTEXT,
 				PVRSRV_HANDLE_ALLOC_FLAG_NONE);
+		ctx->open_count = 1;
 	} else {
 		psCreateDevMemContextOUT->eError =
 			PVRSRVFindHandle(psPerProc->psHandleBase,
-				&psCreateDevMemContextOUT->hDevMemContext,
-				hDevMemContextInt,
+				&psCreateDevMemContextOUT->hDevMemContext, ctx,
 				PVRSRV_HANDLE_TYPE_DEV_MEM_CONTEXT);
 		if (psCreateDevMemContextOUT->eError != PVRSRV_OK)
 			return 0;
+
+		WARN_ON_ONCE(!ctx->open_count);
+		ctx->open_count++;
 	}
 
 	for (i = 0; i < psCreateDevMemContextOUT->ui32ClientHeapCount; i++) {
@@ -225,8 +226,8 @@ static int PVRSRVDestroyDeviceMemContextBW(u32 ui32BridgeID,
 	struct PVRSRV_PER_PROCESS_DATA *psPerProc)
 {
 	void *hDevCookieInt;
-	void *hDevMemContextInt;
-	IMG_BOOL bDestroyed;
+	unsigned long ctx_handle;
+	struct BM_CONTEXT *ctx;
 
 	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID,
 			PVRSRV_BRIDGE_DESTROY_DEVMEMCONTEXT);
@@ -239,25 +240,29 @@ static int PVRSRVDestroyDeviceMemContextBW(u32 ui32BridgeID,
 	if (psRetOUT->eError != PVRSRV_OK)
 		return 0;
 
+	ctx_handle = (unsigned long)psDestroyDevMemContextIN->hDevMemContext;
 	psRetOUT->eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
-				&hDevMemContextInt,
-				psDestroyDevMemContextIN->hDevMemContext,
-				PVRSRV_HANDLE_TYPE_DEV_MEM_CONTEXT);
+					    (void *)&ctx, (void *)ctx_handle,
+					    PVRSRV_HANDLE_TYPE_DEV_MEM_CONTEXT);
 
 	if (psRetOUT->eError != PVRSRV_OK)
 		return 0;
 
-	psRetOUT->eError = PVRSRVDestroyDeviceMemContextKM(hDevCookieInt,
-						hDevMemContextInt, &bDestroyed);
+	if (!ctx->open_count) {
+		psRetOUT->eError = PVRSRV_ERROR_INVALID_PARAMS;
 
-	if (psRetOUT->eError != PVRSRV_OK)
 		return 0;
+	}
 
-	if (bDestroyed)
+	if (!--ctx->open_count)
 		psRetOUT->eError = PVRSRVReleaseHandle(psPerProc->psHandleBase,
-					psDestroyDevMemContextIN->
-					hDevMemContext,
+					(void *)ctx_handle,
 					PVRSRV_HANDLE_TYPE_DEV_MEM_CONTEXT);
+
+	psRetOUT->eError = PVRSRVDestroyDeviceMemContextKM(hDevCookieInt, ctx);
+
+	if (psRetOUT->eError != PVRSRV_OK)
+		return 0;
 
 	return 0;
 }

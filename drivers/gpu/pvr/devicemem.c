@@ -188,16 +188,11 @@ enum PVRSRV_ERROR PVRSRVCreateDeviceMemContextKM(void *hDevCookie,
 }
 
 enum PVRSRV_ERROR PVRSRVDestroyDeviceMemContextKM(void *hDevCookie,
-					     void *hDevMemContext,
-					     IMG_BOOL *pbDestroyed)
+					     void *hDevMemContext)
 {
-	int destroyed;
-
 	PVR_UNREFERENCED_PARAMETER(hDevCookie);
 
-	destroyed = pvr_put_ctx(hDevMemContext);
-	if (pbDestroyed)
-		*pbDestroyed = destroyed ? IMG_TRUE : IMG_FALSE;
+	pvr_put_ctx(hDevMemContext);
 
 	return PVRSRV_OK;
 }

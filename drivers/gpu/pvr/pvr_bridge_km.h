@@ -90,7 +90,7 @@ enum PVRSRV_ERROR PVRSRVCreateDeviceMemContextKM(void *hDevCookie,
 		IMG_BOOL *pbShared);
 
 enum PVRSRV_ERROR PVRSRVDestroyDeviceMemContextKM(void *hDevCookie,
-		void *hDevMemContext, IMG_BOOL *pbCreated);
+		void *hDevMemContext);
 
 enum PVRSRV_ERROR PVRSRVGetDeviceMemHeapInfoKM(void *hDevCookie,
 		void *hDevMemContext, u32 *pui32ClientHeapCount,

@@ -86,6 +86,7 @@ struct BM_CONTEXT {
 	struct HASH_TABLE *pBufferHash;
 	void *hResItem;
 	u32 ui32RefCount;
+	int open_count;
 	struct BM_CONTEXT *psNext;
 };
 

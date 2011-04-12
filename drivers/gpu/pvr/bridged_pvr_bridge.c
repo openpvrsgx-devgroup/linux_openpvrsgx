@@ -2849,11 +2849,38 @@ static int bridged_check_cmd(u32 cmd_id)
 	return 0;
 }
 
+static void pr_ioctl_error(u32 cmd, const char *proc_name, int err,
+			   const void *out, off_t out_err_ofs)
+{
+	u32 r;
+
+	if (err) {
+		r = err;
+	} else if (out) {
+		r = *(u32 *)(out + out_err_ofs);
+		if (!r)
+			return;
+
+		/*
+		 * Don't report the following timeout failure, it's business
+		 * as usual (unfortunately).
+		 */
+		if (PVRSRV_IOWR(cmd) == PVRSRV_BRIDGE_SGX_2DQUERYBLTSCOMPLETE &&
+		    r == PVRSRV_ERROR_CMD_NOT_PROCESSED)
+			return;
+	} else {
+		return;
+	}
+
+	pr_warning("pvr: %s: IOCTL %d failed (%d)\n", proc_name, cmd, r);
+}
+
 static int bridged_ioctl(struct file *filp, u32 cmd, void *in, void *out,
 			 size_t in_size,
 			 struct PVRSRV_PER_PROCESS_DATA *per_proc)
 {
 	int err = -EFAULT;
+	off_t out_err_ofs = 0;
 
 	switch (PVRSRV_IOWR(cmd)) {
 	case PVRSRV_BRIDGE_ENUM_DEVICES:
@@ -3093,6 +3120,9 @@ static int bridged_ioctl(struct file *filp, u32 cmd, void *in, void *out,
 		break;
 
 	case PVRSRV_BRIDGE_GETMMU_PD_DEVPADDR:
+		out_err_ofs =
+			offsetof(struct PVRSRV_BRIDGE_OUT_GETMMU_PD_DEVPADDR,
+				eError);
 		err = MMU_GetPDDevPAddrBW(cmd, in, out, per_proc);
 		break;
 
@@ -3107,6 +3137,9 @@ static int bridged_ioctl(struct file *filp, u32 cmd, void *in, void *out,
 		err = PVRSRVEventObjectWaitBW(cmd, in, out, per_proc);
 		break;
 	case PVRSRV_BRIDGE_EVENT_OBJECT_OPEN:
+		out_err_ofs =
+			offsetof(struct PVRSRV_BRIDGE_OUT_EVENT_OBJECT_OPEN,
+				eError);
 		err = PVRSRVEventObjectOpenBW(cmd, in, out, per_proc);
 		break;
 	case PVRSRV_BRIDGE_EVENT_OBJECT_CLOSE:
@@ -3118,6 +3151,8 @@ static int bridged_ioctl(struct file *filp, u32 cmd, void *in, void *out,
 		break;
 
 	case PVRSRV_BRIDGE_SGX_GETCLIENTINFO:
+		out_err_ofs = offsetof(struct PVRSRV_BRIDGE_OUT_GETCLIENTINFO,
+					eError);
 		err = SGXGetClientInfoBW(cmd, in, out, per_proc);
 		break;
 	case PVRSRV_BRIDGE_SGX_RELEASECLIENTINFO:
@@ -3216,7 +3251,9 @@ static int bridged_ioctl(struct file *filp, u32 cmd, void *in, void *out,
 			__func__, cmd);
        }
 
-       return err;
+	pr_ioctl_error(cmd, per_proc->name, err, out, out_err_ofs);
+
+	return err;
 }
 
 int BridgedDispatchKM(struct file *filp, struct PVRSRV_PER_PROCESS_DATA *pd,

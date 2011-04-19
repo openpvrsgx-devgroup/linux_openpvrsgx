@@ -109,6 +109,8 @@ static int pvr_debugfs_reset_wrapper(void *data, u64 val)
 		return pvr_debugfs_reset(data, val);
 
 	BUG();
+
+	return -EFAULT;
 }
 
 DEFINE_SIMPLE_ATTRIBUTE(pvr_debugfs_reset_fops, NULL,

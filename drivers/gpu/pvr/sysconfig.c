@@ -160,6 +160,8 @@ unsigned long sgx_get_max_freq(void)
 		}
 	}
 	BUG();
+
+	return 0;
 }
 
 #else

@@ -160,30 +160,49 @@ enum PVRSRV_ERROR SGXDoKickKM(void *hDevHandle, struct SGX_CCB_KICK *psCCBKick,
 		}
 	}
 
-	psTACmd->ui32NumSrcSyncs = psCCBKick->ui32NumSrcSyncs;
-	for (i = 0; i < SGX_MAX_SRC_SYNCS; i++) {
-		if (i >= psCCBKick->ui32NumSrcSyncs) {
-			pvr_trcmd_clear_syn(&ktrace->src_syn[i]);
-			continue;
+	/* check for duplicates while creating the new list */
+	psTACmd->ui32NumSrcSyncs = 0;
+	for (i = 0; ((i < SGX_MAX_SRC_SYNCS) &&
+		     (i < psCCBKick->ui32NumSrcSyncs)); i++) {
+		int j;
+
+		psSyncInfo = (struct PVRSRV_KERNEL_SYNC_INFO *)
+			psCCBKick->ahSrcKernelSyncInfo[i];
+
+		for (j = 0; j < i; j++) {
+			struct PVRSRV_KERNEL_SYNC_INFO *tmp =
+				psCCBKick->ahSrcKernelSyncInfo[j];
+			if (tmp->psSyncData == psSyncInfo->psSyncData) {
+				pr_err("%s: Duplicate SRC Sync detected: %p\n",
+				       __func__, tmp->psSyncData);
+				break;
+			}
 		}
+		if (j != i)
+			continue;
 
-		psSyncInfo =
-		    (struct PVRSRV_KERNEL_SYNC_INFO *)psCCBKick->
-		    ahSrcKernelSyncInfo[i];
+		/* beat the 80 char limit. */
+		j = psTACmd->ui32NumSrcSyncs;
 
-		psTACmd->asSrcSyncs[i].sWriteOpsCompleteDevVAddr =
+		psTACmd->asSrcSyncs[j].sWriteOpsCompleteDevVAddr =
 			psSyncInfo->sWriteOpsCompleteDevVAddr;
-		psTACmd->asSrcSyncs[i].sReadOpsCompleteDevVAddr =
+		psTACmd->asSrcSyncs[j].sReadOpsCompleteDevVAddr =
 			psSyncInfo->sReadOpsCompleteDevVAddr;
 
-		psTACmd->asSrcSyncs[i].ui32ReadOpsPendingVal =
+		psTACmd->asSrcSyncs[j].ui32ReadOpsPendingVal =
 			psSyncInfo->psSyncData->ui32ReadOpsPending++;
 
-		psTACmd->asSrcSyncs[i].ui32WriteOpsPendingVal =
+		psTACmd->asSrcSyncs[j].ui32WriteOpsPendingVal =
 			psSyncInfo->psSyncData->ui32WriteOpsPending;
 
-		pvr_trcmd_set_syn(&ktrace->src_syn[i], psSyncInfo);
+		pvr_trcmd_set_syn(&ktrace->src_syn[j], psSyncInfo);
+
+		psTACmd->ui32NumSrcSyncs++;
 	}
+
+	/* clear the remaining src syncs */
+	for (i = psTACmd->ui32NumSrcSyncs; i < SGX_MAX_SRC_SYNCS; i++)
+		pvr_trcmd_clear_syn(&ktrace->src_syn[i]);
 
 	if (psCCBKick->bFirstKickOrResume &&
 	    psCCBKick->ui32NumDstSyncObjects > 0) {

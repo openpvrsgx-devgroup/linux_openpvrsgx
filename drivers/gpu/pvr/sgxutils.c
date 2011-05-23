@@ -644,16 +644,26 @@ enum PVRSRV_ERROR SGXUnregisterHWTransferContextKM(void *hHWTransferContext)
 	return PVRSRV_OK;
 }
 
+
+
+static inline int sync_cnt_after_eq(u32 c1, u32 c2)
+{
+	return (int)(c1 - c2) >= 0;
+}
+
+
+
 static inline IMG_BOOL SGX2DQuerySyncOpsComplete(
 				struct PVRSRV_KERNEL_SYNC_INFO *psSyncInfo,
 				u32 ui32ReadOpsPending, u32 ui32WriteOpsPending)
 {
 	struct PVRSRV_SYNC_DATA *psSyncData = psSyncInfo->psSyncData;
 
-	return (IMG_BOOL)((psSyncData->ui32ReadOpsComplete >=
-				ui32ReadOpsPending) &&
-			   (psSyncData->ui32WriteOpsComplete >=
-				ui32WriteOpsPending));
+	return (IMG_BOOL)(
+		sync_cnt_after_eq(
+			psSyncData->ui32ReadOpsComplete, ui32ReadOpsPending) &&
+		sync_cnt_after_eq(
+			psSyncData->ui32WriteOpsComplete, ui32WriteOpsPending));
 }
 
 enum PVRSRV_ERROR SGX2DQueryBlitsCompleteKM(

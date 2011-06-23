@@ -624,7 +624,7 @@ static enum PVRSRV_ERROR InitDev(struct OMAPLFB_DEVINFO *psDevInfo)
 	struct OMAPLFB_FBINFO *psPVRFBInfo = &psDevInfo->sFBInfo;
 	enum PVRSRV_ERROR eError = PVRSRV_ERROR_GENERIC;
 
-	acquire_console_sem();
+	console_lock();
 
 	if (fb_idx < 0 || fb_idx >= num_registered_fb) {
 		eError = PVRSRV_ERROR_INVALID_DEVICE;
@@ -670,7 +670,7 @@ static enum PVRSRV_ERROR InitDev(struct OMAPLFB_DEVINFO *psDevInfo)
 errModPut:
 	module_put(psLINFBOwner);
 errRelSem:
-	release_console_sem();
+	console_unlock();
 	return eError;
 }
 
@@ -679,7 +679,7 @@ static void DeInitDev(struct OMAPLFB_DEVINFO *psDevInfo)
 	struct fb_info *psLINFBInfo = psDevInfo->psLINFBInfo;
 	struct module *psLINFBOwner;
 
-	acquire_console_sem();
+	console_lock();
 
 	fb_unregister_client(&gFBEventsData.notif);
 
@@ -690,7 +690,7 @@ static void DeInitDev(struct OMAPLFB_DEVINFO *psDevInfo)
 
 	module_put(psLINFBOwner);
 
-	release_console_sem();
+	console_unlock();
 }
 
 enum PVRSRV_ERROR OMAPLFBInit(void)

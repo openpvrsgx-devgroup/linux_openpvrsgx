@@ -129,28 +129,15 @@ static int vdd2_pre_func(struct notifier_block *n, unsigned long event,
 static int vdd2_pre_post_func(struct notifier_block *n, unsigned long event,
 			      void *ptr)
 {
-	struct clk_notifier_data *cnd;
-
 	PVR_UNREFERENCED_PARAMETER(n);
 
-	cnd = (struct clk_notifier_data *)ptr;
-
-	PVR_TRACE("vdd2_pre_post_func: %s clock rate = %lu",
-		  (CLK_PRE_RATE_CHANGE == event) ? "old" :
-		  (CLK_POST_RATE_CHANGE == event) ? "new" :
-		  "???",
-		  cnd->rate);
-
-	if (CLK_PRE_RATE_CHANGE == event) {
+	if (CPUFREQ_PRECHANGE == event) {
 		pvr_dev_lock();
-		PVR_TRACE("vdd2_pre_post_func: CLK_PRE_RATE_CHANGE event");
+		PVR_TRACE("vdd2_pre_post_func: CPUFREQ_PRECHANGE event");
 		vdd2_pre_func(n, event, ptr);
-	} else if (CLK_POST_RATE_CHANGE == event) {
-		PVR_TRACE("vdd2_pre_post_func: CLK_POST_RATE_CHANGE event");
+	} else if (CPUFREQ_POSTCHANGE == event) {
+		PVR_TRACE("vdd2_pre_post_func: CPUFREQ_POSTCHANGE event");
 		vdd2_post_func(n, event, ptr);
-		pvr_dev_unlock();
-	} else if (CLK_ABORT_RATE_CHANGE == event) {
-		PVR_TRACE("vdd2_pre_post_func: CLK_ABORT_RATE_CHANGE event");
 		pvr_dev_unlock();
 	} else {
 		printk(KERN_ERR "vdd2_pre_post_func: unexpected event (%lu)\n",
@@ -172,7 +159,8 @@ static void RegisterConstraintNotifications(struct SYS_SPECIFIC_DATA
 {
 	PVR_TRACE("Registering constraint notifications");
 
-	clk_notifier_register(psSysSpecData->psSGX_FCK, &vdd2_pre_post);
+	cpufreq_register_notifier(&vdd2_pre_post, CPUFREQ_TRANSITION_NOTIFIER);
+
 	PVR_TRACE("VDD2 constraint notifications registered");
 }
 
@@ -181,7 +169,7 @@ static void UnRegisterConstraintNotifications(struct SYS_SPECIFIC_DATA
 {
 	PVR_TRACE("Unregistering constraint notifications");
 
-	clk_notifier_unregister(psSysSpecData->psSGX_FCK, &vdd2_pre_post);
+	cpufreq_unregister_notifier(&vdd2_pre_post, CPUFREQ_TRANSITION_NOTIFIER);
 }
 
 static struct device sgx_dev;

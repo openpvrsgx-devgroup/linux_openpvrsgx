@@ -1,61 +1,3 @@
-/*
-
-  This file is provided under a dual BSD/GPLv2 license.  When using or
-  redistributing this file, you may do so under either license.
-
-  GPL LICENSE SUMMARY
-
-  Copyright(c) 2010-2011 Texas Instruments Incorporated,
-  All rights reserved.
-
-  This program is free software; you can redistribute it and/or modify
-  it under the terms of version 2 of the GNU General Public License as
-  published by the Free Software Foundation.
-
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
-  The full GNU General Public License is included in this distribution
-  in the file called LICENSE.GPL.
-
-  BSD LICENSE
-
-  Copyright(c) 2010-2011 Texas Instruments Incorporated,
-  All rights reserved.
-
-  Redistribution and use in source and binary forms, with or without
-  modification, are permitted provided that the following conditions
-  are met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-    * Redistributions in binary form must reproduce the above copyright
-      notice, this list of conditions and the following disclaimer in
-      the documentation and/or other materials provided with the
-      distribution.
-    * Neither the name of Texas Instruments Incorporated nor the names of
-      its contributors may be used to endorse or promote products derived
-      from this software without specific prior written permission.
-
-  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-*/
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -63,7 +5,6 @@
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
-#include <sys/stat.h>
 
 #define ABE_COEFF_MAGIC	0xABEABE00
 #define ABE_COEFF_VERSION	1
@@ -77,11 +18,9 @@
 #define MAX_COEFFS 	25      /* Number of coefficients for profiles */
 
 
-#define MAX_COEFF_SIZE	(NUM_EQUALIZERS * MAX_PROFILES * MAX_COEFFS * sizeof(int32_t))
-#define MAX_FW_SIZE	(sizeof(firmware) + MAX_COEFF_SIZE)
-#define MAX_FILE_SIZE	(sizeof(struct header) + \
-			 MAX_FW_SIZE + \
-			 NUM_EQUALIZERS * sizeof(struct config))
+#define MAX_COEFF_SIZE	(MAX_PROFILES * MAX_COEFFS * sizeof(int32_t))
+#define MAX_FW_SIZE (sizeof(firmware) + MAX_COEFF_SIZE)
+#define MAX_FILE_SIZE (MAX_FW_SIZE + sizeof (struct header))
 
 #define ARRAY_SIZE(x)	(sizeof(x) / sizeof(x[0]))
 #define NUM_COEFFS(x)	(sizeof(x[0]) / sizeof(x[0][0]))
@@ -126,11 +65,6 @@ const int32_t dl1_equ_coeffs[][DL1_COEFF] = {
 				{0, 0, 0, 0, 0, 0, 0, 0, 0, -1510844,
 				4532536, -4532536, 1510844, 0, 0, 0, 0,
 				0, 0, 0, 0, 0, 6802833, -682266, 731554},
-/* 4kHz LPF filter */
-				{0, 0, 0, 0, 0, 0, 0, 0, 0, 0x0002e630,
-				0x0008b290, 0x0008b290, 0x0002e630,
-				0, 0, 0, 0, 0, 0, 0, 0, 0,
-				0x0058ae58, 0xfffa666a, 0x0007da1e},
 };
 
 /*
@@ -161,10 +95,6 @@ const int32_t dl2l_equ_coeffs[][DL2L_COEFF] = {
 				{0, 0, 0, 0, 0, 0, 0, 0, 0, -1510844,
 				4532536, -4532536, 1510844, 0, 0, 0, 0,
 				0, 0, 0, 0, 0, 6802833, -682266, 731554},
-/* 450Hz High pass and Gain = 1 */
-                                {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-				8046381, -502898, 8046381, 0, 0, 0, 0, 0,
-				0, 0, 0, 0, 0,-7718119, 502466},
 };
 
 /*
@@ -195,10 +125,6 @@ const int32_t dl2r_equ_coeffs[][DL2R_COEFF] = {
 				{0, 0, 0, 0, 0, 0, 0, 0, 0, -1510844,
 				4532536, -4532536, 1510844, 0, 0, 0, 0,
 				0, 0, 0, 0, 0, 6802833, -682266, 731554},
-/* 450Hz High pass and Gain = 1 */
-                                {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-				8046381, -502898, 8046381, 0, 0, 0, 0, 0,
-				0, 0, 0, 0, 0,-7718119, 502466},
 };
 
 /*
@@ -243,6 +169,7 @@ const int32_t amic_equ_coeffs[][AMIC_COEFF] = {
 				4119419, 1938156, -6935719, 775202,
 				-1801934, 2997698, -3692214, 3406822,
 				-2280190, 1042982},
+
 /* 20kHz cut-off frequency and Gain = 0.25 */
 				{-1029873, -3078121, -5462817, -5569389,
 				-2422069, 2422071, 5569391, 5462819,
@@ -301,25 +228,20 @@ struct header {
 	struct config equ[];
 };
 
-#define NUM_EQUALIZERS		6
+#define NUM_EQUALIZERS		5
 
 struct header hdr = {
 	.magic		= ABE_COEFF_MAGIC,
 	.num_equ 	= NUM_EQUALIZERS,
-	/*
-	 * must match the IDs order in ABE HAL:
-	 * DL1, DL2L, DL2R, AMIC, DMIC, SDT
-	 */
 	.equ	= {{
 		.name = "DL1 Equalizer",
 		.count = NUM_PROFILES(dl1_equ_coeffs),
 		.coeff = NUM_COEFFS(dl1_equ_coeffs),
 		.texts	= {
 				"Flat response",
-				"High-pass 0dB",
-				"High-pass -12dB",
-				"High-pass -20dB",
-				"4Khz LPF   0dB",
+				"High-pass 1dB",
+				"High-pass 0.25dB",
+				"High-pass 0.1dB",
 		},},
 		{
 		.name = "DL2 Left Equalizer",
@@ -327,10 +249,9 @@ struct header hdr = {
 		.coeff = NUM_COEFFS(dl2l_equ_coeffs),
 		.texts	= {
 				"Flat response",
-				"High-pass 0dB",
-				"High-pass -12dB",
-				"High-pass -20dB",
-				"450Hz High-pass",
+				"High-pass 1dB",
+				"High-pass 0.25dB",
+				"High-pass 0.1dB",
 		},},
 		{
 		.name = "DL2 Right Equalizer",
@@ -338,10 +259,27 @@ struct header hdr = {
 		.coeff = NUM_COEFFS(dl2r_equ_coeffs),
 		.texts	= {
 				"Flat response",
-				"High-pass 0dB",
-				"High-pass -12dB",
-				"High-pass -20dB",
-				"450Hz High-pass",
+				"High-pass 1dB",
+				"High-pass 0.25dB",
+				"High-pass 0.1dB",
+		},},
+		{
+		.name = "AMIC Equalizer",
+		.count = NUM_PROFILES(amic_equ_coeffs),
+		.coeff = NUM_COEFFS(amic_equ_coeffs),
+		.texts	= {
+				"High-pass 1dB",
+				"High-pass 0.25dB",
+				"High-pass 0.125dB",
+		},},
+		{
+		.name = "DMIC Equalizer",
+		.count = NUM_PROFILES(dmic_equ_coeffs),
+		.coeff = NUM_COEFFS(dmic_equ_coeffs),
+		.texts	= {
+				"High-pass 1dB",
+				"High-pass 0.25dB",
+				"High-pass 0.125dB",
 		},},
 		{
 		.name = "Sidetone Equalizer",
@@ -349,27 +287,9 @@ struct header hdr = {
 		.coeff = NUM_COEFFS(sdt_equ_coeffs),
 		.texts	= {
 				"Flat response",
-				"High-pass 0dB",
-				"High-pass -12dB",
-				"High-pass -18dB",
-		},},
-		{
-		.name = "AMIC Equalizer",
-		.count = NUM_PROFILES(amic_equ_coeffs),
-		.coeff = NUM_COEFFS(amic_equ_coeffs),
-		.texts	= {
-				"High-pass 0dB",
-				"High-pass -12dB",
-				"High-pass -18dB",
-		},},
-		{
-		.name = "DMIC Equalizer",
-		.count = NUM_PROFILES(dmic_equ_coeffs),
-		.coeff = NUM_COEFFS(dmic_equ_coeffs),
-		.texts	= {
-				"High-pass 0dB",
-				"High-pass -12dB",
-				"High-pass -18dB",
+				"High-pass 1dB",
+				"High-pass 0.25dB",
+				"High-pass 0.1dB",
 		},},
 	},
 };
@@ -383,13 +303,11 @@ struct header hdr = {
  */
 int main(int argc, char *argv[])
 {
-	int i, err = 0, in_fd, out_fd, offset = 0;
-	FILE *out_legacy_fd;
-	uint32_t *buf_legacy;
+	int err, in_fd, out_fd, offset = 0;
 	char *buf;
 
-	if (argc != 3) {
-		printf("%s: outfile hexfile\n", argv[0]);
+	if (argc != 2) {
+		printf("%s: outfile\n", argv[0]);
 		return 0;
 	}
 
@@ -403,16 +321,7 @@ int main(int argc, char *argv[])
 	if (out_fd < 0) {
 		printf("failed to open %s err %d\n",
 			argv[1], out_fd);
-		err = out_fd;
-		goto err_open1;
-	}
-
-	/* open output file for FW hexdump */
-	out_legacy_fd = fopen(argv[2], "w");
-	if (out_legacy_fd == NULL) {
-		printf("failed to open %s\n", argv[2]);
-		return 0;
-		goto err_open2;
+		return out_fd;
 	}
 
 	hdr.firmware_version = ABE_FIRMWARE_VERSION;
@@ -420,10 +329,6 @@ int main(int argc, char *argv[])
 	hdr.coeff_version = ABE_COEFF_VERSION;
 	offset = sizeof(hdr) + NUM_EQUALIZERS * sizeof(struct config);
 
-	/*
-	 * must match the IDs order in ABE HAL:
-	 * DL1, DL2L, DL2R, AMIC, DMIC, SDT
-	 */
 	memcpy(buf + offset, dl1_equ_coeffs, sizeof(dl1_equ_coeffs));
 	offset += sizeof(dl1_equ_coeffs);
 
@@ -433,33 +338,23 @@ int main(int argc, char *argv[])
 	memcpy(buf + offset, dl2r_equ_coeffs, sizeof(dl2r_equ_coeffs));
 	offset += sizeof(dl2r_equ_coeffs);
 
-	memcpy(buf + offset, sdt_equ_coeffs, sizeof(sdt_equ_coeffs));
-	offset += sizeof(sdt_equ_coeffs);
-
 	memcpy(buf + offset, amic_equ_coeffs, sizeof(amic_equ_coeffs));
 	offset += sizeof(amic_equ_coeffs);
 
 	memcpy(buf + offset, dmic_equ_coeffs, sizeof(dmic_equ_coeffs));
 	offset += sizeof(dmic_equ_coeffs);
 
+	memcpy(buf + offset, sdt_equ_coeffs, sizeof(sdt_equ_coeffs));
+	offset += sizeof(sdt_equ_coeffs);
+
 	hdr.coeff_size = offset - sizeof(hdr);
 
 	memcpy(buf, &hdr, sizeof(hdr) + NUM_EQUALIZERS * sizeof(struct config));
 	memcpy(buf + offset, firmware, sizeof(firmware));
+
 	err = write(out_fd, buf, offset + sizeof(firmware));
 	if (err <= 0)
-		goto err_write;
+		return err;
 
-	buf_legacy = (uint32_t *)buf;
-	for (i = 0; i < (offset + sizeof(firmware)) >> 2; i++)
-		fprintf(out_legacy_fd, "0x%08x,\n", buf_legacy[i]);
-
-err_write:
-	fclose(out_legacy_fd);
-err_open2:
 	close (out_fd);
-err_open1:
-	free(buf);
-
-	return err;
 }

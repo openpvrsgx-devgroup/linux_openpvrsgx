@@ -1,0 +1,7 @@
+This tools is used to enable the audio cpature/playback for modem voice call.
+see voicecallcontrol --help for more details
+
+
+- Android compilation c.f. Android.mk
+- host PC compilation for simulation c.f. host_compilation.sh
+- target compilation: c.f. compilation.sh

@@ -242,9 +242,9 @@ struct header hdr = {
 		.coeff = NUM_COEFFS(dl1_equ_coeffs),
 		.texts	= {
 				"Flat response",
-				"High-pass 1dB",
-				"High-pass 0.25dB",
-				"High-pass 0.1dB",
+				"High-pass 0dB",
+				"High-pass -12dB",
+				"High-pass -20dB",
 		},},
 		{
 		.name = "DL2 Left Equalizer",
@@ -252,9 +252,9 @@ struct header hdr = {
 		.coeff = NUM_COEFFS(dl2l_equ_coeffs),
 		.texts	= {
 				"Flat response",
-				"High-pass 1dB",
-				"High-pass 0.25dB",
-				"High-pass 0.1dB",
+				"High-pass 0dB",
+				"High-pass -12dB",
+				"High-pass -20dB",
 		},},
 		{
 		.name = "DL2 Right Equalizer",
@@ -262,27 +262,27 @@ struct header hdr = {
 		.coeff = NUM_COEFFS(dl2r_equ_coeffs),
 		.texts	= {
 				"Flat response",
-				"High-pass 1dB",
-				"High-pass 0.25dB",
-				"High-pass 0.1dB",
+				"High-pass 0dB",
+				"High-pass -12dB",
+				"High-pass -20dB",
 		},},
 		{
 		.name = "AMIC Equalizer",
 		.count = NUM_PROFILES(amic_equ_coeffs),
 		.coeff = NUM_COEFFS(amic_equ_coeffs),
 		.texts	= {
-				"High-pass 1dB",
-				"High-pass 0.25dB",
-				"High-pass 0.125dB",
+				"High-pass 0dB",
+				"High-pass -12dB",
+				"High-pass -18dB",
 		},},
 		{
 		.name = "DMIC Equalizer",
 		.count = NUM_PROFILES(dmic_equ_coeffs),
 		.coeff = NUM_COEFFS(dmic_equ_coeffs),
 		.texts	= {
-				"High-pass 1dB",
-				"High-pass 0.25dB",
-				"High-pass 0.125dB",
+				"High-pass 0dB",
+				"High-pass -12dB",
+				"High-pass -18dB",
 		},},
 		{
 		.name = "Sidetone Equalizer",
@@ -290,9 +290,9 @@ struct header hdr = {
 		.coeff = NUM_COEFFS(sdt_equ_coeffs),
 		.texts	= {
 				"Flat response",
-				"High-pass 1dB",
-				"High-pass 0.25dB",
-				"High-pass 0.1dB",
+				"High-pass 0dB",
+				"High-pass -12dB",
+				"High-pass -18dB",
 		},},
 	},
 };

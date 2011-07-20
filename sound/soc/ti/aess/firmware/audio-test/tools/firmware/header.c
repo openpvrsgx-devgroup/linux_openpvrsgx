@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #define ABE_COEFF_MAGIC	0xABEABE00
 #define ABE_COEFF_VERSION	1
@@ -18,9 +19,11 @@
 #define MAX_COEFFS 	25      /* Number of coefficients for profiles */
 
 
-#define MAX_COEFF_SIZE	(MAX_PROFILES * MAX_COEFFS * sizeof(int32_t))
-#define MAX_FW_SIZE (sizeof(firmware) + MAX_COEFF_SIZE)
-#define MAX_FILE_SIZE (MAX_FW_SIZE + sizeof (struct header))
+#define MAX_COEFF_SIZE	(NUM_EQUALIZERS * MAX_PROFILES * MAX_COEFFS * sizeof(int32_t))
+#define MAX_FW_SIZE	(sizeof(firmware) + MAX_COEFF_SIZE)
+#define MAX_FILE_SIZE	(sizeof(struct header) + \
+			 MAX_FW_SIZE + \
+			 NUM_EQUALIZERS * sizeof(struct config))
 
 #define ARRAY_SIZE(x)	(sizeof(x) / sizeof(x[0]))
 #define NUM_COEFFS(x)	(sizeof(x[0]) / sizeof(x[0][0]))
@@ -303,10 +306,12 @@ struct header hdr = {
  */
 int main(int argc, char *argv[])
 {
-	int err, in_fd, out_fd, offset = 0;
+	int i, err = 0, in_fd, out_fd, offset = 0;
+	FILE *out_legacy_fd;
+	uint32_t *buf_legacy;
 	char *buf;
 
-	if (argc != 2) {
+	if (argc != 3) {
 		printf("%s: outfile\n", argv[0]);
 		return 0;
 	}
@@ -321,7 +326,15 @@ int main(int argc, char *argv[])
 	if (out_fd < 0) {
 		printf("failed to open %s err %d\n",
 			argv[1], out_fd);
-		return out_fd;
+		err = out_fd;
+		goto err_open1;
+	}
+
+	out_legacy_fd = fopen(argv[2], "w");
+	if (out_legacy_fd == NULL) {
+		printf("failed to open %s\n", argv[2]);
+		return 0;
+		goto err_open2;
 	}
 
 	hdr.firmware_version = ABE_FIRMWARE_VERSION;
@@ -351,10 +364,20 @@ int main(int argc, char *argv[])
 
 	memcpy(buf, &hdr, sizeof(hdr) + NUM_EQUALIZERS * sizeof(struct config));
 	memcpy(buf + offset, firmware, sizeof(firmware));
-
 	err = write(out_fd, buf, offset + sizeof(firmware));
 	if (err <= 0)
-		return err;
+		goto err_write;
 
+	buf_legacy = (uint32_t *)buf;
+	for (i = 0; i < (offset + sizeof(firmware)) >> 2; i++)
+		fprintf(out_legacy_fd, "0x%08x,\n", buf_legacy[i]);
+
+err_write:
+	fclose(out_legacy_fd);
+err_open2:
 	close (out_fd);
+err_open1:
+	free(buf);
+
+	return err;
 }

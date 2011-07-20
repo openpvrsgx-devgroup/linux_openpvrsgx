@@ -231,11 +231,15 @@ struct header {
 	struct config equ[];
 };
 
-#define NUM_EQUALIZERS		5
+#define NUM_EQUALIZERS		6
 
 struct header hdr = {
 	.magic		= ABE_COEFF_MAGIC,
 	.num_equ 	= NUM_EQUALIZERS,
+	/*
+	 * must match the IDs order in ABE HAL:
+	 * DL1, DL2L, DL2R, AMIC, DMIC, SDT
+	 */
 	.equ	= {{
 		.name = "DL1 Equalizer",
 		.count = NUM_PROFILES(dl1_equ_coeffs),
@@ -267,6 +271,16 @@ struct header hdr = {
 				"High-pass -20dB",
 		},},
 		{
+		.name = "Sidetone Equalizer",
+		.count = NUM_PROFILES(sdt_equ_coeffs),
+		.coeff = NUM_COEFFS(sdt_equ_coeffs),
+		.texts	= {
+				"Flat response",
+				"High-pass 0dB",
+				"High-pass -12dB",
+				"High-pass -18dB",
+		},},
+		{
 		.name = "AMIC Equalizer",
 		.count = NUM_PROFILES(amic_equ_coeffs),
 		.coeff = NUM_COEFFS(amic_equ_coeffs),
@@ -280,16 +294,6 @@ struct header hdr = {
 		.count = NUM_PROFILES(dmic_equ_coeffs),
 		.coeff = NUM_COEFFS(dmic_equ_coeffs),
 		.texts	= {
-				"High-pass 0dB",
-				"High-pass -12dB",
-				"High-pass -18dB",
-		},},
-		{
-		.name = "Sidetone Equalizer",
-		.count = NUM_PROFILES(sdt_equ_coeffs),
-		.coeff = NUM_COEFFS(sdt_equ_coeffs),
-		.texts	= {
-				"Flat response",
 				"High-pass 0dB",
 				"High-pass -12dB",
 				"High-pass -18dB",
@@ -342,6 +346,10 @@ int main(int argc, char *argv[])
 	hdr.coeff_version = ABE_COEFF_VERSION;
 	offset = sizeof(hdr) + NUM_EQUALIZERS * sizeof(struct config);
 
+	/*
+	 * must match the IDs order in ABE HAL:
+	 * DL1, DL2L, DL2R, AMIC, DMIC, SDT
+	 */
 	memcpy(buf + offset, dl1_equ_coeffs, sizeof(dl1_equ_coeffs));
 	offset += sizeof(dl1_equ_coeffs);
 
@@ -351,14 +359,14 @@ int main(int argc, char *argv[])
 	memcpy(buf + offset, dl2r_equ_coeffs, sizeof(dl2r_equ_coeffs));
 	offset += sizeof(dl2r_equ_coeffs);
 
+	memcpy(buf + offset, sdt_equ_coeffs, sizeof(sdt_equ_coeffs));
+	offset += sizeof(sdt_equ_coeffs);
+
 	memcpy(buf + offset, amic_equ_coeffs, sizeof(amic_equ_coeffs));
 	offset += sizeof(amic_equ_coeffs);
 
 	memcpy(buf + offset, dmic_equ_coeffs, sizeof(dmic_equ_coeffs));
 	offset += sizeof(dmic_equ_coeffs);
-
-	memcpy(buf + offset, sdt_equ_coeffs, sizeof(sdt_equ_coeffs));
-	offset += sizeof(sdt_equ_coeffs);
 
 	hdr.coeff_size = offset - sizeof(hdr);
 

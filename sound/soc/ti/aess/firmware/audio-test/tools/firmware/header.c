@@ -374,7 +374,7 @@ int main(int argc, char *argv[])
 	char *buf;
 
 	if (argc != 3) {
-		printf("%s: outfile\n", argv[0]);
+		printf("%s: outfile hexfile\n", argv[0]);
 		return 0;
 	}
 
@@ -392,6 +392,7 @@ int main(int argc, char *argv[])
 		goto err_open1;
 	}
 
+	/* open output file for FW hexdump */
 	out_legacy_fd = fopen(argv[2], "w");
 	if (out_legacy_fd == NULL) {
 		printf("failed to open %s\n", argv[2]);

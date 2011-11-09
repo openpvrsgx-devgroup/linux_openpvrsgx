@@ -136,16 +136,16 @@ int main(int argc, char *argv[])
 			count = 0;
 		}
 
-		printf("\t McPDM DL R=%03d(%d) W=03%d(%d) Flow:%d\n", 
+		printf("\t McPDM DL R=%03d(%d) W=%03d(%d) Flow:%d\n", 
 			trc_slot.mcpdm_dl_read, (int)((trc_slot.mcpdm_dl_read - prev_trc_slot.mcpdm_dl_read) + 120) % 120,
 			trc_slot.mcpdm_dl_write, (int)((trc_slot.mcpdm_dl_write - prev_trc_slot.mcpdm_dl_write) + 120) % 120,
 			trc_slot.mcpdm_dl_flow);
-		printf("\t McPDM UL R=%03d(%d) W=03%d(%d) Flow:%d\n", 
+		printf("\t McPDM UL R=%03d(%d) W=%03d(%d) Flow:%d\n", 
 			trc_slot.mcpdm_ul_read, (int)((trc_slot.mcpdm_ul_read - prev_trc_slot.mcpdm_ul_read) + 120) % 120,
 			trc_slot.mcpdm_ul_write, (int)((trc_slot.mcpdm_ul_write - prev_trc_slot.mcpdm_ul_write) + 120) % 120,
 			trc_slot.mcpdm_ul_flow);
 
-		printf("\t VX DL R=%03d(%d) W=03%d(%d) Flow:%d\n", 
+		printf("\t VX DL R=%03d(%d) W=%03d(%d) Flow:%d\n", 
 			trc_slot.vx_dl_read, (int)((trc_slot.vx_dl_read - prev_trc_slot.vx_dl_read) + 120) % 120,
 			trc_slot.vx_dl_write, (int)((trc_slot.vx_dl_write - prev_trc_slot.vx_dl_write) + 120) % 120,
 			trc_slot.vx_dl_flow);

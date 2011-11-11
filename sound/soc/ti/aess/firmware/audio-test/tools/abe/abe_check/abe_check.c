@@ -709,7 +709,7 @@ int atc_to_io[OMAP_ABE_ATC_TO_PORT_SIZE][2] = {
 	{CBPr_DMA_RTX6, VIB_DL_PORT},
 };
 
-#define OMAP_ABE_ID_TO_FCT_SIZE    20
+#define OMAP_ABE_ID_TO_FCT_SIZE    21
 
 char *id_to_fct[OMAP_ABE_ID_TO_FCT_SIZE] = {
 	"NULL",

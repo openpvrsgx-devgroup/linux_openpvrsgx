@@ -1297,15 +1297,23 @@ int abe_print_gain()
 	uint32_t *p_data = smem;
 	uint32_t target, current;
 
+	printf("|----------------------------------------|\n");
+	printf("|        %-4s        | %-7s | %-7s |\n", "Gain", "Target", "Current");
+	printf("|--------------------|---------|---------|\n");
+
 	for (i = 0; i <36; i++) {
 		target = p_data[OMAP_ABE_S_GTARGET1_ADDR/4+i];
 		current = p_data[OMAP_ABE_S_GCURRENT_ADDR/4+i];
 		if ((target != 0) && (20.0 * log10f(current/262144.0) > -115)) {
 			//printf("Debug %x %x", p_data[OMAP_ABE_S_GTARGET1_ADDR/4+i], p_data[OMAP_ABE_S_GCURRENT_ADDR/4+i]);
-			printf("Gain:%s, Target: %2.2f, ", gain_list[i], 20.0 * log10f(target/262144.0));
-			printf("Current: %2.2f\n", 20.0 * log10f(current/262144.0));
+			printf("| %-18s | %7.2f | %7.2f |\n",
+				gain_list[i],
+				20.0 * log10f(target/262144.0),
+				20.0 * log10f(current/262144.0));
 		}
 	}
+
+	printf("|----------------------------------------|\n\n");
 }
 
 int abe_print_route()

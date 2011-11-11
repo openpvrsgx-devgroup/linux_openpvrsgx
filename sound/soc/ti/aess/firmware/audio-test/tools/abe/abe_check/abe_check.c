@@ -969,7 +969,7 @@ char *get_atc_source_name(int source)
 	case 0x0C:
 		return "DMIC_UP";
 	case 0x0D:
-		return "MCPDM_DL";
+		return "MCPDM_UL";
 	case 0x0E:
 	case 0x0F:
 	case 0x10:

@@ -112,9 +112,6 @@ uint32_t cmem[] = {
 };
 #endif
 
-
-#define NAME_SIZE 30
-
 struct buffer {
 	char name[NAME_SIZE];
 	uint32_t addr;

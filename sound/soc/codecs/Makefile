@@ -262,6 +262,7 @@ snd-soc-sigmadsp-y := sigmadsp.o
 snd-soc-sigmadsp-i2c-y := sigmadsp-i2c.o
 snd-soc-sigmadsp-regmap-y := sigmadsp-regmap.o
 snd-soc-si476x-y := si476x.o
+snd-soc-si47xx-y := si47xx.o
 snd-soc-sma1303-y := sma1303.o
 snd-soc-spdif-tx-y := spdif_transmitter.o
 snd-soc-spdif-rx-y := spdif_receiver.o
@@ -312,6 +313,7 @@ snd-soc-twl4030-y := twl4030.o
 snd-soc-twl6040-y := twl6040.o
 snd-soc-uda1334-y := uda1334.o
 snd-soc-uda1380-y := uda1380.o
+snd-soc-w2cbw003-bt-y := w2cbw003-bt.o
 snd-soc-wcd-classh-y := wcd-clsh-v2.o
 snd-soc-wcd-mbhc-y := wcd-mbhc-v2.o
 snd-soc-wcd9335-y := wcd9335.o
@@ -797,3 +799,8 @@ obj-$(CONFIG_SND_SOC_LPASS_TX_MACRO)	+= snd-soc-lpass-tx-macro.o
 
 # Mux
 obj-$(CONFIG_SND_SOC_SIMPLE_MUX)	+= snd-soc-simple-mux.o
+obj-$(CONFIG_SND_SOC_WM2000)   += snd-soc-wm2000.o
+obj-$(CONFIG_SND_SOC_WM9090)   += snd-soc-wm9090.o
+obj-$(CONFIG_SND_SOC_GTM601)    += snd-soc-gtm601.o
+obj-$(CONFIG_SND_SOC_SI47XX)    += snd-soc-si47xx.o
+obj-$(CONFIG_SND_SOC_W2CBW003)  += snd-soc-w2cbw003-bt.o

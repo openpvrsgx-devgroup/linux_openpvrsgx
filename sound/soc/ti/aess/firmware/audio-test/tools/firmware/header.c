@@ -384,12 +384,12 @@ struct header hdr = {
 int main(int argc, char *argv[])
 {
 	int i, err = 0, in_fd, out_fd, offset = 0;
-	FILE *out_legacy_fd;
+	FILE *out_legacy_fd = NULL;
 	uint32_t *buf_legacy;
 	char *buf;
 
-	if (argc != 3) {
-		printf("%s: outfile hexfile\n", argv[0]);
+	if (argc < 2) {
+		printf("%s: outfile [hexdump]\n", argv[0]);
 		return 0;
 	}
 
@@ -408,11 +408,13 @@ int main(int argc, char *argv[])
 	}
 
 	/* open output file for FW hexdump */
-	out_legacy_fd = fopen(argv[2], "w");
-	if (out_legacy_fd == NULL) {
-		printf("failed to open %s\n", argv[2]);
-		return 0;
-		goto err_open2;
+	if (argc == 3) {
+		out_legacy_fd = fopen(argv[2], "w");
+		if (out_legacy_fd == NULL) {
+			printf("failed to open %s\n", argv[2]);
+			return 0;
+			goto err_open2;
+		}
 	}
 
 	hdr.firmware_version = ABE_FIRMWARE_VERSION;
@@ -450,12 +452,15 @@ int main(int argc, char *argv[])
 	if (err <= 0)
 		goto err_write;
 
-	buf_legacy = (uint32_t *)buf;
-	for (i = 0; i < (offset + sizeof(firmware)) >> 2; i++)
-		fprintf(out_legacy_fd, "0x%08x,\n", buf_legacy[i]);
+	if (argc == 3) {
+		buf_legacy = (uint32_t *)buf;
+		for (i = 0; i < (offset + sizeof(firmware)) >> 2; i++)
+			fprintf(out_legacy_fd, "0x%08x,\n", buf_legacy[i]);
+	}
 
 err_write:
-	fclose(out_legacy_fd);
+	if (out_legacy_fd)
+		fclose(out_legacy_fd);
 err_open2:
 	close (out_fd);
 err_open1:

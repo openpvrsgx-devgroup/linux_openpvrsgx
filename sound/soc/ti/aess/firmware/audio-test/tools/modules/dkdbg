@@ -1,0 +1,17 @@
+# Usage dkdbg file on|off
+# e.g. "dkdbg soc-core on" will switch debug ON whithin soc-core.c 
+
+if [ $# -lt 2 ]; then
+    echo $0 file on off
+    exit 127
+fi
+
+if [ "$2" = "on" ]; then
+echo Enable debug in $1.c
+STR="file "$1".c +p"
+echo -n $STR > /sys/kernel/debug/dynamic_debug/control
+else
+echo Disable debug in $1.c
+STR="file "$1".c -p"
+echo -n $STR > /sys/kernel/debug/dynamic_debug/control
+fi

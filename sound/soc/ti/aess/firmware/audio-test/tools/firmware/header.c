@@ -417,6 +417,12 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	/* check if firmware file is already generated and just dump it again */
+	if (*firmware == 0xabeabe00) {
+		printf("Firmware already processed. Dumping binary firmware\n");
+		goto dump;
+	}
+
 	hdr.firmware_version = ABE_FIRMWARE_VERSION;
 	hdr.firmware_size = sizeof(firmware);
 	hdr.coeff_version = ABE_COEFF_VERSION;
@@ -447,6 +453,8 @@ int main(int argc, char *argv[])
 	hdr.coeff_size = offset - sizeof(hdr);
 
 	memcpy(buf, &hdr, sizeof(hdr) + NUM_EQUALIZERS * sizeof(struct config));
+
+dump:
 	memcpy(buf + offset, firmware, sizeof(firmware));
 	err = write(out_fd, buf, offset + sizeof(firmware));
 	if (err <= 0)

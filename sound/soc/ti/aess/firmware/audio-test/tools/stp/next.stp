@@ -1,0 +1,370 @@
+global start_time, script_start_time
+
+probe begin {
+  script_start_time=get_32k();
+  printf("%-15s\t%-30s\n","SCRIPT NAME:","ASoC OMAP4")
+  printf("%-15s\t%-30s\n","TIME UNIT:","T_32k (default)")
+  printf("%-15s\t%d T_32k\n\n","START_TIME:",get_32k());
+  printf("%-16s %-16s %-16s\n","Entry Time","ACTION", "Exit Time");
+}
+
+probe end {
+  printf("SCRIPT END\n");
+}
+
+
+/* ======================================================================== */
+/*                     OMAP ABE
+/* ======================================================================== */
+probe kernel.function("aess_open") {
+  printf("%-16d aess_open\n", get_32k());
+  
+}
+probe kernel.function("aess_hw_params") {
+  printf("%-16d aess_hw_params\n", get_32k());
+  
+}
+probe kernel.function("aess_prepare") {
+  printf("%-16d aess_prepare\n", get_32k());
+  
+}
+probe kernel.function("aess_close") {
+  printf("%-16d aess_close\n", get_32k());
+  
+}
+probe kernel.function("aess_mmap") {
+  printf("%-16d aess_mmap\n",get_32k());
+  
+}
+/*
+probe kernel.function("aess_pointer") {
+  printf("%-16d aess_pointer\n",get_32k());
+  
+}
+*/
+/* ======================================================================== */
+/*                     SOC
+/* ======================================================================== */
+/*
+probe kernel.function("soc_dsp_be_dai*") {
+  printf("%-16d %s\n",get_32k(), probefunc());
+  
+}
+probe kernel.function("soc_dsp_fe_dai*") {
+  printf("%-16d %s\n",get_32k(), probefunc());
+  
+}
+*/
+/* ======================================================================== */
+/*                     OMAP ABE DSP
+/* ======================================================================== */
+probe kernel.function("omap_abe_dai_startup") {
+  printf("%-16d omap_abe_dai_startup\n", get_32k());
+  
+}
+probe kernel.function("omap_abe_dai_hw_params") {
+  printf("%-16d omap_abe_dai_hw_params\n", get_32k());
+  
+}
+probe kernel.function("omap_abe_dai_prepare") {
+  printf("%-16d omap_abe_dai_prepare\n", get_32k());
+  
+}
+probe kernel.function("omap_abe_dai_shutdown") {
+  printf("%-16d omap_abe_dai_shutdown\n", get_32k());
+  
+}
+probe kernel.function("omap_abe_dai_hw_free") {
+  printf("%-16d omap_abe_dai_hw_free\n", get_32k());
+  
+}
+probe kernel.function("omap_abe_dai_trigger") {
+  printf("%-16d omap_abe_dai_trigger c:%d s:%d\n", get_32k(), $cmd, $substream->stream);
+  
+}
+
+probe kernel.function("omap_abe_dai_bespoke_trigger") {
+  printf("%-16d omap_abe_dai_bespoke_trigger c:%d s:%d\n", get_32k(), $cmd, $substream->stream);
+  
+}
+
+/* ======================================================================== */
+/*                     ABE HAL Functions
+/* ======================================================================== */
+
+function abe_get_port_name(id) {
+  name = "UNKNOW"
+  if(id == 0)  name = "DMIC"
+  if(id == 1)  name = "McPDM UL"
+  if(id == 2)  name = "BT Vx UL"
+  if(id == 3)  name = "MM UL"
+  if(id == 4)  name = "MM UL2"
+  if(id == 5)  name = "VX UL"
+  if(id == 6)  name = "MM DL"
+  if(id == 7)  name = "VX DL"
+  if(id == 8)  name = "TONES DL"
+  if(id == 9)  name = "VIBRA DL"
+  if(id == 10) name = "BT VX DL"
+  if(id == 11) name = "McPDM DL"
+  if(id == 12) name = "MM EXT OUT"
+  if(id == 13) name = "MM EXT IN"
+  if(id == 14) name = "TDM_DL"
+  if(id == 15) name = "TDM UL"
+  if(id == 16) name = "DEBUG"
+  if(id == 18) name = "PDM DL1 !!!"
+  if(id == 19) name = "PDM DL2 !!!"
+  if(id == 20) name = "PDM VIB !!!"
+  return name
+}
+/*
+function abe_get_format(id) {
+  name = "UNKNOW"
+  if(id == 1)  name = "MONO_MSB"
+  if(id == 2)  name = "MONO_RSHIFTED_16"
+  if(id == 3)  name = "STEREO_RSHIFTED_16"
+  if(id == 4)  name = "STEREO_16_16"
+  if(id == 5)  name = "STEREO_MSB"
+  if(id == 6)  name = "THREE_MSB"
+  if(id == 7)  name = "FOUR_MSB"
+  if(id == 8)  name = "FIVE_MSB"
+  if(id == 9)  name = "SIX_MSB"
+  if(id == 10) name = "SEVEN_MSB"
+  if(id == 11) name = "EIGHT_MSB"
+  if(id == 12) name = "NINE_MSB"
+  if(id == 12) name = "TEN_MSB"
+  return name
+}
+*/
+function abe_get_mixer_name(id) {
+  name = "UNKNOW"
+  if(id == 1)  name = "EQ1"
+  if(id == 2)  name = "EQ2 L"
+  if(id == 3)  name = "EQ2_R"
+  if(id == 4)  name = "EQ SDT"
+  if(id == 5)  name = "EQ AMIC"
+  if(id == 6)  name = "EQ DMIC"
+  if(id == 7)  name = "APS 1"
+  if(id == 8)  name = "APS 2"
+  if(id == 9)  name = "APS 3"
+  if(id == 10)  name = "ASRC 1"
+  if(id == 11)  name = "ASRC 2"
+  if(id == 12)  name = "ASRC 3"
+  if(id == 13)  name = "ASRC 4"
+  if(id == 14)  name = "MIXDL1"
+  if(id == 15)  name = "MIXDL2"
+  if(id == 16)  name = "MIXAUDUL"
+  if(id == 17)  name = "MIXVXREC"
+  if(id == 18)  name = "MIXSDT"
+  if(id == 19)  name = "MIXECHO"
+  if(id == 20)  name = "UPROUTE"
+  if(id == 21)  name = "GAIN"
+  if(id == 22)  name = "DMIC1"
+  if(id == 23)  name = "DMIC2"
+  if(id == 24)  name = "DMIC3"
+  if(id == 25)  name = "AMIC"
+  if(id == 26)  name = "SPLIT"
+  if(id == 27)  name = "DL1"
+  if(id == 28)  name = "DL2"
+  if(id == 29)  name = "EANC"
+  if(id == 30)  name = "SEQ"
+  return name
+}
+
+probe kernel.function("omap_abe_init_atc") {
+  printf("%-16d omap_abe_init_atc: %s\n",get_32k(), abe_get_port_name($id));
+  
+}
+/*
+
+probe kernel.function("abe_connect_cbpr_dmareq_port") {
+  start_time= get_32k();
+  id = $id;
+  format = $f->samp_format;
+  freq = $f->f;
+
+  printf("%-16d abe_connect_cbpr_dmareq_port: %s %d %s\n",get_32k(), abe_get_port_name(id), freq, abe_get_format(format));
+  
+}
+
+probe kernel.function("abe_connect_irq_ping_pong_port") {
+  start_time= get_32k();
+  id = $id;
+  format = $f->samp_format;
+  freq = $f->f;
+  cmd = $size;
+
+  printf("%-16d abe_connect_irq_ping_pong_port %s %d %s %d\n",get_32k(), abe_get_port_name(id), freq, abe_get_format(format), cmd);
+ 
+}
+probe kernel.function("abe_connect_serial_port") {
+  start_time= get_32k();
+  id = $id;
+  format = $f->samp_format;
+  freq = $f->f;
+
+  printf("%-16d abe_connect_serial_port: %s %d %s\n",get_32k(), abe_get_port_name(id), freq, abe_get_format(format));
+  
+}
+
+probe kernel.function("abe_reset_hal") {
+  printf("%-16d abe_reset_hal \n",get_32k());
+}
+
+*/
+probe kernel.function("omap_abe_disable_enable_dma_request") {
+  printf("%-16d omap_abe_disable_enable_dma_request: %d %s\n",get_32k(), $on_off, abe_get_port_name($id));
+  
+}
+
+probe kernel.function("omap_abe_write_event_generator") {
+  start_time= get_32k();
+  cmd=$e;
+  printf("%-16d omap_abe_write_event_generator %d\n",get_32k(), cmd);
+  
+}
+
+probe kernel.function("omap_abe_stop_event_generator") {
+  start_time= get_32k();
+  printf("%-16d omap_abe_stop_event_generator\n",get_32k());
+  
+}
+
+
+
+probe kernel.function("omap_abe_unmute_gain") {
+  printf("%-16d abe_unmute_gain %s %d \n",get_32k(), abe_get_mixer_name($id), $p);
+}
+probe kernel.function("omap_abe_mute_gain") {
+  printf("%-16d abe_mute_gain %s %d\n",get_32k(), abe_get_mixer_name($id), $p);
+}
+probe kernel.function("omap_abe_write_gain") {
+  printf("%-16d abe_write_gain %s %d %x\n",get_32k(), abe_get_mixer_name($id), $p, $f_g);
+}
+probe kernel.function("abe_reload_fw") {
+  printf("%-16d abe_reload_fw\n",get_32k());
+}
+/* --------------------------- ABE HAL IRQ --------------------------- */
+
+probe kernel.function("abe_irq_processing") {
+  start_time= get_32k();
+  printf("%-16d abe_irq_processing\n",get_32k());
+  
+}
+probe kernel.function("abe_irq_aps") {
+  start_time= get_32k();
+
+  printf("%-16d abe_irq_aps\n",get_32k());
+  
+}
+probe kernel.function("abe_irq_ping_pong") {
+  start_time= get_32k();
+
+  printf("%-16d abe_irq_ping_pong\n",get_32k());
+  
+}
+probe kernel.function("abe_irq_check_for_sequences") {
+  start_time= get_32k();
+
+  printf("%-16d abe_irq_check_for_sequences\n",get_32k());
+  
+}
+
+probe kernel.function("abe_set_ping_pong_buffer") {
+  id=$port;
+  cmd=$n_bytes;
+
+  printf("%-16d abe_set_ping_pong_buffer: %s %d\n",get_32k(), abe_get_port_name(id), cmd);
+  
+}
+
+
+probe kernel.function("abe_set_opp_processing") {
+  printf("%-16d abe_set_opp_processing: %d\n",get_32k(), $opp);
+  
+}
+
+probe kernel.function("abe_dsp_pm_*") {
+  printf("%-16d %s\n", get_32k(), probefunc());
+  
+}
+
+/* ======================================================================== */
+/*                     McPDM Functions
+/* ======================================================================== */
+/*
+probe kernel.function("omap_mcpdm_write") {
+  printf("%-16d McPDM write: %x %x\n", get_32k(), $reg, $val);
+}
+*/
+probe kernel.function("omap_mcpdm_dai*") {
+  printf("%-16d %s\n", get_32k(), probefunc());
+}
+
+probe kernel.function("omap_mcpdm_prepare") {
+  printf("%-16d %s\n", get_32k(), probefunc());
+}
+
+/* ======================================================================== */
+/*                     DMIC Functions
+/* ======================================================================== */
+
+/* ======================================================================== */
+/*                     Phoenix Audio Functions
+/* ======================================================================== */
+
+function twl6040_reg_name(id) {
+  name = "UNKNOW"
+  if(id == 0x07)  name = "HPPLLCTL"
+  if(id == 0x08)  name = "LPPLLCTL"
+  if(id == 0x0A)  name = "AMICBCTL"
+  if(id == 0x0B)  name = "DMICBCTL"
+  if(id == 0x0C)  name = "MICLCTL"
+  if(id == 0x0D)  name = "MIRLCTL"
+  if(id == 0x0E)  name = "MICGAIN"
+  if(id == 0x10)  name = "HSLCTL"
+  if(id == 0x11)  name = "HSRCTL"
+  if(id == 0x12)  name = "HSGAIN"
+  if(id == 0x13)  name = "EARCTL"
+  if(id == 0x14)  name = "HFLCTL"
+  if(id == 0x15)  name = "HFLGAIN"
+  if(id == 0x16)  name = "HFRCTL"
+  if(id == 0x17)  name = "HFRGAIN"
+  return name
+}
+
+probe kernel.function("twl6040_write") {
+  printf("%-16d twl6040_write: %s(%x) %x \n",get_32k(), twl6040_reg_name($reg), $reg, $value);
+  
+}
+/*
+probe kernel.function("twl6040_reg_write") {
+  printf("%-16d twl6040_reg_write: %s(%x) %x \n",get_32k(), twl6040_reg_name($reg), $reg, $val);
+  
+}
+*/
+
+/* ======================================================================== */
+/*                     McBSP Functions
+/* ======================================================================== */
+probe kernel.function("omap_mcbsp_dai*") {
+  start_time= get_32k();
+  printf("%-16d %s\n",get_32k(),probefunc());
+  
+}
+
+probe kernel.function("omap_mcbsp_start") {
+  start_time= get_32k();
+  printf("%-16d %s\n",get_32k(),probefunc());
+  
+}
+probe kernel.function("omap_mcbsp_stop") {
+  start_time= get_32k();
+  printf("%-16d %s\n",get_32k(),probefunc());
+  
+}
+
+
+/* ======================================================================== */
+/*                     sDMA Functions
+/* ======================================================================== */
+

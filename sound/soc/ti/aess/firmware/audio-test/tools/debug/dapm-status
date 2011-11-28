@@ -1,0 +1,11 @@
+# Usage dapm-status
+# e.g. "dapm-status card" to display dapm status
+
+if [ $# -lt 1 ]; then
+	echo "dapm-status card"
+	exit 127
+fi
+   
+echo $1" enabled widgets dump"
+cat /sys/kernel/debug/asoc/$1/*/dapm/* | grep ": On "
+echo $1" widget dump complete"

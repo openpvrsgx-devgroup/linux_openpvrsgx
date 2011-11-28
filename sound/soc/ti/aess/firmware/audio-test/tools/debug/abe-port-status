@@ -1,0 +1,8 @@
+# Usage abe-port-status
+
+for file in /sys/kernel/debug/abe_port/*
+do
+	echo -n ${file} " = "
+	cat ${file}
+done
+

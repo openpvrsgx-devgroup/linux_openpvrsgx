@@ -21,21 +21,43 @@ LOCAL_PATH:= $(call my-dir)
 # Build voicecallcontrol
 #
 
-include $(CLEAR_VARS)
+# for GingerBread
+ifneq (,$(findstring GINGERBREAD, $(BUILD_ID)))
+    include $(CLEAR_VARS)
 
-LOCAL_CFLAGS:= -D_POSIX_SOURCE
+    LOCAL_CFLAGS:= -D_POSIX_SOURCE
 
-LOCAL_C_INCLUDES += external/alsa-lib/include
+    LOCAL_C_INCLUDES += external/alsa-lib/include
 
-LOCAL_SRC_FILES:= voicecallcontrol.c
+    LOCAL_SRC_FILES:= voicecallcontrol.c
 
-LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
-LOCAL_MODULE_TAGS:= optional
-LOCAL_MODULE:=voicecallcontrol
+    LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
+    LOCAL_MODULE_TAGS:= optional
+    LOCAL_MODULE:=voicecallcontrol
 
-LOCAL_SHARED_LIBRARIES := \
-    libasound \
-    libcutils \
-    libutils
+    LOCAL_SHARED_LIBRARIES := \
+        libasound \
+        libcutils \
+        libutils
+endif
+# for IceCreamSandwitch
+ifneq (,$(findstring ICS, $(BUILD_ID)))
+    include $(CLEAR_VARS)
+
+    LOCAL_CFLAGS:= -D_POSIX_SOURCE -DTINYALSA
+
+    LOCAL_C_INCLUDES += external/tinyalsa/include
+
+    LOCAL_SRC_FILES:= voicecallcontrol.c
+
+    LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
+    LOCAL_MODULE_TAGS:= optional
+    LOCAL_MODULE:=voicecallcontrol
+
+    LOCAL_SHARED_LIBRARIES := \
+        libtinyalsa \
+        libcutils \
+        libutils
+endif
 
 include $(BUILD_EXECUTABLE)

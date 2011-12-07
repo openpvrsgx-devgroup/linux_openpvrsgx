@@ -1,5 +1,5 @@
 /*
-* OMAP4 ALSA Voice Call control 
+* OMAP4 ALSA/TinyAlsa Voice Call control
 *
 *  Copyright (C) 2010-2011 Texas Instruments, Inc.
 *
@@ -21,7 +21,8 @@
 *
 */
 
-#define VERSION "0.1" /* initial version */
+/*#define VERSION "0.1" /* initial version */
+#define VERSION "0.2" /* Update to support TinyAlsa */
 
 #include <errno.h>
 #include <ctype.h>
@@ -31,7 +32,18 @@
 #include <signal.h>
 #include <getopt.h>
 
-#include <alsa/asoundlib.h>
+#ifdef TINYALSA
+    #include <tinyalsa/asoundlib.h>
+#else
+    #include <alsa/asoundlib.h>
+#endif
+
+#ifdef HOSTMODE
+#ifdef TINYALSA
+    #ERROR "Hostmode is not compatible with TinyAlsa !!!"
+#endif
+#endif
+
 /* -----------------------------------------------------*/
 enum audioMode {
 	 HANDSET = 0,
@@ -45,6 +57,10 @@ struct audioConfig {
 	const char *value;
 };
 /* -----------------------------------------------------*/
+#ifdef TINYALSA
+#define snd_strerror(error)  strerror(error)
+#endif
+
 #define DEBUG(arg...) \
 	if (debugFlag) \
 		fprintf(stdout, arg)
@@ -61,14 +77,27 @@ struct audioConfig {
 		return error; \
 	}
 
+#ifndef TINYALSA
 #define COMMAND_SIZE 256
 #define AUDIO_MODEM_PCM_LATENCY     500000
+#endif
 /* -----------------------------------------------------*/
-int debugFlag = 0, terminate = 0, sampleRate = 8000, channels = 1, sideTone=1, volumeChanged = 0;
+int debugFlag = 0, terminate = 0, sampleRate = 8000, channels = 2, sideTone=1, volumeChanged = 0;
 enum audioMode mode = UNKNOWN;
+#ifdef TINYALSA
+unsigned int pcmName = 5;
+struct mixer *mixer;
+struct pcm_config pcmConfig = {
+    .period_size = 160,
+    .period_count = 2,
+    .format = PCM_FORMAT_S16_LE,
+};
+struct pcm *pcmdl, *pcmul;
+#else
 snd_pcm_t *playbackHandle,*captureHandle;
 char *pcmName = "hw:0,5";
 char *alsaControlCommandName = "alsa_amixer";
+#endif
 char *powerLevel = "Low";
 char *volume = "110";
 /* -----------------------------------------------------*/
@@ -100,7 +129,7 @@ const struct audioConfig handsetAudioConfig[] = {
 		{"AMIC_UL PDM Switch",			"on"},
 		{"MUX_VX0",					"AMic0"},
 		{"MUX_VX1",					"AMic1"},
-		
+
 		{"AUDUL Voice UL Volume",		"120"},
 		{"Voice Capture Mixer Capture",	"on"},
 	/* Sidetone */
@@ -137,7 +166,7 @@ const struct audioConfig handfreeAudioConfig[] = {
 		{"AMIC_UL PDM Switch",			"on"},
 		{"MUX_VX0",					"AMic0"},
 		{"MUX_VX1",					"AMic1"},
-		
+
 		{"AUDUL Voice UL Volume",		"120"},
 		{"Voice Capture Mixer Capture",	"on"},
 	/* eof */
@@ -171,7 +200,7 @@ const struct audioConfig headsetAudioConfig[] = {
 		{"AMIC_UL PDM Switch",			"on"},
 		{"MUX_VX0",					"AMic0"},
 		{"MUX_VX1",					"AMic1"},
-		
+
 		{"AUDUL Voice UL Volume",		"120"},
 		{"Voice Capture Mixer Capture",	"on"},
 	/* Sidetone */
@@ -208,7 +237,7 @@ const struct audioConfig offAudioConfig[] = {
 		{"AMIC_UL PDM Switch",			"off"},
 		{"MUX_VX0",					"None"},
 		{"MUX_VX1",					"None"},
-		
+
 		{"AUDUL Voice UL Volume",		"0"},
 		{"Voice Capture Mixer Capture",	"off"},
 	/* Sidetone */
@@ -227,11 +256,16 @@ static void show_help(void)
 		   "  -m, --mode=NAME		audio mode: handset, handfree, headset\n"
 		   "  -V, --volume=#		volume (min=0,step=1,max=120, default=110)\n"
 		   "  -r, --rate=#			sample rate in Hz (default 8000)\n"
-		   "  -D, --device=NAME		select PCM by name (default hw:0,5)\n"
-		   "  -c, --channels=#		channels (default 1)\n"
+		   "  -D, --device=NAME		select PCM by name (default hw:0,5 for ALSA, 5 for TinyAlsa)\n"
+		   "  -c, --channels=#		channels (default 2)\n"
 		   "  -p, --power=NAME		select power level (Low or High, default=Low)\n"
+#ifdef TINYALSA
+		   "  -s, --sidetone=#		enable(1)/disable(0) sidetone (default=1)");
+#else
 		   "  -s, --sidetone=#		enable(1)/disable(0) sidetone (default=1)\n"
-		   "  -C, --command=NAME		select amixer command name (default alsa_amixer)");
+		   "  -C, --command=NAME		select amixer command name");
+
+#endif
 	puts("Debugging options:\n"
 		   "  -d, --debug			toggle debugging trace\n");
 }
@@ -262,7 +296,11 @@ void initSig(void)
 
 static void parse_options(int argc, char *argv[])
 {
+#ifdef TINYALSA
+	static const char short_options[] = "hvm:V:r:D:c:p:s:d";
+#else
 	static const char short_options[] = "hvm:V:r:D:c:p:s:C:d";
+#endif
 	static const struct option long_options[] = {
 		{ .name = "help", .val = 'h' },
 		{ .name = "version", .val = 'v' },
@@ -273,7 +311,9 @@ static void parse_options(int argc, char *argv[])
 		{ .name = "channels", .has_arg = 1, .val = 'c' },
 		{ .name = "power", .has_arg = 1, .val = 'p' },
 		{ .name = "sidetone", .has_arg = 1, .val = 's' },
+#ifndef TINYALSA
 		{ .name = "command", .has_arg = 1, .val = 'C' },
+#endif
 		{ .name = "debug", .val = 'd' },
 		{ .name = ""}
 	};
@@ -315,7 +355,11 @@ static void parse_options(int argc, char *argv[])
 			channels = strtol(optarg, NULL, 0);
 			break;
 		case 'D':
+#ifdef TINYALSA
+			pcmName = strtol(optarg, NULL, 0);
+#else
 			pcmName = optarg;
+#endif
 			break;
 		case 'p':
 			powerLevel = optarg;
@@ -323,9 +367,11 @@ static void parse_options(int argc, char *argv[])
 		case 's':
 			sideTone = strtol(optarg, NULL, 0);
 			break;
+#ifndef TINYALSA
 		case 'C':
 			alsaControlCommandName = optarg;
 			break;
+#endif
 		default:
 			fprintf(stderr, "unknown option: %c\n", option);
 fail:
@@ -338,6 +384,49 @@ fail:
 int setControlName(const char *name, const char *value)
 {
 	int error = 0;
+#ifdef TINYALSA
+	struct mixer_ctl *ctl;
+	enum mixer_ctl_type type;
+	unsigned int num_values, i;
+	int digit_value;
+
+	ctl = mixer_get_ctl_by_name(mixer, name);
+	type = mixer_ctl_get_type(ctl);
+	num_values = mixer_ctl_get_num_values(ctl);
+
+	DEBUG("%s: name: %s, value: %s, type: %s, num_values: %d\n", __FUNCTION__,
+								     name,
+								     value,
+								     mixer_ctl_get_type_string(ctl),
+								     num_values);
+
+	switch (type)
+	{
+		case MIXER_CTL_TYPE_INT:
+			digit_value = atoi(value);
+			for (i = 0; i < num_values; i++) {
+				SND_ERROR_RETURN(mixer_ctl_set_value(ctl, i, digit_value));
+			}
+			break;
+		case MIXER_CTL_TYPE_BOOL:
+			if ((!strcmp(value, "on")) || (!strcmp(value, "On"))) {
+				SND_ERROR_RETURN(mixer_ctl_set_value(ctl, i, 1));
+			} else if ((!strcmp(value, "off")) || (!strcmp(value, "Off"))) {
+				SND_ERROR_RETURN(mixer_ctl_set_value(ctl, i, 0));
+			} else {
+				fputs("Wrong boolean value\n", stderr);
+				error = -EINVAL;
+			}
+			break;
+		case MIXER_CTL_TYPE_ENUM:
+			SND_ERROR_RETURN(mixer_ctl_set_enum_by_string(ctl, value));
+			break;
+		default:
+			fputs("Wrong type!!!\n", stderr);
+			error = -EINVAL;
+			break;
+	}
+#else
 	char command[COMMAND_SIZE];
 
 	if (debugFlag)
@@ -348,6 +437,7 @@ int setControlName(const char *name, const char *value)
 	DEBUG("%s: system call: '%s'\n", __FUNCTION__, &command[0]);
 #ifndef HOSTMODE
 	error = system(&command[0]);
+#endif
 #endif
 	return error;
 }
@@ -368,7 +458,7 @@ int setAudioConfig(const struct audioConfig *audiocfg)
 		if (!sideTone) {
 			if (!strcmp(config->name, "Sidetone Mixer Capture")) {
 				DEBUG("%s: %s = off\n", __FUNCTION__, config->name);
-				error = setControlName(config->name, "off");
+				error = setControlName(config->name, "Off");
 				config++;
 				continue;
 			}
@@ -391,12 +481,13 @@ int setAudioConfig(const struct audioConfig *audiocfg)
 
 	return error;
 }
+#ifndef TINYALSA
 static void ALSAErrorHandler(const char *file,
-						int line,
-						const char *function,
-						int err,
-						const char *fmt,
-						...)
+			     int line,
+			     const char *function,
+			     int err,
+			     const char *fmt,
+			     ...)
 {
 	char buf[BUFSIZ];
 	va_list arg;
@@ -409,9 +500,40 @@ static void ALSAErrorHandler(const char *file,
 	fprintf(stderr, "Error ALSALib: %s", buf);
 	va_end(arg);
 }
-
+#endif
 int startPcm(void)
 {
+#ifdef TINYALSA
+
+	DEBUG("%s:  PCM name: %d sampleRate: %d channels: %d\n", __FUNCTION__, pcmName, sampleRate, channels);
+
+	pcmConfig.channels = channels;
+	pcmConfig.rate = sampleRate;
+
+	pcmdl = pcm_open(0, pcmName , PCM_OUT, &pcmConfig);
+	if (!pcm_is_ready(pcmdl)) {
+	    fprintf(stderr, "cannot open PCM modem DL stream: %s", pcm_get_error(pcmdl));
+	    goto err_open_dl;
+	}
+
+	pcmul = pcm_open(0, pcmName , PCM_IN, &pcmConfig);
+	if (!pcm_is_ready(pcmul)) {
+	    fprintf(stderr, "cannot open PCM modem UL stream: %s", pcm_get_error(pcmdl));
+	    goto err_open_ul;
+	}
+
+	pcm_start(pcmdl);
+	pcm_start(pcmul);
+
+	return 0;
+
+err_open_ul:
+	pcm_close(pcmul);
+err_open_dl:
+	pcm_close(pcmdl);
+
+	return -ENOMEM;
+#else
 	int error = 0;
 
 	DEBUG("%s:  PCM name: %s sampleRate: %d channels: %d\n", __FUNCTION__, pcmName, sampleRate, channels);
@@ -438,11 +560,21 @@ int startPcm(void)
 	SND_ERROR_RETURN(snd_pcm_start(playbackHandle));
 #endif
 	return error;
+#endif
 }
 
 int stopPcm(void)
 {
 	int error = 0;
+#ifdef TINYALSA
+	DEBUG("%s:  PCM name: %d sampleRate: %d channels: %d\n", __FUNCTION__, pcmName, sampleRate, channels);
+
+	SND_ERROR_RETURN(pcm_stop(pcmdl));
+	SND_ERROR_RETURN(pcm_stop(pcmul));
+	SND_ERROR_RETURN(pcm_close(pcmdl));
+	SND_ERROR_RETURN(pcm_close(pcmul));
+
+#else
 	DEBUG("%s:  PCM name: %s sampleRate: %d channels: %d\n", __FUNCTION__, pcmName, sampleRate, channels);
 #ifndef HOSTMODE
 	SND_ERROR_RETURN(snd_pcm_drop(captureHandle));
@@ -451,6 +583,7 @@ int stopPcm(void)
 	SND_ERROR_RETURN(snd_pcm_close(captureHandle));
 	SND_ERROR_RETURN(snd_pcm_close(playbackHandle));
 #endif
+#endif
 	return error;
 }
 
@@ -458,8 +591,14 @@ int main(int argc ,char *argv[])
 {
 	int error = 0;
 
+#ifdef TINYALSA
+	puts("running with TinyAlsa");
+#else
 #ifdef HOSTMODE
-	puts("!!!!running in host mode!!!!");
+	puts("running in host mode");
+#else
+	puts("running with Alsa");
+#endif
 #endif
 	if (argc == 1) {
 		show_help();
@@ -470,8 +609,16 @@ int main(int argc ,char *argv[])
 	parse_options(argc, argv);
 
 	DEBUG("audio mode chosen: %d\n", mode);
+#ifndef TINYALSA
 #ifndef HOSTMODE
 	SND_ERROR_EXIT(snd_lib_error_set_handler(&ALSAErrorHandler));
+#endif
+#else
+	mixer = mixer_open(0);
+	if (NULL == mixer) {
+		fprintf(stderr, "problem to open TinyAlsa mixer\n");
+		exit(EXIT_FAILURE);
+	}
 #endif
 	switch (mode) {
 		case HANDSET:
@@ -493,7 +640,7 @@ int main(int argc ,char *argv[])
 	while(!terminate) {
 		sleep(1);
 	}
-	
+
 	SND_ERROR_EXIT(stopPcm());
 	SND_ERROR_EXIT(setAudioConfig(offAudioConfig));
 	puts("Audio Voice Call off\n");

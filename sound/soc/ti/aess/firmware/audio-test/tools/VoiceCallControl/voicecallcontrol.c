@@ -21,8 +21,9 @@
 *
 */
 
-/*#define VERSION "0.1" /* initial version */
-#define VERSION "0.2" /* Update to support TinyAlsa */
+/*#define VERSION "0.1" initial version */
+/*#define VERSION "0.2" Update to support TinyAlsa */
+#define VERSION "0.3" /* Update to ICS Nexus Prime */
 
 #include <errno.h>
 #include <ctype.h>
@@ -100,9 +101,10 @@ char *alsaControlCommandName = "alsa_amixer";
 #endif
 char *powerLevel = "Low";
 char *volume = "110";
+char *distro = "ICS";
 /* -----------------------------------------------------*/
 
-const struct audioConfig handsetAudioConfig[] = {
+const struct audioConfig handsetAudioConfig_GB[] = {
 	/* Downlink */
 		/* TWL6040 */
 		{"HS Left Playback",			"off"},
@@ -110,36 +112,36 @@ const struct audioConfig handsetAudioConfig[] = {
 		{"Headset Playback Volume",		"0"},
 		{"HF Left Playback",			"off"},
 		{"HF Right Playback",			"off"},
-		{"Handsfree Playback Volume",	"0"},
+		{"Handsfree Playback Volume",		"0"},
 		{"Earphone Driver Switch",		"on"},
 		{"Earphone Playback Volume",		"13"},
 		/* ABE */
-		{"DL1 PDM Switch",				"on"},
+		{"DL1 PDM Switch",			"on"},
 		{"Sidetone Mixer Playback",		"on"},
-		{"SDT DL Volume",				"120"},
-		{"DL1 Mixer Voice",				"on"},
-		{"DL1 Voice Playback Volume",	"110"},
+		{"SDT DL Volume",			"120"},
+		{"DL1 Mixer Voice",			"on"},
+		{"DL1 Voice Playback Volume",		"110"},
 	/* Uplink */
 		/* TWL6040 */
 		{"Analog Left Capture Route",		"Main Mic"},
-		{"Analog Right Capture Route",	"Sub Mic"},
-		{"Capture Preamplifier Volume",	"1"},
-		{"Capture Volume",				"4"},
+		{"Analog Right Capture Route",		"Sub Mic"},
+		{"Capture Preamplifier Volume",		"1"},
+		{"Capture Volume",			"4"},
 		/* ABE */
 		{"AMIC_UL PDM Switch",			"on"},
-		{"MUX_VX0",					"AMic0"},
-		{"MUX_VX1",					"AMic1"},
+		{"MUX_VX0",				"AMic0"},
+		{"MUX_VX1",				"AMic1"},
 
 		{"AUDUL Voice UL Volume",		"120"},
-		{"Voice Capture Mixer Capture",	"on"},
+		{"Voice Capture Mixer Capture",		"on"},
 	/* Sidetone */
 		{"Sidetone Mixer Capture",		"on"},
-		{"SDT UL Volume",				"90"},
+		{"SDT UL Volume",			"90"},
 	/* eof */
 		{ "eof", ""},
 };
 
-const struct audioConfig handfreeAudioConfig[] = {
+const struct audioConfig handfreeAudioConfig_GB[] = {
 	/* Downlink */
 		/* TWL6040 */
 		{"Earphone Driver Switch",		"off"},
@@ -149,68 +151,68 @@ const struct audioConfig handfreeAudioConfig[] = {
 		{"Headset Playback Volume",		"0"},
 		{"HF Left Playback",			"HF DAC"},
 		{"HF Right Playback",			"HF DAC"},
-		{"Handsfree Playback Volume",	"23"},
+		{"Handsfree Playback Volume",		"23"},
 		/* ABE */
-		{"DL1 PDM Switch",				"on"},
-		{"DL2 Left Equalizer",				"0"},
+		{"DL1 PDM Switch",			"on"},
+		{"DL2 Left Equalizer",			"0"},
 		{"DL2 Right Equalizer",			"0"},
-		{"DL2 Mixer Voice",				"on"},
-		{"DL2 Voice Playback Volume",	"110"},
+		{"DL2 Mixer Voice",			"on"},
+		{"DL2 Voice Playback Volume",		"110"},
 	/* Uplink */
 		/* TWL6040 */
 		{"Analog Left Capture Route",		"Main Mic"},
-		{"Analog Right Capture Route",	"Sub Mic"},
-		{"Capture Preamplifier Volume",	"1"},
-		{"Capture Volume",				"4"},
+		{"Analog Right Capture Route",		"Sub Mic"},
+		{"Capture Preamplifier Volume",		"1"},
+		{"Capture Volume",			"4"},
 		/* ABE */
 		{"AMIC_UL PDM Switch",			"on"},
-		{"MUX_VX0",					"AMic0"},
-		{"MUX_VX1",					"AMic1"},
+		{"MUX_VX0",				"AMic0"},
+		{"MUX_VX1",				"AMic1"},
 
 		{"AUDUL Voice UL Volume",		"120"},
-		{"Voice Capture Mixer Capture",	"on"},
+		{"Voice Capture Mixer Capture",		"on"},
 	/* eof */
 		{ "eof", ""},
 };
 
-const struct audioConfig headsetAudioConfig[] = {
+const struct audioConfig headsetAudioConfig_GB[] = {
 	/* Downlink */
 		/* TWL6040 */
 		{"Earphone Driver Switch",		"off"},
 		{"Earphone Playback Volume",		"0"},
 		{"HF Left Playback",			"off"},
 		{"HF Right Playback",			"off"},
-		{"Handsfree Playback Volume",	"0"},
+		{"Handsfree Playback Volume",		"0"},
 		{"HS Left Playback",			"HS DAC"},
 		{"HS Right Playback",			"HS DAC"},
 		{"Headset Playback Volume",		"13"},
 		/* ABE */
-		{"DL1 PDM Switch",				"on"},
+		{"DL1 PDM Switch",			"on"},
 		{"Sidetone Mixer Playback",		"on"},
-		{"SDT DL Volume",				"120"},
-		{"DL1 Mixer Voice",				"on"},
-		{"DL1 Voice Playback Volume",	"110"},
+		{"SDT DL Volume",			"120"},
+		{"DL1 Mixer Voice",			"on"},
+		{"DL1 Voice Playback Volume",		"110"},
 	/* Uplink */
 		/* TWL6040 */
 		{"Analog Left Capture Route",		"Headset Mic"},
-		{"Analog Right Capture Route",	"Headset Mic"},
-		{"Capture Preamplifier Volume",	"1"},
-		{"Capture Volume",				"4"},
+		{"Analog Right Capture Route",		"Headset Mic"},
+		{"Capture Preamplifier Volume",		"1"},
+		{"Capture Volume",			"4"},
 		/* ABE */
 		{"AMIC_UL PDM Switch",			"on"},
-		{"MUX_VX0",					"AMic0"},
-		{"MUX_VX1",					"AMic1"},
+		{"MUX_VX0",				"AMic0"},
+		{"MUX_VX1",				"AMic1"},
 
 		{"AUDUL Voice UL Volume",		"120"},
-		{"Voice Capture Mixer Capture",	"on"},
+		{"Voice Capture Mixer Capture",		"on"},
 	/* Sidetone */
 		{"Sidetone Mixer Capture",		"on"},
-		{"SDT UL Volume",				"90"},
+		{"SDT UL Volume",			"90"},
 	/* eof */
 		{ "eof", ""},
 };
 
-const struct audioConfig offAudioConfig[] = {
+const struct audioConfig offAudioConfig_GB[] = {
 	/* Downlink */
 		/* TWL6040 */
 		{"Earphone Driver Switch",		"off"},
@@ -220,29 +222,167 @@ const struct audioConfig offAudioConfig[] = {
 		{"Headset Playback Volume",		"0"},
 		{"HF Left Playback",			"off"},
 		{"HF Right Playback",			"off"},
-		{"Handsfree Playback Volume",	"0"},
+		{"Handsfree Playback Volume",		"0"},
 		/* ABE */
-		{"DL1 PDM Switch",				"off"},
+		{"DL1 PDM Switch",			"off"},
 		{"Sidetone Mixer Playback",		"off"},
-		{"SDT DL Volume",				"0"},
-		{"DL1 Mixer Voice",				"off"},
-		{"DL1 Voice Playback Volume",	"0"},
+		{"SDT DL Volume",			"0"},
+		{"DL1 Mixer Voice",			"off"},
+		{"DL1 Voice Playback Volume",		"0"},
 	/* Uplink */
 		/* TWL6040 */
 		{"Analog Left Capture Route",		"off"},
-		{"Analog Right Capture Route",	"off"},
-		{"Capture Preamplifier Volume",	"off"},
-		{"Capture Volume",				"off"},
+		{"Analog Right Capture Route",		"off"},
+		{"Capture Preamplifier Volume",		"off"},
+		{"Capture Volume",			"off"},
 		/* ABE */
 		{"AMIC_UL PDM Switch",			"off"},
-		{"MUX_VX0",					"None"},
-		{"MUX_VX1",					"None"},
+		{"MUX_VX0",				"None"},
+		{"MUX_VX1",				"None"},
 
 		{"AUDUL Voice UL Volume",		"0"},
-		{"Voice Capture Mixer Capture",	"off"},
+		{"Voice Capture Mixer Capture",		"off"},
 	/* Sidetone */
 		{"Sidetone Mixer Capture",		"off"},
-		{"SDT UL Volume",				"0"},
+		{"SDT UL Volume",			"0"},
+	/* eof */
+		{ "eof", ""},
+};
+
+const struct audioConfig handsetAudioConfig_ICS[] = {
+	/* Downlink */
+		/* TWL6040 */
+		{"HS Left Playback",			"Off"},
+		{"HS Right Playback",			"Off"},
+		{"Headset Playback Volume",		"0"},
+		{"HF Left Playback",			"Off"},
+		{"HF Right Playback",			"Off"},
+		{"Handsfree Playback Volume",		"0"},
+		{"Earphone Enable Switch",		"On"},
+		{"Earphone Playback Volume",		"13"},
+		/* ABE */
+		{"DL1 PDM Switch",			"On"},
+		{"DL1 Equalizer",			"4Khz LPF   0dB"},
+		{"Sidetone Mixer Playback",		"On"},
+		{"SDT DL Volume",			"120"},
+		{"DL1 Mixer Voice",			"On"},
+		{"DL1 Voice Playback Volume",		"110"},
+	/* Uplink */
+		/* TWL6040 */
+		{"Analog Left Capture Route",		"Main Mic"},
+		{"Analog Right Capture Route",		"Sub Mic"},
+		{"Capture Preamplifier Volume",		"1"},
+		{"Capture Volume",			"4"},
+		/* ABE */
+		{"MUX_VX0",				"AMic0"},
+		{"MUX_VX1",				"AMic1"},
+		{"AMIC UL Volume",			"120"},
+		{"Voice Capture Mixer Capture",		"On"},
+	/* Sidetone */
+		{"Sidetone Mixer Capture",		"On"},
+		{"SDT UL Volume",			"90"},
+	/* eof */
+		{ "eof", ""},
+};
+
+const struct audioConfig handfreeAudioConfig_ICS[] = {
+	/* Downlink */
+		/* TWL6040 */
+		{"Earphone Enable Switch",		"Off"},
+		{"Earphone Playback Volume",		"0"},
+		{"HS Left Playback",			"Off"},
+		{"HS Right Playback",			"Off"},
+		{"Headset Playback Volume",		"0"},
+		{"HF Left Playback",			"HF DAC"},
+		{"HF Right Playback",			"HF DAC"},
+		{"Handsfree Playback Volume",		"23"},
+		/* ABE */
+		{"DL2 Left Equalizer",			"High-pass 0dB"},
+		{"DL2 Right Equalizer",			"High-pass 0dB"},
+		{"DL2 Mixer Voice",			"On"},
+		{"DL2 Voice Playback Volume",		"110"},
+	/* Uplink */
+		/* TWL6040 */
+		{"Analog Left Capture Route",		"Main Mic"},
+		{"Analog Right Capture Route",		"Sub Mic"},
+		{"Capture Preamplifier Volume",		"1"},
+		{"Capture Volume",			"4"},
+		/* ABE */
+		{"MUX_VX0",				"AMic0"},
+		{"MUX_VX1",				"AMic1"},
+		{"AUDUL Voice UL Volume",		"120"},
+		{"Voice Capture Mixer Capture",		"On"},
+	/* eof */
+		{ "eof", ""},
+};
+
+const struct audioConfig headsetAudioConfig_ICS[] = {
+	/* Downlink */
+		/* TWL6040 */
+		{"Earphone Enable Switch",		"Off"},
+		{"Earphone Playback Volume",		"0"},
+		{"HF Left Playback",			"Off"},
+		{"HF Right Playback",			"Off"},
+		{"Handsfree Playback Volume",		"0"},
+		{"HS Left Playback",			"HS DAC"},
+		{"HS Right Playback",			"HS DAC"},
+		{"Headset Playback Volume",		"13"},
+		/* ABE */
+		{"DL1 PDM Switch",			"On"},
+		{"DL1 Equalizer",			"4Khz LPF   0dB"},
+		{"Sidetone Mixer Playback",		"On"},
+		{"SDT DL Volume",			"120"},
+		{"DL1 Mixer Voice",			"On"},
+		{"DL1 Voice Playback Volume",		"110"},
+	/* Uplink */
+		/* TWL6040 */
+		{"Analog Left Capture Route",		"Headset Mic"},
+		{"Analog Right Capture Route",		"Headset Mic"},
+		{"Capture Preamplifier Volume",		"1"},
+		{"Capture Volume",			"4"},
+		/* ABE */
+		{"MUX_VX0",				"AMic0"},
+		{"MUX_VX1",				"AMic1"},
+		{"AUDUL Voice UL Volume",		"120"},
+		{"Voice Capture Mixer Capture",		"On"},
+	/* Sidetone */
+		{"Sidetone Mixer Capture",		"On"},
+		{"SDT UL Volume",			"90"},
+	/* eof */
+		{ "eof", ""},
+};
+
+const struct audioConfig offAudioConfig_ICS[] = {
+	/* Downlink */
+		/* TWL6040 */
+		{"Earphone Enable Switch",		"Off"},
+		{"Earphone Playback Volume",		"0"},
+		{"HS Left Playback",			"Off"},
+		{"HS Right Playback",			"Off"},
+		{"Headset Playback Volume",		"0"},
+		{"HF Left Playback",			"Off"},
+		{"HF Right Playback",			"Off"},
+		{"Handsfree Playback Volume",		"0"},
+		/* ABE */
+		{"DL1 PDM Switch",			"Off"},
+		{"Sidetone Mixer Playback",		"Off"},
+		{"SDT DL Volume",			"0"},
+		{"DL1 Mixer Voice",			"Off"},
+		{"DL1 Voice Playback Volume",		"0"},
+	/* Uplink */
+		/* TWL6040 */
+		{"Analog Left Capture Route",		"Off"},
+		{"Analog Right Capture Route",		"Off"},
+		{"Capture Preamplifier Volume",		"Off"},
+		{"Capture Volume",			"Off"},
+		/* ABE */
+		{"MUX_VX0",				"None"},
+		{"MUX_VX1",				"None"},
+		{"AUDUL Voice UL Volume",		"0"},
+		{"Voice Capture Mixer Capture",		"Off"},
+	/* Sidetone */
+		{"Sidetone Mixer Capture",		"Off"},
+		{"SDT UL Volume",			"0"},
 	/* eof */
 		{ "eof", ""},
 };
@@ -259,6 +399,7 @@ static void show_help(void)
 		   "  -D, --device=NAME		select PCM by name (default hw:0,5 for ALSA, 5 for TinyAlsa)\n"
 		   "  -c, --channels=#		channels (default 2)\n"
 		   "  -p, --power=NAME		select power level (Low or High, default=Low)\n"
+		   "  -i, --distro=DISTRIBUTION	select distro supported (GB, ICS, default=ICS)\n"
 #ifdef TINYALSA
 		   "  -s, --sidetone=#		enable(1)/disable(0) sidetone (default=1)");
 #else
@@ -299,7 +440,7 @@ static void parse_options(int argc, char *argv[])
 #ifdef TINYALSA
 	static const char short_options[] = "hvm:V:r:D:c:p:s:d";
 #else
-	static const char short_options[] = "hvm:V:r:D:c:p:s:C:d";
+	static const char short_options[] = "hvm:V:r:D:c:p:i:s:C:d";
 #endif
 	static const struct option long_options[] = {
 		{ .name = "help", .val = 'h' },
@@ -310,6 +451,7 @@ static void parse_options(int argc, char *argv[])
 		{ .name = "device", .has_arg = 1, .val = 'D' },
 		{ .name = "channels", .has_arg = 1, .val = 'c' },
 		{ .name = "power", .has_arg = 1, .val = 'p' },
+		{ .name = "distro", .has_arg = 1, .val = 'i' },
 		{ .name = "sidetone", .has_arg = 1, .val = 's' },
 #ifndef TINYALSA
 		{ .name = "command", .has_arg = 1, .val = 'C' },
@@ -363,6 +505,15 @@ static void parse_options(int argc, char *argv[])
 			break;
 		case 'p':
 			powerLevel = optarg;
+			break;
+		case 'i':
+			if ((!strcmp(optarg, "GB")) ||
+			    (!strcmp(optarg, "ICS")))
+				distro = optarg;
+			else {
+				fprintf(stderr, "unknown distro: %s\n", optarg);
+				goto fail;
+			}
 			break;
 		case 's':
 			sideTone = strtol(optarg, NULL, 0);
@@ -618,17 +769,31 @@ int main(int argc ,char *argv[])
 	if (NULL == mixer) {
 		fprintf(stderr, "problem to open TinyAlsa mixer\n");
 		exit(EXIT_FAILURE);
+	} else {
+		DEBUG("open TinyAlsa mixer\n");
 	}
 #endif
 	switch (mode) {
 		case HANDSET:
-			SND_ERROR_EXIT(setAudioConfig(handsetAudioConfig));
+			if (!strcmp(distro, "GB")) {
+				SND_ERROR_EXIT(setAudioConfig(handsetAudioConfig_GB));
+			} else if (!strcmp(distro, "ICS")) {
+				SND_ERROR_EXIT(setAudioConfig(handsetAudioConfig_ICS));
+			}
 			break;
 		case HANDFREE:
-			SND_ERROR_EXIT(setAudioConfig(handfreeAudioConfig));
+			if (!strcmp(distro, "GB")) {
+				SND_ERROR_EXIT(setAudioConfig(handfreeAudioConfig_GB));
+			} else if (!strcmp(distro, "ICS")) {
+				SND_ERROR_EXIT(setAudioConfig(handfreeAudioConfig_ICS));
+			}
 			break;
 		case HEADSET:
-			SND_ERROR_EXIT(setAudioConfig(headsetAudioConfig));
+			if (!strcmp(distro, "GB")) {
+				SND_ERROR_EXIT(setAudioConfig(headsetAudioConfig_GB));
+			} else if (!strcmp(distro, "ICS")) {
+				SND_ERROR_EXIT(setAudioConfig(headsetAudioConfig_ICS));
+			}
 			break;
 		default:
 			fprintf(stderr, "unknown audio mode: %c\n", mode);
@@ -642,7 +807,11 @@ int main(int argc ,char *argv[])
 	}
 
 	SND_ERROR_EXIT(stopPcm());
-	SND_ERROR_EXIT(setAudioConfig(offAudioConfig));
+	if (!strcmp(distro, "GB")) {
+		SND_ERROR_EXIT(setAudioConfig(offAudioConfig_GB));
+	} else if (!strcmp(distro, "ICS")) {
+		SND_ERROR_EXIT(setAudioConfig(offAudioConfig_ICS));
+	}
 	puts("Audio Voice Call off\n");
 	exit(EXIT_SUCCESS);
 }

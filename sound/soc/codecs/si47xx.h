@@ -26,7 +26,6 @@ struct si47xx_setup_data {
 	unsigned short i2c_address;
 };
 
-extern struct snd_soc_dai si47xx_dai;
 extern struct snd_soc_codec_device soc_codec_dev_si47xx;
 
 #endif

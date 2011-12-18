@@ -57,48 +57,18 @@ struct snd_soc_dai_driver w2cbw003_dai = {
 		.formats = SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE,
 	},
 };
-EXPORT_SYMBOL_GPL(w2cbw003_dai);
 
-static int w2cbw003_soc_probe(struct snd_soc_codec *codec)
-{
-	int ret = 0;
-
-	/* register pcms */
-	ret = snd_soc_new_ac97_codec(codec, &soc_ac97_ops, 0);
-	if (ret < 0)
-		printk(KERN_ERR "w2cbw003: failed to create pcms\n");
-
-	return ret;
-}
-
-static int w2cbw003_soc_remove(struct snd_soc_codec *codec)
-{
-	if (codec == NULL)
-		return 0;
-	snd_soc_free_ac97_codec(codec);
-	return 0;
-}
-
-struct snd_soc_codec_driver soc_codec_dev_w2cbw003 = {
-	.probe = 	w2cbw003_soc_probe,
-	.remove = 	w2cbw003_soc_remove,
-// 	.write = ac97_write,
-// 	.read = ac97_read,
-};
-EXPORT_SYMBOL_GPL(soc_codec_dev_w2cbw003);
+struct snd_soc_codec_driver soc_codec_dev_w2cbw003;
 
 
 static __devinit int w2cbw003_platform_probe(struct platform_device *pdev)
 {
-// 	w2cbw003_dai.dev = &pdev->dev;
-// 	return snd_soc_register_dai(&w2cbw003_dai);
 	return snd_soc_register_codec(&pdev->dev,
 			&soc_codec_dev_w2cbw003, &w2cbw003_dai, 1);
 }
 
 static int __devexit w2cbw003_platform_remove(struct platform_device *pdev)
 {
-// 	snd_soc_unregister_dai(&w2cbw003_dai);
 	snd_soc_unregister_codec(&pdev->dev);
 	return 0;
 }

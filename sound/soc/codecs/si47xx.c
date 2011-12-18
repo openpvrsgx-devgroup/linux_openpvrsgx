@@ -32,7 +32,10 @@
 
 #include "si47xx.h"
 
-struct snd_soc_codec_device soc_codec_dev_si47xx;
+struct si47xx_priv {
+	enum snd_soc_control_type control_type;
+};
+
 
 /*
  * We can't read the WM8728 register space so we cache them instead.
@@ -100,8 +103,7 @@ static int si47xx_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_dai *dai)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_device *socdev = rtd->socdev;
-	struct snd_soc_codec *codec = socdev->card->codec;
+	struct snd_soc_codec *codec = rtd->codec;
 	u16 dac = snd_soc_read(codec, SI47XX_DACCTL);
 
 	dac &= ~0x18;
@@ -182,7 +184,7 @@ static int si47xx_set_bias_level(struct snd_soc_codec *codec,
 	case SND_SOC_BIAS_ON:
 	case SND_SOC_BIAS_PREPARE:
 	case SND_SOC_BIAS_STANDBY:
-		if (codec->bias_level == SND_SOC_BIAS_OFF) {
+		if (codec->dapm.bias_level == SND_SOC_BIAS_OFF) {
 			/* Power everything up... */
 			reg = snd_soc_read(codec, SI47XX_DACCTL);
 			snd_soc_write(codec, SI47XX_DACCTL, reg & ~0x4);
@@ -199,7 +201,7 @@ static int si47xx_set_bias_level(struct snd_soc_codec *codec,
 		snd_soc_write(codec, SI47XX_DACCTL, reg | 0x4);
 		break;
 	}
-	codec->bias_level = level;
+	codec->dapm.bias_level = level;
 	return 0;
 }
 
@@ -216,7 +218,7 @@ static struct snd_soc_dai_ops si47xx_dai_ops = {
 	.set_fmt	= si47xx_set_dai_fmt,
 };
 
-struct snd_soc_dai si47xx_dai = {
+struct snd_soc_dai_driver si47xx_dai = {
 	.name = "Si47xx",
 	.playback = {
 		.stream_name = "Playback",
@@ -234,28 +236,26 @@ struct snd_soc_dai si47xx_dai = {
 	},
 	.ops = &si47xx_dai_ops,
 };
-EXPORT_SYMBOL_GPL(si47xx_dai);
 
-static int si47xx_suspend(struct platform_device *pdev, pm_message_t state)
+static int si47xx_suspend(struct snd_soc_codec *codec, pm_message_t state)
 {
-	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
-	struct snd_soc_codec *codec = socdev->card->codec;
-
 	si47xx_set_bias_level(codec, SND_SOC_BIAS_OFF);
 
 	return 0;
 }
 
-static int si47xx_resume(struct platform_device *pdev)
+static int si47xx_resume(struct snd_soc_codec *codec)
 {
-	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
-	struct snd_soc_codec *codec = socdev->card->codec;
-
-	si47xx_set_bias_level(codec, codec->suspend_bias_level);
+	si47xx_set_bias_level(codec, codec->dapm.suspend_bias_level);
 
 	return 0;
 }
 
+struct snd_soc_codec_driver si47xx_driver = {
+	.set_bias_level = si47xx_set_bias_level,
+	.reg_cache_size = ARRAY_SIZE(si47xx_reg_defaults),
+	.reg_cache_default = si47xx_reg_defaults,
+};
 /*
  * initialise the Si47xx driver
  * register the mixer and dsp interfaces with the kernel
@@ -268,17 +268,10 @@ static int si47xx_init(struct snd_soc_device *socdev,
 
 	codec->name = "Si47xx";
 	codec->owner = THIS_MODULE;
-	codec->set_bias_level = si47xx_set_bias_level;
-	codec->dai = &si47xx_dai;
-	codec->num_dai = 1;
+	codec->driver = si47xx_driver;
 	codec->bias_level = SND_SOC_BIAS_OFF;
-	codec->reg_cache_size = ARRAY_SIZE(si47xx_reg_defaults);
-	codec->reg_cache = kmemdup(si47xx_reg_defaults,
-				   sizeof(si47xx_reg_defaults),
-				   GFP_KERNEL);
-	if (codec->reg_cache == NULL)
-		return -ENOMEM;
 
+	snd_soc_register_codec(dev, si47xx_driver, &si47xx_dai, 1);
 	ret = snd_soc_codec_set_cache_io(codec, 7, 9, control);
 	if (ret < 0) {
 		printk(KERN_ERR "si47xx: failed to configure cache I/O: %d\n",
@@ -307,8 +300,6 @@ err:
 	return ret;
 }
 
-static struct snd_soc_device *si47xx_socdev;
-
 #if defined(CONFIG_I2C) || defined(CONFIG_I2C_MODULE)
 
 /*
@@ -318,26 +309,38 @@ static struct snd_soc_device *si47xx_socdev;
  *    high = 0x1b
  */
 
-static int si47xx_i2c_probe(struct i2c_client *i2c,
-			    const struct i2c_device_id *id)
+static __devinit int si47xx_i2c_probe(struct i2c_client *i2c,
+				      const struct i2c_device_id *id)
 {
+	struct si47xx_priv *si47xx;
 	struct snd_soc_device *socdev = si47xx_socdev;
 	struct snd_soc_codec *codec = socdev->card->codec;
 	int ret;
 
-	i2c_set_clientdata(i2c, codec);
-	codec->control_data = i2c;
+	si47xx = kzalloc(sizeof *si47xx, GFP_KERNEL);
+	if (!si47xx)
+		return -ENOMEM;
 
-	ret = si47xx_init(socdev, SND_SOC_I2C);
+	si47xx->control_type = SND_SOC_I2C;
+	i2c_set_clientdata(i2c, si47xx);
+
+	ret = snd_soc_register_codec(&i2c->dev,
+				     &si47xx_driver, &si47xx_dai, 1);
+
+	if (ret < 0)
+		kfree(si47xx);
+/X/	ret = si47xx_init(socdev, SND_SOC_I2C);
+
 	if (ret < 0)
 		pr_err("failed to initialise Si47xx\n");
-
 	return ret;
 }
 
 static int si47xx_i2c_remove(struct i2c_client *client)
 {
 	struct snd_soc_codec *codec = i2c_get_clientdata(client);
+	snd_soc_unregister_codec(&client->dev);
+	kfree(i2c_get_clientdata(client));
 	kfree(codec->reg_cache);
 	return 0;
 }

@@ -49,7 +49,7 @@ struct snd_soc_dai_driver w2cbw003_dai = {
 		.rates = W2CBW003_RATES,
 		.formats = SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE,
 		},
-	.playback = {
+	.capture = {
 		.stream_name = "Capture",
 		.channels_min = 2,
 		.channels_max = 2,

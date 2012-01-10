@@ -19,6 +19,7 @@ SectionVerb {
 
 		# ALSA PCM device for HiFi
 		PlaybackPCM "hw:0"
+		CapturePCM "hw:0"
 	}
 }
 
@@ -429,6 +430,11 @@ SectionDevice."Dmic".0 {
 }
 
 ##############  Play Tone Modifier ####################
+#
+# We have 2 PlayTone modifiers. Each one supports different devices as the
+# path configuration is different depending on the device being used when
+# the modifier is enabled.
+#
 
 SectionModifier."PlayTone".0 {
 	Comment "Play a ring tone or system sound"

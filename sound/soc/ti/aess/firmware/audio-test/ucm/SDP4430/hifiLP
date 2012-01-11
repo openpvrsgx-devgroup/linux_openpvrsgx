@@ -19,8 +19,9 @@ SectionVerb {
 
 		TQ "HiFi"
 
-		# ALSA PCM device for low Power HiFi
-		PlaybackPCM "hw:6"
+		# ALSA PCM device for HiFi
+		PlaybackPCM "SDP4430,6"
+		CapturePCM "SDP4430,0"
 	}
 }
 
@@ -431,6 +432,11 @@ SectionDevice."Dmic".0 {
 }
 
 ##############  Play Tone Modifier ####################
+#
+# We have 2 PlayTone modifiers. Each one supports different devices as the
+# path configuration is different depending on the device being used when
+# the modifier is enabled.
+#
 
 SectionModifier."PlayTone".0 {
 	Comment "Play a ring tone or system sound"
@@ -465,7 +471,7 @@ SectionModifier."PlayTone".0 {
 	# QoS, Mixers and ALSA PCMs
 	Value {
 		TQ Tones
-		PlaybackPCM "hw:1"
+		PlaybackPCM "SDP4430,3"
 		PlaybackVolume "name='DL2 Tones Playback Volume' 120,120"
 	}
 }
@@ -492,7 +498,7 @@ SectionModifier."PlayTone".1 {
 	# QoS, Mixers and ALSA PCMs
 	Value {
 		TQ Tones
-		PlaybackPCM "hw:1"
+		PlaybackPCM "SDP4430,3"
 		PlaybackVolume "name='DL2 Tones Playback Volume' 120,120"
 	}
 }

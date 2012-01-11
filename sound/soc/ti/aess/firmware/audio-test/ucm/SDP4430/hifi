@@ -18,8 +18,8 @@ SectionVerb {
 		TQ "HiFi"
 
 		# ALSA PCM device for HiFi
-		PlaybackPCM "hw:0"
-		CapturePCM "hw:0"
+		PlaybackPCM "SDP4430,0"
+		CapturePCM "SDP4430,0"
 	}
 }
 
@@ -469,7 +469,7 @@ SectionModifier."PlayTone".0 {
 	# QoS, Mixers and ALSA PCMs
 	Value {
 		TQ Tones
-		PlaybackPCM "hw:1"
+		PlaybackPCM "SDP4430,3"
 		PlaybackVolume "name='DL2 Tones Playback Volume' 120,120"
 	}
 }
@@ -496,7 +496,7 @@ SectionModifier."PlayTone".1 {
 	# QoS, Mixers and ALSA PCMs
 	Value {
 		TQ Tones
-		PlaybackPCM "hw:1"
+		PlaybackPCM "SDP4430,3"
 		PlaybackVolume "name='DL2 Tones Playback Volume' 120,120"
 	}
 }

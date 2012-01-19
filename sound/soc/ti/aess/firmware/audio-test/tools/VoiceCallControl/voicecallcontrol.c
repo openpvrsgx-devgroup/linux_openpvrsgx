@@ -103,6 +103,8 @@ char *alsaControlCommandName = "alsa_amixer";
 char *powerLevel = "Low";
 char *volume = "110";
 char *distro = "ICS_OMAP4";
+char mcbsp2DLB = 0;
+char *omapconfPath = "";
 /* -----------------------------------------------------*/
 const struct audioConfig handsetAudioConfig_GB_OMAP4[] = {
 	/* Downlink */
@@ -542,9 +544,10 @@ static void show_help(void)
 		   "  -s, --sidetone=#		enable(1)/disable(0) sidetone (default=1)");
 #else
 		   "  -s, --sidetone=#		enable(1)/disable(0) sidetone (default=1)\n"
-		   "  -C, --command=NAME		select amixer command name");
-
+		   "  -C, --command=NAME		select amixer command name\n"
 #endif
+		   "  -l, --loop=#			enable McBSP2 digital loop (!!!! need omapconf)\n"
+		   "  -o, --omapconf=PATH		omapconf path");
 	puts("Debugging options:\n"
 		   "  -d, --debug			toggle debugging trace\n");
 }
@@ -576,9 +579,9 @@ void initSig(void)
 static void parse_options(int argc, char *argv[])
 {
 #ifdef TINYALSA
-	static const char short_options[] = "hvm:V:r:D:c:p:i:s:d";
+	static const char short_options[] = "hvm:V:r:D:c:p:i:s:dlo:";
 #else
-	static const char short_options[] = "hvm:V:r:D:c:p:i:s:C:d";
+	static const char short_options[] = "hvm:V:r:D:c:p:i:s:C:dlo:";
 #endif
 	static const struct option long_options[] = {
 		{ .name = "help", .val = 'h' },
@@ -594,6 +597,8 @@ static void parse_options(int argc, char *argv[])
 #ifndef TINYALSA
 		{ .name = "command", .has_arg = 1, .val = 'C' },
 #endif
+		{ .name = "loop", .val = 'l' },
+		{ .name = "omapconf", .has_arg = 1, .val = 'o' },
 		{ .name = "debug", .val = 'd' },
 		{ .name = ""}
 	};
@@ -662,6 +667,12 @@ static void parse_options(int argc, char *argv[])
 			alsaControlCommandName = optarg;
 			break;
 #endif
+		case 'l':
+			mcbsp2DLB = 1;
+			break;
+		case 'o':
+			omapconfPath = optarg;
+			break;
 		default:
 			fprintf(stderr, "unknown option: %c\n", option);
 fail:
@@ -877,6 +888,40 @@ int stopPcm(void)
 	return error;
 }
 
+int setMcbsp2DLB(void)
+{
+	char command[COMMAND_SIZE];
+
+	if (mcbsp2DLB) {
+		if (strlen(omapconfPath))
+		    sprintf(command, "%s/omapconf set 0x401240AC 5", omapconfPath);
+		else
+		    sprintf(command, "omapconf set 0x401240AC 5");
+		DEBUG("%s: system call: '%s'\n", __FUNCTION__, &command[0]);
+#ifndef HOSTMODE
+		return system(&command[0]);
+#endif
+	}
+	return 0;
+}
+
+int resetMcbsp2DLB(void)
+{
+	char command[COMMAND_SIZE];
+
+	if (mcbsp2DLB) {
+		if (strlen(omapconfPath))
+			sprintf(command, "%s/omapconf clear 0x401240AC 5", omapconfPath);
+		else
+			sprintf(command, "omapconf clear 0x401240AC 5");
+		DEBUG("%s: system call: '%s'\n", __FUNCTION__, &command[0]);
+#ifndef HOSTMODE
+		return system(&command[0]);
+#endif
+	}
+	return 0;
+}
+
 int main(int argc ,char *argv[])
 {
 	int error = 0;
@@ -945,14 +990,19 @@ int main(int argc ,char *argv[])
 			fprintf(stderr, "unknown audio mode: %c\n", mode);
 			exit(EXIT_FAILURE);
 	}
+
 	SND_ERROR_EXIT(startPcm());
 
+	SND_ERROR_EXIT(setMcbsp2DLB());
+
 	puts("Audio Voice Call on...\n");
+
 	while(!terminate) {
 		sleep(1);
 	}
 
 	SND_ERROR_EXIT(stopPcm());
+
 	if (!strcmp(distro, "GB_OMAP4")) {
 		SND_ERROR_EXIT(setAudioConfig(offAudioConfig_GB_OMAP4));
 	} else if (!strcmp(distro, "ICS_OMAP4")) {
@@ -960,7 +1010,9 @@ int main(int argc ,char *argv[])
 	} else if (!strcmp(distro, "ICS_OMAP5")) {
 		SND_ERROR_EXIT(setAudioConfig(offAudioConfig_ICS_OMAP5));
 	}
+
+	SND_ERROR_EXIT(resetMcbsp2DLB());
+
 	puts("Audio Voice Call off\n");
 	exit(EXIT_SUCCESS);
 }
-

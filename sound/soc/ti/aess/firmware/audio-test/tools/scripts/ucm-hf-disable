@@ -1,0 +1,16 @@
+
+if [ -e /proc/asound/SDP4430 ]
+then
+	CARD="SDP4430"
+elif [ -e /proc/asound/Panda ]
+then
+	CARD="Panda"
+elif [ -e /proc/asound/PandaES ]
+then
+	CARD="PandaES"
+else
+	echo "No supported sound card detected"
+	exit
+fi
+
+alsaucm -c $CARD set _verb HiFi set _disdev Handsfree

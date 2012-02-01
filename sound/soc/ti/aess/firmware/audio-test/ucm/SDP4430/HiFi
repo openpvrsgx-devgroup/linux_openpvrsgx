@@ -664,7 +664,7 @@ SectionModifier."PlayTone" {
 	DisableSequence [
 
 		# Set SDP device for following cset commands
-		cdev "Shw:DP4430"
+		cdev "hw:SDP4430"
 
 		cset "name='DL2 Mixer Tones' 0"
 	]

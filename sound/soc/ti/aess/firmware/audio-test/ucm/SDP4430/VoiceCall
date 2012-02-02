@@ -483,7 +483,7 @@ SectionModifier."PlayTone" {
 	}
 }
 
-SectionModifier."PlayTone".1 {
+SectionModifier."PlayTone" {
 	Comment "Play a ring tone or system sound"
 
 	# For the following devices we dont need to set the DL2 path
@@ -572,7 +572,7 @@ SectionModifier."PlayMusic" {
 	}
 }
 
-SectionModifier."PlayMusic".1 {
+SectionModifier."PlayMusic" {
 	Comment "Play Music to near and far end during call"
 
 	# For the following devices we dont need to set the DL2 path

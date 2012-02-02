@@ -48,8 +48,8 @@ SectionVerb {
 
 		# These PCMs are used by the Call management app to start the link and
 		# cannot be used to play or capture call audio.
-		CapturePCM "plughw:SDP4430,2"
-		PlaybackPCM "plughw:SDP4430,2"
+		CapturePCM "hw:SDP4430,2"
+		PlaybackPCM "hw:SDP4430,2"
 	}
 }
 
@@ -112,7 +112,6 @@ SectionDevice."Headset" {
 	]
 
 	TransitionSequence."Handset" [
-		exec echo "Transition to Handset"
 
 		# Set SDP device for following cset commands
 		cdev "hw:SDP4430"
@@ -131,7 +130,6 @@ SectionDevice."Headset" {
 	]
 
 	TransitionSequence."Handsfree" [
-		exec echo "Transition to HF"
 
 		# Set SDP device for following cset commands
 		cdev "hw:SDP4430"
@@ -218,7 +216,6 @@ SectionDevice."Handset" {
 	]
 
 	TransitionSequence."Headset" [
-		exec echo "Transition to HS"
 
 		# Set SDP device for following cset commands
 		cdev "hw:SDP4430"
@@ -237,7 +234,6 @@ SectionDevice."Handset" {
 	]
 
 	TransitionSequence."Handsfree" [
-		exec echo "Transition to HF"
 
 		# Set SDP device for following cset commands
 		cdev "hw:SDP4430"
@@ -326,7 +322,6 @@ SectionDevice."Handsfree" {
 	]
 
 	TransitionSequence."Headset" [
-		exec echo "Transition to HS"
 
 		# Set SDP device for following cset commands
 		cdev "hw:SDP4430"
@@ -350,7 +345,6 @@ SectionDevice."Handsfree" {
 	]
 
 	TransitionSequence."Handset" [
-		exec echo "Transition to Handset"
 
 		# Set SDP device for following cset commands
 		cdev "hw:SDP4430"
@@ -402,7 +396,7 @@ SectionDevice."Bluetooth" {
 		cset "name='BT UL Volume' 120"
 
 		# enable ABE DL1 BT path
-		cset "name='DL1 VX_DL Switch' 1"
+		cset "name='DL1 BT_VX Switch' 1"
 	]
 
 	DisableSequence [
@@ -416,7 +410,7 @@ SectionDevice."Bluetooth" {
 		cset "name='BT UL Volume' 0"
 
 		# disable ABE DL1 BT path
-		cset "name='DL1 VX_DL Switch' 0"
+		cset "name='DL1 BT_VX Switch' 0"
 	]
 
 	Value {
@@ -477,7 +471,7 @@ SectionModifier."PlayTone" {
 	# QoS, Mixers and ALSA PCMs
 	Value {
 		TQ "Tones"
-		PlaybackPCM "plughw:SDP4430,3"
+		PlaybackPCM "hw:SDP4430,3"
 		PlaybackVolume "name='DL2 Tones Playback Volume' 120"
 		PlaybackVolume "name='DL1 Tones Playback Volume' 120"
 	}
@@ -514,7 +508,7 @@ SectionModifier."PlayTone" {
 	# QoS, Mixers and ALSA PCMs
 	Value {
 		TQ "Tones"
-		PlaybackPCM "plughw:SDP4430,3"
+		PlaybackPCM "hw:SDP4430,3"
 		PlaybackVolume "name='DL2 Tones Playback Volume' 120"
 	}
 }
@@ -567,7 +561,7 @@ SectionModifier."PlayMusic" {
 	# QoS, Mixers and ALSA PCMs
 	Value {
 		TQ "HiFi"
-		PlaybackPCM "plughw:SDP4430,0"
+		PlaybackPCM "hw:SDP4430,0"
 		PlaybackVolume "name='DL1 Media Playback Volume' 120"
 	}
 }
@@ -611,7 +605,7 @@ SectionModifier."PlayMusic" {
 	# QoS, Mixers and ALSA PCMs
 	Value {
 		TQ "HiFi"
-		PlaybackPCM "plughw:SDP4430,0"
+		PlaybackPCM "hw:SDP4430,0"
 		PlaybackVolume "name='DL2 Media Playback Volume' 120"
 	}
 }
@@ -656,7 +650,7 @@ SectionModifier."CaptureVoice" {
 	# QoS, Mixers and ALSA PCMs
 	Value {
 		TQ "Voice"
-		PlaybackPCM "plughw:SDP4430,1"
+		PlaybackPCM "hw:SDP4430,1"
 	}
 }
 

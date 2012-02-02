@@ -57,8 +57,8 @@ SectionVerb {
 		TQ "HiFi"
 
 		# ALSA PCM device for HiFi
-		PlaybackPCM "plughw:SDP4430,0"
-		CapturePCM "plughw:SDP4430,1"
+		PlaybackPCM "hw:SDP4430,0"
+		CapturePCM "hw:SDP4430,1"
 	}
 }
 
@@ -71,6 +71,11 @@ SectionDevice."Headset" {
 	ConflictingDevice [
 		"HeadsetLP"
 		"Headphones"
+		"HeadphonesLP"
+		"Mainmic"
+		"Submic"
+		"Line"
+		"FMRadio"
 	]
 
 	EnableSequence [
@@ -125,6 +130,8 @@ SectionDevice."Headset" {
 		# Default ALSA volume gain and mute kcontrols
 		CaptureVolume "name='Capture Volume' 4"
 		PlaybackVolume "name='Headset Playback Volume' 13"
+		PlaybackChannels "2"
+		CaptureChannels "2"
 	}
 }
 
@@ -133,8 +140,13 @@ SectionDevice."HeadsetLP" {
 
 	# HeadsetLP is mutually exclusive to some devices
 	ConflictingDevice [
-		"Headset"
 		"Headphones"
+		"HeadphonesLP"
+		"Headset"
+		"Mainmic"
+		"Submic"
+		"Line"
+		"FMRadio"
 	]
 
 	EnableSequence [
@@ -148,7 +160,7 @@ SectionDevice."HeadsetLP" {
 
 		# TWL6040 Capture Path
 		cset "name='Analog Left Capture Route' 0"
-		cset "name='Analog right Capture Route' 0"
+		cset "name='Analog Right Capture Route' 0"
 		cset "name='Capture Preamplifier Volume' 2"
 	]
 
@@ -189,7 +201,9 @@ SectionDevice."HeadsetLP" {
 		# Default ALSA volume gain and mute kcontrols
 		CaptureVolume "name='Capture Volume' 4"
 		PlaybackVolume "name='Headset Playback Volume' 13"
-		PlaybackPCM "plughw:SDP4430,6"
+		PlaybackPCM "hw:SDP4430,6"
+		PlaybackChannels "2"
+		CaptureChannels "2"
 	}
 }
 
@@ -202,6 +216,7 @@ SectionDevice."Headphones" {
 	ConflictingDevice [
 		"Headset"
 		"HeadsetLP"
+		"HeadphonesLP"
 	]
 
 	EnableSequence [
@@ -240,6 +255,58 @@ SectionDevice."Headphones" {
 	Value {
 		# Default ALSA volume gain and mute kcontrols
 		PlaybackVolume "name='Headset Playback Volume' 13"
+		PlaybackChannels "2"
+	}
+}
+
+SectionDevice."HeadphonesLP" {
+	Comment "Low Power SDP4430 3.5mm Headphones playback"
+
+	# Headphones is mutually exclusive to some devices
+	ConflictingDevice [
+		"Headset"
+		"HeadsetLP"
+		"Headphones"
+	]
+
+	EnableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:SDP4430"
+
+		# TWL6040 playback path
+		cset "name='Headset Left Playback' 1"
+		cset "name='Headset Right Playback' 1"
+	]
+
+	DisableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:SDP4430"
+
+		# TWL6040 playback path
+		cset "name='Headset Right Playback' 0"
+		cset "name='Headset Left Playback' 0"
+	]
+
+	TransitionSequence."Earphone" [
+
+		# Set SDP device for following cset commands
+		cdev "hw:SDP4430"
+
+		# TWL6040 playback path
+		cset "name='Headset Right Playback' 0"
+		cset "name='Headset Left Playback' 0"
+
+		# TWL6040 playback path
+		cset "name='Earphone Playback Switch' 1"
+	]
+
+	Value {
+		# Default ALSA volume gain and mute kcontrols
+		PlaybackVolume "name='Headset Playback Volume' 13"
+		PlaybackPCM "hw:SDP4430,6"
+		PlaybackChannels "2"
 	}
 }
 
@@ -282,6 +349,7 @@ SectionDevice."Earphone" {
 	Value {
 		# Default ALSA volume gain and mute kcontrols
 		PlaybackVolume "name='Earphone Playback Volume' 13"
+		PlaybackChannels "2"
 	}
 }
 
@@ -319,6 +387,7 @@ SectionDevice."Handsfree" {
 	Value {
 		# Default ALSA volume gain and mute kcontrols
 		PlaybackVolume "name='Handsfree Playback Volume' 13"
+		PlaybackChannels "2"
 	}
 }
 
@@ -330,6 +399,8 @@ SectionDevice."Mainmic" {
 	ConflictingDevice [
 		"Headset"
 		"HeadsetLP"
+		"Line"
+		"FMRadio"
 	]
 
 	EnableSequence [
@@ -353,6 +424,7 @@ SectionDevice."Mainmic" {
 	Value {
 		# Default ALSA volume gain and mute kcontrols
 		CaptureVolume "name='Capture Volume' 4"
+		CaptureChannels "2"
 	}
 }
 
@@ -364,6 +436,8 @@ SectionDevice."Submic" {
 	ConflictingDevice [
 		"Headset"
 		"HeadsetLP"
+		"Line"
+		"FMRadio"
 	]
 
 	EnableSequence [
@@ -387,6 +461,7 @@ SectionDevice."Submic" {
 	Value {
 		# Default ALSA volume gain and mute kcontrols
 		CaptureVolume "name='Capture Volume' 4"
+		CaptureChannels "2"
 	}
 }
 
@@ -432,6 +507,7 @@ SectionDevice."Line" {
 	Value {
 		# Default ALSA volume gain and mute kcontrols
 		CaptureVolume "name='Capture Volume' 4"
+		CaptureChannels "2"
 	}
 }
 
@@ -485,6 +561,7 @@ SectionDevice."FMRadio" {
 	Value {
 		# Default ALSA volume gain and mute kcontrols
 		CaptureVolume "name='Capture Volume' 4"
+		CaptureChannels "2"
 	}
 }
 
@@ -526,7 +603,7 @@ SectionDevice."Dmic" {
 		CaptureVolume "name='DMIC1 UL Capture Volume' 30, 30"
 		CaptureVolume "name='DMIC2 UL Capture Volume' 30, 30"
 		CaptureVolume "name='DMIC3 UL Capture Volume' 30, 30"
-		CapturePCM "plughw:SDP4430,0"
+		CapturePCM "hw:SDP4430,0"
 	}
 }
 
@@ -546,7 +623,7 @@ SectionDevice."Bluetooth" {
 		cset "name='BT UL Volume' 120"
 
 		# enable ABE DL1 BT path
-		cset "name='DL1 VX_DL Switch' 1"
+		cset "name='DL1 BT_VX Switch' 1"
 	]
 
 	DisableSequence [
@@ -560,30 +637,34 @@ SectionDevice."Bluetooth" {
 		cset "name='BT UL Volume' 0"
 
 		# enable ABE DL1 BT path
-		cset "name='DL1 VX_DL Switch' 0"
+		cset "name='DL1 BT_VX Switch' 0"
 	]
 
 	Value {
 		# Default ALSA volume gain and mute kcontrols
 		TQ "Voice"
+		PlaybackPriority "150"
+		CapturePriority "150"
+		PlaybackChannels "2"
+		CaptureChannels "2"
 	}
 }
 
 ############ HDMI Device #########################
 
-SectionDevice."HDMI" {
-	Comment "HDMI Connected Device"
-
-	EnableSequence [
-	]
-
-	DisableSequence [
-	]
-
-	Value {
-		PlaybackPCM "plughw:OMAP4HDMI,0"
-	}
-}
+#SectionDevice."HDMI" {
+#	Comment "HDMI Connected Device"
+#
+#	EnableSequence [
+#	]
+#
+#	DisableSequence [
+#	]
+#
+#	Value {
+#		PlaybackPCM "hw:OMAP4HDMI,0"
+#	}
+#}
 
 ##############  Play Tone Modifier ####################
 #
@@ -638,7 +719,7 @@ SectionModifier."PlayTone" {
 	# QoS, Mixers and ALSA PCMs
 	Value {
 		TQ "Tones"
-		PlaybackPCM "plughw:SDP4430,3"
+		PlaybackPCM "hw:SDP4430,3"
 		PlaybackVolume "name='DL2 Tones Playback Volume' 120"
 	}
 }
@@ -672,7 +753,7 @@ SectionModifier."PlayTone" {
 	# QoS, Mixers and ALSA PCMs
 	Value {
 		TQ "Tones"
-		PlaybackPCM "plughw:SDP4430,3"
+		PlaybackPCM "hw:SDP4430,3"
 		PlaybackVolume "name='DL2 Tones Playback Volume' 120"
 	}
 }

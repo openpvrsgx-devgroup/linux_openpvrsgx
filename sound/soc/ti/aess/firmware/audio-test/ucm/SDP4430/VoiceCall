@@ -504,7 +504,7 @@ SectionModifier."PlayTone" {
 	DisableSequence [
 
 		# Set SDP device for following cset commands
-		cdev "Shw:DP4430"
+		cdev "hw:SDP4430"
 
 		# ABE mute tone playback path through DL2
 		cset "name='DL2 Mixer Tones' 0"
@@ -597,7 +597,7 @@ SectionModifier."PlayMusic" {
 	DisableSequence [
 
 		# Set SDP device for following cset commands
-		cdev "Shw:DP4430"
+		cdev "hw:SDP4430"
 
 		# ABE mute tone playback path through DL2
 		cset "name='DL2 Mixer Tones' 0"
@@ -640,7 +640,7 @@ SectionModifier."CaptureVoice" {
 	DisableSequence [
 
 		# Set SDP device for following cset commands
-		cdev "Shw:DP4430"
+		cdev "hw:SDP4430"
 
 		# Enable VX_REC for call capture at 0dB
 		cset "name='Capture Mixer Voice Playback' 0"

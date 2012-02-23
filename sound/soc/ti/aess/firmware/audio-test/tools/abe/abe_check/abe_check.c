@@ -119,6 +119,21 @@ struct buffer {
 	int bank;
 };
 
+#define VX_DL_16K_LIST		0x0001
+#define VX_DL_8K_LIST		0x0002
+#define BT_DL_8K_LIST		0x0004
+#define BT_DL_16K_LIST		0x0008
+#define MM_DL_LIST		0x0010
+#define EARP_LIST		0x0020
+#define IHF_LIST		0x0040
+#define AMIC_UL_LIST		0x0080
+#define BT_UL_8K_LIST		0x0100
+#define BT_UL_16K_LIST		0x0200
+#define VX_UL_8K_LIST		0x0400
+#define VX_UL_16K_LIST		0x0800
+
+#define BUFF_LIST_ALL		0x0FFF
+
 struct buffer vx_dl_16k_list[] = {
 	{
 		.name = "VX_DL FIFO",
@@ -1365,15 +1380,158 @@ int abe_parse_buffer(struct buffer *buf)
 			min = fabsf(data);
 	}
 
-	if (buf->bank == OMAP_ABE_SMEM)
-		printf("Buf: % 20s, Size % 3d, Min: %04.06f, Max: %04.06f, Min: %04.06f, Max: %04.06f\n",
-			buf->name, buf->size/4, minl, maxl, minr, maxr);
-	else if (buf->bank == OMAP_ABE_DMEM)
-		printf("Buf: % 20s, Size % 3d, Min: %04.06f, Max: %04.06f, Min: %04.06f, Max: %04.06f\n",
+	if ((buf->bank == OMAP_ABE_SMEM) || (buf->bank == OMAP_ABE_DMEM))
+		printf("| %-25s | %4d | %15.06f | %15.06f | %15.06f | %15.06f |\n",
 			buf->name, buf->size/4, minl, maxl, minr, maxr);
 	else
-		printf("Buf: % 20s, Size % 3d, Min: %04.06f, Max: %04.06f\n", buf->name, buf->size/4, min, max);
+		printf("| %-25s | %4d | %15.04f | %15.04f | %15s | %15s |\n",
+			buf->name, buf->size/4, min, max, "-", "-");
 
+}
+
+void print_buffers(int buffer_list)
+{
+	int i;
+
+	printf("|------------------------------------------------------");
+	printf("----------------------------------------------------|\n");
+	printf("| %25s | %4s | %33s | %33s |\n",
+		"", "",
+		"              Left               ",
+		"              Right              ");
+        printf("| %25s | %4s |"
+		"-----------------------------------|"
+		"-----------------------------------|\n",
+		"          Buffer         ", "Size");
+        printf("| %25s | %4s | %15s | %15s | %15s | %15s |\n",
+		"", "",
+		"     Min     ", "     Max     ",
+		"     Min     ", "     Max     ");
+	printf("|---------------------------|------|-----------------|");
+	printf("-----------------|-----------------|-----------------|\n");
+
+	/* AMIC */
+	if (buffer_list & AMIC_UL_LIST) {
+		printf("| %-25s | %4s | %15s | %15s | %15s | %15s |\n",
+			"Analog Microphone", "", "", "", "", "");
+		for (i = 0; i < ARRAY_SIZE(amic_ul_list); i++)
+			abe_parse_buffer(&amic_ul_list[i]);
+		printf("| %-25s | %4s | %15s | %15s | %15s | %15s |\n",
+			"", "", "", "", "", "");
+	}
+
+	/* VX UL 16 kHz */
+	if (buffer_list & VX_UL_16K_LIST) {
+		printf("| %-25s | %4s | %15s | %15s | %15s | %15s |\n",
+			"Voice Uplink 16kHz", "", "", "", "", "");
+		for (i = 0; i < ARRAY_SIZE(vx_ul_16k_list); i++)
+			abe_parse_buffer(&vx_ul_16k_list[i]);
+		printf("| %-25s | %4s | %15s | %15s | %15s | %15s |\n",
+			"", "", "", "", "", "");
+	}
+
+	/* VX DL 16kHz */
+	if (buffer_list & VX_DL_16K_LIST) {
+		printf("| %-25s | %4s | %15s | %15s | %15s | %15s |\n",
+			"Voice Downlink 16kHz", "", "", "", "", "");
+		for (i = 0; i < ARRAY_SIZE(vx_dl_16k_list); i++)
+			abe_parse_buffer(&vx_dl_16k_list[i]);
+		printf("| %-25s | %4s | %15s | %15s | %15s | %15s |\n",
+			"", "", "", "", "", "");
+	}
+
+	/* VX UL 8kHz */
+	if (buffer_list & VX_UL_8K_LIST) {
+		printf("| %-25s | %4s | %15s | %15s | %15s | %15s |\n",
+			"Voice Uplink 8kHz", "", "", "", "", "");
+		for (i = 0; i < ARRAY_SIZE(vx_ul_8k_list); i++)
+			abe_parse_buffer(&vx_ul_8k_list[i]);
+		printf("| %-25s | %4s | %15s | %15s | %15s | %15s |\n",
+			"", "", "", "", "", "");
+	}
+
+	/* VX DL 8kHz */
+	if (buffer_list & VX_DL_8K_LIST) {
+		printf("| %-25s | %4s | %15s | %15s | %15s | %15s |\n",
+			"Voice Downlink 8kHz", "", "", "", "", "");
+		for (i = 0; i < ARRAY_SIZE(vx_dl_8k_list); i++)
+			abe_parse_buffer(&vx_dl_8k_list[i]);
+		printf("| %-25s | %4s | %15s | %15s | %15s | %15s |\n",
+			"", "", "", "", "", "");
+	}
+
+	/* EAR */
+	if (buffer_list & EARP_LIST) {
+		printf("| %-25s | %4s | %15s | %15s | %15s | %15s |\n",
+			"Earpiece", "", "", "", "", "");
+		for (i = 0; i < ARRAY_SIZE(earp_list); i++)
+			abe_parse_buffer(&earp_list[i]);
+		printf("| %-25s | %4s | %15s | %15s | %15s | %15s |\n",
+			"", "", "", "", "", "");
+	}
+
+	/* IHF */
+	if (buffer_list & IHF_LIST) {
+		printf("| %-25s | %4s | %15s | %15s | %15s | %15s |\n",
+			"Hands Free", "", "", "", "", "");
+		for (i = 0; i < ARRAY_SIZE(ihf_list); i++)
+			abe_parse_buffer(&ihf_list[i]);
+		printf("| %-25s | %4s | %15s | %15s | %15s | %15s |\n",
+			"", "", "", "", "", "");
+	}
+
+	/* MM DL */
+	if (buffer_list & MM_DL_LIST) {
+		printf("| %-25s | %4s | %15s | %15s | %15s | %15s |\n",
+			"Multimedia Downlink", "", "", "", "", "");
+		for (i = 0; i < ARRAY_SIZE(mm_dl_list); i++)
+			abe_parse_buffer(&mm_dl_list[i]);
+		printf("| %-25s | %4s | %15s | %15s | %15s | %15s |\n",
+			"", "", "", "", "", "");
+	}
+
+	/* BT UL 8kHz */
+	if (buffer_list & BT_UL_8K_LIST) {
+		printf("| %-25s | %4s | %15s | %15s | %15s | %15s |\n",
+			"Bluetooth Uplink 8kHz", "", "", "", "", "");
+		for (i = 0; i < ARRAY_SIZE(bt_ul_8k_list); i++)
+			abe_parse_buffer(&bt_ul_8k_list[i]);
+		printf("| %-25s | %4s | %15s | %15s | %15s | %15s |\n",
+			"", "", "", "", "", "");
+	}
+
+	/* BT DL 8kHz */
+	if (buffer_list & BT_DL_8K_LIST) {
+		printf("| %-25s | %4s | %15s | %15s | %15s | %15s |\n",
+			"Bluetooth Downlink 8kHz", "", "", "", "", "");
+		for (i = 0; i < ARRAY_SIZE(bt_dl_8k_list); i++)
+			abe_parse_buffer(&bt_dl_8k_list[i]);
+		printf("| %-25s | %4s | %15s | %15s | %15s | %15s |\n",
+			"", "", "", "", "", "");
+	}
+
+	/* BT UL 16kHz */
+	if (buffer_list & BT_UL_16K_LIST) {
+		printf("| %-25s | %4s | %15s | %15s | %15s | %15s |\n",
+			"Bluetooth Uplink 16kHz", "", "", "", "", "");
+		for (i = 0; i < ARRAY_SIZE(bt_ul_16k_list); i++)
+			abe_parse_buffer(&bt_ul_16k_list[i]);
+		printf("| %-25s | %4s | %15s | %15s | %15s | %15s |\n",
+			"", "", "", "", "", "");
+	}
+
+	/* BT DL 16kHz */
+	if (buffer_list & BT_DL_16K_LIST) {
+		printf("| %-25s | %4s | %15s | %15s | %15s | %15s |\n",
+			"Bluetooth Downlink 16kHz", "", "", "", "", "");
+		for (i = 0; i < ARRAY_SIZE(bt_dl_16k_list); i++)
+			abe_parse_buffer(&bt_dl_16k_list[i]);
+		printf("| %-25s | %4s | %15s | %15s | %15s | %15s |\n",
+			"", "", "", "", "", "");
+	}
+
+	printf("|------------------------------------------------------");
+	printf("----------------------------------------------------|\n\n");
 }
 
 int main(int argc, char *argv[])
@@ -1391,52 +1549,7 @@ int main(int argc, char *argv[])
 	print_release();
 	print_opp();
 
-	/* AMIC */
-	for (i = 0; i < ARRAY_SIZE(amic_ul_list); i++)
-		abe_parse_buffer(&amic_ul_list[i]);
-	printf("\n");
-
-#if 0
-	/* Vx UL 16 kHz */
-	for (i = 0; i < ARRAY_SIZE(vx_ul_16k_list); i++)
-		abe_parse_buffer(&vx_ul_16k_list[i]);
-	printf("\n");
-
-	/* Vx DL 16 kHz */
-	for (i = 0; i < ARRAY_SIZE(vx_dl_16k_list); i++)
-		abe_parse_buffer(&vx_dl_16k_list[i]);
-	printf("\n");
-#else
-	/* Vx UL 8 kHz */
-	for (i = 0; i < ARRAY_SIZE(vx_ul_8k_list); i++)
-		abe_parse_buffer(&vx_ul_8k_list[i]);
-	printf("\n");
-
-	/* Vx DL 8 kHz */
-	for (i = 0; i < ARRAY_SIZE(vx_dl_8k_list); i++)
-		abe_parse_buffer(&vx_dl_8k_list[i]);
-	printf("\n");
-#endif
-	/* EAR */
-	for (i = 0; i < ARRAY_SIZE(earp_list); i++)
-		abe_parse_buffer(&earp_list[i]);
-	printf("\n");
-
-	/* IHF */
-	for (i = 0; i < ARRAY_SIZE(ihf_list); i++)
-		abe_parse_buffer(&ihf_list[i]);
-	printf("\n");
-
-	/* BT UL 8k */
-	for (i = 0; i < ARRAY_SIZE(bt_ul_8k_list); i++)
-		abe_parse_buffer(&bt_ul_8k_list[i]);
-	printf("\n");
-
-	/* BT DL 8k */
-	for (i = 0; i < ARRAY_SIZE(bt_dl_8k_list); i++)
-		abe_parse_buffer(&bt_dl_8k_list[i]);
-	printf("\n");
-
+	print_buffers(BUFF_LIST_ALL);
 	abe_print_gain();
 	abe_print_route();
 

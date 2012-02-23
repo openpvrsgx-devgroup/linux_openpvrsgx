@@ -1115,42 +1115,44 @@ void print_opp(void)
 
 void print_atc_desc(struct atc_desc *atc_desc, int dma_req)
 {
-	printf("*****************************************\n");
-	printf(" ATC Descriptor %s\n", get_dma_req_name(dma_req));
-	printf("*****************************************\n");
-	printf("RDPT     : 0x%02x\n", atc_desc->rdpt);
-	printf("RESERVED0: 0x%1x\n", atc_desc->reserved0);
-	printf("CBSIZE   : 0x%02x\n", atc_desc->cbsize);
-	printf("IRQDEST  : 0x%1x\n", atc_desc->irqdest);
-	printf("CBERR    : 0x%1x\n", atc_desc->cberr);
-	printf("RESERVED1: 0x%02x\n", atc_desc->reserved1);
-	printf("CBDIR    : 0x%1x\n", atc_desc->cbdir);
-	printf("NW       : 0x%1x\n", atc_desc->nw);
-	printf("WRPT     : 0x%02x\n", atc_desc->wrpt);
-	printf("RESERVED2: 0x%1x\n", atc_desc->reserved2);
-	printf("BADD     : 0x%03x\n", atc_desc->badd);
-	printf("ITER     : 0x%02x\n", atc_desc->iter);
-	printf("SRCID    : 0x%02x\n", atc_desc->srcid);
-	printf("DESTID   : 0x%02x\n", atc_desc->destid);
-	printf("DESEN    : 0x%1x\n", atc_desc->desen);
+	printf("|---------------------------------|\n");
+	printf("| ATC Descriptor %-16s |\n", get_dma_req_name(dma_req));
+	printf("|---------------------------------|\n");
+	printf("| %-13s | 0x%02x            |\n", "RDPT", atc_desc->rdpt);
+	printf("| %-13s | 0x%1x             |\n", "RESERVED0", atc_desc->reserved0);
+	printf("| %-13s | 0x%02x            |\n", "CBSIZE", atc_desc->cbsize);
+	printf("| %-13s | 0x%1x             |\n", "IRQDEST", atc_desc->irqdest);
+	printf("| %-13s | 0x%1x             |\n", "CBERR", atc_desc->cberr);
+	printf("| %-13s | 0x%02x            |\n", "RESERVED1", atc_desc->reserved1);
+	printf("| %-13s | 0x%1x             |\n", "CBDIR", atc_desc->cbdir);
+	printf("| %-13s | 0x%1x             |\n", "NW", atc_desc->nw);
+	printf("| %-13s | 0x%02x            |\n", "WRPT", atc_desc->wrpt);
+	printf("| %-13s | 0x%1x             |\n", "RESERVED2", atc_desc->reserved2);
+	printf("| %-13s | 0x%03x           |\n", "BADD", atc_desc->badd);
+	printf("| %-13s | 0x%02x            |\n", "ITER", atc_desc->iter);
+	printf("| %-13s | 0x%02x            |\n", "SRCID", atc_desc->srcid);
+	printf("| %-13s | 0x%02x            |\n", "DESTID", atc_desc->destid);
+	printf("| %-13s | 0x%1x             |\n", "DESEN", atc_desc->desen);
+	printf("|---------------------------------|\n\n");
 }
 
 void interpret_atc_desc(struct atc_desc *atc_desc, int dma_req)
 {
-	printf("*****************************************\n");
-	printf(" Decoded ATC Descriptor %s\n", get_dma_req_name(dma_req));
-	printf("*****************************************\n");
-	printf("Read pointer relative address : 0x%02x\n", atc_desc->rdpt);
-	printf("Circular buffer size          : 0x%02x\n", atc_desc->cbsize);
-	printf("IRQ destination               : %s\n", atc_desc->irqdest ? "MCU" : "DSP");
-	printf("Report circular buffer errors : %d\n", atc_desc->cberr);
-	printf("Circular buffer direction     : %s (wrt AESS)\n", atc_desc->cbdir ? "Out" : "In");
-	printf("Write pointer relative address: 0x%02x\n", atc_desc->wrpt);
-	printf("Base address                  : 0x%02x\n", atc_desc->badd);
-	printf("Iteration                     : 0x%02x (%d)\n", atc_desc->iter, atc_desc->iter);
-	printf("Source ID peripheral          : %s\n", get_atc_source_name(atc_desc->srcid));
-	printf("Destination ID peripheral     : %s\n", get_atc_dest_name(atc_desc->destid));
-	printf("Descriptor activation         : %s\n", atc_desc->desen ? "Active" : "Not Active");
+	printf("|-------------------------------------------------|\n");
+	printf("| ATC Descriptor Decoded %-24s |\n", get_dma_req_name(dma_req));
+	printf("|-------------------------------------------------|\n");
+	printf("| %-30s | 0x%02x           |\n", "Read pointer relative address", atc_desc->rdpt);
+	printf("| %-30s | 0x%02x           |\n", "Circular buffer size", atc_desc->cbsize);
+	printf("| %-30s | %-14s |\n", "IRQ destination", atc_desc->irqdest ? "MCU" : "DSP");
+	printf("| %-30s | %-3d            |\n", "Report circular buffer errors", atc_desc->cberr);
+	printf("| %-30s | %-3s (wrt AESS) |\n", "Circular buffer direction", atc_desc->cbdir ? "Out" : "In");
+	printf("| %-30s | 0x%02x           |\n", "Write pointer relative address", atc_desc->wrpt);
+	printf("| %-30s | 0x4018%04x     |\n", "Base address", atc_desc->badd << 4);
+	printf("| %-30s | %-14d |\n", "Iteration", atc_desc->iter);
+	printf("| %-30s | %-14s |\n", "Source ID peripheral", get_atc_source_name(atc_desc->srcid));
+	printf("| %-30s | %-14s |\n", "Destination ID peripheral", get_atc_dest_name(atc_desc->destid));
+	printf("| %-30s | %-14s |\n", "Descriptor activation", atc_desc->desen ? "Active" : "Not Active");
+	printf("|-------------------------------------------------|\n\n");
 }
 
 void print_ping_pong_desc(struct ping_pong_desc *pp_desc)

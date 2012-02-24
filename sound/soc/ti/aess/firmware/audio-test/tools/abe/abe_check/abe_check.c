@@ -1605,12 +1605,7 @@ int main(int argc, char *argv[])
 	struct atc_desc atc_desc;
         struct io_desc io_desc;
 	struct ping_pong_desc pp_desc;
-	int i, j, err = 0;
-
-	if (argc != 1) {
-		printf("%s: outfile\n", argv[0]);
-		return 0;
-	}
+	int i, j;
 
 	print_release();
 	print_opp();
@@ -1639,6 +1634,5 @@ int main(int argc, char *argv[])
 	print_ping_pong_desc(&pp_desc);
 	interpret_ping_pong_desc(&pp_desc);
 
-
-	return err;
+	return 0;
 }

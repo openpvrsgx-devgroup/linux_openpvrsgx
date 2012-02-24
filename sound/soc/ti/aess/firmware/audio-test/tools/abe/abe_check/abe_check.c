@@ -975,6 +975,8 @@ char *get_atc_source_name(int source)
 	case 0x10:
 	case 0x11:
 		return "RESERVED";
+	case 0x3F:
+		return "CBPr";
 	}
 
 	return "INVALID";
@@ -1047,6 +1049,8 @@ char *get_atc_dest_name(int dest)
 		return "RESERVED";
 	case 0x15:
 		return "MCPDM_ON";
+	case 0x3F:
+		return "CBPr";
 	}
 
 	return "INVALID";

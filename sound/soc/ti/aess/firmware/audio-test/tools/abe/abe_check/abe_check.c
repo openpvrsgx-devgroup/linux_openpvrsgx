@@ -694,7 +694,7 @@ struct ping_pong_desc {
 
 int atc_to_io[OMAP_ABE_ATC_TO_PORT_SIZE][2] = {
 	{DMIC_DMA_REQ,  DMIC_PORT},
-	{McPDM_DMA_DL,  PDM_UL_PORT},
+	{McPDM_DMA_DL,  PDM_DL_PORT},
 	{McPDM_DMA_UP,  PDM_UL_PORT},
 	{MCBSP1_DMA_TX, BT_VX_DL_PORT},
 	{MCBSP1_DMA_RX, BT_VX_UL_PORT},

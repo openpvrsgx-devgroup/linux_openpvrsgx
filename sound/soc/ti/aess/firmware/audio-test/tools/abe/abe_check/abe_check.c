@@ -1063,6 +1063,19 @@ char *get_dma_req_name(int dma_req)
 
 	return supported_dma_reqs[dma_req];
 }
+
+void print_release(void)
+{
+	uint32_t release;
+	int maj, min, rev;
+
+	release = dmem[OMAP_ABE_D_VERSION_ADDR/4];
+	rev = release & 0xF;
+	min = (release >> 4) & 0xFF;
+	maj = (release >> 12) & 0xFF;
+	printf("ABE release: %02x.%02x.%1x\n\n", maj, min, rev);
+}
+
 void print_atc_desc(struct atc_desc *atc_desc, int dma_req)
 {
 	printf("*****************************************\n");
@@ -1353,7 +1366,7 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
-	printf("ABE release: %x\n", dmem[OMAP_ABE_D_VERSION_ADDR/4]);
+	print_release();
 	printf("   OPP: %x\n", dmem[OMAP_ABE_D_MAXTASKBYTESINSLOT_ADDR/4]);
 
 	/* AMIC */

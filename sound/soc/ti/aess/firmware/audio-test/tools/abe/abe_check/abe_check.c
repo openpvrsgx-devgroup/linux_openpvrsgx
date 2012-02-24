@@ -1160,55 +1160,63 @@ void interpret_atc_desc(struct atc_desc *atc_desc, int dma_req)
 
 void print_ping_pong_desc(struct ping_pong_desc *pp_desc)
 {
-	printf("**********************\n");
-	printf(" Ping Pong Descriptor \n");
-	printf("**********************\n");
-	printf("drift_asrc        : %d\n", pp_desc->drift_asrc);
-	printf("drift_io          : %d\n", pp_desc->drift_io);
-	printf("hw_ctrl_addr      : 0x%04x\n", pp_desc->hw_ctrl_addr);
-	printf("copy_func_index   : %d\n", pp_desc->copy_func_index);
-	printf("x_io              : %d\n", pp_desc->x_io);
-	printf("data_size         : %d\n", pp_desc->data_size);
-	printf("smem_addr         : 0x%02x\n", pp_desc->smem_addr);
-	printf("atc_irq_data      : 0x%02x\n", pp_desc->atc_irq_data);
-	printf("counter           : %d\n", pp_desc->counter);
-	printf("workbuff_baseaddr : %04x\n", pp_desc->workbuff_baseaddr);
-	printf("workbuff_samples  : %04x\n", pp_desc->workbuff_samples);
-	printf("nextbuff0_baseaddr: %04x\n", pp_desc->nextbuff0_baseaddr);
-	printf("nextbuff0_samples : %04x\n", pp_desc->nextbuff0_samples);
-	printf("nextbuff1_baseaddr: %04x\n", pp_desc->nextbuff1_baseaddr);
-	printf("nextbuff1_samples : %04x\n", pp_desc->nextbuff1_samples);
+	printf("|---------------------------------|\n");
+	printf("| Ping Pong Descriptor            |\n");
+	printf("|---------------------------------|\n");
+	printf("| %-22s | %-6d |\n", "drift_asrc", pp_desc->drift_asrc);
+	printf("| %-22s | %-6d |\n", "drift_io", pp_desc->drift_io);
+	printf("| %-22s | 0x%04x |\n", "hw_ctrl_addr", pp_desc->hw_ctrl_addr);
+	printf("| %-22s | %-6d |\n", "copy_func_index", pp_desc->copy_func_index);
+	printf("| %-22s | %-6d |\n", "x_io", pp_desc->x_io);
+	printf("| %-22s | %-6d |\n", "data_size", pp_desc->data_size);
+	printf("| %-22s | 0x%02x   |\n", "smem_addr", pp_desc->smem_addr);
+	printf("| %-22s | 0x%02x   |\n", "atc_irq_data", pp_desc->atc_irq_data);
+	printf("| %-22s | %-6d |\n", "counter", pp_desc->counter);
+	printf("| %-22s | 0x%04x |\n", "workbuff_baseaddr", pp_desc->workbuff_baseaddr);
+	printf("| %-22s | %-6d |\n", "workbuff_samples", pp_desc->workbuff_samples);
+	printf("| %-22s | 0x%04x |\n", "nextbuff0_baseaddr", pp_desc->nextbuff0_baseaddr);
+	printf("| %-22s | %-6d |\n", "nextbuff0_samples", pp_desc->nextbuff0_samples);
+	printf("| %-22s | 0x%04x |\n", "nextbuff1_baseaddr", pp_desc->nextbuff1_baseaddr);
+	printf("| %-22s | %-6d |\n", "nextbuff1_samples", pp_desc->nextbuff1_samples);
+	printf("|---------------------------------|\n\n");
 }
 
 void interpret_ping_pong_desc(struct ping_pong_desc *pp_desc)
 {
-	printf("******************************\n");
-	printf(" Decoded Ping Pong Descriptor \n");
-	printf("******************************\n");
-	printf("Ping base address    : 0x4908%04x\n", pp_desc->nextbuff0_baseaddr);
-	printf("Pong base address    : 0x4908%04x\n", pp_desc->nextbuff1_baseaddr);
-	if (pp_desc->nextbuff0_samples != pp_desc->nextbuff1_samples)
-		printf("Ping size (%d B) doesn't match pong size (%d B)\n",
-			pp_desc->nextbuff0_samples * 4, pp_desc->nextbuff1_samples * 4);
-	else
-		printf("Ping-Pong buffer size: %d B (%d samples)\n",
-			pp_desc->nextbuff0_samples * 8, pp_desc->nextbuff0_samples * 2);
-	if (pp_desc->workbuff_baseaddr == pp_desc->nextbuff0_baseaddr)
-		printf("Current buffer       : Ping\n");
-	else if (pp_desc->workbuff_baseaddr == pp_desc->nextbuff1_baseaddr)
-		printf("Current buffer       : Pong\n");
-	else
-		printf("Current buffer       : invalid (0x4908%04x)\n", pp_desc->workbuff_baseaddr);
-	printf("Remaining samples    : %d\n", pp_desc->workbuff_samples);
+	printf("|-----------------------------------------------------------------|\n");
+	printf("| Decoded Ping Pong Descriptor                                    |\n");
+	printf("|-----------------------------------------------------------------|\n");
+	printf("| %-24s | 0x4908%04x%-26s |\n", "Ping base address", pp_desc->nextbuff0_baseaddr, "");
+	printf("| %-24s | 0x4908%04x%-26s |\n", "Pong base address", pp_desc->nextbuff1_baseaddr, "");
+	printf("| %-24s | %-36d |\n", "Ping-Pong buffer bytes", pp_desc->nextbuff0_samples * 8);
+	printf("| %-24s | %-36d |\n", "Ping-Pong buffer samples", pp_desc->nextbuff0_samples * 2);
+
 	if (pp_desc->data_size == 0)
-		printf("Channels             : Mono\n");
+		printf("| %-24s | %-36s |\n", "Channels", "Mono");
 	else if (pp_desc->data_size == 1)
-		printf("Channels             : Stereo\n");
+		printf("| %-24s | %-36s |\n", "Channels", "Stereo");
 	else
-		printf("Channels             : invalid (%d)\n", pp_desc->data_size);
-	printf("Iterations           : %d\n", pp_desc->x_io * pp_desc->data_size);
-	printf("MCU IRQ register     : %s (0x%04x)\n", get_reg_name(pp_desc->hw_ctrl_addr), pp_desc->hw_ctrl_addr);
-	printf("MCU IRQ data         : 0x%02x\n", pp_desc->atc_irq_data);
+		printf("| %-24s | INVALID, %-27d |\n", "Channels", pp_desc->data_size);
+
+
+	if (pp_desc->workbuff_baseaddr == pp_desc->nextbuff0_baseaddr)
+		printf("| %-24s | %-36s |\n", "Current buffer", "Ping");
+	else if (pp_desc->workbuff_baseaddr == pp_desc->nextbuff1_baseaddr)
+		printf("| %-24s | %-36s |\n", "Current buffer", "Pong");
+	else
+		printf("| %-24s | INVALID (0x4908%04x)%-16s |\n", "Current buffer",pp_desc->workbuff_baseaddr, "");
+
+	printf("| %-24s | %-36d |\n", "Remaining samples", pp_desc->workbuff_samples);
+	printf("| %-24s | %-36d |\n", "Iterations", pp_desc->x_io * pp_desc->data_size);
+	printf("| %-24s | %-36s |\n", "MCU IRQ register", get_reg_name(pp_desc->hw_ctrl_addr));
+	printf("| %-24s | 0x%02x%-32s |\n", "MCU IRQ data", pp_desc->atc_irq_data, "");
+	printf("|-----------------------------------------------------------------|\n");
+
+	if (pp_desc->nextbuff0_samples != pp_desc->nextbuff1_samples)
+		printf(" Note: Ping size (%d B) does not match pong size (%d B)\n",
+			pp_desc->nextbuff0_samples * 4, pp_desc->nextbuff1_samples * 4);
+
+	printf("\n");
 }
 
 int parse_atc_desc(struct atc_desc *atc_desc, int dma_req)

@@ -1076,6 +1076,28 @@ void print_release(void)
 	printf("ABE release: %02x.%02x.%1x\n\n", maj, min, rev);
 }
 
+void print_opp(void)
+{
+	uint32_t task_slot = dmem[OMAP_ABE_D_MAXTASKBYTESINSLOT_ADDR/4];
+
+	printf("OPP: ");
+
+	switch (task_slot) {
+	case 0x04:
+		printf("25\n\n");
+		break;
+	case 0x0C:
+		printf("50\n\n");
+		break;
+	case 0x10:
+		printf("100\n\n");
+		break;
+	default:
+		printf("UNKNOWN\n\n");
+		break;
+	}
+}
+
 void print_atc_desc(struct atc_desc *atc_desc, int dma_req)
 {
 	printf("*****************************************\n");
@@ -1367,7 +1389,7 @@ int main(int argc, char *argv[])
 	}
 
 	print_release();
-	printf("   OPP: %x\n", dmem[OMAP_ABE_D_MAXTASKBYTESINSLOT_ADDR/4]);
+	print_opp();
 
 	/* AMIC */
 	for (i = 0; i < ARRAY_SIZE(amic_ul_list); i++)

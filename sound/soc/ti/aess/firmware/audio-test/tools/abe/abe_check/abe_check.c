@@ -79,6 +79,9 @@
 #define MAX_PROFILES 	8  /* Number of supported profiles */
 #define MAX_COEFFS 	25      /* Number of coefficients for profiles */
 
+/* Scheduler table is an array of 25 x 8 x 2B */
+#define SCHEDULER_SLOTS	25
+#define SCHEDULER_IDXS	8
 
 #define ARRAY_SIZE(x)	(sizeof(x) / sizeof(x[0]))
 
@@ -999,9 +1002,9 @@ char *get_format_name_from_iterfactor(int factor)
 {
 	switch (factor) {
 	case 1:
-		return "MONO_MSB, MONO_RSHIFTED_16 or STEREO_16_16";
+		return "MONO_MSB, MONO_RSHIFTED_16, STEREO_16_16";
 	case 2:
-		return "STEREO_MSB or STEREO_RSHIFTED_16";
+		return "STEREO_MSB, STEREO_RSHIFTED_16";
 	case 3:
 		return "THREE_MSB";
 	case 4:
@@ -1229,67 +1232,65 @@ int parse_ping_pong_desc(struct ping_pong_desc *pp_desc)
 
 void print_io_desc(struct io_desc *io_desc, int port)
 {
-	printf("**********************************\n");
-	printf(" IO Descriptor %s\n", get_port_name(port));
-	printf("**********************************\n");
-	printf("drift_asrc        : %d\n", io_desc->drift_asrc);
-	printf("drift_io          : %d\n", io_desc->drift_io);
-	printf("io_type_idx       : %d\n", io_desc->io_type_idx);
-	printf("samp_size         : 0x%02x\n", io_desc->samp_size);
-	printf("flow_counter      : %d\n", io_desc->flow_counter);
-	printf("hw_ctrl_addr      : 0x%04x\n", io_desc->hw_ctrl_addr);
-	printf("atc_irq_data      : 0x%02x\n", io_desc->atc_irq_data);
-	printf("direction_rw      : 0x%02x\n", io_desc->direction_rw);
-	printf("repeat_last_samp  : 0x%02x\n", io_desc->repeat_last_samp);
-	printf("nsamp             : %d\n", io_desc->nsamp);
-	printf("x_io              : %d\n", io_desc->x_io);
-	printf("on_off            : 0x%02x\n", io_desc->on_off);
-	printf("split_addr1       : 0x%04x\n", io_desc->split_addr1);
-	printf("split_addr2       : 0x%04x\n", io_desc->split_addr2);
-	printf("split_addr3       : 0x%04x\n", io_desc->split_addr3);
-	printf("before_f_index    : 0x%02x\n", io_desc->before_f_index);
-	printf("after_f_index     : 0x%02x\n", io_desc->after_f_index);
-	printf("smem_addr1        : 0x%04x\n", io_desc->smem_addr1);
-	printf("atc_address1      : 0x%04x\n", io_desc->atc_address1);
-	printf("atc_pointer_saved1: 0x%04x\n", io_desc->atc_pointer_saved1);
-	printf("data_size1        : 0x%02x\n", io_desc->data_size1);
-	printf("copy_f_index1     : %d\n", io_desc->copy_f_index1);
-	printf("smem_addr2        : 0x%04x\n", io_desc->smem_addr2);
-	printf("atc_address2      : 0x%04x\n", io_desc->atc_address2);
-	printf("atc_pointer_saved2: 0x%04x\n", io_desc->atc_pointer_saved2);
-	printf("data_size2        : 0x%02x\n", io_desc->data_size2);
-	printf("copy_f_index2     : %d\n", io_desc->copy_f_index2);
+	printf("|---------------------------------|\n");
+	printf("| IO Descriptor %-17s |\n", get_port_name(port));
+	printf("|---------------------------------|\n");
+	printf("| %-22s | %-6d |\n", "drift_asrc", io_desc->drift_asrc);
+	printf("| %-22s | %-6d |\n", "drift_io", io_desc->drift_io);
+	printf("| %-22s | %-6d |\n", "io_type_idx", io_desc->io_type_idx);
+	printf("| %-22s | 0x%02x   |\n", "samp_size", io_desc->samp_size);
+	printf("| %-22s | %-6d |\n", "flow_counter", io_desc->flow_counter);
+	printf("| %-22s | 0x%04x |\n", "hw_ctrl_addr", io_desc->hw_ctrl_addr);
+	printf("| %-22s | 0x%02x   |\n", "atc_irq_data", io_desc->atc_irq_data);
+	printf("| %-22s | 0x%02x   |\n", "direction_rw", io_desc->direction_rw);
+	printf("| %-22s | 0x%02x   |\n", "repeat_last_samp", io_desc->repeat_last_samp);
+	printf("| %-22s | %-6d |\n", "nsamp", io_desc->nsamp);
+	printf("| %-22s | %-6d |\n", "x_io", io_desc->x_io);
+	printf("| %-22s | 0x%02x   |\n", "on_off", io_desc->on_off);
+	printf("| %-22s | 0x%04x |\n", "split_addr1", io_desc->split_addr1);
+	printf("| %-22s | 0x%04x |\n", "split_addr2", io_desc->split_addr2);
+	printf("| %-22s | 0x%04x |\n", "split_addr3", io_desc->split_addr3);
+	printf("| %-22s | 0x%02x   |\n", "before_f_index", io_desc->before_f_index);
+	printf("| %-22s | 0x%02x   |\n", "after_f_index", io_desc->after_f_index);
+	printf("| %-22s | 0x%04x |\n", "smem_addr1", io_desc->smem_addr1);
+	printf("| %-22s | 0x%04x |\n", "atc_address1", io_desc->atc_address1);
+	printf("| %-22s | 0x%04x |\n", "atc_pointer_saved1", io_desc->atc_pointer_saved1);
+	printf("| %-22s | 0x%02x   |\n", "data_size1", io_desc->data_size1);
+	printf("| %-22s | %-6d |\n", "copy_f_index1", io_desc->copy_f_index1);
+	printf("| %-22s | 0x%04x |\n", "smem_addr2", io_desc->smem_addr2);
+	printf("| %-22s | 0x%04x |\n", "atc_address2", io_desc->atc_address2);
+	printf("| %-22s | 0x%04x |\n", "atc_pointer_saved2", io_desc->atc_pointer_saved2);
+	printf("| %-22s | 0x%02x   |\n", "data_size2", io_desc->data_size2);
+	printf("| %-22s | %-6d |\n", "copy_f_index2", io_desc->copy_f_index2);
+	printf("|---------------------------------|\n\n");
 }
 
 void interpret_io_desc(struct io_desc *io_desc, int port)
 {
-	printf("*****************************************\n");
-	printf(" Decoded IO Descriptor %s\n", get_port_name(port));
-	printf("*****************************************\n");
-	printf("IO type          : %d (%s)\n", io_desc->io_type_idx, id_to_fct[io_desc->io_type_idx]);
-	printf("Direction        : %s\n", io_desc->direction_rw ? "Write" : "Read");
-	printf("State            : %s\n", io_desc->on_off ? "On" : "Off");
-	printf("MCU IRQ register : %s (0x%04x)\n", get_reg_name(io_desc->hw_ctrl_addr), io_desc->hw_ctrl_addr);
-	printf("MCU IRQ data     : 0x%02x\n", io_desc->atc_irq_data);
-	printf("Number of samples: %d\n", io_desc->nsamp);
-	printf("Format           : %s\n", get_format_name_from_iterfactor(io_desc->samp_size));
-	printf("- Configuration 1 -\n");
-	printf("Index            : %d (%s)\n", io_desc->copy_f_index1, id_to_fct[io_desc->copy_f_index1]);
-	printf("Data size        : 0x%04x\n", io_desc->data_size1);
-	printf("SMEM address     : 0x%04x\n", io_desc->smem_addr1);
-	printf("ATC address      : %s (0x4908%04x)\n", get_dma_req_name(io_desc->atc_address1 / 8), io_desc->atc_address1);
-	printf("ATC pointer saved: 0x%04x\n", io_desc->atc_pointer_saved1);
-	printf("- Configuration 2 -\n");
-	printf("Index            : %d (%s)\n", io_desc->copy_f_index2, id_to_fct[io_desc->copy_f_index2]);
-	printf("Data size        : 0x%04x\n", io_desc->data_size2);
-	printf("SMEM address     : 0x%04x\n", io_desc->smem_addr2);
-	printf("ATC address      : %s (0x4908%04x)\n", get_dma_req_name(io_desc->atc_address2 / 8), io_desc->atc_address2);
-	printf("ATC pointer saved: 0x%04x\n", io_desc->atc_pointer_saved2);
-	if (io_desc->data_size1 != io_desc->data_size2)
-		printf("Data size1 (0x%04x) doesn't match size2 (0x%04x)\n", io_desc->data_size1, io_desc->data_size2);
+	printf("|-------------------------------------------------------------------|\n");
+	printf("| Decoded IO Descriptor %-43s |\n", get_port_name(port));
+	printf("|-------------------------------------------------------------------|\n");
+	printf("| %-22s | %-40d |\n", "IO type", io_desc->io_type_idx);
+	printf("| %-22s | %-40s |\n", "Direction", io_desc->direction_rw ? "Write" : "Read");
+	printf("| %-22s | %-40s |\n", "State", io_desc->on_off ? "On" : "Off");
+	printf("| %-22s | %-40s |\n", "MCU IRQ register", get_reg_name(io_desc->hw_ctrl_addr));
+	printf("| %-22s | 0x%02x%-36s |\n", "MCU IRQ data", io_desc->atc_irq_data, "");
+	printf("| %-22s | %-40d |\n", "Number of samples", io_desc->nsamp);
+	printf("| %-22s | %-40s |\n", "Format", get_format_name_from_iterfactor(io_desc->samp_size));
+	printf("| %-22s | %-40s |\n", "Configuration 1", "");
+	printf("| %-22s | %-40s |\n", "Index", id_to_fct[io_desc->copy_f_index1]);
+	printf("| %-22s | %-40d |\n", "Data size", io_desc->data_size1);
+	printf("| %-22s | 0x%04x%-34s |\n", "SMEM address", io_desc->smem_addr1, "");
+	printf("| %-22s | %-27s (0x4908%04x) |\n", "ATC address", get_dma_req_name(io_desc->atc_address1 / 8), io_desc->atc_address1);
+	printf("| %-22s | 0x%04x%-34s |\n", "ATC pointer saved", io_desc->atc_pointer_saved1, "");
+	printf("| %-22s | %-40s |\n", "Configuration 1", "");
+	printf("| %-22s | %-40d |\n", "Index", io_desc->copy_f_index2);
+	printf("| %-22s | %-40d |\n", "Data size", io_desc->data_size2);
+	printf("| %-22s | 0x%04x%-34s |\n", "SMEM address", io_desc->smem_addr2, "");
+	printf("| %-22s | %-27s (0x4908%04x) |\n", "ATC address", get_dma_req_name(io_desc->atc_address2 / 8), io_desc->atc_address2);
+	printf("| %-22s | 0x%04x%-34s |\n", "ATC pointer saved", io_desc->atc_pointer_saved2, "");
+	printf("|-------------------------------------------------------------------|\n\n");
 }
-
-
 
 int abe_print_gain()
 {
@@ -1324,6 +1325,53 @@ int abe_print_route()
 //	printf("VX Route, %x, %x", dmem[OMAP_ABE_D_AUPLINKROUTING]);
 }
 
+int task_to_id(int task)
+{
+	int id;
+
+	/* ABE_STask size is 16 bytes */
+	if (task)
+		id = (task - OMAP_ABE_D_TASKSLIST_ADDR) / 16;
+	else
+		id = -1;
+
+	return id;
+}
+
+void print_scheduler_table(void)
+{
+	int addr, id, i, j;
+	uint32_t val;
+
+	printf("|-----------------------------------------------------|\n");
+	printf("|                  Scheduling Table                   |\n");
+	printf("|-----------------------------------------------------|\n");
+	printf("| S\\I ");
+	for (j = 0; j < SCHEDULER_IDXS; j++)
+		printf("| %3d ", j + 1);
+	printf("|\n");
+	printf("|-----|-----|-----|-----|-----|-----|-----|-----|-----|\n");
+
+	for (i = 0; i < SCHEDULER_SLOTS; i++) {
+		printf("| %3d ", i + 1);
+		for (j = 0; j < SCHEDULER_IDXS; j++) {
+			addr = OMAP_ABE_D_MULTIFRAME_ADDR + (i * SCHEDULER_IDXS + j) * 2;
+			val = dmem[addr / 4];
+
+			if (addr % 4)
+				id = task_to_id((val >> 16) & 0xFFFF);
+			else
+				id = task_to_id(val & 0xFFFF);
+
+			if (id > 0)
+				printf("| %3d ", id);
+			else
+				printf("|  -  ");
+		}
+		printf("|\n");
+	}
+	printf("|-----------------------------------------------------|\n\n");
+}
 
 int abe_parse_buffer(struct buffer *buf)
 {
@@ -1558,7 +1606,7 @@ int main(int argc, char *argv[])
 
 	print_release();
 	print_opp();
-
+	print_scheduler_table();
 	print_buffers(BUFF_LIST_ALL);
 	abe_print_gain();
 	abe_print_route();

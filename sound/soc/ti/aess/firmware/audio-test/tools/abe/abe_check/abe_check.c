@@ -63,6 +63,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
+#include <getopt.h>
 #include <sys/stat.h>
 #include <math.h>
 
@@ -82,6 +83,18 @@
 /* Scheduler table is an array of 25 x 8 x 2B */
 #define SCHEDULER_SLOTS	25
 #define SCHEDULER_IDXS	8
+
+/* Option flags */
+#define OPT_VERSION	0x0001
+#define OPT_OPP		0x0002
+#define OPT_SCHED	0x0004
+#define OPT_BUFFERS	0x0008
+#define OPT_GAINS	0x0010
+#define OPT_ROUTES	0x0020
+#define OPT_ATC		0x0040
+#define OPT_IODESC	0x0080
+#define OPT_PPDESC	0x0100
+#define OPT_ALL		0xFFFF
 
 #define ARRAY_SIZE(x)	(sizeof(x) / sizeof(x[0]))
 
@@ -1600,39 +1613,129 @@ void print_buffers(int buffer_list)
 	printf("----------------------------------------------------|\n\n");
 }
 
+void help(void)
+{
+	printf("Usage: abe_check [OPTION]\n");
+	printf("-v --version   ABE version\n");
+	printf("-o --opp       AESS OPP\n");
+	printf("-b --buffers   AESS internal buffers stats\n");
+	printf("-g --gains     gains which are not muted\n");
+	printf("-r --routes    active routes\n");
+	printf("-a --atc       active ATC descriptors\n");
+	printf("-i --iodesc    IO descriptors\n");
+	printf("-p --ppdesc    Ping-Pong descriptor\n");
+	printf("-h --help      help\n");
+}
+
+static const struct option long_options[] = {
+	{"version", no_argument, 0, 'v'},
+	{"opp", no_argument, 0, 'o'},
+	{"sched", no_argument, 0, 's'},
+	{"buffers", no_argument, 0, 'b'},
+	{"gains", no_argument, 0, 'g'},
+	{"routes", no_argument, 0, 'r'},
+	{"atc", no_argument, 0, 'a'},
+	{"iodesc", no_argument, 0, 'i'},
+	{"ppdesc", no_argument, 0, 'p'},
+	{"help", no_argument, 0, 'h'},
+	{0, 0, 0, 0},
+};
+
+static const char short_options[] = "vosbgraiph";
+
 int main(int argc, char *argv[])
 {
 	struct atc_desc atc_desc;
         struct io_desc io_desc;
 	struct ping_pong_desc pp_desc;
 	int i, j;
+	char c;
+	int opt = 0;
 
-	print_release();
-	print_opp();
-	print_scheduler_table();
-	print_buffers(BUFF_LIST_ALL);
-	abe_print_gain();
-	abe_print_route();
+	while ((c = getopt_long(argc, argv, short_options, long_options, 0)) != -1) {
+		switch (c) {
+		case 'v':
+			opt |= OPT_VERSION;
+			break;
+		case 'o':
+			opt |= OPT_OPP;
+			break;
+		case 's':
+			opt |= OPT_SCHED;
+			break;
+		case 'b':
+			opt |= OPT_BUFFERS;
+			break;
+		case 'g':
+			opt |= OPT_GAINS;
+			break;
+		case 'r':
+			opt |= OPT_ROUTES;
+			break;
+		case 'a':
+			opt |= OPT_ATC;
+			break;
+		case 'i':
+			opt |= OPT_IODESC;
+			break;
+		case 'p':
+			opt |= OPT_PPDESC;
+			break;
+		case 'h':
+			help();
+			return 0;
+		default:
+			help();
+			return 1;
+		}
+	}
 
+	/* dump all options if no arg */
+	if (argc == 1)
+		opt = OPT_ALL;
+
+	if (opt & OPT_VERSION)
+		print_release();
+
+	if (opt & OPT_OPP)
+		print_opp();
+
+	if (opt & OPT_SCHED)
+		print_scheduler_table();
+
+	if (opt & OPT_BUFFERS)
+		print_buffers(BUFF_LIST_ALL);
+
+	if (opt & OPT_GAINS)
+		abe_print_gain();
+
+	if (opt & OPT_ROUTES)
+		abe_print_route();
 
 	for (i = 0; i < NUM_SUPPORTED_DMA_REQS; i++) {
 		parse_atc_desc(&atc_desc, i);
 		if (atc_desc.desen) {
-			print_atc_desc(&atc_desc, i);
-			interpret_atc_desc(&atc_desc, i);
+			if (opt & OPT_ATC) {
+				print_atc_desc(&atc_desc, i);
+				interpret_atc_desc(&atc_desc, i);
+			}
 			for (j = 0; j < OMAP_ABE_ATC_TO_PORT_SIZE; j++) {
 				if (atc_to_io[j][0] == i) {
-					parse_io_desc(&io_desc, atc_to_io[j][1]);
-					print_io_desc(&io_desc, atc_to_io[j][1]);
-					interpret_io_desc(&io_desc, atc_to_io[j][1]);
+					if (opt & OPT_IODESC) {
+						parse_io_desc(&io_desc, atc_to_io[j][1]);
+						print_io_desc(&io_desc, atc_to_io[j][1]);
+						interpret_io_desc(&io_desc, atc_to_io[j][1]);
+					}
 				}
 			}
 		}
 	}
 
-	parse_ping_pong_desc(&pp_desc);
-	print_ping_pong_desc(&pp_desc);
-	interpret_ping_pong_desc(&pp_desc);
+	if (opt & OPT_PPDESC) {
+		parse_ping_pong_desc(&pp_desc);
+		print_ping_pong_desc(&pp_desc);
+		interpret_ping_pong_desc(&pp_desc);
+	}
 
 	return 0;
 }

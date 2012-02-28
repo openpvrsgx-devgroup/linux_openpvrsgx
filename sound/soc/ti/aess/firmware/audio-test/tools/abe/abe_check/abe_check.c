@@ -1200,13 +1200,16 @@ void print_ping_pong_desc(struct ping_pong_desc *pp_desc)
 
 void interpret_ping_pong_desc(struct ping_pong_desc *pp_desc)
 {
+	int frame_bytes = pp_desc->data_size << 2;
+
 	printf("|-----------------------------------------------------------------|\n");
 	printf("| Decoded Ping Pong Descriptor                                    |\n");
 	printf("|-----------------------------------------------------------------|\n");
 	printf("| %-24s | 0x4908%04x%-26s |\n", "Ping base address", pp_desc->nextbuff0_baseaddr, "");
 	printf("| %-24s | 0x4908%04x%-26s |\n", "Pong base address", pp_desc->nextbuff1_baseaddr, "");
-	printf("| %-24s | %-36d |\n", "Ping-Pong buffer bytes", pp_desc->nextbuff0_samples * 8);
-	printf("| %-24s | %-36d |\n", "Ping-Pong buffer samples", pp_desc->nextbuff0_samples * 2);
+	printf("| %-24s | %-36d |\n", "Ping-Pong period bytes", pp_desc->nextbuff0_samples * frame_bytes);
+	/* Ping-pong desc samples term refers to period frames */
+	printf("| %-24s | %-36d |\n", "Ping-Pong period frames", pp_desc->nextbuff0_samples);
 
 	if (pp_desc->data_size == 0)
 		printf("| %-24s | %-36s |\n", "Channels", "Mono");
@@ -1231,7 +1234,8 @@ void interpret_ping_pong_desc(struct ping_pong_desc *pp_desc)
 
 	if (pp_desc->nextbuff0_samples != pp_desc->nextbuff1_samples)
 		printf(" Note: Ping size (%d B) does not match pong size (%d B)\n",
-			pp_desc->nextbuff0_samples * 4, pp_desc->nextbuff1_samples * 4);
+		       pp_desc->nextbuff0_samples * frame_bytes,
+		       pp_desc->nextbuff1_samples * frame_bytes);
 
 	printf("\n");
 }

@@ -627,6 +627,10 @@ struct ping_pong_desc {
 	unsigned char smem_addr;
 	unsigned char atc_irq_data;
 	unsigned char counter;
+	unsigned short dummy1;
+	unsigned short dummy2;
+	unsigned short split_addr1;
+	unsigned short dummy3;
 	unsigned short workbuff_baseaddr;
 	unsigned short workbuff_samples;
 	unsigned short nextbuff0_baseaddr;

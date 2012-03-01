@@ -5,3 +5,6 @@ gen: abe_check.c
 
 check:	abe_check
 	./abe_check
+
+clean:
+	rm -fv abe_check

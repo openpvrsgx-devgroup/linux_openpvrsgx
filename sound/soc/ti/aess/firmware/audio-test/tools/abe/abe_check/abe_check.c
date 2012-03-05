@@ -1211,14 +1211,6 @@ void interpret_ping_pong_desc(struct ping_pong_desc *pp_desc)
 	/* Ping-pong desc samples term refers to period frames */
 	printf("| %-24s | %-36d |\n", "Ping-Pong period frames", pp_desc->nextbuff0_samples);
 
-	if (pp_desc->data_size == 0)
-		printf("| %-24s | %-36s |\n", "Channels", "Mono");
-	else if (pp_desc->data_size == 1)
-		printf("| %-24s | %-36s |\n", "Channels", "Stereo");
-	else
-		printf("| %-24s | INVALID, %-27d |\n", "Channels", pp_desc->data_size);
-
-
 	if (pp_desc->workbuff_baseaddr == pp_desc->nextbuff0_baseaddr)
 		printf("| %-24s | %-36s |\n", "Current buffer", "Ping");
 	else if (pp_desc->workbuff_baseaddr == pp_desc->nextbuff1_baseaddr)

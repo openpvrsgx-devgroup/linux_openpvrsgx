@@ -45,15 +45,14 @@ static int dump_memory(char *filename, unsigned int baseaddr, unsigned int size)
 	if (fd < 0) {
 	    	printf("failed to open the mmap device\n");
 		ret = -1;
-		goto out;
+		goto err1;
 	}
 
 	base = mmap(0, size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, baseaddr);
-  	close(fd);				
 	if (base < 0) {
 		printf("failed to mmap\n");
 		ret = -1;
-		goto out;
+		goto err2;
 	}
 
 	ptr = base;
@@ -66,7 +65,10 @@ static int dump_memory(char *filename, unsigned int baseaddr, unsigned int size)
 	if (ret < 0)
 		printf("failed to unmmap\n");
 
-out:
+
+err2:
+	close(fd);
+err1:
 	fclose(fp);
 	return ret;
 }

@@ -825,12 +825,25 @@ static int omap_abe_add_legacy_dai_links(struct snd_soc_card *card)
 static int snd_soc_card_new_dai_links(struct snd_soc_card *card,
 	struct snd_soc_dai_link *new, int count)
 {
-	int ret = 0;
+	struct snd_soc_dai_link *links;
+	size_t bytes;
 
-	while (count-- > 0 && ret >= 0)
-		ret = snd_soc_card_add_dai_link(card, new++);
+	bytes = (count + card->num_links) * sizeof(struct snd_soc_dai_link);
+	links = devm_kzalloc(card->dev, bytes, GFP_KERNEL);
+	if (!links)
+		return -ENOMEM;
 
-	return ret;
+	if (card->dai_link) {
+		memcpy(links, card->dai_link,
+			card->num_links * sizeof(struct snd_soc_dai_link));
+		devm_kfree(card->dev, card->dai_link);
+	}
+	memcpy(links + card->num_links, new,
+		count * sizeof(struct snd_soc_dai_link));
+	card->dai_link = links;
+	card->num_links += count;
+
+	return 0;
 }
 
 /* called after loading firmware */

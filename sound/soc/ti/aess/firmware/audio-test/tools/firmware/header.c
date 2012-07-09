@@ -88,7 +88,7 @@
 #define NUM_PROFILES(x)	(sizeof(x) / sizeof(x[0]))
 
 uint32_t firmware[] = {
-#include "abe_firmware.c"
+#include "../abe/abe_hal/abe_firmware.c"
 };
 
  /* ABE CONST AREA FOR EQUALIZER COEFFICIENTS

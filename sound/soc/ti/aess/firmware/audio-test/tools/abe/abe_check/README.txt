@@ -2,11 +2,6 @@ This tools can be used to analyse ABE DUMP file. It is base on 3.0 Kernel.
 Since 3.0 kernel ABE HAL is using only bytes OFFSET for memory location.
 
 How to use:
-- Copy the next file form your kernel version to the tools/abe/abe_check folder
-     * abe_dm_addr.h
-     * abe_cm_addr.h
-     * abe_sm_addr.h
-     * abe_functionsid.h
 - Make a abe_dump on the TARGET
 - Getback the outputs files from the TARGET
     * Copy dmem.txt, smem.txt, cmem.txt, aess.txt on the folder 

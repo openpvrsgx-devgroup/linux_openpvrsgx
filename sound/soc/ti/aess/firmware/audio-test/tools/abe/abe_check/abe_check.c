@@ -67,10 +67,10 @@
 #include <sys/stat.h>
 #include <math.h>
 
-#include "abe_cm_addr.h"
-#include "abe_dm_addr.h"
-#include "abe_sm_addr.h"
-#include "abe_functionsid.h"
+#include "../abe_hal/abe_cm_linux.h"
+#include "../abe_hal/abe_dm_linux.h"
+#include "../abe_hal/abe_sm_linux.h"
+#include "../abe_hal/abe_functionsid.h"
 
 
 #define NAME_SIZE	30

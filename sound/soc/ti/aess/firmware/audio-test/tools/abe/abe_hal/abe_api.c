@@ -614,7 +614,7 @@ abehal_status abe_set_opp_processing(u32 opp)
 #define ABE_TASK_ID(ID) (D_tasksList_ADDR + sizeof(ABE_STask)*(ID))
 #define TASK_BT_DL_48_8_SLT 14
 #define TASK_BT_DL_48_8_IDX 4
- 	if (abe_port[BT_VX_DL_PORT].format.f == 8000) {
+ 	if (abe_port[BT_VX_DL_PORT].format.f == 8000) {					// Fe = 8Khz
 		if (dOppMode32 == DOPPMODE32_OPP100) {
 			MultiFrame[TASK_BT_DL_48_8_SLT][TASK_BT_DL_48_8_IDX] =
 				ABE_TASK_ID(C_ABE_FW_TASK_BT_DL_48_8_OPP100);
@@ -624,7 +624,7 @@ abehal_status abe_set_opp_processing(u32 opp)
 				ABE_TASK_ID(C_ABE_FW_TASK_BT_DL_48_8_FIR);
 			sio_desc.smem_addr1 = BT_DL_8k_labelID;
 		}
-	} else {
+	} else if (abe_port[BT_VX_DL_PORT].format.f == 16000) {			// Fe = 16Khz
 		if (dOppMode32 == DOPPMODE32_OPP100) {
 			MultiFrame[TASK_BT_DL_48_8_SLT][TASK_BT_DL_48_8_IDX] =
 				ABE_TASK_ID(C_ABE_FW_TASK_BT_DL_48_16_OPP100);
@@ -634,6 +634,8 @@ abehal_status abe_set_opp_processing(u32 opp)
 				ABE_TASK_ID(C_ABE_FW_TASK_BT_DL_48_16);
 			sio_desc.smem_addr1 = BT_DL_16k_labelID;
 		}
+	} else {														// Fe = 48Khz
+			sio_desc.smem_addr1 = DL1_GAIN_out_labelID;		/* Buffer in SMEM at 48KHz*/
 	}
 	abe_block_copy(COPY_FROM_HOST_TO_ABE, ABE_DMEM, D_multiFrame_ADDR,
 				(u32 *) MultiFrame, sizeof(MultiFrame));

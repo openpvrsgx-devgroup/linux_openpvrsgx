@@ -58,7 +58,7 @@
 #ifndef _ABE_EXT_H_
 #define _ABE_EXT_H_
 /* Tuning is done on PC ? */
-#define PC_SIMULATION 1
+#define PC_SIMULATION 0
 #define EXPORT_SYMBOL(sym)
 #if PC_SIMULATION
 extern void target_server_read_pmem(u32 address, u32 *data,

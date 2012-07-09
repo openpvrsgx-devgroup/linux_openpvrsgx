@@ -120,7 +120,7 @@ void abe_default_irq_pingpong_player(void)
 void abe_default_irq_pingpong_player_32bits(void)
 {
 #if ENABLE_DEFAULT_PLAYERS
-	/* ping-pong access to MM_DL at 48kHz Mono with 20ms packet sizes */
+	/* ping-pong access to MM_DL at 48kHz Mono with 20ms packet sizes, 2400Hz */
 	static s32 idx;
 	u32 i, dst, n_samples, n_bytes;
 	s32 temp[N_SAMPLES_MAX], audio_sample;
@@ -162,7 +162,7 @@ void abe_default_irq_pingpong_player_32bits(void)
 void abe_rshifted16_irq_pingpong_player_32bits(void)
 {
 #if ENABLE_DEFAULT_PLAYERS
-	/* ping-pong access to MM_DL at 48kHz Mono with 20ms packet sizes */
+	/* ping-pong access to MM_DL at 48kHz Mono with 20ms packet sizes, 2400Hz */
 	static s32 idx;
 	u32 i, dst, n_samples, n_bytes;
 	s32 temp[N_SAMPLES_MAX], audio_sample;
@@ -204,7 +204,7 @@ void abe_rshifted16_irq_pingpong_player_32bits(void)
 void abe_1616_irq_pingpong_player_1616bits(void)
 {
 #if ENABLE_DEFAULT_PLAYERS
-	/* ping-pong access to MM_DL at 48kHz Mono with 20ms packet sizes */
+	/* ping-pong access to MM_DL at 48kHz Stereo 1616 with 20ms packet sizes, 2400Hz */
 	static s32 idx;
 	u32 i, dst, n_samples, n_bytes;
 	s32 temp[N_SAMPLES_MAX], audio_sample;
@@ -213,6 +213,47 @@ void abe_1616_irq_pingpong_player_1616bits(void)
 		0, 5063, 9630, 13254, 15581, 16383, 15581, 13254,
 		9630, 5063, 0, -5063, -9630, -13254, -15581, -16383,
 		-15581, -13254, -9630, -5063
+	};
+	/* read the address of the Pong buffer */
+	abe_read_next_ping_pong_buffer(MM_DL_PORT, &dst, &n_bytes);
+	/* each stereo sample weights 4 bytes (format 16+16) */
+	n_samples = n_bytes / 4;
+	/* generate a test pattern */
+	for (i = 0; i < n_samples; i++) {
+		/* circular addressing */
+		audio_sample = audio_pattern[idx];
+		idx = (idx >= (DATA_SIZE - 1)) ? 0 : (idx + 1);
+		temp[i] = (audio_sample << 16) | (audio_sample & 0x0000FFFF);
+		//temp[i] = (i << 16)| ((i  )& 0x0000FFFF);
+	}
+	abe_set_ping_pong_buffer(MM_DL_PORT, 0);
+	/* copy the pattern (flush it) to DMEM pointer update
+	 * not necessary here because the buffer size do not
+	 * change from one ping to the other pong
+	 */
+	abe_block_copy(COPY_FROM_HOST_TO_ABE, ABE_DMEM, dst,
+		       (u32 *) &(temp[0]), n_bytes);
+	abe_set_ping_pong_buffer(MM_DL_PORT, n_bytes);
+#endif
+}
+/**
+ * abe_1616_irq_pingpong_player_1616bits
+ *
+ * generates data for the cache-flush buffer  MODE 16+16 BITS
+ * Return value:
+ * None.
+ */
+void abe_1616_irq_pingpong_player_1616bits_441(void)
+{
+#if ENABLE_DEFAULT_PLAYERS
+	/* ping-pong access to MM_DL at 44.1kHz stereo 1616 with 20ms packet sizes, 2205Hz */
+	static s32 idx;
+	u32 i, dst, n_samples, n_bytes;
+	s32 temp[N_SAMPLES_MAX], audio_sample;
+#define DATA_SIZE 20	
+	const s32 audio_pattern[DATA_SIZE] = {
+		0, 2531, 4815, 6627, 7791, 8192, 7791, 6627, 4815, 2531, 0,
+	    -2531, -4815, -6627, -7791, -8192, -7791, -6627, -4815, -2531
 	};
 	/* read the address of the Pong buffer */
 	abe_read_next_ping_pong_buffer(MM_DL_PORT, &dst, &n_bytes);
@@ -246,7 +287,7 @@ void abe_1616_irq_pingpong_player_1616bits(void)
 void abe_1616_irq_pingpong_player_mono_1616bits(void)
 {
 #if ENABLE_DEFAULT_PLAYERS
-	/* ping-pong access to MM_DL at 48kHz Mono with 20ms packet sizes */
+	/* ping-pong access to MM_DL at 48kHz Mono with 20ms packet sizes, 2400Hz */
 	static s32 idx;
 	u32 i, dst, n_samples, n_bytes;
 	s32 temp[N_SAMPLES_MAX], audio_sample, audio_sample2;
@@ -266,7 +307,7 @@ void abe_1616_irq_pingpong_player_mono_1616bits(void)
 		audio_sample = audio_pattern[idx];
 		audio_sample2 = audio_pattern[idx+1];
 		idx = (idx >= (DATA_SIZE - 2)) ? 0 : (idx + 2);			// -2 because of idx+1
-		temp[i] = (audio_sample << 16) | (audio_sample2 & 0x0000FFFF);
+		temp[i] = (audio_sample2 << 16) | (audio_sample & 0x0000FFFF);
 		//temp[i] = (2*i << 16)| ((2*i +1 )& 0x0000FFFF);
 	}
 	/* copy the pattern (flush it) to DMEM pointer update

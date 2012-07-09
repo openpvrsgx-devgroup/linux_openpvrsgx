@@ -197,4 +197,10 @@
 #define C_ABE_FW_TASK_CHECK_IIR_RIGHT_16K                   137
 #define C_ABE_FW_TASK_EARP_48_96_LP                         138
 #define C_ABE_FW_TASK_IHF_48_96_LP                          139
+#define C_ABE_FW_TASK_DMIC1_96_48_LP_NO_PRESCALE            140
+#define C_ABE_FW_TASK_DMIC2_96_48_LP_NO_PRESCALE            141
+#define C_ABE_FW_TASK_DMIC3_96_48_LP_NO_PRESCALE            142
+#define C_ABE_FW_TASK_DMIC1_96_48_LP_NP_OLD_COEFF           143
+#define C_ABE_FW_TASK_DMIC2_96_48_LP_NP_OLD_COEFF           144
+#define C_ABE_FW_TASK_DMIC3_96_48_LP_NP_OLD_COEFF           145
 #endif /* _ABE_TASKID_H_ */

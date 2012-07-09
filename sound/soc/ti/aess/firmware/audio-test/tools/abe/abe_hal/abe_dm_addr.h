@@ -273,6 +273,9 @@
 #define D_VX_UL_48_8_FIR_WRAP_ADDR                          5220
 #define D_VX_UL_48_8_FIR_WRAP_ADDR_END                      5227
 #define D_VX_UL_48_8_FIR_WRAP_sizeof                        8
+#define D_DEBUG_DUMP_FIFO_SMEM_ADDR                         5228
+#define D_DEBUG_DUMP_FIFO_SMEM_ADDR_END                     5355
+#define D_DEBUG_DUMP_FIFO_SMEM_sizeof                       128
 #define D_DEBUG_FW_TASK_ADDR                                5632
 #define D_DEBUG_FW_TASK_ADDR_END                            5887
 #define D_DEBUG_FW_TASK_sizeof                              256

@@ -198,7 +198,7 @@ typedef u32 abe_patch_rev;
 #define TDM_DL_PORT 14
 #define TDM_UL_PORT 15
 #define DEBUG_PORT 16
-#define LAST_PORT_ID 17
+#define LAST_PORT_ID 21
 /* definitions for the compatibility with HAL05xx */
 #define PDM_DL1_PORT 18
 #define PDM_DL2_PORT 19
@@ -715,4 +715,16 @@ typedef struct {
 	u32 min_opp;
 	char name[NBCHARFEATURENAME];
 } abe_feature_t;
+/*
+*      I/O file type description
+*/
+typedef struct {
+	double drift;               /* ppm drift value */
+	long   sampling_option;     /* selects the files at 8 or 16 kHz */
+	double accumulated_drift;   /* [-1..+1] drift management accumulator */
+	long   fpos;                /* file position offset in bytes */
+	long   dmareq_exchanges;    /* 1 = for dmareq, 0 = hw peripherals (McBSP, DMIC..) */
+	double part_sample_96k;     /* portion of samples acquired over one slot period 8k/96k for voice */
+	char port_filenames [20][40];
+} virtaudio_file_desc;
 #endif/* ifndef ABETYP */

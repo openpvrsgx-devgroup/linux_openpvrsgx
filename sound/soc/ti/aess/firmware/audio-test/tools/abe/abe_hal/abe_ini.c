@@ -342,7 +342,7 @@ void abe_build_scheduler_table()
 	MultiFrame[14][3] = 0;
 #define TASK_BT_DL_48_8_SLT 14
 #define TASK_BT_DL_48_8_IDX 4
-	MultiFrame[14][4] = ABE_TASK_ID(C_ABE_FW_TASK_BT_DL_48_8_FIR);
+	MultiFrame[14][4] = 0;//ABE_TASK_ID(C_ABE_FW_TASK_BT_DL_48_8_FIR);
 	/* MultiFrame[14][5] = 0; */
 	/*------------------- OPP 100 --------------------*/
 	/* MultiFrame[14][6] = 0; */
@@ -1011,7 +1011,7 @@ void abe_init_io_tasks(u32 id, abe_data_format_t *format,
 					ABE_TASK_ID(C_ABE_FW_TASK_VX_DL_8_48_FIR);
 				smem1 = IO_VX_DL_ASRC_labelID;
 				/* ASRC set only for McBSP */
-				if ((prot->protocol_switch==DMAREQ_PORT_PROT)){
+				if ((prot->protocol_switch==SERIAL_PORT_PROT)){
 					if ((abe_port[VX_DL_PORT].status ==
 						OMAP_ABE_PORT_ACTIVITY_IDLE) &&
 						(abe_port[VX_UL_PORT].status ==
@@ -1067,8 +1067,6 @@ void abe_init_io_tasks(u32 id, abe_data_format_t *format,
 				}
 			} else {															/* 48000Hz sampling*/
 				MultiFrame[TASK_ASRC_VX_DL_SLT][TASK_ASRC_VX_DL_IDX] = 0;		/* Disable asrc task */
-				MultiFrame[TASK_CHECK_IIR_LEFT_SLT][TASK_CHECK_IIR_LEFT_IDX] = 0;
-				MultiFrame[TASK_CHECK_IIR_RIGHT_SLT][TASK_CHECK_IIR_RIGHT_IDX] = 0;
 				MultiFrame[TASK_VX_DL_SLT][TASK_VX_DL_IDX] = 0;
 				smem1 = VX_DL_labelID;											/* Buffer in SMEM at 48KHz*/
 			}

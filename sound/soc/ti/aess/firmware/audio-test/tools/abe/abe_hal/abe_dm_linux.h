@@ -199,6 +199,8 @@
 #define OMAP_ABE_D_BT_DL_48_8_FIR_OPP100_WRAP_SIZE         0x8
 #define OMAP_ABE_D_VX_UL_48_8_FIR_WRAP_ADDR                0x1464
 #define OMAP_ABE_D_VX_UL_48_8_FIR_WRAP_SIZE                0x8
+#define OMAP_ABE_D_DEBUG_DUMP_FIFO_SMEM_ADDR               0x146C
+#define OMAP_ABE_D_DEBUG_DUMP_FIFO_SMEM_SIZE               0x80
 #define OMAP_ABE_D_DEBUG_FW_TASK_ADDR                      0x1600
 #define OMAP_ABE_D_DEBUG_FW_TASK_SIZE                      0x100
 #define OMAP_ABE_D_DEBUG_FIFO_ADDR                         0x1700

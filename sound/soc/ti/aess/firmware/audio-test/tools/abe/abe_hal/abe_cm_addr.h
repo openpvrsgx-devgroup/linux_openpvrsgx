@@ -306,4 +306,7 @@
 #define C_48_96_LP_NEW_Coefs_ADDR                           1888
 #define C_48_96_LP_NEW_Coefs_ADDR_END                       1906
 #define C_48_96_LP_NEW_Coefs_sizeof                         19
+#define C_96_48_DMIC_Coefs_no_prescale_ADDR                 1907
+#define C_96_48_DMIC_Coefs_no_prescale_ADDR_END             1917
+#define C_96_48_DMIC_Coefs_no_prescale_sizeof               11
 #endif /* _ABECM_ADDR_H_ */

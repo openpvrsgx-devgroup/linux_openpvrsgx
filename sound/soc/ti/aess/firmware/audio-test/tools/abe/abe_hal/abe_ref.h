@@ -104,6 +104,7 @@ void abe_default_irq_pingpong_player(void);
 void abe_default_irq_pingpong_player_32bits(void);
 void abe_rshifted16_irq_pingpong_player_32bits(void);
 void abe_1616_irq_pingpong_player_1616bits(void);
+void abe_1616_irq_pingpong_player_1616bits_441(void);
 void abe_1616_irq_pingpong_player_mono_1616bits(void);
 void abe_default_irq_aps_adaptation(void);
 void abe_irq_aps(u32 aps_info);

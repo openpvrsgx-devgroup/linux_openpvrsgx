@@ -20,6 +20,7 @@
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
+#include <linux/pinctrl/pinmux.h>
 #include <sound/soc.h>
 #include <sound/initval.h>
 #include <sound/tlv.h>
@@ -67,7 +68,13 @@ struct twl4030_priv {
 	u8 ctl_cache[TWL4030_REG_PRECKR_CTL - TWL4030_REG_EAR_CTL + 1];
 
 	struct twl4030_board_params *board_params;
+	u8 voice_enabled;
 };
+
+static int twl4030_voice_set_tristate(struct snd_soc_dai *dai, int tristate);
+
+static void twl4030_voice_enable(struct snd_soc_component *component, int direction,
+				int enable);
 
 static void tw4030_init_ctl_cache(struct twl4030_priv *twl4030)
 {
@@ -332,6 +339,15 @@ static void twl4030_init_chip(struct snd_soc_component *component)
 		  TWL4030_CNCL_OFFSET_START));
 
 	twl4030_codec_enable(component, 0);
+	{
+		struct snd_soc_dai dai = {
+		.component = component
+		};
+		twl4030_voice_set_tristate(&dai, 1);
+	}
+	twl4030_voice_enable(component, SNDRV_PCM_STREAM_PLAYBACK, 1);
+	twl4030_voice_enable(component, SNDRV_PCM_STREAM_CAPTURE, 1);
+	printk("TPS Voice IF is tristated\n");
 }
 
 static void twl4030_apll_enable(struct snd_soc_component *component, int enable)
@@ -403,6 +419,9 @@ static const struct snd_kcontrol_new twl4030_dapm_carkitr_controls[] = {
 	SOC_DAPM_SINGLE("AudioR2", TWL4030_REG_PRECKR_CTL, 2, 1, 0),
 };
 
+/* global voice switch */
+static const struct snd_kcontrol_new twl4030_dapm_voiceroute_out_control =
+	SOC_DAPM_SINGLE_VIRT("Switch", 1);
 /* Handsfree Left */
 static const char *twl4030_handsfreel_texts[] =
 		{"Voice", "AudioL1", "AudioL2", "AudioR2"};
@@ -1023,6 +1042,98 @@ static DECLARE_TLV_DB_SCALE(digital_capture_tlv, 0, 100, 0);
  */
 static DECLARE_TLV_DB_SCALE(input_gain_tlv, 0, 600, 0);
 
+/*
+ * switch GSM audio signal between SoC
+ * and twl4030 voice input
+ */
+static const char *twl4030_voice_route_texts[] = {
+	"inactive", "active"
+};
+
+static const struct soc_enum twl4030_voice_route_enum =
+	SOC_ENUM_SINGLE(0xff,0,
+			ARRAY_SIZE(twl4030_voice_route_texts),
+			twl4030_voice_route_texts);
+
+static int twl4030_voice_route_get(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component = snd_soc_kcontrol_component(kcontrol);
+	struct twl4030_priv *twl4030 = snd_soc_component_get_drvdata(component);
+	ucontrol->value.enumerated.item[0] = twl4030->voice_enabled;
+	return 0;
+}
+
+static int twl4030_voice_route_put(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component = snd_soc_kcontrol_component(kcontrol);
+	struct twl4030_priv *twl4030 = snd_soc_component_get_drvdata(component);
+	dev_dbg(component->dev, "voice ctl route: %u\n",
+		ucontrol->value.enumerated.item[0]);
+	printk("voice ctl route: %u\n", ucontrol->value.enumerated.item[0]);
+	if (ucontrol->value.enumerated.item[0] != twl4030->voice_enabled) {
+		int powered = twl4030->codec_powered;
+		struct snd_soc_dai dai = {
+			.component = component
+		};
+		u8 reg;
+/* FIXME: this should only been done once during probe or we leak memory! */
+		struct pinctrl *pinctrl = devm_pinctrl_get(component->dev);
+		struct pinctrl_state *pins_state;
+		twl4030->voice_enabled = ucontrol->value.enumerated.item[0];
+		if (powered)
+			twl4030_codec_enable(component, 0);
+
+printk("devm_pinctrl_get %p\n", pinctrl);
+printk("dev->of_node = %p\n", component->dev->of_node);
+// FIXME: this dev->of_node is NULL, hence we have no access to the DT properties!
+if(component->dev->of_node)
+	printk("dev->of_node->name = %p\n", component->dev->of_node->name);
+if(component->dev->of_node && component->dev->of_node->name)
+	printk("dev->of_node->name = %s\n", component->dev->of_node->name);	// that is where we likely have to define the pinmux states...
+
+		if (twl4030->voice_enabled) {
+			/* enable the other end of the DAI link */
+			pins_state = pinctrl_lookup_state(pinctrl, "default");
+			if(!IS_ERR(pins_state)) {
+printk("pinctrl_select_state tristate\n");
+				pinctrl_select_state(pinctrl, pins_state);
+			} else
+printk("pinctrl_lookup_state tristate error %ld\n", PTR_ERR(pins_state));
+
+			/* TWL4030_VIF_SLAVE_EN could be done through
+			 * twl4030_voice_set_dai_fmt(&dai, SND_SOC_DAIFMT_CBS_CFS)
+			 * but who would set TWL4030_VIF_DIN_EN | TWL4030_VIF_DOUT_EN | TWL4030_VIF_EN?
+			 */
+			reg = twl4030_read(component, TWL4030_REG_VOICE_IF);
+			reg |= TWL4030_VIF_SLAVE_EN | TWL4030_VIF_DIN_EN |
+					TWL4030_VIF_DOUT_EN | TWL4030_VIF_EN;
+			twl4030_write(component, TWL4030_REG_VOICE_IF, reg);
+			twl4030_voice_set_tristate(&dai, 0);
+		} else {
+			// TWL4030_VIF_SLAVE_EN could be done through twl4030_voice_set_dai_fmt((&dai, ~SND_SOC_DAIFMT_CBS_CFS))
+			twl4030_voice_set_tristate(&dai, 1);
+			reg = twl4030_read(component, TWL4030_REG_VOICE_IF);
+			reg &= ~(TWL4030_VIF_SLAVE_EN | TWL4030_VIF_DIN_EN |
+					 TWL4030_VIF_DOUT_EN | TWL4030_VIF_EN);
+			twl4030_write(component, TWL4030_REG_VOICE_IF, reg);
+
+			/* inactivate the other end of the DAI link */
+			pins_state = pinctrl_lookup_state(pinctrl, "inactive");
+			if(!IS_ERR(pins_state)) {
+printk("pinctrl_select_state default\n");
+				pinctrl_select_state(pinctrl, pins_state);
+			} else
+printk("pinctrl_lookup_state default error %ld\n", PTR_ERR(pins_state));
+		}
+		if (powered)
+			twl4030_codec_enable(component, 1);
+		return 1;
+        }
+	return 0;
+}
+
 /* AVADC clock priority */
 static const char *twl4030_avadc_clk_priority_texts[] = {
 	"Voice high priority", "HiFi high priority"
@@ -1145,6 +1256,10 @@ static const struct snd_kcontrol_new twl4030_snd_controls[] = {
 
 	SOC_ENUM("AVADC Clock Priority", twl4030_avadc_clk_priority_enum),
 
+	SOC_ENUM_EXT("Voice PCM Interface", twl4030_voice_route_enum,
+		twl4030_voice_route_get,
+		twl4030_voice_route_put),
+
 	SOC_ENUM("HS ramp delay", twl4030_rampdelay_enum),
 
 	SOC_ENUM("Vibra H-bridge mode", twl4030_vibradirmode_enum),
@@ -1165,6 +1280,7 @@ static const struct snd_soc_dapm_widget twl4030_dapm_widgets[] = {
 	/* Digital microphones (Stereo) */
 	SND_SOC_DAPM_INPUT("DIGIMIC0"),
 	SND_SOC_DAPM_INPUT("DIGIMIC1"),
+	SND_SOC_DAPM_INPUT("PCMIN"),
 
 	/* Outputs */
 	SND_SOC_DAPM_OUTPUT("EARPIECE"),
@@ -1177,6 +1293,7 @@ static const struct snd_soc_dapm_widget twl4030_dapm_widgets[] = {
 	SND_SOC_DAPM_OUTPUT("HFL"),
 	SND_SOC_DAPM_OUTPUT("HFR"),
 	SND_SOC_DAPM_OUTPUT("VIBRA"),
+	SND_SOC_DAPM_OUTPUT("PCMOUT"),
 
 	/* AIF and APLL clocks for running DAIs (including loopback) */
 	SND_SOC_DAPM_OUTPUT("Virtual HiFi OUT"),
@@ -1193,6 +1310,9 @@ static const struct snd_soc_dapm_widget twl4030_dapm_widgets[] = {
 	SND_SOC_DAPM_AIF_IN("VAIFIN", "Voice Playback", 0,
 			    TWL4030_REG_VOICE_IF, 6, 0),
 
+	/* Voice non-cpu-dai routing */
+	SND_SOC_DAPM_SWITCH("Voice PCM Out", SND_SOC_NOPM, 0, 0,
+			&twl4030_dapm_voiceroute_out_control),
 	/* Analog bypasses */
 	SND_SOC_DAPM_SWITCH("Right1 Analog Loopback", SND_SOC_NOPM, 0, 0,
 			&twl4030_dapm_abypassr1_control),
@@ -1382,6 +1502,7 @@ static const struct snd_soc_dapm_route intercon[] = {
 	{"DAC Left2", NULL, "HiFi Playback"},
 	{"DAC Voice", NULL, "VAIFIN"},
 
+	{"PCMOUT", NULL, "Voice PCM Out"},
 	/* ADC -> Stream mapping */
 	{"HiFi Capture", NULL, "ADC Virtual Left1"},
 	{"HiFi Capture", NULL, "ADC Virtual Right1"},
@@ -1390,6 +1511,8 @@ static const struct snd_soc_dapm_route intercon[] = {
 	{"VAIFOUT", NULL, "ADC Virtual Left2"},
 	{"VAIFOUT", NULL, "ADC Virtual Right2"},
 	{"VAIFOUT", NULL, "VIF Enable"},
+	{"Voice PCM Out", "Switch", "ADC Virtual Left2"},
+	{"Voice PCM Out", "Switch", "ADC Virtual Right2"},
 
 	{"Digital L1 Playback Mixer", NULL, "DAC Left1"},
 	{"Digital R1 Playback Mixer", NULL, "DAC Right1"},
@@ -1399,6 +1522,7 @@ static const struct snd_soc_dapm_route intercon[] = {
 
 	/* Supply for the digital part (APLL) */
 	{"Digital Voice Playback Mixer", NULL, "APLL Enable"},
+	{"Digital Voice Playback Mixer", NULL, "PCMIN"},
 
 	{"DAC Left1", NULL, "AIF Enable"},
 	{"DAC Right1", NULL, "AIF Enable"},
@@ -2089,6 +2213,8 @@ static int twl4030_voice_set_tristate(struct snd_soc_dai *dai, int tristate)
 {
 	struct snd_soc_component *component = dai->component;
 	u8 reg = twl4030_read(component, TWL4030_REG_VOICE_IF);
+
+	printk("twl4030_voice_set_tristate codec=%p %d\n", component, tristate);
 
 	if (tristate)
 		reg |= TWL4030_VIF_TRI_EN;

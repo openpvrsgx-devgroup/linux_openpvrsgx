@@ -1,0 +1,30 @@
+
+- The files in udev-rules should be copies to
+     /etc/udev/rules.d
+  this will ensure stable names in /dev for input devices and
+  the ttys that talk to the 3G modem.
+
+- Kernel can be compiled using a cross compiler.  I use
+    angstrom-2011.03-x86_64-linux-armv7a-linux-gnueabi-toolchain.tar.bz2
+  from  http://www.angstrom-distribution.org/toolchains/
+
+  This goes in /usr/local/angstom.
+  I then compile with
+
+   export PATH=$PATH:/usr/local/angstrom/arm/bin
+   export CROSS_COMPILE=/usr/local/angstrom/arm/bin/arm-angstrom-linux-gnueabi-
+   mkdir O
+   make O=O gta04_defconfig
+   make O=O -j8 uImage
+   rm -r M; mkdir M
+   cp O/arch/arm/book/uImage M
+   make O=O INSTALL_MOD_STRIP=1 INSTALL_MOD_PATH=`pwd`/M modules_install
+
+
+  then the uImage and modules are in 'M' ready to be copied
+
+
+- Directory 'scripts' includes some sample scripts to various
+  simple tasks
+
+  + vibra.py shows how to program the vibrator as a rumble effect.

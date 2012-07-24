@@ -5,12 +5,19 @@
 
 #define SGXFREQ_NAME_LEN 16
 
+struct sgxfreq_sgx_data {
+	bool clk_on;
+	bool active;
+};
+
 struct sgxfreq_governor {
 	char name[SGXFREQ_NAME_LEN];
-	int (*gov_start) (bool sgx_clk_on);
+	int (*gov_start) (struct sgxfreq_sgx_data *data);
 	void (*gov_stop) (void);
 	void (*sgx_clk_on) (void);
 	void (*sgx_clk_off) (void);
+	void (*sgx_active) (void);
+	void (*sgx_idle) (void);
 	struct list_head governor_list;
 };
 
@@ -41,5 +48,7 @@ unsigned long sgxfreq_set_freq_limit(unsigned long freq_limit);
 /* External notifications to sgxfreq */
 void sgxfreq_notif_sgx_clk_on(void);
 void sgxfreq_notif_sgx_clk_off(void);
+void sgxfreq_notif_sgx_active(void);
+void sgxfreq_notif_sgx_idle(void);
 
 #endif

@@ -47,6 +47,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if defined(SYS_OMAP_HAS_DVFS_FRAMEWORK)
 #include "sgxfreq.c"
 #include "sgxfreq_onoff.c"
+#include "sgxfreq_activeidle.c"
 #if defined(CONFIG_THERMAL_FRAMEWORK)
 #include "sgxfreq_cool.c"
 #endif

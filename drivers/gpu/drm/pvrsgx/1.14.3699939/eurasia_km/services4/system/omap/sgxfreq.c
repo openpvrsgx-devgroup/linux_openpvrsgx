@@ -18,17 +18,22 @@ static struct sgxfreq_data {
 } sfd;
 
 /* Governor init/deinit functions */
+int onoff_init(void);
+int onoff_deinit(void);
+
 typedef int sgxfreq_gov_init_t(void);
 sgxfreq_gov_init_t *sgxfreq_gov_init[] = {
+	onoff_init,
 	NULL,
 };
 
 typedef int sgxfreq_gov_deinit_t(void);
 sgxfreq_gov_deinit_t *sgxfreq_gov_deinit[] = {
+	onoff_deinit,
 	NULL,
 };
 
-#define SGXFREQ_DEFAULT_GOV_NAME NULL
+#define SGXFREQ_DEFAULT_GOV_NAME "onoff"
 
 #if defined(CONFIG_THERMAL_FRAMEWORK)
 int cool_init(void);

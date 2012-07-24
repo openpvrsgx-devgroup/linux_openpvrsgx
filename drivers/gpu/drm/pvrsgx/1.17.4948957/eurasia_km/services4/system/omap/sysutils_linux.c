@@ -702,3 +702,12 @@ SysDRMUnregisterPlugin(PVRSRV_DRM_PLUGIN *psDRMPlugin)
 	}
 }
 #endif
+
+IMG_VOID SysSGXIdleEntered(IMG_VOID)
+{
+}
+
+IMG_VOID SysSGXCommandPending(IMG_BOOL bSGXIdle)
+{
+	PVR_UNREFERENCED_PARAMETER(bSGXIdle);
+}

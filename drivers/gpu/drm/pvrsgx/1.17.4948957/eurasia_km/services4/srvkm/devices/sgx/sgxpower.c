@@ -360,6 +360,8 @@ PVRSRV_ERROR SGXPrePowerState (IMG_HANDLE				hDevHandle,
 		}
 		#endif /* NO_HARDWARE */
 
+		psDevInfo->bSGXIdle = IMG_TRUE;
+
 		#if defined(PDUMP)
 		PDUMPCOMMENT("TA/3D CCB Control - Wait for power event on uKernel.");
 		PDUMPMEMPOL(psDevInfo->psKernelSGXHostCtlMemInfo,

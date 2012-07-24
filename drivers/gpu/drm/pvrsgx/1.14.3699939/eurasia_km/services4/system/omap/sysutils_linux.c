@@ -705,9 +705,17 @@ SysDRMUnregisterPlugin(PVRSRV_DRM_PLUGIN *psDRMPlugin)
 
 IMG_VOID SysSGXIdleEntered(IMG_VOID)
 {
+#if defined(SYS_OMAP_HAS_DVFS_FRAMEWORK)
+	sgxfreq_notif_sgx_idle();
+#endif
 }
 
 IMG_VOID SysSGXCommandPending(IMG_BOOL bSGXIdle)
 {
+#if defined(SYS_OMAP_HAS_DVFS_FRAMEWORK)
+	if (bSGXIdle)
+		sgxfreq_notif_sgx_active();
+#else
 	PVR_UNREFERENCED_PARAMETER(bSGXIdle);
+#endif
 }

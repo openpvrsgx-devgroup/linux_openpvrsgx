@@ -30,6 +30,11 @@ sgxfreq_gov_deinit_t *sgxfreq_gov_deinit[] = {
 
 #define SGXFREQ_DEFAULT_GOV_NAME NULL
 
+#if defined(CONFIG_THERMAL_FRAMEWORK)
+int cool_init(void);
+void cool_deinit(void);
+#endif
+
 /*********************** begin sysfs interface ***********************/
 
 struct kobject *sgxfreq_kobj;
@@ -219,6 +224,10 @@ int sgxfreq_init(struct device *dev)
 		return ret;
 	}
 
+#if defined(CONFIG_THERMAL_FRAMEWORK)
+	cool_init();
+#endif
+
 	for (i = 0; sgxfreq_gov_init[i] != NULL; i++)
 		sgxfreq_gov_init[i]();
 
@@ -237,6 +246,10 @@ int sgxfreq_deinit(void)
 	sgxfreq_set_governor(NULL);
 
 	sgxfreq_set_freq_request(sfd.freq_list[0]);
+
+#if defined(CONFIG_THERMAL_FRAMEWORK)
+	cool_deinit();
+#endif
 
 	for (i = 0; sgxfreq_gov_deinit[i] != NULL; i++)
 		sgxfreq_gov_deinit[i]();

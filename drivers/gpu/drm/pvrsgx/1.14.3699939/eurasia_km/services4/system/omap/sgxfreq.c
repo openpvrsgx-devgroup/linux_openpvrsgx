@@ -12,7 +12,7 @@ static struct sgxfreq_data {
 	struct list_head gov_list;
 	struct sgxfreq_governor *gov;
 	struct mutex gov_mutex;
-	bool sgx_clk_on;
+	struct sgxfreq_sgx_data sgx_data;
 	struct device *dev;
 	struct gpu_platform_data *pdata;
 } sfd;
@@ -217,7 +217,8 @@ int sgxfreq_init(struct device *dev)
 	mutex_init(&sfd.freq_mutex);
 	sfd.freq_limit = sfd.freq_list[sfd.freq_cnt - 1];
 	sgxfreq_set_freq_request(sfd.freq_list[sfd.freq_cnt - 1]);
-	sfd.sgx_clk_on = false;
+	sfd.sgx_data.clk_on = false;
+	sfd.sgx_data.active = false;
 
 	mutex_init(&sfd.gov_mutex);
 	INIT_LIST_HEAD(&sfd.gov_list);
@@ -302,11 +303,11 @@ int sgxfreq_set_governor(const char *name)
 		sfd.gov->gov_stop();
 
 	if (new_gov && new_gov->gov_start)
-		ret = new_gov->gov_start(sfd.sgx_clk_on);
+		ret = new_gov->gov_start(&sfd.sgx_data);
 
 	if (ret) {
 		if (sfd.gov && sfd.gov->gov_start)
-			sfd.gov->gov_start(sfd.sgx_clk_on);
+			sfd.gov->gov_start(&sfd.sgx_data);
 		return -ENODEV;
 	}
 	sfd.gov = new_gov;
@@ -405,12 +406,13 @@ unsigned long sgxfreq_set_freq_limit(unsigned long freq_limit)
 }
 
 /*
- * sgx_clk_on and sgx_clk_off notifications are serialized by power
- * lock. governor notif calls need sync with governor setting.
+ * sgx_clk_on, sgx_clk_off, sgx_active, and sgx_idle notifications are
+ * serialized by power lock. governor notif calls need sync with governor
+ * setting.
  */
 void sgxfreq_notif_sgx_clk_on(void)
 {
-	sfd.sgx_clk_on = true;
+	sfd.sgx_data.clk_on = true;
 
 	mutex_lock(&sfd.gov_mutex);
 
@@ -422,12 +424,36 @@ void sgxfreq_notif_sgx_clk_on(void)
 
 void sgxfreq_notif_sgx_clk_off(void)
 {
-	sfd.sgx_clk_on = false;
+	sfd.sgx_data.clk_on = false;
 
 	mutex_lock(&sfd.gov_mutex);
 
 	if (sfd.gov && sfd.gov->sgx_clk_off)
 		sfd.gov->sgx_clk_off();
+
+	mutex_unlock(&sfd.gov_mutex);
+}
+
+void sgxfreq_notif_sgx_active(void)
+{
+	sfd.sgx_data.active = true;
+
+	mutex_lock(&sfd.gov_mutex);
+
+	if (sfd.gov && sfd.gov->sgx_active)
+		sfd.gov->sgx_active();
+
+	mutex_unlock(&sfd.gov_mutex);
+}
+
+void sgxfreq_notif_sgx_idle(void)
+{
+	sfd.sgx_data.active = false;
+
+	mutex_lock(&sfd.gov_mutex);
+
+	if (sfd.gov && sfd.gov->sgx_idle)
+		sfd.gov->sgx_idle();
 
 	mutex_unlock(&sfd.gov_mutex);
 }

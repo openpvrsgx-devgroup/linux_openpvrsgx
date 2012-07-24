@@ -1,7 +1,7 @@
 #include <linux/sysfs.h>
 #include "sgxfreq.h"
 
-static int onoff_start(bool sgx_clk_on);
+static int onoff_start(struct sgxfreq_sgx_data *data);
 static void onoff_stop(void);
 static void onoff_sgx_clk_on(void);
 static void onoff_sgx_clk_off(void);
@@ -119,17 +119,17 @@ int onoff_deinit(void)
 	return 0;
 }
 
-static int onoff_start(bool sgx_clk_on)
+static int onoff_start(struct sgxfreq_sgx_data *data)
 {
 	int ret;
 
-	ood.sgx_clk_on = sgx_clk_on;
+	ood.sgx_clk_on = data->clk_on;
 
 	ret = sysfs_create_group(sgxfreq_kobj, &onoff_attr_group);
 	if (ret)
 		return ret;
 
-	if (sgx_clk_on)
+	if (ood.sgx_clk_on)
 		sgxfreq_set_freq_request(ood.freq_on);
 	else
 		sgxfreq_set_freq_request(ood.freq_off);

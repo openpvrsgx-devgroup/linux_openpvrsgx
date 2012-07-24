@@ -46,6 +46,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "sysutils_linux.c"
 #if defined(SYS_OMAP_HAS_DVFS_FRAMEWORK)
 #include "sgxfreq.c"
+#if defined(CONFIG_THERMAL_FRAMEWORK)
+#include "sgxfreq_cool.c"
+#endif
 #endif
 #endif
 

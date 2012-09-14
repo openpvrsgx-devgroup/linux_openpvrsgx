@@ -1,0 +1,41 @@
+ASoC Firmware Generation Tool
+=============================
+
+This is a generic tool that allows users to generate new firmware files
+for ASoC sound drivers. It's intended to be used to generate the
+generic elements like DAPM objects (widgets, graphs, pins), kcontrols
+and coefficients.
+
+The tool generates a firmware file that takes input files and defined
+configuration data to create a new file that contains the input files
+and configurations with headers to define each object. The header data
+is then interpreted by the ASoC core to instantiate the objects within
+the sound driver.
+
+The input firmware files can be anything, but normally will be
+propriatary firmware text/config. The are treated as opaque data and not
+inspected at all.
+
+The configuration data is compiled into shared object data that
+the tool will open as a plugin at startup. This is then written as
+binary data to the output file. The configuration data files represent
+coefficients, mixers, DAPM, etc and are external plugins since they
+may include some propriatary software derived from the firmware. The
+configuration data source files are in the plugins directory.
+
+
+Build Instructions
+==================
+
+After checking out from git :-
+
+./autogen.sh
+./configure --with-linux-dir=/path/to/linux.git
+make
+sudo make install
+
+This will install the binary and plugins.
+
+
+Usage Instructions
+==================

@@ -30,12 +30,34 @@ Build Instructions
 After checking out from git :-
 
 ./autogen.sh
-./configure --with-linux-dir=/path/to/linux.git
+./configure --with-linux-dir=/path/to/linux.git --enable-omap4
 make
 sudo make install
 
-This will install the binary and plugins.
+This will install the binary and plugins and enable OMAP4+ support.
 
 
 Usage Instructions
 ==================
+
+Thios tool creates a command called socfw with the following args :-
+
+Add plugin data 		[-p plugin]
+Add controls			[-c controls]
+Add vendor firmware		[-vfw firmware]
+Add vendor coefficients 	[-vcf coefficients]
+Add vendor configuration	[-vcn config]
+Add vendor codec		[-vcd codec]
+
+Usage is socfw outfile [args].
+
+e.g. To create FW file called omap4_abe_new with coefficients and DAPM :-
+socfw omap4_abe_new \
+	-p dl1.so \
+	-p abe-dl1dl2-twl6040.so \
+	-vfw omap_abe_fw
+
+Where dl1.so, abe-dl1dl2-twl6040 and omap_abe_fw are coefficients, DAPM graph
+and fw text respectively.
+
+There are some helper scripts in the scripts directory for certain targets.

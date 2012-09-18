@@ -1,4 +1,3 @@
-
 struct omap_aess;
 
 #define ul_mux_get_route	NULL
@@ -15,140 +14,11 @@ struct omap_aess;
 
 #include "socfw.h"
 
-#include "abe_def.h"
-#include "abe_gain.h"
-
-
-#define OMAP_ABE_FRONTEND_DAI_MEDIA		0
-#define OMAP_ABE_FRONTEND_DAI_MEDIA_CAPTURE	1
-#define OMAP_ABE_FRONTEND_DAI_VOICE		2
-#define OMAP_ABE_FRONTEND_DAI_TONES		3
-#define OMAP_ABE_FRONTEND_DAI_VIBRA		4
-#define OMAP_ABE_FRONTEND_DAI_MODEM		5
-#define OMAP_ABE_FRONTEND_DAI_LP_MEDIA	6
-#define OMAP_ABE_FRONTEND_DAI_NUM		7
-
-/* This must currently match the BE order in DSP */
-#define OMAP_ABE_DAI_PDM_UL			0
-#define OMAP_ABE_DAI_PDM_DL1			1
-#define OMAP_ABE_DAI_PDM_DL2			2
-#define OMAP_ABE_DAI_PDM_VIB			3
-#define OMAP_ABE_DAI_BT_VX			4
-#define OMAP_ABE_DAI_MM_FM			5
-#define OMAP_ABE_DAI_MODEM			6
-#define OMAP_ABE_DAI_DMIC0			7
-#define OMAP_ABE_DAI_DMIC1			8
-#define OMAP_ABE_DAI_DMIC2			9
-#define OMAP_ABE_DAI_NUM			10
-
-#define OMAP_ABE_BE_PDM_DL1		"PDM-DL1"
-#define OMAP_ABE_BE_PDM_UL1		"PDM-UL1"
-#define OMAP_ABE_BE_PDM_DL2		"PDM-DL2"
-#define OMAP_ABE_BE_PDM_VIB		"PDM-VIB"
-#define OMAP_ABE_BE_BT_VX_UL		"BT-VX-UL"
-#define OMAP_ABE_BE_BT_VX_DL		"BT-VX-DL"
-#define OMAP_ABE_BE_MM_EXT0		"FM-EXT"
-#define OMAP_ABE_BE_MM_EXT1		"MODEM-EXT"
-#define OMAP_ABE_BE_DMIC0		"DMIC0"
-#define OMAP_ABE_BE_DMIC1		"DMIC1"
-#define OMAP_ABE_BE_DMIC2		"DMIC2"
+#include <aess/abe_def.h>
+#include <aess/abe_gain.h>
+#include <omap-abe-priv.h>
 
 #define OMAP_ABE_MIXER(x)		(x)
-
-
-#define MIX_SWITCH_PDM_DL		OMAP_ABE_MIXER(1)
-#define MIX_SWITCH_BT_VX_DL		OMAP_ABE_MIXER(2)
-#define MIX_SWITCH_MM_EXT_DL		OMAP_ABE_MIXER(3)
-#define MIX_DL1_MONO		OMAP_ABE_MIXER(4)
-#define MIX_DL2_MONO		OMAP_ABE_MIXER(5)
-#define MIX_AUDUL_MONO		OMAP_ABE_MIXER(6)
-
-#define OMAP_ABE_VIRTUAL_SWITCH	36
-
-#define OMAP_ABE_NUM_MONO_MIXERS	(MIX_AUDUL_MONO - MIX_DL1_MONO + 1)
-#define OMAP_ABE_NUM_MIXERS		(MIX_AUDUL_MONO + 1)
-
-#define OMAP_ABE_MUX(x)		(x + 37)
-
-#define MUX_MM_UL10		OMAP_ABE_MUX(0)
-#define MUX_MM_UL11		OMAP_ABE_MUX(1)
-#define MUX_MM_UL12		OMAP_ABE_MUX(2)
-#define MUX_MM_UL13		OMAP_ABE_MUX(3)
-#define MUX_MM_UL14		OMAP_ABE_MUX(4)
-#define MUX_MM_UL15		OMAP_ABE_MUX(5)
-#define MUX_MM_UL16		OMAP_ABE_MUX(6)
-#define MUX_MM_UL17		OMAP_ABE_MUX(7)
-#define MUX_MM_UL20		OMAP_ABE_MUX(8)
-#define MUX_MM_UL21		OMAP_ABE_MUX(9)
-#define MUX_VX_UL0		OMAP_ABE_MUX(10)
-#define MUX_VX_UL1		OMAP_ABE_MUX(11)
-
-#define OMAP_ABE_NUM_MUXES		(MUX_VX_UL1 - MUX_MM_UL10)
-
-#define OMAP_ABE_WIDGET(x)		(x + OMAP_ABE_NUM_MIXERS + OMAP_ABE_NUM_MUXES)
-
-/* ABE AIF Frontend Widgets */
-#define OMAP_ABE_AIF_TONES_DL		OMAP_ABE_WIDGET(0)
-#define OMAP_ABE_AIF_VX_DL		OMAP_ABE_WIDGET(1)
-#define OMAP_ABE_AIF_VX_UL		OMAP_ABE_WIDGET(2)
-#define OMAP_ABE_AIF_MM_UL1		OMAP_ABE_WIDGET(3)
-#define OMAP_ABE_AIF_MM_UL2		OMAP_ABE_WIDGET(4)
-#define OMAP_ABE_AIF_MM_DL		OMAP_ABE_WIDGET(5)
-#define OMAP_ABE_AIF_MM_DL_LP		OMAP_ABE_AIF_MM_DL
-#define OMAP_ABE_AIF_VIB_DL		OMAP_ABE_WIDGET(6)
-#define OMAP_ABE_AIF_MODEM_DL		OMAP_ABE_WIDGET(7)
-#define OMAP_ABE_AIF_MODEM_UL		OMAP_ABE_WIDGET(8)
-
-/* ABE AIF Backend Widgets */
-#define OMAP_ABE_AIF_PDM_UL1		OMAP_ABE_WIDGET(9)
-#define OMAP_ABE_AIF_PDM_DL1		OMAP_ABE_WIDGET(10)
-#define OMAP_ABE_AIF_PDM_DL2		OMAP_ABE_WIDGET(11)
-#define OMAP_ABE_AIF_PDM_VIB		OMAP_ABE_WIDGET(12)
-#define OMAP_ABE_AIF_BT_VX_UL		OMAP_ABE_WIDGET(13)
-#define OMAP_ABE_AIF_BT_VX_DL		OMAP_ABE_WIDGET(14)
-#define OMAP_ABE_AIF_MM_EXT_UL	OMAP_ABE_WIDGET(15)
-#define OMAP_ABE_AIF_MM_EXT_DL	OMAP_ABE_WIDGET(16)
-#define OMAP_ABE_AIF_DMIC0		OMAP_ABE_WIDGET(17)
-#define OMAP_ABE_AIF_DMIC1		OMAP_ABE_WIDGET(18)
-#define OMAP_ABE_AIF_DMIC2		OMAP_ABE_WIDGET(19)
-
-/* ABE ROUTE_UL MUX Widgets */
-#define OMAP_ABE_MUX_UL00		OMAP_ABE_WIDGET(20)
-#define OMAP_ABE_MUX_UL01		OMAP_ABE_WIDGET(21)
-#define OMAP_ABE_MUX_UL02		OMAP_ABE_WIDGET(22)
-#define OMAP_ABE_MUX_UL03		OMAP_ABE_WIDGET(23)
-#define OMAP_ABE_MUX_UL04		OMAP_ABE_WIDGET(24)
-#define OMAP_ABE_MUX_UL05		OMAP_ABE_WIDGET(25)
-#define OMAP_ABE_MUX_UL06		OMAP_ABE_WIDGET(26)
-#define OMAP_ABE_MUX_UL07		OMAP_ABE_WIDGET(27)
-#define OMAP_ABE_MUX_UL10		OMAP_ABE_WIDGET(28)
-#define OMAP_ABE_MUX_UL11		OMAP_ABE_WIDGET(29)
-#define OMAP_ABE_MUX_VX00		OMAP_ABE_WIDGET(30)
-#define OMAP_ABE_MUX_VX01		OMAP_ABE_WIDGET(31)
-
-/* ABE Volume and Mixer Widgets */
-#define OMAP_ABE_MIXER_DL1		OMAP_ABE_WIDGET(32)
-#define OMAP_ABE_MIXER_DL2		OMAP_ABE_WIDGET(33)
-#define OMAP_ABE_VOLUME_DL1		OMAP_ABE_WIDGET(34)
-#define OMAP_ABE_MIXER_AUDIO_UL	OMAP_ABE_WIDGET(35)
-#define OMAP_ABE_MIXER_VX_REC		OMAP_ABE_WIDGET(36)
-#define OMAP_ABE_MIXER_SDT		OMAP_ABE_WIDGET(37)
-#define OMAP_ABE_VSWITCH_DL1_PDM	OMAP_ABE_WIDGET(38)
-#define OMAP_ABE_VSWITCH_DL1_BT_VX	OMAP_ABE_WIDGET(39)
-#define OMAP_ABE_VSWITCH_DL1_MM_EXT	OMAP_ABE_WIDGET(40)
-
-#define OMAP_ABE_NUM_WIDGETS		(OMAP_ABE_VSWITCH_DL1_MM_EXT - OMAP_ABE_AIF_TONES_DL)
-#define OMAP_ABE_WIDGET_LAST		OMAP_ABE_VSWITCH_DL1_MM_EXT
-
-#define OMAP_ABE_NUM_DAPM_REG		\
-	(OMAP_ABE_NUM_MIXERS + OMAP_ABE_NUM_MUXES + OMAP_ABE_NUM_WIDGETS)
-
-#define OMAP_ABE_ROUTES_UL		14
-
-#define OMAP_ABE_OPP_25		0
-#define OMAP_ABE_OPP_50		1
-#define OMAP_ABE_OPP_100		2
-#define OMAP_ABE_OPP_COUNT	3
 
 /* Media DL1 volume control from -120 to 30 dB in 1 dB steps */
 static DECLARE_TLV_DB_SCALE(mm_dl1_tlv, -12000, 100, 3000);
@@ -227,8 +97,6 @@ static const struct soc_enum abe_enum[] = {
 		SOC_ENUM_SINGLE(MUX_MM_UL13, 0, 15, route_ul_texts),
 		SOC_ENUM_SINGLE(MUX_MM_UL14, 0, 15, route_ul_texts),
 		SOC_ENUM_SINGLE(MUX_MM_UL15, 0, 15, route_ul_texts),
-		SOC_ENUM_SINGLE(MUX_MM_UL16, 0, 15, route_ul_texts),
-		SOC_ENUM_SINGLE(MUX_MM_UL17, 0, 15, route_ul_texts),
 		SOC_ENUM_SINGLE(MUX_MM_UL20, 0, 15, route_ul_texts),
 		SOC_ENUM_SINGLE(MUX_MM_UL21, 0, 15, route_ul_texts),
 		SOC_ENUM_SINGLE(MUX_VX_UL0, 0, 15, route_ul_texts),
@@ -464,8 +332,6 @@ static const struct snd_soc_dapm_widget widgets[] = {
 	SND_SOC_DAPM_AIF_IN("MM_DL", NULL, 0,
 			OMAP_ABE_AIF_MM_DL, OMAP_ABE_OPP_25, 0),
 
-	SND_SOC_DAPM_AIF_IN("VIB_DL", NULL, 0,
-			OMAP_ABE_AIF_VIB_DL, OMAP_ABE_OPP_100, 0),
 	SND_SOC_DAPM_AIF_IN("MODEM_DL", NULL, 0,
 			OMAP_ABE_AIF_MODEM_DL, OMAP_ABE_OPP_50, 0),
 	SND_SOC_DAPM_AIF_OUT("MODEM_UL", NULL, 0,
@@ -478,8 +344,6 @@ static const struct snd_soc_dapm_widget widgets[] = {
 			OMAP_ABE_AIF_PDM_DL1, OMAP_ABE_OPP_25, 0),
 	SND_SOC_DAPM_AIF_OUT("PDM_DL2", NULL, 0,
 			OMAP_ABE_AIF_PDM_DL2, OMAP_ABE_OPP_100, 0),
-	SND_SOC_DAPM_AIF_OUT("PDM_VIB", NULL, 0,
-			OMAP_ABE_AIF_PDM_VIB, OMAP_ABE_OPP_100, 0),
 	SND_SOC_DAPM_AIF_IN("BT_VX_UL", "BT Capture", 0,
 			OMAP_ABE_AIF_BT_VX_UL, OMAP_ABE_OPP_50, 0),
 	SND_SOC_DAPM_AIF_OUT("BT_VX_DL", "BT Playback", 0,
@@ -508,10 +372,6 @@ static const struct snd_soc_dapm_widget widgets[] = {
 			OMAP_ABE_MUX_UL04, OMAP_ABE_OPP_50, 0, &mm_ul04_control),
 	SND_SOC_DAPM_MUX("MUX_UL05",
 			OMAP_ABE_MUX_UL05, OMAP_ABE_OPP_50, 0, &mm_ul05_control),
-	SND_SOC_DAPM_MUX("MUX_UL06",
-			OMAP_ABE_MUX_UL06, OMAP_ABE_OPP_50, 0, &mm_ul06_control),
-	SND_SOC_DAPM_MUX("MUX_UL07",
-			OMAP_ABE_MUX_UL07, OMAP_ABE_OPP_50, 0, &mm_ul07_control),
 	SND_SOC_DAPM_MUX("MUX_UL10",
 			OMAP_ABE_MUX_UL10, OMAP_ABE_OPP_50, 0, &mm_ul10_control),
 	SND_SOC_DAPM_MUX("MUX_UL11",
@@ -687,40 +547,6 @@ static const struct snd_soc_dapm_route graph[] = {
 	{"MUX_UL05", "VX Right", "Capture Mixer"},
 	{"MM_UL1", NULL, "MUX_UL05"},
 
-	/* MUX_UL06 - ROUTE_UL - Chan 6  */
-	{"MUX_UL06", "DMic0L", "DMIC0"},
-	{"MUX_UL06", "DMic0R", "DMIC0"},
-	{"MUX_UL06", "DMic1L", "DMIC1"},
-	{"MUX_UL06", "DMic1R", "DMIC1"},
-	{"MUX_UL06", "DMic2L", "DMIC2"},
-	{"MUX_UL06", "DMic2R", "DMIC2"},
-	{"MUX_UL06", "BT Left", "BT_VX_UL"},
-	{"MUX_UL06", "BT Right", "BT_VX_UL"},
-	{"MUX_UL06", "MMExt Left", "MM_EXT_UL"},
-	{"MUX_UL06", "MMExt Right", "MM_EXT_UL"},
-	{"MUX_UL06", "AMic0", "PDM_UL1"},
-	{"MUX_UL06", "AMic1", "PDM_UL1"},
-	{"MUX_UL06", "VX Left", "Capture Mixer"},
-	{"MUX_UL06", "VX Right", "Capture Mixer"},
-	{"MM_UL1", NULL, "MUX_UL06"},
-
-	/* MUX_UL07 - ROUTE_UL - Chan 7  */
-	{"MUX_UL07", "DMic0L", "DMIC0"},
-	{"MUX_UL07", "DMic0R", "DMIC0"},
-	{"MUX_UL07", "DMic1L", "DMIC1"},
-	{"MUX_UL07", "DMic1R", "DMIC1"},
-	{"MUX_UL07", "DMic2L", "DMIC2"},
-	{"MUX_UL07", "DMic2R", "DMIC2"},
-	{"MUX_UL07", "BT Left", "BT_VX_UL"},
-	{"MUX_UL07", "BT Right", "BT_VX_UL"},
-	{"MUX_UL07", "MMExt Left", "MM_EXT_UL"},
-	{"MUX_UL07", "MMExt Right", "MM_EXT_UL"},
-	{"MUX_UL07", "AMic0", "PDM_UL1"},
-	{"MUX_UL07", "AMic1", "PDM_UL1"},
-	{"MUX_UL07", "VX Left", "Capture Mixer"},
-	{"MUX_UL07", "VX Right", "Capture Mixer"},
-	{"MM_UL1", NULL, "MUX_UL07"},
-
 	/* MUX_UL10 - ROUTE_UL - Chan 0  */
 	{"MUX_UL10", "DMic0L", "DMIC0"},
 	{"MUX_UL10", "DMic0R", "DMIC0"},
@@ -834,9 +660,6 @@ static const struct snd_soc_dapm_route graph[] = {
 	/* BT */
 	{"VX UL VMixer", NULL, "Voice Capture Mixer"},
 
-	/* Vibra */
-	{"PDM_VIB", NULL, "VIB_DL"},
-
 	/* VX and MODEM */
 	{"VX_UL", NULL, "VX UL VMixer"},
 	{"MODEM_UL", NULL, "VX UL VMixer"},
@@ -847,7 +670,6 @@ static const struct snd_soc_dapm_route graph[] = {
 	{"MM1 Capture", NULL, "MM_UL1"},
 	{"MM2 Capture", NULL, "MM_UL2"},
 	{"TONES_DL", NULL, "Tones Playback"},
-	{"VIB_DL", NULL, "Vibra Playback"},
 	{"MM_DL", NULL, "MM VMixer"},
 	{"MM VMixer", NULL, "MMLP Playback"},
 	{"MM VMixer", NULL, "MM1 Playback"},
@@ -860,7 +682,6 @@ static const struct snd_soc_dapm_route graph[] = {
 	/* Backend Enablement */
 	{"BE_OUT", NULL, "PDM_DL1"},
 	{"BE_OUT", NULL, "PDM_DL2"},
-	{"BE_OUT", NULL, "PDM_VIB"},
 	{"BE_OUT", NULL, "MM_EXT_DL"},
 	{"BE_OUT", NULL, "BT_VX_DL"},
 	{"PDM_UL1", NULL, "BE_IN"},

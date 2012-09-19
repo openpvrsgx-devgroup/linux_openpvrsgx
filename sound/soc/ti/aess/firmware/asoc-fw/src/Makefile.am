@@ -2,7 +2,7 @@
 COMPATNUM=@LIBTOOL_VERSION_INFO@
 
 AM_CFLAGS = \
-	-I$(top_srcdir)/src -Wall -Werror
+	-I$(top_srcdir)/src -Wall -Werror -I $(LINUX_DIR)/include/sound
 
 bin_PROGRAMS = socfw
 

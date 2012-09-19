@@ -43,14 +43,14 @@ static const int32_t sdt_800Hz_m20db_coeffs[] = {
 };
 
 static const struct snd_soc_fw_coeff_elem elems[] = {
-	SND_SOC_FILE_COEFF_ELEM("Flat Response", sdt_flat_coeffs),
-	SND_SOC_FILE_COEFF_ELEM("800Hz HPF 0dB", sdt_800Hz_0db_coeffs),
-	SND_SOC_FILE_COEFF_ELEM("800Hz HPF -12dB", sdt_800Hz_m12db_coeffs),
-	SND_SOC_FILE_COEFF_ELEM("800Hz HPF -20dB", sdt_800Hz_m20db_coeffs),
+	SND_SOC_FW_COEFF_ELEM("Flat Response", sdt_flat_coeffs),
+	SND_SOC_FW_COEFF_ELEM("800Hz HPF 0dB", sdt_800Hz_0db_coeffs),
+	SND_SOC_FW_COEFF_ELEM("800Hz HPF -12dB", sdt_800Hz_m12db_coeffs),
+	SND_SOC_FW_COEFF_ELEM("800Hz HPF -20dB", sdt_800Hz_m20db_coeffs),
 };
 
 static const struct snd_soc_fw_coeff sdt[] = {
-	SND_SOC_FILE_COEFF(OMAP_AESS_CMEM_SDT_COEFS_ID, "SDT Equalizer", elems),
+	SND_SOC_FW_COEFFICIENT(OMAP_AESS_CMEM_SDT_COEFS_ID, "SDT Equalizer", elems),
 };
 
 const struct snd_soc_fw_plugin plugin = {

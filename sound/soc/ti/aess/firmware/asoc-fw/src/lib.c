@@ -64,11 +64,11 @@ static void verbose(struct soc_fw_priv *soc_fw, const char *fmt, ...)
 static int write_header(struct soc_fw_priv *soc_fw, u32 type,
 	u32 vendor_type, u32 version, size_t size)
 {
-	struct snd_soc_file_hdr hdr;
+	struct snd_soc_fw_hdr hdr;
 	size_t bytes;
 	int offset = lseek(soc_fw->out_fd, 0, SEEK_CUR);
 
-	hdr.magic = SND_SOC_FILE_MAGIC;
+	hdr.magic = SND_SOC_FW_MAGIC;
 	hdr.type = type;
 	hdr.vendor_type = vendor_type;
 	hdr.version = version;
@@ -99,15 +99,15 @@ static int write_header(struct soc_fw_priv *soc_fw, u32 type,
 static int import_mixer(struct soc_fw_priv *soc_fw,
 	const struct snd_kcontrol_new *kcontrol)
 {
-	struct snd_soc_file_mixer_control mc;
+	struct snd_soc_fw_mixer_control mc;
 	struct soc_mixer_control *mixer =
 		(struct soc_mixer_control *)kcontrol->private_value;
 	size_t bytes;
 
 	memset(&mc, 0, sizeof(mc));
 
-	strncpy(mc.hdr.name, (const char*)kcontrol->name, SND_SOC_FILE_TEXT_SIZE);
-	mc.hdr.type = SND_SOC_FILE_MIXER_VALUE;
+	strncpy(mc.hdr.name, (const char*)kcontrol->name, SND_SOC_FW_TEXT_SIZE);
+	mc.hdr.type = SND_SOC_FW_MIXER_VALUE;
 	mc.min = mixer->min;
 	mc.max = mixer->max;
 	mc.platform_max = mixer->platform_max;
@@ -130,7 +130,7 @@ static int import_mixer(struct soc_fw_priv *soc_fw,
 }
 
 static void import_enum_control_data(struct soc_fw_priv *soc_fw, int count,
-	struct snd_soc_file_enum_control *ec, struct soc_enum *menum)
+	struct snd_soc_fw_enum_control *ec, struct soc_enum *menum)
 {
 	int i;
 
@@ -140,7 +140,7 @@ static void import_enum_control_data(struct soc_fw_priv *soc_fw, int count,
 		}
 	} else {
 		for (i = 0; i < count; i++) {
-			strncpy(ec->texts[i], menum->texts[i], SND_SOC_FILE_TEXT_SIZE);
+			strncpy(ec->texts[i], menum->texts[i], SND_SOC_FW_TEXT_SIZE);
 		}
 	}
 }
@@ -148,21 +148,21 @@ static void import_enum_control_data(struct soc_fw_priv *soc_fw, int count,
 static int import_enum_control(struct soc_fw_priv *soc_fw,
 	const struct snd_kcontrol_new *kcontrol)
 {
-	struct snd_soc_file_enum_control ec;
+	struct snd_soc_fw_enum_control ec;
 	struct soc_enum *menum =
 		(struct soc_enum *)kcontrol->private_value;
 	size_t bytes;
 
 	memset(&ec, 0, sizeof(ec));
 
-	if (kcontrol->count >= SND_SOC_FILE_NUM_TEXTS) {
+	if (kcontrol->count >= SND_SOC_FW_NUM_TEXTS) {
 		fprintf(stderr, "error: too many enum values %d\n",
 			kcontrol->count);
-		return -EINVAL;;
+		return -EINVAL;
 	}
 
-	strncpy(ec.hdr.name, (const char*)kcontrol->name, SND_SOC_FILE_TEXT_SIZE);
-	ec.hdr.type = SND_SOC_FILE_MIXER_ENUM;
+	strncpy(ec.hdr.name, (const char*)kcontrol->name, SND_SOC_FW_TEXT_SIZE);
+	ec.hdr.type = SND_SOC_FW_MIXER_ENUM;
 	ec.mask = menum->mask;
 	ec.max = menum->max;
 	ec.reg = menum->reg;
@@ -187,9 +187,9 @@ static int import_enum_control(struct soc_fw_priv *soc_fw,
 int socfw_import_controls(struct soc_fw_priv *soc_fw,
 	const struct snd_kcontrol_new *kcontrols, int kcontrol_count)
 {
-	struct snd_soc_file_kcontrol kc;
+	struct snd_soc_fw_kcontrol kc;
 	int i, mixers = 0, enums = 0;
-	size_t bytes, size = sizeof(struct snd_soc_file_kcontrol);
+	size_t bytes, size = sizeof(struct snd_soc_fw_kcontrol);
 	int err;
 
 	if (kcontrol_count == 0)
@@ -199,32 +199,36 @@ int socfw_import_controls(struct soc_fw_priv *soc_fw,
 		const struct snd_kcontrol_new *kn =
 			&kcontrols[i];
 
-		switch (kn->iface) {
+		switch (kn->put) {
 		case SOC_MIXER_IO_VOLSW:
 		case SOC_MIXER_IO_VOLSW_SX:
 		case SOC_MIXER_IO_VOLSW_S8:
 		case SOC_MIXER_IO_VOLSW_XR_SX:
+		case SOC_MIXER_IO_XR_SX:
 		case SOC_MIXER_IO_VOLSW_EXT:
-			size += sizeof(struct snd_soc_file_mixer_control);
+			size += sizeof(struct snd_soc_fw_mixer_control);
 			mixers++;
 			break;
 		case SOC_MIXER_IO_ENUM:
 		case SOC_MIXER_IO_ENUM_EXT:
-			size += sizeof(struct snd_soc_file_enum_control);
+		case SOC_MIXER_IO_ENUM_VALUE:
+			size += sizeof(struct snd_soc_fw_enum_control);
 			enums++;
 			break;
 		case SOC_MIXER_IO_BYTES:
 		case SOC_MIXER_IO_BOOL:
+		case SOC_MIXER_IO_STROBE:
+		case SOC_MIXER_IO_RANGE:
 		default:
-			fprintf(stderr, "error: mixer type %d not supported atm\n",
-				kn->iface);
+			fprintf(stderr, "error: mixer type %d currently not supported\n",
+				kn->put);
 			return -EINVAL;
 		}
 	}
 	verbose(soc_fw, "kcontrols: %d mixers %d enums %d size %lu bytes\n",
 		mixers + enums, mixers, enums, size);
 
-	err = write_header(soc_fw, SND_SOC_FILE_MIXER, 0, soc_fw->version, size);
+	err = write_header(soc_fw, SND_SOC_FW_MIXER, 0, soc_fw->version, size);
 	if (err < 0)
 		return err;
 
@@ -241,11 +245,12 @@ int socfw_import_controls(struct soc_fw_priv *soc_fw,
 		const struct snd_kcontrol_new *kn =
 			&kcontrols[i];
 
-		switch (kn->iface) {
+		switch (kn->put) {
 		case SOC_MIXER_IO_VOLSW:
 		case SOC_MIXER_IO_VOLSW_SX:
 		case SOC_MIXER_IO_VOLSW_S8:
 		case SOC_MIXER_IO_VOLSW_XR_SX:
+		case SOC_MIXER_IO_XR_SX:
 		case SOC_MIXER_IO_VOLSW_EXT:
 			err = import_mixer(soc_fw, kn);
 			if (err < 0)
@@ -253,15 +258,18 @@ int socfw_import_controls(struct soc_fw_priv *soc_fw,
 			break;
 		case SOC_MIXER_IO_ENUM:
 		case SOC_MIXER_IO_ENUM_EXT:
+		case SOC_MIXER_IO_ENUM_VALUE:
 			err = import_enum_control(soc_fw, kn);
 			if (err < 0)
 				return err;
 			break;
 		case SOC_MIXER_IO_BYTES:
 		case SOC_MIXER_IO_BOOL:
+		case SOC_MIXER_IO_STROBE:
+		case SOC_MIXER_IO_RANGE:
 		default:
 			fprintf(stderr, "error: mixer type %d not supported atm\n",
-				kn->iface);
+				kn->put);
 			return -EINVAL;
 		}
 	}
@@ -271,13 +279,13 @@ int socfw_import_controls(struct soc_fw_priv *soc_fw,
 
 static void import_coeff_enum_control_data(struct soc_fw_priv *soc_fw,
 	const struct snd_soc_fw_coeff *coeff,
-	struct snd_soc_file_enum_control *ec)
+	struct snd_soc_fw_enum_control *ec)
 {
 	int i;
 
 	for (i = 0; i < coeff->count; i++)
 		strncpy(ec->texts[i], coeff->elems[i].description,
-			SND_SOC_FILE_TEXT_SIZE);
+			SND_SOC_FW_TEXT_SIZE);
 }
 
 /*
@@ -289,8 +297,8 @@ static void import_coeff_enum_control_data(struct soc_fw_priv *soc_fw,
 static int import_enum_coeff_control(struct soc_fw_priv *soc_fw,
 	const struct snd_soc_fw_coeff *coeff)
 {
-	struct snd_soc_file_kcontrol kc;
-	struct snd_soc_file_enum_control ec;
+	struct snd_soc_fw_kcontrol kc;
+	struct snd_soc_fw_enum_control ec;
 	size_t bytes;
 	int err, i;
 
@@ -299,14 +307,14 @@ static int import_enum_coeff_control(struct soc_fw_priv *soc_fw,
 
 	kc.count = coeff->count;
 
-	if (coeff->count >= SND_SOC_FILE_NUM_TEXTS) {
+	if (coeff->count >= SND_SOC_FW_NUM_TEXTS) {
 		fprintf(stderr, "error: too many enum values %d\n",
 			coeff->count);
 		return -EINVAL;
 	}
 
-	strncpy(ec.hdr.name, coeff->description, SND_SOC_FILE_TEXT_SIZE);
-	ec.hdr.type = SND_SOC_FILE_MIXER_ENUM;
+	strncpy(ec.hdr.name, coeff->description, SND_SOC_FW_TEXT_SIZE);
+	ec.hdr.type = SND_SOC_FW_MIXER_ENUM;
 	ec.mask = (coeff->count < 1) - 1;
 	ec.max = coeff->count;
 	ec.reg = coeff->id;
@@ -329,8 +337,8 @@ static int import_enum_coeff_control(struct soc_fw_priv *soc_fw,
 
 	for (i = 0; i < coeff->count; i++) {
 
-		err = write_header(soc_fw, SND_SOC_FILE_COEFFS,
-			SND_SOC_FILE_VENDOR_COEFF, soc_fw->version,
+		err = write_header(soc_fw, SND_SOC_FW_COEFF,
+			SND_SOC_FW_VENDOR_COEFF, soc_fw->version,
 			coeff->elems[i].size);
 		if (err < 0)
 			return err;
@@ -362,8 +370,8 @@ int socfw_import_coeffs(struct soc_fw_priv *soc_fw,
 		return 0;
 
 	for (i = 0; i < coeff_count; i++) {
-		size += sizeof(struct snd_soc_file_kcontrol)
-			+ sizeof(struct snd_soc_file_enum_control);
+		size += sizeof(struct snd_soc_fw_kcontrol)
+			+ sizeof(struct snd_soc_fw_enum_control);
 		for (j = 0; j < coeffs[i].count; j++) {
 			//size += coeffs[i].elems[j].size;
 			enums++;
@@ -372,7 +380,7 @@ int socfw_import_coeffs(struct soc_fw_priv *soc_fw,
 	verbose(soc_fw, "coeffs: num coeffs %d enums %d size %lu bytes\n",
 		coeff_count, enums, size);
 
-	err = write_header(soc_fw,  SND_SOC_FILE_COEFFS, 0,
+	err = write_header(soc_fw,  SND_SOC_FW_COEFF, 0,
 		soc_fw->version, size);
 	if (err < 0)
 		return err;
@@ -394,27 +402,23 @@ static int import_dapm_widgets_controls(struct soc_fw_priv *soc_fw, int count,
 
 	for (i = 0; i < count; i++) {
 
-		switch (kn->iface) {
+		switch (kn->put) {
 		case SOC_MIXER_IO_VOLSW:
-		case SOC_MIXER_IO_VOLSW_SX:
-		case SOC_MIXER_IO_VOLSW_S8:
-		case SOC_MIXER_IO_VOLSW_XR_SX:
-		case SOC_MIXER_IO_VOLSW_EXT:
 			err = import_mixer(soc_fw, kn);
 			if (err < 0)
 				return err;
 			break;
-		case SOC_MIXER_IO_ENUM:
-		case SOC_MIXER_IO_ENUM_EXT:
+		case SOC_DAPM_IO_ENUM_DOUBLE:
+		case SOC_DAPM_IO_ENUM_VIRT:
+		case SOC_DAPM_IO_ENUM_VALUE:
 			err = import_enum_control(soc_fw, kn);
 			if (err < 0)
 				return err;
 			break;
-		case SOC_MIXER_IO_BYTES:
-		case SOC_MIXER_IO_BOOL:
+		case SOC_DAPM_IO_PIN:
 		default:
 			fprintf(stderr, "error: widget mixer type %d not supported atm\n",
-				kn->iface);
+				kn->put);
 			return -EINVAL;
 		}
 		kn++;
@@ -428,33 +432,29 @@ static int socfw_calc_widget_size(struct soc_fw_priv *soc_fw,
 	int widget_count)
 {
 	int i, j;
-	int size = sizeof(struct snd_soc_file_dapm_elems) +
-		sizeof(struct snd_soc_file_dapm_widget) * widget_count;
+	int size = sizeof(struct snd_soc_fw_dapm_elems) +
+		sizeof(struct snd_soc_fw_dapm_widget) * widget_count;
 
 	for (i = 0; i < widget_count; i++) {
 		const struct snd_kcontrol_new *kn = widgets[i].kcontrol_news;
 
 		for (j = 0; j < widgets[i].num_kcontrols; j++) {
 
-			switch (kn->iface) {
+			switch (kn->put) {
 			case SOC_MIXER_IO_VOLSW:
-			case SOC_MIXER_IO_VOLSW_SX:
-			case SOC_MIXER_IO_VOLSW_S8:
-			case SOC_MIXER_IO_VOLSW_XR_SX:
-			case SOC_MIXER_IO_VOLSW_EXT:
-				size += /*sizeof(struct snd_soc_file_kcontrol) +*/
-					sizeof(struct snd_soc_file_mixer_control);
+				size += /*sizeof(struct snd_soc_fw_kcontrol) +*/
+					sizeof(struct snd_soc_fw_mixer_control);
 				break;
-			case SOC_MIXER_IO_ENUM:
-			case SOC_MIXER_IO_ENUM_EXT:
-				size += /*sizeof(struct snd_soc_file_kcontrol) +*/
-					sizeof(struct snd_soc_file_enum_control);
+			case SOC_DAPM_IO_ENUM_DOUBLE:
+			case SOC_DAPM_IO_ENUM_VIRT:
+			case SOC_DAPM_IO_ENUM_VALUE:
+				size += /*sizeof(struct snd_soc_fw_kcontrol) +*/
+					sizeof(struct snd_soc_fw_enum_control);
 				break;
-			case SOC_MIXER_IO_BYTES:
-			case SOC_MIXER_IO_BOOL:
+			case SOC_DAPM_IO_PIN:
 			default:
 				fprintf(stderr, "error: widget mixer type %d not supported atm\n",
-					kn->iface);
+					kn->put);
 				return -EINVAL;
 			}
 			kn++;
@@ -467,8 +467,8 @@ static int socfw_calc_widget_size(struct soc_fw_priv *soc_fw,
 int socfw_import_dapm_widgets(struct soc_fw_priv *soc_fw,
 	const struct snd_soc_dapm_widget *widgets, int widget_count)
 {
-	struct snd_soc_file_dapm_widget widget;
-	struct snd_soc_file_dapm_elems delems;
+	struct snd_soc_fw_dapm_widget widget;
+	struct snd_soc_fw_dapm_elems delems;
 	size_t bytes;
 	int i, err, size;
 
@@ -482,7 +482,7 @@ int socfw_import_dapm_widgets(struct soc_fw_priv *soc_fw,
 	verbose(soc_fw, "widgets: widgets %d size %lu bytes\n",
 		widget_count, size);
 
-	err = write_header(soc_fw, SND_SOC_FILE_DAPM_WIDGET, 0,
+	err = write_header(soc_fw, SND_SOC_FW_DAPM_WIDGET, 0,
 		soc_fw->version, size);
 	if (err < 0)
 		return err;
@@ -500,11 +500,11 @@ int socfw_import_dapm_widgets(struct soc_fw_priv *soc_fw,
 		memset(&widget, 0, sizeof(widget));
 
 		strncpy(widget.name, widgets[i].name,
-			SND_SOC_FILE_TEXT_SIZE);
+			SND_SOC_FW_TEXT_SIZE);
 
 		if (widgets[i].sname)
 			strncpy(widget.sname, widgets[i].sname,
-				SND_SOC_FILE_TEXT_SIZE);
+				SND_SOC_FW_TEXT_SIZE);
 
 		widget.id = widgets[i].id;
 		widget.reg = widgets[i].reg;
@@ -535,8 +535,8 @@ int socfw_import_dapm_widgets(struct soc_fw_priv *soc_fw,
 int socfw_import_dapm_graph(struct soc_fw_priv *soc_fw,
 	const struct snd_soc_dapm_route *graph, int graph_count)
 {
-	struct snd_soc_file_dapm_graph_elem elem;
-	struct snd_soc_file_dapm_elems elem_hdr;
+	struct snd_soc_fw_dapm_graph_elem elem;
+	struct snd_soc_fw_dapm_elems elem_hdr;
 	size_t bytes;
 	int i, err;
 
@@ -546,7 +546,7 @@ int socfw_import_dapm_graph(struct soc_fw_priv *soc_fw,
 	verbose(soc_fw, "graph: routes %d size %lu bytes\n",
 		graph_count, sizeof(elem_hdr) + sizeof(elem) * graph_count);
 
-	err = write_header(soc_fw, SND_SOC_FILE_DAPM_GRAPH, 0, soc_fw->version,
+	err = write_header(soc_fw, SND_SOC_FW_DAPM_GRAPH, 0, soc_fw->version,
 		sizeof(elem_hdr) + sizeof(elem) * graph_count);
 	if (err < 0)
 		return err;
@@ -560,13 +560,13 @@ int socfw_import_dapm_graph(struct soc_fw_priv *soc_fw,
 	}
 
 	for (i = 0; i <graph_count; i++) {
-		strncpy(elem.sink, graph[i].sink, SND_SOC_FILE_TEXT_SIZE);
-		strncpy(elem.source, graph[i].source, SND_SOC_FILE_TEXT_SIZE);
+		strncpy(elem.sink, graph[i].sink, SND_SOC_FW_TEXT_SIZE);
+		strncpy(elem.source, graph[i].source, SND_SOC_FW_TEXT_SIZE);
 		if (graph[i].control)
 			strncpy(elem.control, graph[i].control,
-				SND_SOC_FILE_TEXT_SIZE);
+				SND_SOC_FW_TEXT_SIZE);
 		else
-			memset(elem.control, 0, SND_SOC_FILE_TEXT_SIZE);
+			memset(elem.control, 0, SND_SOC_FW_TEXT_SIZE);
 
 		verbose(soc_fw, " graph: %s -> %s -> %s\n",
 			elem.source, elem.control, elem.sink); 

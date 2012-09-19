@@ -8,7 +8,7 @@ AM_LDFLAGS = $(NODELETE_LDFLAGS)
 
 MODULE_LDFLAGS = $(AM_LDFLAGS) -module -disable-static -avoid-version $(LDFLAGS_NOUNDEFINED)
 
-OMAP4CFLAGS = -I $(LINUX_DIR)/sound/soc/omap/aess
+OMAP4CFLAGS = -I $(LINUX_DIR)/include/sound -I $(LINUX_DIR)/sound/soc/omap/aess
 
 if HAVE_OMAP
 

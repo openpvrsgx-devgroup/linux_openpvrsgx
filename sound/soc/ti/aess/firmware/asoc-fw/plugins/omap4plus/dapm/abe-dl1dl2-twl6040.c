@@ -1,24 +1,29 @@
-struct omap_aess;
-
-#define ul_mux_get_route	NULL
-#define ul_mux_put_route	NULL
-#define abe_get_mixer	NULL
-#define put_mixer	NULL
-#define abe_put_switch	NULL
-#define volume_get_mixer	NULL
-#define volume_put_mixer	NULL
-#define volume_get_gain	NULL
-#define volume_put_gain	NULL
-#define abe_get_mono_mixer	NULL
-#define abe_put_mono_mixer	NULL
+/*
+ * Copyright (C) 2012 Texas Instruments
+ *
+ * Contact: Liam Girdwood <lrg@ti.com>
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA
+ *
+ */
 
 #include "socfw.h"
 
 #include <aess/abe_def.h>
 #include <aess/abe_gain.h>
 #include <omap-abe-priv.h>
-
-#define OMAP_ABE_MIXER(x)		(x)
 
 /* Media DL1 volume control from -120 to 30 dB in 1 dB steps */
 static DECLARE_TLV_DB_SCALE(mm_dl1_tlv, -12000, 100, 3000);
@@ -105,212 +110,212 @@ static const struct soc_enum abe_enum[] = {
 
 static const struct snd_kcontrol_new mm_ul00_control =
 	SOC_DAPM_ENUM_EXT("Route", abe_enum[0],
-	ul_mux_get_route, ul_mux_put_route);
+	OMAP_ABE_MIXER_ROUTER, OMAP_ABE_MIXER_ROUTER);
 
 static const struct snd_kcontrol_new mm_ul01_control =
 	SOC_DAPM_ENUM_EXT("Route", abe_enum[1],
-	ul_mux_get_route, ul_mux_put_route);
+	OMAP_ABE_MIXER_ROUTER, OMAP_ABE_MIXER_ROUTER);
 
 static const struct snd_kcontrol_new mm_ul02_control =
 	SOC_DAPM_ENUM_EXT("Route", abe_enum[2],
-	ul_mux_get_route, ul_mux_put_route);
+	OMAP_ABE_MIXER_ROUTER, OMAP_ABE_MIXER_ROUTER);
 
 static const struct snd_kcontrol_new mm_ul03_control =
 	SOC_DAPM_ENUM_EXT("Route", abe_enum[3],
-	ul_mux_get_route, ul_mux_put_route);
+	OMAP_ABE_MIXER_ROUTER, OMAP_ABE_MIXER_ROUTER);
 
 static const struct snd_kcontrol_new mm_ul04_control =
 	SOC_DAPM_ENUM_EXT("Route", abe_enum[4],
-	ul_mux_get_route, ul_mux_put_route);
+	OMAP_ABE_MIXER_ROUTER, OMAP_ABE_MIXER_ROUTER);
 
 static const struct snd_kcontrol_new mm_ul05_control =
 	SOC_DAPM_ENUM_EXT("Route", abe_enum[5],
-	ul_mux_get_route, ul_mux_put_route);
+	OMAP_ABE_MIXER_ROUTER, OMAP_ABE_MIXER_ROUTER);
 
 static const struct snd_kcontrol_new mm_ul06_control =
 	SOC_DAPM_ENUM_EXT("Route", abe_enum[6],
-	ul_mux_get_route, ul_mux_put_route);
+	OMAP_ABE_MIXER_ROUTER, OMAP_ABE_MIXER_ROUTER);
 
 static const struct snd_kcontrol_new mm_ul07_control =
 	SOC_DAPM_ENUM_EXT("Route", abe_enum[7],
-	ul_mux_get_route, ul_mux_put_route);
+	OMAP_ABE_MIXER_ROUTER, OMAP_ABE_MIXER_ROUTER);
 
 static const struct snd_kcontrol_new mm_ul10_control =
 	SOC_DAPM_ENUM_EXT("Route", abe_enum[8],
-	ul_mux_get_route, ul_mux_put_route);
+	OMAP_ABE_MIXER_ROUTER, OMAP_ABE_MIXER_ROUTER);
 
 static const struct snd_kcontrol_new mm_ul11_control =
 	SOC_DAPM_ENUM_EXT("Route", abe_enum[9],
-	ul_mux_get_route, ul_mux_put_route);
+	OMAP_ABE_MIXER_ROUTER, OMAP_ABE_MIXER_ROUTER);
 
 static const struct snd_kcontrol_new mm_vx0_control =
 	SOC_DAPM_ENUM_EXT("Route", abe_enum[10],
-	ul_mux_get_route, ul_mux_put_route);
+	OMAP_ABE_MIXER_ROUTER, OMAP_ABE_MIXER_ROUTER);
 
 static const struct snd_kcontrol_new mm_vx1_control =
 	SOC_DAPM_ENUM_EXT("Route", abe_enum[11],
-	ul_mux_get_route, ul_mux_put_route);
+	OMAP_ABE_MIXER_ROUTER, OMAP_ABE_MIXER_ROUTER);
 
 /* DL1 mixer paths */
 static const struct snd_kcontrol_new dl1_mixer_controls[] = {
 	SOC_SINGLE_EXT("Tones", OMAP_AESS_MIXDL1_TONES, 0, 1, 0,
-		abe_get_mixer, put_mixer),
+		OMAP_ABE_MIXER_DEFAULT, OMAP_ABE_MIXER_DEFAULT),
 	SOC_SINGLE_EXT("Voice", OMAP_AESS_MIXDL1_VX_DL, 0, 1, 0,
-		abe_get_mixer, put_mixer),
+		OMAP_ABE_MIXER_DEFAULT, OMAP_ABE_MIXER_DEFAULT),
 	SOC_SINGLE_EXT("Capture", OMAP_AESS_MIXDL1_MM_UL2, 0, 1, 0,
-		abe_get_mixer, put_mixer),
+		OMAP_ABE_MIXER_DEFAULT, OMAP_ABE_MIXER_DEFAULT),
 	SOC_SINGLE_EXT("Multimedia", OMAP_AESS_MIXDL1_MM_DL, 0, 1, 0,
-		abe_get_mixer, put_mixer),
+		OMAP_ABE_MIXER_DEFAULT, OMAP_ABE_MIXER_DEFAULT),
 };
 
 /* DL2 mixer paths */
 static const struct snd_kcontrol_new dl2_mixer_controls[] = {
 	SOC_SINGLE_EXT("Tones", OMAP_AESS_MIXDL2_TONES, 0, 1, 0,
-		abe_get_mixer, put_mixer),
+		OMAP_ABE_MIXER_DEFAULT, OMAP_ABE_MIXER_DEFAULT),
 	SOC_SINGLE_EXT("Voice", OMAP_AESS_MIXDL2_VX_DL, 0, 1, 0,
-		abe_get_mixer, put_mixer),
+		OMAP_ABE_MIXER_DEFAULT, OMAP_ABE_MIXER_DEFAULT),
 	SOC_SINGLE_EXT("Capture", OMAP_AESS_MIXDL2_MM_UL2, 0, 1, 0,
-		abe_get_mixer, put_mixer),
+		OMAP_ABE_MIXER_DEFAULT, OMAP_ABE_MIXER_DEFAULT),
 	SOC_SINGLE_EXT("Multimedia", OMAP_AESS_MIXDL2_MM_DL, 0, 1, 0,
-		abe_get_mixer, put_mixer),
+		OMAP_ABE_MIXER_DEFAULT, OMAP_ABE_MIXER_DEFAULT),
 };
 
 /* AUDUL ("Voice Capture Mixer") mixer paths */
 static const struct snd_kcontrol_new audio_ul_mixer_controls[] = {
 	SOC_SINGLE_EXT("Tones Playback", OMAP_AESS_MIXAUDUL_TONES, 0, 1, 0,
-		abe_get_mixer, put_mixer),
+		OMAP_ABE_MIXER_DEFAULT, OMAP_ABE_MIXER_DEFAULT),
 	SOC_SINGLE_EXT("Media Playback", OMAP_AESS_MIXAUDUL_MM_DL, 0, 1, 0,
-		abe_get_mixer, put_mixer),
+		OMAP_ABE_MIXER_DEFAULT, OMAP_ABE_MIXER_DEFAULT),
 	SOC_SINGLE_EXT("Capture", OMAP_AESS_MIXAUDUL_UPLINK, 0, 1, 0,
-		abe_get_mixer, put_mixer),
+		OMAP_ABE_MIXER_DEFAULT, OMAP_ABE_MIXER_DEFAULT),
 };
 
 /* VXREC ("Capture Mixer")  mixer paths */
 static const struct snd_kcontrol_new vx_rec_mixer_controls[] = {
 	SOC_SINGLE_EXT("Tones", OMAP_AESS_MIXVXREC_TONES, 0, 1, 0,
-		abe_get_mixer, put_mixer),
+		OMAP_ABE_MIXER_DEFAULT, OMAP_ABE_MIXER_DEFAULT),
 	SOC_SINGLE_EXT("Voice Playback", OMAP_AESS_MIXVXREC_VX_DL,
-		0, 1, 0, abe_get_mixer, put_mixer),
+		0, 1, 0, OMAP_ABE_MIXER_DEFAULT, OMAP_ABE_MIXER_DEFAULT),
 	SOC_SINGLE_EXT("Voice Capture", OMAP_AESS_MIXVXREC_VX_UL,
-		0, 1, 0, abe_get_mixer, put_mixer),
+		0, 1, 0, OMAP_ABE_MIXER_DEFAULT, OMAP_ABE_MIXER_DEFAULT),
 	SOC_SINGLE_EXT("Media Playback", OMAP_AESS_MIXVXREC_MM_DL,
-		0, 1, 0, abe_get_mixer, put_mixer),
+		0, 1, 0, OMAP_ABE_MIXER_DEFAULT, OMAP_ABE_MIXER_DEFAULT),
 };
 
 /* SDT ("Sidetone Mixer") mixer paths */
 static const struct snd_kcontrol_new sdt_mixer_controls[] = {
 	SOC_SINGLE_EXT("Capture", OMAP_AESS_MIXSDT_UL, 0, 1, 0,
-		abe_get_mixer, put_mixer),
+		OMAP_ABE_MIXER_DEFAULT, OMAP_ABE_MIXER_DEFAULT),
 	SOC_SINGLE_EXT("Playback", OMAP_AESS_MIXSDT_DL, 0, 1, 0,
-		abe_get_mixer, put_mixer),
+		OMAP_ABE_MIXER_DEFAULT, OMAP_ABE_MIXER_DEFAULT),
 };
 
 /* Virtual PDM_DL Switch */
 static const struct snd_kcontrol_new pdm_dl1_switch_controls =
 	SOC_SINGLE_EXT("Switch", OMAP_ABE_VIRTUAL_SWITCH, MIX_SWITCH_PDM_DL, 1, 0,
-			abe_get_mixer, abe_put_switch);
+			OMAP_ABE_MIXER_DEFAULT, OMAP_ABE_MIXER_SWITCH);
 
 /* Virtual BT_VX_DL Switch */
 static const struct snd_kcontrol_new bt_vx_dl_switch_controls =
 	SOC_SINGLE_EXT("Switch", OMAP_ABE_VIRTUAL_SWITCH, MIX_SWITCH_BT_VX_DL, 1, 0,
-			abe_get_mixer, abe_put_switch);
+			OMAP_ABE_MIXER_DEFAULT, OMAP_ABE_MIXER_SWITCH);
 
 /* Virtual MM_EXT_DL Switch */
 static const struct snd_kcontrol_new mm_ext_dl_switch_controls =
 	SOC_SINGLE_EXT("Switch", OMAP_ABE_VIRTUAL_SWITCH, MIX_SWITCH_MM_EXT_DL, 1, 0,
-			abe_get_mixer, abe_put_switch);
+			OMAP_ABE_MIXER_DEFAULT, OMAP_ABE_MIXER_SWITCH);
 
 static const struct snd_kcontrol_new controls[] = {
 	/* DL1 mixer gains */
 	SOC_SINGLE_EXT_TLV("DL1 Media Playback Volume",
 		OMAP_AESS_MIXDL1_MM_DL, 0, 149, 0,
-		volume_get_mixer, volume_put_mixer, mm_dl1_tlv),
+		OMAP_ABE_MIXER_VOLUME, OMAP_ABE_MIXER_VOLUME, mm_dl1_tlv),
 	SOC_SINGLE_EXT_TLV("DL1 Tones Playback Volume",
 		OMAP_AESS_MIXDL1_TONES, 0, 149, 0,
-		volume_get_mixer, volume_put_mixer, tones_dl1_tlv),
+		OMAP_ABE_MIXER_VOLUME, OMAP_ABE_MIXER_VOLUME, tones_dl1_tlv),
 	SOC_SINGLE_EXT_TLV("DL1 Voice Playback Volume",
 		OMAP_AESS_MIXDL1_VX_DL, 0, 149, 0,
-		volume_get_mixer, volume_put_mixer, voice_dl1_tlv),
+		OMAP_ABE_MIXER_VOLUME, OMAP_ABE_MIXER_VOLUME, voice_dl1_tlv),
 	SOC_SINGLE_EXT_TLV("DL1 Capture Playback Volume",
 		OMAP_AESS_MIXDL1_MM_UL2, 0, 149, 0,
-		volume_get_mixer, volume_put_mixer, capture_dl1_tlv),
+		OMAP_ABE_MIXER_VOLUME, OMAP_ABE_MIXER_VOLUME, capture_dl1_tlv),
 
 	/* DL2 mixer gains */
 	SOC_SINGLE_EXT_TLV("DL2 Media Playback Volume",
 		OMAP_AESS_MIXDL2_MM_DL, 0, 149, 0,
-		volume_get_mixer, volume_put_mixer, mm_dl2_tlv),
+		OMAP_ABE_MIXER_VOLUME, OMAP_ABE_MIXER_VOLUME, mm_dl2_tlv),
 	SOC_SINGLE_EXT_TLV("DL2 Tones Playback Volume",
 		OMAP_AESS_MIXDL2_TONES, 0, 149, 0,
-		volume_get_mixer, volume_put_mixer, tones_dl2_tlv),
+		OMAP_ABE_MIXER_VOLUME, OMAP_ABE_MIXER_VOLUME, tones_dl2_tlv),
 	SOC_SINGLE_EXT_TLV("DL2 Voice Playback Volume",
 		OMAP_AESS_MIXDL2_VX_DL, 0, 149, 0,
-		volume_get_mixer, volume_put_mixer, voice_dl2_tlv),
+		OMAP_ABE_MIXER_VOLUME, OMAP_ABE_MIXER_VOLUME, voice_dl2_tlv),
 	SOC_SINGLE_EXT_TLV("DL2 Capture Playback Volume",
 		OMAP_AESS_MIXDL2_MM_UL2, 0, 149, 0,
-		volume_get_mixer, volume_put_mixer, capture_dl2_tlv),
+		OMAP_ABE_MIXER_VOLUME, OMAP_ABE_MIXER_VOLUME, capture_dl2_tlv),
 
 	/* VXREC mixer gains */
 	SOC_SINGLE_EXT_TLV("VXREC Media Volume",
 		OMAP_AESS_MIXVXREC_MM_DL, 0, 149, 0,
-		volume_get_mixer, volume_put_mixer, vxrec_mm_dl_tlv),
+		OMAP_ABE_MIXER_VOLUME, OMAP_ABE_MIXER_VOLUME, vxrec_mm_dl_tlv),
 	SOC_SINGLE_EXT_TLV("VXREC Tones Volume",
 		OMAP_AESS_MIXVXREC_TONES, 0, 149, 0,
-		volume_get_mixer, volume_put_mixer, vxrec_tones_tlv),
+		OMAP_ABE_MIXER_VOLUME, OMAP_ABE_MIXER_VOLUME, vxrec_tones_tlv),
 	SOC_SINGLE_EXT_TLV("VXREC Voice DL Volume",
 		OMAP_AESS_MIXVXREC_VX_UL, 0, 149, 0,
-		volume_get_mixer, volume_put_mixer, vxrec_vx_dl_tlv),
+		OMAP_ABE_MIXER_VOLUME, OMAP_ABE_MIXER_VOLUME, vxrec_vx_dl_tlv),
 	SOC_SINGLE_EXT_TLV("VXREC Voice UL Volume",
 		OMAP_AESS_MIXVXREC_VX_DL, 0, 149, 0,
-		volume_get_mixer, volume_put_mixer, vxrec_vx_ul_tlv),
+		OMAP_ABE_MIXER_VOLUME, OMAP_ABE_MIXER_VOLUME, vxrec_vx_ul_tlv),
 
 	/* AUDUL mixer gains */
 	SOC_SINGLE_EXT_TLV("AUDUL Media Volume",
 		OMAP_AESS_MIXAUDUL_MM_DL, 0, 149, 0,
-		volume_get_mixer, volume_put_mixer, audul_mm_tlv),
+		OMAP_ABE_MIXER_VOLUME, OMAP_ABE_MIXER_VOLUME, audul_mm_tlv),
 	SOC_SINGLE_EXT_TLV("AUDUL Tones Volume",
 		OMAP_AESS_MIXAUDUL_TONES, 0, 149, 0,
-		volume_get_mixer, volume_put_mixer, audul_tones_tlv),
+		OMAP_ABE_MIXER_VOLUME, OMAP_ABE_MIXER_VOLUME, audul_tones_tlv),
 	SOC_SINGLE_EXT_TLV("AUDUL Voice UL Volume",
 		OMAP_AESS_MIXAUDUL_UPLINK, 0, 149, 0,
-		volume_get_mixer, volume_put_mixer, audul_vx_ul_tlv),
+		OMAP_ABE_MIXER_VOLUME, OMAP_ABE_MIXER_VOLUME, audul_vx_ul_tlv),
 	SOC_SINGLE_EXT_TLV("AUDUL Voice DL Volume",
 		OMAP_AESS_MIXAUDUL_VX_DL, 0, 149, 0,
-		volume_get_mixer, volume_put_mixer, audul_vx_dl_tlv),
+		OMAP_ABE_MIXER_VOLUME, OMAP_ABE_MIXER_VOLUME, audul_vx_dl_tlv),
 
 	/* SDT mixer gains */
 	SOC_SINGLE_EXT_TLV("SDT UL Volume",
 		OMAP_AESS_MIXSDT_UL, 0, 149, 0,
-		volume_get_mixer, volume_put_mixer, sdt_ul_tlv),
+		OMAP_ABE_MIXER_VOLUME, OMAP_ABE_MIXER_VOLUME, sdt_ul_tlv),
 	SOC_SINGLE_EXT_TLV("SDT DL Volume",
 		OMAP_AESS_MIXSDT_DL, 0, 149, 0,
-		volume_get_mixer, volume_put_mixer, sdt_dl_tlv),
+		OMAP_ABE_MIXER_VOLUME, OMAP_ABE_MIXER_VOLUME, sdt_dl_tlv),
 
 	/* DMIC gains */
 	SOC_DOUBLE_EXT_TLV("DMIC1 UL Volume",
 		GAINS_DMIC1, OMAP_AESS_GAIN_DMIC1_LEFT, OMAP_AESS_GAIN_DMIC1_RIGHT, 149, 0,
-		volume_get_gain, volume_put_gain, dmic_tlv),
+		OMAP_ABE_MIXER_GAIN, OMAP_ABE_MIXER_GAIN, dmic_tlv),
 
 	SOC_DOUBLE_EXT_TLV("DMIC2 UL Volume",
 		GAINS_DMIC2, OMAP_AESS_GAIN_DMIC2_LEFT, OMAP_AESS_GAIN_DMIC2_RIGHT, 149, 0,
-		volume_get_gain, volume_put_gain, dmic_tlv),
+		OMAP_ABE_MIXER_GAIN, OMAP_ABE_MIXER_GAIN, dmic_tlv),
 
 	SOC_DOUBLE_EXT_TLV("DMIC3 UL Volume",
 		GAINS_DMIC3, OMAP_AESS_GAIN_DMIC3_LEFT, OMAP_AESS_GAIN_DMIC3_RIGHT, 149, 0,
-		volume_get_gain, volume_put_gain, dmic_tlv),
+		OMAP_ABE_MIXER_GAIN, OMAP_ABE_MIXER_GAIN, dmic_tlv),
 
 	SOC_DOUBLE_EXT_TLV("AMIC UL Volume",
 		GAINS_AMIC, OMAP_AESS_GAIN_AMIC_LEFT, OMAP_AESS_GAIN_AMIC_RIGHT, 149, 0,
-		volume_get_gain, volume_put_gain, amic_tlv),
+		OMAP_ABE_MIXER_GAIN, OMAP_ABE_MIXER_GAIN, amic_tlv),
 
 	SOC_DOUBLE_EXT_TLV("BT UL Volume",
 		GAINS_BTUL, OMAP_AESS_GAIN_BTUL_LEFT, OMAP_AESS_GAIN_BTUL_RIGHT, 149, 0,
-		volume_get_gain, volume_put_gain, btul_tlv),
+		OMAP_ABE_MIXER_GAIN, OMAP_ABE_MIXER_GAIN, btul_tlv),
 	SOC_SINGLE_EXT("DL1 Mono Mixer", MIXDL1, MIX_DL1_MONO, 1, 0,
-		abe_get_mono_mixer, abe_put_mono_mixer),
+		OMAP_ABE_MIXER_MONO, OMAP_ABE_MIXER_MONO),
 	SOC_SINGLE_EXT("DL2 Mono Mixer", MIXDL2, MIX_DL2_MONO, 1, 0,
-		abe_get_mono_mixer, abe_put_mono_mixer),
+		OMAP_ABE_MIXER_MONO, OMAP_ABE_MIXER_MONO),
 	SOC_SINGLE_EXT("AUDUL Mono Mixer", MIXAUDUL, MIX_AUDUL_MONO, 1, 0,
-		abe_get_mono_mixer, abe_put_mono_mixer),
+		OMAP_ABE_MIXER_MONO, OMAP_ABE_MIXER_MONO),
 };
 
 static const struct snd_soc_dapm_widget widgets[] = {

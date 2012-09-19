@@ -47,13 +47,13 @@ static const int32_t dmic_20kHz_m15db_coeffs[] = {
 };
 
 static const struct snd_soc_fw_coeff_elem elems[] = {
-	SND_SOC_FILE_COEFF_ELEM("20kHz LPF 0dB", dmic_20kHz_0dB_coeffs),
-	SND_SOC_FILE_COEFF_ELEM("20kHz LPF -12dB", dmic_20kHz_m12db_coeffs),
-	SND_SOC_FILE_COEFF_ELEM("20kHz LPF -15dB", dmic_20kHz_m15db_coeffs),
+	SND_SOC_FW_COEFF_ELEM("20kHz LPF 0dB", dmic_20kHz_0dB_coeffs),
+	SND_SOC_FW_COEFF_ELEM("20kHz LPF -12dB", dmic_20kHz_m12db_coeffs),
+	SND_SOC_FW_COEFF_ELEM("20kHz LPF -15dB", dmic_20kHz_m15db_coeffs),
 };
 
 static const struct snd_soc_fw_coeff dmic[] = {
-	SND_SOC_FILE_COEFF(OMAP_AESS_CMEM_96_48_DMIC_COEFS_ID, "DMic Equalizer", elems),
+	SND_SOC_FW_COEFFICIENT(OMAP_AESS_CMEM_96_48_DMIC_COEFS_ID, "DMic Equalizer", elems),
 };
 
 const struct snd_soc_fw_plugin plugin = {

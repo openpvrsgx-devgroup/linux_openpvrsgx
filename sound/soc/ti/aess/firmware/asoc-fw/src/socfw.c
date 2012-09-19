@@ -31,6 +31,19 @@
 
 #include "socfw.h"
 
+struct soc_fw_priv;
+
+struct soc_fw_priv *socfw_new(const char *name, int verbose);
+void socfw_free(struct soc_fw_priv *soc_fw);
+int socfw_import_plugin(struct soc_fw_priv *soc_fw, const char *name);
+int socfw_import_vendor(struct soc_fw_priv *soc_fw, const char *name, int type);
+int socfw_import_dapm_graph(struct soc_fw_priv *soc_fw,
+	const struct snd_soc_dapm_route *graph, int graph_count);
+int socfw_import_dapm_widgets(struct soc_fw_priv *soc_fw,
+	const struct snd_soc_dapm_widget *widgets, int widget_count);
+int socfw_import_controls(struct soc_fw_priv *soc_fw,
+	const struct snd_kcontrol_new *kcontrols, int kcontrol_count);
+
 static void usage(char *name)
 {
 	fprintf(stdout, "usage: %s outfile [options]\n\n", name);
@@ -74,28 +87,28 @@ int main(int argc, char *argv[])
 			if (++i == argc)
 				usage(argv[0]);
 
-			socfw_import_vendor(soc_fw, argv[i], SND_SOC_FILE_VENDOR_FW);
+			socfw_import_vendor(soc_fw, argv[i], SND_SOC_FW_VENDOR_FW);
 			continue;
 		}
 		if (!strcmp("-vcf", argv[i])) {
 			if (++i == argc)
 				usage(argv[0]);
 
-			socfw_import_vendor(soc_fw, argv[i], SND_SOC_FILE_VENDOR_COEFF);
+			socfw_import_vendor(soc_fw, argv[i], SND_SOC_FW_VENDOR_COEFF);
 			continue;
 		}
 		if (!strcmp("-vco", argv[i])) {
 			if (++i == argc)
 				usage(argv[0]);
 
-			socfw_import_vendor(soc_fw, argv[i], SND_SOC_FILE_VENDOR_CODEC);
+			socfw_import_vendor(soc_fw, argv[i], SND_SOC_FW_VENDOR_CODEC);
 			continue;
 		}
 		if (!strcmp("-vcn", argv[i])) {
 			if (++i == argc)
 				usage(argv[0]);
 
-			socfw_import_vendor(soc_fw, argv[i], SND_SOC_FILE_VENDOR_CONFIG);
+			socfw_import_vendor(soc_fw, argv[i], SND_SOC_FW_VENDOR_CONFIG);
 			continue;
 		}
 	}

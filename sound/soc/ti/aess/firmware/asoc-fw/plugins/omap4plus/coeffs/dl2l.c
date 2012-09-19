@@ -54,15 +54,15 @@ static const int32_t dl2l_450Hz_0db_coeffs[] = {
 };
 
 static const struct snd_soc_fw_coeff_elem elems[] = {
-	SND_SOC_FILE_COEFF_ELEM("Flat Response", dl2l_flat_coeffs),
-	SND_SOC_FILE_COEFF_ELEM("800Hz HPF 0dB", dl2l_800Hz_0db_coeffs),
-	SND_SOC_FILE_COEFF_ELEM("800Hz HPF -12dB", dl2l_800Hz_m12db_coeffs),
-	SND_SOC_FILE_COEFF_ELEM("800Hz HPF -20dB", dl2l_800Hz_m20db_coeffs),
-	SND_SOC_FILE_COEFF_ELEM("450Hz HPF 0dB", dl2l_450Hz_0db_coeffs),
+	SND_SOC_FW_COEFF_ELEM("Flat Response", dl2l_flat_coeffs),
+	SND_SOC_FW_COEFF_ELEM("800Hz HPF 0dB", dl2l_800Hz_0db_coeffs),
+	SND_SOC_FW_COEFF_ELEM("800Hz HPF -12dB", dl2l_800Hz_m12db_coeffs),
+	SND_SOC_FW_COEFF_ELEM("800Hz HPF -20dB", dl2l_800Hz_m20db_coeffs),
+	SND_SOC_FW_COEFF_ELEM("450Hz HPF 0dB", dl2l_450Hz_0db_coeffs),
 };
 
 static const struct snd_soc_fw_coeff dl2l[] = {
-	SND_SOC_FILE_COEFF(OMAP_AESS_CMEM_DL2_L_COEFS_ID, "DL2 Left Equalizer", elems),
+	SND_SOC_FW_COEFFICIENT(OMAP_AESS_CMEM_DL2_L_COEFS_ID, "DL2 Left Equalizer", elems),
 };
 
 const struct snd_soc_fw_plugin plugin = {

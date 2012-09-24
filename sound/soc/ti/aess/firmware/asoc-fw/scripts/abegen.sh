@@ -2,7 +2,7 @@ LOCAL_SO_PATH=./plugins/omap4plus
 COEFF_PATH=$LOCAL_SO_PATH/coeffs/.libs
 DAPM_PATH=$LOCAL_SO_PATH/dapm/.libs
 LINUX_PATH=~/source/linux.git
-ABE_GEN_PATH=../abe-gen
+ABE_GEN_PATH=../abefw.git
 
 #	-vfw $LINUX_PATH/firmware/omap4_abe
 

@@ -185,6 +185,7 @@ struct snd_kcontrol_new {
 	int get;
 	int put;
 	int info;
+	int index;
 	int access;
 	const unsigned char *name;	/* ASCII name of item */
 	unsigned int count;		/* count of same elements */

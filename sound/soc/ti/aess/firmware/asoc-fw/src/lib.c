@@ -32,6 +32,8 @@
 
 #include "socfw.h"
 
+#define CHUNK_SIZE 	4096
+
 struct soc_fw_priv {
 
 	/* opaque vendor data */
@@ -107,7 +109,7 @@ static int import_mixer(struct soc_fw_priv *soc_fw,
 	memset(&mc, 0, sizeof(mc));
 
 	strncpy(mc.hdr.name, (const char*)kcontrol->name, SND_SOC_FW_TEXT_SIZE);
-	mc.hdr.type = SND_SOC_FW_MIXER_VALUE;
+	mc.hdr.index = kcontrol->index;
 	mc.min = mixer->min;
 	mc.max = mixer->max;
 	mc.platform_max = mixer->platform_max;
@@ -162,7 +164,7 @@ static int import_enum_control(struct soc_fw_priv *soc_fw,
 	}
 
 	strncpy(ec.hdr.name, (const char*)kcontrol->name, SND_SOC_FW_TEXT_SIZE);
-	ec.hdr.type = SND_SOC_FW_MIXER_ENUM;
+	ec.hdr.index = kcontrol->index;
 	ec.mask = menum->mask;
 	ec.max = menum->max;
 	ec.reg = menum->reg;
@@ -199,13 +201,13 @@ int socfw_import_controls(struct soc_fw_priv *soc_fw,
 		const struct snd_kcontrol_new *kn =
 			&kcontrols[i];
 
-		switch (kn->put) {
+		switch (kn->index) {
 		case SOC_MIXER_IO_VOLSW:
 		case SOC_MIXER_IO_VOLSW_SX:
 		case SOC_MIXER_IO_VOLSW_S8:
 		case SOC_MIXER_IO_VOLSW_XR_SX:
-		case SOC_MIXER_IO_XR_SX:
 		case SOC_MIXER_IO_VOLSW_EXT:
+		case SOC_MIXER_IO_EXT:
 			size += sizeof(struct snd_soc_fw_mixer_control);
 			mixers++;
 			break;
@@ -216,12 +218,12 @@ int socfw_import_controls(struct soc_fw_priv *soc_fw,
 			enums++;
 			break;
 		case SOC_MIXER_IO_BYTES:
-		case SOC_MIXER_IO_BOOL:
+		case SOC_MIXER_IO_BOOL_EXT:
 		case SOC_MIXER_IO_STROBE:
 		case SOC_MIXER_IO_RANGE:
 		default:
-			fprintf(stderr, "error: mixer type %d currently not supported\n",
-				kn->put);
+			fprintf(stderr, "error: mixer %s type %d currently not supported\n",
+				kn->name, kn->index);
 			return -EINVAL;
 		}
 	}
@@ -245,13 +247,13 @@ int socfw_import_controls(struct soc_fw_priv *soc_fw,
 		const struct snd_kcontrol_new *kn =
 			&kcontrols[i];
 
-		switch (kn->put) {
+		switch (kn->index) {
 		case SOC_MIXER_IO_VOLSW:
 		case SOC_MIXER_IO_VOLSW_SX:
 		case SOC_MIXER_IO_VOLSW_S8:
 		case SOC_MIXER_IO_VOLSW_XR_SX:
-		case SOC_MIXER_IO_XR_SX:
 		case SOC_MIXER_IO_VOLSW_EXT:
+		case SOC_MIXER_IO_EXT:
 			err = import_mixer(soc_fw, kn);
 			if (err < 0)
 				return err;
@@ -264,12 +266,12 @@ int socfw_import_controls(struct soc_fw_priv *soc_fw,
 				return err;
 			break;
 		case SOC_MIXER_IO_BYTES:
-		case SOC_MIXER_IO_BOOL:
+		case SOC_MIXER_IO_BOOL_EXT:
 		case SOC_MIXER_IO_STROBE:
 		case SOC_MIXER_IO_RANGE:
 		default:
-			fprintf(stderr, "error: mixer type %d not supported atm\n",
-				kn->put);
+			fprintf(stderr, "error: mixer %s type %d not supported atm\n",
+				kn->name, kn->index);
 			return -EINVAL;
 		}
 	}
@@ -314,7 +316,7 @@ static int import_enum_coeff_control(struct soc_fw_priv *soc_fw,
 	}
 
 	strncpy(ec.hdr.name, coeff->description, SND_SOC_FW_TEXT_SIZE);
-	ec.hdr.type = SND_SOC_FW_MIXER_ENUM;
+	ec.hdr.index = SOC_MIXER_IO_ENUM_EXT;
 	ec.mask = (coeff->count < 1) - 1;
 	ec.max = coeff->count;
 	ec.reg = coeff->id;
@@ -399,26 +401,35 @@ static int import_dapm_widgets_controls(struct soc_fw_priv *soc_fw, int count,
 {
 	int i, err;
 
-
 	for (i = 0; i < count; i++) {
 
-		switch (kn->put) {
+		switch (kn->index) {
 		case SOC_MIXER_IO_VOLSW:
+		case SOC_MIXER_IO_VOLSW_SX:
+		case SOC_MIXER_IO_VOLSW_S8:
+		case SOC_MIXER_IO_VOLSW_XR_SX:
+		case SOC_MIXER_IO_VOLSW_EXT:
+		case SOC_MIXER_IO_EXT:
+		case SOC_DAPM_IO_VOLSW:
 			err = import_mixer(soc_fw, kn);
 			if (err < 0)
 				return err;
 			break;
+		case SOC_MIXER_IO_ENUM:
+		case SOC_MIXER_IO_ENUM_EXT:
+		case SOC_MIXER_IO_ENUM_VALUE:
 		case SOC_DAPM_IO_ENUM_DOUBLE:
 		case SOC_DAPM_IO_ENUM_VIRT:
 		case SOC_DAPM_IO_ENUM_VALUE:
+		case SOC_DAPM_IO_ENUM_EXT:
 			err = import_enum_control(soc_fw, kn);
 			if (err < 0)
 				return err;
 			break;
 		case SOC_DAPM_IO_PIN:
 		default:
-			fprintf(stderr, "error: widget mixer type %d not supported atm\n",
-				kn->put);
+			fprintf(stderr, "error: widget mixer %s type %d not supported atm\n",
+				kn->name, kn->index);
 			return -EINVAL;
 		}
 		kn++;
@@ -440,21 +451,31 @@ static int socfw_calc_widget_size(struct soc_fw_priv *soc_fw,
 
 		for (j = 0; j < widgets[i].num_kcontrols; j++) {
 
-			switch (kn->put) {
+			switch (kn->index) {
 			case SOC_MIXER_IO_VOLSW:
+			case SOC_MIXER_IO_VOLSW_SX:
+			case SOC_MIXER_IO_VOLSW_S8:
+			case SOC_MIXER_IO_VOLSW_XR_SX:
+			case SOC_MIXER_IO_VOLSW_EXT:
+			case SOC_MIXER_IO_EXT:
+			case SOC_DAPM_IO_VOLSW:
 				size += /*sizeof(struct snd_soc_fw_kcontrol) +*/
 					sizeof(struct snd_soc_fw_mixer_control);
 				break;
+			case SOC_MIXER_IO_ENUM:
+			case SOC_MIXER_IO_ENUM_EXT:
+			case SOC_MIXER_IO_ENUM_VALUE:
 			case SOC_DAPM_IO_ENUM_DOUBLE:
 			case SOC_DAPM_IO_ENUM_VIRT:
 			case SOC_DAPM_IO_ENUM_VALUE:
+			case SOC_DAPM_IO_ENUM_EXT:
 				size += /*sizeof(struct snd_soc_fw_kcontrol) +*/
 					sizeof(struct snd_soc_fw_enum_control);
 				break;
 			case SOC_DAPM_IO_PIN:
 			default:
-				fprintf(stderr, "error: widget mixer type %d not supported atm\n",
-					kn->put);
+				fprintf(stderr, "error: widget %s mixer %s type %d not supported atm\n",
+					widgets[i].name, kn->name, kn->index);
 				return -EINVAL;
 			}
 			kn++;
@@ -583,7 +604,7 @@ int socfw_import_dapm_graph(struct soc_fw_priv *soc_fw,
 int socfw_import_vendor(struct soc_fw_priv *soc_fw, const char *name, int type)
 {
 	size_t bytes, size;
-	char buf[4096];
+	char buf[CHUNK_SIZE];
 	int i, chunks, rem, err;
 
 	soc_fw->vendor_fd = open(name, O_RDONLY);
@@ -606,18 +627,18 @@ int socfw_import_vendor(struct soc_fw_priv *soc_fw, const char *name, int type)
 
 	lseek(soc_fw->vendor_fd, 0, SEEK_SET);
 
-	chunks = size / 4096;
-	rem = size % 4096;
+	chunks = size / CHUNK_SIZE;
+	rem = size % CHUNK_SIZE;
 
 	for (i = 0; i < chunks; i++) {
-		bytes = read(soc_fw->vendor_fd, buf, 4096);
-		if (bytes < 0 || bytes != 4096) {
+		bytes = read(soc_fw->vendor_fd, buf, CHUNK_SIZE);
+		if (bytes < 0 || bytes != CHUNK_SIZE) {
 			fprintf(stderr, "error: can't read vendor data %lu\n", bytes);
 			return bytes;
 		}
 
-		bytes = write(soc_fw->out_fd, buf, 4096);
-		if (bytes < 0 || bytes != 4096) {
+		bytes = write(soc_fw->out_fd, buf, CHUNK_SIZE);
+		if (bytes < 0 || bytes != CHUNK_SIZE) {
 			fprintf(stderr, "error: can't write vendor data %lu\n", bytes);
 			return bytes;
 		}

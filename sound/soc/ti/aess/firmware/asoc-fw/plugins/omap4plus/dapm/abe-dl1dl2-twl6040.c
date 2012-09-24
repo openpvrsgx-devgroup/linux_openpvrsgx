@@ -132,28 +132,20 @@ static const struct snd_kcontrol_new mm_ul05_control =
 	SOC_DAPM_ENUM_EXT("Route", abe_enum[5],
 	OMAP_ABE_MIXER_ROUTER, OMAP_ABE_MIXER_ROUTER);
 
-static const struct snd_kcontrol_new mm_ul06_control =
+static const struct snd_kcontrol_new mm_ul10_control =
 	SOC_DAPM_ENUM_EXT("Route", abe_enum[6],
 	OMAP_ABE_MIXER_ROUTER, OMAP_ABE_MIXER_ROUTER);
 
-static const struct snd_kcontrol_new mm_ul07_control =
+static const struct snd_kcontrol_new mm_ul11_control =
 	SOC_DAPM_ENUM_EXT("Route", abe_enum[7],
 	OMAP_ABE_MIXER_ROUTER, OMAP_ABE_MIXER_ROUTER);
 
-static const struct snd_kcontrol_new mm_ul10_control =
+static const struct snd_kcontrol_new mm_vx0_control =
 	SOC_DAPM_ENUM_EXT("Route", abe_enum[8],
 	OMAP_ABE_MIXER_ROUTER, OMAP_ABE_MIXER_ROUTER);
 
-static const struct snd_kcontrol_new mm_ul11_control =
-	SOC_DAPM_ENUM_EXT("Route", abe_enum[9],
-	OMAP_ABE_MIXER_ROUTER, OMAP_ABE_MIXER_ROUTER);
-
-static const struct snd_kcontrol_new mm_vx0_control =
-	SOC_DAPM_ENUM_EXT("Route", abe_enum[10],
-	OMAP_ABE_MIXER_ROUTER, OMAP_ABE_MIXER_ROUTER);
-
 static const struct snd_kcontrol_new mm_vx1_control =
-	SOC_DAPM_ENUM_EXT("Route", abe_enum[11],
+	SOC_DAPM_ENUM_EXT("Route", abe_enum[9],
 	OMAP_ABE_MIXER_ROUTER, OMAP_ABE_MIXER_ROUTER);
 
 /* DL1 mixer paths */

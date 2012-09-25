@@ -109,7 +109,8 @@ static int import_mixer(struct soc_fw_priv *soc_fw,
 	memset(&mc, 0, sizeof(mc));
 
 	strncpy(mc.hdr.name, (const char*)kcontrol->name, SND_SOC_FW_TEXT_SIZE);
-	mc.hdr.index = kcontrol->index;
+	mc.hdr.index = kcontrol->index | kcontrol->put;
+
 	mc.min = mixer->min;
 	mc.max = mixer->max;
 	mc.platform_max = mixer->platform_max;
@@ -119,8 +120,10 @@ static int import_mixer(struct soc_fw_priv *soc_fw,
 	mc.rshift = mixer->rshift;
 	mc.invert = mixer->invert;
 
-	verbose(soc_fw," mixer: \"%s\" R1/2 0x%x/0x%x shift L/R %d/%d\n",
-		mc.hdr.name, mc.reg, mc.rreg, mc.shift, mc.rshift);
+	verbose(soc_fw," mixer: \"%s\" R1/2 0x%x/0x%x shift L/R %d/%d type %d vendor %d\n",
+		mc.hdr.name, mc.reg, mc.rreg, mc.shift, mc.rshift,
+		SND_SOC_BESPOKE_TYPE(mc.hdr.index),
+		SND_SOC_BESPOKE_VENDOR(mc.hdr.index));
 
 	bytes = write(soc_fw->out_fd, &mc, sizeof(mc));
 	if (bytes != sizeof(mc)) {
@@ -164,7 +167,7 @@ static int import_enum_control(struct soc_fw_priv *soc_fw,
 	}
 
 	strncpy(ec.hdr.name, (const char*)kcontrol->name, SND_SOC_FW_TEXT_SIZE);
-	ec.hdr.index = kcontrol->index;
+	ec.hdr.index = kcontrol->index | kcontrol->put;
 	ec.mask = menum->mask;
 	ec.max = menum->max;
 	ec.reg = menum->reg;
@@ -172,8 +175,10 @@ static int import_enum_control(struct soc_fw_priv *soc_fw,
 	ec.shift_l = menum->shift_l;
 	ec.shift_r = menum->shift_r;
 
-	verbose(soc_fw, " enum: \"%s\" R1/2 0x%x/0x%x shift L/R %d/%d\n",
-		ec.hdr.name, ec.reg, ec.reg2, ec.shift_l, ec.shift_r);
+	verbose(soc_fw, " enum: \"%s\" R1/2 0x%x/0x%x shift L/R %d/%d type %d vendor %d\n",
+		ec.hdr.name, ec.reg, ec.reg2, ec.shift_l, ec.shift_r,
+		SND_SOC_BESPOKE_TYPE(ec.hdr.index),
+		SND_SOC_BESPOKE_VENDOR(ec.hdr.index));
 
 	import_enum_control_data(soc_fw, ec.max, &ec, menum);
 
@@ -201,7 +206,7 @@ int socfw_import_controls(struct soc_fw_priv *soc_fw,
 		const struct snd_kcontrol_new *kn =
 			&kcontrols[i];
 
-		switch (kn->index) {
+		switch (SND_SOC_BESPOKE_TYPE(kn->index)) {
 		case SOC_MIXER_IO_VOLSW:
 		case SOC_MIXER_IO_VOLSW_SX:
 		case SOC_MIXER_IO_VOLSW_S8:
@@ -247,7 +252,7 @@ int socfw_import_controls(struct soc_fw_priv *soc_fw,
 		const struct snd_kcontrol_new *kn =
 			&kcontrols[i];
 
-		switch (kn->index) {
+		switch (SND_SOC_BESPOKE_TYPE(kn->index)) {
 		case SOC_MIXER_IO_VOLSW:
 		case SOC_MIXER_IO_VOLSW_SX:
 		case SOC_MIXER_IO_VOLSW_S8:
@@ -403,7 +408,7 @@ static int import_dapm_widgets_controls(struct soc_fw_priv *soc_fw, int count,
 
 	for (i = 0; i < count; i++) {
 
-		switch (kn->index) {
+		switch (SND_SOC_BESPOKE_TYPE(kn->index)) {
 		case SOC_MIXER_IO_VOLSW:
 		case SOC_MIXER_IO_VOLSW_SX:
 		case SOC_MIXER_IO_VOLSW_S8:
@@ -451,7 +456,7 @@ static int socfw_calc_widget_size(struct soc_fw_priv *soc_fw,
 
 		for (j = 0; j < widgets[i].num_kcontrols; j++) {
 
-			switch (kn->index) {
+			switch (SND_SOC_BESPOKE_TYPE(kn->index)) {
 			case SOC_MIXER_IO_VOLSW:
 			case SOC_MIXER_IO_VOLSW_SX:
 			case SOC_MIXER_IO_VOLSW_S8:

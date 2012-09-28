@@ -16,8 +16,8 @@
  */
 
 #include <socfw.h>
-
-#include <abe_mem.h>
+#include <omap-abe-priv.h>
+#include <aess/abe_mem.h>
 
 /* Flat response with Gain =1 */
 static const int32_t sdt_flat_coeffs[] = {
@@ -50,7 +50,8 @@ static const struct snd_soc_fw_coeff_elem elems[] = {
 };
 
 static const struct snd_soc_fw_coeff sdt[] = {
-	SND_SOC_FW_COEFFICIENT(OMAP_AESS_CMEM_SDT_COEFS_ID, "SDT Equalizer", elems),
+	SND_SOC_FW_COEFFICIENT(OMAP_AESS_CMEM_SDT_COEFS_ID, 
+	 OMAP_CONTROL_EQU, "SDT Equalizer", elems),
 };
 
 const struct snd_soc_fw_plugin plugin = {

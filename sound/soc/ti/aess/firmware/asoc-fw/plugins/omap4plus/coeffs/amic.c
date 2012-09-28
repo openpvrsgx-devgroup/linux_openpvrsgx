@@ -16,8 +16,8 @@
  */
 
 #include <socfw.h>
-
-#include <abe_mem.h>
+#include <omap-abe-priv.h>
+#include <aess/abe_mem.h>
 
 /* 20kHz cut-off frequency and Gain = 1 */
 static const int32_t amic_20kHz_0dB_coeffs[] = {
@@ -53,7 +53,8 @@ static const struct snd_soc_fw_coeff_elem elems[] = {
 };
 
 static const struct snd_soc_fw_coeff amic[] = {
-	SND_SOC_FW_COEFFICIENT(OMAP_AESS_CMEM_96_48_AMIC_COEFS_ID, "Amic Equalizer", elems),
+	SND_SOC_FW_COEFFICIENT(OMAP_AESS_CMEM_96_48_AMIC_COEFS_ID, 
+	OMAP_CONTROL_EQU, "Amic Equalizer", elems),
 };
 
 const struct snd_soc_fw_plugin plugin = {

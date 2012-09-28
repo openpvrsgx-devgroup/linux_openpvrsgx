@@ -14,8 +14,8 @@
  * Default Coefficients for DL2
  */
 #include <socfw.h>
-
-#include <abe_mem.h>
+#include <omap-abe-priv.h>
+#include <aess/abe_mem.h>
 
 /* Flat response with Gain =1 */
 static const int32_t dl2r_flat_coeffs[] = {
@@ -61,7 +61,8 @@ static const struct snd_soc_fw_coeff_elem elems[] = {
 };
 
 static const struct snd_soc_fw_coeff dl2r[] = {
-	SND_SOC_FW_COEFFICIENT(OMAP_AESS_CMEM_DL2_R_COEFS_ID, "DL2 Right Equalizer", elems),
+	SND_SOC_FW_COEFFICIENT(OMAP_AESS_CMEM_DL2_R_COEFS_ID,
+	OMAP_CONTROL_EQU, "DL2 Right Equalizer", elems),
 };
 
 const struct snd_soc_fw_plugin plugin = {

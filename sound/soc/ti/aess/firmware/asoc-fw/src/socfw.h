@@ -40,8 +40,8 @@ typedef	int8_t s8;
 	.coeffs = (const void*)c, \
 	.size = ARRAY_SIZE(c) * sizeof(c[0])}
 
-#define SND_SOC_FW_COEFFICIENT(i, text, e) \
-	{.description = text, \
+#define SND_SOC_FW_COEFFICIENT(i, idx, text, e) \
+	{.description = text, .index = idx, \
 	.elems = e, .id = i,\
 	.count = ARRAY_SIZE(e)}
 
@@ -53,6 +53,7 @@ struct snd_soc_fw_coeff_elem {
 
 struct snd_soc_fw_coeff {
 	u32 id;
+	u32 index;
 	const char *description;	/* description e.g. "EQ1" */
 	int count;			/* number of coefficient elements */
 	const struct snd_soc_fw_coeff_elem *elems;	/* elements */
@@ -93,47 +94,47 @@ struct snd_soc_fw_plugin {
 /*
  * Kcontrol and DAPM get/put/info types.
  */
-#define snd_soc_info_enum_ext		SOC_MIXER_IO_ENUM_EXT
-#define snd_soc_info_enum_double	SOC_MIXER_IO_ENUM
-#define snd_soc_get_enum_double		SOC_MIXER_IO_ENUM
-#define snd_soc_put_enum_double		SOC_MIXER_IO_ENUM
-#define snd_soc_get_value_enum_double	SOC_MIXER_IO_ENUM_VALUE
-#define snd_soc_put_value_enum_double	SOC_MIXER_IO_ENUM_VALUE
-#define snd_soc_info_volsw		SOC_MIXER_IO_VOLSW
-#define snd_soc_info_volsw_ext		SOC_MIXER_IO_VOLSW_EXT
-#define snd_soc_info_bool_ext		SOC_MIXER_IO_BOOL
-#define snd_soc_get_volsw		SOC_MIXER_IO_VOLSW
-#define snd_soc_put_volsw		SOC_MIXER_IO_VOLSW
+#define snd_soc_info_enum_ext		SOC_CONTROL_TYPE_ENUM_EXT
+#define snd_soc_info_enum_double	SOC_CONTROL_TYPE_ENUM
+#define snd_soc_get_enum_double		SOC_CONTROL_TYPE_ENUM
+#define snd_soc_put_enum_double		SOC_CONTROL_TYPE_ENUM
+#define snd_soc_get_value_enum_double	SOC_CONTROL_TYPE_ENUM_VALUE
+#define snd_soc_put_value_enum_double	SOC_CONTROL_TYPE_ENUM_VALUE
+#define snd_soc_info_volsw		SOC_CONTROL_TYPE_VOLSW
+#define snd_soc_info_volsw_ext		SOC_CONTROL_TYPE_VOLSW_EXT
+#define snd_soc_info_bool_ext		SOC_CONTROL_TYPE_BOOL
+#define snd_soc_get_volsw		SOC_CONTROL_TYPE_VOLSW
+#define snd_soc_put_volsw		SOC_CONTROL_TYPE_VOLSW
 #define snd_soc_get_volsw_2r 		snd_soc_get_volsw
 #define snd_soc_put_volsw_2r 		snd_soc_put_volsw
-#define snd_soc_get_volsw_sx		SOC_MIXER_IO_VOLSW_SX
-#define snd_soc_put_volsw_sx		SOC_MIXER_IO_VOLSW_SX
-#define snd_soc_info_volsw_s8		SOC_MIXER_IO_VOLSW_S8
-#define snd_soc_get_volsw_s8		SOC_MIXER_IO_VOLSW_S8
-#define snd_soc_put_volsw_s8		SOC_MIXER_IO_VOLSW_S8
-#define snd_soc_info_volsw_range	SOC_MIXER_IO_RANGE
-#define snd_soc_put_volsw_range		SOC_MIXER_IO_RANGE
-#define snd_soc_get_volsw_range		SOC_MIXER_IO_RANGE
-#define snd_soc_bytes_info		SOC_MIXER_IO_BYTES
-#define snd_soc_bytes_get		SOC_MIXER_IO_BYTES
-#define snd_soc_bytes_put		SOC_MIXER_IO_BYTES
-#define snd_soc_info_xr_sx		SOC_MIXER_IO_XR_SX
-#define snd_soc_get_xr_sx		SOC_MIXER_IO_XR_SX
-#define snd_soc_put_xr_sx		SOC_MIXER_IO_XR_SX
-#define snd_soc_get_strobe		SOC_MIXER_IO_STROBE
-#define snd_soc_put_strobe		SOC_MIXER_IO_STROBE
+#define snd_soc_get_volsw_sx		SOC_CONTROL_TYPE_VOLSW_SX
+#define snd_soc_put_volsw_sx		SOC_CONTROL_TYPE_VOLSW_SX
+#define snd_soc_info_volsw_s8		SOC_CONTROL_TYPE_VOLSW_S8
+#define snd_soc_get_volsw_s8		SOC_CONTROL_TYPE_VOLSW_S8
+#define snd_soc_put_volsw_s8		SOC_CONTROL_TYPE_VOLSW_S8
+#define snd_soc_info_volsw_range	SOC_CONTROL_TYPE_RANGE
+#define snd_soc_put_volsw_range		SOC_CONTROL_TYPE_RANGE
+#define snd_soc_get_volsw_range		SOC_CONTROL_TYPE_RANGE
+#define snd_soc_bytes_info		SOC_CONTROL_TYPE_BYTES
+#define snd_soc_bytes_get		SOC_CONTROL_TYPE_BYTES
+#define snd_soc_bytes_put		SOC_CONTROL_TYPE_BYTES
+#define snd_soc_info_xr_sx		SOC_CONTROL_TYPE_XR_SX
+#define snd_soc_get_xr_sx		SOC_CONTROL_TYPE_XR_SX
+#define snd_soc_put_xr_sx		SOC_CONTROL_TYPE_XR_SX
+#define snd_soc_get_strobe		SOC_CONTROL_TYPE_STROBE
+#define snd_soc_put_strobe		SOC_CONTROL_TYPE_STROBE
 
-#define snd_soc_dapm_put_volsw		SOC_DAPM_IO_VOLSW
-#define snd_soc_dapm_get_volsw		SOC_DAPM_IO_VOLSW
-#define snd_soc_dapm_get_enum_double	SOC_DAPM_IO_ENUM_DOUBLE
-#define snd_soc_dapm_put_enum_double	SOC_DAPM_IO_ENUM_DOUBLE
-#define snd_soc_dapm_get_enum_virt	SOC_DAPM_IO_ENUM_VIRT
-#define snd_soc_dapm_put_enum_virt	SOC_DAPM_IO_ENUM_VIRT
-#define snd_soc_dapm_get_value_enum_double	SOC_DAPM_IO_ENUM_VALUE
-#define snd_soc_dapm_put_value_enum_double	SOC_DAPM_IO_ENUM_VALUE
-#define snd_soc_dapm_info_pin_switch	SOC_DAPM_IO_PIN
-#define snd_soc_dapm_get_pin_switch	SOC_DAPM_IO_PIN
-#define snd_soc_dapm_put_pin_switch	SOC_DAPM_IO_PIN
+#define snd_soc_dapm_put_volsw		SOC_DAPM_TYPE_VOLSW
+#define snd_soc_dapm_get_volsw		SOC_DAPM_TYPE_VOLSW
+#define snd_soc_dapm_get_enum_double	SOC_DAPM_TYPE_ENUM_DOUBLE
+#define snd_soc_dapm_put_enum_double	SOC_DAPM_TYPE_ENUM_DOUBLE
+#define snd_soc_dapm_get_enum_virt	SOC_DAPM_TYPE_ENUM_VIRT
+#define snd_soc_dapm_put_enum_virt	SOC_DAPM_TYPE_ENUM_VIRT
+#define snd_soc_dapm_get_value_enum_double	SOC_DAPM_TYPE_ENUM_VALUE
+#define snd_soc_dapm_put_value_enum_double	SOC_DAPM_TYPE_ENUM_VALUE
+#define snd_soc_dapm_info_pin_switch	SOC_DAPM_TYPE_PIN
+#define snd_soc_dapm_get_pin_switch	SOC_DAPM_TYPE_PIN
+#define snd_soc_dapm_put_pin_switch	SOC_DAPM_TYPE_PIN
 
 /*
  * Kernel Kcontrol and DAPM types compressed below for userspace control and

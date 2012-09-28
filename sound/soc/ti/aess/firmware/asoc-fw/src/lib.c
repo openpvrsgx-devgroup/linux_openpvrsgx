@@ -109,7 +109,8 @@ static int import_mixer(struct soc_fw_priv *soc_fw,
 	memset(&mc, 0, sizeof(mc));
 
 	strncpy(mc.hdr.name, (const char*)kcontrol->name, SND_SOC_FW_TEXT_SIZE);
-	mc.hdr.index = kcontrol->index | kcontrol->put;
+	mc.hdr.index = kcontrol->index |
+		SOC_CONTROL_ID(kcontrol->get, kcontrol->put, 0);
 
 	mc.min = mixer->min;
 	mc.max = mixer->max;
@@ -120,10 +121,11 @@ static int import_mixer(struct soc_fw_priv *soc_fw,
 	mc.rshift = mixer->rshift;
 	mc.invert = mixer->invert;
 
-	verbose(soc_fw," mixer: \"%s\" R1/2 0x%x/0x%x shift L/R %d/%d type %d vendor %d\n",
+	verbose(soc_fw," mixer: \"%s\" R1/2 0x%x/0x%x shift L/R %d/%d (g,p,i) %d:%d:%d\n",
 		mc.hdr.name, mc.reg, mc.rreg, mc.shift, mc.rshift,
-		SND_SOC_BESPOKE_TYPE(mc.hdr.index),
-		SND_SOC_BESPOKE_VENDOR(mc.hdr.index));
+		SOC_CONTROL_GET_ID_GET(mc.hdr.index),
+		SOC_CONTROL_GET_ID_PUT(mc.hdr.index),
+		SOC_CONTROL_GET_ID_INFO(mc.hdr.index));
 
 	bytes = write(soc_fw->out_fd, &mc, sizeof(mc));
 	if (bytes != sizeof(mc)) {
@@ -167,7 +169,8 @@ static int import_enum_control(struct soc_fw_priv *soc_fw,
 	}
 
 	strncpy(ec.hdr.name, (const char*)kcontrol->name, SND_SOC_FW_TEXT_SIZE);
-	ec.hdr.index = kcontrol->index | kcontrol->put;
+	ec.hdr.index = kcontrol->index |
+		SOC_CONTROL_ID(kcontrol->get, kcontrol->put, 0);
 	ec.mask = menum->mask;
 	ec.max = menum->max;
 	ec.reg = menum->reg;
@@ -175,10 +178,11 @@ static int import_enum_control(struct soc_fw_priv *soc_fw,
 	ec.shift_l = menum->shift_l;
 	ec.shift_r = menum->shift_r;
 
-	verbose(soc_fw, " enum: \"%s\" R1/2 0x%x/0x%x shift L/R %d/%d type %d vendor %d\n",
+	verbose(soc_fw, " enum: \"%s\" R1/2 0x%x/0x%x shift L/R %d/%d (g,p,i) %d:%d:%d\n",
 		ec.hdr.name, ec.reg, ec.reg2, ec.shift_l, ec.shift_r,
-		SND_SOC_BESPOKE_TYPE(ec.hdr.index),
-		SND_SOC_BESPOKE_VENDOR(ec.hdr.index));
+		SOC_CONTROL_GET_ID_GET(ec.hdr.index),
+		SOC_CONTROL_GET_ID_PUT(ec.hdr.index),
+		SOC_CONTROL_GET_ID_INFO(ec.hdr.index));
 
 	import_enum_control_data(soc_fw, ec.max, &ec, menum);
 
@@ -206,26 +210,26 @@ int socfw_import_controls(struct soc_fw_priv *soc_fw,
 		const struct snd_kcontrol_new *kn =
 			&kcontrols[i];
 
-		switch (SND_SOC_BESPOKE_TYPE(kn->index)) {
-		case SOC_MIXER_IO_VOLSW:
-		case SOC_MIXER_IO_VOLSW_SX:
-		case SOC_MIXER_IO_VOLSW_S8:
-		case SOC_MIXER_IO_VOLSW_XR_SX:
-		case SOC_MIXER_IO_VOLSW_EXT:
-		case SOC_MIXER_IO_EXT:
+		switch (kn->index) {
+		case SOC_CONTROL_TYPE_VOLSW:
+		case SOC_CONTROL_TYPE_VOLSW_SX:
+		case SOC_CONTROL_TYPE_VOLSW_S8:
+		case SOC_CONTROL_TYPE_VOLSW_XR_SX:
+		//case SOC_CONTROL_TYPE_VOLSW_EXT:
+		case SOC_CONTROL_TYPE_EXT:
 			size += sizeof(struct snd_soc_fw_mixer_control);
 			mixers++;
 			break;
-		case SOC_MIXER_IO_ENUM:
-		case SOC_MIXER_IO_ENUM_EXT:
-		case SOC_MIXER_IO_ENUM_VALUE:
+		case SOC_CONTROL_TYPE_ENUM:
+		case SOC_CONTROL_TYPE_ENUM_EXT:
+		case SOC_CONTROL_TYPE_ENUM_VALUE:
 			size += sizeof(struct snd_soc_fw_enum_control);
 			enums++;
 			break;
-		case SOC_MIXER_IO_BYTES:
-		case SOC_MIXER_IO_BOOL_EXT:
-		case SOC_MIXER_IO_STROBE:
-		case SOC_MIXER_IO_RANGE:
+		case SOC_CONTROL_TYPE_BYTES:
+		case SOC_CONTROL_TYPE_BOOL_EXT:
+		case SOC_CONTROL_TYPE_STROBE:
+		case SOC_CONTROL_TYPE_RANGE:
 		default:
 			fprintf(stderr, "error: mixer %s type %d currently not supported\n",
 				kn->name, kn->index);
@@ -252,28 +256,28 @@ int socfw_import_controls(struct soc_fw_priv *soc_fw,
 		const struct snd_kcontrol_new *kn =
 			&kcontrols[i];
 
-		switch (SND_SOC_BESPOKE_TYPE(kn->index)) {
-		case SOC_MIXER_IO_VOLSW:
-		case SOC_MIXER_IO_VOLSW_SX:
-		case SOC_MIXER_IO_VOLSW_S8:
-		case SOC_MIXER_IO_VOLSW_XR_SX:
-		case SOC_MIXER_IO_VOLSW_EXT:
-		case SOC_MIXER_IO_EXT:
+		switch (kn->index) {
+		case SOC_CONTROL_TYPE_VOLSW:
+		case SOC_CONTROL_TYPE_VOLSW_SX:
+		case SOC_CONTROL_TYPE_VOLSW_S8:
+		case SOC_CONTROL_TYPE_VOLSW_XR_SX:
+		//case SOC_CONTROL_TYPE_VOLSW_EXT:
+		case SOC_CONTROL_TYPE_EXT:
 			err = import_mixer(soc_fw, kn);
 			if (err < 0)
 				return err;
 			break;
-		case SOC_MIXER_IO_ENUM:
-		case SOC_MIXER_IO_ENUM_EXT:
-		case SOC_MIXER_IO_ENUM_VALUE:
+		case SOC_CONTROL_TYPE_ENUM:
+		case SOC_CONTROL_TYPE_ENUM_EXT:
+		case SOC_CONTROL_TYPE_ENUM_VALUE:
 			err = import_enum_control(soc_fw, kn);
 			if (err < 0)
 				return err;
 			break;
-		case SOC_MIXER_IO_BYTES:
-		case SOC_MIXER_IO_BOOL_EXT:
-		case SOC_MIXER_IO_STROBE:
-		case SOC_MIXER_IO_RANGE:
+		case SOC_CONTROL_TYPE_BYTES:
+		case SOC_CONTROL_TYPE_BOOL_EXT:
+		case SOC_CONTROL_TYPE_STROBE:
+		case SOC_CONTROL_TYPE_RANGE:
 		default:
 			fprintf(stderr, "error: mixer %s type %d not supported atm\n",
 				kn->name, kn->index);
@@ -321,13 +325,16 @@ static int import_enum_coeff_control(struct soc_fw_priv *soc_fw,
 	}
 
 	strncpy(ec.hdr.name, coeff->description, SND_SOC_FW_TEXT_SIZE);
-	ec.hdr.index = SOC_MIXER_IO_ENUM_EXT;
+	ec.hdr.index = coeff->index;
 	ec.mask = (coeff->count < 1) - 1;
 	ec.max = coeff->count;
 	ec.reg = coeff->id;
 
-	verbose(soc_fw, " enum: \"%s\" R 0x%x shift %d\n",
-		ec.hdr.name, ec.reg, ec.shift_l);
+	verbose(soc_fw, " enum: \"%s\" R1/2 0x%x/0x%x shift L/R %d/%d (g,p,i) %d:%d:%d\n",
+		ec.hdr.name, ec.reg, ec.reg2, ec.shift_l, ec.shift_r,
+		SOC_CONTROL_GET_ID_GET(ec.hdr.index),
+		SOC_CONTROL_GET_ID_PUT(ec.hdr.index),
+		SOC_CONTROL_GET_ID_INFO(ec.hdr.index));
 
 	import_coeff_enum_control_data(soc_fw, coeff, &ec);
 
@@ -408,30 +415,30 @@ static int import_dapm_widgets_controls(struct soc_fw_priv *soc_fw, int count,
 
 	for (i = 0; i < count; i++) {
 
-		switch (SND_SOC_BESPOKE_TYPE(kn->index)) {
-		case SOC_MIXER_IO_VOLSW:
-		case SOC_MIXER_IO_VOLSW_SX:
-		case SOC_MIXER_IO_VOLSW_S8:
-		case SOC_MIXER_IO_VOLSW_XR_SX:
-		case SOC_MIXER_IO_VOLSW_EXT:
-		case SOC_MIXER_IO_EXT:
-		case SOC_DAPM_IO_VOLSW:
+		switch (kn->index) {
+		case SOC_CONTROL_TYPE_VOLSW:
+		case SOC_CONTROL_TYPE_VOLSW_SX:
+		case SOC_CONTROL_TYPE_VOLSW_S8:
+		case SOC_CONTROL_TYPE_VOLSW_XR_SX:
+		//case SOC_CONTROL_TYPE_VOLSW_EXT:
+		case SOC_CONTROL_TYPE_EXT:
+		case SOC_DAPM_TYPE_VOLSW:
 			err = import_mixer(soc_fw, kn);
 			if (err < 0)
 				return err;
 			break;
-		case SOC_MIXER_IO_ENUM:
-		case SOC_MIXER_IO_ENUM_EXT:
-		case SOC_MIXER_IO_ENUM_VALUE:
-		case SOC_DAPM_IO_ENUM_DOUBLE:
-		case SOC_DAPM_IO_ENUM_VIRT:
-		case SOC_DAPM_IO_ENUM_VALUE:
-		case SOC_DAPM_IO_ENUM_EXT:
+		case SOC_CONTROL_TYPE_ENUM:
+		case SOC_CONTROL_TYPE_ENUM_EXT:
+		case SOC_CONTROL_TYPE_ENUM_VALUE:
+		case SOC_DAPM_TYPE_ENUM_DOUBLE:
+		case SOC_DAPM_TYPE_ENUM_VIRT:
+		case SOC_DAPM_TYPE_ENUM_VALUE:
+		case SOC_DAPM_TYPE_ENUM_EXT:
 			err = import_enum_control(soc_fw, kn);
 			if (err < 0)
 				return err;
 			break;
-		case SOC_DAPM_IO_PIN:
+		case SOC_DAPM_TYPE_PIN:
 		default:
 			fprintf(stderr, "error: widget mixer %s type %d not supported atm\n",
 				kn->name, kn->index);
@@ -456,28 +463,28 @@ static int socfw_calc_widget_size(struct soc_fw_priv *soc_fw,
 
 		for (j = 0; j < widgets[i].num_kcontrols; j++) {
 
-			switch (SND_SOC_BESPOKE_TYPE(kn->index)) {
-			case SOC_MIXER_IO_VOLSW:
-			case SOC_MIXER_IO_VOLSW_SX:
-			case SOC_MIXER_IO_VOLSW_S8:
-			case SOC_MIXER_IO_VOLSW_XR_SX:
-			case SOC_MIXER_IO_VOLSW_EXT:
-			case SOC_MIXER_IO_EXT:
-			case SOC_DAPM_IO_VOLSW:
+			switch (kn->index) {
+			case SOC_CONTROL_TYPE_VOLSW:
+			case SOC_CONTROL_TYPE_VOLSW_SX:
+			case SOC_CONTROL_TYPE_VOLSW_S8:
+			case SOC_CONTROL_TYPE_VOLSW_XR_SX:
+		//	case SOC_CONTROL_TYPE_VOLSW_EXT:
+			case SOC_CONTROL_TYPE_EXT:
+			case SOC_DAPM_TYPE_VOLSW:
 				size += /*sizeof(struct snd_soc_fw_kcontrol) +*/
 					sizeof(struct snd_soc_fw_mixer_control);
 				break;
-			case SOC_MIXER_IO_ENUM:
-			case SOC_MIXER_IO_ENUM_EXT:
-			case SOC_MIXER_IO_ENUM_VALUE:
-			case SOC_DAPM_IO_ENUM_DOUBLE:
-			case SOC_DAPM_IO_ENUM_VIRT:
-			case SOC_DAPM_IO_ENUM_VALUE:
-			case SOC_DAPM_IO_ENUM_EXT:
+			case SOC_CONTROL_TYPE_ENUM:
+			case SOC_CONTROL_TYPE_ENUM_EXT:
+			case SOC_CONTROL_TYPE_ENUM_VALUE:
+			case SOC_DAPM_TYPE_ENUM_DOUBLE:
+			case SOC_DAPM_TYPE_ENUM_VIRT:
+			case SOC_DAPM_TYPE_ENUM_VALUE:
+			case SOC_DAPM_TYPE_ENUM_EXT:
 				size += /*sizeof(struct snd_soc_fw_kcontrol) +*/
 					sizeof(struct snd_soc_fw_enum_control);
 				break;
-			case SOC_DAPM_IO_PIN:
+			case SOC_DAPM_TYPE_PIN:
 			default:
 				fprintf(stderr, "error: widget %s mixer %s type %d not supported atm\n",
 					widgets[i].name, kn->name, kn->index);

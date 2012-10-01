@@ -98,6 +98,18 @@ static int write_header(struct soc_fw_priv *soc_fw, u32 type,
 	return 0;
 }
 
+static int tlv_size(const struct snd_kcontrol_new *kcontrol)
+{
+	struct snd_ctl_tlv *tlv;
+
+	if (!kcontrol->tlv.p)
+		return 0;
+
+	tlv = (struct snd_ctl_tlv *)kcontrol->tlv.p;
+
+	return sizeof(struct snd_soc_fw_ctl_tlv) + tlv->length;
+}
+
 static int import_mixer(struct soc_fw_priv *soc_fw,
 	const struct snd_kcontrol_new *kcontrol)
 {
@@ -111,6 +123,8 @@ static int import_mixer(struct soc_fw_priv *soc_fw,
 	strncpy(mc.hdr.name, (const char*)kcontrol->name, SND_SOC_FW_TEXT_SIZE);
 	mc.hdr.index = kcontrol->index |
 		SOC_CONTROL_ID(kcontrol->get, kcontrol->put, 0);
+	mc.hdr.access = kcontrol->access;
+	mc.hdr.tlv_size = tlv_size(kcontrol);
 
 	mc.min = mixer->min;
 	mc.max = mixer->max;
@@ -129,6 +143,38 @@ static int import_mixer(struct soc_fw_priv *soc_fw,
 
 	bytes = write(soc_fw->out_fd, &mc, sizeof(mc));
 	if (bytes != sizeof(mc)) {
+		fprintf(stderr, "error: can't write mixer %lu\n", bytes);
+		return bytes;
+	}
+
+	return 0;
+}
+
+static int import_tlv(struct soc_fw_priv *soc_fw,
+	const struct snd_kcontrol_new *kcontrol)
+{
+	struct snd_soc_fw_ctl_tlv *fw_tlv;
+	struct snd_ctl_tlv *tlv;
+	size_t bytes, size;
+
+	if (!kcontrol->tlv.p)
+		return 0;
+
+	tlv = (struct snd_ctl_tlv *)kcontrol->tlv.p;
+	verbose(soc_fw, " tlv: type %d length %d\n", tlv->numid, tlv->length);
+
+	size = sizeof(*fw_tlv) + tlv->length;
+	fw_tlv = calloc(1, size);
+	if (!fw_tlv)
+		return -ENOMEM;
+
+	fw_tlv->numid = tlv->numid;
+	fw_tlv->length = tlv->length;
+	memcpy(fw_tlv->tlv, tlv->tlv, tlv->length);
+
+	bytes = write(soc_fw->out_fd, fw_tlv, size);
+	free(fw_tlv);
+	if (bytes != size) {
 		fprintf(stderr, "error: can't write mixer %lu\n", bytes);
 		return bytes;
 	}
@@ -171,6 +217,9 @@ static int import_enum_control(struct soc_fw_priv *soc_fw,
 	strncpy(ec.hdr.name, (const char*)kcontrol->name, SND_SOC_FW_TEXT_SIZE);
 	ec.hdr.index = kcontrol->index |
 		SOC_CONTROL_ID(kcontrol->get, kcontrol->put, 0);
+	ec.hdr.access = kcontrol->access;
+	ec.hdr.tlv_size = tlv_size(kcontrol);
+
 	ec.mask = menum->mask;
 	ec.max = menum->max;
 	ec.reg = menum->reg;
@@ -218,12 +267,14 @@ int socfw_import_controls(struct soc_fw_priv *soc_fw,
 		//case SOC_CONTROL_TYPE_VOLSW_EXT:
 		case SOC_CONTROL_TYPE_EXT:
 			size += sizeof(struct snd_soc_fw_mixer_control);
+			size += tlv_size(kn);
 			mixers++;
 			break;
 		case SOC_CONTROL_TYPE_ENUM:
 		case SOC_CONTROL_TYPE_ENUM_EXT:
 		case SOC_CONTROL_TYPE_ENUM_VALUE:
 			size += sizeof(struct snd_soc_fw_enum_control);
+			size += tlv_size(kn);
 			enums++;
 			break;
 		case SOC_CONTROL_TYPE_BYTES:
@@ -266,11 +317,19 @@ int socfw_import_controls(struct soc_fw_priv *soc_fw,
 			err = import_mixer(soc_fw, kn);
 			if (err < 0)
 				return err;
+
+			err = import_tlv(soc_fw, kn);
+			if (err < 0)
+				return err;
 			break;
 		case SOC_CONTROL_TYPE_ENUM:
 		case SOC_CONTROL_TYPE_ENUM_EXT:
 		case SOC_CONTROL_TYPE_ENUM_VALUE:
 			err = import_enum_control(soc_fw, kn);
+			if (err < 0)
+				return err;
+
+			err = import_tlv(soc_fw, kn);
 			if (err < 0)
 				return err;
 			break;
@@ -326,6 +385,7 @@ static int import_enum_coeff_control(struct soc_fw_priv *soc_fw,
 
 	strncpy(ec.hdr.name, coeff->description, SND_SOC_FW_TEXT_SIZE);
 	ec.hdr.index = coeff->index;
+	ec.hdr.access = SNDRV_CTL_ELEM_ACCESS_READWRITE;
 	ec.mask = (coeff->count < 1) - 1;
 	ec.max = coeff->count;
 	ec.reg = coeff->id;
@@ -426,6 +486,11 @@ static int import_dapm_widgets_controls(struct soc_fw_priv *soc_fw, int count,
 			err = import_mixer(soc_fw, kn);
 			if (err < 0)
 				return err;
+
+			err = import_tlv(soc_fw, kn);
+			if (err < 0)
+				return err;
+
 			break;
 		case SOC_CONTROL_TYPE_ENUM:
 		case SOC_CONTROL_TYPE_ENUM_EXT:
@@ -437,6 +502,11 @@ static int import_dapm_widgets_controls(struct soc_fw_priv *soc_fw, int count,
 			err = import_enum_control(soc_fw, kn);
 			if (err < 0)
 				return err;
+
+			err = import_tlv(soc_fw, kn);
+			if (err < 0)
+				return err;
+
 			break;
 		case SOC_DAPM_TYPE_PIN:
 		default:

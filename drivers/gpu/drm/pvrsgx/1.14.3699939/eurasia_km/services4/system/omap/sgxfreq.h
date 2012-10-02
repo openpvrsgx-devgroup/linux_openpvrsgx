@@ -18,6 +18,7 @@ struct sgxfreq_governor {
 	void (*sgx_clk_off) (void);
 	void (*sgx_active) (void);
 	void (*sgx_idle) (void);
+	void (*sgx_frame_done) (void);
 	struct list_head governor_list;
 };
 
@@ -50,5 +51,6 @@ void sgxfreq_notif_sgx_clk_on(void);
 void sgxfreq_notif_sgx_clk_off(void);
 void sgxfreq_notif_sgx_active(void);
 void sgxfreq_notif_sgx_idle(void);
+void sgxfreq_notif_sgx_frame_done(void);
 
 #endif

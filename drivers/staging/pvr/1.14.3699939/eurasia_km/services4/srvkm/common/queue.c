@@ -1306,6 +1306,9 @@ PVRSRV_ERROR PVRSRVProcessQueues(IMG_BOOL	bFlush)
 	return PVRSRV_OK;
 }
 
+#if defined(SYS_OMAP_HAS_DVFS_FRAMEWORK)
+extern void sgxfreq_notif_sgx_frame_done(void);
+#endif /* (SYS_OMAP4_HAS_DVFS_FRAMEWORK) */
 
 /*!
 ******************************************************************************
@@ -1327,6 +1330,10 @@ IMG_VOID PVRSRVCommandCompleteKM(IMG_HANDLE	hCmdCookie,
 	IMG_UINT32				i;
 	COMMAND_COMPLETE_DATA	*psCmdCompleteData = (COMMAND_COMPLETE_DATA *)hCmdCookie;
 	SYS_DATA				*psSysData;
+
+#if defined(SYS_OMAP_HAS_DVFS_FRAMEWORK)
+	sgxfreq_notif_sgx_frame_done();
+#endif /* (SYS_OMAP_HAS_DVFS_FRAMEWORK) */
 
 	SysAcquireData(&psSysData);
 

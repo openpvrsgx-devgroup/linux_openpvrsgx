@@ -114,31 +114,73 @@ static struct thermal_dev_ops cool_dev_ops = {
 };
 
 static struct thermal_dev cool_dev = {
-	.name = "gpu_cooling",
+	.name = "gpu_cooling.0",
 	.domain_name = "gpu",
 	.dev_ops = &cool_dev_ops,
 };
 
+static struct thermal_dev case_cool_dev = {
+	.name = "gpu_cooling.1",
+	.domain_name = "case",
+	.dev_ops = &cool_dev_ops,
+};
+
+static unsigned int gpu_cooling_level;
+#if defined(CONFIG_CASE_TEMP_GOVERNOR)
+static unsigned int case_cooling_level;
+#endif
+
 int cool_init(void)
 {
+	int ret;
 	cd.freq_cnt = sgxfreq_get_freq_list(&cd.freq_list);
 	if (!cd.freq_cnt || !cd.freq_list)
 		return -EINVAL;
 
-	return thermal_cooling_dev_register(&cool_dev);
+	ret = thermal_cooling_dev_register(&cool_dev);
+	if (ret)
+		return ret;
+
+	return thermal_cooling_dev_register(&case_cool_dev);
 }
 
 void cool_deinit(void)
 {
 	thermal_cooling_dev_unregister(&cool_dev);
+	thermal_cooling_dev_unregister(&case_cool_dev);
 }
 
 static int cool_device(struct thermal_dev *dev, int cooling_level)
 {
 	int freq_max_index, freq_limit_index;
 
+#if defined(CONFIG_CASE_TEMP_GOVERNOR)
+	if (!strcmp(dev->domain_name, "case"))
+	{
+		int tmp = 0;
+		tmp = cooling_level - case_subzone_number;
+		if (tmp < 0)
+			tmp = 0;
+		case_cooling_level = tmp;
+	}
+	else
+#endif
+	{
+               gpu_cooling_level = cooling_level;
+	}
+
 	freq_max_index = cd.freq_cnt - 1;
-	freq_limit_index = freq_max_index - cooling_level;
+#if defined(CONFIG_CASE_TEMP_GOVERNOR)
+	if (case_cooling_level > gpu_cooling_level)
+	{
+		freq_limit_index = freq_max_index - case_cooling_level;
+	}
+	else
+#endif
+	{
+		freq_limit_index = freq_max_index - gpu_cooling_level;
+	}
+
 	if (freq_limit_index < 0)
 		freq_limit_index = 0;
 

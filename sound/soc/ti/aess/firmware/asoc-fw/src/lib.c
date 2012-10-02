@@ -170,7 +170,7 @@ static int import_tlv(struct soc_fw_priv *soc_fw,
 
 	fw_tlv->numid = tlv->numid;
 	fw_tlv->length = tlv->length;
-	memcpy(fw_tlv->tlv, tlv->tlv, tlv->length);
+	memcpy(fw_tlv + 1, tlv->tlv, tlv->length);
 
 	bytes = write(soc_fw->out_fd, fw_tlv, size);
 	free(fw_tlv);

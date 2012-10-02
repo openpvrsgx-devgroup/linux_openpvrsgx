@@ -461,3 +461,15 @@ void sgxfreq_notif_sgx_idle(void)
 
 	mutex_unlock(&sfd.gov_mutex);
 }
+
+void sgxfreq_notif_sgx_frame_done(void)
+{
+	mutex_lock(&sfd.gov_mutex);
+
+	trace_printk("CMD");
+
+	if (sfd.gov && sfd.gov->sgx_frame_done)
+		sfd.gov->sgx_frame_done();
+
+	mutex_unlock(&sfd.gov_mutex);
+}

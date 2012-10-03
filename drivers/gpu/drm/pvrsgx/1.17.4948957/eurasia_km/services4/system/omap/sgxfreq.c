@@ -8,6 +8,8 @@ static struct sgxfreq_data {
 	unsigned long freq;
 	unsigned long freq_request;
 	unsigned long freq_limit;
+	unsigned long total_idle_time;
+	unsigned long total_active_time;
 	struct mutex freq_mutex;
 	struct list_head gov_list;
 	struct sgxfreq_governor *gov;
@@ -38,6 +40,10 @@ sgxfreq_gov_deinit_t *sgxfreq_gov_deinit[] = {
 };
 
 #define SGXFREQ_DEFAULT_GOV_NAME "onoff"
+static unsigned long _idle_curr_time;
+static unsigned long _idle_prev_time;
+static unsigned long _active_curr_time;
+static unsigned long _active_prev_time;
 
 #if defined(CONFIG_THERMAL_FRAMEWORK)
 int cool_init(void);
@@ -81,6 +87,14 @@ static ssize_t show_frequency(struct device *dev,
 			      char *buf)
 {
 	return sprintf(buf, "%lu\n", sfd.freq);
+}
+
+static ssize_t show_stat(struct device *dev,
+			      struct device_attribute *attr,
+			      char *buf)
+{
+	return sprintf(buf, "gpu %lu %lu\n",
+		sfd.total_active_time, sfd.total_idle_time);
 }
 
 static ssize_t show_governor_list(struct device *dev,
@@ -134,6 +148,7 @@ static DEVICE_ATTR(frequency_limit, 0444, show_frequency_limit, NULL);
 static DEVICE_ATTR(frequency, 0444, show_frequency, NULL);
 static DEVICE_ATTR(governor_list, 0444, show_governor_list, NULL);
 static DEVICE_ATTR(governor, 0644, show_governor, store_governor);
+static DEVICE_ATTR(stat, 0444, show_stat, NULL);
 
 static const struct attribute *sgxfreq_attributes[] = {
 	&dev_attr_frequency_list.attr,
@@ -142,6 +157,7 @@ static const struct attribute *sgxfreq_attributes[] = {
 	&dev_attr_frequency.attr,
 	&dev_attr_governor_list.attr,
 	&dev_attr_governor.attr,
+	&dev_attr_stat.attr,
 	NULL
 };
 
@@ -174,11 +190,66 @@ static struct sgxfreq_governor *__find_governor(const char *name)
         return NULL;
 }
 
+static void __update_timing_info(bool active)
+{
+	struct timeval tv;
+	do_gettimeofday(&tv);
+	if(active)
+	{
+		if(sfd.sgx_data.active == true) {
+			_active_curr_time = __tv2msec(tv);
+			sfd.total_active_time += __delta32(
+					_active_curr_time, _active_prev_time);
+			SGXFREQ_TRACE("A->A TA:= %lums \tdA: %lums \tTI: %lums \tdI: %lums\n",
+					sfd.total_active_time,
+					__delta32(_active_curr_time, _active_prev_time),
+					sfd.total_active_time,
+					(unsigned long)0);
+			_active_prev_time = _active_curr_time;
+		} else {
+			_idle_curr_time = __tv2msec(tv);
+			_active_prev_time = _idle_curr_time;
+			sfd.total_idle_time +=
+					__delta32(_idle_curr_time, _idle_prev_time);
+			SGXFREQ_TRACE("I->A TA:= %lums \tdA: %lums \tTI: %lums \tdI: %lums\n",
+					sfd.total_active_time,
+					(unsigned long)0,
+					sfd.total_idle_time,
+					__delta32(_idle_curr_time, _idle_prev_time));
+		}
+	} else {
+		if(sfd.sgx_data.active == true)
+		{
+			_idle_prev_time = _active_curr_time = __tv2msec(tv);
+			sfd.total_active_time +=
+					__delta32(_active_curr_time, _active_prev_time);
+			SGXFREQ_TRACE("A->I TA:= %lums \tdA: %lums \tTI: %lums \tdI: %lums\n",
+					sfd.total_active_time,
+					__delta32(_active_curr_time, _active_prev_time),
+					sfd.total_active_time,
+					(unsigned long)0);
+		}
+		else
+		{
+			_idle_curr_time = __tv2msec(tv);
+			sfd.total_idle_time += __delta32(
+					_idle_curr_time, _idle_prev_time);
+			SGXFREQ_TRACE("I->I TA:= %lums \tdA: %lums \tTI: %lums \tdI: %lums\n",
+					sfd.total_active_time,
+					(unsigned long)0,
+					sfd.total_idle_time,
+					__delta32(_idle_curr_time, _idle_prev_time));
+			_idle_prev_time = _idle_curr_time;
+		}
+	}
+}
+
 int sgxfreq_init(struct device *dev)
 {
 	int i, ret;
 	unsigned long freq;
 	struct opp *opp;
+	struct timeval tv;
 
 	sfd.dev = dev;
 	if (!sfd.dev)
@@ -245,6 +316,9 @@ int sgxfreq_init(struct device *dev)
 		kfree(sfd.freq_list);
 		return -ENODEV;
 	}
+	do_gettimeofday(&tv);
+	_idle_prev_time = _active_curr_time = _idle_curr_time =
+		_active_prev_time = __tv2msec(tv);
 
 	return 0;
 }
@@ -409,6 +483,18 @@ unsigned long sgxfreq_set_freq_limit(unsigned long freq_limit)
 	return freq_limit;
 }
 
+unsigned long sgxfreq_get_total_active_time(void)
+{
+	__update_timing_info(sfd.sgx_data.active);
+	return sfd.total_active_time;
+}
+
+unsigned long sgxfreq_get_total_idle_time(void)
+{
+	__update_timing_info(sfd.sgx_data.active);
+	return sfd.total_idle_time;
+}
+
 /*
  * sgx_clk_on, sgx_clk_off, sgx_active, and sgx_idle notifications are
  * serialized by power lock. governor notif calls need sync with governor
@@ -438,8 +524,11 @@ void sgxfreq_notif_sgx_clk_off(void)
 	mutex_unlock(&sfd.gov_mutex);
 }
 
+
 void sgxfreq_notif_sgx_active(void)
 {
+	__update_timing_info(true);
+
 	sfd.sgx_data.active = true;
 
 	mutex_lock(&sfd.gov_mutex);
@@ -448,10 +537,14 @@ void sgxfreq_notif_sgx_active(void)
 		sfd.gov->sgx_active();
 
 	mutex_unlock(&sfd.gov_mutex);
+
 }
 
 void sgxfreq_notif_sgx_idle(void)
 {
+
+	__update_timing_info(false);
+
 	sfd.sgx_data.active = false;
 
 	mutex_lock(&sfd.gov_mutex);
@@ -465,8 +558,6 @@ void sgxfreq_notif_sgx_idle(void)
 void sgxfreq_notif_sgx_frame_done(void)
 {
 	mutex_lock(&sfd.gov_mutex);
-
-	trace_printk("CMD");
 
 	if (sfd.gov && sfd.gov->sgx_frame_done)
 		sfd.gov->sgx_frame_done();

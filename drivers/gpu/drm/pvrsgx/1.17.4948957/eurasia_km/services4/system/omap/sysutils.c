@@ -48,6 +48,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "sgxfreq.c"
 #include "sgxfreq_onoff.c"
 #include "sgxfreq_activeidle.c"
+#include "sgxfreq_on3demand.c"
 #if defined(CONFIG_THERMAL_FRAMEWORK)
 #include "sgxfreq_cool.c"
 #endif

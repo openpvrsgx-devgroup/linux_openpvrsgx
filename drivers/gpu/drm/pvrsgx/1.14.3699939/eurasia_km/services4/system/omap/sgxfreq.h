@@ -2,8 +2,16 @@
 #define SGXFREQ_H
 
 #include <linux/device.h>
+#include <linux/time.h>
 
 #define SGXFREQ_NAME_LEN 16
+
+//#define SGXFREQ_DEBUG_FTRACE
+#if defined(SGXFREQ_DEBUG_FTRACE)
+#define SGXFREQ_TRACE(...) trace_printk(__VA_ARGS__)
+#else
+#define SGXFREQ_TRACE(...)
+#endif
 
 struct sgxfreq_sgx_data {
 	bool clk_on;
@@ -45,6 +53,23 @@ unsigned long sgxfreq_get_freq_limit(void);
 
 unsigned long sgxfreq_set_freq_request(unsigned long freq_request);
 unsigned long sgxfreq_set_freq_limit(unsigned long freq_limit);
+
+unsigned long sgxfreq_get_total_active_time(void);
+unsigned long sgxfreq_get_total_idle_time(void);
+
+/* Helper functions */
+static inline unsigned long __tv2msec(struct timeval tv)
+{
+	return (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
+}
+
+static inline unsigned long __delta32(unsigned long a, unsigned long b)
+{
+	if (a >= b)
+		return a - b;
+	else
+		return 1 + (0xFFFFFFFF - b) + a;
+}
 
 /* External notifications to sgxfreq */
 void sgxfreq_notif_sgx_clk_on(void);

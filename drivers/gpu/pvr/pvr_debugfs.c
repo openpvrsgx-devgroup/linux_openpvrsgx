@@ -22,6 +22,7 @@
  * Debugfs interface living in pvr/ subdirectory.
  *
  */
+#include <linux/export.h>
 #include <linux/kernel.h>
 #include <linux/debugfs.h>
 #include <linux/vmalloc.h>

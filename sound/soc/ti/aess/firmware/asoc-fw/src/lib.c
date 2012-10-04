@@ -76,10 +76,12 @@ static int write_header(struct soc_fw_priv *soc_fw, u32 type,
 	hdr.version = version;
 	hdr.size = size;
 
+	/* make sure the file offset is aligned with the calculated HDR offset */
 	if (offset != soc_fw->next_hdr_pos) {
-		fprintf(stderr, "error: New header is at 0x%x but file"
-			 " offset is 0x%x delta %d bytes\n", soc_fw->next_hdr_pos,
-			offset, offset - soc_fw->next_hdr_pos);
+		fprintf(stderr, "error: New header is at offset 0x%x but file"
+			 " offset 0x%x is %s by %d bytes\n", soc_fw->next_hdr_pos,
+			offset, offset > soc_fw->next_hdr_pos ? "ahead" : "behind",
+			 abs(offset - soc_fw->next_hdr_pos));
 		exit(-EINVAL);
 	}
 
@@ -264,7 +266,6 @@ int socfw_import_controls(struct soc_fw_priv *soc_fw,
 		case SOC_CONTROL_TYPE_VOLSW_SX:
 		case SOC_CONTROL_TYPE_VOLSW_S8:
 		case SOC_CONTROL_TYPE_VOLSW_XR_SX:
-		//case SOC_CONTROL_TYPE_VOLSW_EXT:
 		case SOC_CONTROL_TYPE_EXT:
 			size += sizeof(struct snd_soc_fw_mixer_control);
 			size += tlv_size(kn);
@@ -312,7 +313,6 @@ int socfw_import_controls(struct soc_fw_priv *soc_fw,
 		case SOC_CONTROL_TYPE_VOLSW_SX:
 		case SOC_CONTROL_TYPE_VOLSW_S8:
 		case SOC_CONTROL_TYPE_VOLSW_XR_SX:
-		//case SOC_CONTROL_TYPE_VOLSW_EXT:
 		case SOC_CONTROL_TYPE_EXT:
 			err = import_mixer(soc_fw, kn);
 			if (err < 0)
@@ -358,17 +358,12 @@ static void import_coeff_enum_control_data(struct soc_fw_priv *soc_fw,
 			SND_SOC_FW_TEXT_SIZE);
 }
 
-/*
- * Coefficients with mixer.
- *
- * Output:
- *  [kcontrol].[enum].[[hdr].[data]]....
- */
 static int import_enum_coeff_control(struct soc_fw_priv *soc_fw,
 	const struct snd_soc_fw_coeff *coeff)
 {
 	struct snd_soc_fw_kcontrol kc;
 	struct snd_soc_fw_enum_control ec;
+	struct snd_soc_file_coeff_data cd;
 	size_t bytes;
 	int err, i;
 
@@ -376,6 +371,9 @@ static int import_enum_coeff_control(struct soc_fw_priv *soc_fw,
 	memset(&ec, 0, sizeof(ec));
 
 	kc.count = coeff->count;
+	cd.count = coeff->count;
+	cd.size = cd.count * coeff->elems[0].size;
+	cd.id = coeff->index;
 
 	if (coeff->count >= SND_SOC_FW_NUM_TEXTS) {
 		fprintf(stderr, "error: too many enum values %d\n",
@@ -390,8 +388,8 @@ static int import_enum_coeff_control(struct soc_fw_priv *soc_fw,
 	ec.max = coeff->count;
 	ec.reg = coeff->id;
 
-	verbose(soc_fw, " enum: \"%s\" R1/2 0x%x/0x%x shift L/R %d/%d (g,p,i) %d:%d:%d\n",
-		ec.hdr.name, ec.reg, ec.reg2, ec.shift_l, ec.shift_r,
+	verbose(soc_fw, " coeff %x enum: \"%s\" R1/2 0x%x/0x%x shift L/R %d/%d (g,p,i) %d:%d:%d\n",
+		cd.id, ec.hdr.name, ec.reg, ec.reg2, ec.shift_l, ec.shift_r,
 		SOC_CONTROL_GET_ID_GET(ec.hdr.index),
 		SOC_CONTROL_GET_ID_PUT(ec.hdr.index),
 		SOC_CONTROL_GET_ID_INFO(ec.hdr.index));
@@ -409,30 +407,28 @@ static int import_enum_coeff_control(struct soc_fw_priv *soc_fw,
 		return bytes;
 	}
 
+	err = write_header(soc_fw, SND_SOC_FW_COEFF, SND_SOC_FW_VENDOR_COEFF,
+		soc_fw->version, cd.size + sizeof(cd));
+	if (err < 0)
+		return err;
+
+	bytes = write(soc_fw->out_fd, &cd, sizeof(cd));
+	if (bytes != sizeof(cd)) {
+		fprintf(stderr, "error: can't write coeff data %lu\n", bytes);
+		return bytes;
+	}
+
 	for (i = 0; i < coeff->count; i++) {
-
-		err = write_header(soc_fw, SND_SOC_FW_COEFF,
-			SND_SOC_FW_VENDOR_COEFF, soc_fw->version,
-			coeff->elems[i].size);
-		if (err < 0)
-			return err;
-
 		bytes = write(soc_fw->out_fd, coeff->elems[i].coeffs,
 			coeff->elems[i].size);
 		if (bytes != coeff->elems[i].size) {
-			fprintf(stderr, "error: can't write mixer %lu\n", bytes);
+			fprintf(stderr, "error: can't write coeff data %lu\n", bytes);
 			return bytes;
 		}
 	}
 	return 0;
 }
 
-/*
- * Coefficients with mixer header.
- *
- * Output:
- *  [hdr].<coeff control enum>.<vendor coeff data>
- */
 int socfw_import_coeffs(struct soc_fw_priv *soc_fw,
 	const struct snd_soc_fw_coeff *coeffs, int coeff_count)
 {
@@ -446,13 +442,11 @@ int socfw_import_coeffs(struct soc_fw_priv *soc_fw,
 	for (i = 0; i < coeff_count; i++) {
 		size += sizeof(struct snd_soc_fw_kcontrol)
 			+ sizeof(struct snd_soc_fw_enum_control);
-		for (j = 0; j < coeffs[i].count; j++) {
-			//size += coeffs[i].elems[j].size;
+		for (j = 0; j < coeffs[i].count; j++)
 			enums++;
-		}
 	}
-	verbose(soc_fw, "coeffs: num coeffs %d enums %d size %lu bytes\n",
-		coeff_count, enums, size);
+	verbose(soc_fw, " coeffs: num coeffs %d enums %d size 0x%lx/%lu bytes\n",
+		coeff_count, enums, size, size);
 
 	err = write_header(soc_fw,  SND_SOC_FW_COEFF, 0,
 		soc_fw->version, size);
@@ -480,7 +474,6 @@ static int import_dapm_widgets_controls(struct soc_fw_priv *soc_fw, int count,
 		case SOC_CONTROL_TYPE_VOLSW_SX:
 		case SOC_CONTROL_TYPE_VOLSW_S8:
 		case SOC_CONTROL_TYPE_VOLSW_XR_SX:
-		//case SOC_CONTROL_TYPE_VOLSW_EXT:
 		case SOC_CONTROL_TYPE_EXT:
 		case SOC_DAPM_TYPE_VOLSW:
 			err = import_mixer(soc_fw, kn);
@@ -538,11 +531,9 @@ static int socfw_calc_widget_size(struct soc_fw_priv *soc_fw,
 			case SOC_CONTROL_TYPE_VOLSW_SX:
 			case SOC_CONTROL_TYPE_VOLSW_S8:
 			case SOC_CONTROL_TYPE_VOLSW_XR_SX:
-		//	case SOC_CONTROL_TYPE_VOLSW_EXT:
 			case SOC_CONTROL_TYPE_EXT:
 			case SOC_DAPM_TYPE_VOLSW:
-				size += /*sizeof(struct snd_soc_fw_kcontrol) +*/
-					sizeof(struct snd_soc_fw_mixer_control);
+				size +=	sizeof(struct snd_soc_fw_mixer_control);
 				break;
 			case SOC_CONTROL_TYPE_ENUM:
 			case SOC_CONTROL_TYPE_ENUM_EXT:
@@ -551,8 +542,7 @@ static int socfw_calc_widget_size(struct soc_fw_priv *soc_fw,
 			case SOC_DAPM_TYPE_ENUM_VIRT:
 			case SOC_DAPM_TYPE_ENUM_VALUE:
 			case SOC_DAPM_TYPE_ENUM_EXT:
-				size += /*sizeof(struct snd_soc_fw_kcontrol) +*/
-					sizeof(struct snd_soc_fw_enum_control);
+				size += sizeof(struct snd_soc_fw_enum_control);
 				break;
 			case SOC_DAPM_TYPE_PIN:
 			default:
@@ -823,6 +813,9 @@ struct soc_fw_priv *socfw_new(const char *name, int verbose)
 	soc_fw = calloc(1, sizeof(struct soc_fw_priv));
 	if (!soc_fw)
 		return NULL;
+
+	/* delete any old files */
+	unlink(name);
 
 	soc_fw->verbose = verbose;
 	fd = open(name, O_RDWR | O_CREAT, S_IRWXU | S_IRWXG | S_IRWXO);

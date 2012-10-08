@@ -373,7 +373,7 @@ static int import_enum_coeff_control(struct soc_fw_priv *soc_fw,
 	kc.count = coeff->count;
 	cd.count = coeff->count;
 	cd.size = cd.count * coeff->elems[0].size;
-	cd.id = coeff->index;
+	cd.id = coeff->id;
 
 	if (coeff->count >= SND_SOC_FW_NUM_TEXTS) {
 		fprintf(stderr, "error: too many enum values %d\n",
@@ -388,7 +388,7 @@ static int import_enum_coeff_control(struct soc_fw_priv *soc_fw,
 	ec.max = coeff->count;
 	ec.reg = coeff->id;
 
-	verbose(soc_fw, " coeff %x enum: \"%s\" R1/2 0x%x/0x%x shift L/R %d/%d (g,p,i) %d:%d:%d\n",
+	verbose(soc_fw, " coeff 0x%x enum: \"%s\" R1/2 0x%x/0x%x shift L/R %d/%d (g,p,i) %d:%d:%d\n",
 		cd.id, ec.hdr.name, ec.reg, ec.reg2, ec.shift_l, ec.shift_r,
 		SOC_CONTROL_GET_ID_GET(ec.hdr.index),
 		SOC_CONTROL_GET_ID_PUT(ec.hdr.index),

@@ -26,6 +26,8 @@ int activeidle_init(void);
 int activeidle_deinit(void);
 int on3demand_init(void);
 int on3demand_deinit(void);
+int userspace_init(void);
+int userspace_deinit(void);
 
 
 typedef int sgxfreq_gov_init_t(void);
@@ -33,6 +35,7 @@ sgxfreq_gov_init_t *sgxfreq_gov_init[] = {
 	onoff_init,
 	activeidle_init,
 	on3demand_init,
+	userspace_init,
 	NULL,
 };
 
@@ -41,6 +44,7 @@ sgxfreq_gov_deinit_t *sgxfreq_gov_deinit[] = {
 	onoff_deinit,
 	activeidle_deinit,
 	on3demand_deinit,
+	userspace_deinit,
 	NULL,
 };
 

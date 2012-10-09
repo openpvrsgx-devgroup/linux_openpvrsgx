@@ -58,14 +58,13 @@
 
 #include <abegen.h>
 
-#include <abe_hal/abe_cm_linux.h>
-#include <abe_hal/abe_dm_linux.h>
-#include <abe_hal/abe_sm_linux.h>
-#include <abe_hal/abe_functionsid.h>
-#include <abe_hal/abe_define.h>
-#include <abe_hal/abe_def.h>
-#include <abe_hal/abe_initxxx_labels.h>
-#include <abe_hal/abe_taskid.h>
+#include <abe_cm_linux.h>
+#include <abe_dm_linux.h>
+#include <abe_sm_linux.h>
+#include <abe_functionsid.h>
+#include <abe_define.h>
+#include <abe_initxxx_labels.h>
+#include <abe_taskid.h>
 
 #include <sound/soc/omap/aess/abe_typedef.h>
 #include <sound/soc/omap/aess/abe_typ.h>

@@ -42,19 +42,12 @@ AC_ARG_WITH(
 
 AC_SUBST(LINUX_DIR)
 
-# should be updated to also check the kernel dir for HAL at some point
-AC_ARG_WITH(
-        [hal-dir],
-        AS_HELP_STRING([--with-hal-dir],[HAL source code directory]),
-        [HAL_DIR=$withval], [HAL_DIR="~/source/audio-test.git/tools/abe"])
-
-AC_SUBST(HAL_DIR)
-
 AC_CONFIG_FILES([
 Makefile
 src/Makefile
 fw/Makefile
 tasks/Makefile
+include/Makefile
 ])
 
 AC_OUTPUT

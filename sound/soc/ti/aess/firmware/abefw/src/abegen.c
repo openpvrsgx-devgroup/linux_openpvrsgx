@@ -46,8 +46,8 @@
 #include "abegen.h"
 #include "abe-local.h"
 
-int omap_aess_init_asrc_vx_dl(s32 *el, s32 dppm);
-int omap_aess_init_asrc_vx_ul(s32 *el, s32 dppm);
+int (*omap_aess_init_asrc_vx_dl)(s32 *el, s32 dppm);
+int (*omap_aess_init_asrc_vx_ul)(s32 *el, s32 dppm);
 
 static int abe_dlopen_fw(const char *fw_version)
 {
@@ -198,6 +198,22 @@ static int abe_dlopen_tasks(const char *tasks_version)
 	mapping = dlsym(plugin_handle, "aess_fw_init");
 	if (!mapping) {
 		fprintf(stderr, "error: failed to get symbol. %s\n",
+			dlerror());
+		dlclose(plugin_handle);
+		return -EINVAL;
+	}
+
+	omap_aess_init_asrc_vx_dl = dlsym(plugin_handle, "omap_aess_init_asrc_vx_dl");
+	if (!omap_aess_init_asrc_vx_dl) {
+		fprintf(stderr, "error: failed to get omap_aess_init_asrc_vx_dl. %s\n",
+			dlerror());
+		dlclose(plugin_handle);
+		return -EINVAL;
+	}
+
+	omap_aess_init_asrc_vx_ul = dlsym(plugin_handle, "omap_aess_init_asrc_vx_ul");
+	if (!omap_aess_init_asrc_vx_ul) {
+		fprintf(stderr, "error: failed to get omap_aess_init_asrc_vx_ul. %s\n",
 			dlerror());
 		dlclose(plugin_handle);
 		return -EINVAL;

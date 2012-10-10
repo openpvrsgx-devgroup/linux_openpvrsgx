@@ -85,7 +85,4 @@ struct omap_aess_mapping {
 	const struct omap_aess_task *audul_mono_mixer;
 };
 
-extern int omap_aess_init_asrc_vx_ul(s32 *el, s32 dppm);
-extern int omap_aess_init_asrc_vx_dl(s32 *el, s32 dppm);
-
 #endif/* _ABE_LOCAL_H_ */

@@ -5,7 +5,8 @@ AM_CFLAGS = \
 
 bin_PROGRAMS = abegen
 
-abegen_SOURCES = abegen.c abegen.h abe_asrc.c
+abegen_SOURCES = abegen.c abegen.h
 
-abegen_CFLAGS = $(AM_CFLAGS) -I $(LINUX_DIR) -I $(HAL_DIR) -Werror -Wall
+#todo move abe_asrc to versioned directory
+abegen_CFLAGS = $(AM_CFLAGS) -I $(LINUX_DIR) -Werror -Wall
 

@@ -66,11 +66,11 @@
 #include <sound/soc/omap/aess/abe_typedef.h>
 
 /* abe HAL non kernel headers, we should be using kernel headers here ?? */
-#include <abe_hal/abe_define.h>
-#include <abe_hal/abe_initxxx_labels.h>
-#include <abe_hal/abe_dm_linux.h>
-#include <abe_hal/abe_sm_linux.h>
-#include <abe_hal/abe_cm_linux.h>
+#include <abe_define.h>
+#include <abe_initxxx_labels.h>
+#include <abe_dm_linux.h>
+#include <abe_sm_linux.h>
+#include <abe_cm_linux.h>
 
 #include "abe-local.h"
 

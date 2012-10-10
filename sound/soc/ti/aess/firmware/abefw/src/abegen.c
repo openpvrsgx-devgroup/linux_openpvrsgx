@@ -110,68 +110,72 @@ static int abe_task_gen(struct omap_aess_mapping *m, int fd)
 	int offset = 0, i;
 
 	/* write map */
-	fprintf(stdout, "Mem map: %d entries of size %ld at offset %d bytes %d\n",
-		m->map_count, sizeof(*m->map), offset, offset * 4);
+	fprintf(stdout, "0x%4.4x:0x%4.4x: (bytes:words) has %d map entries of size 0x%lx\n",
+		offset *4, offset, m->map_count, sizeof(*m->map));
 	offset += mwrite(fd, &m->map_count, sizeof(m->map_count));
 	offset += mwrite(fd, m->map, sizeof(struct omap_aess_addr) * m->map_count);
 
 	/* write label ids */
-	fprintf(stdout, "Label: %d entries of size %ld at offset %d bytes %d\n",
-		m->label_count, sizeof(*m->label_id), offset, offset * 4);
+	fprintf(stdout, "0x%4.4x:0x%4.4x: (bytes:words) has %d label entries of size 0x%lx\n",
+		offset *4, offset, m->label_count, sizeof(*m->label_id));
 	offset += mwrite(fd, &m->label_count, sizeof(m->label_count));
 	offset += mwrite(fd, m->label_id, sizeof(*m->label_id) * m->label_count);
 
 	/* write function ids */
-	fprintf(stdout, "Functions: %d entries of size %ld at offset %d bytes %d\n",
-		m->fct_count, sizeof(*m->fct_id), offset, offset * 4);
+	fprintf(stdout, "0x%4.4x:0x%4.4x: (bytes:words) has %d function entries of size 0x%lx\n",
+		offset *4, offset, m->fct_count, sizeof(*m->fct_id));
 	offset += mwrite(fd, &m->fct_count, sizeof(m->fct_count));
 	offset += mwrite(fd, m->fct_id, sizeof(*m->fct_id) * m->fct_count);
 
 	/* write tasks */
-	fprintf(stdout, "Task: %d entries of size %ld at offset %d bytes %d\n",
-		m->table_count, sizeof(*m->init_table), offset, offset * 4);
+	fprintf(stdout, "0x%4.4x:0x%4.4x: (bytes:words) has %d task entries of size 0x%lx\n",
+		offset *4, offset, m->table_count, sizeof(*m->init_table));
 	offset += mwrite(fd, &m->table_count, sizeof(m->table_count));
 	offset += mwrite(fd, m->init_table, sizeof(*m->init_table) * m->table_count);
 
 	/* write ports */
-	fprintf(stdout, "Port: %d entries of size %ld at offset %d bytes %d\n",
-		m->port_count, sizeof(*m->port), offset, offset * 4);
+	fprintf(stdout, "0x%4.4x:0x%4.4x: (bytes:words) has %d port entries of size 0x%lx\n",
+		offset *4, offset, m->port_count, sizeof(*m->port));
 	offset += mwrite(fd, &m->port_count, sizeof(m->port_count));
 	offset += mwrite(fd, m->port, sizeof(*m->port) * m->port_count);
 
 	/* ping pong port */
-	fprintf(stdout, "Ping Pong port: at offset %d bytes %d\n",
-		offset, offset * 4);
+	fprintf(stdout, "0x%4.4x:0x%4.4x: (bytes:words) Ping Pong port\n",
+		offset *4, offset);
 	offset += mwrite(fd, m->ping_pong, sizeof(*m->ping_pong));	
 
 	/* DL1 port */
-	fprintf(stdout, "DL1 port: at offset %d offset %d\n",
-		offset, offset * 4);
+	fprintf(stdout, "0x%4.4x:0x%4.4x: (bytes:words) DL1 port\n",
+		offset *4, offset);
 	offset += mwrite(fd, m->dl1_mono_mixer, sizeof(*m->dl1_mono_mixer));
 
 	/* DL2 port */
-	fprintf(stdout, "DL2 port: at offset %d bytes %d\n",
-		offset, offset * 4);
+	fprintf(stdout, "0x%4.4x:0x%4.4x: (bytes:words) DL2 port\n",
+		offset *4, offset);
 	offset += mwrite(fd, m->dl2_mono_mixer, sizeof(*m->dl2_mono_mixer));
 
 	/* AUDUL port */
-	fprintf(stdout, "AUDUL port: at offset %d bytes %d\n",
-		offset, offset * 4);
+	fprintf(stdout, "0x%4.4x:0x%4.4x: (bytes:words) AUDUL port\n",
+		offset *4, offset);
 	offset += mwrite(fd, m->audul_mono_mixer, sizeof(*m->audul_mono_mixer));
 
 	/* Voice UL ASRC */
 	i = omap_aess_init_asrc_vx_ul(&data_asrc[0], 0);
-	fprintf(stdout,"ASRC UL: %d at offset %d\n", i, offset);
+	fprintf(stdout,"0x%4.4x:0x%4.4x: (bytes:words) has ASRC UL: %d\n",
+		offset *4, offset, i);
 	offset += mwrite(fd, &data_asrc[0], sizeof(s32)*i);
 	i = omap_aess_init_asrc_vx_ul(&data_asrc[0], -250);
-	fprintf(stdout,"ASRC UL(-250): %d at %d\n", i, offset);
+	fprintf(stdout,"0x%4.4x:0x%4.4x: (bytes:words) has ASRC UL(-250): %d \n",
+		offset *4, offset, i);
 	offset += mwrite(fd, &data_asrc[0], sizeof(s32)*i);
 
 	/* Voice DL ASRC */
 	i = omap_aess_init_asrc_vx_dl(&data_asrc[0], 0);
-	fprintf(stdout,"ASRC DL: %d at %d\n", i, offset);
+	fprintf(stdout,"0x%4.4x:0x%4.4x: (bytes:words) has ASRC DL: %d\n",
+		offset *4, offset, i);
 	offset += mwrite(fd, &data_asrc[0], sizeof(s32)*i);
-	fprintf(stdout,"ASRC DL (250): %d at %d\n", i, offset);
+	fprintf(stdout,"0x%4.4x:0x%4.4x: (bytes:words) has ASRC DL (250): %d\n",
+		offset *4, offset, i);
 	i = omap_aess_init_asrc_vx_dl(&data_asrc[0], 250);
 	offset += mwrite(fd, &data_asrc[0], sizeof(s32)*i);
 

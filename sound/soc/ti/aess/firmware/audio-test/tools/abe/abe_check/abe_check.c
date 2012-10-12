@@ -102,6 +102,11 @@
 #define OMAP_ABE_SMEM  1
 #define OMAP_ABE_CMEM  2
 
+#ifdef ARM
+uint32_t *dmem = NULL;
+uint32_t *smem = NULL;
+uint32_t *cmem = NULL;
+#else
 #if 1
 uint32_t dmem[] = {
 #include "dmem.txt"
@@ -126,6 +131,7 @@ uint32_t smem[] = {
 uint32_t cmem[] = {
 #include "dump_cmem.txt"
 };
+#endif
 #endif
 
 struct buffer {
@@ -1316,8 +1322,8 @@ void interpret_io_desc(struct io_desc *io_desc, int port)
 int abe_print_gain()
 {
 	int i;
-	uint32_t *p_data = smem;
 	uint32_t target, current;
+	uint32_t *p_data = smem;
 
 	printf("|----------------------------------------|\n");
 	printf("|        %-4s        | %-7s | %-7s |\n", "Gain", "Target", "Current");
@@ -1613,9 +1619,47 @@ void print_buffers(int buffer_list)
 	printf("----------------------------------------------------|\n\n");
 }
 
-void help(void)
+#ifdef ARM
+
+void get_abe_data(const char *name, uint32_t **data)
 {
-	printf("Usage: abe_check [OPTION]\n");
+	char filename[128];
+	int fd;
+	int size, bytes;
+
+	sprintf(filename, "/sys/kernel/debug/omap-abe/%s", name);
+
+	fd = open(filename, O_RDONLY);
+	if (fd < 0) {
+		fprintf(stderr, "failed to open %s : %d\n", filename, fd);
+		exit(fd);
+	}
+
+	size = lseek(fd, 0, SEEK_END);
+	if (size < 0) {
+		fprintf(stderr, "failed to get size for %s : %d\n", filename, size);
+		exit(size);
+	}
+	lseek(fd, 0, SEEK_SET);
+
+	fprintf(stdout, "loaded %s size %d\n", filename, size);
+	*data = malloc(size);
+	if (*data == NULL)
+		exit(-ENOMEM);
+
+	bytes = read(fd, *data, size);
+	if (bytes != size) {
+		fprintf(stderr, "failed to get read %s : %d\n", filename, bytes);
+		exit(size);
+	}
+	close(fd);
+}
+
+#endif
+
+void help(char *name)
+{
+	printf("Usage: %s [OPTION]\n", name);
 	printf("-v --version   ABE version\n");
 	printf("-o --opp       AESS OPP\n");
 	printf("-b --buffers   AESS internal buffers stats\n");
@@ -1649,10 +1693,19 @@ int main(int argc, char *argv[])
         struct io_desc io_desc;
 	struct ping_pong_desc pp_desc;
 	int i, j;
-	char c;
+	signed char c;
 	int opt = 0;
 
+#ifdef ARM
+
+	get_abe_data("cmem", &cmem);
+	get_abe_data("dmem", &dmem);
+	get_abe_data("smem", &smem);
+
+#endif
+
 	while ((c = getopt_long(argc, argv, short_options, long_options, 0)) != -1) {
+
 		switch (c) {
 		case 'v':
 			opt |= OPT_VERSION;
@@ -1682,10 +1735,10 @@ int main(int argc, char *argv[])
 			opt |= OPT_PPDESC;
 			break;
 		case 'h':
-			help();
+			help(argv[0]);
 			return 0;
 		default:
-			help();
+			help(argv[0]);
 			return 1;
 		}
 	}

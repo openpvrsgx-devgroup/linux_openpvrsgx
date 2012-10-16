@@ -310,6 +310,12 @@ struct buffer mm_dl_list[] = {
 		.size = OMAP_ABE_S_MM_DL_SIZE,
 		.bank = OMAP_ABE_SMEM,
 	},
+	{
+		.name = "MM_DL FIFO",
+		.addr = OMAP_ABE_D_MM_DL_FIFO_ADDR,
+		.size = OMAP_ABE_D_MM_DL_FIFO_SIZE,
+		.bank = OMAP_ABE_DMEM,
+	},
 };
 
 struct buffer earp_list[] = {

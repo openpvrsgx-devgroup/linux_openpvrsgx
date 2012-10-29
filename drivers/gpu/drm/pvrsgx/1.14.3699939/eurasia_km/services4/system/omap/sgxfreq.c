@@ -64,7 +64,7 @@ sgxfreq_gov_deinit_t *sgxfreq_gov_deinit[] = {
 	NULL,
 };
 
-#define SGXFREQ_DEFAULT_GOV_NAME "onoff"
+#define SGXFREQ_DEFAULT_GOV_NAME "on3demand"
 static unsigned long _idle_curr_time;
 static unsigned long _idle_prev_time;
 static unsigned long _active_curr_time;

@@ -173,9 +173,11 @@ IMG_VOID SGXTestActivePowerEvent (PVRSRV_DEVICE_NODE	*psDeviceNode,
 			((psSGXHostCtl->ui32InterruptFlags & PVRSRV_USSE_EDM_INTERRUPT_IDLE) != 0))
 		{
 			psSGXHostCtl->ui32InterruptClearFlags |= PVRSRV_USSE_EDM_INTERRUPT_IDLE;
-			psDevInfo->bSGXIdle = IMG_TRUE;
-
-			SysSGXIdleEntered();
+			if (psDevInfo->bSGXIdle == IMG_FALSE)
+			{
+				psDevInfo->bSGXIdle = IMG_TRUE;
+				SysSGXIdleEntered();
+			}
 		}
 
 		/*

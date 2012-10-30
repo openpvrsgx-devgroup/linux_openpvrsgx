@@ -707,9 +707,6 @@ PVRSRV_ERROR SGXScheduleCCBCommandKM(PVRSRV_DEVICE_NODE		*psDeviceNode,
 	/* Note that a power-up has been dumped in the init phase. */
 	PDUMPSUSPEND();
 
-	SysSGXCommandPending(psDevInfo->bSGXIdle);
-	psDevInfo->bSGXIdle = IMG_FALSE;
-
 	/* Ensure that SGX is powered up before kicking the ukernel. */
 	eError = PVRSRVSetDevicePowerStateKM(psDeviceNode->sDevId.ui32DeviceIndex,
 										 PVRSRV_DEV_POWER_STATE_ON);
@@ -730,6 +727,9 @@ PVRSRV_ERROR SGXScheduleCCBCommandKM(PVRSRV_DEVICE_NODE		*psDeviceNode,
 		PVRSRVPowerUnlock(ui32CallerID);
 		return eError;
 	}
+
+	SysSGXCommandPending(psDevInfo->bSGXIdle);
+	psDevInfo->bSGXIdle = IMG_FALSE;
 
 	eError = SGXScheduleCCBCommand(psDeviceNode, eCmdType, psCommandData, ui32CallerID, ui32PDumpFlags, hDevMemContext, bLastInScene);
 

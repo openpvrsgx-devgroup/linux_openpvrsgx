@@ -147,17 +147,17 @@ static int abe_task_gen(struct omap_aess_mapping *m, int fd)
 	/* DL1 port */
 	fprintf(stdout, "0x%4.4x:0x%4.4x: (bytes:words) DL1 port\n",
 		offset *4, offset);
-	offset += mwrite(fd, m->dl1_mono_mixer, sizeof(*m->dl1_mono_mixer));
+	offset += mwrite(fd, m->dl1_mono_mixer, sizeof(*m->dl1_mono_mixer)*2);
 
 	/* DL2 port */
 	fprintf(stdout, "0x%4.4x:0x%4.4x: (bytes:words) DL2 port\n",
 		offset *4, offset);
-	offset += mwrite(fd, m->dl2_mono_mixer, sizeof(*m->dl2_mono_mixer));
+	offset += mwrite(fd, m->dl2_mono_mixer, sizeof(*m->dl2_mono_mixer)*2);
 
 	/* AUDUL port */
 	fprintf(stdout, "0x%4.4x:0x%4.4x: (bytes:words) AUDUL port\n",
 		offset *4, offset);
-	offset += mwrite(fd, m->audul_mono_mixer, sizeof(*m->audul_mono_mixer));
+	offset += mwrite(fd, m->audul_mono_mixer, sizeof(*m->audul_mono_mixer)*2);
 
 	/* Voice UL ASRC */
 	i = omap_aess_init_asrc_vx_ul(&data_asrc[0], 0);

@@ -14,11 +14,9 @@
 #ifndef __SOC_FW_H
 #define __SOC_FW_H
 
-#include <sys/types.h>
-#include <stdint.h>
-#include <stddef.h>
-
 #include <sound/asound.h>
+#include <sound/asoc.h>
+#include <sound/tlv.h>
 
 /* kernel typedefs */
 typedef	uint32_t u32;
@@ -29,8 +27,6 @@ typedef	uint8_t u8;
 typedef	int8_t s8;
 
 #define ARRAY_SIZE(x)	(sizeof(x) / sizeof(x[0]))
-
-#include <soc-fw.h>
 
 /*
  * Generic Coefficients with Kcontrols
@@ -79,18 +75,6 @@ struct snd_soc_fw_plugin {
 
 	int version;
 };
-
-/*
- * ASoC C types to support copy and paste from Kernel Source files.
- */
-
-/*
- * Kernel headers
- */
-
-#include <soc.h>
-#include <soc-dapm.h>
-#include <tlv.h>
 
 extern __attribute__((const, noreturn))
 int ____ilog2_NaN(void);
@@ -313,7 +297,6 @@ struct snd_soc_dapm_widget {
 
 	int num_kcontrols;
 	const struct snd_kcontrol_new *kcontrol_news;
-	
 };
 
 #endif

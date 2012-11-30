@@ -19,6 +19,9 @@
  *
  */
 
+#include <stdint.h>
+#include <sys/types.h>
+
 #include "socfw.h"
 
 #include <aess/abe_def.h>

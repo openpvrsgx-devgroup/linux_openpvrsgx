@@ -14,6 +14,10 @@
 #ifndef __SOC_FW_H
 #define __SOC_FW_H
 
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdint.h>
+
 #include <sound/asound.h>
 #include <sound/asoc.h>
 #include <sound/tlv.h>

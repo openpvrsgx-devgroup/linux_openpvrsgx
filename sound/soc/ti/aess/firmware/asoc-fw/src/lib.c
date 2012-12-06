@@ -71,6 +71,7 @@ static int write_header(struct soc_fw_priv *soc_fw, u32 type,
 	int offset = lseek(soc_fw->out_fd, 0, SEEK_CUR);
 
 	hdr.magic = SND_SOC_FW_MAGIC;
+	hdr.abi = SND_SOC_FW_ABI_VERSION;
 	hdr.type = type;
 	hdr.vendor_type = vendor_type;
 	hdr.version = version;

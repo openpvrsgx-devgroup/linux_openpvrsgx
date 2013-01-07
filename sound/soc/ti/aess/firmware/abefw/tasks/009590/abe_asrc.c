@@ -63,7 +63,8 @@
 #include <abegen.h>
 
 /* kernel ABE header */
-#include <sound/soc/omap/aess/abe_typedef.h>
+#include <sound/soc/omap/aess/abe_typ.h>
+#include <sound/soc/omap/aess/abe_port.h>
 
 /* abe HAL non kernel headers, we should be using kernel headers here ?? */
 #include <abe_define.h>

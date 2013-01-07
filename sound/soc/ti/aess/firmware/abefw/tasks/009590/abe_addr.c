@@ -66,12 +66,10 @@
 #include <abe_initxxx_labels.h>
 #include <abe_taskid.h>
 
-#include <sound/soc/omap/aess/abe_typedef.h>
 #include <sound/soc/omap/aess/abe_typ.h>
+#include <sound/soc/omap/aess/abe_port.h>
 
 #include "abe-local.h"
-
-#define ABE_TASK_ID(ID) (OMAP_ABE_D_TASKSLIST_ADDR + sizeof(ABE_STask)*(ID))
 
 static const u32 omap_function_id[] = {
 	NULL_COPY_CFPID,

@@ -2694,6 +2694,7 @@ CONFIG_ITG3200=y
 #
 # Magnetometer sensors
 #
+# CONFIG_SENSORS_AK8975 is not set
 CONFIG_SENSORS_HMC5843=y
 
 #
@@ -2850,7 +2851,6 @@ CONFIG_IIO_CONSUMERS_PER_TRIGGER=2
 #
 # CONFIG_ADIS16080 is not set
 # CONFIG_ADIS16136 is not set
-# CONFIG_ADXRS450 is not set
 # CONFIG_IIO_ST_GYRO_3AXIS is not set
 
 #

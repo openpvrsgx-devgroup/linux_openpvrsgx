@@ -17,7 +17,7 @@
 
 #include <socfw.h>
 #include <omap-abe-priv.h>
-#include <aess/abe_mem.h>
+#include <aess/aess-fw.h>
 
 /* 20kHz cut-off frequency and Gain = 1 */
 static const int32_t dmic_20kHz_0dB_coeffs[] = {

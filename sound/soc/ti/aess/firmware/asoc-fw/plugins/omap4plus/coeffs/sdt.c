@@ -17,7 +17,7 @@
 
 #include <socfw.h>
 #include <omap-abe-priv.h>
-#include <aess/abe_mem.h>
+#include <aess/aess-fw.h>
 
 /* Flat response with Gain =1 */
 static const int32_t sdt_flat_coeffs[] = {

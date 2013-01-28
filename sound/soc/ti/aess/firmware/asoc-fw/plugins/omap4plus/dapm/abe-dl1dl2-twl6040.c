@@ -25,8 +25,7 @@
 
 #include "socfw.h"
 
-#include <aess/abe_def.h>
-#include <aess/abe_gain.h>
+#include <aess/aess-fw.h>
 #include <omap-abe-priv.h>
 
 /* Media DL1 volume control from -120 to 30 dB in 1 dB steps */

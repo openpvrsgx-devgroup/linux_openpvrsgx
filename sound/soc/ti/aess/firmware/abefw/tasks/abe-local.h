@@ -59,9 +59,28 @@
 #ifndef _ABE_LOCAL_H_
 #define _ABE_LOCAL_H_
 
-#include <sound/soc/omap/aess/abe_typ.h>
-#include <sound/soc/omap/aess/abe_ext.h>
-#include <sound/soc/omap/aess/abe_mem.h>
+#include <sound/soc/omap/aess/aess-fw.h>
+
+struct ABE_STask {
+	/* 0 ... Index of called function */
+	u16 iF;
+	/* 2 ... for INITPTR of A0 */
+	u16 A0;
+	/* 4 ... for INITPTR of A1 */
+	u16 A1;
+	/* 6 ... for INITPTR of A2 & A3 */
+	u16 A2_3;
+	/* 8 ... for INITPTR of A4 & A5 */
+	u16 A4_5;
+	/* 10 ... for INITREG of R0, R1, R2, R3 */
+	u16 R;
+	/* 12 */
+	u16 misc0;
+	/* 14 */
+	u16 misc1;
+};
+
+#define ABE_TASK_ID(ID) (OMAP_ABE_D_TASKSLIST_ADDR + sizeof(struct ABE_STask)*(ID))
 
 struct omap_aess_mapping {
 	const struct omap_aess_addr *map;

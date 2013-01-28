@@ -63,8 +63,7 @@
 #include <abegen.h>
 
 /* kernel ABE header */
-#include <sound/soc/omap/aess/abe_typ.h>
-#include <sound/soc/omap/aess/abe_port.h>
+#include <sound/soc/omap/aess/aess-fw.h>
 
 /* abe HAL non kernel headers, we should be using kernel headers here ?? */
 #include <abe_define.h>
@@ -349,8 +348,8 @@ int omap_aess_init_asrc_vx_dl(s32 *el, s32 dppm)
 	/* 8. drift_ASRC = 0 & drift_io = 0 */
 	mem_tag = ABE_DMEM;
 	mem_addr = OMAP_ABE_D_IODESCR_ADDR +
-		(OMAP_ABE_VX_DL_PORT * sizeof(struct ABE_SIODescriptor)) +
-		offsetof(struct ABE_SIODescriptor, drift_asrc);
+		(OMAP_ABE_VX_DL_PORT * sizeof(struct omap_aess_io_desc)) +
+		offsetof(struct omap_aess_io_desc, drift_asrc);
 	el[i] = (mem_tag << 16) + mem_addr;
 	el[i + 1] = temp0;
 	/* dummy field */
@@ -559,8 +558,8 @@ int omap_aess_init_asrc_vx_ul(s32 *el, s32 dppm)
 	/* 8. drift_ASRC = 0 & drift_io = 0 */
 	mem_tag = ABE_DMEM;
 	mem_addr = OMAP_ABE_D_IODESCR_ADDR + 
-		(OMAP_ABE_VX_UL_PORT * sizeof(struct ABE_SIODescriptor)) +
-		offsetof(struct ABE_SIODescriptor, drift_asrc);
+		(OMAP_ABE_VX_UL_PORT * sizeof(struct omap_aess_io_desc)) +
+		offsetof(struct omap_aess_io_desc, drift_asrc);
 	el[i] = (mem_tag << 16) + mem_addr;
 	el[i + 1] = temp0;
 	/* dummy field */
@@ -782,8 +781,8 @@ void omap_aess_init_asrc_mm_ext_in(struct omap_aess *abe, s32 dppm)
 	i = i + 3;
 	/* 8. drift_ASRC = 0 & drift_io = 0 */
 	mem_tag = ABE_DMEM;
-	mem_addr = OMAP_ABE_D_IODESCR_ADDR + (OMAP_ABE_MM_EXT_IN_PORT * sizeof(struct ABE_SIODescriptor))
-		+ offsetof(struct ABE_SIODescriptor, drift_asrc);
+	mem_addr = OMAP_ABE_D_IODESCR_ADDR + (OMAP_ABE_MM_EXT_IN_PORT * sizeof(struct omap_aess_io_desc))
+		+ offsetof(struct omap_aess_io_desc, drift_asrc);
 	el[i] = (mem_tag << 16) + mem_addr;
 	el[i + 1] = temp0;
 	/* dummy field */
@@ -974,8 +973,8 @@ void omap_aess_init_asrc_bt_ul(struct omap_aess *abe, s32 dppm)
 	i = i + 3;
 	/* 8. drift_ASRC = 0 & drift_io = 0 */
 	mem_tag = ABE_DMEM;
-	mem_addr = OMAP_ABE_D_IODESCR_ADDR + (OMAP_ABE_BT_VX_UL_PORT * sizeof(struct ABE_SIODescriptor))
-		+ offsetof(struct ABE_SIODescriptor, drift_asrc);
+	mem_addr = OMAP_ABE_D_IODESCR_ADDR + (OMAP_ABE_BT_VX_UL_PORT * sizeof(struct omap_aess_io_desc))
+		+ offsetof(struct omap_aess_io_desc, drift_asrc);
 	el[i] = (mem_tag << 16) + mem_addr;
 	el[i + 1] = temp0;
 	/* dummy field */
@@ -1168,8 +1167,8 @@ void omap_aess_init_asrc_bt_dl(struct omap_aess *abe, s32 dppm)
 	i = i + 3;
 	/* 8. drift_ASRC = 0 & drift_io = 0 */
 	mem_tag = ABE_DMEM;
-	mem_addr = OMAP_ABE_D_IODESCR_ADDR + (OMAP_ABE_BT_VX_DL_PORT * sizeof(struct ABE_SIODescriptor))
-		+ offsetof(struct ABE_SIODescriptor, drift_asrc);
+	mem_addr = OMAP_ABE_D_IODESCR_ADDR + (OMAP_ABE_BT_VX_DL_PORT * sizeof(struct omap_aess_io_desc))
+		+ offsetof(struct omap_aess_io_desc, drift_asrc);
 	el[i] = (mem_tag << 16) + mem_addr;
 	el[i + 1] = temp0;
 	/* dummy field */

@@ -66,8 +66,7 @@
 #include <abe_initxxx_labels.h>
 #include <abe_taskid.h>
 
-#include <sound/soc/omap/aess/abe_typ.h>
-#include <sound/soc/omap/aess/abe_port.h>
+#include <sound/soc/omap/aess/aess-fw.h>
 
 #include "abe-local.h"
 
@@ -805,10 +804,8 @@ static const struct omap_aess_port abe_port_init_pp = {
 	.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
 	.format = {
 		.f = 48000,
-		.samp_format = STEREO_MSB,
+		.samp_format = OMAP_AESS_FORMAT_STEREO_MSB,
 	},
-	.drift = NODRIFT,
-	.callback = NOCALLBACK,
 	.task = {
 		.nb_task = 1,
 		.task = {
@@ -937,15 +934,13 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
 		.format = {
 			.f = 96000,
-			.samp_format = SIX_MSB,
+			.samp_format = OMAP_AESS_FORMAT_SIX_MSB,
 		},
-		.drift = NODRIFT,
-		.callback = NOCALLBACK,
 		.smem_buffer1 = 1,
 		.smem_buffer2 = (DMIC_ITER/6),
 		.protocol = {
 			.direction = SNK_P,
-			.protocol_switch = DMIC_PORT_PROT,
+			.protocol_switch = OMAP_AESS_PORT_DMIC,
 			.p = {
 				.prot_dmic = {
 					.buf_addr = dmem_dmic,
@@ -979,15 +974,13 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
 		.format = {
 			.f = 96000,
-			.samp_format = STEREO_MSB,
+			.samp_format = OMAP_AESS_FORMAT_STEREO_MSB,
 		},
-		.drift = NODRIFT,
-		.callback = NOCALLBACK,
 		.smem_buffer1 = smem_amic,
 		.smem_buffer2 = (MCPDM_UL_ITER/2),
 		.protocol = {
 			.direction = SNK_P,
-			.protocol_switch = MCPDMUL_PORT_PROT,
+			.protocol_switch = OMAP_AESS_PORT_MCPDMUL,
 			.p = {
 				.prot_mcpdmul = {
 					.buf_addr = dmem_amic,
@@ -1015,15 +1008,13 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
 		.format = {
 			.f = 8000,
-			.samp_format = STEREO_MSB,
+			.samp_format = OMAP_AESS_FORMAT_STEREO_MSB,
 		},
-		.drift = NODRIFT,
-		.callback = NOCALLBACK,
 		.smem_buffer1 = smem_bt_vx_ul_opp50,
 		.smem_buffer2 = 1,
 		.protocol = {
 			.direction = SNK_P,
-			.protocol_switch = SERIAL_PORT_PROT,
+			.protocol_switch = OMAP_AESS_PORT_SERIAL,
 			.p = {
 				.prot_serial = {
 					.desc_addr = (MCBSP1_DMA_TX*ATC_SIZE),
@@ -1104,15 +1095,13 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
 		.format = {
 			.f = 48000,
-			.samp_format = STEREO_MSB,
+			.samp_format = OMAP_AESS_FORMAT_STEREO_MSB,
 		},
-		.drift = NODRIFT,
-		.callback = NOCALLBACK,
 		.smem_buffer1 = smem_mm_ul,
 		.smem_buffer2 = 1,
 		.protocol = {
 			.direction = SRC_P,
-			.protocol_switch = DMAREQ_PORT_PROT,
+			.protocol_switch = OMAP_AESS_PORT_DMAREQ,
 			.p = {
 				.prot_dmareq = {
 					.desc_addr = (CBPr_DMA_RTX3*ATC_SIZE),
@@ -1144,15 +1133,13 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
 		.format = {
 			.f = 48000,
-			.samp_format = STEREO_MSB,
+			.samp_format = OMAP_AESS_FORMAT_STEREO_MSB,
 		},
-		.drift = NODRIFT,
-		.callback = NOCALLBACK,
 		.smem_buffer1 = smem_mm_ul2,
 		.smem_buffer2 = 1,
 		.protocol = {
 			.direction = SRC_P,
-			.protocol_switch = DMAREQ_PORT_PROT,
+			.protocol_switch = OMAP_AESS_PORT_DMAREQ,
 			.p = {
 				.prot_dmareq = {
 					.desc_addr = (CBPr_DMA_RTX4*ATC_SIZE),
@@ -1184,15 +1171,13 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
 		.format = {
 			.f = 8000,
-			.samp_format = MONO_MSB,
+			.samp_format = OMAP_AESS_FORMAT_MONO_MSB,
 		},
-		.drift = NODRIFT,
-		.callback = NOCALLBACK,
 		.smem_buffer1 = smem_vx_ul,
 		.smem_buffer2 = 1,
 		.protocol = {
 			.direction = SRC_P,
-			.protocol_switch = DMAREQ_PORT_PROT,
+			.protocol_switch = OMAP_AESS_PORT_DMAREQ,
 			.p = {
 				.prot_dmareq = {
 					.desc_addr = (CBPr_DMA_RTX2*ATC_SIZE),
@@ -1328,15 +1313,13 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
 		.format = {
 			.f = 48000,
-			.samp_format = STEREO_MSB,
+			.samp_format = OMAP_AESS_FORMAT_STEREO_MSB,
 		},
-		.drift = NODRIFT,
-		.callback = NOCALLBACK,
 		.smem_buffer1 = smem_mm_dl,
 		.smem_buffer2 = 1,
 		.protocol = {
 			.direction = SNK_P,
-			.protocol_switch = DMAREQ_PORT_PROT,
+			.protocol_switch = OMAP_AESS_PORT_DMAREQ,
 			.p = {
 				.prot_dmareq = {
 					.desc_addr = (CBPr_DMA_RTX0*ATC_SIZE),
@@ -1422,15 +1405,13 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
 		.format = {
 			.f = 8000,
-			.samp_format = MONO_MSB,
+			.samp_format = OMAP_AESS_FORMAT_MONO_MSB,
 		},
-		.drift = NODRIFT,
-		.callback = NOCALLBACK,
 		.smem_buffer1 = smem_vx_dl,
 		.smem_buffer2 = 1,
 		.protocol = {
 			.direction = SNK_P,
-			.protocol_switch = DMAREQ_PORT_PROT,
+			.protocol_switch = OMAP_AESS_PORT_DMAREQ,
 			.p = {
 				.prot_dmareq = {
 					.desc_addr = (CBPr_DMA_RTX1*ATC_SIZE),
@@ -1566,15 +1547,13 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
 		.format = {
 			.f = 48000,
-			.samp_format = STEREO_MSB,
+			.samp_format = OMAP_AESS_FORMAT_STEREO_MSB,
 		},
-		.drift = NODRIFT,
-		.callback = NOCALLBACK,
 		.smem_buffer1 = smem_tones_dl,
 		.smem_buffer2 = 1,
 		.protocol = {
 			.direction = SNK_P,
-			.protocol_switch = DMAREQ_PORT_PROT,
+			.protocol_switch = OMAP_AESS_PORT_DMAREQ,
 			.p = {
 				.prot_dmareq = {
 					.desc_addr = (CBPr_DMA_RTX5*ATC_SIZE),
@@ -1639,15 +1618,13 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
 		.format = {
 			.f = 48000,
-			.samp_format = STEREO_MSB,
+			.samp_format = OMAP_AESS_FORMAT_STEREO_MSB,
 		},
-		.drift = NODRIFT,
-		.callback = NOCALLBACK,
 		.smem_buffer1 = DL1_GAIN_out_labelID,
 		.smem_buffer2 = 1,
 		.protocol = {
 			.direction = SRC_P,
-			.protocol_switch = SERIAL_PORT_PROT,
+			.protocol_switch = OMAP_AESS_PORT_SERIAL,
 			.p = {
 				.prot_serial = {
 					.desc_addr = (MCASP1_TX*ATC_SIZE),
@@ -1677,15 +1654,13 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
 		.format = {
 			.f = 8000,
-			.samp_format = MONO_MSB,
+			.samp_format = OMAP_AESS_FORMAT_MONO_MSB,
 		},
-		.drift = NODRIFT,
-		.callback = NOCALLBACK,
 		.smem_buffer1 = smem_bt_vx_dl_opp50,
 		.smem_buffer2 = 1,
 		.protocol = {
 			.direction = SRC_P,
-			.protocol_switch = SERIAL_PORT_PROT,
+			.protocol_switch = OMAP_AESS_PORT_SERIAL,
 			.p = {
 				.prot_serial = {
 					.desc_addr = (MCBSP1_DMA_RX*ATC_SIZE),
@@ -1760,15 +1735,13 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
 		.format = {
 			.f = 96000,
-			.samp_format = SIX_MSB,
+			.samp_format = OMAP_AESS_FORMAT_SIX_MSB,
 		},
-		.drift = NODRIFT,
-		.callback = NOCALLBACK,
 		.smem_buffer1 = 1,
 		.smem_buffer2 = (MCPDM_DL_ITER/6),
 		.protocol = {
 			.direction = SRC_P,
-			.protocol_switch = MCPDMDL_PORT_PROT,
+			.protocol_switch = OMAP_AESS_PORT_MCPDMDL,
 			.p = {
 				.prot_mcpdmdl = {
 					.buf_addr = dmem_mcpdm,
@@ -1801,15 +1774,13 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
 		.format = {
 			.f = 48000,
-			.samp_format = STEREO_MSB,
+			.samp_format = OMAP_AESS_FORMAT_STEREO_MSB,
 		},
-		.drift = NODRIFT,
-		.callback = NOCALLBACK,
 		.smem_buffer1 = smem_mm_ext_out,
 		.smem_buffer2 = 1,
 		.protocol = {
 			.direction = SRC_P,
-			.protocol_switch = SERIAL_PORT_PROT,
+			.protocol_switch = OMAP_AESS_PORT_SERIAL,
 			.p = {
 				.prot_serial = {
 					.desc_addr = (MCBSP1_DMA_TX*ATC_SIZE),
@@ -1839,15 +1810,13 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
 		.format = {
 			.f = 48000,
-			.samp_format = STEREO_MSB,
+			.samp_format = OMAP_AESS_FORMAT_STEREO_MSB,
 		},
-		.drift = NODRIFT,
-		.callback = NOCALLBACK,
 		.smem_buffer1 = smem_mm_ext_in_opp100,
 		.smem_buffer2 = 1,
 		.protocol = {
 			.direction = SNK_P,
-			.protocol_switch = SERIAL_PORT_PROT,
+			.protocol_switch = OMAP_AESS_PORT_SERIAL,
 			.p = {
 				.prot_serial = {
 					.desc_addr = (MCBSP1_DMA_RX*ATC_SIZE),
@@ -1877,15 +1846,13 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
 		.format = {
 			.f = 48000,
-			.samp_format = STEREO_MSB,
+			.samp_format = OMAP_AESS_FORMAT_STEREO_MSB,
 		},
-		.drift = NODRIFT,
-		.callback = NOCALLBACK,
 		.smem_buffer1 = 1,
 		.smem_buffer2 = 1,
 		.protocol = {
 			.direction = SRC_P,
-			.protocol_switch = SERIAL_PORT_PROT,
+			.protocol_switch = OMAP_AESS_PORT_SERIAL,
 			.p = {
 				.prot_serial = {
 					.desc_addr = (MCBSP3_DMA_TX * ATC_SIZE),
@@ -1908,15 +1875,13 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
 		.format = {
 			.f = 48000,
-			.samp_format = STEREO_MSB,
+			.samp_format = OMAP_AESS_FORMAT_STEREO_MSB,
 		},
-		.drift = NODRIFT,
-		.callback = NOCALLBACK,
 		.smem_buffer1 = 1,
 		.smem_buffer2 = 1,
 		.protocol = {
 			.direction = SRC_P,
-			.protocol_switch = SERIAL_PORT_PROT,
+			.protocol_switch = OMAP_AESS_PORT_SERIAL,
 			.p = {
 				.prot_serial = {
 					.desc_addr = (MCBSP3_DMA_RX * ATC_SIZE),
@@ -1939,15 +1904,13 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
 		.format = {
 			.f = 48000,
-			.samp_format = MONO_MSB,
+			.samp_format = OMAP_AESS_FORMAT_MONO_MSB,
 		},
-		.drift = NODRIFT,
-		.callback = NOCALLBACK,
 		.smem_buffer1 = 1,
 		.smem_buffer2 = 1,
 		.protocol = {
 			.direction = SRC_P,
-			.protocol_switch = DMAREQ_PORT_PROT,
+			.protocol_switch = OMAP_AESS_PORT_DMAREQ,
 			.p = {
 				.prot_dmareq = {
 					.desc_addr = (CBPr_DMA_RTX7 * ATC_SIZE),
@@ -1968,5 +1931,4 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		},
 	},
 };
-
 

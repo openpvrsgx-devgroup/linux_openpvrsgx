@@ -27,7 +27,7 @@
 #ifndef __MRSTLFB_H__
 #define __MRSTLFB_H__
 
-#include <drm/drmP.h>
+#include "drmP.h"
 #include "psb_intel_reg.h"
 
 #define MRST_USING_INTERRUPTS

@@ -29,7 +29,7 @@
 
 #if defined(SUPPORT_DRI_DRM) && defined(PVR_SECURE_DRM_AUTH_EXPORT)
 #include <linux/list.h>
-#include <drm/drmP.h>
+#include "drmP.h"
 #endif
 
 typedef struct

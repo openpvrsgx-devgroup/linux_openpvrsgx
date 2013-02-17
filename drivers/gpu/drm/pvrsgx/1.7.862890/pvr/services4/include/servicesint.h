@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 #include "services.h"
-#include "sysinfo.h"
+#include "cdv_sysinfo.h"
 
 #define HWREC_DEFAULT_TIMEOUT	(500)
 

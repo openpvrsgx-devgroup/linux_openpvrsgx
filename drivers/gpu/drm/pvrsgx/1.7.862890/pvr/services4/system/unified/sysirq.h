@@ -24,7 +24,7 @@
 #ifndef _SYSIRQ_H_
 #define _SYSIRQ_H_
 
-#include <drm/drmP.h>
+#include "drmP.h"
 
 bool sysirq_init(struct drm_device *dev);
 void sysirq_uninit(struct drm_device *dev);

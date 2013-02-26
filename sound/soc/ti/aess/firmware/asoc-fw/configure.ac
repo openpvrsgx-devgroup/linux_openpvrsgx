@@ -36,7 +36,7 @@ AC_TYPE_UID_T
 AC_SEARCH_LIBS([dlopen], [dl])
 
 AC_ARG_WITH(
-        [kernel-dir],
+        [linux-dir],
         AS_HELP_STRING([--with-linux-dir],[linux source code directory]),
         [LINUX_DIR=$withval], [LINUX_DIR="~/source/linux.git"])
 AC_SUBST(LINUX_DIR)

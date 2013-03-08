@@ -87,14 +87,14 @@ static int write_header(struct soc_fw_priv *soc_fw, u32 type,
 	}
 
 	fprintf(stdout, "New header type %d size 0x%lx/%ld vendor %d "
-		"version %d at offset 0x%x\n", type, size, size, vendor_type,
+		"version %d at offset 0x%x\n", type, (long unsigned int)size, (long int)size, vendor_type,
 		version, offset);
 
 	soc_fw->next_hdr_pos += hdr.size + sizeof(hdr);
 
 	bytes = write(soc_fw->out_fd, &hdr, sizeof(hdr));
 	if (bytes != sizeof(hdr)) {
-		fprintf(stderr, "error: can't write section header %lu\n", bytes);
+		fprintf(stderr, "error: can't write section header %lu\n", (long unsigned int)bytes);
 		return bytes;
 	}
 
@@ -146,7 +146,7 @@ static int import_mixer(struct soc_fw_priv *soc_fw,
 
 	bytes = write(soc_fw->out_fd, &mc, sizeof(mc));
 	if (bytes != sizeof(mc)) {
-		fprintf(stderr, "error: can't write mixer %lu\n", bytes);
+		fprintf(stderr, "error: can't write mixer %lu\n", (long unsigned int)bytes);
 		return bytes;
 	}
 
@@ -178,7 +178,7 @@ static int import_tlv(struct soc_fw_priv *soc_fw,
 	bytes = write(soc_fw->out_fd, fw_tlv, size);
 	free(fw_tlv);
 	if (bytes != size) {
-		fprintf(stderr, "error: can't write mixer %lu\n", bytes);
+		fprintf(stderr, "error: can't write mixer %lu\n", (long unsigned int)bytes);
 		return bytes;
 	}
 
@@ -240,7 +240,7 @@ static int import_enum_control(struct soc_fw_priv *soc_fw,
 
 	bytes = write(soc_fw->out_fd, &ec, sizeof(ec));
 	if (bytes != sizeof(ec)) {
-		fprintf(stderr, "error: can't write mixer %lu\n", bytes);
+		fprintf(stderr, "error: can't write mixer %lu\n", (long unsigned int)bytes);
 		return bytes;
 	}
 
@@ -301,7 +301,7 @@ int socfw_import_controls(struct soc_fw_priv *soc_fw,
 	
 	bytes = write(soc_fw->out_fd, &kc, sizeof(kc));
 	if (bytes != sizeof(kc)) {
-		fprintf(stderr, "error: can't write mixer %lu\n", bytes);
+		fprintf(stderr, "error: can't write mixer %lu\n", (long unsigned int)bytes);
 		return bytes;
 	}
 
@@ -399,12 +399,12 @@ static int import_enum_coeff_control(struct soc_fw_priv *soc_fw,
 
 	bytes = write(soc_fw->out_fd, &kc, sizeof(kc));
 	if (bytes != sizeof(kc)) {
-		fprintf(stderr, "error: can't write mixer %lu\n", bytes);
+		fprintf(stderr, "error: can't write mixer %lu\n", (long unsigned int)bytes);
 		return bytes;
 	}
 	bytes = write(soc_fw->out_fd, &ec, sizeof(ec));
 	if (bytes != sizeof(ec)) {
-		fprintf(stderr, "error: can't write mixer %lu\n", bytes);
+		fprintf(stderr, "error: can't write mixer %lu\n", (long unsigned int)bytes);
 		return bytes;
 	}
 
@@ -415,7 +415,7 @@ static int import_enum_coeff_control(struct soc_fw_priv *soc_fw,
 
 	bytes = write(soc_fw->out_fd, &cd, sizeof(cd));
 	if (bytes != sizeof(cd)) {
-		fprintf(stderr, "error: can't write coeff data %lu\n", bytes);
+		fprintf(stderr, "error: can't write coeff data %lu\n", (long unsigned int)bytes);
 		return bytes;
 	}
 
@@ -423,7 +423,7 @@ static int import_enum_coeff_control(struct soc_fw_priv *soc_fw,
 		bytes = write(soc_fw->out_fd, coeff->elems[i].coeffs,
 			coeff->elems[i].size);
 		if (bytes != coeff->elems[i].size) {
-			fprintf(stderr, "error: can't write coeff data %lu\n", bytes);
+			fprintf(stderr, "error: can't write coeff data %lu\n", (long unsigned int)bytes);
 			return bytes;
 		}
 	}
@@ -612,7 +612,7 @@ int socfw_import_dapm_widgets(struct soc_fw_priv *soc_fw,
 
 		bytes = write(soc_fw->out_fd, &widget, sizeof(widget));
 		if (bytes != sizeof(widget)) {
-			fprintf(stderr, "error: can't write widget %lu\n", bytes);
+			fprintf(stderr, "error: can't write widget %lu\n", (long unsigned int)bytes);
 			return bytes;
 		}
 
@@ -649,7 +649,7 @@ int socfw_import_dapm_graph(struct soc_fw_priv *soc_fw,
 
 	bytes = write(soc_fw->out_fd, &elem_hdr, sizeof(elem_hdr));
 	if (bytes != sizeof(elem_hdr)) {
-		fprintf(stderr, "error: can't write graph elem header %lu\n", bytes);
+		fprintf(stderr, "error: can't write graph elem header %lu\n", (long unsigned int)bytes);
 		return bytes;
 	}
 
@@ -666,7 +666,7 @@ int socfw_import_dapm_graph(struct soc_fw_priv *soc_fw,
 			elem.source, elem.control, elem.sink); 
 		bytes = write(soc_fw->out_fd, &elem, sizeof(elem));
 		if (bytes != sizeof(elem)) {
-			fprintf(stderr, "error: can't write graph elem %lu\n", bytes);
+			fprintf(stderr, "error: can't write graph elem %lu\n", (long unsigned int)bytes);
 			return bytes;
 		}
 	}
@@ -706,26 +706,26 @@ int socfw_import_vendor(struct soc_fw_priv *soc_fw, const char *name, int type)
 	for (i = 0; i < chunks; i++) {
 		bytes = read(soc_fw->vendor_fd, buf, CHUNK_SIZE);
 		if (bytes < 0 || bytes != CHUNK_SIZE) {
-			fprintf(stderr, "error: can't read vendor data %lu\n", bytes);
+			fprintf(stderr, "error: can't read vendor data %lu\n", (long unsigned int)bytes);
 			return bytes;
 		}
 
 		bytes = write(soc_fw->out_fd, buf, CHUNK_SIZE);
 		if (bytes < 0 || bytes != CHUNK_SIZE) {
-			fprintf(stderr, "error: can't write vendor data %lu\n", bytes);
+			fprintf(stderr, "error: can't write vendor data %lu\n", (long unsigned int)bytes);
 			return bytes;
 		}
 	}
 
 	bytes = read(soc_fw->vendor_fd, buf, rem);
 	if (bytes < 0 || bytes != rem) {
-		fprintf(stderr, "error: can't read vendor data %lu\n", bytes);
+		fprintf(stderr, "error: can't read vendor data %lu\n", (long unsigned int)bytes);
 		return bytes;
 	}
 
 	bytes = write(soc_fw->out_fd, buf, rem);
 	if (bytes < 0 || bytes != rem) {
-		fprintf(stderr, "error: can't write vendor data %lu\n", bytes);
+		fprintf(stderr, "error: can't write vendor data %lu\n", (long unsigned int)bytes);
 		return bytes;
 	}
 

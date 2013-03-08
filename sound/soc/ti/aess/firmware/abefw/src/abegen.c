@@ -111,31 +111,31 @@ static int abe_task_gen(struct omap_aess_mapping *m, int fd)
 
 	/* write map */
 	fprintf(stdout, "0x%4.4x:0x%4.4x: (bytes:words) has %d map entries of size 0x%lx\n",
-		offset *4, offset, m->map_count, sizeof(*m->map));
+		offset *4, offset, m->map_count, (long unsigned int)sizeof(*m->map));
 	offset += mwrite(fd, &m->map_count, sizeof(m->map_count));
 	offset += mwrite(fd, m->map, sizeof(struct omap_aess_addr) * m->map_count);
 
 	/* write label ids */
 	fprintf(stdout, "0x%4.4x:0x%4.4x: (bytes:words) has %d label entries of size 0x%lx\n",
-		offset *4, offset, m->label_count, sizeof(*m->label_id));
+		offset *4, offset, m->label_count, (long unsigned int)sizeof(*m->label_id));
 	offset += mwrite(fd, &m->label_count, sizeof(m->label_count));
 	offset += mwrite(fd, m->label_id, sizeof(*m->label_id) * m->label_count);
 
 	/* write function ids */
 	fprintf(stdout, "0x%4.4x:0x%4.4x: (bytes:words) has %d function entries of size 0x%lx\n",
-		offset *4, offset, m->fct_count, sizeof(*m->fct_id));
+		offset *4, offset, m->fct_count, (long unsigned int)sizeof(*m->fct_id));
 	offset += mwrite(fd, &m->fct_count, sizeof(m->fct_count));
 	offset += mwrite(fd, m->fct_id, sizeof(*m->fct_id) * m->fct_count);
 
 	/* write tasks */
 	fprintf(stdout, "0x%4.4x:0x%4.4x: (bytes:words) has %d task entries of size 0x%lx\n",
-		offset *4, offset, m->table_count, sizeof(*m->init_table));
+		offset *4, offset, m->table_count, (long unsigned int)sizeof(*m->init_table));
 	offset += mwrite(fd, &m->table_count, sizeof(m->table_count));
 	offset += mwrite(fd, m->init_table, sizeof(*m->init_table) * m->table_count);
 
 	/* write ports */
 	fprintf(stdout, "0x%4.4x:0x%4.4x: (bytes:words) has %d port entries of size 0x%lx\n",
-		offset *4, offset, m->port_count, sizeof(*m->port));
+		offset *4, offset, m->port_count, (long unsigned int)sizeof(*m->port));
 	offset += mwrite(fd, &m->port_count, sizeof(m->port_count));
 	offset += mwrite(fd, m->port, sizeof(*m->port) * m->port_count);
 

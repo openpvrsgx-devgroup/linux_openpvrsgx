@@ -467,10 +467,10 @@ CONFIG_ATAGS=y
 CONFIG_ZBOOT_ROM_TEXT=0x0
 CONFIG_ZBOOT_ROM_BSS=0x0
 # CONFIG_ARM_APPENDED_DTB is not set
-CONFIG_CMDLINE="console=ttyO2,115200n8 vram=12M omapfb.vram=0:8M,1:4M omapfb.rotate_type=0 omapdss.def_disp=lcd root=/dev/mmcblk0p2 rw rootfstype=ext3 rootwait twl4030_charger.allow_usb=1 musb_hdrc.preserve_vbus=1 log_buf_len=8M ignore_loglevel"
+CONFIG_CMDLINE="console=ttyO2,115200n8 vram=12M omapfb.vram=0:8M,1:4M omapfb.rotate_type=0 omapdss.def_disp=lcd rootwait twl4030_charger.allow_usb=1 musb_hdrc.preserve_vbus=1 log_buf_len=8M ignore_loglevel"
 # CONFIG_CMDLINE_FROM_BOOTLOADER is not set
-# CONFIG_CMDLINE_EXTEND is not set
-CONFIG_CMDLINE_FORCE=y
+CONFIG_CMDLINE_EXTEND=y
+# CONFIG_CMDLINE_FORCE is not set
 CONFIG_KEXEC=y
 CONFIG_ATAGS_PROC=y
 # CONFIG_CRASH_DUMP is not set
@@ -2057,12 +2057,12 @@ CONFIG_MEDIA_CAMERA_SUPPORT=y
 CONFIG_MEDIA_CONTROLLER=y
 CONFIG_VIDEO_V4L2_SUBDEV_API=y
 CONFIG_VIDEO_DEV=m
+CONFIG_VIDEO_V4L2_SUBDEV_API=y
 CONFIG_VIDEO_V4L2=m
 # CONFIG_VIDEO_ADV_DEBUG is not set
 # CONFIG_VIDEO_FIXED_MINOR_RANGES is not set
 CONFIG_VIDEOBUF_GEN=m
 CONFIG_VIDEOBUF_DMA_CONTIG=m
-CONFIG_VIDEOBUF2_CORE=m
 
 #
 # Media drivers
@@ -2256,7 +2256,6 @@ CONFIG_SGX530=y
 CONFIG_SGX_REV125=y
 CONFIG_SGX_530_BUILD_RELEASE=y
 # CONFIG_SGX_530_BUILD_DEBUG is not set
-# CONFIG_SGX530 is not set
 # CONFIG_VGASTATE is not set
 # CONFIG_VIDEO_OUTPUT_CONTROL is not set
 CONFIG_FB=y
@@ -2974,7 +2973,7 @@ CONFIG_ITG3200=y
 # Magnetometer sensors
 #
 # CONFIG_SENSORS_AK8975 is not set
-CONFIG_SENSORS_HMC5843=m
+CONFIG_SENSORS_HMC5843=y
 
 #
 # Active energy metering IC

@@ -61,13 +61,13 @@ struct snd_soc_dai_driver w2cbw003_dai = {
 struct snd_soc_codec_driver soc_codec_dev_w2cbw003;
 
 
-static __devinit int w2cbw003_platform_probe(struct platform_device *pdev)
+static int w2cbw003_platform_probe(struct platform_device *pdev)
 {
 	return snd_soc_register_codec(&pdev->dev,
 			&soc_codec_dev_w2cbw003, &w2cbw003_dai, 1);
 }
 
-static int __devexit w2cbw003_platform_remove(struct platform_device *pdev)
+static int w2cbw003_platform_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_codec(&pdev->dev);
 	return 0;
@@ -82,7 +82,7 @@ static struct platform_driver w2cbw003_codec_driver = {
 	},
 
 	.probe = w2cbw003_platform_probe,
-	.remove = __devexit_p(w2cbw003_platform_remove),
+	.remove = w2cbw003_platform_remove,
 };
 
 static int __init w2cbw003_init(void)

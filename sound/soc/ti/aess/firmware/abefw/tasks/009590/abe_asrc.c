@@ -193,12 +193,12 @@ int omap_aess_write_asrc(struct omap_aess *abe, u32 port, s32 dppm)
 	}
 	switch (port) {
 	/* asynchronous sample-rate-converter for the uplink voice path */
-	case OMAP_ABE_VX_DL_PORT:
+	case OMAP_AESS_PHY_PORT_VX_DL:
 		drift_sign_addr = OMAP_ABE_D_ASRCVARS_DL_VX_ADDR + (1 * sizeof(s32));
 		alpha_params_addr = OMAP_ABE_D_ASRCVARS_DL_VX_ADDR + (3 * sizeof(s32));
 		break;
 	/* asynchronous sample-rate-converter for the downlink voice path */
-	case OMAP_ABE_VX_UL_PORT:
+	case OMAP_AESS_PHY_PORT_VX_UL:
 		drift_sign_addr = OMAP_ABE_D_ASRCVARS_UL_VX_ADDR + (1 * sizeof(s32));
 		alpha_params_addr = OMAP_ABE_D_ASRCVARS_UL_VX_ADDR + (3 * sizeof(s32));
 		break;
@@ -348,7 +348,7 @@ int omap_aess_init_asrc_vx_dl(s32 *el, s32 dppm)
 	/* 8. drift_ASRC = 0 & drift_io = 0 */
 	mem_tag = ABE_DMEM;
 	mem_addr = OMAP_ABE_D_IODESCR_ADDR +
-		(OMAP_ABE_VX_DL_PORT * sizeof(struct omap_aess_io_desc)) +
+		(OMAP_AESS_PHY_PORT_VX_DL * sizeof(struct omap_aess_io_desc)) +
 		offsetof(struct omap_aess_io_desc, drift_asrc);
 	el[i] = (mem_tag << 16) + mem_addr;
 	el[i + 1] = temp0;
@@ -558,7 +558,7 @@ int omap_aess_init_asrc_vx_ul(s32 *el, s32 dppm)
 	/* 8. drift_ASRC = 0 & drift_io = 0 */
 	mem_tag = ABE_DMEM;
 	mem_addr = OMAP_ABE_D_IODESCR_ADDR + 
-		(OMAP_ABE_VX_UL_PORT * sizeof(struct omap_aess_io_desc)) +
+		(OMAP_AESS_PHY_PORT_VX_UL * sizeof(struct omap_aess_io_desc)) +
 		offsetof(struct omap_aess_io_desc, drift_asrc);
 	el[i] = (mem_tag << 16) + mem_addr;
 	el[i + 1] = temp0;

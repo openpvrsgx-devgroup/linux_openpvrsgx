@@ -122,398 +122,398 @@ static const u32 omap_label_id[] = {
 
 static const struct omap_aess_addr omap_aess_map[] = {
 	{
-		.bank = OMAP_ABE_DMEM,
+		.bank = OMAP_AESS_BANK_DMEM,
 		.offset = OMAP_ABE_D_MULTIFRAME_ADDR,
 		.bytes = OMAP_ABE_D_MULTIFRAME_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_DMEM,
+		.bank = OMAP_AESS_BANK_DMEM,
 		.offset = OMAP_ABE_D_DMIC_UL_FIFO_ADDR,
 		.bytes = OMAP_ABE_D_DMIC_UL_FIFO_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_DMEM,
+		.bank = OMAP_AESS_BANK_DMEM,
 		.offset =  OMAP_ABE_D_MCPDM_UL_FIFO_ADDR,
 		.bytes = OMAP_ABE_D_MCPDM_UL_FIFO_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_DMEM,
+		.bank = OMAP_AESS_BANK_DMEM,
 		.offset = OMAP_ABE_D_BT_UL_FIFO_ADDR,
 		.bytes = OMAP_ABE_D_BT_UL_FIFO_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_DMEM,
+		.bank = OMAP_AESS_BANK_DMEM,
 		.offset = OMAP_ABE_D_MM_UL_FIFO_ADDR,
 		.bytes = OMAP_ABE_D_MM_UL_FIFO_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_DMEM,
+		.bank = OMAP_AESS_BANK_DMEM,
 		.offset = OMAP_ABE_D_MM_UL2_FIFO_ADDR,
 		.bytes = OMAP_ABE_D_MM_UL2_FIFO_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_DMEM,
+		.bank = OMAP_AESS_BANK_DMEM,
 		.offset = OMAP_ABE_D_VX_UL_FIFO_ADDR,
 		.bytes = OMAP_ABE_D_VX_UL_FIFO_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_DMEM,
+		.bank = OMAP_AESS_BANK_DMEM,
 		.offset = OMAP_ABE_D_MM_DL_FIFO_ADDR,
 		.bytes = OMAP_ABE_D_MM_DL_FIFO_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_DMEM,
+		.bank = OMAP_AESS_BANK_DMEM,
 		.offset = OMAP_ABE_D_VX_DL_FIFO_ADDR,
 		.bytes = OMAP_ABE_D_VX_DL_FIFO_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_DMEM,
+		.bank = OMAP_AESS_BANK_DMEM,
 		.offset = OMAP_ABE_D_TONES_DL_FIFO_ADDR,
 		.bytes = OMAP_ABE_D_TONES_DL_FIFO_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_DMEM,
+		.bank = OMAP_AESS_BANK_DMEM,
 		.offset = OMAP_ABE_D_MCASP1_FIFO_ADDR,
 		.bytes = OMAP_ABE_D_MCASP1_FIFO_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_DMEM,
+		.bank = OMAP_AESS_BANK_DMEM,
 		.offset = OMAP_ABE_D_BT_DL_FIFO_ADDR,
 		.bytes = OMAP_ABE_D_BT_DL_FIFO_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_DMEM,
+		.bank = OMAP_AESS_BANK_DMEM,
 		.offset =  OMAP_ABE_D_MCPDM_DL_FIFO_ADDR,
 		.bytes = OMAP_ABE_D_MCPDM_DL_FIFO_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_DMEM,
+		.bank = OMAP_AESS_BANK_DMEM,
 		.offset =  OMAP_ABE_D_MM_EXT_OUT_FIFO_ADDR,
 		.bytes = OMAP_ABE_D_MM_EXT_OUT_FIFO_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_DMEM,
+		.bank = OMAP_AESS_BANK_DMEM,
 		.offset =  OMAP_ABE_D_MM_EXT_IN_FIFO_ADDR,
 		.bytes = OMAP_ABE_D_MM_EXT_IN_FIFO_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_DMIC0_96_48_DATA_ADDR,
 		.bytes = OMAP_ABE_S_DMIC0_96_48_DATA_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_DMIC1_96_48_DATA_ADDR,
 		.bytes = OMAP_ABE_S_DMIC1_96_48_DATA_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_DMIC2_96_48_DATA_ADDR,
 		.bytes = OMAP_ABE_S_DMIC2_96_48_DATA_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_AMIC_96_48_DATA_ADDR,
 		.bytes = OMAP_ABE_S_AMIC_96_48_DATA_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_BT_UL_ADDR,
 		.bytes = OMAP_ABE_S_BT_UL_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_BT_UL_8_48_HP_DATA_ADDR,
 		.bytes = OMAP_ABE_S_BT_UL_8_48_HP_DATA_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_BT_UL_8_48_LP_DATA_ADDR,
 		.bytes = OMAP_ABE_S_BT_UL_8_48_LP_DATA_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_BT_UL_16_48_HP_DATA_ADDR,
 		.bytes = OMAP_ABE_S_BT_UL_16_48_HP_DATA_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_BT_UL_16_48_LP_DATA_ADDR,
 		.bytes = OMAP_ABE_S_BT_UL_16_48_LP_DATA_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_MM_UL2_ADDR,
 		.bytes = OMAP_ABE_S_MM_UL2_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_MM_UL_ADDR,
 		.bytes = OMAP_ABE_S_MM_UL_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_VX_UL_ADDR,
 		.bytes = OMAP_ABE_S_VX_UL_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_VX_UL_48_8_HP_DATA_ADDR,
 		.bytes = OMAP_ABE_S_VX_UL_48_8_HP_DATA_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_VX_UL_48_8_LP_DATA_ADDR,
 		.bytes = OMAP_ABE_S_VX_UL_48_8_LP_DATA_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_VX_UL_48_16_HP_DATA_ADDR,
 		.bytes = OMAP_ABE_S_VX_UL_48_16_HP_DATA_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_VX_UL_48_16_LP_DATA_ADDR,
 		.bytes = OMAP_ABE_S_VX_UL_48_16_LP_DATA_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_MM_DL_ADDR,
 		.bytes = OMAP_ABE_S_MM_DL_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_MM_DL_44P1_ADDR,
 		.bytes = OMAP_ABE_S_MM_DL_44P1_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_MM_DL_44P1_XK_ADDR,
 		.bytes = OMAP_ABE_S_MM_DL_44P1_XK_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_VX_DL_ADDR,
 		.bytes = OMAP_ABE_S_VX_DL_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_VX_DL_8_48_HP_DATA_ADDR,
 		.bytes = OMAP_ABE_S_VX_DL_8_48_HP_DATA_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_VX_DL_8_48_LP_DATA_ADDR,
 		.bytes = OMAP_ABE_S_VX_DL_8_48_LP_DATA_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_VX_DL_8_48_OSR_LP_DATA_ADDR,
 		.bytes = OMAP_ABE_S_VX_DL_8_48_OSR_LP_DATA_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_VX_DL_16_48_HP_DATA_ADDR,
 		.bytes = OMAP_ABE_S_VX_DL_16_48_HP_DATA_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_VX_DL_16_48_LP_DATA_ADDR,
 		.bytes = OMAP_ABE_S_VX_DL_16_48_LP_DATA_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_TONES_ADDR,
 		.bytes = OMAP_ABE_S_TONES_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_TONES_44P1_ADDR,
 		.bytes = OMAP_ABE_S_TONES_44P1_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_TONES_44P1_XK_ADDR,
 		.bytes = OMAP_ABE_S_TONES_44P1_XK_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_MCASP1_ADDR,
 		.bytes = OMAP_ABE_S_MCASP1_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_BT_DL_ADDR,
 		.bytes = OMAP_ABE_S_BT_DL_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_BT_DL_8_48_OSR_LP_DATA_ADDR,
 		.bytes = OMAP_ABE_S_BT_DL_8_48_OSR_LP_DATA_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_BT_DL_48_8_HP_DATA_ADDR,
 		.bytes = OMAP_ABE_S_BT_DL_48_8_HP_DATA_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_BT_DL_48_8_LP_DATA_ADDR,
 		.bytes = OMAP_ABE_S_BT_DL_48_8_LP_DATA_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_BT_DL_48_16_HP_DATA_ADDR,
 		.bytes = OMAP_ABE_S_BT_DL_48_16_HP_DATA_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_BT_DL_48_16_LP_DATA_ADDR,
 		.bytes = OMAP_ABE_S_BT_DL_48_16_LP_DATA_SIZE,
 	},
 
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_DL2_M_LR_EQ_DATA_ADDR,
 		.bytes = OMAP_ABE_S_DL2_M_LR_EQ_DATA_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_DL1_M_EQ_DATA_ADDR,
 		.bytes = OMAP_ABE_S_DL1_M_EQ_DATA_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_EARP_48_96_LP_DATA_ADDR,
 		.bytes = OMAP_ABE_S_EARP_48_96_LP_DATA_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_IHF_48_96_LP_DATA_ADDR,
 		.bytes = OMAP_ABE_S_IHF_48_96_LP_DATA_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_DC_HS_ADDR,
 		.bytes = OMAP_ABE_S_DC_HS_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_DC_HF_ADDR,
 		.bytes = OMAP_ABE_S_DC_HF_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_SDT_F_DATA_ADDR,
 		.bytes = OMAP_ABE_S_SDT_F_DATA_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_GTARGET1_ADDR,
 		.bytes = OMAP_ABE_S_GTARGET1_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_SMEM,
+		.bank = OMAP_AESS_BANK_SMEM,
 		.offset = OMAP_ABE_S_GCURRENT_ADDR,
 		.bytes = OMAP_ABE_S_GCURRENT_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_CMEM,
+		.bank = OMAP_AESS_BANK_CMEM,
 		.offset = OMAP_ABE_C_DL1_COEFS_ADDR,
 		.bytes = OMAP_ABE_C_DL1_COEFS_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_CMEM,
+		.bank = OMAP_AESS_BANK_CMEM,
 		.offset = OMAP_ABE_C_DL2_L_COEFS_ADDR,
 		.bytes = OMAP_ABE_C_DL2_L_COEFS_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_CMEM,
+		.bank = OMAP_AESS_BANK_CMEM,
 		.offset = OMAP_ABE_C_DL2_R_COEFS_ADDR,
 		.bytes = OMAP_ABE_C_DL2_R_COEFS_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_CMEM,
+		.bank = OMAP_AESS_BANK_CMEM,
 		.offset = OMAP_ABE_C_SDT_COEFS_ADDR,
 		.bytes = OMAP_ABE_C_SDT_COEFS_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_CMEM,
+		.bank = OMAP_AESS_BANK_CMEM,
 		.offset = OMAP_ABE_C_96_48_AMIC_COEFS_ADDR,
 		.bytes = OMAP_ABE_C_96_48_AMIC_COEFS_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_CMEM,
+		.bank = OMAP_AESS_BANK_CMEM,
 		.offset = OMAP_ABE_C_96_48_DMIC_COEFS_ADDR,
 		.bytes = OMAP_ABE_C_96_48_DMIC_COEFS_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_CMEM,
+		.bank = OMAP_AESS_BANK_CMEM,
 		.offset = OMAP_ABE_C_1_ALPHA_ADDR,
 		.bytes = OMAP_ABE_C_1_ALPHA_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_CMEM,
+		.bank = OMAP_AESS_BANK_CMEM,
 		.offset = OMAP_ABE_C_ALPHA_ADDR,
 		.bytes = OMAP_ABE_C_ALPHA_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_DMEM,
+		.bank = OMAP_AESS_BANK_DMEM,
 		.offset = OMAP_ABE_D_SLOT23_CTRL_ADDR,
 		.bytes = OMAP_ABE_D_SLOT23_CTRL_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_DMEM,
+		.bank = OMAP_AESS_BANK_DMEM,
 		.offset = OMAP_ABE_D_AUPLINKROUTING_ADDR,
 		.bytes = OMAP_ABE_D_AUPLINKROUTING_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_DMEM,
+		.bank = OMAP_AESS_BANK_DMEM,
 		.offset = OMAP_ABE_D_MAXTASKBYTESINSLOT_ADDR,
 		.bytes = 4,
 	},
 	{
-		.bank = OMAP_ABE_DMEM,
+		.bank = OMAP_AESS_BANK_DMEM,
 		.offset = OMAP_ABE_D_PINGPONGDESC_ADDR,
 		.bytes = 4,
 	},
 	{
-		.bank = OMAP_ABE_DMEM,
+		.bank = OMAP_AESS_BANK_DMEM,
 		.offset = OMAP_ABE_D_IODESCR_ADDR,
 		.bytes = 4,
 	},
 	{
-		.bank = OMAP_ABE_DMEM,
+		.bank = OMAP_AESS_BANK_DMEM,
 		.offset = OMAP_ABE_D_MCUIRQFIFO_ADDR,
 		.bytes = 4,
 	},
 	{
-		.bank = OMAP_ABE_DMEM,
+		.bank = OMAP_AESS_BANK_DMEM,
 		.offset = OMAP_ABE_D_PING_ADDR,
 		.bytes = OMAP_ABE_D_PING_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_DMEM,
+		.bank = OMAP_AESS_BANK_DMEM,
 		.offset = OMAP_ABE_D_DEBUG_FIFO_ADDR,
 		.bytes = OMAP_ABE_D_DEBUG_FIFO_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_DMEM,
+		.bank = OMAP_AESS_BANK_DMEM,
 		.offset = OMAP_ABE_D_DEBUG_FIFO_HAL_ADDR,
 		.bytes = OMAP_ABE_D_DEBUG_FIFO_HAL_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_DMEM,
+		.bank = OMAP_AESS_BANK_DMEM,
 		.offset = OMAP_ABE_D_DEBUG_HAL_TASK_ADDR,
 		.bytes = OMAP_ABE_D_DEBUG_HAL_TASK_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_DMEM,
+		.bank = OMAP_AESS_BANK_DMEM,
 		.offset = OMAP_ABE_D_LOOPCOUNTER_ADDR,
 		.bytes = OMAP_ABE_D_LOOPCOUNTER_SIZE,
 	},
 	{
-		.bank = OMAP_ABE_DMEM,
+		.bank = OMAP_AESS_BANK_DMEM,
 		.offset = OMAP_ABE_D_FWMEMINITDESCR_ADDR,
 		.bytes = OMAP_ABE_D_FWMEMINITDESCR_SIZE,
 	},
@@ -801,7 +801,7 @@ static const struct omap_aess_task aess_16k_check[2] = {
 
 static const struct omap_aess_port abe_port_init_pp = {
 	/* MM_DL */
-	.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
+	.status = OMAP_AESS_PORT_ACTIVITY_IDLE,
 	.format = {
 		.f = 48000,
 		.samp_format = OMAP_AESS_FORMAT_STEREO_MSB,
@@ -925,13 +925,13 @@ static const struct omap_aess_port abe_port_init_pp = {
  * HAL/FW ports status / format / sampling / protocol(call_back) / features
  *	/ gain / name
  */
-struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
+struct omap_aess_port abe_port_init[OMAP_AESS_LAST_PHY_PORT_ID] = {
 	/* Status Data Format Drift Call-Back Protocol+selector desc_addr;
 	   buf_addr; buf_size; iter; irq_addr irq_data DMA_T $Features
 	   reseted at start Port Name for the debug trace */
 	{
 		/* DMIC */
-		.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
+		.status = OMAP_AESS_PORT_ACTIVITY_IDLE,
 		.format = {
 			.f = 96000,
 			.samp_format = OMAP_AESS_FORMAT_SIX_MSB,
@@ -940,7 +940,7 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		.smem_buffer2 = (DMIC_ITER/6),
 		.protocol = {
 			.direction = SNK_P,
-			.protocol_switch = OMAP_AESS_PORT_DMIC,
+			.protocol_switch = OMAP_AESS_PHY_PORT_DMIC,
 			.p = {
 				.prot_dmic = {
 					.buf_addr = dmem_dmic,
@@ -971,7 +971,7 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 	},
 	{
 		/* PDM_UL */
-		.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
+		.status = OMAP_AESS_PORT_ACTIVITY_IDLE,
 		.format = {
 			.f = 96000,
 			.samp_format = OMAP_AESS_FORMAT_STEREO_MSB,
@@ -980,7 +980,7 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		.smem_buffer2 = (MCPDM_UL_ITER/2),
 		.protocol = {
 			.direction = SNK_P,
-			.protocol_switch = OMAP_AESS_PORT_MCPDMUL,
+			.protocol_switch = OMAP_AESS_PROTOCOL_MCPDMUL,
 			.p = {
 				.prot_mcpdmul = {
 					.buf_addr = dmem_amic,
@@ -1005,7 +1005,7 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 	},
 	{
 		/* BT_VX_UL */
-		.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
+		.status = OMAP_AESS_PORT_ACTIVITY_IDLE,
 		.format = {
 			.f = 8000,
 			.samp_format = OMAP_AESS_FORMAT_STEREO_MSB,
@@ -1014,7 +1014,7 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		.smem_buffer2 = 1,
 		.protocol = {
 			.direction = SNK_P,
-			.protocol_switch = OMAP_AESS_PORT_SERIAL,
+			.protocol_switch = OMAP_AESS_PROTOCOL_SERIAL,
 			.p = {
 				.prot_serial = {
 					.desc_addr = (MCBSP1_DMA_TX*ATC_SIZE),
@@ -1092,7 +1092,7 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 	},
 	{
 		/* MM_UL */
-		.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
+		.status = OMAP_AESS_PORT_ACTIVITY_IDLE,
 		.format = {
 			.f = 48000,
 			.samp_format = OMAP_AESS_FORMAT_STEREO_MSB,
@@ -1101,14 +1101,14 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		.smem_buffer2 = 1,
 		.protocol = {
 			.direction = SRC_P,
-			.protocol_switch = OMAP_AESS_PORT_DMAREQ,
+			.protocol_switch = OMAP_AESS_PROTOCOL_DMAREQ,
 			.p = {
 				.prot_dmareq = {
 					.desc_addr = (CBPr_DMA_RTX3*ATC_SIZE),
 					.buf_addr = dmem_mm_ul,
 					.buf_size = dmem_mm_ul_size,
 					.iter = (10*SCHED_LOOP_48kHz),
-					.dma_addr = ABE_DMASTATUS_RAW,
+					.dma_addr = AESS_DMASTATUS_RAW,
 					.dma_data = (1 << 3),
 				},
 			},
@@ -1130,7 +1130,7 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 	},
 	{
 		/* MM_UL2 */
-		.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
+		.status = OMAP_AESS_PORT_ACTIVITY_IDLE,
 		.format = {
 			.f = 48000,
 			.samp_format = OMAP_AESS_FORMAT_STEREO_MSB,
@@ -1139,14 +1139,14 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		.smem_buffer2 = 1,
 		.protocol = {
 			.direction = SRC_P,
-			.protocol_switch = OMAP_AESS_PORT_DMAREQ,
+			.protocol_switch = OMAP_AESS_PROTOCOL_DMAREQ,
 			.p = {
 				.prot_dmareq = {
 					.desc_addr = (CBPr_DMA_RTX4*ATC_SIZE),
 					.buf_addr = dmem_mm_ul2,
 					.buf_size = dmem_mm_ul2_size,
 					.iter = (2*SCHED_LOOP_48kHz),
-					.dma_addr = ABE_DMASTATUS_RAW,
+					.dma_addr = AESS_DMASTATUS_RAW,
 					.dma_data = (1 << 4),
 				},
 			},
@@ -1168,7 +1168,7 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 	},
 	{
 		/* VX_UL */
-		.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
+		.status = OMAP_AESS_PORT_ACTIVITY_IDLE,
 		.format = {
 			.f = 8000,
 			.samp_format = OMAP_AESS_FORMAT_MONO_MSB,
@@ -1177,14 +1177,14 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		.smem_buffer2 = 1,
 		.protocol = {
 			.direction = SRC_P,
-			.protocol_switch = OMAP_AESS_PORT_DMAREQ,
+			.protocol_switch = OMAP_AESS_PROTOCOL_DMAREQ,
 			.p = {
 				.prot_dmareq = {
 					.desc_addr = (CBPr_DMA_RTX2*ATC_SIZE),
 					.buf_addr = dmem_vx_ul,
 					.buf_size = dmem_vx_ul_size,
 					.iter = (1*SCHED_LOOP_8kHz),
-					.dma_addr = ABE_DMASTATUS_RAW,
+					.dma_addr = AESS_DMASTATUS_RAW,
 					.dma_data = (1 << 2),
 				},
 			},
@@ -1310,7 +1310,7 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 	},
 	{
 		/* MM_DL */
-		.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
+		.status = OMAP_AESS_PORT_ACTIVITY_IDLE,
 		.format = {
 			.f = 48000,
 			.samp_format = OMAP_AESS_FORMAT_STEREO_MSB,
@@ -1319,14 +1319,14 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		.smem_buffer2 = 1,
 		.protocol = {
 			.direction = SNK_P,
-			.protocol_switch = OMAP_AESS_PORT_DMAREQ,
+			.protocol_switch = OMAP_AESS_PROTOCOL_DMAREQ,
 			.p = {
 				.prot_dmareq = {
 					.desc_addr = (CBPr_DMA_RTX0*ATC_SIZE),
 					.buf_addr = dmem_mm_dl,
 					.buf_size = dmem_mm_dl_size,
 					.iter = (2*SCHED_LOOP_48kHz),
-					.dma_addr = ABE_DMASTATUS_RAW,
+					.dma_addr = AESS_DMASTATUS_RAW,
 					.dma_data = (1 << 0),
 				},
 			},
@@ -1402,7 +1402,7 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 	},
 	{
 		/* VX_DL */
-		.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
+		.status = OMAP_AESS_PORT_ACTIVITY_IDLE,
 		.format = {
 			.f = 8000,
 			.samp_format = OMAP_AESS_FORMAT_MONO_MSB,
@@ -1411,14 +1411,14 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		.smem_buffer2 = 1,
 		.protocol = {
 			.direction = SNK_P,
-			.protocol_switch = OMAP_AESS_PORT_DMAREQ,
+			.protocol_switch = OMAP_AESS_PROTOCOL_DMAREQ,
 			.p = {
 				.prot_dmareq = {
 					.desc_addr = (CBPr_DMA_RTX1*ATC_SIZE),
 					.buf_addr = dmem_vx_dl,
 					.buf_size = dmem_vx_dl_size,
 					.iter = (1*SCHED_LOOP_8kHz),
-					.dma_addr = ABE_DMASTATUS_RAW,
+					.dma_addr = AESS_DMASTATUS_RAW,
 					.dma_data = (1 << 1),
 				},
 			},
@@ -1544,7 +1544,7 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 	},
 	{
 		/* TONES_DL */
-		.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
+		.status = OMAP_AESS_PORT_ACTIVITY_IDLE,
 		.format = {
 			.f = 48000,
 			.samp_format = OMAP_AESS_FORMAT_STEREO_MSB,
@@ -1553,14 +1553,14 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		.smem_buffer2 = 1,
 		.protocol = {
 			.direction = SNK_P,
-			.protocol_switch = OMAP_AESS_PORT_DMAREQ,
+			.protocol_switch = OMAP_AESS_PROTOCOL_DMAREQ,
 			.p = {
 				.prot_dmareq = {
 					.desc_addr = (CBPr_DMA_RTX5*ATC_SIZE),
 					.buf_addr = dmem_tones_dl,
 					.buf_size = dmem_tones_dl_size,
 					.iter = (2*SCHED_LOOP_48kHz),
-					.dma_addr = ABE_DMASTATUS_RAW,
+					.dma_addr = AESS_DMASTATUS_RAW,
 					.dma_data = (1 << 5),
 				},
 			},
@@ -1615,7 +1615,7 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 	},
 	{
 		/* McASP_DL */
-		.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
+		.status = OMAP_AESS_PORT_ACTIVITY_IDLE,
 		.format = {
 			.f = 48000,
 			.samp_format = OMAP_AESS_FORMAT_STEREO_MSB,
@@ -1624,7 +1624,7 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		.smem_buffer2 = 1,
 		.protocol = {
 			.direction = SRC_P,
-			.protocol_switch = OMAP_AESS_PORT_SERIAL,
+			.protocol_switch = OMAP_AESS_PROTOCOL_SERIAL,
 			.p = {
 				.prot_serial = {
 					.desc_addr = (MCASP1_TX*ATC_SIZE),
@@ -1651,7 +1651,7 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 	},
 	{
 		/* BT_VX_DL */
-		.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
+		.status = OMAP_AESS_PORT_ACTIVITY_IDLE,
 		.format = {
 			.f = 8000,
 			.samp_format = OMAP_AESS_FORMAT_MONO_MSB,
@@ -1660,7 +1660,7 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		.smem_buffer2 = 1,
 		.protocol = {
 			.direction = SRC_P,
-			.protocol_switch = OMAP_AESS_PORT_SERIAL,
+			.protocol_switch = OMAP_AESS_PROTOCOL_SERIAL,
 			.p = {
 				.prot_serial = {
 					.desc_addr = (MCBSP1_DMA_RX*ATC_SIZE),
@@ -1732,7 +1732,7 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 	},
 	{
 		/* PDM_DL */
-		.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
+		.status = OMAP_AESS_PORT_ACTIVITY_IDLE,
 		.format = {
 			.f = 96000,
 			.samp_format = OMAP_AESS_FORMAT_SIX_MSB,
@@ -1741,7 +1741,7 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		.smem_buffer2 = (MCPDM_DL_ITER/6),
 		.protocol = {
 			.direction = SRC_P,
-			.protocol_switch = OMAP_AESS_PORT_MCPDMDL,
+			.protocol_switch = OMAP_AESS_PROTOCOL_MCPDMDL,
 			.p = {
 				.prot_mcpdmdl = {
 					.buf_addr = dmem_mcpdm,
@@ -1771,7 +1771,7 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 	},
 	{
 		/* MM_EXT_OUT */
-		.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
+		.status = OMAP_AESS_PORT_ACTIVITY_IDLE,
 		.format = {
 			.f = 48000,
 			.samp_format = OMAP_AESS_FORMAT_STEREO_MSB,
@@ -1780,7 +1780,7 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		.smem_buffer2 = 1,
 		.protocol = {
 			.direction = SRC_P,
-			.protocol_switch = OMAP_AESS_PORT_SERIAL,
+			.protocol_switch = OMAP_AESS_PROTOCOL_SERIAL,
 			.p = {
 				.prot_serial = {
 					.desc_addr = (MCBSP1_DMA_TX*ATC_SIZE),
@@ -1807,7 +1807,7 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 	},
 	{
 		/* MM_EXT_IN */
-		.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
+		.status = OMAP_AESS_PORT_ACTIVITY_IDLE,
 		.format = {
 			.f = 48000,
 			.samp_format = OMAP_AESS_FORMAT_STEREO_MSB,
@@ -1816,7 +1816,7 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		.smem_buffer2 = 1,
 		.protocol = {
 			.direction = SNK_P,
-			.protocol_switch = OMAP_AESS_PORT_SERIAL,
+			.protocol_switch = OMAP_AESS_PROTOCOL_SERIAL,
 			.p = {
 				.prot_serial = {
 					.desc_addr = (MCBSP1_DMA_RX*ATC_SIZE),
@@ -1843,7 +1843,7 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 	},
 	{
 		/* PCM3_TX */
-		.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
+		.status = OMAP_AESS_PORT_ACTIVITY_IDLE,
 		.format = {
 			.f = 48000,
 			.samp_format = OMAP_AESS_FORMAT_STEREO_MSB,
@@ -1852,7 +1852,7 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		.smem_buffer2 = 1,
 		.protocol = {
 			.direction = SRC_P,
-			.protocol_switch = OMAP_AESS_PORT_SERIAL,
+			.protocol_switch = OMAP_AESS_PROTOCOL_SERIAL,
 			.p = {
 				.prot_serial = {
 					.desc_addr = (MCBSP3_DMA_TX * ATC_SIZE),
@@ -1872,7 +1872,7 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 	},
 	{
 		/* PCM3_RX */
-		.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
+		.status = OMAP_AESS_PORT_ACTIVITY_IDLE,
 		.format = {
 			.f = 48000,
 			.samp_format = OMAP_AESS_FORMAT_STEREO_MSB,
@@ -1881,7 +1881,7 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		.smem_buffer2 = 1,
 		.protocol = {
 			.direction = SRC_P,
-			.protocol_switch = OMAP_AESS_PORT_SERIAL,
+			.protocol_switch = OMAP_AESS_PROTOCOL_SERIAL,
 			.p = {
 				.prot_serial = {
 					.desc_addr = (MCBSP3_DMA_RX * ATC_SIZE),
@@ -1901,7 +1901,7 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 	},
 	{
 		/* SCHD_DBG_PORT */
-		.status = OMAP_ABE_PORT_ACTIVITY_IDLE,
+		.status = OMAP_AESS_PORT_ACTIVITY_IDLE,
 		.format = {
 			.f = 48000,
 			.samp_format = OMAP_AESS_FORMAT_MONO_MSB,
@@ -1910,14 +1910,14 @@ struct omap_aess_port abe_port_init[LAST_PORT_ID] = {
 		.smem_buffer2 = 1,
 		.protocol = {
 			.direction = SRC_P,
-			.protocol_switch = OMAP_AESS_PORT_DMAREQ,
+			.protocol_switch = OMAP_AESS_PROTOCOL_DMAREQ,
 			.p = {
 				.prot_dmareq = {
 					.desc_addr = (CBPr_DMA_RTX7 * ATC_SIZE),
 					.buf_addr = dmem_mm_trace,
 					.buf_size = dmem_mm_trace_size,
 					.iter = (2*SCHED_LOOP_48kHz),
-					.dma_addr = ABE_DMASTATUS_RAW,
+					.dma_addr = AESS_DMASTATUS_RAW,
 					.dma_data = (1 << 4),
 				},
 			},

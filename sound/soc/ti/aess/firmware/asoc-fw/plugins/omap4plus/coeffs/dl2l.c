@@ -15,7 +15,7 @@
  */
 
 #include <socfw.h>
-#include <omap-abe-priv.h>
+#include <aess/omap-aess-priv.h>
 #include <aess/aess-fw.h>
 
 /* Flat response with Gain =1 */

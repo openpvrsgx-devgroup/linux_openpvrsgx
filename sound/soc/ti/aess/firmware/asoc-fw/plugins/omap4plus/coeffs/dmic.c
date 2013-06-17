@@ -16,7 +16,7 @@
  */
 
 #include <socfw.h>
-#include <omap-abe-priv.h>
+#include <aess/omap-aess-priv.h>
 #include <aess/aess-fw.h>
 
 /* 20kHz cut-off frequency and Gain = 1 */

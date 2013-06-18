@@ -7,7 +7,7 @@ check:	abe_check
 	./abe_check
 
 target:	abe_check.c
-	arm-linux-gnueabi-gcc -DARM abe_check.c -o abe_check_arm -lm
+	${CROSS_COMPILE}gcc -DARM abe_check.c -o abe_check_arm -lm
 
 clean:
 	rm -fv abe_check

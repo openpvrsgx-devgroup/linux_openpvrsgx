@@ -20,12 +20,4 @@
 #define SI47XX_DACCTL    0x02
 #define SI47XX_IFCTL     0x03
 
-struct si47xx_setup_data {
-	int            spi;
-	int            i2c_bus;
-	unsigned short i2c_address;
-};
-
-extern struct snd_soc_codec_device soc_codec_dev_si47xx;
-
 #endif

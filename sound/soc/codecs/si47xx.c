@@ -14,6 +14,13 @@
  * published by the Free Software Foundation.
  */
 
+// temporary hack until someone understands how to configure the I2C address in the
+// board file and gets the driver loaded with I2C address 0x11
+// all unused code and the #if USE_I2C_SPI should be removed as soon as I2C works
+
+#define USE_I2C_SPI 0
+
+
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/init.h>
@@ -21,21 +28,23 @@
 #include <linux/pm.h>
 #include <linux/i2c.h>
 #include <linux/platform_device.h>
+#include <linux/regmap.h>
 #include <linux/spi/spi.h>
+#include <linux/slab.h>
+#include <linux/of_device.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
-#include <sound/soc-dapm.h>
 #include <sound/initval.h>
 #include <sound/tlv.h>
 
 #include "si47xx.h"
 
-struct si47xx_priv {
-	enum snd_soc_control_type control_type;
-};
-
+// FIXME: for the Si47xx we don't need the register cache mechanism
+// FIXME: we must make sure that the digital clock (DCLK) is stable
+// and the sample rate is set to 0Hz if we disable the clock!
+// this happens when arecord is started/stopped, i.e. the clock is gated
 
 /*
  * We can't read the WM8728 register space so we cache them instead.
@@ -43,21 +52,31 @@ struct si47xx_priv {
  * the volume update bits, mute the output and enable infinite zero
  * detect.
  */
-static const u16 si47xx_reg_defaults[] = {
-	0x1ff,
-	0x1ff,
-	0x001,
-	0x100,
+static const struct reg_default si47xx_reg_defaults[] = {
+	{ 0, 0x1ff },
+	{ 1, 0x1ff },
+	{ 2, 0x001 },
+	{ 3, 0x100 },
+};
+
+/* codec private data */
+struct si47xx_priv {
+	struct regmap *regmap;
 };
 
 static const DECLARE_TLV_DB_SCALE(si47xx_tlv, -12750, 50, 1);
 
 static const struct snd_kcontrol_new si47xx_snd_controls[] = {
+#if USE_I2C_SPI	// these controls call snd_soc_read(codev, ...)
 
 SOC_DOUBLE_R_TLV("Digital Playback Volume", SI47XX_DACLVOL, SI47XX_DACRVOL,
 		 0, 255, 0, si47xx_tlv),
 
 SOC_SINGLE("Deemphasis", SI47XX_DACCTL, 1, 1, 0),
+#endif
+	/* code fragment
+	 SOC_SINGLE("Frequency", SI47XX_DACCTL, 1, 1, 0),
+	 */
 };
 
 /*
@@ -67,34 +86,32 @@ static const struct snd_soc_dapm_widget si47xx_dapm_widgets[] = {
 SND_SOC_DAPM_DAC("DAC", "HiFi Playback", SND_SOC_NOPM, 0, 0),
 SND_SOC_DAPM_OUTPUT("VOUTL"),
 SND_SOC_DAPM_OUTPUT("VOUTR"),
+	/*
+	 * here (???) we should add controls for
+	 * - tuning the receiver
+	 * - tuning the transmitter
+	 * - scanning for stations
+	 * - getting RSSI & SNR
+	 * - RDS
+	 * so that we can read/write them through the amixer get/set commands
+	 */
 };
 
-static const struct snd_soc_dapm_route intercon[] = {
+static const struct snd_soc_dapm_route si47xx_intercon[] = {
 	{"VOUTL", NULL, "DAC"},
 	{"VOUTR", NULL, "DAC"},
 };
 
-static int si47xx_add_widgets(struct snd_soc_codec *codec)
-{
-	struct snd_soc_dapm_context *dapm = &codec->dapm;
-	snd_soc_dapm_new_controls(dapm, si47xx_dapm_widgets,
-				  ARRAY_SIZE(si47xx_dapm_widgets));
-
-	snd_soc_dapm_add_routes(dapm, intercon, ARRAY_SIZE(intercon));
-
-	return 0;
-}
-
 static int si47xx_mute(struct snd_soc_dai *dai, int mute)
 {
+#if 0
 	struct snd_soc_codec *codec = dai->codec;
 	u16 mute_reg = snd_soc_read(codec, SI47XX_DACCTL);
-
 	if (mute)
 		snd_soc_write(codec, SI47XX_DACCTL, mute_reg | 1);
 	else
 		snd_soc_write(codec, SI47XX_DACCTL, mute_reg & ~1);
-
+#endif
 	return 0;
 }
 
@@ -102,8 +119,8 @@ static int si47xx_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params,
 	struct snd_soc_dai *dai)
 {
-	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_codec *codec = rtd->codec;
+#if 0
+	struct snd_soc_codec *codec = dai->codec;
 	u16 dac = snd_soc_read(codec, SI47XX_DACCTL);
 
 	dac &= ~0x18;
@@ -120,15 +137,15 @@ static int si47xx_hw_params(struct snd_pcm_substream *substream,
 	default:
 		return -EINVAL;
 	}
-
 	snd_soc_write(codec, SI47XX_DACCTL, dac);
-
+#endif
 	return 0;
 }
 
 static int si47xx_set_dai_fmt(struct snd_soc_dai *codec_dai,
 		unsigned int fmt)
 {
+#if 0
 	struct snd_soc_codec *codec = codec_dai->codec;
 	u16 iface = snd_soc_read(codec, SI47XX_IFCTL);
 
@@ -169,16 +186,17 @@ static int si47xx_set_dai_fmt(struct snd_soc_dai *codec_dai,
 	default:
 		return -EINVAL;
 	}
-
 	snd_soc_write(codec, SI47XX_IFCTL, iface);
+#endif
 	return 0;
 }
 
 static int si47xx_set_bias_level(struct snd_soc_codec *codec,
 				 enum snd_soc_bias_level level)
 {
+#if 0
+	struct si47xx_priv *si47xx = snd_soc_codec_get_drvdata(codec);
 	u16 reg;
-	int i;
 
 	switch (level) {
 	case SND_SOC_BIAS_ON:
@@ -190,9 +208,7 @@ static int si47xx_set_bias_level(struct snd_soc_codec *codec,
 			snd_soc_write(codec, SI47XX_DACCTL, reg & ~0x4);
 
 			/* ..then sync in the register cache. */
-			for (i = 0; i < ARRAY_SIZE(si47xx_reg_defaults); i++)
-				snd_soc_write(codec, i,
-					     snd_soc_read(codec, i));
+			regcache_sync(si47xx->regmap);
 		}
 		break;
 
@@ -202,11 +218,11 @@ static int si47xx_set_bias_level(struct snd_soc_codec *codec,
 		break;
 	}
 	codec->dapm.bias_level = level;
+#endif
 	return 0;
 }
 
 // FIXME: adjust what the Si47xx chip needs...
-
 #define SI47XX_RATES (SNDRV_PCM_RATE_8000_192000)
 
 #define SI47XX_FORMATS (SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S20_3LE |\
@@ -227,7 +243,7 @@ struct snd_soc_dai_driver si47xx_dai = {
 		.rates = SI47XX_RATES,
 		.formats = SI47XX_FORMATS,
 	},
-	.playback = {
+	.capture = {
 		.stream_name = "Capture",
 		.channels_min = 2,
 		.channels_max = 2,
@@ -237,284 +253,240 @@ struct snd_soc_dai_driver si47xx_dai = {
 	.ops = &si47xx_dai_ops,
 };
 
-static int si47xx_suspend(struct snd_soc_codec *codec, pm_message_t state)
+static int si47xx_suspend(struct snd_soc_codec *codec)
 {
+	printk("si47xx_suspend\n");
 	si47xx_set_bias_level(codec, SND_SOC_BIAS_OFF);
-
+	/* send power off command */
 	return 0;
 }
 
 static int si47xx_resume(struct snd_soc_codec *codec)
 {
+	printk("si47xx_resume\n");
 	si47xx_set_bias_level(codec, codec->dapm.suspend_bias_level);
-
+	/* send power on command */
+	/* tune to current frequency */
 	return 0;
 }
 
-struct snd_soc_codec_driver si47xx_driver = {
-	.set_bias_level = si47xx_set_bias_level,
-	.reg_cache_size = ARRAY_SIZE(si47xx_reg_defaults),
-	.reg_cache_default = si47xx_reg_defaults,
-};
-/*
- * initialise the Si47xx driver
- * register the mixer and dsp interfaces with the kernel
- */
-static int si47xx_init(struct snd_soc_device *socdev,
-		       enum snd_soc_control_type control)
+static int si47xx_probe(struct snd_soc_codec *codec)
 {
-	struct snd_soc_codec *codec = socdev->card->codec;
-	int ret = 0;
-
-	codec->name = "Si47xx";
-	codec->owner = THIS_MODULE;
-	codec->driver = si47xx_driver;
-	codec->bias_level = SND_SOC_BIAS_OFF;
-
-	snd_soc_register_codec(dev, si47xx_driver, &si47xx_dai, 1);
-	ret = snd_soc_codec_set_cache_io(codec, 7, 9, control);
+	int ret;
+	printk("si47xx_probe\n");
+#if USE_I2C_SPI
+	ret = snd_soc_codec_set_cache_io(codec, 7, 9, SND_SOC_REGMAP);
 	if (ret < 0) {
 		printk(KERN_ERR "si47xx: failed to configure cache I/O: %d\n",
 		       ret);
-		goto err;
+		return ret;
 	}
-
-	/* register pcms */
-	ret = snd_soc_new_pcms(socdev, SNDRV_DEFAULT_IDX1, SNDRV_DEFAULT_STR1);
-	if (ret < 0) {
-		printk(KERN_ERR "si47xx: failed to create pcms\n");
-		goto err;
-	}
-
+#endif
 	/* power on device */
 	si47xx_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 
-	snd_soc_add_controls(codec, si47xx_snd_controls,
-				ARRAY_SIZE(si47xx_snd_controls));
-	si47xx_add_widgets(codec);
+	/* power on and ask for chip id */
 
-	return ret;
-
-err:
-	kfree(codec->reg_cache);
 	return ret;
 }
 
-#if defined(CONFIG_I2C) || defined(CONFIG_I2C_MODULE)
-
-/*
- * Si47xx 2 wire address is determined by GPIO5
- * state during powerup.
- *    low  = 0x1a
- *    high = 0x1b
- */
-
-static __devinit int si47xx_i2c_probe(struct i2c_client *i2c,
-				      const struct i2c_device_id *id)
+static int si47xx_remove(struct snd_soc_codec *codec)
 {
-	struct si47xx_priv *si47xx;
-	struct snd_soc_device *socdev = si47xx_socdev;
-	struct snd_soc_codec *codec = socdev->card->codec;
-	int ret;
-
-	si47xx = kzalloc(sizeof *si47xx, GFP_KERNEL);
-	if (!si47xx)
-		return -ENOMEM;
-
-	si47xx->control_type = SND_SOC_I2C;
-	i2c_set_clientdata(i2c, si47xx);
-
-	ret = snd_soc_register_codec(&i2c->dev,
-				     &si47xx_driver, &si47xx_dai, 1);
-
-	if (ret < 0)
-		kfree(si47xx);
-/X/	ret = si47xx_init(socdev, SND_SOC_I2C);
-
-	if (ret < 0)
-		pr_err("failed to initialise Si47xx\n");
-	return ret;
-}
-
-static int si47xx_i2c_remove(struct i2c_client *client)
-{
-	struct snd_soc_codec *codec = i2c_get_clientdata(client);
-	snd_soc_unregister_codec(&client->dev);
-	kfree(i2c_get_clientdata(client));
-	kfree(codec->reg_cache);
+	printk("si47xx_remove\n");
+	si47xx_set_bias_level(codec, SND_SOC_BIAS_OFF);
 	return 0;
 }
 
-static const struct i2c_device_id si47xx_i2c_id[] = {
-	{ "si47xx", 0 },
+static struct snd_soc_codec_driver soc_codec_dev_si47xx = {
+	.probe =	si47xx_probe,
+	.remove =	si47xx_remove,
+	.suspend =	si47xx_suspend,
+	.resume =	si47xx_resume,
+	.set_bias_level = si47xx_set_bias_level,
+	.controls = si47xx_snd_controls,
+	.num_controls = ARRAY_SIZE(si47xx_snd_controls),
+	.dapm_widgets = si47xx_dapm_widgets,
+	.num_dapm_widgets = ARRAY_SIZE(si47xx_dapm_widgets),
+	.dapm_routes = si47xx_intercon,
+	.num_dapm_routes = ARRAY_SIZE(si47xx_intercon),
+};
+
+#if USE_I2C_SPI
+static const struct of_device_id si47xx_of_match[] = {
+	{ .compatible = "si4705,si4721", },
 	{ }
 };
-MODULE_DEVICE_TABLE(i2c, si47xx_i2c_id);
+MODULE_DEVICE_TABLE(of, si47xx_of_match);
 
-static struct i2c_driver si47xx_i2c_driver = {
-	.driver = {
-		.name = "Si47xx I2C Codec",
-		.owner = THIS_MODULE,
-	},
-	.probe =    si47xx_i2c_probe,
-	.remove =   si47xx_i2c_remove,
-	.id_table = si47xx_i2c_id,
+static const struct regmap_config si47xx_regmap = {
+	.reg_bits = 7,
+	.val_bits = 9,
+	.max_register = SI47XX_IFCTL,
+
+	.reg_defaults = si47xx_reg_defaults,
+	.num_reg_defaults = ARRAY_SIZE(si47xx_reg_defaults),
+	.cache_type = REGCACHE_RBTREE,
 };
-
-static int si47xx_add_i2c_device(struct platform_device *pdev,
-				 const struct si47xx_setup_data *setup)
-{
-	struct i2c_board_info info;
-	struct i2c_adapter *adapter;
-	struct i2c_client *client;
-	int ret;
-
-	ret = i2c_add_driver(&si47xx_i2c_driver);
-	if (ret != 0) {
-		dev_err(&pdev->dev, "can't add i2c driver\n");
-		return ret;
-	}
-
-	memset(&info, 0, sizeof(struct i2c_board_info));
-	info.addr = setup->i2c_address;
-	strlcpy(info.type, "si47xx", I2C_NAME_SIZE);
-
-	adapter = i2c_get_adapter(setup->i2c_bus);
-	if (!adapter) {
-		dev_err(&pdev->dev, "can't get i2c adapter %d\n",
-			setup->i2c_bus);
-		goto err_driver;
-	}
-
-	client = i2c_new_device(adapter, &info);
-	i2c_put_adapter(adapter);
-	if (!client) {
-		dev_err(&pdev->dev, "can't add i2c device at 0x%x\n",
-			(unsigned int)info.addr);
-		goto err_driver;
-	}
-
-	return 0;
-
-err_driver:
-	i2c_del_driver(&si47xx_i2c_driver);
-	return -ENODEV;
-}
-#endif
 
 #if defined(CONFIG_SPI_MASTER)
 static int __devinit si47xx_spi_probe(struct spi_device *spi)
 {
-	struct snd_soc_device *socdev = si47xx_socdev;
-	struct snd_soc_codec *codec = socdev->card->codec;
+	struct si47xx_priv *si47xx;
 	int ret;
 
-	codec->control_data = spi;
+	printk("si47xx_spi_probe\n");
+	si47xx = devm_kzalloc(&spi->dev, sizeof(struct si47xx_priv),
+			      GFP_KERNEL);
+	if (si47xx == NULL)
+		return -ENOMEM;
 
-	ret = si47xx_init(socdev, SND_SOC_SPI);
-	if (ret < 0)
-		dev_err(&spi->dev, "failed to initialise Si47xx\n");
+	si47xx->regmap = devm_regmap_init_spi(spi, &si47xx_regmap);
+	if (IS_ERR(si47xx->regmap))
+		return PTR_ERR(si47xx->regmap);
+
+	spi_set_drvdata(spi, si47xx);
+
+	ret = snd_soc_register_codec(&spi->dev,
+			&soc_codec_dev_si47xx, &si47xx_dai, 1);
 
 	return ret;
 }
 
 static int __devexit si47xx_spi_remove(struct spi_device *spi)
 {
+	snd_soc_unregister_codec(&spi->dev);
+
 	return 0;
 }
-
-MODULE_ALIAS("platform:si47xx_codec_audio");
 
 static struct spi_driver si47xx_spi_driver = {
 	.driver = {
 		.name	= "si47xx_codec_audio",
-		.bus	= &spi_bus_type,
 		.owner	= THIS_MODULE,
+		.of_match_table = si47xx_of_match,
 	},
 	.probe		= si47xx_spi_probe,
 	.remove		= __devexit_p(si47xx_spi_remove),
 };
 #endif /* CONFIG_SPI_MASTER */
 
-static int si47xx_probe(struct platform_device *pdev)
+#if defined(CONFIG_I2C) || defined(CONFIG_I2C_MODULE)
+static __devinit int si47xx_i2c_probe(struct i2c_client *i2c,
+				      const struct i2c_device_id *id)
 {
-	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
-	struct si47xx_setup_data *setup;
-	struct snd_soc_codec *codec;
-	int ret = 0;
+	struct si47xx_priv *si47xx;
+	int ret;
 
-	setup = socdev->codec_data;
-	codec = kzalloc(sizeof(struct snd_soc_codec), GFP_KERNEL);
-	if (codec == NULL)
+	printk("si47xx_i2c_probe\n");
+	si47xx = devm_kzalloc(&i2c->dev, sizeof(struct si47xx_priv),
+			      GFP_KERNEL);
+	if (si47xx == NULL)
 		return -ENOMEM;
 
-	socdev->card->codec = codec;
-	mutex_init(&codec->mutex);
-	INIT_LIST_HEAD(&codec->dapm_widgets);
-	INIT_LIST_HEAD(&codec->dapm_paths);
+	si47xx->regmap = devm_regmap_init_i2c(i2c, &si47xx_regmap);
+	if (IS_ERR(si47xx->regmap))
+		return PTR_ERR(si47xx->regmap);
 
-	si47xx_socdev = socdev;
-	ret = -ENODEV;
+	i2c_set_clientdata(i2c, si47xx);
 
-#if defined(CONFIG_I2C) || defined(CONFIG_I2C_MODULE)
-	if (setup->i2c_address) {
-		ret = si47xx_add_i2c_device(pdev, setup);
-	}
-#endif
-#if defined(CONFIG_SPI_MASTER)
-	if (setup->spi) {
-		ret = spi_register_driver(&si47xx_spi_driver);
-		if (ret != 0)
-			printk(KERN_ERR "can't add spi driver");
-	}
-#endif
-
-	if (ret != 0)
-		kfree(codec);
+	ret =  snd_soc_register_codec(&i2c->dev,
+			&soc_codec_dev_si47xx, &si47xx_dai, 1);
 
 	return ret;
 }
 
-/* power down chip */
-static int si47xx_remove(struct platform_device *pdev)
+static __devexit int si47xx_i2c_remove(struct i2c_client *client)
 {
-	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
-	struct snd_soc_codec *codec = socdev->card->codec;
-
-	if (codec->control_data)
-		si47xx_set_bias_level(codec, SND_SOC_BIAS_OFF);
-
-	snd_soc_free_pcms(socdev);
-	snd_soc_dapm_free(socdev);
-#if defined(CONFIG_I2C) || defined(CONFIG_I2C_MODULE)
-	i2c_unregister_device(codec->control_data);
-	i2c_del_driver(&si47xx_i2c_driver);
-#endif
-#if defined(CONFIG_SPI_MASTER)
-	spi_unregister_driver(&si47xx_spi_driver);
-#endif
-	kfree(codec);
-
+	snd_soc_unregister_codec(&client->dev);
 	return 0;
 }
 
-struct snd_soc_codec_device soc_codec_dev_si47xx = {
-	.probe = 	si47xx_probe,
-	.remove = 	si47xx_remove,
-	.suspend = 	si47xx_suspend,
-	.resume =	si47xx_resume,
+static const struct i2c_device_id si47xx_i2c_id[] = {
+	{ "si4705", 0 },
+	{ "si4721", 1 },
+	{ }
 };
-EXPORT_SYMBOL_GPL(soc_codec_dev_si47xx);
+MODULE_DEVICE_TABLE(i2c, si47xx_i2c_id);
+
+static struct i2c_driver si47xx_i2c_driver = {
+	.driver = {
+		.name = "si47xx_codec_audio",
+		.owner = THIS_MODULE,
+		.of_match_table = si47xx_of_match,
+	},
+	.probe =    si47xx_i2c_probe,
+	.remove =   __devexit_p(si47xx_i2c_remove),
+	.id_table = si47xx_i2c_id,
+};
+#endif
+
+#else // USE_I2C_SPI
+
+static __devinit int si47xx_platform_probe(struct platform_device *pdev)
+{
+	printk("si47xx_platform_probe\n");
+	return snd_soc_register_codec(&pdev->dev,
+								  &soc_codec_dev_si47xx, &si47xx_dai, 1);
+}
+
+static int __devexit si47xx_platform_remove(struct platform_device *pdev)
+{
+	snd_soc_unregister_codec(&pdev->dev);
+	return 0;
+}
+
+MODULE_ALIAS("platform:si47xx_codec_audio");
+
+static struct platform_driver si47xx_codec_driver = {
+	.driver = {
+		.name = "si47xx_codec_audio",
+		.owner = THIS_MODULE,
+	},
+
+	.probe = si47xx_platform_probe,
+	.remove = __devexit_p(si47xx_platform_remove),
+};
+#endif // USE_I2C_SPI
 
 static int __init si47xx_modinit(void)
 {
-	return snd_soc_register_dai(&si47xx_dai);
+#if USE_I2C_SPI
+	int ret = 0;
+	printk("si47xx_modinit I2C/SPI\n");
+#if defined(CONFIG_I2C) || defined(CONFIG_I2C_MODULE)
+	ret = i2c_add_driver(&si47xx_i2c_driver);
+	if (ret != 0) {
+		printk(KERN_ERR "Failed to register si47xx I2C driver: %d\n",
+		       ret);
+	}
+#endif
+#if defined(CONFIG_SPI_MASTER)
+	ret = spi_register_driver(&si47xx_spi_driver);
+	if (ret != 0) {
+		printk(KERN_ERR "Failed to register si47xx SPI driver: %d\n",
+		       ret);
+	}
+#endif
+	return ret;
+#else
+	printk("si47xx_modinit\n");
+	return platform_driver_register(&si47xx_codec_driver);
+#endif
 }
 module_init(si47xx_modinit);
 
 static void __exit si47xx_exit(void)
 {
-	snd_soc_unregister_dai(&si47xx_dai);
+#if USE_I2C_SPI
+#if defined(CONFIG_I2C) || defined(CONFIG_I2C_MODULE)
+	i2c_del_driver(&si47xx_i2c_driver);
+#endif
+#if defined(CONFIG_SPI_MASTER)
+	spi_unregister_driver(&si47xx_spi_driver);
+#endif
+#else
+	platform_driver_unregister(&si47xx_codec_driver);
+#endif
 }
 module_exit(si47xx_exit);
 

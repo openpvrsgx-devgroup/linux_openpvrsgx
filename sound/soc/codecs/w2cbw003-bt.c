@@ -1,7 +1,5 @@
 /*
- * FIXME: this is a blueprint for the W2CBW003 Bluetooth PCM interface
- * needs to be adapted for GTA04
- * CHECKME: can we use the generic AC97 or SPDIF driver instead of defining our own?
+ * Tis is a driver for the W2CBW003 Bluetooth PCM interface
  *
  * w2cbw003.c
  *

@@ -802,5 +802,5 @@ obj-$(CONFIG_SND_SOC_SIMPLE_MUX)	+= snd-soc-simple-mux.o
 obj-$(CONFIG_SND_SOC_WM2000)   += snd-soc-wm2000.o
 obj-$(CONFIG_SND_SOC_WM9090)   += snd-soc-wm9090.o
 obj-$(CONFIG_SND_SOC_GTM601)    += snd-soc-gtm601.o
-#obj-$(CONFIG_SND_SOC_SI47XX)    += snd-soc-si47xx.o
+obj-$(CONFIG_SND_SOC_SI47XX)    += snd-soc-si47xx.o
 obj-$(CONFIG_SND_SOC_W2CBW003)  += snd-soc-w2cbw003-bt.o

@@ -281,6 +281,8 @@ static int si47xx_probe(struct snd_soc_codec *codec)
 		       ret);
 		return ret;
 	}
+#else
+	ret = 0;
 #endif
 	/* power on device */
 	si47xx_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
@@ -329,7 +331,7 @@ static const struct regmap_config si47xx_regmap = {
 };
 
 #if defined(CONFIG_SPI_MASTER)
-static int __devinit si47xx_spi_probe(struct spi_device *spi)
+static int si47xx_spi_probe(struct spi_device *spi)
 {
 	struct si47xx_priv *si47xx;
 	int ret;
@@ -352,7 +354,7 @@ static int __devinit si47xx_spi_probe(struct spi_device *spi)
 	return ret;
 }
 
-static int __devexit si47xx_spi_remove(struct spi_device *spi)
+static int si47xx_spi_remove(struct spi_device *spi)
 {
 	snd_soc_unregister_codec(&spi->dev);
 
@@ -366,12 +368,12 @@ static struct spi_driver si47xx_spi_driver = {
 		.of_match_table = si47xx_of_match,
 	},
 	.probe		= si47xx_spi_probe,
-	.remove		= __devexit_p(si47xx_spi_remove),
+	.remove		= si47xx_spi_remove,
 };
 #endif /* CONFIG_SPI_MASTER */
 
 #if defined(CONFIG_I2C) || defined(CONFIG_I2C_MODULE)
-static __devinit int si47xx_i2c_probe(struct i2c_client *i2c,
+static int si47xx_i2c_probe(struct i2c_client *i2c,
 				      const struct i2c_device_id *id)
 {
 	struct si47xx_priv *si47xx;
@@ -395,7 +397,7 @@ static __devinit int si47xx_i2c_probe(struct i2c_client *i2c,
 	return ret;
 }
 
-static __devexit int si47xx_i2c_remove(struct i2c_client *client)
+static int si47xx_i2c_remove(struct i2c_client *client)
 {
 	snd_soc_unregister_codec(&client->dev);
 	return 0;
@@ -415,21 +417,21 @@ static struct i2c_driver si47xx_i2c_driver = {
 		.of_match_table = si47xx_of_match,
 	},
 	.probe =    si47xx_i2c_probe,
-	.remove =   __devexit_p(si47xx_i2c_remove),
+	.remove =   si47xx_i2c_remove,
 	.id_table = si47xx_i2c_id,
 };
 #endif
 
 #else // USE_I2C_SPI
 
-static __devinit int si47xx_platform_probe(struct platform_device *pdev)
+static int si47xx_platform_probe(struct platform_device *pdev)
 {
 	printk("si47xx_platform_probe\n");
 	return snd_soc_register_codec(&pdev->dev,
 								  &soc_codec_dev_si47xx, &si47xx_dai, 1);
 }
 
-static int __devexit si47xx_platform_remove(struct platform_device *pdev)
+static int si47xx_platform_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_codec(&pdev->dev);
 	return 0;
@@ -444,7 +446,7 @@ static struct platform_driver si47xx_codec_driver = {
 	},
 
 	.probe = si47xx_platform_probe,
-	.remove = __devexit_p(si47xx_platform_remove),
+	.remove = si47xx_platform_remove,
 };
 #endif // USE_I2C_SPI
 

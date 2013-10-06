@@ -531,6 +531,10 @@ config INPUT_TWL6040_VIBRA
 	  To compile this driver as a module, choose M here. The module will
 	  be called twl6040_vibra.
 
+config INPUT_AS5013
+	tristate "as5015 device"
+	depends on I2C
+
 config INPUT_UINPUT
 	tristate "User level driver support"
 	help

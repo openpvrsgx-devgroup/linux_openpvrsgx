@@ -28,3 +28,8 @@
   simple tasks
 
   + vibra.py shows how to program the vibrator as a rumble effect.
+  + b_host.sh helps to switch to b_host otg state (GTA04 is external
+    powered but plays the role of an usb host, the id pin is
+    not grounded in that situation). First apply power or switch on
+    software-controlled charging, run that script, then also connect
+    the usb data lines

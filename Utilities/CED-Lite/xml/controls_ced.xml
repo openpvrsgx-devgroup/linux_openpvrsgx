@@ -1,0 +1,2101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Controls xsi:noNamespaceSchemaLocation="../../com.intel.wizards/schema/controls.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+   <control item_type_key="jRocketInfo" data_type="STRING">
+      <control_title>This offering includes BEA WebLogic® JRockit</control_title>
+   </control>
+   <!--Controls that appear on General Settings Page -->
+   <control item_type_key="config_name" data_type="STRING">
+      <control_title>Configuration File Name</control_title>
+      <validation minimum_value="1" maximum_value="50" required="true" severity="ERROR">
+         <validation_message>A Configuration name must be entered that is between 1 and 50 characters</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="platform_chipset" data_type="STRING">
+      <control_title>Platform Chipset</control_title>
+      <items>
+		 <item item_name="Intel(R) System Controller Hub US15W/WP/WPT" item_value="US15" item_id="US15">
+            <item_dependency itk_ref="port_display" page_ref="ChipsetSelectionPage" rule="ITEMS_ALLOWED">
+               <allowed_item allowed_item_id="sdvo"/>
+               <allowed_item allowed_item_id="lvds"/>
+            </item_dependency>
+            <item_dependency itk_ref="display_config_mode" page_ref="ChipsetSelectionPage" rule="ITEMS_ALLOWED">
+               <allowed_item allowed_item_id="single"/>
+               <allowed_item allowed_item_id="clone"/>
+               <allowed_item allowed_item_id="dih"/>
+            </item_dependency>
+			<item_dependency itk_ref="ce_no_d3d" page_ref="WinCEOptionsPage" rule="ENABLE_TRUE"/>
+			<item_dependency itk_ref="overlay_color_correction_group" page_ref="ChipsetSelectionPage" rule="ENABLE_TRUE"/>
+		    <item_dependency itk_ref="ce_framebuffer_overlay" page_ref="WinCEOptionsPage" rule="ENABLE_TRUE"/>
+		 </item>
+		  <item item_name="Intel(R) Atom(TM) Processor E6xx" item_value="Atom_E6xx" item_id="Atom_E6xx">
+            <item_dependency itk_ref="port_display" page_ref="ChipsetSelectionPage" rule="ITEMS_ALLOWED">
+               <allowed_item allowed_item_id="sdvo"/>
+               <allowed_item allowed_item_id="lvds"/>
+            </item_dependency>
+            <item_dependency itk_ref="display_config_mode" page_ref="ChipsetSelectionPage" rule="ITEMS_ALLOWED">
+               <allowed_item allowed_item_id="single"/>
+               <allowed_item allowed_item_id="clone"/>
+               <allowed_item allowed_item_id="dih"/>
+            </item_dependency>
+			<item_dependency itk_ref="ce_no_d3d" page_ref="WinCEOptionsPage" rule="ENABLE_TRUE"/>
+			<item_dependency itk_ref="overlay_color_correction_group" page_ref="ChipsetSelectionPage" rule="ENABLE_TRUE"/>
+		    <item_dependency itk_ref="ce_framebuffer_overlay" page_ref="WinCEOptionsPage" rule="ENABLE_TRUE"/>
+		 </item>
+	</items>
+   </control>	
+   <control item_type_key="port_display" data_type="STRING">
+      <control_title>Port Devices</control_title>
+      <validation minimum_value="1" required="true" severity="ERROR">
+         <validation_message>At least one port must be selected for Single display, two or more ports for all others.</validation_message>
+      </validation>
+      <items>
+         <item item_name="sDVO" item_value="2" item_id="sdvo">
+            <item_dependency itk_ref="port_device_list" page_ref="sDVO" rule="ITEMS_ALLOWED">
+               <allowed_item allowed_item_id="ch7022"/>
+			   <allowed_item allowed_item_id="ch7307"/>
+               <allowed_item allowed_item_id="ch7308"/>
+			   <allowed_item allowed_item_id="ch7315"/>
+			   <allowed_item allowed_item_id="ch7317"/>
+			   <allowed_item allowed_item_id="ch7319"/>
+               <allowed_item allowed_item_id="sii1362"/>
+               <allowed_item allowed_item_id="sii1364"/>
+			   <allowed_item allowed_item_id="okiioh"/>
+			   <allowed_item allowed_item_id="stmioh"/>
+			</item_dependency>
+         </item>
+		 
+         <item item_name="LVDS" item_value="4" item_id="lvds">
+            <item_dependency itk_ref="port_device_list" page_ref="LVDS" rule="ITEMS_ALLOWED">
+               <allowed_item allowed_item_id="lvds"/>
+            </item_dependency>
+         </item>
+         
+      </items>
+   </control>
+   <control item_type_key="display_config_mode" data_type="STRING">
+      <control_title>Display Configuration Mode</control_title>
+      <items>
+         <item item_name="Single" item_value="1" item_id="single">
+            <item_dependency itk_ref="port_display" page_ref="ChipsetSelectionPage" rule="MIN_REQUIRED">
+               <number_allowed>1</number_allowed>
+            </item_dependency>
+            <item_dependency itk_ref="secondary_display_mode_group" page_ref="vbiosConfigPage" rule="ENABLE_FALSE"/>
+			 <item_dependency itk_ref="clone_settings" page_ref="ChipsetSelectionPage" rule="ENABLE_FALSE"/> 
+         </item>
+         <item item_name="Clone" item_value="2" item_id="clone">
+            <item_dependency itk_ref="port_display" page_ref="ChipsetSelectionPage" rule="MIN_REQUIRED">
+               <number_allowed>2</number_allowed>
+            </item_dependency>
+            <item_dependency itk_ref="secondary_display_mode_group" page_ref="vbiosConfigPage" rule="ENABLE_TRUE"/>
+			 <item_dependency itk_ref="clone_settings" page_ref="ChipsetSelectionPage" rule="ENABLE_TRUE"/> 
+         </item>
+         <item item_name="Dual Independent Head" item_value="8" item_id="dih">
+            <item_dependency itk_ref="port_display" page_ref="ChipsetSelectionPage" rule="MIN_REQUIRED">
+               <number_allowed>2</number_allowed>
+            </item_dependency>
+            <item_dependency itk_ref="secondary_display_mode_group" page_ref="vbiosConfigPage" rule="ENABLE_FALSE"/>
+			 <item_dependency itk_ref="clone_settings" page_ref="ChipsetSelectionPage" rule="ENABLE_FALSE"/> 
+		</item>
+      </items>
+   </control>
+   <control item_type_key="display_detection" data_type="STRING">
+      <control_title>Display Detection</control_title>
+      <items>
+         <item item_name="Enable" item_value="1" item_id="enable">
+            <item_dependency itk_ref="cmmn_to_port" page_ref="vbiosConfigPage" rule="ENABLE_TRUE"/>
+         </item>   
+         <item item_name="Disable" item_value="0" item_id="disable">
+            <item_dependency itk_ref="cmmn_to_port" page_ref="vbiosConfigPage" rule="ENABLE_FALSE"/>
+         </item>   
+      </items>
+   </control>
+   <control item_type_key="overlayoff" data_type="STRING">
+      <control_title>Overlay Off</control_title>
+      <items>
+         <item item_name="true" item_value="1" item_id="true"/>
+      </items>
+   </control>
+   <control item_type_key="no_dfb" data_type="STRING">
+      <control_title>Disable Off-screen Bitmap support (No DFB)</control_title>
+      <items>
+         <item item_name="true" item_value="1" item_id="true"/>
+      </items>
+   </control>  
+   <control item_type_key="linux_button" data_type="STRING">
+      <control_title>Linux* Settings</control_title>
+   </control>
+   <control item_type_key="lin_display" data_type="STRING">
+      <control_title>Display</control_title>
+   </control>
+   <control item_type_key="lin_use_default_display" data_type="STRING">
+      <control_title>Use Default</control_title>
+      <items>
+         <item item_name="true" item_value="1" item_id="true">
+            <item_dependency itk_ref="lin_framebuffer_width" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="lin_framebuffer_height" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="lin_framebuffer_color_quality"  rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="lin_display_refresh" rule="ENABLE_FALSE"/>
+		   
+         </item>
+         <item item_name="false" item_value="0" item_id="false">
+            <item_dependency itk_ref="lin_framebuffer_width"  rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="lin_framebuffer_height"  rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="lin_framebuffer_color_quality"  rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="lin_display_refresh"  rule="ENABLE_TRUE"/>
+			
+         </item>
+      </items>
+   </control>
+   <control item_type_key="lin_framebuffer_width" data_type="INTEGER">
+      <control_title>Width</control_title>
+      <validation minimum_value="0" maximum_value="2048" required="false" severity="ERROR">
+         <validation_message>Width must be between 0-2048.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="lin_framebuffer_height" data_type="INTEGER">
+      <control_title>Height</control_title>
+      <validation minimum_value="0" maximum_value="2048" required="false" severity="ERROR">
+         <validation_message>Height must be between 0-2048.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="lin_framebuffer_color_quality" data_type="STRING">
+      <control_title>Color Quality</control_title>
+      <items>
+         <item item_name="8" item_value="8" item_id="8"/>
+         <item item_name="16" item_value="16" item_id="16"/>
+         <item item_name="24" item_value="24" item_id="24"/>
+         <item item_name="32" item_value="32" item_id="32"/>
+      </items>
+   </control>
+   <control item_type_key="lin_display_refresh" data_type="INTEGER">
+      <control_title>Refresh</control_title>
+      <validation minimum_value="50" maximum_value="120" required="false" severity="ERROR">
+         <validation_message>Refresh must be between 50-120 Hz.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="lin_clone_flags" data_type="BOOLEAN">
+      <control_title>Enable interlace mode</control_title>
+      <items>
+         <item item_name="true" item_value="2147483648" item_id="true"/>
+      </items>
+	</control>
+   <control item_type_key="lin_no_accel" data_type="BOOLEAN">
+      <control_title>Disable Hardware Acceleration</control_title>
+      <items>
+         <item item_name="true" item_value="0" item_id="true"/>
+      </items>
+   </control>
+   <control item_type_key="lin_sw_cursor" data_type="BOOLEAN">
+      <control_title>Disable Hardware Cursor</control_title>
+      <items>
+         <item item_name="true" item_value="1" item_id="true"/>
+      </items>
+   </control>
+   <control item_type_key="lin_shadow_fb" data_type="BOOLEAN">
+      <control_title>Enable User Double Buffer (Shadow Framebuffer)</control_title>
+      <items>
+         <item item_name="true" item_value="1" item_id="true"/>
+      </items>
+   </control>
+   <control item_type_key="lin_x_video" data_type="BOOLEAN">
+      <control_title>Disable XVideo Support</control_title>
+      <items>
+         <item item_name="true" item_value="0" item_id="true"/>
+      </items>
+   </control>
+   <control item_type_key="lin_x_video_blend" data_type="BOOLEAN">
+      <control_title>Disable XVideo Blend</control_title>
+      <items>
+         <item item_name="true" item_value="0" item_id="true"/>
+      </items>
+   </control>
+   <control item_type_key="x_video_color_key" data_type="HEX">
+      <control_title>XVideo Color Key</control_title>
+      <validation minimum_value="0" maximum_value="16777215" required="false" severity="ERROR">
+         <validation_message>The maximum value for XVideo Color Key is 0xFFFFFF.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="xinerama" data_type="BOOLEAN">
+      <control_title>No Xinerama</control_title>
+      <items>
+         <item item_name="true" item_value="1" item_id="true"/>
+      </items>
+   </control>
+	<!-- Added For Framebuffer Overlay  transparency-->
+	<control item_type_key="lin_framebuffer_overlay" data_type="BOOLEAN">
+      <control_title>Enable Framebuffer Overlay Blending</control_title>
+      <items>
+         <item item_name="true" item_value="1" item_id="true"/>
+      </items>
+   </control>
+   <!--WinCE Options-->
+   <control item_type_key="win_ce_button" data_type="STRING">
+      <control_title>Microsoft Windows CE* Settings</control_title>
+   </control>
+   <control item_type_key="multi_dvo_detect" data_type="BOOLEAN">
+      <control_title>Disable Detection of Multiple DVO Transmitters of the Same Type</control_title>
+      <items>
+         <item item_name="true" item_value="0" item_id="true"/>
+      </items>
+   </control>
+   <control item_type_key="ce_no_d3d" data_type="BOOLEAN">
+      <control_title>Disable 3D Support</control_title>
+      <items>
+         <item item_name="true" item_value="1" item_id="true"/>
+      </items>
+   </control>
+   <control item_type_key="clone_settings" data_type="STRING">
+      <control_title>Clone Settings</control_title>
+   </control>
+   <control item_type_key="clone_width" data_type="INTEGER">
+      <control_title>Clone Width</control_title>
+      <validation minimum_value="1" maximum_value="2048" required="false" severity="ERROR">
+         <validation_message>Clone width must be between 1-2048</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="clone_height" data_type="INTEGER">
+      <control_title>Clone Height</control_title>
+      <validation minimum_value="1" maximum_value="2048" required="false" severity="ERROR">
+         <validation_message>Clone height must be between 1-2048</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="clone_refresh" data_type="INTEGER">
+      <control_title>Clone Refresh</control_title>
+      <validation minimum_value="1" maximum_value="2048" required="false" severity="ERROR">
+         <validation_message>Clone refresh must be between 1-2048</validation_message>
+      </validation>
+	</control>
+	<control item_type_key="clone_flags" data_type="BOOLEAN">
+      <control_title>Enable interlace mode</control_title>
+      <items>
+         <item item_name="true" item_value="2147483648" item_id="true"/>
+      </items>
+	</control>
+   <control item_type_key="overlay_color_correction" data_type="STRING">
+		<control_title>Overlay Color Correction</control_title>
+   </control>
+   <control item_type_key="overlay_color_correction_group" data_type="STRING">
+      <control_title>Overlay Color Correction</control_title>
+   </control>
+   <control item_type_key="overlay_gamma_correctionr" data_type="FLOAT">
+      <control_title>Gamma Correction Red (0.6 to 6.0)</control_title>
+      <validation minimum_value="0.6" maximum_value="6" required="false" severity="ERROR">
+         <validation_message>Gamma Correction must be 0.6 to 6.  Gamma is 1.0 or no correction by default.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="overlay_gamma_correctiong" data_type="FLOAT">
+      <control_title>Gamma Correction Green (0.6 to 6.0)</control_title>
+      <validation minimum_value="0.6" maximum_value="6" required="false" severity="ERROR">
+         <validation_message>Gamma Correction must be 0.6 to 6.  Gamma is 1.0 or no correction by default.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="overlay_gamma_correctionb" data_type="FLOAT">
+      <control_title>Gamma Correction Blue (0.6 to 6.0)</control_title>
+      <validation minimum_value="0.6" maximum_value="6" required="false" severity="ERROR">
+         <validation_message>Gamma Correction must be 0.6 to 6.  Gamma is 1.0 or no correction by default.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="overlay_brightness_correction" data_type="INTEGER">
+      <control_title>Brightness Correction (0 to 200)</control_title>
+      <validation minimum_value="0" maximum_value="200" required="false" severity="ERROR">
+         <validation_message>Brightness Correction must be 0 to 200.  The default value is 100. Anything less is negative correction.  Anything more is positive correction.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="overlay_contrast_correction" data_type="INTEGER">
+      <control_title>Contrast Correction (0 to 200)</control_title>
+      <validation minimum_value="0" maximum_value="200" required="false" severity="ERROR">
+         <validation_message>Contrast Correction must be 0 to 200.  The default value is 100. Anything less is negative correction.  Anything more is positive correction.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="overlay_saturation_correction" data_type="INTEGER">
+      <control_title>Saturation Correction (0 to 200)</control_title>
+      <validation minimum_value="0" maximum_value="200" required="false" severity="ERROR">
+         <validation_message>Saturation Correction must be 0 to 200.  The default value is 100. Anything less is negative correction.  Anything more is positive correction.</validation_message>
+      </validation>
+   </control>
+	
+   <!--Controls that appear on Port Settings Page -->
+   <control item_type_key="port_name" data_type="STRING">
+      <control_title>Readable Port Name</control_title>
+      <validation minimum_value="1" maximum_value="12" required="true" severity="ERROR">
+         <validation_message>A readable port name must be entered that is between 1 and 12 characters. </validation_message>
+      </validation>
+   </control>
+   <control item_type_key="port_rotation" data_type="STRING">
+      <control_title>Port Rotation</control_title>
+      <items>
+         <item item_name="0" item_value="0" item_id="0"/>
+         <item item_name="90" item_value="90" item_id="90"/>
+         <item item_name="180" item_value="180" item_id="180"/>
+         <item item_name="270" item_value="270" item_id="270"/>
+      </items>
+   </control>
+   <control item_type_key="flip_port" data_type="BOOLEAN">
+      <control_title>Flip Port</control_title>
+      <items>
+         <item item_name="true" item_value="1" item_id="true"/>
+      </items>
+   </control>
+   <control item_type_key="native_dtd_combo" data_type="STRING">
+      <control_title>Native DTD Flag</control_title>
+   </control>
+   <control item_type_key="edid_group" data_type="STRING">
+      <control_title>EDID Options</control_title>
+   </control>
+   <control item_type_key="disable_reading_edid" data_type="BOOLEAN">
+      <control_title>Use EDID Display if available</control_title>
+      <items>
+         <item item_name="true" item_value="1" item_id="true">
+            <item_dependency itk_ref="if_edid_group" rule="ENABLE_TRUE"/>
+		 </item>
+         <item item_name="false" item_value="0" item_id="false">
+            <item_dependency itk_ref="if_edid_group" rule="ENABLE_FALSE"/>
+		    <item_dependency itk_ref="if_not_edid_user_dtd" rule="CTRL_DEPENDENCIES_ENABLED_TRUE"/>
+         </item>
+      </items>
+   </control>
+   <control item_type_key="if_edid_group" data_type="STRING">
+      <control_title>If EDID Device (edid_avail)</control_title>
+   </control>
+   <control item_type_key="if_edid_std_timing" data_type="BOOLEAN">
+      <control_title>Use driver built-in standard timings</control_title>
+      <validation required="false" severity="ERROR">
+         <validation_message>If Device supports EDID select one or more of "use driver standard timing", "use EDID Block" or "user defined DTD"</validation_message>
+      </validation>
+      <items>
+         <item item_name="true" item_value="1" item_id="true">
+            <item_dependency itk_ref="if_edid_edid_data" rule="REQUIRED_FALSE"/>
+            <item_dependency itk_ref="if_edid_user_dtd" rule="REQUIRED_FALSE"/>
+			<!--<item_dependency itk_ref="if_edid_tuningapp_dtd"  rule="REQUIRED_FALSE"/>-->
+			
+         </item>   
+         <item item_name="false" item_value="0" item_id="false">
+            <item_dependency itk_ref="if_edid_edid_data" rule="REQUIRED_TRUE"/>
+         </item>
+      </items>
+   </control>
+   <control item_type_key="if_edid_edid_data" data_type="BOOLEAN">
+      <control_title>Use EDID Block</control_title>
+      <validation required="false" severity="ERROR" > 
+         <validation_message>If Device supports EDID select one or more of "use driver standard timing", "use EDID Block" or "user defined DTD" </validation_message>
+      </validation>
+      <items>
+         <item item_name="true" item_value="2" item_id="true">
+            <item_dependency itk_ref="if_edid_std_timing" rule="REQUIRED_FALSE"/>
+            <item_dependency itk_ref="if_edid_user_dtd" rule="REQUIRED_FALSE"/>
+			<!-- <item_dependency itk_ref="if_edid_tuningapp_dtd"  rule="REQUIRED_FALSE"/>-->
+		</item>   
+         <item item_name="false" item_value="0" item_id="false">
+            <item_dependency itk_ref="if_edid_user_dtd" rule="REQUIRED_TRUE"/>
+		</item>
+      </items>
+   </control>
+   <control item_type_key="if_edid_user_dtd" data_type="BOOLEAN">
+      <control_title>Use user-defined DTDs</control_title>
+      <validation required="false" severity="ERROR">
+         <validation_message>If Device supports EDID select one or more of "use driver standard timing", "use EDID Block" or "user defined DTD" </validation_message>
+      </validation>
+      <items>
+         <item item_name="true" item_value="4" item_id="true">
+            <item_dependency itk_ref="port_device_list" rule="CTRL_DEPENDENCIES_ENABLED_TRUE"/>
+            
+             <item_dependency itk_ref="if_edid_edid_data" rule="REQUIRED_FALSE"/>
+            <item_dependency itk_ref="if_edid_std_timing" rule="REQUIRED_FALSE"/>
+            <item_dependency itk_ref="display_timing_desc_group" rule="ENABLE_TRUE"/>
+         </item>
+         <item item_name="false" item_value="0" item_id="false">
+            <item_dependency itk_ref="display_timing_desc_group" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="if_not_edid_user_dtd" rule="CTRL_DEPENDENCIES_ENABLED_TRUE"/>
+            <item_dependency itk_ref="if_edid_std_timing" rule="REQUIRED_TRUE"/>
+         </item>
+      </items>
+   </control>
+   <control item_type_key="if_not_edid_group" data_type="STRING">
+      <control_title>If Not EDID Device (edid_not_avail)</control_title>
+   </control>
+   <control item_type_key="if_not_edid_std_timing" data_type="BOOLEAN">
+      <control_title>Use driver built-in standard timings</control_title>
+      <validation required="false" severity="ERROR">
+         <validation_message>If Device is not EDID select one or more of "use driver standard timing" or "user defined DTD"</validation_message>
+      </validation>
+      <items>
+         <item item_name="true" item_value="1" item_id="true">
+         	<item_dependency itk_ref="if_not_edid_user_dtd" rule="REQUIRED_FALSE"/>
+			
+         </item>
+         <item item_name="false" item_value="0" item_id="false">
+         	<item_dependency itk_ref="if_not_edid_user_dtd" rule="REQUIRED_TRUE"/>
+         </item>
+      </items>
+   </control>
+   <control item_type_key="if_not_edid_user_dtd" data_type="BOOLEAN">
+      <control_title>Use user-defined DTDs</control_title>
+      <validation required="false" severity="ERROR">
+         <validation_message>If Device is not EDID select one or more of "use driver standard timing" or "user defined DTD" </validation_message>
+      </validation>
+      <items>
+         <item item_name="true" item_value="4" item_id="true">
+            <item_dependency itk_ref="display_timing_desc_group" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="port_device_list" rule="CTRL_DEPENDENCIES_ENABLED_TRUE"/>
+            
+            <item_dependency itk_ref="if_not_edid_std_timing" rule="REQUIRED_FALSE"/> 
+            <item_dependency itk_ref="display_timing_desc_group" rule="ENABLE_TRUE"/>
+         </item>
+         <item item_name="false" item_value="0" item_id="false">
+            <item_dependency itk_ref="display_timing_desc_group" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="if_edid_user_dtd" rule="CTRL_DEPENDENCIES_ENABLED_TRUE"/>
+            <item_dependency itk_ref="if_not_edid_std_timing" rule="REQUIRED_TRUE"/>
+         </item>
+      </items>
+   </control>
+   <control item_type_key="tune_app_wa" data_type="BOOLEAN">
+      <control_title>Enable Display Tuning </control_title>
+      <items>
+         <item item_name="true" item_value="1" item_id="true"/>
+		 <item item_name="false" item_value="0" item_id="false"/>
+      </items>
+   </control>
+	<control item_type_key="ref_frequency" data_type="INTEGER">
+      <control_title>Reference Frequency</control_title>
+       <validation minimum_value="190000" maximum_value="210000" required="false" severity="ERROR">
+         <validation_message>Reference Frequency is between 190000 and 210000.</validation_message>
+      </validation>
+   </control>
+  <control item_type_key="encoder_config_group" data_type="STRING">
+      <control_title>Encoder Configuration</control_title>
+   </control>
+   <control item_type_key="port_device_list" data_type="STRING">
+      <control_title>Select sDVO Device</control_title>
+      <validation minimum_value="1" required="true" severity="ERROR">
+         <validation_message>At least one device must be selected.</validation_message>
+      </validation>
+      <items>
+         
+         <item item_name="Internal LVDS" item_value="lvds" item_id="lvds">
+            <!--item_dependency itk_ref="attr_button" rule="ENABLE_TRUE"/-->
+            <!--item_dependency itk_ref="panel_button" rule="ENABLE_TRUE"/-->
+            <item_dependency itk_ref="flat_panel_backlight_options_group" page_ref="PanelSettingsPage" rule="ENABLE_TRUE"/>
+            <!--item_dependency itk_ref="gpio_pin_group" page_ref="PanelSettingsPage" rule="ENABLE_FALSE"/-->
+            <!--item_dependency itk_ref="dual_single" page_ref="PanelSettingsPage" rule="ENABLE_TRUE"/-->
+            <!--<item_dependency itk_ref="i2c_pins_group" page_ref="DVOSettingsPage" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="ddc_pins_group" page_ref="DVOSettingsPage" rule="ENABLE_FALSE"/--> 
+            <!--item_dependency itk_ref="i2c_bus_config_group" page_ref="DVOSettingsPage" rule="ENABLE_FALSE"/-->
+            <!--item_dependency itk_ref="bit_depth" page_ref="PanelSettingsPage" rule="ENABLE_TRUE"/-->
+            <!--item_dependency itk_ref="native_dtd_combo" rule="ENABLE_TRUE"/-->
+         </item>
+		 <item item_name="Chrontel* CH7022 VGA / TV" item_value="sdvo" item_id="ch7022">
+            <item_dependency itk_ref="flat_panel_backlight_options_group" page_ref="PanelSettingsPage" rule="ENABLE_FALSE"/>
+            <!--<item_dependency itk_ref="i2c_pins_group" page_ref="DVOSettingsPage" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="ddc_pins_group" page_ref="DVOSettingsPage" rule="ENABLE_FALSE"/-->
+            <item_dependency itk_ref="disable_reading_edid" rule="CTRL_DEPENDENCIES_ENABLED_TRUE"/>
+			 
+			  <!--item_dependency itk_ref= "if_edid_tuningapp_dtd" rule="CTRL_DEPENDENCIES_ENABLED_TRUE"/>-->
+            <!--item_dependency itk_ref="if_not_edid_user_dtd" rule="ENABLE_TRUE"/-->
+            <!--item_dependency itk_ref="native_dtd_combo" rule="ENABLE_FALSE"/-->
+         </item>
+         <item item_name="Chrontel* CH7307 DVI" item_value="sdvo" item_id="ch7307">
+            
+            <!--item_dependency itk_ref="i2c_bus_config_group" page_ref="DVOSettingsPage" rule="ENABLE_TRUE"/-->
+            <item_dependency itk_ref="flat_panel_backlight_options_group" page_ref="PanelSettingsPage" rule="ENABLE_FALSE"/>
+            <!--<item_dependency itk_ref="i2c_pins_group" page_ref="DVOSettingsPage" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="ddc_pins_group" page_ref="DVOSettingsPage" rule="ENABLE_FALSE"/-->
+            <item_dependency itk_ref="disable_reading_edid" rule="CTRL_DEPENDENCIES_ENABLED_TRUE"/>
+            <!--item_dependency itk_ref="if_not_edid_user_dtd" rule="ENABLE_TRUE"/-->
+            <!--item_dependency itk_ref="native_dtd_combo" rule="ENABLE_FALSE"/-->
+         </item>
+         <item item_name="Chrontel* CH7308 LVDS" item_value="sdvo" item_id="ch7308">
+            <!--item_dependency itk_ref="i2c_bus_config_group" page_ref="DVOSettingsPage" rule="ENABLE_TRUE"/-->
+            <item_dependency itk_ref="flat_panel_backlight_options_group" page_ref="PanelSettingsPage" rule="ENABLE_TRUE"/>
+            <!--item_dependency itk_ref="i2c_pins_group" page_ref="DVOSettingsPage" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="ddc_pins_group" page_ref="DVOSettingsPage" rule="ENABLE_FALSE"/-->
+            <item_dependency itk_ref="disable_reading_edid" rule="CTRL_DEPENDENCIES_ENABLED_TRUE"/>
+            <!--item_dependency itk_ref="if_not_edid_user_dtd" rule="ENABLE_TRUE"/-->
+            <!--item_dependency itk_ref="native_dtd_combo" rule="ENABLE_TRUE"/-->
+         </item>
+		 <item item_name="Chrontel* CH7315 HDMI" item_value="sdvo" item_id="ch7315">
+            
+            <!--item_dependency itk_ref="i2c_bus_config_group" page_ref="DVOSettingsPage" rule="ENABLE_TRUE"/-->
+            <item_dependency itk_ref="flat_panel_backlight_options_group" page_ref="PanelSettingsPage" rule="ENABLE_FALSE"/>
+            <!--item_dependency itk_ref="dual_single" page_ref="PanelSettingsPage" rule="ENABLE_TRUE"/-->
+            <!--item_dependency itk_ref="bit_depth" page_ref="PanelSettingsPage" rule="ENABLE_TRUE"/-->
+            <!--<item_dependency itk_ref="i2c_pins_group" page_ref="DVOSettingsPage" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="ddc_pins_group" page_ref="DVOSettingsPage" rule="ENABLE_FALSE"/>-->
+            <item_dependency itk_ref="disable_reading_edid" rule="CTRL_DEPENDENCIES_ENABLED_TRUE"/>
+            <!--item_dependency itk_ref="if_not_edid_user_dtd" rule="ENABLE_TRUE"/-->
+            <!--item_dependency itk_ref="native_dtd_combo" rule="ENABLE_TRUE"/-->
+         </item>
+		 <item item_name="Chrontel* CH7319/CH7320 Dual-port DVI" item_value="sdvo" item_id="ch7319">
+            
+            <!--item_dependency itk_ref="i2c_bus_config_group" page_ref="DVOSettingsPage" rule="ENABLE_TRUE"/-->
+            <item_dependency itk_ref="flat_panel_backlight_options_group" page_ref="PanelSettingsPage" rule="ENABLE_FALSE"/>
+            <!--item_dependency itk_ref="dual_single" page_ref="PanelSettingsPage" rule="ENABLE_TRUE"/-->
+            <!--item_dependency itk_ref="bit_depth" page_ref="PanelSettingsPage" rule="ENABLE_TRUE"/-->
+           <!-- <item_dependency itk_ref="i2c_pins_group" page_ref="DVOSettingsPage" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="ddc_pins_group" page_ref="DVOSettingsPage" rule="ENABLE_FALSE"/>-->
+            <item_dependency itk_ref="disable_reading_edid" rule="CTRL_DEPENDENCIES_ENABLED_TRUE"/>
+            <!--item_dependency itk_ref="if_not_edid_user_dtd" rule="ENABLE_TRUE"/-->
+            <!--item_dependency itk_ref="native_dtd_combo" rule="ENABLE_TRUE"/-->
+         </item>
+		 <item item_name="Chrontel* CH7317 VGA" item_value="sdvo" item_id="ch7317">
+            
+            <!--item_dependency itk_ref="i2c_bus_config_group" page_ref="DVOSettingsPage" rule="ENABLE_TRUE"/-->
+            <item_dependency itk_ref="flat_panel_backlight_options_group" page_ref="PanelSettingsPage" rule="ENABLE_FALSE"/>
+            <!--item_dependency itk_ref="dual_single" page_ref="PanelSettingsPage" rule="ENABLE_TRUE"/-->
+            <!--item_dependency itk_ref="bit_depth" page_ref="PanelSettingsPage" rule="ENABLE_TRUE"/-->
+            <!--<item_dependency itk_ref="i2c_pins_group" page_ref="DVOSettingsPage" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="ddc_pins_group" page_ref="DVOSettingsPage" rule="ENABLE_FALSE"/>-->
+            <item_dependency itk_ref="disable_reading_edid" rule="CTRL_DEPENDENCIES_ENABLED_TRUE"/>
+            <!--item_dependency itk_ref="if_not_edid_user_dtd" rule="ENABLE_TRUE"/-->
+            <!--item_dependency itk_ref="native_dtd_combo" rule="ENABLE_TRUE"/-->
+         </item>
+         <item item_name="Silicon Image* SII1362 DVI" item_value="sdvo" item_id="sii1362">
+            <item_dependency itk_ref="flat_panel_backlight_options_group" page_ref="PanelSettingsPage" rule="ENABLE_FALSE"/>
+            <!--<item_dependency itk_ref="i2c_pins_group" page_ref="DVOSettingsPage" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="ddc_pins_group" page_ref="DVOSettingsPage" rule="ENABLE_FALSE"/>-->
+            <item_dependency itk_ref="disable_reading_edid" rule="CTRL_DEPENDENCIES_ENABLED_TRUE"/>
+            <!--item_dependency itk_ref="if_not_edid_user_dtd" rule="ENABLE_TRUE"/-->
+            <!--item_dependency itk_ref="native_dtd_combo" rule="ENABLE_FALSE"/-->
+         </item>
+         <item item_name="Silicon Image* SII1364 DVI" item_value="sdvo" item_id="sii1364">
+            <item_dependency itk_ref="flat_panel_backlight_options_group" page_ref="PanelSettingsPage" rule="ENABLE_FALSE"/>
+            <!--<item_dependency itk_ref="i2c_pins_group" page_ref="DVOSettingsPage" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="ddc_pins_group" page_ref="DVOSettingsPage" rule="ENABLE_FALSE"/>-->
+            <item_dependency itk_ref="disable_reading_edid" rule="CTRL_DEPENDENCIES_ENABLED_TRUE"/>
+            <!--item_dependency itk_ref="if_not_edid_user_dtd" rule="ENABLE_TRUE"/-->
+            <!--item_dependency itk_ref="native_dtd_combo" rule="ENABLE_FALSE"/-->
+         </item>
+		  <!--Added for OKI-->
+		   <item item_name="OKI* ML7213" item_value="sdvo" item_id="okiioh">
+             <item_dependency itk_ref="flat_panel_backlight_options_group" page_ref="PanelSettingsPage" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="disable_reading_edid" rule="CTRL_DEPENDENCIES_ENABLED_TRUE"/>
+		
+		  </item>
+		  <item item_name="STM* IOH ConneXt" item_value="sdvo" item_id="stmioh">
+            <item_dependency itk_ref="flat_panel_backlight_options_group" page_ref="PanelSettingsPage" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="disable_reading_edid" rule="CTRL_DEPENDENCIES_ENABLED_TRUE"/>
+			<item_dependency itk_ref="if_edid_group" rule="ENABLE_FALSE"/>
+			 
+          </item>
+        </items>
+	</control>
+   <control item_type_key="attributes_control" data_type="STRING">
+      <control_title>Attributes</control_title>
+      <validation required="false" severity="ERROR">
+         <validation_message>The same attribute IDs may only be selected once.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="custom_attributes_control" data_type="STRING">
+      <control_title>Custom Attributes</control_title>
+      <validation required="false" severity="ERROR">
+         <validation_message>Selected custom attributes need an ID and value.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="color_correction_attr" data_type="STRING">
+		<control_title>Color Correction Attributes</control_title>
+   </control>
+   <control item_type_key="color_correction_group" data_type="STRING">
+      <control_title>Framebuffer Color Correction Attributes</control_title>
+   </control>
+   <control item_type_key="gamma_correctionr" data_type="FLOAT">
+      <control_title>Gamma Correction Red (0.6 to 6.0)</control_title>
+      <validation minimum_value="0.6" maximum_value="6" required="false" severity="ERROR">
+         <validation_message>Gamma Correction must be 0.6 to 6. Gamma is 1.0 or no correction by default.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="gamma_correctiong" data_type="FLOAT">
+      <control_title>Gamma Correction Green(0.6 to 6.0)</control_title>
+      <validation minimum_value="0.6" maximum_value="6" required="false" severity="ERROR">
+         <validation_message>Gamma Correction must be 0.6 to 6. Gamma is 1.0 or no correction by default.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="gamma_correctionb" data_type="FLOAT">
+      <control_title>Gamma Correction Blue (0.6 to 6.0)</control_title>
+      <validation minimum_value="0.6" maximum_value="6" required="false" severity="ERROR">
+         <validation_message>Gamma Correction must be 0.6 to 6. Gamma is 1.0 or no correction by default.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="brightness_correctionr" data_type="INTEGER">
+      <control_title>Brightness Correction Red (-127 to 127)</control_title>
+      <validation minimum_value="-127" maximum_value="127" required="false" severity="ERROR">
+         <validation_message>Brightness Correction must be -127 to 127.  The default value is 0. Anything less is negative correction.  Anything more is positive correction.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="brightness_correctiong" data_type="INTEGER">
+      <control_title>Brightness Correction Green (-127 to 127)</control_title>
+      <validation minimum_value="-127" maximum_value="127" required="false" severity="ERROR">
+         <validation_message>Brightness Correction must be -127 to 127.  The default value is 0. Anything less is negative correction.  Anything more is positive correction.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="brightness_correctionb" data_type="INTEGER">
+      <control_title>Brightness Correction Blue (-127 to 127)</control_title>
+      <validation minimum_value="-127" maximum_value="127" required="false" severity="ERROR">
+         <validation_message>Brightness Correction must be -127 to 127.  The default value is 0. Anything less is negative correction.  Anything more is positive correction.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="contrast_correctionr" data_type="INTEGER">
+      <control_title>Contrast Correction Red (-127 to 127)</control_title>
+      <validation minimum_value="-127" maximum_value="127" required="false" severity="ERROR">
+         <validation_message>Contrast Correction must be -127 to 127.  The default value is 0. Anything less is negative correction.  Anything more is positive correction.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="contrast_correctiong" data_type="INTEGER">
+      <control_title>Contrast Correction Green (-127 to 127)</control_title>
+      <validation minimum_value="-127" maximum_value="127" required="false" severity="ERROR">
+         <validation_message>Contrast Correction must be -127 to 127.  The default value is 0. Anything less is negative correction.  Anything more is positive correction.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="contrast_correctionb" data_type="INTEGER">
+      <control_title>Contrast Correction Blue (-127 to 127)</control_title>
+      <validation minimum_value="-127" maximum_value="127" required="false" severity="ERROR">
+         <validation_message>Contrast Correction must be -127 to 127.  The default value is 0. Anything less is negative correction.  Anything more is positive correction.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="flat_panel_backlight_options_group" data_type="STRING">
+      <control_title>Flat Panel Backlight Options</control_title>
+   </control>
+   <control item_type_key="backlight_ctrl_method" data_type="STRING">
+      <control_title>Backlight Control Method</control_title>
+      <items>
+         <item item_name="No Backlight" item_value="0" item_id="noBacklight">
+            <item_dependency itk_ref="timing_delays_group" page_ref="PanelSettingsPage" rule="ENABLE_FALSE"/>
+         </item>
+         <item item_name="Port Driver" item_value="1" item_id="portDriver">
+            <item_dependency itk_ref="timing_delays_group" page_ref="PanelSettingsPage" rule="ENABLE_TRUE"/>
+          </item>
+     </items>
+   </control>
+  <control item_type_key="timing_delays_group" data_type="STRING">
+      <control_title>Timing Delays</control_title>
+   </control>
+   <control item_type_key="bkltT1" data_type="HEX">
+      <control_title>T1- VDD active and sDVO clock/data active</control_title>
+      <validation minimum_value="0" maximum_value="4095" required="false" severity="ERROR">
+         <validation_message>VDD Active. 0-4095. Increment of 1. Default = 255.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="bkltT2" data_type="HEX">
+      <control_title>T2- sDVO clock/data active and backlight enable</control_title>
+      <validation minimum_value="0" maximum_value="4095" required="false" severity="ERROR">
+         <validation_message>Backlight Active. 0-4095. Increment of 2. Default = 127.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="bkltT3" data_type="HEX">
+      <control_title>T3- Backlight disable and sDVO clock/data inactive</control_title>
+      <validation minimum_value="0" maximum_value="4095" required="false" severity="ERROR">
+         <validation_message>Backlight Inactive. 0-4095. Increment of 2. Default = 127.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="bkltT4" data_type="HEX">
+      <control_title>T4- sDVO clock/data inactive and VDD inactive</control_title>
+      <validation minimum_value="0" maximum_value="4095" required="false" severity="ERROR">
+         <validation_message>VDD Inactive. 0-4095. Increment of 1. Default = 255.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="bkltT5" data_type="HEX">
+      <control_title>T5- Minimum from VDD inactive and active</control_title>
+      <validation minimum_value="0" maximum_value="2147483647" required="false" severity="ERROR">
+         <validation_message>VDD Active to Inactive must be a valid integer.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="bit_depth" data_type="STRING">
+      <control_title>Bit Depth</control_title>
+      <items>
+         <item item_name="18" item_value="26" item_id="1"/>
+         <item item_name="24" item_value="26" item_id="2"/>
+      </items>
+   </control>
+   <control item_type_key="dual_single" data_type="STRING">
+      <control_title>Single/Dual Channel</control_title>
+      <items>
+         <item item_name="Single" item_value="27" item_id="0"/>
+         <item item_name="Dual" item_value="27" item_id="1"/>
+      </items>
+   </control>
+   <!--Controls that appear on Port Settings Page -->
+   <control item_type_key="i2c_bus_config_group" data_type="STRING">
+      <control_title>I2C Bus Configuration</control_title>
+   </control>
+  <!-- <control item_type_key="i2c_pins_group" data_type="STRING">
+      <control_title>I2C Pins and Speed</control_title>
+   </control>
+   <control item_type_key="i2c_use_default" data_type="BOOLEAN">
+      <control_title>Use Default</control_title>
+      <validation required="false" severity="ERROR">
+         <validation_message>I2C and DDC pin pairs must be different.</validation_message>
+      </validation>
+      <items>
+         <item item_name="true" item_value="i2c use  Value" item_id="true">
+            <item_dependency itk_ref="i2c_pins" page_ref="DVOSettingsPage" rule="ENABLE_FALSE"/>
+         </item>
+         <item item_name="false" item_value="i2c use  Value" item_id="false">
+            <item_dependency itk_ref="i2c_pins" page_ref="DVOSettingsPage" rule="ENABLE_TRUE"/>
+         </item>
+      </items>
+   </control>
+   <control item_type_key="i2c_pins" data_type="STRING">
+      <control_title>I2C Pins</control_title>
+      <validation required="false" severity="ERROR">
+         <validation_message>I2C and DDC pin pairs must be different.</validation_message>
+      </validation>
+      <items>
+         <item item_name="CRT DDC(0)   DDCACLK/DDCADATA" item_value="0" item_id="852_0"/>
+         <item item_name="SCC Chip(1)   LCLKCTLA/LCLKCTLB" item_value="1" item_id="852_1"/>
+         <item item_name="Panel DDC(2) DDCPCLK/DDCPDATA" item_value="2" item_id="852_2"/>
+         <item item_name="DVI 1 DDC(3) MDVICLK/MDVIDATA" item_value="3" item_id="852_3"/>
+         <item item_name="DVO I2C(4)    MI2CCLK/MI2CDATA" item_value="4" item_id="852_4"/>
+         <item item_name="DVI 2 DDC(5) MDDCCLK/MDDCDATA" item_value="5" item_id="852_5"/>
+         <item item_name="External(6)  EXTTS_0" item_value="6" item_id="852_6"/>
+      </items>
+   </control>-->
+   <control item_type_key="i2c_dab" data_type="HEX">
+      <control_title>Device Address Byte</control_title>
+      <validation minimum_value="0" maximum_value="255" required="false" severity="ERROR">
+         <validation_message>Enter Device Address Byte, minimum value is 0x00, maximum value is 0xFF.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="i2c_speed" data_type="INTEGER">
+      <control_title>Speed (kHz)</control_title>
+      <validation minimum_value="10" maximum_value="400" required="false" severity="ERROR">
+         <validation_message>I2C Speed. Enter an integer. Range [10-400].</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="ddc_bus_config_group" data_type="STRING">
+      <control_title>DDC Bus Configuration</control_title>
+   </control>
+   <!--<control item_type_key="ddc_pins_group" data_type="STRING">
+      <control_title>DDC Pins and Speed</control_title>
+   </control>
+   <control item_type_key="ddc_use_default" data_type="BOOLEAN">
+      <control_title>Use Default</control_title>
+      <validation required="false" severity="ERROR">
+         <validation_message>I2C and DDC pin pairs must be different.</validation_message>
+      </validation>
+      <items>
+         <item item_name="true" item_value="ddc use Value" item_id="true">
+            <item_dependency itk_ref="ddc_pins" page_ref="DVOSettingsPage" rule="ENABLE_FALSE"/>
+         </item>
+         <item item_name="false" item_value="ddc use Value" item_id="false">
+            <item_dependency itk_ref="ddc_pins" page_ref="DVOSettingsPage" rule="ENABLE_TRUE"/>
+         </item>
+      </items>
+   </control>
+   <control item_type_key="ddc_pins" data_type="STRING">
+      <control_title>DDC Pins</control_title>
+      <validation required="false" severity="ERROR">
+         <validation_message>I2C and DDC pin pairs must be different.</validation_message>
+      </validation>
+      <items>
+         <item item_name="CRT DDC(0)   DDCACLK/DDCADATA" item_value="0" item_id="852_0"/>
+         <item item_name="SCC Chip(1)   LCLKCTLA/LCLKCTLB" item_value="1" item_id="852_1"/>
+         <item item_name="Panel DDC(2) DDCPCLK/DDCPDATA" item_value="2" item_id="852_2"/>
+         <item item_name="DVI 1 DDC(3) MDVICLK/MDVIDATA" item_value="3" item_id="852_3"/>
+         <item item_name="DVO I2C(4)    MI2CCLK/MI2CDATA" item_value="4" item_id="852_4"/>
+         <item item_name="DVI 2 DDC(5) MDDCCLK/MDDCDATA" item_value="5" item_id="852_5"/>
+         <item item_name="External(6)  EXTTS_0" item_value="6" item_id="852_6"/>
+      </items>
+   </control>-->
+   <control item_type_key="ddc_dab" data_type="HEX">
+      <control_title>Device Address Byte</control_title>
+      <validation minimum_value="0" maximum_value="255" required="false" severity="ERROR">
+         <validation_message>Enter Device Address Byte, minimum value is 0x00, maximum value is 0xFF.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="ddc_speed" data_type="INTEGER">
+      <control_title>Speed (kHz)</control_title>
+      <validation minimum_value="10" maximum_value="400" required="false" severity="ERROR">
+         <validation_message>DDC Speed. Enter an integer. Range [10-400].</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="fixed_resolution" data_type="BOOLEAN">
+      <control_title>Fixed Timing</control_title>
+      <validation required="false" severity="WARNING">
+         <validation_message>When Fixed Timing is enabled, EMGD will output only a single native DTD to the display device.</validation_message>
+      </validation>
+      <items>
+         <item item_name="true" item_value="60" item_id="1"/>
+      </items>
+   </control>
+   <control item_type_key="upscaling_group" data_type="INTEGER">
+      <control_title>Centering and Upscaling</control_title>
+   </control>
+   <control item_type_key="upscaling_default" data_type="BOOLEAN">
+      <control_title>Use Default</control_title>
+      <items>
+         <item item_name="true" item_value="1" item_id="true">
+            <item_dependency itk_ref="upscaling" page_ref="PanelSettingsPage" rule="ENABLE_FALSE"/>
+         </item>
+         <item item_name="false" item_value="0" item_id="false">
+            <item_dependency itk_ref="upscaling" page_ref="PanelSettingsPage" rule="ENABLE_TRUE"/>
+         </item>
+      </items>
+   </control>
+   
+   <control item_type_key="upscaling" data_type="STRING">
+      <control_title></control_title>
+      <items>
+         <item item_name="Upscaling" item_value="18" item_id="1"/>
+         <item item_name="Force Centering" item_value="18" item_id="0"/>
+      </items>
+   </control>
+   <control item_type_key="native_dtd" data_type="STRING">
+      <control_title>Native DTD</control_title>
+   </control>
+   <control item_type_key="display_timing_desc_group" data_type="STRING">
+      <control_title>Custom Display Timing Descriptors (DTDs)</control_title>
+      <validation required="true" minimum_value="1" severity="ERROR">
+         <validation_message>At least one Custom DTD must be defined and selected</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="attr_button" data_type="STRING">
+      <control_title>Attribute Settings</control_title>
+   </control>
+   <control item_type_key="panel_button" data_type="STRING">
+      <control_title>Flat Panel Settings</control_title>
+   </control>
+   <control item_type_key="dtd_button" data_type="STRING">
+      <control_title>New DTD</control_title>
+   </control>
+   <control item_type_key="dvo_button" data_type="STRING">
+      <control_title>I2C Settings</control_title>
+   </control>
+   <!--Controls that appear on DTD Settings Page -->
+   <control item_type_key="dtd_type" data_type="STRING">
+      <control_title>DTD Type.</control_title>
+      <items>
+         <item item_name="EMGD Parameters" item_value="1" item_id="1">
+            <item_dependency itk_ref="hztl_sync_offset" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="hztl_sync_pulse_offset" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="hztl_blanking" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="hztl_active" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="hztl_sync_start" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="hztl_sync_end" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="hztl_blanking_end" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="hztl_blank_start" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="pixel_clock" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="refresh" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_sync_offset" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="vertical_sync_pulse_offset" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="vertical_blanking" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="vertical_active" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="vertical_sync_start" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_sync_end" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_blanking_end" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_blank_start" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="mode_lines" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="edid_block" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vsync_polarity" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="hsync_polarity" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="interlaced_display" rule="ENABLE_TRUE"/>
+         </item>
+         <item item_name="VESA Parameters" item_value="2" item_id="2">
+            <item_dependency itk_ref="hztl_sync_offset" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="hztl_sync_pulse_offset" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="hztl_blanking" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="hztl_active" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="hztl_sync_start" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="hztl_sync_end" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="hztl_blanking_end" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="hztl_blank_start" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="pixel_clock" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="refresh" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_sync_offset" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_sync_pulse_offset" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="vertical_blanking" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="vertical_active" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_sync_start" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="vertical_sync_end" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_blanking_end" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_blank_start" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="mode_lines" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="edid_block" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vsync_polarity" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="hsync_polarity" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="interlaced_display" rule="ENABLE_TRUE"/>
+         </item>
+         <item item_name="Hardware Parameters" item_value="3" item_id="3">
+            <item_dependency itk_ref="hztl_sync_offset" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="hztl_sync_pulse_offset" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="hztl_blanking" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="hztl_active" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="hztl_sync_start" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="hztl_sync_end" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="hztl_blanking_end" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="hztl_blank_start" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="pixel_clock" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="refresh" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_sync_offset" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_sync_pulse_offset" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_blanking" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_active" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="vertical_sync_start" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="vertical_sync_end" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="vertical_blanking_end" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="vertical_blank_start" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="mode_lines" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="edid_block" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vsync_polarity" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="hsync_polarity" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="interlaced_display" rule="ENABLE_TRUE"/>
+         </item>
+         <item item_name="Simple Parameters" item_value="5" item_id="5">
+            <item_dependency itk_ref="hztl_sync_offset" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="hztl_sync_pulse_offset" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="hztl_blanking" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="hztl_active" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="hztl_sync_start" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="hztl_sync_end" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="hztl_blanking_end" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="hztl_blank_start" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="pixel_clock" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="refresh" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="vertical_sync_offset" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_sync_pulse_offset" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_blanking" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_active" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="vertical_sync_start" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_sync_end" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_blanking_end" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_blank_start" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="mode_lines" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="edid_block" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vsync_polarity" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="hsync_polarity" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="interlaced_display" rule="ENABLE_TRUE"/>
+         </item>
+         <item item_name="Mode Lines" item_value="6" item_id="6">
+            <item_dependency itk_ref="hztl_sync_offset" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="hztl_sync_pulse_offset" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="hztl_blanking" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="hztl_active" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="hztl_sync_start" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="hztl_sync_end" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="hztl_blanking_end" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="hztl_blank_start" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="pixel_clock" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="refresh" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_sync_offset" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_sync_pulse_offset" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_blanking" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_active" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_sync_start" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_sync_end" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_blanking_end" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_blank_start" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="mode_lines" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="edid_block" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vsync_polarity" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="hsync_polarity" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="interlaced_display" rule="ENABLE_TRUE"/>
+         </item>
+         <item item_name="EDID Block" item_value="7" item_id="7">
+            <item_dependency itk_ref="hztl_sync_offset" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="hztl_sync_pulse_offset" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="hztl_blanking" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="hztl_active" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="hztl_sync_start" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="hztl_sync_end" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="hztl_blanking_end" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="hztl_blank_start" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="pixel_clock" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="refresh" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_sync_offset" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_sync_pulse_offset" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_blanking" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_active" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_sync_start" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_sync_end" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_blanking_end" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="vertical_blank_start" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="mode_lines" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="edid_block" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="vsync_polarity" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="hsync_polarity" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="interlaced_display" rule="ENABLE_FALSE"/>
+         </item>
+      </items>
+   </control>
+   <control item_type_key="dtd_name" data_type="STRING">
+      <control_title>Enter DTD File Name</control_title>
+      <validation minimum_value="1" maximum_value="50" required="true" severity="ERROR">
+         <validation_message>A DTD name must be entered that is between 1 and 50 characters</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="hztl_sync_offset" data_type="INTEGER">
+		<control_title>Horizontal Sync Offset (Front Porch) in pixels</control_title>
+		<validation minimum_value="0" maximum_value="8191" required="true" severity="ERROR">
+			<validation_message>Horizontal Sync Offset. Enter an integer. Range 0-8191 [13 bits].</validation_message>
+		</validation>
+	</control>
+	<control item_type_key="hztl_sync_pulse_offset" data_type="INTEGER">
+		<control_title>Horizontal Sync Pulse Width (Sync Time) in pixels</control_title>
+		<validation minimum_value="0" maximum_value="8191" required="true" severity="ERROR">
+			<validation_message>Horizontal Sync Pulse Width. Enter an integer. Range 0-8191 [13 bits].</validation_message>
+		</validation>
+	</control>
+	<control item_type_key="hztl_blanking" data_type="INTEGER">
+		<control_title>Horizontal Blank Width (Blank Time) in pixels</control_title>
+		<validation minimum_value="0" maximum_value="32767" required="true" severity="ERROR">
+			<validation_message>Horizontal Blank Width. Enter an integer. Range 0-32767 [15 bits].</validation_message>
+		</validation>
+	</control>
+	<control item_type_key="hztl_active" data_type="INTEGER">
+		<control_title>Horizontal Active (Width) in pixels</control_title>
+		<validation minimum_value="1" maximum_value="32767" required="true" severity="ERROR">
+			<validation_message>Horizontal Active. Enter an integer. Range 1-32767 [15 bits].</validation_message>
+		</validation>
+	</control>
+   <control item_type_key="hztl_sync_start" data_type="INTEGER">
+		<control_title>Horizontal Sync Start in pixels</control_title>
+		<validation minimum_value="0" maximum_value="40957" required="true" severity="ERROR">
+			<validation_message>Horizontal Sync Start. Enter an integer. Range 0-40957.</validation_message>
+		</validation>
+	</control>
+	<control item_type_key="hztl_sync_end" data_type="INTEGER">
+		<control_title>Horizontal Sync End in pixels</control_title>
+		<validation minimum_value="0" maximum_value="49148" required="true" severity="ERROR">
+			<validation_message>Horizontal Sync End. Enter an integer. Range 0-49148.</validation_message>
+		</validation>
+	</control>
+	<control item_type_key="hztl_blanking_end" data_type="INTEGER">
+		<control_title>Horizontal Blank End in pixels</control_title>
+		<validation minimum_value="0" maximum_value="65533" required="true" severity="ERROR">
+			<validation_message>Horizontal Blank End. Enter an integer. Range 0-65533.</validation_message>
+		</validation>
+	</control>
+	<control item_type_key="hztl_blank_start" data_type="INTEGER">
+		<control_title>Horizontal Blank Start in pixels</control_title>
+		<validation minimum_value="0" maximum_value="32766" required="true" severity="ERROR">
+			<validation_message>Horizontal Back Porch. Enter an integer. Range 0-32766.</validation_message>
+		</validation>
+	</control>
+   <control item_type_key="pixel_clock" data_type="INTEGER">
+      <control_title>Pixel Clock in kHz</control_title>
+      <validation minimum_value="0" maximum_value="1000000" required="true" severity="ERROR">
+         <validation_message>Pixel Clock. Enter an integer (kHz).</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="refresh" data_type="INTEGER">
+      <control_title>Refresh in Hz</control_title>
+      <validation minimum_value="0" maximum_value="1000000" required="true" severity="ERROR">
+         <validation_message>Refresh. Enter an integer (Hz).</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="vertical_sync_offset" data_type="INTEGER">
+      <control_title>Vertical Sync Offset (Front Porch) in lines</control_title>
+      <validation minimum_value="0" maximum_value="63" required="true" severity="ERROR">
+         <validation_message>Vertical Sync Offset. Enter an integer. Range 0-63 [6 bits].</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="vertical_sync_pulse_offset" data_type="INTEGER">
+      <control_title>Vertical Sync Pulse Width (Sync Time) in lines</control_title>
+      <validation minimum_value="0" maximum_value="63" required="true" severity="ERROR">
+         <validation_message>Vertical Sync Pulse Width. Enter an integer. Range 0-63 [6 bits].</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="vertical_blanking" data_type="INTEGER">
+      <control_title>Vertical Blank Width (Blank Time) in lines</control_title>
+      <validation minimum_value="0" maximum_value="4095" required="true" severity="ERROR">
+         <validation_message>Vertical Blank Width. Enter an integer. Range 0-4095 [12 bits].</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="vertical_active" data_type="INTEGER">
+      <control_title>Vertical Active (Height) in lines</control_title>
+      <validation minimum_value="1" maximum_value="4095" required="true" severity="ERROR">
+         <validation_message>Vertical Active. Enter an integer. Range 1-4095 [12 bits].</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="vertical_sync_start" data_type="INTEGER">
+      <control_title>Vertical Sync Start in lines</control_title>
+      <validation minimum_value="0" maximum_value="4157" required="true" severity="ERROR">
+         <validation_message>Vertical Sync Start. Enter an integer. Range 0-4157.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="vertical_sync_end" data_type="INTEGER">
+      <control_title>Vertical Sync End in lines</control_title>
+      <validation minimum_value="0" maximum_value="4220" required="true" severity="ERROR">
+         <validation_message>Vertical Sync End. Enter an integer. Range 0-4220.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="vertical_blanking_end" data_type="INTEGER">
+      <control_title>Vertical Blank End in lines</control_title>
+      <validation minimum_value="0" maximum_value="8189" required="true" severity="ERROR">
+         <validation_message>Vertical Blank End. Enter an integer. Range 0-8189.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="vertical_blank_start" data_type="INTEGER">
+      <control_title>Vertical Blank Start in lines</control_title>
+      <validation minimum_value="0" maximum_value="4094" required="true" severity="ERROR">
+         <validation_message>Vertical Back Porch. Enter an integer. Range 0-4094.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="mode_lines" data_type="STRING">
+      <control_title>Mode Line is in the format: name I A B C D E F G H</control_title>
+   </control>
+   <control item_type_key="I" data_type="FLOAT">
+      <control_title>I</control_title>
+      <validation minimum_value="1" maximum_value="1000000" required="true" severity="ERROR">
+         <validation_message>I. Enter the dot clock value.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="A" data_type="INTEGER">
+      <control_title>A</control_title>
+      <validation minimum_value="1" maximum_value="32767" required="true" severity="ERROR">
+         <validation_message>A.  Range 0-32767 [15 bits].</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="B" data_type="INTEGER">
+      <control_title>B</control_title>
+      <validation minimum_value="1" maximum_value="40958" required="true" severity="ERROR">
+         <validation_message>B.  Range 0-40958.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="C" data_type="INTEGER">
+      <control_title>C</control_title>
+      <validation minimum_value="1" maximum_value="40958" required="true" severity="ERROR">
+         <validation_message>C.  Range 0-40958.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="D" data_type="INTEGER">
+      <control_title>D</control_title>
+      <validation minimum_value="1" maximum_value="65534" required="true" severity="ERROR">
+         <validation_message>D.  Range 0-65534.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="E" data_type="INTEGER">
+      <control_title>E</control_title>
+      <validation minimum_value="1" maximum_value="4095" required="true" severity="ERROR">
+         <validation_message>E. Range 0-4095 [12 bits].</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="F" data_type="INTEGER">
+      <control_title>F</control_title>
+      <validation minimum_value="1" maximum_value="4158" required="true" severity="ERROR">
+         <validation_message>F. Range 0-4158.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="G" data_type="INTEGER">
+      <control_title>G</control_title>
+      <validation minimum_value="1" maximum_value="4158" required="true" severity="ERROR">
+         <validation_message>G. Range 0-4158.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="H" data_type="INTEGER">
+      <control_title>H</control_title>
+      <validation minimum_value="1" maximum_value="8190" required="true" severity="ERROR">
+         <validation_message>H. Range 0-8190.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="edid_block" data_type="STRING">
+		<control_title>EDID Block is in the format: a0 0f 20 00 31 58 1c 20 d2 1a 14 -- -- -- -- -- -- 1c</control_title>
+	</control>
+   <control item_type_key="byte18" data_type="HEX">
+      <control_title>18</control_title>
+      <validation minimum_value="0" maximum_value="255" required="true" severity="ERROR">
+         <validation_message>Edid block entry byte 18 must be between 0 and FF.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="byte17" data_type="HEX">
+      <control_title>17</control_title>
+   </control>
+   <control item_type_key="byte16" data_type="HEX">
+      <control_title>16</control_title>
+   </control>
+   <control item_type_key="byte15" data_type="HEX">
+      <control_title>15</control_title>
+   </control>
+   <control item_type_key="byte14" data_type="HEX">
+      <control_title>14</control_title>
+   </control>
+   <control item_type_key="byte13" data_type="HEX">
+      <control_title>13</control_title>
+   </control>
+   <control item_type_key="byte12" data_type="HEX">
+      <control_title>12</control_title>
+   </control>
+   <control item_type_key="byte11" data_type="HEX">
+      <control_title>11</control_title>
+      <validation minimum_value="0" maximum_value="255" required="true" severity="ERROR">
+         <validation_message>Edid block entry byte 11 must be between 0 and FF.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="byte10" data_type="HEX">
+      <control_title>10</control_title>
+      <validation minimum_value="0" maximum_value="255" required="true" severity="ERROR">
+         <validation_message>Edid block entry byte 10 must be between 0 and FF.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="byte9" data_type="HEX">
+      <control_title>9</control_title>
+      <validation minimum_value="0" maximum_value="255" required="true" severity="ERROR">
+         <validation_message>Edid block entry byte 9 must be between 0 and FF.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="byte8" data_type="HEX">
+      <control_title>8</control_title>
+      <validation minimum_value="0" maximum_value="255" required="true" severity="ERROR">
+         <validation_message>Edid block entry byte 8 must be between 0 and FF.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="byte7" data_type="HEX">
+      <control_title>7</control_title>
+      <validation minimum_value="0" maximum_value="255" required="true" severity="ERROR">
+         <validation_message>Edid block entry byte 7 must be between 0 and FF.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="byte6" data_type="HEX">
+      <control_title>6</control_title>
+      <validation minimum_value="0" maximum_value="255" required="true" severity="ERROR">
+         <validation_message>Edid block entry byte 6 must be between 0 and FF.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="byte5" data_type="HEX">
+      <control_title>5</control_title>
+      <validation minimum_value="0" maximum_value="255" required="true" severity="ERROR">
+         <validation_message>Edid block entry byte 5 must be between 0 and FF.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="byte4" data_type="HEX">
+      <control_title>4</control_title>
+      <validation minimum_value="0" maximum_value="255" required="true" severity="ERROR">
+         <validation_message>Edid block entry byte 4 must be between 0 and FF.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="byte3" data_type="HEX">
+      <control_title>3</control_title>
+      <validation minimum_value="0" maximum_value="255" required="true" severity="ERROR">
+         <validation_message>Edid block entry byte 3 must be between 0 and FF.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="byte2" data_type="HEX">
+      <control_title>2</control_title>
+      <validation minimum_value="0" maximum_value="255" required="true" severity="ERROR">
+         <validation_message>Edid block entry byte 2 must be between 0 and FF.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="byte1" data_type="HEX">
+      <control_title>1</control_title>
+      <validation minimum_value="0" maximum_value="255" required="true" severity="ERROR">
+         <validation_message>Edid block entry byte 1 must be between 0 and FF.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="edid_label" data_type="STRING">
+      <control_title>Note: EDID Bytes 12-17 are not used by EMGD.  Also, the value of Byte 18 may change after saving because certain </control_title>
+   </control>
+   <control item_type_key="edid_label1" data_type="STRING">
+      <control_title>bits are used by EMGD.</control_title>
+   </control>
+   <control item_type_key="dtd_flags_group" data_type="STRING">
+      <control_title>DTD Settings Flags</control_title>
+   </control>
+   <control item_type_key="interlaced_display" data_type="BOOLEAN">
+      <control_title>Interlaced Display</control_title>
+      <items>
+         <item item_name="true" item_value="2147483648" item_id="true"/>
+      </items>
+   </control>
+   <control item_type_key="vsync_polarity" data_type="STRING">
+      <control_title>Vertical Sync Polarity </control_title>
+      <items>
+         <item item_name="Active Low" item_value="0" item_id="low"/>
+         <item item_name="Active High" item_value="134217728" item_id="high"/>
+      </items>
+   </control>
+   <control item_type_key="hsync_polarity" data_type="STRING">
+      <control_title>Horizontal Sync Polarity </control_title>
+      <items>
+         <item item_name="Active Low" item_value="0" item_id="low"/>
+         <item item_name="Active High" item_value="67108864" item_id="high"/>
+      </items>
+   </control>
+   <control item_type_key="bsync_polarity" data_type="STRING">
+      <control_title>Blank Polarity </control_title>
+      <items>
+         <item item_name="Active Low" item_value="0" item_id="low"/>
+         <item item_name="Active High" item_value="33554432" item_id="high"/>
+      </items>
+   </control>
+   <!--Controls that appear on the VBIOS Page -->
+   <control item_type_key="post_group" data_type="STRING">
+      <control_title>Power On Self Test</control_title>
+   </control>
+   
+   <control item_type_key="post_disable_group" data_type="STRING">
+      <control_title></control_title>
+  </control>
+   <control item_type_key="post_enable_group" data_type="STRING">
+      <control_title></control_title>
+  </control>
+   
+   <control item_type_key="post_display_msg" data_type="BOOLEAN">
+      <control_title>Enable POST messages to display</control_title>
+      <items>
+         <item item_name="true" item_value="1" item_id="true">
+            <item_dependency itk_ref="post_enable_group" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="oem_post_time" rule="REQUIRED_TRUE"/>
+         </item>
+         <item item_name="false" item_value="0" item_id="false">
+            <item_dependency itk_ref="post_enable_group" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="oem_post_time" rule="REQUIRED_FALSE"/>
+         </item>
+      </items>
+   </control>
+   <control item_type_key="oem_string" data_type="STRING">
+      <control_title>OEM String</control_title>
+   </control>
+   <control item_type_key="oem_post_time" data_type="INTEGER">
+      <control_title>Number of Seconds to Display</control_title>
+      <validation minimum_value="0" maximum_value="65535" required="false" severity="ERROR">
+      <validation_message>Time to display POST message must be between 0 and 65535 seconds.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="oem_vendor_name" data_type="STRING">
+      <control_title>OEM Vendor Name</control_title>
+      <validation minimum_value="1" maximum_value="50" required="false" severity="ERROR">
+         <validation_message>OEM Vendor Name must be between 1 and 50 characters</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="oem_product_name" data_type="STRING">
+      <control_title>OEM Product Name</control_title>
+      <validation minimum_value="1" maximum_value="50" required="false" severity="ERROR">
+         <validation_message>OEM Product Name must be between 1 and 50 characters</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="oem_product_revision" data_type="STRING">
+      <control_title>OEM Product Revision</control_title>
+      <validation minimum_value="1" maximum_value="50" required="false" severity="ERROR">
+         <validation_message>OEM Product Revision must be between 1 and 50 characters</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="primary_use_default" data_type="BOOLEAN">
+      <control_title>Use Default</control_title>
+      <items>
+         <item item_name="true" item_value="1" item_id="true">
+            <item_dependency itk_ref="primary_display_modes" rule="ENABLE_FALSE"/>
+         </item>
+         <item item_name="false" item_value="0" item_id="false">
+            <item_dependency itk_ref="primary_display_modes" rule="ENABLE_TRUE"/>
+         </item>
+      </items>
+   </control>
+   <control item_type_key="secondary_use_default" data_type="BOOLEAN">
+      <control_title>Use Default</control_title>
+      <items>
+         <item item_name="true" item_value="1" item_id="true">
+            <item_dependency itk_ref="secondary_display_modes" rule="ENABLE_FALSE"/>
+         </item>
+         <item item_name="false" item_value="0" item_id="false">
+            <item_dependency itk_ref="secondary_display_modes" rule="ENABLE_TRUE"/>
+         </item>
+      </items>
+   </control>
+   <control item_type_key="primary_display_mode_group" data_type="STRING">
+      <control_title>Primary Display Mode</control_title>
+   </control>
+   <control item_type_key="primary_display_modes" data_type="STRING">
+      <control_title>Standard Modes</control_title>
+      <items>
+         <item item_name="0x00 - 320x200x4bpp (gray)@70Hz" item_value="70" item_id="0x00_320x200x4"/>
+         <item item_name="0x00 - 320x350x4bpp (gray)@70Hz" item_value="70" item_id="0x00_320x350x4"/>
+         <item item_name="0x00 - 360x400x4bpp @70Hz" item_value="70" item_id="0x00_360x400x4"/>
+         <item item_name="0x01 - 320x200x4bpp @70Hz" item_value="70" item_id="0x01_320x200x4"/>
+         <item item_name="0x01 - 320x350x4bpp@70Hz" item_value="70" item_id="0x01_320x350x4"/>
+         <item item_name="0x01 - 360x400x4bpp@70Hz" item_value="70" item_id="0x01_360x400x4"/>
+         <item item_name="0x02 - 640x200x4bpp (gray)@70Hz" item_value="70" item_id="0x02_640x200x4"/>
+         <item item_name="0x02 - 640x350x4bpp (gray)@70Hz" item_value="70" item_id="0x02_640x350x4"/>
+         <item item_name="0x02 - 720x400x4bpp@70Hz" item_value="70" item_id="0x02_720x400x4"/>
+         <item item_name="0x03 - 640x200x4bpp@70Hz" item_value="70" item_id="0x03_640x200x4"/>
+         <item item_name="0x03 - 640x350x4bpp@70Hz" item_value="70" item_id="0x03_640x350x4"/>
+         <item item_name="0x03 - 720x400x4bpp@70Hz" item_value="70" item_id="0x03_720x400x4"/>
+         <item item_name="0x0D - 320x200x4bpp@70Hz" item_value="70" item_id="0x0D"/>
+         <item item_name="0x0E - 640x200x4bpp@70Hz" item_value="70" item_id="0x0E"/>
+         <item item_name="0x0F - 640x350xMono@70Hz" item_value="70" item_id="0x0F"/>
+         <item item_name="0x10 - 640x350x4bpp@70Hz" item_value="70" item_id="0x10"/>
+         <item item_name="0x12 - 640x480x4bpp@60Hz" item_value="60" item_id="0x12"/>
+         <item item_name="0x13 - 320x200x8bpp@70Hz" item_value="70" item_id="0x13"/>
+         <item item_name="0x101 - 640x480x8bpp@60Hz" item_value="60" item_id="0x101_60"/>
+         <item item_name="0x101 - 640x480x8bpp@75Hz" item_value="75" item_id="0x101_75"/>
+         <item item_name="0x101 - 640x480x8bpp@85Hz" item_value="85" item_id="0x101_85"/>
+         <item item_name="0x103 - 800x600x8bpp@60Hz" item_value="60" item_id="0x103_60"/>
+         <item item_name="0x103 - 800x600x8bpp@75Hz" item_value="75" item_id="0x103_75"/>
+         <item item_name="0x103 - 800x600x8bpp@85Hz" item_value="85" item_id="0x103_85"/>
+         <item item_name="0x105 - 1024x768x8bpp@60Hz" item_value="60" item_id="0x105_60"/>
+         <item item_name="0x105 - 1024x768x8bpp@75Hz" item_value="75" item_id="0x105_75"/>
+         <item item_name="0x105 - 1024x768x8bpp@85Hz" item_value="85" item_id="0x105_85"/>
+         <item item_name="0x107 - 1280x1024x8bpp@60Hz" item_value="60" item_id="0x107_60"/>
+         <item item_name="0x107 - 1280x1024x8bpp@75Hz" item_value="75" item_id="0x107_75"/>
+         <item item_name="0x107 - 1280x1024x8bpp@85Hz" item_value="85" item_id="0x107_85"/>
+         <item item_name="0x111 - 640x480x16bpp@60Hz" item_value="60" item_id="0x111_60"/>
+         <item item_name="0x111 - 640x480x16bpp@75Hz" item_value="75" item_id="0x111_75"/>
+         <item item_name="0x111 - 640x480x16bpp@85Hz" item_value="85" item_id="0x111_80"/>
+         <item item_name="0x112 - 640x480x32bpp@60Hz" item_value="60" item_id="0x112_60"/>
+         <item item_name="0x112 - 640x480x32bpp@75Hz" item_value="75" item_id="0x112_75"/>
+         <item item_name="0x112 - 640x480x32bpp@85Hz" item_value="85" item_id="0x112_85"/>
+         <item item_name="0x114 - 800x600x16bpp@60Hz" item_value="60" item_id="0x114_60"/>
+         <item item_name="0x114 - 800x600x16bpp@75Hz" item_value="75" item_id="0x114_75"/>
+         <item item_name="0x114 - 800x600x16bpp@85Hz" item_value="85" item_id="0x114_85"/>
+         <item item_name="0x115 - 800x600x32bpp@60Hz" item_value="60" item_id="0x115_60"/>
+         <item item_name="0x115 - 800x600x32bpp@75Hz" item_value="75" item_id="0x115_75"/>
+         <item item_name="0x115 - 800x600x32bpp@85Hz" item_value="85" item_id="0x115_85"/>
+         <item item_name="0x117 - 1024x768x16bpp@60Hz" item_value="60" item_id="0x117_60"/>
+         <item item_name="0x117 - 1024x768x16bpp@75Hz" item_value="75" item_id="0x117_75"/>
+         <item item_name="0x117 - 1024x768x16bpp@85Hz" item_value="85" item_id="0x117_85"/>
+         <item item_name="0x118 - 1024x768x32bpp@60Hz" item_value="60" item_id="0x118_60"/>
+         <item item_name="0x118 - 1024x768x32bpp@75Hz" item_value="75" item_id="0x118_75"/>
+         <item item_name="0x118 - 1024x768x32bpp@85Hz" item_value="85" item_id="0x118_85"/>
+         <item item_name="0x11A - 1280x1024x16bpp@60Hz" item_value="60" item_id="0x11A_60"/>
+         <item item_name="0x11A - 1280x1024x16bpp@75Hz" item_value="75" item_id="0x11A_75"/>
+         <item item_name="0x11A - 1280x1024x16bpp@85Hz" item_value="85" item_id="0x11A_85"/>
+         <item item_name="0x11B - 1280x1024x32bpp@60Hz" item_value="60" item_id="0x11B_60"/>
+         <item item_name="0x11B - 1280x1024x32bpp@75Hz" item_value="75" item_id="0x11B_75"/>
+         <item item_name="0x11B - 1280x1024x32bpp@85Hz" item_value="85" item_id="0x11B_85"/>
+      </items>
+   </control>
+   <control item_type_key="primary_custom_group" data_type="STRING">
+      <control_title>Primary Non-standard Modes</control_title>
+   </control>
+   <control item_type_key="primary_custom" data_type="STRING">
+      <control_title>Custom</control_title>
+      <items>
+         <item item_name="true" item_value="1" item_id="true">
+            <item_dependency itk_ref="primary_display_modes" page_ref="vbiosConfigPage" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="primary_use_default" page_ref="vbiosConfigPage" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="primary_custom_mode_number" page_ref="vbiosConfigPage" rule="ENABLE_TRUE"/>
+         </item>
+         <item item_name="false" item_value="1" item_id="false">
+            <item_dependency itk_ref="primary_display_modes" page_ref="vbiosConfigPage" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="primary_use_default" page_ref="vbiosConfigPage" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="primary_custom_mode_number" page_ref="vbiosConfigPage" rule="ENABLE_FALSE"/>
+         </item>
+      </items>
+   </control>
+   <control item_type_key="primary_custom_mode_number" data_type="HEX">
+      <control_title>Default Mode Settings</control_title>
+      <validation required="true" minimum_value="0" maximum_value="4095" severity="ERROR">
+         <validation_message>Default Mode Settings must be an integer or in hexadecimal.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="secondary_display_mode_group" data_type="HEX">
+      <control_title>Secondary Display Mode</control_title>
+   </control>
+   <control item_type_key="secondary_display_modes" data_type="STRING">
+      <control_title>Standard Modes</control_title>
+      <items>
+         <item item_name="0x00 - 320x200x4bpp (gray)@70Hz" item_value="70" item_id="0x00_320x200x4"/>
+         <item item_name="0x00 - 320x350x4bpp (gray)@70Hz" item_value="70" item_id="0x00_320x350x4"/>
+         <item item_name="0x00 - 360x400x4bpp @70Hz" item_value="70" item_id="0x00_360x400x4"/>
+         <item item_name="0x01 - 320x200x4bpp @70Hz" item_value="70" item_id="0x01_320x200x4"/>
+         <item item_name="0x01 - 320x350x4bpp@70Hz" item_value="70" item_id="0x01_320x350x4"/>
+         <item item_name="0x01 - 360x400x4bpp@70Hz" item_value="70" item_id="0x01_360x400x4"/>
+         <item item_name="0x02 - 640x200x4bpp (gray)@70Hz" item_value="70" item_id="0x02_640x200x4"/>
+         <item item_name="0x02 - 640x350x4bpp (gray)@70Hz" item_value="70" item_id="0x02_640x350x4"/>
+         <item item_name="0x02 - 720x400x4bpp@70Hz" item_value="70" item_id="0x02_720x400x4"/>
+         <item item_name="0x03 - 640x200x4bpp@70Hz" item_value="70" item_id="0x03_640x200x4"/>
+         <item item_name="0x03 - 640x350x4bpp@70Hz" item_value="70" item_id="0x03_640x350x4"/>
+         <item item_name="0x03 - 720x400x4bpp@70Hz" item_value="70" item_id="0x03_720x400x4"/>
+         <item item_name="0x0D - 320x200x4bpp@70Hz" item_value="70" item_id="0x0D"/>
+         <item item_name="0x0E - 640x200x4bpp@70Hz" item_value="70" item_id="0x0E"/>
+         <item item_name="0x0F - 640x350xMono@70Hz" item_value="70" item_id="0x0F"/>
+         <item item_name="0x10 - 640x350x4bpp@70Hz" item_value="70" item_id="0x10"/>
+         <item item_name="0x12 - 640x480x4bpp@60Hz" item_value="60" item_id="0x12"/>
+         <item item_name="0x13 - 320x200x8bpp@70Hz" item_value="70" item_id="0x13"/>
+         <item item_name="0x101 - 640x480x8bpp@60Hz" item_value="60" item_id="0x101_60"/>
+         <item item_name="0x101 - 640x480x8bpp@75Hz" item_value="75" item_id="0x101_75"/>
+         <item item_name="0x101 - 640x480x8bpp@85Hz" item_value="85" item_id="0x101_85"/>
+         <item item_name="0x103 - 800x600x8bpp@60Hz" item_value="60" item_id="0x103_60"/>
+         <item item_name="0x103 - 800x600x8bpp@75Hz" item_value="75" item_id="0x103_75"/>
+         <item item_name="0x103 - 800x600x8bpp@85Hz" item_value="85" item_id="0x103_85"/>
+         <item item_name="0x105 - 1024x768x8bpp@60Hz" item_value="60" item_id="0x105_60"/>
+         <item item_name="0x105 - 1024x768x8bpp@75Hz" item_value="75" item_id="0x105_75"/>
+         <item item_name="0x105 - 1024x768x8bpp@85Hz" item_value="85" item_id="0x105_85"/>
+         <item item_name="0x107 - 1280x1024x8bpp@60Hz" item_value="60" item_id="0x107_60"/>
+         <item item_name="0x107 - 1280x1024x8bpp@75Hz" item_value="75" item_id="0x107_75"/>
+         <item item_name="0x107 - 1280x1024x8bpp@85Hz" item_value="85" item_id="0x107_85"/>
+         <item item_name="0x111 - 640x480x16bpp@60Hz" item_value="60" item_id="0x111_60"/>
+         <item item_name="0x111 - 640x480x16bpp@75Hz" item_value="75" item_id="0x111_75"/>
+         <item item_name="0x111 - 640x480x16bpp@85Hz" item_value="85" item_id="0x111_80"/>
+         <item item_name="0x112 - 640x480x32bpp@60Hz" item_value="60" item_id="0x112_60"/>
+         <item item_name="0x112 - 640x480x32bpp@75Hz" item_value="75" item_id="0x112_75"/>
+         <item item_name="0x112 - 640x480x32bpp@85Hz" item_value="85" item_id="0x112_85"/>
+         <item item_name="0x114 - 800x600x16bpp@60Hz" item_value="60" item_id="0x114_60"/>
+         <item item_name="0x114 - 800x600x16bpp@75Hz" item_value="75" item_id="0x114_75"/>
+         <item item_name="0x114 - 800x600x16bpp@85Hz" item_value="85" item_id="0x114_85"/>
+         <item item_name="0x115 - 800x600x32bpp@60Hz" item_value="60" item_id="0x115_60"/>
+         <item item_name="0x115 - 800x600x32bpp@75Hz" item_value="75" item_id="0x115_75"/>
+         <item item_name="0x115 - 800x600x32bpp@85Hz" item_value="85" item_id="0x115_85"/>
+         <item item_name="0x117 - 1024x768x16bpp@60Hz" item_value="60" item_id="0x117_60"/>
+         <item item_name="0x117 - 1024x768x16bpp@75Hz" item_value="75" item_id="0x117_75"/>
+         <item item_name="0x117 - 1024x768x16bpp@85Hz" item_value="85" item_id="0x117_85"/>
+         <item item_name="0x118 - 1024x768x32bpp@60Hz" item_value="60" item_id="0x118_60"/>
+         <item item_name="0x118 - 1024x768x32bpp@75Hz" item_value="75" item_id="0x118_75"/>
+         <item item_name="0x118 - 1024x768x32bpp@85Hz" item_value="85" item_id="0x118_85"/>
+         <item item_name="0x11A - 1280x1024x16bpp@60Hz" item_value="60" item_id="0x11A_60"/>
+         <item item_name="0x11A - 1280x1024x16bpp@75Hz" item_value="75" item_id="0x11A_75"/>
+         <item item_name="0x11A - 1280x1024x16bpp@85Hz" item_value="85" item_id="0x11A_85"/>
+         <item item_name="0x11B - 1280x1024x32bpp@60Hz" item_value="60" item_id="0x11B_60"/>
+         <item item_name="0x11B - 1280x1024x32bpp@75Hz" item_value="75" item_id="0x11B_75"/>
+         <item item_name="0x11B - 1280x1024x32bpp@85Hz" item_value="85" item_id="0x11B_85"/>
+      </items>
+   </control>
+   <control item_type_key="secondary_custom_group" data_type="STRING">
+      <control_title>Secondary Non-standard Modes</control_title>
+   </control>
+   <control item_type_key="secondary_custom" data_type="STRING">
+      <control_title>Custom</control_title>
+      <items>
+         <item item_name="true" item_value="1" item_id="true">
+            <item_dependency itk_ref="secondary_display_modes" page_ref="vbiosConfigPage" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="secondary_use_default" page_ref="vbiosConfigPage" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="secondary_custom_mode_number" page_ref="vbiosConfigPage" rule="ENABLE_TRUE"/>
+         </item>
+         <item item_name="false" item_value="1" item_id="false">
+            <item_dependency itk_ref="secondary_display_modes" page_ref="vbiosConfigPage" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="secondary_use_default" page_ref="vbiosConfigPage" rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="secondary_custom_mode_number" page_ref="vbiosConfigPage" rule="ENABLE_FALSE"/>
+         </item>
+      </items>
+   </control>
+   <control item_type_key="secondary_custom_mode_number" data_type="HEX">
+      <control_title>Default Mode Settings</control_title>
+      <validation required="true" minimum_value="0" maximum_value="4095" severity="ERROR">
+         <validation_message>Default Mode Settings must be a hexadecimal. Default mode number is 0x03</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="cmmn_to_port" data_type="STRING">
+      <control_title>Common to Port</control_title>
+      <items>
+         <item item_id="crt"  item_name="1 (CRT) " item_value="1"/>
+         <item item_id="tv1"  item_name="2 (TV1) " item_value="2"/>
+         <item item_id="efp1" item_name="3 (EFP1)" item_value="3"/>
+         <item item_id="lfp"  item_name="4 (LFP) " item_value="4"/>
+         <item item_id="tv2"  item_name="5 (TV2) " item_value="5"/>
+         <item item_id="efp2" item_name="6 (EFP2)" item_value="6"/>
+      </items>
+   </control>
+   <control item_type_key="int15" data_type="STRING">
+      <control_title>5F Functions</control_title>
+      <items>
+         <item item_name="5F31h, POST Completion Notification" item_value="1" item_id="5f31"/>
+         <item item_name="5F33h, Hook After Mode Set" item_value="1" item_id="5f33"/>
+         <item item_name="5F35h, Boot Display Device Hook" item_value="1" item_id="5f35"/>
+         <item item_name="5F36h, Boot TV Format Hook" item_value="1" item_id="5f36"/>
+         <item item_name="5F38h, Hook Before Set Mode" item_value="1" item_id="5f38"/>
+      </items>
+   </control>
+   <!--Controls that appear on the Fastboot Configuration Page -->
+   <control item_type_key="fastboot_group" data_type="STRING">
+      <control_title>Fastboot Configuration</control_title>
+   </control>
+   <control item_type_key="seamless" data_type="BOOLEAN">
+      <control_title>Disable Seamless Mode Set (EFI and EPOG do not support)</control_title>
+      <items>
+         <item item_name="true" item_value="0" item_id="true"/>
+      </items>
+   </control>
+	<control item_type_key="no_edid_gop" data_type="BOOLEAN">
+      <control_title>No Support for EDID (Only for General EFI.  EPOG does not support)</control_title>
+      <items>
+         <item item_name="true" item_value="1" item_id="true"/>
+	 </items>
+		</control>
+   <control item_type_key="splash_screen" data_type="BOOLEAN">
+      <control_title>Splash Screen (enter file path on the Package Page)</control_title>
+      <items>
+         <item item_name="true" item_value="1" item_id="true">
+			 <item_dependency itk_ref="ss_group" rule="ENABLE_TRUE"/>
+	     </item>
+		 <item item_name="false" item_value="0" item_id="false">
+			 <item_dependency itk_ref="ss_group" rule="ENABLE_FALSE"/>
+	     </item>
+      </items>
+   </control>
+   <control item_type_key="splash_video" data_type="BOOLEAN">
+      <control_title>Splash Video</control_title>
+      <items>
+         <item item_name="true" item_value="1" item_id="true">
+			 <item_dependency itk_ref="sv_group" rule="ENABLE_TRUE"/>
+	     </item>
+		 <item item_name="false" item_value="0" item_id="false">
+			 <item_dependency itk_ref="sv_group" rule="ENABLE_FALSE"/>
+	     </item>
+      </items>
+   </control>
+   <control item_type_key="quick_boot" data_type="BOOLEAN">
+      <control_title>Quickboot</control_title>
+      <items>
+         <item item_name="true" item_value="1" item_id="true"/>
+      </items>
+   </control>
+   <control item_type_key="ss_group" data_type="STRING">
+      <control_title>Splash Screen Configuration (only for Linux, EFI, and EPOG)</control_title>
+   </control>
+   <control item_type_key="ss_color_red" data_type="HEX">
+      <control_title>Splash Screen BG Color Red</control_title>
+      <validation minimum_value="0" maximum_value="255" required="true" severity="ERROR">
+		  <validation_message>Splash Screen BG Color Red must be between 0x0 and 0xFF .</validation_message>
+      </validation>
+   </control>
+	<control item_type_key="ss_color_blue" data_type="HEX">
+      <control_title>Splash Screen BG Color Blue</control_title>
+      <validation minimum_value="0" maximum_value="255" required="true" severity="ERROR">
+		  <validation_message>Splash Screen BG Color Blue must be between 0x0 and 0xFF .</validation_message>
+      </validation>
+   </control>
+	<control item_type_key="ss_color_green" data_type="HEX">
+      <control_title>Splash Screen BG Color Green</control_title>
+      <validation minimum_value="0" maximum_value="255" required="true" severity="ERROR">
+		  <validation_message>Splash Screen BG Color Green must be between 0x0 and 0xFF .</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="ss_x" data_type="TWOSCOMP">
+      <control_title>Splash Screen X (upper left corner x coordinate)</control_title>
+	  <validation minimum_value="-2048" maximum_value="2048" required="true" severity="ERROR">
+		  <validation_message>The X coordinate, in pixels, where the Firmware Splash Screen will be placed must be -2048 to 2048.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="ss_y" data_type="TWOSCOMP">
+      <control_title>Splash Screen Y (upper left corner y coordinate)</control_title>
+	  <validation minimum_value="-2048" maximum_value="2048" required="true" severity="ERROR">
+		  <validation_message>The Y coordinate, in pixels, where the Firmware Splash Screen will be placed must be -2048 to 2048.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="sv_group" data_type="STRING">
+      <control_title>Splash Video Configuration (only for Linux and EFI)</control_title>
+   </control>
+   <control item_type_key="sv_offset" data_type="STRING">
+      <control_title>Splash Video Offset</control_title>
+	  <items>
+		  <item item_name="0x600000"  item_value="6291456" item_id="0x600000" />
+		  <item item_name="0x700000"  item_value="7340032" item_id="0x700000" />
+	  </items>
+   </control>
+   <control item_type_key="sv_pixel_format" data_type="STRING">
+      <control_title>Splash Video Pixel Format</control_title>
+	   <items>
+		   <item  item_name="IGD_PF_ARGB32" item_value="590624" item_id="ARGB32" >
+			    <item_dependency itk_ref="sv_group" rule="ENABLE_TRUE"/>
+			</item>
+		   <item item_name="IGD_PF_ABGR32"  item_value="721696" item_id="ABGR32" />
+		   <item item_name="IGD_PF_ARGB32_2101010" item_value="2753312"  item_id="ARGB32_2101010"/>
+		   <item item_name="IGD_PF_RGB16_565" item_value="328208" item_id="RGB16_565"/>
+		   <item item_name="IGD_PF_ARGB8_INDEXED" item_value="66312" item_id="ARGB8_INDEXED"/>
+		   <item item_name="IGD_PF_YUV422_PACKED_YUY2" item_value="787472" item_id="YUV422_PACKED_YUY2"/>
+		   <item item_name="IGD_PF_YUV422_PACKED_UYVY" item_value="918544"  item_id="YUV422_PACKED_UYVY" />
+		   <item item_name="IGD_PF_YUV422_PACKED_YVYU" item_value="853008" item_id="YUV422_PACKED_YVYU" />
+		   <item item_name="IGD_PF_YUV422_PACKED_VYUY" item_value="984080"  item_id="YUV422_PACKED_VYUY" />
+	 </items>
+	 </control>
+   <control item_type_key="sv_src_width" data_type="INTEGER">
+      <control_title>Splash Video Source Width</control_title>
+	  <validation minimum_value="0" maximum_value="1920" required="true" severity="ERROR">
+		  <validation_message>Splash Video Source Width. Enter an integer. Range 0-1920.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="sv_src_height" data_type="INTEGER">
+      <control_title>Splash Video Source Height</control_title>
+	  <validation minimum_value="0" maximum_value="1080" required="true" severity="ERROR">
+		  <validation_message>Splash Video Source Height. Enter an integer. Range 0-1080.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="sv_src_pitch" data_type="INTEGER">
+      <control_title>Splash Video Source Pitch</control_title>
+	  <validation minimum_value="0" maximum_value="8192" required="true" severity="ERROR">
+		  <validation_message>Splash Video Source Pitch. Enter an integer. Range 0-8192</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="sv_dst_x" data_type="TWOSCOMP">
+      <control_title>Splash Video Destination X</control_title>
+	  <validation minimum_value="-2048" maximum_value="2048" required="true" severity="ERROR">
+		  <validation_message>Splash Video Destination X must be between -2048 and 2048</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="sv_dst_y" data_type="TWOSCOMP">
+      <control_title>Splash Video Destination Y</control_title>
+	  <validation minimum_value="-2048" maximum_value="2048" required="true" severity="ERROR">
+		  <validation_message>Splash Video Destination Y must be between -2048 and 2048.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="sv_dst_width" data_type="INTEGER">
+      <control_title>Splash Video Destination Width</control_title>
+	  <validation minimum_value="0" maximum_value="1920" required="true" severity="ERROR">
+		  <validation_message>Splash Video Destination Width. Enter an integer. Range 0-1920.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="sv_dst_height" data_type="INTEGER">
+      <control_title>Splash Video Destination Height</control_title>
+	  <validation minimum_value="0" maximum_value="1080" required="true" severity="ERROR">
+		  <validation_message>Splash Video Destination Height. Enter an integer. Range 0-1080.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="ss_browse" data_type="STRING">
+		<control_title>Browse...</control_title>
+		<validation required="true" severity="ERROR">
+		  <validation_message>Splash Screen file must be selected.</validation_message>
+      </validation>
+	</control>
+	<control item_type_key="ss_file" data_type="STRING">
+		<control_title>Linux, EFI, and EPOG Splash Screen </control_title>
+	</control>
+	<control item_type_key="ss_checkbox" data_type="STRING">
+		<control_title>Add Splash Screen </control_title>
+		<items>
+         <item item_name="true" item_value="1" item_id="true">
+			 <item_dependency itk_ref="ss_browse" rule="ENABLE_TRUE"/>
+	     </item>
+		 <item item_name="false" item_value="0" item_id="false">
+			 <item_dependency itk_ref="ss_browse" rule="ENABLE_FALSE"/>
+	     </item>
+      </items>
+	</control>
+	
+   <!--Controls that appear on the generate Page -->
+   <control item_type_key="target_os" data_type="STRING">
+      <control_title>Target OS</control_title>
+      <validation minimum_value="1" required="true" severity="ERROR">
+         <validation_message>At least one target OS must be selected.</validation_message>
+      </validation>
+      <items>
+         <!-- The item values correspond to the output folder directories for the target OS-->
+         <item item_name="Linux* operating system" item_value="Linux" item_id="linux">
+         </item>  
+         
+         <!--item item_name="Microsoft Windows CE* 6.0" item_value="WINCE60" item_id="wince60">
+         </item-->
+         <item item_name="Microsoft Windows XP*/XPe*" item_value="WINDOWS" item_id="win">
+         </item>   
+         <item item_name="Video BIOS" item_value="VBIOS" item_id="vbios">
+         </item>
+		 <item item_name="EFI" item_value="EFI" item_id="efi">
+         </item>
+         <item item_name="EPOG" item_value="EPOG" item_id="epog">
+         </item>
+      </items>
+   </control>
+   <control item_type_key="default_configuration" data_type="STRING">
+      <control_title>Default Configuration</control_title>
+   </control>
+   <control item_type_key="default_configurationUS15" data_type="STRING">
+      <control_title>Default Configuration</control_title>
+   </control>
+   <control item_type_key="US15" data_type="STRING">
+      <control_title>Intel(R) System Controller Hub US15W/WP/WPT</control_title>
+      <validation minimum_value="1" required="true" severity="ERROR">
+         <validation_message>Select at least one configuration for US15W or deselect Generate VBIOS.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="default_configurationTC" data_type="STRING">
+      <control_title>Default Configuration</control_title>
+   </control>
+   <control item_type_key="Atom_E6xx" data_type="STRING">
+      <control_title>Intel(R) Atom(TM) Processor E6xx</control_title>
+      <validation minimum_value="1" required="true" severity="ERROR">
+         <validation_message>Select at least one configuration for Atom_E6xx or deselect Generate VBIOS.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="epog_plb" data_type="STRING">
+      <control_title>EPOG US15W</control_title>
+      <validation minimum_value="1" required="true" severity="ERROR">
+         <validation_message>Select at least one configuration for fastboot US15W or deselect Generate EPOG.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="epog_tnc" data_type="STRING">
+      <control_title>EPOG Atom_E6xx</control_title>
+      <validation minimum_value="1" required="true" severity="ERROR">
+         <validation_message>Select at least one configuration for fastboot Atom_E6xx or deselect Generate EPOG.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="efi_fb_plb" data_type="STRING">
+      <control_title>Fastboot US15W</control_title>
+      <validation minimum_value="1" required="true" severity="ERROR">
+         <validation_message>Select at least one configuration for fastboot US15W or deselect Generate EFI.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="efi_fb_tnc" data_type="STRING">
+      <control_title>Fastboot Atom_E6xx</control_title>
+      <validation minimum_value="1" required="true" severity="ERROR">
+         <validation_message>Select at least one configuration for fastboot Atom_E6xx or deselect Generate EFI.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="efi" data_type="STRING">
+      <control_title>General</control_title>
+      <validation minimum_value="1" required="true" severity="ERROR">
+         <validation_message>Select at least one configuration for general EFI or deselect Generate EFI.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="configuration_labels" data_type="STRING">
+      <control_title>Configurations</control_title>
+      <validation minimum_value="1" required="true" severity="ERROR">
+         <validation_message>At least one configuration must be selected. The configuration id must be between 1-15 and can only be used once per chipset. </validation_message>
+      </validation>
+   </control>
+   <control item_type_key="gen_package_name" data_type="STRING">
+      <control_title>Package File Name</control_title>
+      <validation maximum_value="50" required="true" severity="ERROR">
+         <validation_message>Package file name required that is between 1 and 50 characters.</validation_message>
+      </validation>
+   </control>
+   <!-- Controls that appear on WinCE Settings Page -->
+   <control item_type_key="ce_display" data_type="STRING">
+      <control_title>Display</control_title>
+   </control>
+   <control item_type_key="ce_use_default_display" data_type="STRING">
+      <control_title>Use Default</control_title>
+      <items>
+         <item item_name="true" item_value="1" item_id="true">
+            <item_dependency itk_ref="ce_framebuffer_width" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="ce_framebuffer_height" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="ce_framebuffer_color_quality"  rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="ce_display_refresh" rule="ENABLE_FALSE"/>
+			<!--item_dependency itk_ref="ce_clone_flags" rule="ENABLE_FALSE"/-->
+         </item>
+         <item item_name="false" item_value="0" item_id="false">
+            <item_dependency itk_ref="ce_framebuffer_width"  rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="ce_framebuffer_height"  rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="ce_framebuffer_color_quality"  rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="ce_display_refresh"  rule="ENABLE_TRUE"/>
+			<!--item_dependency itk_ref="ce_clone_flags" rule="ENABLE_TRUE"/-->
+         </item>
+      </items>
+   </control>
+   <control item_type_key="ce_framebuffer_width" data_type="INTEGER">
+      <control_title>Width</control_title>
+      <validation required="true" severity="WARNING">
+         <validation_message>It is highly recommended that default width is NOT used and that a value for display width is set.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="ce_framebuffer_height" data_type="INTEGER">
+      <control_title>Height</control_title>
+      <validation required="true" severity="WARNING">
+         <validation_message>It is highly recommended that default height is NOT used and that a value for display height is set for Windows CE installations..</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="ce_framebuffer_color_quality" data_type="STRING">
+      <control_title>Color Quality</control_title>
+      <items>
+         <item item_name="8" item_value="8" item_id="8"/>
+         <item item_name="16" item_value="16" item_id="16"/>
+         <item item_name="24" item_value="24" item_id="24"/>
+         <item item_name="32" item_value="32" item_id="32"/>
+      </items>
+   </control>
+   <control item_type_key="ce_display_refresh" data_type="INTEGER">
+      <control_title>Refresh</control_title>
+      <validation minimum_value="50" maximum_value="120" required="false" severity="ERROR">
+         <validation_message>Refresh must be between 50 and 120 Hz.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="ce_clone_flags" data_type="BOOLEAN">
+      <control_title>Enable interlace mode</control_title>
+      <items>
+         <item item_name="true" item_value="2147483648" item_id="true"/>
+      </items>
+	</control>
+   <control item_type_key="res_mem_base" data_type="HEX">
+      <control_title>Reserved Memory Base</control_title>
+      <validation minimum_value="1" maximum_value="268435455" required="false" severity="ERROR">
+         <validation_message>Reserved Memory Base must be between 0x1 and 0xFFFFFFF</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="res_mem_size" data_type="HEX">
+      <control_title>Reserved Memory Size</control_title>
+      <validation minimum_value="1" maximum_value="268435455" required="false" severity="ERROR">
+         <validation_message>Reserved Memory Size must be between 0x1 and 0xFFFFFFF</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="max_fb_size" data_type="HEX">
+      <control_title>Maximum Framebuffer Size</control_title>
+      <validation minimum_value="1" maximum_value="268435455" required="false" severity="ERROR">
+         <validation_message>Maximum Framebuffer Size must be between 0x1 and 0xFFFFFFF</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="page_req_limit" data_type="HEX">
+      <control_title>Page Request Limit</control_title>
+      <validation minimum_value="1" maximum_value="268435455" required="false" severity="ERROR">
+         <validation_message>Page Request Limit must be between 0x1 and 0xFFFFFFF</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="min_vid_surfx" data_type="HEX">
+      <control_title>Minimum Video Surface Width</control_title>
+      <validation minimum_value="1" maximum_value="268435455" required="false" severity="ERROR">
+         <validation_message>Minimum Video Surface Width must be between 0x1 and 0xFFFFFFF</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="min_vid_surfy" data_type="HEX">
+      <control_title>Minimum Video Surface Height</control_title>
+      <validation minimum_value="1" maximum_value="268435455" required="false" severity="ERROR">
+         <validation_message>Minimum Video Surface Height must be between 0x1 and 0xFFFFFFF</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="sys_vid_stretch" data_type="BOOLEAN">
+      <control_title>Enable System to Video Stretch Blits</control_title>
+      <items>
+         <item item_name="true" item_value="1" item_id="true">
+            
+         </item>
+         <item item_name="false" item_value="0" item_id="false">
+           
+         </item>
+      </items>
+   </control>
+   <control item_type_key="overlay_dual_vext" data_type="BOOLEAN">
+      <control_title>Enable Dual Overlay in Vertical Extended</control_title>
+      <items>
+         <item item_name="true" item_value="1" item_id="true"/>
+         <item item_name="false" item_value="0" item_id="false"/>
+      </items>
+   </control>
+   <control item_type_key="dri" data_type="BOOLEAN">
+      <control_title>Disable OpenGL* Installation (Disable the DRI2 Option)</control_title>
+      <items>
+         <item item_name="true" item_value="0" item_id="true"/>
+      </items>
+   </control>
+	<control item_type_key="ce_framebuffer_overlay" data_type="BOOLEAN">
+      <control_title>Enable Framebuffer Overlay Blending</control_title>
+      <items>
+         <item item_name="true" item_value="1" item_id="true"/>
+      </items>
+   </control>
+   <!--Controls that appear on the Windows configuration Page -->
+   <control item_type_key="win_button" data_type="STRING">
+      <control_title>Microsoft Windows* Settings</control_title>
+   </control>
+   <control item_type_key="win_no_d3d" data_type="BOOLEAN">
+      <control_title>Disable 3D Support</control_title>
+	  <items>
+         <item item_name="true" item_value="1" item_id="true"/>
+      </items>
+   </control>
+    <control item_type_key="win_us15hwa" data_type="BOOLEAN">
+      <control_title>Disable US15W WPF Hardware Acceleration</control_title>
+	  <validation required="true" severity="WARNING">
+         <validation_message>WPF Hardware Acceleration is only supported by the US15W chipset.</validation_message>
+      </validation>        
+	   <items>
+         <item item_name="true" item_value="1" item_id="true"/>
+         <item item_name="false" item_value="0" item_id="false"/>
+      </items>             
+   </control>    
+   <control item_type_key="win_display" data_type="STRING">
+      <control_title>Display</control_title>
+   </control>
+   <control item_type_key="win_use_default_display" data_type="STRING">
+      <control_title>Use Default</control_title>
+      <items>
+         <item item_name="true" item_value="1" item_id="true">
+            <item_dependency itk_ref="win_framebuffer_width" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="win_framebuffer_height" rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="win_framebuffer_color_quality"  rule="ENABLE_FALSE"/>
+            <item_dependency itk_ref="win_display_refresh" rule="ENABLE_FALSE"/>
+			<!--item_dependency itk_ref="win_clone_flags" rule="ENABLE_FALSE"/-->
+         </item>
+         <item item_name="false" item_value="0" item_id="false">
+            <item_dependency itk_ref="win_framebuffer_width"  rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="win_framebuffer_height"  rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="win_framebuffer_color_quality"  rule="ENABLE_TRUE"/>
+            <item_dependency itk_ref="win_display_refresh"  rule="ENABLE_TRUE"/>
+			 <!--item_dependency itk_ref="win_clone_flags" rule="ENABLE_TRUE"/-->
+         </item>
+      </items>
+   </control>
+   <control item_type_key="win_framebuffer_width" data_type="INTEGER">
+      <control_title>Width</control_title>
+	  <validation minimum_value="0" maximum_value="2048" required="true" severity="ERROR">
+         <validation_message>Width is between 0 and 2048.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="win_framebuffer_height" data_type="INTEGER">
+      <control_title>Height</control_title>
+	  <validation minimum_value="0" maximum_value="2048" required="true" severity="ERROR">
+         <validation_message>Height is between 0 and 2048.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="win_framebuffer_color_quality" data_type="STRING">
+      <control_title>Color Quality</control_title>
+      <items>
+         <item item_name="8" item_value="8" item_id="8"/>
+         <item item_name="16" item_value="16" item_id="16"/>
+         <item item_name="24" item_value="24" item_id="24"/>
+         <item item_name="32" item_value="32" item_id="32"/>
+      </items>
+   </control>
+   <control item_type_key="win_display_refresh" data_type="INTEGER">
+      <control_title>Refresh</control_title>
+	  <validation minimum_value="50" maximum_value="120" required="true" severity="ERROR">
+         <validation_message>Refresh is between 50 and 120.</validation_message>
+      </validation>
+   </control>
+   <control item_type_key="win_clone_flags" data_type="BOOLEAN">
+      <control_title>Enable interlace mode</control_title>
+      <items>
+         <item item_name="true" item_value="2147483648" item_id="true"/>
+      </items>
+	</control>
+   <control item_type_key="win_centeroff" data_type="BOOLEAN">
+      <control_title>CenterOff</control_title>
+      <items>
+         <item item_name="true" item_value="1" item_id="true"/>
+      </items>
+   </control>
+   <control item_type_key="win_display_attributes" data_type="BOOLEAN">
+      <control_title>Disable Display Attributes Page in EMGD GUI</control_title>
+      <items>
+         <item item_name="true" item_value="1" item_id="true"/>
+		 <item item_name="false" item_value="0" item_id="false"/>
+	  </items>
+   </control>
+   <control item_type_key="win_dxvaoptions" data_type="BOOLEAN">
+      <control_title>Disable DXVA H/W Video Decode Acceleration</control_title>
+	   <items>
+         <item item_name="true" item_value="0" item_id="true"/>
+		 <item item_name="false" item_value="1" item_id="false"/>
+      </items>
+   </control>
+   <control item_type_key="win_framebuffer_overlay" data_type="BOOLEAN">
+      <control_title>Enable Framebuffer Overlay Blending</control_title>
+      <items>
+        <item item_name="true" item_value="1" item_id="true">
+          <item_dependency itk_ref="win_fb_alpha_value" rule="REQUIRED_FALSE"/>  
+		 <item_dependency itk_ref="win_fb_2Dalpha_override" rule="ENABLE_TRUE"/>   
+         </item>
+        <item item_name="false" item_value="0" item_id="false">
+          <item_dependency itk_ref="win_fb_alpha_value" rule="ENABLE_FALSE"/>  
+		 <item_dependency itk_ref="win_fb_2Dalpha_override" rule="ENABLE_FALSE"/>   
+         </item> 
+      </items>
+   </control>
+	<control item_type_key="win_fb_2Dalpha_override" data_type="BOOLEAN">
+      <control_title>Enable Framebuffer Overlay Blending 2D Alpha Override</control_title>
+      <items>
+        <item item_name="true" item_value="1" item_id="true">
+		  <item_dependency itk_ref="win_fb_alpha_value" rule="ENABLE_TRUE"/>
+			</item>
+           <item item_name="false" item_value="0" item_id="false">
+            <item_dependency itk_ref="win_fb_alpha_value" rule="ENABLE_FALSE"/>  
+         </item>
+      </items>
+	</control>
+	<control item_type_key="win_fb_alpha_value" data_type="HEX">
+      <control_title>Framebuffer Overlay Blending  Alpha Value(0-255)</control_title>
+      <validation minimum_value="0" maximum_value="255" required="false" severity="ERROR">
+		  <validation_message>Framebuffer Overlay Blending Alpha Value must be between 0 and 255 .</validation_message>
+      </validation>
+	</control>
+   <!--Pages in the IECD CED  -->
+   <page page_key="ChipsetSelectionPage"/>
+   <page page_key="LVDS"/>
+   <page page_key="sDVO"/>
+   <page page_key="vbiosConfigPage"/>
+   <page page_key="DTDPage"/>
+   <page page_key="DVOSettingsPage"/>
+   <page page_key="ModeConfigPage"/>
+   <page page_key="PackagePage"/>
+   <page page_key="PanelSettingsPage"/>
+   <page page_key="WinCEOptionsPage"/>
+   <page page_key="WindowsOptionsPage"/>
+   <page page_key="LinuxOptionsPage"/>
+   <page page_key="VBiosPage"/>
+   <page page_key="OverlayCCPage"/>
+   <page page_key="AttributeCCPage"/>
+   <page page_key="EFIPage"/>
+   <page page_key="FBConfigPage"/>
+</Controls>

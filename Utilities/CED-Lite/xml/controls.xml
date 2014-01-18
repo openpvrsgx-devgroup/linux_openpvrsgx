@@ -1,0 +1,208 @@
+<?xml version='1.0' standalone='yes'?>
+<templates>
+<config>
+	<controls>
+		<control id="global_cbo_primary_display">
+			<user>primary display</user>
+			<template>port_display</template>
+		</control>
+		<control id="global_ckbox_linux1">
+			<user>Disable Hardware Acceleration</user>
+			<template>lin_no_accel</template>
+		</control>
+		<control id="global_ckbox_linux2">
+			<user>Disable Hardware Cursor</user>
+			<template>lin_sw_cursor</template>
+		</control>
+		<control id="global_ckbox_linux3">
+			<user>Enable Double Buffer (Shadow Framebuffer)</user>
+			<template>lin_shadow_fb</template>
+		</control>
+		<control id="global_ckbox_linux5">
+			<user>Disable OpenGL (DRI2)</user>
+			<template>dri</template>
+		</control>
+		<control id="global_ckbox_linux6">
+			<user>Disable XVideo Support</user>
+			<template>lin_x_video</template>
+		</control>
+		<control id="global_ckbox_linux7">
+			<user>Disable XVideo Blend</user>
+			<template>lin_x_video_blend</template>
+		</control>
+		<control id="global_xvideo_color_key">
+			<user>XVideo Color Key</user>
+			<template>x_video_color_key</template>
+		</control>
+		<control id="global_ckbox_linux8">
+			<user>Enable Framebuffer Overlay Blending</user>
+			<template>lin_framebuffer_overlay</template>
+		</control>
+		<control id="global_ckbox_adv2">
+			<user>Disable Display Detection</user>
+			<template>display_detection</template>
+		</control>
+		<control id="global_clone_width">
+			<user>Clone Width</user>
+			<template>clone_width</template>
+		</control>
+		<control id="global_clone_height">
+			<user>Clone Height</user>
+			<template>clone_height</template>
+		</control>
+		<control id="global_clone_refresh">
+			<user>Clone Refresh</user>
+			<template>clone_refresh</template>
+		</control>
+		<control id="global_sliderValueOverlayGammaR">
+			<user>Red Gamma</user>
+			<template>overlay_gamma_correctionr</template>
+		</control>
+		<control id="global_sliderValueOverlayGammaG">
+			<user>Green Gamma</user>
+			<template>overlay_gamma_correctiong</template>
+		</control>
+		<control id="global_sliderValueOverlayGammaB">
+			<user>Blue Gamma</user>
+			<template>overlay_gamma_correctionb</template>
+		</control>
+		<control id="global_clone_refresh">
+			<user>Clone Refresh</user>
+			<template>clone_refresh</template>
+		</control>
+		<control id="global_sliderValueOverlay2">
+			<user>Brightness</user>
+			<template>overlay_brightness_correction</template>
+		</control>
+		<control id="global_sliderValueOverlay3">
+			<user>Contrast</user>
+			<template>overlay_contrast_correction</template>
+		</control>
+		<control id="global_sliderValueOverlay4">
+			<user>Saturation</user>
+			<template>overlay_saturation_correction</template>
+		</control>
+		<control id="sdvo_referencefrequency">
+			<user>Reference Frequency</user>
+			<template>ref_frequency</template>
+		</control>
+		<control id="sdvo_displaytuning">
+			<user>Enabling Display Tuning</user>
+			<template>tune_app_wa</template>
+		</control>
+	</controls>
+</config>
+<port>
+	<controls>
+		<control id="sdvo_portname">
+			<user>Port Name</user>
+			<template>port_name</template>
+		</control>
+		<control id="lvds_portname">
+			<user>Port Name</user>
+			<template>port_name</template>
+		</control>
+		<control id="sdvo_portrotation">
+			<user>Port Rotation</user>
+			<template>port_rotation</template>
+		</control>
+		<control id="lvds_portrotation">
+			<user>Port Rotation</user>
+			<template>port_rotation</template>
+		</control>
+		<control id="sdvo_flipport">
+			<user>Flip Port</user>
+			<template>flip_port</template>
+		</control>
+		<control id="lvds_flipport">
+			<user>Flip Port</user>
+			<template>flip_port</template>
+		</control>		
+		<control id="lvds_noEDID">
+			<user>Do not use EDID (timing from display)</user>
+			<template>disable_reading_edid</template>
+		</control>
+		<control id="sdvo_noEDID">
+			<user>Do not use EDID (timing from display)</user>
+			<template>disable_reading_edid</template>
+		</control>
+		<control id="lvds_centeroff">
+			<user>Center off</user>
+			<template>win_centeroff</template>
+		</control>
+		<control id="lvds_noEDID">
+			<user>Do not use EDID (timing from display)</user>
+			<template>disable_reading_edid</template>
+		</control>
+		<control id="sdvo_noEDID">
+			<user>Do not use EDID (timing from display)</user>
+			<template>disable_reading_edid</template>
+		</control>
+		<control id="sdvo_centeroff">
+			<user>Center off</user>
+			<template>win_centeroff</template>
+		</control>
+		<control id="sdvo_i2cspeed">
+			<user>speed</user>
+			<template>i2c_speed</template>
+		</control>
+		<control id="sdvo_i2cdab">
+			<user>device address byte</user>
+			<template>i2c_dab</template>
+		</control>
+		<control id="sdvo_ddcspeed">
+			<user>speed</user>
+			<template>ddc_speed</template>
+		</control>
+		<control id="sdvo_ddcdab">
+			<user>device address byte</user>
+			<template>ddc_dab</template>
+		</control>
+		<control id="lvds_backlightcontrol">
+			<user>Backlight Control Method</user>
+			<template>backlight_ctrl_method</template>
+		</control>
+		<control id="lvds_bkltT1">
+			<user>T1- VDD active and sDVO clock/data active</user>
+			<template>bkltT1</template>
+		</control>
+		<control id="lvds_bkltT2">
+			<user>T2- sDVO clock/data active and backlight enable</user>
+			<template>bkltT2</template>
+		</control>
+		<control id="lvds_bkltT3">
+			<user>T3- Backlight disable and sDVO clock/data inactive</user>
+			<template>bkltT3</template>
+		</control>
+		<control id="lvds_bkltT4">
+			<user>T4- sDVO clock/data inactive and VDD inactive</user>
+			<template>bkltT4</template>
+		</control>
+		<control id="lvds_bkltT5">
+			<user>T5- Minimum from VDD inactive and active</user>
+			<template>bkltT5</template>
+		</control>
+		
+	</controls>
+</port>
+<attributes>
+	<controls>
+		<control id="lvds_fixed_timing">
+			<user>Fixed Timing</user>
+			<template>fixed_resolution</template>
+		</control>
+		<control name="lvds_centering">
+			<user></user>
+			<template>upscaling</template>
+		</control>
+		<control id="lvds_bit_depth">
+			<user>Bit Depth</user>
+			<template>bit_depth</template>
+		</control>
+		<control name="lvds_channel">
+			<user></user>
+			<template>dual_single</template>
+		</control>
+	</controls>
+</attributes>
+</templates>

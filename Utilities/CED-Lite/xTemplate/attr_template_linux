@@ -1,0 +1,1 @@
+    Option     "$CHIPSET_ALL$/$CONFIG_ID$/Port/$PORT_ID$/Attr/$ATTR_ID$"    "$ATTR_VALUE$"

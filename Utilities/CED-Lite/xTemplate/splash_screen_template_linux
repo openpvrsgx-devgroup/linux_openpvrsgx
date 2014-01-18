@@ -1,0 +1,4 @@
+    Option     "$CHIPSET_ALL$/$CONFIG_ID$/General/SeamlessModeset" "$seamless$"
+    Option     "$CHIPSET_ALL$/$CONFIG_ID$/General/SplashScreen"    "$splash_screen$"
+    Option     "$CHIPSET_ALL$/$CONFIG_ID$/General/Quickboot"       "$quick_boot$"
+    Option     "$CHIPSET_ALL$/$CONFIG_ID$/General/SplashVideo"     "$splash_video$"   

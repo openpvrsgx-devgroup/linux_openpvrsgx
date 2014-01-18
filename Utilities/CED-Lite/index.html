@@ -1,0 +1,942 @@
+<!--***************************************************************************
+ * Copyright 2012 Intel Corporation All Rights Reserved.
+ *
+ * The source code, information and material ("Material") contained herein is
+ * owned by Intel Corporation or its suppliers or licensors, and title to such
+ * Material remains with Intel Corporation or its suppliers or licensors. The 
+ * Material contains proprietary information of Intel or its suppliers and 
+ * licensors. The Material is protected by worldwide copyright laws and treaty 
+ * provisions. No part of the Material may be used, copied, reproduced, modified,
+ * published, uploaded, posted, transmitted, distributed or disclosed in any way 
+ * without Intel's prior express written permission. No license under any patent,
+ * copyright or other intellectual property rights in the Material is granted to 
+ * or conferred upon you, either expressly, by implication, inducement, estoppel 
+ * or otherwise. Any license under such intellectual property rights must be 
+ * express and approved by Intel in writing.
+ *
+ * Unless otherwise agreed by Intel in writing, you may not remove or alter this
+ * notice or any other notice embedded in Materials by Intel or Intel's suppliers 
+ * or licensors in any way.
+ *
+ *****************************************************************************-->
+
+<HTML>
+
+<head>
+	<title>CED Lite</title>
+	<link rel="intel icon" href="images/title.ico" type="image/x-icon">
+
+	<link type="text/css" href="css/jquery-ui-1.8.12.custom.css" rel="stylesheet" />
+
+	<script type="text/javascript" src="scripts/jquery.js"></script>
+	<script type="text/javascript" src="scripts/jquery-ui-1.8.11.min.js"></script>
+    <script type="text/javascript" src="scripts/indexfuncs.js"></script>
+    <script type="text/javascript" src="scripts/validateUserInput.js"></script>
+    <script type="text/javascript" src="scripts/frontendXML.js"></script>
+    <script type="text/javascript" src="scripts/generate.js"></script>
+    <script type="text/javascript" src="scripts/configureInput.js"></script>
+    <script type="text/javascript" src="scripts/processTemplate.js"></script>
+    <script type="text/javascript" src="scripts/backendXML.js"></script>
+    <script type="text/javascript" src="scripts/utility.js"></script>
+	<script type="text/javascript" src="scripts/saveRestoreForm.js"></script>
+	<script type="text/javascript" src="scripts/customDTD.js"></script>
+	<style>
+	  .red_slider, .green_slider, .blue_slider, .other_slider{
+		  float: left;
+		  clear: left;
+		  width: 200px;
+		  margin: 15px;
+	  }
+	  .red_slider .ui-slider-range { background: #ef2929; }
+	  .red_slider .ui-slider-handle { border-color: #ef2929; }
+	  .green_slider .ui-slider-range { background: #8ae234; }
+	  .green_slider .ui-slider-handle { border-color: #8ae234; }
+	  .blue_slider .ui-slider-range { background: #729fcf; }
+	  .blue_slider .ui-slider-handle { border-color: #729fcf; }
+	  .other_slider .ui-slider-range { background: #f6931f; }
+	  .other_slider .ui-slider-handle { border-color: #f6931f; }
+	</style>
+
+     <script LANGUAGE="JavaScript">
+		 var testing = false;
+		
+		 function onLoad() {
+		  document.forms[0].reset();
+			fillPanels();
+			fillSDVOCARD_XML();
+			fillLVDSAttributes("Internal LVDS");
+			fillDTD_XML('lvds');
+			fillDTD_XML('sdvo');
+			SetDisplayImage();
+			setPortVisibility();
+			customDTDControlFunctions();
+			processDTDControls(document.getElementById("dtd_type").options[document.getElementById("dtd_type").selectedIndex].value);
+			toggleTimingDelays(document.getElementById("lvds_backlightcontrol"));
+			$("#sdvo_attributes_composite").html("");
+			setColorCorrectionSlider()
+		 }
+
+	</script>
+	<META HTTP-EQUIV="Pragma" CONTENT="no-cache">
+	<META HTTP-EQUIV="Expires" CONTENT="-1">
+</head>
+<body onload="onLoad();">
+
+<table width="100%">
+<tr><td></td><td width="950px">
+
+<form name="f1" id="f1">
+<table width="100%"><tr>
+<td>
+	<input type="button" id="btn_done" Value="Generate Intel® EMGD Configuration" onClick="generate();">
+	<input type="button" id="btn_options" Value="Options" onClick='$( "#dialog-options-form" ).dialog( "open" );'>
+	 <input type="button" id="btn_reset" Value="Reset" onClick='onLoad();'>
+	<input type="button" id="btn_help" Value="Help" onClick='window.open("help/toc.htm")'>
+</td><td align="right">
+	<img src="images/main-logo.png">
+</td>
+</tr></table>
+
+<p>
+<!-- DISPLAY SETUP -->
+<div class="openPanel"><h3><a href="#">Display Setup</a></h3><div>
+<div align="right"><a href="help/web_display_setup.htm" target="_blank"><img src="images/questionmark_16w.gif"></a></div>
+	<div style="text-align:center">
+	<!--
+	EMGD Driver version
+			<select id="global_version">
+				<option value="generic">1.0 - 1.6</option>
+				<option value="1.6">1.8</option>
+	</select>&nbsp;&nbsp; -->
+
+	Chipset
+	<select id="global_chipset" onchange="toggleDisplayTuning(event)">
+		  <option value="TNC_B0">Intel® Atom Processor E6xx B0</option>
+		  <option value="TNC_B1">Intel® Atom Processor E6xx B1</option>
+		  <!-- <option value="US15">US15</option> -->
+	</select>
+	<p>
+
+
+	<img src="images/single.jpg" name="displayImage" id="global_displayImage">
+	<img id="secondDisplay" src="" style="display:none">
+
+		<br/>
+
+	<div class="jradio">
+		<input type="radio" name="global_radio" Value="images/single.jpg" checked="yes" id="global_radio1" onClick="SetDisplayImage()"><label for="global_radio1">Single</label>
+		<input type="radio" name="global_radio" Value="images/clone.jpg" id="global_radio2" onClick="SetDisplayImage()"><label for="global_radio2">Clone</label>
+		<input type="radio" name="global_radio" Value="images/extended.jpg" id="global_radio3" onClick="SetDisplayImage()"><label for="global_radio3" title='This enables Xinerama'>Extended</label>
+		<input type="radio" name="global_radio" Value="images/dih1.jpg" id="global_radio4" onClick="SetDisplayImage()"><label for="global_radio4" title="Dual Independent Head. This disables Xinerama">DIH</label>
+	</div>
+	<p>
+	Primary Display <select name="global_cbo_primary_display" id="global_cbo_primary_display" title="tooltip" onChange="setPortVisibility();">
+				  <option value="LVDS">LVDS</option>
+				  <option value="sDVO">sDVO</option>
+	</select>
+
+	</div>
+
+</div></div>
+<!-- End DISPLAY panel -->
+
+<p>
+
+<div id="general_panel" class="closedPanel"><h3><a href="#">General (Advanced Settings)</a></h3><div>
+
+	<!-- Advanced Settings -->
+	<table width="800px" border="0" >
+		<tr>
+		<td valign="top">
+			<div width="100%" id="panel_adv">
+			  <div id="general_tabs" class="ui-tabs ui-widget ui-widget-content ui-corner-all settingstabs">
+				<ul class="ui-tabs-nav ui-helper-reset ui-helper-clearfix ui-widget-header ui-corner-all">
+					<li class="ui-state-default ui-corner-top ui-tabs-selected ui-state-active"><a href="#general_advancedsettings_panel">Advanced Settings</a></li>
+					<li class="ui-state-default ui-corner-top"><a href="#general_colorcorrection_panel">Overlay Color Correction</a></li>
+					<li class="ui-state-default ui-corner-top"><a href="#general_importDTD_panel">Import DTD</a></li>
+					<li class="ui-state-default ui-corner-top"><a href="#general_customDTD_panel">Custom DTD</a></li>
+				</ul>
+				<div id="general_advancedsettings_panel" class="ui-tabs-panel ui-widget-content ui-corner-bottom">
+						<table border=0 width="100%">
+						<tr>
+						<td valign="top">
+						  <fieldset>
+							<legend>Linux Options</legend>
+
+							  <input type="checkbox" id="global_ckbox_linux1" name="global_ckbox_linux1" value="0"/>
+							  <label for='global_ckbox_linux1'>Disable Hardware Acceleration</label><br>
+
+							  <input type="checkbox" id="global_ckbox_linux2" name="global_ckbox_linux2" value="1"/>
+							  <label for='global_ckbox_linux2'>Disable Hardware Cursor</label><br>
+
+							  <input type="checkbox" id="global_ckbox_linux3" name="global_ckbox_linux3" value="1"/>
+							  <label for='global_ckbox_linux3'>Enable Double Buffer (Shadow Framebuffer)</label><br>
+
+							  <input type="checkbox" id="global_ckbox_linux5" name="global_ckbox_linux5" value="0"/>
+							  <label for='global_ckbox_linux5'>Disable OpenGL (DRI2)</label><br>
+
+							  <input type="checkbox" id="global_ckbox_linux6" name="global_ckbox_linux6" value="0"/>
+							  <label for='global_ckbox_linux6'>Disable XVideo Support</label><br>
+
+							  <input type="checkbox" id="global_ckbox_linux7" name="global_ckbox_linux7" value="0"/>
+							  <label for='global_ckbox_linux7'>Disable XVideo Blend</label><br>
+
+							  <input type="checkbox" id="global_ckbox_linux8" name="global_ckbox_linux8" value="1"/>
+							  <label for='global_ckbox_linux8'>Enable Framebuffer Overlay Blending</label><br>
+
+						   </fieldset>
+
+
+						  </td>
+						  <td valign="top">
+							 <div id="field_clone_settings" style="display:none">
+
+							 <fieldset class="f02">
+							   <legend>Clone Settings</legend>
+							   <label for="global_clone_width" id="clone_width_label" >Clone Width</label>
+								 <input id="global_clone_width" name="global_clone_width" minValue="1" maxValue="2048" label="clone_width_label" onBlur="validateUserInput(event);" /> <br>
+
+							   <label for="global_clone_height" id="clone_height_label">Clone Height</label>
+								 <input id="global_clone_height" name="global_clone_height" minValue="1" maxValue="2048" label="clone_height_label" onBlur="validateUserInput(event);"  /> <br>
+
+								<label for="global_clone_refresh" id="clone_refresh_label">Clone Refresh</label>
+								 <input id="global_clone_refresh" name="global_clone_refresh" minValue="1" maxValue="2048" label="clone_refresh_label" onBlur="validateUserInput(event);" /> <br>
+
+							  </fieldset>
+							  </div>
+
+						  <p>
+							   <!-- <input type="checkbox" id="global_ckbox_adv1" name="global_ckbox_adv1" value="1"><label for="global_ckbox_adv1">Overlay Off</label><br> -->
+							   <input type="checkbox" id="global_ckbox_adv2" name="global_ckbox_adv2" value="0"><label for="global_ckbox_adv2">Disable Display Detection</label><br>
+							   <label for="global_xvideo_color_key" id="global_xvideo_label">XVideo Color Key</label>
+							   <input type="text" id="global_xvideo_color_key"  name="global_xvideo_color_key" minValue="0" maxValue="16777215" label="global_xvideo_label" onBlur="validateHexUserInput(event);"/>
+							</td>
+							<td align="right" valign="top">
+								<a href="help/web_EnteringLinuxOptions.htm" target="_blank"><img src="images/questionmark_16w.gif"></a>
+							</td>
+							</tr>
+						</table>
+				</div>
+				<div id="general_colorcorrection_panel" class="ui-tabs-panel ui-widget-content ui-corner-bottom ui-tabs-hide">
+						<table border=0 align="center">
+						<tr>
+						<td>
+
+						<fieldset>
+							<legend>Gamma</legend>
+							<table border=0 align="center" width="600px">
+							<tr>
+							<td>
+							  <input size="5" type="text" name="global_sliderValueOverlayGammaR" readOnly="true" id="global_sliderValueOverlayGammaR" style="border:0; color:#f6931f; font-weight:bold; margin-left: 15px;"/>
+							  <div id="global_sliderValueOverlayGammaR_slider" class="gamma_slider red_slider"></div>
+							</td><td>
+							<input size="5" type="text" name="global_sliderValueOverlayGammaG"  readOnly="true" id="global_sliderValueOverlayGammaG"  style="border:0; color:#f6931f; font-weight:bold; margin-left: 15px;"/>
+							  <div id="global_sliderValueOverlayGammaG_slider" class="gamma_slider green_slider"></div>
+							</td><td>
+							<input size="5" type="text" name="global_sliderValueOverlayGammaB" readOnly="true" id="global_sliderValueOverlayGammaB" style="border:0; color:#f6931f; font-weight:bold; margin-left: 15px;"/>
+							  <div id="global_sliderValueOverlayGammaB_slider" class="gamma_slider blue_slider"></div>
+							</td>
+							</tr>
+							</table>
+						</fieldset>
+						<br>
+						<fieldset>
+							<legend>Other correction</legend>
+							<table border=0 align="center" width="600px">
+							<tr>
+							<td>
+							Brightness
+							<input size="5" type="text" name="global_sliderValueOverlay2"  readOnly="true" id="global_sliderValueOverlay2"  style="border:0; color:#f6931f; font-weight:bold; margin-left: 15px;" />
+							  <div id="global_sliderValueOverlay2_slider" class="other_slider"></div>
+							</td><td>
+							Contrast
+							<input size="5" type="text" name="global_sliderValueOverlay3" readOnly="true" id="global_sliderValueOverlay3" style="border:0; color:#f6931f; font-weight:bold; margin-left: 15px;"  />
+							  <div id="global_sliderValueOverlay3_slider" class="other_slider"></div>
+							</td><td>
+							Saturation
+							<input size="5" type="text" name="global_sliderValueOverlay4" readOnly="true" id="global_sliderValueOverlay4" style="border:0; color:#f6931f; font-weight:bold; margin-left: 15px;" />
+							  <div id="global_sliderValueOverlay4_slider" class="other_slider"></div>
+							</td>
+							</tr>
+							</table>
+						</fieldset>
+						</td><td valign="top">
+							<a href="help/web_overlay_color_corr.htm" target="_blank"><img src="images/questionmark_16w.gif"></a>
+						</td>
+						</tr>
+						</table>
+				</div>
+				<div id="general_importDTD_panel" class="ui-tabs-panel ui-widget-content ui-corner-bottom ui-tabs-hide">
+				  <table border=0 align="center">
+						<tr>
+						<td>
+							You may upload a saved DTD XML file<p>
+							If you want to use a DTD created in CED, you will find it in your CED directory under<br> workspace\dtd<br>
+						</td>
+						</tr><tr>
+						<td>
+							<INPUT TYPE="file" NAME="dtdUploadFile" id="dtdUploadFile" size="70">
+						</td>
+						<td>
+							<Input type="button" id="dtdUploadButton" Value="Add" onClick="importDTD();">
+						</td>
+						<td>
+						  <Input type="button" id="dtdEditButton" Value="Edit" onClick="editDTD();">
+						</td>
+						</tr>
+						<tr><td>
+							<div id="addedDTDs"></div>
+						</td></tr>
+						</table>
+				</div>
+				<div id="general_customDTD_panel" class="ui-tabs-panel ui-widget-content ui-corner-bottom ui-tabs-hide">
+				  <table border=0 align="center" width="100%">
+						<tr>
+
+						  <td>
+							<label for="dtd_name" id="dtd_name_label" >DTD Name</label>
+							<input type="text" id="dtd_name"  label="dtd_name_label" minLength="1" maxLength="50" onBlur="validateInputString(event);"/>
+						  </td>
+
+
+
+						  <td>
+							<label for="dtd_type" id=dtd_type_label">DTD Type</label>
+						  <select id="dtd_type" onchange="dtdControls(event);">
+							<option value="emgd">EMGD Parameters</option>
+							<option value="vesa">VESA Parameters</option>
+							<option value="hardware">Hardware Parameters</option>
+							<option value="simple">Simple Parameters</option>
+							<option value="mode_lines">Mode Lines</option>
+							<option value="edid_block">EDID Block</option>
+						  </select>
+						</td>
+						<td align="right">
+							<a href="help/web_CreatingCustDTD.htm" target="_blank"><img src="images/questionmark_16w.gif"></a>
+						</td>
+						</tr>
+						<tr><td colspan="3">
+						<div id="DTD_parameters">
+						  <fieldset>
+							<legend>DTD Settings Flags</legend>
+							<div class="emgd_parameters hardware_parameters vesa_parameters simple_parameters mode_lines_parameters">
+							<input type="checkbox" id="interlaced_display" value="2147483648" parameter="emgd" class="emgd_parameters hardware_parameters vesa_parameters simple_parameters mode_lines_parameters"/>Interlaced Display<br>
+							</div>
+							<div class="emgd_parameters hardware_parameters vesa_parameters mode_lines_parameters">
+							<label for="vsync_polarity" id="vsync_polarity_label" class="emgd_parameters hardware_parameters vesa_parameters mode_lines_parameters">Vertical Sync Polarity</label>
+							<select id="vsync_polarity" class="emgd_parameters hardware_parameters vesa_parameters mode_lines_parameters">
+								<option value="0">Active Low</option>
+								<option value="134217728">Active High</option>
+							</select><br>
+							</div>
+							<div class="emgd_parameters hardware_parameters vesa_parameters mode_lines_parameters">
+							<label for="hsync_polarity" id="hsync_polarity_label" class="emgd_parameters hardware_parameters vesa_parameters mode_lines_parameters">Horizontal Sync Polarity</label>
+							<select id="hsync_polarity" class="emgd_parameters hardware_parameters vesa_parameters mode_lines_parameters">
+								<option value="0">Active Low</option>
+								<option value="67108864">Active High</option>
+							</select><br>
+							</div>
+							<div class="emgd_parameters hardware_parameters vesa_parameters simple_parameters mode_lines_parameters edid_block_parameters">
+							<label for="bsync_polarity" id="bsync_polarity_label" class="emgd_parameters hardware_parameters vesa_parameters simple_parameters mode_lines_parameters edid_block_parameters">Blank Polarity</label>
+							<select id="bsync_polarity" class="emgd_parameters hardware_parameters vesa_parameters simple_parameters mode_lines_parameters edid_block_parameters">
+								<option value="0">Active Low</option>
+								<option value="33554432">Active High</option>
+							</select>
+							</div>
+						</fieldset>
+
+					  <div id="parameters" class="closedPanel"><h3><a href="#">Parameters</a></h3>
+					  <table width="100%">
+						  <tr><td>
+						  <div class="emgd_parameters hardware_parameters vesa_parameters">
+						  <label for="pixel_clock" id="pixel_clock_label" class="emgd_parameters hardware_parameters vesa_parameters" >Pixel Clock in kHz</label> <br>
+						  <input type="text" id="pixel_clock" label="pixel_clock_label" minValue="0" maxValue="100000" onBlur="validateUserInput(event);" class="emgd_parameters hardware_parameters vesa_parameters"> <br>
+						  </div>
+						 <div class="emgd_parameters">
+						  <label for="hztl_sync_offset" id="hztl_sync_offset_label"  class="emgd_parameters">Horizontal Sync Offset (Front Porch) in pixels</label><br>
+						  <input type="text" id="hztl_sync_offset" label="hztl_sync_offset_label" minValue="0" maxValue="8191" onBlur="validateUserInput(event);" class="emgd_parameters"/> <br>
+						 </div>
+						 <div class="emgd_parameters vesa_parameters">
+						  <label for="hztl_sync_pulse_offset" id="hztl_sync_pulse_offset_label" class="emgd_parameters vesa_parameters">Horizontal Sync Pulse Width (Sync Time) in pixels</label><br>
+						  <input type="text" id="hztl_sync_pulse_offset"  label="hztl_sync_pulse_offset_label" minValue="0" maxValue="8191" onBlur="validateUserInput(event);" class="emgd_parameters vesa_parameters"/> <br>
+						 </div>
+						  <div class="emgd_parameters vesa_parameters">
+						  <label for="hztl_blanking" id="hztl_blanking_label" class="emgd_parameters vesa_parameters">Horizontal Blank Width (Blank Time) in pixels</label><br>
+						  <input type="text" id="hztl_blanking" label="hztl_blanking_label" minValue="0" maxValue="32767" onBlur="validateUserInput(event);" class="emgd_parameters vesa_parameters"/> <br>
+						  </div>
+						  <div class="emgd_parameters hardware_parameters simple_parameters">
+						  <label for="hztl_active" id="hztl_active_label" class="emgd_parameters hardware_parameters simple_parameters">Horizontal Active (Width) in pixels</label><br>
+						  <input type="text" id="hztl_active" label="hztl_active_label" minValue="1" maxValue="32767" onBlur="validateUserInput(event);" class="emgd_parameters hardware_parameters simple_parameters"/> <br>
+						  </div>
+						  <div class="hardware_parameters vesa_parameters">
+						  <label for="hztl_sync_start" id="hztl_sync_start_label" class="hardware_parameters vesa_parameters">Horizontal Sync Start in pixels</label><br>
+						  <input type="text" id="hztl_sync_start"  label="hztl_sync_start_label" minValue="0" maxValue="40957" onBlur="validateUserInput(event);" class="hardware_parameters vesa_parameters"/> <br>
+						  </div>
+						  <div class="hardware_parameters">
+						  <label for="hztl_sync_end" id="hztl_sync_end_label" class="hardware_parameters">Horizontal Sync End in pixels</label><br>
+						  <input type="text" id="hztl_sync_end" label="hztl_sync_end_label" minValue="0" maxValue="49148" onBlur="validateUserInput(event);" class="hardware_parameters"/> <br>
+						  </div>
+						  <div class="hardware_parameters">
+						  <label for="hztl_blank_end" id="hztl_blank_end_label" class="hardware_parameters">Horizontal Blank End in pixels</label><br>
+						  <input type="text" id="hztl_blank_end" label="hztl_blank_end_label" minValue="0" maxValue="65533" onBlur="validateUserInput(event);" class="hardware_parameters"/> <br>
+						  </div>
+						  <div class="vesa_parameters">
+						  <label for="hztl_blank_start" id="hztl_blank_start_label" class="vesa_parameters">Horizontal Blank Start in pixels</label><br>
+						  <input type="text" id="hztl_blank_start" label="hztl_blank_start_label" minValue="0" maxValue="32766" onBlur="validateUserInput(event);" class="vesa_parameters"/> <br>
+						  </div>
+						  </td>
+						  <td>
+						  <div class="simple_parameters">
+						  <label for="refresh" id="refresh_label" class="simple_parameters">Refresh in Hz</label> <br>
+						  <input type="text" id="refresh" class="simple_parameters"/> <br>
+						  </div>
+						  <div class="emgd_parameters">
+						  <label for="vertical_sync_offset" id="vertical_sync_offset_label" class="emgd_parameters">Vertical Sync Offset (Front Porch) in lines</label><br>
+						  <input type="text" id="vertical_sync_offset" label="vertical_sync_offset_label" minValue="0" maxValue="63" onBlur="validateUserInput(event);" class="emgd_parameters"/> <br>
+						  </div>
+						  <div class="emgd_parameters vesa_parameters">
+						  <label for="vertical_sync_pulse_offset" id="vertical_sync_pulse_offset_label" class="emgd_parameters vesa_parameters">Vertical Sync Pulse Width (Sync Time) in lines</label><br>
+						  <input type="text" id="vertical_sync_pulse_offset" label="vertical_sync_pulse_offset_label" minValue="0" maxValue="63" onBlur="validateUserInput(event);" class="emgd_parameters vesa_parameters"/> <br>
+						  </div>
+						 <div class="emgd_parameters vesa_parameters">
+						  <label for="vertical_blanking" id="vertical_blanking_label" class="emgd_parameters vesa_parameters">Vertical Blank Width (Blank Time) in lines</label><br>
+						  <input type="text" id="vertical_blanking" label="vertical_blanking_label" minValue="0" maxValue="4095" onBlur="validateUserInput(event);" class="emgd_parameters vesa_parameters"/> <br>
+						 </div>
+						  <div class="emgd_parameters hardware_parameters simple_parameters">
+						  <label for="vertical_active" id="vertical_active_label" class="emgd_parameters hardware_parameters simple_parameters">Vertical Active (Height) in lines</label><br>
+						  <input type="text" id="vertical_active"  label="vertical_active_label" minValue="0" maxValue="4095" onBlur="validateUserInput(event);"class="emgd_parameters hardware_parameters simple_parameters"/> <br>
+						  </div>
+						   <div class="hardware_parameters vesa_parameters">
+						  <label for="vertical_sync_start" id="vertical_sync_start_label" class="hardware_parameters vesa_parameters">Vertical Sync Start in lines</label><br>
+						  <input type="text" id="vertical_sync_start"  label="vertical_sync_start_label" minValue="0" maxValue="4157" onBlur="validateUserInput(event);" class="hardware_parameters vesa_parameters"/> <br>
+						   </div>
+						  <div class="hardware_parameters">
+						  <label for="vertical_sync_end" id="vertical_sync_end_label" class="hardware_parameters">Vertical Sync End in lines</label><br>
+						  <input type="text" id="vertical_sync_end" label="vertical_sync_end_label" minValue="0" maxValue="4220" onBlur="validateUserInput(event);" class="hardware_parameters"/> <br>
+						  </div>
+						  <div class="hardware_parameters">
+						  <label for="vertical_blank_end" id="vertical_blank_end_label" class="hardware_parameters">Vertical Blank End in lines</label><br>
+						  <input type="text" id="vertical_blank_end" label="vertical_blank_end_label" minValue="0" maxValue="8189" onBlur="validateUserInput(event);" class="hardware_parameters"/> <br>
+						  </div>
+						  <div class="vesa_parameters">
+						  <label for="vertical_blank_start" id="vertical_blank_start_label" class="vesa_parameters">Vertical Blank Start in lines</label><br>
+						  <input type="text" id="vertical_blank_start" label="vertical_blank_start_label" minValue="0" maxValue="4094" onBlur="validateUserInput(event);" class="vesa_parameters"/> <br>
+						  </div>
+						  </td></tr>
+					  </table>
+					  </div>
+					   <div id="mode_lines" class="closedPanel"><h3><a href="#">Mode Line is in the format I A B C D E F G H</a></h3>
+						  <table>
+						  <tr>
+						  <td>
+						  <label for="mode_line_I" id="mode_line_I_label" class="mode_lines_parameters">I</label> <br>
+						  <input type="text" id="mode_line_I" label="mode_line_I_label" class="mode_lines_parameters" minValue="0" maxValue="1000000" onBlur="validateUserInput(event);" /> <br>
+						  </td>
+						  <td>
+						   <label for="mode_line_A" id="mode_line_A_label" class="mode_lines_parameters">A</label> <br>
+						  <input type="text" id="mode_line_A" label="mode_line_A_label" minValue="0" maxValue="32767" onBlur="validateUserInput(event);" class="mode_lines_parameters"/> <br>
+						   </td>
+						  <td>
+						   <label for="mode_line_B" id="mode_line_B_label" class="mode_lines_parameters">B</label> <br>
+						  <input type="text" id="mode_line_B" label="mode_line_B_label" minValue="1" maxValue="40958" onBlur="validateUserInput(event);" class="mode_lines_parameters"/> <br>
+						  </td>
+						  <tr>
+						  <td>
+						   <label for="mode_line_C" id="mode_line_C_label" class="mode_lines_parameters">C</label> <br>
+						  <input type="text" id="mode_line_C" label="mode_line_C_label" minValue="1" maxValue="40958" onBlur="validateUserInput(event);" class="mode_lines_parameters"/> <br>
+						  </td>
+						  <td>
+						   <label for="mode_line_D" id="mode_line_D_label" class="mode_lines_parameters">D</label> <br>
+						  <input type="text" id="mode_line_D" label="mode_line_D_label" minValue="1" maxValue="65334" onBlur="validateUserInput(event);"class="mode_lines_parameters"/> <br>
+						  </td>
+						  <td>
+						  <label for="mode_line_E" id="mode_line_E_label" class="mode_lines_parameters">E</label> <br>
+						  <input type="text" id="mode_line_E" label="mode_line_E_label" minValue="1" maxValue="4095" onBlur="validateUserInput(event);" class="mode_lines_parameters"/> <br>
+						  </td>
+						  </tr>
+						  <tr>
+						  <td>
+						  <label for="mode_line_F" id="mode_line_F_label" class="mode_lines_parameters">F</label> <br>
+						  <input type="text" id="mode_line_F" label="mode_line_F_label" minValue="1" maxValue="4158" onBlur="validateUserInput(event);" class="mode_lines_parameters"/> <br>
+						  </td>
+						  <td>
+						  <label for="mode_line_G" id="mode_line_G_label" class="mode_lines_parameters">G</label> <br>
+						  <input type="text" id="mode_line_G" label="mode_line_G_label" minValue="1" maxValue="4158" onBlur="validateUserInput(event);" class="mode_lines_parameters"/> <br>
+						  </td>
+						  <td>
+						  <label for="mode_line_H" id="mode_line_H_label" class="mode_lines_parameters">H</label> <br>
+						  <input type="text" id="mode_line_H" label="mode_line_H_label" minValue="1" maxValue="8190" onBlur="validateUserInput(event);" class="mode_lines_parameters"/> <br>
+						  </td>
+						  </tr>
+						  </table>
+					  </div>
+					 <div id="edid_block" class="closedPanel"><h3><a href="#">EDID Block is in the format a0 0f 20 00 31 58 1c 20 d2 1a 14 --------- 1c</a></h3>
+						  <table>
+						  <tr>
+						  <td>
+						  <label for="edid_block_1" id="edid_block_1_label" class="edid_block_parameters">1</label> <br>
+						  <input type="text" id="edid_block_1" label="edid_block_1_label" minValue="0" maxValue="255" onBlur="validateHexUserInput(event);" class="edid_block_parameters" size="2"/> <br>
+						  </td>
+						  <td>
+						  <label for="edid_block_2" id="edid_block_2_label" class="edid_block_parameters">2</label> <br>
+						  <input type="text" id="edid_block_2" label="edid_block_2_label" minValue="0" maxValue="255" onBlur="validateHexUserInput(event);" class="edid_block_parameters" size="2"/> <br>
+						  </td>
+						  <td>
+						  <label for="edid_block_3" id="edid_block_3_label" class="edid_block_parameters">3</label> <br>
+						  <input type="text" id="edid_block_3" label="edid_block_3_label" minValue="0" maxValue="255" onBlur="validateHexUserInput(event);" class="edid_block_parameters" size="2"/> <br>
+						  </td>
+						  <td>
+						  <label for="edid_block_4" id="edid_block_4_label" class="edid_block_parameters">4</label> <br>
+						  <input type="text" id="edid_block_4" label="edid_block_4_label" minValue="0" maxValue="255" onBlur="validateHexUserInput(event);" class="edid_block_parameters" size="2"/> <br>
+						  </td>
+						  <td>
+						  <label for="edid_block_5" id="edid_block_5_label" class="edid_block_parameters">5</label> <br>
+						  <input type="text" id="edid_block_5" label="edid_block_5_label" minValue="0" maxValue="255" onBlur="validateHexUserInput(event);" class="edid_block_parameters" size="2"/> <br>
+						  </td>
+						  <td>
+						  <label for="edid_block_6" id="edid_block_6_label" class="edid_block_parameters">6</label> <br>
+						  <input type="text" id="edid_block_6" label="edid_block_6_label" minValue="0" maxValue="255" onBlur="validateHexUserInput(event);" class="edid_block_parameters" size="2"/> <br>
+						  </td>
+						  <td>
+						  <td>
+						  <label for="edid_block_7" id="edid_block_7_label" class="edid_block_parameters">7</label> <br>
+						  <input type="text" id="edid_block_7" label="edid_block_7_label" minValue="0" maxValue="255" onBlur="validateHexUserInput(event);" class="edid_block_parameters" size="2"/> <br>
+						  </td>
+						  <td>
+						  <label for="edid_block_8" id="edid_block_8_label" class="edid_block_parameters">8</label> <br>
+						  <input type="text" id="edid_block_8" label="edid_block_8_label" minValue="0" maxValue="255" onBlur="validateHexUserInput(event);" class="edid_block_parameters" size="2"/> <br>
+						  </td>
+						  <td>
+						  <label for="edid_block_9" id="edid_block_9_label" class="edid_block_parameters">9</label> <br>
+						  <input type="text" id="edid_block_9" label="edid_block_9_label" minValue="0" maxValue="255" onBlur="validateHexUserInput(event);" class="edid_block_parameters" size="2"/> <br>
+						  </td>
+						  <td>
+						  <label for="edid_block_10" id="edid_block_10_label" class="edid_block_parameters">10</label> <br>
+						  <input type="text" id="edid_block_10" label="edid_block_10_label" minValue="0" maxValue="255" onBlur="validateHexUserInput(event);" class="edid_block_parameters" size="2"/> <br>
+						  </td>
+						  <td>
+						  <label for="edid_block_11" id="edid_block_11_label" class="edid_block_parameters">11</label> <br>
+						  <input type="text" id="edid_block_11" label="edid_block_11_label" minValue="0" maxValue="255" onBlur="validateHexUserInput(event);" class="edid_block_parameters" size="2"/> <br>
+						  </td>
+						  <td>
+						   <label for="edid_block_18" id="edid_block_18_label" class="edid_block_parameters">18</label> <br>
+						  <input type="text" id="edid_block_18" label="edid_block_18_label" minValue="0" maxValue="255" onBlur="validateHexUserInput(event);" class="edid_block_parameters" size="2"/> <br>
+						  </td>
+						  <td>
+						  </tr>
+						  </table>
+					</div>
+
+					</div>
+						</td></tr>
+						<tr>
+						  <td align="right" colspan="2">
+							<label id="dtd_added_label"></label>&nbsp
+							<input type="button" id="add_dtd" value="Add DTD" onclick="addDTD();"/>
+							<input type="button" id="export_dtd" value="Save DTD" onclick="exportDTD();"/>
+						  </td>
+						</tr>
+				  </table>
+				</div>
+			  </div>
+			</div>
+			</td>
+			</tr>
+		  </table>
+      <!-- End Overlay Color settings -->
+
+</div></div>
+<!-- End Panel -->
+
+<p>
+
+<!-- LVDS DISPLAY -->
+<div id="lvds_panel" class="closedPanel"><h3><a href="#">LVDS Display (Advanced Settings)</a></h3><div>
+	<table width="800px" border="0">
+		<tr>
+		<td valign="top">
+			<div width="100%" id="panel1_adv">
+
+			  <div id="lvds_tabs" class="ui-tabs ui-widget ui-widget-content ui-corner-all settingstabs">
+				<ul class="ui-tabs-nav ui-helper-reset ui-helper-clearfix ui-widget-header ui-corner-all">
+					<li class="ui-state-default ui-corner-top ui-tabs-selected ui-state-active"><a href="#lvds_portsettings_panel">Port Settings</a></li>
+					<li class="ui-state-default ui-corner-top"><a href="#lvds_panelsettings_panel" class="flat_panel_settings">LVDS Panel Settings</a></li>
+					<li class="ui-state-default ui-corner-top"><a href="#lvds_colorcorrection_panel">Color Correction</a></li>
+					<li class="ui-state-default ui-corner-top"><a href="#lvds_attributesettings_panel">Attribute Settings</a></li>
+				</ul>
+				<div id="lvds_portsettings_panel" class="ui-tabs-panel ui-widget-content ui-corner-bottom"></div>
+				<div id="lvds_panelsettings_panel" class="ui-tabs-panel ui-widget-content ui-corner-bottom ui-tabs-hide flat_panel_settings">
+					<table width="100%">
+					  <tr>
+						<td valign="top">
+						  <input type="checkbox" id="lvds_fixed_timing" name="lvds_fixed_timing" value="1"/><label for="lvds_fixed_timing">Fixed Timing</label>
+
+						  <fieldset>
+							<legend>Centering and Upscaling</legend>
+							<fieldset>
+							  <input type="checkbox" id="lvds_centering_enable" name="lvds_centering_enable" onclick="enableCentering(event);" value="lvds_centering" checked="checked"/><label for="lvds_centering_enable">Use Default</label><br>
+							  <input type = radio Name ="lvds_centering" Value="1" checked="yes" id="lvds_centering_upscaling" disabled="disabled"><label for="lvds_centering_upscaling">Upscaling</label><br>
+							  <input type = radio Name ="lvds_centering" Value="0" id="lvds_centering_forcecentering" disabled="disabled"><label for="lvds_centering_forcecentering">Force Centering</label>
+							</fieldset>
+						  </fieldset>
+
+						  <label for="lvds_bit_depth">Bit Depth</label>
+						  <select id="lvds_bit_depth" name="lvds_bit_depth">
+							<option value="18">18</option>
+							<option value="24">24</option>
+						  </select>
+
+						  <fieldset>
+							<legend>Single/Dual Channel</legend>
+							<input type = radio Name ="lvds_channel" Value="0" checked="yes" id="lvds_channel_single"><label for="lvds_channel_single">Single</label>
+							<input type = radio Name ="lvds_channel" Value="1" id="lvds_channel_dual"><label for="lvds_channel_dual">Dual</label>
+						  </fieldset>
+						</td>
+						<td>
+						  <fieldset>
+							<legend>Flat Panel Backlight Options</legend>
+							<label for="lvds_backlightcontrol">Backlight Control Method</label>
+							<select id="lvds_backlightcontrol" name="lvds_backlightcontrol" onchange="timingDelays(event)">
+							  <option value="0">No Backlight</option>
+							  <option value="1">Port Driver</option>
+							</select><br>
+
+							<fieldset id="timing_delays">
+							  <legend>Timing Delays</legend>
+							  <label for="lvds_bkltT1" name="lvds_bklt" id="lvds_bkltT1_label">T1- VDD active and sDVO clock/data active</label><br><input type="text" id="lvds_bkltT1" name="lvds_bklt" minValue="0" maxValue="4095" label="lvds_bkltT1_label" onBlur="validateHexUserInput(event);"/><br>
+							  <label for="lvds_bkltT2" name="lvds_bklt" id="lvds_bkltT2_label">T2- sDVO clock/data active and backlight enable</label><br><input type="text" id="lvds_bkltT2" name="lvds_bklt" minValue="0" maxValue="4095" label="lvds_bkltT2_label" onBlur="validateHexUserInput(event);"/><br>
+							  <label for="lvds_bkltT3" name="lvds_bklt" id="lvds_bkltT3_label">T3- Backlight disable and sDVO clock/data inactive</label><br><input type="text" id="lvds_bkltT3" name="lvds_bklt" minValue="0" maxValue="4095" label="lvds_bkltT3_label" onBlur="validateHexUserInput(event);"/><br>
+							  <label for="lvds_bkltT4" name="lvds_bklt" id="lvds_bkltT4_label">T4- sDVO clock/data inactive and VDD inactive</label><br><input type="text" id="lvds_bkltT4" name="lvds_bklt" minValue="0" maxValue="4095" label="lvds_bkltT4_label" onBlur="validateHexUserInput(event);"/><br>
+							  <label for="lvds_bkltT5" name="lvds_bklt" id="lvds_bkltT5_label">T5- Minimum from VDD inactive and active</label><br><input type="text" id="lvds_bkltT5" name="lvds_bklt" minValue="0" maxValue="2147483647" label="lvds_bkltT5_label" onBlur="validateHexUserInput(event);"/><br>
+							</fieldset>
+						  </fieldset>
+						</td>
+						<td align="right" valign="top">
+						<a href="help/web_LVDS_flatpanel.htm" target="_blank"><img src="images/questionmark_16w.gif"></a>
+						</td>
+					  </tr>
+					</table>
+				</div>
+				<div id="lvds_colorcorrection_panel" class="ui-tabs-panel ui-widget-content ui-corner-bottom ui-tabs-hide">
+					<table border=0 align='center'>
+						<tr><td>
+							<fieldset>
+
+								<legend>Gamma Correction</legend>
+								<table border=0 align='center' width='600px'>
+								<tr>
+								<td>
+								<input size="5" type="text" type="text" name="lvds_sliderValueGammaR" id="lvds_sliderValueGammaR" readOnly="true" style="border:0; color:#f6931f; font-weight:bold; margin-left: 15px;" />
+								  <div id="lvds_sliderValueGammaR_slider" class="gamma_slider red_slider"></div>
+								</td><td>
+								 <input size="5" type="text" name="lvds_sliderValueGammaG" readOnly="true" id="lvds_sliderValueGammaG" style="border:0; color:#f6931f; font-weight:bold; margin-left: 15px;"/>
+								  <div id="lvds_sliderValueGammaG_slider" class="gamma_slider green_slider"></div>
+								  </td><td>
+								  <input size="5" type="text" name="lvds_sliderValueGammaB" id="lvds_sliderValueGammaB" readOnly="true" style="border:0; color:#f6931f; font-weight:bold; margin-left: 15px;"/>
+								  <div id="lvds_sliderValueGammaB_slider" class="gamma_slider blue_slider"></div>
+								</td>
+								</tr>
+								</table>
+							</fieldset>
+							<br>
+
+							<fieldset>
+
+								<legend>Brightness Correction</legend>
+								<table border=0 align='center' width='600px'>
+								<tr>
+								<td>
+								  <input size="5" type="text" name="lvds_sliderValueBrightR"  id="lvds_sliderValueBrightR" readonly="true" style="border:0; color:#f6931f; font-weight:bold; margin-left: 15px;"/>
+								  <div id="lvds_sliderValueBrightR_slider" class="brightness_slider red_slider"></div>
+								</td><td>
+								 <input size="5" type="text" name="lvds_sliderValueBrightG" id="lvds_sliderValueBrightG" readonly="true" style="border:0; color:#f6931f; font-weight:bold; margin-left: 15px;"/>
+								  <div id="lvds_sliderValueBrightG_slider" class="brightness_slider green_slider"></div>
+								</td><td>
+								<input size="5" type="text" name="lvds_sliderValueBrightB" id="lvds_sliderValueBrightB" readonly="true" style="border:0; color:#f6931f; font-weight:bold; margin-left: 15px;"/>
+								  <div id="lvds_sliderValueBrightB_slider" class="brightness_slider blue_slider"></div>
+								</td>
+								</tr>
+								</table>
+							</fieldset>
+							<br>
+							<fieldset>
+								<legend>Contrast Correction</legend>
+								<table border=0 align='center' width='600px'>
+								<tr>
+								<td>
+								  <input size="5" type="text" name="lvds_sliderValueContrastR" id="lvds_sliderValueContrastR" readonly="true" style="border:0; color:#f6931f; font-weight:bold; margin-left: 15px;"/>
+								  <div id="lvds_sliderValueContrastR_slider" class="brightness_slider red_slider"></div>
+								</td><td>
+								<input size="5" type="text" name="lvds_sliderValueContrastG" id="lvds_sliderValueContrastG" readonly="true" style="border:0; color:#f6931f; font-weight:bold; margin-left: 15px;"/>
+								  <div id="lvds_sliderValueContrastG_slider" class="brightness_slider green_slider"></div>
+								</td><td>
+								</td><td>
+								 <input size="5" type="text" name="lvds_sliderValueContrastB" id="lvds_sliderValueContrastB" readonly="true" style="border:0; color:#f6931f; font-weight:bold; margin-left: 15px;"/>
+								  <div id="lvds_sliderValueContrastB_slider" class="brightness_slider blue_slider"></div>
+								</td><td>
+								</td>
+								</tr>
+								</table>
+							</fieldset>
+							<br>
+					  </td><td valign="top">
+						<a href="help/web_lvds-sdvo_color.htm" target="_blank"><img src="images/questionmark_16w.gif"></a>
+					  </td></tr>
+					</table>
+				</div>
+				<div id="lvds_attributesettings_panel" class="ui-tabs-panel ui-widget-content ui-corner-bottom ui-tabs-hide">
+				    <div align="right">
+						<a href="help/web_PortDriverAttributes.htm" target="_blank"><img src="images/questionmark_16w.gif"></a>
+					 </div>
+					<fieldset> 
+					  <legend>Attributes</legend>
+					  <div id="lvds_predefined_attributes" style="width:100%;height:300px;overflow:auto">
+						<table id="lvds_attributes_composite" width="100%" style="border:0px solid;">
+						  <tr><th style="border: 1px solid #000">Name</th><th style="border: 1px solid #000">ID</th><th style="border: 1px solid #000">Port Driver</th><th style="border: 1px solid #000">Value</th><th style="border: 1px solid #000">Default</th></tr>
+						</table>
+					  </div>
+					</fieldset>
+					<fieldset>
+					  <legend>Custom Attributes</legend>
+					  <div id="lvds_custom_attributes" style="width:100%;height:100px;overflow:auto">
+						<table id="lvds_custom_composite" width="100%" style="border:0px solid;" >
+						  <tr align="left"><th style="border: 1px solid #000">Attribute No.</th><th style="border: 1px solid #000">ID</th><th style="border: 1px solid #000">Value</th><th style="border: 1px solid #000">Name/Description</th>
+						  </tr>
+						</table>
+						<input type="button" id="lvds_custom_add" value="Add Custom Attribute" port="lvds" onclick="addCustomAttribute(event);"/>
+					  </div>
+					</fieldset>
+					
+				</div>
+
+			  </div>
+			</div>
+		</td>
+		</tr>
+	</table>
+
+
+	</div>
+</div>
+<!-- End LVDS Display Panel -->
+
+<p>
+
+<!-- SDVO DISPLAY -->
+<div id="sdvo1_panel" class="closedPanel"><h3><a href="#">SDVO Display (Advanced Settings)</a></h3><div>
+
+		<table width="800px" border="0">
+			<tr>
+			<td valign="top">
+				<div width="100%" id="panel1_adv">
+				  <div id="sdvo1_tabs" class="ui-tabs ui-widget ui-widget-content ui-corner-all settingstabs">
+					<ul class="ui-tabs-nav ui-helper-reset ui-helper-clearfix ui-widget-header ui-corner-all">
+						<li class="ui-state-default ui-corner-top ui-tabs-selected ui-state-active"><a href="#sdvo1_portsettings_panel">Port Settings</a></li>
+						<li class="ui-state-default ui-corner-top"><a href="#sdvo1_panelsettings_panel">SDVO Panel Settings</a></li>
+						<li class="ui-state-default ui-corner-top"><a href="#sdvo1_colorcorrection_panel">Color Correction</a></li>
+						<li class="ui-state-default ui-corner-top"><a href="#sdvo1_attributesettings_panel">Attribute Settings</a></li>
+					</ul>
+					<div id="sdvo1_portsettings_panel" class="ui-tabs-panel ui-widget-content ui-corner-bottom"></div>
+					<div id="sdvo1_panelsettings_panel" class="ui-tabs-panel ui-widget-content ui-corner-bottom ui-tabs-hide">
+					  <table border="0" width="100%">
+						  <tr><td width="300px">
+						   <fieldset>
+							  <legend>SDVO Cards</legend>
+
+							  <div id="sdvo1_cards_ckbox" style="width:300px;height:100px;overflow:auto"></div>
+						   </fieldset>
+						  </td>
+						   <td>
+							<div id="attribute_settings_message">
+							 Selecting SDVO Cards will populate their attributes in the Attribute Settings tab
+							</div>
+						   </td>
+						   <td valign="top" align="right">
+							<a href="help/web_SDVO_flatpanel.htm" target="_blank"><img src="images/questionmark_16w.gif"></a>
+						  </td>
+						  </tr>
+					  </table>
+					  <p>
+					 <fieldset>
+						  <legend>I2C Settings</legend>
+						  <div id="sdvo1_i2csettings" style="width: 100%;">
+							<table style="border:0px solid" width="100%">
+							<tr>
+							<td> I2C Bus Configuration</td>
+							<td id="sdvo_i2cspeed_label"> Speed</td>
+							<td><input type="text" size="10" id="sdvo_i2cspeed" name="sdvo_i2cspeed" minValue="10" maxValue="400" label="sdvo_i2cspeed_label" onBlur="validateUserInput(event);"></td>
+							<td id="sdvo_i2cdab_label"> Device Address Byte</td>
+							<td> <input type="text" size="10" id="sdvo_i2cdab" name="sdvo_i2cdab" minValue="0" maxValue="255" label="sdvo_i2cdab_label" onBlur="validateUserInput(event);"></td>
+							</tr>
+							<tr>
+							<td>DDC Bus Configuration</td>
+							<td id="sdvo_ddcspeed_label">Speed</td>
+							<td><input type="text" size="10" id="sdvo_ddcspeed" name="sdvo_ddcspeed"  minValue="10" maxValue="400" label="sdvo_ddcspeed_label" onBlur="validateUserInput(event);"></td>
+							<td id="sdvo_ddcdab_label">Device Address Byte</td>
+							<td><input type="text" size="10" id="sdvo_ddcdab" name="sdvo_ddcdab" minValue="0" maxValue="255" label="sdvo_ddcdab_label" onBlur="validateUserInput(event);"></td>
+							</tr>
+							</table>
+						  </div>
+					  </fieldset>
+				  </div>
+				  <div id="sdvo1_colorcorrection_panel" class="ui-tabs-panel ui-widget-content ui-corner-bottom ui-tabs-hide">
+					<table border=0 align='center'>
+						<tr><td>
+							<fieldset>
+								<legend>Gamma Correction</legend>
+								<table border=0 align='center' width='600px'>
+								<tr>
+								<td>
+								   <input size="5" type="text" name="sdvo_sliderValueGammaR" id="sdvo_sliderValueGammaR" readonly="true" style="border:0; color:#f6931f; font-weight:bold; margin-left: 15px;"/>
+								  <div id="sdvo_sliderValueGammaR_slider" class="gamma_slider red_slider"></div>
+								</td><td>
+								<input size="5" type="text" name="sdvo_sliderValueGammaG" id="sdvo_sliderValueGammaG" readonly="true" style="border:0; color:#f6931f; font-weight:bold; margin-left: 15px;"/>
+								  <div id="sdvo_sliderValueGammaG_slider" class="gamma_slider green_slider"></div>
+								  </td><td>
+								  <input size="5" type="text" name="sdvo_sliderValueGammaB" id="sdvo_sliderValueGammaB" readonly="true" style="border:0; color:#f6931f; font-weight:bold; margin-left: 15px;"/>
+								  <div id="sdvo_sliderValueGammaB_slider" class="gamma_slider blue_slider"></div>
+								</td>
+								</tr>
+								</table>
+							</fieldset>
+							<br>
+
+							<fieldset>
+								<legend>Brightness Correction</legend>
+								<table border=0 align='center' width='600px'>
+								<tr>
+								<td>
+								  <input size="5" type="text" name="sdvo_sliderValueBrightR" id="sdvo_sliderValueBrightR" readonly="true" style="border:0; color:#f6931f; font-weight:bold; margin-left: 15px;"/>
+								  <div id="sdvo_sliderValueBrightR_slider" class="brightness_slider red_slider"></div>
+								</td><td>
+								<input size="5" type="text" name="sdvo_sliderValueBrightG" id="sdvo_sliderValueBrightG" readonly="true" style="border:0; color:#f6931f; font-weight:bold; margin-left: 15px;"/>
+								  <div id="sdvo_sliderValueBrightG_slider" class="brightness_slider green_slider"></div>
+								</td><td>
+								<input size="5" type="text" name="sdvo_sliderValueBrightB" id="sdvo_sliderValueBrightB" readonly="true" style="border:0; color:#f6931f; font-weight:bold; margin-left: 15px;"/>
+								  <div id="sdvo_sliderValueBrightB_slider" class="brightness_slider blue_slider"></div>
+								</td>
+								</tr>
+								</table>
+							</fieldset>
+							<br>
+							<fieldset>
+								<legend>Contrast Correction</legend>
+								<table border=0 align='center' width='600px'>
+								<tr>
+								<td>
+								   <input size="5" type="text" id="sdvo_sliderValueContrastR" readonly="true" style="border:0; color:#f6931f; font-weight:bold; margin-left: 15px;"/>
+								  <div id="sdvo_sliderValueContrastR_slider" class="brightness_slider red_slider"></div>
+								</td><td>
+								  <input size="5" type="text" id="sdvo_sliderValueContrastG" readonly="true" style="border:0; color:#f6931f; font-weight:bold; margin-left: 15px;"/>
+								  <div id="sdvo_sliderValueContrastG_slider" class="brightness_slider green_slider"></div>
+								</td><td>
+								<input size="5" type="text" id="sdvo_sliderValueContrastB" readonly="true" style="border:0; color:#f6931f; font-weight:bold; margin-left: 15px;"/>
+								  <div id="sdvo_sliderValueContrastB_slider" class="brightness_slider blue_slider"></div>
+								</td></tr>
+								</table>
+							</fieldset>
+							<br>
+					  </td><td valign="top">
+						<a href="help/web_lvds-sdvo_color.htm" target="_blank"><img src="images/questionmark_16w.gif"></a>
+					  </td></tr>
+				  </table>
+				</div>
+				<div id="sdvo1_attributesettings_panel"  class="ui-tabs-panel ui-widget-content ui-corner-bottom ui-tabs-hide">
+				 <div align="right"><a href="help/web_PortDriverAttributes.htm" target="_blank"><img src="images/questionmark_16w.gif"></a></div>
+				  <div id="sdvo_attributes_warning">Please select at least one SDVO card from 'SDVO Panel Settings' Tab</div>
+				  <fieldset>
+					<legend>Attributes</legend>
+					<div id="sdvo1_predefined_attributes" style="width:100%;height:300px;overflow:auto">
+					  <table id="sdvo_attributes_composite" width="100%" style="border:0px solid;" >
+						<tr align="left"><th style="border: 1px solid #000">Name</th><th style="border: 1px solid #000">ID</th><th style="border: 1px solid #000">Port Driver</th><th style="border: 1px solid #000">Value</th><th style="border: 1px solid #000">Default</th></tr>
+					  </table>
+					</div>
+				  </fieldset>
+				  <fieldset>
+					<legend>Custom Attributes</legend>
+					<div id="sdvo1_custom_attributes" style="width:100%;height:100px;overflow:auto">
+					  <table id="sdvo_custom_composite" width="100%" style="border:0px solid;" >
+						<tr align="left"><th style="border: 1px solid #000">Attribute No.</th><th style="border: 1px solid #000">ID</th><th style="border: 1px solid #000">Value</th><th style="border: 1px solid #000">Name/Description</th>
+						</tr>
+					  </table>
+					  <input type="button" id="sdvo_custom_add" value="Add Custom Attribute" port="sdvo" onclick="addCustomAttribute(event);"/>
+					</div>
+				  </fieldset>
+				</div>
+			  </div>
+			</div>
+	  		</td>
+	  		</tr>
+		</table>
+
+</div></div>
+<!-- End SDVO Display Panel -->
+
+<p>
+
+<input type="button" id="btn_finish" Value="Generate Intel® EMGD Configuration" onClick="generate();">
+<p>
+
+</form>
+
+</td><td></td></tr></table>
+
+<!-- ****************************************************************************** -->
+<!-- HTML for popup forms. Does not show up in main page -->
+<div id="dialog-save-form" title="Save Settings">
+	<form>
+	<fieldset>
+		<label for="name">Save Name</label>
+		<input type="text" value="Save1" name="dialog_saveTitle" id="dialog_saveTitle" class="text ui-widget-content ui-corner-all" />
+	</fieldset>
+	</form>
+</div>
+<div id="dialog-load-form" title="Load State">
+	<form name="load_form">
+		<!--<table id="dialog-load-table" class="ui-widget ui-widget-content">
+		</table> -->
+		<div id="dialog-load-table"></div>
+	</form>
+</div>
+<div id="dialog-options-form" title="Options">
+	<form name="options_form" id="options_form">
+		 <div align="right"><a href="help/web_options.htm" target="_blank"><img src="images/questionmark_16w.gif"></a></div>
+		<input type="button" id="btn_info" Value="About CED Lite" onClick="displayAbout();">
+		 <p>
+		<fieldset>
+			<legend>Save/Load Settings</legend>
+			<table>
+			<tr><td valign="top">
+				<input type="button" id="btn_save" Value="Save Settings" onClick='$( "#dialog-options-form" ).dialog( "close" );$( "#dialog-save-form" ).dialog( "open" );'>
+				<p>
+				<input type="button" id="btn_load" Value="Load Settings" onClick='populateLoadForm();$( "#dialog-options-form" ).dialog( "close" );$( "#dialog-load-form" ).dialog( "open" );'>
+			</td><td valign="top">
+			The current settings of CED Lite can be saved and later loaded. Saves may be within the browser or to a file.
+			</td></tr>
+			</table>
+		</fieldset>
+		<p>
+		<fieldset>
+		<legend>Save Options</legend>
+			<table>
+			<tr><td valign="top" width="150px">
+				<input type="radio" name="radio_save_dest" checked="yes" id="radio_save_dest1"/><label for="radio_save_dest1">Save to file</label><br>
+				<input type="radio" name="radio_save_dest" id="radio_save_dest2"/><label for="radio_save_dest2">Open in new window</label>
+			</td><td valign="top">
+				This setting applies to Generate Driver Configuration and Save Settings buttons.  It is for users who want to view output in a new window rather than the default of saving to file
+			</td></tr>
+			</table>
+		</legend>
+		<p>
+	</form>
+</div>
+<div id="dialog-validate-form" title="Incorrect User Input">
+testing
+</div>
+
+<!-- ****************************************************************************** -->
+
+
+</body>
+
+</HTML>

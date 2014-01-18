@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cedSnapshot xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    type="DTD" xsi:type="cedSnapshot">
+    <Selections>
+        <selection page_name="DTDPage" item_type_key="dtd_name">
+            <selection_entry entry_value="1792x1344@60Hz" entry_name="1792x1344@60Hz"/>
+        </selection>
+        <selection page_name="DTDPage" item_type_key="dtd_type">
+            <selection_entry entry_value="1"
+                entry_name="EMGD Parameters" entry_id="1"/>
+        </selection>
+        <selection page_name="DTDPage" item_type_key="pixel_clock">
+            <selection_entry entry_value="204750" entry_name="204750"/>
+        </selection>
+        <selection page_name="DTDPage" item_type_key="hztl_active">
+            <selection_entry entry_value="1792" entry_name="1792"/>
+        </selection>
+        <selection page_name="DTDPage" item_type_key="hztl_sync_offset">
+            <selection_entry entry_value="128" entry_name="128"/>
+        </selection>
+        <selection page_name="DTDPage" item_type_key="hztl_sync_pulse_offset">
+            <selection_entry entry_value="200" entry_name="200"/>
+        </selection>
+        <selection page_name="DTDPage" item_type_key="hztl_blanking">
+            <selection_entry entry_value="656" entry_name="656"/>
+        </selection>
+        <selection page_name="DTDPage" item_type_key="vertical_active">
+            <selection_entry entry_value="1344" entry_name="1344"/>
+        </selection>
+        <selection page_name="DTDPage" item_type_key="vertical_sync_offset">
+            <selection_entry entry_value="1" entry_name="1"/>
+        </selection>
+        <selection page_name="DTDPage" item_type_key="vertical_sync_pulse_offset">
+            <selection_entry entry_value="3" entry_name="3"/>
+        </selection>
+        <selection page_name="DTDPage" item_type_key="vertical_blanking">
+            <selection_entry entry_value="50" entry_name="50"/>
+        </selection>
+        <selection page_name="DTDPage" item_type_key="vsync_polarity">
+            <selection_entry entry_value="134217728" entry_name="Active High"/>
+        </selection>
+        <selection page_name="DTDPage" item_type_key="hsync_polarity">
+            <selection_entry entry_value="0" entry_name="Active Low"/>
+        </selection>
+        <selection page_name="DTDPage" item_type_key="interlaced_display">
+            <selection_entry entry_value="0" entry_name="false"/>
+        </selection>
+        <selection page_name="DTDPage" item_type_key="bsync_polarity">
+            <selection_entry entry_value="0" entry_name="Active Low" entry_id="low"/>
+        </selection>
+    </Selections>
+</cedSnapshot>

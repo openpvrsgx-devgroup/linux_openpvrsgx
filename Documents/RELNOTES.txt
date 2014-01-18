@@ -1,0 +1,320 @@
+======================================================================
+Release Notes for the
+Intel(R) Embedded Media and Graphics Drivers (Intel(R) EMGD)
+Gold Version 1.18 with production license for 
+Windows* XP (and variants) and LINUX
+
+April 2013
+======================================================================
+
+
+Contents
+========
+
+- In This Release (overview)
+- Supported Chipsets
+- Supported Operating Systems
+- IMPORTANT: Features/ Limitations/ Known Issues
+- Getting Started
+- Windows*
+- Linux*
+- Software Licenses
+- Legal / Disclaimers
+
+In This Release 
+================
+Intel(R) EMGD is designed specifically to support the unique GRAPHICS 
+DRIVER requirements of embedded applications for Intel(R) embedded 
+chipset-based platforms with integrated graphics capability.  
+
+This release contains components for:
+1) EMGD_1_18_xxxx.exe (x represents the driver build version):- 
+   Windows* XP, Linux and Firmware package.     
+2) RELNOTES.txt
+
+
+Supported Chipsets
+==================
+Target system must contain one of the following Intel Chipsets/Processors:
+
+              Intel(R) Atom(TM) processor E6xx Series (B1 stepping)
+              Intel(R) US15W System Controller Hub (Poulsbo).
+              Intel(R) US15WP/WPT System Controller Hub (eMenlow XL).
+
+Please check with your system provider to determine the Intel Chipset 
+used in your system. 
+
+
+Supported Operating Systems
+===========================
+This version of driver supports the following OS or distributions:
+    
+    - Microsoft* Windows XP Professional* SP3.
+
+    - MeeGo* IVI 1.2, kernel version 2.6.37, Xorg 1.9.X, Libva 1.0.12, 
+      Mesa 7.9.1 For more detailed information, please refer to the 
+      User Guide.
+    
+     
+    - Fedora* 14 (Timesys* Fedora Remix), kernel version 2.6.35, 
+      Xorg 1.9.X, Libva 1.0.12, Mesa 7.9 (The source is distributed 
+      from Timesys*. For more detailed information, please refer to the 
+      User Guide).
+ 
+
+IMPORTANT: Features/ Limitations/ Known Issues
+==============================================
+
+Features:
+=========
+This release contains the following features/ limitations/ known issues. 
+Please report any sightings through the Intel® Premier Support process.
+
+
+    - The driver supports internal LVDS, SDVO, DDC, EDID (detection), 2D, 
+      D3D (DirectX* 9.0C), OpenGL 2.0 (XP), OpenGL 2.1 (Linux), OpenVG 1.1 
+      (Linux), OpenGL-ES 1.1 and 2.0, hardware video decode and Overlay 
+      framebuffer alpha blending capabilities.
+
+    - The driver is pre-configured to turn on SDVO as PRIMARY and Internal 
+      LVDS as SECONDARY Display. Internal LVDS default resolution as 
+      1366 x 768 for E6xx and 10x7 for US15W. 
+
+    - The driver supports Power Management (Standby and Hibernate) on SDVO 
+      and LVDS for Windows and Linux operating systems.
+
+    - MPlayer and GStreamer are the players used for video decode in Linux. 
+      Please refer to the User Guide for more detailed information.
+
+    - Video encode through USB camera capability (for Intel(R) Atom(TM) 
+      processor E6xx Series only). Setup instructions are provided in the 
+      User Guide.
+
+    - The driver supports Vertical Extended Mode for MeeGo* 1.2 OS.
+
+    - Texture streaming support for Intel(R) Atom(TM) processor E6xx Series 
+      (B1 stepping) platform.
+
+    - Supports LVDS panel brightness configuration at BIOS boot via 5F61, 08H 
+      function call and CED configuration.
+
+    - Colorkey enabled when terminal window is on top of Media Player window 
+      using  XV path.
+        
+    - The driver supports Vertical Extended Mode for MeeGo* 1.2 OS.
+
+    - The driver supports changing from DIH/Vertical Extended Mode to Clone 
+      mode during runtime for MeeGo* 1.2 OS.
+
+    - GStreamer vaimagesink plug-in supports LIBVA and RGB Pixel format.
+
+    - The driver supports direct DMA to Overlay functionality for optimized 
+      performance for external video inputs for MeeGo* 1.2 OS.
+
+    - The driver supports independent freeze framebuffer API at runtime for 
+      MeeGo* 1.2 OS.
+
+    - Enabled option for manual selection of video overlay plane or sprite C 
+      through escape API. The escape API allows a user to choose the preferred 
+      overlay plane based on pixel format for MeeGo* 1.2 OS. 
+
+    - Supports EGL API version 1.4.
+
+    - Supports PVRTC compressed texture Format GL_IMG_Texture.
+
+    - The driver supports YPbPr for Chrontel CH7022.  
+
+    - Added option to allow 100 MHz clock input for SSC enabled platforms 
+      (specific to US15W/WP/WPT platform).
+
+    - Wayland for MeeGo* 1.2 kernel 2.6.37 and above. 
+      Note: MeeGo 1.2 with Wayland feature is mainly for evaluation and 
+      testing purposes; it is not for production usage.)
+
+    - EMGD supports setting display rotation and flip based on the DID 
+      physical orientation information.
+
+    - Intel(R) EMGD VBIOS (build #xxxx) bundled in this release package
+      supports 127K vBIOS for Intel(R) Atom(TM) processor E6xx platform and 
+      64K VBIOS for US15W platform. From EMGD1.16 onward, the 64K vBIOS for  
+      E6xx Series no longer available due to file size constraint as new features
+      added in VBIOS increased the file size over 64K. If you require a 64K VBIOS, 
+      please consider using EMGD v1.10.
+   
+    - EFI/EPOG splash screen size support up to a maximum of 500 kbytes.
+
+    - For Windows XP OS, the driver supports port order swap between 
+      primary and secondary displays for clone/extended mode. 
+
+    - Linux driver installation using RPM method for Fedora* 14 OS.
+
+    - The driver supports MSAA in EGL context shared surfaces for 
+      MeeGo* 1.2 OS.
+
+    - The driver supports direct DMA to Framebuffer functionality for 
+      MeeGo* 1.2 OS.
+
+    - The driver supports primary to secondary display swap at runtime for 
+      MeeGo* 1.2 OS. 
+
+    - The driver supports fastboot Clone mode splash screen and seamless 
+      switches from Clone mode to VEXT mode for MeeGo* 1.2 OS.
+
+    - Supports Early camera capability through DMA to Overlay without X for 
+      MeeGo* 1.2 OS. 
+
+    - New features enabled in EMGD1.18 include:
+
+	- Supports freeze Overlay and Sprite-C at runtime for MeeGo* 1.2 OS.
+	
+	- Overlay Hue color correction for Intel(R) Atom(TM) processor E6xx 
+          Series Linux OS only)
+
+	- Supports subtitle functionality with GStreamer(MI-X) plugin
+
+	- Supports encode of four channels of H.264 streams (four V4l2 cameras 
+          input) simultaneously, the maximum supported resolution is CIF(352x288)
+          per stream.
+
+Please refer to the FAQ which is available at 
+    http://edc.intel.com/Software/Downloads/EMGD/#faqs
+
+
+Limitations:
+============
+    - Windows* 7 or Windows Embedded Compact* 7 is not supported in this version 
+      of the driver. For more information about Windows* 7 or Windows Embedded 
+      Compact* 7 support, please refer to the respective Intel(R) EMGD v1.18 
+      Windows* 7 and Windows Embedded Compact* 7 release package.
+
+    - vBIOS does not support CH7036. For assistance enabling display output 
+      for your specific configuration through CH7036 LVDS Bypass/HDMI/VGA port 
+      during BIOS boot prior to the OS being loaded, please contact Chrontel.
+
+    - Information related to MeeGo* 1.2 Wayland in User Guide Section 7.7 is 
+      specifically targeted for customers or users that already have MeeGo* 1.2 
+      Wayland setup, the feature is mainly for evaluation and testing purposes. 
+      Note for Wayland Compositor setup, GEM and EMGDGUI are not supported. 
+
+    - 8bpp color bit depth display configuration for Windows XP OS will not be 
+      supported from this version onward.
+
+     
+Known Issues:
+=============
+    - Please refer to the Specification Update of the driver release for more 
+      detailed information about the driver known sightings and possible
+      resolutions. The Specification Update can be obtained from Intel Premier 
+      Support or http://edc.intel.com/Software/Downloads/EMGD/ website.
+
+
+
+Getting Started
+===============
+Please follow each dedicated OS section for the installation instructions.
+
+
+=======
+Windows
+=======
+
+Windows* System Requirements
+============================
+The development system should have one the following Windows operating 
+systems installed.
+
+	Microsoft* Windows XP Professional* SP3
+
+
+Supported Players
+=================
+Supported players are Windows Media Player* 11 and PowerDVD* 8.
+
+For PowerDVD 8, the supported version is OEM build 3204.
+
+
+PowerDVD 8
+===========
+By default, PowerDVD 8 uses blend/composite display mode. To enable 
+overlay mode for improved video performance, edit the registry settings 
+as follows:
+
+  HKEY_LOCAL_MACHINE-> Cyberlink-> PDVD8
+
+Create a variable named Dx_ForceVideoRenderer and give it a value of 2.
+To switch back to blend/composite, change the value of said variable to 3.
+
+
+Installation and Uninstallation
+================================
+
+Please see the User Guide for detailed installation instructions.
+
+End Windows
+***********
+
+
+=====
+Linux
+=====
+
+Linux: System Requirements    
+==========================        
+This package includes drivers built for the Linux distributions mentioned in
+ the "Supported Operating Systems" section. 
+
+
+Linux: Installation 
+=================== 
+Please see the User Guide for detailed installation instructions.
+
+
+Linux: FAQ
+==========
+
+Q: In MeeGo 1.2, I'm getting errors related to libva and missing files.
+A: Check that your environment variable 'LIBVA_DRIVERS_PATH' is not set. 
+If it is, unset it.
+e.g., `unset LIBVA_DRIVERS_PATH`
+
+Q: When installing GStreamer in MeeGo*, I get the 'fedora repo not found' error.
+A: Make sure you decompressed the files from the / directory.
+
+Q: I installed the EMGD RPM in MeeGo* 1.2, but it's not working!
+A: The full installation process involves more than just the RPM installation.
+   Please see the User Guide for the complete process.
+
+End Linux
+**********
+
+
+Software Licenses
+=================
+Intel(R) EMGD is subject to the terms of the license agreement 
+located in the license file in this distribution package. Please read, 
+understand, and agree to the terms before using Intel(R) EMGD.
+
+
+Legal / Disclaimers
+===================
+INFORMATION IN THIS DOCUMENT IS PROVIDED IN CONNECTION WITH INTEL PRODUCTS. 
+NO LICENSE, EXPRESS OR IMPLIED, BY ESTOPPEL OR OTHERWISE, TO ANY INTELLECTUAL 
+PROPERTY RIGHTS IS GRANTED BY THIS DOCUMENT.  EXCEPT AS PROVIDED IN INTEL'S 
+TERMS AND CONDITIONS OF SALE FOR SUCH PRODUCTS, INTEL ASSUMES NO LIABILITY 
+WHATSOEVER AND INTEL DISCLAIMS ANY EXPRESS OR IMPLIED WARRANTY, RELATING TO 
+SALE AND/OR USE OF INTEL PRODUCTS INCLUDING LIABILITY OR WARRANTIES RELATING 
+TO FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABILITY, OR INFRINGEMENT OF ANY 
+PATENT, COPYRIGHT OR OTHER INTELLECTUAL PROPERTY RIGHT.
+
+UNLESS OTHERWISE AGREED IN WRITING BY INTEL, THE INTEL PRODUCTS ARE NOT DESIGNED 
+NOR INTENDED FOR ANY APPLICATION IN WHICH THE FAILURE OF THE INTEL PRODUCT COULD 
+CREATE A SITUATION WHERE PERSONAL INJURY OR DEATH MAY OCCUR.
+
+
+Intel may make changes to specifications and product descriptions at any
+time, without notice.
+
+(C) Intel Corporation 2013
+
+* Other names and brands may be claimed as the property of others.
+========================================================================

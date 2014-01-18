@@ -1,0 +1,571 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Devices xsi:noNamespaceSchemaLocation="../../com.intel.graphics/schema/deviceAttribute.xsd"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<!--Added for OKI devices -->
+	<Device device_name="Lapis Semiconductor* ML7213">
+	<DeviceAttribute>
+		<device_attribute_name>Dither</device_attribute_name>
+		<id_number>45</id_number>	
+		<control control_type="default_radio_control"/>
+            <default_value>Disable (0)</default_value>
+            <items>
+               <item item_name="Disable (0)" item_value="0" item_id="0"/>
+               <item item_name="Enable (1)" item_value="1" item_id="1"/>
+            </items>
+	</DeviceAttribute>
+	<!--DeviceAttribute>
+         <device_attribute_name>HSync Panel Protection</device_attribute_name>
+         <id_number>46</id_number>
+         <control control_type="default_radio_control"/>
+            <default_value>Disable (0)</default_value>
+            <items>
+               <item item_name="Disable (0)" item_value="0" item_id="0"/>
+               <item item_name="Enable (1)" item_value="1" item_id="1"/>
+            </items>
+    </DeviceAttribute>
+	 <DeviceAttribute>
+         <device_attribute_name>VSync Panel Protection</device_attribute_name>
+         <id_number>47</id_number>
+         <control control_type="default_radio_control"/>
+            <default_value>Disable (0)</default_value>
+            <items>
+               <item item_name="Disable (0)" item_value="0" item_id="0"/>
+               <item item_name="Enable (1)" item_value="1" item_id="1"/>
+            </items>
+      </DeviceAttribute-->
+      <DeviceAttribute>
+          <device_attribute_name>Pixel Clock Protection</device_attribute_name>
+          <id_number>48</id_number>
+         <control control_type="default_radio_control"/>
+            <default_value>Disable (0)</default_value>
+            <items>
+               <item item_name="Disable (0)" item_value="0" item_id="0"/>
+               <item item_name="Enable (1)" item_value="1" item_id="1"/>
+            </items>
+        </DeviceAttribute>
+       <DeviceAttribute>
+         <device_attribute_name>RB Swap</device_attribute_name>
+         <id_number>73</id_number>
+         <control control_type="default_radio_control"/>
+            <default_value>Disable (0)</default_value>
+            <items>
+               <item item_name="Disable (0)" item_value="0" item_id="0"/>
+               <item item_name="Enable (1)" item_value="1" item_id="1"/>
+            </items>
+      </DeviceAttribute>
+	
+	</Device>
+    
+   <Device device_name="STM* IOH ConneXt">
+   <DeviceAttribute>
+            <device_attribute_name>Display Type</device_attribute_name>
+            <id_number>9</id_number>
+            <control control_type="default_combo_control"/>
+            <default_value>LVDS (64)</default_value>
+            <items>
+               <item item_name="LVDS(64)" item_value="64" item_id="lvds"/>
+               <item item_name="DRGB (128)"  item_value="128" item_id="drgb"/>
+            </items>
+     </DeviceAttribute>
+	<DeviceAttribute>
+            <device_attribute_name>LVDS Panel Type</device_attribute_name>
+            <id_number>49</id_number>
+            <control control_type="default_combo_control"/>
+            <default_value>SPWG (0)</default_value>
+            <items>
+               <item item_name="SPWG (0)" item_value="0" item_id="spwg"/>
+               <item item_name="OpenLDI (1)" item_value="1" item_id="ldi"/>
+            </items>
+     </DeviceAttribute>
+		
+	</Device>
+   
+    
+    
+    <Device device_name="Chrontel* CH7307 DVI">
+        <DeviceAttribute>
+            <device_attribute_name>Spread Spectrum Clocking</device_attribute_name>
+            <id_number>43</id_number>
+            <control control_type="default_edit_control"/>
+            <default_value>0</default_value>
+            <validation minimum_value="0" maximum_value="15" required="true" severity="ERROR"> 
+               <validation_message>Spread Spectrum Clocking must be between 0-15.  Default is 0.</validation_message>
+            </validation>
+        </DeviceAttribute>
+    </Device>
+    <Device device_name="Chrontel* CH7308 LVDS">
+        <DeviceAttribute>
+            <device_attribute_name>Spread Spectrum Clocking</device_attribute_name>
+            <id_number>43</id_number>
+            <control control_type="default_edit_control"/>
+            <default_value>7</default_value>
+            <validation minimum_value="0" maximum_value="15" required="true" severity="ERROR"> 
+               <validation_message>Spread Spectrum Clocking must be between 0-15.  Default is 7.</validation_message>
+            </validation>
+        </DeviceAttribute>
+        <DeviceAttribute>
+            <device_attribute_name>Dither</device_attribute_name>
+            <id_number>45</id_number>
+            <control control_type="default_radio_control"/>
+            <default_value>Disable (0)</default_value>
+            <items>
+               <item item_name="Disable (0)" item_value="0" item_id="0"/>
+               <item item_name="Enable (1)" item_value="1" item_id="1"/>
+            </items>
+        </DeviceAttribute>
+        <DeviceAttribute>
+            <device_attribute_name>HSync Panel Protection</device_attribute_name>
+            <id_number>46</id_number>
+            <control control_type="default_radio_control"/>
+            <default_value>Disable (0)</default_value>
+            <items>
+               <item item_name="Disable (0)" item_value="0" item_id="0"/>
+               <item item_name="Enable (1)" item_value="1" item_id="1"/>
+            </items>
+        </DeviceAttribute>
+        <DeviceAttribute>
+            <device_attribute_name>VSync Panel Protection</device_attribute_name>
+            <id_number>47</id_number>
+            <control control_type="default_radio_control"/>
+            <default_value>Disable (0)</default_value>
+            <items>
+               <item item_name="Disable (0)" item_value="0" item_id="0"/>
+               <item item_name="Enable (1)" item_value="1" item_id="1"/>
+            </items>
+        </DeviceAttribute>
+        <DeviceAttribute>
+            <device_attribute_name>Pixel Clock Protection</device_attribute_name>
+            <id_number>48</id_number>
+            <control control_type="default_radio_control"/>
+            <default_value>Disable (0)</default_value>
+            <items>
+               <item item_name="Disable (0)" item_value="0" item_id="0"/>
+               <item item_name="Enable (1)" item_value="1" item_id="1"/>
+            </items>
+        </DeviceAttribute>
+        <DeviceAttribute>
+            <device_attribute_name>LVDS Panel Type</device_attribute_name>
+            <id_number>49</id_number>
+            <control control_type="default_combo_control"/>
+            <default_value>SPWG (0)</default_value>
+            <items>
+               <item item_name="SPWG (0)" item_value="0" item_id="spwg"/>
+               <item item_name="OpenLDI (1)" item_value="1" item_id="ldi"/>
+            </items>
+        </DeviceAttribute>
+		<DeviceAttribute>
+            <device_attribute_name>Text Enhancement</device_attribute_name>
+            <id_number>58</id_number>
+            <control control_type="default_edit_control"/>
+            <default_value>0</default_value>
+            <validation minimum_value="0" maximum_value="4" required="true" severity="ERROR"> 
+               <validation_message>Text Enhancement must be between 0-4.  Default is 0.</validation_message>
+            </validation>
+        </DeviceAttribute>
+    </Device>
+	<Device device_name="Chrontel* CH7317 VGA">
+        <DeviceAttribute>
+            <device_attribute_name>VGA Bypass</device_attribute_name>
+            <id_number>9</id_number>
+            <control control_type="default_combo_control"/>
+            <default_value>Enable VGA Bypass</default_value>
+            <items>
+               <item item_name="Enable VGA Bypass" item_value="2" item_id="vga"/>
+            </items>
+        </DeviceAttribute>
+    </Device>
+	<Device device_name="Chrontel* CH7022 VGA / TV">
+        <DeviceAttribute>
+            <device_attribute_name>Display Type</device_attribute_name>
+            <id_number>9</id_number>
+            <control control_type="default_combo_control"/>
+            <default_value>VGA Bypass (2)</default_value>
+            <items>
+               <item item_name="VGA Bypass (2)" item_value="2" item_id="vga"/>
+				<item item_name="Composite (4)" item_value="4" item_id="composite"/>
+				<item item_name="S-Video (8)" item_value="8" item_id="s-video"/>
+            </items>
+        </DeviceAttribute>
+		<DeviceAttribute>
+            <device_attribute_name>Brightness</device_attribute_name>
+            <id_number>0</id_number>
+            <control control_type="default_edit_control"/>
+            <default_value>128</default_value>
+            <validation minimum_value="0" maximum_value="255" required="true" severity="ERROR">
+               <validation_message>Brightness must be between 0-255. Default is 128.</validation_message>
+            </validation>
+        </DeviceAttribute>
+		<DeviceAttribute>
+            <device_attribute_name>Saturation</device_attribute_name>
+            <id_number>15</id_number>
+            <control control_type="default_edit_control"/>
+            <default_value>69</default_value>
+            <validation minimum_value="0" maximum_value="127" required="true" severity="ERROR">
+               <validation_message>Saturation must be between 0-127. Default is 69.</validation_message>
+            </validation>
+        </DeviceAttribute>
+        <DeviceAttribute>
+            <device_attribute_name>Hue</device_attribute_name>
+            <id_number>2</id_number>
+            <control control_type="default_edit_control"/>
+            <default_value>64</default_value>
+            <validation minimum_value="0" maximum_value="127" required="true" severity="ERROR"> 
+               <validation_message>Hue must be between 0-127. Default is 64.</validation_message>
+            </validation>
+        </DeviceAttribute>
+        <DeviceAttribute>
+            <device_attribute_name>Contrast</device_attribute_name>
+            <id_number>1</id_number>
+            <control control_type="default_edit_control"/>
+            <default_value>64</default_value>
+            <validation minimum_value="0" maximum_value="127" required="true" severity="ERROR"> 
+               <validation_message>Contrast must be between 0-127. Default is 64.</validation_message>
+            </validation>
+        </DeviceAttribute>
+		<DeviceAttribute>
+            <device_attribute_name>Horizontal Overscan</device_attribute_name>
+            <id_number>41</id_number>
+            <control control_type="default_edit_control"/>
+            <default_value>32</default_value>
+            <validation minimum_value="0" maximum_value="47" required="true" severity="ERROR">
+               <validation_message>Horizontal Overscan must be between 0-47. Default is 32.</validation_message>
+            </validation>
+        </DeviceAttribute>
+        <DeviceAttribute>
+            <device_attribute_name>Vertical Overscan</device_attribute_name>
+            <id_number>42</id_number>
+            <control control_type="default_edit_control"/>
+            <default_value>32</default_value>
+            <validation minimum_value="0" maximum_value="47" required="true" severity="ERROR">
+               <validation_message>Vertical Overscan must be between 0-47. Default is 32.</validation_message>
+            </validation>
+        </DeviceAttribute>
+        <DeviceAttribute>
+            <device_attribute_name>Horizontal Position</device_attribute_name>
+            <id_number>4</id_number>
+            <control control_type="default_edit_control"/>
+            <default_value>512</default_value>
+            <validation minimum_value="0" maximum_value="1023" required="true" severity="ERROR">
+               <validation_message>H Position must be between 0-1023. Default is 512.</validation_message>
+            </validation>
+        </DeviceAttribute>
+        <DeviceAttribute>
+            <device_attribute_name>Vertical Position</device_attribute_name>
+            <id_number>5</id_number>
+            <control control_type="default_edit_control"/>
+            <default_value>512</default_value>
+            <validation minimum_value="0" maximum_value="1023" required="true" severity="ERROR">
+               <validation_message>V Position must be between 0-1023. Default is 512.</validation_message>
+            </validation>
+        </DeviceAttribute>
+		<DeviceAttribute>
+            <device_attribute_name>Sharpness</device_attribute_name>
+            <id_number>31</id_number>
+            <control control_type="default_edit_control"/>
+            <default_value>4</default_value>
+            <validation minimum_value="0" maximum_value="7" required="true" severity="ERROR">
+               <validation_message>Sharpness must be between 0-7. Default is 4.</validation_message>
+            </validation>
+        </DeviceAttribute>
+        <DeviceAttribute>
+            <device_attribute_name>TV Chroma Filter</device_attribute_name>
+            <id_number>11</id_number>
+            <control control_type="default_edit_control"/>
+            <default_value>1</default_value>
+            <validation minimum_value="0" maximum_value="3" required="true" severity="ERROR">
+               <validation_message>TV Chroma Filter must be between 0-3. Default is 1.</validation_message>
+            </validation>
+        </DeviceAttribute>
+        <DeviceAttribute>
+            <device_attribute_name>TV Luma Filter</device_attribute_name>
+            <id_number>10</id_number>
+            <control control_type="default_edit_control"/>
+            <default_value>2</default_value>
+            <validation minimum_value="0" maximum_value="2" required="true" severity="ERROR">
+               <validation_message>TV Luma Filter must be between 0-2. Dafault is 2.</validation_message>
+            </validation>
+        </DeviceAttribute>
+		<DeviceAttribute>
+            <device_attribute_name>Adaptive Flicker Filter</device_attribute_name>
+            <id_number>40</id_number>
+            <control control_type="default_edit_control"/>
+            <default_value>7</default_value>
+            <validation minimum_value="0" maximum_value="7" required="true" severity="ERROR">
+               <validation_message>Adaptive Flicker Filter must be between 0-7. Dafault is 7.</validation_message>
+            </validation>
+        </DeviceAttribute>
+		<DeviceAttribute>
+            <device_attribute_name>Dot Crawl</device_attribute_name>
+            <id_number>44</id_number>
+            <control control_type="default_radio_control"/>
+            <default_value>Have Dot Crawl Run Freely (0)</default_value>
+            <items>
+               <item item_name="Have Dot Crawl Run Freely (0)" item_value="0" item_id="dotcrawl"/>
+               <item item_name="Freeze Dot Crawl (1)" item_value="1" item_id="freezedotcrawl"/>
+            </items>
+        </DeviceAttribute>
+		<DeviceAttribute>
+            <device_attribute_name>TV Output Format</device_attribute_name>
+            <id_number>8</id_number>
+            <control control_type="default_combo_control"/>
+            <default_value>NTSC_M (1)</default_value>
+            <items>
+               <item item_name="NTSC-M (1)" item_value="1" item_id="NTSCM"/>
+			   <item item_name="NTSC-J (17)" item_value="17" item_id="NTSC_J"/>
+			   <item item_name="NTSC-433 (33)" item_value="33" item_id="NTSC_433"/>
+               <item item_name="PAL-B (2)" item_value="2" item_id="PALB"/>
+			   <item item_name="PAL-D (34)" item_value="34" item_id="pald"/>
+			   <item item_name="PAL-G (18)" item_value="18" item_id="PAL_G"/>
+			   <item item_name="PAL-H (50)" item_value="50" item_id="palh"/>
+			   <item item_name="PAL-I (66)" item_value="66" item_id="pali"/>
+			   <item item_name="PAL-M (82)" item_value="82" item_id="PALM"/>
+			   <item item_name="PAL-N (98)" item_value="98" item_id="PALN"/>
+			   <item item_name="PAL-NC (130)" item_value="130" item_id="palnc"/>
+			   <item item_name="PAL-60 (114)" item_value="114" item_id="PAL_60"/>
+               <item item_name="SECAM-B (35)" item_value="35" item_id="SECAM_B"/>
+			   <item item_name="SECAM-D (51)" item_value="51" item_id="SECAM_D"/>
+			   <item item_name="SECAM_G (67)" item_value="67" item_id="SECAM_G"/>
+			   <item item_name="SECAM-K (99)" item_value="99" item_id="SECAM_K"/>
+			   <item item_name="SECAM-K1 (99)" item_value="34" item_id="SECAM_K1"/>
+			   <item item_name="SECAM-L (3)" item_value="3" item_id="SECAM_L"/>
+               <item item_name="SECAM-60 (257)" item_value="257" item_id="SECAM_60"/>
+			   <item item_name="SMPTE_240M_1080i59 (257)" item_value="257" item_id="SMPTE_240M_1080i59"/>
+			   <item item_name="SMPTE_240M_1080i60 (258)" item_value="258" item_id="SMPTE_240M_1080i60"/>
+			   <item item_name="SMPTE_260M_1080i59 (259)" item_value="259" item_id="SMPTE_260M_1080i59"/>
+			   <item item_name="SMPTE_260M_1080i60 (260)" item_value="260" item_id="SMPTE_260M_1080i60"/>
+			   <item item_name="SMPTE_274M_1080i50 (261)" item_value="261" item_id="SMPTE_274M_1080i50"/>
+			   <item item_name="SMPTE_274M_1080i59 (262)" item_value="262" item_id="SMPTE_274M_1080i59"/>
+               <item item_name="SMPTE_274M_1080i60 (263)" item_value="263" item_id="SMPTE_274M_1080i60"/>
+			   <item item_name="SMPTE_274M_1080p23 (264)" item_value="264" item_id="SMPTE_274M_1080p23"/>
+			   <item item_name="SMPTE_274M_1080p24 (265)" item_value="265" item_id="SMPTE_274M_1080p24"/>
+			   <item item_name="SMPTE_274M_1080p25 (266)" item_value="266" item_id="SMPTE_274M_1080p25"/>
+			   <item item_name="SMPTE_274M_1080p29 (267)" item_value="267" item_id="SMPTE_274M_1080p29"/>
+			   <item item_name="SMPTE_274M_1080p30 (268)" item_value="268" item_id="SMPTE_274M_1080p30"/>
+               <item item_name="SMPTE_274M_1080p50 (269)" item_value="269" item_id="SMPTE_274M_1080p50"/>
+			   <item item_name="SMPTE_274M_1080p59 (270)" item_value="270" item_id="SMPTE_274M_1080p59"/>
+			   <item item_name="SMPTE_274M_1080p60 (271)" item_value="271" item_id="SMPTE_274M_1080p60"/>
+			   <item item_name="SMPTE_295M_1080i50 (272)" item_value="272" item_id="SMPTE_295M_1080i50"/>
+			   <item item_name="SMPTE_295M_1080p50 (273)" item_value="273" item_id="SMPTE_295M_1080p50"/>
+			   <item item_name="SMPTE_296M_720p59 (274)" item_value="274" item_id="SMPTE_296M_720p59"/>
+			   <item item_name="SMPTE_296M_720p60 (275)" item_value="275" item_id="SMPTE_296M_720p60"/>
+			   <item item_name="SMPTE_296M_720p50 (276)" item_value="276" item_id="SMPTE_296M_720p50"/>
+			   <item item_name="SMPTE_293M_480p59 (277)" item_value="277" item_id="SMPTE_293M_480p59"/>
+			   <item item_name="MPTE_170M_480i59 (278)" item_value="278" item_id="MPTE_170M_480i59"/>
+			   <item item_name="ITURBT601_576i50 (279)" item_value="279" item_id="ITURBT601_576i50"/>
+			   <item item_name="TURBT601_576p50 (280)" item_value="280" item_id="TURBT601_576p50"/>
+			   <item item_name="EIA_7702A_480i60 (281)" item_value="281" item_id="EIA_7702A_480i60"/>
+			   <item item_name="EIA_7702A_480p60 (282)" item_value="282" item_id="EIA_7702A_480p60"/>
+            </items>
+		</DeviceAttribute>	
+		<DeviceAttribute>
+            <device_attribute_name>Analog Source</device_attribute_name>
+            <id_number>52</id_number>
+            <control control_type="default_radio_control"/>
+            <default_value>Analog Source (1)</default_value>
+            <items>
+               <item item_name="No Data (0)" item_value="0" item_id="nodata"/>
+               <item item_name="Analog Source (1)" item_value="1" item_id="analogsource"/>
+			   <item item_name="Pre-recorded Packaged (2)" item_value="2" item_id="pre-rec"/>
+               <item item_name="Not Analog Pre-recorded (3)" item_value="3" item_id="notanalog"/>
+            </items>
+        </DeviceAttribute>
+		<DeviceAttribute>
+            <device_attribute_name>Scan Information</device_attribute_name>
+            <id_number>53</id_number>
+            <control control_type="default_radio_control"/>
+            <default_value>Overscanned (1)</default_value>
+            <items>
+               <item item_name="No Data (0)" item_value="0" item_id="nodata"/>
+               <item item_name="Overscanned (1)" item_value="1" item_id="Overscanned"/>
+			   <item item_name="Underscanned (2)" item_value="2" item_id="Underscanned"/>
+            </items>
+        </DeviceAttribute>		
+		<DeviceAttribute>
+            <device_attribute_name>Picture Aspect Ratio</device_attribute_name>
+            <id_number>54</id_number>
+            <control control_type="default_radio_control"/>
+            <default_value>4:3 (1)</default_value>
+            <items>
+               <item item_name="No Data (0)" item_value="0" item_id="nodata"/>
+               <item item_name="4:3 (1)" item_value="1" item_id="4:3"/>
+			   <item item_name="16:9 (2)" item_value="2" item_id="16:9"/>
+            </items>
+        </DeviceAttribute>			
+        <DeviceAttribute>
+            <device_attribute_name>Active Format Aspect Ratio</device_attribute_name>
+            <id_number>55</id_number>
+            <control control_type="default_radio_control"/>
+            <default_value>Active Format (1)</default_value>
+            <items>
+               <item item_name="No Data (0)" item_value="0" item_id="nodata"/>
+               <item item_name="Active Format (1)" item_value="1" item_id="activeformat"/>
+			   <item item_name="Square Pixels (8)" item_value="8" item_id="Square Pixels"/>
+			   <item item_name="4:3 Center (9)" item_value="0" item_id="4:3"/>
+               <item item_name="16:9 Center (10)" item_value="1" item_id="16:9"/>
+			   <item item_name="14:9 Center (11)" item_value="8" item_id="14:9"/>
+			   <item item_name="16:9 Letterbox(Top) (2)" item_value="2" item_id="16:9top"/>
+               <item item_name="14:9 Letterbox(Top) (3)" item_value="3" item_id="149top"/>
+			   <item item_name="16:9 Letterbox(Center) (4)" item_value="4" item_id="169center"/>
+			   <item item_name="4:3(with shoot and protect 14:9 center) (41)" item_value="41" item_id="4:3w"/>
+               <item item_name="16:9(with shoot and protect 14:9 center) (10610)" item_value="10610" item_id="16:9w"/>
+			   <item item_name="16:9(with shoot and protect 4:3 center) (11)" item_value="8" item_id="16:9w43"/>
+            </items>
+        </DeviceAttribute>	
+    </Device>
+	<Device device_name="Internal LVDS">
+		<DeviceAttribute>
+            <device_attribute_name>Spread Spectrum Clocking</device_attribute_name>
+            <id_number>43</id_number>
+            <control control_type="default_edit_control"/>
+            <default_value>0</default_value>
+            <validation minimum_value="0" maximum_value="15" required="true" severity="ERROR"> 
+               <validation_message>Spread Spectrum Clocking must be between 0-15.  Default is 0.</validation_message>
+            </validation>
+        </DeviceAttribute>
+		<DeviceAttribute>
+            <device_attribute_name>Dither</device_attribute_name>
+            <id_number>45</id_number>
+            <control control_type="default_radio_control"/>
+            <default_value>Enable (1)</default_value>
+            <items>
+               <item item_name="Disable (0)" item_value="0" item_id="0"/>
+               <item item_name="Enable (1)" item_value="1" item_id="1"/>
+            </items>
+        </DeviceAttribute>
+		<DeviceAttribute>
+            <device_attribute_name>LVDS Panel Type</device_attribute_name>
+            <id_number>49</id_number>
+            <control control_type="default_combo_control"/>
+            <default_value>SPWG (0)</default_value>
+            <items>
+               <item item_name="SPWG (0)" item_value="0" item_id="spwg"/>
+               <item item_name="OpenLDI (1)" item_value="1" item_id="ldi"/>
+            </items>
+        </DeviceAttribute>
+        <DeviceAttribute>
+            <device_attribute_name>Maintain Aspect Ratio (when scaling enabled)</device_attribute_name>
+            <id_number>59</id_number>
+            <control control_type="default_radio_control"/>
+            <default_value>Full Screen Image (0)</default_value>
+            <items>
+               <item item_name="Full Screen Image (0)" item_value="0" item_id="0"/>
+               <item item_name="Maintain Aspect Ratio (1)" item_value="1" item_id="1"/>
+            </items>
+        </DeviceAttribute>
+		<DeviceAttribute>
+            <device_attribute_name>Intensity</device_attribute_name>
+            <id_number>70</id_number>
+            <control control_type="default_edit_control"/>
+            <default_value>0</default_value>
+            <validation minimum_value="0" maximum_value="100" required="true" severity="ERROR">
+               <validation_message>Intensity.Range 0-100 Percentage.Default is 100.</validation_message>
+            </validation>
+        </DeviceAttribute>
+		<DeviceAttribute>
+            <device_attribute_name>Inverter Frequency</device_attribute_name>
+            <id_number>71</id_number>
+            <control control_type="default_edit_control"/>
+            <default_value>0</default_value>
+            <validation minimum_value="0" maximum_value="65535" required="true" severity="ERROR">
+               <validation_message>Inverter Frequency.Range 0-65535 Hertz.Default is 0.</validation_message>
+            </validation>
+        </DeviceAttribute>
+		<DeviceAttribute>
+            <device_attribute_name>Backlight Method</device_attribute_name>
+            <id_number>72</id_number>
+            <control control_type="default_combo_control"/>
+            <default_value>PWM Mode(0)</default_value>
+            <items>
+               <item item_name="PWM Mode (0)" item_value="0" item_id="pwm"/>
+               <item item_name="Legacy + PWM Mode
+ (1)" item_value="1" item_id="legacy"/>
+            </items>
+        </DeviceAttribute>
+    </Device>
+	<Device device_name="Chrontel* CH7036" >
+       <DeviceAttribute>
+            <device_attribute_name>Quality Enhancement</device_attribute_name>
+            <id_number>82</id_number>
+            <control control_type="default_radio_control"/>
+            <default_value>Enable (1)</default_value>
+            <items>
+               <item item_name="Disable(0)" item_value="0" item_id="0"/>
+               <item item_name="Enable (1)" item_value="1" item_id="1"/>
+            </items>
+        </DeviceAttribute>
+		<DeviceAttribute>
+            <device_attribute_name>Dither Sel</device_attribute_name>
+            <id_number>45</id_number>
+             <control control_type="default_combo_control"/>
+            <default_value>18-18</default_value>
+            <items>
+               <item item_name="18-18" item_value="18-18" item_id="18-18"/>
+				<item item_name="18-24" item_value="18-24" item_id="18-24"/>
+				<item item_name="24-18" item_value="24-18" item_id="24-18"/>
+				<item item_name="24-24" item_value="24-24" item_id="24-24"/>
+            </items>
+        </DeviceAttribute>
+		<DeviceAttribute>
+            <device_attribute_name>Audio Type</device_attribute_name>
+            <id_number>78</id_number>
+            <control control_type="default_combo_control"/>
+            <default_value>0-SPDIF</default_value>
+            <items>
+				<item item_name="0-SPDIF" item_value="0" item_id="spdif"/>
+               <item item_name="1-I2S" item_value="1" item_id="i2s"/>
+            </items>
+        </DeviceAttribute>
+		<DeviceAttribute>
+            <device_attribute_name>H Position</device_attribute_name>
+            <id_number>4</id_number>
+            <control control_type="default_edit_control"/>
+            <default_value>2048</default_value>
+            <validation minimum_value="0" maximum_value="4096" required="true" severity="ERROR">
+               <validation_message>Horizontal Position must be between 0-4096. Default is 2048.</validation_message>
+            </validation>
+        </DeviceAttribute>
+        <DeviceAttribute>
+            <device_attribute_name>V Position</device_attribute_name>
+            <id_number>5</id_number>
+            <control control_type="default_edit_control"/>
+            <default_value>2048</default_value>
+            <validation minimum_value="0" maximum_value="4096" required="true" severity="ERROR">
+               <validation_message>Vertical Position must be between 0-4096. Default is 2048.</validation_message>
+            </validation>
+        </DeviceAttribute>
+		<DeviceAttribute>
+            <device_attribute_name>H Scale</device_attribute_name>
+            <id_number>6</id_number>
+            <control control_type="default_edit_control"/>
+            <default_value>10</default_value>
+            <validation minimum_value="0" maximum_value="10" required="true" severity="ERROR"> 
+               <validation_message>Horizontal Scale must be between 0-10. Default is 10.</validation_message>
+            </validation>
+        </DeviceAttribute>
+		<DeviceAttribute>
+            <device_attribute_name>V Scale</device_attribute_name>
+            <id_number>7</id_number>
+            <control control_type="default_edit_control"/>
+            <default_value>10</default_value>
+            <validation minimum_value="0" maximum_value="10" required="true" severity="ERROR"> 
+               <validation_message>Vertical Scale must be between 0-10. Default is 10.</validation_message>
+            </validation>
+        </DeviceAttribute>
+		<DeviceAttribute>
+            <device_attribute_name>Display Channel</device_attribute_name>
+            <id_number>9</id_number>
+            <control control_type="default_combo_control"/>
+            <default_value>1-Auto-detect</default_value>
+            <items>
+			   <item item_name="1-Auto-detect" item_value="1" item_id="auto"/>
+               <item item_name="2-LVDS+HDMI" item_value="2" item_id="lvdshdmi"/>
+			   <item item_name="3-LVDS+DVI" item_value="3" item_id="lvdsdvi"/>
+               <item item_name="4-LVDS+VGA" item_value="4" item_id="lvdsvga"/>
+			   <item item_name="5-HDMI" item_value="5" item_id="hdmi"/>
+               <item item_name="6-DVI" item_value="6" item_id="dvi"/>
+				<item item_name="7-VGA" item_value="7" item_id="vga"/>
+            </items>
+        </DeviceAttribute>
+		
+	 </Device>
+</Devices>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<about>
+  <content>
+About CED Lite
+
+CED Lite generates the Intel &#174; EMGD driver configuration file for Linux.
+The configuration file may be saved on the target system as /etc/X11/xorg.conf
+
+
+Intel &#174; EMGD Build Version
+</content>
+  <version>
+3398
+</version>
+</about>

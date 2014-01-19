@@ -1,0 +1,57 @@
+/**********************************************************************
+ Copyright (c) Imagination Technologies Ltd.
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ THE SOFTWARE.
+ ******************************************************************************/
+
+#if !defined (__KERNELBUFFER_H__)
+#define __KERNELBUFFER_H__
+
+typedef PVRSRV_ERROR (*PFN_OPEN_BC_DEVICE)(IMG_UINT32, IMG_HANDLE*);
+typedef PVRSRV_ERROR (*PFN_CLOSE_BC_DEVICE)(IMG_UINT32, IMG_HANDLE);
+typedef PVRSRV_ERROR (*PFN_GET_BC_INFO)(IMG_HANDLE, BUFFER_INFO*);
+typedef PVRSRV_ERROR (*PFN_GET_BC_BUFFER)(IMG_HANDLE, IMG_UINT32, PVRSRV_SYNC_DATA*, IMG_HANDLE*);
+
+typedef struct PVRSRV_BC_SRV2BUFFER_KMJTABLE_TAG
+{
+	IMG_UINT32							ui32TableSize;
+	PFN_OPEN_BC_DEVICE					pfnOpenBCDevice;
+	PFN_CLOSE_BC_DEVICE					pfnCloseBCDevice;
+	PFN_GET_BC_INFO						pfnGetBCInfo;
+	PFN_GET_BC_BUFFER					pfnGetBCBuffer;
+	PFN_GET_BUFFER_ADDR					pfnGetBufferAddr;
+	PFN_GET_BUFFER_ID_FROM_TAG			pfnGetBufferIdFromTag;
+
+} PVRSRV_BC_SRV2BUFFER_KMJTABLE;
+
+
+typedef PVRSRV_ERROR (*PFN_BC_REGISTER_BUFFER_DEV)(PVRSRV_BC_SRV2BUFFER_KMJTABLE*, IMG_UINT32*);
+typedef PVRSRV_ERROR (*PFN_BC_REMOVE_BUFFER_DEV)(IMG_UINT32);
+
+typedef struct PVRSRV_BC_BUFFER2SRV_KMJTABLE_TAG
+{
+	IMG_UINT32							ui32TableSize;
+	PFN_BC_REGISTER_BUFFER_DEV			pfnPVRSRVRegisterBCDevice;
+	PFN_BC_REMOVE_BUFFER_DEV			pfnPVRSRVRemoveBCDevice;
+
+} PVRSRV_BC_BUFFER2SRV_KMJTABLE, *PPVRSRV_BC_BUFFER2SRV_KMJTABLE;
+
+typedef IMG_BOOL (*PFN_BC_GET_PVRJTABLE) (PPVRSRV_BC_BUFFER2SRV_KMJTABLE);
+
+#endif

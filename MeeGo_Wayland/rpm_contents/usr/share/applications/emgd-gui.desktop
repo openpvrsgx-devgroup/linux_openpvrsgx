@@ -1,8 +1,0 @@
-[Desktop Entry]
-Name=EMGD GUI Utility
-Comment=EMGD Configuration
-Exec=/usr/bin/emgdgui
-Icon=/usr/share/icons/gnome/scalable/devices/video-display.svg
-Type=Application
-Encoding=UTF-8
-Categories=Application;System;

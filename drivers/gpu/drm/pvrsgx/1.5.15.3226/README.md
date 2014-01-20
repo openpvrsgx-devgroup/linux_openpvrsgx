@@ -1,5 +1,5 @@
-intel-binaries-linux
-====================
+Intel®-binaries-linux
+=====================
 
 Hosting the binaries and source code of Intel(R)'s EMGD driver here to collect patches for these drivers here.
 Feel free to fork and send patches.

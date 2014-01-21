@@ -569,7 +569,10 @@ vsense_dt_init(struct i2c_client *client)
 	if (!pdata)
 		return ERR_PTR(-ENOMEM);
 
-//	pdata->gpio_irq = of_get_property(np, "irq", NULL);
+	pdata->gpio_irq = 0;
+	pdata->gpio_reset = 0;	// NOTE: this is not used
+
+	//	pdata->gpio_irq = of_get_property(np, "irq", NULL);
 //	pdata->gpio_reset = of_get_property(np, "reset", NULL);
 
 	return pdata;
@@ -671,6 +674,7 @@ static int vsense_probe(struct i2c_client *client,
 
 	mutex_unlock(&vsense_mutex);
 
+	if(pdata->gpio_irq) {
 	ret = gpio_request_one(pdata->gpio_irq, GPIOF_IN, client->name);
 	if (ret < 0) {
 		dev_err(&client->dev, "failed to request GPIO %d,"
@@ -685,6 +689,8 @@ static int vsense_probe(struct i2c_client *client,
 		goto err_gpio_to_irq;
 	}
 	client->irq = ret;
+	} else
+		client->irq = 0;
 
 	snprintf(ddata->dev_name, sizeof(ddata->dev_name),
 		 "nub%d", ddata->proc_id);
@@ -724,6 +730,7 @@ static int vsense_probe(struct i2c_client *client,
 		goto err_input_register;
 	}
 
+	if(client->irq) {
 	ret = request_threaded_irq(client->irq, NULL,
 				     as5013_axis_interrupt,
 				     IRQF_ONESHOT |
@@ -734,6 +741,8 @@ static int vsense_probe(struct i2c_client *client,
 		dev_err(&client->dev, "unable to claim irq %d, error %d\n",
 			client->irq, ret);
 		goto err_request_irq;
+	}
+
 	}
 
 	dev_dbg(&client->dev, "probe %02x, gpio %i, irq %i, \"%s\"\n",

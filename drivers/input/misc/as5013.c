@@ -556,6 +556,25 @@ static void vsense_create_proc(struct vsense_drvdata *ddata,
 	pret->write_proc = write_proc;
 }
 
+#ifdef CONFIG_OF
+static struct vsense_platform_data *
+vsense_dt_init(struct i2c_client *client)
+{
+	// the task is to initialize dynamic pdata from the device tree properties
+	struct device_node *np = client->dev.of_node;
+	struct vsense_platform_data *pdata;
+
+	pdata = devm_kzalloc(&client->dev,
+						 sizeof(struct vsense_platform_data), GFP_KERNEL);
+	if (!pdata)
+		return ERR_PTR(-ENOMEM);
+
+//	pdata->gpio_irq = of_get_property(np, "irq", NULL);
+//	pdata->gpio_reset = of_get_property(np, "reset", NULL);
+
+	return pdata;
+}
+
 static struct of_device_id as5013_dt_match[] = {
 	{
 	.compatible = "ams,as5013",
@@ -563,24 +582,30 @@ static struct of_device_id as5013_dt_match[] = {
 	{},
 };
 
+#else
+static struct vsense_platform_data *
+vsense_dt_init(struct i2c_client *client)
+{
+	return ERR_PTR(-ENODEV);
+}
+
+#endif
+
 static int vsense_probe(struct i2c_client *client,
 			 const struct i2c_device_id *id)
 {
-	struct vsense_platform_data *pdata = client->dev.platform_data;
+	struct vsense_platform_data *pdata = dev_get_platdata(&client->dev);
 	struct vsense_drvdata *ddata;
 	uint8_t value = 0;
 	char buff[32];
 	int i, ret;
 
 	if (pdata == NULL) {
-		struct device_node *np = client->dev.of_node;
-		if (np) {
-			dev_err(&client->dev, "DT probe not yet implemented\n");
-			return -EINVAL;
+		pdata = vsense_dt_init(client);
+		if (IS_ERR(pdata)) {
+			dev_err(&client->dev, "Needs entries in device tree\n");
+			return PTR_ERR(pdata);
 		}
-
-		dev_err(&client->dev, "no platform data?\n");
-		return -EINVAL;
 	}
 
 	//if (i2c_check_functionality(client->adapter, I2C_FUNC_PROTOCOL_MANGLING) == 0) {

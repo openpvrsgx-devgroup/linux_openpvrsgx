@@ -23,6 +23,8 @@
 #include <linux/i2c/vsense.h>
 #include <linux/gpio.h>
 #include <linux/regulator/consumer.h>
+#include <linux/of.h>
+
 
 #define VSENSE_INTERVAL		25
 
@@ -554,6 +556,13 @@ static void vsense_create_proc(struct vsense_drvdata *ddata,
 	pret->write_proc = write_proc;
 }
 
+static struct of_device_id as5013_dt_match[] = {
+	{
+	.compatible = "ams,as5013",
+	},
+	{},
+};
+
 static int vsense_probe(struct i2c_client *client,
 			 const struct i2c_device_id *id)
 {
@@ -564,6 +573,12 @@ static int vsense_probe(struct i2c_client *client,
 	int i, ret;
 
 	if (pdata == NULL) {
+		struct device_node *np = client->dev.of_node;
+		if (np) {
+			dev_err(&client->dev, "DT probe not yet implemented\n");
+			return -EINVAL;
+		}
+
 		dev_err(&client->dev, "no platform data?\n");
 		return -EINVAL;
 	}
@@ -810,31 +825,22 @@ static const struct i2c_device_id vsense_id[] = {
 	{ }
 };
 
+MODULE_DEVICE_TABLE(i2c, vsense_id);
+
 static struct i2c_driver vsense_driver = {
 	.driver = {
 		.name	= "as5013",
 		.owner	= THIS_MODULE,
 		.pm	= &vsense_pm_ops,
+		.of_match_table = of_match_ptr(as5013_dt_match),
 	},
 	.probe		= vsense_probe,
 	.remove		= vsense_remove,
 	.id_table	= vsense_id,
 };
 
-static int __init vsense_init(void)
-{
-	return i2c_add_driver(&vsense_driver);
-}
-
-static void __exit vsense_exit(void)
-{
-	i2c_del_driver(&vsense_driver);
-}
-
+module_i2c_driver(vsense_driver);
 
 MODULE_AUTHOR("Grazvydas Ignotas");
 MODULE_DESCRIPTION("VSense navigation device driver");
 MODULE_LICENSE("GPL");
-
-module_init(vsense_init);
-module_exit(vsense_exit);

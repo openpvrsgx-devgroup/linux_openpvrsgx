@@ -47,6 +47,8 @@ Quick start guide (OpenGL support)
     ```
 
     3.2 Add "emgd" to /etc/modules as it is not automaticly loaded at boot-time (fix for that is welcome!)
+    
+    3.3 For xUbuntu/Debian: Running "update-initramfs -u -kall" as root might be useful!
 
 4. Create a xorg.conf on your own xorg.conf 
 

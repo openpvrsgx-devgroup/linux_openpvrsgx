@@ -38,20 +38,22 @@ Quick start guide (OpenGL support)
 
 2. Install the emgd driver ("emgd-drm-dkms" and "xserver-xorg-1.9-video-emgd" are minimum)
 
-3.1 Create a file in /etc/modprobe.d/ (e.g. blacklist-emgd.conf) and fill it with the following content
+3. Prepare the emgd module to be loaded
 
-```
-blacklist psb_gfx
-```
+    3.1 Create a file in /etc/modprobe.d/ (e.g. blacklist-emgd.conf) and fill it with the following content
 
-3.2 Add "emgd" to /etc/modules as it is not automaticly loaded at boot-time (fix for that is welcome!)
+    ```
+    blacklist psb_gfx
+    ```
+
+    3.2 Add "emgd" to /etc/modules as it is not automaticly loaded at boot-time (fix for that is welcome!)
 
 4. Create a xorg.conf on your own xorg.conf 
 
-    3.1 (emgd-xorg-conf which I wrote in the past does not work with EMGD 1.10+ [at least on my Asus T91])
+    4.1 (emgd-xorg-conf which I wrote in the past does not work with EMGD 1.10+ [at least on my Asus T91])
 
-    3.2 You can find templetes at /usr/share/doc/emgd/emgd-[cb/rv].conf
+    4.2 You can find templetes at /usr/share/doc/emgd/emgd-[cb/rv].conf
 
-    3.3 don't forget to set there your resolution and color depth
+    4.3 don't forget to set there your resolution and color depth
 
 4. Make sure Xserver-xorg v1.9 and mesa v7.9 are properly installed

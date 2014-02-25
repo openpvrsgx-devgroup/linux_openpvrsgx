@@ -36,9 +36,17 @@ Quick start guide (OpenGL support)
 
 1. Add this PPA: https://launchpad.net/~thopiekar/+archive/emgd
 
-2. Install the emgd driver (emgd-drm-dkms and xorg-module are minimum)
+2. Install the emgd driver ("emgd-drm-dkms" and "xserver-xorg-1.9-video-emgd" are minimum)
 
-3. Create a xorg.conf on your own xorg.conf 
+3.1 Create a file in /etc/modprobe.d/ (e.g. blacklist-emgd.conf) and fill it with the following content
+
+```
+blacklist psb_gfx
+```
+
+3.2 Add "emgd" to /etc/modules as it is not automaticly loaded at boot-time (fix for that is welcome!)
+
+4. Create a xorg.conf on your own xorg.conf 
 
     3.1 (emgd-xorg-conf which I wrote in the past does not work with EMGD 1.10+ [at least on my Asus T91])
 

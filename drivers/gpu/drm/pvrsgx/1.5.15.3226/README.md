@@ -16,20 +16,29 @@ OpenGL        | works (MeeGO binaries, others untested)
 OpenGL ES     | broken
 VA-API        | needs 1.0.x, but packages depend on newer 1.1.x
 
-version       | status
-------------- | -------------
-3.11          | works incl. backlight
-3.12          | should work (builds against it, but not tested)
-3.13          | should work (builds against it, but not tested)
+kernel version       | status
+-------------------- | -------------
+3.11                 | works incl. backlight
+3.12                 | should work (builds against it, but not tested)
+3.13                 | should work (builds against it, but not tested)
 
-Quick start guide
------------------
+VA-API version   | status
+---------------- | ------
+1.0.15           | works (tested on vainfo)
+1.0.16           | needs testing/packaging [version suggested by yoctoproject]
+1.0.17           | broken (tested on vainfo - get seg.fault)
+1.1.x (upstream) | broken (tested on vainfo - get seg.fault)
+
+
+
+Quick start guide (OpenGL support)
+----------------------------------
 
 1. Add this PPA: https://launchpad.net/~thopiekar/+archive/emgd
 
 2. Install the emgd driver (emgd-drm-dkms and xorg-module are minimum)
 
-3. create a xorg.conf on your own xorg.conf 
+3. Create a xorg.conf on your own xorg.conf 
 
     3.1 (emgd-xorg-conf which I wrote in the past does not work with EMGD 1.10+ [at least on my Asus T91])
 

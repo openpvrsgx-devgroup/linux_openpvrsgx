@@ -43,6 +43,7 @@ Quick start guide (OpenGL support)
     3.1 Create a file in /etc/modprobe.d/ (e.g. blacklist-emgd.conf) and fill it with the following content
 
     ```
+    blacklist gma500_gfx
     blacklist psb_gfx
     ```
 

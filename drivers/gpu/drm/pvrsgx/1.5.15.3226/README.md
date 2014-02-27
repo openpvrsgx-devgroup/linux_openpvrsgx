@@ -13,7 +13,7 @@ Status
 ------------- | -------------
 2D Accel      | works (MeeGO binaries, others untested)
 OpenGL        | works (MeeGO binaries, others untested)
-OpenGL ES     | works (completly provided by EMGD)
+OpenGL ES     | works, but unstable (completly provided by EMGD)
 VA-API        | broken (codebase seems to be very buggy - no debug output to find the problem)
 
 kernel version       | status
@@ -28,6 +28,16 @@ VA-API version   | status
 1.0.16           | broken [version suggested by yoctoproject - wonder how they get it work]
 1.0.17           | broken (tested on vainfo - get seg.fault)
 1.1.x (upstream) | broken (tested on vainfo - get seg.fault)
+
+Xserver requirements
+--------------------
+
+distribution  | Xserver video ABI
+------------- | -----------------
+fedora14      | 9  (Xserver  9)
+meego1.2      | 9  (Xserver  9)
+meego-wayland | 10 (Xserver 10)
+tizen1.0      | 9  (Xserver  9)
 
 GL/GLes info
 ------------
@@ -330,10 +340,14 @@ blit_cpu_locksurf_16bpp_2x1024x600:     EGL_KHR_lock_surface2 not supported
 blit_cpu_locksurf_32bpp_2x1024x600:     EGL_KHR_lock_surface2 not supported
 ```
 
-Quick start guide (OpenGL support)
+Quick start guide (no VA-API support)
 ----------------------------------
 
-1. Add this PPA: https://launchpad.net/~thopiekar/+archive/emgd
+1. Add this PPA: https://launchpad.net/~thopiekar/+archive/emgd 
+
+```
+sudo add-apt-repository lp:~thopiekar/emgd
+```
 
 2. Install the emgd driver ("emgd-drm-dkms" and "xserver-xorg-1.9-video-emgd" are minimum)
 

@@ -183,8 +183,6 @@ approximately the same as the monitor refresh rate.
 3418 frames in 5.0 seconds = 683.148 FPS
 2236 frames in 5.0 seconds = 447.150 FPS [lower left corner]
 2309 frames in 5.0 seconds = 461.613 FPS
-XIO:  fatal IO error 11 (Resource temporarily unavailable) on X server ":0"
-      after 48619 requests (48619 known processed) with 5 events remaining.
 ```
 ```
 $ es2gears

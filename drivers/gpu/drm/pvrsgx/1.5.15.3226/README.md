@@ -13,18 +13,18 @@ Status
 ------------- | -------------
 2D Accel      | works (MeeGO binaries, others untested)
 OpenGL        | works (MeeGO binaries, others untested)
-OpenGL ES     | broken
-VA-API        | needs 1.0.x, but packages depend on newer 1.1.x
+OpenGL ES     | works (completly provided by EMGD)
+VA-API        | broken (codebase seems to be very buggy - no debug output to find the problem)
 
 kernel version       | status
 -------------------- | -------------
-3.11                 | works incl. backlight
+3.11                 | works (incl. backlight, suspend)
 3.12                 | should work (builds against it, but not tested)
 3.13                 | should work (builds against it, but not tested)
 
 VA-API version   | status
 ---------------- | ------
-1.0.15           | works (tested on vainfo)
+1.0.15           | works, but encoding broken (tested on vainfo)
 1.0.16           | broken [version suggested by yoctoproject - wonder how they get it work]
 1.0.17           | broken (tested on vainfo - get seg.fault)
 1.1.x (upstream) | broken (tested on vainfo - get seg.fault)

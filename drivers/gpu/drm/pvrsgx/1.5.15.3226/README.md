@@ -28,6 +28,7 @@ VA-API version   | status
 1.0.16           | broken [version suggested by yoctoproject - wonder how they get it work]
 1.0.17           | broken (tested on vainfo - get seg.fault)
 1.1.x (upstream) | broken (tested on vainfo - get seg.fault)
+1.2.0 (Tizen IVI)| works, but e.g. vlc fails using it
 
 Xserver requirements
 --------------------

@@ -532,7 +532,7 @@ config INPUT_TWL6040_VIBRA
 	  be called twl6040_vibra.
 
 config INPUT_AS5013
-	tristate "as5015 device"
+	tristate "AS5013 nub device"
 	depends on I2C
 
 config INPUT_UINPUT

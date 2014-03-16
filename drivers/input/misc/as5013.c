@@ -8,8 +8,12 @@
 	the Free Software Foundation; version 2 of the License.
 */
 
+// FIXME: read_proc_t and write_proc_t has been removed in 3.12
+typedef void *read_proc_t, *write_proc_t;
+
 #define DEBUG
 #include <linux/kernel.h>
+#include <linux/slab.h>
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/i2c.h>
@@ -23,6 +27,7 @@
 #include <linux/i2c/vsense.h>
 #include <linux/gpio.h>
 #include <linux/regulator/consumer.h>
+#include <linux/proc_fs.h>
 #include <linux/of.h>
 
 
@@ -747,6 +752,8 @@ static int vsense_probe(struct i2c_client *client,
 
 	dev_dbg(&client->dev, "probe %02x, gpio %i, irq %i, \"%s\"\n",
 		client->addr, pdata->gpio_irq, client->irq, client->name);
+
+	proc_mkdir("pandora", NULL);	// ignore errors
 
 	snprintf(buff, sizeof(buff), "pandora/nub%d", ddata->proc_id);
 	ddata->proc_root = proc_mkdir(buff, NULL);

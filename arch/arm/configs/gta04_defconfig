@@ -3120,7 +3120,7 @@ CONFIG_IIO_CONSUMERS_PER_TRIGGER=2
 #
 # Accelerometers
 #
-CONFIG_BMA180=y
+# CONFIG_BMA180 is not set
 # CONFIG_IIO_ST_ACCEL_3AXIS is not set
 # CONFIG_KXSD9 is not set
 

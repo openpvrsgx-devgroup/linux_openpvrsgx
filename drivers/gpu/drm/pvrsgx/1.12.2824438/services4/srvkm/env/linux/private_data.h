@@ -64,7 +64,11 @@ typedef struct
 	IMG_UINT32 ui32OpenPID;
 
 	/* Global kernel MemInfo handle */
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID hKernelMemInfo;
+#else
 	IMG_HANDLE hKernelMemInfo;
+#endif
 
 #if defined(SUPPORT_DRI_DRM) && defined(PVR_SECURE_DRM_AUTH_EXPORT)
 	/* The private data is on a list in the per-process data structure */

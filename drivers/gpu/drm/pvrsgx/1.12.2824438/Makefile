@@ -14,8 +14,7 @@ ccflags-y := \
 	-I$(MTK_PATH_PLATFORM)/drivers/gpu/pvr/services4/srvkm/include \
 	-I$(MTK_PATH_PLATFORM)/drivers/gpu/pvr/services4/3rdparty/mtklfb \
 	-I$(MTK_PATH_PLATFORM)/drivers/gpu/pvr/services4/3rdparty/mtkbc \
-	-I$(MTK_PATH_PLATFORM)/drivers/gpu/pvr/services4/system/mt6589 \
-	-I$(MTK_PATH_PLATFORM)/drivers/gpu/pvr/services4/system/mtk_common
+	-I$(MTK_PATH_PLATFORM)/drivers/gpu/pvr/services4/system/mt6589
 
 ccflags-y += \
 	-fno-strict-aliasing \
@@ -46,6 +45,14 @@ ccflags-$(CONFIG_PVR_BUILD_RELEASE_MT6589) += \
 ccflags-$(CONFIG_PVR_BUILD_DEBUG_MT6589) += \
 	-include $(MTK_PATH_PLATFORM)/drivers/gpu/pvr/include4/config_kernel_$(VER).h
 
+ifeq ($(MTK_FORCE_GPU_89T), yes)
+ccflags-y += -DMTK_FORCE_T
+endif
+
+ifeq ($(MTK_FORCE_GPU_89M), yes)
+ccflags-y += -DMTK_FORCE_M
+endif
+
 pvrsrvkm-y := \
 	services4/srvkm/env/linux/osfunc.o \
 	services4/srvkm/env/linux/mutils.o \
@@ -55,12 +62,10 @@ pvrsrvkm-y := \
 	services4/srvkm/env/linux/proc.o \
 	services4/srvkm/env/linux/pvr_bridge_k.o \
 	services4/srvkm/env/linux/pvr_debug.o \
-	services4/srvkm/env/linux/pvr_sync.o \
 	services4/srvkm/env/linux/mm.o \
 	services4/srvkm/env/linux/mutex.o \
 	services4/srvkm/env/linux/event.o \
 	services4/srvkm/env/linux/osperproc.o \
-	services4/srvkm/env/linux/systrace.o \
 	services4/srvkm/common/buffer_manager.o \
 	services4/srvkm/common/devicemem.o \
 	services4/srvkm/common/deviceclass.o \
@@ -89,21 +94,18 @@ pvrsrvkm-y := \
 	services4/srvkm/devices/sgx/sgxtransfer.o \
 	services4/srvkm/devices/sgx/mmu.o \
 	services4/srvkm/devices/sgx/pb.o \
-	services4/system/mt6589/sysconfig.o \
+    services4/system/mt6589/sysconfig.o \
 	services4/system/mt6589/sysutils.o \
-	services4/srvkm/env/linux/mtk_debug.o \
-	services4/srvkm/env/linux/mtk_pp.o \
-	services4/srvkm/env/linux/mtk_hal_mm.o \
+    services4/srvkm/env/linux/mtk_debug.o \
 	services4/srvkm/common/ttrace.o \
-	services4/system/mt6589/mtk_sysfreq.o \
-	services4/system/mtk_common/mtk_gpu_hal.o
+	services4/system/mt6589/mtk_sysfreq.o
 
 pvrsrvkm-$(CONFIG_ION_MTK) += \
-	services4/srvkm/env/linux/ion.o
+    services4/srvkm/env/linux/ion.o
 
 ifeq ($(SUPPORT_ION),1)
 pvrsrvkm-y += \
-	services4/srvkm/env/linux/ion.o
+    services4/srvkm/env/linux/ion.o
 endif
 
 mtklfb-y := \

@@ -32,7 +32,7 @@ PVRSRV_ERROR MTKInsertDebugInfoKM(const char* szInfo)
 	strncpy(g_szDebugInfo[g_iIndex], szInfo, iLen);
 	g_szDebugInfo[g_iIndex][iLen]='\0';
 	g_iIndex = (g_iIndex + 1)%MAX_COUNT;
-	snprintf(g_szDebugInfo[g_iIndex], MAX_LENGTH, "---");
+	sprintf(g_szDebugInfo[g_iIndex], "---");
 	spin_unlock(&g_kLock);
 	return PVRSRV_OK;
 }

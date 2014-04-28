@@ -368,7 +368,7 @@ PVRSRV_ERROR SGXPrePowerState (IMG_HANDLE				hDevHandle,
 		#endif /* PDUMP */
 
 		/* Wait for the pending ukernel to host interrupts to come back. */
-		#if !defined(NO_HARDWARE) && defined(SUPPORT_LISR_MISR_SYNC)
+		#if !defined(NO_HARDWARE)
 		if (PollForValueKM(&g_ui32HostIRQCountSample,
 							psDevInfo->psSGXHostCtl->ui32InterruptCount,
 							0xffffffff,
@@ -380,7 +380,7 @@ PVRSRV_ERROR SGXPrePowerState (IMG_HANDLE				hDevHandle,
 			SGXDumpDebugInfo(psDevInfo, IMG_FALSE);
 			PVR_DBG_BREAK;
 		}
-		#endif /* NO_HARDWARE && SUPPORT_LISR_MISR_SYNC*/
+		#endif /* NO_HARDWARE */
 #if defined(SGX_FEATURE_MP)
 		ui32CoresEnabled = ((OSReadHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_MASTER_CORE) & EUR_CR_MASTER_CORE_ENABLE_MASK) >> EUR_CR_MASTER_CORE_ENABLE_SHIFT) + 1;
 #else
@@ -482,11 +482,23 @@ PVRSRV_ERROR SGXPostPowerState (IMG_HANDLE				hDevHandle,
 			/*
 				Run the SGX init script.
 			*/
-			eError = SGXInitialise(psDevInfo, IMG_FALSE);
-			if (eError != PVRSRV_OK)
 			{
-				PVR_DPF((PVR_DBG_ERROR,"SGXPostPowerState: SGXInitialise failed"));
-				return eError;
+				int counter = 0;
+				do
+				{
+					eError = SGXInitialise(psDevInfo, IMG_FALSE);
+					if (eError != PVRSRV_OK)
+					{
+						PVR_DPF((PVR_DBG_ERROR,"SGXPostPowerState: SGXInitialise failed (%d) counter (%d)", eError, counter));
+						if (eError != PVRSRV_ERROR_RETRY)
+						{
+							return eError;
+						}
+					}
+
+					counter ++;
+				}
+				while (eError==PVRSRV_ERROR_RETRY);
 			}
 		}
 		else

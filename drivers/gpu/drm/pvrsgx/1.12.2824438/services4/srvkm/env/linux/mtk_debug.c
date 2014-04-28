@@ -227,14 +227,14 @@ static void MTKPPAllocData(MTK_PROC_PRINT_DATA *data, int data_size, int max_lin
 	data->data = (char *)kmalloc(sizeof(char)*data_size, GFP_ATOMIC);
 	if (data->data == NULL)
 	{
-		PVR_DPF((PVR_DBG_ERROR, "%s, kmalloc data fail, size = %d", 
+		PVR_DPF((PVR_DBG_ERROR, "%s, vmalloc data fail, size = %d", 
 			__func__, data_size));
 		goto err_alloc_struct;
 	}
 	data->line = (char **)kmalloc(sizeof(char*)*max_line, GFP_ATOMIC);
 	if (data->line == NULL)
 	{
-		PVR_DPF((PVR_DBG_ERROR, "%s, kmalloc line fail, size = %d", 
+		PVR_DPF((PVR_DBG_ERROR, "%s, vmalloc line fail, size = %d", 
 			__func__, data_size));
 		goto err_alloc_data;
 	}
@@ -293,8 +293,9 @@ static void* MTKPPSeqStart(struct seq_file *s, loff_t *pos)
 	if (*pos >= MTK_PP_R_SIZE)	
 	{
 		// lono@2013/1/7
-		// keep buffer in kernel
-		//MTKPPFreeData(g_MTKPPdata[MTK_PP_R_SGXOSTimer]);
+		// seq_file cycle: ^(A(CD)+B)+AB$
+		// A: start, B: stop, C: show, D: next
+		MTKPPFreeData(g_MTKPPdata[MTK_PP_R_SGXOSTimer]);
 		return NULL;
 	}
 
@@ -402,8 +403,8 @@ static IMG_VOID MTKPPInit(IMG_VOID)
 		int max_line;
 	} mtk_pp_register_tabls[] =
 	{	
-		{MTK_PP_R_SGXOSTimer,	MTK_PP_B_QUEUEBUFFER,	1024 * 1024 * 2,  1024 * 64},
-		{MTK_PP_R_DEVMEM,		MTK_PP_B_RINGBUFFER,	1024 * 1024 * 2,  1024 * 64},
+		{MTK_PP_R_SGXOSTimer,	MTK_PP_B_QUEUEBUFFER,	0,					0},
+		{MTK_PP_R_DEVMEM,		MTK_PP_B_RINGBUFFER,	1024 * 1024 * 1,	512},
 	};
 
 	for (i = 0; i < MTK_PP_R_SIZE; ++i)
@@ -428,8 +429,8 @@ static IMG_VOID MTKPPInit(IMG_VOID)
 		{
 			MTKPPAllocData(
 				g_MTKPPdata[i],
-				mtk_pp_register_tabls[i].data_size,
-				mtk_pp_register_tabls[i].max_line
+				mtk_pp_register_tabls[i].data_size * 2,
+				mtk_pp_register_tabls[i].max_line * 2
 				);
 			
 			MTKPPCleanData(g_MTKPPdata[i]);
@@ -476,38 +477,17 @@ MTK_PROC_PRINT_DATA *MTK_PP_4_SGXOSTimer_getregister()
 
 int MTK_PP_4_SGXOSTimer_register(void)
 {
-    int i = 0;
-    int allocate_size[] = {
-        1024 * 1024 * 4,    // 4 MB
-        1024 * 1024 * 2,    // 2 MB
-        1024 * 1024 * 1,    // 1 MB
-        1024 * 512          // 512 KB
-    };
-    
 	spin_lock_irqsave(&g_MTKPP_4_SGXOSTimer_lock, g_MTKPP_4_SGXOSTimer_irqflags);
 
-    // try allocate by different size
-	while (g_MTKPPdata[MTK_PP_R_SGXOSTimer]->data == NULL && i < ARRAY_SIZE(allocate_size))
+	if (g_MTKPPdata[MTK_PP_R_SGXOSTimer]->data == NULL)
 	{
 		MTKPPAllocData(
 			g_MTKPPdata[MTK_PP_R_SGXOSTimer], 
-			allocate_size[i++],
+			1024 * 1024 * 4,
 			1024 * 64
 			);
-
-        if (g_MTKPPdata[MTK_PP_R_SGXOSTimer]->data != NULL)
-        {
-            // allocate success, clean data
-		    MTKPPCleanData(g_MTKPPdata[MTK_PP_R_SGXOSTimer]);
-            break;
-        }
+		MTKPPCleanData(g_MTKPPdata[MTK_PP_R_SGXOSTimer]);
 	}
-
-    if (g_MTKPPdata[MTK_PP_R_SGXOSTimer]->data == NULL)
-    {
-        // allocate fail
-    	PVR_DPF((PVR_DBG_ERROR, "%s: fail to allocate 512 KB for gpulog", __func__));
-    }
 
 	MTKPPPrintQueueBuffer2(g_MTKPPdata[MTK_PP_R_SGXOSTimer], "=== start ===");
 	

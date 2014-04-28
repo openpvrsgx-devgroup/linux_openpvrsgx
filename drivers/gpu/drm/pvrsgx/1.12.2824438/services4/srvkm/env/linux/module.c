@@ -506,7 +506,7 @@ PVR_MOD_STATIC void PVRSRVDriverShutdown(LDM_DEV *pDevice)
 		 * processes trying to use the driver after it has been
 		 * shutdown.
 		 */
-		LinuxLockMutexNested(&gPVRSRVLock, PVRSRV_LOCK_CLASS_BRIDGE);
+		LinuxLockMutex(&gPVRSRVLock);
 
 		(void) PVRSRVSetPowerStateKM(PVRSRV_SYS_POWER_STATE_D3);
 	}
@@ -567,7 +567,7 @@ PVR_MOD_STATIC int PVRSRVDriverSuspend(LDM_DEV *pDevice, pm_message_t state)
 
 	if (!bDriverIsSuspended && !bDriverIsShutdown)
 	{
-		LinuxLockMutexNested(&gPVRSRVLock, PVRSRV_LOCK_CLASS_BRIDGE);
+		LinuxLockMutex(&gPVRSRVLock);
 
 		if (PVRSRVSetPowerStateKM(PVRSRV_SYS_POWER_STATE_D3) == PVRSRV_OK)
 		{
@@ -758,7 +758,7 @@ static int PVRSRVOpen(struct inode unref__ * pInode, struct file *pFile)
 	PVRSRV_ENV_PER_PROCESS_DATA *psEnvPerProc;
 #endif
 
-	LinuxLockMutexNested(&gPVRSRVLock, PVRSRV_LOCK_CLASS_BRIDGE);
+	LinuxLockMutex(&gPVRSRVLock);
 
 	ui32PID = OSGetCurrentProcessIDKM();
 
@@ -829,7 +829,7 @@ static int PVRSRVRelease(struct inode unref__ * pInode, struct file *pFile)
 	PVRSRV_FILE_PRIVATE_DATA *psPrivateData;
 	int err = 0;
 
-	LinuxLockMutexNested(&gPVRSRVLock, PVRSRV_LOCK_CLASS_BRIDGE);
+	LinuxLockMutex(&gPVRSRVLock);
 
 #if defined(SUPPORT_DRI_DRM)
 	psPrivateData = (PVRSRV_FILE_PRIVATE_DATA *)pvPrivData;

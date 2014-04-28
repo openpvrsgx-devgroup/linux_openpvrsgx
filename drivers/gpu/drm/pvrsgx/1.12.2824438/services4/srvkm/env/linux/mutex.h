@@ -44,7 +44,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define __INCLUDED_LINUX_MUTEX_H_
 
 #include <linux/version.h>
-#include <linux/sched.h>
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,15))
 #include <linux/mutex.h>
@@ -56,18 +55,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,15))
 
-#if defined(MTK_DEBUG_PROC_PRINT)
-
-typedef struct {
-	struct mutex hMutex;
-	int hHeldBy;
-}PVRSRV_LINUX_MUTEX;
-
-#else
-
 typedef struct mutex PVRSRV_LINUX_MUTEX;
-
-#endif
 
 #else /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,15)) */
 
@@ -86,15 +74,12 @@ typedef struct {
 
 enum PVRSRV_MUTEX_LOCK_CLASS
 {
-	PVRSRV_LOCK_CLASS_POWER,
 	PVRSRV_LOCK_CLASS_BRIDGE,
 	PVRSRV_LOCK_CLASS_MMAP,
-	PVRSRV_LOCK_CLASS_MM_DEBUG,
-	PVRSRV_LOCK_CLASS_PVR_DEBUG,
 };
 
 #if defined(CONFIG_PROVE_LOCKING)
-#define LinuxInitMutex(l) mutex_init(l)
+#define LinuxInitMutex(l) mutex_init((l))
 #else
 extern IMG_VOID LinuxInitMutex(PVRSRV_LINUX_MUTEX *psPVRSRVMutex);
 #endif

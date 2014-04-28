@@ -54,21 +54,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "mutex.h"
 
 
-#include "mtk_pp.h"
-
-#if defined(MTK_DEBUG_PROC_PRINT)
-extern PVRSRV_LINUX_MUTEX gPVRSRVLock; /* bridge lock */
-extern PVRSRV_LINUX_MUTEX gsPMMutex; /* power lock */
-
-static inline char mtk_GetMutexName(PVRSRV_LINUX_MUTEX *psPVRSRVMutex)
-{
-	if (psPVRSRVMutex == &gPVRSRVLock) return 'B';
-	if (psPVRSRVMutex == &gsPMMutex) return 'P';
-	return ' ';
-}
-
-#endif
-
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,15))
 
 #if !defined(CONFIG_PROVE_LOCKING)
@@ -80,71 +65,33 @@ IMG_VOID LinuxInitMutex(PVRSRV_LINUX_MUTEX *psPVRSRVMutex)
 
 IMG_VOID LinuxLockMutex(PVRSRV_LINUX_MUTEX *psPVRSRVMutex)
 {
-	MTKPP_LOG(MTKPP_ID_MUTEX, "Lock %c %p: %d (current:%d)", 
-		mtk_GetMutexName(psPVRSRVMutex), psPVRSRVMutex, psPVRSRVMutex->hHeldBy, current->pid);
-
     mutex_lock(psPVRSRVMutex);
-	
-#if defined(MTK_DEBUG_PROC_PRINT)
-	psPVRSRVMutex->hHeldBy = current->pid;
-#endif
 }
 
 IMG_VOID LinuxLockMutexNested(PVRSRV_LINUX_MUTEX *psPVRSRVMutex, unsigned int uiLockClass)
 {
-	MTKPP_LOG(MTKPP_ID_MUTEX, "LockNested %c %p,c%d: %d (current:%d)", 
-		mtk_GetMutexName(psPVRSRVMutex), psPVRSRVMutex, uiLockClass, psPVRSRVMutex->hHeldBy, current->pid);
-	
 	mutex_lock_nested(psPVRSRVMutex, uiLockClass);
-	
-#if defined(MTK_DEBUG_PROC_PRINT)
-	psPVRSRVMutex->hHeldBy = current->pid;
-#endif
 }
 
 PVRSRV_ERROR LinuxLockMutexInterruptible(PVRSRV_LINUX_MUTEX *psPVRSRVMutex)
 {
-	MTKPP_LOG(MTKPP_ID_MUTEX, "LockInterruptible %c %p: %d (current:%d)", 
-		mtk_GetMutexName(psPVRSRVMutex), psPVRSRVMutex, psPVRSRVMutex->hHeldBy, current->pid);
-	
     if(mutex_lock_interruptible(psPVRSRVMutex) == -EINTR)
     {
         return PVRSRV_ERROR_MUTEX_INTERRUPTIBLE_ERROR;
     }
     else
     {
-#if defined(MTK_DEBUG_PROC_PRINT)
-    	psPVRSRVMutex->hHeldBy = current->pid;
-#endif
         return PVRSRV_OK;
     }
 }
 
 IMG_INT32 LinuxTryLockMutex(PVRSRV_LINUX_MUTEX *psPVRSRVMutex)
 {
-	IMG_INT32 ret;
-
-	MTKPP_LOG(MTKPP_ID_MUTEX, "TryLock %c %p: %d (current:%d)", 
-		mtk_GetMutexName(psPVRSRVMutex), psPVRSRVMutex, psPVRSRVMutex->hHeldBy, current->pid);
-	
-	ret = mutex_trylock(psPVRSRVMutex);
-	
-#if defined(MTK_DEBUG_PROC_PRINT)
-	if (ret) psPVRSRVMutex->hHeldBy = current->pid;
-#endif
-
-	return ret;
+    return mutex_trylock(psPVRSRVMutex);
 }
 
 IMG_VOID LinuxUnLockMutex(PVRSRV_LINUX_MUTEX *psPVRSRVMutex)
 {
-	MTKPP_LOG(MTKPP_ID_MUTEX, "UnLock %c %p: %d (current:%d)", 
-		mtk_GetMutexName(psPVRSRVMutex), psPVRSRVMutex, psPVRSRVMutex->hHeldBy, current->pid);
-	
-#if defined(MTK_DEBUG_PROC_PRINT)
-	psPVRSRVMutex->hHeldBy = 0;
-#endif
-
     mutex_unlock(psPVRSRVMutex);
 }
 
@@ -196,7 +143,7 @@ IMG_INT32 LinuxTryLockMutex(PVRSRV_LINUX_MUTEX *psPVRSRVMutex)
         atomic_dec(&psPVRSRVMutex->Count);
     }
 
-    return Status == 0;
+    return Status;
 }
 
 IMG_VOID LinuxUnLockMutex(PVRSRV_LINUX_MUTEX *psPVRSRVMutex)

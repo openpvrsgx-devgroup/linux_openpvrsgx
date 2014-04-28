@@ -42,28 +42,44 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef __IMG_LINUX_ION_H__
 #define __IMG_LINUX_ION_H__
 
-#if defined(SUPPORT_ION)
+#include <linux/ion.h>
+#if defined (CONFIG_ION_OMAP)
+#include <linux/omap_ion.h>
+#endif
+#if defined (CONFIG_ION_MTK)
+#include <linux/ion_drv.h>
+#endif
 
-#include SUPPORT_ION_HEADER
-
+#if defined (SUPPORT_ION)
 #include "img_types.h"
 #include "servicesext.h"
+#endif
 
+void PVRSRVExportFDToIONHandles(int fd, struct ion_client **client,
+								struct ion_handle *handles[2]);
+
+struct ion_handle *PVRSRVExportFDToIONHandle(int fd,
+											 struct ion_client **client);
+
+#if defined (SUPPORT_ION)
 PVRSRV_ERROR IonInit(IMG_VOID);
-
 IMG_VOID IonDeinit(IMG_VOID);
 
-PVRSRV_ERROR IonImportBufferAndAcquirePhysAddr(IMG_HANDLE hIonDev,
-											   IMG_UINT32 ui32NumFDs,
-											   IMG_INT32  *pi32BufferFDs,
-											   IMG_UINT32 *pui32PageCount,
-											   IMG_SYS_PHYADDR **ppsSysPhysAddr,
-											   IMG_PVOID *ppvKernAddr0,
-											   IMG_HANDLE *phPriv,
-											   IMG_HANDLE *phUnique);
+PVRSRV_ERROR IonImportBufferAndAquirePhysAddr(IMG_HANDLE hIonDev,
+											  IMG_HANDLE hIonFD,
+											  IMG_UINT32 *pui32PageCount,
+											  IMG_SYS_PHYADDR **ppasSysPhysAddr,
+											  IMG_PVOID *ppvKernAddr,
+											  IMG_HANDLE *phPriv);
 
 IMG_VOID IonUnimportBufferAndReleasePhysAddr(IMG_HANDLE hPriv);
 
-#endif /* defined(SUPPORT_ION) */
 
+#if defined (CONFIG_ION_MTK)
+#include "servicesint.h"
+int PVRSRVGetIONFDKM(PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo);
+#endif 
+
+
+#endif
 #endif /* __IMG_LINUX_ION_H__ */

@@ -4,8 +4,6 @@
 #include "sgxdefs.h"
 #include "services_headers.h"
 
-#include "mach/mt_clkmgr.h"
-
 #define TBLTYPE0        0x0
 #define TBLTYPE1        0x1
 #define TBLTYPE2        0x2

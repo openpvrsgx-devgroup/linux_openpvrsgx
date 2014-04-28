@@ -57,7 +57,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "pvr_debug.h"
 #include "sgxutils.h"
 #include "ttrace.h"
-#include "sgxmmu.h"
 
 #ifdef __linux__
 #include <linux/kernel.h>	// sprintf
@@ -288,11 +287,7 @@ PVRSRV_ERROR SGXScheduleCCBCommand(PVRSRV_DEVICE_NODE	*psDeviceNode,
 #if defined(PDUMP)
 	IMG_VOID *pvDumpCommand;
 	IMG_BOOL bPDumpIsSuspended = PDumpIsSuspended();
-#if defined(SUPPORT_PDUMP_MULTI_PROCESS)
-	IMG_BOOL bPDumpActive = _PDumpIsProcessActive();
-#else
-	IMG_BOOL bPDumpActive = IMG_TRUE;
-#endif
+	IMG_BOOL bPersistentProcess = IMG_FALSE;
 #else
 	PVR_UNREFERENCED_PARAMETER(ui32CallerID);
 	PVR_UNREFERENCED_PARAMETER(ui32PDumpFlags);
@@ -430,6 +425,20 @@ PVRSRV_ERROR SGXScheduleCCBCommand(PVRSRV_DEVICE_NODE	*psDeviceNode,
 		}
 	}
 #endif
+#if defined(PDUMP)
+	/*
+	 *	For persistent processes, the HW kicks should not go into the
+	 *	extended init phase; only keep memory transactions from the
+	 *	window system which are necessary to run the client app.
+	 */
+	{
+		PVRSRV_PER_PROCESS_DATA* psPerProc = PVRSRVFindPerProcessData();
+		if(psPerProc != IMG_NULL)
+		{
+			bPersistentProcess = psPerProc->bPDumpPersistent;
+		}
+	}
+#endif /* PDUMP */
 	psKernelCCB = psDevInfo->psKernelCCBInfo;
 
 	psSGXCommand = SGXAcquireKernelCCBSlot(psKernelCCB);
@@ -490,7 +499,7 @@ PVRSRV_ERROR SGXScheduleCCBCommand(PVRSRV_DEVICE_NODE	*psDeviceNode,
 
 #if defined(PDUMP)
 	if ((ui32CallerID != ISR_ID) && (bPDumpIsSuspended == IMG_FALSE) &&
-		(bPDumpActive == IMG_TRUE) )
+		(bPersistentProcess == IMG_FALSE) )
 	{
 		/* Poll for space in the CCB. */
 		PDUMPCOMMENTWITHFLAGS(ui32PDumpFlags, "Poll for space in the Kernel CCB\r\n");
@@ -553,7 +562,7 @@ PVRSRV_ERROR SGXScheduleCCBCommand(PVRSRV_DEVICE_NODE	*psDeviceNode,
 
 #if defined(PDUMP)
 	if ((ui32CallerID != ISR_ID) && (bPDumpIsSuspended == IMG_FALSE) &&
-		(bPDumpActive == IMG_TRUE) )
+		(bPersistentProcess == IMG_FALSE) )
 	{
 	#if defined(FIX_HW_BRN_26620) && defined(SGX_FEATURE_SYSTEM_CACHE) && !defined(SGX_BYPASS_SYSTEM_CACHE)
 		PDUMPCOMMENTWITHFLAGS(ui32PDumpFlags, "Poll for previous Kernel CCB CMD to be read\r\n");
@@ -713,9 +722,10 @@ PVRSRV_ERROR SGXScheduleCCBCommandKM(PVRSRV_DEVICE_NODE		*psDeviceNode,
 	}
 	else
 	{
-		PVR_DPF((PVR_DBG_ERROR,"SGXScheduleCCBCommandKM failed to power up device - "
+		PVR_DPF((PVR_DBG_ERROR,"SGXScheduleCCBCommandKM failed to acquire lock - "
 				 "ui32CallerID:%d eError:%u", ui32CallerID, eError));
-		PVRSRVPowerUnlock(ui32CallerID);
+        //[MTK]should add here.
+        PVRSRVPowerUnlock(ui32CallerID);
 		return eError;
 	}
 
@@ -740,17 +750,9 @@ PVRSRV_ERROR SGXScheduleProcessQueuesKM(PVRSRV_DEVICE_NODE *psDeviceNode)
 {
 	PVRSRV_ERROR 		eError;
 	PVRSRV_SGXDEV_INFO 	*psDevInfo = psDeviceNode->pvDevice;
-	SGXMKIF_HOST_CTL	*psHostCtl;
+	SGXMKIF_HOST_CTL	*psHostCtl = psDevInfo->psKernelSGXHostCtlMemInfo->pvLinAddrKM;
 	IMG_UINT32			ui32PowerStatus;
 	SGXMKIF_COMMAND		sCommand = {0};
-
-	if (psDevInfo->psKernelSGXHostCtlMemInfo == IMG_NULL)
-	{
-		/* Part2 hasn't run yet, we can't do anything */
-		return PVRSRV_OK;
-	}
-
-	psHostCtl = psDevInfo->psKernelSGXHostCtlMemInfo->pvLinAddrKM;
 
 	ui32PowerStatus = psHostCtl->ui32PowerStatus;
 	if ((ui32PowerStatus & PVRSRV_USSE_EDM_POWMAN_NO_WORK) != 0)
@@ -807,7 +809,11 @@ IMG_BOOL SGXIsDevicePowered(PVRSRV_DEVICE_NODE *psDeviceNode)
 ******************************************************************************/
 IMG_EXPORT
 PVRSRV_ERROR SGXGetInternalDevInfoKM(IMG_HANDLE hDevCookie,
+#if defined (SUPPORT_SID_INTERFACE)
+									SGX_INTERNAL_DEVINFO_KM *psSGXInternalDevInfo)
+#else
 									SGX_INTERNAL_DEVINFO *psSGXInternalDevInfo)
+#endif
 {
 	PVRSRV_SGXDEV_INFO *psDevInfo = (PVRSRV_SGXDEV_INFO *)((PVRSRV_DEVICE_NODE *)hDevCookie)->pvDevice;
 
@@ -1094,7 +1100,6 @@ IMG_HANDLE SGXRegisterHWRenderContextKM(IMG_HANDLE				hDeviceNode,
     IMG_UINT8 *pSrc;
     IMG_UINT8 *pDst;
 	PRESMAN_ITEM psResItem;
-	IMG_UINT32 ui32PDDevPAddrInDirListFormat;
 
 	eError = OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
 						sizeof(SGX_HW_RENDER_CONTEXT_CLEANUP),
@@ -1160,23 +1165,17 @@ IMG_HANDLE SGXRegisterHWRenderContextKM(IMG_HANDLE				hDeviceNode,
     psMMUContext = BM_GetMMUContextFromMemContext(hDevMemContextInt);
     sPDDevPAddr = psDeviceNode->pfnMMUGetPDDevPAddr(psMMUContext);
 
-	/* 
-	   The PDDevPAddr needs to be shifted-down, as the uKernel expects it in the
-	   format it will be inserted into the DirList registers in.
-	*/
-	ui32PDDevPAddrInDirListFormat = (IMG_UINT32)(sPDDevPAddr.uiAddr >> SGX_MMU_PTE_ADDR_ALIGNSHIFT);
-
     /* 
        patch-in the Page-Directory Device-Physical address. Note that this is
        copied-in one byte at a time, as we have no guarantee that the usermode-
        provided ui32OffsetToPDDevPAddr is a validly-aligned address for the
        current CPU architecture.
      */
-	pSrc = (IMG_UINT8 *)&ui32PDDevPAddrInDirListFormat;
+    pSrc = (IMG_UINT8 *)&sPDDevPAddr;
     pDst = (IMG_UINT8 *)psCleanup->psHWRenderContextMemInfo->pvLinAddrKM;
     pDst += ui32OffsetToPDDevPAddr;
 
-    for (iPtrByte = 0; iPtrByte < sizeof(ui32PDDevPAddrInDirListFormat); iPtrByte++)
+    for (iPtrByte = 0; iPtrByte < sizeof(IMG_DEV_PHYADDR); iPtrByte++)
     {
         pDst[iPtrByte] = pSrc[iPtrByte];
     }
@@ -1281,7 +1280,6 @@ IMG_HANDLE SGXRegisterHWTransferContextKM(IMG_HANDLE				hDeviceNode,
     IMG_UINT8 *pSrc;
     IMG_UINT8 *pDst;
 	PRESMAN_ITEM psResItem;
-	IMG_UINT32 ui32PDDevPAddrInDirListFormat;
 
 	eError = OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
 						sizeof(SGX_HW_TRANSFER_CONTEXT_CLEANUP),
@@ -1298,7 +1296,6 @@ IMG_HANDLE SGXRegisterHWTransferContextKM(IMG_HANDLE				hDeviceNode,
 	psDevMemoryInfo = &psDeviceNode->sDevMemoryInfo;
     psHeapInfo = &psDevMemoryInfo->psDeviceMemoryHeap[SGX_KERNEL_DATA_HEAP_ID];
 
-	PDUMPCOMMENTWITHFLAGS(PDUMP_FLAGS_CONTINUOUS, "Allocate HW Transfer context");
     eError = PVRSRVAllocDeviceMemKM(hDeviceNode,
                                psPerProc,
                                psHeapInfo->hDevMemHeap,
@@ -1348,23 +1345,17 @@ IMG_HANDLE SGXRegisterHWTransferContextKM(IMG_HANDLE				hDeviceNode,
     psMMUContext = BM_GetMMUContextFromMemContext(hDevMemContextInt);
     sPDDevPAddr = psDeviceNode->pfnMMUGetPDDevPAddr(psMMUContext);
 
-	/* 
-	   The PDDevPAddr needs to be shifted-down, as the uKernel expects it in the
-	   format it will be inserted into the DirList registers in.
-	*/
-	ui32PDDevPAddrInDirListFormat = (IMG_UINT32)(sPDDevPAddr.uiAddr >> SGX_MMU_PTE_ADDR_ALIGNSHIFT);
-
     /* 
        patch-in the Page-Directory Device-Physical address. Note that this is
        copied-in one byte at a time, as we have no guarantee that the usermode-
        provided ui32OffsetToPDDevPAddr is a validly-aligned address for the
        current CPU architecture.
      */
-	pSrc = (IMG_UINT8 *)&ui32PDDevPAddrInDirListFormat;
+    pSrc = (IMG_UINT8 *)&sPDDevPAddr;
     pDst = (IMG_UINT8 *)psCleanup->psHWTransferContextMemInfo->pvLinAddrKM;
     pDst += ui32OffsetToPDDevPAddr;
 
-    for (iPtrByte = 0; iPtrByte < sizeof(ui32PDDevPAddrInDirListFormat); iPtrByte++)
+    for (iPtrByte = 0; iPtrByte < sizeof(IMG_DEV_PHYADDR); iPtrByte++)
     {
         pDst[iPtrByte] = pSrc[iPtrByte];
     }
@@ -1622,7 +1613,6 @@ IMG_HANDLE SGXRegisterHW2DContextKM(IMG_HANDLE				hDeviceNode,
     IMG_UINT8 *pSrc;
     IMG_UINT8 *pDst;
 	PRESMAN_ITEM psResItem;
-	IMG_UINT32 ui32PDDevPAddrInDirListFormat;
 
 	eError = OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
 						sizeof(SGX_HW_2D_CONTEXT_CLEANUP),
@@ -1687,23 +1677,17 @@ IMG_HANDLE SGXRegisterHW2DContextKM(IMG_HANDLE				hDeviceNode,
     psMMUContext = BM_GetMMUContextFromMemContext(hDevMemContextInt);
     sPDDevPAddr = psDeviceNode->pfnMMUGetPDDevPAddr(psMMUContext);
 
-	/* 
-	   The PDDevPAddr needs to be shifted-down, as the uKernel expects it in the
-	   format it will be inserted into the DirList registers in.
-	*/
-	ui32PDDevPAddrInDirListFormat = sPDDevPAddr.uiAddr >> SGX_MMU_PTE_ADDR_ALIGNSHIFT;
-
     /* 
        patch-in the Page-Directory Device-Physical address. Note that this is
        copied-in one byte at a time, as we have no guarantee that the usermode-
        provided ui32OffsetToPDDevPAddr is a validly-aligned address for the
        current CPU architecture.
      */
-	pSrc = (IMG_UINT8 *)&ui32PDDevPAddrInDirListFormat;
+    pSrc = (IMG_UINT8 *)&sPDDevPAddr;
     pDst = (IMG_UINT8 *)psCleanup->psHW2DContextMemInfo->pvLinAddrKM;
     pDst += ui32OffsetToPDDevPAddr;
 
-    for (iPtrByte = 0; iPtrByte < sizeof(ui32PDDevPAddrInDirListFormat); iPtrByte++)
+    for (iPtrByte = 0; iPtrByte < sizeof(IMG_DEV_PHYADDR); iPtrByte++)
     {
         pDst[iPtrByte] = pSrc[iPtrByte];
     }
@@ -1872,8 +1856,8 @@ PVRSRV_ERROR SGX2DQueryBlitsCompleteKM(PVRSRV_SGXDEV_INFO	*psDevInfo,
 	{
 		PVRSRV_SYNC_DATA *psSyncData = psSyncInfo->psSyncData;
 
-		PVR_TRACE(("SGX2DQueryBlitsCompleteKM: Syncinfo: 0x%p, Syncdata: 0x%p",
-				psSyncInfo, psSyncData));
+		PVR_TRACE(("SGX2DQueryBlitsCompleteKM: Syncinfo: 0x%x, Syncdata: 0x%x",
+				(IMG_UINTPTR_T)psSyncInfo, (IMG_UINTPTR_T)psSyncData));
 
 		PVR_TRACE(("SGX2DQueryBlitsCompleteKM: Read ops complete: %d, Read ops pending: %d", psSyncData->ui32ReadOpsComplete, psSyncData->ui32ReadOpsPending));
 		PVR_TRACE(("SGX2DQueryBlitsCompleteKM: Write ops complete: %d, Write ops pending: %d", psSyncData->ui32WriteOpsComplete, psSyncData->ui32WriteOpsPending));

@@ -43,8 +43,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define __ENV_PERPROC_H__
 
 #include <linux/list.h>
+#include <linux/proc_fs.h>
 
-#include "proc.h"
 #include "services.h"
 #include "handle.h"
 
@@ -56,7 +56,7 @@ typedef struct _PVRSRV_ENV_PER_PROCESS_DATA_
 #if defined(SUPPORT_DRI_DRM) && defined(PVR_SECURE_DRM_AUTH_EXPORT)
 	struct list_head sDRMAuthListHead;
 #endif
-#if defined(SUPPORT_ION)
+#if defined (SUPPORT_ION)
  	struct ion_client *psIONClient;
 	IMG_CHAR azIonClientName[ION_CLIENT_NAME_SIZE];
 #endif

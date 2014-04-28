@@ -71,7 +71,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "mtk_debug.h"
 
 IMG_UINT32 g_ui32HostIRQCountSample = 0;
-
 #if defined(PVRSRV_USSE_EDM_STATUS_DEBUG)
 
 static const IMG_CHAR *SGXUKernelStatusString(IMG_UINT32 code)
@@ -244,6 +243,10 @@ static PVRSRV_ERROR InitDevInfo(PVRSRV_PER_PROCESS_DATA *psPerProc,
 #endif
 #if defined(FIX_HW_BRN_29823)
 	psDevInfo->psKernelDummyTermStreamMemInfo = (PVRSRV_KERNEL_MEM_INFO *)psInitInfo->hKernelDummyTermStreamMemInfo;
+#endif
+#if defined(SGX_FEATURE_VDM_CONTEXT_SWITCH) && defined(FIX_HW_BRN_31559)
+	psDevInfo->psKernelVDMSnapShotBufferMemInfo = (PVRSRV_KERNEL_MEM_INFO *)psInitInfo->hKernelVDMSnapShotBufferMemInfo;
+	psDevInfo->psKernelVDMCtrlStreamBufferMemInfo = (PVRSRV_KERNEL_MEM_INFO *)psInitInfo->hKernelVDMCtrlStreamBufferMemInfo;
 #endif
 #if defined(SGX_FEATURE_VDM_CONTEXT_SWITCH) && \
 	defined(FIX_HW_BRN_33657) && defined(SUPPORT_SECURE_33657_FIX)
@@ -641,7 +644,7 @@ PVRSRV_ERROR SGXInitialise(PVRSRV_SGXDEV_INFO	*psDevInfo,
 	{
 		PVR_DPF((PVR_DBG_ERROR, "SGXInitialise: Wait for uKernel initialisation failed"));
 
-		SGXDumpDebugInfo(psDevInfo, IMG_TRUE);
+		SGXDumpDebugInfo(psDevInfo, IMG_FALSE);
 		PVR_DBG_BREAK;
 
 		return PVRSRV_ERROR_RETRY;
@@ -1272,7 +1275,7 @@ IMG_VOID SGXDumpDebugInfo (PVRSRV_SGXDEV_INFO	*psDevInfo,
 						   IMG_BOOL				bDumpSGXRegs)
 {
 	IMG_UINT32	ui32CoreNum;
-	
+
 	MDWP_REGISTER;
 
 	PVR_LOG_MDWP(("SGX debug (%s)", PVRVERSION_STRING));
@@ -1637,19 +1640,11 @@ IMG_VOID HWRecoveryResetSGX (PVRSRV_DEVICE_NODE *psDeviceNode,
 	/* Suspend pdumping. */
 	PDUMPSUSPEND();
 
+	/* Reset and re-initialise SGX. */
+	eError = SGXInitialise(psDevInfo, IMG_TRUE);
+	if (eError != PVRSRV_OK)
 	{
-		int counter = 0;
-		/* Reset and re-initialise SGX. */
-		do
-		{
-			eError = SGXInitialise(psDevInfo, IMG_TRUE);
-			if (eError != PVRSRV_OK)
-			{
-				PVR_DPF((PVR_DBG_ERROR,"HWRecoveryResetSGX: SGXInitialise failed (%d) counter (%d)", eError, counter));
-			}
-			counter ++;
-		}
-		while (eError==PVRSRV_ERROR_RETRY);
+		PVR_DPF((PVR_DBG_ERROR,"HWRecoveryResetSGX: SGXInitialise failed (%d)", eError));
 	}
 
 	/* Resume pdumping. */
@@ -1710,7 +1705,7 @@ IMG_VOID SGXOSTimer(IMG_VOID *pvData)
 	 * Check whether EDM timer tasks are getting scheduled. If not, assume
 	 * that SGX has locked up and reset the chip.
 	 */
-	
+
 	/* Check whether the timer should be running */
 	if (bPoweredDown)
 	{
@@ -1890,12 +1885,6 @@ IMG_BOOL SGX_ISRHandler (IMG_VOID *pvData)
 			/* clear the events */
 			OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_EVENT_HOST_CLEAR, ui32EventClear);
 			OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_EVENT_HOST_CLEAR2, ui32EventClear2);
-
-			/*
-				Sample the current count from the uKernel _after_ we've cleared the
-				interrupt.
-			*/
-			g_ui32HostIRQCountSample = psDevInfo->psSGXHostCtl->ui32InterruptCount;
 		}
 	}
 
@@ -3353,14 +3342,6 @@ PVRSRV_ERROR SGXGetMiscInfoKM(PVRSRV_SGXDEV_INFO	*psDevInfo,
 
 		case SGX_MISC_INFO_DUMP_DEBUG_INFO_FORCE_REGS:
 		{
-			if(!OSProcHasPrivSrvInit())
-			{
-				PVR_DPF((PVR_DBG_ERROR, "Insufficient privileges to dump SGX "
-										"debug info with registers"));
-
-				return PVRSRV_ERROR_INVALID_MISCINFO;
-			}
-
 			PVR_LOG(("User requested SGX debug info"));
 
 			/* Dump SGX debug data to the kernel log. */

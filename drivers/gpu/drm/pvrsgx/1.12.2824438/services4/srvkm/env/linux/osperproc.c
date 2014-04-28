@@ -113,13 +113,6 @@ PVRSRV_ERROR OSPerProcessPrivateDataDeInit(IMG_HANDLE hOsPrivateData)
 
 	psEnvPerProc = (PVRSRV_ENV_PER_PROCESS_DATA *)hOsPrivateData;
 
-	// {{{ MTK
-	// ALPS00806559: Fix kernel memory leak
-#if defined(SUPPORT_ION)
-	ion_client_destroy(psEnvPerProc->psIONClient);
-#endif
-	// MTK }}}
-
 	/* Linux specific mmap processing */
 	LinuxMMapPerProcessDisconnect(psEnvPerProc);
 

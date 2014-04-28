@@ -69,7 +69,7 @@ void PVRSRVExportFDToIONHandles(int fd, struct ion_client **client,
 	struct file *psFile;
 
 	/* Take the bridge mutex so the handle won't be freed underneath us */
-	LinuxLockMutexNested(&gPVRSRVLock, PVRSRV_LOCK_CLASS_BRIDGE);
+	LinuxLockMutex(&gPVRSRVLock);
 
 	psFile = fget(fd);
 	if(!psFile)

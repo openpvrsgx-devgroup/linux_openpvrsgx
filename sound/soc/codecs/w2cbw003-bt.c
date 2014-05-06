@@ -73,10 +73,18 @@ static int w2cbw003_platform_remove(struct platform_device *pdev)
 
 MODULE_ALIAS("platform:w2cbw003_codec_audio");
 
+#if defined(CONFIG_OF)
+static const struct of_device_id w2cbw003_codec_of_match[] = {
+	{ .compatible = "w2cbw003-codec", },
+	{},
+};
+MODULE_DEVICE_TABLE(of, w2cbw003_codec_of_match);
+#endif
 static struct platform_driver w2cbw003_codec_driver = {
 	.driver = {
 			.name = "w2cbw003_codec_audio",
 			.owner = THIS_MODULE,
+			.of_match_table = of_match_ptr(w2cbw003_codec_of_match),
 	},
 
 	.probe = w2cbw003_platform_probe,

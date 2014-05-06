@@ -18,7 +18,7 @@
 // board file and gets the driver loaded with I2C address 0x11
 // all unused code and the #if USE_I2C_SPI should be removed as soon as I2C works
 
-#define USE_I2C_SPI 0
+#define USE_I2C_SPI 1
 
 
 #include <linux/module.h>
@@ -273,9 +273,11 @@ static int si47xx_resume(struct snd_soc_codec *codec)
 static int si47xx_probe(struct snd_soc_codec *codec)
 {
 	int ret;
+	struct si47xx_priv *si47xx = snd_soc_codec_get_drvdata(codec);
+
 	printk("si47xx_probe\n");
 #if USE_I2C_SPI
-	ret = snd_soc_codec_set_cache_io(codec, 7, 9, SND_SOC_REGMAP);
+	ret = snd_soc_codec_set_cache_io(codec, si47xx->regmap);
 	if (ret < 0) {
 		printk(KERN_ERR "si47xx: failed to configure cache I/O: %d\n",
 		       ret);
@@ -315,7 +317,7 @@ static struct snd_soc_codec_driver soc_codec_dev_si47xx = {
 
 #if USE_I2C_SPI
 static const struct of_device_id si47xx_of_match[] = {
-	{ .compatible = "si4705,si4721", },
+	{ .compatible = "silicon-labs,si4721", },
 	{ }
 };
 MODULE_DEVICE_TABLE(of, si47xx_of_match);

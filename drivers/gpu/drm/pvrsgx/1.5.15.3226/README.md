@@ -21,6 +21,8 @@ kernel version       | status
 3.11                 | works (incl. backlight, suspend)
 3.12                 | should work (builds against it, but not tested)
 3.13                 | should work (builds against it, but not tested)
+3.14                 | should work (builds against it, but not tested)
+3.15-rc8             | should work (builds against it, but not tested)
 
 VA-API version   | status
 ---------------- | ------

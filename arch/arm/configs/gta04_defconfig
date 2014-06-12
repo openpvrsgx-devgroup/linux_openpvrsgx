@@ -1038,7 +1038,6 @@ CONFIG_MTD_CFI_UTIL=y
 # Self-contained MTD device drivers
 #
 # CONFIG_MTD_DATAFLASH is not set
-# CONFIG_MTD_M25P80 is not set
 # CONFIG_MTD_SST25L is not set
 # CONFIG_MTD_SLRAM is not set
 # CONFIG_MTD_PHRAM is not set
@@ -1049,7 +1048,6 @@ CONFIG_MTD_CFI_UTIL=y
 # Disk-On-Chip Device Drivers
 #
 # CONFIG_MTD_DOCG3 is not set
-# CONFIG_MTD_ST_SPI_FSM is not set
 CONFIG_MTD_NAND_ECC=y
 # CONFIG_MTD_NAND_ECC_SMC is not set
 CONFIG_MTD_NAND=y
@@ -1068,9 +1066,11 @@ CONFIG_MTD_NAND_IDS=y
 # CONFIG_MTD_ONENAND is not set
 
 #
-# LPDDR flash memory drivers
+# LPDDR & LPDDR2 PCM memory drivers
 #
 # CONFIG_MTD_LPDDR is not set
+# CONFIG_MTD_LPDDR2_NVM is not set
+# CONFIG_MTD_SPI_NOR is not set
 CONFIG_MTD_UBI=y
 CONFIG_MTD_UBI_WL_THRESHOLD=4096
 CONFIG_MTD_UBI_BEB_LIMIT=20
@@ -2905,6 +2905,7 @@ CONFIG_MMC_OMAP_HS=y
 # CONFIG_MMC_DW is not set
 # CONFIG_MMC_VUB300 is not set
 # CONFIG_MMC_USHC is not set
+# CONFIG_MMC_USDHI6ROL0 is not set
 # CONFIG_MEMSTICK is not set
 CONFIG_NEW_LEDS=y
 CONFIG_LEDS_CLASS=y

@@ -335,8 +335,8 @@ BM_Alloc (IMG_HANDLE			hDevMemHeap,
  */
 IMG_BOOL
 BM_Wrap (	IMG_HANDLE hDevMemHeap,
-		    IMG_SIZE_T uSize,
-			IMG_SIZE_T uOffset,
+		    IMG_SIZE_T ui32Size,
+			IMG_SIZE_T ui32Offset,
 			IMG_BOOL bPhysContig,
 			IMG_SYS_PHYADDR *psSysAddr,
 			IMG_VOID *pvCPUVAddr,
@@ -607,7 +607,6 @@ IMG_VOID _BM_XProcIndexReleaseDebug(const IMG_CHAR *pszFile, IMG_INT iLine, IMG_
 #else
 IMG_VOID _BM_XProcIndexAcquire(IMG_UINT32 ui32Index);
 IMG_VOID _BM_XProcIndexRelease(IMG_UINT32 ui32Index);
-
 
 #define BM_XProcIndexAcquire(x) \
 	_BM_XProcIndexAcquire( x)

@@ -49,7 +49,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <asm/io.h>
 #include <asm/page.h>
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,22)) && (LINUX_VERSION_CODE < KERNEL_VERSION(3,2,0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,22))
 #include <asm/system.h>
 #endif
 #include <linux/mm.h>
@@ -74,6 +74,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "pvrmmap.h"
 #include "mmap.h"
 #include "env_data.h"
+#include "proc.h"
 #include "mutex.h"
 #include "lock.h"
 #include "event.h"
@@ -395,7 +396,7 @@ PVRSRV_ERROR LinuxEventObjectWait(IMG_HANDLE hOSEventObject, IMG_UINT32 ui32MSTi
 
 		ui32TimeOutJiffies = (IMG_UINT32)schedule_timeout((IMG_INT32)ui32TimeOutJiffies);
 		
-		LinuxLockMutexNested(&gPVRSRVLock, PVRSRV_LOCK_CLASS_BRIDGE);
+		LinuxLockMutex(&gPVRSRVLock);
 #if defined(DEBUG)
 		psLinuxEventObject->ui32Stats++;
 #endif			

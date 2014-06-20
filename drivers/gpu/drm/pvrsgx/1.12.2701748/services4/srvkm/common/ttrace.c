@@ -43,8 +43,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "services_headers.h"
 #include "ttrace.h"
 
-#include "mutex.h"
-
 #if defined(PVRSRV_NEED_PVR_DPF)
 #define CHECKSIZE(n,m) \
 	if ((n & m) != n) \
@@ -58,7 +56,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 HASH_TABLE *g_psBufferTable;
 IMG_UINT32 g_ui32HostUID;
 IMG_HANDLE g_psTimer;
-
 static PVRSRV_LINUX_MUTEX g_sTTraceMutex;
 
 /* Trace buffer struct */
@@ -129,13 +126,13 @@ PVRSRVTimeTraceAllocItem(IMG_UINT32 **pui32Item, IMG_UINT32 ui32Size)
 	{
 		PVRSRV_ERROR eError;
 
-		PVR_DPF((PVR_DBG_MESSAGE, "PVRSRVTimeTraceAllocItem: Creating buffer for PID %u", ui32PID));
+		PVR_DPF((PVR_DBG_MESSAGE, "PVRSRVTimeTraceAllocItem: Creating buffer for PID %u", (IMG_UINT32) ui32PID));
 		eError = _PVRSRVTimeTraceBufferCreate(ui32PID);
 		if (eError != PVRSRV_OK)
 		{
 			*pui32Item = IMG_NULL;
 			PVR_DPF((PVR_DBG_ERROR, "PVRSRVTimeTraceAllocItem: Failed to create buffer"));
-			return;
+            return;
 		}
 		
 		psBuffer = (sTimeTraceBuffer *) HASH_Retrieve(g_psBufferTable, (IMG_UINTPTR_T) ui32PID);
@@ -143,7 +140,7 @@ PVRSRVTimeTraceAllocItem(IMG_UINT32 **pui32Item, IMG_UINT32 ui32Size)
 		{
 			*pui32Item = NULL;
 			PVR_DPF((PVR_DBG_ERROR, "PVRSRVTimeTraceAllocItem: Failed to retrieve buffer"));
-			return;
+            return;
 		}
 	}
 
@@ -152,7 +149,7 @@ PVRSRVTimeTraceAllocItem(IMG_UINT32 **pui32Item, IMG_UINT32 ui32Size)
 	{
 		*pui32Item = NULL;
 		PVR_DPF((PVR_DBG_ERROR, "PVRSRVTimeTraceAllocItem: Error trace item too large (%d)", ui32Size));
-		return;
+        return;
 	}
 
 	/* FIXME: Enter critical section? */
@@ -177,7 +174,7 @@ PVRSRVTimeTraceAllocItem(IMG_UINT32 **pui32Item, IMG_UINT32 ui32Size)
 	psBuffer->ui32Woff = psBuffer->ui32Woff + ui32Size;
 	psBuffer->ui32ByteCount += ui32Size;
 
-	/* This allocation will start overwriting past our read pointer, move the read pointer along */
+	/* This allocation will start overwritting past our read pointer, move the read pointer along */
 	while (psBuffer->ui32ByteCount > TIME_TRACE_BUFFER_SIZE)
 	{
 		IMG_UINT32 *psReadItem = (IMG_UINT32 *) &psBuffer->ui8Data[psBuffer->ui32Roff];
@@ -263,9 +260,7 @@ static PVRSRV_ERROR _PVRSRVTimeTraceBufferCreate(IMG_UINT32 ui32PID)
 ******************************************************************************/
 PVRSRV_ERROR PVRSRVTimeTraceBufferDestroy(IMG_UINT32 ui32PID)
 {
-#if !defined(TTRACE_KEEP_BUFFER_ON_EXIT)
 	sTimeTraceBuffer *psBuffer;
-
 #if defined(DUMP_TTRACE_BUFFERS_ON_EXIT)
 	PVRSRVDumpTimeTraceBuffers();
 #endif
@@ -283,9 +278,6 @@ PVRSRV_ERROR PVRSRVTimeTraceBufferDestroy(IMG_UINT32 ui32PID)
 	PVR_DPF((PVR_DBG_ERROR, "PVRSRVTimeTraceBufferDestroy: Can't find trace buffer in hash table"));
 	LinuxUnLockMutex(&g_sTTraceMutex);
 	return PVRSRV_ERROR_INVALID_PARAMS;
-#else
-	return PVRSRV_OK;
-#endif
 }
 
 /*!
@@ -469,7 +461,6 @@ IMG_VOID PVRSRVTimeTraceArray(IMG_UINT32 ui32Group, IMG_UINT32 ui32Class, IMG_UI
 	/* Allocate space from the buffer */
     LinuxLockMutex(&g_sTTraceMutex);
 	PVRSRVTimeTraceAllocItem(&pui32TraceItem, ui32Size);
-
 	if (!pui32TraceItem)
 	{
 		PVR_DPF((PVR_DBG_ERROR, "Can't find buffer\n"));
@@ -516,7 +507,6 @@ IMG_VOID PVRSRVTimeTraceSyncObject(IMG_UINT32 ui32Group, IMG_UINT32 ui32Token,
 
     LinuxLockMutex(&g_sTTraceMutex);
 	PVRSRVTimeTraceAllocItem(&pui32TraceItem, ui32Size);
-
 	if (!pui32TraceItem)
 	{
 		PVR_DPF((PVR_DBG_ERROR, "Can't find buffer\n"));
@@ -565,7 +555,7 @@ static PVRSRV_ERROR PVRSRVDumpTimeTraceBuffer(IMG_UINTPTR_T hKey, IMG_UINTPTR_T 
 	IMG_UINT32 ui32Walker = psBuffer->ui32Roff;
 	IMG_UINT32 ui32Read, ui32LineLen, ui32EOL, ui32MinLine;
 
-	PVR_LOG_MTKPP(("TTB for PID %u:\n", (IMG_UINT32) hKey));
+	PVR_DPF_MDWP((PVR_DBG_ERROR, "TTB for PID %u:\n", (IMG_UINT32) hKey));
 
 	while (ui32ByteCount)
 	{
@@ -577,25 +567,25 @@ static PVRSRV_ERROR PVRSRVDumpTimeTraceBuffer(IMG_UINTPTR_T hKey, IMG_UINTPTR_T 
 
 		if (ui32MinLine >= 4)
 		{
-			PVR_LOG_MTKPP(("\t(TTB-%X) %08X %08X %08X %08X [", ui32ByteCount,
+			PVR_DPF_MDWP((PVR_DBG_ERROR, "\t(TTB-%X) %08X %08X %08X %08X", ui32ByteCount,
 					pui32Buffer[0], pui32Buffer[1], pui32Buffer[2], pui32Buffer[3]));
 			ui32Read = 4 * sizeof(IMG_UINT32);
 		}
 		else if (ui32MinLine >= 3)
 		{
-			PVR_LOG_MTKPP(("\t(TTB-%X) %08X %08X %08X [", ui32ByteCount,
+			PVR_DPF_MDWP((PVR_DBG_ERROR, "\t(TTB-%X) %08X %08X %08X", ui32ByteCount,
 					pui32Buffer[0], pui32Buffer[1], pui32Buffer[2]));
 			ui32Read = 3 * sizeof(IMG_UINT32);
 		}
 		else if (ui32MinLine >= 2)
 		{
-			PVR_LOG_MTKPP(("\t(TTB-%X) %08X %08X [", ui32ByteCount,
+			PVR_DPF_MDWP((PVR_DBG_ERROR, "\t(TTB-%X) %08X %08X", ui32ByteCount,
 					pui32Buffer[0], pui32Buffer[1]));
 			ui32Read = 2 * sizeof(IMG_UINT32);
 		}
 		else
 		{
-			PVR_LOG_MTKPP(("\t(TTB-%X) %08X [", ui32ByteCount,
+			PVR_DPF_MDWP((PVR_DBG_ERROR, "\t(TTB-%X) %08X", ui32ByteCount,
 					pui32Buffer[0]));
 			ui32Read = sizeof(IMG_UINT32);
 		}

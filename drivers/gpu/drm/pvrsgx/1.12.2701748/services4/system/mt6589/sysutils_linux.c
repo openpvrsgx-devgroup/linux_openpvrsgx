@@ -62,7 +62,6 @@ extern struct platform_device *gpsPVRLDMDev;
 
 extern unsigned int mt_gpufreq_cur_freq(void);
 extern int g_pmic_cid;
-extern void MtkSetKeepFreq(void);
 
 
 static PVRSRV_ERROR PowerLockWrap(SYS_SPECIFIC_DATA *psSysSpecData, IMG_BOOL bTryLock)
@@ -164,14 +163,11 @@ PVRSRV_ERROR EnableSGXClocks(SYS_DATA *psSysData)
 	}
 #endif
 
-    MtkSetKeepFreq();
-
     if(( g_pmic_cid != 0) && (get_gpu_power_src()==0))
     {
         upmu_set_rg_vrf18_2_modeset(1); // force PWM mode
     }
 //    printk("EnableSGXClocks ... Reg[0x%x]=0x%x\n",0x37E,upmu_get_reg_value(0x37E));
-
 
     enable_clock(MT_CG_MFG_HYD, "MFG");
     enable_clock(MT_CG_MFG_G3D, "MFG");

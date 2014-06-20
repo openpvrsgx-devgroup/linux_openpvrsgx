@@ -828,7 +828,7 @@ static MTKLFB_ERROR MTKLFBInitFBDev(MTKLFB_DEVINFO *psDevInfo)
 		goto ErrorRelSem;
 	}
 
-#ifdef USE_RGBA_8888_FB
+#ifdef USE_ARGB8888_FB
     {
         int res;
         struct fb_var_screeninfo info;
@@ -839,11 +839,11 @@ static MTKLFB_ERROR MTKLFBInitFBDev(MTKLFB_DEVINFO *psDevInfo)
         info.bits_per_pixel = 32;
         info.transp.offset  = 24;
         info.transp.length  = 8;
-        info.red.offset     = 0;
+        info.red.offset     = 16;
         info.red.length     = 8;
         info.green.offset   = 8;
         info.green.length   = 8;
-        info.blue.offset    = 16;
+        info.blue.offset    = 0;
         info.blue.length    = 8;
 
         res = fb_set_var(psLINFBInfo, &info);
@@ -962,17 +962,6 @@ static MTKLFB_ERROR MTKLFBInitFBDev(MTKLFB_DEVINFO *psDevInfo)
 			(psLINFBInfo->var.blue.offset == 0) && 
 			(psLINFBInfo->var.red.msb_right == 0))
 		{
-			psPVRFBInfo->ePixelFormat = PVRSRV_PIXEL_FORMAT_ARGB8888;
-		}
-		else if((psLINFBInfo->var.red.length == 8) &&
-			(psLINFBInfo->var.green.length == 8) && 
-			(psLINFBInfo->var.blue.length == 8) && 
-			(psLINFBInfo->var.red.offset == 0) &&
-			(psLINFBInfo->var.green.offset == 8) && 
-			(psLINFBInfo->var.blue.offset == 16) && 
-			(psLINFBInfo->var.red.msb_right == 0))
-		{
-			// yu-fu: PVR2D does not support ABGR8888 ...
 			psPVRFBInfo->ePixelFormat = PVRSRV_PIXEL_FORMAT_ARGB8888;
 		}
 		else

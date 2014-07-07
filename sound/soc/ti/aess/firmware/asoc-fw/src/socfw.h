@@ -184,8 +184,6 @@ int ____ilog2_NaN(void);
 #define snd_soc_info_enum_double	SOC_CONTROL_TYPE_ENUM
 #define snd_soc_get_enum_double		SOC_CONTROL_TYPE_ENUM
 #define snd_soc_put_enum_double		SOC_CONTROL_TYPE_ENUM
-#define snd_soc_get_value_enum_double	SOC_CONTROL_TYPE_ENUM_VALUE
-#define snd_soc_put_value_enum_double	SOC_CONTROL_TYPE_ENUM_VALUE
 #define snd_soc_info_volsw		SOC_CONTROL_TYPE_VOLSW
 #define snd_soc_info_volsw_ext		SOC_CONTROL_TYPE_VOLSW_EXT
 #define snd_soc_info_bool_ext		SOC_CONTROL_TYPE_BOOL
@@ -214,10 +212,6 @@ int ____ilog2_NaN(void);
 #define snd_soc_dapm_get_volsw		SOC_DAPM_TYPE_VOLSW
 #define snd_soc_dapm_get_enum_double	SOC_DAPM_TYPE_ENUM_DOUBLE
 #define snd_soc_dapm_put_enum_double	SOC_DAPM_TYPE_ENUM_DOUBLE
-#define snd_soc_dapm_get_enum_virt	SOC_DAPM_TYPE_ENUM_VIRT
-#define snd_soc_dapm_put_enum_virt	SOC_DAPM_TYPE_ENUM_VIRT
-#define snd_soc_dapm_get_value_enum_double	SOC_DAPM_TYPE_ENUM_VALUE
-#define snd_soc_dapm_put_value_enum_double	SOC_DAPM_TYPE_ENUM_VALUE
 #define snd_soc_dapm_info_pin_switch	SOC_DAPM_TYPE_PIN
 #define snd_soc_dapm_get_pin_switch	SOC_DAPM_TYPE_PIN
 #define snd_soc_dapm_put_pin_switch	SOC_DAPM_TYPE_PIN
@@ -232,7 +226,11 @@ int ____ilog2_NaN(void);
 /* mixer control */
 struct soc_mixer_control {
 	int min, max, platform_max;
-	unsigned int reg, rreg, shift, rshift, invert;
+	int reg, rreg;
+	unsigned int shift, rshift;
+	unsigned int sign_bit;
+	unsigned int invert:1;
+	unsigned int autodisable:1;
 };
 
 struct soc_bytes {
@@ -250,10 +248,9 @@ struct soc_mreg_control {
 /* enumerated kcontrol */
 struct soc_enum {
 	unsigned short reg;
-	unsigned short reg2;
 	unsigned char shift_l;
 	unsigned char shift_r;
-	unsigned int max;
+	unsigned int items;
 	unsigned int mask;
 	const char * const *texts;
 	const unsigned int *values;
@@ -295,6 +292,8 @@ struct snd_soc_dapm_widget {
 	unsigned int value;				/* widget current value */
 	unsigned int mask;			/* non-shifted mask */
 	unsigned char invert:1;			/* invert the power bit */
+	unsigned int on_val;			/* on state value */
+	unsigned int off_val;			/* off state value */
 	unsigned char ignore_suspend:1;         /* kept enabled over suspend */
 	unsigned char denum:1;		/* dynamic enum control */
 	unsigned char dmixer:1;		/* dynamic mixer control*/

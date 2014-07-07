@@ -224,19 +224,18 @@ static int import_enum_control(struct soc_fw_priv *soc_fw,
 	ec.hdr.tlv_size = tlv_size(kcontrol);
 
 	ec.mask = menum->mask;
-	ec.max = menum->max;
+	ec.items = menum->items;
 	ec.reg = menum->reg;
-	ec.reg2 = menum->reg2;
 	ec.shift_l = menum->shift_l;
 	ec.shift_r = menum->shift_r;
 
-	verbose(soc_fw, " enum: \"%s\" R1/2 0x%x/0x%x shift L/R %d/%d (g,p,i) %d:%d:%d\n",
-		ec.hdr.name, ec.reg, ec.reg2, ec.shift_l, ec.shift_r,
+	verbose(soc_fw, " enum: \"%s\" R 0x%x shift L/R %d/%d (g,p,i) %d:%d:%d\n",
+		ec.hdr.name, ec.reg, ec.shift_l, ec.shift_r,
 		SOC_CONTROL_GET_ID_GET(ec.hdr.index),
 		SOC_CONTROL_GET_ID_PUT(ec.hdr.index),
 		SOC_CONTROL_GET_ID_INFO(ec.hdr.index));
 
-	import_enum_control_data(soc_fw, ec.max, &ec, menum);
+	import_enum_control_data(soc_fw, ec.items, &ec, menum);
 
 	bytes = write(soc_fw->out_fd, &ec, sizeof(ec));
 	if (bytes != sizeof(ec)) {
@@ -274,7 +273,6 @@ int socfw_import_controls(struct soc_fw_priv *soc_fw,
 			break;
 		case SOC_CONTROL_TYPE_ENUM:
 		case SOC_CONTROL_TYPE_ENUM_EXT:
-		case SOC_CONTROL_TYPE_ENUM_VALUE:
 			size += sizeof(struct snd_soc_fw_enum_control);
 			size += tlv_size(kn);
 			enums++;
@@ -325,7 +323,6 @@ int socfw_import_controls(struct soc_fw_priv *soc_fw,
 			break;
 		case SOC_CONTROL_TYPE_ENUM:
 		case SOC_CONTROL_TYPE_ENUM_EXT:
-		case SOC_CONTROL_TYPE_ENUM_VALUE:
 			err = import_enum_control(soc_fw, kn);
 			if (err < 0)
 				return err;
@@ -386,11 +383,11 @@ static int import_enum_coeff_control(struct soc_fw_priv *soc_fw,
 	ec.hdr.index = coeff->index;
 	ec.hdr.access = SNDRV_CTL_ELEM_ACCESS_READWRITE;
 	ec.mask = (coeff->count < 1) - 1;
-	ec.max = coeff->count;
+	ec.items = coeff->count;
 	ec.reg = coeff->id;
 
-	verbose(soc_fw, " coeff 0x%x enum: \"%s\" R1/2 0x%x/0x%x shift L/R %d/%d (g,p,i) %d:%d:%d\n",
-		cd.id, ec.hdr.name, ec.reg, ec.reg2, ec.shift_l, ec.shift_r,
+	verbose(soc_fw, " coeff 0x%x enum: \"%s\" R 0x%x shift L/R %d/%d (g,p,i) %d:%d:%d\n",
+		cd.id, ec.hdr.name, ec.reg, ec.shift_l, ec.shift_r,
 		SOC_CONTROL_GET_ID_GET(ec.hdr.index),
 		SOC_CONTROL_GET_ID_PUT(ec.hdr.index),
 		SOC_CONTROL_GET_ID_INFO(ec.hdr.index));
@@ -488,10 +485,7 @@ static int import_dapm_widgets_controls(struct soc_fw_priv *soc_fw, int count,
 			break;
 		case SOC_CONTROL_TYPE_ENUM:
 		case SOC_CONTROL_TYPE_ENUM_EXT:
-		case SOC_CONTROL_TYPE_ENUM_VALUE:
 		case SOC_DAPM_TYPE_ENUM_DOUBLE:
-		case SOC_DAPM_TYPE_ENUM_VIRT:
-		case SOC_DAPM_TYPE_ENUM_VALUE:
 		case SOC_DAPM_TYPE_ENUM_EXT:
 			err = import_enum_control(soc_fw, kn);
 			if (err < 0)
@@ -538,10 +532,7 @@ static int socfw_calc_widget_size(struct soc_fw_priv *soc_fw,
 				break;
 			case SOC_CONTROL_TYPE_ENUM:
 			case SOC_CONTROL_TYPE_ENUM_EXT:
-			case SOC_CONTROL_TYPE_ENUM_VALUE:
 			case SOC_DAPM_TYPE_ENUM_DOUBLE:
-			case SOC_DAPM_TYPE_ENUM_VIRT:
-			case SOC_DAPM_TYPE_ENUM_VALUE:
 			case SOC_DAPM_TYPE_ENUM_EXT:
 				size += sizeof(struct snd_soc_fw_enum_control);
 				break;

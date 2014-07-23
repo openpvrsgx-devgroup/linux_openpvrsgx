@@ -328,6 +328,17 @@ BM_Free (BM_HANDLE hBuf,
 		IMG_UINT32 ui32Flags);
 
 
+/**
+ *  @Function   BM_HandleToCpuVaddr
+ *
+ *  @Description
+ *
+ *  Retrieve the host virtual address associated with a buffer.
+ *
+ *  @Input  hBuf - buffer handle.
+ *
+ *  @Return buffers host virtual address.
+ */
 IMG_CPU_VIRTADDR
 BM_HandleToCpuVaddr (BM_HANDLE hBuf);
 
@@ -396,6 +407,9 @@ IMG_VOID BM_GetPhysPageAddr(PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 
 PVRSRV_ERROR BM_GetHeapInfo(IMG_HANDLE hDevMemHeap,
 							PVRSRV_HEAP_INFO *psHeapInfo);
+/*!
+******************************************************************************
+ @Function	 	BM_GetMMUContext
 
  @Description
  				utility function to return the MMU context

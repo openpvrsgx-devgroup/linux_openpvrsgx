@@ -1677,6 +1677,7 @@ static PVRSRV_ERROR PVRSRVHandleBatchCommitOrRelease(PVRSRV_HANDLE_BASE *psBase,
 
 		if (!bCommitBatch || BATCHED_HANDLE_PARTIALLY_FREE(psHandle))
 		{
+			PVRSRV_ERROR eError;
 			/*
 			 * We need a complete free here.  If the handle
 			 * is not partially free, set the handle as

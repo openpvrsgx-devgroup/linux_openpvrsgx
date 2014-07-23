@@ -1,30 +1,59 @@
-/**********************************************************************
- Copyright (c) Imagination Technologies Ltd.
+/*************************************************************************/ /*!
+@Title          Services definitions required by external drivers
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@Description    Provides services data structures, defines and prototypes
+                required by external drivers.
+@License        Dual MIT/GPLv2
 
- Permission is hereby granted, free of charge, to any person obtaining a copy
- of this software and associated documentation files (the "Software"), to deal
- in the Software without restriction, including without limitation the rights
- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- copies of the Software, and to permit persons to whom the Software is
- furnished to do so, subject to the following conditions:
+The contents of this file are subject to the MIT license as set out below.
 
- The above copyright notice and this permission notice shall be included in
- all copies or substantial portions of the Software.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- THE SOFTWARE.
- ******************************************************************************/
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/ /**************************************************************************/
 
 #if !defined (__SERVICESEXT_H__)
 #define __SERVICESEXT_H__
 
 #define PVRSRV_LOCKFLG_READONLY     	(1)
 
+/*!
+ *****************************************************************************
+ * Error values
+ *
+ * NOTE: If you change this, make sure you update the error texts in
+ *   services4/include/pvrsrv_errors.h to match.
+ *
+ *****************************************************************************/
 typedef enum _PVRSRV_ERROR_
 {
 	PVRSRV_OK								=  0,
@@ -73,6 +102,10 @@ typedef enum _PVRSRV_ERROR_
 } PVRSRV_ERROR;
 
 
+/*!
+ *****************************************************************************
+ * List of known device classes.
+ *****************************************************************************/
 typedef enum _PVRSRV_DEVICE_CLASS_
 {
 	PVRSRV_DEVICE_CLASS_3D				= 0 ,
@@ -85,7 +118,10 @@ typedef enum _PVRSRV_DEVICE_CLASS_
 } PVRSRV_DEVICE_CLASS;
 
 
-
+/*!
+ *****************************************************************************
+ *	States for power management
+ *****************************************************************************/
 typedef enum _PVRSRV_SYS_POWER_STATE_
 {
 	PVRSRV_SYS_POWER_STATE_Unspecified		= -1,
@@ -112,6 +148,7 @@ typedef enum _PVRSRV_DEV_POWER_STATE_
 } PVRSRV_DEV_POWER_STATE, *PPVRSRV_DEV_POWER_STATE;
 
 
+/* Power transition handler prototypes */
 typedef PVRSRV_ERROR (*PFN_PRE_POWER) (IMG_HANDLE				hDevHandle,
 									   PVRSRV_DEV_POWER_STATE	eNewPowerState,
 									   PVRSRV_DEV_POWER_STATE	eCurrentPowerState);
@@ -119,6 +156,7 @@ typedef PVRSRV_ERROR (*PFN_POST_POWER) (IMG_HANDLE				hDevHandle,
 										PVRSRV_DEV_POWER_STATE	eNewPowerState,
 										PVRSRV_DEV_POWER_STATE	eCurrentPowerState);
 
+/* Clock speed handler prototypes */
 typedef PVRSRV_ERROR (*PFN_PRE_CLOCKSPEED_CHANGE) (IMG_HANDLE				hDevHandle,
 												   IMG_BOOL					bIdleDevice,
 												   PVRSRV_DEV_POWER_STATE	eCurrentPowerState);
@@ -127,6 +165,16 @@ typedef PVRSRV_ERROR (*PFN_POST_CLOCKSPEED_CHANGE) (IMG_HANDLE				hDevHandle,
 													PVRSRV_DEV_POWER_STATE	eCurrentPowerState);
 
 
+/*****************************************************************************
+ * Enumeration of all possible pixel types. Where applicable, Ordering of name
+ * is in reverse order of memory bytes (i.e. as a word in little endian).
+ * e.g. A8R8G8B8 is in memory as 4 bytes in order: BB GG RR AA
+ *
+ * NOTE: When modifying this structure please update the client driver format
+ *       tables located in %WORKROOT%/eurasia/codegen/pixfmts using the tool
+ *       located in %WORKROOT%/eurasia/tools/intern/TextureFormatParser.
+ *
+ *****************************************************************************/
 typedef enum _PVRSRV_PIXEL_FORMAT_ {
 
 	PVRSRV_PIXEL_FORMAT_UNKNOWN			=  0,
@@ -376,6 +424,10 @@ typedef enum _PVRSRV_PIXEL_FORMAT_ {
 	PVRSRV_PIXEL_FORMAT_FORCE_I32 = 0x7fffffff,
 } PVRSRV_PIXEL_FORMAT;
 
+/*!
+ *****************************************************************************
+ * Enumeration of possible alpha types.
+ *****************************************************************************/
 typedef enum _PVRSRV_ALPHA_FORMAT_ {
 	PVRSRV_ALPHA_FORMAT_UNKNOWN		=  0x00000000,
 	PVRSRV_ALPHA_FORMAT_PRE			=  0x00000001,
@@ -383,6 +435,10 @@ typedef enum _PVRSRV_ALPHA_FORMAT_ {
 	PVRSRV_ALPHA_FORMAT_MASK		=  0x0000000F,
 } PVRSRV_ALPHA_FORMAT;
 
+/*!
+ *****************************************************************************
+ * Enumeration of possible alpha types.
+ *****************************************************************************/
 typedef enum _PVRSRV_COLOURSPACE_FORMAT_ {
 	PVRSRV_COLOURSPACE_FORMAT_UNKNOWN		=  0x00000000,
 	PVRSRV_COLOURSPACE_FORMAT_LINEAR		=  0x00010000,
@@ -391,6 +447,10 @@ typedef enum _PVRSRV_COLOURSPACE_FORMAT_ {
 } PVRSRV_COLOURSPACE_FORMAT;
 
 
+/*
+ * Drawable orientation (in degrees clockwise).
+ * Opposite sense from WSEGL.
+ */
 typedef enum _PVRSRV_ROTATION_ {
 	PVRSRV_ROTATE_0		=	0,
 	PVRSRV_ROTATE_90	=	1,
@@ -400,17 +460,31 @@ typedef enum _PVRSRV_ROTATION_ {
 
 } PVRSRV_ROTATION;
 
+/*!
+ * Flags for DisplayClassCreateSwapChain.
+ */
 #define PVRSRV_CREATE_SWAPCHAIN_SHARED		(1<<0)
 #define PVRSRV_CREATE_SWAPCHAIN_QUERY		(1<<1)
 #define PVRSRV_CREATE_SWAPCHAIN_OEMOVERLAY	(1<<2)
 
+/*!
+ *****************************************************************************
+ * Structure providing implementation details for serialisation and
+ * synchronisation of operations. This is the fundamental unit on which operations
+ * are synced, and would typically be included in any data structures that require
+ * serialised accesses etc. e.g. MEM_INFO structures
+ *
+ *****************************************************************************/
+/*
+	Sync Data to be shared/mapped between user/kernel
+*/
 typedef struct _PVRSRV_SYNC_DATA_
 {
-
+	/* CPU accessible WriteOp Info */
 	IMG_UINT32					ui32WriteOpsPending;
 	volatile IMG_UINT32			ui32WriteOpsComplete;
 
-
+	/* CPU accessible ReadOp Info */
 	IMG_UINT32					ui32ReadOpsPending;
 	volatile IMG_UINT32			ui32ReadOpsComplete;
 
@@ -442,7 +516,10 @@ typedef struct _PVRSRV_CLIENT_SYNC_INFO_
 
 } PVRSRV_CLIENT_SYNC_INFO, *PPVRSRV_CLIENT_SYNC_INFO;
 
-
+/*!
+ *****************************************************************************
+ * Resource locking structure
+ *****************************************************************************/
 typedef struct PVRSRV_RESOURCE_TAG
 {
 	volatile IMG_UINT32 ui32Lock;
@@ -475,6 +552,7 @@ typedef struct _IMG_RECT_16_
 }IMG_RECT_16;
 
 
+/* common pfn between BC/DC */
 typedef PVRSRV_ERROR (*PFN_GET_BUFFER_ADDR)(IMG_HANDLE,
 											IMG_HANDLE,
 											IMG_SYS_PHYADDR**,
@@ -482,7 +560,7 @@ typedef PVRSRV_ERROR (*PFN_GET_BUFFER_ADDR)(IMG_HANDLE,
 											IMG_VOID**,
 											IMG_HANDLE*,
 											IMG_BOOL*,
-											IMG_BOOL*);
+											IMG_UINT32*);
 
 typedef PVRSRV_ERROR (*PFN_GET_BUFFER_ID_FROM_TAG)(IMG_HANDLE, IMG_UINT32, IMG_HANDLE);
 
@@ -496,15 +574,15 @@ typedef struct DISPLAY_DIMS_TAG
 
 typedef struct DISPLAY_FORMAT_TAG
 {
-
+	/* pixel format type */
 	PVRSRV_PIXEL_FORMAT		pixelformat;
 } DISPLAY_FORMAT;
 
 typedef struct DISPLAY_SURF_ATTRIBUTES_TAG
 {
-
+	/* pixel format type */
 	PVRSRV_PIXEL_FORMAT		pixelformat;
-
+	/* dimensions information structure array */
 	DISPLAY_DIMS			sDims;
 	IMG_UINT32			ui32Reseved;
 } DISPLAY_SURF_ATTRIBUTES;
@@ -512,13 +590,13 @@ typedef struct DISPLAY_SURF_ATTRIBUTES_TAG
 
 typedef struct DISPLAY_MODE_INFO_TAG
 {
-
+	/* pixel format type */
 	PVRSRV_PIXEL_FORMAT		pixelformat;
-
+	/* dimensions information structure array */
 	DISPLAY_DIMS			sDims;
-
+	/* refresh rate of the display */
 	IMG_UINT32				ui32RefreshHZ;
-
+	/* OEM specific flags */
 	IMG_UINT32				ui32OEMFlags;
 } DISPLAY_MODE_INFO;
 
@@ -528,21 +606,21 @@ typedef struct DISPLAY_MODE_INFO_TAG
 
 typedef struct DISPLAY_INFO_TAG
 {
-
+	/* max swapchains supported */
 	IMG_UINT32 ui32MaxSwapChains;
-
+	/* max buffers in a swapchain */
 	IMG_UINT32 ui32MaxSwapChainBuffers;
-
+	/* min swap interval supported */
 	IMG_UINT32 ui32MinSwapInterval;
-
+	/* max swap interval supported */
 	IMG_UINT32 ui32MaxSwapInterval;
-
+	/* physical dimensions of the display required for DPI calc. */
 	IMG_UINT32 ui32PhysicalWidthmm;
 	IMG_UINT32 ui32PhysicalHeightmm;
-
+	/* display name */
 	IMG_CHAR	szDisplayName[MAX_DISPLAY_NAME_SIZE];
 #if defined(SUPPORT_HW_CURSOR)
-
+	/* cursor dimensions */
 	IMG_UINT16	ui32CursorWidth;
 	IMG_UINT16	ui32CursorHeight;
 #endif
@@ -552,7 +630,7 @@ typedef struct ACCESS_INFO_TAG
 {
 	IMG_UINT32		ui32Size;
 	IMG_UINT32  	ui32FBPhysBaseAddress;
-	IMG_UINT32		ui32FBMemAvailable;
+	IMG_UINT32		ui32FBMemAvailable;			/* size of usable FB memory */
 	IMG_UINT32  	ui32SysPhysBaseAddress;
 	IMG_UINT32		ui32SysSize;
 	IMG_UINT32		ui32DevIRQ;
@@ -622,8 +700,9 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVWriteRegistryString (PPVRSRV_REGISTRY_INFO psReg
 #define PVRSRV_BC_FLAGS_YUVCSC_BT601			(0 << 1)
 #define PVRSRV_BC_FLAGS_YUVCSC_BT709			(1 << 1)
 
-#define MAX_BUFFER_DEVICE_NAME_SIZE	(50)
+#define MAX_BUFFER_DEVICE_NAME_SIZE	(50) /* arbitrary choice! */
 
+/* buffer information structure */
 typedef struct BUFFER_INFO_TAG
 {
 	IMG_UINT32 			ui32BufferCount;
@@ -644,4 +723,7 @@ typedef enum _OVERLAY_DEINTERLACE_MODE_
 	BOB_EVEN_NONINTERLEAVED
 } OVERLAY_DEINTERLACE_MODE;
 
-#endif
+#endif /* __SERVICESEXT_H__ */
+/*****************************************************************************
+ End of file (servicesext.h)
+*****************************************************************************/

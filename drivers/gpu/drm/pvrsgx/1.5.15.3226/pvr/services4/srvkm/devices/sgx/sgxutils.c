@@ -1,24 +1,44 @@
-/**********************************************************************
- Copyright (c) Imagination Technologies Ltd.
+/*************************************************************************/ /*!
+@Title          Device specific utility routines
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@Description    Device specific functions
+@License        Dual MIT/GPLv2
 
- Permission is hereby granted, free of charge, to any person obtaining a copy
- of this software and associated documentation files (the "Software"), to deal
- in the Software without restriction, including without limitation the rights
- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- copies of the Software, and to permit persons to whom the Software is
- furnished to do so, subject to the following conditions:
+The contents of this file are subject to the MIT license as set out below.
 
- The above copyright notice and this permission notice shall be included in
- all copies or substantial portions of the Software.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- THE SOFTWARE.
- ******************************************************************************/
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/ /**************************************************************************/
 
 #include <stddef.h>
 
@@ -49,13 +69,28 @@ PVRSRV_ERROR SysPowerDownMISR(PVRSRV_DEVICE_NODE	* psDeviceNode, IMG_UINT32 ui32
 
 
 
+/*!
+******************************************************************************
+
+ @Function	SGXPostActivePowerEvent
+
+ @Description
+
+	 post power event functionality (e.g. restart)
+
+ @Input	psDeviceNode : SGX Device Node
+ @Input	ui32CallerID - KERNEL_ID or ISR_ID
+
+ @Return   IMG_VOID :
+
+******************************************************************************/
 IMG_VOID SGXPostActivePowerEvent(PVRSRV_DEVICE_NODE	* psDeviceNode,
                                  IMG_UINT32           ui32CallerID)
 {
 	PVRSRV_SGXDEV_INFO	*psDevInfo = psDeviceNode->pvDevice;
 	SGXMKIF_HOST_CTL	*psSGXHostCtl = psDevInfo->psSGXHostCtl;
 
-
+	/* Update the counter for stats. */
 	psSGXHostCtl->ui32NumActivePowerEvents++;
 
 	if ((psSGXHostCtl->ui32PowerStatus & PVRSRV_USSE_EDM_POWMAN_POWEROFF_RESTART_IMMEDIATE) != 0)
@@ -75,6 +110,22 @@ IMG_VOID SGXPostActivePowerEvent(PVRSRV_DEVICE_NODE	* psDeviceNode,
 }
 
 
+/*!
+******************************************************************************
+
+ @Function	SGXTestActivePowerEvent
+
+ @Description
+
+ Checks whether the microkernel has generated an active power event. If so,
+ 	perform the power transition.
+
+ @Input	psDeviceNode : SGX Device Node
+ @Input	ui32CallerID - KERNEL_ID or ISR_ID
+
+ @Return   IMG_VOID :
+
+******************************************************************************/
 IMG_VOID SGXTestActivePowerEvent (PVRSRV_DEVICE_NODE	*psDeviceNode,
 								  IMG_UINT32			ui32CallerID)
 {
@@ -88,13 +139,14 @@ IMG_VOID SGXTestActivePowerEvent (PVRSRV_DEVICE_NODE	*psDeviceNode,
 
 		psSGXHostCtl->ui32InterruptClearFlags |= PVRSRV_USSE_EDM_INTERRUPT_ACTIVE_POWER;
 
-
+		/* Suspend pdumping. */
 		PDUMPSUSPEND();
 
 #if defined(SYS_CUSTOM_POWERDOWN)
-
-
-
+		/*
+		 	Some power down code cannot be executed inside an MISR on
+		 	some platforms that use mutexes inside the power code.
+		 */
 		eError = SysPowerDownMISR(psDeviceNode, ui32CallerID);
 #else
 		eError = PVRSRVSetDevicePowerStateKM(psDeviceNode->sDevId.ui32DeviceIndex,
@@ -124,6 +176,15 @@ IMG_VOID SGXTestActivePowerEvent (PVRSRV_DEVICE_NODE	*psDeviceNode,
 }
 
 
+/******************************************************************************
+ FUNCTION	: SGXAcquireKernelCCBSlot
+
+ PURPOSE	: Attempts to obtain a slot in the Kernel CCB
+
+ PARAMETERS	: psCCB - the CCB
+
+ RETURNS	: Address of space if available, IMG_NULL otherwise
+******************************************************************************/
 #ifdef INLINE_IS_PRAGMA
 #pragma inline(SGXAcquireKernelCCBSlot)
 #endif
@@ -139,10 +200,27 @@ static INLINE SGXMKIF_COMMAND * SGXAcquireKernelCCBSlot(PVRSRV_SGX_CCB_INFO *psC
 		OSWaitus(MAX_HW_TIME_US/WAIT_TRY_COUNT);
 	} END_LOOP_UNTIL_TIMEOUT();
 
-
+	/* Time out on waiting for CCB space */
 	return IMG_NULL;
 }
 
+/*!
+******************************************************************************
+
+ @Function	SGXScheduleCCBCommand
+
+ @Description - Submits a CCB command and kicks the ukernel (without
+ 				power management)
+
+ @Input psDevInfo - pointer to device info
+ @Input eCmdType - see SGXMKIF_CMD_*
+ @Input psCommandData - kernel CCB command
+ @Input ui32CallerID - KERNEL_ID or ISR_ID
+ @Input ui32PDumpFlags
+
+ @Return ui32Error - success or failure
+
+******************************************************************************/
 PVRSRV_ERROR SGXScheduleCCBCommand(PVRSRV_SGXDEV_INFO 	*psDevInfo,
 								   SGXMKIF_CMD_TYPE		eCmdType,
 								   SGXMKIF_COMMAND		*psCommandData,
@@ -185,7 +263,7 @@ PVRSRV_ERROR SGXScheduleCCBCommand(PVRSRV_SGXDEV_INFO 	*psDevInfo,
 			goto Exit;
 		}
 
-
+		/* Wait for the invalidate to happen */
 		#if !defined(NO_HARDWARE)
 		if(PollForValueKM(&psSGXHostCtl->ui32InvalStatus,
 						  PVRSRV_USSE_EDM_BIF_INVAL_COMPLETE,
@@ -229,18 +307,18 @@ PVRSRV_ERROR SGXScheduleCCBCommand(PVRSRV_SGXDEV_INFO 	*psDevInfo,
 		goto Exit;
 	}
 
-
+	/* embed cache control word */
 	psCommandData->ui32CacheControl = psDevInfo->ui32CacheControl;
 
 #if defined(PDUMP)
-
+	/* Accumulate any cache invalidates that may have happened */
 	psDevInfo->sPDContext.ui32CacheControl |= psDevInfo->ui32CacheControl;
 #endif
 
-
+	/* and clear it */
 	psDevInfo->ui32CacheControl = 0;
 
-
+	/* Copy command data over */
 	*psSGXCommand = *psCommandData;
 
 	if (eCmdType >= SGXMKIF_CMD_MAX)
@@ -290,7 +368,7 @@ PVRSRV_ERROR SGXScheduleCCBCommand(PVRSRV_SGXDEV_INFO 	*psDevInfo,
 					ui32PDumpFlags,
 					MAKEUNIQUETAG(psKernelCCB->psCCBMemInfo));
 
-
+		/* Overwrite cache control with pdump shadow */
 		PDUMPMEM(&psDevInfo->sPDContext.ui32CacheControl,
 					psKernelCCB->psCCBMemInfo,
 					psKernelCCB->ui32CCBDumpWOff * sizeof(SGXMKIF_COMMAND) +
@@ -302,7 +380,7 @@ PVRSRV_ERROR SGXScheduleCCBCommand(PVRSRV_SGXDEV_INFO 	*psDevInfo,
 		if (PDumpIsCaptureFrameKM()
 		|| ((ui32PDumpFlags & PDUMP_FLAGS_CONTINUOUS) != 0))
 		{
-
+			/* Clear cache invalidate shadow */
 			psDevInfo->sPDContext.ui32CacheControl = 0;
 		}
 	}
@@ -322,8 +400,9 @@ PVRSRV_ERROR SGXScheduleCCBCommand(PVRSRV_SGXDEV_INFO 	*psDevInfo,
 	}
 #endif
 
-
-
+	/*
+		Increment the write offset
+	*/
 	*psKernelCCB->pui32WriteOffset = (*psKernelCCB->pui32WriteOffset + 1) & 255;
 
 #if defined(PDUMP)
@@ -391,6 +470,22 @@ Exit:
 }
 
 
+/*!
+******************************************************************************
+
+ @Function	SGXScheduleCCBCommandKM
+
+ @Description - Submits a CCB command and kicks the ukernel
+
+ @Input psDeviceNode - pointer to SGX device node
+ @Input eCmdType - see SGXMKIF_CMD_*
+ @Input psCommandData - kernel CCB command
+ @Input ui32CallerID - KERNEL_ID or ISR_ID
+ @Input ui32PDumpFlags
+
+ @Return ui32Error - success or failure
+
+******************************************************************************/
 PVRSRV_ERROR SGXScheduleCCBCommandKM(PVRSRV_DEVICE_NODE		*psDeviceNode,
 									 SGXMKIF_CMD_TYPE		eCmdType,
 									 SGXMKIF_COMMAND		*psCommandData,
@@ -403,7 +498,7 @@ PVRSRV_ERROR SGXScheduleCCBCommandKM(PVRSRV_DEVICE_NODE		*psDeviceNode,
 
 	PDUMPSUSPEND();
 
-
+	/* Ensure that SGX is powered up before kicking the ukernel. */
 	eError = PVRSRVSetDevicePowerStateKM(psDeviceNode->sDevId.ui32DeviceIndex,
 										 PVRSRV_DEV_POWER_STATE_ON,
 										 ui32CallerID,
@@ -468,6 +563,16 @@ PVRSRV_ERROR SGXScheduleCCBCommandKM(PVRSRV_DEVICE_NODE		*psDeviceNode,
 }
 
 
+/*!
+******************************************************************************
+
+ @Function	SGXScheduleProcessQueuesKM
+
+ @Description - Software command complete handler
+
+ @Input psDeviceNode - SGX device node
+
+******************************************************************************/
 PVRSRV_ERROR SGXScheduleProcessQueuesKM(PVRSRV_DEVICE_NODE *psDeviceNode)
 {
 	/* Note: If the client-side code doesn't call SrvInit(), the normal
@@ -507,7 +612,7 @@ PVRSRV_ERROR SGXScheduleProcessQueuesKM(PVRSRV_DEVICE_NODE *psDeviceNode)
 	ui32PowerStatus = psHostCtl->ui32PowerStatus;
 	if ((ui32PowerStatus & PVRSRV_USSE_EDM_POWMAN_NO_WORK) != 0)
 	{
-
+		/* The ukernel has no work to do so don't waste power. */
 		return PVRSRV_OK;
 	}
 
@@ -523,11 +628,41 @@ PVRSRV_ERROR SGXScheduleProcessQueuesKM(PVRSRV_DEVICE_NODE *psDeviceNode)
 }
 
 
+/*!
+******************************************************************************
+
+ @Function	SGXIsDevicePowered
+
+ @Description
+
+	Whether the device is powered, for the purposes of lockup detection.
+
+ @Input psDeviceNode - pointer to device node
+
+ @Return   IMG_BOOL  : Whether device is powered
+
+******************************************************************************/
 IMG_BOOL SGXIsDevicePowered(PVRSRV_DEVICE_NODE *psDeviceNode)
 {
 	return PVRSRVIsDevicePowered(psDeviceNode->sDevId.ui32DeviceIndex);
 }
 
+/*!
+*******************************************************************************
+
+ @Function	SGXGetInternalDevInfoKM
+
+ @Description
+	Gets device information that is not intended to be passed
+	on beyond the srvclient libs.
+
+ @Input hDevCookie
+
+ @Output psSGXInternalDevInfo
+
+ @Return   PVRSRV_ERROR :
+
+******************************************************************************/
 IMG_EXPORT
 PVRSRV_ERROR SGXGetInternalDevInfoKM(IMG_HANDLE hDevCookie,
 									SGX_INTERNAL_DEVINFO *psSGXInternalDevInfo)
@@ -537,7 +672,7 @@ PVRSRV_ERROR SGXGetInternalDevInfoKM(IMG_HANDLE hDevCookie,
 	psSGXInternalDevInfo->ui32Flags = psDevInfo->ui32Flags;
 	psSGXInternalDevInfo->bForcePTOff = (IMG_BOOL)psDevInfo->bForcePTOff;
 
-
+	/* This should be patched up by OS bridge code */
 	psSGXInternalDevInfo->hHostCtlKernelMemInfoHandle =
 		(IMG_HANDLE)psDevInfo->psKernelSGXHostCtlMemInfo;
 
@@ -938,6 +1073,14 @@ PVRSRV_ERROR SGXUnregisterHW2DContextKM(IMG_HANDLE hHW2DContext)
 }
 #endif
 
+/*!****************************************************************************
+ @Function	SGX2DQuerySyncOpsCompleteKM
+
+ @Input		psSyncInfo : Sync object to be queried
+
+ @Return	IMG_TRUE - ops complete, IMG_FALSE - ops pending
+
+******************************************************************************/
 #ifdef INLINE_IS_PRAGMA
 #pragma inline(SGX2DQuerySyncOpsComplete)
 #endif
@@ -954,6 +1097,16 @@ IMG_BOOL SGX2DQuerySyncOpsComplete(PVRSRV_KERNEL_SYNC_INFO	*psSyncInfo,
 					 );
 }
 
+/*!****************************************************************************
+ @Function	SGX2DQueryBlitsCompleteKM
+
+ @Input		psDevInfo : SGX device info structure
+
+ @Input		psSyncInfo : Sync object to be queried
+
+ @Return	PVRSRV_ERROR
+
+******************************************************************************/
 IMG_EXPORT
 PVRSRV_ERROR SGX2DQueryBlitsCompleteKM(PVRSRV_SGXDEV_INFO	*psDevInfo,
 									   PVRSRV_KERNEL_SYNC_INFO *psSyncInfo,
@@ -970,20 +1123,20 @@ PVRSRV_ERROR SGX2DQueryBlitsCompleteKM(PVRSRV_SGXDEV_INFO	*psDevInfo,
 
 	if(SGX2DQuerySyncOpsComplete(psSyncInfo, ui32ReadOpsPending, ui32WriteOpsPending))
 	{
-
+		/* Instant success */
 		PVR_DPF((PVR_DBG_CALLTRACE, "SGX2DQueryBlitsCompleteKM: No wait. Blits complete."));
 		return PVRSRV_OK;
 	}
 
-
+	/* Not complete yet */
 	if (!bWaitForComplete)
 	{
-
+		/* Just report not complete */
 		PVR_DPF((PVR_DBG_CALLTRACE, "SGX2DQueryBlitsCompleteKM: No wait. Ops pending."));
 		return PVRSRV_ERROR_CMD_NOT_PROCESSED;
 	}
 
-
+	/* Start polling */
 	PVR_DPF((PVR_DBG_MESSAGE, "SGX2DQueryBlitsCompleteKM: Ops pending. Start polling."));
 
 	LOOP_UNTIL_TIMEOUT(MAX_HW_TIME_US)
@@ -992,7 +1145,7 @@ PVRSRV_ERROR SGX2DQueryBlitsCompleteKM(PVRSRV_SGXDEV_INFO	*psDevInfo,
 
 		if(SGX2DQuerySyncOpsComplete(psSyncInfo, ui32ReadOpsPending, ui32WriteOpsPending))
 		{
-
+			/* Success */
 			PVR_DPF((PVR_DBG_CALLTRACE, "SGX2DQueryBlitsCompleteKM: Wait over.  Blits complete."));
 			return PVRSRV_OK;
 		}
@@ -1000,7 +1153,7 @@ PVRSRV_ERROR SGX2DQueryBlitsCompleteKM(PVRSRV_SGXDEV_INFO	*psDevInfo,
 		OSWaitus(MAX_HW_TIME_US/WAIT_TRY_COUNT);
 	} END_LOOP_UNTIL_TIMEOUT();
 
-
+	/* Timed out */
 	PVR_DPF((PVR_DBG_ERROR,"SGX2DQueryBlitsCompleteKM: Timed out. Ops pending."));
 
 #if defined(DEBUG)
@@ -1047,8 +1200,13 @@ IMG_UINT32 SGXConvertTimeStamp(PVRSRV_SGXDEV_INFO	*psDevInfo,
 	ui32Clocksx16 = (IMG_UINT32)(ui64Clocks / 16);
 
 	return ui32Clocksx16;
-#endif
+#endif /* EUR_CR_TIMER */
 }
 
 
 
+
+
+/******************************************************************************
+ End of file (sgxutils.c)
+******************************************************************************/

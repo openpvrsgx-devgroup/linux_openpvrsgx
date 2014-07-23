@@ -1,24 +1,44 @@
-/**********************************************************************
- Copyright (c) Imagination Technologies Ltd.
+/*************************************************************************/ /*!
+@Title          Parameter dump macro target routines
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@License        Dual MIT/GPLv2
 
- Permission is hereby granted, free of charge, to any person obtaining a copy
- of this software and associated documentation files (the "Software"), to deal
- in the Software without restriction, including without limitation the rights
- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- copies of the Software, and to permit persons to whom the Software is
- furnished to do so, subject to the following conditions:
+The contents of this file are subject to the MIT license as set out below.
 
- The above copyright notice and this permission notice shall be included in
- all copies or substantial portions of the Software.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- THE SOFTWARE.
- ******************************************************************************/
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/ /**************************************************************************/
+
 
 #if defined (SUPPORT_SGX)
 #if defined (PDUMP)
@@ -88,6 +108,9 @@ static inline IMG_BOOL PDumpSuspended(IMG_VOID)
 	return atomic_read(&gsPDumpSuspended) != 0;
 }
 
+/*!
+ * \name	PDumpOSGetScriptString
+ */
 PVRSRV_ERROR PDumpOSGetScriptString(IMG_HANDLE *phScript,
 									IMG_UINT32 *pui32MaxLen)
 {
@@ -100,6 +123,9 @@ PVRSRV_ERROR PDumpOSGetScriptString(IMG_HANDLE *phScript,
 	return PVRSRV_OK;
 }
 
+/*!
+ * \name	PDumpOSGetMessageString
+ */
 PVRSRV_ERROR PDumpOSGetMessageString(IMG_HANDLE *phMsg,
 									 IMG_UINT32 *pui32MaxLen)
 {
@@ -112,6 +138,9 @@ PVRSRV_ERROR PDumpOSGetMessageString(IMG_HANDLE *phMsg,
 	return PVRSRV_OK;
 }
 
+/*!
+ * \name	PDumpOSGetFilenameString
+ */
 PVRSRV_ERROR PDumpOSGetFilenameString(IMG_CHAR **ppszFile,
 									 IMG_UINT32 *pui32MaxLen)
 {
@@ -124,11 +153,17 @@ PVRSRV_ERROR PDumpOSGetFilenameString(IMG_CHAR **ppszFile,
 	return PVRSRV_OK;
 }
 
+/*!
+ * \name	PDumpOSWriteString2
+ */
 IMG_BOOL PDumpOSWriteString2(IMG_HANDLE hScript, IMG_UINT32 ui32Flags)
 {
 	return PDumpWriteString2(hScript, ui32Flags);
 }
 
+/*!
+ * \name	PDumpOSBufprintf
+ */
 PVRSRV_ERROR PDumpOSBufprintf(IMG_HANDLE hBuf, IMG_UINT32 ui32ScriptSizeMax, IMG_CHAR* pszFormat, ...)
 {
 	IMG_CHAR* pszBuf = hBuf;
@@ -151,6 +186,9 @@ PVRSRV_ERROR PDumpOSBufprintf(IMG_HANDLE hBuf, IMG_UINT32 ui32ScriptSizeMax, IMG
 	return PVRSRV_OK;
 }
 
+/*!
+ * \name	PDumpOSVSprintf
+ */
 PVRSRV_ERROR PDumpOSVSprintf(IMG_CHAR *pszComment, IMG_UINT32 ui32ScriptSizeMax, IMG_CHAR* pszFormat, PDUMP_va_list vaArgs)
 {
 	IMG_UINT32 n;
@@ -167,11 +205,18 @@ PVRSRV_ERROR PDumpOSVSprintf(IMG_CHAR *pszComment, IMG_UINT32 ui32ScriptSizeMax,
 	return PVRSRV_OK;
 }
 
+/*!
+ * \name	PDumpOSDebugPrintf
+ */
 IMG_VOID PDumpOSDebugPrintf(IMG_CHAR* pszFormat, ...)
 {
 
+	/* FIXME: Implement using services PVR_DBG or otherwise with kprintf */
 }
 
+/*!
+ * \name	PDumpOSSprintf
+ */
 PVRSRV_ERROR PDumpOSSprintf(IMG_CHAR *pszComment, IMG_UINT32 ui32ScriptSizeMax, IMG_CHAR *pszFormat, ...)
 {
 	IMG_UINT32 n;
@@ -193,6 +238,9 @@ PVRSRV_ERROR PDumpOSSprintf(IMG_CHAR *pszComment, IMG_UINT32 ui32ScriptSizeMax, 
 	return PVRSRV_OK;
 }
 
+/*!
+ * \name	PDumpOSBuflen
+ */
 IMG_UINT32 PDumpOSBuflen(IMG_HANDLE hBuffer, IMG_UINT32 ui32BufferSizeMax)
 {
 	IMG_CHAR* pszBuf = hBuffer;
@@ -205,15 +253,18 @@ IMG_UINT32 PDumpOSBuflen(IMG_HANDLE hBuffer, IMG_UINT32 ui32BufferSizeMax)
 	return(ui32Count);
 }
 
+/*!
+ * \name	PDumpOSVerifyLineEnding
+ */
 IMG_VOID PDumpOSVerifyLineEnding(IMG_HANDLE hBuffer, IMG_UINT32 ui32BufferSizeMax)
 {
 	IMG_UINT32 ui32Count = 0;
 	IMG_CHAR* pszBuf = hBuffer;
 
-
+	/* strlen */
 	ui32Count = PDumpOSBuflen(hBuffer, ui32BufferSizeMax);
 
-
+	/* Put \r \n sequence at the end if it isn't already there */
 	if ((ui32Count >= 1) && (pszBuf[ui32Count-1] != '\n') && (ui32Count<ui32BufferSizeMax))
 	{
 		pszBuf[ui32Count] = '\n';
@@ -229,22 +280,34 @@ IMG_VOID PDumpOSVerifyLineEnding(IMG_HANDLE hBuffer, IMG_UINT32 ui32BufferSizeMa
 	}
 }
 
+/*!
+ * \name	PDumpOSGetStream
+ */
 IMG_HANDLE PDumpOSGetStream(IMG_UINT32 ePDumpStream)
 {
 	return (IMG_HANDLE)gsDBGPdumpState.psStream[ePDumpStream];
 }
 
+/*!
+ * \name	PDumpOSGetStreamOffset
+ */
 IMG_UINT32 PDumpOSGetStreamOffset(IMG_UINT32 ePDumpStream)
 {
 	PDBG_STREAM psStream = gsDBGPdumpState.psStream[ePDumpStream];
 	return gpfnDbgDrv->pfnGetStreamOffset(psStream);
 }
 
+/*!
+ * \name	PDumpOSGetParamFileNum
+ */
 IMG_UINT32 PDumpOSGetParamFileNum(IMG_VOID)
 {
 	return gsDBGPdumpState.ui32ParamFileNum;
 }
 
+/*!
+ * \name	PDumpOSWriteString
+ */
 IMG_BOOL PDumpOSWriteString(IMG_HANDLE hStream,
 		IMG_UINT8 *psui8Data,
 		IMG_UINT32 ui32Size,
@@ -257,14 +320,21 @@ IMG_BOOL PDumpOSWriteString(IMG_HANDLE hStream,
 					ui32Flags);
 }
 
+/*!
+ * \name	PDumpOSCheckForSplitting
+ */
 IMG_VOID PDumpOSCheckForSplitting(IMG_HANDLE hStream, IMG_UINT32 ui32Size, IMG_UINT32 ui32Flags)
 {
-
+	/* File size limit not implemented for this OS.
+	 */
 	PVR_UNREFERENCED_PARAMETER(hStream);
 	PVR_UNREFERENCED_PARAMETER(ui32Size);
 	PVR_UNREFERENCED_PARAMETER(ui32Size);
 }
 
+/*!
+ * \name	PDumpOSJTInitialised
+ */
 IMG_BOOL PDumpOSJTInitialised(IMG_VOID)
 {
 	if(gpfnDbgDrv)
@@ -274,11 +344,17 @@ IMG_BOOL PDumpOSJTInitialised(IMG_VOID)
 	return IMG_FALSE;
 }
 
+/*!
+ * \name	PDumpOSIsSuspended
+ */
 inline IMG_BOOL PDumpOSIsSuspended(IMG_VOID)
 {
 	return atomic_read(&gsPDumpSuspended) != 0;
 }
 
+/*!
+ * \name	PDumpOSCPUVAddrToDevPAddr
+ */
 IMG_VOID PDumpOSCPUVAddrToDevPAddr(PVRSRV_DEVICE_TYPE eDeviceType,
         IMG_HANDLE hOSMemHandle,
 		IMG_UINT32 ui32Offset,
@@ -310,6 +386,9 @@ IMG_VOID PDumpOSCPUVAddrToDevPAddr(PVRSRV_DEVICE_TYPE eDeviceType,
 	}
 }
 
+/*!
+ * \name	PDumpOSCPUVAddrToPhysPages
+ */
 IMG_VOID PDumpOSCPUVAddrToPhysPages(IMG_HANDLE hOSMemHandle,
 		IMG_UINT32 ui32Offset,
 		IMG_PUINT8 pui8LinAddr,
@@ -336,18 +415,26 @@ IMG_VOID PDumpOSCPUVAddrToPhysPages(IMG_HANDLE hOSMemHandle,
 
 
 
+/**************************************************************************
+ * Function Name  : PDumpInit
+ * Outputs        : None
+ * Returns        :
+ * Description    : Reset connection to vldbgdrv
+ *					Then try to connect to PDUMP streams
+**************************************************************************/
 IMG_VOID PDumpInit(IMG_VOID)
 {
 	IMG_UINT32 i;
 
-
+	/* If we tried this earlier, then we might have connected to the driver
+	 * But if pdump.exe was running then the stream connected would fail
+	 */
 	if (!gpfnDbgDrv)
 	{
 		DBGDrvGetServiceTable((IMG_VOID **)&gpfnDbgDrv);
 
 
-
-
+		// If something failed then no point in trying to connect streams
 		if (gpfnDbgDrv == IMG_NULL)
 		{
 			return;
@@ -453,6 +540,13 @@ IMG_VOID PDumpDeInit(IMG_VOID)
 	gpfnDbgDrv = IMG_NULL;
 }
 
+/**************************************************************************
+ * Function Name  : PDumpStartInitPhaseKM
+ * Inputs         : None
+ * Outputs        : None
+ * Returns        : None
+ * Description    : Resume init phase state
+**************************************************************************/
 PVRSRV_ERROR PDumpStartInitPhaseKM(IMG_VOID)
 {
 	IMG_UINT32 i;
@@ -468,6 +562,13 @@ PVRSRV_ERROR PDumpStartInitPhaseKM(IMG_VOID)
 	return PVRSRV_OK;
 }
 
+/**************************************************************************
+ * Function Name  : PDumpStopInitPhaseKM
+ * Inputs         : None
+ * Outputs        : None
+ * Returns        : None
+ * Description    : End init phase state
+**************************************************************************/
 PVRSRV_ERROR PDumpStopInitPhaseKM(IMG_VOID)
 {
 	IMG_UINT32 i;
@@ -484,12 +585,26 @@ PVRSRV_ERROR PDumpStopInitPhaseKM(IMG_VOID)
 	return PVRSRV_OK;
 }
 
+/**************************************************************************
+ * Function Name  : PDumpIsLastCaptureFrameKM
+ * Inputs         : None
+ * Outputs        : None
+ * Returns        : True or false
+ * Description    : Tests whether the current frame is being pdumped
+**************************************************************************/
 IMG_BOOL PDumpIsLastCaptureFrameKM(IMG_VOID)
 {
 	return gpfnDbgDrv->pfnIsLastCaptureFrame(gsDBGPdumpState.psStream[PDUMP_STREAM_SCRIPT2]);
 }
 
 
+/**************************************************************************
+ * Function Name  : PDumpIsCaptureFrameKM
+ * Inputs         : None
+ * Outputs        : None
+ * Returns        : True or false
+ * Description    : Tests whether the current frame is being pdumped
+**************************************************************************/
 IMG_BOOL PDumpIsCaptureFrameKM(IMG_VOID)
 {
 	if (PDumpSuspended())
@@ -499,6 +614,13 @@ IMG_BOOL PDumpIsCaptureFrameKM(IMG_VOID)
 	return gpfnDbgDrv->pfnIsCaptureFrame(gsDBGPdumpState.psStream[PDUMP_STREAM_SCRIPT2], IMG_FALSE);
 }
 
+/**************************************************************************
+ * Function Name  : PDumpSetFrameKM
+ * Inputs         : None
+ * Outputs        : None
+ * Returns        : None
+ * Description    : Sets a frame
+**************************************************************************/
 PVRSRV_ERROR PDumpSetFrameKM(IMG_UINT32 ui32Frame)
 {
 	IMG_UINT32	ui32Stream;
@@ -523,12 +645,30 @@ PVRSRV_ERROR PDumpGetFrameKM(IMG_PUINT32 pui32Frame)
 
 
 
+/*****************************************************************************
+ FUNCTION	:	PDumpWriteString2
+
+ PURPOSE	:
+
+ PARAMETERS	:
+
+ RETURNS	:
+*****************************************************************************/
 static IMG_BOOL PDumpWriteString2(IMG_CHAR * pszString, IMG_UINT32 ui32Flags)
 {
 	return PDumpWriteILock(gsDBGPdumpState.psStream[PDUMP_STREAM_SCRIPT2], (IMG_UINT8 *) pszString, strlen(pszString), ui32Flags);
 }
 
 
+/*****************************************************************************
+ FUNCTION	: PDumpWriteILock
+
+ PURPOSE	: Writes, making sure it all goes...
+
+ PARAMETERS	:
+
+ RETURNS	:
+*****************************************************************************/
 static IMG_BOOL PDumpWriteILock(PDBG_STREAM psStream, IMG_UINT8 *pui8Data, IMG_UINT32 ui32Count, IMG_UINT32 ui32Flags)
 {
 	IMG_UINT32 ui32Written = 0;
@@ -540,7 +680,9 @@ static IMG_BOOL PDumpWriteILock(PDBG_STREAM psStream, IMG_UINT8 *pui8Data, IMG_U
 	}
 
 
-
+	/*
+		Set the stream marker to split output files
+	*/
 
 	if (psStream == gsDBGPdumpState.psStream[PDUMP_STREAM_PARAM2])
 	{
@@ -584,6 +726,16 @@ static IMG_BOOL PDumpWriteILock(PDBG_STREAM psStream, IMG_UINT8 *pui8Data, IMG_U
 	return IMG_TRUE;
 }
 
+/*****************************************************************************
+ FUNCTION	:	DbgSetFrame
+
+ PURPOSE	:	Sets the frame in the stream
+
+ PARAMETERS	:	psStream	- Stream pointer
+				ui32Frame		- Frame number to set
+
+ RETURNS	: 	None
+*****************************************************************************/
 static IMG_VOID DbgSetFrame(PDBG_STREAM psStream, IMG_UINT32 ui32Frame)
 {
 	gpfnDbgDrv->pfnSetFrame(psStream, ui32Frame);
@@ -595,6 +747,16 @@ static IMG_UINT32 DbgGetFrame(PDBG_STREAM psStream)
 	return gpfnDbgDrv->pfnGetFrame(psStream);
 }
 
+/*****************************************************************************
+ FUNCTION	:	DbgSetMarker
+
+ PURPOSE	:	Sets the marker of the stream to split output files
+
+ PARAMETERS	:	psStream	- Stream pointer
+				ui32Marker	- Marker number to set
+
+ RETURNS	: 	None
+*****************************************************************************/
 static IMG_VOID DbgSetMarker(PDBG_STREAM psStream, IMG_UINT32 ui32Marker)
 {
 	gpfnDbgDrv->pfnSetMarker(psStream, ui32Marker);
@@ -654,5 +816,8 @@ IMG_VOID PDumpResumeKM(IMG_VOID)
 	atomic_dec(&gsPDumpSuspended);
 }
 
-#endif
-#endif
+#endif /* #if defined (PDUMP) */
+#endif /* #if defined (SUPPORT_SGX) */
+/*****************************************************************************
+ End of file (PDUMP.C)
+*****************************************************************************/

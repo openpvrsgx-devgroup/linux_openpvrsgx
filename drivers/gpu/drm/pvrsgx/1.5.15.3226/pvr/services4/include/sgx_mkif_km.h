@@ -1,24 +1,44 @@
-/**********************************************************************
- Copyright (c) Imagination Technologies Ltd.
+/*************************************************************************/ /*!
+@Title          SGX microkernel interface structures used by srvkm
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@Description    SGX microkernel interface structures used by srvkm
+@License        Dual MIT/GPLv2
 
- Permission is hereby granted, free of charge, to any person obtaining a copy
- of this software and associated documentation files (the "Software"), to deal
- in the Software without restriction, including without limitation the rights
- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- copies of the Software, and to permit persons to whom the Software is
- furnished to do so, subject to the following conditions:
+The contents of this file are subject to the MIT license as set out below.
 
- The above copyright notice and this permission notice shall be included in
- all copies or substantial portions of the Software.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- THE SOFTWARE.
- ******************************************************************************/
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/ /**************************************************************************/
 
 #if !defined (__SGX_MKIF_KM_H__)
 #define __SGX_MKIF_KM_H__
@@ -45,6 +65,10 @@
 #endif
 
 
+/*!
+ ******************************************************************************
+ * CCB command structure for SGX
+ *****************************************************************************/
 typedef struct _SGXMKIF_COMMAND_
 {
 	IMG_UINT32				ui32ServiceAddress;
@@ -53,19 +77,31 @@ typedef struct _SGXMKIF_COMMAND_
 } SGXMKIF_COMMAND;
 
 
+/*!
+ ******************************************************************************
+ * CCB array of commands for SGX
+ *****************************************************************************/
 typedef struct _PVRSRV_SGX_KERNEL_CCB_
 {
-	SGXMKIF_COMMAND		asCommands[256];
+	SGXMKIF_COMMAND		asCommands[256];		/*!< array of commands */
 } PVRSRV_SGX_KERNEL_CCB;
 
 
+/*!
+ ******************************************************************************
+ * CCB control for SGX
+ *****************************************************************************/
 typedef struct _PVRSRV_SGX_CCB_CTL_
 {
-	IMG_UINT32				ui32WriteOffset;
-	IMG_UINT32				ui32ReadOffset;
+	IMG_UINT32				ui32WriteOffset;		/*!< write offset into array of commands (MUST be alligned to 16 bytes!) */
+	IMG_UINT32				ui32ReadOffset;			/*!< read offset into array of commands */
 } PVRSRV_SGX_CCB_CTL;
 
 
+/*!
+ *****************************************************************************
+ * Control data for SGX
+ *****************************************************************************/
 typedef struct _SGXMKIF_HOST_CTL_
 {
 #if defined(PVRSRV_USSE_EDM_BREAKPOINTS)
@@ -100,7 +136,18 @@ typedef struct _SGXMKIF_HOST_CTL_
 	IMG_UINT32			ui32TimeWraps;
 } SGXMKIF_HOST_CTL;
 
+/*
+ * TA queue Kick flags
+ */
+/* Set in DoKickKM to indicate the command is ready to be processed */
 #define	SGXMKIF_CMDTA_CTRLFLAGS_READY			0x00000001
+/*!
+ ******************************************************************************
+ * Shared TA command structure.
+ * This structure is part of the TA command structure proper (SGXMKIF_CMDTA),
+ * and is accessed from the kernel part of the driver and the microkernel.
+ * There shouldn't be a need to access it from user space.
+ *****************************************************************************/
 typedef struct _SGXMKIF_CMDTA_SHARED_
 {
 	IMG_UINT32			ui32CtrlFlags;
@@ -143,6 +190,9 @@ typedef struct _SGXMKIF_CMDTA_SHARED_
 
 } SGXMKIF_CMDTA_SHARED;
 
+/*
+ * Services internal TQ limits
+ */
 #define SGXTQ_MAX_STATUS						SGX_MAX_TRANSFER_STATUS_VALS + 2
 
 #define SGXMKIF_TQFLAGS_NOSYNCUPDATE			0x00000001
@@ -154,6 +204,13 @@ typedef struct _SGXMKIF_CMDTA_SHARED_
 #endif
 #define SGXMKIF_TQFLAGS_DUMMYTRANSFER			0x00000020
 
+/*!
+ ******************************************************************************
+ * Shared Transfer Queue command structure.
+ * This structure is placed at the start of the TQ command structure proper
+ * (SGXMKIF_TRANSFERCMD), and is accessed from the kernel part of the driver
+ * and the microkernel.
+ *****************************************************************************/
 typedef struct _SGXMKIF_TRANSFERCMD_SHARED_
 {
 
@@ -232,6 +289,11 @@ typedef struct _SGXMKIF_HWDEVICE_SYNC_LIST_
 #define PVRSRV_USSE_EDM_BIF_INVAL_COMPLETE 		(1UL << 0)1UL
 #endif
 
+/*!
+ ****************************************************************************
+ * EDM / uKernel Get misc info defines
+ ****************************************************************************
+ */
 #define PVRSRV_USSE_MISCINFO_READY		0x1UL
 #define PVRSRV_USSE_MISCINFO_GET_STRUCT_SIZES	0x2UL
 #if defined(SUPPORT_SGX_EDM_MEMORY_DEBUG)
@@ -260,6 +322,10 @@ typedef struct _SGXMKIF_HWDEVICE_SYNC_LIST_
 #define SGX_BIF_DIR_LIST_INDEX_EDM	(0)
 #endif
 
+/*!
+ ******************************************************************************
+ * microkernel cache control requests
+ ******************************************************************************/
 #define	SGXMKIF_CC_INVAL_BIF_PT	0x1
 #define	SGXMKIF_CC_INVAL_BIF_PD	0x2
 #define SGXMKIF_CC_INVAL_BIF_SL	0x4
@@ -297,6 +363,11 @@ typedef struct _PVRSRV_SGX_MISCINFO_MEMREAD
 } PVRSRV_SGX_MISCINFO_MEMREAD;
 #endif
 
+/*!
+ *****************************************************************************
+ * SGX Misc Info structure used in the microkernel
+ * PVRSRV_SGX_MISCINFO_FEATURES is defined in sgxapi_km.h
+ ****************************************************************************/
 typedef struct _PVRSRV_SGX_MISCINFO_INFO
 {
 	IMG_UINT32						ui32MiscInfoFlags;
@@ -308,6 +379,10 @@ typedef struct _PVRSRV_SGX_MISCINFO_INFO
 } PVRSRV_SGX_MISCINFO_INFO;
 
 #ifdef PVRSRV_USSE_EDM_STATUS_DEBUG
+/*!
+ *****************************************************************************
+ * Number of entries in the microkernel status buffer
+ *****************************************************************************/
 #define SGXMK_TRACE_BUFFER_SIZE 512
 #endif
 
@@ -324,6 +399,10 @@ typedef struct _SGXMKIF_HWPERF_CB_ENTRY_
 	IMG_UINT32	ui32Counters[PVRSRV_SGX_HWPERF_NUM_COUNTERS];
 } SGXMKIF_HWPERF_CB_ENTRY;
 
+/*!
+ *****************************************************************************
+ * The HWPerf Circular Buffer.
+ *****************************************************************************/
 typedef struct _SGXMKIF_HWPERF_CB_
 {
 	IMG_UINT32				ui32Woff;
@@ -335,5 +414,10 @@ typedef struct _SGXMKIF_HWPERF_CB_
 #endif
 
 
-#endif
+#endif /*  __SGX_MKIF_KM_H__ */
+
+/******************************************************************************
+ End of file (sgx_mkif_km.h)
+******************************************************************************/
+
 

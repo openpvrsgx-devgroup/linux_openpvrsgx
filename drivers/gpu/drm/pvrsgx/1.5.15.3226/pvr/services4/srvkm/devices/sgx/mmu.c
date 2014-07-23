@@ -1491,7 +1491,6 @@ MMU_UnmapPagesAndFreePTs (MMU_HEAP *psMMUHeap,
 
 			/* The page table count should not go below zero */
 			PVR_ASSERT((IMG_INT32)ppsPTInfoList[0]->ui32ValidPTECount >= 0);
-			MakeKernelPageReadWrite(ppsPTInfoList[0]->PTPageCpuVAddr);
 #if defined(SUPPORT_SGX_MMU_DUMMY_PAGE)
 			/* point the PT entry to the dummy data page */
 			pui32Tmp[ui32PTIndex] = (psMMUHeap->psMMUContext->psDevInfo->sDummyDataDevPAddr.uiAddr>>SGX_MMU_PTE_ADDR_ALIGNSHIFT)

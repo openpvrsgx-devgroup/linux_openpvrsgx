@@ -1,24 +1,43 @@
-/**********************************************************************
- Copyright (c) Imagination Technologies Ltd.
+/*************************************************************************/ /*!
+@Title          Linux memory interface support functions
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@License        Dual MIT/GPLv2
 
- Permission is hereby granted, free of charge, to any person obtaining a copy
- of this software and associated documentation files (the "Software"), to deal
- in the Software without restriction, including without limitation the rights
- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- copies of the Software, and to permit persons to whom the Software is
- furnished to do so, subject to the following conditions:
+The contents of this file are subject to the MIT license as set out below.
 
- The above copyright notice and this permission notice shall be included in
- all copies or substantial portions of the Software.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- THE SOFTWARE.
- ******************************************************************************/
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/ /**************************************************************************/
 
 #include <linux/version.h>
 
@@ -67,15 +86,23 @@ pvr_pat_entry(u64 pat, IMG_UINT index)
 static IMG_VOID
 PVRLinuxX86PATProbe(IMG_VOID)
 {
-
-	if (cpu_has_pat)
+	/*
+	 * cpu_has_pat indicates whether PAT support is available on the CPU,
+	 * but doesn't indicate if it has been enabled.
+	 */
+	if (cpu_has_pat)	/* PRQA S 3335 */ /* ignore 'no function declared' */
 	{
 		u64 pat;
 		IMG_UINT pat_index;
 		IMG_UINT pat_entry;
 
 		PVR_TRACE(("%s: PAT available", __FUNCTION__));
-
+		/*
+		 * There is no Linux API for finding out if write combining
+		 * is avaialable through the PAT, so we take the direct
+		 * approach, and see if the PAT MSR contains a write combining
+		 * entry.
+		 */
 		rdmsrl(MSR_IA32_CR_PAT, pat);
 		PVR_TRACE(("%s: Top 32 bits of PAT: 0x%.8x", __FUNCTION__, (IMG_UINT)(pat >> 32)));
 		PVR_TRACE(("%s: Bottom 32 bits of PAT: 0x%.8x", __FUNCTION__, (IMG_UINT)(pat)));
@@ -100,21 +127,28 @@ PVRLinuxX86PATProbe(IMG_VOID)
 	{
 		PVR_TRACE(("%s: Write combining not available", __FUNCTION__));
 	}
-#else
+#else	/* defined(SUPPORT_LINUX_X86_WRITECOMBINE) */
 	PVR_TRACE(("%s: Write combining disabled in driver build", __FUNCTION__));
-#endif
-#endif
+#endif	/* defined(SUPPORT_LINUX_X86_WRITECOMBINE) */
+#endif	/* DEBUG */
 }
 
 pgprot_t
 pvr_pgprot_writecombine(pgprot_t prot)
 {
-
-
+    /*
+     * It would be worth checking from time to time to see if a
+     * pgprot_writecombine function (or similar) is introduced on Linux for
+     * x86 processors.  If so, this function, and PVRLinuxX86PATProbe can be
+     * removed, and a macro used to select between pgprot_writecombine and
+     * pgprot_noncached, dpending on the value for of
+     * SUPPORT_LINUX_X86_WRITECOMBINE.
+     */
+    /* PRQA S 0481,0482 2 */ /* scalar expressions */
     return (g_write_combining_available) ?
 		__pgprot((pgprot_val(prot) & ~_PAGE_CACHE_MASK) | _PAGE_CACHE_WC) : pgprot_noncached(prot);
 }
-#endif
+#endif	/* defined(SUPPORT_LINUX_X86_PAT) */
 
 IMG_VOID
 PVRLinuxMUtilsInit(IMG_VOID)

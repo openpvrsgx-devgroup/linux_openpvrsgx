@@ -1,24 +1,43 @@
-/**********************************************************************
- Copyright (c) Imagination Technologies Ltd.
+/*************************************************************************/ /*!
+@Title          Parameter Buffer management functions
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@License        Dual MIT/GPLv2
 
- Permission is hereby granted, free of charge, to any person obtaining a copy
- of this software and associated documentation files (the "Software"), to deal
- in the Software without restriction, including without limitation the rights
- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- copies of the Software, and to permit persons to whom the Software is
- furnished to do so, subject to the following conditions:
+The contents of this file are subject to the MIT license as set out below.
 
- The above copyright notice and this permission notice shall be included in
- all copies or substantial portions of the Software.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- THE SOFTWARE.
- ******************************************************************************/
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/ /**************************************************************************/
 
 #include <stddef.h>
 
@@ -45,6 +64,8 @@ static PVRSRV_PER_PROCESS_DATA *psPerProcCreateSharedPB = IMG_NULL;
 static PVRSRV_ERROR SGXCleanupSharedPBDescCallback(IMG_PVOID pvParam, IMG_UINT32 ui32Param);
 static PVRSRV_ERROR SGXCleanupSharedPBDescCreateLockCallback(IMG_PVOID pvParam, IMG_UINT32 ui32Param);
 
+/* override level pointer indirection */
+/* PRQA S 5102 12 */
 IMG_EXPORT PVRSRV_ERROR
 SGXFindSharedPBDescKM(PVRSRV_PER_PROCESS_DATA	*psPerProc,
 					  IMG_HANDLE 				hDevCookie,
@@ -103,7 +124,7 @@ SGXFindSharedPBDescKM(PVRSRV_PER_PROCESS_DATA	*psPerProc,
 					  sizeof(PVRSRV_KERNEL_MEM_INFO *) * psStubPBDesc->ui32SubKernelMemInfosCount,
 					  ppsSharedPBDescSubKernelMemInfos,
 					  0);
-
+			/*not nulling pointer, out of scope*/
 
 			PVR_DPF((PVR_DBG_ERROR, "SGXFindSharedPBDescKM: ResManRegisterRes failed"));
 
@@ -168,14 +189,11 @@ ExitNotFound:
 static PVRSRV_ERROR
 SGXCleanupSharedPBDescKM(PVRSRV_STUB_PBDESC *psStubPBDescIn)
 {
-
+	/*PVRSRV_STUB_PBDESC **ppsStubPBDesc;*/
 	IMG_UINT32 i;
 	PVRSRV_DEVICE_NODE *psDeviceNode;
 
 	psDeviceNode = (PVRSRV_DEVICE_NODE*)psStubPBDescIn->hDevCookie;
-
-
-
 
 	psStubPBDescIn->ui32RefCount--;
 	if (psStubPBDescIn->ui32RefCount == 0)
@@ -183,7 +201,6 @@ SGXCleanupSharedPBDescKM(PVRSRV_STUB_PBDESC *psStubPBDescIn)
 		List_PVRSRV_STUB_PBDESC_Remove(psStubPBDescIn);
 		for(i=0 ; i<psStubPBDescIn->ui32SubKernelMemInfosCount; i++)
 		{
-
 			PVRSRVFreeDeviceMemKM(psStubPBDescIn->hDevCookie,
 								  psStubPBDescIn->ppsSubKernelMemInfos[i]);
 		}
@@ -206,15 +223,15 @@ SGXCleanupSharedPBDescKM(PVRSRV_STUB_PBDESC *psStubPBDescIn)
 				  sizeof(PVRSRV_STUB_PBDESC),
 				  psStubPBDescIn,
 				  0);
+		/*not nulling pointer, copy on stack*/
 
-
-
+		/* signal the microkernel to clear its sTAHWPBDesc and s3DHWPBDesc values in sTA3DCtl */
 		SGXCleanupRequest(psDeviceNode,
 						  IMG_NULL,
 						  PVRSRV_CLEANUPCMD_PB);
 	}
 	return PVRSRV_OK;
-
+	/*return PVRSRV_ERROR_INVALID_PARAMS;*/
 }
 
 static PVRSRV_ERROR SGXCleanupSharedPBDescCallback(IMG_PVOID pvParam, IMG_UINT32 ui32Param)
@@ -271,7 +288,10 @@ SGXAddSharedPBDescKM(PVRSRV_PER_PROCESS_DATA	*psPerProc,
 	PVRSRV_SGXDEV_INFO *psSGXDevInfo;
 	PRESMAN_ITEM psResItem;
 
-
+	/*
+	 * The caller must have previously called SGXFindSharedPBDesc with
+	 * bLockOnFailure set, and not managed to find a suitable shared PB.
+	 */
 	if (psPerProcCreateSharedPB != psPerProc)
 	{
 		goto NoAdd;
@@ -299,7 +319,11 @@ SGXAddSharedPBDescKM(PVRSRV_PER_PROCESS_DATA	*psPerProc,
 
 		}
 
-
+		/*
+		 * We make the caller think the add was successful,
+		 * but return the existing shared PB desc rather than
+		 * a new one.
+		 */
 		psResItem = ResManRegisterRes(psPerProc->hResManContext,
 									  RESMAN_TYPE_SHARED_PB_DESC,
 									  psStubPBDesc,
@@ -314,7 +338,10 @@ SGXAddSharedPBDescKM(PVRSRV_PER_PROCESS_DATA	*psPerProc,
 			goto NoAddKeepPB;
 		}
 
-
+		/*
+		 * The caller will unreference the PB desc after
+		 * a successful add, so up the reference count.
+		 */
 		psStubPBDesc->ui32RefCount++;
 
 		*phSharedPBDesc = (IMG_HANDLE)psResItem;
@@ -411,7 +438,8 @@ SGXAddSharedPBDescKM(PVRSRV_PER_PROCESS_DATA	*psPerProc,
 	}
 	psStubPBDesc->hDevCookie = hDevCookie;
 
-
+	/* Finally everything was prepared successfully so link the new
+	 * PB in to place. */
 	List_PVRSRV_STUB_PBDESC_Insert(&(psSGXDevInfo->psStubPBDescListKM),
 									psStubPBDesc);
 
@@ -434,7 +462,7 @@ NoAdd:
 				  sizeof(PVRSRV_STUB_PBDESC),
 				  psStubPBDesc,
 				  0);
-
+		/*not nulling pointer, out of scope*/
 	}
 
 NoAddKeepPB:
@@ -452,3 +480,6 @@ NoAddKeepPB:
 	return eRet;
 }
 
+/******************************************************************************
+ End of file (pb.c)
+******************************************************************************/

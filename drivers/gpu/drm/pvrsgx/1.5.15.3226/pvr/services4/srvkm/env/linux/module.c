@@ -218,7 +218,13 @@ static struct platform_device powervr_device = {
 static IMG_INT PVRSRVDriverProbe(LDM_DEV *pDevice)
 #endif
 #if defined(PVR_LDM_PCI_MODULE)
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0))
 static IMG_INT PVRSRVDriverProbe(LDM_DEV *pDevice, const struct pci_device_id *id)
+#else
+static IMG_INT __devinit PVRSRVDriverProbe(LDM_DEV *pDevice, const struct pci_device_id *id)
+#endif
+
 #endif
 {
 	SYS_DATA *psSysData;

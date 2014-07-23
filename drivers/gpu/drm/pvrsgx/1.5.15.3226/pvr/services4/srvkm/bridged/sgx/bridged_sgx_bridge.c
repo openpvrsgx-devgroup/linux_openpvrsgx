@@ -1,24 +1,45 @@
-/**********************************************************************
- Copyright (c) Imagination Technologies Ltd.
+/*************************************************************************/ /*!
+@Title          SGX Common Bridge Module (kernel side)
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@Description    Receives calls from the user portion of services and
+                despatches them to functions in the kernel portion.
+@License        Dual MIT/GPLv2
 
- Permission is hereby granted, free of charge, to any person obtaining a copy
- of this software and associated documentation files (the "Software"), to deal
- in the Software without restriction, including without limitation the rights
- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- copies of the Software, and to permit persons to whom the Software is
- furnished to do so, subject to the following conditions:
+The contents of this file are subject to the MIT license as set out below.
 
- The above copyright notice and this permission notice shall be included in
- all copies or substantial portions of the Software.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- THE SOFTWARE.
- ******************************************************************************/
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/ /**************************************************************************/
 
 
 
@@ -218,7 +239,7 @@ SGXDoKickBW(IMG_UINT32 ui32BridgeID,
 
 
 #if defined(SUPPORT_SGX_GENERALISED_SYNCOBJECTS)
-
+	/* SRC and DST sync details */
 	if (psDoKickIN->sCCBKick.ui32NumTASrcSyncs > SGX_MAX_TA_SRC_SYNCS)
 	{
 		psRetOUT->eError = PVRSRV_ERROR_INVALID_PARAMS;
@@ -384,7 +405,7 @@ SGXDoKickBW(IMG_UINT32 ui32BridgeID,
 			goto PVRSRV_BRIDGE_SGX_DOKICK_RETURN_RESULT;
 		}
 
-
+		/* Set sCCBKick.pahDstSyncHandles to point to the local memory */
 		psDoKickIN->sCCBKick.pahDstSyncHandles = phKernelSyncInfoHandles;
 
 		for( i = 0; i < ui32NumDstSyncs; i++)
@@ -426,7 +447,7 @@ PVRSRV_BRIDGE_SGX_DOKICK_RETURN_RESULT:
 				  ui32NumDstSyncs * sizeof(IMG_HANDLE),
 				  (IMG_VOID *)phKernelSyncInfoHandles,
 				  0);
-
+		/*not nulling pointer, out of scope*/
 	}
 	return ret;
 }
@@ -662,8 +683,8 @@ SGXSubmit2DBW(IMG_UINT32 ui32BridgeID,
 
 	return 0;
 }
-#endif
-#endif
+#endif /* #if defined(SGX_FEATURE_2D_HARDWARE) */
+#endif /* #if defined(TRANSFER_QUEUE) */
 
 
 static IMG_INT
@@ -676,7 +697,7 @@ SGXGetMiscInfoBW(IMG_UINT32 ui32BridgeID,
 	IMG_HANDLE hDevMemContextInt = 0;
 	PVRSRV_SGXDEV_INFO *psDevInfo;
 	SGX_MISC_INFO        sMiscInfo;
-	PVRSRV_DEVICE_NODE *psDeviceNode;
+ 	PVRSRV_DEVICE_NODE *psDeviceNode;
 
 	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID,
 							PVRSRV_BRIDGE_SGX_GETMISCINFO);
@@ -692,7 +713,7 @@ SGXGetMiscInfoBW(IMG_UINT32 ui32BridgeID,
 	}
 
 #if defined(SUPPORT_SGX_EDM_MEMORY_DEBUG)
-
+	/* Lookup handle for dev mem context */
 	if (psSGXGetMiscInfoIN->psMiscInfo->eRequest == SGX_MISC_INFO_REQUEST_MEMREAD)
 	{
 		psRetOUT->eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
@@ -706,7 +727,7 @@ SGXGetMiscInfoBW(IMG_UINT32 ui32BridgeID,
 		}
 	}
 #endif
-
+	/* device node is required for scheduling a CCB command */
 	psDeviceNode = hDevCookieInt;
 	PVR_ASSERT(psDeviceNode != IMG_NULL);
 	if (psDeviceNode == IMG_NULL)
@@ -716,7 +737,7 @@ SGXGetMiscInfoBW(IMG_UINT32 ui32BridgeID,
 
 	psDevInfo = psDeviceNode->pvDevice;
 
-
+	/* Copy psMiscInfo to kernel space */
 	psRetOUT->eError = CopyFromUserWrapper(psPerProc,
 			                               ui32BridgeID,
 			                               &sMiscInfo,
@@ -790,7 +811,7 @@ SGXGetMiscInfoBW(IMG_UINT32 ui32BridgeID,
 		}
 	}
 
-
+	/* Copy back misc info to user address space */
 	psRetOUT->eError = CopyToUserWrapper(psPerProc,
 		                             ui32BridgeID,
 		                             psSGXGetMiscInfoIN->psMiscInfo,
@@ -853,7 +874,7 @@ SGXReadHWPerfCBBW(IMG_UINT32							ui32BridgeID,
 
 	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID, PVRSRV_BRIDGE_SGX_READ_HWPERF_CB);
 
-	psSGXReadHWPerfCBOUT->eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
+	psSGXReadHWPerfCBOUT->eError =PVRSRVLookupHandle(psPerProc->psHandleBase,
 							&hDevCookieInt,
 							psSGXReadHWPerfCBIN->hDevCookie,
 							PVRSRV_HANDLE_TYPE_DEV_NODE);
@@ -891,7 +912,7 @@ SGXReadHWPerfCBBW(IMG_UINT32							ui32BridgeID,
 			  ui32AllocatedSize,
 			  psAllocated,
 			  hAllocatedHandle);
-
+	/*not nulling pointer, out of scope*/
 
 	return 0;
 }
@@ -930,9 +951,7 @@ SGXDevInitPart2BW(IMG_UINT32 ui32BridgeID,
 		return 0;
 	}
 
-
-
-
+	/* Check all the meminfo handles */
 	eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
 						   &hDummy,
 						   psSGXDevInitPart2IN->sInitInfo.hKernelCCBMemInfo,
@@ -1454,7 +1473,7 @@ SGXUnregisterHW2DContextBW(IMG_UINT32 ui32BridgeID,
 
 	return 0;
 }
-#endif
+#endif /* #if defined(SGX_FEATURE_2D_HARDWARE) */
 
 static IMG_INT
 SGXFlushHWRenderTargetBW(IMG_UINT32 ui32BridgeID,
@@ -1575,7 +1594,8 @@ SGXFindSharedPBDescBW(IMG_UINT32 ui32BridgeID,
 	if(hSharedPBDesc == IMG_NULL)
 	{
 		psSGXFindSharedPBDescOUT->hSharedPBDescKernelMemInfoHandle = 0;
-
+		/* It's not an error if we don't find a buffer,
+		 * we just return NULL */
 		goto PVRSRV_BRIDGE_SGX_FINDSHAREDPBDESC_EXIT;
 	}
 
@@ -1585,7 +1605,12 @@ SGXFindSharedPBDescBW(IMG_UINT32 ui32BridgeID,
 					  PVRSRV_HANDLE_TYPE_SHARED_PB_DESC,
 					  PVRSRV_HANDLE_ALLOC_FLAG_NONE);
 
-
+	/*
+	 * We allocate handles of type PVRSRV_HANDLE_TYPE_MEM_INFO_REF here,
+	 * as the process doesn't own the underlying memory, and so should
+	 * only be allowed a restricted set of operations on it, such as
+	 * mapping it into its address space.
+	 */
 	PVRSRVAllocSubHandleNR(psPerProc->psHandleBase,
 					  &psSGXFindSharedPBDescOUT->hSharedPBDescKernelMemInfoHandle,
 					  psSharedPBDescKernelMemInfo,
@@ -1818,26 +1843,30 @@ SGXAddSharedPBDescBW(IMG_UINT32 ui32BridgeID,
 		}
 	}
 
-
-
+	/*
+	 * Release all the handles we've just looked up, as none
+	 * of the associated resources will be valid for access via
+	 * those handles once we return from SGXAddSharedPBDesc.
+	 */
+	/* PRQA S 3198 2 */ /* override redundant warning as PVR_ASSERT is ignored by QAC */
 	eError = PVRSRVReleaseHandle(psPerProc->psHandleBase,
 								psSGXAddSharedPBDescIN->hSharedPBDescKernelMemInfo,
 								PVRSRV_HANDLE_TYPE_SHARED_SYS_MEM_INFO);
 	PVR_ASSERT(eError == PVRSRV_OK);
 
-
+	/* PRQA S 3198 2 */ /* override redundant warning as PVR_ASSERT is ignored by QAC */
 	eError = PVRSRVReleaseHandle(psPerProc->psHandleBase,
 								psSGXAddSharedPBDescIN->hHWPBDescKernelMemInfo,
 								PVRSRV_HANDLE_TYPE_MEM_INFO);
 	PVR_ASSERT(eError == PVRSRV_OK);
 
-
+	/* PRQA S 3198 2 */ /* override redundant warning as PVR_ASSERT is ignored by QAC */
 	eError = PVRSRVReleaseHandle(psPerProc->psHandleBase,
 								psSGXAddSharedPBDescIN->hBlockKernelMemInfo,
 								PVRSRV_HANDLE_TYPE_SHARED_SYS_MEM_INFO);
 	PVR_ASSERT(eError == PVRSRV_OK);
 
-
+	/* PRQA S 3198 2 */ /* override redundant warning as PVR_ASSERT is ignored by QAC */
 	eError = PVRSRVReleaseHandle(psPerProc->psHandleBase,
 								psSGXAddSharedPBDescIN->hHWBlockKernelMemInfo,
 								PVRSRV_HANDLE_TYPE_MEM_INFO);
@@ -1845,7 +1874,7 @@ SGXAddSharedPBDescBW(IMG_UINT32 ui32BridgeID,
 
 	for(i=0; i<ui32KernelMemInfoHandlesCount; i++)
 	{
-
+		/* PRQA S 3198 2 */ /* override redundant warning as PVR_ASSERT is ignored by QAC */
 		eError = PVRSRVReleaseHandle(psPerProc->psHandleBase,
 									phKernelMemInfoHandles[i],
 									PVRSRV_HANDLE_TYPE_MEM_INFO);
@@ -1950,7 +1979,7 @@ SGXGetInfoForSrvinitBW(IMG_UINT32 ui32BridgeID,
 
 			if (psHeapInfo->hDevMemHeap != IMG_NULL)
 			{
-
+				/* Allocate heap handle */
 				PVRSRVAllocHandleNR(psPerProc->psHandleBase,
 								  &hDevMemHeapExt,
 								  psHeapInfo->hDevMemHeap,
@@ -1967,6 +1996,13 @@ SGXGetInfoForSrvinitBW(IMG_UINT32 ui32BridgeID,
 }
 
 #if defined(PDUMP)
+// PRQA S 5120++
+/*****************************************************************************
+ FUNCTION	: DumpBufferArray
+ PURPOSE	: PDUMP information in stored buffer array
+ PARAMETERS	:
+ RETURNS	:
+*****************************************************************************/
 static IMG_VOID
 DumpBufferArray(PVRSRV_PER_PROCESS_DATA *psPerProc,
 				PSGX_KICKTA_DUMP_BUFFER	psBufferArray,
@@ -2026,7 +2062,9 @@ DumpBufferArray(PVRSRV_PER_PROCESS_DATA *psPerProc,
 		}
 		else
 		{
-
+			/*
+				Range of data wraps the end of the buffer so it needs to be dumped in two sections
+			*/
 
 			if (bDumpPolls)
 			{
@@ -2113,7 +2151,7 @@ SGXPDumpBufferArrayBW(IMG_UINT32 ui32BridgeID,
 						   ui32BufferArraySize) != PVRSRV_OK)
 	{
 		OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, ui32BufferArraySize, psKickTADumpBuffer, 0);
-
+		/*not nulling pointer, out of scope*/
 		return -EFAULT;
 	}
 
@@ -2406,6 +2444,9 @@ Exit:
 
 	return ret;
 }
+//PRQA S 5120--
+
+
 static IMG_INT
 SGXPDumpHWPerfCBBW(IMG_UINT32						ui32BridgeID,
 				   PVRSRV_BRIDGE_IN_PDUMP_HWPERFCB	*psPDumpHWPerfCBIN,
@@ -2450,7 +2491,7 @@ SGXPDumpHWPerfCBBW(IMG_UINT32						ui32BridgeID,
 	PVR_UNREFERENCED_PARAMETER(psRetOUT);
 	PVR_UNREFERENCED_PARAMETER(psPerProc);
 	return -EFAULT;
-#endif
+#endif /* defined(SUPPORT_SGX_HWPERF) */
 }
 
 #endif
@@ -2506,5 +2547,6 @@ IMG_VOID SetSGXDispatchTableEntry(IMG_VOID)
 	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_PDUMP_HWPERFCB, SGXPDumpHWPerfCBBW);
 #endif
 }
+/* PRQA L:END_SET_SGX */ /* end of setup overrides */
 
-#endif
+#endif /* SUPPORT_SGX */

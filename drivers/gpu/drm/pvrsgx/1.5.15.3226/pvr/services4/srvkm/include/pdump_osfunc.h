@@ -245,5 +245,3 @@ IMG_VOID PDumpOSCPUVAddrToPhysPages(IMG_HANDLE hOSMemHandle,
 }
 #endif
 
-#endif
-

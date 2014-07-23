@@ -1,24 +1,44 @@
-/**********************************************************************
- Copyright (c) Imagination Technologies Ltd.
+/*************************************************************************/ /*!
+@Title          Debug Functionality
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@Description    Provides kernel side Debug Functionality
+@License        Dual MIT/GPLv2
 
- Permission is hereby granted, free of charge, to any person obtaining a copy
- of this software and associated documentation files (the "Software"), to deal
- in the Software without restriction, including without limitation the rights
- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- copies of the Software, and to permit persons to whom the Software is
- furnished to do so, subject to the following conditions:
+The contents of this file are subject to the MIT license as set out below.
 
- The above copyright notice and this permission notice shall be included in
- all copies or substantial portions of the Software.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- THE SOFTWARE.
- ******************************************************************************/
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/ /**************************************************************************/
 
 
 #include <asm/io.h>
@@ -94,6 +114,11 @@ static inline void SelectBuffer(IMG_CHAR **ppszBuf, IMG_UINT32 *pui32BufSiz)
 	}
 }
 
+/*
+ * Append a string to a buffer using formatted conversion.
+ * The function takes a variable number of arguments, pointed
+ * to by the var args list.
+ */
 static IMG_BOOL VBAppend(IMG_CHAR *pszBuf, IMG_UINT32 ui32BufSiz, const IMG_CHAR* pszFormat, va_list VArgs)
 {
 	IMG_UINT32 ui32Used;
@@ -111,11 +136,21 @@ static IMG_BOOL VBAppend(IMG_CHAR *pszBuf, IMG_UINT32 ui32BufSiz, const IMG_CHAR
 	return (i32Len < 0 || i32Len >= ui32Space);
 }
 
+/* Actually required for ReleasePrintf too */
+
 IMG_VOID PVRDPFInit(IMG_VOID)
 {
     mutex_init(&gsDebugMutexNonIRQ);
 }
 
+/*!
+******************************************************************************
+	@Function    PVRSRVReleasePrintf
+	@Description To output an important message to the user in release builds
+	@Input       pszFormat - The message format string
+	@Input       ... - Zero or more arguments for use by the format string
+	@Return      None
+ ******************************************************************************/
 IMG_VOID PVRSRVReleasePrintf(const IMG_CHAR *pszFormat, ...)
 {
 	va_list vaArgs;
@@ -156,6 +191,14 @@ IMG_VOID PVRSRVDebugAssertFail(const IMG_CHAR* pszFile, IMG_UINT32 uLine)
 
 #if defined(PVRSRV_NEED_PVR_TRACE)
 
+/*!
+******************************************************************************
+	@Function    PVRTrace
+	@Description To output a debug message to the user
+	@Input       pszFormat - The message format string
+	@Input       ... - Zero or more arguments for use by the format string
+	@Return      None
+ ******************************************************************************/
 IMG_VOID PVRSRVTrace(const IMG_CHAR* pszFormat, ...)
 {
 	va_list VArgs;
@@ -185,10 +228,15 @@ IMG_VOID PVRSRVTrace(const IMG_CHAR* pszFormat, ...)
 	va_end(VArgs);
 }
 
-#endif
+#endif /* defined(PVRSRV_NEED_PVR_TRACE) */
 
 #if defined(PVRSRV_NEED_PVR_DPF)
 
+/*
+ * Append a string to a buffer using formatted conversion.
+ * The function takes a variable number of arguments, calling
+ * VBAppend to do the actual work.
+ */
 static IMG_BOOL BAppend(IMG_CHAR *pszBuf, IMG_UINT32 ui32BufSiz, const IMG_CHAR *pszFormat, ...)
 {
 		va_list VArgs;
@@ -203,6 +251,17 @@ static IMG_BOOL BAppend(IMG_CHAR *pszBuf, IMG_UINT32 ui32BufSiz, const IMG_CHAR 
 		return bTrunc;
 }
 
+/*!
+******************************************************************************
+	@Function    PVRSRVDebugPrintf
+	@Description To output a debug message to the user
+	@Input       uDebugLevel - The current debug level
+	@Input       pszFile - The source file generating the message
+	@Input       uLine - The line of the source file
+	@Input       pszFormat - The message format string
+	@Input       ... - Zero or more arguments for use by the format string
+	@Return      None
+ ******************************************************************************/
 IMG_VOID PVRSRVDebugPrintf	(
 						IMG_UINT32	ui32DebugLevel,
 						const IMG_CHAR*	pszFullFileName,
@@ -283,16 +342,15 @@ IMG_VOID PVRSRVDebugPrintf	(
 			if (!bTrace)
 			{
 #ifdef DEBUG_LOG_PATH_TRUNCATE
-
+				/* Buffer for rewriting filepath in log messages */
 				static IMG_CHAR szFileNameRewrite[PVR_MAX_FILEPATH_LEN];
 
 				IMG_CHAR* pszTruncIter;
 				IMG_CHAR* pszTruncBackInter;
 
 
-				pszFileName = pszFullFileName + strlen(DEBUG_LOG_PATH_TRUNCATE)+1;
-
-
+				/* Try to find '/../' entries and remove it together with
+				   previous entry. Repeat unit all removed */
 				strncpy(szFileNameRewrite, pszFileName,PVR_MAX_FILEPATH_LEN);
 
 				if(strlen(szFileNameRewrite) == PVR_MAX_FILEPATH_LEN-1) {
@@ -304,7 +362,7 @@ IMG_VOID PVRSRVDebugPrintf	(
 				while(*pszTruncIter++ != 0)
 				{
 					IMG_CHAR* pszNextStartPoint;
-
+					/* Find '/../' pattern */
 					if(
 					   !( ( *pszTruncIter == '/' && (pszTruncIter-4 >= szFileNameRewrite) ) &&
 						 ( *(pszTruncIter-1) == '.') &&
@@ -312,7 +370,7 @@ IMG_VOID PVRSRVDebugPrintf	(
 						 ( *(pszTruncIter-3) == '/') )
 					   ) continue;
 
-
+					/* Find previous '/' */
 					pszTruncBackInter = pszTruncIter - 3;
 					while(*(--pszTruncBackInter) != '/')
 					{
@@ -320,19 +378,19 @@ IMG_VOID PVRSRVDebugPrintf	(
 					}
 					pszNextStartPoint = pszTruncBackInter;
 
-
+					/* Remove found region */
 					while(*pszTruncIter != 0)
 					{
 						*pszTruncBackInter++ = *pszTruncIter++;
 					}
 					*pszTruncBackInter = 0;
 
-
+					/* Start again */
 					pszTruncIter = pszNextStartPoint;
 				}
 
 				pszFileName = szFileNameRewrite;
-
+				/* Remove first '/' if exist (it's always relative path */
 				if(*pszFileName == '/') pszFileName++;
 #endif
 
@@ -343,7 +401,7 @@ IMG_VOID PVRSRVDebugPrintf	(
 				{
 					pszFileName = pszLeafName;
 		       	}
-#endif
+#endif /* __sh__ */
 
 				if (BAppend(pszBuf, ui32BufSiz, " [%lu, %s]", ui32Line, pszFileName))
 				{
@@ -366,7 +424,7 @@ IMG_VOID PVRSRVDebugPrintf	(
 	}
 }
 
-#endif
+#endif /* PVRSRV_NEED_PVR_DPF */
 
 #if defined(DEBUG)
 
@@ -415,4 +473,4 @@ IMG_INT PVRDebugProcGetLevel(IMG_CHAR *page, IMG_CHAR **start, off_t off, IMG_IN
 }
 #endif
 
-#endif
+#endif /* defined(DEBUG) */

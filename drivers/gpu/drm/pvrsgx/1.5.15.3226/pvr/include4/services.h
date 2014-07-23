@@ -1,24 +1,44 @@
-/**********************************************************************
- Copyright (c) Imagination Technologies Ltd.
+/*************************************************************************/ /*!
+@Title          Services API Header
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@Description    Exported services API details
+@License        Dual MIT/GPLv2
 
- Permission is hereby granted, free of charge, to any person obtaining a copy
- of this software and associated documentation files (the "Software"), to deal
- in the Software without restriction, including without limitation the rights
- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- copies of the Software, and to permit persons to whom the Software is
- furnished to do so, subject to the following conditions:
+The contents of this file are subject to the MIT license as set out below.
 
- The above copyright notice and this permission notice shall be included in
- all copies or substantial portions of the Software.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- THE SOFTWARE.
- ******************************************************************************/
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/ /**************************************************************************/
 
 #ifndef __SERVICES_H__
 #define __SERVICES_H__
@@ -32,11 +52,26 @@ extern "C" {
 #include "pdumpdefs.h"
 
 
+/* The comment below is the front page for code-generated doxygen documentation */
+/*!
+ ******************************************************************************
+ @mainpage
+ This document details the APIs and implementation of the Consumer Services.
+ It is intended to be used in conjunction with the Consumer Services
+ Software Architectural Specification and the Consumer Services Software
+ Functional Specification.
+ *****************************************************************************/
+
+/******************************************************************************
+ * 	#defines
+ *****************************************************************************/
+
+/* 4k page size definition */
 #define PVRSRV_4K_PAGE_SIZE		4096UL
 
-#define PVRSRV_MAX_CMD_SIZE		1024
+#define PVRSRV_MAX_CMD_SIZE		1024/*!< max size in bytes of a command */
 
-#define PVRSRV_MAX_DEVICES		16
+#define PVRSRV_MAX_DEVICES		16	/*!< Largest supported number of devices on the system */
 
 #define EVENTOBJNAME_MAXLENGTH (50)
 
@@ -69,12 +104,24 @@ extern "C" {
                                             |PVRSRV_HAP_FROM_EXISTING_PROCESS \
                                             |PVRSRV_HAP_NO_CPU_VIRTUAL)
 
+/*
+	Allows user allocations to override heap attributes
+	(Bits shared with heap flags)
+*/
 #define PVRSRV_MEM_CACHED					PVRSRV_HAP_CACHED
 #define PVRSRV_MEM_UNCACHED					PVRSRV_HAP_UNCACHED
 #define PVRSRV_MEM_WRITECOMBINE				PVRSRV_HAP_WRITECOMBINE
 
+/*
+	Backing store flags (defined internally)
+	(bits 24-26)
+*/
 #define PVRSRV_MEM_BACKINGSTORE_FIELD_SHIFT	(24)
 
+/*
+	Per allocation/mapping flags
+	(bits 27-30)
+ */
 #define PVRSRV_MAP_NOUSERVIRTUAL            (1UL<<27)
 
 #define PVRSRV_NO_CONTEXT_LOSS					0
@@ -181,6 +228,10 @@ typedef struct _PVRSRV_DEVICE_IDENTIFIER_
 } PVRSRV_DEVICE_IDENTIFIER;
 
 
+/******************************************************************************
+ * Client dev info
+ ******************************************************************************
+ */
 typedef struct _PVRSRV_CLIENT_DEV_DATA_
 {
 	IMG_UINT32		ui32NumDevices;
@@ -191,6 +242,10 @@ typedef struct _PVRSRV_CLIENT_DEV_DATA_
 } PVRSRV_CLIENT_DEV_DATA;
 
 
+/*!
+ ******************************************************************************
+ * Kernel Services connection structure
+ *****************************************************************************/
 typedef struct _PVRSRV_CONNECTION_
 {
 	IMG_HANDLE hServices;
@@ -199,6 +254,11 @@ typedef struct _PVRSRV_CONNECTION_
 }PVRSRV_CONNECTION;
 
 
+/*!
+ ******************************************************************************
+ * This structure allows the user mode glue code to have an OS independent
+ * set of prototypes.
+ *****************************************************************************/
 typedef struct _PVRSRV_DEV_DATA_
 {
 	PVRSRV_CONNECTION	sConnection;
@@ -206,18 +266,30 @@ typedef struct _PVRSRV_DEV_DATA_
 
 } PVRSRV_DEV_DATA;
 
+/*!
+ ******************************************************************************
+ * address:value update structure
+ *****************************************************************************/
 typedef struct _PVRSRV_MEMUPDATE_
 {
 	IMG_UINT32			ui32UpdateAddr;
 	IMG_UINT32			ui32UpdateVal;
 } PVRSRV_MEMUPDATE;
 
+/*!
+ ******************************************************************************
+ * address:value register structure
+ *****************************************************************************/
 typedef struct _PVRSRV_HWREG_
 {
 	IMG_UINT32			ui32RegAddr;
 	IMG_UINT32			ui32RegVal;
 } PVRSRV_HWREG;
 
+/*!
+ ******************************************************************************
+ * Implementation details for memory handling
+ *****************************************************************************/
 typedef struct _PVRSRV_MEMBLK_
 {
 	IMG_DEV_VIRTADDR	sDevVirtAddr;
@@ -229,6 +301,10 @@ typedef struct _PVRSRV_MEMBLK_
 
 } PVRSRV_MEMBLK;
 
+/*!
+ ******************************************************************************
+ * Memory Management (externel interface)
+ *****************************************************************************/
 typedef struct _PVRSRV_KERNEL_MEM_INFO_ *PPVRSRV_KERNEL_MEM_INFO;
 
 typedef struct _PVRSRV_CLIENT_MEM_INFO_
@@ -290,6 +366,10 @@ typedef struct _PVRSRV_CLIENT_MEM_INFO_
 } PVRSRV_CLIENT_MEM_INFO, *PPVRSRV_CLIENT_MEM_INFO;
 
 
+/*!
+ ******************************************************************************
+ * Memory Heap Information
+ *****************************************************************************/
 #define PVRSRV_MAX_CLIENT_HEAPS (32)
 typedef struct _PVRSRV_HEAP_INFO_
 {
@@ -303,6 +383,9 @@ typedef struct _PVRSRV_HEAP_INFO_
 
 
 
+/*
+	Event Object information structure
+*/
 typedef struct _PVRSRV_EVENTOBJECT_
 {
 

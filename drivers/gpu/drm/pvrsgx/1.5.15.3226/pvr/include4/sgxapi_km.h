@@ -1,24 +1,44 @@
-/**********************************************************************
- Copyright (c) Imagination Technologies Ltd.
+/*************************************************************************/ /*!
+@Title          SGX KM API Header
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@Description    Exported SGX API details
+@License        Dual MIT/GPLv2
 
- Permission is hereby granted, free of charge, to any person obtaining a copy
- of this software and associated documentation files (the "Software"), to deal
- in the Software without restriction, including without limitation the rights
- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- copies of the Software, and to permit persons to whom the Software is
- furnished to do so, subject to the following conditions:
+The contents of this file are subject to the MIT license as set out below.
 
- The above copyright notice and this permission notice shall be included in
- all copies or substantial portions of the Software.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- THE SOFTWARE.
- ******************************************************************************/
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/ /**************************************************************************/
 
 #ifndef __SGXAPI_KM_H__
 #define __SGXAPI_KM_H__
@@ -37,6 +57,11 @@ extern "C" {
 	#endif
 #endif
 
+/******************************************************************************
+ Some defines...
+******************************************************************************/
+
+/* SGX Heap IDs, note: not all heaps are available to clients */
 #define SGX_UNDEFINED_HEAP_ID					(~0LU)
 #define SGX_GENERAL_HEAP_ID						0
 #define SGX_TADATA_HEAP_ID						1
@@ -69,9 +94,11 @@ extern "C" {
 #define SGX_MAX_3D_STATUS_VALS	3
 
 #if defined(SUPPORT_SGX_GENERALISED_SYNCOBJECTS)
+/* sync info structure array size */
 #define SGX_MAX_TA_DST_SYNCS			1
 #define SGX_MAX_TA_SRC_SYNCS			1
 #define SGX_MAX_3D_SRC_SYNCS			4
+/* note: there is implicitly 1 3D Dst Sync */
 #else
 #define SGX_MAX_SRC_SYNCS				4
 #endif
@@ -120,6 +147,10 @@ extern "C" {
 #define PVRSRV_SGX_HWPERF_MK_EXECUTION_ON			(1UL << 1)
 
 
+/*!
+ *****************************************************************************
+ * One entry in the HWPerf Circular Buffer. 
+ *****************************************************************************/
 typedef struct _PVRSRV_SGX_HWPERF_CB_ENTRY_
 {
 	IMG_UINT32	ui32FrameNo;
@@ -160,6 +191,9 @@ typedef struct _CTL_STATUS_
 } CTL_STATUS;
 
 
+/*!
+	List of possible requests/commands to SGXGetMiscInfo()
+*/
 typedef enum _SGX_MISC_INFO_REQUEST_
 {
 	SGX_MISC_INFO_REQUEST_CLOCKSPEED = 0,
@@ -183,6 +217,11 @@ typedef enum _SGX_MISC_INFO_REQUEST_
 } SGX_MISC_INFO_REQUEST;
 
 
+/******************************************************************************
+ * Struct for passing SGX core rev/features from ukernel to driver.
+ * This is accessed from the kernel part of the driver and microkernel; it is
+ * only accessed in user space during buffer allocation in srvinit.
+ ******************************************************************************/
 typedef struct _PVRSRV_SGX_MISCINFO_FEATURES
 {
 	IMG_UINT32			ui32CoreRev;
@@ -201,7 +240,7 @@ typedef struct _PVRSRV_SGX_MISCINFO_FEATURES
 #if defined(SGX_FEATURE_DATA_BREAKPOINTS)
 typedef struct _SGX_BREAKPOINT_INFO
 {
-
+	/* set/clear BP boolean */
 	IMG_BOOL					bBPEnable;
 
 
@@ -235,12 +274,19 @@ typedef struct _SGX_MISC_INFO_
 } SGX_MISC_INFO;
 
 #if defined(SGX_FEATURE_2D_HARDWARE)
+/*
+ * The largest number of source sync objects that can be associated with a blit
+ * command.  Allows for src, pattern, and mask
+ */
 #define PVRSRV_MAX_BLT_SRC_SYNCS		3
 #endif
 
 
 #define SGX_KICKTA_DUMPBITMAP_MAX_NAME_LENGTH		256
 
+/*
+	Structure for dumping bitmaps
+*/
 typedef struct _SGX_KICKTA_DUMPBITMAP_
 {
 	IMG_DEV_VIRTADDR	sDevBaseAddr;
@@ -255,6 +301,10 @@ typedef struct _SGX_KICKTA_DUMPBITMAP_
 
 #define PVRSRV_SGX_PDUMP_CONTEXT_MAX_BITMAP_ARRAY_SIZE	(16)
 
+/*!
+ ******************************************************************************
+ * Data required only when dumping parameters
+ *****************************************************************************/
 typedef struct _PVRSRV_SGX_PDUMP_CONTEXT_
 {
 
@@ -290,6 +340,9 @@ typedef struct _SGX_KICKTA_DUMP_BUFFER_
 } SGX_KICKTA_DUMP_BUFFER, *PSGX_KICKTA_DUMP_BUFFER;
 
 #ifdef PDUMP
+/*
+	PDUMP version of above kick structure
+*/
 typedef struct _SGX_KICKTA_PDUMP_
 {
 
@@ -319,5 +372,8 @@ typedef struct _SGX_KICKTA_PDUMP_
 }
 #endif
 
-#endif
+#endif /* __SGXAPI_KM_H__ */
 
+/******************************************************************************
+ End of file (sgxapi_km.h)
+******************************************************************************/

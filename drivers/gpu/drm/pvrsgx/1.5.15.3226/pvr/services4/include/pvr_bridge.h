@@ -1,24 +1,44 @@
-/**********************************************************************
- Copyright (c) Imagination Technologies Ltd.
+/*************************************************************************/ /*!
+@Title          PVR Bridge Functionality
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@Description    Header for the PVR Bridge code
+@License        Dual MIT/GPLv2
 
- Permission is hereby granted, free of charge, to any person obtaining a copy
- of this software and associated documentation files (the "Software"), to deal
- in the Software without restriction, including without limitation the rights
- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- copies of the Software, and to permit persons to whom the Software is
- furnished to do so, subject to the following conditions:
+The contents of this file are subject to the MIT license as set out below.
 
- The above copyright notice and this permission notice shall be included in
- all copies or substantial portions of the Software.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- THE SOFTWARE.
- ******************************************************************************/
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/ /**************************************************************************/
 
 #ifndef __PVR_BRIDGE_H__
 #define __PVR_BRIDGE_H__
@@ -28,6 +48,11 @@ extern "C" {
 #endif
 
 #include "servicesint.h"
+
+/*
+ * Bridge Cmd Ids
+ */
+
 
 #ifdef __linux__
 
@@ -51,6 +76,11 @@ extern "C" {
 	#define PVRSRV_BRIDGE_BASE                  PVRSRV_IOC_GID
 #endif
 
+
+/*
+ * Note *REMEMBER* to update PVRSRV_BRIDGE_LAST_CMD (below) if you add any new
+ * bridge commands!
+ */
 
 #define PVRSRV_BRIDGE_CORE_CMD_FIRST			0UL
 #define PVRSRV_BRIDGE_ENUM_DEVICES				PVRSRV_IOWR(PVRSRV_BRIDGE_CORE_CMD_FIRST+0)
@@ -89,6 +119,7 @@ extern "C" {
 #define PVRSRV_BRIDGE_UNREGISTER_SIM_PROCESS	PVRSRV_IOWR(PVRSRV_BRIDGE_SIM_CMD_FIRST+2)
 #define PVRSRV_BRIDGE_SIM_CMD_LAST				(PVRSRV_BRIDGE_SIM_CMD_FIRST+2)
 
+/* User Mapping */
 #define PVRSRV_BRIDGE_MAPPING_CMD_FIRST			(PVRSRV_BRIDGE_SIM_CMD_LAST+1)
 #define PVRSRV_BRIDGE_MAPPHYSTOUSERSPACE		PVRSRV_IOWR(PVRSRV_BRIDGE_MAPPING_CMD_FIRST+0)
 #define PVRSRV_BRIDGE_UNMAPPHYSTOUSERSPACE		PVRSRV_IOWR(PVRSRV_BRIDGE_MAPPING_CMD_FIRST+1)
@@ -99,10 +130,13 @@ extern "C" {
 #define	PVRSRV_BRIDGE_GET_FB_STATS				PVRSRV_IOWR(PVRSRV_BRIDGE_STATS_CMD_FIRST+0)
 #define PVRSRV_BRIDGE_STATS_CMD_LAST			(PVRSRV_BRIDGE_STATS_CMD_FIRST+0)
 
+/* API to retrieve misc. info. from services */
 #define PVRSRV_BRIDGE_MISC_CMD_FIRST			(PVRSRV_BRIDGE_STATS_CMD_LAST+1)
 #define PVRSRV_BRIDGE_GET_MISC_INFO				PVRSRV_IOWR(PVRSRV_BRIDGE_MISC_CMD_FIRST+0)
 #define PVRSRV_BRIDGE_RELEASE_MISC_INFO			PVRSRV_IOWR(PVRSRV_BRIDGE_MISC_CMD_FIRST+1)
 #define PVRSRV_BRIDGE_MISC_CMD_LAST				(PVRSRV_BRIDGE_MISC_CMD_FIRST+1)
+
+/* Overlay ioctls */
 
 #define PVRSRV_BRIDGE_OVERLAY_CMD_FIRST			(PVRSRV_BRIDGE_MISC_CMD_LAST+1)
 #if defined (SUPPORT_OVERLAY_ROTATE_BLIT)
@@ -111,6 +145,7 @@ extern "C" {
 #endif
 #define PVRSRV_BRIDGE_OVERLAY_CMD_LAST			(PVRSRV_BRIDGE_OVERLAY_CMD_FIRST+1)
 
+/* PDUMP */
 #if defined(PDUMP)
 #define PVRSRV_BRIDGE_PDUMP_CMD_FIRST			(PVRSRV_BRIDGE_OVERLAY_CMD_FIRST+1)
 #define PVRSRV_BRIDGE_PDUMP_INIT			PVRSRV_IOWR(PVRSRV_BRIDGE_PDUMP_CMD_FIRST+0)
@@ -134,17 +169,23 @@ extern "C" {
 #define PVRSRV_BRIDGE_PDUMP_STOPINITPHASE			PVRSRV_IOWR(PVRSRV_BRIDGE_PDUMP_CMD_FIRST+18)
 #define PVRSRV_BRIDGE_PDUMP_CMD_LAST			(PVRSRV_BRIDGE_PDUMP_CMD_FIRST+18)
 #else
+/* Note we are carefull here not to leave a large gap in the ioctl numbers.
+ * (Some ports may use these values to index into an array where large gaps can
+ * waste memory) */
 #define PVRSRV_BRIDGE_PDUMP_CMD_LAST			PVRSRV_BRIDGE_OVERLAY_CMD_LAST
 #endif
 
+/* DisplayClass APIs */
 #define PVRSRV_BRIDGE_OEM_CMD_FIRST				(PVRSRV_BRIDGE_PDUMP_CMD_LAST+1)
 #define PVRSRV_BRIDGE_GET_OEMJTABLE				PVRSRV_IOWR(PVRSRV_BRIDGE_OEM_CMD_FIRST+0)
 #define PVRSRV_BRIDGE_OEM_CMD_LAST				(PVRSRV_BRIDGE_OEM_CMD_FIRST+0)
 
+/* device class enum */
 #define PVRSRV_BRIDGE_DEVCLASS_CMD_FIRST		(PVRSRV_BRIDGE_OEM_CMD_LAST+1)
 #define PVRSRV_BRIDGE_ENUM_CLASS				PVRSRV_IOWR(PVRSRV_BRIDGE_DEVCLASS_CMD_FIRST+0)
 #define PVRSRV_BRIDGE_DEVCLASS_CMD_LAST			(PVRSRV_BRIDGE_DEVCLASS_CMD_FIRST+0)
 
+/* display class API */
 #define PVRSRV_BRIDGE_DISPCLASS_CMD_FIRST		(PVRSRV_BRIDGE_DEVCLASS_CMD_LAST+1)
 #define PVRSRV_BRIDGE_OPEN_DISPCLASS_DEVICE		PVRSRV_IOWR(PVRSRV_BRIDGE_DISPCLASS_CMD_FIRST+0)
 #define PVRSRV_BRIDGE_CLOSE_DISPCLASS_DEVICE	PVRSRV_IOWR(PVRSRV_BRIDGE_DISPCLASS_CMD_FIRST+1)

@@ -37,13 +37,16 @@
 
 #define END_OF_FILE (off_t) -1
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
 typedef int (pvr_read_proc_t)(struct seq_file *, void *v);
 
 typedef int (read_proc_t)(char *page, char **start, off_t off,
 			  int count, int *eof, void *data);
 typedef int (write_proc_t)(struct file *file, const char __user *buffer,
 			   unsigned long count, void *data);
-
+#else
+typedef off_t (pvr_read_proc_t)(IMG_CHAR *, size_t, off_t);
+#endif
 
 #ifdef PVR_PROC_USE_SEQ_FILE
 #define PVR_PROC_SEQ_START_TOKEN (void*)1
@@ -92,8 +95,12 @@ struct proc_dir_entry* CreateProcReadEntrySeq (
 								pvr_next_proc_seq_t next_handler,
 								pvr_show_proc_seq_t show_handler,
 								pvr_off2element_proc_seq_t off2element_handler,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
 								pvr_startstop_proc_seq_t startstop_handler,
 								PVR_PROC_SEQ_HANDLERS **handlers
+#else
+								pvr_startstop_proc_seq_t startstop_handler
+#endif
 							   );
 
 struct proc_dir_entry* CreateProcEntrySeq (
@@ -103,8 +110,12 @@ struct proc_dir_entry* CreateProcEntrySeq (
 								pvr_show_proc_seq_t show_handler,
 								pvr_off2element_proc_seq_t off2element_handler,
 								pvr_startstop_proc_seq_t startstop_handler,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
 								write_proc_t whandler,
 								PVR_PROC_SEQ_HANDLERS **handlers
+#else
+								write_proc_t whandler
+#endif
 							   );
 
 struct proc_dir_entry* CreatePerProcessProcEntrySeq (
@@ -118,8 +129,12 @@ struct proc_dir_entry* CreatePerProcessProcEntrySeq (
 							   );
 
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
 IMG_VOID RemoveProcEntrySeq(struct proc_dir_entry* proc_entry, const char *name,
 			    PVR_PROC_SEQ_HANDLERS *handlers);
+#else
+IMG_VOID RemoveProcEntrySeq(struct proc_dir_entry* proc_entry);
+#endif
 IMG_VOID RemovePerProcessProcEntrySeq(struct proc_dir_entry* proc_entry);
 
 #endif

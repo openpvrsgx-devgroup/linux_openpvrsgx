@@ -47,6 +47,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 extern "C" {
 #endif
 
+#include "ra.h"
+#include "resman.h"
+
 /* BM context forward reference */
 typedef struct _BM_CONTEXT_ BM_CONTEXT;
 

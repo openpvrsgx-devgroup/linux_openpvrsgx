@@ -639,7 +639,13 @@ PVRMMap(struct file* pFile, struct vm_area_struct* ps_vma)
     PVR_DPF((PVR_DBG_MESSAGE, "%s: Mapped psLinuxMemArea 0x%p\n",
          __FUNCTION__, psOffsetStruct->psLinuxMemArea));
 #endif
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)
     ps_vma->vm_flags |= VM_DONTEXPAND | VM_DONTDUMP;
+#else
+    ps_vma->vm_flags |= VM_RESERVED;
+#endif
+
     ps_vma->vm_flags |= VM_IO;
 
 

@@ -164,7 +164,12 @@ static IMG_INT pvr_proc_open(struct inode *inode,struct file *file)
 	struct seq_file *seq = (struct seq_file*)file->private_data;
 
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0))
 	seq->private = PDE_DATA(inode);
+#else
+	seq->private = PDE(inode)->data;
+#endif
+
 	return ret;
 }
 
@@ -507,7 +512,11 @@ IMG_INT CreatePerProcessProcEntry(const IMG_CHAR * name, read_proc_t rhandler, w
 
 static int pvr_read_proc_open(struct inode *inode, struct file *file)
 {
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0))
 	return single_open(file, pvr_read_proc, PDE_DATA(inode));
+#else
+	return single_open(file, pvr_read_proc, PDE(file->f_path.dentry->d_inode)->data);
+#endif
 }
 
 static struct file_operations pvr_read_proc_operations =

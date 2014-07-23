@@ -633,7 +633,7 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVInsertCommandKM(PVRSRV_QUEUE_INFO	*psQueue,
 	psCommand->ui32ProcessID	= OSGetCurrentProcessIDKM();
 
 	/* setup the command */
-	psCommand->uCmdSize		= ui32CommandSize; /* this may change if cmd shrinks */
+	psCommand->ui32CmdSize		= ui32CommandSize; /* this may change if cmd shrinks */
 	psCommand->ui32DevIndex 	= ui32DevIndex;
 	psCommand->CommandType 		= CommandType;
 	psCommand->ui32DstSyncCount	= ui32DstSyncCount;

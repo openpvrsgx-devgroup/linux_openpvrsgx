@@ -1926,7 +1926,6 @@ IMG_VOID MMU_GetPDPhysAddr(MMU_CONTEXT *pMMUContext, IMG_DEV_PHYADDR *psDevPAddr
 	*psDevPAddr = pMMUContext->sPDDevPAddr;
 }
 
-#endif
 #if defined(PDUMP)
 /*!
 ******************************************************************************

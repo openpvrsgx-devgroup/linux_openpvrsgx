@@ -688,6 +688,7 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVFinaliseSystem(IMG_BOOL bInitSuccessful)
 		}
 	}
 
+#if !defined(SUPPORT_PDUMP_DELAYED_INITPHASE_TERMINATION)
 	/* Some platforms call this too early in the boot phase. */
 	PDUMPENDINITPHASE();
 #endif

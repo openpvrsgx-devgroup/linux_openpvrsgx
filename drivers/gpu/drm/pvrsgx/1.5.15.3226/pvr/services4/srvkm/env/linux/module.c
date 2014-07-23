@@ -1,24 +1,43 @@
-/**********************************************************************
- Copyright (c) Imagination Technologies Ltd.
+/*************************************************************************/ /*!
+@Title          Linux module setup
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@License        Dual MIT/GPLv2
 
- Permission is hereby granted, free of charge, to any person obtaining a copy
- of this software and associated documentation files (the "Software"), to deal
- in the Software without restriction, including without limitation the rights
- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- copies of the Software, and to permit persons to whom the Software is
- furnished to do so, subject to the following conditions:
+The contents of this file are subject to the MIT license as set out below.
 
- The above copyright notice and this permission notice shall be included in
- all copies or substantial portions of the Software.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- THE SOFTWARE.
- ******************************************************************************/
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/ /**************************************************************************/
 
 #if !defined(SUPPORT_DRI_DRM)
 
@@ -46,11 +65,11 @@
 
 #if defined(PVR_LDM_PLATFORM_MODULE)
 #include <linux/platform_device.h>
-#endif
+#endif /* PVR_LDM_PLATFORM_MODULE */
 
 #if defined(PVR_LDM_PCI_MODULE)
 #include <linux/pci.h>
-#endif
+#endif /* PVR_LDM_PCI_MODULE */
 
 #if defined(DEBUG) && defined(PVR_MANUAL_POWER_CONTROL)
 #include <asm/uaccess.h>
@@ -107,11 +126,14 @@ MODULE_PARM_DESC(debug, "Sets the level of debug output (default=0x4)");
 extern IMG_BOOL PVRGetDisplayClassJTable(PVRSRV_DC_DISP2SRV_KMJTABLE *psJTable);
 extern IMG_BOOL PVRGetBufferClassJTable(PVRSRV_BC_BUFFER2SRV_KMJTABLE *psJTable);
 
+/* PRQA S 3207 2 */ /* ignore 'not used' warning */
 EXPORT_SYMBOL(PVRGetDisplayClassJTable);
 EXPORT_SYMBOL(PVRGetBufferClassJTable);
 
-
 #if defined(PVR_LDM_MODULE)
+/*
+ * Device class used for /sys entries (and udev device node creation)
+ */
 static struct class *psPvrClass;
 #endif
 
@@ -132,6 +154,7 @@ static struct file_operations pvrsrv_fops = {
 
 struct mutex gPVRSRVLock;
 
+/* PID of process being released */
 IMG_UINT32 gui32ReleasePID;
 
 #if defined(DEBUG) && defined(PVR_MANUAL_POWER_CONTROL)
@@ -143,13 +166,15 @@ static IMG_UINT32 gPVRPowerLevel;
 #if defined(PVR_LDM_PLATFORM_MODULE)
 #define	LDM_DEV	struct platform_device
 #define	LDM_DRV	struct platform_driver
-#endif
+#endif /*PVR_LDM_PLATFORM_MODULE */
 
 #if defined(PVR_LDM_PCI_MODULE)
 #define	LDM_DEV	struct pci_dev
 #define	LDM_DRV	struct pci_driver
-#endif
-
+#endif /* PVR_LDM_PCI_MODULE */
+/*
+ * This is the driver interface we support.  
+ */
 #if defined(PVR_LDM_PLATFORM_MODULE)
 static IMG_INT PVRSRVDriverRemove(LDM_DEV *device);
 static IMG_INT PVRSRVDriverProbe(LDM_DEV *device);
@@ -163,7 +188,7 @@ static IMG_VOID PVRSRVDriverShutdown(LDM_DEV *device);
 static IMG_INT PVRSRVDriverResume(LDM_DEV *device);
 
 #if defined(PVR_LDM_PCI_MODULE)
-/* all supported platform ids */
+/* This structure is used by the Linux module code */
 struct pci_device_id powervr_id_table[] __devinitdata = {
 	{ PCI_DEVICE(SYS_SGX_DEV_VENDOR_ID, SYS_SGX_DEV_DEVICE_ID_PLB) },
 	{ PCI_DEVICE(SYS_SGX_DEV_VENDOR_ID, SYS_SGX_DEV_DEVICE_ID_TNC) },
@@ -214,6 +239,22 @@ static struct platform_device powervr_device = {
 
 #endif
 
+/*!
+******************************************************************************
+
+ @Function		PVRSRVDriverProbe
+
+ @Description
+
+ See whether a given device is really one we can drive.  The platform bus
+ handler has already established that we should be able to service this device
+ because of the name match.  We probably don't need to do anything else.
+
+ @input pDevice - the device for which a probe is requested
+
+ @Return 0 for success or <0 for an error.
+
+*****************************************************************************/
 #if defined(PVR_LDM_PLATFORM_MODULE)
 static IMG_INT PVRSRVDriverProbe(LDM_DEV *pDevice)
 #endif
@@ -231,8 +272,14 @@ static IMG_INT __devinit PVRSRVDriverProbe(LDM_DEV *pDevice, const struct pci_de
 
 	PVR_TRACE(("PVRSRVDriverProbe(pDevice=%p)", pDevice));
 
-#if 0
-
+#if 0   /* INTEGRATION_POINT */
+	/* Some systems require device-specific system initialisation.
+	 * E.g. this lets the OS track a device's dependencies on various
+	 * system hardware.
+	 *
+	 * Note: some systems use this to enable HW that SysAcquireData
+	 * will depend on, therefore it must be called first.
+	 */
 	if (PerDeviceSysInitialise((IMG_PVOID)pDevice) != PVRSRV_OK)
 	{
 		return -EINVAL;
@@ -253,6 +300,25 @@ static IMG_INT __devinit PVRSRVDriverProbe(LDM_DEV *pDevice, const struct pci_de
 }
 
 
+/*!
+******************************************************************************
+
+ @Function		PVRSRVDriverRemove
+
+ @Description
+
+ This call is the opposite of the probe call: it is called when the device is
+ being removed from the driver's control.  See the file $KERNELDIR/drivers/
+ base/bus.c:device_release_driver() for the call to this function.
+
+ This is the correct place to clean up anything our driver did while it was
+ asoociated with the device.
+
+ @input pDevice - the device for which driver detachment is happening
+
+ @Return 0 for success or <0 for an error.
+
+*****************************************************************************/
 #if defined (PVR_LDM_PLATFORM_MODULE)
 static IMG_INT PVRSRVDriverRemove(LDM_DEV *pDevice)
 #endif
@@ -341,10 +407,46 @@ static IMG_INT PVRSRVDriverResume(LDM_DEV *pDevice)
 #endif
 	return 0;
 }
-#endif
+#endif /* defined(PVR_LDM_MODULE) || defined(SUPPORT_DRI_DRM) */
 
 
 #if defined(DEBUG) && defined(PVR_MANUAL_POWER_CONTROL) && !defined(SUPPORT_DRI_DRM)
+/*
+ * If PVR_LDM_PCI_MODULE is defined (and PVR_MANUAL_POWER_CONTROL is *NOT* defined),
+ * the device can be suspended and resumed without suspending/resuming the
+ * system, by writing values into the power/state sysfs file for the device.
+ * To suspend:
+ *	echo -n 2 > power/state
+ * To Resume:
+ *	echo -n 0 > power/state
+ *
+ * The problem with this approach is that the device is usually left
+ * powered up; it is the responsibility of the bus driver to remove
+ * the power.
+ *
+ * Defining PVR_MANUAL_POWER_CONTROL is intended to make it easier to
+ * debug power management issues, especially when power is really removed
+ * from the device.  It is easier to debug the driver if it is not being
+ * suspended/resumed with the rest of the system.
+ *
+ * When PVR_MANUAL_POWER_CONTROL is defined, the following proc entry is
+ * created:
+ * 	/proc/pvr/power_control
+ * The driver suspend/resume entry points defined below no longer suspend or
+ * resume the device.  To suspend the device, type the following:
+ * 	echo 2 > /proc/pvr/power_control
+ * To resume the device, type:
+ * 	echo 0 > /proc/pvr/power_control
+ * 
+ * The following example shows how to suspend/resume the device independently
+ * of the rest of the system.
+ * Suspend the device:
+ * 	echo 2 > /proc/pvr/power_control
+ * Suspend the system.  Then you should be able to suspend and resume
+ * as normal.  To resume the device type the following:
+ * 	echo 0 > /proc/pvr/power_control
+ */
+
 IMG_INT PVRProcSetPowerLevel(struct file *file, const IMG_CHAR *buffer, IMG_UINT32 count, IMG_VOID *data)
 {
 	IMG_CHAR data_buffer[2];
@@ -468,6 +570,23 @@ err_unlock:
 }
 
 
+/*!
+******************************************************************************
+
+ @Function		PVRSRVRelease
+
+ @Description
+
+ Release access the PVR services node - called when a file is closed, whether
+ at exit or using close(2) system call.
+
+ @input pInode - the inode for the file being released
+
+ @input pFile - the file handle data for the actual file being released
+
+ @Return 0 for success or <0 for an error.
+
+*****************************************************************************/
 #if defined(SUPPORT_DRI_DRM)
 IMG_INT PVRSRVRelease(struct drm_device unref__ *dev, struct drm_file *pFile)
 #else
@@ -506,6 +625,42 @@ static IMG_INT PVRSRVRelease(struct inode unref__ * pInode, struct file *pFile)
 }
 
 
+/*!
+******************************************************************************
+
+ @Function		PVRCore_Init
+
+ @Description
+
+ Insert the driver into the kernel.
+
+ The device major number is allocated by the kernel dynamically.  This means
+ that the device node (nominally /dev/pvrsrv) will need to be re-made at boot
+ time if the number changes between subsequent loads of the module.  While the
+ number often stays constant between loads this is not guaranteed.  The node
+ is made as root on the shell with:
+
+ 		mknod /dev/pvrsrv c nnn 0
+
+ where nnn is the major number found in /proc/devices for DEVNAME and also
+ reported by the PVR_DPF() - look at the boot log using dmesg' to see this).
+
+ Currently the auto-generated script /etc/init.d/rc.pvr handles creation of
+ the device.  In other environments the device may be created either through
+ devfs or sysfs.
+
+ Readable proc-filesystem entries under /proc/pvr are created with
+ CreateProcEntries().  These can be read at runtime to get information about
+ the device (eg. 'cat /proc/pvr/vm')
+
+ __init places the function in a special memory section that the kernel frees
+ once the function has been run.  Refer also to module_init() macro call below.
+
+ @input none
+
+ @Return none
+
+*****************************************************************************/
 #if defined(SUPPORT_DRI_DRM)
 IMG_INT PVRCore_Init(IMG_VOID)
 #else
@@ -572,7 +727,7 @@ static IMG_INT __init PVRCore_Init(IMG_VOID)
 		goto init_failed;
 	}
 #endif
-#endif
+#endif /* PVR_LDM_PLATFORM_MODULE */
 
 #if defined(PVR_LDM_PCI_MODULE)
 	if ((error = pci_register_driver(&powervr_driver)) != 0)
@@ -581,7 +736,7 @@ static IMG_INT __init PVRCore_Init(IMG_VOID)
 
 		goto init_failed;
 	}
-#endif
+#endif /* PVR_LDM_PCI_MODULE */
 
 #else
 
@@ -597,7 +752,7 @@ static IMG_INT __init PVRCore_Init(IMG_VOID)
 #endif
 		goto init_failed;
 	}
-#endif
+#endif /* !defined(PVR_LDM_MODULE) */
 
 #if !defined(SUPPORT_DRI_DRM)
 	AssignedMajorNumber = register_chrdev(0, DEVNAME, &pvrsrv_fops);
@@ -611,10 +766,13 @@ static IMG_INT __init PVRCore_Init(IMG_VOID)
 	}
 
 	PVR_TRACE(("PVRCore_Init: major device %d", AssignedMajorNumber));
-#endif
+#endif /* !defined(SUPPORT_DRI_DRM) */
 
 #if defined(PVR_LDM_MODULE)
-
+	/*
+	 * This code (using GPL symbols) facilitates automatic device
+	 * node creation on platforms with udev (or similar).
+	 */
 	psPvrClass = class_create(THIS_MODULE, "pvr");
 
 	if (IS_ERR(psPvrClass))
@@ -627,7 +785,7 @@ static IMG_INT __init PVRCore_Init(IMG_VOID)
 	psDev = device_create(psPvrClass, NULL, MKDEV(AssignedMajorNumber, 0),
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,26))
 				  NULL,
-#endif
+#endif /* (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,26)) */
 				  DEVNAME);
 	if (IS_ERR(psDev))
 	{
@@ -635,7 +793,7 @@ static IMG_INT __init PVRCore_Init(IMG_VOID)
 		error = -EBUSY;
 		goto destroy_class;
 	}
-#endif
+#endif /* defined(PVR_LDM_DEVICE_CLASS) */
 
 	return 0;
 
@@ -660,8 +818,8 @@ sys_deinit:
 	platform_driver_unregister(&powervr_driver);
 #endif
 
-#else
-
+#else	/* defined(PVR_LDM_MODULE) */
+	/* LDM drivers call SysDeinitialise during PVRSRVDriverRemove */
 	{
 		SYS_DATA *psSysData;
 
@@ -671,7 +829,7 @@ sys_deinit:
 			SysDeinitialise(psSysData);
 		}
 	}
-#endif
+#endif	/* defined(PVR_LDM_MODULE) */
 init_failed:
 	PVRMMapCleanup();
 	LinuxMMCleanup();
@@ -681,9 +839,34 @@ init_failed:
 
 	return error;
 
-}
+} /*PVRCore_Init*/
 
 
+/*!
+*****************************************************************************
+
+ @Function		PVRCore_Cleanup
+
+ @Description	
+
+ Remove the driver from the kernel.
+
+ There's no way we can get out of being unloaded other than panicking; we
+ just do everything and plough on regardless of error.
+
+ __exit places the function in a special memory section that the kernel frees
+ once the function has been run.  Refer also to module_exit() macro call below.
+
+ Note that the for LDM on MontaVista kernels, the positioning of the driver
+ de-registration is the opposite way around than would be suggested by the
+ registration case or the 2,6 kernel case.  This is the correct way to do it
+ and the kernel panics if you change it.  You have been warned.
+
+ @input none
+
+ @Return none
+
+*****************************************************************************/
 #if defined(SUPPORT_DRI_DRM)
 IMG_VOID PVRCore_Cleanup(IMG_VOID)
 #else
@@ -704,17 +887,17 @@ static IMG_VOID __exit PVRCore_Cleanup(IMG_VOID)
 #if !defined(SUPPORT_DRI_DRM)
 #if (LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,22))
 	if (
-#endif
+#endif	/* (LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,22)) */
 		unregister_chrdev((IMG_UINT)AssignedMajorNumber, DRVNAME)
 #if !(LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,22))
 								;
-#else
+#else	/* (LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,22)) */
 								)
 	{
 		PVR_DPF((PVR_DBG_ERROR," can't unregister device major %d", AssignedMajorNumber));
 	}
-#endif
-#endif
+#endif	/* (LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,22)) */
+#endif	/* !defined(SUPPORT_DRI_DRM) */
 
 #if defined(PVR_LDM_MODULE)
 
@@ -729,7 +912,7 @@ static IMG_VOID __exit PVRCore_Cleanup(IMG_VOID)
 	platform_driver_unregister(&powervr_driver);
 #endif
 
-#else
+#else /* defined(PVR_LDM_MODULE) */
 #if defined(DEBUG) && defined(PVR_MANUAL_POWER_CONTROL)
 	if (gPVRPowerLevel != 0)
 	{
@@ -739,9 +922,9 @@ static IMG_VOID __exit PVRCore_Cleanup(IMG_VOID)
 		}
 	}
 #endif
-
+	/* LDM drivers call SysDeinitialise during PVRSRVDriverRemove */
 	SysDeinitialise(psSysData);
-#endif
+#endif /* defined(PVR_LDM_MODULE) */
 
 	PVRMMapCleanup();
 
@@ -756,6 +939,12 @@ static IMG_VOID __exit PVRCore_Cleanup(IMG_VOID)
 	PVR_TRACE(("PVRCore_Cleanup: unloading"));
 }
 
+/*
+ * These macro calls define the initialisation and removal functions of the
+ * driver.  Although they are prefixed `module_', they apply when compiling
+ * statically as well; in both cases they define the function the kernel will
+ * run to start/stop the driver.
+*/
 #if !defined(SUPPORT_DRI_DRM)
 module_init(PVRCore_Init);
 module_exit(PVRCore_Cleanup);

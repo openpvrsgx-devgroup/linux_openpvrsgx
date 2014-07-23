@@ -1,24 +1,89 @@
-/**********************************************************************
- Copyright (c) Imagination Technologies Ltd.
+/*************************************************************************/ /*!
+@Title          Resource Allocator
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@Description
+  Implements generic resource allocation. The resource
+  allocator was originally intended to manage address spaces in
+  practice the resource allocator is generic and can manages arbitrary
+  sets of integers.
+ 
+  Resources are allocated from arenas. Arena's can be created with an
+  initial span of resources. Further resources spans can be added to
+  arenas. A call back mechanism allows an arena to request further
+  resource spans on demand.
+ 
+  Each arena maintains an ordered list of resource segments each
+  described by a boundary tag. Each boundary tag describes a segment
+  of resources which are either 'free', available for allocation, or
+  'busy' currently allocated. Adjacent 'free' segments are always
+  coallesced to avoid fragmentation.
+ 
+  For allocation, all 'free' segments are kept on lists of 'free'
+  segments in a table index by pvr_log2(segment size). ie Each table index
+  n holds 'free' segments in the size range 2**(n-1) -> 2**n.
+ 
+  Allocation policy is based on an *almost* best fit
+  stratedy. Choosing any segment from the appropriate table entry
+  guarantees that we choose a segment which is with a power of 2 of
+  the size we are allocating.
+ 
+  Allocated segments are inserted into a self scaling hash table which
+  maps the base resource of the span to the relevant boundary
+  tag. This allows the code to get back to the bounary tag without
+  exporting explicit boundary tag references through the API.
+ 
+  Each arena has an associated quantum size, all allocations from the
+  arena are made in multiples of the basic quantum.
+ 
+  On resource exhaustion in an arena, a callback if provided will be
+  used to request further resources. Resouces spans allocated by the
+  callback mechanism are delimited by special boundary tag markers of
+  zero span, 'span' markers. Span markers are never coallesced. Span
+  markers are used to detect when an imported span is completely free
+  and can be deallocated by the callback mechanism.
+@License        Dual MIT/GPLv2
 
- Permission is hereby granted, free of charge, to any person obtaining a copy
- of this software and associated documentation files (the "Software"), to deal
- in the Software without restriction, including without limitation the rights
- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- copies of the Software, and to permit persons to whom the Software is
- furnished to do so, subject to the following conditions:
+The contents of this file are subject to the MIT license as set out below.
 
- The above copyright notice and this permission notice shall be included in
- all copies or substantial portions of the Software.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- THE SOFTWARE.
- ******************************************************************************/
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/ /**************************************************************************/
+
+/* Issues:
+ * - flags, flags are passed into the resource allocator but are not currently used.
+ * - determination, of import size, is currently braindead.
+ * - debug code should be moved out to own module and #ifdef'd
+ */
 
 #include "services_headers.h"
 #include "hash.h"
@@ -35,9 +100,17 @@
 #include <stdio.h>
 #endif
 
+/* The initial, and minimum size of the live address -> boundary tag
+   structure hash table. The value 64 is a fairly arbitrary
+   choice. The hash table resizes on demand so the value choosen is
+   not critical. */
 #define MINIMUM_HASH_SIZE (64)
 
 #if defined(VALIDATE_ARENA_TEST)
+
+/* This test validates the doubly linked ordered list of boundary tags, by
+checking that adjacent members of the list have compatible eResourceSpan
+and eResourceType values. */
 
 typedef enum RESOURCE_DESCRIPTOR_TAG {
 
@@ -63,33 +136,36 @@ static IMG_UINT32 ui32BoundaryTagID = 0;
 IMG_UINT32 ValidateArena(RA_ARENA *pArena);
 #endif
 
+/* boundary tags, used to describe a resource segment */
 struct _BT_
 {
 	enum bt_type
 	{
-		btt_span,
-		btt_free,
-		btt_live
+		btt_span,				/* span markers */
+		btt_free,				/* free resource segment */
+		btt_live				/* allocated resource segment */
 	} type;
 
-
+	/* The base resource and extent of this segment */
 	IMG_UINTPTR_T base;
 	IMG_SIZE_T uSize;
 
-
+	/* doubly linked ordered list of all segments within the arena */
 	struct _BT_ *pNextSegment;
 	struct _BT_ *pPrevSegment;
-
+	/* doubly linked un-ordered list of free segments. */
 	struct _BT_ *pNextFree;
 	struct _BT_ *pPrevFree;
-
+	/* a user reference associated with this span, user references are
+	 * currently only provided in the callback mechanism */
 	BM_MAPPING *psMapping;
 
 #if defined(VALIDATE_ARENA_TEST)
 	RESOURCE_DESCRIPTOR eResourceSpan;
 	RESOURCE_TYPE		eResourceType;
 
-
+	/* This variable provides a reference (used in debug messages) to incompatible
+	boundary tags within the doubly linked ordered list. */
 	IMG_UINT32			ui32BoundaryTagID;
 #endif
 
@@ -97,15 +173,16 @@ struct _BT_
 typedef struct _BT_ BT;
 
 
+/* resource allocation arena */
 struct _RA_ARENA_
 {
-
+	/* arena name for diagnostics output */
 	IMG_CHAR *name;
 
-
+	/* allocations within this arena are quantum sized */
 	IMG_SIZE_T uQuantum;
 
-
+	/* import interface, if provided */
 	IMG_BOOL (*pImportAlloc)(IMG_VOID *,
 							 IMG_SIZE_T uSize,
 							 IMG_SIZE_T *pActualSize,
@@ -117,20 +194,22 @@ struct _RA_ARENA_
 						 BM_MAPPING *psMapping);
 	IMG_VOID (*pBackingStoreFree) (IMG_VOID *, IMG_SIZE_T, IMG_SIZE_T, IMG_HANDLE);
 
-
+	/* arbitrary handle provided by arena owner to be passed into the
+	 * import alloc and free hooks */
 	IMG_VOID *pImportHandle;
 
-
+	/* head of list of free boundary tags for indexed by pvr_log2 of the
+	   boundary tag size */
 #define FREE_TABLE_LIMIT 32
 
-
+	/* power-of-two table of free lists */
 	BT *aHeadFree [FREE_TABLE_LIMIT];
 
-
+	/* resource ordered segment list */
 	BT *pHeadSegment;
 	BT *pTailSegment;
 
-
+	/* segment address to boundary tag hash table */
 	HASH_TABLE *pSegmentHash;
 
 #ifdef RA_STATS
@@ -195,6 +274,25 @@ static IMG_CHAR *ReplaceSpaces(IMG_CHAR * const pS)
 }
 #endif
 
+/*!
+******************************************************************************
+	@Function       _RequestAllocFail
+
+	@Description    Default callback allocator used if no callback is
+                    specified, always fails to allocate further resources to the
+                    arena.
+
+	@Input          _h - callback handle
+	@Input          _uSize - requested allocation size
+	@Output         _pActualSize - actual allocation size
+	@Input          _pRef - user reference
+	@Input          _uflags - allocation flags
+	@Input          _pvPrivData - private data
+	@Input          _ui32PrivDataLength - private data length
+	@Input          _pBase - receives allocated base
+
+	@Return         IMG_FALSE, this function always fails to allocate.
+******************************************************************************/
 static IMG_BOOL
 _RequestAllocFail (IMG_VOID *_h,
 				  IMG_SIZE_T _uSize,
@@ -213,6 +311,16 @@ _RequestAllocFail (IMG_VOID *_h,
 	return IMG_FALSE;
 }
 
+/*!
+******************************************************************************
+	@Function       pvr_log2
+
+	@Description    Computes the floor of the log base 2 of a unsigned integer
+
+	@Input          n - unsigned integer
+
+	@Return         Floor(Log2(n))
+******************************************************************************/
 static IMG_UINT32
 pvr_log2 (IMG_SIZE_T n)
 {
@@ -226,6 +334,19 @@ pvr_log2 (IMG_SIZE_T n)
 	return l;
 }
 
+/*!
+******************************************************************************
+	@Function       _SegmentListInsertAfter
+
+	@Description    Insert a boundary tag into an arena segment list after a
+                    specified boundary tag.
+
+	@Input          pArena - the arena.
+	@Input          pInsertionPoint - the insertion point.
+	@Input          pBT - the boundary tag to insert.
+
+	@Return         PVRSRV_ERROR
+******************************************************************************/
 static PVRSRV_ERROR
 _SegmentListInsertAfter (RA_ARENA *pArena,
 						 BT *pInsertionPoint,
@@ -251,12 +372,24 @@ _SegmentListInsertAfter (RA_ARENA *pArena,
 	return PVRSRV_OK;
 }
 
+/*!
+******************************************************************************
+	@Function       _SegmentListInsert
+
+	@Description    Insert a boundary tag into an arena segment list at the
+                    appropriate point.
+
+	@Input          pArena - the arena.
+	@Input          pBT - the boundary tag to insert.
+
+	@Return         None
+******************************************************************************/
 static PVRSRV_ERROR
 _SegmentListInsert (RA_ARENA *pArena, BT *pBT)
 {
 	PVRSRV_ERROR eError = PVRSRV_OK;
 
-
+	/* insert into the segment chain */
 	if (pArena->pHeadSegment == IMG_NULL)
 	{
 		pArena->pHeadSegment = pArena->pTailSegment = pBT;
@@ -268,7 +401,8 @@ _SegmentListInsert (RA_ARENA *pArena, BT *pBT)
 
 		if (pBT->base < pArena->pHeadSegment->base)
 		{
-
+			/* The base address of pBT is less than the base address of the boundary tag
+			at the head of the list - so insert this boundary tag at the head. */
 			pBT->pNextSegment = pArena->pHeadSegment;
 			pArena->pHeadSegment->pPrevSegment = pBT;
 			pArena->pHeadSegment = pBT;
@@ -277,9 +411,10 @@ _SegmentListInsert (RA_ARENA *pArena, BT *pBT)
 		else
 		{
 
-
-
-
+			/* The base address of pBT is greater than or equal to that of the boundary tag
+			at the head of the list. Search for the insertion point: pBT must be inserted
+			before the first boundary tag with a greater base value - or at the end of the list.
+			*/
 			pBTScan = pArena->pHeadSegment;
 
 			while ((pBTScan->pNextSegment != IMG_NULL)  && (pBT->base >= pBTScan->pNextSegment->base))
@@ -297,6 +432,17 @@ _SegmentListInsert (RA_ARENA *pArena, BT *pBT)
 	return eError;
 }
 
+/*!
+******************************************************************************
+	@Function       _SegmentListRemove
+
+	@Description    Remove a boundary tag from an arena segment list.
+
+	@Input          pArena - the arena.
+	@Input          pBT - the boundary tag to remove.
+
+	@Return         None
+******************************************************************************/
 static IMG_VOID
 _SegmentListRemove (RA_ARENA *pArena, BT *pBT)
 {
@@ -311,6 +457,23 @@ _SegmentListRemove (RA_ARENA *pArena, BT *pBT)
 		pBT->pNextSegment->pPrevSegment = pBT->pPrevSegment;
 }
 
+/*!
+******************************************************************************
+	@Function       _SegmentSplit
+
+	@Description    Split a segment into two, maintain the arena segment list. The
+                    boundary tag should not be in the free table. Neither the
+                    original or the new neighbour bounary tag will be in the free
+                    table.
+
+	@Input          pArena - the arena.
+	@Input          pBT - the boundary tag to split.
+	@Input          uSize - the required segment size of boundary tag after
+	           	     splitting.
+
+	@Return         New neighbour boundary tag.
+
+******************************************************************************/
 static BT *
 _SegmentSplit (RA_ARENA *pArena, BT *pBT, IMG_SIZE_T uSize)
 {
@@ -373,6 +536,18 @@ _SegmentSplit (RA_ARENA *pArena, BT *pBT, IMG_SIZE_T uSize)
 	return pNeighbour;
 }
 
+/*!
+******************************************************************************
+	@Function       _FreeListInsert
+
+	@Description    Insert a boundary tag into an arena free table.
+
+	@Input          pArena - the arena.
+	@Input          pBT - the boundary tag.
+
+	@Return         None
+
+******************************************************************************/
 static IMG_VOID
 _FreeListInsert (RA_ARENA *pArena, BT *pBT)
 {
@@ -386,6 +561,18 @@ _FreeListInsert (RA_ARENA *pArena, BT *pBT)
 	pArena->aHeadFree [uIndex] = pBT;
 }
 
+/*!
+******************************************************************************
+	@Function       _FreeListRemove
+
+	@Description    Remove a boundary tag from an arena free table.
+
+	@Input          pArena - the arena.
+	@Input          pBT - the boundary tag.
+
+	@Return         None
+
+******************************************************************************/
 static IMG_VOID
 _FreeListRemove (RA_ARENA *pArena, BT *pBT)
 {
@@ -399,6 +586,18 @@ _FreeListRemove (RA_ARENA *pArena, BT *pBT)
 		pBT->pPrevFree->pNextFree = pBT->pNextFree;
 }
 
+/*!
+******************************************************************************
+	@Function       _BuildSpanMarker
+
+	@Description    Construct a span marker boundary tag.
+
+	@Input          pArena - arena to contain span marker
+	@Input          base - the base of the bounary tag.
+
+	@Return         span marker boundary tag
+
+******************************************************************************/
 static BT *
 _BuildSpanMarker (IMG_UINTPTR_T base, IMG_SIZE_T uSize)
 {
@@ -426,6 +625,18 @@ _BuildSpanMarker (IMG_UINTPTR_T base, IMG_SIZE_T uSize)
 	return pBT;
 }
 
+/*!
+******************************************************************************
+	@Function       _BuildBT
+
+	@Description    Construct a boundary tag for a free segment.
+
+	@Input          base - the base of the resource segment.
+	@Input          uSize - the extent of the resouce segment.
+
+	@Return         boundary tag
+
+******************************************************************************/
 static BT *
 _BuildBT (IMG_UINTPTR_T base, IMG_SIZE_T uSize)
 {
@@ -452,6 +663,20 @@ _BuildBT (IMG_UINTPTR_T base, IMG_SIZE_T uSize)
 	return pBT;
 }
 
+/*!
+******************************************************************************
+	@Function       _InsertResource
+
+	@Description    Add a free resource segment to an arena.
+
+	@Input          pArena - the arena.
+	@Input          base - the base of the resource segment.
+	@Input          uSize - the extent of the resource segment.
+
+	@Return         New bucket pointer
+                    IMG_NULL failure
+
+******************************************************************************/
 static BT *
 _InsertResource (RA_ARENA *pArena, IMG_UINTPTR_T base, IMG_SIZE_T uSize)
 {
@@ -487,6 +712,19 @@ _InsertResource (RA_ARENA *pArena, IMG_UINTPTR_T base, IMG_SIZE_T uSize)
 	return pBT;
 }
 
+/*!
+******************************************************************************
+	@Function       _InsertResourceSpan
+
+	@Description    Add a free resource span to an arena, complete with span markers.
+
+	@Input          pArena - the arena.
+	@Input          base - the base of the resource segment.
+	@Input          uSize - the extent of the resource segment.
+
+	@Return         the boundary tag representing the free resource segment,
+                    or IMG_NULL on failure.
+******************************************************************************/
 static BT *
 _InsertResourceSpan (RA_ARENA *pArena, IMG_UINTPTR_T base, IMG_SIZE_T uSize)
 {
@@ -561,22 +799,40 @@ _InsertResourceSpan (RA_ARENA *pArena, IMG_UINTPTR_T base, IMG_SIZE_T uSize)
 
 #ifdef RA_STATS
 	pArena->sStatistics.uTotalResourceCount+=uSize;
+/*	pArena->sStatistics.uFreeResourceCount+=uSize;
+	This has got to be wrong as uFreeResourceCount ends
+	up larger than uTotalResourceCount by uTotalResourceCount
+	- allocated memory
+*/
 #endif
 	return pBT;
 
   fail_SegListInsert:
 	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, sizeof(BT), pBT, IMG_NULL);
-
+	/*not nulling pointer, out of scope*/
   fail_bt:
 	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, sizeof(BT), pSpanEnd, IMG_NULL);
-
+	/*not nulling pointer, out of scope*/
   fail_end:
 	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, sizeof(BT), pSpanStart, IMG_NULL);
-
+	/*not nulling pointer, out of scope*/
   fail_start:
 	return IMG_NULL;
 }
 
+/*!
+******************************************************************************
+	@Function       _FreeBT
+
+	@Description    Free a boundary tag taking care of the segment list and the
+                    boundary tag free table.
+
+	@Input          pArena - the arena.
+	@Input          pBT - the boundary tag to free.
+	@Input          bFreeBackingStore - Should backing for the memory be freed
+										 as well.
+	@Return         None
+******************************************************************************/
 static IMG_VOID
 _FreeBT (RA_ARENA *pArena, BT *pBT, IMG_BOOL bFreeBackingStore)
 {
@@ -602,7 +858,7 @@ _FreeBT (RA_ARENA *pArena, BT *pBT, IMG_BOOL bFreeBackingStore)
 	uOrigBase = pBT->base;
 	uOrigSize = pBT->uSize;
 
-
+	/* try and coalesce with left neighbour */
 	pNeighbour = pBT->pPrevSegment;
 	if (pNeighbour!=IMG_NULL
 		&& pNeighbour->type == btt_free
@@ -613,13 +869,13 @@ _FreeBT (RA_ARENA *pArena, BT *pBT, IMG_BOOL bFreeBackingStore)
 		pBT->base = pNeighbour->base;
 		pBT->uSize += pNeighbour->uSize;
 		OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, sizeof(BT), pNeighbour, IMG_NULL);
-
+		/*not nulling original pointer, already overwritten*/
 #ifdef RA_STATS
 		pArena->sStatistics.uFreeSegmentCount--;
 #endif
 	}
 
-
+	/* try to coalesce with right neighbour */
 	pNeighbour = pBT->pNextSegment;
 	if (pNeighbour!=IMG_NULL
 		&& pNeighbour->type == btt_free
@@ -629,28 +885,28 @@ _FreeBT (RA_ARENA *pArena, BT *pBT, IMG_BOOL bFreeBackingStore)
 		_SegmentListRemove (pArena, pNeighbour);
 		pBT->uSize += pNeighbour->uSize;
 		OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, sizeof(BT), pNeighbour, IMG_NULL);
-
+		/*not nulling original pointer, already overwritten*/
 #ifdef RA_STATS
 		pArena->sStatistics.uFreeSegmentCount--;
 #endif
 	}
 
-
+	/* try to free backing store memory. */
 	if (pArena->pBackingStoreFree != IMG_NULL && bFreeBackingStore)
 	{
 		IMG_UINTPTR_T	uRoundedStart, uRoundedEnd;
 
-
+		/* Work out the first address we might be able to free. */
 		uRoundedStart = (uOrigBase / pArena->uQuantum) * pArena->uQuantum;
-
+		/* If a span is still using that address then leave it. */
 		if (uRoundedStart < pBT->base)
 		{
 			uRoundedStart += pArena->uQuantum;
 		}
 
-
+		/* Work out the last address we might be able to free. */
 		uRoundedEnd = ((uOrigBase + uOrigSize + pArena->uQuantum - 1) / pArena->uQuantum) * pArena->uQuantum;
-
+		/* If a span is still using that addres then leave it. */
 		if (uRoundedEnd > (pBT->base + pBT->uSize))
 		{
 			uRoundedEnd -= pArena->uQuantum;
@@ -679,17 +935,35 @@ _FreeBT (RA_ARENA *pArena, BT *pBT, IMG_BOOL bFreeBackingStore)
 		pArena->sStatistics.uTotalResourceCount-=pBT->uSize;
 #endif
 		OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, sizeof(BT), next, IMG_NULL);
-
+		/*not nulling original pointer, already overwritten*/
 		OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, sizeof(BT), prev, IMG_NULL);
-
+		/*not nulling original pointer, already overwritten*/
 		OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, sizeof(BT), pBT, IMG_NULL);
-
+		/*not nulling pointer, copy on stack*/
 	}
 	else
 		_FreeListInsert (pArena, pBT);
 }
 
 
+/*!
+******************************************************************************
+	@Function       _AttemptAllocAligned
+
+	@Description    Attempt an allocation from an arena.
+
+	@Input          pArena - the arena.
+	@Input          uSize - the requested allocation size.
+	@Output         ppsMapping - the user references associated with
+	                 the allocated segment.
+	@Input          flags - allocation flags
+	@Input          uAlignment - required uAlignment, or 0
+	@Input          uAlignmentOffset
+	@Output         base - allocated resource base
+
+	@Return         IMG_FALSE failure
+                    IMG_TRUE success
+******************************************************************************/
 static IMG_BOOL
 _AttemptAllocAligned (RA_ARENA *pArena,
 					  IMG_SIZE_T uSize,
@@ -710,8 +984,9 @@ _AttemptAllocAligned (RA_ARENA *pArena,
 	if (uAlignment>1)
 		uAlignmentOffset %= uAlignment;
 
-
-
+	/* search for a near fit free boundary tag, start looking at the
+	   pvr_log2 free table for our required size and work on up the
+	   table. */
 	uIndex = pvr_log2 (uSize);
 
 #if 0
@@ -727,7 +1002,7 @@ _AttemptAllocAligned (RA_ARENA *pArena,
 	{
 		if (pArena->aHeadFree[uIndex]!=IMG_NULL)
 		{
-
+			/* we have a cached free boundary tag */
 			BT *pBT;
 
 			pBT = pArena->aHeadFree [uIndex];
@@ -758,17 +1033,17 @@ _AttemptAllocAligned (RA_ARENA *pArena,
 						pArena->sStatistics.uFreeResourceCount-=pBT->uSize;
 #endif
 
-
+						/* with uAlignment we might need to discard the front of this segment */
 						if (aligned_base > pBT->base)
 						{
 							BT *pNeighbour;
 
 							pNeighbour = _SegmentSplit (pArena, pBT, aligned_base-pBT->base);
-
+							/* partition the buffer, create a new boundary tag */
 							if (pNeighbour==IMG_NULL)
 							{
 								PVR_DPF ((PVR_DBG_ERROR,"_AttemptAllocAligned: Front split failed"));
-
+								/* Put pBT back in the list */
 								_FreeListInsert (pArena, pBT);
 								return IMG_FALSE;
 							}
@@ -781,16 +1056,16 @@ _AttemptAllocAligned (RA_ARENA *pArena,
 							pBT = pNeighbour;
 						}
 
-
+						/* the segment might be too big, if so, discard the back of the segment */
 						if (pBT->uSize > uSize)
 						{
 							BT *pNeighbour;
 							pNeighbour = _SegmentSplit (pArena, pBT, uSize);
-
+							/* partition the buffer, create a new boundary tag */
 							if (pNeighbour==IMG_NULL)
 							{
 								PVR_DPF ((PVR_DBG_ERROR,"_AttemptAllocAligned: Back split failed"));
-
+								/* Put pBT back in the list */
 								_FreeListInsert (pArena, pBT);
 								return IMG_FALSE;
 							}
@@ -851,6 +1126,23 @@ _AttemptAllocAligned (RA_ARENA *pArena,
 
 
 
+/*!
+******************************************************************************
+	@Function       RA_Create
+
+	@Description    To create a resource arena.
+
+	@Input          name - the name of the arena for diagnostic purposes.
+	@Input          base - the base of an initial resource span or 0.
+	@Input          uSize - the size of an initial resource span or 0.
+	@Input          uQuantum - the arena allocation quantum.
+	@Input          alloc - a resource allocation callback or 0.
+	@Input          free - a resource de-allocation callback or 0.
+	@Input          backingstore_free - a callback to free resources for spans or 0.
+	@Input          pImportHandle - handle passed to alloc and free or 0.
+
+	@Return         arena handle, or IMG_NULL.
+******************************************************************************/
 RA_ARENA *
 RA_Create (IMG_CHAR *name,
 		   IMG_UINTPTR_T base,
@@ -952,7 +1244,7 @@ RA_Create (IMG_CHAR *name,
 
 		pArena->bInitProcEntry = !PVRSRVGetInitServerState(PVRSRV_INIT_SERVER_SUCCESSFUL);
 
-
+		/* Don't put shared heap info into a per process /proc subdirectory */
 		pfnCreateProcEntrySeq = pArena->bInitProcEntry ? CreateProcEntrySeq : CreatePerProcessProcEntrySeq;
 
 		ret = snprintf(szProcInfoName, sizeof(szProcInfoName), "ra_info_%s", pArena->name);
@@ -982,7 +1274,7 @@ RA_Create (IMG_CHAR *name,
 #endif
 
 	}
-#endif
+#endif /* defined(CONFIG_PROC_FS) && defined(DEBUG) */
 
 	pArena->pSegmentHash = HASH_Create (MINIMUM_HASH_SIZE);
 	if (pArena->pSegmentHash==IMG_NULL)
@@ -1006,11 +1298,22 @@ insert_fail:
 	HASH_Delete (pArena->pSegmentHash);
 hash_fail:
 	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, sizeof(RA_ARENA), pArena, IMG_NULL);
-
+	/*not nulling pointer, out of scope*/
 arena_fail:
 	return IMG_NULL;
 }
 
+/*!
+******************************************************************************
+	@Function       RA_Delete
+
+	@Description    To delete a resource arena. All resources allocated from
+                    the arena must be freed before deleting the arena.
+
+	@Input          pArena - the arena to delete.
+
+	@Return         None
+******************************************************************************/
 IMG_VOID
 RA_Delete (RA_ARENA *pArena)
 {
@@ -1043,7 +1346,7 @@ RA_Delete (RA_ARENA *pArena)
 
 		_SegmentListRemove (pArena, pBT);
 		OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, sizeof(BT), pBT, IMG_NULL);
-
+		/*not nulling original pointer, it has changed*/
 #ifdef RA_STATS
 		pArena->sStatistics.uSpanCount--;
 #endif
@@ -1086,9 +1389,20 @@ RA_Delete (RA_ARENA *pArena)
 #endif
 	HASH_Delete (pArena->pSegmentHash);
 	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, sizeof(RA_ARENA), pArena, IMG_NULL);
-
+	/*not nulling pointer, copy on stack*/
 }
 
+/*!
+******************************************************************************
+	@Function       RA_TestDelete
+
+	@Description    To test whether it is safe to delete a resource arena. If any
+                    allocations have not been freed, the RA must not be deleted.
+
+	@Input          pArena - the arena to test.
+
+	@Return         IMG_BOOL - IMG_TRUE if is safe to go on and call RA_Delete.
+******************************************************************************/
 IMG_BOOL
 RA_TestDelete (RA_ARENA *pArena)
 {
@@ -1111,6 +1425,20 @@ RA_TestDelete (RA_ARENA *pArena)
 	return IMG_TRUE;
 }
 
+/*!
+******************************************************************************
+	@Function       RA_Add
+
+	@Description    To add a resource span to an arena. The span must not
+                    overlapp with any span previously added to the arena.
+
+	@Input          pArena - the arena to add a span into.
+	@Input          base - the base of the span.
+	@Input          uSize - the extent of the span.
+
+	@Return         IMG_TRUE - Success
+                    IMG_FALSE - failure
+******************************************************************************/
 IMG_BOOL
 RA_Add (RA_ARENA *pArena, IMG_UINTPTR_T base, IMG_SIZE_T uSize)
 {
@@ -1129,6 +1457,29 @@ RA_Add (RA_ARENA *pArena, IMG_UINTPTR_T base, IMG_SIZE_T uSize)
 	return ((IMG_BOOL)(_InsertResource (pArena, base, uSize) != IMG_NULL));
 }
 
+/*!
+******************************************************************************
+	@Function       RA_Alloc
+
+	@Description    To allocate resource from an arena.
+
+	@Input          pArena - the arena
+	@Input          uRequestSize - the size of resource segment requested.
+	@Output         pActualSize - the actual size of resource segment
+                     allocated, typcially rounded up by quantum.
+	@Output         ppsMapping - the user reference associated with allocated resource span.
+	@Input          uFlags - flags influencing allocation policy.
+	@Input          uAlignment - the uAlignment constraint required for the
+	           	     allocated segment, use 0 if uAlignment not required.
+	@Input          uAlignmentOffset
+	@Input          pvPrivData - opaque private data passed through to allocator
+	@Input          ui32PrivDataLength - length of opaque private data
+
+	@Output         base - allocated base resource
+
+	@Return         IMG_TRUE - success
+                    IMG_FALSE - failure
+******************************************************************************/
 IMG_BOOL
 RA_Alloc (RA_ARENA *pArena,
 		  IMG_SIZE_T uRequestSize,
@@ -1167,8 +1518,9 @@ RA_Alloc (RA_ARENA *pArena,
 			  "RA_Alloc: arena='%s', size=0x%x(0x%x), alignment=0x%x, offset=0x%x",
 		   pArena->name, uSize, uRequestSize, uAlignment, uAlignmentOffset));
 
-
-
+	/* if allocation failed then we might have an import source which
+	   can provide more resource, else we will have to fail the
+	   allocation to the caller. */
 	bResult = _AttemptAllocAligned (pArena, uSize, ppsMapping, uFlags,
 									uAlignment, uAlignmentOffset, base);
 	if (!bResult)
@@ -1177,15 +1529,16 @@ RA_Alloc (RA_ARENA *pArena,
 		IMG_UINTPTR_T import_base;
 		IMG_SIZE_T uImportSize = uSize;
 
-
-
-
+		/*
+			Ensure that we allocate sufficient space to meet the uAlignment
+			constraint
+		 */
 		if (uAlignment > pArena->uQuantum)
 		{
 			uImportSize += (uAlignment - 1);
 		}
 
-
+		/* ensure that we import according to the quanta of this arena */
 		uImportSize = ((uImportSize + pArena->uQuantum - 1)/pArena->uQuantum)*pArena->uQuantum;
 
 		bResult =
@@ -1195,16 +1548,18 @@ RA_Alloc (RA_ARENA *pArena,
 		{
 			BT *pBT;
 			pBT = _InsertResourceSpan (pArena, import_base, uImportSize);
-
+			/* successfully import more resource, create a span to
+			   represent it and retry the allocation attempt */
 			if (pBT == IMG_NULL)
 			{
-
+				/* insufficient resources to insert the newly acquired span,
+				   so free it back again */
 				pArena->pImportFree(pArena->pImportHandle, import_base,
 									psImportMapping);
 				PVR_DPF ((PVR_DBG_MESSAGE,
 						  "RA_Alloc: name='%s', size=0x%x failed!",
 						  pArena->name, uSize));
-
+				/* RA_Dump (arena); */
 				return IMG_FALSE;
 			}
 			pBT->psMapping = psImportMapping;
@@ -1234,7 +1589,9 @@ RA_Alloc (RA_ARENA *pArena,
 			  "RA_Alloc: name='%s', size=0x%x, *base=0x%x = %d",
 			  pArena->name, uSize, *base, bResult));
 
-
+	/*  RA_Dump (pArena);
+		ra_stats (pArena);
+	*/
 
 #if defined(VALIDATE_ARENA_TEST)
 	ValidateArena(pArena);
@@ -1246,6 +1603,20 @@ RA_Alloc (RA_ARENA *pArena,
 
 #if defined(VALIDATE_ARENA_TEST)
 
+/*!
+******************************************************************************
+	@Function       ValidateArena
+
+	@Description    Validate an arena by checking that adjacent members of the
+                    double linked ordered list are compatible. PVR_DBG_BREAK and
+                    PVR_DPF messages are used when an error is detected.
+                    NOTE: A DEBUG build is required for PVR_DBG_BREAK and PVR_DPF
+                    to operate.
+
+	@Input          pArena - the arena
+
+	@Return         0
+******************************************************************************/
 IMG_UINT32 ValidateArena(RA_ARENA *pArena)
 {
 	BT* pSegment;
@@ -1274,7 +1645,7 @@ IMG_UINT32 ValidateArena(RA_ARENA *pArena)
 						  (eNextSpan == IMPORTED_RESOURCE_SPAN_FREE) ||
 						  (eNextSpan == IMPORTED_RESOURCE_SPAN_END)))
 					{
-
+						/* error - next span must be live, free or end */
 						PVR_DPF((PVR_DBG_ERROR, "ValidateArena ERROR: adjacent boundary tags %d (base=0x%x) and %d (base=0x%x) are incompatible (arena: %s)",
 								pSegment->ui32BoundaryTagID, pSegment->base, pSegment->pNextSegment->ui32BoundaryTagID, pSegment->pNextSegment->base, pArena->name));
 
@@ -1287,7 +1658,7 @@ IMG_UINT32 ValidateArena(RA_ARENA *pArena)
 					if (!((eNextSpan == IMPORTED_RESOURCE_SPAN_LIVE) ||
 						  (eNextSpan == IMPORTED_RESOURCE_SPAN_END)))
 					{
-
+						/* error - next span must be live or end */
 						PVR_DPF((PVR_DBG_ERROR, "ValidateArena ERROR: adjacent boundary tags %d (base=0x%x) and %d (base=0x%x) are incompatible (arena: %s)",
 								pSegment->ui32BoundaryTagID, pSegment->base, pSegment->pNextSegment->ui32BoundaryTagID, pSegment->pNextSegment->base, pArena->name));
 
@@ -1301,7 +1672,7 @@ IMG_UINT32 ValidateArena(RA_ARENA *pArena)
 						(eNextSpan == IMPORTED_RESOURCE_SPAN_FREE) ||
 						(eNextSpan == IMPORTED_RESOURCE_SPAN_END))
 					{
-
+						/* error - next span cannot be live, free or end */
 						PVR_DPF((PVR_DBG_ERROR, "ValidateArena ERROR: adjacent boundary tags %d (base=0x%x) and %d (base=0x%x) are incompatible (arena: %s)",
 								pSegment->ui32BoundaryTagID, pSegment->base, pSegment->pNextSegment->ui32BoundaryTagID, pSegment->pNextSegment->base, pArena->name));
 
@@ -1315,7 +1686,7 @@ IMG_UINT32 ValidateArena(RA_ARENA *pArena)
 					if (!((eNextSpan == IMPORTED_RESOURCE_SPAN_LIVE) ||
 						  (eNextSpan == IMPORTED_RESOURCE_SPAN_FREE)))
 					{
-
+						/* error - next span must be live or free */
 						PVR_DPF((PVR_DBG_ERROR, "ValidateArena ERROR: adjacent boundary tags %d (base=0x%x) and %d (base=0x%x) are incompatible (arena: %s)",
 								pSegment->ui32BoundaryTagID, pSegment->base, pSegment->pNextSegment->ui32BoundaryTagID, pSegment->pNextSegment->base, pArena->name));
 
@@ -1348,7 +1719,7 @@ IMG_UINT32 ValidateArena(RA_ARENA *pArena)
 					if (!((eNextSpan == RESOURCE_SPAN_FREE) ||
 						  (eNextSpan == RESOURCE_SPAN_LIVE)))
 					{
-
+						/* error - next span must be free or live */
 						PVR_DPF((PVR_DBG_ERROR, "ValidateArena ERROR: adjacent boundary tags %d (base=0x%x) and %d (base=0x%x) are incompatible (arena: %s)",
 								pSegment->ui32BoundaryTagID, pSegment->base, pSegment->pNextSegment->ui32BoundaryTagID, pSegment->pNextSegment->base, pArena->name));
 
@@ -1361,7 +1732,7 @@ IMG_UINT32 ValidateArena(RA_ARENA *pArena)
 					if (!((eNextSpan == RESOURCE_SPAN_FREE) ||
 						  (eNextSpan == RESOURCE_SPAN_LIVE)))
 					{
-
+						/* error - next span must be free or live */
 						PVR_DPF((PVR_DBG_ERROR, "ValidateArena ERROR: adjacent boundary tags %d (base=0x%x) and %d (base=0x%x) are incompatible (arena: %s)",
 								pSegment->ui32BoundaryTagID, pSegment->base, pSegment->pNextSegment->ui32BoundaryTagID, pSegment->pNextSegment->base, pArena->name));
 
@@ -1393,6 +1764,18 @@ IMG_UINT32 ValidateArena(RA_ARENA *pArena)
 #endif
 
 
+/*!
+******************************************************************************
+	@Function       RA_Free
+
+	@Description    To free a resource segment.
+
+	@Input          pArena - the arena the segment was originally allocated from.
+	@Input          base - the base of the resource span to free.
+	@Input          bFreeBackingStore - Should backing store memory be freed.
+
+	@Return         None
+******************************************************************************/
 IMG_VOID
 RA_Free (RA_ARENA *pArena, IMG_UINTPTR_T base, IMG_BOOL bFreeBackingStore)
 {
@@ -1452,6 +1835,17 @@ RA_Free (RA_ARENA *pArena, IMG_UINTPTR_T base, IMG_BOOL bFreeBackingStore)
 }
 
 
+/*!
+******************************************************************************
+	@Function       RA_GetNextLiveSegment
+
+	@Description    Returns details of the next live resource segments
+
+	@Input          pArena - the arena the segment was originally allocated from.
+	@InOut          psSegDetails - rtn details of segments
+
+	@Return         IMG_TRUE if operation succeeded
+******************************************************************************/
 IMG_BOOL RA_GetNextLiveSegment(IMG_HANDLE hArena, RA_SEGMENT_DETAILS *psSegDetails)
 {
 	BT        *pBT;
@@ -1466,7 +1860,7 @@ IMG_BOOL RA_GetNextLiveSegment(IMG_HANDLE hArena, RA_SEGMENT_DETAILS *psSegDetai
 
 		pBT = pArena->pHeadSegment;
 	}
-
+	/* walk the arena segments and write live one to the  buffer */
 	while (pBT != IMG_NULL)
 	{
 		if (pBT->type == btt_live)
@@ -1548,6 +1942,16 @@ _BTType (IMG_INT eType)
 #endif
 
 #if defined(ENABLE_RA_DUMP)
+/*!
+******************************************************************************
+	@Function       RA_Dump
+
+	@Description    To dump a readable description of an arena. Diagnostic only.
+
+	@Input          pArena - the arena to dump.
+
+	@Return         None
+******************************************************************************/
 IMG_VOID
 RA_Dump (RA_ARENA *pArena)
 {
@@ -1576,7 +1980,7 @@ RA_Dump (RA_ARENA *pArena)
 	HASH_Dump (pArena->pSegmentHash);
 #endif
 }
-#endif
+#endif /* #if defined(ENABLE_RA_DUMP) */
 
 
 #if defined(CONFIG_PROC_FS) && defined(DEBUG)
@@ -1771,6 +2175,18 @@ RA_DumpInfo(IMG_CHAR *page, IMG_CHAR **start, off_t off, IMG_INT count, IMG_INT 
 
 
 #ifdef RA_STATS
+/*!
+******************************************************************************
+	@Function       RA_GetStats
+
+	@Description    Gets the arena stats and places in client buffer
+
+	@Input          pArena - the arena to print statistics for.
+	@Input          ppszStr - caller string to fill
+	@Input          pui32StrLen - length of caller string
+
+	@Return         PVRSRV_ERROR
+******************************************************************************/
 PVRSRV_ERROR RA_GetStats(RA_ARENA *pArena,
 							IMG_CHAR **ppszStr,
 							IMG_UINT32 *pui32StrLen)
@@ -1864,4 +2280,11 @@ PVRSRV_ERROR RA_GetStats(RA_ARENA *pArena,
 	return PVRSRV_OK;
 }
 #endif
+
+/******************************************************************************
+ End of file (ra.c)
+******************************************************************************/
+
+
+
 

@@ -1,26 +1,60 @@
-/**********************************************************************
- Copyright (c) Imagination Technologies Ltd.
+/*************************************************************************/ /*!
+@Title          Resource Handle Manager
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@Description    Provide resource handle management
+@License        Dual MIT/GPLv2
 
- Permission is hereby granted, free of charge, to any person obtaining a copy
- of this software and associated documentation files (the "Software"), to deal
- in the Software without restriction, including without limitation the rights
- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- copies of the Software, and to permit persons to whom the Software is
- furnished to do so, subject to the following conditions:
+The contents of this file are subject to the MIT license as set out below.
 
- The above copyright notice and this permission notice shall be included in
- all copies or substantial portions of the Software.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- THE SOFTWARE.
- ******************************************************************************/
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
 
-#ifdef	PVR_SECURE_HANDLES
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/ /**************************************************************************/
+
+#if defined(PVR_SECURE_HANDLES) || defined (SUPPORT_SID_INTERFACE)
+/* See handle.h for a description of the handle API. */
+
+/*
+ * There is no locking here.  It is assumed the code is used in a single
+ * threaded environment.  In particular, it is assumed that the code will
+ * never be called from an interrupt handler.
+ *
+ * The implmentation supports movable handle structures, allowing the address
+ * of a handle structure to change without having to fix up pointers in
+ * any of the handle structures.  For example, the linked list mechanism
+ * used to link subhandles together uses handle array indices rather than
+ * pointers to the structures themselves.
+ */
+
 #include <stddef.h>
 
 #include "services_headers.h"
@@ -81,6 +115,11 @@
 
 #define	MIN(x, y) (((x) < (y)) ? (x) : (y))
 
+/*
+ * Linked list structure.  Used for both the list head and list items.
+ * Array indices, rather than pointers, are used to point to the next and
+ * previous items on the list.
+ */
 struct sHandleList
 {
 	IMG_UINT32 ui32Prev;
@@ -95,30 +134,41 @@ enum ePVRSRVInternalHandleFlag
 	INTERNAL_HANDLE_FLAG_BATCHED_PARTIALLY_FREE = 0x02,
 };
 
+/* Handle structure */
 struct sHandle
 {
-
+	/* Handle type */
 	PVRSRV_HANDLE_TYPE eType;
 
-
+	/* Pointer to the data that the handle represents */
 	IMG_VOID *pvData;
 
-
+	/*
+	 * When handles are on the free list, the value of the "next index
+	 * plus one field" has the following meaning:
+	 * zero - next handle is the one that follows this one,
+	 * nonzero - the index of the next handle is the value minus one.
+	 * This scheme means handle space can be initialised to all zeros.
+	 *
+	 * When this field is used to link together handles on a list
+	 * other than the free list, zero indicates the end of the
+	 * list, with nonzero the same as above.
+	 */
 	IMG_UINT32 ui32NextIndexPlusOne;
 
-
+	/* Internal flags */
 	enum ePVRSRVInternalHandleFlag eInternalFlag;
 
-
+	/* Flags specified when the handle was allocated */
 	PVRSRV_HANDLE_ALLOC_FLAG eFlag;
 
-
+	/* Index of this handle in the handle array */
 	IMG_UINT32 ui32Index;
 
-
+	/* List head for subhandles of this handle */
 	struct sHandleList sChildren;
 
-
+	/* List entry for sibling subhandles */
 	struct sHandleList sSiblings;
 };
 
@@ -133,51 +183,96 @@ struct _PVRSRV_HANDLE_BASE_
 
 	struct sHandle *psHandleArray;
 
-
+	/*
+	 * Pointer to handle hash table.
+	 * The hash table is used to do reverse lookups, converting data
+	 * pointers to handles.
+	 */
 	HASH_TABLE *psHashTab;
 
-
+	/* Number of free handles */
 	IMG_UINT32 ui32FreeHandCount;
 
-
+	/*
+	 * If purging is not enabled, this is the array index of first free
+	 * handle.
+	 * If purging is enabled, this is the index to start searching for
+	 * a free handle from.  In this case it is usually zero, unless
+	 * the handle array size has been increased due to lack of
+	 * handles.
+	 */
 	IMG_UINT32 ui32FirstFreeIndex;
 
-
+	/* Maximum handle index, plus one */
 	IMG_UINT32 ui32MaxIndexPlusOne;
 
-
+	/* Total number of handles, free and allocated */
 	IMG_UINT32 ui32TotalHandCount;
 
-
+	/*
+	 * Index of the last free index, plus one. Not used if purging
+	 * is enabled.
+	 */
 	IMG_UINT32 ui32LastFreeIndexPlusOne;
 
-
+	/* Size of current handle batch, or zero if batching not enabled */
 	IMG_UINT32 ui32HandBatchSize;
 
-
+	/* Number of handles prior to start of current batch */
 	IMG_UINT32 ui32TotalHandCountPreBatch;
 
-
+	/* Index of first handle in batch, plus one */
 	IMG_UINT32 ui32FirstBatchIndexPlusOne;
 
-
+	/* Number of handle allocation failures in batch */
 	IMG_UINT32 ui32BatchHandAllocFailures;
 
-
+	/* Purging enabled.
+	 * If purging is enabled, the size of the table can be reduced
+	 * by removing free space at the end of the table.  To make
+	 * purging more likely to succeed, handles are allocated as
+	 * far to the front of the table as possible.  The first free
+	 * handle is found by a linear search from the start of the table,
+	 * and so no free handle list management is done.
+	 */
 	IMG_BOOL bPurgingEnabled;
 };
 
+/*
+ * The key for the handle hash table is an array of three elements, the
+ * pointer to the resource, the resource type, and the process ID.  The
+ * eHandKey enumeration gives the array indices of the elements making
+ * up the key.
+ */
 enum eHandKey {
 	HAND_KEY_DATA = 0,
 	HAND_KEY_TYPE,
 	HAND_KEY_PARENT,
-	HAND_KEY_LEN
+	HAND_KEY_LEN			/* Must be last item in list */
 };
 
+/*
+ * Kernel handle base structure.  For handles that are not allocated on
+ * behalf of a particular process
+ */
 PVRSRV_HANDLE_BASE *gpsKernelHandleBase = IMG_NULL;
 
+/* HAND_KEY is the type of the hash table key */
 typedef IMG_UINTPTR_T HAND_KEY[HAND_KEY_LEN];
 
+/*!
+******************************************************************************
+
+ @Function	HandleListInit
+
+ @Description	Initialise a linked list structure embedded in a handle
+		structure.
+
+ @Input		ui32Index - index of handle in the handle array
+		psList - pointer to linked list structure
+		hParent - parent handle, or IMG_NULL
+
+******************************************************************************/
 #ifdef INLINE_IS_PRAGMA
 #pragma inline(HandleListInit)
 #endif
@@ -189,6 +284,17 @@ IMG_VOID HandleListInit(IMG_UINT32 ui32Index, struct sHandleList *psList, IMG_HA
 	psList->hParent = hParent;
 }
 
+/*!
+******************************************************************************
+
+ @Function	InitParentList
+
+ @Description	Initialise the children list head in a handle structure.
+		The children are the subhandles of this handle.
+
+ @Input		psHandle - pointer to handle structure
+
+******************************************************************************/
 #ifdef INLINE_IS_PRAGMA
 #pragma inline(InitParentList)
 #endif
@@ -200,6 +306,18 @@ IMG_VOID InitParentList(PVRSRV_HANDLE_BASE *psBase, struct sHandle *psHandle)
 	HandleListInit(ui32Parent, &psHandle->sChildren, INDEX_TO_HANDLE(psBase, ui32Parent));
 }
 
+/*!
+******************************************************************************
+
+ @Function	InitChildEntry
+
+ @Description	Initialise the child list entry in a handle structure.
+		The list entry is used to link together subhandles of
+		a given handle.
+
+ @Input		psHandle - pointer to handle structure
+
+******************************************************************************/
 #ifdef INLINE_IS_PRAGMA
 #pragma inline(InitChildEntry)
 #endif
@@ -209,6 +327,19 @@ IMG_VOID InitChildEntry(PVRSRV_HANDLE_BASE *psBase, struct sHandle *psHandle)
 	HandleListInit(HANDLE_PTR_TO_INDEX(psBase, psHandle), &psHandle->sSiblings, IMG_NULL);
 }
 
+/*!
+******************************************************************************
+
+ @Function	HandleListIsEmpty
+
+ @Description	Determine whether a given linked list is empty.
+
+ @Input		ui32Index - index of the handle containing the list head
+		psList - pointer to the list head
+
+ @Return	IMG_TRUE if the list is empty, IMG_FALSE if it isn't.
+
+******************************************************************************/
 #ifdef INLINE_IS_PRAGMA
 #pragma inline(HandleListIsEmpty)
 #endif
@@ -232,6 +363,18 @@ IMG_BOOL HandleListIsEmpty(IMG_UINT32 ui32Index, struct sHandleList *psList)
 }
 
 #ifdef DEBUG
+/*!
+******************************************************************************
+
+ @Function	NoChildren
+
+ @Description	Determine whether a handle has any subhandles
+
+ @Input		psHandle - pointer to handle structure
+
+ @Return	IMG_TRUE if the handle has no subhandles, IMG_FALSE if it does.
+
+******************************************************************************/
 #ifdef INLINE_IS_PRAGMA
 #pragma inline(NoChildren)
 #endif
@@ -243,6 +386,18 @@ IMG_BOOL NoChildren(PVRSRV_HANDLE_BASE *psBase, struct sHandle *psHandle)
 	return HandleListIsEmpty(HANDLE_PTR_TO_INDEX(psBase, psHandle), &psHandle->sChildren);
 }
 
+/*!
+******************************************************************************
+
+ @Function	NoParent
+
+ @Description	Determine whether a handle is a subhandle
+
+ @Input		psHandle - pointer to handle structure
+
+ @Return	IMG_TRUE if the handle is not a subhandle, IMG_FALSE if it is.
+
+******************************************************************************/
 #ifdef INLINE_IS_PRAGMA
 #pragma inline(NoParent)
 #endif
@@ -261,7 +416,19 @@ IMG_BOOL NoParent(PVRSRV_HANDLE_BASE *psBase, struct sHandle *psHandle)
 	}
 	return IMG_FALSE;
 }
-#endif
+#endif /*DEBUG*/
+/*!
+******************************************************************************
+
+ @Function	ParentHandle
+
+ @Description	Determine the parent of a handle
+
+ @Input		psHandle - pointer to handle structure
+
+ @Return	Parent handle, or IMG_NULL if the handle is not a subhandle.
+
+******************************************************************************/
 #ifdef INLINE_IS_PRAGMA
 #pragma inline(ParentHandle)
 #endif
@@ -271,9 +438,37 @@ IMG_HANDLE ParentHandle(struct sHandle *psHandle)
 	return psHandle->sSiblings.hParent;
 }
 
+/*
+ * The LIST_PTR_FROM_INDEX_AND_OFFSET macro is used to generate either a
+ * pointer to the subhandle list head, or a pointer to the linked list
+ * structure of an item on a subhandle list.
+ * The list head is itself on the list, but is at a different offset
+ * in the handle structure to the linked list structure for items on
+ * the list.  The two linked list structures are differentiated by
+ * the third parameter, containing the parent index.  The parent field
+ * in the list head structure references the handle structure that contains
+ * it.  For items on the list, the parent field in the linked list structure
+ * references the parent handle, which will be different from the handle
+ * containing the linked list structure.
+ */
 #define	LIST_PTR_FROM_INDEX_AND_OFFSET(psBase, i, p, po, eo) \
 		((struct sHandleList *)((IMG_CHAR *)(INDEX_TO_HANDLE_PTR(psBase, i)) + (((i) == (p)) ? (po) : (eo))))
 
+/*!
+******************************************************************************
+
+ @Function	HandleListInsertBefore
+
+ @Description	Insert a handle before a handle currently on the list.
+
+ @Input		ui32InsIndex - index of handle to be inserted after
+		psIns - pointer to handle structure to be inserted after
+		uiParentOffset - offset to list head struct in handle structure
+		ui32EntryIndex - index of handle to be inserted
+		psEntry - pointer to handle structure of item to be inserted
+		uiEntryOffset - offset of list item struct in handle structure
+
+******************************************************************************/
 #ifdef INLINE_IS_PRAGMA
 #pragma inline(HandleListInsertBefore)
 #endif
@@ -295,6 +490,17 @@ IMG_VOID HandleListInsertBefore(PVRSRV_HANDLE_BASE *psBase, IMG_UINT32 ui32InsIn
 	psEntry->hParent = INDEX_TO_HANDLE(psBase, ui32ParentIndex);
 }
 
+/*!
+******************************************************************************
+
+ @Function	AdoptChild
+
+ @Description	Assign a subhandle to a handle
+
+ @Input		psParent - pointer to handle structure of parent handle
+		psChild - pointer to handle structure of child subhandle
+
+******************************************************************************/
 #ifdef INLINE_IS_PRAGMA
 #pragma inline(AdoptChild)
 #endif
@@ -309,6 +515,19 @@ IMG_VOID AdoptChild(PVRSRV_HANDLE_BASE *psBase, struct sHandle *psParent, struct
 
 }
 
+/*!
+******************************************************************************
+
+ @Function	HandleListRemove
+
+ @Description	Remove a handle from a list
+
+ @Input		ui32EntryIndex - index of handle to be removed
+		psEntry - pointer to handle structure of item to be removed
+		uiEntryOffset - offset of list item struct in handle structure
+		uiParentOffset - offset to list head struct in handle structure
+
+******************************************************************************/
 #ifdef INLINE_IS_PRAGMA
 #pragma inline(HandleListRemove)
 #endif
@@ -331,6 +550,16 @@ IMG_VOID HandleListRemove(PVRSRV_HANDLE_BASE *psBase, IMG_UINT32 ui32EntryIndex,
 	}
 }
 
+/*!
+******************************************************************************
+
+ @Function	UnlinkFromParent
+
+ @Description	Remove a subhandle from its parents list
+
+ @Input		psHandle - pointer to handle structure of child subhandle
+
+******************************************************************************/
 #ifdef INLINE_IS_PRAGMA
 #pragma inline(UnlinkFromParent)
 #endif
@@ -340,6 +569,19 @@ IMG_VOID UnlinkFromParent(PVRSRV_HANDLE_BASE *psBase, struct sHandle *psHandle)
 	HandleListRemove(psBase, HANDLE_PTR_TO_INDEX(psBase, psHandle), &psHandle->sSiblings, offsetof(struct sHandle, sSiblings), offsetof(struct sHandle, sChildren));
 }
 
+/*!
+******************************************************************************
+
+ @Function	HandleListIterate
+
+ @Description	Iterate over the items in a list
+
+ @Input		psHead - pointer to list head
+		uiParentOffset - offset to list head struct in handle structure
+		uiEntryOffset - offset of list item struct in handle structure
+		pfnIterFunc - function to be called for each handle in the list
+
+******************************************************************************/
 #ifdef INLINE_IS_PRAGMA
 #pragma inline(HandleListIterate)
 #endif
@@ -351,7 +593,10 @@ PVRSRV_ERROR HandleListIterate(PVRSRV_HANDLE_BASE *psBase, struct sHandleList *p
 
 	PVR_ASSERT(psHead->hParent != IMG_NULL);
 
-
+	/*
+ 	 * Follow the next chain from the list head until we reach
+ 	 * the list head again, which signifies the end of the list.
+ 	 */
 	for(ui32Index = psHead->ui32Next; ui32Index != ui32Parent; )
 	{
 		struct sHandle *psHandle = INDEX_TO_HANDLE_PTR(psBase, ui32Index);
@@ -360,7 +605,10 @@ PVRSRV_ERROR HandleListIterate(PVRSRV_HANDLE_BASE *psBase, struct sHandleList *p
 		PVRSRV_ERROR eError;
 
 		PVR_ASSERT(psEntry->hParent == psHead->hParent);
-
+		/*
+		 * Get the next index now, in case the list item is
+		 * modified by the iteration function.
+		 */
 		ui32Index = psEntry->ui32Next;
 
 		eError = (*pfnIterFunc)(psBase, psHandle);
@@ -373,6 +621,17 @@ PVRSRV_ERROR HandleListIterate(PVRSRV_HANDLE_BASE *psBase, struct sHandleList *p
 	return PVRSRV_OK;
 }
 
+/*!
+******************************************************************************
+
+ @Function	IterateOverChildren
+
+ @Description	Iterate over the subhandles of a parent handle
+
+ @Input		psParent - pointer to parent handle structure
+		pfnIterFunc - function to be called for each subhandle
+
+******************************************************************************/
 #ifdef INLINE_IS_PRAGMA
 #pragma inline(IterateOverChildren)
 #endif
@@ -382,6 +641,24 @@ PVRSRV_ERROR IterateOverChildren(PVRSRV_HANDLE_BASE *psBase, struct sHandle *psP
 	 return HandleListIterate(psBase, &psParent->sChildren, offsetof(struct sHandle, sChildren), offsetof(struct sHandle, sSiblings), pfnIterFunc);
 }
 
+/*!
+******************************************************************************
+
+ @Function	GetHandleStructure
+
+ @Description	Get the handle structure for a given handle
+
+ @Input		psBase - pointer to handle base structure
+		ppsHandle - location to return pointer to handle structure
+		hHandle - handle from client
+		eType - handle type or PVRSRV_HANDLE_TYPE_NONE if the
+			handle type is not to be checked.
+
+ @Output	ppsHandle - points to a pointer to the handle structure
+
+ @Return	Error code or PVRSRV_OK
+
+******************************************************************************/
 #ifdef INLINE_IS_PRAGMA
 #pragma inline(GetHandleStructure)
 #endif
@@ -391,7 +668,7 @@ PVRSRV_ERROR GetHandleStructure(PVRSRV_HANDLE_BASE *psBase, struct sHandle **pps
 	IMG_UINT32 ui32Index = HANDLE_TO_INDEX(psBase, hHandle);
 	struct sHandle *psHandle;
 
-
+	/* Check handle index is in range */
 	if (!INDEX_IS_VALID(psBase, ui32Index))
 	{
 		PVR_DPF((PVR_DBG_ERROR, "GetHandleStructure: Handle index out of range (%u >= %u)", ui32Index, psBase->ui32TotalHandCount));
@@ -418,6 +695,20 @@ PVRSRV_ERROR GetHandleStructure(PVRSRV_HANDLE_BASE *psBase, struct sHandle **pps
 	return PVRSRV_OK;
 }
 
+/*!
+******************************************************************************
+
+ @Function	ParentIfPrivate
+
+ @Description	Return the parent handle if the handle was allocated
+		with PVRSRV_HANDLE_ALLOC_FLAG_PRIVATE, else return
+		IMG_NULL
+
+ @Input		psHandle - pointer to handle
+
+ @Return	Parent handle, or IMG_NULL
+
+******************************************************************************/
 #ifdef INLINE_IS_PRAGMA
 #pragma inline(ParentIfPrivate)
 #endif
@@ -428,6 +719,19 @@ IMG_HANDLE ParentIfPrivate(struct sHandle *psHandle)
 			ParentHandle(psHandle) : IMG_NULL;
 }
 
+/*!
+******************************************************************************
+
+ @Function	InitKey
+
+ @Description	Initialise a hash table key for the current process
+
+ @Input		psBase - pointer to handle base structure
+		aKey - pointer to key
+		pvData - pointer to the resource the handle represents
+		eType - type of resource
+
+******************************************************************************/
 #ifdef INLINE_IS_PRAGMA
 #pragma inline(InitKey)
 #endif
@@ -484,10 +788,10 @@ static PVRSRV_ERROR FreeHandle(PVRSRV_HANDLE_BASE *psBase, struct sHandle *psHan
 		PVR_UNREFERENCED_PARAMETER(hHandle);
 	}
 
-
+	/* Unlink handle from parent */
 	UnlinkFromParent(psBase, psHandle);
 
-
+	/* Free children */
 	eError = IterateOverChildren(psBase, psHandle, FreeHandle);
 	if (eError != PVRSRV_OK)
 	{
@@ -495,18 +799,24 @@ static PVRSRV_ERROR FreeHandle(PVRSRV_HANDLE_BASE *psBase, struct sHandle *psHan
 		return eError;
 	}
 
-
+	/*
+	 * Clear the type here, so that a handle can no longer be looked
+	 * up if it is only partially freed.
+	 */
 	psHandle->eType = PVRSRV_HANDLE_TYPE_NONE;
 
 	if (BATCHED_HANDLE(psHandle) && !BATCHED_HANDLE_PARTIALLY_FREE(psHandle))
 	{
-
-		SET_BATCHED_HANDLE_PARTIALLY_FREE(psHandle);
-
+		/* PRQA S 1474,4130 1 */ /* ignore warnings about enum types being modified */
+        SET_BATCHED_HANDLE_PARTIALLY_FREE(psHandle);
+		/*
+		 * If the handle was allocated in batch mode, delay the free
+		 * until the batch commit or release.
+		 */
 		return PVRSRV_OK;
 	}
 
-
+	/* No free list management if purging is enabled */
 	if (!psBase->bPurgingEnabled)
 	{
 		if (psBase->ui32FreeHandCount == 0)
@@ -518,7 +828,10 @@ static PVRSRV_ERROR FreeHandle(PVRSRV_HANDLE_BASE *psBase, struct sHandle *psHan
 		}
 		else
 		{
-
+			/*
+			 * Put the handle pointer on the end of the the free
+			 * handle pointer linked list.
+			 */
 			PVR_ASSERT(psBase->ui32LastFreeIndexPlusOne != 0);
 			PVR_ASSERT(INDEX_TO_HANDLE_PTR(psBase, psBase->ui32LastFreeIndexPlusOne - 1)->ui32NextIndexPlusOne == 0);
 			INDEX_TO_HANDLE_PTR(psBase, psBase->ui32LastFreeIndexPlusOne - 1)->ui32NextIndexPlusOne =  ui32Index + 1;
@@ -526,7 +839,7 @@ static PVRSRV_ERROR FreeHandle(PVRSRV_HANDLE_BASE *psBase, struct sHandle *psHan
 
 		PVR_ASSERT(psHandle->ui32NextIndexPlusOne == 0);
 
-
+		/* Update the end of the free handle linked list */
 		psBase->ui32LastFreeIndexPlusOne = ui32Index + 1;
 	}
 
@@ -535,6 +848,18 @@ static PVRSRV_ERROR FreeHandle(PVRSRV_HANDLE_BASE *psBase, struct sHandle *psHan
 	return PVRSRV_OK;
 }
 
+/*!
+******************************************************************************
+
+ @Function	FreeAllHandles
+
+ @Description	Free all handles for a given handle base
+
+ @Input		psBase - pointer to handle base structure
+
+ @Return	PVRSRV_OK or PVRSRV_ERROR
+
+******************************************************************************/
 static PVRSRV_ERROR FreeAllHandles(PVRSRV_HANDLE_BASE *psBase)
 {
 	IMG_UINT32 i;
@@ -560,7 +885,7 @@ static PVRSRV_ERROR FreeAllHandles(PVRSRV_HANDLE_BASE *psBase)
 				break;
 			}
 
-
+			/* Break out of loop if all the handles free */
 			if (psBase->ui32FreeHandCount == psBase->ui32TotalHandCount)
 			{
 				break;
@@ -571,6 +896,18 @@ static PVRSRV_ERROR FreeAllHandles(PVRSRV_HANDLE_BASE *psBase)
 	return eError;
 }
 
+/*!
+******************************************************************************
+
+ @Function	FreeHandleBase
+
+ @Description	Free a handle base.
+
+ @Input		psHandleBase - pointer to handle base
+
+ @Return	Error code or PVRSRV_OK
+
+******************************************************************************/
 static PVRSRV_ERROR FreeHandleBase(PVRSRV_HANDLE_BASE *psBase)
 {
 	PVRSRV_ERROR eError;
@@ -581,7 +918,7 @@ static PVRSRV_ERROR FreeHandleBase(PVRSRV_HANDLE_BASE *psBase)
 		PVRSRVReleaseHandleBatch(psBase);
 	}
 
-
+	/* Free the handle array */
 	eError = FreeAllHandles(psBase);
 	if (eError != PVRSRV_OK)
 	{
@@ -589,7 +926,7 @@ static PVRSRV_ERROR FreeHandleBase(PVRSRV_HANDLE_BASE *psBase)
 		return eError;
 	}
 
-
+	/* Free the handle array */
 	eError = FreeHandleArray(psBase);
 	if (eError != PVRSRV_OK)
 	{
@@ -599,7 +936,7 @@ static PVRSRV_ERROR FreeHandleBase(PVRSRV_HANDLE_BASE *psBase)
 
 	if (psBase->psHashTab != IMG_NULL)
 	{
-
+		/* Free the hash table */
 		HASH_Delete(psBase->psHashTab);
 	}
 
@@ -616,6 +953,20 @@ static PVRSRV_ERROR FreeHandleBase(PVRSRV_HANDLE_BASE *psBase)
 	return PVRSRV_OK;
 }
 
+/*!
+******************************************************************************
+
+ @Function	FindHandle
+
+ @Description	Find handle corresponding to a resource pointer
+
+ @Input		psBase - pointer to handle base structure
+		pvData - pointer to resource to be associated with the handle
+		eType - the type of resource
+
+ @Return	the handle, or IMG_NULL if not found
+
+******************************************************************************/
 #ifdef INLINE_IS_PRAGMA
 #pragma inline(FindHandle)
 #endif
@@ -798,14 +1149,14 @@ static PVRSRV_ERROR AllocHandle(PVRSRV_HANDLE_BASE *psBase, IMG_HANDLE *phHandle
 	HAND_KEY aKey;
 	PVRSRV_ERROR eError;
 
-
+	/* PVRSRV_HANDLE_TYPE_NONE is reserved for internal use */
 	PVR_ASSERT(eType != PVRSRV_HANDLE_TYPE_NONE);
 
 	PVR_ASSERT(psBase->psHashTab != IMG_NULL);
 
 	if (!TEST_FLAG(eFlag, PVRSRV_HANDLE_ALLOC_FLAG_MULTI))
 	{
-
+		/* Handle must not already exist */
 		PVR_ASSERT(FindHandle(psBase, pvData, eType, hParent) == IMG_NULL);
 	}
 
@@ -814,7 +1165,7 @@ static PVRSRV_ERROR AllocHandle(PVRSRV_HANDLE_BASE *psBase, IMG_HANDLE *phHandle
 		 PVR_DPF((PVR_DBG_WARNING, "AllocHandle: Handle batch size (%u) was too small, allocating additional space", psBase->ui32HandBatchSize));
 	}
 
-
+	/* Ensure there is a free handle */
 	eError = EnsureFreeHandles(psBase, 1);
 	if (eError != PVRSRV_OK)
 	{
@@ -825,7 +1176,7 @@ static PVRSRV_ERROR AllocHandle(PVRSRV_HANDLE_BASE *psBase, IMG_HANDLE *phHandle
 
 	if (!psBase->bPurgingEnabled)
 	{
-
+		/* Array index of first free handle */
 		ui32NewIndex = psBase->ui32FirstFreeIndex;
 
 
@@ -854,10 +1205,10 @@ static PVRSRV_ERROR AllocHandle(PVRSRV_HANDLE_BASE *psBase, IMG_HANDLE *phHandle
 
 	if (!TEST_FLAG(eFlag, PVRSRV_HANDLE_ALLOC_FLAG_MULTI))
 	{
-
+		/* Initialise hash key */
 		InitKey(aKey, psBase, pvData, eType, hParent);
 
-
+		/* Put the new handle in the hash table */
 		if (!HASH_Insert_Extended(psBase->psHashTab, aKey, (IMG_UINTPTR_T)hHandle))
 		{
 			PVR_DPF((PVR_DBG_ERROR, "AllocHandle: Couldn't add handle to hash table"));
@@ -871,7 +1222,7 @@ static PVRSRV_ERROR AllocHandle(PVRSRV_HANDLE_BASE *psBase, IMG_HANDLE *phHandle
 
 	if (!psBase->bPurgingEnabled)
 	{
-
+		/* Check whether the last free handle has been allocated */
 		if (psBase->ui32FreeHandCount == 0)
 		{
 			PVR_ASSERT(psBase->ui32FirstFreeIndex == ui32NewIndex);
@@ -882,7 +1233,15 @@ static PVRSRV_ERROR AllocHandle(PVRSRV_HANDLE_BASE *psBase, IMG_HANDLE *phHandle
 		}
 		else
 		{
-
+			/*
+			 * Update the first free handle index.
+			 * If the "next free index plus one" field in the new
+			 * handle structure is zero, the next free index is
+			 * the index of the new handle plus one.  This
+			 * convention has been adopted to simplify the
+			 * initialisation of freshly allocated handle
+			 * space.
+			 */
 			psBase->ui32FirstFreeIndex = (psNewHandle->ui32NextIndexPlusOne == 0) ?
 				ui32NewIndex + 1 :
 				psNewHandle->ui32NextIndexPlusOne - 1;
@@ -890,6 +1249,7 @@ static PVRSRV_ERROR AllocHandle(PVRSRV_HANDLE_BASE *psBase, IMG_HANDLE *phHandle
 	}
 
 
+	/* PRQA S 0505 1 */ /* psNewHandle is never NULL, see assert earlier */
 	psNewHandle->eType = eType;
 	psNewHandle->pvData = pvData;
 	psNewHandle->eInternalFlag = INTERNAL_HANDLE_FLAG_NONE;
@@ -908,12 +1268,12 @@ static PVRSRV_ERROR AllocHandle(PVRSRV_HANDLE_BASE *psBase, IMG_HANDLE *phHandle
 
 	if (HANDLES_BATCHED(psBase))
 	{
-
+		/* Add handle to batch list */
 		psNewHandle->ui32NextIndexPlusOne = psBase->ui32FirstBatchIndexPlusOne;
 
 		psBase->ui32FirstBatchIndexPlusOne = ui32NewIndex + 1;
 
-
+		/* PRQA S 1474 1 */ /* ignore warnings about enum types being modified */
 		SET_BATCHED_HANDLE(psNewHandle);
 	}
 	else
@@ -921,7 +1281,7 @@ static PVRSRV_ERROR AllocHandle(PVRSRV_HANDLE_BASE *psBase, IMG_HANDLE *phHandle
 		psNewHandle->ui32NextIndexPlusOne = 0;
 	}
 
-
+	/* Return the new handle to the client */
 	*phHandle = hHandle;
 
 	return PVRSRV_OK;
@@ -936,16 +1296,19 @@ PVRSRV_ERROR PVRSRVAllocHandle(PVRSRV_HANDLE_BASE *psBase, IMG_HANDLE *phHandle,
 
 	if (HANDLES_BATCHED(psBase))
 	{
-
+		/*
+		 * Increment the counter in case of failure.  It will be
+		 * decremented on success.
+		 */
 		psBase->ui32BatchHandAllocFailures++;
 	}
 
-
+	/* PVRSRV_HANDLE_TYPE_NONE is reserved for internal use */
 	PVR_ASSERT(eType != PVRSRV_HANDLE_TYPE_NONE);
 
 	if (!TEST_FLAG(eFlag, PVRSRV_HANDLE_ALLOC_FLAG_MULTI))
 	{
-
+		/* See if there is already a handle for this data pointer */
 		hHandle = FindHandle(psBase, pvData, eType, IMG_NULL);
 		if (hHandle != IMG_NULL)
 		{
@@ -958,7 +1321,11 @@ PVRSRV_ERROR PVRSRVAllocHandle(PVRSRV_HANDLE_BASE *psBase, IMG_HANDLE *phHandle,
 				return eError;
 			}
 
-
+			/*
+			 * If the client is willing to share a handle, and the
+			 * existing handle is marked as shareable, return the
+			 * existing handle.
+			 */
 			if (TEST_FLAG(psHandle->eFlag & eFlag, PVRSRV_HANDLE_ALLOC_FLAG_SHARED))
 			{
 				*phHandle = hHandle;
@@ -992,17 +1359,20 @@ PVRSRV_ERROR PVRSRVAllocSubHandle(PVRSRV_HANDLE_BASE *psBase, IMG_HANDLE *phHand
 
 	if (HANDLES_BATCHED(psBase))
 	{
-
+		/*
+		 * Increment the counter in case of failure.  It will be
+		 * decremented on success.
+		 */
 		psBase->ui32BatchHandAllocFailures++;
 	}
 
-
+	/* PVRSRV_HANDLE_TYPE_NONE is reserved for internal use */
 	PVR_ASSERT(eType != PVRSRV_HANDLE_TYPE_NONE);
 
 	hParentKey = TEST_FLAG(eFlag, PVRSRV_HANDLE_ALLOC_FLAG_PRIVATE) ?
 			hParent : IMG_NULL;
 
-
+	/* Lookup the parent handle */
 	eError = GetHandleStructure(psBase, &psPHand, hParent, PVRSRV_HANDLE_TYPE_NONE);
 	if (eError != PVRSRV_OK)
 	{
@@ -1011,7 +1381,7 @@ PVRSRV_ERROR PVRSRVAllocSubHandle(PVRSRV_HANDLE_BASE *psBase, IMG_HANDLE *phHand
 
 	if (!TEST_FLAG(eFlag, PVRSRV_HANDLE_ALLOC_FLAG_MULTI))
 	{
-
+		/* See if there is already a handle for this data pointer */
 		hHandle = FindHandle(psBase, pvData, eType, hParentKey);
 		if (hHandle != IMG_NULL)
 		{
@@ -1131,7 +1501,7 @@ PVRSRV_ERROR PVRSRVLookupSubHandle(PVRSRV_HANDLE_BASE *psBase, IMG_PVOID *ppvDat
 		return eError;
 	}
 
-
+	/* Look for hAncestor among the handle's ancestors */
 	for (psPHand = psCHand; ParentHandle(psPHand) != hAncestor; )
 	{
 		eError = GetHandleStructure(psBase, &psPHand, ParentHandle(psPHand), PVRSRV_HANDLE_TYPE_NONE);
@@ -1206,6 +1576,19 @@ PVRSRV_ERROR PVRSRVReleaseHandle(PVRSRV_HANDLE_BASE *psBase, IMG_HANDLE hHandle,
 	return eError;
 }
 
+/*!
+******************************************************************************
+
+ @Function	PVRSRVNewHandleBatch
+
+ @Description	Start a new handle batch
+
+ @Input 	psBase		- handle base
+ @Input 	ui32BatchSize	- handle batch size
+
+ @Return	Error code or PVRSRV_OK
+
+******************************************************************************/
 PVRSRV_ERROR PVRSRVNewHandleBatch(PVRSRV_HANDLE_BASE *psBase, IMG_UINT32 ui32BatchSize)
 {
 	PVRSRV_ERROR eError;
@@ -1243,6 +1626,19 @@ PVRSRV_ERROR PVRSRVNewHandleBatch(PVRSRV_HANDLE_BASE *psBase, IMG_UINT32 ui32Bat
 	return PVRSRV_OK;
 }
 
+/*!
+******************************************************************************
+
+ @Function	PVRSRVHandleBatchCommitOrRelease
+
+ @Description	Release a handle batch
+
+ @Input 	psBase	- handle base
+		bCommit	- commit handles
+
+ @Return	none
+
+******************************************************************************/
 static PVRSRV_ERROR PVRSRVHandleBatchCommitOrRelease(PVRSRV_HANDLE_BASE *psBase, IMG_BOOL bCommit)
 {
 
@@ -1264,7 +1660,10 @@ static PVRSRV_ERROR PVRSRVHandleBatchCommitOrRelease(PVRSRV_HANDLE_BASE *psBase,
 		}
 		bCommitBatch = IMG_FALSE;
 	}
-
+	/*
+	 * The whole point of batched handles is to avoid handle allocation
+	 * failures.
+	 */
 	PVR_ASSERT(psBase->ui32BatchHandAllocFailures == 0 || !bCommit);
 
 	ui32IndexPlusOne = psBase->ui32FirstBatchIndexPlusOne;
@@ -1278,9 +1677,11 @@ static PVRSRV_ERROR PVRSRVHandleBatchCommitOrRelease(PVRSRV_HANDLE_BASE *psBase,
 
 		if (!bCommitBatch || BATCHED_HANDLE_PARTIALLY_FREE(psHandle))
 		{
-			PVRSRV_ERROR eError;
-
-
+			/*
+			 * We need a complete free here.  If the handle
+			 * is not partially free, set the handle as
+			 * unbatched to avoid a partial free.
+			 */
 			if (!BATCHED_HANDLE_PARTIALLY_FREE(psHandle))
 			{
 				SET_UNBATCHED_HANDLE(psHandle);
@@ -1295,6 +1696,7 @@ static PVRSRV_ERROR PVRSRVHandleBatchCommitOrRelease(PVRSRV_HANDLE_BASE *psBase,
 		}
 		else
 		{
+			/* PRQA S 1474,4130 1 */ /* ignore warnings about enum types being modified */
 			SET_UNBATCHED_HANDLE(psHandle);
 		}
 
@@ -1328,16 +1730,53 @@ static PVRSRV_ERROR PVRSRVHandleBatchCommitOrRelease(PVRSRV_HANDLE_BASE *psBase,
 	return PVRSRV_OK;
 }
 
+/*!
+******************************************************************************
+
+ @Function	PVRSRVCommitHandleBatch
+
+ @Description	Commit a handle batch
+
+ @Input 	psBase	- handle base
+
+ @Return	Error code or PVRSRV_OK
+
+******************************************************************************/
 PVRSRV_ERROR PVRSRVCommitHandleBatch(PVRSRV_HANDLE_BASE *psBase)
 {
 	return PVRSRVHandleBatchCommitOrRelease(psBase, IMG_TRUE);
 }
 
+/*!
+******************************************************************************
+
+ @Function	PVRSRReleaseHandleBatch
+
+ @Description	Release a handle batch
+
+ @Input 	psBase	- handle base
+
+ @Return	none
+
+******************************************************************************/
 IMG_VOID PVRSRVReleaseHandleBatch(PVRSRV_HANDLE_BASE *psBase)
 {
 	(IMG_VOID) PVRSRVHandleBatchCommitOrRelease(psBase, IMG_FALSE);
 }
 
+/*!
+******************************************************************************
+
+ @Function	PVRSRVSetMaxHandle
+
+ @Description	Set maximum handle number for given handle base
+
+ @Input 	psBase - pointer to handle base structure
+		ui32MaxHandle - Maximum handle number
+
+ @Return	Error code or PVRSRV_OK
+
+******************************************************************************/
 PVRSRV_ERROR PVRSRVSetMaxHandle(PVRSRV_HANDLE_BASE *psBase, IMG_UINT32 ui32MaxHandle)
 {
 	if (HANDLES_BATCHED(psBase))
@@ -1354,7 +1793,7 @@ PVRSRV_ERROR PVRSRVSetMaxHandle(PVRSRV_HANDLE_BASE *psBase, IMG_UINT32 ui32MaxHa
 		return PVRSRV_ERROR_INVALID_PARAMS;
 	}
 
-
+	/* The limit can only be set if no handles have been allocated */
 	if (psBase->ui32TotalHandCount != 0)
 	{
 		PVR_DPF((PVR_DBG_ERROR, "PVRSRVSetMaxHandle: Limit cannot be set becuase handles have already been allocated"));
@@ -1367,11 +1806,38 @@ PVRSRV_ERROR PVRSRVSetMaxHandle(PVRSRV_HANDLE_BASE *psBase, IMG_UINT32 ui32MaxHa
 	return PVRSRV_OK;
 }
 
+/*!
+******************************************************************************
+
+ @Function	PVRSRVGetMaxHandle
+
+ @Description	Get maximum handle number for given handle base
+
+ @Input 	psBase - pointer to handle base structure
+
+ @Output 	Maximum handle number, or 0 if handle limits not
+		supported.
+
+ @Return	Error code or PVRSRV_OK
+
+******************************************************************************/
 IMG_UINT32 PVRSRVGetMaxHandle(PVRSRV_HANDLE_BASE *psBase)
 {
 	return psBase->ui32MaxIndexPlusOne;
 }
 
+/*!
+******************************************************************************
+
+ @Function	PVRSRVEnableHandlePurging
+
+ @Description	Enable purging for a given handle base
+
+ @Input 	psBase - pointer to handle base structure
+
+ @Return	Error code or PVRSRV_OK
+
+******************************************************************************/
 PVRSRV_ERROR PVRSRVEnableHandlePurging(PVRSRV_HANDLE_BASE *psBase)
 {
 	if (psBase->bPurgingEnabled)
@@ -1380,7 +1846,7 @@ PVRSRV_ERROR PVRSRVEnableHandlePurging(PVRSRV_HANDLE_BASE *psBase)
 		return PVRSRV_OK;
 	}
 
-
+	/* Purging can only be enabled if no handles have been allocated */
 	if (psBase->ui32TotalHandCount != 0)
 	{
 		PVR_DPF((PVR_DBG_ERROR, "PVRSRVEnableHandlePurging: Handles have already been allocated"));
@@ -1392,6 +1858,18 @@ PVRSRV_ERROR PVRSRVEnableHandlePurging(PVRSRV_HANDLE_BASE *psBase)
 	return PVRSRV_OK;
 }
 
+/*!
+******************************************************************************
+
+ @Function	PVRSRVPurgeHandles
+
+ @Description	Purge handles for a given handle base
+
+ @Input 	psBase - pointer to handle base structure
+
+ @Return	Error code or PVRSRV_OK
+
+******************************************************************************/
 PVRSRV_ERROR PVRSRVPurgeHandles(PVRSRV_HANDLE_BASE *psBase)
 {
 	IMG_UINT32 ui32Handle;
@@ -1426,6 +1904,7 @@ PVRSRV_ERROR PVRSRVPurgeHandles(PVRSRV_HANDLE_BASE *psBase)
 		IMG_UINT32 ui32Delta = psBase->ui32TotalHandCount - ui32NewHandCount;
 		PVRSRV_ERROR eError;
 
+		// PVR_TRACE((" PVRSRVPurgeHandles: reducing number of handles from %u to %u", psBase->ui32TotalHandCount, ui32NewHandCount));
 
 
 		eError = ReallocHandleArray(psBase, ui32NewHandCount, psBase->ui32TotalHandCount);
@@ -1443,6 +1922,20 @@ PVRSRV_ERROR PVRSRVPurgeHandles(PVRSRV_HANDLE_BASE *psBase)
 	return PVRSRV_OK;
 }
 
+/*!
+******************************************************************************
+
+ @Function	PVRSRVAllocHandleBase
+
+ @Description	Allocate a handle base structure for a process
+
+ @Input 	ppsBase - pointer to handle base structure pointer
+
+ @Output	ppsBase - points to handle base structure pointer
+
+ @Return	Error code or PVRSRV_OK
+
+******************************************************************************/
 PVRSRV_ERROR PVRSRVAllocHandleBase(PVRSRV_HANDLE_BASE **ppsBase)
 {
 	PVRSRV_HANDLE_BASE *psBase;
@@ -1461,7 +1954,7 @@ PVRSRV_ERROR PVRSRVAllocHandleBase(PVRSRV_HANDLE_BASE **ppsBase)
 	}
 	OSMemSet(psBase, 0, sizeof(*psBase));
 
-
+	/* Create hash table */
 	psBase->psHashTab = HASH_Create_Extended(HANDLE_HASH_TAB_INIT_SIZE, sizeof(HAND_KEY), HASH_Func_Default, HASH_Key_Comp_Default);
 	if (psBase->psHashTab == IMG_NULL)
 	{
@@ -1481,6 +1974,18 @@ failure:
 	return PVRSRV_ERROR_GENERIC;
 }
 
+/*!
+******************************************************************************
+
+ @Function	PVRSRVFreeHandleBase
+
+ @Description	Free a handle base structure
+
+ @Input 	psBase - pointer to handle base structure
+
+ @Return	Error code or PVRSRV_OK
+
+******************************************************************************/
 PVRSRV_ERROR PVRSRVFreeHandleBase(PVRSRV_HANDLE_BASE *psBase)
 {
 	PVRSRV_ERROR eError;
@@ -1496,6 +2001,16 @@ PVRSRV_ERROR PVRSRVFreeHandleBase(PVRSRV_HANDLE_BASE *psBase)
 	return eError;
 }
 
+/*!
+******************************************************************************
+
+ @Function	PVRSRVHandleInit
+
+ @Description	Initialise handle management
+
+ @Return	Error code or PVRSRV_OK
+
+******************************************************************************/
 PVRSRV_ERROR PVRSRVHandleInit(IMG_VOID)
 {
 	PVRSRV_ERROR eError;
@@ -1522,6 +2037,16 @@ error:
 	return eError;
 }
 
+/*!
+******************************************************************************
+
+ @Function	PVRSRVHandleDeInit
+
+ @Description	De-initialise handle management
+
+ @Return	Error code or PVRSRV_OK
+
+******************************************************************************/
 PVRSRV_ERROR PVRSRVHandleDeInit(IMG_VOID)
 {
 	PVRSRV_ERROR eError = PVRSRV_OK;
@@ -1542,4 +2067,8 @@ PVRSRV_ERROR PVRSRVHandleDeInit(IMG_VOID)
 	return eError;
 }
 #else
-#endif
+/* disable warning about empty module */
+#endif	/* #if defined(PVR_SECURE_HANDLES) || defined (SUPPORT_SID_INTERFACE) */
+/******************************************************************************
+ End of file (handle.c)
+******************************************************************************/

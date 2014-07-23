@@ -1,24 +1,43 @@
-/**********************************************************************
- Copyright (c) Imagination Technologies Ltd.
+/*************************************************************************/ /*!
+@Title          Device specific reset routines
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@License        Dual MIT/GPLv2
 
- Permission is hereby granted, free of charge, to any person obtaining a copy
- of this software and associated documentation files (the "Software"), to deal
- in the Software without restriction, including without limitation the rights
- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- copies of the Software, and to permit persons to whom the Software is
- furnished to do so, subject to the following conditions:
+The contents of this file are subject to the MIT license as set out below.
 
- The above copyright notice and this permission notice shall be included in
- all copies or substantial portions of the Software.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- THE SOFTWARE.
- ******************************************************************************/
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/ /**************************************************************************/
 
 #include "sgxdefs.h"
 #include "sgxmmu.h"
@@ -29,6 +48,20 @@
 #include "pdump_km.h"
 
 
+/*!
+*******************************************************************************
+
+ @Function	SGXInitClocks
+
+ @Description
+	Initialise the SGX clocks
+
+ @Input psDevInfo - device info. structure
+ @Input ui32PDUMPFlags - flags to control PDUMP output
+
+ @Return   IMG_VOID
+
+******************************************************************************/
 static IMG_VOID SGXResetSoftReset(PVRSRV_SGXDEV_INFO	*psDevInfo,
 								  IMG_BOOL				bResetBIF,
 								  IMG_UINT32			ui32PDUMPFlags,
@@ -59,13 +92,14 @@ static IMG_VOID SGXResetSoftReset(PVRSRV_SGXDEV_INFO	*psDevInfo,
 #endif
 
 	ui32SoftResetRegVal =
-
+					/* add common reset bits: */
 					EUR_CR_SOFT_RESET_DPM_RESET_MASK |
 					EUR_CR_SOFT_RESET_TA_RESET_MASK  |
 					EUR_CR_SOFT_RESET_USE_RESET_MASK |
 					EUR_CR_SOFT_RESET_ISP_RESET_MASK |
 					EUR_CR_SOFT_RESET_TSP_RESET_MASK;
 
+/* add conditional reset bits: */
 #ifdef EUR_CR_SOFT_RESET_TWOD_RESET_MASK
 	ui32SoftResetRegVal |= EUR_CR_SOFT_RESET_TWOD_RESET_MASK;
 #endif
@@ -117,7 +151,7 @@ static IMG_VOID SGXResetSoftReset(PVRSRV_SGXDEV_INFO	*psDevInfo,
 
 #if !defined(PDUMP)
 	PVR_UNREFERENCED_PARAMETER(ui32PDUMPFlags);
-#endif
+#endif /* PDUMP */
 
 	if (bResetBIF)
 	{
@@ -155,13 +189,28 @@ static IMG_VOID SGXResetSleep(PVRSRV_SGXDEV_INFO	*psDevInfo,
 }
 
 
+/*!
+*******************************************************************************
+
+ @Function	SGXResetInvalDC
+
+ @Description
+
+ Invalidate the BIF Directory Cache and wait for the operation to complete.
+
+ @Input psDevInfo - SGX Device Info
+ @Input ui32PDUMPFlags - flags to control PDUMP output
+
+ @Return   Nothing
+
+******************************************************************************/
 static IMG_VOID SGXResetInvalDC(PVRSRV_SGXDEV_INFO	*psDevInfo,
 							    IMG_UINT32			ui32PDUMPFlags,
 								IMG_BOOL			bPDump)
 {
 	IMG_UINT32 ui32RegVal;
 
-
+	/* Invalidate BIF Directory cache. */
 #if defined(EUR_CR_BIF_CTRL_INVAL)
 	ui32RegVal = EUR_CR_BIF_CTRL_INVAL_ALL_MASK;
 	OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_BIF_CTRL_INVAL, ui32RegVal);
@@ -189,9 +238,10 @@ static IMG_VOID SGXResetInvalDC(PVRSRV_SGXDEV_INFO	*psDevInfo,
 
 #if !defined(SGX_FEATURE_MULTIPLE_MEM_CONTEXTS)
 	{
-
-
-
+		/*
+			Wait for the DC invalidate to complete - indicated by
+			outstanding reads reaching zero.
+		*/
 		if (PollForValueKM((IMG_UINT32 *)((IMG_UINT8*)psDevInfo->pvRegsBaseKM + EUR_CR_BIF_MEM_REQ_STAT),
 							0,
 							EUR_CR_BIF_MEM_REQ_STAT_READS_MASK,
@@ -207,10 +257,27 @@ static IMG_VOID SGXResetInvalDC(PVRSRV_SGXDEV_INFO	*psDevInfo,
 			PDUMPREGPOLWITHFLAGS(EUR_CR_BIF_MEM_REQ_STAT, 0, EUR_CR_BIF_MEM_REQ_STAT_READS_MASK, ui32PDUMPFlags);
 		}
 	}
-#endif
+#endif /* SGX_FEATURE_MULTIPLE_MEM_CONTEXTS */
 }
 
 
+/*!
+*******************************************************************************
+
+ @Function	SGXReset
+
+ @Description
+
+ Reset chip
+
+ @Input psDevInfo - device info. structure
+ @Input bHardwareRecovery - true if recovering powered hardware,
+ 							false if powering up
+ @Input ui32PDUMPFlags - flags to control PDUMP output
+
+ @Return   IMG_VOID
+
+******************************************************************************/
 IMG_VOID SGXReset(PVRSRV_SGXDEV_INFO	*psDevInfo,
 				  IMG_UINT32			 ui32PDUMPFlags)
 {
@@ -253,17 +320,18 @@ IMG_VOID SGXReset(PVRSRV_SGXDEV_INFO	*psDevInfo,
 
 		SGXResetSleep(psDevInfo, ui32PDUMPFlags, IMG_TRUE);
 	}
-#endif
+#endif /* defined(FIX_HW_BRN_23944) */
 
-
+	/* Reset all including BIF */
 	SGXResetSoftReset(psDevInfo, IMG_TRUE, ui32PDUMPFlags, IMG_TRUE);
 
 	SGXResetSleep(psDevInfo, ui32PDUMPFlags, IMG_TRUE);
 
-
-
+	/*
+		Initialise the BIF state.
+	*/
 #if defined(SGX_FEATURE_36BIT_MMU)
-
+	/* enable 36bit addressing mode if the MMU supports it*/
 	OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_BIF_36BIT_ADDRESSING, EUR_CR_BIF_36BIT_ADDRESSING_ENABLE_MASK);
 	PDUMPREGWITHFLAGS(EUR_CR_BIF_36BIT_ADDRESSING, EUR_CR_BIF_36BIT_ADDRESSING_ENABLE_MASK, ui32PDUMPFlags);
 #endif
@@ -301,8 +369,9 @@ IMG_VOID SGXReset(PVRSRV_SGXDEV_INFO	*psDevInfo,
 #endif
 
 #if defined(EUR_CR_BIF_MEM_ARB_CONFIG)
-
-
+	/*
+		Initialise the memory arbiter to its default state
+	*/
 	ui32RegVal	= (12UL << EUR_CR_BIF_MEM_ARB_CONFIG_PAGE_SIZE_SHIFT) |
 				  (7UL << EUR_CR_BIF_MEM_ARB_CONFIG_BEST_CNT_SHIFT) |
 				  (12UL << EUR_CR_BIF_MEM_ARB_CONFIG_TTE_THRESH_SHIFT);
@@ -332,7 +401,7 @@ IMG_VOID SGXReset(PVRSRV_SGXDEV_INFO	*psDevInfo,
 		#if defined(FIX_HW_BRN_26620)
 			ui32RegVal = 0;
 		#else
-
+			/* set the SLC to bypass cache-coherent accesses */
 			ui32RegVal = EUR_CR_MNE_CR_CTRL_BYP_CC_MASK;
 		#endif
 	#endif
@@ -482,4 +551,6 @@ IMG_VOID SGXReset(PVRSRV_SGXDEV_INFO	*psDevInfo,
 	PDUMPCOMMENTWITHFLAGS(ui32PDUMPFlags, "End of SGX reset sequence\r\n");
 }
 
-
+/******************************************************************************
+ End of file (sgxreset.c)
+******************************************************************************/

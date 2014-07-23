@@ -1,25 +1,44 @@
-/**********************************************************************
- Copyright (c) Imagination Technologies Ltd.
+/*************************************************************************/ /*!
+@Title          OS functions header
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@Description    OS specific API definitions
+@License        Dual MIT/GPLv2
 
- Permission is hereby granted, free of charge, to any person obtaining a copy
- of this software and associated documentation files (the "Software"), to deal
- in the Software without restriction, including without limitation the rights
- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- copies of the Software, and to permit persons to whom the Software is
- furnished to do so, subject to the following conditions:
+The contents of this file are subject to the MIT license as set out below.
 
- The above copyright notice and this permission notice shall be included in
- all copies or substantial portions of the Software.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- THE SOFTWARE.
- ******************************************************************************/
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
 
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/ /**************************************************************************/
 #ifdef DEBUG_RELEASE_BUILD
 #pragma optimize( "", off )
 #define DEBUG		1
@@ -38,9 +57,13 @@ extern "C" {
 #endif
 
 
-
+/* setup conditional pageable / non-pageable select */
+	/* Other OSs only need pageable */
 	#define PVRSRV_PAGEABLE_SELECT		PVRSRV_OS_PAGEABLE_HEAP
 
+/******************************************************************************
+ * Static defines
+ *****************************************************************************/
 #define KERNEL_ID			0xffffffffL
 #define POWER_MANAGER_ID	0xfffffffeL
 #define ISR_ID				0xfffffffdL
@@ -91,7 +114,7 @@ PVRSRV_ERROR OSUnRegisterDiscontigMem(IMG_VOID *pvCpuVAddr,
 									IMG_SIZE_T ui32Bytes,
 									IMG_UINT32 ui32Flags,
 									IMG_HANDLE hOSMemHandle);
-#else
+#else	/* defined(__linux__) */
 #ifdef INLINE_IS_PRAGMA
 #pragma inline(OSRegisterDiscontigMem)
 #endif
@@ -125,7 +148,7 @@ static INLINE PVRSRV_ERROR OSUnRegisterDiscontigMem(IMG_VOID *pvCpuVAddr,
 
 	return PVRSRV_ERROR_NOT_SUPPORTED;
 }
-#endif
+#endif	/* defined(__linux__) */
 
 
 #if defined(__linux__)
@@ -140,6 +163,14 @@ static INLINE PVRSRV_ERROR OSReserveDiscontigPhys(IMG_SYS_PHYADDR *pBasePAddr, I
 #else
 	extern IMG_CPU_PHYADDR SysSysPAddrToCpuPAddr(IMG_SYS_PHYADDR SysPAddr);
 
+	/*
+	 * On uITRON we know:
+	 * 1. We will only be called with a non-contig physical if we
+	 *    already have a contiguous CPU linear
+	 * 2. There is a one->one mapping of CpuPAddr -> CpuVAddr
+	 * 3. Looking up the first CpuPAddr will find the first CpuVAddr
+	 * 4. We don't need to unmap
+	 */
 
 	return OSReservePhys(SysSysPAddrToCpuPAddr(pBasePAddr[0]), ui32Bytes, ui32Flags, ppvCpuVAddr, phOSMemHandle);
 #endif
@@ -150,10 +181,10 @@ static INLINE PVRSRV_ERROR OSUnReserveDiscontigPhys(IMG_VOID *pvCpuVAddr, IMG_SI
 #if defined(__linux__)
 	OSUnRegisterDiscontigMem(pvCpuVAddr, ui32Bytes, ui32Flags, hOSMemHandle);
 #endif
-
+	/* We don't need to unmap */
 	return PVRSRV_OK;
 }
-#else
+#else	/* defined(__linux__) */
 
 
 #ifdef INLINE_IS_PRAGMA
@@ -182,7 +213,7 @@ static INLINE PVRSRV_ERROR OSUnReserveDiscontigPhys(IMG_VOID *pvCpuVAddr, IMG_SI
 
 	return PVRSRV_ERROR_NOT_SUPPORTED;
 }
-#endif
+#endif	/* defined(__linux__) */
 
 PVRSRV_ERROR OSRegisterMem(IMG_CPU_PHYADDR BasePAddr,
 							IMG_VOID *pvCpuVAddr,
@@ -258,7 +289,9 @@ PVRSRV_ERROR OSFreePages(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size, IMG_PVOID pv
 	#define OSFreeMem(flags, size, linAddr, blockAlloc) \
 			OSFreeMem_Debug_Wrapper(flags, size, linAddr, blockAlloc, __FILE__, __LINE__)
 #endif
-
+ 
+/*If level 2 wrapper is enabled declare the function,
+else alias to level 1 wrapper, else the wrapper function will be used*/
 #ifdef PVRSRV_DEBUG_OS_MEMORY
 
 	PVRSRV_ERROR OSAllocMem_Debug_Wrapper(IMG_UINT32 ui32Flags,
@@ -267,7 +300,7 @@ PVRSRV_ERROR OSFreePages(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size, IMG_PVOID pv
 										IMG_HANDLE *phBlockAlloc,
 										IMG_CHAR *pszFilename,
 										IMG_UINT32 ui32Line);
-
+	
 	PVRSRV_ERROR OSFreeMem_Debug_Wrapper(IMG_UINT32 ui32Flags,
 									 IMG_UINT32 ui32Size,
 									 IMG_PVOID pvCpuVAddr,
@@ -277,7 +310,7 @@ PVRSRV_ERROR OSFreePages(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size, IMG_PVOID pv
 
 
 	typedef struct
-	{
+	{	
 		IMG_UINT8 sGuardRegionBefore[8];
 		IMG_CHAR sFileName[128];
 		IMG_UINT32 uLineNo;
@@ -288,7 +321,7 @@ PVRSRV_ERROR OSFreePages(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size, IMG_PVOID pv
 			isAllocated = 0x260511AA
 		} eValid;
 	} OSMEM_DEBUG_INFO;
-
+	
 	#define TEST_BUFFER_PADDING_STATUS (sizeof(OSMEM_DEBUG_INFO))
 	#define TEST_BUFFER_PADDING_AFTER  (8)
 	#define TEST_BUFFER_PADDING (TEST_BUFFER_PADDING_STATUS + TEST_BUFFER_PADDING_AFTER)
@@ -300,13 +333,13 @@ PVRSRV_ERROR OSFreePages(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size, IMG_PVOID pv
 #if defined(__linux__) && defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
 	PVRSRV_ERROR OSAllocMem_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size, IMG_PVOID *ppvLinAddr, IMG_HANDLE *phBlockAlloc, IMG_CHAR *pszFilename, IMG_UINT32 ui32Line);
 	PVRSRV_ERROR OSFreeMem_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size, IMG_PVOID pvLinAddr, IMG_HANDLE hBlockAlloc, IMG_CHAR *pszFilename, IMG_UINT32 ui32Line);
-
+	
 	#define OSAllocMem_Debug_Linux_Memory_Allocations OSAllocMem_Impl
 	#define OSFreeMem_Debug_Linux_Memory_Allocations OSFreeMem_Impl
 #else
 	PVRSRV_ERROR OSAllocMem_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size, IMG_PVOID *ppvLinAddr, IMG_HANDLE *phBlockAlloc);
 	PVRSRV_ERROR OSFreeMem_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size, IMG_PVOID pvLinAddr, IMG_HANDLE hBlockAlloc);
-
+	
 	#define OSAllocMem_Debug_Linux_Memory_Allocations(flags, size, addr, blockAlloc, file, line) \
 		OSAllocMem_Impl(flags, size, addr, blockAlloc)
 	#define OSFreeMem_Debug_Linux_Memory_Allocations(flags, size, addr, blockAlloc, file, line) \
@@ -418,6 +451,17 @@ PVRSRV_ERROR OSPCIResumeDev(PVRSRV_PCI_DEV_HANDLE hPVRPCI);
 
 PVRSRV_ERROR OSScheduleMISR(IMG_VOID *pvSysData);
 
+/******************************************************************************
+
+ @Function		OSPanic
+
+ @Description	Take action in response to an unrecoverable driver error
+
+ @Input    IMG_VOID
+
+ @Return   IMG_VOID
+
+******************************************************************************/
 IMG_VOID OSPanic(IMG_VOID);
 
 IMG_BOOL OSProcHasPrivSrvInit(IMG_VOID);
@@ -479,5 +523,9 @@ static inline IMG_BOOL OSInLISR(IMG_VOID unref__ *pvSysData)
 }
 #endif
 
-#endif
+#endif /* __OSFUNC_H__ */
+
+/******************************************************************************
+ End of file (osfunc.h)
+******************************************************************************/
 

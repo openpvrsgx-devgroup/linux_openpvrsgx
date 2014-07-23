@@ -219,19 +219,6 @@ IMG_UINTPTR_T HASH_Retrieve_Extended (HASH_TABLE *pHash, IMG_VOID *pKey);
 ******************************************************************************/
 IMG_UINTPTR_T HASH_Retrieve (HASH_TABLE *pHash, IMG_UINTPTR_T k);
 
-/*!
-******************************************************************************
-    @Function       HASH_Interate
-
-    @Description    Iterate over every entry in the hash table
-
-    @Input          pHash - the old hash table
-    @Input          HASH_pfnCallback - the size of the old hash table
-
-    @Return         Callback error if any, otherwise PVRSRV_OK
-******************************************************************************/
-PVRSRV_ERROR HASH_Iterate(HASH_TABLE *pHash, HASH_pfnCallback pfnCallback);
-
 #ifdef HASH_TRACE
 /*!
 ******************************************************************************

@@ -1,24 +1,45 @@
-/**********************************************************************
- Copyright (c) Imagination Technologies Ltd.
+/*************************************************************************/ /*!
+@Title          Display device class API structures and prototypes
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@Description    Provides display device class API structures and prototypes
+                for kernel services to kernel 3rd party display.
+@License        Dual MIT/GPLv2
 
- Permission is hereby granted, free of charge, to any person obtaining a copy
- of this software and associated documentation files (the "Software"), to deal
- in the Software without restriction, including without limitation the rights
- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- copies of the Software, and to permit persons to whom the Software is
- furnished to do so, subject to the following conditions:
+The contents of this file are subject to the MIT license as set out below.
 
- The above copyright notice and this permission notice shall be included in
- all copies or substantial portions of the Software.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- THE SOFTWARE.
- ******************************************************************************/
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/ /**************************************************************************/
 
 #if !defined (__KERNELDISPLAY_H__)
 #define __KERNELDISPLAY_H__
@@ -61,6 +82,9 @@ typedef PVRSRV_ERROR (*PFN_SWAP_TO_DC_SYSTEM)(IMG_HANDLE, IMG_HANDLE);
 typedef IMG_VOID (*PFN_QUERY_SWAP_COMMAND_ID)(IMG_HANDLE, IMG_HANDLE, IMG_HANDLE, IMG_HANDLE, IMG_UINT16*, IMG_BOOL*);
 typedef IMG_VOID (*PFN_SET_DC_STATE)(IMG_HANDLE, IMG_UINT32);
 
+/*
+	Function table for SRVKM->DISPLAY
+*/
 typedef struct PVRSRV_DC_SRV2DISP_KMJTABLE_TAG
 {
 	IMG_UINT32						ui32TableSize;
@@ -85,8 +109,12 @@ typedef struct PVRSRV_DC_SRV2DISP_KMJTABLE_TAG
 
 } PVRSRV_DC_SRV2DISP_KMJTABLE;
 
+/* ISR callback pfn prototype */
 typedef IMG_BOOL (*PFN_ISR_HANDLER)(IMG_VOID*);
 
+/*
+	functions exported by kernel services for use by 3rd party kernel display class device driver
+*/
 typedef PVRSRV_ERROR (*PFN_DC_REGISTER_DISPLAY_DEV)(PVRSRV_DC_SRV2DISP_KMJTABLE*, IMG_UINT32*);
 typedef PVRSRV_ERROR (*PFN_DC_REMOVE_DISPLAY_DEV)(IMG_UINT32);
 typedef PVRSRV_ERROR (*PFN_DC_OEM_FUNCTION)(IMG_UINT32, IMG_VOID*, IMG_UINT32, IMG_VOID*, IMG_UINT32);
@@ -98,6 +126,9 @@ typedef PVRSRV_ERROR (*PFN_DC_REGISTER_POWER)(IMG_UINT32, PFN_PRE_POWER, PFN_POS
 											  PFN_PRE_CLOCKSPEED_CHANGE, PFN_POST_CLOCKSPEED_CHANGE,
 											  IMG_HANDLE, PVRSRV_DEV_POWER_STATE, PVRSRV_DEV_POWER_STATE);
 
+/*
+	Function table for DISPLAY->SRVKM
+*/
 typedef struct PVRSRV_DC_DISP2SRV_KMJTABLE_TAG
 {
 	IMG_UINT32						ui32TableSize;
@@ -140,13 +171,17 @@ typedef struct DISPLAYCLASS_FLIP_COMMAND_TAG
 
 #define DC_FLIP_COMMAND		0
 
+/* States used in PFN_SET_DC_STATE */
 #define DC_STATE_NO_FLUSH_COMMANDS		0
 #define DC_STATE_FLUSH_COMMANDS			1
 
-
+/* function to retrieve kernel services function table from kernel services */
 typedef IMG_BOOL (*PFN_DC_GET_PVRJTABLE)(PPVRSRV_DC_DISP2SRV_KMJTABLE);
 
 
 
-#endif
+#endif/* #if !defined (__KERNELDISPLAY_H__) */
 
+/******************************************************************************
+ End of file (kerneldisplay.h)
+******************************************************************************/

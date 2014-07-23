@@ -1,27 +1,45 @@
-/**********************************************************************
- Copyright (c) Imagination Technologies Ltd.
+/*************************************************************************/ /*!
+@Title          Common PDump functions
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@License        Dual MIT/GPLv2
 
- Permission is hereby granted, free of charge, to any person obtaining a copy
- of this software and associated documentation files (the "Software"), to deal
- in the Software without restriction, including without limitation the rights
- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- copies of the Software, and to permit persons to whom the Software is
- furnished to do so, subject to the following conditions:
+The contents of this file are subject to the MIT license as set out below.
 
- The above copyright notice and this permission notice shall be included in
- all copies or substantial portions of the Software.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- THE SOFTWARE.
- ******************************************************************************/
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/ /**************************************************************************/
 
 #if defined(PDUMP)
-
 #include <stdarg.h>
 
 #include "services_headers.h"
@@ -31,10 +49,12 @@
 #endif
 #include "pdump_km.h"
 
+/* Allow temporary buffer size override */
 #if !defined(PDUMP_TEMP_BUFFER_SIZE)
 #define PDUMP_TEMP_BUFFER_SIZE (64 * 1024L)
 #endif
 
+/* DEBUG */
 #if 1
 #define PDUMP_DBG(a)   PDumpOSDebugPrintf a
 #else
@@ -54,9 +74,22 @@ static IMG_HANDLE ghTempBufferBlockAlloc;
 static IMG_UINT16 gui16MMUContextUsage = 0;
 
 
-
+/**************************************************************************
+ * Function Name  : GetTempBuffer
+ * Inputs         : None
+ * Outputs        : None
+ * Returns        : Temporary buffer address, or IMG_NULL
+ * Description    : Get temporary buffer address.
+**************************************************************************/
 static IMG_VOID *GetTempBuffer(IMG_VOID)
 {
+	/*
+	 * Allocate the temporary buffer, it it hasn't been allocated already.
+	 * Return the address of the temporary buffer, or IMG_NULL if it
+	 * couldn't be allocated.
+	 * It is expected that the buffer will be allocated once, at driver
+	 * load time, and left in place until the driver unloads.
+	 */
 
 	if (gpvTempBuffer == IMG_NULL)
 	{
@@ -96,19 +129,19 @@ static IMG_VOID FreeTempBuffer(IMG_VOID)
 
 IMG_VOID PDumpInitCommon(IMG_VOID)
 {
-
+	/* Allocate temporary buffer for copying from user space */
 	(IMG_VOID) GetTempBuffer();
 
-
+	/* Call environment specific PDump initialisation */
 	PDumpInit();
 }
 
 IMG_VOID PDumpDeInitCommon(IMG_VOID)
 {
-
+	/* Free temporary buffer */
 	FreeTempBuffer();
 
-
+	/* Call environment specific PDump Deinitialisation */
 	PDumpDeInit();
 }
 
@@ -222,13 +255,14 @@ PVRSRV_ERROR PDumpMallocPages (PVRSRV_DEVICE_TYPE eDeviceType,
 	}
 	PDumpOSWriteString2(hScript, PDUMP_FLAGS_CONTINUOUS);
 
-
-
+	/*
+		Write to the MMU script stream indicating the memory allocation
+	*/
 	pui8LinAddr = (IMG_PUINT8) pvLinAddr;
 	ui32Offset = 0;
 	ui32NumPages = ui32NumBytes / ui32PageSize;
 	while (ui32NumPages)
-	{
+	{ 
 		ui32NumPages--;
 
 
@@ -280,6 +314,13 @@ PVRSRV_ERROR PDumpMallocPageTable (PVRSRV_DEVICE_TYPE eDeviceType,
 	}
 	PDumpOSWriteString2(hScript, PDUMP_FLAGS_CONTINUOUS);
 
+	/*
+		Write to the MMU script stream indicating the memory allocation
+	*/
+	// FIXME: we'll never need more than a 4k page for a pagetable
+	// fixing to 1 page for now.
+	// note: when the mmu code supports packed pagetables the PTs
+	// will be as small as 16bytes
 
 
 
@@ -320,6 +361,14 @@ PVRSRV_ERROR PDumpMallocPageTable (PVRSRV_DEVICE_TYPE eDeviceType,
 	return PVRSRV_OK;
 }
 
+/**************************************************************************
+ * Function Name  : PDumpFreePages
+ * Inputs         : psBMHeap, sDevVAddr, ui32NumBytes, hUniqueTag,
+ 					bInterLeaved
+ * Outputs        : None
+ * Returns        : None
+ * Description    : Free memory pages
+**************************************************************************/
 PVRSRV_ERROR PDumpFreePages	(BM_HEAP 			*psBMHeap,
                          IMG_DEV_VIRTADDR  sDevVAddr,
                          IMG_UINT32        ui32NumBytes,
@@ -347,7 +396,9 @@ PVRSRV_ERROR PDumpFreePages	(BM_HEAP 			*psBMHeap,
 	PDumpOSWriteString2(hScript, PDUMP_FLAGS_CONTINUOUS);
 
 
-
+	/*
+		Write to the MMU script stream indicating the memory free
+	*/
 	ui32NumPages = ui32NumBytes / ui32PageSize;
 	psDeviceNode = psBMHeap->pBMContext->psDeviceNode;
 	for (ui32PageCounter = 0; ui32PageCounter < ui32NumPages; ui32PageCounter++)
@@ -366,7 +417,7 @@ PVRSRV_ERROR PDumpFreePages	(BM_HEAP 			*psBMHeap,
 		}
 		else
 		{
-
+			/* Gap pages in an interleaved allocation should be ignored. */
 		}
 
 		sDevVAddr.uiAddr += ui32PageSize;
@@ -489,6 +540,19 @@ PVRSRV_ERROR PDumpPDReg	(IMG_UINT32 ui32Reg,
 	return PDumpPDRegWithFlags(ui32Reg, ui32Data, PDUMP_FLAGS_CONTINUOUS, hUniqueTag);
 }
 
+/**************************************************************************
+ * Function Name  : PDumpMemPolKM
+ * Inputs         : psMemInfo
+ *				  : ui32Offset
+ *				  : ui32Value
+ *				  : ui32Mask
+ *				  : eOperator
+ *				  : ui32Flags
+ *				  : hUniqueTag
+ * Outputs        : None
+ * Returns        : PVRSRV_ERROR
+ * Description    : Implements Client pdump memory poll API
+**************************************************************************/
 PVRSRV_ERROR PDumpMemPolKM(PVRSRV_KERNEL_MEM_INFO		*psMemInfo,
 						   IMG_UINT32			ui32Offset,
 						   IMG_UINT32			ui32Value,
@@ -530,7 +594,7 @@ PVRSRV_ERROR PDumpMemPolKM(PVRSRV_KERNEL_MEM_INFO		*psMemInfo,
 
 	pui8LinAddr = psMemInfo->pvLinAddrKM;
 
-
+	/* Advance address by offset */
 	pui8LinAddr += ui32Offset;
 
 
@@ -541,15 +605,15 @@ PVRSRV_ERROR PDumpMemPolKM(PVRSRV_KERNEL_MEM_INFO		*psMemInfo,
 			pui8LinAddr,
 			&ui32PageOffset);
 
-
+	/* calculate the DevV page address */
 	sDevVPageAddr.uiAddr = psMemInfo->sDevVAddr.uiAddr + ui32Offset - ui32PageOffset;
 
 	PVR_ASSERT((sDevVPageAddr.uiAddr & 0xFFF) == 0);
 
-
+	/* get the physical page address based on the device virtual address */
 	BM_GetPhysPageAddr(psMemInfo, sDevVPageAddr, &sDevPAddr);
 
-
+	/* convert DevP page address to byte address */
 	sDevPAddr.uiAddr += ui32PageOffset;
 
 	eErr = PDumpOSBufprintf(hScript,
@@ -605,7 +669,7 @@ PVRSRV_ERROR PDumpMemKM(IMG_PVOID pvAltLinAddr,
 		return PVRSRV_OK;
 	}
 
-
+	/* setup memory addresses */
 	if(pvAltLinAddr)
 	{
 		pui8DataLinAddr = pvAltLinAddr;
@@ -617,7 +681,7 @@ PVRSRV_ERROR PDumpMemKM(IMG_PVOID pvAltLinAddr,
 	pui8LinAddr = (IMG_UINT8 *)psMemInfo->pvLinAddrKM;
 	sDevVAddr = psMemInfo->sDevVAddr;
 
-
+	/* advance address by offset */
 	sDevVAddr.uiAddr += ui32Offset;
 	pui8LinAddr += ui32Offset;
 
@@ -627,8 +691,9 @@ PVRSRV_ERROR PDumpMemKM(IMG_PVOID pvAltLinAddr,
 
 	ui32ParamOutPos = PDumpOSGetStreamOffset(PDUMP_STREAM_PARAM2);
 
-
-
+	/*
+		write the binary data up-front.
+	*/
 	if(!PDumpOSWriteString(PDumpOSGetStream(PDUMP_STREAM_PARAM2),
 						pui8DataLinAddr,
 						ui32Bytes,
@@ -650,8 +715,9 @@ PVRSRV_ERROR PDumpMemKM(IMG_PVOID pvAltLinAddr,
 		return eErr;
 	}
 
-
-
+	/*
+		Write a comment to the PDump2 script streams indicating the virtual memory load
+	*/
 	eErr = PDumpOSBufprintf(hScript,
 			 ui32MaxLenScript,
 			 "-- LDB :SGXMEM:VA_%8.8lX%8.8lX:0x%8.8lX 0x%8.8lX 0x%8.8lX %s\r\n",
@@ -667,9 +733,10 @@ PVRSRV_ERROR PDumpMemKM(IMG_PVOID pvAltLinAddr,
 	}
 	PDumpOSWriteString2(hScript, ui32Flags);
 
-
-
-
+	/*
+		query the buffer manager for the physical pages that back the
+		virtual address
+	*/
 	PDumpOSCPUVAddrToPhysPages(psMemInfo->sMemBlk.hOSMemHandle,
 			ui32Offset,
 			pui8LinAddr,
@@ -684,16 +751,16 @@ PVRSRV_ERROR PDumpMemKM(IMG_PVOID pvAltLinAddr,
 						 ui32CurrentOffset);
 #endif
 		ui32NumPages--;
-
-
+	
+		/* calculate the DevV page address */
 		sDevVPageAddr.uiAddr = sDevVAddr.uiAddr - ui32PageByteOffset;
 
 		PVR_ASSERT((sDevVPageAddr.uiAddr & 0xFFF) == 0);
 
-
+		/* get the physical page address based on the device virtual address */
 		BM_GetPhysPageAddr(psMemInfo, sDevVPageAddr, &sDevPAddr);
 
-
+		/* convert DevP page address to byte address */
 		sDevPAddr.uiAddr += ui32PageByteOffset;
 #if 0
 		if(ui32PageByteOffset)
@@ -712,7 +779,7 @@ PVRSRV_ERROR PDumpMemKM(IMG_PVOID pvAltLinAddr,
 		}
 		else
 		{
-
+			/* dump what's left */
 			ui32BlockBytes = ui32Bytes;
 		}
 
@@ -731,6 +798,7 @@ PVRSRV_ERROR PDumpMemKM(IMG_PVOID pvAltLinAddr,
 		}
 		PDumpOSWriteString2(hScript, ui32Flags);
 
+		/* update details for next page */
 
 
 
@@ -784,9 +852,10 @@ PVRSRV_ERROR PDumpMem2KM(PVRSRV_DEVICE_TYPE eDeviceType,
 
 	if (bInitialisePages)
 	{
-
-
-
+		/*
+			write the binary data up-front
+			Use the 'continuous' memory stream
+		*/
 		if (!PDumpOSWriteString(PDumpOSGetStream(PDUMP_STREAM_PARAM2),
 							pvLinAddr,
 							ui32Bytes,
@@ -809,6 +878,13 @@ PVRSRV_ERROR PDumpMem2KM(PVRSRV_DEVICE_TYPE eDeviceType,
 		}
 	}
 
+	/*
+		Mask for the physical page address backing the PT
+		The PT size can be less than 4k with variable page size support
+		The PD size is always 4k
+		FIXME: This won't work for dumping the dummy data page
+	*/
+	ui32PageMask = psMMUAttrib->ui32PTSize - 1;
 
 
 
@@ -861,6 +937,7 @@ PVRSRV_ERROR PDumpMem2KM(PVRSRV_DEVICE_TYPE eDeviceType,
 
 				if ((ui32PTE & SGX_MMU_PDE_ADDR_MASK) != 0)
 				{
+					/* PT entry points to non-null page */
 #if defined(SGX_FEATURE_36BIT_MMU)
 					eErr = PDumpOSBufprintf(hScript,
 							ui32MaxLenScript,
@@ -931,15 +1008,15 @@ PVRSRV_ERROR PDumpMem2KM(PVRSRV_DEVICE_TYPE eDeviceType,
 			}
 		}
 
+		/* update details for next page */
 
-
-
+		/* page offset 0 after first page dump */
 		ui32PageOffset = 0;
-
+		/* bytes left over */
 		ui32Bytes -= ui32BlockBytes;
-
+		/* advance the cpuVaddr */
 		pui8LinAddr += ui32BlockBytes;
-
+		/* update the file write offset */
 		ui32ParamOutPos += ui32BlockBytes;
 	}
 
@@ -1064,6 +1141,13 @@ PVRSRV_ERROR PDumpPDDevPAddrKM(PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 	return PVRSRV_OK;
 }
 
+/**************************************************************************
+ * Function Name  : PDumpCommentKM
+ * Inputs         : pszComment, ui32Flags
+ * Outputs        : None
+ * Returns        : None
+ * Description    : Dumps a comment
+**************************************************************************/
 PVRSRV_ERROR PDumpCommentKM(IMG_CHAR *pszComment, IMG_UINT32 ui32Flags)
 {
 	PVRSRV_ERROR eErr;
@@ -1098,13 +1182,22 @@ PVRSRV_ERROR PDumpCommentKM(IMG_CHAR *pszComment, IMG_UINT32 ui32Flags)
 	return PVRSRV_OK;
 }
 
+/**************************************************************************
+ * Function Name  : PDumpCommentWithFlags
+ * Inputs         : psPDev - PDev for PDump device
+ *				  : pszFormat - format string for comment
+ *				  : ... - args for format string
+ * Outputs        : None
+ * Returns        : None
+ * Description    : PDumps a comments
+**************************************************************************/
 PVRSRV_ERROR PDumpCommentWithFlags(IMG_UINT32 ui32Flags, IMG_CHAR * pszFormat, ...)
 {
 	PVRSRV_ERROR eErr;
 	PDUMP_va_list ap;
 	PDUMP_GET_MSG_STRING();
 
-
+	/* Construct the string */
 	PDUMP_va_start(ap, pszFormat);
 	eErr = PDumpOSVSprintf(hMsg, ui32MaxLen, pszFormat, ap);
 	PDUMP_va_end(ap);
@@ -1116,6 +1209,15 @@ PVRSRV_ERROR PDumpCommentWithFlags(IMG_UINT32 ui32Flags, IMG_CHAR * pszFormat, .
 	return PDumpCommentKM(hMsg, ui32Flags);
 }
 
+/**************************************************************************
+ * Function Name  : PDumpComment
+ * Inputs         : psPDev - PDev for PDump device
+ *				  : pszFormat - format string for comment
+ *				  : ... - args for format string
+ * Outputs        : None
+ * Returns        : None
+ * Description    : PDumps a comments
+**************************************************************************/
 PVRSRV_ERROR PDumpComment(IMG_CHAR *pszFormat, ...)
 {
 	PVRSRV_ERROR eErr;
@@ -1134,6 +1236,13 @@ PVRSRV_ERROR PDumpComment(IMG_CHAR *pszFormat, ...)
 	return PDumpCommentKM(hMsg, PDUMP_FLAGS_CONTINUOUS);
 }
 
+/**************************************************************************
+ * Function Name  : PDumpDriverInfoKM
+ * Inputs         : pszString, ui32Flags
+ * Outputs        : None
+ * Returns        : None
+ * Description    : Dumps a comment
+**************************************************************************/
 PVRSRV_ERROR PDumpDriverInfoKM(IMG_CHAR *pszString, IMG_UINT32 ui32Flags)
 {
 	PVRSRV_ERROR eErr;
@@ -1251,12 +1360,19 @@ PVRSRV_ERROR PDumpReadRegKM		(	IMG_CHAR *pszFileName,
 	return PVRSRV_OK;
 }
 
+/*****************************************************************************
+ @name		PDumpTestNextFrame
+ @brief		Tests whether the next frame will be pdumped
+ @param		ui32CurrentFrame
+ @return	bFrameDumped
+*****************************************************************************/
 IMG_BOOL PDumpTestNextFrame(IMG_UINT32 ui32CurrentFrame)
 {
 	IMG_BOOL	bFrameDumped;
 
-
-
+	/*
+		Try dumping a string
+	*/
 	(IMG_VOID) PDumpSetFrameKM(ui32CurrentFrame + 1);
 	bFrameDumped = PDumpIsCaptureFrameKM();
 	(IMG_VOID) PDumpSetFrameKM(ui32CurrentFrame);
@@ -1460,29 +1576,28 @@ PVRSRV_ERROR PDumpCBP(PPVRSRV_KERNEL_MEM_INFO		psROffMemInfo,
 	pui8LinAddr = psROffMemInfo->pvLinAddrKM;
 	sDevVAddr = psROffMemInfo->sDevVAddr;
 
-
+	/* Advance addresses by offset */
 	pui8LinAddr += ui32ROffOffset;
 	sDevVAddr.uiAddr += ui32ROffOffset;
 
-
-
-
-
-
+	/*
+		query the buffer manager for the physical pages that back the
+		virtual address
+	*/
 	PDumpOSCPUVAddrToPhysPages(psROffMemInfo->sMemBlk.hOSMemHandle,
 			ui32ROffOffset,
 			pui8LinAddr,
 			&ui32PageOffset);
 
-
+	/* calculate the DevV page address */
 	sDevVPageAddr.uiAddr = sDevVAddr.uiAddr - ui32PageOffset;
 
 	PVR_ASSERT((sDevVPageAddr.uiAddr & 0xFFF) == 0);
 
-
+	/* get the physical page address based on the device virtual address */
 	BM_GetPhysPageAddr(psROffMemInfo, sDevVPageAddr, &sDevPAddr);
 
-
+	/* convert DevP page address to byte address */
 	sDevPAddr.uiAddr += ui32PageOffset;
 
 	eErr = PDumpOSBufprintf(hScript,
@@ -1503,6 +1618,13 @@ PVRSRV_ERROR PDumpCBP(PPVRSRV_KERNEL_MEM_INFO		psROffMemInfo,
 }
 
 
+/**************************************************************************
+ * Function Name  : PDumpIDLWithFlags
+ * Inputs         : Idle time in clocks
+ * Outputs        : None
+ * Returns        : Error
+ * Description    : Dump IDL command to script
+**************************************************************************/
 PVRSRV_ERROR PDumpIDLWithFlags(IMG_UINT32 ui32Clocks, IMG_UINT32 ui32Flags)
 {
 	PVRSRV_ERROR eErr;
@@ -1519,13 +1641,32 @@ PVRSRV_ERROR PDumpIDLWithFlags(IMG_UINT32 ui32Clocks, IMG_UINT32 ui32Flags)
 }
 
 
+/**************************************************************************
+ * Function Name  : PDumpIDL
+ * Inputs         : Idle time in clocks
+ * Outputs        : None
+ * Returns        : Error
+ * Description    : Dump IDL command to script
+**************************************************************************/
 PVRSRV_ERROR PDumpIDL(IMG_UINT32 ui32Clocks)
 {
 	return PDumpIDLWithFlags(ui32Clocks, PDUMP_FLAGS_CONTINUOUS);
 }
 #endif
 
-
+/**************************************************************************
+ * Function Name  : PDumpMemUM
+ * Inputs         : pvAltLinAddrUM
+ *				  : pvLinAddrUM
+ *				  : psMemInfo
+ *				  : ui32Offset
+ *				  : ui32Bytes
+ *				  : ui32Flags
+ *				  : hUniqueTag
+ * Outputs        : None
+ * Returns        : PVRSRV_ERROR
+ * Description    : Dump user mode memory
+**************************************************************************/
 PVRSRV_ERROR PDumpMemUM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 						IMG_PVOID pvAltLinAddrUM,
 						IMG_PVOID pvLinAddrUM,
@@ -1542,7 +1683,10 @@ PVRSRV_ERROR PDumpMemUM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 
 	if (psMemInfo->pvLinAddrKM != IMG_NULL && pvAltLinAddrUM == IMG_NULL)
 	{
-
+		/*
+		 * There is a kernel virtual address for the memory that is
+		 * being dumped, and no alternate user mode linear address.
+		 */
 		return PDumpMemKM(IMG_NULL,
 					   psMemInfo,
 					   ui32Offset,
@@ -1555,7 +1699,10 @@ PVRSRV_ERROR PDumpMemUM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 
 	pvAddrKM = GetTempBuffer();
 
-
+	/*
+	 * The memory to be dumped needs to be copied in from
+	 * the client.  Dump the memory, a buffer at a time.
+	 */
 	PVR_ASSERT(pvAddrUM != IMG_NULL && pvAddrKM != IMG_NULL);
 	if (pvAddrUM == IMG_NULL || pvAddrKM == IMG_NULL)
 	{
@@ -1612,16 +1759,23 @@ PVRSRV_ERROR PDumpMemUM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 }
 
 
+/**************************************************************************
+ * Function Name  : _PdumpAllocMMUContext
+ * Inputs         : pui32MMUContextID
+ * Outputs        : None
+ * Returns        : PVRSRV_ERROR
+ * Description    : pdump util to allocate MMU contexts
+**************************************************************************/
 static PVRSRV_ERROR _PdumpAllocMMUContext(IMG_UINT32 *pui32MMUContextID)
 {
 	IMG_UINT32 i;
 
-
+	/* there are MAX_PDUMP_MMU_CONTEXTS contexts available, find one */
 	for(i=0; i<MAX_PDUMP_MMU_CONTEXTS; i++)
 	{
 		if((gui16MMUContextUsage & (1U << i)) == 0)
 		{
-
+			/* mark in use */
 			gui16MMUContextUsage |= 1U << i;
 			*pui32MMUContextID = i;
 			return PVRSRV_OK;
@@ -1634,11 +1788,18 @@ static PVRSRV_ERROR _PdumpAllocMMUContext(IMG_UINT32 *pui32MMUContextID)
 }
 
 
+/**************************************************************************
+ * Function Name  : _PdumpFreeMMUContext
+ * Inputs         : ui32MMUContextID
+ * Outputs        : None
+ * Returns        : PVRSRV_ERROR
+ * Description    : pdump util to free MMU contexts
+**************************************************************************/
 static PVRSRV_ERROR _PdumpFreeMMUContext(IMG_UINT32 ui32MMUContextID)
 {
 	if(ui32MMUContextID < MAX_PDUMP_MMU_CONTEXTS)
 	{
-
+		/* free the id */
 		gui16MMUContextUsage &= ~(1U << ui32MMUContextID);
 		return PVRSRV_OK;
 	}
@@ -1649,6 +1810,13 @@ static PVRSRV_ERROR _PdumpFreeMMUContext(IMG_UINT32 ui32MMUContextID)
 }
 
 
+/**************************************************************************
+ * Function Name  : PDumpSetMMUContext
+ * Inputs         :
+ * Outputs        : None
+ * Returns        : PVRSRV_ERROR
+ * Description    : Set MMU Context
+**************************************************************************/
 PVRSRV_ERROR PDumpSetMMUContext(PVRSRV_DEVICE_TYPE eDeviceType,
 								IMG_CHAR *pszMemSpace,
 								IMG_UINT32 *pui32MMUContextID,
@@ -1685,13 +1853,20 @@ PVRSRV_ERROR PDumpSetMMUContext(PVRSRV_DEVICE_TYPE eDeviceType,
 						hUniqueTag1,
 						sDevPAddr.uiAddr);
 
-
+	/* return the MMU Context ID */
 	*pui32MMUContextID = ui32MMUContextID;
 
 	return PVRSRV_OK;
 }
 
 
+/**************************************************************************
+ * Function Name  : PDumpClearMMUContext
+ * Inputs         :
+ * Outputs        : None
+ * Returns        : PVRSRV_ERROR
+ * Description    : Clear MMU Context
+**************************************************************************/
 PVRSRV_ERROR PDumpClearMMUContext(PVRSRV_DEVICE_TYPE eDeviceType,
 								IMG_CHAR *pszMemSpace,
 								IMG_UINT32 ui32MMUContextID,
@@ -1701,7 +1876,9 @@ PVRSRV_ERROR PDumpClearMMUContext(PVRSRV_DEVICE_TYPE eDeviceType,
 
 	PVR_UNREFERENCED_PARAMETER(eDeviceType);
 
-
+	/* FIXME: Propagate error from PDumpComment once it's supported on
+	 * all OSes and platforms
+	 */
 	PDumpComment("Clear MMU Context for memory space %s\r\n", pszMemSpace);
 
 	PDumpComment("MMU :%s:v%d %d\r\n",
@@ -1719,5 +1896,9 @@ PVRSRV_ERROR PDumpClearMMUContext(PVRSRV_DEVICE_TYPE eDeviceType,
 	return PVRSRV_OK;
 }
 
-#else
-#endif
+#else	/* defined(PDUMP) */
+/* disable warning about empty module */
+#endif	/* defined(PDUMP) */
+/*****************************************************************************
+ End of file (pdump_common.c)
+*****************************************************************************/

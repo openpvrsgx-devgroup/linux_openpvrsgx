@@ -1,24 +1,43 @@
-/**********************************************************************
- Copyright (c) Imagination Technologies Ltd.
+/*************************************************************************/ /*!
+@Title          Event Object 
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@License        Dual MIT/GPLv2
 
- Permission is hereby granted, free of charge, to any person obtaining a copy
- of this software and associated documentation files (the "Software"), to deal
- in the Software without restriction, including without limitation the rights
- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- copies of the Software, and to permit persons to whom the Software is
- furnished to do so, subject to the following conditions:
+The contents of this file are subject to the MIT license as set out below.
 
- The above copyright notice and this permission notice shall be included in
- all copies or substantial portions of the Software.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- THE SOFTWARE.
- ******************************************************************************/
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/ /**************************************************************************/
 
 #include <linux/version.h>
 #include <asm/io.h>
@@ -58,25 +77,39 @@
 
 typedef struct PVRSRV_LINUX_EVENT_OBJECT_LIST_TAG
 {
-   rwlock_t 			   sLock;
-   struct list_head        sList;
-
+   rwlock_t		sLock;
+   struct list_head	sList;
+   
 } PVRSRV_LINUX_EVENT_OBJECT_LIST;
 
 
 typedef struct PVRSRV_LINUX_EVENT_OBJECT_TAG
 {
-	atomic_t	sTimeStamp;
-	IMG_UINT32  ui32TimeStampPrevious;
+   	atomic_t	sTimeStamp;
+   	IMG_UINT32  ui32TimeStampPrevious;
 #if defined(DEBUG)
 	IMG_UINT	ui32Stats;
 #endif
-    wait_queue_head_t sWait;
+    wait_queue_head_t sWait;	
 	struct list_head        sList;
-	IMG_HANDLE				hResItem;
+	IMG_HANDLE		hResItem;				
 	PVRSRV_LINUX_EVENT_OBJECT_LIST *psLinuxEventObjectList;
 } PVRSRV_LINUX_EVENT_OBJECT;
 
+/*!
+******************************************************************************
+
+ @Function	LinuxEventObjectListCreate
+ 
+ @Description 
+ 
+ Linux wait object list creation
+
+ @Output    hOSEventKM : Pointer to the event object list handle 
+ 
+ @Return   PVRSRV_ERROR  :  Error code
+
+******************************************************************************/
 PVRSRV_ERROR LinuxEventObjectListCreate(IMG_HANDLE *phEventObjectList)
 {
 	PVRSRV_LINUX_EVENT_OBJECT_LIST *psEvenObjectList;
@@ -98,6 +131,20 @@ PVRSRV_ERROR LinuxEventObjectListCreate(IMG_HANDLE *phEventObjectList)
 	return PVRSRV_OK;
 }
 
+/*!
+******************************************************************************
+
+ @Function	LinuxEventObjectListDestroy
+ 
+ @Description 
+ 
+ Linux wait object list destruction
+
+ @Input    hOSEventKM : Event object list handle 
+ 
+ @Return   PVRSRV_ERROR  :  Error code
+
+******************************************************************************/
 PVRSRV_ERROR LinuxEventObjectListDestroy(IMG_HANDLE hEventObjectList)
 {
 
@@ -117,6 +164,22 @@ PVRSRV_ERROR LinuxEventObjectListDestroy(IMG_HANDLE hEventObjectList)
 }
 
 
+/*!
+******************************************************************************
+
+ @Function	LinuxEventObjectDelete
+ 
+ @Description 
+ 
+ Linux wait object removal
+ 
+ @Input    hOSEventObjectList : Event object list handle 
+ @Input    hOSEventObject : Event object handle 
+ @Input    bResManCallback : Called from the resman
+ 
+ @Return   PVRSRV_ERROR  :  Error code
+
+******************************************************************************/
 PVRSRV_ERROR LinuxEventObjectDelete(IMG_HANDLE hOSEventObjectList, IMG_HANDLE hOSEventObject)
 {
 	if(hOSEventObjectList)
@@ -131,7 +194,7 @@ PVRSRV_ERROR LinuxEventObjectDelete(IMG_HANDLE hOSEventObjectList, IMG_HANDLE hO
 			{
 				return PVRSRV_ERROR_GENERIC;
 			}
-
+			
 			return PVRSRV_OK;
 		}
 	}
@@ -139,6 +202,20 @@ PVRSRV_ERROR LinuxEventObjectDelete(IMG_HANDLE hOSEventObjectList, IMG_HANDLE hO
 
 }
 
+/*!
+******************************************************************************
+
+ @Function	LinuxEventObjectDeleteCallback
+ 
+ @Description 
+ 
+ Linux wait object removal
+ 
+ @Input    hOSEventObject : Event object handle 
+ 
+ @Return   PVRSRV_ERROR  :  Error code
+
+******************************************************************************/
 static PVRSRV_ERROR LinuxEventObjectDeleteCallback(IMG_PVOID pvParam, IMG_UINT32 ui32Param)
 {
 	PVRSRV_LINUX_EVENT_OBJECT *psLinuxEventObject = pvParam;
@@ -155,10 +232,25 @@ static PVRSRV_ERROR LinuxEventObjectDeleteCallback(IMG_PVOID pvParam, IMG_UINT32
 #endif
 
 	OSFreeMem(PVRSRV_OS_NON_PAGEABLE_HEAP, sizeof(PVRSRV_LINUX_EVENT_OBJECT), psLinuxEventObject, IMG_NULL);
-
+	/*not nulling pointer, copy on stack*/
 
 	return PVRSRV_OK;
 }
+/*!
+******************************************************************************
+
+ @Function	LinuxEventObjectAdd
+ 
+ @Description 
+ 
+ Linux wait object addition
+
+ @Input    hOSEventObjectList : Event object list handle 
+ @Output   phOSEventObject : Pointer to the event object handle 
+ 
+ @Return   PVRSRV_ERROR  :  Error code
+
+******************************************************************************/
 PVRSRV_ERROR LinuxEventObjectAdd(IMG_HANDLE hOSEventObjectList, IMG_HANDLE *phOSEventObject)
  {
 	PVRSRV_LINUX_EVENT_OBJECT *psLinuxEventObject;
@@ -173,13 +265,13 @@ PVRSRV_ERROR LinuxEventObjectAdd(IMG_HANDLE hOSEventObjectList, IMG_HANDLE *phOS
 		return PVRSRV_ERROR_OUT_OF_MEMORY;
 	}
 
-
+	/* allocate completion variable */
 	if(OSAllocMem(PVRSRV_OS_NON_PAGEABLE_HEAP, sizeof(PVRSRV_LINUX_EVENT_OBJECT),
 		(IMG_VOID **)&psLinuxEventObject, IMG_NULL,
 		"Linux Event Object") != PVRSRV_OK)
 	{
-		PVR_DPF((PVR_DBG_ERROR, "LinuxEventObjectAdd: failed to allocate memory "));
-		return PVRSRV_ERROR_OUT_OF_MEMORY;
+		PVR_DPF((PVR_DBG_ERROR, "LinuxEventObjectAdd: failed to allocate memory "));		
+		return PVRSRV_ERROR_OUT_OF_MEMORY;	
 	}
 
 	INIT_LIST_HEAD(&psLinuxEventObject->sList);
@@ -209,6 +301,20 @@ PVRSRV_ERROR LinuxEventObjectAdd(IMG_HANDLE hOSEventObjectList, IMG_HANDLE *phOS
 	return PVRSRV_OK;
 }
 
+/*!
+******************************************************************************
+
+ @Function	LinuxEventObjectSignal
+ 
+ @Description 
+ 
+ Linux wait object signaling function
+ 
+ @Input    hOSEventObjectList : Event object list handle 
+ 
+ @Return   PVRSRV_ERROR  :  Error code
+
+******************************************************************************/
 PVRSRV_ERROR LinuxEventObjectSignal(IMG_HANDLE hOSEventObjectList)
 {
 	PVRSRV_LINUX_EVENT_OBJECT *psLinuxEventObject;
@@ -216,6 +322,10 @@ PVRSRV_ERROR LinuxEventObjectSignal(IMG_HANDLE hOSEventObjectList)
 	struct list_head *psListEntry, *psListEntryTemp, *psList;
 	psList = &psLinuxEventObjectList->sList;
 
+	/*
+	 * We don't take the write lock in interrupt context, so we don't
+	 * need to use read_lock_irqsave.
+	 */
 	read_lock(&psLinuxEventObjectList->sLock);
 	list_for_each_safe(psListEntry, psListEntryTemp, psList)
 	{
@@ -231,6 +341,22 @@ PVRSRV_ERROR LinuxEventObjectSignal(IMG_HANDLE hOSEventObjectList)
 
 }
 
+/*!
+******************************************************************************
+
+ @Function	LinuxEventObjectWait
+ 
+ @Description 
+ 
+ Linux wait object routine
+ 
+ @Input    hOSEventObject : Event object handle 
+ 
+ @Input   ui32MSTimeout : Time out value in msec
+
+ @Return   PVRSRV_ERROR  :  Error code
+
+******************************************************************************/
 PVRSRV_ERROR LinuxEventObjectWait(IMG_HANDLE hOSEventObject, IMG_UINT32 ui32MSTimeout)
 {
 	IMG_UINT32 ui32TimeStamp;
@@ -239,8 +365,8 @@ PVRSRV_ERROR LinuxEventObjectWait(IMG_HANDLE hOSEventObject, IMG_UINT32 ui32MSTi
 	PVRSRV_LINUX_EVENT_OBJECT *psLinuxEventObject = (PVRSRV_LINUX_EVENT_OBJECT *) hOSEventObject;
 
 	IMG_UINT32 ui32TimeOutJiffies = msecs_to_jiffies(ui32MSTimeout);
-
-	do
+	
+	do	
 	{
 		prepare_to_wait(&psLinuxEventObject->sWait, &sWait, TASK_INTERRUPTIBLE);
 		ui32TimeStamp = atomic_read(&psLinuxEventObject->sTimeStamp);
@@ -257,12 +383,12 @@ PVRSRV_ERROR LinuxEventObjectWait(IMG_HANDLE hOSEventObject, IMG_UINT32 ui32MSTi
 		mutex_lock(&gPVRSRVLock);
 #if defined(DEBUG)
 		psLinuxEventObject->ui32Stats++;
-#endif
+#endif			
 
-
+		
 	} while (ui32TimeOutJiffies);
 
-	finish_wait(&psLinuxEventObject->sWait, &sWait);
+	finish_wait(&psLinuxEventObject->sWait, &sWait);	
 
 	psLinuxEventObject->ui32TimeStampPrevious = ui32TimeStamp;
 

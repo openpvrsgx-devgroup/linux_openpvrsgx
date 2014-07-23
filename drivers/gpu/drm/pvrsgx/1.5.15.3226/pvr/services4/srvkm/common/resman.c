@@ -305,9 +305,6 @@ IMG_VOID PVRSRVResManDisconnect(PRESMAN_CONTEXT psResManContext,
 		/* OS specific User-mode Mappings: */
 		FreeResourceByCriteria(psResManContext, RESMAN_CRITERIA_RESTYPE, RESMAN_TYPE_OS_USERMODE_MAPPING, 0, 0, IMG_TRUE);
 
-		/* VGX types: */
-		FreeResourceByCriteria(psResManContext, RESMAN_CRITERIA_RESTYPE, RESMAN_TYPE_DMA_CLIENT_FIFO_DATA, 0, 0, IMG_TRUE);
-
 		/* Event Object */
 		FreeResourceByCriteria(psResManContext, RESMAN_CRITERIA_RESTYPE, RESMAN_TYPE_EVENT_OBJECT, 0, 0, IMG_TRUE);
 

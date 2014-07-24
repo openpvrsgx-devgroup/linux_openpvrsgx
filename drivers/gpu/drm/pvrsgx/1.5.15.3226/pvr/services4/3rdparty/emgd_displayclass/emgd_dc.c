@@ -2147,24 +2147,24 @@ static emgd_error_t emgddc_init_devinfo(struct drm_device *dev,
 	 * Setup the jump table that PVR services uses to call this 3rd-party
 	 * display driver:
 	 */
-	devinfo->dc_jtable.ui32TableSize = sizeof(PVRSRV_DC_SRV2DISP_KMJTABLE);
-	devinfo->dc_jtable.pfnOpenDCDevice = OpenDCDevice;
-	devinfo->dc_jtable.pfnCloseDCDevice = CloseDCDevice;
-	devinfo->dc_jtable.pfnEnumDCFormats = EnumDCFormats;
-	devinfo->dc_jtable.pfnEnumDCDims = EnumDCDims;
-	devinfo->dc_jtable.pfnGetDCSystemBuffer = GetDCSystemBuffer;
-	devinfo->dc_jtable.pfnGetDCInfo = GetDCInfo;
-	devinfo->dc_jtable.pfnGetBufferAddr = GetDCBufferAddr;
-	devinfo->dc_jtable.pfnCreateDCSwapChain = CreateDCSwapChain;
-	devinfo->dc_jtable.pfnDestroyDCSwapChain = DestroyDCSwapChain;
-	devinfo->dc_jtable.pfnSetDCDstRect = SetDCDstRect;
-	devinfo->dc_jtable.pfnSetDCSrcRect = SetDCSrcRect;
-	devinfo->dc_jtable.pfnSetDCDstColourKey = SetDCDstColourKey;
-	devinfo->dc_jtable.pfnSetDCSrcColourKey = SetDCSrcColourKey;
-	devinfo->dc_jtable.pfnGetDCBuffers = GetDCBuffers;
-	devinfo->dc_jtable.pfnSwapToDCBuffer = SwapToDCBuffer;
-	devinfo->dc_jtable.pfnSwapToDCSystem = SwapToDCSystem;
-	devinfo->dc_jtable.pfnSetDCState = SetDCState;
+	devinfo->dc_jtable.ui32TableSize         = (IMG_UINT32) sizeof(PVRSRV_DC_SRV2DISP_KMJTABLE);
+	devinfo->dc_jtable.pfnOpenDCDevice       = (PFN_OPEN_DC_DEVICE) OpenDCDevice;
+	devinfo->dc_jtable.pfnCloseDCDevice      = (PFN_CLOSE_DC_DEVICE) CloseDCDevice;
+	devinfo->dc_jtable.pfnEnumDCFormats      = (PFN_ENUM_DC_FORMATS) EnumDCFormats;
+	devinfo->dc_jtable.pfnEnumDCDims         = (PFN_ENUM_DC_DIMS) EnumDCDims;
+	devinfo->dc_jtable.pfnGetDCSystemBuffer  = (PFN_GET_DC_SYSTEMBUFFER) GetDCSystemBuffer;
+	devinfo->dc_jtable.pfnGetDCInfo          = (PFN_GET_DC_INFO) GetDCInfo;
+	devinfo->dc_jtable.pfnGetBufferAddr      = (PFN_GET_BUFFER_ADDR) GetDCBufferAddr;
+	devinfo->dc_jtable.pfnCreateDCSwapChain  = (PFN_CREATE_DC_SWAPCHAIN) CreateDCSwapChain;
+	devinfo->dc_jtable.pfnDestroyDCSwapChain = (PFN_DESTROY_DC_SWAPCHAIN) DestroyDCSwapChain;
+	devinfo->dc_jtable.pfnSetDCDstRect       = (PFN_SET_DC_DSTRECT) SetDCDstRect;
+	devinfo->dc_jtable.pfnSetDCSrcRect       = (PFN_SET_DC_SRCRECT) SetDCSrcRect;
+	devinfo->dc_jtable.pfnSetDCDstColourKey  = (PFN_SET_DC_DSTCK) SetDCDstColourKey;
+	devinfo->dc_jtable.pfnSetDCSrcColourKey  = (PFN_SET_DC_SRCCK) SetDCSrcColourKey;
+	devinfo->dc_jtable.pfnGetDCBuffers       = (PFN_GET_DC_BUFFERS) GetDCBuffers;
+	devinfo->dc_jtable.pfnSwapToDCBuffer     = (PFN_SWAP_TO_DC_BUFFER) SwapToDCBuffer;
+	devinfo->dc_jtable.pfnSwapToDCSystem     = (PFN_SWAP_TO_DC_SYSTEM) SwapToDCSystem;
+	devinfo->dc_jtable.pfnSetDCState         = (PFN_SET_DC_STATE) SetDCState;
 
 
 	/*

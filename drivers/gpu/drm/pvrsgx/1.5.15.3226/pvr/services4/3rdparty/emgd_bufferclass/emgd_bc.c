@@ -292,12 +292,12 @@ emgd_error_t bc_ts_init(IMG_UINT32 id) {
 		/* Initialize BC JTable */
         psDevInfo->sBCJTable.ui32TableSize = sizeof (PVRSRV_BC_SRV2BUFFER_KMJTABLE);
 
-        psDevInfo->sBCJTable.pfnOpenBCDevice = (PFN_OPEN_BC_DEVICE)OpenBCDevice;
-        psDevInfo->sBCJTable.pfnCloseBCDevice = (PFN_CLOSE_BC_DEVICE)CloseBCDevice;
-        psDevInfo->sBCJTable.pfnGetBCBuffer = (PFN_GET_BC_BUFFER)GetBCBuffer;
-        psDevInfo->sBCJTable.pfnGetBCInfo = (PFN_GET_BC_INFO)GetBCInfo;
-        psDevInfo->sBCJTable.pfnGetBufferAddr = (PFN_GET_BUFFER_ADDR)GetBCBufferAddr;
-		psDevInfo->sBCJTable.pfnGetBufferIdFromTag = (PFN_GET_BUFFER_ID_FROM_TAG)GetBCBufferIdFromTag;
+        psDevInfo->sBCJTable.pfnOpenBCDevice       = (PFN_OPEN_BC_DEVICE)OpenBCDevice;
+        psDevInfo->sBCJTable.pfnCloseBCDevice      = (PFN_CLOSE_BC_DEVICE)CloseBCDevice;
+        psDevInfo->sBCJTable.pfnGetBCBuffer        = (PFN_GET_BC_BUFFER)GetBCBuffer;
+        psDevInfo->sBCJTable.pfnGetBCInfo          = (PFN_GET_BC_INFO)GetBCInfo;
+        psDevInfo->sBCJTable.pfnGetBufferAddr      = (PFN_GET_BUFFER_ADDR)GetBCBufferAddr;
+	psDevInfo->sBCJTable.pfnGetBufferIdFromTag = (PFN_GET_BUFFER_ID_FROM_TAG)GetBCBufferIdFromTag;
 
         if (PVRSRV_OK != psDevInfo->sPVRJTable.pfnPVRSRVRegisterBCDevice(&psDevInfo->sBCJTable,
                     &(psDevInfo->Device_ID))){

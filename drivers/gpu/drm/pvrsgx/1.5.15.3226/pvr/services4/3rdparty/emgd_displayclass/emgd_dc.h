@@ -27,6 +27,7 @@
 #include "memory.h"
 #include "io.h"
 #include "emgd_shared.h"
+#include "kerneldisplay.h"
 
 
 #define EMGDDC_MAXFORMATS 20

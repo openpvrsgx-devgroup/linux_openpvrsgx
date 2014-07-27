@@ -1,0 +1,147 @@
+/*
+ * Copyright (C) 2014 H. Nikolaus Schaller <hns@goldelico.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+/ {
+	model = "Goldelico GTA04b3/Letux 7004";
+
+	/* add additional regulators etc. */
+
+	/* overwrite panel definitions */
+
+	aliases {
+		display0 = &lcd_b3;
+		display1 = &tv0;
+	};
+
+	lcd_b3: lcd {
+		compatible =	"sharp,lq070y3dg3b",
+				"panel-dpi";
+		label = "lcd";
+		enable-gpios = <&gpio1 12 0>;
+
+		panel-timing {
+			clock-frequency = <33260000>;
+
+			hback-porch = <64>;
+			hactive = <800>;
+			hfront-porch = <64>;
+			hsync-len = <128>;
+
+			vback-porch = <35>;
+			vactive = <480>;
+			vfront-porch = <8>;
+			vsync-len = <2>;
+
+			hsync-active = <0>;
+			vsync-active = <0>;
+			de-active = <1>;
+			pixelclk-active = <1>;
+
+		};
+
+		port {
+			lcd_b3_in: endpoint {
+				remote-endpoint = <&dpi_out>;
+			};
+		};
+	};
+};
+
+&dss {
+	pinctrl-names = "default";
+	pinctrl-0 = < &dss_dpi_pins >;
+
+	status = "okay";
+
+	port {
+		dpi_out: endpoint {
+			remote-endpoint = <&lcd_b3_in>;
+			data-lines = <24>;
+		};
+	};
+};
+
+&spi_lcd {
+	compatible = "none";
+};
+
+/* FIXME: &spi_gpio_pins: { }; */
+
+
+&battery {
+	compatible = "ti,twl4030-madc-battery";
+	capacity = <3900000>;
+	charging-calibration-data = <4200 100 4100 75 4000 55 3900 25 3800 5 3700 2 3600 1 3300 0>;
+	discharging-calibration-data = <4200 100 4100 95 4000 70 3800 50 3700 10 3600 5 3300 0>;
+};
+
+/* FIXME: handle optional USB Host/Ethernet port */
+
+&i2c2 {
+	/* we have a different set of LEDs */
+	tca_gpios: tca6507@45 {
+		compatible = "ti,tca6507";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <0x45>;
+
+		gta04_led0: led@0 {
+			label = "gta04:red:aux";
+			reg = <0x0>;
+		};
+
+		gta04_led1: led@1 {
+			label = "gta04:green:aux";
+			reg = <0x1>;
+		};
+
+		gta04_led2: led@2 {
+			label = "gta04:blue:aux";
+			reg = <0x2>;
+		};
+
+		gta04_led3: led@3 {
+			label = "gta04:red:power";
+			reg = <0x3>;
+			linux,default-trigger = "default-on";
+		};
+
+		gta04_led4: led@4 {
+			label = "gta04:green:power";
+			reg = <0x4>;
+		};
+
+		gta04_led5: led@5 {
+			label = "gta04:blue:power";
+			reg = <0x5>;
+		};
+
+		wifi_reset: led@6 { /* reference as <&tca_gpios 0 0> since it is currently the only GPIO */
+			reg = <0x6>;
+			compatible = "gpio";
+		};
+
+	};
+
+	/* touchscreen */
+	tsc2007@48 {
+		compatible = "ti,tsc2007";
+		reg = <0x48>;
+		interrupt-parent = <&gpio6>;
+		interrupts = <0 IRQ_TYPE_EDGE_FALLING>;
+		gpios = <&gpio6 0 GPIO_ACTIVE_LOW>;	/* gpio160 */
+		ti,x-plate-ohms = <450>;
+		ti,rng_x = <0 4095>;
+		ti,rng_y = <0 4095>;
+		ti,rng_z = <0 4095>;
+		ti,flip_x = <0>;
+		ti,flip_y = <0>;
+		ti,swap_xy = <1>;
+	};
+
+};

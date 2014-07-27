@@ -1,5 +1,4 @@
-
-- The files in udev-rules should be copies to
+- The files in etc/udevudev-rules should be copied to
      /etc/udev/rules.d
   this will ensure stable names in /dev for input devices and
   the ttys that talk to the 3G modem.
@@ -24,10 +23,9 @@
   then the uImage and modules are in 'M' ready to be copied
 
 
-- Directory 'scripts' includes some sample scripts to various
+- Directory 'root' includes some sample scripts to various
   simple tasks
 
-  + vibra.py shows how to program the vibrator as a rumble effect.
   + b_host.sh helps to switch to b_host otg state (GTA04 is external
     powered but plays the role of an usb host, the id pin is
     not grounded in that situation). First apply power or switch on

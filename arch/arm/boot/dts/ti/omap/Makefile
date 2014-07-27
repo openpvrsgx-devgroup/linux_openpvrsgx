@@ -32,6 +32,10 @@ dtb-$(CONFIG_ARCH_OMAP3) += \
 	omap3-gta04a4.dtb \
 	omap3-gta04a5.dtb \
 	omap3-gta04a5one.dtb \
+	omap3-gta04a3+b2.dtb \
+	omap3-gta04a4+b2.dtb \
+	omap3-gta04a4+b3.dtb \
+	omap3-neo900.dtb \
 	omap3-ha.dtb \
 	omap3-ha-lcd.dtb \
 	omap3-igep0020.dtb \

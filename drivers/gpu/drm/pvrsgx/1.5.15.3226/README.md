@@ -81,14 +81,14 @@ https://github.com/EMGD-Community/libva
 
 version          | status                                                                   | build recipe 
 ---------------- | -------------------------------------------------------------------------|---------------
-1.0.10           | works, but encoding broken (tested on vainfo)                            | https://code.launchpad.net/~thopiekar/+recipe/libva-1.0.10-emgd-daily
-1.0.11           | works, but encoding broken (tested on vainfo)                            | https://code.launchpad.net/~thopiekar/+recipe/libva-1.0.11-emgd-daily
-1.0.12           | works, but encoding broken (tested on vainfo)                            | https://code.launchpad.net/~thopiekar/+recipe/libva-1.0.12-emgd-daily
-1.0.13           | works, but encoding broken (tested on vainfo)                            | https://code.launchpad.net/~thopiekar/+recipe/libva-1.0.13-emgd-daily
-1.0.14           | works, but encoding broken (tested on vainfo)                            | https://code.launchpad.net/~thopiekar/+recipe/libva-1.0.14-emgd-daily
-1.0.15           | works, but encoding broken (tested on vainfo)                            | https://code.launchpad.net/~thopiekar/+recipe/libva-1.0.15-emgd-daily
-1.0.16           | broken [version suggested by yoctoproject - wonder how they get it work] | https://code.launchpad.net/~thopiekar/+recipe/libva-1.0.16-emgd-daily
-1.0.17           | broken (tested on vainfo - get seg.fault)                                | https://code.launchpad.net/~thopiekar/+recipe/libva-1.0.17-emgd-daily
+1.0.10           | build passes, but encoding broken (tested on vainfo)                            | https://code.launchpad.net/~thopiekar/+recipe/libva-1.0.10-emgd-daily
+1.0.11           | build passes, but encoding broken (tested on vainfo)                            | https://code.launchpad.net/~thopiekar/+recipe/libva-1.0.11-emgd-daily
+1.0.12           | build passes, but encoding broken (tested on vainfo)                            | https://code.launchpad.net/~thopiekar/+recipe/libva-1.0.12-emgd-daily
+1.0.13           | build passes, but encoding broken (tested on vainfo)                            | https://code.launchpad.net/~thopiekar/+recipe/libva-1.0.13-emgd-daily
+1.0.14           | build does not pass                                                             | https://code.launchpad.net/~thopiekar/+recipe/libva-1.0.14-emgd-daily
+1.0.15           | build does not pass                                                             | https://code.launchpad.net/~thopiekar/+recipe/libva-1.0.15-emgd-daily
+1.0.16           | build passes, but encoding broken (tested on vainfo)                            | https://code.launchpad.net/~thopiekar/+recipe/libva-1.0.16-emgd-daily
+1.0.17           | build passes, but encoding broken (tested on vainfo)                            | https://code.launchpad.net/~thopiekar/+recipe/libva-1.0.17-emgd-daily
 1.1.x (upstream) | broken (tested on vainfo - get seg.fault)                                | 
 1.2.0 (Tizen IVI)| works, but e.g. vlc fails using it                                       | 
 

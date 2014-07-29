@@ -6,34 +6,51 @@ Feel free to fork and send patches.
 
 If you find more binaries also feel free to send them with a pull request.
 
+
+Quick start guide (no VA-API support)
+----------------------------------
+
+1. Add this PPA: https://launchpad.net/~thopiekar/+archive/emgd 
+
+```
+sudo add-apt-repository lp:~thopiekar/emgd
+```
+
+2. Install xorg 1.9 and mesa 7.9 ("xserver-xorg-1.9" and "libgl*-7.9" are minimum)
+
+3. Install the emgd driver ("emgd-drm-dkms" and "xserver-xorg-1.9-video-emgd" are minimum)
+
+3. Create a xorg.conf on your own xorg.conf 
+
+    3.0 (emgd-xorg-conf which I wrote in the past does not work with EMGD 1.10+ [at least on my Asus T91])
+
+    3.1 You can find templetes at /usr/share/doc/emgd/emgd-[cb/rv].conf
+
+    3.2 don't forget to set there your resolution and color depth
+
+
 Status
 ------
 
               | feature
 ------------- | -------------
-2D Accel      | works (MeeGO binaries, others untested)
-OpenGL        | works (MeeGO binaries, others untested)
+2D Accel      | works very well
+OpenGL        | works, but some applications/libraries might depend on a newer API, so you get freezes or seg. faults
 OpenGL ES     | works, but unstable (completly provided by EMGD)
-VA-API        | broken (codebase seems to be very buggy - no debug output to find the problem)
+VA-API        | broken/unknown - testing is needed here
 
 kernel version       | status
 -------------------- | -------------
 3.11                 | works (incl. backlight, suspend)
 3.12                 | should work (builds against it, but not tested)
-3.13                 | should work (builds against it, but not tested)
+3.13                 | works (Ubuntu Trusty)
 3.14                 | should work (builds against it, but not tested)
-3.15-rc8             | should work (builds against it, but not tested)
-
-VA-API version   | status
----------------- | ------
-1.0.15           | works, but encoding broken (tested on vainfo)
-1.0.16           | broken [version suggested by yoctoproject - wonder how they get it work]
-1.0.17           | broken (tested on vainfo - get seg.fault)
-1.1.x (upstream) | broken (tested on vainfo - get seg.fault)
-1.2.0 (Tizen IVI)| works, but e.g. vlc fails using it
+3.15                 | works (Ubuntu Trusty using mainline kernel)
+3.16-rc              | should work (builds against it, but not tested)
 
 Xserver requirements
 --------------------
+https://github.com/EMGD-Community/xserver-xorg
 
 distribution  | Xserver video ABI
 ------------- | -----------------
@@ -41,6 +58,24 @@ fedora14      | 9  (Xserver  9)
 meego1.2      | 9  (Xserver  9)
 meego-wayland | 10 (Xserver 10)
 tizen1.0      | 9  (Xserver  9)
+
+libVA requirements
+------------------
+https://github.com/EMGD-Community/libva
+
+version          | status                                                                   | build recipe 
+---------------- | -------------------------------------------------------------------------|---------------
+1.0.10           | works, but encoding broken (tested on vainfo)                            | https://code.launchpad.net/~thopiekar/+recipe/libva-1.0.10-emgd-daily
+1.0.11           | works, but encoding broken (tested on vainfo)                            | https://code.launchpad.net/~thopiekar/+recipe/libva-1.0.11-emgd-daily
+1.0.12           | works, but encoding broken (tested on vainfo)                            | https://code.launchpad.net/~thopiekar/+recipe/libva-1.0.12-emgd-daily
+1.0.13           | works, but encoding broken (tested on vainfo)                            | https://code.launchpad.net/~thopiekar/+recipe/libva-1.0.13-emgd-daily
+1.0.14           | works, but encoding broken (tested on vainfo)                            | https://code.launchpad.net/~thopiekar/+recipe/libva-1.0.14-emgd-daily
+1.0.15           | works, but encoding broken (tested on vainfo)                            | https://code.launchpad.net/~thopiekar/+recipe/libva-1.0.15-emgd-daily
+1.0.16           | broken [version suggested by yoctoproject - wonder how they get it work] | https://code.launchpad.net/~thopiekar/+recipe/libva-1.0.16-emgd-daily
+1.0.17           | broken (tested on vainfo - get seg.fault)                                | https://code.launchpad.net/~thopiekar/+recipe/libva-1.0.17-emgd-daily
+1.1.x (upstream) | broken (tested on vainfo - get seg.fault)                                | 
+1.2.0 (Tizen IVI)| works, but e.g. vlc fails using it                                       | 
+
 
 GL/GLes info
 ------------
@@ -342,37 +377,3 @@ blit_cpu_texupload_32bpp_2x1024x600:     46 fps ################
 blit_cpu_locksurf_16bpp_2x1024x600:     EGL_KHR_lock_surface2 not supported
 blit_cpu_locksurf_32bpp_2x1024x600:     EGL_KHR_lock_surface2 not supported
 ```
-
-Quick start guide (no VA-API support)
-----------------------------------
-
-1. Add this PPA: https://launchpad.net/~thopiekar/+archive/emgd 
-
-```
-sudo add-apt-repository lp:~thopiekar/emgd
-```
-
-2. Install the emgd driver ("emgd-drm-dkms" and "xserver-xorg-1.9-video-emgd" are minimum)
-
-3. Prepare the emgd module to be loaded
-
-    3.1 Create a file in /etc/modprobe.d/ (e.g. blacklist-emgd.conf) and fill it with the following content
-
-    ```
-    blacklist gma500_gfx
-    blacklist psb_gfx
-    ```
-
-    3.2 Add "emgd" to /etc/modules as it is not automaticly loaded at boot-time (fix for that is welcome!)
-    
-    3.3 For xUbuntu/Debian: Running "update-initramfs -u -kall" as root might be useful!
-
-4. Create a xorg.conf on your own xorg.conf 
-
-    4.1 (emgd-xorg-conf which I wrote in the past does not work with EMGD 1.10+ [at least on my Asus T91])
-
-    4.2 You can find templetes at /usr/share/doc/emgd/emgd-[cb/rv].conf
-
-    4.3 don't forget to set there your resolution and color depth
-
-4. Make sure Xserver-xorg v1.9 and mesa v7.9 are properly installed

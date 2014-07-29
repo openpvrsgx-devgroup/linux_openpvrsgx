@@ -45,7 +45,8 @@ Kernel
 ------
 
 version  | status
--------- | -------------
+-------- | -----------------------------------------------
+3.10     | should work (builds against it, but not tested)
 3.11     | works (incl. backlight, suspend)
 3.12     | should work (builds against it, but not tested)
 3.13     | works (Ubuntu Trusty)

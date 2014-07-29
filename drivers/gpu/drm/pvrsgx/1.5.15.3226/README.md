@@ -24,7 +24,7 @@ sudo add-apt-repository lp:~thopiekar/emgd
 
     3.0 (emgd-xorg-conf which I wrote in the past does not work with EMGD 1.10+ [at least on my Asus T91])
 
-    3.1 You can find templetes at /usr/share/doc/emgd/emgd-[cb/rv].conf
+    3.1 You can find templetes at /usr/share/emgd-driver/xorg.conf/ or https://github.com/EMGD-Community/intel-binaries-linux/tree/master/config/xorg.conf
 
     3.2 don't forget to set there your resolution and color depth
 

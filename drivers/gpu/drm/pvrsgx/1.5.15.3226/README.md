@@ -1,5 +1,5 @@
-Intel® Embedded Media and Graphics Driver (Intel® EMGD)
-=======================================================
+Intel® Embedded Media and Graphics Driver (Intel® EMGD) 1.18
+============================================================
 
 Hosting the binaries and source code of Intel(R)'s EMGD driver here to collect patches for these drivers here.
 Feel free to fork and send patches.
@@ -15,6 +15,8 @@ Quick start guide (no VA-API support)
 ```
 sudo add-apt-repository lp:~thopiekar/emgd
 ```
+
+   Packages hosted there say that their version is 1.16, but they include 1.18!
 
 2. Install xorg 1.9 and mesa 7.9 ("xserver-xorg-1.9" and "libgl*-7.9" are minimum)
 

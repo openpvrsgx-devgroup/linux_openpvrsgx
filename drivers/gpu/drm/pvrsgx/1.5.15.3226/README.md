@@ -34,21 +34,24 @@ sudo add-apt-repository lp:~thopiekar/emgd
 Status
 ------
 
-              | feature
+feature       | status
 ------------- | -------------
 2D Accel      | works very well
 OpenGL        | works, but some applications/libraries might depend on a newer API, so you get freezes or seg. faults
 OpenGL ES     | works, but unstable (completly provided by EMGD)
 VA-API        | broken/unknown - testing is needed here
 
-kernel version       | status
--------------------- | -------------
-3.11                 | works (incl. backlight, suspend)
-3.12                 | should work (builds against it, but not tested)
-3.13                 | works (Ubuntu Trusty)
-3.14                 | should work (builds against it, but not tested)
-3.15                 | works (Ubuntu Trusty using mainline kernel)
-3.16-rc              | should work (builds against it, but not tested)
+Kernel
+------
+
+version  | status
+-------- | -------------
+3.11     | works (incl. backlight, suspend)
+3.12     | should work (builds against it, but not tested)
+3.13     | works (Ubuntu Trusty)
+3.14     | should work (builds against it, but not tested)
+3.15     | works (Ubuntu Trusty using mainline kernel)
+3.16-rc  | should work (builds against it, but not tested)
 
 Xserver requirements
 --------------------
@@ -60,6 +63,17 @@ fedora14      | 9  (Xserver  9)
 meego1.2      | 9  (Xserver  9)
 meego-wayland | 10 (Xserver 10)
 tizen1.0      | 9  (Xserver  9)
+
+Xserver requirements
+--------------------
+https://github.com/EMGD-Community/mesa
+
+version  | status
+-------- | -------------
+7.9      | works
+8.1      | used in Meego - never released really - untested
+9.0-rc   | used in Tizen IVI - untested
+
 
 libVA requirements
 ------------------

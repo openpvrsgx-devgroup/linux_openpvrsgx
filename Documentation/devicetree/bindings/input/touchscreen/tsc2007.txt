@@ -6,22 +6,24 @@ Required properties:
 - ti,x-plate-ohms: X-plate resistance in ohms.
 
 Optional properties:
+- generic touch screen properties: see touchscreen binding [2].
 - gpios: the interrupt gpio the chip is connected to (through the penirq pin).
   The penirq pin goes to low when the panel is touched.
   (see GPIO binding[1] for more details).
 - interrupts: (gpio) interrupt to which the chip is connected
   (see interrupt binding[0]).
-- ti,max-rt: maximum pressure.
-- ti,fuzzx: specifies the absolute input fuzz x value.
-  If set, it will permit noise in the data up to +- the value given to the fuzz
-  parameter, that is used to filter noise from the event stream.
-- ti,fuzzy: specifies the absolute input fuzz y value.
-- ti,fuzzz: specifies the absolute input fuzz z value.
+- ti,max-rt: maximum pressure resistance above which samples are ignored
+  (default: 4095).
+- ti,min-x: minimum value reported by X axis ADC (default 0).
+- ti,max-x: maximum value reported by X axis ADC (default 4095).
+- ti,min-y: minimum value reported by Y axis ADC (default 0).
+- ti,max-y: maximum value reported by Y axis ADC (default 4095).
 - ti,poll-period: how much time to wait (in milliseconds) before reading again the
-  values from the tsc2007.
+  values from the tsc2007 (default 1).
 
 [0]: Documentation/devicetree/bindings/interrupt-controller/interrupts.txt
 [1]: Documentation/devicetree/bindings/gpio/gpio.txt
+[2]: Documentation/devicetree/bindings/input/touchscreen/touchscreen.txt
 
 Example:
 	&i2c1 {
@@ -33,6 +35,8 @@ Example:
 			interrupts = <0x0 0x8>;
 			gpios = <&gpio4 0 0>;
 			ti,x-plate-ohms = <180>;
+			touchscreen-size-x = <640>;
+			touchscreen-size-y = <480>;
 		};
 
 		/* ... */

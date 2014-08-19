@@ -132,16 +132,19 @@
 	tsc2007@48 {
 		compatible = "ti,tsc2007";
 		reg = <0x48>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&penirq_pins>;
 		interrupt-parent = <&gpio6>;
 		interrupts = <0 IRQ_TYPE_EDGE_FALLING>;
 		gpios = <&gpio6 0 GPIO_ACTIVE_LOW>;	/* gpio160 */
 		ti,x-plate-ohms = <450>;
-		ti,rng_x = <0 4095>;
-		ti,rng_y = <0 4095>;
-		ti,rng_z = <0 4095>;
-		ti,flip_x = <0>;
-		ti,flip_y = <0>;
-		ti,swap_xy = <1>;
+		ti,min-x = <0x010>;
+		ti,max-x = <0xff0>;
+		ti,min-y = <0x010>;
+		ti,max-y = <0xff0>;
+		ti,min-rt = <0xfff>;
+		ti,max-rt = <0>;
+		ti,swap-xy;
 	};
 
 };

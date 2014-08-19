@@ -2,8 +2,8 @@ echo "******************"
 echo "Choose Pyra Panels"
 echo "******************"
 
-case $(cat /proc/devicetree/name) in
-pyra )
+case $(cat /proc/device-tree/model) in
+Pyra-Handheld )
 	;;
 * )
 	echo "For Pyra only"

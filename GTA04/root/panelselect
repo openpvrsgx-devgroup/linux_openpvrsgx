@@ -1,0 +1,65 @@
+echo "******************"
+echo "Choose Pyra Panels"
+echo "******************"
+
+case $(cat /proc/devicetree/name) in
+pyra )
+	;;
+* )
+	echo "For Pyra only"
+	exit
+	;;
+esac
+
+while true
+do
+echo
+echo "current panel: $(cat /proc/device-tree/ocp/dss/dsi@1/lcd/compatible)"
+echo
+echo "1) LG Full-HD Panel with HD adapter"
+echo "2) BOE Half-HD panel with SSD2858 Rotator"
+echo "3) Success Half-HD panel with SSD2858 Rotator"
+echo "4) BOE Half-HD panel with simple adapter"
+echo "5) Success Half-HD panel with simple adapter"
+echo "q) abort"
+echo
+echo "choosing a panel will poweroff the board so that you can connect"
+echo "a different adapter/panel"
+echo
+echo -n "please choose 1..3: "
+
+read CHOICE
+
+case "$CHOICE" in
+	1 )
+		cp /boot/omap5-pyra+lg.dtb /boot/omap5-pyra.dtb
+		sync
+		./bl 0
+		echo "now powering off - please connect the LG panel before reboot!"
+		poweroff
+		exit
+		;;
+	2 | 4 )
+                cp /boot/omap5-pyra+boe.dtb /boot/omap5-pyra.dtb
+                sync
+		./bl 0
+                echo "now powering off - please connect the BOE panel before reboot!"
+                poweroff
+		exit
+		;;
+	3 | 5 )
+                cp /boot/omap5-pyra+succ.dtb /boot/omap5-pyra.dtb
+                sync
+		./bl 0
+                echo "now powering off - please connect the SUCEESS panel before reboot!"
+                poweroff
+		exit
+		;;
+	q | Q )
+		exit
+		;;
+	* )
+		echo "*** undefined option $CHOICE ***"
+		;;
+esac
+done

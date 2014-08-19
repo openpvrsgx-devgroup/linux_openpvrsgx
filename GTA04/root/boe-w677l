@@ -1,0 +1,23 @@
+# BOE panel directly connected to OMAP5
+# controller: OTM1283A
+
+./bl 1
+
+if [ ! -L dcs ]
+then
+	rm -rf dcs
+	ln -s /sys/devices/ocp.3/dss.10/0.dsi/display0/dcs dcs
+fi
+
+# show some DCS status
+for i in 05 0a 0b 0c 0d 0e 0f 13 20 52 54 5f 68 a1rrrr da db dc; do echo $i r >dcs; done
+# DCS sleep out
+echo 11 >dcs
+sleep 0.120
+# program panel
+
+
+# enable stream and turn display on
+echo stream >dcs
+sleep 0.020
+echo 29 >dcs

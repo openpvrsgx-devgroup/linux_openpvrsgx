@@ -1,0 +1,535 @@
+# Success panel directly connected to OMAP5
+# controller: NT35590
+
+./bl 1
+
+if [ ! -L dcs ]
+then
+	rm -rf dcs
+	ln -s /sys/devices/ocp.3/dss.10/0.dsi/display0/dcs dcs
+fi
+
+# write a no-op because starting with read gives a VC BTA error
+echo 00 >dcs
+
+# show some DCS register status
+for i in 04rr 05 0a 0b 0c 0d 0e 0f 26 3a 52 54 abr ba c2 da db dc f4 fe; do echo $i r >dcs; done
+
+# program panel
+
+if true
+then
+
+# Increase VDD level
+echo FF  EE >dcs
+echo FB  01 >dcs
+echo 12  50 >dcs
+echo 13  02 >dcs
+echo 6A  60 >dcs
+echo 05  59 >dcs
+# CMD2 Page0 -Power
+echo FF 01 >dcs
+echo FB 01 >dcs
+echo 00 4A >dcs
+echo 01 33 >dcs
+echo 02 53 >dcs
+echo 03 55 >dcs
+echo 04 55 >dcs
+echo 05 33 >dcs
+echo 06 22 >dcs
+echo 08 56 >dcs
+echo 09 8F >dcs
+echo 36 73 >dcs
+echo 0B CF >dcs
+echo 0C CF >dcs
+echo 0D 2F >dcs
+echo 0E 29 >dcs
+echo 11 86 >dcs
+echo 12 03 >dcs
+echo 71 2C >dcs
+echo 6F 03 >dcs
+# NVT ENGINEER COMMAND
+echo 0F 0A >dcs
+# CMD2 Page 4 -Display Register
+echo FF 05 >dcs
+echo FB 01 >dcs
+echo 01 00 >dcs
+echo 02 82 >dcs
+echo 03 82 >dcs
+echo 04 82 >dcs
+echo 05 30 >dcs
+echo 06 33 >dcs
+echo 07 01 >dcs
+echo 08 00 >dcs
+echo 09 46 >dcs
+echo 0A 46 >dcs
+echo 0D 0B >dcs
+echo 0E 1D >dcs
+echo 0F 08 >dcs
+echo 10 53 >dcs
+echo 11 00 >dcs
+echo 12 00 >dcs
+echo 14 01 >dcs
+echo 15 00 >dcs
+echo 16 05 >dcs
+echo 17 00 >dcs
+echo 19 7F >dcs
+echo 1A FF >dcs
+echo 1B 0F >dcs
+echo 1C 00 >dcs
+echo 1D 00 >dcs
+echo 1E 00 >dcs
+echo 1F 07 >dcs
+echo 20 00 >dcs
+echo 21 00 >dcs
+echo 22 55 >dcs
+echo 23 4D >dcs
+echo 2D 02 >dcs
+echo 83 01 >dcs
+echo 9E 58 >dcs
+echo 9F 6A >dcs
+echo A0 01 >dcs
+echo A2 10 >dcs
+echo BB 0A >dcs
+echo BC 0A >dcs
+# NVT ENGINEER COMMAND
+echo 28 01  >dcs
+echo 2F 02  >dcs
+echo 32 08 >dcs
+echo 33 B8 >dcs
+echo 36 01 >dcs
+echo 37 00 >dcs
+echo 43 00 >dcs
+echo 4B 21 >dcs
+echo 4C 03 >dcs
+echo 50 21 >dcs
+echo 51 03 >dcs
+echo 58 21 >dcs
+echo 59 03 >dcs
+echo 5D 21 >dcs
+echo 5E 03 >dcs
+echo 6C 00 >dcs
+echo 6D 00 >dcs
+
+# Gamma setting Start
+# page selection cmd start
+echo FF  01 >dcs
+# page selection cmd end
+# R(+) MCR cmd
+echo 75 00 >dcs
+echo 76 98 >dcs
+echo 77 00 >dcs
+echo 78 AF >dcs
+echo 79 00 >dcs
+echo 7A D1 >dcs
+echo 7B 00 >dcs
+echo 7C E9 >dcs
+echo 7D 00 >dcs
+echo 7E FE >dcs
+echo 7F 01 >dcs
+echo 80 10 >dcs
+echo 81 01 >dcs
+echo 82 20 >dcs
+echo 83 01 >dcs
+echo 84 2E >dcs
+echo 85 01 >dcs
+echo 86 3B >dcs
+echo 87 01 >dcs
+echo 88 65 >dcs
+echo 89 01 >dcs
+echo 8A 88 >dcs
+echo 8B 01 >dcs
+echo 8C BD >dcs
+echo 8D 01 >dcs
+echo 8E E7 >dcs
+echo 8F 02 >dcs
+echo 90 27 >dcs
+echo 91 02 >dcs
+echo 92 59 >dcs
+echo 93 02 >dcs
+echo 94 5B >dcs
+echo 95 02 >dcs
+echo 96 87 >dcs
+echo 97 02 >dcs
+echo 98 B6 >dcs
+echo 99 02 >dcs
+echo 9A D5 >dcs
+echo 9B 02 >dcs
+echo 9C FD >dcs
+echo 9D 03 >dcs
+echo 9E 19 >dcs
+echo 9F 03 >dcs
+echo A0 40 >dcs
+echo A2 03 >dcs
+echo A3 4C >dcs
+echo A4 03 >dcs
+echo A5 59 >dcs
+echo A6 03 >dcs
+echo A7 67 >dcs
+echo A9 03 >dcs
+echo AA 78 >dcs
+echo AB 03 >dcs
+echo AC 8A >dcs
+echo AD 03 >dcs
+echo AE A8 >dcs
+echo AF 03 >dcs
+echo B0 B8 >dcs
+echo B1 03 >dcs
+echo B2 BE >dcs
+# R(-) MCR cmd
+echo B3 00 >dcs
+echo B4 98 >dcs
+echo B5 00 >dcs
+echo B6 AF >dcs
+echo B7 00 >dcs
+echo B8 D1 >dcs
+echo B9 00 >dcs
+echo BA E9 >dcs
+echo BB 00 >dcs
+echo BC FE >dcs
+echo BD 01 >dcs
+echo BE 10 >dcs
+echo BF 01 >dcs
+echo C0 20 >dcs
+echo C1 01 >dcs
+echo C2 2E >dcs
+echo C3 01 >dcs
+echo C4 3B >dcs
+echo C5 01 >dcs
+echo C6 65 >dcs
+echo C7 01 >dcs
+echo C8 88 >dcs
+echo C9 01 >dcs
+echo CA BD >dcs
+echo CB 01 >dcs
+echo CC E7 >dcs
+echo CD 02 >dcs
+echo CE 27 >dcs
+echo CF 02 >dcs
+echo D0 59 >dcs
+echo D1 02 >dcs
+echo D2 5B >dcs
+echo D3 02 >dcs
+echo D4 87 >dcs
+echo D5 02 >dcs
+echo D6 B6 >dcs
+echo D7 02 >dcs
+echo D8 D5 >dcs
+echo D9 02 >dcs
+echo DA FD >dcs
+echo DB 03 >dcs
+echo DC 19 >dcs
+echo DD 03 >dcs
+echo DE 40 >dcs
+echo DF 03 >dcs
+echo E0 4C >dcs
+echo E1 03 >dcs
+echo E2 59 >dcs
+echo E3 03 >dcs
+echo E4 67 >dcs
+echo E5 03 >dcs
+echo E6 78 >dcs
+echo E7 03 >dcs
+echo E8 8A >dcs
+echo E9 03 >dcs
+echo EA A8 >dcs
+echo EB 03 >dcs
+echo EC B8 >dcs
+echo ED 03 >dcs
+echo EE BE >dcs
+# G(+) MCR cmd
+echo EF 00 >dcs
+echo F0 98 >dcs
+echo F1 00 >dcs
+echo F2 AF >dcs
+echo F3 00 >dcs
+echo F4 D1 >dcs
+echo F5 00 >dcs
+echo F6 E9 >dcs
+echo F7 00 >dcs
+echo F8 FE >dcs
+echo F9 01 >dcs
+echo FA 10 >dcs
+# page selection cmd start
+echo FF  02 >dcs
+# page selection cmd end
+echo 00 01 >dcs
+echo 01 20 >dcs
+echo 02 01 >dcs
+echo 03 2E >dcs
+echo 04 01 >dcs
+echo 05 3B >dcs
+echo 06 01 >dcs
+echo 07 65 >dcs
+echo 08 01 >dcs
+echo 09 88 >dcs
+echo 0A 01 >dcs
+echo 0B BD >dcs
+echo 0C 01 >dcs
+echo 0D E7 >dcs
+echo 0E 02 >dcs
+echo 0F 27 >dcs
+echo 10 02 >dcs
+echo 11 59 >dcs
+echo 12 02 >dcs
+echo 13 5B >dcs
+echo 14 02 >dcs
+echo 15 87 >dcs
+echo 16 02 >dcs
+echo 17 B6 >dcs
+echo 18 02 >dcs
+echo 19 D5 >dcs
+echo 1A 02 >dcs
+echo 1B FD >dcs
+echo 1C 03 >dcs
+echo 1D 19 >dcs
+echo 1E 03 >dcs
+echo 1F 40 >dcs
+echo 20 03 >dcs
+echo 21 4C >dcs
+echo 22 03 >dcs
+echo 23 59 >dcs
+echo 24 03 >dcs
+echo 25 67 >dcs
+echo 26 03 >dcs
+echo 27 78 >dcs
+echo 28 03 >dcs
+echo 29 8A >dcs
+echo 2A 03 >dcs
+echo 2B A8 >dcs
+echo 2D 03 >dcs
+echo 2F B8 >dcs
+echo 30 03 >dcs
+echo 31 BE >dcs
+# G(-) MCR cmd
+echo 32 00 >dcs
+echo 33 98 >dcs
+echo 34 00 >dcs
+echo 35 AF >dcs
+echo 36 00 >dcs
+echo 37 D1 >dcs
+echo 38 00 >dcs
+echo 39 E9 >dcs
+echo 3A 00 >dcs
+echo 3B FE >dcs
+echo 3D 01 >dcs
+echo 3F 10 >dcs
+echo 40 01 >dcs
+echo 41 20 >dcs
+echo 42 01 >dcs
+echo 43 2E >dcs
+echo 44 01 >dcs
+echo 45 3B >dcs
+echo 46 01 >dcs
+echo 47 65 >dcs
+echo 48 01 >dcs
+echo 49 88 >dcs
+echo 4A 01 >dcs
+echo 4B BD >dcs
+echo 4C 01 >dcs
+echo 4D E7 >dcs
+echo 4E 02 >dcs
+echo 4F 27 >dcs
+echo 50 02 >dcs
+echo 51 59 >dcs
+echo 52 02 >dcs
+echo 53 5B >dcs
+echo 54 02 >dcs
+echo 55 87 >dcs
+echo 56 02 >dcs
+echo 58 B6 >dcs
+echo 59 02 >dcs
+echo 5A D5 >dcs
+echo 5B 02 >dcs
+echo 5C FD >dcs
+echo 5D 03 >dcs
+echo 5E 19 >dcs
+echo 5F 03 >dcs
+echo 60 40 >dcs
+echo 61 03 >dcs
+echo 62 4C >dcs
+echo 63 03 >dcs
+echo 64 59 >dcs
+echo 65 03 >dcs
+echo 66 67 >dcs
+echo 67 03 >dcs
+echo 68 78 >dcs
+echo 69 03 >dcs
+echo 6A 8A >dcs
+echo 6B 03 >dcs
+echo 6C A8 >dcs
+echo 6D 03 >dcs
+echo 6E B8 >dcs
+echo 6F 03 >dcs
+echo 70 BE >dcs
+# B(+) MCR cmd
+echo 71 00 >dcs
+echo 72 98 >dcs
+echo 73 00 >dcs
+echo 74 AF >dcs
+echo 75 00 >dcs
+echo 76 D1 >dcs
+echo 77 00 >dcs
+echo 78 E9 >dcs
+echo 79 00 >dcs
+echo 7A FE >dcs
+echo 7B 01 >dcs
+echo 7C 10 >dcs
+echo 7D 01 >dcs
+echo 7E 20 >dcs
+echo 7F 01 >dcs
+echo 80 2E >dcs
+echo 81 01 >dcs
+echo 82 3B >dcs
+echo 83 01 >dcs
+echo 84 65 >dcs
+echo 85 01 >dcs
+echo 86 88 >dcs
+echo 87 01 >dcs
+echo 88 BD >dcs
+echo 89 01 >dcs
+echo 8A E7 >dcs
+echo 8B 02 >dcs
+echo 8C 27 >dcs
+echo 8D 02 >dcs
+echo 8E 59 >dcs
+echo 8F 02 >dcs
+echo 90 5B >dcs
+echo 91 02 >dcs
+echo 92 87 >dcs
+echo 93 02 >dcs
+echo 94 B6 >dcs
+echo 95 02 >dcs
+echo 96 D5 >dcs
+echo 97 02 >dcs
+echo 98 FD >dcs
+echo 99 03 >dcs
+echo 9A 19 >dcs
+echo 9B 03 >dcs
+echo 9C 40 >dcs
+echo 9D 03 >dcs
+echo 9E 4C >dcs
+echo 9F 03 >dcs
+echo A0 59 >dcs
+echo A2 03 >dcs
+echo A3 67 >dcs
+echo A4 03 >dcs
+echo A5 78 >dcs
+echo A6 03 >dcs
+echo A7 8A >dcs
+echo A9 03 >dcs
+echo AA A8 >dcs
+echo AB 03 >dcs
+echo AC B8 >dcs
+echo AD 03 >dcs
+echo AE BE >dcs
+# B(-) MCR cmd
+echo AF 00 >dcs
+echo B0 98 >dcs
+echo B1 00 >dcs
+echo B2 AF >dcs
+echo B3 00 >dcs
+echo B4 D1 >dcs
+echo B5 00 >dcs
+echo B6 E9 >dcs
+echo B7 00 >dcs
+echo B8 FE >dcs
+echo B9 01 >dcs
+echo BA 10 >dcs
+echo BB 01 >dcs
+echo BC 20 >dcs
+echo BD 01 >dcs
+echo BE 2E >dcs
+echo BF 01 >dcs
+echo C0 3B >dcs
+echo C1 01 >dcs
+echo C2 65 >dcs
+echo C3 01 >dcs
+echo C4 88 >dcs
+echo C5 01 >dcs
+echo C6 BD >dcs
+echo C7 01 >dcs
+echo C8 E7 >dcs
+echo C9 02 >dcs
+echo CA 27 >dcs
+echo CB 02 >dcs
+echo CC 59 >dcs
+echo CD 02 >dcs
+echo CE 5B >dcs
+echo CF 02 >dcs
+echo D0 87 >dcs
+echo D1 02 >dcs
+echo D2 B6 >dcs
+echo D3 02 >dcs
+echo D4 D5 >dcs
+echo D5 02 >dcs
+echo D6 FD >dcs
+echo D7 03 >dcs
+echo D8 19 >dcs
+echo D9 03 >dcs
+echo DA 40 >dcs
+echo DB 03 >dcs
+echo DC 4C >dcs
+echo DD 03 >dcs
+echo DE 59 >dcs
+echo DF 03 >dcs
+echo E0 67 >dcs
+echo E1 03 >dcs
+echo E2 78 >dcs
+echo E3 03 >dcs
+echo E4 8A >dcs
+echo E5 03 >dcs
+echo E6 A8 >dcs
+echo E7 03 >dcs
+echo E8 B8 >dcs
+echo E9 03 >dcs
+echo EA BE >dcs
+# Gamma setting End
+
+# non-reload MTP
+# CMD1
+echo FF 00 >dcs
+echo FB 01 >dcs
+# CMD2 Page0
+echo FF 01 >dcs
+echo FB 01 >dcs
+# CMD2 Page1
+echo FF 02 >dcs
+echo FB 01 >dcs
+# CMD2 Page2
+echo FF 03 >dcs
+echo FB 01 >dcs
+# CMD2 Page3
+echo FF 04 >dcs
+echo FB 01 >dcs
+# CMD2 Page4
+echo FF 05 >dcs
+echo FB 01 >dcs
+
+fi
+
+echo ff00 >dcs
+echo fb01 >dcs
+echo ba03 >dcs	# switch to 4 lanes
+echo ba r >dcs	# check
+echo c203 >dcs
+echo c2 r >dcs	# check
+
+# DCS sleep out
+echo 11 >dcs
+sleep 0.100
+
+if false
+then
+echo 51ff >dcs
+echo 532c >dcs
+echo 5500 >dcs
+fi
+
+# enable stream and turn display on
+echo 29 >dcs
+sleep 0.020
+echo stream >dcs
+
+# randomly fill frameboffer
+cat /dev/urandom > /dev/fb0 2>/dev/null

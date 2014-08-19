@@ -1,0 +1,59 @@
+#
+# bootargs.scr
+#
+# Kernel parameter script for Beagle Hybrid / Panda Hybrid / GTA04
+#
+# Author: H. Nikolaus Schaller
+# Copyright Golden Delicious Computers 2010-2014
+# licensed under GPL 2.0
+#
+# This script will be run by boot.scr if the kernel is detected
+# on SD card. It will be searched in a FAT partition and /boot
+# in an ext partition
+#
+# Please take this as a template and add to your distro as
+# /boot/bootargs.scr together with a kernel (/boot/uImage)
+#
+# The partition number where the kernel was found is stored
+# in the variable ${PARTITON}. The MMC number as defined by
+# the kenrel in ${kernelmmc}
+#
+# Add/modify bootargs as needed, but please resist to do other
+# fancy stuff here. And, you should not run a saveenv here as
+# this may disturb booting from NAND!
+#
+
+echo running bootargs.scr
+
+# echo before: $bootargs
+# echo mmc: ${kernelmmc}
+# echo root: $mmcroot
+# echo type: $mmcrootfstype
+
+if test "${PARTITIONTYPE}" = "FAT"
+then
+# kernel comes from fat partition; choose next in sequence as ext rootfs
+if   itest ${PARTITION} == 1; then setenv mmcroot "/dev/mmcblk${kernelmmc}p2 rw"; setenv mmcrootfstype "ext4,ext3 rootwait";
+elif itest ${PARTITION} == 2; then setenv mmcroot "/dev/mmcblk${kernelmmc}p3 rw"; setenv mmcrootfstype "ext4,ext3 rootwait";
+elif itest ${PARTITION} == 3; then setenv mmcroot "/dev/mmcblk${kernelmmc}p4 rw"; setenv mmcrootfstype "ext4,ext3 rootwait";
+elif itest ${PARTITION} == 4; then setenv mmcroot "/dev/mmcblk${kernelmmc}p1 rw"; setenv mmcrootfstype "ext4,ext3 rootwait";
+fi
+else
+# kernel found on ext partition: choose same for rootfs
+setenv mmcroot "/dev/mmcblk${kernelmmc}p${PARTITION} rw"
+setenv mmcrootfstype "ext4,ext3 rootwait";
+fi
+
+# overwrite boot args for this specific kernel setup
+setenv vram 12M
+setenv omapfbvram 0:8M,1:4M
+
+# compile boot args
+
+setenv bootargs "console=${console} mux=${mux} mpurate=${mpurate} vram=${vram} cma=${vram} omapfb.vram=${omapfbvram} omapfb.mode=dvi:${dvimode} omapfb.debug=y omapdss.def_disp=${defaultdisplay} ubi.mtd=${nand} root=${mmcroot} rootfstype=${mmcrootfstype}"
+
+# echo after: $bootargs
+# echo root: $mmcroot
+# echo type: $mmcrootfstype
+
+echo bootargs.scr done...

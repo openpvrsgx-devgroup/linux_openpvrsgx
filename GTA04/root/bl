@@ -1,0 +1,21 @@
+#
+# override panel instructed backlight by enabling the gpio190
+# can be used for testing purposes
+#
+case $(cat /proc/devicetree/name) in
+pyra )
+	[ "$(which devmem2)" ] || apt-get install -y --force-yes devmem2
+
+	if [ "$1" = 1 ]
+	then
+	devmem2 0x4a0028f6 h 0x011e	# switch to GPIO mode
+	echo 190 > /sys/class/gpio/export 2>/dev/null
+	echo out > /sys/class/gpio/gpio190/direction
+	echo 1 > /sys/class/gpio/gpio190/value
+	else
+	devmem2 0x4a0028f6 h 0x010f	# switch to safe mode with pull-down
+	fi
+	;;
+* ) echo "for Pyra only"
+	;;
+esac

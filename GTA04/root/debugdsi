@@ -1,0 +1,5 @@
+mount | fgrep -q debugfs || mount -t debugfs none /sys/kernel/debug
+cat /sys/kernel/debug/omapdss/clk
+cat /sys/kernel/debug/omapdss/dispc
+cat /sys/kernel/debug/omapdss/dsi1_irqs
+cat /sys/kernel/debug/omapdss/dsi1_regs

@@ -1,0 +1,4 @@
+# create stable name nodes
+SUBSYSTEM=="tty", KERNEL=="ttyHS*", ATTR{hsotype}=="?*", ATTRS{busnum}=="?*", SYMLINK+="ttyHS_$attr{hsotype}", OPTIONS+="string_escape=replace"
+# set EHCI power control to "auto" (is initialized as always on)
+ACTION=="add", SUBSYSTEM=="usb", KERNEL=="2-2", DRIVER=="usb", ATTR{power/control}="auto"

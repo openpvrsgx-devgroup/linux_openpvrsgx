@@ -1,0 +1,16 @@
+/*
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+/* we start with the omap4-panda-es tree */
+
+#include "omap4-panda+gta04.dts"
+
+/* overwrite device model */
+
+/ {
+	model = "Pandaboard GTA04";
+
+};

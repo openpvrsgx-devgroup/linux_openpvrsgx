@@ -6,7 +6,7 @@
 
 /* we start with the omap4-panda-es tree */
 
-#include "omap4-panda+gta04.dts"
+#include "omap4-panda-es.dts"
 
 /* overwrite device model */
 

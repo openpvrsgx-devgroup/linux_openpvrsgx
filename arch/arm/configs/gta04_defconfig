@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm 3.17.0-rc1 Kernel Configuration
+# Linux/arm 3.17.0-rc3 Kernel Configuration
 #
 CONFIG_ARM=y
 CONFIG_ARM_HAS_SG_CHAIN=y
@@ -2803,6 +2803,7 @@ CONFIG_USB_STORAGE=y
 #
 # CONFIG_USB_MDC800 is not set
 # CONFIG_USB_MICROTEK is not set
+# CONFIG_USBIP_CORE is not set
 CONFIG_USB_MUSB_HDRC=y
 # CONFIG_USB_MUSB_HOST is not set
 # CONFIG_USB_MUSB_GADGET is not set
@@ -3133,7 +3134,6 @@ CONFIG_DMA_OF=y
 # Microsoft Hyper-V guest support
 #
 CONFIG_STAGING=y
-# CONFIG_USBIP_CORE is not set
 # CONFIG_PRISM2_USB is not set
 # CONFIG_COMEDI is not set
 # CONFIG_RTLLIB is not set

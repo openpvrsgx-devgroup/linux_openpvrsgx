@@ -686,6 +686,16 @@ config CHARGER_BQ24735
 	help
 	  Say Y to enable support for the TI BQ24735 battery charger.
 
+config CHARGER_BQ2429X
+	tristate "TI BQ2429x battery charger driver"
+	depends on I2C
+	depends on GPIOLIB || COMPILE_TEST
+	help
+	  Say Y to enable support for the TI BQ24296/297 battery charger.
+
+	  You'll need this driver to charge batteries on e.g. Pyra
+	  Handheld.
+
 config CHARGER_BQ2515X
 	tristate "TI BQ2515X battery charger family"
 	depends on I2C

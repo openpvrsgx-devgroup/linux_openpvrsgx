@@ -89,6 +89,7 @@ obj-$(CONFIG_CHARGER_PM8916_LBC)	+= pm8916_lbc.o
 obj-$(CONFIG_CHARGER_BQ2415X)	+= bq2415x_charger.o
 obj-$(CONFIG_CHARGER_BQ24190)	+= bq24190_charger.o
 obj-$(CONFIG_CHARGER_BQ24257)	+= bq24257_charger.o
+obj-$(CONFIG_CHARGER_BQ2429X)	+= bq2429x_charger.o
 obj-$(CONFIG_CHARGER_BQ24735)	+= bq24735-charger.o
 obj-$(CONFIG_CHARGER_BQ2515X)	+= bq2515x_charger.o
 obj-$(CONFIG_CHARGER_BQ25890)	+= bq25890_charger.o

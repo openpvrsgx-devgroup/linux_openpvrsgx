@@ -1,0 +1,27 @@
+#
+# test all leds
+#
+
+cd /sys/class/leds
+
+while true
+do
+	for i in *
+	do
+		echo $i
+		echo "default-on" >$i/trigger
+		sleep 0.2
+		echo "none" >$i/trigger
+	done
+	for i in *
+	do
+		echo $i
+		echo "default-on" >$i/trigger
+		sleep 0.2
+	done
+	for i in *
+	do
+		echo "none" >$i/trigger
+	done
+	sleep 0.2
+done

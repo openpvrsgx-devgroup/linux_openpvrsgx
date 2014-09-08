@@ -5,4 +5,5 @@ SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*a0,1,
 SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*k74,*", SYMLINK+="input/power"
 SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*kA9,*", SYMLINK+="input/aux"
 SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*kF0,*", SYMLINK+="input/incoming"
+SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*k110,*", SYMLINK+="input/keyboard"
 SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0*,5,*w[24678D]*", SYMLINK+="input/jack"

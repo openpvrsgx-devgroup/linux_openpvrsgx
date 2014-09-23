@@ -14,6 +14,8 @@ amixer -q set "Headset Left Playback" "HS DAC" &&
 amixer -q set "Headset Right Playback" "HS DAC" &&
 amixer -q set "Headset Power Mode" "High-Performance" &&
 amixer -q set "PLL Selection" "High-Performance" &&
+amixer -q set "Headset Power Mode" "Low-Power" &&
+amixer -q set "PLL Selection" "Low-Power" &&
 amixer -q set "Vibra Left Playback" "Audio PDM" &&
 amixer -q set "Vibra Right Playback" "Audio PDM" &&
 aplay -q /usr/share/sounds/alsa/*.wav

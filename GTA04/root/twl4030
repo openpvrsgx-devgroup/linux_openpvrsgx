@@ -1,3 +1,4 @@
+amixer -q set "AVADC Clock Priority" "HiFi high priority" && &&
 amixer -q set "DAC1 Analog" off &&
 amixer -q set "DAC2 Analog" on &&
 amixer -q set "DAC2 Analog" 5 &&        # so that total gain is < 1
@@ -17,3 +18,5 @@ amixer -q set HandsfreeR on &&
 amixer -q set "HandsfreeL Mux" AudioL2 &&
 amixer -q set "HandsfreeR Mux" AudioR2 &&
 aplay -q /usr/share/sounds/alsa/*.wav
+# play chirp sound on all channels
+sox -c 2 -n -t wav - synth 10 sine 10-100 | aplay

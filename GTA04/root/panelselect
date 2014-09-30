@@ -14,7 +14,7 @@ esac
 while true
 do
 echo
-echo "current panel: $(cat /proc/device-tree/ocp/dss/dsi@1/lcd/compatible)"
+echo "current panel: $(cat /proc/device-tree/ocp/dss@58000000/encoder@58004000/lcd/compatible)"
 echo
 echo "1) LG Full-HD Panel with HD adapter"
 echo "2) BOE Half-HD panel with SSD2858 Rotator"

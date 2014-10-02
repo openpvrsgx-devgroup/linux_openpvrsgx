@@ -26,7 +26,7 @@ echo
 echo "choosing a panel will poweroff the board so that you can connect"
 echo "a different adapter/panel"
 echo
-echo -n "please choose 1..3: "
+echo -n "please choose 1..5 or q: "
 
 read CHOICE
 

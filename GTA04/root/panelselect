@@ -15,43 +15,68 @@ while true
 do
 echo
 echo "current panel: $(cat /proc/device-tree/ocp/dss@58000000/encoder@58004000/lcd/compatible)"
+
+case "$(cat /proc/device-tree/ocp/dss@58000000/encoder@58004000/lcd/compatible)" in
+	omapdss,none )
+		cp /boot/omap5-pyra.dtb /boot/omap5-pyra-none.dtb
+		;;
+esac
+
 echo
 echo "1) LG Full-HD Panel with HD adapter"
 echo "2) BOE Half-HD panel with SSD2858 Rotator"
 echo "3) Success Half-HD panel with SSD2858 Rotator"
 echo "4) BOE Half-HD panel with simple adapter"
 echo "5) Success Half-HD panel with simple adapter"
+echo "n) non panel driver"
+echo "s) SSD2858 only (no panel and no other init)"
 echo "q) abort"
 echo
 echo "choosing a panel will poweroff the board so that you can connect"
 echo "a different adapter/panel"
 echo
-echo -n "please choose 1..5 or q: "
+echo -n "please choose 1..5 or n,s or q: "
 
 read CHOICE
 
 case "$CHOICE" in
 	1 )
-		cp /boot/omap5-pyra+lg.dtb /boot/omap5-pyra.dtb
+		cp /boot/omap5-pyra+lg.dtb /boot/omap5-pyra.dtb || exit
 		sync
 		./bl 0
 		echo "now powering off - please connect the LG panel before reboot!"
 		poweroff
 		exit
 		;;
-	2 | 4 )
-                cp /boot/omap5-pyra+boe.dtb /boot/omap5-pyra.dtb
+	4 )
+                cp /boot/omap5-pyra+boe.dtb /boot/omap5-pyra.dtb || exit
                 sync
 		./bl 0
                 echo "now powering off - please connect the BOE panel before reboot!"
                 poweroff
 		exit
 		;;
-	3 | 5 )
-                cp /boot/omap5-pyra+succ.dtb /boot/omap5-pyra.dtb
+	5 )
+                cp /boot/omap5-pyra+succ.dtb /boot/omap5-pyra.dtb || exit
                 sync
 		./bl 0
                 echo "now powering off - please connect the SUCEESS panel before reboot!"
+                poweroff
+		exit
+		;;
+	n )
+                cp /boot/omap5-pyra-none.dtb /boot/omap5-pyra.dtb || exit
+                sync
+		./bl 0
+                echo "now powering off - please connect the BOE panel before reboot!"
+                poweroff
+		exit
+		;;
+	2 | 3 | s )
+                cp /boot/omap5-pyra+ssd.dtb /boot/omap5-pyra.dtb || exit
+                sync
+		./bl 0
+                echo "now powering off - please connect some SSD2858 adapter before reboot!"
                 poweroff
 		exit
 		;;

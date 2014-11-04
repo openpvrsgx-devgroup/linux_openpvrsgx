@@ -1,0 +1,10 @@
+#
+# enable handsfree / earpiece
+# and echo microphone signal
+#
+
+# if running on OMAP3
+./twl4030
+# else ./twl6040
+
+arecord | tee record.wav | aplay

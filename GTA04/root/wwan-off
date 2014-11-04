@@ -1,0 +1,20 @@
+#
+# turn off UMTS modem
+#
+
+for repeat in 1 2 3 4 5
+	do
+	if lsusb | fgrep '0af0:8800 Option' >/dev/null
+		then
+		if [ -w /sys/devices/virtual/gpio/gpio186/value ]
+			then # turn off modem in GTA04A4
+			echo 1 >/sys/devices/virtual/gpio/gpio186/value
+			sleep 1
+			echo 0 >/sys/devices/virtual/gpio/gpio186/value
+			sleep 5
+		fi
+		else
+		echo modem is off
+		break
+	fi
+	done

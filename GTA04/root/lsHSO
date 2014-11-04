@@ -1,0 +1,7 @@
+depmod -a
+modprobe hso
+cd /sys/class/tty
+for i in ttyHS*
+	do
+	echo "/dev/$i: $(cat $i/hsotype)"
+	done

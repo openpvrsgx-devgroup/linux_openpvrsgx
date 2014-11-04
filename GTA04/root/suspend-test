@@ -1,0 +1,210 @@
+#!/bin/bash
+# Quick script to verify SUSPEND Resume behavior without human intervention
+# Refer: http://elinux.org/OMAP_Power_Management for details
+
+# Some params that might change based on the environment
+SYS=/sys
+DEBUG=$SYS/kernel/debug
+PROC=/proc
+
+PMDEBUG=$DEBUG/pm_debug
+if [ ! -d $PMDEBUG ]
+then
+	echo "Kernel must be compiled with debug fs"
+	exit 1
+fi
+
+VOLTAGE_OFF=$PMDEBUG/voltage_off_mode
+kver=`uname -r`
+if [ $kver > "2.6.36" ]; then
+	UART="$SYS/devices/platform/omap/omap-hsuart"
+else
+	UART="$SYS/devices/platform/serial8250"
+fi
+UART1=$UART.0/sleep_timeout
+UART2=$UART.1/sleep_timeout
+UART3=$UART.2/sleep_timeout
+
+# Setup cpu idle
+cpu_idle(){
+	echo -n "$1" > $PMDEBUG/sleep_while_idle
+}
+
+# setup off mode
+off_mode(){
+	echo -n "$1" > $PMDEBUG/enable_off_mode
+}
+
+# Do a suspend
+suspend_me(){
+	echo -n "mem" > $SYS/power/state
+}
+
+# get my core data (This is the last domain to hit lowest power state)
+core_count(){
+	cat $PMDEBUG/count |grep "^core_pwrdm"
+}
+
+# get my retention counter
+core_ret_count(){
+	core_count|cut -d ',' -f3|cut -d ':' -f2
+}
+
+# get my off counter
+core_off_count(){
+	core_count|cut -d ',' -f2|cut -d ':' -f2
+}
+
+# setup wakeup timer - automated testing
+wakeup_timer(){
+	echo -n "$1" > $PMDEBUG/wakeup_timer_seconds
+	echo -n "$2" > $PMDEBUG/wakeup_timer_milliseconds
+}
+
+# Setup our uart to be inactivity timer
+setup_tty_sleep_timeout() {
+	if [ -f $UART1 ]; then
+		echo -n "$1" > $UART1
+	fi
+	if [ -f $UART2 ]; then
+		echo -n "$1" > $UART1
+	fi
+	if [ -f $UART3 ]; then
+		echo -n "$1" > $UART3
+	fi
+
+}
+
+# Measurement Start
+measure_start(){
+	OFF_START=`core_off_count`
+	RET_START=`core_ret_count`
+	TIME_START=`date "+%s"`
+}
+# Measurement End
+measure_end(){
+	OFF_END=`core_off_count`
+	RET_END=`core_ret_count`
+	TIME_END=`date "+%s"`
+}
+# Common formatted print
+measure_print(){
+	DUR=`expr $TIME_END - $TIME_START`
+	echo "$1 | $2 | OFF: $OFF_START->$OFF_END| RET:$RET_START->$RET_END ($DUR sec)"
+}
+
+# verify function
+check_core_off(){
+	RESULT=FAIL
+	if [ $OFF_START -lt $OFF_END ]; then
+		RESULT=PASS
+	fi
+}
+check_core_ret(){
+	RESULT=FAIL
+	if [ $RET_START -lt $RET_END ]; then
+		RESULT=PASS
+	fi
+}
+
+# Disable everything
+disable_all(){
+	# disable voltage off
+	if [ -f $VOLTAGE_OFF ]; then
+		echo -n "0" >$VOLTAGE_OFF
+	fi
+	setup_tty_sleep_timeout 0
+	wakeup_timer 0 0
+	off_mode 0
+	cpu_idle 0
+}
+
+# test idle - core ret
+test_idle_ret() {
+	disable_all
+	measure_start
+	setup_tty_sleep_timeout 5
+	cpu_idle 1
+	sleep 20
+	disable_all
+	sleep 1;sync
+	measure_end
+	check_core_ret
+	measure_print "IDLE:RET test" $RESULT
+}
+
+# test idle - core off
+test_idle_off() {
+	disable_all
+	measure_start
+	setup_tty_sleep_timeout 5
+	off_mode 1
+	cpu_idle 1
+	sleep 20
+	disable_all
+	sleep 1;sync
+	measure_end
+	check_core_off
+	measure_print "IDLE:OFF test" $RESULT
+}
+
+# test suspend - core ret
+test_suspend_ret() {
+	disable_all
+	measure_start
+	wakeup_timer 5 0
+	suspend_me
+	disable_all
+	sleep 1;sync
+	measure_end
+	check_core_ret
+	measure_print "SUSPEND:RET test" $RESULT
+}
+
+# test suspend - core off
+test_suspend_off() {
+	disable_all
+	measure_start
+	off_mode 1
+	wakeup_timer 5 0
+	suspend_me
+	disable_all
+	sleep 1;sync
+	measure_end
+	check_core_off
+	measure_print "SUSPEND:OFF test" $RESULT
+}
+
+# mount up the basic fs
+already_mntd=`mount|grep $PROC`
+if [ x == x"$already_mntd" ]; then
+	mount -t proc none $PROC
+fi
+
+already_mntd=`mount|grep $SYS`
+if [ x == x"$already_mntd" ]; then
+	mount -t sysfs none $SYS
+fi
+already_mntd=`mount|grep $DEBUG`
+if [ x == x"$already_mntd" ]; then
+	mount -t debugfs none $DEBUG
+fi
+# Lets run the tests one by one..
+NR=""
+R=`test_suspend_off`
+echo $R
+NR="$NR\n$R"
+R=`test_suspend_ret`
+echo $R
+NR="$NR\n$R"
+R=`test_idle_off`
+echo $R
+NR="$NR\n$R"
+R=`test_idle_ret`
+echo $R
+NR="$NR\n$R"
+# Print End result summary
+cat $PMDEBUG/count
+
+# Print test summary
+echo -e "$NR"

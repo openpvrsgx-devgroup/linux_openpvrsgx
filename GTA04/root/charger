@@ -1,0 +1,62 @@
+### echo "USB and Power input"
+### echo "==================="
+
+echo "USB Charger"
+echo "============"
+echo online: $(cat /sys/class/power_supply/twl4030_usb/online 2>/dev/null)
+echo type: $(cat /sys/class/power_supply/twl4030_usb/type)
+echo status: $(cat /sys/class/power_supply/twl4030_usb/status 2>/dev/null)
+echo volt: $(cat /sys/class/power_supply/twl4030_usb/voltage_now 2>/dev/null)uV
+echo current: $(cat /sys/class/power_supply/twl4030_usb/current_now 2>/dev/null)uA
+echo ID: $(cat /dev/usb_id 2>/dev/null)
+echo max_current: $(cat /dev/usb_max_current 2>/dev/null)uA
+
+echo
+echo "AC Charger"
+echo "============"
+echo online: $(cat /sys/class/power_supply/twl4030_ac/online 2>/dev/null)
+echo type: $(cat /sys/class/power_supply/twl4030_ac/type 2>/dev/null)
+echo status: $(cat /sys/class/power_supply/twl4030_ac/status 2>/dev/null)
+echo volt: $(cat /sys/class/power_supply/twl4030_ac/voltage_now 2>/dev/null)uV
+echo current: $(cat /sys/class/power_supply/twl4030_ac/current_now 2>/dev/null)uA
+
+# see http://www.mjmwired.net/kernel/Documentation/hwmon/twl4030-madc-hwmon
+echo
+echo "Main Battery"
+echo "============"
+VOLT=$(cat /sys/devices/madc-hwmon/hwmon/hwmon*/in12_input)
+echo volt: ${VOLT}mV ca. $(expr \( "$VOLT" - 3300 \) \* 100 / 950)%
+echo current: $(cat /sys/devices/madc-hwmon/hwmon/hwmon*/curr10_input)mA
+echo temp: $(cat /sys/devices/madc-hwmon/hwmon/hwmon*/temp1_input)°C
+echo type: $(cat /sys/devices/madc-hwmon/hwmon/hwmon*/in0_input)mV
+echo ADC7: $(cat /sys/devices/madc-hwmon/hwmon/hwmon*/in7_input)mV	# MICSENSE
+echo VBUS: $(cat /sys/devices/madc-hwmon/hwmon/hwmon*/in8_input)mV
+echo VCHG: $(cat /sys/devices/madc-hwmon/hwmon/hwmon*/in11_input)mV
+
+echo
+echo "Backup battery"
+echo "=============="
+echo volt: $(cat /sys/devices/madc-hwmon/hwmon/hwmon*/in9_input)mV
+
+echo
+echo "BQ27000 (if HDQ works)"
+echo "======================"
+echo present: $(cat /sys/class/power_supply/bq27000-battery/present 2>/dev/null)
+echo type: $(cat /sys/class/power_supply/bq27000-battery/type 2>/dev/null)
+echo technology: $(cat /sys/class/power_supply/bq27000-battery/technology 2>/dev/null)
+echo capacity: $(cat /sys/class/power_supply/bq27000-battery/capacity 2>/dev/null)%
+echo status: $(cat /sys/class/power_supply/bq27000-battery/status 2>/dev/null)
+echo level: $(cat /sys/class/power_supply/bq27000-battery/capacity_level 2>/dev/null)
+echo volt: $(cat /sys/class/power_supply/bq27000-battery/voltage_now 2>/dev/null)uV
+echo current: $(cat /sys/class/power_supply/bq27000-battery/current_now 2>/dev/null)uA
+echo temp: $(LC_ALL=C LANGUAGE=C perl -e "print $(cat /sys/class/power_supply/bq27000-battery/tempi 2>/dev/null)0 / 100")°C
+echo charge: $(cat /sys/class/power_supply/bq27000-battery/charge_now 2>/dev/null)uAh
+echo full: $(cat /sys/class/power_supply/bq27000-battery/charge_full 2>/dev/null)uAh
+echo design: $(cat /sys/class/power_supply/bq27000-battery/charge_full_design 2>/dev/null)uAh
+echo energy: "$(cat /sys/class/power_supply/bq27000-battery/energy 2>/dev/null)J?"
+echo power: "$(cat /sys/class/power_supply/bq27000-battery/power 2>/dev/null)W?"
+echo cycles: $(cat /sys/class/power_supply/bq27000-battery/cycle_count 2>/dev/null)
+echo health: $(cat /sys/class/power_supply/bq27000-battery/health 2>/dev/null)
+echo discharge: $(cat /sys/class/power_supply/bq27000-battery/time_to_empty_avg 2>/dev/null)s to empty
+echo remaining: $(cat /sys/class/power_supply/bq27000-battery/time_to_empty_now 2>/dev/null)s to "?"
+echo charging: $(cat /sys/class/power_supply/bq27000-battery/time_to_full_now 2>/dev/null)s to full

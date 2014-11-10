@@ -44,6 +44,13 @@ properties:
     description:
       The card detection will be done using the GPIO provided.
 
+  reset-gpios:
+    maxItems: 1
+    description:
+      Specify a GPIO to be asserted during power-up. This is
+      useful if power is not actually removed (e.g. due to shared
+      regulator) but a reset is needed before reconfiguration.
+
   non-removable:
     $ref: /schemas/types.yaml#/definitions/flag
     description:

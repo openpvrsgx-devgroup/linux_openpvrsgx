@@ -52,7 +52,9 @@ version  | status
 3.13     | works (Ubuntu Trusty)
 3.14     | should work (builds against it, but not tested)
 3.15     | works (Ubuntu Trusty using mainline kernel)
-3.16-rc  | should work (builds against it, but not tested)
+3.16     | should work (builds against it, but not tested)
+3.17     | should work (builds against it, but not tested)
+3.18-rc  | build fails
 
 Xserver requirements
 --------------------

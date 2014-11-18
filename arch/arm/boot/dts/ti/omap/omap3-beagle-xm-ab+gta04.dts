@@ -6,11 +6,15 @@
  * published by the Free Software Foundation.
  */
 
-#include "omap3-beagle-xm.dts"
+#include "omap3-beagle-xm-ab.dts"
 
 / {
 
 	/* overwrite device model */
 	model = "BeagleBoard XM / GTA04";
+
+	madc-hwmon {
+		compatible = "ti,twl4030-madc-hwmon";
+	};
 
 };

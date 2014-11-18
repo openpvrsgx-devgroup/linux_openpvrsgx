@@ -16,11 +16,10 @@ Quick start guide (no VA-API support)
 sudo add-apt-repository lp:~thopiekar/emgd
 ```
 
-   Packages hosted there say that their version is 1.16, but they include 1.18!
+      Packages hosted there say that their version is 1.16, but they include 1.18!
 
-2. Install xorg 1.9 and mesa 7.9 ("xserver-xorg-1.9" and "libgl*-7.9" are minimum)
 
-3. Install the emgd driver ("emgd-drm-dkms" and "xserver-xorg-1.9-video-emgd" are minimum)
+2. Install the emgd driver ("emgd-drm-dkms" and "xserver-xorg-1.9-video-emgd" are minimum)
 
 3. Create a xorg.conf on your own xorg.conf 
 

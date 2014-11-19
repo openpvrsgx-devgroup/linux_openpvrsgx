@@ -1,4 +1,4 @@
-amixer -q set "AVADC Clock Priority" "HiFi high priority" && &&
+amixer -q set "AVADC Clock Priority" "HiFi high priority" &&
 amixer -q set "DAC1 Analog" off &&
 amixer -q set "DAC2 Analog" on &&
 amixer -q set "DAC2 Analog" 5 &&        # so that total gain is < 1

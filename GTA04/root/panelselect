@@ -72,8 +72,16 @@ case "$CHOICE" in
                 poweroff
 		exit
 		;;
-	2 | 3 | s )
-                cp /boot/omap5-pyra+ssd.dtb /boot/omap5-pyra.dtb || exit
+	2 | s )
+                cp /boot/omap5-pyra+ssd+boe.dtb /boot/omap5-pyra.dtb || exit
+                sync
+		./bl 0
+                echo "now powering off - please connect some SSD2858 adapter before reboot!"
+                poweroff
+		exit
+		;;
+	3 )
+                cp /boot/omap5-pyra+ssd+succ.dtb /boot/omap5-pyra.dtb || exit
                 sync
 		./bl 0
                 echo "now powering off - please connect some SSD2858 adapter before reboot!"

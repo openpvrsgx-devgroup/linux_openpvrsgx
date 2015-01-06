@@ -1,0 +1,8 @@
+#
+# scan wlan
+#
+
+WLAN=wlan0
+
+ifconfig $WLAN up
+iw dev wlan0 scan

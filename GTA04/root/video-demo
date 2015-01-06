@@ -1,0 +1,20 @@
+#
+#
+# video demo
+# needs 160 MByte on Flash card!
+
+FILE=/root/big_buck_bunny_480p_stereo.ogg
+
+[ -r $FILE ] || wget "http://ftp.nc.debian.org/media/films/big_buck_bunny_480p_stereo.ogg" -o "$FILE"
+
+export XAUTHORITY=/.Xauthority
+
+[ -x /usr/bin/mplayer ] || apt-get install -y mplayer
+
+amixer set HandsfreeL on
+amixer set HandsfreeR on
+amixer set 'HandsfreeL Mux' AudioL2
+amixer set 'HandsfreeR Mux' AudioR2
+
+export DISPLAY=:0.0
+mplayer -vo x11 $FILE

@@ -5,7 +5,7 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  *
- * the GTA04b4 is a BeagleBoard plus a display adapter
+ * the beagle-b4 is a BeagleBoard plus a display adapter
  * adapter baord.
  *
  * This adapter supports

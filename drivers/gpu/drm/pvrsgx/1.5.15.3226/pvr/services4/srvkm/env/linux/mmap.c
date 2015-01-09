@@ -59,6 +59,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <drm/drmP.h>
 #endif
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,0)
+#include <drm/drm_legacy.h>
+#endif
+
 #include "img_defs.h"
 #include "services.h"
 #include "servicesint.h"
@@ -718,8 +722,11 @@ PVRMMap(struct file* pFile, struct vm_area_struct* ps_vma)
 #if defined(SUPPORT_DRI_DRM)
         mutex_unlock(&g_sMMapMutex);
 
-
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,0)
+        return drm_legacy_mmap(pFile, ps_vma);
+#else
         return drm_mmap(pFile, ps_vma);
+#endif
 #else
         PVR_UNREFERENCED_PARAMETER(pFile);
 

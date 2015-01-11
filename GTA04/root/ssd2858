@@ -1,4 +1,5 @@
-# Solomon SSD2858 chip connected to OMAP5 with chanined panel
+# Solomon SSD2858 chip with input stream from OMAP5 and panel chained to the output
+# using the panel-mipi-debug driver
 
 ./bl 1
 
@@ -11,8 +12,10 @@ fi
 
 # show some DCS status
 echo status >dcs
+
 # DCS sleep out
 echo 11 >dcs
+
 # read SCM_CTRL and other registers
 for i in 4 8 c 10 14 1c 20 24 28 2c 30 ; do echo $i r >reg; done
 # registers
@@ -44,6 +47,7 @@ then
 	do
 		echo p11 >dcs
 		echo p10 >dcs
+		sleep 0.1
 	done
 fi
 

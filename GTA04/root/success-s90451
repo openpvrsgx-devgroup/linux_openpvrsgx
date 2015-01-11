@@ -1,4 +1,5 @@
 # Success panel directly connected to OMAP5
+# using the panel-mipi-debug driver
 # controller: NT35590
 
 ./bl 1
@@ -6,7 +7,7 @@
 if [ ! -L dcs ]
 then
 	rm -rf dcs
-	ln -s /sys/devices/ocp.3/dss.10/0.dsi/display0/dcs dcs
+	ln -s /sys/devices/platform/44000000.ocp/58000000.dss/58004000.encoder/58004000.encoder:lcd/dcs dcs
 fi
 
 # write a no-op because starting with read gives a VC BTA error
@@ -531,5 +532,8 @@ echo 29 >dcs
 sleep 0.020
 echo stream >dcs
 
-# randomly fill frameboffer
+# randomly fill framebuffer
+while true
+do
 cat /dev/urandom > /dev/fb0 2>/dev/null
+done

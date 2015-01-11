@@ -10,24 +10,32 @@ then
 	ln -s /sys/devices/platform/44000000.ocp/58000000.dss/58004000.encoder/58004000.encoder:lcd/dcs dcs
 fi
 
+# make sure the panel is active before trying to send commands
+echo start >dcs
+sleep .1
+echo noreset >dcs
+sleep .1
+
 # write a no-op because starting with read gives a VC BTA error
 echo 00 >dcs
 
 # show some DCS register status
-for i in 04rr 05 0a 0b 0c 0d 0e 0f 26 3a 52 54 abr ba c2 da db dc f4 fe; do echo $i r >dcs; done
+echo status >dcs
+#for i in 04rr 05 0a 0b 0c 0d 0e 0f 26 3a 52 54 abr ba c2 da db dc f4 fe; do echo $i r >dcs; done
 
 # program panel
 
-if true
+if false
 then
+### FIXME: separate between DCS and generic packages
 
 # Increase VDD level
-echo FF  EE >dcs
-echo FB  01 >dcs
-echo 12  50 >dcs
-echo 13  02 >dcs
-echo 6A  60 >dcs
-echo 05  59 >dcs
+echo FF EE >dcs
+echo FB 01 >dcs
+echo 12 50 >dcs
+echo 13 02 >dcs
+echo 6A 60 >dcs
+echo 05 59 >dcs
 # CMD2 Page0 -Power
 echo FF 01 >dcs
 echo FB 01 >dcs

@@ -10,13 +10,21 @@ then
 	ln -s /sys/devices/platform/44000000.ocp/58000000.dss/58004000.encoder/58004000.encoder:lcd/dcs dcs
 fi
 
+# make sure the panel is active before trying to send commands
+echo start >dcs
+sleep .1
+echo noreset >dcs
+sleep .1
+
 # show some DCS status
-for i in 05 0a 0b 0c 0d 0e 0f 13 20 52 54 5f 68 a1rrrr da db dc; do echo $i r >dcs; done
+echo status >dcs
+# for i in 05 0a 0b 0c 0d 0e 0f 13 20 52 54 5f 68 a1rrrr da db dc; do echo $i r >dcs; done
+
+# program panel here
+
 # DCS sleep out
 echo 11 >dcs
 sleep 0.120
-# program panel
-
 
 # enable stream and turn display on
 echo stream >dcs

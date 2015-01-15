@@ -22,6 +22,7 @@
 
 	aliases {
 		display0 = &lcd;
+		display1 = &tv;
 	};
 
 	/* fixed 26MHz oscillator */
@@ -48,6 +49,37 @@
 
 		pinctrl-names = "default";
 		pinctrl-0 = <&led_pins>;
+
+/* twl leds are broken?
+
+		led_backlight {
+			label = "pandora::backlight";
+			gpios = <&twl_gpio 6 GPIO_ACTIVE_HIGH>; /* LED.6 * /
+			linux,default-trigger = "heartbeat";
+			default-state = "on";
+		};
+
+		led_charger {
+			label = "pandora::charger";
+			gpios = <&twl_gpio 7 GPIO_ACTIVE_HIGH>; /* LED.7 * /
+			linux,default-trigger = "heartbeat";
+			linux,default-trigger = "bq27500-0-charging-blink-full-solid";
+			default-state = "on";
+		};
+
+		led_keypad {
+			label = "pandora::keypad";
+			gpios = <&twl_gpio 18 GPIO_ACTIVE_HIGH>; /* LEDA * /
+			linux,default-trigger = "heartbeat";
+		};
+
+		led_power {
+			label = "pandora::power";
+			gpios = <&twl_gpio 19 GPIO_ACTIVE_HIGH>; /* LEDB * /
+			linux,default-trigger = "heartbeat";
+			default-state = "on";
+		};
+*/
 
 		led1 {
 			label = "pandora::sd1";
@@ -201,7 +233,17 @@
 			linux,code = <0x00>;    /* SW_LID lid shut */
 			linux,input-type = <0x05>;    /* EV_SW */
 			gpios = <&gpio4 12 GPIO_ACTIVE_HIGH>;   /* GPIO_108 */
+			gpio-key,wakeup;
 		};
+	};
+
+	madc-hwmon {
+		compatible = "ti,twl4030-madc-hwmon";
+	};
+
+	control: control@48002270 {
+		compatible = "ti,omap3-devconf1-syscon", "syscon";
+		reg = <0x48002270 0x74>;
 	};
 
 	/* HS USB Host PHY on PORT 2 */
@@ -250,6 +292,11 @@
 };
 
 &omap3_pmx_core {
+
+	pinctrl-names = "default";
+	pinctrl-0 = <
+		&hsusb2_pins
+	>;
 
 	mmc1_pins: mmc1-pins {
 		pinctrl-single,pins = <
@@ -353,6 +400,19 @@
 		pinctrl-single,pins = <
 			/* here we could enable to wakeup the cpu from suspend by a pen touch */
 			OMAP3_CORE1_IOPAD(0x210c, PIN_INPUT | MUX_MODE4)	/* GPIO_94 */
+		>;
+	};
+
+	hsusb2_pins: hsusb2-pins {
+		pinctrl-single,pins = <
+			OMAP3_CORE1_IOPAD(0x21d4, PIN_INPUT_PULLDOWN | MUX_MODE3)	/* mcspi1_cs3.hsusb2_data2 */
+			OMAP3_CORE1_IOPAD(0x21d6, PIN_INPUT_PULLDOWN | MUX_MODE3)	/* mcspi2_clk.hsusb2_data7 */
+			OMAP3_CORE1_IOPAD(0x21d8, PIN_INPUT_PULLDOWN | MUX_MODE3)	/* mcspi2_simo.hsusb2_data4 */
+			OMAP3_CORE1_IOPAD(0x21da, PIN_INPUT_PULLDOWN | MUX_MODE3)	/* mcspi2_somi.hsusb2_data5 */
+			OMAP3_CORE1_IOPAD(0x21dc, PIN_INPUT_PULLDOWN | MUX_MODE3)	/* mcspi2_cs0.hsusb2_data6 */
+			OMAP3_CORE1_IOPAD(0x21de, PIN_INPUT_PULLDOWN | MUX_MODE3)	/* mcspi2_cs1.hsusb2_data3 */
+			OMAP3_CORE1_IOPAD(0x219a, PIN_INPUT_PULLUP | MUX_MODE4) /* gpio_163 = !OC_USB5 (over current input) */
+			OMAP3_CORE1_IOPAD(0x219c, PIN_OUTPUT | MUX_MODE4) /* gpio_164 = EN_USB_5V */
 		>;
 	};
 
@@ -542,6 +602,10 @@
 		reg = <0x55>;
 	};
 
+	/*
+	 * 2 nubs
+	 * mma7455
+	 */
 };
 
 &usb_otg_hs {
@@ -563,7 +627,7 @@
 	pinctrl-0 = <&mmc1_pins>;
 	vmmc-supply = <&vmmc1>;
 	bus-width = <4>;
-	cd-gpios = <&twl_gpio 0 GPIO_ACTIVE_LOW>;
+	/*cd-gpios = <&twl_gpio 0 GPIO_ACTIVE_LOW>; */
 	/*wp-gpios = <&gpio4 30 GPIO_ACTIVE_HIGH>;*/	/* GPIO_126 */
 };
 
@@ -572,7 +636,7 @@
 	pinctrl-0 = <&mmc2_pins>;
 	vmmc-supply = <&vmmc2>;
 	bus-width = <4>;
-	cd-gpios = <&twl_gpio 1 GPIO_ACTIVE_LOW>;
+	/* cd-gpios = <&twl_gpio 1 GPIO_ACTIVE_LOW>;
 	/*wp-gpios = <&gpio4 31 GPIO_ACTIVE_HIGH>;*/	/* GPIO_127 */
 };
 
@@ -604,6 +668,8 @@
 
 /* bluetooth*/
 &uart1 {
+	/* to be defined */
+	// bt-shutdown = gpio1_15
 };
 
 /* spare (expansion connector) */

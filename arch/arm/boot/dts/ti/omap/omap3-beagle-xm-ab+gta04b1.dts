@@ -318,8 +318,8 @@
 		ti,x-plate-ohms = <550>;
 		ti,min-x = <0x100>;
 		ti,max-x = <0xf00>;
-		ti,min-y = <0xf00>;
-		ti,max-y = <0x100>;
+		ti,min-y = <0x100>;
+		ti,max-y = <0xf00>;
 		ti,min-rt = <0xfff>;
 		ti,max-rt = <0>;
 	};

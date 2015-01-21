@@ -13,4 +13,5 @@
 	/* overwrite device model */
 	model = "BeagleBoard / GTA04";
 
+	// configure peripherals supported only by the GTA04 kernel
 };

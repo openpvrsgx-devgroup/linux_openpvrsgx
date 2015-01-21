@@ -16,11 +16,12 @@
  *   external antenna detect (GPIO )
  */
 
-#include "omap3-beagle-xm.dts"
+#include "omap3-beagle+gta04.dts"
 
 / {
 
 	/* overwrite device model */
 	model = "BeagleBoard / GTA04 b4";
 
+	// configure b4 panel
 };

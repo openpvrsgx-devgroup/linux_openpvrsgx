@@ -43,17 +43,26 @@ VA-API        | broken/unknown - testing is needed here
 Kernel
 ------
 
-version  | status
--------- | -----------------------------------------------
-3.10     | should work (builds against it, but not tested)
-3.11     | works (incl. backlight, suspend)
-3.12     | should work (builds against it, but not tested)
-3.13     | works (Ubuntu Trusty)
-3.14     | should work (builds against it, but not tested)
-3.15     | works (Ubuntu Trusty using mainline kernel)
-3.16     | should work (builds against it, but not tested)
-3.17     | should work (builds against it, but not tested)
-3.18-rc  | build fails
+version (mainline)  | status
+------------------- | -----------------------------------------------
+3.1                 | should work (builds against it, but not tested)
+3.2                 | should work (builds against it, but not tested)
+3.3                 | should work (builds against it, but not tested)
+3.4                 | should work (builds against it, but not tested)
+3.5                 | should work (builds against it, but not tested)
+3.6                 | should work (builds against it, but not tested)
+3.7                 | should work (builds against it, but not tested)
+3.8                 | should work (builds against it, but not tested)
+3.9                 | should work (builds against it, but not tested)
+3.10                | should work (builds against it, but not tested)
+3.11                | works (incl. backlight, suspend)
+3.12                | should work (builds against it, but not tested)
+3.13                | works (Ubuntu Trusty)
+3.14                | should work (builds against it, but not tested)
+3.15                | works (Ubuntu Trusty using mainline kernel)
+3.16                | should work (builds against it, but not tested)
+3.17                | should work (builds against it, but not tested)
+3.18-rc             | should work (builds against it, but not tested)
 
 Xserver requirements
 --------------------

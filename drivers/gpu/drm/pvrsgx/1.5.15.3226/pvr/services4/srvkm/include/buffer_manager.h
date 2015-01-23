@@ -381,7 +381,6 @@ BM_HandleToSysPaddr (BM_HANDLE hBuf);
 IMG_HANDLE
 BM_HandleToOSMemHandle (BM_HANDLE hBuf);
 
-
 IMG_BOOL
 BM_ContiguousStatistics (IMG_UINT32 uFlags,
                          IMG_UINT32 *pTotalBytes,

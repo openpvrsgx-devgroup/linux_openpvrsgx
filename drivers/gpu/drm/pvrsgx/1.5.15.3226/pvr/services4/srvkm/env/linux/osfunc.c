@@ -185,7 +185,7 @@ PVRSRV_ERROR OSFreeMem_Impl(IMG_UINT32 ui32Flags, IMG_UINT32 ui32Size, IMG_PVOID
 #else
 PVRSRV_ERROR OSFreeMem_Impl(IMG_UINT32 ui32Flags, IMG_UINT32 ui32Size, IMG_PVOID pvCpuVAddr, IMG_HANDLE hBlockAlloc, IMG_CHAR *pszFilename, IMG_UINT32 ui32Line)
 #endif
-{	
+{
     PVR_UNREFERENCED_PARAMETER(ui32Flags);
     PVR_UNREFERENCED_PARAMETER(ui32Size);
 
@@ -305,7 +305,7 @@ OSAllocPages_Impl(IMG_UINT32 ui32AllocFlags,
 
 PVRSRV_ERROR
 OSFreePages(IMG_UINT32 ui32AllocFlags, IMG_UINT32 ui32Bytes, IMG_VOID *pvCpuVAddr, IMG_HANDLE hOSMemHandle)
-{   
+{
     LinuxMemArea *psLinuxMemArea;
     PVR_UNREFERENCED_PARAMETER(ui32Bytes);
     PVR_UNREFERENCED_PARAMETER(pvCpuVAddr);
@@ -753,7 +753,7 @@ static irqreturn_t DeviceISRWrapper(int irq, void *dev_id
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,19))
     PVR_UNREFERENCED_PARAMETER(regs);
-#endif	
+#endif
     psDeviceNode = (PVRSRV_DEVICE_NODE*)dev_id;
     if(!psDeviceNode)
     {
@@ -870,7 +870,7 @@ PVRSRV_ERROR OSInstallDeviceLISR(IMG_VOID *pvSysData,
     psEnvData->pvISRCookie = pvDeviceNode;
     psEnvData->bLISRInstalled = IMG_TRUE;
 
-    return PVRSRV_OK;	
+    return PVRSRV_OK;
 }
 
 /*!
@@ -949,7 +949,7 @@ PVRSRV_ERROR OSInstallSystemLISR(IMG_VOID *pvSysData, IMG_UINT32 ui32Irq)
     psEnvData->pvISRCookie = pvSysData;
     psEnvData->bLISRInstalled = IMG_TRUE;
 
-    return PVRSRV_OK;	
+    return PVRSRV_OK;
 }
 
 
@@ -1114,7 +1114,7 @@ PVRSRV_ERROR OSScheduleMISR(IMG_VOID *pvSysData)
 		queue_work(psEnvData->psWorkQueue, &psEnvData->sMISRWork);
 	}
 
-	return PVRSRV_OK;	
+	return PVRSRV_OK;
 }
 #else	/* defined(PVR_LINUX_MISR_USING_PRIVATE_WORKQUEUE) */
 #if defined(PVR_LINUX_MISR_USING_WORKQUEUE)
@@ -1238,7 +1238,7 @@ PVRSRV_ERROR OSScheduleMISR(IMG_VOID *pvSysData)
 		schedule_work(&psEnvData->sMISRWork);
 	}
 
-	return PVRSRV_OK;	
+	return PVRSRV_OK;
 }
 
 #else	/* #if defined(PVR_LINUX_MISR_USING_WORKQUEUE) */
@@ -1353,7 +1353,7 @@ PVRSRV_ERROR OSScheduleMISR(IMG_VOID *pvSysData)
         tasklet_schedule(&psEnvData->sMISRTasklet);
     }
 
-    return PVRSRV_OK;	
+    return PVRSRV_OK;
 }
 
 #endif /* #if defined(PVR_LINUX_MISR_USING_WORKQUEUE) */
@@ -2529,8 +2529,8 @@ IMG_HANDLE OSAddTimer(PFN_TIMER_FUNC pfnTimerFunc, IMG_VOID *pvData, IMG_UINT32 
     /* check callback */
     if(!pfnTimerFunc)
     {
-        PVR_DPF((PVR_DBG_ERROR, "OSAddTimer: passed invalid callback"));		
-        return IMG_NULL;		
+        PVR_DPF((PVR_DBG_ERROR, "OSAddTimer: passed invalid callback"));
+        return IMG_NULL;
     }
 
 
@@ -2717,7 +2717,7 @@ PVRSRV_ERROR OSEventObjectCreate(const IMG_CHAR *pszName, PVRSRV_EVENTOBJECT *ps
 
         if(LinuxEventObjectListCreate(&psEventObject->hOSEventKM) != PVRSRV_OK)
         {
-             eError = PVRSRV_ERROR_OUT_OF_MEMORY;	
+             eError = PVRSRV_ERROR_OUT_OF_MEMORY;
         }
 
     }
@@ -3321,6 +3321,7 @@ PVRSRV_ERROR OSAcquirePhysPageAddr(IMG_VOID* pvCPUVAddr,
             "OSAcquirePhysPageAddr: No read/write access to memory region (VMA flags: 0x%lx)", psVMArea->vm_flags));
         goto error_release_mmap_sem;
     }
+
 
     for (ulAddr = ulStartAddrOrig, i = 0; ulAddr < ulBeyondEndAddrOrig; ulAddr += PAGE_SIZE, i++)
     {

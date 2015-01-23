@@ -55,7 +55,7 @@ typedef struct _BM_MAPPING_ BM_MAPPING;
 
 
 /** Enable support for arena statistics. */
-#define RA_STATS 
+#define RA_STATS
 
 
 /** Resource arena statistics. */
@@ -120,7 +120,7 @@ RA_Create (IMG_CHAR *name,
            IMG_UINTPTR_T base,
            IMG_SIZE_T uSize,
            BM_MAPPING *psMapping,
-           IMG_SIZE_T uQuantum, 
+           IMG_SIZE_T uQuantum,
            IMG_BOOL (*imp_alloc)(IMG_VOID *_h,
                                 IMG_SIZE_T uSize,
                                 IMG_SIZE_T *pActualSize,
@@ -204,10 +204,10 @@ RA_Add (RA_ARENA *pArena, IMG_UINTPTR_T base, IMG_SIZE_T uSize);
  *  @Return IMG_TRUE - success, IMG_FALSE - failure
  */
 IMG_BOOL
-RA_Alloc (RA_ARENA *pArena, 
+RA_Alloc (RA_ARENA *pArena,
           IMG_SIZE_T uSize,
           IMG_SIZE_T *pActualSize,
-          BM_MAPPING **ppsMapping, 
+          BM_MAPPING **ppsMapping,
           IMG_UINT32 uFlags,
           IMG_UINT32 uAlignment,
 		  IMG_UINT32 uAlignmentOffset,
@@ -224,7 +224,7 @@ RA_Alloc (RA_ARENA *pArena,
  *
  *  @Return None
  */
-IMG_VOID 
+IMG_VOID
 RA_Free (RA_ARENA *pArena, IMG_UINTPTR_T base, IMG_BOOL bFreeBackingStore);
 
 
@@ -273,7 +273,7 @@ IMG_BOOL RA_GetNextLiveSegment(IMG_HANDLE hArena, RA_SEGMENT_DETAILS *psSegDetai
  *  @Return PVRSRV_ERROR
  */
 PVRSRV_ERROR RA_GetStats(RA_ARENA *pArena,
-							IMG_CHAR **ppszStr, 
+							IMG_CHAR **ppszStr,
 							IMG_UINT32 *pui32StrLen);
 
 #endif /* #ifdef RA_STATS */

@@ -174,7 +174,7 @@ static void ProcSeqStartstopBridgeStats(struct seq_file *sfile,IMG_BOOL start)
 */
 static void* ProcSeqOff2ElementBridgeStats(struct seq_file *sfile, loff_t off)
 {
-	if(!off) 
+	if(!off)
 	{
 		return PVR_PROC_SEQ_START_TOKEN;
 	}

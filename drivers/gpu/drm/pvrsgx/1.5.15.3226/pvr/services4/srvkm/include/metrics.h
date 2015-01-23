@@ -51,7 +51,7 @@ extern "C" {
 #if defined(DEBUG) || defined(TIMING)
 
 
-typedef struct 
+typedef struct
 {
 	IMG_UINT32 ui32Start;
 	IMG_UINT32 ui32Stop;
@@ -59,7 +59,7 @@ typedef struct
 	IMG_UINT32 ui32Count;
 } Temporal_Data;
 
-extern Temporal_Data asTimers[]; 
+extern Temporal_Data asTimers[];
 
 extern IMG_UINT32 PVRSRVTimeNow(IMG_VOID);
 extern IMG_VOID   PVRSRVSetupMetricTimers(IMG_VOID *pvDevInfo);

@@ -53,12 +53,12 @@ typedef struct tagIOCTL_PACKAGE
 	IMG_UINT32  ui32OutBufferSize;    // size of output data buffer
 } IOCTL_PACKAGE;
 
-IMG_UINT32 DeviceIoControl(IMG_UINT32 hDevice,		
-						IMG_UINT32 ui32ControlCode, 
-						IMG_VOID *pInBuffer,		
+IMG_UINT32 DeviceIoControl(IMG_UINT32 hDevice,
+						IMG_UINT32 ui32ControlCode,
+						IMG_VOID *pInBuffer,
 						IMG_UINT32 ui32InBufferSize,
-						IMG_VOID *pOutBuffer,		
-						IMG_UINT32 ui32OutBufferSize,  
-						IMG_UINT32 *pui32BytesReturned); 
+						IMG_VOID *pOutBuffer,
+						IMG_UINT32 ui32OutBufferSize,
+						IMG_UINT32 *pui32BytesReturned);
 
 #endif /* _LINUXSRV_H__*/

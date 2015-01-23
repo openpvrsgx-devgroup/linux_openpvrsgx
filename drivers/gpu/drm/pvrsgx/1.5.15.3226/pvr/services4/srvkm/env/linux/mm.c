@@ -394,7 +394,7 @@ _KMallocWrapper(IMG_UINT32 ui32ByteSize, IMG_CHAR *pszFileName, IMG_UINT32 ui32L
                                ui32ByteSize,
                                pszFileName,
                                ui32Line
-                              );
+                               );
     }
 #else
     PVR_UNREFERENCED_PARAMETER(pszFileName);
@@ -581,7 +581,7 @@ _VMallocWrapper(IMG_UINT32 ui32Bytes,
             return NULL;
     }
 
-	/* Allocate virtually contiguous pages */
+    /* Allocate virtually contiguous pages */
     pvRet = __vmalloc(ui32Bytes, GFP_KERNEL | __GFP_HIGHMEM, PGProtFlags);
     
 #if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
@@ -595,7 +595,7 @@ _VMallocWrapper(IMG_UINT32 ui32Bytes,
                                PAGE_ALIGN(ui32Bytes),
                                pszFileName,
                                ui32Line
-                              );
+                               );
     }
 #else
     PVR_UNREFERENCED_PARAMETER(pszFileName);
@@ -760,7 +760,7 @@ _IORemapWrapper(IMG_CPU_PHYADDR BasePAddr,
                                ui32Bytes,
                                pszFileName,
                                ui32Line
-                              );
+                               );
     }
 #else
     PVR_UNREFERENCED_PARAMETER(pszFileName);
@@ -953,7 +953,7 @@ NewIOLinuxMemArea(IMG_CPU_PHYADDR BasePAddr,
                            ui32Bytes,
                            "unknown",
                            0
-                          );
+                           );
 #endif
    
 #if defined(DEBUG_LINUX_MEM_AREAS)
@@ -1189,7 +1189,7 @@ _KMemCacheAllocWrapper(LinuxKMemCache *psCache,
                            kmem_cache_size(psCache),
                            pszFileName,
                            ui32Line
-                          );
+                           );
 #else
     PVR_UNREFERENCED_PARAMETER(pszFileName);
     PVR_UNREFERENCED_PARAMETER(ui32Line);
@@ -1637,7 +1637,7 @@ LinuxMemAreaTypeToString(LINUX_MEM_AREA_TYPE eMemAreaType)
 #if defined(DEBUG_LINUX_MEM_AREAS) || defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
 static void ProcSeqStartstopDebugMutex(struct seq_file *sfile, IMG_BOOL start)
 {
-	if (start) 
+	if (start)
 	{
 	    mutex_lock(&g_sDebugMutex);
 	}
@@ -1679,7 +1679,7 @@ static void* ProcSeqNextMemArea(struct seq_file *sfile,void* el,loff_t off)
 static void* ProcSeqOff2ElementMemArea(struct seq_file * sfile, loff_t off)
 {
     DEBUG_LINUX_MEM_AREA_REC *psRecord;
-	if (!off) 
+	if (!off)
 	{
 		return PVR_PROC_SEQ_START_TOKEN;
 	}
@@ -1897,7 +1897,7 @@ static void* ProcSeqNextMemoryRecords(struct seq_file *sfile,void* el,loff_t off
 static void* ProcSeqOff2ElementMemoryRecords(struct seq_file *sfile, loff_t off)
 {
     DEBUG_MEM_ALLOC_REC *psRecord;
-	if (!off) 
+	if (!off)
 	{
 		return PVR_PROC_SEQ_START_TOKEN;
 	}
@@ -1908,7 +1908,7 @@ static void* ProcSeqOff2ElementMemoryRecords(struct seq_file *sfile, loff_t off)
 										&off);
 
 #if defined(DEBUG_LINUX_XML_PROC_FILES)
-	if (!psRecord) 
+	if (!psRecord)
 	{
 		seq_printf(sfile, "</meminfo>\n");
 	}
@@ -1920,7 +1920,7 @@ static void* ProcSeqOff2ElementMemoryRecords(struct seq_file *sfile, loff_t off)
 static void ProcSeqShowMemoryRecords(struct seq_file *sfile,void* el)
 {
     DEBUG_MEM_ALLOC_REC *psRecord = (DEBUG_MEM_ALLOC_REC*)el;
-	if (el == PVR_PROC_SEQ_START_TOKEN) 
+	if (el == PVR_PROC_SEQ_START_TOKEN)
 	{
 #if !defined(DEBUG_LINUX_XML_PROC_FILES)
         /* NOTE: If you update this code, please also update the XML varient below

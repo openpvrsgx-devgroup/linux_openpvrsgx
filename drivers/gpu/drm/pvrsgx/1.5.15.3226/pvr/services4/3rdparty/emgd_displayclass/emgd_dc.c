@@ -221,23 +221,28 @@ static PVRSRV_ERROR OpenDCDevice(IMG_UINT32 device_id,
  */
 static PVRSRV_ERROR CloseDCDevice(IMG_HANDLE device_h)
 {
-	/* TRYING A LEAK FIX*/
+#if 0
+	/* MEMORY LEAK FIX - UNTESTED */
 	emgddc_devinfo_t *devinfo;
 	igd_context_t *context;
-	/* TODO: CHECK IF FIX WORKS */
+#endif
 	EMGD_TRACE_STUB;
 
 	EMGD_DEBUG("device_h = 0x%p", device_h);
-	/* TRYING A LEAK FIX*/
+#if 0
+	/* MEMORY LEAK FIX - UNTESTED */
 	devinfo = (emgddc_devinfo_t *) device_h;
 	if (!is_valid_devinfo(devinfo)) {
-	/* if (!is_valid_devinfo((emgddc_devinfo_t *) device_h)) { */
-	/* TODO: CHECK IF FIX WORKS */
+#else
+	if (!is_valid_devinfo((emgddc_devinfo_t *) device_h)) {
+#endif
 		printk(KERN_ERR "[EMGD] %s() given invalid device handle (0x%p)\n",
 			__FUNCTION__, device_h);
 		return PVRSRV_ERROR_INVALID_PARAMS;
 	}
-	/* TRYING A LEAK FIX*/
+
+#if 0
+	/* MEMORY LEAK FIX - UNTESTED */
 	if( devinfo->priv ) {
 		context = devinfo->priv->context;
 		if ( context && devinfo->system_buffer.virt_addr) {
@@ -245,7 +250,7 @@ static PVRSRV_ERROR CloseDCDevice(IMG_HANDLE device_h)
 			devinfo->system_buffer.virt_addr = NULL;
 		}
 	}
-	/* TODO: CHECK IF FIX WORKS */
+#endif
 	
 	return PVRSRV_OK;
 } /* CloseDCDevice() */
@@ -2053,9 +2058,10 @@ void emgddc_free_a_devinfo(emgddc_devinfo_t *devinfo)
 
 		if (devinfo->system_buffer.virt_addr) {
 			context->dispatch.gmm_unmap(devinfo->system_buffer.virt_addr);
-			/* TRYING A LEAK FIX*/
+#if 0
+			/* MEMORY LEAK FIX - UNTESTED */
 			devinfo->system_buffer.virt_addr = NULL;
-			/* TODO: CHECK IF FIX WORKS */
+#endif
 		}
 	}
 	OS_FREE(devinfo);

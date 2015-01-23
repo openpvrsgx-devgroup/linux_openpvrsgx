@@ -130,6 +130,7 @@ extern IMG_BOOL PVRGetBufferClassJTable(PVRSRV_BC_BUFFER2SRV_KMJTABLE *psJTable)
 EXPORT_SYMBOL(PVRGetDisplayClassJTable);
 EXPORT_SYMBOL(PVRGetBufferClassJTable);
 
+
 #if defined(PVR_LDM_MODULE)
 /*
  * Device class used for /sys entries (and udev device node creation)
@@ -260,7 +261,7 @@ static IMG_INT PVRSRVDriverProbe(LDM_DEV *pDevice)
 #endif
 #if defined(PVR_LDM_PCI_MODULE)
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0))
 static IMG_INT PVRSRVDriverProbe(LDM_DEV *pDevice, const struct pci_device_id *id)
 #else
 static IMG_INT __devinit PVRSRVDriverProbe(LDM_DEV *pDevice, const struct pci_device_id *id)

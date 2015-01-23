@@ -689,7 +689,7 @@ IMG_BOOL StreamValid(PDBG_STREAM psStream)
 
 	while (psThis)
 	{
-		if (psStream && (psThis == psStream) )
+		if (psStream && (psThis == psStream))
 		{
 			return(IMG_TRUE);
 		}

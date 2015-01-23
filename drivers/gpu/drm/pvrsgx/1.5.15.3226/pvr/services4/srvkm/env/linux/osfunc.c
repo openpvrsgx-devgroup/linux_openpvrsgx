@@ -87,6 +87,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "event.h"
 #include "linkage.h"
 
+/* 
+ VM_RESERVED has disappeared starting from Linux 3.7 and has been
+ replaced by VM_DONTDUMP since then.
+*/
+#ifndef VM_DONTDUMP
+#define VM_DONTDUMP VM_RESERVED
+#endif
+
 #define EVENT_OBJECT_TIMEOUT_MS		(100)
 
 #if defined(SUPPORT_CPU_CACHED_BUFFERS) || \

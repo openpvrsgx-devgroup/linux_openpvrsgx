@@ -90,9 +90,9 @@ typedef struct PVRSRV_LINUX_EVENT_OBJECT_TAG
 #if defined(DEBUG)
 	IMG_UINT	ui32Stats;
 #endif
-    wait_queue_head_t sWait;	
+    wait_queue_head_t sWait;
 	struct list_head        sList;
-	IMG_HANDLE		hResItem;				
+	IMG_HANDLE		hResItem;
 	PVRSRV_LINUX_EVENT_OBJECT_LIST *psLinuxEventObjectList;
 } PVRSRV_LINUX_EVENT_OBJECT;
 
@@ -270,8 +270,8 @@ PVRSRV_ERROR LinuxEventObjectAdd(IMG_HANDLE hOSEventObjectList, IMG_HANDLE *phOS
 		(IMG_VOID **)&psLinuxEventObject, IMG_NULL,
 		"Linux Event Object") != PVRSRV_OK)
 	{
-		PVR_DPF((PVR_DBG_ERROR, "LinuxEventObjectAdd: failed to allocate memory "));		
-		return PVRSRV_ERROR_OUT_OF_MEMORY;	
+		PVR_DPF((PVR_DBG_ERROR, "LinuxEventObjectAdd: failed to allocate memory "));
+		return PVRSRV_ERROR_OUT_OF_MEMORY;
 	}
 
 	INIT_LIST_HEAD(&psLinuxEventObject->sList);
@@ -366,7 +366,7 @@ PVRSRV_ERROR LinuxEventObjectWait(IMG_HANDLE hOSEventObject, IMG_UINT32 ui32MSTi
 
 	IMG_UINT32 ui32TimeOutJiffies = msecs_to_jiffies(ui32MSTimeout);
 	
-	do	
+	do
 	{
 		prepare_to_wait(&psLinuxEventObject->sWait, &sWait, TASK_INTERRUPTIBLE);
 		ui32TimeStamp = atomic_read(&psLinuxEventObject->sTimeStamp);
@@ -383,12 +383,12 @@ PVRSRV_ERROR LinuxEventObjectWait(IMG_HANDLE hOSEventObject, IMG_UINT32 ui32MSTi
 		mutex_lock(&gPVRSRVLock);
 #if defined(DEBUG)
 		psLinuxEventObject->ui32Stats++;
-#endif			
+#endif
 
-		
+
 	} while (ui32TimeOutJiffies);
 
-	finish_wait(&psLinuxEventObject->sWait, &sWait);	
+	finish_wait(&psLinuxEventObject->sWait, &sWait);
 
 	psLinuxEventObject->ui32TimeStampPrevious = ui32TimeStamp;
 

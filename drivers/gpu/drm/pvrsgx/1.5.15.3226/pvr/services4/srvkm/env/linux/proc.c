@@ -48,7 +48,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <linux/fs.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
+#if LINUX_VERSION_CODE > KERNEL_VERSION(3,8,0)
 #include <linux/slab.h>
+#endif
 
 #include "services_headers.h"
 
@@ -85,11 +87,19 @@ static void *pvr_proc_seq_start (struct seq_file *m, loff_t *pos);
 static void pvr_proc_seq_stop (struct seq_file *m, void *v);
 static void *pvr_proc_seq_next (struct seq_file *m, void *v, loff_t *pos);
 static int pvr_proc_seq_show (struct seq_file *m, void *v);
+#if LINUX_VERSION_CODE >= PATCH_SEQ_HANDLERS
+#else
+static ssize_t pvr_proc_write(struct file *file, const char __user *buffer, size_t count, loff_t *ppos);
+#endif
 
 static struct file_operations pvr_proc_operations =
 {
 	.open		= pvr_proc_open,
 	.read		= seq_read,
+#if LINUX_VERSION_CODE >= PATCH_SEQ_HANDLERS
+#else
+	.write		= pvr_proc_write,
+#endif
 	.llseek		= seq_lseek,
 	.release	= seq_release,
 };
@@ -106,9 +116,11 @@ static struct proc_dir_entry* g_pProcQueue;
 static struct proc_dir_entry* g_pProcVersion;
 static struct proc_dir_entry* g_pProcSysNodes;
 
+#if LINUX_VERSION_CODE >= PATCH_SEQ_HANDLERS
 static PVR_PROC_SEQ_HANDLERS *g_pProcQueueHandlers;
 static PVR_PROC_SEQ_HANDLERS *g_pProcVersionHandlers;
 static PVR_PROC_SEQ_HANDLERS *g_pProcSysNodesHandlers;
+#endif
 
 #ifdef DEBUG
 static struct proc_dir_entry* g_pProcDebugLevel;
@@ -260,16 +272,33 @@ static IMG_INT pvr_proc_open(struct inode *inode,struct file *file)
 
 	struct seq_file *seq = (struct seq_file*)file->private_data;
 
-
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0))
+#if LINUX_VERSION_CODE >= PATCH_PDE_DATA
 	seq->private = PDE_DATA(inode);
 #else
-	seq->private = PDE(inode)->data;
-#endif
+	struct proc_dir_entry* pvr_proc_entry = PDE(inode);
 
+
+	seq->private = pvr_proc_entry->data;
+#endif
 	return ret;
 }
 
+#if LINUX_VERSION_CODE >= PATCH_SEQ_HANDLERS
+#else
+static ssize_t pvr_proc_write(struct file *file, const char __user *buffer,
+		size_t count, loff_t *ppos)
+{
+	struct inode *inode = file->f_path.dentry->d_inode;
+	struct proc_dir_entry * dp;
+
+	dp = PDE(inode);
+
+	if (!dp->write_proc)
+		return -EIO;
+
+	return dp->write_proc(file, buffer, count, dp->data);
+}
+#endif
 
 /*!
 ******************************************************************************
@@ -411,13 +440,20 @@ static struct proc_dir_entry* CreateProcEntryInDirSeq(
 									   pvr_show_proc_seq_t show_handler,
 									   pvr_off2element_proc_seq_t off2element_handler,
 									   pvr_startstop_proc_seq_t startstop_handler,
+#if LINUX_VERSION_CODE > PATCH_SEQ_HANDLERS
 									   write_proc_t whandler,
 									   PVR_PROC_SEQ_HANDLERS **handlers
+#else
+									   write_proc_t whandler
+#endif
 									   )
 {
-	PVR_PROC_SEQ_HANDLERS *seq_handlers;
-	struct proc_dir_entry * file;
-	mode_t mode;
+#if LINUX_VERSION_CODE >= PATCH_SEQ_HANDLERS
+    PVR_PROC_SEQ_HANDLERS *seq_handlers;
+#endif
+
+    struct proc_dir_entry * file;
+    mode_t mode;
 
     if (!dir)
     {
@@ -437,6 +473,7 @@ static struct proc_dir_entry* CreateProcEntryInDirSeq(
 		mode |= S_IWUSR;
     }
 
+#if LINUX_VERSION_CODE >= PATCH_SEQ_HANDLERS
     seq_handlers =  kmalloc(sizeof(PVR_PROC_SEQ_HANDLERS), GFP_KERNEL);
     if(seq_handlers)
     {
@@ -446,15 +483,47 @@ static struct proc_dir_entry* CreateProcEntryInDirSeq(
 	    seq_handlers->startstop = startstop_handler;
 	    seq_handlers->data = data;
     }
+#endif
 
+#if LINUX_VERSION_CODE >= PATCH_PROC_CREATE_DATA
     file = proc_create_data(name, mode, pdir, &pvr_proc_operations,
 			    seq_handlers);
+#else
+    file = create_proc_entry(name, mode, pdir);
+#endif
 
-    if (file) {
+    if (file)
+    {
+#if LINUX_VERSION_CODE >= PATCH_SEQ_HANDLERS
 	    *handlers = seq_handlers;
 	    return file;
     } else
 	    kfree(seq_handlers)
+#else /* LINUX_VERSION_CODE > KERNEL_VERSION(3,9,0) */
+		PVR_PROC_SEQ_HANDLERS *seq_handlers;
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,30)
+        file->owner = THIS_MODULE;
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(2,6,30) */
+
+		file->proc_fops = &pvr_proc_operations;
+		file->write_proc = whandler;
+
+
+		file->data =  kmalloc(sizeof(PVR_PROC_SEQ_HANDLERS), GFP_KERNEL);
+		if(file->data)
+		{
+			seq_handlers = (PVR_PROC_SEQ_HANDLERS*)file->data;
+			seq_handlers->next = next_handler;
+			seq_handlers->show = show_handler;
+			seq_handlers->off2element = off2element_handler;
+			seq_handlers->startstop = startstop_handler;
+			seq_handlers->data = data;
+
+	return file;
+		}
+    }
+#endif /* LINUX_VERSION_CODE > KERNEL_VERSION(3,3,0) */
 
     PVR_DPF((PVR_DBG_ERROR, "CreateProcEntryInDirSeq: cannot make proc entry /proc/%s/%s: no memory", PVRProcDirRoot, name));
     return 0;
@@ -496,8 +565,12 @@ struct proc_dir_entry* CreateProcReadEntrySeq (
 								pvr_next_proc_seq_t next_handler,
 								pvr_show_proc_seq_t show_handler,
 								pvr_off2element_proc_seq_t off2element_handler,
+#if LINUX_VERSION_CODE >= PATCH_SEQ_HANDLERS
 								pvr_startstop_proc_seq_t startstop_handler,
 								PVR_PROC_SEQ_HANDLERS **handlers
+#else
+								pvr_startstop_proc_seq_t startstop_handler
+#endif
 							   )
 {
 	return CreateProcEntrySeq(name,
@@ -506,8 +579,12 @@ struct proc_dir_entry* CreateProcReadEntrySeq (
 				  show_handler,
 				  off2element_handler,
 				  startstop_handler,
+#if LINUX_VERSION_CODE >= PATCH_SEQ_HANDLERS
 				  NULL,
 				  handlers);
+#else
+				  NULL);
+#endif
 }
 
 /*!
@@ -551,9 +628,13 @@ struct proc_dir_entry* CreateProcEntrySeq (
 											pvr_show_proc_seq_t show_handler,
 											pvr_off2element_proc_seq_t off2element_handler,
 											pvr_startstop_proc_seq_t startstop_handler,
+#if LINUX_VERSION_CODE >= PATCH_SEQ_HANDLERS
 											write_proc_t whandler,
 											PVR_PROC_SEQ_HANDLERS **handlers
-	)
+#else
+											write_proc_t whandler
+#endif
+										  )
 {
 	return CreateProcEntryInDirSeq(
 								   dir,
@@ -563,8 +644,12 @@ struct proc_dir_entry* CreateProcEntrySeq (
 								   show_handler,
 								   off2element_handler,
 								   startstop_handler,
+#if LINUX_VERSION_CODE >= PATCH_SEQ_HANDLERS
 								   NULL,
 								   handlers
+#else
+								   NULL
+#endif
 								  );
 }
 
@@ -655,19 +740,38 @@ struct proc_dir_entry* CreatePerProcessProcEntrySeq (
     }
 
     return CreateProcEntryInDirSeq(psPerProc->psProcDir, name, data, next_handler,
-				   show_handler,off2element_handler,startstop_handler,whandler, NULL);
+				   show_handler,off2element_handler,startstop_handler,
+#if LINUX_VERSION_CODE >= PATCH_SEQ_HANDLERS
+                                   whandler, NULL);
+#else
+                                   whandler);
+#endif
 }
 
 
-IMG_VOID RemoveProcEntrySeq(struct proc_dir_entry* proc_entry, const char *name,
-			    PVR_PROC_SEQ_HANDLERS *handlers)
+#if LINUX_VERSION_CODE >= PATCH_SEQ_HANDLERS
+IMG_VOID RemoveProcEntrySeq( struct proc_dir_entry* proc_entry, 
+                                                    const char *name,
+						    PVR_PROC_SEQ_HANDLERS *handlers )
+#else
+IMG_VOID RemoveProcEntrySeq( struct proc_dir_entry* proc_entry )
+#endif
 {
     if (dir)
     {
-        PVR_DPF((PVR_DBG_MESSAGE, "Removing /proc/%s/%s", PVRProcDirRoot, name));
+#if LINUX_VERSION_CODE >= PATCH_SEQ_HANDLERS
+		PVR_DPF((PVR_DBG_MESSAGE, "Removing /proc/%s/%s", PVRProcDirRoot, name));
 
-        remove_proc_entry(name, dir);
-	kfree(handlers);
+		remove_proc_entry(name, dir);
+		kfree(handlers);
+#else
+		void* data = proc_entry->data ;
+		PVR_DPF((PVR_DBG_MESSAGE, "Removing /proc/%s/%s", PVRProcDirRoot, proc_entry->name));
+		
+		remove_proc_entry(proc_entry->name, dir);
+		if( data )
+			kfree( data );
+#endif
     }
 }
 
@@ -703,11 +807,24 @@ IMG_VOID RemovePerProcessProcEntrySeq(struct proc_dir_entry* proc_entry)
         }
     }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,9,0)
     WARN_ON_ONCE(psPerProc->psProcDir != NULL);
+#else
+    if (psPerProc->psProcDir)
+    {
+		void* data = proc_entry->data ;
+        PVR_DPF((PVR_DBG_MESSAGE, "Removing proc entry %s from %s", proc_entry->name, psPerProc->psProcDir->name));
+
+        remove_proc_entry(proc_entry->name, psPerProc->psProcDir);
+		if(data)
+			kfree( data );
+    }
+#endif
 }
 
 #endif
 
+#if LINUX_VERSION_CODE >= PATCH_SEQ_HANDLERS
 static int pvr_read_proc(struct seq_file *m, void *v)
 {
     pvr_read_proc_t *pprn = (pvr_read_proc_t *)m->private;
@@ -715,6 +832,30 @@ static int pvr_read_proc(struct seq_file *m, void *v)
     pprn (m, v);
 
     return 0;
+#else
+static IMG_INT pvr_read_proc(IMG_CHAR *page, IMG_CHAR **start, off_t off,
+                         IMG_INT count, IMG_INT *eof, IMG_VOID *data)
+{
+    pvr_read_proc_t *pprn = (pvr_read_proc_t *)data;
+
+    off_t len = pprn (page, (size_t)count, off);
+
+    if (len == END_OF_FILE)
+    {
+        len  = 0;
+        *eof = 1;
+    }
+    else if (!len)
+    {
+        *start = (IMG_CHAR *) 0;
+    }
+    else
+    {
+        *start = (IMG_CHAR *) 1;
+    }
+
+    return len;
+#endif
 }
 
 
@@ -763,12 +904,22 @@ static IMG_INT CreateProcEntryInDir(struct proc_dir_entry *pdir, const IMG_CHAR 
 	mode |= S_IWUSR;
     }
 
+#if LINUX_VERSION_CODE >= PATCH_PROC_CREATE_DATA
     file = proc_create_data(name, mode, pdir, &pvr_proc_operations, data);
+#else
+    file = create_proc_entry(name, mode, pdir);
+#endif
 
     if (file)
     {
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,30))
         file->owner = THIS_MODULE;
+#endif
+#if LINUX_VERSION_CODE >= PATCH_PROC_CREATE_DATA
+#else
+		file->read_proc = rhandler;
+		file->write_proc = whandler;
+		file->data = data;
 #endif
 
 		PVR_DPF((PVR_DBG_MESSAGE, "Created proc entry %s in %s", name, pdir->name));
@@ -880,15 +1031,18 @@ IMG_INT CreatePerProcessProcEntry(const IMG_CHAR * name, read_proc_t rhandler, w
     return CreateProcEntryInDir(psPerProc->psProcDir, name, rhandler, whandler, data);
 }
 
+#if LINUX_VERSION_CODE >= PATCH_SEQ_HANDLERS
 static int pvr_read_proc_open(struct inode *inode, struct file *file)
 {
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0))
+#if LINUX_VERSION_CODE >= PATCH_PDE_DATA
 	return single_open(file, pvr_read_proc, PDE_DATA(inode));
 #else
 	return single_open(file, pvr_read_proc, PDE(file->f_path.dentry->d_inode)->data);
 #endif
 }
+#endif
 
+#if LINUX_VERSION_CODE >= PATCH_PROC_CREATE_DATA
 static struct file_operations pvr_read_proc_operations =
 {
 	.open		= pvr_read_proc_open,
@@ -896,6 +1050,7 @@ static struct file_operations pvr_read_proc_operations =
 	.llseek		= seq_lseek,
 	.release	= seq_release,
 };
+#endif
 
 /*!
 ******************************************************************************
@@ -927,7 +1082,11 @@ IMG_INT CreateProcReadEntry(const IMG_CHAR * name, pvr_read_proc_t handler)
         return -ENOMEM;
     }
 
+#if LINUX_VERSION_CODE >= PATCH_PROC_CREATE_DATA
     file = proc_create_data(name, S_IFREG | S_IRUGO, dir, &pvr_read_proc_operations, (IMG_VOID *)handler);
+#else
+    file = create_proc_read_entry (name, S_IFREG | S_IRUGO, dir, pvr_read_proc, (IMG_VOID *)handler);
+#endif
 
     if (file)
     {
@@ -972,15 +1131,21 @@ IMG_INT CreateProcEntries(IMG_VOID)
     }
 
 #ifdef PVR_PROC_USE_SEQ_FILE
-    g_pProcQueue = CreateProcReadEntrySeq("queue", NULL, NULL, ProcSeqShowQueue, ProcSeqOff2ElementQueue, NULL, &g_pProcQueueHandlers);
-    g_pProcVersion = CreateProcReadEntrySeq("version", NULL, NULL, ProcSeqShowVersion, ProcSeq1ElementHeaderOff2Element, NULL, &g_pProcVersionHandlers);
-    g_pProcSysNodes = CreateProcReadEntrySeq("nodes", NULL, NULL, ProcSeqShowSysNodes, ProcSeqOff2ElementSysNodes, NULL, &g_pProcSysNodesHandlers);
+#if LINUX_VERSION_CODE >= PATCH_SEQ_HANDLERS
+	g_pProcQueue = CreateProcReadEntrySeq("queue", NULL, NULL, ProcSeqShowQueue, ProcSeqOff2ElementQueue, NULL, &g_pProcQueueHandlers);
+	g_pProcVersion = CreateProcReadEntrySeq("version", NULL, NULL, ProcSeqShowVersion, ProcSeq1ElementHeaderOff2Element, NULL, &g_pProcQueueHandlers);
+	g_pProcSysNodes = CreateProcReadEntrySeq("nodes", NULL, NULL, ProcSeqShowSysNodes, ProcSeqOff2ElementSysNodes, NULL, &g_pProcQueueHandlers);
+#else
+	g_pProcQueue = CreateProcReadEntrySeq("queue", NULL, NULL, ProcSeqShowQueue, ProcSeqOff2ElementQueue, NULL);
+	g_pProcVersion = CreateProcReadEntrySeq("version", NULL, NULL, ProcSeqShowVersion, ProcSeq1ElementHeaderOff2Element, NULL);
+	g_pProcSysNodes = CreateProcReadEntrySeq("nodes", NULL, NULL, ProcSeqShowSysNodes, ProcSeqOff2ElementSysNodes, NULL);
+#endif
 
 	if(!g_pProcQueue || !g_pProcVersion || !g_pProcSysNodes)
 #else
-    if (CreateProcReadEntry("queue", QueuePrintQueues) ||
-		CreateProcReadEntry("version", procDumpVersion) ||
-		CreateProcReadEntry("nodes", procDumpSysNodes))
+    if (CreateProcReadEntry("queue", QueuePrintQueues)  ||
+	CreateProcReadEntry("version", procDumpVersion) ||
+	CreateProcReadEntry("nodes", procDumpSysNodes))
 #endif
     {
         PVR_DPF((PVR_DBG_ERROR, "CreateProcEntries: couldn't make /proc/%s files", PVRProcDirRoot));
@@ -1107,7 +1272,20 @@ IMG_VOID RemovePerProcessProcEntry(const IMG_CHAR *name)
 *****************************************************************************/
 IMG_VOID RemovePerProcessProcDir(PVRSRV_ENV_PER_PROCESS_DATA *psPerProc)
 {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,9,0)
 	WARN_ON_ONCE(psPerProc->psProcDir != NULL);
+#else
+    if (psPerProc->psProcDir)
+    {
+        while (psPerProc->psProcDir->subdir)
+        {
+            PVR_DPF((PVR_DBG_WARNING, "Belatedly removing /proc/%s/%s/%s", PVRProcDirRoot, psPerProc->psProcDir->name, psPerProc->psProcDir->subdir->name));
+
+            RemoveProcEntry(psPerProc->psProcDir->subdir->name);
+        }
+        RemoveProcEntry(psPerProc->psProcDir->name);
+    }
+#endif
 }
 
 /*!
@@ -1146,13 +1324,29 @@ IMG_VOID RemoveProcEntries(IMG_VOID)
 #endif
 
 #ifdef PVR_PROC_USE_SEQ_FILE
+#if LINUX_VERSION_CODE >= PATCH_SEQ_HANDLERS
     RemoveProcEntrySeq(g_pProcQueue, "queue", g_pProcQueueHandlers);
     RemoveProcEntrySeq(g_pProcVersion, "version", g_pProcVersionHandlers);
     RemoveProcEntrySeq(g_pProcSysNodes, "nodes", g_pProcSysNodesHandlers);
 #else
+    RemoveProcEntrySeq(g_pProcQueue);
+    RemoveProcEntrySeq(g_pProcVersion);
+    RemoveProcEntrySeq(g_pProcSysNodes);
+#endif
+#else
     RemoveProcEntry("queue");
     RemoveProcEntry("version");
     RemoveProcEntry("nodes");
+#endif
+
+#if LINUX_VERSION_CODE >= PATCH_SEQ_HANDLERS
+#else
+    while (dir->subdir)
+    {
+	PVR_DPF((PVR_DBG_WARNING, "Belatedly removing /proc/%s/%s", PVRProcDirRoot, dir->subdir->name));
+
+	RemoveProcEntry(dir->subdir->name);
+    }
 #endif
 
     remove_proc_entry(PVRProcDirRoot, NULL);

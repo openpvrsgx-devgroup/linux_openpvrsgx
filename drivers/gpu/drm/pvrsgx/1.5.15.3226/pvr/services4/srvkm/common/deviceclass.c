@@ -108,7 +108,7 @@ typedef struct PVRSRV_DC_SWAPCHAIN_TAG
 typedef struct PVRSRV_DC_SWAPCHAIN_REF_TAG
 {
 	struct PVRSRV_DC_SWAPCHAIN_TAG		*psSwapChain;
-	IMG_HANDLE							hResItem;	
+	IMG_HANDLE							hResItem;
 } PVRSRV_DC_SWAPCHAIN_REF;
 
 

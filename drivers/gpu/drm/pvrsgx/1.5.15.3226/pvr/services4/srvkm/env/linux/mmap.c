@@ -724,9 +724,9 @@ PVRMMap(struct file* pFile, struct vm_area_struct* ps_vma)
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,0)
         return drm_legacy_mmap(pFile, ps_vma);
-#else
+#else  /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,0) */
         return drm_mmap(pFile, ps_vma);
-#endif
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,0) */
 #else
         PVR_UNREFERENCED_PARAMETER(pFile);
 
@@ -734,9 +734,9 @@ PVRMMap(struct file* pFile, struct vm_area_struct* ps_vma)
         PVR_DPF((PVR_DBG_ERROR,
              "%s: Attempted to mmap unregistered area at vm_pgoff %ld",
              __FUNCTION__, ps_vma->vm_pgoff));
-#endif
+#endif /* END: FIXME: crash when call to print debug messages */
         iRetVal = -EINVAL;
-#endif
+#endif /* defined(SUPPORT_DRI_DRM)*/
         goto unlock_and_return;
     }
 
@@ -760,7 +760,7 @@ PVRMMap(struct file* pFile, struct vm_area_struct* ps_vma)
          __FUNCTION__, psOffsetStruct->psLinuxMemArea));
 #endif
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,0)
     ps_vma->vm_flags |= VM_DONTEXPAND | VM_DONTDUMP;
 #else
     ps_vma->vm_flags |= VM_RESERVED;
@@ -848,7 +848,7 @@ static void ProcSeqStartstopMMapRegistations(struct seq_file *sfile,IMG_BOOL sta
 static void* ProcSeqOff2ElementMMapRegistrations(struct seq_file *sfile, loff_t off)
 {
     LinuxMemArea *psLinuxMemArea;
-	if(!off) 
+	if(!off)
 	{
 		return PVR_PROC_SEQ_START_TOKEN;
 	}
@@ -861,7 +861,7 @@ static void* ProcSeqOff2ElementMMapRegistrations(struct seq_file *sfile, loff_t 
         {
 	    	off--;
 	    	if (off == 0)
-	    	{				
+	    	{
 				PVR_ASSERT(psOffsetStruct->psLinuxMemArea == psLinuxMemArea);
 				return (void*)psOffsetStruct;
 		    }
@@ -892,7 +892,7 @@ static void ProcSeqShowMMapRegistrations(struct seq_file *sfile,void* el)
 	IMG_UINT32 ui32RealByteSize;
 	IMG_UINT32 ui32ByteOffset;
 
-	if(el == PVR_PROC_SEQ_START_TOKEN) 
+	if(el == PVR_PROC_SEQ_START_TOKEN)
 	{
         seq_printf( sfile,
 #if !defined(DEBUG_LINUX_XML_PROC_FILES)
@@ -918,7 +918,7 @@ static void ProcSeqShowMMapRegistrations(struct seq_file *sfile,void* el)
 		return;
 	}
 
-   	psLinuxMemArea = psOffsetStruct->psLinuxMemArea;
+	psLinuxMemArea = psOffsetStruct->psLinuxMemArea;
 
 	DetermineUsersSizeAndByteOffset(psLinuxMemArea,
 									&ui32RealByteSize,
@@ -1339,7 +1339,7 @@ PVRMMapCleanup(IMG_VOID)
 	PVR_DPF((PVR_DBG_ERROR, "%s: Memory areas are still registered with MMap", __FUNCTION__));
 	
 	PVR_TRACE(("%s: Unregistering memory areas", __FUNCTION__));
- 	list_for_each_entry_safe(psLinuxMemArea, psTmpMemArea, &g_sMMapAreaList, sMMapItem)
+	list_for_each_entry_safe(psLinuxMemArea, psTmpMemArea, &g_sMMapAreaList, sMMapItem)
 	{
 		eError = PVRMMapRemoveRegisteredArea(psLinuxMemArea);
 		if (eError != PVRSRV_OK)

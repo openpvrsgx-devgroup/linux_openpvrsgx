@@ -39,24 +39,25 @@ echo "=============="
 echo volt: $(cat /sys/devices/madc-hwmon/hwmon/hwmon*/in9_input)mV
 
 echo
-echo "BQ27000 (if HDQ works)"
+echo "BQ27x00 (if HDQ/USB works)"
 echo "======================"
-echo present: $(cat /sys/class/power_supply/bq27000-battery/present 2>/dev/null)
-echo type: $(cat /sys/class/power_supply/bq27000-battery/type 2>/dev/null)
-echo technology: $(cat /sys/class/power_supply/bq27000-battery/technology 2>/dev/null)
-echo capacity: $(cat /sys/class/power_supply/bq27000-battery/capacity 2>/dev/null)%
-echo status: $(cat /sys/class/power_supply/bq27000-battery/status 2>/dev/null)
-echo level: $(cat /sys/class/power_supply/bq27000-battery/capacity_level 2>/dev/null)
-echo volt: $(cat /sys/class/power_supply/bq27000-battery/voltage_now 2>/dev/null)uV
-echo current: $(cat /sys/class/power_supply/bq27000-battery/current_now 2>/dev/null)uA
-echo temp: $(LC_ALL=C LANGUAGE=C perl -e "print $(cat /sys/class/power_supply/bq27000-battery/tempi 2>/dev/null)0 / 100")°C
-echo charge: $(cat /sys/class/power_supply/bq27000-battery/charge_now 2>/dev/null)uAh
-echo full: $(cat /sys/class/power_supply/bq27000-battery/charge_full 2>/dev/null)uAh
-echo design: $(cat /sys/class/power_supply/bq27000-battery/charge_full_design 2>/dev/null)uAh
-echo energy: "$(cat /sys/class/power_supply/bq27000-battery/energy 2>/dev/null)J?"
-echo power: "$(cat /sys/class/power_supply/bq27000-battery/power 2>/dev/null)W?"
-echo cycles: $(cat /sys/class/power_supply/bq27000-battery/cycle_count 2>/dev/null)
-echo health: $(cat /sys/class/power_supply/bq27000-battery/health 2>/dev/null)
-echo discharge: $(cat /sys/class/power_supply/bq27000-battery/time_to_empty_avg 2>/dev/null)s to empty
-echo remaining: $(cat /sys/class/power_supply/bq27000-battery/time_to_empty_now 2>/dev/null)s to "?"
-echo charging: $(cat /sys/class/power_supply/bq27000-battery/time_to_full_now 2>/dev/null)s to full
+BATT=/sys/class/power_supply/bq27?00-*	# "bq27200-battery" or "bq27500-0"
+echo present: $(cat $BATT/present 2>/dev/null)
+echo type: $(cat $BATT/type 2>/dev/null)
+echo technology: $(cat $BATT/technology 2>/dev/null)
+echo capacity: $(cat $BATT/capacity 2>/dev/null)%
+echo status: $(cat $BATT/status 2>/dev/null)
+echo level: $(cat $BATT/capacity_level 2>/dev/null)
+echo volt: $(cat $BATT/voltage_now 2>/dev/null)uV
+echo current: $(cat $BATT/current_now 2>/dev/null)uA
+echo temp: $(LC_ALL=C LANGUAGE=C perl -e "print $(cat $BATT/temp 2>/dev/null)0 / 100")°C
+echo charge: $(cat $BATT/charge_now 2>/dev/null)uAh
+echo full: $(cat $BATT/charge_full 2>/dev/null)uAh
+echo design: $(cat $BATT/charge_full_design 2>/dev/null)uAh
+echo energy: "$(cat $BATT/energy 2>/dev/null)J?"
+echo power: "$(cat $BATT/power 2>/dev/null)W?"
+echo cycles: $(cat $BATT/cycle_count 2>/dev/null)
+echo health: $(cat $BATT/health 2>/dev/null)
+echo discharge: $(cat $BATT/time_to_empty_avg 2>/dev/null)s to empty
+echo remaining: $(cat $BATT/time_to_empty_now 2>/dev/null)s to "?"
+echo charging: $(cat $BATT/time_to_full_now 2>/dev/null)s to full

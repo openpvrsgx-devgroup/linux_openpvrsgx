@@ -1,10 +1,11 @@
-SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,15,*f50,51*", SYMLINK="input/rumble"
-SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0*,3,*a0,1,*18,*", SYMLINK+="input/touchscreen"
-SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,3,*a0,1,2,*", SYMLINK+="input/accel"
-SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*a0,1,2,*", SYMLINK+="input/accel2"
-SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*k74,*", SYMLINK+="input/power"
-SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*kA9,*", SYMLINK+="input/aux"
-SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*kF0,*", SYMLINK+="input/incoming"
+SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,15,*f50,51*", SYMLINK="input/rumble"	# rumble/vibra force feedback
+SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0*,3,*a0,1,*18,*", SYMLINK+="input/touchscreen"	# touchscreen
+SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,3,*a0,1,2,*", SYMLINK+="input/accel"	# main accelerometer
+SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*a0,1,2,*", SYMLINK+="input/accel2"	# optional second
+SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*k74,*", SYMLINK+="input/power"	# twl4030/6030 power button
+SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*kA9,*", SYMLINK+="input/aux"		# user/aus button (if available)
+SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*kF0,*", SYMLINK+="input/incoming"	# 3G74G incoming call/message event
 SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*k110,*", SYMLINK+="input/keyboard"	# tca8418
 SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*k1D0,*", SYMLINK+="input/keyboard"	# twl4030
-SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0*,5,*w[24678D]*", SYMLINK+="input/jack"
+SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*k8B,*", SYMLINK+="input/keyboard2"	# gpio buttons (OpenPandora, Pyra)
+SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0*,5,*w[24678D]*", SYMLINK+="input/jack"	# headset jack plug/unplug

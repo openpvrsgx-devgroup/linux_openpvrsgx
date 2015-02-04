@@ -1,63 +1,87 @@
-### echo "USB and Power input"
-### echo "==================="
+TWL4030_MADC=/sys/devices/platform/68000000.ocp/48070000.i2c/i2c-0/0-0048/48070000.i2c:twl@48:madc/iio:device0
 
-echo "USB Charger"
-echo "============"
-echo online: $(cat /sys/class/power_supply/twl4030_usb/online 2>/dev/null)
-echo type: $(cat /sys/class/power_supply/twl4030_usb/type)
-echo status: $(cat /sys/class/power_supply/twl4030_usb/status 2>/dev/null)
-echo volt: $(cat /sys/class/power_supply/twl4030_usb/voltage_now 2>/dev/null)uV
-echo current: $(cat /sys/class/power_supply/twl4030_usb/current_now 2>/dev/null)uA
-echo ID: $(cat /dev/usb_id 2>/dev/null)
-echo max_current: $(cat /dev/usb_max_current 2>/dev/null)uA
+if [ -d $TWL4030_MADC ]
+then
 
-echo
-echo "AC Charger"
-echo "============"
-echo online: $(cat /sys/class/power_supply/twl4030_ac/online 2>/dev/null)
-echo type: $(cat /sys/class/power_supply/twl4030_ac/type 2>/dev/null)
-echo status: $(cat /sys/class/power_supply/twl4030_ac/status 2>/dev/null)
-echo volt: $(cat /sys/class/power_supply/twl4030_ac/voltage_now 2>/dev/null)uV
-echo current: $(cat /sys/class/power_supply/twl4030_ac/current_now 2>/dev/null)uA
-
-# see http://www.mjmwired.net/kernel/Documentation/hwmon/twl4030-madc-hwmon
-echo
+# see http://www.mjmwired.net/kernel/Documentation/hwmon/twl4030-madc-hwmon for a list of channels
 echo "Main Battery"
 echo "============"
-VOLT=$(cat /sys/devices/madc-hwmon/hwmon/hwmon*/in12_input)
+VOLT=$(cat $TWL4030_MADC/in_voltage12_input)
 echo volt: ${VOLT}mV ca. $(expr \( "$VOLT" - 3300 \) \* 100 / 950)%
-echo current: $(cat /sys/devices/madc-hwmon/hwmon/hwmon*/curr10_input)mA
-echo temp: $(cat /sys/devices/madc-hwmon/hwmon/hwmon*/temp1_input)°C
-echo type: $(cat /sys/devices/madc-hwmon/hwmon/hwmon*/in0_input)mV
-echo ADC7: $(cat /sys/devices/madc-hwmon/hwmon/hwmon*/in7_input)mV	# MICSENSE
-echo VBUS: $(cat /sys/devices/madc-hwmon/hwmon/hwmon*/in8_input)mV
-echo VCHG: $(cat /sys/devices/madc-hwmon/hwmon/hwmon*/in11_input)mV
-
+echo current: $(cat $TWL4030_MADC/in_current10_input)mA
+echo temp: $(cat $TWL4030_MADC/in_temp1_input)°C
+echo type: $(cat $TWL4030_MADC/in_voltage0_input)mV
+echo micsense: $(cat $TWL4030_MADC/in_voltage7_input)mV
+echo VBUS: $(cat $TWL4030_MADC/in_voltage8_input)mV
+echo VCHG: $(cat $TWL4030_MADC/in_voltage11_input)mV
 echo
 echo "Backup battery"
 echo "=============="
-echo volt: $(cat /sys/devices/madc-hwmon/hwmon/hwmon*/in9_input)mV
-
+echo volt: $(cat $TWL4030_MADC/in_voltage9_input)mV
 echo
-echo "BQ27x00 (if HDQ/USB works)"
+
+fi
+
+for SUPPLY in /sys/class/power_supply/*
+do
+
+case "$(cat $SUPPLY/type 2>/dev/null)" in
+
+USB )
+echo "Charger $SUPPLY"
+echo "============"
+echo type: $(cat /sys/class/power_supply/twl4030_usb/type)
+echo online: $(cat /sys/class/power_supply/twl4030_usb/online 2>/dev/null)
+echo status: $(cat /sys/class/power_supply/twl4030_usb/status 2>/dev/null)
+echo volt: $(cat /sys/class/power_supply/twl4030_usb/voltage_now 2>/dev/null)uV
+echo current: $(cat /sys/class/power_supply/twl4030_usb/current_now 2>/dev/null)uA
+echo max_current: $(cat /dev/usb_max_current 2>/dev/null)uA
+echo ID: $(cat /dev/usb_id 2>/dev/null)
+echo
+;;
+
+Mains )
+echo "AC Charger"
+echo "============"
+echo type: $(cat /sys/class/power_supply/twl4030_ac/type 2>/dev/null)
+echo online: $(cat /sys/class/power_supply/twl4030_ac/online 2>/dev/null)
+echo status: $(cat /sys/class/power_supply/twl4030_ac/status 2>/dev/null)
+echo volt: $(cat /sys/class/power_supply/twl4030_ac/voltage_now 2>/dev/null)uV
+echo current: $(cat /sys/class/power_supply/twl4030_ac/current_now 2>/dev/null)uA
+echo
+;;
+
+Battery )
+echo "Battery $SUPPLY"
 echo "======================"
-BATT=/sys/class/power_supply/bq27?00-*	# "bq27200-battery" or "bq27500-0"
-echo present: $(cat $BATT/present 2>/dev/null)
-echo type: $(cat $BATT/type 2>/dev/null)
-echo technology: $(cat $BATT/technology 2>/dev/null)
-echo capacity: $(cat $BATT/capacity 2>/dev/null)%
-echo status: $(cat $BATT/status 2>/dev/null)
-echo level: $(cat $BATT/capacity_level 2>/dev/null)
-echo volt: $(cat $BATT/voltage_now 2>/dev/null)uV
-echo current: $(cat $BATT/current_now 2>/dev/null)uA
-echo temp: $(LC_ALL=C LANGUAGE=C perl -e "print $(cat $BATT/temp 2>/dev/null)0 / 100")°C
-echo charge: $(cat $BATT/charge_now 2>/dev/null)uAh
-echo full: $(cat $BATT/charge_full 2>/dev/null)uAh
-echo design: $(cat $BATT/charge_full_design 2>/dev/null)uAh
-echo energy: "$(cat $BATT/energy 2>/dev/null)J?"
-echo power: "$(cat $BATT/power 2>/dev/null)W?"
-echo cycles: $(cat $BATT/cycle_count 2>/dev/null)
-echo health: $(cat $BATT/health 2>/dev/null)
-echo discharge: $(cat $BATT/time_to_empty_avg 2>/dev/null)s to empty
-echo remaining: $(cat $BATT/time_to_empty_now 2>/dev/null)s to "?"
-echo charging: $(cat $BATT/time_to_full_now 2>/dev/null)s to full
+echo type: $(cat $SUPPLY/type 2>/dev/null)
+echo present: $(cat $SUPPLY/present 2>/dev/null)
+echo technology: $(cat $SUPPLY/technology 2>/dev/null)
+echo capacity: $(cat $SUPPLY/capacity 2>/dev/null)%
+echo status: $(cat $SUPPLY/status 2>/dev/null)
+echo level: $(cat $SUPPLY/capacity_level 2>/dev/null)
+echo volt: $(cat $SUPPLY/voltage_now 2>/dev/null)uV
+echo current: $(cat $SUPPLY/current_now 2>/dev/null)uA
+echo temp: $(LC_ALL=C LANGUAGE=C perl -e "print $(cat $SUPPLY/temp 2>/dev/null)0 / 100")°C
+echo charge: $(cat $SUPPLY/charge_now 2>/dev/null)uAh
+echo full: $(cat $SUPPLY/charge_full 2>/dev/null)uAh
+echo design: $(cat $SUPPLY/charge_full_design 2>/dev/null)uAh
+echo energy: "$(cat $SUPPLY/energy 2>/dev/null)J?"
+echo power: "$(cat $SUPPLY/power 2>/dev/null)W?"
+echo cycles: $(cat $SUPPLY/cycle_count 2>/dev/null)
+echo health: $(cat $SUPPLY/health 2>/dev/null)
+echo discharge: $(cat $SUPPLY/time_to_empty_avg 2>/dev/null)s to empty average
+echo remaining: $(cat $SUPPLY/time_to_empty_now 2>/dev/null)s to empty
+echo charging: $(cat $SUPPLY/time_to_full_now 2>/dev/null)s to full
+echo
+;;
+
+* )
+echo "Unknown $SUPPLY"
+echo "======================"
+echo type: $(cat $SUPPLY/type 2>/dev/null)
+echo
+;;
+
+esac
+done

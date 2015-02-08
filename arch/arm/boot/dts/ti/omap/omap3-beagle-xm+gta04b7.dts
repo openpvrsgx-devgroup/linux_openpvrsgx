@@ -13,4 +13,9 @@
 	/* overwrite device model */
 	model = "BeagleBoard XM / GTA04 b7 / Neo900 Prototype";
 
+	memory {
+		device_type = "memory";
+                reg = <0x80000000 0x40000000>; /* 1 GB */
+	};
+
 };

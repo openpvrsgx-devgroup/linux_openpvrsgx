@@ -81,6 +81,8 @@ ifneq ($(filter jacinto6evm omap5uevm,$(TARGET_PRODUCT)),)
  VS_PRODUCT_VERSION			:= 5
 endif
 
+PVR_NO_OMAP_TIMER := 1
+
 PVR_SYSTEM		:= omap
 
 KERNEL_COMPONENTS := srvkm bufferclass_example

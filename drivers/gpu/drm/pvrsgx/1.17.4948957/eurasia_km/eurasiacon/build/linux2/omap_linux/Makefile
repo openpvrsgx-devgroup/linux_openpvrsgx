@@ -74,6 +74,7 @@ ifneq ($(filter jacinto6evm omap5uevm,$(TARGET_PRODUCT)),)
  SGX_FEATURE_MP				:= 1
  SGX_FEATURE_SYSTEM_CACHE		:= 1
  SGX_FEATURE_MP_CORE_COUNT		:= 2
+ SYS_OMAP_HAS_DVFS_FRAMEWORK		:= 1
 
  SYS_OMAP5_UEVM				:= 1
 

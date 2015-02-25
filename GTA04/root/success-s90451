@@ -11,10 +11,13 @@ then
 fi
 
 # make sure the panel is active before trying to send commands
+echo nopower >dcs	# enable is unused
+sleep .2
 echo start >dcs
 sleep .1
 echo noreset >dcs
 sleep .1
+echo nostream >dcs
 
 # write a no-op because starting with read gives a VC BTA error
 echo 00 >dcs

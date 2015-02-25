@@ -10,6 +10,15 @@ then
 	ln -s /sys/devices/44000000.ocp/58000000.dss/58004000.encoder/58004000.encoder:lcd/reg reg
 fi
 
+# make sure the panel is active before trying to send commands
+echo nopower >dcs	# enable is unused
+sleep .2
+echo start >dcs
+sleep .1
+echo noreset >dcs
+sleep .1
+echo nostream >dcs
+
 # show some DCS status
 echo status >dcs
 

@@ -10,9 +10,13 @@ then
 	ln -s /sys/devices/platform/44000000.ocp/58000000.dss/58004000.encoder/58004000.encoder:lcd/dcs dcs
 fi
 
-# make sure the panel is active before trying to send commands
-echo nopower >dcs	# enable is unused
+# turn off programming power!
+echo nopower >dcs
 sleep .2
+echo nopower >dcs
+sleep .2
+
+# make sure the panel is active before trying to send commands
 echo start >dcs
 sleep .1
 echo noreset >dcs
@@ -235,7 +239,51 @@ sleep 0.020
 echo 29 >dcs
 
 # randomly fill framebuffer
-while true
-do
 cat /dev/urandom > /dev/fb0 2>/dev/null
-done
+
+read -p "Panel ok (y/n)? " yn
+if [ "$yn" != "y" ]
+then exit
+fi
+
+# prepare for programming
+echo nostream >dcs
+
+echo 28 >dcs
+echo 10 >dcs
+sleep 0.080
+
+# enable command2 and address shift
+echo gff128301 >dcs # write FF00h
+# use address shift to specify lower 8 address bits
+echo g0080 >dcs # write address shift register
+# enable orise command 2
+echo gff1283 >dcs # write FF80h
+
+# try to read MIPISET1 for debugging of interface
+echo g0080 >dcs
+echo gb0rrrrr >dcs # read 5 bytes from B080h
+
+# do the programming
+echo power >dcs # >enable 7.5V
+echo g0000 >dcs             # NVMIN
+echo geb01 >dcs             # NVMIN
+sleep 0.850	# programming impulse
+echo g0000 >dcs             # NVMIN
+echo geb00 >dcs             # NVMIN
+echo nopower >dcs # turn off 7.5V
+sleep 0.2
+echo reset >dcs	# hardware reset
+sleep 0.1
+echo noreset >dcs
+sleep 0.5	# wait for panel to initialize
+
+# inspect result (panel should now run fine without initial sequence)
+
+echo 11 >dcs
+sleep 0.120
+
+# enable stream and turn display on
+echo stream >dcs
+sleep 0.020
+echo 29 >dcs

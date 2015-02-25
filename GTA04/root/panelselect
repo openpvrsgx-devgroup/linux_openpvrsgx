@@ -16,11 +16,15 @@ do
 echo
 echo "current panel: $(cat /proc/device-tree/ocp/dss@58000000/encoder@58004000/lcd/compatible)"
 
+# make a "backup" for the -n option
+
 case "$(cat /proc/device-tree/ocp/dss@58000000/encoder@58004000/lcd/compatible)" in
-	omapdss,none )
+	omapdss,none | omapdss,mipi,debug )
 		cp /boot/omap5-pyra.dtb /boot/omap5-pyra-none.dtb
 		;;
 esac
+
+[ -r /boot/omap5-pyra-none.dtb ] || cp /boot/omap5-pyra.dtb /boot/omap5-pyra-none.dtb
 
 echo
 echo "1) LG Full-HD Panel with HD adapter"

@@ -63,12 +63,17 @@ amixer set 'TX1 Digital' 12
 amixer set 'Analog Left AUXL' nocap
 amixer set 'Analog Right AUXR' nocap
 amixer set 'Analog Left Main Mic' cap
-amixer set 'Analog Left Headset Mic' nocap
+amixer set 'Analog Left Headset Mic' cap
 if [ "$MODE" = "-hw" ]	# not available on GTA04A3 boards
 	then
 		amixer set 'AVADC Clock Priority' 'Voice high priority'
 		amixer set 'Voice route' 'Voice to twl4030'
+		amixer set 'DAC Voice Analog Downlink' unmute
+		amixer set 'DAC Voice Analog Downlink' 16
+		amixer set 'DAC Voice Digital Downlink' 44
 		amixer set 'Earpiece Mixer Voice' on
+		amixer set 'HeadsetL Mixer Voice' on
+		amixer set 'HeadsetR Mixer Voice' on
 fi
 
 (
@@ -76,6 +81,7 @@ if [ "$1" == "-" ]
 then
 	echo "AT+CHUP"; sleep 3
 else
+	#echo "AT+CPIN=XXXX"; sleep 1
 	echo "AT_ODO=0"; sleep 1
 	echo "AT_OPCMENABLE=1"; sleep 1
 	echo "AT_OPCMPROF=0"; sleep 1

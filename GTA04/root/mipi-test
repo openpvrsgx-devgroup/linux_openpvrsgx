@@ -1,0 +1,52 @@
+# generic startup for a MIPI panel directly connected to OMAP5
+# using the panel-mipi-debug driver
+# we are assuming no specific controller (i.e. use the default settings of the panel)
+
+if ! [ "$(cat /proc/device-tree/ocp/dss@58000000/encoder@58004000/lcd/compatible)" = "omapdss,mipi,debug" ]
+then
+	echo this script needs the mipi-debug driver!
+	echo use ./panelselect and choose the 'n' driver
+	exit 1
+fi
+
+./bl 1
+
+if [ ! -L dcs ]
+then
+	rm -rf dcs
+	ln -s /sys/devices/platform/44000000.ocp/58000000.dss/58004000.encoder/58004000.encoder:lcd/dcs dcs
+fi
+
+# make sure the panel is active before trying to send commands
+echo nostream >dcs	# if it was on before
+echo stop >dcs	# stop if it was already running
+echo nopower >dcs	# enable is unused
+echo reset >dcs	# reset panel
+# reset panel
+echo reset >dcs	# reset panel
+sleep .1
+echo noreset >dcs	# take panel out of reset before starting the clocks
+sleep .2
+echo start >dcs	# start MIPI interface
+sleep .2
+
+# ask some DCS status (shows up in dmesg)
+echo status >dcs
+
+### here we could program the panel ###
+
+# DCS sleep out
+echo 11 >dcs
+sleep 0.120
+
+echo stream >dcs
+
+# enable video stream and turn display on
+sleep 0.020
+echo 29 >dcs
+
+# randomly fill framebuffer
+for i in 1 2 3 4 5
+do
+cat /dev/urandom > /dev/fb0 2>/dev/null
+done

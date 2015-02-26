@@ -2,6 +2,13 @@
 # using the panel-mipi-debug driver
 # controller: NT35590
 
+if ! [ "$(cat /proc/device-tree/ocp/dss@58000000/encoder@58004000/lcd/compatible)" = "omapdss,mipi,debug" ]
+then
+	echo this script needs the mipi-debug driver!
+	echo use ./panelselect and choose the 'n' driver
+	exit 1
+fi
+
 ./bl 1
 
 if [ ! -L dcs ]
@@ -11,13 +18,20 @@ then
 fi
 
 # make sure the panel is active before trying to send commands
+echo nostream >dcs	# if it was on before
+echo stop >dcs	# stop if it was already running
 echo nopower >dcs	# enable is unused
+echo reset >dcs	# reset panel
+# reset panel
+echo reset >dcs	# reset panel
+sleep .1
+echo noreset >dcs	# take panel out of reset before starting the clocks
 sleep .2
-echo start >dcs
-sleep .1
-echo noreset >dcs
-sleep .1
-echo nostream >dcs
+echo start >dcs	# start MIPI interface
+sleep .2
+
+# show some DCS status
+echo status >dcs
 
 # write a no-op because starting with read gives a VC BTA error
 echo 00 >dcs

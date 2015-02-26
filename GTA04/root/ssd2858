@@ -1,6 +1,13 @@
 # Solomon SSD2858 chip with input stream from OMAP5 and panel chained to the output
 # using the panel-mipi-debug driver
 
+if ! [ "$(cat /proc/device-tree/ocp/dss@58000000/encoder@58004000/lcd/compatible)" = "omapdss,mipi,debug" ]
+then
+	echo this script needs the mipi-debug driver!
+	echo use ./panelselect and choose the 'n' driver
+	exit 1
+fi
+
 ./bl 1
 
 if [ ! -L dcs ]
@@ -11,13 +18,17 @@ then
 fi
 
 # make sure the panel is active before trying to send commands
+echo nostream >dcs	# if it was on before
+echo stop >dcs	# stop if it was already running
 echo nopower >dcs	# enable is unused
+echo reset >dcs	# reset panel
+# reset panel
+echo reset >dcs	# reset panel
+sleep .1
+echo noreset >dcs	# take panel out of reset before starting the clocks
 sleep .2
-echo start >dcs
-sleep .1
-echo noreset >dcs
-sleep .1
-echo nostream >dcs
+echo start >dcs	# start MIPI interface
+sleep .2
 
 # show some DCS status
 echo status >dcs
@@ -35,12 +46,12 @@ for i in 4 8 c 10 14 1c 20 24 28 2c 30 ; do echo $i r >reg; done
 # 5000   GPIO
 # 6000   MIPITX
 # enable video bypass
-echo 0014 0C7f800F >reg
-echo 200C 00000004 >reg
+echo g0014 0C7f800F >reg
+echo g200C 00000004 >reg
 # choose 4-lane mode TX
-echo 6008 r >reg
-echo 6008 00C40008 >reg
-echo 6008 r >reg
+echo g6008 r >reg
+echo g6008 00C40008 >reg
+echo g6008 r >reg
 
 # program panel
 

@@ -2,6 +2,13 @@
 # using the panel-mipi-debug driver
 # controller: OTM1283A
 
+if ! [ "$(cat /proc/device-tree/ocp/dss@58000000/encoder@58004000/lcd/compatible)" = "omapdss,mipi,debug" ]
+then
+	echo this script needs the mipi-debug driver!
+	echo use panelselect to choose the '-n' driver
+	exit 1
+fi
+
 ./bl 1
 
 if [ ! -L dcs ]
@@ -11,13 +18,17 @@ then
 fi
 
 # make sure the panel is active before trying to send commands
+echo nostream >dcs	# if it was on before
+echo stop >dcs	# stop if it was already running
 echo nopower >dcs	# enable is unused
+echo reset >dcs	# reset panel
+# reset panel
+echo reset >dcs	# reset panel
+sleep .1
+echo noreset >dcs	# take panel out of reset before starting the clocks
 sleep .2
-echo start >dcs
-sleep .1
-echo noreset >dcs
-sleep .1
-echo nostream >dcs
+echo start >dcs	# start MIPI interface
+sleep .2
 
 # show some DCS status
 echo status >dcs
@@ -29,6 +40,7 @@ if true
 then
 
 # enable command2 and address shift
+echo g0000 >dcs # write address shift register
 echo gff128301 >dcs # write FF00h
 # use address shift to specify lower 8 address bits
 echo g0080 >dcs # write address shift register
@@ -38,6 +50,7 @@ echo gff1283 >dcs # write FF80h
 # try to read MIPISET1 for debugging of interface
 echo g0080 >dcs
 echo gb0rrrrr >dcs # read 5 bytes from B080h
+# expected: 00 01 00 30 04
 
 ## now really program the panel according to manufacturer's command list
 
@@ -235,7 +248,7 @@ sleep 0.020
 echo 29 >dcs
 
 # randomly fill framebuffer
-while true
+for i in 1 2 3 4 5
 do
 cat /dev/urandom > /dev/fb0 2>/dev/null
 done

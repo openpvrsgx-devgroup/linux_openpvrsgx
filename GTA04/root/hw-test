@@ -206,7 +206,7 @@ read VAL < <(host www.goldelico.com | fgrep 'goldelico.com has address ' | sed "
 [ "$VAL" = "83.151.26.121" ] && ok "$VAL" || nok "$VAL"
 
 testing "Vibra" "running rumble effect demo"
-vibra.py && ok || nok
+./vibra.py && ok || nok
 
 testing "Sound" "enabling sound"
 killall -9 arecord aplay 2>/dev/null # stop any running audio forwarding (or amixer commands will fail)
@@ -243,23 +243,14 @@ testing "TVout-off" "switching back to LCD"
 ./tvout 0 2>/dev/null && ok || nok
 
 testing "GTM601-USB" "check internal USB port"
-for repeat in 1 2 3 4 5
-	do
-	if lsusb | fgrep '0af0:8800 Option' >/dev/null
-		then # found
-		ok
-		break
-	fi
-	if [ -w /sys/devices/virtual/gpio/gpio186/value ]
-	then # wake up modem in GTA04A4
-		rfkill unblock wwan
-		echo 1 >/sys/devices/virtual/gpio/gpio186/value
-		sleep 1
-		echo 0 >/sys/devices/virtual/gpio/gpio186/value
-		sleep 5
-	fi
-	done
-nok
+rfkill unblock wwan
+sleep 5
+if lsusb | fgrep '0af0:8800 Option' >/dev/null
+then # found
+	ok
+else
+	nok
+fi
 
 testing "GTM601-Device" "find out application port"
 for i in $(cd /sys/class/tty/ && echo ttyHS*)

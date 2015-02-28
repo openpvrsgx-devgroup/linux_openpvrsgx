@@ -4,6 +4,9 @@
 # usage: dial [ -hw | -sw ] number
 # to hang up: dial -
 
+rfkill unblock wwan
+sleep 5
+
 make femtocom
 
 MODE="-sw"
@@ -81,7 +84,7 @@ if [ "$1" == "-" ]
 then
 	echo "AT+CHUP"; sleep 3
 else
-	#echo "AT+CPIN=XXXX"; sleep 1
+	#echo "AT+CPIN=XXXX"; sleep 1	# use the ./pin script to unlock the SIM card
 	echo "AT_ODO=0"; sleep 1
 	echo "AT_OPCMENABLE=1"; sleep 1
 	echo "AT_OPCMPROF=0"; sleep 1

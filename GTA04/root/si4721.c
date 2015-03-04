@@ -21,10 +21,13 @@
 #include <errno.h>
 #include <linux/i2c.h>
 #include <linux/i2c-dev.h>
+
 #define I2CADDR 0x11
 
 static char *bus="/dev/i2c-2";
+
 static int fd=-1;
+
 /* sends a command to the si4721 chip and gets a response */
 static int send_cmd(unsigned char *cmd_data,int cmd_len,unsigned char *resp_data, int resp_len)
 {
@@ -35,25 +38,6 @@ static int send_cmd(unsigned char *cmd_data,int cmd_len,unsigned char *resp_data
 			exit(1);
 		}
 	}
-#if 0
-	struct i2c_rdwr_ioctl_data iod;
-	struct i2c_msg msgs[2];
-	if (resp_data)
-		iod.nmsgs=2;
-	else
-		iod.nmsgs=1;
-	iod.msgs=msgs;
-	msgs[0].addr=I2CADDR;
-	msgs[0].flags=0;
-	msgs[0].buf=cmd_data;
-	msgs[0].len=cmd_len;
-	msgs[1].addr=I2CADDR;
-	msgs[1].flags=I2C_M_RD;
-	msgs[1].buf=resp_data;
-	msgs[1].len=resp_len;
-	if((resp_len=ioctl(fd,I2C_RDWR,&iod)) < 0)	// does this really return the response length?
-		fprintf(stderr, "I2C error: %s\n", strerror(errno));
-#else
 	if (ioctl(fd, I2C_SLAVE, I2CADDR) < 0) {
 		printf("Failed to acquire bus access and/or talk to slave: %s\n", strerror(errno));
 		return -1;
@@ -70,7 +54,6 @@ static int send_cmd(unsigned char *cmd_data,int cmd_len,unsigned char *resp_data
 	}
 	// here we should wait for the interrupt (1us impulse on GPO2/INT connected to CLKR/GPIO156)
 	usleep(100*1000);	/* give the MCU in the Si4721 some time to prepare for the next command */
-#endif
 	return resp_len;
 }
 

@@ -12,9 +12,8 @@ fi
 
 if [ ! -L dcs ]
 then
-	rm -rf dcs reg
+	rm -rf dcs
 	ln -s /sys/devices/44000000.ocp/58000000.dss/58004000.encoder/58004000.encoder:lcd/dcs dcs
-	ln -s /sys/devices/44000000.ocp/58000000.dss/58004000.encoder/58004000.encoder:lcd/reg reg
 fi
 
 # make sure the panel is active before trying to send commands
@@ -30,14 +29,16 @@ sleep .2
 echo start >dcs	# start MIPI interface
 sleep .2
 
-# show some DCS status
-echo status >dcs
+# show some DCS status (don't use echo status >dcs because it reads non-existent registers which makes the chip hang)
+for i in 0b 0c 45
+	do echo $i r >dcs
+done
 
 # DCS sleep out
 echo 11 >dcs
 
-# read SCM_CTRL and other registers
-for i in 4 8 c 10 14 1c 20 24 28 2c 30 ; do echo $i r >reg; done
+# now program the ssd chip
+
 # registers
 # 0000   SCM
 # 1000   MIPIRX
@@ -46,16 +47,20 @@ for i in 4 8 c 10 14 1c 20 24 28 2c 30 ; do echo $i r >reg; done
 # 5000   GPIO
 # 6000   MIPITX
 # enable video bypass
-echo g0014 0C7f800F >reg
-echo g200C 00000004 >reg
+echo g0014 rrrr >dcs
+echo g0014 0C7f800F >dcs
+echo g0014 rrrr >dcs
+echo g200C 00000004 >dcs
 # choose 4-lane mode TX
-echo g6008 r >reg
-echo g6008 00C40008 >reg
-echo g6008 r >reg
+echo g6008 rrrr >dcs
+echo g6008 00C40008 >dcs
+echo g6008 rrrr >dcs
 
 # program panel
 
 echo 29 >dcs
+
+echo gff01 >dcs	# enable forwarding through ssd
 
 # this tries to forward DCS commands to the panel
 # so that it is possible to inspect the waveforms
@@ -65,12 +70,14 @@ if false
 then
 	while true
 	do
-		echo p11 >dcs
-		echo p10 >dcs
+		echo 11 >dcs
+		echo 10 >dcs
 		sleep 0.1
 	done
 fi
 
-# echo pstatus >dcs
+# echo status >dcs
 # enable stream and turn display on
 # echo stream >dcs
+# echo 11 >dcs
+# echo 29 >dcs

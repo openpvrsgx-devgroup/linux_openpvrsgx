@@ -4,9 +4,9 @@
 # licenced under GPL
 #
 
-TESTER_VERSION="3.9"
-TESTER_RECOMMENDED_KERNEL="3.18"
-TESTER_DATE="24 Oct 2014"
+TESTER_VERSION="4.0"
+TESTER_RECOMMENDED_KERNEL="4.0"
+TESTER_DATE="28 Feb 2015"
 
 trap "killall hciattach arecord aplay 2>/dev/null" EXIT
 trap "exit 1" SIGHUP SIGINT SIGTERM
@@ -51,7 +51,7 @@ testing "Tests-Version"
 ok "$TESTER_VERSION"
 
 testing "Tests-Kernel"
-ok "$(uname -rv) - recommended: $TESTER_RECOMMENDED_KERNEL"
+ok "$(uname -rv) - recommended minimum: $TESTER_RECOMMENDED_KERNEL"
 
 testing "Tests-Rootfs"
 if fgrep -q 'root=/dev/mmcblk' /proc/cmdline
@@ -112,7 +112,7 @@ GMAX=$(expr 300 '*' 300)
 [ "$G" -le "$GMAX" -a "$G" -ge "$GMIN" ] && ok "$X, $Y, $Z" || nok "$X, $Y, $Z"
 
 testing "HMC5883L" "Compass values"
-COMPASS=$(findiio hmc5883l)
+COMPASS=$(findiio hmc5843)
 echo 15 >$COMPASS/in_magn_sampling_frequency 2>/dev/null
 sleep 1
 X=$(cat $COMPASS/in_magn_x_raw 2>/dev/null)
@@ -124,6 +124,19 @@ testing "TSC2007" "Touch screen values"
 read VAL < <(sed "s/,/ /g" /sys/bus/i2c/devices/1-0048/values 2>/dev/null)
 [ "$VAL" ] && ok "$VAL" || nok "$VAL"
 
+testing "CRTOUCH" "Touch screen values"
+read VAL < <(sed "s/,/ /g" /sys/bus/i2c/devices/1-0049/values 2>/dev/null)
+[ "$VAL" ] && ok "$VAL" || nok "$VAL"
+
+testing "Left Nub" "Exists"
+[ -r "/proc/pandora/nub0" ] && ok "$VAL" || nok "$VAL"
+
+testing "Right Nub" "Exists"
+[ -r "/proc/pandora/nub0" ] && ok "$VAL" || nok "$VAL"
+
+testing "Keyboard" "Exists"
+[ -r "/dev/input/keyboard" ] && ok "$VAL" || nok "$VAL"
+
 testing "OV9655" "Camera device found"
 [ -r /dev/v4l-subdev8 ] && ok || nok
 
@@ -133,7 +146,7 @@ testing "PVR/SGX" "GPU device found"
 testing "TPS61050" "Torch/Flash I2C response"
 [ -r /sys/bus/i2c/devices/1-0033 ] && ok || nok
 
-testing "M24LR64" "RFID-EEPROM found"
+testing "EEPROM" "EEPROM on I2C1 found"
 [ -r /sys/bus/i2c/devices/1-0050/eeprom ] && ok || nok
 
 testing "Si47xx" "FM TRX"
@@ -146,10 +159,12 @@ case "$VAL" in
 esac
 
 testing "TCA6507" "LED controller found"
-[ -d /sys/bus/i2c/devices/1-0045/leds ] && ok || nok
+[ -d /sys/bus/i2c/devices/1-0045/leds -o -d /sys/bus/i2c/devices/3-0045/leds ] && ok || nok
+
+MADC=$(findiio "48070000.i2c:twl@48:madc")
 
 testing "Batt-Volt" "main battery voltage"
-VOLT=$(cat /sys/devices/madc-hwmon.*/in12_input 2>/dev/null)
+VOLT=$(cat ${MADC}/in_voltage12_input 2>/dev/null)
 [ "${VOLT:=-1}" -ge 3100 -a "$VOLT" -le 4300 ] && ok "${VOLT} mV" || nok "${VOLT} mV"
 
 testing "Batt-Status" "main battery USB charging status"
@@ -157,19 +172,24 @@ STATUS=$(cat /sys/class/power_supply/twl4030_usb/status 2>/dev/null)
 [ "$STATUS" ] && ok "$STATUS" || nok "$STATUS"
 
 testing "Batt-Temp" "main battery temperature (may not be real value if there is no NTC - and if not charging)"
-TEMP=$(cat /sys/devices/madc-hwmon.*/temp1_input 2>/dev/null)
+TEMP=$(cat ${MADC}/in_temp1_input 2>/dev/null)
 [ "${TEMP:=-1}" -ge 20 -a "$TEMP" -le 60 ] && ok "${TEMP} °C" || nok "${TEMP} °C"
 
 testing "Batt-Type" "main battery identification"
-TYPE=$(cat /sys/devices/madc-hwmon.*/in0_input 2>/dev/null)
+TYPE=$(cat ${MADC}/in_voltage0_input 2>/dev/null)
 [ "${TYPE:=-1}" ] && ok "${TYPE} mV" || nok "${TYPE} mV"
 
 testing "Batt-Backup" "backup battery voltage"
-VOLT=$(cat /sys/devices/madc-hwmon.*/in9_input 2>/dev/null)
+VOLT=$(cat ${MADC}/in_voltage9_input 2>/dev/null)
 [ "${VOLT:=-1}" -ge 200 -a "$VOLT" -le 3250 ] && ok "${VOLT} mV" || nok "${VOLT} mV"
 
 testing "Batt-Volt-HDQ" "main battery voltage (hdq)"
 VOLT=$(cat /sys/class/power_supply/bq27000-battery/voltage_now 2>/dev/null)
+VOLT=$(expr "${VOLT:=0}" / 1000)
+[ "${VOLT:=-1}" -ge 3100 -a "$VOLT" -le 4300 ] && ok "${VOLT} mV" || nok "${VOLT} mV"
+
+testing "Batt-Volt-MADC" "main battery voltage (calibrated madc)"
+VOLT=$(cat /sys/class/power_supply/twl4030_battery/voltage_now 2>/dev/null)
 VOLT=$(expr "${VOLT:=0}" / 1000)
 [ "${VOLT:=-1}" -ge 3100 -a "$VOLT" -le 4300 ] && ok "${VOLT} mV" || nok "${VOLT} mV"
 

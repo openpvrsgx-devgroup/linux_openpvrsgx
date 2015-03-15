@@ -115,6 +115,8 @@ echo g6008 rrrr >dcs
 echo g6008 rrrr >dcs
 ;;
 
+esac
+
 # program panel
 
 echo 29 >dcs

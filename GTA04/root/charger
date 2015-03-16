@@ -30,11 +30,11 @@ case "$(cat $SUPPLY/type 2>/dev/null)" in
 USB )
 echo "Charger $SUPPLY"
 echo "============"
-echo type: $(cat /sys/class/power_supply/twl4030_usb/type)
-echo online: $(cat /sys/class/power_supply/twl4030_usb/online 2>/dev/null)
-echo status: $(cat /sys/class/power_supply/twl4030_usb/status 2>/dev/null)
-echo volt: $(cat /sys/class/power_supply/twl4030_usb/voltage_now 2>/dev/null)uV
-echo current: $(cat /sys/class/power_supply/twl4030_usb/current_now 2>/dev/null)uA
+echo type: $(cat $SUPPLY/type)
+echo online: $(cat $SUPPLY/online 2>/dev/null)
+echo status: $(cat $SUPPLY/status 2>/dev/null)
+echo volt: $(cat $SUPPLY/voltage_now 2>/dev/null)uV
+echo current: $(cat $SUPPLY/current_now 2>/dev/null)uA
 echo max_current: $(cat /dev/usb_max_current 2>/dev/null)uA
 echo ID: $(cat /dev/usb_id 2>/dev/null)
 echo
@@ -43,11 +43,11 @@ echo
 Mains )
 echo "AC Charger"
 echo "============"
-echo type: $(cat /sys/class/power_supply/twl4030_ac/type 2>/dev/null)
-echo online: $(cat /sys/class/power_supply/twl4030_ac/online 2>/dev/null)
-echo status: $(cat /sys/class/power_supply/twl4030_ac/status 2>/dev/null)
-echo volt: $(cat /sys/class/power_supply/twl4030_ac/voltage_now 2>/dev/null)uV
-echo current: $(cat /sys/class/power_supply/twl4030_ac/current_now 2>/dev/null)uA
+echo type: $(cat $SUPPLY/type 2>/dev/null)
+echo online: $(cat $SUPPLY/online 2>/dev/null)
+echo status: $(cat $SUPPLY/status 2>/dev/null)
+echo volt: $(cat /sys$SUPPLY/voltage_now 2>/dev/null)uV
+echo current: $(cat $SUPPLY/current_now 2>/dev/null)uA
 echo
 ;;
 

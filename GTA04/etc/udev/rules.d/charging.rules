@@ -19,6 +19,8 @@
 
 ACTION=="add", SUBSYSTEM=="platform", KERNEL=="*twl4030-usb", DRIVER=="twl4030_usb", RUN+="/bin/ln -s /sys%p/id /dev/usb_id"
 ACTION=="add", SUBSYSTEM=="power_supply", KERNEL=="twl4030_usb", ATTR{type}=="USB", RUN+="/bin/ln -s /sys%p/device/max_current /dev/usb_max_current"
+ACTION=="add", SUBSYSTEM=="power_supply", KERNEL=="bq24297", ATTR{type}=="USB", RUN+="/bin/ln -s /sys%p/device/id /dev/usb_id"
+ACTION=="add", SUBSYSTEM=="power_supply", KERNEL=="bq24297", ATTR{type}=="USB", RUN+="/bin/ln -s /sys%p/device/max_current /dev/usb_max_current"
 
 # default to 500 mA right after boot (independently what the ID pin says)
 ACTION=="add", SUBSYSTEM=="power_supply", KERNEL=="twl4030_usb", ATTR{type}=="USB", ATTR{device/max_current}="500000"

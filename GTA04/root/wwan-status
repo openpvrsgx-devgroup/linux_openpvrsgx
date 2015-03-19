@@ -9,6 +9,47 @@ sleep 5
 
 make femtocom
 
+case $(cat /proc/device-tree/model) in
+Neo900 | Pyra-Handheld ) # device with Cinterion
+	sleep 8
+	# lsusb | fgrep -q "ID 1e2d:0054" || {echo No Modem found; exit 1}
+	IF="/dev/ttyACM0"	# PHS8 in at^sdata=6 mode
+	if ! [ -r "$IF" ]
+	then # PHS8 might be in at^sdata=3 mode (NEVER SWITCH TO at^sdata=2 or you are in big trouble!)
+		modprobe usbserial
+		echo 1e2d 0053 >/sys/bus/usb-serial/drivers/generic/new_id
+		sleep 1
+		IF="/dev/ttyUSB3" # try alternate
+	fi
+
+	[ -r "$IF" ] || {echo Modem Application interface not found; exit 1}
+
+	echo Interface: $IF
+
+	(
+	# FIXME
+	echo "AT^SBV"; sleep 1
+	echo "AT^SDATA?"; sleep 1
+#echo "AT\$QCSIMSTAT?"; sleep 1
+	echo "AT+CGMI"; sleep 1
+	echo "AT+CGMM"; sleep 1
+	echo "AT+CGSN"; sleep 1
+	echo "AT+CIMI"; sleep 1
+	echo "AT+CPIN?"; sleep 1
+	echo "AT+CSQ"; sleep 1
+#echo "AT_OLCC=1"; sleep 1
+#echo "AT_OSQI=1"; sleep 1
+#echo "AT_OWANCALL?"; sleep 1
+#echo "AT_OWANDATA?"; sleep 1
+#echo "AT_OWANNWERROR?"; sleep 1
+	echo "AT^SMONI"; sleep 1	# serving cell
+	echo "AT^SMONP"; sleep 1	# neighbour cell
+	sleep 60
+	) | ./femtocom $IF
+	;;
+
+* ) # GTA04 with OPTION GTM601W
+	sleep 5
 for i in $(cd /sys/class/tty/ && echo ttyHS*)
 	do
 	if [ "$(cat /sys/class/tty/$i/hsotype)" == "Application" ]
@@ -38,3 +79,8 @@ echo "AT_OWANNWERROR?"; sleep 1
 echo "AT_ONCI?"; sleep 1
 sleep 60
 ) | ./femtocom $IF
+	;;
+esac
+
+
+exit

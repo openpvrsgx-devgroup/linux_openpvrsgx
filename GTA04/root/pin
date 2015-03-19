@@ -8,15 +8,28 @@ sleep 5
 
 make femtocom
 
-for i in $(cd /sys/class/tty/ && echo ttyHS*)
-	do
-	if [ "$(cat /sys/class/tty/$i/hsotype)" == "Application" ]
-		then
-		IF="/dev/$i"
-	fi
-done
+case $(cat /proc/device-tree/model) in
+	Neo900 | Pyra-Handheld ) # device with Cinterion
+		sleep 8
+		IF="/dev/ttyACM0"
 
-[ "$IF" ] || (echo HSO Application interface not found; exit 1)
+		[ -r "$IF" ] || (echo Modem Application interface not found; exit 1)
+
+		;;
+
+	* ) # GTA04 with OPTION GTM601W
+		sleep 5
+		for i in $(cd /sys/class/tty/ && echo ttyHS*)
+		do
+			if [ "$(cat /sys/class/tty/$i/hsotype)" == "Application" ]
+			then
+				IF="/dev/$i"
+			fi
+		done
+
+		[ "$IF" ] || (echo HSO Application interface not found; exit 1)
+		;;
+esac
 
 echo Interface: $IF
 

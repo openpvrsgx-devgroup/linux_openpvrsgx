@@ -3,6 +3,8 @@
 #
 # usage: dial [ -hw | -sw ] number
 # to hang up: dial -
+#
+# to unlock with pin, use the ./pin script
 
 rfkill unblock wwan
 sleep 5
@@ -18,21 +20,17 @@ case "$1" in
 		;;
 esac
 
-for repeat in 1 2 3 4 5
-	do
-	if lsusb | fgrep '0af0:8800 Option' >/dev/null
-		then # found
-		break
-	fi
-	if [ -w /sys/devices/virtual/gpio/gpio186/value ]
-	then # wake up modem in GTA04A4
-		echo 1 >/sys/devices/virtual/gpio/gpio186/value
-		sleep 1
-		echo 0 >/sys/devices/virtual/gpio/gpio186/value
-		sleep 5
-	fi
-	done
+case $(cat /proc/device-tree/model) in
+Neo900 | Pyra-Handheld ) # device with Cinterion
+	sleep 8
+	IF="/dev/ttyACM0"
 
+[ -r "$IF" ] || (echo Modem Application interface not found; exit 1)
+
+	;;
+
+* ) # GTA04 with OPTION GTM601W
+	sleep 5
 for i in $(cd /sys/class/tty/ && echo ttyHS*)
 	do
 	if [ "$(cat /sys/class/tty/$i/hsotype)" == "Application" ]
@@ -42,6 +40,8 @@ for i in $(cd /sys/class/tty/ && echo ttyHS*)
 done
 
 [ "$IF" ] || (echo HSO Application interface not found; exit 1)
+	;;
+esac
 
 echo Interface: $IF
 killall arecord

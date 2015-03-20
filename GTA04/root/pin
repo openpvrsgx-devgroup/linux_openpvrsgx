@@ -3,36 +3,18 @@
 #
 # usage: pin number
 
-rfkill unblock wwan
-sleep 5
+IF="$(/root/wwan-on)"
 
-make femtocom
-
-case $(cat /proc/device-tree/model) in
-	Neo900 | Pyra-Handheld ) # device with Cinterion
-		sleep 8
-		IF="/dev/ttyACM0"
-
-		[ -r "$IF" ] || (echo Modem Application interface not found; exit 1)
-
+case "$IF" in
+	"" )
+		echo Modem Application interface not found >&2
+		exit 1
 		;;
 
-	* ) # GTA04 with OPTION GTM601W
-		sleep 5
-		for i in $(cd /sys/class/tty/ && echo ttyHS*)
-		do
-			if [ "$(cat /sys/class/tty/$i/hsotype)" == "Application" ]
-			then
-				IF="/dev/$i"
-			fi
-		done
-
-		[ "$IF" ] || (echo HSO Application interface not found; exit 1)
+	* )
+		(
+		echo "AT+CPIN=$1"; sleep 3
+		) | ./femtocom $IF
 		;;
+
 esac
-
-echo Interface: $IF
-
-(
-	echo "AT+CPIN=$1"; sleep 3
-) | ./femtocom $IF

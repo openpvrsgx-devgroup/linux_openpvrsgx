@@ -6,97 +6,99 @@
 #
 # to unlock with pin, use the ./pin script
 
-rfkill unblock wwan
-sleep 5
+IF="$(/root/wwan-on)"
 
-make femtocom
-
-MODE="-sw"
-
-case "$1" in
-	-hw | -sw )
-		MODE="$1"
-		shift
+case "$IF" in
+	"" )
+		echo Modem Application interface not found >&2
+		exit 1
 		;;
-esac
 
-case $(cat /proc/device-tree/model) in
-Neo900 | Pyra-Handheld ) # device with Cinterion
-	sleep 8
-	IF="/dev/ttyACM0"
+	/dev/ttyHS* ) # GTA04 with OPTION GTM601W
+		killall arecord
+		trap "killall arecord aplay; (echo "AT+CHUP"; sleep 1) | ./femtocom $IF" EXIT
+		trap "exit 1" SIGHUP SIGINT SIGTERM
 
-[ -r "$IF" ] || (echo Modem Application interface not found; exit 1)
+		# enable phone mixer
+		amixer set 'Voice route' 'Voice to SoC'
+		amixer set 'AVADC Clock Priority' 'HiFi high priority'
+		amixer set 'DAC1 Analog' off
+		amixer set 'DAC2 Analog' on
+		#amixer set 'Codec Operation Mode' 'Option 1 (audio)'
+		amixer set 'Codec Operation Mode' 'Option 2 (voice/audio)'
+		amixer set 'Earpiece Mixer Voice' off
+		amixer set Earpiece 100%
+		amixer set 'Earpiece Mixer AudioL2' on
+		#amixer set 'Earpiece Mixer AudioR2' off # does not exist
+		amixer set 'Analog' 5
+		amixer set TX1 'Analog'
+		amixer set 'TX1 Digital' 12
+		amixer set 'Analog Left AUXL' nocap
+		amixer set 'Analog Right AUXR' nocap
+		amixer set 'Analog Left Main Mic' cap
+		amixer set 'Analog Left Headset Mic' cap
 
-	;;
-
-* ) # GTA04 with OPTION GTM601W
-	sleep 5
-for i in $(cd /sys/class/tty/ && echo ttyHS*)
-	do
-	if [ "$(cat /sys/class/tty/$i/hsotype)" == "Application" ]
+		if [ "$MODE" = "-hw" ]	# not available on GTA04A3 boards
 		then
-		IF="/dev/$i"
-	fi
-done
+			amixer set 'AVADC Clock Priority' 'Voice high priority'
+			amixer set 'Voice route' 'Voice to twl4030'
+			amixer set 'DAC Voice Analog Downlink' unmute
+			amixer set 'DAC Voice Analog Downlink' 16
+			amixer set 'DAC Voice Digital Downlink' 44
+			amixer set 'Earpiece Mixer Voice' on
+			amixer set 'HeadsetL Mixer Voice' on
+			amixer set 'HeadsetR Mixer Voice' on
+		fi
 
-[ "$IF" ] || (echo HSO Application interface not found; exit 1)
-	;;
+		(
+		if [ "$1" == "-" ]
+		then
+			echo "AT+CHUP"; sleep 3
+		else
+			#echo "AT+CPIN=XXXX"; sleep 1	# use the ./pin script to unlock the SIM card
+			echo "AT_ODO=0"; sleep 1
+			echo "AT_OPCMENABLE=1"; sleep 1
+			echo "AT_OPCMPROF=0"; sleep 1
+			echo "AT+COPS"; sleep 1
+			echo "ATD$1;"; sleep 1
+			if [ "$MODE" = "-sw" ]
+			then
+				arecord -fS16_LE -r8000 | aplay -Ddefault:CARD=gta04voice &	# microphone -> modem
+				arecord -Ddefault:CARD=gta04voice -fS16_LE -r8000 | aplay	# modem -> earpiece, speaker, headset
+			else
+				echo "please ctl-C to end the call"
+				sleep 9999	# we can't easily detect end of call by a shell script
+			fi
+		fi
+		) | ./femtocom $IF
+		;;
+
+	/dev/ttyACM0 | /dev/ttyUSB[0-4] )	# Neo900 / Pyra
+
+		# set up voice channel
+
+		(
+		if [ "$1" == "-" ]
+		then
+			echo "AT+CHUP"; sleep 3
+		else
+			#echo "AT+CPIN=XXXX"; sleep 1	# use the ./pin script to unlock the SIM card
+			echo "AT_ODO=0"; sleep 1
+			echo "AT_OPCMENABLE=1"; sleep 1
+			echo "AT_OPCMPROF=0"; sleep 1
+			echo "AT+COPS"; sleep 1
+			echo "ATD$1;"; sleep 1
+			if [ "$MODE" = "-sw" ]
+			then
+				arecord -fS16_LE -r8000 | aplay -Ddefault:CARD=gta04voice &	# microphone -> modem
+				arecord -Ddefault:CARD=gta04voice -fS16_LE -r8000 | aplay	# modem -> earpiece, speaker, headset
+			else
+				echo "please ctl-C to end the call"
+				sleep 9999	# we can't easily detect end of call by a shell script
+			fi
+		fi
+		) | ./femtocom $IF
+
 esac
 
-echo Interface: $IF
-killall arecord
-trap "killall arecord aplay; (echo "AT+CHUP"; sleep 1) | ./femtocom $IF" EXIT
-trap "exit 1" SIGHUP SIGINT SIGTERM
 
-
-# enable phone mixer
-amixer set 'Voice route' 'Voice to SoC'
-amixer set 'AVADC Clock Priority' 'HiFi high priority'
-amixer set 'DAC1 Analog' off
-amixer set 'DAC2 Analog' on
-#amixer set 'Codec Operation Mode' 'Option 1 (audio)'
-amixer set 'Codec Operation Mode' 'Option 2 (voice/audio)'
-amixer set 'Earpiece Mixer Voice' off
-amixer set Earpiece 100%
-amixer set 'Earpiece Mixer AudioL2' on
-#amixer set 'Earpiece Mixer AudioR2' off # does not exist
-amixer set 'Analog' 5
-amixer set TX1 'Analog'
-amixer set 'TX1 Digital' 12
-amixer set 'Analog Left AUXL' nocap
-amixer set 'Analog Right AUXR' nocap
-amixer set 'Analog Left Main Mic' cap
-amixer set 'Analog Left Headset Mic' cap
-if [ "$MODE" = "-hw" ]	# not available on GTA04A3 boards
-	then
-		amixer set 'AVADC Clock Priority' 'Voice high priority'
-		amixer set 'Voice route' 'Voice to twl4030'
-		amixer set 'DAC Voice Analog Downlink' unmute
-		amixer set 'DAC Voice Analog Downlink' 16
-		amixer set 'DAC Voice Digital Downlink' 44
-		amixer set 'Earpiece Mixer Voice' on
-		amixer set 'HeadsetL Mixer Voice' on
-		amixer set 'HeadsetR Mixer Voice' on
-fi
-
-(
-if [ "$1" == "-" ]
-then
-	echo "AT+CHUP"; sleep 3
-else
-	#echo "AT+CPIN=XXXX"; sleep 1	# use the ./pin script to unlock the SIM card
-	echo "AT_ODO=0"; sleep 1
-	echo "AT_OPCMENABLE=1"; sleep 1
-	echo "AT_OPCMPROF=0"; sleep 1
-	echo "AT+COPS"; sleep 1
-	echo "ATD$1;"; sleep 1
-	if [ "$MODE" = "-sw" ]
-	then
-		arecord -fS16_LE -r8000 | aplay -Ddefault:CARD=gta04voice &	# microphone -> modem
-		arecord -Ddefault:CARD=gta04voice -fS16_LE -r8000 | aplay	# modem -> earpiece, speaker, headset
-	else
-		echo "please ctl-C to end the call"
-		sleep 9999	# we can't easily detect end of call by a shell script
-	fi
-fi
-) | ./femtocom $IF

@@ -1,0 +1,64 @@
+#
+# start UMTS modem
+# and provde interface name
+# may block ~30 seconds if no modem can be found
+#
+# usage: wwan-on
+#
+
+rfkill unblock wwan
+
+make femtocom 2>/dev/null >&2
+
+case $(cat /proc/device-tree/model) in
+Neo900 | Pyra-Handheld ) # device with Cinterion Module
+	for wait in 1 2 3
+	do
+		if [ -r /dev/ttyACM0 ]
+		then
+			IF="/dev/ttyACM0"	# PHS8 in at^sdata=6 mode
+			break
+		fi
+		if [ -r /dev/ttyUSB3 ]
+		then
+			IF="/dev/ttyUSB3"	# PHS8 in at^sdata=3/4/5 mode
+			break
+		fi
+		sleep 8	# not yet running - try again
+		# lsusb | fgrep -q "ID 1e2d:0054" || { echo No Modem found >&2; exit 1; }
+		if [ "$wait" = 2 ]
+		then
+			# PHS8 might be in at^sdata=3/4/5 mode (NEVER SWITCH TO at^sdata=2 or you are in big trouble!)
+			modprobe usbserial
+			echo 1e2d 0053 >/sys/bus/usb-serial/drivers/generic/new_id
+			sleep 1
+		fi
+	done
+
+	;;
+
+* ) # GTA04 with OPTION GTM601W
+	for wait in 1 2 3
+	do
+		for i in $(cd /sys/class/tty/ && echo ttyHS* 2>/dev/null)
+			do
+			if [ "$(cat /sys/class/tty/$i/hsotype)" == "Application" ]
+				then
+				IF="/dev/$i"
+			fi
+		done
+		[ "$IF" ] && break;
+		sleep 5	# not yet running - try again
+		# lsusb | fgrep -q "ID 0af0:8800" || { echo No Modem found >&2; exit 1; }
+	done
+
+	;;
+esac
+
+if [ -r "$IF" ]
+then
+	echo $IF
+else
+	echo Modem Application interface not found >&2
+	exit 1
+fi

@@ -4,18 +4,22 @@
 # usage: tam
 #
 
-rfkill unblock wwan
+IF="$(/root/wwan-on)"
 
-make femtocom
+case "$IF" in
+	"" )
+		echo Modem Application interface not found >&2
+		exit 1
+		;;
 
-case $(cat /proc/device-tree/model) in
-Neo900 | Pyra-Handheld ) # device with Cinterion
-	sleep 8
-	IF="/dev/ttyACM0"
+	/dev/ttyHS* ) # GTA04 with OPTION GTM601W
+		;;
 
-[ -r "$IF" ] || (echo Modem Application interface not found; exit 1)
-
-echo Interface: $IF
+	/dev/ttyACM0 | /dev/ttyUSB[0-4] )	# Neo900 / Pyra
+		echo Not supported on this device >&2
+		exit 1
+		;;
+esac
 
 # make sure the PCM goes to the SoC
 amixer set 'Voice route' 'Voice to SoC'
@@ -26,7 +30,7 @@ mkfifo /tmp/femtocom
 ./femtocom $IF </tmp/femtocom |
 (
 echo "*** TAM starting ***"
-( # enable unsolicite messages and extended reporting
+( # enable unsolicited messages and extended reporting
 ### FIXME ###
 echo "AT+CPIN?"; sleep 1
 echo "AT_OPONI=1"; sleep 1
@@ -58,63 +62,5 @@ do
 done
 echo "*** TAM done ***"
 )
-	;;
-* ) # GTA04 with OPTION GTM601W
-	sleep 5
-for i in $(cd /sys/class/tty/ && echo ttyHS*)
-	do
-	if [ "$(cat /sys/class/tty/$i/hsotype)" == "Application" ]
-		then
-		IF="/dev/$i"
-	fi
-done
-
-[ "$IF" ] || (echo HSO Application interface not found; exit 1)
-
-echo Interface: $IF
-
-# make sure the PCM goes to the SoC
-amixer set 'Voice route' 'Voice to SoC'
-
-rm -rf /tmp/femtocom
-mkfifo /tmp/femtocom
-
-./femtocom $IF </tmp/femtocom |
-(
-echo "*** TAM starting ***"
-( # enable unsolicite messages and extended reporting
-echo "AT+CPIN?"; sleep 1
-echo "AT_OPONI=1"; sleep 1
-echo "AT_OSQI=1"; sleep 1
-echo "AT_OEANT=1"; sleep 1
-echo "AT_OCTI=1"; sleep 1
-echo "AT_OUWCTI=1"; sleep 1
-echo "AT_OUHCIP=1"; sleep 1
-echo "AT_OSSYS=1"; sleep 1
-echo "AT_OPATEMP=1"; sleep 1
-echo "AT+COPS"; sleep 1
-echo "AT+CRC=1"; sleep 1
-echo "AT+CLIP=1"; sleep 1
-) >/tmp/femtocom
-echo "*** TAM started ***"
-while read MSG ARGS
-do
-	[ "$MSG$ARGS" ] && echo $MSG $ARGS >&2
-	case "$MSG" in
-		++CLIP: )
-			# decode phone number from ARGS
-			echo "ATA" >/tmp/femtocom
-			# arecord -fS16_LE -r8000 | aplay -Ddefault:CARD=gta04voice &	# microphone -> modem
-			cat /usr/share/sounds/alsa/Front_Center.wav | aplay -Ddefault:CARD=gta04voice &	# file -> modem
-			# arecord -Ddefault:CARD=gta04voice -fS16_LE -r8000 | aplay	# modem -> earpiece, speaker, headset
-			arecord -Ddefault:CARD=gta04voice -fS16_LE -r8000 >/tmp/tam.wav	# modem -> earpiece, speaker, headset
-			;;
-	esac
-done
-echo "*** TAM done ***"
-)
-	;;
-esac
-
 
 exit

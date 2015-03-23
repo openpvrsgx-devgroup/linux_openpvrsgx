@@ -36,7 +36,7 @@ case "$IF" in
 		(
 		# FIXME
 		echo "AT^SBV"; sleep 1
-		echo "AT^SDATA?"; sleep 1
+		echo "AT^SDPORT?"; sleep 1
 #echo "AT\$QCSIMSTAT?"; sleep 1
 		echo "AT+CGMI"; sleep 1
 		echo "AT+CGMM"; sleep 1

@@ -79,7 +79,7 @@ echo 2b 000002cf >dcs
 echo g1008 01200445 >dcs	# MIPIRX_DCR (01200245): HST=4
 
 # VTCM
-echo g200c 00000302 >dcs
+echo g200c 00000302 >dcs	# VCTM_CFGR (00000000): SPLIT_MEM=1, ROT90=1, TE_SEL=1
 echo g2010 00040001 >dcs	# VCTM_PCFRR (00010001): PCLKDEN=4 PCLKNUM=1
 echo g2014 0366004c >dcs
 echo g2018 051e0010 >dcs
@@ -130,9 +130,13 @@ echo 11 >dcs
 # 5000   GPIO
 # 6000   MIPITX
 
+# fixme: can we use bash hex arithmetic to do the required calculations e.g. for clock dividers?
+# something like echo g0008 $(($POSTDIV<<8 | $MULT<<2))
+# but: $(()) expands to a decimal result
+
 # start with SCM
 echo g0008 01f4012a >dcs	# SCM_PLL (01F40132): default = POSTDIV=2 MULT=42 => 504 MHz
-echo g000c 00000001 >dcs	# SCM_CC (00000003): MTXDIV=1 (=> 504 MHz) SYSDIV=2 (=> 252 MHz)
+echo g000c 00000000 >dcs	# SCM_CC (00000003): MTXDIV=0 (:1 => 504 MHz) SYSDIV=0 (:1 => 252 MHz)
 echo g0014 0C3F800F >dcs	# SCM_MISC2: default + MRXEN = enabled + MRXVB
 echo g0024 00003000 >dcs	# SCM_ANACTRL2 (00003300): CPPER=24
 echo g0014 rrrr >dcs
@@ -141,11 +145,13 @@ echo g0020 rrrr >dcs
 # MIPIRX
 echo g1008 01200445 >dcs	# MIPIRX_DCR (01200245): HST=4
 
-# we must set VCTM for the pixel clock!
-echo g2010 00040001 >dcs	# VCTM_PCFRR (00010001): PCLKDEN=4 PCLKNUM=1
+# VCTM
+echo g200c 00000006 >dcs	# VCTM_CFGR (00000000): VBP=1, TE_SEL=1
+echo g2010 00a80033 >dcs	# VCTM_PCFRR (00010001): PCLKNUM=51 PCLKNUM=168 => 76.5 MHz
 
 # MIPITX
-echo g6008 00c90009 >dcs	# MIPITX_CTLR (00030008): LS_OUT=4 lanes; LPD=9; CKE
+# echo g6008 00c60009 >dcs	# MIPITX_CTLR (00030008): LS_OUT=4 lanes; LPD=6 (63:7 => 9 MHz); CKE
+echo g6008 00c90009 >dcs	# MIPITX_CTLR (00030008): LS_OUT=4 lanes; LPD=9 (76:9 => 8.4 MHz); CKE
 echo g600c 329e3c05 >dcs	# MIPITX_VTC1R (0214020A): HSA=5 VSA=60 HBP=158 VBP=50
 echo g6010 05003205 >dcs	# MIPITX_VTC2R (0438020A): HFP=5 VFP=50 VACT=1280
 echo g6014 01000102 >dcs	# MIPITX_VCFR (01000101): VM=burst mode

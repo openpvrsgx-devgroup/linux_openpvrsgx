@@ -1,3 +1,11 @@
 # SPDX-License-Identifier: GPL-2.0-only
 source "drivers/power/reset/Kconfig"
 source "drivers/power/supply/Kconfig"
+
+config POWER_ALPHA400
+	tristate "Alpha400 power controller support"
+	depends on I2C
+	help
+	  This adds support for the Skytone Alpha 400 and similars
+	  (like Letux 400). It provides battery status and system
+	  power off.

@@ -3,6 +3,7 @@
 # using the panel-mipi-debug driver
 #
 # -r:	program for rotation
+# -d:	dump registers
 # -l:	loop dcs commands 10h and 11h to check LP output to panel
 # -p:	program panel
 # -s:	enable stream to ssd and panel
@@ -161,6 +162,22 @@ echo g6010 rrrr >dcs
 ;;
 
 esac
+
+if [ "$1" = "-d" ]
+then
+for r in 0004 0008 000c 0010 0014 001c 0020 0024 0028 002c 0030 \
+         1004 1008 100c 1010 1014 1018 101c 1020 1024 1028 102c 1030 \
+         2000 2004 2008 200c 2010 2014 2018 201c 2020 2024 2028 202c 2030 2034 2038 203c \
+              2040 2044 2048 204c 2050 2054 2058 205c 2060 2064 2068 206c 2070 2074 2078 207c \
+              2080 2084 2088 208c 2090 2094 2098 209c 20a0 20a4 20a8 20ac 20b0 20b4 2ffc \
+         6000 6004 6008 600c 6010 6014 6018 6030 6034 6038 603c 6040 6044 6048 604c 6050 6054 \
+              6084 6088 608c 6090 6094 60a4 60a8 60ac 60b0 60b4
+do
+echo g$r rrrr >dcs
+echo $r: $(cat dcs)
+done
+shift
+fi
 
 if [ "$1" = "-l" ]
 then

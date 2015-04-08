@@ -50,7 +50,7 @@ setenv omapfbvram 0:8M,1:4M
 
 # compile boot args
 
-setenv bootargs "console=${console} ubi.mtd=${nand} root=${mmcroot} rootfstype=${mmcrootfstype}"
+setenv bootargs "console=${console} mtdoops.mtddev=omap2.nand ubi.mtd=${nand} root=${mmcroot} rootfstype=${mmcrootfstype}"
 
 # echo after: $bootargs
 # echo root: $mmcroot

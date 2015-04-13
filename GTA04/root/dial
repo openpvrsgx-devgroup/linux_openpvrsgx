@@ -76,8 +76,8 @@ case "$IF" in
 			echo "ATD$NUMBER;"; sleep 1
 			if [ "$MODE" = "-sw" ]
 			then
-				arecord -fS16_LE -r8000 | aplay -Ddefault:CARD=gta04voice &	# microphone -> modem
-				arecord -Ddefault:CARD=gta04voice -fS16_LE -r8000 | aplay	# modem -> earpiece, speaker, headset
+				arecord -fS16_LE -r8000 | aplay -Ddefault:CARD=voice &	# microphone -> modem
+				arecord -Ddefault:CARD=voice -fS16_LE -r8000 | aplay	# modem -> earpiece, speaker, headset
 			else
 				echo "please ctl-C to end the call"
 				sleep 9999	# we can't easily detect end of call by a shell script
@@ -88,7 +88,7 @@ case "$IF" in
 
 	/dev/ttyACM0 | /dev/ttyUSB[0-4] )	# Neo900 / Pyra
 
-		# set up voice channel
+		# set up voice channel by programming twl4030/6040
 
 		(
 		if [ "$NUMBER" == "-" ]
@@ -103,8 +103,8 @@ case "$IF" in
 			echo "ATD$NUMBER;"; sleep 1
 			if [ "$MODE" = "-sw" ]
 			then
-				arecord -fS16_LE -r8000 | aplay -Ddefault:CARD=gta04voice &	# microphone -> modem
-				arecord -Ddefault:CARD=gta04voice -fS16_LE -r8000 | aplay	# modem -> earpiece, speaker, headset
+				arecord -fS16_LE -r8000 | aplay -Ddefault:CARD=voice &	# microphone -> modem
+				arecord -Ddefault:CARD=voice -fS16_LE -r8000 | aplay	# modem -> earpiece, speaker, headset
 			else
 				echo "please ctl-C to end the call"
 				sleep 9999	# we can't easily detect end of call by a shell script

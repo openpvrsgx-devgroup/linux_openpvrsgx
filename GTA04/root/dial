@@ -8,6 +8,19 @@
 
 IF="$(/root/wwan-on)"
 
+MODE=-sw	# default
+
+while true
+do
+	case "$1" in
+		-hw ) MODE=-hw; shift;;
+		-sw ) MODE=-sw; shift;;
+		*) break;;
+	esac
+done
+
+NUMBER="$1"
+
 case "$IF" in
 	"" )
 		echo Modem Application interface not found >&2
@@ -51,7 +64,7 @@ case "$IF" in
 		fi
 
 		(
-		if [ "$1" == "-" ]
+		if [ "$NUMBER" == "-" ]
 		then
 			echo "AT+CHUP"; sleep 3
 		else
@@ -60,7 +73,7 @@ case "$IF" in
 			echo "AT_OPCMENABLE=1"; sleep 1
 			echo "AT_OPCMPROF=0"; sleep 1
 			echo "AT+COPS"; sleep 1
-			echo "ATD$1;"; sleep 1
+			echo "ATD$NUMBER;"; sleep 1
 			if [ "$MODE" = "-sw" ]
 			then
 				arecord -fS16_LE -r8000 | aplay -Ddefault:CARD=gta04voice &	# microphone -> modem
@@ -78,7 +91,7 @@ case "$IF" in
 		# set up voice channel
 
 		(
-		if [ "$1" == "-" ]
+		if [ "$NUMBER" == "-" ]
 		then
 			echo "AT+CHUP"; sleep 3
 		else
@@ -87,7 +100,7 @@ case "$IF" in
 			echo "AT_OPCMENABLE=1"; sleep 1
 			echo "AT_OPCMPROF=0"; sleep 1
 			echo "AT+COPS"; sleep 1
-			echo "ATD$1;"; sleep 1
+			echo "ATD$NUMBER;"; sleep 1
 			if [ "$MODE" = "-sw" ]
 			then
 				arecord -fS16_LE -r8000 | aplay -Ddefault:CARD=gta04voice &	# microphone -> modem

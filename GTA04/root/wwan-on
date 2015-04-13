@@ -42,7 +42,7 @@ Neo900 | Pyra-Handheld ) # device with Cinterion Module
 	do
 		for i in $(cd /sys/class/tty/ && echo ttyHS* 2>/dev/null)
 			do
-			if [ "$(cat /sys/class/tty/$i/hsotype)" == "Application" ]
+			if [ "$(cat /sys/class/tty/$i/hsotype 2>/dev/null)" == "Application" ]
 				then
 				IF="/dev/$i"
 			fi

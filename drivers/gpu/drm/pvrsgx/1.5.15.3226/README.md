@@ -62,7 +62,9 @@ version (mainline)  | status
 3.15                | works (Ubuntu Trusty using mainline kernel)
 3.16                | should work (builds against it, but not tested)
 3.17                | should work (builds against it, but not tested)
-3.18-rc             | should work (builds against it, but not tested)
+3.18                | should work (builds against it, but not tested)
+3.19                | works (Ubuntu Vivid using Ubuntu kernel)
+4.0                 | should work (builds against it, but not tested)
 
 Xserver requirements
 --------------------

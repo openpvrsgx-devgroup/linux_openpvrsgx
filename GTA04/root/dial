@@ -1,21 +1,37 @@
 #
 # dial a phone number
 #
-# usage: dial [ -hw | -sw ] number
+# usage: dial [ -hf ] [ -hs ] [ -hw | -sw ] number
+#   -hf:	enable handsfree
+#   -hs:	enable headset
+#   -hw:	use hardware voice routing (GTA04A4++ only)
+#   -sw:	use software routing (arecord | aplay) [default]
 # to hang up: dial -
 #
 # to unlock with pin, use the ./pin script
 
 IF="$(/root/wwan-on)"
 
-MODE=-sw	# default
+MODE="-sw"	# default
+HANDSFREE=false
+HEADSET=false
 
 while true
 do
 	case "$1" in
-		-hw ) MODE=-hw; shift;;
-		-sw ) MODE=-sw; shift;;
-		*) break;;
+		-hw | -sw )
+			MODE="$1"
+			shift
+			;;
+		-hf )	HANDSFREE=true
+			shift
+			;;
+		-hs )	HEADSET=true
+			shift
+			;;
+		* )
+			break
+			;;
 	esac
 done
 
@@ -41,7 +57,9 @@ case "$IF" in
 		amixer set 'Codec Operation Mode' 'Option 2 (voice/audio)'
 		amixer set 'Earpiece Mixer Voice' off
 		amixer set Earpiece 100%
+		amixer set 'Earpiece Mixer AudioL1' off
 		amixer set 'Earpiece Mixer AudioL2' on
+		amixer set 'Earpiece Mixer AudioR1' off
 		#amixer set 'Earpiece Mixer AudioR2' off # does not exist
 		amixer set 'Analog' 5
 		amixer set TX1 'Analog'
@@ -49,7 +67,27 @@ case "$IF" in
 		amixer set 'Analog Left AUXL' nocap
 		amixer set 'Analog Right AUXR' nocap
 		amixer set 'Analog Left Main Mic' cap
-		amixer set 'Analog Left Headset Mic' cap
+
+		if $HANDSFREE
+		then
+			amixer set 'HandsfreeL Mux' AudioL2
+			amixer set 'HandsfreeR Mux' AudioR2
+			amixer set HandsfreeL on
+			amixer set HandsfreeR on
+		else
+			amixer set HandsfreeL off
+			amixer set HandsfreeR off
+		fi
+
+		if $HEADSET
+		then
+			./tvout 0	# disable tvout
+			amixer set 'Analog Left Main Mic' nocap
+			amixer set 'Analog Left Headset Mic' cap
+		else
+			amixer set 'Analog Left Main Mic' cap
+			amixer set 'Analog Left Headset Mic' nocap
+		fi
 
 		if [ "$MODE" = "-hw" ]	# not available on GTA04A3 boards
 		then

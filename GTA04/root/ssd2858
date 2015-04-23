@@ -55,19 +55,12 @@ echo LPCLK: $LPCLK
 
 case "$1" in
 "-r" )
-	OMAP_WIDTH=1280
-	OMAP_HEIGHT=720
-	ROT90=1
-	shift
+	echo start x_res=1280 y_res=720 lpclock=$LPCLK >dcs	# start MIPI interface timing for rotation
 	;;
 * )
-	OMAP_WIDTH=1280
-	OMAP_HEIGHT=720
-	ROT90=0
+	echo start x_res=720 y_res=1280 lpclock=$LPCLK >dcs	# start MIPI interface timing for pass-through
 	;;
 esac
-
-echo start x_res=$OMAP_WIDTH y_res=$OMAP_HEIGHT lpclock=$LPCLK >dcs	# start MIPI interface timing
 
 sleep .1
 
@@ -99,17 +92,15 @@ echo g0030 rrrr >dcs
 # XTAL: 20 .. 30 MHz
 # PLL = XTAL * MULT: 1-1.5GHz
 # MAIN CLOCK = PLL / POSTDIV
-PLL=$((3 * 470000000))	# run a little faster than OMAP (460 MHz)
-echo target PLL: $PLL
+PLL=1008000000
+[ $PLL -ge 1000000000 -a $PLL -le 1500000000 ] || echo PLL frequency problem: $PLL
+echo PLL: $PLL
+POSTDIV=1 # means 2
+echo POSTDIV: $POSTDIV
+[ $POSTDIV -lt 64 ] || echo POSTDIV problem: $POSTDIV
 MULT=$(( $PLL / $XTAL ))
 echo MULT: $MULT
 [ $MULT -lt 128 ] || echo MULT problem: $MULT
-PLL=$(($XTAL * $MULT))	# real PLL frequency
-echo real PLL: $PLL
-[ $PLL -ge 1000000000 -a $PLL -le 1500000000 ] || echo PLL frequency problem: $PLL
-POSTDIV=2 # means 3
-echo POSTDIV: $POSTDIV
-[ $POSTDIV -lt 64 ] || echo POSTDIV problem: $POSTDIV
 MAIN_CLK=$(( $PLL / ($POSTDIV + 1) ))
 echo MAIN_CLK: $MAIN_CLK
 # LOCKCNT - at least 30us - this is the number of LPCLK (XTAL / 2); we add 40% safety margin
@@ -151,15 +142,21 @@ echo g0020 rrrr >dcs
 
 # some DCS
 echo 11 >dcs
-echo 2a $(printf "%08x" $(( $OMAP_WIDTH - 1 )) ) >dcs
-echo 2b $(printf "%08x" $(( $OMAP_HEIGHT - 1 )) ) >dcs
+echo 2a 000004ff >dcs
+echo 2b 000002cf >dcs
 
 # MIPIRX
 echo g1008 01200445 >dcs	# MIPIRX_DCR (01200245): HST=4
 
 # VCTM
 
-SPLIT_MEM=1 TE_SEL=1 VBP=0
+case "$1" in
+
+"-r" )
+
+# VTCM for rotation
+# echo g200c 00000302 >dcs	# VCTM_CFGR (00000000): SPLIT_MEM=1, ROT90=1, TE_SEL=1
+SPLIT_MEM=1 ROT90=1 TE_SEL=1 VBP=0
 echo g200c $(printf "%08x" $(( ($SPLIT_MEM << 9) | ($ROT90 << 8) | ($VBP << 2) | ($TE_SEL << 1) )) ) >dcs	# VCTM_CFGR (00000000)
 PCLKDEN=168
 [ $PCLKDEN -lt 256 ] || echo PCLKDEN problem: $PCLKDEN
@@ -170,18 +167,41 @@ echo PCLKNUM / PCLKDEN: $PCLKNUM / $PCLKDEN
 echo PCLK: $PCLK
 # echo g2010 00040001 >dcs	# VCTM_PCFRR (00010001): PCLKDEN=4 PCLKNUM=1
 echo g2010 $(printf "%08x" $(( ($PCLKDEN << 16) | ($PCLKNUM << 0) )) ) >dcs	# VCTM_PCFRR (00010001)
-echo g2014 $(printf "%08x" $(( ($PANEL_FRAME_WIDTH << 16) | 0x30 )) ) >dcs
-echo g2018 $(printf "%08x" $(( ($PANEL_FRAME_HEIGHT << 16) | 0x30 )) ) >dcs
-echo g201c $(printf "%08x" $(( ($OMAP_HEIGHT << 16) | $OMAP_WIDTH )) ) >dcs	# MSZR
-echo g2020 $(printf "%08x" $(( ($PANEL_HEIGHT << 16) | $PANEL_WIDTH )) ) >dcs		# DSZR
-echo g2024 $(printf "%08x" $(( ($PANEL_HEIGHT << 16) | $PANEL_WIDTH )) ) >dcs		# PSZR
-echo g203c $(printf "%08x" $(( ($PANEL_HEIGHT << 16) | $PANEL_WIDTH )) ) >dcs		# ISZR
+echo g2014 0366004c >dcs
+echo g2018 051e0010 >dcs
+echo g201c 02d00500 >dcs
+echo g2020 050002d0 >dcs
+echo g2024 050002d0 >dcs
+echo g203c 050002d0 >dcs
 echo g2034 00000000 >dcs
-echo g2038 $(printf "%08x" $(( (($PANEL_HEIGHT - 1) << 16) | ($PANEL_WIDTH - 1) )) ) >dcs >dcs	# POER
+echo g2038 04ff02cf >dcs
 echo g2030 00000015 >dcs
 echo g20a0 00000050 >dcs
 echo g2014 rrrr >dcs
 echo g2038 rrrr >dcs
+
+shift	# remove "-r"
+
+;;
+
+* )
+
+# VCTM w/o rotation
+SPLIT_MEM=1 ROT90=0 TE_SEL=1 VBP=1
+# echo g200c 00000006 >dcs	# VCTM_CFGR (00000000): VBP=1, TE_SEL=1
+echo g200c $(printf "%08x" $(( ($SPLIT_MEM << 9) | ($ROT90 << 8) | ($VBP << 2) | ($TE_SEL << 1) )) ) >dcs	# VCTM_CFGR (00000000)
+# FIXME: calculate best approximation by prime factor decomposition of num and den
+PCLKDEN=168
+[ $PCLKDEN -lt 256 ] || echo PCLKDEN problem: $PCLKDEN
+PCLKNUM=51
+[ $PCLKNUM -lt 128 ] || echo PCLKNUM problem: $PCLKNUM
+PCLK=$(( ($SYS_CLK * $PCLKNUM) / $PCLKDEN ))
+echo PCLKNUM / PCLKDEN: $PCLKNUM / $PCLKDEN
+echo PCLK: $PCLK
+# echo g2010 00040001 >dcs	# VCTM_PCFRR (00010001): PCLKDEN=4 PCLKNUM=1
+echo g2010 $(printf "%08x" $(( ($PCLKDEN << 16) | ($PCLKNUM << 0) )) ) >dcs	# VCTM_PCFRR (00010001)
+
+esac
 
 # MIPITX
 # echo g6008 00c90008 >dcs	# MIPITX_CTLR (00030008): LS_OUT=4 lanes; LPD=9
@@ -195,7 +215,6 @@ echo PANEL_LPCLOCK: $(( $MIPITX_BYTE_CLK / ($LPD+1) ))
 CKE=0
 echo g6008 $(printf "%08x" $(( 0x00000008 | (($PANEL_LANES - 1) << 22) | ($LPD << 16) | ($CKE << 0) )) ) >dcs	# MIPITX_CTLR (00030008)
 # echo g600c 02d00500 >dcs	# MIPITX_VTC1R (0214020A):
-### FIXME: calculate from PANEL parameters
 echo g600c 329e3c05 >dcs	# MIPITX_VTC1R (0214020A): HSA=5 VSA=60 HBP=158 VBP=50
 # echo g6010 104c0202 >dcs	# MIPITX_VTC2R (0438020A):
 #echo g6010 05003205 >dcs	# MIPITX_VTC2R (0438020A): HFP=5 VFP=50 VACT=1280

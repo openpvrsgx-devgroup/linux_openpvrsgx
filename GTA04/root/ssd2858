@@ -97,6 +97,78 @@ echo g0028 rrrr >dcs
 echo g002c rrrr >dcs
 echo g0030 rrrr >dcs
 
+# prepare for getting access to the ssd
+echo 28 >dcs
+echo 10 >dcs
+echo ff00 >dcs
+echo 28 >dcs
+echo 10 >dcs
+
+if [ "$1" = "-x" ]
+then # test (prefix with -r!)
+
+# send code sequences verbatim...
+
+echo gff00 >dcs
+echo g0008 01f40132 >dcs
+echo g000c 00000001 >dcs
+echo g0014 0c37800f >dcs
+echo g0020 1592577d >dcs
+echo g0024 00003000 >dcs
+echo 11 >dcs
+sleep 0.001
+echo 2a 000004ff
+echo 2b 000002cf
+echo g1008 01200445 >dcs
+echo g200c 00000302 >dcs
+echo g2010 00040001 >dcs
+echo g2014 02ee0014 >dcs
+echo g2018 050e000a >dcs
+echo g201c 02d00500 >dcs
+echo g2020 050002d0 >dcs
+echo g2024 050002d0 >dcs
+echo g203c 050002d0 >dcs
+echo g2034 00000000 >dcs
+echo g2038 04ff02cf >dcs
+echo g2030 0000000a >dcs
+echo g20a0 00000050 >dcs
+echo 35 02 >dcs
+echo 44 0500 >dcs
+echo g6008 00c70008 >dcs
+echo g600c 0a14020a >dcs
+echo g6010 0500040a >dcs
+echo g6014 01000101 >dcs
+echo g6084 000002d0 >dcs
+
+# dump all register values
+for r in 0004 0008 000c 0010 0014 001c 0020 0024 0028 002c 0030 \
+         1004 1008 100c 1010 1014 1018 101c 1020 1024 1028 102c 1030 \
+         2000 2004 2008 200c 2010 2014 2018 201c 2020 2024 2028 202c 2030 2034 2038 203c \
+              2040 2044 2048 204c 2050 2054 2058 205c 2060 2064 2068 206c 2070 2074 2078 207c \
+              2080 2084 2088 208c 2090 2094 2098 209c 20a0 20a4 20a8 20ac 20b0 20b4 2ffc \
+         6000 6004 6008 600c 6010 6014 6018 6030 6034 6038 603c 6040 6044 6048 604c 6050 6054 \
+              6084 6088 608c 6090 6094 60a4 60a8 60ac 60b0 60b4
+do
+echo g$r rrrr >dcs
+echo $r: $(cat dcs)
+done
+
+# turn on omap5 stream
+
+echo stream >dcs
+sleep .1
+echo 29 >dcs
+
+echo gff01 >dcs	# enable forwarding through ssd
+echo 11 >dcs
+sleep .1
+echo 29 >dcs
+
+echo gff00 >dcs	# address the ssd
+# all done in this (special) case
+exit
+fi
+
 # now program the ssd chip
 # start with SCM
 

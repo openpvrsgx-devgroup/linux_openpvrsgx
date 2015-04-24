@@ -189,8 +189,8 @@ echo g20a0 00000050 >dcs	# VTCM_QFBCCTRLR (00004151) - no padding, no pixswap, n
 echo g2014 rrrr >dcs
 echo g2038 rrrr >dcs
 
-echo 35 02	# tear on
-echo 44 0500	# tear scan line
+echo 35 02 >dcs		# tear on
+echo 44 0500 >dcs	# tear scan line
 
 # MIPITX
 LPD=$(( (($MIPITX_BYTE_CLK + $PANEL_LPCLOCK - 1) / $PANEL_LPCLOCK) - 1 ))

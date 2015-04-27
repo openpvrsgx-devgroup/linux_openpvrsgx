@@ -125,8 +125,8 @@ then # test (prefix with -r!)
 # send code sequences verbatim...
 
 echo gff00 >dcs
-echo g0008 01f40132 >dcs
-echo g000c 00000001 >dcs
+echo g0008 01f4012a >dcs
+echo g000c 00000005 >dcs
 echo g0014 0c37800f >dcs
 echo g0020 1592577d >dcs
 echo g0024 00003000 >dcs
@@ -136,7 +136,7 @@ echo 2a 000004ff
 echo 2b 000002cf
 echo g1008 01200445 >dcs
 echo g200c 00000302 >dcs
-echo g2010 00040001 >dcs
+echo g2010 00010001 >dcs
 echo g2014 02ee0014 >dcs
 echo g2018 050e000a >dcs
 echo g201c 02d00500 >dcs
@@ -168,18 +168,18 @@ echo g$r rrrr >dcs
 echo $r: $(cat dcs)
 done
 
-# turn on omap5 stream
-
-echo stream >dcs
-sleep .1
-echo 29 >dcs
-
 echo gff01 >dcs	# enable forwarding through ssd
 echo 11 >dcs
 sleep .1
 echo 29 >dcs
 
-echo gff00 >dcs	# address the ssd
+# turn on omap5 stream
+
+echo gff00 >dcs	# address the ssd directly
+echo stream >dcs
+sleep .1
+echo 29 >dcs
+
 # all done in this (special) case
 exit
 fi
@@ -344,18 +344,16 @@ fi
 if [ "$1" = "-s" ]
 then	# enable stream
 
-	echo gff00 >dcs	# address the ssd
-
-	echo stream >dcs
-	echo 11 >dcs
-	sleep .1
-	echo 29 >dcs
-
 	echo gff01 >dcs	# enable forwarding through ssd
 	echo 11 >dcs
 	sleep .1
 	echo 29 >dcs
 
-	echo gff00 >dcs	# address the ssd
+	# turn on omap5 stream
+
+	echo gff00 >dcs	# address the ssd directly
+	echo stream >dcs
+	sleep .1
+	echo 29 >dcs
 
 fi

@@ -2,6 +2,9 @@
 # initialite Solomon SSD2858 chip with input stream from OMAP5 and panel chained to the output
 # using the panel-mipi-debug driver
 #
+# arguments must be specified in this order!
+#
+# -b:	BIST mode (test pattern)
 # -r:	program for rotation
 # -d:	dump registers
 # -l:	loop dcs commands 10h and 11h to check LP output to panel
@@ -59,6 +62,18 @@ XTAL=24000000	# we have 24 MHz XTAL
 LPCLK=$(( $XTAL / 2 ))	# we must drive SSD with this LP clock freq.
 echo XTAL: $XTAL
 echo LPCLK: $LPCLK
+
+case "$1" in
+"-b" )
+	VB_MODE=4
+	VBE=3
+	shift
+	;;
+* )
+	VB_MODE=0
+	VBE=0
+	;;
+esac
 
 case "$1" in
 "-r" )
@@ -273,7 +288,7 @@ CKE=0
 echo g6008 $(printf "%08x" $(( 0x00000008 | (($PANEL_LANES - 1) << 22) | ($LPD << 16) | ($CKE << 0) )) ) >dcs	# MIPITX_CTLR (00030008)
 echo g600c $(printf "%08x" $(( ($PANEL_VBP << 24) | ($PANEL_HBP << 16) | ($PANEL_VSA << 8) | ($PANEL_HSA << 0) )) ) >dcs	# MIPITX_VTC1R (0214020A)
 echo g6010 $(printf "%08x" $(( ($PANEL_HEIGHT << 16) | ($PANEL_VFP << 8) | ($PANEL_HFP << 0) )) ) >dcs	# MIPITX_VTC2R (0438020A)
-echo g6014 01000102 >dcs	# MIPITX_VCFR (01000101): VM=burst mode
+echo g6014 $(printf "%08x" $(( 0x01000102 | ($VB_MODE << 13) | ($VBE << 30) )) ) >dcs	# MIPITX_VCFR (01000101): VM=burst mode
 echo g6084 $(printf "%08x" $(( $PANEL_WIDTH << 0 )) ) >dcs	# MIPITX_DSI0VR (00000400)
 echo g6010 rrrr >dcs
 

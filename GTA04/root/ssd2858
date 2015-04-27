@@ -2,14 +2,18 @@
 # initialite Solomon SSD2858 chip with input stream from OMAP5 and panel chained to the output
 # using the panel-mipi-debug driver
 #
-# arguments must be specified in this order!
-#
 # -b:	BIST mode (test pattern)
 # -r:	program for rotation
-# -d:	dump registers
+# -x:	apply some register value array
+# -d:	dump ssd2858 registers
 # -l:	loop dcs commands 10h and 11h to check LP output to panel
-# -p:	program panel
+# -p:	program panel through DCS
 # -s:	enable stream to ssd and panel
+#
+# typical invocation for operation
+# ./ssd2858 -r -p -s
+# ./ssd2858 -b -d -l
+
 
 if ! [ "$(cat /proc/device-tree/ocp/dss@58000000/encoder@58004000/lcd/compatible)" = "omapdss,mipi,debug" ]
 then
@@ -63,31 +67,55 @@ LPCLK=$(( $XTAL / 2 ))	# we must drive SSD with this LP clock freq.
 echo XTAL: $XTAL
 echo LPCLK: $LPCLK
 
-case "$1" in
-"-b" )
-	VB_MODE=4
-	VBE=3
-	shift
-	;;
-* )
-	VB_MODE=0
-	VBE=0
-	;;
-esac
+# default modes
+VB_MODE=0
+VBE=0
+OMAP_WIDTH=1280
+OMAP_HEIGHT=720
+ROT90=0
 
-case "$1" in
-"-r" )
-	OMAP_WIDTH=1280
-	OMAP_HEIGHT=720
-	ROT90=1
+X_MODE=false
+DUMP_REGS=false
+LOOP_DCS_11_10=false
+PROGRAM_PANEL=false
+STREAM=true
+
+while [ "$1" ]
+do
+	case "$1" in
+	"-b" )
+		VB_MODE=4
+		VBE=3
+		;;
+	"-r" )
+		OMAP_WIDTH=1280
+		OMAP_HEIGHT=720
+		ROT90=1
+		;;
+	"-x" )
+		X_MODE=true
+		OMAP_WIDTH=1280	# currently assumes rotation
+		OMAP_HEIGHT=720
+		ROT90=1
+		;;
+	"-d" )
+		DUMP_REGS=true
+		;;
+	"-l" )
+		LOOP_DCS_11_10=true
+		;;
+	"-p" )
+		PROGRAM_PANEL=true
+		;;
+	"-s" )
+		STREAM=true
+		;;
+	* )
+		break
+		;;
+	esac
 	shift
-	;;
-* )
-	OMAP_WIDTH=1280
-	OMAP_HEIGHT=720
-	ROT90=0
-	;;
-esac
+done
 
 echo start x_res=$OMAP_WIDTH y_res=$OMAP_HEIGHT lpclock=$LPCLK >dcs	# start MIPI interface timing
 
@@ -119,8 +147,8 @@ echo ff00 >dcs
 echo 28 >dcs
 echo 10 >dcs
 
-if [ "$1" = "-x" ]
-then # test (prefix with -r!)
+if $X_MODE
+then
 
 # send code sequences verbatim...
 
@@ -194,6 +222,7 @@ fi
 # XTAL: 20 .. 30 MHz
 # PLL = XTAL * MULT: 1-1.5GHz
 # MAIN CLOCK = PLL / POSTDIV
+## FIXME: find the best combination from MULT and POSTDIV so that PLL is between 1 and 1.5 GHz
 PLL=$((3 * 470000000))	# run a little faster than OMAP (460 MHz)
 echo target PLL: $PLL
 MULT=$(( $PLL / $XTAL ))
@@ -213,7 +242,7 @@ echo LOCKCNT: $LOCKCNT
 
 echo g0008 $(printf "%08x" $(( ($LOCKCNT << 16) | (0 << 15) | (0 << 15) | ($POSTDIV << 8) | $MULT << 0)) ) >dcs
 
-MIPITX_BIT_CLK=504000000	# what we would like to have (should be calculated from panel parameters)
+MIPITX_BIT_CLK=460000000	# what we would like to have (should be calculated from panel parameters)
 MTXDIV=$(( (($MAIN_CLK + $MIPITX_BIT_CLK - 1 ) / $MIPITX_BIT_CLK) - 1 ))	# get divisor and round up
 echo MTXDIV: $MTXDIV
 [ $MTXDIV -ge 0 -a $MTXDIV -lt 16 ] || echo MTXDIV problem: $MTXDIV
@@ -292,7 +321,7 @@ echo g6014 $(printf "%08x" $(( 0x01000102 | ($VB_MODE << 13) | ($VBE << 30) )) )
 echo g6084 $(printf "%08x" $(( $PANEL_WIDTH << 0 )) ) >dcs	# MIPITX_DSI0VR (00000400)
 echo g6010 rrrr >dcs
 
-if [ "$1" = "-d" ]
+if $DUMP_REGS
 then
 # dump all register values
 for r in 0004 0008 000c 0010 0014 001c 0020 0024 0028 002c 0030 \
@@ -309,7 +338,7 @@ done
 shift
 fi
 
-if [ "$1" = "-l" ]
+if $LOOP_DCS_11_10
 then
 
 # this tries to forward DCS commands to the panel
@@ -328,7 +357,7 @@ then
 	shift
 fi
 
-if [ "$1" = "-p" ]
+if $PROGRAM_PANEL
 then	# activate panel
 
 	echo gff01 >dcs	# enable forwarding through ssd
@@ -341,8 +370,8 @@ then	# activate panel
 	shift
 fi
 
-if [ "$1" = "-s" ]
-then	# enable stream
+if $STREAM
+then	# enable video stream
 
 	echo gff01 >dcs	# enable forwarding through ssd
 	echo 11 >dcs

@@ -70,8 +70,8 @@ echo LPCLK: $LPCLK
 # default modes
 VB_MODE=0
 VBE=0
-OMAP_WIDTH=1280
-OMAP_HEIGHT=720
+OMAP_WIDTH=$PANEL_WIDTH
+OMAP_HEIGHT=$PANEL_HEIGHT
 ROT90=0
 
 X_MODE=false
@@ -88,14 +88,15 @@ do
 		VBE=3
 		;;
 	"-r" )
-		OMAP_WIDTH=1280
-		OMAP_HEIGHT=720
+		OMAP_WIDTH=$PANEL_HEIGHT
+		OMAP_HEIGHT=$PANEL_WIDTH
 		ROT90=1
 		;;
+	## if we want to rotate in the other direction, combine with flip horizontal/vertical DCS 36h
 	"-x" )
 		X_MODE=true
-		OMAP_WIDTH=1280	# currently assumes rotation
-		OMAP_HEIGHT=720
+		OMAP_WIDTH=$PANEL_HEIGHT	# currently assumes rotation
+		OMAP_HEIGHT=$PANEL_WIDTH
 		ROT90=1
 		;;
 	"-d" )
@@ -291,9 +292,11 @@ PCLKNUM=51
 PCLK=$(( ($SYS_CLK * $PCLKNUM) / $PCLKDEN ))
 echo PCLKNUM / PCLKDEN: $PCLKNUM / $PCLKDEN
 echo PCLK: $PCLK
+HDPS=0x30
+VDPS=0x30
 echo g2010 $(printf "%08x" $(( ($PCLKDEN << 16) | ($PCLKNUM << 0) )) ) >dcs	# VCTM_PCFRR (00010001)
-echo g2014 $(printf "%08x" $(( ($PANEL_FRAME_WIDTH << 16) | 0x30 )) ) >dcs
-echo g2018 $(printf "%08x" $(( ($PANEL_FRAME_HEIGHT << 16) | 0x30 )) ) >dcs
+echo g2014 $(printf "%08x" $(( ($PANEL_FRAME_WIDTH << 16) | $HDPS )) ) >dcs	# HDCFGR
+echo g2018 $(printf "%08x" $(( ($PANEL_FRAME_HEIGHT << 16) | $VDPS )) ) >dcs	# VDCFGR
 echo g201c $(printf "%08x" $(( ($OMAP_HEIGHT << 16) | $OMAP_WIDTH )) ) >dcs	# MSZR
 echo g2020 $(printf "%08x" $(( ($PANEL_HEIGHT << 16) | $PANEL_WIDTH )) ) >dcs		# DSZR
 echo g2024 $(printf "%08x" $(( ($PANEL_HEIGHT << 16) | $PANEL_WIDTH )) ) >dcs		# PSZR

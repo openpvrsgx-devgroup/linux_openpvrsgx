@@ -40,8 +40,8 @@ echo reset >dcs	# reset panel
 echo power >dcs	# enable ssd (should do this only on v4 boards!!! but I have no method to decide between v3 and v4)
 
 sleep .1
-echo noreset >dcs	# take panel out of reset before starting the clocks
-sleep .1
+echo noreset >dcs	# take ssd2858 out of reset before starting the clocks
+sleep .5
 
 # parameters should be provided by the panel driver
 PANEL_WIDTH=720
@@ -119,7 +119,7 @@ done
 
 echo start x_res=$OMAP_WIDTH y_res=$OMAP_HEIGHT lpclock=$LPCLK >dcs	# start MIPI interface timing
 
-sleep .1
+sleep .5
 
 # show some DCS status (don't use echo status >dcs because it reads non-existent registers which makes the communication hang)
 for i in 0b 0c 45
@@ -242,7 +242,7 @@ echo LOCKCNT: $LOCKCNT
 
 echo g0008 $(printf "%08x" $(( ($LOCKCNT << 16) | (0 << 15) | (0 << 15) | ($POSTDIV << 8) | $MULT << 0)) ) >dcs
 
-MIPITX_BIT_CLK=460000000	# what we would like to have (should be calculated from panel parameters)
+MIPITX_BIT_CLK=470000000	# what we would like to have (should be calculated from panel parameters)
 MTXDIV=$(( (($MAIN_CLK + $MIPITX_BIT_CLK - 1 ) / $MIPITX_BIT_CLK) - 1 ))	# get divisor and round up
 echo MTXDIV: $MTXDIV
 [ $MTXDIV -ge 0 -a $MTXDIV -lt 16 ] || echo MTXDIV problem: $MTXDIV

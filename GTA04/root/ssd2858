@@ -55,10 +55,12 @@ PANEL_HBP=158	# back porch
 PANEL_VFP=50
 PANEL_VSA=60
 PANEL_VBP=50
-PANEL_FRAME_WIDTH=888	# some margin for sync and retrace
-PANEL_FRAME_HEIGHT=1440	# some margin for sync and retrace
+PANEL_FRAME_WIDTH=$(($PANEL_WIDTH+$PANEL_HFP+$PANEL_HSA+$PANEL_HBP))	# some margin for sync and retrace
+PANEL_FRAME_HEIGHT=$(($PANEL_HEIGHT+$PANEL_VFP+$PANEL_VSA+$PANEL_VBP))	# some margin for sync and retrace
+echo Panel: ${PANEL_WIDTH}x${PANEL_HEIGHT} in ${PANEL_FRAME_WIDTH}x${PANEL_FRAME_HEIGHT}
 PANEL_LPCLOCK=8000000	# maximum is 9.2 MHz
 PANEL_PCLK=$(( $PANEL_FRAME_WIDTH * $PANEL_FRAME_HEIGHT * $PANEL_FPS ))
+echo Panel PCLK: $PANEL_PCLK
 PANEL_MIN_DDR=$(( $PANEL_PCLK / 2 / $PANEL_LANES * $PANEL_BPP ))
 
 XTAL=24000000	# we have 24 MHz XTAL
@@ -118,7 +120,9 @@ do
 	shift
 done
 
-echo start x_res=$OMAP_WIDTH y_res=$OMAP_HEIGHT lpclock=$LPCLK >dcs	# start MIPI interface timing
+# FIXME: we should define OMAP_HFP etc.
+
+echo start x_res=$OMAP_WIDTH y_res=$OMAP_HEIGHT lpclock=$LPCLK hfp=$PANEL_HFP hsw=$PANEL_HSA hbp=$PANEL_HBP >dcs	# start MIPI interface timing
 
 sleep .5
 
@@ -285,10 +289,13 @@ echo g1008 01200445 >dcs	# MIPIRX_DCR (01200245): HST=4
 
 SPLIT_MEM=1 TE_SEL=1 VBP=0
 echo g200c $(printf "%08x" $(( ($SPLIT_MEM << 9) | ($ROT90 << 8) | ($VBP << 2) | ($TE_SEL << 1) )) ) >dcs	# VCTM_CFGR (00000000)
-PCLKDEN=168
-[ $PCLKDEN -lt 256 ] || echo PCLKDEN problem: $PCLKDEN
-PCLKNUM=51
+
+## FIXME: calculate as needed
+
+PCLKNUM=2
+PCLKDEN=6
 [ $PCLKNUM -lt 128 ] || echo PCLKNUM problem: $PCLKNUM
+[ $PCLKDEN -lt 256 ] || echo PCLKDEN problem: $PCLKDEN
 PCLK=$(( ($SYS_CLK * $PCLKNUM) / $PCLKDEN ))
 echo PCLKNUM / PCLKDEN: $PCLKNUM / $PCLKDEN
 echo PCLK: $PCLK

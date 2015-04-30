@@ -28,7 +28,7 @@ do
 case "$(cat $SUPPLY/type 2>/dev/null)" in
 
 USB )
-echo "Charger $SUPPLY"
+echo "USB Charger $SUPPLY"
 echo "============"
 echo type: $(cat $SUPPLY/type)
 echo online: $(cat $SUPPLY/online 2>/dev/null)
@@ -41,7 +41,7 @@ echo
 ;;
 
 Mains )
-echo "AC Charger"
+echo "AC Charger $SUPPLY"
 echo "============"
 echo type: $(cat $SUPPLY/type 2>/dev/null)
 echo online: $(cat $SUPPLY/online 2>/dev/null)

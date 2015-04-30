@@ -1,23 +1,33 @@
 DURATION="$1"
 [ "$DURATION" ] || DURATION=60
 
+## check DT model
+
+# GTA04
+TWL4030_MADC=/sys/devices/platform/68000000.ocp/48070000.i2c/i2c-0/0-0048/48070000.i2c:twl@48:madc/iio:device0
+CHARGER=/sys/class/power_supply/twl4030_usb
+BQ27000=/sys/class/power_supply/bq27000-battery
+# Pyra
+[ -r "$CHARGER" ] || CHARGER=/sys/class/power_supply/bq24297
+[ -r "$BQ27000" ] || BQ27000=/sys/class/power_supply/bq27425-0
+
 while true
 do
-	VBUS=$(cat /sys/devices/platform/twl4030_madc_hwmon/in8_input 2>/dev/null)
-	VCHG=$(cat /sys/devices/platform/twl4030_madc_hwmon/in11_input 2>/dev/null)
-	CHGVOLT=$(cat /sys/class/power_supply/twl4030_usb/voltage_now 2>/dev/null)
+	VBUS=$(cat $TWL4030_MADC/in_voltage8_input 2>/dev/null)
+	VCHG=$(cat $TWL4030_MADC/in_voltage11_input 2>/dev/null)
+	CHGVOLT=$(cat $CHARGER/voltage_now 2>/dev/null)
 	[ "$CHGVOLT" ] && CHGVOLT=$(expr "$CHGVOLT" / 1000)
-	VBAT=$(cat /sys/devices/platform/twl4030_madc_hwmon/in12_input 2>/dev/null)
-	BQVBAT=$(cat /sys/class/power_supply/bq27000-battery/voltage_now 2>/dev/null)
+	VBAT=$(cat $TWL4030_MADC/in_voltage12_input 2>/dev/null)
+	BQVBAT=$(cat $BQ27000/voltage_now 2>/dev/null)
 	[ "$BQVBAT" ] && BQVBAT=$(expr "$BQVBAT" / 1000)
 	[ "$VBAT" ] && CHG=$(expr \( "$VBAT" - 3200 \) \* 100 / 1050)
-	BQCHG=$(cat /sys/class/power_supply/bq27000-battery/capacity 2>/dev/null)
-	TEMP=$(cat /sys/devices/platform/twl4030_madc_hwmon/temp1_input 2>/dev/null)
-	BQTEMP=$(cat /sys/class/power_supply/bq27000-battery/temp 2>/dev/null)
-	IDPIN=$(cat /sys/devices/platform/omap_i2c.1/i2c-1/1-0048/twl4030_usb/id 2>/dev/null)
+	BQCHG=$(cat $BQ27000/capacity 2>/dev/null)
+	TEMP=$(cat $TWL4030_MADC/int_temp1_input 2>/dev/null)
+	BQTEMP=$(cat $BQ27000/temp 2>/dev/null)
+	IDPIN=$(cat /dev/usb_id 2>/dev/null)
 	[ "$BQTEMP" ] && BQTEMP=$(expr "$BQTEMP" / 10)
-	ICHG=$(cat /sys/devices/platform/twl4030_madc_hwmon/curr10_input 2>/dev/null)
-	BQCICHG=$(cat /sys/class/power_supply/bq27000-battery/current_now 2>/dev/null)
+	ICHG=$(cat $TWL4030_MADC/in_current10_input 2>/dev/null)
+	BQCICHG=$(cat $BQ27000/current_now 2>/dev/null)
 	[ "$BQCICHG" ] && BQCICHG=$(expr "$BQCICHG" / 1000)
 	echo "$(date) - ${VBUS}/${CHGVOLT}/${VBAT}/${BQVBAT}/${VCHG}mV - ${CHG}/${BQCHG}% - ${TEMP}/${BQTEMP}C - ${ICHG}/${BQCICHG}mA - ${IDPIN}" | tee -a battlog
 	sync

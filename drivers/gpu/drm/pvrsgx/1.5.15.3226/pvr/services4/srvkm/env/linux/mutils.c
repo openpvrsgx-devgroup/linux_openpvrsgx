@@ -145,7 +145,7 @@ pvr_pgprot_writecombine(pgprot_t prot)
      * pgprot_writecombine function (or similar) is introduced on Linux for
      * x86 processors.  If so, this function, and PVRLinuxX86PATProbe can be
      * removed, and a macro used to select between pgprot_writecombine and
-     * pgprot_noncached, dpending on the value for of
+     * pgprot_noncached, depending on the value for of
      * SUPPORT_LINUX_X86_WRITECOMBINE.
      */
     /* PRQA S 0481,0482 2 */ /* scalar expressions */

@@ -245,7 +245,7 @@ echo 10 >dcs
 
 echo g0008 $(printf "%08x" $(( ($LOCKCNT << 16) | (0 << 15) | (0 << 15) | (($PLL_POST_DIV-1) << 8) | $PLL_MULT << 0)) ) >dcs
 echo g000c $(printf "%08x" $(( (($MTX_CLK_DIV-1) << 4) | (($SYS_CLK_DIV-1) << 0) )) ) >dcs
-echo g0014 $(printf "%08x" $(( 0x0C77800F | (1 << 22) )) ) >dcs	# SCM_MISC2 (0C77800F): MRXEN = enabled
+echo g0014 $(printf "%08x" $(( 0x0C37800F )) ) >dcs	# SCM_MISC2 (0C77800F): MRXEN = enabled
 echo g0020 $(printf "%08x" $(( 0x1592567D | (1 << 22) )) ) >dcs	# SCM_ANACTRL1 (1592567D): CPEN = enabled
 echo g0024 00003000 >dcs	# SCM_ANACTRL2 (00003300): CPPER=24
 echo g0008 rrrr >dcs

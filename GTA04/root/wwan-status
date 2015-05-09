@@ -18,6 +18,7 @@ case "$IF" in
 		echo "AT\$QCSIMSTAT?"; sleep 1
 		echo "AT+CGMI"; sleep 1
 		echo "AT+CGMM"; sleep 1
+		echo "AT+CGMR"; sleep 1
 		echo "AT+CGSN"; sleep 1
 		echo "AT+CIMI"; sleep 1
 		echo "AT+CPIN?"; sleep 1
@@ -40,6 +41,7 @@ case "$IF" in
 #echo "AT\$QCSIMSTAT?"; sleep 1
 		echo "AT+CGMI"; sleep 1
 		echo "AT+CGMM"; sleep 1
+		echo "AT+CGMR"; sleep 1
 		echo "AT+CGSN"; sleep 1
 		echo "AT+CIMI"; sleep 1
 		echo "AT+CPIN?"; sleep 1

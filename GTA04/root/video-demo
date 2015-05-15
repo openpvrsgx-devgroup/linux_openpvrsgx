@@ -5,7 +5,7 @@
 
 FILE=/root/big_buck_bunny_480p_stereo.ogg
 
-[ -r $FILE ] || wget "http://ftp.nc.debian.org/media/films/big_buck_bunny_480p_stereo.ogg" -o "$FILE"
+[ -r $FILE ] || wget -O "$FILE" "http://ftp.nc.debian.org/media/films/big_buck_bunny_480p_stereo.ogg"
 
 export XAUTHORITY=/.Xauthority
 

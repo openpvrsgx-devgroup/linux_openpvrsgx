@@ -51,10 +51,10 @@ PANEL_BPP=24	# bits per lane
 PANEL_LANES=4	# lanes
 PANEL_HFP=5	# front porch
 PANEL_HSA=5	# sync active
-PANEL_HBP=158	# back porch
-PANEL_VFP=50
-PANEL_VSA=60
-PANEL_VBP=50
+PANEL_HBP=100	# back porch
+PANEL_VFP=20
+PANEL_VSA=20
+PANEL_VBP=20
 PANEL_FRAME_WIDTH=$(($PANEL_WIDTH+$PANEL_HFP+$PANEL_HSA+$PANEL_HBP))	# some margin for sync and retrace
 PANEL_FRAME_HEIGHT=$(($PANEL_HEIGHT+$PANEL_VFP+$PANEL_VSA+$PANEL_VBP))	# some margin for sync and retrace
 echo Panel: ${PANEL_WIDTH}x${PANEL_HEIGHT} in ${PANEL_FRAME_WIDTH}x${PANEL_FRAME_HEIGHT}
@@ -122,7 +122,7 @@ done
 
 # FIXME: we should define OMAP_HFP etc.
 
-echo start x_res=$OMAP_WIDTH y_res=$OMAP_HEIGHT lpclock=$LPCLK hfp=$PANEL_HFP hsw=$PANEL_HSA hbp=$PANEL_HBP >dcs	# start MIPI interface timing
+echo start x_res=$OMAP_WIDTH y_res=$OMAP_HEIGHT lpclock=$LPCLK pixelclock=$PANEL_PCL hfp=$PANEL_HFP hsw=$PANEL_HSA hbp=$PANEL_HBP >dcs	# start MIPI interface timing
 
 sleep .5
 
@@ -228,7 +228,7 @@ fi
 # PLL = XTAL * MULT: 1-1.5GHz
 # MAIN CLOCK = PLL / POSTDIV
 ## FIXME: find the best combination from MULT and POSTDIV so that PLL is between 1 and 1.5 GHz
-PLL=$((3 * 470000000))	# run a little faster than OMAP (460 MHz)
+PLL=$((3 * 450000000))	# run a little faster than OMAP
 echo target PLL: $PLL
 MULT=$(( $PLL / $XTAL ))
 echo MULT: $MULT
@@ -247,7 +247,7 @@ echo LOCKCNT: $LOCKCNT
 
 echo g0008 $(printf "%08x" $(( ($LOCKCNT << 16) | (0 << 15) | (0 << 15) | ($POSTDIV << 8) | $MULT << 0)) ) >dcs
 
-MIPITX_BIT_CLK=470000000	# what we would like to have (should be calculated from panel parameters)
+MIPITX_BIT_CLK=450000000	# what we would like to have (should be calculated from panel parameters)
 MTXDIV=$(( (($MAIN_CLK + $MIPITX_BIT_CLK - 1 ) / $MIPITX_BIT_CLK) - 1 ))	# get divisor and round up
 echo MTXDIV: $MTXDIV
 [ $MTXDIV -ge 0 -a $MTXDIV -lt 16 ] || echo MTXDIV problem: $MTXDIV
@@ -292,8 +292,8 @@ echo g200c $(printf "%08x" $(( ($SPLIT_MEM << 9) | ($ROT90 << 8) | ($VBP << 2) |
 
 ## FIXME: calculate as needed
 
-PCLKNUM=2
-PCLKDEN=6
+PCLKNUM=1
+PCLKDEN=4
 [ $PCLKNUM -lt 128 ] || echo PCLKNUM problem: $PCLKNUM
 [ $PCLKDEN -lt 256 ] || echo PCLKDEN problem: $PCLKDEN
 PCLK=$(( ($SYS_CLK * $PCLKNUM) / $PCLKDEN ))

@@ -43,7 +43,7 @@ sleep .1
 echo noreset >dcs	# take ssd2858 out of reset before starting the clocks
 sleep .5
 
-# parameters should be provided by the panel driver
+# Panel parameters (should be provided by the panel driver)
 PANEL_WIDTH=720
 PANEL_HEIGHT=1280
 PANEL_FPS=60	# frames per second
@@ -52,30 +52,95 @@ PANEL_LANES=4	# lanes
 PANEL_HFP=5	# front porch
 PANEL_HSA=5	# sync active
 PANEL_HBP=100	# back porch
-PANEL_VFP=20
-PANEL_VSA=20
-PANEL_VBP=20
+PANEL_VFP=20	# top porch
+PANEL_VSA=20	# sync active
+PANEL_VBP=20	# bottom porch
+PANEL_LPCLOCK=8000000	# maximum is 9.2 MHz
+
+# panel derived parameters
 PANEL_FRAME_WIDTH=$(($PANEL_WIDTH+$PANEL_HFP+$PANEL_HSA+$PANEL_HBP))	# some margin for sync and retrace
 PANEL_FRAME_HEIGHT=$(($PANEL_HEIGHT+$PANEL_VFP+$PANEL_VSA+$PANEL_VBP))	# some margin for sync and retrace
-echo Panel: ${PANEL_WIDTH}x${PANEL_HEIGHT} in ${PANEL_FRAME_WIDTH}x${PANEL_FRAME_HEIGHT}
-PANEL_LPCLOCK=8000000	# maximum is 9.2 MHz
 PANEL_PCLK=$(( $PANEL_FRAME_WIDTH * $PANEL_FRAME_HEIGHT * $PANEL_FPS ))
-echo Panel PCLK: $PANEL_PCLK
 PANEL_MIN_DDR=$(( $PANEL_PCLK / 2 / $PANEL_LANES * $PANEL_BPP ))
 
+# SSD2858 parameters
 XTAL=24000000	# we have 24 MHz XTAL
 [ $XTAL -ge 20000000 -a $XTAL -le 300000000 ] || echo XTAL frequency problem: $XTAL
-LPCLK=$(( $XTAL / 2 ))	# we must drive SSD with this LP clock freq.
-echo XTAL: $XTAL
-echo LPCLK: $LPCLK
 
-# default modes
+# ssd2858 derived parameters
+# SCM_PLL, clock requirements:
+# XTAL: 20 .. 30 MHz
+# PLL = XTAL * MULT: 1-1.5GHz
+# MAIN CLOCK = PLL / POSTDIV
+## FIXME: find the best combination from MULT and POSTDIV so that PLL is between 1 and 1.5 GHz
+PLL=$((3 * 450000000))	# run a little faster than OMAP
+echo target PLL: $PLL
+MULT=$(( $PLL / $XTAL ))
+echo MULT: $MULT
+[ $MULT -lt 128 ] || echo MULT problem: $MULT
+PLL=$(($XTAL * $MULT))	# real PLL frequency
+echo real PLL: $PLL
+[ $PLL -ge 1000000000 -a $PLL -le 1500000000 ] || echo PLL frequency problem: $PLL
+POSTDIV=2 # means 3
+echo POSTDIV: $POSTDIV
+[ $POSTDIV -lt 64 ] || echo POSTDIV problem: $POSTDIV
+MAIN_CLK=$(( $PLL / ($POSTDIV + 1) ))
+echo MAIN_CLK: $MAIN_CLK
+# LOCKCNT - at least 30us - this is the number of LPCLK (XTAL / 2); we add 40% safety margin
+LOCKCNT=$(printf "%.0f" $(echo '1.4 * 30*10^-6 *' $LPCLK | bc -l ))
+echo LOCKCNT: $LOCKCNT
+
+MIPITX_BIT_CLK=450000000	# what we would like to have (should be calculated from panel parameters)
+MTXDIV=$(( (($MAIN_CLK + $MIPITX_BIT_CLK - 1 ) / $MIPITX_BIT_CLK) - 1 ))	# get divisor and round up
+echo MTXDIV: $MTXDIV
+[ $MTXDIV -ge 0 -a $MTXDIV -lt 16 ] || echo MTXDIV problem: $MTXDIV
+MIPITX_BIT_CLK=$(( $MAIN_CLK / ($MTXDIV + 1) ))
+MIPITX_DDR_CLK=$(( $MIPITX_BIT_CLK / 2 ))
+[ $MIPITX_DDR_CLK -ge $PANEL_MIN_DDR ] || echo MIPITX_DDR_CLK vs. PANEL_MIN_DDR problem: $MIPITX_DDR_CLK "<" $PANEL_MIN_DDR
+MIPITX_BYTE_CLK=$(( $MIPITX_BIT_CLK / 8 ))
+echo MIPITX_BIT_CLK: $MIPITX_BIT_CLK
+echo MIPITX_DDR_CLK: $MIPITX_DDR_CLK
+echo MIPITX_BYTE_CLK: $MIPITX_BYTE_CLK
+
+SYS_CLK=150000000	# max. value
+SYSDIV=$(( (($MAIN_CLK / 2 + $SYS_CLK -1 ) / $SYS_CLK) - 1 ))
+echo SYSDIV: $SYSDIV
+[ $SYSDIV -ge 0 -a $SYSDIV -lt 16 ] || echo SYSDIV problem: $SYSDIV
+SYS_CLK=$(( $MAIN_CLK / 2 / ($SYSDIV + 1) ))
+echo SYS_CLK: $SYS_CLK
+[ $SYS_CLK -le 150000000 ] || echo SYS_CLK problem: $SYS_CLK
+
+SPLIT_MEM=1 TE_SEL=1 VBP=0
+CKE=0
 VB_MODE=0
 VBE=0
-OMAP_WIDTH=$PANEL_WIDTH
-OMAP_HEIGHT=$PANEL_HEIGHT
+
+PCLKNUM=1
+PCLKDEN=4
+[ $PCLKNUM -lt 128 ] || echo PCLKNUM problem: $PCLKNUM
+[ $PCLKDEN -lt 256 ] || echo PCLKDEN problem: $PCLKDEN
+PCLK=$(( ($SYS_CLK * $PCLKNUM) / $PCLKDEN ))
+echo PCLKNUM / PCLKDEN: $PCLKNUM / $PCLKDEN
+echo PCLK: $PCLK
+HDPS=0x30
+VDPS=0x30
+# MIPITX
+LPD=$(( (($MIPITX_BYTE_CLK + $PANEL_LPCLOCK - 1) / $PANEL_LPCLOCK) - 1 ))
+[ $LPD -ge 0 -a $LPD -lt 64 ] || echo LPD problem: $LPD
+echo LPD: $LPD
+echo PANEL_LPCLOCK: $(( $MIPITX_BYTE_CLK / ($LPD+1) ))
 ROT90=0
 
+# calculate OMAP parameters
+LPCLK=$(( $XTAL / 2 ))	# we must drive SSD with this LP clock freq.
+OMAP_WIDTH=$PANEL_WIDTH
+OMAP_HEIGHT=$PANEL_HEIGHT
+OMAP_HFP=$PANEL_HFP
+OMAP_HSA=$PANEL_HSA
+OMAP_HBP=$PANEL_HBP
+OMAP_PCL=$PANEL_PCLK
+
+# default flags
 X_MODE=false
 DUMP_REGS=false
 LOOP_DCS_11_10=false
@@ -120,9 +185,22 @@ do
 	shift
 done
 
-# FIXME: we should define OMAP_HFP etc.
+echo "Panel MIPI:"
+echo "  Dimensions:" ${PANEL_WIDTH}x${PANEL_HEIGHT} in ${PANEL_FRAME_WIDTH}x${PANEL_FRAME_HEIGHT}
+echo "  Pixel CLK:" $PANEL_PCLK
+echo "  DDR CLK:" $PANEL_MIN_DDR
+echo "  LPCLK:" $PANEL_LPCLOCK
 
-echo start x_res=$OMAP_WIDTH y_res=$OMAP_HEIGHT lpclock=$LPCLK pixelclock=$PANEL_PCL hfp=$PANEL_HFP hsw=$PANEL_HSA hbp=$PANEL_HBP >dcs	# start MIPI interface timing
+echo "SSD2858:"
+echo "  XTAL CLK:" $XTAL
+
+echo "OMAP MIPI:"
+echo "  Dimensions:" ${OMAP_WIDTH}x${OMAP_HEIGHT} in ${PANEL_FRAME_WIDTH}x${PANEL_FRAME_HEIGHT}
+echo "  Pixel CLK:" $OMAP_PCLK
+echo "  DDR CLK:" $PANEL_MIN_DDR
+echo "  LPCLK:" $LPCLK
+
+echo start x_res=$OMAP_WIDTH y_res=$OMAP_HEIGHT lpclock=$LPCLK pixelclock=$OMAP_PCL hfp=$OMAP_HFP hsw=$OMAP_HSA hbp=$OMAP_HBP >dcs	# start MIPI interface timing
 
 sleep .5
 
@@ -217,58 +295,8 @@ echo 29 >dcs
 exit
 fi
 
-# now program the ssd chip
-# start with SCM
-
-### FIXME: should we calculate register values or divisors etc?
-### and account for +/-1 definition on echo $(printf)?
-
-# SCM_PLL, clock requirements:
-# XTAL: 20 .. 30 MHz
-# PLL = XTAL * MULT: 1-1.5GHz
-# MAIN CLOCK = PLL / POSTDIV
-## FIXME: find the best combination from MULT and POSTDIV so that PLL is between 1 and 1.5 GHz
-PLL=$((3 * 450000000))	# run a little faster than OMAP
-echo target PLL: $PLL
-MULT=$(( $PLL / $XTAL ))
-echo MULT: $MULT
-[ $MULT -lt 128 ] || echo MULT problem: $MULT
-PLL=$(($XTAL * $MULT))	# real PLL frequency
-echo real PLL: $PLL
-[ $PLL -ge 1000000000 -a $PLL -le 1500000000 ] || echo PLL frequency problem: $PLL
-POSTDIV=2 # means 3
-echo POSTDIV: $POSTDIV
-[ $POSTDIV -lt 64 ] || echo POSTDIV problem: $POSTDIV
-MAIN_CLK=$(( $PLL / ($POSTDIV + 1) ))
-echo MAIN_CLK: $MAIN_CLK
-# LOCKCNT - at least 30us - this is the number of LPCLK (XTAL / 2); we add 40% safety margin
-LOCKCNT=$(printf "%.0f" $(echo '1.4 * 30*10^-6 *' $LPCLK | bc -l ))
-echo LOCKCNT: $LOCKCNT
-
 echo g0008 $(printf "%08x" $(( ($LOCKCNT << 16) | (0 << 15) | (0 << 15) | ($POSTDIV << 8) | $MULT << 0)) ) >dcs
-
-MIPITX_BIT_CLK=450000000	# what we would like to have (should be calculated from panel parameters)
-MTXDIV=$(( (($MAIN_CLK + $MIPITX_BIT_CLK - 1 ) / $MIPITX_BIT_CLK) - 1 ))	# get divisor and round up
-echo MTXDIV: $MTXDIV
-[ $MTXDIV -ge 0 -a $MTXDIV -lt 16 ] || echo MTXDIV problem: $MTXDIV
-MIPITX_BIT_CLK=$(( $MAIN_CLK / ($MTXDIV + 1) ))
-MIPITX_DDR_CLK=$(( $MIPITX_BIT_CLK / 2 ))
-[ $MIPITX_DDR_CLK -ge $PANEL_MIN_DDR ] || echo MIPITX_DDR_CLK vs. PANEL_MIN_DDR problem: $MIPITX_DDR_CLK "<" $PANEL_MIN_DDR
-MIPITX_BYTE_CLK=$(( $MIPITX_BIT_CLK / 8 ))
-echo MIPITX_BIT_CLK: $MIPITX_BIT_CLK
-echo MIPITX_DDR_CLK: $MIPITX_DDR_CLK
-echo MIPITX_BYTE_CLK: $MIPITX_BYTE_CLK
-
-SYS_CLK=150000000	# max. value
-SYSDIV=$(( (($MAIN_CLK / 2 + $SYS_CLK -1 ) / $SYS_CLK) - 1 ))
-echo SYSDIV: $SYSDIV
-[ $SYSDIV -ge 0 -a $SYSDIV -lt 16 ] || echo SYSDIV problem: $SYSDIV
-SYS_CLK=$(( $MAIN_CLK / 2 / ($SYSDIV + 1) ))
-echo SYS_CLK: $SYS_CLK
-[ $SYS_CLK -le 150000000 ] || echo SYS_CLK problem: $SYS_CLK
-
 echo g000c $(printf "%08x" $(( ($MTXDIV << 4) | ($SYSDIV << 0) )) ) >dcs
-
 echo g0014 $(printf "%08x" $(( 0x0C77800F | (1 << 22) )) ) >dcs	# SCM_MISC2 (0C77800F): MRXEN = enabled
 echo g0020 $(printf "%08x" $(( 0x1592567D | (1 << 22) )) ) >dcs	# SCM_ANACTRL1 (1592567D): CPEN = enabled
 echo g0024 00003000 >dcs	# SCM_ANACTRL2 (00003300): CPPER=24
@@ -287,20 +315,8 @@ echo g1008 01200445 >dcs	# MIPIRX_DCR (01200245): HST=4
 
 # VCTM
 
-SPLIT_MEM=1 TE_SEL=1 VBP=0
 echo g200c $(printf "%08x" $(( ($SPLIT_MEM << 9) | ($ROT90 << 8) | ($VBP << 2) | ($TE_SEL << 1) )) ) >dcs	# VCTM_CFGR (00000000)
 
-## FIXME: calculate as needed
-
-PCLKNUM=1
-PCLKDEN=4
-[ $PCLKNUM -lt 128 ] || echo PCLKNUM problem: $PCLKNUM
-[ $PCLKDEN -lt 256 ] || echo PCLKDEN problem: $PCLKDEN
-PCLK=$(( ($SYS_CLK * $PCLKNUM) / $PCLKDEN ))
-echo PCLKNUM / PCLKDEN: $PCLKNUM / $PCLKDEN
-echo PCLK: $PCLK
-HDPS=0x30
-VDPS=0x30
 echo g2010 $(printf "%08x" $(( ($PCLKDEN << 16) | ($PCLKNUM << 0) )) ) >dcs	# VCTM_PCFRR (00010001)
 echo g2014 $(printf "%08x" $(( ($PANEL_FRAME_WIDTH << 16) | $HDPS )) ) >dcs	# HDCFGR
 echo g2018 $(printf "%08x" $(( ($PANEL_FRAME_HEIGHT << 16) | $VDPS )) ) >dcs	# VDCFGR
@@ -318,12 +334,6 @@ echo g2038 rrrr >dcs
 echo 35 02 >dcs		# tear on
 echo 44 0500 >dcs	# tear scan line
 
-# MIPITX
-LPD=$(( (($MIPITX_BYTE_CLK + $PANEL_LPCLOCK - 1) / $PANEL_LPCLOCK) - 1 ))
-[ $LPD -ge 0 -a $LPD -lt 64 ] || echo LPD problem: $LPD
-echo LPD: $LPD
-echo PANEL_LPCLOCK: $(( $MIPITX_BYTE_CLK / ($LPD+1) ))
-CKE=0
 echo g6008 $(printf "%08x" $(( 0x00000008 | (($PANEL_LANES - 1) << 22) | ($LPD << 16) | ($CKE << 0) )) ) >dcs	# MIPITX_CTLR (00030008)
 echo g600c $(printf "%08x" $(( ($PANEL_VBP << 24) | ($PANEL_HBP << 16) | ($PANEL_VSA << 8) | ($PANEL_HSA << 0) )) ) >dcs	# MIPITX_VTC1R (0214020A)
 echo g6010 $(printf "%08x" $(( ($PANEL_HEIGHT << 16) | ($PANEL_VFP << 8) | ($PANEL_HFP << 0) )) ) >dcs	# MIPITX_VTC2R (0438020A)

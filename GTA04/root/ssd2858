@@ -27,7 +27,7 @@ fi
 if [ ! -L dcs ]
 then
 	rm -rf dcs
-	ln -s /sys/devices/44000000.ocp/58000000.dss/58004000.encoder/58004000.encoder:lcd/dcs dcs
+	ln -s /sys/bus/platform/devices/58004000.encoder:lcd/dcs dcs
 fi
 
 # make sure the panel is active before trying to send commands

@@ -52,10 +52,12 @@ PANEL_LANES=4	# lanes
 PANEL_HFP=10	# front porch
 PANEL_HSA=10	# sync active
 PANEL_HBP=100	# back porch
-# NOTE: we must set this to 20,20,20 to get a slightly higher pixel and DDR rate or the panel wouldn't sync properly
-PANEL_VFP=20	# top porch
-PANEL_VSA=20	# sync active
-PANEL_VBP=20	# bottom porch
+# NOTE: we must set this so the sum of V* is < ~70 to get a slightly higher pixel and DDR rate or the panel wouldn't sync properly
+# warning: some VBP values are causing horizontal misalignemt:
+# 12..15, 18..23, 26..?, 34..40, ...?
+PANEL_VFP=10	# top porch
+PANEL_VSA=2	# sync active
+PANEL_VBP=48	# bottom porch
 PANEL_LPCLOCK=8000000	# maximum is 9.2 MHz
 PANEL_MAX_DDR=250000000	# maximum DDR clock (4..25ns) that can be processed by controller
 
@@ -115,10 +117,12 @@ OMAP_HEIGHT=$PANEL_HEIGHT
 OMAP_HFP=$PANEL_HFP
 OMAP_HSA=$PANEL_HSA
 OMAP_HBP=$PANEL_HBP
+OMAP_VFP=$PANEL_VFP
+OMAP_VSA=$PANEL_VSA
+OMAP_VBP=$PANEL_VBP
 OMAP_DDR=$MIPITX_DDR_CLK	# I hope the OMAP DSS calculates what it needs
 
 # default flags
-X_MODE=false
 DUMP_REGS=false
 LOOP_DCS_11_10=false
 PROGRAM_PANEL=false
@@ -133,13 +137,6 @@ do
 		;;
 	"-r" )
 		OMAP_WIDTH=$PANEL_HEIGHT
-		OMAP_HEIGHT=$PANEL_WIDTH
-		ROT90=1
-		;;
-	## if we want to rotate in the other direction, combine with flip horizontal/vertical DCS 36h
-	"-x" )
-		X_MODE=true
-		OMAP_WIDTH=$PANEL_HEIGHT	# currently assumes rotation
 		OMAP_HEIGHT=$PANEL_WIDTH
 		ROT90=1
 		;;
@@ -209,7 +206,9 @@ echo "  LPCLK: $(($XTAL / 2))"
 
 ## now initialize OMAP MIPI Interface ##
 
-echo start x_res=$OMAP_WIDTH y_res=$OMAP_HEIGHT lpclock=$OMAP_LPCLK pixelclock=$OMAP_PCLK hfp=$OMAP_HFP hsw=$OMAP_HSA hbp=$OMAP_HBP >dcs	# start MIPI interface timing
+echo start x_res=$OMAP_WIDTH y_res=$OMAP_HEIGHT lpclock=$OMAP_LPCLK pixelclock=$OMAP_PCLK \
+	hfp=$OMAP_HFP hsw=$OMAP_HSA hbp=$OMAP_HBP \
+	vfp=$OMAP_VFP vsw=$OMAP_VSA vbp=$OMAP_VBP >dcs	# start MIPI interface timing
 
 sleep .5
 
@@ -238,71 +237,6 @@ echo 10 >dcs
 echo ff00 >dcs
 echo 28 >dcs
 echo 10 >dcs
-
-if $X_MODE
-then
-
-# send code sequences verbatim...
-
-echo gff00 >dcs
-echo g0008 01f4012a >dcs
-echo g000c 00000005 >dcs
-echo g0014 0c37800f >dcs
-echo g0020 1592577d >dcs
-echo g0024 00003000 >dcs
-echo 11 >dcs
-sleep 0.001
-echo 2a 000004ff
-echo 2b 000002cf
-echo g1008 01200445 >dcs
-echo g200c 00000302 >dcs
-echo g2010 00010001 >dcs
-echo g2014 02ee0014 >dcs
-echo g2018 050e000a >dcs
-echo g201c 02d00500 >dcs
-echo g2020 050002d0 >dcs
-echo g2024 050002d0 >dcs
-echo g203c 050002d0 >dcs
-echo g2034 00000000 >dcs
-echo g2038 04ff02cf >dcs
-echo g2030 0000000a >dcs
-echo g20a0 00000050 >dcs
-echo 35 02 >dcs
-echo 44 0500 >dcs
-echo g6008 00c70008 >dcs
-echo g600c 0a14020a >dcs
-echo g6010 0500040a >dcs
-echo g6014 01000101 >dcs
-echo g6084 000002d0 >dcs
-
-# dump all register values
-for r in 0004 0008 000c 0010 0014 001c 0020 0024 0028 002c 0030 \
-         1004 1008 100c 1010 1014 1018 101c 1020 1024 1028 102c 1030 \
-         2000 2004 2008 200c 2010 2014 2018 201c 2020 2024 2028 202c 2030 2034 2038 203c \
-              2040 2044 2048 204c 2050 2054 2058 205c 2060 2064 2068 206c 2070 2074 2078 207c \
-              2080 2084 2088 208c 2090 2094 2098 209c 20a0 20a4 20a8 20ac 20b0 20b4 2ffc \
-         6000 6004 6008 600c 6010 6014 6018 6030 6034 6038 603c 6040 6044 6048 604c 6050 6054 \
-              6084 6088 608c 6090 6094 60a4 60a8 60ac 60b0 60b4
-do
-echo g$r rrrr >dcs
-echo $r: $(cat dcs)
-done
-
-echo gff01 >dcs	# enable forwarding through ssd
-echo 11 >dcs
-sleep .1
-echo 29 >dcs
-
-# turn on omap5 stream
-
-echo gff00 >dcs	# address the ssd directly
-echo stream >dcs
-sleep .1
-echo 29 >dcs
-
-# all done in this (special) case
-exit
-fi
 
 # start programming the SSD2858 with the SCM
 

@@ -105,9 +105,9 @@ MIPITX_BIT_CLK=$(( $MAIN_CLK / $MTX_CLK_DIV ))
 MIPITX_DDR_CLK=$(( $MIPITX_BIT_CLK / 2 ))	# going to panel
 MIPITX_BYTE_CLK=$(( $MIPITX_BIT_CLK / 8 ))
 LP_CLK_DIV=$(( ($MIPITX_BYTE_CLK + $PANEL_LPCLOCK - 1) / $PANEL_LPCLOCK ))	# divider
-SSD_LPCLK=$(( $MIPITX_BYTE_CLK / $LP_CLK_DIV ))	# real LP clock
-# LOCKCNT - at least 30us - this is the number of SSD_LPCLOCK (XTAL / 2); we add 40% safety margin
-LOCKCNT=$(printf "%.0f" $(echo '1.4 * 30*10^-6 *' $SSD_LPCLK | bc -l ))
+SSD_LPCLK=$(( $MIPITX_BYTE_CLK / $LP_CLK_DIV ))	# real LP clock output
+# LOCKCNT - at least 30us - this is the number of LPCLOCK (XTAL / 2); we add 40% safety margin
+LOCKCNT=$(printf "%.0f" $(echo '1.4 * 30*10^-6 *' $XTAL '/ 2' | bc -l ))
 
 # calculate OMAP parameters
 OMAP_LPCLK=$(( $XTAL / 2 ))	# we must drive SSD with this LP clock frequency
@@ -163,11 +163,12 @@ echo "Panel MIPI:"
 echo "  Dimensions: ${PANEL_WIDTH}x${PANEL_HEIGHT} in ${PANEL_FRAME_WIDTH}x${PANEL_FRAME_HEIGHT}"
 echo "  Pixel CLK: $PANEL_PCLK"
 echo "  DDR CLK: $PANEL_MIN_DDR"
-echo "  OMAP_LPCLK target: $PANEL_LPCLOCK"
+echo "  LPCLK target: $PANEL_LPCLOCK"
 
 echo "SSD2858:"
 echo "  XTAL CLK: $XTAL"
 [ $XTAL -ge 20000000 -a $XTAL -le 300000000 ] || echo XTAL frequency problem: $XTAL
+echo "  LPCLK in: $(($XTAL / 2))"
 echo "  target VTCM PIXEL CLK: $TARGET_PIXEL_CLK"
 echo "  target SYS_CLK: $TARGET_SYS_CLK"
 echo "  target MAIN_CLK: $TARGET_MAIN_CLK"
@@ -189,20 +190,22 @@ echo "  VTCM PIXEL_CLK: $PIXEL_CLK"
 echo "  Panel PIXEL_CLK: $(( 2 * $PIXEL_CLK ))"
 echo "  MTX_CLK_DIV: $MTX_CLK_DIV"
 [ $MTX_CLK_DIV -ge 1 -a $MTX_CLK_DIV -le 16 ] || echo MTX_CLK_DIV problem: $MTX_CLK_DIV
+[ $MTX_CLK_DIV -eq 1 -o $((MTX_CLK_DIV % 2)) -eq 0 ] || echo MTX_CLK_DIV problem: $MTX_CLK_DIV
 echo "  MIPITX_BIT_CLK: $MIPITX_BIT_CLK"
 echo "  MIPITX_DDR_CLK: $MIPITX_DDR_CLK"
 [ $MIPITX_DDR_CLK -ge $PANEL_MIN_DDR ] || echo MIPITX_DDR_CLK vs. PANEL_MIN_DDR problem: $MIPITX_DDR_CLK "<" $PANEL_MIN_DDR
 [ $MIPITX_DDR_CLK -le $PANEL_MAX_DDR ] || echo MIPITX_DDR_CLK vs. PANEL_MAX_DDR problem: $MIPITX_DDR_CLK "<" $PANEL_MAX_DDR
 echo "  MIPITX_BYTE_CLK: $MIPITX_BYTE_CLK"
-echo "  LPCLK: $SSD_LPCLK"
+echo "  LPCLK out: $SSD_LPCLK"
 [ $LP_CLK_DIV -gt 0 -a $LP_CLK_DIV -le 64 ] || echo LP_CLK_DIV problem: $LP_CLK_DIV
 echo "  LOCKCNT: $LOCKCNT"
+[ $LOCKCNT -gt 0 -a $LOCKCNT -le 65535 ] || echo LOCKCNT problem: $LOCKCNT
 
 echo "OMAP MIPI:"
 echo "  Dimensions: ${OMAP_WIDTH}x${OMAP_HEIGHT} in ${PANEL_FRAME_WIDTH}x${PANEL_FRAME_HEIGHT}"
 echo "  Pixel CLK: $OMAP_PCLK"
 echo "  DDR CLK: $OMAP_DDR"
-echo "  LPCLK: $(($XTAL / 2))"
+echo "  LPCLK out: $(($XTAL / 2))"
 
 ## now initialize OMAP MIPI Interface ##
 

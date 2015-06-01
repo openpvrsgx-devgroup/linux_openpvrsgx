@@ -1,0 +1,5 @@
+[ -r /usr/lib/arm-linux-gnueabihf/libpng.so ] || apt-get install libpng12-dev
+[ -x fbpng ] || gcc fbpng.c -o fbpng -lpng
+[ -r 1280x720_board.png ] || wget -O 1280x720_board.png http://notaz.gp2x.de/img/mess/pyra/1280x720_board.png
+
+./fbpng 1280x720_board.png

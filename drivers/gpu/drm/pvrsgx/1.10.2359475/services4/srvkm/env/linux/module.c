@@ -47,6 +47,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 #endif
 
+#ifndef CONFIG_RESET_CONTROLLER
+#include <linux/platform_data/sgx-omap.h>
+#endif
+
 #if defined(SUPPORT_DRI_DRM) && !defined(SUPPORT_DRI_DRM_PLUGIN)
 #define	PVR_MOD_STATIC
 #else
@@ -344,8 +348,10 @@ static LDM_DRV powervr_driver = {
 LDM_DEV *gpsPVRLDMDev;
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0))
+#ifdef CONFIG_RESET_CONTROLLER
 struct reset_control *rstc;
 bool already_deasserted = false;
+#endif
 #endif
 
 #if defined(MODULE) && defined(PVR_LDM_PLATFORM_MODULE) && \
@@ -388,11 +394,14 @@ static int __devinit PVRSRVDriverProbe(LDM_DEV *pDevice, const struct pci_device
 #endif
 {
 	SYS_DATA *psSysData;
-	int ret;	
+	int ret;
+	struct device *dev = &pDevice->dev;
+	struct gfx_sgx_platform_data *pdata = dev->platform_data;
+
 	PVR_TRACE(("PVRSRVDriverProbe(pDevice=%p)", pDevice));
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0))
+#ifdef CONFIG_RESET_CONTROLLER
 	rstc = reset_control_get(&pDevice->dev, NULL);
-
 	if (IS_ERR(rstc)) 
 	{
 		dev_err(&pDevice->dev, "%s: error: reset_control_get\n", __func__);
@@ -403,7 +412,7 @@ static int __devinit PVRSRVDriverProbe(LDM_DEV *pDevice, const struct pci_device
 
 	if (ret < 0)
 	{
-		dev_err(&pDevice->dev, "%s: error: reset_control_clear_reset\n", __func__);
+		dev_err(dev, "%s: error: reset_control_clear_reset\n", __func__);
 		return ret;
 	}
 
@@ -413,11 +422,22 @@ static int __devinit PVRSRVDriverProbe(LDM_DEV *pDevice, const struct pci_device
 	{
 		already_deasserted = true;
 	}
-	else if (ret < 0) 
+	else if (ret < 0)
 	{
-		dev_err(&pDevice->dev, "%s: error: reset_control_deassert\n", __func__);
+		dev_err(dev, "%s: error: reset_control_deassert\n", __func__);
 		return ret;
 	}
+#else
+	if (pdata && pdata->deassert_reset) {
+		ret = pdata->deassert_reset(pDevice, pdata->reset_name);
+		if (ret) {
+			dev_err(dev, "Unable to reset SGX!\n");
+		}
+	} else {
+		dev_err(dev, "SGX Platform data missing deassert_reset!\n");
+		return -ENODEV;
+	}
+#endif  /* CONFIG_RESET_CONTROLLER */
 #endif
 
 #if 0   /* INTEGRATION_POINT */
@@ -432,7 +452,7 @@ static int __devinit PVRSRVDriverProbe(LDM_DEV *pDevice, const struct pci_device
 	{
 		return -EINVAL;
 	}
-#endif	
+#endif
 	/* SysInitialise only designed to be called once.
 	 */
 	psSysData = SysAcquireDataNoCheck();
@@ -445,6 +465,7 @@ static int __devinit PVRSRVDriverProbe(LDM_DEV *pDevice, const struct pci_device
 		}
 	}
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0))
+#ifdef CONFIG_RESET_CONTROLLER
         if (!already_deasserted)
         {
                 ret = reset_control_is_reset(rstc);
@@ -454,6 +475,7 @@ static int __devinit PVRSRVDriverProbe(LDM_DEV *pDevice, const struct pci_device
                 }
         }
         reset_control_put(rstc);
+#endif /* CONFIG_RESET_CONTROLLER */
 #endif
 
 	return PVRSRVIONClientCreate();

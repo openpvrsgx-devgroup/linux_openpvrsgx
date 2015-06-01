@@ -1,10 +1,9 @@
 #
-# initialite Solomon SSD2858 chip with input stream from OMAP5 and panel chained to the output
+# initialize Solomon SSD2858 chip with input stream from OMAP5 and panel chained to the output
 # using the panel-mipi-debug driver
 #
 # -b:	BIST mode (test pattern)
 # -r:	program for rotation
-# -x:	apply some register value array
 # -d:	dump ssd2858 registers
 # -l:	loop dcs commands 10h and 11h to check LP output to panel
 # -p:	program panel through DCS

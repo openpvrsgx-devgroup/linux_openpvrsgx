@@ -93,6 +93,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <linux/mutex.h>
 
 #include <video/da8xx-fb.h>
+/* used by SGX OMAPLFB drvier */
+typedef void (*vsync_callback_t)(void *arg);
+int register_vsync_cb(vsync_callback_t handler, void *arg, int idx);
+int unregister_vsync_cb(vsync_callback_t handler, void *arg, int idx);
+
 #if defined(PVR_OMAPLFB_DRM_FB)
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,0,0))
 #include <plat/display.h>
@@ -324,15 +329,14 @@ void OMAPLFBFlip(OMAPLFB_DEVINFO *psDevInfo, OMAPLFB_BUFFER *psBuffer)
 	struct fb_var_screeninfo sFBVar;
 	int res;
 	
+	OMAPLFB_CONSOLE_LOCK();
+
 	if (!lock_fb_info(psDevInfo->psLINFBInfo))
 	{
 		DEBUG_PRINTK((KERN_WARNING DRIVER_PREFIX
 			": %s: Device %u: Couldn't lock FB info\n", __FUNCTION__,  psDevInfo->uiFBDevID));
 		return;
 	}
-
-
-	OMAPLFB_CONSOLE_LOCK();
 
 	sFBVar = psDevInfo->psLINFBInfo->var;
 
@@ -449,8 +453,8 @@ void OMAPLFBFlip(OMAPLFB_DEVINFO *psDevInfo, OMAPLFB_BUFFER *psBuffer)
 	}
 #endif /* defined(CONFIG_DSSCOMP) */
 
-	OMAPLFB_CONSOLE_UNLOCK();
 	unlock_fb_info(psDevInfo->psLINFBInfo);
+	OMAPLFB_CONSOLE_UNLOCK();
 }
 
 /* Newer kernels don't have any update mode capability */
@@ -807,10 +811,13 @@ static OMAPLFB_ERROR OMAPLFBBlankOrUnblankDisplay(OMAPLFB_DEVINFO *psDevInfo, IM
 {
 #ifdef FBDEV_PRESENT
 	int res;
+
+	OMAPLFB_CONSOLE_LOCK();
 	if (!lock_fb_info(psDevInfo->psLINFBInfo))
 	{
 		printk(KERN_ERR DRIVER_PREFIX
 			": %s: Device %u: Couldn't lock FB info\n", __FUNCTION__,  psDevInfo->uiFBDevID);
+		OMAPLFB_CONSOLE_UNLOCK();
 		return (OMAPLFB_ERROR_GENERIC);
 	}
 
@@ -820,14 +827,13 @@ static OMAPLFB_ERROR OMAPLFBBlankOrUnblankDisplay(OMAPLFB_DEVINFO *psDevInfo, IM
 	* notification.
 	*/
 
-
-	OMAPLFB_CONSOLE_LOCK();
 	psDevInfo->psLINFBInfo->flags |= FBINFO_MISC_USEREVENT;
 	res = fb_blank(psDevInfo->psLINFBInfo, bBlank ? 1 : 0);
 	psDevInfo->psLINFBInfo->flags &= ~FBINFO_MISC_USEREVENT;
 
-	OMAPLFB_CONSOLE_UNLOCK();
 	unlock_fb_info(psDevInfo->psLINFBInfo);
+	OMAPLFB_CONSOLE_UNLOCK();
+
 	if (res != 0 && res != -EINVAL)
 	{
 		printk(KERN_ERR DRIVER_PREFIX

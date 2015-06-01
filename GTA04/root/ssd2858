@@ -211,6 +211,8 @@ echo "  LPCLK out: $(($XTAL / 2))"
 
 ## now initialize OMAP MIPI Interface ##
 
+fbset -g $OMAP_WIDTH $OMAP_HEIGHT $OMAP_WIDTH $OMAP_HEIGHT 32
+
 echo start x_res=$OMAP_WIDTH y_res=$OMAP_HEIGHT lpclock=$OMAP_LPCLK pixelclock=$OMAP_PCLK \
 	hfp=$OMAP_HFP hsw=$OMAP_HSA hbp=$OMAP_HBP \
 	vfp=$OMAP_VFP vsw=$OMAP_VSA vbp=$OMAP_VBP >dcs	# start MIPI interface timing

@@ -32,9 +32,11 @@ fi
 
 # make sure the panel is active before trying to send commands
 echo nostream >dcs	# if it was on before
+sleep .5
 echo stop >dcs	# stop if it was already running
 echo nopower >dcs	# enable is unused
 echo reset >dcs	# reset panel
+sleep .5
 # reset panel
 echo reset >dcs	# reset panel
 echo power >dcs	# enable ssd (should do this only on v4 boards!!! but I have no method to decide between v3 and v4)

@@ -407,7 +407,7 @@ static int __devinit PVRSRVDriverProbe(LDM_DEV *pDevice, const struct pci_device
 		dev_err(&pDevice->dev, "%s: error: reset_control_get\n", __func__);
 		return PTR_ERR(rstc);
 	}
-
+#if 0
 	ret = reset_control_clear_reset(rstc);
 
 	if (ret < 0)
@@ -415,7 +415,7 @@ static int __devinit PVRSRVDriverProbe(LDM_DEV *pDevice, const struct pci_device
 		dev_err(dev, "%s: error: reset_control_clear_reset\n", __func__);
 		return ret;
 	}
-
+#endif
 	ret = reset_control_deassert(rstc);
 
 	if (ret == -EEXIST)
@@ -468,11 +468,13 @@ static int __devinit PVRSRVDriverProbe(LDM_DEV *pDevice, const struct pci_device
 #ifdef CONFIG_RESET_CONTROLLER
         if (!already_deasserted)
         {
+#if 0
                 ret = reset_control_is_reset(rstc);
                 if (ret <= 0)
                 {
                         PVR_DPF((PVR_DBG_MESSAGE, "reset control reset"));
                 }
+#endif
         }
         reset_control_put(rstc);
 #endif /* CONFIG_RESET_CONTROLLER */

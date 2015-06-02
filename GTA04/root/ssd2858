@@ -74,8 +74,6 @@ CKE=0
 VB_MODE=0
 VBE=0
 ROT90=0
-HDPS=0x30
-VDPS=0x30
 
 # SSD2858 clock divider parameters
 XTAL=24000000	# we have 24 MHz XTAL
@@ -269,8 +267,8 @@ echo g1008 01200445 >dcs	# MIPIRX_DCR (01200245): HST=4
 # VCTM
 echo g200c $(printf "%08x" $(( ($SPLIT_MEM << 9) | ($ROT90 << 8) | ($VBP << 2) | ($TE_SEL << 1) )) ) >dcs	# VCTM_CFGR (00000000)
 echo g2010 $(printf "%08x" $(( ($PCLK_DEN << 16) | ($PCLK_NUM << 0) )) ) >dcs	# VCTM_PCFRR (00010001)
-echo g2014 $(printf "%08x" $(( ($PANEL_FRAME_WIDTH << 16) | $HDPS )) ) >dcs	# HDCFGR
-echo g2018 $(printf "%08x" $(( ($PANEL_FRAME_HEIGHT << 16) | $VDPS )) ) >dcs	# VDCFGR
+echo g2014 $(printf "%08x" $(( ($PANEL_FRAME_WIDTH << 16) | $PANEL_HBP )) ) >dcs	# HDCFGR
+echo g2018 $(printf "%08x" $(( ($PANEL_FRAME_HEIGHT << 16) | $PANEL_VBP )) ) >dcs	# VDCFGR
 echo g201c $(printf "%08x" $(( ($OMAP_HEIGHT << 16) | $OMAP_WIDTH )) ) >dcs	# MSZR
 echo g2020 $(printf "%08x" $(( ($PANEL_HEIGHT << 16) | $PANEL_WIDTH )) ) >dcs		# DSZR
 echo g2024 $(printf "%08x" $(( ($PANEL_HEIGHT << 16) | $PANEL_WIDTH )) ) >dcs		# PSZR

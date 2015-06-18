@@ -636,7 +636,7 @@ static struct of_device_id fs_fxas2100x_match[] = {
 	},
 	{},
 };
-MODULE_DEVICE_TABLE(of, fs_fxos8700_match);
+MODULE_DEVICE_TABLE(of, fs_fxas2100x_match);
 
 static const struct i2c_device_id fxas2100x_id[] = {
 	{ "fxas2100x", 0 },

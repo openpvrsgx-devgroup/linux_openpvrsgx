@@ -784,7 +784,7 @@ PVRMMap(struct file* pFile, struct vm_area_struct* ps_vma)
 
             break;
         case PVRSRV_HAP_WRITECOMBINE:
-	        ps_vma->vm_page_prot = PGPROT_WC(ps_vma->vm_page_prot);
+	    ps_vma->vm_page_prot = PGPROT_WC(ps_vma->vm_page_prot);
             break;
         case PVRSRV_HAP_UNCACHED:
             ps_vma->vm_page_prot = PGPROT_UC(ps_vma->vm_page_prot);

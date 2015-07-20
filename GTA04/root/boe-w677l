@@ -303,6 +303,8 @@ echo stream >dcs
 sleep 0.020
 echo 29 >dcs
 
+exit
+
 # randomly fill framebuffer
 for i in 1 2 3 4 5
 do

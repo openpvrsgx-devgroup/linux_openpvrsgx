@@ -32,6 +32,7 @@ Package: kernel-3.14.y-fslc-imx6-sr-dev
 Architecture: any-arm
 Conflicts: kernel-cubox-i-dev
 Replaces: kernel-cubox-i-dev
+Provides: imx-kernel-api
 Description: kernel API development files
  This packages provides the required development files to
  utilize this kernel`s public API.

@@ -57,3 +57,9 @@ override_dh_auto_install:
 	mv $(DDESTDIR)/usr/include/kernel-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/include/* $(DDESTDIR)/usr/include/kernel-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/
 	rmdir $(DDESTDIR)/usr/include/kernel-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/include
 	find $(DDESTDIR)/usr/include/kernel-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION) -name "*.cmd" -delete
+
+	# add easy link to public kernel headers
+	ln -sv kernel-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION) $(DDESTDIR)/usr/include/imx-kernel-api
+
+override_dh_auto_test:
+	# don't test

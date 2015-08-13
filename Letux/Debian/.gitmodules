@@ -1,0 +1,4 @@
+[submodule "linux"]
+	path = linux
+	url = https://github.com/SolidRun/linux-fslc.git
+	branch = 3.14-1.0.x-mx6

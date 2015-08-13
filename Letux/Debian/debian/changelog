@@ -1,0 +1,44 @@
+kernel-3.14.y-fslc-imx6-sr (3.14.48pkg1) stable; urgency=low
+
+  * switch to Freescale community kernel, with SolidRun enablement patches on top
+
+ -- Josua Mayer <privacy@not.given>  Sat, 18 Jul 2015 07:19:16 +0200
+
+kernel-cubox-i (3.14.14.1421085670-5) stable; urgency=medium
+
+  * remove firmware from package
+
+ -- Josua Mayer <privacy@not.given>  Wed, 17 Jun 2015 18:56:30 +0800
+
+kernel-cubox-i (3.14.14.1421085670-4) stable; urgency=medium
+
+  * set memory split userspace/kernelspace to 3GB/1GB
+  * use Thumb2 instructions
+
+ -- Josua Mayer <josua@localhost>  Fri, 15 May 2015 18:53:14 +0200
+
+kernel-cubox-i (3.14.14.1421085670-3) stable; urgency=low
+
+  * provide galcore as virtual package
+  * enable armel builds
+  * fix kernel-headers package
+
+ -- Josua Mayer <unknown>  Tue, 07 Apr 2015 18:40:17 +0200
+
+kernel-cubox-i (3.14.14.1421085670-2) stable; urgency=critical
+
+  * install dtb files for cubox-i quad and hummingboard duallite SoCs
+
+ -- Josua Mayer <josua@localhost>  Sat, 17 Jan 2015 16:17:30 +0100
+
+kernel-cubox-i (3.14.14.1421085670-1) stable; urgency=high
+
+  * update
+
+ -- Josua Mayer <unknown>  Mon, 12 Jan 2015 19:03:04 +0100
+
+kernel-cubox-i (3.14.14.1414094154-1) unstable; urgency=low
+
+  * Initial release (Closes: #nnnn)  <nnnn is the bug number of your ITP>
+
+ -- unknown <unknown>  Sat, 25 Oct 2014 22:43:37 +0200

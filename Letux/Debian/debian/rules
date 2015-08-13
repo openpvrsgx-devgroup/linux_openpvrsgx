@@ -1,0 +1,59 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+# Sample debian/rules that uses debhelper.
+# This file was originally written by Joey Hess and Craig Small.
+# As a special exception, when this file is copied by dh-make into a
+# dh-make output file, you may use that output file without restriction.
+# This special exception was added by Craig Small in version 0.37 of dh-make.
+
+# Uncomment this to turn on verbose mode.
+export DH_VERBOSE=1
+
+KDESTDIR=$(CURDIR)/debian/kernel-3.14.y-fslc-imx6-sr
+HDESTDIR=$(CURDIR)/debian/kernel-headers-3.14.y-fslc-imx6-sr
+DDESTDIR=$(CURDIR)/debian/kernel-3.14.y-fslc-imx6-sr-dev
+
+# kernel version information
+BASEVERSION=3.14.44
+LOCALVERSION=-fslc-imx6-sr
+SCMVERSION=$(shell test -e .git && echo +)
+
+%:
+	dh $@ --parallel --sourcedirectory=linux --builddirectory=build
+
+override_dh_auto_configure:
+	mkdir build
+	cp defconfig build/.config
+	cd build; ../linux/scripts/config --set-str LOCALVERSION $(LOCALVERSION)
+	make -C linux O="$(CURDIR)/build" olddefconfig
+
+override_dh_auto_build:
+	dh_auto_build -- dtbs zImage modules
+
+override_dh_auto_install:
+	mkdir -vp $(KDESTDIR)/boot
+	install -v -m755 build/arch/arm/boot/zImage $(KDESTDIR)/boot/zImage-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)
+	install -v -m644 build/System.map $(KDESTDIR)/boot/System.map-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)
+	install -v -m644 build/.config $(KDESTDIR)/boot/config-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)
+	install -v -m644 build/arch/arm/boot/dts/imx6dl-cubox-i.dtb $(KDESTDIR)/boot/
+	install -v -m644 build/arch/arm/boot/dts/imx6dl-hummingboard.dtb $(KDESTDIR)/boot/
+	install -v -m644 build/arch/arm/boot/dts/imx6q-cubox-i.dtb $(KDESTDIR)/boot/
+	install -v -m644 build/arch/arm/boot/dts/imx6q-hummingboard.dtb $(KDESTDIR)/boot/
+	make -C build INSTALL_MOD_PATH=$(KDESTDIR) modules_install
+	rm -rf $(KDESTDIR)/lib/firmware # for now, dont package any firmware!
+	rm -fv $(KDESTDIR)/lib/modules/$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/source
+	rm -fv $(KDESTDIR)/lib/modules/$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/build
+
+	# install kernel headers
+	cd build; sh ../install_devel_files.sh arm $(HDESTDIR)/usr/src/kernel-headers-$(shell cat include/config/kernel.release 2> /dev/null)
+
+	# add source and build symlinks
+	mkdir -p $(HDESTDIR)/lib/modules/$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)
+	ln -sfv /usr/src/kernel-headers-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION) $(HDESTDIR)/lib/modules/$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/source
+	ln -sfv /usr/src/kernel-headers-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION) $(HDESTDIR)/lib/modules/$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/build
+
+	# install the public API headers
+	make -C build INSTALL_HDR_PATH=$(DDESTDIR)/usr/include/kernel-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION) headers_install
+	mv $(DDESTDIR)/usr/include/kernel-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/include/* $(DDESTDIR)/usr/include/kernel-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/
+	rmdir $(DDESTDIR)/usr/include/kernel-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/include
+	find $(DDESTDIR)/usr/include/kernel-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION) -name "*.cmd" -delete

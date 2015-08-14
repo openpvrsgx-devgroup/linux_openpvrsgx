@@ -16,7 +16,7 @@ set -e
 # for details, see http://www.debian.org/doc/debian-policy/ or
 # the debian-policy package
 
-KERNEL_LOCALVERSION=3.14.44-fslc-imx6-sr
+KERNEL_LOCALVERSION=3.14.48-fslc-imx6-sr
 
 case "$1" in
     remove|upgrade|deconfigure)
@@ -37,7 +37,7 @@ case "$1" in
     ;;
 
     *)
-        echo "prerm called with unknown argument \`$1'" >&2
+        echo "prerm called with unknown argument \"$1\"" >&2
         exit 1
     ;;
 esac

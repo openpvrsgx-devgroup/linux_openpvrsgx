@@ -21,22 +21,22 @@ KERNEL_LOCALVERSION=3.14.48-fslc-imx6-sr
 
 case "$1" in
     configure)
-        # create an initrd
-        update-initramfs -k $KERNEL_LOCALVERSION -c 2>/dev/null || true
+	# create an initrd
+	update-initramfs -k $KERNEL_LOCALVERSION -c 2>/dev/null || true
 
-        # set this kernel as boot kernel (if none other exists)
-        if [ ! -e "/boot/zImage" ] || ( [ -h "/boot/zImage" ] && [ ! -e "/boot/$(readlink /boot/zImage)" ] ); then
-                ln -sfv zImage-$KERNEL_LOCALVERSION /boot/zImage
-                ln -sfv initrd.img-$KERNEL_LOCALVERSION /boot/initrd
-        fi
+	# set this kernel as boot kernel (if none other exists)
+	if [ ! -e "/boot/zImage" ] || ( [ -h "/boot/zImage" ] && [ ! -e "/boot/$(readlink /boot/zImage)" ] ); then
+		ln -sfv zImage-$KERNEL_LOCALVERSION /boot/zImage
+		ln -sfv initrd.img-$KERNEL_LOCALVERSION /boot/initrd
+	fi
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
     ;;
 
     *)
-        echo "postinst called with unknown argument \"$1\"" >&2
-        exit 1
+	echo "postinst called with unknown argument \"$1\"" >&2
+	exit 1
     ;;
 esac
 

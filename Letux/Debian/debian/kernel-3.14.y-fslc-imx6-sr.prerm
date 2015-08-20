@@ -15,30 +15,26 @@ set -e
 #          <conflicting-package> <version>
 # for details, see http://www.debian.org/doc/debian-policy/ or
 # the debian-policy package
-
 KERNEL_LOCALVERSION=3.14.48-fslc-imx6-sr
 
-case "$1" in
+case $1 in
     remove|upgrade|deconfigure)
-        # if there is a boot symlink to this kernel, remove it
-        if [ -h /boot/zImage ] && [ "$(readlink /boot/zImage" = "zImage-$KERNEL_LOCALVERSION" ]; then
-                rm -f /boot/zImage
-                echo 1
+	# if there is a boot symlink to this kernel, remove it
+	if [ -h /boot/zImage ] && [ "$(readlink /boot/zImage)" = "zImage-$KERNEL_LOCALVERSION" ]; then
+		rm -f /boot/zImage
+	fi
+	# same for initrd
+	if [ -h /boot/initrd ] && [ "$(readlink /boot/initrd)" = "initrd.img-$KERNEL_LOCALVERSION" ]; then
+		rm -f /boot/initrd
         fi
-        # same for initrd
-        if [ -h /boot/initrd ] && [ "$(readlink /boot/initrd)" = "initrd.img-$KERNEL_LOCALVERSION" ]; then
-                rm -f /boot/initrd
-                echo 2
-        fi
-        # call update-initramfs to remove initrd of this kernel
-        update-initramfs -k $KERNEL_LOCALVERSION -d 2>/dev/null || true
+	# call update-initramfs to remove initrd of this kernel
+	update-initramfs -k $KERNEL_LOCALVERSION -d 2>/dev/null || true
     ;;
     failed-upgrade)
     ;;
-
     *)
-        echo "prerm called with unknown argument \"$1\"" >&2
-        exit 1
+	echo "prerm called with unknown argument \`$1'" >&2
+	exit 1
     ;;
 esac
 

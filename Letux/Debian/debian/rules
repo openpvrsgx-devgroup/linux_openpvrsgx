@@ -35,10 +35,7 @@ override_dh_auto_install:
 	install -v -m755 build/arch/arm/boot/zImage $(KDESTDIR)/boot/zImage-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)
 	install -v -m644 build/System.map $(KDESTDIR)/boot/System.map-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)
 	install -v -m644 build/.config $(KDESTDIR)/boot/config-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)
-	install -v -m644 build/arch/arm/boot/dts/imx6dl-cubox-i.dtb $(KDESTDIR)/boot/
-	install -v -m644 build/arch/arm/boot/dts/imx6dl-hummingboard.dtb $(KDESTDIR)/boot/
-	install -v -m644 build/arch/arm/boot/dts/imx6q-cubox-i.dtb $(KDESTDIR)/boot/
-	install -v -m644 build/arch/arm/boot/dts/imx6q-hummingboard.dtb $(KDESTDIR)/boot/
+	find arch/arm/boot/dts/ -name "imx6*-cubox-i.dtb" -o -name "imx6*-hummingboard.dtb" -o -name "imx6*-hummingboard2.dtb" -exec install -v -m644 {} $(KDESTDIR)/boot/ \;
 	make -C build INSTALL_MOD_PATH=$(KDESTDIR) modules_install
 	rm -rf $(KDESTDIR)/lib/firmware # for now, dont package any firmware!
 	rm -fv $(KDESTDIR)/lib/modules/$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/source

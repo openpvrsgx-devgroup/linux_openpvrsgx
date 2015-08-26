@@ -1,3 +1,9 @@
+kernel-3.14.y-fslc-imx6-sr (3.14.48pkg4) stable; urgency=low
+
+  * added Hummingboard-2 DTBs
+
+ -- Josua Mayer <privacy@not.given>  Wed, 26 Aug 2015 21:41:59 +0200
+
 kernel-3.14.y-fslc-imx6-sr (3.14.48pkg3) stable; urgency=medium
 
   * Update

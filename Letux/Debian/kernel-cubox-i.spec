@@ -24,7 +24,7 @@ Name: kernel-3.14.y-fslc-imx6-sr
 Summary: 3.14 LTS Kernel for Freescale i.MX6 devices
 Url: https://github.com/SolidRun/linux-fslc/tree/3.14-1.0.x-mx6-sr
 Version: 3.14.48
-Release: 1
+Release: 4
 License: GPL-2.0
 Group: System/Kernel
 Source: kernel-3.14.y-fslc-imx6-sr-git.tar.gz
@@ -113,6 +113,7 @@ rm -rf %{buildroot}/lib/firmware
 install -v -m755 -d %{buildroot}/boot/dtb
 install -v -m644 arch/arm/boot/dts/*-cubox-i.dtb %{buildroot}/boot/dtb/
 install -v -m644 arch/arm/boot/dts/*-hummingboard.dtb %{buildroot}/boot/dtb/
+install -v -m644 arch/arm/boot/dts/*-hummingboard2.dtb %{buildroot}/boot/dtb/
 
 # initrd placeholder for ghost file
 touch %{buildroot}/boot/initrd-%{baseversion}%{localversion}

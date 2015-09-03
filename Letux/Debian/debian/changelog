@@ -1,3 +1,9 @@
+kernel-3.14.y-fslc-imx6-sr (3.14.48pkg5) stable; urgency=low
+
+  * Update to a9fbd5d6a35699b4cc01b604559a9164b74eb053
+
+ -- Josua Mayer <josua@seriouspenguin>  Thu, 03 Sep 2015 23:38:26 +0200
+
 kernel-3.14.y-fslc-imx6-sr (3.14.48pkg4) stable; urgency=low
 
   * Update to a15c00aca127c010a7e125a0e31c86814db31c4c

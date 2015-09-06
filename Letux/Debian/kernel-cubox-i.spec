@@ -17,14 +17,14 @@
 
 #BuildArch: armv7l armv7hl
 
-%define baseversion 3.14.48
+%define baseversion 3.14.51
 %define localversion -fslc-imx6-sr
 
 Name: kernel-3.14.y-fslc-imx6-sr
 Summary: 3.14 LTS Kernel for Freescale i.MX6 devices
 Url: https://github.com/SolidRun/linux-fslc/tree/3.14-1.0.x-mx6-sr
-Version: 3.14.48
-Release: 5
+Version: 3.14.51
+Release: 2
 License: GPL-2.0
 Group: System/Kernel
 Source: kernel-3.14.y-fslc-imx6-sr-git.tar.gz

@@ -21,19 +21,31 @@ main(int argc, char *argv[])
 	}
 	if(!argv[1]) {
 		fprintf(stderr, "usage: %s [-s] [-r] /dev/ttyHS?\n", arg0);
-		fprintf(stderr, "  -s send \\n as \\n and not as CRLF\n");
-		fprintf(stderr, "  -r pass \\r and don't ignore\n");
+		fprintf(stderr, "  -s send \\n as \\n and not as \\r\\n\n");
+		fprintf(stderr, "  -r receive \\r and don't ignore\n");
 		return 1;
 	}
 	fd=open(argv[1], O_RDWR);
 	if(fd < 0) {
-		perror("open");		return 1;
+		perror("open");
+		return 1;
 	}
-	if(tcgetattr(fd, &tc) < 0) {		perror("tcgetattr");		return 1;	}  	tc.c_cflag &= ~(CSIZE | PARENB | CSTOPB | CSIZE);
+	if(tcgetattr(fd, &tc) < 0) {
+		perror("tcgetattr");
+		return 1;
+	}
+	tc.c_cflag &= ~(CSIZE | PARENB | CSTOPB | CSIZE);
 	tc.c_cflag |= CS8;
 	tc.c_lflag &= ~(ICANON | ECHO | ECHOE | ECHOK | ECHONL | INPCK | ISIG);
-	tc.c_iflag |= IGNBRK | IGNPAR | ICRNL | INLCR;	tc.c_oflag &= ~OPOST;
-	tc.c_cc[VMIN]	= 1;	tc.c_cc[VTIME]	=0;	if(tcsetattr(fd, TCSANOW, &tc) < 0) { /* tried to modify */		perror("tcsetattr");		return 1;	}	while(1) {
+	tc.c_iflag |= IGNBRK | IGNPAR | ICRNL | INLCR;
+	tc.c_oflag &= ~OPOST;
+	tc.c_cc[VMIN]	= 1;
+	tc.c_cc[VTIME]	=0;
+	if(tcsetattr(fd, TCSANOW, &tc) < 0) { /* tried to modify */
+		perror("tcsetattr");
+		return 1;
+	}
+	while(1) {
 		fd_set rfd, wfd, efd;
 		FD_SET(0, &rfd);
 		FD_SET(fd, &rfd);

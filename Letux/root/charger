@@ -1,5 +1,5 @@
 TWL4030_MADC=/sys/devices/platform/68000000.ocp/48070000.i2c/i2c-0/0-0048/48070000.i2c:twl@48:madc/iio:device0
-TWL6037_GPADC=/sys/bus/platform/drivers/palmas-gpadc/48070000.i2c:palmas@48:gpadc
+TWL6037_GPADC=/sys/devices/platform/44000000.ocp/48070000.i2c/i2c-0/0-0048/48070000.i2c:palmas@48:gpadc/iio:device0
 
 if [ -d $TWL4030_MADC ]
 then
@@ -48,23 +48,24 @@ then
 
 echo "System Voltage"
 echo "=============="
-echo VSYS: $(cat $TWL6037_GPADC/in7_channel)mV
+echo VSYS: $(cat $TWL6037_GPADC/in_voltage7_input)mV
 echo
 echo "Main Battery"
 echo "============"
-VOLT=$(cat $TWL6037_GPADC/in6_channel)
+VOLT=$(cat $TWL6037_GPADC/in_voltage6_input)
 echo volt: ${VOLT}mV ca. $(expr \( "$VOLT" - 3300 \) \* 100 / 950)%
-echo current: $(cat $TWL6037_GPADC/in11_channel)mA
-echo temp: $(cat $TWL6037_GPADC/in2_channel)°C
-echo type: $(cat $TWL6037_GPADC/in0_channel)mV
-echo VBUS: $(cat $TWL6037_GPADC/in10_channel)mV
-echo VCHG: $(cat $TWL6037_GPADC/in9_channel)mV
-echo audio: $(cat $TWL6037_GPADC/in2_channel)mV
-echo usb id: $(cat $TWL6037_GPADC/in14_channel)mV
+# NOTE: the driver reports mV and not mA or °C!
+echo current: $(cat $TWL6037_GPADC/in_voltage11_input)mA
+echo temp: $(cat $TWL6037_GPADC/in_temp1_raw)°C
+echo type: $(cat $TWL6037_GPADC/in_voltage0_input)mV
+echo VBUS: $(cat $TWL6037_GPADC/in_voltage10_input)mV
+echo VCHG: $(cat $TWL6037_GPADC/in_voltage9_input)mV
+echo audio: $(cat $TWL6037_GPADC/in_voltage2_input)mV
+echo usb id: $(cat $TWL6037_GPADC/in_voltage14_input)mV
 echo
 echo "Backup battery"
 echo "=============="
-echo volt: $(cat $TWL6037_GPADC/in8_channel)mV
+echo volt: $(cat $TWL6037_GPADC/in_voltage8_input)mV
 echo
 
 fi

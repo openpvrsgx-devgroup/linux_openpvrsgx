@@ -1,0 +1,79 @@
+#!/bin/sh
+
+# adjust screen size and touch depending on device model
+#
+# should in the future be only based on the device tree file name because that uniquely defines a device
+# /proc/device-tree/model and /proc/device-tree/name
+
+MUX=$(expr "$(cat /proc/cmdline)" : ".*mux=\([^ ]*\)")
+[ "$MUX" ] || MUX=$(cat /proc/device-tree/model 2>/dev/null)
+
+# NOTE: basically we need to map the panel model (and not a board name) to a config
+# but there is no canonical way to find out the panel model
+# /sys/class/lcd may be empty and panels don't have a 'model' attribute
+
+case "$MUX$DT" in
+	*BeagleBoardB1* | *OpenMoko-Beagle-Hybrid* )
+		PANEL=tpo028ttec1;;	# OpenmokoBeagleHybrid (with TPO LCD conneced to J4&5)
+	*GTA04A2* | *GTA04A3* | *GTA04A4* | *GTA04A5* | *GTA04A3+* | *Letux2804* )
+		PANEL=tpo028ttec1;;	# Letux 2804
+	*BeagleBoardB2* | *GTA04B2* | *GTA04B6* | *Letux3704* )
+		PANEL=COM37;;	# Letux 3704
+	*BeagleBoardB3* | *GTA04B3* | *Letux7004* )
+		PANEL=7-landscape;;	# Letux 7004
+	*BeagleBoardB4* | *GTA04B4* )
+		PANEL=5-landscape;;	# Letux 5004
+	*BeagleBoardB4* | *GTA04B7* | *Neo900* )
+		PANEL=AXE;;	# Neo900
+	*GTA04B8* )
+		PANEL=WristWatch;;	# Letux 2204
+	*PandaBoard* )
+		PANEL=default;;
+	*Pyra-Handheld* )
+		PANEL=720p;;
+	*Pandora* )
+		PANEL=tp043;;
+	*BeagleBoneBlack* )
+		PANEL=4.3-landscape;; # BBB with 4.3 inch panel cape
+	* )
+		echo "unknown motherboard $MUX"
+		echo "we don't know how to configure X11 for the display"
+		exit 1
+		;;
+esac
+
+case "$PANEL" in
+	default )
+		cp /etc/X11/xorg.conf /etc/X11/xorg.conf;;
+	tpo028ttec1 )
+		cp /etc/X11/640x480-2.8.conf /etc/X11/xorg.conf;;
+	com37 )
+		(
+		cd /root
+		[ -x blanviewd ] || make blanviewd
+		./blanviewd &
+		)
+		cp /etc/X11/640x480-3.7-bv.conf /etc/X11/xorg.conf
+		;;
+	7-landscape )
+		cp /etc/X11/480x800-7.0.conf /etc/X11/xorg.conf;;
+	5-landscape )
+		cp /etc/X11/xorg.conf.gta04b4 /etc/X11/xorg.conf;;
+	AXE ) 	cp /etc/X11/800x480-3.0.conf /etc/X11/xorg.conf;;
+	WristWatch )
+		cp /etc/X11/xorg.conf.gta04b8 /etc/X11/xorg.conf;;
+	720p )
+		cp /etc/X11/720x1280-5.0.conf /etc/X11/xorg.conf
+		/root/bl 1
+		;;
+	tpo430 )
+		cp /etc/X11/480x640-4.3.conf /etc/X11/xorg.conf;;
+	4.3-landscape )
+		cp /etc/X11/272x480-4.3.conf /etc/X11/xorg.conf;;
+	* )
+		cp /etc/X11/xorg.conf.$PANEL /etc/X11/xorg.conf;;
+esac
+
+# exec /usr/bin/X -nolisten tcp "$@"
+# allow to access X11 thorough TCP
+exec /usr/bin/X "$@"

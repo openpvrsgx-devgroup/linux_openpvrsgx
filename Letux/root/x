@@ -1,0 +1,20 @@
+#
+# allow access to local X server
+#
+# since the X server is being started with varying DISPLAY name and
+# different -auth parameter we have to grep the X command from ps -ef
+# and extract these values.
+# Since we need to set the current shell environment, we must source
+# this script.
+#
+# usage: . x
+#
+
+# root      3008  3007  0 12:38 tty2     00:00:01 /usr/bin/X :7 -auth /tmp/serverauth.YPgDh8JPcm
+
+read REPLY REPLY REPLY REPLY REPLY REPLY REPLY REPLY DISPLAY REPLY XAUTHORITY REPLY < <(ps -ef | fgrep /usr/bin/X | fgrep -v fgrep)
+
+export DISPLAY XAUTHORITY
+
+echo DISPLAY=$DISPLAY
+echo XAUTHORITY=$XAUTHORITY

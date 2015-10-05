@@ -7,6 +7,8 @@ SYS=/sys
 DEBUG=$SYS/kernel/debug
 PROC=/proc
 
+mount | fgrep -q debugfs || mount -t debugfs none $DEBUG
+
 PMDEBUG=$DEBUG/pm_debug
 if [ ! -d $PMDEBUG ]
 then

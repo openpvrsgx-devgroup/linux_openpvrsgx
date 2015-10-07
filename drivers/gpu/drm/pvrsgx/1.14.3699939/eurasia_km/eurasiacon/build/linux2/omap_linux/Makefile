@@ -39,9 +39,9 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ### ###########################################################################
 
-# If a product wasn't specified, we're an OMAP4430 blaze.
+# If a product wasn't specified, we're a J6 EVM.
 #
-TARGET_PRODUCT ?= omap5uevm
+TARGET_PRODUCT ?= jacinto6evm
 
 # Customize this build as per the TARGET_PRODUCT setting
 #
@@ -68,7 +68,7 @@ ifneq ($(filter omap5sevm panda5,$(TARGET_PRODUCT)),)
  # FIXME: Re-enable this ASAP
  SUPPORT_ACTIVE_POWER_MANAGEMENT 	:= 0
 endif
-ifneq ($(filter omap5uevm,$(TARGET_PRODUCT)),)
+ifneq ($(filter jacinto6evm omap5uevm,$(TARGET_PRODUCT)),)
  SGXCORE					:= 544
  SGX_CORE_REV				:= 116
  SGX_FEATURE_MP				:= 1

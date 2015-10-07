@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm 4.3.0-rc3 Kernel Configuration
+# Linux/arm 4.3.0-rc4 Kernel Configuration
 #
 CONFIG_ARM=y
 CONFIG_ARM_HAS_SG_CHAIN=y
@@ -1503,7 +1503,7 @@ CONFIG_USB_NET_DRIVERS=y
 # CONFIG_USB_KAWETH is not set
 # CONFIG_USB_PEGASUS is not set
 # CONFIG_USB_RTL8150 is not set
-# CONFIG_USB_RTL8152 is not set
+CONFIG_USB_RTL8152=m
 # CONFIG_USB_LAN78XX is not set
 CONFIG_USB_USBNET=m
 # CONFIG_USB_NET_AX8817X is not set
@@ -1520,7 +1520,7 @@ CONFIG_USB_NET_CDC_NCM=m
 CONFIG_USB_NET_SMSC95XX=m
 # CONFIG_USB_NET_GL620A is not set
 # CONFIG_USB_NET_NET1080 is not set
-# CONFIG_USB_NET_PLUSB is not set
+CONFIG_USB_NET_PLUSB=m
 # CONFIG_USB_NET_MCS7830 is not set
 # CONFIG_USB_NET_RNDIS_HOST is not set
 CONFIG_USB_NET_CDC_SUBSET=m

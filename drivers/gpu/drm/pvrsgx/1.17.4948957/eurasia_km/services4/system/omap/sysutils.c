@@ -44,6 +44,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #if defined(__linux__)
 #include "sysutils_linux.c"
+#if defined(SYS_OMAP_HAS_DVFS_FRAMEWORK)
+#include "sgxfreq.c"
+#endif
 #endif
 
 

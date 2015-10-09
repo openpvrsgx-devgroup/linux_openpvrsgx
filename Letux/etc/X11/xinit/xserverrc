@@ -46,30 +46,30 @@ case "$PANEL" in
 	default )
 		cp /etc/X11/xorg.conf /etc/X11/xorg.conf;;
 	tpo028ttec1 )
-		cp /etc/X11/640x480-2.8.conf /etc/X11/xorg.conf;;
+		cp /etc/X11/2.8-640x480.conf /etc/X11/xorg.conf;;
 	com37 )
 		(
 		cd /root
 		[ -x blanviewd ] || make blanviewd
 		./blanviewd &
 		)
-		cp /etc/X11/640x480-3.7-bv.conf /etc/X11/xorg.conf
+		cp /etc/X11/3.7-640x480.conf /etc/X11/xorg.conf
 		;;
 	7-landscape )
-		cp /etc/X11/480x800-7.0.conf /etc/X11/xorg.conf;;
+		cp /etc/X11/7.0-480x800.conf /etc/X11/xorg.conf;;
 	5-landscape )
 		cp /etc/X11/xorg.conf.gta04b4 /etc/X11/xorg.conf;;
-	AXE ) 	cp /etc/X11/800x480-3.0.conf /etc/X11/xorg.conf;;
+	AXE ) 	cp /etc/X11/3.0-800x480.conf /etc/X11/xorg.conf;;
 	WristWatch )
 		cp /etc/X11/xorg.conf.gta04b8 /etc/X11/xorg.conf;;
 	720p )
-		cp /etc/X11/720x1280-5.0.conf /etc/X11/xorg.conf
+		cp /etc/X11/5.0-720x1280.conf /etc/X11/xorg.conf
 		/root/bl 1
 		;;
 	tpo430 )
-		cp /etc/X11/480x640-4.3.conf /etc/X11/xorg.conf;;
+		cp /etc/X11/4.3-480x640.conf /etc/X11/xorg.conf;;
 	4.3-landscape )
-		cp /etc/X11/272x480-4.3.conf /etc/X11/xorg.conf;;
+		cp /etc/X11/4.3-272x480.conf /etc/X11/xorg.conf;;
 	* )
 		cp /etc/X11/xorg.conf.$PANEL /etc/X11/xorg.conf;;
 esac

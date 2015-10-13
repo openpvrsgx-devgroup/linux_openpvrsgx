@@ -1,25 +1,12 @@
 #
-# override panel instructed backlight by enabling the gpio190
-# can be used for testing purposes
+# turn on/off backlight
 #
 
-case $(cat /proc/device-tree/model) in
-Pyra-Handheld* )
-	;;
-* )
-	echo "For Pyra only"
-	exit
-	;;
-esac
-
-[ "$(which devmem2)" ] || apt-get install -y --force-yes devmem2
+BL=/sys/class/backlight/$(cd /sys/class/backlight/ && ls -1 | head -1)
 
 if [ "$1" = 1 ]
-	then
-	devmem2 0x4a0028f6 h 0x011e	# switch to GPIO mode
-	echo 190 > /sys/class/gpio/export 2>/dev/null
-	echo out > /sys/class/gpio/gpio190/direction
-	echo 1 > /sys/class/gpio/gpio190/value
-	else
-	devmem2 0x4a0028f6 h 0x010f	# switch to safe mode with pull-down
+then
+	echo 0 >$BL/bl_power
+else
+	echo 1 >$BL/bl_power
 fi

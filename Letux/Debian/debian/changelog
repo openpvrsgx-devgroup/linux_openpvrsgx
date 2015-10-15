@@ -1,6 +1,7 @@
 kernel-3.14.y-fslc-imx6-sr (3.14.53pkg3) stable; urgency=high
 
   * merge new defconfig ...
+  * update to 5c6b4137ae5933a0e6b5f0956d166eb17d593392
 
  -- Josua Mayer <josua@linux.site>  Thu, 15 Oct 2015 20:27:06 +0200
 

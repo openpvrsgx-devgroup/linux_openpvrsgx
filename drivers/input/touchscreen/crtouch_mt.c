@@ -209,7 +209,6 @@ struct crtouch_data {
 	struct input_dev 	*input_dev;
 	struct i2c_client 	*client;
 	int is_capacitive;
-	int pending_gpio;
 	int polling_period;
 	struct timer_list tsc_poll_timer;
 	s32 configuration;
@@ -475,25 +474,14 @@ static int crtouch_probe(struct i2c_client *client,
 	if (result)
 		goto err_free_wq;
 
-	crtouch->pending_gpio = of_get_named_gpio(node, "pending-gpios", 0);
-	if (gpio_is_valid(crtouch->pending_gpio)) {
-		result = devm_gpio_request_one(&client->dev, crtouch->pending_gpio,
-					       GPIOF_IN, "GPIO_WAKE_CRTOUCH");
-		if (result != 0) {
-			dev_err(&client->dev, "failed to request GPIO for IRQ\n");
-			goto err_unr_dev;
-		}
-
-		result = request_irq(gpio_to_irq(crtouch->pending_gpio), crtouch_irq,
-				     IRQF_TRIGGER_FALLING, IRQ_NAME, &client->dev);
-
-		if (result < 0) {
-			dev_err(&client->dev, "failed to request IRQ\n");
-			goto err_free_pinIrq;
-		}
+	if (client->irq) {
+		result = devm_request_irq(&client->dev, client->irq, crtouch_irq,
+					  IRQF_TRIGGER_FALLING, IRQ_NAME, &client->dev);
 
 		device_init_wakeup(&client->dev, 1);
-	} else {
+	}
+
+	if (!client->irq || result) {
 		if (of_property_read_u32(node, "polling-period-ms", &crtouch->polling_period))
 			crtouch->polling_period = DEFAULT_POLLING_PERIOD;
 		crtouch->polling_period = msecs_to_jiffies(crtouch->polling_period);
@@ -510,9 +498,6 @@ static int crtouch_probe(struct i2c_client *client,
 
 	return 0;
 
-err_free_pinIrq:
-	if (gpio_is_valid(crtouch->pending_gpio))
-		gpio_free(crtouch->pending_gpio);
 err_unr_dev:
 	input_unregister_device(crtouch->input_dev);
 err_free_wq:
@@ -530,13 +515,11 @@ static int crtouch_resume(struct device *dev)
 	struct crtouch_data *crtouch = dev_get_drvdata(dev);
 	struct i2c_client *client = crtouch->client;
 
-	if (gpio_is_valid(crtouch->pending_gpio)) {
-		int pend_irq = gpio_to_irq(crtouch->pending_gpio);
-
+	if (client->irq) {
 		if (device_may_wakeup(&client->dev))
-			disable_irq_wake(pend_irq);
+			disable_irq_wake(client->irq);
 		else
-			enable_irq(pend_irq);
+			enable_irq(client->irq);
 	}
 
 	return 0;
@@ -552,13 +535,11 @@ static int crtouch_suspend(struct device *dev)
 	data_to_read |= SHUTDOWN_CRICS;
 	i2c_smbus_write_byte_data(client, CONFIGURATION , data_to_read);
 
-	if (gpio_is_valid(crtouch->pending_gpio)) {
-		int pend_irq = gpio_to_irq(crtouch->pending_gpio);
-
+	if (client->irq) {
 		if (device_may_wakeup(&client->dev))
-			enable_irq_wake(pend_irq);
+			enable_irq_wake(client->irq);
 		else
-			disable_irq(pend_irq);
+			disable_irq(client->irq);
 	}
 
 	return 0;

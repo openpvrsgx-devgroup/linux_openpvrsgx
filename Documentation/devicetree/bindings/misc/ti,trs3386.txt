@@ -1,0 +1,24 @@
+TI RS232 level shifter additional modem control lines through gpio
+
+Required properties:
+- compatible: ti,trs3386
+- gpios: list of the gpios matching the mctrl lines, specify <0> if not used
+	0: DTR
+	1: RTS
+	2: DSR
+	3: RI
+	4: OUT1
+	5: OUT2
+  NOTEs:
+	- the RTS gpio is not required if the UART has a dedicated RTS output
+	- <0> entries at the end can be left out
+- uart: the uart the tr3386 is connected to for RX/TX
+
+example:
+
+        trs3386 {
+                compatible = "ti,trs3386";
+                uart = <&uart3>;	/* trs3386 is connected to uart3 */
+		gpios = <&gpio1 21 0>,	/* DTR: GPIO_21 */
+			<0>;		/* RTS: unused */
+        }

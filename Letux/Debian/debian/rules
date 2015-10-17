@@ -14,7 +14,7 @@ HDESTDIR=$(CURDIR)/debian/kernel-headers-3.14.y-fslc-imx6-sr
 DDESTDIR=$(CURDIR)/debian/kernel-3.14.y-fslc-imx6-sr-dev
 
 # kernel version information
-BASEVERSION=3.14.53
+BASEVERSION=3.14.54
 LOCALVERSION=-fslc-imx6-sr
 SCMVERSION=$(shell test -e .git && echo +)
 

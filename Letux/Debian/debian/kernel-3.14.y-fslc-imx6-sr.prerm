@@ -15,7 +15,7 @@ set -e
 #          <conflicting-package> <version>
 # for details, see http://www.debian.org/doc/debian-policy/ or
 # the debian-policy package
-KERNEL_LOCALVERSION=3.14.53-fslc-imx6-sr
+KERNEL_LOCALVERSION=3.14.54-fslc-imx6-sr
 
 case $1 in
     remove|upgrade|deconfigure)

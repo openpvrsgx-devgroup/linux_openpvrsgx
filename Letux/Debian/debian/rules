@@ -37,7 +37,6 @@ override_dh_auto_install:
 	install -v -m644 build/.config $(KDESTDIR)/boot/config-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)
 	find build/arch/arm/boot/dts/ \( -name "imx6*-cubox-i.dtb" -o -name "imx6*-hummingboard.dtb" -o -name "imx6*-hummingboard2.dtb" \) -exec install -v -m644 {} $(KDESTDIR)/boot/ \;
 	make -C build INSTALL_MOD_PATH=$(KDESTDIR) modules_install
-	rm -rf $(KDESTDIR)/lib/firmware # for now, dont package any firmware!
 	rm -fv $(KDESTDIR)/lib/modules/$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/source
 	rm -fv $(KDESTDIR)/lib/modules/$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/build
 
@@ -57,6 +56,11 @@ override_dh_auto_install:
 
 	# add easy link to public kernel headers
 	ln -sv kernel-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION) $(DDESTDIR)/usr/include/imx-kernel-api
+
+	# move installed firmware into a kernelbuild-specific subfolder
+	mv $(KDESTDIR)/lib/firmware $(KDESTDIR)/lib/$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)
+	mkdir -p $(KDESTDIR)/lib/firmware
+	mv $(KDESTDIR)/lib/$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION) $(KDESTDIR)/lib/firmware/
 
 override_dh_auto_test:
 	# don't test

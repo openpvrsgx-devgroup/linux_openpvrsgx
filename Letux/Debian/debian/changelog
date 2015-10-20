@@ -1,9 +1,9 @@
-kernel-3.14.y-fslc-imx6-sr (3.14.54pkg2) UNRELEASED; urgency=low
+kernel-3.14.y-fslc-imx6-sr (3.14.54pkg2) stable; urgency=low
 
   * install firmware files
-  * update to 709c51d447185cd5a1adca3f8f21826ddec468d2
+  * update to 71486eaaf4ac30c8d67297aa57a241bf47e84489
 
- -- Josua Mayer <josua@linux.sitex>  Mon, 19 Oct 2015 18:06:11 +0200
+ -- Josua Mayer <josua@linux.site>  Mon, 19 Oct 2015 18:06:11 +0200
 
 kernel-3.14.y-fslc-imx6-sr (3.14.54pkg1) stable; urgency=medium
 

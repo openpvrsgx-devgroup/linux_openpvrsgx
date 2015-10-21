@@ -25,6 +25,12 @@ Additional required properties:
 
 Optional properties:
 
+You can optionally specify any of the touchscreen parameters described in
+
+	Documentation/devicetree/bindings/input/touchscreen/touchscreen.txt
+
+This allows to scale, invert or swap coordinates and define the fuzz factors.
+
 	ti,vref-delay-usecs		vref supply delay in usecs, 0 for
 					external vref (u16).
 	ti,vref-mv			The VREF voltage, in millivolts (u16).
@@ -94,6 +100,7 @@ Example for a TSC2046 chip connected to an McSPI controller of an OMAP SoC::
 			pendown-gpio = <&gpio1 8 0>;
 			vcc-supply = <&reg_vcc3>;
 
+			touchscreen-swapped-x-y;
 			ti,x-min = /bits/ 16 <0>;
 			ti,x-max = /bits/ 16 <8000>;
 			ti,y-min = /bits/ 16 <0>;

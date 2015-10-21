@@ -30,6 +30,7 @@
 #include <linux/spi/ads7846.h>
 #include <linux/regulator/consumer.h>
 #include <linux/module.h>
+#include <asm/irq.h>
 #include <asm/unaligned.h>
 
 /*
@@ -104,8 +105,13 @@ struct ads7846 {
 	u16			vref_delay_usecs;
 	u16			x_plate_ohms;
 	u16			pressure_max;
+	u16			x_min;
+	u16			x_max;
+	u16			y_min;
+	u16			y_max;
 
-	bool			swap_xy;
+	struct touchscreen_properties prop;
+
 	bool			use_internal;
 
 	struct ads7846_packet	*packet;
@@ -885,18 +891,35 @@ static void ads7846_report_state(struct ads7846 *ts)
 	 */
 	if (Rt) {
 		struct input_dev *input = ts->input;
+		int sx, sy;
 
+		dev_dbg(&ts->spi->dev,
+			"Raw point(%4d,%4d), pressure (%4u)\n",
+				x, y, Rt);
+
+		/* scale ADC values to desired output range */
+		sx = (ts->prop.max_x * (x - ts->x_min))
+			/ (ts->x_max - ts->x_min);
+		sy = (ts->prop.max_y * (y - ts->y_min))
+			/ (ts->y_max - ts->y_min);
+
+		dev_dbg(&ts->spi->dev,
+			"Scaled point(%4d,%4d), pressure (%4u)\n",
+				sx, sy, Rt);
+
+		/* report event */
 		if (!ts->pendown) {
 			input_report_key(input, BTN_TOUCH, 1);
 			ts->pendown = true;
 			dev_vdbg(&ts->spi->dev, "DOWN\n");
 		}
 
-		touchscreen_report_pos(input, &ts->core_prop, x, y, false);
-		input_report_abs(input, ABS_PRESSURE, ts->pressure_max - Rt);
+		touchscreen_report_pos(input, &ts->core_prop,
+				       (unsigned int) sx, (unsigned int) sy,
+				       false);
 
 		input_sync(input);
-		dev_vdbg(&ts->spi->dev, "%4d/%4d/%4d\n", x, y, Rt);
+		dev_vdbg(&ts->spi->dev, "%4d/%4d/%4d\n", sx, sy, Rt);
 	}
 }
 
@@ -1128,6 +1151,8 @@ static const struct ads7846_platform_data *ads7846_get_props(struct device *dev)
 	pdata->keep_vref_on = device_property_read_bool(dev, "ti,keep-vref-on");
 
 	pdata->swap_xy = device_property_read_bool(dev, "ti,swap-xy");
+	if (pdata->swap_xy)
+		dev_notice(dev, "please update device tree to use touchscreen-swapped-x-y");
 
 	device_property_read_u16(dev, "ti,settle-delay-usec",
 				 &pdata->settle_delay_usecs);
@@ -1270,13 +1295,23 @@ static int ads7846_probe(struct spi_device *spi)
 	input_dev->id.product = pdata->model;
 
 	input_set_capability(input_dev, EV_KEY, BTN_TOUCH);
+
+	input_dev->evbit[0] = BIT_MASK(EV_KEY) | BIT_MASK(EV_ABS);
+	input_dev->absbit[0] = BIT_MASK(ABS_X) | BIT_MASK(ABS_Y) |
+				BIT_MASK(ABS_PRESSURE);
+
+	ts->x_min = pdata->x_min ? : 0;
+	ts->x_max = pdata->x_max ? : MAX_12BIT;
+	ts->y_min = pdata->y_min ? : 0;
+	ts->y_max = pdata->y_max ? : MAX_12BIT;
+
 	input_set_abs_params(input_dev, ABS_X,
-			pdata->x_min ? : 0,
-			pdata->x_max ? : MAX_12BIT,
+			ts->x_min,
+			ts->x_max,
 			0, 0);
 	input_set_abs_params(input_dev, ABS_Y,
-			pdata->y_min ? : 0,
-			pdata->y_max ? : MAX_12BIT,
+			ts->y_min,
+			ts->y_max,
 			0, 0);
 	if (ts->model != 7845)
 		input_set_abs_params(input_dev, ABS_PRESSURE,
@@ -1287,6 +1322,7 @@ static int ads7846_probe(struct spi_device *spi)
 	 * correct behaviour in case of using the legacy vendor bindings. The
 	 * general binding value overrides the vendor specific one.
 	 */
+
 	touchscreen_parse_properties(ts->input, false, &ts->core_prop);
 	ts->pressure_max = input_abs_get_max(input_dev, ABS_PRESSURE) ? : ~0;
 

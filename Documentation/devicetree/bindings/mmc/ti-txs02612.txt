@@ -1,0 +1,41 @@
+txs02612 SDIO switch
+
+If a txs02612 SDIO switch (and level shifter) is connected
+to a sdio/mmc port of a SoC we have effectively two interfaces
+as a result. The switch is controlled by a GPIO.
+
+Required properties:
+
+	compatible = “ti,txs02612”
+
+	select-gpio:	the channel select gpio.
+
+	ports:	two new mmc ports. For details check with
+		Documentation//devicetree/bindings/mmc/mmc.txt
+
+Optional properties:
+
+	mmc:	phandle to reference the sdio/mmc port of the SoC.
+		If the node is a subnode of the mmc port of the SoC
+		this phandle can be omitted.
+
+Example:
+
+	mmc-expander {
+		compatible = “ti,txs02612”;
+		mmc = <&mmc1>;
+		select-gpio = <&gpio3 18 0>;	/* gpio3_82 */
+		ports {
+			eMMC: port@0 {
+				reg = <0>;
+				bus-width: 8;
+				bus-width = <8>;
+				non-removable;
+			};
+			uSD: port@1 {
+				reg = <1>;
+				bus-width: 4;
+				cd-gpios = <&gpio3 13 GPIO_ACTIVE_LOW>;	/* gpio3_77 */
+				wp-gpios = <&gpio3 15 GPIO_ACTIVE_HIGH>;	/* gpio3_79 */
+			};
+	};

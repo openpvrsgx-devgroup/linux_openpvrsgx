@@ -69,8 +69,8 @@ This package provides the public kernel headers, to build userspace applications
 # build in subdirectory, out-of-tree
 mkdir build
 
-# use provided defconfig
-cp defconfig build/.config
+# merge defautl defconfig with provided one
+cd build; ../linux/scripts/kconfig/merge_config.sh -m ../linux/arch/arm/configs/imx_v7_cbi_hb_defconfig ../defconfig; cd ..
 
 # set LOCALVERSION
 cd build; ../linux/scripts/config --set-str LOCALVERSION %{localversion}; cd ..

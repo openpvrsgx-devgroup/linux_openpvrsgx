@@ -27,7 +27,7 @@ Version: 3.14.54
 Release: 2
 License: GPL-2.0
 Group: System/Kernel
-Source: kernel-3.14.y-fslc-imx6-sr-git.tar.gz
+Source: kernel-3.14.y-fslc-imx6-sr_3.14.54pkg2.tar.gz
 
 BuildRequires: bc lzop
 BuildRequires: module-init-tools
@@ -64,7 +64,7 @@ Group: Development/Languages/C and C++
 This package provides the public kernel headers, to build userspace applications against this specific kernel.
 
 %prep
-%setup -q -n kernel-3.14.y-fslc-imx6-sr-git
+%setup -q -n kernel-3.14.y-fslc-imx6-sr-3.14.54pkg2
 
 # build in subdirectory, out-of-tree
 mkdir build

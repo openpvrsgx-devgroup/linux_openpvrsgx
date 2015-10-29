@@ -82,7 +82,7 @@ echo online: $(cat $SUPPLY/online 2>/dev/null)
 echo status: $(cat $SUPPLY/status 2>/dev/null)
 echo volt: $(cat $SUPPLY/voltage_now 2>/dev/null)uV
 echo current: $(cat $SUPPLY/current_now 2>/dev/null)uA
-echo max_current: $(cat /dev/usb_max_current 2>/dev/null)uA
+echo max_current: $(cat $SUPPLY/max_current 2>/dev/null)uA
 echo ID: $(cat /dev/usb_id 2>/dev/null)
 echo
 ;;
@@ -95,6 +95,7 @@ echo online: $(cat $SUPPLY/online 2>/dev/null)
 echo status: $(cat $SUPPLY/status 2>/dev/null)
 echo volt: $(cat /sys$SUPPLY/voltage_now 2>/dev/null)uV
 echo current: $(cat $SUPPLY/current_now 2>/dev/null)uA
+echo max_current: $(cat $SUPPLY/max_current 2>/dev/null)uA
 echo
 ;;
 

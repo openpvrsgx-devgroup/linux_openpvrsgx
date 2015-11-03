@@ -30,9 +30,9 @@ int main(int argc, char *argv[])
 		return 1;
 		}
 #if 1
-	file="/sys/devices/platform/pwm-backlight/backlight/pwm-backlight/brightness";
+	file="/sys/class/backlight/backlight/brightness";
 #else
-	file="/sys/devices/platform/pwm-backlight/backlight/pwm-backlight/max_brightness";
+	file="/sys/class/backlight/backlight/max_brightness";
 #endif
 	out=fopen(file, "w");
 	if(!out)
@@ -43,48 +43,32 @@ int main(int argc, char *argv[])
 	while(1)
 		{
 		int i, n;
-		unsigned short x, y, pressure_raw, pressure, pendown;
-		unsigned short temperature, temp0, temp1;
-		unsigned short z1, z2;
 		unsigned short aux;
 		unsigned short ambient_light;
 		unsigned short bl;
-		file="/sys/bus/i2c/drivers/tsc2007/2-0048/values";
+		file="/sys/bus/iio/devices/iio:device1/in_voltage4_raw";
 		in=fopen(file, "r");
 		if(!in)
 			{
 			fprintf(stderr, "%s: %s\n", file, strerror(errno));
 			return 1;
 			}
-		n=fscanf(in, "%hu,%hu,%hu,%hu,%hu,%hu,%hu,%hu,%hu,%hu,%hu",
-				 &x,
-				 &y,
-				 &pressure_raw,
-				 &pendown,
-				 &temperature,
-				 &z1,
-				 &z2,
-				 &temp0,
-				 &temp1,
-				 &aux,
-				 &pressure);
+		n=fscanf(in, "%hu", &aux);
 		fclose(in);
-		if(n == 11)
+		if(n == 1)
 			{
 			if(debug)
 				fprintf(stderr, "aux=%d", aux);
 
-			if(aux <= 4096 && aux > 2048)	// max ambient light
+			if(aux > 2048)	// max ambient light
 				ambient_light = 1;
-			else if(aux <= 2048 && aux > 1024)
+			else if(aux > 1024)
 				ambient_light = 2;
-			else if(aux <= 1024 && aux > 512)
+			else if(aux > 512)
 				ambient_light = 3;
-			else if(aux <= 512 && aux > 256)
+			else if(aux > 256)
 				ambient_light = 4;
-			else if(aux <= 256 && aux > 0)	// min ambient light
-				ambient_light = 5;
-			else							// something went wrong, go max
+			else 	// min ambient light
 				ambient_light = 5;
 
 			bl = ambient_light*20;

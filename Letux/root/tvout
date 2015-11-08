@@ -3,6 +3,19 @@
 # must properly resize the framebuffer for othe display given by hardware
 #
 
+ls -l /sys/devices/platform/omapdrm.0/drm/card0/card0-*
+
+if [ "$1" == "1" ]
+then
+	xrandr --output None-1 --same-as None-2
+else
+	xrandr --output None-1 --off
+fi
+
+exit
+
+### old
+
 MUX=$(expr "$(cat /proc/cmdline)" : ".*mux=\([^ ]*\)")
 
 TV=unknown

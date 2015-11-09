@@ -9,13 +9,11 @@
 / {
 	model = "Goldelico GTA04b2/Letux 3704";
 
-	/* add additional regulators etc. */
-
 	/* overwrite panel definitions */
 
 	aliases {
 		display0 = &lcd_b2;
-//		display1 = &tv0;
+		display1 = &tv0;
 	};
 
 	lcd_b2: lcd {
@@ -68,6 +66,7 @@
 };
 
 &spi_lcd {
+	status = "disabled";
 	compatible = "none";
 };
 

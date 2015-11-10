@@ -2,7 +2,7 @@
  * Driver for Freescale CR Touch I2C touch controller
  *
  * Copyright (C) 2011-2012 Freescale Semiconductor, Inc.
- * Author: Alison Wang <b18965@freescale.com>
+ * Author: Alison Wang <alison.wang@freescale.com>
  *
  * Copyright (C) 2012,2015 Emcraft Systems
  * Added Qt Embedded support - Alexander Potashev <aspotashev@emcraft.com>
@@ -388,7 +388,7 @@ static int crtouch_probe(struct i2c_client *client,
 	if (!crtouch)
 		return -ENOMEM;
 
-	input_dev = input_allocate_device();
+	input_dev = devm_input_allocate_device(&client->dev);
 	if (!input_dev) {
 		result = -ENOMEM;
 		goto err_free_mem;
@@ -472,7 +472,7 @@ static int crtouch_probe(struct i2c_client *client,
 
 	result = input_register_device(crtouch->input_dev);
 	if (result)
-		goto err_free_wq;
+		goto err_unr_dev;
 
 	if (client->irq) {
 		result = devm_request_irq(&client->dev, client->irq, crtouch_irq,
@@ -505,7 +505,7 @@ err_free_wq:
 err_wqueue:
 	input_free_device(crtouch->input_dev);
 err_free_mem:
-	kfree(crtouch);
+	devm_kfree(&client->dev, crtouch);
 	return result;
 }
 

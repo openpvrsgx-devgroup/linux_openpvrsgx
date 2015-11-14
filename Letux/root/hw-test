@@ -135,7 +135,7 @@ GMAX=$(expr 300 '*' 300)
 [ "$G" -le "$GMAX" -a "$G" -ge "$GMIN" ] && ok "$X, $Y, $Z" || nok "$X, $Y, $Z"
 
 testing "HMC5883L" "Compass values"
-COMPASS=$(findiio hmc5883l)
+COMPASS=$(findiio hmc5843)
 [ "$COMPASS" ] && echo 15 >$COMPASS/in_magn_sampling_frequency 2>/dev/null
 sleep 1
 X=$(cat $COMPASS/in_magn_x_raw 2>/dev/null)

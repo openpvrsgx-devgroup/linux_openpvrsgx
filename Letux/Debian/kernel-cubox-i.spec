@@ -24,10 +24,10 @@ Name: kernel-3.14.y-fslc-imx6-sr
 Summary: 3.14 LTS Kernel for Freescale i.MX6 devices
 Url: https://github.com/SolidRun/linux-fslc/tree/3.14-1.0.x-mx6-sr
 Version: 3.14.54
-Release: 2
+Release: 3
 License: GPL-2.0
 Group: System/Kernel
-Source: kernel-3.14.y-fslc-imx6-sr_3.14.54pkg2.tar.gz
+Source: kernel-3.14.y-fslc-imx6-sr_3.14.54pkg3.tar.gz
 
 BuildRequires: bc lzop
 BuildRequires: module-init-tools
@@ -64,7 +64,7 @@ Group: Development/Languages/C and C++
 This package provides the public kernel headers, to build userspace applications against this specific kernel.
 
 %prep
-%setup -q -n kernel-3.14.y-fslc-imx6-sr-3.14.54pkg2
+%setup -q -n kernel-3.14.y-fslc-imx6-sr-3.14.54pkg3
 
 # build in subdirectory, out-of-tree
 mkdir build

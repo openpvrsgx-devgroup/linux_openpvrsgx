@@ -331,7 +331,7 @@ static struct sgxfreq_governor *__find_governor(const char *name)
         struct sgxfreq_governor *t;
 
         list_for_each_entry(t, &sfd.gov_list, governor_list)
-                if (!strnicmp(name, t->name, SGXFREQ_NAME_LEN))
+                if (!strncasecmp(name, t->name, SGXFREQ_NAME_LEN))
                         return t;
 
         return NULL;

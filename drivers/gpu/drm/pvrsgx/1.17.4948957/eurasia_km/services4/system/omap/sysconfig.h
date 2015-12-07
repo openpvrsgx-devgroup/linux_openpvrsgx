@@ -91,7 +91,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #if defined(__linux__)
 #if defined(PVR_LDM_DEVICE_TREE)
-#define	SYS_SGX_DEV_NAME	"ti,omap4-gpu"
+#define	SYS_SGX_DEV_NAME	"ti,dra7-sgx544"
 #else
 /*
  * Recent OMAP4 kernels register SGX as platform device "omap_gpu".

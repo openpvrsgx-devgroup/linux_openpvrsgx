@@ -1,43 +1,56 @@
 #!/bin/bash
 #
-# Letux/scripts/merge [ -p ] [ -nm ]
+# Letux/scripts/merge [ -p ] { branches... }
 #
 # merge Letux feature branches on top of current Linux branch
+# the current Linux branch is the highest numbered one starting
+#  with at least two digits separated by a .
+# i.e. 3.18, 4,4-rc4, 4.7 qualify while v3.18, 3.x don't
+#
+# if a file 'mergefile' exists in the current directory
+# it will also be included before the branches specified
+# on the command line
+#
+# if a branch is versioned (suffix -v[0-9]), the highest one
+# will be taken
 #
 # result is new branch "letux-next"
 #
 # options:
 #  -p		push --force all branches to 'origin'
-#  -nm		include not mature branches (for testing them)
-#
-# Currently the list of branches is hard-coded here so that we
-# have to fix it from time to time creating a commit just for this.
-# Or if you change it in wour working tree please take care not
-# to commit such changes.
-#
-# A better solution would be to keep the list in a separate config
-# file so that it can be changed locally.
 #
 # Author: <hns@goldelico.com>
 # License: GPL V2
 
 PUSH=false
-MATURE=true
+
+function usage {
+	echo "usage: $0 [ -p ] { branches...}"
+	echo "  -p	push --force all branches to 'origin'"
+	exit 1
+}
 
 while [ "$1" ]
 do
 	case "$1" in
 		-p ) PUSH=true; shift ;;
-		-nm ) MATURE=false; shift ;;
+		-* ) echo "unknown option $1"; usage; exit 1 ;;
 		* ) break;
 	esac
 done
 
-LASTKERNEL=$(echo $(git branch | sed 's|^*| |' | grep '^. [0-9].[0-9]' | sort | tail -1))
+LASTKERNEL=$(echo $(git branch | sed 's|^*| |' | grep '^. [0-9].[0-9]' | sort -n | tail -1))
+
+if [ "$(git status -s -uno)" ]
+then
+	echo there are uncommitted changes!
+	echo refusing to overwrite
+	exit 1
+fi
 
 # try to switch to last kernel
-echo "*** force checkout $LASTKERNEL ***"
-git checkout --force $LASTKERNEL || exit
+echo "*** checkout $LASTKERNEL ***"
+git checkout $LASTKERNEL || exit
 
 echo merging features on top of $LASTKERNEL
 
@@ -45,54 +58,26 @@ echo "*** make a fresh working copy: letux-next ***"
 git branch -D letux-next
 git checkout -b letux-next $LASTKERNEL || exit
 
-# the current feature branches
-FEATURE_BRANCHES="
-	work/hns/input/tsc2007 \
-	work/hns/misc/w2sg-tty-slave2 \
-	work/hns/omapdss/tvfix \
-	work/hns/iio/palmas/gpadc \
-	work/hns/dt/omap5-common \
-"
+BRANCHES=""
 
-# these branches are not mature enough to be included by default
-NOT_MATURE="
-	work/hns/video/dss/antitear \
-	work/hns/video/dss/ssd2858 \
-	work/hns/video/ov9655 \
-	work/hns/gpu/pvr \
-	work/hns/arch/mips/jz4730 \
-	work/hns/mmc/txs02612 \
-	"
-
-# these branches are not clean enough for a git merge
-NOT_MERGING="
-	work/hns/twl4030-charger \
-	work/hns/dt/separation \
-	"
-
-if ! $MATURE
-then
-	FEATURE_BRANCHES="$FEATURE_BRANCHES $NOT_MATURE"
-fi
-
-LATEST_BRANCHES=""
-
-for FEATURE in $FEATURE_BRANCHES
+for FEATURE in $(cat mergefile 2>/dev/null) "$@"
 do
+	case "$FEATURE" in
+	'' | -* | '#'* )	continue;;
+	esac
 	LATEST=$(echo $(git branch | fgrep $FEATURE | sort | tail -1))
 	if [ "$LATEST" = "" ]
 	then
-		echo "*** no latest version of branch $FEATURE found ***"
-		echo "*** you should run git pull -t origin/$FEATURE+Version ***"
-		exit 1
+		echo "*** merging $FEATURE (run git pull -t origin/$FEATURE-Version?) ***"
+		BRANCHES="$BRANCHES $FEATURE"	# collect for octopus
 	else
 		$PUSH && echo "*** merging $FEATURE -> $LATEST and pushing remote ***" || echo "*** merging $FEATURE -> $LATEST ***"
 		$PUSH && git push --force origin $LATEST	# update branch on public server
-		LATEST_BRANCHES="$LATEST_BRANCHES $LATEST"	# collect for octopus
+		BRANCHES="$BRANCHES $LATEST"	# collect for octopus
 	fi
 done
 
-git merge --no-ff --no-edit $LATEST_BRANCHES || exit	# try to merge all
+git merge --no-ff --no-edit $BRANCHES || exit	# try to merge all
 
 $PUSH && echo "*** pushing letux-next on remote ***"
 $PUSH && git push --force origin letux-next	# update letux-next on public server

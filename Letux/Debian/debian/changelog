@@ -1,3 +1,9 @@
+kernel-3.14.y-fslc-imx6-sr (3.14.54pkg4) UNRELEASED; urgency=low
+
+  * fix symlinks /lib/modules/<uname -r>/build,source
+
+ -- Josua Mayer <josua@linux.site>  Fri, 11 Dec 2015 13:08:07 +0100
+
 kernel-3.14.y-fslc-imx6-sr (3.14.54pkg3) stable; urgency=medium
 
   * update to c3cae448b862d6bc21acbfa1f935ea3650ea7ac3

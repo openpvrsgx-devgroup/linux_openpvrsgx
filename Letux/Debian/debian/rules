@@ -46,7 +46,7 @@ override_dh_auto_install:
 	rm -fv $(KDESTDIR)/lib/modules/$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/build
 
 	# install kernel headers
-	cd build; sh ../install_devel_files.sh arm $(HDESTDIR)/usr/src/kernel-headers-$(shell cat include/config/kernel.release 2> /dev/null)
+	cd build; sh ../install_devel_files.sh arm $(HDESTDIR)/usr/src/kernel-headers-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)
 
 	# add source and build symlinks
 	mkdir -p $(HDESTDIR)/lib/modules/$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)

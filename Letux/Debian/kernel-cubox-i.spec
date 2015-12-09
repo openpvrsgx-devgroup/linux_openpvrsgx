@@ -24,7 +24,7 @@ Name: kernel-3.14.y-fslc-imx6-sr
 Summary: 3.14 LTS Kernel for Freescale i.MX6 devices
 Url: https://github.com/SolidRun/linux-fslc/tree/3.14-1.0.x-mx6-sr
 Version: 3.14.54
-Release: 3
+Release: 4
 License: GPL-2.0
 Group: System/Kernel
 Source: kernel-3.14.y-fslc-imx6-sr_3.14.54pkg3.tar.gz

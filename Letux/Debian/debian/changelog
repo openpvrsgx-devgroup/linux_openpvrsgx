@@ -1,6 +1,7 @@
-kernel-3.14.y-fslc-imx6-sr (3.14.54pkg4) UNRELEASED; urgency=low
+kernel-3.14.y-fslc-imx6-sr (3.14.54pkg4) stable; urgency=low
 
   * fix symlinks /lib/modules/<uname -r>/build,source
+  * repair kernel-headers package so that modules can once more be built
 
  -- Josua Mayer <josua@linux.site>  Fri, 11 Dec 2015 13:08:07 +0100
 

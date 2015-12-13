@@ -1,72 +1,12 @@
 #
-# switch on/off TVout
-# must properly resize the framebuffer for othe display given by hardware
+# switch on/off TVout on the GTA04 or BeagleBoard
 #
 
-ls -l /sys/devices/platform/omapdrm.0/drm/card0/card0-*
+# ls -l /sys/devices/platform/omapdrm.0/drm/card0/card0-*
 
 if [ "$1" == "1" ]
 then
-	xrandr --output None-1 --same-as None-2
+	xrandr --output None-1 --auto
 else
 	xrandr --output None-1 --off
-fi
-
-exit
-
-### old
-
-MUX=$(expr "$(cat /proc/cmdline)" : ".*mux=\([^ ]*\)")
-
-TV=unknown
-LCD=unknown
-DVI=unknown
-
-for path in /sys/devices/platform/omapdss/display*
-do
-	case "$(cat $path/name)" in
-		tv ) TV="$path";;
-		lcd ) LCD="$path";;
-		dvi ) DVI="$path";;
-		* ) echo "unknown display $(cat $path/name)";;
-	esac
-done
-
-if [ "$TV" == "unknown" ]
-then
-	echo "can't find TV out display"
-	exit 1
-fi
-
-if [ "$1" == "1" ]
-then # LCD -> TVout
-
-echo 0 >/sys/devices/platform/omapdss/overlay0/enabled
-echo "" >/sys/devices/platform/omapdss/overlay0/manager
-echo 0 >$LCD/enabled || echo "can't write $LCD/enabled"
-# echo "pal" >$TV/timings || echo "can't write $TV/timings"
-fbset -fb /dev/fb0 -xres 720 -yres 574 -vxres 480 -vyres 640
-echo 1 >$TV/enabled || echo "can't write $TV/enabled"
-echo "tv" >/sys/devices/platform/omapdss/overlay0/manager
-echo 120,-33 >/sys/devices/platform/omapdss/overlay0/position	# try to center
-echo 1 >/sys/devices/platform/omapdss/overlay0/enabled
-
-else # TVout -> LCD
-
-echo 0 >/sys/devices/platform/omapdss/overlay0/enabled
-echo 0,0 >/sys/devices/platform/omapdss/overlay0/position
-echo "" >/sys/devices/platform/omapdss/overlay0/manager
-echo 0 >$TV/enabled || echo "can't write $TV/enabled"
-case "$MUX" in
-	GTA04B3 )	# WVGA landscape
-		fbset -fb /dev/fb0 -xres 800 -yres 480 -vxres 800 -vyres 480
-		;;
-	* )	# VGA portrait
-		fbset -fb /dev/fb0 -xres 480 -yres 640 -vxres 480 -vyres 640
-		;;
-esac
-echo 1 >$LCD/enabled || echo "can't write $LCD/enabled"
-echo "lcd" >/sys/devices/platform/omapdss/overlay0/manager
-echo 1 >/sys/devices/platform/omapdss/overlay0/enabled
-
 fi

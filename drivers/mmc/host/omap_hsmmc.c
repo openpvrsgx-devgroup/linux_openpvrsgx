@@ -1510,6 +1510,7 @@ static void omap_hsmmc_enable_sdio_irq(struct mmc_host *mmc, int enable)
 	con = OMAP_HSMMC_READ(host->base, CON);
 	irq_mask = OMAP_HSMMC_READ(host->base, ISE);
 	if (enable) {
+	        pm_runtime_get_sync(host->dev);
 		host->flags |= HSMMC_SDIO_IRQ_ENABLED;
 		irq_mask |= CIRQ_EN;
 		con |= CTPL | CLKEXTFREE;
@@ -1517,6 +1518,7 @@ static void omap_hsmmc_enable_sdio_irq(struct mmc_host *mmc, int enable)
 		host->flags &= ~HSMMC_SDIO_IRQ_ENABLED;
 		irq_mask &= ~CIRQ_EN;
 		con &= ~(CTPL | CLKEXTFREE);
+	        pm_runtime_put(host->dev);
 	}
 	OMAP_HSMMC_WRITE(host->base, CON, con);
 	OMAP_HSMMC_WRITE(host->base, IE, irq_mask);
@@ -1942,7 +1944,7 @@ static int omap_hsmmc_probe(struct platform_device *pdev)
 	 * are moving to DT based booting anyways.
 	 */
 	ret = omap_hsmmc_configure_wake_irq(host);
-	if (!ret)
+//	if (!ret)
 		mmc->caps |= MMC_CAP_SDIO_IRQ;
 
 	ret = mmc_add_host(mmc);

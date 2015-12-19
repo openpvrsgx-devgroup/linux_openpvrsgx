@@ -15,7 +15,7 @@
 
 	aliases {
 		display0 = &lcd_b2;
-		display1 = &tv0;
+//		display1 = &tv0;
 	};
 
 	lcd_b2: lcd {

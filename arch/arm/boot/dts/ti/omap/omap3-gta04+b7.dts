@@ -24,10 +24,26 @@
 		display1 = &tv0;
 	};
 
+};
+
+&spi_lcd {
+	status = "disabled";
+
+	td028ttec1@0 {
+		status = "disabled";
+	};
+};
+
+&mcspi1 {
+
+	num-chipselects = <2>;
+
 	lcd_neo900: lcd {
 		compatible = "sony,acx565akm";
-		spi-max-frequency = <6000000>;
 		reg = <2>;
+		spi-max-frequency = <6000000>;
+		spi-cpol;
+		spi-cpha;
 
 		label = "lcd";
 		reset-gpios = <&gpio3 26 GPIO_ACTIVE_HIGH>; /* 90 */
@@ -53,12 +69,6 @@
 		};
 	};
 };
-
-&spi_lcd {
-	compatible = "none";
-};
-
-/* FIXME: &spi_gpio_pins: { }; */
 
 &battery {
 	compatible = "ti,twl4030-madc-battery";

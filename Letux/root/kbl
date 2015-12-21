@@ -1,8 +1,8 @@
 #
-# turn on/off backlight
+# turn on/off keyboard backlight
 #
 
-BL=/sys/class/backlight/backlight
+BL=/sys/class/backlight/keyboard-backlight
 
 # just turn completely on/off instead of writing backlight intensity
 

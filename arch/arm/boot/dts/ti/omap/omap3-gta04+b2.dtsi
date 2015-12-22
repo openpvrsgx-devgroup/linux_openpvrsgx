@@ -65,9 +65,21 @@
 	};
 };
 
+&spi_lcd {
+	status = "disabled";
+	compatible = "none";
+};
+
 /* FIXME: &spi_gpio_pins: { }; */
 
 /* FIXME: add optional TRF7970 */
+
+&battery {
+	compatible = "ti,twl4030-madc-battery";
+	capacity = <3900000>;
+	charging-calibration-data = <4200 100 4100 75 4000 55 3900 25 3800 5 3700 2 3600 1 3300 0>;
+	discharging-calibration-data = <4200 100 4100 95 4000 70 3800 50 3700 10 3600 5 3300 0>;
+};
 
 &i2c2 {
 	/* we have a different set of LEDs */
@@ -110,17 +122,22 @@
 		compatible = "ti,tsc2007";
 		reg = <0x48>;
 		pinctrl-names = "default";
-//		pinctrl-0 = <&penirq_pins>;
+		pinctrl-0 = <&penirq_pins>;
 		interrupt-parent = <&gpio6>;
 		interrupts = <0 IRQ_TYPE_EDGE_FALLING>;
 		gpios = <&gpio6 0 GPIO_ACTIVE_LOW>;	/* gpio160 */
-		ti,x-plate-ohms = <600>;
-		ti,min-x = <0x100>;
-		ti,max-x = <0xf00>;
-		ti,min-y = <0xf00>;
-		ti,max-y = <0x100>;
-		ti,min-rt = <0xfff>;
-		ti,max-rt = <0>;
+		ti,x-plate-ohms = <450>;
+		touchscreen-size-x = <480>;
+		touchscreen-size-y = <800>;
+		touchscreen-max-pressure = <1000>;
+		touchscreen-fuzz-x = <2>;
+		touchscreen-fuzz-y = <2>;
+		touchscreen-fuzz-pressure = <10>;
+		ti,min-x = <190>;
+		ti,max-x = <3900>;
+		ti,min-y = <140>;
+		ti,max-y = <3900>;
+		ti,max-rt = <1000>;
 	};
 
 };

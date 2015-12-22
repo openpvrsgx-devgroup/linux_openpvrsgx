@@ -73,20 +73,9 @@
 	};
 };
 
-&spi_lcd {
-	compatible = "none";
-};
-
 /* FIXME: &spi_gpio_pins: { }; */
 
 /* FIXME: add optional TRF7970 */
-
-&battery {
-	compatible = "ti,twl4030-madc-battery";
-	capacity = <3900000>;
-	charging-calibration-data = <4200 100 4100 75 4000 55 3900 25 3800 5 3700 2 3600 1 3300 0>;
-	discharging-calibration-data = <4200 100 4100 95 4000 70 3800 50 3700 10 3600 5 3300 0>;
-};
 
 &i2c2 {
 	/* we have a different set of LEDs */
@@ -129,7 +118,7 @@
 		compatible = "ti,tsc2007";
 		reg = <0x48>;
 		pinctrl-names = "default";
-		pinctrl-0 = <&penirq_pins>;
+//		pinctrl-0 = <&penirq_pins>;
 		interrupt-parent = <&gpio6>;
 		interrupts = <0 IRQ_TYPE_EDGE_FALLING>;
 		gpios = <&gpio6 0 GPIO_ACTIVE_LOW>;	/* gpio160 */

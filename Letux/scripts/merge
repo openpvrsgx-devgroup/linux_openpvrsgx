@@ -17,6 +17,7 @@
 # result is new branch "letux-$version"
 #
 # options:
+#  -s		sequential merge
 #  -p		push --force all branches to 'origin'
 #
 # Author: <hns@goldelico.com>
@@ -70,7 +71,7 @@ git checkout -b letux-$VERSION HEAD || exit
 
 BRANCHES=""
 
-for FEATURE in $(cat mergefile 2>/dev/null) "$@"
+for FEATURE in $(cat Letux/scripts/mergefile 2>/dev/null) "$@"
 do
 	case "$FEATURE" in
 	'' | -* | '#'* )	continue;;

@@ -23,9 +23,11 @@
 # License: GPL V2
 
 PUSH=false
+SEQUENTIAL=false
 
 function usage {
-	echo "usage: $0 [ -p ] { branches...}"
+	echo "usage: $0 [ -s ] [ -p ] { branches...}"
+	echo "  -s	sequential merge"
 	echo "  -p	push --force all branches to 'origin'"
 	exit 1
 }
@@ -34,6 +36,7 @@ while [ "$1" ]
 do
 	case "$1" in
 		-p ) PUSH=true; shift ;;
+		-s ) SEQUENTIAL=true; shift ;;
 		-* ) echo "unknown option $1"; usage; exit 1 ;;
 		* ) break;
 	esac
@@ -72,27 +75,30 @@ do
 	case "$FEATURE" in
 	'' | -* | '#'* )	continue;;
 	esac
-	LATEST=$(echo $(git branch | fgrep $FEATURE | sort | tail -1))
+	LATEST=$(echo $(git branch | fgrep "${FEATURE}-v" | sort | tail -1))
 	if [ "$LATEST" = "" ]
 	then
 		echo "*** merging $FEATURE (run git pull -t origin/$FEATURE-Version?) ***"
-		BRANCHES="$BRANCHES $FEATURE"	# collect for octopus
 	else
-		$PUSH && echo "*** merging $LATEST and pushing remote ***" || echo "*** merging $FEATURE -> $LATEST ***"
-		$PUSH && { git push --force origin $LATEST || exit; }	# update branch on public server
-		BRANCHES="$BRANCHES $LATEST"	# collect for octopus
+		echo "*** merging $FEATURE -> $LATEST ***"
+		FEATURE="$LATEST"	# take latest instead
+	fi
+	if $PUSH
+	then
+		echo "*** pushing $LATEST to origin ***"
+		git push --force origin $LATEST || exit;	# update branch on public server
+	fi
+	BRANCHES="$BRANCHES $FEATURE"	# collect for octopus
+	if $SEQUENTIAL
+	then
+		git merge --no-ff --no-edit $FEATURE || exit	# try to merge one after the other
 	fi
 done
 
-if false
+if ! $SEQUENTIAL
 then # octopus
-git merge --no-ff --no-edit $BRANCHES || exit	# try to merge all
-
-else # sequence
-for BRANCH in $BRANCHES
-do
-	git merge --no-ff --no-edit $BRANCH || exit	# try to merge one after the other
-done
+	echo "*** Octopus Merge ***"
+	git merge --no-ff --no-edit $BRANCHES || exit	# try to merge all
 fi
 
 $PUSH && echo "*** pushing letux-$VERSION to remote ***"

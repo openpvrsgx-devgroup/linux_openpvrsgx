@@ -57,6 +57,7 @@ fi
 # try to switch to base
 echo "*** checkout letux-base ***"
 git checkout letux-base || exit
+$PUSH && { git push origin letux-base; }	# update letux-base on public server
 
 echo merging features on top of letux-base for $VERSION
 
@@ -78,14 +79,23 @@ do
 		BRANCHES="$BRANCHES $FEATURE"	# collect for octopus
 	else
 		$PUSH && echo "*** merging $LATEST and pushing remote ***" || echo "*** merging $FEATURE -> $LATEST ***"
-		$PUSH && git push --force origin $LATEST	# update branch on public server
+		$PUSH && { git push --force origin $LATEST || exit; }	# update branch on public server
 		BRANCHES="$BRANCHES $LATEST"	# collect for octopus
 	fi
 done
 
+if false
+then # octopus
 git merge --no-ff --no-edit $BRANCHES || exit	# try to merge all
 
+else # sequence
+for BRANCH in $BRANCHES
+do
+	git merge --no-ff --no-edit $BRANCH || exit	# try to merge one after the other
+done
+fi
+
 $PUSH && echo "*** pushing letux-$VERSION to remote ***"
-$PUSH && git push --force origin letux-$VERSION	# update letux-$VERSION on public server
+$PUSH && { git push --force origin letux-$VERSION || exit; }	# update letux-$VERSION on public server
 
 echo "*** switched to $(git branch | fgrep '* ' | sed 's/\* //g') ***"

@@ -605,6 +605,18 @@ static struct ti_dt_clk omap54xx_clks[] = {
 	DT_CLK(NULL, "usb_tll_hs_usb_ch2_clk", "l3init-clkctrl:0048:10"),
 	DT_CLK(NULL, "utmi_p1_gfclk", "l3init-clkctrl:0038:24"),
 	DT_CLK(NULL, "utmi_p2_gfclk", "l3init-clkctrl:0038:25"),
+	DT_CLK("4ae18000.timer", "timer_sys_ck", "sys_clkin"),
+	DT_CLK("48032000.timer", "timer_sys_ck", "sys_clkin"),
+	DT_CLK("48034000.timer", "timer_sys_ck", "sys_clkin"),
+	DT_CLK("48036000.timer", "timer_sys_ck", "sys_clkin"),
+	DT_CLK("4803e000.timer", "timer_sys_ck", "sys_clkin"),
+	DT_CLK("48086000.timer", "timer_sys_ck", "sys_clkin"),
+	DT_CLK("48088000.timer", "timer_sys_ck", "sys_clkin"),
+	DT_CLK("40138000.timer", "timer_sys_ck", "dss_syc_gfclk_div"),
+	DT_CLK("4013a000.timer", "timer_sys_ck", "dss_syc_gfclk_div"),
+	DT_CLK("4013c000.timer", "timer_sys_ck", "dss_syc_gfclk_div"),
+	DT_CLK("4013e000.timer", "timer_sys_ck", "dss_syc_gfclk_div"),
+	DT_CLK(NULL, "fref_xtal_ck", "fref_xtal_ck"),
 	{ .node_name = NULL },
 };
 

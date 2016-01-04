@@ -86,8 +86,8 @@ do
 	fi
 	if $PUSH
 	then
-		echo "*** pushing $LATEST to origin ***"
-		git push --force origin $LATEST || exit;	# update branch on public server
+		echo "*** pushing $FEATURE to origin ***"
+		git push --force origin $FEATURE:$FEATURE || exit;	# update branch on public server
 	fi
 	BRANCHES="$BRANCHES $FEATURE"	# collect for octopus
 	if $SEQUENTIAL

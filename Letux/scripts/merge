@@ -1,10 +1,11 @@
 #!/bin/bash
 #
-# Letux/scripts/merge [ -p ] { branches... }
+# Letux/scripts/merge [ -sp ] [ -b base ] { branches... }
 #
-# merge Letux feature branches on top of current Linux branch
+# merge Letux feature branches on top of the base branch
+#
 # the current Linux branch is the highest numbered one starting
-#  with at least two digits separated by a .
+# with at least two digits separated by a .
 # i.e. 3.18, 4,4-rc4, 4.7 qualify while v3.18, 3.x don't
 #
 # if a file 'mergefile' exists in the current directory
@@ -13,6 +14,8 @@
 #
 # if a branch is versioned (suffix -v[0-9]), the highest one
 # will be taken
+#
+# default base commit is "letux-base"
 #
 # result is new branch "letux-$version"
 #
@@ -25,11 +28,13 @@
 
 PUSH=false
 SEQUENTIAL=false
+BASE=letux-base
 
 function usage {
 	echo "usage: $0 [ -s ] [ -p ] { branches...}"
 	echo "  -s	sequential merge"
 	echo "  -p	push --force all branches to 'origin'"
+	echo "  -b base	specify base commit"
 	exit 1
 }
 
@@ -38,6 +43,7 @@ do
 	case "$1" in
 		-p ) PUSH=true; shift ;;
 		-s ) SEQUENTIAL=true; shift ;;
+		-b ) shift; BASE="$1"; shift ;;
 		-* ) echo "unknown option $1"; usage; exit 1 ;;
 		* ) break;
 	esac
@@ -50,20 +56,20 @@ then
 	exit 1
 fi
 
-VERSION=$(git log -1 -E --grep="^Merge tag 'v[0-9].[0-9]" --format=oneline | sed "s|.*Merge tag 'v\(.*\)' into .*|\1|g")
+VERSION=$(git log -1 -E --grep="^Merge tag 'v[0-9].[0-9]" --format=oneline "$BASE" | sed "s|.*Merge tag 'v\(.*\)' into .*|\1|g")
 
 if ! [ "$VERSION" ]
 then
-	echo could not determine Linux version of letux-base
+	echo could not determine Linux version of "$BASE"
 	exit 1
 fi
 
 # try to switch to base
-echo "*** checkout letux-base ***"
-git checkout letux-base || exit
-$PUSH && { git push origin letux-base; }	# update letux-base on public server
+echo "*** checkout "$BASE" ($VERSION) ***"
+git checkout "$BASE" || exit
+$PUSH && { git push origin "$BASE"; }	# update on public server (if possible)
 
-echo merging features on top of letux-base for $VERSION
+echo merging features on top of "$BASE" for $VERSION
 
 echo "*** make a fresh working copy: letux-$VERSION ***"
 git branch -D letux-$VERSION 2>/dev/null

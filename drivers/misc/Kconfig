@@ -585,6 +585,18 @@ config NSM
 	  To compile this driver as a module, choose M here.
 	  The module will be called nsm.
 
+config WWAN_ON_OFF
+	tristate "WWAN ON/OFF"
+	depends on GPIOLIB
+	help
+	  If you say yes here you can control the power of a
+	  WWAN module throughrfkill wwan that has some power-on
+	  GPIO . The driver can also sense either some
+	  other GPIO to read back the real status or inspect
+	  the state of some USB PHY port where the modem module
+	  is connected to. Typical devices that can be controlled
+	  are OPTION GTM601, Gemalto PHS8.
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"

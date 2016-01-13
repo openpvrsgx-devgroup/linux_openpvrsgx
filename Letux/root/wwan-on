@@ -11,7 +11,7 @@ rfkill unblock wwan
 make femtocom 2>/dev/null >&2
 
 case $(cat /proc/device-tree/model) in
-Neo900 | Pyra-Handheld ) # device with Cinterion Module
+*GTA04b7* | *Neo900* | *Pyra-Handheld* ) # device with Cinterion Module
 	for wait in 1 2 3
 	do
 		if [ -r /dev/ttyACM0 ]
@@ -28,7 +28,7 @@ Neo900 | Pyra-Handheld ) # device with Cinterion Module
 		# lsusb | fgrep -q "ID 1e2d:0054" || { echo No Modem found >&2; exit 1; }
 		if [ "$wait" = 2 ]
 		then
-			# PHS8 might be in at^sdata=3/4/5 mode (NEVER SWITCH TO at^sdata=2 or you are in big trouble!)
+			# PHS8 might be in at^sdata=3/4/5 mode (NEVER NEVER SWITCH TO at^sdata=2 or you are in big trouble!)
 			modprobe usbserial
 			echo 1e2d 0053 >/sys/bus/usb-serial/drivers/generic/new_id
 			sleep 1
@@ -37,7 +37,7 @@ Neo900 | Pyra-Handheld ) # device with Cinterion Module
 
 	;;
 
-* ) # GTA04 with OPTION GTM601W
+*GTA04* ) # assume GTA04 with OPTION GTM601W
 	for wait in 1 2 3
 	do
 		for i in $(cd /sys/class/tty/ && echo ttyHS* 2>/dev/null)
@@ -53,6 +53,9 @@ Neo900 | Pyra-Handheld ) # device with Cinterion Module
 	done
 
 	;;
+
+*)
+	echo "unknown device model:" $(cat /proc/device-tree/model)
 esac
 
 if [ -r "$IF" ]

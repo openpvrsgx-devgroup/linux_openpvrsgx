@@ -1,10 +1,10 @@
 # test TS3A225E microphone switch
 
 case $(cat /proc/device-tree/model) in
-Pyra-Handheld )
+*Pyra-Handheld* )
 	i2cbus=1	# I2C2
 	;;
-GTA04b7 )	# Neo900
+*GTA04b7* | *Neo900* )	# Neo900
 	i2cbus=1	# I2C2
 	;;
 * )

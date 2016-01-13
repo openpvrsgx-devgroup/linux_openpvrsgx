@@ -1,6 +1,6 @@
 TWL4030_MADC=/sys/devices/platform/68000000.ocp/48070000.i2c/i2c-0/0-0048/48070000.i2c:twl@48:madc/iio:device0
 TWL6030_GPADC=/sys/devices/platform/44000000.ocp/48070000.i2c/i2c-0/0-0048/48070000.i2c:twl@48:adc/iio:device0
-TWL6037_GPADC=/sys/devices/platform/44000000.ocp/48070000.i2c/i2c-0/0-0048/48070000.i2c:palmas@48:gpadc/iio:device0
+TWL6037_GPADC=$(./findiio "palmas-gpadc")
 
 if [ -d $TWL4030_MADC ]
 then

@@ -1,0 +1,10 @@
+# find iio device by name
+
+for iiodev in /sys/bus/iio/devices/iio:device*
+do
+	if [ "$(cat $iiodev/name 2>/dev/null)" = "$1" ]
+		then echo $iiodev
+		exit 0
+	fi
+done
+exit 1

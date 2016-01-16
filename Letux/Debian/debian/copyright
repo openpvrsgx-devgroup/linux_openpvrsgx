@@ -1,5 +1,5 @@
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: kernel
+Upstream-Name: linux
 Source: <url://example.com>
 
 Files: *

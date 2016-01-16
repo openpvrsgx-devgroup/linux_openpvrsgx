@@ -60,9 +60,11 @@ override_dh_auto_install:
 	find $(DDESTDIR)/usr/include/kernel-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION) -name "*.cmd" -delete
 
 	# move installed firmware into a kernelbuild-specific subfolder
-	mv $(KDESTDIR)/lib/firmware $(KDESTDIR)/lib/$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)
+	# if no firmware is installed, created an empty folder for it
 	mkdir -p $(KDESTDIR)/lib/firmware
-	mv $(KDESTDIR)/lib/$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION) $(KDESTDIR)/lib/firmware/
+	mv $(KDESTDIR)/lib/firmware $(KDESTDIR)/lib/firmware-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)
+	mkdir -p $(KDESTDIR)/lib/firmware
+	mv $(KDESTDIR)/lib/firmware-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION) $(KDESTDIR)/lib/firmware/$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)
 
 override_dh_auto_test:
 	# don't test

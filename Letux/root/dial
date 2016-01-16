@@ -124,7 +124,7 @@ case "$IF" in
 		) | ./femtocom $IF
 		;;
 
-	/dev/ttyACM0 | /dev/ttyUSB[0-4] )	# Neo900 / Pyra
+	/dev/ttyACM[0-4] | /dev/ttyUSB[0-4] )	# Neo900 / Pyra
 
 		# set up voice channel by programming twl4030/6040
 

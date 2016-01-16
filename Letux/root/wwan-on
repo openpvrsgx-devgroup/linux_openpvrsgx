@@ -14,6 +14,11 @@ case $(cat /proc/device-tree/model) in
 *GTA04b7* | *Neo900* | *Pyra-Handheld* ) # device with Cinterion Module
 	for wait in 1 2 3
 	do
+		if [ -r /dev/ttyACM1 ]
+		then
+			IF="/dev/ttyACM1"	# PLS8
+			break
+		fi
 		if [ -r /dev/ttyACM0 ]
 		then
 			IF="/dev/ttyACM0"	# PHS8 in at^sdata=6 mode
@@ -25,7 +30,8 @@ case $(cat /proc/device-tree/model) in
 			break
 		fi
 		sleep 8	# not yet running - try again
-		# lsusb | fgrep -q "ID 1e2d:0054" || { echo No Modem found >&2; exit 1; }
+		# lsusb | fgrep -q "ID 1e2d:0054" || { echo No PHS8 found >&2; exit 1; }
+		# lsusb | fgrep -q "ID 1e2d:0061" || { echo No PLS8 found >&2; exit 1; }
 		if [ "$wait" = 2 ]
 		then
 			# PHS8 might be in at^sdata=3/4/5 mode (NEVER NEVER SWITCH TO at^sdata=2 or you are in big trouble!)

@@ -30,6 +30,7 @@ override_dh_auto_configure:
 	mkdir build
 	find config -name "*.conf" | sort | xargs ./linux/scripts/kconfig/merge_config.sh -O build -m /dev/null
 	./linux/scripts/config --file build/.config --set-str LOCALVERSION $(LOCALVERSION)
+	./linux/scripts/config --file build/.config --disable LOCALVERSION_AUTO
 	make -C linux O="$(CURDIR)/build" olddefconfig
 
 override_dh_auto_build:

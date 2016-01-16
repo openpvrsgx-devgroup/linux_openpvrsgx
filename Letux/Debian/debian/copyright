@@ -1,5 +1,5 @@
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: kernel-cubox-i
+Upstream-Name: kernel
 Source: <url://example.com>
 
 Files: *
@@ -20,7 +20,7 @@ License: GPL-2.0
  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 
 Files: debian/*
-Copyright: 2014 Josua Mayer <privacy@not.given>
+Copyright: 2014-2016 Josua Mayer <privacy@not.given>
 License: MIT
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal

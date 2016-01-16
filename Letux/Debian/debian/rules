@@ -9,13 +9,13 @@
 # Uncomment this to turn on verbose mode.
 export DH_VERBOSE=1
 
-KDESTDIR=$(CURDIR)/debian/kernel-3.14.y-fslc-imx6-sr
-HDESTDIR=$(CURDIR)/debian/kernel-headers-3.14.y-fslc-imx6-sr
-DDESTDIR=$(CURDIR)/debian/kernel-3.14.y-fslc-imx6-sr-dev
+KDESTDIR=$(CURDIR)/debian/linux-image-NAME
+HDESTDIR=$(CURDIR)/debian/linux-headers-NAME
+DDESTDIR=$(CURDIR)/debian/linux-NAME-dev
 
 # kernel version information
-BASEVERSION=3.14.54
-LOCALVERSION=-fslc-imx6-sr
+BASEVERSION=4.4.0
+LOCALVERSION=-NAME
 SCMVERSION=$(shell test -e .git && echo +)
 
 %:
@@ -28,8 +28,8 @@ override_dh_auto_clean:
 
 override_dh_auto_configure:
 	mkdir build
-	cd build; ../linux/scripts/kconfig/merge_config.sh -m ../linux/arch/arm/configs/imx_v7_cbi_hb_defconfig ../defconfig
-	cd build; ../linux/scripts/config --set-str LOCALVERSION $(LOCALVERSION)
+	find config -name "*.conf" | sort | xargs ./linux/scripts/kconfig/merge_config.sh -O build -m /dev/null
+	./linux/scripts/config --file build/.config --set-str LOCALVERSION $(LOCALVERSION)
 	make -C linux O="$(CURDIR)/build" olddefconfig
 
 override_dh_auto_build:
@@ -40,27 +40,24 @@ override_dh_auto_install:
 	install -v -m755 build/arch/arm/boot/zImage $(KDESTDIR)/boot/zImage-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)
 	install -v -m644 build/System.map $(KDESTDIR)/boot/System.map-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)
 	install -v -m644 build/.config $(KDESTDIR)/boot/config-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)
-	find build/arch/arm/boot/dts/ \( -name "imx6*-cubox-i.dtb" -o -name "imx6*-hummingboard.dtb" -o -name "imx6*-hummingboard2.dtb" \) -exec install -v -m644 {} $(KDESTDIR)/boot/ \;
+	find build/arch/arm/boot/dts/ -name "*.dtb" -exec install -v -m644 {} $(KDESTDIR)/boot/ \;
 	make -C build INSTALL_MOD_PATH=$(KDESTDIR) modules_install
 	rm -fv $(KDESTDIR)/lib/modules/$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/source
 	rm -fv $(KDESTDIR)/lib/modules/$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/build
 
 	# install kernel headers
-	sh install_devel_files.sh arm linux build $(HDESTDIR)/usr/src/kernel-headers-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)
+	sh install_devel_files.sh arm linux build $(HDESTDIR)/usr/src/linux-headers-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)
 
 	# add source and build symlinks
 	mkdir -p $(HDESTDIR)/lib/modules/$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)
-	ln -sfv /usr/src/kernel-headers-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION) $(HDESTDIR)/lib/modules/$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/source
-	ln -sfv /usr/src/kernel-headers-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION) $(HDESTDIR)/lib/modules/$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/build
+	ln -sfv /usr/src/linux-headers-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION) $(HDESTDIR)/lib/modules/$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/source
+	ln -sfv /usr/src/linux-headers-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION) $(HDESTDIR)/lib/modules/$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/build
 
 	# install the public API headers
 	make -C build INSTALL_HDR_PATH=$(DDESTDIR)/usr/include/kernel-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION) headers_install
 	mv $(DDESTDIR)/usr/include/kernel-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/include/* $(DDESTDIR)/usr/include/kernel-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/
 	rmdir $(DDESTDIR)/usr/include/kernel-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/include
 	find $(DDESTDIR)/usr/include/kernel-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION) -name "*.cmd" -delete
-
-	# add easy link to public kernel headers
-	ln -sv kernel-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION) $(DDESTDIR)/usr/include/imx-kernel-api
 
 	# move installed firmware into a kernelbuild-specific subfolder
 	mv $(KDESTDIR)/lib/firmware $(KDESTDIR)/lib/$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)

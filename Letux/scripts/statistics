@@ -19,7 +19,7 @@ if [ "$1" = "-a" ]
 then # all
 	echo "*** Letux Upstreaming Statistics ***"
 
-	git branch | sed 's/\* //g' | while read VERSION
+	git branch | sed 's/\* //' | while read VERSION
 	do
 		case "$VERSION" in
 			[2-9].*.*-* | [2-9].*-rc*-* )
@@ -50,12 +50,14 @@ fi
 CURRENTBRANCH=$1
 CURRENTLINUS=$2
 
-[ "$1" ] || CURRENTBRANCH=$(git branch | fgrep '* ' | sed 's/\* //g')
-if [ "$CURRENTBRANCH" = 4.0 ]
+[ "$1" ] || CURRENTBRANCH=$(git branch | fgrep '* ' | sed 's/\* //')
+CBRANCH=$(echo $CURRENTBRANCH | sed 's/letux-//')
+
+if [ "$CBRANCH" = 4.0 ]
 then
-[ "$2" ] || CURRENTLINUS=v$CURRENTBRANCH
+[ "$2" ] || CURRENTLINUS=v$CBRANCH
 else
-[ "$2" ] || CURRENTLINUS=$(echo v$CURRENTBRANCH | sed 's/\.0$//')	# strip off .0 from 3.14.0 for Linus tag conventions
+[ "$2" ] || CURRENTLINUS=$(echo v$CBRANCH | sed 's/\.0$//')	# strip off .0 from 3.14.0 for Linus tag conventions
 fi
 COUNT=0
 

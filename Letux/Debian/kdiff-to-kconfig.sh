@@ -12,11 +12,15 @@ if [ $# -ne 1 ]; then
 fi
 
 my_big_regex() {
-	# magic: part 1 = +/- sign at line start
+	# part 1: operator (+) ( )
 	# part 2: name of the config (CONFIG_ needs to be prepended)
 	# part 3: value or setting (n m y "" 0-9)
 	# turn into CONFIG_<SOMETHING>=<SOMETHING>
-	sed -e "s;\(^+\)\([a-zA-Z0-9_]\+\) \(.\+\);CONFIG_\2=\3;g"
+	# first magic: additions (+)
+	# second magic: changes ( )
+	sed \
+		-e "s;\(^+\)\([a-zA-Z0-9_]\+\) \(.\+\)$;CONFIG_\2=\3;g" \
+		-e "s;\(^ \)\([a-zA-Z0-9_]\+\) [nmy] -> \([nmy]\)$;CONFIG_\2=\3;g"
 }
 
 cat "$DIFF" | my_big_regex

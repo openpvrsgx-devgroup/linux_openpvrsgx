@@ -10,7 +10,7 @@ Vcs-Browser: https://github.com/mxOBS/deb-pkg_kernel-xyz
 
 Package: linux-image-NAME
 Architecture: any-arm
-Provides: linux-image, linux-modules-${binary:Version}
+Provides: linux-image
 Depends: ${misc:Depends}
 Description: LONGNAME kernel
  This package provides the mainline kernel

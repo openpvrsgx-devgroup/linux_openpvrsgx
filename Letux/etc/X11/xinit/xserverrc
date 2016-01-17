@@ -32,7 +32,11 @@ case "$(cat /proc/device-tree/model 2>/dev/null)" in
 	*PandaBoard* )
 		PANEL=none;;
 	*Pyra-Handheld* )
-		# /root/bl 1
+		(
+		cd /root
+		# ./bl 1
+		./ssd2858 -r -p -s
+		)
 		PANEL=5.0-720x1280;;
 	*Pandora* )
 		PANEL=4.3-480x640;;

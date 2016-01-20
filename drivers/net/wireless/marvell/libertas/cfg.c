@@ -2048,6 +2048,7 @@ static int lbs_set_power_mgmt(struct wiphy *wiphy, struct net_device *dev,
 			lbs_set_ps_mode(priv,
 					PS_MODE_ACTION_EXIT_PS,
 					true);
+		lbs_exit_auto_deep_sleep(priv);
 		return 0;
 	}
 	if (priv->psmode != LBS802_11POWERMODECAM)
@@ -2055,6 +2056,8 @@ static int lbs_set_power_mgmt(struct wiphy *wiphy, struct net_device *dev,
 	priv->psmode = LBS802_11POWERMODEMAX_PSP;
 	if (priv->connect_status == LBS_CONNECTED)
 		lbs_set_ps_mode(priv, PS_MODE_ACTION_ENTER_PS, true);
+	priv->auto_deep_sleep_timeout = 1000; /* 1000ms */
+	lbs_enter_auto_deep_sleep(priv);
 	return 0;
 }
 

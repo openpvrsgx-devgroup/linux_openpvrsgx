@@ -1,21 +1,12 @@
 #
 # GTA04 hardware test script
-# (c) Golden Delicious Computers GmbH&Co. KG, 2011-2014
+# (c) Golden Delicious Computers GmbH&Co. KG, 2011-2016
 # licenced under GPL
 #
 
-TESTER_VERSION="4.0"
-TESTER_RECOMMENDED_KERNEL="4.3"
-TESTER_DATE="03 Nov 2015"
-
-trap "killall hciattach arecord aplay 2>/dev/null" EXIT
-trap "exit 1" SIGHUP SIGINT SIGTERM
-
-make femtocom si4721 >/dev/null
-
-# call e.g. as: testing "GTM601" "test if we can access"
-
-ANYNOK=false
+TESTER_VERSION="5.0"
+TESTER_RECOMMENDED_KERNEL="4.4"
+TESTER_DATE="21 Jan 2016"
 
 function testing {
 	TEST="$1"
@@ -52,21 +43,6 @@ function optional {
 	fi
 }
 
-testing "Tests-Start"
-ok "$(date)"
-
-testing "Tests-Version"
-ok "$TESTER_VERSION"
-
-testing "Tests-Kernel"
-ok "$(uname -rv) - recommended minimum: $TESTER_RECOMMENDED_KERNEL"
-
-testing "Tests-Rootfs"
-if fgrep -q 'root=/dev/mmcblk' /proc/cmdline
-then ok "SD"
-else ok "NAND"
-fi
-
 function findregulator {
 for regulator in /sys/class/regulator/regulator.*
 do
@@ -86,6 +62,23 @@ do
 	fi
 done
 }
+
+function test_all {
+
+testing "Tests-Start"
+ok "$(date)"
+
+testing "Tests-Version"
+ok "$TESTER_VERSION"
+
+testing "Tests-Kernel"
+ok "$(uname -rv) - recommended minimum: $TESTER_RECOMMENDED_KERNEL"
+
+testing "Tests-Rootfs"
+if fgrep -q 'root=/dev/mmcblk' /proc/cmdline
+then ok "SD"
+else ok "NAND"
+fi
 
 testing "Device Tree"
 [ -r /proc/device-tree ] && ok "with DT" || optional "without DT"
@@ -519,10 +512,56 @@ fi
 testing "VAUX4" "power off for WLAN"
 [ "$(cat $VAUX4/num_users)" = "0" ] && ok || nok
 
-killall -9 arecord aplay 2>/dev/null # stop any running audio forwarding
-
 testing "Tests-End" "Summary of all tests"
 $ANYNOK && nok "$(date)" || ok "$(date)"
+
+}
+
+function test_bluetooth_tiwi {
+	# based on http://processors.wiki.ti.com/index.php/WL1835_Cape_on_BeagleBone_with_MainLine_Kernel_Debian_Filesystem#Starting_the_Bluetooth
+
+	# remove shared transport layer
+	modprobe -r st_drv
+
+	UART=/dev/ttyO1	# uart2
+	hciattach $UART texas 3000000 &
+
+	hciconfig hci0 up
+
+	bt-adapter –d
+}
+
+function test_gta04 {
+	# call all gta04 tests
+	test_wwan
+	test_wlan
+	test_bluetooth
+}
+
+function test_pyra {
+	# call all pyra tests
+	test_wwan
+	test_wlan
+	test_bluetooth
+}
+
+trap "killall -9 hciattach arecord aplay 2>/dev/null" EXIT
+trap "exit 1" SIGHUP SIGINT SIGTERM
+
+make femtocom si4721 >/dev/null
+
+# call e.g. as: testing "GTM601" "test if we can access"
+
+ANYNOK=false
+
+TEST="$1"
+[ "$1" ] || TEST="all"
+
+# run selected test function
+test_$1
+
+killall -9 arecord aplay 2>/dev/null # stop any running audio forwarding
+
 if $ANYNOK
 then # red
 	(

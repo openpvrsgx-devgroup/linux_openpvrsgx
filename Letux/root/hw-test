@@ -411,61 +411,7 @@ nok
 
 VAUX4=$(findregulator "VAUX4")
 
-testing "W2CBW003-BT UART" "Bluetooth/WLAN power, UART1, Bluetooth and initial baudrate"
-rfkill unblock bluetooth
-for BTBAUD in 3000000 921600 115200
-	do
-	killall hciattach 2>/dev/null	# stop any running daemon
-	hciattach -s $BTBAUD /dev/ttyO0 any $BTBAUD flow 2>/dev/null >&2	# start daemon at current speed
-	sleep 2
-	if hciconfig hci0 up 2>/dev/null	# try to enable Bluetooth interface
-		then # successfull at this speed
-		ok $BTBAUD
-		break
-	fi
-done
-nok
-
-if $OK
-then # run additional Bluetooth tests
-	if [ $BTBAUD != "3000000" ]
-		then	# not yet at 3 MBit/s - switch to 3 MBit/s
-		testing "W2CBW003-BT-Highspeed" "try to temporarily go up to 3 MBit/s"
-		bccmd -d hci0 psset baudrate 12288 2>/dev/null &&
-		bccmd -d hci0 warmreset 2>/dev/null &&	# temporarily go up to 3 MBit/s
-		killall hciattach 2>/dev/null
-		hciattach -s 3000000 /dev/ttyO0 any 3000000 flow 2>/dev/null >&2 &&	# restart daemon at 3 MBit/s
-		hciconfig hci0 up 2>/dev/null &&
-		ok "3000000" || nok
-		if $OK
-			then
-			testing "W2CBW003-BT-Program" "try to program boot baudrate to 3 MBit/s"
-			bccmd -d hci0 psset -s 0x1 baudrate 12288	# reprogram the boot baudrate
-			ok "programmed" || nok "not programmed"
-		fi
-	fi
-	testing "W2CBW003-BT-BootBaud" "read boot baudrate"
-	read VAL < <(bccmd -d hci0 psget -s 0x1 baudrate 2>/dev/null | sed "s/UART Baud rate:.*(\(.*\))/\1/g")
-	VAL=$(expr "${VAL:=0}" '*' 1000000 / 4096)
-	[ "$VAL" -gt 0 ] && ok $VAL || nok $VAL
-	testing "W2CBW003-BT-MAC" "read MAC address"
-	BTMAC=$(hciconfig -a | fgrep 'BD Address' | cut -d ' ' -f 3-3)
-	[ "$BTMAC" ] && ok "$BTMAC" || nok "$BTMAC"
-fi
-if $OK
-then # scan
-	testing "W2CBW003-BT-Scan" "scan for Bluetooth Base station"
-	for i in 1 2 3 4 5
-		do
-		BASE=$(hcitool scan --info | fgrep 'BD Address' | head -1 | cut -f 2 | cut -d ' ' -f 1)	# try to locate base station
-		if [ "$BASE" ]
-		then
-			ok $BASE	# found
-			break
-		fi
-	done
-	nok
-fi
+test_bluetooth_w2cbw003
 
 testing "VAUX4" "power on for Bluetooth"
 [ "$(cat $VAUX4/num_users)" = "2" ] && ok || nok
@@ -515,6 +461,67 @@ testing "VAUX4" "power off for WLAN"
 testing "Tests-End" "Summary of all tests"
 $ANYNOK && nok "$(date)" || ok "$(date)"
 
+}
+
+function test_bluetooth_w2cbw003 {
+	UART=/dev/ttyO0	# uart1
+	VAUX4=$(findregulator "VAUX4")
+
+	testing "W2CBW003-BT UART" "Bluetooth/WLAN power, UART1, Bluetooth and initial baudrate"
+	rfkill unblock bluetooth
+	for BTBAUD in 3000000 921600 115200
+		do
+		killall hciattach 2>/dev/null	# stop any running daemon
+		hciattach -s $BTBAUD $UART any $BTBAUD flow 2>/dev/null >&2	# start daemon at current speed
+		sleep 2
+		if hciconfig hci0 up 2>/dev/null	# try to enable Bluetooth interface
+			then # successful at this speed
+			ok $BTBAUD
+			break
+		fi
+	done
+	nok
+
+	if $OK
+	then # run additional Bluetooth tests
+		if [ $BTBAUD != "3000000" ]
+			then	# not yet at 3 MBit/s - switch to 3 MBit/s
+			testing "W2CBW003-BT-Highspeed" "try to temporarily go up to 3 MBit/s"
+			bccmd -d hci0 psset baudrate 12288 2>/dev/null &&
+			bccmd -d hci0 warmreset 2>/dev/null &&	# temporarily go up to 3 MBit/s
+			killall hciattach 2>/dev/null
+			hciattach -s 3000000 $UART any 3000000 flow 2>/dev/null >&2 &&	# restart daemon at 3 MBit/s
+			hciconfig hci0 up 2>/dev/null &&
+			ok "3000000" || nok
+			if $OK
+				then
+				testing "W2CBW003-BT-Program" "try to program boot baudrate to 3 MBit/s"
+				bccmd -d hci0 psset -s 0x1 baudrate 12288	# reprogram the boot baudrate
+				ok "programmed" || nok "not programmed"
+			fi
+		fi
+		testing "W2CBW003-BT-BootBaud" "read boot baudrate"
+		read VAL < <(bccmd -d hci0 psget -s 0x1 baudrate 2>/dev/null | sed "s/UART Baud rate:.*(\(.*\))/\1/g")
+		VAL=$(expr "${VAL:=0}" '*' 1000000 / 4096)
+		[ "$VAL" -gt 0 ] && ok $VAL || nok $VAL
+		testing "W2CBW003-BT-MAC" "read MAC address"
+		BTMAC=$(hciconfig -a | fgrep 'BD Address' | cut -d ' ' -f 3-3)
+		[ "$BTMAC" ] && ok "$BTMAC" || nok "$BTMAC"
+	fi
+	if $OK
+	then # scan
+		testing "W2CBW003-BT-Scan" "scan for some Bluetooth Base station"
+		for i in 1 2 3 4 5
+			do
+			BASE=$(hcitool scan --info | fgrep 'BD Address' | head -1 | cut -f 2 | cut -d ' ' -f 1)	# try to locate base station
+			if [ "$BASE" ]
+			then
+				ok $BASE	# found
+				break
+			fi
+		done
+		nok
+	fi
 }
 
 function test_bluetooth_tiwi {

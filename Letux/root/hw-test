@@ -413,14 +413,6 @@ VAUX4=$(findregulator "VAUX4")
 
 test_bluetooth_w2cbw003
 
-testing "VAUX4" "power on for Bluetooth"
-[ "$(cat $VAUX4/num_users)" = "2" ] && ok || nok
-
-killall hciattach 2>/dev/null	# stop any running daemon
-
-testing "VAUX4" "power off for Bluetooth"
-[ "$(cat $VAUX4/num_users)" = "1" ] && ok || nok
-
 testing "W2CBW003-WLAN-libertas" "check if kernel did load libertas driver"
 rfkill unblock wifi
 ( lsmod | fgrep libertas_sdio >/dev/null ) && ok || nok
@@ -464,8 +456,18 @@ $ANYNOK && nok "$(date)" || ok "$(date)"
 }
 
 function test_bluetooth_w2cbw003 {
+	killall -9 hciattach 2>/dev/null	# stop any running daemon
+
 	UART=/dev/ttyO0	# uart1
 	VAUX4=$(findregulator "VAUX4")
+	NUM_USERS=$(cat $VAUX4/num_users)
+
+#testing "VAUX4" "power on for Bluetooth"
+#[ "$(cat $VAUX4/num_users)" = "2" ] && ok || nok
+
+#testing "VAUX4" "power off for Bluetooth"
+#[ "$(cat $VAUX4/num_users)" = "1" ] && ok || nok
+
 
 	testing "W2CBW003-BT UART" "Bluetooth/WLAN power, UART1, Bluetooth and initial baudrate"
 	rfkill unblock bluetooth
@@ -473,6 +475,8 @@ function test_bluetooth_w2cbw003 {
 		do
 		killall hciattach 2>/dev/null	# stop any running daemon
 		hciattach -s $BTBAUD $UART any $BTBAUD flow 2>/dev/null >&2	# start daemon at current speed
+#		[ "$(cat $VAUX4/state)" = "enabled" ] && ok || nok
+#		[ "$(cat $VAUX4/num_users)" = $(expr $NUM_USERS + 1) ] && ok || nok
 		sleep 2
 		if hciconfig hci0 up 2>/dev/null	# try to enable Bluetooth interface
 			then # successful at this speed

@@ -565,6 +565,13 @@ make femtocom si4721 >/dev/null
 
 ANYNOK=false
 
+if [ "$1" = "-t" ]
+then
+	echo "known tests:"
+	declare -F | sed 's/declare -f //' | fgrep test_ | sed 's/test_//'
+	exit
+fi
+
 TEST="$1"
 [ "$1" ] || TEST="all"
 

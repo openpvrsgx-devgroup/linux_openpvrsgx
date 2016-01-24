@@ -18,9 +18,11 @@ my_big_regex() {
 	# turn into CONFIG_<SOMETHING>=<SOMETHING>
 	# first magic: additions (+)
 	# second magic: changes ( )
+	# third magic: removals (-)
 	sed \
 		-e "s;\(^+\)\([a-zA-Z0-9_]\+\) \(.\+\)$;CONFIG_\2=\3;g" \
-		-e "s;\(^ \)\([a-zA-Z0-9_]\+\) [nmy] -> \([nmy]\)$;CONFIG_\2=\3;g"
+		-e "s;\(^ \)\([a-zA-Z0-9_]\+\) [nmy] -> \([nmy]\)$;CONFIG_\2=\3;g" \
+		-e "s;\(^-\)\([a-zA-Z0-9_]\+\) \(.\+\)$;# CONFIG_\2 is not set;g"
 }
 
 cat "$DIFF" | my_big_regex

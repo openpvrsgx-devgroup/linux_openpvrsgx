@@ -500,7 +500,9 @@ $(eval $(call BothConfigC,PVR_SECURE_HANDLES,))
 # on SPM platforms the LISR and MISR can run at the same time and
 # thus during powerdown we need to drain all pending LISRs before
 # proceeding to do the actual powerdown
+ifneq ($(SUPPORT_LISR_MISR_SYNC),)
 $(eval $(call KernelConfigC,SUPPORT_LISR_MISR_SYNC))
+endif
 
 ifneq ($(DISPLAY_CONTROLLER),)
 $(eval $(call BothConfigC,DISPLAY_CONTROLLER,$(DISPLAY_CONTROLLER)))

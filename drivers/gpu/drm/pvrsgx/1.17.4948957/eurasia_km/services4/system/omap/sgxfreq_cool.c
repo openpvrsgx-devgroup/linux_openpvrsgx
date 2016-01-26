@@ -86,7 +86,7 @@ int cool_init(void)
 		return -1;
 	}
 
-	ret = thermal_zone_bind_cooling_device(tz, 0, cd.cdev, THERMAL_NO_LIMIT, THERMAL_NO_LIMIT);
+	ret = thermal_zone_bind_cooling_device(tz, 0, cd.cdev, THERMAL_NO_LIMIT, THERMAL_NO_LIMIT, THERMAL_WEIGHT_DEFAULT);
 	if (ret)
 	{
 		pr_err("sgxfreq: Error binding cooling device: %d\n", ret);

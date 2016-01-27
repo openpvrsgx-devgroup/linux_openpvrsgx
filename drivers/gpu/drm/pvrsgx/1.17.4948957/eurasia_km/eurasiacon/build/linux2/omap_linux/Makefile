@@ -43,6 +43,9 @@
 #
 TARGET_PRODUCT ?= jacinto6evm
 
+PVRSRV_NEED_PVR_DPF := 1
+PVRSRV_NEW_PVR_DPF := 1
+
 # Customize this build as per the TARGET_PRODUCT setting
 #
 ifneq ($(filter blaze blaze_tablet panda,$(TARGET_PRODUCT)),)

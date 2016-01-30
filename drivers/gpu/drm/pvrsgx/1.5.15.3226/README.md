@@ -31,6 +31,8 @@ sudo add-apt-repository lp:~thopiekar/emgd
 
 4. If you had used open source drivers, don't forget to blacklist `gma500_gfx` and `psb_gfx`, so that emgd can be loaded.
 5. `# update-initrams`
+
+
 Status
 ------
 

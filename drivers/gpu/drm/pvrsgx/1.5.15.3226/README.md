@@ -30,7 +30,7 @@ sudo add-apt-repository lp:~thopiekar/emgd
     3.2 don't forget to set there your resolution and color depth
 
 4. If you had used open source drivers, don't forget to blacklist `gma500_gfx` and `psb_gfx`, so that emgd can be loaded.
-
+5. `# update-initrams`
 Status
 ------
 
@@ -115,9 +115,7 @@ MPlayer          | untested
 
 Rootless xorg setup
 -------------------
-Probe `emgd` module sometime during the boot.
-
-Some issues with wrong permissions could pop up (if you are not using systemd-logind). 
+Should work out of the box, but some issues with wrong permissions could pop up (if you are not using systemd-logind). 
 
 Don't forget to add the target user to the appropriate groups, such as `video`, `tty` and `input`.
 You may want to add the following to rc.local if the groups are not giving you enough permissions:

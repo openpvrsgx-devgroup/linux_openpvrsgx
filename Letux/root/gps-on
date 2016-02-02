@@ -1,0 +1,67 @@
+#
+# start GPS NMEA receiver
+# and return the serial port
+#
+# usage: gps-on
+#
+
+## FIXME: we should not turn on wwan for GPS on GTA04
+
+IF="$(/root/wwan-on)"
+
+case "$IF" in
+	"" )
+		echo Modem Application interface not found >&2
+		# FIXME: on Pyra with PHS8 we can try the rescue procedure
+		# 1. turn off Bluetooth (will switch the UART interface)
+		# 2. access the command port through /dev/ttyO2
+		# 3. AT^SDPORT=* --- replace * by a mode where USB is active
+		# 4. start over
+		exit 1
+		;;
+
+	/dev/ttyHS* ) # GTA04 with OPTION GTM601W
+		echo /dev/ttyO1
+		;;
+
+	/dev/ttyACM0 )
+		# verify that we are a PHS8 and only then switch
+		echo PHS8 in wrong mode >&2
+		echo unknown
+		exit 1
+		(
+		echo "AT^SDPORT=4"	# switch to multiplexed data mode
+		sleep 1
+		) | ./femtocom $IF >&2
+		echo should now make modem re-enumerate and restart this script
+		;;
+
+	/dev/ttyACM1 )	# PLS8
+		(
+		echo 'AT^SGPSC="Engine","1"'	# enable GPS
+		sleep .5
+		echo 'AT^SGPSC="Nmea/Output","on"'	# enable data stream
+		sleep .5
+		echo 'AT^SGPSC="Power/Antenna","on"'	# turn on LNA
+		sleep .5
+		echo 'AT^SGPSC="Power/Antenna","auto"'	# switch to auto mode
+		sleep 1
+		) | ./femtocom $IF >&2 &
+		echo /dev/ttyACM2
+		;;
+
+	/dev/ttyUSB[0-4] )	# PHS8 in mutiplexed mode
+		(
+		echo 'AT^SGPSC="Engine","1"'	# enable GPS
+		sleep .5
+		echo 'AT^SGPSC="Nmea/Output","on"'
+		sleep .5
+		echo 'AT^SGPSC="Power/Antenna","on"'
+		sleep .5
+		echo 'AT^SGPSC="Power/Antenna","auto"'
+		sleep 1
+		) | ./femtocom $IF >&2  &
+		echo /dev/ttyUSB1
+		;;
+
+esac

@@ -3,60 +3,14 @@
 # see also http://projects.goldelico.com/p/gta04-kernel/page/GPS/
 #
 
-SERIAL=/dev/ttyO1
-
-case "$(uname -r)" in
-
-2.6.* )
-echo "### powering up antenna ###"
-VDD=2800000
-echo $VDD >/sys/devices/platform/reg-virt-consumer.5/max_microvolts 2>/dev/null &&
-echo $VDD >/sys/devices/platform/reg-virt-consumer.5/min_microvolts 2>/dev/null &&
-echo normal >/sys/devices/platform/reg-virt-consumer.5/mode 2>/dev/null &&	#  enable power supply
-
-echo "### resetting GPS receiver ###"
-killall gpsd
-OK=false
-for i in 1 2 3 4 5
-	do
-	if read -t 2 <$SERIAL LINE && echo $LINE | fgrep '$GP' >/dev/null
-	then
-		OK=true
-		break
-	fi
-	echo 0 >/sys/devices/virtual/gpio/gpio145/value &&
-	echo 1 >/sys/devices/virtual/gpio/gpio145/value	&& # trigger chip
-	stty 9600 <$SERIAL
-	sleep 1
-done
-if "$OK"
-then : nothing
-else
-	echo "### failed resetting GPS receiver ###"
-	exit 1
-fi
-
-case $(cat /sys/devices/virtual/gpio/gpio144/value) in
-	0 )	echo "### on internal antenna ###";;
-	1 )	echo "### on external antenna ###";;
-	* )	echo "### unknown antenna status ###";;
-esac
+SERIAL=$(/root/gps-on)
 
 echo "### starting gpsd ###"
 gpsd $SERIAL
 ;;
 
-3.?.* | 3.1[0-2].* )
-	rfkill unblock gps	# enable VSIM
-	echo "### $(cat /sys/devices/platform/extcon-gpio/extcon/gps_antenna/state) antenna ###"
-;;
-
-3.1[3-9].* | 3.[2-9]* | 4.*)
-	rfkill unblock gps	# enable VSIM
-	echo "### $(cat /sys/class/extcon/gps_antenna/state) antenna ###"
-;;
-
-esac
+rfkill unblock gps	# enable VSIM
+echo "### $(cat /sys/class/extcon/gps_antenna/state) antenna ###"
 
 export XAUTHORITY=/.Xauthority
 

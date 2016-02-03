@@ -11,6 +11,11 @@ case $(cat /proc/device-tree/model) in
 	;;
 esac
 
+echo "currently not working (device tree needs updates)"
+echo "run ./ssd2858 or ./boe script"
+
+exit 1
+
 while true
 do
 echo

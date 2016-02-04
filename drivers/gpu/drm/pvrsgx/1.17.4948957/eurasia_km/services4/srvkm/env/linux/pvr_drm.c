@@ -49,6 +49,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 #endif
 
+#include <linux/platform_data/sgx-omap.h>
+
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -665,7 +667,19 @@ static struct platform_driver sPVRPlatDriver =
 static int
 PVRSRVDrmProbe(struct platform_device *pDevice)
 {
+
+	int ret;
+	struct device *dev = &pDevice->dev;
+	struct gfx_sgx_platform_data *pdata = dev->platform_data;
+
 	PVR_TRACE(("PVRSRVDrmProbe"));
+
+	if (pdata && pdata->deassert_reset) {
+		ret = pdata->deassert_reset(pDevice, pdata->reset_name);
+		if (ret) {
+			dev_err(dev, "Unable to reset SGX!\n");
+		}
+	}
 
 #if defined(PVR_NEW_STYLE_DRM_PLATFORM_DEV)
 	gpsPVRLDMDev = pDevice;
@@ -679,6 +693,10 @@ PVRSRVDrmProbe(struct platform_device *pDevice)
 static int
 PVRSRVDrmRemove(struct platform_device *pDevice)
 {
+	int ret;
+	struct device *dev = &pDevice->dev;
+	struct gfx_sgx_platform_data *pdata = dev->platform_data;
+
 	PVR_TRACE(("PVRSRVDrmRemove"));
 
 #if defined(PVR_NEW_STYLE_DRM_PLATFORM_DEV) && (LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0))
@@ -686,6 +704,14 @@ PVRSRVDrmRemove(struct platform_device *pDevice)
 #else
 	drm_put_dev(gpsPVRDRMDev);
 #endif
+
+	if (pdata && pdata->assert_reset) {
+		ret = pdata->assert_reset(pDevice, pdata->reset_name);
+		if (ret) {
+			dev_err(dev, "Unable to reset SGX!\n");
+		}
+	}
+
 	return 0;
 }
 #endif

@@ -82,6 +82,25 @@ ifneq ($(filter jacinto6evm omap5uevm,$(TARGET_PRODUCT)),)
 
  # OMAP Product Version
  VS_PRODUCT_VERSION			:= 5
+ AM_VERSION					:= 5
+endif
+
+ifneq ($(filter ti335x ti437x,$(TARGET_PRODUCT)),)
+ SGXCORE					:= 530
+ SGX_CORE_REV				:= 125
+ # Reuse this variable to select the common environment variables for AM3/4/5
+ # The method introduces the minimum changes to support AM3/4 although the variable name
+ # is misleading.
+ SYS_OMAP5_UEVM				:= 1
+
+ ifeq ($(TARGET_PRODUCT), ti437x)
+ AM_VERSION					:= 4
+ else
+ AM_VERSION					:= 3
+ endif
+
+ # FIXME: Re-enable this ASAP
+ SUPPORT_ACTIVE_POWER_MANAGEMENT 	:= 0
 endif
 
 PVR_NO_OMAP_TIMER := 1
@@ -160,7 +179,11 @@ LDM_PLATFORM := 1
 PVR_LDM_DEVICE_TREE := 1
 PVR_DRI_DRM_PLATFORM_DEV := 1
 SUPPORT_DMABUF := 1
+ifeq ($(TARGET_PRODUCT),ti335x)
+PVR_DRM_MODESET_DRIVER_NAME := tilcdc
+else
 PVR_DRM_MODESET_DRIVER_NAME := omapdrm
+endif
 PVR_DRM_MODESET_MODULE_NAME := dumb
 # No display class driver.
 DISPLAY_CONTROLLER_COMPONENT :=

@@ -43,10 +43,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if !defined(__SYSINFO_H__)
 #define __SYSINFO_H__
 
+#if (AM_VERSION == 5)
 #if defined(SGX540) && (SGX_CORE_REV == 120)
 #define SYS_SGX_CLOCK_SPEED		307200000
 #else
 #define SYS_SGX_CLOCK_SPEED		304742400
+#endif
+#else // (AM_VERSION == 5)
+#define SYS_SGX_CLOCK_SPEED		200000000
 #endif
 
 /*!< System specific poll/timeout details */

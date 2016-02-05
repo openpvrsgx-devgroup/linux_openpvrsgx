@@ -46,7 +46,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if defined(VS_PRODUCT_VERSION) && VS_PRODUCT_VERSION == 5
 #define VS_PRODUCT_NAME	"OMAP5"
 #else
-#define VS_PRODUCT_NAME	"OMAP4"
+#if (AM_VERSION == 4)
+#define VS_PRODUCT_NAME	"TI43xx"
+#else
+#define VS_PRODUCT_NAME	"TI335x"
+#endif
 #endif
 
 
@@ -60,9 +64,17 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 #define SYS_OMAP_SGX_REGS_SYS_PHYS_BASE  0x56000000
+#if (AM_VERSION == 5)
 #define SYS_OMAP_SGX_REGS_SIZE           0xFFFF
+#else
+#define SYS_OMAP_SGX_REGS_SIZE           0x1000000
+#endif
 
+#if (AM_VERSION == 5)
 #define SYS_OMAP_SGX_IRQ				 53 /* OMAP4 IRQ's are offset by 32 */
+#else
+#define SYS_OMAP_SGX_IRQ				 37 /* OMAP4 IRQ's are offset by 32 */
+#endif
 
 #define SYS_OMAP_DSS_REGS_SYS_PHYS_BASE  0x58000000
 #define SYS_OMAP_DSS_REGS_SIZE           0x7000
@@ -79,10 +91,17 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define SYS_OMAP_DSS_LCD_INTERRUPT_VSYNC_ENABLE_MASK 0x40002
 #define SYS_OMAP_DSS_LCD_INTERRUPT_VSYNC_STATUS_MASK 0x40002
 
-
-#define SYS_OMAP_GP11TIMER_ENABLE_SYS_PHYS_BASE	0x48088038
-#define SYS_OMAP_GP11TIMER_REGS_SYS_PHYS_BASE	0x4808803C
-#define SYS_OMAP_GP11TIMER_TSICR_SYS_PHYS_BASE	0x48088054
+#if (AM_VERSION == 5)
+/* AM57xx uses GP11 TIMER */
+#define SYS_OMAP_GPTIMER_ENABLE_SYS_PHYS_BASE	0x48088038
+#define SYS_OMAP_GPTIMER_REGS_SYS_PHYS_BASE		0x4808803C
+#define SYS_OMAP_GPTIMER_TSICR_SYS_PHYS_BASE	0x48088054
+#else
+/* AM335x and AM5437x use GP7 TIMER */
+#define SYS_OMAP_GPTIMER_ENABLE_SYS_PHYS_BASE	0x4804A038
+#define SYS_OMAP_GPTIMER_REGS_SYS_PHYS_BASE		0x4804A03C
+#define SYS_OMAP_GPTIMER_TSICR_SYS_PHYS_BASE	0x4804A054
+#endif
 
 /* Interrupt bits */
 #define DEVICE_SGX_INTERRUPT		(1<<0)
@@ -91,23 +110,30 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #if defined(__linux__)
 #if defined(PVR_LDM_DEVICE_TREE)
+#if (AM_VERSION == 5)
 #define	SYS_SGX_DEV_NAME	"ti,dra7-sgx544"
+#elif (AM_VERSION == 4)
+#define	SYS_SGX_DEV_NAME	"ti,am4376-sgx530"
+#else
+#define	SYS_SGX_DEV_NAME	"ti,am3352-sgx530"
+#endif
 #else
 /*
  * Recent OMAP4 kernels register SGX as platform device "omap_gpu".
  * This device must be used with the Linux power management calls
  * in sysutils_linux.c, in order for SGX to be powered on.
  */
+#if (AM_VERSION == 5)
 #if defined(PVR_LDM_PLATFORM_PRE_REGISTERED_DEV)
 #define	SYS_SGX_DEV_NAME	PVR_LDM_PLATFORM_PRE_REGISTERED_DEV
 #else
 #define	SYS_SGX_DEV_NAME	"omap_gpu"
 #endif	/* defined(PVR_LDM_PLATFORM_PRE_REGISTERED_DEV) */
+#endif
 #endif	/* defined(PVR_LDM_DEVICE_TREE) */
 #endif	/* defined(__linux__) */
 
 /*****************************************************************************
  * system specific data structures
  *****************************************************************************/
- 
 #endif	/* __SYSCONFIG_H__ */

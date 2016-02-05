@@ -88,13 +88,17 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <plat/gpu.h>
 #endif
 #if !defined(PVR_NO_OMAP_TIMER)
+#if (AM_VERSION == 5)
 #define	PVR_OMAP_USE_DM_TIMER_API
 #include <plat/dmtimer.h>
 #endif
 #endif
+#endif
 
 #if !defined(PVR_NO_OMAP_TIMER)
+#if (AM_VERSION == 5)
 #define PVR_OMAP_TIMER_BASE_IN_SYS_SPEC_DATA
+#endif
 #endif
 #endif /* defined(__linux__) */
 
@@ -107,7 +111,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if defined(SGX_OCP_REGS_ENABLED)
 /* FIXME: Temporary workaround for OMAP4470 and active power off in 4430 */
 #if !defined(SGX544) && defined(SUPPORT_ACTIVE_POWER_MANAGEMENT)
+#if (AM_VERSION == 5)
 #define SGX_OCP_NO_INT_BYPASS
+#endif
 #endif
 #endif
 #endif

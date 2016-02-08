@@ -84,7 +84,7 @@ static void mmc_pwrseq_simple_power_off(struct mmc_host *host)
 {
 	struct mmc_pwrseq_simple *pwrseq = to_pwrseq_simple(host->pwrseq);
 
-	mmc_pwrseq_simple_set_gpios_value(pwrseq, 1);
+	mmc_pwrseq_simple_set_gpios_value(pwrseq, 0);
 
 	if (pwrseq->power_off_delay_us)
 		usleep_range(pwrseq->power_off_delay_us,

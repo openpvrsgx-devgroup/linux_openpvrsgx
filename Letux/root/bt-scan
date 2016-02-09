@@ -1,0 +1,27 @@
+#
+# scan bluetooth
+#
+
+UART=/dev/ttyO0	# uart1
+BTBAUD=3000000
+MODE=any
+
+case $(cat /proc/device-tree/model) in
+*Pyra-Handheld* )
+	UART=/dev/ttyO1	# uart2
+	MODE=texas
+        ;;
+* )
+esac
+
+rfkill unblock bluetooth
+
+modprobe -r st_drv
+
+killall hciattach 2>/dev/null
+hciattach -s $BTBAUD $UART $MODE $BTBAUD flow 2>/dev/null >&2	# start daemon
+
+hciconfig hci0 up
+
+hcitool scan --info
+bt-adapter –d

@@ -5,4 +5,4 @@
 WLAN=wlan0
 
 ifconfig $WLAN up
-iw dev wlan0 scan
+iw dev $WLAN scan

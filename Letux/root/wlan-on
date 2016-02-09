@@ -1,0 +1,25 @@
+#
+# set up wlan connection
+#
+
+WLAN=wlan0
+
+case "$1" in
+	-a ) # ad hoc network
+		iwconfig $WLAN mode ad-hoc essid Letux enc off channel 6 &&
+		ifconfig $WLAN 10.1.1.1
+		;;
+
+	'' )
+		echo "usage: $0 -a | ssid"
+		echo "  -a:     ad hoc mode"
+		echo "  ssid:   SSID to connect to"
+		;;
+
+	* ) # simple client
+		ifconfig $WLAN up &&
+		iwconfig $WLAN essid "$1" &&
+		dhclient $WLAN
+		;;
+
+esac

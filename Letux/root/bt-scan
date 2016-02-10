@@ -2,26 +2,59 @@
 # scan bluetooth
 #
 
-UART=/dev/ttyO0	# uart1
-BTBAUD=3000000
-MODE=any
-
 case $(cat /proc/device-tree/model) in
-*Pyra-Handheld* )
+
+*Pyra-Handheld* ) # WL183x
+	# enables the 32kHz clock
+	ifconfig wlan0 up
+	# load firmware if needed
+	FIRMWARE=/lib/firmware/ti-connectivity/TIInit_11.8.32.bts
+	[ -r $FIRMWARE ] || wget -O $FIRMWARE https://git.ti.com/ti-bt/service-packs/blobs/raw/5f73abe7c03631bb2596af27e41a94abcc70b009/initscripts/TIInit_12.8.32.bts
+	# set parameters
 	UART=/dev/ttyO1	# uart2
+	BTBAUD=115200	# for firmware download
+	FLAGS=
 	MODE=texas
+	ARGS=
         ;;
+
+*GTA04A5* | *Neo900* | *GTA04b7* ) # WL183x
+	FIRMWARE=/lib/firmware/ti-connectivity/TIInit_11.8.32.bts
+	[ -r $FIRMWARE ] || wget -O $FIRMWARE https://git.ti.com/ti-bt/service-packs/blobs/raw/5f73abe7c03631bb2596af27e41a94abcc70b009/initscripts/TIInit_12.8.32.bts
+	UART=/dev/ttyO0	# uart1
+	BTBAUD=115200	# for firmware download
+	FLAGS=
+	MODE=texas
+	ARGS=
+        ;;
+
+*GTA04* ) # W2CBW003
+	UART=/dev/ttyO0	# uart1
+	BTBAUD=3000000
+	FLAGS="-s $BTBAUD"
+	MODE=any
+	ARGS=flow
+	;;
+
 * )
+	echo "unknown model $(cat /proc/device-tree/model)"
+	exit 1
+	;;
+
 esac
 
 rfkill unblock bluetooth
 
 modprobe -r st_drv
 
+# start daemon
+
 killall hciattach 2>/dev/null
-hciattach -s $BTBAUD $UART $MODE $BTBAUD flow 2>/dev/null >&2	# start daemon
+if hciattach $FLAGS $UART $MODE $BTBAUD $ARGS
+then
 
-hciconfig hci0 up
+	hciconfig hci0 up || exit 1
 
-hcitool scan --info
-bt-adapter –d
+	hcitool scan --info
+	bt-adapter -d
+fi

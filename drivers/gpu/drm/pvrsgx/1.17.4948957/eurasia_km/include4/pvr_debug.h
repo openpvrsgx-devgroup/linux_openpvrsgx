@@ -53,16 +53,17 @@ extern "C" {
 #define PVR_MAX_DEBUG_MESSAGE_LEN	(512)
 
 /* These are privately used by pvr_debug, use the PVR_DBG_ defines instead */
-#define DBGPRIV_FATAL			0x01UL
-#define DBGPRIV_ERROR			0x02UL
-#define DBGPRIV_WARNING			0x04UL
-#define DBGPRIV_MESSAGE			0x08UL
-#define DBGPRIV_VERBOSE			0x10UL
-#define DBGPRIV_CALLTRACE		0x20UL
-#define DBGPRIV_ALLOC			0x40UL
-#define DBGPRIV_DBGDRV_MESSAGE	0x80UL
+#define DBGPRIV_FATAL			0x001UL
+#define DBGPRIV_ERROR			0x002UL
+#define DBGPRIV_WARNING			0x004UL
+#define DBGPRIV_MESSAGE			0x008UL
+#define DBGPRIV_VERBOSE			0x010UL
+#define DBGPRIV_CALLTRACE		0x020UL
+#define DBGPRIV_ALLOC			0x040UL
+#define DBGPRIV_BUFFERED		0x080UL
+#define DBGPRIV_DBGDRV_MESSAGE	0x100UL
 
-#define DBGPRIV_DBGLEVEL_COUNT	8
+#define DBGPRIV_DBGLEVEL_COUNT	9
 
 #if !defined(PVRSRV_NEED_PVR_ASSERT) && defined(DEBUG)
 #define PVRSRV_NEED_PVR_ASSERT
@@ -143,27 +144,29 @@ IMG_IMPORT IMG_VOID IMG_CALLCONV PVRSRVDebugAssertFail(const IMG_CHAR *pszFile,
 	#define PVR_DBG_VERBOSE		DBGPRIV_VERBOSE
 	#define PVR_DBG_CALLTRACE	DBGPRIV_CALLTRACE
 	#define PVR_DBG_ALLOC		DBGPRIV_ALLOC
+	#define PVR_DBG_BUFFERED	DBGPRIV_BUFFERED
 	#define PVR_DBGDRIV_MESSAGE	DBGPRIV_DBGDRV_MESSAGE
 
 	/* These levels are always on with PVRSRV_NEED_PVR_DPF */
-	#define __PVR_DPF_0x01UL(x...) PVRSRVDebugPrintf(DBGPRIV_FATAL, x)
-	#define __PVR_DPF_0x02UL(x...) PVRSRVDebugPrintf(DBGPRIV_ERROR, x)
+	#define __PVR_DPF_0x001UL(x...) PVRSRVDebugPrintf(DBGPRIV_FATAL, x)
+	#define __PVR_DPF_0x002UL(x...) PVRSRVDebugPrintf(DBGPRIV_ERROR, x)
+	#define __PVR_DPF_0x080UL(x...) PVRSRVDebugPrintf(DBGPRIV_BUFFERED, x)
 
 	/* Some are compiled out completely in release builds */
 #if defined(DEBUG)
-	#define __PVR_DPF_0x04UL(x...) PVRSRVDebugPrintf(DBGPRIV_WARNING, x)
-	#define __PVR_DPF_0x08UL(x...) PVRSRVDebugPrintf(DBGPRIV_MESSAGE, x)
-	#define __PVR_DPF_0x10UL(x...) PVRSRVDebugPrintf(DBGPRIV_VERBOSE, x)
-	#define __PVR_DPF_0x20UL(x...) PVRSRVDebugPrintf(DBGPRIV_CALLTRACE, x)
-	#define __PVR_DPF_0x40UL(x...) PVRSRVDebugPrintf(DBGPRIV_ALLOC, x)
-	#define __PVR_DPF_0x80UL(x...) PVRSRVDebugPrintf(DBGPRIV_DBGDRV_MESSAGE, x)
+	#define __PVR_DPF_0x004UL(x...) PVRSRVDebugPrintf(DBGPRIV_WARNING, x)
+	#define __PVR_DPF_0x008UL(x...) PVRSRVDebugPrintf(DBGPRIV_MESSAGE, x)
+	#define __PVR_DPF_0x010UL(x...) PVRSRVDebugPrintf(DBGPRIV_VERBOSE, x)
+	#define __PVR_DPF_0x020UL(x...) PVRSRVDebugPrintf(DBGPRIV_CALLTRACE, x)
+	#define __PVR_DPF_0x040UL(x...) PVRSRVDebugPrintf(DBGPRIV_ALLOC, x)
+	#define __PVR_DPF_0x100UL(x...) PVRSRVDebugPrintf(DBGPRIV_DBGDRV_MESSAGE, x)
 #else
-	#define __PVR_DPF_0x04UL(x...)
-	#define __PVR_DPF_0x08UL(x...)
-	#define __PVR_DPF_0x10UL(x...)
-	#define __PVR_DPF_0x20UL(x...)
-	#define __PVR_DPF_0x40UL(x...)
-	#define __PVR_DPF_0x80UL(x...)
+	#define __PVR_DPF_0x004UL(x...)
+	#define __PVR_DPF_0x008UL(x...)
+	#define __PVR_DPF_0x010UL(x...)
+	#define __PVR_DPF_0x020UL(x...)
+	#define __PVR_DPF_0x040UL(x...)
+	#define __PVR_DPF_0x100UL(x...)
 #endif
 
 	/* Translate the different log levels to separate macros
@@ -188,6 +191,7 @@ IMG_IMPORT IMG_VOID IMG_CALLCONV PVRSRVDebugAssertFail(const IMG_CHAR *pszFile,
 	#define PVR_DBG_VERBOSE		DBGPRIV_VERBOSE,__FILE__, __LINE__
 	#define PVR_DBG_CALLTRACE	DBGPRIV_CALLTRACE,__FILE__, __LINE__
 	#define PVR_DBG_ALLOC		DBGPRIV_ALLOC,__FILE__, __LINE__
+	#define PVR_DBG_BUFFERED	DBGPRIV_BUFFERED,__FILE__, __LINE__
 	#define PVR_DBGDRIV_MESSAGE	DBGPRIV_DBGDRV_MESSAGE, "", 0
 
 	#define PVR_DPF(X)			PVRSRVDebugPrintf X
@@ -200,12 +204,13 @@ IMG_IMPORT IMG_VOID IMG_CALLCONV PVRSRVDebugPrintf(IMG_UINT32 ui32DebugLevel,
 												   const IMG_CHAR *pszFormat,
 												   ...) IMG_FORMAT_PRINTF(4, 5);
 
+IMG_IMPORT IMG_VOID IMG_CALLCONV PVRSRVDebugPrintfDumpCCB(void);
+
 #else  /* defined(PVRSRV_NEED_PVR_DPF) */
 
 	#define PVR_DPF(X)
 
 #endif /* defined(PVRSRV_NEED_PVR_DPF) */
-
 
 /* PVR_TRACE() handling */
 

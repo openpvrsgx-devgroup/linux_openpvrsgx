@@ -42,11 +42,31 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ### ###########################################################################
 
+# NOTE: You must *not* use the cc-option et al macros in COMMON_FLAGS,
+# COMMON_CFLAGS or COMMON_USER_FLAGS. These flags are shared between
+# host and target, which might use compilers with different capabilities.
+
+# These flags are used for kernel, User C and User C++
+#
+COMMON_FLAGS := -W -Wall
+
+# Some GCC warnings are C only, so we must mask them from C++
+#
+COMMON_CFLAGS := $(COMMON_FLAGS) \
+ -Wdeclaration-after-statement -Wno-format-zero-length \
+ -Wmissing-prototypes -Wstrict-prototypes
+
+# User C and User C++ optimization control. Does not affect kernel.
+#
 ifeq ($(BUILD),debug)
-COMMON_USER_FLAGS := -Os
+COMMON_USER_FLAGS := -O0
 else
 OPTIM ?= -O2
+ifeq ($(USE_LTO),1)
+COMMON_USER_FLAGS := $(OPTIM) -flto
+else
 COMMON_USER_FLAGS := $(OPTIM)
+endif
 endif
 
 # FIXME: We should probably audit the driver for aliasing
@@ -58,26 +78,40 @@ COMMON_USER_FLAGS += -fno-strict-aliasing
 #
 COMMON_USER_FLAGS += -g
 
-# These flags are used for kernel, User C and User C++
+# User C and User C++ warning flags
 #
-COMMON_FLAGS = -W -Wall
-
-# Some GCC warnings are C only, so we must mask them from C++
-#
-COMMON_CFLAGS := $(COMMON_FLAGS) \
- -Wdeclaration-after-statement -Wno-format-zero-length \
- -Wmissing-prototypes -Wstrict-prototypes
+COMMON_USER_FLAGS += \
+ -Wpointer-arith -Wunused-parameter \
+ -Wmissing-format-attribute
 
 # Additional warnings, and optional warnings.
 #
-WARNING_CFLAGS := \
- -Wpointer-arith -Wunused-parameter \
- -Wmissing-format-attribute \
+TESTED_TARGET_USER_FLAGS := \
  $(call cc-option,-Wno-missing-field-initializers) \
- $(call cc-option,-fdiagnostics-show-option)
+ $(call cc-option,-fdiagnostics-show-option) \
+ $(call cc-option,-Wno-self-assign) \
+ $(call cc-option,-Wno-parentheses-equality)
+TESTED_HOST_USER_FLAGS := \
+ $(call host-cc-option,-Wno-missing-field-initializers) \
+ $(call host-cc-option,-fdiagnostics-show-option) \
+ $(call host-cc-option,-Wno-self-assign) \
+ $(call host-cc-option,-Wno-parentheses-equality)
+
+# These flags are clang-specific.
+# -Wno-unused-command-line-argument works around a buggy interaction
+# with ccache, see https://bugzilla.samba.org/show_bug.cgi?id=8118
+# -fcolor-diagnostics force-enables colored error messages which
+# get disabled when ccache is piped through ccache.
+#
+TESTED_TARGET_USER_FLAGS += \
+ $(call cc-option,-Qunused-arguments) \
+ $(call cc-option,-fcolor-diagnostics)
+TESTED_HOST_USER_FLAGS += \
+ $(call host-cc-option,-Qunused-arguments) \
+ $(call host-cc-option,-fcolor-diagnostics)
 
 ifeq ($(W),1)
-WARNING_CFLAGS += \
+TESTED_TARGET_USER_FLAGS += \
  $(call cc-option,-Wbad-function-cast) \
  $(call cc-option,-Wcast-qual) \
  $(call cc-option,-Wcast-align) \
@@ -97,19 +131,7 @@ WARNING_CFLAGS += \
  $(call cc-option,-Wswitch-default) \
  $(call cc-option,-Wvla) \
  $(call cc-option,-Wwrite-strings)
-endif
-
-WARNING_CFLAGS += \
- $(call cc-optional-warning,-Wunused-but-set-variable)
-
-HOST_WARNING_CFLAGS := \
- -Wpointer-arith -Wunused-parameter \
- -Wmissing-format-attribute \
- $(call host-cc-option,-Wno-missing-field-initializers) \
- $(call host-cc-option,-fdiagnostics-show-option)
-
-ifeq ($(W),1)
-HOST_WARNING_CFLAGS += \
+TESTED_HOST_USER_FLAGS += \
  $(call host-cc-option,-Wbad-function-cast) \
  $(call host-cc-option,-Wcast-qual) \
  $(call host-cc-option,-Wcast-align) \
@@ -131,12 +153,21 @@ HOST_WARNING_CFLAGS += \
  $(call host-cc-option,-Wwrite-strings)
 endif
 
-HOST_WARNING_CFLAGS += \
+TESTED_TARGET_USER_FLAGS += \
+ $(call cc-optional-warning,-Wunused-but-set-variable)
+TESTED_HOST_USER_FLAGS += \
  $(call host-cc-optional-warning,-Wunused-but-set-variable)
 
-KBUILD_WARNING_CFLAGS := \
+KBUILD_FLAGS := \
  -Wno-unused-parameter -Wno-sign-compare
-KBUILD_WARNING_CFLAGS += \
+
+TESTED_KBUILD_FLAGS := \
+ $(call kernel-cc-option,-Wmissing-include-dirs) \
+ $(call kernel-cc-option,-Wno-type-limits) \
+ $(call kernel-cc-option,-Wno-pointer-arith) \
+ $(call kernel-cc-option,-Wno-aggregate-return) \
+ $(call kernel-cc-option,-Wno-unused-but-set-variable) \
+ $(call kernel-cc-option,-Wno-old-style-declaration) \
  $(call kernel-cc-optional-warning,-Wbad-function-cast) \
  $(call kernel-cc-optional-warning,-Wcast-qual) \
  $(call kernel-cc-optional-warning,-Wcast-align) \
@@ -161,22 +192,31 @@ KBUILD_WARNING_CFLAGS += \
 # User C only
 #
 ALL_CFLAGS := \
- $(COMMON_USER_FLAGS) $(COMMON_CFLAGS) $(WARNING_CFLAGS) \
+ $(COMMON_USER_FLAGS) $(COMMON_CFLAGS) $(TESTED_TARGET_USER_FLAGS) \
  $(SYS_CFLAGS)
-
 ALL_HOST_CFLAGS := \
- $(COMMON_USER_FLAGS) $(COMMON_CFLAGS) $(HOST_WARNING_CFLAGS)
+ $(COMMON_USER_FLAGS) $(COMMON_CFLAGS) $(TESTED_HOST_USER_FLAGS)
 
 # User C++ only
 #
 ALL_CXXFLAGS := \
- $(COMMON_USER_FLAGS) $(COMMON_FLAGS) \
  -fno-rtti -fno-exceptions \
- -Wpointer-arith -Wunused-parameter \
+ $(COMMON_USER_FLAGS) $(COMMON_FLAGS) $(TESTED_TARGET_USER_FLAGS) \
  $(SYS_CXXFLAGS)
-
 ALL_HOST_CXXFLAGS := \
- $(COMMON_USER_FLAGS) $(COMMON_CFLAGS) -Wall
+ -fno-rtti -fno-exceptions \
+ $(COMMON_USER_FLAGS) $(COMMON_FLAGS) $(TESTED_HOST_USER_FLAGS)
+
+# Workaround for some target clangs that don't support -O0 w/ PIC.
+#
+ifeq ($(cc-is-clang),true)
+ALL_CFLAGS := $(patsubst -O0,-O1,$(ALL_CFLAGS))
+ALL_CXXFLAGS := $(patsubst -O0,-O1,$(ALL_CXXFLAGS))
+endif
+
+# Kernel C only
+#
+ALL_KBUILD_CFLAGS := $(COMMON_CFLAGS) $(KBUILD_FLAGS) $(TESTED_KBUILD_FLAGS)
 
 # User C and C++
 #
@@ -186,11 +226,20 @@ ALL_HOST_CXXFLAGS := \
 # We can't use it right now because we want to support non-GNU-compatible
 # linkers like the Darwin 'ld' which doesn't support -rpath-link.
 #
+# For the same reason (Darwin 'ld') don't bother checking for text
+# relocations in host binaries.
+#
 ALL_HOST_LDFLAGS := -L$(HOST_OUT)
-ALL_LDFLAGS := -L$(TARGET_OUT) -Xlinker -rpath-link=$(TARGET_OUT)
+ALL_LDFLAGS := \
+ -Wl,--warn-shared-textrel \
+ -L$(TARGET_OUT) -Xlinker -rpath-link=$(TARGET_OUT)
 
 ifneq ($(strip $(TOOLCHAIN)),)
 ALL_LDFLAGS += -L$(TOOLCHAIN)/lib -Xlinker -rpath-link=$(TOOLCHAIN)/lib
+endif
+
+ifneq ($(strip $(TOOLCHAIN2)),)
+ALL_LDFLAGS += -L$(TOOLCHAIN2)/lib -Xlinker -rpath-link=$(TOOLCHAIN2)/lib
 endif
 
 ifneq ($(strip $(LINKER_RPATH)),)
@@ -198,14 +247,6 @@ ALL_LDFLAGS += $(addprefix -Xlinker -rpath=,$(LINKER_RPATH))
 endif
 
 ALL_LDFLAGS += $(SYS_LDFLAGS)
-
-# Kernel C only
-#
-ALL_KBUILD_CFLAGS := $(COMMON_CFLAGS) $(KBUILD_WARNING_CFLAGS) \
- $(call kernel-cc-option,-Wno-type-limits) \
- $(call kernel-cc-option,-Wno-pointer-arith) \
- $(call kernel-cc-option,-Wno-aggregate-return) \
- $(call kernel-cc-option,-Wno-unused-but-set-variable)
 
 # This variable contains a list of all modules built by kbuild
 ALL_KBUILD_MODULES :=

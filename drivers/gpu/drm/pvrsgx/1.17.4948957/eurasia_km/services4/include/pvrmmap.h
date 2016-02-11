@@ -54,11 +54,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  @return		PVRSRV_OK, or error code.
  ***************************************************************************/
 
-#if defined (SUPPORT_SID_INTERFACE)
-PVRSRV_ERROR PVRPMapKMem(IMG_HANDLE hModule, IMG_VOID **ppvLinAddr, IMG_VOID *pvLinAddrKM, IMG_SID *phMappingInfo, IMG_SID hMHandle);
-#else
 PVRSRV_ERROR PVRPMapKMem(IMG_HANDLE hModule, IMG_VOID **ppvLinAddr, IMG_VOID *pvLinAddrKM, IMG_HANDLE *phMappingInfo, IMG_HANDLE hMHandle);
-#endif
 
 
 /*!
@@ -71,11 +67,7 @@ PVRSRV_ERROR PVRPMapKMem(IMG_HANDLE hModule, IMG_VOID **ppvLinAddr, IMG_VOID *pv
 
  @return	IMG_BOOL indicating success or otherwise.
  ***************************************************************************/
-#if defined (SUPPORT_SID_INTERFACE)
-IMG_BOOL PVRUnMapKMem(IMG_HANDLE hModule, IMG_SID hMappingInfo, IMG_SID hMHandle);
-#else
 IMG_BOOL PVRUnMapKMem(IMG_HANDLE hModule, IMG_HANDLE hMappingInfo, IMG_HANDLE hMHandle);
-#endif
 
 #endif /* _PVRMMAP_H_ */
 

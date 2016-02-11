@@ -71,7 +71,37 @@ extern "C" {
 
 /*Forward declaration*/
 typedef struct _PVRSRV_STUB_PBDESC_ PVRSRV_STUB_PBDESC;
+#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE)
+typedef struct _PVRSRV_SYSTRACE_JOB_
+{
+	IMG_UINT32 ui32JobID;
+	IMG_UINT32 ui32FrameNum;
+	IMG_UINT32 ui32RTData;
+	
+} PVRSRV_SYSTRACE_JOB;
 
+typedef struct _PVRSRV_SYSTRACE_CONTEXT_
+{
+	IMG_UINT32 ui32PID;
+	IMG_UINT32 ui32CtxID;
+
+	/*Every PID has a circular buffer of jobs*/
+	IMG_UINT32 ui32Start;
+	IMG_UINT32 ui32End;
+	IMG_UINT32 ui32CurrentJobID;
+	PVRSRV_SYSTRACE_JOB asJobs[16];
+	
+} PVRSRV_SYSTRACE_CONTEXT;
+
+typedef struct _PVRSRV_SYSTRACE_DATA_
+{
+	IMG_UINT64 ui64LastHostTimestamp;
+	IMG_UINT32 ui32LastSGXClocksx16;
+	IMG_UINT32 ui32Index;
+	IMG_UINT32 ui32CurrentCtxID;
+	PVRSRV_SYSTRACE_CONTEXT asSystraceContext[8];
+} PVRSRV_SYSTRACE_DATA;	
+#endif
 
 typedef struct _PVRSRV_SGX_CCB_INFO_ *PPVRSRV_SGX_CCB_INFO;
 
@@ -149,16 +179,6 @@ typedef struct _PVRSRV_SGXDEV_INFO_
 	PPVRSRV_KERNEL_MEM_INFO		psKernelHWPerfCBMemInfo;		/*!< Meminfo for hardware performace circular buffer */
 	PPVRSRV_KERNEL_MEM_INFO		psKernelTASigBufferMemInfo;		/*!< Meminfo for TA signature buffer */
 	PPVRSRV_KERNEL_MEM_INFO		psKernel3DSigBufferMemInfo;		/*!< Meminfo for 3D signature buffer */
-#if defined(FIX_HW_BRN_29702)
-	PPVRSRV_KERNEL_MEM_INFO psKernelCFIMemInfo;	/*!< Meminfo for cfi */
-#endif
-#if defined(FIX_HW_BRN_29823)
-	PPVRSRV_KERNEL_MEM_INFO	psKernelDummyTermStreamMemInfo; /*!< Meminfo for dummy terminate stream */
-#endif
-#if defined(SGX_FEATURE_VDM_CONTEXT_SWITCH) && defined(FIX_HW_BRN_31559)
-	PPVRSRV_KERNEL_MEM_INFO	psKernelVDMSnapShotBufferMemInfo; /*!< Meminfo for dummy snapshot buffer */
-	PPVRSRV_KERNEL_MEM_INFO	psKernelVDMCtrlStreamBufferMemInfo; /*!< Meminfo for dummy control stream */
-#endif
 #if defined(SGX_FEATURE_VDM_CONTEXT_SWITCH) && \
 	defined(FIX_HW_BRN_33657) && defined(SUPPORT_SECURE_33657_FIX)
 	PPVRSRV_KERNEL_MEM_INFO	psKernelVDMStateUpdateBufferMemInfo; /*!< Meminfo for state update buffer */
@@ -200,6 +220,9 @@ typedef struct _PVRSRV_SGXDEV_INFO_
 	IMG_UINT32				ui32MasterClkGateStatus2Reg;
 	IMG_UINT32				ui32MasterClkGateStatus2Mask;
 #endif /* SGX_FEATURE_MP */
+#if defined(SGX_FEATURE_AUTOCLOCKGATING)
+	IMG_BOOL				bDisableClockGating;
+#endif
 	SGX_INIT_SCRIPTS		sScripts;
 
 	/* Members associated with dummy PD needed for BIF reset */
@@ -231,8 +254,6 @@ typedef struct _PVRSRV_SGXDEV_INFO_
 #if defined(FIX_HW_BRN_31272) || defined(FIX_HW_BRN_31780) || defined(FIX_HW_BRN_33920)
 	PVRSRV_KERNEL_MEM_INFO			*psKernelSGXPTLAWriteBackMemInfo;
 #endif
-
-	IMG_UINT32				ui32Flags;
 
 	/* memory tiling range usage */
 	IMG_UINT32				ui32MemTilingUsage;
@@ -267,6 +288,11 @@ typedef struct _PVRSRV_SGXDEV_INFO_
 	IMG_DEV_PHYADDR			sBRN31620DummyPTDevPAddr;
 
 	IMG_HANDLE			hKernelMMUContext;
+#endif
+
+#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE)
+	IMG_BOOL			bSystraceInitialised;
+	PVRSRV_SYSTRACE_DATA *psSystraceData;
 #endif
 
 } PVRSRV_SGXDEV_INFO;
@@ -385,12 +411,6 @@ typedef struct _SGX_BRIDGE_INIT_INFO_KM_
 	IMG_HANDLE	hKernelTASigBufferMemInfo;
 	IMG_HANDLE	hKernel3DSigBufferMemInfo;
 
-#if defined(FIX_HW_BRN_29702)
-	IMG_HANDLE	hKernelCFIMemInfo;
-#endif
-#if defined(FIX_HW_BRN_29823)
-	IMG_HANDLE	hKernelDummyTermStreamMemInfo;
-#endif
 #if defined(PVRSRV_USSE_EDM_STATUS_DEBUG)
 	IMG_HANDLE	hKernelEDMStatusBufferMemInfo;
 #endif
@@ -569,6 +589,8 @@ PVRSRV_ERROR SGXPostClockSpeedChange(IMG_HANDLE				hDevHandle,
 									 PVRSRV_DEV_POWER_STATE	eCurrentPowerState);
 
 IMG_VOID SGXPanic(PVRSRV_SGXDEV_INFO	*psDevInfo);
+
+IMG_VOID RunSGXREGDebugScripts(PVRSRV_SGXDEV_INFO	*psDevInfo);
 
 IMG_VOID SGXDumpDebugInfo (PVRSRV_SGXDEV_INFO	*psDevInfo,
 						   IMG_BOOL				bDumpSGXRegs);

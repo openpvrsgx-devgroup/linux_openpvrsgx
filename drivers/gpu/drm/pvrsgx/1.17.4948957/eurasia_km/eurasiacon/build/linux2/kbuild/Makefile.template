@@ -65,7 +65,6 @@ $(OUT)/target/kbuild/%.c: $(TOP)/%.c
 	@if [ ! -h $@ ]; then ln -sf $< $@; fi
 
 ccflags-y += -D__linux__ -include $(OUT)/config_kernel.h \
- -DDEBUG_LOG_PATH_TRUNCATE="\"$(OUT)/target/kbuild\"" \
  -I$(OUT)/include \
  -I$(TOP)/include4 \
  -I$(TOP)/services4/include \
@@ -86,7 +85,7 @@ endif
 
 include $(INTERNAL_KBUILD_MAKEFILES)
 
-$(if $($(PVRSRV_MODNAME)-y),,$(error $(PVRSRV_MODNAME)-y was empty, which could mean that srvkm is missing from $$(KERNEL_COMPONENTS)))
-$(PVRSRV_MODNAME)-y += $(foreach _m,$(INTERNAL_EXTRA_KBUILD_OBJECTS:.o=),$($(_m)-y))
+$(if $(pvrsrvkm-y),,$(error pvrsrvkm-y was empty, which could mean that srvkm is missing from $$(KERNEL_COMPONENTS)))
+pvrsrvkm-y += $(foreach _m,$(INTERNAL_EXTRA_KBUILD_OBJECTS:.o=),$($(_m)-y))
 
 obj-m += $(INTERNAL_KBUILD_OBJECTS)

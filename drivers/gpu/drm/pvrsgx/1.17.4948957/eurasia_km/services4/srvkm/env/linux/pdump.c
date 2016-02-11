@@ -62,6 +62,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <linux/kernel.h> // sprintf
 #include <linux/string.h> // strncpy, strlen
+#include <linux/mutex.h>
 
 static IMG_BOOL PDumpWriteString2		(IMG_CHAR * pszString, IMG_UINT32 ui32Flags);
 static IMG_BOOL PDumpWriteILock			(PDBG_STREAM psStream, IMG_UINT8 *pui8Data, IMG_UINT32 ui32Count, IMG_UINT32 ui32Flags);
@@ -80,7 +81,8 @@ static atomic_t gsPDumpSuspended = ATOMIC_INIT(0);
 
 static PDBGKM_SERVICE_TABLE gpfnDbgDrv = IMG_NULL;
 
-
+DEFINE_MUTEX(sPDumpLock);
+DEFINE_MUTEX(sPDumpMsgLock);
 
 IMG_CHAR *pszStreamName[PDUMP_NUM_STREAMS] = {	"ParamStream2",
 												"ScriptStream2",
@@ -391,7 +393,7 @@ IMG_VOID PDumpOSCPUVAddrToDevPAddr(PVRSRV_DEVICE_TYPE eDeviceType,
 IMG_VOID PDumpOSCPUVAddrToPhysPages(IMG_HANDLE hOSMemHandle,
 		IMG_UINT32 ui32Offset,
 		IMG_PUINT8 pui8LinAddr,
-		IMG_UINT32 ui32DataPageMask,
+		IMG_UINTPTR_T ui32DataPageMask,
 		IMG_UINT32 *pui32PageOffset)
 {
 	if(hOSMemHandle)
@@ -411,7 +413,7 @@ IMG_VOID PDumpOSCPUVAddrToPhysPages(IMG_HANDLE hOSMemHandle,
 		PVR_UNREFERENCED_PARAMETER(hOSMemHandle);
 		PVR_UNREFERENCED_PARAMETER(ui32Offset);
 
-		*pui32PageOffset = ((IMG_UINT32)pui8LinAddr & ui32DataPageMask);
+		*pui32PageOffset = ((IMG_UINTPTR_T)pui8LinAddr & ui32DataPageMask);
 	}
 }
 
@@ -724,7 +726,7 @@ static IMG_BOOL PDumpWriteILock(PDBG_STREAM psStream, IMG_UINT8 *pui8Data, IMG_U
 	IMG_UINT32 ui32Written = 0;
 	if ((psStream == IMG_NULL) || PDumpSuspended() || ((ui32Flags & PDUMP_FLAGS_NEVER) != 0))
 	{
-		PVR_DPF((PVR_DBG_MESSAGE, "PDumpWriteILock: Failed to write 0x%x bytes to stream 0x%x", ui32Count, (IMG_UINT32)psStream));
+		PVR_DPF((PVR_DBG_MESSAGE, "PDumpWriteILock: Failed to write 0x%x bytes to stream 0x%p", ui32Count, psStream));
 		return IMG_TRUE;
 	}
 
@@ -795,6 +797,55 @@ IMG_VOID PDumpSuspendKM(IMG_VOID)
 IMG_VOID PDumpResumeKM(IMG_VOID)
 {
 	atomic_dec(&gsPDumpSuspended);
+}
+
+/* Set to 1 if you want to debug PDump locking issues */
+#define DEBUG_PDUMP_LOCKS 0
+
+#if DEBUG_PDUMP_LOCKS
+static IMG_UINT32 ui32Count=0;
+static IMG_UINT32 aui32LockLine[2] = {0};
+static IMG_UINT32 aui32UnlockLine[2] = {0};
+static IMG_UINT32 ui32LockLineCount = 0;
+static IMG_UINT32 ui32UnlockLineCount = 0;
+#endif
+
+IMG_VOID PDumpOSLock(IMG_UINT32 ui32Line)
+{
+#if DEBUG_PDUMP_LOCKS
+	aui32LockLine[ui32LockLineCount++ % 2] = ui32Line;
+	ui32Count++;
+	if (ui32Count == 2)
+	{
+		IMG_UINT32 i;
+		printk(KERN_ERR "Double lock\n");
+		dump_stack();
+		for (i=0;i<2;i++)
+		{
+			printk(KERN_ERR "Lock[%d] = %d, Unlock[%d] = %d\n", i, aui32LockLine[i],i, aui32UnlockLine[i]);
+		}
+	}
+#endif
+	mutex_lock(&sPDumpLock);
+}
+
+IMG_VOID PDumpOSUnlock(IMG_UINT32 ui32Line)
+{
+	mutex_unlock(&sPDumpLock);
+#if DEBUG_PDUMP_LOCKS
+	aui32UnlockLine[ui32UnlockLineCount++ % 2] = ui32Line;
+	ui32Count--;
+#endif
+}
+
+IMG_VOID PDumpOSLockMessageBuffer(IMG_VOID)
+{
+	mutex_lock(&sPDumpMsgLock);
+}
+
+IMG_VOID PDumpOSUnlockMessageBuffer(IMG_VOID)
+{
+	mutex_unlock(&sPDumpMsgLock);
 }
 
 #endif /* #if defined (PDUMP) */

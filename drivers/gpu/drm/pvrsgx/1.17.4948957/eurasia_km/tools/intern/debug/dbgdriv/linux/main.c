@@ -61,7 +61,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #if defined(SUPPORT_DRI_DRM)
 #include "drmP.h"
-#include "drm.h"
 #endif
 
 #include "img_types.h"

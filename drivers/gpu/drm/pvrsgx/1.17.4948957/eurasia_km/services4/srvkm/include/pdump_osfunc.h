@@ -58,7 +58,10 @@ extern "C" {
  * supported (e.g. Linux).
  */
 #define MAX_PDUMP_STRING_LENGTH (256)
-#if  defined(__QNXNTO__)
+
+
+#if defined(__QNXNTO__)
+
 #define PDUMP_GET_SCRIPT_STRING()	\
 	IMG_CHAR pszScript[MAX_PDUMP_STRING_LENGTH];		\
 	IMG_UINT32	ui32MaxLen = MAX_PDUMP_STRING_LENGTH-1;	\
@@ -79,7 +82,12 @@ extern "C" {
 	IMG_UINT32	ui32MaxLenFileName = MAX_PDUMP_STRING_LENGTH-1;	\
 	IMG_HANDLE	hScript = (IMG_HANDLE)pszScript;
 
-#else /* WIN32 or QNX */
+#define PDUMP_LOCK(args...)
+#define PDUMP_UNLOCK(args...)
+#define PDUMP_LOCK_MSG(args...)
+#define PDUMP_UNLOCK_MSG(args...)
+
+#else  /* __QNXNTO__ */
 
 
 	/*
@@ -117,6 +125,48 @@ extern "C" {
 	eError = PDumpOSGetFilenameString(&pszFileName, &ui32MaxLenFileName);\
 	if(eError != PVRSRV_OK) return eError;
 
+#define PDUMP_LOCK()		\
+	PDumpOSLock(__LINE__);
+
+#define PDUMP_UNLOCK()		\
+	PDumpOSUnlock(__LINE__);
+
+#define PDUMP_LOCK_MSG()		\
+	PDumpOSLockMessageBuffer();
+
+#define PDUMP_UNLOCK_MSG()		\
+	PDumpOSUnlockMessageBuffer();
+
+	/*!
+	 * @name	PDumpOSLock
+	 * @brief	Lock the PDump streams
+	 * @return	error none
+	 */
+	IMG_VOID PDumpOSLock(IMG_UINT32 ui32Line);
+
+	/*!
+	 * @name	PDumpOSUnlock
+	 * @brief	Lock the PDump streams
+	 * @return	error none
+	 */
+	IMG_VOID PDumpOSUnlock(IMG_UINT32 ui32Line);
+
+	/*!
+	 * @name	PDumpOSLockMessageBuffer
+	 * @brief	Lock the PDump message buffer
+	 * @return	error none
+	 */
+	IMG_VOID PDumpOSLockMessageBuffer(IMG_VOID);
+
+	/*!
+	 * @name	PDumpOSUnlockMessageBuffer
+	 * @brief	Lock the PDump message buffer
+	 * @return	error none
+	 */
+	IMG_VOID PDumpOSUnlockMessageBuffer(IMG_VOID);
+
+#endif /* __QNXNTO__ */
+
 	/*!
 	 * @name	PDumpOSGetScriptString
 	 * @brief	Get the "script" buffer
@@ -146,8 +196,6 @@ extern "C" {
 	 * @return	error (always PVRSRV_OK on some OSes)
 	 */
 	PVRSRV_ERROR PDumpOSGetFilenameString(IMG_CHAR **ppszFile, IMG_UINT32 *pui32MaxLen);
-
-#endif /* WIN32 or QNX */
 
 
 /*
@@ -305,13 +353,13 @@ IMG_VOID PDumpOSCPUVAddrToDevPAddr(PVRSRV_DEVICE_TYPE eDeviceType,
  * @param	hOSMemHandle	mem allocation handle (used if kernel virtual mem space is limited, e.g. linux)
  * @param	ui32Offset		offset within mem allocation block
  * @param	pui8LinAddr		CPU linear addr
- * @param	ui32DataPageMask	mask for data page (= data page size -1)
+ * @param	uiDataPageMask	mask for data page (= data page size -1)
  * @return	pui32PageOffset	CPU page offset (same as device page offset if page sizes equal)
  */
 IMG_VOID PDumpOSCPUVAddrToPhysPages(IMG_HANDLE hOSMemHandle,
 		IMG_UINT32 ui32Offset,
 		IMG_PUINT8 pui8LinAddr,
-		IMG_UINT32 ui32DataPageMask,
+		IMG_UINTPTR_T uiDataPageMask,
 		IMG_UINT32 *pui32PageOffset);
 
 /*!

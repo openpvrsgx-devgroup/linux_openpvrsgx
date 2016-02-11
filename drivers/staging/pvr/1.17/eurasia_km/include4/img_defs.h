@@ -147,6 +147,75 @@ typedef char				TCHAR, *PTCHAR, *PTSTR;
 #define IMG_UNDEF	(~0UL)
 #endif
 
+/*
+   Do the right thing when using printf to output cpu addresses,
+   depending on architecture.
+ */
+#if defined (_WIN64)
+    #define UINTPTR_FMT "%016llX"
+#else
+    #if defined (__x86_64__)
+        #define UINTPTR_FMT "%016lX"
+    #else
+        #define UINTPTR_FMT "%08lX"
+    #endif
+#endif
+
+/* 
+   Similarly for DEV_ and SYS_ PHYSADDRs, but this is dependent on 32/36-bit MMU
+   capability, in addition to host architecture.
+ */
+#if IMG_ADDRSPACE_PHYSADDR_BITS == 32
+	#if defined(IMG_UINT32_IS_ULONG)
+		#define CPUPADDR_FMT "%08lX"
+		#define DEVPADDR_FMT "%08lX"
+		#define SYSPADDR_FMT "%08lX"
+	#else
+		#define CPUPADDR_FMT "%08X"
+		#define DEVPADDR_FMT "%08X"
+		#define SYSPADDR_FMT "%08X"
+	#endif
+#else
+	#if defined(__x86_64__)
+			#define CPUPADDR_FMT "%016lX"
+			#define DEVPADDR_FMT "%016lX"
+			#define SYSPADDR_FMT "%016lX"
+	#else
+
+			#define CPUPADDR_FMT "%016llX"
+			#define DEVPADDR_FMT "%016llX"
+			#define SYSPADDR_FMT "%016llX"
+	#endif
+#endif
+
+/*
+   Define a printf format macro for the length property of the format-specifier
+   for size_t, that allows avoidance of C99 dependency on compilers that don't
+   support this, while still ensuring that whatever the size of size_t (eg 32, 
+   64 bit Linux builds, or Win32/64 builds), a size_t (or IMG_SIZE_T) can be
+   passed to printf-type functions without a cast.
+*/
+#if defined LINUX
+	/* Use C99 format specifier where possible */
+	#define SIZE_T_FMT_LEN "z"
+#elif  defined _WIN64
+	#define SIZE_T_FMT_LEN "I"
+#else
+	#define SIZE_T_FMT_LEN "l" /* May need to be updated as required, for other OSs */
+#endif
+
+
+#if defined (__x86_64__)
+	#define IMG_UINT64_FMT "l"
+#else
+	#define IMG_UINT64_FMT "ll" /* May need to be updated as required, for other OSs */
+#endif
+
+/*
+	Some versions of MSVC don't have snprintf, vsnprintf in their CRTs.
+	Remap to the deprecated unix compatibility versions.
+*/
+
 #endif /* #if !defined (__IMG_DEFS_H__) */
 /*****************************************************************************
  End of file (IMG_DEFS.H)

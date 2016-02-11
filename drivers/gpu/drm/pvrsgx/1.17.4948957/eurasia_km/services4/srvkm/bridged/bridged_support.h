@@ -55,11 +55,7 @@ extern "C" {
  * Derive the internal OS specific memory handle from a secure
  * handle.
  */
-#if defined (SUPPORT_SID_INTERFACE)
-PVRSRV_ERROR PVRSRVLookupOSMemHandle(PVRSRV_HANDLE_BASE *psBase, IMG_HANDLE *phOSMemHandle, IMG_SID hMHandle);
-#else
 PVRSRV_ERROR PVRSRVLookupOSMemHandle(PVRSRV_HANDLE_BASE *psBase, IMG_HANDLE *phOSMemHandle, IMG_HANDLE hMHandle);
-#endif
 
 #if defined (__cplusplus)
 }

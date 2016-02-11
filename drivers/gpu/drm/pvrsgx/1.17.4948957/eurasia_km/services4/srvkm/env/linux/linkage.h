@@ -66,6 +66,8 @@ void ProcSeqShowPowerLevel(struct seq_file *sfile,void* el);
 
 #endif	/* DEBUG */
 
+struct device *PVRLDMGetDevice(void);
+
 #endif /* __LINKAGE_H__ */
 /*****************************************************************************
  End of file (linkage.h)

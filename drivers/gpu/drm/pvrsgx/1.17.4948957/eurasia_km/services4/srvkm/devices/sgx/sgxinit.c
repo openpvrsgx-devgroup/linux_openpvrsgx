@@ -68,6 +68,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "srvkm.h"
 #include "ttrace.h"
 
+#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE)
+#include "systrace.h"
+#endif
+
 IMG_UINT32 g_ui32HostIRQCountSample = 0;
 
 #if defined(PVRSRV_USSE_EDM_STATUS_DEBUG)
@@ -195,11 +199,7 @@ static IMG_UINT32 DeinitDevInfo(PVRSRV_SGXDEV_INFO *psDevInfo)
 ******************************************************************************/
 static PVRSRV_ERROR InitDevInfo(PVRSRV_PER_PROCESS_DATA *psPerProc,
 								PVRSRV_DEVICE_NODE *psDeviceNode,
-#if defined (SUPPORT_SID_INTERFACE)
-								SGX_BRIDGE_INIT_INFO_KM *psInitInfo)
-#else
 								SGX_BRIDGE_INIT_INFO *psInitInfo)
-#endif
 {
 	PVRSRV_SGXDEV_INFO *psDevInfo = (PVRSRV_SGXDEV_INFO *)psDeviceNode->pvDevice;
 	PVRSRV_ERROR		eError;
@@ -237,16 +237,6 @@ static PVRSRV_ERROR InitDevInfo(PVRSRV_PER_PROCESS_DATA *psPerProc,
 #endif
 	psDevInfo->psKernelTASigBufferMemInfo = psInitInfo->hKernelTASigBufferMemInfo;
 	psDevInfo->psKernel3DSigBufferMemInfo = psInitInfo->hKernel3DSigBufferMemInfo;
-#if defined(FIX_HW_BRN_29702)
-	psDevInfo->psKernelCFIMemInfo = (PVRSRV_KERNEL_MEM_INFO *)psInitInfo->hKernelCFIMemInfo;
-#endif
-#if defined(FIX_HW_BRN_29823)
-	psDevInfo->psKernelDummyTermStreamMemInfo = (PVRSRV_KERNEL_MEM_INFO *)psInitInfo->hKernelDummyTermStreamMemInfo;
-#endif
-#if defined(SGX_FEATURE_VDM_CONTEXT_SWITCH) && defined(FIX_HW_BRN_31559)
-	psDevInfo->psKernelVDMSnapShotBufferMemInfo = (PVRSRV_KERNEL_MEM_INFO *)psInitInfo->hKernelVDMSnapShotBufferMemInfo;
-	psDevInfo->psKernelVDMCtrlStreamBufferMemInfo = (PVRSRV_KERNEL_MEM_INFO *)psInitInfo->hKernelVDMCtrlStreamBufferMemInfo;
-#endif
 #if defined(SGX_FEATURE_VDM_CONTEXT_SWITCH) && \
 	defined(FIX_HW_BRN_33657) && defined(SUPPORT_SECURE_33657_FIX)
 	psDevInfo->psKernelVDMStateUpdateBufferMemInfo = (PVRSRV_KERNEL_MEM_INFO *)psInitInfo->hKernelVDMStateUpdateBufferMemInfo;
@@ -308,6 +298,9 @@ static PVRSRV_ERROR InitDevInfo(PVRSRV_PER_PROCESS_DATA *psPerProc,
 	psDevInfo->ui32MasterClkGateStatus2Reg = psInitInfo->ui32MasterClkGateStatus2Reg;
 	psDevInfo->ui32MasterClkGateStatus2Mask = psInitInfo->ui32MasterClkGateStatus2Mask;
 #endif /* SGX_FEATURE_MP */
+#if defined(SGX_FEATURE_AUTOCLOCKGATING)
+	psDevInfo->bDisableClockGating = psInitInfo->bDisableClockGating;
+#endif
 
 
 	/* Initialise Dev Data */
@@ -344,13 +337,21 @@ static PVRSRV_ERROR SGXRunScript(PVRSRV_SGXDEV_INFO *psDevInfo, SGX_INIT_COMMAND
 			}
 			case SGX_INIT_OP_READ_HW_REG:
 			{
-				OSReadHWReg(psDevInfo->pvRegsBaseKM, psComm->sReadHWReg.ui32Offset);
+				psComm->sReadHWReg.ui32Value = OSReadHWReg(psDevInfo->pvRegsBaseKM, psComm->sReadHWReg.ui32Offset);
 #if defined(PDUMP)
 				PDUMPCOMMENT("SGXRunScript: Read HW reg operation");
 				PDumpRegRead(SGX_PDUMPREG_NAME, psComm->sReadHWReg.ui32Offset, PDUMP_FLAGS_CONTINUOUS);
 #endif
 				break;
 			}
+			case SGX_INIT_OP_PRINT_HW_REG:
+			{
+				psComm->sReadHWReg.ui32Value = OSReadHWReg(psDevInfo->pvRegsBaseKM, psComm->sReadHWReg.ui32Offset);
+				PVR_LOG(("\t(SGXREG) 0x%08X : 0x%08X", psComm->sReadHWReg.ui32Offset, psComm->sReadHWReg.ui32Value));
+
+				break;
+			}
+
 #if defined(PDUMP)
 			case SGX_INIT_OP_PDUMP_HW_REG:
 			{
@@ -368,6 +369,72 @@ static PVRSRV_ERROR SGXRunScript(PVRSRV_SGXDEV_INFO *psDevInfo, SGX_INIT_COMMAND
 			default:
 			{
 				PVR_DPF((PVR_DBG_ERROR,"SGXRunScript: PC %d: Illegal command: %d", ui32PC, psComm->eOp));
+				return PVRSRV_ERROR_UNKNOWN_SCRIPT_OPERATION;
+			}
+		}
+
+	}
+
+	return PVRSRV_ERROR_UNKNOWN_SCRIPT_OPERATION;
+}
+
+/* Run scripts on given core */
+static PVRSRV_ERROR SGXRunScriptOnCore(PVRSRV_SGXDEV_INFO *psDevInfo, SGX_INIT_COMMAND *psScript, IMG_UINT32 ui32NumInitCommands, IMG_UINT32 ui32CoreNum)
+{
+	IMG_UINT32 ui32PC;
+	SGX_INIT_COMMAND *psComm;
+
+#if !defined(SGX_FEATURE_MP)
+	PVR_UNREFERENCED_PARAMETER(ui32CoreNum);
+#endif
+
+	for (ui32PC = 0, psComm = psScript;
+		ui32PC < ui32NumInitCommands;
+		ui32PC++, psComm++)
+	{
+		switch (psComm->eOp)
+		{
+			case SGX_INIT_OP_WRITE_HW_REG:
+			{
+				OSWriteHWReg(psDevInfo->pvRegsBaseKM, SGX_MP_CORE_SELECT(psComm->sWriteHWReg.ui32Offset,ui32CoreNum), psComm->sWriteHWReg.ui32Value);
+				PDUMPCOMMENT("SGXRunScriptOnCore: Write HW reg operation");
+				PDUMPREG(SGX_PDUMPREG_NAME, SGX_MP_CORE_SELECT(psComm->sWriteHWReg.ui32Offset,ui32CoreNum), psComm->sWriteHWReg.ui32Value);
+				break;
+			}
+			case SGX_INIT_OP_READ_HW_REG:
+			{
+				psComm->sReadHWReg.ui32Value = OSReadHWReg(psDevInfo->pvRegsBaseKM, SGX_MP_CORE_SELECT(psComm->sReadHWReg.ui32Offset, ui32CoreNum));
+#if defined(PDUMP)
+				PDUMPCOMMENT("SGXRunScriptOnCore: Read HW reg operation");
+				PDumpRegRead(SGX_PDUMPREG_NAME, SGX_MP_CORE_SELECT(psComm->sReadHWReg.ui32Offset,ui32CoreNum), PDUMP_FLAGS_CONTINUOUS);
+#endif
+				break;
+			}
+			case SGX_INIT_OP_PRINT_HW_REG:
+			{
+				psComm->sReadHWReg.ui32Value = OSReadHWReg(psDevInfo->pvRegsBaseKM, SGX_MP_CORE_SELECT(psComm->sReadHWReg.ui32Offset,ui32CoreNum));
+				PVR_LOG(("\t(SGXREG) 0x%08X : 0x%08X", SGX_MP_CORE_SELECT(psComm->sReadHWReg.ui32Offset, ui32CoreNum), psComm->sReadHWReg.ui32Value));
+
+				break;
+			}
+
+#if defined(PDUMP)
+			case SGX_INIT_OP_PDUMP_HW_REG:
+			{
+				PDUMPCOMMENT("SGXRunScriptOnCore: Dump HW reg operation");
+				PDUMPREG(SGX_PDUMPREG_NAME, SGX_MP_CORE_SELECT(psComm->sPDumpHWReg.ui32Offset, ui32CoreNum), psComm->sPDumpHWReg.ui32Value);
+				break;
+			}
+#endif
+			case SGX_INIT_OP_HALT:
+			{
+				return PVRSRV_OK;
+			}
+			case SGX_INIT_OP_ILLEGAL:
+			/* FALLTHROUGH */
+			default:
+			{
+				PVR_DPF((PVR_DBG_ERROR,"SGXRunScriptOnCore: PC %d: Illegal command: %d", ui32PC, psComm->eOp));
 				return PVRSRV_ERROR_UNKNOWN_SCRIPT_OPERATION;
 			}
 		}
@@ -849,11 +916,7 @@ static PVRSRV_ERROR DevInitSGXPart1 (IMG_VOID *pvDeviceNode)
 
 ******************************************************************************/
 IMG_EXPORT
-#if defined (SUPPORT_SID_INTERFACE)
-PVRSRV_ERROR SGXGetInfoForSrvinitKM(IMG_HANDLE hDevHandle, PVRSRV_HEAP_INFO_KM *pasHeapInfo, IMG_DEV_PHYADDR *psPDDevPAddr)
-#else
 PVRSRV_ERROR SGXGetInfoForSrvinitKM(IMG_HANDLE hDevHandle, SGX_BRIDGE_INFO_FOR_SRVINIT *psInitInfo)
-#endif
 {
 	PVRSRV_DEVICE_NODE	*psDeviceNode;
 	PVRSRV_SGXDEV_INFO	*psDevInfo;
@@ -864,15 +927,9 @@ PVRSRV_ERROR SGXGetInfoForSrvinitKM(IMG_HANDLE hDevHandle, SGX_BRIDGE_INFO_FOR_S
 	psDeviceNode = (PVRSRV_DEVICE_NODE *)hDevHandle;
 	psDevInfo = (PVRSRV_SGXDEV_INFO *)psDeviceNode->pvDevice;
 
-#if defined (SUPPORT_SID_INTERFACE)
-	*psPDDevPAddr = psDevInfo->sKernelPDDevPAddr;
-
-	eError = PVRSRVGetDeviceMemHeapsKM(hDevHandle, pasHeapInfo);
-#else
 	psInitInfo->sPDDevPAddr = psDevInfo->sKernelPDDevPAddr;
 
 	eError = PVRSRVGetDeviceMemHeapsKM(hDevHandle, &psInitInfo->asHeapInfo[0]);
-#endif
 	if (eError != PVRSRV_OK)
 	{
 		PVR_DPF((PVR_DBG_ERROR,"SGXGetInfoForSrvinit: PVRSRVGetDeviceMemHeapsKM failed (%d)", eError));
@@ -899,11 +956,7 @@ PVRSRV_ERROR SGXGetInfoForSrvinitKM(IMG_HANDLE hDevHandle, SGX_BRIDGE_INFO_FOR_S
 IMG_EXPORT
 PVRSRV_ERROR DevInitSGXPart2KM (PVRSRV_PER_PROCESS_DATA *psPerProc,
                                 IMG_HANDLE hDevHandle,
-#if defined (SUPPORT_SID_INTERFACE)
-                                SGX_BRIDGE_INIT_INFO_KM *psInitInfo)
-#else
                                 SGX_BRIDGE_INIT_INFO *psInitInfo)
-#endif
 {
 	PVRSRV_DEVICE_NODE		*psDeviceNode;
 	PVRSRV_SGXDEV_INFO		*psDevInfo;
@@ -1159,8 +1212,7 @@ static PVRSRV_ERROR DevDeInitSGX (IMG_VOID *pvDeviceNode)
 		}
 	}
 #endif /* #ifdef SGX_FEATURE_HOST_PORT */
-
-
+	
 	/* DeAllocate devinfo */
 	OSFreeMem(PVRSRV_OS_NON_PAGEABLE_HEAP,
 				sizeof(PVRSRV_SGXDEV_INFO),
@@ -1181,35 +1233,6 @@ static PVRSRV_ERROR DevDeInitSGX (IMG_VOID *pvDeviceNode)
 	return PVRSRV_OK;
 }
 
-
-#if defined(RESTRICTED_REGISTERS) && defined(SGX_FEATURE_MP)
-
-/*!
-*******************************************************************************
-
- @Function	SGXDumpMasterDebugReg
-
- @Description
-
- Dump a single SGX debug register value
-
- @Input psDevInfo - SGX device info
- @Input pszName - string used for logging
- @Input ui32RegAddr - SGX register offset
-
- @Return   IMG_VOID
-
-******************************************************************************/
-static IMG_VOID SGXDumpMasterDebugReg (PVRSRV_SGXDEV_INFO	*psDevInfo,
-								 IMG_CHAR			*pszName,
-								 IMG_UINT32			ui32RegAddr)
-{
-	IMG_UINT32	ui32RegVal;
-	ui32RegVal = OSReadHWReg(psDevInfo->pvRegsBaseKM, ui32RegAddr);
-	PVR_LOG(("(HYD) %s%08X", pszName, ui32RegVal));
-}
-
-#endif /* defined(RESTRICTED_REGISTERS) */
 
 /*!
 *******************************************************************************
@@ -1253,6 +1276,45 @@ static INLINE IMG_UINT32 GetDirListBaseReg(IMG_UINT32 ui32Index)
 #endif
 
 /*!
+ * **************************************************************************
+ * @Function	RunSGXREGDebugScripts
+ * @Description	Runs the SGXREG debug scripts
+ *
+ * @Input	PVRSRV_SGXDEV_INFO
+ * @Output
+ * @Return	IMG_VOID
+ * **************************************************************************/
+
+IMG_VOID RunSGXREGDebugScripts (PVRSRV_SGXDEV_INFO	*psDevInfo)
+{
+	IMG_UINT32	ui32Core;
+	PVRSRV_ERROR		eError;
+
+	/* Run SGXREGDebug scripts */
+#if defined(SGX_FEATURE_MP)
+	PVR_LOG(("(HYD)"));
+	eError = SGXRunScript(psDevInfo, psDevInfo->sScripts.asSGXREGDebugCommandsMaster, SGX_MAX_PRINT_COMMANDS);
+	if (eError != PVRSRV_OK)
+	{
+		PVR_DPF((PVR_DBG_ERROR,"RunSGXREGDebugScripts: SGXREGDebugCommandsMaster SGXRunScript failed (%d)", eError));
+	}
+#endif
+
+	/* Run on each core */
+	for (ui32Core = 0; ui32Core < SGX_FEATURE_MP_CORE_COUNT_3D; ui32Core++) 
+	{
+		PVR_LOG(("(P%u)",ui32Core));
+		eError = SGXRunScriptOnCore(psDevInfo, psDevInfo->sScripts.asSGXREGDebugCommandsSlave, SGX_MAX_PRINT_COMMANDS, ui32Core);
+		if (eError != PVRSRV_OK)
+		{
+			PVR_DPF((PVR_DBG_ERROR,"RunSGXREGDebugScripts: SGXREGDebugCommandsSlave SGXRunScript failed (%d)", eError));
+		}
+	}
+	/* Scripts end */
+}
+
+
+/*!
 *******************************************************************************
 
  @Function	SGXDumpDebugInfo
@@ -1277,35 +1339,19 @@ IMG_VOID SGXDumpDebugInfo (PVRSRV_SGXDEV_INFO	*psDevInfo,
 
 	if (bDumpSGXRegs)
 	{
-		PVR_DPF((PVR_DBG_ERROR,"SGX Register Base Address (Linear):   0x%08X", (IMG_UINTPTR_T)psDevInfo->pvRegsBaseKM));
-		PVR_DPF((PVR_DBG_ERROR,"SGX Register Base Address (Physical): 0x%08X", psDevInfo->sRegsPhysBase.uiAddr));
+		PVR_DPF((PVR_DBG_ERROR,"SGX Register Base Address (Linear):   0x%p", psDevInfo->pvRegsBaseKM));
+		PVR_DPF((PVR_DBG_ERROR,"SGX Register Base Address (Physical): 0x" SYSPADDR_FMT, psDevInfo->sRegsPhysBase.uiAddr));
 
+		/* Run SGXREGDebug Scripts */
+		PVR_LOG(("Running SGXREG Debug Scripts:"));
+		RunSGXREGDebugScripts(psDevInfo);
+
+		PVR_LOG(("SGX Register Dump:"));
 		SGXDumpDebugReg(psDevInfo, 0, "EUR_CR_CORE_ID:          ", EUR_CR_CORE_ID);
 		SGXDumpDebugReg(psDevInfo, 0, "EUR_CR_CORE_REVISION:    ", EUR_CR_CORE_REVISION);
-#if defined(RESTRICTED_REGISTERS) && defined(SGX_FEATURE_MP)
-		SGXDumpMasterDebugReg(psDevInfo, "EUR_CR_MASTER_BIF_INT_STAT:   ", EUR_CR_MASTER_BIF_INT_STAT);
-		SGXDumpMasterDebugReg(psDevInfo, "EUR_CR_MASTER_BIF_FAULT:      ",EUR_CR_MASTER_BIF_FAULT);
-		SGXDumpMasterDebugReg(psDevInfo, "EUR_CR_MASTER_CLKGATESTATUS2: ",EUR_CR_MASTER_CLKGATESTATUS2 );
-		SGXDumpMasterDebugReg(psDevInfo, "EUR_CR_MASTER_VDM_PIM_STATUS: ",EUR_CR_MASTER_VDM_PIM_STATUS);
-		SGXDumpMasterDebugReg(psDevInfo, "EUR_CR_MASTER_BIF_BANK_SET:   ",EUR_CR_MASTER_BIF_BANK_SET);
-
-		SGXDumpMasterDebugReg(psDevInfo, "EUR_CR_MASTER_EVENT_STATUS:   ",EUR_CR_MASTER_EVENT_STATUS);
-		SGXDumpMasterDebugReg(psDevInfo, "EUR_CR_MASTER_EVENT_STATUS2:  ",EUR_CR_MASTER_EVENT_STATUS2);
-		SGXDumpMasterDebugReg(psDevInfo, "EUR_CR_MASTER_MP_PRIMITIVE:   ",EUR_CR_MASTER_MP_PRIMITIVE);
-		SGXDumpMasterDebugReg(psDevInfo, "EUR_CR_MASTER_DPM_DPLIST_STATUS: ",EUR_CR_MASTER_DPM_DPLIST_STATUS);
-		SGXDumpMasterDebugReg(psDevInfo, "EUR_CR_MASTER_DPM_PROACTIVE_PIM_SPEC: ",EUR_CR_MASTER_DPM_PROACTIVE_PIM_SPEC);
-		SGXDumpMasterDebugReg(psDevInfo, "EUR_CR_MASTER_PAGE_MANAGEOP:  ",EUR_CR_MASTER_DPM_PAGE_MANAGEOP);
-		SGXDumpMasterDebugReg(psDevInfo, "EUR_CR_MASTER_VDM_CONTEXT_STORE_SNAPSHOT: ",EUR_CR_MASTER_VDM_CONTEXT_STORE_SNAPSHOT);
-		SGXDumpMasterDebugReg(psDevInfo, "EUR_CR_MASTER_VDM_CONTEXT_LOAD_STATUS: ",EUR_CR_MASTER_VDM_CONTEXT_LOAD_STATUS);
-		SGXDumpMasterDebugReg(psDevInfo, "EUR_CR_MASTER_VDM_CONTEXT_STORE_STREAM: ",EUR_CR_MASTER_VDM_CONTEXT_STORE_STREAM);
-		SGXDumpMasterDebugReg(psDevInfo, "EUR_CR_MASTER_VDM_CONTEXT_STORE_STATUS: ",EUR_CR_MASTER_VDM_CONTEXT_STORE_STATUS);
-		SGXDumpMasterDebugReg(psDevInfo, "EUR_CR_MASTER_VDM_CONTEXT_STORE_STATE0: ",EUR_CR_MASTER_VDM_CONTEXT_STORE_STATE0);
-		SGXDumpMasterDebugReg(psDevInfo, "EUR_CR_MASTER_VDM_CONTEXT_STORE_STATE1: ",EUR_CR_MASTER_VDM_CONTEXT_STORE_STATE1);
-		SGXDumpMasterDebugReg(psDevInfo, "EUR_CR_MASTER_VDM_WAIT_FOR_KICK: ",EUR_CR_MASTER_VDM_WAIT_FOR_KICK);
-#endif
+		
 		for (ui32CoreNum = 0; ui32CoreNum < SGX_FEATURE_MP_CORE_COUNT_3D; ui32CoreNum++)
 		{
-			/* Dump HW event status */
 			SGXDumpDebugReg(psDevInfo, ui32CoreNum, "EUR_CR_EVENT_STATUS:     ", EUR_CR_EVENT_STATUS);
 			SGXDumpDebugReg(psDevInfo, ui32CoreNum, "EUR_CR_EVENT_STATUS2:    ", EUR_CR_EVENT_STATUS2);
 			SGXDumpDebugReg(psDevInfo, ui32CoreNum, "EUR_CR_BIF_CTRL:         ", EUR_CR_BIF_CTRL);
@@ -1319,37 +1365,6 @@ IMG_VOID SGXDumpDebugInfo (PVRSRV_SGXDEV_INFO	*psDevInfo,
 		#if defined(EUR_CR_PDS_PC_BASE)
 			SGXDumpDebugReg(psDevInfo, ui32CoreNum, "EUR_CR_PDS_PC_BASE:      ", EUR_CR_PDS_PC_BASE);
 		#endif
-#if defined(RESTRICTED_REGISTERS)
-			SGXDumpDebugReg(psDevInfo, ui32CoreNum, "EUR_CR_BIF_BANK_SET: ", EUR_CR_BIF_BANK_SET);
-
-			SGXDumpDebugReg(psDevInfo, ui32CoreNum, "EUR_CR_CLKGATECTL: ", EUR_CR_CLKGATECTL);
-			SGXDumpDebugReg(psDevInfo, ui32CoreNum, "EUR_CR_CLKGATESTATUS: ", EUR_CR_CLKGATESTATUS);
-			SGXDumpDebugReg(psDevInfo, ui32CoreNum, "EUR_CR_MTE_CTRL: ", EUR_CR_MTE_CTRL);
-			SGXDumpDebugReg(psDevInfo, ui32CoreNum, "EUR_CR_EVENT_OTHER_PDS_EXEC: ", EUR_CR_EVENT_OTHER_PDS_EXEC);
-			SGXDumpDebugReg(psDevInfo, ui32CoreNum, "EUR_CR_EVENT_OTHER_PDS_DATA: ", EUR_CR_EVENT_OTHER_PDS_DATA);
-			SGXDumpDebugReg(psDevInfo, ui32CoreNum, "EUR_CR_EVENT_OTHER_PDS_INFO: ", EUR_CR_EVENT_OTHER_PDS_INFO);
-
-			SGXDumpDebugReg(psDevInfo, ui32CoreNum, "EUR_CR_DPM_ZLS_PAGE_THRESHOLD: ", EUR_CR_DPM_ZLS_PAGE_THRESHOLD);
-			SGXDumpDebugReg(psDevInfo, ui32CoreNum, "EUR_CR_DPM_TA_GLOBAL_LIST: ", EUR_CR_DPM_TA_GLOBAL_LIST);
-			SGXDumpDebugReg(psDevInfo, ui32CoreNum, "EUR_CR_DPM_STATE_CONTEXT_ID: ", EUR_CR_DPM_STATE_CONTEXT_ID);
-			SGXDumpDebugReg(psDevInfo, ui32CoreNum, "EUR_CR_DPM_CONTEXT_PB_BASE: ", EUR_CR_DPM_CONTEXT_PB_BASE);
-			SGXDumpDebugReg(psDevInfo, ui32CoreNum, "EUR_CR_DPM_TA_ALLOC_FREE_LIST_STATUS1: ", EUR_CR_DPM_TA_ALLOC_FREE_LIST_STATUS1);
-			SGXDumpDebugReg(psDevInfo, ui32CoreNum, "EUR_CR_DPM_3D_FREE_LIST_STATUS1: ", EUR_CR_DPM_3D_FREE_LIST_STATUS1);
-			SGXDumpDebugReg(psDevInfo, ui32CoreNum, "EUR_CR_DPM_TA_ALLOC_FREE_LIST_STATUS2: ", EUR_CR_DPM_TA_ALLOC_FREE_LIST_STATUS2);
-			SGXDumpDebugReg(psDevInfo, ui32CoreNum, "EUR_CR_DPM_3D_FREE_LIST_STATUS2: ", EUR_CR_DPM_3D_FREE_LIST_STATUS2);
-			SGXDumpDebugReg(psDevInfo, ui32CoreNum, "EUR_CR_DPM_ABORT_STATUS_MTILE: ", EUR_CR_DPM_ABORT_STATUS_MTILE);
-			SGXDumpDebugReg(psDevInfo, ui32CoreNum, "EUR_CR_DPM_PAGE_STATUS: ", EUR_CR_DPM_PAGE_STATUS);
-			SGXDumpDebugReg(psDevInfo, ui32CoreNum, "EUR_CR_DPM_PAGE: ", EUR_CR_DPM_PAGE);
-			SGXDumpDebugReg(psDevInfo, ui32CoreNum, "EUR_CR_DPM_GLOBAL_PAGE_STATUS: ", EUR_CR_DPM_GLOBAL_PAGE_STATUS);
-			SGXDumpDebugReg(psDevInfo, ui32CoreNum, "EUR_CR_VDM_CONTEXT_LOAD_STATUS: ", EUR_CR_VDM_CONTEXT_LOAD_STATUS);
-			SGXDumpDebugReg(psDevInfo, ui32CoreNum, "EUR_CR_VDM_CONTEXT_STORE_STATUS: ", EUR_CR_VDM_CONTEXT_STORE_STATUS);
-			SGXDumpDebugReg(psDevInfo, ui32CoreNum, "EUR_CR_VDM_TASK_KICK_STATUS: ", EUR_CR_VDM_TASK_KICK_STATUS);
-			SGXDumpDebugReg(psDevInfo, ui32CoreNum, "EUR_CR_VDM_CONTEXT_STORE_STATE0: ", EUR_CR_VDM_CONTEXT_STORE_STATE0);
-			SGXDumpDebugReg(psDevInfo, ui32CoreNum, "EUR_CR_VDM_CONTEXT_STORE_STATE1: ", EUR_CR_VDM_CONTEXT_STORE_STATE1);
-			SGXDumpDebugReg(psDevInfo, ui32CoreNum, "EUR_CR_DPM_REQUESTING: ", EUR_CR_DPM_REQUESTING);
-			SGXDumpDebugReg(psDevInfo, ui32CoreNum, "EUR_CR_DPM_REQUESTING: ", EUR_CR_DPM_REQUESTING);
-
-#endif
 		}
 
 	#if !defined(SGX_FEATURE_MULTIPLE_MEM_CONTEXTS) && !defined(FIX_HW_BRN_31620)
@@ -1362,7 +1377,11 @@ IMG_VOID SGXDumpDebugInfo (PVRSRV_SGXDEV_INFO	*psDevInfo,
 				host thinks the fault is correct
 			*/
 			ui32RegVal = OSReadHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_BIF_INT_STAT);
+			#if defined(EUR_CR_BIF_INT_STAT_PF_N_RW_MASK)
 			if (ui32RegVal & EUR_CR_BIF_INT_STAT_PF_N_RW_MASK)
+			#else
+			if (ui32RegVal & EUR_CR_BIF_INT_STAT_FAULT_TYPE_MASK)	
+			#endif
 			{
 				ui32RegVal = OSReadHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_BIF_FAULT);
 				ui32RegVal &= EUR_CR_BIF_FAULT_ADDR_MASK;
@@ -1377,67 +1396,149 @@ IMG_VOID SGXDumpDebugInfo (PVRSRV_SGXDEV_INFO	*psDevInfo,
 			IMG_UINT32 ui32Bank0;
 			IMG_UINT32 ui32DirListIndex;
 			IMG_UINT32 ui32PDDevPAddr;
+			IMG_UINT32 ui32RegVal;
+
+#if defined(SGX_FEATURE_MP)
+			ui32RegVal = OSReadHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_MASTER_BIF_INT_STAT);
+#if defined(EUR_CR_BIF_INT_STAT_FAULT_TYPE_MASK)
+			if( ui32RegVal & EUR_CR_BIF_INT_STAT_FAULT_TYPE_MASK)
+#else
+			if( ui32RegVal & EUR_CR_BIF_INT_STAT_PF_N_RW_MASK)
+#endif
+			{
+				ui32FaultAddress = OSReadHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_MASTER_BIF_FAULT);
+				if(ui32FaultAddress)
+				{
+					ui32Bank0 = OSReadHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_BIF_BANK0);
+		
+					/* Check the EDM's's memory context */
+					ui32DirListIndex = (ui32Bank0 & EUR_CR_BIF_BANK0_INDEX_EDM_MASK) >> EUR_CR_BIF_BANK0_INDEX_EDM_SHIFT;
+					ui32PDDevPAddr = OSReadHWReg(psDevInfo->pvRegsBaseKM,
+													GetDirListBaseReg(ui32DirListIndex));
+					PVR_LOG(("Checking EDM memory context (index = %d, PD = 0x%08x)", ui32DirListIndex, ui32PDDevPAddr));
+					MMU_CheckFaultAddr(psDevInfo, ui32PDDevPAddr, ui32FaultAddress);
+			
+					/* Check the TA's memory context */
+					ui32DirListIndex = (ui32Bank0 & EUR_CR_BIF_BANK0_INDEX_TA_MASK) >> EUR_CR_BIF_BANK0_INDEX_TA_SHIFT;
+					ui32PDDevPAddr = OSReadHWReg(psDevInfo->pvRegsBaseKM,
+													GetDirListBaseReg(ui32DirListIndex));
+					PVR_LOG(("Checking TA memory context (index = %d, PD = 0x%08x)", ui32DirListIndex, ui32PDDevPAddr));
+					MMU_CheckFaultAddr(psDevInfo, ui32PDDevPAddr, ui32FaultAddress);
+		
+					/* Check the 3D's memory context */
+					ui32DirListIndex = (ui32Bank0 & EUR_CR_BIF_BANK0_INDEX_3D_MASK) >> EUR_CR_BIF_BANK0_INDEX_3D_SHIFT;
+					ui32PDDevPAddr = OSReadHWReg(psDevInfo->pvRegsBaseKM,
+													GetDirListBaseReg(ui32DirListIndex));
+					PVR_LOG(("Checking 3D memory context (index = %d, PD = 0x%08x)", ui32DirListIndex, ui32PDDevPAddr));
+					MMU_CheckFaultAddr(psDevInfo, ui32PDDevPAddr, ui32FaultAddress);
+			
+			#if defined(EUR_CR_BIF_BANK0_INDEX_2D_MASK)
+					/* Check the 2D's memory context */
+					ui32DirListIndex = (ui32Bank0 & EUR_CR_BIF_BANK0_INDEX_2D_MASK) >> EUR_CR_BIF_BANK0_INDEX_2D_SHIFT;
+					ui32PDDevPAddr = OSReadHWReg(psDevInfo->pvRegsBaseKM,
+													GetDirListBaseReg(ui32DirListIndex));
+					PVR_LOG(("Checking 2D memory context (index = %d, PD = 0x%08x)", ui32DirListIndex, ui32PDDevPAddr));
+					MMU_CheckFaultAddr(psDevInfo, ui32PDDevPAddr, ui32FaultAddress);
+			#endif
+			
+			#if defined(EUR_CR_BIF_BANK0_INDEX_PTLA_MASK)
+					/* Check the 2D's memory context */
+					ui32DirListIndex = (ui32Bank0 & EUR_CR_BIF_BANK0_INDEX_PTLA_MASK) >> EUR_CR_BIF_BANK0_INDEX_PTLA_SHIFT;
+					ui32PDDevPAddr = OSReadHWReg(psDevInfo->pvRegsBaseKM,
+													GetDirListBaseReg(ui32DirListIndex));
+					PVR_LOG(("Checking PTLA memory context (index = %d, PD = 0x%08x)", ui32DirListIndex, ui32PDDevPAddr));
+					MMU_CheckFaultAddr(psDevInfo, ui32PDDevPAddr, ui32FaultAddress);
+			#endif
 	
-			ui32FaultAddress = OSReadHWReg(psDevInfo->pvRegsBaseKM,
-											EUR_CR_BIF_FAULT);
-			ui32FaultAddress = ui32FaultAddress & EUR_CR_BIF_FAULT_ADDR_MASK;
-	
-			ui32Bank0 = OSReadHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_BIF_BANK0);
-	
-			/* Check the EDM's's memory context */
-			ui32DirListIndex = (ui32Bank0 & EUR_CR_BIF_BANK0_INDEX_EDM_MASK) >> EUR_CR_BIF_BANK0_INDEX_EDM_SHIFT;
-			ui32PDDevPAddr = OSReadHWReg(psDevInfo->pvRegsBaseKM,
-											GetDirListBaseReg(ui32DirListIndex));
-			PVR_LOG(("Checking EDM memory context (index = %d, PD = 0x%08x)", ui32DirListIndex, ui32PDDevPAddr));
-			MMU_CheckFaultAddr(psDevInfo, ui32PDDevPAddr, ui32FaultAddress);
-	
-			/* Check the TA's memory context */
-			ui32DirListIndex = (ui32Bank0 & EUR_CR_BIF_BANK0_INDEX_TA_MASK) >> EUR_CR_BIF_BANK0_INDEX_TA_SHIFT;
-			ui32PDDevPAddr = OSReadHWReg(psDevInfo->pvRegsBaseKM,
-											GetDirListBaseReg(ui32DirListIndex));
-			PVR_LOG(("Checking TA memory context (index = %d, PD = 0x%08x)", ui32DirListIndex, ui32PDDevPAddr));
-			MMU_CheckFaultAddr(psDevInfo, ui32PDDevPAddr, ui32FaultAddress);
-	
-			/* Check the 3D's memory context */
-			ui32DirListIndex = (ui32Bank0 & EUR_CR_BIF_BANK0_INDEX_3D_MASK) >> EUR_CR_BIF_BANK0_INDEX_3D_SHIFT;
-			ui32PDDevPAddr = OSReadHWReg(psDevInfo->pvRegsBaseKM,
-											GetDirListBaseReg(ui32DirListIndex));
-			PVR_LOG(("Checking 3D memory context (index = %d, PD = 0x%08x)", ui32DirListIndex, ui32PDDevPAddr));
-			MMU_CheckFaultAddr(psDevInfo, ui32PDDevPAddr, ui32FaultAddress);
-	
-	#if defined(EUR_CR_BIF_BANK0_INDEX_2D_MASK)
-			/* Check the 2D's memory context */
-			ui32DirListIndex = (ui32Bank0 & EUR_CR_BIF_BANK0_INDEX_2D_MASK) >> EUR_CR_BIF_BANK0_INDEX_2D_SHIFT;
-			ui32PDDevPAddr = OSReadHWReg(psDevInfo->pvRegsBaseKM,
-											GetDirListBaseReg(ui32DirListIndex));
-			PVR_LOG(("Checking 2D memory context (index = %d, PD = 0x%08x)", ui32DirListIndex, ui32PDDevPAddr));
-			MMU_CheckFaultAddr(psDevInfo, ui32PDDevPAddr, ui32FaultAddress);
+			#if defined(EUR_CR_BIF_BANK0_INDEX_HOST_MASK)
+					/* Check the Host's memory context */
+					ui32DirListIndex = (ui32Bank0 & EUR_CR_BIF_BANK0_INDEX_HOST_MASK) >> EUR_CR_BIF_BANK0_INDEX_HOST_SHIFT;
+					ui32PDDevPAddr = OSReadHWReg(psDevInfo->pvRegsBaseKM,
+													GetDirListBaseReg(ui32DirListIndex));
+					PVR_LOG(("Checking Host memory context (index = %d, PD = 0x%08x)", ui32DirListIndex, ui32PDDevPAddr));
+					MMU_CheckFaultAddr(psDevInfo, ui32PDDevPAddr, ui32FaultAddress);
+					
+			#endif
+				}
+			}
+#endif
+			for (ui32CoreNum = 0; ui32CoreNum < SGX_FEATURE_MP_CORE_COUNT_3D; ui32CoreNum++)
+			{
+
+				ui32RegVal = OSReadHWReg(psDevInfo->pvRegsBaseKM, SGX_MP_CORE_SELECT(EUR_CR_BIF_INT_STAT, ui32CoreNum));
+	#if defined(EUR_CR_BIF_INT_STAT_FAULT_TYPE_MASK)
+				if( ui32RegVal & EUR_CR_BIF_INT_STAT_FAULT_TYPE_MASK)
+	#else
+				if( ui32RegVal & EUR_CR_BIF_INT_STAT_PF_N_RW_MASK)
 	#endif
-	
-	#if defined(EUR_CR_BIF_BANK0_INDEX_PTLA_MASK)
-			/* Check the 2D's memory context */
-			ui32DirListIndex = (ui32Bank0 & EUR_CR_BIF_BANK0_INDEX_PTLA_MASK) >> EUR_CR_BIF_BANK0_INDEX_PTLA_SHIFT;
-			ui32PDDevPAddr = OSReadHWReg(psDevInfo->pvRegsBaseKM,
-											GetDirListBaseReg(ui32DirListIndex));
-			PVR_LOG(("Checking PTLA memory context (index = %d, PD = 0x%08x)", ui32DirListIndex, ui32PDDevPAddr));
-			MMU_CheckFaultAddr(psDevInfo, ui32PDDevPAddr, ui32FaultAddress);
-	#endif
-	
-	#if defined(EUR_CR_BIF_BANK0_INDEX_HOST_MASK)
-			/* Check the Host's memory context */
-			ui32DirListIndex = (ui32Bank0 & EUR_CR_BIF_BANK0_INDEX_HOST_MASK) >> EUR_CR_BIF_BANK0_INDEX_HOST_SHIFT;
-			ui32PDDevPAddr = OSReadHWReg(psDevInfo->pvRegsBaseKM,
-											GetDirListBaseReg(ui32DirListIndex));
-			PVR_LOG(("Checking Host memory context (index = %d, PD = 0x%08x)", ui32DirListIndex, ui32PDDevPAddr));
-			MMU_CheckFaultAddr(psDevInfo, ui32PDDevPAddr, ui32FaultAddress);
-	#endif
+				{
+					ui32FaultAddress = OSReadHWReg(psDevInfo->pvRegsBaseKM, SGX_MP_CORE_SELECT(EUR_CR_BIF_FAULT, ui32CoreNum));
+					ui32FaultAddress &= EUR_CR_BIF_FAULT_ADDR_MASK;
+					if(ui32FaultAddress)
+					{
+						ui32Bank0 = OSReadHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_BIF_BANK0);
+			
+						/* Check the EDM's's memory context */
+						ui32DirListIndex = (ui32Bank0 & EUR_CR_BIF_BANK0_INDEX_EDM_MASK) >> EUR_CR_BIF_BANK0_INDEX_EDM_SHIFT;
+						ui32PDDevPAddr = OSReadHWReg(psDevInfo->pvRegsBaseKM,
+														GetDirListBaseReg(ui32DirListIndex));
+						PVR_LOG(("Checking EDM memory context (index = %d, PD = 0x%08x)", ui32DirListIndex, ui32PDDevPAddr));
+						MMU_CheckFaultAddr(psDevInfo, ui32PDDevPAddr, ui32FaultAddress);
+				
+						/* Check the TA's memory context */
+						ui32DirListIndex = (ui32Bank0 & EUR_CR_BIF_BANK0_INDEX_TA_MASK) >> EUR_CR_BIF_BANK0_INDEX_TA_SHIFT;
+						ui32PDDevPAddr = OSReadHWReg(psDevInfo->pvRegsBaseKM,
+														GetDirListBaseReg(ui32DirListIndex));
+						PVR_LOG(("Checking TA memory context (index = %d, PD = 0x%08x)", ui32DirListIndex, ui32PDDevPAddr));
+						MMU_CheckFaultAddr(psDevInfo, ui32PDDevPAddr, ui32FaultAddress);
+			
+						/* Check the 3D's memory context */
+						ui32DirListIndex = (ui32Bank0 & EUR_CR_BIF_BANK0_INDEX_3D_MASK) >> EUR_CR_BIF_BANK0_INDEX_3D_SHIFT;
+						ui32PDDevPAddr = OSReadHWReg(psDevInfo->pvRegsBaseKM,
+														GetDirListBaseReg(ui32DirListIndex));
+						PVR_LOG(("Checking 3D memory context (index = %d, PD = 0x%08x)", ui32DirListIndex, ui32PDDevPAddr));
+						MMU_CheckFaultAddr(psDevInfo, ui32PDDevPAddr, ui32FaultAddress);
+				
+				#if defined(EUR_CR_BIF_BANK0_INDEX_2D_MASK)
+						/* Check the 2D's memory context */
+						ui32DirListIndex = (ui32Bank0 & EUR_CR_BIF_BANK0_INDEX_2D_MASK) >> EUR_CR_BIF_BANK0_INDEX_2D_SHIFT;
+						ui32PDDevPAddr = OSReadHWReg(psDevInfo->pvRegsBaseKM,
+														GetDirListBaseReg(ui32DirListIndex));
+						PVR_LOG(("Checking 2D memory context (index = %d, PD = 0x%08x)", ui32DirListIndex, ui32PDDevPAddr));
+						MMU_CheckFaultAddr(psDevInfo, ui32PDDevPAddr, ui32FaultAddress);
+				#endif		
+					
+				#if defined(EUR_CR_BIF_BANK0_INDEX_PTLA_MASK)
+						/* Check the 2D's memory context */
+						ui32DirListIndex = (ui32Bank0 & EUR_CR_BIF_BANK0_INDEX_PTLA_MASK) >> EUR_CR_BIF_BANK0_INDEX_PTLA_SHIFT;
+						ui32PDDevPAddr = OSReadHWReg(psDevInfo->pvRegsBaseKM,
+														GetDirListBaseReg(ui32DirListIndex));
+						PVR_LOG(("Checking PTLA memory context (index = %d, PD = 0x%08x)", ui32DirListIndex, ui32PDDevPAddr));
+						MMU_CheckFaultAddr(psDevInfo, ui32PDDevPAddr, ui32FaultAddress);
+				#endif	
+		
+				#if defined(EUR_CR_BIF_BANK0_INDEX_HOST_MASK)
+						/* Check the Host's memory context */
+						ui32DirListIndex = (ui32Bank0 & EUR_CR_BIF_BANK0_INDEX_HOST_MASK) >> EUR_CR_BIF_BANK0_INDEX_HOST_SHIFT;
+						ui32PDDevPAddr = OSReadHWReg(psDevInfo->pvRegsBaseKM,
+													GetDirListBaseReg(ui32DirListIndex));
+						PVR_LOG(("Checking Host memory context (index = %d, PD = 0x%08x)", ui32DirListIndex, ui32PDDevPAddr));
+						MMU_CheckFaultAddr(psDevInfo, ui32PDDevPAddr, ui32FaultAddress);
+						
+				#endif
+					}
+				}
+			}
 		}
 	#endif
 	}
+
+#if defined(SUPPORT_PVRSRV_DEVICE_CLASS)
 	/*
 		Dump out the outstanding queue items.
 	*/
 	QueueDumpDebugInfo();
+#endif
 
 	{
 		/*
@@ -1446,7 +1547,25 @@ IMG_VOID SGXDumpDebugInfo (PVRSRV_SGXDEV_INFO	*psDevInfo,
 		SGXMKIF_HOST_CTL	*psSGXHostCtl = psDevInfo->psSGXHostCtl;
 		IMG_UINT32			*pui32HostCtlBuffer = (IMG_UINT32 *)psSGXHostCtl;
 		IMG_UINT32			ui32LoopCounter;
-
+		
+		/* Report which defines are enabled that affect the HostCTL structure being dumped-out here */
+		{
+			IMG_UINT32 ui32CtlFlags = 0;
+			#if defined(PVRSRV_USSE_EDM_BREAKPOINTS)
+			ui32CtlFlags = ui32CtlFlags | 0x0001;
+			#endif
+			#if defined(FIX_HW_BRN_28889)
+			ui32CtlFlags = ui32CtlFlags | 0x0002;
+			#endif
+			#if defined(SUPPORT_HW_RECOVERY)
+			ui32CtlFlags = ui32CtlFlags | 0x0004;
+			#endif
+			#if defined(SGX_FEATURE_EXTENDED_PERF_COUNTERS)
+			ui32CtlFlags = ui32CtlFlags | 0x0008;
+			#endif
+			PVR_LOG((" Host Ctl flags= %08x", ui32CtlFlags));
+		}
+		
 		if (psSGXHostCtl->ui32AssertFail != 0)
 		{
 			PVR_LOG(("SGX Microkernel assert fail: 0x%08X", psSGXHostCtl->ui32AssertFail));
@@ -1459,7 +1578,8 @@ IMG_VOID SGXDumpDebugInfo (PVRSRV_SGXDEV_INFO	*psDevInfo,
 			 ui32LoopCounter < sizeof(*psDevInfo->psSGXHostCtl) / sizeof(*pui32HostCtlBuffer);
 			 ui32LoopCounter += 4)
 		{
-			PVR_LOG(("\t(HC-%X) 0x%08X 0x%08X 0x%08X 0x%08X", ui32LoopCounter * sizeof(*pui32HostCtlBuffer),
+			PVR_LOG(("\t(HC-%" SIZE_T_FMT_LEN "X) 0x%08X 0x%08X 0x%08X 0x%08X", 
+                    ui32LoopCounter * sizeof(*pui32HostCtlBuffer),
 					pui32HostCtlBuffer[ui32LoopCounter + 0], pui32HostCtlBuffer[ui32LoopCounter + 1],
 					pui32HostCtlBuffer[ui32LoopCounter + 2], pui32HostCtlBuffer[ui32LoopCounter + 3]));
 		}
@@ -1478,7 +1598,8 @@ IMG_VOID SGXDumpDebugInfo (PVRSRV_SGXDEV_INFO	*psDevInfo,
 			 ui32LoopCounter < psDevInfo->psKernelSGXTA3DCtlMemInfo->uAllocSize / sizeof(*pui32TA3DCtlBuffer);
 			 ui32LoopCounter += 4)
 		{
-			PVR_LOG(("\t(T3C-%X) 0x%08X 0x%08X 0x%08X 0x%08X", ui32LoopCounter * sizeof(*pui32TA3DCtlBuffer),
+			PVR_LOG(("\t(T3C-%" SIZE_T_FMT_LEN "X) 0x%08X 0x%08X 0x%08X 0x%08X", 
+                    ui32LoopCounter * sizeof(*pui32TA3DCtlBuffer),
 					pui32TA3DCtlBuffer[ui32LoopCounter + 0], pui32TA3DCtlBuffer[ui32LoopCounter + 1],
 					pui32TA3DCtlBuffer[ui32LoopCounter + 2], pui32TA3DCtlBuffer[ui32LoopCounter + 3]));
 		}
@@ -1551,6 +1672,24 @@ IMG_VOID SGXDumpDebugInfo (PVRSRV_SGXDEV_INFO	*psDevInfo,
 	PVRSRVDumpTimeTraceBuffers();
 	#endif
 
+	#if defined (SUPPORT_FORCE_SYNC_DUMP)
+	PVRSRVDumpSyncs(IMG_FALSE);
+	#else
+	PVRSRVDumpSyncs(IMG_TRUE);
+	#endif
+	
+
+#if defined (MEM_TRACK_INFO_DEBUG)
+	{
+		IMG_UINT32 ui32FaultAddress = OSReadHWReg(psDevInfo->pvRegsBaseKM, SGX_MP_CORE_SELECT(EUR_CR_BIF_FAULT, 0));
+		PVRSRVPrintMemTrackInfo(ui32FaultAddress);
+	}
+#endif
+
+
+#if defined(PVRSRV_DEBUG_CCB_MAX)
+	PVRSRVDebugPrintfDumpCCB();
+#endif
 }
 
 
@@ -1607,7 +1746,7 @@ IMG_VOID HWRecoveryResetSGX (PVRSRV_DEVICE_NODE *psDeviceNode,
 	psSGXHostCtl->ui32InterruptClearFlags |= PVRSRV_USSE_EDM_INTERRUPT_HWR;
 
 	PVR_LOG(("HWRecoveryResetSGX: SGX Hardware Recovery triggered"));
-	
+
 #if defined(SUPPORT_HWRECOVERY_TRACE_LIMIT)	
 /*
  * 		The following defines are system specific and should be defined in
@@ -1648,8 +1787,10 @@ IMG_VOID HWRecoveryResetSGX (PVRSRV_DEVICE_NODE *psDeviceNode,
 	/* Send a dummy kick so that we start processing again */
 	SGXScheduleProcessQueuesKM(psDeviceNode);
 
+#if defined(SUPPORT_PVRSRV_DEVICE_CLASS)
 	/* Flush any old commands from the queues. */
 	PVRSRVProcessQueues(IMG_TRUE);
+#endif
 }
 #endif /* #if defined(SYS_USING_INTERRUPTS) || defined(SUPPORT_HW_RECOVERY) */
 
@@ -1884,6 +2025,71 @@ IMG_BOOL SGX_ISRHandler (IMG_VOID *pvData)
 	return bInterruptProcessed;
 }
 
+/*
+	SGX Systrace Handler
+*/
+#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE)
+static IMG_VOID SGXSystraceHandler(PVRSRV_DEVICE_NODE *psDeviceNode)
+{
+	PVRSRV_SGXDEV_INFO *psDevInfo = (PVRSRV_SGXDEV_INFO *)psDeviceNode->pvDevice;
+	IMG_UINT32 ui32SgxClockSpeed, ui32DataCount, ui32HostTimestamp;
+
+	/* NOTE: Not thread safe. MISR should only run in one thread */
+	static PVRSRV_SGX_HWPERF_CB_ENTRY asSGXHWPerf[8];
+
+	if(SystraceIsCapturingHWData() && psDevInfo->bSystraceInitialised)
+	{
+		SGXReadHWPerfCBKM((IMG_HANDLE) psDeviceNode, 
+						8,
+						asSGXHWPerf,
+						(IMG_UINT32 *)&ui32DataCount,
+						(IMG_UINT32 *)&ui32SgxClockSpeed,
+						(IMG_UINT32 *)&ui32HostTimestamp);
+
+		SystraceHWPerfPackets(psDevInfo, asSGXHWPerf, ui32DataCount, ui32SgxClockSpeed);
+	} 
+	else if(SystraceIsCapturingHWData() && !psDevInfo->bSystraceInitialised)
+	{
+		SGX_MISC_INFO sSGXMiscInfo;
+
+		if(OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP, sizeof(PVRSRV_SYSTRACE_DATA),
+					  (IMG_VOID **)&psDevInfo->psSystraceData, 0,
+					  "Systrace data storage") != PVRSRV_OK)
+		{
+			PVR_DPF((PVR_DBG_ERROR, "SGXSystraceHandler: Failed to allocate systrace data"));
+			return;
+		}
+
+		OSMemSet(psDevInfo->psSystraceData, 0, sizeof(PVRSRV_SYSTRACE_DATA));
+
+		/* Prepare the SGXMiscInfo request in order to stop recording data*/
+		sSGXMiscInfo.eRequest = SGX_MISC_INFO_REQUEST_SET_HWPERF_STATUS;
+		sSGXMiscInfo.uData.sSetHWPerfStatus.ui32NewHWPerfStatus = PVRSRV_SGX_HWPERF_STATUS_GRAPHICS_ON | PVRSRV_SGX_HWPERF_STATUS_PERIODIC_ON;
+
+		/* Call into SGX DDK KM Services*/
+		SGXGetMiscInfoKM(psDevInfo, &sSGXMiscInfo, psDeviceNode, NULL);
+
+		psDevInfo->bSystraceInitialised = IMG_TRUE;
+
+		/* Initialize the first context to be 1 (0 is idle)*/
+		psDevInfo->psSystraceData->ui32CurrentCtxID = 1;
+	}
+	else if(psDevInfo->bSystraceInitialised)
+	{
+		SGX_MISC_INFO sSGXMiscInfo;
+
+		/* Prepare the SGXMiscInfo request in order to stop recording data*/
+		sSGXMiscInfo.eRequest = SGX_MISC_INFO_REQUEST_SET_HWPERF_STATUS;
+		sSGXMiscInfo.uData.sSetHWPerfStatus.ui32NewHWPerfStatus = 0;
+
+		/* Call into SGX DDK KM Services*/
+		SGXGetMiscInfoKM(psDevInfo, &sSGXMiscInfo, psDeviceNode, NULL);
+
+		OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, sizeof(PVRSRV_SYSTRACE_DATA), psDevInfo->psSystraceData, NULL);
+		psDevInfo->bSystraceInitialised = IMG_FALSE;
+	}
+}
+#endif
 
 /*
 	SGX MISR Handler
@@ -1908,6 +2114,11 @@ static IMG_VOID SGX_MISRHandler (IMG_VOID *pvData)
 #endif
 
 	SGXTestActivePowerEvent(psDeviceNode, ISR_ID);
+	
+#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE)
+	SGXSystraceHandler(psDeviceNode);
+#endif
+	
 }
 #endif /* #if defined (SYS_USING_INTERRUPTS) */
 
@@ -2100,11 +2311,33 @@ PVRSRV_ERROR SGXRegisterDevice (PVRSRV_DEVICE_NODE *psDeviceNode)
 	psDeviceMemoryHeap->DevMemHeapType = DEVICE_MEMORY_HEAP_PERCONTEXT;
 	/* set the default (4k). System can override these as required */
 	psDeviceMemoryHeap->ui32DataPageSize = SGX_MMU_PAGE_SIZE;
-#if !defined(SUPPORT_SGX_GENERAL_MAPPING_HEAP)
+#if !defined(SUPPORT_SGX_GENERAL_MAPPING_HEAP) && !defined(SGX5300)
 	/* specify the mapping heap ID for this device */
 	psDevMemoryInfo->ui32MappingHeapID = (IMG_UINT32)(psDeviceMemoryHeap - psDevMemoryInfo->psDeviceMemoryHeap);
 #endif
 	psDeviceMemoryHeap++;/* advance to the next heap */
+
+#if defined(SGX_FEATURE_ADDRESS_SPACE_EXTENSION)
+   /************* Texture Heap ***************/
+	psDeviceMemoryHeap->ui32HeapID = HEAP_ID( PVRSRV_DEVICE_TYPE_SGX, SGX_TEXTURE_HEAP_ID);
+	psDeviceMemoryHeap->sDevVAddrBase.uiAddr = SGX_TEXTURE_HEAP_BASE;
+	psDeviceMemoryHeap->ui32HeapSize = SGX_TEXTURE_HEAP_SIZE;
+	psDeviceMemoryHeap->ui32Attribs = PVRSRV_HAP_WRITECOMBINE
+	                                | PVRSRV_MEM_RAM_BACKED_ALLOCATION
+	                                | PVRSRV_HAP_SINGLE_PROCESS;
+ 
+	psDeviceMemoryHeap->pszName = "Texture";
+	psDeviceMemoryHeap->pszBSName = "Texture BS";
+	psDeviceMemoryHeap->DevMemHeapType = DEVICE_MEMORY_HEAP_PERCONTEXT;
+	/* set the default (4k). System can override these as required */
+	psDeviceMemoryHeap->ui32DataPageSize = SGX_MMU_PAGE_SIZE;
+	/* The mapping heap ID should be texture heap for SGX5300 */
+#if !defined(SUPPORT_SGX_GENERAL_MAPPING_HEAP) && defined(SGX5300)
+	/* specify the mapping heap ID for this device */
+	psDevMemoryInfo->ui32MappingHeapID = (IMG_UINT32)(psDeviceMemoryHeap - psDevMemoryInfo->psDeviceMemoryHeap);
+#endif 
+	psDeviceMemoryHeap++;/* advance to the next heap */
+#endif
 
 #if defined(SUPPORT_MEMORY_TILING)
 	/************* VPB tiling ***************/
@@ -2121,23 +2354,6 @@ PVRSRV_ERROR SGXRegisterDevice (PVRSRV_DEVICE_NODE *psDeviceNode)
 	psDeviceMemoryHeap->ui32DataPageSize = SGX_MMU_PAGE_SIZE;
 	psDeviceMemoryHeap->ui32XTileStride = SGX_VPB_TILED_HEAP_STRIDE;
 	PVR_DPF((PVR_DBG_WARNING, "VPB tiling heap tiling stride = 0x%x", psDeviceMemoryHeap->ui32XTileStride));
-	psDeviceMemoryHeap++;/* advance to the next heap */
-#endif
-
-#if defined(SUPPORT_ION)
-	/************* Ion Heap ***************/
-	psDeviceMemoryHeap->ui32HeapID = HEAP_ID( PVRSRV_DEVICE_TYPE_SGX, SGX_ION_HEAP_ID);
-	psDeviceMemoryHeap->sDevVAddrBase.uiAddr = SGX_ION_HEAP_BASE;
-	psDeviceMemoryHeap->ui32HeapSize = SGX_ION_HEAP_SIZE;
-	psDeviceMemoryHeap->ui32Attribs = PVRSRV_HAP_WRITECOMBINE
-														| PVRSRV_HAP_SINGLE_PROCESS;
-	psDeviceMemoryHeap->pszName = "Ion";
-	psDeviceMemoryHeap->pszBSName = "Ion BS";
-	psDeviceMemoryHeap->DevMemHeapType = DEVICE_MEMORY_HEAP_PERCONTEXT;
-	/* specify the ion heap ID for this device */
-	psDevMemoryInfo->ui32IonHeapID = SGX_ION_HEAP_ID;
-	/* set the default (4k). System can override these as required */
-	psDeviceMemoryHeap->ui32DataPageSize = SGX_MMU_PAGE_SIZE;
 	psDeviceMemoryHeap++;/* advance to the next heap */
 #endif
 
@@ -2483,8 +2699,7 @@ PVRSRV_ERROR SGXDevInitCompatCheck(PVRSRV_DEVICE_NODE *psDeviceNode)
 
 	/*
 	 *  1. Check kernel-side and client-side build options
-	 * 	2. Ensure ukernel DDK version and driver DDK version are compatible
-	 * 	3. Check ukernel build options against kernel-side build options
+	 *  2. Check ukernel build options against kernel-side build options
 	 */
 
 	/*
@@ -2497,16 +2712,16 @@ PVRSRV_ERROR SGXDevInitCompatCheck(PVRSRV_DEVICE_NODE *psDeviceNode)
 		ui32BuildOptionsMismatch = ui32BuildOptions ^ psDevInfo->ui32ClientBuildOptions;
 		if ( (psDevInfo->ui32ClientBuildOptions & ui32BuildOptionsMismatch) != 0)
 		{
-			PVR_LOG(("(FAIL) SGXInit: Mismatch in client-side and KM driver build options; "
-				"extra options present in client-side driver: (0x%x). Please check sgx_options.h",
-				psDevInfo->ui32ClientBuildOptions & ui32BuildOptionsMismatch ));
+			PVR_LOG(("(FAIL) SGXInit: Mismatch in client-side and KM driver build options."));
+			PVR_LOG(("Extra options present in client-side driver: (0x%x). Please check sgx_options.h",
+					 psDevInfo->ui32ClientBuildOptions & ui32BuildOptionsMismatch));
 		}
 
 		if ( (ui32BuildOptions & ui32BuildOptionsMismatch) != 0)
 		{
-			PVR_LOG(("(FAIL) SGXInit: Mismatch in client-side and KM driver build options; "
-				"extra options present in KM: (0x%x). Please check sgx_options.h",
-				ui32BuildOptions & ui32BuildOptionsMismatch ));
+			PVR_LOG(("(FAIL) SGXInit: Mismatch in client-side and KM driver build options."));
+			PVR_LOG(("Extra options present in KM: (0x%x). Please check sgx_options.h",
+					 ui32BuildOptions & ui32BuildOptionsMismatch));
 		}
 		eError = PVRSRV_ERROR_BUILD_MISMATCH;
 		goto chk_exit;
@@ -2521,36 +2736,16 @@ PVRSRV_ERROR SGXDevInitCompatCheck(PVRSRV_DEVICE_NODE *psDeviceNode)
 
 	/* Clear state (not strictly necessary since this is the first call) */
 	psSGXMiscInfoInt = psMemInfo->pvLinAddrKM;
-	psSGXMiscInfoInt->ui32MiscInfoFlags = 0;
+	psSGXMiscInfoInt->ui32MiscInfoFlags &= ~PVRSRV_USSE_MISCINFO_GET_STRUCT_SIZES;
 	psSGXMiscInfoInt->ui32MiscInfoFlags |= PVRSRV_USSE_MISCINFO_GET_STRUCT_SIZES;
 	eError = SGXGetMiscInfoUkernel(psDevInfo, psDeviceNode, IMG_NULL);
 
-	/*
-	 * Validate DDK version
-	 */
 	if(eError != PVRSRV_OK)
 	{
-		PVR_LOG(("(FAIL) SGXInit: Unable to validate device DDK version"));
+		PVR_LOG(("(FAIL) SGXInit: Unable to validate hardware core revision"));
 		goto chk_exit;
 	}
 	psSGXFeatures = &((PVRSRV_SGX_MISCINFO_INFO*)(psMemInfo->pvLinAddrKM))->sSGXFeatures;
-	if( (psSGXFeatures->ui32DDKVersion !=
-		((PVRVERSION_MAJ << 16) |
-		 (PVRVERSION_MIN << 8) |
-		  PVRVERSION_BRANCH) ) ||
-		(psSGXFeatures->ui32DDKBuild != PVRVERSION_BUILD) )
-	{
-		PVR_LOG(("(FAIL) SGXInit: Incompatible driver DDK revision (%d)/device DDK revision (%d).",
-				PVRVERSION_BUILD, psSGXFeatures->ui32DDKBuild));
-		eError = PVRSRV_ERROR_DDK_VERSION_MISMATCH;
-		goto chk_exit;
-	}
-	else
-	{
-		PVR_DPF((PVR_DBG_MESSAGE, "SGXInit: driver DDK (%d) and device DDK (%d) match. [ OK ]",
-				PVRVERSION_BUILD, psSGXFeatures->ui32DDKBuild));
-	}
-
 	/*
 	 * 	Check hardware core revision is compatible with the one in software
 	 */
@@ -2782,10 +2977,8 @@ PVRSRV_ERROR SGXGetMiscInfoKM(PVRSRV_SGXDEV_INFO	*psDevInfo,
 {
 	PVRSRV_ERROR eError;
 	PPVRSRV_KERNEL_MEM_INFO	psMemInfo = psDevInfo->psKernelSGXMiscMemInfo;
-	IMG_UINT32	*pui32MiscInfoFlags = &((PVRSRV_SGX_MISCINFO_INFO*)(psMemInfo->pvLinAddrKM))->ui32MiscInfoFlags;
-
-	/* Reset the misc info state flags */
-	*pui32MiscInfoFlags = 0;
+	IMG_UINT32	*pui32MiscInfoFlags;
+	pui32MiscInfoFlags = &((PVRSRV_SGX_MISCINFO_INFO*)(psMemInfo->pvLinAddrKM))->ui32MiscInfoFlags;
 
 #if !defined(SUPPORT_SGX_EDM_MEMORY_DEBUG)
 	PVR_UNREFERENCED_PARAMETER(hDevMemContext);
@@ -3084,6 +3277,17 @@ PVRSRV_ERROR SGXGetMiscInfoKM(PVRSRV_SGXDEV_INFO	*psDevInfo,
 			return PVRSRV_OK;
 		}
 
+		case SGX_MISC_INFO_REQUEST_CLOCKSPEED_SLCSIZE:
+		{
+			psMiscInfo->uData.sQueryClockSpeedSLCSize.ui32SGXClockSpeed = SYS_SGX_CLOCK_SPEED;
+#if defined(SGX_FEATURE_SYSTEM_CACHE) && defined(SYS_SGX_SLC_SIZE)
+			psMiscInfo->uData.sQueryClockSpeedSLCSize.ui32SGXSLCSize = SYS_SGX_SLC_SIZE;
+#else
+			psMiscInfo->uData.sQueryClockSpeedSLCSize.ui32SGXSLCSize = 0;
+#endif /* defined(SGX_FEATURE_SYSTEM_CACHE) && defined(SYS_SGX_SLC_SIZE) */
+			return PVRSRV_OK;
+		}
+
 		case SGX_MISC_INFO_REQUEST_ACTIVEPOWER:
 		{
 			psMiscInfo->uData.sActivePower.ui32NumActivePowerEvents = psDevInfo->psSGXHostCtl->ui32NumActivePowerEvents;
@@ -3152,23 +3356,26 @@ PVRSRV_ERROR SGXGetMiscInfoKM(PVRSRV_SGXDEV_INFO	*psDevInfo,
 
 			psSGXFeatures->ui32DDKVersion =
 				(PVRVERSION_MAJ << 16) |
-				(PVRVERSION_MIN << 8) |
-				PVRVERSION_BRANCH;
+				(PVRVERSION_MIN << 8);
 			psSGXFeatures->ui32DDKBuild = PVRVERSION_BUILD;
 
 			/* Also report the kernel module build options -- used in SGXConnectionCheck() */
 			psSGXFeatures->ui32BuildOptions = (SGX_BUILD_OPTIONS);
 
-#if defined(PVRSRV_USSE_EDM_STATUS_DEBUG)
-			/* Report the EDM status buffer location in memory */
-			psSGXFeatures->sDevVAEDMStatusBuffer = psDevInfo->psKernelEDMStatusBufferMemInfo->sDevVAddr;
-			psSGXFeatures->pvEDMStatusBuffer = psDevInfo->psKernelEDMStatusBufferMemInfo->pvLinAddrKM;
-#endif
-
 			/* Copy SGX features into misc info struct, to return to client */
 			psMiscInfo->uData.sSGXFeatures = *psSGXFeatures;
 			return PVRSRV_OK;
 		}
+
+#if defined(PVRSRV_USSE_EDM_STATUS_DEBUG)
+		case SGX_MISC_INFO_REQUEST_EDM_STATUS_BUFFER_INFO:
+		{
+			/* Report the EDM status buffer location in memory */
+			psMiscInfo->uData.sEDMStatusBufferInfo.sDevVAEDMStatusBuffer = psDevInfo->psKernelEDMStatusBufferMemInfo->sDevVAddr;
+			psMiscInfo->uData.sEDMStatusBufferInfo.pvEDMStatusBuffer = psDevInfo->psKernelEDMStatusBufferMemInfo->pvLinAddrKM;
+			return PVRSRV_OK;
+		}
+#endif
 
 #if defined(SUPPORT_SGX_EDM_MEMORY_DEBUG)
 		case SGX_MISC_INFO_REQUEST_MEMREAD:
@@ -3180,6 +3387,7 @@ PVRSRV_ERROR SGXGetMiscInfoKM(PVRSRV_SGXDEV_INFO	*psDevInfo,
 			PVRSRV_SGX_MISCINFO_MEMACCESS		*psSGXMemDest;	/* user-defined mem write */
 
 			{				
+				*pui32MiscInfoFlags &= ~PVRSRV_USSE_MISCINFO_MEMREAD;
 				/* Set the mem read flag; src is user-defined */
 				*pui32MiscInfoFlags |= PVRSRV_USSE_MISCINFO_MEMREAD;
 				psSGXMemSrc = &((PVRSRV_SGX_MISCINFO_INFO*)(psMemInfo->pvLinAddrKM))->sSGXMemAccessSrc;
@@ -3196,6 +3404,7 @@ PVRSRV_ERROR SGXGetMiscInfoKM(PVRSRV_SGXDEV_INFO	*psDevInfo,
 
 			if( psMiscInfo->eRequest == SGX_MISC_INFO_REQUEST_MEMCOPY)
 			{				
+				*pui32MiscInfoFlags &= ~PVRSRV_USSE_MISCINFO_MEMWRITE;
 				/* Set the mem write flag; dest is user-defined */
 				*pui32MiscInfoFlags |= PVRSRV_USSE_MISCINFO_MEMWRITE;
 				psSGXMemDest = &((PVRSRV_SGX_MISCINFO_INFO*)(psMemInfo->pvLinAddrKM))->sSGXMemAccessDest;
@@ -3335,6 +3544,14 @@ PVRSRV_ERROR SGXGetMiscInfoKM(PVRSRV_SGXDEV_INFO	*psDevInfo,
 
 		case SGX_MISC_INFO_DUMP_DEBUG_INFO_FORCE_REGS:
 		{
+			if(!OSProcHasPrivSrvInit())
+			{
+				PVR_DPF((PVR_DBG_ERROR, "Insufficient privileges to dump SGX "
+										"debug info with registers"));
+
+				return PVRSRV_ERROR_INVALID_MISCINFO;
+			}
+
 			PVR_LOG(("User requested SGX debug info"));
 
 			/* Dump SGX debug data to the kernel log. */

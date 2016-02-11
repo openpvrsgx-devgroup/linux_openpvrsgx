@@ -43,6 +43,9 @@
 
 ifeq ($(filter xorg,$(EXCLUDED_APIS)),)
 ifneq ($(wildcard ../common/apis/xorg.mk),)
-want_xorg := 1
+SUPPORT_BUILD_XORG := 1
+ifeq ($(PDUMP),1)
+SUPPORT_PDUMP_MULTI_PROCESS := 1
+endif
 endif
 endif

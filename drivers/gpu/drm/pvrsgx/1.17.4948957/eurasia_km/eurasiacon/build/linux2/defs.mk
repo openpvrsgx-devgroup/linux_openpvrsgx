@@ -96,13 +96,16 @@ endef
 define cc-check
 $(shell \
 	CC_CHECK=$(patsubst @%,%,$(CC_CHECK)) && \
-	$(patsubst @%,%,$(DOS2UNIX)) $$CC_CHECK && \
 	$(patsubst @%,%,$(CHMOD)) +x $$CC_CHECK && \
 	$$CC_CHECK --cc "$(1)" --out "$(2)" $(3))
 endef
 
 define cc-is-64bit
 $(call cc-check,$(1),$(OUT),--64)
+endef
+
+define cc-is-clang
+$(call cc-check,$(patsubst @%,%,$(CC)),$(OUT),--clang)
 endef
 
 define cc-option
@@ -115,6 +118,10 @@ endef
 
 define host-cc-option
 $(call cc-check,$(patsubst @%,%,$(HOST_CC)),$(OUT),$(1))
+endef
+
+define host-cxx-option
+$(call cc-check,$(patsubst @%,%,$(HOST_CXX)),$(OUT),$(1))
 endef
 
 define kernel-cc-option
@@ -138,4 +145,9 @@ endef
 
 define module-info-line
 $(if $(filter modules,$(D)),$(info $(1)),)
+endef
+
+# $(call if-exists,A,B) => A if A is a file which exists, otherwise B
+define if-exists
+$(if $(wildcard $(1)),$(1),$(2))
 endef

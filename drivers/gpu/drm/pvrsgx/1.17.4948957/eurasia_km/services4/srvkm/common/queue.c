@@ -45,14 +45,46 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "lists.h"
 #include "ttrace.h"
 
+#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
+#include <linux/version.h>
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0))
+#include <linux/sw_sync.h>
+#else
+#include <../drivers/staging/android/sw_sync.h>
+#endif
+static struct sync_fence *AllocQueueFence(struct sw_sync_timeline *psTimeline, IMG_UINT32 ui32FenceValue, const char *szName)
+{
+	struct sync_fence *psFence = IMG_NULL;
+	struct sync_pt *psPt;
+
+	psPt = sw_sync_pt_create(psTimeline, ui32FenceValue);
+	if(psPt)
+	{
+		psFence = sync_fence_create(szName, psPt);
+		if(!psFence)
+		{
+			sync_pt_free(psPt);
+		}
+	}
+
+	return psFence;
+}
+#endif /* defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC) */
+
 /*
  * The number of commands of each type which can be in flight at once.
  */
+
+#define DC_MAX_SUPPORTED_QUEUES			1
 #if defined(SUPPORT_DC_CMDCOMPLETE_WHEN_NO_LONGER_DISPLAYED)
-#define DC_NUM_COMMANDS_PER_TYPE		2
+#define DC_NUM_COMMANDS_PER_QUEUE		2
 #else
-#define DC_NUM_COMMANDS_PER_TYPE		1
+#define DC_NUM_COMMANDS_PER_QUEUE		1
 #endif
+
+#define DC_NUM_COMMANDS_PER_TYPE (DC_NUM_COMMANDS_PER_QUEUE * DC_MAX_SUPPORTED_QUEUES)
+
+static IMG_UINT32 ui32NoOfSwapchainCreated = 0;
 
 /*
  * List of private command processing function pointer tables and command
@@ -87,8 +119,8 @@ void ProcSeqShowQueue(struct seq_file *sfile,void* el)
 {
 	PVRSRV_QUEUE_INFO *psQueue = (PVRSRV_QUEUE_INFO*)el;
 	IMG_INT cmds = 0;
-	IMG_SIZE_T ui32ReadOffset;
-	IMG_SIZE_T ui32WriteOffset;
+	IMG_SIZE_T uReadOffset;
+	IMG_SIZE_T uWriteOffset;
 	PVRSRV_COMMAND *psCmd;
 
 	if(el == PVR_PROC_SEQ_START_TOKEN)
@@ -99,16 +131,16 @@ void ProcSeqShowQueue(struct seq_file *sfile,void* el)
 		return;
 	}
 
-	ui32ReadOffset = psQueue->ui32ReadOffset;
-	ui32WriteOffset = psQueue->ui32WriteOffset;
+	uReadOffset = psQueue->uReadOffset;
+	uWriteOffset = psQueue->uWriteOffset;
 
-	while (ui32ReadOffset != ui32WriteOffset)
+	while (uReadOffset != uWriteOffset)
 	{
-		psCmd= (PVRSRV_COMMAND *)((IMG_UINTPTR_T)psQueue->pvLinQueueKM + ui32ReadOffset);
+		psCmd= (PVRSRV_COMMAND *)((IMG_UINTPTR_T)psQueue->pvLinQueueKM + uReadOffset);
 
-		seq_printf(sfile, "%x %x  %5u  %6u  %3u  %5u   %2u   %2u    %3u  \n",
-							(IMG_UINTPTR_T)psQueue,
-							(IMG_UINTPTR_T)psCmd,
+		seq_printf(sfile, "%p %p  %5u  %6u  %3" SIZE_T_FMT_LEN "u  %5u   %2u   %2u    %3" SIZE_T_FMT_LEN "u  \n",
+							psQueue,
+							psCmd,
 					 		psCmd->ui32ProcessID,
 							psCmd->CommandType,
 							psCmd->uCmdSize,
@@ -133,14 +165,14 @@ void ProcSeqShowQueue(struct seq_file *sfile,void* el)
 		}
 
 		/* taken from UPDATE_QUEUE_ROFF in queue.h */
-		ui32ReadOffset += psCmd->uCmdSize;
-		ui32ReadOffset &= psQueue->ui32QueueSize - 1;
+		uReadOffset += psCmd->uCmdSize;
+		uReadOffset &= psQueue->uQueueSize - 1;
 		cmds++;
 	}
 
 	if (cmds == 0)
 	{
-		seq_printf(sfile, "%x <empty>\n", (IMG_UINTPTR_T)psQueue);
+		seq_printf(sfile, "%p <empty>\n", psQueue);
 	}
 }
 
@@ -181,15 +213,15 @@ void* ProcSeqOff2ElementQueue(struct seq_file * sfile, loff_t off)
  * Macro to return space in given command queue
  */
 #define GET_SPACE_IN_CMDQ(psQueue)										\
-	((((psQueue)->ui32ReadOffset - (psQueue)->ui32WriteOffset)				\
-	+ ((psQueue)->ui32QueueSize - 1)) & ((psQueue)->ui32QueueSize - 1))
+	((((psQueue)->uReadOffset - (psQueue)->uWriteOffset)				\
+	+ ((psQueue)->uQueueSize - 1)) & ((psQueue)->uQueueSize - 1))
 
 /*!
  * Macro to Write Offset in given command queue
  */
-#define UPDATE_QUEUE_WOFF(psQueue, ui32Size)							\
-	(psQueue)->ui32WriteOffset = ((psQueue)->ui32WriteOffset + (ui32Size))	\
-	& ((psQueue)->ui32QueueSize - 1);
+#define UPDATE_QUEUE_WOFF(psQueue, uSize)							\
+	(psQueue)->uWriteOffset = ((psQueue)->uWriteOffset + (uSize))	\
+	& ((psQueue)->uQueueSize - 1);
 
 /*!
  * Check if an ops complete value has gone past the pending value.
@@ -227,7 +259,7 @@ IMG_UINT32 PVRSRVGetWriteOpsPending(PVRSRV_KERNEL_SYNC_INFO *psSyncInfo, IMG_BOO
 			Note: This needs to be atomic and is provided the
 			kernel driver is single threaded (non-rentrant)
 		*/
-		ui32WriteOpsPending = psSyncInfo->psSyncData->ui32WriteOpsPending++;
+		ui32WriteOpsPending = SyncTakeWriteOp(psSyncInfo, SYNC_OP_CLASS_QUEUE);
 	}
 
 	return ui32WriteOpsPending;
@@ -254,7 +286,7 @@ IMG_UINT32 PVRSRVGetReadOpsPending(PVRSRV_KERNEL_SYNC_INFO *psSyncInfo, IMG_BOOL
 
 	if(bIsReadOp)
 	{
-		ui32ReadOpsPending = psSyncInfo->psSyncData->ui32ReadOps2Pending++;
+		ui32ReadOpsPending = SyncTakeReadOp2(psSyncInfo, SYNC_OP_CLASS_QUEUE);
 	}
 	else
 	{
@@ -347,21 +379,21 @@ IMG_VOID QueueDumpDebugInfo(IMG_VOID)
 	Kernel-side functions of User->Kernel transitions
 ******************************************************************************/
 
-static IMG_SIZE_T NearestPower2(IMG_SIZE_T ui32Value)
+static IMG_SIZE_T NearestPower2(IMG_SIZE_T uValue)
 {
-	IMG_SIZE_T ui32Temp, ui32Result = 1;
+	IMG_SIZE_T uTemp, uResult = 1;
 
-	if(!ui32Value)
+	if(!uValue)
 		return 0;
 
-	ui32Temp = ui32Value - 1;
-	while(ui32Temp)
+	uTemp = uValue - 1;
+	while(uTemp)
 	{
-		ui32Result <<= 1;
-		ui32Temp >>= 1;
+		uResult <<= 1;
+		uTemp >>= 1;
 	}
 
-	return ui32Result;
+	return uResult;
 }
 
 
@@ -374,7 +406,7 @@ static IMG_SIZE_T NearestPower2(IMG_SIZE_T ui32Value)
  Creates a new command queue into which render/blt commands etc can be
  inserted.
 
- @Input    ui32QueueSize :
+ @Input    uQueueSize :
 
  @Output   ppsQueueInfo :
 
@@ -382,14 +414,20 @@ static IMG_SIZE_T NearestPower2(IMG_SIZE_T ui32Value)
 
 ******************************************************************************/
 IMG_EXPORT
-PVRSRV_ERROR IMG_CALLCONV PVRSRVCreateCommandQueueKM(IMG_SIZE_T ui32QueueSize,
+PVRSRV_ERROR IMG_CALLCONV PVRSRVCreateCommandQueueKM(IMG_SIZE_T uQueueSize,
 													 PVRSRV_QUEUE_INFO **ppsQueueInfo)
 {
 	PVRSRV_QUEUE_INFO	*psQueueInfo;
-	IMG_SIZE_T			ui32Power2QueueSize = NearestPower2(ui32QueueSize);
+	IMG_SIZE_T			uPower2QueueSize = NearestPower2(uQueueSize);
 	SYS_DATA			*psSysData;
 	PVRSRV_ERROR		eError;
 	IMG_HANDLE			hMemBlock;
+
+	if (ui32NoOfSwapchainCreated >= DC_NUM_COMMANDS_PER_TYPE)
+	{
+		PVR_DPF((PVR_DBG_ERROR,"PVRSRVCreateCommandQueueKM: Swapchain already exists, increament DC_MAX_SUPPORTED_QUEUES to support more than one swapchain"));
+		return PVRSRV_ERROR_FLIP_CHAIN_EXISTS;
+	}
 
 	SysAcquireData(&psSysData);
 
@@ -410,7 +448,7 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVCreateCommandQueueKM(IMG_SIZE_T ui32QueueSize,
 
 	/* allocate the command queue buffer - allow for overrun */
 	eError = OSAllocMem(PVRSRV_OS_NON_PAGEABLE_HEAP,
-					 ui32Power2QueueSize + PVRSRV_MAX_CMD_SIZE,
+					 uPower2QueueSize + PVRSRV_MAX_CMD_SIZE,
 					 &psQueueInfo->pvLinQueueKM, &hMemBlock,
 					 "Command Queue");
 	if (eError != PVRSRV_OK)
@@ -423,10 +461,19 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVCreateCommandQueueKM(IMG_SIZE_T ui32QueueSize,
 	psQueueInfo->pvLinQueueUM = psQueueInfo->pvLinQueueKM;
 
 	/* Sanity check: Should be zeroed by OSMemSet */
-	PVR_ASSERT(psQueueInfo->ui32ReadOffset == 0);
-	PVR_ASSERT(psQueueInfo->ui32WriteOffset == 0);
+	PVR_ASSERT(psQueueInfo->uReadOffset == 0);
+	PVR_ASSERT(psQueueInfo->uWriteOffset == 0);
 
-	psQueueInfo->ui32QueueSize = ui32Power2QueueSize;
+	psQueueInfo->uQueueSize = uPower2QueueSize;
+
+#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
+	psQueueInfo->pvTimeline = sw_sync_timeline_create("pvr_queue_proc");
+	if(psQueueInfo->pvTimeline == IMG_NULL)
+	{
+		PVR_DPF((PVR_DBG_ERROR,"PVRSRVCreateCommandQueueKM: sw_sync_timeline_create() failed"));
+		goto ErrorExit;
+	}
+#endif
 
 	/* if this is the first q, create a lock resource for the q list */
 	if (psSysData->psQueueList == IMG_NULL)
@@ -439,8 +486,13 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVCreateCommandQueueKM(IMG_SIZE_T ui32QueueSize,
 	}
 
 	/* Ensure we don't corrupt queue list, by blocking access */
+#if !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__)
+	eError = OSLockResourceAndBlockMISR(&psSysData->sQProcessResource,
+							KERNEL_ID);
+#else /* !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__) */
 	eError = OSLockResource(&psSysData->sQProcessResource,
 							KERNEL_ID);
+#endif /* !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__) */
 	if (eError != PVRSRV_OK)
 	{
 		goto ErrorExit;
@@ -449,13 +501,19 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVCreateCommandQueueKM(IMG_SIZE_T ui32QueueSize,
 	psQueueInfo->psNextKM = psSysData->psQueueList;
 	psSysData->psQueueList = psQueueInfo;
 
+#if !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__)
+	eError = OSUnlockResourceAndUnblockMISR(&psSysData->sQProcessResource, KERNEL_ID);
+#else /* !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__) */
 	eError = OSUnlockResource(&psSysData->sQProcessResource, KERNEL_ID);
+#endif /* !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__) */
 	if (eError != PVRSRV_OK)
 	{
 		goto ErrorExit;
 	}
 
 	*ppsQueueInfo = psQueueInfo;
+
+	ui32NoOfSwapchainCreated++;
 
 	return PVRSRV_OK;
 
@@ -466,7 +524,7 @@ ErrorExit:
 		if(psQueueInfo->pvLinQueueKM)
 		{
 			OSFreeMem(PVRSRV_OS_NON_PAGEABLE_HEAP,
-						psQueueInfo->ui32QueueSize,
+						psQueueInfo->uQueueSize,
 						psQueueInfo->pvLinQueueKM,
 						psQueueInfo->hMemBlock[1]);
 			psQueueInfo->pvLinQueueKM = IMG_NULL;
@@ -510,7 +568,7 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVDestroyCommandQueueKM(PVRSRV_QUEUE_INFO *psQueue
 	/* PRQA S 3415,4109 1 */ /* macro format critical - leave alone */
 	LOOP_UNTIL_TIMEOUT(MAX_HW_TIME_US)
 	{
-		if(psQueueInfo->ui32ReadOffset == psQueueInfo->ui32WriteOffset)
+		if(psQueueInfo->uReadOffset == psQueueInfo->uWriteOffset)
 		{
 			bTimeout = IMG_FALSE;
 			break;
@@ -528,19 +586,30 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVDestroyCommandQueueKM(PVRSRV_QUEUE_INFO *psQueue
 	}
 
 	/* Ensure we don't corrupt queue list, by blocking access */
+#if !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__)
+	eError = OSLockResourceAndBlockMISR(&psSysData->sQProcessResource,
+								KERNEL_ID);
+#else /* !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__) */
 	eError = OSLockResource(&psSysData->sQProcessResource,
 								KERNEL_ID);
+#endif /* !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__) */
 	if (eError != PVRSRV_OK)
 	{
 		goto ErrorExit;
 	}
+
+	ui32NoOfSwapchainCreated--;
+
+#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
+	sync_timeline_destroy(psQueueInfo->pvTimeline);
+#endif
 
 	if(psQueue == psQueueInfo)
 	{
 		psSysData->psQueueList = psQueueInfo->psNextKM;
 
 		OSFreeMem(PVRSRV_OS_NON_PAGEABLE_HEAP,
-					NearestPower2(psQueueInfo->ui32QueueSize) + PVRSRV_MAX_CMD_SIZE,
+					NearestPower2(psQueueInfo->uQueueSize) + PVRSRV_MAX_CMD_SIZE,
 					psQueueInfo->pvLinQueueKM,
 					psQueueInfo->hMemBlock[1]);
 		psQueueInfo->pvLinQueueKM = IMG_NULL;
@@ -560,7 +629,7 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVDestroyCommandQueueKM(PVRSRV_QUEUE_INFO *psQueue
 				psQueue->psNextKM = psQueueInfo->psNextKM;
 
 				OSFreeMem(PVRSRV_OS_NON_PAGEABLE_HEAP,
-							psQueueInfo->ui32QueueSize,
+							psQueueInfo->uQueueSize,
 							psQueueInfo->pvLinQueueKM,
 							psQueueInfo->hMemBlock[1]);
 				psQueueInfo->pvLinQueueKM = IMG_NULL;
@@ -577,7 +646,11 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVDestroyCommandQueueKM(PVRSRV_QUEUE_INFO *psQueue
 
 		if(!psQueue)
 		{
+#if !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__)
+			eError = OSUnlockResourceAndUnblockMISR(&psSysData->sQProcessResource, KERNEL_ID);
+#else /* !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__) */
 			eError = OSUnlockResource(&psSysData->sQProcessResource, KERNEL_ID);
+#endif /* !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__) */
 			if (eError != PVRSRV_OK)
 			{
 				goto ErrorExit;
@@ -588,7 +661,11 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVDestroyCommandQueueKM(PVRSRV_QUEUE_INFO *psQueue
 	}
 
 	/*  unlock the Q list lock resource */
+#if !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__)
+	eError = OSUnlockResourceAndUnblockMISR(&psSysData->sQProcessResource, KERNEL_ID);
+#else /* !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__) */
 	eError = OSUnlockResource(&psSysData->sQProcessResource, KERNEL_ID);
+#endif /* !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__) */
 	if (eError != PVRSRV_OK)
 	{
 		goto ErrorExit;
@@ -626,40 +703,26 @@ ErrorExit:
 *****************************************************************************/
 IMG_EXPORT
 PVRSRV_ERROR IMG_CALLCONV PVRSRVGetQueueSpaceKM(PVRSRV_QUEUE_INFO *psQueue,
-												IMG_SIZE_T ui32ParamSize,
+												IMG_SIZE_T uParamSize,
 												IMG_VOID **ppvSpace)
 {
-	IMG_BOOL bTimeout = IMG_TRUE;
-
 	/*	round to 4byte units */
-	ui32ParamSize =  (ui32ParamSize+3) & 0xFFFFFFFC;
+	uParamSize =  (uParamSize + 3) & 0xFFFFFFFC;
 
-	if (ui32ParamSize > PVRSRV_MAX_CMD_SIZE)
+	if (uParamSize > PVRSRV_MAX_CMD_SIZE)
 	{
 		PVR_DPF((PVR_DBG_WARNING,"PVRSRVGetQueueSpace: max command size is %d bytes", PVRSRV_MAX_CMD_SIZE));
 		return PVRSRV_ERROR_CMD_TOO_BIG;
 	}
 
-	/* PRQA S 3415,4109 1 */ /* macro format critical - leave alone */
-	LOOP_UNTIL_TIMEOUT(MAX_HW_TIME_US)
+	if (GET_SPACE_IN_CMDQ(psQueue) > uParamSize)
 	{
-		if (GET_SPACE_IN_CMDQ(psQueue) > ui32ParamSize)
-		{
-			bTimeout = IMG_FALSE;
-			break;
-		}
-		OSSleepms(1);
-	} END_LOOP_UNTIL_TIMEOUT();
-
-	if (bTimeout == IMG_TRUE)
-	{
-		*ppvSpace = IMG_NULL;
-
-		return PVRSRV_ERROR_CANNOT_GET_QUEUE_SPACE;
+		*ppvSpace = (IMG_VOID *)((IMG_UINTPTR_T)psQueue->pvLinQueueUM + psQueue->uWriteOffset);
 	}
 	else
 	{
-		*ppvSpace = (IMG_VOID *)((IMG_UINTPTR_T)psQueue->pvLinQueueUM + psQueue->ui32WriteOffset);
+		*ppvSpace = IMG_NULL;
+		return PVRSRV_ERROR_CANNOT_GET_QUEUE_SPACE;
 	}
 
 	return PVRSRV_OK;
@@ -695,16 +758,21 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVInsertCommandKM(PVRSRV_QUEUE_INFO	*psQueue,
 												PVRSRV_KERNEL_SYNC_INFO	*apsDstSync[],
 												IMG_UINT32			ui32SrcSyncCount,
 												PVRSRV_KERNEL_SYNC_INFO	*apsSrcSync[],
-												IMG_SIZE_T			ui32DataByteSize,
+												IMG_SIZE_T			uDataByteSize,
 												PFN_QUEUE_COMMAND_COMPLETE pfnCommandComplete,
-												IMG_HANDLE			hCallbackData)
+												IMG_HANDLE			hCallbackData,
+												IMG_HANDLE			*phFence)
 {
 	PVRSRV_ERROR 	eError;
 	PVRSRV_COMMAND	*psCommand;
-	IMG_SIZE_T		ui32CommandSize;
+	IMG_SIZE_T		uCommandSize;
 	IMG_UINT32		i;
 	SYS_DATA *psSysData;
 	DEVICE_COMMAND_DATA *psDeviceCommandData;
+
+#if !defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
+	PVR_UNREFERENCED_PARAMETER(phFence);
+#endif
 
 	/* Check that we've got enough space in our command complete data for this command */
 	SysAcquireData(&psSysData);
@@ -718,24 +786,63 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVInsertCommandKM(PVRSRV_QUEUE_INFO	*psQueue,
 	}
 
 	/* Round up to nearest 32 bit size so pointer arithmetic works */
-	ui32DataByteSize = (ui32DataByteSize + 3UL) & ~3UL;
+	uDataByteSize = (uDataByteSize + 3UL) & ~3UL;
 
 	/*  calc. command size */
-	ui32CommandSize = sizeof(PVRSRV_COMMAND)
+	uCommandSize = sizeof(PVRSRV_COMMAND)
 					+ ((ui32DstSyncCount + ui32SrcSyncCount) * sizeof(PVRSRV_SYNC_OBJECT))
-					+ ui32DataByteSize;
+					+ uDataByteSize;
 
 	/* wait for space in queue */
-	eError = PVRSRVGetQueueSpaceKM (psQueue, ui32CommandSize, (IMG_VOID**)&psCommand);
+	eError = PVRSRVGetQueueSpaceKM (psQueue, uCommandSize, (IMG_VOID**)&psCommand);
 	if(eError != PVRSRV_OK)
 	{
 		return eError;
 	}
 
+#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
+	if(phFence != IMG_NULL)
+	{
+		struct sync_fence *psRetireFence, *psCleanupFence;
+
+		/* New command? New timeline target */
+		psQueue->ui32FenceValue++;
+
+		psRetireFence = AllocQueueFence(psQueue->pvTimeline, psQueue->ui32FenceValue, "pvr_queue_retire");
+		if(!psRetireFence)
+		{
+			PVR_DPF((PVR_DBG_ERROR, "PVRSRVInsertCommandKM: sync_fence_create() failed"));
+			psQueue->ui32FenceValue--;
+			return PVRSRV_ERROR_INVALID_PARAMS;
+		}
+
+		/* This similar to the retire fence, except that it is destroyed
+		 * when a display command completes, rather than at the whim of
+		 * userspace. It is used to keep the timeline alive.
+		 */
+		psCleanupFence = AllocQueueFence(psQueue->pvTimeline, psQueue->ui32FenceValue, "pvr_queue_cleanup");
+		if(!psCleanupFence)
+		{
+			PVR_DPF((PVR_DBG_ERROR, "PVRSRVInsertCommandKM: sync_fence_create() #2 failed"));
+			sync_fence_put(psRetireFence);
+			psQueue->ui32FenceValue--;
+			return PVRSRV_ERROR_INVALID_PARAMS;
+		}
+
+		psCommand->pvCleanupFence = psCleanupFence;
+		psCommand->pvTimeline = psQueue->pvTimeline;
+		*phFence = psRetireFence;
+	}
+	else
+	{
+		psCommand->pvTimeline = IMG_NULL;
+	}
+#endif /* defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC) */
+
 	psCommand->ui32ProcessID	= OSGetCurrentProcessIDKM();
 
 	/* setup the command */
-	psCommand->uCmdSize		= ui32CommandSize; /* this may change if cmd shrinks */
+	psCommand->uCmdSize			= uCommandSize; /* this may change if cmd shrinks */
 	psCommand->ui32DevIndex 	= ui32DevIndex;
 	psCommand->CommandType 		= CommandType;
 	psCommand->ui32DstSyncCount	= ui32DstSyncCount;
@@ -752,7 +859,7 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVInsertCommandKM(PVRSRV_QUEUE_INFO	*psQueue,
 								+ (ui32SrcSyncCount * sizeof(PVRSRV_SYNC_OBJECT)));
 /* PRQA L:END_PTR_ASSIGNMENTS */
 
-	psCommand->uDataSize		= ui32DataByteSize;/* this may change if cmd shrinks */
+	psCommand->uDataSize		= uDataByteSize;/* this may change if cmd shrinks */
 
 	psCommand->pfnCommandComplete = pfnCommandComplete;
 	psCommand->hCallbackData = hCallbackData;
@@ -829,18 +936,18 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVSubmitCommandKM(PVRSRV_QUEUE_INFO *psQueue,
 	if (psCommand->ui32DstSyncCount > 0)
 	{
 		psCommand->psDstSync = (PVRSRV_SYNC_OBJECT*)(((IMG_UINTPTR_T)psQueue->pvLinQueueKM)
-									+ psQueue->ui32WriteOffset + sizeof(PVRSRV_COMMAND));
+									+ psQueue->uWriteOffset + sizeof(PVRSRV_COMMAND));
 	}
 
 	if (psCommand->ui32SrcSyncCount > 0)
 	{
 		psCommand->psSrcSync = (PVRSRV_SYNC_OBJECT*)(((IMG_UINTPTR_T)psQueue->pvLinQueueKM)
-									+ psQueue->ui32WriteOffset + sizeof(PVRSRV_COMMAND)
+									+ psQueue->uWriteOffset + sizeof(PVRSRV_COMMAND)
 									+ (psCommand->ui32DstSyncCount * sizeof(PVRSRV_SYNC_OBJECT)));
 	}
 
 	psCommand->pvData = (PVRSRV_SYNC_OBJECT*)(((IMG_UINTPTR_T)psQueue->pvLinQueueKM)
-									+ psQueue->ui32WriteOffset + sizeof(PVRSRV_COMMAND)
+									+ psQueue->uWriteOffset + sizeof(PVRSRV_COMMAND)
 									+ (psCommand->ui32DstSyncCount * sizeof(PVRSRV_SYNC_OBJECT))
 									+ (psCommand->ui32SrcSyncCount * sizeof(PVRSRV_SYNC_OBJECT)));
 
@@ -897,8 +1004,8 @@ PVRSRV_ERROR CheckIfSyncIsQueued(PVRSRV_SYNC_OBJECT *psSync, COMMAND_COMPLETE_DA
 					if (SYNCOPS_STALE(ui32WriteOpsComplete, psSync->ui32WriteOpsPending))
 					{
 						PVR_DPF((PVR_DBG_WARNING,
-								"CheckIfSyncIsQueued: Stale syncops psSyncData:0x%x ui32WriteOpsComplete:0x%x ui32WriteOpsPending:0x%x",
-								(IMG_UINTPTR_T)psSyncData, ui32WriteOpsComplete, psSync->ui32WriteOpsPending));
+								"CheckIfSyncIsQueued: Stale syncops psSyncData:0x%p ui32WriteOpsComplete:0x%x ui32WriteOpsPending:0x%x",
+								psSyncData, ui32WriteOpsComplete, psSync->ui32WriteOpsPending));
 						return PVRSRV_OK;
 					}
 				}
@@ -979,8 +1086,8 @@ PVRSRV_ERROR PVRSRVProcessCommand(SYS_DATA			*psSysData,
 				SYNCOPS_STALE(ui32ReadOpsComplete, psWalkerObj->ui32ReadOps2Pending))
 			{
 				PVR_DPF((PVR_DBG_WARNING,
-						"PVRSRVProcessCommand: Stale syncops psSyncData:0x%x ui32WriteOpsComplete:0x%x ui32WriteOpsPending:0x%x",
-						(IMG_UINTPTR_T)psSyncData, ui32WriteOpsComplete, psWalkerObj->ui32WriteOpsPending));
+						"PVRSRVProcessCommand: Stale syncops psSyncData:0x%p ui32WriteOpsComplete:0x%x ui32WriteOpsPending:0x%x",
+						psSyncData, ui32WriteOpsComplete, psWalkerObj->ui32WriteOpsPending));
 			}
 
 			if (!bFlush ||
@@ -1046,6 +1153,11 @@ PVRSRV_ERROR PVRSRVProcessCommand(SYS_DATA			*psSysData,
 
 	psCmdCompleteData->pfnCommandComplete = psCommand->pfnCommandComplete;
 	psCmdCompleteData->hCallbackData = psCommand->hCallbackData;
+
+#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
+	psCmdCompleteData->pvCleanupFence = psCommand->pvCleanupFence;
+	psCmdCompleteData->pvTimeline = psCommand->pvTimeline;
+#endif
 
 	/* copy dst updates over */
 	psCmdCompleteData->ui32SrcSyncCount = psCommand->ui32SrcSyncCount;
@@ -1131,7 +1243,17 @@ PVRSRV_ERROR PVRSRVProcessQueues(IMG_BOOL	bFlush)
 	/* Ensure we don't corrupt queue list, by blocking access. This is required for OSs where
 	    multiple ISR threads may exist simultaneously (eg WinXP DPC routines)
 	*/
+	if (psSysData->psQueueList == IMG_NULL)
+	{
+		PVR_DPF((PVR_DBG_MESSAGE,"No Queues installed - cannot process commands"));
+		return PVRSRV_OK;
+	}
+
+#if !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__)
+	while (OSLockResourceAndBlockMISR(&psSysData->sQProcessResource, ISR_ID) != PVRSRV_OK)
+#else /* !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__) */
 	while (OSLockResource(&psSysData->sQProcessResource, ISR_ID) != PVRSRV_OK)
+#endif /* !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__) */
 	{
 		OSWaitus(1);
 	};
@@ -1150,9 +1272,9 @@ PVRSRV_ERROR PVRSRVProcessQueues(IMG_BOOL	bFlush)
 
 	while (psQueue)
 	{
-		while (psQueue->ui32ReadOffset != psQueue->ui32WriteOffset)
+		while (psQueue->uReadOffset != psQueue->uWriteOffset)
 		{
-			psCommand = (PVRSRV_COMMAND*)((IMG_UINTPTR_T)psQueue->pvLinQueueKM + psQueue->ui32ReadOffset);
+			psCommand = (PVRSRV_COMMAND*)((IMG_UINTPTR_T)psQueue->pvLinQueueKM + psQueue->uReadOffset);
 
 			if (PVRSRVProcessCommand(psSysData, psCommand, bFlush) == PVRSRV_OK)
 			{
@@ -1175,47 +1297,14 @@ PVRSRV_ERROR PVRSRVProcessQueues(IMG_BOOL	bFlush)
 	List_PVRSRV_DEVICE_NODE_ForEach(psSysData->psDeviceNodeList,
 									&PVRSRVProcessQueues_ForEachCb);
 
+#if !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__)
+	OSUnlockResourceAndUnblockMISR(&psSysData->sQProcessResource, ISR_ID);
+#else /* !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__) */
 	OSUnlockResource(&psSysData->sQProcessResource, ISR_ID);
+#endif /* !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__) */
 
 	return PVRSRV_OK;
 }
-
-#if defined(SUPPORT_CUSTOM_SWAP_OPERATIONS)
-/*!
-******************************************************************************
-
- @Function	PVRSRVCommandCompleteKM
-
- @Description	Updates non-private command complete sync objects
-
- @Input		hCmdCookie : command cookie
- @Input		bScheduleMISR : obsolete parameter
-
- @Return	PVRSRV_ERROR
-
-******************************************************************************/
-IMG_INTERNAL
-IMG_VOID PVRSRVFreeCommandCompletePacketKM(IMG_HANDLE	hCmdCookie,
-										   IMG_BOOL		bScheduleMISR)
-{
-	COMMAND_COMPLETE_DATA	*psCmdCompleteData = (COMMAND_COMPLETE_DATA *)hCmdCookie;
-	SYS_DATA				*psSysData;
-
-	PVR_UNREFERENCED_PARAMETER(bScheduleMISR);
-
-	SysAcquireData(&psSysData);
-
-	/* free command complete storage */
-	psCmdCompleteData->bInUse = IMG_FALSE;
-
-	/* FIXME: This may cause unrelated devices to be woken up. */
-	PVRSRVScheduleDeviceCallbacks();
-
-	/* the MISR is always scheduled, regardless of bScheduleMISR */
-	OSScheduleMISR(psSysData);
-}
-
-#endif /* (SUPPORT_CUSTOM_SWAP_OPERATIONS) */
 
 
 /*!
@@ -1288,6 +1377,14 @@ IMG_VOID PVRSRVCommandCompleteKM(IMG_HANDLE	hCmdCookie,
 		psCmdCompleteData->pfnCommandComplete(psCmdCompleteData->hCallbackData);
 	}
 
+#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
+	if(psCmdCompleteData->pvTimeline)
+	{
+		sw_sync_timeline_inc(psCmdCompleteData->pvTimeline, 1);
+		sync_fence_put(psCmdCompleteData->pvCleanupFence);
+	}
+#endif /* defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC) */
+
 	/* free command complete storage */
 	psCmdCompleteData->bInUse = IMG_FALSE;
 
@@ -1299,8 +1396,6 @@ IMG_VOID PVRSRVCommandCompleteKM(IMG_HANDLE	hCmdCookie,
 		OSScheduleMISR(psSysData);
 	}
 }
-
-
 
 
 /*!

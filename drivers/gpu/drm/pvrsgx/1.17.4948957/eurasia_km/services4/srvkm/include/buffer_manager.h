@@ -86,17 +86,6 @@ struct _BM_MAPPING_
     IMG_HANDLE          hOSMemHandle;
 	IMG_UINT32			ui32Flags;
 
-	/* possibly this could be tracked in ui32Flags, but to be
-	 * less intrusive for now I'm keeping it a separate variable
-	 */
-	IMG_BOOL			bUnmapped;
-
-	/* need to track the original required alignment to make sure
-	 * that an unmapped buffer which is later remapped to device
-	 * is remapped with the original alignment restrictions.
-	 */
-	IMG_UINT32			ui32DevVAddrAlignment;
-
 	/* Sparse mapping data */
 	IMG_UINT32			ui32ChunkSize;
 	IMG_UINT32			ui32NumVirtChunks;
@@ -346,8 +335,8 @@ BM_Alloc (IMG_HANDLE			hDevMemHeap,
  */
 IMG_BOOL
 BM_Wrap (	IMG_HANDLE hDevMemHeap,
-		    IMG_SIZE_T ui32Size,
-			IMG_SIZE_T ui32Offset,
+		    IMG_SIZE_T uSize,
+			IMG_SIZE_T uOffset,
 			IMG_BOOL bPhysContig,
 			IMG_SYS_PHYADDR *psSysAddr,
 			IMG_VOID *pvCPUVAddr,
@@ -367,13 +356,6 @@ BM_Wrap (	IMG_HANDLE hDevMemHeap,
 IMG_VOID
 BM_Free (BM_HANDLE hBuf,
 		IMG_UINT32 ui32Flags);
-
-
-
-#if defined(SUPPORT_DRI_DRM_EXTERNAL)
-IMG_VOID BM_SetGEM(BM_HANDLE hBuf, IMG_HANDLE buf);
-IMG_HANDLE BM_GetGEM(BM_HANDLE hBuf);
-#endif /* SUPPORT_DRI_DRM_EXTERNAL */
 
 
 /**
@@ -428,14 +410,6 @@ BM_HandleToSysPaddr (BM_HANDLE hBuf);
  */
 IMG_HANDLE
 BM_HandleToOSMemHandle (BM_HANDLE hBuf);
-
-
-IMG_BOOL
-BM_RemapToDev(BM_HANDLE hBuf);
-
-IMG_BOOL
-BM_UnmapFromDev(BM_HANDLE hBuf);
-
 
 /**
  *  @Function   BM_GetPhysPageAddr
@@ -633,6 +607,7 @@ IMG_VOID _BM_XProcIndexReleaseDebug(const IMG_CHAR *pszFile, IMG_INT iLine, IMG_
 #else
 IMG_VOID _BM_XProcIndexAcquire(IMG_UINT32 ui32Index);
 IMG_VOID _BM_XProcIndexRelease(IMG_UINT32 ui32Index);
+
 
 #define BM_XProcIndexAcquire(x) \
 	_BM_XProcIndexAcquire( x)

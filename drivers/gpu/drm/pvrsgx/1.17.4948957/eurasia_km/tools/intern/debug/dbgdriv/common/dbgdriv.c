@@ -934,7 +934,7 @@ static IMG_UINT32 WriteExpandingBuffer(PDBG_STREAM psStream,IMG_UINT8 * pui8InBu
 	*/
 	if ((psStream->psCtrl->ui32OutMode & DEBUG_OUTMODE_STREAMENABLE) == 0)
 	{
-		PVR_DPF((PVR_DBG_ERROR, "WriteExpandingBuffer: buffer %x is disabled", (IMG_UINTPTR_T) psStream));
+		PVR_DPF((PVR_DBG_ERROR, "WriteExpandingBuffer: buffer %p is disabled", psStream));
 		return(0);
 	}
 
@@ -949,7 +949,7 @@ static IMG_UINT32 WriteExpandingBuffer(PDBG_STREAM psStream,IMG_UINT8 * pui8InBu
 		*/
 		if (ui32Space < 32)
 		{
-			PVR_DPF((PVR_DBG_ERROR, "WriteExpandingBuffer: buffer %x is full and isn't expandable", (IMG_UINTPTR_T) psStream));
+			PVR_DPF((PVR_DBG_ERROR, "WriteExpandingBuffer: buffer %p is full and isn't expandable", psStream));
 			return(0);
 		}
 	}
@@ -986,7 +986,7 @@ static IMG_UINT32 WriteExpandingBuffer(PDBG_STREAM psStream,IMG_UINT8 * pui8InBu
 					else
 					{
 						/* out of memory */
-						PVR_DPF((PVR_DBG_ERROR, "WriteExpandingBuffer: Unable to expand %x. Out of memory.", (IMG_UINTPTR_T) psStream));
+						PVR_DPF((PVR_DBG_ERROR, "WriteExpandingBuffer: Unable to expand %p. Out of memory.", psStream));
 						InvalidateAllStreams();
 						return (0xFFFFFFFFUL);
 					}
@@ -1815,13 +1815,13 @@ IMG_UINT32 IMG_CALLCONV DBGDrivWrite(PDBG_STREAM psMainStream,IMG_UINT8 * pui8In
 	*/
 	if ((psStream->psCtrl->ui32OutMode & DEBUG_OUTMODE_STREAMENABLE) == 0)
 	{
-		PVR_DPF((PVR_DBG_ERROR, "DBGDrivWrite: buffer %x is disabled", (IMG_UINTPTR_T) psStream));
+		PVR_DPF((PVR_DBG_ERROR, "DBGDrivWrite: buffer %p is disabled", psStream));
 		return(0);
 	}
 
 	if (ui32Space < 8)
 	{
-		PVR_DPF((PVR_DBG_ERROR, "DBGDrivWrite: buffer %x is full", (IMG_UINTPTR_T) psStream));
+		PVR_DPF((PVR_DBG_ERROR, "DBGDrivWrite: buffer %p is full", psStream));
 		return(0);
 	}
 
@@ -2002,7 +2002,7 @@ IMG_UINT32 IMG_CALLCONV DBGDrivRead(PDBG_STREAM psMainStream, IMG_BOOL bReadInit
 	*/
 	if (!StreamValidForRead(psMainStream))
 	{
-		PVR_DPF((PVR_DBG_ERROR, "DBGDrivRead: buffer %x is invalid", (IMG_UINTPTR_T) psMainStream));
+		PVR_DPF((PVR_DBG_ERROR, "DBGDrivRead: buffer %p is invalid", psMainStream));
 		return(0);
 	}
 

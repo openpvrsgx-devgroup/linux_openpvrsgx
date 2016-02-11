@@ -79,6 +79,7 @@ help:
 	@echo '  make, make build       Build all components of the build'
 	@echo '  make components        Build only the user-mode components'
 	@echo '  make kbuild            Build only the kernel-mode components'
+	@echo '  make docs              Build the build's supporting documentation'
 	@echo '  make MODULE            Build the module MODULE and all of its dependencies'
 	@echo '  make eurasiacon/binary2_.../target/libsomething.so'
 	@echo '                         Build a particular file (including intermediates)'
@@ -104,9 +105,11 @@ ifneq ($(filter help,$(D)),)
 empty :=
 space := $(empty) $(empty) 
 $(info Debug options)
-$(info $(space)D=modules                  dump module info)
-$(info $(space)D=freeze-config            prevent config changes)
-$(info $(space)D=config-changes           dump diffs when config changes)
-$(info Options may be combined: make D=freeze-config,config-changes)
+$(info $(space)D=modules            dump module info)
+$(info $(space)D=config             dump all config options + type and origin)
+$(info $(space)D=freeze-config      prevent config changes)
+$(info $(space)D=config-changes     dump diffs when config changes)
+$(info $(space)D=nobuild            stop before running the main build)
+$(info Options can be combined: make D=freeze-config,config-changes)
 $(error D=help given)
 endif

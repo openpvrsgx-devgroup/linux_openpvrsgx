@@ -51,16 +51,17 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <asm/io.h>
 #include <asm/uaccess.h>
 #include <linux/kernel.h>
+#include <linux/sched.h>
 #include <linux/hardirq.h>
 #include <linux/module.h>
 #include <linux/spinlock.h>
 #include <linux/string.h>			// strncpy, strlen
 #include <stdarg.h>
+#include <linux/seq_file.h>
 #include "img_types.h"
 #include "servicesext.h"
 #include "pvr_debug.h"
 #include "srvkm.h"
-#include "proc.h"
 #include "mutex.h"
 #include "linkage.h"
 #include "pvr_uaccess.h"
@@ -69,6 +70,104 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define	PVR_DEBUG_ALWAYS_USE_SPINLOCK
 #endif
 
+#if defined(PVRSRV_NEED_PVR_DPF)
+
+/******** BUFFERED LOG MESSAGES ********/
+
+/* Because we don't want to have to handle CCB wrapping, each buffered
+ * message is rounded up to PVRSRV_DEBUG_CCB_MESG_MAX bytes. This means
+ * there is the same fixed number of messages that can be stored,
+ * regardless of message length.
+ */
+
+#if defined(PVRSRV_DEBUG_CCB_MAX)
+
+#define PVRSRV_DEBUG_CCB_MESG_MAX	PVR_MAX_DEBUG_MESSAGE_LEN
+
+#include <linux/syscalls.h>
+#include <linux/time.h>
+
+typedef struct
+{
+	const IMG_CHAR *pszFile;
+	IMG_INT iLine;
+	IMG_UINT32 ui32TID;
+	IMG_CHAR pcMesg[PVRSRV_DEBUG_CCB_MESG_MAX];
+	struct timeval sTimeVal;
+}
+PVRSRV_DEBUG_CCB;
+
+static PVRSRV_DEBUG_CCB gsDebugCCB[PVRSRV_DEBUG_CCB_MAX] = { { 0 } };
+
+static IMG_UINT giOffset = 0;
+
+static PVRSRV_LINUX_MUTEX gsDebugCCBMutex;
+
+static void
+AddToBufferCCB(const IMG_CHAR *pszFileName, IMG_UINT32 ui32Line,
+			   const IMG_CHAR *szBuffer)
+{
+	LinuxLockMutex(&gsDebugCCBMutex);
+
+	gsDebugCCB[giOffset].pszFile = pszFileName;
+	gsDebugCCB[giOffset].iLine   = ui32Line;
+	gsDebugCCB[giOffset].ui32TID = current->tgid;
+
+	do_gettimeofday(&gsDebugCCB[giOffset].sTimeVal);
+
+	strncpy(gsDebugCCB[giOffset].pcMesg, szBuffer, PVRSRV_DEBUG_CCB_MESG_MAX - 1);
+	gsDebugCCB[giOffset].pcMesg[PVRSRV_DEBUG_CCB_MESG_MAX - 1] = 0;
+
+	giOffset = (giOffset + 1) % PVRSRV_DEBUG_CCB_MAX;
+
+	LinuxUnLockMutex(&gsDebugCCBMutex);
+}
+
+IMG_EXPORT IMG_VOID PVRSRVDebugPrintfDumpCCB(void)
+{
+	int i;
+
+	LinuxLockMutex(&gsDebugCCBMutex);
+	
+	for(i = 0; i < PVRSRV_DEBUG_CCB_MAX; i++)
+	{
+		PVRSRV_DEBUG_CCB *psDebugCCBEntry =
+			&gsDebugCCB[(giOffset + i) % PVRSRV_DEBUG_CCB_MAX];
+
+		/* Early on, we won't have PVRSRV_DEBUG_CCB_MAX messages */
+		if(!psDebugCCBEntry->pszFile)
+			continue;
+
+		printk("%s:%d:\t[%5ld.%6ld] %s\n",
+			   psDebugCCBEntry->pszFile,
+			   psDebugCCBEntry->iLine,
+			   (long)psDebugCCBEntry->sTimeVal.tv_sec,
+			   (long)psDebugCCBEntry->sTimeVal.tv_usec,
+			   psDebugCCBEntry->pcMesg);
+	}
+
+	LinuxUnLockMutex(&gsDebugCCBMutex);
+}
+
+#else /* defined(PVRSRV_DEBUG_CCB_MAX) */
+static INLINE void
+AddToBufferCCB(const IMG_CHAR *pszFileName, IMG_UINT32 ui32Line,
+               const IMG_CHAR *szBuffer)
+{
+	(void)pszFileName;
+	(void)szBuffer;
+	(void)ui32Line;
+}
+
+IMG_EXPORT IMG_VOID PVRSRVDebugPrintfDumpCCB(void)
+{
+	/* Not available */
+}
+
+#endif /* defined(PVRSRV_DEBUG_CCB_MAX) */
+
+#endif /* defined(PVRSRV_NEED_PVR_DPF) */
+
 static IMG_BOOL VBAppend(IMG_CHAR *pszBuf, IMG_UINT32 ui32BufSiz,
 						 const IMG_CHAR* pszFormat, va_list VArgs)
 						 IMG_FORMAT_PRINTF(3, 0);
@@ -76,15 +175,9 @@ static IMG_BOOL VBAppend(IMG_CHAR *pszBuf, IMG_UINT32 ui32BufSiz,
 
 #if defined(PVRSRV_NEED_PVR_DPF)
 
-#define PVR_MAX_FILEPATH_LEN 256
-
-static IMG_BOOL BAppend(IMG_CHAR *pszBuf, IMG_UINT32 ui32BufSiz,
-						const IMG_CHAR *pszFormat, ...)
-						IMG_FORMAT_PRINTF(3, 4);
-
 /* NOTE: Must NOT be static! Used in module.c.. */
 IMG_UINT32 gPVRDebugLevel =
-	(DBGPRIV_FATAL | DBGPRIV_ERROR | DBGPRIV_WARNING);
+	(DBGPRIV_FATAL | DBGPRIV_ERROR | DBGPRIV_WARNING | DBGPRIV_BUFFERED);
 
 #endif /* defined(PVRSRV_NEED_PVR_DPF) || defined(PVRSRV_NEED_PVR_TRACE) */
 
@@ -128,7 +221,7 @@ static inline void GetBufferLock(unsigned long *pulLockFlags)
 #if !defined(PVR_DEBUG_ALWAYS_USE_SPINLOCK)
 	else
 	{
-		LinuxLockMutex(&gsDebugMutexNonIRQ);
+		LinuxLockMutexNested(&gsDebugMutexNonIRQ, PVRSRV_LOCK_CLASS_PVR_DEBUG);
 	}
 #endif
 }
@@ -194,7 +287,10 @@ static IMG_BOOL VBAppend(IMG_CHAR *pszBuf, IMG_UINT32 ui32BufSiz, const IMG_CHAR
 IMG_VOID PVRDPFInit(IMG_VOID)
 {
 #if !defined(PVR_DEBUG_ALWAYS_USE_SPINLOCK)
-    LinuxInitMutex(&gsDebugMutexNonIRQ);
+	LinuxInitMutex(&gsDebugMutexNonIRQ);
+#endif
+#if defined(PVRSRV_DEBUG_CCB_MAX)
+	LinuxInitMutex(&gsDebugCCBMutex);
 #endif
 }
 
@@ -231,7 +327,6 @@ IMG_VOID PVRSRVReleasePrintf(const IMG_CHAR *pszFormat, ...)
 
 	ReleaseBufferLock(ulLockFlags);
 	va_end(vaArgs);
-
 }
 
 #if defined(PVRSRV_NEED_PVR_TRACE)
@@ -277,25 +372,6 @@ IMG_VOID PVRSRVTrace(const IMG_CHAR* pszFormat, ...)
 
 #if defined(PVRSRV_NEED_PVR_DPF)
 
-/*
- * Append a string to a buffer using formatted conversion.
- * The function takes a variable number of arguments, calling
- * VBAppend to do the actual work.
- */
-static IMG_BOOL BAppend(IMG_CHAR *pszBuf, IMG_UINT32 ui32BufSiz, const IMG_CHAR *pszFormat, ...)
-{
-	va_list VArgs;
-	IMG_BOOL bTrunc;
-
-	va_start (VArgs, pszFormat);
-
-	bTrunc = VBAppend(pszBuf, ui32BufSiz, pszFormat, VArgs);
-
-	va_end (VArgs);
-
-	return bTrunc;
-}
-
 /*!
 ******************************************************************************
 	@Function    PVRSRVDebugPrintf
@@ -317,8 +393,6 @@ IMG_VOID PVRSRVDebugPrintf	(
 {
 	IMG_BOOL bTrace;
 	const IMG_CHAR *pszFileName = pszFullFileName;
-	IMG_CHAR *pszLeafName;
-
 
 	bTrace = (IMG_BOOL)(ui32DebugLevel & DBGPRIV_CALLTRACE) ? IMG_TRUE : IMG_FALSE;
 
@@ -365,9 +439,14 @@ IMG_VOID PVRSRVDebugPrintf	(
 					strncpy (pszBuf, "PVR_K:(Verbose): ", (ui32BufSiz -1));
 					break;
 				}
+				case DBGPRIV_BUFFERED:
+				{
+					strncpy (pszBuf, "PVR_K: ", (ui32BufSiz -1));
+					break;
+				}
 				default:
 				{
-					strncpy (pszBuf, "PVR_K:(Unknown message level)", (ui32BufSiz -1));
+					strncpy (pszBuf, "PVR_K:(Unknown message level): ", (ui32BufSiz -1));
 					break;
 				}
 			}
@@ -383,82 +462,14 @@ IMG_VOID PVRSRVDebugPrintf	(
 		}
 		else
 		{
-			/* Traces don't need a location */
-			if (bTrace == IMG_FALSE)
+			if (ui32DebugLevel & DBGPRIV_BUFFERED)
 			{
-#ifdef DEBUG_LOG_PATH_TRUNCATE
-				/* Buffer for rewriting filepath in log messages */
-				static IMG_CHAR szFileNameRewrite[PVR_MAX_FILEPATH_LEN];
+				/* We don't need the full path here */
+				const IMG_CHAR *pszShortName = strrchr(pszFileName, '/') + 1;
+				if(pszShortName)
+					pszFileName = pszShortName;
 
-   				IMG_CHAR* pszTruncIter;
-				IMG_CHAR* pszTruncBackInter;
-
-				/* Truncate path (DEBUG_LOG_PATH_TRUNCATE shoud be set to EURASIA env var)*/
-				if (strlen(pszFullFileName) > strlen(DEBUG_LOG_PATH_TRUNCATE)+1)
-					pszFileName = pszFullFileName + strlen(DEBUG_LOG_PATH_TRUNCATE)+1;
-
-				/* Try to find '/../' entries and remove it together with
-				   previous entry. Repeat unit all removed */
-				strncpy(szFileNameRewrite, pszFileName,PVR_MAX_FILEPATH_LEN);
-
-				if(strlen(szFileNameRewrite) == PVR_MAX_FILEPATH_LEN-1) {
-					IMG_CHAR szTruncateMassage[] = "FILENAME TRUNCATED";
-					strcpy(szFileNameRewrite + (PVR_MAX_FILEPATH_LEN - 1 - strlen(szTruncateMassage)), szTruncateMassage);
-				}
-
-				pszTruncIter = szFileNameRewrite;
-				while(*pszTruncIter++ != 0)
-				{
-					IMG_CHAR* pszNextStartPoint;
-					/* Find '/../' pattern */
-					if(
-					   !( ( *pszTruncIter == '/' && (pszTruncIter-4 >= szFileNameRewrite) ) &&
-						 ( *(pszTruncIter-1) == '.') &&
-						 ( *(pszTruncIter-2) == '.') &&
-						 ( *(pszTruncIter-3) == '/') )
-					   ) continue;
-
-					/* Find previous '/' */
-					pszTruncBackInter = pszTruncIter - 3;
-					while(*(--pszTruncBackInter) != '/')
-					{
-						if(pszTruncBackInter <= szFileNameRewrite) break;
-					}
-					pszNextStartPoint = pszTruncBackInter;
-
-					/* Remove found region */
-					while(*pszTruncIter != 0)
-					{
-						*pszTruncBackInter++ = *pszTruncIter++;
-					}
-					*pszTruncBackInter = 0;
-
-					/* Start again */
-					pszTruncIter = pszNextStartPoint;
-				}
-
-				pszFileName = szFileNameRewrite;
-				/* Remove first '/' if exist (it's always relative path */
-				if(*pszFileName == '/') pszFileName++;
-#endif
-
-#if !defined(__sh__)
-				pszLeafName = (IMG_CHAR *)strrchr (pszFileName, '\\');
-
-				if (pszLeafName)
-				{
-					pszFileName = pszLeafName;
-		       	}
-#endif /* __sh__ */
-
-				if (BAppend(pszBuf, ui32BufSiz, " [%u, %s]", ui32Line, pszFileName))
-				{
-					printk(KERN_INFO "PVR_K:(Message Truncated): %s\n", pszBuf);
-				}
-				else
-				{
-					printk(KERN_INFO "%s\n", pszBuf);
-				}
+				AddToBufferCCB(pszFileName, ui32Line, pszBuf);
 			}
 			else
 			{
@@ -481,6 +492,9 @@ IMG_INT PVRDebugProcSetLevel(struct file *file, const IMG_CHAR *buffer, IMG_UINT
 #define	_PROC_SET_BUFFER_SZ		6
 	IMG_CHAR data_buffer[_PROC_SET_BUFFER_SZ];
 
+	PVR_UNREFERENCED_PARAMETER(file);
+	PVR_UNREFERENCED_PARAMETER(data);
+
 	if (count > _PROC_SET_BUFFER_SZ)
 	{
 		return -EINVAL;
@@ -498,8 +512,10 @@ IMG_INT PVRDebugProcSetLevel(struct file *file, const IMG_CHAR *buffer, IMG_UINT
 	return (count);
 }
 
-void ProcSeqShowDebugLevel(struct seq_file *sfile,void* el)
+void ProcSeqShowDebugLevel(struct seq_file *sfile, void* el)
 {
+	PVR_UNREFERENCED_PARAMETER(el);
+
 	seq_printf(sfile, "%u\n", gPVRDebugLevel);
 }
 

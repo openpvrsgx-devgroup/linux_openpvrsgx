@@ -80,6 +80,7 @@ enum {
 	RESMAN_TYPE_DEVICEMEM_WRAP,						/*!< Device Memory Wrap Resource */
 	RESMAN_TYPE_DEVICEMEM_ALLOCATION,				/*!< Device Memory Allocation Resource */
 	RESMAN_TYPE_DEVICEMEM_ION,						/*!< Device Memory Ion Resource */
+	RESMAN_TYPE_DEVICEMEM_DMABUF,						/*!< Device Memory dma-buf Resource */
 	RESMAN_TYPE_EVENT_OBJECT,						/*!< Event Object */
     RESMAN_TYPE_SHARED_MEM_INFO,                    /*!< Shared system memory meminfo */
     RESMAN_TYPE_MODIFY_SYNC_OPS,					/*!< Syncobject synchronisation Resource*/

@@ -38,7 +38,9 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ### ###########################################################################
 
+ifeq ($(PVR_DRM_MODESET_DRIVER_NAME),)
 PVR_SECURE_DRM_AUTH_EXPORT := 1
+endif
 
 $(eval $(call TunableKernelConfigC,XPROC_WORKAROUND_NUM_SHAREABLES,4095))
 

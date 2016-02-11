@@ -123,7 +123,7 @@ PVRSRVTimeTraceAllocItem(IMG_UINT32 **pui32Item, IMG_UINT32 ui32Size)
 	{
 		PVRSRV_ERROR eError;
 
-		PVR_DPF((PVR_DBG_MESSAGE, "PVRSRVTimeTraceAllocItem: Creating buffer for PID %u", (IMG_UINT32) ui32PID));
+		PVR_DPF((PVR_DBG_MESSAGE, "PVRSRVTimeTraceAllocItem: Creating buffer for PID %u", ui32PID));
 		eError = PVRSRVTimeTraceBufferCreate(ui32PID);
 		if (eError != PVRSRV_OK)
 		{
@@ -171,7 +171,7 @@ PVRSRVTimeTraceAllocItem(IMG_UINT32 **pui32Item, IMG_UINT32 ui32Size)
 	psBuffer->ui32Woff = psBuffer->ui32Woff + ui32Size;
 	psBuffer->ui32ByteCount += ui32Size;
 
-	/* This allocation will start overwritting past our read pointer, move the read pointer along */
+	/* This allocation will start overwriting past our read pointer, move the read pointer along */
 	while (psBuffer->ui32ByteCount > TIME_TRACE_BUFFER_SIZE)
 	{
 		IMG_UINT32 *psReadItem = (IMG_UINT32 *) &psBuffer->ui8Data[psBuffer->ui32Roff];
@@ -248,6 +248,7 @@ PVRSRV_ERROR PVRSRVTimeTraceBufferCreate(IMG_UINT32 ui32PID)
 ******************************************************************************/
 PVRSRV_ERROR PVRSRVTimeTraceBufferDestroy(IMG_UINT32 ui32PID)
 {
+#if !defined(TTRACE_KEEP_BUFFER_ON_EXIT)
 	sTimeTraceBuffer *psBuffer;
 
 #if defined(DUMP_TTRACE_BUFFERS_ON_EXIT)
@@ -264,6 +265,9 @@ PVRSRV_ERROR PVRSRVTimeTraceBufferDestroy(IMG_UINT32 ui32PID)
 
 	PVR_DPF((PVR_DBG_ERROR, "PVRSRVTimeTraceBufferDestroy: Can't find trace buffer in hash table"));
 	return PVRSRV_ERROR_INVALID_PARAMS;
+#else
+	return PVRSRV_OK;
+#endif
 }
 
 /*!
@@ -535,7 +539,7 @@ static PVRSRV_ERROR PVRSRVDumpTimeTraceBuffer(IMG_UINTPTR_T hKey, IMG_UINTPTR_T 
 	IMG_UINT32 ui32Walker = psBuffer->ui32Roff;
 	IMG_UINT32 ui32Read, ui32LineLen, ui32EOL, ui32MinLine;
 
-	PVR_DPF((PVR_DBG_ERROR, "TTB for PID %u:\n", (IMG_UINT32) hKey));
+	PVR_LOG(("TTB for PID %u:\n", (IMG_UINT32) hKey));
 
 	while (ui32ByteCount)
 	{
@@ -547,25 +551,25 @@ static PVRSRV_ERROR PVRSRVDumpTimeTraceBuffer(IMG_UINTPTR_T hKey, IMG_UINTPTR_T 
 
 		if (ui32MinLine >= 4)
 		{
-			PVR_DPF((PVR_DBG_ERROR, "\t(TTB-%X) %08X %08X %08X %08X", ui32ByteCount,
+			PVR_LOG(("\t(TTB-%X) %08X %08X %08X %08X [", ui32ByteCount,
 					pui32Buffer[0], pui32Buffer[1], pui32Buffer[2], pui32Buffer[3]));
 			ui32Read = 4 * sizeof(IMG_UINT32);
 		}
 		else if (ui32MinLine >= 3)
 		{
-			PVR_DPF((PVR_DBG_ERROR, "\t(TTB-%X) %08X %08X %08X", ui32ByteCount,
+			PVR_LOG(("\t(TTB-%X) %08X %08X %08X [", ui32ByteCount,
 					pui32Buffer[0], pui32Buffer[1], pui32Buffer[2]));
 			ui32Read = 3 * sizeof(IMG_UINT32);
 		}
 		else if (ui32MinLine >= 2)
 		{
-			PVR_DPF((PVR_DBG_ERROR, "\t(TTB-%X) %08X %08X", ui32ByteCount,
+			PVR_LOG(("\t(TTB-%X) %08X %08X [", ui32ByteCount,
 					pui32Buffer[0], pui32Buffer[1]));
 			ui32Read = 2 * sizeof(IMG_UINT32);
 		}
 		else
 		{
-			PVR_DPF((PVR_DBG_ERROR, "\t(TTB-%X) %08X", ui32ByteCount,
+			PVR_LOG(("\t(TTB-%X) %08X [", ui32ByteCount,
 					pui32Buffer[0]));
 			ui32Read = sizeof(IMG_UINT32);
 		}

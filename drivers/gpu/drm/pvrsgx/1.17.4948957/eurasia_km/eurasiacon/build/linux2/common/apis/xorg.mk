@@ -40,7 +40,7 @@
 ### ###########################################################################
 
 ifeq ($(filter xorg,$(EXCLUDED_APIS)),)
- COMPONENTS += xorg pvr_conf pvr_video pvr_video_bin wsegl_dri2_linux
+ COMPONENTS += xorg pvr_conf pvr_video wsegl_dri2_linux
  -include ../common/apis/xorg_opengl.mk
 ifeq ($(SUPPORT_PVR_REMOTE),1)
  COMPONENTS += pvr_input

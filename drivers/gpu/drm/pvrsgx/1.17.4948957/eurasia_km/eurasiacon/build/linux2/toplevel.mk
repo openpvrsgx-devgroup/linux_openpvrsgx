@@ -60,6 +60,7 @@ $(call directory-must-exist,$(TOP))
 RELATIVE_OUT		:= $(patsubst $(TOP)/%,%,$(OUT))
 HOST_OUT			:= $(RELATIVE_OUT)/host
 TARGET_OUT			:= $(RELATIVE_OUT)/target
+DOCS_OUT			:= $(RELATIVE_OUT)/docs
 CONFIG_MK			:= $(RELATIVE_OUT)/config.mk
 CONFIG_H			:= $(RELATIVE_OUT)/config.h
 CONFIG_KERNEL_MK	:= $(RELATIVE_OUT)/config_kernel.mk
@@ -82,9 +83,9 @@ ifneq ($(INTERNAL_CLOBBER_ONLY),true)
 #
 $(shell mkdir -p $(OUT))
 
-# Provide rules to create $(HOST_OUT) and $(TARGET_OUT)
-.SECONDARY: $(HOST_OUT) $(TARGET_OUT)
-$(HOST_OUT) $(TARGET_OUT):
+# Provide rules to create the directories for binaries and documentation
+.SECONDARY: $(HOST_OUT) $(TARGET_OUT) $(DOCS_OUT)
+$(HOST_OUT) $(TARGET_OUT) $(DOCS_OUT):
 	$(make-directory)
 
 # If these generated files differ from any pre-existing ones,
@@ -201,13 +202,15 @@ endif
 # You can say 'make all_modules' to attempt to make everything, or 'make
 # components' to only make the things which are listed (in the per-build
 # makefiles) as components of the build.
-.PHONY: all_modules components
+.PHONY: all_modules all_docs components
 all_modules: $(ALL_MODULES)
+all_docs: ;
 components: $(COMPONENTS)
+docs: $(DOCS)
 
 # Cleaning
 .PHONY: clean clobber
-clean: MODULE_DIRS_TO_REMOVE := $(OUT)/host/intermediates $(OUT)/target/intermediates $(OUT)/target/kbuild
+clean: MODULE_DIRS_TO_REMOVE := $(HOST_OUT) $(TARGET_OUT) $(DOCS_OUT)
 clean:
 	$(clean-dirs)
 clobber: MODULE_DIRS_TO_REMOVE := $(OUT)
@@ -217,10 +220,14 @@ clobber:
 # Saying 'make clean-MODULE' removes the intermediates for MODULE.
 # clobber-MODULE deletes the output files as well
 clean-%:
-	$(if $(V),,@echo "  RM      " $(call relative-to-top,$(OUT)/host/intermediates/$* $(OUT)/target/intermediates/$*))
-	$(RM) -rf $(OUT)/host/intermediates/$*/* $(OUT)/target/intermediates/$*/*
+	$(if $(V),,@echo "  RM      " $(call relative-to-top,$(OUT)/host/intermediates/$* $(OUT)/target/intermediates/$* $(OUT)/docs/intermediates/$*))
+	$(RM) -rf $(OUT)/host/intermediates/$*/* $(OUT)/target/intermediates/$*/* $(OUT)/docs/intermediates/$*/*
 clobber-%:
 	$(if $(V),,@echo "  RM      " $(call relative-to-top,$(OUT)/host/intermediates/$* $(OUT)/target/intermediates/$* $(INTERNAL_TARGETS_FOR_$*)))
-	$(RM) -rf $(OUT)/host/intermediates/$* $(OUT)/target/intermediates/$* $(INTERNAL_TARGETS_FOR_$*)
+	$(RM) -rf $(OUT)/host/intermediates/$* $(OUT)/target/intermediates/$* $(OUT)/docs/intermediates/$* $(INTERNAL_TARGETS_FOR_$*)
 
 include $(MAKE_TOP)/bits.mk
+
+# D=nobuild stops the build before any recipes are run. This line should
+# come at the end of this makefile.
+$(if $(filter nobuild,$(D)),$(error D=nobuild given),)

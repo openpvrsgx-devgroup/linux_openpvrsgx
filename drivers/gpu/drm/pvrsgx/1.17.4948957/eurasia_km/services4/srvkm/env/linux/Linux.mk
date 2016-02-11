@@ -41,5 +41,5 @@
 modules := srvkm
 
 srvkm_type := kernel_module
-srvkm_target := $(PVRSRV_MODNAME).ko
+srvkm_target := pvrsrvkm.ko
 srvkm_makefile := $(THIS_DIR)/Kbuild.mk

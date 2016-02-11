@@ -56,6 +56,7 @@
 #
 define KernelConfigMake
 $$(shell echo "override $(1) := $(2)" >>$(CONFIG_KERNEL_MK).new)
+$(if $(filter config,$(D)),$(info KernelConfigMake $(1) := $(2) 	# $(if $($(1)),$(origin $(1)),default)))
 endef
 
 # Write out a GNU make option for both user & kernel
@@ -88,6 +89,7 @@ endef
 #
 define KernelConfigC
 $$(shell echo "#define $(1) $(2)" >>$(CONFIG_KERNEL_H).new)
+$(if $(filter config,$(D)),$(info KernelConfigC    #define $(1) $(2) 	/* $(if $($(1)),$(origin $(1)),default) */),)
 endef
 
 # Write out an option for both user & kernel
@@ -125,10 +127,6 @@ $$(eval $$(call TunableKernelConfigC,$(1),$(2)))
 endef
 
 ############################### END MACROS ##################################
-
-DOS2UNIX := $(shell \
- if [ -z `which fromdos` ]; then echo dos2unix -f -q; else echo fromdos -f -p; fi \
-)
 
 # Check we have a new enough version of GNU make.
 #
@@ -183,13 +181,18 @@ BUILD	?= release
 OUT		?= $(TOP)/eurasiacon/binary2_$(PVR_BUILD_DIR)_$(BUILD)
 override OUT := $(if $(filter /%,$(OUT)),$(OUT),$(TOP)/$(OUT))
 
-# Without a build date drm fails to load
-DATE := $(shell date +%Y-%m-%d)
-
 CONFIG_MK			:= $(OUT)/config.mk
 CONFIG_H			:= $(OUT)/config.h
 CONFIG_KERNEL_MK	:= $(OUT)/config_kernel.mk
 CONFIG_KERNEL_H		:= $(OUT)/config_kernel.h
+
+# Convert commas to spaces in $(D). This is so you can say "make
+# D=config-changes,freeze-config" and have $(filter config-changes,$(D))
+# still work.
+comma := ,
+empty :=
+space := $(empty) $(empty)
+override D := $(subst $(comma),$(space),$(D))
 
 # Create the OUT directory and delete any previous intermediary files
 #
@@ -215,6 +218,19 @@ endif
 # For a clobber-only build, we shouldn't regenerate any config files, or
 # require things like SGXCORE to be set
 ifneq ($(INTERNAL_CLOBBER_ONLY),true)
+
+# These are defined by the core build system, but we might need them
+# earlier to feature-check the compilers
+#
+_CC		:= $(if $(filter default,$(origin CC)),gcc,$(CC))
+_CLANG	:= \
+ $(shell $(TOP)/eurasiacon/build/linux2/tools/cc-check.sh --clang --cc $(_CC))
+ifeq ($(_CLANG),true)
+_CC		:= $(_CC) -target $(patsubst %-,%,$(CROSS_COMPILE))
+else
+_CC		:= $(CROSS_COMPILE)$(_CC)
+endif
+HOST_CC	?= gcc
 
 -include ../config/user-defs.mk
 
@@ -278,21 +294,10 @@ override SUPPORT_HW_RECOVERY := 0
 override SUPPORT_ACTIVE_POWER_MANAGEMENT := 0
 endif
 
-# We're bumping against USSE limits on older cores because the ukernel
-# is too large when building both SGX_DISABLE_VISTEST_SUPPORT=0 and
-# PVRSRV_USSE_EDM_STATUS_DEBUG=1.
-#
-# Automatically disable vistest support if debugging the ukernel to
-# prevent build failures.
-#
-ifneq ($(filter 520 530 531 535 540,$(SGXCORE)),)
-ifneq ($(SGX_DISABLE_VISTEST_SUPPORT),1)
-SGX_DISABLE_VISTEST_SUPPORT ?= not-overridden
-ifeq ($(SGX_DISABLE_VISTEST_SUPPORT),not-overridden)
-$(warning Setting SGX_DISABLE_VISTEST_SUPPORT=1 because PVRSRV_USSE_EDM_STATUS_DEBUG=1)
-SGX_DISABLE_VISTEST_SUPPORT := 1
-endif
-endif
+ifeq ($(SGX_FEATURE_36BIT_MMU),1)
+override IMG_ADDRSPACE_PHYSADDR_BITS := 64
+else
+override IMG_ADDRSPACE_PHYSADDR_BITS := 32
 endif
 
 ifeq ($(SGXCORE),535)
@@ -330,7 +335,12 @@ endif
 # one not), make PVRSRV_MODNAME a non-tunable and give it an overridable
 # default here.
 #
-PVRSRV_MODNAME ?= omapdrm
+PVRSRV_MODNAME ?= pvrsrvkm
+
+# Normally builds don't touch this, but we use it to influence the components
+# list. Make sure it is defined early enough to make this possible.
+#
+SUPPORT_PVRSRV_DEVICE_CLASS ?= 1
 
 # The user didn't set CROSS_COMPILE. There's probably nothing wrong
 # with that, but we'll let them know anyway.
@@ -350,18 +360,21 @@ $$(warning *** Setting $(1) via $$(origin $(1)) is deprecated)
 $$(error If you are trying to disable a component, use e.g. EXCLUDED_APIS="opengles1 opengl")
 endif
 endef
-$(foreach _o,SYS_CFLAGS SYS_CXXFLAGS SYS_EXE_LDFLAGS SYS_LIB_LDFLAGS SUPPORT_EWS SUPPORT_OPENGLES1 SUPPORT_OPENGLES2 SUPPORT_OPENVG SUPPORT_OPENCL SUPPORT_OPENGL SUPPORT_UNITTESTS SUPPORT_XORG,$(eval $(call sanity-check-support-option-origin,$(_o))))
+$(foreach _o,SYS_CFLAGS SYS_CXXFLAGS SYS_INCLUDES SYS_COMMON_LDFLAGS SYS_EXE_LDFLAGS SYS_LIB_LDFLAGS SYS_EXE_LDFLAGS_CXX SYS_LIB_LDFLAGS_CXX SUPPORT_EWS SUPPORT_OPENGLES1 SUPPORT_OPENGLES2 SUPPORT_OPENCL SUPPORT_RSCOMPUTE SUPPORT_OPENGL SUPPORT_UNITTESTS SUPPORT_XORG,$(eval $(call sanity-check-support-option-origin,$(_o))))
 
 # Check for words in EXCLUDED_APIS that aren't understood by the
 # common/apis/*.mk files. This should be kept in sync with all the tests on
 # EXCLUDED_APIS in those files
-_excludable_apis := opencl opengl opengles1 opengles2 openvg ews unittests xorg xorg_unittests scripts
-_unrecognised := $(strip $(filter-out $(_excludable_apis),$(EXCLUDED_APIS)))
+_excludable_apis := rscompute opencl opengl opengles1 opengles2 openvg ews unittests xorg xorg_unittests scripts composerhal camerahal memtrackhal
+_excluded_apis := $(subst $(comma),$(space),$(EXCLUDED_APIS))
+_unrecognised := $(strip $(filter-out $(_excludable_apis),$(_excluded_apis)))
 ifneq ($(_unrecognised),)
 $(warning *** Unrecognised entries in EXCLUDED_APIS: $(_unrecognised))
 $(warning *** EXCLUDED_APIS was set via: $(origin EXCLUDED_APIS))
 $(error Excludable APIs are: $(_excludable_apis))
 endif
+
+override EXCLUDED_APIS := $(filter $(_excludable_apis), $(_excluded_apis))
 
 # Build's selected list of components
 #
@@ -385,7 +398,12 @@ ifneq ($(filter pvr2d,$(COMPONENTS)),)
 COMPONENTS += null_pvr2d_remote
 endif
 COMPONENTS += pvrvncsrv
+COMPONENTS += pvrvncinput
 endif
+
+$(if $(filter config,$(D)),$(info Build configuration:))
+
+################################# CONFIG ####################################
 
 # If KERNELDIR is set, write it out to the config.mk, with
 # KERNEL_COMPONENTS and KERNEL_ID
@@ -407,16 +425,51 @@ KERNEL_CROSS_COMPILE ?= $(CROSS_COMPILE)
 $(eval $(call TunableBothConfigMake,KERNEL_CROSS_COMPILE,))
 endif
 
-# Check the KERNELDIR has a kernel built and also check that it is
-# not 64-bit, which we do not support.
+# Check the KERNELDIR has a kernel built.
 VMLINUX := $(strip $(wildcard $(KERNELDIR)/vmlinux))
+LINUXCFG := $(strip $(wildcard $(KERNELDIR)/.config))
+
 ifneq ($(VMLINUX),)
-VMLINUX_IS_64BIT := $(shell file $(VMLINUX) | grep -q 64-bit || echo false)
+ifneq ($(shell file $(KERNELDIR)/vmlinux | grep 64-bit >/dev/null && echo 1),$(shell $(_CC) -dM -E - </dev/null | grep __x86_64__ >/dev/null && echo 1))
+$(error Attempting to build 64-bit DDK against 32-bit kernel, or 32-bit DDK against 64-bit kernel. This is not allowed.)
+endif
+VMLINUX_IS_64BIT := $(shell file $(VMLINUX) | grep 64-bit >/dev/null || echo false)
+VMLINUX_HAS_PAE36 := $(shell cat $(LINUXCFG) | grep CONFIG_X86_PAE=y >/dev/null || echo false)
+VMLINUX_HAS_PAE40 := $(shell cat $(LINUXCFG) | grep CONFIG_ARM_LPAE=y >/dev/null || echo false)
+VMLINUX_HAS_DMA32 := $(shell cat $(LINUXCFG) | grep CONFIG_ZONE_DMA32=y >/dev/null || echo false)
+
+# $(error 64BIT=$(VMLINUX_IS_64BIT) PAE36=$(VMLINUX_HAS_PAE36) PAE40=$(VMLINUX_HAS_PAE40) DMA32=$(VMLINUX_HAS_DMA32) MMU36=$(SGX_FEATURE_36BIT_MMU))
+
 ifneq ($(VMLINUX_IS_64BIT),false)
-$(warning $$(KERNELDIR)/vmlinux is 64-bit, which is not supported. Kbuild may fail.)
+$(warning $$(KERNELDIR)/vmlinux: Note: vmlinux is 64-bit, which is supported but currently experimental.)
 endif
 else
 $(warning $$(KERNELDIR)/vmlinux does not exist. Kbuild may fail.)
+endif
+endif
+
+ifneq ($(VMLINUX_HAS_PAE40),false)
+ifeq ($(VMLINUX_HAS_DMA32),false)
+$(warning SGX MMUs are currently supported up to only 36 bits max. Your Kernel is built with 40-bit PAE but does not have CONFIG_ZONE_DMA32.)
+$(warning This means you must ensure the runtime system has <= 4GB of RAM, or there will be BIG problems...)
+endif 
+endif
+
+ifneq ($(SGX_FEATURE_36BIT_MMU),1)
+ifneq ($(VMLINUX_IS_64BIT),false)
+# Kernel is 64-bit
+ifeq ($(VMLINUX_HAS_DMA32),false)
+$(warning SGX is configured with 32-bit MMU. Your Kernel is 64-bit but does not have CONFIG_ZONE_DMA32.)
+$(warning This means you must ensure the runtime system has <= 4GB of RAM, or there will be BIG problems...)
+endif
+else
+ # Kernel is 32-bit
+ifneq ($(VMLINUX_HAS_PAE36),false)
+ifeq ($(VMLINUX_HAS_DMA32),false)
+$(warning SGX is configured with 32-bit MMU. Your Kernel is 32-bit PAE, but does not have CONFIG_ZONE_DMA32. )
+$(warning This means you must ensure the runtime system has <= 4GB of RAM, or there will be BIG problems...)
+endif
+endif
 endif
 endif
 
@@ -429,10 +482,8 @@ endif
 $(eval $(call BothConfigC,LINUX,))
 
 $(eval $(call BothConfigC,PVR_BUILD_DIR,"\"$(PVR_BUILD_DIR)\""))
-$(eval $(call BothConfigC,PVR_BUILD_DATE,"\"$(DATE)\""))
 $(eval $(call BothConfigC,PVR_BUILD_TYPE,"\"$(BUILD)\""))
 $(eval $(call BothConfigC,PVRSRV_MODNAME,"\"$(PVRSRV_MODNAME)\""))
-$(eval $(call BothConfigMake,PVRSRV_MODNAME,$(PVRSRV_MODNAME)))
 
 $(eval $(call TunableBothConfigC,SGXCORE,))
 $(eval $(call BothConfigC,SGX$(SGXCORE),))
@@ -445,10 +496,17 @@ $(eval $(call TunableBothConfigC,USE_SGX_CORE_REV_HEAD,))
 $(eval $(call BothConfigC,TRANSFER_QUEUE,))
 $(eval $(call BothConfigC,PVR_SECURE_HANDLES,))
 
+# Support syncing LISR & MISR. This is required for OS's where
+# on SPM platforms the LISR and MISR can run at the same time and
+# thus during powerdown we need to drain all pending LISRs before
+# proceeding to do the actual powerdown
+$(eval $(call KernelConfigC,SUPPORT_LISR_MISR_SYNC))
+
 ifneq ($(DISPLAY_CONTROLLER),)
 $(eval $(call BothConfigC,DISPLAY_CONTROLLER,$(DISPLAY_CONTROLLER)))
 endif
 
+ifneq ($(strip $(KERNELDIR)),)
 PVR_LINUX_MEM_AREA_POOL_MAX_PAGES ?= 0
 ifneq ($(PVR_LINUX_MEM_AREA_POOL_MAX_PAGES),0)
 PVR_LINUX_MEM_AREA_USE_VMAP ?= 1
@@ -460,9 +518,8 @@ endif
 $(eval $(call KernelConfigC,PVR_LINUX_MEM_AREA_POOL_MAX_PAGES,$(PVR_LINUX_MEM_AREA_POOL_MAX_PAGES)))
 $(eval $(call TunableKernelConfigC,PVR_LINUX_MEM_AREA_USE_VMAP,))
 $(eval $(call TunableKernelConfigC,PVR_LINUX_MEM_AREA_POOL_ALLOW_SHRINK,))
+endif
 
-$(eval $(call TunableKernelConfigC,FLIP_TECHNIQUE_FRAMEBUFFER,))
-$(eval $(call TunableKernelConfigC,FLIP_TECHNIQUE_OVERLAY,))
 
 $(eval $(call BothConfigMake,PVR_SYSTEM,$(PVR_SYSTEM)))
 
@@ -470,10 +527,6 @@ $(eval $(call BothConfigMake,PVR_SYSTEM,$(PVR_SYSTEM)))
 # Build-type dependent options
 #
 $(eval $(call BothConfigMake,BUILD,$(BUILD)))
-$(eval $(call KernelConfigC,DEBUG_LINUX_MMAP_AREAS,))
-$(eval $(call KernelConfigC,DEBUG_LINUX_MEM_AREAS,))
-$(eval $(call KernelConfigC,DEBUG_LINUX_MEMORY_ALLOCATIONS,))
-$(eval $(call KernelConfigC,PVRSRV_DISABLE_UM_SYNCOBJ_MAPPINGS,1))
 
 ifeq ($(BUILD),debug)
 $(eval $(call BothConfigC,DEBUG,))
@@ -481,15 +534,12 @@ $(eval $(call KernelConfigC,DEBUG_LINUX_MEMORY_ALLOCATIONS,))
 $(eval $(call KernelConfigC,DEBUG_LINUX_MEM_AREAS,))
 $(eval $(call KernelConfigC,DEBUG_LINUX_MMAP_AREAS,))
 $(eval $(call KernelConfigC,DEBUG_BRIDGE_KM,))
-$(eval $(call TunableBothConfigC,PVRSRV_USSE_EDM_STATUS_DEBUG,1))
 else ifeq ($(BUILD),release)
 $(eval $(call BothConfigC,RELEASE,))
 $(eval $(call TunableBothConfigMake,DEBUGLINK,1))
-$(eval $(call TunableBothConfigC,PVRSRV_USSE_EDM_STATUS_DEBUG,))
 else ifeq ($(BUILD),timing)
 $(eval $(call BothConfigC,TIMING,))
 $(eval $(call TunableBothConfigMake,DEBUGLINK,1))
-$(eval $(call TunableBothConfigC,PVRSRV_USSE_EDM_STATUS_DEBUG,))
 else
 $(error BUILD= must be either debug, release or timing)
 endif
@@ -502,7 +552,7 @@ $(eval $(call TunableBothConfigC,SUPPORT_HYBRID_PB,))
 $(eval $(call TunableBothConfigC,SUPPORT_HW_RECOVERY,1))
 $(eval $(call TunableBothConfigC,SUPPORT_ACTIVE_POWER_MANAGEMENT,1))
 $(eval $(call TunableBothConfigC,SUPPORT_SGX_HWPERF,1))
-$(eval $(call TunableBothConfigC,SUPPORT_SGX_LOW_LATENCY_SCHEDULING,))
+$(eval $(call TunableBothConfigC,SUPPORT_SGX_LOW_LATENCY_SCHEDULING,1))
 $(eval $(call TunableBothConfigC,SUPPORT_MEMINFO_IDS,))
 $(eval $(call TunableBothConfigC,SUPPORT_SGX_NEW_STATUS_VALS,1))
 $(eval $(call TunableBothConfigC,SUPPORT_PDUMP_MULTI_PROCESS,))
@@ -515,10 +565,10 @@ $(eval $(call TunableBothConfigC,SGX_FEATURE_MP,))
 $(eval $(call TunableBothConfigC,SGX_FEATURE_MP_PLUS,))
 $(eval $(call TunableBothConfigC,FPGA,))
 $(eval $(call TunableBothConfigC,PDUMP,))
+$(eval $(call TunableBothConfigC,MEM_TRACK_INFO_DEBUG,))
 $(eval $(call TunableBothConfigC,NO_HARDWARE,))
 $(eval $(call TunableBothConfigC,PDUMP_DEBUG_OUTFILES,))
 $(eval $(call TunableBothConfigC,PVRSRV_USSE_EDM_STATUS_DEBUG,))
-$(eval $(call TunableBothConfigC,SGX_DISABLE_VISTEST_SUPPORT,))
 $(eval $(call TunableBothConfigC,PVRSRV_RESET_ON_HWTIMEOUT,))
 $(eval $(call TunableBothConfigC,SYS_USING_INTERRUPTS,1))
 $(eval $(call TunableBothConfigC,SUPPORT_EXTERNAL_SYSTEM_CACHE,))
@@ -528,9 +578,15 @@ $(eval $(call TunableBothConfigC,PVRSRV_NEED_PVR_ASSERT,))
 $(eval $(call TunableBothConfigC,PVRSRV_NEED_PVR_TRACE,))
 $(eval $(call TunableBothConfigC,SUPPORT_SECURE_33657_FIX,))
 $(eval $(call TunableBothConfigC,SUPPORT_ION,))
+$(eval $(call TunableBothConfigC,SUPPORT_DMABUF,))
 $(eval $(call TunableBothConfigC,SUPPORT_HWRECOVERY_TRACE_LIMIT,))
+$(eval $(call TunableBothConfigC,SUPPORT_PVRSRV_DEVICE_CLASS,))
 $(eval $(call TunableBothConfigC,SUPPORT_PVRSRV_GET_DC_SYSTEM_BUFFER,1))
 $(eval $(call TunableBothConfigC,SUPPORT_NV12_FROM_2_HWADDRS,))
+$(eval $(call TunableBothConfigC,SGX_FEATURE_36BIT_MMU,))
+$(eval $(call TunableBothConfigC,IMG_ADDRSPACE_PHYSADDR_BITS,))
+$(eval $(call TunableBothConfigC,PVRSRV_EXTRA_PB_DEBUG,))
+$(eval $(call TunableBothConfigC,PVRSRV_DEBUG_CCB_MAX,))
 
 $(eval $(call TunableKernelConfigC,SUPPORT_LINUX_X86_WRITECOMBINE,1))
 $(eval $(call TunableKernelConfigC,SUPPORT_LINUX_X86_PAT,1))
@@ -544,6 +600,7 @@ $(eval $(call TunableKernelConfigC,PVR_LINUX_MISR_USING_PRIVATE_WORKQUEUE,))
 $(eval $(call TunableKernelConfigC,PVR_LINUX_TIMERS_USING_WORKQUEUES,))
 $(eval $(call TunableKernelConfigC,PVR_LINUX_TIMERS_USING_SHARED_WORKQUEUE,))
 $(eval $(call TunableKernelConfigC,LDM_PLATFORM,))
+$(eval $(call TunableKernelConfigC,PVR_LDM_DEVICE_TREE,))
 $(eval $(call TunableKernelConfigC,PVR_LDM_PLATFORM_PRE_REGISTERED,))
 $(eval $(call TunableKernelConfigC,PVR_LDM_PLATFORM_PRE_REGISTERED_DEV,))
 $(eval $(call TunableKernelConfigC,PVR_LDM_DRIVER_REGISTRATION_NAME,"\"$(PVRSRV_MODNAME)\""))
@@ -553,14 +610,20 @@ $(eval $(call TunableKernelConfigC,PVRSRV_DUMP_KERNEL_CCB,))
 $(eval $(call TunableKernelConfigC,PVRSRV_REFCOUNT_DEBUG,))
 $(eval $(call TunableKernelConfigC,PVRSRV_MMU_MAKE_READWRITE_ON_DEMAND,))
 $(eval $(call TunableKernelConfigC,HYBRID_SHARED_PB_SIZE,))
-$(eval $(call TunableKernelConfigC,SUPPORT_LARGE_GENERAL_HEAP,1))
+$(eval $(call TunableKernelConfigC,SUPPORT_LARGE_GENERAL_HEAP,))
+$(eval $(call TunableKernelConfigC,SUPPORT_OLD_ION_API,))
 $(eval $(call TunableKernelConfigC,TTRACE,))
+$(eval $(call TunableKernelConfigC,TTRACE_LARGE_BUFFER,))
+$(eval $(call TunableKernelConfigC,SUPPORT_PDUMP_SYNC_DEBUG,))
+$(eval $(call TunableKernelConfigC,SUPPORT_PER_SYNC_DEBUG,))
+$(eval $(call TunableKernelConfigC,SUPPORT_FORCE_SYNC_DUMP,))
 
-
-$(eval $(call TunableBothConfigMake,SUPPORT_ION,))
 
 
 $(eval $(call TunableBothConfigMake,OPTIM,))
+$(eval $(call TunableBothConfigMake,SUPPORT_ION,))
+$(eval $(call TunableBothConfigMake,SUPPORT_DMABUF,))
+$(eval $(call TunableBothConfigMake,SUPPORT_PVRSRV_DEVICE_CLASS,))
 
 
 $(eval $(call TunableKernelConfigMake,TTRACE,))
@@ -589,7 +652,6 @@ endif
 autogen:
 ifeq ($(INTERNAL_CLOBBER_ONLY),)
 	@$(MAKE) -s --no-print-directory -C $(EURASIAROOT) \
-		DOS2UNIX="$(DOS2UNIX)" \
 		-f eurasiacon/build/linux2/prepare_tree.mk \
 		LDM_PCI=$(LDM_PCI) LDM_PLATFORM=$(LDM_PLATFORM)
 else

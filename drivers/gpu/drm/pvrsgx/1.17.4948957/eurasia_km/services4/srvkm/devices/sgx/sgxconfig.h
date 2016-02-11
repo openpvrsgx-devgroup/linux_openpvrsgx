@@ -56,15 +56,96 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define SGX_KERNEL_DATA_HEAP_OFFSET		0x00000000
 #endif
 
-#if !defined(ION_HEAP_SIZE) && defined(SUPPORT_ION)
-	/* Default the Ion heap to 16MB */
-	#define ION_HEAP_SIZE						0x01000000
-#else
-	#define ION_HEAP_SIZE						0
-#endif
-
 
 #if SGX_FEATURE_ADDRESS_SPACE_SIZE == 32
+
+#if defined (SGX_FEATURE_ADDRESS_SPACE_EXTENSION)
+/*
+ * Constraints: (Additional to above ones)
+ *	-GENERAL, PDS, USE_CODE, KERNEL_DATA heaps should be within [0-256MB] range only.
+ *	-(3DPARAMETERS_HEAP_BASE+TADATA_HEAP) <= 256MB, within same 256MB range.
+ *	
+ * BIF_REQ_BASE Setting:
+ *	-PDS_REQ_BASE = USCE_REQ_BASE = VDM_REQ_BASE = 0x00000000 
+ * 3D Task:
+ *	-ISPP_REQ_BASE = ISPZ_REQ_BASE = 3D_REQ_BASE = 3DPARAMETERS_HEAP_BASE
+ * TA Task:
+ *	-TA_COMMON_REQ_BASE = TA_REQ_BASE = 3DPARAMETERS_HEAP_BASE
+ * TQ Task:
+ *	-3D_REQ_BASE = ISPP_REQ_BASE = ISPZ_REQ_BASE = ISP stream CCB base
+ */
+#if defined(SUPPORT_SGX_GENERAL_MAPPING_HEAP)
+	#define SGX_GENERAL_MAPPING_HEAP_BASE		 0x00001000
+	#define SGX_GENERAL_MAPPING_HEAP_SIZE		(0x01400000-0x00001000-0x00001000)
+
+	#define SGX_GENERAL_HEAP_BASE				 0x01400000
+	#define SGX_GENERAL_HEAP_SIZE				(0x07000000-0x00001000)
+
+#else
+	#define SGX_GENERAL_HEAP_BASE				 0x00001000
+	#define SGX_GENERAL_HEAP_SIZE				(0x08400000-0x00001000-0x00001000)
+#endif
+
+	#define SGX_PDSPIXEL_CODEDATA_HEAP_BASE		 0x08400000
+	#define SGX_PDSPIXEL_CODEDATA_HEAP_SIZE		(0x02000000-0x00001000)
+
+	#define SGX_KERNEL_CODE_HEAP_BASE			 0x0A400000
+	#define SGX_KERNEL_CODE_HEAP_SIZE			(0x00080000-0x00001000)
+
+	#define SGX_PDSVERTEX_CODEDATA_HEAP_BASE	 0x0A800000
+	#define SGX_PDSVERTEX_CODEDATA_HEAP_SIZE	(0x01C00000-0x00001000)
+
+	#define SGX_PIXELSHADER_HEAP_BASE			 0x0C400000
+	#define SGX_PIXELSHADER_HEAP_SIZE			(0x00800000-0x00001000)
+
+	#define SGX_VERTEXSHADER_HEAP_BASE			 0x0CC00000
+	#define SGX_VERTEXSHADER_HEAP_SIZE			(0x00400000-0x00001000)
+
+	#define SGX_KERNEL_DATA_HEAP_BASE			(0x0D000000+SGX_KERNEL_DATA_HEAP_OFFSET)
+	#define SGX_KERNEL_DATA_HEAP_SIZE			(0x02F00000-(0x00001000+SGX_KERNEL_DATA_HEAP_OFFSET))
+
+	/* ==== Heaps 256MB onwards ==== */
+
+	#define SGX_3DPARAMETERS_HEAP_SIZE			0x04000000
+
+	/* By default we split the PB 50/50 */
+#if !defined(HYBRID_SHARED_PB_SIZE)
+	#define HYBRID_SHARED_PB_SIZE				(SGX_3DPARAMETERS_HEAP_SIZE >> 1)
+#endif
+#if defined(SUPPORT_HYBRID_PB)
+	#define SGX_SHARED_3DPARAMETERS_SIZE			(HYBRID_SHARED_PB_SIZE)
+	#define SGX_SHARED_3DPARAMETERS_HEAP_SIZE		(HYBRID_SHARED_PB_SIZE-0x00001000)
+	#define SGX_PERCONTEXT_3DPARAMETERS_HEAP_SIZE		(SGX_3DPARAMETERS_HEAP_SIZE - SGX_SHARED_3DPARAMETERS_SIZE - 0x00001000)
+#else
+#if defined(SUPPORT_PERCONTEXT_PB)
+	#define SGX_SHARED_3DPARAMETERS_SIZE			0
+	#define SGX_SHARED_3DPARAMETERS_HEAP_SIZE		0
+	#define SGX_PERCONTEXT_3DPARAMETERS_HEAP_SIZE		(SGX_3DPARAMETERS_HEAP_SIZE - 0x00001000)
+#endif
+#if defined(SUPPORT_SHARED_PB)
+	#define SGX_SHARED_3DPARAMETERS_SIZE			SGX_3DPARAMETERS_HEAP_SIZE
+	#define SGX_SHARED_3DPARAMETERS_HEAP_SIZE		(SGX_3DPARAMETERS_HEAP_SIZE - 0x00001000)
+	#define SGX_PERCONTEXT_3DPARAMETERS_HEAP_SIZE		0
+#endif
+#endif
+
+	#define SGX_SHARED_3DPARAMETERS_HEAP_BASE		 0x10000000
+
+	/* Size is defined above */
+
+	#define SGX_PERCONTEXT_3DPARAMETERS_HEAP_BASE		 (SGX_SHARED_3DPARAMETERS_HEAP_BASE + SGX_SHARED_3DPARAMETERS_SIZE)
+	/* Size is defined above */
+
+	#define SGX_TADATA_HEAP_BASE				 0x14000000
+	#define SGX_TADATA_HEAP_SIZE				(0x04000000-0x00001000)
+
+	#define SGX_SYNCINFO_HEAP_BASE				 0x18000000
+	#define SGX_SYNCINFO_HEAP_SIZE				(0x01000000-0x00001000)
+
+    #define SGX_TEXTURE_HEAP_BASE                0x19000000
+    #define SGX_TEXTURE_HEAP_SIZE               (0xE6000000-0x00001000)
+
+#else /* defined(SGX_FEATURE_ADDRESS_SPACE_EXTENSION) */ 
 #if defined(FIX_HW_BRN_31620)
 	#if defined(SGX_FEATURE_2D_HARDWARE)
 	#define SGX_2D_HEAP_BASE					 0x04000000
@@ -78,7 +159,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 	 * For hybrid PB we have to split virtual PB range between the shared
 	 * PB and percontext PB due to the fact we only have one heap config
 	 * per device.
-	 * If hybrid PB is enabled we split the space acording to HYBRID_SHARED_PB_SIZE.
+	 * If hybrid PB is enabled we split the space according to HYBRID_SHARED_PB_SIZE.
 	 * i.e. HYBRID_SHARED_PB_SIZE defines the size of the shared PB and the
 	 * remainder is the size of the percontext PB.
 	 * If hybrid PB is not enabled then we still create both heaps (helps keep
@@ -109,10 +190,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 
 	#define SGX_SHARED_3DPARAMETERS_HEAP_BASE		 0xC0000000
-	/* Size is defiend above */
+	/* Size is defined above */
 
 	#define SGX_PERCONTEXT_3DPARAMETERS_HEAP_BASE		 (SGX_SHARED_3DPARAMETERS_HEAP_BASE + SGX_SHARED_3DPARAMETERS_SIZE)
-	/* Size is defiend above */
+	/* Size is defined above */
 
 	#define SGX_TADATA_HEAP_BASE				 0xD0000000
 	#define SGX_TADATA_HEAP_SIZE				(0x0D000000-0x00001000)
@@ -151,16 +232,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 	#endif
 
 	#if !defined(SUPPORT_MEMORY_TILING)
-		#if defined (SUPPORT_ION)
-			#define SGX_GENERAL_HEAP_BASE				 0x10000000
-			#define SGX_GENERAL_HEAP_SIZE				(0xC2000000-ION_HEAP_SIZE-0x00001000)
-
-			#define SGX_ION_HEAP_BASE					(SGX_GENERAL_HEAP_BASE+SGX_GENERAL_HEAP_SIZE+0x00001000)
-			#define SGX_ION_HEAP_SIZE					(ION_HEAP_SIZE-0x00001000)
-		#else
-			#define SGX_GENERAL_HEAP_BASE				 0x10000000
-			#define SGX_GENERAL_HEAP_SIZE				(0xC2000000-0x00001000)
-		#endif
+		#define SGX_GENERAL_HEAP_BASE				 0x10000000
+		#define SGX_GENERAL_HEAP_SIZE				(0xC2000000-0x00001000)
 	#else
 		#include <sgx_msvdx_defs.h>
 		/* Create heaps with memory tiling enabled.
@@ -185,7 +258,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 	 * For hybrid PB we have to split virtual PB range between the shared
 	 * PB and percontext PB due to the fact we only have one heap config
 	 * per device.
-	 * If hybrid PB is enabled we split the space acording to HYBRID_SHARED_PB_SIZE.
+	 * If hybrid PB is enabled we split the space according to HYBRID_SHARED_PB_SIZE.
 	 * i.e. HYBRID_SHARED_PB_SIZE defines the size of the shared PB and the
 	 * remainder is the size of the percontext PB.
 	 * If hybrid PB is not enabled then we still create both heaps (helps keep
@@ -216,10 +289,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 
 	#define SGX_SHARED_3DPARAMETERS_HEAP_BASE		 0xD2000000
-	/* Size is defiend above */
+	/* Size is defined above */
 
 	#define SGX_PERCONTEXT_3DPARAMETERS_HEAP_BASE		 (SGX_SHARED_3DPARAMETERS_HEAP_BASE + SGX_SHARED_3DPARAMETERS_SIZE)
-	/* Size is defiend above */
+	/* Size is defined above */
 
 	#define SGX_TADATA_HEAP_BASE				 0xE2000000
 	#define SGX_TADATA_HEAP_SIZE				(0x0D000000-0x00001000)
@@ -248,6 +321,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 	#define SGX_VERTEXSHADER_HEAP_SIZE			(0x02000000-0x00001000)
 #endif /* FIX_HW_BRN_31620 */
 	/* signal we've identified the core by the build */
+#endif /* defined(SGX_FEATURE_ADDRESS_SPACE_EXTENSION) */
 	#define SGX_CORE_IDENTIFIED
 #endif /* SGX_FEATURE_ADDRESS_SPACE_SIZE == 32 */
 
@@ -258,26 +332,22 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 	#define SGX_GENERAL_MAPPING_HEAP_SIZE		(0x01800000-0x00001000-0x00001000)
 
 	#define SGX_GENERAL_HEAP_BASE				 0x01800000
-	#define SGX_GENERAL_HEAP_SIZE				(0x07000000-ION_HEAP_SIZE-0x00001000)
+	#define SGX_GENERAL_HEAP_SIZE				(0x07000000-0x00001000)
 
 #else
 	#define SGX_GENERAL_HEAP_BASE				 0x00001000
 #if defined(SUPPORT_LARGE_GENERAL_HEAP)
-	#define SGX_GENERAL_HEAP_SIZE				(0x0B800000-ION_HEAP_SIZE-0x00001000-0x00001000)
+	#define SGX_GENERAL_HEAP_SIZE				(0x0B800000-0x00001000-0x00001000)
 #else
-	#define SGX_GENERAL_HEAP_SIZE				(0x08800000-ION_HEAP_SIZE-0x00001000-0x00001000)
+	#define SGX_GENERAL_HEAP_SIZE				(0x08800000-0x00001000-0x00001000)
 #endif
 #endif
 
-#if defined(SUPPORT_ION)
-	#define SGX_ION_HEAP_BASE					(SGX_GENERAL_HEAP_BASE+SGX_GENERAL_HEAP_SIZE+0x00001000)
-	#define SGX_ION_HEAP_SIZE					(ION_HEAP_SIZE-0x00001000)
-#endif
 	/*
 	 * For hybrid PB we have to split virtual PB range between the shared
 	 * PB and percontext PB due to the fact we only have one heap config
 	 * per device.
- 	 * If hybrid PB is enabled we split the space acording to HYBRID_SHARED_PB_SIZE.
+ 	 * If hybrid PB is enabled we split the space according to HYBRID_SHARED_PB_SIZE.
 	 * i.e. HYBRID_SHARED_PB_SIZE defines the size of the shared PB and the
 	 * remainder is the size of the percontext PB.
 	 * If hybrid PB is not enabled then we still create both heaps (helps keep
@@ -354,6 +424,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 	#error "sgxconfig.h: ERROR: unspecified SGX Core version"
 #endif
 
+#if !defined(SGX_FEATURE_ADDRESS_SPACE_EXTENSION)
 /*********************************************************************************
  *
  * SGX_PDSPIXEL_CODEDATA_HEAP_BASE + 64MB range must include PDSVERTEX_CODEDATA and KERNEL_CODE heaps
@@ -428,11 +499,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 		#error "sgxconfig.h: ERROR: SGX_VPB_TILED_HEAP overlaps SGX_3DPARAMETERS_HEAP"
 	#endif
 #else
-	#if defined(SUPPORT_ION)
-		#if ((SGX_ION_HEAP_BASE + SGX_ION_HEAP_SIZE) >= SGX_SHARED_3DPARAMETERS_HEAP_BASE)
-			#error "sgxconfig.h: ERROR: SGX_ION_HEAP overlaps SGX_3DPARAMETERS_HEAP"
-		#endif
-	#endif
 	#if ((SGX_GENERAL_HEAP_BASE + SGX_GENERAL_HEAP_SIZE) >= SGX_SHARED_3DPARAMETERS_HEAP_BASE)
 		#error "sgxconfig.h: ERROR: SGX_GENERAL_HEAP overlaps SGX_3DPARAMETERS_HEAP"
 	#endif
@@ -473,7 +539,105 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if ((SGX_VERTEXSHADER_HEAP_BASE + SGX_VERTEXSHADER_HEAP_SIZE) < SGX_VERTEXSHADER_HEAP_BASE)
 	#error "sgxconfig.h: ERROR: SGX_VERTEXSHADER_HEAP_BASE size cause wraparound"
 #endif
+#else	/* !defined(SGX_FEATURE_ADDRESS_SPACE_EXTENSION) */
 
+/*********************************************************************************
+ *
+ * SGX_PDSPIXEL_CODEDATA_HEAP_BASE + 64MB range must include PDSVERTEX_CODEDATA and KERNEL_CODE heaps
+ *
+ ********************************************************************************/
+#if !defined (SGX_FEATURE_EDM_VERTEX_PDSADDR_FULL_RANGE)
+	#if ((SGX_KERNEL_CODE_HEAP_BASE + SGX_KERNEL_CODE_HEAP_SIZE - SGX_PDSPIXEL_CODEDATA_HEAP_BASE) >  0x4000000)
+	 	#error "sgxconfig.h: ERROR: SGX_KERNEL_CODE_HEAP_BASE out of range of SGX_PDSPIXEL_CODEDATA_HEAP_BASE"
+	#endif
+	
+	#if ((SGX_PDSVERTEX_CODEDATA_HEAP_BASE + SGX_PDSVERTEX_CODEDATA_HEAP_SIZE - SGX_PDSPIXEL_CODEDATA_HEAP_BASE) >  0x4000000)
+	 	#error "sgxconfig.h: ERROR: SGX_PDSVERTEX_CODEDATA_HEAP_BASE out of range of SGX_PDSPIXEL_CODEDATA_HEAP_BASE"
+	#endif
+#endif	
+
+/*********************************************************************************
+ *
+ * The kernel code heap base must be aligned to a USSE code page
+ *
+ ********************************************************************************/
+#if defined (EURASIA_USE_CODE_PAGE_SIZE)
+	#if ((SGX_KERNEL_CODE_HEAP_BASE & (EURASIA_USE_CODE_PAGE_SIZE - 1)) != 0)
+		#error "sgxconfig.h: ERROR: Kernel code heap base misalignment"
+	#endif
+#endif
+
+/*********************************************************************************
+ *
+ * Heap overlap check
+ *
+ ********************************************************************************/
+#if defined(SUPPORT_SGX_GENERAL_MAPPING_HEAP)
+	#if ((SGX_GENERAL_MAPPING_HEAP_BASE + SGX_GENERAL_MAPPING_HEAP_SIZE) >= SGX_GENERAL_HEAP_BASE)
+		#error "sgxconfig.h: ERROR: SGX_GENERAL_MAPPING_HEAP overlaps SGX_GENERAL_HEAP"
+	#endif
+#endif
+
+#if ((SGX_GENERAL_HEAP_BASE + SGX_GENERAL_HEAP_SIZE) >= SGX_PDSPIXEL_CODEDATA_HEAP_BASE)
+	#error "sgxconfig.h: ERROR: SGX_GENERAL_HEAP overlaps SGX_PDSPIXEL_CODEDATA_HEAP"
+#endif
+
+#if ((SGX_PDSPIXEL_CODEDATA_HEAP_BASE + SGX_PDSPIXEL_CODEDATA_HEAP_SIZE) >= SGX_KERNEL_CODE_HEAP_BASE)
+	#error "sgxconfig.h: ERROR: SGX_PDSPIXEL_CODEDATA_HEAP overlaps SGX_KERNEL_CODE_HEAP"
+#endif
+
+#if ((SGX_KERNEL_CODE_HEAP_BASE + SGX_KERNEL_CODE_HEAP_SIZE) >= SGX_PDSVERTEX_CODEDATA_HEAP_BASE)
+	#error "sgxconfig.h: ERROR: SGX_KERNEL_CODE_HEAP overlaps SGX_PDSVERTEX_CODEDATA_HEAP"
+#endif
+
+#if ((SGX_PDSVERTEX_CODEDATA_HEAP_BASE + SGX_PDSVERTEX_CODEDATA_HEAP_SIZE) >= SGX_PIXELSHADER_HEAP_BASE)
+	#error "sgxconfig.h: ERROR: SGX_PDSVERTEX_CODEDATA_HEAP overlaps SGX_KERNEL_DATA_HEAP"
+#endif
+
+#if ((SGX_PIXELSHADER_HEAP_BASE + SGX_PIXELSHADER_HEAP_SIZE) >= SGX_VERTEXSHADER_HEAP_BASE)
+	#error "sgxconfig.h: ERROR: SGX_PIXELSHADER_HEAP overlaps SGX_VERTEXSHADER_HEAP"
+#endif
+
+#if ((SGX_VERTEXSHADER_HEAP_BASE + SGX_VERTEXSHADER_HEAP_SIZE) >= SGX_KERNEL_DATA_HEAP_BASE)
+	#error "sgxconfig.h: ERROR: SGX_VERTEXSHADER_HEAP_BASE size overlaps SGX_KERNEL_DATA_HEAP"
+#endif
+
+/* check if last heap in 0-256MB spill out of 256MB */
+#if ((SGX_KERNEL_DATA_HEAP_BASE + SGX_KERNEL_DATA_HEAP_SIZE) > 0x0FFFFFFF)
+	#error "sgxconfig.h: ERROR: SGX_KERNEL_DATA_HEAP spill out of 256MB"
+#endif
+
+
+/* check for heaps out 0f 0-256MB range */
+
+
+#if ((SGX_SHARED_3DPARAMETERS_HEAP_BASE < 0x0FFFFFFF))
+	#error "sgxconfig.h: ERROR: put SGX_SHARED_3DPARAMETERS_HEAP out side of 0-256MB"
+#endif
+
+#if defined(SUPPORT_HYBRID_PB)
+	#if ((HYBRID_SHARED_PB_SIZE + 0x000001000) > SGX_3DPARAMETERS_HEAP_SIZE)
+		#error "sgxconfig.h: ERROR: HYBRID_SHARED_PB_SIZE too large"
+	#endif
+#endif
+
+#if (((SGX_PERCONTEXT_3DPARAMETERS_HEAP_BASE + SGX_PERCONTEXT_3DPARAMETERS_HEAP_SIZE) >= SGX_TADATA_HEAP_BASE) && (SGX_PERCONTEXT_3DPARAMETERS_HEAP_SIZE > 0))
+	#error "sgxconfig.h: ERROR: SGX_PERCONTEXT_3DPARAMETERS_HEAP_BASE overlaps SGX_TADATA_HEAP"
+#endif
+
+#if ((SGX_TADATA_HEAP_BASE + SGX_TADATA_HEAP_SIZE) >= SGX_SYNCINFO_HEAP_BASE)
+	#error "sgxconfig.h: ERROR: SGX_TADATA_HEAP overlaps SGX_SYNCINFO_HEAP"
+#endif
+
+#if ((SGX_SYNCINFO_HEAP_BASE + SGX_SYNCINFO_HEAP_SIZE) >= SGX_TEXTURE_HEAP_BASE)
+	#error "sgxconfig.h: ERROR: SGX_SYNCINFO_HEAP overlaps SGX_TEXTURE_HEAP_BASE"
+#endif
+
+#if ((SGX_TEXTURE_HEAP_BASE + SGX_TEXTURE_HEAP_SIZE) < SGX_TEXTURE_HEAP_BASE)
+	#error "sgxconfig.h: ERROR: SGX_TEXTURE_HEAP size cause wraparound"
+#endif
+
+#endif /* !defined(SGX_FEATURE_ADDRESS_SPACE_EXTENSION) */
 #endif /* __SGXCONFIG_H__ */
 
 /*****************************************************************************

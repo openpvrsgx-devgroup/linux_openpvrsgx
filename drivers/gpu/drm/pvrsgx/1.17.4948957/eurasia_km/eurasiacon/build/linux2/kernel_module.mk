@@ -66,7 +66,7 @@ $(THIS_MODULE):
 	@echo "kbuild module '$@'"
 	@echo " MODULE_KBUILD_MAKEFILE := $(MODULE_KBUILD_MAKEFILE)"
 	@echo " MODULE_KBUILD_OBJECTS := $(MODULE_KBUILD_OBJECTS)"
-	@echo ' Being built:' $(if $(filter $@,$(KERNEL_COMPONENTS)),"yes (separate module)",$(if $(filter $@,$(EXTRA_PVRSRVKM_COMPONENTS)),"yes (into omapdrm)","no"))
+	@echo ' Being built:' $(if $(filter $@,$(KERNEL_COMPONENTS)),"yes (separate module)",$(if $(filter $@,$(EXTRA_PVRSRVKM_COMPONENTS)),"yes (into pvrsrvkm)","no"))
 	@echo "Module $@ is a kbuild module. Run 'make kbuild' to make it"
 	@false
 

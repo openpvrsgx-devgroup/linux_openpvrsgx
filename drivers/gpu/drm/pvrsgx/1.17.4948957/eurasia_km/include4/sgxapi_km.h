@@ -83,11 +83,13 @@ extern "C" {
 #if defined(SUPPORT_MEMORY_TILING)
 #define SGX_VPB_TILED_HEAP_ID			14
 #endif
-#if defined(SUPPORT_ION)
-#define SGX_ION_HEAP_ID							15
-#endif
 
-#define SGX_MAX_HEAP_ID							16
+#if defined(SGX_FEATURE_ADDRESS_SPACE_EXTENSION)
+		#define SGX_TEXTURE_HEAP_ID                     15      
+		#define SGX_MAX_HEAP_ID                         16      
+#else
+		#define SGX_MAX_HEAP_ID 						15
+#endif
 
 /*
  * Keep SGX_3DPARAMETERS_HEAP_ID as TQ full custom
@@ -119,9 +121,9 @@ extern "C" {
 /* sync info structure array size */
 #define SGX_MAX_SRC_SYNCS_TA				32
 #define SGX_MAX_DST_SYNCS_TA				1
-/* note: there is implicitly 1 3D Dst Sync */
-#define SGX_MAX_SRC_SYNCS_TQ				8
-#define SGX_MAX_DST_SYNCS_TQ				1
+/* note: only one dst sync is supported by the 2D paths */
+#define SGX_MAX_SRC_SYNCS_TQ				6
+#define SGX_MAX_DST_SYNCS_TQ				2
 #endif
 
 
@@ -142,6 +144,9 @@ extern "C" {
 #define PVRSRV_SGX_HWPERF_POWER						0x6
 #define PVRSRV_SGX_HWPERF_PERIODIC					0x7
 #define PVRSRV_SGX_HWPERF_3DSPM						0x8
+#define PVRSRV_SGX_HWPERF_TA_OCL					0x9
+#define PVRSRV_SGX_HWPERF_3D_OCL					0xA
+#define PVRSRV_SGX_HWPERF_3DSPM_OCL					0xB
 
 #define PVRSRV_SGX_HWPERF_MK_EVENT					0x101
 #define PVRSRV_SGX_HWPERF_MK_TA						0x102
@@ -154,6 +159,7 @@ extern "C" {
 #define PVRSRV_SGX_HWPERF_MK_TA_LOCKUP					0x109
 #define PVRSRV_SGX_HWPERF_MK_3D_LOCKUP					0x10A
 #define PVRSRV_SGX_HWPERF_MK_2D_LOCKUP					0x10B
+#define PVRSRV_SGX_HWPERF_MK_HK						0x10C
 
 #define PVRSRV_SGX_HWPERF_TYPE_STARTEND_BIT			28
 #define PVRSRV_SGX_HWPERF_TYPE_OP_MASK				((1UL << PVRSRV_SGX_HWPERF_TYPE_STARTEND_BIT) - 1)
@@ -173,6 +179,12 @@ extern "C" {
 #define PVRSRV_SGX_HWPERF_TYPE_PERIODIC				(PVRSRV_SGX_HWPERF_PERIODIC)
 #define PVRSRV_SGX_HWPERF_TYPE_3DSPM_START			(PVRSRV_SGX_HWPERF_3DSPM | PVRSRV_SGX_HWPERF_TYPE_OP_START)
 #define PVRSRV_SGX_HWPERF_TYPE_3DSPM_END			(PVRSRV_SGX_HWPERF_3DSPM | PVRSRV_SGX_HWPERF_TYPE_OP_END)
+#define PVRSRV_SGX_HWPERF_TYPE_3DSPM_OCL_START			(PVRSRV_SGX_HWPERF_3DSPM_OCL | PVRSRV_SGX_HWPERF_TYPE_OP_START)
+#define PVRSRV_SGX_HWPERF_TYPE_3DSPM_OCL_END			(PVRSRV_SGX_HWPERF_3DSPM_OCL | PVRSRV_SGX_HWPERF_TYPE_OP_END)
+#define PVRSRV_SGX_HWPERF_TYPE_TA_OCL_START			(PVRSRV_SGX_HWPERF_TA_OCL | PVRSRV_SGX_HWPERF_TYPE_OP_START)
+#define PVRSRV_SGX_HWPERF_TYPE_TA_OCL_END			(PVRSRV_SGX_HWPERF_TA_OCL | PVRSRV_SGX_HWPERF_TYPE_OP_END)
+#define PVRSRV_SGX_HWPERF_TYPE_3D_OCL_START			(PVRSRV_SGX_HWPERF_3D_OCL | PVRSRV_SGX_HWPERF_TYPE_OP_START)
+#define PVRSRV_SGX_HWPERF_TYPE_3D_OCL_END			(PVRSRV_SGX_HWPERF_3D_OCL | PVRSRV_SGX_HWPERF_TYPE_OP_END)
 #define PVRSRV_SGX_HWPERF_TYPE_MK_TRANSFER_DUMMY_START		(PVRSRV_SGX_HWPERF_MK_TRANSFER_DUMMY | PVRSRV_SGX_HWPERF_TYPE_OP_START)
 #define PVRSRV_SGX_HWPERF_TYPE_MK_TRANSFER_DUMMY_END		(PVRSRV_SGX_HWPERF_MK_TRANSFER_DUMMY | PVRSRV_SGX_HWPERF_TYPE_OP_END)
 #define PVRSRV_SGX_HWPERF_TYPE_MK_TA_DUMMY_START		(PVRSRV_SGX_HWPERF_MK_TA_DUMMY | PVRSRV_SGX_HWPERF_TYPE_OP_START)
@@ -193,6 +205,9 @@ extern "C" {
 #define PVRSRV_SGX_HWPERF_TYPE_MK_3D_END			(PVRSRV_SGX_HWPERF_MK_3D | PVRSRV_SGX_HWPERF_TYPE_OP_END)
 #define PVRSRV_SGX_HWPERF_TYPE_MK_2D_START			(PVRSRV_SGX_HWPERF_MK_2D | PVRSRV_SGX_HWPERF_TYPE_OP_START)
 #define PVRSRV_SGX_HWPERF_TYPE_MK_2D_END			(PVRSRV_SGX_HWPERF_MK_2D | PVRSRV_SGX_HWPERF_TYPE_OP_END)
+#define PVRSRV_SGX_HWPERF_TYPE_MK_HK_START			(PVRSRV_SGX_HWPERF_MK_HK | PVRSRV_SGX_HWPERF_TYPE_OP_START)
+#define PVRSRV_SGX_HWPERF_TYPE_MK_HK_END			(PVRSRV_SGX_HWPERF_MK_HK | PVRSRV_SGX_HWPERF_TYPE_OP_END)
+
 
 #define PVRSRV_SGX_HWPERF_STATUS_OFF				(0x0)
 #define PVRSRV_SGX_HWPERF_STATUS_RESET_COUNTERS		(1UL << 0)
@@ -236,6 +251,7 @@ typedef struct _CTL_STATUS_
 typedef enum _SGX_MISC_INFO_REQUEST_
 {
 	SGX_MISC_INFO_REQUEST_CLOCKSPEED = 0,
+	SGX_MISC_INFO_REQUEST_CLOCKSPEED_SLCSIZE,
 	SGX_MISC_INFO_REQUEST_SGXREV,
 	SGX_MISC_INFO_REQUEST_DRIVER_SGXREV,
 #if defined(SUPPORT_SGX_EDM_MEMORY_DEBUG)
@@ -254,6 +270,9 @@ typedef enum _SGX_MISC_INFO_REQUEST_
 	SGX_MISC_INFO_REQUEST_SPM,
 	SGX_MISC_INFO_REQUEST_ACTIVEPOWER,
 	SGX_MISC_INFO_REQUEST_LOCKUPS,
+#if defined(PVRSRV_USSE_EDM_STATUS_DEBUG)
+	SGX_MISC_INFO_REQUEST_EDM_STATUS_BUFFER_INFO,
+#endif
 	SGX_MISC_INFO_REQUEST_FORCE_I16 				=  0x7fff
 } SGX_MISC_INFO_REQUEST;
 
@@ -275,11 +294,24 @@ typedef struct _PVRSRV_SGX_MISCINFO_FEATURES
 #if defined(SUPPORT_SGX_EDM_MEMORY_DEBUG)
 	IMG_UINT32			ui32DeviceMemValue;		/*!< device mem value read from ukernel */
 #endif
+} PVRSRV_SGX_MISCINFO_FEATURES;
+
+typedef struct _PVRSRV_SGX_MISCINFO_QUERY_CLOCKSPEED_SLCSIZE
+{
+	IMG_UINT32                      ui32SGXClockSpeed;
+	IMG_UINT32                      ui32SGXSLCSize;
+} PVRSRV_SGX_MISCINFO_QUERY_CLOCKSPEED_SLCSIZE;
+
 #if defined(PVRSRV_USSE_EDM_STATUS_DEBUG)
+/******************************************************************************
+ * Struct for getting access to the EDM Status Buffer
+ ******************************************************************************/
+typedef struct _PVRSRV_SGX_MISCINFO_EDM_STATUS_BUFFER_INFO
+{
 	IMG_DEV_VIRTADDR	sDevVAEDMStatusBuffer;	/*!< DevVAddr of the EDM status buffer */
 	IMG_PVOID			pvEDMStatusBuffer;		/*!< CPUVAddr of the EDM status buffer */
+} PVRSRV_SGX_MISCINFO_EDM_STATUS_BUFFER_INFO;
 #endif
-} PVRSRV_SGX_MISCINFO_FEATURES;
 
 
 /******************************************************************************
@@ -389,6 +421,7 @@ typedef struct _SGX_MISC_INFO_
 		IMG_UINT32	reserved;	/*!< Unused: ensures valid code in the case everything else is compiled out */
 		PVRSRV_SGX_MISCINFO_FEATURES						sSGXFeatures;
 		IMG_UINT32											ui32SGXClockSpeed;
+		PVRSRV_SGX_MISCINFO_QUERY_CLOCKSPEED_SLCSIZE				sQueryClockSpeedSLCSize;
 		PVRSRV_SGX_MISCINFO_ACTIVEPOWER						sActivePower;
 		PVRSRV_SGX_MISCINFO_LOCKUPS							sLockups;
 		PVRSRV_SGX_MISCINFO_SPM								sSPM;
@@ -396,6 +429,10 @@ typedef struct _SGX_MISC_INFO_
 		SGX_BREAKPOINT_INFO									sSGXBreakpointInfo;
 #endif
 		PVRSRV_SGX_MISCINFO_SET_HWPERF_STATUS				sSetHWPerfStatus;
+
+#if defined(PVRSRV_USSE_EDM_STATUS_DEBUG)
+		PVRSRV_SGX_MISCINFO_EDM_STATUS_BUFFER_INFO			sEDMStatusBufferInfo;
+#endif
 	} uData;
 } SGX_MISC_INFO;
 
@@ -439,7 +476,6 @@ typedef struct _PVRSRV_SGX_PDUMP_CONTEXT_
 } PVRSRV_SGX_PDUMP_CONTEXT;
 
 
-#if !defined (SUPPORT_SID_INTERFACE)
 typedef struct _SGX_KICKTA_DUMP_ROFF_
 {
 	IMG_HANDLE			hKernelMemInfo;						/*< Buffer handle */
@@ -448,13 +484,8 @@ typedef struct _SGX_KICKTA_DUMP_ROFF_
 	IMG_UINT32			ui32Value;							/*< Actual value to dump */
 	IMG_PCHAR			pszName;							/*< Name of buffer */
 } SGX_KICKTA_DUMP_ROFF, *PSGX_KICKTA_DUMP_ROFF;
-#endif
 
-#if defined (SUPPORT_SID_INTERFACE)
-typedef struct _SGX_KICKTA_DUMP_BUFFER_KM_
-#else
 typedef struct _SGX_KICKTA_DUMP_BUFFER_
-#endif
 {
 	IMG_UINT32			ui32SpaceUsed;
 	IMG_UINT32			ui32Start;							/*< Byte offset of start to dump */
@@ -475,13 +506,8 @@ typedef struct _SGX_KICKTA_DUMP_BUFFER_
 #if defined (__QNXNTO__)
 	IMG_UINT32          ui32NameLength;                     /*< Number of characters in buffer name */
 #endif
-#if defined (SUPPORT_SID_INTERFACE)
-} SGX_KICKTA_DUMP_BUFFER_KM, *PSGX_KICKTA_DUMP_BUFFER_KM;
-#else
 } SGX_KICKTA_DUMP_BUFFER, *PSGX_KICKTA_DUMP_BUFFER;
-#endif
 
-#if !defined (SUPPORT_SID_INTERFACE)
 #ifdef PDUMP
 /*
 	PDUMP version of above kick structure
@@ -501,7 +527,6 @@ typedef struct _SGX_KICKTA_PDUMP_
 	IMG_UINT32						ui32ROffArraySize;
 } SGX_KICKTA_PDUMP, *PSGX_KICKTA_PDUMP;
 #endif	/* PDUMP */
-#endif /* #if !defined (SUPPORT_SID_INTERFACE) */
 
 #if defined(TRANSFER_QUEUE)
 #if defined(SGX_FEATURE_2D_HARDWARE)

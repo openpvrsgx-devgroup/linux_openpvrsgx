@@ -42,6 +42,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef SRVKM_H
 #define SRVKM_H
 
+#include "servicesint.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -63,11 +64,154 @@ extern "C" {
 
 	IMG_IMPORT IMG_VOID PVRSRVScheduleDevicesKM(IMG_VOID);
 
+#if defined(SUPPORT_PVRSRV_DEVICE_CLASS)
 	IMG_VOID IMG_CALLCONV PVRSRVSetDCState(IMG_UINT32 ui32State);
+#endif
 
 	PVRSRV_ERROR IMG_CALLCONV PVRSRVSaveRestoreLiveSegments(IMG_HANDLE hArena, IMG_PBYTE pbyBuffer, IMG_SIZE_T *puiBufSize, IMG_BOOL bSave);
 
 	IMG_VOID PVRSRVScheduleDeviceCallbacks(IMG_VOID);
+
+	IMG_IMPORT IMG_VOID IMG_CALLCONV PVRSRVDumpSyncs(IMG_BOOL bActiveOnly);
+
+#define SYNC_OP_CLASS_MASK			0x0000ffffUL
+#define SYNC_OP_CLASS_SHIFT			0
+#define SYNC_OP_CLASS_MODOBJ		(1<<0)
+#define SYNC_OP_CLASS_QUEUE			(1<<1)
+#define SYNC_OP_CLASS_KICKTA		(1<<2)
+#define SYNC_OP_CLASS_TQ_3D			(1<<3)
+#define SYNC_OP_CLASS_TQ_2D			(1<<4)
+
+#define SYNC_OP_TYPE_MASK			0x00f0000UL
+#define SYNC_OP_TYPE_SHIFT			16
+#define SYNC_OP_TYPE_READOP			(1<<0)
+#define SYNC_OP_TYPE_WRITEOP		(1<<1)
+#define SYNC_OP_TYPE_READOP2		(1<<2)
+
+#define SYNC_OP_HAS_DATA			0x80000000UL
+#define SYNC_OP_TAKE				0x40000000UL
+#define SYNC_OP_ROLLBACK			0x20000000UL
+
+#ifdef INLINE_IS_PRAGMA
+#pragma inline(SyncTakeWriteOp)
+#endif
+static INLINE
+IMG_UINT32 SyncTakeWriteOp(PVRSRV_KERNEL_SYNC_INFO *psKernelSync, IMG_UINT32 ui32OpType)
+{
+#if defined(SUPPORT_PER_SYNC_DEBUG)
+	IMG_UINT32 ui32Index = psKernelSync->ui32HistoryIndex;
+
+	/* Record a history of all the classes of operation taken on this sync */
+	psKernelSync->ui32OperationMask |= (ui32OpType & SYNC_OP_CLASS_MASK) >> SYNC_OP_CLASS_SHIFT;
+
+	/* Add this operation to the history buffer */
+	psKernelSync->aui32OpInfo[ui32Index] = SYNC_OP_HAS_DATA | ui32OpType | (SYNC_OP_TYPE_WRITEOP << SYNC_OP_TYPE_SHIFT) | SYNC_OP_TAKE;
+	psKernelSync->aui32ReadOpSample[ui32Index] = psKernelSync->psSyncData->ui32ReadOpsPending;
+	psKernelSync->aui32WriteOpSample[ui32Index] = psKernelSync->psSyncData->ui32WriteOpsPending;
+	psKernelSync->aui32ReadOp2Sample[ui32Index] = psKernelSync->psSyncData->ui32ReadOps2Pending;
+	psKernelSync->ui32HistoryIndex++;
+	psKernelSync->ui32HistoryIndex = psKernelSync->ui32HistoryIndex % PER_SYNC_HISTORY;
+#endif
+	PVR_UNREFERENCED_PARAMETER(ui32OpType);
+	return psKernelSync->psSyncData->ui32WriteOpsPending++;
+}
+
+#ifdef INLINE_IS_PRAGMA
+#pragma inline(SyncTakeReadOp)
+#endif
+static INLINE
+IMG_UINT32 SyncTakeReadOp(PVRSRV_KERNEL_SYNC_INFO *psKernelSync, IMG_UINT32 ui32OpType)
+{
+#if defined(SUPPORT_PER_SYNC_DEBUG)
+	IMG_UINT32 ui32Index = psKernelSync->ui32HistoryIndex;
+
+	/* Record a history of all the classes of operation taken on this sync */
+	psKernelSync->ui32OperationMask |= (ui32OpType & SYNC_OP_CLASS_MASK) >> SYNC_OP_CLASS_SHIFT;
+
+	/* Add this operation to the history buffer */
+	psKernelSync->aui32OpInfo[ui32Index] = SYNC_OP_HAS_DATA | ui32OpType | (SYNC_OP_TYPE_READOP << SYNC_OP_TYPE_SHIFT) | SYNC_OP_TAKE;
+	psKernelSync->aui32ReadOpSample[ui32Index] = psKernelSync->psSyncData->ui32ReadOpsPending;
+	psKernelSync->aui32WriteOpSample[ui32Index] = psKernelSync->psSyncData->ui32WriteOpsPending;
+	psKernelSync->aui32ReadOp2Sample[ui32Index] = psKernelSync->psSyncData->ui32ReadOps2Pending;
+	psKernelSync->ui32HistoryIndex++;
+	psKernelSync->ui32HistoryIndex = psKernelSync->ui32HistoryIndex % PER_SYNC_HISTORY;
+#endif
+	PVR_UNREFERENCED_PARAMETER(ui32OpType);
+	return psKernelSync->psSyncData->ui32ReadOpsPending++;
+}
+
+#ifdef INLINE_IS_PRAGMA
+#pragma inline(SyncTakeReadOp2)
+#endif
+static INLINE
+IMG_UINT32 SyncTakeReadOp2(PVRSRV_KERNEL_SYNC_INFO *psKernelSync, IMG_UINT32 ui32OpType)
+{
+#if defined(SUPPORT_PER_SYNC_DEBUG)
+	IMG_UINT32 ui32Index = psKernelSync->ui32HistoryIndex;
+
+	/* Record a history of all the classes of operation taken on this sync */
+	psKernelSync->ui32OperationMask |= (ui32OpType & SYNC_OP_CLASS_MASK) >> SYNC_OP_CLASS_SHIFT;
+
+	/* Add this operation to the history buffer */
+	psKernelSync->aui32OpInfo[ui32Index] = SYNC_OP_HAS_DATA | ui32OpType | (SYNC_OP_TYPE_READOP2 << SYNC_OP_TYPE_SHIFT) | SYNC_OP_TAKE;
+	psKernelSync->aui32ReadOpSample[ui32Index] = psKernelSync->psSyncData->ui32ReadOpsPending;
+	psKernelSync->aui32WriteOpSample[ui32Index] = psKernelSync->psSyncData->ui32WriteOpsPending;
+	psKernelSync->aui32ReadOp2Sample[ui32Index] = psKernelSync->psSyncData->ui32ReadOps2Pending;
+	psKernelSync->ui32HistoryIndex++;
+	psKernelSync->ui32HistoryIndex = psKernelSync->ui32HistoryIndex % PER_SYNC_HISTORY;
+#endif
+	PVR_UNREFERENCED_PARAMETER(ui32OpType);
+	return psKernelSync->psSyncData->ui32ReadOps2Pending++;
+}
+
+#ifdef INLINE_IS_PRAGMA
+#pragma inline(SyncRollBackWriteOp)
+#endif
+static INLINE
+IMG_UINT32 SyncRollBackWriteOp(PVRSRV_KERNEL_SYNC_INFO *psKernelSync, IMG_UINT32 ui32OpType)
+{
+#if defined(SUPPORT_PER_SYNC_DEBUG)
+	IMG_UINT32 ui32Index = psKernelSync->ui32HistoryIndex;
+
+	/* Record a history of all the classes of operation taken on this sync */
+	psKernelSync->ui32OperationMask |= (ui32OpType & SYNC_OP_CLASS_MASK) >> SYNC_OP_CLASS_SHIFT;
+
+	/* Add this operation to the history buffer */
+	psKernelSync->aui32OpInfo[ui32Index] = SYNC_OP_HAS_DATA | ui32OpType | (SYNC_OP_TYPE_WRITEOP << SYNC_OP_TYPE_SHIFT) | SYNC_OP_ROLLBACK;
+	psKernelSync->aui32ReadOpSample[ui32Index] = psKernelSync->psSyncData->ui32ReadOpsPending;
+	psKernelSync->aui32WriteOpSample[ui32Index] = psKernelSync->psSyncData->ui32WriteOpsPending;
+	psKernelSync->aui32ReadOp2Sample[ui32Index] = psKernelSync->psSyncData->ui32ReadOps2Pending;
+	psKernelSync->ui32HistoryIndex++;
+	psKernelSync->ui32HistoryIndex = psKernelSync->ui32HistoryIndex % PER_SYNC_HISTORY;
+#endif
+	PVR_UNREFERENCED_PARAMETER(ui32OpType);
+	return psKernelSync->psSyncData->ui32WriteOpsPending--;
+}
+
+#ifdef INLINE_IS_PRAGMA
+#pragma inline(SyncRollBackReadOp)
+#endif
+static INLINE
+IMG_UINT32 SyncRollBackReadOp(PVRSRV_KERNEL_SYNC_INFO *psKernelSync, IMG_UINT32 ui32OpType)
+{
+#if defined(SUPPORT_PER_SYNC_DEBUG)
+	IMG_UINT32 ui32Index = psKernelSync->ui32HistoryIndex;
+
+	/* Record a history of all the classes of operation taken on this sync */
+	psKernelSync->ui32OperationMask |= (ui32OpType & SYNC_OP_CLASS_MASK) >> SYNC_OP_CLASS_SHIFT;
+
+	/* Add this operation to the history buffer */
+	psKernelSync->aui32OpInfo[ui32Index] = SYNC_OP_HAS_DATA | ui32OpType | (SYNC_OP_TYPE_READOP << SYNC_OP_TYPE_SHIFT) | SYNC_OP_ROLLBACK;
+	psKernelSync->aui32ReadOpSample[ui32Index] = psKernelSync->psSyncData->ui32ReadOpsPending;
+	psKernelSync->aui32WriteOpSample[ui32Index] = psKernelSync->psSyncData->ui32WriteOpsPending;
+	psKernelSync->aui32ReadOp2Sample[ui32Index] = psKernelSync->psSyncData->ui32ReadOps2Pending;
+	psKernelSync->ui32HistoryIndex++;
+	psKernelSync->ui32HistoryIndex = psKernelSync->ui32HistoryIndex % PER_SYNC_HISTORY;
+#endif
+	PVR_UNREFERENCED_PARAMETER(ui32OpType);
+	return psKernelSync->psSyncData->ui32ReadOpsPending--;
+}
+
 
 
 #if defined (__cplusplus)

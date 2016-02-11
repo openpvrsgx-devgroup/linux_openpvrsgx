@@ -55,22 +55,20 @@ endef
 
 define target-o-from-one-c
 $(if $(V),,@echo "  CC      " $(call relative-to-top,$<))
-$(CC) -MD -c $(MODULE_CFLAGS) $(MODULE_INCLUDE_FLAGS) \
+$(CC) -MD -c $(MODULE_CFLAGS) $(SYS_INCLUDES) $(MODULE_INCLUDE_FLAGS) \
 	 -include $(CONFIG_H) $< -o $@
 endef
 
-# We use $(CC) to compile C++ files, and expect it to detect that it's
-# compiling C++
 define host-o-from-one-cxx
-$(if $(V),,@echo "  HOST_CC " $(call relative-to-top,$<))
-$(HOST_CC) -MD -c $(MODULE_HOST_CXXFLAGS) $(MODULE_INCLUDE_FLAGS) \
-	 -include $(CONFIG_H) $< -o $@
+$(if $(V),,@echo "  HOST_CXX" $(call relative-to-top,$<))
+$(HOST_CXX) -MD -c $(MODULE_HOST_CXXFLAGS) $(MODULE_INCLUDE_FLAGS) \
+	-include $(CONFIG_H) $< -o $@
 endef
 
 define target-o-from-one-cxx
-$(if $(V),,@echo "  CC      " $(call relative-to-top,$<))
-$(CC) -MD -c $(MODULE_CXXFLAGS) $(MODULE_INCLUDE_FLAGS) \
-	 -include $(CONFIG_H) $< -o $@
+$(if $(V),,@echo "  CXX     " $(call relative-to-top,$<))
+$(CXX) -MD -c $(MODULE_CXXFLAGS) $(SYS_INCLUDES) $(MODULE_INCLUDE_FLAGS) \
+	-include $(CONFIG_H) $< -o $@
 endef
 
 define host-executable-from-o
@@ -90,7 +88,7 @@ endef
 define target-executable-from-o
 $(if $(V),,@echo "  LD      " $(call relative-to-top,$@))
 $(CC) \
-	$(SYS_EXE_LDFLAGS) $(MODULE_LDFLAGS) -o $@ \
+	$(SYS_EXE_LDFLAGS) $(SYS_COMMON_LDFLAGS) $(MODULE_LDFLAGS) -o $@ \
 	$(SYS_EXE_CRTBEGIN) $(sort $(MODULE_ALL_OBJECTS)) $(SYS_EXE_CRTEND) \
 	$(MODULE_LIBRARY_DIR_FLAGS) $(MODULE_LIBRARY_FLAGS) $(LIBGCC)
 endef
@@ -98,7 +96,7 @@ endef
 define target-executable-cxx-from-o
 $(if $(V),,@echo "  LD      " $(call relative-to-top,$@))
 $(CXX) \
-	$(SYS_EXE_LDFLAGS) $(MODULE_LDFLAGS) -o $@ \
+	$(SYS_EXE_LDFLAGS_CXX) $(SYS_EXE_LDFLAGS) $(SYS_COMMON_LDFLAGS) $(MODULE_LDFLAGS) -o $@ \
 	$(SYS_EXE_CRTBEGIN) $(sort $(MODULE_ALL_OBJECTS)) $(SYS_EXE_CRTEND) \
 	$(MODULE_LIBRARY_DIR_FLAGS) $(MODULE_LIBRARY_FLAGS) $(LIBGCC)
 endef
@@ -106,7 +104,7 @@ endef
 define target-shared-library-from-o
 $(if $(V),,@echo "  LD      " $(call relative-to-top,$@))
 $(CC) -shared -Wl,-Bsymbolic \
-	$(SYS_LIB_LDFLAGS) $(MODULE_LDFLAGS) -o $@ \
+	$(SYS_LIB_LDFLAGS) $(SYS_COMMON_LDFLAGS) $(MODULE_LDFLAGS) -o $@ \
 	$(SYS_LIB_CRTBEGIN) $(sort $(MODULE_ALL_OBJECTS)) $(SYS_LIB_CRTEND) \
 	$(MODULE_LIBRARY_DIR_FLAGS) $(MODULE_LIBRARY_FLAGS) $(LIBGCC)
 endef
@@ -116,9 +114,27 @@ endef
 define target-shared-library-cxx-from-o
 $(if $(V),,@echo "  LD      " $(call relative-to-top,$@))
 $(CXX) -shared -Wl,-Bsymbolic \
-	$(SYS_LIB_LDFLAGS) $(MODULE_LDFLAGS) -o $@ \
+	$(SYS_LIB_LDFLAGS_CXX) $(SYS_LIB_LDFLAGS) $(SYS_COMMON_LDFLAGS) $(MODULE_LDFLAGS) -o $@ \
 	$(SYS_LIB_CRTBEGIN) $(sort $(MODULE_ALL_OBJECTS)) $(SYS_LIB_CRTEND) \
 	$(MODULE_LIBRARY_DIR_FLAGS) $(MODULE_LIBRARY_FLAGS) $(LIBGCC)
+endef
+
+define host-shared-library-from-o
+$(if $(V),,@echo "  HOST_LD " $(call relative-to-top,$@))
+$(HOST_CC) -shared -Wl,-Bsymbolic \
+	$(MODULE_HOST_LDFLAGS) -o $@ \
+	$(sort $(MODULE_ALL_OBJECTS)) \
+	$(MODULE_LIBRARY_DIR_FLAGS) $(MODULE_LIBRARY_FLAGS)
+endef
+
+# If there were any C++ source files in a shared library, we use this recipe,
+# which runs the C++ compiler to link the final library
+define host-shared-library-cxx-from-o
+$(if $(V),,@echo "  HOST_LD " $(call relative-to-top,$@))
+$(HOST_CXX) -shared -Wl,-Bsymbolic \
+	$(MODULE_HOST_LDFLAGS) -o $@ \
+	$(sort $(MODULE_ALL_OBJECTS)) \
+	$(MODULE_LIBRARY_DIR_FLAGS) $(MODULE_LIBRARY_FLAGS)
 endef
 
 define target-copy-debug-information
@@ -167,7 +183,11 @@ define make-directory
 $(MKDIR) -p $@
 endef
 
+define check-exports-from-file
+endef
+
 define check-exports
+$(call check-exports-from-file,$(if $1,$1,$(notdir $@).txt))
 endef
 
 # Programs used in recipes
@@ -182,40 +202,64 @@ JAVA ?= java
 JAVAC ?= javac
 ZIP ?= zip
 
-override AR			:= $(if $(V),,@)$(CROSS_COMPILE)ar
-override BISON		:= $(if $(V),,@)$(BISON)
-override BZIP2		:= $(if $(V),,@)bzip2 -9
-override CC			:= $(if $(V),,@)$(CROSS_COMPILE)$(CC)
-override CC_CHECK	:= $(if $(V),,@)$(MAKE_TOP)/tools/cc-check.sh
-override CXX		:= $(if $(V),,@)$(CROSS_COMPILE)$(CXX)
+ifeq ($(USE_CCACHE),1)
+CCACHE ?= ccache
+endif
+
+# Define CHMOD and CC_CHECK first so we can use cc-is-clang
+#
 override CHMOD		:= $(if $(V),,@)chmod
-override CP			:= $(if $(V),,@)cp
-override DOS2UNIX	:= $(if $(V),,@)\
- $(shell if [ -z `which fromdos` ]; then echo dos2unix -f -q; else echo fromdos -f -p; fi)
-override ECHO		:= $(if $(V),,@)echo
-override FLEX		:= $(if $(V),,@)flex
-override GAWK		:= $(if $(V),,@)gawk
-override GREP		:= $(if $(V),,@)grep
-override HOST_AR	:= $(if $(V),,@)ar
-override HOST_CC	:= $(if $(V),,@)$(HOST_CC)
-override HOST_CXX	:= $(if $(V),,@)$(HOST_CXX)
-override HOST_STRIP := $(if $(V),,@)strip
-override INSTALL	:= $(if $(V),,@)install
-override JAR		:= $(if $(V),,@)$(JAR)
-override JAVA		:= $(if $(V),,@)$(JAVA)
-override JAVAC		:= $(if $(V),,@)$(JAVAC)
-override M4			:= $(if $(V),,@)m4
-override MKDIR		:= $(if $(V),,@)mkdir
-override MV			:= $(if $(V),,@)mv
-override OBJCOPY	:= $(if $(V),,@)$(CROSS_COMPILE)objcopy
-override PDSASM		:= $(if $(V),,@)$(HOST_OUT)/pdsasm
-override RANLIB		:= $(if $(V),,@)$(CROSS_COMPILE)ranlib
-override RM			:= $(if $(V),,@)rm -f
-override SED		:= $(if $(V),,@)sed
-override STRIP		:= $(if $(V),,@)$(CROSS_COMPILE)strip
-override TAR		:= $(if $(V),,@)tar
-override TOUCH  	:= $(if $(V),,@)touch
-override USEASM		:= $(if $(V),,@)$(HOST_OUT)/useasm
-override USELINK	:= $(if $(V),,@)$(HOST_OUT)/uselink
-override VHD2INC	:= $(if $(V),,@)$(HOST_OUT)/vhd2inc
-override ZIP		:= $(if $(V),,@)$(ZIP)
+override CC_CHECK	:= $(if $(V),,@)$(MAKE_TOP)/tools/cc-check.sh
+
+# If clang is detected, the compiler name is invariant but CROSS_COMPILE
+# is reflected in the use of -target. For GCC this is always encoded into
+# the binary. If CROSS_COMPILE is not set we can skip this.
+#
+ifneq ($(CROSS_COMPILE),)
+ifeq ($(cc-is-clang),true)
+override CC  := $(if $(V),,@)$(CCACHE) $(CC) \
+ -target $(patsubst %-,%,$(CROSS_COMPILE)) \
+ -B$(dir $(shell which $(CROSS_COMPILE)gcc))
+override CXX := $(if $(V),,@)$(CCACHE) $(CXX) \
+ -target $(patsubst %-,%,$(CROSS_COMPILE)) \
+ -B$(dir $(shell which $(CROSS_COMPILE)gcc))
+else
+override CC  := $(if $(V),,@)$(CCACHE) $(CROSS_COMPILE)$(CC)
+override CXX := $(if $(V),,@)$(CCACHE) $(CROSS_COMPILE)$(CXX)
+endif
+else
+override CC  := $(if $(V),,@)$(CCACHE) $(CC)
+override CXX := $(if $(V),,@)$(CCACHE) $(CXX)
+endif
+
+override AR				:= $(if $(V),,@)$(CROSS_COMPILE)ar
+override BISON			:= $(if $(V),,@)$(BISON)
+override BZIP2			:= $(if $(V),,@)bzip2 -9
+override CP				:= $(if $(V),,@)cp
+override ECHO			:= $(if $(V),,@)echo
+override FLEX			:= $(if $(V),,@)flex
+override GAWK			:= $(if $(V),,@)gawk
+override GREP			:= $(if $(V),,@)grep
+override HOST_AR		:= $(if $(V),,@)ar
+override HOST_CC		:= $(if $(V),,@)$(CCACHE) $(HOST_CC)
+override HOST_CXX		:= $(if $(V),,@)$(CCACHE) $(HOST_CXX)
+override HOST_STRIP		:= $(if $(V),,@)strip
+override INSTALL		:= $(if $(V),,@)install
+override JAR			:= $(if $(V),,@)$(JAR)
+override JAVA			:= $(if $(V),,@)$(JAVA)
+override JAVAC			:= $(if $(V),,@)$(JAVAC)
+override M4				:= $(if $(V),,@)m4
+override MKDIR			:= $(if $(V),,@)mkdir
+override MV				:= $(if $(V),,@)mv
+override OBJCOPY		:= $(if $(V),,@)$(CROSS_COMPILE)objcopy
+override PDSASM			:= $(if $(V),,@)$(HOST_OUT)/pdsasm
+override RANLIB			:= $(if $(V),,@)$(CROSS_COMPILE)ranlib
+override RM				:= $(if $(V),,@)rm -f
+override SED			:= $(if $(V),,@)sed
+override STRIP			:= $(if $(V),,@)$(CROSS_COMPILE)strip
+override TAR			:= $(if $(V),,@)tar
+override TOUCH			:= $(if $(V),,@)touch
+override USEASM			:= $(if $(V),,@)$(HOST_OUT)/useasm
+override USELINK		:= $(if $(V),,@)$(HOST_OUT)/uselink
+override VHD2INC		:= $(if $(V),,@)$(HOST_OUT)/vhd2inc
+override ZIP			:= $(if $(V),,@)$(ZIP)

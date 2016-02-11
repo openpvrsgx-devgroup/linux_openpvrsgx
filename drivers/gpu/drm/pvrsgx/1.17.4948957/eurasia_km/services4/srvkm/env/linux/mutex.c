@@ -141,7 +141,7 @@ IMG_INT32 LinuxTryLockMutex(PVRSRV_LINUX_MUTEX *psPVRSRVMutex)
         atomic_dec(&psPVRSRVMutex->Count);
     }
 
-    return Status;
+    return Status == 0;
 }
 
 IMG_VOID LinuxUnLockMutex(PVRSRV_LINUX_MUTEX *psPVRSRVMutex)

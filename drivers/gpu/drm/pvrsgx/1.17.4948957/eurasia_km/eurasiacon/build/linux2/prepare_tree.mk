@@ -40,10 +40,6 @@
 
 .PHONY: prepare_tree
 
--include eurasiacon/build/linux2/kbuild/external_tarball.mk
-
-# If there's no external tarball, there's nothing to do
-#
 prepare_tree:
 
 INTERNAL_INCLUDED_PREPARE_HEADERS :=

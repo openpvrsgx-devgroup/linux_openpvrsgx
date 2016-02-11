@@ -48,20 +48,47 @@ MODULE_HOST_LDFLAGS := $(ALL_HOST_LDFLAGS) $($(THIS_MODULE)_ldflags)
 MODULE_BISON_FLAGS := $(ALL_BISON_FLAGS) $($(THIS_MODULE)_bisonflags)
 MODULE_FLEX_FLAGS := $(ALL_FLEX_FLAGS) $($(THIS_MODULE)_flexflags)
 
-# -L flags for library search dirs
+ifneq ($(BUILD),debug)
+ifeq ($(USE_LTO),1)
+MODULE_HOST_LDFLAGS := \
+ $(sort $(filter-out -W% -D%,$(ALL_HOST_CFLAGS) $(ALL_HOST_CXXFLAGS))) \
+ $(MODULE_HOST_LDFLAGS)
+MODULE_LDFLAGS := \
+ $(sort $(filter-out -W% -D%,$(ALL_CFLAGS) $(ALL_CXXFLAGS))) \
+ $(MODULE_LDFLAGS)
+endif
+endif
+
+# Only allow cflags that do not affect code generation. This is to ensure
+# proper binary compatibility when LTO (Link-Time Optimization) is enabled.
+# We make exceptions for the below flags which will all fail linkage in
+# non-LTO mode if incorrectly specified.
+#
+# NOTE: Only used by static_library and objects right now. Other module
+# types should not be affected by complex code generation flags w/ LTO.
+MODULE_ALLOWED_CFLAGS := -W% -D% -std=% -fPIC -fPIE -pie -m32
+
+# -L flags for library search dirs: these are relative to $(TOP), unless
+# they're absolute paths
 MODULE_LIBRARY_DIR_FLAGS := $(foreach _path,$($(THIS_MODULE)_libpaths),$(if $(filter /%,$(_path)),-L$(call relative-to-top,$(_path)),-L$(_path)))
-# -I flags for header search dirs
+# -I flags for header search dirs (same rules as for -L)
 MODULE_INCLUDE_FLAGS := $(foreach _path,$($(THIS_MODULE)_includes),$(if $(filter /%,$(_path)),-I$(call relative-to-top,$(_path)),-I$(_path)))
 
 # Variables used to differentiate between host/target builds
 MODULE_OUT := $(if $(MODULE_HOST_BUILD),$(HOST_OUT),$(TARGET_OUT))
+# For documentation modules, this variable is overridden by the module type
+# makefile to place the intermediates in $(DOCS_OUT)/intermediates.
 MODULE_INTERMEDIATES_DIR := $(if $(MODULE_HOST_BUILD),$(HOST_INTERMEDIATES)/$(THIS_MODULE),$(TARGET_INTERMEDIATES)/$(THIS_MODULE))
 
 .SECONDARY: $(MODULE_INTERMEDIATES_DIR)
 $(MODULE_INTERMEDIATES_DIR):
 	$(make-directory)
 
+# These are used for messages and variable names where we need to say "host"
+# or "target" according to the module build type.
 Host_or_target := $(if $(MODULE_HOST_BUILD),Host,Target)
+host_or_target := $(if $(MODULE_HOST_BUILD),host,target)
+HOST_OR_TARGET := $(if $(MODULE_HOST_BUILD),HOST,TARGET)
 
 # These define the rules for finding source files.
 # - If a name begins with a slash, we strip $(TOP) off the front if it begins
@@ -77,18 +104,26 @@ _SOURCES_WITHOUT_SLASH := $(strip $(foreach _s,$($(THIS_MODULE)_src),$(if $(find
 _SOURCES_WITH_SLASH := $(strip $(foreach _s,$($(THIS_MODULE)_src),$(if $(findstring /,$(_s)),$(_s),)))
 MODULE_SOURCES := $(addprefix $(THIS_DIR)/,$(_SOURCES_WITHOUT_SLASH))
 MODULE_SOURCES += $(call relative-to-top,$(filter /%,$(_SOURCES_WITH_SLASH)))
+
 _RELATIVE_SOURCES_WITH_SLASH := $(filter-out /%,$(_SOURCES_WITH_SLASH))
 _OUTDIR_RELATIVE_SOURCES_WITH_SLASH := $(filter $(RELATIVE_OUT)/%,$(_RELATIVE_SOURCES_WITH_SLASH))
 _THISDIR_RELATIVE_SOURCES_WITH_SLASH := $(filter-out $(RELATIVE_OUT)/%,$(_RELATIVE_SOURCES_WITH_SLASH))
 MODULE_SOURCES += $(_OUTDIR_RELATIVE_SOURCES_WITH_SLASH)
 MODULE_SOURCES += $(addprefix $(THIS_DIR)/,$(_THISDIR_RELATIVE_SOURCES_WITH_SLASH))
+
+# Generated sources and headers. We use $(MODULE_OUT) because it encourages
+# correctly marking modules which generate headers as host/target.
 MODULE_SOURCES += $(addprefix $(MODULE_OUT)/intermediates/,$($(THIS_MODULE)_gensrc))
 MODULE_GENERATED_HEADERS := $(addprefix $(MODULE_OUT)/intermediates/,$($(THIS_MODULE)_genheaders))
 
-# -l flags for each library
+# -l flags for each library. The rules are:
+#  - for all static libs, use -lfoo
+#  - for all in-tree or external libs, use $(libfoo_ldflags) if that
+#    variable is defined (empty counts as defined). Otherwise use
+#    -lfoo.
 MODULE_LIBRARY_FLAGS := $(addprefix -l, $($(THIS_MODULE)_staticlibs)) $(addprefix -l,$($(THIS_MODULE)_libs)) $(foreach _lib,$($(THIS_MODULE)_extlibs),$(if $(filter undefined,$(origin lib$(_lib)_ldflags)),-l$(_lib),$(lib$(_lib)_ldflags)))
 
-# pkg-config integration; primarily used by X.org
+# pkg-config integration; primarily used by X.Org
 # FIXME: We don't support arbitrary CFLAGS yet (just includes)
 $(foreach _package,$($(THIS_MODULE)_packages),\
  $(eval MODULE_INCLUDE_FLAGS     += `pkg-config --cflags-only-I $(_package)`)\

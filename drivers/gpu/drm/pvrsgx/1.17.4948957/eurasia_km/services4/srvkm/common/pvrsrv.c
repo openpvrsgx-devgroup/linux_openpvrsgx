@@ -40,7 +40,6 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */ /**************************************************************************/
 
-#include <linux/slab.h>
 #include "services_headers.h"
 #include "buffer_manager.h"
 #include "pvr_bridge_km.h"
@@ -53,20 +52,18 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "ttrace.h"
 #endif
 #include "perfkm.h"
+#include "devicemem.h"
 
 #include "pvrversion.h"
 
 #include "lists.h"
 
-#ifdef SUPPORT_DRI_DRM_EXTERNAL
-#  include <../drivers/gpu/drm/omapdrm/omap_drv.h>
-#endif
-
 IMG_UINT32	g_ui32InitFlags;
 
 /* mark which parts of Services were initialised */
 #define		INIT_DATA_ENABLE_PDUMPINIT	0x1U
-#define		INIT_DATA_ENABLE_TTARCE		0x2U
+#define		INIT_DATA_ENABLE_TTRACE		0x2U
+#define		INIT_DATA_ENABLE_DEVMEM		0x4U
 
 /*!
 ******************************************************************************
@@ -159,7 +156,37 @@ PVRSRV_ERROR FreeDeviceID(SYS_DATA *psSysData, IMG_UINT32 ui32DevID)
 
 	return PVRSRV_ERROR_INVALID_DEVICEID;
 }
+/*!
+******************************************************************************
 
+ @Function		PVRSRVCompatCheckKM
+
+ @Description   	UM/KM ddk branch Compatibility check function
+
+ @input 		psUserModeDDKDetails: User mode DDK version
+
+ @output		In case of incompatibility, returns PVRSRV_ERROR_DDK_VERSION_MISMATCH
+
+ @Return   		PVRSRV_ERROR
+
+******************************************************************************/
+IMG_VOID IMG_CALLCONV PVRSRVCompatCheckKM(PVRSRV_BRIDGE_IN_COMPAT_CHECK *psUserModeDDKDetails, PVRSRV_BRIDGE_RETURN *psRetOUT)
+{
+
+	if(psUserModeDDKDetails->ui32DDKVersion != ((PVRVERSION_MAJ << 16) | (PVRVERSION_MIN << 8))
+		|| (psUserModeDDKDetails->ui32DDKBuild != PVRVERSION_BUILD))
+	{
+		psRetOUT->eError = PVRSRV_ERROR_DDK_VERSION_MISMATCH;
+		PVR_LOG(("(FAIL) UM-KM DDK Mismatch UM-(%d) KM-(%d).",
+						psUserModeDDKDetails->ui32DDKBuild, PVRVERSION_BUILD));
+	}
+	else
+	{
+		psRetOUT->eError = PVRSRV_OK;
+		PVR_LOG(("UM DDK-(%d) and KM DDK-(%d) match. [ OK ]",
+						psUserModeDDKDetails->ui32DDKBuild ,PVRVERSION_BUILD));
+	}
+}
 
 /*!
 ******************************************************************************
@@ -208,8 +235,8 @@ IMG_UINT32 ReadHWReg(IMG_PVOID pvLinRegBaseAddr, IMG_UINT32 ui32Offset)
 IMG_EXPORT
 IMG_VOID WriteHWReg(IMG_PVOID pvLinRegBaseAddr, IMG_UINT32 ui32Offset, IMG_UINT32 ui32Value)
 {
-	PVR_DPF((PVR_DBG_MESSAGE,"WriteHWReg Base:%x, Offset: %x, Value %x",
-			(IMG_UINTPTR_T)pvLinRegBaseAddr,ui32Offset,ui32Value));
+	PVR_DPF((PVR_DBG_MESSAGE,"WriteHWReg Base:%p, Offset: %x, Value %x",
+			pvLinRegBaseAddr,ui32Offset,ui32Value));
 
 	*(IMG_UINT32*)((IMG_UINTPTR_T)pvLinRegBaseAddr+ui32Offset) = ui32Value;
 }
@@ -399,16 +426,16 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVInit(PSYS_DATA psSysData)
 	psSysData->eFailedPowerState = PVRSRV_SYS_POWER_STATE_Unspecified;
 
 	/* Create an event object */
-	if(OSAllocMem( PVRSRV_PAGEABLE_SELECT,
+	if((eError = OSAllocMem( PVRSRV_PAGEABLE_SELECT,
 					 sizeof(PVRSRV_EVENTOBJECT) ,
 					 (IMG_VOID **)&psSysData->psGlobalEventObject, 0,
-					 "Event Object") != PVRSRV_OK)
+					 "Event Object")) != PVRSRV_OK)
 	{
 
 		goto Error;
 	}
 
-	if(OSEventObjectCreateKM("PVRSRV_GLOBAL_EVENTOBJECT", psSysData->psGlobalEventObject) != PVRSRV_OK)
+	if((eError = OSEventObjectCreateKM("PVRSRV_GLOBAL_EVENTOBJECT", psSysData->psGlobalEventObject)) != PVRSRV_OK)
 	{
 		goto Error;
 	}
@@ -422,12 +449,21 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVInit(PSYS_DATA psSysData)
 	eError = PVRSRVTimeTraceInit();
 	if (eError != PVRSRV_OK)
 		goto Error;
-	g_ui32InitFlags |= INIT_DATA_ENABLE_TTARCE;
+	g_ui32InitFlags |= INIT_DATA_ENABLE_TTRACE;
 #endif
 
+#if defined(PDUMP)
 	/* Initialise pdump */
 	PDUMPINIT();
 	g_ui32InitFlags |= INIT_DATA_ENABLE_PDUMPINIT;
+#endif
+
+#if defined(SUPPORT_ION) || defined(SUPPORT_DMABUF)
+	eError = PVRSRVInitDeviceMem();
+	if (eError != PVRSRV_OK)
+		goto Error;
+	g_ui32InitFlags |= INIT_DATA_ENABLE_DEVMEM;
+#endif
 
 	PERFINIT();
 	return eError;
@@ -465,19 +501,35 @@ IMG_VOID IMG_CALLCONV PVRSRVDeInit(PSYS_DATA psSysData)
 
 	PERFDEINIT();
 
+
+#if defined(SUPPORT_ION) || defined(SUPPORT_DMABUF)
+	if ((g_ui32InitFlags & INIT_DATA_ENABLE_DEVMEM) > 0)
+	{
+		PVRSRVDeInitDeviceMem();
+	}
+#endif
+
+#if defined(MEM_TRACK_INFO_DEBUG)
+	/* Free the list of memory operations */
+	PVRSRVFreeMemOps();
+#endif
+
 #if defined(TTRACE)
 	/* deinitialise ttrace */
-	if ((g_ui32InitFlags & INIT_DATA_ENABLE_TTARCE) > 0)
+	if ((g_ui32InitFlags & INIT_DATA_ENABLE_TTRACE) > 0)
 	{
 		PVRSRVTimeTraceDeinit();
 	}
 #endif
+
+#if defined(PDUMP)
 	/* deinitialise pdump */
 	if( (g_ui32InitFlags & INIT_DATA_ENABLE_PDUMPINIT) > 0)
 	{
 		PDUMPDEINIT();
 	}
-	
+#endif
+
 	/* destroy event object */
 	if(psSysData->psGlobalEventObject)
 	{
@@ -963,18 +1015,23 @@ PVRSRV_ERROR IMG_CALLCONV PollForValueKM (volatile IMG_UINT32*	pui32LinMemAddr,
 		/* For the Emulator we want the system to stop when a lock-up is detected so the state can be analysed.
 		 * Also the Emulator is much slower than real silicon so timeouts are not valid. 
 		 */
+		if((*pui32LinMemAddr & ui32Mask) == ui32Value)
+		{
+			return PVRSRV_OK;
+		}
+
 		do
 		{
-			if((*pui32LinMemAddr & ui32Mask) == ui32Value)
-			{
-				return PVRSRV_OK;
-			}
-
 			#if defined(__linux__)
 			OSWaitus(ui32PollPeriodus);
 			#else
 			OSReleaseThreadQuanta();
 			#endif	
+
+			if((*pui32LinMemAddr & ui32Mask) == ui32Value)
+			{
+				return PVRSRV_OK;
+			}
 
 		} while (ui32Timeoutus); /* Endless loop only for the Emulator */
 	}
@@ -987,15 +1044,15 @@ PVRSRV_ERROR IMG_CALLCONV PollForValueKM (volatile IMG_UINT32*	pui32LinMemAddr,
 			PVR_ASSERT(ui32PollPeriodus >= 1000);
 		}
 
+		ui32ActualValue = (*pui32LinMemAddr & ui32Mask);
+		if(ui32ActualValue == ui32Value)
+		{
+			return PVRSRV_OK;
+		}
+
 		/* PRQA S 3415,4109 1 */ /* macro format critical - leave alone */
 		LOOP_UNTIL_TIMEOUT(ui32Timeoutus)
 		{
-			ui32ActualValue = (*pui32LinMemAddr & ui32Mask);
-			if(ui32ActualValue == ui32Value)
-			{
-				return PVRSRV_OK;
-			}
-			
 			if (bAllowPreemption)
 			{
 				OSSleepms(ui32PollPeriodus / 1000);
@@ -1004,6 +1061,13 @@ PVRSRV_ERROR IMG_CALLCONV PollForValueKM (volatile IMG_UINT32*	pui32LinMemAddr,
 			{
 				OSWaitus(ui32PollPeriodus);
 			}
+
+			ui32ActualValue = (*pui32LinMemAddr & ui32Mask);
+			if(ui32ActualValue == ui32Value)
+			{
+				return PVRSRV_OK;
+			}
+
 		} END_LOOP_UNTIL_TIMEOUT();
 	
 		PVR_DPF((PVR_DBG_ERROR,"PollForValueKM: Timeout. Expected 0x%x but found 0x%x (mask 0x%x).",
@@ -1141,11 +1205,7 @@ static PVRSRV_ERROR PVRSRVGetMiscInfoKM_Device_AnyVaCb(PVRSRV_DEVICE_NODE *psDev
 
 ******************************************************************************/
 IMG_EXPORT
-#if defined (SUPPORT_SID_INTERFACE)
-PVRSRV_ERROR IMG_CALLCONV PVRSRVGetMiscInfoKM(PVRSRV_MISC_INFO_KM *psMiscInfo)
-#else
 PVRSRV_ERROR IMG_CALLCONV PVRSRVGetMiscInfoKM(PVRSRV_MISC_INFO *psMiscInfo)
-#endif
 {
 	SYS_DATA *psSysData;
 
@@ -1331,16 +1391,10 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVGetMiscInfoKM(PVRSRV_MISC_INFO *psMiscInfo)
 		}
 		else
 		{
-#if defined (SUPPORT_SID_INTERFACE)
-			PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo = psMiscInfo->sCacheOpCtl.psKernelMemInfo;
-
-			if(!psMiscInfo->sCacheOpCtl.psKernelMemInfo)
-#else
 			PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
 			PVRSRV_PER_PROCESS_DATA *psPerProc;
 
 			if(!psMiscInfo->sCacheOpCtl.u.psKernelMemInfo)
-#endif
 			{
 				PVR_DPF((PVR_DBG_WARNING, "PVRSRVGetMiscInfoKM: "
 						 "Ignoring non-deferred cache op with no meminfo"));
@@ -1354,9 +1408,6 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVGetMiscInfoKM(PVRSRV_MISC_INFO *psMiscInfo)
 						 "to combine deferred cache ops with immediate ones"));
 			}
 
-#if defined (SUPPORT_SID_INTERFACE)
-			PVR_DBG_BREAK
-#else
 			psPerProc = PVRSRVFindPerProcessData();
 
 			if(PVRSRVLookupHandle(psPerProc->psHandleBase,
@@ -1368,241 +1419,43 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVGetMiscInfoKM(PVRSRV_MISC_INFO *psMiscInfo)
 						 "Can't find kernel meminfo"));
 				return PVRSRV_ERROR_INVALID_PARAMS;
 			}
-#endif
 
 			if(psMiscInfo->sCacheOpCtl.eCacheOpType == PVRSRV_MISC_INFO_CPUCACHEOP_FLUSH)
 			{
-				if(!OSFlushCPUCacheRangeKM(psKernelMemInfo->sMemBlk.hOSMemHandle,
-										   0,
-										   psMiscInfo->sCacheOpCtl.pvBaseVAddr,
-										   psMiscInfo->sCacheOpCtl.ui32Length))
+				if(psMiscInfo->sCacheOpCtl.ui32Length!=0)
 				{
-					return PVRSRV_ERROR_CACHEOP_FAILED;
-				}
-			}
-
-			if ((psMiscInfo->sCacheOpCtl.eCacheOpType == PVRSRV_MISC_INFO_CPUCACHEOP_CLEAN_REGIONS) ||
-				(psMiscInfo->sCacheOpCtl.eCacheOpType == PVRSRV_MISC_INFO_CPUCACHEOP_INV_REGIONS))
-			{
-				IMG_BOOL (*op)(IMG_HANDLE hOSMemHandle, IMG_UINT32 ui32ByteOffset, IMG_VOID *pvRangeAddrStart, IMG_UINT32 ui32Length);
-				IMG_HANDLE hOSMemHandle = psKernelMemInfo->sMemBlk.hOSMemHandle;
-				IMG_VOID *pvEndVAddr = psMiscInfo->sCacheOpCtl.pvBaseVAddr +
-						psMiscInfo->sCacheOpCtl.ui32Length;
-				int i, j;
-
-				if (psMiscInfo->sCacheOpCtl.eCacheOpType == PVRSRV_MISC_INFO_CPUCACHEOP_CLEAN_REGIONS)
-					op = OSCleanCPUCacheRangeKM;
-				else
-					op = OSInvalidateCPUCacheRangeKM;
-
-				for (i = 0; i < psMiscInfo->sCacheOpCtl.ui32NumRegions; i++)
-				{
-					IMG_UINT32 ui32Length = psMiscInfo->sCacheOpCtl.sRegions[i].w;
-
-					/* if length bleeds over into next line, merge all into one range op */
-					if (ui32Length >= psMiscInfo->sCacheOpCtl.i32StrideInBytes)
+					if(!OSFlushCPUCacheRangeKM(psKernelMemInfo->sMemBlk.hOSMemHandle,
+											   0,
+											   psMiscInfo->sCacheOpCtl.pvBaseVAddr,
+											   psMiscInfo->sCacheOpCtl.ui32Length))
 					{
-						IMG_VOID *pvBaseVAddr = psMiscInfo->sCacheOpCtl.pvBaseVAddr +
-								psMiscInfo->sCacheOpCtl.sRegions[i].x +
-								(psMiscInfo->sCacheOpCtl.sRegions[i].y *
-										psMiscInfo->sCacheOpCtl.i32StrideInBytes);
-
-						ui32Length *= psMiscInfo->sCacheOpCtl.sRegions[i].h;
-
-						if(!(*op)(hOSMemHandle, 0, pvBaseVAddr, ui32Length))
-						{
-							return PVRSRV_ERROR_CACHEOP_FAILED;
-						}
-
-						continue;
-					}
-
-					for (j = 0; j < psMiscInfo->sCacheOpCtl.sRegions[i].h; j++)
-					{
-						IMG_VOID *pvBaseVAddr = psMiscInfo->sCacheOpCtl.pvBaseVAddr +
-								psMiscInfo->sCacheOpCtl.sRegions[i].x +
-								((psMiscInfo->sCacheOpCtl.sRegions[i].y+j) *
-										psMiscInfo->sCacheOpCtl.i32StrideInBytes);
-
-						if ((pvBaseVAddr + ui32Length) > pvEndVAddr)
-						{
-							printk(KERN_WARNING "out of bounds, %p + %d (%p) > %p (%d, %d) (%d, %d)\n",
-									pvBaseVAddr, ui32Length, pvBaseVAddr + ui32Length, pvEndVAddr,
-									i, psMiscInfo->sCacheOpCtl.ui32NumRegions,
-									j, psMiscInfo->sCacheOpCtl.sRegions[i].h);
-							ui32Length = pvEndVAddr - pvBaseVAddr;
-						}
-
-						if(!(*op)(hOSMemHandle, 0, pvBaseVAddr, ui32Length))
-						{
-							printk(KERN_WARNING "op failed\n");
-							return PVRSRV_ERROR_CACHEOP_FAILED;
-						}
-
-						if (ui32Length != psMiscInfo->sCacheOpCtl.sRegions[i].w)
-						{
-							break;
-						}
+						return PVRSRV_ERROR_CACHEOP_FAILED;
 					}
 				}
 			}
 			else if(psMiscInfo->sCacheOpCtl.eCacheOpType == PVRSRV_MISC_INFO_CPUCACHEOP_CLEAN)
 			{
-				if(!OSCleanCPUCacheRangeKM(psKernelMemInfo->sMemBlk.hOSMemHandle,
-										   0,
-										   psMiscInfo->sCacheOpCtl.pvBaseVAddr,
-										   psMiscInfo->sCacheOpCtl.ui32Length))
+				if(psMiscInfo->sCacheOpCtl.ui32Length!=0)
 				{
-					return PVRSRV_ERROR_CACHEOP_FAILED;
-				}
-			}
-/* FIXME: Temporary fix needs to be revisited
- * LinuxMemArea struct listing is not registered for memory areas
- * wrapped through PVR2DMemWrap() call. For now, we are doing
- * cache flush/inv range ops by grabbing the physical pages through
- * get_user_pages() for every blt call.
- */
-			else if (psMiscInfo->sCacheOpCtl.eCacheOpType ==
-						PVRSRV_MISC_INFO_CPUCACHEOP_CUSTOM_FLUSH)
-			{
-				/* Sync operation for buffer-to-GPU case */
-
-#if defined(CONFIG_OUTER_CACHE)
-				/* If the size of mem region is more than 500 kB,
-				 * its beneficial to perform full cache flush
-				 * than range wise flush, provided full cache
-				 * operations are supported in the kernel.
-				 */
-				if (psMiscInfo->sCacheOpCtl.ui32Length >
-					PVR_FULL_CACHE_OP_THRESHOLD)
-				{
-					OSFlushCPUCacheKM();
-#if defined(PVR_NO_FULL_CACHE_OPS)
-					outer_flush_all();
-#endif
-				}
-				else
-				{
-					IMG_SIZE_T 	uPageOffset, uPageCount;
-					IMG_VOID	*pvPageAlignedCPUVAddr;
-					IMG_SYS_PHYADDR	 	*psIntSysPAddr = IMG_NULL;
-					IMG_HANDLE	hOSWrapMem = IMG_NULL;
-					PVRSRV_ERROR eError;
-					int i;
-
-					uPageOffset = (IMG_UINTPTR_T)psMiscInfo->sCacheOpCtl.pvBaseVAddr & (HOST_PAGESIZE() - 1);
-					uPageCount =
-						HOST_PAGEALIGN(psMiscInfo->sCacheOpCtl.ui32Length + uPageOffset)/HOST_PAGESIZE();
-					pvPageAlignedCPUVAddr = (IMG_VOID *)((IMG_UINTPTR_T)psMiscInfo->sCacheOpCtl.pvBaseVAddr - uPageOffset);
-
-					if(OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
-						uPageCount * sizeof(IMG_SYS_PHYADDR),
-						(IMG_VOID **)&psIntSysPAddr, IMG_NULL,
-						"Array of Page Addresses") != PVRSRV_OK)
+					if(!OSCleanCPUCacheRangeKM(psKernelMemInfo->sMemBlk.hOSMemHandle,
+											   0,
+											   psMiscInfo->sCacheOpCtl.pvBaseVAddr,
+											   psMiscInfo->sCacheOpCtl.ui32Length))
 					{
-						PVR_DPF((PVR_DBG_ERROR,"PVRSRVWrapExtMemoryKM: Failed to alloc memory for block"));
-						return PVRSRV_ERROR_OUT_OF_MEMORY;
+						return PVRSRV_ERROR_CACHEOP_FAILED;
 					}
-
-					eError = OSAcquirePhysPageAddr(pvPageAlignedCPUVAddr,
-										uPageCount * HOST_PAGESIZE(),
-										psIntSysPAddr,
-										&hOSWrapMem);
-					for (i = 0; i < uPageCount; i++)
-					{
-						outer_flush_range(psIntSysPAddr[i].uiAddr, psIntSysPAddr[i].uiAddr + HOST_PAGESIZE() -1);
-					}
-
-					OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP,
-						uPageCount * sizeof(IMG_SYS_PHYADDR),
-						psIntSysPAddr, IMG_NULL);
-
-					OSReleasePhysPageAddr(hOSWrapMem);
-
 				}
-
-#endif /* CONFIG_OUTER_CACHE */
-			}
-			else if (psMiscInfo->sCacheOpCtl.eCacheOpType ==
-							PVRSRV_MISC_INFO_CPUCACHEOP_CUSTOM_INV)
-			{
-				/* Sync operation for buffer-from-GPU case */
-#if defined(CONFIG_OUTER_CACHE)
-				/* If the size of mem region is more than 500 kB,
-				 * its beneficial to perform full cache operations
-				 * then range operations, so here we do full cache
-				 * flush operation.
-				 *
-				 * The clean op resulting from flush should not
-				 * affect the usecase as the cache lines
-				 * corresponding to the buffer in question will not
-				 * be dirty during the GPU update. If they are dirty,
-				 * the buffer is not synched properly between
-				 * CPU<-->GPU and the contents are undefined anyway.
-				 */
-				if (psMiscInfo->sCacheOpCtl.ui32Length >
-					PVR_FULL_CACHE_OP_THRESHOLD)
-				{
-					OSFlushCPUCacheKM();
-#if defined(PVR_NO_FULL_CACHE_OPS)
-					outer_flush_all();
-#endif
-				}
-				else
-				{
-					IMG_SIZE_T 	uPageOffset, uPageCount;
-					IMG_VOID	*pvPageAlignedCPUVAddr;
-					IMG_SYS_PHYADDR	 	*psIntSysPAddr = IMG_NULL;
-					IMG_HANDLE	hOSWrapMem = IMG_NULL;
-					PVRSRV_ERROR eError;
-					int i;
-
-					uPageOffset = (IMG_UINTPTR_T)psMiscInfo->sCacheOpCtl.pvBaseVAddr & (HOST_PAGESIZE() - 1);
-					uPageCount =
-						HOST_PAGEALIGN(psMiscInfo->sCacheOpCtl.ui32Length + uPageOffset)/HOST_PAGESIZE();
-					pvPageAlignedCPUVAddr = (IMG_VOID *)((IMG_UINTPTR_T)psMiscInfo->sCacheOpCtl.pvBaseVAddr - uPageOffset);
-
-					if(OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
-						uPageCount * sizeof(IMG_SYS_PHYADDR),
-						(IMG_VOID **)&psIntSysPAddr, IMG_NULL,
-						"Array of Page Addresses") != PVRSRV_OK)
-					{
-						PVR_DPF((PVR_DBG_ERROR,"PVRSRVWrapExtMemoryKM: Failed to alloc memory for block"));
-						return PVRSRV_ERROR_OUT_OF_MEMORY;
-					}
-
-					eError = OSAcquirePhysPageAddr(pvPageAlignedCPUVAddr,
-										uPageCount * HOST_PAGESIZE(),
-										psIntSysPAddr,
-										&hOSWrapMem);
-					for (i = 0; i < uPageCount; i++)
-					{
-						outer_inv_range(psIntSysPAddr[i].uiAddr, psIntSysPAddr[i].uiAddr + HOST_PAGESIZE() -1);
-					}
-
-					OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP,
-						uPageCount * sizeof(IMG_SYS_PHYADDR),
-						psIntSysPAddr, IMG_NULL);
-
-					OSReleasePhysPageAddr(hOSWrapMem);
-				}
-#endif /* CONFIG_OUTER_CACHE */
 			}
 		}
 	}
 
 	if((psMiscInfo->ui32StateRequest & PVRSRV_MISC_INFO_GET_REF_COUNT_PRESENT) != 0UL)
 	{
-#if !defined (SUPPORT_SID_INTERFACE)
 		PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
 		PVRSRV_PER_PROCESS_DATA *psPerProc;
-#endif
 
 		psMiscInfo->ui32StatePresent |= PVRSRV_MISC_INFO_GET_REF_COUNT_PRESENT;
 
-#if defined (SUPPORT_SID_INTERFACE)
-		PVR_DBG_BREAK
-#else
 		psPerProc = PVRSRVFindPerProcessData();
 
 		if(PVRSRVLookupHandle(psPerProc->psHandleBase,
@@ -1616,7 +1469,6 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVGetMiscInfoKM(PVRSRV_MISC_INFO *psMiscInfo)
 		}
 
 		psMiscInfo->sGetRefCountCtl.ui32RefCount = psKernelMemInfo->ui32RefCount;
-#endif
 	}
 
 	if ((psMiscInfo->ui32StateRequest & PVRSRV_MISC_INFO_GET_PAGE_SIZE_PRESENT) != 0UL)
@@ -1633,11 +1485,13 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVGetMiscInfoKM(PVRSRV_MISC_INFO *psMiscInfo)
 	}
 #endif /* #if defined(PVRSRV_RESET_ON_HWTIMEOUT) */
 
+#if defined(SUPPORT_PVRSRV_DEVICE_CLASS)
 	if ((psMiscInfo->ui32StateRequest & PVRSRV_MISC_INFO_FORCE_SWAP_TO_SYSTEM_PRESENT) != 0UL)
 	{
-		PVRSRVSetDCState(DC_STATE_FORCE_SWAP_TO_SYSTEM);
+		PVRSRVProcessQueues(IMG_TRUE);
 		psMiscInfo->ui32StatePresent |= PVRSRV_MISC_INFO_FORCE_SWAP_TO_SYSTEM_PRESENT;
 	}
+#endif /* defined(SUPPORT_PVRSRV_DEVICE_CLASS) */
 
 	return PVRSRV_OK;
 }
@@ -1785,10 +1639,6 @@ IMG_VOID IMG_CALLCONV PVRSRVMISR(IMG_VOID *pvSysData)
 	SYS_DATA			*psSysData = pvSysData;
 /*	PVRSRV_DEVICE_NODE	*psDeviceNode; */
 
-#ifdef SUPPORT_DRI_DRM_EXTERNAL
-	omap_gem_op_update();
-#endif
-
 	if(!psSysData)
 	{
 		PVR_DPF((PVR_DBG_ERROR, "PVRSRVMISR: Invalid params\n"));
@@ -1799,11 +1649,13 @@ IMG_VOID IMG_CALLCONV PVRSRVMISR(IMG_VOID *pvSysData)
 	List_PVRSRV_DEVICE_NODE_ForEach(psSysData->psDeviceNodeList,
 									&PVRSRVMISR_ForEachCb);
 
+#if defined(SUPPORT_PVRSRV_DEVICE_CLASS)
 	/* Process the queues. */
 	if (PVRSRVProcessQueues(IMG_FALSE) == PVRSRV_ERROR_PROCESSING_BLOCKED)
 	{
 		PVRSRVProcessQueues(IMG_FALSE);
 	}
+#endif /* defined(SUPPORT_PVRSRV_DEVICE_CLASS) */
 
 	/* signal global event object */
 	if (psSysData->psGlobalEventObject)
@@ -1900,7 +1752,11 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVSaveRestoreLiveSegments(IMG_HANDLE hArena, IMG_P
 				return (PVRSRV_ERROR_OUT_OF_MEMORY);
 			}
 
-			PVR_DPF((PVR_DBG_MESSAGE, "PVRSRVSaveRestoreLiveSegments: Base %08x size %08x", sSegDetails.sCpuPhyAddr.uiAddr, sSegDetails.uiSize));
+			PVR_DPF((
+                PVR_DBG_MESSAGE, 
+                "PVRSRVSaveRestoreLiveSegments: Base " CPUPADDR_FMT " size %" SIZE_T_FMT_LEN "x", 
+                sSegDetails.sCpuPhyAddr.uiAddr, 
+                sSegDetails.uiSize));
 
 			/* Map the device's local memory area onto the host. */
 			pvLocalMemCPUVAddr = OSMapPhysToLin(sSegDetails.sCpuPhyAddr,

@@ -139,10 +139,6 @@ typedef struct _SGXMKIF_HOST_CTL_
 	IMG_UINT32				ui32PerfGroup;									/*!< Specifies the HW's active group */
 #endif /* SGX_FEATURE_EXTENDED_PERF_COUNTERS */
 
-#if defined(FIX_HW_BRN_31939)
-	IMG_UINT32				ui32BRN31939Mem;
-#endif
-
 	IMG_UINT32				ui32OpenCLDelayCount;			/* Counter to keep track OpenCL task completion time in units of regular task time out events */
 	IMG_UINT32				ui32InterruptCount;
 } SGXMKIF_HOST_CTL;
@@ -269,6 +265,9 @@ typedef struct _SGXMKIF_2DCMD_SHARED_ {
 
 	/* need to be able to check reads and writes on 2D ops, and update writes */
 	PVRSRV_DEVICE_SYNC_OBJECT	s3DSyncData;
+
+	IMG_UINT32 		ui32NumStatusVals;
+	CTL_STATUS  	sCtlStatusInfo[SGXTQ_MAX_STATUS];
 } SGXMKIF_2DCMD_SHARED, *PSGXMKIF_2DCMD_SHARED;
 #endif /* SGX_FEATURE_2D_HARDWARE */
 

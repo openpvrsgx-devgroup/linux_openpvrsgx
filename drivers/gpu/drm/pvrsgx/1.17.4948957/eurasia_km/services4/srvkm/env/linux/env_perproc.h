@@ -43,8 +43,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define __ENV_PERPROC_H__
 
 #include <linux/list.h>
-#include <linux/proc_fs.h>
 
+#include "proc.h"
 #include "services.h"
 #include "handle.h"
 
@@ -55,15 +55,8 @@ typedef struct _PVRSRV_ENV_PER_PROCESS_DATA_
 	struct proc_dir_entry *psProcDir;
 #if defined(SUPPORT_DRI_DRM) && defined(PVR_SECURE_DRM_AUTH_EXPORT)
 	struct list_head sDRMAuthListHead;
-#if defined(SUPPORT_DRI_DRM_EXTERNAL)
-	/* note: these fields are valid for the duration of a syscall
-	 * or until gPVRSRVLock is released..
-	 */
-	struct drm_file *file;
-	struct drm_device *dev;
-#endif /* SUPPORT_DRI_DRM_EXTERNAL */
 #endif
-#if defined (SUPPORT_ION)
+#if defined(SUPPORT_ION)
  	struct ion_client *psIONClient;
 	IMG_CHAR azIonClientName[ION_CLIENT_NAME_SIZE];
 #endif

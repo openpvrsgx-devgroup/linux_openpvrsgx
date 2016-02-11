@@ -44,24 +44,36 @@ LANG=C
 export LANG
 
 usage() {
-	echo "usage: $0 [--64] --cc CC --out OUT [cflag]"
+	echo "usage: $0 [--64] [--clang] --cc CC [--out OUT] [cflag]"
 	exit 1
 }
 
-# NOTE: The program passed to the compiler is deliberately incorrect
-# (`return;' should be `return 0;') but we do this to emit a warning.
-#
-# Emitting a warning is necessary to get GCC to print out additional
-# warnings about any unsupported -Wno options, so we can handle these
-# as unsupported by the build.
-#
+check_clang() {
+	$CC -dM -E - </dev/null | grep __clang__ >/dev/null 2>&1
+	if [ "$?" = "0" ]; then
+		# Clang must be passed a program with a main() that returns 0.
+		# It will produce an error if main() is improperly specified.
+		IS_CLANG=1
+		TEST_PROGRAM="int main(void){return 0;}"
+	else
+		# If we're not clang, assume we're GCC. GCC needs to be passed
+		# a program with a faulty return in main() so that another
+		# warning (unrelated to the flag being tested) is emitted.
+		# This will cause GCC to warn about the unsupported warning flag.
+		IS_CLANG=0
+		TEST_PROGRAM="int main(void){return;}"
+	fi
+}
+
 do_cc() {
-	echo "int main(void){return;}" | $CC -W -Wall $3 -xc -c - -o $1 >$2 2>&1
+	echo "$TEST_PROGRAM" | $CC -W -Wall $3 -xc -c - -o $1 >$2 2>&1
 }
 
 while [ 1 ]; do
 	if [ "$1" = "--64" ]; then
-		BIT_CHECK=1
+		[ -z $CLANG ] && BIT_CHECK=1
+	elif [ "$1" = "--clang" ]; then
+		[ -z $BIT_CHECK ] && CLANG=1
 	elif [ "$1" = "--cc" ]; then
 		[ "x$2" = "x" ] && usage
 		CC="$2" && shift
@@ -77,20 +89,28 @@ while [ 1 ]; do
 done
 
 [ "x$CC" = "x" ] && usage
-[ "x$OUT" = "x" ] && usage
+[ "x$CLANG" = "x" -a "x$OUT" = "x" ] && usage
 ccof=$OUT/cc-sanity-check
 log=${ccof}.log
+
+check_clang
 
 if [ "x$BIT_CHECK" = "x1" ]; then
 	do_cc $ccof $log ""
 	file $ccof | grep 64-bit >/dev/null 2>&1
 	[ "$?" = "0" ] && echo true || echo false
+elif [ "x$CLANG" = "x1" ]; then
+	[ "x$IS_CLANG" = "x1" ] && echo true || echo false
 else
 	[ "x$1" = "x" ] && usage
 	do_cc $ccof $log $1
 	if [ "$?" = "0" ]; then
 		# compile passed, but was the warning unrecognized?
-		grep -q "^cc1: warning: unrecognized command line option \"$1\"" $log
+		if [ "x$IS_CLANG" = "x1" ]; then
+			grep "^warning: unknown warning option '$1'" $log >/dev/null 2>&1
+		else
+			grep "^cc1: warning: unrecognized command line option \"$1\"" $log >/dev/null 2>&1
+		fi
 		[ "$?" = "1" ] && echo $1
 	fi
 fi

@@ -40,11 +40,10 @@
 
 $(eval $(call TunableBothConfigC,SUPPORT_DRI_DRM,))
 $(eval $(call TunableBothConfigC,SUPPORT_DRI_DRM_EXT,))
-$(eval $(call TunableBothConfigC,SUPPORT_DRI_DRM_EXTERNAL,))
+$(eval $(call TunableKernelConfigC,SUPPORT_DRI_DRM_PLUGIN,))
 
 
 $(eval $(call TunableBothConfigMake,SUPPORT_DRI_DRM,))
-$(eval $(call TunableBothConfigMake,SUPPORT_DRI_DRM_EXTERNAL,))
 
 ifeq ($(SUPPORT_DRI_DRM),1)
 ifeq ($(SUPPORT_DRI_DRM_NO_LIBDRM),1)
@@ -61,4 +60,5 @@ $(eval $(call TunableBothConfigMake,PVR_DRI_DRM_NOT_PCI))
 $(eval $(call TunableKernelConfigC,PVR_DRI_DRM_PLATFORM_DEV,))
 
 
-export EXTERNAL_3PDD_TARBALL
+
+

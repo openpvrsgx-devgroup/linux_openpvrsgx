@@ -65,6 +65,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define	OMAPLFB_CONSOLE_UNLOCK()	release_console_sem()
 #endif
 
+#if defined(CONFIG_ION_OMAP)
+#include <linux/ion.h>
+#include <linux/omap_ion.h>
+#endif /* defined(CONFIG_ION_OMAP) */
+
 #define unref__ __attribute__ ((unused))
 
 typedef void *       OMAPLFB_HANDLE;
@@ -226,6 +231,10 @@ typedef struct OMAPLFB_DEVINFO_TAG
 	OMAPLFB_ATOMIC_BOOL     sLeaveVT;
 #endif
 
+#if defined(CONFIG_ION_OMAP)
+	struct ion_client      *psIONClient;
+#endif
+
 }  OMAPLFB_DEVINFO;
 
 #define	OMAPLFB_PAGE_SIZE 4096
@@ -265,7 +274,8 @@ typedef enum _OMAPLFB_UPDATE_MODE_
 	OMAPLFB_UPDATE_MODE_UNDEFINED			= 0,
 	OMAPLFB_UPDATE_MODE_MANUAL			= 1,
 	OMAPLFB_UPDATE_MODE_AUTO			= 2,
-	OMAPLFB_UPDATE_MODE_DISABLED			= 3
+	OMAPLFB_UPDATE_MODE_DISABLED			= 3,
+	OMAPLFB_UPDATE_MODE_VSYNC			= 4
 } OMAPLFB_UPDATE_MODE;
 
 #ifndef UNREFERENCED_PARAMETER

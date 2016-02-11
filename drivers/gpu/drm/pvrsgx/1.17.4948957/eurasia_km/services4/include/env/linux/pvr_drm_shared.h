@@ -43,21 +43,27 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #if defined(SUPPORT_DRI_DRM)
 
+typedef struct drm_pvr_unpriv_cmd_tag
+{
+    uint32_t cmd;
+    uint32_t res;
+} drm_pvr_unpriv_cmd;
+
 /* DRM command numbers, relative to DRM_COMMAND_BASE */
 #if defined(SUPPORT_DRI_DRM_EXT)
-#define        DRM_PVR_SRVKM           DRM_PVR_RESERVED1
-#define        DRM_PVR_DISP            DRM_PVR_RESERVED2
-#define        DRM_PVR_BC              DRM_PVR_RESERVED3
-#define        DRM_PVR_IS_MASTER       DRM_PVR_RESERVED4
-#define        DRM_PVR_UNPRIV          DRM_PVR_RESERVED5
-#define        DRM_PVR_DBGDRV          DRM_PVR_RESERVED6
+#define PVR_DRM_SRVKM_CMD	DRM_PVR_RESERVED1	/* Used for PVR Services ioctls */
+#define	PVR_DRM_DISP_CMD	DRM_PVR_RESERVED2	/* Reserved for display class driver */
+#define	PVR_DRM_BC_CMD		DRM_PVR_RESERVED3	/* Reserved for buffer class driver */
+#define PVR_DRM_IS_MASTER_CMD	DRM_PVR_RESERVED4	/* Are we the DRM master? */
+#define PVR_DRM_UNPRIV_CMD	DRM_PVR_RESERVED5	/* PVR driver unprivileged ioctls */
+#define PVR_DRM_DBGDRV_CMD	DRM_PVR_RESERVED6	/* Debug driver (PDUMP) ioctls */
 #else	/* defined(SUPPORT_DRI_DRM_EXT) */
-#define        DRM_PVR_SRVKM           0x00
-#define        DRM_PVR_DISP            0x01
-#define        DRM_PVR_BC              0x02
-#define        DRM_PVR_IS_MASTER       0x03
-#define        DRM_PVR_UNPRIV          0x04
-#define        DRM_PVR_DBGDRV          0x05
+#define PVR_DRM_SRVKM_CMD	0	/* Used for PVR Services ioctls */
+#define	PVR_DRM_DISP_CMD	1	/* Reserved for display class driver */
+#define	PVR_DRM_BC_CMD		2	/* Reserved for buffer class driver */
+#define PVR_DRM_IS_MASTER_CMD	3	/* Are we the DRM master? */
+#define PVR_DRM_UNPRIV_CMD	4	/* PVR driver unprivileged ioctls */
+#define PVR_DRM_DBGDRV_CMD	5	/* Debug driver (PDUMP) ioctls */
 #endif	/* defined(SUPPORT_DRI_DRM_EXT) */
 
 /* Subcommands of PVR_DRM_UNPRIV_CMD */

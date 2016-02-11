@@ -44,6 +44,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define __3RDPARTY_DC_DRM_SHARED_H__
 #if defined(SUPPORT_DRI_DRM)
 
+typedef struct drm_pvr_display_cmd_tag
+{
+    uint32_t cmd;
+    uint32_t dev;
+} drm_pvr_display_cmd;
+
 #define	PVR_DRM_DISP_CMD_ENTER_VT	1
 #define	PVR_DRM_DISP_CMD_LEAVE_VT	2
 
@@ -51,10 +57,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define	PVR_DRM_DISP_CMD_STANDBY	4
 #define	PVR_DRM_DISP_CMD_SUSPEND	5
 #define	PVR_DRM_DISP_CMD_OFF		6
-
-#define	PVR_DRM_DISP_ARG_CMD		0
-#define	PVR_DRM_DISP_ARG_DEV		1
-#define	PVR_DRM_DISP_NUM_ARGS		2
 
 #endif	/* defined(SUPPORT_DRI_DRM) */
 #endif /* __3RDPARTY_DC_DRM_SHARED_H__ */

@@ -45,29 +45,24 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef _PVRVERSION_H_
 #define _PVRVERSION_H_
 
-#define OMAPVERSION_PVR_RLS 6
-#define OMAPVERSION_OMAP_RLS 0
-#define OMAPVERSION_STRING "1.9.6.0"
-
 #define PVR_STR(X) #X
 #define PVR_STR2(X) PVR_STR(X)
 
 #define PVRVERSION_MAJ               1
-#define PVRVERSION_MIN               9
-#define PVRVERSION_BRANCH            19
+#define PVRVERSION_MIN               14
 
 #define PVRVERSION_FAMILY           "sgxddk"
-#define PVRVERSION_BRANCHNAME       "1.9"
-#define PVRVERSION_BUILD             2253347
-#define PVRVERSION_BSCONTROL        "SGX_DDK_Linux_CustomerTI"
+#define PVRVERSION_BRANCHNAME       "MAIN"
+#define PVRVERSION_BUILD             3699939
+#define PVRVERSION_BSCONTROL        "SGX_DDK"
 
-#define PVRVERSION_STRING           "SGX_DDK_Linux_CustomerTI sgxddk 19 1.9@" PVR_STR2(PVRVERSION_BUILD)
-#define PVRVERSION_STRING_SHORT     "1.9@" PVR_STR2(PVRVERSION_BUILD)
+#define PVRVERSION_STRING           "SGX_DDK sgxddk MAIN@" PVR_STR2(PVRVERSION_BUILD)
+#define PVRVERSION_STRING_SHORT     "1.14@" PVR_STR2(PVRVERSION_BUILD) " (MAIN)"
 
 #define COPYRIGHT_TXT               "Copyright (c) Imagination Technologies Ltd. All Rights Reserved."
 
-#define PVRVERSION_BUILD_HI          225
-#define PVRVERSION_BUILD_LO          3347
+#define PVRVERSION_BUILD_HI          369
+#define PVRVERSION_BUILD_LO          9939
 #define PVRVERSION_STRING_NUMERIC    PVR_STR2(PVRVERSION_MAJ) "." PVR_STR2(PVRVERSION_MIN) "." PVR_STR2(PVRVERSION_BUILD_HI) "." PVR_STR2(PVRVERSION_BUILD_LO)
 
 #endif /* _PVRVERSION_H_ */

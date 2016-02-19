@@ -26,7 +26,13 @@ fi
 if [ ! -L dcs ]
 then
 	rm -rf dcs
-	ln -s /sys/bus/platform/devices/58004000.encoder:lcd/dcs dcs
+	ln -s /sys/bus/platform/devices/58004000.encoder:lcd/dcs dcs || exit 1
+fi
+
+if ! [ -r dcs ]
+then
+	echo "can't access mipi-dcs channel" >&2
+	exit 1
 fi
 
 # make sure the panel is active before trying to send commands
@@ -38,10 +44,10 @@ echo reset >dcs	# reset panel
 sleep .5
 # reset panel
 echo reset >dcs	# reset panel
-echo power >dcs	# enable ssd (should do this only on v4 boards!!! but I have no method to decide between v3 and v4)
+echo power >dcs	# enable ssd (should do this only on v4/v5 boards!!! but I have no method to decide between v3 and v4)
 
 sleep .1
-echo noreset >dcs	# take ssd2858 out of reset before starting the clocks
+echo noreset >dcs	# take panel out of reset before starting the clocks
 sleep .5
 
 # Panel parameters (should be provided by the panel driver)
@@ -307,7 +313,6 @@ do
 echo g$r rrrr >dcs
 echo $r: $(cat dcs)
 done
-shift
 fi
 
 if $LOOP_DCS_11_10
@@ -326,7 +331,6 @@ then
 		echo 10 >dcs
 		sleep 0.02
 	done
-	shift
 fi
 
 if $PROGRAM_PANEL
@@ -339,7 +343,6 @@ then	# activate panel
 		do echo $i r >dcs
 	done
 	# send more dcs commands
-	shift
 fi
 
 if $STREAM

@@ -3,8 +3,8 @@ amixer -q set "Capture" 100% &&
 amixer -q set "Capture Preamplifier" 100% &&
 amixer -q set "AUXL" "on" &&
 amixer -q set "AUXR" "on" &&
-amixer -q set "Analog Left" Off &&
-amixer -q set "Analog Right" Off &&
+amixer -q set "Analog Left" "Main Mic" &&
+amixer -q set "Analog Right" "Headset Mic" &&
 amixer -q set "Earphone" 80% &&
 amixer -q set "Handsfree" 80% &&
 amixer -q set "Handsfree Left Playback" "HF DAC" &&
@@ -12,6 +12,7 @@ amixer -q set "Handsfree Right Playback" "HF DAC" &&
 amixer -q set "Headset" 80% &&
 amixer -q set "Headset Left Playback" "HS DAC" &&
 amixer -q set "Headset Right Playback" "HS DAC" &&
+amixer -q set "Analog Left" "Main Mic"
 : amixer -q set "Headset Power Mode" "High-Performance" &&
 : amixer -q set "PLL Selection" "High-Performance" &&
 amixer -q set "Headset Power Mode" "Low-Power" &&

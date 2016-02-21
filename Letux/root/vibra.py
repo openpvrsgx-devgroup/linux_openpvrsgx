@@ -47,9 +47,9 @@ class Vibra:
         # this is 'struct ff_effect' from "linux/input.h"
         effect = struct.pack('HhHHHHHxxHH',
                              0x50, -1, 0, # FF_RUMBLE, id, direction
-                             0, 0,        # trigger (button interval)
-                             length, delay,
-                             int(strength * 0xFFFF), 0)
+                             0, 0,        # struct ff_trigger (button interval)
+                             length, delay,	# struct ff_replay
+                             int(strength * 0xFFFF), int(strength * 0xFFFF))	# struct ff_rumble_effect
         a = array.array('h', effect)
         fcntl.ioctl(self.f, EVIOCSFF, a, True)
         return a[1]

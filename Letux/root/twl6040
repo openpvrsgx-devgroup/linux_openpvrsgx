@@ -12,12 +12,12 @@ amixer -q set "Handsfree Right Playback" "HF DAC" &&
 amixer -q set "Headset" 80% &&
 amixer -q set "Headset Left Playback" "HS DAC" &&
 amixer -q set "Headset Right Playback" "HS DAC" &&
-amixer -q set "Headset Power Mode" "High-Performance" &&
-amixer -q set "PLL Selection" "High-Performance" &&
+: amixer -q set "Headset Power Mode" "High-Performance" &&
+: amixer -q set "PLL Selection" "High-Performance" &&
 amixer -q set "Headset Power Mode" "Low-Power" &&
 amixer -q set "PLL Selection" "Low-Power" &&
-amixer -q set "Vibra Left Playback" "Audio PDM" &&
-amixer -q set "Vibra Right Playback" "Audio PDM" &&
+: amixer -q set "Vibra Left Playback" "Audio PDM" &&
+: amixer -q set "Vibra Right Playback" "Audio PDM" &&
 aplay -q /usr/share/sounds/alsa/*.wav
 # play chirp sound on all 4 channels
 sox -c 4 -n -t wav - synth 10 sine 10-100 | aplay

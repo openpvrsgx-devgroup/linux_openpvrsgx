@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+#
+# Author: NeilBrown <neilb@suse.de>
+#
 
 import fcntl, struct, time, array
 

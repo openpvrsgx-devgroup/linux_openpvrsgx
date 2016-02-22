@@ -271,6 +271,7 @@ config SND_SOC_ALL_CODECS
 	imply SND_SOC_TLV320DAC33
 	imply SND_SOC_TSCS42XX
 	imply SND_SOC_TSCS454
+	imply SND_SOC_TS3A225E
 	imply SND_SOC_TS3A227E
 	imply SND_SOC_TWL4030
 	imply SND_SOC_TWL6040
@@ -2030,6 +2031,10 @@ config SND_SOC_TLV320ADCX140
 	help
 	  Add support for Texas Instruments tlv320adc3140, tlv320adc5140 and
 	  tlv320adc6140 quad channel ADCs.
+
+config SND_SOC_TS3A225E
+	tristate "TI Headset/Mic detect chip"
+	depends on I2C
 
 config SND_SOC_TS3A227E
 	tristate "TI Headset/Mic detect and keypress chip"

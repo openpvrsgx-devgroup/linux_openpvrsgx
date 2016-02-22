@@ -1,0 +1,20 @@
+* TI Autonomous Audio Headset Switch driver.
+
+Required properties:
+- compatible: "ti,ts3a225e"
+- reg: i2c address (0x3b)
+
+Optional properties:
+- interrupt
+  if no interrupt is defined, the driver can poll.
+
+Examples:
+
+&i2c5 {
+	headset: ts3a225@3b {
+		compatible = "ti,ts3a225e";
+		reg = <0x3b>;
+		interrupt-parent = <&gpio6>;
+		interrupts = <1 IRQ_TYPE_LEVEL_LOW>;	/* gpio6_161 */
+	};
+};

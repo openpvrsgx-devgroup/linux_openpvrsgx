@@ -1,4 +1,4 @@
-# find iio device by name
+# find hwmon device by name
 
 LIST=false
 if [ "$1" = "-a" ]
@@ -7,11 +7,11 @@ then
 	shift
 fi
 
-for dev in /sys/bus/iio/devices/iio:device*
+for dev in /sys/class/hwmon/hwmon*
 do
 	$LIST && cat $dev/name
 	if [ "$(cat $dev/name 2>/dev/null)" = "$1" ]
-		then echo $dev
+		then echo $iiodev
 		exit 0
 	fi
 done

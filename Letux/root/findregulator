@@ -1,4 +1,4 @@
-# find iio device by name
+# find regulator by name
 
 LIST=false
 if [ "$1" = "-a" ]
@@ -7,7 +7,7 @@ then
 	shift
 fi
 
-for dev in /sys/bus/iio/devices/iio:device*
+for dev in /sys/class/regulator/regulator.*
 do
 	$LIST && cat $dev/name
 	if [ "$(cat $dev/name 2>/dev/null)" = "$1" ]

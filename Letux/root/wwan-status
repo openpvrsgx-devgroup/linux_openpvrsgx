@@ -35,8 +35,7 @@ case "$IF" in
 
 	/dev/ttyACM[0-4] | /dev/ttyUSB[0-4] )	# Neo900 / Pyra
 		(
-# is this correct??
-INA231=$(ls -d1 /sys/bus/i2c/drivers/ina2xx/1-004f/hwmon/hwmon? | head -1)
+INA231=$(findhwmon ina231)
 echo "VSYS: $(cat $INA231/in1_input) mV"
 echo "Modem Current: $(cat $INA231/curr1_input) mA"
 echo "Modem Power: $(cat $INA231/power1_input) uW"

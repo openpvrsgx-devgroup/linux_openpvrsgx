@@ -152,7 +152,9 @@ echo online: $(cat $SUPPLY/online 2>/dev/null)
 echo status: $(cat $SUPPLY/status 2>/dev/null)
 echo volt: $(cat $SUPPLY/voltage_now 2>/dev/null)uV
 echo current: $(cat $SUPPLY/current_now 2>/dev/null)uA
-echo max_current: $(cat $SUPPLY/max_current 2>/dev/null)uA
+# twl4030 defines a special property max_current
+# rather it should use input_current_limit and implement power_supply_desc->set_property
+echo max_current: $(cat $SUPPLY/max_current 2>/dev/null)$(cat $SUPPLY/input_current_limit 2>/dev/null)uA
 echo ID: $(cat /dev/usb_id 2>/dev/null)
 echo
 ;;

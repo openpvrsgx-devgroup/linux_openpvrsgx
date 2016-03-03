@@ -3,16 +3,17 @@
 # using the panel-mipi-debug driver
 #
 # -b:	BIST mode (test pattern)
-# -r:	program for rotation
+# -r:	rotate by 90 degrees
+# -f <n>: flip mode n (0..3) - 3 adds a rotation by 180 degrees, 0 by 0 degrees
 # -d:	dump ssd2858 registers
 # -l:	loop dcs commands 10h and 11h to check LP output to panel
 # -p:	program panel through DCS
 # -s:	enable stream to ssd and panel
+# -off:	turn off
 #
 # typical invocation for operation
-# ./ssd2858 -r -p -s
+# ./ssd2858 -r -f 3 -p -s
 # ./ssd2858 -b -d -l
-
 
 if ! [ "$(cat /proc/device-tree/ocp/dss@58000000/encoder@58004000/lcd/compatible)" = "omapdss,mipi,debug" ]
 then
@@ -35,13 +36,71 @@ then
 	exit 1
 fi
 
-# make sure the panel is active before trying to send commands
+# default flags
+DUMP_REGS=false
+LOOP_DCS_11_10=false
+PROGRAM_PANEL=false
+STREAM=true
+OFF=false
+
+# SSD2858 mode parameters
+VB_MODE=0
+VBE=0
+ROT90=0
+FLIP=0
+
+# default to 3 for the Pyra so that we don't have to modify the xinit patch
+FLIP=3
+
+while [ "$1" ]
+do
+	case "$1" in
+	"-b" )
+		VB_MODE=4
+		VBE=3
+		;;
+	"-r" )
+		ROT90=1
+		;;
+	"-f" )
+		shift
+		FLIP=$1
+		;;
+	"-d" )
+		DUMP_REGS=true
+		;;
+	"-l" )
+		LOOP_DCS_11_10=true
+		;;
+	"-p" )
+		PROGRAM_PANEL=true
+		;;
+	"-s" )
+		STREAM=true
+		;;
+	"-off" )
+		OFF=true
+		;;
+	-* )
+		echo unknown option $1
+		exit 1
+		;;
+	* )
+		break
+		;;
+	esac
+	shift
+done
+
+# make sure the panel is off before trying to send commands
 echo nostream >dcs	# if it was on before
 sleep .5
 echo stop >dcs	# stop if it was already running
 echo nopower >dcs	# enable is unused
-echo reset >dcs	# reset panel
 sleep .5
+
+$OFF && exit 0
+
 # reset panel
 echo reset >dcs	# reset panel
 echo power >dcs	# enable ssd (should do this only on v4/v5 boards!!! but I have no method to decide between v3 and v4)
@@ -77,9 +136,6 @@ PANEL_MIN_DDR=$(( $PANEL_PCLK / 2 / $PANEL_LANES * $PANEL_BPP ))	# min is define
 # SSD2858 mode parameters
 SPLIT_MEM=1 TE_SEL=1 VBP=0
 CKE=0
-VB_MODE=0
-VBE=0
-ROT90=0
 
 # SSD2858 clock divider parameters
 XTAL=24000000	# we have 24 MHz XTAL
@@ -118,8 +174,16 @@ LOCKCNT=$(printf "%.0f" $(echo '1.4 * 30*10^-6 *' $XTAL '/ 2' | bc -l ))
 # calculate OMAP parameters
 OMAP_LPCLK=$(( $XTAL / 2 ))	# we must drive SSD with this LP clock frequency
 OMAP_PCLK=$((2 * $PIXEL_CLK))	# feed pixels in speed defined by SSD2858
-OMAP_WIDTH=$PANEL_WIDTH
-OMAP_HEIGHT=$PANEL_HEIGHT
+
+if [ "$ROT90" = 1 ]
+then
+	OMAP_WIDTH=$PANEL_HEIGHT
+	OMAP_HEIGHT=$PANEL_WIDTH
+else
+	OMAP_WIDTH=$PANEL_WIDTH
+	OMAP_HEIGHT=$PANEL_HEIGHT
+fi
+
 OMAP_HFP=$PANEL_HFP
 OMAP_HSA=$PANEL_HSA
 OMAP_HBP=$PANEL_HBP
@@ -127,43 +191,6 @@ OMAP_VFP=$PANEL_VFP
 OMAP_VSA=$PANEL_VSA
 OMAP_VBP=$PANEL_VBP
 OMAP_DDR=$MIPITX_DDR_CLK	# I hope the OMAP DSS calculates what it needs
-
-# default flags
-DUMP_REGS=false
-LOOP_DCS_11_10=false
-PROGRAM_PANEL=false
-STREAM=true
-
-while [ "$1" ]
-do
-	case "$1" in
-	"-b" )
-		VB_MODE=4
-		VBE=3
-		;;
-	"-r" )
-		OMAP_WIDTH=$PANEL_HEIGHT
-		OMAP_HEIGHT=$PANEL_WIDTH
-		ROT90=1
-		;;
-	"-d" )
-		DUMP_REGS=true
-		;;
-	"-l" )
-		LOOP_DCS_11_10=true
-		;;
-	"-p" )
-		PROGRAM_PANEL=true
-		;;
-	"-s" )
-		STREAM=true
-		;;
-	* )
-		break
-		;;
-	esac
-	shift
-done
 
 echo "Panel MIPI:"
 echo "  Dimensions: ${PANEL_WIDTH}x${PANEL_HEIGHT} in ${PANEL_FRAME_WIDTH}x${PANEL_FRAME_HEIGHT}"
@@ -219,18 +246,18 @@ fbset -g $OMAP_WIDTH $OMAP_HEIGHT $OMAP_WIDTH $OMAP_HEIGHT 32
 
 echo start x_res=$OMAP_WIDTH y_res=$OMAP_HEIGHT lpclock=$OMAP_LPCLK pixelclock=$OMAP_PCLK \
 	hfp=$OMAP_HFP hsw=$OMAP_HSA hbp=$OMAP_HBP \
-	vfp=$OMAP_VFP vsw=$OMAP_VSA vbp=$OMAP_VBP >dcs	# start MIPI interface timing
+	vfp=$OMAP_VFP vsw=$OMAP_VSA vbp=$OMAP_VBP >dcs || exit 1	# start MIPI interface timing
 
 sleep .5
 
 # show some DCS status (don't use echo status >dcs because it reads non-existent registers which makes the communication hang)
 for i in 0b 0c 45
-	do echo $i r >dcs
+	do echo $i r >dcs || exit 1
 done
 
 # read out some values after power on
 
-echo g0004 rrrr >dcs
+echo g0004 rrrr >dcs || exit 1
 echo g0008 rrrr >dcs
 echo g000c rrrr >dcs
 echo g0010 rrrr >dcs
@@ -243,7 +270,7 @@ echo g002c rrrr >dcs
 echo g0030 rrrr >dcs
 
 # prepare for getting access to the ssd
-echo 28 >dcs
+echo 28 >dcs || exit 1
 echo 10 >dcs
 echo ff00 >dcs
 echo 28 >dcs
@@ -290,6 +317,7 @@ echo g2038 rrrr >dcs
 # some DCS
 echo 35 02 >dcs		# tear on
 echo 44 0500 >dcs	# tear scan line
+[ "$FLIP" != "0" ] && echo 36 $(printf "%02x" $(( $FLIP << 6 )) ) >dcs
 
 # MIPITX
 echo g6008 $(printf "%08x" $(( 0x00000008 | (($PANEL_LANES - 1) << 22) | (($LP_CLK_DIV-1) << 16) | ($CKE << 0) )) ) >dcs	# MIPITX_CTLR (00030008)

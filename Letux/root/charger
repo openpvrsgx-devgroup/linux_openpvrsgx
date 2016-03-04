@@ -25,7 +25,7 @@ then # OMAP3 with TWL4030 / TPS65950
 
 # enable high charging current if GTA04 is connected to USB
 
-echo 800000 >/sys/class/power_supply/twl4030_usb/max_current
+echo 800000 >/sys/class/power_supply/twl4030_usb/input_current_limit
 
 # see http://www.mjmwired.net/kernel/Documentation/hwmon/twl4030-madc-hwmon for a list of channels
 echo "TWL4030 Main Battery"
@@ -152,9 +152,7 @@ echo online: $(cat $SUPPLY/online 2>/dev/null)
 echo status: $(cat $SUPPLY/status 2>/dev/null)
 echo volt: $(cat $SUPPLY/voltage_now 2>/dev/null)uV
 echo current: $(cat $SUPPLY/current_now 2>/dev/null)uA
-# twl4030 defines a special property max_current
-# rather it should use input_current_limit and implement power_supply_desc->set_property
-echo max_current: $(cat $SUPPLY/max_current 2>/dev/null)$(cat $SUPPLY/input_current_limit 2>/dev/null)uA
+echo max_current: $(cat $SUPPLY/input_current_limit 2>/dev/null)uA
 echo ID: $(cat /dev/usb_id 2>/dev/null)
 echo
 ;;
@@ -167,7 +165,7 @@ echo online: $(cat $SUPPLY/online 2>/dev/null)
 echo status: $(cat $SUPPLY/status 2>/dev/null)
 echo volt: $(cat /sys$SUPPLY/voltage_now 2>/dev/null)uV
 echo current: $(cat $SUPPLY/current_now 2>/dev/null)uA
-echo max_current: $(cat $SUPPLY/max_current 2>/dev/null)uA
+echo max_current: $(cat $SUPPLY/input_current_limit 2>/dev/null)uA
 echo
 ;;
 

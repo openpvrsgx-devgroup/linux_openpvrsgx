@@ -9,7 +9,7 @@ CHARGER=/sys/class/power_supply/twl4030_usb
 BQ27000=/sys/class/power_supply/bq27000-battery
 # Pyra
 [ -r "$CHARGER" ] || CHARGER=/sys/class/power_supply/bq24297
-[ -r "$BQ27000" ] || BQ27000=/sys/class/power_supply/bq27425-0
+[ -r "$BQ27000" ] || BQ27000=/sys/class/power_supply/bq27621-0
 
 while true
 do

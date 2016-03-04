@@ -6,7 +6,7 @@ amixer -q set "AUXR" "on" &&
 amixer -q set "Analog Left" "Main Mic" &&
 amixer -q set "Analog Right" "Headset Mic" &&
 amixer -q set "Earphone" 80% &&
-amixer -q set "Handsfree" 80% &&
+amixer -q set "Handsfree" 50% &&
 amixer -q set "Handsfree Left Playback" "HF DAC" &&
 amixer -q set "Handsfree Right Playback" "HF DAC" &&
 amixer -q set "Headset" 80% &&

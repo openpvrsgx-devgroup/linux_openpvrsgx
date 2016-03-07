@@ -151,6 +151,67 @@ static irqreturn_t gab_charged(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+#ifdef CONFIG_OF
+static struct gab_platform_data *gab_dt_probe(struct platform_device *pdev)
+{
+	struct gab_platform_data *pdata;
+	struct device_node *np = pdev->dev.of_node;
+	const char *name;
+	u32 val;
+	int err;
+
+	pdata = devm_kzalloc(&pdev->dev,
+			sizeof(struct gab_platform_data),
+			GFP_KERNEL);
+	if (!pdata)
+		return ERR_PTR(-ENOMEM);
+
+	/* parse and fill power_supply_info struct */
+	err = of_property_read_u32(np, "technology", &val);
+	if (err) {
+		dev_info(&pdev->dev, "Battery technology unknown\n");
+		val = 0;
+	}
+	pdata->battery_info.technology = val;
+
+	err = of_property_read_string(np, "battery-name", &name);
+	if (err) {
+		dev_info(&pdev->dev, "Battery name empty, setting default\n");
+	}
+	pdata->battery_info.name = name;
+
+	val = 0;
+	err = of_property_read_u32(np, "charge_empty_design", &val);
+	pdata->battery_info.charge_empty_design = val;
+
+	val = 0;
+	err = of_property_read_u32(np, "charge_full_design", &val);
+	pdata->battery_info.charge_full_design = val;
+
+	val = 0;
+	err = of_property_read_u32(np, "voltage_min_design", &val);
+	pdata->battery_info.voltage_min_design = val;
+
+	val = 0;
+	err = of_property_read_u32(np, "voltage_max-design", &val);
+	pdata->battery_info.voltage_max_design = val;
+
+	return pdata;
+}
+
+static const struct of_device_id of_gab_match[] = {
+	{ .compatible = "linux,generic-adc-battery", },
+	{},
+};
+MODULE_DEVICE_TABLE(of, of_gab_match);
+
+#else
+static struct gab_platform_data gab_dt_probe(struct platform_device *pdev)
+{
+	ERR_PTR(-ENODEV);
+}
+#endif
+
 static int gab_probe(struct platform_device *pdev)
 {
 	struct gab *adc_bat;

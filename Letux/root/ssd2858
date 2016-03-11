@@ -168,8 +168,7 @@ MIPITX_BYTE_CLK=$(( $MIPITX_BIT_CLK / 8 ))
 LP_CLK_DIV=$(( ($MIPITX_BYTE_CLK + $PANEL_LPCLOCK - 1) / $PANEL_LPCLOCK ))	# divider
 SSD_LPCLK=$(( $MIPITX_BYTE_CLK / $LP_CLK_DIV ))	# real LP clock output
 # LOCKCNT - at least 30us - this is the number of LPCLOCK (XTAL / 2); we add 40% safety margin
-[ -x /usr/bin/bc ] || apt-get install bc
-LOCKCNT=$(printf "%.0f" $(echo '1.4 * 30*10^-6 *' $XTAL '/ 2' | bc -l ))
+LOCKCNT=$(( (((($XTAL / 2 ) * 30) / 1000000) * 140) / 100 ))
 
 # calculate OMAP parameters
 OMAP_LPCLK=$(( $XTAL / 2 ))	# we must drive SSD with this LP clock frequency

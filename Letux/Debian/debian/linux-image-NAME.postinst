@@ -24,7 +24,7 @@ case "$1" in
 	# create an initrd
 	update-initramfs -k $KERNEL_LOCALVERSION -c 2>/dev/null || true
 
-	# set this kernel as boot kernel (if none other exists)
+	# set this kernel as boot kernel if none other is set or exists
 	if [ ! -e "/boot/zImage" ] || ( [ -h "/boot/zImage" ] && [ ! -e "/boot/$(readlink /boot/zImage)" ] ); then
 		ln -sfv zImage-$KERNEL_LOCALVERSION /boot/zImage
 		ln -sfv initrd.img-$KERNEL_LOCALVERSION /boot/initrd

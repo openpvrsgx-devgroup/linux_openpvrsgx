@@ -26,7 +26,11 @@ case $1 in
 	# same for initrd
 	if [ -h /boot/initrd ] && [ "$(readlink /boot/initrd)" = "initrd.img-$KERNEL_LOCALVERSION" ]; then
 		rm -f /boot/initrd
-        fi
+	fi
+	# same for DTBs
+	if [ -h /boot/dtb ] && [ "$(readlink /boot/dtb)" = "dtb-$KERNEL_LOCALVERSION" ]; then
+		rm -f /boot/dtb
+	fi
 	# call update-initramfs to remove initrd of this kernel
 	update-initramfs -k $KERNEL_LOCALVERSION -d 2>/dev/null || true
     ;;

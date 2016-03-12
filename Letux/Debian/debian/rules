@@ -37,11 +37,17 @@ override_dh_auto_build:
 	dh_auto_build -- dtbs zImage modules
 
 override_dh_auto_install:
-	mkdir -vp $(KDESTDIR)/boot
+	# install kernel image
+	mkdir -vp "$(KDESTDIR)/boot"
 	install -v -m755 build/arch/arm/boot/zImage $(KDESTDIR)/boot/zImage-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)
 	install -v -m644 build/System.map $(KDESTDIR)/boot/System.map-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)
 	install -v -m644 build/.config $(KDESTDIR)/boot/config-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)
-	find build/arch/arm/boot/dts/ -name "*.dtb" -exec install -v -m644 {} $(KDESTDIR)/boot/ \;
+
+	# install DTBs
+	mkdir -vp "$(KDESTDIR)/boot/dtb-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)"
+	find build/arch/arm/boot/dts/ -name "*.dtb" -exec install -v -m644 {} "$(KDESTDIR)/boot/dtb-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/" \;
+
+	# install modules
 	make -C build INSTALL_MOD_PATH=$(KDESTDIR) modules_install
 	rm -fv $(KDESTDIR)/lib/modules/$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/source
 	rm -fv $(KDESTDIR)/lib/modules/$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/build

@@ -25,9 +25,14 @@ case "$1" in
 	update-initramfs -k $KERNEL_LOCALVERSION -c 2>/dev/null || true
 
 	# set this kernel as boot kernel if none other is set or exists
-	if [ ! -e "/boot/zImage" ] || ( [ -h "/boot/zImage" ] && [ ! -e "/boot/$(readlink /boot/zImage)" ] ); then
+	if ( [ ! -e "/boot/zImage" ] || ( [ -h "/boot/zImage" ] && [ ! -e "/boot/$(readlink /boot/zImage)" ] ) ) \
+	|| ( [ ! -e "/boot/dtb" ] || ( [ -h "/boot/dtb" ] && [ ! -e "/boot/$(readlink /boot/dtb)" ] ) ); then
 		ln -sfv zImage-$KERNEL_LOCALVERSION /boot/zImage
 		ln -sfv initrd.img-$KERNEL_LOCALVERSION /boot/initrd
+		ln -sfv dtb-$KERNEL_LOCALVERSION /boot/dtb
+	else
+		echo "Notice: linux-image-$KERNEL_LOCALVERSION will not boot automatically!"
+		echo "If desired, please update the symlinks zImage, initrd and dtb in /boot."
 	fi
     ;;
 

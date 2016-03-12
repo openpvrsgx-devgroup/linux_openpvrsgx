@@ -125,12 +125,19 @@ static void gab_work(struct work_struct *work)
 	struct gab *adc_bat;
 	struct delayed_work *delayed_work;
 	int status;
+	int ret, iio_charge;
 
 	delayed_work = to_delayed_work(work);
 	adc_bat = container_of(delayed_work, struct gab, bat_work);
 	status = adc_bat->status;
 
-	if (!power_supply_am_i_supplied(adc_bat->psy))
+	ret = read_channel(adc_bat, POWER_SUPPLY_PROP_CURRENT_NOW, &iio_charge);
+	if (ret < 0) {
+		pr_info("Cannot read current channel, ret:%d\n", ret);
+		iio_charge = 0;
+	}
+
+	if (!power_supply_am_i_supplied(adc_bat->psy) && iio_charge <= 0)
 		adc_bat->status =  POWER_SUPPLY_STATUS_DISCHARGING;
 	else if (gab_charge_finished(adc_bat))
 		adc_bat->status = POWER_SUPPLY_STATUS_NOT_CHARGING;

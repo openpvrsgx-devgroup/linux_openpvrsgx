@@ -43,7 +43,7 @@ struct ts3a225e {
 	struct	completion done;
 };
 
-#define DRIVER_NAME		"ts3a225"
+#define DRIVER_NAME		"ts3a225e"
 #define TS3A225_I2C_ADDRESS	0x3b
 #define POLL_INTERVAL		msecs_to_jiffies(1000)
 
@@ -66,43 +66,43 @@ static void ts3a225_state_changed(struct device *dev)
 
 	if (reg != data->last_reg) {
 		if (reg & 0x01)
-			printk("ts3a225e: TRS headset detected\n");
+			printk("ts3a225e: TRS headset plugged");
 		else if (data->last_reg & 0x01)
-			printk("ts3a225e: TRS headset removed\n");
+			printk("ts3a225e: TRS headset removed");
 		if (reg & 0x02)
-			printk("ts3a225e: microphone detected\n");
+			printk("ts3a225e:  microphone plugged");
 		else if (data->last_reg & 0x02)
-			printk("ts3a225e: microphone unplugged\n");
+			printk("ts3a225e:  microphone removed");
 		if (reg & 0x80)
-			printk("ts3a225e: detection unsuccessful\n");
+			printk("ts3a225e:    detection failed");
 		data->last_reg = reg;
 
 		ret = regmap_read(data->regmap, TS3A225_DAT1_REG, &reg);
 		if (ret < 0)
 			return;
 		if (reg & 0x80)
-			printk("GND on Ring 2 band\n");
+			printk("; GND on Ring 2 band");
 		else
-			printk("GND on Sleeve band\n");
+			printk("; GND on Sleeve band");
 		switch ((reg >> 3) & 0x07) {
-			case 0:	printk("Tip-Sleeve <400 Ohm\n"); break;
-			case 1:	printk("Tip-Sleeve <800 Ohm\n"); break;
-			case 2:	printk("Tip-Sleeve <1200 Ohm\n"); break;
-			case 3:	printk("Tip-Sleeve <1600 Ohm\n"); break;
-			case 4:	printk("Tip-Sleeve <2000 Ohm\n"); break;
-			case 5:	printk("Tip-Sleeve <2400 Ohm\n"); break;
-			case 6:	printk("Tip-Sleeve <2800 Ohm\n"); break;
-			case 7:	printk("Tip-Sleeve >2800 Ohm\n"); break;
+			case 0:	printk("; Tip-Sleeve < 400 Ohm"); break;
+			case 1:	printk("; Tip-Sleeve < 800 Ohm"); break;
+			case 2:	printk("; Tip-Sleeve <1200 Ohm"); break;
+			case 3:	printk("; Tip-Sleeve <1600 Ohm"); break;
+			case 4:	printk("; Tip-Sleeve <2000 Ohm"); break;
+			case 5:	printk("; Tip-Sleeve <2400 Ohm"); break;
+			case 6:	printk("; Tip-Sleeve <2800 Ohm"); break;
+			case 7:	printk("; Tip-Sleeve >2800 Ohm"); break;
 		}
 		switch ((reg >> 0) & 0x07) {
-			case 0:	printk("Tip-Ring2 <400 Ohm\n"); break;
-			case 1:	printk("Tip-Ring2 <800 Ohm\n"); break;
-			case 2:	printk("Tip-Ring2 <1200 Ohm\n"); break;
-			case 3:	printk("Tip-Ring2 <1600 Ohm\n"); break;
-			case 4:	printk("Tip-Ring2 <2000 Ohm\n"); break;
-			case 5:	printk("Tip-Ring2 <2400 Ohm\n"); break;
-			case 6:	printk("Tip-Ring2 <2800 Ohm\n"); break;
-			case 7:	printk("Tip-Ring2 >2800 Ohm\n"); break;
+			case 0:	printk("; Tip-Ring2 < 400 Ohm\n"); break;
+			case 1:	printk("; Tip-Ring2 < 800 Ohm\n"); break;
+			case 2:	printk("; Tip-Ring2 <1200 Ohm\n"); break;
+			case 3:	printk("; Tip-Ring2 <1600 Ohm\n"); break;
+			case 4:	printk("; Tip-Ring2 <2000 Ohm\n"); break;
+			case 5:	printk("; Tip-Ring2 <2400 Ohm\n"); break;
+			case 6:	printk("; Tip-Ring2 <2800 Ohm\n"); break;
+			case 7:	printk("; Tip-Ring2 >2800 Ohm\n"); break;
 		}
 	}
 }
@@ -116,10 +116,10 @@ static irqreturn_t ts3a225_isr(int irq, void *devid)
 	return IRQ_HANDLED;
 }
 
-static void ts3a225_work(struct delayed_work *work)
+static void ts3a225_work(struct work_struct *work)
 {
 	struct ts3a225e *data = container_of(work, struct ts3a225e,
-		work);
+		work.work);
 	struct device *dev = data->dev;
 
 	ts3a225_state_changed(dev);
@@ -189,10 +189,6 @@ int ts3a225_probe(struct device *dev, struct regmap *regmap, int irq)
 
 
 #if OLD
-	/* Initialize the BMP085 chip */
-	err = ts3a225_init_client(data);
-	if (err < 0)
-		goto exit_free;
 
 	/* Register sysfs hooks */
 	err = sysfs_create_group(&dev->kobj, &ts3a225_attr_group);
@@ -233,7 +229,7 @@ static int ts3a225_i2c_remove(struct i2c_client *client)
 }
 
 static const struct i2c_device_id ts3a225_id[] = {
-	{ "ti,ts3a225", 0x02 },
+	{ "ts3a225e", 0x02 },
 	{ }
 };
 MODULE_DEVICE_TABLE(i2c, ts3a225_id);

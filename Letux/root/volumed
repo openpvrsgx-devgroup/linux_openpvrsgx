@@ -1,0 +1,36 @@
+#!/bin/bash
+#
+# Pyra volume control daemon
+#
+
+GPADC=$(/root/findiio "palmas-gpadc")
+
+[ "$GPADC" ] || exit 1
+
+LASTVOL="unknown"
+MAXWHEEL=1200	# reports 0..1250 mV but leave some margin
+
+while true
+do
+	WHEEL=$(cat $GPADC/in_voltage2_input 2>/dev/null)
+	# could apply non-linear scale for smoother control
+	VOL=$(( 100 * $WHEEL / $MAXWHEEL ))
+	[ "$VOL" -lt 0 ] && VOL=0
+	[ "$VOL" -gt 100 ] && VOL=100
+	if [ "$VOL" != "$LASTVOL" ]
+	then # update only if changed since amixer command needs some resources
+		if [ "$1" = -d ]
+		then
+			echo $WHEEL - $VOL%
+		fi
+		if [ "$VOL" = 0 ]
+		then
+			: should turn off
+		fi
+		amixer -q set "Handsfree" "$VOL%" || exit
+		amixer -q set "Headset" "$VOL%" || exit
+		amixer -q set "Earphone" "$VOL%" || exit
+		LASTVOL=$VOL
+	fi
+	sleep 0.1
+done

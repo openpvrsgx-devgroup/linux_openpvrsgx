@@ -512,7 +512,7 @@ static inline u32 rtw_phydm_ability_get(_adapter *adapter)
 
 #ifdef CONFIG_LOAD_PHY_PARA_FROM_FILE
 extern char *rtw_phy_file_path;
-extern char file_path[PATH_LENGTH_MAX];
+extern char rtw_file_path[PATH_LENGTH_MAX];
 #define GetLineFromBuffer(buffer)   strsep(&buffer, "\r\n")
 #endif
 

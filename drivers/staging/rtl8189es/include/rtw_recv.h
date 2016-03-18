@@ -75,6 +75,7 @@
 #define RX_CMD_QUEUE				1
 #define RX_MAX_QUEUE				2
 
+#if 0 // jfm
 static u8 SNAP_ETH_TYPE_IPX[2] = {0x81, 0x37};
 
 static u8 SNAP_ETH_TYPE_APPLETALK_AARP[2] = {0x80, 0xf3};
@@ -84,13 +85,16 @@ static u8 SNAP_HDR_APPLETALK_DDP[3] = {0x08, 0x00, 0x07}; // Datagram Delivery P
 
 static u8 oui_8021h[] = {0x00, 0x00, 0xf8};
 static u8 oui_rfc1042[]= {0x00,0x00,0x00};
+#endif
 
 #define MAX_SUBFRAME_COUNT	64
+#if 0 // jfm
 static u8 rtw_rfc1042_header[] =
 { 0xaa, 0xaa, 0x03, 0x00, 0x00, 0x00 };
 /* Bridge-Tunnel header (for EtherTypes ETH_P_AARP and ETH_P_IPX) */
 static u8 rtw_bridge_tunnel_header[] =
 { 0xaa, 0xaa, 0x03, 0x00, 0x00, 0xf8 };
+#endif
 
 //for Rx reordering buffer control
 struct recv_reorder_ctrl

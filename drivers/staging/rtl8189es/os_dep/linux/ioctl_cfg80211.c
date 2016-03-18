@@ -32,6 +32,7 @@
 #endif /* Linux kernel >= 4.0.0 */
 
 #include <rtw_wifi_regd.h>
+#include <uapi/linux/nl80211.h>
 
 #define RTW_MAX_MGMT_TX_CNT (8)
 #define RTW_MAX_MGMT_TX_MS_GAS (500)
@@ -878,7 +879,7 @@ void rtw_cfg80211_indicate_disconnect(_adapter *padapter)
 			cfg80211_connect_result(padapter->pnetdev, NULL, NULL, 0, NULL, 0, 
 				WLAN_STATUS_UNSPECIFIED_FAILURE, GFP_ATOMIC/*GFP_KERNEL*/);
 		else if(pwdev->sme_state==CFG80211_SME_CONNECTED)
-			cfg80211_disconnected(padapter->pnetdev, 0, NULL, 0, GFP_ATOMIC);
+			cfg80211_disconnected(padapter->pnetdev, 0, NULL, 0, 0, GFP_ATOMIC);
 		//else
 			//DBG_8192C("pwdev->sme_state=%d\n", pwdev->sme_state);
 
@@ -887,7 +888,7 @@ void rtw_cfg80211_indicate_disconnect(_adapter *padapter)
 
 		if (check_fwstate(&padapter->mlmepriv, _FW_LINKED)) {
 			DBG_871X(FUNC_ADPT_FMT" call cfg80211_disconnected\n", FUNC_ADPT_ARG(padapter));
-			cfg80211_disconnected(padapter->pnetdev, 0, NULL, 0, GFP_ATOMIC);
+			cfg80211_disconnected(padapter->pnetdev, 0, NULL, 0, 0, GFP_ATOMIC);
 		} else {
 			DBG_871X(FUNC_ADPT_FMT" call cfg80211_connect_result\n", FUNC_ADPT_ARG(padapter));
 			cfg80211_connect_result(padapter->pnetdev, NULL, NULL, 0, NULL, 0, 
@@ -1826,16 +1827,16 @@ static int cfg80211_rtw_get_station(struct wiphy *wiphy,
 			goto exit;
 		}
 
-		sinfo->filled |= STATION_INFO_SIGNAL;
+		sinfo->filled |= NL80211_STA_INFO_SIGNAL;
 		sinfo->signal = translate_percentage_to_dbm(padapter->recvpriv.signal_strength);
 
-		sinfo->filled |= STATION_INFO_TX_BITRATE;
+		sinfo->filled |= NL80211_STA_INFO_TX_BITRATE;
 		sinfo->txrate.legacy = rtw_get_cur_max_rate(padapter);
 
-		sinfo->filled |= STATION_INFO_RX_PACKETS;
+		sinfo->filled |= NL80211_STA_INFO_RX_PACKETS;
 		sinfo->rx_packets = sta_rx_data_pkts(psta);
 
-		sinfo->filled |= STATION_INFO_TX_PACKETS;
+		sinfo->filled |= NL80211_STA_INFO_TX_PACKETS;
 		sinfo->tx_packets = psta->sta_stats.tx_pkts;
 
 	}
@@ -3614,7 +3615,8 @@ void rtw_cfg80211_indicate_sta_assoc(_adapter *padapter, u8 *pmgmt_frame, uint f
 			ie_offset = _REASOCREQ_IE_OFFSET_;
 	
 		sinfo.filled = 0;
-		sinfo.filled = STATION_INFO_ASSOC_REQ_IES;
+// cf commit 319090bf6c75e3ad42a8c
+//		sinfo.filled = STATION_INFO_ASSOC_REQ_IES;
 		sinfo.assoc_req_ies = pmgmt_frame + WLAN_HDR_A3_LEN + ie_offset;
 		sinfo.assoc_req_ies_len = frame_len - WLAN_HDR_A3_LEN - ie_offset;
 		cfg80211_new_sta(ndev, GetAddr2Ptr(pmgmt_frame), &sinfo, GFP_ATOMIC);
@@ -4472,7 +4474,7 @@ static int	cfg80211_rtw_dump_station(struct wiphy *wiphy, struct net_device *nde
 	}
 	_rtw_memcpy(mac, psta->hwaddr, ETH_ALEN);
 	sinfo->filled = 0;
-	sinfo->filled |= STATION_INFO_SIGNAL;
+	sinfo->filled |= NL80211_STA_INFO_SIGNAL;
 	sinfo->signal = psta->rssi;
 	
 exit:
@@ -6746,7 +6748,7 @@ void rtw_wdev_unregister(struct wireless_dev *wdev)
 	#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 0)) || defined(COMPAT_KERNEL_RELEASE)	
 	if (wdev->current_bss) {
 		DBG_871X(FUNC_ADPT_FMT" clear current_bss by cfg80211_disconnected\n", FUNC_ADPT_ARG(adapter));
-		cfg80211_disconnected(adapter->pnetdev, 0, NULL, 0, GFP_ATOMIC);
+		cfg80211_disconnected(adapter->pnetdev, 0, NULL, 0, 0, GFP_ATOMIC);
 	}
 	#endif
 

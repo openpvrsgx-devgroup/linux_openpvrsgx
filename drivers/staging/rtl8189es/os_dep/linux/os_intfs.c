@@ -4130,6 +4130,7 @@ _func_enter_;
 	if (pwrpriv->wowlan_wake_reason == RX_PNOWakeUp) {
 #ifdef CONFIG_IOCTL_CFG80211	
 		cfg80211_disconnected(padapter->pnetdev, 0, NULL, 0,
+				1,			// locally_generated = true
 				GFP_ATOMIC);
 #endif
 		rtw_lock_ext_suspend_timeout(10000);

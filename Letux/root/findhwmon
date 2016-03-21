@@ -11,7 +11,7 @@ for dev in /sys/class/hwmon/hwmon*
 do
 	$LIST && cat $dev/name
 	if [ "$(cat $dev/name 2>/dev/null)" = "$1" ]
-		then echo $iiodev
+		then echo $dev
 		exit 0
 	fi
 done

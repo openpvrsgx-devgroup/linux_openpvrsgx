@@ -431,7 +431,7 @@ static int get_write_value(const char __user *buffer, size_t count, int *val)
 			count < sizeof(buff) ? count : sizeof(buff) - 1);
 	buff[count] = 0;
 
-	ret = strict_strtol(buff, 0, &lval);
+	ret = kstrtol(buff, 0, &lval);
 	if (ret < 0)
 		return ret;
 
@@ -536,7 +536,7 @@ vsense_set_reset(struct device *dev, struct device_attribute *attr,
 	struct vsense_drvdata *ddata;
 	int ret;
 
-	ret = strict_strtoul(buf, 10, &new_reset);
+	ret = kstrtoul(buf, 10, &new_reset);
 	if (ret)
 		return -EINVAL;
 

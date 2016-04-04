@@ -71,9 +71,17 @@ $PUSH && { git push origin "$BASE"; }	# update on public server (if possible)
 
 echo merging features on top of "$BASE" for $VERSION
 
-echo "*** make a fresh working copy: letux-$VERSION ***"
-git branch -D letux-$VERSION 2>/dev/null
-git checkout -b letux-$VERSION HEAD || exit
+OUTPUT="letux-$VERSION"
+
+for FEATURE in "$@"
+do
+	F=$(basename "$FEATURE")
+	OUTPUT="$OUTPUT+$F"
+done
+
+echo "*** make a fresh working copy: $OUTPUT ***"
+git branch -D $OUTPUT 2>/dev/null
+git checkout -b $OUTPUT HEAD || exit
 
 BRANCHES=""
 
@@ -108,7 +116,7 @@ then # octopus
 	git merge --no-ff --no-edit $BRANCHES || exit	# try to merge all
 fi
 
-$PUSH && echo "*** pushing letux-$VERSION to remote ***"
-$PUSH && { git push --force origin letux-$VERSION || exit; }	# update letux-$VERSION on public server
+$PUSH && echo "*** pushing $OUTPUT to remote ***"
+$PUSH && { git push --force origin $OUTPUT || exit; }	# update letux-$VERSION on public server
 
 echo "*** switched to $(git branch | fgrep '* ' | sed 's/\* //g') ***"

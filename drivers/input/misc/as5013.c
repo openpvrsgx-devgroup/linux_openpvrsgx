@@ -26,6 +26,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/seq_file.h>
 #include <linux/of.h>
+#include <linux/of_gpio.h>
 
 
 #define VSENSE_INTERVAL		25
@@ -560,11 +561,8 @@ vsense_dt_init(struct i2c_client *client)
 	if (!pdata)
 		return ERR_PTR(-ENOMEM);
 
-	pdata->gpio_irq = 0;
-	pdata->gpio_reset = 0;	// NOTE: this is not used
-
-	//	pdata->gpio_irq = of_get_property(np, "irq", NULL);
-//	pdata->gpio_reset = of_get_property(np, "reset", NULL);
+	pdata->gpio_irq = of_get_gpio(np, 0);
+	pdata->gpio_reset = of_get_gpio(np, 1);	// not used
 
 	return pdata;
 }
@@ -575,6 +573,8 @@ static struct of_device_id as5013_dt_match[] = {
 	},
 	{},
 };
+
+MODULE_DEVICE_TABLE(of, as5013_dt_match);
 
 #else
 static struct vsense_platform_data *
@@ -671,27 +671,27 @@ static int vsense_probe(struct i2c_client *client,
 	if (ddata == NULL)
 		return -ENOMEM;
 
-	ret = idr_pre_get(&vsense_proc_id, GFP_KERNEL);
-	if (ret == 0) {
-		ret = -ENOMEM;
-		goto err_idr;
-	}
-
+	idr_preload(GFP_KERNEL);
 	mutex_lock(&vsense_mutex);
 
-	ret = idr_get_new(&vsense_proc_id, client, &ddata->proc_id);
+	ret = idr_alloc(&vsense_proc_id, client, 0, 0, GFP_NOWAIT);
+	if (ret >= 0) {
+		ddata->proc_id = ret;
+
+		// hack to get something like a mkdir -p ..
+		if (idr_find_slowpath(&vsense_proc_id, ddata->proc_id ^ 1) == NULL)
+			proc_mkdir("pandora", NULL);
+	}
+
+	mutex_unlock(&vsense_mutex);
+	idr_preload_end();
 	if (ret < 0) {
-		mutex_unlock(&vsense_mutex);
+		dev_err(&client->dev, "failed to alloc idr,"
+				" error %d\n", ret);
 		goto err_idr;
 	}
 
-	// hack to get something like a mkdir -p ..
-	if (idr_find_slowpath(&vsense_proc_id, ddata->proc_id ^ 1) == NULL)
-		proc_mkdir("pandora", NULL);
-
-	mutex_unlock(&vsense_mutex);
-
-	if(pdata->gpio_irq) {
+	if(gpio_is_valid(pdata->gpio_irq)) {
 	ret = gpio_request_one(pdata->gpio_irq, GPIOF_IN, client->name);
 	if (ret < 0) {
 		dev_err(&client->dev, "failed to request GPIO %d,"

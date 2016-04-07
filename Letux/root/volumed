@@ -10,6 +10,11 @@ GPADC=$(/root/findiio "palmas-gpadc")
 LASTVOL="unknown"
 MAXWHEEL=1200	# reports 0..1250 mV but leave some margin
 
+if [ "$1" = -q ]
+then
+	QUIET=true
+fi
+
 while true
 do
 	WHEEL=$(cat $GPADC/in_voltage2_input 2>/dev/null)
@@ -17,15 +22,13 @@ do
 	VOL=$(( 100 * $WHEEL / $MAXWHEEL ))
 	[ "$VOL" -lt 0 ] && VOL=0
 	[ "$VOL" -gt 100 ] && VOL=100
+	# should check for abs($VOL-$LASTVOL) > threshold
 	if [ "$VOL" != "$LASTVOL" ]
 	then # update only if changed since amixer command needs some resources
-		if [ "$1" = -d ]
-		then
-			echo $WHEEL - $VOL%
-		fi
+		[ "$QUIET" ] || echo $WHEEL - $VOL%
 		if [ "$VOL" = 0 ]
 		then
-			: should turn off
+			: should turn audio off
 		fi
 		amixer -q set "Handsfree" "$VOL%" || exit
 		amixer -q set "Headset" "$VOL%" || exit

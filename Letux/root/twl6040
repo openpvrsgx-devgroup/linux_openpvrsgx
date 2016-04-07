@@ -1,30 +1,67 @@
-amixer -q set "Aux FM" 100% &&
-amixer -q set "Capture" 100% &&
-amixer -q set "Capture Preamplifier" 100% &&
-amixer -q set "AUXL" "on" &&
-amixer -q set "AUXR" "on" &&
-amixer -q set "Analog Left" "Main Mic" &&
-amixer -q set "Analog Right" "Headset Mic" &&
-amixer -q set "Earphone" 80% &&
-amixer -q set "Handsfree" 50% &&
-amixer -q set "Handsfree Left Playback" "HF DAC" &&
-amixer -q set "Handsfree Right Playback" "HF DAC" &&
-amixer -q set "Headset" 80% &&
-amixer -q set "Headset Left Playback" "HS DAC" &&
-amixer -q set "Headset Right Playback" "HS DAC" &&
-amixer -q set "Analog Left" "Main Mic"
-: amixer -q set "Headset Power Mode" "High-Performance" &&
-: amixer -q set "PLL Selection" "High-Performance" &&
-amixer -q set "Headset Power Mode" "Low-Power" &&
-amixer -q set "PLL Selection" "Low-Power" &&
-: amixer -q set "Vibra Left Playback" "Audio PDM" &&
-: amixer -q set "Vibra Right Playback" "Audio PDM" &&
-aplay -q /usr/share/sounds/alsa/*.wav
-[ -x /usr/bin/sox ] || apt-get install sox
-# play chirp sound on all 4 channels
-sox -c 4 -n -t wav - synth 10 sine 10-100 | aplay
-# remix for Pandaboard/OMAP5 stereo
-play /usr/share/sounds/alsa/Front_Center.wav remix 1 1
-# play some music file
-play somefile.mp3
-play somefile.mp3 remix 1 1 2 2
+trap "killall volumed" EXIT
+trap "exit 1" SIGHUP SIGINT SIGTERM
+
+if [ "$1" = -v ]
+then
+	# don't start volumed
+	shift
+else
+	/root/volumed -q &
+fi
+
+amixer -q set "Aux FM" 100% || exit
+amixer -q set "Capture" 100% || exit
+amixer -q set "Capture Preamplifier" 100% || exit
+amixer -q set "AUXL" "on" || exit
+amixer -q set "AUXR" "on" || exit
+amixer -q set "Analog Left" "Main Mic" || exit
+amixer -q set "Analog Right" "Headset Mic" || exit
+amixer -q set "Earphone" 80% || exit
+amixer -q set "Handsfree" 50% || exit
+amixer -q set "Handsfree Left Playback" "HF DAC" || exit
+amixer -q set "Handsfree Right Playback" "HF DAC" || exit
+amixer -q set "Headset" 80% || exit
+amixer -q set "Headset Left Playback" "HS DAC" || exit
+amixer -q set "Headset Right Playback" "HS DAC" || exit
+amixer -q set "Analog Left" "Main Mic" || exit
+
+if [ "$1" = -lp ] # low power mode
+then
+	amixer -q set "Headset Power Mode" "Low-Power" || exit
+	amixer -q set "PLL Selection" "Low-Power" || exit
+	shift
+else
+	amixer -q set "Headset Power Mode" "High-Performance" || exit
+	amixer -q set "PLL Selection" "High-Performance" || exit
+fi
+
+amixer -q set "Vibra Left Playback" "Input FF" || exit
+amixer -q set "Vibra Right Playback" "Input FF" || exit
+
+: amixer -q set "Vibra Left Playback" "Audio PDM" || exit
+: amixer -q set "Vibra Right Playback" "Audio PDM" || exit
+
+FILE=somefile.mp3
+
+if [ "$1" = "-d" ] # demo
+then
+	aplay -q /usr/share/sounds/alsa/*.wav
+	[ -x /usr/bin/sox ] || apt-get install sox
+	# play chirp sound on all 4 channels
+	sox -c 4 -n -t wav - synth 10 sine 10-100 | aplay
+	# remix for Pandaboard/OMAP5 stereo
+	play /usr/share/sounds/alsa/Front_Center.wav remix 1 1
+	# play some music file
+	# headset only
+	play $FILE
+	shift
+fi
+
+if [ "$1" ] # given file
+then
+	FILE=$1
+	shift
+fi
+
+# play on headset and main speakers
+play $FILE remix 1 1 2 2

@@ -37,6 +37,7 @@ case "$(cat /proc/device-tree/model 2>/dev/null)" in
 		# ./bl 1
 		./ssd2858 -r -p -s
 		)
+		cp /etc/X11/Xmodmap.pyra cp /etc/X11/Xmodmap
 		PANEL=5.0-720x1280;;
 	*Pandora* )
 		PANEL=4.3-480x640;;

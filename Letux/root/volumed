@@ -19,7 +19,7 @@ while true
 do
 	WHEEL=$(cat $GPADC/in_voltage2_input 2>/dev/null)
 	# could apply non-linear scale for smoother control
-	VOL=$(( 100 * $WHEEL / $MAXWHEEL ))
+	VOL=$(( 100 * ${WHEEL:-0} / $MAXWHEEL ))
 	[ "$VOL" -lt 0 ] && VOL=0
 	[ "$VOL" -gt 100 ] && VOL=100
 	# should check for abs($VOL-$LASTVOL) > threshold

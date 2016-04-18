@@ -1,0 +1,78 @@
+#!/bin/bash
+#
+# Letux/scripts/rebase [ -p ] [ -b base ] { branches... }
+#
+# rebase Letux feature branches on top of the base branch
+#
+# default base commit is "letux-base"
+#
+# options:
+#  -p		push --force all branches to 'origin'
+#  -b base	pase branch
+#
+# Author: <hns@goldelico.com>
+# License: GPL V2
+
+BASE=letux-base
+PUSH=false
+
+function usage {
+	echo "usage: $0 { branches...}"
+	echo "  -s	sequential merge"
+	echo "  -p	push --force all branches to 'origin'"
+	echo "  -b base	specify base commit"
+	exit 1
+}
+
+while [ "$1" ]
+do
+	case "$1" in
+		-b ) shift; BASE="$1"; shift ;;
+		-p ) PUSH=true; shift ;;
+		-* ) echo "unknown option $1"; usage; exit 1 ;;
+		* ) break;
+	esac
+done
+
+if [ "$(git status -s -uno)" ]
+then
+	echo there are uncommitted changes!
+	echo refusing to overwrite
+	exit 1
+fi
+
+echo rebasing features on top of "$BASE"
+
+EMPTY=""
+
+for FEATURE in $(cat Letux/scripts/mergefile 2>/dev/null) "$@"
+do
+	case "$FEATURE" in
+	'' | '#'* )	continue;;
+	esac
+	FEATURE=$(echo "$FEATURE" | sed 's|^-||')	# include all branches starting with -
+	LATEST=$(echo $(git branch | fgrep "${FEATURE}-v" | sort | tail -1))
+	echo
+	if [ "$LATEST" = "" ]
+	then
+		echo "*** rebasing $FEATURE ***"
+	else
+		echo "*** rebasing $LATEST ($FEATURE)  ***"
+		FEATURE="$LATEST"	# take latest instead
+	fi
+	git checkout $FEATURE || exit 1
+	git rebase $BASE || exit 1
+	if $PUSH
+	then
+		git push --force origin $FEATURE:$FEATURE || exit 1
+	fi
+	if [ "$(git rev-parse "$FEATURE")" = "$(git rev-parse "$BASE")" ]
+	then
+		EMPTY="$EMPTY $FEATURE"
+	fi
+done
+
+for i in "" $EMPTY
+do
+	[ "$i" ] && echo '!!!' $i 'is completely merged/empty - consider removing from mergefile'
+done

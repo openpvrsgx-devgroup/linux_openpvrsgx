@@ -91,7 +91,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /* Decide whether or not DevMem allocs need __GFP_DMA32 */
 #ifndef SGX_FEATURE_36BIT_MMU
-#	ifdef CONFIG_ZONE_DMA32
+#	ifdef CONFIG_ZONE_DMA
 #		if defined CONFIG_X86_PAE || defined CONFIG_ARM_LPAE || defined CONFIG_64BIT
 #			define PVR_USE_DMA32_FOR_DEVMEM_ALLOCS
 #		endif

@@ -34,8 +34,12 @@ case "$(cat /proc/device-tree/model 2>/dev/null)" in
 	*Pyra-Handheld* )
 		(
 		cd /root
-		# ./bl 1
-		./ssd2858 -r -p -s
+		if [ "$(cat /proc/device-tree/ocp/dss@58000000/encoder@58004000/lcd/compatible)" = "omapdss,mipi,debug" ]
+			then
+			./ssd2858 -r -p -s	# start ssd
+		else
+			./bl 1
+		fi
 		)
 		cp /etc/X11/Xmodmap.pyra cp /etc/X11/Xmodmap
 		PANEL=5.0-720x1280;;

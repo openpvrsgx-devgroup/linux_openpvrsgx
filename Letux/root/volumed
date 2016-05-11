@@ -28,11 +28,15 @@ do
 		[ "$QUIET" ] || echo $WHEEL - $VOL%
 		if [ "$VOL" = 0 ]
 		then
-			: should turn audio off
+			amixer -q set "Handsfree Left Playback" "Off" || exit
+			amixer -q set "Handsfree Right Playback" "Off" || exit
+		else
+			amixer -q set "Handsfree Left Playback" "HF DAC" || exit
+			amixer -q set "Handsfree Right Playback" "HF DAC" || exit
+			amixer -q set "Handsfree" "$VOL%" || exit
+			amixer -q set "Headset" "$VOL%" || exit
+			amixer -q set "Earphone" "$VOL%" || exit
 		fi
-		amixer -q set "Handsfree" "$VOL%" || exit
-		amixer -q set "Headset" "$VOL%" || exit
-		amixer -q set "Earphone" "$VOL%" || exit
 		LASTVOL=$VOL
 	fi
 	sleep 0.1

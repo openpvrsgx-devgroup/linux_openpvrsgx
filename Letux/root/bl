@@ -1,14 +1,43 @@
 #
-# turn on/off backlight
+# /root/bl: turn on/off backlight power
+# -g: use gpio mode
+# 1: turn on
+# 0: turn off
+#
+# intensity can be controlled in non-gpio mode through
+#    /sys/class/backlight/backlight/brightness
 #
 
-BL=/sys/class/backlight/backlight
+BL=/sys/class/backlight/backlight/bl_power	# just turn completely on/off instead of writing backlight intensity
+ON=0
+OFF=1
 
-# just turn completely on/off instead of writing backlight intensity
+case $(cat /proc/device-tree/model) in
+	Pyra-Handheld* )
+		[ "$(which devmem2)" ] || apt-get install -y --force-yes devmem2
+		if [ "$1" = -g ]
+			then
+			shift
+			devmem2 0x4a0028f6 h 0x011e >/dev/null	# switch to gpio mode
+			echo 190 > /sys/class/gpio/export 2>/dev/null
+			echo out > /sys/class/gpio/gpio190/direction
+			BL=/sys/class/gpio/gpio190/value
+			ON=1
+			OFF=0
+		else
+			if [ -r /sys/class/gpio/gpio190 ]
+			then
+				echo in > /sys/class/gpio/gpio190/direction
+				echo 190 > /sys/class/gpio/unexport 2>/dev/null
+			fi
+			devmem2 0x4a0028f6 h 0x0118 >/dev/null	# switch to timer9_pwm mode
+		fi
+		;;
+esac
 
 if [ "$1" = 1 ]
 then
-	echo 0 >$BL/bl_power
+	echo $ON >$BL
 else
-	echo 1 >$BL/bl_power
+	echo $OFF >$BL
 fi

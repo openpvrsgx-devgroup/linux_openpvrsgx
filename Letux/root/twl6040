@@ -64,4 +64,4 @@ then
 fi
 
 # play on headset and main speakers
-play $FILE remix 1 1 2 2
+play $FILE remix 1 2 1 2

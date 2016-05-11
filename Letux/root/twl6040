@@ -1,35 +1,79 @@
+#
+# /root/twl6040: demo for twl6040 sound
+#
+
 trap "killall volumed" EXIT
 trap "exit 1" SIGHUP SIGINT SIGTERM
 
-if [ "$1" = -v ]
-then
-	# don't start volumed
+FILE=somefile.mp3
+
+while [ "$1" ]
+do
+        case "$1" in
+        "-d" )
+		DEMO=true
+		;;
+        "-v" )
+		NOVOLUMED=true
+		;;
+        "-lp" )
+		LPMODE=true
+		;;
+        "-hf" )
+		NOHANDSFREE=true
+		;;
+	-* )
+		echo unknown option $1
+		exit 1
+		;;
+	* )
+		break
+		;;
+	esac
 	shift
+done
+
+if [ "$1" ] # given file
+then
+	FILE=$1
+	shift
+fi
+
+if [ "$NOVOLUMED" ]
+then
+	: # don't start volumed
 else
 	/root/volumed -q &
 fi
 
-amixer -q set "Aux FM" 100% || exit
+amixer -q set "Aux FM" 0% || exit
 amixer -q set "Capture" 100% || exit
 amixer -q set "Capture Preamplifier" 100% || exit
-amixer -q set "AUXL" "on" || exit
-amixer -q set "AUXR" "on" || exit
+amixer -q set "AUXL" "off" || exit
+amixer -q set "AUXR" "off" || exit
 amixer -q set "Analog Left" "Main Mic" || exit
 amixer -q set "Analog Right" "Headset Mic" || exit
 amixer -q set "Earphone" 80% || exit
 amixer -q set "Handsfree" 50% || exit
+
+if [ "$NOHANDSFREE" ]
+then
 amixer -q set "Handsfree Left Playback" "HF DAC" || exit
 amixer -q set "Handsfree Right Playback" "HF DAC" || exit
+else
+amixer -q set "Handsfree Left Playback" "Off" || exit
+amixer -q set "Handsfree Right Playback" "Off" || exit
+fi
+
 amixer -q set "Headset" 80% || exit
 amixer -q set "Headset Left Playback" "HS DAC" || exit
 amixer -q set "Headset Right Playback" "HS DAC" || exit
 amixer -q set "Analog Left" "Main Mic" || exit
 
-if [ "$1" = -lp ] # low power mode
+if [ "$LPMODE" ] # low power mode
 then
 	amixer -q set "Headset Power Mode" "Low-Power" || exit
 	amixer -q set "PLL Selection" "Low-Power" || exit
-	shift
 else
 	amixer -q set "Headset Power Mode" "High-Performance" || exit
 	amixer -q set "PLL Selection" "High-Performance" || exit
@@ -41,9 +85,7 @@ amixer -q set "Vibra Right Playback" "Input FF" || exit
 : amixer -q set "Vibra Left Playback" "Audio PDM" || exit
 : amixer -q set "Vibra Right Playback" "Audio PDM" || exit
 
-FILE=somefile.mp3
-
-if [ "$1" = "-d" ] # demo
+if [ "$DEMO" ] # demo
 then
 	aplay -q /usr/share/sounds/alsa/*.wav
 	[ -x /usr/bin/sox ] || apt-get install sox
@@ -54,13 +96,6 @@ then
 	# play some music file
 	# headset only
 	play $FILE
-	shift
-fi
-
-if [ "$1" ] # given file
-then
-	FILE=$1
-	shift
 fi
 
 # play on headset and main speakers

@@ -12,28 +12,47 @@ BL=/sys/class/backlight/backlight/bl_power	# just turn completely on/off instead
 ON=0
 OFF=1
 
+[ "$(which devmem2)" ] || apt-get install -y --force-yes devmem2
+
+if [ "$1" = -g ]
+then
+	USEGPIO=true
+	shift
+fi
+
 case $(cat /proc/device-tree/model) in
 	Pyra-Handheld* )
-		[ "$(which devmem2)" ] || apt-get install -y --force-yes devmem2
-		if [ "$1" = -g ]
-			then
-			shift
-			devmem2 0x4a0028f6 h 0x011e >/dev/null	# switch to gpio mode
-			echo 190 > /sys/class/gpio/export 2>/dev/null
-			echo out > /sys/class/gpio/gpio190/direction
-			BL=/sys/class/gpio/gpio190/value
-			ON=1
-			OFF=0
-		else
-			if [ -r /sys/class/gpio/gpio190 ]
-			then
-				echo in > /sys/class/gpio/gpio190/direction
-				echo 190 > /sys/class/gpio/unexport 2>/dev/null
-			fi
-			devmem2 0x4a0028f6 h 0x0118 >/dev/null	# switch to timer9_pwm mode
-		fi
+		PADCONF=0x4a0028f6	# OMAP5
+		GPIOMODE=0x011e
+		PWMMODE=0x0118
+		GPIO=190
+		;;
+	*GTA04* )
+		PADCONF=0x480020b8	# OMAP3
+		GPIOMODE=0x011c
+		PWMMODE=0x011b
+		GPIO=57
+		;;
+	* )
+		USEGPIO=""	# ignore -g
+		GPIO=none	# there is no /sys/class/gpio/gpionone
 		;;
 esac
+
+if [ "$USEGPIO" ]
+then
+	devmem2 $PADCONF h $GPIOMODE >/dev/null	# switch to gpio mode
+	echo $GPIO > /sys/class/gpio/export 2>/dev/null
+	echo out > /sys/class/gpio/gpio$GPIO/direction
+	BL=/sys/class/gpio/gpio$GPIO/value
+	ON=1
+	OFF=0
+elif [ -r /sys/class/gpio/gpio$GPIO ]
+then
+	echo in > /sys/class/gpio/gpio$GPIO/direction
+	echo $GPIO > /sys/class/gpio/unexport 2>/dev/null
+	devmem2 $PADCONF h $PWMMODE >/dev/null	# switch to pwm mode
+fi
 
 if [ "$1" = 1 ]
 then

@@ -54,10 +54,10 @@ echo g0001 >dcs # write address shift register
 echo gff83 >dcs # write FF01h
 echo g0002 >dcs # write address shift register
 echo gff01 >dcs # write FF02h
+shift
 else
 echo g0000 >dcs # write address shift register
 echo gff128301 >dcs # write FF00h
-shift
 fi
 
 # use address shift to specify lower 8 address bits

@@ -7,5 +7,8 @@
 # invoke global X session script
 . /etc/X11/Xsession
 
+# this is NOT loaded because the script does an exit!
+# so this is the wrong approach
+
 # load Pyra keyboard definitions
-[ -r /root/Xmodmap] && xmodmap /etc/X11/Xmodmap
+[ -r /root/Xmodmap ] && xmodmap /etc/X11/Xmodmap

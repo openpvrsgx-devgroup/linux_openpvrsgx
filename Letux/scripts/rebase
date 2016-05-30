@@ -60,7 +60,11 @@ do
 		echo "*** rebasing $LATEST ($FEATURE)  ***"
 		FEATURE="$LATEST"	# take latest instead
 	fi
+	# switch to (local) branch
 	git checkout $FEATURE || exit 1
+	# fetch any upstream changes
+	git pull origin || exit 1
+	# now rebase
 	git rebase $BASE || exit 1
 	if $PUSH
 	then

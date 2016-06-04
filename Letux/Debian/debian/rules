@@ -12,13 +12,13 @@ export DH_VERBOSE=1
 # include system information
 include /usr/share/dpkg/architecture.mk
 
-KDESTDIR=$(CURDIR)/debian/linux-image-NAME
-HDESTDIR=$(CURDIR)/debian/linux-headers-NAME
-DDESTDIR=$(CURDIR)/debian/linux-NAME-dev
+KDESTDIR=$(CURDIR)/debian/linux-image-letux
+HDESTDIR=$(CURDIR)/debian/linux-headers-letux
+DDESTDIR=$(CURDIR)/debian/linux-letux-dev
 
 # kernel version information
-BASEVERSION=4.4.0
-LOCALVERSION=-NAME
+BASEVERSION=4.6.0
+LOCALVERSION=-letux
 SCMVERSION=
 
 %:
@@ -32,18 +32,18 @@ override_dh_auto_clean:
 
 override_dh_auto_configure:
 	mkdir build
-	find config -name "*.conf" | sort | xargs ./linux/scripts/kconfig/merge_config.sh -O build -m /dev/null
+	find config -name "*.conf" | sort | xargs ./linux/scripts/kconfig/merge_config.sh -O build -m linux/arch/arm/configs/letux_defconfig
 	./linux/scripts/config --file build/.config --set-str LOCALVERSION $(LOCALVERSION)
 	./linux/scripts/config --file build/.config --disable LOCALVERSION_AUTO
 	make -C linux O="$(CURDIR)/build" ARCH=arm CROSS_COMPILE=$(DEB_TARGET_GNU_TYPE)- olddefconfig
 
 override_dh_auto_build:
-	dh_auto_build -- ARCH=arm CROSS_COMPILE=$(DEB_TARGET_GNU_TYPE)- LOCALVERSION= dtbs zImage modules
+	dh_auto_build -- ARCH=arm CROSS_COMPILE=$(DEB_TARGET_GNU_TYPE)- LOCALVERSION= LOADADDR=0x80008000 dtbs uImage modules
 
 override_dh_auto_install:
 	# install kernel image
 	mkdir -vp "$(KDESTDIR)/boot"
-	install -v -m755 build/arch/arm/boot/zImage $(KDESTDIR)/boot/zImage-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)
+	install -v -m755 build/arch/arm/boot/uImage $(KDESTDIR)/boot/uImage-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)
 	install -v -m644 build/System.map $(KDESTDIR)/boot/System.map-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)
 	install -v -m644 build/.config $(KDESTDIR)/boot/config-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)
 

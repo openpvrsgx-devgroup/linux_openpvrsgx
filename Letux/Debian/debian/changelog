@@ -1,5 +1,5 @@
-linux (4.4.0) unstable; urgency=low
+linux (4.6.0) stable; urgency=low
 
   * Initial release
 
- -- unknown <unknown>  Sat, 25 Oct 2014 22:43:37 +0200
+ -- Josua Mayer <josua@linux-k8dt>  Thu, 09 Jun 2016 15:22:22 +0200

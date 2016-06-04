@@ -4,18 +4,18 @@
 1.  Install Cross-Compiler for armhf from emdebian:
     [https://wiki.debian.org/CrossToolchains#Installation](https://wiki.debian.org/CrossToolchains#Installation)
 2.  install build dependencies:
-    `sudo apt-get install debhelper bc lzop lzop:armhf`
+    `sudo apt-get install debhelper bc lzop u-boot-tools lzop:armhf`
 3.  Get the Code:
-    `git clone https://github.com/mxOBS/deb-pkg_kernel-xyz.git`
-    `cd deb-pkg_kernel-xyz; git submodule update --init`
+    `git clone git://git.goldelico.com/qtmoko2-kernel.git`
+    `cd qtmoko2-kernel; git submodule update --init`
 4.  build deb:
-    `cd deb-pkg_kernel-xyz; dpkg-buildpackage -a armhf -b`
+    `cd qtmoko2-kernel; dpkg-buildpackage -a armhf -b`
 
 ## Building natively on armhf:
 1.  install build dependencies:
-    `sudo apt-get install debhelper bc lzop`
+    `sudo apt-get install debhelper bc lzop u-boot-tools`
 2.  Get the Code:
-    `git clone https://github.com/mxOBS/deb-pkg_kernel-xyz.git`
-    `cd deb-pkg_kernel-xyz; git submodule update --init`
+    `git clone git://git.goldelico.com/qtmoko2-kernel.git`
+    `cd qtmoko2-kernel; git submodule update --init`
 3.  build deb:
-    `cd deb-pkg_kernel-xyz; dpkg-buildpackage -a armhf -b`
+    `cd qtmoko2-kernel; dpkg-buildpackage -a armhf -b`

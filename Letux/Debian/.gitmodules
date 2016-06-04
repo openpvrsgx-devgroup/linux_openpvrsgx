@@ -1,4 +1,4 @@
 [submodule "linux"]
 	path = linux
-	url = https://kernel.googlesource.com/pub/scm/linux/kernel/git/torvalds/linux.git
-	branch = master
+	url = git://git.goldelico.com/gta04-kernel.git
+	branch = letux-4.6

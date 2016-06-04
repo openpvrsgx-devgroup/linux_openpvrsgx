@@ -1,21 +1,21 @@
 Source: linux
 Section: kernel
 Priority: optional
-Maintainer: unknown <unknown>
-Build-Depends: debhelper (>= 8.0.0), bc, lzop
+Maintainer: Josua Mayer <josua.mayer97@gmail.com>
+Build-Depends: debhelper (>= 8.0.0), bc, lzop, u-boot-tools
 Standards-Version: 3.9.3
 Homepage: https://www.kernel.org/
 Vcs-Git: https://github.com/mxOBS/deb-pkg_kernel-xyz.git
 Vcs-Browser: https://github.com/mxOBS/deb-pkg_kernel-xyz
 
-Package: linux-image-NAME
+Package: linux-image-letux
 Architecture: any-arm
 Provides: linux-image
 Depends: ${misc:Depends}, initramfs-tools
-Description: LONGNAME kernel
- This package provides the mainline kernel
+Description: Letux kernel
+ This package provides the mainline kernel patched for the Letux devices by goldelico.
 
-Package: linux-headers-NAME
+Package: linux-headers-letux
 Architecture: any-arm
 Provides: linux-headers
 Depends: ${misc:Depends}
@@ -23,7 +23,7 @@ Description: kernel development files
  This package provides the required development files to build
  modules for this kernel.
 
-Package: linux-NAME-dev
+Package: linux-letux-dev
 Architecture: any-arm
 Description: kernel API development files
  This packages provides the required development files to

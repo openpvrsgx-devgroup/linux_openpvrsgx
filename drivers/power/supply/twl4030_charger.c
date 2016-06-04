@@ -142,7 +142,7 @@ struct twl4030_bci {
 	unsigned int		usb_cur_target;
 	struct delayed_work	current_worker;
 #define	USB_CUR_STEP	20000	/* 20mA at a time */
-#define	USB_MIN_VOLT	4750000	/* 4.75V */
+#define	USB_MIN_VOLT	4550000	/* 4.55V */
 #define	USB_CUR_DELAY	msecs_to_jiffies(100)
 #define	USB_MAX_CURRENT	1700000 /* TWL4030 caps at 1.7A */
 

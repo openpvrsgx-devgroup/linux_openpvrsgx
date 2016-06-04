@@ -255,7 +255,8 @@ static int twl4030_charger_update_current(struct twl4030_bci *bci)
 	} else {
 		cur = bci->usb_cur;
 		bci->ac_is_active = false;
-		if (cur > bci->usb_cur_target) {
+		if ((cur > bci->usb_cur_target) ||
+		(bci->usb_mode == CHARGE_LINEAR)) {
 			cur = bci->usb_cur_target;
 			bci->usb_cur = cur;
 		}

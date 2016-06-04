@@ -235,6 +235,7 @@ static int gab_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	psy_cfg.of_node = pdev->dev.of_node;
+
 	psy_cfg.drv_data = adc_bat;
 	psy_desc = &adc_bat->psy_desc;
 	psy_desc->name = dev_name(&pdev->dev);

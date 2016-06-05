@@ -18,7 +18,9 @@
 #include <linux/iio/consumer.h>
 #include <linux/iio/types.h>
 #include <linux/of.h>
+#include <linux/of_gpio.h>
 #include <linux/devm-helpers.h>
+#include <linux/power/generic-fuel-gauge.h>
 
 #define JITTER_DEFAULT 10 /* hope 10ms is enough */
 
@@ -64,6 +66,17 @@ static void gab_ext_power_changed(struct power_supply *psy)
 
 static const enum power_supply_property gab_props[] = {
 	POWER_SUPPLY_PROP_STATUS,
+	POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN,
+	POWER_SUPPLY_PROP_CHARGE_EMPTY_DESIGN,
+	POWER_SUPPLY_PROP_CHARGE_NOW,
+	POWER_SUPPLY_PROP_VOLTAGE_NOW,
+	POWER_SUPPLY_PROP_CURRENT_NOW,
+	POWER_SUPPLY_PROP_TECHNOLOGY,
+	POWER_SUPPLY_PROP_VOLTAGE_MIN_DESIGN,
+	POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN,
+	POWER_SUPPLY_PROP_MODEL_NAME,
+	POWER_SUPPLY_PROP_TEMP,
+	POWER_SUPPLY_PROP_CAPACITY,
 };
 
 /*
@@ -115,6 +128,35 @@ static int gab_get_property(struct power_supply *psy,
 		return gab_read_channel(adc_bat, GAB_POWER, &val->intval);
 	case POWER_SUPPLY_PROP_TEMP:
 		return gab_read_channel(adc_bat, GAB_TEMP, &val->intval);
+#if FIXME
+	case POWER_SUPPLY_PROP_TECHNOLOGY:
+		val->intval = bat_info->technology;
+		break;
+	case POWER_SUPPLY_PROP_VOLTAGE_MIN_DESIGN:
+		val->intval = bat_info->voltage_min_design;
+		break;
+	case POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN:
+		val->intval = bat_info->voltage_max_design;
+		break;
+	case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
+		val->intval = bat_info->charge_full_design;
+		break;
+	case POWER_SUPPLY_PROP_MODEL_NAME:
+		val->strval = bat_info->name;
+		break;
+#endif
+	case POWER_SUPPLY_PROP_CAPACITY:
+		{
+		int ret, curr, voltage;
+
+		ret = read_channel(adc_bat, POWER_SUPPLY_PROP_CURRENT_NOW, &curr);
+		ret |= read_channel(adc_bat, POWER_SUPPLY_PROP_VOLTAGE_NOW, &voltage);
+		if (ret < 0)
+			goto err;
+
+		val->intval = fuel_level_LiIon(voltage, curr, 10);
+		}
+		break;
 	default:
 		return -EINVAL;
 	}

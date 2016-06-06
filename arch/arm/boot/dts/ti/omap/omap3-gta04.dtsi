@@ -980,3 +980,198 @@
 		/* port@1 and port@2 are not used by GTA04 */
 	};
 };
+
+/*
+ * additions not yet upstreamed
+ * and work in progress
+ * as soon as something is stable, it should be casted into a
+ *    patch for code above and upstreamed
+ * as soon as it arrives upstream, we can remove it here
+ */
+
+#include <dt-bindings/power/power.h>
+
+/* battery monitor if no hdq fuel gauge exists */
+
+/ {
+	bat: battery {
+		battery-name = "FIC-HF08-battery";
+		compatible = "simple-battery", "gta04-battery";
+		voltage-min-design-microvolt = <3200000>;
+		energy-full-design-microwatt-hours = <4440000>;
+		charge-full-design-microamp-hours = <1250000>;
+	};
+
+	battery: battery-monitor {
+		compatible = "linux,generic-adc-battery";
+		io-channels = <&twl_madc 12>, <&twl_madc 10>, <&twl_madc 0>;
+		io-channel-names = "voltage", "current", "temperature";
+		monitored-battery = <&bat>;
+		technology = <POWER_SUPPLY_TECHNOLOGY_LION>;
+		battery-name = "gta04-battery";
+		charge_full_design = <1250000>;
+		charge_empty_design = <0>;
+		voltage_min_design = <3200000>;
+		voltage_max_design = <4200000>;
+	};
+};
+
+/* Bluetooth audio */
+
+/ {
+	w2cbw003_codec: headset_codec {
+		compatible = "w2cbw003-codec";
+		#sound-dai-cells = <0>;
+	};
+
+	sound_bluetooth {
+		compatible = "simple-audio-card";
+		simple-audio-card,name = "GTA04 bluetooth";
+		simple-audio-card,bitclock-master = <&bt_link_master>;
+		simple-audio-card,frame-master = <&bt_link_master>;
+		simple-audio-card,format = "i2s";
+
+		simple-audio-card,cpu {
+			sound-dai = <&mcbsp3>;
+		};
+
+		bt_link_master: simple-audio-card,codec {
+			sound-dai = <&w2cbw003_codec>;
+		};
+	};
+};
+
+/* FM Radio (no kernel driver exists) */
+&i2c2 {
+	si4721_codec: si4721@11 {
+		compatible = "silicon-labs,si4721";
+
+		interrupt-parent = <&gpio5>;
+		interrupts = <28 IRQ_TYPE_EDGE_RISING>; /* GPIO_156 */
+
+		#sound-dai-cells = <0>;
+		reg = <0x11>;
+	};
+
+};
+
+/ {
+	sound_fm_radio {
+		compatible = "simple-audio-card";
+		simple-audio-card,name = "GTA04 fm-radio";
+
+		/* FM tuner audio */
+		simple-audio-card,dai-link@0 {
+			format = "i2s";
+			cpu {
+				sound-dai = <&mcbsp1>;
+			};
+			codec {
+				sound-dai = <&si4721_codec>;
+			};
+		};
+	};
+};
+
+/* more pinmux */
+
+&omap3_pmx_core {
+
+	i2c1_pins: pinmux_i2c1_pins {
+		pinctrl-single,pins = <
+			OMAP3_CORE1_IOPAD(0x21ba, PIN_INPUT_PULLUP | MUX_MODE0) /* i2c1_scl.i2c1_scl */
+			OMAP3_CORE1_IOPAD(0x21bc, PIN_INPUT_PULLUP | MUX_MODE0) /* i2c1_sda.i2c1_sda */
+		>;
+	};
+
+	i2c2_pins: pinmux_i2c2_pins {
+		pinctrl-single,pins = <
+			OMAP3_CORE1_IOPAD(0x21be, PIN_INPUT_PULLUP | MUX_MODE0) /* i2c2_scl.i2c2_scl */
+			OMAP3_CORE1_IOPAD(0x21c0, PIN_INPUT_PULLUP | MUX_MODE0) /* i2c2_sda.i2c2_sda */
+		>;
+	};
+
+	i2c3_pins: pinmux_i2c3_pins {
+		pinctrl-single,pins = <
+			OMAP3_CORE1_IOPAD(0x21c2, PIN_INPUT_PULLUP | MUX_MODE0) /* i2c3_scl.i2c3_scl */
+			OMAP3_CORE1_IOPAD(0x21c4, PIN_INPUT_PULLUP | MUX_MODE0) /* i2c3_sda.i2c3_sda */
+		>;
+	};
+
+	headset_pins: headset_pins_pimnux {
+		pinctrl-single,pins = <
+			OMAP3_CORE1_IOPAD(0x20b4, PIN_INPUT_PULLUP | MUX_MODE4)	/* gpio55 */
+		>;
+	};
+
+};
+
+/* audio voice routing options */
+
+&omap3_pmx_core {
+
+	/* if twl4030 voice interface is inactive the omap3 mcbsp4 can drive the dx line */
+	mcbsp4_twl_inactive: pinmux_mcbsp4_twl_inactive {
+		pinctrl-single,pins = <
+			OMAP3_CORE1_IOPAD(0x2188, PIN_OUTPUT | MUX_MODE0)	/* mcbsp4_dx.mcbsp4_dx */
+		>;
+	};
+
+	/* if twl4030 voice interface is active the omap3 mcbsp4 should not drive the dx line */
+	mcbsp4_twl_active: pinmux_mcbsp4_twl_active {
+		pinctrl-single,pins = <
+			OMAP3_CORE1_IOPAD(0x2188, PIN_INPUT_PULLDOWN | MUX_MODE7)	/* mcbsp4_dr.mcbsp4_dx */
+		>;
+	};
+};
+
+&twl_audio {
+	codec {
+		pinctrl-names = "default", "inactive";
+		pinctrl-0 = <&mcbsp4_twl_active>;	/* twl voice is actively driving the DX line */
+		pinctrl-1 = <&mcbsp4_twl_inactive>;	/* twl voice is tristate */
+	};
+};
+
+/* ??? */
+
+&twl_power {
+	compatible = "ti,twl4030-power-reset";
+};
+
+/* spare LDO */
+
+&vmmc2 {
+	regulator-min-microvolt = <1800000>;
+	regulator-max-microvolt = <1800000>;
+};
+
+/* flash/torch (torch driver not yet available) */
+
+&i2c2 {
+	tps61050@33 {
+		/* segfaults during modprobe */
+		in-compatible = "ti,tps61050";
+		reg = <0x33>;
+
+		flash: regulator@0 {
+			regulator-min-microvolt= <1000000>;
+			regulator-max-microvolt= <3000000>;
+		};
+	};
+};
+
+/* Console and IrDA /dev/ttyO2 */
+
+&uart3 {
+	dtr-gpio = <&gpio1 21 GPIO_ACTIVE_HIGH>;	/* DTR line on external RS232 interface */
+};
+
+/* may configure for bch8 if u-boot supports/makes use */
+#if 0
+&gpmc {
+	nand@0,0 {
+		ti,nand-ecc-opt = "bch8";
+	};
+};
+#endif

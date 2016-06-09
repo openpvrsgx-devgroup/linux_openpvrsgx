@@ -79,3 +79,8 @@ override_dh_auto_install:
 
 override_dh_auto_test:
 	# don't test
+
+override_dh_strip:
+	# only strip linux-image package
+	# (the headers contain binaries oft eh hot system in scripts folder, they break strip when cross-compiling)
+	dh_strip --package=linux-image-NAME

@@ -9,6 +9,9 @@
 # Uncomment this to turn on verbose mode.
 export DH_VERBOSE=1
 
+# include system information
+include /usr/share/dpkg/architecture.mk
+
 KDESTDIR=$(CURDIR)/debian/linux-image-NAME
 HDESTDIR=$(CURDIR)/debian/linux-headers-NAME
 DDESTDIR=$(CURDIR)/debian/linux-NAME-dev
@@ -32,10 +35,10 @@ override_dh_auto_configure:
 	find config -name "*.conf" | sort | xargs ./linux/scripts/kconfig/merge_config.sh -O build -m /dev/null
 	./linux/scripts/config --file build/.config --set-str LOCALVERSION $(LOCALVERSION)
 	./linux/scripts/config --file build/.config --disable LOCALVERSION_AUTO
-	make -C linux O="$(CURDIR)/build" ARCH=arm olddefconfig
+	make -C linux O="$(CURDIR)/build" ARCH=arm CROSS_COMPILE=$(DEB_TARGET_GNU_TYPE)- olddefconfig
 
 override_dh_auto_build:
-	dh_auto_build -- ARCH=arm LOCALVERSION= dtbs zImage modules
+	dh_auto_build -- ARCH=arm CROSS_COMPILE=$(DEB_TARGET_GNU_TYPE)- LOCALVERSION= dtbs zImage modules
 
 override_dh_auto_install:
 	# install kernel image
@@ -49,7 +52,7 @@ override_dh_auto_install:
 	find build/arch/arm/boot/dts/ -name "*.dtb" -exec install -v -m644 {} "$(KDESTDIR)/boot/dtb-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/" \;
 
 	# install modules
-	make -C build ARCH=arm INSTALL_MOD_PATH=$(KDESTDIR) modules_install
+	make -C build ARCH=arm CROSS_COMPILE=$(DEB_TARGET_GNU_TYPE)- INSTALL_MOD_PATH=$(KDESTDIR) modules_install
 	rm -fv $(KDESTDIR)/lib/modules/$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/source
 	rm -fv $(KDESTDIR)/lib/modules/$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/build
 
@@ -62,7 +65,7 @@ override_dh_auto_install:
 	ln -sfv /usr/src/linux-headers-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION) $(HDESTDIR)/lib/modules/$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/build
 
 	# install the public API headers
-	make -C build ARCH=arm INSTALL_HDR_PATH=$(DDESTDIR)/usr/include/kernel-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION) headers_install
+	make -C build ARCH=arm CROSS_COMPILE=$(DEB_TARGET_GNU_TYPE)- INSTALL_HDR_PATH=$(DDESTDIR)/usr/include/kernel-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION) headers_install
 	mv $(DDESTDIR)/usr/include/kernel-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/include/* $(DDESTDIR)/usr/include/kernel-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/
 	rmdir $(DDESTDIR)/usr/include/kernel-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/include
 	find $(DDESTDIR)/usr/include/kernel-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION) -name "*.cmd" -delete

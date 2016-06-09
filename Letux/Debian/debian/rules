@@ -23,6 +23,7 @@ SCMVERSION=
 
 override_dh_auto_clean:
 	dh_auto_clean
+	rm -rf build
 	# also make sure source-tree is really clean
 	cd linux; make mrproper
 

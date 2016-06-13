@@ -90,7 +90,7 @@ static const u32 rtw_cipher_suites[] = {
 	}
 
 #define CHAN2G(_channel, _freq, _flags) {			\
-	.band			= IEEE80211_BAND_2GHZ,		\
+	.band			= NL80211_BAND_2GHZ,		\
 	.center_freq		= (_freq),			\
 	.hw_value		= (_channel),			\
 	.flags			= (_flags),			\
@@ -99,7 +99,7 @@ static const u32 rtw_cipher_suites[] = {
 }
 
 #define CHAN5G(_channel, _flags) {				\
-	.band			= IEEE80211_BAND_5GHZ,		\
+	.band			= NL80211_BAND_5GHZ,		\
 	.center_freq		= 5000 + (5 * (_channel)),	\
 	.hw_value		= (_channel),			\
 	.flags			= (_flags),			\
@@ -216,18 +216,18 @@ void rtw_5g_rates_init(struct ieee80211_rate *rates)
 }
 
 struct ieee80211_supported_band *rtw_spt_band_alloc(
-	enum ieee80211_band band
+	enum nl80211_band band
 	)
 {
 	struct ieee80211_supported_band *spt_band = NULL;
 	int n_channels, n_bitrates;
 
-	if(band == IEEE80211_BAND_2GHZ)
+	if(band == NL80211_BAND_2GHZ)
 	{
 		n_channels = RTW_2G_CHANNELS_NUM;
 		n_bitrates = RTW_G_RATES_NUM;
 	}
-	else if(band == IEEE80211_BAND_5GHZ)
+	else if(band == NL80211_BAND_5GHZ)
 	{
 		n_channels = RTW_5G_CHANNELS_NUM;
 		n_bitrates = RTW_A_RATES_NUM;
@@ -251,12 +251,12 @@ struct ieee80211_supported_band *rtw_spt_band_alloc(
 	spt_band->n_channels = n_channels;
 	spt_band->n_bitrates = n_bitrates;
 
-	if(band == IEEE80211_BAND_2GHZ)
+	if(band == NL80211_BAND_2GHZ)
 	{
 		rtw_2g_channels_init(spt_band->channels);
 		rtw_2g_rates_init(spt_band->bitrates);
 	}
-	else if(band == IEEE80211_BAND_5GHZ)
+	else if(band == NL80211_BAND_5GHZ)
 	{
 		rtw_5g_channels_init(spt_band->channels);
 		rtw_5g_rates_init(spt_band->bitrates);
@@ -276,13 +276,13 @@ void rtw_spt_band_free(struct ieee80211_supported_band *spt_band)
 	if(!spt_band)
 		return;
 	
-	if(spt_band->band == IEEE80211_BAND_2GHZ)
+	if(spt_band->band == NL80211_BAND_2GHZ)
 	{
 		size = sizeof(struct ieee80211_supported_band)
 			+ sizeof(struct ieee80211_channel)*RTW_2G_CHANNELS_NUM
 			+ sizeof(struct ieee80211_rate)*RTW_G_RATES_NUM;
 	}
-	else if(spt_band->band == IEEE80211_BAND_5GHZ)
+	else if(spt_band->band == NL80211_BAND_5GHZ)
 	{
 		size = sizeof(struct ieee80211_supported_band)
 			+ sizeof(struct ieee80211_channel)*RTW_5G_CHANNELS_NUM
@@ -6258,7 +6258,7 @@ int rtw_cfg80211_set_mgnt_wpsp2pie(struct net_device *net, char *buf, int len,
 	
 }
 
-static void rtw_cfg80211_init_ht_capab_ex(_adapter *padapter, struct ieee80211_sta_ht_cap *ht_cap, enum ieee80211_band band, u8 rf_type)
+static void rtw_cfg80211_init_ht_capab_ex(_adapter *padapter, struct ieee80211_sta_ht_cap *ht_cap, enum nl80211_band band, u8 rf_type)
 {
 	struct registry_priv *pregistrypriv = &padapter->registrypriv;
 	struct mlme_priv	*pmlmepriv = &padapter->mlmepriv;
@@ -6278,9 +6278,9 @@ static void rtw_cfg80211_init_ht_capab_ex(_adapter *padapter, struct ieee80211_s
 	/* RX STBC */
 	if (TEST_FLAG(phtpriv->stbc_cap, STBC_HT_ENABLE_RX)) {
 		/*rtw_rx_stbc 0: disable, bit(0):enable 2.4g, bit(1):enable 5g*/
-		if (IEEE80211_BAND_2GHZ == band)
+		if (NL80211_BAND_2GHZ == band)
 			stbc_rx_enable = (pregistrypriv->rx_stbc & BIT(0))?_TRUE:_FALSE;
-		if (IEEE80211_BAND_5GHZ == band)
+		if (NL80211_BAND_5GHZ == band)
 			stbc_rx_enable = (pregistrypriv->rx_stbc & BIT(1))?_TRUE:_FALSE;
 
 		if (stbc_rx_enable) {
@@ -6306,7 +6306,7 @@ static void rtw_cfg80211_init_ht_capab_ex(_adapter *padapter, struct ieee80211_s
 	}
 }
 
-static void rtw_cfg80211_init_ht_capab(_adapter *padapter, struct ieee80211_sta_ht_cap *ht_cap, enum ieee80211_band band, u8 rf_type)
+static void rtw_cfg80211_init_ht_capab(_adapter *padapter, struct ieee80211_sta_ht_cap *ht_cap, enum nl80211_band band, u8 rf_type)
 {
 #define MAX_BIT_RATE_40MHZ_MCS23	450	/* Mbps */
 #define MAX_BIT_RATE_40MHZ_MCS15	300	/* Mbps */
@@ -6331,7 +6331,7 @@ static void rtw_cfg80211_init_ht_capab(_adapter *padapter, struct ieee80211_sta_
 	ht_cap->mcs.tx_params = IEEE80211_HT_MCS_TX_DEFINED;
 
 	/*
-	 *hw->wiphy->bands[IEEE80211_BAND_2GHZ]
+	 *hw->wiphy->bands[NL80211_BAND_2GHZ]
 	 *base on ant_num
 	 *rx_mask: RX mask
 	 *if rx_ant =1 rx_mask[0]=0xff;==>MCS0-MCS7
@@ -6374,15 +6374,15 @@ void rtw_cfg80211_init_wiphy(_adapter *padapter)
 	DBG_8192C("%s:rf_type=%d\n", __func__, rf_type);
 
 	if (IsSupported24G(padapter->registrypriv.wireless_mode)) {	
-		bands = wiphy->bands[IEEE80211_BAND_2GHZ];
+		bands = wiphy->bands[NL80211_BAND_2GHZ];
 		if(bands)
-			rtw_cfg80211_init_ht_capab(padapter, &bands->ht_cap, IEEE80211_BAND_2GHZ, rf_type);
+			rtw_cfg80211_init_ht_capab(padapter, &bands->ht_cap, NL80211_BAND_2GHZ, rf_type);
 	}
 #ifdef CONFIG_IEEE80211_BAND_5GHZ
 	if (IsSupported5G(padapter->registrypriv.wireless_mode)) {	
-		bands = wiphy->bands[IEEE80211_BAND_5GHZ];
+		bands = wiphy->bands[NL80211_BAND_5GHZ];
 		if(bands)
-			rtw_cfg80211_init_ht_capab(padapter, &bands->ht_cap, IEEE80211_BAND_5GHZ, rf_type);
+			rtw_cfg80211_init_ht_capab(padapter, &bands->ht_cap, NL80211_BAND_5GHZ, rf_type);
 	}
 #endif
 	/* init regulary domain */
@@ -6470,11 +6470,11 @@ static void rtw_cfg80211_preinit_wiphy(_adapter *adapter, struct wiphy *wiphy)
 	wiphy->n_cipher_suites = ARRAY_SIZE(rtw_cipher_suites);
 
 	if (IsSupported24G(adapter->registrypriv.wireless_mode))
-		wiphy->bands[IEEE80211_BAND_2GHZ] = rtw_spt_band_alloc(IEEE80211_BAND_2GHZ);
+		wiphy->bands[NL80211_BAND_2GHZ] = rtw_spt_band_alloc(NL80211_BAND_2GHZ);
 
 #ifdef CONFIG_IEEE80211_BAND_5GHZ
 	if (IsSupported5G(adapter->registrypriv.wireless_mode))
-		wiphy->bands[IEEE80211_BAND_5GHZ] = rtw_spt_band_alloc(IEEE80211_BAND_5GHZ);
+		wiphy->bands[NL80211_BAND_5GHZ] = rtw_spt_band_alloc(NL80211_BAND_5GHZ);
 #endif
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38) && LINUX_VERSION_CODE < KERNEL_VERSION(3,0,0))
@@ -6626,13 +6626,13 @@ void rtw_wiphy_free(struct wiphy *wiphy)
 
 	DBG_871X(FUNC_WIPHY_FMT"\n", FUNC_WIPHY_ARG(wiphy));
 
-	if (wiphy->bands[IEEE80211_BAND_2GHZ]) {
-		rtw_spt_band_free(wiphy->bands[IEEE80211_BAND_2GHZ]);
-		wiphy->bands[IEEE80211_BAND_2GHZ] = NULL;
+	if (wiphy->bands[NL80211_BAND_2GHZ]) {
+		rtw_spt_band_free(wiphy->bands[NL80211_BAND_2GHZ]);
+		wiphy->bands[NL80211_BAND_2GHZ] = NULL;
 	}
-	if (wiphy->bands[IEEE80211_BAND_5GHZ]) {
-		rtw_spt_band_free(wiphy->bands[IEEE80211_BAND_5GHZ]);
-		wiphy->bands[IEEE80211_BAND_5GHZ] = NULL;
+	if (wiphy->bands[NL80211_BAND_5GHZ]) {
+		rtw_spt_band_free(wiphy->bands[NL80211_BAND_5GHZ]);
+		wiphy->bands[NL80211_BAND_5GHZ] = NULL;
 	}
 
 	wiphy_free(wiphy);

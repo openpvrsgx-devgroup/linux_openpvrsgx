@@ -37,69 +37,12 @@
 							_offset = _size-1;\
 					} while(0)
 
-#if (RTL8192C_SUPPORT||RTL8192D_SUPPORT||RTL8723A_SUPPORT)
-void phydm_txpwrtrack_setpwr_dummy(
-	PDM_ODM_T			pDM_Odm,
-	PWRTRACK_METHOD 	Method,
-	u1Byte 				RFPath,
-	u1Byte 				ChannelMappedIndex
-	)
-{};
-
-void doiqk_dummy(
-	PDM_ODM_T	pDM_Odm,
-	u1Byte 		DeltaThermalIndex,
-	u1Byte		ThermalValue,	
-	u1Byte 		Threshold
-	)
-{};
-
-VOID phy_lccalibrate_dummy(
-	IN PDM_ODM_T		pDM_Odm
-	)
-{};
-
-VOID get_delta_swing_table_dummy(
-	IN 	PDM_ODM_T			pDM_Odm,
-	OUT pu1Byte 			*TemperatureUP_A,
-	OUT pu1Byte 			*TemperatureDOWN_A,
-	OUT pu1Byte 			*TemperatureUP_B,
-	OUT pu1Byte 			*TemperatureDOWN_B	
-	)
-{};
-
-void configure_txpower_track_dummy(
-	PTXPWRTRACK_CFG	pConfig
-	)
-{
-
-	pConfig->ODM_TxPwrTrackSetPwr = phydm_txpwrtrack_setpwr_dummy;
-	pConfig->DoIQK = doiqk_dummy;
-	pConfig->PHY_LCCalibrate = phy_lccalibrate_dummy;
-	pConfig->GetDeltaSwingTable = get_delta_swing_table_dummy;
-}
-#endif
-
 void ConfigureTxpowerTrack(
 	IN		PVOID					pDM_VOID,
 	OUT	PTXPWRTRACK_CFG	pConfig
 	)
 {
 	PDM_ODM_T		pDM_Odm = (PDM_ODM_T)pDM_VOID;
-#if RTL8192C_SUPPORT
-	if(pDM_Odm->SupportICType==ODM_RTL8192C)
-		configure_txpower_track_dummy(pConfig);
-#endif
-
-#if RTL8192D_SUPPORT
-	if(pDM_Odm->SupportICType==ODM_RTL8192D)
-		configure_txpower_track_dummy(pConfig);
-#endif
-
-#if RTL8723A_SUPPORT
-	if(pDM_Odm->SupportICType==ODM_RTL8723A)
-		configure_txpower_track_dummy(pConfig);
-#endif
 
 #if RTL8192E_SUPPORT
 	if(pDM_Odm->SupportICType==ODM_RTL8192E)
@@ -183,8 +126,9 @@ ODM_ClearTxPowerTrackingState(
 	pRFCalibrateInfo->Modify_TxAGC_Flag_PathD = FALSE;       /*Initial at Modify Tx Scaling Mode*/
 	pRFCalibrateInfo->Remnant_CCKSwingIdx = 0;
 	pRFCalibrateInfo->ThermalValue = pHalData->EEPROMThermalMeter;
-	pRFCalibrateInfo->ThermalValue_IQK = pHalData->EEPROMThermalMeter;
-	pRFCalibrateInfo->ThermalValue_LCK = pHalData->EEPROMThermalMeter;	
+	
+	pRFCalibrateInfo->Modify_TxAGC_Value_CCK=0;			//modify by Mingzhi.Guo
+	pRFCalibrateInfo->Modify_TxAGC_Value_OFDM=0;		//modify by Mingzhi.Guo
 }
 
 VOID
@@ -315,28 +259,30 @@ ODM_TXPowerTrackingCallback_ThermalMeter(
 		diff_DPK[p] = (s1Byte)ThermalValue - (s1Byte)pDM_Odm->RFCalibrateInfo.DpkThermal[p];
 
 	/*4 6. If necessary, do LCK.*/	
+	if (!(pDM_Odm->SupportICType & ODM_RTL8821)) {
 
-	if (pDM_Odm->RFCalibrateInfo.ThermalValue_LCK == 0xff) {		/*no PG , do LCK at initial status*/
-		ODM_RT_TRACE(pDM_Odm, ODM_COMP_TX_PWR_TRACK, ODM_DBG_LOUD, ("no PG, do LCK\n"));
-		pDM_Odm->RFCalibrateInfo.ThermalValue_LCK = ThermalValue;
-		if (c.PHY_LCCalibrate)
-			(*c.PHY_LCCalibrate)(pDM_Odm);
-		delta_LCK = (ThermalValue > pDM_Odm->RFCalibrateInfo.ThermalValue_LCK)?(ThermalValue - pDM_Odm->RFCalibrateInfo.ThermalValue_LCK):(pDM_Odm->RFCalibrateInfo.ThermalValue_LCK - ThermalValue);
+		if (pDM_Odm->RFCalibrateInfo.ThermalValue_LCK == 0xff) {
+			/*no PG , do LCK at initial status*/
+			ODM_RT_TRACE(pDM_Odm, ODM_COMP_TX_PWR_TRACK, ODM_DBG_LOUD, ("no PG, do LCK\n"));
+			pDM_Odm->RFCalibrateInfo.ThermalValue_LCK = ThermalValue;
+			if (c.PHY_LCCalibrate)
+				(*c.PHY_LCCalibrate)(pDM_Odm);
+			delta_LCK = (ThermalValue > pDM_Odm->RFCalibrateInfo.ThermalValue_LCK)?(ThermalValue - pDM_Odm->RFCalibrateInfo.ThermalValue_LCK):(pDM_Odm->RFCalibrateInfo.ThermalValue_LCK - ThermalValue);
+		}
+
+		ODM_RT_TRACE(pDM_Odm, ODM_COMP_TX_PWR_TRACK, ODM_DBG_LOUD, ("(delta, delta_LCK, delta_IQK) = (%d, %d, %d)\n", delta, delta_LCK, delta_IQK));
+		/*DBG_871X("(delta, delta_LCK, delta_IQK) = (%d, %d, %d), %d\n", delta, delta_LCK, delta_IQK, c.Threshold_IQK);*/
+		
+		/* 4 6. If necessary, do LCK.*/
+		
+		if (delta_LCK >= c.Threshold_IQK) {
+			/* Delta temperature is equal to or larger than 20 centigrade.*/
+			ODM_RT_TRACE(pDM_Odm, ODM_COMP_TX_PWR_TRACK, ODM_DBG_LOUD, ("delta_LCK(%d) >= Threshold_IQK(%d)\n", delta_LCK, c.Threshold_IQK));
+			pDM_Odm->RFCalibrateInfo.ThermalValue_LCK = ThermalValue;
+			if (c.PHY_LCCalibrate)
+				(*c.PHY_LCCalibrate)(pDM_Odm);
+		}
 	}
-
-	ODM_RT_TRACE(pDM_Odm, ODM_COMP_TX_PWR_TRACK, ODM_DBG_LOUD, ("(delta, delta_LCK, delta_IQK) = (%d, %d, %d)\n", delta, delta_LCK, delta_IQK));
-	/*DBG_871X("(delta, delta_LCK, delta_IQK) = (%d, %d, %d), %d\n", delta, delta_LCK, delta_IQK, c.Threshold_IQK);*/
-	
-	//4 6. If necessary, do LCK.	
-	
-	if ((delta_LCK >= c.Threshold_IQK)) // Delta temperature is equal to or larger than 20 centigrade.
-	{
-		ODM_RT_TRACE(pDM_Odm, ODM_COMP_TX_PWR_TRACK, ODM_DBG_LOUD, ("delta_LCK(%d) >= Threshold_IQK(%d)\n", delta_LCK, c.Threshold_IQK));
-		pDM_Odm->RFCalibrateInfo.ThermalValue_LCK = ThermalValue;
-		if(c.PHY_LCCalibrate)
-			(*c.PHY_LCCalibrate)(pDM_Odm);
-	}
-
 	//3 7. If necessary, move the index of swing table to adjust Tx power.	
 	
 	if (delta > 0 && pDM_Odm->RFCalibrateInfo.TxPowerTrackControl)
@@ -553,8 +499,8 @@ ODM_TXPowerTrackingCallback_ThermalMeter(
 				("Temperature(%d) higher than PG value(%d)\n", ThermalValue, pHalData->EEPROMThermalMeter));			
 
 			if (pDM_Odm->SupportICType == ODM_RTL8188E || pDM_Odm->SupportICType == ODM_RTL8192E || pDM_Odm->SupportICType == ODM_RTL8821 ||
-				pDM_Odm->SupportICType == ODM_RTL8812 || pDM_Odm->SupportICType == ODM_RTL8723B || pDM_Odm->SupportICType == ODM_RTL8814A || 
-				pDM_Odm->SupportICType == ODM_RTL8822B) {
+				pDM_Odm->SupportICType == ODM_RTL8812 || pDM_Odm->SupportICType == ODM_RTL8723B || pDM_Odm->SupportICType == ODM_RTL8814A ||
+				pDM_Odm->SupportICType == ODM_RTL8822B || pDM_Odm->SupportICType == ODM_RTL8188F || pDM_Odm->SupportICType == ODM_RTL8703B) {
 				ODM_RT_TRACE(pDM_Odm, ODM_COMP_TX_PWR_TRACK, ODM_DBG_LOUD, ("**********Enter POWER Tracking MIX_MODE**********\n"));
 				for (p = ODM_RF_PATH_A; p < c.RfPathCount; p++)
 						(*c.ODM_TxPwrTrackSetPwr)(pDM_Odm, MIX_MODE, p, 0);
@@ -573,8 +519,8 @@ ODM_TXPowerTrackingCallback_ThermalMeter(
 
 			if (pDM_Odm->SupportICType == ODM_RTL8188E || pDM_Odm->SupportICType == ODM_RTL8192E || pDM_Odm->SupportICType == ODM_RTL8821 ||
 				pDM_Odm->SupportICType == ODM_RTL8812 || pDM_Odm->SupportICType == ODM_RTL8723B || pDM_Odm->SupportICType == ODM_RTL8814A ||
-				pDM_Odm->SupportICType == ODM_RTL8822B) {
-
+				pDM_Odm->SupportICType == ODM_RTL8822B || pDM_Odm->SupportICType == ODM_RTL8188F || pDM_Odm->SupportICType == ODM_RTL8703B) {
+			
 				ODM_RT_TRACE(pDM_Odm, ODM_COMP_TX_PWR_TRACK, ODM_DBG_LOUD, ("**********Enter POWER Tracking MIX_MODE**********\n"));
 				for (p = ODM_RF_PATH_A; p < c.RfPathCount; p++)
 					(*c.ODM_TxPwrTrackSetPwr)(pDM_Odm, MIX_MODE, p, Indexforchannel);
@@ -662,34 +608,7 @@ ODM_ResetIQKResult(
 	IN		PVOID					pDM_VOID
 )
 {
-	PDM_ODM_T		pDM_Odm = (PDM_ODM_T)pDM_VOID;
-	u1Byte		i;
-#if (DM_ODM_SUPPORT_TYPE == ODM_WIN || DM_ODM_SUPPORT_TYPE == ODM_CE)
-	PADAPTER	Adapter = pDM_Odm->Adapter;
-
-	if (!IS_HARDWARE_TYPE_8192D(Adapter))
-		return;
-#endif
-	ODM_RT_TRACE(pDM_Odm,ODM_COMP_CALIBRATION, ODM_DBG_LOUD,("PHY_ResetIQKResult:: settings regs %d default regs %d\n", (u4Byte)(sizeof(pDM_Odm->RFCalibrateInfo.IQKMatrixRegSetting)/sizeof(IQK_MATRIX_REGS_SETTING)), IQK_Matrix_Settings_NUM));
-	//0xe94, 0xe9c, 0xea4, 0xeac, 0xeb4, 0xebc, 0xec4, 0xecc
-
-	for(i = 0; i < IQK_Matrix_Settings_NUM; i++)
-	{
-		{
-			pDM_Odm->RFCalibrateInfo.IQKMatrixRegSetting[i].Value[0][0] = 
-				pDM_Odm->RFCalibrateInfo.IQKMatrixRegSetting[i].Value[0][2] = 
-				pDM_Odm->RFCalibrateInfo.IQKMatrixRegSetting[i].Value[0][4] = 
-				pDM_Odm->RFCalibrateInfo.IQKMatrixRegSetting[i].Value[0][6] = 0x100;
-
-			pDM_Odm->RFCalibrateInfo.IQKMatrixRegSetting[i].Value[0][1] = 
-				pDM_Odm->RFCalibrateInfo.IQKMatrixRegSetting[i].Value[0][3] = 
-				pDM_Odm->RFCalibrateInfo.IQKMatrixRegSetting[i].Value[0][5] = 
-				pDM_Odm->RFCalibrateInfo.IQKMatrixRegSetting[i].Value[0][7] = 0x0;
-
-			pDM_Odm->RFCalibrateInfo.IQKMatrixRegSetting[i].bIQKDone = FALSE;
-
-		}
-	}
+	return;
 
 }
 #if !(DM_ODM_SUPPORT_TYPE & ODM_AP)
@@ -750,7 +669,8 @@ odm_IQCalibrate(
 			/*Mark out IQK flow to prevent tx stuck. by Maddest 20130306*/
 			/*Open it verified by James 20130715*/
 #if (DM_ODM_SUPPORT_TYPE == ODM_CE)
-			PHY_IQCalibrate_8821A(pDM_Odm, FALSE);
+			/*Change channel will do IQK , cancel duplicate doIQK by YiWei*/
+			/*PHY_IQCalibrate_8821A(pDM_Odm, FALSE);*/
 #elif (DM_ODM_SUPPORT_TYPE == ODM_WIN)
 			PHY_IQCalibrate(Adapter, FALSE);
 #else

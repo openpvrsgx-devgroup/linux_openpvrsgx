@@ -1222,4 +1222,85 @@ choose_ch:
 
 #endif
 
+VOID
+phydm_CLMInit(
+	IN		PVOID			pDM_VOID,
+	IN		u2Byte			sampleNum			/*unit : 4us*/
+)
+{
+	PDM_ODM_T		pDM_Odm = (PDM_ODM_T)pDM_VOID;		
+
+	if (pDM_Odm->SupportICType & ODM_IC_11AC_SERIES) {
+		ODM_SetBBReg(pDM_Odm, ODM_REG_CLM_TIME_PERIOD_11AC, bMaskLWord, sampleNum);	/*4us sample 1 time*/
+		ODM_SetBBReg(pDM_Odm, ODM_REG_CLM_11AC, BIT8, 0x1);							/*Enable CCX for CLM*/
+	} else if (pDM_Odm->SupportICType & ODM_IC_11N_SERIES) {
+		ODM_SetBBReg(pDM_Odm, ODM_REG_CLM_TIME_PERIOD_11N, bMaskLWord, sampleNum);	/*4us sample 1 time*/
+		ODM_SetBBReg(pDM_Odm, ODM_REG_CLM_11N, BIT8, 0x1);								/*Enable CCX for CLM*/	
+	}
+
+	ODM_RT_TRACE(pDM_Odm, ODM_COMP_ACS, ODM_DBG_LOUD, ("[%s] : CLM sampleNum = %d\n", __func__, sampleNum));
+		
+}
+
+VOID
+phydm_CLMtrigger(
+	IN		PVOID			pDM_VOID
+)
+{
+	PDM_ODM_T		pDM_Odm = (PDM_ODM_T)pDM_VOID;
+
+	if (pDM_Odm->SupportICType & ODM_IC_11AC_SERIES) {
+		ODM_SetBBReg(pDM_Odm, ODM_REG_CLM_11AC, BIT0, 0x0);	/*Trigger CLM*/
+		ODM_SetBBReg(pDM_Odm, ODM_REG_CLM_11AC, BIT0, 0x1);
+	} else if (pDM_Odm->SupportICType & ODM_IC_11N_SERIES) {
+		ODM_SetBBReg(pDM_Odm, ODM_REG_CLM_11N, BIT0, 0x0);	/*Trigger CLM*/
+		ODM_SetBBReg(pDM_Odm, ODM_REG_CLM_11N, BIT0, 0x1);
+	}
+}
+
+BOOLEAN
+phydm_checkCLMready(
+	IN		PVOID			pDM_VOID
+)
+{
+	PDM_ODM_T		pDM_Odm = (PDM_ODM_T)pDM_VOID;
+	u4Byte			value32 = 0;
+	BOOLEAN			ret = FALSE;
+	
+	if (pDM_Odm->SupportICType & ODM_IC_11AC_SERIES)
+		value32 = ODM_GetBBReg(pDM_Odm, ODM_REG_CLM_RESULT_11AC, bMaskDWord);				/*make sure CLM calc is ready*/
+	else if (pDM_Odm->SupportICType & ODM_IC_11N_SERIES)
+		value32 = ODM_GetBBReg(pDM_Odm, ODM_REG_CLM_READY_11N, bMaskDWord);				/*make sure CLM calc is ready*/
+
+	if (value32 & BIT16)
+		ret = TRUE;
+	else
+		ret = FALSE;
+
+	ODM_RT_TRACE(pDM_Odm, ODM_COMP_ACS, ODM_DBG_LOUD, ("[%s] : CLM ready = %d\n", __func__, ret));
+
+	return ret;
+}
+
+u2Byte
+phydm_getCLMresult(
+	IN		PVOID			pDM_VOID
+)
+{
+	PDM_ODM_T		pDM_Odm = (PDM_ODM_T)pDM_VOID;
+	u4Byte			value32 = 0;
+	u2Byte			results = 0;
+	
+	if (pDM_Odm->SupportICType & ODM_IC_11AC_SERIES)
+		value32 = ODM_GetBBReg(pDM_Odm, ODM_REG_CLM_RESULT_11AC, bMaskDWord);				/*read CLM calc result*/
+	else if (pDM_Odm->SupportICType & ODM_IC_11N_SERIES)
+		value32 = ODM_GetBBReg(pDM_Odm, ODM_REG_CLM_RESULT_11N, bMaskDWord);				/*read CLM calc result*/
+
+	results = (u2Byte)(value32 & bMaskLWord);
+
+	ODM_RT_TRACE(pDM_Odm, ODM_COMP_ACS, ODM_DBG_LOUD, ("[%s] : CLM result = %d\n", __func__, results));
+	
+	return results;
+/*results are number of CCA times in sampleNum*/
+}
 

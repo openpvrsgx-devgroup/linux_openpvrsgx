@@ -93,145 +93,139 @@ extern unsigned char P2P_OUI[];
 extern unsigned char WMM_INFO_OUI[];
 extern unsigned char WMM_PARA_OUI[];
 
-
-//
-// Channel Plan Type.
-// Note: 
-//	We just add new channel plan when the new channel plan is different from any of the following 
-//	channel plan. 
-//	If you just wnat to customize the acitions(scan period or join actions) about one of the channel plan,
-//	customize them in RT_CHANNEL_INFO in the RT_CHANNEL_LIST.
-// 
 typedef enum _RT_CHANNEL_DOMAIN
 {
-	//===== old channel plan mapping =====//
-	RT_CHANNEL_DOMAIN_FCC = 0x00,
-	RT_CHANNEL_DOMAIN_IC = 0x01,
-	RT_CHANNEL_DOMAIN_ETSI = 0x02,
-	RT_CHANNEL_DOMAIN_SPAIN = 0x03,
-	RT_CHANNEL_DOMAIN_FRANCE = 0x04,
-	RT_CHANNEL_DOMAIN_MKK = 0x05,
-	RT_CHANNEL_DOMAIN_MKK1 = 0x06,
-	RT_CHANNEL_DOMAIN_ISRAEL = 0x07,
-	RT_CHANNEL_DOMAIN_TELEC = 0x08,
-	RT_CHANNEL_DOMAIN_GLOBAL_DOAMIN = 0x09,
-	RT_CHANNEL_DOMAIN_WORLD_WIDE_13 = 0x0A,
-	RT_CHANNEL_DOMAIN_TAIWAN = 0x0B,
-	RT_CHANNEL_DOMAIN_CHINA = 0x0C,
-	RT_CHANNEL_DOMAIN_SINGAPORE_INDIA_MEXICO = 0x0D,
-	RT_CHANNEL_DOMAIN_KOREA = 0x0E,
-	RT_CHANNEL_DOMAIN_TURKEY = 0x0F,
-	RT_CHANNEL_DOMAIN_JAPAN = 0x10,
-	RT_CHANNEL_DOMAIN_FCC_NO_DFS = 0x11,
-	RT_CHANNEL_DOMAIN_JAPAN_NO_DFS = 0x12,
-	RT_CHANNEL_DOMAIN_WORLD_WIDE_5G = 0x13,
-	RT_CHANNEL_DOMAIN_TAIWAN_NO_DFS = 0x14,
+	/* ===== 0x00 ~ 0x1F, legacy channel plan ===== */
+	RTW_CHPLAN_FCC = 0x00,
+	RTW_CHPLAN_IC = 0x01,
+	RTW_CHPLAN_ETSI = 0x02,
+	RTW_CHPLAN_SPAIN = 0x03,
+	RTW_CHPLAN_FRANCE = 0x04,
+	RTW_CHPLAN_MKK = 0x05,
+	RTW_CHPLAN_MKK1 = 0x06,
+	RTW_CHPLAN_ISRAEL = 0x07,
+	RTW_CHPLAN_TELEC = 0x08,
+	RTW_CHPLAN_GLOBAL_DOAMIN = 0x09,
+	RTW_CHPLAN_WORLD_WIDE_13 = 0x0A,
+	RTW_CHPLAN_TAIWAN = 0x0B,
+	RTW_CHPLAN_CHINA = 0x0C,
+	RTW_CHPLAN_SINGAPORE_INDIA_MEXICO = 0x0D,
+	RTW_CHPLAN_KOREA = 0x0E,
+	RTW_CHPLAN_TURKEY = 0x0F,
+	RTW_CHPLAN_JAPAN = 0x10,
+	RTW_CHPLAN_FCC_NO_DFS = 0x11,
+	RTW_CHPLAN_JAPAN_NO_DFS = 0x12,
+	RTW_CHPLAN_WORLD_WIDE_5G = 0x13,
+	RTW_CHPLAN_TAIWAN_NO_DFS = 0x14,
 
-	//===== new channel plan mapping, (2GDOMAIN_5GDOMAIN) =====//
-	RT_CHANNEL_DOMAIN_WORLD_NULL = 0x20,
-	RT_CHANNEL_DOMAIN_ETSI1_NULL = 0x21,
-	RT_CHANNEL_DOMAIN_FCC1_NULL = 0x22,
-	RT_CHANNEL_DOMAIN_MKK1_NULL = 0x23,
-	RT_CHANNEL_DOMAIN_ETSI2_NULL = 0x24,
-	RT_CHANNEL_DOMAIN_FCC1_FCC1 = 0x25,
-	RT_CHANNEL_DOMAIN_WORLD_ETSI1 = 0x26,
-	RT_CHANNEL_DOMAIN_MKK1_MKK1 = 0x27,
-	RT_CHANNEL_DOMAIN_WORLD_KCC1 = 0x28,
-	RT_CHANNEL_DOMAIN_WORLD_FCC2 = 0x29,
-	RT_CHANNEL_DOMAIN_WORLD_FCC3 = 0x30,
-	RT_CHANNEL_DOMAIN_WORLD_FCC4 = 0x31,
-	RT_CHANNEL_DOMAIN_WORLD_FCC5 = 0x32,
-	RT_CHANNEL_DOMAIN_WORLD_FCC6 = 0x33,
-	RT_CHANNEL_DOMAIN_FCC1_FCC7 = 0x34,
-	RT_CHANNEL_DOMAIN_WORLD_ETSI2 = 0x35,
-	RT_CHANNEL_DOMAIN_WORLD_ETSI3 = 0x36,
-	RT_CHANNEL_DOMAIN_MKK1_MKK2 = 0x37,
-	RT_CHANNEL_DOMAIN_MKK1_MKK3 = 0x38,
-	RT_CHANNEL_DOMAIN_FCC1_NCC1 = 0x39,
-	RT_CHANNEL_DOMAIN_FCC1_NCC2 = 0x40,
-	RT_CHANNEL_DOMAIN_GLOBAL_NULL = 0x41,
-	RT_CHANNEL_DOMAIN_ETSI1_ETSI4 = 0x42,
-	RT_CHANNEL_DOMAIN_FCC1_FCC2 = 0x43,
-	RT_CHANNEL_DOMAIN_FCC1_NCC3 = 0x44,
-	RT_CHANNEL_DOMAIN_WORLD_ETSI5 = 0x45,
-	RT_CHANNEL_DOMAIN_FCC1_FCC8 = 0x46,
-	RT_CHANNEL_DOMAIN_WORLD_ETSI6 = 0x47,
-	RT_CHANNEL_DOMAIN_WORLD_ETSI7 = 0x48,
-	RT_CHANNEL_DOMAIN_WORLD_ETSI8 = 0x49,
-	RT_CHANNEL_DOMAIN_WORLD_ETSI9 = 0x50,
-	RT_CHANNEL_DOMAIN_WORLD_ETSI10 = 0x51,
-	RT_CHANNEL_DOMAIN_WORLD_ETSI11 = 0x52,
-	RT_CHANNEL_DOMAIN_FCC1_NCC4 = 0x53,
-	RT_CHANNEL_DOMAIN_WORLD_ETSI12 = 0x54,
-	RT_CHANNEL_DOMAIN_FCC1_FCC9 = 0x55,
-	RT_CHANNEL_DOMAIN_WORLD_ETSI13 = 0x56,
-	RT_CHANNEL_DOMAIN_FCC1_FCC10 = 0x57,
-	RT_CHANNEL_DOMAIN_WORLD_MKK4 = 0x58,
-	//===== Add new channel plan above this line===============//
-	RT_CHANNEL_DOMAIN_MAX,
-	RT_CHANNEL_DOMAIN_REALTEK_DEFINE = 0x7F,
+	/* ===== 0x20 ~ 0x7F, new channel plan ===== */
+	RTW_CHPLAN_WORLD_NULL = 0x20,
+	RTW_CHPLAN_ETSI1_NULL = 0x21,
+	RTW_CHPLAN_FCC1_NULL = 0x22,
+	RTW_CHPLAN_MKK1_NULL = 0x23,
+	RTW_CHPLAN_ETSI2_NULL = 0x24,
+	RTW_CHPLAN_FCC1_FCC1 = 0x25,
+	RTW_CHPLAN_WORLD_ETSI1 = 0x26,
+	RTW_CHPLAN_MKK1_MKK1 = 0x27,
+	RTW_CHPLAN_WORLD_KCC1 = 0x28,
+	RTW_CHPLAN_WORLD_FCC2 = 0x29,
+	RTW_CHPLAN_WORLD_FCC3 = 0x30,
+	RTW_CHPLAN_WORLD_FCC4 = 0x31,
+	RTW_CHPLAN_WORLD_FCC5 = 0x32,
+	RTW_CHPLAN_WORLD_FCC6 = 0x33,
+	RTW_CHPLAN_FCC1_FCC7 = 0x34,
+	RTW_CHPLAN_WORLD_ETSI2 = 0x35,
+	RTW_CHPLAN_WORLD_ETSI3 = 0x36,
+	RTW_CHPLAN_MKK1_MKK2 = 0x37,
+	RTW_CHPLAN_MKK1_MKK3 = 0x38,
+	RTW_CHPLAN_FCC1_NCC1 = 0x39,
+	RTW_CHPLAN_FCC1_NCC2 = 0x40,
+	RTW_CHPLAN_GLOBAL_NULL = 0x41,
+	RTW_CHPLAN_ETSI1_ETSI4 = 0x42,
+	RTW_CHPLAN_FCC1_FCC2 = 0x43,
+	RTW_CHPLAN_FCC1_NCC3 = 0x44,
+	RTW_CHPLAN_WORLD_ETSI5 = 0x45,
+	RTW_CHPLAN_FCC1_FCC8 = 0x46,
+	RTW_CHPLAN_WORLD_ETSI6 = 0x47,
+	RTW_CHPLAN_WORLD_ETSI7 = 0x48,
+	RTW_CHPLAN_WORLD_ETSI8 = 0x49,
+	RTW_CHPLAN_WORLD_ETSI9 = 0x50,
+	RTW_CHPLAN_WORLD_ETSI10 = 0x51,
+	RTW_CHPLAN_WORLD_ETSI11 = 0x52,
+	RTW_CHPLAN_FCC1_NCC4 = 0x53,
+	RTW_CHPLAN_WORLD_ETSI12 = 0x54,
+	RTW_CHPLAN_FCC1_FCC9 = 0x55,
+	RTW_CHPLAN_WORLD_ETSI13 = 0x56,
+	RTW_CHPLAN_FCC1_FCC10 = 0x57,
+	RTW_CHPLAN_MKK2_MKK4 = 0x58,
+	RTW_CHPLAN_WORLD_ETSI14 = 0x59,
+
+	RTW_CHPLAN_MAX,
+	RTW_CHPLAN_REALTEK_DEFINE = 0x7F,
 }RT_CHANNEL_DOMAIN, *PRT_CHANNEL_DOMAIN;
 
 typedef enum _RT_CHANNEL_DOMAIN_2G
 {
-	RT_CHANNEL_DOMAIN_2G_WORLD = 0x00,		//Worldwird 13
-	RT_CHANNEL_DOMAIN_2G_ETSI1 = 0x01,		//Europe
-	RT_CHANNEL_DOMAIN_2G_FCC1 = 0x02,		//US
-	RT_CHANNEL_DOMAIN_2G_MKK1 = 0x03,		//Japan
-	RT_CHANNEL_DOMAIN_2G_ETSI2 = 0x04,		//France
-	RT_CHANNEL_DOMAIN_2G_GLOBAL = 0x05,		//Global domain
-	RT_CHANNEL_DOMAIN_2G_NULL = 0x06,
-	//===== Add new channel plan above this line===============//
-	RT_CHANNEL_DOMAIN_2G_MAX,
+	RTW_RD_2G_NULL = 0,
+	RTW_RD_2G_WORLD = 1,	/* Worldwird 13 */
+	RTW_RD_2G_ETSI1 = 2,	/* Europe */
+	RTW_RD_2G_FCC1 = 3,		/* US */
+	RTW_RD_2G_MKK1 = 4,		/* Japan */
+	RTW_RD_2G_ETSI2 = 5,	/* France */
+	RTW_RD_2G_GLOBAL = 6,	/* Global domain */
+	RTW_RD_2G_MKK2 = 7,		/* Japan */
+
+	RTW_RD_2G_MAX,
 }RT_CHANNEL_DOMAIN_2G, *PRT_CHANNEL_DOMAIN_2G;
 
 typedef enum _RT_CHANNEL_DOMAIN_5G
 {
-	RT_CHANNEL_DOMAIN_5G_NULL = 0x00,
-	RT_CHANNEL_DOMAIN_5G_ETSI1 = 0x01,		//Europe
-	RT_CHANNEL_DOMAIN_5G_ETSI2 = 0x02,		//Australia, New Zealand
-	RT_CHANNEL_DOMAIN_5G_ETSI3 = 0x03,		//Russia
-	RT_CHANNEL_DOMAIN_5G_FCC1 = 0x04,		//US
-	RT_CHANNEL_DOMAIN_5G_FCC2 = 0x05,		//FCC o/w DFS Channels
-	RT_CHANNEL_DOMAIN_5G_FCC3 = 0x06,		//India, Mexico
-	RT_CHANNEL_DOMAIN_5G_FCC4 = 0x07,		//Venezuela
-	RT_CHANNEL_DOMAIN_5G_FCC5 = 0x08,		//China
-	RT_CHANNEL_DOMAIN_5G_FCC6 = 0x09,		//Israel
-	RT_CHANNEL_DOMAIN_5G_FCC7_IC1 = 0x0A,	//US, Canada
-	RT_CHANNEL_DOMAIN_5G_KCC1 = 0x0B,		//Korea
-	RT_CHANNEL_DOMAIN_5G_MKK1 = 0x0C,		//Japan
-	RT_CHANNEL_DOMAIN_5G_MKK2 = 0x0D,		//Japan (W52, W53)
-	RT_CHANNEL_DOMAIN_5G_MKK3 = 0x0E,		//Japan (W56)
-	RT_CHANNEL_DOMAIN_5G_NCC1 = 0x0F,		//Taiwan
-	RT_CHANNEL_DOMAIN_5G_NCC2 = 0x10,		//Taiwan o/w DFS
-	RT_CHANNEL_DOMAIN_5G_NCC3 = 0x11,		//Taiwan w/o DFS, Band4 only
-	RT_CHANNEL_DOMAIN_5G_ETSI4 = 0x12,		//Europe w/o DFS, Band1 only
-	RT_CHANNEL_DOMAIN_5G_ETSI5 = 0x13,		//Australia, New Zealand(w/o Weather radar)
-	RT_CHANNEL_DOMAIN_5G_FCC8 = 0x14,		//Latin America
-	RT_CHANNEL_DOMAIN_5G_ETSI6 = 0x15,		//Israel, Bahrain, Egypt, India, China, Malaysia
-	RT_CHANNEL_DOMAIN_5G_ETSI7 = 0x16,		//China
-	RT_CHANNEL_DOMAIN_5G_ETSI8 = 0x17,		//Jordan
-	RT_CHANNEL_DOMAIN_5G_ETSI9 = 0x18,		//Lebanon
-	RT_CHANNEL_DOMAIN_5G_ETSI10 = 0x19,		//Qatar
-	RT_CHANNEL_DOMAIN_5G_ETSI11 = 0x1A,		//Russia
-	RT_CHANNEL_DOMAIN_5G_NCC4 = 0x1B,		//Taiwan, (w/o Weather radar)
-	RT_CHANNEL_DOMAIN_5G_ETSI12 = 0x1C,		//Indonesia
-	RT_CHANNEL_DOMAIN_5G_FCC9 = 0x1D,		//(w/o Weather radar)
-	RT_CHANNEL_DOMAIN_5G_ETSI13 = 0x1E,		//(w/o Weather radar)
-	RT_CHANNEL_DOMAIN_5G_FCC10 = 0x1F,		//Argentina (w/o Weather radar)
-	RT_CHANNEL_DOMAIN_5G_KCC2 = 0x20,		//Korea 5G
-	RT_CHANNEL_DOMAIN_5G_FCC11 = 0x21,		//US/Canada
-	RT_CHANNEL_DOMAIN_5G_NCC5 = 0x22,		//Taiwan
-	RT_CHANNEL_DOMAIN_5G_MKK4 = 0x23,		//Japan W52
-	//===== Add new channel plan above this line===============//
-	//===== Driver Self Defined =====//
-	RT_CHANNEL_DOMAIN_5G_FCC = 0x30,
-	RT_CHANNEL_DOMAIN_5G_JAPAN_NO_DFS = 0x31,
-	RT_CHANNEL_DOMAIN_5G_FCC4_NO_DFS = 0x32,
-	RT_CHANNEL_DOMAIN_5G_MAX,
+	RTW_RD_5G_NULL = 0,		/*	*/
+	RTW_RD_5G_ETSI1 = 1,	/* Europe */
+	RTW_RD_5G_ETSI2 = 2,	/* Australia, New Zealand */
+	RTW_RD_5G_ETSI3 = 3,	/* Russia */
+	RTW_RD_5G_FCC1 = 4,		/* US */
+	RTW_RD_5G_FCC2 = 5,		/* FCC w/o DFS Channels */
+	RTW_RD_5G_FCC3 = 6,		/* Bolivia, Chile, El Salvador, Venezuela */
+	RTW_RD_5G_FCC4 = 7,		/* Venezuela */
+	RTW_RD_5G_FCC5 = 8,		/* China */
+	RTW_RD_5G_FCC6 = 9,		/*	*/
+	RTW_RD_5G_FCC7 = 10,	/* US Canada(w/o Weather radar) */
+	RTW_RD_5G_KCC1 = 11,	/* Korea */
+	RTW_RD_5G_MKK1 = 12,	/* Japan */
+	RTW_RD_5G_MKK2 = 13,	/* Japan (W52, W53) */
+	RTW_RD_5G_MKK3 = 14,	/* Japan (W56) */
+	RTW_RD_5G_NCC1 = 15,	/* Taiwan, (w/o Weather radar) */
+	RTW_RD_5G_NCC2 = 16,	/* Taiwan, Band2, Band4 */
+	RTW_RD_5G_NCC3 = 17,	/* Taiwan w/o DFS, Band4 only */
+	RTW_RD_5G_ETSI4 = 18,	/* Europe w/o DFS, Band1 only */
+	RTW_RD_5G_ETSI5 = 19,	/* Australia, New Zealand(w/o Weather radar) */
+	RTW_RD_5G_FCC8 = 20,	/* Latin America */
+	RTW_RD_5G_ETSI6 = 21,	/* Israel, Bahrain, Egypt, India, China, Malaysia */
+	RTW_RD_5G_ETSI7 = 22,	/* China */
+	RTW_RD_5G_ETSI8 = 23,	/* Jordan */
+	RTW_RD_5G_ETSI9 = 24,	/* Lebanon */
+	RTW_RD_5G_ETSI10 = 25,	/* Qatar */
+	RTW_RD_5G_ETSI11 = 26,	/* Russia */
+	RTW_RD_5G_NCC4 = 27,	/* Taiwan, (w/o Weather radar) */
+	RTW_RD_5G_ETSI12 = 28,	/* Indonesia */
+	RTW_RD_5G_FCC9 = 29,	/* (w/o Weather radar) */
+	RTW_RD_5G_ETSI13 = 30,	/* (w/o Weather radar) */
+	RTW_RD_5G_FCC10 = 31,	/* Argentina(w/o Weather radar) */
+	RTW_RD_5G_MKK4 = 32,	/* Japan (W52) */
+	RTW_RD_5G_ETSI14 = 33,	/* Russia */
+
+	/* === Below are driver defined for legacy channel plan compatible, DON'T assign index ==== */
+	RTW_RD_5G_OLD_FCC1,
+	RTW_RD_5G_OLD_NCC1,
+	RTW_RD_5G_OLD_KCC1,
+
+	RTW_RD_5G_MAX,
 }RT_CHANNEL_DOMAIN_5G, *PRT_CHANNEL_DOMAIN_5G;
 
-#define rtw_is_channel_plan_valid(chplan) (chplan<RT_CHANNEL_DOMAIN_MAX || chplan == RT_CHANNEL_DOMAIN_REALTEK_DEFINE)
+bool rtw_chplan_is_empty(u8 id);
+#define rtw_is_channel_plan_valid(chplan) (((chplan) < RTW_CHPLAN_MAX || (chplan) == RTW_CHPLAN_REALTEK_DEFINE) && !rtw_chplan_is_empty(chplan))
+#define rtw_is_legacy_channel_plan(chplan) ((chplan) < 0x20)
 
 typedef struct _RT_CHANNEL_PLAN
 {
@@ -253,8 +247,9 @@ typedef struct _RT_CHANNEL_PLAN_5G
 
 typedef struct _RT_CHANNEL_PLAN_MAP
 {
-	unsigned char	Index2G;
-	unsigned char	Index5G;
+	u8 Index2G;
+	u8 Index5G;
+	u8 regd; /* value of REGULATION_TXPWR_LMT */
 }RT_CHANNEL_PLAN_MAP, *PRT_CHANNEL_PLAN_MAP;
 
 enum Associated_AP
@@ -401,15 +396,6 @@ enum TDLS_option
 
 #endif //CONFIG_TDLS
 
-struct FW_Sta_Info
-{
-	struct sta_info	*psta;
-	u32	status;
-	u32	rx_pkt;
-	u32	retry;
-	NDIS_802_11_RATES_EX  SupportedRates;
-};
-
 /*
  * Usage:
  * When one iface acted as AP mode and the other iface is STA mode and scanning, 
@@ -480,7 +466,6 @@ struct mlme_ext_info
 	struct HT_caps_element	HT_caps;
 	struct HT_info_element		HT_info;
 	WLAN_BSSID_EX			network;//join network or bss_network, if in ap mode, it is the same to cur_network.network
-	struct FW_Sta_Info		FW_sta_info[NUM_STA];
 };
 
 // The channel information about this channel including joining, scanning, and power constraints.
@@ -530,8 +515,12 @@ enum {
 	RTW_CHF_NON_LONG_CAC = BIT5,
 };
 bool rtw_choose_available_chbw(_adapter *adapter, u8 req_bw, u8 *dec_ch, u8 *dec_bw, u8 *dec_offset, u8 d_flags);
+void dump_country_chplan(void *sel, const struct country_chplan *ent);
+void dump_country_chplan_map(void *sel);
+void dump_chplan_id_list(void *sel);
+void dump_chplan_test(void *sel);
 void dump_chset(void *sel, RT_CHANNEL_INFO *ch_set);
-void dump_ch_plan_test(void *sel);
+void dump_cur_chset(void *sel, _adapter *adapter);
 
 int rtw_ch_set_search_ch(RT_CHANNEL_INFO *ch_set, const u32 ch);
 bool rtw_mlme_band_check(_adapter *adapter, const u32 ch);
@@ -636,7 +625,8 @@ struct mlme_ext_priv
 #ifdef DBG_FIXED_CHAN
 	u8 fixed_chan;
 #endif
-	
+	/* set hw sync bcn tsf register or not */
+	u8 en_hw_update_tsf;
 };
 
 #define mlmeext_msr(mlmeext) ((mlmeext)->mlmext_info.state & 0x03)
@@ -736,11 +726,6 @@ void SetBWMode(_adapter *padapter, unsigned short bwmode, unsigned char channel_
 
 unsigned int decide_wait_for_beacon_timeout(unsigned int bcn_interval);
 
-void read_cam(_adapter *padapter ,u8 entry, u8 *get_key);
-void dump_cam_table(_adapter *padapter);
-
-/* modify HW only */
-void _write_cam(_adapter *padapter, u8 entry, u16 ctrl, u8 *mac, u8 *key);
 void _clear_cam_entry(_adapter *padapter, u8 entry);
 void write_cam_from_cache(_adapter *adapter, u8 id);
 
@@ -755,8 +740,6 @@ void clear_cam_cache(_adapter *adapter, u8 id);
 void invalidate_cam_all(_adapter *padapter);
 void CAM_empty_entry(PADAPTER Adapter, u8 ucIndex);
 
-
-int allocate_fw_sta_entry(_adapter *padapter);
 void flush_all_cam_entry(_adapter *padapter);
 
 BOOLEAN IsLegal5GChannel(PADAPTER Adapter, u8 channel);
@@ -777,7 +760,8 @@ unsigned char check_assoc_AP(u8 *pframe, uint len);
 
 int WMM_param_handler(_adapter *padapter, PNDIS_802_11_VARIABLE_IEs	pIE);
 #ifdef CONFIG_WFD
-int WFD_info_handler(_adapter *padapter, PNDIS_802_11_VARIABLE_IEs	pIE);
+void rtw_process_wfd_ie(_adapter *adapter, u8 *ie, u8 ie_len, const char *tag);
+void rtw_process_wfd_ies(_adapter *adapter, u8 *ies, u8 ies_len, const char *tag);
 #endif
 void WMMOnAssocRsp(_adapter *padapter);
 
@@ -801,7 +785,7 @@ void update_capinfo(PADAPTER Adapter, u16 updateCap);
 void update_wireless_mode(_adapter * padapter);
 void update_tx_basic_rate(_adapter *padapter, u8 modulation);
 void update_sta_basic_rate(struct sta_info *psta, u8 wireless_mode);
-int update_sta_support_rate(_adapter *padapter, u8* pvar_ie, uint var_ie_len, int cam_idx);
+int rtw_ies_get_supported_rate(u8 *ies, uint ies_len, u8 *rate_set, u8 *rate_num);
 
 //for sta/adhoc mode
 void update_sta_info(_adapter *padapter, struct sta_info *psta);
@@ -826,12 +810,16 @@ void rtw_camctl_set_flags(_adapter *adapter, u32 flags);
 void _rtw_camctl_clr_flags(_adapter *adapter, u32 flags);
 void rtw_camctl_clr_flags(_adapter *adapter, u32 flags);
 bool _rtw_camctl_chk_flags(_adapter *adapter, u32 flags);
+
+struct sec_cam_bmp;
+void dump_sec_cam_map(void *sel, struct sec_cam_bmp *map, u8 max_num);
+void rtw_sec_cam_map_clr_all(struct sec_cam_bmp *map);
+
 bool _rtw_camid_is_gk(_adapter *adapter, u8 cam_id);
 bool rtw_camid_is_gk(_adapter *adapter, u8 cam_id);
 s16 rtw_camid_search(_adapter *adapter, u8 *addr, s16 kid, s8 gk);
 s16 rtw_camid_alloc(_adapter *adapter, struct sta_info *sta, u8 kid, bool *used);
 void rtw_camid_free(_adapter *adapter, u8 cam_id);
-bool read_phy_cam_is_gtk(_adapter *padapter, u8 entry);
 
 struct macid_bmp;
 struct macid_ctl_t;
@@ -844,6 +832,7 @@ s8 rtw_macid_get_ch_g(struct macid_ctl_t *macid_ctl, u8 id);
 void rtw_alloc_macid(_adapter *padapter, struct sta_info *psta);
 void rtw_release_macid(_adapter *padapter, struct sta_info *psta);
 u8 rtw_search_max_mac_id(_adapter *padapter);
+void rtw_macid_ctl_set_h2c_msr(struct macid_ctl_t *macid_ctl, u8 id, u8 h2c_msr);
 void rtw_macid_ctl_init(struct macid_ctl_t *macid_ctl);
 void rtw_macid_ctl_deinit(struct macid_ctl_t *macid_ctl);
 
@@ -851,7 +840,7 @@ void report_join_res(_adapter *padapter, int res);
 void report_survey_event(_adapter *padapter, union recv_frame *precv_frame);
 void report_surveydone_event(_adapter *padapter);
 void report_del_sta_event(_adapter *padapter, unsigned char *MacAddr, unsigned short reason, bool enqueue);
-void report_add_sta_event(_adapter *padapter, unsigned char* MacAddr, int cam_idx);
+void report_add_sta_event(_adapter *padapter, unsigned char *MacAddr);
 bool rtw_port_switch_chk(_adapter *adapter);
 void report_wmm_edca_update(_adapter *padapter);
 
@@ -860,6 +849,7 @@ u8 chk_bmc_sleepq_cmd(_adapter* padapter);
 extern u8 set_tx_beacon_cmd(_adapter*padapter);
 unsigned int setup_beacon_frame(_adapter *padapter, unsigned char *beacon_frame);
 void update_mgnt_tx_rate(_adapter *padapter, u8 rate);
+void update_monitor_frame_attrib(_adapter *padapter, struct pkt_attrib *pattrib);
 void update_mgntframe_attrib(_adapter *padapter, struct pkt_attrib *pattrib);
 void update_mgntframe_attrib_addr(_adapter *padapter, struct xmit_frame *pmgntframe);
 void dump_mgntframe(_adapter *padapter, struct xmit_frame *pmgntframe);
@@ -1048,7 +1038,7 @@ u8 led_blink_hdl(_adapter *padapter, unsigned char *pbuf);
 u8 set_csa_hdl(_adapter *padapter, unsigned char *pbuf);	//Kurt: Handling DFS channel switch announcement ie.
 u8 tdls_hdl(_adapter *padapter, unsigned char *pbuf);
 u8 run_in_thread_hdl(_adapter *padapter, u8 *pbuf);
-
+u8 rtw_getmacreg_hdl(_adapter *padapter, u8 *pbuf);
 
 #define GEN_DRV_CMD_HANDLER(size, cmd)	{size, &cmd ## _hdl},
 #define GEN_MLME_EXT_HANDLER(size, cmd)	{size, cmd},
@@ -1057,7 +1047,7 @@ u8 run_in_thread_hdl(_adapter *padapter, u8 *pbuf);
 
 struct cmd_hdl wlancmds[] = 
 {
-	GEN_DRV_CMD_HANDLER(0, NULL) /*0*/
+	GEN_DRV_CMD_HANDLER(sizeof(struct readMAC_parm), rtw_getmacreg) /*0*/
 	GEN_DRV_CMD_HANDLER(0, NULL)
 	GEN_DRV_CMD_HANDLER(0, NULL)
 	GEN_DRV_CMD_HANDLER(0, NULL)

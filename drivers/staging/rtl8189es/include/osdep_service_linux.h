@@ -81,7 +81,7 @@
 
 	/* Monitor mode */
 	#include <net/ieee80211_radiotap.h>
-
+	#include <linux/ieee80211.h>
 #ifdef CONFIG_IOCTL_CFG80211	
 /*	#include <linux/ieee80211.h> */
 	#include <net/cfg80211.h>
@@ -282,11 +282,11 @@ __inline static void _set_timer(_timer *ptimer,u32 delay_time)
 __inline static void _cancel_timer(_timer *ptimer,u8 *bcancelled)
 {
 	del_timer_sync(ptimer); 	
-	*bcancelled=  _TRUE;//TRUE ==1; FALSE==0
+	*bcancelled = 1;
 }
 
 
-__inline static void _init_workitem(_workitem *pwork, void *pfunc, PVOID cntx)
+static inline void _init_workitem(_workitem *pwork, void *pfunc, void *cntx)
 {
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,20))
 	INIT_WORK(pwork, pfunc);
@@ -373,7 +373,7 @@ static inline void rtw_netif_stop_queue(struct net_device *pnetdev)
 #endif
 }
 
-static inline void rtw_merge_string(char *dst, int dst_len, char *src1, char *src2)
+static inline void rtw_merge_string(char *dst, int dst_len, const char *src1, const char *src2)
 {
 	int	len = 0;
 	len += snprintf(dst+len, dst_len - len, "%s", src1);

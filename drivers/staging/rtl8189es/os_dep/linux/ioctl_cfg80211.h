@@ -154,6 +154,7 @@ void rtw_cfg80211_ibss_indicate_connect(_adapter *padapter);
 void rtw_cfg80211_indicate_connect(_adapter *padapter);
 void rtw_cfg80211_indicate_disconnect(_adapter *padapter);
 void rtw_cfg80211_indicate_scan_done(_adapter *adapter, bool aborted);
+u32 rtw_cfg80211_wait_scan_req_empty(_adapter *adapter, u32 timeout_ms);
 
 #ifdef CONFIG_AP_MODE
 void rtw_cfg80211_indicate_sta_assoc(_adapter *padapter, u8 *pmgmt_frame, uint frame_len);

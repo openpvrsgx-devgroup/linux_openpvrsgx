@@ -189,6 +189,31 @@ u4Byte OFDMSwingTable_New[OFDM_TABLE_SIZE] = {
 };               
 
 
+u1Byte CCKSwingTable_Ch1_Ch14_88F[CCK_TABLE_SIZE_88F][16] = {
+{0x44, 0x42, 0x3C, 0x33, 0x28, 0x1C, 0x13, 0x0B, 0x05, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},    /*-16dB*/
+{0x48, 0x46, 0x3F, 0x36, 0x2A, 0x1E, 0x14, 0x0B, 0x05, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},    /*-15.5dB*/
+{0x4D, 0x4A, 0x43, 0x39, 0x2C, 0x20, 0x15, 0x0C, 0x06, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},    /*-15dB*/
+{0x51, 0x4F, 0x47, 0x3C, 0x2F, 0x22, 0x16, 0x0D, 0x06, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},    /*-14.5dB*/
+{0x56, 0x53, 0x4B, 0x40, 0x32, 0x24, 0x17, 0x0E, 0x06, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},    /*-14dB*/
+{0x5B, 0x58, 0x50, 0x43, 0x35, 0x26, 0x19, 0x0E, 0x07, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},    /*-13.5dB*/
+{0x60, 0x5D, 0x54, 0x47, 0x38, 0x28, 0x1A, 0x0F, 0x07, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},    /*-13dB*/
+{0x66, 0x63, 0x59, 0x4C, 0x3B, 0x2B, 0x1C, 0x10, 0x08, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},    /*-12.5dB*/
+{0x6C, 0x69, 0x5F, 0x50, 0x3F, 0x2D, 0x1E, 0x11, 0x08, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},    /*-12dB*/
+{0x73, 0x6F, 0x64, 0x55, 0x42, 0x30, 0x1F, 0x12, 0x08, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},    /*-11.5dB*/
+{0x79, 0x76, 0x6A, 0x5A, 0x46, 0x33, 0x21, 0x13, 0x09, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},    /*-11dB*/
+{0x81, 0x7C, 0x71, 0x5F, 0x4A, 0x36, 0x23, 0x14, 0x0A, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},    /*-10.5dB*/
+{0x88, 0x84, 0x77, 0x65, 0x4F, 0x39, 0x25, 0x15, 0x0A, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},    /*-10dB*/
+{0x90, 0x8C, 0x7E, 0x6B, 0x54, 0x3C, 0x27, 0x17, 0x0B, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},    /*-9.5dB*/
+{0x99, 0x94, 0x86, 0x71, 0x58, 0x40, 0x2A, 0x18, 0x0B, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},    /*-9dB*/
+{0xA2, 0x9D, 0x8E, 0x78, 0x5E, 0x43, 0x2C, 0x19, 0x0C, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},    /*-8.5dB*/
+{0xAC, 0xA6, 0x96, 0x7F, 0x63, 0x47, 0x2F, 0x1B, 0x0D, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},    /*-8dB*/
+{0xB6, 0xB0, 0x9F, 0x87, 0x69, 0x4C, 0x32, 0x1D, 0x0D, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},    /*-7.5dB*/
+{0xC1, 0xBA, 0xA8, 0x8F, 0x6F, 0x50, 0x35, 0x1E, 0x0E, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},    /*-7dB*/
+{0xCC, 0xC5, 0xB2, 0x97, 0x76, 0x55, 0x38, 0x20, 0x0F, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},    /*-6.5dB*/
+{0xD8, 0xD1, 0xBD, 0xA0, 0x7D, 0x5A, 0x3B, 0x22, 0x10, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}     /*-6dB*/
+};
+
+
 u1Byte CCKSwingTable_Ch1_Ch13_New[CCK_TABLE_SIZE][8] = {
 	{0x09, 0x08, 0x07, 0x06, 0x04, 0x03, 0x01, 0x01},	//  0, -16.0dB
 	{0x09, 0x09, 0x08, 0x06, 0x05, 0x03, 0x01, 0x01},	//  1, -15.5dB
@@ -353,7 +378,7 @@ odm_TXPowerTrackingInit(
 	)
 {
 	PDM_ODM_T		pDM_Odm = (PDM_ODM_T)pDM_VOID;
-#if (DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+#if (DM_ODM_SUPPORT_TYPE & (ODM_AP))
 	if(!(pDM_Odm->SupportICType & (ODM_RTL8814A|ODM_IC_11N_SERIES|ODM_RTL8822B)))
 		return;
 #endif
@@ -375,7 +400,7 @@ getSwingIndex(
 	pu4Byte 			pSwingTable;
 
 	if (pDM_Odm->SupportICType == ODM_RTL8188E || pDM_Odm->SupportICType == ODM_RTL8723B ||
-		pDM_Odm->SupportICType == ODM_RTL8192E) 
+		pDM_Odm->SupportICType == ODM_RTL8192E || pDM_Odm->SupportICType == ODM_RTL8188F || pDM_Odm->SupportICType == ODM_RTL8703B) 
 	{
 		bbSwing = PHY_QueryBBReg(Adapter, rOFDM0_XATxIQImbalance, 0xFFC00000);
 
@@ -443,7 +468,7 @@ odm_TXPowerTrackingThermalMeterInit(
 	
 	}	
 	#endif//endif (CONFIG_RTL8188E==1)	
-#elif (DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+#elif (DM_ODM_SUPPORT_TYPE & (ODM_AP))
 	#ifdef RTL8188E_SUPPORT
 	{
 		pRFCalibrateInfo->bTXPowerTracking = _TRUE;
@@ -461,10 +486,15 @@ odm_TXPowerTrackingThermalMeterInit(
 
 	// The index of "0 dB" in SwingTable.
 	if (pDM_Odm->SupportICType == ODM_RTL8188E || pDM_Odm->SupportICType == ODM_RTL8723B ||
-		pDM_Odm->SupportICType == ODM_RTL8192E) 
+		pDM_Odm->SupportICType == ODM_RTL8192E || pDM_Odm->SupportICType == ODM_RTL8703B) 
 	{
 		pRFCalibrateInfo->DefaultOfdmIndex = (defaultSwingIndex >= OFDM_TABLE_SIZE) ? 30 : defaultSwingIndex;
 		pRFCalibrateInfo->DefaultCckIndex = 20;	
+	}
+	else if(pDM_Odm->SupportICType == ODM_RTL8188F)          //add by Mingzhi.Guo  2015-03-23
+	{
+		pRFCalibrateInfo->DefaultOfdmIndex =28;							//OFDM: -1dB
+		pRFCalibrateInfo->DefaultCckIndex =20;							//CCK:-6dB
 	}
 	else
 	{
@@ -484,6 +514,8 @@ odm_TXPowerTrackingThermalMeterInit(
 		pRFCalibrateInfo->PowerIndexOffset[p] = 0;
 		pRFCalibrateInfo->KfreeOffset[p] = 0;
 	}
+	pRFCalibrateInfo->Modify_TxAGC_Value_OFDM=0;			//add by Mingzhi.Guo
+	pRFCalibrateInfo->Modify_TxAGC_Value_CCK=0;			//add by Mingzhi.Guo
 
 }
 
@@ -513,8 +545,7 @@ ODM_TXPowerTrackingCheck(
 			odm_TXPowerTrackingCheckAP(pDM_Odm);		
 			break;		
 
-		case	ODM_ADSL:
-			//odm_DIGAP(pDM_Odm);
+		default:
 			break;	
 	}
 
@@ -528,16 +559,10 @@ odm_TXPowerTrackingCheckCE(
 	PDM_ODM_T		pDM_Odm = (PDM_ODM_T)pDM_VOID;
 #if (DM_ODM_SUPPORT_TYPE == ODM_CE)
 	PADAPTER	Adapter = pDM_Odm->Adapter;
-	#if( (RTL8192C_SUPPORT==1) ||  (RTL8723A_SUPPORT==1) )
+	#if ((RTL8188F_SUPPORT == 1))
 	rtl8192c_odm_CheckTXPowerTracking(Adapter);
 	#endif
 
-	#if (RTL8192D_SUPPORT==1) 
-	#if (RTL8192D_EASY_SMART_CONCURRENT == 1)
-	if(!Adapter->bSlaveOfDMSP)
-	#endif
-		rtl8192d_odm_CheckTXPowerTracking(Adapter);
-	#endif
 	#if(RTL8188E_SUPPORT==1)
 
 	if(!(pDM_Odm->SupportAbility & ODM_RF_TX_PWR_TRACK))
@@ -585,15 +610,14 @@ odm_TXPowerTrackingCheckMP(
 	if(IS_HARDWARE_TYPE_8821B(Adapter)) // TODO: Don't Do PowerTracking
 		return;
 	
-	if(IS_HARDWARE_TYPE_8723A(Adapter))
-		return;
-	#if(RTL8192D_SUPPORT==1)
-	if(!Adapter->bSlaveOfDMSP || Adapter->DualMacSmartConcurrent == FALSE)
+//	#if(RTL8192D_SUPPORT==1)
+//	if(!Adapter->bSlaveOfDMSP || Adapter->DualMacSmartConcurrent == FALSE)
+	if (IS_HARDWARE_TYPE_8814A(Adapter) || IS_HARDWARE_TYPE_8188F(Adapter))
 		odm_TXPowerTrackingThermalMeterCheck(Adapter);
 	else {
 		RT_TRACE(COMP_POWER_TRACKING, DBG_LOUD, ("!Adapter->bSlaveOfDMSP || Adapter->DualMacSmartConcurrent == FALSE\n"));
 	}
-	#endif
+//	#endif
 #endif
 	
 }
@@ -604,23 +628,7 @@ odm_TXPowerTrackingCheckAP(
 	IN	PVOID		pDM_VOID
 	)
 {
-	PDM_ODM_T		pDM_Odm = (PDM_ODM_T)pDM_VOID;
-#if (DM_ODM_SUPPORT_TYPE == ODM_AP)
-	prtl8192cd_priv	priv		= pDM_Odm->priv;
-
-	if ( (priv->pmib->dot11RFEntry.ther) && ((priv->up_time % priv->pshare->rf_ft_var.tpt_period) == 0)){
-#ifdef CONFIG_RTL_92D_SUPPORT
-		if (GET_CHIP_VER(priv)==VERSION_8192D){
-			tx_power_tracking_92D(priv);
-		} else 
-#endif
-		{
-#ifdef CONFIG_RTL_92C_SUPPORT			
-			tx_power_tracking(priv);
-#endif
-		}
-	}
-#endif	
+return;
 
 }
 
@@ -634,30 +642,7 @@ odm_TXPowerTrackingDirectCall(
 	HAL_DATA_TYPE		*pHalData	= GET_HAL_DATA(Adapter);
 	PDM_ODM_T			pDM_Odm = &pHalData->DM_OutSrc;
 	
-	#if (RTL8192D_SUPPORT==1)
-		if(pDM_Odm->SupportICType == ODM_RTL8192D)
-		{
-			odm_TXPowerTrackingCallback_ThermalMeter_92D(Adapter);
-		}
-		else
-	#endif
-	#if (RTL8192C_SUPPORT==1)
-		if(pDM_Odm->SupportICType == ODM_RTL8192C)
-		{
-			odm_TXPowerTrackingCallback_ThermalMeter_92C(Adapter);
-		}
-		else
-	#endif
-	#if (RTL8723A_SUPPORT==1)
-		if(pDM_Odm->SupportICType == ODM_RTL8723A)
-		{
-			odm_TXPowerTrackingCallback_ThermalMeter_8723A(Adapter);
-		}
-		else
-	#endif
-	{
-		ODM_TXPowerTrackingCallback_ThermalMeter(Adapter);
-	}
+	ODM_TXPowerTrackingCallback_ThermalMeter(Adapter);
 }
 
 VOID
@@ -677,10 +662,8 @@ odm_TXPowerTrackingThermalMeterCheck(
 
 	if(!TM_Trigger)		//at least delay 1 sec
 	{
-		if(IS_HARDWARE_TYPE_8192D(Adapter))
-			PHY_SetRFReg(Adapter, ODM_RF_PATH_A, RF_T_METER_92D, BIT17 | BIT16, 0x03);
-		else if(IS_HARDWARE_TYPE_8188E(Adapter) || IS_HARDWARE_TYPE_JAGUAR(Adapter) || IS_HARDWARE_TYPE_8192E(Adapter) ||
-			    IS_HARDWARE_TYPE_8723B(Adapter) || IS_HARDWARE_TYPE_8814A(Adapter))
+		if (IS_HARDWARE_TYPE_8188E(Adapter) || IS_HARDWARE_TYPE_JAGUAR(Adapter) || IS_HARDWARE_TYPE_8192E(Adapter) ||
+			    IS_HARDWARE_TYPE_8723B(Adapter) || IS_HARDWARE_TYPE_8814A(Adapter) || IS_HARDWARE_TYPE_8188F(Adapter) || IS_HARDWARE_TYPE_8703B(Adapter))
 			PHY_SetRFReg(Adapter, ODM_RF_PATH_A, RF_T_METER_88E, BIT17 | BIT16, 0x03);
 		else
 			PHY_SetRFReg(Adapter, ODM_RF_PATH_A, RF_T_METER, bRFRegOffsetMask, 0x60);

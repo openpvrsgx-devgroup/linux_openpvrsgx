@@ -558,6 +558,51 @@ bool match_write_sniff_ranges(u32 addr, u16 len)
 	return _FALSE;
 }
 
+struct rf_sniff_ent {
+	u8 path;
+	u16 reg;
+	u32 mask;
+};
+
+struct rf_sniff_ent rf_read_sniff_ranges[] = {
+	/* example for all path addr 0x55 with all RF Reg mask */
+	/* {MAX_RF_PATH, 0x55, bRFRegOffsetMask}, */
+};
+
+struct rf_sniff_ent rf_write_sniff_ranges[] = {
+	/* example for all path addr 0x55 with all RF Reg mask */
+	/* {MAX_RF_PATH, 0x55, bRFRegOffsetMask}, */
+};
+
+int rf_read_sniff_num = sizeof(rf_read_sniff_ranges)/sizeof(struct rf_sniff_ent);
+int rf_write_sniff_num = sizeof(rf_write_sniff_ranges)/sizeof(struct rf_sniff_ent);
+
+bool match_rf_read_sniff_ranges(u8 path, u32 addr, u32 mask)
+{
+	int i;
+
+	for (i = 0; i < rf_read_sniff_num; i++) {
+		if (rf_read_sniff_ranges[i].path == MAX_RF_PATH || rf_read_sniff_ranges[i].path == path)
+			if (addr == rf_read_sniff_ranges[i].reg && (mask & rf_read_sniff_ranges[i].mask))
+				return _TRUE;
+	}
+
+	return _FALSE;
+}
+
+bool match_rf_write_sniff_ranges(u8 path, u32 addr, u32 mask)
+{
+	int i;
+
+	for (i = 0; i < rf_write_sniff_num; i++) {
+		if (rf_write_sniff_ranges[i].path == MAX_RF_PATH || rf_write_sniff_ranges[i].path == path)
+			if (addr == rf_write_sniff_ranges[i].reg && (mask & rf_write_sniff_ranges[i].mask))
+				return _TRUE;
+	}
+
+	return _FALSE;
+}
+
 u8 dbg_rtw_read8(_adapter *adapter, u32 addr, const char *caller, const int line)
 {
 	u8 val = _rtw_read8(adapter, addr);

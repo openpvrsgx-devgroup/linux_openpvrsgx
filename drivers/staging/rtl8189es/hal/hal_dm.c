@@ -177,7 +177,12 @@ void Init_ODM_ComInfo(_adapter *adapter)
 
 	ODM_CmnInfoHook(pDM_Odm, ODM_CMNINFO_SCAN, &(pmlmepriv->bScanInProcess));
 	ODM_CmnInfoHook(pDM_Odm, ODM_CMNINFO_POWER_SAVING, &(pwrctl->bpower_saving));
-
+	/*Add by Yuchen for phydm beamforming*/
+	ODM_CmnInfoHook(pDM_Odm, ODM_CMNINFO_TX_TP, &(dvobj->traffic_stat.cur_tx_tp));
+	ODM_CmnInfoHook(pDM_Odm, ODM_CMNINFO_RX_TP, &(dvobj->traffic_stat.cur_rx_tp));
+#ifdef CONFIG_USB_HCI
+	ODM_CmnInfoHook(pDM_Odm, ODM_CMNINFO_HUBUSBMODE, &(dvobj->usb_speed));
+#endif
 	for(i=0; i<ODM_ASSOCIATE_ENTRY_NUM; i++)
 		ODM_CmnInfoPtrArrayHook(pDM_Odm, ODM_CMNINFO_STA_STATUS, i, NULL);
 

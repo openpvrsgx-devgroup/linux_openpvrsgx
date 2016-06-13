@@ -106,6 +106,46 @@
 	#define CONFIG_RTW_ADAPTIVITY_DC_BACKOFF 2
 #endif
 
+#ifndef CONFIG_RTW_ADAPTIVITY_TH_L2H_INI
+	#define CONFIG_RTW_ADAPTIVITY_TH_L2H_INI 0
+#endif
+
+#ifndef CONFIG_RTW_ADAPTIVITY_TH_EDCCA_HL_DIFF
+	#define CONFIG_RTW_ADAPTIVITY_TH_EDCCA_HL_DIFF 0
+#endif
+
+#ifndef CONFIG_RTW_TARGET_TX_PWR_2G_A
+	#define CONFIG_RTW_TARGET_TX_PWR_2G_A {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1}
+#endif
+
+#ifndef CONFIG_RTW_TARGET_TX_PWR_2G_B
+	#define CONFIG_RTW_TARGET_TX_PWR_2G_B {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1}
+#endif
+
+#ifndef CONFIG_RTW_TARGET_TX_PWR_2G_C
+	#define CONFIG_RTW_TARGET_TX_PWR_2G_C {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1}
+#endif
+
+#ifndef CONFIG_RTW_TARGET_TX_PWR_2G_D
+	#define CONFIG_RTW_TARGET_TX_PWR_2G_D {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1}
+#endif
+
+#ifndef CONFIG_RTW_TARGET_TX_PWR_5G_A
+	#define CONFIG_RTW_TARGET_TX_PWR_5G_A {-1, -1, -1, -1, -1, -1, -1, -1, -1}
+#endif
+
+#ifndef CONFIG_RTW_TARGET_TX_PWR_5G_B
+	#define CONFIG_RTW_TARGET_TX_PWR_5G_B {-1, -1, -1, -1, -1, -1, -1, -1, -1}
+#endif
+
+#ifndef CONFIG_RTW_TARGET_TX_PWR_5G_C
+	#define CONFIG_RTW_TARGET_TX_PWR_5G_C {-1, -1, -1, -1, -1, -1, -1, -1, -1}
+#endif
+
+#ifndef CONFIG_RTW_TARGET_TX_PWR_5G_D
+	#define CONFIG_RTW_TARGET_TX_PWR_5G_D {-1, -1, -1, -1, -1, -1, -1, -1, -1}
+#endif
+
 #ifndef CONFIG_RTW_AMPLIFIER_TYPE_2G
 	#define CONFIG_RTW_AMPLIFIER_TYPE_2G 0
 #endif
@@ -127,11 +167,29 @@
 #endif
 
 #define MACID_NUM_SW_LIMIT 32
-#define CAM_ENTRY_NUM_SW_LIMIT 32
+#define SEC_CAM_ENT_NUM_SW_LIMIT 32
 
 #if defined(CONFIG_RTL8812A) || defined(CONFIG_RTL8821A) || defined(CONFIG_RTL8814A)
 	#define CONFIG_IEEE80211_BAND_5GHZ
 #endif
+
+#ifndef RTW_DEF_MODULE_REGULATORY_CERT
+	#define RTW_DEF_MODULE_REGULATORY_CERT 0
+#endif
+
+#if RTW_DEF_MODULE_REGULATORY_CERT
+	/* force enable TX power by rate and TX power limit */
+	#ifndef CONFIG_CALIBRATE_TX_POWER_BY_REGULATORY
+		#define CONFIG_CALIBRATE_TX_POWER_BY_REGULATORY
+	#endif
+#endif
+
+/*
+	Mark CONFIG_DEAUTH_BEFORE_CONNECT by Arvin 2015/07/20
+	If the failure of Wi-Fi connection is due to some irregular disconnection behavior (like unplug dongle,
+	power down etc.) in last time, we can unmark this flag to avoid some unpredictable response from AP.
+*/
+/*#define CONFIG_DEAUTH_BEFORE_CONNECT */
 
 /*#define CONFIG_WEXT_DONT_JOIN_BYSSID	*/
 //#include <rtl871x_byteorder.h>

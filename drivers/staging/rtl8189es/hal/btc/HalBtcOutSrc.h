@@ -438,7 +438,7 @@ typedef	BOOLEAN
 	IN	u1Byte			setType,
 	OUT	PVOID			pInBuf
 	);
-typedef VOID
+typedef u2Byte
 (*BFP_BTC_SET_BT_REG)(
 	IN 	PVOID			pBtcContext,
 	IN	u1Byte			regType,
@@ -451,11 +451,12 @@ typedef BOOLEAN
 	IN	u1Byte			txTime,
 	IN	u1Byte			btChnl
 	);
-typedef u4Byte 
+typedef u2Byte 
 (*BFP_BTC_GET_BT_REG)(
 	IN 	PVOID			pBtcContext,
 	IN	u1Byte			regType,
-	IN	u4Byte			offset
+	IN	u4Byte			offset,
+	IN	pu4Byte			data
 	);
 typedef VOID
 (*BFP_BTC_DISP_DBG_MSG)(
@@ -668,6 +669,12 @@ VOID
 EXhalbtcoutsrc_PnpNotify(
 	IN	PBTC_COEXIST		pBtCoexist,
 	IN	u1Byte			pnpState
+	);
+VOID
+EXhalbtcoutsrc_ScoreBoardStatusNotify(
+	IN	PBTC_COEXIST		pBtCoexist,
+	IN	pu1Byte			tmpBuf,
+	IN	u1Byte			length
 	);
 VOID
 EXhalbtcoutsrc_CoexDmSwitch(

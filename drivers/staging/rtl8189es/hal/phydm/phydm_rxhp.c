@@ -1412,6 +1412,13 @@ void odm_RXHP(
 		Is40MHz = *(pDM_Odm->pBandWidth);
 		curRssi = pDM_Odm->RSSI_Min;
 		cur_channel = ODM_GetRFReg(pDM_Odm, ODM_RF_PATH_A, RF_CHNLBW, 0x0fff) & 0x0f;
+
+		/* check illegal channel and bandwidth */
+		if (Is40MHz && ((cur_channel < 3) || (cur_channel > 12))) {
+			ODM_RT_TRACE(pDM_Odm,	ODM_COMP_RXHP, ODM_DBG_LOUD, ("illegal channel setting, 40MHz channel = %d\n", cur_channel));
+			return;
+		}
+		
 		ODM_RT_TRACE(pDM_Odm, 	ODM_COMP_RXHP, ODM_DBG_LOUD, ("RXHP RX HP flag = %d\n", pRX_HP_Table->RXHP_flag));
 		ODM_RT_TRACE(pDM_Odm,	ODM_COMP_RXHP, ODM_DBG_LOUD, ("RXHP FA = %d\n", FalseAlmCnt->Cnt_all));
 		ODM_RT_TRACE(pDM_Odm,	ODM_COMP_RXHP, ODM_DBG_LOUD, ("RXHP cur RSSI = %d, pre RSSI=%d\n", curRssi, preRssi));

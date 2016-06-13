@@ -218,42 +218,12 @@ typedef struct _RT_8188F_FIRMWARE_HDR
 
 #define EFUSE_PROTECT_BYTES_BANK		16
 
-// Description: Determine the types of C2H events that are the same in driver and Fw.
-// Fisrt constructed by tynli. 2009.10.09.
-typedef enum _C2H_EVT
-{
-	C2H_DBG = 0,
-	C2H_TSF = 1,
-	C2H_AP_RPT_RSP = 2,
-	C2H_CCX_TX_RPT = 3,	// The FW notify the report of the specific tx packet.
-	C2H_BT_RSSI = 4,
-	C2H_BT_OP_MODE = 5,
-	C2H_EXT_RA_RPT = 6,
-	C2H_8188F_BT_INFO = 9,
-	C2H_HW_INFO_EXCH = 10,
-	C2H_8188F_BT_MP_INFO = 11,
-	C2H_8188F_P2P_RPORT = 0x16,
-#ifdef CONFIG_FW_C2H_DEBUG
-	C2H_8188F_FW_DEBUG = 0xff,
-#endif //CONFIG_FW_C2H_DEBUG
-	MAX_C2HEVENT
-} C2H_EVT;
-
 typedef struct _C2H_EVT_HDR
 {
 	u8	CmdID;
 	u8	CmdLen;
 	u8	CmdSeq;
 } __attribute__((__packed__)) C2H_EVT_HDR, *PC2H_EVT_HDR;
-
-typedef enum tag_Package_Definition
-{
-    PACKAGE_DEFAULT,
-    PACKAGE_QFN68,
-    PACKAGE_TFBGA90,
-    PACKAGE_TFBGA80,
-    PACKAGE_TFBGA79
-}PACKAGE_TYPE_E;
 
 #define INCLUDE_MULTI_FUNC_BT(_Adapter)		(GET_HAL_DATA(_Adapter)->MultiFunc & RT_MULTI_FUNC_BT)
 #define INCLUDE_MULTI_FUNC_GPS(_Adapter)	(GET_HAL_DATA(_Adapter)->MultiFunc & RT_MULTI_FUNC_GPS)
@@ -286,8 +256,8 @@ void Hal_EfuseParsePowerSavingMode_8188F(PADAPTER pAdapter, u8 *hwinfo, BOOLEAN 
 void Hal_EfuseParseAntennaDiversity_8188F(PADAPTER padapter, u8 *hwinfo, BOOLEAN AutoLoadFail);
 void Hal_EfuseParseXtal_8188F(PADAPTER pAdapter, u8 *hwinfo, u8 AutoLoadFail);
 void Hal_EfuseParseThermalMeter_8188F(PADAPTER padapter, u8 *hwinfo, u8 AutoLoadFail);
-VOID Hal_EfuseParsePackageType_8188F(PADAPTER pAdapter,u8* hwinfo,BOOLEAN AutoLoadFail);
 void Hal_EfuseParseKFreeData_8188F(PADAPTER pAdapter, u8 *hwinfo, BOOLEAN AutoLoadFail);
+VOID Hal_EfuseParseMacHidden_8188F(PADAPTER pAdapter, u8 *hwinfo, BOOLEAN AutoLoadFail);
 
 #if 0 /* Do not need for rtl8188f */
 VOID Hal_EfuseParseVoltage_8188F(PADAPTER pAdapter,u8* hwinfo,BOOLEAN 	AutoLoadFail); 
@@ -300,6 +270,7 @@ void rtl8188f_c2h_packet_handler(PADAPTER padapter, u8 *pbuf, u16 length);
 void rtl8188f_set_pll_ref_clk_sel(_adapter *adapter, u8 sel);
 
 void rtl8188f_set_hal_ops(struct hal_ops *pHalFunc);
+void init_hal_spec_8188f(_adapter *adapter);
 void SetHwReg8188F(PADAPTER padapter, u8 variable, u8 *val);
 void GetHwReg8188F(PADAPTER padapter, u8 variable, u8 *val);
 #ifdef CONFIG_C2H_PACKET_EN

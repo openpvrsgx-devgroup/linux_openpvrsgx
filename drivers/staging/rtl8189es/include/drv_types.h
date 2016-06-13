@@ -93,6 +93,7 @@ typedef struct _ADAPTER _adapter, ADAPTER,*PADAPTER;
 #include <rtw_sreset.h>
 #include <hal_intf.h>
 #include <hal_com.h>
+#include<hal_com_h2c.h>
 #include <hal_com_led.h>
 #include "../hal/hal_dm.h"
 #include <rtw_qos.h>
@@ -118,9 +119,7 @@ typedef struct _ADAPTER _adapter, ADAPTER,*PADAPTER;
 #include <rtw_mem.h>
 #endif
 
-#ifdef CONFIG_P2P
 #include <rtw_p2p.h>
-#endif // CONFIG_P2P
 
 #ifdef CONFIG_TDLS
 #include <rtw_tdls.h>
@@ -240,6 +239,8 @@ struct registry_priv
 	u8	stbc_cap;
 	// BIT0: Enable VHT Beamformer, BIT1: Enable VHT Beamformee, BIT4: Enable HT Beamformer, BIT5: Enable HT Beamformee
 	u8	beamform_cap;
+	u8	beamformer_rf_num;
+	u8	beamformee_rf_num;
 #endif //CONFIG_80211N_HT
 
 #ifdef CONFIG_80211AC_VHT
@@ -255,7 +256,9 @@ struct registry_priv
 
 	u8	wifi_spec;// !turbo_mode
 	u8	special_rf_path; // 0: 2T2R ,1: only turn on path A 1T1R
+	char alpha2[2];
 	u8	channel_plan;
+	u8  full_ch_in_p2p_handshake; /* 0: reply only softap channel, 1: reply full channel list*/
 #ifdef CONFIG_BT_COEXIST
 	u8	btcoex;
 	u8	bt_iso;
@@ -310,6 +313,13 @@ struct registry_priv
 	u8	RegEnableTxPowerByRate;
 	u8	RegPowerBase;
 	u8	RegPwrTblSel;
+
+	u8 target_tx_pwr_valid;
+	s8 target_tx_pwr_2g[RF_PATH_MAX][RATE_SECTION_NUM];
+#ifdef CONFIG_IEEE80211_BAND_5GHZ
+	s8 target_tx_pwr_5g[RF_PATH_MAX][RATE_SECTION_NUM - 1];
+#endif
+
 	s8	TxBBSwing_2G;
 	s8	TxBBSwing_5G;
 	u8	AmplifierType_2G;
@@ -335,14 +345,20 @@ struct registry_priv
 	u8 adaptivity_mode;
 	u8 adaptivity_dml;
 	u8 adaptivity_dc_backoff;
+	s8 adaptivity_th_l2h_ini;
+	s8 adaptivity_th_edcca_hl_diff;
+
 	u8 boffefusemask;
 	BOOLEAN bFileMaskEfuse;
 #ifdef CONFIG_AUTO_CHNL_SEL_NHM
 	u8 acs_mode;
 	u8 acs_auto_scan;
 #endif
+	u32	reg_rxgain_offset_2g;
+	u32	reg_rxgain_offset_5gl;
+	u32	reg_rxgain_offset_5gm;
+	u32	reg_rxgain_offset_5gh;
 };
-
 
 //For registry parameters
 #define RGTRY_OFT(field) ((ULONG)FIELD_OFFSET(struct registry_priv,field))
@@ -361,7 +377,10 @@ struct registry_priv
 #define BSSID_OFT(field) ((ULONG)FIELD_OFFSET(WLAN_BSSID_EX,field))
 #define BSSID_SZ(field)   sizeof(((PWLAN_BSSID_EX) 0)->field)
 
-
+#define REGSTY_BW_2G(regsty) ((regsty)->bw_mode & 0x0F)
+#define REGSTY_BW_5G(regsty) (((regsty)->bw_mode) >> 4)
+#define REGSTY_IS_BW_2G_SUPPORT(regsty, bw) (REGSTY_BW_2G((regsty)) >= (bw))
+#define REGSTY_IS_BW_5G_SUPPORT(regsty, bw) (REGSTY_BW_5G((regsty)) >= (bw))
 
 #ifdef CONFIG_SDIO_HCI
 #include <drv_types_sdio.h>
@@ -584,14 +603,32 @@ struct rtw_traffic_statistics {
 
 #define SEC_STATUS_STA_PK_GK_CONFLICT_DIS_BMC_SEARCH	BIT0
 
-struct cam_ctl_t {
-	_lock lock;
-	u8 sec_cap;
-	u32 flags;
-	u64 bitmap;
+struct sec_cam_bmp {
+	u32 m0;
+#if (SEC_CAM_ENT_NUM_SW_LIMIT > 32)
+	u32 m1;
+#endif
+#if (SEC_CAM_ENT_NUM_SW_LIMIT > 64)
+	u32 m2;
+#endif
+#if (SEC_CAM_ENT_NUM_SW_LIMIT > 96)
+	u32 m3;
+#endif
 };
 
-struct cam_entry_cache {
+struct cam_ctl_t {
+	_lock lock;
+
+	u8 sec_cap;
+	u32 flags;
+
+	u8 num;
+	struct sec_cam_bmp used;
+
+	_mutex sec_cam_access_mutex;
+};
+
+struct sec_cam_ent {
 	u16 ctrl;
 	u8 mac[ETH_ALEN];
 	u8 key[16];
@@ -622,6 +659,8 @@ struct macid_ctl_t {
 	struct macid_bmp bmc;
 	struct macid_bmp if_g[IFACE_ID_MAX];
 	struct macid_bmp ch_g[2]; /* 2 ch concurrency */
+	u8 h2c_msr[MACID_NUM_SW_LIMIT];
+	struct sta_info *sta[MACID_NUM_SW_LIMIT];
 };
 
 struct rf_ctl_t {
@@ -685,7 +724,7 @@ struct dvobj_priv
 	struct macid_ctl_t macid_ctl;
 
 	struct cam_ctl_t cam_ctl;
-	struct cam_entry_cache cam_cache[TOTAL_CAM_ENTRY];
+	struct sec_cam_ent cam_cache[SEC_CAM_ENT_NUM_SW_LIMIT];
 
 	struct rf_ctl_t rf_ctl;
 
@@ -1141,8 +1180,9 @@ struct _ADAPTER{
 #endif
 };
 
-#define adapter_to_dvobj(adapter) (adapter->dvobj)
-#define adapter_to_pwrctl(adapter) (dvobj_to_pwrctl(adapter->dvobj))
+#define adapter_to_dvobj(adapter) ((adapter)->dvobj)
+#define adapter_to_regsty(adapter) dvobj_to_regsty(adapter_to_dvobj((adapter)))
+#define adapter_to_pwrctl(adapter) dvobj_to_pwrctl(adapter_to_dvobj((adapter)))
 #define adapter_wdev_data(adapter) (&((adapter)->wdev_data))
 #if defined(RTW_SINGLE_WIPHY)
 #define adapter_to_wiphy(adapter) dvobj_to_wiphy(adapter_to_dvobj(adapter))
@@ -1153,6 +1193,9 @@ struct _ADAPTER{
 #define adapter_to_rfctl(adapter) dvobj_to_rfctl(adapter_to_dvobj((adapter)))
 
 #define adapter_mac_addr(adapter) (adapter->mac_addr)
+
+#define mlme_to_adapter(mlme) container_of((mlme), struct _ADAPTER, mlmepriv)
+#define tdls_info_to_adapter(tdls) container_of((tdls), struct _ADAPTER, tdlsinfo)
 
 #define rtw_get_chip_type(adapter) (((PADAPTER)adapter)->dvobj->chip_type)
 #define rtw_get_hw_type(adapter) (((PADAPTER)adapter)->dvobj->HardwareType)

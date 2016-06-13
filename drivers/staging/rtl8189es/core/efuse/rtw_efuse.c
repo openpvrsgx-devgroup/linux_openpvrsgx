@@ -736,6 +736,24 @@ u8 efuse_GetCurrentSize(PADAPTER padapter, u16 *size)
 	return _SUCCESS;
 }
 //------------------------------------------------------------------------------
+u16 efuse_bt_GetMaxSize(PADAPTER padapter)
+{
+	u16	max_size;
+
+	max_size = 0;
+	EFUSE_GetEfuseDefinition(padapter, EFUSE_BT , TYPE_AVAILABLE_EFUSE_BYTES_TOTAL, (PVOID)&max_size, _FALSE);
+	return max_size;
+}
+
+u8 efuse_bt_GetCurrentSize(PADAPTER padapter, u16 *size)
+{
+	Efuse_PowerSwitch(padapter, _FALSE, _TRUE);
+	*size = Efuse_GetCurrentSize(padapter, EFUSE_BT, _FALSE);
+	Efuse_PowerSwitch(padapter, _FALSE, _FALSE);
+
+	return _SUCCESS;
+}
+
 u8 rtw_efuse_map_read(PADAPTER padapter, u16 addr, u16 cnts, u8 *data)
 {
 	u16	mapLen=0;
@@ -875,6 +893,10 @@ efuse_IsMasked(
 #if defined(CONFIG_RTL8723B)
 	if (IS_HARDWARE_TYPE_8723B(pAdapter))  
 		return (IS_MASKED(8723B,_MUSB,Offset)) ? TRUE : FALSE;
+#endif
+#if defined(CONFIG_RTL8703B)
+	if (IS_HARDWARE_TYPE_8703B(pAdapter))
+		return (IS_MASKED(8703B, _MUSB, Offset)) ? TRUE : FALSE;
 #endif
 #if defined(CONFIG_RTL8814A)
 	if (IS_HARDWARE_TYPE_8814A(pAdapter))
@@ -1475,6 +1497,33 @@ Efuse_InitSomeVar(
 	}
 	_rtw_memset((PVOID)&fakeBTEfuseInitMap[0], 0xff, EFUSE_BT_MAX_MAP_LEN);
 	_rtw_memset((PVOID)&fakeBTEfuseModifiedMap[0], 0xff, EFUSE_BT_MAX_MAP_LEN);
+}
+
+const u8 _mac_hidden_max_bw_to_hal_bw_cap[MAC_HIDDEN_MAX_BW_NUM] = {
+	0,
+	0,
+	(BW_CAP_160M|BW_CAP_80M|BW_CAP_40M|BW_CAP_20M|BW_CAP_10M|BW_CAP_5M),
+	(BW_CAP_5M),
+	(BW_CAP_10M|BW_CAP_5M),
+	(BW_CAP_20M|BW_CAP_10M|BW_CAP_5M),
+	(BW_CAP_40M|BW_CAP_20M|BW_CAP_10M|BW_CAP_5M),
+	(BW_CAP_80M|BW_CAP_40M|BW_CAP_20M|BW_CAP_10M|BW_CAP_5M),
+};
+
+u8 mac_hidden_wl_func_to_hal_wl_func(u8 func)
+{
+	u8 wl_func = 0;
+
+	if (func & BIT0)
+		wl_func |= WL_FUNC_MIRACAST;
+	if (func & BIT1)
+		wl_func |= WL_FUNC_P2P;
+	if (func & BIT2)
+		wl_func |= WL_FUNC_TDLS;
+	if (func & BIT3)
+		wl_func |= WL_FUNC_FTM;
+
+	return wl_func;
 }
 
 #ifdef PLATFORM_LINUX

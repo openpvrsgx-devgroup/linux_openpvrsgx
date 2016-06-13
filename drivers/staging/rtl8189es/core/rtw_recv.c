@@ -195,6 +195,19 @@ _func_exit_;
 
 }
 
+bool rtw_rframe_del_wfd_ie(union recv_frame *rframe, u8 ies_offset)
+{
+#define DBG_RFRAME_DEL_WFD_IE 0
+	u8 *ies = rframe->u.hdr.rx_data + sizeof(struct rtw_ieee80211_hdr_3addr) + ies_offset;
+	uint ies_len_ori = rframe->u.hdr.len - (ies - rframe->u.hdr.rx_data);
+	uint ies_len;
+
+	ies_len = rtw_del_wfd_ie(ies, ies_len_ori, DBG_RFRAME_DEL_WFD_IE ? __func__ : NULL);
+	rframe->u.hdr.len -= ies_len_ori - ies_len;
+
+	return ies_len_ori != ies_len;
+}
+
 union recv_frame *_rtw_alloc_recvframe (_queue *pfree_recv_queue)
 {
 
@@ -1025,14 +1038,20 @@ sint OnTDLS(_adapter *adapter, union recv_frame *precv_frame)
 			+ PAYLOAD_TYPE_LEN 
 			+ category_field;
 
+	DBG_871X("[TDLS] Recv %s from "MAC_FMT"\n", rtw_tdls_action_txt(*paction), MAC_ARG(pattrib->src));
+
+	if (hal_chk_wl_func(adapter, WL_FUNC_TDLS) == _FALSE) {
+		DBG_871X("Ignore tdls frame since hal doesn't support tdls\n");
+		ret = _FAIL;
+		return ret;
+	}
+
 	if (ptdlsinfo->tdls_enable == _FALSE) {
 		DBG_871X("recv tdls frame, "
 				"but tdls haven't enabled\n");
 		ret = _FAIL;
 		return ret;
 	}
-
-	DBG_871X("[TDLS] Recv %s from "MAC_FMT"\n", rtw_tdls_action_txt(*paction), MAC_ARG(pattrib->src));
 	
 	switch(*paction){
 	case TDLS_SETUP_REQUEST:
@@ -1807,7 +1826,7 @@ sint validate_recv_ctrl_frame(_adapter *padapter, union recv_frame *precv_frame)
 	else if(GetFrameSubType(pframe) == WIFI_NDPA) {
 #ifdef CONFIG_BEAMFORMING
 		beamforming_get_ndpa_frame(padapter, precv_frame);
-#endif
+#endif/*CONFIG_BEAMFORMING*/
 	}
 
 	return _FAIL;
@@ -2306,7 +2325,8 @@ _func_enter_;
 
 #if 1 //Dump rx packets
 {
-	u8 bDumpRxPkt;
+	u8 bDumpRxPkt = 0;
+
 	rtw_hal_get_def_var(adapter, HAL_DEF_DBG_DUMP_RXPKT, &(bDumpRxPkt));
 	if (bDumpRxPkt == 1) //dump all rx packets
 		dump_rx_packet(ptr);
@@ -4023,9 +4043,8 @@ static sint fill_radiotap_hdr(_adapter *padapter, union recv_frame *precvframe, 
 	if (pattrib->mfrag)
 		hdr_buf[rt_len] |= IEEE80211_RADIOTAP_F_FRAG;
 
-#ifndef CONFIG_RX_PACKET_APPEND_FCS
-		hdr_buf[rt_len] |= IEEE80211_RADIOTAP_F_FCS;
-#endif
+	/* always append FCS */
+	hdr_buf[rt_len] |= IEEE80211_RADIOTAP_F_FCS;
 
 	if (0)
 		hdr_buf[rt_len] |= IEEE80211_RADIOTAP_F_DATAPAD;
@@ -4900,9 +4919,6 @@ void rx_query_phy_status(
 		psta->rssi = pattrib->phy_info.RecvSignalPower;
 	//_exit_critical_bh(&pHalData->odm_stainfo_lock, &irqL);
 
-#ifdef CONFIG_SW_ANTENNA_DIVERSITY
-	if (GET_HAL_DATA(padapter)->odmpriv.RSSI_test == _FALSE)
-#endif
 	{
 		precvframe->u.hdr.psta = NULL;
 		if (pkt_info.bPacketMatchBSSID

@@ -21,12 +21,13 @@
 #ifndef	__PHYDMPOWERTRACKING_H__
 #define    __PHYDMPOWERTRACKING_H__
 
-#define POWRTRACKING_VERSION	"1.0"
+#define POWRTRACKING_VERSION	"1.1"
 
 #define		DPK_DELTA_MAPPING_NUM	13
 #define		index_mapping_HP_NUM	15	
 #define	OFDM_TABLE_SIZE 	43
 #define	CCK_TABLE_SIZE			33
+#define	CCK_TABLE_SIZE_88F	21
 #define TXSCALE_TABLE_SIZE 		37
 #define TXPWR_TRACK_TABLE_SIZE 	30
 #define DELTA_SWINGIDX_SIZE     30
@@ -37,11 +38,9 @@
 #define IQK_MAC_REG_NUM		4
 #define IQK_ADDA_REG_NUM		16
 #define IQK_BB_REG_NUM_MAX	10
-#if (RTL8192D_SUPPORT==1) 
-#define IQK_BB_REG_NUM		10
-#else
+
 #define IQK_BB_REG_NUM		9
-#endif
+
 
 
 #define IQK_Matrix_REG_NUM	8
@@ -54,6 +53,8 @@ extern	u1Byte CCKSwingTable_Ch14 [CCK_TABLE_SIZE][8];
 extern	u4Byte OFDMSwingTable_New[OFDM_TABLE_SIZE];
 extern	u1Byte CCKSwingTable_Ch1_Ch13_New[CCK_TABLE_SIZE][8];
 extern	u1Byte CCKSwingTable_Ch14_New [CCK_TABLE_SIZE][8];
+extern	u1Byte CCKSwingTable_Ch1_Ch14_88F[CCK_TABLE_SIZE_88F][16];
+
 
 extern  u4Byte TxScalingTable_Jaguar[TXSCALE_TABLE_SIZE];
 
@@ -196,9 +197,10 @@ typedef struct ODM_RF_Calibration_Structure
 	u4Byte	IQK_BB_backup[IQK_BB_REG_NUM];	
 	u4Byte 	TxIQC_8723B[2][3][2]; // { {S1: 0xc94, 0xc80, 0xc4c} , {S0: 0xc9c, 0xc88, 0xc4c}}
 	u4Byte 	RxIQC_8723B[2][2][2]; // { {S1: 0xc14, 0xca0} ,           {S0: 0xc14, 0xca0}}
-	u4Byte 	TxIQC_8703B[2][3][2]; // { {S1: 0xc94, 0xc80, 0xc4c} , {S0: 0xc9c, 0xc88, 0xc4c}}
-	u4Byte 	RxIQC_8703B[2][2][2]; // { {S1: 0xc14, 0xca0} ,           {S0: 0xc14, 0xca0}}
+	u4Byte	TxIQC_8703B[3][2];	/* { {S1: 0xc94, 0xc80, 0xc4c} , {S0: 0xc9c, 0xc88, 0xc4c}}*/
+	u4Byte	RxIQC_8703B[2][2];	/* { {S1: 0xc14, 0xca0} ,           {S0: 0xc14, 0xca0}}*/
 
+	
 
 	// <James> IQK time measurement 
 	u8Byte	IQK_StartTime;
@@ -220,6 +222,8 @@ typedef struct ODM_RF_Calibration_Structure
 	u4Byte  DpkTxAGC;
 	s4Byte  DpkGain;
 	u4Byte  DpkThermal[4];
+	s1Byte Modify_TxAGC_Value_OFDM;
+	s1Byte Modify_TxAGC_Value_CCK;
 }ODM_RF_CAL_T,*PODM_RF_CAL_T;
 
 

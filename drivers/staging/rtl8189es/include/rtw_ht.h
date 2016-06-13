@@ -93,6 +93,8 @@ typedef enum _RT_HT_INF1_CAP{
 #define	BEAMFORMING_HT_BEAMFORMER_ENABLE	BIT0	// Declare our NIC supports beamformer
 #define	BEAMFORMING_HT_BEAMFORMEE_ENABLE	BIT1	// Declare our NIC supports beamformee
 #define	BEAMFORMING_HT_BEAMFORMER_TEST		BIT2	// Transmiting Beamforming no matter the target supports it or not
+#define	BEAMFORMING_HT_BEAMFORMER_STEER_NUM		(BIT4|BIT5)
+#define	BEAMFORMING_HT_BEAMFORMEE_CHNL_EST_CAP	(BIT6|BIT7)
 
 //------------------------------------------------------------
 // The HT Control field
@@ -174,10 +176,13 @@ typedef enum _RT_HT_INF1_CAP{
 #define SET_HT_CAP_TXBF_EXPLICIT_COMP_STEERING_CAP(_pEleStart, _val)	SET_BITS_TO_LE_4BYTE(((u8 *)(_pEleStart))+21, 10, 1, ((u8)_val))
 #define SET_HT_CAP_TXBF_EXPLICIT_COMP_FEEDBACK_CAP(_pEleStart, _val)	SET_BITS_TO_LE_4BYTE(((u8 *)(_pEleStart))+21, 15, 2, ((u8)_val))
 #define SET_HT_CAP_TXBF_COMP_STEERING_NUM_ANTENNAS(_pEleStart, _val)	SET_BITS_TO_LE_4BYTE(((u8 *)(_pEleStart))+21, 23, 2, ((u8)_val))
+#define SET_HT_CAP_TXBF_CHNL_ESTIMATION_NUM_ANTENNAS(_pEleStart, _val)	SET_BITS_TO_LE_4BYTE(((u8 *)(_pEleStart))+21, 27, 2, ((u8)_val))
+
 
 #define GET_HT_CAP_TXBF_EXPLICIT_COMP_STEERING_CAP(_pEleStart)			LE_BITS_TO_4BYTE(((u8 *)(_pEleStart))+21, 10, 1)
 #define GET_HT_CAP_TXBF_EXPLICIT_COMP_FEEDBACK_CAP(_pEleStart)			LE_BITS_TO_4BYTE(((u8 *)(_pEleStart))+21, 15, 2)
-
+#define GET_HT_CAP_TXBF_COMP_STEERING_NUM_ANTENNAS(_pEleStart)		LE_BITS_TO_4BYTE(((u8 *)(_pEleStart))+21, 23, 2)
+#define GET_HT_CAP_TXBF_CHNL_ESTIMATION_NUM_ANTENNAS(_pEleStart)		LE_BITS_TO_4BYTE(((u8 *)(_pEleStart))+21, 27, 2)
 
 /* HT Operation element */
 

@@ -615,6 +615,8 @@ union recv_frame{
 
 };
 
+bool rtw_rframe_del_wfd_ie(union recv_frame *rframe, u8 ies_offset);
+
 typedef enum _RX_PACKET_TYPE{
 	NORMAL_RX,//Normal rx packet
 	TX_REPORT1,//CCX

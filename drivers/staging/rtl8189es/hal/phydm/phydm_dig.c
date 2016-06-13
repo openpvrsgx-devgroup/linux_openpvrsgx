@@ -75,7 +75,7 @@ int
 getIGIForDiff(int value_IGI)
 {
 	#define ONERCCA_LOW_TH		0x30
-	#define ONERCCA_LOW_DIFF	8
+	#define ONERCCA_LOW_DIFF		8
 
 	if (value_IGI < ONERCCA_LOW_TH) {
 		if ((ONERCCA_LOW_TH - value_IGI) < ONERCCA_LOW_DIFF)
@@ -404,34 +404,37 @@ ODM_Write_DIG(
 	PDM_ODM_T		pDM_Odm = (PDM_ODM_T)pDM_VOID;
 	pDIG_T			pDM_DigTable = &pDM_Odm->DM_DigTable;
 
-	if(pDM_DigTable->bStopDIG)
-	{
-		ODM_RT_TRACE(pDM_Odm,ODM_COMP_DIG, ODM_DBG_LOUD, ("Stop Writing IGI\n"));
+	if (pDM_DigTable->bStopDIG) {
+		ODM_RT_TRACE(pDM_Odm, ODM_COMP_DIG, ODM_DBG_LOUD, ("ODM_Write_DIG(): Stop Writing IGI\n"));
 		return;
 	}
 
-	ODM_RT_TRACE(pDM_Odm,ODM_COMP_DIG, ODM_DBG_TRACE, ("ODM_REG(IGI_A,pDM_Odm)=0x%x, ODM_BIT(IGI,pDM_Odm)=0x%x \n",
+	ODM_RT_TRACE(pDM_Odm, ODM_COMP_DIG, ODM_DBG_TRACE, ("ODM_Write_DIG(): ODM_REG(IGI_A,pDM_Odm)=0x%x, ODM_BIT(IGI,pDM_Odm)=0x%x\n",
 		ODM_REG(IGI_A,pDM_Odm),ODM_BIT(IGI,pDM_Odm)));
 
 	//1 Check initial gain by upper bound		
-	if(!pDM_DigTable->bPSDInProgress)
+	if ((!pDM_DigTable->bPSDInProgress) && pDM_Odm->bLinked)
 	{
-		if(CurrentIGI > pDM_DigTable->rx_gain_range_max)
-		{
-			ODM_RT_TRACE(pDM_Odm,ODM_COMP_DIG, ODM_DBG_TRACE, ("CurrentIGI(0x%02x) is larger than upper bound !!\n",CurrentIGI));
+		if (CurrentIGI > pDM_DigTable->rx_gain_range_max) {
+			ODM_RT_TRACE(pDM_Odm, ODM_COMP_DIG, ODM_DBG_TRACE, ("ODM_Write_DIG(): CurrentIGI(0x%02x) is larger than upper bound !!\n", CurrentIGI));
 			CurrentIGI = pDM_DigTable->rx_gain_range_max;
 		}
-		if(pDM_Odm->SupportAbility & ODM_BB_ADAPTIVITY && pDM_Odm->adaptivity_flag == TRUE)
+		if (pDM_Odm->SupportAbility & ODM_BB_ADAPTIVITY && pDM_Odm->adaptivity_flag == TRUE)
 		{
 			if(CurrentIGI > pDM_Odm->Adaptivity_IGI_upper)
 				CurrentIGI = pDM_Odm->Adaptivity_IGI_upper;
 	
-			ODM_RT_TRACE(pDM_Odm, ODM_COMP_DIG, ODM_DBG_LOUD, ("odm_write_DIG(): Adaptivity case: Force upper bound to 0x%x !!!!!!\n", CurrentIGI));
+			ODM_RT_TRACE(pDM_Odm, ODM_COMP_DIG, ODM_DBG_LOUD, ("ODM_Write_DIG(): Adaptivity case: Force upper bound to 0x%x !!!!!!\n", CurrentIGI));
 		}
 	}
 
 	if(pDM_DigTable->CurIGValue != CurrentIGI)
 	{
+
+		/*Add by YuChen for USB IO too slow issue*/
+		if ((pDM_Odm->SupportAbility & ODM_BB_ADAPTIVITY) && (CurrentIGI > pDM_DigTable->CurIGValue))
+			Phydm_Adaptivity(pDM_Odm, CurrentIGI);
+
 		//1 Set IGI value
 		if(pDM_Odm->SupportPlatform & (ODM_WIN|ODM_CE))
 		{ 
@@ -477,77 +480,119 @@ ODM_Write_DIG(
 		pDM_DigTable->CurIGValue = CurrentIGI;
 	}
 
-	ODM_RT_TRACE(pDM_Odm,ODM_COMP_DIG, ODM_DBG_TRACE, ("CurrentIGI(0x%02x). \n",CurrentIGI));
+	ODM_RT_TRACE(pDM_Odm, ODM_COMP_DIG, ODM_DBG_TRACE, ("ODM_Write_DIG(): CurrentIGI(0x%02x).\n", CurrentIGI));
 	
 }
 
 VOID
 odm_PauseDIG(
 	IN		PVOID					pDM_VOID,
-	IN		ODM_Pause_DIG_TYPE		PauseType,
+	IN		PHYDM_PAUSE_TYPE		PauseType,
+	IN		PHYDM_PAUSE_LEVEL		pause_level,
 	IN		u1Byte					IGIValue
 )
 {
 	PDM_ODM_T			pDM_Odm = (PDM_ODM_T)pDM_VOID;
 	pDIG_T				pDM_DigTable = &pDM_Odm->DM_DigTable;
 
-	ODM_RT_TRACE(pDM_Odm,ODM_COMP_DIG, ODM_DBG_LOUD, ("odm_PauseDIG()=========>\n"));
+	ODM_RT_TRACE(pDM_Odm, ODM_COMP_DIG, ODM_DBG_LOUD, ("odm_PauseDIG()=========> level = %d\n", pause_level));
 
-#if (DM_ODM_SUPPORT_TYPE & ODM_WIN)	
-	if (*pDM_DigTable->bP2PInProcess)
-	{
-		ODM_RT_TRACE(pDM_Odm,ODM_COMP_DIG, ODM_DBG_LOUD, ("odm_PauseDIG(): P2P in progress !!\n"));
+	if ((pDM_DigTable->pause_dig_level == 0) && (!(pDM_Odm->SupportAbility & ODM_BB_DIG) || !(pDM_Odm->SupportAbility & ODM_BB_FA_CNT))) {
+		ODM_RT_TRACE(pDM_Odm, ODM_COMP_DIG, ODM_DBG_LOUD, 
+			("odm_PauseDIG(): Return: SupportAbility DIG or FA is disabled !!\n"));
 		return;
 	}
-#endif
 
-	if(!pDM_DigTable->bPauseDIG && (!(pDM_Odm->SupportAbility & ODM_BB_DIG) || !(pDM_Odm->SupportAbility & ODM_BB_FA_CNT)))
-	{
-		ODM_RT_TRACE(pDM_Odm,ODM_COMP_DIG, ODM_DBG_LOUD, ("odm_PauseDIG(): Return: SupportAbility ODM_BB_DIG or ODM_BB_FA_CNT is disabled\n"));
+	if (pause_level > DM_DIG_MAX_PAUSE_TYPE) {
+		ODM_RT_TRACE(pDM_Odm, ODM_COMP_DIG, ODM_DBG_LOUD, 
+			("odm_PauseDIG(): Return: Wrong pause level !!\n"));
 		return;
 	}
+
+	ODM_RT_TRACE(pDM_Odm, ODM_COMP_DIG, ODM_DBG_LOUD, ("odm_PauseDIG(): pause level = 0x%x, Current value = 0x%x\n", pDM_DigTable->pause_dig_level, IGIValue));
+	ODM_RT_TRACE(pDM_Odm, ODM_COMP_DIG, ODM_DBG_LOUD, ("odm_PauseDIG(): pause value = 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x\n", 
+		pDM_DigTable->pause_dig_value[7], pDM_DigTable->pause_dig_value[6], pDM_DigTable->pause_dig_value[5], pDM_DigTable->pause_dig_value[4],
+		pDM_DigTable->pause_dig_value[3], pDM_DigTable->pause_dig_value[2], pDM_DigTable->pause_dig_value[1], pDM_DigTable->pause_dig_value[0]));
 	
-	switch(PauseType)
+	switch (PauseType) {
+	/* Pause DIG */
+	case PHYDM_PAUSE:
 	{
-		//1 Pause DIG
-		case ODM_PAUSE_DIG:
-			//2 Disable DIG
-			ODM_CmnInfoUpdate(pDM_Odm, ODM_CMNINFO_ABILITY, pDM_Odm->SupportAbility & (~ODM_BB_DIG));
-			ODM_RT_TRACE(pDM_Odm,ODM_COMP_DIG, ODM_DBG_LOUD, ("odm_PauseDIG(): Pause DIG !!\n"));
+		/* Disable DIG */
+		ODM_CmnInfoUpdate(pDM_Odm, ODM_CMNINFO_ABILITY, pDM_Odm->SupportAbility & (~ODM_BB_DIG));
+		ODM_RT_TRACE(pDM_Odm, ODM_COMP_DIG, ODM_DBG_LOUD, ("odm_PauseDIG(): Pause DIG !!\n"));
+		
+		/* Backup IGI value */
+		if (pDM_DigTable->pause_dig_level == 0) {
+			pDM_DigTable->IGIBackup = pDM_DigTable->CurIGValue;
+			ODM_RT_TRACE(pDM_Odm, ODM_COMP_DIG, ODM_DBG_LOUD, ("odm_PauseDIG(): Backup IGI  = 0x%x, new IGI = 0x%x\n", pDM_DigTable->IGIBackup, IGIValue));
+		}
 
-			//2 Backup IGI value
-			if(!pDM_DigTable->bPauseDIG)
-			{
-				pDM_DigTable->IGIBackup = pDM_DigTable->CurIGValue;
-				pDM_DigTable->bPauseDIG = TRUE;
-			}
-			ODM_RT_TRACE(pDM_Odm,ODM_COMP_DIG, ODM_DBG_LOUD, ("odm_PauseDIG(): Backup IGI  = 0x%x\n", pDM_DigTable->IGIBackup));
+		/* Record IGI value */
+		pDM_DigTable->pause_dig_value[pause_level] = IGIValue;
 
-			//2 Write new IGI value
+		/* Update pause level */
+		pDM_DigTable->pause_dig_level = (pDM_DigTable->pause_dig_level | BIT(pause_level));
+
+		/* Write new IGI value */
+		if (BIT(pause_level + 1) > pDM_DigTable->pause_dig_level) {
 			ODM_Write_DIG(pDM_Odm, IGIValue);
-			ODM_RT_TRACE(pDM_Odm,ODM_COMP_DIG, ODM_DBG_LOUD, ("odm_PauseDIG(): Write new IGI = 0x%x\n", IGIValue));
-			break;
-
-		//1 Resume DIG
-		case ODM_RESUME_DIG:
-			if(pDM_DigTable->bPauseDIG)
-			{
-				//2 Write backup IGI value
-				ODM_Write_DIG(pDM_Odm, pDM_DigTable->IGIBackup);
-				pDM_DigTable->bPauseDIG = FALSE;
-				pDM_DigTable->bIgnoreDIG = TRUE;
-				ODM_RT_TRACE(pDM_Odm,ODM_COMP_DIG, ODM_DBG_LOUD, ("odm_PauseDIG(): Write original IGI = 0x%x\n", pDM_DigTable->IGIBackup));
-
-				//2 Enable DIG
-				ODM_CmnInfoUpdate(pDM_Odm, ODM_CMNINFO_ABILITY, pDM_Odm->SupportAbility | ODM_BB_DIG);	
-				ODM_RT_TRACE(pDM_Odm,ODM_COMP_DIG, ODM_DBG_LOUD, ("odm_PauseDIG(): Resume DIG !!\n"));
-			}
-			break;
-
-		default:
-			ODM_RT_TRACE(pDM_Odm,ODM_COMP_DIG, ODM_DBG_LOUD, ("odm_PauseDIG(): Wrong  type !!\n"));
-			break;
+			ODM_RT_TRACE(pDM_Odm, ODM_COMP_DIG, ODM_DBG_LOUD, ("odm_PauseDIG(): IGI of higher level = 0x%x\n",  IGIValue));
+		}
+		break;
 	}
+	/* Resume DIG */
+	case PHYDM_RESUME:
+	{
+		/* check if the level is illegal or not */
+		if ((pDM_DigTable->pause_dig_level & (BIT(pause_level))) != 0) {
+			pDM_DigTable->pause_dig_level = pDM_DigTable->pause_dig_level & (~(BIT(pause_level)));
+			pDM_DigTable->pause_dig_value[pause_level] = 0;
+			ODM_RT_TRACE(pDM_Odm, ODM_COMP_DIG, ODM_DBG_LOUD, ("odm_PauseDIG(): Resume DIG !!\n"));
+		} else {
+			ODM_RT_TRACE(pDM_Odm, ODM_COMP_DIG, ODM_DBG_LOUD, ("odm_PauseDIG(): Wrong resume level !!\n"));
+			break;
+		}
+
+		/* Resume DIG */
+		if (pDM_DigTable->pause_dig_level == 0) {
+			/* Write backup IGI value */
+			ODM_Write_DIG(pDM_Odm, pDM_DigTable->IGIBackup);
+			pDM_DigTable->bIgnoreDIG = TRUE;
+			ODM_RT_TRACE(pDM_Odm, ODM_COMP_DIG, ODM_DBG_LOUD, ("odm_PauseDIG(): Write original IGI = 0x%x\n", pDM_DigTable->IGIBackup));
+
+			/* Enable DIG */
+			ODM_CmnInfoUpdate(pDM_Odm, ODM_CMNINFO_ABILITY, pDM_Odm->SupportAbility | ODM_BB_DIG);	
+			break;
+		}
+
+		if (BIT(pause_level) > pDM_DigTable->pause_dig_level) {
+			u1Byte		max_level;
+		
+			/* Calculate the maximum level now */
+			for (max_level = (pause_level - 1); max_level >= 0; max_level--) {
+				if ((pDM_DigTable->pause_dig_level & BIT(max_level)) > 0)
+					break;
+			}
+		
+			/* write IGI of lower level */
+			ODM_Write_DIG(pDM_Odm, pDM_DigTable->pause_dig_value[max_level]);
+			ODM_RT_TRACE(pDM_Odm, ODM_COMP_DIG, ODM_DBG_LOUD, ("odm_PauseDIG(): Write IGI (0x%x) of level (%d)\n",  
+				 pDM_DigTable->pause_dig_value[max_level], max_level));
+			break;
+		}
+		break;
+	}
+	default:
+		ODM_RT_TRACE(pDM_Odm, ODM_COMP_DIG, ODM_DBG_LOUD, ("odm_PauseDIG(): Wrong  type !!\n"));
+		break;
+	}
+
+	ODM_RT_TRACE(pDM_Odm, ODM_COMP_DIG, ODM_DBG_LOUD, ("odm_PauseDIG(): pause level = 0x%x, Current value = 0x%x\n", pDM_DigTable->pause_dig_level, IGIValue));
+	ODM_RT_TRACE(pDM_Odm, ODM_COMP_DIG, ODM_DBG_LOUD, ("odm_PauseDIG(): pause value = 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x\n", 
+		pDM_DigTable->pause_dig_value[7], pDM_DigTable->pause_dig_value[6], pDM_DigTable->pause_dig_value[5], pDM_DigTable->pause_dig_value[4],
+		pDM_DigTable->pause_dig_value[3], pDM_DigTable->pause_dig_value[2], pDM_DigTable->pause_dig_value[1], pDM_DigTable->pause_dig_value[0]));
+
 }
 
 BOOLEAN 
@@ -654,7 +699,6 @@ odm_DIGInit(
 #endif
 
 	pDM_DigTable->bStopDIG = FALSE;
-	pDM_DigTable->bPauseDIG = FALSE;
 	pDM_DigTable->bIgnoreDIG = FALSE;
 	pDM_DigTable->bPSDInProgress = FALSE;
 	pDM_DigTable->CurIGValue = (u1Byte) ODM_GetBBReg(pDM_Odm, ODM_REG(IGI_A,pDM_Odm), ODM_BIT(IGI,pDM_Odm));
@@ -701,6 +745,11 @@ odm_DIGInit(
 
 	//To Initi BT30 IGI
 	pDM_DigTable->BT30_CurIGI=0x32;
+
+	ODM_Memory_Set(pDM_Odm, pDM_DigTable->pause_dig_value, 0, (DM_DIG_MAX_PAUSE_TYPE + 1));
+	pDM_DigTable->pause_dig_level = 0;
+	ODM_Memory_Set(pDM_Odm, pDM_DigTable->pause_cckpd_value, 0, (DM_DIG_MAX_PAUSE_TYPE + 1));
+	pDM_DigTable->pause_cckpd_level = 0;
 #endif
 
 	if(pDM_Odm->BoardType & (ODM_BOARD_EXT_PA|ODM_BOARD_EXT_LNA))
@@ -1073,14 +1122,13 @@ odm_DIG(
 	{
 		if((pDM_Odm->SupportICType & ODM_ANTDIV_SUPPORT) && (pDM_Odm->SupportAbility & ODM_BB_ANT_DIV))
 		{
-			if(pDM_Odm->AntDivType == CG_TRX_HW_ANTDIV || pDM_Odm->AntDivType == CG_TRX_SMART_ANTDIV ||pDM_Odm->AntDivType == S0S1_SW_ANTDIV)
-			{
-				if(pDM_DigTable->AntDiv_RSSI_max > DIG_MaxOfMin)
+			if (pDM_Odm->AntDivType == CG_TRX_HW_ANTDIV || pDM_Odm->AntDivType == CG_TRX_SMART_ANTDIV) {
+				if (pDM_DigTable->AntDiv_RSSI_max > DIG_MaxOfMin)
 					DIG_Dynamic_MIN = DIG_MaxOfMin;
 				else
 					DIG_Dynamic_MIN = (u1Byte) pDM_DigTable->AntDiv_RSSI_max;
-				ODM_RT_TRACE(pDM_Odm,ODM_COMP_ANT_DIV, ODM_DBG_LOUD, ("odm_DIG(): Antenna diversity case: Force lower bound to 0x%x !!!!!!\n", DIG_Dynamic_MIN));
-				ODM_RT_TRACE(pDM_Odm,ODM_COMP_ANT_DIV, ODM_DBG_LOUD, ("odm_DIG(): Antenna diversity case: RSSI_max = 0x%x !!!!!!\n", pDM_DigTable->AntDiv_RSSI_max));
+				ODM_RT_TRACE(pDM_Odm, ODM_COMP_DIG, ODM_DBG_LOUD, ("odm_DIG(): Antenna diversity case: Force lower bound to 0x%x !!!!!!\n", DIG_Dynamic_MIN));
+				ODM_RT_TRACE(pDM_Odm, ODM_COMP_DIG, ODM_DBG_LOUD, ("odm_DIG(): Antenna diversity case: RSSI_max = 0x%x !!!!!!\n", pDM_DigTable->AntDiv_RSSI_max));
 			}
 		}
 	}
@@ -1114,6 +1162,7 @@ odm_DIG(
 #if (DM_ODM_SUPPORT_TYPE & (ODM_WIN|ODM_CE))
 	if(pDM_Odm->bLinked && !FirstConnect)
 	{
+		ODM_RT_TRACE(pDM_Odm, ODM_COMP_DIG, ODM_DBG_LOUD, ("Beacon Num (%d)\n", pDM_Odm->PhyDbgInfo.NumQryBeaconPkt));
 		if((pDM_Odm->PhyDbgInfo.NumQryBeaconPkt < 5) && (pDM_Odm->bsta_state))
 		{
 			pDM_DigTable->rx_gain_range_min = dm_dig_min;
@@ -1518,8 +1567,7 @@ odm_FalseAlarmCounterStatistics(
 		
 		/* read OFDM FA counter */
 		FalseAlmCnt->Cnt_Ofdm_fail = ODM_GetBBReg(pDM_Odm, ODM_REG_OFDM_FA_11AC, bMaskLWord);
-		FalseAlmCnt->Cnt_SB_Search_fail = ODM_GetBBReg(pDM_Odm, ODM_REG_OFDM_FA_TYPE2_11AC, bMaskLWord);
-		FalseAlmCnt->Cnt_Ofdm_fail = FalseAlmCnt->Cnt_Ofdm_fail + FalseAlmCnt->Cnt_SB_Search_fail;
+		
 
 		/* Read CCK FA counter */
 		FalseAlmCnt->Cnt_Cck_fail = ODM_GetBBReg(pDM_Odm, ODM_REG_CCK_FA_11AC, bMaskLWord);
@@ -1601,71 +1649,111 @@ odm_FalseAlarmCounterStatistics(
 VOID
 odm_PauseCCKPacketDetection(
 	IN		PVOID					pDM_VOID,
-	IN		ODM_Pause_CCKPD_TYPE	PauseType,
+	IN		PHYDM_PAUSE_TYPE		PauseType,
+	IN		PHYDM_PAUSE_LEVEL		pause_level,
 	IN		u1Byte					CCKPDThreshold
 )
 {
 	PDM_ODM_T			pDM_Odm = (PDM_ODM_T)pDM_VOID;
 	pDIG_T				pDM_DigTable = &pDM_Odm->DM_DigTable;
-	static	BOOLEAN		bPaused = FALSE;
 
-	ODM_RT_TRACE(pDM_Odm,ODM_COMP_CCK_PD, ODM_DBG_LOUD, ("odm_PauseCCKPacketDetection()=========>\n"));
+	ODM_RT_TRACE(pDM_Odm, ODM_COMP_CCK_PD, ODM_DBG_LOUD, ("odm_PauseCCKPacketDetection()=========> level = %d\n", pause_level));
 
-#if (DM_ODM_SUPPORT_TYPE & ODM_WIN)	
-	if (*pDM_DigTable->bP2PInProcess)
-	{
-		ODM_RT_TRACE(pDM_Odm,ODM_COMP_CCK_PD, ODM_DBG_LOUD, ("P2P in progress !!\n"));
-		return;
-	}
-#endif
-
-	if(!bPaused && (!(pDM_Odm->SupportAbility & ODM_BB_CCK_PD) || !(pDM_Odm->SupportAbility & ODM_BB_FA_CNT)))
-	{
-		ODM_RT_TRACE(pDM_Odm,ODM_COMP_CCK_PD, ODM_DBG_LOUD, ("Return: SupportAbility ODM_BB_CCK_PD or ODM_BB_FA_CNT is disabled\n"));
+	if ((pDM_DigTable->pause_cckpd_level == 0) && (!(pDM_Odm->SupportAbility & ODM_BB_CCK_PD) || !(pDM_Odm->SupportAbility & ODM_BB_FA_CNT))) {
+		ODM_RT_TRACE(pDM_Odm, ODM_COMP_CCK_PD, ODM_DBG_LOUD, ("Return: SupportAbility ODM_BB_CCK_PD or ODM_BB_FA_CNT is disabled\n"));
 		return;
 	}
 
-	switch(PauseType)
+	if (pause_level > DM_DIG_MAX_PAUSE_TYPE) {
+		ODM_RT_TRACE(pDM_Odm, ODM_COMP_CCK_PD, ODM_DBG_LOUD, 
+			("odm_PauseCCKPacketDetection(): Return: Wrong pause level !!\n"));
+		return;
+	}
+
+	ODM_RT_TRACE(pDM_Odm, ODM_COMP_CCK_PD, ODM_DBG_LOUD, ("odm_PauseCCKPacketDetection(): pause level = 0x%x, Current value = 0x%x\n", pDM_DigTable->pause_cckpd_level, CCKPDThreshold));
+	ODM_RT_TRACE(pDM_Odm, ODM_COMP_CCK_PD, ODM_DBG_LOUD, ("odm_PauseCCKPacketDetection(): pause value = 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x\n", 
+		pDM_DigTable->pause_cckpd_value[7], pDM_DigTable->pause_cckpd_value[6], pDM_DigTable->pause_cckpd_value[5], pDM_DigTable->pause_cckpd_value[4],
+		pDM_DigTable->pause_cckpd_value[3], pDM_DigTable->pause_cckpd_value[2], pDM_DigTable->pause_cckpd_value[1], pDM_DigTable->pause_cckpd_value[0]));
+
+	switch (PauseType) {
+	/* Pause CCK Packet Detection Threshold */
+	case PHYDM_PAUSE:
 	{
-		//1 Pause CCK Packet Detection Threshold
-		case ODM_PAUSE_CCKPD:
-			//2 Disable DIG
-			ODM_CmnInfoUpdate(pDM_Odm, ODM_CMNINFO_ABILITY, pDM_Odm->SupportAbility & (~ODM_BB_CCK_PD));
-			ODM_RT_TRACE(pDM_Odm,ODM_COMP_CCK_PD, ODM_DBG_LOUD, ("Pause CCK packet detection threshold !!\n"));
+		/* Disable CCK PD */
+		ODM_CmnInfoUpdate(pDM_Odm, ODM_CMNINFO_ABILITY, pDM_Odm->SupportAbility & (~ODM_BB_CCK_PD));
+		ODM_RT_TRACE(pDM_Odm, ODM_COMP_CCK_PD, ODM_DBG_LOUD, ("odm_PauseCCKPacketDetection(): Pause CCK packet detection threshold !!\n"));
 
-			//2 Backup CCK Packet Detection Threshold value
-			if(!bPaused)
-			{
-				pDM_DigTable->CCKPDBackup = pDM_DigTable->CurCCK_CCAThres;
-				bPaused = TRUE;
-			}
-			ODM_RT_TRACE(pDM_Odm,ODM_COMP_CCK_PD, ODM_DBG_LOUD, ("Backup CCK packet detection tgreshold  = %d\n", pDM_DigTable->CCKPDBackup));
+		/* Backup original CCK PD threshold decided by CCK PD mechanism */
+		if (pDM_DigTable->pause_cckpd_level == 0) {
+			pDM_DigTable->CCKPDBackup = pDM_DigTable->CurCCK_CCAThres;
+			ODM_RT_TRACE(pDM_Odm, ODM_COMP_CCK_PD, ODM_DBG_LOUD, 
+				("odm_PauseCCKPacketDetection(): Backup CCKPD  = 0x%x, new CCKPD = 0x%x\n", pDM_DigTable->CCKPDBackup, CCKPDThreshold));
+		}
 
-			//2 Write new CCK Packet Detection Threshold value
+		/* Update pause level */
+		pDM_DigTable->pause_cckpd_level = (pDM_DigTable->pause_cckpd_level | BIT(pause_level));
+
+		/* Record CCK PD threshold */
+		pDM_DigTable->pause_cckpd_value[pause_level] = CCKPDThreshold;
+		
+		/* Write new CCK PD threshold */
+		if (BIT(pause_level + 1) > pDM_DigTable->pause_cckpd_level) {
 			ODM_Write_CCK_CCA_Thres(pDM_Odm, CCKPDThreshold);
-			ODM_RT_TRACE(pDM_Odm,ODM_COMP_CCK_PD, ODM_DBG_LOUD, ("Write new CCK packet detection tgreshold = %d\n", CCKPDThreshold));
+			ODM_RT_TRACE(pDM_Odm, ODM_COMP_CCK_PD, ODM_DBG_LOUD, ("odm_PauseCCKPacketDetection(): CCKPD of higher level = 0x%x\n", CCKPDThreshold));
+		}
+		break;
+	}
+	/* Resume CCK Packet Detection Threshold */
+	case PHYDM_RESUME:
+	{	
+		/* check if the level is illegal or not */
+		if ((pDM_DigTable->pause_cckpd_level & (BIT(pause_level))) != 0) {
+			pDM_DigTable->pause_cckpd_level = pDM_DigTable->pause_cckpd_level & (~(BIT(pause_level)));
+			pDM_DigTable->pause_cckpd_value[pause_level] = 0;
+			ODM_RT_TRACE(pDM_Odm, ODM_COMP_CCK_PD, ODM_DBG_LOUD, ("odm_PauseCCKPacketDetection(): Resume CCK PD !!\n"));
+		} else {
+			ODM_RT_TRACE(pDM_Odm, ODM_COMP_CCK_PD, ODM_DBG_LOUD, ("odm_PauseCCKPacketDetection(): Wrong resume level !!\n"));
 			break;
-			
-		//1 Resume CCK Packet Detection Threshold
-		case ODM_RESUME_CCKPD:
-			if(bPaused)
-			{
-				//2 Write backup CCK Packet Detection Threshold value
-				ODM_Write_CCK_CCA_Thres(pDM_Odm, pDM_DigTable->CCKPDBackup);
-				bPaused = FALSE;
-				ODM_RT_TRACE(pDM_Odm,ODM_COMP_CCK_PD, ODM_DBG_LOUD, ("Write original CCK packet detection tgreshold = %d\n", pDM_DigTable->CCKPDBackup));
+		}
 
-				//2 Enable CCK Packet Detection Threshold
-				ODM_CmnInfoUpdate(pDM_Odm, ODM_CMNINFO_ABILITY, pDM_Odm->SupportAbility | ODM_BB_CCK_PD);		
-				ODM_RT_TRACE(pDM_Odm,ODM_COMP_CCK_PD, ODM_DBG_LOUD, ("Resume CCK packet detection threshold  !!\n"));
+		/* Resume DIG */
+		if (pDM_DigTable->pause_cckpd_level == 0) {
+			/* Write backup IGI value */
+			ODM_Write_CCK_CCA_Thres(pDM_Odm, pDM_DigTable->CCKPDBackup);
+			/* pDM_DigTable->bIgnoreDIG = TRUE; */
+			ODM_RT_TRACE(pDM_Odm, ODM_COMP_CCK_PD, ODM_DBG_LOUD, ("odm_PauseCCKPacketDetection(): Write original CCKPD = 0x%x\n", pDM_DigTable->CCKPDBackup));
+
+			/* Enable DIG */
+			ODM_CmnInfoUpdate(pDM_Odm, ODM_CMNINFO_ABILITY, pDM_Odm->SupportAbility | ODM_BB_CCK_PD);	
+			break;
+		}
+
+		if (BIT(pause_level) > pDM_DigTable->pause_cckpd_level) {
+			u1Byte	max_level;
+		
+			/* Calculate the maximum level now */
+			for (max_level = (pause_level - 1); max_level >= 0; max_level--) {
+				if ((pDM_DigTable->pause_cckpd_level & BIT(max_level)) > 0)
+					break;
 			}
+		
+			/* write CCKPD of lower level */
+			ODM_Write_CCK_CCA_Thres(pDM_Odm, pDM_DigTable->pause_cckpd_value[max_level]);
+			ODM_RT_TRACE(pDM_Odm, ODM_COMP_CCK_PD, ODM_DBG_LOUD, ("odm_PauseCCKPacketDetection(): Write CCKPD (0x%x) of level (%d)\n", 
+				pDM_DigTable->pause_cckpd_value[max_level], max_level));
 			break;
-			
-		default:
-			ODM_RT_TRACE(pDM_Odm,ODM_COMP_CCK_PD, ODM_DBG_LOUD, ("Wrong  type !!\n"));
-			break;
+		}
+		break;
+	}
+	default:
+		ODM_RT_TRACE(pDM_Odm, ODM_COMP_CCK_PD, ODM_DBG_LOUD, ("odm_PauseCCKPacketDetection(): Wrong  type !!\n"));
+		break;
 	}	
-	return;
+	
+	ODM_RT_TRACE(pDM_Odm, ODM_COMP_CCK_PD, ODM_DBG_LOUD, ("odm_PauseCCKPacketDetection(): pause level = 0x%x, Current value = 0x%x\n", pDM_DigTable->pause_cckpd_level, CCKPDThreshold));
+	ODM_RT_TRACE(pDM_Odm, ODM_COMP_CCK_PD, ODM_DBG_LOUD, ("odm_PauseCCKPacketDetection(): pause value = 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x\n", 
+		pDM_DigTable->pause_cckpd_value[7], pDM_DigTable->pause_cckpd_value[6], pDM_DigTable->pause_cckpd_value[5], pDM_DigTable->pause_cckpd_value[4],
+		pDM_DigTable->pause_cckpd_value[3], pDM_DigTable->pause_cckpd_value[2], pDM_DigTable->pause_cckpd_value[1], pDM_DigTable->pause_cckpd_value[0]));
 }
 
 

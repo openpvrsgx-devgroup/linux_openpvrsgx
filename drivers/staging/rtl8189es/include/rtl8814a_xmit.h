@@ -58,6 +58,8 @@ typedef struct txdescriptor_8814
 #endif
 #define SET_TX_EXTBUFF_DESC_ADDR_HIGH_8814A(__pTxDesc, __Value, __Set) SET_BITS_TO_LE_4BYTE(__pTxDesc+(__Set*16)+8, 0, 32, __Value)
 #endif
+/*c2h-DWORD 2*/
+#define GET_RX_STATUS_DESC_RPT_SEL_8814A(__pRxDesc)			LE_BITS_TO_4BYTE(__pRxDesc+8, 28, 1)
 
 //=========================================================
 // for Txfilldescroptor8814Ae, fill the desc content.

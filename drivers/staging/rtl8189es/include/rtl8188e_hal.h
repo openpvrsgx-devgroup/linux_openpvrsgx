@@ -251,6 +251,17 @@ Total page numbers : 176(0xB0) / 256(0x100)
 //#define RT_IS_FUNC_DISABLED(__pAdapter, __FuncBits) ( (__pAdapter)->DisabledFunctions & (__FuncBits) )
 
 #ifdef CONFIG_PCI_HCI
+ /* according to the define in the rtw_xmit.h, rtw_recv.h */
+#define TX_DESC_NUM_8188EE  TXDESC_NUM   /* 128 */
+#ifdef CONFIG_CONCURRENT_MODE
+/*#define BE_QUEUE_TX_DESC_NUM_8188EE  (TXDESC_NUM<<1)*/		/* 256 */
+#define BE_QUEUE_TX_DESC_NUM_8188EE  ((TXDESC_NUM<<1)+(TXDESC_NUM>>1))    /* 320 */
+/*#define BE_QUEUE_TX_DESC_NUM_8188EE  ((TXDESC_NUM<<1)+TXDESC_NUM)*/    /* 384 */
+#else
+#define BE_QUEUE_TX_DESC_NUM_8188EE  TXDESC_NUM /* 128 */
+/*#define BE_QUEUE_TX_DESC_NUM_8188EE  (TXDESC_NUM+(TXDESC_NUM>>1)) *//* 192 */
+#endif
+
 void InterruptRecognized8188EE(PADAPTER Adapter, PRT_ISR_CONTENT pIsrContent);
 void UpdateInterruptMask8188EE(PADAPTER Adapter, u32 AddMSR, u32 AddMSR1, u32 RemoveMSR, u32 RemoveMSR1);
 #endif	//CONFIG_PCI_HCI
@@ -293,6 +304,7 @@ void Hal_ReadRFGainOffset(PADAPTER pAdapter,u8* hwinfo,BOOLEAN AutoLoadFail);
 void rtl8188e_init_default_value(_adapter *adapter);
 
 void rtl8188e_set_hal_ops(struct hal_ops *pHalFunc);
+void init_hal_spec_8188e(_adapter *adapter);
 
 // register
 void SetBcnCtrlReg(PADAPTER padapter, u8 SetBits, u8 ClearBits);

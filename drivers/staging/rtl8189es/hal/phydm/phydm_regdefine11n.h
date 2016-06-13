@@ -60,10 +60,14 @@
 #define	ODM_REG_PSD_DATA_11N				0x8B4
 #define	ODM_REG_PSD_DATA_11N				0x8B4
 #define	ODM_REG_NHM_TIMER_11N			0x894
+#define	ODM_REG_CLM_TIME_PERIOD_11N			0x894
 #define	ODM_REG_NHM_TH9_TH10_11N		0x890
+#define	ODM_REG_CLM_11N					0x890
 #define	ODM_REG_NHM_TH3_TO_TH0_11N		0x898
 #define	ODM_REG_NHM_TH7_TO_TH4_11N		0x89c
-#define ODM_REG_NHM_TH8_11N             0xe28
+#define ODM_REG_NHM_TH8_11N				0xe28
+#define	ODM_REG_CLM_READY_11N			0x8b4
+#define	ODM_REG_CLM_RESULT_11N			0x8d0
 #define	ODM_REG_NHM_CNT_11N				0x8d8
 
 // For ACS, Jeffery, 2014-12-26

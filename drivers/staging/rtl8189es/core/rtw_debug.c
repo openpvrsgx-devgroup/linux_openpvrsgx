@@ -68,7 +68,7 @@ u32 GlobalDebugLevel = _drv_err_;
 void dump_drv_version(void *sel)
 {
 	DBG_871X_SEL_NL(sel, "%s %s\n", DRV_NAME, DRIVERVERSION);
-	DBG_871X_SEL_NL(sel, "build time: %s %s\n", __DATE__, __TIME__);
+	//DBG_871X_SEL_NL(sel, "build time: %s %s\n", __DATE__, __TIME__);
 }
 
 void dump_drv_cfg(void *sel)
@@ -365,36 +365,37 @@ void dump_adapters_status(void *sel, struct dvobj_priv *dvobj)
 	_adapter *iface;
 	u8 u_ch, u_bw, u_offset;
 
-	DBG_871X_SEL_NL(sel, "%-2s %-8s %-4s %-7s %s\n"
-		, "id", "ifname", "port", "ch", "status");
+	DBG_871X_SEL_NL(sel, "%-2s %-8s %-17s %-4s %-7s %s\n"
+		, "id", "ifname", "macaddr", "port", "ch", "status");
 
-	DBG_871X_SEL_NL(sel, "------------------------\n");
+	DBG_871X_SEL_NL(sel, "------------------------------------------\n");
 
 	for (i = 0; i < dvobj->iface_nums; i++) {
 		iface = dvobj->padapters[i];
 		if (iface) {
-			DBG_871X_SEL_NL(sel, "%2d %-8s %4hhu %3u,%u,%u "MLME_STATE_FMT" %s%s\n"
+			DBG_871X_SEL_NL(sel, "%2d %-8s "MAC_FMT" %4hhu %3u,%u,%u "MLME_STATE_FMT" %s%s\n"
 				, i, ADPT_ARG(iface)
+				, MAC_ARG(adapter_mac_addr(iface))
 				, get_iface_type(iface)
 				, iface->mlmeextpriv.cur_channel
 				, iface->mlmeextpriv.cur_bwmode
 				, iface->mlmeextpriv.cur_ch_offset
-				, ADPT_MLME_S_ARG(iface)
+				, MLME_STATE_ARG(iface)
 				, rtw_is_surprise_removed(iface)?" SR":""
 				, rtw_is_drv_stopped(iface)?" DS":""
 			);
 		}
 	}
 
-	DBG_871X_SEL_NL(sel, "------------------------\n");
+	DBG_871X_SEL_NL(sel, "------------------------------------------\n");
 
 	rtw_get_ch_setting_union(dvobj->padapters[IFACE_ID0], &u_ch, &u_bw, &u_offset);
-	DBG_871X_SEL_NL(sel, "%16s %3u,%u,%u\n"
+	DBG_871X_SEL_NL(sel, "%34s %3u,%u,%u\n"
 		, "union:"
 		, u_ch, u_bw, u_offset
 	);
 
-	DBG_871X_SEL_NL(sel, "%16s %3u,%u,%u\n"
+	DBG_871X_SEL_NL(sel, "%34s %3u,%u,%u\n"
 		, "oper:"
 		, dvobj->oper_channel
 		, dvobj->oper_bwmode
@@ -403,7 +404,7 @@ void dump_adapters_status(void *sel, struct dvobj_priv *dvobj)
 
 	#ifdef CONFIG_DFS_MASTER
 	if (rfctl->radar_detect_ch != 0) {
-		DBG_871X_SEL_NL(sel, "%16s %3u,%u,%u"
+		DBG_871X_SEL_NL(sel, "%34s %3u,%u,%u"
 			, "radar_detect:"
 			, rfctl->radar_detect_ch
 			, rfctl->radar_detect_bw
@@ -416,6 +417,59 @@ void dump_adapters_status(void *sel, struct dvobj_priv *dvobj)
 			DBG_871X_SEL(sel, "\n");
 	}
 	#endif
+}
+
+#define SEC_CAM_ENT_ID_TITLE_FMT "%-2s"
+#define SEC_CAM_ENT_ID_TITLE_ARG "id"
+#define SEC_CAM_ENT_ID_VALUE_FMT "%2u"
+#define SEC_CAM_ENT_ID_VALUE_ARG(id) (id)
+
+#define SEC_CAM_ENT_TITLE_FMT "%-6s %-17s %-32s %-3s %-7s %-2s %-2s %-5s"
+#define SEC_CAM_ENT_TITLE_ARG "ctrl", "addr", "key", "kid", "type", "MK", "GK", "valid"
+#define SEC_CAM_ENT_VALUE_FMT "0x%04x "MAC_FMT" "KEY_FMT" %3u %-7s %2u %2u %5u"
+#define SEC_CAM_ENT_VALUE_ARG(ent) \
+	(ent)->ctrl \
+	, MAC_ARG((ent)->mac) \
+	, KEY_ARG((ent)->key) \
+	, ((ent)->ctrl) & 0x03 \
+	, security_type_str((((ent)->ctrl) >> 2) & 0x07) \
+	, (((ent)->ctrl) >> 5) & 0x01 \
+	, (((ent)->ctrl) >> 6) & 0x01 \
+	, (((ent)->ctrl) >> 15) & 0x01
+
+void dump_sec_cam_ent(void *sel, struct sec_cam_ent *ent, int id)
+{
+	if (id >= 0) {
+		DBG_871X_SEL_NL(sel, SEC_CAM_ENT_ID_VALUE_FMT " " SEC_CAM_ENT_VALUE_FMT"\n"
+			, SEC_CAM_ENT_ID_VALUE_ARG(id), SEC_CAM_ENT_VALUE_ARG(ent));
+	} else {
+		DBG_871X_SEL_NL(sel, SEC_CAM_ENT_VALUE_FMT"\n", SEC_CAM_ENT_VALUE_ARG(ent));
+	}
+}
+
+void dump_sec_cam_ent_title(void *sel, u8 has_id)
+{
+	if (has_id) {
+		DBG_871X_SEL_NL(sel, SEC_CAM_ENT_ID_TITLE_FMT " " SEC_CAM_ENT_TITLE_FMT"\n"
+			, SEC_CAM_ENT_ID_TITLE_ARG, SEC_CAM_ENT_TITLE_ARG);
+	} else {
+		DBG_871X_SEL_NL(sel, SEC_CAM_ENT_TITLE_FMT"\n", SEC_CAM_ENT_TITLE_ARG);
+	}
+}
+
+void dump_sec_cam(void *sel, _adapter *adapter)
+{
+	struct dvobj_priv *dvobj = adapter_to_dvobj(adapter);
+	struct cam_ctl_t *cam_ctl = &dvobj->cam_ctl;
+	struct sec_cam_ent ent;
+	int i;
+
+	DBG_871X_SEL_NL(sel, "HW sec cam:\n");
+	dump_sec_cam_ent_title(sel, 1);
+	for (i = 0; i < cam_ctl->num; i++) {
+		rtw_sec_read_cam_ent(adapter, i, (u8 *)(&ent.ctrl), ent.mac, ent.key);
+		dump_sec_cam_ent(sel , &ent, i);
+	}
 }
 
 #ifdef CONFIG_PROC_DEBUG
@@ -1172,7 +1226,8 @@ ssize_t proc_reset_trx_info(struct file *file, const char __user *buffer, size_t
 	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
 	struct dvobj_priv *psdpriv = padapter->dvobj;
 	struct debug_priv *pdbgpriv = &psdpriv->drv_dbg;
-	char cmd[32] = {'0'};
+	char cmd[32] = {0};
+	u8 cnt = 0;
 
 	if (count > sizeof(cmd)) {
 		rtw_warn_on(1);
@@ -1180,7 +1235,9 @@ ssize_t proc_reset_trx_info(struct file *file, const char __user *buffer, size_t
 	}
 
 	if (buffer && !copy_from_user(cmd, buffer, count)) {
-		if('0' == cmd[0]){
+		int num = sscanf(cmd, "%hhx", &cnt);
+
+		if (0 == cnt) {
 			pdbgpriv->dbg_rx_ampdu_drop_count = 0;
 			pdbgpriv->dbg_rx_ampdu_forced_indicate_count = 0;
 			pdbgpriv->dbg_rx_ampdu_loss_count = 0;
@@ -2446,6 +2503,12 @@ int proc_get_all_sta_info(struct seq_file *m, void *v)
 				DBG_871X_SEL_NL(m, "tx_data_pkts=%llu\n", psta->sta_stats.tx_pkts);
 				DBG_871X_SEL_NL(m, "tx_bytes=%llu\n", psta->sta_stats.tx_bytes);
 #endif //CONFIG_TDLS
+
+				dump_st_ctl(m, &psta->st_ctl);
+
+				if (STA_OP_WFD_MODE(psta))
+					DBG_871X_SEL_NL(m, "op_wfd_mode:0x%02x\n", STA_OP_WFD_MODE(psta));
+
 				DBG_871X_SEL_NL(m, "==============================\n");
 			}
 
@@ -3407,6 +3470,11 @@ int proc_get_tdls_info(struct seq_file *m, void *v)
 	u8 SpaceBtwnItemAndValueTmp = 0;
 	u8 NumOfTdlsStaToShow = 0;
 	BOOLEAN FirstMatchFound = _FALSE;
+
+	if (hal_chk_wl_func(padapter, WL_FUNC_TDLS) == _FALSE) {
+		DBG_871X_SEL_NL(m, "No tdls info can be shown since hal doesn't support tdls\n");
+		return 0;
+	}
 
 	proc_tdls_display_tdls_function_info(m);
 	proc_tdls_display_network_info(m);

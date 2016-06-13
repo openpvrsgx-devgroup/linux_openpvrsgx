@@ -169,9 +169,9 @@ typedef struct _Phy_Status_Rpt_8812 {
 #if (ODM_ENDIAN_TYPE == ODM_ENDIAN_LITTLE)
 	u1Byte			antidx_anta: 3;							/*antidx_anta[2:0]*/
 	u1Byte			antidx_antb: 3;							/*antidx_antb[2:0]*/
-	u1Byte			resvd_2: 2;								/*1'b0*/
+	u1Byte			hw_antsw_occur: 2;								/*1'b0*/
 #else	/*_BIG_ENDIAN_*/
-	u1Byte			resvd_2: 2;
+	u1Byte			hw_antsw_occur: 2;
 	u1Byte			antidx_antb: 3;
 	u1Byte			antidx_anta: 3;
 #endif

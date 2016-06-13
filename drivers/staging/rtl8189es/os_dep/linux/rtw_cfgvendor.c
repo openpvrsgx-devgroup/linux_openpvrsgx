@@ -44,7 +44,7 @@
 
 #ifdef DBG_MEM_ALLOC
 extern bool match_mstat_sniff_rules(const enum mstat_f flags, const size_t size);
-struct sk_buff * dbg_rtw_cfg80211_vendor_event_alloc(struct wiphy *wiphy, int len, int event_id, gfp_t gfp
+struct sk_buff *dbg_rtw_cfg80211_vendor_event_alloc(struct wiphy *wiphy, int len, int event_id, gfp_t gfp
 	, const enum mstat_f flags, const char *func, const int line)
 {
 	_adapter *padapter = wiphy_to_adapter(wiphy);
@@ -147,7 +147,7 @@ int dbg_rtw_cfg80211_vendor_cmd_reply(struct sk_buff *skb
 		dbg_rtw_cfg80211_vendor_cmd_reply(skb, MSTAT_FUNC_CFG_VENDOR|MSTAT_TYPE_SKB, __FUNCTION__, __LINE__)
 #else
 
-struct sk_buff * rtw_cfg80211_vendor_event_alloc(
+struct sk_buff *rtw_cfg80211_vendor_event_alloc(
 		struct wiphy *wiphy, int len, int event_id, gfp_t gfp)
 {
 	_adapter *padapter = wiphy_to_adapter(wiphy);
@@ -257,16 +257,6 @@ int rtw_dev_get_feature_set(struct net_device *dev)
 	feature_set |= WIFI_FEATURE_SOFT_AP;
 
 	feature_set |= WIFI_FEATURE_ADDITIONAL_STA;
-
-#if defined(GSCAN_SUPPORT)
-	feature_set |= WIFI_FEATURE_GSCAN;
-#endif
-
-#if defined(RTT_SUPPORT)
-	feature_set |= WIFI_FEATURE_NAN;
-	feature_set |= WIFI_FEATURE_D2D_RTT;
-	feature_set |= WIFI_FEATURE_D2AP_RTT;
-#endif
 
 	return feature_set;
 }
@@ -1153,7 +1143,7 @@ static int wl_cfgvendor_priv_string_handler(struct wiphy *wiphy,
 
 	bzero(cfg->ioctl_buf, WLC_IOCTL_MAXLEN);
 
-	if (strncmp((char *)data, RTK_VENDOR_SCMD_CAPA, strlen(RTK_VENDOR_SCMD_CAPA)) == 0) {
+	if (strncmp((char *)data, BRCM_VENDOR_SCMD_CAPA, strlen(BRCM_VENDOR_SCMD_CAPA)) == 0) {
 		err = wldev_iovar_getbuf(bcmcfg_to_prmry_ndev(cfg), "cap", NULL, 0,
 			cfg->ioctl_buf, WLC_IOCTL_MAXLEN, &cfg->ioctl_buf_sync);
 		if (unlikely(err)) {
@@ -1178,8 +1168,8 @@ static int wl_cfgvendor_priv_string_handler(struct wiphy *wiphy,
 static const struct wiphy_vendor_command rtw_vendor_cmds [] = {
 	{
 		{
-			.vendor_id = OUI_RTK,
-			.subcmd = RTK_VENDOR_SCMD_PRIV_STR
+			.vendor_id = OUI_BRCM,
+			.subcmd = BRCM_VENDOR_SCMD_PRIV_STR
 		},
 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV | WIPHY_VENDOR_CMD_NEED_NETDEV,
 		.doit = wl_cfgvendor_priv_string_handler
@@ -1303,8 +1293,8 @@ static const struct wiphy_vendor_command rtw_vendor_cmds [] = {
 };
 
 static const struct  nl80211_vendor_cmd_info rtw_vendor_events [] = {
-		{ OUI_RTK, RTK_VENDOR_EVENT_UNSPEC },
-		{ OUI_RTK, RTK_VENDOR_EVENT_PRIV_STR },
+		{ OUI_BRCM, BRCM_VENDOR_EVENT_UNSPEC },
+		{ OUI_BRCM, BRCM_VENDOR_EVENT_PRIV_STR },
 #if defined(GSCAN_SUPPORT) && 0
 		{ OUI_GOOGLE, GOOGLE_GSCAN_SIGNIFICANT_EVENT },
 		{ OUI_GOOGLE, GOOGLE_GSCAN_GEOFENCE_FOUND_EVENT },

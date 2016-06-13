@@ -1042,7 +1042,6 @@ odm_PathDiversityAfterLink_92C(
 
 			PHY_SetBBReg(Adapter, rCCK0_AFESetting  , 0x0F000000, 0x00); // RX path = PathA
 			pDM_PDTable->TrainingState = 1;
-			pHalData->RSSI_test = TRUE;
 			ODM_SetTimer( pDM_Odm, &pDM_Odm->CCKPathDiversityTimer, pDM_PDTable->Timer); //ms
 		}
 		else
@@ -1348,7 +1347,6 @@ odm_ResetPathDiversity_92C(
 	PRT_WLAN_STA	pEntry;
 	u4Byte	i,j;
 
-	pHalData->RSSI_test = FALSE;
 	pDM_PDTable->CCK_Pkt_Cnt = 0;
 	pDM_PDTable->OFDM_Pkt_Cnt = 0;
 	pHalData->CCK_Pkt_Cnt =0;
@@ -1762,7 +1760,6 @@ odm_PathDivChkAntSwitch(
 			}
 			
 			pDM_SWAT_Table->try_flag = 0;
-			pHalData->RSSI_test = FALSE;
 			pHalData->RSSI_sum_A = 0;
 			pHalData->RSSI_cnt_A = 0;
 			pHalData->RSSI_sum_B = 0;
@@ -1798,7 +1795,6 @@ odm_PathDivChkAntSwitch(
 			//Prepare To Try Antenna		
 				nextAntenna = (pDM_SWAT_Table->CurAntenna == MAIN_ANT)? AUX_ANT : MAIN_ANT;
 				pDM_SWAT_Table->try_flag = 1;
-				pHalData->RSSI_test = TRUE;
 			if((curRxOkCnt+curTxOkCnt) > 1000)
 			{
 #if DEV_BUS_TYPE==RT_PCI_INTERFACE
@@ -1956,7 +1952,7 @@ ODM_CCKPathDiversityChkPerPktRssi(
 	BOOLEAN	isCCKrate = IS_HARDWARE_TYPE_8188E(Adapter) ? RX_HAL_IS_CCK_RATE_88E(pDesc) : RX_HAL_IS_CCK_RATE_92C(pDesc);
 #endif
 
-	if((pHalData->PathDivCfg != 1) || (pHalData->RSSI_test == FALSE))
+	if ((pHalData->PathDivCfg != 1))
 		return;
 		
 	if(pHalData->RSSI_target==NULL && bIsDefPort && bMatchBSSID)
@@ -2088,7 +2084,6 @@ ODM_PathDivRestAfterLink(
 
 	pHalData->RSSI_cnt_A = 0;
 	pHalData->RSSI_cnt_B = 0;
-	pHalData->RSSI_test = FALSE;
 	pDM_SWAT_Table->try_flag = 0x0;       // NOT 0xff
 	pDM_SWAT_Table->RSSI_Trying = 0;
 	pDM_SWAT_Table->SelectAntennaMap=0xAA;

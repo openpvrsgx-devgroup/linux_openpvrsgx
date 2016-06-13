@@ -50,13 +50,14 @@ const char *odm_comp_str[] = {
 	/* BIT25 */"ODM_COMP_RX_GAIN_TRACK",
 	/* BIT26 */"ODM_COMP_CALIBRATION",
 	/* BIT27 */NULL,
-	/* BIT28 */NULL,
+	/* BIT28 */"ODM_PHY_CONFIG",
 	/* BIT29 */"BEAMFORMING_DEBUG",
 	/* BIT30 */"ODM_COMP_COMMON",
 	/* BIT31 */"ODM_COMP_INIT",
+	/* BIT32 */"ODM_COMP_NOISY_DETECT",
 };
 
-#define RTW_ODM_COMP_MAX 32
+#define RTW_ODM_COMP_MAX 33
 
 const char *odm_ability_str[] = {
 	/* BIT0 */"ODM_BB_DIG",
@@ -236,6 +237,15 @@ void rtw_odm_adaptivity_dc_backoff_msg(void *sel, _adapter *adapter)
 	DBG_871X_SEL_NL(sel, "RTW_ADAPTIVITY_DC_BACKOFF:%u\n", regsty->adaptivity_dc_backoff);
 }
 
+void rtw_odm_adaptivity_config_msg(void *sel, _adapter *adapter)
+{
+	rtw_odm_adaptivity_ver_msg(sel, adapter);
+	rtw_odm_adaptivity_en_msg(sel, adapter);
+	rtw_odm_adaptivity_mode_msg(sel, adapter);
+	rtw_odm_adaptivity_dml_msg(sel, adapter);
+	rtw_odm_adaptivity_dc_backoff_msg(sel, adapter);
+}
+
 bool rtw_odm_adaptivity_needed(_adapter *adapter)
 {
 	struct registry_priv *regsty = &adapter->registrypriv;
@@ -245,14 +255,6 @@ bool rtw_odm_adaptivity_needed(_adapter *adapter)
 	if (regsty->adaptivity_en == RTW_ADAPTIVITY_EN_ENABLE)
 		ret = _TRUE;
 
-	if (ret == _TRUE) {
-		rtw_odm_adaptivity_ver_msg(RTW_DBGDUMP, adapter);
-		rtw_odm_adaptivity_en_msg(RTW_DBGDUMP, adapter);
-		rtw_odm_adaptivity_mode_msg(RTW_DBGDUMP, adapter);
-		rtw_odm_adaptivity_dml_msg(RTW_DBGDUMP, adapter);
-		rtw_odm_adaptivity_dc_backoff_msg(RTW_DBGDUMP, adapter);
-	}
-
 	return ret;
 }
 
@@ -261,11 +263,7 @@ void rtw_odm_adaptivity_parm_msg(void *sel, _adapter *adapter)
 	HAL_DATA_TYPE *pHalData = GET_HAL_DATA(adapter);
 	DM_ODM_T *odm = &pHalData->odmpriv;
 
-	rtw_odm_adaptivity_ver_msg(sel, adapter);
-	rtw_odm_adaptivity_en_msg(sel, adapter);
-	rtw_odm_adaptivity_mode_msg(sel, adapter);
-	rtw_odm_adaptivity_dml_msg(sel, adapter);
-	rtw_odm_adaptivity_dc_backoff_msg(sel, adapter);
+	rtw_odm_adaptivity_config_msg(sel, adapter);
 
 	DBG_871X_SEL_NL(sel, "%10s %16s %16s %22s %12s\n"
 		, "TH_L2H_ini", "TH_EDCCA_HL_diff", "TH_L2H_ini_mode2", "TH_EDCCA_HL_diff_mode2", "EDCCA_enable");

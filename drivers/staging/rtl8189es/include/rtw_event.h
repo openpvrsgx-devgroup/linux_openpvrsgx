@@ -66,9 +66,6 @@ It is used in AP/Ad-HoC(M) mode.
 */
 struct stassoc_event {
 	unsigned char macaddr[6];
-	unsigned char rsvd[2];
-	int    cam_id;
-	
 };
 
 struct stadel_event {

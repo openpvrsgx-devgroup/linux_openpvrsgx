@@ -78,7 +78,10 @@ extern void EnableInterrupt8821AS(PADAPTER padapter);
 extern void DisableInterrupt8821AS(PADAPTER padapter);
 extern u8 HalQueryTxBufferStatus8821AS(PADAPTER padapter);
 extern u8 HalQueryTxOQTBufferStatus8821ASdio(PADAPTER padapter);
-#endif // CONFIG_RTL8188E
+#if defined(CONFIG_WOWLAN) || defined(CONFIG_AP_WOWLAN)
+void ClearInterrupt8821AS(PADAPTER padapter);
+#endif /* defined(CONFIG_WOWLAN) || defined(CONFIG_AP_WOWLAN) */
+#endif /* CONFIG_RTL8821A */
 
 #if defined(CONFIG_WOWLAN) || defined(CONFIG_AP_WOWLAN)
 extern u8 RecvOnePkt(PADAPTER padapter, u32 size);

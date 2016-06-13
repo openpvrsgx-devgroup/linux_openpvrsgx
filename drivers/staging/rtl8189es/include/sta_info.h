@@ -105,6 +105,65 @@ struct	stainfo_stats	{
 	u64  tx_drops;
 };
 
+#ifndef DBG_SESSION_TRACKER
+#define DBG_SESSION_TRACKER 0
+#endif
+
+/* session tracker status */
+#define ST_STATUS_NONE		0
+#define ST_STATUS_CHECK		BIT0
+#define ST_STATUS_ESTABLISH	BIT1
+#define ST_STATUS_EXPIRE	BIT2
+
+#define ST_EXPIRE_MS (10 * 1000)
+
+struct session_tracker {
+	_list list; /* session_tracker_queue */
+	u32 local_naddr;
+	u16 local_port;
+	u32 remote_naddr;
+	u16 remote_port;
+	u32 set_time;
+	u8 status;
+};
+
+/* session tracker cmd */
+#define ST_CMD_ADD 0
+#define ST_CMD_DEL 1
+#define ST_CMD_CHK 2
+
+struct st_cmd_parm {
+	u8 cmd;
+	struct sta_info *sta;
+	u32 local_naddr; /* TODO: IPV6 */
+	u16 local_port;
+	u32 remote_naddr; /* TODO: IPV6 */
+	u16 remote_port;
+};
+
+typedef bool (*st_match_rule)(_adapter *adapter, u8 *local_naddr, u8 *local_port, u8 *remote_naddr, u8 *remote_port);
+
+struct st_register {
+	u8 s_proto;
+	st_match_rule rule;
+};
+
+#define SESSION_TRACKER_REG_ID_WFD 0
+#define SESSION_TRACKER_REG_ID_NUM 1
+
+struct st_ctl_t {
+	struct st_register reg[SESSION_TRACKER_REG_ID_NUM];
+	_queue tracker_q;
+};
+
+void rtw_st_ctl_init(struct st_ctl_t *st_ctl);
+void rtw_st_ctl_deinit(struct st_ctl_t *st_ctl);
+void rtw_st_ctl_register(struct st_ctl_t *st_ctl, u8 st_reg_id, struct st_register *reg);
+void rtw_st_ctl_unregister(struct st_ctl_t *st_ctl, u8 st_reg_id);
+bool rtw_st_ctl_chk_reg_s_proto(struct st_ctl_t *st_ctl, u8 s_proto);
+bool rtw_st_ctl_chk_reg_rule(struct st_ctl_t *st_ctl, _adapter *adapter, u8 *local_naddr, u8 *local_port, u8 *remote_naddr, u8 *remote_port);
+void dump_st_ctl(void *sel, struct st_ctl_t *st_ctl);
+
 #ifdef CONFIG_TDLS
 struct TDLS_PeerKey {
 	u8 kck[16]; /* TPK-KCK */
@@ -134,6 +193,7 @@ struct sta_info {
 	uint qos_option;
 	u8	hwaddr[ETH_ALEN];
 	u16 hwseq;
+	u8	ra_rpt_linked;
 
 	uint	ieee8021x_blocked;	//0: allowed, 1:blocked 
 	uint	dot118021XPrivacy; //aes, tkip...
@@ -170,6 +230,11 @@ struct sta_info {
 	u8	ldpc;
 	u8	stbc;
 
+#ifdef CONFIG_BEAMFORMING
+	u16 txbf_paid;
+	u16 txbf_gid;
+#endif
+		
 	struct stainfo_stats sta_stats;
 
 #ifdef CONFIG_TDLS
@@ -220,13 +285,14 @@ struct sta_info {
 	//AP_Mode:
 	//curr_network(mlme_priv/security_priv/qos/ht) : AP CAP/INFO
 	//sta_info: (AP & STA) CAP/INFO
-		
+
+	unsigned int expire_to;
+
 #ifdef CONFIG_AP_MODE
 
 	_list asoc_list;
 	_list auth_list;
-	 
-	unsigned int expire_to;
+
 	unsigned int auth_seq;
 	unsigned int authalg;
 	unsigned char chg_txt[128];
@@ -287,6 +353,10 @@ struct sta_info {
 	u8 dev_name[32];	
 #endif //CONFIG_P2P
 
+#ifdef CONFIG_WFD
+	u8 op_wfd_mode;
+#endif
+
 #ifdef CONFIG_TX_MCAST2UNI
 	u8 under_exist_checking;
 #endif	// CONFIG_TX_MCAST2UNI
@@ -336,6 +406,8 @@ struct sta_info {
 
 	/* To store the sequence number of received management frame */
 	u16 RxMgmtFrameSeqNum;
+
+	struct st_ctl_t st_ctl;
 };
 
 #define sta_rx_pkts(sta) \
@@ -424,7 +496,15 @@ struct sta_info {
 	, sta->sta_stats.rx_data_pkts -sta->sta_stats.last_rx_data_pkts
 
 #define STA_PKTS_FMT "(m:%llu, c:%llu, d:%llu)"
-	
+
+#ifdef CONFIG_WFD
+#define STA_OP_WFD_MODE(sta) (sta)->op_wfd_mode
+#define STA_SET_OP_WFD_MODE(sta, mode) (sta)->op_wfd_mode = (mode)
+#else
+#define STA_OP_WFD_MODE(sta) 0
+#define STA_SET_OP_WFD_MODE(sta, mode) do {} while (0)
+#endif
+
 struct	sta_priv {
 	
 	u8 *pallocated_stainfo_buf;
@@ -438,7 +518,8 @@ struct	sta_priv {
 	_queue wakeup_q;
 	
 	_adapter *padapter;
-	
+
+	u32 adhoc_expire_to;
 
 #ifdef CONFIG_AP_MODE
 	_list asoc_list;

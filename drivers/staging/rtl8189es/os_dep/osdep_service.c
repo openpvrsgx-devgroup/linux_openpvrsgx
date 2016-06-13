@@ -322,7 +322,7 @@ inline int _rtw_netif_rx(_nic_hdl ndev, struct sk_buff *skb)
 {
 #ifdef PLATFORM_LINUX
 	skb->dev = ndev;
-		return netif_rx(skb);
+	return netif_rx(skb);
 #endif /* PLATFORM_LINUX */
 
 #ifdef PLATFORM_FREEBSD
@@ -821,6 +821,15 @@ void _rtw_memcpy(void *dst, const void *src, u32 sz)
 
 }
 
+inline void _rtw_memmove(void *dst, const void *src, u32 sz)
+{
+#if defined(PLATFORM_LINUX)
+	memmove(dst, src, sz);
+#else
+	#warning "no implementation\n"
+#endif
+}
+
 int	_rtw_memcmp(void *dst, void *src, u32 sz)
 {
 
@@ -1270,13 +1279,15 @@ void	_rtw_spinunlock_ex(_lock *plock)
 
 
 
-void	_rtw_init_queue(_queue	*pqueue)
+void _rtw_init_queue(_queue *pqueue)
 {
-
 	_rtw_init_listhead(&(pqueue->queue));
-
 	_rtw_spinlock_init(&(pqueue->lock));
+}
 
+void _rtw_deinit_queue(_queue *pqueue)
+{
+	_rtw_spinlock_free(&(pqueue->lock));
 }
 
 u32	  _rtw_queue_empty(_queue	*pqueue)
@@ -2473,5 +2484,43 @@ struct rtw_cbuf *rtw_cbuf_alloc(u32 size)
 void rtw_cbuf_free(struct rtw_cbuf *cbuf)
 {
 	rtw_mfree((u8*)cbuf, sizeof(*cbuf) + sizeof(void*)*cbuf->size);
+}
+
+/**
+* IsHexDigit -
+*
+* Return	TRUE if chTmp is represent for hex digit
+*		FALSE otherwise.
+*/
+inline BOOLEAN IsHexDigit(char chTmp)
+{
+	if ((chTmp >= '0' && chTmp <= '9') ||
+		(chTmp >= 'a' && chTmp <= 'f') ||
+		(chTmp >= 'A' && chTmp <= 'F'))
+		return _TRUE;
+	else
+		return _FALSE;
+}
+
+/**
+* is_alpha -
+*
+* Return	TRUE if chTmp is represent for alphabet
+*		FALSE otherwise.
+*/
+inline BOOLEAN is_alpha(char chTmp)
+{
+	if ((chTmp >= 'a' && chTmp <= 'z') ||
+		(chTmp >= 'A' && chTmp <= 'Z'))
+		return _TRUE;
+	else
+		return _FALSE;
+}
+
+inline char alpha_to_upper(char c)
+{
+	if ((c >= 'a' && c <= 'z'))
+		c = 'A' + (c - 'a');
+	return c;
 }
 

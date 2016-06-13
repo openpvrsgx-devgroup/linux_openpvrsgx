@@ -861,17 +861,12 @@ void update_bmc_sta(_adapter *padapter)
 	int supportRateNum = 0;
 	u64 tx_ra_bitmap = 0;
 	struct mlme_priv *pmlmepriv = &(padapter->mlmepriv);
-	struct mlme_ext_priv	*pmlmeext = &(padapter->mlmeextpriv);
-	struct mlme_ext_info	*pmlmeinfo = &(pmlmeext->mlmext_info);	
 	WLAN_BSSID_EX *pcur_network = (WLAN_BSSID_EX *)&pmlmepriv->cur_network.network;	
 	struct sta_info *psta = rtw_get_bcmc_stainfo(padapter);
 
 	if(psta)
 	{
 		psta->aid = 0;//default set to 0
-
-		pmlmeinfo->FW_sta_info[psta->mac_id].psta = psta;
-
 		psta->qos_option = 0;
 #ifdef CONFIG_80211N_HT	
 		psta->htpriv.ht_option = _FALSE;
@@ -1039,23 +1034,26 @@ void update_sta_info_apmode(_adapter *padapter, struct sta_info *psta)
 		}
 
 #ifdef CONFIG_BEAMFORMING
-		// Config Tx beamforming setting
+		/*Config Tx beamforming setting*/
 		if (TEST_FLAG(phtpriv_ap->beamform_cap, BEAMFORMING_HT_BEAMFORMEE_ENABLE) && 
 			GET_HT_CAP_TXBF_EXPLICIT_COMP_STEERING_CAP((u8 *)(&phtpriv_sta->ht_cap)))
 		{
 			SET_FLAG(cur_beamform_cap, BEAMFORMING_HT_BEAMFORMER_ENABLE);
+			/*Shift to BEAMFORMING_HT_BEAMFORMEE_CHNL_EST_CAP*/
+			SET_FLAG(cur_beamform_cap, GET_HT_CAP_TXBF_CHNL_ESTIMATION_NUM_ANTENNAS((u8 *)(&phtpriv_sta->ht_cap)) << 6);
 		}
 
 		if (TEST_FLAG(phtpriv_ap->beamform_cap, BEAMFORMING_HT_BEAMFORMER_ENABLE) &&
 			GET_HT_CAP_TXBF_EXPLICIT_COMP_FEEDBACK_CAP((u8 *)(&phtpriv_sta->ht_cap)))
 		{
 			SET_FLAG(cur_beamform_cap, BEAMFORMING_HT_BEAMFORMEE_ENABLE);
+			/*Shift to BEAMFORMING_HT_BEAMFORMER_STEER_NUM*/
+			SET_FLAG(cur_beamform_cap, GET_HT_CAP_TXBF_COMP_STEERING_NUM_ANTENNAS((u8 *)(&phtpriv_sta->ht_cap)) << 4);
 		}
-
 		if (cur_beamform_cap) {
 			DBG_871X("Client STA(%d) HT Beamforming Cap = 0x%02X\n", psta->aid, cur_beamform_cap);
 		}
-#endif //CONFIG_BEAMFORMING
+#endif /*CONFIG_BEAMFORMING*/
 	}
 	else
 	{
@@ -1486,6 +1484,7 @@ void start_bss_network(_adapter *padapter, struct createbss_parm *parm)
 	u8 req_ch, req_bw, req_offset;
 	bool ch_setting_changed = _FALSE;
 	u8 ch_to_set = 0, bw_to_set, offset_to_set;
+	u8 doiqk = _FALSE;
 
 	if (parm->req_ch == 0) {
 		/* change to unspecificed ch, bw, offset, get from IE */
@@ -1567,8 +1566,6 @@ void start_bss_network(_adapter *padapter, struct createbss_parm *parm)
 	//Beacon Control related register
 	rtw_hal_set_hwreg(padapter, HW_VAR_BEACON_INTERVAL, (u8 *)(&bcn_interval));
 
-	rtw_hal_set_hwreg(padapter, HW_VAR_DO_IQK, NULL);
-
 #if 0
 	if(pmlmepriv->cur_network.join_res != _TRUE) //setting only at  first time
 	{
@@ -1609,9 +1606,14 @@ change_chbw:
 	rtw_dfs_master_status_apply(padapter, MLME_AP_STARTED);
 	#endif
 
+	doiqk = _TRUE;
+	rtw_hal_set_hwreg(padapter , HW_VAR_DO_IQK , &doiqk);
+	
 	if (ch_to_set != 0)
 		set_channel_bwmode(padapter, ch_to_set, offset_to_set, bw_to_set);
 
+	doiqk = _FALSE;
+	rtw_hal_set_hwreg(padapter , HW_VAR_DO_IQK , &doiqk);
 	if (DUMP_ADAPTERS_STATUS) {
 		DBG_871X(FUNC_ADPT_FMT" done\n", FUNC_ADPT_ARG(padapter));
 		dump_adapters_status(RTW_DBGDUMP , adapter_to_dvobj(padapter));
@@ -1675,7 +1677,8 @@ int rtw_check_beacon_data(_adapter *padapter, u8 *pbuf,  int len)
 	u8 vht_cap=_FALSE;
 	struct mlme_ext_priv	*pmlmeext = &(padapter->mlmeextpriv);
 	struct mlme_ext_info	*pmlmeinfo = &(pmlmeext->mlmext_info);
-
+	u8 rf_num = 0;
+	
 	/* SSID */
 	/* Supported rates */
 	/* DS Params */
@@ -2047,6 +2050,8 @@ int rtw_check_beacon_data(_adapter *padapter, u8 *pbuf,  int len)
 			SET_HT_CAP_TXBF_EXPLICIT_COMP_STEERING_CAP(pht_cap, 1);
 			// Compressed Steering Number Antennas
 			SET_HT_CAP_TXBF_COMP_STEERING_NUM_ANTENNAS(pht_cap, 1);
+			rtw_hal_get_def_var(padapter, HAL_DEF_BEAMFORMER_CAP, (u8 *)&rf_num);
+			SET_HT_CAP_TXBF_CHNL_ESTIMATION_NUM_ANTENNAS(pht_cap, rf_num);		
 		}
 
 		// HT Beamformee
@@ -2056,6 +2061,8 @@ int rtw_check_beacon_data(_adapter *padapter, u8 *pbuf,  int len)
 			SET_HT_CAP_TXBF_RECEIVE_NDP_CAP(pht_cap, 1);
 			// Explicit Compressed Beamforming Feedback Capable
 			SET_HT_CAP_TXBF_EXPLICIT_COMP_FEEDBACK_CAP(pht_cap, 2);
+			rtw_hal_get_def_var(padapter, HAL_DEF_BEAMFORMEE_CAP, (u8 *)&rf_num);
+			SET_HT_CAP_TXBF_COMP_STEERING_NUM_ANTENNAS(pht_cap, rf_num);
 		}
 #endif //CONFIG_BEAMFORMING
 
@@ -2135,10 +2142,11 @@ int rtw_check_beacon_data(_adapter *padapter, u8 *pbuf,  int len)
 
 	pmlmepriv->vhtpriv.vht_option = _FALSE;
 	// if channel in 5G band, then add vht ie .
-	if ((pbss_network->Configuration.DSConfig > 14) && 
-		(pmlmepriv->htpriv.ht_option == _TRUE) &&
-		(pregistrypriv->vht_enable)) 
-	{
+	if ((pbss_network->Configuration.DSConfig > 14)
+		&& (pmlmepriv->htpriv.ht_option == _TRUE)
+		&& (pregistrypriv->vht_enable)
+		&& (!pmlmepriv->country_ent || COUNTRY_CHPLAN_EN_11AC(pmlmepriv->country_ent))
+	) {
 		if(vht_cap == _TRUE)
 		{
 			pmlmepriv->vhtpriv.vht_option = _TRUE;
@@ -3731,13 +3739,7 @@ void sta_info_update(_adapter *padapter, struct sta_info *psta)
 /* called >= TSR LEVEL for USB or SDIO Interface*/
 void ap_sta_info_defer_update(_adapter *padapter, struct sta_info *psta)
 {
-	struct mlme_ext_priv *pmlmeext = &padapter->mlmeextpriv;
-	struct mlme_ext_info	*pmlmeinfo = &(pmlmeext->mlmext_info);
-
-	if(psta->state & _FW_LINKED)
-	{
-		pmlmeinfo->FW_sta_info[psta->mac_id].psta = psta;
-	
+	if (psta->state & _FW_LINKED) {
 		//add ratid
 		add_RATid(padapter, psta, 0);//DM_RATR_STA_INIT
 	}	
@@ -3855,15 +3857,6 @@ void start_ap_mode(_adapter *padapter)
 
 	for (i = 0 ;  i < NUM_STA ; i++)
 		pstapriv->sta_aid[i] = NULL;
-
-/* to avoid memory leak issue, don't set to NULL directly
-	pmlmepriv->wps_beacon_ie = NULL;	
-	pmlmepriv->wps_probe_resp_ie = NULL;
-	pmlmepriv->wps_assoc_resp_ie = NULL;
-	
-	pmlmepriv->p2p_beacon_ie = NULL;
-	pmlmepriv->p2p_probe_resp_ie = NULL;
-*/
 	
 	//for ACL 
 	_rtw_init_listhead(&(pacl_list->acl_node_q.queue));
@@ -4104,7 +4097,7 @@ bool rtw_ap_chbw_decision(_adapter *adapter, u8 req_ch, u8 req_bw, u8 req_offset
 		DBG_871X(FUNC_ADPT_FMT" union no self: %u,%u,%u\n", FUNC_ADPT_ARG(adapter), u_ch, u_bw, u_offset);
 		DBG_871X(FUNC_ADPT_FMT" req: %u,%u,%u\n", FUNC_ADPT_ARG(adapter), req_ch, req_bw, req_offset);
 
-		rtw_regsty_adjust_chbw(&adapter->registrypriv, u_ch, &dec_bw, &dec_offset);
+		rtw_adjust_chbw(adapter, u_ch, &dec_bw, &dec_offset);
 
 		rtw_sync_chbw(&dec_ch, &dec_bw, &dec_offset
 			, &u_ch, &u_bw, &u_offset);
@@ -4121,7 +4114,7 @@ bool rtw_ap_chbw_decision(_adapter *adapter, u8 req_ch, u8 req_bw, u8 req_offset
 		DBG_871X(FUNC_ADPT_FMT" union no self: %u,%u,%u\n", FUNC_ADPT_ARG(adapter), u_ch, u_bw, u_offset);
 		DBG_871X(FUNC_ADPT_FMT" req: %u,%u,%u\n", FUNC_ADPT_ARG(adapter), req_ch, req_bw, req_offset);
 
-		rtw_regsty_adjust_chbw(&adapter->registrypriv, dec_ch, &dec_bw, &dec_offset);
+		rtw_adjust_chbw(adapter, dec_ch, &dec_bw, &dec_offset);
 		
 		if (rtw_is_chbw_grouped(u_ch, u_bw, u_offset, dec_ch, dec_bw, dec_offset)) {
 
@@ -4140,7 +4133,7 @@ bool rtw_ap_chbw_decision(_adapter *adapter, u8 req_ch, u8 req_bw, u8 req_offset
 		/* single AP mode */
 
 		DBG_871X(FUNC_ADPT_FMT" req: %u,%u,%u\n", FUNC_ADPT_ARG(adapter), req_ch, req_bw, req_offset);
-		rtw_regsty_adjust_chbw(&adapter->registrypriv, dec_ch, &dec_bw, &dec_offset);
+		rtw_adjust_chbw(adapter, dec_ch, &dec_bw, &dec_offset);
 
 		#if defined(CONFIG_DFS_MASTER)
 		/* check NOL */

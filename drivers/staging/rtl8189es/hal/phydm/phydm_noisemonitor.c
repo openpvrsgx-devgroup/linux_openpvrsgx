@@ -67,7 +67,7 @@ s2Byte odm_InbandNoise_Monitor_NSeries(PDM_ODM_T	pDM_Odm,u8 bPauseDIG,u8 IGIValu
 	
 	if(bPauseDIG)
 	{
-		odm_PauseDIG(pDM_Odm,ODM_PAUSE_DIG,IGIValue);
+		odm_PauseDIG(pDM_Odm, PHYDM_PAUSE, PHYDM_PAUSE_LEVEL_1, IGIValue);
 	}
 	//
 	// Step 2. Disable all power save for read registers
@@ -169,7 +169,7 @@ s2Byte odm_InbandNoise_Monitor_NSeries(PDM_ODM_T	pDM_Odm,u8 bPauseDIG,u8 IGIValu
 	//
 	if(bPauseDIG)
 	{
-		odm_PauseDIG(pDM_Odm,ODM_RESUME_DIG,IGIValue);
+		odm_PauseDIG(pDM_Odm, PHYDM_RESUME, PHYDM_PAUSE_LEVEL_1, IGIValue);
 	}	
 	func_end = ODM_GetProgressingTime(pDM_Odm,func_start) ;	
 	
@@ -199,7 +199,7 @@ odm_InbandNoise_Monitor_ACSeries(PDM_ODM_T	pDM_Odm, u8 bPauseDIG, u8 IGIValue, u
 	
 	/* Step 1. Disable DIG && Set initial gain. */
 	if (bPauseDIG)
-		odm_PauseDIG(pDM_Odm, ODM_PAUSE_DIG, IGIValue);
+		odm_PauseDIG(pDM_Odm, PHYDM_PAUSE, PHYDM_PAUSE_LEVEL_1, IGIValue);
 
 	/* Step 2. Disable all power save for read registers */
 	/*dcmd_DebugControlPowerSave(pAdapter, PSDisable); */
@@ -272,7 +272,7 @@ odm_InbandNoise_Monitor_ACSeries(PDM_ODM_T	pDM_Odm, u8 bPauseDIG, u8 IGIValue, u
 
 	/* Step 4. Recover the Dig*/
 	if (bPauseDIG)
-		odm_PauseDIG(pDM_Odm, ODM_RESUME_DIG, IGIValue);
+		odm_PauseDIG(pDM_Odm, PHYDM_RESUME, PHYDM_PAUSE_LEVEL_1, IGIValue);
 	
 	func_end = ODM_GetProgressingTime(pDM_Odm, func_start);
 	

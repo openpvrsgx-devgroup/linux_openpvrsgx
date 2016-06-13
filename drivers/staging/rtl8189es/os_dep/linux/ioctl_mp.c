@@ -147,7 +147,8 @@ int rtw_mp_read_reg(struct net_device *dev,
 		return -EFAULT;
 
 	_rtw_memset(extra, 0, wrqu->length);
-
+	_rtw_memset(data, '\0', sizeof(data));
+	_rtw_memset(tmp, '\0', sizeof(tmp));
 	pch = input;
 	pnext = strpbrk(pch, " ,.-");
 	if (pnext == NULL)
@@ -234,7 +235,7 @@ int rtw_mp_read_reg(struct net_device *dev,
 					break;
 				pch = pnext;
 			}
-			wrqu->length = strlen(extra) - 1;
+			wrqu->length = strlen(extra);
 			break;
 
 	default:
@@ -372,12 +373,14 @@ int rtw_mp_start(struct net_device *dev,
 	LeaveAllPowerSaveMode(padapter);
 
 	if (padapter->registrypriv.mp_mode == 0) {
-		pHalFunc->hal_deinit(padapter);
+		rtw_hal_deinit(padapter);
 		padapter->registrypriv.mp_mode = 1;
-		pHalFunc->hal_init(padapter);
-
-		rtw_pm_set_ips(padapter, IPS_NONE);
-		LeaveAllPowerSaveMode(padapter);
+		#ifdef CONFIG_RF_GAIN_OFFSET
+		if (!IS_HARDWARE_TYPE_8814A(padapter))
+			padapter->registrypriv.RegRfKFreeEnable = 1;
+		rtw_hal_read_chip_info(padapter);
+		#endif /*CONFIG_RF_GAIN_OFFSET*/
+		rtw_hal_init(padapter);
 	}
 
 	if (padapter->registrypriv.mp_mode == 0)
@@ -449,14 +452,16 @@ int rtw_mp_rate(struct net_device *dev,
 		return -EFAULT;
 
 	rate = rtw_mpRateParseFunc(padapter, input);
+	padapter->mppriv.rateidx = rate;
 
 	if (rate == 0 && strcmp(input, "1M") != 0) {
 		rate = rtw_atoi(input);
-		if (rate <= 0x7f)
+		padapter->mppriv.rateidx = MRateToHwRate(rate);
+		/*if (rate <= 0x7f)
 			rate = wifirate2_ratetbl_inx((u8)rate);
 		else if (rate < 0xC8)
-			rate = (rate - 0x80 + MPT_RATE_MCS0);
-		/*HT  rate 0x80(MCS0)  ~ 0x8F(MCS15) ~ 0x9F(MCS31) 128~159
+			rate = (rate - 0x79 + MPT_RATE_MCS0);
+		HT  rate 0x80(MCS0)  ~ 0x8F(MCS15) ~ 0x9F(MCS31) 128~159
 		VHT1SS~2SS rate 0xA0 (VHT1SS_MCS0 44) ~ 0xB3 (VHT2SS_MCS9 #63) 160~179
 		VHT rate 0xB4 (VHT3SS_MCS0 64) ~ 0xC7 (VHT2SS_MCS9 #83) 180~199
 		else
@@ -466,14 +471,13 @@ int rtw_mp_rate(struct net_device *dev,
 	}
 	_rtw_memset(extra, 0, wrqu->length);
 
-	sprintf(extra, "Set data rate to %s index %d" , input, rate);
-	DBG_871X("%s: %s rate index=%d\n", __func__, input, rate);
+	sprintf(extra, "Set data rate to %s index %d" , input, padapter->mppriv.rateidx);
+	DBG_871X("%s: %s rate index=%d\n", __func__, input, padapter->mppriv.rateidx);
 
-	if (rate >= MPT_RATE_LAST)
+	if (padapter->mppriv.rateidx >= DESC_RATEVHTSS4MCS9)
 		return -EINVAL;
 
-	padapter->mppriv.rateidx = rate;
-	pMptCtx->MptRateIndex = rate;
+	pMptCtx->MptRateIndex = padapter->mppriv.rateidx;
 	SetDataRate(padapter);
 
 	wrqu->length = strlen(extra);
@@ -738,7 +742,13 @@ int rtw_mp_ctx(struct net_device *dev,
 		return -EFAULT;
 
 	DBG_871X("%s: in=%s\n", __func__, extra);
-
+#ifdef CONFIG_CONCURRENT_MODE
+	if (padapter->adapter_type == SECONDARY_ADAPTER) {
+		sprintf(extra, "Error: MP mode can't support Virtual Adapter, Please to use main Adapter.\n");
+		wrqu->length = strlen(extra);
+		return 0;
+	}
+#endif
 	countPkTx = strncmp(extra, "count=", 5); /* strncmp TRUE is 0*/
 	cotuTx = strncmp(extra, "background", 20);
 	CarrSprTx = strncmp(extra, "background,cs", 20);
@@ -780,8 +790,10 @@ int rtw_mp_ctx(struct net_device *dev,
 		bStartTest = 0; /* To set Stop*/
 		pmp_priv->tx.stop = 1;
 		sprintf(extra, "Stop continuous Tx");
+		ODM_Write_DIG(&pHalData->odmpriv, 0x20);
 	} else {
 		bStartTest = 1;
+		ODM_Write_DIG(&pHalData->odmpriv, 0x7f);
 		if (pmp_priv->mode != MP_ON) {
 			if (pmp_priv->tx.stop != 1) {
 				DBG_871X("%s: MP_MODE != ON %d\n", __func__, pmp_priv->mode);
@@ -868,7 +880,13 @@ int rtw_mp_arx(struct net_device *dev,
 		return -EFAULT;
 
 	DBG_871X("%s: %s\n", __func__, input);
-
+#ifdef CONFIG_CONCURRENT_MODE
+	if (padapter->adapter_type == SECONDARY_ADAPTER) {
+		sprintf(extra, "Error: MP mode can't support Virtual Adapter, Please to use main Adapter.\n");
+		wrqu->length = strlen(extra);
+		return 0;
+	}
+#endif
 	bStartRx = (strncmp(input, "start", 5) == 0) ? 1 : 0; /* strncmp TRUE is 0*/
 	bStopRx = (strncmp(input, "stop", 5) == 0) ? 1 : 0; /* strncmp TRUE is 0*/
 	bQueryPhy = (strncmp(input, "phy", 3) == 0) ? 1 : 0; /* strncmp TRUE is 0*/
@@ -1189,7 +1207,7 @@ int rtw_mp_phypara(struct net_device *dev,
 	ret = sscanf(input, "xcap=%d", &valxcap);
 
 	pHalData->CrystalCap = (u8)valxcap;
-	Hal_ProSetCrystalCap(padapter , valxcap);
+	hal_set_crystal_cap(padapter , valxcap);
 
 	sprintf(extra, "Set xcap=%d", valxcap);
 	wrqu->length = strlen(extra) + 1;
@@ -1385,7 +1403,7 @@ int rtw_mp_pretx_proc(PADAPTER padapter, u8 bStartTest, char *extra)
 						break;
 		case MP_CARRIER_SUPPRISSION_TX:
 						if (bStartTest != 0) {
-							if (pmp_priv->rateidx <= MPT_RATE_11M)
+							if (HwRateToMPTRate(pmp_priv->rateidx) <= MPT_RATE_11M)
 								sprintf(extra, "%s\nStart continuous DA=ffffffffffff len=1500\n infinite=yes.", extra);
 							else
 								sprintf(extra, "%s\nSpecify carrier suppression but not CCK rate", extra);
@@ -1441,14 +1459,22 @@ int rtw_mp_tx(struct net_device *dev,
 		HAL_DATA_TYPE	*pHalData	= GET_HAL_DATA(padapter);
 		struct mp_priv *pmp_priv = &padapter->mppriv;
 		PMPT_CONTEXT		pMptCtx = &(padapter->mppriv.MptCtx);
+		struct registry_priv	*pregistrypriv = &padapter->registrypriv;
 
 		u32 bandwidth = 0, sg = 0, channel = 6, txpower = 40, rate = 108, ant = 0, txmode = 1, count = 0;
-		u8 i = 0, j = 0, bStartTest = 1, status = 0;
+		u8 i = 0, j = 0, bStartTest = 1, status = 0, Idx = 0, tmpU1B = 0;
 		u16 antenna = 0;
 
 		if (copy_from_user(extra, wrqu->data.pointer, wrqu->data.length))
 			return -EFAULT;
 		DBG_871X("extra = %s\n", extra);
+#ifdef CONFIG_CONCURRENT_MODE
+			if (padapter->adapter_type == SECONDARY_ADAPTER) {
+				sprintf(extra, "Error: MP mode can't support Virtual Adapter, Please to use main Adapter.\n");
+				wrqu->data.length = strlen(extra);
+				return 0;
+			}
+#endif
 
 		if (strncmp(extra, "stop", 3) == 0) {
 			bStartTest = 0; /* To set Stop*/
@@ -1462,7 +1488,7 @@ int rtw_mp_tx(struct net_device *dev,
 					DBG_871X("Got Count=%d]\n", count);
 				pmp_priv->tx.count = count;
 				return 0;
-		} else if (strncmp(extra, "setting", 5) == 0) {
+		} else if (strncmp(extra, "setting", 7) == 0) {
 				_rtw_memset(extra, 0, wrqu->data.length);
 				sprintf(extra, "Current Setting :\n Channel:%d", pmp_priv->channel);
 				sprintf(extra, "%s\n Bandwidth:%d", extra, pmp_priv->bandwidth);
@@ -1473,6 +1499,136 @@ int rtw_mp_tx(struct net_device *dev,
 				sprintf(extra, "%s\n MP Mode:%d", extra, pmp_priv->mode);
 				wrqu->data.length = strlen(extra);
 				return 0;
+#ifdef CONFIG_MP_VHT_HW_TX_MODE
+		} else if (strncmp(extra, "pmact", 5) == 0) {
+				if (strncmp(extra, "pmact=start", 11) == 0) {
+					_rtw_memset(&pMptCtx->PMacTxInfo, 0, sizeof(pMptCtx->PMacTxInfo));
+					pMptCtx->PMacTxInfo.bEnPMacTx = _TRUE;
+
+					if (pMptCtx->bldpc == TRUE)
+						pMptCtx->PMacTxInfo.bLDPC = _TRUE;
+
+					if (pMptCtx->bstbc == TRUE)
+						pMptCtx->PMacTxInfo.bSTBC = _TRUE;
+
+					pMptCtx->PMacTxInfo.bSPreamble = pmp_priv->preamble;
+					pMptCtx->PMacTxInfo.bSGI = pmp_priv->preamble;
+					pMptCtx->PMacTxInfo.BandWidth = pmp_priv->bandwidth;
+					pMptCtx->PMacTxInfo.TX_RATE = HwRateToMPTRate(pmp_priv->rateidx);
+
+					pMptCtx->PMacTxInfo.Mode = pMptCtx->HWTxmode;
+
+					pMptCtx->PMacTxInfo.NDP_sound = FALSE;/*(Adapter.PacketType == NDP_PKT)?TRUE:FALSE;*/
+
+					if (padapter->mppriv.pktInterval == 0)
+						pMptCtx->PMacTxInfo.PacketPeriod = 100;
+					else
+						pMptCtx->PMacTxInfo.PacketPeriod = padapter->mppriv.pktInterval;
+
+					if (padapter->mppriv.pktLength < 1000)
+						pMptCtx->PMacTxInfo.PacketLength = 1000;
+					else
+						pMptCtx->PMacTxInfo.PacketLength = padapter->mppriv.pktLength;
+
+					pMptCtx->PMacTxInfo.PacketPattern  = rtw_random32() % 0xFF;
+
+					if (padapter->mppriv.tx_pktcount != 0)
+						pMptCtx->PMacTxInfo.PacketCount = padapter->mppriv.tx_pktcount;
+
+					pMptCtx->PMacTxInfo.Ntx = 0;
+					for (Idx = 16; Idx < 20; Idx++) {
+						tmpU1B = (padapter->mppriv.antenna_tx >> Idx) & 1;
+						if (tmpU1B)
+							pMptCtx->PMacTxInfo.Ntx++;
+					}
+
+					_rtw_memset(pMptCtx->PMacTxInfo.MacAddress, 0xFF, ETH_ALEN);
+
+					PMAC_Get_Pkt_Param(&pMptCtx->PMacTxInfo, &pMptCtx->PMacPktInfo);
+
+					if (MPT_IS_CCK_RATE(pMptCtx->PMacTxInfo.TX_RATE)) {
+
+						CCK_generator(&pMptCtx->PMacTxInfo, &pMptCtx->PMacPktInfo);
+					} else {
+						PMAC_Nsym_generator(&pMptCtx->PMacTxInfo, &pMptCtx->PMacPktInfo);
+						/* 24 BIT*/
+						L_SIG_generator(pMptCtx->PMacPktInfo.N_sym, &pMptCtx->PMacTxInfo, &pMptCtx->PMacPktInfo);
+					}
+					/*	48BIT*/
+					if (MPT_IS_HT_RATE(pMptCtx->PMacTxInfo.TX_RATE))
+						HT_SIG_generator(&pMptCtx->PMacTxInfo, &pMptCtx->PMacPktInfo);
+					else if (MPT_IS_VHT_RATE(pMptCtx->PMacTxInfo.TX_RATE)) {
+						/*	48BIT*/
+						VHT_SIG_A_generator(&pMptCtx->PMacTxInfo, &pMptCtx->PMacPktInfo);
+
+						/*	26/27/29 BIT  & CRC 8 BIT*/
+						VHT_SIG_B_generator(&pMptCtx->PMacTxInfo);
+
+						/* 32 BIT*/
+						VHT_Delimiter_generator(&pMptCtx->PMacTxInfo);
+					}
+
+					mpt_ProSetPMacTx(padapter);
+					sprintf(extra, "Set PMac Tx Mode start\n");
+
+				} else if (strncmp(extra, "pmact,mode=", 11) == 0) {
+						int txmode = 0;
+
+						if (sscanf(extra, "pmact,mode=%d", &txmode) > 0) {
+							if (txmode == 1) {
+								pMptCtx->HWTxmode = CONTINUOUS_TX;
+								sprintf(extra, "\t Config HW Tx mode = CONTINUOUS_TX\n");
+							} else if (txmode == 2) {
+								pMptCtx->HWTxmode = OFDM_Single_Tone_TX;
+								sprintf(extra, "\t Config HW Tx mode = OFDM_Single_Tone_TX\n");
+							} else {
+								pMptCtx->HWTxmode = PACKETS_TX;
+								sprintf(extra, "\t Config HW Tx mode = PACKETS_TX\n");
+							}
+						} else {
+							pMptCtx->HWTxmode = PACKETS_TX;
+							sprintf(extra, "\t Config HW Tx mode=\n 0 = PACKETS_TX\n 1 = CONTINUOUS_TX\n 2 = OFDM_Single_Tone_TX");
+						}
+				} else if (strncmp(extra, "pmact,", 6) == 0) {
+					int PacketPeriod = 0, PacketLength = 0, PacketCout = 0;
+					int bldpc = 0, bstbc = 0;
+
+					if (sscanf(extra, "pmact,period=%d", &PacketPeriod) > 0) {
+							padapter->mppriv.pktInterval = PacketPeriod;
+							DBG_871X("PacketPeriod=%d\n", padapter->mppriv.pktInterval);
+							sprintf(extra, "PacketPeriod [1~255]= %d\n", padapter->mppriv.pktInterval);
+
+					} else if (sscanf(extra, "pmact,length=%d", &PacketLength) > 0) {
+							padapter->mppriv.pktLength = PacketLength;
+							DBG_871X("PacketPeriod=%d\n", padapter->mppriv.pktLength);
+							sprintf(extra, "PacketLength[~65535]=%d\n", padapter->mppriv.pktLength);
+
+					} else if (sscanf(extra, "pmact,count=%d", &PacketCout) > 0) {
+							padapter->mppriv.tx_pktcount = PacketCout;
+							DBG_871X("Packet Cout =%d\n", padapter->mppriv.tx_pktcount);
+							sprintf(extra, "Packet Cout =%d\n", padapter->mppriv.tx_pktcount);
+
+					} else if (sscanf(extra, "pmact,ldpc=%d", &bldpc) > 0) {
+							pMptCtx->bldpc = bldpc;
+							DBG_871X("Set LDPC =%d\n", pMptCtx->bldpc);
+							sprintf(extra, "Set LDPC =%d\n", pMptCtx->bldpc);
+
+					} else if (sscanf(extra, "pmact,stbc=%d", &bstbc) > 0) {
+							pMptCtx->bstbc = bstbc;
+							DBG_871X("Set STBC =%d\n", pMptCtx->bstbc);
+							sprintf(extra, "Set STBC =%d\n", pMptCtx->bstbc);
+					} else
+						sprintf(extra, "\n period={1~255}\n length={1000~65535}\n count={0~}\n ldpc={0/1}\n stbc={0/1}");
+
+				} else {
+					pMptCtx->PMacTxInfo.bEnPMacTx = FALSE;
+					sprintf(extra, "Set PMac Tx Mode stop\n");
+
+				}
+
+				wrqu->data.length = strlen(extra);
+				return 0;
+#endif
 		} else {
 
 			if (sscanf(extra, "ch=%d,bw=%d,rate=%d,pwr=%d,ant=%d,tx=%d", &channel, &bandwidth, &rate, &txpower, &ant, &txmode) < 6) {
@@ -1629,6 +1785,14 @@ int rtw_mp_rx(struct net_device *dev,
 
 	if (copy_from_user(extra, wrqu->data.pointer, wrqu->data.length))
 			return -EFAULT;
+
+#ifdef CONFIG_CONCURRENT_MODE
+		if (padapter->adapter_type == SECONDARY_ADAPTER) {
+			sprintf(extra, "Error: MP mode can't support Virtual Adapter, Please to use main Adapter.\n");
+			wrqu->data.length = strlen(extra);
+			return 0;
+		}
+#endif
 
 	if (strncmp(extra, "stop", 4) == 0) {
 		_rtw_memset(extra, 0, wrqu->data.length);

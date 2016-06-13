@@ -97,8 +97,7 @@ ODM_REG(DIG,_pDM_Odm)
 #define ODM_REG(_name, _pDM_Odm)	_cat(_name, _pDM_Odm->SupportICType, _reg)
 #define ODM_BIT(_name, _pDM_Odm)	_cat(_name, _pDM_Odm->SupportICType, _bit)
 #endif
-typedef enum _ODM_H2C_CMD 
-{
+typedef enum _PHYDM_H2C_CMD {
 	ODM_H2C_RSSI_REPORT = 0,
 	ODM_H2C_PSD_RESULT = 1,	
 	ODM_H2C_PathDiv = 2,
@@ -107,8 +106,34 @@ typedef enum _ODM_H2C_CMD
 	ODM_H2C_RA_PARA_ADJUST = 5,
 	PHYDM_H2C_DYNAMIC_TX_PATH = 6,
 	PHYDM_H2C_FW_TRACE_EN = 7,
+	PHYDM_H2C_TXBF = 8,
 	ODM_MAX_H2CCMD
-}ODM_H2C_CMD;
+} PHYDM_H2C_CMD;
+
+typedef enum _PHYDM_C2H_EVT {
+	PHYDM_C2H_DBG = 0,
+	PHYDM_C2H_LB = 1,
+	PHYDM_C2H_XBF = 2,
+	PHYDM_C2H_TX_REPORT = 3,
+	PHYDM_C2H_INFO = 9,
+	PHYDM_C2H_BT_MP = 11,
+	PHYDM_C2H_RA_RPT = 12,
+	PHYDM_C2H_RA_PARA_RPT = 14,
+	PHYDM_C2H_DYNAMIC_TX_PATH_RPT = 15,
+	PHYDM_C2H_IQK_FINISH = 17, /*0x11*/
+	PHYDM_C2H_DBG_CODE = 0xFE,
+	PHYDM_C2H_EXTEND = 0xFF,
+} PHYDM_C2H_EVT;
+
+typedef enum _PHYDM_EXTEND_C2H_EVT {
+	PHYDM_EXTEND_C2H_DBG_PRINT = 0
+
+} PHYDM_EXTEND_C2H_EVT;
+
+typedef enum _PHYDM_ACTING_TYPE {
+	PhyDM_ACTING_AS_IBSS = 0,
+	PhyDM_ACTING_AS_AP = 1
+} PHYDM_ACTING_TYPE;
 
 
 //
@@ -378,6 +403,11 @@ ODM_ReleaseTimer(
 	IN	PRT_TIMER		pTimer
 	);
 
+BOOLEAN
+phydm_actingDetermine(
+	IN	PDM_ODM_T		pDM_Odm,
+	IN	PHYDM_ACTING_TYPE	type
+	);
 
 //
 // ODM FW relative API.
@@ -388,6 +418,14 @@ ODM_FillH2CCmd(
 	IN	u1Byte 			ElementID,
 	IN	u4Byte 			CmdLen,
 	IN	pu1Byte			pCmdBuffer
+);
+
+u1Byte
+phydm_c2H_content_parsing(
+	IN	PVOID			pDM_VOID,
+	IN	u1Byte			c2hCmdId,
+	IN	u1Byte			c2hCmdLen,
+	IN	pu1Byte			tmpBuf
 );
 
 u8Byte

@@ -182,12 +182,19 @@ typedef struct _RT_FIRMWARE_8812 {
 #define WOWLAN_PAGE_NUM_8812	0x00
 #endif
 
-#define TX_TOTAL_PAGE_NUMBER_8812	(0xFF - BCNQ_PAGE_NUM_8812 - WOWLAN_PAGE_NUM_8812)
+
+#ifdef	CONFIG_BEAMFORMER_FW_NDPA
+#define FW_NDPA_PAGE_NUM	0x02
+#else
+#define FW_NDPA_PAGE_NUM	0x00
+#endif
+
+#define TX_TOTAL_PAGE_NUMBER_8812	(0xFF - BCNQ_PAGE_NUM_8812 - WOWLAN_PAGE_NUM_8812-FW_NDPA_PAGE_NUM)
 #define TX_PAGE_BOUNDARY_8812			(TX_TOTAL_PAGE_NUMBER_8812 + 1)
 
 #define TX_PAGE_BOUNDARY_WOWLAN_8812		(0xFF - BCNQ_PAGE_NUM_8812 - WOWLAN_PAGE_NUM_8812 + 1)
 
-#define WMM_NORMAL_TX_TOTAL_PAGE_NUMBER_8812	TX_PAGE_BOUNDARY_8812
+#define WMM_NORMAL_TX_TOTAL_PAGE_NUMBER_8812	TX_TOTAL_PAGE_NUMBER_8812
 #define WMM_NORMAL_TX_PAGE_BOUNDARY_8812		(WMM_NORMAL_TX_TOTAL_PAGE_NUMBER_8812 + 1)
 
 // For Normal Chip Setting
@@ -338,6 +345,8 @@ u8 SetHalDefVar8812A(PADAPTER padapter, HAL_DEF_VARIABLE variable, void *pval);
 u8 GetHalDefVar8812A(PADAPTER padapter, HAL_DEF_VARIABLE variable, void *pval);
 s32 c2h_id_filter_ccx_8812a(u8 *buf);
 void rtl8812_set_hal_ops(struct hal_ops *pHalFunc);
+void init_hal_spec_8812a(_adapter *adapter);
+void init_hal_spec_8821a(_adapter *adapter);
 
 // register
 void SetBcnCtrlReg(PADAPTER padapter, u8 SetBits, u8 ClearBits);
@@ -354,6 +363,11 @@ VOID	UpdateInterruptMask8812AE(PADAPTER Adapter, u32 AddMSR, u32 AddMSR1, u32 Re
 void rtl8812a_combo_card_WifiOnlyHwInit(PADAPTER Adapter);
 #endif
 
+VOID
+Hal_PatchwithJaguar_8812(
+	IN PADAPTER				Adapter,
+	IN RT_MEDIA_STATUS		MediaStatus
+	);
 
 #endif //__RTL8188E_HAL_H__
 

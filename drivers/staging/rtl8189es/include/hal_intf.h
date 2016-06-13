@@ -42,6 +42,12 @@ enum _CHIP_TYPE {
 	MAX_CHIP_TYPE
 };
 
+typedef enum _HAL_HW_TIMER_TYPE {
+	HAL_TIMER_NONE = 0,
+	HAL_TIMER_TXBF = 1,
+	HAL_TIMER_EARLYMODE = 2,
+} HAL_HW_TIMER_TYPE, *PHAL_HW_TIMER_TYPE;
+
 
 typedef enum _HW_VARIABLES{
 	HW_VAR_MEDIA_STATUS,
@@ -71,8 +77,6 @@ typedef enum _HW_VARIABLES{
 	/* PHYDM odm->SupportAbility */
 	HW_VAR_CAM_EMPTY_ENTRY,
 	HW_VAR_CAM_INVALID_ALL,
-	HW_VAR_CAM_WRITE,
-	HW_VAR_CAM_READ,
 	HW_VAR_AC_PARAM_VO,
 	HW_VAR_AC_PARAM_VI,
 	HW_VAR_AC_PARAM_BE,
@@ -94,7 +98,6 @@ typedef enum _HW_VARIABLES{
 	HW_VAR_BT_SET_COEXIST,
 	HW_VAR_BT_ISSUE_DELBA,	
 	HW_VAR_CURRENT_ANTENNA,
-	HW_VAR_ANTENNA_DIVERSITY_LINK,
 	HW_VAR_ANTENNA_DIVERSITY_SELECT,
 	HW_VAR_SWITCH_EPHY_WoWLAN,
 	HW_VAR_EFUSE_USAGE,
@@ -122,7 +125,6 @@ typedef enum _HW_VARIABLES{
 	HW_VAR_C2H_HANDLE,
 	HW_VAR_RPT_TIMER_SETTING,
 	HW_VAR_TX_RPT_MAX_MACID,	
-	HW_VAR_H2C_MEDIA_STATUS_RPT,
 	HW_VAR_CHK_HI_QUEUE_EMPTY,
 	HW_VAR_DL_BCN_SEL,
 	HW_VAR_AMPDU_MAX_TIME,
@@ -139,12 +141,20 @@ typedef enum _HW_VARIABLES{
 	HW_VAR_SOUNDING_STATUS,
 	HW_VAR_SOUNDING_FW_NDPA,
 	HW_VAR_SOUNDING_CLK,
+/*Add by YuChen for TXBF HW timer*/
+	HW_VAR_HW_REG_TIMER_INIT,
+	HW_VAR_HW_REG_TIMER_RESTART,
+	HW_VAR_HW_REG_TIMER_START,
+	HW_VAR_HW_REG_TIMER_STOP,
+/*Add by YuChen for TXBF HW timer*/
 	HW_VAR_DL_RSVD_PAGE,
+	HW_VAR_MACID_LINK,
+	HW_VAR_MACID_NOLINK,
 	HW_VAR_MACID_SLEEP,
 	HW_VAR_MACID_WAKEUP,
 	HW_VAR_DUMP_MAC_QUEUE_INFO,
 	HW_VAR_ASIX_IOT,
-	HW_VAR_E2500_IOT,
+	HW_VAR_EN_HW_UPDATE_TSF,
 }HW_VARIABLES;
 
 typedef enum _HAL_DEF_VARIABLE{
@@ -167,6 +177,8 @@ typedef enum _HAL_DEF_VARIABLE{
 	HAL_DEF_RX_STBC, 				// RX STBC support
 	HAL_DEF_EXPLICIT_BEAMFORMER,// Explicit  Compressed Steering Capable
 	HAL_DEF_EXPLICIT_BEAMFORMEE,// Explicit Compressed Beamforming Feedback Capable
+	HAL_DEF_BEAMFORMER_CAP,
+	HAL_DEF_BEAMFORMEE_CAP,
 	HW_VAR_MAX_RX_AMPDU_FACTOR,
 	HW_DEF_RA_INFO_DUMP,
 	HAL_DEF_DBG_DUMP_TXPKT,
@@ -182,6 +194,7 @@ typedef enum _HAL_DEF_VARIABLE{
 	HAL_DEF_DBG_DIS_PWT, //disable Tx power training or not.
 	HAL_DEF_EFUSE_USAGE,	/* Get current EFUSE utilization. 2008.12.19. Added by Roger. */
 	HAL_DEF_EFUSE_BYTES,
+	HW_VAR_BEST_AMPDU_DENSITY,
 }HAL_DEF_VARIABLE;
 
 typedef enum _HAL_ODM_VARIABLE{
@@ -351,6 +364,7 @@ struct hal_ops {
 #ifdef CONFIG_GPIO_API
 	void (*update_hisr_hsisr_ind)(PADAPTER padapter, u32 flag);
 #endif
+	void (*fw_correct_bcn)(PADAPTER padapter);
 };
 
 typedef	enum _RT_EEPROM_TYPE{
@@ -659,6 +673,8 @@ u8 rtw_hal_get_txbuff_rsvd_page_num(_adapter *adapter, bool wowlan);
 #ifdef CONFIG_GPIO_API
 void rtw_hal_update_hisr_hsisr_ind(_adapter *padapter, u32 flag);
 #endif
+
+void rtw_hal_fw_correct_bcn(_adapter *padapter);
 
 #if defined(CONFIG_WOWLAN) || defined(CONFIG_AP_WOWLAN)
 void rtw_hal_clear_interrupt(_adapter *padapter);

@@ -75,6 +75,14 @@ VOID
 odm_DynamicTxPower_92D(
 	IN		PVOID					pDM_VOID
 	);
+
+VOID 
+odm_DynamicTxPower_8821(
+	IN		PVOID					pDM_VOID,	
+	IN		pu1Byte					pDesc,
+	IN		u1Byte					macId
+	);
+
 #endif
 
 VOID 

@@ -1071,28 +1071,27 @@ Current IOREG MAP
 #define RCR_APP_ICV				BIT29	// MACRX will retain the ICV at the bottom of the packet.
 #define RCR_APP_PHYST_RXFF		BIT28	// PHY Status is appended before RX packet in RXFF
 #define RCR_APP_BA_SSN			BIT27	// SSN of previous TXBA is appended as after original RXDESC as the 4-th DW of RXDESC.
-#define RCR_NONQOS_VHT			BIT26	// Reserved
-#define RCR_RSVD_BIT25			BIT25	// Reserved
+#define RCR_VHT_DACK			BIT26	/* This bit to control response type for vht single mpdu data packet. 1. ACK as response 0. BA as response */
+#define RCR_TCPOFLD_EN			BIT25	/* Enable TCP checksum offload */
 #define RCR_ENMBID				BIT24	// Enable Multiple BssId. Only response ACK to the packets whose DID(A1) matching to the addresses in the MBSSID CAM Entries.
 #define RCR_LSIGEN				BIT23	// Enable LSIG TXOP Protection function. Search KEYCAM for each rx packet to check if LSIGEN bit is set.
 #define RCR_MFBEN				BIT22	// Enable immediate MCS Feedback function. When Rx packet with MRQ = 1'b1, then search KEYCAM to find sender's MCS Feedback function and send response.
-#define RCR_RSVD_BIT21			BIT21	// Reserved
-#define RCR_RSVD_BIT20			BIT20	// Reserved
-#define RCR_RSVD_BIT19			BIT19	// Reserved
+#define RCR_DISCHKPPDLLEN		BIT21	/* Do not check PPDU while the PPDU length is smaller than 14 byte. */
+#define RCR_PKTCTL_DLEN			BIT20	/* While rx path dead lock occurs, reset rx path */
+#define RCR_DISGCLK				BIT19	/* Disable macrx clock gating control (no used) */
 #define RCR_TIM_PARSER_EN		BIT18	// RX Beacon TIM Parser.
-#define RCR_BM_DATA_EN			BIT17	// Broadcast data packet interrupt enable.
-#define RCR_UC_DATA_EN			BIT16	// Unicast data packet interrupt enable.
-#define RCR_RSVD_BIT15			BIT15	// Reserved
+#define RCR_BC_MD_EN			BIT17	/* Broadcast data packet more data bit check interrupt enable.*/
+#define RCR_UC_MD_EN			BIT16	/* Unicast data packet more data bit check interrupt enable. */
+#define RCR_RXSK_PERPKT			BIT15	/* Executing key search per MPDU */
 #define RCR_HTC_LOC_CTRL		BIT14	// MFC<--HTC=1 MFC-->HTC=0
 #define RCR_AMF					BIT13	// Accept management type frame
 #define RCR_ACF					BIT12	// Accept control type frame. Control frames BA, BAR, and PS-Poll (when in AP mode) are not controlled by this bit. They are controlled by ADF.
 #define RCR_ADF					BIT11	// Accept data type frame. This bit also regulates BA, BAR, and PS-Poll (AP mode only).
-#define RCR_RSVD_BIT10			BIT10	// Reserved
+#define RCR_DISDECMYPKT			BIT10	/* This bit determines whether hw need to do decryption.1: If A1 match, do decryption.0: Do decryption. */
 #define RCR_AICV					BIT9		// Accept ICV error packet
 #define RCR_ACRC32				BIT8		// Accept CRC32 error packet 
 #define RCR_CBSSID_BCN			BIT7		// Accept BSSID match packet (Rx beacon, probe rsp)
 #define RCR_CBSSID_DATA		BIT6		// Accept BSSID match packet (Data)
-#define RCR_CBSSID				RCR_CBSSID_DATA	// Accept BSSID match packet
 #define RCR_APWRMGT			BIT5		// Accept power management packet
 #define RCR_ADD3				BIT4		// Accept address 3 match packet
 #define RCR_AB					BIT3		// Accept broadcast packet 

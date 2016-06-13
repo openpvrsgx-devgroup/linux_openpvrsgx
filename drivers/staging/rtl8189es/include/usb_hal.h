@@ -50,6 +50,10 @@ void rtl8814au_set_hal_ops(_adapter * padapter);
 void rtl8188fu_set_hal_ops(_adapter *padapter);
 #endif
 
+#ifdef CONFIG_RTL8703B
+void rtl8703bu_set_hal_ops(_adapter *padapter);
+#endif
+
 #ifdef CONFIG_INTEL_PROXIM	
 extern _adapter  *rtw_usb_get_sw_pointer(void);
 #endif	//CONFIG_INTEL_PROXIM

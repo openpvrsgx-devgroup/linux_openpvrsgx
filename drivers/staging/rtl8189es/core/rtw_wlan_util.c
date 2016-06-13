@@ -943,20 +943,21 @@ int is_client_associated_to_ibss(_adapter *padapter)
 
 int is_IBSS_empty(_adapter *padapter)
 {
-	unsigned int i;
-	struct mlme_ext_priv	*pmlmeext = &padapter->mlmeextpriv;
-	struct mlme_ext_info	*pmlmeinfo = &(pmlmeext->mlmext_info);
-	
-	for (i = IBSS_START_MAC_ID; i < NUM_STA; i++)
-	{
-		if (pmlmeinfo->FW_sta_info[i].status == 1)
-		{
+	int i;
+	struct macid_ctl_t *macid_ctl = &padapter->dvobj->macid_ctl;
+
+	for (i = 0; i < macid_ctl->num; i++) {
+		if (!rtw_macid_is_used(macid_ctl, i))
+			continue;
+		if (rtw_macid_get_if_g(macid_ctl, i) != padapter->iface_id)
+			continue;
+		if (!GET_H2CCMD_MSRRPT_PARM_OPMODE(&macid_ctl->h2c_msr[i]))
+			continue;
+		if (GET_H2CCMD_MSRRPT_PARM_ROLE(&macid_ctl->h2c_msr[i]) == H2C_MSR_ROLE_ADHOC)
 			return _FAIL;
-		}
 	}
-	
+
 	return _TRUE;
-	
 }
 
 unsigned int decide_wait_for_beacon_timeout(unsigned int bcn_interval)
@@ -993,95 +994,9 @@ void invalidate_cam_all(_adapter *padapter)
 	rtw_hal_set_hwreg(padapter, HW_VAR_CAM_INVALID_ALL, &val8);
 
 	_enter_critical_bh(&cam_ctl->lock, &irqL);
-	cam_ctl->bitmap = 0;
-	_rtw_memset(dvobj->cam_cache, 0, sizeof(struct cam_entry_cache)*TOTAL_CAM_ENTRY);
+	rtw_sec_cam_map_clr_all(&cam_ctl->used);
+	_rtw_memset(dvobj->cam_cache, 0, sizeof(struct sec_cam_ent) * SEC_CAM_ENT_NUM_SW_LIMIT);
 	_exit_critical_bh(&cam_ctl->lock, &irqL);
-}
-#if 1
-static u32 _ReadCAM(_adapter *padapter ,u32 addr)
-{
-	u32 count = 0, cmd;
-	cmd = CAM_POLLINIG |addr ;
-	rtw_write32(padapter, RWCAM, cmd);
-
-	do{
-		if(0 == (rtw_read32(padapter,REG_CAMCMD) & CAM_POLLINIG)){
-			break;
-		}
-	}while(count++ < 100);		
-
-	return rtw_read32(padapter,REG_CAMREAD);	
-}
-void read_cam(_adapter *padapter ,u8 entry, u8 *get_key)
-{
-	u32	j,count = 0, addr, cmd;
-	addr = entry << 3;
-
-	//DBG_8192C("********* DUMP CAM Entry_#%02d***************\n",entry);
-	for (j = 0; j < 6; j++)
-	{	
-		cmd = _ReadCAM(padapter ,addr+j);
-		//DBG_8192C("offset:0x%02x => 0x%08x \n",addr+j,cmd);
-		if(j>1) //get key from cam
-			_rtw_memcpy(get_key+(j-2)*4, &cmd, 4);
-	}
-	//DBG_8192C("*********************************\n");
-}
-
-bool read_phy_cam_is_gtk(_adapter *padapter, u8 entry)
-{
-	bool res = _FALSE;
-	u32 addr, cmd;
-
-	addr = entry << 3;
-	cmd = _ReadCAM(padapter, addr);
-
-	res = (cmd & BIT6)? _TRUE:_FALSE;
-	return res;
-}
-
-void dump_cam_table(_adapter *padapter) {
-	u32 i, j, addr, cmd;
-	DBG_871X("###########DUMP CAM TABLE##############\n");
-	for (i = 0; i < 8 ; i++) {
-		addr = i << 3;
-		DBG_871X("********* DUMP CAM Entry_#%02d**********\n",i);
-		for (j = 0; j < 6; j++) {
-			cmd = _ReadCAM(padapter ,addr+j);
-			DBG_8192C("offset:0x%02x => 0x%08x \n",addr+j,cmd);
-		}
-		DBG_871X("*********************************\n");
-	}
-}
-#endif
-
-void _write_cam(_adapter *padapter, u8 entry, u16 ctrl, u8 *mac, u8 *key)
-{
-	unsigned int i, val, addr;
-	int j;
-	u32	cam_val[2];
-
-	addr = entry << 3;
-
-	for (j = 5; j >= 0; j--) {
-		switch (j) {
-		case 0:
-			val = (ctrl | (mac[0] << 16) | (mac[1] << 24) );
-			break;
-		case 1:
-			val = (mac[2] | ( mac[3] << 8) | (mac[4] << 16) | (mac[5] << 24));
-			break;
-		default:
-			i = (j - 2) << 2;
-			val = (key[i] | (key[i+1] << 8) | (key[i+2] << 16) | (key[i+3] << 24));
-			break;
-		}
-
-		cam_val[0] = val;
-		cam_val[1] = addr + (unsigned int)j;
-
-		rtw_hal_set_hwreg(padapter, HW_VAR_CAM_WRITE, (u8 *)cam_val);
-	}
 }
 
 void _clear_cam_entry(_adapter *padapter, u8 entry)
@@ -1089,7 +1004,7 @@ void _clear_cam_entry(_adapter *padapter, u8 entry)
 	unsigned char null_sta[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 	unsigned char null_key[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,0x00, 0x00, 0x00, 0x00,0x00, 0x00, 0x00, 0x00};
 
-	_write_cam(padapter, entry, 0, null_sta, null_key);
+	rtw_sec_write_cam_ent(padapter, entry, 0, null_sta, null_key);
 }
 
 inline void write_cam(_adapter *adapter, u8 id, u16 ctrl, u8 *mac, u8 *key)
@@ -1097,7 +1012,7 @@ inline void write_cam(_adapter *adapter, u8 id, u16 ctrl, u8 *mac, u8 *key)
 #ifdef CONFIG_WRITE_CACHE_ONLY
 	write_cam_cache(adapter, id ,ctrl, mac, key);
 #else
-	_write_cam(adapter, id, ctrl, mac, key);
+	rtw_sec_write_cam_ent(adapter, id, ctrl, mac, key);
 	write_cam_cache(adapter, id ,ctrl, mac, key);
 #endif
 }
@@ -1113,13 +1028,13 @@ inline void write_cam_from_cache(_adapter *adapter, u8 id)
 	struct dvobj_priv *dvobj = adapter_to_dvobj(adapter);
 	struct cam_ctl_t *cam_ctl = &dvobj->cam_ctl;
 	_irqL irqL;
-	struct cam_entry_cache cache;
+	struct sec_cam_ent cache;
 
 	_enter_critical_bh(&cam_ctl->lock, &irqL);
-	_rtw_memcpy(&cache, &dvobj->cam_cache[id], sizeof(struct cam_entry_cache));
+	_rtw_memcpy(&cache, &dvobj->cam_cache[id], sizeof(struct sec_cam_ent));
 	_exit_critical_bh(&cam_ctl->lock, &irqL);
 
-	_write_cam(adapter, id, cache.ctrl, cache.mac, cache.key);
+	rtw_sec_write_cam_ent(adapter, id, cache.ctrl, cache.mac, cache.key);
 }
 
 void write_cam_cache(_adapter *adapter, u8 id, u16 ctrl, u8 *mac, u8 *key)
@@ -1145,7 +1060,7 @@ void clear_cam_cache(_adapter *adapter, u8 id)
 
 	_enter_critical_bh(&cam_ctl->lock, &irqL);
 
-	_rtw_memset(&(dvobj->cam_cache[id]), 0, sizeof(struct cam_entry_cache));
+	_rtw_memset(&(dvobj->cam_cache[id]), 0, sizeof(struct sec_cam_ent));
 
 	_exit_critical_bh(&cam_ctl->lock, &irqL);
 }
@@ -1251,32 +1166,163 @@ inline bool _rtw_camctl_chk_flags(_adapter *adapter, u32 flags)
 	return _FALSE;
 }
 
-bool _rtw_camid_is_used(_adapter *adapter, u8 cam_id)
+void dump_sec_cam_map(void *sel, struct sec_cam_bmp *map, u8 max_num)
 {
-	struct dvobj_priv *dvobj = adapter_to_dvobj(adapter);
-	struct cam_ctl_t *cam_ctl = &dvobj->cam_ctl;
+	DBG_871X_SEL_NL(sel, "0x%08x\n", map->m0);
+#if (SEC_CAM_ENT_NUM_SW_LIMIT > 32)
+	if (max_num && max_num > 32)
+		DBG_871X_SEL_NL(sel, "0x%08x\n", map->m1);
+#endif
+#if (SEC_CAM_ENT_NUM_SW_LIMIT > 64)
+	if (max_num && max_num > 64)
+		DBG_871X_SEL_NL(sel, "0x%08x\n", map->m2);
+#endif
+#if (SEC_CAM_ENT_NUM_SW_LIMIT > 96)
+	if (max_num && max_num > 96)
+		DBG_871X_SEL_NL(sel, "0x%08x\n", map->m3);
+#endif
+}
+
+inline bool rtw_sec_camid_is_set(struct sec_cam_bmp *map, u8 id)
+{
+	if (id < 32)
+		return (map->m0 & BIT(id));
+#if (SEC_CAM_ENT_NUM_SW_LIMIT > 32)
+	else if (id < 64)
+		return (map->m1 & BIT(id - 32));
+#endif
+#if (SEC_CAM_ENT_NUM_SW_LIMIT > 64)
+	else if (id < 96)
+		return (map->m2 & BIT(id - 64));
+#endif
+#if (SEC_CAM_ENT_NUM_SW_LIMIT > 96)
+	else if (id < 128)
+		return (map->m3 & BIT(id - 96));
+#endif
+	else
+		rtw_warn_on(1);
+
+	return 0;
+}
+
+inline void rtw_sec_cam_map_set(struct sec_cam_bmp *map, u8 id)
+{
+	if (id < 32)
+		map->m0 |= BIT(id);
+#if (SEC_CAM_ENT_NUM_SW_LIMIT > 32)
+	else if (id < 64)
+		map->m1 |= BIT(id - 32);
+#endif
+#if (SEC_CAM_ENT_NUM_SW_LIMIT > 64)
+	else if (id < 96)
+		map->m2 |= BIT(id - 64);
+#endif
+#if (SEC_CAM_ENT_NUM_SW_LIMIT > 96)
+	else if (id < 128)
+		map->m3 |= BIT(id - 96);
+#endif
+	else
+		rtw_warn_on(1);
+}
+
+inline void rtw_sec_cam_map_clr(struct sec_cam_bmp *map, u8 id)
+{
+	if (id < 32)
+		map->m0 &= ~BIT(id);
+#if (SEC_CAM_ENT_NUM_SW_LIMIT > 32)
+	else if (id < 64)
+		map->m1 &= ~BIT(id-32);
+#endif
+#if (SEC_CAM_ENT_NUM_SW_LIMIT > 64)
+	else if (id < 96)
+		map->m2 &= ~BIT(id-64);
+#endif
+#if (SEC_CAM_ENT_NUM_SW_LIMIT > 96)
+	else if (id < 128)
+		map->m3 &= ~BIT(id-96);
+#endif
+	else
+		rtw_warn_on(1);
+}
+
+inline void rtw_sec_cam_map_clr_all(struct sec_cam_bmp *map)
+{
+	map->m0 = 0;
+#if (SEC_CAM_ENT_NUM_SW_LIMIT > 32)
+	map->m1 = 0;
+#endif
+#if (SEC_CAM_ENT_NUM_SW_LIMIT > 64)
+	map->m2 = 0;
+#endif
+#if (SEC_CAM_ENT_NUM_SW_LIMIT > 96)
+	map->m3 = 0;
+#endif
+}
+
+inline bool rtw_sec_camid_is_drv_forbid(struct cam_ctl_t *cam_ctl, u8 id)
+{
+	struct sec_cam_bmp forbid_map;
+
+	forbid_map.m0 = 0x00000ff0;
+#if (SEC_CAM_ENT_NUM_SW_LIMIT > 32)
+	forbid_map.m1 = 0x00000000;
+#endif
+#if (SEC_CAM_ENT_NUM_SW_LIMIT > 64)
+	forbid_map.m2 = 0x00000000;
+#endif
+#if (SEC_CAM_ENT_NUM_SW_LIMIT > 96)
+	forbid_map.m3 = 0x00000000;
+#endif
+
+	if (id < 32)
+		return (forbid_map.m0 & BIT(id));
+#if (SEC_CAM_ENT_NUM_SW_LIMIT > 32)
+	else if (id < 64)
+		return (forbid_map.m1 & BIT(id - 32));
+#endif
+#if (SEC_CAM_ENT_NUM_SW_LIMIT > 64)
+	else if (id < 96)
+		return (forbid_map.m2 & BIT(id - 64));
+#endif
+#if (SEC_CAM_ENT_NUM_SW_LIMIT > 96)
+	else if (id < 128)
+		return (forbid_map.m3 & BIT(id - 96));
+#endif
+	else
+		rtw_warn_on(1);
+
+	return 1;
+}
+
+bool _rtw_sec_camid_is_used(struct cam_ctl_t *cam_ctl, u8 id)
+{
 	bool ret = _FALSE;
 
-	if (cam_id >= TOTAL_CAM_ENTRY) {
+	if (id >= cam_ctl->num) {
 		rtw_warn_on(1);
 		goto exit;
 	}
 
-	ret = (cam_ctl->bitmap & BIT(cam_id))?_TRUE:_FALSE;
+	#if 0 /* for testing */
+	if (rtw_sec_camid_is_drv_forbid(cam_ctl, id)) {
+		ret = _TRUE;
+		goto exit;
+	}
+	#endif
+
+	ret = rtw_sec_camid_is_set(&cam_ctl->used, id);
 
 exit:
 	return ret;
 }
 
-bool rtw_camid_is_used(_adapter *adapter, u8 cam_id)
+inline bool rtw_sec_camid_is_used(struct cam_ctl_t *cam_ctl, u8 id)
 {
-	struct dvobj_priv *dvobj = adapter_to_dvobj(adapter);
-	struct cam_ctl_t *cam_ctl = &dvobj->cam_ctl;
 	_irqL irqL;
 	bool ret;
 
 	_enter_critical_bh(&cam_ctl->lock, &irqL);
-	ret = _rtw_camid_is_used(adapter, cam_id);
+	ret = _rtw_sec_camid_is_used(cam_ctl, id);
 	_exit_critical_bh(&cam_ctl->lock, &irqL);
 
 	return ret;
@@ -1288,12 +1334,12 @@ inline bool _rtw_camid_is_gk(_adapter *adapter, u8 cam_id)
 	struct cam_ctl_t *cam_ctl = &dvobj->cam_ctl;
 	bool ret = _FALSE;
 
-	if (cam_id >= TOTAL_CAM_ENTRY) {
+	if (cam_id >= cam_ctl->num) {
 		rtw_warn_on(1);
 		goto exit;
 	}
 
-	if (!(cam_ctl->bitmap & BIT(cam_id)))
+	if (_rtw_sec_camid_is_used(cam_ctl, cam_id) == _FALSE)
 		goto exit;
 	
 	ret = (dvobj->cam_cache[cam_id].ctrl&BIT6)?_TRUE:_FALSE;
@@ -1341,7 +1387,7 @@ s16 _rtw_camid_search(_adapter *adapter, u8 *addr, s16 kid, s8 gk)
 	int i;
 	s16 cam_id = -1;
 
-	for (i=0;i<TOTAL_CAM_ENTRY;i++) {
+	for (i = 0; i < cam_ctl->num; i++) {
 		if (cam_cache_chk(adapter, i, addr, kid, gk)) {
 			cam_id = i;
 			break;
@@ -1403,6 +1449,11 @@ s16 rtw_camid_alloc(_adapter *adapter, struct sta_info *sta, u8 kid, bool *used)
 		else {
 			int i;
 			u8 *addr = sta?sta->hwaddr:NULL;
+			#if 0 /* for testing */
+			static u8 start_id = 0;
+			#else
+			u8 start_id = 0;
+			#endif
 
 			if(!sta) {
 				if (!(mlmeinfo->state & WIFI_FW_ASSOC_SUCCESS)) {
@@ -1424,11 +1475,16 @@ s16 rtw_camid_alloc(_adapter *adapter, struct sta_info *sta, u8 kid, bool *used)
 				goto bitmap_handle;
 			}
 
-			for (i=4;i<TOTAL_CAM_ENTRY;i++)
-				if (!(cam_ctl->bitmap & BIT(i)))
-					break;
+			for (i = 0; i < cam_ctl->num; i++) {
+				/* bypass default key which is allocated statically */
+				if (((i + start_id) % cam_ctl->num) < 4)
+					continue;
 
-			if (i == TOTAL_CAM_ENTRY) {
+				if (_rtw_sec_camid_is_used(cam_ctl, ((i + start_id) % cam_ctl->num)) == _FALSE)
+					break;
+			}
+
+			if (i == cam_ctl->num) {
 				if (sta)
 					DBG_871X_LEVEL(_drv_always_, FUNC_ADPT_FMT" pairwise key with "MAC_FMT" id:%u no room\n"
 					, FUNC_ADPT_ARG(adapter), MAC_ARG(addr), kid);
@@ -1439,7 +1495,8 @@ s16 rtw_camid_alloc(_adapter *adapter, struct sta_info *sta, u8 kid, bool *used)
 				goto bitmap_handle;
 			}
 
-			cam_id = i;
+			cam_id = ((i + start_id) % cam_ctl->num);
+			start_id = ((i + start_id + 1) % cam_ctl->num);
 		}
 	}
 #else
@@ -1448,8 +1505,8 @@ s16 rtw_camid_alloc(_adapter *adapter, struct sta_info *sta, u8 kid, bool *used)
 
 bitmap_handle:
 	if (cam_id >= 0) {
-		*used = _rtw_camid_is_used(adapter, cam_id);
-		cam_ctl->bitmap |= BIT(cam_id);
+		*used = _rtw_sec_camid_is_used(cam_ctl, cam_id);
+		rtw_sec_cam_map_set(&cam_ctl->used, cam_id);
 	}
 
 	_exit_critical_bh(&cam_ctl->lock, &irqL);
@@ -1465,29 +1522,10 @@ void rtw_camid_free(_adapter *adapter, u8 cam_id)
 
 	_enter_critical_bh(&cam_ctl->lock, &irqL);
 
-	if (cam_id < TOTAL_CAM_ENTRY)
-		cam_ctl->bitmap &= ~(BIT(cam_id));
+	if (cam_id < cam_ctl->num)
+		rtw_sec_cam_map_clr(&cam_ctl->used, cam_id);
 
 	_exit_critical_bh(&cam_ctl->lock, &irqL);
-}
-
-int allocate_fw_sta_entry(_adapter *padapter)
-{
-	unsigned int mac_id;
-	struct mlme_ext_priv	*pmlmeext = &padapter->mlmeextpriv;
-	struct mlme_ext_info	*pmlmeinfo = &(pmlmeext->mlmext_info);
-	
-	for (mac_id = IBSS_START_MAC_ID; mac_id < NUM_STA; mac_id++)
-	{
-		if (pmlmeinfo->FW_sta_info[mac_id].status == 0)
-		{
-			pmlmeinfo->FW_sta_info[mac_id].status = 1;
-			pmlmeinfo->FW_sta_info[mac_id].retry = 0;
-			break;
-		}
-	}
-	
-	return mac_id;
 }
 
 void flush_all_cam_entry(_adapter *padapter)
@@ -1544,46 +1582,42 @@ void flush_all_cam_entry(_adapter *padapter)
 		rtw_hal_set_hwreg(padapter, HW_VAR_SEC_DK_CFG, (u8*)_FALSE);
 		#endif
 	}
-
-	_rtw_memset((u8 *)(pmlmeinfo->FW_sta_info), 0, sizeof(pmlmeinfo->FW_sta_info));
-	
 }
 
 #if defined(CONFIG_P2P) && defined(CONFIG_WFD)
-int WFD_info_handler(_adapter *padapter, PNDIS_802_11_VARIABLE_IEs	pIE)
+void rtw_process_wfd_ie(_adapter *adapter, u8 *wfd_ie, u8 wfd_ielen, const char *tag)
 {
-	struct registry_priv	*pregpriv = &padapter->registrypriv;
-	struct mlme_priv	*pmlmepriv = &(padapter->mlmepriv);
-	struct mlme_ext_priv	*pmlmeext = &padapter->mlmeextpriv;
-	struct mlme_ext_info	*pmlmeinfo = &(pmlmeext->mlmext_info);
-	struct wifidirect_info	*pwdinfo;	
-	u8	wfd_ie[ 128 ] = { 0x00 };
-	u32	wfd_ielen = 0;
+	struct wifidirect_info *wdinfo = &adapter->wdinfo;
 
+	u8 *attr_content;
+	u32 attr_contentlen = 0;
 
-	pwdinfo = &padapter->wdinfo;
-	if ( rtw_get_wfd_ie( ( u8* ) pIE, pIE->Length, wfd_ie, &wfd_ielen ) )
-	{
-		u8	attr_content[ 10 ] = { 0x00 };
-		u32	attr_contentlen = 0;
-			
-		DBG_871X( "[%s] Found WFD IE\n", __FUNCTION__ );
-		rtw_get_wfd_attr_content( wfd_ie, wfd_ielen, WFD_ATTR_DEVICE_INFO, attr_content, &attr_contentlen);
-		if ( attr_contentlen )
-		{
-			pwdinfo->wfd_info->peer_rtsp_ctrlport = RTW_GET_BE16( attr_content + 2 );
-			DBG_8192C( "[%s] Peer PORT NUM = %d\n", __FUNCTION__, pwdinfo->wfd_info->peer_rtsp_ctrlport );
-			return( _TRUE );
-		}		
+	if (!hal_chk_wl_func(adapter, WL_FUNC_MIRACAST))
+		return;
+
+	DBG_871X("[%s] Found WFD IE\n", tag);
+	attr_content = rtw_get_wfd_attr_content(wfd_ie, wfd_ielen, WFD_ATTR_DEVICE_INFO, NULL, &attr_contentlen);
+	if (attr_content && attr_contentlen) {
+		wdinfo->wfd_info->peer_rtsp_ctrlport = RTW_GET_BE16(attr_content + 2);
+		DBG_871X("[%s] Peer PORT NUM = %d\n", tag, wdinfo->wfd_info->peer_rtsp_ctrlport);
 	}
-	else
-	{
-		DBG_871X( "[%s] NO WFD IE\n", __FUNCTION__ );
-
-	}
-	return( _FAIL );
 }
-#endif
+
+void rtw_process_wfd_ies(_adapter *adapter, u8 *ies, u8 ies_len, const char *tag)
+{
+	u8 *wfd_ie;
+	u32	wfd_ielen;
+
+	if (!hal_chk_wl_func(adapter, WL_FUNC_MIRACAST))
+		return;
+
+	wfd_ie = rtw_get_wfd_ie(ies, ies_len, NULL, &wfd_ielen);
+	while (wfd_ie) {
+		rtw_process_wfd_ie(adapter, wfd_ie, wfd_ielen, tag);
+		wfd_ie = rtw_get_wfd_ie(wfd_ie + wfd_ielen, (ies + ies_len) - (wfd_ie + wfd_ielen), NULL, &wfd_ielen);
+	}
+}
+#endif /* defined(CONFIG_P2P) && defined(CONFIG_WFD) */
 
 int WMM_param_handler(_adapter *padapter, PNDIS_802_11_VARIABLE_IEs	pIE)
 {
@@ -1804,12 +1838,14 @@ static void bwmode_update_check(_adapter *padapter, PNDIS_802_11_VARIABLE_IEs pI
 	
 	pHT_info = (struct HT_info_element *)pIE->data;
 
-	if (pmlmeext->cur_channel > 14) {
-		if ((pregistrypriv->bw_mode & 0xf0) > 0)
-			cbw40_enable = 1;
-	} else {
-		if ((pregistrypriv->bw_mode & 0x0f) > 0)
-			cbw40_enable = 1;
+	if (hal_chk_bw_cap(padapter, BW_CAP_40M)) {
+		if (pmlmeext->cur_channel > 14) {
+			if (REGSTY_IS_BW_5G_SUPPORT(pregistrypriv, CHANNEL_WIDTH_40))
+				cbw40_enable = 1;
+		} else {
+			if (REGSTY_IS_BW_2G_SUPPORT(pregistrypriv, CHANNEL_WIDTH_40))
+				cbw40_enable = 1;
+		}
 	}
 
 	if((pHT_info->infos[0] & BIT(2)) && cbw40_enable)
@@ -1839,8 +1875,9 @@ static void bwmode_update_check(_adapter *padapter, PNDIS_802_11_VARIABLE_IEs pI
 	}	
 
 	
-	if((new_bwmode!= pmlmeext->cur_bwmode) || (new_ch_offset!=pmlmeext->cur_ch_offset))
-	{
+	if ((new_bwmode != pmlmeext->cur_bwmode || new_ch_offset != pmlmeext->cur_ch_offset)
+		&& new_bwmode < pmlmeext->cur_bwmode
+	) {
 		pmlmeinfo->bwmode_updated = _TRUE;
 		
 		pmlmeext->cur_bwmode = new_bwmode;
@@ -1997,19 +2034,24 @@ void HT_caps_handler(_adapter *padapter, PNDIS_802_11_VARIABLE_IEs pIE)
 			GET_HT_CAP_TXBF_EXPLICIT_COMP_STEERING_CAP(pIE->data))
 		{
 			SET_FLAG(cur_beamform_cap, BEAMFORMING_HT_BEAMFORMER_ENABLE);
+			/* Shift to BEAMFORMING_HT_BEAMFORMEE_CHNL_EST_CAP*/
+			SET_FLAG(cur_beamform_cap, GET_HT_CAP_TXBF_CHNL_ESTIMATION_NUM_ANTENNAS(pIE->data) << 6);
 		}
 
 		if (TEST_FLAG(phtpriv->beamform_cap, BEAMFORMING_HT_BEAMFORMEE_ENABLE) &&
 			GET_HT_CAP_TXBF_EXPLICIT_COMP_FEEDBACK_CAP(pIE->data))
 		{
 			SET_FLAG(cur_beamform_cap, BEAMFORMING_HT_BEAMFORMEE_ENABLE);
+			/* Shift to BEAMFORMING_HT_BEAMFORMER_STEER_NUM*/
+			SET_FLAG(cur_beamform_cap, GET_HT_CAP_TXBF_COMP_STEERING_NUM_ANTENNAS(pIE->data) << 4);
 		}
 		phtpriv->beamform_cap = cur_beamform_cap;
 		if (cur_beamform_cap) {
 			DBG_871X("AP HT Beamforming Cap = 0x%02X\n", cur_beamform_cap);
 		}
-#endif //CONFIG_BEAMFORMING
+#endif /*CONFIG_BEAMFORMING*/
 	} else {
+		/*WIFI_STATION_STATEorI_ADHOC_STATE or WIFI_ADHOC_MASTER_STATE*/
 		// Config LDPC Coding Capability
 		if (TEST_FLAG(phtpriv->ldpc_cap, LDPC_HT_ENABLE_TX) && GET_HT_CAP_ELE_LDPC_CAP(pIE->data))
 		{
@@ -2032,18 +2074,22 @@ void HT_caps_handler(_adapter *padapter, PNDIS_802_11_VARIABLE_IEs pIE)
 			GET_HT_CAP_TXBF_EXPLICIT_COMP_STEERING_CAP(pIE->data))
 		{
 			SET_FLAG(cur_beamform_cap, BEAMFORMING_HT_BEAMFORMER_ENABLE);
+			/* Shift to BEAMFORMING_HT_BEAMFORMEE_CHNL_EST_CAP*/
+			SET_FLAG(cur_beamform_cap, GET_HT_CAP_TXBF_CHNL_ESTIMATION_NUM_ANTENNAS(pIE->data) << 6);
 		}
 
 		if (TEST_FLAG(phtpriv->beamform_cap, BEAMFORMING_HT_BEAMFORMER_ENABLE) &&
 			GET_HT_CAP_TXBF_EXPLICIT_COMP_FEEDBACK_CAP(pIE->data))
 		{
 			SET_FLAG(cur_beamform_cap, BEAMFORMING_HT_BEAMFORMEE_ENABLE);
+			/* Shift to BEAMFORMING_HT_BEAMFORMER_STEER_NUM*/
+			SET_FLAG(cur_beamform_cap, GET_HT_CAP_TXBF_COMP_STEERING_NUM_ANTENNAS(pIE->data) << 4);
 		}
 		phtpriv->beamform_cap = cur_beamform_cap;
 		if (cur_beamform_cap) {
 			DBG_871X("Client HT Beamforming Cap = 0x%02X\n", cur_beamform_cap);
 		}
-#endif //CONFIG_BEAMFORMING
+#endif /*CONFIG_BEAMFORMING*/
 	}
 
 #endif //CONFIG_80211N_HT
@@ -3047,7 +3093,7 @@ unsigned char get_highest_mcs_rate(struct HT_caps_element *pHT_caps)
 
 void Update_RA_Entry(_adapter *padapter, struct sta_info *psta)
 {
-	rtw_hal_update_ra_mask(psta, 0);
+	rtw_hal_update_ra_mask(psta, psta->rssi_level);
 }
 
 void enable_rate_adaptive(_adapter *padapter, struct sta_info *psta);
@@ -3336,7 +3382,10 @@ void update_wireless_mode(_adapter *padapter)
 	rtw_hal_set_hwreg( padapter, HW_VAR_WIRELESS_MODE,  (u8 *)&(pmlmeext->cur_wireless_mode));
 
 	if ((pmlmeext->cur_wireless_mode & WIRELESS_11B)
-		&& rtw_p2p_chk_state(pwdinfo, P2P_STATE_NONE))
+#ifdef CONFIG_P2P
+		&& rtw_p2p_chk_state(pwdinfo, P2P_STATE_NONE)
+#endif /* CONFIG_P2P */
+		)
 		update_mgnt_tx_rate(padapter, IEEE80211_CCK_RATE_1MB);
 	else
 		update_mgnt_tx_rate(padapter, IEEE80211_OFDM_RATE_6MB);
@@ -3385,31 +3434,41 @@ void update_sta_basic_rate(struct sta_info *psta, u8 wireless_mode)
 	}
 }
 
-int update_sta_support_rate(_adapter *padapter, u8* pvar_ie, uint var_ie_len, int cam_idx)
+int rtw_ies_get_supported_rate(u8 *ies, uint ies_len, u8 *rate_set, u8 *rate_num)
 {
-	unsigned int	ie_len;
-	PNDIS_802_11_VARIABLE_IEs	pIE;
-	int	supportRateNum = 0;
-	struct mlme_ext_priv	*pmlmeext = &(padapter->mlmeextpriv);
-	struct mlme_ext_info	*pmlmeinfo = &(pmlmeext->mlmext_info);
-	
-	pIE = (PNDIS_802_11_VARIABLE_IEs)rtw_get_ie(pvar_ie, _SUPPORTEDRATES_IE_, &ie_len, var_ie_len);
-	if (pIE == NULL)
-	{
-		return _FAIL;
+	u8 *ie;
+	unsigned int ie_len;
+
+	if (!rate_set || !rate_num)
+		return _FALSE;
+
+	*rate_num = 0;
+
+	ie = rtw_get_ie(ies, _SUPPORTEDRATES_IE_, &ie_len, ies_len);
+	if (ie == NULL)
+		goto ext_rate;
+
+	_rtw_memcpy(rate_set, ie + 2, ie_len);
+	*rate_num = ie_len;
+
+ext_rate:
+	ie = rtw_get_ie(ies, _EXT_SUPPORTEDRATES_IE_, &ie_len, ies_len);
+	if (ie) {
+		_rtw_memcpy(rate_set + *rate_num, ie + 2, ie_len);
+		*rate_num += ie_len;
 	}
-	
-	_rtw_memcpy(pmlmeinfo->FW_sta_info[cam_idx].SupportedRates, pIE->data, ie_len);
-	supportRateNum = ie_len;
-				
-	pIE = (PNDIS_802_11_VARIABLE_IEs)rtw_get_ie(pvar_ie, _EXT_SUPPORTEDRATES_IE_, &ie_len, var_ie_len);
-	if (pIE)
-	{
-		_rtw_memcpy((pmlmeinfo->FW_sta_info[cam_idx].SupportedRates + supportRateNum), pIE->data, ie_len);
+
+	if (*rate_num == 0)
+		return _FAIL;
+
+	if (0) {
+		int i;
+
+		for (i = 0; i < *rate_num; i++)
+			DBG_871X("rate:0x%02x\n", *(rate_set + i));
 	}
 
 	return _SUCCESS;
-	
 }
 
 void process_addba_req(_adapter *padapter, u8 *paddba_req, u8 *addr)
@@ -3723,6 +3782,7 @@ void rtw_alloc_macid(_adapter *padapter, struct sta_info *psta)
 		rtw_macid_map_set(&macid_ctl->bmc, 1);
 		for (i=0;i<IFACE_ID_MAX;i++)
 			rtw_macid_map_set(&macid_ctl->if_g[padapter->iface_id], 1);
+		macid_ctl->sta[1] = psta;
 		/* TODO ch_g? */
 		_exit_critical_bh(&macid_ctl->lock, &irqL);
 		i = 1;
@@ -3749,6 +3809,7 @@ void rtw_alloc_macid(_adapter *padapter, struct sta_info *psta)
 			rtw_macid_map_set(&macid_ctl->bmc, i);
 
 		rtw_macid_map_set(&macid_ctl->if_g[padapter->iface_id], i);
+		macid_ctl->sta[i] = psta;
 
 		/* TODO ch_g? */
 
@@ -3816,6 +3877,7 @@ void rtw_release_macid(_adapter *padapter, struct sta_info *psta)
 			rtw_macid_map_clr(&macid_ctl->if_g[i], psta->mac_id);
 		for (i=0;i<2;i++)
 			rtw_macid_map_clr(&macid_ctl->ch_g[i], psta->mac_id);
+		macid_ctl->sta[psta->mac_id] = NULL;
 	}
 
 	_exit_critical_bh(&macid_ctl->lock, &irqL);
@@ -3832,6 +3894,8 @@ u8 rtw_search_max_mac_id(_adapter *padapter)
 	int i;
 	_irqL irqL;
 
+	/* TODO: Only search for connected macid? */
+
 	_enter_critical_bh(&macid_ctl->lock, &irqL);
 	for(i=(macid_ctl->num-1); i>0 ; i--) {
 		if (!rtw_macid_is_used(macid_ctl, i))
@@ -3842,6 +3906,18 @@ u8 rtw_search_max_mac_id(_adapter *padapter)
 
 	return max_mac_id;
 }		
+
+inline void rtw_macid_ctl_set_h2c_msr(struct macid_ctl_t *macid_ctl, u8 id, u8 h2c_msr)
+{
+	if (id >= macid_ctl->num) {
+		rtw_warn_on(1);
+		return;
+	}
+
+	macid_ctl->h2c_msr[id] = h2c_msr;
+	if (0)
+		DBG_871X("macid:%u, h2c_msr:"H2C_MSR_FMT"\n", id, H2C_MSR_ARG(&macid_ctl->h2c_msr[id]));
+}
 
 inline void rtw_macid_ctl_init(struct macid_ctl_t *macid_ctl)
 {
@@ -4002,15 +4078,17 @@ bool rtw_check_pattern_valid(u8 *input, u8 len)
 {
 	int i = 0;
 	bool res = _FALSE;
-	
-	for (i = 0 ; i < len ; i++) {
-		if ((input[i] <= '9' && input[i] >= '0') ||
-		    (input[i] <= 'F' && input[i] >= 'A') ||
-		    (input[i] <= 'f' && input[i] >= 'a'))
-			res = _TRUE;
-		else
-			res = _FALSE;
-	}
+
+	if (len != 2)
+		goto exit;
+
+	for (i = 0 ; i < len ; i++)
+		if (IsHexDigit(input[i]) == _FALSE)
+			goto exit;
+
+	res = _SUCCESS;
+
+exit:
 	return res;
 }
 

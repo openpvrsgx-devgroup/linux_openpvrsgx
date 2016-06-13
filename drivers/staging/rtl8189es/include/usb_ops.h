@@ -105,6 +105,15 @@ void interrupt_handler_8723bu(_adapter *padapter, u16 pkt_len, u8 *pbuf);
 #endif
 #endif
 
+#ifdef CONFIG_RTL8703B
+void rtl8703bu_set_hw_type(struct dvobj_priv *pdvobj);
+void rtl8703bu_set_intf_ops(struct _io_ops *pops);
+void rtl8703bu_recv_tasklet(void *priv);
+void rtl8703bu_xmit_tasklet(void *priv);
+#ifdef CONFIG_SUPPORT_USB_INT
+void interrupt_handler_8703bu(_adapter *padapter, u16 pkt_len, u8 *pbuf);
+#endif /* CONFIG_SUPPORT_USB_INT */
+#endif /* CONFIG_RTL8703B */
 
 enum RTW_USB_SPEED {
 	RTW_USB_SPEED_UNKNOWN	= 0,

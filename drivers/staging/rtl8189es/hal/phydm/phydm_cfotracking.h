@@ -21,7 +21,7 @@
 #ifndef	__PHYDMCFOTRACK_H__
 #define    __PHYDMCFOTRACK_H__
 
-#define CFO_TRACKING_VERSION	"1.1" /*2015.02.09*/
+#define CFO_TRACKING_VERSION	"1.2" /*2015.06.17*/
 
 #define		CFO_TH_XTAL_HIGH			20			// kHz
 #define		CFO_TH_XTAL_LOW			10			// kHz

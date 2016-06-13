@@ -56,26 +56,6 @@ typedef enum _RTL8192E_H2C_CMD
 	MAX_8192E_H2CCMD
 }RTL8192E_H2C_CMD;
 
-typedef enum _RTL8192E_C2H_EVT
-{
-	C2H_8192E_DBG = 0,
-	C2H_8192E_LB = 1,
-	C2H_8192E_TXBF = 2,
-	C2H_8192E_TX_REPORT = 3,
-	C2H_8192E_BT_INFO = 9,
-	C2H_8192E_FW_SWCHNL = 0x10,
-	C2H_8192E_BT_MP = 11,
-	C2H_8192E_RA_RPT = 12,
-	C2H_8192E_RA_PARA_RPT = 14,
-	C2H_8192E_EXTEND = 0xff,
-	MAX_8192E_C2HEVENT	
-}RTL8192E_C2H_EVT;
-
-typedef enum _RTL8192E_EXTEND_C2H_EVT {
-	EXTEND_C2H_8192E_DBG_PRINT = 0
-
-} RTL8192E_EXTEND_C2H_EVT;
-
 struct cmd_msg_parm {
 	u8 eid; //element id
 	u8 sz; // sz
@@ -120,13 +100,13 @@ typedef struct _RSVDPAGE_LOC_92E {
 
 
 //_SETPWRMODE_PARM
-#define SET_8192E_H2CCMD_PWRMODE_PARM_MODE(__pH2CCmd, __Value)				SET_BITS_TO_LE_1BYTE_8BIT(__pH2CCmd, 0, 8, __Value)
+#define SET_8192E_H2CCMD_PWRMODE_PARM_MODE(__pH2CCmd, __Value)				SET_BITS_TO_LE_1BYTE(__pH2CCmd, 0, 8, __Value)
 #define SET_8192E_H2CCMD_PWRMODE_PARM_RLBM(__pH2CCmd, __Value)				SET_BITS_TO_LE_1BYTE((__pH2CCmd)+1, 0, 4, __Value)
 #define SET_8192E_H2CCMD_PWRMODE_PARM_SMART_PS(__pH2CCmd, __Value)			SET_BITS_TO_LE_1BYTE((__pH2CCmd)+1, 4, 4, __Value)
-#define SET_8192E_H2CCMD_PWRMODE_PARM_BCN_PASS_TIME(__pH2CCmd, __Value)		SET_BITS_TO_LE_1BYTE_8BIT((__pH2CCmd)+2, 0, 8, __Value)
-#define SET_8192E_H2CCMD_PWRMODE_PARM_ALL_QUEUE_UAPSD(__pH2CCmd, __Value)	SET_BITS_TO_LE_1BYTE_8BIT((__pH2CCmd)+3, 0, 8, __Value)
-#define SET_8192E_H2CCMD_PWRMODE_PARM_PWR_STATE(__pH2CCmd, __Value)			SET_BITS_TO_LE_1BYTE_8BIT((__pH2CCmd)+4, 0, 8, __Value)
-#define SET_8192E_H2CCMD_PWRMODE_PARM_BYTE5(__pH2CCmd, __Value)				SET_BITS_TO_LE_1BYTE_8BIT((__pH2CCmd)+5, 0, 8, __Value)
+#define SET_8192E_H2CCMD_PWRMODE_PARM_BCN_PASS_TIME(__pH2CCmd, __Value)		SET_BITS_TO_LE_1BYTE((__pH2CCmd)+2, 0, 8, __Value)
+#define SET_8192E_H2CCMD_PWRMODE_PARM_ALL_QUEUE_UAPSD(__pH2CCmd, __Value)	SET_BITS_TO_LE_1BYTE((__pH2CCmd)+3, 0, 8, __Value)
+#define SET_8192E_H2CCMD_PWRMODE_PARM_PWR_STATE(__pH2CCmd, __Value)			SET_BITS_TO_LE_1BYTE((__pH2CCmd)+4, 0, 8, __Value)
+#define SET_8192E_H2CCMD_PWRMODE_PARM_BYTE5(__pH2CCmd, __Value)				SET_BITS_TO_LE_1BYTE((__pH2CCmd)+5, 0, 8, __Value)
 #define GET_8192E_H2CCMD_PWRMODE_PARM_MODE(__pH2CCmd)						LE_BITS_TO_1BYTE(__pH2CCmd, 0, 8)
 
 //_P2P_PS_OFFLOAD
@@ -156,7 +136,6 @@ void rtl8192e_set_p2p_ps_offload_cmd(PADAPTER padapter, u8 p2p_ps_state);
 #endif //CONFIG_P2P
 
 void CheckFwRsvdPageContent(PADAPTER padapter);
-void rtl8192e_set_FwMediaStatus_cmd(PADAPTER padapter, u16 mstatus_rpt );
 
 #ifdef CONFIG_TSF_RESET_OFFLOAD
 int reset_tsf(PADAPTER Adapter, u8 reset_port );

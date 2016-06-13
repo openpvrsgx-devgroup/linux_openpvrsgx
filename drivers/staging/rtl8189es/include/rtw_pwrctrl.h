@@ -285,7 +285,6 @@ struct pwrctrl_priv
 
 	u8	pwr_mode;
 	u8	smart_ps;
-	u8	disable_smart_ps;
 	u8	bcn_ant_mode;
 	u8 	dtim;
 
@@ -350,7 +349,6 @@ struct pwrctrl_priv
 	u8		wowlan_mode;
 	u8		wowlan_p2p_mode;
 	u8		wowlan_pno_enable;
-	u8		wowlan_in_resume;
 #ifdef CONFIG_GPIO_WAKEUP
 	u8		is_high_active;
 #endif /* CONFIG_GPIO_WAKEUP */

@@ -17,7 +17,11 @@
  *
  *
  ******************************************************************************/
+#include <linux/time.h>
+#include <linux/delay.h>
 #ifndef CONFIG_PLATFORM_OPS
+extern void sdio_reinit(void);
+extern void extern_wifi_set_enable(int is_on);
 /*
  * Return:
  *	0:	power on successfully
@@ -27,7 +31,12 @@ int platform_wifi_power_on(void)
 {
 	int ret = 0;
 
-
+	printk("######%s: \n",__func__);
+	extern_wifi_set_enable(0);
+	msleep(500);
+	extern_wifi_set_enable(1);
+	msleep(500);
+	sdio_reinit();
 	return ret;
 }
 

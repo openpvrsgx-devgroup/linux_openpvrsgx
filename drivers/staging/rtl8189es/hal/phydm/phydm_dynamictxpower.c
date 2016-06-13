@@ -584,3 +584,50 @@ odm_DynamicTxPower_92D(
 #endif
 }
 
+VOID 
+odm_DynamicTxPower_8821(
+	IN		PVOID			pDM_VOID,	
+	IN		pu1Byte			pDesc,
+	IN		u1Byte			macId	
+	)
+{
+#if (RTL8821A_SUPPORT == 1)
+#if (DM_ODM_SUPPORT_TYPE == ODM_WIN)
+	PDM_ODM_T		pDM_Odm = (PDM_ODM_T)pDM_VOID;
+	PSTA_INFO_T		pEntry;
+	u1Byte			reg0xc56_byte;
+	u1Byte			reg0xe56_byte;
+	u1Byte			txpwr_offset = 0;
+	
+	pEntry = pDM_Odm->pODM_StaInfo[macId];	
+
+	reg0xc56_byte = ODM_Read1Byte(pDM_Odm, 0xc56);
+
+	ODM_RT_TRACE(pDM_Odm, ODM_COMP_DYNAMIC_TXPWR, DBG_LOUD, ("reg0xc56_byte=%d\n", reg0xc56_byte));
+
+	if (pEntry[macId].rssi_stat.UndecoratedSmoothedPWDB > 85) {
+
+		/* Avoid TXAGC error after TX power offset is applied.
+		For example: Reg0xc56=0x6, if txpwr_offset=3( reduce 11dB )
+		Total power = 6-11= -5( overflow!! ), PA may be burned !
+		so txpwr_offset should be adjusted by Reg0xc56*/
+		
+		if (reg0xc56_byte < 7)
+			txpwr_offset = 1;
+		else if (reg0xc56_byte < 11)
+			txpwr_offset = 2;
+		else
+			txpwr_offset = 3;
+		
+		SET_TX_DESC_TX_POWER_OFFSET_8812(pDesc, txpwr_offset);
+		ODM_RT_TRACE(pDM_Odm, ODM_COMP_DYNAMIC_TXPWR, DBG_LOUD, ("odm_DynamicTxPower_8821: RSSI=%d, txpwr_offset=%d\n", pEntry[macId].rssi_stat.UndecoratedSmoothedPWDB, txpwr_offset));
+
+	} else{
+		SET_TX_DESC_TX_POWER_OFFSET_8812(pDesc, txpwr_offset);
+		ODM_RT_TRACE(pDM_Odm, ODM_COMP_DYNAMIC_TXPWR, DBG_LOUD, ("odm_DynamicTxPower_8821: RSSI=%d, txpwr_offset=%d\n", pEntry[macId].rssi_stat.UndecoratedSmoothedPWDB, txpwr_offset));
+
+	}
+#endif	/*#if (DM_ODM_SUPPORT_TYPE == ODM_WIN)*/
+#endif	/*#if (RTL8821A_SUPPORT==1)*/
+}
+

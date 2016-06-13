@@ -70,6 +70,7 @@
 #define	INIT_RA_TABLE	BIT1
 #define	RATE_UP			BIT2
 #define	RATE_DOWN		BIT3
+#define	TRY_DONE		BIT4
 #define	F_RATE_AP_RPT	BIT7
 
 //-----------------------------------------------------------------------------
@@ -77,38 +78,40 @@
 //
 //-----------------------------------------------------------------------------
 //BB Functions
-#define ODM_COMP_DIG					BIT0	
-#define ODM_COMP_RA_MASK				BIT1	
-#define ODM_COMP_DYNAMIC_TXPWR		BIT2
-#define ODM_COMP_FA_CNT				BIT3
-#define ODM_COMP_RSSI_MONITOR		BIT4
-#define ODM_COMP_CCK_PD				BIT5
-#define ODM_COMP_ANT_DIV				BIT6
-#define ODM_COMP_PWR_SAVE			BIT7
-#define ODM_COMP_PWR_TRAIN			BIT8
-#define ODM_COMP_RATE_ADAPTIVE		BIT9
-#define ODM_COMP_PATH_DIV				BIT10
-#define ODM_COMP_PSD					BIT11
-#define ODM_COMP_DYNAMIC_PRICCA		BIT12
-#define ODM_COMP_RXHP					BIT13
-#define ODM_COMP_MP					BIT14
-#define ODM_COMP_CFO_TRACKING		BIT15
-#define ODM_COMP_ACS					BIT16
-#define PHYDM_COMP_ADAPTIVITY			BIT17
-#define PHYDM_COMP_RA_DBG				BIT18
-#define PHYDM_COMP_TXBF				BIT19
+#define	ODM_COMP_DIG					BIT0	
+#define	ODM_COMP_RA_MASK				BIT1	
+#define	ODM_COMP_DYNAMIC_TXPWR		BIT2
+#define	ODM_COMP_FA_CNT				BIT3
+#define	ODM_COMP_RSSI_MONITOR		BIT4
+#define	ODM_COMP_CCK_PD				BIT5
+#define	ODM_COMP_ANT_DIV				BIT6
+#define	ODM_COMP_PWR_SAVE			BIT7
+#define	ODM_COMP_PWR_TRAIN			BIT8
+#define	ODM_COMP_RATE_ADAPTIVE		BIT9
+#define	ODM_COMP_PATH_DIV			BIT10
+#define	ODM_COMP_PSD					BIT11
+#define	ODM_COMP_DYNAMIC_PRICCA		BIT12
+#define	ODM_COMP_RXHP					BIT13
+#define	ODM_COMP_MP					BIT14
+#define	ODM_COMP_CFO_TRACKING		BIT15
+#define	ODM_COMP_ACS					BIT16
+#define	PHYDM_COMP_ADAPTIVITY		BIT17
+#define	PHYDM_COMP_RA_DBG			BIT18
+#define	PHYDM_COMP_TXBF				BIT19
 //MAC Functions
-#define ODM_COMP_EDCA_TURBO			BIT20
-#define ODM_COMP_EARLY_MODE			BIT21
-#define ODM_FW_DEBUG_TRACE			BIT22
+#define	ODM_COMP_EDCA_TURBO			BIT20
+#define	ODM_COMP_EARLY_MODE			BIT21
+#define	ODM_FW_DEBUG_TRACE			BIT22
 //RF Functions
-#define ODM_COMP_TX_PWR_TRACK		BIT24
-#define ODM_COMP_RX_GAIN_TRACK		BIT25
-#define ODM_COMP_CALIBRATION			BIT26
+#define	ODM_COMP_TX_PWR_TRACK		BIT24
+#define	ODM_COMP_RX_GAIN_TRACK		BIT25
+#define	ODM_COMP_CALIBRATION			BIT26
 //Common Functions
-#define	BEAMFORMING_DEBUG			BIT29
-#define ODM_COMP_COMMON				BIT30
-#define ODM_COMP_INIT					BIT31
+#define	ODM_PHY_CONFIG				BIT28
+#define	BEAMFORMING_DEBUG				BIT29
+#define	ODM_COMP_COMMON				BIT30
+#define	ODM_COMP_INIT					BIT31
+#define	ODM_COMP_NOISY_DETECT		BIT32
 
 /*------------------------Export Marco Definition---------------------------*/
 #if (DM_ODM_SUPPORT_TYPE == ODM_WIN)
@@ -128,6 +131,7 @@
 
 #if DBG
 #define ODM_RT_TRACE(pDM_Odm, comp, level, fmt)									\
+	do {	\
 		if(((comp) & pDM_Odm->DebugComponents) && (level <= pDM_Odm->DebugLevel || level == ODM_DBG_SERIOUS))	\
 		{																			\
 			if(pDM_Odm->SupportICType == ODM_RTL8192C)								\
@@ -153,8 +157,9 @@
 			else if (pDM_Odm->SupportICType == ODM_RTL8188F)							\
 				DbgPrint("[ODM-8188F] ");											\
 			RT_PRINTK fmt;															\
-		}
-
+		}	\
+	} while (0)
+	
 #define ODM_RT_TRACE_F(pDM_Odm, comp, level, fmt)									\
 		if(((comp) & pDM_Odm->DebugComponents) && (level <= pDM_Odm->DebugLevel))	\
 		{																			\
@@ -211,16 +216,16 @@ VOID phydm_BasicDbgMessage(	IN		PVOID			pDM_VOID);
 #define	PHYDM_SSCANF(x, y, z)	DCMD_Scanf(x, y, z)
 #if (PHYDM_DBGPRINT == 1)
 #define	PHYDM_SNPRINTF(msg)	\
-		{\
+		do {\
 			rsprintf msg;\
 			DbgPrint(output);\
-		}
+		} while (0)
 #else
 #define	PHYDM_SNPRINTF(msg)	\
-		{\
+		do {\
 			rsprintf msg;\
 			DCMD_Printf(output);\
-		}
+		} while (0)
 #endif
 #else
 #if (DM_ODM_SUPPORT_TYPE == ODM_CE)
@@ -237,16 +242,16 @@ VOID phydm_BasicDbgMessage(	IN		PVOID			pDM_VOID);
 #define	PHYDM_SSCANF(x, y, z)	sscanf(x, y, z)
 #if (PHYDM_DBGPRINT == 1)
 #define	PHYDM_SNPRINTF(msg)\
-		{\
+		do {\
 			snprintf msg;\
 			DbgPrint(output);\
-		}
+		} while (0)
 #else
 #define	PHYDM_SNPRINTF(msg)\
-		{\
+		do {\
 			if(out_len > used)\
 				used+=snprintf msg;\
-		}
+		} while (0)
 #endif
 #endif
 

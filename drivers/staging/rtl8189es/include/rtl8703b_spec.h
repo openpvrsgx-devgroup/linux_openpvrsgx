@@ -345,8 +345,10 @@
 #define REG_SND_PTCL_CTRL_8703B		0x0718
 
 // LTE_COEX
-#define REG_LTECOEX_CTRL				0x07C0
+#define REG_LTECOEX_CTRL			0x07C0
 #define REG_LTECOEX_WRITE_DATA		0x07C4	
+#define REG_LTECOEX_READ_DATA		0x07C8
+#define REG_LTECOEX_PATH_CONTROL	0x70
 
 //============================================================
 // SDIO Bus Specification
@@ -467,8 +469,11 @@
 // General definitions
 //========================================================
 
-#define MACID_NUM_8703B 128
-#define CAM_ENTRY_NUM_8703B 16
+#define MACID_NUM_8703B 16
+#define SEC_CAM_ENT_NUM_8703B 16
+#define NSS_NUM_8703B 1
+#define BAND_CAP_8703B (BAND_CAP_2G)
+#define BW_CAP_8703B (BW_CAP_20M | BW_CAP_40M)
 
 #endif /* __RTL8703B_SPEC_H__ */
 

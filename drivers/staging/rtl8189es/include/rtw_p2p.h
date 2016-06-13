@@ -27,6 +27,11 @@ u32 build_prov_disc_request_p2p_ie(struct wifidirect_info *pwdinfo, u8 *pbuf, u8
 u32 build_assoc_resp_p2p_ie(struct wifidirect_info *pwdinfo, u8 *pbuf, u8 status_code);
 u32 build_deauth_p2p_ie(struct wifidirect_info *pwdinfo, u8 *pbuf);
 #ifdef CONFIG_WFD
+int rtw_init_wifi_display_info(_adapter *padapter);
+void rtw_wfd_enable(_adapter *adapter, bool on);
+void rtw_wfd_set_ctrl_port(_adapter *adapter, u16 port);
+void rtw_tdls_wfd_enable(_adapter *adapter, bool on);
+
 u32 build_probe_req_wfd_ie(struct wifidirect_info *pwdinfo, u8 *pbuf);
 u32 build_probe_resp_wfd_ie(struct wifidirect_info *pwdinfo, u8 *pbuf, u8 tunneled);
 u32 build_beacon_wfd_ie(struct wifidirect_info *pwdinfo, u8 *pbuf);
@@ -39,7 +44,15 @@ u32 build_assoc_req_wfd_ie(struct wifidirect_info *pwdinfo, u8 *pbuf);
 u32 build_assoc_resp_wfd_ie(struct wifidirect_info *pwdinfo, u8 *pbuf);
 u32 build_provdisc_req_wfd_ie(struct wifidirect_info *pwdinfo, u8 *pbuf);
 u32 build_provdisc_resp_wfd_ie(struct wifidirect_info *pwdinfo, u8 *pbuf);
-#endif //CONFIG_WFD
+
+u32 rtw_append_beacon_wfd_ie(_adapter *adapter, u8 *pbuf);
+u32 rtw_append_probe_req_wfd_ie(_adapter *adapter, u8 *pbuf);
+u32 rtw_append_probe_resp_wfd_ie(_adapter *adapter, u8 *pbuf);
+u32 rtw_append_assoc_req_wfd_ie(_adapter *adapter, u8 *pbuf);
+u32 rtw_append_assoc_resp_wfd_ie(_adapter *adapter, u8 *pbuf);
+#endif /*CONFIG_WFD */
+
+void rtw_xframe_chk_wfd_ie(struct xmit_frame *xframe);
 
 u32 process_probe_req_p2p_ie(struct wifidirect_info *pwdinfo, u8 *pframe, uint len);
 u32 process_assoc_req_p2p_ie(struct wifidirect_info *pwdinfo, u8 *pframe, uint len, struct sta_info *psta);
@@ -64,11 +77,9 @@ u8	p2p_ps_wk_cmd(_adapter*padapter, u8 p2p_ps_state, u8 enqueue);
 #ifdef CONFIG_IOCTL_CFG80211
 void rtw_init_cfg80211_wifidirect_info( _adapter*	padapter);
 int rtw_p2p_check_frames(_adapter *padapter, const u8 *buf, u32 len, u8 tx);
-void rtw_append_wfd_ie(_adapter *padapter, u8 *buf, u32 *len);
-#endif //CONFIG_IOCTL_CFG80211
+#endif /* CONFIG_IOCTL_CFG80211 */
 
 void reset_global_wifidirect_info( _adapter* padapter );
-int rtw_init_wifi_display_info(_adapter* padapter);
 void rtw_init_wifidirect_timers(_adapter* padapter);
 void rtw_init_wifidirect_addrs(_adapter* padapter, u8 *dev_addr, u8 *iface_addr);
 void init_wifidirect_info( _adapter* padapter, enum P2P_ROLE role);

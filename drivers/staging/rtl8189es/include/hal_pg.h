@@ -22,9 +22,11 @@
 #define __HAL_PG_H__
 
 #define PPG_BB_GAIN_2G_TX_OFFSET_MASK	0x0F
+#define PPG_BB_GAIN_2G_TXB_OFFSET_MASK	0xF0
+
 #define PPG_BB_GAIN_5G_TX_OFFSET_MASK	0x1F
 #define PPG_THERMAL_OFFSET_MASK			0x1F
-#define KFREE_BB_GAIN_2G_TX_OFFSET(_ppg_v) (((_ppg_v) == PPG_BB_GAIN_2G_TX_OFFSET_MASK) ? 0 : (((_ppg_v) & 0x01) ? (_ppg_v >> 1) : (-((_ppg_v) >> 1))))
+#define KFREE_BB_GAIN_2G_TX_OFFSET(_ppg_v) (((_ppg_v) == PPG_BB_GAIN_2G_TX_OFFSET_MASK) ? 0 : (((_ppg_v) & 0x01) ? ((_ppg_v) >> 1) : (-((_ppg_v) >> 1))))
 #define KFREE_BB_GAIN_5G_TX_OFFSET(_ppg_v) (((_ppg_v) == PPG_BB_GAIN_5G_TX_OFFSET_MASK) ? 0 : (((_ppg_v) & 0x01) ? ((_ppg_v) >> 1) : (-((_ppg_v) >> 1))))
 #define KFREE_THERMAL_OFFSET(_ppg_v) (((_ppg_v) == PPG_THERMAL_OFFSET_MASK) ? 0 : (((_ppg_v) & 0x01) ? ((_ppg_v) >> 1) : (-((_ppg_v) >> 1))))
 
@@ -44,6 +46,7 @@
 #define EEPROM_VERSION_88E						0xC4
 #define EEPROM_CustomID_88E					0xC5
 #define EEPROM_RF_ANTENNA_OPT_88E			0xC9
+#define EEPROM_COUNTRY_CODE_88E				0xCB
 
 // RTL88EE
 #define EEPROM_MAC_ADDR_88EE					0xD0
@@ -64,6 +67,12 @@
 //====================================================
 //			EEPROM/Efuse PG Offset for 8192EE/8192EU/8192ES
 //====================================================
+#define GET_PG_KFREE_ON_8192E(_pg_m)			LE_BITS_TO_1BYTE(((u8 *)(_pg_m)) + 0xC1, 4, 1)
+#define GET_PG_KFREE_THERMAL_K_ON_8192E(_pg_m)	LE_BITS_TO_1BYTE(((u8 *)(_pg_m)) + 0xC8, 5, 1)
+
+#define PPG_BB_GAIN_2G_TXA_OFFSET_8192E	0x1F6
+#define PPG_THERMAL_OFFSET_8192E		0x1F5
+
 // 0x10 ~ 0x63 = TX power area.
 #define	EEPROM_TX_PWR_INX_8192E				0x10
 
@@ -85,6 +94,7 @@
 #define	EEPROM_TX_PWR_CALIBRATE_RATE_8192E	0xC8
 #define	EEPROM_RF_ANTENNA_OPT_8192E			0xC9
 #define	EEPROM_RFE_OPTION_8192E				0xCA
+#define EEPROM_COUNTRY_CODE_8192E			0xCB
 
 // RTL8192EE
 #define	EEPROM_MAC_ADDR_8192EE				0xD0
@@ -128,6 +138,7 @@
 #define EEPROM_TX_PWR_CALIBRATE_RATE_8812	0xC8
 #define EEPROM_RF_ANTENNA_OPT_8812			0xC9
 #define EEPROM_RFE_OPTION_8812				0xCA
+#define EEPROM_COUNTRY_CODE_8812			0xCB
 
 // RTL8812AE
 #define EEPROM_MAC_ADDR_8812AE				0xD0
@@ -162,6 +173,16 @@
 //====================================================
 //			EEPROM/Efuse PG Offset for 8814AU
 //====================================================
+#define GET_PG_KFREE_ON_8814A(_pg_m)			LE_BITS_TO_1BYTE(((u8 *)(_pg_m)) + 0xC8, 4, 1)
+#define GET_PG_KFREE_THERMAL_K_ON_8814A(_pg_m)	LE_BITS_TO_1BYTE(((u8 *)(_pg_m)) + 0xC8, 5, 1)
+#define GET_PG_TX_POWER_TRACKING_MODE_8814A(_pg_m)	LE_BITS_TO_1BYTE(((u8 *)(_pg_m)) + 0xC8, 6, 2)
+
+#define KFREE_GAIN_DATA_LENGTH_8814A	22
+
+#define PPG_BB_GAIN_2G_TXBA_OFFSET_8814A	0x3EE
+
+#define PPG_THERMAL_OFFSET_8814A		0x3EF
+
 #define EEPROM_TX_PWR_INX_8814				0x10
 #define EEPROM_ChannelPlan_8814				0xB8
 #define EEPROM_XTAL_8814					0xB9
@@ -182,6 +203,17 @@
 #define	EEPROM_TX_BBSWING_5G_8814			0xC7
 #define EEPROM_TRX_ANTENNA_OPTION_8814		0xC9
 #define	EEPROM_RFE_OPTION_8814				0xCA
+#define EEPROM_COUNTRY_CODE_8814			0xCB
+
+/*Extra Info for 8814A Initial Gain Fine Tune  suggested by Willis, JIRA: MP123*/
+#define	EEPROM_IG_OFFSET_4_AB_2G_8814A				0x120
+#define	EEPROM_IG_OFFSET_4_CD_2G_8814A				0x121
+#define	EEPROM_IG_OFFSET_4_AB_5GL_8814A				0x122
+#define	EEPROM_IG_OFFSET_4_CD_5GL_8814A				0x123
+#define	EEPROM_IG_OFFSET_4_AB_5GM_8814A				0x124
+#define	EEPROM_IG_OFFSET_4_CD_5GM_8814A				0x125
+#define	EEPROM_IG_OFFSET_4_AB_5GH_8814A				0x126
+#define	EEPROM_IG_OFFSET_4_CD_5GH_8814A				0x127
 
 //====================================================
 //			EEPROM/Efuse PG Offset for 8821AE/8821AU/8821AS
@@ -287,6 +319,7 @@
 #define	EEPROM_TX_PWR_CALIBRATE_RATE_8188F	0xC8
 #define	EEPROM_RF_ANTENNA_OPT_8188F			0xC9
 #define	EEPROM_RFE_OPTION_8188F				0xCA
+#define EEPROM_COUNTRY_CODE_8188F			0xCB
 #define EEPROM_CUSTOMER_ID_8188F			0x7F
 #define EEPROM_SUBCUSTOMER_ID_8188F			0x59
 
@@ -325,6 +358,7 @@
 #define	EEPROM_TX_PWR_CALIBRATE_RATE_8723B	0xC8
 #define	EEPROM_RF_ANTENNA_OPT_8723B		0xC9
 #define	EEPROM_RFE_OPTION_8723B				0xCA
+#define EEPROM_COUNTRY_CODE_8723B			0xCB
 
 // RTL8723BE
 #define EEPROM_MAC_ADDR_8723BE				0xD0
@@ -346,8 +380,14 @@
 #define EEPROM_Voltage_ADDR_8723B			0x8
 
 //====================================================
-//			EEPROM/Efuse PG Offset for 8703BS
+/*			EEPROM/Efuse PG Offset for 8703B		*/
 //====================================================
+#define GET_PG_KFREE_ON_8703B(_pg_m)			LE_BITS_TO_1BYTE(((u8 *)(_pg_m)) + 0xC1, 4, 1)
+#define GET_PG_KFREE_THERMAL_K_ON_8703B(_pg_m)	LE_BITS_TO_1BYTE(((u8 *)(_pg_m)) + 0xC8, 5, 1)
+
+#define PPG_BB_GAIN_2G_TXA_OFFSET_8703B	0xEE
+#define PPG_THERMAL_OFFSET_8703B		0xEF
+
 #define	EEPROM_TX_PWR_INX_8703B				0x10
 
 #define	EEPROM_ChannelPlan_8703B				0xB8
@@ -367,6 +407,27 @@
 #define	EEPROM_TX_PWR_CALIBRATE_RATE_8703B	0xC8
 #define	EEPROM_RF_ANTENNA_OPT_8703B		0xC9
 #define	EEPROM_RFE_OPTION_8703B				0xCA
+#define EEPROM_COUNTRY_CODE_8703B			0xCB
+
+/* MAC Hidden */
+#define PPG_MAC_HIDDEN_START_8703B			0xF0
+#define PPG_MAC_HIDDEN_END_8703B			0xFF
+#define EEPROM_HCI_AND_PACKAGE_TYPE_8703B	0xF8
+#define EEPROM_WL_FUNC_CAP_8703B			0xF9
+#define EEPROM_BW_AND_ANT_NUM_CAP_8703B		0xFB
+#define GET_PMH_HCI_TYPE_8703B(_pmh_m)		LE_BITS_TO_1BYTE(((u8 *)(_pmh_m)) + EEPROM_HCI_AND_PACKAGE_TYPE_8703B - PPG_MAC_HIDDEN_START_8703B, 0, 4)
+#define	GET_PMH_PACKAGE_TYPE_8703B(_pmh_m)	LE_BITS_TO_1BYTE(((u8 *)(_pmh_m)) + EEPROM_HCI_AND_PACKAGE_TYPE_8703B - PPG_MAC_HIDDEN_START_8703B, 4, 4)
+#define GET_PMH_WL_FUNC_CAP_8703B(_pmh_m)	LE_BITS_TO_1BYTE(((u8 *)(_pmh_m)) + EEPROM_WL_FUNC_CAP_8703B - PPG_MAC_HIDDEN_START_8703B, 0, 4)
+#define GET_PMH_BW_CAP_8703B(_pmh_m)		LE_BITS_TO_1BYTE(((u8 *)(_pmh_m)) + EEPROM_BW_AND_ANT_NUM_CAP_8703B - PPG_MAC_HIDDEN_START_8703B, 0, 3)
+#define GET_PMH_ANT_NUM_CAP_8703B(_pmh_m)	LE_BITS_TO_1BYTE(((u8 *)(_pmh_m)) + EEPROM_BW_AND_ANT_NUM_CAP_8703B - PPG_MAC_HIDDEN_START_8703B, 5, 3)
+
+/* RTL8703BU */
+#define EEPROM_MAC_ADDR_8703BU                          0x107
+#define EEPROM_VID_8703BU                               0x100
+#define EEPROM_PID_8703BU                               0x102
+#define EEPROM_USB_OPTIONAL_FUNCTION0_8703BU            0x104
+#define EEPROM_PA_TYPE_8703BU                           0xBC
+#define EEPROM_LNA_TYPE_2G_8703BU                       0xBD
 
 //RTL8703BS
 #define	EEPROM_MAC_ADDR_8703BS				0x11A
@@ -479,7 +540,7 @@
 #define EEPROM_DEFAULT_DIFF				0XFE
 #define EEPROM_DEFAULT_CHANNEL_PLAN		0x7F
 #define EEPROM_DEFAULT_BOARD_OPTION		0x00
-#define EEPROM_DEFAULT_RFE_OPTION_8192E 0x03
+#define EEPROM_DEFAULT_RFE_OPTION_8192E 0xFF
 #define EEPROM_DEFAULT_RFE_OPTION		0x04
 #define EEPROM_DEFAULT_FEATURE_OPTION	0x00
 #define EEPROM_DEFAULT_BT_OPTION			0x10
@@ -508,22 +569,6 @@
 //----------------------------------------------------------------------------
 //       EEPROM/EFUSE data structure definition.
 //----------------------------------------------------------------------------
-#define MAX_RF_PATH_NUM	2
-#define MAX_CHNL_GROUP		3+9
-typedef struct _TxPowerInfo{
-	u8 CCKIndex[MAX_RF_PATH_NUM][MAX_CHNL_GROUP];
-	u8 HT40_1SIndex[MAX_RF_PATH_NUM][MAX_CHNL_GROUP];
-	u8 HT40_2SIndexDiff[MAX_RF_PATH_NUM][MAX_CHNL_GROUP];
-	s8 HT20IndexDiff[MAX_RF_PATH_NUM][MAX_CHNL_GROUP];
-	u8 OFDMIndexDiff[MAX_RF_PATH_NUM][MAX_CHNL_GROUP];
-	u8 HT40MaxOffset[MAX_RF_PATH_NUM][MAX_CHNL_GROUP];
-	u8 HT20MaxOffset[MAX_RF_PATH_NUM][MAX_CHNL_GROUP];
-	u8 TSSI_A[3];
-	u8 TSSI_B[3];
-	u8 TSSI_A_5G[3];		//5GL/5GM/5GH
-	u8 TSSI_B_5G[3];
-}TxPowerInfo, *PTxPowerInfo;
-
 
 //For 88E new structure
 
@@ -556,7 +601,7 @@ typedef struct _TxPowerInfo{
 }
 */
 #define	MAX_RF_PATH				4
-#define 	RF_PATH_MAX				MAX_RF_PATH	
+#define RF_PATH_MAX				MAX_RF_PATH	
 #define	MAX_CHNL_GROUP_24G		6 
 #define	MAX_CHNL_GROUP_5G		14 
 

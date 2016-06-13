@@ -46,6 +46,7 @@
 		u8	*rsp;
 		u32	rspsz;
 		struct submit_ctx *sctx;
+		u8 no_io;
 		//_sema 	cmd_sem;
 		_list	list;
 	};
@@ -214,6 +215,7 @@ u8 p2p_protocol_wk_cmd(_adapter*padapter, int intCmdType );
 enum rtw_drvextra_cmd_id
 {	
 	NONE_WK_CID,
+	STA_MSTATUS_RPT_WK_CID,
 	DYNAMIC_CHK_WK_CID,
 	DM_CTRL_WK_CID,
 	PBC_POLLING_WK_CID,
@@ -234,6 +236,8 @@ enum rtw_drvextra_cmd_id
 	LPS_CHANGE_DTIM_CID,
 	BTINFO_WK_CID,
 	DFS_MASTER_WK_CID,
+	SESSION_TRACKER_WK_CID,
+	EN_HW_UPDATE_TSF_WK_CID,
 	MAX_WK_CID
 };
 
@@ -249,6 +253,7 @@ enum LPS_CTRL_TYPE
 	LPS_CTRL_TX_TRAFFIC_LEAVE = 7,
 	LPS_CTRL_RX_TRAFFIC_LEAVE = 8,	
 	LPS_CTRL_ENTER = 9,
+	LPS_CTRL_LEAVE_CFG80211_PWRMGMT = 10,
 };
 
 enum STAKEY_TYPE
@@ -606,6 +611,11 @@ struct readTSSI_rsp {
 	u8	value;
 };
 
+struct readMAC_parm {
+	u8 len;
+	u32	addr;
+};
+
 struct writeBB_parm {
 	u8	offset;
 	u8	value;
@@ -956,6 +966,7 @@ struct SwitchBandwidth_parm
 /*H2C Handler index: 59 */ 
 struct SetChannelPlan_param
 {
+	const struct country_chplan *country_ent;
 	u8 channel_plan;
 };
 
@@ -1010,6 +1021,8 @@ Result:
 #define H2C_REJECTED			0x05
 #define H2C_CMD_OVERFLOW		0x06
 #define H2C_RESERVED			0x07
+#define H2C_ENQ_HEAD			0x08
+#define H2C_ENQ_HEAD_FAIL		0x09
 
 extern u8 rtw_setassocsta_cmd(_adapter  *padapter, u8 *mac_addr);
 extern u8 rtw_setstandby_cmd(_adapter *padapter, uint action);
@@ -1030,6 +1043,8 @@ u8 rtw_disassoc_cmd(_adapter *padapter, u32 deauth_timeout_ms, bool enqueue);
 extern u8 rtw_setopmode_cmd(_adapter  *padapter, NDIS_802_11_NETWORK_INFRASTRUCTURE networktype, bool enqueue);
 extern u8 rtw_setdatarate_cmd(_adapter  *padapter, u8 *rateset);
 extern u8 rtw_setbasicrate_cmd(_adapter  *padapter, u8 *rateset);
+extern u8 rtw_getmacreg_cmd(_adapter *padapter, u8 len, u32 addr);
+extern void rtw_usb_catc_trigger_cmd(_adapter *padapter, const char *caller);
 extern u8 rtw_setbbreg_cmd(_adapter * padapter, u8 offset, u8 val);
 extern u8 rtw_setrfreg_cmd(_adapter * padapter, u8 offset, u32 val);
 extern u8 rtw_getbbreg_cmd(_adapter * padapter, u8 offset, u8 * pval);
@@ -1086,8 +1101,13 @@ void rtw_dfs_master_status_apply(_adapter *adapter, u8 self_action);
 u8 rtw_btinfo_cmd(PADAPTER padapter, u8 *pbuf, u16 length);
 #endif
 
+u8 rtw_enable_hw_update_tsf_cmd(_adapter *padapter);
+
 u8 rtw_set_ch_cmd(_adapter*padapter, u8 ch, u8 bw, u8 ch_offset, u8 enqueue);
-extern u8 rtw_set_chplan_cmd(_adapter*padapter, u8 chplan, u8 enqueue, u8 swconfig);
+
+u8 rtw_set_chplan_cmd(_adapter *adapter, int flags, u8 chplan, u8 swconfig);
+u8 rtw_set_country_cmd(_adapter *adapter, int flags, const char *country_code, u8 swconfig);
+
 extern u8 rtw_led_blink_cmd(_adapter*padapter, PVOID pLed);
 extern u8 rtw_set_csa_cmd(_adapter*padapter, u8 new_ch_no);
 extern u8 rtw_tdls_cmd(_adapter*padapter, u8 *addr, u8 option);
@@ -1099,6 +1119,10 @@ extern u8 rtw_c2h_wk_cmd(PADAPTER padapter, u8 *c2h_evt);
 //#endif
 
 u8 rtw_run_in_thread_cmd(PADAPTER padapter, void (*func)(void*), void* context);
+
+u8 session_tracker_chk_cmd(_adapter *adapter, struct sta_info *sta);
+u8 session_tracker_add_cmd(_adapter *adapter, struct sta_info *sta, u8 *local_naddr, u8 *local_port, u8 *remote_naddr, u8 *remote_port);
+u8 session_tracker_del_cmd(_adapter *adapter, struct sta_info *sta, u8 *local_naddr, u8 *local_port, u8 *remote_naddr, u8 *remote_port);
 
 u8 rtw_drvextra_cmd_hdl(_adapter *padapter, unsigned char *pbuf);
 
@@ -1112,6 +1136,7 @@ extern void rtw_readtssi_cmdrsp_callback(_adapter*	padapter,  struct cmd_obj *pc
 extern void rtw_setstaKey_cmdrsp_callback(_adapter  *padapter,  struct cmd_obj *pcmd);
 extern void rtw_setassocsta_cmdrsp_callback(_adapter  *padapter,  struct cmd_obj *pcmd);
 extern void rtw_getrttbl_cmdrsp_callback(_adapter  *padapter,  struct cmd_obj *pcmd);
+extern void rtw_getmacreg_cmdrsp_callback(_adapter *padapter,  struct cmd_obj *pcmd);
 
 
 struct _cmd_callback {
@@ -1199,6 +1224,8 @@ enum rtw_h2c_cmd
 	MAX_H2CCMD
 };
 
+#define _GetMACReg_CMD_ _Read_MACREG_CMD_
+#define _SetMACReg_CMD_ _Write_MACREG_CMD_
 #define _GetBBReg_CMD_		_Read_BBREG_CMD_
 #define _SetBBReg_CMD_ 		_Write_BBREG_CMD_
 #define _GetRFReg_CMD_ 		_Read_RFREG_CMD_
@@ -1207,7 +1234,7 @@ enum rtw_h2c_cmd
 #ifdef _RTW_CMD_C_
 struct _cmd_callback 	rtw_cmd_callback[] = 
 {
-	{GEN_CMD_CODE(_Read_MACREG), NULL}, /*0*/
+	{GEN_CMD_CODE(_Read_MACREG), &rtw_getmacreg_cmdrsp_callback}, /*0*/
 	{GEN_CMD_CODE(_Write_MACREG), NULL}, 
 	{GEN_CMD_CODE(_Read_BBREG), &rtw_getbbrfreg_cmdrsp_callback},
 	{GEN_CMD_CODE(_Write_BBREG), NULL},
@@ -1282,6 +1309,12 @@ struct _cmd_callback 	rtw_cmd_callback[] =
 	{GEN_CMD_CODE(_RunInThreadCMD), NULL},/*64*/
 };
 #endif
+
+#define CMD_FMT "cmd=%d,%d,%d"
+#define CMD_ARG(cmd) \
+	(cmd)->cmdcode, \
+	(cmd)->cmdcode == GEN_CMD_CODE(_Set_Drv_Extra) ? ((struct drvextra_cmd_parm *)(cmd)->parmbuf)->ec_id : ((cmd)->cmdcode == GEN_CMD_CODE(_Set_MLME_EVT) ? ((struct C2HEvent_Header *)(cmd)->parmbuf)->ID : 0), \
+	(cmd)->cmdcode == GEN_CMD_CODE(_Set_Drv_Extra) ? ((struct drvextra_cmd_parm *)(cmd)->parmbuf)->type : 0
 
 #endif // _CMD_H_
 

@@ -51,7 +51,8 @@ enum{
 		VOLTAGE_V25						= 0x03,
 		LDOE25_SHIFT					= 28 ,
 	};
-#define FW_SIZE					      0x10000  // Compatible with RTL8723 Maximal RAM code size 24K.   modified to 32k, TO compatible with 92d maximal fw size 32k
+/* max. iram is 64k , max dmen is 32k. Total = 96k = 0x18000*/
+#define FW_SIZE							0x18000
 #define FW_START_ADDRESS   0x1000
 typedef struct _RT_FIRMWARE_8814 {
 	FIRMWARE_SOURCE	eFWSource;
@@ -173,6 +174,12 @@ typedef struct _RT_FIRMWARE_8814 {
 
 #endif //#if defined(CONFIG_SDIO_HCI) || defined(CONFIG_USB_HCI)
 
+#ifdef CONFIG_WOWLAN
+#define WOWLAN_PAGE_NUM_8814	0x00
+#else
+#define WOWLAN_PAGE_NUM_8814	0x00
+#endif
+
 #define PAGE_SIZE_8814A						128//TXFF Page Size, Unit: Byte
 #define MAX_RX_DMA_BUFFER_SIZE_8814A		0x5C00	//BASIC_RXFF_SIZE_8814A+TRX_SHARE_MODE_8814A*TRX_SHARE_BUFF_UNIT_8814A //Basic RXFF Size + ShareBuffer Size
 #define TX_PAGE_BOUNDARY_8814A			TXPKT_PGNUM_8814A	// Need to enlarge boundary, by KaiYuan
@@ -180,7 +187,7 @@ typedef struct _RT_FIRMWARE_8814 {
 
 
 #define  TOTAL_PGNUM_8814A		2048
-#define  TXPKT_PGNUM_8814A		2032
+#define  TXPKT_PGNUM_8814A		(2048 - BCNQ_PAGE_NUM_8814-WOWLAN_PAGE_NUM_8814)
 #define  PUB_PGNUM_8814A		(TXPKT_PGNUM_8814A-HPQ_PGNUM_8814A-NPQ_PGNUM_8814A-LPQ_PGNUM_8814A-EPQ_PGNUM_8814A)
 
 //Note: For WMM Normal Chip Setting ,modify later
@@ -276,6 +283,15 @@ VOID hal_ReadPAType_8814A(
 	OUT u8*		pPAType, 
 	OUT u8*		pLNAType
 	);
+void hal_GetRxGainOffset_8814A(
+	PADAPTER	Adapter,
+	pu1Byte		PROMContent,
+	BOOLEAN		AutoloadFail
+	);
+void Hal_EfuseParseKFreeData_8814A(
+	IN		PADAPTER		Adapter,
+	IN		u8				*PROMContent,
+	IN		BOOLEAN			AutoloadFail);
 void	hal_ReadRFEType_8814A(PADAPTER Adapter,u8* PROMContent, BOOLEAN AutoloadFail);
 void	hal_EfuseParseBTCoexistInfo8814A(PADAPTER Adapter, u8* hwinfo, BOOLEAN AutoLoadFail);
 
@@ -302,6 +318,7 @@ u8 SetHalDefVar8814A(PADAPTER padapter, HAL_DEF_VARIABLE variable, void *pval);
 u8 GetHalDefVar8814A(PADAPTER padapter, HAL_DEF_VARIABLE variable, void *pval);
 s32 c2h_id_filter_ccx_8814a(u8 *buf);
 void rtl8814_set_hal_ops(struct hal_ops *pHalFunc);
+void init_hal_spec_8814a(_adapter *adapter);
 
 // register
 void SetBcnCtrlReg(PADAPTER padapter, u8 SetBits, u8 ClearBits);

@@ -270,6 +270,8 @@ void	Hal_ReadPAType_8192E(PADAPTER Adapter,u8* PROMContent, BOOLEAN AutoloadFail
 void	Hal_ReadAmplifierType_8192E(PADAPTER Adapter, u8 *PROMContent, BOOLEAN AutoloadFail);
 void	Hal_ReadRFEType_8192E(PADAPTER Adapter, u8 *PROMContent, BOOLEAN AutoloadFail);
 void	Hal_EfuseParseBTCoexistInfo8192E(PADAPTER Adapter, u8* hwinfo, BOOLEAN AutoLoadFail);
+void	Hal_EfuseParseKFreeData_8192E(PADAPTER pAdapter, u8 *hwinfo, BOOLEAN AutoLoadFail);
+
 u8 Hal_CrystalAFEAdjust(_adapter * Adapter);
 
 BOOLEAN HalDetectPwrDownMode8192E(PADAPTER Adapter);
@@ -286,7 +288,6 @@ VOID _InitTxBufferBoundary_8192E(IN PADAPTER Adapter,IN u8 txpktbuf_bndy);
 VOID _InitPageBoundary_8192E(IN PADAPTER Adapter);
 //VOID _InitTransferPageSize_8192E(IN PADAPTER Adapter);
 VOID _InitDriverInfoSize_8192E(IN PADAPTER Adapter,IN u8 drvInfoSize);
-VOID _InitRxSetting_8192E(PADAPTER Adapter);
 VOID _InitRDGSetting_8192E(PADAPTER Adapter);
 void _InitID_8192E(IN  PADAPTER Adapter);
 VOID _InitNetworkType_8192E(IN  PADAPTER Adapter);
@@ -322,6 +323,7 @@ GetHalDefVar8192E(
 	);
 
 void rtl8192e_set_hal_ops(struct hal_ops *pHalFunc);
+void init_hal_spec_8192e(_adapter *adapter);
 void rtl8192e_init_default_value(_adapter * padapter);
 // register
 void SetBcnCtrlReg(PADAPTER padapter, u8 SetBits, u8 ClearBits);

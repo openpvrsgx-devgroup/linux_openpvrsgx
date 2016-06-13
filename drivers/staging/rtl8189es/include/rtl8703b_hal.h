@@ -196,8 +196,8 @@ typedef struct _RT_8703B_FIRMWARE_HDR
 
 #define HAL_EFUSE_MEMORY
 
-#define HWSET_MAX_SIZE_8703B			512
-#define EFUSE_REAL_CONTENT_LEN_8703B		512
+#define HWSET_MAX_SIZE_8703B			256
+#define EFUSE_REAL_CONTENT_LEN_8703B		256
 #define EFUSE_MAP_LEN_8703B				512
 #define EFUSE_MAX_SECTION_8703B			64
 
@@ -210,33 +210,12 @@ typedef struct _RT_8703B_FIRMWARE_HDR
 //========================================================
 //			EFUSE for BT definition
 //========================================================
-#define EFUSE_BT_REAL_BANK_CONTENT_LEN	512
-#define EFUSE_BT_REAL_CONTENT_LEN		1536	// 512*3
+#define BANK_NUM		1
+#define EFUSE_BT_REAL_BANK_CONTENT_LEN	128
+#define EFUSE_BT_REAL_CONTENT_LEN		(EFUSE_BT_REAL_BANK_CONTENT_LEN * BANK_NUM)
 #define EFUSE_BT_MAP_LEN				1024	// 1k bytes
-#define EFUSE_BT_MAX_SECTION			128		// 1024/8
-
+#define EFUSE_BT_MAX_SECTION			(EFUSE_BT_MAP_LEN / 8)
 #define EFUSE_PROTECT_BYTES_BANK		16
-
-// Description: Determine the types of C2H events that are the same in driver and Fw.
-// Fisrt constructed by tynli. 2009.10.09.
-typedef enum _C2H_EVT
-{
-	C2H_DBG = 0,
-	C2H_TSF = 1,
-	C2H_AP_RPT_RSP = 2,
-	C2H_CCX_TX_RPT = 3,	// The FW notify the report of the specific tx packet.
-	C2H_BT_RSSI = 4,
-	C2H_BT_OP_MODE = 5,
-	C2H_EXT_RA_RPT = 6,
-	C2H_8703B_BT_INFO = 9,
-	C2H_HW_INFO_EXCH = 10,
-	C2H_8703B_BT_MP_INFO = 11,
-	C2H_8703B_P2P_RPORT = 0x16,
-#ifdef CONFIG_FW_C2H_DEBUG
-	C2H_8703B_FW_DEBUG = 0xff,
-#endif //CONFIG_FW_C2H_DEBUG
-	MAX_C2HEVENT
-} C2H_EVT;
 
 typedef struct _C2H_EVT_HDR
 {
@@ -284,7 +263,7 @@ void Hal_EfuseParseCustomerID_8703B(PADAPTER padapter, u8 *hwinfo, BOOLEAN AutoL
 void Hal_EfuseParseAntennaDiversity_8703B(PADAPTER padapter, u8 *hwinfo, BOOLEAN AutoLoadFail);
 void Hal_EfuseParseXtal_8703B(PADAPTER pAdapter, u8 *hwinfo, u8 AutoLoadFail);
 void Hal_EfuseParseThermalMeter_8703B(PADAPTER padapter, u8 *hwinfo, u8 AutoLoadFail);
-VOID Hal_EfuseParsePackageType_8703B(PADAPTER pAdapter,u8* hwinfo,BOOLEAN AutoLoadFail);
+VOID Hal_EfuseParseMacHidden_8703B(PADAPTER pAdapter, u8 *hwinfo, BOOLEAN AutoLoadFail);
 VOID Hal_EfuseParseVoltage_8703B(PADAPTER pAdapter,u8* hwinfo,BOOLEAN 	AutoLoadFail); 
 VOID Hal_EfuseParseBoardType_8703B(PADAPTER Adapter,	u8*	PROMContent,BOOLEAN AutoloadFail);
 
@@ -294,6 +273,7 @@ void rtl8703b_c2h_packet_handler(PADAPTER padapter, u8 *pbuf, u16 length);
 
 
 void rtl8703b_set_hal_ops(struct hal_ops *pHalFunc);
+void init_hal_spec_8703b(_adapter *adapter);
 void SetHwReg8703B(PADAPTER padapter, u8 variable, u8 *val);
 void GetHwReg8703B(PADAPTER padapter, u8 variable, u8 *val);
 #ifdef CONFIG_C2H_PACKET_EN
@@ -307,6 +287,7 @@ void rtl8703b_InitBeaconParameters(PADAPTER padapter);
 void rtl8703b_InitBeaconMaxError(PADAPTER padapter, u8 InfraMode);
 void	_InitBurstPktLen_8703BS(PADAPTER Adapter);
 void _InitLTECoex_8703BS(PADAPTER Adapter);
+void _InitMacAPLLSetting_8703B(PADAPTER Adapter);
 void _8051Reset8703(PADAPTER padapter);
 #ifdef CONFIG_WOWLAN
 void Hal_DetectWoWMode(PADAPTER pAdapter);
@@ -334,9 +315,7 @@ s32 c2h_handler_8703b(PADAPTER padapter, u8 *pC2hEvent);
 u8 MRateToHwRate8703B(u8  rate);
 u8 HwRateToMRate8703B(u8	 rate);
 
-#ifdef CONFIG_RF_GAIN_OFFSET
 void Hal_ReadRFGainOffset(PADAPTER pAdapter,u8* hwinfo,BOOLEAN AutoLoadFail);
-#endif //CONFIG_RF_GAIN_OFFSET
 
 #ifdef CONFIG_PCI_HCI
 BOOLEAN	InterruptRecognized8703BE(PADAPTER Adapter);

@@ -21,12 +21,14 @@
 #ifndef	__PHYDMDIG_H__
 #define    __PHYDMDIG_H__
 
-#define DIG_VERSION	"1.6"	/*2015.02.09*/
+#define DIG_VERSION	"1.8"	/*2015.07.01*/
+
+/* Pause DIG & CCKPD */
+#define		DM_DIG_MAX_PAUSE_TYPE		0x7
 
 typedef struct _Dynamic_Initial_Gain_Threshold_
 {
 	BOOLEAN		bStopDIG;		// for debug
-	BOOLEAN		bPauseDIG;
 	BOOLEAN		bIgnoreDIG;
 	BOOLEAN		bPSDInProgress;
 
@@ -61,6 +63,8 @@ typedef struct _Dynamic_Initial_Gain_Threshold_
 	u1Byte		PreCCKPDState;
 	u1Byte		CurCCKPDState;
 	u1Byte		CCKPDBackup;
+	u1Byte		pause_cckpd_level;
+	u1Byte		pause_cckpd_value[DM_DIG_MAX_PAUSE_TYPE + 1];
 
 	u1Byte		LargeFAHit;
 	u1Byte		ForbiddenIGI;
@@ -75,6 +79,9 @@ typedef struct _Dynamic_Initial_Gain_Threshold_
 	u4Byte		RSSI_max;
 
 	u1Byte		*bP2PInProcess;
+
+	u1Byte		pause_dig_level;
+	u1Byte		pause_dig_value[DM_DIG_MAX_PAUSE_TYPE + 1];
 
 #if(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
 	BOOLEAN		bTpTarget;
@@ -115,16 +122,6 @@ typedef enum tag_Dynamic_Init_Gain_Operation_Type_Definition
 	DIG_OP_TYPE_MAX
 }DM_DIG_OP_E;
 
-typedef enum tag_ODM_PauseDIG_Type {
-	ODM_PAUSE_DIG    		= 	BIT0,
-	ODM_RESUME_DIG  		= 	BIT1
-} ODM_Pause_DIG_TYPE;
-
-typedef enum tag_ODM_PauseCCKPD_Type {
-	ODM_PAUSE_CCKPD    	= 	BIT0,
-	ODM_RESUME_CCKPD  	= 	BIT1
-} ODM_Pause_CCKPD_TYPE;
-
 /*
 typedef enum tag_CCK_Packet_Detection_Threshold_Type_Definition
 {
@@ -161,6 +158,25 @@ typedef enum tag_DIG_Connect_Definition
 #define DM_MultiSTA_InitGainChangeNotify_DISCONNECT(_ADAPTER)	\
 	DM_MultiSTA_InitGainChangeNotify(DIG_MultiSTA_DISCONNECT)
 */
+
+typedef enum tag_PHYDM_Pause_Type {
+	PHYDM_PAUSE = BIT0,
+	PHYDM_RESUME = BIT1
+} PHYDM_PAUSE_TYPE;
+
+typedef enum tag_PHYDM_Pause_Level {
+/* number of pause level can't exceed DM_DIG_MAX_PAUSE_TYPE */
+	PHYDM_PAUSE_LEVEL_0 = 0,
+	PHYDM_PAUSE_LEVEL_1 = 1,
+	PHYDM_PAUSE_LEVEL_2 = 2,
+	PHYDM_PAUSE_LEVEL_3 = 3,
+	PHYDM_PAUSE_LEVEL_4 = 4,
+	PHYDM_PAUSE_LEVEL_5 = 5,
+	PHYDM_PAUSE_LEVEL_6 = 6,
+	PHYDM_PAUSE_LEVEL_7 = DM_DIG_MAX_PAUSE_TYPE		/* maximum level */
+} PHYDM_PAUSE_LEVEL;
+
+
 #define		DM_DIG_THRESH_HIGH			40
 #define		DM_DIG_THRESH_LOW			35
 
@@ -236,7 +252,8 @@ ODM_Write_DIG(
 VOID
 odm_PauseDIG(
 	IN		PVOID					pDM_VOID,
-	IN		ODM_Pause_DIG_TYPE		PauseType,
+	IN		PHYDM_PAUSE_TYPE		PauseType,
+	IN		PHYDM_PAUSE_LEVEL		pause_level,
 	IN		u1Byte					IGIValue
 	);
 
@@ -263,7 +280,8 @@ odm_FalseAlarmCounterStatistics(
 VOID
 odm_PauseCCKPacketDetection(
 	IN		PVOID					pDM_VOID,
-	IN		ODM_Pause_CCKPD_TYPE	PauseType,
+	IN		PHYDM_PAUSE_TYPE		PauseType,
+	IN		PHYDM_PAUSE_LEVEL		pause_level,
 	IN		u1Byte					CCKPDThreshold
 	);
 

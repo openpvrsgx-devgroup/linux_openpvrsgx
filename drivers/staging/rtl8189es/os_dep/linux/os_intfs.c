@@ -99,16 +99,17 @@ int rtw_uapsd_acbk_en = 0;
 int rtw_uapsd_acbe_en = 0;
 int rtw_uapsd_acvi_en = 0;
 int rtw_uapsd_acvo_en = 0;
-
+#ifdef CONFIG_RTL8814A
 int rtw_rfkfree_enable = 2; /* disable kfree */
-
+#else
+int rtw_rfkfree_enable = 0; /* Default Enalbe kfree by efuse config */
+#endif
 #ifdef CONFIG_80211N_HT
 int rtw_ht_enable = 1;
 // 0: 20 MHz, 1: 40 MHz, 2: 80 MHz, 3: 160MHz, 4: 80+80MHz
 // 2.4G use bit 0 ~ 3, 5G use bit 4 ~ 7
 // 0x21 means enable 2.4G 40MHz & 5G 80MHz
 int rtw_bw_mode = 0x21;
-int rtw_cbw40_enable = 3; // 0 :diable, bit(0): enable 2.4g, bit(1): enable 5g
 int rtw_ampdu_enable = 1;//for enable tx_ampdu ,// 0: disable, 0x1:enable (but wifi_spec should be 0), 0x2: force enable (don't care wifi_spec)
 int rtw_rx_stbc = 1;// 0: disable, bit(0):enable 2.4g, bit(1):enable 5g, default is set to enable 2.4GHZ for IOT issue with bufflao's AP at 5GHZ
 int rtw_ampdu_amsdu = 0;// 0: disabled, 1:enabled, 2:auto . There is an IOT issu with DLINK DIR-629 when the flag turn on
@@ -124,6 +125,9 @@ int rtw_ldpc_cap = 0x00;
 int rtw_stbc_cap = 0x13;
 // BIT0: Enable VHT Beamformer, BIT1: Enable VHT Beamformee, BIT4: Enable HT Beamformer, BIT5: Enable HT Beamformee
 int rtw_beamform_cap = 0x2;
+int rtw_bfer_rf_number = 0; /*BeamformerCapRfNum Rf path number, 0 for auto, others for manual*/
+int rtw_bfee_rf_number = 0; /*BeamformeeCapRfNum  Rf path number, 0 for auto, others for manual*/
+
 #endif //CONFIG_80211N_HT
 
 #ifdef CONFIG_80211AC_VHT
@@ -146,7 +150,22 @@ int rtw_wifi_spec = 0;
 
 int rtw_special_rf_path = 0; //0: 2T2R ,1: only turn on path A 1T1R
 
-int rtw_channel_plan = RT_CHANNEL_DOMAIN_MAX;
+char rtw_country_unspecified[] = {0xFF, 0xFF, 0x00};
+char *rtw_country_code = rtw_country_unspecified;
+module_param(rtw_country_code, charp, 0644);
+MODULE_PARM_DESC(rtw_country_code, "The default country code (in alpha2)");
+
+int rtw_channel_plan = RTW_CHPLAN_MAX;
+module_param(rtw_channel_plan, int, 0644);
+MODULE_PARM_DESC(rtw_channel_plan, "The default chplan ID when rtw_alpha2 is not specified or valid");
+
+/*if concurrent softap + p2p(GO) is needed, this param lets p2p response full channel list.
+But Softap must be SHUT DOWN once P2P decide to set up connection and become a GO.*/
+#ifdef CONFIG_FULL_CH_IN_P2P_HANDSHAKE
+int rtw_full_ch_in_p2p_handshake = 1; /* reply full channel list*/
+#else
+int rtw_full_ch_in_p2p_handshake = 0; /* reply only softap channel*/
+#endif
 
 #ifdef CONFIG_BT_COEXIST
 int rtw_btcoex_enable = 1;
@@ -237,8 +256,8 @@ int rtw_ext_iface_num  = 1;//primary/secondary iface is excluded
 module_param(rtw_ext_iface_num, int, 0644);
 #endif //CONFIG_MULTI_VIR_IFACES
 
+module_param(rtw_rfkfree_enable, int, 0644);
 module_param(rtw_initmac, charp, 0644);
-module_param(rtw_channel_plan, int, 0644);
 module_param(rtw_special_rf_path, int, 0644);
 module_param(rtw_chip_version, int, 0644);
 module_param(rtw_rfintfs, int, 0644);
@@ -261,7 +280,9 @@ module_param(rtw_ampdu_amsdu, int, 0644);
 #ifdef CONFIG_80211AC_VHT
 module_param(rtw_vht_enable, int, 0644);
 #endif //CONFIG_80211AC_VHT
-
+#ifdef CONFIG_BEAMFORMING
+module_param(rtw_beamform_cap, int, 0644);
+#endif
 module_param(rtw_lowrate_two_xmit, int, 0644);
 
 module_param(rtw_rf_config, int, 0644);
@@ -270,6 +291,7 @@ module_param(rtw_smart_ps, int, 0644);
 module_param(rtw_low_power, int, 0644);
 module_param(rtw_wifi_spec, int, 0644);
 
+module_param(rtw_full_ch_in_p2p_handshake, int, 0644);
 module_param(rtw_antdiv_cfg, int, 0644);
 module_param(rtw_antdiv_type, int, 0644);
 
@@ -351,6 +373,14 @@ uint rtw_adaptivity_dc_backoff = CONFIG_RTW_ADAPTIVITY_DC_BACKOFF;
 module_param(rtw_adaptivity_dc_backoff, uint, 0644);
 MODULE_PARM_DESC(rtw_adaptivity_dc_backoff, "DC backoff for Adaptivity");
 
+int rtw_adaptivity_th_l2h_ini = CONFIG_RTW_ADAPTIVITY_TH_L2H_INI;
+module_param(rtw_adaptivity_th_l2h_ini, int, 0644);
+MODULE_PARM_DESC(rtw_adaptivity_th_l2h_ini, "TH_L2H_ini for Adaptivity");
+
+int rtw_adaptivity_th_edcca_hl_diff = CONFIG_RTW_ADAPTIVITY_TH_EDCCA_HL_DIFF;
+module_param(rtw_adaptivity_th_edcca_hl_diff, int, 0644);
+MODULE_PARM_DESC(rtw_adaptivity_th_edcca_hl_diff, "TH_EDCCA_HL_diff for Adaptivity");
+
 uint rtw_amplifier_type_2g = CONFIG_RTW_AMPLIFIER_TYPE_2G;
 module_param(rtw_amplifier_type_2g, uint, 0644);
 MODULE_PARM_DESC(rtw_amplifier_type_2g, "BIT3:2G ext-PA, BIT4:2G ext-LNA");
@@ -377,11 +407,32 @@ MODULE_PARM_DESC(rtw_TxBBSwing_5G, "default init value:0xFF");
 
 uint rtw_OffEfuseMask = 0;
 module_param(rtw_OffEfuseMask, uint, 0644);
-MODULE_PARM_DESC(rtw_OffEfuseMask, "default open Efuse Mask vaule:0");
+MODULE_PARM_DESC(rtw_OffEfuseMask, "default open Efuse Mask value:0");
 
 uint rtw_FileMaskEfuse = 0;
 module_param(rtw_FileMaskEfuse, uint, 0644);
-MODULE_PARM_DESC(rtw_FileMaskEfuse, "default drv Mask Efuse vaule:0");
+MODULE_PARM_DESC(rtw_FileMaskEfuse, "default drv Mask Efuse value:0");
+
+uint rtw_kfree = 0;
+module_param(rtw_kfree, uint, 0644);
+MODULE_PARM_DESC(rtw_kfree, "default kfree config value:0");
+
+uint rtw_rxgain_offset_2g = 0;
+module_param(rtw_rxgain_offset_2g, uint, 0644);
+MODULE_PARM_DESC(rtw_rxgain_offset_2g, "default RF Gain 2G Offset value:0");
+
+uint rtw_rxgain_offset_5gl = 0;
+module_param(rtw_rxgain_offset_5gl, uint, 0644);
+MODULE_PARM_DESC(rtw_rxgain_offset_5gl, "default RF Gain 5GL Offset value:0");
+
+uint rtw_rxgain_offset_5gm = 0;
+module_param(rtw_rxgain_offset_5gm, uint, 0644);
+MODULE_PARM_DESC(rtw_rxgain_offset_5gm, "default RF Gain 5GM Offset value:0");
+
+uint rtw_rxgain_offset_5gh = 0;
+module_param(rtw_rxgain_offset_5gh, uint, 0644);
+MODULE_PARM_DESC(rtw_rxgain_offset_5gm, "default RF Gain 5GL Offset value:0");
+
 
 uint rtw_pll_ref_clk_sel = CONFIG_RTW_PLL_REF_CLK_SEL;
 module_param(rtw_pll_ref_clk_sel, uint, 0644);
@@ -409,6 +460,48 @@ MODULE_PARM_DESC(rtw_tx_pwr_lmt_enable,"0:Disable, 1:Enable, 2: Depend on efuse"
 module_param(rtw_tx_pwr_by_rate, int, 0644);
 MODULE_PARM_DESC(rtw_tx_pwr_by_rate,"0:Disable, 1:Enable, 2: Depend on efuse");
 
+static int rtw_target_tx_pwr_2g_a[RATE_SECTION_NUM] = CONFIG_RTW_TARGET_TX_PWR_2G_A;
+static int rtw_target_tx_pwr_2g_a_num = 0;
+module_param_array(rtw_target_tx_pwr_2g_a, int, &rtw_target_tx_pwr_2g_a_num, 0644);
+MODULE_PARM_DESC(rtw_target_tx_pwr_2g_a, "2.4G target tx power (unit:dBm) of RF path A for each rate section, should match the real calibrate power, -1: undefined");
+
+static int rtw_target_tx_pwr_2g_b[RATE_SECTION_NUM] = CONFIG_RTW_TARGET_TX_PWR_2G_B;
+static int rtw_target_tx_pwr_2g_b_num = 0;
+module_param_array(rtw_target_tx_pwr_2g_b, int, &rtw_target_tx_pwr_2g_b_num, 0644);
+MODULE_PARM_DESC(rtw_target_tx_pwr_2g_b, "2.4G target tx power (unit:dBm) of RF path B for each rate section, should match the real calibrate power, -1: undefined");
+
+static int rtw_target_tx_pwr_2g_c[RATE_SECTION_NUM] = CONFIG_RTW_TARGET_TX_PWR_2G_C;
+static int rtw_target_tx_pwr_2g_c_num = 0;
+module_param_array(rtw_target_tx_pwr_2g_c, int, &rtw_target_tx_pwr_2g_c_num, 0644);
+MODULE_PARM_DESC(rtw_target_tx_pwr_2g_c, "2.4G target tx power (unit:dBm) of RF path C for each rate section, should match the real calibrate power, -1: undefined");
+
+static int rtw_target_tx_pwr_2g_d[RATE_SECTION_NUM] = CONFIG_RTW_TARGET_TX_PWR_2G_D;
+static int rtw_target_tx_pwr_2g_d_num = 0;
+module_param_array(rtw_target_tx_pwr_2g_d, int, &rtw_target_tx_pwr_2g_d_num, 0644);
+MODULE_PARM_DESC(rtw_target_tx_pwr_2g_d, "2.4G target tx power (unit:dBm) of RF path D for each rate section, should match the real calibrate power, -1: undefined");
+
+#ifdef CONFIG_IEEE80211_BAND_5GHZ
+static int rtw_target_tx_pwr_5g_a[RATE_SECTION_NUM - 1] = CONFIG_RTW_TARGET_TX_PWR_5G_A;
+static int rtw_target_tx_pwr_5g_a_num = 0;
+module_param_array(rtw_target_tx_pwr_5g_a, int, &rtw_target_tx_pwr_5g_a_num, 0644);
+MODULE_PARM_DESC(rtw_target_tx_pwr_5g_a, "5G target tx power (unit:dBm) of RF path A for each rate section, should match the real calibrate power, -1: undefined");
+
+static int rtw_target_tx_pwr_5g_b[RATE_SECTION_NUM - 1] = CONFIG_RTW_TARGET_TX_PWR_5G_B;
+static int rtw_target_tx_pwr_5g_b_num = 0;
+module_param_array(rtw_target_tx_pwr_5g_b, int, &rtw_target_tx_pwr_5g_b_num, 0644);
+MODULE_PARM_DESC(rtw_target_tx_pwr_5g_b, "5G target tx power (unit:dBm) of RF path B for each rate section, should match the real calibrate power, -1: undefined");
+
+static int rtw_target_tx_pwr_5g_c[RATE_SECTION_NUM - 1] = CONFIG_RTW_TARGET_TX_PWR_5G_C;
+static int rtw_target_tx_pwr_5g_c_num = 0;
+module_param_array(rtw_target_tx_pwr_5g_c, int, &rtw_target_tx_pwr_5g_c_num, 0644);
+MODULE_PARM_DESC(rtw_target_tx_pwr_5g_c, "5G target tx power (unit:dBm) of RF path C for each rate section, should match the real calibrate power, -1: undefined");
+
+static int rtw_target_tx_pwr_5g_d[RATE_SECTION_NUM - 1] = CONFIG_RTW_TARGET_TX_PWR_5G_D;
+static int rtw_target_tx_pwr_5g_d_num = 0;
+module_param_array(rtw_target_tx_pwr_5g_d, int, &rtw_target_tx_pwr_5g_d_num, 0644);
+MODULE_PARM_DESC(rtw_target_tx_pwr_5g_d, "5G target tx power (unit:dBm) of RF path D for each rate section, should match the real calibrate power, -1: undefined");
+#endif /* CONFIG_IEEE80211_BAND_5GHZ */
+
 #ifdef CONFIG_LOAD_PHY_PARA_FROM_FILE
 char *rtw_phy_file_path = REALTEK_CONFIG_PATH;
 module_param(rtw_phy_file_path, charp, 0644);
@@ -435,6 +528,42 @@ static int netdev_close (struct net_device *pnetdev);
 #ifdef CONFIG_PLATFORM_INTEL_BYT
 extern int rtw_sdio_set_power(int on);
 #endif //CONFIG_PLATFORM_INTEL_BYT
+
+void rtw_regsty_load_target_tx_power(struct registry_priv *regsty)
+{
+	int path, rs;
+	int *target_tx_pwr;
+
+	for (path = RF_PATH_A; path < RF_PATH_MAX; path++) {
+		if (path == RF_PATH_A)
+			target_tx_pwr = rtw_target_tx_pwr_2g_a;
+		else if (path == RF_PATH_B)
+			target_tx_pwr = rtw_target_tx_pwr_2g_b;
+		else if (path == RF_PATH_C)
+			target_tx_pwr = rtw_target_tx_pwr_2g_c;
+		else if (path == RF_PATH_D)
+			target_tx_pwr = rtw_target_tx_pwr_2g_d;
+
+		for (rs = CCK; rs < RATE_SECTION_NUM; rs++)
+			regsty->target_tx_pwr_2g[path][rs] = target_tx_pwr[rs];
+	}
+
+#ifdef CONFIG_IEEE80211_BAND_5GHZ
+	for (path = RF_PATH_A; path < RF_PATH_MAX; path++) {
+		if (path == RF_PATH_A)
+			target_tx_pwr = rtw_target_tx_pwr_5g_a;
+		else if (path == RF_PATH_B)
+			target_tx_pwr = rtw_target_tx_pwr_5g_b;
+		else if (path == RF_PATH_C)
+			target_tx_pwr = rtw_target_tx_pwr_5g_c;
+		else if (path == RF_PATH_D)
+			target_tx_pwr = rtw_target_tx_pwr_5g_d;
+
+		for (rs = OFDM; rs < RATE_SECTION_NUM; rs++)
+			regsty->target_tx_pwr_5g[path][rs - 1] = target_tx_pwr[rs - 1];
+	}
+#endif /* CONFIG_IEEE80211_BAND_5GHZ */
+}
 
 uint loadparam(_adapter *padapter)
 {
@@ -510,6 +639,8 @@ _func_enter_;
 	registry_par->ldpc_cap = (u8)rtw_ldpc_cap;
 	registry_par->stbc_cap = (u8)rtw_stbc_cap;
 	registry_par->beamform_cap = (u8)rtw_beamform_cap;
+	registry_par->beamformer_rf_num = (u8)rtw_bfer_rf_number;
+	registry_par->beamformee_rf_num = (u8)rtw_bfee_rf_number;
 #endif
 
 #ifdef CONFIG_80211AC_VHT
@@ -528,9 +659,20 @@ _func_enter_;
 
 	registry_par->wifi_spec = (u8)rtw_wifi_spec;
 
+	if (strlen(rtw_country_code) != 2
+		|| is_alpha(rtw_country_code[0]) == _FALSE
+		|| is_alpha(rtw_country_code[1]) == _FALSE
+	) {
+		if (rtw_country_code != rtw_country_unspecified)
+			DBG_871X_LEVEL(_drv_err_, "%s discard rtw_country_code not in alpha2\n", __func__);
+		_rtw_memset(registry_par->alpha2, 0xFF, 2);
+	} else
+		_rtw_memcpy(registry_par->alpha2, rtw_country_code, 2);
+
 	registry_par->channel_plan = (u8)rtw_channel_plan;
 	registry_par->special_rf_path = (u8)rtw_special_rf_path;
 
+	registry_par->full_ch_in_p2p_handshake = (u8)rtw_full_ch_in_p2p_handshake;
 #ifdef CONFIG_BT_COEXIST
 	registry_par->btcoex = (u8)rtw_btcoex_enable;
 	registry_par->bt_iso = (u8)rtw_bt_iso;
@@ -595,6 +737,8 @@ _func_enter_;
 	registry_par->RegEnableTxPowerLimit = (u8)rtw_tx_pwr_lmt_enable;
 	registry_par->RegEnableTxPowerByRate = (u8)rtw_tx_pwr_by_rate;
 
+	rtw_regsty_load_target_tx_power(registry_par);
+
 	registry_par->RegPowerBase = 14;
 	registry_par->TxBBSwing_2G = (s8)rtw_TxBBSwing_2G;
 	registry_par->TxBBSwing_5G = (s8)rtw_TxBBSwing_5G;
@@ -615,34 +759,87 @@ _func_enter_;
 	registry_par->adaptivity_mode = (u8)rtw_adaptivity_mode;
 	registry_par->adaptivity_dml = (u8)rtw_adaptivity_dml;
 	registry_par->adaptivity_dc_backoff = (u8)rtw_adaptivity_dc_backoff;
+	registry_par->adaptivity_th_l2h_ini = (s8)rtw_adaptivity_th_l2h_ini;
+	registry_par->adaptivity_th_edcca_hl_diff = (s8)rtw_adaptivity_th_edcca_hl_diff;
 
 	registry_par->boffefusemask = (u8)rtw_OffEfuseMask;
 	registry_par->bFileMaskEfuse = (u8)rtw_FileMaskEfuse;
-	
 #ifdef CONFIG_AUTO_CHNL_SEL_NHM
 	registry_par->acs_mode = (u8)rtw_acs_mode;
 	registry_par->acs_auto_scan = (u8)rtw_acs_auto_scan;
 #endif
+	registry_par->reg_rxgain_offset_2g = (u32) rtw_rxgain_offset_2g;
+	registry_par->reg_rxgain_offset_5gl = (u32) rtw_rxgain_offset_5gl;
+	registry_par->reg_rxgain_offset_5gm = (u32) rtw_rxgain_offset_5gm;
+	registry_par->reg_rxgain_offset_5gh = (u32) rtw_rxgain_offset_5gh;
 _func_exit_;
 
 	return status;
 }
 
-static int rtw_net_set_mac_address(struct net_device *pnetdev, void *p)
+/**
+ * rtw_net_set_mac_address
+ * This callback function is used for the Media Access Control address
+ * of each net_device needs to be changed.
+ *
+ * Arguments:
+ * @pnetdev: net_device pointer.
+ * @addr: new MAC address.
+ *
+ * Return:
+ * ret = 0: Permit to change net_device's MAC address.
+ * ret = -1 (Default): Operation not permitted.
+ *
+ * Auther: Arvin Liu
+ * Date: 2015/05/29
+ */
+static int rtw_net_set_mac_address(struct net_device *pnetdev, void *addr)
 {
 	_adapter *padapter = (_adapter *)rtw_netdev_priv(pnetdev);
-	struct sockaddr *addr = p;
+	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
+	struct sockaddr *sa = (struct sockaddr *)addr;
+	int ret = -1;
 
-	if(padapter->bup == _FALSE)
-	{
-		//DBG_871X("r8711_net_set_mac_address(), MAC=%x:%x:%x:%x:%x:%x\n", addr->sa_data[0], addr->sa_data[1], addr->sa_data[2], addr->sa_data[3],
-		//addr->sa_data[4], addr->sa_data[5]);
-		_rtw_memcpy(adapter_mac_addr(padapter), addr->sa_data, ETH_ALEN);
-		//_rtw_memcpy(pnetdev->dev_addr, addr->sa_data, ETH_ALEN);
-		//padapter->bset_hwaddr = _TRUE;
+	/* only the net_device is in down state to permit modifying mac addr */
+	if ((pnetdev->flags & IFF_UP) == _TRUE) {
+		DBG_871X(FUNC_ADPT_FMT": The net_device's is not in down state\n"
+			, FUNC_ADPT_ARG(padapter));
+
+		return ret;
 	}
 
-	return 0;
+	/* if the net_device is linked, it's not permit to modify mac addr */
+	if (check_fwstate(pmlmepriv, _FW_UNDER_LINKING) ||
+		check_fwstate(pmlmepriv, _FW_LINKED) ||
+		check_fwstate(pmlmepriv, _FW_UNDER_SURVEY)) {
+		DBG_871X(FUNC_ADPT_FMT": The net_device's is not idle currently\n"
+			, FUNC_ADPT_ARG(padapter));
+
+		return ret;
+	}
+
+	/* check whether the input mac address is valid to permit modifying mac addr */
+	if (rtw_check_invalid_mac_address(sa->sa_data, _FALSE) == _TRUE) {
+		DBG_871X(FUNC_ADPT_FMT": Invalid Mac Addr for "MAC_FMT"\n"
+			, FUNC_ADPT_ARG(padapter), MAC_ARG(sa->sa_data));
+
+		return ret;
+	}
+
+	_rtw_memcpy(adapter_mac_addr(padapter), sa->sa_data, ETH_ALEN); /* set mac addr to adapter */
+	_rtw_memcpy(pnetdev->dev_addr, sa->sa_data, ETH_ALEN); /* set mac addr to net_device */
+
+	rtw_ps_deny(padapter, PS_DENY_IOCTL);
+	LeaveAllPowerSaveModeDirect(padapter); /* leave PS mode for guaranteeing to access hw register successfully */
+	rtw_hal_set_hwreg(padapter, HW_VAR_MAC_ADDR, sa->sa_data); /* set mac addr to mac register */
+	rtw_ps_deny_cancel(padapter, PS_DENY_IOCTL);
+
+	DBG_871X(FUNC_ADPT_FMT": Set Mac Addr to "MAC_FMT" Successfully\n"
+		, FUNC_ADPT_ARG(padapter), MAC_ARG(sa->sa_data));
+
+	ret = 0;
+
+	return ret;
 }
 
 static struct net_device_stats *rtw_net_get_stats(struct net_device *pnetdev)
@@ -758,8 +955,14 @@ static int rtw_ndev_notifier_call(struct notifier_block * nb, unsigned long stat
 #endif
 
 #if (LINUX_VERSION_CODE>=KERNEL_VERSION(2,6,29))
+	if (dev->netdev_ops->ndo_do_ioctl == NULL)
+		return NOTIFY_DONE;
+
 	if (dev->netdev_ops->ndo_do_ioctl != rtw_ioctl)
 #else
+	if (dev->do_ioctl == NULL)
+		return NOTIFY_DONE;
+
 	if (dev->do_ioctl != rtw_ioctl)
 #endif
 		return NOTIFY_DONE;
@@ -1009,8 +1212,12 @@ int rtw_os_ndev_register(_adapter *adapter, char *name)
 	}
 
 #if defined(CONFIG_IOCTL_CFG80211)
-	if (ret != _SUCCESS)
+	if (ret != _SUCCESS) {
 		rtw_cfg80211_ndev_res_unregister(adapter);
+		#if !defined(RTW_SINGLE_WIPHY)
+		rtw_wiphy_unregister(adapter_to_wiphy(adapter));
+		#endif
+	}
 #endif
 
 exit:
@@ -1028,11 +1235,15 @@ void rtw_os_ndev_unregister(_adapter *adapter)
 
 	netdev = adapter->pnetdev;
 
+#if defined(CONFIG_IOCTL_CFG80211)
+	rtw_cfg80211_ndev_res_unregister(adapter);
+#endif
+
 	if ((adapter->DriverState != DRIVER_DISAPPEAR) && netdev)
 		unregister_netdev(netdev); /* will call netdev_close() */
 
-#if defined(CONFIG_IOCTL_CFG80211)
-	rtw_cfg80211_ndev_res_unregister(adapter);
+#if defined(CONFIG_IOCTL_CFG80211) && !defined(RTW_SINGLE_WIPHY)
+	rtw_wiphy_unregister(adapter_to_wiphy(adapter));
 #endif
 
 	adapter->ndev_unregistering = 0;
@@ -1338,6 +1549,7 @@ struct dvobj_priv *devobj_init(void)
 
 	rtw_macid_ctl_init(&pdvobj->macid_ctl);
 	_rtw_spinlock_init(&pdvobj->cam_ctl.lock);
+	_rtw_mutex_init(&pdvobj->cam_ctl.sec_cam_access_mutex);
 
 	return pdvobj;
 
@@ -1363,6 +1575,7 @@ void devobj_deinit(struct dvobj_priv *pdvobj)
 
 	rtw_macid_ctl_deinit(&pdvobj->macid_ctl);
 	_rtw_spinlock_free(&pdvobj->cam_ctl.lock);
+	_rtw_mutex_free(&pdvobj->cam_ctl.sec_cam_access_mutex);
 
 	rtw_mfree((u8*)pdvobj, sizeof(*pdvobj));
 }	
@@ -1794,6 +2007,7 @@ static int netdev_vir_if_close(struct net_device *pnetdev)
 
 #ifdef CONFIG_IOCTL_CFG80211
 	rtw_scan_abort(padapter);
+	rtw_cfg80211_wait_scan_req_empty(padapter, 200);
 	adapter_wdev_data(padapter)->bandroid_scan = _FALSE;
 #endif
 
@@ -1821,6 +2035,7 @@ void rtw_hook_vir_if_ops(struct net_device *ndev)
 #else
 	ndev->open = netdev_vir_if_open;
 	ndev->stop = netdev_vir_if_close;
+	ndev->set_mac_address = rtw_net_set_mac_address;
 #endif
 }
 
@@ -2128,6 +2343,7 @@ static int netdev_if2_close(struct net_device *pnetdev)
 
 #ifdef CONFIG_IOCTL_CFG80211
 	rtw_scan_abort(padapter);
+	rtw_cfg80211_wait_scan_req_empty(padapter, 200);
 	adapter_wdev_data(padapter)->bandroid_scan = _FALSE;
 #endif
 
@@ -2159,6 +2375,7 @@ void rtw_hook_if2_ops(struct net_device *ndev)
 	ndev->uninit = rtw_ndev_uninit;
 	ndev->open = netdev_if2_open;
 	ndev->stop = netdev_if2_close;
+	ndev->set_mac_address = rtw_net_set_mac_address;
 #endif
 }
 
@@ -2752,12 +2969,6 @@ static int netdev_close(struct net_device *pnetdev)
 	RT_TRACE(_module_os_intfs_c_,_drv_info_,("+871x_drv - drv_close\n"));
 
 #ifndef CONFIG_PLATFORM_INTEL_BYT
-	if (pwrctl->bInSuspend == _TRUE)
-	{
-		DBG_871X("+871x_drv - drv_close, bInSuspend=%d\n", pwrctl->bInSuspend);
-		return 0;
-	}
-
 	if(pwrctl->bInternalAutoSuspend == _TRUE)
 	{
 		//rtw_pwr_wakeup(padapter);
@@ -2815,14 +3026,9 @@ static int netdev_close(struct net_device *pnetdev)
 
 #ifdef CONFIG_IOCTL_CFG80211
 	rtw_scan_abort(padapter);
+	rtw_cfg80211_wait_scan_req_empty(padapter, 200);
 	adapter_wdev_data(padapter)->bandroid_scan = _FALSE;
-
-	DBG_871X("netdev_close, bips_processing=%d\n", pwrctl->bips_processing);
-	/* waiting for ips_processing done before call rtw_dev_unload() */
-	while (pwrctl->bips_processing == _TRUE)
-		rtw_msleep_os(1);	
-
-	rtw_dev_unload(padapter);
+	//padapter->rtw_wdev->iftype = NL80211_IFTYPE_MONITOR; //set this at the end
 #endif //CONFIG_IOCTL_CFG80211
 
 #ifdef CONFIG_WAPI_SUPPORT
@@ -2843,6 +3049,9 @@ static int netdev_close(struct net_device *pnetdev)
 	}
 
 	rtw_scan_abort(padapter); // stop scanning process before wifi is going to down
+	#ifdef CONFIG_IOCTL_CFG80211
+	rtw_cfg80211_wait_scan_req_empty(padapter, 200);
+	#endif
 
 	DBG_871X("netdev_close, bips_processing=%d\n", pwrctl->bips_processing);
 	while (pwrctl->bips_processing == _TRUE) // waiting for ips_processing done before call rtw_dev_unload()
@@ -3777,8 +3986,6 @@ _func_enter_;
 
 	DBG_871X("==> "FUNC_ADPT_FMT" entry....\n", FUNC_ADPT_ARG(padapter));
 	
-	pwrpriv->wowlan_in_resume = _TRUE;
-
 	if (padapter) {
 		pnetdev = padapter->pnetdev;
 		pwrpriv = adapter_to_pwrctl(padapter);
@@ -3951,7 +4158,7 @@ _func_enter_;
 
 	//clean driver side wake up reason.
 	pwrpriv->wowlan_wake_reason = 0;
-	pwrpriv->wowlan_in_resume = _FALSE;
+
 exit:
 	DBG_871X("<== "FUNC_ADPT_FMT" exit....\n", FUNC_ADPT_ARG(padapter));
 _func_exit_;
@@ -3978,8 +4185,6 @@ _func_enter_;
 
 	DBG_871X("==> "FUNC_ADPT_FMT" entry....\n", FUNC_ADPT_ARG(padapter));
 	
-	pwrpriv->wowlan_in_resume = _TRUE;
-
 	if (padapter) {
 		pnetdev = padapter->pnetdev;
 		pwrpriv = adapter_to_pwrctl(padapter);
@@ -4085,7 +4290,6 @@ _func_enter_;
 #endif
 	//clean driver side wake up reason.
 	pwrpriv->wowlan_wake_reason = 0;
-	pwrpriv->wowlan_in_resume = _FALSE;
 
 	// Power On LED
 	rtw_hal_sw_led_init(padapter);

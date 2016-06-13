@@ -47,13 +47,6 @@ const u2Byte dB_Invert_Table[12][8] = {
 
 /* START------------COMMON INFO RELATED--------------- */
 
-#if (DM_ODM_SUPPORT_TYPE == ODM_WIN)
-VOID
-ODM_UpdateInitRateWorkItemCallback(
-    IN PVOID            pContext
-    );
-#endif
-
 VOID
 odm_GlobalAdapterCheck(
 	IN		VOID
@@ -169,14 +162,15 @@ PHYDM_InitTRXAntennaSetting(
 	IN		PDM_ODM_T		pDM_Odm
 )
 {
-#if ((RTL8814A_SUPPORT == 1) || (RTL8822B_SUPPORT == 1))
+#if (RTL8814A_SUPPORT == 1)
 
-	if (pDM_Odm->SupportICType & (ODM_RTL8814A|ODM_RTL8822B)) {
+	if (pDM_Odm->SupportICType & (ODM_RTL8814A)) {
 		u1Byte	RxAnt = 0, TxAnt = 0;
 
 		RxAnt = (u1Byte)ODM_GetBBReg(pDM_Odm, ODM_REG(BB_RX_PATH, pDM_Odm), ODM_BIT(BB_RX_PATH, pDM_Odm));
 		TxAnt = (u1Byte)ODM_GetBBReg(pDM_Odm, ODM_REG(BB_TX_PATH, pDM_Odm), ODM_BIT(BB_TX_PATH, pDM_Odm));
-		pDM_Odm->TRXAntStatus =  (RxAnt << 4) + TxAnt;
+		pDM_Odm->TXAntStatus =  (TxAnt & 0xf);
+		pDM_Odm->RXAntStatus =  (RxAnt & 0xf);
 	}
 #endif
 }
@@ -220,6 +214,16 @@ phydm_Init_cck_setting(
 	
 }
 
+u1Byte DummyHubUsbMode = 1;/* USB 2.0 */
+void	phydm_hook_dummy_member(
+	IN	PDM_ODM_T		pDM_Odm
+	)
+{
+	if (pDM_Odm->HubUsbMode == NULL)
+		pDM_Odm->HubUsbMode = &DummyHubUsbMode;
+}
+
+
 VOID
 odm_CommonInfoSelfInit(
 	IN		PDM_ODM_T		pDM_Odm
@@ -241,6 +245,7 @@ odm_CommonInfoSelfInit(
 	pDM_Odm->pre_number_linked_client = 0;
 	pDM_Odm->number_active_client = 0;
 	pDM_Odm->pre_number_active_client = 0;
+	phydm_hook_dummy_member(pDM_Odm);
 	
 }
 
@@ -433,10 +438,11 @@ ODM_DMInit(
 	ODM_EdcaTurboInit(pDM_Odm);
 	odm_RSSIMonitorInit(pDM_Odm);
 	phydm_rf_init(pDM_Odm);
+	odm_TXPowerTrackingInit(pDM_Odm);
 	odm_AntennaDiversityInit(pDM_Odm);
 	odm_AutoChannelSelectInit(pDM_Odm);
 	odm_PathDiversityInit(pDM_Odm);
-#if (DM_ODM_SUPPORT_TYPE & (ODM_WIN))
+#if (DM_ODM_SUPPORT_TYPE & (ODM_WIN | ODM_CE))
 	phydm_Beamforming_Init(pDM_Odm);
 #endif	
 
@@ -477,7 +483,6 @@ ODM_DMReset(
 	)
 {
 	ODM_AntDivReset(pDM_Odm);
-	ODM_DMWatchdog(pDM_Odm);
 }
 
 
@@ -589,7 +594,6 @@ ODM_DMWatchdog(
 	IN		PDM_ODM_T		pDM_Odm
 	)
 {
-	ODM_AsocEntry_Init(pDM_Odm);
 	odm_CommonInfoSelfUpdate(pDM_Odm);
 	phydm_BasicDbgMessage(pDM_Odm);
 	odm_HWSetting(pDM_Odm);
@@ -626,6 +630,7 @@ ODM_DMWatchdog(
 	}
 	odm_CCKPacketDetectionThresh(pDM_Odm);
 	phydm_ra_dynamic_retry_limit(pDM_Odm);
+	phydm_ra_dynamic_retry_count(pDM_Odm);
 	odm_RefreshRateAdaptiveMask(pDM_Odm);
 	odm_RefreshBasicRateMask(pDM_Odm);
 	odm_DynamicBBPowerSaving(pDM_Odm);
@@ -634,7 +639,7 @@ ODM_DMWatchdog(
 	ODM_CfoTracking(pDM_Odm);
 	odm_DynamicTxPower(pDM_Odm);
 	odm_AntennaDiversity(pDM_Odm);
-#if (DM_ODM_SUPPORT_TYPE & (ODM_WIN))
+#if (DM_ODM_SUPPORT_TYPE & (ODM_WIN | ODM_CE))
 	phydm_Beamforming_Watchdog(pDM_Odm);
 #endif
 
@@ -749,16 +754,16 @@ ODM_CmnInfoInit(
 			break;
 
 		case	ODM_CMNINFO_GPA:
-			pDM_Odm->TypeGPA= (ODM_TYPE_GPA_E)Value;
+			pDM_Odm->TypeGPA = (u2Byte)Value;
 			break;
 		case	ODM_CMNINFO_APA:
-			pDM_Odm->TypeAPA= (ODM_TYPE_APA_E)Value;
+			pDM_Odm->TypeAPA = (u2Byte)Value;
 			break;
 		case	ODM_CMNINFO_GLNA:
-			pDM_Odm->TypeGLNA= (ODM_TYPE_GLNA_E)Value;
+			pDM_Odm->TypeGLNA = (u2Byte)Value;
 			break;
 		case	ODM_CMNINFO_ALNA:
-			pDM_Odm->TypeALNA= (ODM_TYPE_ALNA_E)Value;
+			pDM_Odm->TypeALNA = (u2Byte)Value;
 			break;
 
 		case	ODM_CMNINFO_EXT_TRSW:
@@ -919,7 +924,22 @@ ODM_CmnInfoHook(
 		case	ODM_CMNINFO_FCS_MODE:
 			pDM_Odm->pIsFcsModeEnable = (BOOLEAN *)pValue;
 			break;
-
+		/*add by YuChen for beamforming PhyDM*/
+		case	ODM_CMNINFO_HUBUSBMODE:
+			pDM_Odm->HubUsbMode = (u1Byte *)pValue;
+			break;
+		case	ODM_CMNINFO_FWDWRSVDPAGEINPROGRESS:
+			pDM_Odm->pbFwDwRsvdPageInProgress = (BOOLEAN *)pValue;
+			break;
+		case	ODM_CMNINFO_TX_TP:
+			pDM_Odm->pCurrentTxTP = (u4Byte *)pValue;
+			break;
+		case	ODM_CMNINFO_RX_TP:
+			pDM_Odm->pCurrentRxTP = (u4Byte *)pValue;
+			break;
+		case	ODM_CMNINFO_SOUNDING_SEQ:
+			pDM_Odm->pSoundingSeq = (u1Byte *)pValue;
+			break;
 		//case	ODM_CMNINFO_RTSTA_AID:
 		//	pDM_Odm->pAidMap =  (u1Byte *)pValue;
 		//	break;
@@ -1094,6 +1114,10 @@ ODM_CmnInfoUpdate(
 			pDM_Odm->APTotalNum = (u1Byte)Value;
 			break;
 
+		case	ODM_CMNINFO_POWER_TRAINING:
+			pDM_Odm->bDisablePowerTraining = (BOOLEAN)Value;
+			break;
+
 /*
 		case	ODM_CMNINFO_OP_MODE:
 			pDM_Odm->OPMode = (u1Byte)Value;
@@ -1139,21 +1163,27 @@ ODM_InitAllWorkItems(IN PDM_ODM_T	pDM_Odm )
 
 	PADAPTER		pAdapter = pDM_Odm->Adapter;
 #if USE_WORKITEM
-#if (RTL8723B_SUPPORT == 1)||(RTL8821A_SUPPORT == 1)
+	#ifdef CONFIG_S0S1_SW_ANTENNA_DIVERSITY
 	ODM_InitializeWorkItem(	pDM_Odm, 
-							&pDM_Odm->DM_SWAT_Table.SwAntennaSwitchWorkitem_8723B, 
+							&pDM_Odm->DM_SWAT_Table.phydm_SwAntennaSwitchWorkitem, 
 							(RT_WORKITEM_CALL_BACK)ODM_SW_AntDiv_WorkitemCallback,
 							(PVOID)pAdapter,
 							"AntennaSwitchWorkitem");
-#endif
-	#if ((RTL8192C_SUPPORT == 1) && (defined(CONFIG_SW_ANTENNA_DIVERSITY)))	
-	ODM_InitializeWorkItem(	pDM_Odm, 
-							&pDM_Odm->DM_SWAT_Table.SwAntennaSwitchWorkitem, 
-							(RT_WORKITEM_CALL_BACK)odm_SwAntDivChkAntSwitchWorkitemCallback,
-							(PVOID)pAdapter,
-							"AntennaSwitchWorkitem");
-	#endif	
+	#endif
+	#ifdef CONFIG_HL_SMART_ANTENNA_TYPE1
+	ODM_InitializeWorkItem(pDM_Odm, 
+						&pDM_Odm->dm_sat_table.hl_smart_antenna_workitem, 
+						(RT_WORKITEM_CALL_BACK)phydm_beam_switch_workitem_callback,
+						(PVOID)pAdapter,
+						"hl_smart_ant_workitem");
 
+	ODM_InitializeWorkItem(pDM_Odm, 
+						&pDM_Odm->dm_sat_table.hl_smart_antenna_decision_workitem, 
+						(RT_WORKITEM_CALL_BACK)phydm_beam_decision_workitem_callback,
+						(PVOID)pAdapter,
+						"hl_smart_ant_decision_workitem");
+	#endif
+	
 	ODM_InitializeWorkItem(
 		pDM_Odm,
 		&(pDM_Odm->PathDivSwitchWorkitem), 
@@ -1262,12 +1292,16 @@ VOID
 ODM_FreeAllWorkItems(IN PDM_ODM_T	pDM_Odm )
 {
 #if USE_WORKITEM
-#if (RTL8723B_SUPPORT == 1)||(RTL8821A_SUPPORT == 1)
-	ODM_FreeWorkItem(&(pDM_Odm->DM_SWAT_Table.SwAntennaSwitchWorkitem_8723B));
+
+#ifdef CONFIG_S0S1_SW_ANTENNA_DIVERSITY
+	ODM_FreeWorkItem(&(pDM_Odm->DM_SWAT_Table.phydm_SwAntennaSwitchWorkitem));
 #endif
-#if ((RTL8192C_SUPPORT == 1) && (defined(CONFIG_SW_ANTENNA_DIVERSITY)))
-	ODM_FreeWorkItem(&(pDM_Odm->DM_SWAT_Table.SwAntennaSwitchWorkitem));
+
+#ifdef CONFIG_HL_SMART_ANTENNA_TYPE1
+	ODM_FreeWorkItem(&(pDM_Odm->dm_sat_table.hl_smart_antenna_workitem));
+	ODM_FreeWorkItem(&(pDM_Odm->dm_sat_table.hl_smart_antenna_decision_workitem));
 #endif
+
 	ODM_FreeWorkItem(&(pDM_Odm->PathDivSwitchWorkitem));      
 	ODM_FreeWorkItem(&(pDM_Odm->CCKPathDiversityWorkitem));
 #if (defined(CONFIG_5G_CG_SMART_ANT_DIVERSITY)) || (defined(CONFIG_2G_CG_SMART_ANT_DIVERSITY))
@@ -1288,7 +1322,6 @@ ODM_FreeAllWorkItems(IN PDM_ODM_T	pDM_Odm )
 	ODM_FreeWorkItem((&pDM_Odm->BeamformingInfo.TxbfInfo.Txbf_StatusWorkItem));
 	ODM_FreeWorkItem((&pDM_Odm->BeamformingInfo.TxbfInfo.Txbf_ResetTxPathWorkItem));
 	ODM_FreeWorkItem((&pDM_Odm->BeamformingInfo.TxbfInfo.Txbf_GetTxRateWorkItem));
-
 #endif
 
 }
@@ -1346,11 +1379,8 @@ ODM_InitAllTimers(
 	IN PDM_ODM_T	pDM_Odm 
 	)
 {
-#if(defined(CONFIG_HW_ANTENNA_DIVERSITY))
+#if (defined(CONFIG_PHYDM_ANTENNA_DIVERSITY))
 	ODM_AntDivTimers(pDM_Odm,INIT_ANTDIV_TIMMER);
-#elif(defined(CONFIG_SW_ANTENNA_DIVERSITY))
-	ODM_InitializeTimer(pDM_Odm,&pDM_Odm->DM_SWAT_Table.SwAntennaSwitchTimer,
-		(RT_TIMER_CALL_BACK)odm_SwAntDivChkAntSwitchCallback, NULL, "SwAntennaSwitchTimer");
 #endif
 
 #if (DM_ODM_SUPPORT_TYPE == ODM_AP)
@@ -1378,14 +1408,15 @@ ODM_InitAllTimers(
 #if (BEAMFORMING_SUPPORT == 1)
 	ODM_InitializeTimer(pDM_Odm, &pDM_Odm->BeamformingInfo.TxbfInfo.Txbf_FwNdpaTimer,
 		(RT_TIMER_CALL_BACK)halComTxbf_FwNdpaTimerCallback, NULL, "Txbf_FwNdpaTimer");
-
-	ODM_InitializeTimer(pDM_Odm, &pDM_Odm->BeamformingInfo.BeamformingTimer,
-		(RT_TIMER_CALL_BACK)Beamforming_SWTimerCallback, NULL, "BeamformingTimer");
-#endif	
-
+#endif
 #endif
 
-
+#if (DM_ODM_SUPPORT_TYPE & (ODM_WIN | ODM_CE))
+#if (BEAMFORMING_SUPPORT == 1)
+	ODM_InitializeTimer(pDM_Odm, &pDM_Odm->BeamformingInfo.BeamformingTimer,
+		(RT_TIMER_CALL_BACK)Beamforming_SWTimerCallback, NULL, "BeamformingTimer");
+#endif
+#endif
 }
 
 VOID
@@ -1401,10 +1432,8 @@ ODM_CancelAllTimers(
 	HAL_ADAPTER_STS_CHK(pDM_Odm)
 #endif	
 
-#if(defined(CONFIG_HW_ANTENNA_DIVERSITY))
+#if (defined(CONFIG_PHYDM_ANTENNA_DIVERSITY))
 	ODM_AntDivTimers(pDM_Odm,CANCEL_ANTDIV_TIMMER);
-#elif(defined(CONFIG_SW_ANTENNA_DIVERSITY))
-	ODM_CancelTimer(pDM_Odm,&pDM_Odm->DM_SWAT_Table.SwAntennaSwitchTimer);
 #endif
 
 #if (DM_ODM_SUPPORT_TYPE == ODM_AP)
@@ -1425,9 +1454,13 @@ ODM_CancelAllTimers(
 	ODM_CancelTimer(pDM_Odm, &pDM_Odm->sbdcnt_timer);
 #if (BEAMFORMING_SUPPORT == 1)
 	ODM_CancelTimer(pDM_Odm, &pDM_Odm->BeamformingInfo.TxbfInfo.Txbf_FwNdpaTimer);
-	ODM_CancelTimer(pDM_Odm, &pDM_Odm->BeamformingInfo.BeamformingTimer);
-#endif	
+#endif
+#endif
 
+#if (DM_ODM_SUPPORT_TYPE & (ODM_WIN | ODM_CE))
+#if (BEAMFORMING_SUPPORT == 1)
+	ODM_CancelTimer(pDM_Odm, &pDM_Odm->BeamformingInfo.BeamformingTimer);
+#endif
 #endif
 
 }
@@ -1438,10 +1471,8 @@ ODM_ReleaseAllTimers(
 	IN PDM_ODM_T	pDM_Odm 
 	)
 {
-#if(defined(CONFIG_HW_ANTENNA_DIVERSITY))
+#if (defined(CONFIG_PHYDM_ANTENNA_DIVERSITY))
 	ODM_AntDivTimers(pDM_Odm,RELEASE_ANTDIV_TIMMER);
-#elif(defined(CONFIG_SW_ANTENNA_DIVERSITY))
-	ODM_ReleaseTimer(pDM_Odm,&pDM_Odm->DM_SWAT_Table.SwAntennaSwitchTimer);
 #endif
 
 #if (DM_ODM_SUPPORT_TYPE == ODM_AP)
@@ -1462,10 +1493,14 @@ ODM_ReleaseTimer(pDM_Odm, &pDM_Odm->MPT_DIGTimer);
 	ODM_ReleaseTimer(pDM_Odm, &pDM_Odm->sbdcnt_timer);
 #if (BEAMFORMING_SUPPORT == 1)
 	ODM_ReleaseTimer(pDM_Odm, &pDM_Odm->BeamformingInfo.TxbfInfo.Txbf_FwNdpaTimer);
-	ODM_ReleaseTimer(pDM_Odm, &pDM_Odm->BeamformingInfo.BeamformingTimer);
 #endif
 #endif
 
+#if (DM_ODM_SUPPORT_TYPE & (ODM_WIN | ODM_CE))
+#if (BEAMFORMING_SUPPORT == 1)
+	ODM_ReleaseTimer(pDM_Odm, &pDM_Odm->BeamformingInfo.BeamformingTimer);
+#endif
+#endif
 }
 
 
@@ -1654,11 +1689,13 @@ odm_ConvertTo_linear(
 	u1Byte i;
 	u1Byte j;
 	u4Byte linear;
-
+	
+	/* 1dB~96dB */
+	
 	Value = Value & 0xFF;
 
 	i = (u1Byte)((Value - 1) >> 3);
-	j = (u1Byte)(Value-1) - (i << 3);
+	j = (u1Byte)(Value - 1) - (i << 3);
 
 	linear = dB_Invert_Table[i][j];
 
@@ -2113,9 +2150,9 @@ phydm_NoisyDetection(
             ("[NoisyDetection] Unknown Value!! Need Check!!\n"));            
     }
 */        
-    ODM_RT_TRACE(pDM_Odm,ODM_COMP_COMMON, ODM_DBG_LOUD,
-    ("[NoisyDetection] Total_CCA_Cnt=%d, Total_FA_Cnt=%d, NoisyDecision_Smooth=%d, Score=%d, Score_Smooth=%d, pDM_Odm->NoisyDecision=%d\n",
-    Total_CCA_Cnt, Total_FA_Cnt, pDM_Odm->NoisyDecision_Smooth, Score, Score_Smooth, pDM_Odm->NoisyDecision));
+	ODM_RT_TRACE(pDM_Odm, ODM_COMP_NOISY_DETECT, ODM_DBG_LOUD,
+	("[NoisyDetection] Total_CCA_Cnt=%d, Total_FA_Cnt=%d, NoisyDecision_Smooth=%d, Score=%d, Score_Smooth=%d, pDM_Odm->NoisyDecision=%d\n",
+	Total_CCA_Cnt, Total_FA_Cnt, pDM_Odm->NoisyDecision_Smooth, Score, Score_Smooth, pDM_Odm->NoisyDecision));
 	
 }
 

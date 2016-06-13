@@ -78,6 +78,9 @@
 #define		DM_RATR_STA_ULTRA_LOW	4
 #endif
 
+#define		DM_RA_RATE_UP				1
+#define		DM_RA_RATE_DOWN			2
+
 typedef enum _phydm_arfr_num {
 	ARFR_0_RATE_ID	=	0x9,
 	ARFR_1_RATE_ID	=	0xa,
@@ -138,6 +141,15 @@ typedef struct _ODM_RA_Info_ {
 	u1Byte PTModeSS;  // decide whitch rate should do PT
 	u1Byte RAstage;  // StageRA, decide how many times RA will be done between PT
 	u1Byte PTSmoothFactor;
+#endif
+#if (DM_ODM_SUPPORT_TYPE == ODM_AP) && ((DEV_BUS_TYPE == RT_USB_INTERFACE) || (DEV_BUS_TYPE == RT_SDIO_INTERFACE))
+	u1Byte RateDownCounter;
+	u1Byte RateUpCounter;
+	u1Byte RateDirection;
+	u1Byte BoundingType;
+	u1Byte BoundingCounter;
+	u1Byte BoundingLearningTime;
+	u1Byte RateDownStartTime;
 #endif
 } ODM_RA_INFO_T, *PODM_RA_INFO_T;
 #endif
@@ -233,6 +245,11 @@ odm_RA_ParaAdjust_init(
 VOID
 odm_RA_ParaAdjust(
 	IN		PVOID		pDM_VOID
+);
+
+VOID
+phydm_ra_dynamic_retry_count(
+	IN	PVOID	pDM_VOID
 );
 
 VOID
@@ -417,6 +434,8 @@ ODM_Get_Rate_Bitmap(
 	IN	u4Byte 		ra_mask,
 	IN	u1Byte 		rssi_level
 );
+void phydm_ra_rssi_rpt_wk(PVOID pContext);
+
 #endif/*#elif (DM_ODM_SUPPORT_TYPE == ODM_CE)*/
 
 #endif/*#if (DM_ODM_SUPPORT_TYPE & (ODM_WIN| ODM_CE))*/

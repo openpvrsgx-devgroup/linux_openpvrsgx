@@ -32,7 +32,12 @@
 
 #define	BEAMFORMING_VHT_BEAMFORMER_ENABLE	BIT0	// Declare our NIC supports beamformer
 #define	BEAMFORMING_VHT_BEAMFORMEE_ENABLE	BIT1	// Declare our NIC supports beamformee
-#define	BEAMFORMING_VHT_BEAMFORMER_TEST		BIT2	// Transmiting Beamforming no matter the target supports it or not
+#define	BEAMFORMING_VHT_MU_MIMO_AP_ENABLE		BIT2			/*Declare our NIC support MU-MIMO AP mode*/
+#define	BEAMFORMING_VHT_MU_MIMO_STA_ENABLE	BIT3			/*Declare our NIC support MU-MIMO STA mode*/
+#define	BEAMFORMING_VHT_BEAMFORMER_TEST		BIT4			/*Transmiting Beamforming no matter the target supports it or not*/
+#define	BEAMFORMING_VHT_BEAMFORMER_STS_CAP		(BIT8|BIT9|BIT10)		/*Asoc rsp cap*/
+#define	BEAMFORMING_VHT_BEAMFORMEE_SOUND_DIM		(BIT12|BIT13|BIT14)		/*Asoc rsp cap*/
+
 
 //VHT capability info
 #define SET_VHT_CAPABILITY_ELE_MAX_MPDU_LENGTH(_pEleStart, _val)			SET_BITS_TO_LE_1BYTE(_pEleStart, 0, 2, _val)
@@ -46,6 +51,7 @@
 #define SET_VHT_CAPABILITY_ELE_SU_BFEE(_pEleStart, _val)				SET_BITS_TO_LE_1BYTE((_pEleStart)+1, 4, 1, _val)
 #define SET_VHT_CAPABILITY_ELE_BFER_ANT_SUPP(_pEleStart, _val)				SET_BITS_TO_LE_1BYTE((_pEleStart)+1, 5, 3, _val)
 #define SET_VHT_CAPABILITY_ELE_SOUNDING_DIMENSIONS(_pEleStart, _val)				SET_BITS_TO_LE_1BYTE((_pEleStart)+2, 0, 3, _val)
+
 #define SET_VHT_CAPABILITY_ELE_MU_BFER(_pEleStart, _val)				SET_BITS_TO_LE_1BYTE((_pEleStart)+2, 3, 1, _val)
 #define SET_VHT_CAPABILITY_ELE_MU_BFEE(_pEleStart, _val)				SET_BITS_TO_LE_1BYTE((_pEleStart)+2, 4, 1, _val)
 #define SET_VHT_CAPABILITY_ELE_TXOP_PS(_pEleStart, _val)				SET_BITS_TO_LE_1BYTE((_pEleStart)+2, 5, 1, _val)
@@ -67,6 +73,9 @@
 #define GET_VHT_CAPABILITY_ELE_RX_STBC(_pEleStart)				LE_BITS_TO_1BYTE((_pEleStart)+1, 0, 3)
 #define GET_VHT_CAPABILITY_ELE_SU_BFER(_pEleStart)					LE_BITS_TO_1BYTE((_pEleStart)+1, 3, 1)
 #define GET_VHT_CAPABILITY_ELE_SU_BFEE(_pEleStart)					LE_BITS_TO_1BYTE((_pEleStart)+1, 4, 1)
+/*phydm-beamforming*/
+#define GET_VHT_CAPABILITY_ELE_SU_BFEE_STS_CAP(_pEleStart)	LE_BITS_TO_2BYTE((_pEleStart)+1, 5, 3)
+#define GET_VHT_CAPABILITY_ELE_SU_BFER_SOUND_DIM_NUM(_pEleStart)	LE_BITS_TO_2BYTE((_pEleStart)+2, 0, 3)
 #define GET_VHT_CAPABILITY_ELE_TXOP_PS(_pEleStart)				LE_BITS_TO_1BYTE((_pEleStart)+2, 5, 1)
 #define GET_VHT_CAPABILITY_ELE_MAX_RXAMPDU_FACTOR(_pEleStart)	LE_BITS_TO_2BYTE((_pEleStart)+2, 7, 3)
 #define GET_VHT_CAPABILITY_ELE_RX_MCS(_pEleStart)					       ((_pEleStart)+4)
@@ -102,7 +111,7 @@ struct vht_priv
 
 	u8	ldpc_cap;
 	u8	stbc_cap;
-	u8	beamform_cap;
+	u16	beamform_cap;
 
 	u8	sgi_80m;//short GI
 	u8	ampdu_len;

@@ -22,6 +22,7 @@
 #define __ODM_PRECOMP_H__
 
 #include "phydm_types.h"
+#include "phydm_features.h"
 
 #if (DM_ODM_SUPPORT_TYPE == ODM_WIN)
 #include "Precomp.h"		// We need to include mp_precomp.h due to batch file setting.
@@ -65,7 +66,6 @@
 	#endif
 
 #elif (DM_ODM_SUPPORT_TYPE ==ODM_CE)
-	#define BEAMFORMING_SUPPORT 0
 	#define __PACK
 	#define __WLAN_ATTRIB_PACK__
 #elif (DM_ODM_SUPPORT_TYPE == ODM_WIN)
@@ -278,16 +278,15 @@ PHY_SetTxPowerLimit(
 #endif
 
 #if (RTL8822B_SUPPORT==1) 
-#include "rtl8822B/HalHWImg8822B_MAC.h"
-#include "rtl8822B/HalHWImg8822B_RF.h"
-#include "rtl8822B/HalHWImg8822B_BB.h"
-#include "rtl8822B/HalHWImg8822B_FW.h"
-#include "rtl8822B/phydm_RegConfig8822B.h"
-#include "rtl8822B/HalHWImg8822B_TestChip_MAC.h"
-#include "rtl8822B/HalHWImg8822B_TestChip_RF.h"
-#include "rtl8822B/HalHWImg8822B_TestChip_BB.h"
-#include "rtl8822B/HalHWImg8822B_TestChip_FW.h"
-#include "rtl8822b/HalPhyRf_8822B.h"
+#include "rtl8822b/halhwimg8822b_mac.h"
+#include "rtl8822b/halhwimg8822b_rf.h"
+#include "rtl8822b/halhwimg8822b_bb.h"
+/*#include "rtl8822b/halhwimg8822b_fw.h"*/
+#include "rtl8822b/phydm_regconfig8822b.h"
+#include "rtl8822b/halphyrf_8822b.h"
+#include "rtl8822b/phydm_rtl8822b.h"
+#include "rtl8822b/phydm_hal_api8822b.h"
+#include "rtl8822b/version_rtl8822b.h"
 #endif
 
 #if (RTL8703B_SUPPORT==1) 
@@ -297,6 +296,7 @@ PHY_SetTxPowerLimit(
 #include "rtl8703b/halhwimg8703b_bb.h"
 #include "rtl8703b/halhwimg8703b_fw.h"
 #include "rtl8703b/halphyrf_8703b.h"
+#include "rtl8703b/version_rtl8703b.h"
 #if (DM_ODM_SUPPORT_TYPE == ODM_CE)
 #include "rtl8703b_hal.h"
 #endif

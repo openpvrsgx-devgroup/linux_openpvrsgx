@@ -49,9 +49,9 @@
 	#define	ODM_ASSOCIATE_ENTRY_NUM				ASSOCIATE_ENTRY_NUM
 #elif(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
 	#define ASSOCIATE_ENTRY_NUM					NUM_STAT
-	#define	ODM_ASSOCIATE_ENTRY_NUM				ASSOCIATE_ENTRY_NUM+1
+	#define	ODM_ASSOCIATE_ENTRY_NUM				(ASSOCIATE_ENTRY_NUM+1)
 #else
-	#define ODM_ASSOCIATE_ENTRY_NUM				(ASSOCIATE_ENTRY_NUM*3)+1// Default port only one // 0 is for STA 1-n is for AP clients.
+	#define ODM_ASSOCIATE_ENTRY_NUM				((ASSOCIATE_ENTRY_NUM*3)+1)
 #endif
 
 /* -----MGN rate--------------------------------- */
@@ -352,14 +352,10 @@ typedef enum tag_ODM_Fab_Version_Definition
 //
 typedef enum tag_ODM_RF_Path_Bit_Definition
 {
-	ODM_RF_TX_A 	=	BIT0,
-	ODM_RF_TX_B 	=	BIT1,
-	ODM_RF_TX_C	=	BIT2,
-	ODM_RF_TX_D	=	BIT3,
-	ODM_RF_RX_A	=	BIT4,
-	ODM_RF_RX_B	=	BIT5,
-	ODM_RF_RX_C	=	BIT6,
-	ODM_RF_RX_D	=	BIT7,
+	ODM_RF_A = BIT0,
+	ODM_RF_B = BIT1,
+	ODM_RF_C = BIT2,
+	ODM_RF_D = BIT3,
 }ODM_RF_PATH_E;
 
 typedef enum tag_PHYDM_RF_TX_NUM {
@@ -487,7 +483,9 @@ typedef enum tag_Bandwidth_Definition
 	ODM_BW40M 		= 1,
 	ODM_BW80M 		= 2,
 	ODM_BW160M 		= 3,
-	ODM_BW10M 		= 4,
+	ODM_BW5M			= 4,
+	ODM_BW10M			= 5,
+	ODM_BW_MAX		= 6
 }ODM_BW_E;
 
 // ODM_CMNINFO_CHNL
@@ -514,32 +512,80 @@ typedef enum tag_ODM_Package_Definition
     ODM_PACKAGE_TFBGA79      = BIT(2),	
 }ODM_Package_TYPE_E;
 
-typedef enum tag_ODM_TYPE_GPA_Definition
-{
-    TYPE_GPA0 = 0, 	  
-    TYPE_GPA1 = BIT(1)|BIT(0)
+typedef enum tag_ODM_TYPE_GPA_Definition {
+	TYPE_GPA0 = 0x0000,
+	TYPE_GPA1 = 0x0055,
+	TYPE_GPA2 = 0x00AA,
+	TYPE_GPA3 = 0x00FF,
+	TYPE_GPA4 = 0x5500,
+	TYPE_GPA5 = 0x5555,
+	TYPE_GPA6 = 0x55AA,
+	TYPE_GPA7 = 0x55FF,
+	TYPE_GPA8 = 0xAA00,
+	TYPE_GPA9 = 0xAA55,
+	TYPE_GPA10 = 0xAAAA,
+	TYPE_GPA11 = 0xAAFF,
+	TYPE_GPA12 = 0xFF00,
+	TYPE_GPA13 = 0xFF55,
+	TYPE_GPA14 = 0xFFAA,
+	TYPE_GPA15 = 0xFFFF,
 }ODM_TYPE_GPA_E;
 
-typedef enum tag_ODM_TYPE_APA_Definition
-{
-    TYPE_APA0 = 0, 	  
-    TYPE_APA1 = BIT(1)|BIT(0)
+typedef enum tag_ODM_TYPE_APA_Definition {
+	TYPE_APA0 = 0x0000,
+	TYPE_APA1 = 0x0055,
+	TYPE_APA2 = 0x00AA,
+	TYPE_APA3 = 0x00FF,
+	TYPE_APA4 = 0x5500,
+	TYPE_APA5 = 0x5555,
+	TYPE_APA6 = 0x55AA,
+	TYPE_APA7 = 0x55FF,
+	TYPE_APA8 = 0xAA00,
+	TYPE_APA9 = 0xAA55,
+	TYPE_APA10 = 0xAAAA,
+	TYPE_APA11 = 0xAAFF,
+	TYPE_APA12 = 0xFF00,
+	TYPE_APA13 = 0xFF55,
+	TYPE_APA14 = 0xFFAA,
+	TYPE_APA15 = 0xFFFF,
 }ODM_TYPE_APA_E;
 
-typedef enum tag_ODM_TYPE_GLNA_Definition
-{
-    TYPE_GLNA0 = 0, 	  
-    TYPE_GLNA1 = BIT(2)|BIT(0),
-    TYPE_GLNA2 = BIT(3)|BIT(1),
-    TYPE_GLNA3 = BIT(3)|BIT(2)|BIT(1)|BIT(0)
+typedef enum tag_ODM_TYPE_GLNA_Definition {
+	TYPE_GLNA0 = 0x0000,
+	TYPE_GLNA1 = 0x0055,
+	TYPE_GLNA2 = 0x00AA,
+	TYPE_GLNA3 = 0x00FF,
+	TYPE_GLNA4 = 0x5500,
+	TYPE_GLNA5 = 0x5555,
+	TYPE_GLNA6 = 0x55AA,
+	TYPE_GLNA7 = 0x55FF,
+	TYPE_GLNA8 = 0xAA00,
+	TYPE_GLNA9 = 0xAA55,
+	TYPE_GLNA10 = 0xAAAA,
+	TYPE_GLNA11 = 0xAAFF,
+	TYPE_GLNA12 = 0xFF00,
+	TYPE_GLNA13 = 0xFF55,
+	TYPE_GLNA14 = 0xFFAA,
+	TYPE_GLNA15 = 0xFFFF,
 }ODM_TYPE_GLNA_E;
 
-typedef enum tag_ODM_TYPE_ALNA_Definition
-{
-    TYPE_ALNA0 = 0, 	  
-    TYPE_ALNA1 = BIT(2)|BIT(0),
-    TYPE_ALNA2 = BIT(3)|BIT(1),
-    TYPE_ALNA3 = BIT(3)|BIT(2)|BIT(1)|BIT(0)
+typedef enum tag_ODM_TYPE_ALNA_Definition {
+	TYPE_ALNA0 = 0x0000,
+	TYPE_ALNA1 = 0x0055,
+	TYPE_ALNA2 = 0x00AA,
+	TYPE_ALNA3 = 0x00FF,
+	TYPE_ALNA4 = 0x5500,
+	TYPE_ALNA5 = 0x5555,
+	TYPE_ALNA6 = 0x55AA,
+	TYPE_ALNA7 = 0x55FF,
+	TYPE_ALNA8 = 0xAA00,
+	TYPE_ALNA9 = 0xAA55,
+	TYPE_ALNA10 = 0xAAAA,
+	TYPE_ALNA11 = 0xAAFF,
+	TYPE_ALNA12 = 0xFF00,
+	TYPE_ALNA13 = 0xFF55,
+	TYPE_ALNA14 = 0xFFAA,
+	TYPE_ALNA15 = 0xFFFF,
 }ODM_TYPE_ALNA_E;
 
 
@@ -560,5 +606,10 @@ typedef enum _ODM_RF_RADIO_PATH {
     ODM_RF_PATH_ABCD,
   //  ODM_RF_PATH_MAX,    //Max RF number 90 support
 } ODM_RF_RADIO_PATH_E, *PODM_RF_RADIO_PATH_E;
+
+typedef enum _ODM_PARAMETER_INIT {
+	ODM_PRE_SETTING = 0,
+	ODM_POST_SETTING = 1,
+} ODM_PARAMETER_INIT_E;
 
 #endif

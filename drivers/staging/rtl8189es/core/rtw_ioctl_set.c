@@ -1437,7 +1437,7 @@ int rtw_set_channel_plan(_adapter *adapter, u8 channel_plan)
 	struct mlme_priv *pmlmepriv = &adapter->mlmepriv;
 
 	//handle by cmd_thread to sync with scan operation
-	return rtw_set_chplan_cmd(adapter, channel_plan, 1, 1);
+	return rtw_set_chplan_cmd(adapter, RTW_CMDF_WAIT_ACK, channel_plan, 1);
 }
 
 /*
@@ -1449,26 +1449,11 @@ int rtw_set_channel_plan(_adapter *adapter, u8 channel_plan)
 */
 int rtw_set_country(_adapter *adapter, const char *country_code)
 {
-	int channel_plan = RT_CHANNEL_DOMAIN_WORLD_WIDE_5G;
-
-	DBG_871X("%s country_code:%s\n", __func__, country_code);
-
-	//TODO: should have a table to match country code and RT_CHANNEL_DOMAIN
-	//TODO: should consider 2-character and 3-character country code
-	if(0 == strcmp(country_code, "US"))
-		channel_plan = RT_CHANNEL_DOMAIN_FCC;
-	else if(0 == strcmp(country_code, "EU"))
-		channel_plan = RT_CHANNEL_DOMAIN_ETSI;
-	else if(0 == strcmp(country_code, "JP"))
-		channel_plan = RT_CHANNEL_DOMAIN_MKK;
-	else if(0 == strcmp(country_code, "CN"))
-		channel_plan = RT_CHANNEL_DOMAIN_CHINA;
-	else if(0 == strcmp(country_code, "IN"))
-		channel_plan = RT_CHANNEL_DOMAIN_GLOBAL_DOAMIN;
-	else
-		DBG_871X("%s unknown country_code:%s\n", __FUNCTION__, country_code);
-	
-	return rtw_set_channel_plan(adapter, channel_plan);
+#ifdef CONFIG_RTW_IOCTL_SET_COUNTRY
+	return rtw_set_country_cmd(adapter, RTW_CMDF_WAIT_ACK, country_code, 1);
+#else
+	return _FAIL;
+#endif
 }
 
 /*

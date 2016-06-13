@@ -702,6 +702,52 @@ int rtw_recv_indicatepkt(_adapter *padapter, union recv_frame *precv_frame)
 #endif
 #endif //CONFIG_AUTO_AP_MODE
 
+	/* TODO: move to core */
+	{
+		_pkt *pkt = skb;
+		struct ethhdr *etherhdr = (struct ethhdr *)pkt->data;
+		struct sta_info *sta = precv_frame->u.hdr.psta;
+
+		if (!sta)
+			goto bypass_session_tracker;
+
+		if (ntohs(etherhdr->h_proto) == ETH_P_IP) {
+			u8 *ip = pkt->data + 14;
+
+			if (GET_IPV4_PROTOCOL(ip) == 0x06  /* TCP */
+				&& rtw_st_ctl_chk_reg_s_proto(&sta->st_ctl, 0x06) == _TRUE
+			) {
+				u8 *tcp = ip + GET_IPV4_IHL(ip) * 4;
+
+				if (rtw_st_ctl_chk_reg_rule(&sta->st_ctl, padapter, IPV4_DST(ip), TCP_DST(tcp), IPV4_SRC(ip), TCP_SRC(tcp)) == _TRUE) {
+					if (GET_TCP_SYN(tcp) && GET_TCP_ACK(tcp)) {
+						session_tracker_add_cmd(padapter, sta
+							, IPV4_DST(ip), TCP_DST(tcp)
+							, IPV4_SRC(ip), TCP_SRC(tcp));
+						if (DBG_SESSION_TRACKER)
+							DBG_871X(FUNC_ADPT_FMT" local:"IP_FMT":"PORT_FMT", remote:"IP_FMT":"PORT_FMT" SYN-ACK\n"
+								, FUNC_ADPT_ARG(padapter)
+								, IP_ARG(IPV4_DST(ip)), PORT_ARG(TCP_DST(tcp))
+								, IP_ARG(IPV4_SRC(ip)), PORT_ARG(TCP_SRC(tcp)));
+					}
+					if (GET_TCP_FIN(tcp)) {
+						session_tracker_del_cmd(padapter, sta
+							, IPV4_DST(ip), TCP_DST(tcp)
+							, IPV4_SRC(ip), TCP_SRC(tcp));
+						if (DBG_SESSION_TRACKER)
+							DBG_871X(FUNC_ADPT_FMT" local:"IP_FMT":"PORT_FMT", remote:"IP_FMT":"PORT_FMT" FIN\n"
+								, FUNC_ADPT_ARG(padapter)
+								, IP_ARG(IPV4_DST(ip)), PORT_ARG(TCP_DST(tcp))
+								, IP_ARG(IPV4_SRC(ip)), PORT_ARG(TCP_SRC(tcp)));
+					}
+				}
+
+			}
+		}
+bypass_session_tracker:
+		;
+	}
+
 	rtw_os_recv_indicate_pkt(padapter, skb, pattrib);
 
 _recv_indicatepkt_end:

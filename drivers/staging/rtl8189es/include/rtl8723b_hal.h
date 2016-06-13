@@ -217,27 +217,6 @@ typedef struct _RT_8723B_FIRMWARE_HDR
 
 #define EFUSE_PROTECT_BYTES_BANK		16
 
-// Description: Determine the types of C2H events that are the same in driver and Fw.
-// Fisrt constructed by tynli. 2009.10.09.
-typedef enum _C2H_EVT
-{
-	C2H_DBG = 0,
-	C2H_TSF = 1,
-	C2H_AP_RPT_RSP = 2,
-	C2H_CCX_TX_RPT = 3,	// The FW notify the report of the specific tx packet.
-	C2H_BT_RSSI = 4,
-	C2H_BT_OP_MODE = 5,
-	C2H_EXT_RA_RPT = 6,
-	C2H_8723B_BT_INFO = 9,
-	C2H_HW_INFO_EXCH = 10,
-	C2H_8723B_BT_MP_INFO = 11,
-	C2H_8723B_P2P_RPORT = 0x16,
-#ifdef CONFIG_FW_C2H_DEBUG
-	C2H_8723B_FW_DEBUG = 0xff,
-#endif //CONFIG_FW_C2H_DEBUG
-	MAX_C2HEVENT
-} C2H_EVT;
-
 typedef struct _C2H_EVT_HDR
 {
 	u8	CmdID;
@@ -294,6 +273,7 @@ void rtl8723b_c2h_packet_handler(PADAPTER padapter, u8 *pbuf, u16 length);
 
 
 void rtl8723b_set_hal_ops(struct hal_ops *pHalFunc);
+void init_hal_spec_8723b(_adapter *adapter);
 void SetHwReg8723B(PADAPTER padapter, u8 variable, u8 *val);
 void GetHwReg8723B(PADAPTER padapter, u8 variable, u8 *val);
 #ifdef CONFIG_C2H_PACKET_EN

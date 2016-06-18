@@ -16908,6 +16908,14 @@ T:	git git://git.kernel.org/pub/scm/linux/kernel/git/overlayfs/vfs.git
 F:	Documentation/filesystems/overlayfs.rst
 F:	fs/overlayfs/
 
+ORANGEFS FILESYSTEM
+M:	Mike Marshall <hubcap@omnibond.com>
+L:	pvfs2-developers@beowulf-underground.org (subscribers-only)
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/hubcap/linux.git
+S:	Supported
+F:	fs/orangefs/
+F:	Documentation/filesystems/orangefs.txt
+
 P54 WIRELESS DRIVER
 M:	Christian Lamparter <chunkeey@googlemail.com>
 L:	linux-wireless@vger.kernel.org
@@ -18201,6 +18209,22 @@ F:	drivers/usb/gadget/udc/pxa2*
 F:	include/sound/pxa2xx-lib.h
 F:	sound/arm/pxa*
 F:	sound/soc/pxa/
+
+PXA3xx NAND FLASH DRIVER
+M:	Ezequiel Garcia <ezequiel.garcia@free-electrons.com>
+L:	linux-mtd@lists.infradead.org
+S:	Maintained
+F:	drivers/mtd/nand/pxa3xx_nand.c
+
+PYRA HANDHELD PC
+M:	H. Nikolaus Schaller <hns@goldelico.com>
+M:	Michael Mrozek <EvilDragon@openpandora.org>
+M:	Andrey Utkin <andrey_utkin@fastmail.com>
+L:	kernel@pyra-handheld.com
+L:	letux-kernel@openphoenux.org
+W:	https://pyra-handheld.com
+T:	git://git.openpandora.org/pyra-kernel.git
+S:	Maintained
 
 QAT DRIVER
 M:	Giovanni Cabiddu <giovanni.cabiddu@intel.com>

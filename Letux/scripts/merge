@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Letux/scripts/merge [ -sp ] [ -b base ] { branches... }
+# Letux/scripts/merge [ -spu ] [ -b base ] { branches... }
 #
 # merge Letux feature branches on top of the base branch
 #
@@ -29,11 +29,13 @@
 PUSH=false
 SEQUENTIAL=false
 BASE=letux-base
+HARD=false
 
 function usage {
 	echo "usage: $0 [ -s ] [ -p ] { branches...}"
 	echo "  -s	sequential merge"
 	echo "  -p	push --force all branches to 'origin'"
+	echo "  --hard	hard update to remote version"
 	echo "  -b base	specify base commit"
 	exit 1
 }
@@ -44,6 +46,7 @@ do
 		-p ) PUSH=true; shift ;;
 		-s ) SEQUENTIAL=true; shift ;;
 		-b ) shift; BASE="$1"; shift ;;
+		--hard ) HARD=true; shift ;;
 		-* ) echo "unknown option $1"; usage; exit 1 ;;
 		* ) break;
 	esac
@@ -87,16 +90,41 @@ BRANCHES=""
 
 for FEATURE in $(cat Letux/scripts/mergefile 2>/dev/null) "$@"
 do
+#	echo "*** process $FEATURE ***"
 	case "$FEATURE" in
 	'' | -* | '#'* )	continue;;
 	esac
-	LATEST=$(echo $(git branch | fgrep "${FEATURE}-v" | sort | tail -1))
-	if [ "$LATEST" = "" ]
-	then
-		echo "*** merging $FEATURE (run git pull -t origin/$FEATURE-Version?) ***"
-	else
+	LATEST=$(echo $(git branch | grep "${FEATURE}-v[0-9]*" | sort | tail -1))
+	if [ "$LATEST" ]
+	then # there is a latest with -v
 		echo "*** merging $FEATURE -> $LATEST ***"
 		FEATURE="$LATEST"	# take latest instead
+	elif git show-ref --verify --quiet "refs/heads/${FEATURE}" >/dev/null
+	then # a local version w/o -v exists
+		echo "*** merging $FEATURE ***"
+	else # nothing exists locally - check with remote
+		LATEST=$(echo $(git branch -r | grep "${FEATURE}-v[0-9]*" | sed 's|origin/||' | sort | tail -1))
+		if [ "$LATEST" ]
+		then # there is a remote latest with -v
+			echo "*** checking out and merging $FEATURE -> $LATEST ***"
+			git checkout --track origin/$LATEST
+			FEATURE="$LATEST"	# take new one instead
+		elif git ls-remote --heads --quiet origin "${FEATURE}" >/dev/null
+		then # a remote version w/o -v exists
+			echo "*** checking out and merging $FEATURE ***"
+			git checkout --track origin/$FEATURE
+		else
+			echo "*** $FEATURE nowhere found ***"
+			exit 1
+		fi
+	fi
+	if $HARD
+	then
+		echo "*** resetting $FEATURE to origin/$FEATURE ***"
+		# this throws away local commits!
+		git checkout --force $FEATURE || exit
+		git reset --hard origin/$FEATURE || exit
+		git checkout $OUTPUT || exit
 	fi
 	if $PUSH
 	then

@@ -95,12 +95,32 @@ echo 31 >/sys/class/leds/gta04:red:aux/brightness &&
 echo 255 >/sys/class/leds/gta04:green:aux/brightness ) 2>/dev/null &&
 ok || nok
 
-testing "BMP085/180" "Barometer values"
+testing "BMP085/180/BMP280/BME280" "Barometer values"
+
+BARO=$(findiio bmp085)
+[ "$BARO" ] || BARO=$(findiio bme280)
+
+if [ "$BARO" ]
+then # new iio driver
+PRESSURE=$(cat $BARO/in_pressure_input 2>/dev/null)
+PRESSURE=$(echo | awk "{ printf \"%.0f\", ${PRESSURE:=0} * 10 }" 2>/dev/null)
+CENTIGRADE=$(cat $BARO/in_temp_input 2>/dev/null)
+CENTIGRADE=$(expr "${CENTIGRADE:=0}" / 1000)
+HUMIDITY=$(cat $BARO/in_humidityrelative_input 2>/dev/null)
+HUMIDITY=$(expr "${HUMIDITY:=0}")
+else
 PRESSURE=$(cat /sys/bus/i2c/devices/1-0077/pressure0_input 2>/dev/null)
 CENTIGRADE=$(cat /sys/bus/i2c/devices/1-0077/temp0_input 2>/dev/null)
 PRESSURE=$(expr "${PRESSURE:=0}" / 100)
 CENTIGRADE=$(expr "${CENTIGRADE:=0}" / 10)
+fi
+
+if [ "$HUMIDITY" ]
+then
+[ "${PRESSURE:=-1}" -ge 850 -a "$PRESSURE" -le 1150 -a "${CENTIGRADE:=-1}" -ge 20 -a "$CENTIGRADE" -le 60 ] && ok "${PRESSURE} mBar, ${CENTIGRADE} °C ${HUMIDITY}%rh" || nok "${PRESSURE} mBar, ${CENTIGRADE} °C ${HUMIDITY}%rh"
+else
 [ "${PRESSURE:=-1}" -ge 850 -a "$PRESSURE" -le 1150 -a "${CENTIGRADE:=-1}" -ge 20 -a "$CENTIGRADE" -le 60 ] && ok "${PRESSURE} mBar, ${CENTIGRADE} °C" || nok "${PRESSURE} mBar, ${CENTIGRADE} °C"
+fi
 
 testing "ITG3200" "Gyroscope values"
 GYRO=$(findiio itg3200)
@@ -576,7 +596,7 @@ TEST="$1"
 [ "$1" ] || TEST="all"
 
 # run selected test function
-test_$1
+test_$TEST
 
 killall -9 arecord aplay 2>/dev/null # stop any running audio forwarding
 

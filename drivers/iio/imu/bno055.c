@@ -16,6 +16,8 @@
 #include <linux/i2c.h>
 #include <linux/regmap.h>
 #include <linux/delay.h>
+#include <linux/of.h>
+#include <linux/of_device.h>
 #include <linux/slab.h>
 
 #include <linux/iio/iio.h>
@@ -555,9 +557,17 @@ static const struct i2c_device_id bno055_id[] = {
 };
 MODULE_DEVICE_TABLE(i2c, bno055_id);
 
+static const struct of_device_id of_bno055_match[] = {
+	{ .compatible = "bosch,bno055", .data = 0, },
+	{},
+};
+
+MODULE_DEVICE_TABLE(of, of_bno055_match);
+
 static struct i2c_driver bno055_driver = {
 	.driver = {
 		.name	= BNO055_DRIVER_NAME,
+		.of_match_table = of_match_ptr(of_bno055_match),
 	},
 	.probe		= bno055_probe,
 	.id_table	= bno055_id,

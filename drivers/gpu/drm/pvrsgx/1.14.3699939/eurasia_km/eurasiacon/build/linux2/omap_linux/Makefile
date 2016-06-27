@@ -46,6 +46,9 @@ TARGET_PRODUCT ?= jacinto6evm
 PVRSRV_NEED_PVR_DPF := 1
 PVRSRV_NEW_PVR_DPF := 1
 
+# Disable active power management
+SUPPORT_ACTIVE_POWER_MANAGEMENT 	:= 0
+
 # Customize this build as per the TARGET_PRODUCT setting
 #
 ifneq ($(filter blaze blaze_tablet panda,$(TARGET_PRODUCT)),)

@@ -280,6 +280,16 @@ config JOYSTICK_AS5011
 	  To compile this driver as a module, choose M here: the
 	  module will be called as5011.
 
+config JOYSTICK_AS5013
+	tristate "Austria Microsystem AS5013 joystick"
+	depends on I2C
+	help
+	  Say Y here if you have an AS5013 digital joystick connected to your
+	  system.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called as5013.
+
 config JOYSTICK_JOYDUMP
 	tristate "Gameport data dumper"
 	select GAMEPORT

@@ -151,7 +151,7 @@ static void _rtw_reg_apply_beaconing_flags(struct wiphy *wiphy,
 	u32 bandwidth = 0;
 	int r;
 
-	for (band = 0; band < NUM_NL80211_BANDS; band++) {
+	for (band = 0; band < IEEE80211_NUM_BANDS; band++) {
 
 		if (!wiphy->bands[band])
 			continue;
@@ -205,9 +205,9 @@ static void _rtw_reg_apply_active_scan_flags(struct wiphy *wiphy,
 	u32 bandwidth = 0;
 	int r;
 
-	if (!wiphy->bands[NL80211_BAND_2GHZ])
+	if (!wiphy->bands[IEEE80211_BAND_2GHZ])
 		return;
-	sband = wiphy->bands[NL80211_BAND_2GHZ];
+	sband = wiphy->bands[IEEE80211_BAND_2GHZ];
 
 	/*
 	 * If no country IE has been received always enable active scan
@@ -258,10 +258,10 @@ static void _rtw_reg_apply_radar_flags(struct wiphy *wiphy)
 	struct ieee80211_channel *ch;
 	unsigned int i;
 
-	if (!wiphy->bands[NL80211_BAND_5GHZ])
+	if (!wiphy->bands[IEEE80211_BAND_5GHZ])
 		return;
 
-	sband = wiphy->bands[NL80211_BAND_5GHZ];
+	sband = wiphy->bands[IEEE80211_BAND_5GHZ];
 
 	for (i = 0; i < sband->n_channels; i++) {
 		ch = &sband->channels[i];
@@ -316,7 +316,7 @@ static void _rtw_reg_apply_flags(struct wiphy *wiphy)
 	u32 freq;
 
 	// all channels disable
-	for (i = 0; i < NUM_NL80211_BANDS; i++) {
+	for (i = 0; i < IEEE80211_NUM_BANDS; i++) {
 		sband = wiphy->bands[i];
 
 		if (sband) {
@@ -364,7 +364,7 @@ static void _rtw_reg_apply_flags(struct wiphy *wiphy)
 	u16 channel;
 	u32 freq;
 
-	for (i = 0; i < NUM_NL80211_BANDS; i++) {
+	for (i = 0; i < IEEE80211_NUM_BANDS; i++) {
 		sband = wiphy->bands[i];
 
 		if (sband)

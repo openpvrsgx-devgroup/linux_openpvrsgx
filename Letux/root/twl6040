@@ -5,25 +5,39 @@
 trap "killall volumed" EXIT
 trap "exit 1" SIGHUP SIGINT SIGTERM
 
+[ -x /usr/bin/sox ] || apt-get install sox libsox-fmt-mp3
+
 FILE=somefile.mp3
 
 while [ "$1" ]
 do
         case "$1" in
         "-d" )
-		DEMO=true
+		DEMO=yes
 		;;
-        "-v" )
-		NOVOLUMED=true
+        "-t" )
+		FORMAT=yes
+		;;
+        "-nv" )
+		NOVOLUMED=yes
 		;;
         "-lp" )
-		LPMODE=true
+		LPMODE=yes
 		;;
-        "-hf" )
-		NOHANDSFREE=true
+        "-nhf" )
+		NOHANDSFREE=yes
+		;;
+	- )	# stdin
+		break
 		;;
 	-* )
 		echo unknown option $1
+		echo "-d: demo"
+		echo "-nv: no volumed"
+		echo "-lp: low power mode"
+		echo "-nhf: keep handsfree off"
+		echo "-: file from stdin"
+		echo "file: play file"
 		exit 1
 		;;
 	* )
@@ -35,15 +49,8 @@ done
 
 if [ "$1" ] # given file
 then
-	FILE=$1
+	FILE="$1"
 	shift
-fi
-
-if [ "$NOVOLUMED" ]
-then
-	: # don't start volumed
-else
-	/root/volumed -q &
 fi
 
 amixer -q set "Aux FM" 0% || exit
@@ -53,19 +60,29 @@ amixer -q set "AUXL" "off" || exit
 amixer -q set "AUXR" "off" || exit
 amixer -q set "Analog Left" "Main Mic" || exit
 amixer -q set "Analog Right" "Headset Mic" || exit
-amixer -q set "Earphone" 80% || exit
-amixer -q set "Handsfree" 50% || exit
 
-if [ "$NOHANDSFREE" ]
+if [ "$NOVOLUMED" ] # start volumed
 then
-amixer -q set "Handsfree Left Playback" "HF DAC" || exit
-amixer -q set "Handsfree Right Playback" "HF DAC" || exit
+	: # don't start volumed and use defaults
+	amixer -q set "Headset" 80% || exit
+	amixer -q set "Earphone" 80% || exit
+	amixer -q set "Handsfree" 50% || exit
+elif [ "$NOHANDSFREE" ]
+then
+	/root/volumed -q -nhf &
 else
-amixer -q set "Handsfree Left Playback" "Off" || exit
-amixer -q set "Handsfree Right Playback" "Off" || exit
+	/root/volumed -q &
 fi
 
-amixer -q set "Headset" 80% || exit
+if [ "$NOHANDSFREE" ] # handsfree on/off
+then
+	amixer -q set "Handsfree Left Playback" "Off" || exit
+	amixer -q set "Handsfree Right Playback" "Off" || exit
+else
+	amixer -q set "Handsfree Left Playback" "HF DAC" || exit
+	amixer -q set "Handsfree Right Playback" "HF DAC" || exit
+fi
+
 amixer -q set "Headset Left Playback" "HS DAC" || exit
 amixer -q set "Headset Right Playback" "HS DAC" || exit
 amixer -q set "Analog Left" "Main Mic" || exit
@@ -85,19 +102,16 @@ amixer -q set "Vibra Right Playback" "Input FF" || exit
 : amixer -q set "Vibra Left Playback" "Audio PDM" || exit
 : amixer -q set "Vibra Right Playback" "Audio PDM" || exit
 
-[ -x /usr/bin/sox ] || apt-get install sox libsox-fmt-mp3
-
 if [ "$DEMO" ] # demo
 then
 	aplay -q /usr/share/sounds/alsa/*.wav
 	# play chirp sound on all 4 channels
 	sox -c 4 -n -t wav - synth 10 sine 10-100 | aplay
 	# remix for Pandaboard/OMAP5 stereo
-	play /usr/share/sounds/alsa/Front_Center.wav remix 1 1
-	# play some music file
+	play /usr/share/sounds/alsa/Front_Center.wav remix 1 1 1 1
 	# headset only
 	play $FILE
 fi
 
-# play on headset and main speakers
-play $FILE remix 1 2 1 2
+# play stereo on headset and main speakers
+[ "$FILE" ] && play ${FORMAT:+-t} ${FORMAT:+$FORMAT} -v 0.98 $FILE remix 1 2 1 2

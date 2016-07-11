@@ -10,15 +10,26 @@ GPADC=$(/root/findiio "palmas-gpadc")
 LASTVOL="unknown"
 MAXWHEEL=1200	# reports 0..1250 mV but leave some margin
 
-if [ "$1" = -q ]
-then
-	QUIET=true
-fi
+while [ "$1" ]
+do
+        case "$1" in
+        "-q" )
+		QUIET=true
+		;;
+        "-nhf" )
+		NOHANDSFREE=yes
+		;;
+	* )
+		break
+		;;
+	esac
+	shift
+done
 
 while true
 do
 	WHEEL=$(cat $GPADC/in_voltage2_input 2>/dev/null)
-	# could apply non-linear scale for smoother control
+	# could apply non-linear scale for more intuitive control
 	VOL=$(( 100 * ${WHEEL:-0} / $MAXWHEEL ))
 	[ "$VOL" -lt 0 ] && VOL=0
 	[ "$VOL" -gt 100 ] && VOL=100
@@ -26,17 +37,17 @@ do
 	if [ "$VOL" != "$LASTVOL" ]
 	then # update only if changed since amixer command needs some resources
 		[ "$QUIET" ] || echo $WHEEL - $VOL%
-		if [ "$VOL" = 0 ]
-		then
+		if [ "$NOHANDSFREE" -o "$VOL" = 0 ]
+		then # turn off
 			amixer -q set "Handsfree Left Playback" "Off" || exit
 			amixer -q set "Handsfree Right Playback" "Off" || exit
 		else
 			amixer -q set "Handsfree Left Playback" "HF DAC" || exit
 			amixer -q set "Handsfree Right Playback" "HF DAC" || exit
 			amixer -q set "Handsfree" "$VOL%" || exit
-			amixer -q set "Headset" "$VOL%" || exit
-			amixer -q set "Earphone" "$VOL%" || exit
 		fi
+		amixer -q set "Headset" "$VOL%" || exit
+		amixer -q set "Earphone" "$VOL%" || exit
 		LASTVOL=$VOL
 	fi
 	sleep 0.1

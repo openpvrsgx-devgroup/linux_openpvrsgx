@@ -18,7 +18,8 @@ do
 		DEMO=yes
 		;;
         "-t" )
-		FORMAT=yes
+		shift
+		FORMAT="$1";
 		;;
         "-nv" )
 		NOVOLUMED=yes
@@ -38,6 +39,7 @@ do
 		echo "-nv: no volumed"
 		echo "-lp: low power mode"
 		echo "-nhf: keep handsfree off"
+		echo "-t fmt: define format"
 		echo "-: file from stdin"
 		echo "file: play file"
 		exit 1

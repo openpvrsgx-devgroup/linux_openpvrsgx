@@ -1,3 +1,7 @@
+exec /root/twl6040 "$@"
+
+##
+
 amixer -q set "AVADC Clock Priority" "HiFi high priority" &&
 amixer -q set "DAC1 Analog" off &&
 amixer -q set "DAC2 Analog" on &&

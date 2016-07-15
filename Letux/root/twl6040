@@ -9,6 +9,8 @@ trap "exit 1" SIGHUP SIGINT SIGTERM
 
 FILE=somefile.mp3
 
+[ -r /sys/firmware/devicetree/base/sound/ti,twl6040 ] || NOVOLUMED=yes
+
 while [ "$1" ]
 do
         case "$1" in
@@ -53,6 +55,11 @@ then
 	shift
 fi
 
+if [ -r /sys/firmware/devicetree/base/sound/ti,twl6040 ]
+then
+
+echo "TWL6040 (Pandaboard, OMAP5432EVM, Pyra, ...)"
+
 amixer -q set "Aux FM" 0% || exit
 amixer -q set "Capture" 100% || exit
 amixer -q set "Capture Preamplifier" 100% || exit
@@ -61,18 +68,10 @@ amixer -q set "AUXR" "off" || exit
 amixer -q set "Analog Left" "Main Mic" || exit
 amixer -q set "Analog Right" "Headset Mic" || exit
 
-if [ "$NOVOLUMED" ] # start volumed
-then
-	: # don't start volumed and use defaults
-	amixer -q set "Headset" 80% || exit
-	amixer -q set "Earphone" 80% || exit
-	amixer -q set "Handsfree" 50% || exit
-elif [ "$NOHANDSFREE" ]
-then
-	/root/volumed -q -nhf &
-else
-	/root/volumed -q &
-fi
+# set defaults if we have no volumed
+amixer -q set "Headset" 100% || exit
+amixer -q set "Earphone" 100% || exit
+amixer -q set "Handsfree" 100% || exit
 
 if [ "$NOHANDSFREE" ] # handsfree on/off
 then
@@ -81,6 +80,16 @@ then
 else
 	amixer -q set "Handsfree Left Playback" "HF DAC" || exit
 	amixer -q set "Handsfree Right Playback" "HF DAC" || exit
+fi
+
+if [ ! "$NOVOLUMED" ] # start volumed
+then
+if [ "$NOHANDSFREE" ]
+then
+	/root/volumed -q -nhf &
+else
+	/root/volumed -q &
+fi
 fi
 
 amixer -q set "Headset Left Playback" "HS DAC" || exit
@@ -102,16 +111,53 @@ amixer -q set "Vibra Right Playback" "Input FF" || exit
 : amixer -q set "Vibra Left Playback" "Audio PDM" || exit
 : amixer -q set "Vibra Right Playback" "Audio PDM" || exit
 
+REMIX_MONO="remix 1 1 1 1"
+REMIX_STEREO="remix 1 2 1 2"
+
+else
+
+echo "TWL4030 (GTA04, ...)"
+
+amixer -q set "AVADC Clock Priority" "HiFi high priority" || exit
+amixer -q set "DAC1 Analog" off || exit
+amixer -q set "DAC2 Analog" on || exit
+amixer -q set "DAC2 Analog" 5 || exit        # so that total gain is < 1
+amixer -q set "Codec Operation Mode" "Option 2 (voice/audio)" || exit
+amixer -q set Earpiece 100% || exit
+amixer -q set "Earpiece Mixer AudioL2" on || exit
+amixer -q set "Earpiece Mixer Voice" off || exit
+amixer -q set "Analog" 5 || exit
+amixer -q set TX1 "Analog" || exit
+amixer -q set "TX1 Digital" 12 || exit
+amixer -q set "Analog Left AUXL" nocap || exit
+amixer -q set "Analog Right AUXR" nocap || exit
+amixer -q set "Analog Left Main Mic" cap || exit
+amixer -q set "Analog Left Headset Mic" nocap || exit
+if [ "$NOHANDSFREE" ] # handsfree on/off
+then
+amixer -q set HandsfreeL on || exit
+amixer -q set HandsfreeR on || exit
+else
+amixer -q set HandsfreeL off || exit
+amixer -q set HandsfreeR off || exit
+fi
+amixer -q set "HandsfreeL Mux" AudioL2 || exit
+amixer -q set "HandsfreeR Mux" AudioR2 || exit
+
+REMIX_MONO=""
+REMIX_STEREO=""
+fi
+
 if [ "$DEMO" ] # demo
 then
 	aplay -q /usr/share/sounds/alsa/*.wav
 	# play chirp sound on all 4 channels
 	sox -c 4 -n -t wav - synth 10 sine 10-100 | aplay
 	# remix for Pandaboard/OMAP5 stereo
-	play /usr/share/sounds/alsa/Front_Center.wav remix 1 1 1 1
+	play /usr/share/sounds/alsa/Front_Center.wav $REMIX_MONO
 	# headset only
 	play $FILE
 fi
 
 # play stereo on headset and main speakers
-[ "$FILE" ] && play ${FORMAT:+-t} ${FORMAT:+$FORMAT} -v 0.98 $FILE remix 1 2 1 2
+[ "$FILE" ] && play ${FORMAT:+-t} ${FORMAT:+$FORMAT} -v 0.98 $FILE $REMIX_STEREO

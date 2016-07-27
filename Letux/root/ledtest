@@ -10,6 +10,7 @@ do
 	do
 		echo $i
 		echo "default-on" >$i/trigger
+		echo 255 >$i/brightness
 		sleep 0.2
 		echo "none" >$i/trigger
 	done

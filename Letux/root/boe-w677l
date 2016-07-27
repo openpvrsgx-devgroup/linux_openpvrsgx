@@ -24,7 +24,7 @@ then
 fi
 
 # make sure the panel is active before trying to send commands
-echo nostream >dcs	# if it was on before
+echo nostream >dcs || exit 1	# if it was on before
 echo stop >dcs	# stop if it was already running
 echo nopower >dcs	# enable is unused
 echo reset >dcs	# reset panel
@@ -33,11 +33,14 @@ echo reset >dcs	# reset panel
 sleep .1
 echo noreset >dcs	# take panel out of reset before starting the clocks
 sleep .2
+
+fbset -g 720 1280 720 1280 32
+
 echo start >dcs	# start MIPI interface
 sleep .2
 
 # show some DCS status
-echo status >dcs
+echo status >dcs || exit 1
 # for i in 05 0a 0b 0c 0d 0e 0f 13 20 52 54 5f 68 a1rrrr da db dc; do echo $i r >dcs; done
 
 # program panel here
@@ -48,7 +51,7 @@ then
 # enable command2 and address shift
 if [ "$1" = "-s" ]
 then
-echo g0000 >dcs # write address shift register
+echo g0000 >dcs || exit 1 # write address shift register
 echo gff12 >dcs # write FF00h
 echo g0001 >dcs # write address shift register
 echo gff83 >dcs # write FF01h
@@ -56,7 +59,7 @@ echo g0002 >dcs # write address shift register
 echo gff01 >dcs # write FF02h
 shift
 else
-echo g0000 >dcs # write address shift register
+echo g0000 >dcs || exit 1 # write address shift register
 echo gff128301 >dcs # write FF00h
 fi
 

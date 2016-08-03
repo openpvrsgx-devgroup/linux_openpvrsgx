@@ -2,7 +2,7 @@
 # /root/twl6040: demo for twl6040 sound
 #
 
-trap "killall volumed" EXIT
+trap "killall volumed 2>/dev/null" EXIT
 trap "exit 1" SIGHUP SIGINT SIGTERM
 
 [ -x /usr/bin/sox ] || apt-get install sox libsox-fmt-mp3

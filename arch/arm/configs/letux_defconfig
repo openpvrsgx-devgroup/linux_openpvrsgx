@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm 4.7.0-rc7 Kernel Configuration
+# Linux/arm 4.7.0 Kernel Configuration
 #
 CONFIG_ARM=y
 CONFIG_ARM_HAS_SG_CHAIN=y
@@ -373,7 +373,8 @@ CONFIG_ARCH_OMAP=y
 #
 # OMAP Feature Selections
 #
-# CONFIG_POWER_AVS_OMAP is not set
+CONFIG_POWER_AVS_OMAP=y
+CONFIG_POWER_AVS_OMAP_CLASS3=y
 CONFIG_OMAP_RESET_CLOCKS=y
 CONFIG_OMAP_MUX=y
 CONFIG_OMAP_MUX_DEBUG=y
@@ -413,7 +414,7 @@ CONFIG_SOC_OMAP3430=y
 # CONFIG_MACH_OMAP3_PANDORA is not set
 # CONFIG_MACH_NOKIA_RX51 is not set
 # CONFIG_OMAP3_SDRC_AC_TIMING is not set
-# CONFIG_OMAP5_ERRATA_801819 is not set
+CONFIG_OMAP5_ERRATA_801819=y
 # CONFIG_ARCH_MMP is not set
 # CONFIG_ARCH_QCOM is not set
 # CONFIG_ARCH_REALVIEW is not set

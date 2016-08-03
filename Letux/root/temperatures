@@ -1,0 +1,22 @@
+# log system temperatures (omap3 / omap5)
+
+function findthermal {
+	for dev in /sys/class/thermal/thermal_zone*
+	do
+		if [ "$(cat $dev/type 2>/dev/null)" = "$1" ]
+			then echo $dev
+			return
+		fi
+	done
+}
+
+[ "$CPU" ] || CPU=$(findthermal cpu_thermal)
+[ "$CPU" ] || CPU=$(findthermal cpu)
+GPU=$(findthermal gpu_thermal)
+CORE=$(findthermal core_thermal)
+[ "$BATTERY" ] || BATTERY=$(findthermal bq27621)
+[ "$BATTERY" ] || BATTERY=$(findthermal bq27421-0)
+[ "$BATTERY" ] || BATTERY=$(findthermal bq27000)
+[ "$BATTERY" ] || BATTERY=$(findthermal bq24297)
+
+echo $(date) $(cat $CPU/temp 2>/dev/null) $(cat $GPU/temp 2>/dev/null) $(cat $CORE/temp 2>/dev/null) $(cat $BATTERY/temp 2>/dev/null)

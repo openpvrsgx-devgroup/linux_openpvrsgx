@@ -4,10 +4,6 @@
 
 # parameters for Pyra (OMAP5)
 CORES=2	# find from /proc/cpuinfo
-CPU=$(./findthermal cpu_thermal)/temp
-GPU=$(./findthermal gpu_thermal)/temp
-CORE=$(./findthermal core_thermal)/temp
-BATTERY=$(./findthermal bq24297)/temp
 
 # start 100% load processes
 for i in $(seq 1 $CORES)
@@ -22,9 +18,8 @@ done
 # stop them if we are stopped
 trap "echo kill $PIDS; kill $PIDS" EXIT
 
-# log system temperatures
 while true
 do
-	echo $(date) $(cat $CPU) $(cat $GPU) $(cat $CORE) $(cat $BATTERY)
+	/root/temperatures
 	sleep 1
 done

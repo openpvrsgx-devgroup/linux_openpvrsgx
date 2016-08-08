@@ -3,45 +3,14 @@
 # (c) Golden Delicious Computers GmbH&Co. KG, 2011-2016
 # licenced under GPL
 #
+# usage: hw-test [-t] [testname]
+#
 
-TESTER_VERSION="5.0"
-TESTER_RECOMMENDED_KERNEL="4.4"
-TESTER_DATE="21 Jan 2016"
+TESTER_VERSION="6.0"
+TESTER_RECOMMENDED_KERNEL="4.7"
+TESTER_DATE="07 Aug 2016"
 
-function testing {
-	TEST="$1"
-	MESSAGE=
-	[ "$2" ] && MESSAGE="# $2"
-	OK=false
-	NOK=true
-}
-
-# (n)ok "value" (optional)
-
-SEQUENCE=1
-function ok {
-	echo $SEQUENCE "$TEST" ok "$1" $MESSAGE
-	SEQUENCE=$(expr $SEQUENCE + 1)
-	OK=true
-	NOK=false
-}
-
-function nok {
-	if "$NOK"
-	then
-		echo $SEQUENCE "$TEST" nok "$1" $MESSAGE
-		SEQUENCE=$(expr $SEQUENCE + 1)
-		ANYNOK=true
-	fi
-}
-
-function optional {
-	if "$NOK"
-	then
-		echo $SEQUENCE "$TEST" optional "$1" $MESSAGE
-		SEQUENCE=$(expr $SEQUENCE + 1)
-	fi
-}
+MODEL=$(cat /proc/device-tree/model 2>/dev/null)
 
 function findregulator {
 for regulator in /sys/class/regulator/regulator.*
@@ -63,564 +32,632 @@ do
 done
 }
 
-function test_all {
+ANYNOK=false
 
-testing "Tests-Start"
-ok "$(date)"
-
-testing "Tests-Version"
-ok "$TESTER_VERSION"
-
-testing "Tests-Kernel"
-ok "$(uname -rv) - recommended minimum: $TESTER_RECOMMENDED_KERNEL"
-
-testing "Tests-Rootfs"
-if fgrep -q 'root=/dev/mmcblk' /proc/cmdline
-then ok "SD"
-else ok "NAND"
-fi
-
-testing "Device Tree"
-[ -r /proc/device-tree ] && ok "with DT" || optional "without DT"
-
-testing "Device-Tree-Model" "model from Device Tree"
-MODEL=$(cat /proc/device-tree/model 2>/dev/null)
-[ "$MODEL" ] && ok "$MODEL" || nok "$MODEL"
-# now we can make the following tests depend on $MODEL
-
-testing "LED" "enable LEDs"
-( echo 31 >/sys/class/leds/gta04:red:power/brightness &&
-echo 255 >/sys/class/leds/gta04:green:power/brightness &&
-echo 31 >/sys/class/leds/gta04:red:aux/brightness &&
-echo 255 >/sys/class/leds/gta04:green:aux/brightness ) 2>/dev/null &&
-ok || nok
-
-testing "BMP085/180/BMP280/BME280" "Barometer values"
-
-BARO=$(findiio bmp085)
-[ "$BARO" ] || BARO=$(findiio bme280)
-
-if [ "$BARO" ]
-then # new iio driver
-PRESSURE=$(cat $BARO/in_pressure_input 2>/dev/null)
-PRESSURE=$(echo | awk "{ printf \"%.0f\", ${PRESSURE:=0} * 10 }" 2>/dev/null)
-CENTIGRADE=$(cat $BARO/in_temp_input 2>/dev/null)
-CENTIGRADE=$(expr "${CENTIGRADE:=0}" / 1000)
-HUMIDITY=$(cat $BARO/in_humidityrelative_input 2>/dev/null)
-HUMIDITY=$(expr "${HUMIDITY:=0}")
-else
-PRESSURE=$(cat /sys/bus/i2c/devices/1-0077/pressure0_input 2>/dev/null)
-CENTIGRADE=$(cat /sys/bus/i2c/devices/1-0077/temp0_input 2>/dev/null)
-PRESSURE=$(expr "${PRESSURE:=0}" / 100)
-CENTIGRADE=$(expr "${CENTIGRADE:=0}" / 10)
-fi
-
-if [ "$HUMIDITY" ]
-then
-[ "${PRESSURE:=-1}" -ge 850 -a "$PRESSURE" -le 1150 -a "${CENTIGRADE:=-1}" -ge 20 -a "$CENTIGRADE" -le 60 ] && ok "${PRESSURE} mBar, ${CENTIGRADE} °C ${HUMIDITY}%rh" || nok "${PRESSURE} mBar, ${CENTIGRADE} °C ${HUMIDITY}%rh"
-else
-[ "${PRESSURE:=-1}" -ge 850 -a "$PRESSURE" -le 1150 -a "${CENTIGRADE:=-1}" -ge 20 -a "$CENTIGRADE" -le 60 ] && ok "${PRESSURE} mBar, ${CENTIGRADE} °C" || nok "${PRESSURE} mBar, ${CENTIGRADE} °C"
-fi
-
-testing "ITG3200" "Gyroscope values"
-GYRO=$(findiio itg3200)
-[ "$GYRO" ] && echo 10 >$GYRO/sampling_frequency 2>/dev/null
-sleep 0.1
-X=$(cat $GYRO/in_anglvel_x_raw 2>/dev/null)
-Y=$(cat $GYRO/in_anglvel_y_raw 2>/dev/null)
-Z=$(cat $GYRO/in_anglvel_z_raw 2>/dev/null)
-CENTIGRADE=$(echo | awk "{ printf \"%.0f\", ( $(cat $GYRO/in_temp_raw 2>/dev/null) + $(cat $GYRO/in_temp_offset 2>/dev/null) ) * $(cat $GYRO/in_temp_scale 2>/dev/null) * 10 }" 2>/dev/null)
-G=$(expr ${X:=0} '*' ${X} + ${Y:=0} '*' ${Y} + ${Z:=0} '*' ${Z})
-GMAX=$(expr 3 '*' 200 '*' 200)
-CENTIGRADE=$(expr "${CENTIGRADE:=0}" / 10)
-[ "$G" -le "$GMAX" -a "$G" -ge 0 -a "$CENTIGRADE" -ge 10 -a "$CENTIGRADE" -le 60 ] && ok "$X, $Y, $Z, ${CENTIGRADE} °C" || nok "$GYRO: $X, $Y, $Z, ${CENTIGRADE} °C"
-
-testing "BMG160" "Gyroscope values"
-GYRO=$(findiio bmg160)
-[ "$GYRO" ] && echo 100 >$GYRO/in_anglvel_sampling_frequency 2>/dev/null
-sleep 0.1
-X=$(cat $GYRO/in_anglvel_x_raw 2>/dev/null)
-Y=$(cat $GYRO/in_anglvel_y_raw 2>/dev/null)
-Z=$(cat $GYRO/in_anglvel_z_raw 2>/dev/null)
-CENTIGRADE=$(echo | awk "{ printf \"%.0f\", ( $(cat $GYRO/in_temp_raw 2>/dev/null) + $(cat $GYRO/in_temp_offset 2>/dev/null) ) * $(cat $GYRO/in_temp_scale 2>/dev/null) * 10 }" 2>/dev/null)
-G=$(expr ${X:=0} '*' ${X} + ${Y:=0} '*' ${Y} + ${Z:=0} '*' ${Z})
-GMAX=$(expr 3 '*' 200 '*' 200)
-CENTIGRADE=$(expr "${CENTIGRADE:=0}" / 10)
-[ "$G" -le "$GMAX" -a "$G" -ge 0 -a "$CENTIGRADE" -ge 10 -a "$CENTIGRADE" -le 60 ] && ok "$X, $Y, $Z, ${CENTIGRADE} °C" || optional "$GYRO: $X, $Y, $Z, ${CENTIGRADE} °C"
-
-testing "BMA180/BMC150" "Accelerometer values"
-[ -r /dev/input/accel ] && read -t 1 X Y Z < <(echo $(evtest /dev/input/accel | head -19 | fgrep Value | sed 's/Value//g'))
-G=$(expr ${X:=0} '*' ${X} + ${Y:=0} '*' ${Y} + ${Z:=0} '*' ${Z})
-GMIN=$(expr 200 '*' 200)
-GMAX=$(expr 300 '*' 300)
-[ "$G" -le "$GMAX" -a "$G" -ge "$GMIN" ] && ok "$X, $Y, $Z" || nok "$X, $Y, $Z"
-
-testing "HMC5883L" "Compass values"
-COMPASS=$(findiio hmc5883l)
-[ "$COMPASS" ] && echo 15 >$COMPASS/in_magn_sampling_frequency 2>/dev/null
-sleep 1
-X=$(cat $COMPASS/in_magn_x_raw 2>/dev/null)
-Y=$(cat $COMPASS/in_magn_y_raw 2>/dev/null)
-Z=$(cat $COMPASS/in_magn_z_raw 2>/dev/null)
-[ "$X$Y$Z" ] && ok "$X, $Y, $Z" || nok "$COMPASS: $X, $Y, $Z"
-
-testing "BMC150-Compass" "Compass values"
-COMPASS=$(findiio bmc150-compass)
-[ "$COMPASS" ] && echo 15 >$COMPASS/in_magn_sampling_frequency 2>/dev/null
-sleep 1
-X=$(cat $COMPASS/in_magn_x_raw 2>/dev/null)
-Y=$(cat $COMPASS/in_magn_y_raw 2>/dev/null)
-Z=$(cat $COMPASS/in_magn_z_raw 2>/dev/null)
-[ "$X$Y$Z" ] && ok "$X, $Y, $Z" || optional "$COMPASS: $X, $Y, $Z"
-
-testing "BNO055" "All values"
-COMPASS=$(findiio bno055)
-sleep 1
-XA=$(cat $COMPASS/in_accel_x_raw 2>/dev/null)
-YA=$(cat $COMPASS/in_accel_y_raw 2>/dev/null)
-ZA=$(cat $COMPASS/in_accel_z_raw 2>/dev/null)
-XG=$(cat $COMPASS/in_anglvel_x_raw 2>/dev/null)
-YG=$(cat $COMPASS/in_anglvel_y_raw 2>/dev/null)
-ZG=$(cat $COMPASS/in_anglvel_z_raw 2>/dev/null)
-TEMP=$(cat $COMPASS/in_temp_input 2>/dev/null)
-[ "$XA$YA$ZA$XG$YG$ZG$TEMP" ] && ok "$XA, $YA, $ZA - $XG, $YG, ZG - $TEMP" || optional "$COMPASS: $XA, $YA, $ZA - $XG, $YG, ZG - $TEMP"
-
-testing "TSC2007" "Touch screen values"
-TSC=$(findiio tsc2007)
-read VAL < <(sed "s/,/ /g" $TSC/in_pressure6_raw 2>/dev/null)
-[ "$VAL" ] && ok "$VAL" || nok "$VAL"
-
-testing "CRTOUCH" "Touch screen values"
-read VAL < <(sed "s/,/ /g" /sys/bus/i2c/devices/1-0049/values 2>/dev/null)
-[ "$VAL" ] && ok "$VAL" || optional "$VAL"
-
-testing "Left Nub" "Left Nub controller found"
-[ -r "/proc/pandora/nub0" ] && ok "$VAL" || optional "$VAL"
-
-testing "Right Nub" "Left Nub controller found"
-[ -r "/proc/pandora/nub0" ] && ok "$VAL" || optional "$VAL"
-
-testing "Keyboard" "Keyboard controller found"
-[ -r "/dev/input/keyboard" ] && ok "$VAL" || optional "$VAL"
-
-testing "OV9655" "Camera device found"
-[ -r /dev/v4l-subdev8 ] && ok || optional
-
-testing "PVR/SGX" "GPU device found"
-[ -r /proc/pvr/version ] && ok $(cat /proc/pvr/version) || nok
-
-testing "TPS61050" "Torch/Flash controller found"
-[ -r /sys/bus/i2c/devices/1-0033 ] && ok || optional
-
-testing "EEPROM" "EEPROM on I2C1 found"
-[ -r /sys/bus/i2c/devices/1-0050/eeprom ] && ok || nok
-
-testing "Si47xx" "FM TRX"
-VAL=$(echo $(./si4721 -d -up -dn))
-case "$VAL" in
-	"init resp: 80 get_chiprev resp: 80 1532300000323042 powered off" | \
-	"init resp: 80 get_chiprev resp: 80 0532300000323042 powered off" )
-		ok "$VAL" ;;
-	* )	nok "$VAL" ;;
-esac
-
-testing "TCA6507" "LED controller found"
-[ -d /sys/bus/i2c/devices/1-0045/leds -o -d /sys/bus/i2c/devices/1-0045/leds ] && ok || nok
-
-testing "TCA6507-Pyra" "LED controller found"
-[ -d /sys/bus/i2c/devices/1-0045/leds -o -d /sys/bus/i2c/devices/3-0045/leds ] && ok || optional
-
-MADC=$(findiio "48070000.i2c:twl@48:madc")
-
-testing "Batt-Volt" "main battery voltage"
-VOLT=$(cat ${MADC}/in_voltage12_input 2>/dev/null)
-[ "${VOLT:=-1}" -ge 3100 -a "$VOLT" -le 4300 ] && ok "${VOLT} mV" || nok "${VOLT} mV"
-
-testing "Batt-Status" "main battery USB charging status"
-STATUS=$(cat /sys/class/power_supply/twl4030_usb/status 2>/dev/null)
-[ "$STATUS" ] && ok "$STATUS" || nok "$STATUS"
-
-testing "Batt-Temp" "main battery temperature (may not be real value if there is no NTC - and if not charging)"
-TEMP=$(cat ${MADC}/in_temp1_input 2>/dev/null)
-[ "${TEMP:=-1}" -ge 20 -a "$TEMP" -le 60 ] && ok "${TEMP} °C" || nok "${TEMP} °C"
-
-testing "Batt-Type" "main battery identification"
-TYPE=$(cat ${MADC}/in_voltage0_input 2>/dev/null)
-[ "${TYPE:=-1}" ] && ok "${TYPE} mV" || nok "${TYPE} mV"
-
-testing "Batt-Backup" "backup battery voltage"
-VOLT=$(cat ${MADC}/in_voltage9_input 2>/dev/null)
-[ "${VOLT:=-1}" -ge 200 -a "$VOLT" -le 3250 ] && ok "${VOLT} mV" || nok "${VOLT} mV"
-
-testing "Batt-Volt-HDQ" "main battery voltage (hdq)"
-VOLT=$(cat /sys/class/power_supply/bq27000-battery/voltage_now 2>/dev/null)
-VOLT=$(expr "${VOLT:=0}" / 1000)
-[ "${VOLT:=-1}" -ge 3100 -a "$VOLT" -le 4300 ] && ok "${VOLT} mV" || optional "${VOLT} mV"
-
-testing "Batt-Volt-MADC" "main battery voltage (calibrated madc)"
-VOLT=$(cat /sys/class/power_supply/twl4030_battery/voltage_now 2>/dev/null)
-VOLT=$(expr "${VOLT:=0}" / 1000)
-[ "${VOLT:=-1}" -ge 3100 -a "$VOLT" -le 4300 ] && ok "${VOLT} mV" || nok "${VOLT} mV"
-
-# does not reflect which device tree we have booted since there is no saveenv
-if false; then
-testing "Device-Tree" "Board variant stored in u-boot environment"
-read VAL < <(fw_printenv 'devicetree' 2>/dev/null | sed "s/board=//g" 2>/dev/null)
-[ "$VAL" ] && ok "$VAL" || nok "$VAL"
-fi
-
-testing "CPU-Memory" "Memory size (/proc/meminfo)"
-read VAL < <(fgrep MemTotal /proc/meminfo | sed "s/MemTotal.*:/ /g" 2>/dev/null)
-[ "$VAL" ] && ok "$VAL" || nok "$VAL"
-
-testing "CPU-NAND" "NAND size (/proc/mtd)"
-read MTD VAL OTHER < <(fgrep "File System" /proc/mtd)
-[ "$VAL" ] && ok "$(expr $(printf "%d\n" 0x$VAL) / 1000) kB" || optional "$VAL"
-
-testing "CPU-ID" "Die-ID stored in u-boot environment"
-read VAL < <(fw_printenv 'dieid#' 2>/dev/null | sed "s/dieid#=//g" 2>/dev/null)
-[ "$VAL" ] && ok "$VAL" || nok "$VAL"
-
-testing "CPU-MPUrate" "mpurate reported by U-Boot"
-read VAL < <(fw_printenv 'mpurate' 2>/dev/null | sed "s/mpurate=//g" 2>/dev/null)
-[ "$VAL" ] && ok "$VAL MHz" || nok "$VAL"
-
-testing "U-Boot version" "Version string of U-Boot"
-VAL=$(strings /dev/mtd1ro | fgrep U-Boot | head -1 )
-# here we could test the U-Boot compilation date to be recent enough
-[ "$VAL" ] && ok "$VAL" || nok "$VAL"
-
-testing "USB-IP" "IP access through Ethernet over USB"
-read VAL < <(host www.goldelico.com | fgrep 'goldelico.com has address ' | sed "s/[.a-zA-Z]*goldelico\.com has address //g" 2>/dev/null)
-[ "$VAL" = "83.151.26.121" ] && ok "$VAL" || nok "$VAL"
-
-testing "Vibra" "running rumble effect demo"
-[ -r /dev/input/rumble ] && ./vibra.py && ok || nok
-
-testing "Sound" "enabling sound"
-killall -9 arecord aplay 2>/dev/null # stop any running audio forwarding (or amixer commands will fail)
-sleep 1
-amixer -q set "AVADC Clock Priority" "HiFi high priority" &&
-amixer -q set "DAC1 Analog" off &&
-amixer -q set "DAC2 Analog" on &&
-amixer -q set "DAC2 Analog" 5 &&	# so that total gain is < 1
-amixer -q set "Codec Operation Mode" "Option 2 (voice/audio)" &&
-amixer -q set Earpiece 100% &&
-amixer -q set "Earpiece Mixer AudioL2" on &&
-amixer -q set "Earpiece Mixer Voice" off &&
-amixer -q set "Analog" 5 &&
-amixer -q set TX1 "Analog" &&
-amixer -q set "TX1 Digital" 12 &&
-amixer -q set "Analog Left AUXL" nocap &&
-amixer -q set "Analog Right AUXR" nocap &&
-amixer -q set "Analog Left Main Mic" cap &&
-amixer -q set "Analog Left Headset Mic" nocap &&
-amixer -q set HandsfreeL on &&
-amixer -q set HandsfreeR on &&
-amixer -q set "HandsfreeL Mux" AudioL2 &&
-amixer -q set "HandsfreeR Mux" AudioR2 &&
-aplay -q /usr/share/sounds/alsa/Front_Center.wav &&
-ok || nok
-$OK && amixer -q set "Analog" 3 && (arecord | tee /tmp/echo.wav | aplay) >/dev/null 2>&1 &	# run sound echo
-
-testing "TVout" "enabling TVout"
-./tvout 1 2>/dev/null && ok || nok
-
-sleep 1	# do only shortly since TV-out disturbs the aux mic input
-
-testing "TVout-off" "switching back to LCD"
-./tvout 0 2>/dev/null && ok || nok
-
-testing "GTM601-USB" "check internal USB port"
-rfkill unblock wwan
-sleep 5
-if lsusb | fgrep '0af0:8800 Option' >/dev/null
-then # found
-	ok
-else
-	nok
-fi
-
-testing "GTM601-Device" "find out application port"
-for i in $(cd /sys/class/tty/ && echo ttyHS*)
-	do
-	T=
-	if [ "$(cat /sys/class/tty/$i/hsotype 2>/dev/null)" = Application ]
-	then
-		UMTSDEV="/dev/$i"
-		ok "$UMTSDEV"
-		break
+function report { # $1: result $2: test-name $3: values $4: message
+# echo "$2-$MODEL"
+	if [ "$1" == 0 ]
+	then # successful
+		SEQUENCE=$(expr $SEQUENCE + 1)
+		echo $SEQUENCE $2 ok $3 $4
+		return 0;
+	else # not successful - outcome depends on device/variant
+# this can be seen as a "database" which knows about hardware variations
+		case "$2-$MODEL" in
+			  test_lis302-*GTA04A3* \
+			| test_bno055-* \
+			| test_tca6507_*-*Pyra* \
+			| test_crtouch-*Pyra* \
+			| test_bmg160-*Pyra* \
+			| test_bmc150*-*Pyra* \
+			| test_eeprom_*-*Pyra* \
+			) # optional feature
+				SEQUENCE=$(expr $SEQUENCE + 1)
+				echo $SEQUENCE $2 nfnd $3 $4
+				return 1;
+				;;
+			  test_lis302-* \
+			| test_bmc150*-*GTA04A[2-4]* \
+			| test_bmg160*-*GTA04A[2-4]* \
+			| test_hmc5883-*GTA04A5* \
+			| test_itg3200-*GTA04A5* \
+			| test_tca6507_4-*GTA04* \
+			| test_is31fl31xx_*-*GTA04* \
+			| test_crtouch-*GTA04* \
+			| test_nub*-*GTA04* \
+			| test_keyboard-*GTA04* \
+			| test_eeprom_[234]-*GTA04* \
+			| test_wwan_usb_gemalto-*GTA04* \
+			| test_hmc5883-*Pyra* \
+			| test_itg3200-*Pyra* \
+			| test_camera-*Pyra* \
+			| test_si47xx-*Pyra* \
+			| test_tps61050-*Pyra* \
+			| test_wwan_usb_option-*Pyra* \
+			| test_leds_on-*Pyra* \
+			| test_rootfs-*Pyra* \
+			| test_uboot-*Pyra* \
+			) # known to be never available on these models
+				: no message about failure
+				return 0
+				;;
+			* ) # function is missing on device
+				SEQUENCE=$(expr $SEQUENCE + 1)
+				echo $SEQUENCE $2 nok $3 $4
+				ANYNOK=true
+				return 1
+				;;
+		esac
 	fi
-done
-nok
+}
 
-if $OK
+# low level tests
+
+function test_start {
+	report $? ${FUNCNAME} $(date)
+}
+
+function test_version {
+	report 0 ${FUNCNAME} "$TESTER_VERSION"
+}
+
+function test_kernel {
+	report 0 ${FUNCNAME} "$(uname -rv) - recommended minimum: $TESTER_RECOMMENDED_KERNEL"
+}
+
+function test_rootfs {
+	if fgrep -q 'root=/dev/mmcblk' /proc/cmdline
+	then report 0 ${FUNCNAME} "SD"
+	else report 0 ${FUNCNAME} "NAND/eMMC"
+	fi
+}
+
+function test_device_tree {
+	if [ -r /proc/device-tree ]
+	then report 0 ${FUNCNAME} "with DT"
+	else report 0 ${FUNCNAME} "without DT"
+	fi
+}
+
+function test_model {
+	report 0 ${FUNCNAME} "$MODEL" "Device-Tree-Model"
+}
+
+function test_test {
+	test_start
+	test_version
+	test_kernel
+	test_rootfs
+	test_device_tree
+	test_model
+}
+
+function test_leds_on {
+	# if GTA04
+	( echo 31 >/sys/class/leds/gta04:red:power/brightness &&
+	echo 255 >/sys/class/leds/gta04:green:power/brightness &&
+	echo 31 >/sys/class/leds/gta04:red:aux/brightness &&
+	echo 255 >/sys/class/leds/gta04:green:aux/brightness ) 2>/dev/null
+	report $? ${FUNCNAME} "" "enable LEDs"
+}
+
+function test_barometer {
+	# BMP085/180/280
+	BARO=$(findiio bmp085)
+	[ "$BARO" ] || BARO=$(findiio bmp180)
+	[ "$BARO" ] || BARO=$(findiio bmp280)
+	[ "$BARO" ] || BARO=$(findiio bme280)
+	PRESSURE=$(cat $BARO/in_pressure_input 2>/dev/null)
+	CENTIGRADE=$(cat $BARO/in_temp_input 2>/dev/null)
+	PRESSURE=$(echo | awk "{ printf \"%.0f\", 10.0 * ${PRESSURE:=0} }")
+	CENTIGRADE=$(echo | awk "{ printf \"%.0f\", ${CENTIGRADE:=0} / 1000 }")
+	[ "${PRESSURE:=-1}" -ge 850 -a "$PRESSURE" -le 1150 -a "${CENTIGRADE:=-1}" -ge 20 -a "$CENTIGRADE" -le 60 ]
+	report $? ${FUNCNAME} "${PRESSURE} mBar, ${CENTIGRADE} °C" "Barometer values"
+}
+
+function test_itg3200 {
+	GYRO=$(findiio itg3200)
+	[ "$GYRO" ] && echo 10 >$GYRO/sampling_frequency 2>/dev/null
+	sleep 0.1
+	X=$(cat $GYRO/in_anglvel_x_raw 2>/dev/null)
+	Y=$(cat $GYRO/in_anglvel_y_raw 2>/dev/null)
+	Z=$(cat $GYRO/in_anglvel_z_raw 2>/dev/null)
+	CENTIGRADE=$(echo | awk "{ printf \"%.0f\", ( $(cat $GYRO/in_temp_raw 2>/dev/null) + $(cat $GYRO/in_temp_offset 2>/dev/null) ) * $(cat $GYRO/in_temp_scale 2>/dev/null) * 10 }" 2>/dev/null)
+	G=$(expr ${X:=0} '*' ${X} + ${Y:=0} '*' ${Y} + ${Z:=0} '*' ${Z})
+	GMAX=$(expr 3 '*' 200 '*' 200)
+	CENTIGRADE=$(expr "${CENTIGRADE:=0}" / 10)
+	[ "$G" -le "$GMAX" -a "$G" -ge 0 -a "$CENTIGRADE" -ge 10 -a "$CENTIGRADE" -le 60 ]
+	report $? ${FUNCNAME} "$X, $Y, $Z, ${CENTIGRADE} °C" "Gyroscope values"
+}
+
+function test_bmg160 {
+	GYRO=$(findiio bmg160)
+	[ "$GYRO" ] && echo 100 >$GYRO/in_anglvel_sampling_frequency 2>/dev/null
+	sleep 0.1
+	X=$(cat $GYRO/in_anglvel_x_raw 2>/dev/null)
+	Y=$(cat $GYRO/in_anglvel_y_raw 2>/dev/null)
+	Z=$(cat $GYRO/in_anglvel_z_raw 2>/dev/null)
+	CENTIGRADE=$(echo | awk "{ printf \"%.0f\", ( $(cat $GYRO/in_temp_raw 2>/dev/null) + $(cat $GYRO/in_temp_offset 2>/dev/null) ) * $(cat $GYRO/in_temp_scale 2>/dev/null) * 10 }" 2>/dev/null)
+	G=$(expr ${X:=0} '*' ${X} + ${Y:=0} '*' ${Y} + ${Z:=0} '*' ${Z})
+	GMAX=$(expr 3 '*' 200 '*' 200)
+	CENTIGRADE=$(expr "${CENTIGRADE:=0}" / 10)
+	[ "$G" -le "$GMAX" -a "$G" -ge 0 -a "$CENTIGRADE" -ge 10 -a "$CENTIGRADE" -le 60 ]
+	report $? ${FUNCNAME} "$GYRO: $X, $Y, $Z, ${CENTIGRADE} °C" "Gyroscope values"
+}
+
+function test_gyroscope {
+	test_itg3200
+	test_bmg160
+}
+
+function test_bmc150 {
+	[ -r /dev/input/accel ] && read -t 1 X Y Z < <(echo $(evtest /dev/input/accel | head -19 | fgrep Value | sed 's/Value//g'))
+	G=$(expr ${X:=0} '*' ${X} + ${Y:=0} '*' ${Y} + ${Z:=0} '*' ${Z})
+	GMIN=$(expr 200 '*' 200)
+	GMAX=$(expr 300 '*' 300)
+	[ "$G" -le "$GMAX" -a "$G" -ge "$GMIN" ]
+	report $? ${FUNCNAME} "$X, $Y, $Z" "Accelerometer values"
+}
+
+function test_lis302 {
+	false
+	report $? ${FUNCNAME} "$X, $Y, $Z" "Accelerometer values"
+}
+
+function test_accelerometer {
+	test_bmc150
+	test_lis302
+}
+
+function test_hmc5883 {
+	COMPASS=$(findiio hmc5883l)
+	[ "$COMPASS" ] && echo 15 >$COMPASS/in_magn_sampling_frequency 2>/dev/null
+	sleep 1
+	X=$(cat $COMPASS/in_magn_x_raw 2>/dev/null)
+	Y=$(cat $COMPASS/in_magn_y_raw 2>/dev/null)
+	Z=$(cat $COMPASS/in_magn_z_raw 2>/dev/null)
+	[ "$X$Y$Z" ]
+	report $? ${FUNCNAME} "$COMPASS: $X, $Y, $Z" "Compass values"
+}
+
+function test_bmc150_compass {
+	COMPASS=$(findiio bmc150-compass)
+	[ "$COMPASS" ] && echo 15 >$COMPASS/in_magn_sampling_frequency 2>/dev/null
+	sleep 1
+	X=$(cat $COMPASS/in_magn_x_raw 2>/dev/null)
+	Y=$(cat $COMPASS/in_magn_y_raw 2>/dev/null)
+	Z=$(cat $COMPASS/in_magn_z_raw 2>/dev/null)
+	[ "$X$Y$Z" ]
+	report $? ${FUNCNAME} "$COMPASS: $X, $Y, $Z" "Compass values"
+}
+
+function test_compass {
+	test_hmc5883
+	test_bmc150_compass
+}
+
+function test_bno055 {
+	COMPASS=$(findiio bno055)
+	sleep 1
+	XA=$(cat $COMPASS/in_accel_x_raw 2>/dev/null)
+	YA=$(cat $COMPASS/in_accel_y_raw 2>/dev/null)
+	ZA=$(cat $COMPASS/in_accel_z_raw 2>/dev/null)
+	XG=$(cat $COMPASS/in_anglvel_x_raw 2>/dev/null)
+	YG=$(cat $COMPASS/in_anglvel_y_raw 2>/dev/null)
+	ZG=$(cat $COMPASS/in_anglvel_z_raw 2>/dev/null)
+	TEMP=$(cat $COMPASS/in_temp_input 2>/dev/null)
+	[ "$XA$YA$ZA$XG$YG$ZG$TEMP" ]
+	report $? ${FUNCNAME} "$XA, $YA, $ZA - $XG, $YG, ZG - $TEMP" "All values"
+}
+
+function test_sensors {
+	test_barometer
+	test_gyroscope
+	test_accelerometer
+	test_compass
+	test_bno055
+}
+
+function test_tsc2007 {
+	TSC=$(findiio tsc2007)
+	read VAL < <(sed "s/,/ /g" $TSC/in_pressure6_raw 2>/dev/null)
+	[ "$VAL" ]
+	report $? ${FUNCNAME} "$VAL" "Touch screen pressure"
+}
+
+function test_crtouch {
+	read VAL < <(sed "s/,/ /g" /sys/bus/i2c/devices/3-0049/values 2>/dev/null)
+	[ "$VAL" ]
+	report $? ${FUNCNAME} "$VAL" "Touch screen values"
+}
+
+function test_nub_left {
+	[ $(cat /sys/bus/i2c/drivers/as5013/1-0040/name 2>/dev/null) = "as5013" ]
+	report $? ${FUNCNAME} "" "Left Nub controller"
+}
+
+function test_nub_right {
+	[ $(cat /sys/bus/i2c/drivers/as5013/1-0041/name 2>/dev/null) = "as5013" ]
+	report $? ${FUNCNAME} "" "Right Nub controller"
+}
+
+function test_nubs {
+	test_nub_left
+	test_nub_right
+}
+
+function test_keyboard {
+	[ -r "/dev/input/keyboard" ]
+	report $? ${FUNCNAME} "" "Keyboard controller"
+}
+
+function test_inputs {
+	test_tsc2007
+	test_crtouch
+	test_nubs
+	test_keyboard
+}
+
+function test_camera {
+	[ -r "/dev/v4l-subdev8" ]
+	report $? ${FUNCNAME} "" "Camera device"
+}
+
+function test_tps61050 {
+	[ -r "/sys/bus/i2c/devices/1-0033" ]
+	report $? ${FUNCNAME} "" "Torch/Flash controller"
+}
+
+function test_eeprom { # $1: bus number
+	[ -r "/sys/bus/i2c/devices/$1-0050/eeprom" ]
+	report $? ${FUNCNAME}_$1 "$1-0050" "EEPROM on I2C$1"
+}
+
+function test_misc {
+	test_tps61050
+	test_eeprom 1
+	test_eeprom 2
+	test_eeprom 3
+	test_eeprom 4
+}
+
+function test_tca6507 { # $1: bus number
+	[ -r "/sys/bus/i2c/devices/$1-0045/leds" ]
+	report $? ${FUNCNAME}_$1 "$1-0064" "TCA6507 LED controller on I2C$1"
+}
+
+function test_is31fl31xx { # $1: bus number
+	[ -r "/sys/bus/i2c/devices/$1-0064/leds" ]
+	report $? ${FUNCNAME}_$1 "$1-0064" "IS31FL31xx LED controller on I2C$1"
+}
+
+function test_leds {
+	test_tca6507 1
+	test_is31fl31xx 3
+	test_tca6507 4
+	test_is31fl31xx 4
+}
+
+function test_power_twl4030 {
+	MADC=$(findiio "48070000.i2c:twl@48:madc")
+
+	if [ "$MADC" ]
 	then
-	testing "GTM601-IMEI" "read IMEI, Serial, versions etc."
-	(echo AT_OID; sleep 1) | ./femtocom "$UMTSDEV" | fgrep ':' >/tmp/$$.values
-	while read KEY VAL
-	do
-	case "$KEY" in
-		SN: )	read IMEI SN < <(echo "$VAL" | sed "s/,/ /g")
-			testing "GTM601-IMEI" "IMEI"
-			ok "$IMEI"
-			testing "GTM601-SN" "Serial Number"
-			ok "$SN"
+		VOLT=$(cat ${MADC}/in_voltage12_input 2>/dev/null)
+		[ "${VOLT:=-1}" -ge 3100 -a "$VOLT" -le 4300 ]
+		report $? ${FUNCNAME}_batt_volt "${VOLT} mV" "main battery voltage"
+
+		STATUS=$(cat /sys/class/power_supply/twl4030_usb/status 2>/dev/null)
+		[ "$STATUS" ]
+		report $? ${FUNCNAME}_batt_status "$STATUS" "main battery USB charging status"
+
+		TEMP=$(cat ${MADC}/in_temp1_input 2>/dev/null)
+		[ "${TEMP:=-1}" -ge 20 -a "$TEMP" -le 55 ]
+		report $? ${FUNCNAME}_batt_temp "${TEMP} °C" "main battery temperature (may not be real value if there is no NTC - and if not charging)"
+
+		TYPE=$(cat ${MADC}/in_voltage0_input 2>/dev/null)
+		[ "${TYPE:=-1}" ]
+		report $? ${FUNCNAME}_batt_type "$TYPE" "main battery identification"
+
+		VOLT=$(cat ${MADC}/in_voltage9_input 2>/dev/null)
+		[ "${VOLT:=-1}" -ge 200 -a "$VOLT" -le 3250 ]
+		report $? ${FUNCNAME}_batt_backup "${VOLT} mV" "backup battery voltage"
+
+		VOLT=$(cat /sys/class/power_supply/bq27000-battery/voltage_now 2>/dev/null)
+		VOLT=$(expr "${VOLT:=0}" / 1000)
+		[ "${VOLT:=-1}" -ge 3100 -a "$VOLT" -le 4300 ]
+		report $? ${FUNCNAME}_batt_hdq "${VOLT} mV" "main battery voltage (hdq)"
+	fi
+
+	VOLT=$(cat /sys/class/power_supply/generic-adc-batt/voltage_now 2>/dev/null)
+	VOLT=$(expr "${VOLT:=0}" / 1000)
+	[ "${VOLT:=-1}" -ge 3100 -a "$VOLT" -le 4300 ]
+	report $? ${FUNCNAME}_batt_volt "${VOLT} mV" "generic adc battery voltage"
+}
+
+function test_power {
+	test_power_twl4030
+}
+
+function test_memory {
+	read VAL < <(fgrep MemTotal /proc/meminfo | sed "s/MemTotal.*:/ /g" 2>/dev/null)
+	[ "$VAL" ]
+	report $? ${FUNCNAME}_cpu_memory "$VAL" "Memory size (/proc/meminfo)"
+
+	read MTD VAL OTHER < <(fgrep "File System" /proc/mtd)
+	[ "$VAL" ] && VAL=$(expr $(printf "%d\n" 0x$VAL) / 1000) kB
+	report $? ${FUNCNAME}_cpu_nand "$VAL" "NAND size (/proc/mtd)"
+}
+
+function test_cpu {
+	read VAL < <(fw_printenv 'dieid#' 2>/dev/null | sed "s/dieid#=//g" 2>/dev/null)
+	[ "$VAL" ]
+	report $? ${FUNCNAME}_cpuid "$VAL" "Die-ID stored in u-boot environment"
+
+	read VAL < <(fw_printenv 'mpurate' 2>/dev/null | sed "s/mpurate=//g" 2>/dev/null)
+	[ "$VAL" ]
+	report $? ${FUNCNAME}_mpurate "$VAL MHz" "mpurate reported by U-Boot)"
+}
+
+function test_gpu {
+	[ -r /proc/pvr/version ]
+	report $? ${FUNCNAME} "$(cat /proc/pvr/version 2>/dev/null)" "GPU device"
+}
+
+function test_uboot {
+	VAL=$(strings /dev/mtd1ro 2>/dev/null | fgrep U-Boot | head -1 )
+	# here we could test the U-Boot compilation date to be recent enough
+	[ "$VAL" ]
+	report $? ${FUNCNAME} "$VAL" "Version string of U-Boot in NAND"
+}
+
+function test_si47xx {
+	(cd /root && make si4721 >/dev/null 2>&1)
+VAL=$(echo $(/root/si4721 -d -up -dn))
+	case "$VAL" in
+		"init resp: 80 get_chiprev resp: 80 1532300000323042 powered off" | \
+		"init resp: 80 get_chiprev resp: 80 0532300000323042 powered off" )
+			true
 			;;
-		HWV: )	testing "GTM601-HWV" "Hardware Version"
-			ok "$VAL"
-			;;
-		FWV: )	testing "GTM601-FWV" "Firmware Version"
-			ok "$VAL"
-			;;
-		FBT: )	testing "GTM601-FBT" "Firmware Build Time"
-			ok "$(echo "$VAL" | sed 's/.*(Date: \(.*\), Time: \(.*\)).*/\1,\2/g')"
-			;;
-		PMN: )	testing "GTM601-PMN" "Product Name"
-			ok "$VAL"
+		* )
+			false
 			;;
 	esac
-	done </tmp/$$.values
-	nok
+	report $? ${FUNCNAME} "$VAL" "FM TRX"
+}
 
-	testing "GTM601-Wakeup" "check for 3G Wakeup through AT_ORESET"
-	for i in 1 2 3
-		do
-		if (echo AT_ORESET; sleep 15) | /root/femtocom "$UMTSDEV" >/dev/null | ( evtest /dev/input/incoming & sleep 15; kill $! ) | fgrep -e 'type 1 (Key), code 240 (Unknown), value 1' -e 'type 1 (EV_KEY), code 240 (KEY_UNKNOWN), value 1' 2>/dev/null 1>&2
-			then
-			ok "$LINE"
-			break
-		fi
-		done
-	nok
+function test_usb_ip {
+	read VAL < <(host www.goldelico.com | fgrep 'goldelico.com has address ' | sed "s/[.a-zA-Z]*goldelico\.com has address //g" 2>/dev/null)
+	[ "$VAL" = "83.151.26.121" ]
+	report $? ${FUNCNAME} "$VAL" "IP access through Ethernet over USB"
+}
 
-# known to fail on GTA04A3
+function test_vibra {
+	[ -r /dev/input/rumble ] && ./vibra.py
+	report $? ${FUNCNAME} "" "running rumble effect demo"
+}
 
-	testing "GTM601 power off" "check power off through rfkill block"
-	rfkill block wwan
-	sleep 8
-	if lsusb | fgrep '0af0:8800 Option' >/dev/null
-		then # still/again found
-	nok
-		else
-	ok
-	fi
-fi
+function test_sound {
+	test_si47xx
+	test_vibra
+	# test audio
+}
 
-# enable antenna power
-rfkill unblock gps
+function test_lcd {
+	false
+	report $? ${FUNCNAME} "" "LCD"
+}
 
-testing "W2SG0004" "UART2 and GPS receiver"
-for i in 1 2 3 4 5
-	do
-	if read -t 5 </dev/ttyO1 LINE && echo $LINE | fgrep '$GP
+function test_tvout {
+	. x >/dev/null
+	./tvout 1 2>/dev/null
+	report $? ${FUNCNAME} "" "enabling TVOut"
+}
+
+function test_tvout_off {
+	. x >/dev/null
+	./tvout 0 2>/dev/null
+	report $? ${FUNCNAME} "" "switching back to LCD"
+}
+
+function test_gps {
+	GPS=$(/root/gps-on 2>/dev/null)
+	report $? ${FUNCNAME}_interface "$GPS" "GPS interface"
+	read -t 5 <$GPS LINE && echo $LINE | fgrep '$GP
+$GNGNS
 $PSRF' >/dev/null
-	then
-		ok "$LINE"
-		break
-	fi
-	(
-		stty 9600
-		sleep 2
-		# check LNA state and voltage
-		cat /sys/bus/platform/devices/48070000.i2c:twl@48:regulator-vsim/regulator/regulator.*/state
-		cat /sys/bus/platform/devices/48070000.i2c:twl@48:regulator-vsim/regulator/regulator.*/microvolts
-	) </dev/ttyO1
-done
-nok
-
-VAUX4=$(findregulator "VAUX4")
-
-test_bluetooth_w2cbw003
-
-testing "W2CBW003-WLAN-libertas" "check if kernel did load libertas driver"
-rfkill unblock wifi
-( lsmod | fgrep libertas_sdio >/dev/null ) && ok || nok
-
-testing "W2CBW003-WLAN-IF" "find the interface"
-WLANIF=$(iwconfig 2>/dev/null | fgrep wlan | (read -t 5 IF X Y ESSID; echo $IF))	# WLAN should have been configured while bluetooth was starting; but iwconfig may block
-[ "$WLANIF" ] && ok "$WLANIF" || nok "$WLANIF"
-
-if $OK
-then # run additional WLAN tests
-	testing "W2CBW003-WLAN-IFUP" "check if ifup works"
-	ifconfig $WLANIF up && ok || nok
-	testing "W2CBW003-WLAN-MAC" "read MAC address"
-	WLANMAC=$(ifconfig $WLANIF | fgrep "HWaddr" | (read -t 5 IF L ENC HW MAC; echo $MAC))
-	[ "$WLANMAC" ] && ok "$WLANMAC" || nok "$WLANMAC"
-fi
-if $OK
-then # scan
-	testing "W2CBW003-WLAN-Scan" "scan for WLAN Base station"
-	for i in 1 2 3 4 5
-		do
-		BASE=$(iwlist $WLANIF scan | fgrep Address: | head -1 | sed 's/.*Address: \([0-9a-fA-F:]*\).*/\1/g')	# try to locate base station
-		if [ "$BASE" ]
-		then
-			ok $BASE	# found
-			break
-		fi
-	done
-	nok
-	testing "W2CBW003-WLAN-IFDOWN" "disable WLAN"
-	ifconfig $WLANIF down 2>/dev/null &&
-	ok || nok
-fi
-
-testing "VAUX4" "power off for WLAN"
-[ "$(cat $VAUX4/num_users)" = "0" ] && ok || nok
-
-testing "Tests-End" "Summary of all tests"
-$ANYNOK && nok "$(date)" || ok "$(date)"
-
+	report $? ${FUNCNAME} "$LINE" "GPS startup"
+	# check LNA state and voltage VSIM=$(findregulator "VSIM") on GTA04
 }
 
-function test_bluetooth_w2cbw003 {
-	killall -9 hciattach 2>/dev/null	# stop any running daemon
+function test_wwan_usb {
+	USB=$(lsusb | fgrep "0af0:8800 Option")
+	report $? ${FUNCNAME}_option "$USB" "OPTION modem"
+	USB=$(lsusb | fgrep "ID 1e2d:00")
+	report $? ${FUNCNAME}_gemalto "$USB" "GEMALTO modem"
+}
 
-	UART=/dev/ttyO0	# uart1
-	VAUX4=$(findregulator "VAUX4")
-	NUM_USERS=$(cat $VAUX4/num_users)
-
-#testing "VAUX4" "power on for Bluetooth"
-#[ "$(cat $VAUX4/num_users)" = "2" ] && ok || nok
-
-#testing "VAUX4" "power off for Bluetooth"
-#[ "$(cat $VAUX4/num_users)" = "1" ] && ok || nok
-
-
-	testing "W2CBW003-BT UART" "Bluetooth/WLAN power, UART1, Bluetooth and initial baudrate"
-	rfkill unblock bluetooth
-	for BTBAUD in 3000000 921600 115200
+function test_wwan_option {
+	# do subtests by sending AT commands
+	(cd /root && make femtocom >/dev/null 2>&1)
+	WWAN=$(/root/wwan-on 2>/dev/null)
+	(echo AT_OID; sleep 1) | ./femtocom "$WWAN" | fgrep ':' >/tmp/$$.values
+	cat /tmp/$$.values | while read KEY VAL
 		do
-		killall hciattach 2>/dev/null	# stop any running daemon
-		hciattach -s $BTBAUD $UART any $BTBAUD flow 2>/dev/null >&2	# start daemon at current speed
-#		[ "$(cat $VAUX4/state)" = "enabled" ] && ok || nok
-#		[ "$(cat $VAUX4/num_users)" = $(expr $NUM_USERS + 1) ] && ok || nok
-		sleep 2
-		if hciconfig hci0 up 2>/dev/null	# try to enable Bluetooth interface
-			then # successful at this speed
-			ok $BTBAUD
-			break
-		fi
-	done
-	nok
-
-	if $OK
-	then # run additional Bluetooth tests
-		if [ $BTBAUD != "3000000" ]
-			then	# not yet at 3 MBit/s - switch to 3 MBit/s
-			testing "W2CBW003-BT-Highspeed" "try to temporarily go up to 3 MBit/s"
-			bccmd -d hci0 psset baudrate 12288 2>/dev/null &&
-			bccmd -d hci0 warmreset 2>/dev/null &&	# temporarily go up to 3 MBit/s
-			killall hciattach 2>/dev/null
-			hciattach -s 3000000 $UART any 3000000 flow 2>/dev/null >&2 &&	# restart daemon at 3 MBit/s
-			hciconfig hci0 up 2>/dev/null &&
-			ok "3000000" || nok
-			if $OK
-				then
-				testing "W2CBW003-BT-Program" "try to program boot baudrate to 3 MBit/s"
-				bccmd -d hci0 psset -s 0x1 baudrate 12288	# reprogram the boot baudrate
-				ok "programmed" || nok "not programmed"
-			fi
-		fi
-		testing "W2CBW003-BT-BootBaud" "read boot baudrate"
-		read VAL < <(bccmd -d hci0 psget -s 0x1 baudrate 2>/dev/null | sed "s/UART Baud rate:.*(\(.*\))/\1/g")
-		VAL=$(expr "${VAL:=0}" '*' 1000000 / 4096)
-		[ "$VAL" -gt 0 ] && ok $VAL || nok $VAL
-		testing "W2CBW003-BT-MAC" "read MAC address"
-		BTMAC=$(hciconfig -a | fgrep 'BD Address' | cut -d ' ' -f 3-3)
-		[ "$BTMAC" ] && ok "$BTMAC" || nok "$BTMAC"
-	fi
-	if $OK
-	then # scan
-		testing "W2CBW003-BT-Scan" "scan for some Bluetooth Base station"
-		for i in 1 2 3 4 5
-			do
-			BASE=$(hcitool scan --info | fgrep 'BD Address' | head -1 | cut -f 2 | cut -d ' ' -f 1)	# try to locate base station
-			if [ "$BASE" ]
-			then
-				ok $BASE	# found
-				break
-			fi
+			case "$KEY" in
+				SN: )
+					read IMEI SN < <(echo "$VAL" | sed "s/,/ /g")
+					report 0 ${FUNCNAME}_imei "$VAL" "IMEI"
+					report 0 ${FUNCNAME}_serial "$SN" "Serial Number"
+					;;
+				HWV: )
+					report 0 ${FUNCNAME}_hwv "$VAL" "Hardware Version"
+					;;
+				FWV: )
+					report 0 ${FUNCNAME}_fwv "$VAL" "Firmware Version"
+					;;
+				FBT: )
+					report 0 ${FUNCNAME}_fbt "$VAL" "Firmware Build Time"
+					;;
+				PMN: )
+					report 0 ${FUNCNAME}_product_name "$VAL" "Product Name"
+					;;
+			esac
 		done
-		nok
+	#testing "GTM601-Wakeup" "check for 3G Wakeup through AT_ORESET"
+	for i in 1 2 3
+	do
+		if (echo AT_ORESET; sleep 15) | /root/femtocom "$WWAN" >/dev/null | ( evtest /dev/input/incoming & sleep 15; kill $! ) | fgrep -e 'type 1 (Key), code 240 (Unknown), value 1' -e 'type 1 (EV_KEY), code 240 (KEY_UNKNOWN), value 1' 2>/dev/null 1>&2
+		then
+			true
+			break
+		fi
+	done
+	report $? ${FUNCNAME}_3gwoe "$WWAN" "check for 3G Wakeup through AT_ORESET"
+}
+
+function test_wwan_gemalto {
+	(cd /root && make femtocom >/dev/null 2>&1)
+	WWAN=$(/root/wwan-on 2>/dev/null)
+# FIXME: send commands to read IMEI / SN
+	(echo ATI; sleep 1) | ./femtocom "$WWAN" | fgrep ':' >/tmp/$$.values
+	cat /tmp/$$.values | while read KEY VAL
+		do
+		case "$KEY" in
+			Cinterion )
+				report 0 ${FUNCNAME}_manufacturer "$KEY" "Serial Number"
+				;;
+			P*S* )
+				report 0 ${FUNCNAME}_product_name "$KEY" "Product Name"
+				;;
+			REVISION )
+				report 0 ${FUNCNAME}_revision "$VAL" "Revision"
+				;;
+		esac
+	done
+}
+
+function test_wwan_off {
+	# known to fail on GTA04A3
+	/root/wwan-off >/dev/null
+	report $? ${FUNCNAME}_off "$WWAN" "WWAN power off"
+	## check through lsusb if it is really off
+}
+
+function test_wwan {
+# check for USB presence of either OPTION or Gemalto
+	(cd /root && make femtocom >/dev/null 2>&1)
+	WWAN=$(/root/wwan-on 2>/dev/null)
+	R=$?
+	test_wwan_usb
+	report $R ${FUNCNAME}_interface "$WWAN" "WWAN interface"
+	if [ "$WWAN" ]
+	then # was turned on
+		case "$WWAN" in
+			/dev/ttyHS* ) # OPTION modem
+				test_wwan_option
+				;;
+			/dev/ttyACM* ) # GEMALTO modem
+				test_wwan_gemalto
+				;;
+		esac
 	fi
+	test_wwan_off
 }
 
-function test_bluetooth_tiwi {
-	# based on http://processors.wiki.ti.com/index.php/WL1835_Cape_on_BeagleBone_with_MainLine_Kernel_Debian_Filesystem#Starting_the_Bluetooth
-
-	# remove shared transport layer
-	modprobe -r st_drv
-
-	UART=/dev/ttyO1	# uart2
-	hciattach $UART texas 3000000 &
-
-	hciconfig hci0 up
-
-	bt-adapter –d
+function test_bluetooth {
+# test if it turns on VAUX4=$(findregulator "VAUX4") on GTA04A[2-4]
+	read -t 30 ADDR < <(/root/bt-scan 2>/dev/null | fgrep 'BD Address:' | sed "s/.*: *\([0-9a-fA-F:]*\).*/\1/g")
+	[ "$ADDR" ]
+	report $? ${FUNCNAME} "$ADDR" "Bluetooth scan"
 }
 
-function test_gta04 {
-	# call all gta04 tests
+function test_wlan {
+#testing "W2CBW003-WLAN-libertas" "check if kernel did load libertas driver"
+#rfkill unblock wifi
+#( lsmod | fgrep libertas_sdio >/dev/null ) && ok || nok
+
+#testing "W2CBW003-WLAN-IF" "find the interface"
+#WLANIF=$(iwconfig 2>/dev/null | fgrep wlan | (read -t 5 IF X Y ESSID; echo $IF))	# WLAN should have been configured while bluetooth was starting; but iwconfig may block
+#[ "$WLANIF" ] && ok "$WLANIF" || nok "$WLANIF"
+
+	read -t 30 ADDR < <(/root/wlan-scan 2>/dev/null)
+	[ "$ADDR" ]
+	report $? ${FUNCNAME} "$ADDR" "WLAN scan"
+
+#testing "W2CBW003-WLAN-IFDOWN" "disable WLAN"
+#ifconfig $WLANIF down 2>/dev/null &&
+
+}
+
+function test_all {
+	test_test
+	test_leds_on
+	test_sensors
+	test_inputs
+	test_camera
+	test_misc
+	test_leds
+	test_power
+	test_memory
+	test_cpu
+	test_gpu
+	test_uboot
+	test_usb_ip
+	test_lcd
+	test_tvout
+	sleep 1 # do only shortly since TV-out disturbs the aux mic input
+	test_tvout_off
+	test_sound
+	test_gps
 	test_wwan
-	test_wlan
 	test_bluetooth
-}
-
-function test_pyra {
-	# call all pyra tests
-	test_wwan
 	test_wlan
-	test_bluetooth
 }
-
-trap "killall -9 hciattach arecord aplay 2>/dev/null" EXIT
-trap "exit 1" SIGHUP SIGINT SIGTERM
-
-make femtocom si4721 >/dev/null
-
-# call e.g. as: testing "GTM601" "test if we can access"
-
-ANYNOK=false
 
 if [ "$1" = "-t" ]
 then
 	echo "known tests:"
 	declare -F | sed 's/declare -f //' | fgrep test_ | sed 's/test_//'
-	exit
+	exit 0
 fi
 
-TEST="$1"
-[ "$1" ] || TEST="all"
+TEST="$1"; [ "$1" ] || TEST="all"
 
 # run selected test function
-test_$TEST
+test_$TEST "$@"
 
 killall -9 arecord aplay 2>/dev/null # stop any running audio forwarding
 
+# show status through all colored LEDs
+(
 if $ANYNOK
 then # red
-	(
-	echo 255 >/sys/class/leds/gta04:red:power/brightness
-	echo 0 >/sys/class/leds/gta04:green:power/brightness
-	echo 255 >/sys/class/leds/gta04:red:aux/brightness
-	echo 0 >/sys/class/leds/gta04:green:aux/brightness
-	echo 255 >/sys/class/leds/gta04:left/brightness
-	echo 255 >/sys/class/leds/gta04:right/brightness
-	) 2>/dev/null
-else # green
-	(
-	echo 0 >/sys/class/leds/gta04:red:power/brightness
-	echo 255 >/sys/class/leds/gta04:green:power/brightness
-	echo 0 >/sys/class/leds/gta04:red:aux/brightness
-	echo 255 >/sys/class/leds/gta04:green:aux/brightness
-	echo 0 >/sys/class/leds/gta04:left/brightness
-	echo 0 >/sys/class/leds/gta04:right/brightness
-	) 2>/dev/null
+	report 1 "summary" "" "global test result"
+	ON=red
+	OFF=green
+else
+	report 0 "summary" "" "global test result"
+	ON=green
+	OFF=red
 fi
+for i in /sys/class/leds/*$ON*
+do
+	echo default-on >$i/trigger
+	echo 255 >$i/brightness
+done
+for i in /sys/class/leds/*$OFF*
+do
+	echo default-on >$i/trigger
+	echo 0 >$i/brightness
+done
+for i in /sys/class/leds/*blue*
+do
+	echo default-on >$i/trigger
+	echo 0 >$i/brightness
+done
+) 2>/dev/null
 
-sync	# so that we can safely switch off the device after test
+sync	# so that we can almost safely switch off the device after running the test
 
 $ANYNOK && exit 1 || exit 0

@@ -119,15 +119,6 @@
 		state-off = "internal";
 	};
 
-	/* don't match these drivers inherited from omap3-beagle-xm-ab.dts */
-	dvi0: connector@0 {
-		compatible = "dvi-connector-disabled";
-	};
-
-	tfp410: encoder@0 {
-		compatible = "ti,tfp410-disabled";
-	};
-
 	gps_en: w2sg0004 { /* presents a single gpio to be plumbed to uart2 dts */
 		compatible = "wi2wi,w2sg0004";
 		gpio-controller;
@@ -173,6 +164,18 @@
 		};
 	};
 };
+
+/* don't match these drivers inherited from omap3-beagle-xm-ab.dts */
+&dvi0 {
+	status = "disabled";
+	compatible = "dvi-connector-disabled";
+};
+
+&tfp410 {
+	status = "disabled";
+	compatible = "ti,tfp410-disabled";
+};
+
 
 &omap3_pmx_core {
 	pinctrl-names = "default";

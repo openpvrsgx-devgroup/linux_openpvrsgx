@@ -228,7 +228,9 @@ _CLANG	:= \
 ifeq ($(_CLANG),true)
 _CC		:= $(_CC) -target $(patsubst %-,%,$(CROSS_COMPILE))
 else
+ifeq (,$(findstring $(CROSS_COMPILE), $(_CC)))
 _CC		:= $(CROSS_COMPILE)$(_CC)
+endif
 endif
 HOST_CC	?= gcc
 

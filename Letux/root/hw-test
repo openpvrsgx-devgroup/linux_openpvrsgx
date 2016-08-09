@@ -78,6 +78,8 @@ function report { # $1: result $2: test-name $3: values $4: message
 			| test_rootfs-*Pyra* \
 			| test_uboot-*Pyra* \
 			| test_cpu_nand-*Pyra* \
+			| test_cpu_id-*Pyra* \
+			| test_cpu_mpurate-*Pyra* \
 			| test_twl4030*-*Pyra* \
 			) # known to be never available on these models
 				: no message about failure
@@ -401,7 +403,7 @@ function test_cpu {
 
 	read VAL < <(fw_printenv 'mpurate' 2>/dev/null | sed "s/mpurate=//g" 2>/dev/null)
 	[ "$VAL" ]
-	report $? ${FUNCNAME}_mpurate "$VAL MHz" "mpurate reported by U-Boot)"
+	report $? ${FUNCNAME}_mpurate "$VAL MHz" "mpurate reported by U-Boot"
 }
 
 function test_gpu {
@@ -434,7 +436,7 @@ VAL=$(echo $(/root/si4721 -d -up -dn))
 function test_usb_ip {
 	read VAL < <(host www.goldelico.com | fgrep 'goldelico.com has address ' | sed "s/[.a-zA-Z]*goldelico\.com has address //g" 2>/dev/null)
 	[ "$VAL" = "83.151.26.121" ]
-	report $? ${FUNCNAME} "$VAL" "IP access through Ethernet over USB"
+	report $? ${FUNCNAME} "$VAL" "global IP access through Ethernet over USB/WLAN"
 }
 
 function test_vibra {

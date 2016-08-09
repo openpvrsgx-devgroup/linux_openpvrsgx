@@ -224,7 +224,11 @@ override CXX := $(if $(V),,@)$(CCACHE) $(CXX) \
  -target $(patsubst %-,%,$(CROSS_COMPILE)) \
  -B$(dir $(shell which $(CROSS_COMPILE)gcc))
 else
+ifeq (,$(findstring $(CROSS_COMPILE), $(CC)))
 override CC  := $(if $(V),,@)$(CCACHE) $(CROSS_COMPILE)$(CC)
+else
+override CC  := $(if $(V),,@)$(CCACHE) $(CC)
+endif
 override CXX := $(if $(V),,@)$(CCACHE) $(CROSS_COMPILE)$(CXX)
 endif
 else

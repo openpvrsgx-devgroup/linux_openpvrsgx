@@ -8,7 +8,7 @@
 
 TESTER_VERSION="6.0"
 TESTER_RECOMMENDED_KERNEL="4.7"
-TESTER_DATE="07 Aug 2016"
+TESTER_DATE="10 Aug 2016"
 
 MODEL=$(cat /proc/device-tree/model 2>/dev/null)
 
@@ -27,6 +27,26 @@ for iiodev in /sys/bus/iio/devices/iio:device*
 do
 	if [ "$(cat $iiodev/name 2>/dev/null)" = "$1" ]
 		then echo $iiodev
+		break
+	fi
+done
+}
+
+function findhwmon {
+for dev in /sys/class/hwmon/hwmon*
+do
+	if [ "$(cat $dev/name 2>/dev/null)" = "$1" ]
+		then echo $dev
+		break
+	fi
+done
+}
+
+function findthermal {
+for dev in /sys/class/thermal/thermal_zone*
+	do
+	if [ "$(cat $dev/type 2>/dev/null)" = "$1" ]
+		then echo $dev
 		break
 	fi
 done
@@ -77,10 +97,10 @@ function report { # $1: result $2: test-name $3: values $4: message
 			| test_leds_on-*Pyra* \
 			| test_rootfs-*Pyra* \
 			| test_uboot-*Pyra* \
-			| test_cpu_nand-*Pyra* \
+			| test_memory_nand-*Pyra* \
 			| test_cpu_id-*Pyra* \
 			| test_cpu_mpurate-*Pyra* \
-			| test_twl4030*-*Pyra* \
+			| test_power_twl4030*-*Pyra* \
 			) # known to be never available on these models
 				: no message about failure
 				return 0
@@ -95,7 +115,13 @@ function report { # $1: result $2: test-name $3: values $4: message
 	fi
 }
 
-# low level tests
+function test_false {
+	report 1 ${FUNCNAME} "always fails"
+}
+
+function test_true {
+	report 0 ${FUNCNAME} "always succeeds"
+}
 
 function test_start {
 	report $? ${FUNCNAME} "$(date)"
@@ -127,7 +153,7 @@ function test_model {
 	report 0 ${FUNCNAME} "$MODEL" "Device-Tree-Model"
 }
 
-function test_test {
+function test_startup {
 	test_start
 	test_version
 	test_kernel
@@ -276,12 +302,12 @@ function test_crtouch {
 }
 
 function test_nub_left {
-	[ $(cat /sys/bus/i2c/drivers/as5013/1-0040/name 2>/dev/null) = "as5013" ]
+	[ "$(cat /sys/bus/i2c/drivers/as5013/1-0040/name 2>/dev/null)" = "as5013" ]
 	report $? ${FUNCNAME} "" "Left Nub controller"
 }
 
 function test_nub_right {
-	[ $(cat /sys/bus/i2c/drivers/as5013/1-0041/name 2>/dev/null) = "as5013" ]
+	[ "$(cat /sys/bus/i2c/drivers/as5013/1-0041/name 2>/dev/null)" = "as5013" ]
 	report $? ${FUNCNAME} "" "Right Nub controller"
 }
 
@@ -360,7 +386,7 @@ function test_power_twl4030 {
 	report $? ${FUNCNAME}_batt_temp "${TEMP} °C" "main battery temperature (may not be real value if there is no NTC - and if not charging)"
 
 	TYPE=$(cat ${MADC}/in_voltage0_input 2>/dev/null)
-	[ "${TYPE:=-1}" ]
+	[ "$TYPE" ]
 	report $? ${FUNCNAME}_batt_type "$TYPE" "main battery identification"
 
 	VOLT=$(cat ${MADC}/in_voltage9_input 2>/dev/null)
@@ -389,11 +415,11 @@ function test_power {
 function test_memory {
 	read VAL < <(fgrep MemTotal /proc/meminfo | sed "s/MemTotal.*:/ /g" 2>/dev/null)
 	[ "$VAL" ]
-	report $? ${FUNCNAME}_cpu_memory "$VAL" "Memory size (/proc/meminfo)"
+	report $? ${FUNCNAME}_ram "$VAL" "Memory size (/proc/meminfo)"
 
 	read MTD VAL OTHER < <(fgrep "File System" /proc/mtd)
 	[ "$VAL" ] && VAL=$(expr $(printf "%d\n" 0x$VAL) / 1000) kB
-	report $? ${FUNCNAME}_cpu_nand "$VAL" "NAND size (/proc/mtd)"
+	report $? ${FUNCNAME}_nand "$VAL" "NAND size (/proc/mtd)"
 }
 
 function test_cpu {
@@ -404,6 +430,12 @@ function test_cpu {
 	read VAL < <(fw_printenv 'mpurate' 2>/dev/null | sed "s/mpurate=//g" 2>/dev/null)
 	[ "$VAL" ]
 	report $? ${FUNCNAME}_mpurate "$VAL MHz" "mpurate reported by U-Boot"
+
+	CPU=$(findthermal cpu)
+	[ "$CPU" ] || CPU=$(findthermal cpu_thermal)
+	VAL=$(cat $CPU/temp 2>/dev/null)
+	[ "$VAL" ]
+	report $? ${FUNCNAME}_temperature "$(expr "${VAL:-0}" / 1000) °C" "cpu temperature"
 }
 
 function test_gpu {
@@ -452,7 +484,7 @@ function test_sound {
 
 function test_lcd {
 	false
-	report $? ${FUNCNAME} "" "LCD"
+	report $? ${FUNCNAME} "" "LCD [test not implemented]"
 }
 
 function test_tvout {
@@ -470,7 +502,7 @@ function test_tvout_off {
 function test_gps {
 	GPS=$(/root/gps-on 2>/dev/null)
 	report $? ${FUNCNAME}_interface "$GPS" "GPS interface"
-	read -t 5 <$GPS LINE && echo $LINE | fgrep '$GP
+	read -t 5 LINE <$GPS && echo $LINE | fgrep '$GP
 $GNGNS
 $PSRF' >/dev/null
 	report $? ${FUNCNAME} "$LINE" "GPS startup"
@@ -523,9 +555,19 @@ function test_wwan_option {
 	report $? ${FUNCNAME}_3gwoe "$WWAN" "check for 3G Wakeup through AT_ORESET"
 }
 
+function test_wwan_hwmon { # $1: on/off
+	INA231=$(findhwmon ina231)
+	[ "$INA231" ] && LINE="VSYS=$(cat $INA231/in1_input) mV Imodem=$(cat $INA231/curr1_input) mA Pmodem=$(cat $INA231/power1_input) uW Vmodem=$(cat $INA231/in0_input) mV"
+	[ "$INA231" ]
+	report $? ${FUNCNAME}_$1 "$LINE" "Modem hardware monitor status"
+}
+
 function test_wwan_gemalto {
 	(cd /root && make femtocom >/dev/null 2>&1)
 	WWAN=$(/root/wwan-on 2>/dev/null)
+
+	test_wwan_hwmon on
+
 	(echo AT+CGMI; sleep 0.2
 	 echo AT+CGMM; sleep 0.2
 	 echo AT+CGMR; sleep 0.2
@@ -560,8 +602,13 @@ function test_wwan_gemalto {
 function test_wwan_off {
 	# known to fail on GTA04A3
 	/root/wwan-off >/dev/null
-	report $? ${FUNCNAME}_off "$WWAN" "WWAN power off"
+	report $? ${FUNCNAME} "$WWAN" "WWAN power off"
 	## check through lsusb if it is really off
+	USB=$(lsusb | fgrep "0af0:8800 Option")
+	[ "$USB" ] && report 1 ${FUNCNAME}_option "$USB" "still found OPTION modem"
+	USB=$(lsusb | fgrep "ID 1e2d:00")
+	[ "$USB" ] && report 1 ${FUNCNAME}_gemalto "$USB" "still found GEMALTO modem"
+	test_wwan_hwmon off
 }
 
 function test_wwan {
@@ -611,7 +658,7 @@ function test_wlan {
 }
 
 function test_all {
-	test_test
+	test_startup
 	test_leds_on
 	test_sensors
 	test_inputs
@@ -643,6 +690,7 @@ then
 fi
 
 TEST="$1"; [ "$1" ] || TEST="all"
+TEST=$(echo "$TEST" | sed 's|test_||') # strip off test_ if already given
 
 # run selected test function
 test_$TEST "$@"

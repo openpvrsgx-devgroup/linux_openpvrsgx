@@ -422,6 +422,21 @@ function test_memory {
 	report $? ${FUNCNAME}_nand "$VAL" "NAND size (/proc/mtd)"
 }
 
+function test_cpu_frequency {
+	FREQ=$(cpufreq-info | fgrep 'current CPU frequency is 1000 MHz' | sed 's|current CPU frequency is \(.*\) (asserted by call to hardware).|\1|' 2>/dev/null)
+	FREQ=$(echo $FREQ)	# make single line
+	[ "$FREQ" ]
+	report $? ${FUNCNAME} "$FREQ" "cpu clock frequency(ies)"
+}
+
+function test_cpu_temperature {
+	CPU=$(findthermal cpu)
+	[ "$CPU" ] || CPU=$(findthermal cpu_thermal)
+	VAL=$(cat $CPU/temp 2>/dev/null)
+	[ "$VAL" ]
+	report $? ${FUNCNAME} "$(expr "${VAL:-0}" / 1000) °C" "cpu temperature"
+}
+
 function test_cpu {
 	read VAL < <(fw_printenv 'dieid#' 2>/dev/null | sed "s/dieid#=//g" 2>/dev/null)
 	[ "$VAL" ]
@@ -431,11 +446,8 @@ function test_cpu {
 	[ "$VAL" ]
 	report $? ${FUNCNAME}_mpurate "$VAL MHz" "mpurate reported by U-Boot"
 
-	CPU=$(findthermal cpu)
-	[ "$CPU" ] || CPU=$(findthermal cpu_thermal)
-	VAL=$(cat $CPU/temp 2>/dev/null)
-	[ "$VAL" ]
-	report $? ${FUNCNAME}_temperature "$(expr "${VAL:-0}" / 1000) °C" "cpu temperature"
+	test_cpu_frequency
+	test_cpu_temperature
 }
 
 function test_gpu {

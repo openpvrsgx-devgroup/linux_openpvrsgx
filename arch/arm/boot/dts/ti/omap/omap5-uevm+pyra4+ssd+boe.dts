@@ -1,0 +1,44 @@
+/*
+ * Copyright (C) 2014 OpenPandora - http://www.pyra-handheld.com/
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+/* we start with the omap5-pyra tree with BOE panel
+   and "insert" the ssd2858 into the video stream by
+   overwriting the DT nodes */
+
+#include "omap5-uevm+pyra4+boe.dts"
+
+/ {
+	ssd: encoder {
+		compatible = "solomon-systech,ssd2858";
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			port@0 {
+				reg = <0>;
+				ssd_in: endpoint@0 {
+					remote-endpoint = <&dsi1_out_ep>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				ssd_out: endpoint@0 {
+					remote-endpoint = <&lcd_in>;
+				};
+			};
+		};
+	};
+};
+
+&lcd_in {
+	remote-endpoint = <&ssd_out>;
+};
+
+&dsi1_out_ep {
+	remote-endpoint = <&ssd_in>;
+};

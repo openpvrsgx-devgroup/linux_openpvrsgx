@@ -1,0 +1,99 @@
+/*
+ * We have a broken OMAP5432EVM where I2C2_SCL output is damaged
+ * Therefore we rewire some gpio to I2C2_SCL and switch I2C2_SDA to GPIO mode as well
+ * And we drive the "new" i2c2 in bitbang mode
+ * Update: now, I2C2_SDA is also broken
+ */
+
+#include "omap5-uevm+pyra4.dts"
+
+/ {
+	model = "Pyra-Handheld with broken I2C2";
+};
+
+/* make I2C2 bitbanged */
+
+&i2c2 {
+	compatible = "i2c-gpio";
+	gpios = <&gpio5 11 0 /* sda => gpio5_139 */
+		 &gpio5 10 0 /* scl => gpio5_138 */
+	>;
+};
+
+&i2c2_pins {
+	pinctrl-single,pins = <
+		OMAP5_IOPAD(0x1b8, PIN_INPUT_PULLUP | MUX_MODE6)		/* i2c2_scl as gpio5_138 */
+		OMAP5_IOPAD(0x1ba, PIN_INPUT_PULLUP | MUX_MODE6)		/* i2c2_sda as gpio5_139 */
+	>;
+};
+
+/* reconnect broken i2c2_scl to gpio2_33 on the reparied OMAP5432EVM */
+
+&i2c2 {
+	gpios = <&gpio5 11 0 /* sda => gpio5_139 */
+		 &gpio2 1 0 /* scl => gpio2_33 */
+	>;
+};
+
+&i2c2_pins {
+	pinctrl-single,pins = <
+		OMAP5_IOPAD(0x054, PIN_INPUT_PULLUP | MUX_MODE6)		/* c2c_clkout0 as gpio2_33 */
+		OMAP5_IOPAD(0x1b8, PIN_INPUT_PULLUP | MUX_MODE7)		/* i2c2_scl as safe mode */
+		OMAP5_IOPAD(0x1ba, PIN_INPUT_PULLUP | MUX_MODE6)		/* i2c2_sda as gpio5_139 */
+	>;
+};
+
+/* reconnect broken i2c2_sda to gpio2_34 on the reparied OMAP5432EVM */
+
+&i2c2 {
+	gpios = <&gpio2 2 0 /* sda => gpio2_34 */
+		 &gpio2 1 0 /* scl => gpio2_33 */
+	>;
+};
+
+&i2c2_pins {
+	pinctrl-single,pins = <
+		OMAP5_IOPAD(0x054, PIN_INPUT_PULLUP | MUX_MODE6)		/* c2c_clkout0 as gpio2_33 */
+		OMAP5_IOPAD(0x056, PIN_INPUT_PULLUP | MUX_MODE6)		/* c2c_clkout1 as gpio2_34 */
+		OMAP5_IOPAD(0x1b8, PIN_INPUT_PULLUP | MUX_MODE7)		/* i2c2_scl as safe mode */
+		OMAP5_IOPAD(0x1ba, PIN_INPUT_PULLUP | MUX_MODE7)		/* i2c2_sda as safe mode */
+	>;
+};
+
+#if 0	/* the old V3 display adapter has the TSC connected to i2c2 */
+
+&i2c2 {
+	/* touchscreen */
+	tsc2007-2@48 {
+		compatible = "ti,tsc2007";
+		reg = <0x48>;
+		pinctrl-names = "default";
+/* FIXME:		pinctrl-0 = <&penirq_pins>; */
+		interrupt-parent = <&gpio6>;
+		interrupts = <13 IRQ_TYPE_EDGE_FALLING>;	/* gpio6_173 falling edge */
+		gpios = <&gpio6 13 GPIO_ACTIVE_LOW>;	/* gpio6_173 active low */
+/* note: overwrite for rotated screen */
+		touchscreen-size-x = <720>;
+		touchscreen-size-y = <1280>;
+		touchscreen-max-pressure = <1000>;
+		touchscreen-fuzz-x = <2>;
+		touchscreen-fuzz-y = <5>;
+		touchscreen-fuzz-pressure = <50>;
+		touchscreen-inverted-y;
+		ti,min-x = <160>;
+		ti,max-x = <3850>;
+		ti,min-y = <100>;
+		ti,max-y = <3950>;
+		ti,max-rt = <2000>;
+		ti,x-plate-ohms = <550>;
+	};
+};
+
+&i2c4 {
+	/* touchscreen */
+	tsc2007@48 {
+		status = "disabled";
+	};
+};
+
+#endif

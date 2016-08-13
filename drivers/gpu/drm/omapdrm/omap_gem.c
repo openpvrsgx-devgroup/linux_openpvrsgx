@@ -1083,6 +1083,11 @@ void *omap_gem_vaddr(struct drm_gem_object *obj)
 	mutex_lock(&omap_obj->lock);
 
 	if (!omap_obj->vaddr) {
+		if (omap_obj->flags & OMAP_BO_TILED) {
+			// FIXME to avoid contiguous mapping?
+			vaddr = ioremap(omap_obj->dma_addr, obj->size);
+			goto unlock;
+		}
 		ret = omap_gem_attach_pages(obj);
 		if (ret) {
 			vaddr = ERR_PTR(ret);
@@ -1233,6 +1238,8 @@ static void omap_gem_free_object(struct drm_gem_object *obj)
 	if (omap_obj->flags & OMAP_BO_MEM_DMA_API) {
 		dma_free_wc(dev->dev, obj->size, omap_obj->vaddr,
 			    omap_obj->dma_addr);
+	} else if (omap_obj->flags & OMAP_BO_TILED) {
+		iounmap(omap_obj->vaddr);
 	} else if (omap_obj->vaddr) {
 		vunmap(omap_obj->vaddr);
 	} else if (obj->import_attach) {

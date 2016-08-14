@@ -65,20 +65,23 @@ function report { # $1: result $2: test-name $3: values $4: message
 # this can be seen as a "database" which knows about hardware variations
 		case "$2-$MODEL" in
 			  test_lis302-*GTA04A3* \
-			| test_bno055-* \
+			| test_bno055-*GTA04A5* \
+			| test_bno055-*Pyra* \
 			| test_tca6507_*-*Pyra* \
 			| test_crtouch-*Pyra* \
 			| test_bmg160-*Pyra* \
 			| test_bmc150*-*Pyra* \
 			| test_eeprom_*-*Pyra* \
+			| test_camera-*GTA04* \
 			) # optional feature
 				SEQUENCE=$(expr $SEQUENCE + 1)
 				echo $SEQUENCE $2 nfnd $3 $4
 				return 1;
 				;;
 			  test_lis302-* \
-			| test_bmc150*-*GTA04A[2-4]* \
-			| test_bmg160*-*GTA04A[2-4]* \
+			| test_bno055-* \
+			| test_bmc150*-*GTA04[Ab2-4]* \
+			| test_bmg160*-*GTA04[Ab2-4]* \
 			| test_hmc5883-*GTA04A5* \
 			| test_itg3200-*GTA04A5* \
 			| test_tca6507_[0234]-*GTA04* \
@@ -86,8 +89,10 @@ function report { # $1: result $2: test-name $3: values $4: message
 			| test_crtouch-*GTA04* \
 			| test_nub*-*GTA04* \
 			| test_keyboard-*GTA04* \
-			| test_eeprom_[234]-*GTA04* \
+			| test_eeprom_[0234]-*GTA04* \
 			| test_wwan_usb_gemalto-*GTA04* \
+			| test_wwan_hwmon_off-*GTA04* \
+			| test_power_twl4030_batt_hdq-*GTA04b* \
 			| test_hmc5883-*Pyra* \
 			| test_itg3200-*Pyra* \
 			| test_camera-*Pyra* \
@@ -335,7 +340,7 @@ function test_camera {
 
 function test_tps61050 {
 	[ -r "/sys/bus/i2c/devices/1-0033" ]
-	report $? ${FUNCNAME} "" "Torch/Flash controller"
+	report $? ${FUNCNAME} "" "Torch/Flash controller [no kernel driver]"
 }
 
 function test_eeprom { # $1: bus number
@@ -373,38 +378,34 @@ function test_power_twl4030 {
 	MADC=$(findiio "48070000.i2c:twl@48:madc")
 
 	VOLT=$(cat ${MADC}/in_voltage12_input 2>/dev/null)
-	VOLT=$(expr "${VOLT:=0}" / 1000)
 	[ "${VOLT:=-1}" -ge 3100 -a "$VOLT" -le 4300 ]
 	report $? ${FUNCNAME}_batt_volt "${VOLT} mV" "main battery voltage"
 
 	STATUS=$(cat /sys/class/power_supply/twl4030_usb/status 2>/dev/null)
 	[ "$STATUS" ]
-	report $? ${FUNCNAME}_batt_status "$STATUS" "main battery USB charging status"
+	report $? ${FUNCNAME}_batt_status "$STATUS" "USB charging status"
 
 	TEMP=$(cat ${MADC}/in_temp1_input 2>/dev/null)
 	[ "${TEMP:=-1}" -ge 20 -a "$TEMP" -le 55 ]
-	report $? ${FUNCNAME}_batt_temp "${TEMP} °C" "main battery temperature (may not be real value if there is no NTC - and if not charging)"
+	report $? ${FUNCNAME}_batt_temp "${TEMP} °C" "battery temperature [may not be real value if there is no NTC and if not charging]"
 
 	TYPE=$(cat ${MADC}/in_voltage0_input 2>/dev/null)
 	[ "$TYPE" ]
-	report $? ${FUNCNAME}_batt_type "$TYPE" "main battery identification"
+	report $? ${FUNCNAME}_batt_type "$TYPE" "battery identification"
 
 	VOLT=$(cat ${MADC}/in_voltage9_input 2>/dev/null)
-	VOLT=$(expr "${VOLT:=0}" / 1000)
 	[ "${VOLT:=-1}" -ge 200 -a "$VOLT" -le 3250 ]
 	report $? ${FUNCNAME}_batt_backup "${VOLT} mV" "backup battery voltage"
 
 	VOLT=$(cat /sys/class/power_supply/bq27000-battery/voltage_now 2>/dev/null)
-	VOLT=$(expr "${VOLT:=0}" / 1000)
 	[ "${VOLT:=-1}" -ge 3100 -a "$VOLT" -le 4300 ]
-	report $? ${FUNCNAME}_batt_hdq "${VOLT} mV" "main battery voltage (hdq)"
+	report $? ${FUNCNAME}_batt_hdq "${VOLT} mV" "main battery voltage [hdq]"
 }
 
 function test_power_generic {
 	VOLT=$(cat /sys/class/power_supply/generic-adc-batt/voltage_now 2>/dev/null)
-	VOLT=$(expr "${VOLT:=0}" / 1000)
 	[ "${VOLT:=-1}" -ge 3100 -a "$VOLT" -le 4300 ]
-	report $? ${FUNCNAME}_batt_volt "${VOLT} mV" "generic adc battery voltage"
+	report $? ${FUNCNAME}_batt_volt "${VOLT} mV" "generic adc battery voltage [broken driver]"
 }
 
 function test_power {
@@ -418,12 +419,12 @@ function test_memory {
 	report $? ${FUNCNAME}_ram "$VAL" "Memory size (/proc/meminfo)"
 
 	read MTD VAL OTHER < <(fgrep "File System" /proc/mtd)
-	[ "$VAL" ] && VAL=$(expr $(printf "%d\n" 0x$VAL) / 1000) kB
+	[ "$VAL" ] && VAL="$(expr $(printf "%d\n" 0x$VAL) / 1000) kB"
 	report $? ${FUNCNAME}_nand "$VAL" "NAND size (/proc/mtd)"
 }
 
 function test_cpu_frequency {
-	FREQ=$(cpufreq-info | fgrep 'current CPU frequency is 1000 MHz' | sed 's|current CPU frequency is \(.*\) (asserted by call to hardware).|\1|' 2>/dev/null)
+	FREQ=$(cpufreq-info | fgrep 'current CPU frequency is ' | sed 's|current CPU frequency is \(.*\) (asserted by call to hardware).|\1|' 2>/dev/null)
 	FREQ=$(echo $FREQ)	# make single line
 	[ "$FREQ" ]
 	report $? ${FUNCNAME} "$FREQ" "cpu clock frequency(ies)"
@@ -452,7 +453,7 @@ function test_cpu {
 
 function test_gpu {
 	[ -r /proc/pvr/version ]
-	report $? ${FUNCNAME} "$(cat /proc/pvr/version 2>/dev/null)" "GPU device"
+	report $? ${FUNCNAME} "$(cat /proc/pvr/version 2>/dev/null)" "GPU device [no kernel driver]"
 }
 
 function test_uboot {

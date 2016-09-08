@@ -3,14 +3,20 @@
 # see also http://projects.goldelico.com/p/gta04-kernel/page/Camera/
 #
 
+PATH=$PATH:/usr/bin/arm-linux-gnueabihf
+
 make capture
 
+[ "$(which media-ctl)" ] || apt-get install -y v4l-utils
+
 case "$(uname -r)" in
+
+DEVICE=unknown
 
 2.6.* )
 	export DEVICE=/dev/video0
 	;;
-3.* )
+[34].* )
 #	media-ctl -r -l '"ov9655 2-0030":0->"OMAP3 ISP CCDC":0[1], "OMAP3 ISP CCDC":2->"OMAP3 ISP preview":0[1], "OMAP3 ISP preview":1->"OMAP3 ISP resizer":0[1], "OMAP3 ISP resizer":1->"OMAP3 ISP resizer output":0[1]'
 #	media-ctl -V '"ov9655 2-0030":0 [SGRBG10 1280x1024], "OMAP3 ISP CCDC":2 [SGRBG10 1280x1024], "OMAP3 ISP preview":1 [UYVY 1280x1024], "OMAP3 ISP resizer":1 [UYVY 1024x768]'
 #	export DEVICE=/dev/video6
@@ -22,5 +28,5 @@ case "$(uname -r)" in
 	;;
 esac
 
-echo "### capturing $DEVICE to snapshot.jpg ###"
-./capture -d $DEVICE
+echo "### capturing $DEVICE ###"
+./capture -d $DEVICE # -o snapshot.jpg

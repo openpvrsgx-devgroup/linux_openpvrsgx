@@ -13,13 +13,18 @@
 # Unfortunately there is no good documentation. Except the kernel and media-ctl sources.
 # So be prepared for a lot of trial-and-error if you want to improve anything.
 #
+# for recent kernels we need a modern media-ctl found in the v4l-utils package
+# or built from source: https://git.linuxtv.org/v4l-utils.git
 
-[ "$(which media-ctl)" ] || apt-get install -y media-ctl
+PATH=$PATH:/usr/bin/arm-linux-gnueabihf
+
+# [ "$(which media-ctl)" ] || apt-get install -y media-ctl
+[ "$(which media-ctl)" ] || apt-get install -y v4l-utils
 [ "$(which mplayer)" ] || apt-get install -y mplayer
 
 MODE=$1; [ "$MODE" ] || MODE=sxga
 
-export XAUTHORITY=/.Xauthority
+. /root/x
 
 echo "### starting mplayer in $MODE mode ###"
 case "$MODE" in

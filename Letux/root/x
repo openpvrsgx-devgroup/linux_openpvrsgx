@@ -12,7 +12,7 @@
 
 # root      3008  3007  0 12:38 tty2     00:00:01 /usr/bin/X :7 -auth /tmp/serverauth.YPgDh8JPcm
 
-read REPLY REPLY REPLY REPLY REPLY REPLY REPLY REPLY DISPLAY REPLY XAUTHORITY REPLY < <(ps -ef | grep /usr/bin/X | grep -v grep)
+read REPLY REPLY REPLY REPLY REPLY REPLY REPLY REPLY DISPLAY REPLY XAUTHORITY REPLY < <(ps -ef | grep "/usr/bin/X\|/opt/X11/bin/Xquartz" | grep -v -- "--" | grep -v grep)
 
 export DISPLAY XAUTHORITY
 

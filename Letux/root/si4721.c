@@ -74,9 +74,18 @@ void setprop(int number, int value)	// should be u16...
 
 void usage(char **argv)
 {
-	fprintf(stderr,"Usage: %s [-i /dev/i2c-X] [-d] { -up | -dn | -t freq-in-10khz | -r srate | -ts | -s }\n");
+	fprintf(stderr,"Usage: %s [-i /dev/i2c-X] [-d] { -up | -t freq-in-10khz | -r srate | -ts | -s | -rds | -dn }\n",argv[0]);
 	fprintf(stderr," e.g.: %s -i /dev/i2c-2 -up -t 9380 for 93800khz\n",argv[0]);
 	fprintf(stderr,"   or: %s -dn to power off\n",argv[0]);
+	fprintf(stderr,"      -i choose i2c device\n");
+	fprintf(stderr,"      -d debug\n");
+	fprintf(stderr,"      -up power on and chip revision\n");
+	fprintf(stderr,"      -dn power off\n");
+	fprintf(stderr,"      -t tune to given frequency\n");
+	fprintf(stderr,"      -r specify sample rate\n");
+	fprintf(stderr,"      -ts report tune status\n");
+	fprintf(stderr,"      -s report signal status\n");
+	fprintf(stderr,"      -rds report RDS status\n");
 	exit(1);
 	}
 

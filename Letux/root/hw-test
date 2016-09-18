@@ -515,7 +515,7 @@ function test_tvout_off {
 function test_gps {
 	GPS=$(/root/gps-on 2>/dev/null)
 	report $? ${FUNCNAME}_interface "$GPS" "GPS interface"
-	read -t 5 LINE <$GPS && echo $LINE | fgrep '$GP
+	[ "$GPS" ] && read -t 5 LINE <$GPS && echo $LINE | fgrep '$GP
 $GNGNS
 $PSRF' >/dev/null
 	report $? ${FUNCNAME} "$LINE" "GPS startup"

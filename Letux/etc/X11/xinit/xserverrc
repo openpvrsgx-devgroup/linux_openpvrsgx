@@ -29,7 +29,7 @@ case "$(cat /proc/device-tree/model 2>/dev/null)" in
 		PANEL=3.0-800x480;;	# Neo900
 	*'GTA04 b8'* )
 		PANEL=2.0-320x320;;	# Letux 2204
-	*PandaBoard* )
+	*PandaBoard* |	*OMAP5*uEVM* )
 		PANEL=none;;
 	*Pyra-Handheld* )
 		(

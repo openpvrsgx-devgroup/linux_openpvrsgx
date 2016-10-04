@@ -5,7 +5,12 @@
 # usage: gps-on
 #
 
-## FIXME: we should not turn on wwan for GPS on GTA04
+case "$(cat /sys/firmware/devicetree/base/model)" in
+	*GTA04*/Letux* )
+		echo /dev/ttyO1
+		exit
+		;;
+esac
 
 IF="$(/root/wwan-on)"
 

@@ -398,6 +398,7 @@ function test_power_twl4030 {
 	report $? ${FUNCNAME}_batt_backup "${VOLT} mV" "backup battery voltage"
 
 	VOLT=$(cat /sys/class/power_supply/bq27000-battery/voltage_now 2>/dev/null)
+	VOLT="$(expr "${VOLT:-0}" / 1000)"
 	[ "${VOLT:=-1}" -ge 3100 -a "$VOLT" -le 4300 ]
 	report $? ${FUNCNAME}_batt_hdq "${VOLT} mV" "main battery voltage [hdq]"
 }

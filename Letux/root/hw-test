@@ -71,6 +71,8 @@ function report { # $1: result $2: test-name $3: values $4: message
 			| test_crtouch-*Pyra* \
 			| test_bmg160-*Pyra* \
 			| test_bmc150*-*Pyra* \
+			| test_bmg160-*GTA04A5* \
+			| test_bmc150*-*GTA04A5* \
 			| test_eeprom_*-*Pyra* \
 			| test_camera-*GTA04* \
 			) # optional feature
@@ -256,7 +258,7 @@ function test_hmc5883 {
 }
 
 function test_bmc150_compass {
-	COMPASS=$(findiio bmc150-compass)
+	COMPASS=$(findiio bmc150_magn)
 	[ "$COMPASS" ] && echo 15 >$COMPASS/in_magn_sampling_frequency 2>/dev/null
 	sleep 1
 	X=$(cat $COMPASS/in_magn_x_raw 2>/dev/null)
@@ -466,7 +468,7 @@ function test_uboot {
 
 function test_si47xx {
 	(cd /root && make si4721 >/dev/null 2>&1)
-VAL=$(echo $(/root/si4721 -d -up -dn))
+	VAL=$(echo $(/root/si4721 -d -up -dn))
 	case "$VAL" in
 		"init resp: 80 get_chiprev resp: 80 1532300000323042 powered off" | \
 		"init resp: 80 get_chiprev resp: 80 0532300000323042 powered off" )

@@ -709,7 +709,16 @@ TEST="$1"; [ "$1" ] || TEST="all"
 TEST=$(echo "$TEST" | sed 's|test_||') # strip off test_ if already given
 
 # run selected test function
-test_$TEST "$@"
+
+if [ "$(type -t test_$TEST)" == "function" ]
+then
+	test_$TEST "$@"
+else
+	echo "Test not recognised: $TEST"
+	# could check for similar names and report "did you mean ..."
+	echo "known tests:" $(declare -F | sed 's/declare -f //' | fgrep test_ | sed 's/test_//')
+	exit 1
+fi
 
 killall -9 arecord aplay 2>/dev/null # stop any running audio forwarding
 

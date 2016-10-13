@@ -415,6 +415,7 @@ include ../kernel_version.mk
 PVRSRV_MODULE_BASEDIR ?= /lib/modules/$(KERNEL_ID)/extra/
 $(eval $(call KernelConfigMake,KERNELDIR,$(KERNELDIR)))
 # Needed only by install script
+$(eval $(call KernelConfigMake,KERNEL_ID,$(KERNEL_ID)))
 $(eval $(call KernelConfigMake,KERNEL_COMPONENTS,$(KERNEL_COMPONENTS)))
 $(eval $(call TunableKernelConfigMake,EXTRA_PVRSRVKM_COMPONENTS,))
 $(eval $(call TunableKernelConfigMake,EXTRA_KBUILD_SOURCE,))
@@ -488,6 +489,7 @@ $(eval $(call BothConfigC,LINUX,))
 $(eval $(call BothConfigC,PVR_BUILD_DIR,"\"$(PVR_BUILD_DIR)\""))
 $(eval $(call BothConfigC,PVR_BUILD_TYPE,"\"$(BUILD)\""))
 $(eval $(call BothConfigC,PVRSRV_MODNAME,"\"$(PVRSRV_MODNAME)\""))
+$(eval $(call KernelConfigMake,PVRSRV_MODNAME,$(PVRSRV_MODNAME)))
 
 $(eval $(call TunableBothConfigC,SGXCORE,))
 $(eval $(call BothConfigC,SGX$(SGXCORE),))
@@ -510,6 +512,7 @@ endif
 
 ifneq ($(DISPLAY_CONTROLLER),)
 $(eval $(call BothConfigC,DISPLAY_CONTROLLER,$(DISPLAY_CONTROLLER)))
+$(eval $(call KernelConfigMake,DISPLAY_CONTROLLER,$(DISPLAY_CONTROLLER)))
 endif
 
 ifneq ($(strip $(KERNELDIR)),)

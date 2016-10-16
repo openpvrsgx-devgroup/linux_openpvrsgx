@@ -152,6 +152,10 @@
 		gpio-controller;
 		#gpio-cells = <2>;
 		vcc-supply = <&vdds_1v8_main>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&tca6424_pins>;
+		interrupt-parent = <&gpio3>;
+		interrupts = <12 IRQ_TYPE_EDGE_FALLING>;  /* gpio3_76 */
 	};
 };
 
@@ -173,6 +177,12 @@
 		pinctrl-single,pins = <
 			OMAP5_IOPAD(0x1c6, PIN_INPUT | MUX_MODE0)		/* i2c5_scl */
 			OMAP5_IOPAD(0x1c8, PIN_INPUT | MUX_MODE0)		/* i2c5_sda */
+		>;
+	};
+
+	tca6424_pins: tca6424-pins {
+		pinctrl-single,pins = <
+			OMAP5_IOPAD(0x0a8, PIN_INPUT_PULLUP | MUX_MODE6)	/* gpio3_76 */
 		>;
 	};
 

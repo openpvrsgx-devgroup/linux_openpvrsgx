@@ -3423,7 +3423,11 @@ PVRSRV_ERROR OSReleasePhysPageAddr(IMG_HANDLE hOSWrapMem)
                         SetPageDirty(psPage);
                     }
 	        }
-                page_cache_release(psPage);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0))
+             put_page(psPage);
+#else
+	     page_cache_release(psPage);
+#endif
 	    }
             break;
         }

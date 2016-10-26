@@ -4348,8 +4348,11 @@ static void pvr_dmac_inv_range(const void *pvStart, const void *pvEnd)
 {
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,34))
 	dmac_inv_range(pvStart, pvEnd);
-#else
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0))
 	dmac_map_area(pvStart, pvr_dmac_range_len(pvStart, pvEnd), DMA_FROM_DEVICE);
+#else
+#warning fix pvr_dmac_inv_range
+//	__dma_page_cpu_to_dev(???, pvr_dmac_range_len(pvStart, pvEnd), DMA_FROM_DEVICE);
 #endif
 }
 
@@ -4357,8 +4360,25 @@ static void pvr_dmac_clean_range(const void *pvStart, const void *pvEnd)
 {
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,34))
 	dmac_clean_range(pvStart, pvEnd);
-#else
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0))
 	dmac_map_area(pvStart, pvr_dmac_range_len(pvStart, pvEnd), DMA_TO_DEVICE);
+#else
+#warning fix pvr_dmac_clean_range
+//	__dma_page_cpu_to_dev(???, pvr_dmac_range_len(pvStart, pvEnd), DMA_TO_DEVICE);
+// or
+//	dma_sync_single_for_cpu(???, pvStart, pvr_dmac_range_len(pvStart, pvEnd), DMA_TO_DEVICE);
+//	dma_sync_single_for_device(???, pvStart, pvr_dmac_range_len(pvStart, pvEnd), DMA_TO_DEVICE);
+#endif
+}
+
+static void pvr_dmac_flush_range(const void *pvStart, const void *pvEnd)
+{
+#if 0
+	dmac_flush_range(pvStart, pvEnd);
+#else
+#warning fix pvr_dmac_flush_range
+// if this ends in the __glue definition we ask for a non-exported function in mm like v7_dma_flush_range
+// this is connected to MULTI_CACHE in asm/cacheflush.h
 #endif
 }
 
@@ -4369,7 +4389,7 @@ IMG_BOOL OSFlushCPUCacheRangeKM(IMG_HANDLE hOSMemHandle,
 {
 	return CheckExecuteCacheOp(hOSMemHandle, ui32ByteOffset,
 							   pvRangeAddrStart, ui32Length,
-							   dmac_flush_range, outer_flush_range);
+							   pvr_dmac_flush_range, outer_flush_range);
 }
 
 IMG_BOOL OSCleanCPUCacheRangeKM(IMG_HANDLE hOSMemHandle,

@@ -57,14 +57,17 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <asm/io.h>
 
-#define	PHYS_TO_PFN(phys) ((phys) >> PAGE_SHIFT)
-#define PFN_TO_PHYS(pfn) ((pfn) << PAGE_SHIFT)
+#include <linux/pfn_t.h>
 
-#define RANGE_TO_PAGES(range) (((range) + (PAGE_SIZE - 1)) >> PAGE_SHIFT)
+// #define	PHYS_TO_PFN(phys) PHYS_PFN(phys)	// exists >= 4.4.0
+#define	PHYS_TO_PFN(phys) ((unsigned long) PFN_DOWN(phys))	// extsts >= 2.6.17
+#define PFN_TO_PHYS(pfn) PFN_PHYS(pfn)
 
-#define	ADDR_TO_PAGE_OFFSET(addr) (((unsigned long)(addr)) & (PAGE_SIZE - 1))
+#define RANGE_TO_PAGES(range) PFN_UP(range)
 
-#define	PAGES_TO_BYTES(pages) ((pages) << PAGE_SHIFT)
+#define	ADDR_TO_PAGE_OFFSET(addr) (((unsigned long)(addr)) & (PAGE_SIZE - 1))	// don't round like PFN_ALIGN would do
+
+#define	PAGES_TO_BYTES(pages) PFN_PHYS(pages)
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,10))
 #define	REMAP_PFN_RANGE(vma, addr, pfn, size, prot) remap_pfn_range(vma, addr, pfn, size, prot)

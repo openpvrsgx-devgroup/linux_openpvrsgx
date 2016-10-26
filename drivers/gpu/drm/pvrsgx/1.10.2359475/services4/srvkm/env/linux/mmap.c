@@ -67,6 +67,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 #if defined(SUPPORT_DRI_DRM)
 #include <drm/drmP.h>
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,0))
+#include "drm/drm_legacy.h"
+#endif
 #endif
 
 #ifdef CONFIG_ARCH_OMAP5
@@ -713,7 +716,7 @@ DoMapToUser(LinuxMemArea *psLinuxMemArea,
 	/* First pass, validate the page frame numbers */
 	for(uiPA = uiByteOffset; uiPA < uiByteEnd; uiPA += PAGE_SIZE)
 	{
-		IMG_UINTPTR_T pfn;
+	    IMG_UINTPTR_T pfn;
 	    IMG_BOOL bMapPage = IMG_TRUE;
 
 		if (psLinuxMemArea->hBMHandle)
@@ -775,7 +778,7 @@ DoMapToUser(LinuxMemArea *psLinuxMemArea,
 #if defined(PVR_MAKE_ALL_PFNS_SPECIAL)
 		    if (bMixedMap)
 		    {
-			result = vm_insert_mixed(ps_vma, ulVMAPos, pfn);
+			result = vm_insert_mixed(ps_vma, ulVMAPos, pfn_to_pfn_t(pfn));
 	                if(result != 0)
 	                {
 	                    PVR_DPF((PVR_DBG_ERROR,"%s: Error - vm_insert_mixed failed (%d)", __FUNCTION__, result));
@@ -936,7 +939,8 @@ static int MMapVAccess(struct vm_area_struct *ps_vma, unsigned long addr,
 	}
 	else
 	{
-		IMG_UINTPTR_T pfn, uiOffsetInPage;
+		IMG_UINTPTR_T uiOffsetInPage;
+		IMG_UINTPTR_T pfn;
 		struct page *page;
 
 		pfn = LinuxMemAreaToCpuPFN(psLinuxMemArea, ulOffset);
@@ -1022,7 +1026,11 @@ PVRMMap(struct file* pFile, struct vm_area_struct* ps_vma)
 
 #if !defined(SUPPORT_DRI_DRM_EXT)
 		/* Pass unknown requests onto the DRM module */
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0))
 		return drm_mmap(pFile, ps_vma);
+#else
+		return drm_legacy_mmap(pFile, ps_vma);
+#endif
 #else
         /*
          * Indicate to caller that the request is not for us.

@@ -310,7 +310,7 @@ static struct platform_device_id powervr_id_table[] __devinitdata = {
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,8,0))
 static const struct of_device_id omap_sgx_of_match[] = {
 	{
-		.compatible = "ti,sgx",
+		.compatible = SGX_COMPATIBLE,
 	},
 	{},
 };

@@ -1,0 +1,73 @@
+#
+# start PVR SGX GPU
+# and run some demo
+#
+# usage: gpu-demo
+#
+# WARNING: this loads and installs packages with NON-FREE
+# firmware for the SGX libraries and runtime support from
+#
+# http://download.goldelico.com/letux-debian-rootfs/debian/dists/jessie/main/binary-armhf/omap3-pvrsgx530-gta04_0.20130811195126_armhf.deb
+#
+# It needs a kernel where the GPL'ed SGX kernel driver is
+# properly configured.
+#
+
+# autodetect package version to load
+PACKAGE=$(egrep -ao '[a-z0-9]*-sgx[0-9]*-[0-9]*' </proc/device-tree/ocp*/gfx@*/compatible)
+COMPATIBLE=$(echo "$PACKAGE" | tr '-' '_')
+echo autodetected driver package: $PACKAGE
+echo compatible driver: $COMPATIBLE
+
+PACKAGE=omap3-pvrsgx530-gta04	# version detection does not work and we don't have separate pvrsgx-121 / pvrsgx-125 packages
+DIR=/usr/local/bin
+
+# board sepcific fixes
+case "$(cat /sys/firmware/devicetree/base/model)" in
+	*GTA04* | *Pandora* | *BeagleBoard* | *BeagleBone* | *'Letux Cortex 8'* )
+		;;
+	*Panda* )
+		PACKAGE=omap4-pvrsgx540-120
+		;;
+	*Pyra* | *omap5* | *'Letux Cortex 15'* )
+		PACKAGE=omap5-sgx-ddk-um-linux		# from /e/a/s/pyra.list
+		;;
+	* )
+		echo "unsupported device; $(cat /sys/firmware/devicetree/base/model)"
+		exit 1
+		;;
+esac
+
+# make us locate the pvr tools in PATH
+case $PACKAGE in
+	omap5-* )	PATH=$PATH:/opt/$PACKAGE/bin;;
+esac
+
+# fetch the microkernel binary and libraries
+[ "$(which pvrsrvctl)" ] || apt-get install -y --force-yes $PACKAGE
+
+# if automatic kernel module loading was blocked, load it now
+lsmod | fgrep -q pvr_ || modprobe pvr_$COMPATIBLE
+
+# fix clock setup
+# should have been done by driver, hwmods and pdata-quirks
+if fgrep -q AM33XX </proc/cpuinfo
+then
+	: seems to work now with CM_GFX_L3_CLKSTCTRL / CM_GFX_GFX_CLKCTRL hack
+	# devmem2 0x44E00900 w 0x02
+	# devmem2 0x44E00904 w 0x02
+	# devmem2 0x44E0090c w 0x02
+	# devmem2 0x44E00910 w 0x02
+	# devmem2 0x44E00914 w 0x02
+else
+	: no fix needed
+fi
+
+# start pvr
+fgrep -q 'System Version String: None' /proc/pvr/version && pvrsrvctl --start --no-module
+
+fgrep "System Version String: " /proc/pvr/version
+
+sgx_clipblit_test
+
+# pvrsrvctl --stop

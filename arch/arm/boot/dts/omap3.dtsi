@@ -579,6 +579,13 @@
 			status = "disabled";
 		};
 
+		gfx: gfx@50000000 {
+			compatible = "ti,omap3-gpu", "ti,sgx", "ti,omap3-sgx530-121", "img,sgx530-121";
+			reg = <0x50000000 0x10000>;
+			interrupts = <21>;
+			ti,hwmods = "gfx";
+		};
+
 		sham: sham@480c3000 {
 			compatible = "ti,omap3-sham";
 			ti,hwmods = "sham";

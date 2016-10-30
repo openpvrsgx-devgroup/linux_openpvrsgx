@@ -1,0 +1,60 @@
+config SGX
+	bool "PowerVR SGX"
+	---help---
+	  Support for the PowerVR SGX 3D core.
+
+config SGX_114
+	bool "PowerVR SGX DDK 1.14"
+	depends on SGX
+	---help---
+	  Support for the PowerVR SGX 3D core based on DDK 1.14 code.
+	  Default is the DDK 1.9/10 code.
+
+config SGX_DEBUG
+	bool "PowerVR SGX build with DEBUG enabled"
+	depends on SGX
+	---help---
+	  Build for DEBUG.
+
+config SGX_DRM
+	bool "PowerVR SGX build with DRM support"
+	depends on SGX
+	---help---
+	  Build for using DRM infrastructure.
+
+config SGX_CEDARVIEW
+	tristate "PowerVR SGX inside Atom SoC"
+	depends on SGX_114 && MATOM
+	---help---
+	  Support for the PowerVR SGX 3D core inside Intel Atom D2500/N2600 and more.
+
+config SGX_OMAP
+	tristate "PowerVR SGX inside OMAP SoC"
+	depends on (SGX || SGX_114) && (ARCH_OMAP3 || ARCH_OMAP4 || ARCH_OMAP5)
+	---help---
+	  Support for the PowerVR SGX 3D core inside OMAP SoC.
+
+config SGX_POULSBO
+	tristate "PowerVR SGX inside GMA500 SoC"
+	depends on SGX_114 && MATOM
+	---help---
+	  Support for the PowerVR SGX 3D core inside Intel GMA500 ('Poulsbo') and
+	  other Intel IMG based graphics devices.
+
+config SGX_JZ4780
+	tristate "PowerVR SGX inside JZ4780 SoC"
+	depends on SGX_114 && MACH_JZ4780
+	---help---
+	  Support for the PowerVR SGX 3D core inside OMAP SoC.
+
+config SGX_SUNXI
+	tristate "PowerVR SGX inside SUNXI SoC"
+	depends on SGX_114 && ARCH_SUNXI
+	---help---
+	  Support for the PowerVR SGX 3D core inside Allwinner A31 or A83T.
+
+config SGX_GENERIC
+	tristate "PowerVR SGX generic driver"
+	depends on SGX_114
+	---help---
+	  Support for the PowerVR SGX 3D core inside generic SoC.

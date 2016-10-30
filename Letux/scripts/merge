@@ -88,12 +88,14 @@ git checkout -b $OUTPUT HEAD || exit
 
 BRANCHES=""
 
-for FEATURE in $(cat Letux/scripts/mergefile 2>/dev/null) "$@"
-do
-#	echo "*** process $FEATURE ***"
+function process {
+	FEATURE=$1
 	case "$FEATURE" in
-	'' | -* | '#'* )	continue;;
+		'-'* )
+			return
+			;;	# disabled
 	esac
+#	echo "*** process $FEATURE ***"
 	LATEST=$(echo $(git branch | grep "${FEATURE}-v[0-9]*" | sort | tail -1))
 	if [ "$LATEST" ]
 	then # there is a latest with -v
@@ -136,6 +138,24 @@ do
 	then
 		git merge --no-ff --no-edit $FEATURE || exit	# try to merge one after the other
 	fi
+}
+
+# feature branches provided in mergefile
+while read FEATURE IGNORE
+do
+	case "$FEATURE" in
+		'' | '#'* )
+			;;	# ignore empty lines and comments
+		* )
+			process "$FEATURE"
+			;;
+	esac
+done <Letux/scripts/mergefile
+
+# more feature branches provided on command line
+for FEATURE
+do
+	process "$FEATURE"
 done
 
 if ! $SEQUENTIAL

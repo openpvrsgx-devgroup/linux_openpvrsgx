@@ -1,0 +1,85 @@
+config SGX
+	bool "PowerVR SGX"
+	help
+	  Support for the PowerVR SGX 3D core.
+
+choice
+	prompt "Choose PVR/SGX DDK version"
+	depends on SGX
+	help
+	  Support for the PowerVR SGX 3D core based on DDK code
+	  variant as selected.
+	
+config PVRSGX_1_9_2253347
+	bool "DDK 1.9.2253347 (TI)"
+
+config PVRSGX_1_10_2359475
+	bool "DDK 1.10.2359475 (TI)"
+
+config PVRSGX_1_13_3341330
+	bool "DDK 1.13.3341330 (INGENIC)"
+
+config PVRSGX_1_14_3699939
+	bool "DDK 1.14.3699939 (TI)"
+
+config PVRSGX_1_14_3759903
+	bool "DDK 1.14.3759903 (INGENIC)"
+
+config PVRSGX_1_14_3841212
+	bool "DDK 1.14.3841212 (SUNXI)"
+
+config PVRSGX_1_17_4948957
+	bool "DDK 1.17.4948957 (TI)"
+
+endchoice
+
+config SGX_DEBUG
+	bool "PowerVR SGX build with DEBUG enabled"
+	depends on SGX
+	help
+	  Build for DEBUG.
+
+config SGX_DRM
+	bool "PowerVR SGX build with DRM support"
+	depends on SGX
+	select DRM_LEGACY
+	help
+	  Build for using DRM infrastructure.
+	  Note: this selectes DRM_LEGACY with all its issues.
+
+config SGX_CEDARVIEW
+	tristate "PowerVR SGX inside Atom SoC"
+	depends on SGX && MATOM
+	help
+	  Support for the PowerVR SGX 3D core inside Intel Atom D2500/N2600 and more.
+
+config SGX_OMAP
+	tristate "PowerVR SGX inside OMAP SoC"
+	depends on SGX && (ARCH_OMAP3 || SOC_AM33XX || ARCH_OMAP2PLUS)
+	help
+	  Support for the PowerVR SGX 3D core inside OMAP SoC.
+
+config SGX_POULSBO
+	tristate "PowerVR SGX inside GMA500 SoC"
+	depends on SGX && MATOM
+	help
+	  Support for the PowerVR SGX 3D core inside Intel GMA500 ('Poulsbo') and
+	  other Intel IMG based graphics devices.
+
+config SGX_JZ4780
+	tristate "PowerVR SGX inside JZ4780 SoC"
+	depends on SGX && MACH_JZ4780
+	help
+	  Support for the PowerVR SGX 3D core inside OMAP SoC.
+
+config SGX_SUNXI
+	tristate "PowerVR SGX inside SUNXI SoC"
+	depends on SGX && ARCH_SUNXI
+	help
+	  Support for the PowerVR SGX 3D core inside Allwinner A31 or A83T.
+
+config SGX_GENERIC
+	tristate "PowerVR SGX generic driver"
+	depends on SGX
+	help
+	  Support for the PowerVR SGX 3D core inside generic SoC.

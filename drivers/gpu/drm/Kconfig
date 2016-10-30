@@ -387,6 +387,8 @@ source "drivers/gpu/drm/aspeed/Kconfig"
 
 source "drivers/gpu/drm/mcde/Kconfig"
 
+source "drivers/gpu/drm/pvrsgx/Kconfig"
+
 # Keep legacy drivers last
 
 menuconfig DRM_LEGACY

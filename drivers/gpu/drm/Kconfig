@@ -451,6 +451,7 @@ source "drivers/gpu/drm/tidss/Kconfig"
 source "drivers/gpu/drm/adp/Kconfig"
 
 source "drivers/gpu/drm/xlnx/Kconfig"
+source "drivers/gpu/drm/pvrsgx/Kconfig"
 
 source "drivers/gpu/drm/gud/Kconfig"
 

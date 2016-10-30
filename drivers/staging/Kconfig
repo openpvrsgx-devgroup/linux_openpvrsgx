@@ -127,4 +127,6 @@ source "drivers/staging/qlge/Kconfig"
 
 source "drivers/staging/vboxsf/Kconfig"
 
+source "drivers/staging/pvr/Kconfig"
+
 endif # STAGING

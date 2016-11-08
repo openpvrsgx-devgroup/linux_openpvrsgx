@@ -175,7 +175,8 @@ Values are intended to be multiplied as:
   z' = mxz * x + myz * y + mzz * z
 
 It is represented as an array of strings containing the real values for
-producing the transformation matrix.
+producing the transformation matrix. The real values use a decimal point and
+a minus (-) to indicate a negative value.
 
 Examples:
 

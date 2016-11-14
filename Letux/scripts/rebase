@@ -45,12 +45,8 @@ echo rebasing features on top of "$BASE"
 
 EMPTY=""
 
-for FEATURE in $(cat Letux/scripts/mergefile 2>/dev/null) "$@"
-do
-	case "$FEATURE" in
-	'' | '#'* )	continue;;
-	esac
-	FEATURE=$(echo "$FEATURE" | sed 's|^-||')	# include all branches starting with -
+function rebase {
+	FEATURE=$(echo "$1" | sed 's|^-||')	# include all branches starting with -
 	LATEST=$(echo $(git branch | fgrep "${FEATURE}-v" | sort | tail -1))
 	echo
 	if [ "$LATEST" = "" ]
@@ -77,7 +73,24 @@ do
 	then
 		EMPTY="$EMPTY $FEATURE"
 	fi
+}
+
+while read FEATURE REST
+do
+	case "$FEATURE" in
+		'' | '#'* )
+			;;	# ignore
+		* )
+			rebase "$FEATURE"
+			;;
+	esac
+done <Letux/scripts/mergefile
+
+for FEATURE
+do
+	rebase "$FEATURE"
 done
+
 
 for i in "" $EMPTY
 do

@@ -127,7 +127,7 @@ PVRSRV_ERROR DmaBufImportAndAcquirePhysAddr(IMG_INT32 i32DmaBufFD,
 
 	for_each_sg(import->sg_table->sgl, sg, import->sg_table->nents, i)
 	{
-		npages += PAGE_ALIGN(sg_dma_len(sg) / PAGE_SIZE);
+		npages += (PAGE_ALIGN(sg_dma_len(sg)) / PAGE_SIZE);
 	}
 
        /* The following allocation will be freed by the caller */

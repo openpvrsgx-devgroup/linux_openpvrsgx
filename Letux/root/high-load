@@ -2,6 +2,21 @@
 # start multiple background processes with 100% CPU load
 #
 
+function loop {
+	while true
+	do
+		:
+	done
+}
+
+LOOP=loop
+
+if [ "$1" = "-n" ]
+then
+	# neon_loop requests higher CPU load than a bash loop
+	[ neon_loop.S -nt neon_loop ] && gcc -o neon_loop neon_loop.S -mfpu=neon -mcpu=native
+	LOOP=./neon_loop
+fi
 
 CORES=$(fgrep processor /proc/cpuinfo | wc -l)	# find from /proc/cpuinfo
 
@@ -10,13 +25,10 @@ echo "100% load stress test for $CORES cores"
 # run once in this shell so that we define the 'temperatures' function for the loop
 . ./temperatures
 
-# start 100% load processes
+# start as many 100% load processes as we have cores
 for i in $(seq 1 $CORES)
 do
-	while true
-	do
-		:
-	done &
+	$LOOP &
 	PIDS="$PIDS $!"
 done
 

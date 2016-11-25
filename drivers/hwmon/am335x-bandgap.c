@@ -99,7 +99,7 @@ static int am335x_bandgap_probe(struct platform_device *pdev)
 	if (!res)
 		return -ENODEV;
 
-	data->regs = devm_request_and_ioremap(&pdev->dev, res);
+	data->regs = devm_ioremap_resource(&pdev->dev, res);
 	if (!data->regs)
 		return -ENODEV;
 

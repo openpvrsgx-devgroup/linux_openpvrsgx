@@ -187,6 +187,54 @@
 
 	};
 
+	backlight {
+		compatible = "pwm-backlight";
+		pwms = <&ehrpwm1 0 50000 0>;
+		brightness-levels = <0 51 53 56 62 75 101 152 255>;
+		default-brightness-level = <8>;
+	};
+
+	panel {
+		status = "okay";
+
+		compatible = "ti,tilcdc,panel";
+		pinctrl-names = "default";
+		pinctrl-0 = <&lcd_24bit_pins>;
+
+		enable-gpios = <&gpio3 19 GPIO_ACTIVE_HIGH>;
+
+		panel-info {
+			ac-bias           = <255>;
+			ac-bias-intrpt    = <0>;
+			dma-burst-sz      = <16>;
+			bpp               = <24>;	// uses only RGB565 out of RGB888
+			fdd               = <0x80>;
+			sync-edge         = <0>;
+			sync-ctrl         = <1>;
+			raster-order      = <0>;
+			fifo-th           = <0>;
+		};
+
+		display-timings {
+			native-mode = <&timing0>;
+			timing0: 480x272p60 {
+				clock-frequency = <9200000>;
+				hactive = <480>;
+				vactive = <272>;
+				hfront-porch = <8>;
+				hback-porch = <47>;
+				hsync-len = <41>;
+				vback-porch = <2>;
+				vfront-porch = <3>;
+				vsync-len = <10>;
+				hsync-active = <0>;
+				vsync-active = <0>;
+				de-active = <1>;
+				pixelclk-active = <0>;
+			};
+		};
+	};
+
 };
 
 &ehrpwm1 {
@@ -196,7 +244,7 @@
 };
 
 &lcdc {
-	status = "disabled";
+	status = "okay";
 };
 
 /* no touch screen but 2 ADC channels */

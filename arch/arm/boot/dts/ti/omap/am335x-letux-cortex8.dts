@@ -232,6 +232,11 @@
         status = "okay";
 };
 
+/* no ethernet */
+&mac {
+	status = "disabled";
+};
+
 &am33xx_pinmux {
 
 	button_pins: pinmux_button_pins {

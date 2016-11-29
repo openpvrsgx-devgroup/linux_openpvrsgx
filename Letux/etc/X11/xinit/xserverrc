@@ -52,7 +52,7 @@ case "$(cat /proc/device-tree/model 2>/dev/null)" in
 	*BeagleBoneBlack* )
 		PANEL=4.3-272x480;;	# BBB with 4.3 inch panel cape
 	*'Letux Cortex 8'* )
-		PANEL=none;;
+		PANEL=4.3-272x480;;	# assume a PSP display could be connected
 	* )
 		echo "unknown motherboard $(cat /proc/device-tree/model 2>/dev/null)"
 		echo "we don't know how to configure X11 for the display"

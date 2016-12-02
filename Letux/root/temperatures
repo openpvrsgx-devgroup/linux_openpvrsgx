@@ -3,23 +3,33 @@
 #
 
 function findthermal {
-	for dev in /sys/class/thermal/thermal_zone*
+	for dev in /sys/class/thermal/thermal_zone*/type
 	do
-		if [ "$(cat $dev/type 2>/dev/null)" = "$1" ]
-			then echo $dev
+		if [ "$(cat $dev 2>/dev/null)" = "$1" ]
+			then echo $(dirname $dev)/
 			return
 		fi
 	done
 }
 
 function findiio {
-	for dev in /sys/bus/iio/devices/iio:device*
+	for dev in /sys/bus/iio/devices/iio:device*/name
 	do
-		if [ "$(cat $dev/name 2>/dev/null)" = "$1" ]
-			then echo $dev
+		if [ "$(cat $dev 2>/dev/null)" = "$1" ]
+			then echo $(dirname $dev)/
 			exit 0
 		fi
 	done
+}
+
+function findhwmon {
+for dev in /sys/class/hwmon/hwmon*/name /sys/class/hwmon/hwmon*/device/name
+do
+	if [ "$(cat $dev 2>/dev/null)" = "$1" ]
+		then echo $(dirname $dev)/
+		break
+	fi
+done
 }
 
 TWL4030_MADC=$(findiio "48070000.i2c:twl@48:madc")        # OMAP3
@@ -48,17 +58,18 @@ TWL6037_GPADC=$(findiio "palmas-gpadc")   # OMAP5
 # 14 USB ID line voltage
 # 15 test network
 
-[ "$CPU" ] || CPU=$(findthermal cpu_thermal)
-[ "$CPU" ] || CPU=$(findthermal cpu)
-[ "$CPU" ] || CPU=/dev/null
-GPU=$(findthermal gpu_thermal)
-CORE=$(findthermal core_thermal)
+[ -r "$CPU" ] || CPU=$(findthermal cpu_thermal)/temp
+[ -r "$CPU" ] || CPU=$(findthermal cpu)/temp
+[ -r "$CPU" ] || CPU=$(findhwmon am335x-bandgap)/temp1_input
+[ -r "$CPU" ] || CPU=/dev/null
+GPU=$(findthermal gpu_thermal)/temp
+CORE=$(findthermal core_thermal)/temp
 
-[ "$BATTERY" ] || BATTERY=$(findthermal bq27621)
-[ "$BATTERY" ] || BATTERY=$(findthermal bq27421-0)
-[ "$BATTERY" ] || BATTERY=$(findthermal bq27000-battery)
-[ "$BATTERY" ] || BATTERY=$(findthermal bq24297)
-[ "$BATTERY" ] || BATTERY=/dev/null
+[ -r "$BATTERY" ] || BATTERY=$(findthermal bq27621)/temp
+[ -r "$BATTERY" ] || BATTERY=$(findthermal bq27421-0)/temp
+[ -r "$BATTERY" ] || BATTERY=$(findthermal bq27000-battery)/temp
+[ -r "$BATTERY" ] || BATTERY=$(findthermal bq24297)/temp
+[ -r "$BATTERY" ] || BATTERY=/dev/null
 
 VSYS=/dev/null
 [ -r "$TWL4030_MADC" ] && VSYS="$TWL4030_MADC/in_voltage12_input"
@@ -77,10 +88,10 @@ function fmt { # $1 is file; $2 is units; $3 optional scale
 
 function temperatures {
 	echo	$(date) \
-		$(fmt $CPU/temp "°" 1000) \
-		$(fmt $GPU/temp "°" 1000) \
-		$(fmt $CORE/temp "°" 1000) \
-		$(fmt $BATTERY/temp "°" 1000) \
+		$(fmt $CPU "°" 1000) \
+		$(fmt $GPU "°" 1000) \
+		$(fmt $CORE "°" 1000) \
+		$(fmt $BATTERY "°" 1000) \
 		$(fmt $VSYS "mV" 1) \
 		$(fmt /sys/devices/system/cpu/cpufreq/policy0/scaling_cur_freq "MHz" 1000)
 }

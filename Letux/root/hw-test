@@ -33,10 +33,10 @@ done
 }
 
 function findhwmon {
-for dev in /sys/class/hwmon/hwmon*
+for dev in /sys/class/hwmon/hwmon*/name /sys/class/hwmon/hwmon*/device/name
 do
-	if [ "$(cat $dev/name 2>/dev/null)" = "$1" ]
-		then echo $dev
+	if [ "$(cat $dev 2>/dev/null)" = "$1" ]
+		then echo $(dirname $dev)/
 		break
 	fi
 done

@@ -578,6 +578,9 @@ struct iio_buffer_setup_ops {
  *			enable/disable
  * @priv:		[DRIVER] reference to driver's private information
  *			**MUST** be accessed **ONLY** via iio_priv() helper
+ * @debugfs_dentry:	[INTERN] device specific debugfs dentry.
+ * @cached_reg_addr:	[INTERN] cached register address for debugfs reads.
+ * @input_mapping:	[INTERN] mapping for input device
  */
 struct iio_dev {
 	int				modes;
@@ -603,6 +606,15 @@ struct iio_dev {
 	const struct iio_buffer_setup_ops	*setup_ops;
 
 	void				*priv;
+#if defined(CONFIG_DEBUG_FS)
+	struct dentry			*debugfs_dentry;
+	unsigned			cached_reg_addr;
+	char				read_buf[20];
+	unsigned int			read_buf_len;
+#endif
+#if defined(CONFIG_IIO_INPUT_BRIDGE)
+	void				*input_mapping;
+#endif
 };
 
 int iio_device_id(struct iio_dev *indio_dev);

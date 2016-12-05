@@ -80,6 +80,14 @@ config IIO_BACKEND
 	  multiple backend devices. The framework then makes it easy to get
 	  and control such backend devices.
 
+config IIO_INPUT_BRIDGE
+	depends on INPUT
+	bool "Enable accelerometer bridge to input driver"
+	help
+	  Provides a /dev/input/event* device for accelerometers
+	  to use as a 3D input device, e.g. for gaming or auto-rotation
+	  of screen contents.
+
 source "drivers/iio/accel/Kconfig"
 source "drivers/iio/adc/Kconfig"
 source "drivers/iio/addac/Kconfig"

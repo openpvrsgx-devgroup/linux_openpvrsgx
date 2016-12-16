@@ -138,3 +138,31 @@
 	};
 
 };
+
+/*
+
+// define pinmux for trf7970a_default
+
+&spi1 {
+	status = "okay";
+
+	nfc@0 {
+		compatible = "ti,trf7970a";
+		reg = <0>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&trf7970a_default>;
+		spi-max-frequency = <2000000>;
+		interrupt-parent = <&gpio2>;
+		interrupts = <14 0>;
+		ti,enable-gpios = <&gpio2 2 GPIO_ACTIVE_LOW>,
+				  <&gpio2 5 GPIO_ACTIVE_LOW>;
+		vin-supply = <&ldo3_reg>;
+		vin-voltage-override = <5000000>;
+		autosuspend-delay = <30000>;
+		irq-status-read-quirk;
+		en2-rf-quirk;
+		t5t-rmb-extra-byte-quirk;
+		status = "okay";
+	};
+};
+*/

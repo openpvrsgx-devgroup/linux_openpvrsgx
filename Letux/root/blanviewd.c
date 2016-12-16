@@ -4,8 +4,9 @@
  * daemon to read the ambient light sensor and control
  * backlight intensity for Ortustech Blanview display
  *
- * (c) H. N. Schaller, Golden Delicious Comp. GmbH&Co. KG, 2013
+ * (c) H. N. Schaller <hns@goldelico.com>
  *     Lukas Märdian <lukas@goldelico.com>
+ *     Golden Delicious Comp. GmbH&Co. KG, 2013-16
  * Licence: GNU GPL2
  */
 
@@ -17,8 +18,9 @@ int main(int argc, char *argv[])
 {
 	char debug=0;
 	int prev_bl=-1;
-	char *file;
-	FILE *in, *out;
+	char file[256];
+	FILE *in=NULL, *out;
+	int i, n;
 	if(argv[1] != NULL && strcmp(argv[1], "-d") == 0)
 		{
 		fprintf(stderr, "debug mode\n");
@@ -29,10 +31,35 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "usage: blanviewd [-d]\n");
 		return 1;
 		}
+	for(i=0; i<100; i++)
+		{
+		char c;
+		sprintf(file, "/sys/bus/iio/devices/iio:device%d/name", i);
+		if(debug)
+			fprintf(stderr, "trying %s\n", file);
+		in=fopen(file, "r");
+		if(!in)
+			break;
+		n=fscanf(in, "tsc2007%c", &c);
+		if(debug)
+			fprintf(stderr, "n=%d\n", n);
+		fclose(in);
+		if(n == 1)
+			break;	// found
+		in=NULL;
+		}
+	if(!in)
+		{
+		fprintf(stderr, "no tsc2007 iio device found\n");
+		return 1;
+		}
+	sprintf(file, "/sys/bus/iio/devices/iio:device%d/in_voltage4_raw", i);
+	if(debug)
+		fprintf(stderr, "iio device=%s\n", file);
 #if 1
-	file="/sys/class/backlight/backlight/brightness";
+	strcpy(file, "/sys/class/backlight/backlight/brightness");
 #else
-	file="/sys/class/backlight/backlight/max_brightness";
+	strcpy(file, "/sys/class/backlight/backlight/max_brightness");
 #endif
 	out=fopen(file, "w");
 	if(!out)
@@ -42,11 +69,9 @@ int main(int argc, char *argv[])
 		}
 	while(1)
 		{
-		int i, n;
 		unsigned short aux;
 		unsigned short ambient_light;
 		unsigned short bl;
-		file="/sys/bus/iio/devices/iio:device1/in_voltage4_raw";
 		in=fopen(file, "r");
 		if(!in)
 			{

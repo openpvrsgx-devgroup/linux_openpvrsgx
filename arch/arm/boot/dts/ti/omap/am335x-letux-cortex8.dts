@@ -247,12 +247,12 @@
 	status = "okay";
 };
 
-/* no touch screen but 2 ADC channels */
+/* no touch screen but 3 ADC channels */
 &tscadc {
 	status = "okay";
 
 	adc {
-		ti,adc-channels = <0 2>;
+		ti,adc-channels = <0 1 2>;
 	};
 };
 

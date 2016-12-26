@@ -117,6 +117,15 @@ config DRM_PANEL_FEIXIN_K101_IM2BA02
 	  Say Y here if you want to enable support for the Feixin K101 IM2BA02
 	  4-lane 800x1280 MIPI DSI panel.
 
+config DRM_PANEL_BOE_BTL507212_W677L
+	tristate "BOE W677L LCD Panel"
+	depends on OF
+	depends on DRM_MIPI_DSI
+	depends on BACKLIGHT_CLASS_DEVICE
+	help
+	  Say Y here if you want to enable support for BOE BTL507212-W677L
+	  panel with OTM1283A controller.
+
 config DRM_PANEL_FEIYANG_FY07024DI26A30D
 	tristate "Feiyang FY07024DI26A30-D MIPI-DSI LCD panel"
 	depends on OF

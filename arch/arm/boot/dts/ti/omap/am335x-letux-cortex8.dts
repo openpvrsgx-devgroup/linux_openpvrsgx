@@ -247,6 +247,10 @@
 	status = "okay";
 };
 
+&rtc {
+	system-power-controller;
+};
+
 /* no touch screen but 3 ADC channels */
 &tscadc {
 	status = "okay";

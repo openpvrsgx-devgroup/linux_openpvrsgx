@@ -2,7 +2,8 @@
 # set up wlan connection
 #
 
-WLAN=wlan0
+read -t 5 WLAN OTHER < <(iwconfig 2>&1 | fgrep 'wlan')
+[ "$WLAN" ] || WLAN=wlan0
 
 case "$1" in
 	-a ) # ad hoc network

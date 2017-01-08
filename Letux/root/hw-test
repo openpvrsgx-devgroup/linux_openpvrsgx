@@ -92,6 +92,7 @@ function report { # $1: result $2: test-name $3: values $4: message
 			| test_nub*-*GTA04* \
 			| test_keyboard-*GTA04* \
 			| test_eeprom_[0234]-*GTA04* \
+			| test_eeprom_1-*GTA04A5* \
 			| test_wwan_usb_gemalto-*GTA04* \
 			| test_wwan_hwmon_off-*GTA04* \
 			| test_power_twl4030_batt_hdq-*GTA04b* \

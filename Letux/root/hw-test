@@ -219,7 +219,7 @@ function test_bmg160 {
 	GMAX=$(expr 3 '*' 200 '*' 200)
 	CENTIGRADE=$(expr "${CENTIGRADE:=0}" / 10)
 	[ "$G" -le "$GMAX" -a "$G" -ge 0 -a "$CENTIGRADE" -ge 10 -a "$CENTIGRADE" -le 60 ]
-	report $? ${FUNCNAME} "$GYRO: $X, $Y, $Z, ${CENTIGRADE} °C" "Gyroscope values"
+	report $? ${FUNCNAME} "$X, $Y, $Z, ${CENTIGRADE} °C" "Gyroscope values"
 }
 
 function test_gyroscope {
@@ -227,7 +227,7 @@ function test_gyroscope {
 	test_bmg160
 }
 
-function test_bmc150 {
+function test_bmc150_accel {
 	[ -r /dev/input/accel ] && read -t 1 X Y Z < <(echo $(evtest /dev/input/accel | head -19 | fgrep Value | sed 's/Value//g'))
 	G=$(expr ${X:=0} '*' ${X} + ${Y:=0} '*' ${Y} + ${Z:=0} '*' ${Z})
 	GMIN=$(expr 200 '*' 200)
@@ -242,7 +242,7 @@ function test_lis302 {
 }
 
 function test_accelerometer {
-	test_bmc150
+	test_bmc150_accel
 	test_lis302
 }
 
@@ -254,7 +254,7 @@ function test_hmc5883 {
 	Y=$(cat $COMPASS/in_magn_y_raw 2>/dev/null)
 	Z=$(cat $COMPASS/in_magn_z_raw 2>/dev/null)
 	[ "$X$Y$Z" ]
-	report $? ${FUNCNAME} "$COMPASS: $X, $Y, $Z" "Compass values"
+	report $? ${FUNCNAME} "$X, $Y, $Z" "Compass values"
 }
 
 function test_bmc150_compass {
@@ -265,7 +265,7 @@ function test_bmc150_compass {
 	Y=$(cat $COMPASS/in_magn_y_raw 2>/dev/null)
 	Z=$(cat $COMPASS/in_magn_z_raw 2>/dev/null)
 	[ "$X$Y$Z" ]
-	report $? ${FUNCNAME} "$COMPASS: $X, $Y, $Z" "Compass values"
+	report $? ${FUNCNAME} "$X, $Y, $Z" "Compass values"
 }
 
 function test_compass {
@@ -542,7 +542,7 @@ function test_wwan_option {
 			case "$KEY" in
 				SN: )
 					read IMEI SN < <(echo "$VAL" | sed "s/,/ /g")
-					report 0 ${FUNCNAME}_imei "$VAL" "IMEI"
+					report 0 ${FUNCNAME}_imei "$IMEI" "IMEI"
 					report 0 ${FUNCNAME}_serial "$SN" "Serial Number"
 					;;
 				HWV: )
@@ -726,11 +726,11 @@ killall -9 arecord aplay 2>/dev/null # stop any running audio forwarding
 (
 if $ANYNOK
 then # red
-	report 1 "summary" "$(date)" "global test result"
+	report 1 "Summary" "$(date)" "global test result"
 	ON=red
 	OFF=green
 else
-	report 0 "summary" "$(date)" "global test result"
+	report 0 "Summary" "$(date)" "global test result"
 	ON=green
 	OFF=red
 fi

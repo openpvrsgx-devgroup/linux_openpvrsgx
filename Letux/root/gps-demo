@@ -7,10 +7,23 @@ SERIAL=$(/root/gps-on)
 
 echo "### starting gpsd ###"
 gpsd $SERIAL
-;;
 
-rfkill unblock gps	# enable VSIM
-echo "### $(cat /sys/class/extcon/gps_antenna/state) antenna ###"
+rfkill unblock gps      # enable VSIM
+
+# GTA04 only
+[ -r /sys/class/gpio/gpio144/value ] || echo 144 >/sys/class/gpio/export # 2>/dev/null
+# VSIM is only enabled if we open </dev/ttyO1
+EXTANT="$((sleep 0.1; cat /sys/class/gpio/gpio144/value) 2>/dev/null </dev/ttyO1)"
+# echo $EXTANT
+case "$EXTANT" in
+        0 )
+                echo "### internal antenna ###"
+                ;;
+        1 )
+                echo "### external antenna ###"
+                ;;
+esac
+[ -r /sys/class/gpio/gpio144/value ] && echo 144 >/sys/class/gpio/unexport 2>/dev/null
 
 export XAUTHORITY=/.Xauthority
 

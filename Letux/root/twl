@@ -137,11 +137,11 @@ amixer -q set "Analog Left Main Mic" cap || exit
 amixer -q set "Analog Left Headset Mic" nocap || exit
 if [ "$NOHANDSFREE" ] # handsfree on/off
 then
-amixer -q set HandsfreeL on || exit
-amixer -q set HandsfreeR on || exit
-else
 amixer -q set HandsfreeL off || exit
 amixer -q set HandsfreeR off || exit
+else
+amixer -q set HandsfreeL on || exit
+amixer -q set HandsfreeR on || exit
 fi
 amixer -q set "HandsfreeL Mux" AudioL2 || exit
 amixer -q set "HandsfreeR Mux" AudioR2 || exit

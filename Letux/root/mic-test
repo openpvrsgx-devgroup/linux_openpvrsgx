@@ -23,4 +23,7 @@ done
 # Main Mic goes to Analog Left
 # Headset Mic goes to Analog Right
 
-arecord -c 2 | tee /tmp/echo.wav | /root/twl $FLAGS -t wav -
+# we must delay arecord a little so that the amixer
+# commands by the twl script are already done
+
+(sleep 1; arecord -c 2) | tee /tmp/echo.wav | /root/twl $FLAGS -t wav -

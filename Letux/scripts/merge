@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Letux/scripts/merge [ -spu ] [ -b base ] { branches... }
+# Letux/scripts/merge [ -spu ] [ -b base ] { [-]branches... }
 #
 # merge Letux feature branches on top of the base branch
 #
@@ -76,10 +76,18 @@ echo merging features on top of "$BASE" for $VERSION
 
 OUTPUT="letux-$VERSION"
 
-for FEATURE in "$@"
+# append all additionally merged branches
+for FEATURE
 do
-	F=$(basename "$FEATURE")
-	OUTPUT="$OUTPUT+$F"
+	F=$(basename -- "$FEATURE")
+	case "$FEATURE" in
+		-* ) # will be ignored
+			OUTPUT="$OUTPUT-$F"
+			;;
+		* )
+			OUTPUT="$OUTPUT+$F"
+			;;
+	esac
 done
 
 echo "*** make a fresh working copy: $OUTPUT ***"
@@ -147,6 +155,14 @@ do
 		'' | '#'* )
 			;;	# ignore empty lines and comments
 		* )
+			# check if there is an -branch ignore pattern
+			for IGNORE
+			do
+				if [ "$IGNORE" = "-$FEATURE" ]
+				then
+					continue 2;	# found in ignore list
+				fi
+			done
 			process "$FEATURE"
 			;;
 	esac
@@ -155,7 +171,13 @@ done <Letux/scripts/mergefile
 # more feature branches provided on command line
 for FEATURE
 do
-	process "$FEATURE"
+	case "$FEATURE" in
+		-* ) # ignore
+			;;
+		* )
+			process "$FEATURE"
+			;;
+	esac
 done
 
 if ! $SEQUENTIAL

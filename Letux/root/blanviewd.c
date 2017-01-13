@@ -14,6 +14,8 @@
 #include <string.h>
 #include <errno.h>
 
+#define MAX_BL 10	/* defined by device tree */
+
 int main(int argc, char *argv[])
 {
 	char debug=0;
@@ -29,6 +31,17 @@ int main(int argc, char *argv[])
 	else if(argv[1])
 		{
 		fprintf(stderr, "usage: blanviewd [-d]\n");
+		return 1;
+		}
+#if 1
+	strcpy(file, "/sys/class/backlight/backlight/brightness");
+#else
+	strcpy(file, "/sys/class/backlight/backlight/max_brightness");
+#endif
+	out=fopen(file, "w");
+	if(!out)
+		{
+		fprintf(stderr, "%s: %s\n", file, strerror(errno));
 		return 1;
 		}
 	for(i=0; i<100; i++)
@@ -56,17 +69,6 @@ int main(int argc, char *argv[])
 	sprintf(file, "/sys/bus/iio/devices/iio:device%d/in_voltage4_raw", i);
 	if(debug)
 		fprintf(stderr, "iio device=%s\n", file);
-#if 1
-	strcpy(file, "/sys/class/backlight/backlight/brightness");
-#else
-	strcpy(file, "/sys/class/backlight/backlight/max_brightness");
-#endif
-	out=fopen(file, "w");
-	if(!out)
-		{
-		fprintf(stderr, "%s: %s\n", file, strerror(errno));
-		return 1;
-		}
 	while(1)
 		{
 		unsigned short aux;
@@ -86,17 +88,17 @@ int main(int argc, char *argv[])
 				fprintf(stderr, "aux=%d", aux);
 
 			if(aux > 2048)	// max ambient light
-				ambient_light = 1;
+				ambient_light = 0;
 			else if(aux > 1024)
-				ambient_light = 2;
+				ambient_light = 1;
 			else if(aux > 512)
-				ambient_light = 3;
+				ambient_light = 2;
 			else if(aux > 256)
-				ambient_light = 4;
+				ambient_light = 3;
 			else 	// min ambient light
-				ambient_light = 5;
+				ambient_light = 4;
 
-			bl = ambient_light*20;
+			bl = 1+((MAX_BL-1)*ambient_light)/4;
 			if(debug)
 				fprintf(stderr, " ->");
 			while(prev_bl != bl)

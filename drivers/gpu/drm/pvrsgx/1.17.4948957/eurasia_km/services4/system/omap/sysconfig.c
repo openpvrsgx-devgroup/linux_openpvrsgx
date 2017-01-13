@@ -89,9 +89,6 @@ static PVRSRV_ERROR EnableSGXClocksWrap(SYS_DATA *psSysData)
 #if !defined(SGX_OCP_NO_INT_BYPASS)
 	if(eError == PVRSRV_OK)
 	{
-        #if (AM_VERSION == 5)
-		OSWriteHWReg(gpvOCPRegsLinAddr, EUR_CR_OCP_SYSCONFIG, 0x14);
-        #endif
 		OSWriteHWReg(gpvOCPRegsLinAddr, EUR_CR_OCP_DEBUG_CONFIG, EUR_CR_OCP_DEBUG_CONFIG_THALIA_INT_BYPASS_MASK);
 	}
 #endif

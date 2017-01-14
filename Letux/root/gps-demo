@@ -8,7 +8,7 @@ SERIAL=$(/root/gps-on)
 echo "### starting gpsd ###"
 gpsd $SERIAL
 
-rfkill unblock gps      # enable VSIM
+rfkill unblock gps      # potentially enable VSIM
 
 # GTA04 only
 [ -r /sys/class/gpio/gpio144/value ] || echo 144 >/sys/class/gpio/export # 2>/dev/null
@@ -25,8 +25,6 @@ case "$EXTANT" in
 esac
 [ -r /sys/class/gpio/gpio144/value ] && echo 144 >/sys/class/gpio/unexport 2>/dev/null
 
-export XAUTHORITY=/.Xauthority
-
-echo "### starting tangogps ###"
-# dbus-launch tangogps
-tangogps --display :0.0
+echo "### starting foxtrot gps ###"
+. x
+dbus-launch foxtrotgps

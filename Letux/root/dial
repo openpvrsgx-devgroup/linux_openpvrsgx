@@ -67,6 +67,10 @@ case "$IF" in
 		amixer set 'Analog Left AUXL' nocap
 		amixer set 'Analog Right AUXR' nocap
 		amixer set 'Analog Left Main Mic' cap
+		amixer set 'HeadsetL Mixer AudioL1' off
+		amixer set 'HeadsetL Mixer AudioL2' off
+		amixer set 'HeadsetR Mixer AudioR1' off
+		amixer set 'HeadsetR Mixer AudioR2' off
 
 		if $HANDSFREE
 		then
@@ -99,6 +103,10 @@ case "$IF" in
 			amixer set 'Earpiece Mixer Voice' on
 			amixer set 'HeadsetL Mixer Voice' on
 			amixer set 'HeadsetR Mixer Voice' on
+		else
+			amixer set 'Earpiece Mixer Voice' off
+			amixer set 'HeadsetL Mixer Voice' off
+			amixer set 'HeadsetR Mixer Voice' off
 		fi
 
 		(

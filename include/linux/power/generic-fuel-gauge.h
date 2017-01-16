@@ -25,7 +25,7 @@ static inline int fuel_level_LiIon(int mV, int mA, int mOhm) {
 
 	/* use linear approx. below 3.756V => 19.66% assuming 3.3V => 0% */
 	if (u < 0) {
-		return  max(((mV - 3300) * ((3756 - 3300) * 1966)) / 100000, 0);
+		return  max(((mV - 3300) * ((3756 - 3300) * 1966)) / 100000000, 0);
 	}
 
 	/* apply second part of formula */

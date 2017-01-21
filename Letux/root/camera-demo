@@ -18,60 +18,76 @@
 
 PATH=$PATH:/usr/bin/arm-linux-gnueabihf
 
-# [ "$(which media-ctl)" ] || apt-get install -y media-ctl
 [ "$(which media-ctl)" ] || apt-get install -y v4l-utils
 [ "$(which mplayer)" ] || apt-get install -y mplayer
+
+[ -d $HOME/.mplayer ] || mkdir -p $HOME/.mplayer
+[ -r $HOME/.mplayer/input.conf ] || ( echo MOUSE_BTN0 quit ) >$HOME/.mplayer/input.conf
 
 MODE=$1; [ "$MODE" ] || MODE=sxga
 
 . /root/x
 
+CAMERA="ov9650"		# driver name not camera model! use media-ctl -p to find out
+
+CPATH="$(media-ctl -e "$CAMERA")"
+if [ ! -r "$CPATH" ]
+then
+	echo "Camera $CAMERA not found!"
+	exit
+fi
+
+echo Camera: $CPATH
+
 echo "### starting mplayer in $MODE mode ###"
+
 case "$MODE" in
 	sxga )	# bypassing OMAP ISP (almost)
-		media-ctl -r -l '"ov9655 2-0030":0->"OMAP3 ISP CCDC":0[1], "OMAP3 ISP CCDC":1->"OMAP3 ISP CCDC output":0[1]'
-		media-ctl -V '"ov9655 2-0030":0 [UYVY2X8 1280x1024]'
+		media-ctl -r -l '"'"$CAMERA"'":0->"OMAP3 ISP CCDC":0[1], "OMAP3 ISP CCDC":1->"OMAP3 ISP CCDC output":0[1]'
+		media-ctl -V '"'"$CAMERA"'":0 [UYVY2X8 1280x1024]'
 		# media-ctl -V '"OMAP3 ISP CCDC":0 [UYVY2X8 1280x1024]'	# is set automatically
 		media-ctl -V '"OMAP3 ISP CCDC":1 [UYVY 1280x1024]'
-		mplayer tv:// -vf rotate=2 -tv driver=v4l2:device=$(media-ctl -e "OMAP3 ISP CCDC output"):outfmt=uyvy:width=1280:height=1024:fps=15 -vo x11
+		DEVICE=$(media-ctl -e "OMAP3 ISP CCDC output")
+		mplayer tv:// -vf rotate=2 -tv driver=v4l2:device=$DEVICE:outfmt=uyvy:width=1280:height=1024:fps=15 -vo x11
 		;;
 	sxga-old )
-		media-ctl -r -l '"ov9655 2-0030":0->"OMAP3 ISP CCDC":0[1], "OMAP3 ISP CCDC":2->"OMAP3 ISP preview":0[1], "OMAP3 ISP preview":1->"OMAP3 ISP resizer":0[1], "OMAP3 ISP resizer":1->"OMAP3 ISP resizer output":0[1]'
-		export DEVICE=$(media-ctl -e "OMAP3 ISP resizer output")
-		media-ctl -V '"ov9655 2-0030":0 [SGRBG10 1280x1024], "OMAP3 ISP CCDC":2 [SGRBG10 1280x1024], "OMAP3 ISP preview":1 [UYVY 1280x1024], "OMAP3 ISP resizer":1 [UYVY 1280x1024]'
-		mplayer tv:// -vf rotate=2 -tv driver=v4l2:device=$(media-ctl -e "OMAP3 ISP resizer output"):outfmt=uyvy:width=1280:height=1024:fps=15 -vo x11
+		media-ctl -r -l '"'"$CAMERA"'":0->"OMAP3 ISP CCDC":0[1], "OMAP3 ISP CCDC":2->"OMAP3 ISP preview":0[1], "OMAP3 ISP preview":1->"OMAP3 ISP resizer":0[1], "OMAP3 ISP resizer":1->"OMAP3 ISP resizer output":0[1]'
+		media-ctl -V '"'"$CAMERA"'":0 [SGRBG10 1280x1024], "OMAP3 ISP CCDC":2 [SGRBG10 1280x1024], "OMAP3 ISP preview":1 [UYVY 1280x1024], "OMAP3 ISP resizer":1 [UYVY 1280x1024]'
+		DEVICE=$(media-ctl -e "OMAP3 ISP resizer output")
+		mplayer tv:// -vf rotate=2 -tv driver=v4l2:device=$DEVICE:outfmt=uyvy:width=1280:height=1024:fps=15 -vo x11
 		;;
 	qvga-old )
-		media-ctl -r -l '"ov9655 2-0030":0->"OMAP3 ISP CCDC":0[1], "OMAP3 ISP CCDC":2->"OMAP3 ISP preview":0[1], "OMAP3 ISP preview":1->"OMAP3 ISP resizer":0[1], "OMAP3 ISP resizer":1->"OMAP3 ISP resizer output":0[1]'
-		export DEVICE=$(media-ctl -e "OMAP3 ISP resizer output")
-		media-ctl -V '"ov9655 2-0030":0 [SGRBG10 320x240], "OMAP3 ISP CCDC":2 [SGRBG10 320x240], "OMAP3 ISP preview":1 [UYVY 320x240], "OMAP3 ISP resizer":1 [UYVY 320x240]'
-		mplayer tv:// -vf rotate=2 -tv driver=v4l2:device=$(media-ctl -e "OMAP3 ISP resizer output"):outfmt=uyvy:width=320:height=240:fps=30 -vo x11
+		media-ctl -r -l '"'"$CAMERA"'":0->"OMAP3 ISP CCDC":0[1], "OMAP3 ISP CCDC":2->"OMAP3 ISP preview":0[1], "OMAP3 ISP preview":1->"OMAP3 ISP resizer":0[1], "OMAP3 ISP resizer":1->"OMAP3 ISP resizer output":0[1]'
+		media-ctl -V '"'"$CAMERA"'":0 [SGRBG10 320x240], "OMAP3 ISP CCDC":2 [SGRBG10 320x240], "OMAP3 ISP preview":1 [UYVY 320x240], "OMAP3 ISP resizer":1 [UYVY 320x240]'
+		DEVICE=$(media-ctl -e "OMAP3 ISP resizer output")
+		mplayer tv:// -vf rotate=2 -tv driver=v4l2:device=$DEVICE:outfmt=uyvy:width=320:height=240:fps=30 -vo x11
 		;;
 	cif-old )
-		media-ctl -r -l '"ov9655 2-0030":0->"OMAP3 ISP CCDC":0[1], "OMAP3 ISP CCDC":2->"OMAP3 ISP preview":0[1], "OMAP3 ISP preview":1->"OMAP3 ISP resizer":0[1], "OMAP3 ISP resizer":1->"OMAP3 ISP resizer output":0[1]'
-		export DEVICE=$(media-ctl -e "OMAP3 ISP resizer output")
-		media-ctl -V '"ov9655 2-0030":0 [SGRBG10 352x288], "OMAP3 ISP CCDC":2 [SGRBG10 352x288], "OMAP3 ISP preview":1 [UYVY 352x288], "OMAP3 ISP resizer":1 [UYVY 352x288]'
-		mplayer tv:// -vf rotate=2 -tv driver=v4l2:device=$(media-ctl -e "OMAP3 ISP resizer output"):outfmt=uyvy:width=352:height=288:fps=30 -vo x11
+		media-ctl -r -l '"'"$CAMERA"'":0->"OMAP3 ISP CCDC":0[1], "OMAP3 ISP CCDC":2->"OMAP3 ISP preview":0[1], "OMAP3 ISP preview":1->"OMAP3 ISP resizer":0[1], "OMAP3 ISP resizer":1->"OMAP3 ISP resizer output":0[1]'
+		media-ctl -V '"'"$CAMERA"'":0 [SGRBG10 352x288], "OMAP3 ISP CCDC":2 [SGRBG10 352x288], "OMAP3 ISP preview":1 [UYVY 352x288], "OMAP3 ISP resizer":1 [UYVY 352x288]'
+		DEVICE=$(media-ctl -e "OMAP3 ISP resizer output")
+		mplayer tv:// -vf rotate=2 -tv driver=v4l2:device=$DEVICE:outfmt=uyvy:width=352:height=288:fps=30 -vo x11
 		;;
 	vga-old )
-		media-ctl -r -l '"ov9655 2-0030":0->"OMAP3 ISP CCDC":0[1], "OMAP3 ISP CCDC":2->"OMAP3 ISP preview":0[1], "OMAP3 ISP preview":1->"OMAP3 ISP resizer":0[1], "OMAP3 ISP resizer":1->"OMAP3 ISP resizer output":0[1]'
-		media-ctl -V '"ov9655 2-0030":0 [SGRBG10 640x480], "OMAP3 ISP CCDC":2 [SGRBG10 640x480], "OMAP3 ISP preview":1 [UYVY 640x480], "OMAP3 ISP resizer":1 [UYVY 640x480]'
-		mplayer tv:// -vf rotate=2 -tv driver=v4l2:device=$(media-ctl -e "OMAP3 ISP resizer output"):outfmt=uyvy:width=640:height=480:fps=30 -vo x11
+		media-ctl -r -l '"'"$CAMERA"'":0->"OMAP3 ISP CCDC":0[1], "OMAP3 ISP CCDC":2->"OMAP3 ISP preview":0[1], "OMAP3 ISP preview":1->"OMAP3 ISP resizer":0[1], "OMAP3 ISP resizer":1->"OMAP3 ISP resizer output":0[1]'
+		media-ctl -V '"'"$CAMERA"'":0 [SGRBG10 640x480], "OMAP3 ISP CCDC":2 [SGRBG10 640x480], "OMAP3 ISP preview":1 [UYVY 640x480], "OMAP3 ISP resizer":1 [UYVY 640x480]'
+		DEVICE=$(media-ctl -e "OMAP3 ISP resizer output")
+		mplayer tv:// -vf rotate=2 -tv driver=v4l2:device=$DEVICE:outfmt=uyvy:width=640:height=480:fps=30 -vo x11
 		;;
 	vga-resizer | vga-r* )
-		media-ctl -r -l '"ov9655 2-0030":0->"OMAP3 ISP CCDC":0[1], "OMAP3 ISP CCDC":1->"OMAP3 ISP resizer":0[1], "OMAP3 ISP resizer":1->"OMAP3 ISP resizer output":0[1]'
-		export DEVICE=$(media-ctl -e "OMAP3 ISP resizer output")
-		media-ctl -V '"ov9655 2-0030":0 [UYVY2X8 1280x1024]'
+		media-ctl -r -l '"'"$CAMERA"'":0->"OMAP3 ISP CCDC":0[1], "OMAP3 ISP CCDC":1->"OMAP3 ISP resizer":0[1], "OMAP3 ISP resizer":1->"OMAP3 ISP resizer output":0[1]'
+		media-ctl -V '"'"$CAMERA"'":0 [UYVY2X8 1280x1024]'
 		media-ctl -V '"OMAP3 ISP CCDC":1 [UYVY2X8 1280x1024]'
 		media-ctl -V '"OMAP3 ISP resizer":1 [UYVY 640x480]'
+		DEVICE=$(media-ctl -e "OMAP3 ISP resizer output")
 		mplayer tv:// -vf rotate=2 -tv driver=v4l2:device=$DEVICE:outfmt=uyvy:width=640:height=480:fps=30 -vo x11
 		;;
 	vga )	# try bypassing OMAP ISP by programming the camera to VGA mode (is not completely supported by kernel driver!)
-		media-ctl -r -l '"ov9655 2-0030":0->"OMAP3 ISP CCDC":0[1], "OMAP3 ISP CCDC":1->"OMAP3 ISP CCDC output":0[1]'
-		export DEVICE=$(media-ctl -e "OMAP3 ISP CCDC output")
-		media-ctl -V '"ov9655 2-0030":0 [UYVY2X8 640x480]'
+		media-ctl -r -l '"'"$CAMERA"'":0->"OMAP3 ISP CCDC":0[1], "OMAP3 ISP CCDC":1->"OMAP3 ISP CCDC output":0[1]'
+		media-ctl -V '"'"$CAMERA"'":0 [UYVY2X8 640x480]'
 		# media-ctl -V '"OMAP3 ISP CCDC":0 [UYVY2X8 640x480]'
 		media-ctl -V '"OMAP3 ISP CCDC":1 [UYVY 640x480]'
+		DEVICE=$(media-ctl -e "OMAP3 ISP CCDC output")
 		mplayer tv:// -vf rotate=2 -tv driver=v4l2:device=$DEVICE:outfmt=uyvy:width=640:height=480:fps=30 -vo x11
 		;;
 esac

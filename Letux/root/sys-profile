@@ -1,0 +1,31 @@
+echo
+echo "*** System Profile ***"
+echo "*** $(cat /proc/device-tree/model ***"
+echo
+
+echo
+echo "CPU"
+cat /proc/cpuinfo
+
+echo
+echo "WLAN"
+iwconfig
+
+echo
+echo "Bluetooth"
+hciconfig -a
+hciconfig dev
+
+echo
+echo "WWAN"
+
+echo
+echo "USB"
+lsusb
+
+echo
+echo "Disks/Media"
+df
+
+# echo "Battery status"
+# cat /sys/class/power_battery/...

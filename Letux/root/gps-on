@@ -35,36 +35,27 @@ case "$IF" in
 		echo unknown
 		exit 1
 		(
-		echo "AT^SDPORT=4"	# switch to multiplexed data mode
-		sleep 1
+		echo "AT^SDPORT=4"; sleep1	# switch to multiplexed data mode
 		) | ./femtocom $IF >&2
 		echo should now make modem re-enumerate and restart this script
 		;;
 
 	/dev/ttyACM1 )	# PLS8
 		(
-		echo 'AT^SGPSC="Engine","1"'	# enable GPS
-		sleep .5
-		echo 'AT^SGPSC="Nmea/Output","on"'	# enable data stream
-		sleep .5
-		echo 'AT^SGPSC="Power/Antenna","on"'	# turn on LNA
-		sleep .5
-		echo 'AT^SGPSC="Power/Antenna","auto"'	# switch to auto mode
-		sleep 1
+		echo 'AT^SGPSC="Engine","1"'; sleep 1	# enable GPS
+		echo 'AT^SGPSC="Nmea/Output","on"'; sleep 1	# enable data stream
+		echo 'AT^SGPSC="Power/Antenna","on"'; sleep 1	# turn on LNA
+		echo 'AT^SGPSC="Power/Antenna","auto"'; sleep 1	# switch to auto mode
 		) | ./femtocom $IF >&2 &
 		echo /dev/ttyACM2
 		;;
 
 	/dev/ttyUSB[0-4] )	# PHS8 in mutiplexed mode
 		(
-		echo 'AT^SGPSC="Engine","1"'	# enable GPS
-		sleep .5
-		echo 'AT^SGPSC="Nmea/Output","on"'
-		sleep .5
-		echo 'AT^SGPSC="Power/Antenna","on"'
-		sleep .5
-		echo 'AT^SGPSC="Power/Antenna","auto"'
-		sleep 1
+		echo 'AT^SGPSC="Engine","1"'; sleep 1	# enable GPS
+		echo 'AT^SGPSC="Nmea/Output","on"'; sleep 1
+		echo 'AT^SGPSC="Power/Antenna","on"'; sleep 1
+		echo 'AT^SGPSC="Power/Antenna","auto"'; sleep 1
 		) | ./femtocom $IF >&2  &
 		echo /dev/ttyUSB1
 		;;

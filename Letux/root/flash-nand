@@ -1,0 +1,356 @@
+#
+# clone the currently running system to NAND/OneNAND
+# for GTA04 devices (and BeagleBoard with NAND)
+#
+# works only if booted from SD
+#
+
+# do sanity tests
+# - that the rootfs is not already coming from nand
+# - that boot.scr does not overwrite U-Boot
+
+# DEFAULT="-x -b -k -j" ### we can't write X-Loader yet
+DEFAULT="-k -u"
+
+[ "$1" == "" ] && set - $DEFAULT
+
+if [ ! -x /usr/sbin/nandwrite ]
+then
+	echo "mtd-utils not installed (apt-get install mtd-utils)"
+	exit 1
+fi
+
+UIMAGE="/boot/uImage"	# the uImage on the SD card
+
+# copy only modules for the current kernel
+MODULES=$(mkimage -l "$UIMAGE" | fgrep "Image Name:" | sed 's/Image Name: *//' | sed 's/Linux-//')
+
+# copy only the modules we need to boot on this device
+THEMODULES="-C /"
+
+case "$(cat /proc/device-tree/model)" in
+	*GTA04* ) # take all that are currently loaded
+		echo "find really used kernel modules"
+		LOADEDMODULES=$(lsmod | while read MODULE SIZE REFCNT USEDBY
+                        do
+                        [ "$MODULE" != "Module" ] && modprobe -v -D $MODULE | awk '{ print "."$2 }'
+                        done | sort -u)
+		echo "stripping kernel modules"
+		(cd / && strip --strip-debug $LOADEDMODULES)
+		THEMODULES+=" $LOADEDMODULES"
+		THEMODULES+=" $(cd /; echo ./lib/modules/$MODULES/modules.*)"
+		;;
+	* ) # no restriction - copy full file tree
+		THEMODULES+=" ./lib/modules/$MODULES "
+		;;
+esac
+
+# OS files for rootfs (without locales)
+TAR_SRC="--exclude ./flash-test"
+TAR_SRC+=" --exclude lost+found"
+TAR_SRC+=" --exclude .bash_history"
+TAR_SRC+=" --exclude .cache"
+TAR_SRC+=" --exclude *.mp3"
+TAR_SRC+=" --exclude ./mnt"
+TAR_SRC+=" --exclude ./media"
+TAR_SRC+=" --exclude ./var/cache"
+TAR_SRC+=" --exclude ./var/log"
+TAR_SRC+=" --exclude ./var/spool"
+TAR_SRC+=" --exclude ./tmp"
+TAR_SRC+=" --exclude ./proc"
+TAR_SRC+=" --exclude ./sys"
+TAR_SRC+=" --exclude ./boot"
+TAR_SRC+=" --exclude ./lib/modules"
+TAR_SRC+=" --exclude ./debian-*"
+TAR_SRC+=" --exclude ./usr/share/man/??"
+TAR_SRC+=" --exclude ./usr/share/man/??_*"
+TAR_SRC+=" --exclude ./usr/share/doc"
+TAR_SRC+=" -cf - -C / ."
+
+# check if requested components are available and fit into given space
+
+for cmd
+do
+	case "$cmd" in
+		-f ) # force flashing by skipping sanity checks
+			break
+			;;
+		-x )
+			echo "flashing X-Loader from Linux not available (HW-ECC kernel support needed)"
+			exit 1
+			if [ ! -r /boot/x-load.flash ]
+			then
+				echo x-loader missing
+				exit 1
+			fi
+			# MLO is not stored in NAND but should be in rootfs
+			# so that we can create bootable SD cards
+			if [ ! -r /boot/MLO ]
+			then
+				echo MLO missing
+				exit 1
+			fi
+			;;
+		-b )
+			echo "flashing U-Boot from Linux not available (HW-ECC kernel support needed)"
+			exit 1
+			if [ ! -r /boot/u-boot.bin ]
+			then
+				echo U-Boot missing
+				exit 1
+			fi
+			if [ ! -r /boot/boot.scr ]
+			then
+				echo boot script missing
+				exit 1
+			fi
+			if [ ! -r /boot/menu.rgb16z -a -r /boot/splash.rgb16z ]
+			then
+				echo boot menu images missing
+				exit 1
+			fi
+			;;
+		-k )
+			if [ ! -r /boot/uImage ]
+			then
+				echo kernel image missing
+				exit 1
+			fi
+			;;
+		-j )
+			echo jffs2 is no longer supported
+			exit 1
+			;;
+		-j | -u )
+			if fgrep -q 'root=/dev/mtdblock4' /proc/cmdline
+			then
+				echo "can't overwrite active rootfs"
+				exit 1
+			fi
+
+			NANDSIZE=480
+			read MAJOR MINOR BLOCKS NAME < <(fgrep mtdblock4 /proc/partitions)
+			NANDSIZE=$(expr "$BLOCKS" / 1100)	# sets aside some reserve
+
+			echo "cleaning up current rootfs before copying"
+			apt-get clean
+			apt-get autoclean
+			apt-get autoremove
+			depmod -a
+
+			(
+			echo en_US.UTF-8 UTF-8
+			echo de_DE.UTF-8 UTF-8
+			) >/etc/locale.gen
+			(
+			echo MANDELETE
+			echo DONTBOTHERNEWLOCALE
+			echo SHOWFREEDSPACE
+			echo en_US.UTF-8 UTF-8
+			echo de_DE.UTF-8 UTF-8
+			) >/etc/locale.nopurge
+
+			yes | DEBIAN_FRONTEND=noninteractive apt-get install -y localepurge locales
+			locale-gen
+			localepurge
+
+			read USED PERIOD < <(du -s -m / 2>/dev/null )
+
+			echo "Available flash space is ${NANDSIZE} MB"
+			echo "Root file system on SD card is ${USED} MB"
+
+			echo "doing a test copy to estimate total file size (takes some time and needs a lot of space on the SD card!)"
+
+			echo tar $TAR_SRC
+
+			rm -rf /flash-test
+			tar $TAR_SRC | (mkdir -p /flash-test && cd /flash-test && tar xpf - --checkpoint=100)
+
+			echo tar -cf - $THEMODULES
+			tar -cf - $THEMODULES | (mkdir -p /flash-test && cd /flash-test && tar xpf - --checkpoint=100)
+
+			read FUSED PERIOD < <(du -s -m /flash-test 2>/dev/null)
+			echo "Reduced root file system wants to copy ${FUSED} MB to NAND flash"
+
+			if [ $USED -lt 1 -o $FUSED -gt $NANDSIZE ]
+				then
+				echo "this is definitively too big for the NAND flash ($NANDSIZE MB)"
+				echo "check /flash-test what would be copied"
+				echo "20 biggest packages (du /flash-test | sort -n):"
+				du /flash-test | sort -n | tail -20
+				exit 1
+			fi
+			rm -rf /flash-test
+exit
+			;;
+		* ) echo unknown option "$cmd"
+			echo "-x x-loader [better done by boot-system]"
+			echo "-b u-boot and boot scripts [better done by boot-system]"
+			echo "-k kernel"
+			echo "-j rootfs in jffs2 format [no longer available]"
+			echo "-u rootfs in UBIFS format"
+			echo "-f force [skips sanity checks; use with care]"
+			echo "default: $DEFAULT"
+			exit 1
+			;;
+	esac
+done
+
+# install requested components
+
+for cmd
+do
+	case "$cmd" in
+		-f )
+			;;
+
+		-x ) echo flashing X-loader
+
+			# FIXME: this must be written with HW_ECC enabled!
+
+			flash_erase /dev/mtd0 0 0 &&
+			# write 4 copies at different locations? use -s option
+			nandwrite -p /dev/mtd0 -s 0x00000 /boot/x-load.flash &&
+			nandwrite -p /dev/mtd0 -s 0x20000 /boot/x-load.flash &&
+			nandwrite -p /dev/mtd0 -s 0x40000 /boot/x-load.flash &&
+			nandwrite -p /dev/mtd0 -s 0x60000 /boot/x-load.flash || exit 1
+			;;
+
+		-b ) echo flashing U-Boot and boot scripts
+
+			flash_erase /dev/mtd1 0 0 &&
+			nandwrite -p /dev/mtd1 -s 0x000000 /boot/u-boot.bin || exit 1
+
+			echo copying boot scripts to end of U-Boot partition
+
+			nandwrite -p /dev/mtd1 -s 0x140000 /boot/splash.rgb16z &&
+			nandwrite -p /dev/mtd1 -s 0x180000 /boot/menu.rgb16z &&
+			nandwrite -p /dev/mtd1 -s 0x130000 /boot/boot.scr || exit 1
+
+			nanddump /dev/mtd2 | xxd | head
+			;;
+
+		-k ) echo flashing Kernel
+
+			UIMAGE="/boot/uImage"	# the uImage on the SD card
+			# we do not use /sys/firmware/fdt because that is "cooked" by booting
+			DTB="$(fw_printenv -n devicetree)"	# hardware dependent device tree blob (if it exists)
+
+if false
+then
+			if [ "$DTB" ] && (which mkimage >/dev/null)
+			then # merge uImage and device tree BLOB for NAND partition
+				echo unpacking "$UIMAGE"
+				VERSION=$(mkimage -l "$UIMAGE" | fgrep "Image Name:" | sed 's/Image Name: *//')
+				LOADADDRESS=0x$(mkimage -l "$UIMAGE" | fgrep "Load Address:" | sed 's/Load Address: *//')
+				ENTRYPOINT=0x$(mkimage -l "$UIMAGE" | fgrep "Entry Point:" | sed 's/Entry Point: *//')
+				ZIMAGE="/tmp/$$-zImage"
+				dd if="$UIMAGE" ibs=64 skip=1 | dd of="$ZIMAGE" ibs=8 skip=1 || exit 1
+				echo appending "/boot/${DTB}.dtb"
+				cat "/boot/${DTB}.dtb" >>"$ZIMAGE" || exit 1
+				UIMAGE="/tmp/$$-uImage" # new UIMAGE file
+				echo repacking into "$UIMAGE"
+				mkimage -A arm -O linux -T kernel -C none -a "$LOADADDRESS" -e "$ENTRYPOINT" -n "$VERSION" -d "$ZIMAGE" "$UIMAGE" || exit 1
+			fi
+fi
+			flash_erase /dev/mtd3 0 0 &&
+			nandwrite -p /dev/mtd3 "$UIMAGE" || exit 1
+			if [ "$DTB" ]
+			then
+				nandwrite -p /dev/mtd3 -s 0x5c0000 "/boot/${DTB}.dtb" || exit 1
+			fi
+			;;
+
+		-j ) echo flashing Rootfs as jffs2
+
+			if fgrep -q 'root=/dev/mtdblock4' /proc/cmdline
+			then
+				echo "can't overwrite active rootfs"
+				exit 1
+			fi
+			umount /dev/mtdblock4
+			flash_eraseall -j /dev/mtd4 &&
+			mkdir -p /mnt/nand &&
+			mount -t jffs2 /dev/mtdblock4 /mnt/nand &&
+			(
+			cd /mnt/nand &&
+				(
+				echo "copying files (takes a while)"
+				rm -rf *	# clear previous rootfs (if any) -- this leaves .* files!
+				# copy to jffs2
+				tar $TAR_SRC | tar xpf - --checkpoint=100
+				echo "copied"
+				echo "patching and syncing"
+				mkdir -p ./mnt ./media ./tmp ./proc ./sys
+				mkdir -p ./var/cache/apt/archives ./var/cache/apt/archives/partial ./var/cache/debconf
+				cp /var/cache/debconf/config.dat ./var/cache/debconf/config.dat
+				rm -f ./home/.bash_history ./root/.bash_history ./.bash_history
+				# apply any important patches (which?)
+				# echo "creating new sshd key"
+				# e.g. clear sshd key
+				# so we should save the keys before doing that and restore them
+				# rm -f ./etc/ssh/ssh_host_*
+				# dpkg-reconfigure openssh-server
+				sync
+				echo "synced"
+				)
+			) || echo erasing/flashing jffs2 to NAND failed
+			df
+			umount /mnt/nand
+			rm -rf /mnt/nand
+			;;
+
+		-u ) echo flashing Rootfs as UBIFS
+
+			if fgrep -q 'root=/dev/mtdblock4' /proc/cmdline
+			then
+				echo "can't overwrite active rootfs"
+				exit 1
+			fi
+			umount /mnt/nand
+			umount ubi0:gta04-rootfs	# if mounted
+			ubidetach /dev/ubi_ctrl -m 4	# if attached
+			ubiformat -y /dev/mtd4
+			ubiattach /dev/ubi_ctrl -m 4
+			ubimkvol /dev/ubi0 -N gta04-rootfs -m &&
+			mkdir -p /mnt/nand &&
+			mount -t ubifs ubi0:gta04-rootfs /mnt/nand &&
+			(
+			cd /mnt/nand &&
+				(
+# FIXME: should we do exactly the same as the initial test copy?
+				echo "copying files (takes a while)"
+				rm -rf *	# clear previous rootfs (if any) -- this leaves .* files!
+				echo "copying kernel modules"
+				tar -cf - $THEMODULES | tar vxpf - --checkpoint=100
+				echo "copying rootfs"
+				tar $TAR_SRC | tar xpf - --checkpoint=100
+				echo "patching and syncing"
+				mkdir -p ./mnt/nand ./media ./tmp ./proc ./sys ./boot
+				mkdir -p ./var/cache/apt/archives ./var/cache/apt/archives/partial ./var/cache/debconf
+				cp /var/cache/debconf/config.dat ./var/cache/debconf/config.dat
+				sed s/^rootfs/#rootfs/ /etc/fstab >./etc/fstab	# comment out the rootfs entry because rootfs mounting fails
+				rm -f ./home/.bash_history ./root/.bash_history ./.bash_history
+				echo "MLO/X-Loader, U-Boot and Kernel are stored in separate NAND partitions and not here" >./boot/booting_from_nand
+				# apply any important patches (which?)
+				# echo "creating new sshd key"
+				# e.g. clear sshd key
+				# so we should save the keys before doing that and restore them
+				# rm -f ./etc/ssh/ssh_host_*
+				# dpkg-reconfigure openssh-server
+
+				# check that some things are really not copied
+				find . \( -name '*.mp3' -o -name 'debian-*' -o -name '.bash-history' \) -print
+				sync
+				echo "synced"
+				)
+			) || echo erasing/flashing ubifs to NAND failed
+			df
+#			umount /mnt/nand
+#			rm -rf /mnt/nand
+			;;
+
+	esac
+done
+
+echo "done."

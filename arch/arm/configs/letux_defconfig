@@ -1,6 +1,5 @@
 #
-# Automatically generated file; DO NOT EDIT.
-# Linux/arm 4.10.0-rc4 Kernel Configuration
+# Linux/arm 4.10.0-rc6 Kernel Configuration
 #
 CONFIG_ARM=y
 CONFIG_ARM_HAS_SG_CHAIN=y
@@ -3936,7 +3935,7 @@ CONFIG_RTC_INTF_DEV=y
 # CONFIG_RTC_DRV_PCF8583 is not set
 # CONFIG_RTC_DRV_M41T80 is not set
 # CONFIG_RTC_DRV_BQ32K is not set
-CONFIG_RTC_DRV_TWL4030=m
+CONFIG_RTC_DRV_TWL4030=y
 CONFIG_RTC_DRV_PALMAS=y
 # CONFIG_RTC_DRV_TPS65910 is not set
 # CONFIG_RTC_DRV_S35390A is not set

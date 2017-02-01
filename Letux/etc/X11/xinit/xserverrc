@@ -43,6 +43,9 @@ case "$(cat /proc/device-tree/model 2>/dev/null)" in
 				./ssd2858 -r -p -s	# start ssd
 			fi
 			./bl 1
+		else
+			# assume we have a native and working panel driver and need to rotate by tiler
+			./tiler-ctl 270
 		fi
 		)
 		cp /etc/X11/Xmodmap.pyra /etc/X11/Xmodmap

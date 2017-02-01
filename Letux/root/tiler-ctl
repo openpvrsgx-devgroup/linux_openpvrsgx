@@ -1,0 +1,22 @@
+#
+# control OMAP5 tiler rotation
+# following how-to provided by aTc
+#
+
+case "$1" in
+	0 )	ROTATION=0;;
+	90 )	ROTATION=2;;
+	180 )	ROTATION=4;;
+	270 )	ROTATION=8;;
+	* )
+		echo "usage: $0 0|90|180|270" 2>&1
+		exit;;
+esac
+
+echo "$1 -> $ROTATION"
+
+echo 0 >/sys/class/vtconsole/vtcon1/bind
+modprobe -r omapdrm
+modprobe drm_kms_helper fbdev_rotation=$ROTATION
+modprobe omapdrm
+# cat /dev/dri/card0 > /dev/null &

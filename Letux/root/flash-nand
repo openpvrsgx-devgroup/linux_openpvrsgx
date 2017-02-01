@@ -325,6 +325,8 @@ fi
 				tar -cf - $THEMODULES | tar vxpf - --checkpoint=100
 				echo "copying rootfs"
 				tar $TAR_SRC | tar xpf - --checkpoint=100
+				# we must preserve copyright notices
+				(cd / && tar -cf - ./usr/share/doc/*/copyright) | tar xpf - --checkpoint=100
 				echo "patching and syncing"
 				mkdir -p ./mnt/nand ./media ./tmp ./proc ./sys ./boot
 				mkdir -p ./var/cache/apt/archives ./var/cache/apt/archives/partial ./var/cache/debconf

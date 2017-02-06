@@ -31,7 +31,6 @@ mkfifo /tmp/femtocom
 (
 echo "*** TAM starting ***"
 ( # enable unsolicited messages and extended reporting
-### FIXME ###
 echo "AT+CPIN?"; sleep 1
 echo "AT_OPONI=1"; sleep 1
 echo "AT_OSQI=1"; sleep 1
@@ -44,7 +43,11 @@ echo "AT_OPATEMP=1"; sleep 1
 echo "AT+COPS"; sleep 1
 echo "AT+CRC=1"; sleep 1
 echo "AT+CLIP=1"; sleep 1
-) >/tmp/femtocom
+echo "AT_ODO=0"; sleep 1
+echo "AT_OPCMENABLE=1"; sleep 1
+echo "AT_OPCMPROF=0"; sleep 1
+sleep 99999999
+) >/tmp/femtocom &	# send commands by background process
 echo "*** TAM started ***"
 while read MSG ARGS
 do

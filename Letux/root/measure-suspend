@@ -6,16 +6,6 @@
 # power usage by monitoring battery.
 
 case $(cat /proc/device-tree/model 2>/dev/null) in
-	*GTA04A5* )
-		power1=/sys/class/power_supply/twl4030_usb/mode
-		power2=/sys/class/power_supply/twl4030_ac/mode
-		chg=/sys/class/power_supply/bq27621-0/charge_now
-		alarm=/sys/class/rtc/rtc0/wakealarm
-		rs232=/sys/class/gpio/gpio13/value
-		rs232dir=/sys/class/gpio/gpio13/direction
-		echo heartbeat >/sys/class/leds/gta04:green:aux/trigger
-		[ -f $rs232 ] || { echo 13 > /sys/class/gpio/export; echo high > $rs232dir;}
-		;;
 	*GTA04* )
 		power1=/sys/class/power_supply/twl4030_usb/mode
 		power2=/sys/class/power_supply/twl4030_ac/mode
@@ -35,7 +25,7 @@ case $(cat /proc/device-tree/model 2>/dev/null) in
 		# FIXME: disabling charging must be done differently
 	# FIXME: there is no "mode": power1=/sys/class/power_supply/bq24297/mode
 		power3=/sys/class/power_supply/bq24297/input_current_limit
-		chg=/sys/class/power_supply/bq27621-0/charge_now
+		chg=/sys/class/power_supply/bq27421-0/charge_now
 		alarm=/sys/class/rtc/rtc0/wakealarm
 		;;
 	* )
@@ -48,25 +38,28 @@ delay=${1-300}
 
 echo suspending for $delay seconds >&2
 stty raw -echo -cread
+# stop RS232
 [ "$rs232" ] && echo 0 > $rs232
+# turn off external power supplies
 [ "$power1" ] && echo off > $power1
 [ "$power2" ] && echo off > $power2
 [ "$power3" ] && echo 0 > $power3
+# turn off LEDs
 ( cd /sys/class/leds; for i in *; do echo "none" >$i/trigger; done )
 before=`cat $chg`
-echo fuel: $before
 start=`date '+%s'`
 echo $[start+delay] > $alarm
 echo mem > /sys/power/state
-sleep 1
-after=`cat $chg`
 end=`date '+%s'`
+after=`cat $chg`
+sleep 1
 [ "$rs232" ] && echo 1 > $rs232
 stty sane
 echo did wake up >&2
-echo fuel: $after
+echo before: $before
+echo after: $after
 [ "$power1" ] && echo auto > $power1
 [ "$power2" ] && echo auto > $power2
 [ "$power3" ] && echo 2000000 > $power3
 
-echo $[(before-after)*3600/(end-start)] uA over $[end-start] seconds
+echo average $[(before-after)*3600/(end-start)] uA over $[end-start] seconds

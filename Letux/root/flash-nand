@@ -314,7 +314,7 @@ fi
 			ubiattach /dev/ubi_ctrl -m 4
 			ubimkvol /dev/ubi0 -N gta04-rootfs -m &&
 			mkdir -p /mnt/nand &&
-			mount -t ubifs ubi0:gta04-rootfs /mnt/nand &&
+			mount -o compr=lzo -t ubifs ubi0:gta04-rootfs /mnt/nand &&
 			(
 			cd /mnt/nand &&
 				(

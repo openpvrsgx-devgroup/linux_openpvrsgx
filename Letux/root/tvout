@@ -1,5 +1,10 @@
 #
-# switch on/off TVout on the GTA04 or BeagleBoard
+# switch on/off TVout on the GTA04 or BeagleBoard or Pyra
+# on GTA04 the TVout is called "None-1"
+# on Pyra the HDMI interface is called "HDMI-1"
+#
+# specifying an unknown device gives only a warning by xrandr
+# so we do not explicitly check
 #
 
 # ls -l /sys/devices/platform/omapdrm.0/drm/card0/card0-*
@@ -7,6 +12,8 @@
 if [ "$1" == "1" ]
 then
 	xrandr --output None-1 --auto
+	xrandr --output HDMI-1 --auto
 else
 	xrandr --output None-1 --off
+	xrandr --output HDMI-1 --off
 fi

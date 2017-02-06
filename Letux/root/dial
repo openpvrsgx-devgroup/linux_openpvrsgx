@@ -49,7 +49,7 @@ case "$IF" in
 		trap "exit 1" SIGHUP SIGINT SIGTERM
 
 		# enable phone mixer
-		amixer set 'Voice route' 'Voice to SoC'
+		amixer set 'Voice route' 'inactive'
 		amixer set 'AVADC Clock Priority' 'HiFi high priority'
 		amixer set 'DAC1 Analog' off
 		amixer set 'DAC2 Analog' on
@@ -96,7 +96,7 @@ case "$IF" in
 		if [ "$MODE" = "-hw" ]	# not available on GTA04A3 boards
 		then
 			amixer set 'AVADC Clock Priority' 'Voice high priority'
-			amixer set 'Voice route' 'Voice to twl4030'
+			amixer set 'Voice route' 'active'
 			amixer set 'DAC Voice Analog Downlink' unmute
 			amixer set 'DAC Voice Analog Downlink' 16
 			amixer set 'DAC Voice Digital Downlink' 44
@@ -126,7 +126,7 @@ case "$IF" in
 				arecord -Ddefault:CARD=voice -fS16_LE -r8000 | aplay	# modem -> earpiece, speaker, headset
 			else
 				echo "please ctl-C to end the call"
-				sleep 9999	# we can't easily detect end of call by a shell script
+				arecord -fS16_LE -r8000 >/dev/null	# enable micbias
 			fi
 		fi
 		) | ./femtocom $IF
@@ -142,6 +142,9 @@ case "$IF" in
 			echo "AT+CHUP"; sleep 3
 		else
 			#echo "AT+CPIN=XXXX"; sleep 1	# use the ./pin script to unlock the SIM card
+
+			# FIXME: set up commands to use PCM interface of PHS8/PLS8
+
 			echo "AT_ODO=0"; sleep 1
 			echo "AT_OPCMENABLE=1"; sleep 1
 			echo "AT_OPCMPROF=0"; sleep 1
@@ -153,7 +156,7 @@ case "$IF" in
 				arecord -Ddefault:CARD=voice -fS16_LE -r8000 | aplay	# modem -> earpiece, speaker, headset
 			else
 				echo "please ctl-C to end the call"
-				sleep 9999	# we can't easily detect end of call by a shell script
+				arecord -fS16_LE -r8000 >/dev/null	# enable micbias
 			fi
 		fi
 		) | ./femtocom $IF

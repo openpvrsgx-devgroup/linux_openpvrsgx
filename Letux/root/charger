@@ -23,10 +23,6 @@ function fuel-level { # $1 is mV; $2 is mA charging current; $3 is resistance, r
 if [ -d "$TWL4030_MADC" ]
 then # OMAP3 with TWL4030 / TPS65950
 
-# enable high charging current if GTA04 is connected to USB
-
-echo 800000 >/sys/class/power_supply/twl4030_usb/input_current_limit
-
 # see http://www.mjmwired.net/kernel/Documentation/hwmon/twl4030-madc-hwmon for a list of channels
 echo "TWL4030 Main Battery"
 echo "===================="
@@ -156,6 +152,12 @@ echo current: $(cat $SUPPLY/current_now 2>/dev/null)uA
 echo max_current: $(cat $SUPPLY/input_current_limit 2>/dev/null)uA
 echo ID: $(cat /dev/usb_id 2>/dev/null)
 echo
+
+# enable higher charging current limit for GTA04 and/or Pyra
+case "$SUPPLY" in
+	*twl4030* ) echo 800000 >$SUPPLY/input_current_limit;;
+	*bq2429* ) echo 2000000 >$SUPPLY/input_current_limit;;
+esac
 ;;
 
 Mains )

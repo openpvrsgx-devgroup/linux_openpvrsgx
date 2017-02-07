@@ -1097,10 +1097,10 @@ if(component->dev->of_node && component->dev->of_node->name)
 			/* enable the other end of the DAI link */
 			pins_state = pinctrl_lookup_state(pinctrl, "default");
 			if(!IS_ERR(pins_state)) {
-printk("pinctrl_select_state tristate\n");
+printk("pinctrl_select_state default\n");
 				pinctrl_select_state(pinctrl, pins_state);
 			} else
-printk("pinctrl_lookup_state tristate error %ld\n", PTR_ERR(pins_state));
+printk("pinctrl_lookup_state default error %ld\n", PTR_ERR(pins_state));
 
 			/* TWL4030_VIF_SLAVE_EN could be done through
 			 * twl4030_voice_set_dai_fmt(&dai, SND_SOC_DAIFMT_CBS_CFS)
@@ -1122,10 +1122,10 @@ printk("pinctrl_lookup_state tristate error %ld\n", PTR_ERR(pins_state));
 			/* inactivate the other end of the DAI link */
 			pins_state = pinctrl_lookup_state(pinctrl, "inactive");
 			if(!IS_ERR(pins_state)) {
-printk("pinctrl_select_state default\n");
+printk("pinctrl_select_state inactive\n");
 				pinctrl_select_state(pinctrl, pins_state);
 			} else
-printk("pinctrl_lookup_state default error %ld\n", PTR_ERR(pins_state));
+printk("pinctrl_lookup_state inactive error %ld\n", PTR_ERR(pins_state));
 		}
 		if (powered)
 			twl4030_codec_enable(component, 1);

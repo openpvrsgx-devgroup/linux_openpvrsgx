@@ -48,9 +48,11 @@ echo "AT_OPATEMP=1"; sleep 1
 echo "AT+COPS"; sleep 1
 echo "AT+CRC=1"; sleep 1
 echo "AT+CLIP=1"; sleep 1
+echo "AT+CLVL=7"; sleep 1
 echo "AT_ODO=0"; sleep 1
 echo "AT_OPCMENABLE=1"; sleep 1
-echo "AT_OPCMPROF=0"; sleep 1
+echo "AT_OPCMPROF=0"; sleep 1	# handset profile
+echo "AT+VIP=0"; sleep 1	# compatible to S16_LE
 sleep 99999999
 ) >/tmp/femtocom &	# send commands by background process
 echo "*** TAM started ***"

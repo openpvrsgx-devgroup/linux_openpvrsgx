@@ -117,8 +117,10 @@ case "$IF" in
 			#echo "AT+CPIN=XXXX"; sleep 1	# use the ./pin script to unlock the SIM card
 			echo "AT_ODO=0"; sleep 1
 			echo "AT_OPCMENABLE=1"; sleep 1
-			echo "AT_OPCMPROF=0"; sleep 1
+			echo "AT_OPCMPROF=0"; sleep 1	# handset profile
+			echo "AT+VIP=0"; sleep 1	# compatible to S16_LE
 			echo "AT+COPS"; sleep 1
+			echo "AT+CLVL=7"; sleep 1
 			echo "ATD$NUMBER;"; sleep 1
 			if [ "$MODE" = "-sw" ]
 			then

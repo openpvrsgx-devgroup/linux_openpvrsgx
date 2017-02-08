@@ -14,6 +14,7 @@ case $(cat /proc/device-tree/model 2>/dev/null) in
 		rs232=/sys/class/gpio/gpio13/value
 		rs232dir=/sys/class/gpio/gpio13/direction
 		[ -f $rs232 ] || { echo 13 > /sys/class/gpio/export; echo high > $rs232dir;}
+		[ -r /dev/ttyHS_Application ] && MODEM="with modem on"
 		;;
 	*Pandora* )
 		power1=/sys/class/power_supply/twl4030_usb/mode
@@ -27,6 +28,7 @@ case $(cat /proc/device-tree/model 2>/dev/null) in
 		power3=/sys/class/power_supply/bq24297/input_current_limit
 		chg=/sys/class/power_supply/bq27421-0/charge_now
 		alarm=/sys/class/rtc/rtc0/wakealarm
+		[ -r /dev/ttyACM1 ] && MODEM="with modem on"
 		;;
 	* )
 		echo "unknown device $(cat /proc/device-tree/model 2>/dev/null)"
@@ -62,4 +64,4 @@ echo after: $after
 [ "$power2" ] && echo auto > $power2
 [ "$power3" ] && echo 2000000 > $power3
 
-echo average $[(before-after)*3600/(end-start)] uA over $[end-start] seconds
+echo average $[(before-after)*3600/(end-start)] uA over $[end-start] seconds $MODEM

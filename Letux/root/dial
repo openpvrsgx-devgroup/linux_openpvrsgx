@@ -49,7 +49,7 @@ case "$IF" in
 		trap "exit 1" SIGHUP SIGINT SIGTERM
 
 		# enable phone mixer
-		amixer set 'Voice route' 'inactive'
+		amixer set 'Voice PCM Interface' 'inactive'
 		amixer set 'AVADC Clock Priority' 'HiFi high priority'
 		amixer set 'DAC1 Analog' off
 		amixer set 'DAC2 Analog' on
@@ -96,7 +96,7 @@ case "$IF" in
 		if [ "$MODE" = "-hw" ]	# not available on GTA04A3 boards
 		then
 			amixer set 'AVADC Clock Priority' 'Voice high priority'
-			amixer set 'Voice route' 'active'
+			amixer set 'Voice PCM Interface' 'active'
 			amixer set 'DAC Voice Analog Downlink' unmute
 			amixer set 'DAC Voice Analog Downlink' 16
 			amixer set 'DAC Voice Digital Downlink' 44

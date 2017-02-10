@@ -188,8 +188,7 @@ dtb-$(CONFIG_SOC_OMAP5) += \
 	omap5-uevm+pyra4.dtb omap5-uevm+pyra4+lg.dtb omap5-uevm+pyra4+boe.dtb omap5-uevm+pyra4+succ.dtb omap5-uevm+pyra4+ssd+boe.dtb omap5-uevm+pyra4+ssd+succ.dtb \
 	omap5-pyra-brokenevm.dtb \
 	omap5-uevm-broken+pyra4.dtb \
-	omap5-letux-cortex15.dtb omap5-letux-cortex15+pyra.dtb \
-	omap5-letux-cortex15-v4.9.dtb omap5-letux-cortex15-v4.9+pyra.dtb \
+	omap5-letux-cortex15-v4.9.dtb omap5-letux-cortex15-v4.9+pyra-v5.0.dtb \
 	omap5-uevm.dtb
 dtb-$(CONFIG_SOC_TI81XX) += \
 	am3874-iceboard.dtb \

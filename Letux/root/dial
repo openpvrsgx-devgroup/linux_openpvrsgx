@@ -50,13 +50,14 @@ case "$IF" in
 
 		# enable phone mixer
 		amixer set 'Voice PCM Interface' 'inactive'
+		amixer set 'Voice PCM Out' off
 		amixer set 'AVADC Clock Priority' 'HiFi high priority'
 		amixer set 'DAC1 Analog' off
 		amixer set 'DAC2 Analog' on
 		#amixer set 'Codec Operation Mode' 'Option 1 (audio)'
 		amixer set 'Codec Operation Mode' 'Option 2 (voice/audio)'
 		amixer set 'Earpiece Mixer Voice' off
-		amixer set Earpiece 100%
+		amixer set Earpiece 30%
 		amixer set 'Earpiece Mixer AudioL1' off
 		amixer set 'Earpiece Mixer AudioL2' on
 		amixer set 'Earpiece Mixer AudioR1' off
@@ -97,6 +98,7 @@ case "$IF" in
 		then
 			amixer set 'AVADC Clock Priority' 'Voice high priority'
 			amixer set 'Voice PCM Interface' 'active'
+			amixer set 'Voice PCM Out' on
 			amixer set 'DAC Voice Analog Downlink' unmute
 			amixer set 'DAC Voice Analog Downlink' 16
 			amixer set 'DAC Voice Digital Downlink' 44
@@ -113,22 +115,25 @@ case "$IF" in
 		if [ "$NUMBER" == "-" ]
 		then
 			echo "AT+CHUP"; sleep 3
+			amixer set 'Voice PCM Out' off
 		else
 			#echo "AT+CPIN=XXXX"; sleep 1	# use the ./pin script to unlock the SIM card
 			echo "AT_ODO=0"; sleep 1
 			echo "AT_OPCMENABLE=1"; sleep 1
 			echo "AT_OPCMPROF=0"; sleep 1	# handset profile
+			echo "AT_OLCC=1"; sleep 1	# report connection status
 			echo "AT+VIP=0"; sleep 1	# compatible to S16_LE
 			echo "AT+COPS"; sleep 1
-			echo "AT+CLVL=7"; sleep 1
-			echo "ATD$NUMBER;"; sleep 1
+			echo "AT+CLVL=4"; sleep 1
+			echo "ATD$NUMBER;"; sleep 1	# make voice call (the ; is important)
 			if [ "$MODE" = "-sw" ]
 			then
 				arecord -fS16_LE -r8000 | aplay -Ddefault:CARD=voice &	# microphone -> modem
 				arecord -Ddefault:CARD=voice -fS16_LE -r8000 | aplay	# modem -> earpiece, speaker, headset
 			else
-				echo "please ctl-C to end the call"
+				echo "please ctl-C to end the call" >&2
 				arecord -fS16_LE -r8000 >/dev/null	# enable micbias
+				# sleep 99999	# we can't easily detect end of call (without monitoring femtocom output)
 			fi
 		fi
 		) | ./femtocom $IF
@@ -147,9 +152,6 @@ case "$IF" in
 
 			# FIXME: set up commands to use PCM interface of PHS8/PLS8
 
-			echo "AT_ODO=0"; sleep 1
-			echo "AT_OPCMENABLE=1"; sleep 1
-			echo "AT_OPCMPROF=0"; sleep 1
 			echo "AT+COPS"; sleep 1
 			echo "ATD$NUMBER;"; sleep 1
 			if [ "$MODE" = "-sw" ]
@@ -157,8 +159,10 @@ case "$IF" in
 				arecord -fS16_LE -r8000 | aplay -Ddefault:CARD=voice &	# microphone -> modem
 				arecord -Ddefault:CARD=voice -fS16_LE -r8000 | aplay	# modem -> earpiece, speaker, headset
 			else
-				echo "please ctl-C to end the call"
+				echo "please ctl-C to end the call" >&2
 				arecord -fS16_LE -r8000 >/dev/null	# enable micbias
+				amixer set 'Voice PCM Out' on
+				sleep 99999
 			fi
 		fi
 		) | ./femtocom $IF

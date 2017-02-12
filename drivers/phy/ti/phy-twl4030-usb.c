@@ -294,8 +294,14 @@ static enum musb_vbus_id_status
 		if (status & BIT(7)) {
 			if (twl4030_is_driving_vbus(twl))
 				status &= ~BIT(7);
-			else
+			else {
 				twl->vbus_supplied = true;
+				/* We have VBUS so ignore ID_PRES - it
+				 * is only meaningful as an indicator
+				 * of an A plug when there is no VBUS.
+				 */
+				status &= ~BIT(2);
+			}
 		}
 
 		if (status & BIT(2))

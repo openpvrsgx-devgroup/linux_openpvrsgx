@@ -856,9 +856,15 @@ static void musb_handle_intr_suspend(struct musb *musb, u8 devctl)
 		if (musb->is_active) {
 			musb_set_state(musb, OTG_STATE_B_WAIT_ACON);
 			musb_dbg(musb, "HNP: Setting timer for b_ase0_brst");
+		/* If trying to switch to b_host without a real
+		 * hnp reset (y-cables and such) the timer might
+		 * be disturbing
+		 */
+#if 0
 			mod_timer(&musb->otg_timer, jiffies
 				+ msecs_to_jiffies(
 						OTG_TIME_B_ASE0_BRST));
+#endif
 		}
 		break;
 	case OTG_STATE_A_WAIT_BCON:

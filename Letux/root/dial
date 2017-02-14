@@ -44,8 +44,17 @@ case "$IF" in
 		;;
 
 	/dev/ttyHS* ) # GTA04 with OPTION GTM601W
-		killall arecord
-		trap "killall arecord aplay; (echo "AT+CHUP"; sleep 1) | ./femtocom $IF" EXIT
+function turnoff {
+	killall arecord
+	killall arecord aplay
+	amixer set 'Voice PCM Out' off
+	amixer set 'Voice PCM Interface' 'inactive'
+	amixer set 'Earpiece Mixer Voice' off
+	amixer set 'HeadsetL Mixer Voice' off
+	amixer set 'HeadsetR Mixer Voice' off
+	(echo "AT+CHUP"; sleep 1) | ./femtocom $IF
+}
+		trap "turnoff" EXIT
 		trap "exit 1" SIGHUP SIGINT SIGTERM
 
 		# enable phone mixer

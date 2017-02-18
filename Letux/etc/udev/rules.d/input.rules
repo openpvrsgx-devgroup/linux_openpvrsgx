@@ -1,11 +1,26 @@
-SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,15,*f50,51*", SYMLINK="input/rumble"	# rumble/vibra force feedback
-SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0*,3,*a0,1,*18,*", SYMLINK+="input/touchscreen"	# touchscreen
-SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,3,*a0,1,2,*", SYMLINK+="input/accel"	# main accelerometer
-SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*a0,1,2,*", SYMLINK+="input/accel2"	# optional second
-SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*k74,*", SYMLINK+="input/power"	# twl4030/6030 power button
-SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*kA9,*", SYMLINK+="input/aux"		# user/aus button (if available)
-SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*kF0,*", SYMLINK+="input/incoming"	# 3G/4G incoming call/message event
-SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*k77,*", SYMLINK+="input/keyboard"	# tca8418 keyboard
-SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*k1D0,*", SYMLINK+="input/keyboard"	# twl4030 keyboard
-SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*k7e,*", SYMLINK+="input/keyboard2"	# gpio buttons (OpenPandora, Pyra)
-SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0*,5,*w[24678D]*", SYMLINK+="input/jack"	# headset jack plug/unplug
+# make stable /dev/input file names for Letux devices
+# to find the patterns to match against, use e.g. udevadm info -a -p /sys/class/input/event5
+# and cat /sys/devices/platform/68000000.ocp/48072000.i2c/i2c-1/1-0048/input/input5/modalias
+
+# rumble/vibra force feedback
+SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,15,*f50,51*", SYMLINK="input/rumble"
+# touchscreen
+SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0*,3,*a0,1,*18,*", SYMLINK+="input/touchscreen"
+# main accelerometer
+SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,3,*a0,1,2,*", SYMLINK+="input/accel"
+# optional second
+SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*a0,1,2,*", SYMLINK+="input/accel2"
+# twl4030/6030 power button
+SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*k74,*", SYMLINK+="input/power"
+# user/aus button (if available)
+SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*kA9,*", SYMLINK+="input/aux"
+# 3G/4G incoming call/message event
+SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*kF0,*", SYMLINK+="input/incoming"
+# tca8418 keyboard
+SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*k77,*", SYMLINK+="input/keyboard"
+# twl4030 keyboard
+SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*k1D0,*", SYMLINK+="input/keyboard"
+# gpio buttons (OpenPandora, Pyra)
+SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*k7e,*", SYMLINK+="input/keyboard2"
+# headset jack plug/unplug
+SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0*,5,*w[24678D]*", SYMLINK+="input/jack"

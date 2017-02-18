@@ -1,4 +1,5 @@
 #!/bin/bash
+# detect Openmoko wall charger and increase input current limit
 
 case $(cat /dev/usb_id 2>/dev/null) in
 	"floating" ) echo "500000" >/dev/usb_max_current;;

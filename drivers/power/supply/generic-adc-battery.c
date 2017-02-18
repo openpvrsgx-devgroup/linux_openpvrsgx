@@ -104,6 +104,13 @@ static int gab_read_channel(struct gab *adc_bat, enum gab_chan_type channel,
 	int ret;
 
 	ret = iio_read_channel_processed(adc_bat->channel[channel], result);
+
+	if (ret == -EINVAL && channel == GAB_TEMP) {
+		/* Palmas gpadc1 does not return processed values */
+		*result=20000;
+		return 0;
+	}
+
 	if (ret < 0)
 		dev_err(&adc_bat->psy->dev, "read channel error: %d\n", ret);
 	else

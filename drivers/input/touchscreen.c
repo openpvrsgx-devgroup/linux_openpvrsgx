@@ -35,18 +35,19 @@ static void touchscreen_set_params(struct input_dev *dev,
 				   int min, int max, int fuzz)
 {
 	struct input_absinfo *absinfo;
-
+#if 0
 	if (!test_bit(axis, dev->absbit)) {
 		dev_warn(&dev->dev,
 			 "Parameters are specified but the axis %lu is not set up\n",
 			 axis);
 		return;
 	}
-
+#endif
 	absinfo = &dev->absinfo[axis];
 	absinfo->minimum = min;
 	absinfo->maximum = max;
 	absinfo->fuzz = fuzz;
+	input_set_capability(dev, EV_ABS, axis);
 }
 
 /**

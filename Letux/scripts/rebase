@@ -50,7 +50,7 @@ EMPTY=""
 
 function rebase {
 	FEATURE=$(echo "$1" | sed 's|^-||')	# include all branches starting with -
-	LATEST=$(echo $(git branch | fgrep "${FEATURE}-v" | sort | tail -1))
+	LATEST=$(echo $(git branch | fgrep "${FEATURE}-v" | perl -e 'print sort{length($a)<=>length($b) or $a cmp $b} <>' | tail -1))
 	echo
 	if [ "$LATEST" = "" ]
 	then

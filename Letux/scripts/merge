@@ -104,7 +104,7 @@ function process {
 			;;	# disabled
 	esac
 #	echo "*** process $FEATURE ***"
-	LATEST=$(echo $(git branch | grep "${FEATURE}-v[0-9]*" | sort | tail -1))
+	LATEST=$(echo $(git branch | grep "${FEATURE}-v[0-9]*" | perl -e 'print sort{length($a)<=>length($b) or $a cmp $b} <>' | tail -1))
 	if [ "$LATEST" ]
 	then # there is a latest with -v
 		echo "*** merging $FEATURE -> $LATEST ***"
@@ -113,7 +113,7 @@ function process {
 	then # a local version w/o -v exists
 		echo "*** merging $FEATURE ***"
 	else # nothing exists locally - check with remote
-		LATEST=$(echo $(git branch -r | grep "${FEATURE}-v[0-9]*" | sed 's|origin/||' | sort | tail -1))
+		LATEST=$(echo $(git branch -r | grep "${FEATURE}-v[0-9]*" | sed 's|origin/||' | perl -e 'print sort{length($a)<=>length($b) or $a cmp $b} <>' | tail -1))
 		if [ "$LATEST" ]
 		then # there is a remote latest with -v
 			echo "*** checking out and merging $FEATURE -> $LATEST ***"

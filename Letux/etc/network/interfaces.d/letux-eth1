@@ -1,0 +1,19 @@
+#
+# interfaces for Letux supported devices
+# GTA04, BeagleBoard, BeagleBoneBlack, Letux Cortex 8,
+# Letux Cortex15, Pandaboard ES, OMAP5EVM, Pyra, OpenPandora
+#
+# some of them have an Ethernet interface
+# but all of them have an ethernet gadget (usb0)
+#
+
+auto eth1
+iface eth1 inet static
+	address 192.168.2.202
+	netmask 255.255.255.0
+	network 192.168.2.0
+	# higher priority than usb0 - if eth0 is available
+	post-up route add default gw 192.168.2.1 metric 0
+	pre-down route del default gw 192.168.2.1
+	# set up OpenDNS by default
+	up echo nameserver 208.67.222.222 >/etc/resolv.conf

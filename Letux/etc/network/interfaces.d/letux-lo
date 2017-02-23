@@ -1,0 +1,8 @@
+#
+# loopback interface for Letux supported devices
+# GTA04, BeagleBoard, BeagleBoneBlack, Letux Cortex 8,
+# Letux Cortex15, Pandaboard ES, OMAP5EVM, Pyra, OpenPandora
+#
+
+auto lo
+iface lo inet loopback

@@ -48,7 +48,7 @@ case $(cat /proc/device-tree/model) in
 	do
 		for i in $(cd /sys/class/tty/ && echo ttyHS* 2>/dev/null)
 			do
-			if [ "$(cat /sys/class/tty/$i/hsotype 2>/dev/null)" == "Application" ]
+			if [ "$(cat /sys/class/tty/$i/hsotype 2>/dev/null)" == "Modem" ]
 				then
 				IF="/dev/$i"
 			fi

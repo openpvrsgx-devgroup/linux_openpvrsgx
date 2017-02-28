@@ -18,9 +18,16 @@ then
 	LOOP=./neon_loop
 fi
 
+if [ "$1" = "-n2" ]
+then
+	# neon_loop2 requests even higher CPU load
+	[ neon_loop2.S -nt neon_loop2 ] && gcc -o neon_loop2 neon_loop2.S -mfpu=neon -mcpu=native
+	LOOP=./neon_loop2
+fi
+
 CORES=$(fgrep processor /proc/cpuinfo | wc -l)	# find from /proc/cpuinfo
 
-echo "100% load stress test for $CORES cores"
+echo "100% load stress test for $CORES cores running $LOOP"
 
 # run once in this shell so that we define the 'temperatures' function for the loop
 . ./temperatures

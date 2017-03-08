@@ -679,7 +679,7 @@ static int vsense_probe(struct i2c_client *client,
 		ddata->proc_id = ret;
 
 		// hack to get something like a mkdir -p ..
-		if (idr_find_slowpath(&vsense_proc_id, ddata->proc_id ^ 1) == NULL)
+		if (idr_find(&vsense_proc_id, ddata->proc_id ^ 1) == NULL)
 			proc_mkdir("pandora", NULL);
 	}
 
@@ -847,7 +847,7 @@ static int vsense_remove(struct i2c_client *client)
 	idr_remove(&vsense_proc_id, ddata->proc_id);
 
 	// hack..
-	if (idr_find_slowpath(&vsense_proc_id, ddata->proc_id ^ 1) == NULL)
+	if (idr_find(&vsense_proc_id, ddata->proc_id ^ 1) == NULL)
 		remove_proc_entry("pandora", NULL);
 
 	mutex_unlock(&vsense_mutex);

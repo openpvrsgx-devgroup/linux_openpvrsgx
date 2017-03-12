@@ -45,16 +45,28 @@ esac
 
 rfkill unblock bluetooth
 
+# load TI multiplexer (if configured into the kernel)
+
 modprobe -r st_drv
 
-# start daemon
-
-killall hciattach 2>/dev/null
-if hciattach $FLAGS $UART $MODE $BTBAUD $ARGS
+if ! ps -ef | fgrep hciattach | fgrep -v -q grep
 then
-
-	hciconfig hci0 up || exit 1
-
-	hcitool scan --info
-	bt-adapter -d
+	# start daemon
+	# note we should never kill hciattach or a reattach will fail
+echo hciattach $FLAGS $UART $MODE $BTBAUD $ARGS
+	if hciattach $FLAGS $UART $MODE $BTBAUD $ARGS </dev/null
+	then
+		if ! hciconfig hci0 up
+		then
+			echo hciconfig failed
+			exit 1
+		fi
+	else
+		echo hciattach failed
+		exit 1
+	fi
 fi
+
+timeout --foreground -k 3 30 hcitool scan --info
+# reports in a different format
+# timeout --foreground -k 3 30 bt-adapter -d

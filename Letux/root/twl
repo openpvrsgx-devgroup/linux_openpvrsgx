@@ -54,6 +54,7 @@ done
 if [ "$1" ] # given file
 then
 	FILE="$1"
+	[ "$FILE" = "-" ] && FILE=""
 	shift
 fi
 
@@ -172,8 +173,14 @@ then
 	# remix for Pandaboard/OMAP5 stereo
 	play /usr/share/sounds/alsa/Front_Center.wav $REMIX_MONO
 	# headset only
-	play $FILE
+	if [ "$FILE" ]
+	then
+		play $FILE
+	fi
 fi
 
 # play stereo on headset and main speakers
-[ "$FILE" ] && play ${FORMAT:+-t} ${FORMAT:+$FORMAT} -v 0.98 $FILE $REMIX_STEREO
+if [ "$FILE" ]
+then
+	play ${FORMAT:+-t} ${FORMAT:+$FORMAT} -v 0.98 $FILE $REMIX_STEREO
+fi

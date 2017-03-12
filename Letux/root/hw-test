@@ -1,14 +1,15 @@
 #
-# GTA04 hardware test script
-# (c) Golden Delicious Computers GmbH&Co. KG, 2011-2016
+# GTA04/Pyra hardware test script
+#
+# (c) Golden Delicious Computers GmbH&Co. KG, 2011-2017
 # licenced under GPL
 #
 # usage: hw-test [-t] [testname]
 #
 
-TESTER_VERSION="6.0"
-TESTER_RECOMMENDED_KERNEL="4.7"
-TESTER_DATE="10 Aug 2016"
+TESTER_VERSION="6.1"
+TESTER_RECOMMENDED_KERNEL="4.10"
+TESTER_DATE="12 Mar 2017"
 
 MODEL=$(cat /proc/device-tree/model 2>/dev/null)
 
@@ -52,6 +53,10 @@ for dev in /sys/class/thermal/thermal_zone*
 done
 }
 
+function i2c-probe { # bus hex-address
+	[ "$(i2cdetect -y -r $1 0x$2 0x$2 | fgrep $2 | (read ADDR FOUND; echo $FOUND))" ]
+}
+
 ANYNOK=false
 
 function report { # $1: result $2: test-name $3: values $4: message
@@ -59,7 +64,7 @@ function report { # $1: result $2: test-name $3: values $4: message
 	if [ "$1" == 0 ]
 	then # successful
 		SEQUENCE=$(expr $SEQUENCE + 1)
-		echo $SEQUENCE $2 ok $3 $4
+		echo -e "$SEQUENCE\t$2\tok\t$3\t$4"
 		return 0;
 	else # not successful - outcome depends on device/variant
 # this can be seen as a "database" which knows about hardware variations
@@ -75,9 +80,11 @@ function report { # $1: result $2: test-name $3: values $4: message
 			| test_bmc150*-*GTA04A5* \
 			| test_eeprom_*-*Pyra* \
 			| test_camera-*GTA04* \
+			| test_cpu_cpuid-*GTA04* \
+			| test_gpu-* \
 			) # optional feature
 				SEQUENCE=$(expr $SEQUENCE + 1)
-				echo $SEQUENCE $2 nfnd $3 $4
+				echo -e "$SEQUENCE\t$2\tnfnd\t$3\t$4"
 				return 1;
 				;;
 			  test_lis302-* \
@@ -95,13 +102,13 @@ function report { # $1: result $2: test-name $3: values $4: message
 			| test_eeprom_1-*GTA04A5* \
 			| test_wwan_usb_gemalto-*GTA04* \
 			| test_wwan_hwmon_off-*GTA04* \
+			| test_wwan_usb_option-*Pyra* \
 			| test_power_twl4030_batt_hdq-*GTA04b* \
 			| test_hmc5883-*Pyra* \
 			| test_itg3200-*Pyra* \
 			| test_camera-*Pyra* \
 			| test_si47xx-*Pyra* \
 			| test_tps61050-*Pyra* \
-			| test_wwan_usb_option-*Pyra* \
 			| test_leds_on-*Pyra* \
 			| test_rootfs-*Pyra* \
 			| test_uboot-*Pyra* \
@@ -109,13 +116,15 @@ function report { # $1: result $2: test-name $3: values $4: message
 			| test_cpu_id-*Pyra* \
 			| test_cpu_mpurate-*Pyra* \
 			| test_power_twl4030*-*Pyra* \
+			| test_wlan_libertas-*Pyra* \
+			| test_wlan_libertas-*GTA04A5* \
 			) # known to be never available on these models
 				: no message about failure
 				return 0
 				;;
 			* ) # function is missing on device
 				SEQUENCE=$(expr $SEQUENCE + 1)
-				echo $SEQUENCE $2 nok $3 $4
+				echo -e "$SEQUENCE\t$2\tnok\t$3\t$4"
 				ANYNOK=true
 				return 1
 				;;
@@ -338,12 +347,13 @@ function test_inputs {
 
 function test_camera {
 	[ -r "/dev/v4l-subdev8" ]
-	report $? ${FUNCNAME} "" "Camera device"
+	report $? ${FUNCNAME} "optional" "Camera device"
 }
 
 function test_tps61050 {
-	[ -r "/sys/bus/i2c/devices/1-0033" ]
-	report $? ${FUNCNAME} "" "Torch/Flash controller [no kernel driver]"
+#	[ -r "/sys/bus/i2c/devices/1-0033" ]
+	i2c-probe 1 33
+	report $? ${FUNCNAME} "1-0033" "Torch/Flash controller [no kernel driver]"
 }
 
 function test_eeprom { # $1: bus number
@@ -389,21 +399,38 @@ function test_power_twl4030 {
 	report $? ${FUNCNAME}_batt_status "$STATUS" "USB charging status"
 
 	TEMP=$(cat ${MADC}/in_temp1_input 2>/dev/null)
-	[ "${TEMP:=-1}" -ge 20 -a "$TEMP" -le 55 ]
-	report $? ${FUNCNAME}_batt_temp "${TEMP} °C" "battery temperature [may not be real value if there is no NTC and if not charging]"
+	[ "${TEMP:=-1}" -ge 10 -a "$TEMP" -le 55 ]
+	report $? ${FUNCNAME}_batt_temp "${TEMP} °C" "battery temperature [may not be real value if there is no NTC and while not charging]"
 
 	TYPE=$(cat ${MADC}/in_voltage0_input 2>/dev/null)
 	[ "$TYPE" ]
-	report $? ${FUNCNAME}_batt_type "$TYPE" "battery identification"
+	report $? ${FUNCNAME}_batt_type "$TYPE mV" "battery identification"
 
 	VOLT=$(cat ${MADC}/in_voltage9_input 2>/dev/null)
-	[ "${VOLT:=-1}" -ge 200 -a "$VOLT" -le 3250 ]
+	[ "${VOLT:=-1}" -ge 200 -a "$VOLT" -le 3300 ]
 	report $? ${FUNCNAME}_batt_backup "${VOLT} mV" "backup battery voltage"
+}
 
-	VOLT=$(cat /sys/class/power_supply/bq27000-battery/voltage_now 2>/dev/null)
+function test_power_hdq {
+	GAUGE=/sys/class/power_supply/bq27000-battery
+	# if gta04 - for pyra use different device name
+	STATUS=$(cat ${GAUGE}/status 2>/dev/null)
+	[ "$STATUS" ]
+	report $? ${FUNCNAME}_status "$STATUS" "Status"
+
+	SOC=$(cat ${GAUGE}/capacity 2>/dev/null)
+	[ "${SOC:=-1}" -ge 0 -a "$SOC" -le 100 ]
+	report $? ${FUNCNAME}_fuel "$SOC %" "Fuel level"
+
+	TEMP=$(cat ${GAUGE}/temp 2>/dev/null)
+	TEMP="$(expr "${TEMP:-0}" / 10)"
+	[ "${TEMP:=-1}" -ge 10 -a "$TEMP" -le 55 ]
+	report $? ${FUNCNAME}_temp "$TEMP °C" "Temperature"
+
+	VOLT=$(cat ${GAUGE}/voltage_now 2>/dev/null)
 	VOLT="$(expr "${VOLT:-0}" / 1000)"
 	[ "${VOLT:=-1}" -ge 3100 -a "$VOLT" -le 4300 ]
-	report $? ${FUNCNAME}_batt_hdq "${VOLT} mV" "main battery voltage [hdq]"
+	report $? ${FUNCNAME}_volt "${VOLT} mV" "main battery voltage"
 }
 
 function test_power_generic {
@@ -415,6 +442,7 @@ function test_power_generic {
 function test_power {
 	test_power_generic
 	test_power_twl4030
+	test_power_hdq
 }
 
 function test_memory {
@@ -468,6 +496,8 @@ function test_uboot {
 }
 
 function test_si47xx {
+if false
+then
 	(cd /root && make si4721 >/dev/null 2>&1)
 	VAL=$(echo $(/root/si4721 -d -up -dn))
 	case "$VAL" in
@@ -480,6 +510,10 @@ function test_si47xx {
 			;;
 	esac
 	report $? ${FUNCNAME} "$VAL" "FM TRX"
+else
+	i2c-probe 1 11
+	report $? ${FUNCNAME} "1-0011" "FM TRX [no kernel driver]"
+fi
 }
 
 function test_usb_ip {
@@ -493,15 +527,26 @@ function test_vibra {
 	report $? ${FUNCNAME} "" "running rumble effect demo"
 }
 
+function test_audio {
+	./twl -d - >/dev/null 2>&1
+	report $? ${FUNCNAME} "" "running audio demo"
+}
+
+function test_mic {
+	false
+	report $? ${FUNCNAME} "" "microphone demo"
+}
+
 function test_sound {
 	test_si47xx
 	test_vibra
-	# test audio
+	test_audio
+#	test_mic
 }
 
 function test_lcd {
-	false
-	report $? ${FUNCNAME} "" "LCD [test not implemented]"
+	[ -r /dev/fb0 ]
+	report $? ${FUNCNAME} "" "LCD driver has initialized [no test for colors etc.]"
 }
 
 function test_tvout {
@@ -619,7 +664,8 @@ function test_wwan_gemalto {
 function test_wwan_off {
 	# known to fail on GTA04A3
 	/root/wwan-off >/dev/null
-	report $? ${FUNCNAME} "$WWAN" "WWAN power off"
+	report $? ${FUNCNAME} "$WWAN" "WWAN power off command"
+	sleep 5
 	## check through lsusb if it is really off
 	USB=$(lsusb | fgrep "0af0:8800 Option")
 	[ "$USB" ] && report 1 ${FUNCNAME}_option "$USB" "still found OPTION modem"
@@ -651,27 +697,29 @@ function test_wwan {
 
 function test_bluetooth {
 # test if it turns on VAUX4=$(findregulator "VAUX4") on GTA04A[2-4]
-	read -t 30 ADDR < <(/root/bt-scan 2>/dev/null | fgrep 'BD Address:' | sed "s/.*: *\([0-9a-fA-F:]*\).*/\1/g")
+	read ADDR < <(/root/bt-scan 2>/dev/null | fgrep 'BD Address:' | cut -d ':' -f 2-6)
 	[ "$ADDR" ]
 	report $? ${FUNCNAME} "$ADDR" "Bluetooth scan"
+
+# ${FUNCNAME}_mac
+# ${FUNCNAME}_baud
 }
 
 function test_wlan {
-#testing "W2CBW003-WLAN-libertas" "check if kernel did load libertas driver"
-#rfkill unblock wifi
-#( lsmod | fgrep libertas_sdio >/dev/null ) && ok || nok
 
 #testing "W2CBW003-WLAN-IF" "find the interface"
 #WLANIF=$(iwconfig 2>/dev/null | fgrep wlan | (read -t 5 IF X Y ESSID; echo $IF))	# WLAN should have been configured while bluetooth was starting; but iwconfig may block
 #[ "$WLANIF" ] && ok "$WLANIF" || nok "$WLANIF"
 
+	lsmod | fgrep -q libertas_sdio >/dev/null
+	report $? ${FUNCNAME}_libertas "" "libertas loaded (chip found on interface)"
+
 	read -t 30 ADDR < <(/root/wlan-scan 2>/dev/null)
 	[ "$ADDR" ]
-	report $? ${FUNCNAME} "$ADDR" "WLAN scan"
+	report $? ${FUNCNAME}_scan "$ADDR" "WLAN scan"
 
-#testing "W2CBW003-WLAN-IFDOWN" "disable WLAN"
-#ifconfig $WLANIF down 2>/dev/null &&
-
+#	/root/wlan-off
+#	report $? ${FUNCNAME}_off "R" "WLAN off"
 }
 
 function test_all {

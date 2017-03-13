@@ -20,6 +20,9 @@ static inline int fuel_level_LiIon(int mV, int mA, int mOhm) {
 	/* internal battery voltage is higher than measured when discharging */
 	mV += (mOhm * mA) /1000;
 
+	if (mV == 0)
+		return 0;
+
 	/* apply first part of formula */
 	u = 3870000 - (14523 * (37835 - 10 * mV));
 

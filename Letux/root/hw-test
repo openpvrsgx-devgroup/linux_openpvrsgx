@@ -699,27 +699,36 @@ function test_bluetooth {
 # test if it turns on VAUX4=$(findregulator "VAUX4") on GTA04A[2-4]
 	read ADDR < <(/root/bt-scan 2>/dev/null | fgrep 'BD Address:' | cut -d ':' -f 2-6)
 	[ "$ADDR" ]
-	report $? ${FUNCNAME} "$ADDR" "Bluetooth scan"
+	report $? ${FUNCNAME}_scan "$ADDR" "Bluetooth scan"
 
-# ${FUNCNAME}_mac
+	BTMAC=$(hciconfig -a | fgrep 'BD Address' | cut -d ' ' -f 3-3)
+	[ "$BTMAC" ]
+	report $? ${FUNCNAME}_mac "$BTMAC" "Bluetooth MAC"
+
 # ${FUNCNAME}_baud
 }
 
 function test_wlan {
+	read -t 5 WLANIF OTHER < <(iwconfig 2>&1 | fgrep 'wlan')
+	[ "$WLANIF" ]
+	report $? ${FUNCNAME}_if "$WLANIF" "WLAN interface"
 
-#testing "W2CBW003-WLAN-IF" "find the interface"
-#WLANIF=$(iwconfig 2>/dev/null | fgrep wlan | (read -t 5 IF X Y ESSID; echo $IF))	# WLAN should have been configured while bluetooth was starting; but iwconfig may block
-#[ "$WLANIF" ] && ok "$WLANIF" || nok "$WLANIF"
+	if [ "$WLANIF" ]
+	then
+		lsmod | fgrep -q libertas_sdio >/dev/null
+		report $? ${FUNCNAME}_libertas "" "libertas loaded (chip found on interface)"
 
-	lsmod | fgrep -q libertas_sdio >/dev/null
-	report $? ${FUNCNAME}_libertas "" "libertas loaded (chip found on interface)"
+		read -t 30 BSS ADDR < <(/root/wlan-scan 2>/dev/null)
+		[ "$ADDR" ]
+		report $? ${FUNCNAME}_scan "$ADDR" "WLAN scan"
 
-	read -t 30 ADDR < <(/root/wlan-scan 2>/dev/null)
-	[ "$ADDR" ]
-	report $? ${FUNCNAME}_scan "$ADDR" "WLAN scan"
+		WLANMAC=$(ifconfig $WLANIF | fgrep "HWaddr" | (read -t 5 IF L ENC HW MAC; echo $MAC))
+		[ "$WLANMAC" ]
+		report $? ${FUNCNAME}_mac "$WLANMAC" "WLAN MAC"
 
-#	/root/wlan-off
-#	report $? ${FUNCNAME}_off "R" "WLAN off"
+		ifconfig "$WLANIF" down
+		report $? ${FUNCNAME}_off "" "WLAN off"
+	fi
 }
 
 function test_all {

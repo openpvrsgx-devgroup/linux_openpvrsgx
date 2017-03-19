@@ -1,11 +1,26 @@
-#
-# make sure to turn off UMTS modem on 'poweroff' or 'halt'
-#
+#!/bin/sh
+# kFreeBSD do not accept scripts as interpreters, using #!/bin/sh and sourcing.
+if [ true != "$INIT_D_SCRIPT_SOURCED" ] ; then
+    set "$0" "$@"; INIT_D_SCRIPT_SOURCED=true . /lib/init/init-d-script
+fi
+### BEGIN INIT INFO
+# Provides:          wwan
+# Required-Start:
+# Required-Stop:
+# Default-Start:
+# Default-Stop:      0 1 2 3 4 5 6
+# Short-Description: Shutdown WWAN
+# Description:       This script makes sure to turn off WWAN modem on
+#                    'poweroff' or 'halt'
+### END INIT INFO
+
+# Author: H. Nikolaus Schaller <hns@goldelico.com
 
 DESC="wwan"
+DAEMON=/root/wwan-off
 
 do_stop () {
-	/root/wwan-off
+	$DAEMON
 }
 
 case "$1" in

@@ -5,7 +5,8 @@
 
 SERIAL=$(/root/gps-on)
 
-echo "### starting gpsd ###"
+echo "### starting gpsd $SERIAL ###"
+killall gpsd	# kill any existing
 gpsd $SERIAL
 
 rfkill unblock gps      # potentially enable VSIM
@@ -26,5 +27,5 @@ esac
 [ -r /sys/class/gpio/gpio144/value ] && echo 144 >/sys/class/gpio/unexport 2>/dev/null
 
 echo "### starting foxtrot gps ###"
-. x
+. /root/x
 dbus-launch foxtrotgps

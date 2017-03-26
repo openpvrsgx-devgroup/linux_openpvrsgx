@@ -31,10 +31,11 @@ THEMODULES="-C /"
 case "$(cat /proc/device-tree/model)" in
 	*GTA04* ) # take all that are currently loaded
 		echo "find really used kernel modules"
-		LOADEDMODULES=$(lsmod | while read MODULE SIZE REFCNT USEDBY
+		LOADEDMODULES=$( { lsmod; echo hso; } | while read MODULE SIZE REFCNT USEDBY
                         do
                         [ "$MODULE" != "Module" ] && modprobe -v -D $MODULE | awk '{ print "."$2 }'
-                        done | sort -u)
+                        done | sort -u )
+		# some modules may not yet be loaded while flashing
 		echo "stripping kernel modules"
 		(cd / && strip --strip-debug $LOADEDMODULES)
 		THEMODULES+=" $LOADEDMODULES"

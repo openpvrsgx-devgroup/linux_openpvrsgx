@@ -11,7 +11,7 @@
 
 auto usb2
 iface usb2 inet static
-	pre-up modprobe g_ether
+	host_addr=32:70:05:18:ff:78 dev_addr=46:10:3a:b3:af:d9
 	address 192.168.0.202
 	# only 192.168.0.192..255
 	netmask 255.255.255.192

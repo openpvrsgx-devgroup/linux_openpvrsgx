@@ -17,7 +17,7 @@ iface usb2 inet static
 	netmask 255.255.255.192
 	network 192.168.0.0
 	# lower priority than eth0
-	post-up route add default gw 192.168.0.200 metric 1
+	post-up route add default gw 192.168.0.200 metric 203
 	pre-down route del default gw 192.168.0.200
 	post-down rmmod g_ether
 	# set up OpenDNS by default

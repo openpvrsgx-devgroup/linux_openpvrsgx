@@ -30,13 +30,17 @@ PUSH=false
 SEQUENTIAL=false
 BASE=letux-base
 HARD=false
+MF=true
 
 function usage {
 	echo "usage: $0 [ -s ] [ -p ] { branches...}"
 	echo "  -s	sequential merge"
 	echo "  -p	push --force all branches to 'origin'"
+	echo "  -nmf	ignore mergefile"
 	echo "  --hard	hard update to remote version"
 	echo "  -b base	specify base commit"
+	echo "  --	separate options from branches"
+	echo "	branch	branch to merge in addition to mergefile; if starting with - remove from mergefile"
 	exit 1
 }
 
@@ -46,7 +50,9 @@ do
 		-p ) PUSH=true; shift ;;
 		-s ) SEQUENTIAL=true; shift ;;
 		-b ) shift; BASE="$1"; shift ;;
+		-nmf ) shift; MF=false; shift ;;
 		--hard ) HARD=true; shift ;;
+		-- ) shift; break ;;
 		-* ) echo "unknown option $1"; usage; exit 1 ;;
 		* ) break;
 	esac
@@ -89,6 +95,8 @@ do
 			;;
 	esac
 done
+
+OUTPUT="${OUTPUT:0:120}"	# truncate to limit file name length
 
 echo "*** make a fresh working copy: $OUTPUT ***"
 git branch -D $OUTPUT 2>/dev/null
@@ -148,14 +156,19 @@ function process {
 	fi
 }
 
+if $MF
+then
 # feature branches provided in mergefile
 while read FEATURE IGNORE
 do
 	case "$FEATURE" in
+		'###' )	# can be used to bisect the mergefile (this and all further lines are ignored)
+			break
+			;;
 		'' | '#'* )
 			;;	# ignore empty lines and comments
 		* )
-			# check if there is an -branch ignore pattern
+			# check if there is a matching -branch ignore pattern on the command line
 			for IGNORE
 			do
 				if [ "$IGNORE" = "-$FEATURE" ]
@@ -167,6 +180,7 @@ do
 			;;
 	esac
 done <Letux/scripts/mergefile
+fi
 
 # more feature branches provided on command line
 for FEATURE

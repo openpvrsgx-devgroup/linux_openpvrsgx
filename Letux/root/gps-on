@@ -7,7 +7,10 @@
 
 case "$(cat /sys/firmware/devicetree/base/model)" in
 	*GTA04*/Letux* )
-		echo /dev/ttyO1
+		if [ -r /dev/ttyGPS0 ]
+		then	echo /dev/ttyGPS0
+		else 	echo /dev/ttyO1
+		fi
 		exit
 		;;
 esac

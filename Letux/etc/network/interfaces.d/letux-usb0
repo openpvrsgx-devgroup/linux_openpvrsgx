@@ -20,5 +20,7 @@ iface usb0 inet static
 	post-up route add default gw 192.168.0.200 metric 203
 	pre-down route del default gw 192.168.0.200
 	post-down rmmod g_ether
-	# set up OpenDNS by default
-	up echo nameserver 208.67.222.222 >/etc/resolv.conf
+	# set up OpenDNS by default - one of these methods should work...
+	dns-nameserver 208.67.222.222
+	post-up echo nameserver 208.67.222.222 >/etc/resolv.conf
+	post-up echo nameserver 208.67.222.222 >/etc/resolv.conf.tail

@@ -28,10 +28,13 @@ MODULES=$(mkimage -l "$UIMAGE" | fgrep "Image Name:" | sed 's/Image Name: *//' |
 # copy only the modules we need to boot on this device
 THEMODULES="-C /"
 
+# modules we even install if they are currently not loaded
+FIXEDMODULES="hso ov9650 v4l2_common omap3_isp videodev videobuf2_core videobuf2_v4l2 media"
+
 case "$(cat /proc/device-tree/model)" in
 	*GTA04* ) # take all that are currently loaded
 		echo "find really used kernel modules"
-		LOADEDMODULES=$( { lsmod; echo hso; } | while read MODULE SIZE REFCNT USEDBY
+		LOADEDMODULES=$( { lsmod; echo $FIXEDMODULES; } | while read MODULE SIZE REFCNT USEDBY
                         do
                         [ "$MODULE" != "Module" ] && modprobe -v -D $MODULE | awk '{ print "."$2 }'
                         done | sort -u )

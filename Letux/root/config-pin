@@ -1,4 +1,5 @@
 #!/bin/dash
+# based on https://raw.githubusercontent.com/cdsteinkuehler/beaglebone-universal-io/master/config-pin
 
 # Some important directories for use later
 OCPDIR=/sys/devices/ocp.*

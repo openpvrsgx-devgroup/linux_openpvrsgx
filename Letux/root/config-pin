@@ -763,6 +763,11 @@ listmode () {
 # List the legal mode values for a pin
 # $1 = Pin Name
 listmodes () {
+	if [ "$1" = -a ]
+	then
+		set | grep -o '^P[89]_[0-49][0-9]' | sort -u | xargs echo
+		return 0
+	fi
 	PIN=$(fixup_pin $1)
 	eval MODES="\$${PIN}_PINMUX"
 	eval INFO="\$${PIN}_INFO"

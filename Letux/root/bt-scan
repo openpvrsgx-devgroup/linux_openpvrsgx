@@ -43,6 +43,8 @@ case $(cat /proc/device-tree/model) in
 
 esac
 
+[ -r /dev/ttyBT0 ] && UART=/dev/ttyBT0
+
 rfkill unblock bluetooth
 
 # load TI multiplexer (if configured into the kernel)

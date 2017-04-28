@@ -22,9 +22,8 @@
 #include <linux/i2c.h>
 #include <linux/i2c-dev.h>
 
-#define I2CADDR 0x11
-
-static char *bus="/dev/i2c-2";
+static char *bus="/dev/i2c-1";
+static int chipaddr=0x11;
 
 static int fd=-1;
 
@@ -38,7 +37,7 @@ static int send_cmd(unsigned char *cmd_data,int cmd_len,unsigned char *resp_data
 			exit(1);
 		}
 	}
-	if (ioctl(fd, I2C_SLAVE, I2CADDR) < 0) {
+	if (ioctl(fd, I2C_SLAVE, chipaddr) < 0) {
 		printf("Failed to acquire bus access and/or talk to slave: %s\n", strerror(errno));
 		return -1;
 	}
@@ -78,6 +77,7 @@ void usage(char **argv)
 	fprintf(stderr," e.g.: %s -i /dev/i2c-2 -up -t 9380 for 93800khz\n",argv[0]);
 	fprintf(stderr,"   or: %s -dn to power off\n",argv[0]);
 	fprintf(stderr,"      -i choose i2c device\n");
+	fprintf(stderr,"      -a choose chip address\n");
 	fprintf(stderr,"      -d debug\n");
 	fprintf(stderr,"      -up power on and chip revision\n");
 	fprintf(stderr,"      -dn power off\n");
@@ -238,6 +238,14 @@ int main(int argc, char **argv)
 				if(argc <= 2)
 					usage(argv);
 				bus=argv[2];
+				argv+=2, argc-=2;
+			}
+		else if(strcmp(argv[1], "-a") == 0)
+			{ /* choose chip address */
+				if(argc <= 2)
+					usage(argv);
+				// fixme: accept hex address as well
+				chipaddr=atoi(argv[2]);
 				argv+=2, argc-=2;
 			}
 		else

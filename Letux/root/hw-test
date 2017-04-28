@@ -496,10 +496,8 @@ function test_uboot {
 }
 
 function test_si47xx {
-if false
-then
 	(cd /root && make si4721 >/dev/null 2>&1)
-	VAL=$(echo $(/root/si4721 -d -up -dn))
+	VAL=$(echo $(/root/si4721 -i /dev/i2c-1 -d -up -dn))
 	case "$VAL" in
 		"init resp: 80 get_chiprev resp: 80 1532300000323042 powered off" | \
 		"init resp: 80 get_chiprev resp: 80 0532300000323042 powered off" )
@@ -510,10 +508,6 @@ then
 			;;
 	esac
 	report $? ${FUNCNAME} "$VAL" "FM TRX"
-else
-	i2c-probe 1 11
-	report $? ${FUNCNAME} "1-0011" "FM TRX [no kernel driver]"
-fi
 }
 
 function test_usb_ip {

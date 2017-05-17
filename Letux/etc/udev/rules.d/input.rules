@@ -5,7 +5,7 @@
 # rumble/vibra force feedback
 SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,15,*f50,51*", SYMLINK="input/rumble"
 # touchscreen
-SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0*,3,*a0,1,*18,*", SYMLINK+="input/touchscreen"
+SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*k14A,*", SYMLINK+="input/touchscreen"
 # main accelerometer
 SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,3,*a0,1,2,*", SYMLINK+="input/accel"
 # optional second

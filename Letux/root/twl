@@ -30,18 +30,18 @@ do
         "-nhf" )
 		NOHANDSFREE=yes
 		;;
-	- )	# stdin
-		break
+	"-" | "-stdin" )
+		FILE="-"
 		;;
 	-* )
 		echo unknown option $1
-		echo "-d: demo"
-		echo "-nv: no volumed"
-		echo "-lp: low power mode"
-		echo "-nhf: keep handsfree off"
-		echo "-t fmt: define format"
-		echo "-: file from stdin"
-		echo "file: play file"
+		echo "-d	demo"
+		echo "-nv	no volumed"
+		echo "-lp	low power mode"
+		echo "-nhf	keep handsfree off"
+		echo "-t fmt	define format"
+		echo "-		take file from stdin"
+		echo "file	play file"
 		exit 1
 		;;
 	* )
@@ -54,7 +54,6 @@ done
 if [ "$1" ] # given file
 then
 	FILE="$1"
-	[ "$FILE" = "-" ] && FILE=""
 	shift
 fi
 

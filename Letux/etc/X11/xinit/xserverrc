@@ -1,75 +1,8 @@
 #!/bin/sh
 
-# adjust screen size and touch depending on device model
-#
-# should in the future be only based on the device tree file name because that uniquely defines a device
-# /proc/device-tree/model and /proc/device-tree/name
+# setup letux panel
+/etc/X11/xinit/letux-setup
 
-# NOTE: basically we need to map the panel model (and not a board name) to a config
-# but there is no canonical way to find out the panel model name
-# /sys/class/lcd may be empty and panels don't have a 'model' attribute
-
-case "$(cat /proc/device-tree/model 2>/dev/null)" in
-	*GTA04A2* | *GTA04A3* | *GTA04A4* | *GTA04A5* | *GTA04A3+* | *Letux2804* )
-		PANEL=2.8-640x480;;	# Letux 2804
-	*'GTA04 b1'* | *OpenMoko-Beagle-Hybrid* )
-		PANEL=2.8-640x480;;	# OpenmokoBeagleHybrid (with TPO LCD conneced to J4&5)
-	*GTA04b2* | *'GTA04 b2'* | *GTA04b6* | *'GTA04 b6'* | *'Letux 3704'* | *'Letux 3714'* )
-		(
-		cd /root
-		[ -x blanviewd ] || make blanviewd
-		./blanviewd &
-		)
-		PANEL=3.7-640x480;;	# Letux 3704
-	*GTA04b3* | *'GTA04 b3'* | *'Letux 7004'* )
-		PANEL=7.0-480x800;;	# Letux 7004
-	*'GTA04 b4'* )
-		PANEL=5.0x640x1024;;	# Letux 5004 (never built)
-	*GTA04b7* | *'GTA04 b7'* | *Neo900* )
-		PANEL=3.0-800x480;;	# Neo900
-	*'GTA04 b8'* )
-		PANEL=2.0-320x320;;	# Letux 2204 (never built)
-	*PandaBoard* |	*OMAP5*uEVM* )
-		PANEL=none;;
-	*Pyra-Handheld* )
-		PANEL=5.0-720x1280
-		(
-		cd /root
-		if [ "$(cat /proc/device-tree/ocp/dss@58000000/encoder@58004000/lcd/compatible)" = "omapdss,mipi,debug" ]
-		then
-			PANEL=5.0-720x1280-debug
-			if [ -r /sys/bus/i2c/devices/1-0048 ]
-			then	# old V3 touch&display adapter for display demo/tester
-				./boe-w677l
-			else
-				./ssd2858 -r -p -s	# start ssd
-			fi
-			./bl 1
-		else
-			# assume we have a native and working panel driver and need to rotate by tiler
-			./tiler-ctl 270
-		fi
-		)
-		cp /etc/X11/Xmodmap.pyra /etc/X11/Xmodmap
-		;;
-	*Pandora* )
-		PANEL=4.3-480x640;;
-	*BeagleBoneBlack* )
-		PANEL=4.3-272x480;;	# BBB with 4.3 inch panel cape
-	*'Letux Cortex 8'* )
-		PANEL=4.3-272x480;;	# assume a PSP display can be connected
-	* )
-		echo "unknown motherboard $(cat /proc/device-tree/model 2>/dev/null)"
-		echo "we don't know how to configure X11 for the display"
-		exit 1
-		;;
-esac
-
-if [ -r /etc/X11/$PANEL.conf ]
-then cp /etc/X11/$PANEL.conf /etc/X11/xorg.conf
-else cp /etc/X11/xorg.conf /etc/X11/xorg.conf
-fi
-
+# we allow to access X11 through TCP
 # exec /usr/bin/X -nolisten tcp "$@"
-# allow to access X11 thorough TCP
 exec /usr/bin/X "$@"

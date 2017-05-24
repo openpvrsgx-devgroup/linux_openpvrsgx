@@ -3,10 +3,10 @@
 # GTA04, BeagleBoard, BeagleBoneBlack, Letux Cortex 8,
 # Letux Cortex15, Pandaboard ES, OMAP5EVM, Pyra, OpenPandora
 #
-# The PLS8 automatically creates an usb2 interface - at least on Pyra
+# The PLS8 automatically creates an usb1 interface - at least on Pyra
 
-auto usb2
-iface usb2 inet dhcp
+auto usb1
+iface usb1 inet dhcp
 	pre-up depmod
 	# set up OpenDNS by default
 	up echo nameserver 208.67.222.222 >/etc/resolv.conf

@@ -62,20 +62,27 @@ fi
 COUNT=0
 
 git diff --stat=9999,9999 $CURRENTBRANCH $CURRENTLINUS |
-while read FILE BAR CHANGES PLUSMINUS
+while read FILE BAR CHANGES PLUSMINUS X1 X2
 do
 # idea: format as HTML so that we can publish it more easily
+	if [ "$BAR" = "=>" ]
+	then # file rename
+		BAR="$PLUSMINUS"
+		CHANGES="$X1"
+		PLUSMINUS="$X2"
+	fi
 	if [ "$BAR" = "|" ]
 	then
 		case $FILE in
+			.* ) continue;;
 			Documentation/devicetree/* ) GROUP="Documentation changes by being ahead"; CNT=no;;
 			Letux/* | GTA04/* ) GROUP="Letux specific user space kernel support";CNT=no;;
 			arch/arm/boot/dts/* | arch/mips/boot/dts/* ) GROUP="Letux specific Device Tree definitions";CNT=yes;;
-			arch/arm/configs/* | arch/mips/configs/* ) GROUP="Letux specific configs";CNT=no;;
-			drivers/gpu/Makefile | drivers/gpu/pvr/omap3/* ) GROUP="PVR extensions";CNT=no;;
+			arch/arm/configs/* | arch/mips/configs/* ) GROUP="Letux specific kernel config";CNT=no;;
+			drivers/gpu/Makefile | drivers/gpu/pvr/* ) GROUP="PVR extensions";CNT=no;;
 			drivers/video/omap2/* ) GROUP="Letux specific Panel drivers";CNT=yes;;
-			scripts/sortextable.c ) GROUP="Make it compile on Darwin gcc";CNT=no;;
-			sound/soc/* ) GROUP="ALSA Sound";CNT=yes;;
+			scripts/* ) GROUP="Make it compile on Darwin gcc";CNT=no;;
+			sound/soc/* ) GROUP="Letux for ALSA Sound";CNT=yes;;
 			* ) GROUP="Other";CNT=yes;;
 		esac
 		if [ "$GROUP" != "$PREVGROUP" ]

@@ -35,6 +35,8 @@
 #include <linux/usb/phy.h>
 #include <linux/workqueue.h>
 
+#define DEBUG
+
 struct wwan_on_off {
 	struct rfkill *rf_kill;
 	int		on_off_gpio;	/* may be invalid */
@@ -46,40 +48,54 @@ struct wwan_on_off {
 	bool		can_turnoff;	/* can also turn off by impulse */
 };
 
-static bool is_powered_on(struct wwan_on_off *wwan)
+static bool wwan_on_off_is_powered_on(struct wwan_on_off *wwan)
 { /* check with physical interfaces if possible */
-	if (gpio_is_valid(wwan->feedback_gpio))
+	if (gpio_is_valid(wwan->feedback_gpio)) {
+#ifdef DEBUG
+printk("%s: gpio value = %d, inverted=%d\n", __func__, gpio_get_value_cansleep(wwan->feedback_gpio), wwan->feedback_gpio_inverted);
+printk("%s: return '%s'\n", __func__, (gpio_get_value_cansleep(wwan->feedback_gpio) != wwan->feedback_gpio_inverted)?"true":"false");
 		return gpio_get_value_cansleep(wwan->feedback_gpio) != wwan->feedback_gpio_inverted;	/* read gpio */
+#endif
+}
 	if (wwan->usb_phy != NULL && !IS_ERR(wwan->usb_phy))
-		printk("wwan-on-off: USB phy event %d\n", wwan->usb_phy->last_event);
+		printk("%s: USB phy event %d\n", __func__, wwan->usb_phy->last_event);
 	/* check with PHY if available */
-	if (!gpio_is_valid(wwan->on_off_gpio))
+	if (!gpio_is_valid(wwan->on_off_gpio)) {
+#ifdef DEBUG
+printk("%s: in-off invalid\n", __func__);
+printk("%s: return 'true'\n", __func__);
+#endif
 		return true;	/* we can't even control power, assume it is on */
+}
+#ifdef DEBUG
+printk("%s: we assume %d\n", __func__, wwan->is_power_on);
+printk("%s: return '%s'\n", __func__, wwan->is_power_on?"true":"false");
+#endif
 	return wwan->is_power_on;	/* assume that we know the correct state */
 }
 
-static void set_power(struct wwan_on_off *wwan, bool on)
+static void wwan_on_off_set_power(struct wwan_on_off *wwan, bool on)
 {
 	int state;
 #ifdef DEBUG
-	printk("wwan-on-off: set_power %d\n", on);
+	printk("%s:on = %d\n", __func__, on);
 #endif
 	if (!gpio_is_valid(wwan->on_off_gpio))
 		return;	/* we can't control power */
 
-	state = is_powered_on(wwan);
+	state = wwan_on_off_is_powered_on(wwan);
 
 #ifdef DEBUG
-	printk("wwan-on-off: state %d\n", state);
+	printk("%s: state %d\n", __func__, state);
 #endif
 
 	if(state != on) {
 		if (!on && !wwan->can_turnoff) {
-			printk("wwan-on-off: can't turn off by impulse\n");
+			printk("%s: can't turn off by impulse\n", __func__);
 			return;
 		}
 #ifdef DEBUG
-		printk("wwan-on-off: send impulse\n");
+		printk("%s: send impulse\n", __func__);
 #endif
 		// use gpiolib to generate impulse
 		gpio_set_value_cansleep(wwan->on_off_gpio, 1);
@@ -88,12 +104,12 @@ static void set_power(struct wwan_on_off *wwan, bool on)
 		gpio_set_value_cansleep(wwan->on_off_gpio, 0);
 		msleep(500);	/* wait 500 ms */
 		wwan->is_power_on = on;
-		if (is_powered_on(wwan) != on)
-			printk("wwan-on-off: failed to change modem state\n");	/* warning only! using USB feedback might not be immediate */
+		if (wwan_on_off_is_powered_on(wwan) != on)
+			printk("%s: failed to change modem state\n", __func__);	/* warning only! using USB feedback might not be immediate */
 	}
 
 #ifdef DEBUG
-	printk("wwan-on-off: done\n");
+	printk("%s: done\n", __func__);
 #endif
 }
 
@@ -108,7 +124,7 @@ static int wwan_on_off_rfkill_set_block(void *data, bool blocked)
 	if (!gpio_is_valid(wwan->on_off_gpio))
 		return -EIO;	/* can't block if we have no control */
 
-	set_power(wwan, !blocked);
+	wwan_on_off_set_power(wwan, !blocked);
 	return ret;
 }
 
@@ -125,7 +141,7 @@ static int wwan_on_off_probe(struct platform_device *pdev)
 	int err;
 	enum of_gpio_flags flags;
 #ifdef DEBUG
-	printk("wwan-on-off: wwan_on_off_probe()\n");
+	printk("%s: wwan_on_off_probe()\n", __func__);
 #endif
 
 	if (!pdev->dev.of_node)
@@ -143,14 +159,14 @@ static int wwan_on_off_probe(struct platform_device *pdev)
 	// handle active low feedback gpio!
 
 	wwan->usb_phy = devm_usb_get_phy_by_phandle(dev, "usb-port", 0);
-	printk("wwan-on-off: onoff = %d indicator = %d act low: %d usb_phy = %ld\n", wwan->on_off_gpio, wwan->feedback_gpio, wwan->feedback_gpio_inverted, PTR_ERR(wwan->usb_phy));
+	printk("%s: onoff = %d indicator = %d act low: %d usb_phy = %ld\n", __func__, wwan->on_off_gpio, wwan->feedback_gpio, wwan->feedback_gpio_inverted, PTR_ERR(wwan->usb_phy));
 	if (wwan->on_off_gpio == -EPROBE_DEFER ||
 		wwan->feedback_gpio == -EPROBE_DEFER ||
 		PTR_ERR(wwan->usb_phy) == -EPROBE_DEFER)
 		return -EPROBE_DEFER;
 	// get optional reference to USB PHY (through "usb-port")
 #ifdef DEBUG
-	printk("wwan-on-off: wwan_on_off_probe() wwan=%p\n", wwan);
+	printk("%s: wwan_on_off_probe() wwan=%p\n", __func__, wwan);
 #endif
 
 	// FIXME: read from of_device_id table
@@ -165,7 +181,7 @@ static int wwan_on_off_probe(struct platform_device *pdev)
 			return err;
 		gpio_direction_output(wwan->on_off_gpio, 0);	/* initially off */
 	} else
-		pr_warn("wwan-on-off: I have no control over modem\n");
+		pr_warn("%s: I have no control over modem\n", __func__);
 
 	if (gpio_is_valid(wwan->feedback_gpio)) {
 		err = devm_gpio_request(dev, wwan->feedback_gpio, "on-indicator-gpio");
@@ -181,7 +197,7 @@ static int wwan_on_off_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	rfkill_init_sw_state(rf_kill, !is_powered_on(wwan));	/* set initial state */
+	rfkill_init_sw_state(rf_kill, !wwan_on_off_is_powered_on(wwan));	/* set initial state */
 
 	err = rfkill_register(rf_kill);
 	if (err) {
@@ -192,14 +208,14 @@ static int wwan_on_off_probe(struct platform_device *pdev)
 	wwan->rf_kill = rf_kill;
 
 #ifdef DEBUG
-	printk("wwan-on-off: successfully probed\n");
+	printk("%s: successfully probed\n", __func__);
 #endif
 	return 0;
 
 err:
 	rfkill_destroy(rf_kill);
 #ifdef DEBUG
-	printk("wwan-on-off: probe failed %d\n", err);
+	printk("%s: probe failed %d\n", __func__, err);
 #endif
 	return err;
 }
@@ -221,7 +237,7 @@ static int wwan_on_off_suspend(struct device *dev)
 {
 #ifdef DEBUG
 	struct wwan_on_off *wwan = dev_get_drvdata(dev);
-	printk("wwan-on-off: WWAN suspend\n");
+	printk("%s: WWAN suspend\n", __func__);
 #endif
 	/* set gpio to harmless mode */
 	return 0;
@@ -231,7 +247,7 @@ static int wwan_on_off_resume(struct device *dev)
 {
 #ifdef DEBUG
 	struct wwan_on_off *wwan = dev_get_drvdata(dev);
-	printk("wwan-on-off: WWAN resume\n");
+	printk("%s: WWAN resume\n", __func__);
 #endif
 	/* restore gpio */
 	return 0;
@@ -246,10 +262,10 @@ static int wwan_on_off_poweroff(struct device *dev)
 {
 	struct wwan_on_off *wwan = dev_get_drvdata(dev);
 #ifdef DEBUG
-	printk("wwan-on-off: WWAN poweroff\n");
+	printk("%s: WWAN poweroff\n", __func__);
 #endif
-	set_power(wwan, 0);	/* turn off modem */
-	printk("wwan-on-off: WWAN powered off\n");
+	wwan_on_off_set_power(wwan, 0);	/* turn off modem */
+	printk("%s: WWAN powered off\n", __func__);
 	return 0;
 }
 
@@ -281,7 +297,7 @@ static struct platform_driver wwan_on_off_driver = {
 
 static int __init wwan_on_off_init(void)
 {
-	printk("wwan-on-off: wwan_on_off_init\n");
+	printk("%s: wwan_on_off_init\n", __func__);
 	return platform_driver_register(&wwan_on_off_driver);
 }
 module_init(wwan_on_off_init);

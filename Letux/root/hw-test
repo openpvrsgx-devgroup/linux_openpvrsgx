@@ -7,9 +7,9 @@
 # usage: hw-test [-t] [testname]
 #
 
-TESTER_VERSION="6.1"
+TESTER_VERSION="6.2"
 TESTER_RECOMMENDED_KERNEL="4.10"
-TESTER_DATE="12 Mar 2017"
+TESTER_DATE="09 Jun 2017"
 
 MODEL=$(cat /proc/device-tree/model 2>/dev/null)
 
@@ -81,6 +81,7 @@ function report { # $1: result $2: test-name $3: values $4: message
 			| test_eeprom_*-*Pyra* \
 			| test_camera-*GTA04* \
 			| test_cpu_cpuid-*GTA04* \
+			| test_cpu_lpae-* \
 			| test_gpu-* \
 			) # optional feature
 				SEQUENCE=$(expr $SEQUENCE + 1)
@@ -470,6 +471,11 @@ function test_cpu_temperature {
 	report $? ${FUNCNAME} "$(expr "${VAL:-0}" / 1000) °C" "cpu temperature"
 }
 
+function test_cpu_lpae {
+	grep Features /proc/cpuinfo | head -1 | fgrep -q lpae
+	report $? ${FUNCNAME} "$(gunzip </proc/config.gz | fgrep CONFIG_ARM_LPAE)" "CPU7Kernel support of LPAE"
+	}
+
 function test_cpu {
 	read VAL < <(fw_printenv 'dieid#' 2>/dev/null | sed "s/dieid#=//g" 2>/dev/null)
 	[ "$VAL" ]
@@ -481,6 +487,7 @@ function test_cpu {
 
 	test_cpu_frequency
 	test_cpu_temperature
+	test_cpu_lpae
 }
 
 function test_gpu {

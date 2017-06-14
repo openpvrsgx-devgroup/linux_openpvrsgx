@@ -2,7 +2,7 @@
 # scan bluetooth
 #
 
-case $(cat /proc/device-tree/model) in
+case $(tr -d '\0' </proc/device-tree/model) in
 
 *Pyra-Handheld* ) # WL183x
 	# enables the 32kHz clock
@@ -37,7 +37,7 @@ case $(cat /proc/device-tree/model) in
 	;;
 
 * )
-	echo "unknown model $(cat /proc/device-tree/model)"
+	echo "unknown model $(tr -d '\0' </proc/device-tree/model)"
 	exit 1
 	;;
 

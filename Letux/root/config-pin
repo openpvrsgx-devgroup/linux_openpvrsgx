@@ -2,7 +2,7 @@
 # based on https://github.com/cdsteinkuehler/beaglebone-universal-io/blob/master/config-pin
 # adapted for Letux Cortex 8
 
-case "$(cat /proc/device-tree/model)" in
+case "$(tr -d '\0' </proc/device-tree/model)" in
 	"BeagleBone*" )
 		;;
 	"Letux Cortex 8" )

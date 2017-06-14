@@ -20,7 +20,7 @@ then
 	shift
 fi
 
-case $(cat /proc/device-tree/model) in
+case $(tr -d '\0' </proc/device-tree/model) in
 	Pyra-Handheld* )
 		PADCONF=0x4a0028f6	# OMAP5
 		GPIOMODE=0x011e

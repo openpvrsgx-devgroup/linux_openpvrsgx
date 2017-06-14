@@ -8,7 +8,7 @@
 # but there is no canonical way to find out the panel model name
 # /sys/class/lcd may be empty and panels don't have a 'model' attribute
 
-case "$(cat /proc/device-tree/model 2>/dev/null)" in
+case "$(tr -d '\0' </proc/device-tree/model 2>/dev/null)" in
 	*GTA04A2* | *GTA04A3* | *GTA04A4* | *GTA04A5* | *GTA04A3+* | *Letux2804* )
 		PANEL=2.8-640x480;;	# Letux 2804
 	*'GTA04 b1'* | *OpenMoko-Beagle-Hybrid* )
@@ -35,7 +35,7 @@ case "$(cat /proc/device-tree/model 2>/dev/null)" in
 		PANEL=5.0-720x1280
 		(
 		cd /root
-		if [ "$(cat /proc/device-tree/ocp/dss@58000000/encoder@58004000/lcd/compatible)" = "omapdss,mipi,debug" ]
+		if [ "$(tr -d '\0' </proc/device-tree/ocp/dss@58000000/encoder@58004000/lcd/compatible)" = "omapdss,mipi,debug" ]
 		then
 			PANEL=5.0-720x1280-debug
 			if [ -r /sys/bus/i2c/devices/1-0048 ]
@@ -59,7 +59,7 @@ case "$(cat /proc/device-tree/model 2>/dev/null)" in
 	*'Letux Cortex 8'* )
 		PANEL=4.3-272x480;;	# assume a PSP display can be connected
 	* )
-		echo "unknown motherboard $(cat /proc/device-tree/model 2>/dev/null)"
+		echo "unknown motherboard $(tr -d '\0' </proc/device-tree/model 2>/dev/null)"
 		echo "we don't know how to configure X11 for the display"
 		exit 1
 		;;

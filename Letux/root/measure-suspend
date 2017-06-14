@@ -5,7 +5,7 @@
 # disable charging, suspend for 5 minutes and report apparent
 # power usage by monitoring battery.
 
-case $(cat /proc/device-tree/model 2>/dev/null) in
+case $(tr -d '\0' </proc/device-tree/model 2>/dev/null) in
 	*GTA04* )
 		power1=/sys/class/power_supply/twl4030_usb/mode
 		power2=/sys/class/power_supply/twl4030_ac/mode
@@ -31,7 +31,7 @@ case $(cat /proc/device-tree/model 2>/dev/null) in
 		[ -r /dev/ttyACM1 ] && MODEM="with modem on"
 		;;
 	* )
-		echo "unknown device $(cat /proc/device-tree/model 2>/dev/null)"
+		echo "unknown device $(tr -d '\0' </proc/device-tree/model 2>/dev/null)"
 		exit 1
 		;;
 esac

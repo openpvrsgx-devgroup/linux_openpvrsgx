@@ -1,6 +1,6 @@
 echo
 echo "*** System Profile ***"
-echo "*** $(cat /proc/device-tree/model ***"
+echo "*** $(tr -d '\0' </proc/device-tree/model ***"
 echo
 
 echo

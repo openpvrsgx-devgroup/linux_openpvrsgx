@@ -6,12 +6,12 @@
 #
 # usage: otg 0 | 1
 
-case $(cat /proc/device-tree/model) in
+case $(tr -d '\0' </proc/device-tree/model) in
 	*Pyra-Handheld* )
 
 		;;
 	* )
-		echo "not for this device $(cat /proc/device-tree/model)"
+		echo "not for this device $(tr -d '\0' </proc/device-tree/model)"
 		exit
 		;;
 esac
@@ -35,7 +35,7 @@ echo "value: $(cat /sys/class/gpio/gpio$GPIO/value)"
 echo out >/sys/class/gpio/gpio$GPIO/direction
 echo $VAL >/sys/class/gpio/gpio$GPIO/value
 
-echo "newval: $(cat /sys/class/gpio/gpio$GPIO/value)"
+echo "newval: $(tr -d '\0' </sys/class/gpio/gpio$GPIO/value)"
 
 # somehow switch bq24297 in/out OTG mode
 # switch USB stack into otg mode

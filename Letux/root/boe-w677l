@@ -8,7 +8,7 @@
 # -s:	experiments for address shift register and enable command2
 # -t:	test if we can write single bytes through MIPI (yes we can - if command2 and address shift is already enabled)
 
-if ! [ "$(cat /proc/device-tree/ocp/dss@58000000/encoder@58004000/lcd/compatible)" = "omapdss,mipi,debug" ]
+if ! [ "$(tr -d '\0' </proc/device-tree/ocp/dss@58000000/encoder@58004000/lcd/compatible)" = "omapdss,mipi,debug" ]
 then
 	echo this script needs the mipi-debug driver!
 	echo use panelselect to choose the '-n' driver

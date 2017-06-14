@@ -15,7 +15,7 @@
 # ./ssd2858 -r -f 3 -p -s
 # ./ssd2858 -b -d -l
 
-if ! [ "$(cat /proc/device-tree/ocp/dss@58000000/encoder@58004000/lcd/compatible)" = "omapdss,mipi,debug" ]
+if ! [ "$(tr -d '\0' </proc/device-tree/ocp/dss@58000000/encoder@58004000/lcd/compatible)" = "omapdss,mipi,debug" ]
 then
 	echo this script needs the mipi-debug driver!
 	echo use ./panelselect and choose the 'n' driver

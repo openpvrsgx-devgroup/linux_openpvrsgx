@@ -11,7 +11,7 @@ TESTER_VERSION="6.2"
 TESTER_RECOMMENDED_KERNEL="4.10"
 TESTER_DATE="09 Jun 2017"
 
-MODEL=$(cat /proc/device-tree/model 2>/dev/null)
+MODEL=$(tr -d '\0' </proc/device-tree/model 2>/dev/null)
 
 function findregulator {
 for regulator in /sys/class/regulator/regulator.*

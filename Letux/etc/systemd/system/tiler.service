@@ -1,0 +1,10 @@
+[Unit]
+Description=OMAP5 Tiler fix
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+ExecStart=/root/tiler.sh
+
+[Install]
+Before=graphical.target

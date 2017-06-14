@@ -1,7 +1,7 @@
-# nodm configuration
+# nodm configuration (mix between Jessie and Stretch options)
 
 # Set NODM_ENABLED to something different than 'false' to enable nodm
-NODM_ENABLED=true	# false
+NODM_ENABLED=true
 
 # User to autologin for
 NODM_USER=root
@@ -12,16 +12,28 @@ NODM_FIRST_VT=7
 # X session
 NODM_XSESSION=/etc/X11/Xsession
 
-# Options for the X server
-NODM_X_OPTIONS=		# '-nolisten tcp'
+# Options for nodm itself
+NODM_OPTIONS=
+
+# Options for the X server.
+#
+# Format: [/usr/bin/<Xserver>] [:<disp>] <Xserver-options>
+#
+# The Xserver executable and the display name can be omitted, but should
+# be placed in front, if nodm's defaults shall be overridden.
+NODM_X_OPTIONS='-nolisten tcp'
 
 # If an X session will run for less than this time in seconds, nodm will wait an
 # increasing bit of time before restarting the session.
 NODM_MIN_SESSION_TIME=60
 
+# Timeout (in seconds) to wait for X to be ready to accept connections. If X is
+# not ready before this timeout, it is killed and restarted.
+NODM_X_TIMEOUT=300
+NODM_MIN_SESSION_TIME=60
+
+# this runs only in initd (Jessie) before Xserver is opened
+# only runs in initd because nodm-service sources this with $1 = ""
+# systemd should be made to start the letux-panel-setup.service
 # setup xorg.conf and start daemon(s)
-# this runs before Xserver is opened
-if [ "$1" = "start" ]
-then
-	/etc/X11/xinit/letux-setup
-fi
+DUMMY=$([ "$1" = "start" ] && /etc/X11/xinit/letux-panel-setup)

@@ -1,0 +1,10 @@
+[Unit]
+Description=Setup Letux Panel config
+Before=nodm.service
+
+[Service]
+Type=oneshot
+ExecStart=/etc/X11/xinit/letux-setup
+
+[Install]
+WantedBy=graphical.target

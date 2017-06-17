@@ -160,6 +160,10 @@ function test_rootfs {
 	fi
 }
 
+function test_distro {
+	report 0 "Debian $(cat /etc/debian_version)" ""
+}
+
 function test_device_tree {
 	if [ -r /proc/device-tree ]
 	then report 0 ${FUNCNAME} "with DT"
@@ -176,6 +180,7 @@ function test_startup {
 	test_version
 	test_kernel
 	test_rootfs
+	test_distro
 	test_device_tree
 	test_model
 }

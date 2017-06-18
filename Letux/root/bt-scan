@@ -42,31 +42,33 @@ case $(tr -d '\0' </proc/device-tree/model) in
 	;;
 
 esac
-
+# override
 [ -r /dev/ttyBT0 ] && UART=/dev/ttyBT0
 
 rfkill unblock bluetooth
 
-# load TI multiplexer (if configured into the kernel)
+# load TI Shared Transport driver (if configured into the kernel)
 
 modprobe -r st_drv
 
-if ! ps -ef | fgrep hciattach | fgrep -v -q grep
-then
-	# start daemon
-	# note we should never kill hciattach or a reattach will fail
-echo hciattach $FLAGS $UART $MODE $BTBAUD $ARGS
-	if hciattach $FLAGS $UART $MODE $BTBAUD $ARGS </dev/null
-	then
-		if ! hciconfig hci0 up
+if ! hciconfig | fgrep -q hci0
+then # bluetooth support not configured into kernel - needs to start hciattach
+	if ! ps -ef | fgrep hciattach | fgrep -v -q grep
+	then	# hciattach is not yet running
+		# note we should never kill hciattach or a reattach will fail
+echo starting: hciattach $FLAGS $UART $MODE $BTBAUD $ARGS
+		if ! hciattach $FLAGS $UART $MODE $BTBAUD $ARGS </dev/null
 		then
-			echo hciconfig failed
+			echo hciattach failed
 			exit 1
 		fi
-	else
-		echo hciattach failed
-		exit 1
 	fi
+fi
+
+if ! hciconfig hci0 up
+then
+	echo hciconfig hci0 up failed
+	exit 1
 fi
 
 timeout --foreground -k 3 30 hcitool scan --info

@@ -576,7 +576,7 @@
 	regulator-max-microvolt = <2800000>;
 };
 
-/* ADS7846 and nubs */
+/* ADS7846 and nubs and mma7455 */
 &vaux4 {
 	regulator-min-microvolt = <2800000>;
 	regulator-max-microvolt = <2800000>;
@@ -602,9 +602,13 @@
 		reg = <0x55>;
 	};
 
+	mma7455@1d {
+		compatible = "fsl,mma7455";
+		reg = <0x1d>;
+	};
+
 	/*
 	 * 2 nubs
-	 * mma7455
 	 */
 };
 

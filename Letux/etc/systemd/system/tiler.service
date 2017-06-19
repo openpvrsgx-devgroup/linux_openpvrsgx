@@ -1,10 +1,12 @@
 [Unit]
-Description=OMAP5 Tiler fix
+Description=OMAP5 Tiler setup to rotate display
+Before=nodm.service
 
 [Service]
 Type=oneshot
 RemainAfterExit=true
-ExecStart=/root/tiler.sh
+ExecStart=/root/tiler-ctl 270
 
 [Install]
-Before=graphical.target
+WantedBy=graphical.target
+WantedBy=multi-user.target

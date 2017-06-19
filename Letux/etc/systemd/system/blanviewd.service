@@ -1,6 +1,7 @@
 # start blanview display daemon on Letux 3704
 
 [Unit]
+Description=Blanview daemon to control backlight by ambient light sensor
 After=systemd-user-sessions.service
 
 [Service]

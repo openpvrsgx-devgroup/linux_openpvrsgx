@@ -2,6 +2,7 @@
 # this should not be needed if we have nodm installed (and we usually have)
 
 [Unit]
+Description=Start X in case we have no 'nodm' instaled
 After=systemd-user-sessions.service
 
 [Service]

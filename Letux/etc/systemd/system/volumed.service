@@ -5,7 +5,7 @@ Description=Start volume wheel daemon on Pyra
 After=systemd-user-sessions.service
 
 [Service]
-ExecStart=/root/volumed
+ExecStart=/root/volumed -q
 
 [Install]
 WantedBy=multi-user.target

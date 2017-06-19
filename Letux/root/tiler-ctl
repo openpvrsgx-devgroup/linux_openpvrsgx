@@ -1,3 +1,4 @@
+#!/bin/sh
 #
 # control OMAP5 tiler rotation
 # following how-to provided by aTc

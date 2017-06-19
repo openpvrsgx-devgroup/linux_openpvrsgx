@@ -167,7 +167,7 @@ echo type: $(cat $SUPPLY/type 2>/dev/null)
 echo online: $(cat $SUPPLY/online 2>/dev/null)
 echo status: $(cat $SUPPLY/status 2>/dev/null)
 echo mode: $(cat $SUPPLY/mode 2>/dev/null)
-echo volt: $(cat /sys$SUPPLY/voltage_now 2>/dev/null)uV
+echo volt: $(cat $SUPPLY/voltage_now 2>/dev/null)uV
 echo current: $(cat $SUPPLY/current_now 2>/dev/null)uA
 echo max_current: $(cat $SUPPLY/input_current_limit 2>/dev/null)uA
 echo

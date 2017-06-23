@@ -721,6 +721,13 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&uart3_pins>;
 	interrupts-extended = <&intc 74 &omap3_pmx_core OMAP3_UART3_RX>;
+
+	rs232: rs232 {
+		status = "disabled";
+		compatible = "ti,trs3386-mctrl";
+		gpios = <0>,		/* ... */
+			<&gpio1 21 0>;	/* DTR: GPIO_21 */
+	};
 };
 
 &charger {

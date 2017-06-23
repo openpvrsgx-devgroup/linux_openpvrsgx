@@ -759,6 +759,11 @@
 &uart1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&uart1_pins>;
+
+	bluetooth: bluetooth {
+		compatible = "wi2wi,w2cbw003-bluetooth";
+		vdd-supply = <&vaux4>;
+	};
 };
 
 &uart2 {

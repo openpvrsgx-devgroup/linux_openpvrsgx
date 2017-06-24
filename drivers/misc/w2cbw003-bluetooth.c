@@ -15,16 +15,18 @@
 #include <linux/tty.h>
 #include <linux/tty_flip.h>
 
-#undef pr_debug
-#define pr_debug printk
+// #undef pr_debug
+// #define pr_debug printk
 
 struct w2cbw_data {
 	struct		regulator *vdd_regulator;
 	struct		serdev_device *uart;	/* the uart connected to the chip */
+#if !IS_ENABLED(CONFIG_W2CBW003_HCI)
 	struct		tty_driver *tty_drv;	/* this is the user space tty */
 	struct		device *dev;	/* returned by tty_port_register_device() */
 	struct		tty_port port;
 	int		open_count;	/* how often we were opened */
+#endif
 };
 
 static struct w2cbw_data *w2cbw_by_minor[1];
@@ -50,10 +52,11 @@ static int w2cbw_uart_receive_buf(struct serdev_device *serdev, const unsigned c
 
 //	pr_debug("%s() characters\n", __func__, count);
 
+#if !IS_ENABLED(CONFIG_W2CBW003_HCI)
 	if (data->open_count > 0) {
 		int n;
 
-		pr_debug("w2cbw003: uart->tty %d chars\n", count);
+		pr_debug("w2cbw003: uart=>tty %d chars\n", count);
 		n = tty_insert_flip_string(&data->port, rxdata, count);	/* pass to user-space */
 		if (n != count)
 			pr_debug("w2cbw003: did loose %d characters\n", count - n);
@@ -63,6 +66,7 @@ static int w2cbw_uart_receive_buf(struct serdev_device *serdev, const unsigned c
 
 	/* nobody is listenig - ignore incoming data */
 	return count;
+#endif
 }
 
 static struct serdev_device_ops serdev_ops = {
@@ -71,6 +75,8 @@ static struct serdev_device_ops serdev_ops = {
 	.write_wakeup = w2cbw_uart_wakeup,
 #endif
 };
+
+#if !CONFIG_W2CBW003_HCI
 
 static struct w2cbw_data *w2cbw_get_by_minor(unsigned int minor)
 {
@@ -133,9 +139,16 @@ static int w2cbw_tty_write(struct tty_struct *tty,
 {
 	struct w2cbw_data *data = tty->driver_data;
 
-	pr_debug("w2cbw003: tty->uart %d chars\n", count);
+	pr_debug("w2cbw003: tty=>uart %d chars\n", count);
 
 	return serdev_device_write_buf(data->uart, buffer, count);	/* simply pass down to UART */
+}
+
+static int w2cbw_tty_write_room(struct tty_struct *tty)
+{
+	struct w2cbw_data *data = tty->driver_data;
+
+	return serdev_device_write_room(data->uart);	/* simply pass from UART */
 }
 
 static void w2cbw_tty_set_termios(struct tty_struct *tty,
@@ -204,10 +217,9 @@ static const struct tty_operations w2cbw_serial_ops = {
 	.open = w2cbw_tty_open,
 	.close = w2cbw_tty_close,
 	.write = w2cbw_tty_write,
+	.write_room = w2cbw_tty_write_room,
 	.set_termios = w2cbw_tty_set_termios,
 #if 0
-	/* sometimes: [  300.314968] ttyBT ttyBT0: missing write_room method */
-	.write_room = w2cbw_tty_write_room,
 	.cleanup = w2cbw_tty_cleanup,
 	.ioctl = w2cbw_tty_ioctl,
 	.chars_in_buffer = w2cbw_tty_chars_in_buffer,
@@ -220,6 +232,7 @@ static const struct tty_operations w2cbw_serial_ops = {
 
 static const struct tty_port_operations w2cbw_port_ops = {
 };
+#endif
 
 static int w2cbw_probe(struct serdev_device *serdev)
 {
@@ -268,6 +281,13 @@ static int w2cbw_probe(struct serdev_device *serdev)
 
 	serdev_device_set_baudrate(data->uart, 9600);
 	serdev_device_set_flow_control(data->uart, false);
+
+#if IS_ENABLED(CONFIG_W2CBW003_HCI)
+
+	hci_uart_register_device(tbd);
+
+#else // CONFIG_W2CBW003_HCI
+
 #if 1
 	pr_debug("w2cbw alloc_tty_driver\n");
 #endif
@@ -328,6 +348,8 @@ static int w2cbw_probe(struct serdev_device *serdev)
 #endif
 //	data->port.tty->driver_data = data;	/* make us known in tty_struct */
 
+#endif // CONFIG_W2CBW003_HCI
+
 	/* keep off until user space requests the device */
 	if (regulator_is_enabled(data->vdd_regulator))
 		w2cbw_set_power(data, false);
@@ -356,14 +378,16 @@ static void w2cbw_remove(struct serdev_device *serdev)
 	/* what is the right sequence to avoid problems? */
 	serdev_device_close(data->uart);
 
+#if !IS_ENABLED(CONFIG_W2CBW003_HCI)
 	// should get minor from searching for data == w2cbw_by_minor[minor]
 	minor = 0;
 	tty_unregister_device(data->tty_drv, minor);
 
 	tty_unregister_driver(data->tty_drv);
+#endif
 }
 
-// suspend/resume? handle by regulator
+// ??? add suspend/resume handler by regulator
 
 static const struct of_device_id w2cbw_of_match[] = {
 	{ .compatible = "wi2wi,w2cbw003-bluetooth" },

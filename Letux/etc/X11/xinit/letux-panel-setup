@@ -59,6 +59,8 @@ case "$(tr -d '\0' </proc/device-tree/model 2>/dev/null)" in
 		PANEL=4.3-272x480;;	# BBB with 4.3 inch panel cape
 	*'Letux Cortex 8'* )
 		PANEL=4.3-272x480;;	# assume a PSP display can be connected
+	*'UDOO Neo'* )
+		PANEL=udoo;;
 	* )
 		echo "unknown motherboard $(tr -d '\0' </proc/device-tree/model 2>/dev/null)"
 		echo "we don't know how to configure X11 for the display"

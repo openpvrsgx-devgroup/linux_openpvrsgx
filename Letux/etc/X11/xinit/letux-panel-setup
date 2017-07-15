@@ -68,10 +68,6 @@ case "$(tr -d '\0' </proc/device-tree/model 2>/dev/null)" in
 		;;
 esac
 
-if [ -r /etc/X11/$PANEL.conf ]
-then
-	cp /etc/X11/$PANEL.conf /etc/X11/xorg.conf
-else
-	rm /etc/X11/xorg.conf
-	cp /etc/X11/none.conf /etc/X11/xorg.conf
-fi
+# symlink to chosen config
+rm /etc/X11/xorg.conf
+ln -s $PANEL.conf /etc/X11/xorg.conf

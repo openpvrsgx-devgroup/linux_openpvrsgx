@@ -247,6 +247,14 @@
 		enable-active-high;
 		gpio = <&twl_gpio 13 GPIO_ACTIVE_HIGH>;
 	};
+
+	/* standard OpenPandora battery (PB-4000-001) */
+	bat: battery {
+		compatible = "simple-battery", "openpandora-battery";
+		voltage-min-design-microvolt = <3200000>;
+		energy-full-design-microwatt-hours = <14800000>;
+		charge-full-design-microamp-hours = <4000000>;
+	};
 };
 
 &omap3_pmx_core {

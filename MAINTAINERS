@@ -16706,6 +16706,15 @@ T:	git git://linuxtv.org/media_tree.git
 F:	Documentation/devicetree/bindings/media/i2c/ov9650.txt
 F:	drivers/media/i2c/ov9650.c
 
+OMNIVISION OV9655 SENSOR DRIVER
+M:	Hugues Fruchet <hugues.fruchet@st.com>
+M:	H. Nikolaus Schaller <hns@goldelico.com>
+L:	linux-media@vger.kernel.org
+T:	git git://linuxtv.org/media_tree.git
+S:	Maintained
+F:	drivers/media/i2c/ov9655.c
+F:	Documentation/devicetree/bindings/media/i2c/ov9655.txt
+
 OMNIVISION OV9734 SENSOR DRIVER
 M:	Tianshu Qiu <tian.shu.qiu@intel.com>
 R:	Bingbu Cao <bingbu.cao@intel.com>

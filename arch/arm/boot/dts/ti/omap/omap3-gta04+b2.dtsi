@@ -74,7 +74,7 @@
 
 /* FIXME: add optional TRF7970 */
 
-&battery {
+&bat {
 	charge_full_design = <3900000>;
 };
 

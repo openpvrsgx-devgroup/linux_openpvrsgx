@@ -73,9 +73,10 @@
 /* FIXME: &spi_gpio_pins: { }; */
 
 
-&battery {
-	charge_full_design = <3900000>;
-	charge_full_design = <10000000>;
+&bat {
+	battery-name = "l3704-battery";
+	energy-full-design-microwatt-hours = <14430000>;
+	charge-full-design-microamp-hours = <3900000>;
 };
 
 /* FIXME: handle optional USB Host/Ethernet port */

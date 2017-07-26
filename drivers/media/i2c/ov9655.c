@@ -42,6 +42,7 @@
 struct ov9655 {
 	struct v4l2_subdev subdev;
 	struct media_pad pad;
+	struct v4l2_rect crop;  /* Sensor window */
 	struct v4l2_mbus_framefmt format;
 	struct mutex power_lock; /* lock to protect power_count */
 
@@ -336,6 +337,23 @@ struct ov9655 {
 #define QVGA	WH(QVGA_NUM_ACTIVE_PIXELS, QVGA_NUM_ACTIVE_LINES)
 #define QQVGA	WH(VGA_NUM_ACTIVE_PIXELS/4, VGA_NUM_ACTIVE_LINES/4)
 #define CIF	WH(CIF_NUM_ACTIVE_PIXELS, CIF_NUM_ACTIVE_LINES)
+
+/* this is to compile the code to handle crop and probably needs to be FIXED */
+
+#define OV9655_PIXEL_ARRAY_WIDTH	OV9655_MAX_WIDTH
+#define OV9655_PIXEL_ARRAY_HEIGHT	OV9655_MAX_HEIGHT
+#define OV9655_WINDOW_HEIGHT_MIN	2
+#define OV9655_WINDOW_HEIGHT_MAX	OV9655_MAX_HEIGHT
+#define OV9655_WINDOW_HEIGHT_DEF	OV9655_MAX_HEIGHT
+#define OV9655_WINDOW_WIDTH_MIN	2
+#define OV9655_WINDOW_WIDTH_MAX	OV9655_MAX_WIDTH
+#define OV9655_WINDOW_WIDTH_DEF	OV9655_MAX_WIDTH
+#define OV9655_ROW_START_MIN		0
+#define OV9655_ROW_START_MAX		OV9655_MAX_HEIGHT
+#define OV9655_ROW_START_DEF		0
+#define OV9655_COLUMN_START_MIN	0
+#define OV9655_COLUMN_START_MAX	OV9655_MAX_WIDTH
+#define OV9655_COLUMN_START_DEF	0
 
 struct ov9655_pixfmt {
 	u32 code;
@@ -656,6 +674,7 @@ static int ov9655_set_params(struct ov9655 *ov9655)
 { /* called by ov9655_s_stream() */
 	struct i2c_client *client = v4l2_get_subdevdata(&ov9655->subdev);
 	struct v4l2_mbus_framefmt *format = &ov9655->format;
+	const struct v4l2_rect *crop = &ov9655->crop;
 	int i;
 	int ret = 0;
 	int is_sxga;
@@ -769,6 +788,59 @@ static int ov9655_set_params(struct ov9655 *ov9655)
 
 	// format->field could ask for some interlacing
 
+	/* set crop */
+
+#if 0
+	/* Windows position and size.
+	 *
+	 * TODO: Make sure the start coordinates and window size match the
+	 * skipping, binning and mirroring (see description of registers 2 and 4
+	 * in table 13, and Binning section on page 41).
+	 */
+	ret =  mt9p031_write(client, MT9P031_COLUMN_START, crop->left);
+	if (ret < 0)
+		return ret;
+	ret =  mt9p031_write(client, MT9P031_ROW_START, crop->top);
+	if (ret < 0)
+		return ret;
+	ret =  mt9p031_write(client, MT9P031_WINDOW_WIDTH, crop->width - 1);
+	if (ret < 0)
+		return ret;
+	ret =  mt9p031_write(client, MT9P031_WINDOW_HEIGHT, crop->height - 1);
+	if (ret < 0)
+		return ret;
+
+	/* Row and column binning and skipping. Use the maximum binning value
+	 * compatible with the skipping settings.
+	 */
+	xskip = DIV_ROUND_CLOSEST(crop->width, format->width);
+	yskip = DIV_ROUND_CLOSEST(crop->height, format->height);
+	xbin = 1 << (ffs(xskip) - 1);
+	ybin = 1 << (ffs(yskip) - 1);
+
+	ret =  mt9p031_write(client, MT9P031_COLUMN_ADDRESS_MODE,
+			    ((xbin - 1) << 4) | (xskip - 1));
+	if (ret < 0)
+		return ret;
+	ret =  mt9p031_write(client, MT9P031_ROW_ADDRESS_MODE,
+			    ((ybin - 1) << 4) | (yskip - 1));
+	if (ret < 0)
+		return ret;
+
+	/* Blanking - use minimum value for horizontal blanking and default
+	 * value for vertical blanking.
+	 */
+	hblank = 346 * ybin + 64 + (80 >> min_t(unsigned int, xbin, 3));
+	vblank = MT9P031_VERTICAL_BLANK_DEF;
+
+	ret =  mt9p031_write(client, MT9P031_HORIZONTAL_BLANK, hblank - 1);
+	if (ret < 0)
+		return ret;
+	ret =  mt9p031_write(client, MT9P031_VERTICAL_BLANK, vblank - 1);
+	if (ret < 0)
+		return ret;
+#endif
+
 	return ret;
 }
 
@@ -842,6 +914,26 @@ __ov9655_get_pad_format(struct ov9655 *ov9655, struct v4l2_subdev_pad_config *cf
 	}
 }
 
+static struct v4l2_rect *
+__ov9655_get_pad_crop(struct ov9655 *ov9655, struct v4l2_subdev_pad_config *cfg,
+		     unsigned int pad, u32 which)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(&ov9655->subdev);
+
+	dev_info(&client->dev, "%s: pad=%u which=%u %s\n", __func__, pad, which,
+		which == V4L2_SUBDEV_FORMAT_TRY ?
+			"V4L2_SUBDEV_FORMAT_TRY" : "V4L2_SUBDEV_FORMAT_ACTIVE");
+
+	switch (which) {
+	case V4L2_SUBDEV_FORMAT_TRY:
+		return v4l2_subdev_get_try_crop(&ov9655->subdev, cfg, pad);
+	case V4L2_SUBDEV_FORMAT_ACTIVE:
+		return &ov9655->crop;
+	default:
+		return NULL;
+	}
+}
+
 static void ov9655_get_default_format(struct v4l2_mbus_framefmt *mf)
 {
 	mf->width = ov9655_framesizes[0].width;
@@ -888,6 +980,74 @@ static int ov9655_set_format(struct v4l2_subdev *subdev,
 		}
 	} else
 		ov9655->format = fmt->format;
+
+	return 0;
+}
+
+static int ov9655_get_selection(struct v4l2_subdev *subdev,
+			    struct v4l2_subdev_pad_config *cfg,
+				 struct v4l2_subdev_selection *sel)
+{
+	struct ov9655 *ov9655 = to_ov9655(subdev);
+	struct i2c_client *client = v4l2_get_subdevdata(&ov9655->subdev);
+
+	dev_info(&client->dev, "%s\n", __func__);
+
+	if (sel->target != V4L2_SEL_TGT_CROP)
+		return -EINVAL;
+
+	sel->r = *__ov9655_get_pad_crop(ov9655, cfg, sel->pad, sel->which);
+	return 0;
+}
+
+static int ov9655_set_selection(struct v4l2_subdev *subdev,
+			    struct v4l2_subdev_pad_config *cfg,
+				 struct v4l2_subdev_selection *sel)
+{
+	struct ov9655 *ov9655 = to_ov9655(subdev);
+	struct v4l2_mbus_framefmt *__format;
+	struct v4l2_rect *__crop;
+	struct v4l2_rect rect;
+	struct i2c_client *client = v4l2_get_subdevdata(&ov9655->subdev);
+
+	dev_info(&client->dev, "%s\n", __func__);
+
+	if (sel->target != V4L2_SEL_TGT_CROP)
+		return -EINVAL;
+
+	/* Clamp the crop rectangle boundaries and align them to a multiple of 2
+	 * pixels to ensure a GRBG Bayer pattern.
+	 */
+	rect.left = clamp(ALIGN(sel->r.left, 2), OV9655_COLUMN_START_MIN,
+			  OV9655_COLUMN_START_MAX);
+	rect.top = clamp(ALIGN(sel->r.top, 2), OV9655_ROW_START_MIN,
+			 OV9655_ROW_START_MAX);
+	rect.width = clamp_t(unsigned int, ALIGN(sel->r.width, 2),
+			   OV9655_WINDOW_WIDTH_MIN,
+			   OV9655_WINDOW_WIDTH_MAX);
+	rect.height = clamp_t(unsigned int, ALIGN(sel->r.height, 2),
+			    OV9655_WINDOW_HEIGHT_MIN,
+			    OV9655_WINDOW_HEIGHT_MAX);
+
+	rect.width = min_t(unsigned int, rect.width,
+			OV9655_PIXEL_ARRAY_WIDTH - rect.left);
+	rect.height = min_t(unsigned int, rect.height,
+			OV9655_PIXEL_ARRAY_HEIGHT - rect.top);
+
+	__crop = __ov9655_get_pad_crop(ov9655, cfg, sel->pad, sel->which);
+
+	if (rect.width != __crop->width || rect.height != __crop->height) {
+		/* Reset the output image size if the crop rectangle size has
+		 * been modified.
+		 */
+		__format = __ov9655_get_pad_format(ov9655, cfg, sel->pad,
+						    sel->which);
+		__format->width = rect.width;
+		__format->height = rect.height;
+	}
+
+	*__crop = rect;
+	sel->r = rect;
 
 	return 0;
 }
@@ -1220,6 +1380,16 @@ static int ov9655_open(struct v4l2_subdev *subdev, struct v4l2_subdev_fh *fh)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(subdev);
 	struct v4l2_mbus_framefmt *format;
+	struct v4l2_rect *crop;
+
+	dev_info(&client->dev, "%s\n", __func__);
+
+	// v4l2_subdev_get_try_crop
+	crop = v4l2_subdev_get_try_crop(subdev, fh->pad, 0);
+	crop->left = OV9655_COLUMN_START_DEF;
+	crop->top = OV9655_ROW_START_DEF;
+	crop->width = OV9655_WINDOW_WIDTH_DEF;
+	crop->height = OV9655_WINDOW_HEIGHT_DEF;
 
 	format = v4l2_subdev_get_try_format(subdev, fh->pad, 0);
 
@@ -1244,6 +1414,8 @@ static struct v4l2_subdev_pad_ops ov9655_subdev_pad_ops = {
 	.enum_frame_size	= ov9655_enum_frame_size,
 	.get_fmt		= ov9655_get_format,
 	.set_fmt		= ov9655_set_format,
+	.get_selection		= ov9655_get_selection,
+	.set_selection		= ov9655_set_selection,
 };
 
 static struct v4l2_subdev_ops ov9655_subdev_ops = {
@@ -1378,6 +1550,11 @@ static int ov9655_probe(struct i2c_client *client,
 		goto err_2;
 
 	ov9655->subdev.flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
+
+	ov9655->crop.width = OV9655_WINDOW_WIDTH_DEF;
+	ov9655->crop.height = OV9655_WINDOW_HEIGHT_DEF;
+	ov9655->crop.left = OV9655_COLUMN_START_DEF;
+	ov9655->crop.top = OV9655_ROW_START_DEF;
 
 	ov9655->reset = devm_gpiod_get_optional(&client->dev, "reset",
 						 GPIOD_OUT_HIGH);

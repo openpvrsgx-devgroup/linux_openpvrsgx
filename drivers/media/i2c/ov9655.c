@@ -896,6 +896,13 @@ static int ov9655_set_format(struct v4l2_subdev *subdev,
  * V4L2 subdev control operations
  */
 
+/* private extensions to the MT9P031 driver? */
+
+#define V4L2_CID_BLC_AUTO		(V4L2_CID_USER_BASE | 0x1002)
+#define V4L2_CID_BLC_TARGET_LEVEL	(V4L2_CID_USER_BASE | 0x1003)
+#define V4L2_CID_BLC_ANALOG_OFFSET	(V4L2_CID_USER_BASE | 0x1004)
+#define V4L2_CID_BLC_DIGITAL_OFFSET	(V4L2_CID_USER_BASE | 0x1005)
+
 /*
  * NOTE:
  * interesting features of ov9655 for controls:
@@ -1004,6 +1011,50 @@ static int ov9655_s_ctrl(struct v4l2_ctrl *ctrl)
 
 		return ov9655_update_bits(client, REG_COM20, REG_COM20, ctrl->val?REG_COM20 : 0);
 
+/* private extensions to the MT9P031 driver? */
+
+#if 0
+	case V4L2_CID_BLC_AUTO:
+		dev_info(&client->dev, "%s: V4L2_CID_BLC_AUTO %d\n", __func__, ctrl->val);
+
+		ret = ov9655_set_mode2(ov9655,
+				ctrl->val ? 0 : MT9P031_READ_MODE_2_ROW_BLC,
+				ctrl->val ? MT9P031_READ_MODE_2_ROW_BLC : 0);
+		if (ret < 0)
+			return ret;
+
+		return  mt9p031_write(client, MT9P031_BLACK_LEVEL_CALIBRATION,
+				     ctrl->val ? 0 : MT9P031_BLC_MANUAL_BLC);
+
+	case V4L2_CID_BLC_TARGET_LEVEL:
+		dev_info(&client->dev, "%s: V4L2_CID_BLC_TARGET_LEVEL %08x\n", __func__, ctrl->val);
+
+		return  mt9p031_write(client, MT9P031_ROW_BLACK_TARGET,
+				     ctrl->val);
+
+	case V4L2_CID_BLC_ANALOG_OFFSET:
+		dev_info(&client->dev, "%s: V4L2_CID_BLC_ANALOG_OFFSET %08x\n", __func__, ctrl->val);
+
+		data = ctrl->val & ((1 << 9) - 1);
+
+		ret =  mt9p031_write(client, MT9P031_GREEN1_OFFSET, data);
+		if (ret < 0)
+			return ret;
+		ret =  mt9p031_write(client, MT9P031_GREEN2_OFFSET, data);
+		if (ret < 0)
+			return ret;
+		ret =  mt9p031_write(client, MT9P031_RED_OFFSET, data);
+		if (ret < 0)
+			return ret;
+		return  mt9p031_write(client, MT9P031_BLUE_OFFSET, data);
+
+	case V4L2_CID_BLC_DIGITAL_OFFSET:
+		dev_info(&client->dev, "%s: V4L2_CID_BLC_DIGITAL_OFFSET %08x\n", __func__, ctrl->val);
+
+		return  mt9p031_write(client, MT9P031_ROW_BLACK_DEF_OFFSET,
+				     ctrl->val & ((1 << 12) - 1));
+#endif
+
 	}
 
 	return 0;
@@ -1016,6 +1067,52 @@ static const struct v4l2_ctrl_ops ov9655_ctrl_ops = {
 static const char * const ov9655_test_pattern_menu[] = {
 	"Disabled",
 	"Color bars",
+};
+
+/* private extensions */
+
+static const struct v4l2_ctrl_config ov9655_ctrls[] = {
+	{
+		.ops		= &ov9655_ctrl_ops,
+		.id		= V4L2_CID_BLC_AUTO,
+		.type		= V4L2_CTRL_TYPE_BOOLEAN,
+		.name		= "BLC, Auto",
+		.min		= 0,
+		.max		= 1,
+		.step		= 1,
+		.def		= 1,
+		.flags		= 0,
+	}, {
+		.ops		= &ov9655_ctrl_ops,
+		.id		= V4L2_CID_BLC_TARGET_LEVEL,
+		.type		= V4L2_CTRL_TYPE_INTEGER,
+		.name		= "BLC Target Level",
+		.min		= 0,
+		.max		= 4095,
+		.step		= 1,
+		.def		= 168,
+		.flags		= 0,
+	}, {
+		.ops		= &ov9655_ctrl_ops,
+		.id		= V4L2_CID_BLC_ANALOG_OFFSET,
+		.type		= V4L2_CTRL_TYPE_INTEGER,
+		.name		= "BLC Analog Offset",
+		.min		= -255,
+		.max		= 255,
+		.step		= 1,
+		.def		= 32,
+		.flags		= 0,
+	}, {
+		.ops		= &ov9655_ctrl_ops,
+		.id		= V4L2_CID_BLC_DIGITAL_OFFSET,
+		.type		= V4L2_CTRL_TYPE_INTEGER,
+		.name		= "BLC Digital Offset",
+		.min		= -2048,
+		.max		= 2047,
+		.step		= 1,
+		.def		= 40,
+		.flags		= 0,
+	}
 };
 
 /*
@@ -1042,6 +1139,11 @@ static int ov9655_set_power(struct v4l2_subdev *subdev, int on)
 			ret = ov9655_reset(ov9655);
 			if (ret < 0) {
 				dev_err(&client->dev, "Failed to reset the camera\n");
+				goto out;
+				}
+			ret = v4l2_ctrl_handler_setup(&ov9655->ctrls);
+			if (ret < 0) {
+				dev_err(&client->dev, "Failed to choose defaults\n");
 				goto out;
 				}
 		}
@@ -1223,6 +1325,8 @@ static int ov9655_probe(struct i2c_client *client,
 
 	mutex_init(&ov9655->power_lock);
 
+	v4l2_ctrl_handler_init(&ov9655->ctrls, ARRAY_SIZE(ov9655_ctrls) + 6);
+
 	/* register custom controls */
 
 	v4l2_ctrl_new_std(&ov9655->ctrls, &ov9655_ctrl_ops,
@@ -1247,6 +1351,9 @@ static int ov9655_probe(struct i2c_client *client,
 			  V4L2_CID_TEST_PATTERN,
 			  ARRAY_SIZE(ov9655_test_pattern_menu) - 1, 0,
 			  0, ov9655_test_pattern_menu);
+
+	for (i = 0; i < ARRAY_SIZE(ov9655_ctrls); ++i)
+		v4l2_ctrl_new_custom(&ov9655->ctrls, &ov9655_ctrls[i], NULL);
 
 	ov9655->subdev.ctrl_handler = &ov9655->ctrls;
 

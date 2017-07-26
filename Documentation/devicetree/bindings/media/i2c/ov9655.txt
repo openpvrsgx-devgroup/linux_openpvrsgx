@@ -6,6 +6,7 @@ output format.
 
 Required Properties:
 - compatible: should be one of
+	"ovti,ov9155"
 	"ovti,ov9655"
 - clocks: reference to the xclk input clock.
 

@@ -1198,6 +1198,7 @@ static const struct i2c_device_id ov9655_id[] = {
 MODULE_DEVICE_TABLE(i2c, ov9655_id);
 
 static const struct of_device_id of_ov9655_match_tbl[] = {
+	{ .compatible = "ovti,ov9155", },	/* B&W variant - could define different colorspace */
 	{ .compatible = "ovti,ov9655", },
 	{ /* end */ }
 };

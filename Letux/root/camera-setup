@@ -56,26 +56,28 @@ media-reset
 case "$1" in
 	sxga )	# bypassing OMAP ISP (almost)
 		FORMAT=uyvy
+		CCDCFORMAT=UYVY2X8
 		WIDTH=1280
 		HEIGHT=1024
 		FPS=15
 		media-link "$CAMERA:0" '"OMAP3 ISP CCDC":0[1]'
 		media-link '"OMAP3 ISP CCDC":1' '"OMAP3 ISP CCDC output":0[1]'
-		media-format "$CAMERA:0" UYVY2X8 ${WIDTH}x${HEIGHT}
-		media-format '"OMAP3 ISP CCDC":0' UYVY2X8 ${WIDTH}x${HEIGHT}
-		media-format '"OMAP3 ISP CCDC":1' UYVY2X8 ${WIDTH}x${HEIGHT}
+		media-format "$CAMERA:0" $CCDCFORMAT ${WIDTH}x${HEIGHT}
+		media-format '"OMAP3 ISP CCDC":0' $CCDCFORMAT ${WIDTH}x${HEIGHT}
+		media-format '"OMAP3 ISP CCDC":1' $CCDCFORMAT ${WIDTH}x${HEIGHT}
 		DEVICE=$(media-ctl -e "OMAP3 ISP CCDC output")
 		;;
 	vga )	# bypassing OMAP ISP (almost)
 		FORMAT=uyvy
+		CCDCFORMAT=UYVY2X8
 		WIDTH=640
 		HEIGHT=480
 		FPS=30
 		media-link "$CAMERA:0" '"OMAP3 ISP CCDC":0[1]'
 		media-link '"OMAP3 ISP CCDC":1' '"OMAP3 ISP CCDC output":0[1]'
-		media-format "$CAMERA:0" UYVY2X8 ${WIDTH}x${HEIGHT}
-		media-format '"OMAP3 ISP CCDC":0' UYVY2X8 ${WIDTH}x${HEIGHT}
-		media-format '"OMAP3 ISP CCDC":1' UYVY2X8 ${WIDTH}x${HEIGHT}
+		media-format "$CAMERA:0" $CCDCFORMAT ${WIDTH}x${HEIGHT}
+		media-format '"OMAP3 ISP CCDC":0' $CCDCFORMAT ${WIDTH}x${HEIGHT}
+		media-format '"OMAP3 ISP CCDC":1' $CCDCFORMAT ${WIDTH}x${HEIGHT}
 		DEVICE=$(media-ctl -e "OMAP3 ISP CCDC output")
 		;;
 	qvga )	# bypassing OMAP ISP (almost)
@@ -104,14 +106,16 @@ case "$1" in
 		;;
 	vga-resizer | vga-r* )
 		FORMAT=uyvy
+		CCDCFORMAT=UYVY2X8
 		WIDTH=640
 		HEIGHT=480
 		FPS=30
 		media-link "$CAMERA:0" '"OMAP3 ISP CCDC":0[1]'
 		media-link '"OMAP3 ISP CCDC":1' '"OMAP3 ISP resizer":0[1]'
 		media-link '"OMAP3 ISP resizer":1' '"OMAP3 ISP resizer output":0[1]'
-		media-format "$CAMERA:0" UYVY2X8 ${WIDTH}x${HEIGHT}
-		media-format '"OMAP3 ISP CCDC":1' UYVY ${WIDTH}x${HEIGHT}
+		media-format "$CAMERA:0" $CCDCFORMAT ${WIDTH}x${HEIGHT}
+		media-format '"OMAP3 ISP CCDC":0' $CCDCFORMAT ${WIDTH}x${HEIGHT}
+		media-format '"OMAP3 ISP CCDC":1' $CCDCFORMAT ${WIDTH}x${HEIGHT}
 		media-format '"OMAP3 ISP resizer":1' UYVY ${WIDTH}x${HEIGHT}
 		DEVICE=$(media-ctl -e "OMAP3 ISP resizer output")
 		;;

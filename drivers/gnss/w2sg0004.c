@@ -25,6 +25,10 @@
  *
  */
 
+#ifdef CONFIG_W2SG0004_DEBUG
+#define DEBUG 1
+#endif
+
 #include <linux/delay.h>
 #include <linux/err.h>
 #include <linux/gnss.h>
@@ -80,6 +84,8 @@ static int w2sg_set_lna_power(struct w2sg_data *data)
 	int ret = 0;
 	bool off = data->suspended || !data->requested || data->lna_blocked;
 
+	pr_debug("%s: %s\n", __func__, off ? "off" : "on");
+
 	if (off != data->lna_is_off) {
 		data->lna_is_off = off;
 		if (!IS_ERR_OR_NULL(data->lna_regulator)) {
@@ -95,6 +101,9 @@ static int w2sg_set_lna_power(struct w2sg_data *data)
 
 static void w2sg_set_power(struct w2sg_data *data, bool val)
 {
+	pr_debug("%s to state=%d (requested=%d)\n", __func__, val,
+		 data->requested);
+
 	if (val && !data->requested) {
 		data->requested = true;
 	} else if (!val && data->requested) {
@@ -125,7 +134,7 @@ static int w2sg_uart_receive_buf(struct serdev_device *serdev,
 		    time_after(jiffies,
 		    data->last_toggle + data->backoff)) {
 			/* Should be off by now, time to toggle again */
-			dev_dbg(&serdev->dev, "w2sg00x4 has sent %d characters data although it should be off!\n",
+			pr_debug("w2sg00x4 has sent %d characters data although it should be off!\n",
 				data->discard_count);
 
 			data->discard_count = 0;
@@ -141,6 +150,8 @@ static int w2sg_uart_receive_buf(struct serdev_device *serdev,
 	/*
 	 * pass to user-space
 	 */
+	pr_debug("w2sg00x4: push %lu chars to user space\n",
+		(unsigned long) count);
 
 	if (data->requested)
 		return gnss_insert_raw(data->gdev, rxdata, count);
@@ -166,6 +177,8 @@ static void toggle_work(struct work_struct *work)
 		gpiod_set_value_cansleep(data->on_off_gpio, 1);
 		data->state = W2SG_PULSE;
 
+		pr_debug("w2sg: power gpio ON\n");
+
 		schedule_delayed_work(&data->work,
 				      msecs_to_jiffies(10));
 		break;
@@ -176,12 +189,16 @@ static void toggle_work(struct work_struct *work)
 		data->state = W2SG_NOPULSE;
 		data->is_on = !data->is_on;
 
+		pr_debug("w2sg: power gpio OFF\n");
+
 		schedule_delayed_work(&data->work,
 				      msecs_to_jiffies(10));
 		break;
 
 	case W2SG_NOPULSE:
 		data->state = W2SG_IDLE;
+
+		pr_debug("w2sg: idle\n");
 
 		break;
 
@@ -191,6 +208,8 @@ static void toggle_work(struct work_struct *work)
 static int w2sg_rfkill_set_block(void *pdata, bool blocked)
 {
 	struct w2sg_data *data = pdata;
+
+	pr_debug("%s: blocked: %d\n", __func__, blocked);
 
 	data->lna_blocked = blocked;
 
@@ -212,6 +231,8 @@ static int w2sg_gps_open(struct gnss_device *gdev)
 { /* user-space has opened our interface */
 	struct w2sg_data *data = gnss_get_drvdata(gdev);
 
+	pr_debug("%s()\n", __func__);
+
 	w2sg_set_power(data, true);
 
 	return 0;
@@ -220,6 +241,8 @@ static int w2sg_gps_open(struct gnss_device *gdev)
 static void w2sg_gps_close(struct gnss_device *gdev)
 { /* user-space has finally closed our interface */
 	struct w2sg_data *data = gnss_get_drvdata(gdev);
+
+	pr_debug("%s()\n", __func__);
 
 	w2sg_set_power(data, false);
 }
@@ -246,9 +269,13 @@ static int w2sg_probe(struct serdev_device *serdev)
 	struct gnss_device *gdev;
 	int err;
 
+	pr_debug("%s()\n", __func__);
+
 	data = devm_kzalloc(&serdev->dev, sizeof(*data), GFP_KERNEL);
 	if (!data)
 		return -ENOMEM;
+
+	pr_debug("w2sg serdev_device_set_drvdata\n");
 
 	data->on_off_gpio = devm_gpiod_get_index(&serdev->dev,
 						   "enable", 0,
@@ -272,6 +299,7 @@ static int w2sg_probe(struct serdev_device *serdev)
 
 		data->lna_regulator = NULL;	/* ignore other errors */
 	}
+	pr_debug("%s() lna_regulator = %p\n", __func__, data->lna_regulator);
 
 	gdev = gnss_allocate_device(&serdev->dev);
 	if (!gdev)
@@ -294,6 +322,8 @@ static int w2sg_probe(struct serdev_device *serdev)
 
 	INIT_DELAYED_WORK(&data->work, toggle_work);
 
+	pr_debug("w2sg devm_gpio_request\n");
+
 	serdev_device_set_drvdata(serdev, data);
 	serdev_device_set_client_ops(data->uart, &serdev_ops);
 
@@ -307,6 +337,8 @@ static int w2sg_probe(struct serdev_device *serdev)
 
 	serdev_device_set_flow_control(data->uart, false);
 
+	pr_debug("w2sg rfkill_alloc\n");
+
 	err = gnss_register_device(gdev);
 	if (err < 0)
 		goto err_close_serdev;
@@ -318,6 +350,8 @@ static int w2sg_probe(struct serdev_device *serdev)
 		goto err_deregister_gnss;
 	}
 
+	pr_debug("w2sg register rfkill\n");
+
 	err = rfkill_register(rf_kill);
 	if (err) {
 		dev_err(&serdev->dev, "Cannot register rfkill device\n");
@@ -325,6 +359,19 @@ static int w2sg_probe(struct serdev_device *serdev)
 	}
 
 	data->rf_kill = rf_kill;
+
+	pr_debug("w2sg probed\n");
+
+#ifdef CONFIG_W2SG0004_DEBUG
+	pr_debug("w2sg DEBUGGING MODE enabled\n");
+	/* turn on for debugging rx notifications */
+	pr_debug("w2sg power gpio ON\n");
+	gpiod_set_value_cansleep(data->on_off_gpio, 1);
+	mdelay(100);
+	pr_debug("w2sg power gpio OFF\n");
+	gpiod_set_value_cansleep(data->on_off_gpio, 0);
+	mdelay(300);
+#endif
 
 	/* keep off until user space requests the device */
 	w2sg_set_power(data, false);
@@ -342,6 +389,8 @@ err_close_serdev:
 
 err_put_gnss:
 	gnss_put_device(data->gdev);
+
+	pr_debug("w2sg error %d\n", err);
 
 	return err;
 }
@@ -385,6 +434,9 @@ static int __maybe_unused w2sg_suspend(struct device *dev)
 	}
 
 	if (data->is_on) {
+		pr_info("GPS off for suspend %d %d %d\n", data->requested,
+			data->is_on, data->lna_is_off);
+
 		gpiod_set_value_cansleep(data->on_off_gpio, 1);
 		msleep(10);
 		gpiod_set_value_cansleep(data->on_off_gpio, 0);
@@ -399,6 +451,9 @@ static int __maybe_unused w2sg_resume(struct device *dev)
 	struct w2sg_data *data = dev_get_drvdata(dev);
 
 	data->suspended = false;
+
+	pr_info("GPS resuming %d %d %d\n", data->requested,
+		data->is_on, data->lna_is_off);
 
 	schedule_delayed_work(&data->work, 0);	/* enables LNA if needed */
 

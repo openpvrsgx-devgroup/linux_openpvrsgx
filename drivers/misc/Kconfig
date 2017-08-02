@@ -602,4 +602,38 @@ source "drivers/misc/cardreader/Kconfig"
 source "drivers/misc/uacce/Kconfig"
 source "drivers/misc/pvpanic/Kconfig"
 source "drivers/misc/mchp_pci1xxxx/Kconfig"
+
+config WWAN_ON_OFF
+	tristate "WWAN ON/OFF"
+	depends on GPIOLIB
+	help
+	  If you say yes here you can control the power of a
+	  WWAN module throughrfkill wwan that has some power-on
+	  GPIO . The driver can also sense either some
+	  other GPIO to read back the real status or inspect
+	  the state of some USB PHY port where the modem module
+	  is connected to. Typical devices that can be controlled
+	  are OPTION GTM601, Gemalto PHS8.
+
+config W2CBW003
+	tristate "W2CBW003 power on/off control"
+	depends on GPIOLIB
+	help
+	  Enable on/off power control of W2CBW003 if the /dev/tty$n for
+	  Bluetooth is opened.
+
+config W2CBW003_HCI
+	bool "W2CBW003 kernel HCI driver"
+	depends on W2CBW003
+	help
+	  Don't present a TTY device for using hciattach in user
+	  space but register a new hci node.
+
+config TRS3386
+	tristate "TRS3386 modem control"
+	help
+	  Enable the driver to forward modem control lines
+	  through gpio(s) to the physical RS232 level shifter
+	  chip TRS3386.
+
 endmenu

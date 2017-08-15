@@ -1,5 +1,5 @@
 #
-# Linux/arm 4.13.0-rc1 Kernel Configuration
+# Linux/arm 4.13.0-rc5 Kernel Configuration
 #
 CONFIG_ARM=y
 CONFIG_ARM_HAS_SG_CHAIN=y
@@ -1736,7 +1736,6 @@ CONFIG_ATA_BMDMA=y
 #
 # PATA SFF controllers with BMDMA
 #
-# CONFIG_PATA_FTIDE010 is not set
 
 #
 # PIO-only SFF controllers
@@ -1853,6 +1852,7 @@ CONFIG_NET_VENDOR_WIZNET=y
 CONFIG_NET_VENDOR_SYNOPSYS=y
 # CONFIG_DWC_XLGMAC is not set
 CONFIG_MDIO_DEVICE=y
+CONFIG_MDIO_BUS=y
 # CONFIG_MDIO_BCM_UNIMAC is not set
 # CONFIG_MDIO_BITBANG is not set
 # CONFIG_MDIO_BUS_MUX_GPIO is not set
@@ -4384,7 +4384,6 @@ CONFIG_OMAP_IOMMU=y
 #
 # CONFIG_SUNXI_SRAM is not set
 CONFIG_SOC_TI=y
-# CONFIG_SOC_ZTE is not set
 # CONFIG_PM_DEVFREQ is not set
 CONFIG_EXTCON=y
 
@@ -4799,7 +4798,6 @@ CONFIG_NVMEM=y
 #
 # CONFIG_FSI is not set
 # CONFIG_TEE is not set
-# CONFIG_MULTIPLEXER is not set
 
 #
 # Firmware Drivers

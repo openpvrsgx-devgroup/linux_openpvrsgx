@@ -2369,7 +2369,19 @@ CONFIG_SPI_SPIDEV=y
 # CONFIG_SPI_SLAVE is not set
 # CONFIG_SPMI is not set
 # CONFIG_HSI is not set
-# CONFIG_PPS is not set
+CONFIG_PPS=m
+# CONFIG_PPS_DEBUG is not set
+
+#
+# PPS clients support
+#
+CONFIG_PPS_CLIENT_KTIMER=m
+CONFIG_PPS_CLIENT_LDISC=m
+CONFIG_PPS_CLIENT_GPIO=m
+
+#
+# PPS generators support
+#
 
 #
 # PTP clock support

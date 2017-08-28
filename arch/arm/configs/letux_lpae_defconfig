@@ -1,5 +1,5 @@
 #
-# Linux/arm 4.13.0-rc5 Kernel Configuration
+# Linux/arm 4.13.0-rc7 Kernel Configuration
 #
 CONFIG_ARM=y
 CONFIG_ARM_HAS_SG_CHAIN=y
@@ -1669,6 +1669,7 @@ CONFIG_SCSI_MOD=y
 CONFIG_SCSI=y
 CONFIG_SCSI_DMA=y
 # CONFIG_SCSI_NETLINK is not set
+# CONFIG_SCSI_MQ_DEFAULT is not set
 CONFIG_SCSI_PROC_FS=y
 
 #
@@ -2359,7 +2360,19 @@ CONFIG_SPI_SPIDEV=y
 # CONFIG_SPI_SLAVE is not set
 # CONFIG_SPMI is not set
 # CONFIG_HSI is not set
-# CONFIG_PPS is not set
+CONFIG_PPS=m
+# CONFIG_PPS_DEBUG is not set
+
+#
+# PPS clients support
+#
+CONFIG_PPS_CLIENT_KTIMER=m
+CONFIG_PPS_CLIENT_LDISC=m
+CONFIG_PPS_CLIENT_GPIO=m
+
+#
+# PPS generators support
+#
 
 #
 # PTP clock support
@@ -3356,6 +3369,7 @@ CONFIG_SND_SEQUENCER=m
 # CONFIG_SND_SEQUENCER_OSS is not set
 CONFIG_SND_SEQ_HRTIMER_DEFAULT=y
 CONFIG_SND_SEQ_MIDI_EVENT=m
+CONFIG_SND_SEQ_MIDI=m
 # CONFIG_SND_OPL3_LIB_SEQ is not set
 # CONFIG_SND_OPL4_LIB_SEQ is not set
 CONFIG_SND_DRIVERS=y

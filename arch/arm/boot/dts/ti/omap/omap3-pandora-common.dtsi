@@ -503,8 +503,9 @@
 	clock-frequency = <100000>;
 
 	bq27500@55 {
-		compatible = "ti,bq27500";
+		compatible = "ti,bq27500-1";
 		reg = <0x55>;
+		monitored-battery = <&bat>;
 	};
 
 };

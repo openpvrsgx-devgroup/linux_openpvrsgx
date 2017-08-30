@@ -1284,6 +1284,8 @@ static void bq27xxx_battery_update_dm_block(struct bq27xxx_device_info *di,
 	const char *str = bq27xxx_dm_reg_name[reg_id];
 	__be16 *prev = bq27xxx_dm_reg_ptr(buf, reg);
 
+pr_info("%s\n", __func__);
+
 	if (prev == NULL) {
 		dev_warn(di->dev, "%s dm spec incompatible with data on flash/NVM\n", str);
 		return;
@@ -1329,6 +1331,8 @@ static int bq27xxx_battery_cfgupdate_priv(struct bq27xxx_device_info *di, bool a
 	const int limit = 100;
 	u16 cmd = active ? BQ27XXX_SET_CFGUPDATE : BQ27XXX_SOFT_RESET;
 	int ret, try = limit;
+
+pr_info("%s\n", __func__);
 
 	ret = bq27xxx_write(di, BQ27XXX_REG_CTRL, cmd, false);
 	if (ret < 0)
@@ -1485,10 +1489,15 @@ static void bq27xxx_battery_settings(struct bq27xxx_device_info *di)
 {
 	struct power_supply_battery_info *info;
 	unsigned int min, max;
+int ret;
 
-	if (!di->dev->of_node || power_supply_get_battery_info(di->bat, &info) < 0)
+pr_info("%s\n", __func__);
+
+	if (!di->dev->of_node || (ret=power_supply_get_battery_info(di->bat, &info)) < 0)
+{
+pr_info("%s: power_supply_get_battery_info failed ret=%d\n", __func__, ret);
 		return;
-
+}
 	if (!di->dm_regs) {
 		dev_warn(di->dev, "data memory update not supported for chip\n");
 		return;
@@ -2145,6 +2154,8 @@ int bq27xxx_battery_setup(struct bq27xxx_device_info *di)
 	};
 	int ret;
 
+pr_info("%s\n", __func__);
+
 	INIT_DELAYED_WORK(&di->work, bq27xxx_battery_poll);
 	mutex_init(&di->lock);
 	ret = devm_add_action_or_reset(di->dev, bq27xxx_battery_mutex_destroy,
@@ -2155,6 +2166,9 @@ int bq27xxx_battery_setup(struct bq27xxx_device_info *di)
 	di->regs       = bq27xxx_chip_data[di->chip].regs;
 	di->unseal_key = bq27xxx_chip_data[di->chip].unseal_key;
 	di->dm_regs    = bq27xxx_chip_data[di->chip].dm_regs;
+
+pr_info("%s: dm_regs=%p\n", __func__, di->dm_regs);
+
 	di->opts       = bq27xxx_chip_data[di->chip].opts;
 
 	psy_desc = devm_kzalloc(di->dev, sizeof(*psy_desc), GFP_KERNEL);

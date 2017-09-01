@@ -19,6 +19,10 @@ config INGENIC_GENERIC_BOARD
 	bool "Generic board"
 	select MACH_INGENIC_GENERIC
 
+config JZ4730_ALPHA400
+	bool "JZ4730 based small netbook (e.g. Skytone Alpha 400, Razorbook 400, Letux 400)"
+	select MACH_JZ4730
+
 config JZ4740_QI_LB60
 	bool "Qi Hardware Ben NanoNote"
 	select MACH_JZ4740

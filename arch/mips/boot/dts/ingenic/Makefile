@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0
+dtb-$(CONFIG_JZ4730_ALPHA400)	+= alpha400.dtb
 dtb-$(CONFIG_JZ4740_QI_LB60)	+= qi_lb60.dtb
 dtb-$(CONFIG_JZ4740_RS90)	+= rs90.dtb
 dtb-$(CONFIG_JZ4770_GCW0)	+= gcw0.dtb

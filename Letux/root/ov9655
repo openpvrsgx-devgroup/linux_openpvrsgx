@@ -1,0 +1,40 @@
+FORMAT=sxga
+
+function isrunning {
+	ps -ef|fgrep mplayer|fgrep -q device=/dev/video2
+}
+
+function start {
+	if ! isrunning
+	then
+		./camera-demo $FORMAT >/dev/null 2>&1 &
+		sleep 8
+	fi
+}
+
+function stop {
+	if isrunning
+	then
+		killall mplayer
+		sleep 5
+	fi
+}
+
+function read {
+	echo a$1 r >/sys/bus/i2c/devices/1-0030/i2c
+	cat /sys/bus/i2c/devices/1-0030/i2c
+}
+
+function write {
+	echo a$1 w$2 r >/sys/bus/i2c/devices/1-0030/i2c
+}
+
+case "$1" in
+	-r )	start; echo $(read $2);;
+	-w )	start; write $2 $3;;
+	-l )	start; : dump all registers;;
+	-s )	stop;;
+	-sxga )	stop; FORMAT=sxga; start;;
+	-vga )	stop; FORMAT=vga; start;;
+	*)	echo unknown command $1; exit 1;;
+esac

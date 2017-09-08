@@ -876,7 +876,7 @@ enum bq27xxx_dm_reg_id {
 
 static struct bq27xxx_dm_reg bq27500_dm_regs[] = {
 	[BQ27XXX_DM_DESIGN_CAPACITY]   = { 48, 10, 2,    0, 65535 },
-	[BQ27XXX_DM_DESIGN_ENERGY]     = { }, /* missing on chip */
+	[BQ27XXX_DM_DESIGN_ENERGY]     = {  0,  0, 0,    0, 65535 }, /* missing on chip */
 	[BQ27XXX_DM_TERMINATE_VOLTAGE] = { 80, 48, 2, 1000, 32767 },
 };
 #else

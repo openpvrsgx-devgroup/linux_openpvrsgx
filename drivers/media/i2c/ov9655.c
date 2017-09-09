@@ -1488,118 +1488,6 @@ static const struct v4l2_subdev_internal_ops ov9655_subdev_internal_ops = {
 	.open		= ov9655_open,
 };
 
-/* hack to read/write registers - device must be powered on! */
-
-static u8 i2c_register;
-static char i2c_readval[200];
-
-static ssize_t set_i2c(struct device *dev,
-			struct device_attribute *attr,
-			const char *buf, size_t count)
-{
-	int r = 0;
-	const char *p;
-	int d;
-
-	/* syntax:
-	 * a ##		- set register number (hex digits)
-	 * w ##		- write data byte (and register number)
-	 * r		- read data byte (and register number)
-	 * l		- printk full register dump
-	 * space, tab, newline, ;		- separators
-	 */
-	for(p = buf; p < buf + count; p++) {
-// printk("process %02x\n", *p);
-		switch (*p) {
-			case ' ':
-			case '\t':
-			case '\n':
-			case ';':
-				continue;
-			case 'a':
-				d=0;
-				for(p++; p < buf + count; p++) {
-// printk("process a %02x\n", *p);
-					if(*p >= '0' && *p <= '9')
-						d=16*d+(*p-'0');
-					else if(*p >= 'a' && *p <= 'f')
-						d=16*d+(*p-'a'+10);
-					else if(*p >= 'A' && *p <= 'F')
-						d=16*d+(*p-'A'+10);
-					else {
-						p--;
-						break;
-					}
-				}
-				i2c_register=d;
-				continue;
-			case 'r':
-				r=ov9655_read(to_i2c_client(dev), i2c_register++);
-				if(r < 0)
-					return r;
-				sprintf(i2c_readval, "%x", r);
-				continue;
-			case 'w':
-				d=0;
-				for(p++; p < buf + count; p++) {
-// printk("process w %02x\n", *p);
-					if(*p >= '0' && *p <= '9')
-						d=16*d+(*p-'0');
-					else if(*p >= 'a' && *p <= 'f')
-						d=16*d+(*p-'a'+10);
-					else if(*p >= 'A' && *p <= 'F')
-						d=16*d+(*p-'A'+10);
-					else {
-						p--;
-						break;
-					}
-				}
-				r=ov9655_write(to_i2c_client(dev), i2c_register++, d);
-				if(r < 0)
-					return r;
-				continue;
-			case 'l':
-#define ROWS		16
-#define COLUMNS		16
-				for(d=0; d<ROWS*COLUMNS; d++)
-					{
-					if(d%COLUMNS == 0)
-						sprintf(i2c_readval, "%02x:", d);
-					r=ov9655_read(to_i2c_client(dev), d);
-					if(r < 0)
-						strcat(i2c_readval, " ??");
-					else
-						sprintf(i2c_readval+strlen(i2c_readval), " %02x", r);
-					if(d%COLUMNS == COLUMNS-1)
-						printk("%s\n", i2c_readval);
-					}
-				continue;
-			default:
-				return -EIO;	// no command
-		}
-		break;
-	}
-	return count;	// ok
-}
-
-static ssize_t show_i2c(struct device *dev,
-	struct device_attribute *attr, char *buf)
-{
-	return sprintf(buf, "%s", i2c_readval);
-}
-
-static DEVICE_ATTR(i2c, S_IWUSR | S_IRUGO,
-				   show_i2c, set_i2c);
-
-static struct attribute *i2c_debug_attributes[] = {
-	&dev_attr_i2c.attr,
-	NULL
-};
-
-static const struct attribute_group i2c_debugattr_group = {
-	.attrs = i2c_debug_attributes,
-};
-
 /*
  * Driver initialization and probing
  */
@@ -1748,13 +1636,6 @@ static int ov9655_probe(struct i2c_client *client,
 		goto err_3;
 	}
 
-	/* Register sysfs hooks */
-	ret = sysfs_create_group(&client->dev.kobj, &i2c_debugattr_group);
-	if (ret) {
-		dev_err(&client->dev, "failed to create sysfs files\n");
-		goto err_3;
-	}
-
 	ret = v4l2_async_register_subdev(&ov9655->subdev);
 
 	if (!ret)
@@ -1774,8 +1655,6 @@ static int ov9655_remove(struct i2c_client *client)
 {
 	struct v4l2_subdev *subdev = i2c_get_clientdata(client);
 	struct ov9655 *ov9655 = to_ov9655(subdev);
-
-	sysfs_remove_group(&client->dev.kobj, &i2c_debugattr_group);
 
 	v4l2_async_unregister_subdev(subdev);
 	media_entity_cleanup(&subdev->entity);

@@ -1,7 +1,11 @@
 #
 # start camera demo
 
-. /root/x	# set DISPLAY
+if [ ! "$DISPLAY" ]
+then
+	. /root/x	# set DISPLAY
+fi
+
 . /root/camera-setup	# load setup script
 
 PATH=$PATH:/usr/bin/arm-linux-gnueabihf

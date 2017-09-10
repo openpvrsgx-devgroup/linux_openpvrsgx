@@ -82,26 +82,41 @@ case "$1" in
 		;;
 	qvga )	# bypassing OMAP ISP (almost)
 		FORMAT=uyvy
+		CCDCFORMAT=UYVY2X8
 		WIDTH=320
 		HEIGHT=240
 		FPS=30
 		media-link "$CAMERA:0" '"OMAP3 ISP CCDC":0[1]'
 		media-link '"OMAP3 ISP CCDC":1' '"OMAP3 ISP CCDC output":0[1]'
-		media-format "$CAMERA:0" UYVY2X8 ${WIDTH}x${HEIGHT}
-		media-format '"OMAP3 ISP CCDC":0' UYVY2X8 ${WIDTH}x${HEIGHT}
-		media-format '"OMAP3 ISP CCDC":1' UYVY2X8 ${WIDTH}x${HEIGHT}
+		media-format "$CAMERA:0" $CCDCFORMAT ${WIDTH}x${HEIGHT}
+		media-format '"OMAP3 ISP CCDC":0' $CCDCFORMAT ${WIDTH}x${HEIGHT}
+		media-format '"OMAP3 ISP CCDC":1' $CCDCFORMAT ${WIDTH}x${HEIGHT}
+		DEVICE=$(media-ctl -e "OMAP3 ISP CCDC output")
+		;;
+	qqvga )	# bypassing OMAP ISP (almost)
+		FORMAT=uyvy
+		CCDCFORMAT=UYVY2X8
+		WIDTH=160
+		HEIGHT=120
+		FPS=30
+		media-link "$CAMERA:0" '"OMAP3 ISP CCDC":0[1]'
+		media-link '"OMAP3 ISP CCDC":1' '"OMAP3 ISP CCDC output":0[1]'
+		media-format "$CAMERA:0" $CCDCFORMAT ${WIDTH}x${HEIGHT}
+		media-format '"OMAP3 ISP CCDC":0' $CCDCFORMAT ${WIDTH}x${HEIGHT}
+		media-format '"OMAP3 ISP CCDC":1' $CCDCFORMAT ${WIDTH}x${HEIGHT}
 		DEVICE=$(media-ctl -e "OMAP3 ISP CCDC output")
 		;;
 	cif )	# bypassing OMAP ISP (almost)
 		FORMAT=uyvy
+		CCDCFORMAT=UYVY2X8
 		WIDTH=352
 		HEIGHT=288
 		FPS=30
 		media-link "$CAMERA:0" '"OMAP3 ISP CCDC":0[1]'
 		media-link '"OMAP3 ISP CCDC":1' '"OMAP3 ISP CCDC output":0[1]'
-		media-format "$CAMERA:0" UYVY2X8 ${WIDTH}x${HEIGHT}
-		media-format '"OMAP3 ISP CCDC":0' UYVY2X8 ${WIDTH}x${HEIGHT}
-		media-format '"OMAP3 ISP CCDC":1' UYVY2X8 ${WIDTH}x${HEIGHT}
+		media-format "$CAMERA:0" $CCDCFORMAT ${WIDTH}x${HEIGHT}
+		media-format '"OMAP3 ISP CCDC":0' $CCDCFORMAT ${WIDTH}x${HEIGHT}
+		media-format '"OMAP3 ISP CCDC":1' $CCDCFORMAT ${WIDTH}x${HEIGHT}
 		DEVICE=$(media-ctl -e "OMAP3 ISP CCDC output")
 		;;
 	vga-resizer | vga-r* )
@@ -122,6 +137,7 @@ case "$1" in
 # old code follows
 	sxga-old )
 		FORMAT=uyvy
+		CCDCFORMAT=UYVY2X8
 		WIDTH=1280
 		HEIGHT=1024
 		FPS=15
@@ -137,6 +153,7 @@ case "$1" in
 		;;
 	qvga-old )
 		FORMAT=uyvy
+		CCDCFORMAT=UYVY2X8
 		WIDTH=320
 		HEIGHT=240
 		FPS=30
@@ -154,6 +171,7 @@ case "$1" in
 		;;
 	cif-old )
 		FORMAT=uyvy
+		CCDCFORMAT=UYVY2X8
 		WIDTH=352
 		HEIGHT=288
 		FPS=30

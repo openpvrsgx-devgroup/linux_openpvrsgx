@@ -1,5 +1,6 @@
 #
 # start camera demo
+#
 
 if [ ! "$DISPLAY" ]
 then

@@ -874,6 +874,12 @@ enum bq27xxx_dm_reg_id {
 #define bq2751x_dm_regs NULL
 #define bq2752x_dm_regs NULL
 
+/*
+ * current logic for multi-block DM update (where terminate-voltage has a diff
+ * subclass than design-*) does not update both blocks in a single pass on the
+ * 27500, and perhaps not others as well
+ */
+
 static struct bq27xxx_dm_reg bq27500_dm_regs[] = {
 	[BQ27XXX_DM_DESIGN_CAPACITY]   = { 48, 10, 2,    0, 65535 },
 	[BQ27XXX_DM_DESIGN_ENERGY]     = {  0,  0, 0,    0, 65535 }, /* missing on chip */
@@ -1275,7 +1281,7 @@ static void bq27xxx_battery_update_dm_block(struct bq27xxx_device_info *di,
 	__be16 *prev = bq27xxx_dm_reg_ptr(buf, reg);
 
 	if (prev == NULL) {
-		dev_warn(di->dev, "buffer does not match %s dm spec\n", str);
+		dev_warn(di->dev, "%s dm spec incompatible with data on flash/NVM\n", str);
 		return;
 	}
 
@@ -1474,7 +1480,7 @@ static void bq27xxx_battery_settings(struct bq27xxx_device_info *di)
 	struct power_supply_battery_info *info;
 	unsigned int min, max;
 
-	if (power_supply_get_battery_info(di->bat, &info) < 0)
+	if (!di->dev->of_node || power_supply_get_battery_info(di->bat, &info) < 0)
 		return;
 
 	if (!di->dm_regs) {

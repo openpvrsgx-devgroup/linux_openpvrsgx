@@ -1304,9 +1304,13 @@ pr_info("%s\n", __func__);
 		return;
 	}
 
+printk("bq27xxx: di->opts=%x\n", di->opts);
+printk("bq27xxx: bq27xxx_dt_to_nvm=%d\n", bq27xxx_dt_to_nvm);
 #ifdef CONFIG_BATTERY_BQ27XXX_DT_UPDATES_NVM
+printk("bq27xxx: CONFIG_BATTERY_BQ27XXX_DT_UPDATES_NVM=y\n");
 	if (!(di->opts & BQ27XXX_O_RAM) && !bq27xxx_dt_to_nvm) {
 #else
+printk("bq27xxx: CONFIG_BATTERY_BQ27XXX_DT_UPDATES_NVM=n\n");
 	if (!(di->opts & BQ27XXX_O_RAM)) {
 #endif
 		/* devicetree and NVM differ; defer to NVM */

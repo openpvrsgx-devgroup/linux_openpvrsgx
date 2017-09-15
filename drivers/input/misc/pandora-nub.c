@@ -1,5 +1,5 @@
 /*
-	vsense.c
+	pandora_nub.c
 
 	Written by Gražvydas Ignotas <notasas@gmail.com>
 
@@ -8,7 +8,9 @@
 	the Free Software Foundation; version 2 of the License.
 */
 
+#define DEBUG
 #include <linux/kernel.h>
+#include <linux/slab.h>
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/i2c.h>
@@ -19,27 +21,35 @@
 #include <linux/ctype.h>
 #include <linux/proc_fs.h>
 #include <linux/idr.h>
-#include <linux/i2c/vsense.h>
 #include <linux/gpio.h>
 #include <linux/regulator/consumer.h>
+#include <linux/seq_file.h>
+#include <linux/of.h>
+#include <linux/of_gpio.h>
 
-#define VSENSE_INTERVAL		25
 
-#define VSENSE_MODE_ABS		0
-#define VSENSE_MODE_MOUSE	1
-#define VSENSE_MODE_SCROLL	2
-#define VSENSE_MODE_MBUTTONS	3
+#define PANDORA_NUB_INTERVAL		25
 
-static DEFINE_IDR(vsense_proc_id);
-static DEFINE_MUTEX(vsense_mutex);
+#define PANDORA_NUB_MODE_ABS		0
+#define PANDORA_NUB_MODE_MOUSE	1
+#define PANDORA_NUB_MODE_SCROLL	2
+#define PANDORA_NUB_MODE_MBUTTONS	3
+
+static DEFINE_IDR(pandora_nub_proc_id);
+static DEFINE_MUTEX(pandora_nub_mutex);
 
 /* Reset state is shared between both nubs, so we keep
  * track of it here.
  */
-static int vsense_reset_state;
-static int vsense_reset_refcount;
+static int pandora_nub_reset_state;
+static int pandora_nub_reset_refcount;
 
-struct vsense_drvdata {
+struct pandora_nub_platform_data {
+	int gpio_irq;
+	int gpio_reset;
+};
+
+struct pandora_nub_drvdata {
 	char dev_name[12];
 	struct input_dev *input;
 	struct i2c_client *client;
@@ -77,7 +87,7 @@ enum nub_position {
 	NUB_POS_LEFT,
 };
 
-static void release_mbuttons(struct vsense_drvdata *ddata)
+static void release_mbuttons(struct pandora_nub_drvdata *ddata)
 {
 	if (ddata->mbutton.state_l) {
 		input_report_key(ddata->input, BTN_LEFT, 0);
@@ -94,15 +104,15 @@ static void release_mbuttons(struct vsense_drvdata *ddata)
 	ddata->mbutton.pos_active = NUB_POS_CENTER;
 }
 
-static void vsense_work(struct work_struct *work)
+static void pandora_nub_work(struct work_struct *work)
 {
-	struct vsense_drvdata *ddata;
+	struct pandora_nub_drvdata *ddata;
 	int ax = 0, ay = 0, rx = 0, ry = 0;
 	int update_pending = 0;
 	signed char buff[4];
 	int ret, pos, l, m, r;
 
-	ddata = container_of(work, struct vsense_drvdata, work.work);
+	ddata = container_of(work, struct pandora_nub_drvdata, work.work);
 
 	if (unlikely(gpio_get_value(ddata->irq_gpio)))
 		goto dosync;
@@ -118,18 +128,18 @@ static void vsense_work(struct work_struct *work)
 	ax = (signed int)buff[2];
 	ay = (signed int)buff[3];
 
-	schedule_delayed_work(&ddata->work, msecs_to_jiffies(VSENSE_INTERVAL));
+	schedule_delayed_work(&ddata->work, msecs_to_jiffies(PANDORA_NUB_INTERVAL));
 	update_pending = 1;
 
 dosync:
 	switch (ddata->mode) {
-	case VSENSE_MODE_MOUSE:
+	case PANDORA_NUB_MODE_MOUSE:
 		rx = rx * ddata->mouse_multiplier / 256;
 		ry = -ry * ddata->mouse_multiplier / 256;
 		input_report_rel(ddata->input, REL_X, rx);
 		input_report_rel(ddata->input, REL_Y, ry);
 		break;
-	case VSENSE_MODE_SCROLL:
+	case PANDORA_NUB_MODE_SCROLL:
 		if (++(ddata->scroll_counter) < ddata->scroll_steps)
 			return;
 		ddata->scroll_counter = 0;
@@ -138,7 +148,7 @@ dosync:
 		input_report_rel(ddata->input, REL_HWHEEL, ax);
 		input_report_rel(ddata->input, REL_WHEEL, ay);
 		break;
-	case VSENSE_MODE_MBUTTONS:
+	case PANDORA_NUB_MODE_MBUTTONS:
 		if (!update_pending) {
 			release_mbuttons(ddata);
 			break;
@@ -199,22 +209,22 @@ dosync:
 	input_sync(ddata->input);
 }
 
-static irqreturn_t vsense_isr(int irq, void *dev_id)
+static irqreturn_t pandora_nub_interrupt(int irq, void *dev_id)
 {
-	struct vsense_drvdata *ddata = dev_id;
+	struct pandora_nub_drvdata *ddata = dev_id;
 
 	schedule_delayed_work(&ddata->work, 0);
 
 	return IRQ_HANDLED;
 }
 
-static int vsense_reset(struct vsense_drvdata *ddata, int val)
+static int pandora_nub_reset(struct pandora_nub_drvdata *ddata, int val)
 {
 	int ret;
 
-	dev_dbg(&ddata->client->dev, "vsense_reset: %i\n", val);
+	dev_dbg(&ddata->client->dev, "pandora_nub_reset: %i\n", val);
 
-	if (ddata->mode != VSENSE_MODE_ABS)
+	if (ddata->mode != PANDORA_NUB_MODE_ABS)
 		release_mbuttons(ddata);
 
 	ret = gpio_direction_output(ddata->reset_gpio, val);
@@ -223,24 +233,24 @@ static int vsense_reset(struct vsense_drvdata *ddata, int val)
 			"for GPIO %d, error %d\n", ddata->reset_gpio, ret);
 	}
 	else {
-		vsense_reset_state = val;
+		pandora_nub_reset_state = val;
 	}
 
 	return ret;
 }
 
-static int vsense_open(struct input_dev *dev)
+static int pandora_nub_open(struct input_dev *dev)
 {
-	dev_dbg(&dev->dev, "vsense_open\n");
+	dev_dbg(&dev->dev, "pandora_nub_open\n");
 
 	/* get out of reset and stay there until user wants to reset it */
-	if (vsense_reset_state != 0)
-		vsense_reset(input_get_drvdata(dev), 0);
+	if (pandora_nub_reset_state != 0)
+		pandora_nub_reset(input_get_drvdata(dev), 0);
 
 	return 0;
 }
 
-static int vsense_input_register(struct vsense_drvdata *ddata, int mode)
+static int pandora_nub_input_register(struct pandora_nub_drvdata *ddata, int mode)
 {
 	struct input_dev *input;
 	int ret;
@@ -249,7 +259,7 @@ static int vsense_input_register(struct vsense_drvdata *ddata, int mode)
 	if (input == NULL)
 		return -ENOMEM;
 
-	if (mode != VSENSE_MODE_ABS) {
+	if (mode != PANDORA_NUB_MODE_ABS) {
 		/* pretend to be a mouse */
 		input_set_capability(input, EV_REL, REL_X);
 		input_set_capability(input, EV_REL, REL_Y);
@@ -271,7 +281,7 @@ static int vsense_input_register(struct vsense_drvdata *ddata, int mode)
 	input->id.bustype = BUS_I2C;
 	input->id.version = 0x0092;
 
-	input->open = vsense_open;
+	input->open = pandora_nub_open;
 
 	ddata->input = input;
 	input_set_drvdata(input, ddata);
@@ -287,42 +297,39 @@ static int vsense_input_register(struct vsense_drvdata *ddata, int mode)
 	return 0;
 }
 
-static void vsense_input_unregister(struct vsense_drvdata *ddata)
+static void pandora_nub_input_unregister(struct pandora_nub_drvdata *ddata)
 {
 	cancel_delayed_work_sync(&ddata->work);
 	input_unregister_device(ddata->input);
 }
 
-static int vsense_proc_mode_read(char *page, char **start, off_t off, int count,
-		int *eof, void *data)
+static int pandora_nub_proc_mode_read(struct seq_file *m, void *p)
 {
-	struct vsense_drvdata *ddata = data;
-	char *p = page;
-	int len;
+	struct pandora_nub_drvdata *ddata = m->private;
 
 	switch (ddata->mode) {
-	case VSENSE_MODE_MOUSE:
-		len = sprintf(p, "mouse\n");
+	case PANDORA_NUB_MODE_MOUSE:
+		seq_printf(m, "mouse\n");
 		break;
-	case VSENSE_MODE_SCROLL:
-		len = sprintf(p, "scroll\n");
+	case PANDORA_NUB_MODE_SCROLL:
+		seq_printf(m, "scroll\n");
 		break;
-	case VSENSE_MODE_MBUTTONS:
-		len = sprintf(p, "mbuttons\n");
+	case PANDORA_NUB_MODE_MBUTTONS:
+		seq_printf(m, "mbuttons\n");
 		break;
 	default:
-		len = sprintf(p, "absolute\n");
+		seq_printf(m, "absolute\n");
 		break;
 	}
 
-	*eof = 1;
-	return len;
+	return 0;
 }
 
-static int vsense_proc_mode_write(struct file *file, const char __user *buffer,
-		unsigned long count, void *data)
+static int pandora_nub_proc_mode_write(struct file *file, const char __user *buffer,
+		size_t count, loff_t *offs)
 {
-	struct vsense_drvdata *ddata = data;
+	struct pandora_nub_drvdata *ddata =
+		((struct seq_file *)file->private_data)->private;
 	int mode = ddata->mode;
 	char buff[32], *p;
 	int ret;
@@ -337,26 +344,26 @@ static int vsense_proc_mode_write(struct file *file, const char __user *buffer,
 	p[1] = 0;
 
 	if (strcasecmp(buff, "mouse") == 0)
-		mode = VSENSE_MODE_MOUSE;
+		mode = PANDORA_NUB_MODE_MOUSE;
 	else if (strcasecmp(buff, "scroll") == 0)
-		mode = VSENSE_MODE_SCROLL;
+		mode = PANDORA_NUB_MODE_SCROLL;
 	else if (strcasecmp(buff, "mbuttons") == 0)
-		mode = VSENSE_MODE_MBUTTONS;
+		mode = PANDORA_NUB_MODE_MBUTTONS;
 	else if (strcasecmp(buff, "absolute") == 0)
-		mode = VSENSE_MODE_ABS;
+		mode = PANDORA_NUB_MODE_ABS;
 	else {
 		dev_err(&ddata->client->dev, "unknown mode: %s\n", buff);
 		return -EINVAL;
 	}
 
-	if (ddata->mode != VSENSE_MODE_ABS)
+	if (ddata->mode != PANDORA_NUB_MODE_ABS)
 		release_mbuttons(ddata);
 
-	if ((mode == VSENSE_MODE_ABS && ddata->mode != VSENSE_MODE_ABS) ||
-	    (mode != VSENSE_MODE_ABS && ddata->mode == VSENSE_MODE_ABS)) {
+	if ((mode == PANDORA_NUB_MODE_ABS && ddata->mode != PANDORA_NUB_MODE_ABS) ||
+	    (mode != PANDORA_NUB_MODE_ABS && ddata->mode == PANDORA_NUB_MODE_ABS)) {
 		disable_irq(ddata->client->irq);
-		vsense_input_unregister(ddata);
-		ret = vsense_input_register(ddata, mode);
+		pandora_nub_input_unregister(ddata);
+		ret = pandora_nub_input_register(ddata, mode);
 		if (ret)
 			dev_err(&ddata->client->dev, "failed to re-register "
 				"input as %d, code %d\n", mode, ret);
@@ -368,51 +375,61 @@ static int vsense_proc_mode_write(struct file *file, const char __user *buffer,
 	return count;
 }
 
-static int vsense_proc_int_read(char *page, char **start, off_t off,
-		int count, int *eof, void *data)
+static int pandora_nub_proc_int_read(struct seq_file *m, void *p)
 {
-	int *val = data;
-	int len;
+	int *val = m->private;
 
-	len = sprintf(page, "%d\n", *val);
-	*eof = 1;
-	return len;
+	seq_printf(m, "%d\n", *val);
+	return 0;
 }
 
-static int vsense_proc_int_write(struct file *file, const char __user *buffer,
-		unsigned long count, void *data)
+static int get_write_value(const char __user *buffer, size_t count, int *val)
 {
 	char buff[32];
-	long val;
+	long lval = 0;
 	int ret;
-	int *value = data;
 
 	count = strncpy_from_user(buff, buffer,
 			count < sizeof(buff) ? count : sizeof(buff) - 1);
 	buff[count] = 0;
 
-	ret = strict_strtol(buff, 0, &val);
+	ret = kstrtol(buff, 0, &lval);
 	if (ret < 0)
 		return ret;
+
+	*val = lval;
+	return count;
+}
+
+static int pandora_nub_proc_int_write(struct file *file, const char __user *buffer,
+		size_t count, loff_t *offs)
+{
+	int *value = ((struct seq_file *)file->private_data)->private;
+	int val;
+	int ret;
+
+	ret = get_write_value(buffer, count, &val);
+	if (ret < 0)
+		return ret;
+
 	*value = val;
 	return count;
 }
 
-static int vsense_proc_mult_read(char *page, char **start, off_t off,
-		int count, int *eof, void *data)
+static int pandora_nub_proc_mult_read(struct seq_file *m, void *p)
 {
-	int *multiplier = data;
+	int *multiplier = m->private;
 	int val = *multiplier * 100 / 256;
-	return vsense_proc_int_read(page, start, off, count, eof, &val);
+	return pandora_nub_proc_int_read(m, &val);
 }
 
-static int vsense_proc_mult_write(struct file *file, const char __user *buffer,
-		unsigned long count, void *data)
+static int pandora_nub_proc_mult_write(struct file *file, const char __user *buffer,
+		size_t count, loff_t *offs)
 {
-	int *multiplier = data;
+	int *multiplier = ((struct seq_file *)file->private_data)->private;
 	int ret, val, adj;
 
-	ret = vsense_proc_int_write(file, buffer, count, &val);
+	ret = get_write_value(buffer, count, &val);
 	if (ret < 0)
 		return ret;
 	if (val == 0)
@@ -425,39 +442,38 @@ static int vsense_proc_mult_write(struct file *file, const char __user *buffer,
 	return ret;
 }
 
-static int vsense_proc_rate_read(char *page, char **start, off_t off,
-		int count, int *eof, void *data)
+static int pandora_nub_proc_rate_read(struct seq_file *m, void *p)
 {
-	int *steps = data;
-	int val = 1000 / VSENSE_INTERVAL / *steps;
-	return vsense_proc_int_read(page, start, off, count, eof, &val);
+	int *steps = m->private;
+	int val = 1000 / PANDORA_NUB_INTERVAL / *steps;
+	return pandora_nub_proc_int_read(m, &val);
 }
 
-static int vsense_proc_rate_write(struct file *file, const char __user *buffer,
-		unsigned long count, void *data)
+static int pandora_nub_proc_rate_write(struct file *file, const char __user *buffer,
+		size_t count, loff_t *offs)
 {
-	int *steps = data;
+	int *steps = ((struct seq_file *)file->private_data)->private;
 	int ret, val;
 
-	ret = vsense_proc_int_write(file, buffer, count, &val);
+	ret = get_write_value(buffer, count, &val);
 	if (ret < 0)
 		return ret;
 	if (val < 1)
 		return -EINVAL;
 
-	*steps = 1000 / VSENSE_INTERVAL / val;
+	*steps = 1000 / PANDORA_NUB_INTERVAL / val;
 	if (*steps < 1)
 		*steps = 1;
 	return ret;
 }
 
-static int vsense_proc_treshold_write(struct file *file, const char __user *buffer,
-		unsigned long count, void *data)
+static int pandora_nub_proc_treshold_write(struct file *file, const char __user *buffer,
+		size_t count, loff_t *offs)
 {
-	int *value = data;
+	int *value = ((struct seq_file *)file->private_data)->private;
 	int ret, val;
 
-	ret = vsense_proc_int_write(file, buffer, count, &val);
+	ret = get_write_value(buffer, count, &val);
 	if (ret < 0)
 		return ret;
 	if (val < 1 || val > 32)
@@ -468,62 +484,107 @@ static int vsense_proc_treshold_write(struct file *file, const char __user *buff
 }
 
 static ssize_t
-vsense_show_reset(struct device *dev, struct device_attribute *attr, char *buf)
+pandora_nub_show_reset(struct device *dev, struct device_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%d\n", vsense_reset_state);
+	return sprintf(buf, "%d\n", pandora_nub_reset_state);
 }
 
 static ssize_t
-vsense_set_reset(struct device *dev, struct device_attribute *attr,
+pandora_nub_set_reset(struct device *dev, struct device_attribute *attr,
 		const char *buf, size_t count)
 {
 	unsigned long new_reset;
 	struct i2c_client *client;
-	struct vsense_drvdata *ddata;
+	struct pandora_nub_drvdata *ddata;
 	int ret;
 
-	ret = strict_strtoul(buf, 10, &new_reset);
+	ret = kstrtol(buf, 10, &new_reset);
 	if (ret)
 		return -EINVAL;
 
 	client = to_i2c_client(dev);
 	ddata = i2c_get_clientdata(client);
 
-	vsense_reset(ddata, new_reset ? 1 : 0);
+	pandora_nub_reset(ddata, new_reset ? 1 : 0);
 
 	return count;
 }
 static DEVICE_ATTR(reset, S_IRUGO | S_IWUSR,
-	vsense_show_reset, vsense_set_reset);
+	pandora_nub_show_reset, pandora_nub_set_reset);
 
-static void vsense_create_proc(struct vsense_drvdata *ddata,
-			       void *pdata, const char *name,
-			       read_proc_t *read_proc, write_proc_t *write_proc)
+#ifdef CONFIG_OF
+static struct pandora_nub_platform_data *
+pandora_nub_dt_init(struct i2c_client *client)
 {
-	struct proc_dir_entry *pret;
+	// the task is to initialize dynamic pdata from the device tree properties
+	struct device_node *np = client->dev.of_node;
+	struct pandora_nub_platform_data *pdata;
 
-	pret = create_proc_entry(name, S_IWUGO | S_IRUGO, ddata->proc_root);
-	if (pret == NULL) {
-		dev_err(&ddata->client->dev, "failed to create proc file %s\n", name);
-		return;
-	}
+	pdata = devm_kzalloc(&client->dev,
+		 sizeof(struct pandora_nub_platform_data), GFP_KERNEL);
+	if (!pdata)
+		return ERR_PTR(-ENOMEM);
 
-	pret->data = pdata;
-	pret->read_proc = read_proc;
-	pret->write_proc = write_proc;
+	pdata->gpio_irq = of_get_gpio(np, 0);
+	pdata->gpio_reset = of_get_gpio(np, 1);	// not used
+
+	return pdata;
 }
 
-static int vsense_probe(struct i2c_client *client,
+static struct of_device_id pandora_nub_dt_match[] = {
+	{
+	.compatible = "pandora,vsense",
+	},
+	{},
+};
+
+MODULE_DEVICE_TABLE(of, pandora_nub_dt_match);
+
+#else
+static struct pandora_nub_platform_data *
+pandora_nub_dt_init(struct i2c_client *client)
+{
+	return ERR_PTR(-ENODEV);
+}
+
+#endif
+
+#define PANDORA_NUB_PE(name, readf, writef) \
+static int proc_open_##name(struct inode *inode, struct file *file) \
+{ \
+	return single_open(file, readf, PDE_DATA(inode)); \
+} \
+static const struct file_operations pandora_nub_proc_##name = { \
+	.open		= proc_open_##name, \
+	.read		= seq_read, \
+	.llseek		= seq_lseek, \
+	.release	= seq_release, \
+	.write		= writef, \
+}
+
+PANDORA_NUB_PE(mode, pandora_nub_proc_mode_read, pandora_nub_proc_mode_write);
+PANDORA_NUB_PE(mouse_sensitivity, pandora_nub_proc_mult_read, pandora_nub_proc_mult_write);
+PANDORA_NUB_PE(scrollx_sensitivity, pandora_nub_proc_mult_read, pandora_nub_proc_mult_write);
+PANDORA_NUB_PE(scrolly_sensitivity, pandora_nub_proc_mult_read, pandora_nub_proc_mult_write);
+PANDORA_NUB_PE(scroll_rate, pandora_nub_proc_rate_read, pandora_nub_proc_rate_write);
+PANDORA_NUB_PE(mbutton_threshold, pandora_nub_proc_int_read, pandora_nub_proc_treshold_write);
+PANDORA_NUB_PE(mbutton_threshold_y, pandora_nub_proc_int_read, pandora_nub_proc_treshold_write);
+PANDORA_NUB_PE(mbutton_delay, pandora_nub_proc_int_read, pandora_nub_proc_int_write);
+
+static int pandora_nub_probe(struct i2c_client *client,
 			 const struct i2c_device_id *id)
 {
-	struct vsense_platform_data *pdata = client->dev.platform_data;
-	struct vsense_drvdata *ddata;
+	struct pandora_nub_platform_data *pdata = dev_get_platdata(&client->dev);
+	struct pandora_nub_drvdata *ddata;
 	char buff[32];
 	int ret;
 
 	if (pdata == NULL) {
-		dev_err(&client->dev, "no platform data?\n");
-		return -EINVAL;
+		pdata = pandora_nub_dt_init(client);
+		if (IS_ERR(pdata)) {
+			dev_err(&client->dev, "Needs entries in device tree\n");
+			return PTR_ERR(pdata);
+		}
 	}
 
 	if (i2c_check_functionality(client->adapter, I2C_FUNC_I2C) == 0) {
@@ -531,37 +592,44 @@ static int vsense_probe(struct i2c_client *client,
 		return -EIO;
 	}
 
-	ddata = kzalloc(sizeof(struct vsense_drvdata), GFP_KERNEL);
+	ddata = kzalloc(sizeof(struct pandora_nub_drvdata), GFP_KERNEL);
 	if (ddata == NULL)
 		return -ENOMEM;
 
-	ret = idr_pre_get(&vsense_proc_id, GFP_KERNEL);
-	if (ret == 0) {
-		ret = -ENOMEM;
-		goto err_idr;
+	idr_preload(GFP_KERNEL);
+	mutex_lock(&pandora_nub_mutex);
+
+	ret = idr_alloc(&pandora_nub_proc_id, client, 0, 0, GFP_NOWAIT);
+	if (ret >= 0) {
+		ddata->proc_id = ret;
+
+		/* hack to get something like a mkdir -p .. */
+		if (idr_find(&pandora_nub_proc_id, ddata->proc_id ^ 1) == NULL)
+			proc_mkdir("pandora", NULL);
 	}
 
-	mutex_lock(&vsense_mutex);
-
-	ret = idr_get_new(&vsense_proc_id, client, &ddata->proc_id);
+	mutex_unlock(&pandora_nub_mutex);
+	idr_preload_end();
 	if (ret < 0) {
-		mutex_unlock(&vsense_mutex);
+		dev_err(&client->dev, "failed to alloc idr,"
+				" error %d\n", ret);
 		goto err_idr;
 	}
 
-	if (!vsense_reset_refcount) {
+	mutex_lock(&pandora_nub_mutex);
+	if (!pandora_nub_reset_refcount) {
 		ret = gpio_request_one(pdata->gpio_reset, GPIOF_OUT_INIT_HIGH,
-			"vsense reset");
+			"pandora_nub reset");
 		if (ret < 0) {
 			dev_err(&client->dev, "gpio_request error: %d, %d\n",
 				pdata->gpio_reset, ret);
-			mutex_unlock(&vsense_mutex);
+			mutex_unlock(&pandora_nub_mutex);
 			goto err_gpio_reset;
 		}
 	}
-	vsense_reset_refcount++;
+	pandora_nub_reset_refcount++;
 
-	mutex_unlock(&vsense_mutex);
+	mutex_unlock(&pandora_nub_mutex);
 
 	ret = gpio_request_one(pdata->gpio_irq, GPIOF_IN, client->name);
 	if (ret < 0) {
@@ -581,15 +649,15 @@ static int vsense_probe(struct i2c_client *client,
 	snprintf(ddata->dev_name, sizeof(ddata->dev_name),
 		 "nub%d", ddata->proc_id);
 
-	INIT_DELAYED_WORK(&ddata->work, vsense_work);
-	ddata->mode = VSENSE_MODE_ABS;
+	INIT_DELAYED_WORK(&ddata->work, pandora_nub_work);
+	ddata->mode = PANDORA_NUB_MODE_ABS;
 	ddata->client = client;
 	ddata->reset_gpio = pdata->gpio_reset;
 	ddata->irq_gpio = pdata->gpio_irq;
 	ddata->mouse_multiplier = 170 * 256 / 100;
 	ddata->scrollx_multiplier =
 	ddata->scrolly_multiplier = 8 * 256 / 100;
-	ddata->scroll_steps = 1000 / VSENSE_INTERVAL / 3;
+	ddata->scroll_steps = 1000 / PANDORA_NUB_INTERVAL / 3;
 	ddata->mbutton.threshold_x = 20;
 	ddata->mbutton.threshold_y = 26;
 	ddata->mbutton.delay = 1;
@@ -609,25 +677,30 @@ static int vsense_probe(struct i2c_client *client,
 	}
 
 	/* HACK */
-	if (vsense_reset_refcount == 2)
+	if (pandora_nub_reset_refcount == 2)
 		/* resetting drains power, as well as disabling supply,
 		 * so keep it powered and out of reset at all times */
-		vsense_reset(ddata, 0);
+		pandora_nub_reset(ddata, 0);
 
-	ret = vsense_input_register(ddata, ddata->mode);
+	ret = pandora_nub_input_register(ddata, ddata->mode);
 	if (ret) {
 		dev_err(&client->dev, "failed to register input device, "
 			"error %d\n", ret);
 		goto err_input_register;
 	}
 
-	ret = request_irq(client->irq, vsense_isr,
-			IRQF_SAMPLE_RANDOM | IRQF_TRIGGER_FALLING,
-			client->name, ddata);
+	if(client->irq) {
+	ret = request_threaded_irq(client->irq, NULL,
+				     pandora_nub_interrupt,
+				     IRQF_ONESHOT |
+				     IRQF_TRIGGER_FALLING,
+				     "pandora_joystick", ddata);
 	if (ret) {
 		dev_err(&client->dev, "unable to claim irq %d, error %d\n",
 			client->irq, ret);
 		goto err_request_irq;
+	}
+
 	}
 
 	dev_dbg(&client->dev, "probe %02x, gpio %i, irq %i, \"%s\"\n",
@@ -636,22 +709,30 @@ static int vsense_probe(struct i2c_client *client,
 	snprintf(buff, sizeof(buff), "pandora/nub%d", ddata->proc_id);
 	ddata->proc_root = proc_mkdir(buff, NULL);
 	if (ddata->proc_root != NULL) {
-		vsense_create_proc(ddata, ddata, "mode",
-				vsense_proc_mode_read, vsense_proc_mode_write);
-		vsense_create_proc(ddata, &ddata->mouse_multiplier, "mouse_sensitivity",
-				vsense_proc_mult_read, vsense_proc_mult_write);
-		vsense_create_proc(ddata, &ddata->scrollx_multiplier, "scrollx_sensitivity",
-				vsense_proc_mult_read, vsense_proc_mult_write);
-		vsense_create_proc(ddata, &ddata->scrolly_multiplier, "scrolly_sensitivity",
-				vsense_proc_mult_read, vsense_proc_mult_write);
-		vsense_create_proc(ddata, &ddata->scroll_steps, "scroll_rate",
-				vsense_proc_rate_read, vsense_proc_rate_write);
-		vsense_create_proc(ddata, &ddata->mbutton.threshold_x, "mbutton_threshold",
-				vsense_proc_int_read, vsense_proc_treshold_write);
-		vsense_create_proc(ddata, &ddata->mbutton.threshold_y, "mbutton_threshold_y",
-				vsense_proc_int_read, vsense_proc_treshold_write);
-		vsense_create_proc(ddata, &ddata->mbutton.delay, "mbutton_delay",
-				vsense_proc_int_read, vsense_proc_int_write);
+		proc_create_data("mode", S_IWUGO | S_IRUGO,
+			ddata->proc_root, &pandora_nub_proc_mode,
+			ddata);
+		proc_create_data("mouse_sensitivity", S_IWUGO | S_IRUGO,
+			ddata->proc_root, &pandora_nub_proc_mouse_sensitivity,
+			&ddata->mouse_multiplier);
+		proc_create_data("scrollx_sensitivity", S_IWUGO | S_IRUGO, ddata->proc_root,
+			&pandora_nub_proc_scrollx_sensitivity,
+			&ddata->scrollx_multiplier);
+		proc_create_data("scrolly_sensitivity", S_IWUGO | S_IRUGO, ddata->proc_root,
+			&pandora_nub_proc_scrolly_sensitivity,
+			&ddata->scrolly_multiplier);
+		proc_create_data("scroll_rate", S_IWUGO | S_IRUGO, ddata->proc_root,
+			&pandora_nub_proc_scroll_rate,
+			&ddata->scroll_steps);
+		proc_create_data("mbutton_threshold", S_IWUGO | S_IRUGO, ddata->proc_root,
+			&pandora_nub_proc_mbutton_threshold,
+			&ddata->mbutton.threshold_x);
+		proc_create_data("mbutton_threshold_y", S_IWUGO | S_IRUGO, ddata->proc_root,
+			&pandora_nub_proc_mbutton_threshold_y,
+			&ddata->mbutton.threshold_y);
+		proc_create_data("mbutton_delay", S_IWUGO | S_IRUGO, ddata->proc_root,
+			&pandora_nub_proc_mbutton_delay,
+			&ddata->mbutton.delay);
 	} else
 		dev_err(&client->dev, "can't create proc dir");
 
@@ -660,7 +741,7 @@ static int vsense_probe(struct i2c_client *client,
 	return 0;
 
 err_request_irq:
-	vsense_input_unregister(ddata);
+	pandora_nub_input_unregister(ddata);
 err_input_register:
 err_regulator_enable:
 	regulator_put(ddata->reg);
@@ -670,28 +751,28 @@ err_gpio_to_irq:
 err_gpio_irq:
 	gpio_free(pdata->gpio_reset);
 err_gpio_reset:
-	idr_remove(&vsense_proc_id, ddata->proc_id);
+	idr_remove(&pandora_nub_proc_id, ddata->proc_id);
 err_idr:
 	kfree(ddata);
 	return ret;
 }
 
-static int __devexit vsense_remove(struct i2c_client *client)
+static int pandora_nub_remove(struct i2c_client *client)
 {
-	struct vsense_drvdata *ddata;
+	struct pandora_nub_drvdata *ddata;
 	char buff[32];
 
 	dev_dbg(&client->dev, "remove\n");
 
 	ddata = i2c_get_clientdata(client);
 
-	mutex_lock(&vsense_mutex);
+	mutex_lock(&pandora_nub_mutex);
 
-	vsense_reset_refcount--;
-	if (!vsense_reset_refcount)
+	pandora_nub_reset_refcount--;
+	if (!pandora_nub_reset_refcount)
 		gpio_free(ddata->reset_gpio);
 
-	mutex_unlock(&vsense_mutex);
+	mutex_unlock(&pandora_nub_mutex);
 
 	device_remove_file(&client->dev, &dev_attr_reset);
 
@@ -705,10 +786,10 @@ static int __devexit vsense_remove(struct i2c_client *client)
 	remove_proc_entry("mbutton_delay", ddata->proc_root);
 	snprintf(buff, sizeof(buff), "pandora/nub%d", ddata->proc_id);
 	remove_proc_entry(buff, NULL);
-	idr_remove(&vsense_proc_id, ddata->proc_id);
+	idr_remove(&pandora_nub_proc_id, ddata->proc_id);
 
 	free_irq(client->irq, ddata);
-	vsense_input_unregister(ddata);
+	pandora_nub_input_unregister(ddata);
 	gpio_free(ddata->irq_gpio);
 	regulator_put(ddata->reg);
 	kfree(ddata);
@@ -717,10 +798,10 @@ static int __devexit vsense_remove(struct i2c_client *client)
 }
 
 #ifdef CONFIG_PM_SLEEP
-static int vsense_i2c_suspend(struct device *dev)
+static int pandora_nub_i2c_suspend(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
-	struct vsense_drvdata *ddata = i2c_get_clientdata(client);
+	struct pandora_nub_drvdata *ddata = i2c_get_clientdata(client);
 
 	/* we can't process irqs while i2c is suspended and we can't
 	 * ask the device to not generate them, so just disable instead */
@@ -730,7 +811,7 @@ static int vsense_i2c_suspend(struct device *dev)
 	return 0;
 }
 
-static int vsense_i2c_resume(struct device *dev)
+static int pandora_nub_i2c_resume(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
 
@@ -740,38 +821,29 @@ static int vsense_i2c_resume(struct device *dev)
 }
 #endif /* CONFIG_PM_SLEEP */
 
-static SIMPLE_DEV_PM_OPS(vsense_pm_ops, vsense_i2c_suspend, vsense_i2c_resume);
+static SIMPLE_DEV_PM_OPS(pandora_nub_pm_ops, pandora_nub_i2c_suspend, pandora_nub_i2c_resume);
 
-static const struct i2c_device_id vsense_id[] = {
-	{ "vsense", 0 },
+static const struct i2c_device_id pandora_nub_id[] = {
+	{ "pandora_nub", 0 },
 	{ }
 };
 
-static struct i2c_driver vsense_driver = {
+MODULE_DEVICE_TABLE(i2c, pandora_nub_id);
+
+static struct i2c_driver pandora_nub_driver = {
 	.driver = {
-		.name	= "vsense",
+		.name	= "pandora_nub",
 		.owner	= THIS_MODULE,
-		.pm	= &vsense_pm_ops,
+		.pm	= &pandora_nub_pm_ops,
+		.of_match_table = of_match_ptr(pandora_nub_dt_match),
 	},
-	.probe		= vsense_probe,
-	.remove		= __devexit_p(vsense_remove),
-	.id_table	= vsense_id,
+	.probe		= pandora_nub_probe,
+	.remove		= pandora_nub_remove,
+	.id_table	= pandora_nub_id,
 };
 
-static int __init vsense_init(void)
-{
-	return i2c_add_driver(&vsense_driver);
-}
-
-static void __exit vsense_exit(void)
-{
-	i2c_del_driver(&vsense_driver);
-}
-
+module_i2c_driver(pandora_nub_driver);
 
 MODULE_AUTHOR("Grazvydas Ignotas");
 MODULE_DESCRIPTION("VSense navigation device driver");
 MODULE_LICENSE("GPL");
-
-module_init(vsense_init);
-module_exit(vsense_exit);

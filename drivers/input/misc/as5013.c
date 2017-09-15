@@ -1,5 +1,5 @@
 /*
-	vsense.c
+	as5013.c
 
 	Written by Gražvydas Ignotas <notasas@gmail.com>
 
@@ -21,7 +21,6 @@
 #include <linux/ctype.h>
 #include <linux/proc_fs.h>
 #include <linux/idr.h>
-#include <linux/i2c/vsense.h>
 #include <linux/gpio.h>
 #include <linux/regulator/consumer.h>
 #include <linux/seq_file.h>
@@ -29,17 +28,22 @@
 #include <linux/of_gpio.h>
 
 
-#define VSENSE_INTERVAL		25
+#define AS5013_INTERVAL		25
 
-#define VSENSE_MODE_ABS		0
-#define VSENSE_MODE_MOUSE	1
-#define VSENSE_MODE_SCROLL	2
-#define VSENSE_MODE_MBUTTONS	3
+#define AS5013_MODE_ABS		0
+#define AS5013_MODE_MOUSE	1
+#define AS5013_MODE_SCROLL	2
+#define AS5013_MODE_MBUTTONS	3
 
-static DEFINE_IDR(vsense_proc_id);
-static DEFINE_MUTEX(vsense_mutex);
+static DEFINE_IDR(as5013_proc_id);
+static DEFINE_MUTEX(as5013_mutex);
 
-struct vsense_drvdata {
+struct as5013_platform_data {
+	int gpio_irq;
+	int gpio_reset;
+};
+
+struct as5013_drvdata {
 	char dev_name[12];
 	struct input_dev *input;
 	struct i2c_client *client;
@@ -112,7 +116,7 @@ enum nub_position {
 	NUB_POS_LEFT,
 };
 
-static void release_mbuttons(struct vsense_drvdata *ddata)
+static void release_mbuttons(struct as5013_drvdata *ddata)
 {
 	if (ddata->mbutton.state_l) {
 		input_report_key(ddata->input, BTN_LEFT, 0);
@@ -131,7 +135,7 @@ static void release_mbuttons(struct vsense_drvdata *ddata)
 
 static irqreturn_t as5013_axis_interrupt(int irq, void *dev_id)
 {
-	struct vsense_drvdata *ddata = dev_id;
+	struct as5013_drvdata *ddata = dev_id;
 	struct i2c_client *client = ddata->client;
 	int ax = 0, ay = 0, rx = 0, ry = 0;
 	int update_pending = 0;
@@ -172,13 +176,13 @@ static irqreturn_t as5013_axis_interrupt(int irq, void *dev_id)
 
 //dosync:
 	switch (ddata->mode) {
-	case VSENSE_MODE_MOUSE:
+	case AS5013_MODE_MOUSE:
 		rx = rx * ddata->mouse_multiplier / 256 / 8;
 		ry = -ry * ddata->mouse_multiplier / 256 / 8;
 		input_report_rel(ddata->input, REL_X, rx);
 		input_report_rel(ddata->input, REL_Y, ry);
 		break;
-	case VSENSE_MODE_SCROLL:
+	case AS5013_MODE_SCROLL:
 		if (++(ddata->scroll_counter) < ddata->scroll_steps)
 			return IRQ_HANDLED;
 		ddata->scroll_counter = 0;
@@ -187,7 +191,7 @@ static irqreturn_t as5013_axis_interrupt(int irq, void *dev_id)
 		input_report_rel(ddata->input, REL_HWHEEL, ax);
 		input_report_rel(ddata->input, REL_WHEEL, ay);
 		break;
-	case VSENSE_MODE_MBUTTONS:
+	case AS5013_MODE_MBUTTONS:
 		if (!update_pending) {
 			release_mbuttons(ddata);
 			break;
@@ -254,14 +258,14 @@ static irqreturn_t as5013_axis_interrupt(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static void vsense_work(struct work_struct *work)
+static void as5013_work(struct work_struct *work)
 {
-	struct vsense_drvdata *ddata;
+	struct as5013_drvdata *ddata;
 	struct i2c_client *client;
 	uint8_t value = 0;
 	int ret;
 
-	ddata = container_of(work, struct vsense_drvdata, work.work);
+	ddata = container_of(work, struct as5013_drvdata, work.work);
 	client = ddata->client;
 
 	ret = as5013_i2c_read(client, 0x0f, &value);
@@ -273,22 +277,22 @@ static void vsense_work(struct work_struct *work)
 	if (value & 1)
 		as5013_axis_interrupt(0, ddata);
 
-	schedule_delayed_work(&ddata->work, msecs_to_jiffies(VSENSE_INTERVAL));
+	schedule_delayed_work(&ddata->work, msecs_to_jiffies(AS5013_INTERVAL));
 }
 
-static int vsense_open(struct input_dev *dev)
+static int as5013_open(struct input_dev *dev)
 {
-	struct vsense_drvdata *ddata = input_get_drvdata(dev);
+	struct as5013_drvdata *ddata = input_get_drvdata(dev);
 
-	dev_dbg(&dev->dev, "vsense_open\n");
+	dev_dbg(&dev->dev, "as5013_open\n");
 
 	cancel_delayed_work_sync(&ddata->work);
-	schedule_delayed_work(&ddata->work, msecs_to_jiffies(VSENSE_INTERVAL));
+	schedule_delayed_work(&ddata->work, msecs_to_jiffies(AS5013_INTERVAL));
 
 	return 0;
 }
 
-static int vsense_input_register(struct vsense_drvdata *ddata, int mode)
+static int as5013_input_register(struct as5013_drvdata *ddata, int mode)
 {
 	struct input_dev *input;
 	int ret;
@@ -297,7 +301,7 @@ static int vsense_input_register(struct vsense_drvdata *ddata, int mode)
 	if (input == NULL)
 		return -ENOMEM;
 
-	if (mode != VSENSE_MODE_ABS) {
+	if (mode != AS5013_MODE_ABS) {
 		/* pretend to be a mouse */
 		input_set_capability(input, EV_REL, REL_X);
 		input_set_capability(input, EV_REL, REL_Y);
@@ -319,7 +323,7 @@ static int vsense_input_register(struct vsense_drvdata *ddata, int mode)
 	input->id.bustype = BUS_I2C;
 	input->id.version = 0x0092;
 
-	input->open = vsense_open;
+	input->open = as5013_open;
 
 	ddata->input = input;
 	input_set_drvdata(input, ddata);
@@ -335,24 +339,24 @@ static int vsense_input_register(struct vsense_drvdata *ddata, int mode)
 	return 0;
 }
 
-static void vsense_input_unregister(struct vsense_drvdata *ddata)
+static void as5013_input_unregister(struct as5013_drvdata *ddata)
 {
 	cancel_delayed_work_sync(&ddata->work);
 	input_unregister_device(ddata->input);
 }
 
-static int vsense_proc_mode_read(struct seq_file *m, void *p)
+static int as5013_proc_mode_read(struct seq_file *m, void *p)
 {
-	struct vsense_drvdata *ddata = m->private;
+	struct as5013_drvdata *ddata = m->private;
 
 	switch (ddata->mode) {
-	case VSENSE_MODE_MOUSE:
+	case AS5013_MODE_MOUSE:
 		seq_printf(m, "mouse\n");
 		break;
-	case VSENSE_MODE_SCROLL:
+	case AS5013_MODE_SCROLL:
 		seq_printf(m, "scroll\n");
 		break;
-	case VSENSE_MODE_MBUTTONS:
+	case AS5013_MODE_MBUTTONS:
 		seq_printf(m, "mbuttons\n");
 		break;
 	default:
@@ -363,10 +367,10 @@ static int vsense_proc_mode_read(struct seq_file *m, void *p)
 	return 0;
 }
 
-static ssize_t vsense_proc_mode_write(struct file *file, const char __user *buffer,
+static ssize_t as5013_proc_mode_write(struct file *file, const char __user *buffer,
 		size_t count, loff_t *offs)
 {
-	struct vsense_drvdata *ddata =
+	struct as5013_drvdata *ddata =
 		((struct seq_file *)file->private_data)->private;
 	int mode = ddata->mode;
 	char buff[32], *p;
@@ -382,26 +386,26 @@ static ssize_t vsense_proc_mode_write(struct file *file, const char __user *buff
 	p[1] = 0;
 
 	if (strcasecmp(buff, "mouse") == 0)
-		mode = VSENSE_MODE_MOUSE;
+		mode = AS5013_MODE_MOUSE;
 	else if (strcasecmp(buff, "scroll") == 0)
-		mode = VSENSE_MODE_SCROLL;
+		mode = AS5013_MODE_SCROLL;
 	else if (strcasecmp(buff, "mbuttons") == 0)
-		mode = VSENSE_MODE_MBUTTONS;
+		mode = AS5013_MODE_MBUTTONS;
 	else if (strcasecmp(buff, "absolute") == 0)
-		mode = VSENSE_MODE_ABS;
+		mode = AS5013_MODE_ABS;
 	else {
 		dev_err(&ddata->client->dev, "unknown mode: %s\n", buff);
 		return -EINVAL;
 	}
 
-	if (ddata->mode != VSENSE_MODE_ABS)
+	if (ddata->mode != AS5013_MODE_ABS)
 		release_mbuttons(ddata);
 
-	if ((mode == VSENSE_MODE_ABS && ddata->mode != VSENSE_MODE_ABS) ||
-	    (mode != VSENSE_MODE_ABS && ddata->mode == VSENSE_MODE_ABS)) {
+	if ((mode == AS5013_MODE_ABS && ddata->mode != AS5013_MODE_ABS) ||
+	    (mode != AS5013_MODE_ABS && ddata->mode == AS5013_MODE_ABS)) {
 		disable_irq(ddata->client->irq);
-		vsense_input_unregister(ddata);
-		ret = vsense_input_register(ddata, mode);
+		as5013_input_unregister(ddata);
+		ret = as5013_input_register(ddata, mode);
 		if (ret)
 			dev_err(&ddata->client->dev, "failed to re-register "
 				"input as %d, code %d\n", mode, ret);
@@ -413,7 +417,7 @@ static ssize_t vsense_proc_mode_write(struct file *file, const char __user *buff
 	return count;
 }
 
-static int vsense_proc_int_read(struct seq_file *m, void *p)
+static int as5013_proc_int_read(struct seq_file *m, void *p)
 {
 	int *val = m->private;
 
@@ -439,7 +443,7 @@ static int get_write_value(const char __user *buffer, size_t count, int *val)
 	return count;
 }
 
-static ssize_t vsense_proc_int_write(struct file *file, const char __user *buffer,
+static ssize_t as5013_proc_int_write(struct file *file, const char __user *buffer,
 		size_t count, loff_t *offs)
 {
 	int *value = ((struct seq_file *)file->private_data)->private;
@@ -454,14 +458,14 @@ static ssize_t vsense_proc_int_write(struct file *file, const char __user *buffe
 	return count;
 }
 
-static int vsense_proc_mult_read(struct seq_file *m, void *p)
+static int as5013_proc_mult_read(struct seq_file *m, void *p)
 {
 	int *multiplier = m->private;
 	int val = *multiplier * 100 / 256;
-	return vsense_proc_int_read(m, &val);
+	return as5013_proc_int_read(m, &val);
 }
 
-static ssize_t vsense_proc_mult_write(struct file *file, const char __user *buffer,
+static ssize_t as5013_proc_mult_write(struct file *file, const char __user *buffer,
 		size_t count, loff_t *offs)
 {
 	int *multiplier = ((struct seq_file *)file->private_data)->private;
@@ -480,14 +484,14 @@ static ssize_t vsense_proc_mult_write(struct file *file, const char __user *buff
 	return ret;
 }
 
-static int vsense_proc_rate_read(struct seq_file *m, void *p)
+static int as5013_proc_rate_read(struct seq_file *m, void *p)
 {
 	int *steps = m->private;
-	int val = 1000 / VSENSE_INTERVAL / *steps;
-	return vsense_proc_int_read(m, &val);
+	int val = 1000 / AS5013_INTERVAL / *steps;
+	return as5013_proc_int_read(m, &val);
 }
 
-static ssize_t vsense_proc_rate_write(struct file *file, const char __user *buffer,
+static ssize_t as5013_proc_rate_write(struct file *file, const char __user *buffer,
 		size_t count, loff_t *offs)
 {
 	int *steps = ((struct seq_file *)file->private_data)->private;
@@ -499,13 +503,13 @@ static ssize_t vsense_proc_rate_write(struct file *file, const char __user *buff
 	if (val < 1)
 		return -EINVAL;
 
-	*steps = 1000 / VSENSE_INTERVAL / val;
+	*steps = 1000 / AS5013_INTERVAL / val;
 	if (*steps < 1)
 		*steps = 1;
 	return ret;
 }
 
-static ssize_t vsense_proc_treshold_write(struct file *file, const char __user *buffer,
+static ssize_t as5013_proc_treshold_write(struct file *file, const char __user *buffer,
 		size_t count, loff_t *offs)
 {
 	int *value = ((struct seq_file *)file->private_data)->private;
@@ -522,18 +526,18 @@ static ssize_t vsense_proc_treshold_write(struct file *file, const char __user *
 }
 
 static ssize_t
-vsense_show_reset(struct device *dev, struct device_attribute *attr, char *buf)
+as5013_show_reset(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	return sprintf(buf, "%d\n", 0);
 }
 
 static ssize_t
-vsense_set_reset(struct device *dev, struct device_attribute *attr,
+as5013_set_reset(struct device *dev, struct device_attribute *attr,
 		const char *buf, size_t count)
 {
 	unsigned long new_reset;
 	struct i2c_client *client;
-	struct vsense_drvdata *ddata;
+	struct as5013_drvdata *ddata;
 	int ret;
 
 	ret = kstrtoul(buf, 10, &new_reset);
@@ -546,18 +550,18 @@ vsense_set_reset(struct device *dev, struct device_attribute *attr,
 	return count;
 }
 static DEVICE_ATTR(reset, S_IRUGO | S_IWUSR,
-	vsense_show_reset, vsense_set_reset);
+	as5013_show_reset, as5013_set_reset);
 
 #ifdef CONFIG_OF
-static struct vsense_platform_data *
-vsense_dt_init(struct i2c_client *client)
+static struct as5013_platform_data *
+as5013_dt_init(struct i2c_client *client)
 {
 	// the task is to initialize dynamic pdata from the device tree properties
 	struct device_node *np = client->dev.of_node;
-	struct vsense_platform_data *pdata;
+	struct as5013_platform_data *pdata;
 
 	pdata = devm_kzalloc(&client->dev,
-						 sizeof(struct vsense_platform_data), GFP_KERNEL);
+						 sizeof(struct as5013_platform_data), GFP_KERNEL);
 	if (!pdata)
 		return ERR_PTR(-ENOMEM);
 
@@ -577,20 +581,20 @@ static struct of_device_id as5013_dt_match[] = {
 MODULE_DEVICE_TABLE(of, as5013_dt_match);
 
 #else
-static struct vsense_platform_data *
-vsense_dt_init(struct i2c_client *client)
+static struct as5013_platform_data *
+as5013_dt_init(struct i2c_client *client)
 {
 	return ERR_PTR(-ENODEV);
 }
 
 #endif
 
-#define VSENSE_PE(name, readf, writef) \
+#define AS5013_PE(name, readf, writef) \
 static int proc_open_##name(struct inode *inode, struct file *file) \
 { \
 	return single_open(file, readf, PDE_DATA(inode)); \
 } \
-static const struct file_operations vsense_proc_##name = { \
+static const struct file_operations as5013_proc_##name = { \
 	.open		= proc_open_##name, \
 	.read		= seq_read, \
 	.llseek		= seq_lseek, \
@@ -598,26 +602,26 @@ static const struct file_operations vsense_proc_##name = { \
 	.write		= writef, \
 }
 
-VSENSE_PE(mode, vsense_proc_mode_read, vsense_proc_mode_write);
-VSENSE_PE(mouse_sensitivity, vsense_proc_mult_read, vsense_proc_mult_write);
-VSENSE_PE(scrollx_sensitivity, vsense_proc_mult_read, vsense_proc_mult_write);
-VSENSE_PE(scrolly_sensitivity, vsense_proc_mult_read, vsense_proc_mult_write);
-VSENSE_PE(scroll_rate, vsense_proc_rate_read, vsense_proc_rate_write);
-VSENSE_PE(mbutton_threshold, vsense_proc_int_read, vsense_proc_treshold_write);
-VSENSE_PE(mbutton_threshold_y, vsense_proc_int_read, vsense_proc_treshold_write);
-VSENSE_PE(mbutton_delay, vsense_proc_int_read, vsense_proc_int_write);
+AS5013_PE(mode, as5013_proc_mode_read, as5013_proc_mode_write);
+AS5013_PE(mouse_sensitivity, as5013_proc_mult_read, as5013_proc_mult_write);
+AS5013_PE(scrollx_sensitivity, as5013_proc_mult_read, as5013_proc_mult_write);
+AS5013_PE(scrolly_sensitivity, as5013_proc_mult_read, as5013_proc_mult_write);
+AS5013_PE(scroll_rate, as5013_proc_rate_read, as5013_proc_rate_write);
+AS5013_PE(mbutton_threshold, as5013_proc_int_read, as5013_proc_treshold_write);
+AS5013_PE(mbutton_threshold_y, as5013_proc_int_read, as5013_proc_treshold_write);
+AS5013_PE(mbutton_delay, as5013_proc_int_read, as5013_proc_int_write);
 
-static int vsense_probe(struct i2c_client *client,
+static int as5013_probe(struct i2c_client *client,
 			 const struct i2c_device_id *id)
 {
-	struct vsense_platform_data *pdata = dev_get_platdata(&client->dev);
-	struct vsense_drvdata *ddata;
+	struct as5013_platform_data *pdata = dev_get_platdata(&client->dev);
+	struct as5013_drvdata *ddata;
 	uint8_t value = 0;
 	char buff[32];
 	int i, ret;
 
 	if (pdata == NULL) {
-		pdata = vsense_dt_init(client);
+		pdata = as5013_dt_init(client);
 		if (IS_ERR(pdata)) {
 			dev_err(&client->dev, "Needs entries in device tree\n");
 			return PTR_ERR(pdata);
@@ -667,23 +671,23 @@ static int vsense_probe(struct i2c_client *client,
 		return -ENODEV;
 	}
 
-	ddata = kzalloc(sizeof(struct vsense_drvdata), GFP_KERNEL);
+	ddata = kzalloc(sizeof(struct as5013_drvdata), GFP_KERNEL);
 	if (ddata == NULL)
 		return -ENOMEM;
 
 	idr_preload(GFP_KERNEL);
-	mutex_lock(&vsense_mutex);
+	mutex_lock(&as5013_mutex);
 
-	ret = idr_alloc(&vsense_proc_id, client, 0, 0, GFP_NOWAIT);
+	ret = idr_alloc(&as5013_proc_id, client, 0, 0, GFP_NOWAIT);
 	if (ret >= 0) {
 		ddata->proc_id = ret;
 
 		// hack to get something like a mkdir -p ..
-		if (idr_find(&vsense_proc_id, ddata->proc_id ^ 1) == NULL)
+		if (idr_find(&as5013_proc_id, ddata->proc_id ^ 1) == NULL)
 			proc_mkdir("pandora", NULL);
 	}
 
-	mutex_unlock(&vsense_mutex);
+	mutex_unlock(&as5013_mutex);
 	idr_preload_end();
 	if (ret < 0) {
 		dev_err(&client->dev, "failed to alloc idr,"
@@ -712,14 +716,14 @@ static int vsense_probe(struct i2c_client *client,
 	snprintf(ddata->dev_name, sizeof(ddata->dev_name),
 		 "nub%d", ddata->proc_id);
 
-	INIT_DELAYED_WORK(&ddata->work, vsense_work);
-	ddata->mode = VSENSE_MODE_ABS;
+	INIT_DELAYED_WORK(&ddata->work, as5013_work);
+	ddata->mode = AS5013_MODE_ABS;
 	ddata->client = client;
 	ddata->irq_gpio = pdata->gpio_irq;
 	ddata->mouse_multiplier = 170 * 256 / 100;
 	ddata->scrollx_multiplier =
 	ddata->scrolly_multiplier = 8 * 256 / 100;
-	ddata->scroll_steps = 1000 / VSENSE_INTERVAL / 3;
+	ddata->scroll_steps = 1000 / AS5013_INTERVAL / 3;
 	ddata->mbutton.threshold_x = 20;
 	ddata->mbutton.threshold_y = 26;
 	ddata->mbutton.delay = 1;
@@ -740,7 +744,7 @@ static int vsense_probe(struct i2c_client *client,
 	}
 #endif
 
-	ret = vsense_input_register(ddata, ddata->mode);
+	ret = as5013_input_register(ddata, ddata->mode);
 	if (ret) {
 		dev_err(&client->dev, "failed to register input device, "
 			"error %d\n", ret);
@@ -769,40 +773,40 @@ static int vsense_probe(struct i2c_client *client,
 	ddata->proc_root = proc_mkdir(buff, NULL);
 	if (ddata->proc_root != NULL) {
 		proc_create_data("mode", S_IWUGO | S_IRUGO,
-			ddata->proc_root, &vsense_proc_mode,
+			ddata->proc_root, &as5013_proc_mode,
 			ddata);
 		proc_create_data("mouse_sensitivity", S_IWUGO | S_IRUGO,
-			ddata->proc_root, &vsense_proc_mouse_sensitivity,
+			ddata->proc_root, &as5013_proc_mouse_sensitivity,
 			&ddata->mouse_multiplier);
 		proc_create_data("scrollx_sensitivity", S_IWUGO | S_IRUGO, ddata->proc_root,
-			&vsense_proc_scrollx_sensitivity,
+			&as5013_proc_scrollx_sensitivity,
 			&ddata->scrollx_multiplier);
 		proc_create_data("scrolly_sensitivity", S_IWUGO | S_IRUGO, ddata->proc_root,
-			&vsense_proc_scrolly_sensitivity,
+			&as5013_proc_scrolly_sensitivity,
 			&ddata->scrolly_multiplier);
 		proc_create_data("scroll_rate", S_IWUGO | S_IRUGO, ddata->proc_root,
-			&vsense_proc_scroll_rate,
+			&as5013_proc_scroll_rate,
 			&ddata->scroll_steps);
 		proc_create_data("mbutton_threshold", S_IWUGO | S_IRUGO, ddata->proc_root,
-			&vsense_proc_mbutton_threshold,
+			&as5013_proc_mbutton_threshold,
 			&ddata->mbutton.threshold_x);
 		proc_create_data("mbutton_threshold_y", S_IWUGO | S_IRUGO, ddata->proc_root,
-			&vsense_proc_mbutton_threshold_y,
+			&as5013_proc_mbutton_threshold_y,
 			&ddata->mbutton.threshold_y);
 		proc_create_data("mbutton_delay", S_IWUGO | S_IRUGO, ddata->proc_root,
-			&vsense_proc_mbutton_delay,
+			&as5013_proc_mbutton_delay,
 			&ddata->mbutton.delay);
 	} else
 		dev_err(&client->dev, "can't create proc dir");
 
 	ret = device_create_file(&client->dev, &dev_attr_reset);
 
-	//schedule_delayed_work(&ddata->work, msecs_to_jiffies(VSENSE_INTERVAL));
+	//schedule_delayed_work(&ddata->work, msecs_to_jiffies(AS5013_INTERVAL));
 
 	return 0;
 
 err_request_irq:
-	vsense_input_unregister(ddata);
+	as5013_input_unregister(ddata);
 err_input_register:
 //err_regulator_enable:
 //	regulator_put(ddata->reg);
@@ -811,24 +815,24 @@ err_gpio_to_irq:
 	gpio_free(pdata->gpio_irq);
 err_gpio_irq:
 //	gpio_free(pdata->gpio_reset);
-	idr_remove(&vsense_proc_id, ddata->proc_id);
+	idr_remove(&as5013_proc_id, ddata->proc_id);
 err_idr:
 	kfree(ddata);
 	return ret;
 }
 
-static int vsense_remove(struct i2c_client *client)
+static int as5013_remove(struct i2c_client *client)
 {
-	struct vsense_drvdata *ddata;
+	struct as5013_drvdata *ddata;
 	char buff[32];
 
 	dev_dbg(&client->dev, "remove\n");
 
 	ddata = i2c_get_clientdata(client);
 
-	mutex_lock(&vsense_mutex);
+	mutex_lock(&as5013_mutex);
 
-	mutex_unlock(&vsense_mutex);
+	mutex_unlock(&as5013_mutex);
 
 	device_remove_file(&client->dev, &dev_attr_reset);
 
@@ -843,17 +847,17 @@ static int vsense_remove(struct i2c_client *client)
 	snprintf(buff, sizeof(buff), "pandora/nub%d", ddata->proc_id);
 	remove_proc_entry(buff, NULL);
 
-	mutex_lock(&vsense_mutex);
-	idr_remove(&vsense_proc_id, ddata->proc_id);
+	mutex_lock(&as5013_mutex);
+	idr_remove(&as5013_proc_id, ddata->proc_id);
 
 	// hack..
-	if (idr_find(&vsense_proc_id, ddata->proc_id ^ 1) == NULL)
+	if (idr_find(&as5013_proc_id, ddata->proc_id ^ 1) == NULL)
 		remove_proc_entry("pandora", NULL);
 
-	mutex_unlock(&vsense_mutex);
+	mutex_unlock(&as5013_mutex);
 
 	free_irq(client->irq, ddata);
-	vsense_input_unregister(ddata);
+	as5013_input_unregister(ddata);
 	gpio_free(ddata->irq_gpio);
 	//regulator_put(ddata->reg);
 	kfree(ddata);
@@ -862,10 +866,10 @@ static int vsense_remove(struct i2c_client *client)
 }
 
 #ifdef CONFIG_PM_SLEEP
-static int vsense_i2c_suspend(struct device *dev)
+static int as5013_i2c_suspend(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
-	struct vsense_drvdata *ddata = i2c_get_clientdata(client);
+	struct as5013_drvdata *ddata = i2c_get_clientdata(client);
 
 	/* we can't process irqs while i2c is suspended and we can't
 	 * ask the device to not generate them, so just disable instead */
@@ -875,7 +879,7 @@ static int vsense_i2c_suspend(struct device *dev)
 	return 0;
 }
 
-static int vsense_i2c_resume(struct device *dev)
+static int as5013_i2c_resume(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
 
@@ -885,28 +889,28 @@ static int vsense_i2c_resume(struct device *dev)
 }
 #endif /* CONFIG_PM_SLEEP */
 
-static SIMPLE_DEV_PM_OPS(vsense_pm_ops, vsense_i2c_suspend, vsense_i2c_resume);
+static SIMPLE_DEV_PM_OPS(as5013_pm_ops, as5013_i2c_suspend, as5013_i2c_resume);
 
-static const struct i2c_device_id vsense_id[] = {
+static const struct i2c_device_id as5013_id[] = {
 	{ "as5013", 0 },
 	{ }
 };
 
-MODULE_DEVICE_TABLE(i2c, vsense_id);
+MODULE_DEVICE_TABLE(i2c, as5013_id);
 
-static struct i2c_driver vsense_driver = {
+static struct i2c_driver as5013_driver = {
 	.driver = {
 		.name	= "as5013",
 		.owner	= THIS_MODULE,
-		.pm	= &vsense_pm_ops,
+		.pm	= &as5013_pm_ops,
 		.of_match_table = of_match_ptr(as5013_dt_match),
 	},
-	.probe		= vsense_probe,
-	.remove		= vsense_remove,
-	.id_table	= vsense_id,
+	.probe		= as5013_probe,
+	.remove		= as5013_remove,
+	.id_table	= as5013_id,
 };
 
-module_i2c_driver(vsense_driver);
+module_i2c_driver(as5013_driver);
 
 MODULE_AUTHOR("Grazvydas Ignotas");
 MODULE_DESCRIPTION("VSense navigation device driver");

@@ -939,4 +939,14 @@ config INPUT_STPMIC1_ONKEY
 	  To compile this driver as a module, choose M here: the
 	  module will be called stpmic1_onkey.
 
+config INPUT_VSENSE
+	tristate "VSense Navigation Device"
+	depends on I2C
+	help
+	  Say Y here if you want to support VSense navigation device
+	  (the analog nub on pandora handheld).
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called vsense.
+
 endif

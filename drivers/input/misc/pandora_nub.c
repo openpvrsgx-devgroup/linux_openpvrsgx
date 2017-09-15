@@ -533,7 +533,7 @@ pandora_nub_dt_init(struct i2c_client *client)
 
 static struct of_device_id pandora_nub_dt_match[] = {
 	{
-	.compatible = "pandora,vsense",
+	.compatible = "pandora,pandora-nub",
 	},
 	{},
 };

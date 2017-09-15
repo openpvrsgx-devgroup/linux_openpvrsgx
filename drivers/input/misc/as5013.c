@@ -22,7 +22,6 @@
 #include <linux/proc_fs.h>
 #include <linux/idr.h>
 #include <linux/gpio.h>
-#include <linux/regulator/consumer.h>
 #include <linux/seq_file.h>
 #include <linux/of.h>
 #include <linux/of_gpio.h>
@@ -40,14 +39,13 @@ static DEFINE_MUTEX(as5013_mutex);
 
 struct as5013_platform_data {
 	int gpio_irq;
-	int gpio_reset;
 };
 
 struct as5013_drvdata {
 	char dev_name[12];
 	struct input_dev *input;
 	struct i2c_client *client;
-	//struct regulator *reg;
+
 	int x_old, y_old;
 	int irq_gpio;
 	int mode;
@@ -74,8 +72,7 @@ struct as5013_drvdata {
 	} mbutton;
 };
 
-//static
-int as5013_i2c_write(struct i2c_client *client,
+static int as5013_i2c_write(struct i2c_client *client,
 			    uint8_t aregaddr,
 			    uint8_t avalue)
 {
@@ -103,7 +100,6 @@ static int as5013_i2c_read(struct i2c_client *client,
 	if (error < 0)
 		return error;
 
-	//*value = data[0] & 0x80 ? -1 * (1 + ~data[0]) : data[0];
 	*value = data[0];
 	return 0;
 }
@@ -142,12 +138,6 @@ static irqreturn_t as5013_axis_interrupt(int irq, void *dev_id)
 	int ret, pos, l, m, r;
 	uint8_t value;
 
-	//dev_err(&client->dev, "irq\n");
-//return IRQ_HANDLED;
-
-	//if (unlikely(gpio_get_value(ddata->irq_gpio)))
-	//	goto dosync;
-
 	ret = as5013_i2c_read(client, 0x10, &value);
 	if (ret < 0) {
 		dev_err(&client->dev, "as5013_i2c_read(10) %d\n", ret);
@@ -163,8 +153,6 @@ static irqreturn_t as5013_axis_interrupt(int irq, void *dev_id)
 	}
 	ay = (int)(signed char)value;
 
-	//rx = (ax - ddata->x_old) / 4;
-	//ry = (ay - ddata->y_old) / 4;
 	if (abs(ax) > 10)
 		rx = ax;
 	if (abs(ay) > 10)
@@ -174,7 +162,6 @@ static irqreturn_t as5013_axis_interrupt(int irq, void *dev_id)
 
 	update_pending = 1;
 
-//dosync:
 	switch (ddata->mode) {
 	case AS5013_MODE_MOUSE:
 		rx = rx * ddata->mouse_multiplier / 256 / 8;
@@ -272,7 +259,6 @@ static void as5013_work(struct work_struct *work)
 	if (ret < 0) {
 		dev_err(&client->dev, "as5013_i2c_read %d\n", ret);
 	}
-	//dev_info(&client->dev, "control: %02x\n", value);
 
 	if (value & 1)
 		as5013_axis_interrupt(0, ddata);
@@ -555,8 +541,7 @@ static DEVICE_ATTR(reset, S_IRUGO | S_IWUSR,
 #ifdef CONFIG_OF
 static struct as5013_platform_data *
 as5013_dt_init(struct i2c_client *client)
-{
-	// the task is to initialize dynamic pdata from the device tree properties
+{ /*  the task is to initialize dynamic pdata from the device tree properties */
 	struct device_node *np = client->dev.of_node;
 	struct as5013_platform_data *pdata;
 
@@ -566,7 +551,6 @@ as5013_dt_init(struct i2c_client *client)
 		return ERR_PTR(-ENOMEM);
 
 	pdata->gpio_irq = of_get_gpio(np, 0);
-	pdata->gpio_reset = of_get_gpio(np, 1);	// not used
 
 	return pdata;
 }
@@ -628,7 +612,6 @@ static int as5013_probe(struct i2c_client *client,
 		}
 	}
 
-	//if (i2c_check_functionality(client->adapter, I2C_FUNC_PROTOCOL_MANGLING) == 0) {
 	if (i2c_check_functionality(client->adapter, I2C_FUNC_I2C) == 0) {
 		dev_err(&client->dev, "can't talk I2C?\n");
 		return -EIO;
@@ -682,7 +665,7 @@ static int as5013_probe(struct i2c_client *client,
 	if (ret >= 0) {
 		ddata->proc_id = ret;
 
-		// hack to get something like a mkdir -p ..
+		/* hack to get something like a mkdir -p .. */
 		if (idr_find(&as5013_proc_id, ddata->proc_id ^ 1) == NULL)
 			proc_mkdir("pandora", NULL);
 	}
@@ -729,21 +712,6 @@ static int as5013_probe(struct i2c_client *client,
 	ddata->mbutton.delay = 1;
 	i2c_set_clientdata(client, ddata);
 
-#if 0
-	ddata->reg = regulator_get(&client->dev, "vcc");
-	if (IS_ERR(ddata->reg)) {
-		ret = PTR_ERR(ddata->reg);
-		dev_err(&client->dev, "unable to get regulator: %d\n", ret);
-		goto err_regulator_get;
-	}
-
-	ret = regulator_enable(ddata->reg);
-	if (ret) {
-		dev_err(&client->dev, "unable to enable regulator: %d\n", ret);
-		goto err_regulator_enable;
-	}
-#endif
-
 	ret = as5013_input_register(ddata, ddata->mode);
 	if (ret) {
 		dev_err(&client->dev, "failed to register input device, "
@@ -755,7 +723,6 @@ static int as5013_probe(struct i2c_client *client,
 	ret = request_threaded_irq(client->irq, NULL,
 				     as5013_axis_interrupt,
 				     IRQF_ONESHOT |
-				     //IRQF_TRIGGER_RISING |
 				     IRQF_TRIGGER_FALLING,
 				     "as5013_joystick", ddata);
 	if (ret) {
@@ -801,20 +768,14 @@ static int as5013_probe(struct i2c_client *client,
 
 	ret = device_create_file(&client->dev, &dev_attr_reset);
 
-	//schedule_delayed_work(&ddata->work, msecs_to_jiffies(AS5013_INTERVAL));
-
 	return 0;
 
 err_request_irq:
 	as5013_input_unregister(ddata);
 err_input_register:
-//err_regulator_enable:
-//	regulator_put(ddata->reg);
-//err_regulator_get:
 err_gpio_to_irq:
 	gpio_free(pdata->gpio_irq);
 err_gpio_irq:
-//	gpio_free(pdata->gpio_reset);
 	idr_remove(&as5013_proc_id, ddata->proc_id);
 err_idr:
 	kfree(ddata);
@@ -850,7 +811,7 @@ static int as5013_remove(struct i2c_client *client)
 	mutex_lock(&as5013_mutex);
 	idr_remove(&as5013_proc_id, ddata->proc_id);
 
-	// hack..
+	/* hack */
 	if (idr_find(&as5013_proc_id, ddata->proc_id ^ 1) == NULL)
 		remove_proc_entry("pandora", NULL);
 
@@ -859,7 +820,6 @@ static int as5013_remove(struct i2c_client *client)
 	free_irq(client->irq, ddata);
 	as5013_input_unregister(ddata);
 	gpio_free(ddata->irq_gpio);
-	//regulator_put(ddata->reg);
 	kfree(ddata);
 
 	return 0;
@@ -913,5 +873,5 @@ static struct i2c_driver as5013_driver = {
 module_i2c_driver(as5013_driver);
 
 MODULE_AUTHOR("Grazvydas Ignotas");
-MODULE_DESCRIPTION("VSense navigation device driver");
+MODULE_DESCRIPTION("as5013 navigation device driver");
 MODULE_LICENSE("GPL");

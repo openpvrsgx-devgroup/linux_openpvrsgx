@@ -276,16 +276,7 @@ static int si47xx_probe(struct snd_soc_codec *codec)
 	struct si47xx_priv *si47xx = snd_soc_codec_get_drvdata(codec);
 
 	printk("si47xx_probe\n");
-#if USE_I2C_SPI
-	ret = snd_soc_codec_set_cache_io(codec, si47xx->regmap);
-	if (ret < 0) {
-		printk(KERN_ERR "si47xx: failed to configure cache I/O: %d\n",
-		       ret);
-		return ret;
-	}
-#else
 	ret = 0;
-#endif
 	/* power on device */
 	si47xx_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 

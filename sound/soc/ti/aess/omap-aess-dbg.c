@@ -534,17 +534,17 @@ void aess_init_debugfs(struct omap_aess *aess)
 	}
 
 	/* Test related files */
-	debug->d_fmt1 = debugfs_create_bool("format1", 0644, debug->test_root,
+	debug->d_fmt1 = debugfs_create_u32("format1", 0644, debug->test_root,
 					    &debug->format1);
 	if (!debug->d_fmt1)
 		aess_debugfs_failure(aess, "format1");
 
-	debug->d_fmt2 = debugfs_create_bool("format2", 0644, debug->test_root,
+	debug->d_fmt2 = debugfs_create_u32("format2", 0644, debug->test_root,
 					    &debug->format2);
 	if (!debug->d_fmt2)
 		aess_debugfs_failure(aess, "format2");
 
-	debug->d_fmt3 = debugfs_create_bool("format3", 0644, debug->test_root,
+	debug->d_fmt3 = debugfs_create_u32("format3", 0644, debug->test_root,
 					    &debug->format3);
 	if (!debug->d_fmt3)
 		aess_debugfs_failure(aess, "format3");
@@ -560,7 +560,7 @@ void aess_init_debugfs(struct omap_aess *aess)
 	if (!debug->d_size)
 		aess_debugfs_failure(aess, "buffer size");
 
-	debug->d_circ = debugfs_create_bool("circular", 0644, debug->test_root,
+	debug->d_circ = debugfs_create_u32("circular", 0644, debug->test_root,
 					    &debug->circular);
 	if (!debug->d_size)
 		aess_debugfs_failure(aess, "circular mode");

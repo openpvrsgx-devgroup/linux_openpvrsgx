@@ -75,7 +75,7 @@ static void mute_be(struct snd_soc_pcm_runtime *be, struct snd_soc_dai *dai,
 	dev_dbg(be->dev, "%s: %s %d\n", __func__, be->cpu_dai->name, stream);
 
 	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		switch (be->dai_link->be_id) {
+		switch (be->dai_link->id) {
 		case OMAP_AESS_BE_ID_PDM_DL1:
 		case OMAP_AESS_BE_ID_BT_VX:
 		case OMAP_AESS_BE_ID_MM_FM:
@@ -98,7 +98,7 @@ static void mute_be(struct snd_soc_pcm_runtime *be, struct snd_soc_dai *dai,
 			break;
 		}
 	} else {
-		switch (be->dai_link->be_id) {
+		switch (be->dai_link->id) {
 		case OMAP_AESS_BE_ID_PDM_UL:
 			omap_aess_mute_gain(aess, OMAP_AESS_GAIN_AMIC_LEFT);
 			omap_aess_mute_gain(aess, OMAP_AESS_GAIN_AMIC_RIGHT);
@@ -134,7 +134,7 @@ static void unmute_be(struct snd_soc_pcm_runtime *be,struct snd_soc_dai *dai,
 	dev_dbg(be->dev, "%s: %s %d\n", __func__, be->cpu_dai->name, stream);
 
 	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		switch (be->dai_link->be_id) {
+		switch (be->dai_link->id) {
 		case OMAP_AESS_BE_ID_PDM_DL1:
 		case OMAP_AESS_BE_ID_BT_VX:
 		case OMAP_AESS_BE_ID_MM_FM:
@@ -156,7 +156,7 @@ static void unmute_be(struct snd_soc_pcm_runtime *be,struct snd_soc_dai *dai,
 		}
 	} else {
 
-		switch (be->dai_link->be_id) {
+		switch (be->dai_link->id) {
 		case OMAP_AESS_BE_ID_PDM_UL:
 			omap_aess_unmute_gain(aess, OMAP_AESS_GAIN_AMIC_LEFT);
 			omap_aess_unmute_gain(aess, OMAP_AESS_GAIN_AMIC_RIGHT);
@@ -192,7 +192,7 @@ static void enable_be_port(struct snd_soc_pcm_runtime *be,
 
 	dev_dbg(be->dev, "%s: %s %d\n", __func__, be->cpu_dai->name, stream);
 
-	switch (be->dai_link->be_id) {
+	switch (be->dai_link->id) {
 	case OMAP_AESS_BE_ID_PDM_DL1:
 	case OMAP_AESS_BE_ID_PDM_DL2:
 	case OMAP_AESS_BE_ID_PDM_UL:
@@ -321,7 +321,7 @@ static void disable_be_port(struct snd_soc_pcm_runtime *be,
 
 	dev_dbg(be->dev, "%s: %s %d\n", __func__, be->cpu_dai->name, stream);
 
-	switch (be->dai_link->be_id) {
+	switch (be->dai_link->id) {
 	/* McPDM is a special case, handled by McPDM driver */
 	case OMAP_AESS_BE_ID_PDM_DL1:
 	case OMAP_AESS_BE_ID_PDM_DL2:

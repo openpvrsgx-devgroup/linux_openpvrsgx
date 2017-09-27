@@ -570,7 +570,7 @@ static int omap_aess_oppwidget_write(struct snd_soc_platform *platform,
 static int omap_aess_pcm_stream_event(struct snd_soc_dapm_context *dapm,
 				      int event)
 {
-	struct snd_soc_platform *platform = dapm->platform;
+	struct snd_soc_platform *platform = snd_soc_component_to_platform(dapm->component);
 	struct omap_aess *aess = snd_soc_platform_get_drvdata(platform);
 
 	if (aess->active) {

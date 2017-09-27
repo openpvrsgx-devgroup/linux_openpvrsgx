@@ -770,7 +770,7 @@ static int omap_aess_hwrule_size_step(struct snd_pcm_hw_params *params,
 	rate = (rate == 44100) ? 48000 : rate;
 
 	/* AESS requires chunks of 250us worth of data */
-	return snd_interval_step(hw_param_interval(params, rule->var), 0,
+	return snd_interval_step(hw_param_interval(params, rule->var),
 				 rate / 4000);
 }
 

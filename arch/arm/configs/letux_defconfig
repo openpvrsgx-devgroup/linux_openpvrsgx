@@ -636,8 +636,7 @@ CONFIG_ATAGS=y
 # CONFIG_DEPRECATED_PARAM_STRUCT is not set
 CONFIG_ZBOOT_ROM_TEXT=0x0
 CONFIG_ZBOOT_ROM_BSS=0x0
-CONFIG_ARM_APPENDED_DTB=y
-# CONFIG_ARM_ATAG_DTB_COMPAT is not set
+# CONFIG_ARM_APPENDED_DTB is not set
 CONFIG_CMDLINE="console=ttyO2,115200n8 vram=12M omapfb.vram=0:8M,1:4M omapfb.rotate_type=0 omapdss.def_disp=lcd rootwait twl4030_charger.allow_usb=1 musb_hdrc.preserve_vbus=1 log_buf_len=8M ignore_loglevel earlyprintk"
 # CONFIG_CMDLINE_FROM_BOOTLOADER is not set
 CONFIG_CMDLINE_EXTEND=y
@@ -709,7 +708,7 @@ CONFIG_ELFCORE=y
 CONFIG_BINFMT_SCRIPT=y
 # CONFIG_BINFMT_FLAT is not set
 # CONFIG_HAVE_AOUT is not set
-CONFIG_BINFMT_MISC=y
+CONFIG_BINFMT_MISC=m
 CONFIG_COREDUMP=y
 
 #

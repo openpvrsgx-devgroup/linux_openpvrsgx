@@ -53,15 +53,23 @@ CURRENTLINUS=$2
 [ "$1" ] || CURRENTBRANCH=$(git branch | fgrep '* ' | sed 's/\* //')
 CBRANCH=$(echo $CURRENTBRANCH | sed 's/letux-//')
 
-if [ "$CBRANCH" = 4.0 ]
-then
-[ "$2" ] || CURRENTLINUS=v$CBRANCH
-else
-[ "$2" ] || CURRENTLINUS=$(echo v$CBRANCH | sed 's/\.0$//')	# strip off .0 from 3.14.0 for Linus tag conventions
-fi
+case "$CBRANCH" in
+	base )
+		VERSION=$(git log -1 -E --grep="^Merge tag 'v[0-9].[0-9]" --format=oneline HEAD | sed "s|.*Merge tag 'v\(.*\)' into .*|\1|g")
+		CURRENTLINUS=v$VERSION
+# echo $CBRANCH $VERSION $CURRENTLINUS
+		;;
+	4.0 )
+		[ "$2" ] || CURRENTLINUS=v$CBRANCH
+		;;
+	* )
+		[ "$2" ] || CURRENTLINUS=$(echo v$CBRANCH | sed 's/\.0$//')	# strip off .0 from 3.14.0 for Linus tag conventions
+		;;
+esac
+
 COUNT=0
 
-git diff --stat=9999,9999 $CURRENTBRANCH $CURRENTLINUS |
+git diff --stat=9999,9999 $CURRENTBRANCH $CURRENTLINUS | tee slog |
 while read FILE BAR CHANGES PLUSMINUS X1 X2
 do
 # idea: format as HTML so that we can publish it more easily

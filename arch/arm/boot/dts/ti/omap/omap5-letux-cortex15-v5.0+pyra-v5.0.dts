@@ -1,0 +1,13 @@
+/*
+ * Copyright (C) 2015 OpenPandora - http://www.pyra-handheld.com/
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+/* this version is for Pyra V5.0 (also V4.0) with Letux Cortex 15 CPU board V5.0 */
+
+#include "omap5-letux-cortex15-v5.0.dts"
+#include "pyra-mainboard-v5.0.dtsi"
+#include "pyra-display.dtsi"

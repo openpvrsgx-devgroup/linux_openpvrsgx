@@ -335,16 +335,24 @@
 	ti,non-removable;
 };
 
+/*
+ * Note that we use gpio_wk14 padconf interrupt as the WLAN wakeirq
+ * for wlcore instead of the sdio_dat1 interrupt as wlcore does not
+ * seem to support sdio_dat1 interrupt. Any boards using other WLAN
+ * chips such as mwifiex_sdio probably need to configure the wakeirq
+ * to <&omap5_pmx_core 0x16a> instead of <&omap5_pmx_wkup 0>.
+ */
 &mmc3 {
 	vmmc-supply = <&vmmcsdio_fixed>;
 	mmc-pwrseq = <&mmc3_pwrseq>;
 	bus-width = <4>;
 	non-removable;
 	cap-power-off-card;
+	keep-power-in-suspend;
 	pinctrl-names = "default";
 	pinctrl-0 = <&mmc3_pins>;
-	interrupts-extended = <&wakeupgen GIC_SPI 94 IRQ_TYPE_LEVEL_HIGH
-			       &omap5_pmx_core 0x16a>;
+	interrupts-extended = <&wakeupgen GIC_SPI 94 IRQ_TYPE_LEVEL_HIGH>,
+			      <&omap5_pmx_wkup 0>;
 
 	#address-cells = <1>;
 	#size-cells = <0>;

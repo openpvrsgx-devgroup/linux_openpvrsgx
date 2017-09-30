@@ -35,7 +35,7 @@
 #include <sound/soc.h>
 #include <sound/soc-dapm.h>
 #include <sound/tlv.h>
-#include <sound/soc-fw.h>
+#include <sound/soc-topology.h>
 
 #include "omap-aess-priv.h"
 #include "aess_mem.h"
@@ -510,7 +510,7 @@ static int aess_put_equalizer(struct snd_kcontrol *kcontrol,
 	return 1;
 }
 
-static const struct snd_soc_fw_kcontrol_ops omap_aess_fw_ops[] = {
+static const struct snd_soc_tplg_kcontrol_ops omap_aess_fw_ops[] = {
 {OMAP_CONTROL_DEFAULT,	aess_get_mixer, aess_put_mixer, NULL},
 {OMAP_CONTROL_VOLUME,	aess_vol_get_mixer, aess_vol_put_mixer, NULL},
 {OMAP_CONTROL_ROUTER,	aess_ul_mux_get_route, aess_ul_mux_put_route, NULL},
@@ -521,10 +521,10 @@ static const struct snd_soc_fw_kcontrol_ops omap_aess_fw_ops[] = {
 };
 
 static int aess_load_coeffs(struct snd_soc_platform *platform,
-			    struct snd_soc_fw_hdr *hdr)
+			    struct snd_soc_tplg_hdr *hdr)
 {
 	struct omap_aess *aess = snd_soc_platform_get_drvdata(platform);
-	const struct snd_soc_file_coeff_data *cd = snd_soc_fw_get_data(hdr);
+	const struct snd_soc_file_coeff_data *cd = snd_soc_tplg_get_data(hdr);
 	const void *coeff_data = cd + 1;
 
 	dev_dbg(platform->dev,"coeff %d size 0x%x with %d elems\n",
@@ -588,10 +588,10 @@ static int aess_load_coeffs(struct snd_soc_platform *platform,
 }
 
 static int aess_load_fw(struct snd_soc_platform *platform,
-			struct snd_soc_fw_hdr *hdr)
+			struct snd_soc_tplg_hdr *hdr)
 {
 	struct omap_aess *aess = snd_soc_platform_get_drvdata(platform);
-	const void *fw_data = snd_soc_fw_get_data(hdr);
+	const void *fw_data = snd_soc_tplg_get_data(hdr);
 
 	/* get firmware and coefficients header info */
 	memcpy(&aess->hdr, fw_data, sizeof(struct fw_header));
@@ -614,10 +614,10 @@ static int aess_load_fw(struct snd_soc_platform *platform,
 }
 
 static int aess_load_config(struct snd_soc_platform *platform,
-			    struct snd_soc_fw_hdr *hdr)
+			    struct snd_soc_tplg_hdr *hdr)
 {
 	struct omap_aess *aess = snd_soc_platform_get_drvdata(platform);
-	const void *fw_data = snd_soc_fw_get_data(hdr);
+	const void *fw_data = snd_soc_tplg_get_data(hdr);
 
 	/* store AESS config for later context restore */
 	dev_info(aess->dev, "AESS Config size %d bytes\n", hdr->size);
@@ -628,17 +628,18 @@ static int aess_load_config(struct snd_soc_platform *platform,
 }
 
 /* callback to handle vendor data */
-static int aess_vendor_load(struct snd_soc_platform *platform,
-			    struct snd_soc_fw_hdr *hdr)
+static int aess_vendor_load(struct snd_soc_component *component,
+			    struct snd_soc_tplg_hdr *hdr)
 {
+	struct snd_soc_platform *platform = snd_soc_component_to_platform(component);
 	switch (hdr->type) {
-	case SND_SOC_FW_VENDOR_FW:
+	case SND_SOC_TPLG_TYPE_VENDOR_FW:
 		return aess_load_fw(platform, hdr);
-	case SND_SOC_FW_VENDOR_CONFIG:
+	case SND_SOC_TPLG_TYPE_VENDOR_CONFIG:
 		return aess_load_config(platform, hdr);
-	case SND_SOC_FW_COEFF:
+	case SND_SOC_TPLG_TYPE_VENDOR_COEFF:
 		return aess_load_coeffs(platform, hdr);
-	case SND_SOC_FW_VENDOR_CODEC:
+	case SND_SOC_TPLG_TYPEVENDOR_CODEC:
 	default:
 		dev_err(platform->dev, "vendor type %d:%d not supported\n",
 			hdr->type, hdr->vendor_type);
@@ -647,7 +648,7 @@ static int aess_vendor_load(struct snd_soc_platform *platform,
 	return 0;
 }
 
-struct snd_soc_fw_platform_ops soc_fw_ops = {
+struct snd_soc_tplg_ops soc_tplg_ops = {
 	.vendor_load	= aess_vendor_load,
 	.io_ops		= omap_aess_fw_ops,
 	.io_ops_count	= ARRAY_SIZE(omap_aess_fw_ops),

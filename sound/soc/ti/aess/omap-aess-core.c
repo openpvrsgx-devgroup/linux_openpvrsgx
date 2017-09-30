@@ -41,7 +41,7 @@
 #include <linux/of_device.h>
 
 #include <sound/soc.h>
-#include <sound/soc-fw.h>
+#include <sound/soc-topology.h>
 #include "../../../arch/arm/mach-omap2/omap-pm.h"
 
 #include "omap-aess-priv.h"

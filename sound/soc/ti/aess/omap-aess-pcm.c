@@ -476,7 +476,8 @@ static int omap_aess_pcm_probe(struct snd_soc_platform *platform)
 	pm_runtime_enable(aess->dev);
 	pm_runtime_irq_safe(aess->dev);
 
-	ret = snd_soc_fw_load_platform(platform, &soc_fw_ops, aess->fw, 0);
+	ret = snd_soc_tplg_component_load(&platform->component, &soc_tplg_ops,
+					  aess->fw, 0);
 	if (ret < 0) {
 		dev_err(platform->dev, "request for AESS FW failed %d\n", ret);
 		goto out;

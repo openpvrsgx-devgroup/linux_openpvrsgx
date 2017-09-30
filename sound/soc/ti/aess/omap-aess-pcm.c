@@ -567,10 +567,10 @@ static int omap_aess_oppwidget_write(struct snd_soc_platform *platform,
 	return 0;
 }
 
-static int omap_aess_pcm_stream_event(struct snd_soc_dapm_context *dapm,
+static int omap_aess_pcm_stream_event(struct snd_soc_component *component,
 				      int event)
 {
-	struct snd_soc_platform *platform = snd_soc_component_to_platform(dapm->component);
+	struct snd_soc_platform *platform = snd_soc_component_to_platform(component);
 	struct omap_aess *aess = snd_soc_platform_get_drvdata(platform);
 
 	if (aess->active) {
@@ -634,5 +634,7 @@ struct snd_soc_platform_driver omap_aess_platform = {
 	.remove		= omap_aess_pcm_remove,
 	.read		= omap_aess_oppwidget_read,
 	.write		= omap_aess_oppwidget_write,
-	.stream_event	= omap_aess_pcm_stream_event,
+	.component_driver = {
+		.stream_event	= omap_aess_pcm_stream_event,
+	},
 };

@@ -136,6 +136,11 @@ function process {
 					git merge --no-ff --no-edit $BRANCHES || exit	# try to merge all
 					BRANCHES=""
 				fi
+				if $PUSH
+				then
+					echo "*** pushing $OUTPUT to origin ***"
+					git push --force origin $OUTPUT:$OUTPUT || exit	# update branch on public server
+				fi
 				echo "*** creating ${FEATURE:1} from $OUTPUT ***"
 				git checkout -B "${FEATURE:1}" "$OUTPUT"	# make a copy
 			fi

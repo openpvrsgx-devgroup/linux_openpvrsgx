@@ -123,10 +123,29 @@ function latestforbranch {
 	git branch $2 | cut -c 3- | grep "^$1-v[0-9]*" | perl -e 'print sort{length($a)<=>length($b) or $a cmp $b} <>' | tail -1
 }
 
+function linuxversion {
+# echo linuxversion $1 >&2
+	# extract Linux version from given branch $1
+	git log -1 -E --grep="^Linux [0-9].[0-9]+[-.0-9rc]*" "$1" | grep "Linux [0-9].[0-9]*" | sed "s|.*Linux ||g"
+}
+
 function process {
 	FEATURE=$1
 	case "$FEATURE" in
-		'>'* )	# switch to new "base"
+		'-'* )	# ignore
+			return
+			;;
+		'>>'* )	# create file name from current branch
+			VERSION=$(linuxversion $LASTBASE)
+#echo LASTBASE $LASTBASE
+#echo OUTPUT $OUTPUT
+#echo VERSION $VERSION
+			if [ ! "$VERSION" ]
+			then
+				echo "*** Fatal - can't detect Linux version of letux base ***"
+				exit 1
+			fi
+			NEWOUTPUT=${FEATURE:2}-$VERSION
 			if [ "$OUTPUT" ]
 			then
 				if ! $SEQUENTIAL && [ "$BRANCHES" ]
@@ -141,12 +160,35 @@ function process {
 					echo "*** pushing $OUTPUT to origin ***"
 					git push --force origin $OUTPUT:$OUTPUT || exit	# update branch on public server
 				fi
-				echo "*** creating ${FEATURE:1} from $OUTPUT ***"
-				git checkout -B "${FEATURE:1}" "$OUTPUT"	# make a copy
+				echo "*** creating $NEWOUTPUT from $OUTPUT ***"
+				git checkout -B "$NEWOUTPUT" "$OUTPUT"	# make a copy
 			fi
 			LASTBASE="$OUTPUT"	# remember current "base" for next rebase
-			OUTPUT="${FEATURE:1}"
-			continue;
+			OUTPUT="$NEWOUTPUT"
+			return
+			;;			
+		'>'* )	# switch to new "base"
+			NEWOUTPUT=${FEATURE:1}
+			if [ "$OUTPUT" ]
+			then
+				if ! $SEQUENTIAL && [ "$BRANCHES" ]
+				then
+					echo "*** Octopus Merge into $OUTPUT ***"
+					git checkout $OUTPUT || exit
+					git merge --no-ff --no-edit $BRANCHES || exit	# try to merge all
+					BRANCHES=""
+				fi
+				if $PUSH
+				then
+					echo "*** pushing $OUTPUT to origin ***"
+					git push --force origin $OUTPUT:$OUTPUT || exit	# update branch on public server
+				fi
+				echo "*** creating $NEWOUTPUT from $OUTPUT ***"
+				git checkout -B "$NEWOUTPUT" "$OUTPUT"	# make a copy
+			fi
+			LASTBASE="$OUTPUT"	# remember current "base" for next rebase
+			OUTPUT="$NEWOUTPUT"
+			return
 			;;
 		'<'* )	# checkout some branch
 			if [ "$OUTPUT" ]
@@ -157,11 +199,9 @@ function process {
 				echo "*** switching to ${FEATURE:1} ***"
 				git checkout "${FEATURE:1}"
 			fi
-			continue;
-			;;
-		'-'* )
+			LASTBASE="${FEATURE:1}"	# remember current "base" for next rebase
 			return
-			;;	# disabled
+			;;
 		work/letux-base/* )
 			;;
 		* )

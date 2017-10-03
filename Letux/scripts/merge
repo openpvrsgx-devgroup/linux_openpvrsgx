@@ -200,6 +200,11 @@ function process {
 				git checkout "${FEATURE:1}"
 			fi
 			LASTBASE="${FEATURE:1}"	# remember current "base" for next rebase
+			if $PUSH
+			then
+				echo "*** pushing $LASTBASE to origin ***"
+				git push --force origin $LASTBASE:$LASTBASE || exit	# update branch on public server
+			fi
 			return
 			;;
 		work/letux-base/* )

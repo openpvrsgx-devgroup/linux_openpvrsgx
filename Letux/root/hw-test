@@ -161,7 +161,7 @@ function test_rootfs {
 }
 
 function test_distro {
-	report 0 "Debian $(cat /etc/debian_version)" ""
+	report 0 ${FUNCNAME} "Debian $(cat /etc/debian_version)"
 }
 
 function test_device_tree {

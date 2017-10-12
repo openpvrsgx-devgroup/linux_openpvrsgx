@@ -76,46 +76,6 @@ then
 	exit 1
 fi
 
-if false
-then
-VERSION=$(git log -1 -E --grep="^Merge tag 'v[0-9].[0-9]" --format=oneline "$BASE" | sed "s|.*Merge tag 'v\(.*\)' into .*|\1|g")
-
-if ! [ "$VERSION" ]
-then
-	echo could not determine Linux version of "$BASE"
-	exit 1
-fi
-
-try to switch to base
-echo "*** checkout "$BASE" ($VERSION) ***"
-git checkout "$BASE" || exit
-$PUSH && { git push origin "$BASE"; }	# update on public server (if possible)
-
-# echo merging features on top of "$BASE" for $VERSION
-
-OUTPUT="letux-$VERSION"
-
-# append all additionally merged branches
-for FEATURE
-do
-	F=$(basename -- "$FEATURE")
-	case "$FEATURE" in
-		-* ) # will be ignored
-			OUTPUT="$OUTPUT-$F"
-			;;
-		* )
-			OUTPUT="$OUTPUT+$F"
-			;;
-	esac
-done
-
-OUTPUT="${OUTPUT:0:120}"	# truncate to limit file name length
-
-echo "*** make a fresh working copy: $OUTPUT ***"
-git branch -D $OUTPUT 2>/dev/null
-git checkout -b $OUTPUT HEAD || exit
-fi
-
 BRANCHES=""
 
 function latestforbranch {
@@ -132,9 +92,6 @@ function linuxversion {
 function process {
 	FEATURE=$1
 	case "$FEATURE" in
-		'-'* )	# ignore
-			return
-			;;
 		'>>'* )	# create file name from current branch
 			VERSION=$(linuxversion $LASTBASE)
 #echo LASTBASE $LASTBASE
@@ -207,9 +164,13 @@ function process {
 			fi
 			return
 			;;
-		work/letux-base/* )
+		'-'* )	# strip off "-"
+			HIDDEN=true
+			FEATURE="${FEATURE:1}"
 			;;
 		* )
+# FIXME: hide if explicitly specified on command line with a - prefix
+			HIDDEN=false
 			;;
 	esac
 	echo "*** process $FEATURE ***"
@@ -247,14 +208,14 @@ function process {
 			exit 1
 		fi
 	fi
-	if $HARD
+	if ! $HIDDEN && $HARD
 	then
 		echo "*** resetting $FEATURE to origin/$FEATURE ***"
 		# this throws away local commits!
 		git checkout --force $FEATURE || exit
 		git reset --hard origin/$FEATURE || exit
 	fi
-	if $REBASE
+	if $REBASE	# even if hidden
 	then
 		if [ ! "$LASTBASE" ]
 		then
@@ -268,13 +229,16 @@ function process {
 #		git rebase --strategy=recursive -X theirs --whitespace=fix "$LASTBASE" || exit
 		git rebase $WHITESPACE "$LASTBASE" || exit
 	fi
-	if $PUSH
+	if $PUSH	# even if hidden (use # to completely remove)
 	then
 		echo "*** pushing $FEATURE to origin ***"
 		git push --force origin $FEATURE:$FEATURE || exit	# update branch on public server
 	fi
-	BRANCHES="$BRANCHES $FEATURE"	# collect for octopus
-	if $SEQUENTIAL
+	if ! $HIDDEN
+	then
+		BRANCHES="$BRANCHES $FEATURE"	# collect for octopus
+	fi
+	if ! $HIDDEN && $SEQUENTIAL
 	then
 		if [ ! "$OUTPUT" ]
 		then
@@ -293,7 +257,7 @@ then
 while read FEATURE IGNORE
 do
 	case "$FEATURE" in
-		'###' )	# can be used to bisect the mergefile (this and all further lines are ignored)
+		'###' )	# triple-hash can be used to bisect the mergefile (this and all further lines are ignored)
 			break
 			;;
 		'' | '#'* )
@@ -317,7 +281,7 @@ fi
 for FEATURE
 do
 	case "$FEATURE" in
-		-* ) # ignore
+		-* ) # ignorehas a different meaning on command line
 			;;
 		* )
 			process "$FEATURE"

@@ -293,15 +293,17 @@ do
 	esac
 done
 
+# switch to output branch
+if [ ! "$OUTPUT" ]
+then
+	echo "*** don't know where to collect results ***"
+	exit
+fi
+git checkout $OUTPUT || exit
+
 if ! $SEQUENTIAL && [ "$BRANCHES" ]
-then # octopus
-	if [ ! "$OUTPUT" ]
-	then
-		echo "*** don't know where to collect results ***"
-		exit
-	fi
+then # octopus of last set of branches
 	echo "*** Octopus Merge into $OUTPUT ***"
-	git checkout $OUTPUT || exit
 	git merge --no-ff --no-edit $BRANCHES || exit	# try to merge all
 fi
 

@@ -119,6 +119,10 @@ function process {
 				fi
 				echo "*** creating $NEWOUTPUT from $OUTPUT ***"
 				git checkout -B "$NEWOUTPUT" "$OUTPUT"	# make a copy
+			elif ! $SEQUENTIAL
+			then
+				echo "*** creating $NEWOUTPUT from $LASTBASE ***"
+				git checkout -B "$NEWOUTPUT" "$LASTBASE"	# make a copy
 			fi
 			LASTBASE="$OUTPUT"	# remember current "base" for next rebase
 			OUTPUT="$NEWOUTPUT"
@@ -281,7 +285,7 @@ fi
 for FEATURE
 do
 	case "$FEATURE" in
-		-* ) # ignorehas a different meaning on command line
+		-* ) # ignore has a different meaning on command line
 			;;
 		* )
 			process "$FEATURE"

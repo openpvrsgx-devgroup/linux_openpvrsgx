@@ -1,0 +1,257 @@
+#
+# this mergefile defines the feature branches
+# merged on top of letux-base to build a letux
+# source tree
+#
+# Syntax:
+# lines commented out with # are completely disabled
+# lines starting with - are not merged but rebased for every new linus/master release
+# lines starting with > define the permanent name of the result (everything is merged into branch 'merge-temp'
+# lines starting with < choose a base branch
+#
+
+# start with choosen base (e.g. git checkout -B letux-base v4.14-rc3)
+<letux-base
+
+#
+# create specific letux-version (by appending version number found in letux-base)
+#
+
+>>letux
+
+# scripts (incl. ./merge)
+work/letux-base/scripts
+
+# we need some compile fixes for MacOS X cross-compiler
+work/letux-base/compile-fixes
+
+# Letux base code
+work/letux-base/Letux
+
+# Letux defconfigs
+work/letux-base/arm_defconfig
+work/letux-base/arm_lpae_defconfig
+work/letux-base/arm_udoo_defconfig
+work/letux-base/mips_defconfig
+
+# Letux Rootfs
+work/letux-base/rootfs
+work/letux-base/hw-test
+
+# Diverse drivers and bindings
+work/letux-base/bindings
+work/letux-base/twl4030
+work/letux-base/dss-bindings
+
+# Device Trees for Letux devices
+work/letux-base/dt
+work/letux-base/dt-gta04
+work/letux-base/dt-gta04-common
+work/letux-base/dt-gta04a5
+work/letux-base/dt-gta04b234
+work/letux-base/dt-beagle
+work/letux-base/dt-evm-pyra
+work/letux-base/hns/dt/lc8
+work/letux-base/dt-lc15
+work/letux-base/dt-panda
+work/letux-base/dt-pandora
+work/letux-base/dt-pyra
+work/letux-base/hns/dt/omap5-common
+work/letux-base/hns/dt/omap5-uevm
+
+# Debian build scripts
+work/letux-base/josua/debian-build
+
+# upstreaming in progress
+work/letux-base/marek/generic-adc-battery
+work/letux-base/hns/misc/w2sg-serdev
+work/letux-base/hns/input/tsc2007
+
+# almost ready for upstreaming
+work/letux-base/hns/usb/misc/usb3503
+work/letux-base/hns/power/twl4030_charger
+work/letux-base/hns/misc/wwan
+work/letux-base/hns/input/as5013
+work/letux-base/hns/input/pandora-nub
+work/letux-base/andrey/input/as5013
+work/letux-base/hns/video/ov9655-new
+work/letux-base/hns/iio-input-bridge
+
+# not ready for upstreaming but works
+work/letux-base/hns/power/bq27xxx
+work/letux-base/hns/power/bq2429x
+work/letux-base/hns/sound/ts3a225e
+work/letux-base/hns/video/dss/panels+ssd2858
+work/letux-base/extern/bno055
+
+# almost empty or untested...
+work/letux-base/hns/mmc/txs02612
+work/letux-base/tps6105x-flashlight
+work/letux-base/hns/input/crtouch
+
+# not for upstreaming
+work/letux-base/marek/am335x-hwmon
+work/letux-base/extern/sgx544-v2
+work/letux-base/hns/mtd/onenand
+
+# GTA04 sound
+work/letux-base/codecs-for-gta04
+work/letux-base/sound-for-gta04
+work/letux-base/hns/codec/twl4030
+
+# Mipsbook / JZ4730
+work/letux-base/pboddie/mips/jz4730
+work/letux-base/hns/mipsbook400/dt
+work/letux-base/hns/mipsbook400/pm
+
+# hacks and fixes
+work/letux-base/hns/hwmon-fixes
+work/letux-base/kemnade/libertas
+work/letux-base/kemnade/musb-fixes
+work/letux-base/kemnade/phy-twl
+work/letux-base/hns/omapdss/tvfix
+work/letux-base/hns/video/dss/displayprobing
+work/letux-base/kemnade/charging_fixes
+work/letux-base/hns/gta04/pm
+work/letux-base/hacks
+work/letux-base/omap2plus
+work/letux-base/pvr
+work/letux-base/omapdrm
+work/letux-base/mmc
+work/letux-base/ubi-fs
+work/letux-base/extcon
+work/letux-base/serial
+work/letux-base/misc
+work/letux-base/drivers-keyboard
+
+# not included but carried along and rebased
+
+-work/letux-base/hns/input/tsc2007-pressure
+-work/letux-base/marek/upstream-queue
+-work/letux-base/extern/ov9655
+-work/letux-base/hns/video/ov9655
+-work/letux-base/extern/omap5-idle
+-work/letux-base/extern/omap-hsmmc
+-work/letux-base/extern/omap/reset-controller
+-work/letux-base/hns/gpu/pvr
+# unvollständig! Es gibt dazu noch DT- und defconfig-Patches
+-work/letux-base/hns/video/dss/antitear
+-work/letux-base/lukas/android
+
+### END
+
+
+
+# work/josua/debian-build
+
+# ready for upstreaming or upstreaming in progress
+# first base for second but should not be merged
+#-work/hns/input/tsc2007-pressure
+#work/hns/input/tsc2007
+# work/hns/power/twl4030_charger
+# work/hns/usb/misc/usb3503
+
+# Device Tree patches
+#work/hns/dt/gta04
+#work/hns/dt/gta04a5
+#work/hns/dt/pandora
+#-work/marek/upstream-queue
+#work/hns/dt/omap5-common
+#work/hns/dt/omap5-uevm
+#work/hns/dt/pyra
+#work/hns/dt/lc8
+#-work/hns/dt/boneblack+letux
+#-work/hns/dt/separation   # merge or compile is broken
+
+# more fixes and work in progress
+# rfkill wwan to power on/off modem
+# work/hns/misc/wwan
+
+# w2sg GPS - choose-either-one...
+# old ones are retired
+# -work/hns/misc/w2sg-tty-slave2
+# -work/hns/misc/uart-peers
+# work/hns/misc/w2sg-serdev
+# this has arrived upstream
+# -extern/robh/serial-bus
+
+#work/hns/omapdss/tvfix
+#work/hns/video/dss/displayprobing
+#work/hns/power/bq27xxx		# write capacity to fuel gauge
+# work/marek/generic-adc-battery	# extend generic-adc-battery for DT
+#work/kemnade/charging_fixes
+# work/kemnade/musb-fixes
+# work/kemnade/phy-twl
+# work/hns/iio-input-bridge	# we do no longer need/want to patch the bma150-input driver for bma180
+# work/hns/input/bma180
+# work/hns/input/bma150-cleanup
+# work/hns/extcon
+# work/hns/hwmon-fixes
+
+# specials for gta04
+# work/hns/mtd/onenand
+# work/kemnade/wifi-sdio-fixes
+#work/hns/gta04/pm
+#work/hns/codec/twl4030
+
+# completely new drivers
+#work/hns/input/as5013
+#work/hns/input/pandora-nub
+#work/andrey/input/as5013
+#work/hns/power/bq2429x
+#work/hns/sound/ts3a225e
+#work/hns/mmc/txs02612
+# work/hns/input/crtouch
+
+# choose one of these camera drivers
+#-extern/ov9655
+#-work/hns/video/ov9655
+#work/hns/video/ov9655-new
+
+# foreign stuff not upstreamed
+#extern/bno055
+#-extern/omap5-idle
+# work/marek/am335x-hwmon
+#-extern/omap-hsmmc
+
+# OMAP3 graphics
+# work/hns/video/dss/displayprobing
+#-extern/omap/reset-controller	# needed for pvr
+#-work/hns/gpu/pvr
+
+# OMAP5 graphics
+# work/hns/video/dss/panels+ssd2858
+#-work/hns/video/dss/antitear
+# extern/sgx544
+# extern/mvduin/patch/tiler-fbdev
+# not needed with our X11 setup
+# -extern/mvduin/patch/tiler-buf-dumb
+
+# trying to have a single kernel for Debian and Replicant
+# for testing use: ./merge work/lukas/android
+#-work/lukas/android
+
+# Hardware test scripts
+# work/hns/hw-test
+
+# other platforms
+#work/pboddie/mips/jz4730
+#work/hns/mipsbook400/dt
+#work/hns/mipsbook400/pm
+
+# tests
+#-tests
+
+# completely merged upstream or now obsolete
+# work/hns/leds/is31fl32xx
+# work/hns/omaphdq
+# work/test/bmp280
+# work/hns/power/twl4030_madc
+# work/marek/backlight
+# work/hns/leds/is31fl3196
+# work/hns/power/bq270x0
+# work/hns/video/omap3isp
+
+# some private hacks on top
+#>mywork-merged
+#mywork

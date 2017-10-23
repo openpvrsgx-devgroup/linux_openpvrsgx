@@ -119,10 +119,10 @@ function process {
 				fi
 				echo "*** creating $NEWOUTPUT from $OUTPUT ***"
 				git checkout -B "$NEWOUTPUT" "$OUTPUT"	# make a copy
-			elif ! $SEQUENTIAL
-			then
+			else
 				echo "*** creating $NEWOUTPUT from $LASTBASE ***"
 				git checkout -B "$NEWOUTPUT" "$LASTBASE"	# make a copy
+				OUTPUT="$LASTBASE"	# keep LASTBASE intact
 			fi
 			LASTBASE="$OUTPUT"	# remember current "base" for next rebase
 			OUTPUT="$NEWOUTPUT"

@@ -44,7 +44,7 @@ work/letux-base/twl4030
 work/letux-base/dss-bindings
 
 # Device Trees for Letux devices
-work/letux-base/dt
+work/letux-base/dt-makefile
 work/letux-base/dt-gta04
 work/letux-base/dt-gta04-common
 work/letux-base/dt-gta04a5

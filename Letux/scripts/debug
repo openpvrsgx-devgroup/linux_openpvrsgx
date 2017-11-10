@@ -1,0 +1,53 @@
+# enable kernel debugging
+# please don't commit and run only once
+# must be called with tree root as current directory
+
+CONFIGS="arch/arm/configs/letux_defconfig"
+CONFIGS+=" arch/arm/configs/letux_lpae_defconfig"
+CONFIGS+=" arch/arm/configs/letux_udoo_defconfig"
+# CONFIGS+=" arch/arm/configs/letux_android_defconfig"
+CONFIGS+=" arch/mips/configs/letux_defconfig"
+
+case "$1" in
+	off | no | 0 )	# disable all DEBUG settings
+		sed -i.bak "s/\(.*DEBUG.*\)=y/# \1 is not set/g" $CONFIGS
+		;;
+	* )
+		for DEF in $CONFIGS
+		do
+			cat <<END >>$DEF
+# CONFIG_DEBUG_LL is not defined
+CONFIG_DEBUG_RODATA=y
+CONFIG_DEBUG_ALIGN_RODATA=y
+CONFIG_PM_DEBUG=y
+CONFIG_PM_SLEEP_DEBUG=y
+CONFIG_BT_DEBUGFS=y
+CONFIG_W2SG0004_DEBUG=y
+CONFIG_LIBERTAS_DEBUG=y
+CONFIG_VIDEO_OMAP3_DEBUG=y
+CONFIG_OMAP2_DSS_DEBUGFS=y
+CONFIG_SND_DEBUG=y
+CONFIG_USB_GADGET_DEBUG_FILES=y
+CONFIG_USB_GADGET_DEBUG_FS=y
+CONFIG_CIFS_DEBUG=y
+CONFIG_DEBUG_INFO=y
+CONFIG_DEBUG_FS=y
+CONFIG_DEBUG_KERNEL=y
+CONFIG_HAVE_DEBUG_KMEMLEAK=y
+CONFIG_ARCH_HAS_DEBUG_VIRTUAL=y
+CONFIG_SCHED_DEBUG=y
+CONFIG_DEBUG_PREEMPT=y
+CONFIG_DEBUG_RT_MUTEXES=y
+CONFIG_DEBUG_SPINLOCK=y
+CONFIG_DEBUG_MUTEXES=y
+CONFIG_DEBUG_LOCK_ALLOC=y
+CONFIG_HAVE_DMA_API_DEBUG=y
+CONFIG_BLK_DEBUG_FS=y
+CONFIG_DEBUG_ALIGN_RODATA=y
+CONFIG_PM_DEBUG=y
+CONFIG_PM_SLEEP_DEBUG=y
+CONFIG_BT_DEBUGFS=y
+END
+		done
+		;;
+esac

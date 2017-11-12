@@ -1,5 +1,5 @@
 #
-# Linux/mips 4.14.0-rc8 Kernel Configuration
+# Linux/mips 4.14.0 Kernel Configuration
 #
 CONFIG_MIPS=y
 

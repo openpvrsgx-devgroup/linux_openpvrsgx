@@ -225,6 +225,9 @@ static struct rfkill_ops w2sg0004_rfkill_ops = {
 
 static struct serdev_device_ops serdev_ops = {
 	.receive_buf = w2sg_uart_receive_buf,
+#if 0
+	.write_wakeup = w2sg_uart_wakeup,
+#endif
 };
 
 static int w2sg_gps_open(struct gnss_device *gdev)

@@ -19,7 +19,7 @@ case $(tr -d '\0' </proc/device-tree/model 2>/dev/null) in
 	*Pandora* )
 		power1=/sys/class/power_supply/twl4030_usb/mode
 		power2=/sys/class/power_supply/twl4030_ac/mode
-		chg=/sys/class/power_supply/bq27500-0/charge_now
+		chg=/sys/class/power_supply/bq27500-1-0/charge_now
 		alarm=/sys/class/rtc/rtc0/wakealarm
 		;;
 	*Pyra-Handheld* )

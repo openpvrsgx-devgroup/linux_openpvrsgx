@@ -47,6 +47,8 @@ struct gab {
 	struct power_supply *psy;
 	struct power_supply_desc psy_desc;
 	struct iio_channel *channel[GAB_MAX_CHAN_TYPE];
+// CHECKME: maintainers might suggest to remove pdata support
+	struct gab_platform_data	*pdata;
 	struct delayed_work bat_work;
 	int status;
 	struct gpio_desc *charge_finished;
@@ -152,6 +154,23 @@ static int gab_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_STATUS:
 		val->intval = adc_bat->status;
 		return 0;
+	case POWER_SUPPLY_PROP_CHARGE_EMPTY_DESIGN:
+		val->intval = 0;
+		break;
+	case POWER_SUPPLY_PROP_CHARGE_NOW:
+		if(!pdata->cal_charge) {
+/* FIXME: refactor fetching fuel level into static function */
+			int ret, curr, voltage;
+
+			ret = read_channel(adc_bat, POWER_SUPPLY_PROP_CURRENT_NOW, &curr);
+			ret |= read_channel(adc_bat, POWER_SUPPLY_PROP_VOLTAGE_NOW, &voltage);
+			if (ret < 0)
+				goto err;
+
+			val->intval = (bat_info->charge_full_design * fuel_level_LiIon(voltage, curr, 10)) / 100;
+		} else
+			val->intval = pdata->cal_charge(result);
+		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
 		return gab_read_channel(adc_bat, GAB_VOLTAGE, &val->intval);
 	case POWER_SUPPLY_PROP_CURRENT_NOW:

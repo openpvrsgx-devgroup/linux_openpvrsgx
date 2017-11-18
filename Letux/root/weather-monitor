@@ -1,0 +1,20 @@
+#!/bin/bash
+# simple weather monitor
+
+INTERVAL=60	# seconds
+HUMIDITY=$(./findiio bme280)
+PRESSURE="$HUMIDITY"
+[ "$PRESSURE" ] || PRESSURE=$(./findiio bmp085)
+TEMPERATURE="$PRESSURE"
+# echo $TEMPERATURE $HUMIDITY $PRESSURE
+BATTERY="/sys/class/power_supply/bq27000-battery"
+[ "$(cat $BATTERY/present 2>/dev/null)" = 1 ] || BATTERY="/sys/class/power_supply/gta04-battery"
+
+while true
+do 
+	START=$(date +%s)
+	echo $[$start+$INTERVAL] > /sys/class/rtc/rtc0/wakealarm
+	echo $(date) $(cat $TEMPERATURE/in_temp_input 2>/dev/null)m°C $(cat $HUMIDITY/in_humidityrelative_input 2>/dev/null)%rH $($PRESSURE/in_pressure_input 2>/dev/null)mBar $(<$BATTERY/capacity 2>/dev/null)%
+	sleep 1
+	echo mem >/sys/power/state 
+done

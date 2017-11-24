@@ -179,7 +179,6 @@ static int gab_get_property(struct power_supply *psy,
 		return gab_read_channel(adc_bat, GAB_POWER, &val->intval);
 	case POWER_SUPPLY_PROP_TEMP:
 		return gab_read_channel(adc_bat, GAB_TEMP, &val->intval);
-#if FIXME
 	case POWER_SUPPLY_PROP_TECHNOLOGY:
 		val->intval = bat_info->technology;
 		break;
@@ -195,7 +194,6 @@ static int gab_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_MODEL_NAME:
 		val->strval = bat_info->name;
 		break;
-#endif
 	case POWER_SUPPLY_PROP_CAPACITY:
 		{
 		int ret, curr, voltage;

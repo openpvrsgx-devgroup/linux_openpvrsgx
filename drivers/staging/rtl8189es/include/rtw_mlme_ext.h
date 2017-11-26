@@ -347,6 +347,8 @@ struct ss_res {
 	u16 scan_ch_ms;
 	u8 rx_ampdu_accept;
 	u8 rx_ampdu_size;
+	u8 igi_scan;
+	u8 igi_before_scan; /* used for restoring IGI value without enable DIG & FA_CNT */
 #ifdef CONFIG_SCAN_BACKOP
 	u8 backop_flags_sta; /* policy for station mode*/
 	u8 backop_flags_ap; /* policy for ap mode */

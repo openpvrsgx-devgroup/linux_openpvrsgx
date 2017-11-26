@@ -633,7 +633,12 @@ int rtw_cfg80211_check_bss(_adapter *padapter)
 	bss = cfg80211_get_bss(padapter->rtw_wdev->wiphy, notify_channel,
 			pnetwork->MacAddress, pnetwork->Ssid.Ssid,
 			pnetwork->Ssid.SsidLength,
-			WLAN_CAPABILITY_ESS, WLAN_CAPABILITY_ESS);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 1, 0)
+			pnetwork->InfrastructureMode == Ndis802_11Infrastructure?IEEE80211_BSS_TYPE_ESS:IEEE80211_BSS_TYPE_IBSS,
+			IEEE80211_PRIVACY(pnetwork->Privacy));
+#else
+			pnetwork->InfrastructureMode == Ndis802_11Infrastructure?WLAN_CAPABILITY_ESS:WLAN_CAPABILITY_IBSS, pnetwork->InfrastructureMode == Ndis802_11Infrastructure?WLAN_CAPABILITY_ESS:WLAN_CAPABILITY_IBSS);
+#endif
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 9, 0)
 	cfg80211_put_bss(padapter->rtw_wdev->wiphy, bss);
@@ -905,8 +910,14 @@ void rtw_cfg80211_indicate_disconnect(_adapter *padapter)
 		#else
 
 		if (check_fwstate(&padapter->mlmepriv, _FW_LINKED)) {
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 2, 0))
+			u8 locally_generated = 1;
 			DBG_871X(FUNC_ADPT_FMT" call cfg80211_disconnected\n", FUNC_ADPT_ARG(padapter));
-			cfg80211_disconnected(padapter->pnetdev, 0, NULL, 0, 0, GFP_ATOMIC);
+			cfg80211_disconnected(padapter->pnetdev, 0, NULL, 0, locally_generated, GFP_ATOMIC);
+#else
+			DBG_871X(FUNC_ADPT_FMT" call cfg80211_disconnected\n", FUNC_ADPT_ARG(padapter));
+			cfg80211_disconnected(padapter->pnetdev, 0, NULL, 0, GFP_ATOMIC);
+#endif
 		} else {
 			DBG_871X(FUNC_ADPT_FMT" call cfg80211_connect_result\n", FUNC_ADPT_ARG(padapter));
 			cfg80211_connect_result(padapter->pnetdev, NULL, NULL, 0, NULL, 0, 
@@ -2125,8 +2136,14 @@ void rtw_cfg80211_unlink_bss(_adapter *padapter, struct wlan_network *pnetwork)
 	
 	bss = cfg80211_get_bss(wiphy, NULL/*notify_channel*/,
 		select_network.MacAddress, select_network.Ssid.Ssid,
-		select_network.Ssid.SsidLength, 0/*WLAN_CAPABILITY_ESS*/, 
-		0/*WLAN_CAPABILITY_ESS*/);
+		select_network.Ssid.SsidLength,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 1, 0)
+		select_network.InfrastructureMode == Ndis802_11Infrastructure?IEEE80211_BSS_TYPE_ESS:IEEE80211_BSS_TYPE_IBSS,
+		IEEE80211_PRIVACY(select_network.Privacy));
+#else
+		select_network.InfrastructureMode == Ndis802_11Infrastructure?WLAN_CAPABILITY_ESS:WLAN_CAPABILITY_IBSS,
+		select_network.InfrastructureMode == Ndis802_11Infrastructure?WLAN_CAPABILITY_ESS:WLAN_CAPABILITY_IBSS);
+#endif
 	
 	if (bss) {
 		cfg80211_unlink_bss(wiphy, bss);
@@ -6797,10 +6814,16 @@ void rtw_wdev_unregister(struct wireless_dev *wdev)
 
 	rtw_cfg80211_indicate_scan_done(adapter, _TRUE);
 
-	#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 0)) || defined(COMPAT_KERNEL_RELEASE)	
+	#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 2, 0))
+	if (wdev->current_bss) {
+		u8 locally_generated = 1;
+		DBG_871X(FUNC_ADPT_FMT" clear current_bss by cfg80211_disconnected\n", FUNC_ADPT_ARG(adapter));
+		cfg80211_disconnected(adapter->pnetdev, 0, NULL, 0, locally_generated, GFP_ATOMIC);
+	}
+	#elif ((LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 0)) && (LINUX_VERSION_CODE < KERNEL_VERSION(4, 2, 0))) || defined(COMPAT_KERNEL_RELEASE)	
 	if (wdev->current_bss) {
 		DBG_871X(FUNC_ADPT_FMT" clear current_bss by cfg80211_disconnected\n", FUNC_ADPT_ARG(adapter));
-		cfg80211_disconnected(adapter->pnetdev, 0, NULL, 0, 0, GFP_ATOMIC);
+		cfg80211_disconnected(adapter->pnetdev, 0, NULL, 0, GFP_ATOMIC);
 	}
 	#endif
 

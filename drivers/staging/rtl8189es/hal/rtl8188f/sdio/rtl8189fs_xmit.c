@@ -115,10 +115,10 @@ query_free_page:
 		}
 #else //CONFIG_SDIO_TX_ENABLE_AVAL_INT
 		polling_num++;
-		if ((polling_num % 0x7F) == 0) {//or 80
+		if ((polling_num % 10) == 0) {
 			//DBG_871X("%s: FIFO starvation!(%d) len=%d agg=%d page=(R)%d(A)%d\n",
 			//	__func__, polling_num, pxmitbuf->len, pxmitbuf->agg_num, pframe->pg_num, freePage[PageIdx] + freePage[PUBLIC_QUEUE_IDX]);
-			rtw_msleep_os(1);
+			rtw_usleep_os(50);
 		}
 
 		// Total number of page is NOT available, so update current FIFO status
@@ -276,7 +276,7 @@ static s32 xmit_xmitframes(PADAPTER padapter, struct xmit_priv *pxmitpriv)
 	struct xmit_frame *pxmitframe;
 	_queue *pframe_queue;
 	struct xmit_buf *pxmitbuf;
-	u32 txlen, max_xmit_len;
+	u32 txlen, max_xmit_len, page_size;
 	u8 txdesc_size = TXDESC_SIZE;
 	int inx[4];
 	u8 pre_qsel=0xFF,next_qsel=0xFF;
@@ -290,6 +290,8 @@ static s32 xmit_xmitframes(PADAPTER padapter, struct xmit_priv *pxmitpriv)
 	pxmitframe = NULL;
 	pframe_queue = NULL;
 	pxmitbuf = NULL;
+
+	rtw_hal_get_def_var(padapter, HAL_DEF_TX_PAGE_SIZE, &page_size);
 
 	if (padapter->registrypriv.wifi_spec == 1) {
 		for(idx=0; idx<4; idx++)
@@ -344,8 +346,8 @@ static s32 xmit_xmitframes(PADAPTER padapter, struct xmit_priv *pxmitpriv)
 				// check xmit_buf size enough or not
 				txlen = txdesc_size + rtw_wlan_pkt_size(pxmitframe);
 				next_qsel = pxmitframe->attrib.qsel;
-				if ((NULL == pxmitbuf) ||
-					((_RND(pxmitbuf->len, 8) + txlen) > max_xmit_len)
+				if ((NULL == pxmitbuf)
+					|| (pxmitbuf->pg_num + PageNum(txlen, page_size) > PageNum(max_xmit_len, page_size))
 					|| (k >= (rtw_hal_sdio_max_txoqt_free_space(padapter)-1))
 					|| ((k!=0) && (_FAIL == rtw_hal_busagg_qsel_check(padapter,pre_qsel,next_qsel)))
 				)

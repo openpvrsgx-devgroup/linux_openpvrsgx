@@ -955,96 +955,127 @@ efuse_IsMasked(
 u8 rtw_efuse_map_write(PADAPTER padapter, u16 addr, u16 cnts, u8 *data)
 {
 #define RT_ASSERT_RET(expr)												\
-	if(!(expr)) {															\
-		printk( "Assertion failed! %s at ......\n", #expr);							\
-		printk( "      ......%s,%s,line=%d\n",__FILE__,__FUNCTION__,__LINE__);	\
+	if (!(expr)) {															\
+		printk("Assertion failed! %s at ......\n", #expr);							\
+		printk("      ......%s,%s, line=%d\n",__FILE__, __FUNCTION__, __LINE__);	\
 		return _FAIL;	\
 	}
 
 	u8	offset, word_en;
 	u8	*map;
 	u8	newdata[PGPKT_DATA_SIZE];
-	s32	i, j, idx;
+	s32	i, j, idx, chk_total_byte;
 	u8	ret = _SUCCESS;
-	u16	mapLen=0;
+	u16	mapLen = 0, startAddr = 0, efuse_max_available_len = 0;
 	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(padapter);
+	PEFUSE_HAL	pEfuseHal = &pHalData->EfuseHal;
 
 	EFUSE_GetEfuseDefinition(padapter, EFUSE_WIFI, TYPE_EFUSE_MAP_LEN, (PVOID)&mapLen, _FALSE);
+	EFUSE_GetEfuseDefinition(padapter, EFUSE_WIFI, TYPE_AVAILABLE_EFUSE_BYTES_TOTAL, &efuse_max_available_len, _FALSE);
 
 	if ((addr + cnts) > mapLen)
 		return _FAIL;
 
-	RT_ASSERT_RET(PGPKT_DATA_SIZE == 8); // have to be 8 byte alignment
-	RT_ASSERT_RET((mapLen & 0x7) == 0); // have to be PGPKT_DATA_SIZE alignment for memcpy
+	RT_ASSERT_RET(PGPKT_DATA_SIZE == 8); /* have to be 8 byte alignment */
+	RT_ASSERT_RET((mapLen & 0x7) == 0); /* have to be PGPKT_DATA_SIZE alignment for memcpy */
 
 	map = rtw_zmalloc(mapLen);
-	if(map == NULL){
+	if (map == NULL)
 		return _FAIL;
-	}
-	
-	_rtw_memset(map, 0xFF, mapLen);
-	
-	ret = rtw_efuse_map_read(padapter, 0, mapLen, map);
-	if (ret == _FAIL) goto exit;
 
-	if(padapter->registrypriv.boffefusemask==0)
-	{
-		for (i =0; i < cnts; i++)
-		{ 
-			if(padapter->registrypriv.bFileMaskEfuse==_TRUE)
-			{
-				if (rtw_file_efuse_IsMasked(padapter, addr+i))	/*use file efuse mask. */
-						data[i] = map[addr+i];
+	_rtw_memset(map, 0xFF, mapLen);
+
+	ret = rtw_efuse_map_read(padapter, 0, mapLen, map);
+	if (ret == _FAIL)
+		goto exit;
+
+	if (padapter->registrypriv.boffefusemask == 0) {
+		for (i = 0; i < cnts; i++) {
+			if (padapter->registrypriv.bFileMaskEfuse == _TRUE) {
+				if (rtw_file_efuse_IsMasked(padapter, addr + i))	/*use file efuse mask. */
+					data[i] = map[addr + i];
+			} else {
+				if (efuse_IsMasked(padapter, addr + i))
+					data[i] = map[addr + i];
 			}
-			else
-			{
-				if ( efuse_IsMasked(padapter, addr+i ))
-						data[i] = map[addr+i];
-			}
-			DBG_8192C("%s , data[%d] = %x, map[addr+i]= %x\n", __func__, i, data[i], map[addr+i]);
+			RTW_INFO("%s , data[%d] = %x, map[addr+i]= %x\n", __func__, i, data[i], map[addr + i]);
 		}
 	}
 	/*Efuse_PowerSwitch(padapter, _TRUE, _TRUE);*/
 
+	chk_total_byte = 0;
 	idx = 0;
 	offset = (addr >> 3);
-	while (idx < cnts)
-	{
+
+	while (idx < cnts) {
+		word_en = 0xF;
+		j = (addr + idx) & 0x7;
+		for (i = j; i < PGPKT_DATA_SIZE && idx < cnts; i++, idx++) {
+			if (data[idx] != map[addr + idx])
+				word_en &= ~BIT(i >> 1);
+		}
+
+		if (word_en != 0xF) {
+			chk_total_byte += Efuse_CalculateWordCnts(word_en) * 2;
+
+			if (offset >= EFUSE_MAX_SECTION_BASE) /* Over EFUSE_MAX_SECTION 16 for 2 ByteHeader */
+				chk_total_byte += 2;
+			else
+				chk_total_byte += 1;
+		}
+
+		offset++;
+	}
+
+	RTW_INFO("Total PG bytes Count = %d\n", chk_total_byte);
+	rtw_hal_get_hwreg(padapter, HW_VAR_EFUSE_BYTES, (u8 *)&startAddr);
+
+	if (startAddr == 0) {
+		startAddr = Efuse_GetCurrentSize(padapter, EFUSE_WIFI, _FALSE);
+		RTW_INFO("%s: Efuse_GetCurrentSize startAddr=%#X\n", __func__, startAddr);
+	}
+	/* RTW_DBG("%s: startAddr=%#X\n", __func__, startAddr); */
+
+	if ((startAddr + chk_total_byte) >= efuse_max_available_len) {
+		RTW_INFO("%s: startAddr(0x%X) + PG data len %d >= efuse_max_available_len(0x%X)\n",
+			 __func__, startAddr, chk_total_byte, efuse_max_available_len);
+		ret = _FAIL;
+		goto exit;
+	}
+
+
+	idx = 0;
+	offset = (addr >> 3);
+	while (idx < cnts) {
 		word_en = 0xF;
 		j = (addr + idx) & 0x7;
 		_rtw_memcpy(newdata, &map[offset << 3], PGPKT_DATA_SIZE);
-		for (i = j; i<PGPKT_DATA_SIZE && idx < cnts; i++, idx++)
-		{
-			if (data[idx] != map[addr + idx])
-			{
+		for (i = j; i < PGPKT_DATA_SIZE && idx < cnts; i++, idx++) {
+			if (data[idx] != map[addr + idx]) {
 				word_en &= ~BIT(i >> 1);
 				newdata[i] = data[idx];
-#ifdef CONFIG_RTL8723B					
-				 if( addr + idx == 0x8)
-				 {	
-					if (IS_C_CUT(pHalData->VersionID) || IS_B_CUT(pHalData->VersionID))
-					{
-						if(pHalData->adjuseVoltageVal == 6)
-						{
-								newdata[i] = map[addr + idx];
-							 	DBG_8192C(" %s ,\n adjuseVoltageVal = %d ,newdata[%d] = %x \n",__func__,pHalData->adjuseVoltageVal,i,newdata[i]);	 
+#ifdef CONFIG_RTL8723B
+				if (addr + idx == 0x8) {
+					if (IS_C_CUT(pHalData->VersionID) || IS_B_CUT(pHalData->VersionID)) {
+						if (pHalData->adjuseVoltageVal == 6) {
+							newdata[i] = map[addr + idx];
+							RTW_INFO(" %s ,\n adjuseVoltageVal = %d ,newdata[%d] = %x\n", __func__, pHalData->adjuseVoltageVal, i, newdata[i]);
 						}
 					}
-				  }
+				}
 #endif
 			}
 		}
 
 		if (word_en != 0xF) {
 			ret = Efuse_PgPacketWrite(padapter, offset, word_en, newdata, _FALSE);
-			DBG_871X("offset=%x \n",offset);
-			DBG_871X("word_en=%x \n",word_en);
+			RTW_INFO("offset=%x\n", offset);
+			RTW_INFO("word_en=%x\n", word_en);
 
-			for(i=0;i<PGPKT_DATA_SIZE;i++)
-			{
-				DBG_871X("data=%x \t",newdata[i]);
-			}
-			if (ret == _FAIL) break;
+			for (i = 0; i < PGPKT_DATA_SIZE; i++)
+				RTW_INFO("data=%x \t", newdata[i]);
+			if (ret == _FAIL)
+				break;
 		}
 
 		offset++;
@@ -1091,9 +1122,9 @@ u8 rtw_efuse_mask_map_read(PADAPTER padapter, u16 addr, u16 cnts, u8 *data)
 u8 rtw_BT_efuse_map_write(PADAPTER padapter, u16 addr, u16 cnts, u8 *data)
 {
 #define RT_ASSERT_RET(expr)												\
-	if(!(expr)) {															\
-		printk( "Assertion failed! %s at ......\n", #expr);							\
-		printk( "      ......%s,%s,line=%d\n",__FILE__,__FUNCTION__,__LINE__);	\
+	if (!(expr)) {															\
+		printk("Assertion failed! %s at ......\n", #expr);							\
+		printk("      ......%s,%s, line=%d\n",__FILE__, __FUNCTION__, __LINE__);	\
 		return _FAIL;	\
 	}
 

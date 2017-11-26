@@ -2798,7 +2798,7 @@ hal_EfusePgPacketWriteData(
 	efuse_addr = *pAddr;
 	badworden = Efuse_WordEnableDataWrite(pAdapter, efuse_addr + 1, pTargetPkt->word_en, pTargetPkt->data, bPseudoTest);
 	if (badworden == 0x0F) {
-			DBG_8192C("%s: Fail!!\n", __func__);
+			RTW_INFO("%s: OK!!\n", __FUNCTION__);
 			return _TRUE;
 		} else {	/* Reorganize other pg packet */
 			DBG_8192C ("Error, efuse_PgPacketWriteData(), wirte data fail!!\n");

@@ -1149,7 +1149,7 @@ static u32 rtl8188fs_hal_init(PADAPTER padapter)
 
 #ifdef CONFIG_CHECK_AC_LIFETIME
 	// Enable lifetime check for the four ACs
-	rtw_write8(padapter, REG_LIFETIME_EN, 0x0F);
+	rtw_write8(padapter, REG_LIFETIME_CTRL, rtw_read8(padapter, REG_LIFETIME_CTRL) | 0x0F);
 #endif	// CONFIG_CHECK_AC_LIFETIME
 
 #ifdef CONFIG_TX_MCAST2UNI
@@ -1205,7 +1205,7 @@ static u32 rtl8188fs_hal_init(PADAPTER padapter)
 	* 2015.03.19.
 	*/
 	u4Tmp = rtw_read32(padapter, SDIO_LOCAL_BASE|SDIO_REG_TX_CTRL);
-	u4Tmp &= 0x0000FFF8;
+	u4Tmp &= 0xFFFFFFF8;
 	rtw_write32(padapter, SDIO_LOCAL_BASE|SDIO_REG_TX_CTRL, u4Tmp);
 
 	_RfPowerSave(padapter);

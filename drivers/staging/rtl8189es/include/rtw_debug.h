@@ -166,6 +166,8 @@ extern void rtl871x_cedbg(const char *fmt, ...);
 	#define MSG_8192C(x, ...) do {} while(0)
 	#define DBG_8192C(x,...) do {} while(0)
 	#define DBG_871X_LEVEL(x,...) do {} while(0)
+	#define RTW_WARN(x, ...) do {} while(0)
+	#define RTW_INFO(x, ...) do {} while(0)
 #endif
 
 #undef _dbgdump
@@ -268,10 +270,12 @@ extern void rtl871x_cedbg(const char *fmt, ...);
 		_dbgdump(DRIVER_PREFIX __VA_ARGS__);\
 	}while(0)
 
+	#undef RTW_WARN
 	#define RTW_WARN(...)	  do {\
 		_dbgdump(DRIVER_PREFIX"WARN " __VA_ARGS__);\
 	}while(0)
 
+	#undef RTW_INFO
 	#define RTW_INFO DBG_871X
 #endif /* defined(_dbgdump) */
 #endif /* CONFIG_DEBUG */

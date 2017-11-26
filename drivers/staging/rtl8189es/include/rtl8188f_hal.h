@@ -161,7 +161,7 @@ typedef struct _RT_8188F_FIRMWARE_HDR
 #include "HalVerDef.h"
 #include "hal_com.h"
 
-#define EFUSE_OOB_PROTECT_BYTES (18 + 1)
+#define EFUSE_OOB_PROTECT_BYTES (34 + 1)
 
 #define HAL_EFUSE_MEMORY
 

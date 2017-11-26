@@ -2084,6 +2084,10 @@ static void sd_rxhandler(PADAPTER padapter, struct recv_buf *precvbuf)
 #endif
 }
 
+#ifndef CMD52_ACCESS_HISR_RX_REQ_LEN
+#define CMD52_ACCESS_HISR_RX_REQ_LEN 0
+#endif
+
 void sd_int_dpc(PADAPTER padapter)
 {
 	PHAL_DATA_TYPE phal;
@@ -2197,12 +2201,28 @@ void sd_int_dpc(PADAPTER padapter)
 	{
 		struct recv_buf *precvbuf;
 		int alloc_fail_time=0;
-		u32 hisr;
 
 //		DBG_8192C("%s: RX Request, size=%d\n", __func__, phal->SdioRxFIFOSize);
 		phal->sdio_hisr ^= SDIO_HISR_RX_REQUEST;
 		do {
-			phal->SdioRxFIFOSize = SdioLocalCmd52Read2Byte(padapter, SDIO_REG_RX0_REQ_LEN);
+			if (phal->SdioRxFIFOSize == 0) {
+				#if CMD52_ACCESS_HISR_RX_REQ_LEN
+				u16 rx_req_len;
+
+				rx_req_len = SdioLocalCmd52Read2Byte(padapter, SDIO_REG_RX0_REQ_LEN);
+				if (rx_req_len) {
+					if (rx_req_len % 256 == 0)
+						rx_req_len += SdioLocalCmd52Read1Byte(padapter, SDIO_REG_RX0_REQ_LEN);
+					phal->SdioRxFIFOSize = rx_req_len;
+				}
+				#else
+				u8 data[4];
+
+				_sdio_local_read(padapter, SDIO_REG_RX0_REQ_LEN, 4, data);
+				phal->SdioRxFIFOSize = le16_to_cpu(*(u16 *)data);
+				#endif
+			}
+
 			if (phal->SdioRxFIFOSize != 0)
 			{
 #ifdef CONFIG_MAC_LOOPBACK_DRIVER
@@ -2223,12 +2243,6 @@ void sd_int_dpc(PADAPTER padapter)
 			}
 			else
 				break;
-
-			hisr = 0;
-			ReadInterrupt8188FSdio(padapter, &hisr);
-			hisr &= SDIO_HISR_RX_REQUEST;
-			if (!hisr)
-				break;
 		} while (1);
 
 		if (alloc_fail_time == 10)
@@ -2239,15 +2253,23 @@ void sd_int_dpc(PADAPTER padapter)
 void sd_int_hdl(PADAPTER padapter)
 {
 	PHAL_DATA_TYPE phal;
-
+	#if !CMD52_ACCESS_HISR_RX_REQ_LEN
+	u8 data[6];
+	#endif
 
 	if (RTW_CANNOT_RUN(padapter))
 		return;
 
 	phal = GET_HAL_DATA(padapter);
 
+	#if CMD52_ACCESS_HISR_RX_REQ_LEN
 	phal->sdio_hisr = 0;
 	ReadInterrupt8188FSdio(padapter, &phal->sdio_hisr);
+	#else
+	_sdio_local_read(padapter, SDIO_REG_HISR, 6, data);
+	phal->sdio_hisr = le32_to_cpu(*(u32 *)data);
+	phal->SdioRxFIFOSize = le16_to_cpu(*(u16 *)&data[4]);
+	#endif
 
 	if (phal->sdio_hisr & phal->sdio_himr)
 	{
@@ -2258,7 +2280,12 @@ void sd_int_hdl(PADAPTER padapter)
 		// clear HISR
 		v32 = phal->sdio_hisr & MASK_SDIO_HISR_CLEAR;
 		if (v32) {
+			#if CMD52_ACCESS_HISR_RX_REQ_LEN
 			SdioLocalCmd52Write4Byte(padapter, SDIO_REG_HISR, v32);
+			#else
+			v32 = cpu_to_le32(v32);
+			_sdio_local_write(padapter, SDIO_REG_HISR, 4, (u8 *)&v32);
+			#endif
 		}
 
 		sd_int_dpc(padapter);

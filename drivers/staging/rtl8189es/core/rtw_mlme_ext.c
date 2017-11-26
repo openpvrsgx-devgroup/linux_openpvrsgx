@@ -13454,6 +13454,8 @@ static void sitesurvey_res_reset(_adapter *adapter, struct sitesurvey_parm *parm
 
 	ss->bss_cnt = 0;
 	ss->channel_idx = 0;
+	ss->igi_scan = 0;
+	ss->igi_before_scan = 0;
 #ifdef CONFIG_SCAN_BACKOP
 	ss->scan_cnt = 0;
 #endif
@@ -13772,30 +13774,56 @@ u8 sitesurvey_ps_annc(struct dvobj_priv *dvobj, bool ps)
 	return ps_anc;
 }
 
-void sitesurvey_set_igi(_adapter *adapter, bool enter)
+void sitesurvey_set_igi(_adapter *adapter)
 {
+	struct mlme_ext_priv *mlmeext = &adapter->mlmeextpriv;
+	struct ss_res *ss = &mlmeext->sitesurvey_res;
 	u8 igi;
 #ifdef CONFIG_P2P
 	struct wifidirect_info *pwdinfo = &adapter->wdinfo;
 #endif
 
-	if (enter) {
-#ifdef CONFIG_P2P
-#ifdef CONFIG_IOCTL_CFG80211
+	switch (mlmeext_scan_state(mlmeext)) {
+	case SCAN_ENTER:
+		#ifdef CONFIG_P2P
+		#ifdef CONFIG_IOCTL_CFG80211
 		if (adapter_wdev_data(adapter)->p2p_enabled == _TRUE && pwdinfo->driver_interface == DRIVER_CFG80211)
 			igi = 0x30;
 		else
-#endif /* CONFIG_IOCTL_CFG80211 */
+		#endif /* CONFIG_IOCTL_CFG80211 */
 		if (!rtw_p2p_chk_state(pwdinfo, P2P_STATE_NONE))
 			igi = 0x28;
 		else
-#endif /* CONFIG_P2P */
+		#endif /* CONFIG_P2P */
 			igi = 0x1e;
-	} else {
-			igi = 0xff; /* restore RX GAIN */
-	}
 
-	rtw_hal_set_odm_var(adapter, HAL_ODM_INITIAL_GAIN, &igi, _FALSE);
+		/* record IGI status */
+		ss->igi_scan = igi;
+		rtw_hal_get_odm_var(adapter, HAL_ODM_INITIAL_GAIN, &ss->igi_before_scan, NULL);
+
+		/* disable DIG and set IGI for scan */
+		rtw_hal_set_odm_var(adapter, HAL_ODM_INITIAL_GAIN, &igi, _FALSE);
+		break;
+	case SCAN_COMPLETE:
+	case SCAN_TO_P2P_LISTEN:
+		/* enable DIG and restore IGI */
+		igi = 0xff;
+		rtw_hal_set_odm_var(adapter, HAL_ODM_INITIAL_GAIN, &igi, _FALSE);
+		break;
+#ifdef CONFIG_SCAN_BACKOP
+	case SCAN_BACKING_OP:
+		/* write IGI for op channel when DIG is not enabled */
+		ODM_Write_DIG(GET_ODM(adapter), ss->igi_before_scan);
+		break;
+	case SCAN_LEAVE_OP:
+		/* write IGI for scan when DIG is not enabled */
+		ODM_Write_DIG(GET_ODM(adapter), ss->igi_scan);
+		break;
+#endif /* CONFIG_SCAN_BACKOP */
+	default:
+		rtw_warn_on(1);
+		break;
+	}
 }
 
 u8 sitesurvey_cmd_hdl(_adapter *padapter, u8 *pbuf)
@@ -13871,11 +13899,11 @@ operation_by_state:
 		* HW register and DM setting for enter scan
 		*/
 
-		/* config the initial gain under scanning */
-		sitesurvey_set_igi(padapter, 1);
-		
-		/* disable dynamic functions, such as high power, DIG */
 		rtw_phydm_ability_backup(padapter);
+
+		sitesurvey_set_igi(padapter);
+
+		/* config dynamic functions for off channel */
 		rtw_phydm_func_for_offchannel(padapter);
 		
 		/* set MSR to no link state */
@@ -14000,7 +14028,7 @@ operation_by_state:
 		rtw_hal_set_hwreg(padapter, HW_VAR_MLME_SITESURVEY, (u8 *)(&val8));
 
 		if (mlmeext_chk_scan_backop_flags(pmlmeext, SS_BACKOP_PS_ANNC)) {
-			sitesurvey_set_igi(padapter, 0);
+			sitesurvey_set_igi(padapter);
 			sitesurvey_ps_annc(adapter_to_dvobj(padapter), 0);
 		}
 
@@ -14058,10 +14086,8 @@ operation_by_state:
 		* HW register and DM setting for enter scan
 		*/
 
-		if (mlmeext_chk_scan_backop_flags(pmlmeext, SS_BACKOP_PS_ANNC)) {
-			/* config the initial gain under scanning */
-			sitesurvey_set_igi(padapter, 1);
-		}
+		if (mlmeext_chk_scan_backop_flags(pmlmeext, SS_BACKOP_PS_ANNC))
+			sitesurvey_set_igi(padapter);
 
 		/* set MSR to no link state */
 		Set_MSR(padapter, _HW_STATE_NOLINK_);
@@ -14101,7 +14127,7 @@ operation_by_state:
 		/* turn on phy-dynamic functions */
 		rtw_phydm_ability_restore(padapter);
 
-		sitesurvey_set_igi(padapter, 0);
+		sitesurvey_set_igi(padapter);
 
 		mlmeext_set_scan_state(pmlmeext, SCAN_P2P_LISTEN);
 		_set_timer(&pwdinfo->find_phase_timer, (u32)((u32)pwdinfo->listen_dwell * 100));
@@ -14142,7 +14168,7 @@ operation_by_state:
 		/* turn on phy-dynamic functions */
 		rtw_phydm_ability_restore(padapter);
 
-		sitesurvey_set_igi(padapter, 0);
+		sitesurvey_set_igi(padapter);
 
 		sitesurvey_ps_annc(adapter_to_dvobj(padapter), 0);
 

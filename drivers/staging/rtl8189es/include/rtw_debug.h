@@ -183,7 +183,7 @@ extern void rtl871x_cedbg(const char *fmt, ...);
 	#define _dbgdump rtl871x_cedbg
 	#define _seqdump(sel, fmt, arg...) _dbgdump(fmt, ##arg)
 #elif defined PLATFORM_LINUX
-	#define _dbgdump pr_debug
+	#define _dbgdump printk
 	#define _seqdump seq_printf
 #elif defined PLATFORM_FREEBSD
 	#define _dbgdump printf
@@ -207,6 +207,8 @@ extern void rtl871x_cedbg(const char *fmt, ...);
 				_dbgdump(DRIVER_PREFIX fmt, ##arg);\
 		}\
 	}while(0)
+
+	#define RTW_ERR(fmt, arg...) DBG_871X_LEVEL(_drv_err_, fmt, ##arg)
 
 /* without driver-defined prefix */
 #undef _DBG_871X_LEVEL
@@ -243,6 +245,8 @@ extern void rtl871x_cedbg(const char *fmt, ...);
 		} \
 	}while(0)
 
+#define RTW_PRINT_SEL DBG_871X_SEL_NL
+#define _RTW_PRINT_SEL DBG_871X_SEL
 #endif /* defined(_seqdump) */
 
 #endif /* defined(_dbgdump) */
@@ -263,6 +267,12 @@ extern void rtl871x_cedbg(const char *fmt, ...);
 	#define DBG_8192C(...)     do {\
 		_dbgdump(DRIVER_PREFIX __VA_ARGS__);\
 	}while(0)
+
+	#define RTW_WARN(...)	  do {\
+		_dbgdump(DRIVER_PREFIX"WARN " __VA_ARGS__);\
+	}while(0)
+
+	#define RTW_INFO DBG_871X
 #endif /* defined(_dbgdump) */
 #endif /* CONFIG_DEBUG */
 
@@ -349,6 +359,7 @@ struct sta_info;
 void sta_rx_reorder_ctl_dump(void *sel, struct sta_info *sta);
 
 struct dvobj_priv;
+void dump_tx_rate_bmp(void *sel, struct dvobj_priv *dvobj);
 void dump_adapters_status(void *sel, struct dvobj_priv *dvobj);
 
 struct sec_cam_ent;

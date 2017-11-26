@@ -152,6 +152,7 @@ static RT_CHANNEL_PLAN_2G RTW_ChannelPlan2G[] = {
 	/* 5, RTW_RD_2G_ETSI2 */		{{10, 11, 12, 13}, 4},
 	/* 6, RTW_RD_2G_GLOBAL */	{{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}, 14},
 	/* 7, RTW_RD_2G_MKK2 */		{{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13}, 13},
+	/* 8, RTW_RD_2G_FCC2 */		{{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13}, 13},
 };
 
 static RT_CHANNEL_PLAN_5G RTW_ChannelPlan5G[] = {
@@ -242,7 +243,7 @@ static RT_CHANNEL_PLAN_MAP	RTW_ChannelPlanMap[] = {
 	{RTW_RD_2G_MKK1,	RTW_RD_5G_MKK1,		TXPWR_LMT_MKK},		/* 0x27, RTW_CHPLAN_MKK1_MKK1 */
 	{RTW_RD_2G_WORLD,	RTW_RD_5G_KCC1,		TXPWR_LMT_ETSI},	/* 0x28, RTW_CHPLAN_WORLD_KCC1 */
 	{RTW_RD_2G_WORLD,	RTW_RD_5G_FCC2,		TXPWR_LMT_FCC},		/* 0x29, RTW_CHPLAN_WORLD_FCC2 */
-	{RTW_RD_2G_NULL,	RTW_RD_5G_NULL,		TXPWR_LMT_WW},		/* 0x2A, */
+	{RTW_RD_2G_FCC2,	RTW_RD_5G_NULL,		TXPWR_LMT_FCC},		/* 0x2A, RTW_CHPLAN_FCC2_NULL */
 	{RTW_RD_2G_NULL,	RTW_RD_5G_NULL,		TXPWR_LMT_WW},		/* 0x2B, */
 	{RTW_RD_2G_NULL,	RTW_RD_5G_NULL,		TXPWR_LMT_WW},		/* 0x2C, */
 	{RTW_RD_2G_NULL,	RTW_RD_5G_NULL,		TXPWR_LMT_WW},		/* 0x2D, */
@@ -290,6 +291,13 @@ static RT_CHANNEL_PLAN_MAP	RTW_ChannelPlanMap[] = {
 	{RTW_RD_2G_FCC1,	RTW_RD_5G_FCC10,	TXPWR_LMT_FCC},		/* 0x57, RTW_CHPLAN_FCC1_FCC10 */
 	{RTW_RD_2G_MKK2,	RTW_RD_5G_MKK4,		TXPWR_LMT_MKK},		/* 0x58, RTW_CHPLAN_MKK2_MKK4 */
 	{RTW_RD_2G_WORLD,	RTW_RD_5G_ETSI14,	TXPWR_LMT_ETSI},	/* 0x59, RTW_CHPLAN_WORLD_ETSI14 */
+	{RTW_RD_2G_NULL,	RTW_RD_5G_NULL,		TXPWR_LMT_WW},		/* 0x5A, */
+	{RTW_RD_2G_NULL,	RTW_RD_5G_NULL,		TXPWR_LMT_WW},		/* 0x5B, */
+	{RTW_RD_2G_NULL,	RTW_RD_5G_NULL,		TXPWR_LMT_WW},		/* 0x5C, */
+	{RTW_RD_2G_NULL,	RTW_RD_5G_NULL,		TXPWR_LMT_WW},		/* 0x5D, */
+	{RTW_RD_2G_NULL,	RTW_RD_5G_NULL,		TXPWR_LMT_WW},		/* 0x5E, */
+	{RTW_RD_2G_NULL,	RTW_RD_5G_NULL,		TXPWR_LMT_WW},		/* 0x5F, */
+	{RTW_RD_2G_FCC1,	RTW_RD_5G_FCC5,		TXPWR_LMT_FCC},		/* 0x60, RTW_CHPLAN_FCC1_FCC5 */
 };
 
 static RT_CHANNEL_PLAN_MAP RTW_CHANNEL_PLAN_MAP_REALTEK_DEFINE = {
@@ -10800,7 +10808,6 @@ void start_create_ibss(_adapter* padapter)
 		rtw_hal_set_hwreg(padapter , HW_VAR_DO_IQK , &doiqk);
 
 		//switch channel
-		//SelectChannel(padapter, pmlmeext->cur_channel, HAL_PRIME_CHNL_OFFSET_DONT_CARE);
 		set_channel_bwmode(padapter, pmlmeext->cur_channel, HAL_PRIME_CHNL_OFFSET_DONT_CARE, CHANNEL_WIDTH_20);
 
 		doiqk = _FALSE;
@@ -11003,16 +11010,12 @@ unsigned int receive_disconnect(_adapter *padapter, unsigned char *MacAddr, unsi
 
 	if((pmlmeinfo->state&0x03) == WIFI_FW_STATION_STATE)
 	{
-		if (pmlmeinfo->state & WIFI_FW_ASSOC_SUCCESS)
-		{
-			pmlmeinfo->state = WIFI_FW_NULL_STATE;
-			report_del_sta_event(padapter, MacAddr, reason, _TRUE);
-
-		}
-		else if (pmlmeinfo->state & WIFI_FW_LINKING_STATE)
-		{
-			pmlmeinfo->state = WIFI_FW_NULL_STATE;
-			report_join_res(padapter, -2);
+		if (pmlmeinfo->state & WIFI_FW_ASSOC_SUCCESS) {
+			if (report_del_sta_event(padapter, MacAddr, reason, _TRUE) != _FAIL)
+				pmlmeinfo->state = WIFI_FW_NULL_STATE;
+		} else if (pmlmeinfo->state & WIFI_FW_LINKING_STATE) {
+			if (report_join_res(padapter, -2) != _FAIL)
+				pmlmeinfo->state = WIFI_FW_NULL_STATE;
 		} else
 			DBG_871X(FUNC_ADPT_FMT" - End to Disconnect\n", FUNC_ADPT_ARG(padapter));
 	}
@@ -11423,7 +11426,7 @@ void report_surveydone_event(_adapter *padapter)
 
 }
 
-void report_join_res(_adapter *padapter, int res)
+u32 report_join_res(_adapter *padapter, int res)
 {
 	struct cmd_obj *pcmd_obj;
 	u8	*pevtcmd;
@@ -11433,17 +11436,16 @@ void report_join_res(_adapter *padapter, int res)
 	struct mlme_ext_priv		*pmlmeext = &padapter->mlmeextpriv;
 	struct mlme_ext_info	*pmlmeinfo = &(pmlmeext->mlmext_info);
 	struct cmd_priv *pcmdpriv = &padapter->cmdpriv;
+	u32 ret = _FAIL;
 
 	if ((pcmd_obj = (struct cmd_obj*)rtw_zmalloc(sizeof(struct cmd_obj))) == NULL)
-	{
-		return;
-	}
+		goto exit;
 
 	cmdsz = (sizeof(struct joinbss_event) + sizeof(struct C2HEvent_Header));
-	if ((pevtcmd = (u8*)rtw_zmalloc(cmdsz)) == NULL)
-	{
+	pevtcmd = (u8 *)rtw_zmalloc(cmdsz);
+	if (pevtcmd == NULL) {
 		rtw_mfree((u8 *)pcmd_obj, sizeof(struct cmd_obj));
-		return;
+		goto exit;
 	}
 
 	_rtw_init_listhead(&pcmd_obj->list);
@@ -11470,10 +11472,10 @@ void report_join_res(_adapter *padapter, int res)
 	rtw_joinbss_event_prehandle(padapter, (u8 *)&pjoinbss_evt->network);
 	
 	
-	rtw_enqueue_cmd(pcmdpriv, pcmd_obj);
+	ret = rtw_enqueue_cmd(pcmdpriv, pcmd_obj);
 
-	return;
-
+exit:
+	return ret;
 }
 
 void report_wmm_edca_update(_adapter *padapter)
@@ -11522,7 +11524,7 @@ void report_wmm_edca_update(_adapter *padapter)
 
 }
 
-void report_del_sta_event(_adapter *padapter, unsigned char *MacAddr, unsigned short reason, bool enqueue)
+u32 report_del_sta_event(_adapter *padapter, unsigned char *MacAddr, unsigned short reason, bool enqueue)
 {
 	struct cmd_obj *pcmd_obj;
 	u8	*pevtcmd;
@@ -11586,7 +11588,7 @@ exit:
 	DBG_871X(FUNC_ADPT_FMT" "MAC_FMT" mac_id=%d, enqueue:%d, res:%u\n"
 		, FUNC_ADPT_ARG(padapter), MAC_ARG(MacAddr), mac_id, enqueue, res);
 
-	return;
+	return res;
 }
 
 void report_add_sta_event(_adapter *padapter, unsigned char *MacAddr)
@@ -12427,12 +12429,19 @@ void linked_status_chk(_adapter *padapter, u8 from_timer)
 
 			#if defined(CONFIG_ACTIVE_KEEP_ALIVE_CHECK) && !defined(CONFIG_LPS_LCLK_WD_TIMER)
 			if (pmlmeext->active_keep_alive_check && (rx_chk == _FAIL || tx_chk == _FAIL)) {
-				u8 backup_oper_channel=0;
+				u8 backup_ch = 0, backup_bw, backup_offset;
+				u8 union_ch = 0, union_bw, union_offset;
+
+				if (!rtw_get_ch_setting_union(padapter, &union_ch, &union_bw, &union_offset)
+					|| pmlmeext->cur_channel != union_ch)
+						goto bypass_active_keep_alive;
 
 				/* switch to correct channel of current network  before issue keep-alive frames */
 				if (rtw_get_oper_ch(padapter) != pmlmeext->cur_channel) {
-					backup_oper_channel = rtw_get_oper_ch(padapter);
-					SelectChannel(padapter, pmlmeext->cur_channel);
+					backup_ch = rtw_get_oper_ch(padapter);
+					backup_bw = rtw_get_oper_bw(padapter);
+					backup_offset = rtw_get_oper_choffset(padapter);
+					set_channel_bwmode(padapter, union_ch, union_offset, union_bw);
 				}
 
 				if (rx_chk != _SUCCESS)
@@ -12446,9 +12455,11 @@ void linked_status_chk(_adapter *padapter, u8 from_timer)
 				}
 
 				/* back to the original operation channel */
-				if(backup_oper_channel>0)
-					SelectChannel(padapter, backup_oper_channel);
+				if (backup_ch > 0)
+					set_channel_bwmode(padapter, backup_ch, backup_offset, backup_bw);
 
+bypass_active_keep_alive:
+				;
 			}
 			else
 			#endif /* CONFIG_ACTIVE_KEEP_ALIVE_CHECK */
@@ -15056,6 +15067,28 @@ inline void rtw_dev_iface_status_no_self(_adapter *adapter, u8 *sta_num, u8 *ld_
 	return _rtw_dev_iface_status(adapter, sta_num, ld_sta_num, lg_sta_num, ap_num, ld_ap_num, 0);
 }
 
+u8 rtw_mp_mode_check(_adapter *padapter)
+{
+#ifdef CONFIG_MP_INCLUDED
+#ifdef CONFIG_CONCURRENT_MODE
+	int i;
+	struct dvobj_priv *dvobj = adapter_to_dvobj(padapter);
+	_adapter *iface = NULL;
+
+	for (i = 0; i < dvobj->iface_nums; i++) {
+		iface = dvobj->padapters[i];
+
+		if ((iface) && (iface->registrypriv.mp_mode == 1))
+			return _TRUE;
+	}
+#else
+	if (padapter->registrypriv.mp_mode == 1)
+		return _TRUE;
+#endif
+#endif /* CONFIG_MP_INCLUDED */
+	return _FALSE;
+}
+
 u8 set_ch_hdl(_adapter *padapter, u8 *pbuf)
 {
 	struct set_ch_parm *set_ch_parm;
@@ -15144,7 +15177,7 @@ u8 set_csa_hdl(_adapter *padapter, unsigned char *pbuf)
 	rtw_hal_set_hwreg(padapter, HW_VAR_TXPAUSE, &sval8);
 
 	DBG_871X("DFS detected! Swiching channel to %d!\n", new_ch_no);
-	SelectChannel(padapter, new_ch_no);
+	set_channel_bwmode(padapter, new_ch_no, HAL_PRIME_CHNL_OFFSET_DONT_CARE, CHANNEL_WIDTH_20);
 
 	rtw_hal_set_hwreg(padapter, HW_VAR_TXPAUSE, &gval8);
 
@@ -15266,7 +15299,7 @@ u8 tdls_hdl(_adapter *padapter, unsigned char *pbuf)
 		rtw_msleep_os(resp_sleep);
 
 		/* If we receive TDLS_CH_SW_REQ at off channel which it's target is AP's channel */
-		/* then we just SelectChannel to AP's channel*/
+		/* then we just switch to AP's channel*/
 		if (padapter->mlmeextpriv.cur_channel == pchsw_info->off_ch_num) {
 			SelectChannel(padapter, padapter->mlmeextpriv.cur_channel);
 			issue_nulldata(padapter, NULL, 0, 0, 0);

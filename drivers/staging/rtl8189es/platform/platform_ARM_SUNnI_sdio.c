@@ -41,6 +41,12 @@ extern void sw_mci_rescan_card(unsigned id, unsigned insert);
 extern void sunxi_mci_rescan_card(unsigned id, unsigned insert);
 #endif
 
+#ifdef CONFIG_PLATFORM_ARM_SUN8I_W5P1
+extern int get_rf_mod_type(void);
+#else
+extern int wifi_pm_get_mod_type(void);
+#endif
+
 extern void wifi_pm_power(int on);
 #ifdef CONFIG_GPIO_WAKEUP
 extern unsigned int oob_irq;
@@ -61,13 +67,19 @@ int platform_wifi_power_on(void)
 	script_item_u val;
 	script_item_value_type_e type;
 
+#ifdef CONFIG_PLATFORM_ARM_SUN8I_W5P1
+	unsigned int mod_sel = get_rf_mod_type();
+#else
+	unsigned int mod_sel = wifi_pm_get_mod_type();
+#endif
+
 	type = script_get_item("wifi_para", "wifi_sdc_id", &val);
 	if (SCIRPT_ITEM_VALUE_TYPE_INT!=type) {
 		DBG_871X("get wifi_sdc_id failed\n");
 		ret = -1;
 	} else {
 		sdc_id = val.val;
-		DBG_871X("----- %s sdc_id: %d\n", __FUNCTION__, sdc_id);
+		DBG_871X("----- %s sdc_id: %d, mod_sel: %d\n", __FUNCTION__, sdc_id, mod_sel);
 
 #if defined(CONFIG_PLATFORM_ARM_SUN6I) || defined(CONFIG_PLATFORM_ARM_SUN7I)
 		sw_mci_rescan_card(sdc_id, 1);
@@ -81,7 +93,16 @@ int platform_wifi_power_on(void)
 	}
 
 #ifdef CONFIG_GPIO_WAKEUP
+#ifdef CONFIG_PLATFORM_ARM_SUN8I_W5P1
 	type = script_get_item("wifi_para", "wl_host_wake", &val);
+#else
+#ifdef CONFIG_RTL8723B
+	type = script_get_item("wifi_para", "rtl8723bs_wl_host_wake", &val);
+#endif
+#ifdef CONFIG_RTL8188E
+	type = script_get_item("wifi_para", "rtl8189es_host_wake", &val);
+#endif
+#endif /* CONFIG_PLATFORM_ARM_SUN8I_W5P1 */
 	if (SCIRPT_ITEM_VALUE_TYPE_PIO != type) {
 		DBG_871X("No definition of wake up host PIN\n");
 		ret = -1;

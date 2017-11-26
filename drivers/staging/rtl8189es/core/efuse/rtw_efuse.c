@@ -512,6 +512,7 @@ efuse_OneByteWrite(
 		return bResult;
 	}
 
+	Efuse_PowerSwitch(pAdapter, _TRUE, _TRUE);
 
 	// -----------------e-fuse reg ctrl ---------------------------------	
 	//address			
@@ -562,6 +563,8 @@ efuse_OneByteWrite(
 		) {
 		PHY_SetMacReg(pAdapter, EFUSE_TEST, BIT(11), 0);
 	}
+
+	Efuse_PowerSwitch(pAdapter, _TRUE, _FALSE);
 
 	return bResult;
 }
@@ -1001,7 +1004,7 @@ u8 rtw_efuse_map_write(PADAPTER padapter, u16 addr, u16 cnts, u8 *data)
 			DBG_8192C("%s , data[%d] = %x, map[addr+i]= %x\n", __func__, i, data[i], map[addr+i]);
 		}
 	}
-	Efuse_PowerSwitch(padapter, _TRUE, _TRUE);
+	/*Efuse_PowerSwitch(padapter, _TRUE, _TRUE);*/
 
 	idx = 0;
 	offset = (addr >> 3);
@@ -1047,7 +1050,7 @@ u8 rtw_efuse_map_write(PADAPTER padapter, u16 addr, u16 cnts, u8 *data)
 		offset++;
 	}
 
-	Efuse_PowerSwitch(padapter, _TRUE, _FALSE);
+	/*Efuse_PowerSwitch(padapter, _TRUE, _FALSE);*/
 
 exit:
 
@@ -1389,6 +1392,8 @@ void EFUSE_ShadowMapUpdate(
 
 	//PlatformMoveMemory((PVOID)&pHalData->EfuseMap[EFUSE_MODIFY_MAP][0], 
 	//(PVOID)&pHalData->EfuseMap[EFUSE_INIT_MAP][0], mapLen);
+
+	rtw_dump_cur_efuse(pAdapter);
 }// EFUSE_ShadowMapUpdate
 
 
@@ -1510,6 +1515,13 @@ const u8 _mac_hidden_max_bw_to_hal_bw_cap[MAC_HIDDEN_MAX_BW_NUM] = {
 	(BW_CAP_80M|BW_CAP_40M|BW_CAP_20M|BW_CAP_10M|BW_CAP_5M),
 };
 
+const u8 _mac_hidden_proto_to_hal_proto_cap[MAC_HIDDEN_PROTOCOL_NUM] = {
+	0,
+	0,
+	(PROTO_CAP_11N|PROTO_CAP_11G|PROTO_CAP_11B),
+	(PROTO_CAP_11AC|PROTO_CAP_11N|PROTO_CAP_11G|PROTO_CAP_11B),
+};
+
 u8 mac_hidden_wl_func_to_hal_wl_func(u8 func)
 {
 	u8 wl_func = 0;
@@ -1584,130 +1596,147 @@ int retriveAdaptorInfoFile(char *path, u8* efuse_data)
 #endif /* CONFIG_ADAPTOR_INFO_CACHING_FILE */
 
 #ifdef CONFIG_EFUSE_CONFIG_FILE
-u32 rtw_read_efuse_from_file(const char *path, u8 *buf)
+u32 rtw_read_efuse_from_file(const char *path, u8 *buf, int map_size)
 {
 	u32 i;
+	u8 c;
 	u8 temp[3];
+	u8 temp_i;
+	u8 end = _FALSE;
 	u32 ret = _FAIL;
 
-	struct file *fp;
-	mm_segment_t fs;
-	loff_t pos = 0;
+	u8 *file_data = NULL;
+	u32 file_size, read_size, pos = 0;
+	u8 *map = NULL;
 
-	fp = filp_open(path, O_RDONLY, 0);
-	if (fp == NULL || IS_ERR(fp)) {
-		if (fp != NULL)
-			DBG_871X_LEVEL(_drv_always_, "%s open %s fail, err:%ld\n"
-				, __func__, path, PTR_ERR(fp));
-		else
-			DBG_871X_LEVEL(_drv_always_, "%s open %s fail, fp is NULL\n"
-				, __func__, path);
-
+	if (rtw_is_file_readable_with_size(path, &file_size) != _TRUE) {
+		DBG_871X_LEVEL(_drv_always_, "%s %s is not readable\n", __func__, path);
 		goto exit;
 	}
 
-	temp[2] = 0; /* add end of string '\0' */
+	file_data = rtw_vmalloc(file_size);
+	if (!file_data) {
+		DBG_871X_LEVEL(_drv_err_, "%s rtw_vmalloc(%d) fail\n", __func__, file_size);
+		goto exit;
+	}
 
-	fs = get_fs();
-	set_fs(KERNEL_DS);
+	read_size = rtw_retrieve_from_file(path, file_data, file_size);
+	if (read_size == 0) {
+		DBG_871X_LEVEL(_drv_err_, "%s read from %s fail\n", __func__, path);
+		goto exit;
+	}
 
-	for (i = 0 ; i < HWSET_MAX_SIZE ; i++) {
-		vfs_read(fp, temp, 2, &pos);
-		if (sscanf(temp, "%hhx", &buf[i]) != 1) {
-			if (0)
-				DBG_871X_LEVEL(_drv_err_, "%s sscanf fail\n", __func__);
-			buf[i] = 0xFF;
-		}
-		if ((i % EFUSE_FILE_COLUMN_NUM) == (EFUSE_FILE_COLUMN_NUM - 1)) {
-			/* Filter the lates space char. */
-			vfs_read(fp, temp, 1, &pos);
-			if (strchr(temp, ' ') == NULL) {
-				pos--;
-				vfs_read(fp, temp, 2, &pos);
+	map = rtw_vmalloc(map_size);
+	if (!map) {
+		DBG_871X_LEVEL(_drv_err_, "%s rtw_vmalloc(%d) fail\n", __func__, map_size);
+		goto exit;
+	}
+	_rtw_memset(map, 0xff, map_size);
+
+	temp[2] = 0; /* end of string '\0' */
+
+	for (i = 0 ; i < map_size ; i++) {
+		temp_i = 0;
+
+		while (1) {
+			if (pos >= read_size) {
+				end = _TRUE;
+				break;
 			}
-		} else {
-			pos += 1; /* Filter the space character */
+			c = file_data[pos++];
+
+			/* bypass spece or eol or null before first hex digit */
+			if (temp_i == 0 && (is_eol(c) == _TRUE || is_space(c) == _TRUE || is_null(c) == _TRUE))
+				continue;
+
+			if (IsHexDigit(c) == _FALSE) {
+				DBG_871X_LEVEL(_drv_err_, "%s invalid 8-bit hex format for offset:0x%03x\n", __func__, i);
+				goto exit;
+			}
+
+			temp[temp_i++] = c;
+
+			if (temp_i == 2) {
+				/* parse value */
+				if (sscanf(temp, "%hhx", &map[i]) != 1) {
+					DBG_871X_LEVEL(_drv_err_, "%s sscanf fail for offset:0x%03x\n", __func__, i);
+					goto exit;
+				}
+				break;
+			}
+		}
+
+		if (end == _TRUE) {
+			if (temp_i != 0) {
+				DBG_871X_LEVEL(_drv_err_, "%s incomplete 8-bit hex format for offset:0x%03x\n", __func__, i);
+				goto exit;
+			}
+			break;
 		}
 	}
 
-	set_fs(fs);
+	DBG_871X_LEVEL(_drv_always_, "efuse file:%s, 0x%03x byte content read\n", path, i);
 
-	DBG_871X_LEVEL(_drv_always_, "efuse file: %s\n", path);
-#ifdef CONFIG_DEBUG
-	for (i = 0; i < HWSET_MAX_SIZE; i++) {
-		if (i % 16 == 0)
-			DBG_871X_SEL_NL(RTW_DBGDUMP, "0x%03x: ", i);
-
-		DBG_871X_SEL(RTW_DBGDUMP, "%02X%s"
-			, buf[i]
-			, ((i + 1) % 16 == 0) ? "\n" : (((i + 1) % 8 == 0) ? "    " : " ")
-		);
-	}
-	DBG_871X_SEL(RTW_DBGDUMP, "\n");
-#endif
+	_rtw_memcpy(buf, map, map_size);
 
 	ret = _SUCCESS;
 
 exit:
+	if (file_data)
+		rtw_vmfree(file_data, file_size);
+	if (map)
+		rtw_vmfree(map, map_size);
+
 	return ret;
 }
 
 u32 rtw_read_macaddr_from_file(const char *path, u8 *buf)
 {
-	struct file *fp;
-	mm_segment_t fs;
-	loff_t pos = 0;
-
-	u8 source_addr[18];
-	u8 *head, *end;
-	int i;
+	u32 i;
+	u8 temp[3];
 	u32 ret = _FAIL;
 
-	_rtw_memset(source_addr, 0, 18);
+	u8 file_data[17];
+	u32 read_size, pos = 0;
+	u8 addr[ETH_ALEN];
 
-	fp = filp_open(path, O_RDONLY, 0);
-	if (fp == NULL || IS_ERR(fp)) {
-		if (fp != NULL)
-			DBG_871X_LEVEL(_drv_always_, "%s open %s fail, err:%ld\n"
-				, __func__, path, PTR_ERR(fp));
-		else
-			DBG_871X_LEVEL(_drv_always_, "%s open %s fail, fp is NULL\n"
-				, __func__, path);
-
+	if (rtw_is_file_readable(path) != _TRUE) {
+		DBG_871X_LEVEL(_drv_always_, "%s %s is not readable\n", __func__, path);
 		goto exit;
 	}
 
-	fs = get_fs();
-	set_fs(KERNEL_DS);
+	read_size = rtw_retrieve_from_file(path, file_data, 17);
+	if (read_size != 17) {
+		DBG_871X_LEVEL(_drv_err_, "%s read from %s fail\n", __func__, path);
+		goto exit;
+	}
 
-	vfs_read(fp, source_addr, 18, &pos);
-	source_addr[17] = ':';
+	temp[2] = 0; /* end of string '\0' */
 
-	head = end = source_addr;
-	for (i = 0; i < ETH_ALEN; i++) {
-		while (end && (*end != ':'))
-			end++;
-
-		if (end && (*end == ':'))
-			*end = '\0';
-
-		if (sscanf(head, "%hhx", &buf[i]) != 1) {
-			if (0)
-				DBG_871X_LEVEL(_drv_err_, "%s sscanf fail\n", __func__);
-			buf[i] = 0xFF;
+	for (i = 0 ; i < ETH_ALEN ; i++) {
+		if (IsHexDigit(file_data[i * 3]) == _FALSE || IsHexDigit(file_data[i * 3 + 1]) == _FALSE) {
+			DBG_871X_LEVEL(_drv_err_, "%s invalid 8-bit hex format for address offset:%u\n", __func__, i);
+			goto exit;
 		}
 
-		if (end) {
-			end++;
-			head = end;
+		if (i < ETH_ALEN - 1 && file_data[i * 3 + 2] != ':') {
+			DBG_871X_LEVEL(_drv_err_, "%s invalid separator after address offset:%u\n", __func__, i);
+			goto exit;
+		}
+
+		temp[0] = file_data[i * 3];
+		temp[1] = file_data[i * 3 + 1];
+		if (sscanf(temp, "%hhx", &addr[i]) != 1) {
+			DBG_871X_LEVEL(_drv_err_, "%s sscanf fail for address offset:0x%03x\n", __func__, i);
+			goto exit;
 		}
 	}
 
-	set_fs(fs);
+	_rtw_memcpy(buf, addr, ETH_ALEN);
 
 	DBG_871X_LEVEL(_drv_always_, "wifi_mac file: %s\n", path);
 #ifdef CONFIG_DEBUG
-	DBG_871X(MAC_FMT"\n", MAC_ARG(buf));
+	DBG_871X_LEVEL(_drv_always_, MAC_FMT"\n", MAC_ARG(buf));
 #endif
 
 	ret = _SUCCESS;

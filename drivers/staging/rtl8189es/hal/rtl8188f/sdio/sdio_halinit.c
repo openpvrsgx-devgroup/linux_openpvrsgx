@@ -828,17 +828,6 @@ static void _InitRFType(PADAPTER padapter)
 	MSG_8192C("Set RF Chip ID to RF_6052 and RF type to %d.\n", pHalData->rf_type);
 }
 
-// Set CCK and OFDM Block "ON"
-static void _BBTurnOnBlock(PADAPTER padapter)
-{
-#if (DISABLE_BB_RF)
-	return;
-#endif
-
-	PHY_SetBBReg(padapter, rFPGA0_RFMOD, bCCKEn, 0x1);
-	PHY_SetBBReg(padapter, rFPGA0_RFMOD, bOFDMEn, 0x1);
-}
-
 static void _RfPowerSave(PADAPTER padapter)
 {
 //YJ,TODO
@@ -1065,8 +1054,6 @@ static u32 rtl8188fs_hal_init(PADAPTER padapter)
 		}
 	}
 
-	rtl8188f_InitializeFirmwareVars(padapter);
-
 //	SIC_Init(padapter);
 
 	if (pwrctrlpriv->reg_rfoff == _TRUE) {
@@ -1177,6 +1164,8 @@ static u32 rtl8188fs_hal_init(PADAPTER padapter)
 
 	invalidate_cam_all(padapter);
 
+	BBTurnOnBlock_8188F(padapter);
+
 	rtw_hal_set_chnl_bw(padapter, padapter->registrypriv.channel,
 		CHANNEL_WIDTH_20, HAL_PRIME_CHNL_OFFSET_DONT_CARE, HAL_PRIME_CHNL_OFFSET_DONT_CARE);
 
@@ -1272,6 +1261,7 @@ static u32 rtl8188fs_hal_init(PADAPTER padapter)
 
 			PHY_LCCalibrate_8188F(&pHalData->odmpriv);
 
+			#ifdef CONFIG_BT_COEXIST
 			/* Inform WiFi FW that it is the beginning of IQK */
 			h2cCmdBuf = 1;
 			FillH2CCmd8188F(padapter, H2C_8188F_BT_WLAN_CALIBRATION, 1, &h2cCmdBuf);
@@ -1283,14 +1273,17 @@ static u32 rtl8188fs_hal_init(PADAPTER padapter)
 
 				rtw_msleep_os(50);
 			} while (rtw_get_passing_time_ms(start_time) <= 400);
+			#endif
 
 			restore_iqk_rst = (pwrpriv->bips_processing==_TRUE)?_TRUE:_FALSE;
 			PHY_IQCalibrate_8188F(padapter, _FALSE, restore_iqk_rst);
 			pHalData->bIQKInitialized = _TRUE;
 
+			#ifdef CONFIG_BT_COEXIST
 			/* Inform WiFi FW that it is the finish of IQK */
 			h2cCmdBuf = 0;
 			FillH2CCmd8188F(padapter, H2C_8188F_BT_WLAN_CALIBRATION, 1, &h2cCmdBuf);
+			#endif
 
 			ODM_TXPowerTrackingCheck(&pHalData->odmpriv);
 		}
@@ -1625,7 +1618,7 @@ _ReadEfuseInfo8188FS(
 #endif
 
 	Hal_EfuseParseKFreeData_8188F(padapter, hwinfo, pHalData->bautoload_fail_flag);
-	Hal_EfuseParseMacHidden_8188F(padapter, hwinfo, pHalData->bautoload_fail_flag);
+	hal_read_mac_hidden_rpt(padapter);
 
 	RT_TRACE(_module_hci_hal_init_c_, _drv_info_, ("<==== _ReadEfuseInfo8188FS()\n"));
 }

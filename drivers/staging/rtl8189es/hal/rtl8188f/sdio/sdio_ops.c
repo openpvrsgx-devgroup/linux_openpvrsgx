@@ -179,7 +179,7 @@ static bool sdio_chk_hci_resume(struct intf_hdl *pintfhdl)
 	u8 hci_sus_state;
 	u8 sus_ctl, sus_ctl_ori = 0xEA;
 	u8 do_leave = 0;
-	u32 start = 0, end = 0;
+	u32 start = 0, end = 0, poll_cnt = 0;
 	u8 timeout = 0;
 	u8 sr = 0;
 	s32 err = 0;
@@ -193,17 +193,19 @@ static bool sdio_chk_hci_resume(struct intf_hdl *pintfhdl)
 		goto exit;
 	sus_ctl_ori = sus_ctl;
 
-	if (sus_ctl & HCI_RESUME_PWR_RDY)
+	if ((sus_ctl & HCI_RESUME_PWR_RDY) && !(sus_ctl & HCI_SUS_CTRL))
 		goto exit;
 
-	sus_ctl &= ~(HCI_SUS_CTRL);
-	err = sd_cmd52_write(pintfhdl, SDIO_LOCAL_CMD_ADDR(SDIO_REG_HSUS_CTRL), 1, &sus_ctl);
-	if (err)
-		goto exit;
+	if (sus_ctl & HCI_SUS_CTRL) {
+		sus_ctl &= ~(HCI_SUS_CTRL);
+		err = sd_cmd52_write(pintfhdl, SDIO_LOCAL_CMD_ADDR(SDIO_REG_HSUS_CTRL), 1, &sus_ctl);
+		if (err)
+			goto exit;
+	}
 
 	do_leave = 1;
 
-	/* polling for HCI_RESUME_PWR_RDY */
+	/* polling for HCI_RESUME_PWR_RDY && !HCI_SUS_CTRL */
 	start = rtw_get_current_time();
 	while (1) {
 		if (rtw_is_surprise_removed(adapter)) {
@@ -212,8 +214,9 @@ static bool sdio_chk_hci_resume(struct intf_hdl *pintfhdl)
 		}
 
 		err = sd_cmd52_read(pintfhdl, SDIO_LOCAL_CMD_ADDR(SDIO_REG_HSUS_CTRL), 1, &sus_ctl);
+		poll_cnt++;
 
-		if (!err && (sus_ctl & HCI_RESUME_PWR_RDY))
+		if (!err && (sus_ctl & HCI_RESUME_PWR_RDY) && !(sus_ctl & HCI_SUS_CTRL))
 			break;
 
 		if (rtw_get_passing_time_ms(start) > SDIO_HCI_RESUME_PWR_RDY_TIMEOUT_MS) {
@@ -229,8 +232,8 @@ exit:
 		DBG_871X(FUNC_ADPT_FMT" hci_sus_state:%u, sus_ctl:0x%02x(0x%02x), do_leave:%u, to:%u, err:%u\n"
 			, FUNC_ADPT_ARG(adapter), hci_sus_state, sus_ctl, sus_ctl_ori, do_leave, timeout, err);
 		if (start != 0 || end != 0) {
-			DBG_871X(FUNC_ADPT_FMT" polling %d ms\n"
-				, FUNC_ADPT_ARG(adapter), rtw_get_time_interval_ms(start, end));
+			DBG_871X(FUNC_ADPT_FMT" polling %d ms, cnt:%u\n"
+				, FUNC_ADPT_ARG(adapter), rtw_get_time_interval_ms(start, end), poll_cnt);
 		}
 	}
 
@@ -253,7 +256,7 @@ void sdio_chk_hci_suspend(struct intf_hdl *pintfhdl)
 	_adapter *adapter = pintfhdl->padapter;
 	u8 hci_sus_state;
 	u8 sus_ctl, sus_ctl_ori = 0xEA;
-	u32 start = 0, end = 0;
+	u32 start = 0, end = 0, poll_cnt = 0;
 	u8 timeout = 0;
 	u8 sr = 0;
 	s32 err = 0;
@@ -287,6 +290,7 @@ void sdio_chk_hci_suspend(struct intf_hdl *pintfhdl)
 		}
 
 		err = sd_cmd52_read(pintfhdl, SDIO_LOCAL_CMD_ADDR(SDIO_REG_HSUS_CTRL), 1, &sus_ctl);
+		poll_cnt++;
 
 		if (!err && !(sus_ctl & HCI_RESUME_PWR_RDY))
 			break;
@@ -305,8 +309,8 @@ exit:
 		DBG_871X(FUNC_ADPT_FMT" hci_sus_state:%u, sus_ctl:0x%02x(0x%02x), to:%u, err:%u\n"
 			, FUNC_ADPT_ARG(adapter), hci_sus_state, sus_ctl, sus_ctl_ori, timeout, err);
 		if (start != 0 || end != 0) {
-			DBG_871X(FUNC_ADPT_FMT" polling %d ms\n"
-				, FUNC_ADPT_ARG(adapter), rtw_get_time_interval_ms(start, end));
+			DBG_871X(FUNC_ADPT_FMT" polling %d ms, cnt:%u\n"
+				, FUNC_ADPT_ARG(adapter), rtw_get_time_interval_ms(start, end), poll_cnt);
 		}
 	}
 
@@ -1647,34 +1651,39 @@ void InitInterrupt8188FSdio(PADAPTER padapter)
 {
 	PHAL_DATA_TYPE pHalData;
 
-
 	pHalData = GET_HAL_DATA(padapter);
-	pHalData->sdio_himr = (u32)(			\
-								SDIO_HIMR_RX_REQUEST_MSK			|
+	pHalData->sdio_himr = 0
+		| SDIO_HIMR_RX_REQUEST_MSK
 #ifdef CONFIG_SDIO_TX_ENABLE_AVAL_INT
-								SDIO_HIMR_AVAL_MSK					|
+		| SDIO_HIMR_AVAL_MSK
 #endif
-//								SDIO_HIMR_TXERR_MSK				|
-//								SDIO_HIMR_RXERR_MSK				|
-//								SDIO_HIMR_TXFOVW_MSK				|
-//								SDIO_HIMR_RXFOVW_MSK				|
-//								SDIO_HIMR_TXBCNOK_MSK				|
-//								SDIO_HIMR_TXBCNERR_MSK			|
-//								SDIO_HIMR_BCNERLY_INT_MSK			|
-//								SDIO_HIMR_C2HCMD_MSK				|
+#if 0
+		| SDIO_HIMR_TXERR_MSK
+		| SDIO_HIMR_RXERR_MSK
+		| SDIO_HIMR_TXFOVW_MSK
+		| SDIO_HIMR_RXFOVW_MSK
+		| SDIO_HIMR_TXBCNOK_MSK
+		| SDIO_HIMR_TXBCNERR_MSK
+		| SDIO_HIMR_BCNERLY_INT_MSK
+		| SDIO_HIMR_C2HCMD_MSK
+#endif
 #if defined(CONFIG_LPS_LCLK) && !defined(CONFIG_DETECT_CPWM_BY_POLLING)
-								SDIO_HIMR_CPWM1_MSK				|
-//								SDIO_HIMR_CPWM2_MSK				|
-#endif // CONFIG_LPS_LCLK && !CONFIG_DETECT_CPWM_BY_POLLING
-//								SDIO_HIMR_HSISR_IND_MSK			|
-//								SDIO_HIMR_GTINT3_IND_MSK			|
-//								SDIO_HIMR_GTINT4_IND_MSK			|
-//								SDIO_HIMR_PSTIMEOUT_MSK			|
-//								SDIO_HIMR_OCPINT_MSK				|
-//								SDIO_HIMR_ATIMEND_MSK				|
-//								SDIO_HIMR_ATIMEND_E_MSK			|
-//								SDIO_HIMR_CTWEND_MSK				|
-								0);
+		| SDIO_HIMR_CPWM1_MSK
+#endif
+#ifdef CONFIG_WOWLAN
+		| SDIO_HIMR_CPWM2_MSK
+#endif
+#if 0
+		| SDIO_HIMR_HSISR_IND_MSK
+		| SDIO_HIMR_GTINT3_IND_MSK
+		| SDIO_HIMR_GTINT4_IND_MSK
+		| SDIO_HIMR_PSTIMEOUT_MSK
+		| SDIO_HIMR_OCPINT_MSK
+		| SDIO_HIMR_ATIMEND_MSK
+		| SDIO_HIMR_ATIMEND_E_MSK
+		| SDIO_HIMR_CTWEND_MSK
+#endif
+		;
 }
 
 //

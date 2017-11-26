@@ -95,6 +95,13 @@ static s32 rtl8188fs_dequeue_writeport(PADAPTER padapter)
 query_free_page:
 	/* check if hardware tx fifo page is enough */
 	if (_FALSE == rtw_hal_sdio_query_tx_freepage(padapter, PageIdx, pxmitbuf->pg_num)) {
+		if (RTW_CANNOT_RUN(padapter)) {
+			DBG_871X("%s: bDriverStopped(%d) bSurpriseRemoved(%d)!\n"
+				, __func__
+				, rtw_is_drv_stopped(padapter)
+				, rtw_is_surprise_removed(padapter));
+			goto free_xmitbuf;
+		}
 #ifdef CONFIG_SDIO_TX_ENABLE_AVAL_INT
 		if (!bUpdatePageNum) {
 			// Total number of page is NOT available, so update current FIFO status
@@ -118,12 +125,6 @@ query_free_page:
 		HalQueryTxBufferStatus8188FSdio(padapter);
 		goto query_free_page;
 #endif //CONFIG_SDIO_TX_ENABLE_AVAL_INT
-	}
-
-	if (RTW_CANNOT_RUN(padapter)) {
-		RT_TRACE(_module_hal_xmit_c_, _drv_notice_,
-			 ("%s: bSurpriseRemoved(wirte port)\n", __FUNCTION__));
-		goto free_xmitbuf;
 	}
 
 	if (rtw_sdio_wait_enough_TxOQT_space(padapter, pxmitbuf->agg_num) == _FALSE) 

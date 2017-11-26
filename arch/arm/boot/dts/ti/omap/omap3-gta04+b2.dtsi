@@ -75,7 +75,9 @@
 /* FIXME: add optional TRF7970 */
 
 &bat {
-	charge_full_design = <3900000>;
+	battery-name = "Letux-7004-battery";
+	energy-full-design-microwatt-hours = <14430000>;
+	charge-full-design-microamp-hours = <3900000>;
 };
 
 &i2c2 {

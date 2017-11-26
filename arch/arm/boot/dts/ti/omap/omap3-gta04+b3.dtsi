@@ -74,7 +74,7 @@
 
 
 &bat {
-	battery-name = "l3704-battery";
+	battery-name = "Letux-7004-battery";
 	energy-full-design-microwatt-hours = <14430000>;
 	charge-full-design-microamp-hours = <3900000>;
 };

@@ -341,8 +341,9 @@ static irqreturn_t crtouch_irq(int irq, void *dev)
 	return IRQ_HANDLED;
 }
 
-static void tsc_poll_handler(unsigned long arg)
+static void tsc_poll_handler(struct timer_list *arg)
 {
+/* FIXME: how do we pass the private data through timer_list? */
 	struct crtouch_data *crtouch = (struct crtouch_data *)arg;
 
 	queue_work(crtouch->workqueue, &crtouch->work);
@@ -485,10 +486,10 @@ static int crtouch_probe(struct i2c_client *client,
 		if (of_property_read_u32(node, "polling-period-ms", &crtouch->polling_period))
 			crtouch->polling_period = DEFAULT_POLLING_PERIOD;
 		crtouch->polling_period = msecs_to_jiffies(crtouch->polling_period);
-		init_timer(&crtouch->tsc_poll_timer);
+		timer_setup(&crtouch->tsc_poll_timer, &tsc_poll_handler, 0);
 		crtouch->tsc_poll_timer.function	= tsc_poll_handler;
-		crtouch->tsc_poll_timer.expires		= jiffies + crtouch->polling_period;
-		crtouch->tsc_poll_timer.data		= (unsigned long)crtouch;
+		crtouch->tsc_poll_timer.expires	= jiffies + crtouch->polling_period;
+/* FIXME:		crtouch->tsc_poll_timer.data		= (unsigned long)crtouch; */
 		add_timer(&crtouch->tsc_poll_timer);
 		dev_dbg(&client->dev, "Configured to poll every %d ms\n", crtouch->polling_period);
 	}

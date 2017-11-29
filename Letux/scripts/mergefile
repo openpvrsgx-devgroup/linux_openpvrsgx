@@ -88,6 +88,7 @@ work/letux-base/extern/bno055
 work/letux-base/hns/mmc/txs02612
 work/letux-base/tps6105x-flashlight
 work/letux-base/hns/input/crtouch
+work/hns/drivers/gpio/gpio-pcal6524
 
 # not for upstreaming
 work/letux-base/marek/am335x-hwmon

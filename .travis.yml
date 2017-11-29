@@ -82,7 +82,7 @@ matrix:
             - ubuntu-toolchain-r-test
           packages:
             - gcc-4.9
-      env: COMPILER=gcc-4.9 KVER=3.16.50
+      env: COMPILER=gcc-4.9 KVER=3.14.79
     - compiler: gcc
       addons:
         apt:
@@ -90,4 +90,4 @@ matrix:
             - ubuntu-toolchain-r-test
           packages:
             - gcc-5
-      env: COMPILER=gcc-5 KVER=3.14.79
+      env: COMPILER=gcc-5 KVER=3.10.108

@@ -2784,10 +2784,16 @@ static void OSTimerCallbackBody(TIMER_CALLBACK_DATA *psTimerCBData)
  @Return   NONE
 
 ******************************************************************************/
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,15,0))
+static IMG_VOID OSTimerCallbackWrapper(struct timer_list *t)
+{
+    TIMER_CALLBACK_DATA	*psTimerCBData = from_timer(psTimerCBData, t, sTimer);
+#else
 static IMG_VOID OSTimerCallbackWrapper(IMG_UINTPTR_T uiData)
 {
     TIMER_CALLBACK_DATA	*psTimerCBData = (TIMER_CALLBACK_DATA*)uiData;
-    
+#endif
+   
 #if defined(PVR_LINUX_TIMERS_USING_WORKQUEUES) || defined(PVR_LINUX_TIMERS_USING_SHARED_WORKQUEUE)
     int res;
 
@@ -2887,12 +2893,16 @@ IMG_HANDLE OSAddTimer(PFN_TIMER_FUNC pfnTimerFunc, IMG_VOID *pvData, IMG_UINT32 
                                 ?	1
                                 :	((HZ * ui32MsTimeout) / 1000);
     /* initialise object */
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,15,0))
+    timer_setup(&psTimerCBData->sTimer, OSTimerCallbackWrapper, 0);
+#else
     init_timer(&psTimerCBData->sTimer);
-    
     /* setup timer object */
     /* PRQA S 0307,0563 1 */ /* ignore warning about inconpartible ptr casting */
     psTimerCBData->sTimer.function = (IMG_VOID *)OSTimerCallbackWrapper;
     psTimerCBData->sTimer.data = (IMG_UINTPTR_T)psTimerCBData;
+#endif
     
     return (IMG_HANDLE)(ui + 1);
 }

@@ -1703,7 +1703,29 @@ CONFIG_ATA_BMDMA=y
 #
 # Generic fallback / legacy drivers
 #
-# CONFIG_MD is not set
+CONFIG_MD=y
+# CONFIG_BLK_DEV_MD is not set
+# CONFIG_BCACHE is not set
+CONFIG_BLK_DEV_DM_BUILTIN=y
+CONFIG_BLK_DEV_DM=m
+# CONFIG_DM_MQ_DEFAULT is not set
+# CONFIG_DM_DEBUG is not set
+CONFIG_DM_CRYPT=m
+# CONFIG_DM_SNAPSHOT is not set
+# CONFIG_DM_THIN_PROVISIONING is not set
+# CONFIG_DM_CACHE is not set
+# CONFIG_DM_ERA is not set
+# CONFIG_DM_MIRROR is not set
+# CONFIG_DM_RAID is not set
+# CONFIG_DM_ZERO is not set
+# CONFIG_DM_MULTIPATH is not set
+# CONFIG_DM_DELAY is not set
+# CONFIG_DM_UEVENT is not set
+# CONFIG_DM_FLAKEY is not set
+# CONFIG_DM_VERITY is not set
+# CONFIG_DM_SWITCH is not set
+# CONFIG_DM_LOG_WRITES is not set
+# CONFIG_DM_INTEGRITY is not set
 # CONFIG_TARGET_CORE is not set
 CONFIG_NETDEVICES=y
 CONFIG_MII=y
@@ -1718,7 +1740,7 @@ CONFIG_NET_CORE=y
 # CONFIG_NETCONSOLE is not set
 # CONFIG_NETPOLL is not set
 # CONFIG_NET_POLL_CONTROLLER is not set
-# CONFIG_TUN is not set
+CONFIG_TUN=m
 # CONFIG_TUN_VNET_CROSS_LE is not set
 # CONFIG_VETH is not set
 # CONFIG_NLMON is not set
@@ -4868,7 +4890,7 @@ CONFIG_ANDROID_BINDER_IPC=y
 CONFIG_ANDROID_BINDER_DEVICES="binder"
 CONFIG_ANDROID_BINDER_IPC_32BIT=y
 # CONFIG_ANDROID_BINDER_IPC_SELFTEST is not set
-# CONFIG_DAX is not set
+CONFIG_DAX=m
 CONFIG_NVMEM=y
 # CONFIG_STM is not set
 # CONFIG_INTEL_TH is not set

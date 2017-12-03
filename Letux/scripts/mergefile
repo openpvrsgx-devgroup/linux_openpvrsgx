@@ -116,7 +116,9 @@ work/letux-base/kemnade/charging_fixes
 work/letux-base/hns/gta04/pm
 work/letux-base/hacks
 work/letux-base/omap2plus
-work/letux-base/pvr
+-work/letux-base/pvr
+# gpu/pvr: incomplete! Is missing defconfig
+work/letux-base/hns/gpu/pvr
 work/letux-base/omapdrm
 work/letux-base/mmc
 work/letux-base/ubi-fs
@@ -133,8 +135,6 @@ work/letux-base/drivers-keyboard
 -work/letux-base/extern/omap5-idle
 -work/letux-base/extern/omap-hsmmc
 -work/letux-base/extern/omap/reset-controller
-# gpu/pvr: incomplete! Is missing defconfig and DTS patches
--work/letux-base/hns/gpu/pvr
 -work/letux-base/hns/video/dss/antitear
 -work/letux-base/lukas/android
 -work/letux-base/mvduin/patch/tiler-buf-dumb

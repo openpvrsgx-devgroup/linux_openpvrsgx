@@ -112,6 +112,67 @@ static struct omap_hwmod omap3xxx_iva_hwmod = {
 	},
 };
 
+/* gfx */
+
+static struct omap_hwmod_sysc_fields omap3_hwmod_sysc_type_gfx = {
+	.midle_shift	= 4,
+	.sidle_shift	= 2,
+};
+
+static struct omap_hwmod_class_sysconfig omap3_sgx_sysc = {
+	.rev_offs	= 0,
+	.sysc_offs	= 0x10,
+	.sysc_flags	= SYSC_HAS_MIDLEMODE | SYSC_HAS_SIDLEMODE,
+	.idlemodes	= SIDLE_FORCE | SIDLE_NO | SIDLE_SMART |
+			  MSTANDBY_FORCE | MSTANDBY_NO | MSTANDBY_SMART,
+	.sysc_fields	= &omap3_hwmod_sysc_type_gfx,
+};
+
+static struct omap_hwmod_class omap3xxx_gfx_hwmod_class = {
+	.name	= "gfx",
+	.sysc	= &omap3_sgx_sysc,
+};
+
+static struct omap_hwmod_rst_info omap3xxx_gfx_resets[] = {
+#if 0	// does not exist or is not required
+	{ .name = "gfx", .rst_shift = 0, .st_shift = 0},
+#endif
+};
+
+struct omap_hwmod omap3xxx_gfx_hwmod = {
+	.name		= "gfx",
+	.class		= &omap3xxx_gfx_hwmod_class,
+	.clkdm_name	= "sgx_clkdm",
+	.main_clk	= "sgx_fck",
+	.prcm		= {
+		.omap2	= {
+			.prcm_reg_id = 1,
+			.module_offs = OMAP3430ES2_SGX_MOD,
+			.module_bit = OMAP3430ES2_CM_FCLKEN_SGX_EN_SGX_SHIFT,
+			.idlest_reg_id = 1,
+			.idlest_idle_bit = OMAP3430ES2_ST_SGX_SHIFT,
+		},
+	},
+	.rst_lines	= omap3xxx_gfx_resets,
+	.rst_lines_cnt	= ARRAY_SIZE(omap3xxx_gfx_resets),
+};
+
+/* l3_main -> gfx */
+static struct omap_hwmod_ocp_if omap3xxx_l3_main__gfx = {
+	.master		= &omap3xxx_l3_main_hwmod,
+	.slave		= &omap3xxx_gfx_hwmod,
+	.clk		= "sgx_ick",
+	.user		= OCP_USER_MPU | OCP_USER_SDMA,
+	};
+
+/* gfx -> l3_main */
+static struct omap_hwmod_ocp_if omap3xxx_gfx__l3_main = {
+	.master		= &omap3xxx_gfx_hwmod,
+	.slave		= &omap3xxx_l3_main_hwmod,
+	.clk		= "core_l3_ick",
+	.user		= OCP_USER_MPU | OCP_USER_SDMA,
+	};
+
 /*
  * 'debugss' class
  * debug and emulation sub system
@@ -2643,6 +2704,8 @@ static struct omap_hwmod_ocp_if *omap3xxx_hwmod_ocp_ifs[] __initdata = {
 	&omap34xx_l4_core__mcspi4,
 	&omap3xxx_l4_wkup__counter_32k,
 	&omap3xxx_l3_main__gpmc,
+	&omap3xxx_l3_main__gfx,
+	&omap3xxx_gfx__l3_main,
 	NULL,
 };
 

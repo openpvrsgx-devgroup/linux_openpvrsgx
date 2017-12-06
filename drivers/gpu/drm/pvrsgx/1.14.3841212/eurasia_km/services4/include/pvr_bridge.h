@@ -1423,6 +1423,19 @@ typedef struct PVRSRV_BRIDGE_OUT_ALLOCDEVICEMEM_TAG
 
 
 /******************************************************************************
+ *	'bridge out' free device memory
+ *****************************************************************************/
+typedef struct PVRSRV_BRIDGE_OUT_FREEDEVICEMEM_TAG
+{
+	PVRSRV_ERROR            eError;
+#if defined (PVRSRV_DEVMEM_TIME_STATS)
+	IMG_UINT32				ui32TimeToDevUnmap;
+#endif
+
+} PVRSRV_BRIDGE_OUT_FREEDEVICEMEM;
+
+
+/******************************************************************************
  *	'bridge out' export device memory
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_OUT_EXPORTDEVICEMEM_TAG

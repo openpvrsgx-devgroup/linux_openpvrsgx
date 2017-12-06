@@ -68,8 +68,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "srvkm.h"
 #include "ttrace.h"
 
-#include "owl_gpu_clk.h"
-
 #if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE)
 #include "systrace.h"
 #endif
@@ -300,6 +298,9 @@ static PVRSRV_ERROR InitDevInfo(PVRSRV_PER_PROCESS_DATA *psPerProc,
 	psDevInfo->ui32MasterClkGateStatus2Reg = psInitInfo->ui32MasterClkGateStatus2Reg;
 	psDevInfo->ui32MasterClkGateStatus2Mask = psInitInfo->ui32MasterClkGateStatus2Mask;
 #endif /* SGX_FEATURE_MP */
+#if defined(SGX_FEATURE_AUTOCLOCKGATING)
+	psDevInfo->bDisableClockGating = psInitInfo->bDisableClockGating;
+#endif
 
 
 	/* Initialise Dev Data */
@@ -2105,12 +2106,10 @@ static IMG_VOID SGX_MISRHandler (IMG_VOID *pvData)
 		HWRecoveryResetSGX(psDeviceNode, 0, ISR_ID);
 	}
 
-#if defined(OS_SUPPORTS_IN_LISR)
 	if (psDeviceNode->bReProcessDeviceCommandComplete)
 	{
 		SGXScheduleProcessQueuesKM(psDeviceNode);
 	}
-#endif
 
 	SGXTestActivePowerEvent(psDeviceNode, ISR_ID);
 	
@@ -3278,7 +3277,7 @@ PVRSRV_ERROR SGXGetMiscInfoKM(PVRSRV_SGXDEV_INFO	*psDevInfo,
 
 		case SGX_MISC_INFO_REQUEST_CLOCKSPEED_SLCSIZE:
 		{
-			psMiscInfo->uData.sQueryClockSpeedSLCSize.ui32SGXClockSpeed = GPU_Coreclk_Get(); //SYS_SGX_CLOCK_SPEED;
+			psMiscInfo->uData.sQueryClockSpeedSLCSize.ui32SGXClockSpeed = SYS_SGX_CLOCK_SPEED;
 #if defined(SGX_FEATURE_SYSTEM_CACHE) && defined(SYS_SGX_SLC_SIZE)
 			psMiscInfo->uData.sQueryClockSpeedSLCSize.ui32SGXSLCSize = SYS_SGX_SLC_SIZE;
 #else

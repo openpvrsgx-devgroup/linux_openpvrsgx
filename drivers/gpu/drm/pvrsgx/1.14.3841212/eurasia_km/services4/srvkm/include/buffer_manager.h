@@ -85,6 +85,11 @@ struct _BM_MAPPING_
 	IMG_SIZE_T			uSizeVM;
     IMG_HANDLE          hOSMemHandle;
 	IMG_UINT32			ui32Flags;
+#if defined (PVRSRV_DEVMEM_TIME_STATS)
+	IMG_UINT32			ui32TimeToDevMap;	/* Time taken (in microseconds) to map this memory in device MMU */
+	IMG_UINT32			*pui32TimeToDevUnmap; /* Time taken (in microseconds) to unmap this memory from Device MMU.
+													NOTE - API user provided address to store this info, if at all  */
+#endif
 
 	/* Sparse mapping data */
 	IMG_UINT32			ui32ChunkSize;
@@ -298,6 +303,9 @@ BM_Reinitialise (PVRSRV_DEVICE_NODE *psDeviceNode);
  *  @Input ui32NumVirtChunks - Number of virtual chunks
  *  @Input ui32NumPhysChunks - Number of physical chunks
  *  @Input pabMapChunk - Chunk mapping array
+ *  @Output pui32TimeToDevMap - Available only when PVRSRV_DEVMEM_TIME_STATS defined,
+ *                              contains time taken (in microseconds) to map this buffer
+ *                              to Device MMU.
  *  @Output phBuf - receives the buffer handle.
  *  @Return IMG_TRUE - Success, IMG_FALSE - Failed.
  */
@@ -313,6 +321,9 @@ BM_Alloc (IMG_HANDLE			hDevMemHeap,
 			IMG_UINT32			ui32NumVirtChunks,
 			IMG_UINT32			ui32NumPhysChunks,
 			IMG_BOOL			*pabMapChunk,
+			#if defined (PVRSRV_DEVMEM_TIME_STATS)
+			IMG_UINT32			*pui32TimeToDevMap,
+			#endif
 			BM_HANDLE			*phBuf);
 
 /**
@@ -351,11 +362,17 @@ BM_Wrap (	IMG_HANDLE hDevMemHeap,
  *  Free a buffer previously allocated via BM_Alloc.
  *
  *  @Input  hBuf - buffer handle.
+ *  @Output pui32TimeToDevUnmap - Time taken in us to "unmap"
+ *		the memory from Device MMU
  *  @Return None.
  */
 IMG_VOID
 BM_Free (BM_HANDLE hBuf,
-		IMG_UINT32 ui32Flags);
+		IMG_UINT32 ui32Flags
+		#if defined(PVRSRV_DEVMEM_TIME_STATS)
+		, IMG_UINT32 *pui32TimeToDevUnmap
+		#endif
+		);
 
 
 /**

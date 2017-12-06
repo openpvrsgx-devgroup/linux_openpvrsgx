@@ -1,23 +1,23 @@
 ########################################################################### ###
 #@Copyright     Copyright (c) Imagination Technologies Ltd. All Rights Reserved
 #@License       Dual MIT/GPLv2
-# 
+#
 # The contents of this file are subject to the MIT license as set out below.
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
-# 
+#
 # Alternatively, the contents of this file may be used under the terms of
 # the GNU General Public License Version 2 ("GPL") in which case the provisions
 # of GPL are applicable instead of those above.
-# 
+#
 # If you wish to allow use of your version of this file only under the terms of
 # GPL, and not to allow others to use your version of this file under the terms
 # of the MIT license, indicate your decision by deleting the provisions above
@@ -25,10 +25,10 @@
 # out in the file called "GPL-COPYING" included in this distribution. If you do
 # not delete the provisions above, a recipient may use your version of this file
 # under the terms of either the MIT license or GPL.
-# 
+#
 # This License is also included in this distribution in the file called
 # "MIT-COPYING".
-# 
+#
 # EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
 # PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
 # BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
@@ -92,7 +92,7 @@ OBJS += \
 	services4/system/$(PVR_SYSTEM)/sysutils.o
 #	services4/system/$(PVR_SYSTEM)/owl_gpu_clk.o \
 #	services4/system/$(PVR_SYSTEM)/owl_gpu_dvfs.o
-	
+
 
 ifeq ($(SUPPORT_PVRSRV_DEVICE_CLASS),1)
 OBJS += \
@@ -185,6 +185,19 @@ CFLAGS_mmu.o := -Werror
 CFLAGS_pb.o := -Werror
 endif
 
+ccflags-y += \
+        -I$(TOP)/tools/intern/debug/dbgdriv/common \
+        -I$(TOP)/tools/intern/debug/client
+
+OBJS += \
+        tools/intern/debug/dbgdriv/common/dbgdriv.o \
+        tools/intern/debug/dbgdriv/common/ioctl.o \
+        tools/intern/debug/dbgdriv/common/handle.o \
+        tools/intern/debug/dbgdriv/common/hotkey.o \
+        tools/intern/debug/dbgdriv/linux/main.o \
+        tools/intern/debug/dbgdriv/linux/hostfunc.o
+
+
 ifeq ($(SUPPORT_DRI_DRM),1)
 
 OBJS += \
@@ -202,13 +215,14 @@ endif # SUPPORT_DRI_DRM
 
 ccflags-y += \
 	-I$(TOP)/services4/3rdparty/dc_sunxi \
-	-Idrivers/video 
+	-Idrivers/video
+
 #	-Iarch/arm/plat-omap/include
 
 OBJS += \
 	services4/3rdparty/dc_sunxi/dc_sunxi_displayclass.o \
 
-pvrsrvkm-objs := $(OBJS) 
+pvrsrvkm-objs := $(OBJS)
 
 
 ccflags-y += -I$(TOP)/services4/3rdparty/bufferclass_example

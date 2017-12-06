@@ -130,7 +130,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "lock.h"
 #include "linkage.h"
 #include "buffer_manager.h"
-#include "owl_gpu_clk.h"
 #if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
 #include "pvr_sync.h"
 #endif
@@ -1209,8 +1208,6 @@ static void __exit PVRCore_Cleanup(void)
 	}
 #endif	/* (LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,22)) */
 #endif	/* !defined(SUPPORT_DRI_DRM) */
-
-    gpu_clock_deinit();
 
 #if defined(PVR_LDM_MODULE)
 

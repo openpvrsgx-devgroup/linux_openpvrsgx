@@ -77,21 +77,6 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmitTransferKM(IMG_HANDLE hDevHandle, PVRSRV_TRANSF
 	IMG_UINT32					ui32RealDstSyncNum = 0;
 
 
-#if defined(PDUMP)
-	IMG_BOOL bPersistentProcess = IMG_FALSE;
-	/*
-	 *	For persistent processes, the HW kicks should not go into the
-	 *	extended init phase; only keep memory transactions from the
-	 *	window system which are necessary to run the client app.
-	 */
-	{
-		PVRSRV_PER_PROCESS_DATA* psPerProc = PVRSRVFindPerProcessData();
-		if(psPerProc != IMG_NULL)
-		{
-			bPersistentProcess = psPerProc->bPDumpPersistent;
-		}
-	}
-#endif /* PDUMP */
 #if defined(FIX_HW_BRN_31620)
 	hDevMemContext = psKick->hDevMemContext;
 #endif

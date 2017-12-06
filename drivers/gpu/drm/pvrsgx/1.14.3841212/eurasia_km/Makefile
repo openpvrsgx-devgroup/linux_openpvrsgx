@@ -51,7 +51,8 @@ ccflags-y += -D__linux__ -I$(TOP) -include config_kernel.h\
  -I$(TOP)/services4/srvkm/common \
  -I$(TOP)/services4/srvkm/devices/sgx \
  -I$(TOP)/services4/srvkm/env/linux \
- -I$(TOP)/services4/srvkm/include
+ -I$(TOP)/services4/srvkm/include \
+ -I$(TOP)/tools/intern/debug/client
 
 ccflags-y += -I$(TOP)/services4/srvkm/hwdefs
 
@@ -88,9 +89,9 @@ OBJS += \
 	services4/srvkm/bridged/bridged_support.o \
 	services4/srvkm/bridged/bridged_pvr_bridge.o \
 	services4/system/$(PVR_SYSTEM)/sysconfig.o \
-	services4/system/$(PVR_SYSTEM)/sysutils.o \
-	services4/system/$(PVR_SYSTEM)/owl_gpu_clk.o \
-	services4/system/$(PVR_SYSTEM)/owl_gpu_dvfs.o
+	services4/system/$(PVR_SYSTEM)/sysutils.o
+#	services4/system/$(PVR_SYSTEM)/owl_gpu_clk.o \
+#	services4/system/$(PVR_SYSTEM)/owl_gpu_dvfs.o
 	
 
 ifeq ($(SUPPORT_PVRSRV_DEVICE_CLASS),1)

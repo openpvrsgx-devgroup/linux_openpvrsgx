@@ -400,6 +400,26 @@ typedef struct _PVRSRV_MEMBLK_
  ******************************************************************************
  * Memory Management (externel interface)
  *****************************************************************************/
+#if defined (PVRSRV_DEVMEM_TIME_STATS)
+typedef struct _DEVMEM_UNMAPPING_TIME_STATS_
+{
+	IMG_UINT32	ui32TimeToCPUUnmap;
+	IMG_UINT32	ui32TimeToDevUnmap;
+} DEVMEM_UNMAPPING_TIME_STATS;
+
+typedef struct _PVRSRV_DEVMEM_TIMING_STATS_
+{
+	/* This struct holds time taken to map/unmap device memory into CPU/GPU in microsec granularity */
+	struct
+	{
+		IMG_UINT32	ui32TimeToCPUMap;
+		IMG_UINT32	ui32TimeToDevMap;
+	} sDevMemMapTimes;
+
+	DEVMEM_UNMAPPING_TIME_STATS *psDevMemUnmapTimes;	/* User supplied space for "unmap" timings */
+} PVRSRV_DEVMEM_TIMING_STATS;
+#endif
+
 typedef struct _PVRSRV_KERNEL_MEM_INFO_ *PPVRSRV_KERNEL_MEM_INFO;
 
 typedef struct _PVRSRV_CLIENT_MEM_INFO_
@@ -450,6 +470,10 @@ typedef struct _PVRSRV_CLIENT_MEM_INFO_
 #if defined(SUPPORT_DMABUF)
 	IMG_SIZE_T							uiDmaBufSize;
 #endif /* defined(SUPPORT_ION) */
+
+#if defined (PVRSRV_DEVMEM_TIME_STATS)
+	PVRSRV_DEVMEM_TIMING_STATS			sDevMemTimingStats;
+#endif
 
 	/*
 		ptr to next mem info

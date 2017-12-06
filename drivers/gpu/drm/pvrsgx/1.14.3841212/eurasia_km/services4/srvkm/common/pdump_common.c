@@ -83,10 +83,7 @@ IMG_BOOL _PDumpIsProcessActive(IMG_VOID)
 	PVRSRV_PER_PROCESS_DATA* psPerProc = PVRSRVFindPerProcessData();
 	if(psPerProc == IMG_NULL)
 	{
-		/* FIXME: kernel process logs some comments when kernel module is
-		 * loaded, want to keep those.
-		 */
-		return IMG_TRUE;
+		return IMG_FALSE;
 	}
 	return psPerProc->bPDumpActive;
 }
@@ -932,6 +929,7 @@ PVRSRV_ERROR PDumpMemPolKM(PVRSRV_KERNEL_MEM_INFO		*psMemInfo,
 static PVRSRV_ERROR _PDumpMemIntKM(IMG_PVOID pvAltLinAddr,
 								   PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 								   IMG_UINT32 ui32Offset,
+								   IMG_UINT32 ui32PhyOffset,
 								   IMG_UINT32 ui32Bytes,
 								   IMG_UINT32 ui32Flags,
 								   IMG_HANDLE hUniqueTag)
@@ -1043,11 +1041,23 @@ static PVRSRV_ERROR _PDumpMemIntKM(IMG_PVOID pvAltLinAddr,
 		query the buffer manager for the physical pages that back the
 		virtual address
 	*/
-	PDumpOSCPUVAddrToPhysPages(psMemInfo->sMemBlk.hOSMemHandle,
-			ui32Offset,
-			pui8LinAddr,
-			psMMUAttrib->ui32DataPageMask,
-			&ui32PageByteOffset);
+
+	if (psMemInfo->ui32Flags & PVRSRV_MEM_SPARSE)
+	{
+		PDumpOSCPUVAddrToPhysPages(psMemInfo->sMemBlk.hOSMemHandle,
+				ui32PhyOffset,
+				pui8LinAddr,
+				psMMUAttrib->ui32DataPageMask,
+				&ui32PageByteOffset);
+	}
+	else
+	{
+		PDumpOSCPUVAddrToPhysPages(psMemInfo->sMemBlk.hOSMemHandle,
+				ui32Offset,
+				pui8LinAddr,
+				psMMUAttrib->ui32DataPageMask,
+				&ui32PageByteOffset);
+	}
 	ui32DataPageSize = psMMUAttrib->ui32DataPageMask + 1;
 	ui32NumPages = (ui32PageByteOffset + ui32Bytes + psMMUAttrib->ui32DataPageMask) / ui32DataPageSize;
 
@@ -1156,6 +1166,7 @@ PVRSRV_ERROR PDumpMemKM(IMG_PVOID pvAltLinAddr,
 		return _PDumpMemIntKM(pvAltLinAddr,
 							  psMemInfo,
 							  ui32Offset,
+							  0,
 							  ui32Bytes,
 							  ui32Flags,
 							  hUniqueTag);
@@ -2534,6 +2545,21 @@ PVRSRV_ERROR PDumpMemUM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 		IMG_UINT32 ui32BytesToCopy = 0;
 		IMG_UINT32 ui32InPageStart = ui32Offset & (~HOST_PAGEMASK);
 		IMG_UINT32 ui32PageOffset = ui32Offset & (HOST_PAGEMASK);
+		IMG_UINT32 ui32InPhyPageStart = 0;
+
+		if(ui32InPageStart != 0)
+		{
+			IMG_UINT32 ui32DummyInPageStart = 0;
+			
+			while(ui32DummyInPageStart != ui32InPageStart)
+			{
+				if (BM_MapPageAtOffset(BM_MappingHandleFromBuffer(psMemInfo->sMemBlk.hBuffer), ui32DummyInPageStart))
+				{
+					ui32InPhyPageStart += HOST_PAGESIZE();
+				}
+				ui32DummyInPageStart += HOST_PAGESIZE();
+			}
+		}
 
 		do
 		{
@@ -2558,6 +2584,7 @@ PVRSRV_ERROR PDumpMemUM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 				eError = _PDumpMemIntKM(pvAddrKM,
 										psMemInfo,
 										ui32PageOffset + ui32InPageStart,
+										ui32PageOffset + ui32InPhyPageStart,
 										ui32BytesToCopy,
 										ui32Flags,
 										hUniqueTag);
@@ -2575,6 +2602,7 @@ PVRSRV_ERROR PDumpMemUM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 					PVR_ASSERT(ui32BytesToCopy == 0);
 					return eError;
 				}
+				ui32InPhyPageStart += HOST_PAGESIZE();
 			}
 
 			VPTR_INC(pvAddrUM, ui32BytesToCopy);

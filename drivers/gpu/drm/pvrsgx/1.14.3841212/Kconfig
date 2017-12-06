@@ -12,12 +12,6 @@ config IMG_SGX_5xx
 	help
 	  Say M here if you have a IMG_SGX_5xx on the chip
 
-config IMG_ROGUE_T6xxx
-	tristate "ROGUE-T6230"
-	default  n
-	help
-		Say M here if you have a IMG_ROGUE_T6xxx on the chip
-
 endif
 
 

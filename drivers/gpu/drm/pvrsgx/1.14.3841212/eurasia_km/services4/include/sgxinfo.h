@@ -142,6 +142,9 @@ typedef struct _SGX_BRIDGE_INIT_INFO_
 	IMG_UINT32 ui32MasterClkGateStatus2Mask;
 #endif /* SGX_FEATURE_MP */
 
+#if defined(SGX_FEATURE_AUTOCLOCKGATING)
+	IMG_BOOL bDisableClockGating;
+#endif
 	IMG_UINT32 ui32CacheControl;
 
 	IMG_UINT32	asInitDevData[SGX_MAX_DEV_DATA];
@@ -269,7 +272,6 @@ typedef struct _SGX_CLIENT_INFO_
  *****************************************************************************/
 typedef struct _SGX_INTERNAL_DEVINFO_
 {
-	IMG_UINT32			ui32Flags;
 	IMG_HANDLE			hHostCtlKernelMemInfoHandle;
 	IMG_BOOL			bForcePTOff;
 } SGX_INTERNAL_DEVINFO;

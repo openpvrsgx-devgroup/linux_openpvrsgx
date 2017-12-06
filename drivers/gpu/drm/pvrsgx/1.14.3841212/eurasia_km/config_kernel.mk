@@ -1,6 +1,6 @@
 override KERNEL_COMPONENTS := srvkm bufferclass_example
-override EXTRA_PVRSRVKM_COMPONENTS := dc_omapfb3_linux
-override PVR_SYSTEM := omap
+override EXTRA_PVRSRVKM_COMPONENTS := dc_sunxi dbgdrv
+override PVR_SYSTEM := sunxi
 override BUILD := release
 override DEBUGLINK := 1
 override OPTIM := -Os

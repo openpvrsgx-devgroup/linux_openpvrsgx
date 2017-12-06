@@ -190,6 +190,10 @@ typedef struct _PVRSRV_KERNEL_MEM_INFO_
 #if defined (MEM_TRACK_INFO_DEBUG)
 	IMG_CHAR heapId[128];
 #endif
+#if defined (PVRSRV_DEVMEM_TIME_STATS)
+	IMG_UINT32 ui32TimeToDevMap;
+	IMG_UINT32 *pui32TimeToDevUnmap;	/* API user to provide space for storing "unmap" time */
+#endif
 } PVRSRV_KERNEL_MEM_INFO;
 
 

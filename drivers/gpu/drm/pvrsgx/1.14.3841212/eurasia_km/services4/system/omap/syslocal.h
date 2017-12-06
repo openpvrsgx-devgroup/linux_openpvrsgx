@@ -72,7 +72,31 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define	PVR_LINUX_DYNAMIC_SGX_RESOURCE_INFO
 #include <linux/platform_device.h>
 #endif
+
+#if ((defined(DEBUG) || defined(TIMING)) && \
+    (LINUX_VERSION_CODE == KERNEL_VERSION(2,6,34))) && \
+    !defined(PVR_NO_OMAP_TIMER)
+/*
+ * We need to explicitly enable the GPTIMER11 clocks, or we'll get an
+ * abort when we try to access the timer registers.
+ */
+#define	PVR_OMAP4_TIMING_PRCM
 #endif
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,35))
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,8,13))
+#include <plat/gpu.h>
+#endif
+#if !defined(PVR_NO_OMAP_TIMER)
+#define	PVR_OMAP_USE_DM_TIMER_API
+#include <plat/dmtimer.h>
+#endif
+#endif
+
+#if !defined(PVR_NO_OMAP_TIMER)
+#define PVR_OMAP_TIMER_BASE_IN_SYS_SPEC_DATA
+#endif
+#endif /* defined(__linux__) */
 
 #if !defined(NO_HARDWARE) && \
      defined(SYS_USING_INTERRUPTS)
@@ -157,6 +181,13 @@ typedef struct _SYS_SPECIFIC_DATA_TAG_
 	spinlock_t	sNotifyLock;
 	atomic_t	sNotifyLockCPU;
 	IMG_BOOL	bCallVDD2PostFunc;
+#endif
+#if defined(DEBUG) || defined(TIMING)
+	struct clk	*psGPT11_FCK;
+	struct clk	*psGPT11_ICK;
+#endif
+#if defined(PVR_OMAP_USE_DM_TIMER_API)
+	struct omap_dm_timer *psGPTimer;
 #endif
 	IMG_UINT32 ui32SGXFreqListSize;
 	IMG_UINT32 *pui32SGXFreqList;

@@ -192,8 +192,10 @@ IMG_VOID SGXTestActivePowerEvent (PVRSRV_DEVICE_NODE	*psDeviceNode,
 		/* Microkernel is idle and is requesting to be powered down. */
 		psSGXHostCtl->ui32InterruptClearFlags |= PVRSRV_USSE_EDM_INTERRUPT_ACTIVE_POWER;
 
+#if !defined(SUPPORT_PDUMP_MULTI_PROCESS)
 		/* Suspend pdumping. */
 		PDUMPSUSPEND();
+#endif
 
 #if defined(SYS_CUSTOM_POWERDOWN)
 		/*
@@ -211,8 +213,10 @@ IMG_VOID SGXTestActivePowerEvent (PVRSRV_DEVICE_NODE	*psDeviceNode,
 #endif
 		PVRSRVPowerUnlock(ui32CallerID);
 
+#if !defined(SUPPORT_PDUMP_MULTI_PROCESS)
 		/* Resume pdumping */
 		PDUMPRESUME();
+#endif
 	}
 
 	if (eError != PVRSRV_OK)
@@ -698,6 +702,9 @@ PVRSRV_ERROR SGXScheduleCCBCommandKM(PVRSRV_DEVICE_NODE		*psDeviceNode,
 		return eError;
 	}
 
+#if defined(SUPPORT_PDUMP_MULTI_PROCESS)
+	PDUMP_LOCK();
+#endif
 	/* Note that a power-up has been dumped in the init phase. */
 	PDUMPSUSPEND();
 
@@ -706,6 +713,9 @@ PVRSRV_ERROR SGXScheduleCCBCommandKM(PVRSRV_DEVICE_NODE		*psDeviceNode,
 										 PVRSRV_DEV_POWER_STATE_ON);
 
 	PDUMPRESUME();
+#if defined(SUPPORT_PDUMP_MULTI_PROCESS)
+	PDUMP_UNLOCK();
+#endif
 
 	if (eError == PVRSRV_OK)
 	{
@@ -811,7 +821,6 @@ PVRSRV_ERROR SGXGetInternalDevInfoKM(IMG_HANDLE hDevCookie,
 {
 	PVRSRV_SGXDEV_INFO *psDevInfo = (PVRSRV_SGXDEV_INFO *)((PVRSRV_DEVICE_NODE *)hDevCookie)->pvDevice;
 
-	psSGXInternalDevInfo->ui32Flags = psDevInfo->ui32Flags;
 	psSGXInternalDevInfo->bForcePTOff = (IMG_BOOL)psDevInfo->bForcePTOff;
 
 	/* This should be patched up by OS bridge code */

@@ -664,7 +664,9 @@ PVRSRVAllocDeviceMemBW(IMG_UINT32 ui32BridgeID,
 	psAllocDeviceMemOUT->sClientMemInfo.ui32Flags = psMemInfo->ui32Flags;
 	psAllocDeviceMemOUT->sClientMemInfo.uAllocSize = psMemInfo->uAllocSize;
 	psAllocDeviceMemOUT->sClientMemInfo.hMappingInfo = psMemInfo->sMemBlk.hOSMemHandle;
-
+#if defined (PVRSRV_DEVMEM_TIME_STATS)
+	psAllocDeviceMemOUT->sClientMemInfo.sDevMemTimingStats.sDevMemMapTimes.ui32TimeToDevMap = psMemInfo->ui32TimeToDevMap;
+#endif
 	PVRSRVAllocHandleNR(psPerProc->psHandleBase,
 					  &psAllocDeviceMemOUT->sClientMemInfo.hKernelMemInfo,
 					  psMemInfo,
@@ -719,43 +721,54 @@ PVRSRVAllocDeviceMemBW(IMG_UINT32 ui32BridgeID,
 static IMG_INT
 PVRSRVFreeDeviceMemBW(IMG_UINT32 ui32BridgeID,
 					  PVRSRV_BRIDGE_IN_FREEDEVICEMEM *psFreeDeviceMemIN,
-					  PVRSRV_BRIDGE_RETURN *psRetOUT,
+					  PVRSRV_BRIDGE_OUT_FREEDEVICEMEM *psFreeDeviceMemOUT,
 					  PVRSRV_PER_PROCESS_DATA *psPerProc)
 {
 	IMG_HANDLE hDevCookieInt;
-	IMG_VOID *pvKernelMemInfo;
+	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
+#if defined (PVRSRV_DEVMEM_TIME_STATS)
+	IMG_UINT32 ui32TimeToDevUnmap;
+#endif
 
 	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID, PVRSRV_BRIDGE_FREE_DEVICEMEM);
 
-	psRetOUT->eError =
+	psFreeDeviceMemOUT->eError =
 		PVRSRVLookupHandle(psPerProc->psHandleBase, &hDevCookieInt,
 						   psFreeDeviceMemIN->hDevCookie,
 						   PVRSRV_HANDLE_TYPE_DEV_NODE);
 
-	if(psRetOUT->eError != PVRSRV_OK)
+	if(psFreeDeviceMemOUT->eError != PVRSRV_OK)
 	{
 		return 0;
 	}
 
-	psRetOUT->eError =
+	psFreeDeviceMemOUT->eError =
         PVRSRVLookupHandle(psPerProc->psHandleBase,
-                           &pvKernelMemInfo,
+                           (IMG_PVOID *)&psKernelMemInfo,
 						   psFreeDeviceMemIN->psKernelMemInfo,
 						   PVRSRV_HANDLE_TYPE_MEM_INFO);
 
-	if(psRetOUT->eError != PVRSRV_OK)
+	if(psFreeDeviceMemOUT->eError != PVRSRV_OK)
 	{
 		return 0;
 	}
 
-	psRetOUT->eError = PVRSRVFreeDeviceMemKM(hDevCookieInt, pvKernelMemInfo);
+#if defined (PVRSRV_DEVMEM_TIME_STATS)
+	psKernelMemInfo->pui32TimeToDevUnmap = &ui32TimeToDevUnmap;
+#endif
 
-	if(psRetOUT->eError != PVRSRV_OK)
+	psFreeDeviceMemOUT->eError = PVRSRVFreeDeviceMemKM(hDevCookieInt, psKernelMemInfo);
+
+	if(psFreeDeviceMemOUT->eError != PVRSRV_OK)
 	{
 		return 0;
 	}
 
-	psRetOUT->eError =
+#if defined (PVRSRV_DEVMEM_TIME_STATS)
+	psFreeDeviceMemOUT->ui32TimeToDevUnmap = ui32TimeToDevUnmap;
+#endif
+
+	psFreeDeviceMemOUT->eError =
 		PVRSRVReleaseHandle(psPerProc->psHandleBase,
 							psFreeDeviceMemIN->psKernelMemInfo,
 							PVRSRV_HANDLE_TYPE_MEM_INFO);

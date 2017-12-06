@@ -49,6 +49,7 @@ static struct twl4030_gpio_platform_data twl_gpio_auxdata;
 #if defined(CONFIG_SOC_AM33XX) || defined(CONFIG_SOC_AM43XX)
 static struct gfx_sgx_platform_data sgx_pdata = {
 	.reset_name = "gfx",
+	.assert_reset = omap_device_assert_hardreset,
 	.deassert_reset = omap_device_deassert_hardreset,
 };
 #endif

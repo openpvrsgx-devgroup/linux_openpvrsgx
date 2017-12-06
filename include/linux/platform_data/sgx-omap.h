@@ -18,5 +18,6 @@
 struct gfx_sgx_platform_data {
 	const char *reset_name;
 
+	int (*assert_reset)(struct platform_device *pdev, const char *name);
 	int (*deassert_reset)(struct platform_device *pdev, const char *name);
 };

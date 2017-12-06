@@ -50,9 +50,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "ocpdefs.h"
 
-#include "owl_gpu_dvfs.h"
-#include "owl_gpu_clk.h"
-
 /* top level system data anchor point*/
 SYS_DATA* gpsSysData = (SYS_DATA*)IMG_NULL;
 SYS_DATA  gsSysData;
@@ -325,11 +322,6 @@ PVRSRV_ERROR SysInitialise(IMG_VOID)
 #if !defined(SGX_DYNAMIC_TIMING_INFO)
 	SGX_TIMING_INFORMATION*	psTimingInfo;
 #endif
-
-	/* owl initialise. */
-	gpu_dvfs_create_sysfs(&gpsPVRLDMDev->dev);
-    PVR_DPF((PVR_DBG_MESSAGE,"SysInitialise"));
-
 	gpsSysData = &gsSysData;
 	OSMemSet(gpsSysData, 0, sizeof(SYS_DATA));
 
@@ -372,7 +364,7 @@ PVRSRV_ERROR SysInitialise(IMG_VOID)
 #if !defined(SGX_DYNAMIC_TIMING_INFO)
 	/* Set up timing information*/
 	psTimingInfo = &gsSGXDeviceMap.sTimingInfo;
-	psTimingInfo->ui32CoreClockSpeed = GPU_Coreclk_Get(); //SYS_SGX_CLOCK_SPEED;
+	psTimingInfo->ui32CoreClockSpeed = SYS_SGX_CLOCK_SPEED;
 	psTimingInfo->ui32HWRecoveryFreq = SYS_SGX_HWRECOVERY_TIMEOUT_FREQ; 
 #if defined(SUPPORT_ACTIVE_POWER_MANAGEMENT)
 	psTimingInfo->bEnableActivePM = IMG_TRUE;
@@ -517,6 +509,26 @@ PVRSRV_ERROR SysInitialise(IMG_VOID)
 	/* SGX defaults to D3 power state */
 	DisableSGXClocks(gpsSysData);
 #endif	/* SUPPORT_ACTIVE_POWER_MANAGEMENT */
+
+#if !defined(PVR_NO_OMAP_TIMER)
+#if defined(PVR_OMAP_TIMER_BASE_IN_SYS_SPEC_DATA)
+	TimerRegPhysBase = gsSysSpecificData.sTimerRegPhysBase;
+#else
+	TimerRegPhysBase.uiAddr = SYS_OMAP_GP11TIMER_REGS_SYS_PHYS_BASE;
+#endif
+	gpsSysData->pvSOCTimerRegisterKM = IMG_NULL;
+	gpsSysData->hSOCTimerRegisterOSMemHandle = 0;
+	if (TimerRegPhysBase.uiAddr != 0)
+	{
+		OSReservePhys(TimerRegPhysBase,
+				  4,
+				  PVRSRV_HAP_MULTI_PROCESS|PVRSRV_HAP_UNCACHED,
+				  IMG_NULL,
+				  (IMG_VOID **)&gpsSysData->pvSOCTimerRegisterKM,
+				  &gpsSysData->hSOCTimerRegisterOSMemHandle);
+	}
+#endif /* !defined(PVR_NO_OMAP_TIMER) */
+
 
 	return PVRSRV_OK;
 }
@@ -725,10 +737,6 @@ PVRSRV_ERROR SysDeinitialise (SYS_DATA *psSysData)
 	gpsSysSpecificData->bSGXInitComplete = IMG_FALSE;
 
 	gpsSysData = IMG_NULL;
-
-	/* owl deinitialise. */
-	//gpu_dvfs_create_sysfs(&gpsPVRLDMDev->dev);
-    gpu_dvfs_remove_sysfs(&gpsPVRLDMDev->dev);
 
 	return PVRSRV_OK;
 }

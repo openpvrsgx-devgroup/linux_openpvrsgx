@@ -142,17 +142,17 @@ typedef struct {
 	char dummy[4];
 } drm_pvr_dummy_arg;
 
-/* IOCTL numbers, relative to DRM_COMMAND_BASE */
-#define	DRM_IOCTL_PVR_SRVKM	_IOWR(0, DRM_PVR_SRVKM, PVRSRV_BRIDGE_PACKAGE)
-#define	DRM_IOCTL_PVR_IS_MASTER _IOW(0, DRM_PVR_IS_MASTER, drm_pvr_dummy_arg)
-#define	DRM_IOCTL_PVR_UNPRIV	_IOWR(0, DRM_PVR_UNPRIV, drm_pvr_unpriv_cmd)
+/* IOCTL numbers */
+#define	DRM_IOCTL_PVR_SRVKM	DRM_IOWR(DRM_COMMAND_BASE + DRM_PVR_SRVKM, PVRSRV_BRIDGE_PACKAGE)
+#define	DRM_IOCTL_PVR_IS_MASTER DRM_IOW(DRM_COMMAND_BASE + DRM_PVR_IS_MASTER, drm_pvr_dummy_arg)
+#define	DRM_IOCTL_PVR_UNPRIV	DRM_IOWR(DRM_COMMAND_BASE + DRM_PVR_UNPRIV, drm_pvr_unpriv_cmd)
 
 #if defined(PDUMP)
-#define	DRM_IOCTL_PVR_DBGDRV	_IOWR(0, DRM_PVR_DBGDRV, IOCTL_PACKAGE)
+#define	DRM_IOCTL_PVR_DBGDRV	DRM_IOWR(DRM_COMMAND_BASE + DRM_PVR_DBGDRV, IOCTL_PACKAGE)
 #endif
 
 #if defined(PVR_DISPLAY_CONTROLLER_DRM_IOCTL)
-#define	DRM_IOCTL_PVR_DISP	_IOWR(0, DRM_PVR_DISP, drm_pvr_display_cmd)
+#define	DRM_IOCTL_PVR_DISP	DRM_IOWR(DRM_COMMAND_BASE + DRM_PVR_DISP, drm_pvr_display_cmd)
 #endif
 #endif	/* !defined(SUPPORT_DRI_DRM_EXT) */
 

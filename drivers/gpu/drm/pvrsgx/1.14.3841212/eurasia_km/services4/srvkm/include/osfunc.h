@@ -84,7 +84,9 @@ extern "C" {
 #define PVRSRV_OS_PAGEABLE_HEAP		0x1 /* allocation pageable */
 #define PVRSRV_OS_NON_PAGEABLE_HEAP	0x2 /* allocation non pageable */
 
-
+#if defined (PVRSRV_DEVMEM_TIME_STATS)
+IMG_UINT64 OSClockMonotonicus(IMG_VOID);
+#endif
 IMG_UINT32 OSClockus(IMG_VOID);
 IMG_UINT32 OSGetPageSize(IMG_VOID);
 PVRSRV_ERROR OSInstallDeviceLISR(IMG_VOID *pvSysData,

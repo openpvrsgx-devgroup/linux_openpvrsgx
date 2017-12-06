@@ -92,7 +92,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define PVR_USE_PRE_REGISTERED_PLATFORM_DEV
 #endif
 
-#define PVR_LDM_DEVICE_TREE
 #if defined(PVR_LDM_DEVICE_TREE) && !defined(NO_HARDWARE)
 #define PVR_USE_DEVICE_TREE
 #endif
@@ -167,8 +166,7 @@ struct drm_device *gpsPVRDRMDev;
 #if defined(PVR_USE_DEVICE_TREE)
 static struct of_device_id asPlatIdList[] = {
 	{
-		//.compatible = SYS_SGX_DEV_NAME
-		.compatible = "actions,atm7039c-gpu"
+		.compatible = SYS_SGX_DEV_NAME
 	},
 	{}
 };
@@ -456,23 +454,20 @@ PVRSRVPciRemove(struct pci_dev *dev)
 #define	PVR_DRM_UNLOCKED	0
 #endif
 
-#if !defined(SUPPORT_DRI_DRM_EXT)
-
-#if defined(DRM_IOCTL_DEF)
-#define	PVR_DRM_IOCTL_DEF(ioctl, _func, _flags) DRM_IOCTL_DEF(DRM_##ioctl, _func, _flags)
-#else
-#define	PVR_DRM_IOCTL_DEF(ioctl, _func, _flags) DRM_IOCTL_DEF_DRV(ioctl, _func, _flags)
+#if !defined(DRM_IOCTL_DEF_DRV)
+#define DRM_IOCTL_DEF_DRV(ioctl, _func, _flags) DRM_IOCTL_DEF(DRM_##ioctl, _func, _flags)
 #endif
 
+#if !defined(SUPPORT_DRI_DRM_EXT)
 struct drm_ioctl_desc sPVRDrmIoctls[] = {
-	PVR_DRM_IOCTL_DEF(PVR_SRVKM, PVRSRV_BridgeDispatchKM, PVR_DRM_RENDER_ALLOW | PVR_DRM_UNLOCKED),
-	PVR_DRM_IOCTL_DEF(PVR_IS_MASTER, PVRDRMIsMaster, PVR_DRM_RENDER_ALLOW | DRM_MASTER | PVR_DRM_UNLOCKED),
-	PVR_DRM_IOCTL_DEF(PVR_UNPRIV, PVRDRMUnprivCmd, PVR_DRM_RENDER_ALLOW | PVR_DRM_UNLOCKED),
+	DRM_IOCTL_DEF_DRV(PVR_SRVKM, PVRSRV_BridgeDispatchKM, PVR_DRM_RENDER_ALLOW | PVR_DRM_UNLOCKED),
+	DRM_IOCTL_DEF_DRV(PVR_IS_MASTER, PVRDRMIsMaster, PVR_DRM_RENDER_ALLOW | DRM_MASTER | PVR_DRM_UNLOCKED),
+	DRM_IOCTL_DEF_DRV(PVR_UNPRIV, PVRDRMUnprivCmd, PVR_DRM_RENDER_ALLOW | PVR_DRM_UNLOCKED),
 #if defined(PDUMP)
-	PVR_DRM_IOCTL_DEF(PVR_DBGDRV, dbgdrv_ioctl, PVR_DRM_RENDER_ALLOW | PVR_DRM_UNLOCKED),
+	DRM_IOCTL_DEF_DRV(PVR_DBGDRV, dbgdrv_ioctl, PVR_DRM_RENDER_ALLOW | PVR_DRM_UNLOCKED),
 #endif
 #if defined(DISPLAY_CONTROLLER) && defined(PVR_DISPLAY_CONTROLLER_DRM_IOCTL)
-	PVR_DRM_IOCTL_DEF(PVR_DISP, PVRDRM_Display_ioctl, DRM_MASTER | PVR_DRM_UNLOCKED)
+	DRM_IOCTL_DEF_DRV(PVR_DISP, PVRDRM_Display_ioctl, DRM_MASTER | PVR_DRM_UNLOCKED)
 #endif
 };
 
@@ -606,7 +601,7 @@ static struct drm_driver sPVRDrmDriver =
 #endif
 #endif
 #endif
-	.name = PVRSRV_MODNAME,
+	.name = "pvr",
 	.desc = PVR_DRM_DESC,
 	.date = PVR_DRM_DATE,
 	.major = PVRVERSION_MAJ,

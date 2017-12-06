@@ -201,13 +201,12 @@ endif
 endif # SUPPORT_DRI_DRM
 
 ccflags-y += \
-	-I$(TOP)/services4/3rdparty/dc_omapfb3_linux \
-	-Idrivers/video/omap2 \
-	-Iarch/arm/plat-omap/include
+	-I$(TOP)/services4/3rdparty/dc_sunxi \
+	-Idrivers/video 
+#	-Iarch/arm/plat-omap/include
 
 OBJS += \
-	services4/3rdparty/dc_omapfb3_linux/omaplfb_displayclass.o \
-	services4/3rdparty/dc_omapfb3_linux/omaplfb_linux.o
+	services4/3rdparty/dc_sunxi/dc_sunxi_displayclass.o \
 
 pvrsrvkm-objs := $(OBJS) 
 

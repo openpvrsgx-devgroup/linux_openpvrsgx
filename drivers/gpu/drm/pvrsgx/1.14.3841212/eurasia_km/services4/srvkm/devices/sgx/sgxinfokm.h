@@ -220,6 +220,9 @@ typedef struct _PVRSRV_SGXDEV_INFO_
 	IMG_UINT32				ui32MasterClkGateStatus2Reg;
 	IMG_UINT32				ui32MasterClkGateStatus2Mask;
 #endif /* SGX_FEATURE_MP */
+#if defined(SGX_FEATURE_AUTOCLOCKGATING)
+	IMG_BOOL				bDisableClockGating;
+#endif
 	SGX_INIT_SCRIPTS		sScripts;
 
 	/* Members associated with dummy PD needed for BIF reset */
@@ -251,8 +254,6 @@ typedef struct _PVRSRV_SGXDEV_INFO_
 #if defined(FIX_HW_BRN_31272) || defined(FIX_HW_BRN_31780) || defined(FIX_HW_BRN_33920)
 	PVRSRV_KERNEL_MEM_INFO			*psKernelSGXPTLAWriteBackMemInfo;
 #endif
-
-	IMG_UINT32				ui32Flags;
 
 	/* memory tiling range usage */
 	IMG_UINT32				ui32MemTilingUsage;

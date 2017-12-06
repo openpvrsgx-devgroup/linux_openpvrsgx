@@ -71,6 +71,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "poulsbo_linux.h"
 
 #include <linux/module.h>
+#include <linux/vmalloc.h>
 
 #if defined(SUPPORT_DRI_DRM)
 #include "pvr_drm.h"

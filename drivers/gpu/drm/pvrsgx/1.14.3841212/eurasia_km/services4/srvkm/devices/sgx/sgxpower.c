@@ -227,6 +227,7 @@ static IMG_VOID SGXStartTimer(PVRSRV_SGXDEV_INFO	*psDevInfo)
 }
 
 
+#if defined(SGX_FEATURE_AUTOCLOCKGATING)
 /*!
 ******************************************************************************
 
@@ -274,6 +275,7 @@ static IMG_VOID SGXPollForClockGating (PVRSRV_SGXDEV_INFO	*psDevInfo,
 	PDUMPCOMMENT("%s", pszComment);
 	PDUMPREGPOL(SGX_PDUMPREG_NAME, ui32Register, 0, ui32RegisterValue, PDUMP_POLL_OPERATOR_EQUAL);
 }
+#endif
 
 
 /*!
@@ -304,8 +306,10 @@ PVRSRV_ERROR SGXPrePowerState (IMG_HANDLE				hDevHandle,
 		PVRSRV_SGXDEV_INFO	*psDevInfo = psDeviceNode->pvDevice;
 		IMG_UINT32			ui32PowerCmd, ui32CompleteStatus;
 		SGXMKIF_COMMAND		sCommand = {0};
+#if defined(SGX_FEATURE_AUTOCLOCKGATING)
 		IMG_UINT32			ui32Core;
 		IMG_UINT32			ui32CoresEnabled;
+#endif
 
 		#if defined(SUPPORT_HW_RECOVERY)
 		/* Disable timer callback for HW recovery */
@@ -381,33 +385,39 @@ PVRSRV_ERROR SGXPrePowerState (IMG_HANDLE				hDevHandle,
 			PVR_DBG_BREAK;
 		}
 		#endif /* NO_HARDWARE && SUPPORT_LISR_MISR_SYNC*/
+		
+#if defined(SGX_FEATURE_AUTOCLOCKGATING)
+		if(psDevInfo->bDisableClockGating == IMG_FALSE)
+		{
 #if defined(SGX_FEATURE_MP)
-		ui32CoresEnabled = ((OSReadHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_MASTER_CORE) & EUR_CR_MASTER_CORE_ENABLE_MASK) >> EUR_CR_MASTER_CORE_ENABLE_SHIFT) + 1;
+			ui32CoresEnabled = ((OSReadHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_MASTER_CORE) & EUR_CR_MASTER_CORE_ENABLE_MASK) >> EUR_CR_MASTER_CORE_ENABLE_SHIFT) + 1;
 #else
-		ui32CoresEnabled = 1;
+			ui32CoresEnabled = 1;
 #endif
 
-		for (ui32Core = 0; ui32Core < ui32CoresEnabled; ui32Core++)
-		{
-			/* Wait for SGX clock gating. */
+			for (ui32Core = 0; ui32Core < ui32CoresEnabled; ui32Core++)
+			{
+				/* Wait for SGX clock gating. */
+				SGXPollForClockGating(psDevInfo,
+									SGX_MP_CORE_SELECT(psDevInfo->ui32ClkGateStatusReg, ui32Core),
+									psDevInfo->ui32ClkGateStatusMask,
+									"Wait for SGX clock gating");
+			}
+
+#if defined(SGX_FEATURE_MP)
+			/* Wait for SGX master clock gating. */
 			SGXPollForClockGating(psDevInfo,
-								  SGX_MP_CORE_SELECT(psDevInfo->ui32ClkGateStatusReg, ui32Core),
-								  psDevInfo->ui32ClkGateStatusMask,
-								  "Wait for SGX clock gating");
+								psDevInfo->ui32MasterClkGateStatusReg,
+								psDevInfo->ui32MasterClkGateStatusMask,
+								"Wait for SGX master clock gating");
+
+			SGXPollForClockGating(psDevInfo,
+								psDevInfo->ui32MasterClkGateStatus2Reg,
+								psDevInfo->ui32MasterClkGateStatus2Mask,
+								"Wait for SGX master clock gating (2)");
+#endif /* SGX_FEATURE_MP */
 		}
-
-		#if defined(SGX_FEATURE_MP)
-		/* Wait for SGX master clock gating. */
-		SGXPollForClockGating(psDevInfo,
-							  psDevInfo->ui32MasterClkGateStatusReg,
-							  psDevInfo->ui32MasterClkGateStatusMask,
-							  "Wait for SGX master clock gating");
-
-		SGXPollForClockGating(psDevInfo,
-							  psDevInfo->ui32MasterClkGateStatus2Reg,
-							  psDevInfo->ui32MasterClkGateStatus2Mask,
-							  "Wait for SGX master clock gating (2)");
-		#endif /* SGX_FEATURE_MP */
+#endif /* defined(SGX_FEATURE_AUTOCLOCKGATING) */
 
 		if (eNewPowerState == PVRSRV_DEV_POWER_STATE_OFF)
 		{

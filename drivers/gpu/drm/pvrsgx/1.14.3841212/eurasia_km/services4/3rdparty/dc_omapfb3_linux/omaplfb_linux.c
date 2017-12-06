@@ -67,6 +67,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  **************************************************************************/
 
 #include <linux/version.h>
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38))
+#ifndef AUTOCONF_INCLUDED
+#include <linux/config.h>
+#endif
+#endif
+
 #include <asm/atomic.h>
 
 #if defined(SUPPORT_DRI_DRM)
@@ -82,7 +89,75 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <linux/workqueue.h>
 #include <linux/fb.h>
 #include <linux/console.h>
+#include <linux/omapfb.h>
 #include <linux/mutex.h>
+
+#if defined(PVR_OMAPLFB_DRM_FB)
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,0,0))
+#include <plat/display.h>
+#else
+#include <video/omapdss.h>
+#endif
+#include <linux/omap_gpu.h>
+#else	/* defined(PVR_OMAPLFB_DRM_FB) */
+/* OmapZoom.org OMAP3 2.6.29 kernel tree	- Needs mach/vrfb.h
+ * OmapZoom.org OMAP3 2.6.32 kernel tree	- No additional header required
+ * OmapZoom.org OMAP4 2.6.33 kernel tree	- No additional header required
+ * OmapZoom.org OMAP4 2.6.34 kernel tree	- Needs plat/vrfb.h
+ * Sholes 2.6.32 kernel tree			- Needs plat/vrfb.h
+ */
+#if defined(SYS_OMAP5_UEVM)
+#define PVR_OMAPFB3_OMAP5_UEVM
+#endif
+
+#if defined(PVR_OMAPFB3_OMAP5_UEVM)
+#define PVR_OMAPFB3_NEEDS_VIDEO_OMAPVRFB_H
+#else
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,34))
+#define PVR_OMAPFB3_NEEDS_PLAT_VRFB_H
+#endif
+#endif
+
+#if defined(PVR_OMAPFB3_NEEDS_VIDEO_OMAPVRFB_H)
+#include <video/omapvrfb.h>
+#else
+#if defined(PVR_OMAPFB3_NEEDS_PLAT_VRFB_H)
+#include <plat/vrfb.h>
+#else
+#if defined(PVR_OMAPFB3_NEEDS_MACH_VRFB_H)
+#include <mach/vrfb.h>
+#endif
+#endif
+#endif
+
+#if defined(DEBUG)
+#define	PVR_DEBUG DEBUG
+#undef DEBUG
+#endif
+#include <omapfb/omapfb.h>
+#undef DBG
+#if defined(DEBUG)
+#undef DEBUG
+#endif
+#if defined(PVR_DEBUG)
+#define	DEBUG PVR_DEBUG
+#undef PVR_DEBUG
+#endif
+#endif	/* defined(PVR_OMAPLFB_DRM_FB) */
+
+#if defined(CONFIG_DSSCOMP)
+#if defined(CONFIG_DRM_OMAP_DMM_TILER)
+#include <../drivers/staging/omapdrm/omap_dmm_tiler.h>
+#include <../drivers/video/omap2/dsscomp/tiler-utils.h>
+#elif defined(CONFIG_TI_TILER)
+#include <mach/tiler.h>
+#else /* defined(CONFIG_DRM_OMAP_DMM_TILER) */
+#error CONFIG_DSSCOMP support requires either \
+       CONFIG_DRM_OMAP_DMM_TILER or CONFIG_TI_TILER
+#endif /* defined(CONFIG_DRM_OMAP_DMM_TILER) */
+#include <video/dsscomp.h>
+#include <plat/dsscomp.h>
+#endif /* defined(CONFIG_DSSCOMP) */
 
 #include "img_defs.h"
 #include "servicesext.h"
@@ -99,6 +174,24 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 
 MODULE_SUPPORTED_DEVICE(DEVNAME);
+
+#if !defined(PVR_OMAPLFB_DRM_FB)
+#if defined(PVR_OMAPFB3_OMAP5_UEVM)
+#define OMAP_DSS_DRIVER(drv, dev) struct omap_dss_driver *drv = (dev)->driver
+#define OMAP_DSS_MANAGER(man, dev) struct omap_overlay_manager *man = (dev)->output->manager
+#define	WAIT_FOR_VSYNC(man)	((man)->wait_for_vsync)
+#else	/* defined(PVR_OMAPFB3_OMAP5_UEVM) */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,34))
+#define OMAP_DSS_DRIVER(drv, dev) struct omap_dss_driver *drv = (dev) != NULL ? (dev)->driver : NULL
+#define OMAP_DSS_MANAGER(man, dev) struct omap_overlay_manager *man = (dev) != NULL ? (dev)->manager : NULL
+#define	WAIT_FOR_VSYNC(man)	((man)->wait_for_vsync)
+#else	/* (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,34)) */
+#define OMAP_DSS_DRIVER(drv, dev) struct omap_dss_device *drv = (dev)
+#define OMAP_DSS_MANAGER(man, dev) struct omap_dss_device *man = (dev)
+#define	WAIT_FOR_VSYNC(man)	((man)->wait_vsync)
+#endif	/* (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,34)) */
+#endif	/* defined(PVR_OMAPFB3_OMAP5_UEVM) */
+#endif	/* !defined(PVR_OMAPLFB_DRM_FB) */
 
 void *OMAPLFBAllocKernelMem(unsigned long ulSize)
 {
@@ -708,7 +801,32 @@ void OMAPLFBPrintInfo(OMAPLFB_DEVINFO *psDevInfo)
 /* Wait for VSync */
 OMAPLFB_BOOL OMAPLFBWaitForVSync(OMAPLFB_DEVINFO *psDevInfo)
 {
+#if defined(PVR_OMAPLFB_DRM_FB)
+	struct drm_connector *psConnector;
+
+	for (psConnector = NULL;
+		(psConnector = omap_fbdev_get_next_connector(psDevInfo->psLINFBInfo, psConnector)) != NULL;)
+	{
+		(void) omap_encoder_wait_for_vsync(psConnector->encoder);
+	}
+
 	return OMAPLFB_TRUE;
+#else	/* defined(PVR_OMAPLFB_DRM_FB) */
+	struct omap_dss_device *psDSSDev = fb2display(psDevInfo->psLINFBInfo);
+	OMAP_DSS_MANAGER(psDSSMan, psDSSDev);
+
+	if (psDSSMan != NULL && WAIT_FOR_VSYNC(psDSSMan) != NULL)
+	{
+		int res = WAIT_FOR_VSYNC(psDSSMan)(psDSSMan);
+		if (res != 0)
+		{
+			DEBUG_PRINTK((KERN_WARNING DRIVER_PREFIX ": %s: Device %u: Wait for vsync failed (%d)\n", __FUNCTION__, psDevInfo->uiFBDevID, res));
+			return OMAPLFB_FALSE;
+		}
+	}
+
+	return OMAPLFB_TRUE;
+#endif	/* defined(PVR_OMAPLFB_DRM_FB) */
 }
 
 /*
@@ -717,7 +835,36 @@ OMAPLFB_BOOL OMAPLFBWaitForVSync(OMAPLFB_DEVINFO *psDevInfo)
  */
 OMAPLFB_BOOL OMAPLFBManualSync(OMAPLFB_DEVINFO *psDevInfo)
 {
+#if defined(PVR_OMAPLFB_DRM_FB)
+	struct drm_connector *psConnector;
+
+	for (psConnector = NULL;
+		(psConnector = omap_fbdev_get_next_connector(psDevInfo->psLINFBInfo, psConnector)) != NULL; )
+	{
+		/* Try manual sync first, then try wait for vsync */
+		if (omap_connector_sync(psConnector) != 0)
+		{
+			(void) omap_encoder_wait_for_vsync(psConnector->encoder);
+		}
+	}
+
 	return OMAPLFB_TRUE;
+#else	/* defined(PVR_OMAPLFB_DRM_FB) */
+	struct omap_dss_device *psDSSDev = fb2display(psDevInfo->psLINFBInfo);
+	OMAP_DSS_DRIVER(psDSSDrv, psDSSDev);
+
+	if (psDSSDrv != NULL && psDSSDrv->sync != NULL)
+	{
+		int res = psDSSDrv->sync(psDSSDev);
+		if (res != 0)
+		{
+			printk(KERN_ERR DRIVER_PREFIX ": %s: Device %u: Sync failed (%d)\n", __FUNCTION__, psDevInfo->uiFBDevID, res);
+			return OMAPLFB_FALSE;
+		}
+	}
+
+	return OMAPLFB_TRUE;
+#endif	/* defined(PVR_OMAPLFB_DRM_FB) */
 }
 
 /*
@@ -830,7 +977,6 @@ OMAPLFB_ERROR OMAPLFBUnblankDisplay(OMAPLFB_DEVINFO *psDevInfo)
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 
-#if 0 /* Unused function. */
 /* Blank the screen */
 static void OMAPLFBEarlyUnblankDisplay(OMAPLFB_DEVINFO *psDevInfo)
 {
@@ -845,7 +991,6 @@ static void OMAPLFBEarlyBlankDisplay(OMAPLFB_DEVINFO *psDevInfo)
 	fb_blank(psDevInfo->psLINFBInfo, 1);
 	OMAPLFB_CONSOLE_UNLOCK();
 }
-#endif
 
 static void OMAPLFBEarlySuspendHandler(struct early_suspend *h)
 {
@@ -859,11 +1004,7 @@ static void OMAPLFBEarlySuspendHandler(struct early_suspend *h)
 		if (psDevInfo != NULL)
 		{
 			OMAPLFBAtomicBoolSet(&psDevInfo->sEarlySuspendFlag, OMAPLFB_TRUE);
-
-			/* Avoid conflict of de driver's early-suspend.
-			 *
-			 * OMAPLFBEarlyBlankDisplay(psDevInfo);
-			 */
+			OMAPLFBEarlyBlankDisplay(psDevInfo);
 		}
 	}
 }
@@ -879,11 +1020,7 @@ static void OMAPLFBEarlyResumeHandler(struct early_suspend *h)
 
 		if (psDevInfo != NULL)
 		{
-			/* Avoid conflict of de driver's early-resume.
-			 *
-			 * OMAPLFBEarlyUnblankDisplay(psDevInfo);
-			 */
-
+			OMAPLFBEarlyUnblankDisplay(psDevInfo);
 			OMAPLFBAtomicBoolSet(&psDevInfo->sEarlySuspendFlag, OMAPLFB_FALSE);
 		}
 	}
@@ -1125,6 +1262,7 @@ static int __init OMAPLFB_Init(void)
 	}
 
 	return 0;
+
 }
 
 /* Remove the driver from the kernel */

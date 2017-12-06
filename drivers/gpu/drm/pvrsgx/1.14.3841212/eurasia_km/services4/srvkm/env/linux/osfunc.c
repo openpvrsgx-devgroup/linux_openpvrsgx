@@ -66,7 +66,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <linux/interrupt.h>
 #include <asm/hardirq.h>
 #include <linux/timer.h>
-#if defined(MEM_TRACK_INFO_DEBUG)
+#if defined(MEM_TRACK_INFO_DEBUG) || defined (PVRSRV_DEVMEM_TIME_STATS)
 #include <linux/time.h>
 #endif
 #include <linux/capability.h>
@@ -707,6 +707,30 @@ IMG_VOID OSReleaseThreadQuanta(IMG_VOID)
 {
     schedule();
 }
+
+#if defined (PVRSRV_DEVMEM_TIME_STATS)
+/*!
+******************************************************************************
+
+ @Function OSClockMonotonicus
+
+ @Description	This function returns the raw monotonic clock time in microseconds
+				(i.e. un-affected by NTP or similar changes)
+
+ @Input void
+
+ @Return - monotonic clock time in (us)
+
+******************************************************************************/ 
+IMG_UINT64 OSClockMonotonicus(IMG_VOID)
+{
+	struct timespec ts;
+
+	getrawmonotonic(&ts);
+
+	return ((unsigned long)ts.tv_sec * 1000000ul + (unsigned long)ts.tv_nsec / 1000ul);
+}
+#endif
 
 
 /*!

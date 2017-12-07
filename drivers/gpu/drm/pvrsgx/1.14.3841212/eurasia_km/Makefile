@@ -88,11 +88,8 @@ OBJS += \
 	services4/srvkm/common/resman.o \
 	services4/srvkm/bridged/bridged_support.o \
 	services4/srvkm/bridged/bridged_pvr_bridge.o \
-	services4/system/$(PVR_SYSTEM)/sysconfig.o \
-	services4/system/$(PVR_SYSTEM)/sysutils.o
-#	services4/system/$(PVR_SYSTEM)/owl_gpu_clk.o \
-#	services4/system/$(PVR_SYSTEM)/owl_gpu_dvfs.o
-
+	services4/system/sunxi/sysconfig.o \
+	services4/system/sunxi/sysutils.o
 
 ifeq ($(SUPPORT_PVRSRV_DEVICE_CLASS),1)
 OBJS += \
@@ -216,8 +213,6 @@ endif # SUPPORT_DRI_DRM
 ccflags-y += \
 	-I$(TOP)/services4/3rdparty/dc_sunxi \
 	-Idrivers/video
-
-#	-Iarch/arm/plat-omap/include
 
 OBJS += \
 	services4/3rdparty/dc_sunxi/dc_sunxi_displayclass.o \

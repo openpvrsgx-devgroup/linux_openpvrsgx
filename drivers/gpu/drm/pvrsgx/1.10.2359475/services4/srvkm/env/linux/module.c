@@ -287,6 +287,12 @@ static int PVRSRVDriverSuspend(LDM_DEV *device, pm_message_t state);
 static void PVRSRVDriverShutdown(LDM_DEV *device);
 static int PVRSRVDriverResume(LDM_DEV *device);
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,8,0))
+#define __devinit
+#define __devinitdata
+#define	SYS_SGX_DEV_NAME	"omap_gpu"	// should be defined in sysconfig.h
+#endif
+
 #if defined(PVR_LDM_PCI_MODULE)
 /* This structure is used by the Linux module code */
 struct pci_device_id powervr_id_table[] __devinitdata = {

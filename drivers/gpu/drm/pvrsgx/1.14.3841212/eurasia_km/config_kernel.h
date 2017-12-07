@@ -1,7 +1,13 @@
 #define SGX_FEATURE_MP_CORE_COUNT 1
 #define LINUX
 #define PVR_BUILD_DIR "sunxi_linux"
+
+#ifdef CONFIG_IMG_SGX_5xx_BUILD_DEBUG
+#define PVR_BUILD_TYPE "debug"
+#else
 #define PVR_BUILD_TYPE "release"
+#endif
+
 #define PVRSRV_MODNAME "pvrsrvkm"
 #define SGXCORE 544
 #define SGX544
@@ -43,3 +49,17 @@
 #define PVR_DRI_DRM_PLATFORM_DEV
 #define DC_NOHW_BUFFER_WIDTH
 #define DC_NOHW_BUFFER_HEIGHT
+
+#ifdef CONFIG_IMG_SGX_5xx_DEBUG
+#define PVRSRV_USSE_EDM_STATUS_DEBUG
+#define PVRSRV_NEED_PVR_DPF
+#define PVRSRV_DUMP_MK_TRACE
+#endif
+
+#ifdef CONFIG_IMG_SGX_5xx_BUILD_DEBUG
+#define DEBUG
+#define DEBUG_LINUX_MEMORY_ALLOCATIONS
+#define DEBUG_LINUX_MEM_AREAS
+#define DEBUG_LINUX_MMAP_AREAS
+#define DEBUG_BRIDGE_KM
+#endif

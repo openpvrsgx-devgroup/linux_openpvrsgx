@@ -186,8 +186,10 @@ PVRSRV_ERROR EnableSGXClocks(SYS_DATA *psSysData)
 {
 #if !defined(NO_HARDWARE)
 	SYS_SPECIFIC_DATA *psSysSpecData = (SYS_SPECIFIC_DATA *) psSysData->pvSysSpecificData;
-#if !defined(PM_RUNTIME_SUPPORT)
+#if !defined(PM_RUNTIME_SUPPORT) || (LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0))
         IMG_INT res;
+#endif
+#if !defined(PM_RUNTIME_SUPPORT)
         long lRate,lNewRate;
 #endif
 	/* SGX clocks already enabled? */
@@ -196,7 +198,7 @@ PVRSRV_ERROR EnableSGXClocks(SYS_DATA *psSysData)
 		return PVRSRV_OK;
 	}
 
-#if !defined(PM_RUNTIME_SUPPORT)
+#if !defined(PM_RUNTIME_SUPPORT) || (LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0))
         PVR_DPF((PVR_DBG_MESSAGE, "EnableSGXClocks: Enabling SGX Clocks"));
         res=clk_enable(psSysSpecData->psSGX_FCK);
         if (res < 0)
@@ -205,6 +207,9 @@ PVRSRV_ERROR EnableSGXClocks(SYS_DATA *psSysData)
                 return PVRSRV_ERROR_UNABLE_TO_ENABLE_CLOCK;
         }
 
+#endif
+
+#if !defined(PM_RUNTIME_SUPPORT)
         lNewRate = clk_round_rate(psSysSpecData->psSGX_FCK, SYS_SGX_CLOCK_SPEED + ONE_MHZ);
         if (lNewRate <= 0)
         {
@@ -323,7 +328,7 @@ IMG_VOID DisableSGXClocks(SYS_DATA *psSysData)
 	}
 
 	PVR_DPF((PVR_DBG_MESSAGE, "DisableSGXClocks: Disabling SGX Clocks"));
-#if !defined(PM_RUNTIME_SUPPORT)
+#if !defined(PM_RUNTIME_SUPPORT) || (LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0))
         clk_disable(psSysSpecData->psSGX_FCK);
 #endif
 	SysDisableSGXInterrupts(psSysData);
@@ -696,8 +701,8 @@ static void ReleaseGPTimer(SYS_SPECIFIC_DATA *psSysSpecData)
 PVRSRV_ERROR EnableSystemClocks(SYS_DATA *psSysData)
 {
 	SYS_SPECIFIC_DATA *psSysSpecData = (SYS_SPECIFIC_DATA *) psSysData->pvSysSpecificData;
-#if !defined(PM_RUNTIME_SUPPORT)
         struct clk *psCLK;
+#if !defined(PM_RUNTIME_SUPPORT)
 	IMG_INT res;
 #endif
 
@@ -710,13 +715,14 @@ PVRSRV_ERROR EnableSystemClocks(SYS_DATA *psSysData)
 		atomic_set(&psSysSpecData->sSGXClocksEnabled, 0);
 		
 		psCLK = clk_get(NULL, SGX_PARENT_CLOCK);
-                if (IS_ERR(psCLK))
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0))
+               if (IS_ERR(psCLK))
                 {
                         PVR_DPF((PVR_DBG_ERROR, "EnableSsystemClocks: Couldn't get Core Clock"));
                         return PVRSRV_ERROR_UNABLE_TO_GET_PARENT_CLOCK;
                 }
                 psSysSpecData->psCORE_CK = psCLK;
-
+#endif
 
 //		psSysSpecData->bSysClocksOneTimeInit = IMG_TRUE;
 #if !defined(PM_RUNTIME_SUPPORT)

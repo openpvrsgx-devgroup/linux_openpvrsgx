@@ -3,7 +3,12 @@ TOP = $(src)
 
 include $(TOP)/config_kernel.mk
 
-ccflags-y += -D__linux__ -I$(TOP) -include config_kernel.h
+ccflags-y += -D__linux__ -DLINUX -DPVR_BUILD_DIR="\"sunxi_linux\""
+ccflags-y += -I$(TOP) -include config_kernel.h
+
+###############################################################
+# Genreal Includes
+###############################################################
 
 ccflags-y += -I$(TOP)/services4/srvkm/hwdefs \
  -I$(TOP)/include4 \
@@ -18,6 +23,87 @@ ccflags-y += -I$(TOP)/services4/srvkm/hwdefs \
  -I$(TOP)/services4/srvkm/include \
  -I$(TOP)/tools/intern/debug/client
 
+###############################################################
+# Genreal Defines
+###############################################################
+
+ccflags-y += \
+	-DSUPPORT_SGX \
+	-DTRANSFER_QUEUE \
+	-DSUPPORT_HW_RECOVERY \
+	-DLDM_PLATFORM \
+	-DSUPPORT_SGX_NEW_STATUS_VALS \
+	-DSUPPORT_SGX_HWPERF \
+	-DSYS_USING_INTERRUPTS \
+	-DPVR_SECURE_HANDLES \
+	-DPVR_LINUX_USING_WORKQUEUES \
+	-DPVR_LINUX_MISR_USING_PRIVATE_WORKQUEUE \
+	-DPVR_LINUX_TIMERS_USING_WORKQUEUES \
+	-DSYS_CUSTOM_POWERLOCK_WRAP \
+	-DDISPLAY_CONTROLLER=dc_sunxi \
+	-DPVRSRV_MODNAME="\"pvrsrvkm\"" \
+	-DPVR_LDM_DRIVER_REGISTRATION_NAME="\"pvrsrvkm\""
+
+
+
+###############################################################
+# Configured Defines
+###############################################################
+
+ccflags-$(CONFIG_PVR_SGXCORE_544) += \
+	-DSGX544 \
+	-DSUPPORT_SGX544 \
+	-DSGX_CORE_REV=115 \
+	-DSGXCORE=544
+
+ccflags-$(CONFIG_PVR_BUILD_RELEASE) += \
+	-DPVR_BUILD_TYPE="\"release\"" \
+	-DRELEASE
+
+ccflags-$(CONFIG_PVR_BUILD_DEBUG) += \
+	-DPVR_BUILD_TYPE="\"debug\"" \
+	-DDEBUG
+
+flags-$(CONFIG_PVR_NEED_PVR_DPF) += \
+	-DPVRSRV_NEED_PVR_DPF \
+	-DPVRSRV_NEED_PVR_TRACE \
+	-DPVRSRV_NEW_PVR_DPF
+
+ccflags-$(CONFIG_PVR_NEED_PVR_ASSERT) += \
+	-DPVRSRV_NEED_PVR_ASSERT
+
+ccflags-$(CONFIG_PVR_DEBUG_MEMORY) += \
+	-DDEBUG_LINUX_MEMORY_ALLOCATIONS \
+	-DDEBUG_LINUX_MEM_AREAS \
+	-DDEBUG_LINUX_MMAP_AREAS
+
+ccflags-$(CONFIG_PVR_DEBUG_BRIDGE_KM) += \
+	-DDEBUG_BRIDGE_KM
+
+ccflags-$(CONFIG_PVR_DEBUG_TRACE_BRIDGE_KM) += \
+	-DDEBUG_TRACE_BRIDGE_KM
+
+ccflags-$(CONFIG_PVR_DEBUG_BRIDGE_KM_DISPATCH_TABLE) += \
+	-DDEBUG_BRIDGE_KM_DISPATCH_TABLE
+
+ccflags-$(CONFIG_PVR_USSE_EDM_STATUS_DEBUG) += \
+	-DPVRSRV_USSE_EDM_STATUS_DEBUG
+
+ccflags-$(CONFIG_PVR_DUMP_MK_TRACE) += \
+	-DPVRSRV_DUMP_MK_TRACE
+
+ccflags-$(CONFIG_PVR_PDUMP) += \
+	-DPDUMP \
+	-DSUPPORT_DBGDRV_EVENT_OBJECTS \
+	-DSUPPORT_PDUMP_MULTI_PROCESS
+
+ccflags-$(CONFIG_PVR_IGNORE_INIT_COMPATIBILITY_CHECK) += \
+	-DIGNORE_SGX_INIT_COMPATIBILITY_CHECK
+
+
+###############################################################
+# Genreal Objectfiles
+###############################################################
 
 OBJS += \
 	services4/srvkm/env/linux/osfunc.o \

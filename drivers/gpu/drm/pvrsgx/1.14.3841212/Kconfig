@@ -1,13 +1,134 @@
-menuconfig IMG_PVR_GPU
-	bool "IMG PVR GPU Support "
+menuconfig IMG_PVR_SGX_GPU
+	bool "IMGTEC PowerVR SGX GPU Support "
 	default n
 	help
-		Say Y here if you have a IMG GPU on the chip
+	  Say Y here if you have a IMGTEC PowerVR GPU on the chip
 
-config IMG_SGX_5xx
-	tristate "SGX-540 or SGX-544"
+config PVR_SGX_GPU
+	tristate "SGX-xxx"
 	default n
-	depends on IMG_PVR_GPU
+	depends on IMG_PVR_SGX_GPU
+	help
+	  Enable this option to build support for the PowerVR SGX 3D core.
+
+	  To compile this driver as a module, choose M here.
+
+choice
+	prompt "PowerVR SGX core"
+	depends on PVR_SGX_GPU
+	default PVR_SGXCORE_544
+
+config PVR_SGXCORE_544
+	bool "SGX 544"
+
+endchoice
+
+choice
+	prompt "PowerVR build type"
+	depends on PVR_SGX_GPU
+	default PVR_BUILD_RELEASE
+
+config PVR_BUILD_RELEASE
+	bool "Release"
+
+config PVR_BUILD_DEBUG
+	bool "Debug"
+
+endchoice
+
+# Release build debugging options
+
+config PVR_NEED_PVR_DPF
+	bool "Enable debugging messages in release build"
+	default n
+	depends on PVR_BUILD_RELEASE && PVR_SGX_GPU
+
+config PVR_NEED_PVR_ASSERT
+	bool "Enable assertions in release build"
+	depends on PVR_BUILD_RELEASE && PVR_SGX_GPU
+
+# Debugging options
+
+config PVR_DEBUG_MEMORY
+	bool "Record memory-related debugging information"
+	depends on PVR_BUILD_DEBUG && PVR_SGX_GPU
+	default y
+
+config PVR_DEBUG_BRIDGE_KM
+	bool "Collect bridge statistics"
+	depends on PVR_BUILD_DEBUG && PVR_SGX_GPU
+	default y
+
+config PVR_DEBUG_TRACE_BRIDGE_KM
+	bool "Trace bridge calls"
+	depends on PVR_DEBUG_BRIDGE_KM && PVR_SGX_GPU
+	default n
+
+config PVR_DEBUG_BRIDGE_KM_DISPATCH_TABLE
+	bool "Dump bridge dispatch table entries"
+	depends on PVR_BUILD_DEBUG && PVR_SGX_GPU
+	default n
+
+#
+# General options
+#
+
+## right now not implemented
+#config PVR_PERCONTEXT_PB
+#	bool "Per-context parameter buffer (recommended)"
+#	depends on PVR_SGX
+#	default y
+
+#config PVR_ACTIVE_POWER_MANAGEMENT
+#	bool "Support for active power management (recommended)"
+#	depends on PVR_SGX
+#	default y
+
+#config PVR_ACTIVE_POWER_LATENCY_MS
+#	int "Active power event latency (ms)"
+#	depends on PVR_ACTIVE_POWER_MANAGEMENT
+#	default 100
+
+#config PVR_SGX_LOW_LATENCY_SCHEDULING
+#	bool "Enable low-latency scheduling"
+#	depends on PVR_SGX
+#	default y
+
+config PVR_USSE_EDM_STATUS_DEBUG
+	bool "Trace microkernel status"
+	depends on PVR_SGX_GPU
+	default y if PVR_BUILD_DEBUG
+
+config PVR_DUMP_MK_TRACE
+	bool "Dump microkernel trace on HW recovery"
+	depends on PVR_USSE_EDM_STATUS_DEBUG
+	default y
+
+config PVR_PDUMP
+	bool "Support for parameter dumping (Pdump)"
+	depends on PVR_SGX_GPU
+	default n
+
+config PVR_IGNORE_INIT_COMPATIBILITY_CHECK
+	bool "Ignores compatibility check during inint"
+	depends on PVR_SGX_GPU
+	default n
+	help
+	  Say Y here if you want to ignore following two errors:
+
+	   - Mismatch in driver and microkernel build options
+	   - Mismatch in client-side and KM driver build options
+
+	  Be careful with this option since all init checks like: HW core,
+	  SW core, ,...
+
+
+###################################################################
+### old
+config IMG_SGX_5xx
+	tristate "SGX-540 or SGX-544 -OLD"
+	default n
+	depends on IMG_PVR_SGX_GPU
 	help
 	  Say M here if you have a IMG_SGX_5xx on the chip
 

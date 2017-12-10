@@ -55,7 +55,7 @@
 #define PVRSRV_NEED_PVR_DPF
 #define PVRSRV_NEW_PVR_DPF
 #define DEBUG
-//#define PVRSRV_DUMP_MK_TRACE
+#define PVRSRV_DUMP_MK_TRACE
 #endif
 
 #ifdef CONFIG_IMG_SGX_5xx_BUILD_DEBUG

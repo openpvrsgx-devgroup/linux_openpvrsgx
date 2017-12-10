@@ -5,7 +5,7 @@ menuconfig IMG_PVR_SGX_GPU
 	  Say Y here if you have a IMGTEC PowerVR GPU on the chip
 
 config PVR_SGX_GPU
-	tristate "SGX-xxx"
+	tristate "SGX-5xx"
 	default n
 	depends on IMG_PVR_SGX_GPU
 	help

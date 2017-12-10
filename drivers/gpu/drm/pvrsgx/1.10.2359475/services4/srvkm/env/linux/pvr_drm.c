@@ -103,6 +103,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 #endif
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,16,0))
+#define DRM_ARRAY_SIZE(x) ARRAY_SIZE(x)
+#endif
+
 /*
  * Prior to Linux 2.6.36, we couldn't do the release processing in post close
  * when workqueues were being used, because drm_release held the big kernel

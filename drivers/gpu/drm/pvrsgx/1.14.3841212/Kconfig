@@ -122,27 +122,3 @@ config PVR_IGNORE_INIT_COMPATIBILITY_CHECK
 	  Be careful with this option since all init checks like: HW core,
 	  SW core, ,...
 
-
-###################################################################
-### old
-config IMG_SGX_5xx
-	tristate "SGX-540 or SGX-544 -OLD"
-	default n
-	depends on IMG_PVR_SGX_GPU
-	help
-	  Say M here if you have a IMG_SGX_5xx on the chip
-
-
-config IMG_SGX_5xx_DEBUG
-	bool "Debug output"
-	default n
-	depends on IMG_SGX_5xx
-	help
-	  Say y here if you want to have debug output.
-
-config IMG_SGX_5xx_BUILD_DEBUG
-	bool "Build with debug option"
-	default n
-	depends on IMG_SGX_5xx
-	help
-	  Say y here if you want to compile a debug build instead of a release build

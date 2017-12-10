@@ -44,7 +44,15 @@ ccflags-y += \
 	-DPVRSRV_MODNAME="\"pvrsrvkm\"" \
 	-DPVR_LDM_DRIVER_REGISTRATION_NAME="\"pvrsrvkm\""
 
-
+# configs that ar not available in this driver
+ccflags-y += \
+	-DSGX_DYNAMIC_TIMING_INFO \
+	-DSUPPORT_MEMINFO_IDS \
+	-DSUPPORT_DC_CMDCOMPLETE_WHEN_NO_LONGER_DISPLAYED \
+	-DSUPPORT_LARGE_GENERAL_HEAP \
+	-DPVR_NO_OMAP_TIMER \
+	-DSYS_SUPPORTS_SGX_IDLE_CALLBACK \
+	-DPVRSRV_REFCOUNT_DEBUG
 
 ###############################################################
 # Configured Defines

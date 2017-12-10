@@ -1,3 +1,3 @@
 
-obj-$(CONFIG_IMG_SGX_5xx) += eurasia_km/
+obj-$(CONFIG_PVR_SGX_GPU) += eurasia_km/
 

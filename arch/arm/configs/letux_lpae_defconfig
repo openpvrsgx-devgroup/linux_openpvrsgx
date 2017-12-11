@@ -1,5 +1,5 @@
 #
-# Linux/arm 4.15.0-rc2 Kernel Configuration
+# Linux/arm 4.15.0-rc3 Kernel Configuration
 #
 CONFIG_ARM=y
 CONFIG_ARM_HAS_SG_CHAIN=y
@@ -1695,7 +1695,29 @@ CONFIG_ATA_BMDMA=y
 #
 # Generic fallback / legacy drivers
 #
-# CONFIG_MD is not set
+CONFIG_MD=y
+# CONFIG_BLK_DEV_MD is not set
+# CONFIG_BCACHE is not set
+CONFIG_BLK_DEV_DM_BUILTIN=y
+CONFIG_BLK_DEV_DM=m
+# CONFIG_DM_MQ_DEFAULT is not set
+# CONFIG_DM_DEBUG is not set
+CONFIG_DM_CRYPT=m
+# CONFIG_DM_SNAPSHOT is not set
+# CONFIG_DM_THIN_PROVISIONING is not set
+# CONFIG_DM_CACHE is not set
+# CONFIG_DM_ERA is not set
+# CONFIG_DM_MIRROR is not set
+# CONFIG_DM_RAID is not set
+# CONFIG_DM_ZERO is not set
+# CONFIG_DM_MULTIPATH is not set
+# CONFIG_DM_DELAY is not set
+# CONFIG_DM_UEVENT is not set
+# CONFIG_DM_FLAKEY is not set
+# CONFIG_DM_VERITY is not set
+# CONFIG_DM_SWITCH is not set
+# CONFIG_DM_LOG_WRITES is not set
+# CONFIG_DM_INTEGRITY is not set
 # CONFIG_TARGET_CORE is not set
 CONFIG_NETDEVICES=y
 CONFIG_MII=y
@@ -1710,7 +1732,7 @@ CONFIG_NET_CORE=y
 # CONFIG_NETCONSOLE is not set
 # CONFIG_NETPOLL is not set
 # CONFIG_NET_POLL_CONTROLLER is not set
-# CONFIG_TUN is not set
+CONFIG_TUN=m
 # CONFIG_TUN_VNET_CROSS_LE is not set
 # CONFIG_VETH is not set
 # CONFIG_NLMON is not set
@@ -3919,7 +3941,6 @@ CONFIG_USB_CONFIGFS_MASS_STORAGE=y
 # CONFIG_USB_CONFIGFS_F_UVC is not set
 # CONFIG_USB_CONFIGFS_F_PRINTER is not set
 CONFIG_USB_GADGET_LEGACY=y
-# CONFIG_TYPEC is not set
 # CONFIG_USB_ZERO is not set
 CONFIG_USB_AUDIO=m
 # CONFIG_GADGET_UAC1 is not set
@@ -3942,13 +3963,7 @@ CONFIG_USB_CDC_COMPOSITE=m
 CONFIG_USB_G_HID=m
 # CONFIG_USB_G_DBGP is not set
 # CONFIG_USB_G_WEBCAM is not set
-
-#
-# USB Power Delivery and Type-C drivers
-#
-# CONFIG_TYPEC_TCPM is not set
-# CONFIG_TYPEC_UCSI is not set
-# CONFIG_TYPEC_TPS6598X is not set
+# CONFIG_TYPEC is not set
 # CONFIG_USB_LED_TRIG is not set
 # CONFIG_USB_ULPI_BUS is not set
 # CONFIG_UWB is not set
@@ -4853,7 +4868,7 @@ CONFIG_ANDROID_BINDER_DEVICES="binder"
 CONFIG_ANDROID_BINDER_IPC_32BIT=y
 # CONFIG_ANDROID_BINDER_IPC_SELFTEST is not set
 # CONFIG_LIBNVDIMM is not set
-# CONFIG_DAX is not set
+CONFIG_DAX=m
 CONFIG_NVMEM=y
 # CONFIG_STM is not set
 # CONFIG_INTEL_TH is not set

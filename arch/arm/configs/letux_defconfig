@@ -1,5 +1,5 @@
 #
-# Linux/arm 4.15.0-rc2 Kernel Configuration
+# Linux/arm 4.15.0-rc3 Kernel Configuration
 #
 CONFIG_ARM=y
 CONFIG_ARM_HAS_SG_CHAIN=y
@@ -3288,6 +3288,8 @@ CONFIG_DRM_PANEL_BRIDGE=y
 # CONFIG_DRM_TVE200 is not set
 # CONFIG_DRM_LEGACY is not set
 # CONFIG_DRM_LIB_RANDOM is not set
+# CONFIG_SGX540 is not set
+# CONFIG_SGX530 is not set
 
 #
 # Frame buffer Devices
@@ -3981,13 +3983,7 @@ CONFIG_USB_CDC_COMPOSITE=m
 CONFIG_USB_G_HID=m
 # CONFIG_USB_G_DBGP is not set
 # CONFIG_USB_G_WEBCAM is not set
-
-#
-# USB Power Delivery and Type-C drivers
-#
-# CONFIG_TYPEC_TCPM is not set
-# CONFIG_TYPEC_UCSI is not set
-# CONFIG_TYPEC_TPS6598X is not set
+# CONFIG_TYPEC is not set
 # CONFIG_USB_LED_TRIG is not set
 # CONFIG_USB_ULPI_BUS is not set
 # CONFIG_UWB is not set

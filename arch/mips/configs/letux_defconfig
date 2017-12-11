@@ -1,5 +1,5 @@
 #
-# Linux/mips 4.15.0-rc2 Kernel Configuration
+# Linux/mips 4.15.0-rc3 Kernel Configuration
 #
 CONFIG_MIPS=y
 
@@ -2992,9 +2992,8 @@ CONFIG_USB_CONFIGFS_MASS_STORAGE=y
 # CONFIG_USB_CONFIGFS_F_HID is not set
 # CONFIG_USB_CONFIGFS_F_UVC is not set
 # CONFIG_USB_CONFIGFS_F_PRINTER is not set
-CONFIG_USB_ZERO=m
 CONFIG_USB_GADGET_LEGACY=y
-# CONFIG_TYPEC is not set
+CONFIG_USB_ZERO=m
 # CONFIG_USB_ZERO_HNPTEST is not set
 CONFIG_USB_AUDIO=m
 # CONFIG_GADGET_UAC1 is not set
@@ -3014,13 +3013,7 @@ CONFIG_USB_CDC_COMPOSITE=m
 CONFIG_USB_G_HID=m
 # CONFIG_USB_G_DBGP is not set
 # CONFIG_USB_G_WEBCAM is not set
-
-#
-# USB Power Delivery and Type-C drivers
-#
-# CONFIG_TYPEC_TCPM is not set
-# CONFIG_TYPEC_UCSI is not set
-# CONFIG_TYPEC_TPS6598X is not set
+# CONFIG_TYPEC is not set
 # CONFIG_USB_LED_TRIG is not set
 # CONFIG_USB_ULPI_BUS is not set
 # CONFIG_UWB is not set

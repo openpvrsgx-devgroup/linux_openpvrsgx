@@ -318,11 +318,11 @@ IMG_VOID PVRSRVReleasePrintf(const IMG_CHAR *pszFormat, ...)
 
 	if (VBAppend(pszBuf, ui32BufSiz, pszFormat, vaArgs))
 	{
-		printk(KERN_INFO "PVR_K:(Message Truncated): %s\n", pszBuf);
+		printk(KERN_ALERT "PVR_K:(Message Truncated): %s\n", pszBuf);
 	}
 	else
 	{
-		printk(KERN_INFO "%s\n", pszBuf);
+		printk(KERN_ALERT "%s\n", pszBuf);
 	}
 
 	ReleaseBufferLock(ulLockFlags);

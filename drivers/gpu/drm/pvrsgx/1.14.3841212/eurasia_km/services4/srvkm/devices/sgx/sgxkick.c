@@ -432,8 +432,8 @@ PVRSRV_ERROR SGXDoKickKM(IMG_HANDLE hDevHandle, SGX_CCB_KICK *psCCBKick)
 			}
 		}
 	}
-	
-	/* 
+
+	/*
 		NOTE: THIS MUST BE THE LAST THING WRITTEN TO THE TA COMMAND!
 		Set the ready for so the uKernel will process the command.
 	*/
@@ -614,7 +614,7 @@ PVRSRV_ERROR SGXDoKickKM(IMG_HANDLE hDevHandle, SGX_CCB_KICK *psCCBKick)
 					sizeof(IMG_UINT32),
 					0,
 					MAKEUNIQUETAG(psCCBMemInfo));
-			
+
 			if (psCCBKick->bTADependency)
 			{
 				psSyncInfo->psSyncData->ui32LastOpDumpVal++;
@@ -782,14 +782,14 @@ PVRSRV_ERROR SGXDoKickKM(IMG_HANDLE hDevHandle, SGX_CCB_KICK *psCCBKick)
 			psSyncInfo->psSyncData->ui32ReadOpsPending--;
 			SyncRollBackReadOp(psSyncInfo, SYNC_OP_CLASS_KICKTA);
 		}
-	
+
 		if (psCCBKick->hTASyncInfo)
 		{
 			psSyncInfo = (PVRSRV_KERNEL_SYNC_INFO *)psCCBKick->hTASyncInfo;
 			psSyncInfo->psSyncData->ui32ReadOpsPending--;
 			SyncRollBackReadOp(psSyncInfo, SYNC_OP_CLASS_KICKTA);
 		}
-	
+
 		if (psCCBKick->h3DSyncInfo)
 		{
 			psSyncInfo = (PVRSRV_KERNEL_SYNC_INFO *)psCCBKick->h3DSyncInfo;

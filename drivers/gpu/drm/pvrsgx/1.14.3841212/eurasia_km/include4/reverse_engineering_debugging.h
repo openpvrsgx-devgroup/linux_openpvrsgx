@@ -32,5 +32,8 @@ void printrreg(char *dumpregname, u32 offset){
 #define DBG_LOG printdbgcomment
 
 #else
-#define RV_DBG(x)
+#define DEBUG_REG_R(args...)
+#define DEBUG_REG_W(args...)
+#define RVDBGCOMMENT(args...)
+#define DBG_LOG(args...)
 #endif

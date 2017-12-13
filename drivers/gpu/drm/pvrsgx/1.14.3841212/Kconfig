@@ -123,7 +123,7 @@ config PVR_IGNORE_INIT_COMPATIBILITY_CHECK
 	  SW core, ,...
 
 config PVR_DRIVER_DEBUG
-	bool "Adds a special printk for Driver Reverse engineering"
+	bool "Add a special printk for Driver Reverse engineering"
 	depends on PVR_SGX_GPU
 	default n
 	help

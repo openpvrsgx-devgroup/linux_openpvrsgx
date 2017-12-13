@@ -5,6 +5,7 @@ include $(TOP)/config_kernel.mk
 
 ccflags-y += -D__linux__ -DLINUX -DPVR_BUILD_DIR="\"sunxi_linux\""
 ccflags-y += -I$(TOP) -include config_kernel.h
+ccflags-y += -I$(TOP)/../../../../
 
 ###############################################################
 # Genreal Includes

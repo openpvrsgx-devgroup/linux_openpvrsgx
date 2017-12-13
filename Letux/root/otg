@@ -1,10 +1,11 @@
 #
-# enable otg
+# enable otg power
 #
-# NOTE: this should be moved to hte kernel
+# NOTE: this functionality should be moved to the kernel
 #   so that pugging in an OTG cable does this automatically
 #
-# usage: otg 0 | 1
+# usage: otg 0 | 1 | 1.5
+#
 
 case $(tr -d '\0' </proc/device-tree/model) in
 	*Pyra-Handheld* )
@@ -16,26 +17,59 @@ case $(tr -d '\0' </proc/device-tree/model) in
 		;;
 esac
 
-[ "$1" == "1" ] && VAL=1 || VAL=0
-
 # locate the gpio that controls the FPF3040 EN pin to switch it to OTG pass-through mode
-
-GPIOCHIP=gpiochip484
-### will be P24 in V5.1.2 prototype
-### will be P23 in final V5.1.3 board!
-GPIO=$(expt 484 + 2 '*' 8 + 4)		# P24
+GPIOCHIP=$(/root/findgpiochip tca6424)
+GPIOBASE=$(cat $GPIOCHIP/base)
+### was P24 in reworked V5.1.2 prototype
+### not available in V5.1.3 boards
+### is P23 in final V5.1.4 and V5.2 board!
+GPIO=$(expr $GPIOBASE + 2 '*' 8 + 3)		# P23
 
 echo "gpio: $GPIO"
 
-echo $GPIO >/sys/class/gpio/export
+# locate the OTG regulator and its device (the bq24297 charger)
+OTG_REG=$(/root/findregulator "otg")
+BQ24297=$OTG_REG/device	# same as /sys/class/power_supply/bq24297/device
 
+# locate Palmas for ADC
+TWL6037_GPADC=$(/root/findiio "palmas-gpadc")   # OMAP5
+
+# prepare gpio
+[ -r /sys/class/gpio/gpio$GPIO/value ] || echo $GPIO >/sys/class/gpio/export
 echo "direction: $(cat /sys/class/gpio/gpio$GPIO/direction)"
 echo "value: $(cat /sys/class/gpio/gpio$GPIO/value)"
-
 echo out >/sys/class/gpio/gpio$GPIO/direction
-echo $VAL >/sys/class/gpio/gpio$GPIO/value
 
-echo "newval: $(tr -d '\0' </sys/class/gpio/gpio$GPIO/value)"
+# enable/disable
+case "$1" in
+	1 )
+		echo 1 >/sys/class/gpio/gpio$GPIO/value
+		echo 1000000 >$BQ24297/otg
+		;;
+	1.5 )
+		echo 1 >/sys/class/gpio/gpio$GPIO/value
+		echo 1500000 >$BQ24297/otg
+		;;
+	* )
+		echo 0 >$BQ24297/otg
+		echo 0 >/sys/class/gpio/gpio$GPIO/value
+		;;
+esac
 
-# somehow switch bq24297 in/out OTG mode
-# switch USB stack into otg mode
+if [ "$(tr -d '\0' </sys/class/gpio/gpio$GPIO/value)" = 1 -a "$(cat $BQ24297/otg)" = 0 ]
+then
+	echo "!!! could not turn on OTG - maybe no battery available or charger connected?"
+fi
+
+echo "usb id:"	$(cat $TWL6037_GPADC/in_voltage14_input)mV
+echo "boost:"	$(cat $OTG_REG/microvolts)uV
+echo "current:"	$(cat $OTG_REG/max_microamps)uA
+echo "otg:"	$(cat $BQ24297/otg)
+echo "gpio:"	$(tr -d '\0' </sys/class/gpio/gpio$GPIO/value)
+echo "VBUS:"	$(cat $TWL6037_GPADC/in_voltage10_input)mV
+echo "VCHG:"	$(cat $TWL6037_GPADC/in_voltage9_input)mV
+
+echo "bq24297 registers:"
+cat $BQ24297/registers
+
+# manually switch USB stack into otg mode...

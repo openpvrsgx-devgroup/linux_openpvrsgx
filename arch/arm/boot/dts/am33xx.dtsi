@@ -428,6 +428,7 @@
 			reg = <0x56000000 0x1000000>;
 			interrupts = <37>;
 			resets = <&prcm 0>;
+			timer = <&timer7>;
 		};
 
 		sham: sham@53100000 {

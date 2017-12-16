@@ -584,6 +584,8 @@
 			reg = <0x50000000 0x10000>;
 			interrupts = <21>;
 			ti,hwmods = "gfx";
+			timer = <&timer11>;
+			clk = <&sgx_fck>;
 		};
 
 		sham: sham@480c3000 {

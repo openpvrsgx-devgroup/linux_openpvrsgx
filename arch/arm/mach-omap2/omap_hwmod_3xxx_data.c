@@ -147,8 +147,8 @@ struct omap_hwmod omap3xxx_gfx_hwmod = {
 	.prcm		= {
 		.omap2	= {
 			.prcm_reg_id = 1,
-			.module_offs = OMAP3430ES2_SGX_MOD,
-			.module_bit = OMAP3430ES2_CM_FCLKEN_SGX_EN_SGX_SHIFT,
+//			.module_offs = OMAP3430ES2_SGX_MOD,
+//			.module_bit = OMAP3430ES2_CM_FCLKEN_SGX_EN_SGX_SHIFT,
 			.idlest_reg_id = 1,
 			.idlest_idle_bit = OMAP3430ES2_ST_SGX_SHIFT,
 		},

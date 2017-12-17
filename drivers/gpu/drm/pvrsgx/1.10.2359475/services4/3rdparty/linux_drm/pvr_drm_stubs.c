@@ -48,6 +48,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <linux/version.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0))
+#define CONFIG_PCI	# do not load new static inline stubs but external declaration
+#endif
 #include <linux/pci.h>
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,15,0))
 #include <asm/system.h>

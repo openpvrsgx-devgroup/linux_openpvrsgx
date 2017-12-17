@@ -229,8 +229,11 @@ exit:
 	return iRes;
 }
 
-DRI_DRM_STATIC int
-PVRSRVDrmUnload(struct drm_device *dev)
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,11,0))
+DRI_DRM_STATIC int PVRSRVDrmUnload(struct drm_device *dev)
+#else
+DRI_DRM_STATIC void PVRSRVDrmUnload(struct drm_device *dev)
+#endif
 {
 	PVR_TRACE(("PVRSRVDrmUnload"));
 
@@ -244,7 +247,9 @@ PVRSRVDrmUnload(struct drm_device *dev)
 	dbgdrv_cleanup();
 #endif
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,11,0))
 	return 0;
+#endif
 }
 
 DRI_DRM_STATIC int
@@ -435,6 +440,10 @@ PVRSRVPciRemove(struct pci_dev *dev)
 #define	PVR_DRM_IOCTL_DEF(ioctl, _func, _flags) DRM_IOCTL_DEF_DRV(ioctl, _func, _flags)
 #endif
 
+#define XSTR(x) STR(x)
+#define STR(x) #x
+#pragma message "The value of ABC: " XSTR(PVR_DRM_IOCTL_DEF(PVR_SRVKM, PVRSRV_BridgeDispatchKM, PVR_DRM_UNLOCKED))
+
 struct drm_ioctl_desc sPVRDrmIoctls[] = {
 	PVR_DRM_IOCTL_DEF(PVR_SRVKM, PVRSRV_BridgeDispatchKM, PVR_DRM_UNLOCKED),
 	PVR_DRM_IOCTL_DEF(PVR_IS_MASTER, PVRDRMIsMaster, DRM_MASTER | PVR_DRM_UNLOCKED),
@@ -489,7 +498,11 @@ static const struct file_operations sPVRFileOps =
 	PVR_DRM_FOPS_IOCTL = drm_ioctl,
 	.mmap = PVRMMap,
 	.poll = drm_poll,
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,12,0))
 	.fasync = drm_fasync,
+#else
+#warning provide replacement for drm_fasync - http://elixir.free-electrons.com/linux/v3.11.10/source/drivers/gpu/drm/drm_fops.c#L392
+#endif
 };
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)) */
 
@@ -688,6 +701,8 @@ static int __init PVRSRVDrmInit(void)
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,39))
 #if defined(PVR_DRI_DRM_PLATFORM_DEV)
 	iRes = drm_platform_init(&sPVRDrmDriver, gpsPVRLDMDev);
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0))
+#warning provide replacement for drm_pci_init -- http://elixir.free-electrons.com/linux/v4.13.16/source/drivers/gpu/drm/drm_pci.c#L283
 #else
 	iRes = drm_pci_init(&sPVRDrmDriver, &sPVRPCIDriver);
 #endif
@@ -720,6 +735,8 @@ static void __exit PVRSRVDrmExit(void)
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,39))
 #if defined(PVR_DRI_DRM_PLATFORM_DEV)
 	drm_platform_exit(&sPVRDrmDriver, gpsPVRLDMDev);
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0))
+#warning provide replacement for drm_pci_exit
 #else
 	drm_pci_exit(&sPVRDrmDriver, &sPVRPCIDriver);
 #endif

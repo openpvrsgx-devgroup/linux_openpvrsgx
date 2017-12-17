@@ -79,7 +79,11 @@ int PVRSRV_BridgeDispatchKM(struct drm_device *dev, void *arg, struct drm_file *
 #define	DRI_DRM_STATIC
 /*Exported functions to common drm layer*/
 int PVRSRVDrmLoad(struct drm_device *dev, unsigned long flags);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,11,0))
 int PVRSRVDrmUnload(struct drm_device *dev);
+#else
+void PVRSRVDrmUnload(struct drm_device *dev);
+#endif
 int PVRSRVDrmOpen(struct drm_device *dev, struct drm_file *file);
 #if defined(PVR_LINUX_USING_WORKQUEUES)
 DRI_DRM_STATIC int PVRSRVDrmRelease(struct inode *inode, struct file *filp);

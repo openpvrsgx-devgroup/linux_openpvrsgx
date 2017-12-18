@@ -116,8 +116,6 @@ work/letux-base/kemnade/charging_fixes
 work/letux-base/hns/gta04/pm
 work/letux-base/hacks
 work/letux-base/omap2plus
--work/letux-base/pvr
-# gpu/pvr: incomplete! Is missing defconfig
 work/letux-base/hns/gpu/pvr
 work/letux-base/omapdrm
 work/letux-base/mmc
@@ -127,16 +125,19 @@ work/letux-base/serial
 work/letux-base/misc
 work/letux-base/drivers-keyboard
 
-# not included by default but carried along and rebased
--work/letux-base/hns/input/tsc2007-pressure
+# not included by default, but carried along and rebased
 -work/letux-base/marek/upstream-queue
--work/letux-base/extern/ov9655
--work/letux-base/hns/video/ov9655
 -work/letux-base/extern/omap5-idle
 -work/letux-base/extern/omap-hsmmc
--work/letux-base/extern/omap/reset-controller
 -work/letux-base/hns/video/dss/antitear
 -work/letux-base/lukas/android
 -work/letux-base/mvduin/patch/tiler-buf-dumb
+
 # tiler-fbdev: does not cleanly rebase
 #-work/letux-base/mvduin/patch/tiler-fbdev
+
+# abandoned
+#-work/letux-base/hns/input/tsc2007-pressure
+#-work/letux-base/extern/ov9655
+#-work/letux-base/hns/video/ov9655
+#-work/letux-base/extern/omap/reset-controller

@@ -896,6 +896,23 @@ static int ov9655_set_format(struct v4l2_subdev *subdev,
  * V4L2 subdev control operations
  */
 
+/*
+ * NOTE:
+ * interesting features of ov9655 for controls:
+ *
+ * night mode (bit7 of COM11) + Exposure
+ * 50/60 Hz filter
+ * gamma curve adjustment
+ * AGC automatic / manual gain (separate for RGB channels?)
+ * AEC automatic / manual exposure
+ * BLC automatic / manual black
+ * AWB automatic / manual white balance
+ * RGB bias?
+ * denoise, edge enhancement (COM17)
+ * brightness adjust (BRTN)
+ * lens correction - may depend not on sensor chip but module (?)
+ */
+
 static int ov9655_s_ctrl(struct v4l2_ctrl *ctrl)
 {
 	struct ov9655 *ov9655 =
@@ -905,6 +922,14 @@ static int ov9655_s_ctrl(struct v4l2_ctrl *ctrl)
 
 	if (ctrl->flags & V4L2_CTRL_FLAG_INACTIVE)
 		return 0;
+
+	/*
+	 * NOTEs:
+	 * AEC has a slow and a fast mode (see OV9655_COM5 bit 0) and COM8
+	 * AGC has a ceiling register (COM9)
+	 * registers 0x20 .. 0x29 control gain, agc, awb etc.
+	 * registers 27, 28, 2c are bias values (default 0x80)
+	 */
 
 	switch (ctrl->id) {
 	case V4L2_CID_EXPOSURE:
@@ -916,6 +941,51 @@ static int ov9655_s_ctrl(struct v4l2_ctrl *ctrl)
 		if (ret < 0)
 			return ret;
 		return ov9655_update_bits(client, REG_COM1, COM1_AEC_MASK, ctrl->val);	/* lower 2 bits */
+
+	case V4L2_CID_GAIN:
+
+#if 0
+		/*
+		 * Gain is controlled by 2 analog stages and a digital stage.
+		 * Valid values for the 3 stages are
+		 *
+		 * Stage                Min     Max     Step
+		 * ------------------------------------------
+		 * First analog stage   x1      x2      1
+		 * Second analog stage  x1      x4      0.125
+		 * Digital stage        x1      x16     0.125
+		 *
+		 * To minimize noise, the gain stages should be used in the
+		 * second analog stage, first analog stage, digital stage order.
+		 * Gain from a previous stage should be pushed to its maximum
+		 * value before the next stage is used.
+		 */
+		if (ctrl->val <= 32) {
+			data = ctrl->val;
+		} else if (ctrl->val <= 64) {
+			ctrl->val &= ~1;
+			data = (1 << 6) | (ctrl->val >> 1);
+		} else {
+			ctrl->val &= ~7;
+			data = ((ctrl->val - 64) << 5) | (1 << 6) | 32;
+		}
+
+		return  mt9p031_write(client, MT9P031_GLOBAL_GAIN, data);
+
+		/*
+		 * for ov9655 it is  similar
+		 * OV9655_GAIN + 2 bits in OV9655_VREF
+		 * OV9655_BLUE
+		 * OV9655_RED
+		 * OV9655_GREEN
+		 * OV9655_PREGAIN
+		 * OV9655_ADC1		analog range adjustment
+		 * OV9655_COM15		data output full range
+		 * OV9655_COM21		digital gain value
+		 */
+#endif
+
+		return -EINVAL;
 
 	case V4L2_CID_HFLIP:
 		return ov9655_update_bits(client, REG_MVFP, MVFP_MIRROR, ctrl->val?MVFP_MIRROR : 0);
@@ -1160,6 +1230,12 @@ static int ov9655_probe(struct i2c_client *client,
 			  OV9655_SHUTTER_WIDTH_MIN,
 			  OV9655_SHUTTER_WIDTH_MAX, 1,
 			  OV9655_SHUTTER_WIDTH_DEF);
+#if 0
+	v4l2_ctrl_new_std(&ov9655->ctrls, &ov9655_ctrl_ops,
+			  V4L2_CID_GAIN, MT9P031_GLOBAL_GAIN_MIN,
+			  MT9P031_GLOBAL_GAIN_MAX, 1, MT9P031_GLOBAL_GAIN_DEF);
+#endif
+
 	v4l2_ctrl_new_std(&ov9655->ctrls, &ov9655_ctrl_ops,
 			  V4L2_CID_HFLIP, 0, 1, 1, 0);
 	v4l2_ctrl_new_std(&ov9655->ctrls, &ov9655_ctrl_ops,

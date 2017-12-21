@@ -440,6 +440,7 @@ static const struct ov9655_pixfmt ov9655_formats[] = {
 	{ MEDIA_BUS_FMT_YVYU8_2X8, V4L2_COLORSPACE_SRGB, },
 	{ MEDIA_BUS_FMT_RGB565_2X8_LE, V4L2_COLORSPACE_SRGB, },
 	{ MEDIA_BUS_FMT_RGB565_2X8_BE, V4L2_COLORSPACE_SRGB, },
+//	{ MEDIA_BUS_FMT_SGRBG12_1X12, V4L2_COLORSPACE_SRGB, },
 };
 
 static struct ov9655 *to_ov9655(struct v4l2_subdev *sd)
@@ -668,6 +669,8 @@ static int ov9655_set_params(struct ov9655 *ov9655)
 	ret = ov9655_update_bits(client, REG_COM7, COM7_RES_MASK, ov9655_framesizes[i].resolution);
 
 	/* setup PLL and dividers */
+	if (format->code == MEDIA_BUS_FMT_SGRBG12_1X12)
+		;	/* adjust pixel clock for 12 bit wide (raw rgb) interface */
 	ret = ov9655_update_bits(client, REG_DBLV, DBLV_PLL_MASK, DBLV_PLL_4X);
 	ret = ov9655_write(client, REG_CLKRC, ov9655_framesizes[i].clkrc);
 
@@ -712,6 +715,12 @@ static int ov9655_set_params(struct ov9655 *ov9655)
 	case MEDIA_BUS_FMT_RGB565_2X8_BE:
 		ret = ov9655_set_format_regs(client, COM3_SWAP, COM7_RGB, 0, COM15_RGB565);
 		break;
+#if 0
+	case MEDIA_BUS_FMT_SGRBG12_1X12:
+		ret = ov9655_set_format_regs(client, 0x00, COM7_RAWRGB, 0, COM15_RGB555);
+		// FIXME: we must probably adjust pixel clock by factor 2
+		break;
+#endif
 	default:
 		/* should have been rejected in ov9655_set_format() */
 		break;

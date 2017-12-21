@@ -47,169 +47,90 @@ function media-format { # $1 = entity, $2 = format $3 = widthxheight
 	media-ctl -V "$1 [$2 $3]"
 }
 
-function setup { # $1 = video mode
+function setup { # -r: choose resizer; $1 = video resolution
 
-echo "Setting mode $1"
+echo Setting mode "$@"
 
 media-reset
 
+RESIZER=false	# bypassing OMAP ISP (almost)
+
+while [ "$1" ]
+do
+	case "$1" in
+		-r )
+			RESIZER=true
+			shift
+			;;
+		* )	break;;
+	esac
+done
+
 case "$1" in
-	sxga )	# bypassing OMAP ISP (almost)
+	sxga )
 		FORMAT=uyvy
 		CCDCFORMAT=UYVY2X8
 		WIDTH=1280
 		HEIGHT=1024
 		FPS=15
-		media-link "$CAMERA:0" '"OMAP3 ISP CCDC":0[1]'
-		media-link '"OMAP3 ISP CCDC":1' '"OMAP3 ISP CCDC output":0[1]'
-		media-format "$CAMERA:0" $CCDCFORMAT ${WIDTH}x${HEIGHT}
-		media-format '"OMAP3 ISP CCDC":0' $CCDCFORMAT ${WIDTH}x${HEIGHT}
-		media-format '"OMAP3 ISP CCDC":1' $CCDCFORMAT ${WIDTH}x${HEIGHT}
-		DEVICE=$(media-ctl -e "OMAP3 ISP CCDC output")
 		;;
-	vga )	# bypassing OMAP ISP (almost)
+	vga )
 		FORMAT=uyvy
 		CCDCFORMAT=UYVY2X8
 		WIDTH=640
 		HEIGHT=480
 		FPS=30
-		media-link "$CAMERA:0" '"OMAP3 ISP CCDC":0[1]'
-		media-link '"OMAP3 ISP CCDC":1' '"OMAP3 ISP CCDC output":0[1]'
-		media-format "$CAMERA:0" $CCDCFORMAT ${WIDTH}x${HEIGHT}
-		media-format '"OMAP3 ISP CCDC":0' $CCDCFORMAT ${WIDTH}x${HEIGHT}
-		media-format '"OMAP3 ISP CCDC":1' $CCDCFORMAT ${WIDTH}x${HEIGHT}
-		DEVICE=$(media-ctl -e "OMAP3 ISP CCDC output")
 		;;
-	qvga )	# bypassing OMAP ISP (almost)
+	qvga )
 		FORMAT=uyvy
 		CCDCFORMAT=UYVY2X8
 		WIDTH=320
 		HEIGHT=240
 		FPS=30
-		media-link "$CAMERA:0" '"OMAP3 ISP CCDC":0[1]'
-		media-link '"OMAP3 ISP CCDC":1' '"OMAP3 ISP CCDC output":0[1]'
-		media-format "$CAMERA:0" $CCDCFORMAT ${WIDTH}x${HEIGHT}
-		media-format '"OMAP3 ISP CCDC":0' $CCDCFORMAT ${WIDTH}x${HEIGHT}
-		media-format '"OMAP3 ISP CCDC":1' $CCDCFORMAT ${WIDTH}x${HEIGHT}
-		DEVICE=$(media-ctl -e "OMAP3 ISP CCDC output")
 		;;
-	qqvga )	# bypassing OMAP ISP (almost)
+	qqvga )
 		FORMAT=uyvy
 		CCDCFORMAT=UYVY2X8
 		WIDTH=160
 		HEIGHT=120
 		FPS=30
-		media-link "$CAMERA:0" '"OMAP3 ISP CCDC":0[1]'
-		media-link '"OMAP3 ISP CCDC":1' '"OMAP3 ISP CCDC output":0[1]'
-		media-format "$CAMERA:0" $CCDCFORMAT ${WIDTH}x${HEIGHT}
-		media-format '"OMAP3 ISP CCDC":0' $CCDCFORMAT ${WIDTH}x${HEIGHT}
-		media-format '"OMAP3 ISP CCDC":1' $CCDCFORMAT ${WIDTH}x${HEIGHT}
-		DEVICE=$(media-ctl -e "OMAP3 ISP CCDC output")
 		;;
-	cif )	# bypassing OMAP ISP (almost)
+	cif )
 		FORMAT=uyvy
 		CCDCFORMAT=UYVY2X8
 		WIDTH=352
 		HEIGHT=288
 		FPS=30
-		media-link "$CAMERA:0" '"OMAP3 ISP CCDC":0[1]'
-		media-link '"OMAP3 ISP CCDC":1' '"OMAP3 ISP CCDC output":0[1]'
-		media-format "$CAMERA:0" $CCDCFORMAT ${WIDTH}x${HEIGHT}
-		media-format '"OMAP3 ISP CCDC":0' $CCDCFORMAT ${WIDTH}x${HEIGHT}
-		media-format '"OMAP3 ISP CCDC":1' $CCDCFORMAT ${WIDTH}x${HEIGHT}
-		DEVICE=$(media-ctl -e "OMAP3 ISP CCDC output")
 		;;
-	vga-resizer | vga-r* )
+	qcif )
 		FORMAT=uyvy
 		CCDCFORMAT=UYVY2X8
-		WIDTH=640
-		HEIGHT=480
+		WIDTH=176
+		HEIGHT=144
 		FPS=30
-		media-link "$CAMERA:0" '"OMAP3 ISP CCDC":0[1]'
-		media-link '"OMAP3 ISP CCDC":1' '"OMAP3 ISP resizer":0[1]'
-		media-link '"OMAP3 ISP resizer":1' '"OMAP3 ISP resizer output":0[1]'
-		media-format "$CAMERA:0" $CCDCFORMAT ${WIDTH}x${HEIGHT}
-		media-format '"OMAP3 ISP CCDC":0' $CCDCFORMAT ${WIDTH}x${HEIGHT}
-		media-format '"OMAP3 ISP CCDC":1' $CCDCFORMAT ${WIDTH}x${HEIGHT}
-		media-format '"OMAP3 ISP resizer":1' UYVY ${WIDTH}x${HEIGHT}
-		DEVICE=$(media-ctl -e "OMAP3 ISP resizer output")
-		;;
-# old code follows
-	sxga-old )
-		FORMAT=uyvy
-		CCDCFORMAT=UYVY2X8
-		WIDTH=1280
-		HEIGHT=1024
-		FPS=15
-		media-link "$CAMERA:0" '"OMAP3 ISP CCDC":0[1]'
-		media-link '"OMAP3 ISP CCDC":2' '"OMAP3 ISP preview":0[1]'
-		media-link '"OMAP3 ISP preview":1' '"OMAP3 ISP resizer":0[1]'
-		media-link '"OMAP3 ISP resizer":1' '"OMAP3 ISP resizer output":0[1]'
-		media-format "$CAMERA:0" SGRBG10 ${WIDTH}x${HEIGHT}
-		media-format '"OMAP3 ISP CCDC":2' SGRBG10 ${WIDTH}x${HEIGHT}
-		media-format '"OMAP3 ISP preview":1' UYVY ${WIDTH}x${HEIGHT}
-		media-format '"OMAP3 ISP resizer":1' UYVY ${WIDTH}x${HEIGHT}
-		DEVICE=$(media-ctl -e "OMAP3 ISP resizer output")
-		;;
-	qvga-old )
-		FORMAT=uyvy
-		CCDCFORMAT=UYVY2X8
-		WIDTH=320
-		HEIGHT=240
-		FPS=30
-		# media-ctl -r -l '"'"$CAMERA"'":0->"OMAP3 ISP CCDC":0[1], "OMAP3 ISP CCDC":2->"OMAP3 ISP preview":0[1], "OMAP3 ISP preview":1->"OMAP3 ISP resizer":0[1], "OMAP3 ISP resizer":1->"OMAP3 ISP resizer output":0[1]'
-		media-link "$CAMERA:0" '"OMAP3 ISP CCDC":0[1]'
-		media-link '"OMAP3 ISP CCDC":2' '"OMAP3 ISP preview":0[1]'
-		media-link '"OMAP3 ISP preview":1' '"OMAP3 ISP resizer":0[1]'
-		media-link '"OMAP3 ISP resizer":1' '"OMAP3 ISP resizer output":0[1]'
-		# media-ctl -V '"'"$CAMERA"'":0 [SGRBG10 320x240], "OMAP3 ISP CCDC":2 [SGRBG10 320x240], "OMAP3 ISP preview":1 [UYVY 320x240], "OMAP3 ISP resizer":1 [UYVY 320x240]'
-		media-format "$CAMERA:0" SGRBG10 ${WIDTH}x${HEIGHT}
-		media-format '"OMAP3 ISP CCDC":2' SGRBG10 ${WIDTH}x${HEIGHT}
-		media-format '"OMAP3 ISP preview":1' UYVY ${WIDTH}x${HEIGHT}
-		media-format '"OMAP3 ISP resizer":1' UYVY ${WIDTH}x${HEIGHT}
-		DEVICE=$(media-ctl -e "OMAP3 ISP resizer output")
-		;;
-	cif-old )
-		FORMAT=uyvy
-		CCDCFORMAT=UYVY2X8
-		WIDTH=352
-		HEIGHT=288
-		FPS=30
-		# media-ctl -r -l '"'"$CAMERA"'":0->"OMAP3 ISP CCDC":0[1], "OMAP3 ISP CCDC":2->"OMAP3 ISP preview":0[1], "OMAP3 ISP preview":1->"OMAP3 ISP resizer":0[1], "OMAP3 ISP resizer":1->"OMAP3 ISP resizer output":0[1]'
-		media-link "$CAMERA:0" '"OMAP3 ISP CCDC":0[1]'
-		media-link '"OMAP3 ISP CCDC":2' '"OMAP3 ISP preview":0[1]'
-		media-link '"OMAP3 ISP preview":1' '"OMAP3 ISP resizer":0[1]'
-		media-link '"OMAP3 ISP resizer":1' '"OMAP3 ISP resizer output":0[1]'
-		# media-ctl -V '"'"$CAMERA"'":0 [SGRBG10 352x288], "OMAP3 ISP CCDC":2 [SGRBG10 352x288], "OMAP3 ISP preview":1 [UYVY 352x288], "OMAP3 ISP resizer":1 [UYVY 352x288]'
-		media-format "$CAMERA:0" SGRBG10 ${WIDTH}x${HEIGHT}
-		media-format '"OMAP3 ISP CCDC":2' SGRBG10 ${WIDTH}x${HEIGHT}
-		media-format '"OMAP3 ISP preview":1' UYVY ${WIDTH}x${HEIGHT}
-		media-format '"OMAP3 ISP resizer":1' UYVY ${WIDTH}x${HEIGHT}
-		DEVICE=$(media-ctl -e "OMAP3 ISP resizer output")
-		;;
-	vga-old )
-		FORMAT=uyvy
-		WIDTH=640
-		HEIGHT=480
-		FPS=30
-		# media-ctl -r -l '"'"$CAMERA"'":0->"OMAP3 ISP CCDC":0[1], "OMAP3 ISP CCDC":2->"OMAP3 ISP preview":0[1], "OMAP3 ISP preview":1->"OMAP3 ISP resizer":0[1], "OMAP3 ISP resizer":1->"OMAP3 ISP resizer output":0[1]'
-		media-link "$CAMERA:0" '"OMAP3 ISP CCDC":0[1]'
-		media-link '"OMAP3 ISP CCDC":2' '"OMAP3 ISP preview":0[1]'
-		media-link '"OMAP3 ISP preview":1' '"OMAP3 ISP resizer":0[1]'
-		media-link '"OMAP3 ISP resizer":1' '"OMAP3 ISP resizer output":0[1]'
-		# media-ctl -V '"'"$CAMERA"'":0 [SGRBG10 640x480], "OMAP3 ISP CCDC":2 [SGRBG10 640x480], "OMAP3 ISP preview":1 [UYVY 640x480], "OMAP3 ISP resizer":1 [UYVY 640x480]'
-		media-format "$CAMERA:0" SGRBG10 ${WIDTH}x${HEIGHT}
-		media-format '"OMAP3 ISP CCDC":2' SGRBG10 ${WIDTH}x${HEIGHT}
-		media-format '"OMAP3 ISP preview":1' UYVY ${WIDTH}x${HEIGHT}
-		media-format '"OMAP3 ISP resizer":1' UYVY ${WIDTH}x${HEIGHT}
-		DEVICE=$(media-ctl -e "OMAP3 ISP resizer output")
 		;;
 	* )
-		echo Unknown camera mode $1
-		echo valid modes: sxga vga vga-r[esizer] sxga-old qvga-old cif-old vga-old
+		echo Unknown camera resolution $1
+		echo valid modes: [-r] sxga vga qvga qqvga cif qcif
 		exit 1
 		;;
 esac
+
+media-link "$CAMERA:0" '"OMAP3 ISP CCDC":0[1]'
+media-format "$CAMERA:0" $CCDCFORMAT ${WIDTH}x${HEIGHT}
+media-format '"OMAP3 ISP CCDC":0' $CCDCFORMAT ${WIDTH}x${HEIGHT}
+media-format '"OMAP3 ISP CCDC":1' $CCDCFORMAT ${WIDTH}x${HEIGHT}
+
+if $RESIZER
+then
+	media-link '"OMAP3 ISP CCDC":1' '"OMAP3 ISP resizer":0[1]'
+	media-link '"OMAP3 ISP resizer":1' '"OMAP3 ISP resizer output":0[1]'
+	media-format '"OMAP3 ISP resizer":1' UYVY ${WIDTH}x${HEIGHT}
+	DEVICE=$(media-ctl -e "OMAP3 ISP resizer output")
+else
+	media-link '"OMAP3 ISP CCDC":1' '"OMAP3 ISP CCDC output":0[1]'
+	DEVICE=$(media-ctl -e "OMAP3 ISP CCDC output")
+fi
 
 echo "Device: $DEVICE"
 

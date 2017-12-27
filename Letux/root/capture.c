@@ -519,7 +519,7 @@ init_device                     (void)
         fmt.fmt.pix.height      = 1024;
 //        fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
 		fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_UYVY;
-        fmt.fmt.pix.field       = V4L2_FIELD_INTERLACED;
+        //fmt.fmt.pix.field       = V4L2_FIELD_INTERLACED;
 
         if (-1 == xioctl (fd, VIDIOC_S_FMT, &fmt))
                 errno_exit ("VIDIOC_S_FMT");

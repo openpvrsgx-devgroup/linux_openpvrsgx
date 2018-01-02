@@ -213,7 +213,7 @@ PVRSRVDrmLoad(struct drm_device *dev, unsigned long flags)
 	gpsPVRDRMDev = dev;
 #if !defined(PVR_DRI_DRM_NOT_PCI) && !defined(SUPPORT_DRI_DRM_PLUGIN)
 #if defined(PVR_DRI_DRM_PLATFORM_DEV)
-	gpsPVRLDMDev = dev->platformdev;
+	gpsPVRLDMDev = to_platform_device(dev->dev);
 #else
 	gpsPVRLDMDev = dev->pdev;
 #endif
@@ -531,8 +531,10 @@ static struct drm_driver sPVRDrmDriver =
 #endif
 		,
 	.dev_priv_size = 0,
+#if (LINUX_VERSION_CODE <= KERNEL_VERSION(4,11,0))
 	.load = PVRSRVDrmLoad,
 	.unload = PVRSRVDrmUnload,
+#endif
 	.open = PVRSRVDrmOpen,
 #if defined(PVR_DRI_DRM_USE_POST_CLOSE)
 	.postclose = PVRSRVDrmPostClose,
@@ -657,8 +659,11 @@ static struct platform_driver sPVRPlatDriver =
 static int
 PVRSRVDrmProbe(struct platform_device *pDevice)
 {
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,12,0))
+	struct drm_device *ddev;
+#endif
+	int ret = 0;
 #if (AM_VERSION != 5)
-	int ret;
 	struct device *dev = &pDevice->dev;
 	struct gfx_sgx_platform_data *pdata = dev->platform_data;
 #endif
@@ -675,9 +680,24 @@ PVRSRVDrmProbe(struct platform_device *pDevice)
 #endif
 
 #if defined(PVR_NEW_STYLE_DRM_PLATFORM_DEV)
-	gpsPVRLDMDev = pDevice;
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,12,0))
+	ddev = drm_dev_alloc(&sPVRDrmDriver, &pDevice->dev);
+	if (IS_ERR(ddev))
+		return PTR_ERR(ddev);
 
+	ret = PVRSRVDrmLoad(ddev, 0);
+	if (!ret)
+		ret = drm_dev_register(ddev, 0);
+
+	if (ret)
+		drm_dev_unref(ddev);
+	else
+		gpsPVRLDMDev = pDevice;
+	return ret;
+#else
+	gpsPVRLDMDev = pDevice;
 	return drm_platform_init(&sPVRDrmDriver, gpsPVRLDMDev);
+#endif
 #else
 	return drm_get_platform_dev(pDevice, &sPVRDrmDriver);
 #endif
@@ -697,7 +717,13 @@ PVRSRVDrmRemove(struct platform_device *pDevice)
 #if defined(PVR_NEW_STYLE_DRM_PLATFORM_DEV) && (LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0))
 	drm_platform_exit(&sPVRDrmDriver, gpsPVRLDMDev);
 #else
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,12,0))
+	PVRSRVDrmUnload(gpsPVRDRMDev);
+#endif
 	drm_put_dev(gpsPVRDRMDev);
+#endif
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,12,0))
+	gpsPVRDRMDev = NULL;
 #endif
 
 #if (AM_VERSION != 5)

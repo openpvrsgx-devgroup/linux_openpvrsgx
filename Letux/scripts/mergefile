@@ -124,6 +124,7 @@ work/letux-base/extcon
 work/letux-base/serial
 work/letux-base/misc
 work/letux-base/drivers-keyboard
+work/letux-base/mvduin/patch/tiler-fbdev
 
 # not included by default, but carried along and rebased
 -work/letux-base/marek/upstream-queue
@@ -131,10 +132,6 @@ work/letux-base/drivers-keyboard
 -work/letux-base/extern/omap-hsmmc
 -work/letux-base/hns/video/dss/antitear
 -work/letux-base/lukas/android
--work/letux-base/mvduin/patch/tiler-buf-dumb
-
-# tiler-fbdev: does not cleanly rebase
-#-work/letux-base/mvduin/patch/tiler-fbdev
 
 # abandoned
 #-work/letux-base/hns/input/tsc2007-pressure

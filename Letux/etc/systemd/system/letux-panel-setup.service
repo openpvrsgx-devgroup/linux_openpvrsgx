@@ -4,7 +4,7 @@ Before=nodm.service
 
 [Service]
 Type=oneshot
-ExecStart=/etc/X11/xinit/letux-setup
+ExecStart=/etc/X11/xinit/letux-panel-setup
 
 [Install]
 WantedBy=graphical.target

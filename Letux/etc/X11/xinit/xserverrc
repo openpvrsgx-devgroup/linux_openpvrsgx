@@ -1,8 +1,8 @@
 #!/bin/sh
 
 # setup letux panel
-/etc/X11/xinit/letux-setup
+/etc/X11/xinit/letux-panel-setup
 
-# we allow to access X11 through TCP
+# we may allow to access X11 through TCP
 # exec /usr/bin/X -nolisten tcp "$@"
 exec /usr/bin/X "$@"

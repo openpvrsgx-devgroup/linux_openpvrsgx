@@ -1,5 +1,5 @@
 #
-# Linux/mips 4.15.0-rc7 Kernel Configuration
+# Linux/mips 4.15.0-rc8 Kernel Configuration
 #
 CONFIG_MIPS=y
 
@@ -231,7 +231,6 @@ CONFIG_TICK_CPU_ACCOUNTING=y
 CONFIG_BSD_PROCESS_ACCT=y
 # CONFIG_BSD_PROCESS_ACCT_V3 is not set
 # CONFIG_TASKSTATS is not set
-# CONFIG_CPU_ISOLATION is not set
 
 #
 # RCU Subsystem
@@ -2374,7 +2373,6 @@ CONFIG_DRM_PANEL_BRIDGE=y
 # CONFIG_DRM_TINYDRM is not set
 # CONFIG_DRM_LEGACY is not set
 # CONFIG_DRM_LIB_RANDOM is not set
-# CONFIG_SGX is not set
 
 #
 # Frame buffer Devices
@@ -3399,6 +3397,7 @@ CONFIG_IRDA_ULTRA=y
 # USB Power Delivery and Type-C drivers
 #
 # CONFIG_PI433 is not set
+# CONFIG_SGX is not set
 CONFIG_MIPS_PLATFORM_DEVICES=y
 # CONFIG_GOLDFISH is not set
 CONFIG_CLKDEV_LOOKUP=y

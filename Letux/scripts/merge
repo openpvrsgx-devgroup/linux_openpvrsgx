@@ -80,7 +80,7 @@ BRANCHES=""
 
 function latestforbranch {
 	# get latest version for branch $1 (optionally passing $2 to git branch)
-	git branch $2 | cut -c 3- | grep "^$1-v[0-9]*" | perl -e 'print sort{length($a)<=>length($b) or $a cmp $b} <>' | tail -1
+	git branch $2 | cut -c 3- | grep "^$1-v[0-9]*$" | perl -e 'print sort{length($a)<=>length($b) or $a cmp $b} <>' | tail -1
 }
 
 function linuxversion {
@@ -178,12 +178,7 @@ function process {
 			;;
 	esac
 	echo "*** process $FEATURE ***"
-#	LATEST=$(echo $(git branch | cut -c 3- | grep "^${FEATURE}-v[0-9]*" | perl -e 'print sort{length($a)<=>length($b) or $a cmp $b} <>' | tail -1))
 	LATEST=$(latestforbranch "$FEATURE")
-	if [ "$LATEST" != "$(latestforbranch "$FEATURE")" ]
-	then
-		echo latestforbranch error
-	fi
 	if [ "$LATEST" ]
 	then # there is a latest with -v
 		echo "*** taking $FEATURE -> $LATEST ***"
@@ -192,12 +187,7 @@ function process {
 	then # a local version w/o -v exists
 		echo "*** taking $FEATURE ***"
 	else # nothing exists locally - check with remote
-#		LATEST=$(echo $(git branch -r | cut -c 3- | grep "^${FEATURE}-v[0-9]*" | sed 's|origin/||' | perl -e 'print sort{length($a)<=>length($b) or $a cmp $b} <>' | tail -1))
 		LATEST=$(latestforbranch "$FEATURE" -r)
-		if [ "$LATEST" != "$(latestforbranch "$FEATURE" -r)" ]
-		then
-			echo latestforbranch error
-		fi
 		if [ "$LATEST" ]
 		then # there is a remote latest with -v
 			echo "*** checking out and taking $FEATURE -> $LATEST ***"

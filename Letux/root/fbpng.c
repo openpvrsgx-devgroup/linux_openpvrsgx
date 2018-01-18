@@ -53,7 +53,14 @@ int main(int argc, char *argv[])
 
 	// Start reading
 	png_init_io(png_ptr, fp);
-	png_read_png(png_ptr, info_ptr, PNG_TRANSFORM_STRIP_16 | PNG_TRANSFORM_STRIP_ALPHA | PNG_TRANSFORM_PACKING, NULL);
+	png_read_png(png_ptr, info_ptr,
+		PNG_TRANSFORM_STRIP_16 |
+		PNG_TRANSFORM_STRIP_ALPHA |
+		PNG_TRANSFORM_PACKING |
+		PNG_TRANSFORM_GRAY_TO_RGB |
+		PNG_TRANSFORM_EXPAND,
+		NULL);
+
 	row_ptr = png_get_rows(png_ptr, info_ptr);
 	if (row_ptr == NULL)
 	{
@@ -75,21 +82,22 @@ int main(int argc, char *argv[])
 	if (ret == -1)
 		perror("ioctl(FBIOGET_VSCREENINFO)");
 
+	if ((fbvar.bits_per_pixel != 32) && (fbvar.bits_per_pixel != 24)) {
+		fbvar.bits_per_pixel = info_ptr->pixel_depth;
+
+		ret = ioctl(fd, FBIOPUT_VSCREENINFO, &fbvar);
+		if (ret == -1)
+			perror("ioctl(FBIOPUT_VSCREENINFO)");
+	}
+
 	destsize = fbvar.xres_virtual * fbvar.yres_virtual
-		 * info_ptr->pixel_depth / 8;
+		 * fbvar.bits_per_pixel / 8;
 	dest = mmap(0, destsize, PROT_WRITE|PROT_READ, MAP_SHARED, fd, 0);
 	if (dest == MAP_FAILED)
 	{
 		perror("mmap(fbptr) failed");
 		return 1;
 	}
-
-	fbvar.bits_per_pixel = info_ptr->pixel_depth;
-
-	ret = ioctl(fd, FBIOPUT_VSCREENINFO, &fbvar);
-	if (ret == -1)
-		perror("ioctl(FBIOPUT_VSCREENINFO)");
-
 	memset(dest, 0, destsize);
 
 	switch (info_ptr->pixel_depth)
@@ -105,20 +113,32 @@ int main(int argc, char *argv[])
 			width = info_ptr->width;
 			if (width  > fbvar.xres_virtual)
 				width = fbvar.xres_virtual;
-			dst += (fbvar.xres_virtual-width) / 2 * 3;
+			dst += (fbvar.xres_virtual-width) / 2 * fbvar.bits_per_pixel / 8;
 
 			for (h = 0; h < height; h++)
 			{
 				unsigned char *src = row_ptr[h];
 				int len = width;
-				while (len--)
-				{
-					*dst++ = src[2];
-					*dst++ = src[1];
-					*dst++ = src[0];
-					src += 3;
+				if (fbvar.bits_per_pixel == 32) {
+					while (len--)
+					{
+						*dst++ = src[2];
+						*dst++ = src[1];
+						*dst++ = src[0];
+						src += 3;
+						dst++;
+					}
+				} else {
+					while (len--)
+					{
+						*dst++ = src[2];
+						*dst++ = src[1];
+						*dst++ = src[0];
+						src += 3;
+					}
 				}
-				dst += fbvar.xres_virtual - width;
+				dst += (fbvar.xres_virtual - width)
+				*  fbvar.bits_per_pixel / 8;
 			}
 			break;
 		}

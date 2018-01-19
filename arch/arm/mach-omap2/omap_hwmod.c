@@ -1569,7 +1569,7 @@ static int _deassert_hardreset(struct omap_hwmod *oh, const char *name)
 
 	ret = soc_ops.deassert_hardreset(oh, &ohri);
 
-	if (soc_ops.disable_module)
+	if (soc_ops.disable_module && strcmp(name, "gfx") != 0)
 		soc_ops.disable_module(oh);
 	_disable_clocks(oh);
 
@@ -1583,7 +1583,8 @@ static int _deassert_hardreset(struct omap_hwmod *oh, const char *name)
 		 */
 		clkdm_allow_idle(oh->clkdm);
 
-		clkdm_hwmod_disable(oh->clkdm, oh);
+		if(strcmp(name, "gfx") != 0)
+			clkdm_hwmod_disable(oh->clkdm, oh);
 	}
 
 	return ret;

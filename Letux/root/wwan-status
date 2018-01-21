@@ -30,7 +30,7 @@ case "$IF" in
 		echo "AT_OWANNWERROR?"; sleep 1
 		echo "AT_ONCI?"; sleep 1
 		sleep 60
-		) | ./femtocom $IF
+		) | /root/femtocom $IF
 		;;
 
 	/dev/ttyACM[0-4] | /dev/ttyUSB[0-4] )	# Neo900 / Pyra
@@ -59,7 +59,7 @@ echo "VMODEM: $(cat $INA231/in0_input) mV"
 		echo "AT^SMONI"; sleep 1	# serving cell
 		echo "AT^SMONP"; sleep 1	# neighbour cell
 		sleep 5
-		) | ./femtocom $IF
+		) | /root/femtocom $IF
 		;;
 
 esac

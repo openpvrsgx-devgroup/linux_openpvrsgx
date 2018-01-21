@@ -14,7 +14,7 @@ case "$IF" in
 
 	/dev/ttyHS* ) # GTA04 with OPTION GTM601W
 		killall arecord
-		trap "killall arecord aplay; (echo "AT+CHUP"; sleep 1) | ./femtocom $IF" EXIT
+		trap "killall arecord aplay; (echo "AT+CHUP"; sleep 1) | /root/femtocom $IF" EXIT
 		trap "exit 1" SIGHUP SIGINT SIGTERM
 
 		# make sure the PCM goes to the SoC
@@ -32,7 +32,7 @@ mkfifo /tmp/femtocom
 
 MESSAGE=/usr/share/sounds/alsa/Front_Center.wav
 
-./femtocom $IF </tmp/femtocom |
+/root/femtocom $IF </tmp/femtocom |
 (
 echo "*** TAM initialized ***"
 ( # enable unsolicited messages and extended reporting

@@ -14,7 +14,7 @@ case "$IF" in
 	* )
 		(
 		echo "AT+CPIN=$1"; sleep 3
-		) | ./femtocom $IF
+		) | /root/femtocom $IF
 		;;
 
 esac

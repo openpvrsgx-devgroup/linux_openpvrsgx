@@ -8,7 +8,7 @@
 
 rfkill unblock wwan
 
-make femtocom 2>/dev/null >&2
+(cd /root && make femtocom 2>/dev/null >&2)
 
 case $(tr -d '\0' </proc/device-tree/model) in
 *GTA04b7* | *Neo900* | *Pyra-Handheld* ) # device with Cinterion Module

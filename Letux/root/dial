@@ -52,7 +52,7 @@ function turnoff {
 	amixer set 'Earpiece Mixer Voice' off
 	amixer set 'HeadsetL Mixer Voice' off
 	amixer set 'HeadsetR Mixer Voice' off
-	(echo "AT+CHUP"; sleep 1) | ./femtocom $IF
+	(echo "AT+CHUP"; sleep 1) | /root/femtocom $IF
 }
 		trap "turnoff" EXIT
 		trap "exit 1" SIGHUP SIGINT SIGTERM
@@ -145,7 +145,7 @@ function turnoff {
 				# sleep 99999	# we can't easily detect end of call (without monitoring femtocom output)
 			fi
 		fi
-		) | ./femtocom $IF
+		) | /root/femtocom $IF
 		;;
 
 	/dev/ttyACM[0-4] | /dev/ttyUSB[0-4] )	# Neo900 / Pyra
@@ -174,6 +174,6 @@ function turnoff {
 				sleep 99999
 			fi
 		fi
-		) | ./femtocom $IF
+		) | /root/femtocom $IF
 
 esac

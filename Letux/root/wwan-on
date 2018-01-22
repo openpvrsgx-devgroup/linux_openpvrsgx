@@ -1,3 +1,4 @@
+#!/bin/bash
 #
 # start UMTS modem
 # and provde interface name

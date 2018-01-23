@@ -116,7 +116,7 @@ work/letux-base/kemnade/charging_fixes
 work/letux-base/hns/gta04/pm
 work/letux-base/hacks
 work/letux-base/omap2plus
-work/letux-base/hns/gpu/pvr
+work/letux-base/hns/gpu/omap-pvr
 work/letux-base/omapdrm
 work/letux-base/mmc
 work/letux-base/ubi-fs

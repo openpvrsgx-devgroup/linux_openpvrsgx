@@ -5,8 +5,11 @@
 # usage: gps-on
 #
 
+rfkill unblock gps	# turn on LNA etc.
+
 case "$(cat /sys/firmware/devicetree/base/model)" in
 	*GTA04*/Letux* )
+		[ -r /sys/class/gpio/gpio144/value ] || echo 144 >/sys/class/gpio/export # 2>/dev/null
 		if [ -r /dev/ttyGPS0 ]
 		then	echo /dev/ttyGPS0
 		else 	echo /dev/ttyO1
@@ -45,20 +48,24 @@ case "$IF" in
 
 	/dev/ttyACM1 )	# PLS8
 		(
-		echo 'AT^SGPSC="Engine","1"'; sleep 1	# enable GPS
-		echo 'AT^SGPSC="Nmea/Output","on"'; sleep 1	# enable data stream
-		echo 'AT^SGPSC="Power/Antenna","on"'; sleep 1	# turn on LNA
-		echo 'AT^SGPSC="Power/Antenna","auto"'; sleep 1	# switch to auto mode
+		# note: * commands report "+CME ERROR: operation failed" if the setting is already done
+		echo 'AT^SGPSC="Engine","0"'; sleep 0.2		# must turn off before enabling GLONASS
+		echo 'AT^SGPSC="Nmea/Glonass","on"'; sleep 0.2	# * enable GLONASS
+		echo 'AT^SGPSC="Engine","1"'; sleep 0.2		# enable GPS
+		echo 'AT^SGPSC="Nmea/Freq",1'; sleep 0.2		# once a second
+		echo 'AT^SGPSC="Nmea/Output","on"'; sleep 0.2		# enable data stream
+		echo 'AT^SGPSC="Nmea/Urc","on"'; sleep 0.2		# unsolicited reports
+		echo 'AT^SGPSC="Power/Antenna","auto"'; sleep 0.2	# * switch LNA to auto mode
 		) | /root/femtocom $IF >&2 &
 		echo /dev/ttyACM2
 		;;
 
 	/dev/ttyUSB[0-4] )	# PHS8 in mutiplexed mode
 		(
-		echo 'AT^SGPSC="Engine","1"'; sleep 1	# enable GPS
-		echo 'AT^SGPSC="Nmea/Output","on"'; sleep 1
-		echo 'AT^SGPSC="Power/Antenna","on"'; sleep 1
-		echo 'AT^SGPSC="Power/Antenna","auto"'; sleep 1
+		echo 'AT^SGPSC="Engine","1"'; sleep 0.2		# enable GPS
+		echo 'AT^SGPSC="Nmea/Output","on"'; sleep 0.2		# normal output
+		echo 'AT^SGPSC="Power/Antenna","on"'; sleep 0.2	# turn on LNA
+		echo 'AT^SGPSC="Power/Antenna","auto"'; sleep 0.2	# switch to auto mode
 		) | /root/femtocom $IF >&2  &
 		echo /dev/ttyUSB1
 		;;

@@ -69,7 +69,6 @@ work/letux-base/hns/input/tsc2007
 
 # almost ready for upstreaming
 work/letux-base/hns/usb/misc/usb3503
-work/letux-base/hns/power/twl4030_charger
 work/letux-base/hns/misc/wwan
 work/letux-base/hns/input/as5013
 work/letux-base/hns/input/pandora-nub
@@ -138,3 +137,4 @@ work/letux-base/mvduin/patch/tiler-fbdev
 #-work/letux-base/extern/ov9655
 #-work/letux-base/hns/video/ov9655
 #-work/letux-base/extern/omap/reset-controller
+#work/letux-base/hns/power/twl4030_charger

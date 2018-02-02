@@ -91,7 +91,6 @@ work/hns/drivers/gpio/gpio-pcal6524
 
 # not for upstreaming
 work/letux-base/marek/am335x-hwmon
-work/letux-base/extern/sgx544-v2
 work/letux-base/hns/mtd/onenand
 
 # GTA04 sound
@@ -116,6 +115,8 @@ work/letux-base/hns/gta04/pm
 work/letux-base/hacks
 work/letux-base/omap2plus
 work/letux-base/hns/gpu/omap-pvr
+work/letux-base/hns/gpu/latest-pvr
+# work/letux-base/extern/sgx544-v2
 work/letux-base/omapdrm
 work/letux-base/mmc
 work/letux-base/ubi-fs

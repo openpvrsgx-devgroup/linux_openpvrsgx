@@ -1,16 +1,18 @@
 #!/bin/bash
 
-# by Neil Brown
+# originally by Neil Brown
+# improved by H. Nikolaus Schaller
 
 # disable charging, suspend for 5 minutes and report apparent
 # power usage by monitoring battery.
+
+# should not be run over usb-ethernet-gadget
 
 case $(tr -d '\0' </proc/device-tree/model 2>/dev/null) in
 	*GTA04* )
 		power1=/sys/class/power_supply/twl4030_usb/mode
 		power2=/sys/class/power_supply/twl4030_ac/mode
 		chg=/sys/class/power_supply/bq27000-battery/charge_now
-		alarm=/sys/class/rtc/rtc0/wakealarm
 		rs232=/sys/class/gpio/gpio13/value
 		rs232dir=/sys/class/gpio/gpio13/direction
 		[ -f $rs232 ] || { echo 13 > /sys/class/gpio/export; echo high > $rs232dir;}
@@ -20,14 +22,12 @@ case $(tr -d '\0' </proc/device-tree/model 2>/dev/null) in
 		power1=/sys/class/power_supply/twl4030_usb/mode
 		power2=/sys/class/power_supply/twl4030_ac/mode
 		chg=/sys/class/power_supply/bq27500-1-0/charge_now
-		alarm=/sys/class/rtc/rtc0/wakealarm
 		;;
 	*Pyra-Handheld* )
 		# FIXME: disabling charging must be done differently
 	# FIXME: there is no "mode": power1=/sys/class/power_supply/bq24297/mode
 		power3=/sys/class/power_supply/bq24297/input_current_limit
 		chg=/sys/class/power_supply/bq27421-0/charge_now
-		alarm=/sys/class/rtc/rtc0/wakealarm
 		[ -r /dev/ttyACM1 ] && MODEM="with modem on"
 		;;
 	* )
@@ -36,30 +36,31 @@ case $(tr -d '\0' </proc/device-tree/model 2>/dev/null) in
 		;;
 esac
 
-delay=${1-300}
+delay=${1-300}	# default to 300 seconds (5 minutes)
 
 echo suspending for $delay seconds >&2
-stty raw -echo -cread
 # stop RS232
+stty raw -echo -cread 2>/dev/null
 [ "$rs232" ] && echo 0 > $rs232
 # turn off external power supplies
 [ "$power1" ] && echo off > $power1
 [ "$power2" ] && echo off > $power2
 [ "$power3" ] && echo 0 > $power3
 # turn off LEDs
-( cd /sys/class/leds; for i in *; do echo "none" >$i/trigger; done )
+( cd /sys/class/leds; for i in *; do echo "none" >$i/trigger; echo "0" >$i/brightness; done )
 before=`cat $chg`
 start=`date '+%s'`
-echo $[start+delay] > $alarm
-echo mem > /sys/power/state
+rtcwake -m mem -s $delay
 end=`date '+%s'`
 after=`cat $chg`
+# wait a little for system components to awake
 sleep 1
+# restart RS232
 [ "$rs232" ] && echo 1 > $rs232
-stty sane
+stty sane 2>/dev/null
 echo did wake up >&2
-echo before: $before
-echo after: $after
+echo before: $start $before
+echo after: $end $after
 [ "$power1" ] && echo auto > $power1
 [ "$power2" ] && echo auto > $power2
 [ "$power3" ] && echo 2000000 > $power3

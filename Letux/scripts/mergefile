@@ -91,7 +91,6 @@ work/hns/drivers/gpio/gpio-pcal6524
 
 # not for upstreaming
 work/letux-base/marek/am335x-hwmon
-work/letux-base/hns/mtd/onenand
 
 # GTA04 sound
 work/letux-base/codecs-for-gta04
@@ -134,6 +133,7 @@ work/letux-base/mvduin/patch/tiler-fbdev
 -work/letux-base/lukas/android
 
 # abandoned
+#-work/letux-base/hns/mtd/onenand
 #-work/letux-base/hns/input/tsc2007-pressure
 #-work/letux-base/extern/ov9655
 #-work/letux-base/hns/video/ov9655

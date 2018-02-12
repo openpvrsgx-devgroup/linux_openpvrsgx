@@ -15,6 +15,7 @@
 #include <linux/platform_data/i2c-omap.h>
 #include <linux/power/smartreflex.h>
 #include <linux/platform_data/hsmmc-omap.h>
+#include <linux/platform_data/ti-sysc.h>
 
 #include <linux/omap-dma.h>
 #include "l3_3xxx.h"
@@ -114,7 +115,7 @@ static struct omap_hwmod omap3xxx_iva_hwmod = {
 
 /* gfx */
 
-static struct omap_hwmod_sysc_fields omap3_hwmod_sysc_type_gfx = {
+static struct sysc_regbits omap3_hwmod_sysc_type_gfx = {
 	.midle_shift	= 4,
 	.sidle_shift	= 2,
 };
@@ -146,7 +147,6 @@ struct omap_hwmod omap3xxx_gfx_hwmod = {
 	.main_clk	= "sgx_fck",
 	.prcm		= {
 		.omap2	= {
-			.prcm_reg_id = 1,
 //			.module_offs = OMAP3430ES2_SGX_MOD,
 //			.module_bit = OMAP3430ES2_CM_FCLKEN_SGX_EN_SGX_SHIFT,
 			.idlest_reg_id = 1,

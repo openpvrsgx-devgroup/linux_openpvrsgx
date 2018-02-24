@@ -22,6 +22,8 @@ fi
 
 UIMAGE="/boot/uImage"	# the uImage on the SD card
 
+[ -x /etc/init.d/qtmoko-gta04 ] && /etc/init.d/qtmoko-gta04 stop
+
 # copy only modules for the current kernel
 MODULES=$(mkimage -l "$UIMAGE" | fgrep "Image Name:" | sed 's/Image Name: *//' | sed 's/Linux-//')
 
@@ -358,5 +360,7 @@ fi
 
 	esac
 done
+
+[ -x /etc/init.d/qtmoko-gta04 ] && /etc/init.d/qtmoko-gta04 start
 
 echo "done."

@@ -1,0 +1,11 @@
+#!/bin/bash
+
+for i in /dev/sda /dev/sdb /dev/sdc /dev/sdd /dev/mmcblk0 /dev/mmcblk1 /dev/mmcblk2 /dev/mmcblk3 /dev/nand
+do
+	if [ -b "$i" ]
+	then
+		echo "+++ checking $i +++"
+		hdparm -tT --direct "$i"
+		# could also use dd, see: https://wiki.ubuntuusers.de/Festplatten-Geschwindigkeitstest/
+	fi
+done

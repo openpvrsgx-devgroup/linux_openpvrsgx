@@ -1,0 +1,23 @@
+/*
+ * Copyright (C) 2014 H. Nikolaus Schaller <hns@goldelico.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * the beagle-b4 is a BeagleBoard plus a display adapter
+ * board.
+ *
+ * This adapter supports
+ *   Sharp Panel
+ *   Backlight driver (GPIO / PWM)
+ *   TSC2007 touch screen controller (2C2 + GPIO )
+ *   W2SG0004 GPS receiver connected to UART2 + GPIO
+ *   external antenna detect (GPIO )
+ */
+
+/ {
+
+	// configure b4 panel
+
+};

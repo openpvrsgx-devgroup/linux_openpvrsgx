@@ -6,11 +6,12 @@
  * published by the Free Software Foundation.
  */
 
-#include "omap3-beagle-xm+gta04b1.dts"
+#include "omap3-beagle-xm-ab+gta04.dts"
+#include "omap3-beagle+b1.dtsi"
 
 / {
-	/* HS USB Port 2 Power enable was inverted with the xM C */
-	hsusb2_power: hsusb2_power_reg {
-		enable-active-high;
-	};
+
+	/* overwrite device model */
+	model = "BeagleBoard XM AB / GTA04 b1 / OpenMoko-Beagle-Hybrid";
+
 };

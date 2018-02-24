@@ -6,11 +6,15 @@
  * published by the Free Software Foundation.
  */
 
-#include "omap3-beagle-xm+gta04.dts"
+#include "omap3-beagle-xm-ab.dts"
 
 / {
-	/* HS USB Port 2 Power enable was inverted with the xM C */
-	hsusb2_power: hsusb2_power_reg {
-		enable-active-high;
+
+	/* overwrite device model */
+	model = "BeagleBoard XM AB + GTA04";
+
+	madc-hwmon {
+		compatible = "ti,twl4030-madc-hwmon";
 	};
+
 };

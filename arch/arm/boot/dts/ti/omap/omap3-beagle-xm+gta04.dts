@@ -11,7 +11,7 @@
 / {
 
 	/* overwrite device model */
-	model = "BeagleBoard XM / GTA04";
+	model = "BeagleBoard XM + GTA04";
 
 	madc-hwmon {
 		compatible = "ti,twl4030-madc-hwmon";

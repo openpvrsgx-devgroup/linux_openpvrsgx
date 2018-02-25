@@ -176,7 +176,7 @@ do
 			tar -cf - $THEMODULES | (mkdir -p /flash-test && cd /flash-test && tar xpf - --checkpoint=100)
 
 			read FUSED PERIOD < <(du -s -m /flash-test 2>/dev/null)
-			echo "Reduced root file system wants to copy ${FUSED} MB to NAND flash"
+			echo "Reduced root file system wants to copy ${FUSED} MB to ${NANDSIZE} MB NAND flash"
 
 			if [ $USED -lt 1 -o $FUSED -gt $NANDSIZE ]
 				then
@@ -187,7 +187,6 @@ do
 				exit 1
 			fi
 			rm -rf /flash-test
-exit
 			;;
 		* ) echo unknown option "$cmd"
 			echo "-x x-loader [better done by boot-system]"
@@ -260,9 +259,11 @@ then
 			fi
 fi
 			flash_erase /dev/mtd3 0 0 &&
+			echo writing $UIMAGE
 			nandwrite -p /dev/mtd3 "$UIMAGE" || exit 1
 			if [ "$DTB" ]
 			then
+				echo writing ${DTB}.dtb
 				nandwrite -p /dev/mtd3 -s 0x5c0000 "/boot/${DTB}.dtb" || exit 1
 			fi
 			;;

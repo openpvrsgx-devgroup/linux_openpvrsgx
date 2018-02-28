@@ -41,6 +41,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef __BC_EXAMPLE_H__
 #define __BC_EXAMPLE_H__
 
+#include <linux/uaccess.h>
+
 /* IMG services headers */
 #include "img_defs.h"
 #include "servicesext.h"

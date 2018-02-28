@@ -51,10 +51,21 @@ case "$(tr -d '\0' </proc/device-tree/model 2>/dev/null)" in
 			./tiler-ctl 270
 		fi
 		)
+		# setup keyboard
 		cp /etc/X11/Xmodmap.pyra /etc/X11/Xmodmap
+		# setup nubs
+		echo mouse > /proc/pandora/nub0/mode	# mouse
+		echo scroll > /proc/pandora/nub1/mode	# scroll wheel
+		# mouse buttons are handled by gpio-buttons
 		;;
 	*Pandora* )
-		PANEL=4.3-480x640;;
+		PANEL=4.3-480x640
+		# setup keyboard
+		cp /etc/X11/Xmodmap.pyra /etc/X11/Xmodmap
+		# setup nubs
+		echo mouse > /proc/pandora/nub0/mode	# mouse
+		echo mbuttons > /proc/pandora/nub1/mode	# mouse buttons
+		;;
 	*BeagleBoneBlack* )
 		PANEL=4.3-272x480;;	# BBB with 4.3 inch panel cape
 	*'Letux Cortex 8'* )

@@ -1,5 +1,5 @@
 #
-# Linux/mips 4.16.0-rc3 Kernel Configuration
+# Linux/mips 4.16.0-rc4 Kernel Configuration
 #
 CONFIG_MIPS=y
 
@@ -161,7 +161,6 @@ CONFIG_LOCKDEP_SUPPORT=y
 CONFIG_STACKTRACE_SUPPORT=y
 CONFIG_HAVE_LATENCYTOP_SUPPORT=y
 CONFIG_PGTABLE_LEVELS=2
-CONFIG_DEFCONFIG_LIST="/lib/modules/$UNAME_RELEASE/.config"
 CONFIG_IRQ_WORK=y
 CONFIG_BUILDTIME_EXTABLE_SORT=y
 
@@ -2130,6 +2129,7 @@ CONFIG_SOC_CAMERA_PLATFORM=m
 #
 # CONFIG_CYPRESS_FIRMWARE is not set
 CONFIG_VIDEOBUF2_CORE=m
+CONFIG_VIDEOBUF2_V4L2=m
 
 #
 # Media ancillary drivers (tuners, sensors, i2c, spi, frontends)

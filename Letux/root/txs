@@ -1,0 +1,37 @@
+#
+# /root/txs
+# Pyra: switch between eMMC and uSD
+#
+
+TXS=/sys/devices/platform/txs02612/switch
+
+if ! [ -w "$TXS" ]
+then
+	echo "can't control the switch" >&2
+	exit 1
+fi
+
+case "$1" in
+	e* )
+		umount /dev/mmcblk0*
+		echo 0 >$TXS
+		partprobe
+		;;
+	u* )
+		umount /dev/mmcblk0*
+		echo 1 >$TXS
+		partprobe
+		;;
+	"" )
+		cat $TXS
+		;;
+	* )
+		echo "tool to manually switch the Pyra between"
+		echo "eMMC and uSD access as /dev/mmcblk0"
+		echo
+		echo "$0 u[SD]   -- switch to uSD"
+		echo "$0 e[MMC]  -- switch to eMMC"
+		echo "$0         -- show state"
+		;;
+esac
+

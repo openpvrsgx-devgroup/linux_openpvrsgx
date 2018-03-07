@@ -80,5 +80,5 @@ case "$(tr -d '\0' </proc/device-tree/model 2>/dev/null)" in
 esac
 
 # symlink to chosen config
-rm /etc/X11/xorg.conf
+rm -f /etc/X11/xorg.conf
 ln -s $PANEL.conf /etc/X11/xorg.conf

@@ -213,7 +213,7 @@ PVRSRVDrmLoad(struct drm_device *dev, unsigned long flags)
 	gpsPVRDRMDev = dev;
 #if !defined(PVR_DRI_DRM_NOT_PCI) && !defined(SUPPORT_DRI_DRM_PLUGIN)
 #if defined(PVR_DRI_DRM_PLATFORM_DEV)
-	gpsPVRLDMDev = dev->platformdev;
+	gpsPVRLDMDev = to_platform_device(dev->dev);
 #else
 	gpsPVRLDMDev = dev->pdev;
 #endif
@@ -262,7 +262,7 @@ exit:
 	return iRes;
 }
 
-DRI_DRM_STATIC int
+DRI_DRM_STATIC void
 PVRSRVDrmUnload(struct drm_device *dev)
 {
 	PVR_TRACE(("PVRSRVDrmUnload"));
@@ -276,8 +276,6 @@ PVRSRVDrmUnload(struct drm_device *dev)
 #if defined(PDUMP)
 	dbgdrv_cleanup();
 #endif
-
-	return 0;
 }
 
 DRI_DRM_STATIC int

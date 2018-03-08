@@ -656,10 +656,11 @@ static int
 PVRSRVDrmProbe(struct platform_device *pDevice)
 {
 #if (AM_VERSION != 5)
-	int ret;
-	struct device *dev = &pDevice->dev;
 	struct gfx_sgx_platform_data *pdata = dev->platform_data;
 #endif
+	int ret;
+	struct device *dev = &pDevice->dev;
+	struct drm_device *drm_dev;
 
 	PVR_TRACE(("PVRSRVDrmProbe"));
 
@@ -675,7 +676,21 @@ PVRSRVDrmProbe(struct platform_device *pDevice)
 #if defined(PVR_NEW_STYLE_DRM_PLATFORM_DEV)
 	gpsPVRLDMDev = pDevice;
 
-	return drm_platform_init(&sPVRDrmDriver, gpsPVRLDMDev);
+	drm_dev = drm_dev_alloc(&sPVRDrmDriver, dev);
+	if (IS_ERR(drm_dev)) {
+		dev_err(dev, "Unable to allocate SGX DRM device!\n");
+		return -ENOMEM;
+	}
+
+	platform_set_drvdata(pDevice, drm_dev);
+	ret = drm_dev_register(drm_dev, 0);
+	if (ret != 0) {
+		dev_err(dev, "Unable to register SGX DRM device\n");
+		drm_dev_unref(drm_dev);
+	}
+
+	return ret;
+
 #else
 	return drm_get_platform_dev(pDevice, &sPVRDrmDriver);
 #endif
@@ -689,14 +704,10 @@ PVRSRVDrmRemove(struct platform_device *pDevice)
 	struct device *dev = &pDevice->dev;
 	struct gfx_sgx_platform_data *pdata = dev->platform_data;
 #endif
+	struct drm_device *drm_dev = platform_get_drvdata(pDevice);
 
 	PVR_TRACE(("PVRSRVDrmRemove"));
 
-#if defined(PVR_NEW_STYLE_DRM_PLATFORM_DEV) && (LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0))
-	drm_platform_exit(&sPVRDrmDriver, gpsPVRLDMDev);
-#else
-	drm_put_dev(gpsPVRDRMDev);
-#endif
 
 #if (AM_VERSION != 5)
 	if (pdata && pdata->assert_reset) {
@@ -706,6 +717,9 @@ PVRSRVDrmRemove(struct platform_device *pDevice)
 		}
 	}
 #endif
+
+	drm_dev_unregister(drm_dev);
+	drm_dev_unref(drm_dev);
 
 	return 0;
 }

@@ -106,6 +106,7 @@ work/letux-base/hns/mipsbook400/pm
 work/letux-base/hns/hwmon-fixes
 work/letux-base/kemnade/libertas
 work/letux-base/kemnade/musb-fixes
+work/letux-base/kemnade/ehci-usb-pm
 work/letux-base/kemnade/phy-twl
 work/letux-base/hns/omapdss/tvfix
 work/letux-base/hns/video/dss/displayprobing

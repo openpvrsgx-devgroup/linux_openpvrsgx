@@ -151,6 +151,7 @@
 		reg = <0x22>;
 		gpio-controller;
 		#gpio-cells = <2>;
+		vcc-supply = <&vdds_1v8_main>;
 	};
 };
 

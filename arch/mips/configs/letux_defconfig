@@ -2336,13 +2336,11 @@ CONFIG_DRM_FBDEV_OVERALLOC=100
 # CONFIG_DRM_VGEM is not set
 # CONFIG_DRM_UDL is not set
 # CONFIG_DRM_RCAR_DW_HDMI is not set
-# CONFIG_DRM_RCAR_LVDS is not set
 CONFIG_DRM_PANEL=y
 
 #
 # Display Panels
 #
-# CONFIG_DRM_PANEL_ARM_VERSATILE is not set
 # CONFIG_DRM_PANEL_LVDS is not set
 # CONFIG_DRM_PANEL_SIMPLE is not set
 # CONFIG_DRM_PANEL_ILITEK_IL9322 is not set
@@ -2785,6 +2783,7 @@ CONFIG_USB_EHCI_TT_NEWSCHED=y
 # CONFIG_USB_EHCI_HCD_PLATFORM is not set
 # CONFIG_USB_OXU210HP_HCD is not set
 # CONFIG_USB_ISP116X_HCD is not set
+# CONFIG_USB_ISP1362_HCD is not set
 # CONFIG_USB_FOTG210_HCD is not set
 # CONFIG_USB_MAX3421_HCD is not set
 # CONFIG_USB_OHCI_HCD is not set
@@ -3375,6 +3374,10 @@ CONFIG_IRDA_ULTRA=y
 # CONFIG_AD2S90 is not set
 # CONFIG_AD2S1200 is not set
 # CONFIG_AD2S1210 is not set
+
+#
+# Triggers - standalone
+#
 
 #
 # Speakup console speech
@@ -4142,7 +4145,6 @@ CONFIG_PANIC_TIMEOUT=0
 #
 # Lock Debugging (spinlocks, mutexes, etc...)
 #
-CONFIG_LOCK_DEBUGGING_SUPPORT=y
 # CONFIG_WW_MUTEX_SELFTEST is not set
 CONFIG_STACKTRACE=y
 # CONFIG_WARN_ALL_UNSEEDED_RANDOM is not set

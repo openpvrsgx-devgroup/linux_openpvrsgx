@@ -59,6 +59,7 @@ do
 		-p ) PUSH=true; shift ;;
 		-r ) REBASE=true; SEQUENTIAL=true; shift ;;
 		-s ) SEQUENTIAL=true; shift ;;
+		-nos ) SEQUENTIAL=false; shift ;;
 		-w ) WHITESPACE=--whitespace=fix; REBASE=true; SEQUENTIAL=true; shift ;;
 		-b ) shift; BASE="$1"; shift ;;
 		-nmf ) shift; MF=false; shift ;;
@@ -221,7 +222,11 @@ function process {
 		echo "*** rebasing $FEATURE onto $LASTBASE ***"
 # strategy recursive macht Probleme und macht quasi cherry-pick für jeden einzelnen...
 #		git rebase --strategy=recursive -X theirs --whitespace=fix "$LASTBASE" || exit
-		git rebase $WHITESPACE "$LASTBASE" || exit
+#
+# define and export $ONTO to roll back to an earlier base
+# e.g. ONTO="--onto v4.16" ./merge -r -nos
+
+		git rebase $ONTO $WHITESPACE "$LASTBASE" || exit
 	fi
 	if $PUSH	# even if hidden (use # to completely remove)
 	then

@@ -156,6 +156,8 @@
 		pinctrl-0 = <&tca6424_pins>;
 		interrupt-parent = <&gpio3>;
 		interrupts = <12 IRQ_TYPE_EDGE_FALLING>;  /* gpio3_76 */
+		interrupt-controller;
+		#interrupts-cells = <2>;
 	};
 };
 

@@ -788,6 +788,11 @@ static int pca953x_irq_set_type(struct irq_data *d, unsigned int type)
 	struct device *dev = &chip->client->dev;
 	irq_hw_number_t hwirq = irqd_to_hwirq(d);
 
+	if (type & IRQ_TYPE_LEVEL_LOW)
+		type |= IRQ_TYPE_EDGE_FALLING;
+	if (type & IRQ_TYPE_LEVEL_HIGH)
+		type |= IRQ_TYPE_EDGE_RISING;
+
 	if (!(type & IRQ_TYPE_EDGE_BOTH)) {
 		dev_err(dev, "irq %d: unsupported type %d\n", d->irq, type);
 		return -EINVAL;

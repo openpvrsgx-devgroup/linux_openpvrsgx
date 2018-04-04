@@ -66,6 +66,8 @@ work/letux-base/josua/debian-build
 work/letux-base/marek/generic-adc-battery
 work/letux-base/hns/misc/w2sg-serdev
 work/letux-base/hns/input/tsc2007
+work/hns/drivers/gpio/gpio-pcal6524
+work/letux-base/hns/video/ov9655-new
 
 # almost ready for upstreaming
 work/letux-base/hns/usb/misc/usb3503
@@ -73,7 +75,6 @@ work/letux-base/hns/misc/wwan
 work/letux-base/hns/input/as5013
 work/letux-base/hns/input/pandora-nub
 work/letux-base/andrey/input/as5013
-work/letux-base/hns/video/ov9655-new
 work/letux-base/hns/iio-input-bridge
 
 # not ready for upstreaming but works
@@ -85,9 +86,9 @@ work/letux-base/extern/bno055
 
 # almost empty or untested...
 work/letux-base/hns/mmc/txs02612
+-work/letux-base/hns/mmc/txs02612-sdio
 work/letux-base/tps6105x-flashlight
 work/letux-base/hns/input/crtouch
-work/hns/drivers/gpio/gpio-pcal6524
 
 # not for upstreaming
 work/letux-base/marek/am335x-hwmon

@@ -24,6 +24,10 @@
 		ti,jack-det-gpio = <&twl_gpio 2 GPIO_ACTIVE_HIGH>;	/* GTA04A5 only */
 	};
 
+	modem_en: modem { /* control modem power through rfkill */
+		on-indicator-gpio = <&twl_gpio 6 GPIO_ACTIVE_HIGH>;	/* GTA04A5 only: reset_out feedback from modem */
+	};
+
 	wlan_en: wlan_en_regulator {
 		compatible = "regulator-fixed";
 		pinctrl-names = "default";

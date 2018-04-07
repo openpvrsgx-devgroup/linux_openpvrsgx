@@ -7,6 +7,20 @@
 
 / {
 	model = "Goldelico GTA04A3/Letux 2804";
+
+	gpio-keys-wwan-wakeup {
+		compatible = "gpio-keys";
+
+/* could we write &wwan_wakeup_button { ... } ? */
+
+		wwan-wakeup-button {
+			label = "3G_WOE";
+			linux,code = <240>;
+			gpios = <&gpio6 16 GPIO_ACTIVE_HIGH>;
+			gpio-key,wakeup;
+		};
+	};
+
 };
 
 /* GTA04A3 uses a different GPIO */
@@ -61,6 +75,7 @@
 		st,axis-y = <1>;
 		st,axis-z = <2>;
 #endif		/* FIXME: check values */
+
 		st,min-limit-x = <32>;
 		st,min-limit-y = <3>;
 		st,min-limit-z = <3>;

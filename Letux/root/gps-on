@@ -9,7 +9,6 @@ rfkill unblock gps	# turn on LNA etc.
 
 case "$(cat /sys/firmware/devicetree/base/model)" in
 	*GTA04*/Letux* )
-		[ -r /sys/class/gpio/gpio144/value ] || echo 144 >/sys/class/gpio/export # 2>/dev/null
 		if [ -r /dev/ttyGPS0 ]
 		then	echo /dev/ttyGPS0
 		else 	echo /dev/ttyO1

@@ -9,18 +9,33 @@ echo "### starting gpsd $SERIAL ###"
 killall gpsd	# kill any existing
 gpsd $SERIAL
 
-# VSIM is only enabled if we open </dev/ttyO1
-EXTANT="$((sleep 0.1; cat /sys/class/gpio/gpio144/value) 2>/dev/null </dev/ttyO1)"
-# echo $EXTANT
-case "$EXTANT" in
-        0 )
+function findextcon {
+	for i in /sys/class/extcon/*
+	do
+		if [ "$(cat "$i"/name 2>/dev/null)" = $1 ]
+		then
+			echo "$i"
+			return
+		fi
+	done
+}
+
+function antennastate { # check for external antenna status
+	ANTENNA_STATE=$(findextcon antenna-detect)/state
+	(
+	sleep 0.1
+	cat "$ANTENNA_STATE" 2>/dev/null	# no output if there is no extcon
+	) <$SERIAL	# GTA04: VSIM is only enabled if we open the GPS port
+}
+
+case "$(antennastate 2>/dev/null)" in
+        0* )
                 echo "### internal antenna ###"
                 ;;
-        1 )
+        1* )
                 echo "### external antenna ###"
                 ;;
 esac
-[ -r /sys/class/gpio/gpio144/value ] && echo 144 >/sys/class/gpio/unexport 2>/dev/null
 
 echo "### starting foxtrot gps ###"
 . /root/x

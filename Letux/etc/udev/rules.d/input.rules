@@ -22,5 +22,9 @@ SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*k77,*
 SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*k1D0,*", SYMLINK+="input/keyboard"
 # gpio buttons (OpenPandora, Pyra)
 SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*k7e,*", SYMLINK+="input/keyboard2"
+
+# check with /sys/devices/platform/*/input/input*/modalias if they are unique
 # headset jack plug/unplug
-SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0*,5,*w[24678D]*", SYMLINK+="input/jack"
+# SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0*,5,*w[24678D]*", SYMLINK+="input/jack"
+# external GPS antenna plug/unplug
+SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0*,5,*w[24678D]*", SYMLINK+="input/antenna-detect"

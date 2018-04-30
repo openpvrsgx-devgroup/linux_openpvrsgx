@@ -93,7 +93,7 @@ function linuxversion {
 function process {
 	FEATURE=$1
 	case "$FEATURE" in
-		'>>'* )	# create file name from current branch
+		'>>'* )	# define output branch
 			VERSION=$(linuxversion $LASTBASE)
 #echo LASTBASE $LASTBASE
 #echo OUTPUT $OUTPUT
@@ -127,6 +127,7 @@ function process {
 			fi
 			LASTBASE="$OUTPUT"	# remember current "base" for next rebase
 			OUTPUT="$NEWOUTPUT"
+			git branch -f "archive/$OUTPUT/$LASTBASE" "$LASTBASE" 	# save a copy in the archive
 			return
 			;;			
 		'>'* )	# switch to new "base"
@@ -150,9 +151,10 @@ function process {
 			fi
 			LASTBASE="$OUTPUT"	# remember current "base" for next rebase
 			OUTPUT="$NEWOUTPUT"
+			git branch -f "archive/$OUTPUT/$LASTBASE" "$LASTBASE" 	# save a copy in the archive
 			return
 			;;
-		'<'* )	# checkout some branch
+		'<'* )	# checkout some base branch
 			if [ "$OUTPUT" ]
 			then
 				echo "*** creating $OUTPUT from ${FEATURE:1} ***"
@@ -248,6 +250,7 @@ function process {
 		echo "*** merging $FEATURE into $OUTPUT ***"
 		git merge --no-ff --no-edit "$FEATURE" || exit	# try to merge one after the other
 	fi
+	git branch -f "archive/$OUTPUT/$FEATURE" "$FEATURE" 	# save a copy in the archive
 }
 
 if $MF

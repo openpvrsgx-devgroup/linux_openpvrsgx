@@ -1,5 +1,5 @@
 #
-# Linux/mips 4.17.0-rc2 Kernel Configuration
+# Linux/mips 4.17.0-rc3 Kernel Configuration
 #
 CONFIG_MIPS=y
 
@@ -775,6 +775,7 @@ CONFIG_CMA_ALIGNMENT=8
 # CONFIG_SIMPLE_PM_BUS is not set
 CONFIG_CONNECTOR=y
 CONFIG_PROC_EVENTS=y
+# CONFIG_GNSS is not set
 CONFIG_MTD=y
 # CONFIG_MTD_TESTS is not set
 # CONFIG_MTD_REDBOOT_PARTS is not set

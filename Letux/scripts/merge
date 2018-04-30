@@ -86,8 +86,8 @@ function latestforbranch {
 
 function linuxversion {
 # echo linuxversion $1 >&2
-	# extract Linux version from given branch $1
-	git log -1 -E --grep="^Linux [0-9].[0-9]+[-.0-9rc]*" "$1" | grep "Linux [0-9].[0-9]*" | sed "s|.*Linux ||g"
+	# extract Linux version from given base branch $1
+	git log -1 -E --grep="^Linux [^0-9]*[0-9].[0-9]+[-.0-9rc]*" $1 | egrep "Linux [^0-9]*[0-9].[0-9]*" | sed "s|.*Linux [^0-9]*||g"
 }
 
 function process {

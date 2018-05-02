@@ -65,4 +65,14 @@ config GNSS_USB
 
 	  If unsure, say N.
 
+config GNSS_W2SG0004
+	tristate "W2SG00x4 power on/off driver"
+	depends on GPIOLIB && SERIAL_DEV_BUS
+	help
+	  Enable on/off control of W2SG00x4 GPS module connected
+	  to some SoC UART to allow powering up/down if the /dev/gnss
+	  is opened/closed.
+
+	  It also provides a "rfkill gps" name to control the LNA power.
+
 endif # GNSS

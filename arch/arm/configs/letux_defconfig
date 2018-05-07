@@ -1,5 +1,5 @@
 #
-# Linux/arm 4.17.0-rc3 Kernel Configuration
+# Linux/arm 4.17.0-rc4 Kernel Configuration
 #
 CONFIG_ARM=y
 CONFIG_ARM_HAS_SG_CHAIN=y
@@ -1357,7 +1357,10 @@ CONFIG_TI_SYSC=y
 CONFIG_CONNECTOR=y
 CONFIG_PROC_EVENTS=y
 CONFIG_GNSS=m
+# CONFIG_GNSS_SIRF_SERIAL is not set
+# CONFIG_GNSS_UBX_SERIAL is not set
 CONFIG_GNSS_W2SG0004=m
+# CONFIG_W2SG0004_DEBUG is not set
 CONFIG_MTD=y
 # CONFIG_MTD_TESTS is not set
 # CONFIG_MTD_REDBOOT_PARTS is not set

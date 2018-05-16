@@ -1,19 +1,59 @@
 #
-# switch on/off TVout on the GTA04 or BeagleBoard or Pyra
-# on GTA04 the TVout is called "None-1"
+# switch on/off TVout on the GTA04 or BeagleBoard or HDMI on Pyra or OMAP5EVM
+#
+# on GTA04 the TVout is called "SVIDEO-1"
 # on Pyra the HDMI interface is called "HDMI-1"
+# LCDs are currently called "Unknown-16" or similar
 #
-# specifying an unknown device gives only a warning by xrandr
-# so we do not explicitly check
-#
+
+. /root/x
+
+if ! [ "$DISPLAY" ]
+then
+	echo "X11 must be running"
+	exit
+fi
 
 # ls -l /sys/devices/platform/omapdrm.0/drm/card0/card0-*
+# warning: card names do not always match what xrandr -q reports!
 
-if [ "$1" == "1" ]
-then
-	xrandr --output None-1 --auto
-	xrandr --output HDMI-1 --auto
-else
-	xrandr --output None-1 --off
-	xrandr --output HDMI-1 --off
-fi
+while read DEVICE INFO
+do
+#	echo "$DEVICE $INFO"
+	case "$DEVICE" in
+		Screen )
+			continue
+			;;
+		*x* )	# dimensions
+			continue
+			;;
+		SVIDEO-* | HDMI-* )	# external monitor out
+			TV="$DEVICE"
+			;;
+		Unknown-* | * )	# assume this is the LCD
+			LCD="$DEVICE"
+			;;
+	esac
+done < <(xrandr -q)
+
+#echo LCD=$LCD TV=$TV
+
+case "$1" in
+	2)	# both
+		xrandr --output "$LCD" --off
+		xrandr --output "$LCD" --auto
+		xrandr --output "$TV" --off
+		xrandr --output "$TV" --auto
+		;;
+	1)	# TV only
+		xrandr --output "$LCD" --off
+		xrandr --output "$TV" --off
+		xrandr --output "$TV" --auto
+		;;
+	* )	# LCD only
+		xrandr --output "$TV" --auto
+		xrandr --output "$LCD" --off
+		xrandr --output "$LCD" --auto
+	# on Pyra we shoudl also do: xrandr --orientation right
+		;;
+esac

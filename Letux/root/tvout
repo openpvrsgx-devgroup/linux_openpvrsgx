@@ -6,7 +6,7 @@
 # LCDs are currently called "Unknown-16" or similar
 #
 
-. /root/x
+. /root/x >/dev/null
 
 if ! [ "$DISPLAY" ]
 then
@@ -14,6 +14,7 @@ then
 	exit
 fi
 
+# see also:
 # ls -l /sys/devices/platform/omapdrm.0/drm/card0/card0-*
 # warning: card names do not always match what xrandr -q reports!
 
@@ -38,22 +39,52 @@ done < <(xrandr -q)
 
 #echo LCD=$LCD TV=$TV
 
+function lcdon {
+	if [ "$LCD" ]
+	then
+		xrandr --output "$LCD" --off
+		xrandr --output "$LCD" --auto
+		# on Pyra we should also do: xrandr --orientation right
+	else
+		echo no LCD found
+	fi
+}
+
+function lcdoff {
+	if [ "$LCD" ]
+	then
+		xrandr --output "$LCD" --off
+	fi
+}
+
+function tvon {
+	if [ "$TV" ]
+	then
+		xrandr --output "$TV" --off
+		xrandr --output "$TV" --auto
+	else
+		echo no TV found
+	fi
+}
+
+function tvoff {
+	if [ "$TV" ]
+	then
+		xrandr --output "$TV" --off
+	fi
+}
+
 case "$1" in
 	2)	# both
-		xrandr --output "$LCD" --off
-		xrandr --output "$LCD" --auto
-		xrandr --output "$TV" --off
-		xrandr --output "$TV" --auto
+		lcdon
+		tvon
 		;;
 	1)	# TV only
-		xrandr --output "$LCD" --off
-		xrandr --output "$TV" --off
-		xrandr --output "$TV" --auto
+		lcdoff
+		tvon
 		;;
 	* )	# LCD only
-		xrandr --output "$TV" --auto
-		xrandr --output "$LCD" --off
-		xrandr --output "$LCD" --auto
-	# on Pyra we shoudl also do: xrandr --orientation right
+		lcdon
+		tvoff
 		;;
 esac

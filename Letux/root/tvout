@@ -76,15 +76,15 @@ function tvoff {
 
 case "$1" in
 	2)	# both
-		lcdon
 		tvon
+		lcdon
 		;;
 	1)	# TV only
 		lcdoff
 		tvon
 		;;
 	* )	# LCD only
-		lcdon
 		tvoff
+		lcdon
 		;;
 esac

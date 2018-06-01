@@ -1,0 +1,18 @@
+/*
+ * Copyright (C) 2018 OpenPandora - http://www.pyra-handheld.com/
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+/* this version is for Letux LC15 EVM V0.1 with Letux Cortex 15 CPU board V5.3 */
+
+#include "omap5-letux-cortex15-v5.3.dts"
+
+#include "letux-lc15-evm-v0.1.dtsi"
+
+// no panel connected
+
+// #define PANEL 1		/* use w677 panel and non-rotating display board */
+// #include "pyra-display.dtsi"

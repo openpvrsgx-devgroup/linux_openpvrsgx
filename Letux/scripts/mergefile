@@ -114,7 +114,6 @@ work/letux-base/kemnade/phy-twl
 work/letux-base/hns/omapdss/tvfix
 work/letux-base/hns/video/dss/displayprobing
 work/letux-base/kemnade/charging_fixes
-work/letux-base/hns/gta04/pm
 work/letux-base/hacks
 work/letux-base/omap2plus
 work/letux-base/hns/gpu/omap-pvr
@@ -124,7 +123,6 @@ work/letux-base/omapdrm
 work/letux-base/mmc
 work/letux-base/ubi-fs
 work/letux-base/extcon
-work/letux-base/serial
 work/letux-base/misc
 work/letux-base/drivers-keyboard
 work/letux-base/mvduin/patch/tiler-fbdev
@@ -143,3 +141,5 @@ work/letux-base/mvduin/patch/tiler-fbdev
 #-work/letux-base/hns/video/ov9655
 #-work/letux-base/extern/omap/reset-controller
 #work/letux-base/hns/power/twl4030_charger
+# work/letux-base/hns/gta04/pm
+# work/letux-base/serial

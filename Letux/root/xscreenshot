@@ -1,0 +1,12 @@
+#
+# capture screen shot as png from X11
+#
+
+[ "$(which convert)" ] || apt-get install graphicsmagick-imagemagick-compat || exit 1
+
+. x
+
+FILE="$1"
+[ "$FILE" ] || FILE=screenshot.png
+
+xwd -root | convert - "$FILE"

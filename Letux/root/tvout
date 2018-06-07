@@ -1,7 +1,7 @@
 #
 # switch on/off TVout on the GTA04 or BeagleBoard or HDMI on Pyra or OMAP5EVM
 #
-# on GTA04 the TVout is called "SVIDEO-1"
+# on GTA04 or OpenPandora the TVout is called "SVIDEO-1"
 # on Pyra the HDMI interface is called "HDMI-1"
 # LCDs are currently called "Unknown-16" or similar
 #
@@ -44,7 +44,12 @@ function lcdon {
 	then
 		xrandr --output "$LCD" --off
 		xrandr --output "$LCD" --auto
-		# on Pyra we should also do: xrandr --orientation right
+		case "$(tr -d '\0' </proc/device-tree/model 2>/dev/null)" in
+			*Pyra-Handheld* )
+				xrandr --orientation 3
+				;;
+		esac
+
 	else
 		echo no LCD found
 	fi

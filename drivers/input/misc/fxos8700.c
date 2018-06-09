@@ -592,13 +592,13 @@ static ssize_t fxos8700_data_show(struct device *dev,
 	return sprintf(buf, "%d,%d,%d\n",data.x,data.y,data.z);
 }
 
-static DEVICE_ATTR(enable, 0666,fxos8700_enable_show, fxos8700_enable_store);
+static DEVICE_ATTR(enable, 0644, fxos8700_enable_show, fxos8700_enable_store);
 
-static DEVICE_ATTR(poll_delay,0666,fxos8700_poll_delay_show, fxos8700_poll_delay_store);
+static DEVICE_ATTR(poll_delay, 0644, fxos8700_poll_delay_show, fxos8700_poll_delay_store);
 
-static DEVICE_ATTR(position, 0666,fxos8700_position_show, fxos8700_position_store);
+static DEVICE_ATTR(position, 0644, fxos8700_position_show, fxos8700_position_store);
 
-static DEVICE_ATTR(data, 0666,fxos8700_data_show, NULL);
+static DEVICE_ATTR(data, 0644, fxos8700_data_show, NULL);
 
 
 /*acc only sysfs interface*/
@@ -625,7 +625,7 @@ static ssize_t fxos8700_motion_detect_store(struct device *dev,
 	return count;
 }
 
-static DEVICE_ATTR(motion_detect, 0666,fxos8700_motion_detect_show, fxos8700_motion_detect_store);
+static DEVICE_ATTR(motion_detect, 0644, fxos8700_motion_detect_show, fxos8700_motion_detect_store);
 
 static struct attribute *fxos8700_acc_attributes[] = {
 	&dev_attr_enable.attr,

@@ -32,6 +32,7 @@
 #include <linux/input-polldev.h>
 #include <linux/miscdevice.h>
 #include <linux/poll.h>
+#include <linux/stat.h>
 
 #define	SENSOR_IOCTL_BASE	'S'
 #define	SENSOR_GET_MODEL_NAME		_IOR(SENSOR_IOCTL_BASE, 0, char *)
@@ -457,13 +458,13 @@ static ssize_t fxas2100x_data_show(struct device *dev,
 }
 
 
-static DEVICE_ATTR(enable, 0666, fxas2100x_enable_show, fxas2100x_enable_store);
+static DEVICE_ATTR(enable, 0644, fxas2100x_enable_show, fxas2100x_enable_store);
 
-static DEVICE_ATTR(poll_delay, 0666,fxas2100x_poll_delay_show, fxas2100x_poll_delay_store);
+static DEVICE_ATTR(poll_delay, 0644,fxas2100x_poll_delay_show, fxas2100x_poll_delay_store);
 
-static DEVICE_ATTR(position, 0666,fxas2100x_position_show, fxas2100x_position_store);
+static DEVICE_ATTR(position, 0644,fxas2100x_position_show, fxas2100x_position_store);
 
-static DEVICE_ATTR(data, 0666,fxas2100x_data_show, NULL);
+static DEVICE_ATTR(data, 0644,fxas2100x_data_show, NULL);
 
 
 static struct attribute *fxas2100x_attributes[] = {

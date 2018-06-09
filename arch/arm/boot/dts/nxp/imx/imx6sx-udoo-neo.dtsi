@@ -390,6 +390,32 @@
 	};
 };
 
+&i2c4 {
+	clock-frequency = <100000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c4_1>;
+	status = "okay";
+
+	accelerometer: fxos8700@1e {
+		compatible = "fsl,fxos8700";
+		reg = <0x1e>;
+	};
+
+	gyroscope: fxas2100x@20 {
+		compatible = "fsl,fxas2100x";
+		reg = <0x20>;
+	};
+};
+
+&iomuxc {
+	pinctrl_i2c4_1: i2c4grp-1 {
+		fsl,pins = <
+			MX6SX_PAD_USB_H_DATA__I2C4_SDA			0x4001b8b1
+			MX6SX_PAD_USB_H_STROBE__I2C4_SCL		0x4001b8b1
+		>;
+	};
+};
+
 &uart1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart1>;

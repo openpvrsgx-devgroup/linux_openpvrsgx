@@ -58,6 +58,7 @@ work/letux-base/dt-pandora
 work/letux-base/dt-pyra
 work/letux-base/dt-lc15-evm
 work/letux-base/dt-gta15
+work/hns/dt-udoo-neo
 work/letux-base/hns/dt/omap5-common
 work/letux-base/hns/dt/omap5-uevm
 
@@ -85,6 +86,7 @@ work/letux-base/hns/power/bq2429x
 work/letux-base/hns/sound/ts3a225e
 work/letux-base/hns/video/dss/panels+ssd2858
 work/letux-base/extern/bno055
+work/hns/freescale-sensors
 
 # almost empty or untested...
 work/letux-base/hns/mmc/txs02612

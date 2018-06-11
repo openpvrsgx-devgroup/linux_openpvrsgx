@@ -61,6 +61,7 @@ then
 	echo "!!! could not turn on OTG - maybe no battery available or charger connected?"
 fi
 
+sleep 0.5
 echo "usb id:"	$(cat $TWL6037_GPADC/in_voltage14_input)mV
 echo "boost:"	$(cat $OTG_REG/microvolts)uV
 echo "current:"	$(cat $OTG_REG/max_microamps)uA

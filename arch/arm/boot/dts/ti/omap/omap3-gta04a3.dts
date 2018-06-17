@@ -9,6 +9,25 @@
 	model = "Goldelico GTA04A3/Letux 2804";
 };
 
+/* GTA04A3 uses a different GPIO */
+&wwan_wakeup {
+	gpios = <&gpio6 16 GPIO_ACTIVE_HIGH>;
+};
+
+/* GTA04A3 can't control modem power through rfkill */
+
+&modem_en {
+	status = "disabled";
+	on-off-gpio = <0>;	/* overwrite as n/a */
+};
+
+&modem_pins {
+	pinctrl-single,pins = <
+		/* remove entry inherited from omap3-gta04.dtsi */
+	>;
+};
+
+
 &i2c2 {
 
 	/* alternate accelerometer that might be installed on some GTA04A3 boards */

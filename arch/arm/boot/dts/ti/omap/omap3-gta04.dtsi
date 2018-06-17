@@ -520,7 +520,7 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&bma180_pins>;
 		interrupt-parent = <&gpio4>;
-		interrupts = <19 IRQ_TYPE_LEVEL_HIGH>; /* GPIO_115 */
+		interrupts = <19 (IRQ_TYPE_LEVEL_HIGH | IRQ_TYPE_EDGE_RISING)>; /* GPIO_115 */
 	};
 
 	/* gyroscope */

@@ -21,7 +21,7 @@
 #
 # options:
 #  -s		sequential merge
-#  -p		push --force all branches to 'origin'
+#  -p		push --force all branches to 'origin' and archive in separate branch
 #  -r		rebase branches before merge (implies -s)
 #  -u		upload result
 #  -nmf		no mergefile (ignore)
@@ -127,7 +127,7 @@ function process {
 			fi
 			LASTBASE="$OUTPUT"	# remember current "base" for next rebase
 			OUTPUT="$NEWOUTPUT"
-			git branch -f "archive/$OUTPUT/$LASTBASE" "$LASTBASE" 	# save a copy in the archive
+			$PUSH && git branch -f "archive/$OUTPUT/$LASTBASE" "$LASTBASE" 	# save a copy in the archive
 			return
 			;;			
 		'>'* )	# switch to new "base"
@@ -151,7 +151,7 @@ function process {
 			fi
 			LASTBASE="$OUTPUT"	# remember current "base" for next rebase
 			OUTPUT="$NEWOUTPUT"
-			git branch -f "archive/$OUTPUT/$LASTBASE" "$LASTBASE" 	# save a copy in the archive
+			$PUSH && git branch -f "archive/$OUTPUT/$LASTBASE" "$LASTBASE" 	# save a copy in the archive
 			return
 			;;
 		'<'* )	# checkout some base branch
@@ -234,6 +234,7 @@ function process {
 	then
 		echo "*** pushing $FEATURE to origin ***"
 		git push --force origin $FEATURE:$FEATURE || exit	# update branch on public server
+		git branch -f "archive/$OUTPUT/$FEATURE" "$FEATURE" 	# save a copy in the archive
 	fi
 	if ! $HIDDEN
 	then
@@ -250,7 +251,6 @@ function process {
 		echo "*** merging $FEATURE into $OUTPUT ***"
 		git merge --no-ff --no-edit "$FEATURE" || exit	# try to merge one after the other
 	fi
-	git branch -f "archive/$OUTPUT/$FEATURE" "$FEATURE" 	# save a copy in the archive
 }
 
 if $MF

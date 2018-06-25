@@ -102,6 +102,9 @@ work/letux-base/codecs-for-gta04
 work/letux-base/sound-for-gta04
 work/letux-base/hns/codec/twl4030
 
+# Pyra sound
+-work/andrey/aess
+
 # Mipsbook / JZ4730
 work/letux-base/pboddie/mips/jz4730
 work/letux-base/hns/mipsbook400/dt

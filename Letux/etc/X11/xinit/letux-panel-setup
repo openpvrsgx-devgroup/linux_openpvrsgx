@@ -32,6 +32,8 @@ case "$(tr -d '\0' </proc/device-tree/model 2>/dev/null)" in
 		PANEL=2.0-320x320;;	# Letux 2204 (never built)
 	*PandaBoard* |	*OMAP5*uEVM* )
 		PANEL=none;;
+	*LC15-EVM* )
+		PANEL=5.0-720x1280;;
 	*Pyra-Handheld* )
 		PANEL=5.0-720x1280
 		(

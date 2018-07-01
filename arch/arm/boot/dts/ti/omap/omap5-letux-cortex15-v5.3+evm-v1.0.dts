@@ -10,7 +10,7 @@
 
 #include "omap5-letux-cortex15-v5.3.dts"
 
-#include "letux-lc15-evm-v0.1.dtsi"
+#include "letux-lc15-evm-v1.0.dtsi"
 
 // no panel connected
 

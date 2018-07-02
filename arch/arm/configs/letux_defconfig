@@ -1,5 +1,5 @@
 #
-# Linux/arm 4.18.0-rc2 Kernel Configuration
+# Linux/arm 4.18.0-rc3 Kernel Configuration
 #
 
 #
@@ -2554,6 +2554,7 @@ CONFIG_INPUT_PALMAS_PWRBUTTON=m
 # CONFIG_INPUT_DRV260X_HAPTICS is not set
 # CONFIG_INPUT_DRV2665_HAPTICS is not set
 # CONFIG_INPUT_DRV2667_HAPTICS is not set
+# CONFIG_INPUT_VSENSE is not set
 CONFIG_INPUT_PANDORA_NUB=m
 # CONFIG_RMI4_CORE is not set
 

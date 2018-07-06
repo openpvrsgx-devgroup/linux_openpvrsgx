@@ -41,7 +41,7 @@
 $(if $(strip $(KERNELDIR)),,$(error KERNELDIR must be set))
 $(call directory-must-exist,$(KERNELDIR))
 
-$(TARGET_OUT)/kbuild/Makefile: $(MAKE_TOP)/kbuild/Makefile.template
+$(TARGET_PRIMARY_OUT)/kbuild/Makefile: $(MAKE_TOP)/kbuild/Makefile.template
 	@[ ! -e $(dir $@) ] && mkdir -p $(dir $@) || true
 	$(CP) -f $< $@
 
@@ -52,40 +52,36 @@ INTERNAL_KBUILD_OBJECTS := $(foreach _m,$(KERNEL_COMPONENTS),$(if $(INTERNAL_KBU
 INTERNAL_EXTRA_KBUILD_OBJECTS := $(foreach _m,$(EXTRA_PVRSRVKM_COMPONENTS),$(if $(INTERNAL_KBUILD_OBJECTS_FOR_$(_m)),$(INTERNAL_KBUILD_OBJECTS_FOR_$(_m)),$(error BUG: Unknown kbuild module "$(_m)" should have been caught earlier)))
 .PHONY: kbuild kbuild_clean
 
-kbuild: $(TARGET_OUT)/kbuild/Makefile
-	@$(MAKE) -Rr --no-print-directory -C $(KERNELDIR) M=$(abspath $(TARGET_OUT)/kbuild) \
+kbuild: $(TARGET_PRIMARY_OUT)/kbuild/Makefile
+	$(if $(V),,@)$(MAKE) -Rr --no-print-directory -C $(KERNELDIR) \
+		M=$(abspath $(TARGET_PRIMARY_OUT)/kbuild) \
 		INTERNAL_KBUILD_MAKEFILES="$(INTERNAL_KBUILD_MAKEFILES)" \
 		INTERNAL_KBUILD_OBJECTS="$(INTERNAL_KBUILD_OBJECTS)" \
 		INTERNAL_EXTRA_KBUILD_OBJECTS="$(INTERNAL_EXTRA_KBUILD_OBJECTS)" \
 		EXTRA_KBUILD_SOURCE="$(EXTRA_KBUILD_SOURCE)" \
+		TARGET_PRIMARY_ARCH=$(TARGET_PRIMARY_ARCH) \
 		CROSS_COMPILE="$(CCACHE) $(KERNEL_CROSS_COMPILE)" \
 		EXTRA_CFLAGS="$(ALL_KBUILD_CFLAGS)" \
+		CC=$(if $(KERNEL_CC),$(KERNEL_CC),$(KERNEL_CROSS_COMPILE)gcc) \
 		V=$(V) W=$(W) \
 		TOP=$(TOP)
-	@for kernel_module in $(addprefix $(TARGET_OUT)/kbuild/,$(INTERNAL_KBUILD_OBJECTS:.o=.ko)); do \
-		cp $$kernel_module $(TARGET_OUT); \
+	@for kernel_module in $(addprefix $(TARGET_PRIMARY_OUT)/kbuild/,$(INTERNAL_KBUILD_OBJECTS:.o=.ko)); do \
+		cp $$kernel_module $(TARGET_PRIMARY_OUT); \
 	done
 
-kbuild_clean: $(TARGET_OUT)/kbuild/Makefile
-	@$(MAKE) -Rr --no-print-directory -C $(KERNELDIR) M=$(abspath $(TARGET_OUT)/kbuild) \
+kbuild_clean: $(TARGET_PRIMARY_OUT)/kbuild/Makefile
+	$(if $(V),,@)$(MAKE) -Rr --no-print-directory -C $(KERNELDIR) \
+		M=$(abspath $(TARGET_PRIMARY_OUT)/kbuild) \
 		INTERNAL_KBUILD_MAKEFILES="$(INTERNAL_KBUILD_MAKEFILES)" \
 		INTERNAL_KBUILD_OBJECTS="$(INTERNAL_KBUILD_OBJECTS)" \
 		INTERNAL_EXTRA_KBUILD_OBJECTS="$(INTERNAL_EXTRA_KBUILD_OBJECTS)" \
 		EXTRA_KBUILD_SOURCE="$(EXTRA_KBUILD_SOURCE)" \
+		TARGET_PRIMARY_ARCH=$(TARGET_PRIMARY_ARCH) \
 		CROSS_COMPILE="$(CCACHE) $(KERNEL_CROSS_COMPILE)" \
 		EXTRA_CFLAGS="$(ALL_KBUILD_CFLAGS)" \
+		CC=$(if $(KERNEL_CC),$(KERNEL_CC),$(KERNEL_CROSS_COMPILE)gcc) \
 		V=$(V) W=$(W) \
 		TOP=$(TOP) clean
 
-kbuild_install: $(TARGET_OUT)/kbuild/Makefile
-	@: $(if $(strip $(DISCIMAGE)),,$(error $$(DISCIMAGE) was empty or unset while trying to use it to set INSTALL_MOD_PATH for modules_install))
-	@$(MAKE) -Rr --no-print-directory -C $(KERNELDIR) M=$(abspath $(TARGET_OUT)/kbuild) \
-		INTERNAL_KBUILD_MAKEFILES="$(INTERNAL_KBUILD_MAKEFILES)" \
-		INTERNAL_KBUILD_OBJECTS="$(INTERNAL_KBUILD_OBJECTS)" \
-		INTERNAL_EXTRA_KBUILD_OBJECTS="$(INTERNAL_EXTRA_KBUILD_OBJECTS)" \
-		EXTRA_KBUILD_SOURCE="$(EXTRA_KBUILD_SOURCE)" \
-		CROSS_COMPILE="$(CCACHE) $(KERNEL_CROSS_COMPILE)" \
-		EXTRA_CFLAGS="$(ALL_KBUILD_CFLAGS)" \
-		INSTALL_MOD_PATH="$(DISCIMAGE)" \
-		V=$(V) W=$(W) \
-		TOP=$(TOP) modules_install
+kbuild_install: install
+kbuild: install_script_km

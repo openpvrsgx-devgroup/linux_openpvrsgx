@@ -209,21 +209,12 @@ static PVRSRV_ERROR SysLocateDevices(SYS_DATA *psSysData)
 		return PVRSRV_ERROR_INVALID_DEVICE;
 	}
 
-    #if (AM_VERSION == 5)
-	gsSGXDeviceMap.sRegsSysPBase.uiAddr = SYS_OMAP_SGX_REGS_SYS_PHYS_BASE;
-    #else
 	gsSGXDeviceMap.sRegsSysPBase.uiAddr = dev_res->start;
-    #endif
 	gsSGXDeviceMap.sRegsCpuPBase =
 		SysSysPAddrToCpuPAddr(gsSGXDeviceMap.sRegsSysPBase);
 	PVR_TRACE(("SGX register base: 0x%lx", (unsigned long)gsSGXDeviceMap.sRegsCpuPBase.uiAddr));
 
-#if defined(SGX544) && defined(SGX_FEATURE_MP)
-	/* FIXME: Workaround due to HWMOD change. Otherwise this region is too small. */
-	gsSGXDeviceMap.ui32RegsSize = SYS_OMAP_SGX_REGS_SIZE;
-#else
 	gsSGXDeviceMap.ui32RegsSize = (unsigned int)(dev_res->end - dev_res->start);
-#endif
 	PVR_TRACE(("SGX register size: %d",gsSGXDeviceMap.ui32RegsSize));
 
 	gsSGXDeviceMap.ui32IRQ = dev_irq;

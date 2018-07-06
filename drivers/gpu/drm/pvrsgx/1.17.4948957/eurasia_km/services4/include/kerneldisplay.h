@@ -166,6 +166,9 @@ typedef struct DISPLAYCLASS_FLIP_COMMAND_TAG
 	/* Ext SwapChain Handle */
 	IMG_HANDLE hExtSwapChain;
 
+	/* number of vsync intervals between successive flips */
+	IMG_UINT32	ui32SwapInterval;
+	
 	/* Ext Buffer Handle (Buffer to Flip to) */
 	IMG_HANDLE hExtBuffer;
 
@@ -178,9 +181,6 @@ typedef struct DISPLAYCLASS_FLIP_COMMAND_TAG
 	/* clip rects */
 	IMG_RECT *psClipRect;
 
-	/* number of vsync intervals between successive flips */
-	IMG_UINT32	ui32SwapInterval;
-
 } DISPLAYCLASS_FLIP_COMMAND;
 
 
@@ -192,11 +192,11 @@ typedef struct DISPLAYCLASS_FLIP_COMMAND2_TAG
 	/* Ext SwapChain Handle */
 	IMG_HANDLE hExtSwapChain;
 
-	/* Unused field, padding for compatibility with above structure */
-	IMG_HANDLE hUnused;
-
 	/* number of vsync intervals between successive flips */
 	IMG_UINT32 ui32SwapInterval;
+
+	/* Unused field, padding for compatibility with above structure */
+	IMG_HANDLE hUnused;
 
 	/* private data from userspace */
 	IMG_PVOID  pvPrivData;

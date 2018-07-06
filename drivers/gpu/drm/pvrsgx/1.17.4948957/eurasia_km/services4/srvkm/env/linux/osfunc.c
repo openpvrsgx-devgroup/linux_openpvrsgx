@@ -66,7 +66,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <linux/interrupt.h>
 #include <asm/hardirq.h>
 #include <linux/timer.h>
-#if defined(MEM_TRACK_INFO_DEBUG)
+#if defined(MEM_TRACK_INFO_DEBUG) || defined (PVRSRV_DEVMEM_TIME_STATS)
 #include <linux/time.h>
 #endif
 #include <linux/capability.h>
@@ -91,12 +91,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "linkage.h"
 #include "pvr_uaccess.h"
 #include "lock.h"
-#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
-#include "pvr_sync.h"
+#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC) || defined(PVR_ANDROID_NATIVE_WINDOW_HAS_FENCE)
+#include "pvr_sync_common.h"
 #endif
-
 #if defined (SUPPORT_ION)
 #include "ion.h"
+#endif
+#if defined(SUPPORT_DMABUF)
+#include "pvr_linux_fence.h"
 #endif
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,27))
@@ -146,7 +148,7 @@ PVRSRV_ERROR OSAllocMem_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T uiSize, IMG_PVOID 
     }
 
 #if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
-    *ppvCpuVAddr = _KMallocWrapper(uiSize, GFP_KERNEL | __GFP_NOWARN, pszFilename, ui32Line);
+    *ppvCpuVAddr = _KMallocWrapper(uiSize, GFP_KERNEL | __GFP_NOWARN, pszFilename, ui32Line, ui32Flags & PVRSRV_SWAP_BUFFER_ALLOCATION);
 #else
     *ppvCpuVAddr = KMallocWrapper(uiSize, GFP_KERNEL | __GFP_NOWARN);
 #endif
@@ -189,7 +191,7 @@ PVRSRV_ERROR OSFreeMem_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T uiSize, IMG_PVOID p
     else
     {
 #if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
-        _KFreeWrapper(pvCpuVAddr, pszFilename, ui32Line);
+        _KFreeWrapper(pvCpuVAddr, pszFilename, ui32Line, ui32Flags & PVRSRV_SWAP_BUFFER_ALLOCATION);
 #else
         KFreeWrapper(pvCpuVAddr);
 #endif
@@ -708,6 +710,30 @@ IMG_VOID OSReleaseThreadQuanta(IMG_VOID)
     schedule();
 }
 
+#if defined (PVRSRV_DEVMEM_TIME_STATS)
+/*!
+******************************************************************************
+
+ @Function OSClockMonotonicus
+
+ @Description	This function returns the raw monotonic clock time in microseconds
+				(i.e. un-affected by NTP or similar changes)
+
+ @Input void
+
+ @Return - monotonic clock time in (us)
+
+******************************************************************************/ 
+IMG_UINT64 OSClockMonotonicus(IMG_VOID)
+{
+	struct timespec ts;
+
+	getrawmonotonic(&ts);
+
+	return ((unsigned long)ts.tv_sec * 1000000ul + (unsigned long)ts.tv_nsec / 1000ul);
+}
+#endif
+
 
 /*!
 ******************************************************************************
@@ -1141,8 +1167,11 @@ static void MISRWrapper(
 
 	PVRSRVMISR(psSysData);
 
-#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
+#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC) || defined(PVR_ANDROID_NATIVE_WINDOW_HAS_FENCE)
 	PVRSyncUpdateAllSyncs();
+#endif
+#if defined(SUPPORT_DMABUF)
+	PVRLinuxFenceCheckAll();
 #endif
 }
 
@@ -2140,7 +2169,7 @@ PVRSRV_ERROR OSBaseAllocContigMemory(IMG_SIZE_T uiSize, IMG_CPU_VIRTADDR *pvLinA
     IMG_VOID *pvKernLinAddr;
 
 #if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
-    pvKernLinAddr = _KMallocWrapper(uiSize, GFP_KERNEL, __FILE__, __LINE__);
+    pvKernLinAddr = _KMallocWrapper(uiSize, GFP_KERNEL, __FILE__, __LINE__, IMG_FALSE);
 #else
     pvKernLinAddr = KMallocWrapper(uiSize, GFP_KERNEL);
 #endif
@@ -2787,7 +2816,7 @@ static void OSTimerCallbackBody(TIMER_CALLBACK_DATA *psTimerCBData)
 static IMG_VOID OSTimerCallbackWrapper(IMG_UINTPTR_T uiData)
 {
     TIMER_CALLBACK_DATA	*psTimerCBData = (TIMER_CALLBACK_DATA*)uiData;
-    
+
 #if defined(PVR_LINUX_TIMERS_USING_WORKQUEUES) || defined(PVR_LINUX_TIMERS_USING_SHARED_WORKQUEUE)
     int res;
 
@@ -3518,7 +3547,11 @@ PVRSRV_ERROR OSReleasePhysPageAddr(IMG_HANDLE hOSWrapMem)
                         SetPageDirty(psPage);
                     }
 	        }
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,6,0))
+                page_cache_release(psPage);
+#else
                 put_page(psPage);
+#endif
 	    }
             break;
         }
@@ -3700,7 +3733,15 @@ PVRSRV_ERROR OSAcquirePhysPageAddr(IMG_VOID *pvCPUVAddr,
     bMMapSemHeld = IMG_TRUE;
 
     /* Get page list */
-    psInfo->iNumPagesMapped = get_user_pages_remote(current, current->mm, uStartAddr, psInfo->iNumPages, FOLL_WRITE, psInfo->ppsPages, NULL, NULL);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,6,0))
+    psInfo->iNumPagesMapped = get_user_pages(
+		current, current->mm,
+		uStartAddr, psInfo->iNumPages, 1, 0, psInfo->ppsPages, NULL);
+#else
+    psInfo->iNumPagesMapped = get_user_pages_remote(
+		current, current->mm,
+		uStartAddr, psInfo->iNumPages, FOLL_WRITE, psInfo->ppsPages, NULL, NULL);
+#endif
 
     if (psInfo->iNumPagesMapped >= 0)
     {
@@ -3886,17 +3927,30 @@ PVRSRV_ERROR OSAcquirePhysPageAddr(IMG_VOID *pvCPUVAddr,
 exit:
     PVR_ASSERT(bMMapSemHeld);
     up_read(&current->mm->mmap_sem);
+    bMMapSemHeld = IMG_FALSE;
 
-    /* Return the cookie */
-    *phOSWrapMem = (IMG_HANDLE)psInfo;
+    PVR_ASSERT(psInfo->eType != 0);
 
     if (bHaveNoPageStructs)
     {
+#if defined(PVR_ALLOW_NON_PAGE_STRUCT_MEMORY_IMPORT)
+	/*
+	 * Allowing the GPU to access pages that can't be locked down is
+	 * potentially unsafe. For recent versions of Linux, there are
+	 * safer ways to get access to such memory, such as DMA Buffer
+	 * sharing (DMABUF).
+	 */
         PVR_DPF((PVR_DBG_MESSAGE,
             "OSAcquirePhysPageAddr: Region contains pages which can't be locked down (no page structures)"));
+#else
+        PVR_DPF((PVR_DBG_ERROR,
+            "OSAcquirePhysPageAddr: Region contains pages which can't be locked down (no page structures)"));
+	goto error;
+#endif
     }
 
-    PVR_ASSERT(psInfo->eType != 0);
+    /* Return the cookie */
+    *phOSWrapMem = (IMG_HANDLE)psInfo;
 
     return PVRSRV_OK;
 
@@ -3912,7 +3966,7 @@ error:
     return eError;
 }
 
-#if ! defined(__arm__)
+#if ! (defined(__arm__) || defined(__aarch64__))
 # define USE_VIRTUAL_CACHE_OP
 #elif LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0)
 # define USE_VIRTUAL_CACHE_OP
@@ -4366,12 +4420,27 @@ IMG_BOOL OSInvalidateCPUCacheRangeKM(IMG_HANDLE hOSMemHandle,
 							   x86_flush_cache_range);
 }
 
-#elif defined(__arm__)
+#elif defined(__arm__) || defined(__aarch64__)
 
 static void per_cpu_cache_flush(void *arg)
 {
 	PVR_UNREFERENCED_PARAMETER(arg);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,2,0))
+	/*
+		NOTE: Regarding arm64 global flush support on >= Linux v4.2:
+		- Global cache flush support is deprecated from v4.2 onwards
+		- Cache maintenance is done using UM/KM VA maintenance _only_
+		- If you find that more time is spent in VA cache maintenance
+			- Implement arm64 assembly sequence for global flush here
+				- asm volatile ();
+		- If you do not want to implement the global cache assembly
+			- Disable KM cache maintenance support in UM cache.c
+			- Remove this PVR_LOG message
+	*/
+	PVR_LOG(("arm64: Global d-cache flush assembly not implemented"));
+#else
 	flush_cache_all();
+#endif
 }
 
 IMG_VOID OSCleanCPUCacheKM(IMG_VOID)
@@ -4430,18 +4499,38 @@ static void pvr_dmac_clean_range(const void *pvStart, const void *pvEnd)
 
 static void pvr_flush_range(phys_addr_t pStart, phys_addr_t pEnd)
 {
+#if defined(__aarch64__)
+	struct device *dev = PVRLDMGetDevice();
+	const struct dma_map_ops *dma_ops = get_dma_ops(dev);
+	dma_ops->sync_single_for_device(dev, pStart, pEnd - pStart, DMA_TO_DEVICE);
+	dma_ops->sync_single_for_cpu(dev, pStart, pEnd - pStart, DMA_FROM_DEVICE);
+#else
 	arm_dma_ops.sync_single_for_device(NULL, pStart, pEnd - pStart, DMA_TO_DEVICE);
 	arm_dma_ops.sync_single_for_cpu(NULL, pStart, pEnd - pStart, DMA_FROM_DEVICE);
+#endif
 }
 
 static void pvr_clean_range(phys_addr_t pStart, phys_addr_t pEnd)
 {
+#if defined(__aarch64__)
+	struct device *dev = PVRLDMGetDevice();
+	const struct dma_map_ops *dma_ops = get_dma_ops(dev);
+	dma_ops->sync_single_for_device(dev, pStart, pEnd - pStart, DMA_TO_DEVICE);
+#else
 	arm_dma_ops.sync_single_for_device(NULL, pStart, pEnd - pStart, DMA_TO_DEVICE);
+#endif
+
 }
 
 static void pvr_invalidate_range(phys_addr_t pStart, phys_addr_t pEnd)
 {
+#if defined(__aarch64__)
+	struct device *dev = PVRLDMGetDevice();
+	const struct dma_map_ops *dma_ops = get_dma_ops(dev);
+	dma_ops->sync_single_for_cpu(dev, pStart, pEnd - pStart, DMA_FROM_DEVICE);
+#else
 	arm_dma_ops.sync_single_for_cpu(NULL, pStart, pEnd - pStart, DMA_FROM_DEVICE);
+#endif
 }
 
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0) */
@@ -4734,10 +4823,9 @@ PVRSRV_ERROR PVROSFuncInit(IMG_VOID)
     }
 #endif
 
-#if defined (SUPPORT_ION)
+#if defined(SUPPORT_ION) && !defined(LMA)
 	{
 		PVRSRV_ERROR eError;
-
 		eError = IonInit();
 		if (eError != PVRSRV_OK)
 		{

@@ -60,24 +60,25 @@ typedef	enum _SGX_INIT_OPERATION
 #if defined(PDUMP)
 	SGX_INIT_OP_PDUMP_HW_REG,
 #endif
-	SGX_INIT_OP_HALT
+	SGX_INIT_OP_HALT,
+	SGX_INIT_FORCE_I32 = 0x7FFFFFFF
 } SGX_INIT_OPERATION;
 
 typedef union _SGX_INIT_COMMAND
 {
 	SGX_INIT_OPERATION eOp;
-	struct {
+	struct IMG_COMPAT {
 		SGX_INIT_OPERATION eOp;
 		IMG_UINT32 ui32Offset;
 		IMG_UINT32 ui32Value;
 	} sWriteHWReg;
-	struct {
+	struct IMG_COMPAT {
 		SGX_INIT_OPERATION eOp;
 		IMG_UINT32 ui32Offset;
 		IMG_UINT32 ui32Value;
 	} sReadHWReg;
 #if defined(PDUMP)
-	struct {
+	struct IMG_COMPAT {
 		SGX_INIT_OPERATION eOp;
 		IMG_UINT32 ui32Offset;
 		IMG_UINT32 ui32Value;
@@ -85,7 +86,7 @@ typedef union _SGX_INIT_COMMAND
 #endif
 } SGX_INIT_COMMAND;
 
-typedef struct _SGX_INIT_SCRIPTS_
+typedef struct IMG_COMPAT _SGX_INIT_SCRIPTS_
 {
 	SGX_INIT_COMMAND asInitCommandsPart1[SGX_MAX_INIT_COMMANDS];
 	SGX_INIT_COMMAND asInitCommandsPart2[SGX_MAX_INIT_COMMANDS];

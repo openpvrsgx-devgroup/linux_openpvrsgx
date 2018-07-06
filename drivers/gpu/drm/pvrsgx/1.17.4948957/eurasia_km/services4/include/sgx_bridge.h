@@ -123,7 +123,6 @@ extern "C" {
  *****************************************************************************/ 
 typedef struct PVRSRV_BRIDGE_IN_GETPHYSPAGEADDR
 {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hDevMemHeap;
 	IMG_DEV_VIRTADDR sDevVAddr;
 }PVRSRV_BRIDGE_IN_GETPHYSPAGEADDR;
@@ -142,109 +141,100 @@ typedef struct PVRSRV_BRIDGE_OUT_GETPHYSPAGEADDR
 /*!
  *****************************************************************************
  *	`bridge in' set transfer context priority
- *****************************************************************************/ 
+ *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_SGX_SET_TRANSFER_CONTEXT_PRIORITY_TAG
  {
- 	IMG_UINT32				ui32BridgeFlags; /* Must be first member of structure */
- 	IMG_HANDLE				hDevCookie;
-	IMG_HANDLE				hHWTransferContext;
-    IMG_UINT32              ui32Priority;
-    IMG_UINT32              ui32OffsetOfPriorityField;
+	IMG_HANDLE			hDevCookie;
+	IMG_HANDLE			hHWTransferContext;
+	IMG_UINT32			ui32Priority;
+	IMG_UINT32			ui32OffsetOfPriorityField;
 }PVRSRV_BRIDGE_IN_SGX_SET_TRANSFER_CONTEXT_PRIORITY;
 
 /*!
  *****************************************************************************
  *	`bridge in' set render context priority
- *****************************************************************************/ 
+ *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_SGX_SET_RENDER_CONTEXT_PRIORITY_TAG
 {
-	IMG_UINT32				ui32BridgeFlags; /* Must be first member of structure */
-	IMG_HANDLE				hDevCookie;
-	IMG_HANDLE				hHWRenderContext;
-    IMG_UINT32              ui32Priority;
-    IMG_UINT32              ui32OffsetOfPriorityField;
+	IMG_HANDLE			hDevCookie;
+	IMG_HANDLE			hHWRenderContext;
+	IMG_UINT32			ui32Priority;
+	IMG_UINT32			ui32OffsetOfPriorityField;
 }PVRSRV_BRIDGE_IN_SGX_SET_RENDER_CONTEXT_PRIORITY;
 
 /*!
  *****************************************************************************
  *	`bridge in' Get Client Info
- *****************************************************************************/ 
+ *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_GETCLIENTINFO_TAG
 {
-	IMG_UINT32					ui32BridgeFlags; /* Must be first member of structure */
-	IMG_HANDLE					hDevCookie;
+	IMG_HANDLE			hDevCookie;
 }PVRSRV_BRIDGE_IN_GETCLIENTINFO;
 
 /*!
  *****************************************************************************
  *	`bridge out' Get internal device info
- *****************************************************************************/ 
-typedef struct PVRSRV_BRIDGE_OUT_GETINTERNALDEVINFO_TAG
+ *****************************************************************************/
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_OUT_GETINTERNALDEVINFO_TAG
 {
 	SGX_INTERNAL_DEVINFO	sSGXInternalDevInfo;
-	PVRSRV_ERROR				eError;
+	PVRSRV_ERROR			eError;
 }PVRSRV_BRIDGE_OUT_GETINTERNALDEVINFO;
 
 /*!
  *****************************************************************************
  *	`bridge in' Get internal device info
- *****************************************************************************/ 
+ *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_GETINTERNALDEVINFO_TAG
 {
-	IMG_UINT32				ui32BridgeFlags; /* Must be first member of structure */
-	IMG_HANDLE				hDevCookie;
+	IMG_HANDLE			hDevCookie;
 }PVRSRV_BRIDGE_IN_GETINTERNALDEVINFO;
 
 /*!
  *****************************************************************************
  *	`bridge out' Get Client Info
- *****************************************************************************/ 
+ *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_OUT_GETCLIENTINFO_TAG
 {
-	SGX_CLIENT_INFO  	sClientInfo;
-	PVRSRV_ERROR			eError;
+	SGX_CLIENT_INFO		sClientInfo;
+	PVRSRV_ERROR		eError;
 }PVRSRV_BRIDGE_OUT_GETCLIENTINFO;
 
 /*!
  *****************************************************************************
  *	`bridge in' Release Client Info
- *****************************************************************************/ 
+ *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_RELEASECLIENTINFO_TAG
 {
-	IMG_UINT32			ui32BridgeFlags; /* Must be first member of structure */
-	IMG_HANDLE			hDevCookie;
-	SGX_CLIENT_INFO  	sClientInfo;
+	IMG_HANDLE		hDevCookie;
 }PVRSRV_BRIDGE_IN_RELEASECLIENTINFO;
 
 /*!
  *****************************************************************************
  *	`bridge in' Pdump ISP mem Pol
- *****************************************************************************/ 
+ *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_ISPBREAKPOLL_TAG
 {
-	IMG_UINT32				ui32BridgeFlags; /* Must be first member of structure */
-	IMG_HANDLE				hDevCookie;
+	IMG_HANDLE		hDevCookie;
 }PVRSRV_BRIDGE_IN_ISPBREAKPOLL;
 
 /*!
  *****************************************************************************
  *	`bridge in' KickTA
- *****************************************************************************/ 
+ *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_DOKICK_TAG
 {
-	IMG_UINT32				ui32BridgeFlags; /* Must be first member of structure */
-	IMG_HANDLE				hDevCookie;
-	SGX_CCB_KICK			sCCBKick;
+	IMG_HANDLE			hDevCookie;
+	SGX_CCB_KICK		sCCBKick;
 }PVRSRV_BRIDGE_IN_DOKICK;
 
 /*!
  *****************************************************************************
  *	`bridge in' SGXScheduleProcessQueues
- *****************************************************************************/ 
+ *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_SGX_SCHEDULE_PROCESS_QUEUES_TAG
 {
-	IMG_UINT32				ui32BridgeFlags; /* Must be first member of structure */
-	IMG_HANDLE				hDevCookie;
+	IMG_HANDLE		hDevCookie;
 }PVRSRV_BRIDGE_IN_SGX_SCHEDULE_PROCESS_QUEUES;
 
 
@@ -252,12 +242,11 @@ typedef struct PVRSRV_BRIDGE_IN_SGX_SCHEDULE_PROCESS_QUEUES_TAG
 /*!
  *****************************************************************************
  *	`bridge in' SubmitTransfer
- *****************************************************************************/ 
-typedef struct PVRSRV_BRIDGE_IN_SUBMITTRANSFER_TAG
+ *****************************************************************************/
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_SUBMITTRANSFER_TAG
 {
-	IMG_UINT32				ui32BridgeFlags; /* Must be first member of structure */
-	IMG_HANDLE				hDevCookie;
-	PVRSRV_TRANSFER_SGX_KICK 			sKick;
+	IMG_HANDLE					hDevCookie;
+	PVRSRV_TRANSFER_SGX_KICK	sKick;
 }PVRSRV_BRIDGE_IN_SUBMITTRANSFER;
 
 #if defined(SGX_FEATURE_2D_HARDWARE)
@@ -265,7 +254,7 @@ typedef struct PVRSRV_BRIDGE_IN_SUBMITTRANSFER_TAG
  *****************************************************************************
  *	`bridge in' Submit2D
  *****************************************************************************/ 
-typedef struct PVRSRV_BRIDGE_IN_SUBMIT2D_TAG
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_SUBMIT2D_TAG
 {
 	IMG_UINT32				ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE				hDevCookie;
@@ -280,10 +269,9 @@ typedef struct PVRSRV_BRIDGE_IN_SUBMIT2D_TAG
  *****************************************************************************/ 
 typedef struct PVRSRV_BRIDGE_IN_READREGDWORD_TAG
 {
-	IMG_UINT32				ui32BridgeFlags; /* Must be first member of structure */
-	IMG_HANDLE				hDevCookie;
-    IMG_PCHAR				pszKey;
-    IMG_PCHAR				pszValue;
+	IMG_HANDLE			hDevCookie;
+	IMG_PCHAR			pszKey;
+    	IMG_PCHAR			pszValue;
 }PVRSRV_BRIDGE_IN_READREGDWORD;
 
 /*!
@@ -293,7 +281,7 @@ typedef struct PVRSRV_BRIDGE_IN_READREGDWORD_TAG
 typedef struct PVRSRV_BRIDGE_OUT_READREGDWORD_TAG
 {
 	PVRSRV_ERROR	eError;
-	IMG_UINT32		ui32Data;
+	IMG_UINT32	ui32Data;
 }PVRSRV_BRIDGE_OUT_READREGDWORD;
 
 
@@ -303,9 +291,8 @@ typedef struct PVRSRV_BRIDGE_OUT_READREGDWORD_TAG
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_SGXGETMISCINFO_TAG
 {
-	IMG_UINT32		ui32BridgeFlags; /* Must be first member of structure */
-	IMG_HANDLE		hDevCookie;
-	SGX_MISC_INFO	*psMiscInfo;
+	IMG_HANDLE			hDevCookie;
+	IMG_HANDLE			hMiscInfo;
 }PVRSRV_BRIDGE_IN_SGXGETMISCINFO;
 
 /*!
@@ -314,17 +301,16 @@ typedef struct PVRSRV_BRIDGE_IN_SGXGETMISCINFO_TAG
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_SGXINFO_FOR_SRVINIT_TAG
 {
-	IMG_UINT32		ui32BridgeFlags; /* Must be first member of structure */
-	IMG_HANDLE		hDevCookie;
+	IMG_HANDLE			hDevCookie;
 }PVRSRV_BRIDGE_IN_SGXINFO_FOR_SRVINIT;
 
 /*!
  *****************************************************************************
  *	`bridge out' SGXGetInfoForSrvInit
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_OUT_SGXINFO_FOR_SRVINIT_TAG
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_OUT_SGXINFO_FOR_SRVINIT_TAG
 {
-	PVRSRV_ERROR			eError;
+	PVRSRV_ERROR				eError;
 	SGX_BRIDGE_INFO_FOR_SRVINIT	sInitInfo;
 }PVRSRV_BRIDGE_OUT_SGXINFO_FOR_SRVINIT;
 
@@ -332,10 +318,9 @@ typedef struct PVRSRV_BRIDGE_OUT_SGXINFO_FOR_SRVINIT_TAG
  *****************************************************************************
  *	`bridge in' SGXDevInitPart2
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_IN_SGXDEVINITPART2_TAG
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_SGXDEVINITPART2_TAG
 {
-	IMG_UINT32		ui32BridgeFlags; /* Must be first member of structure */
-	IMG_HANDLE		hDevCookie;
+	IMG_HANDLE              hDevCookie;
 	SGX_BRIDGE_INIT_INFO	sInitInfo;
 }PVRSRV_BRIDGE_IN_SGXDEVINITPART2;
 
@@ -345,21 +330,19 @@ typedef struct PVRSRV_BRIDGE_IN_SGXDEVINITPART2_TAG
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_OUT_SGXDEVINITPART2_TAG
 {
-	PVRSRV_ERROR 	eError;
-	IMG_UINT32 		ui32KMBuildOptions;
-
+	PVRSRV_ERROR		eError;
+	IMG_UINT32			ui32KMBuildOptions;
 }PVRSRV_BRIDGE_OUT_SGXDEVINITPART2;
 
 /*!
  *****************************************************************************
  *	`bridge in' 2D query blits complete
- *****************************************************************************/ 
-typedef struct PVRSRV_BRIDGE_IN_2DQUERYBLTSCOMPLETE_TAG
+ *****************************************************************************/
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_2DQUERYBLTSCOMPLETE_TAG
 {
-	IMG_UINT32				ui32BridgeFlags; /* Must be first member of structure */
-	IMG_HANDLE				hDevCookie;
-	IMG_HANDLE				hKernSyncInfo;
-	IMG_BOOL				bWaitForComplete;
+	IMG_HANDLE			hDevCookie;
+	IMG_HANDLE			hKernSyncInfo;
+	IMG_BOOL			bWaitForComplete;
 }PVRSRV_BRIDGE_IN_2DQUERYBLTSCOMPLETE;
 
 
@@ -367,7 +350,6 @@ typedef struct PVRSRV_BRIDGE_IN_2DQUERYBLTSCOMPLETE_TAG
 
 typedef struct PVRSRV_BRIDGE_IN_SGXFINDSHAREDPBDESC_TAG
 {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hDevCookie;
 	IMG_BOOL   bLockOnFailure;
 	IMG_UINT32 ui32TotalPBSize;
@@ -388,7 +370,6 @@ typedef struct PVRSRV_BRIDGE_OUT_SGXFINDSHAREDPBDESC_TAG
 
 typedef struct PVRSRV_BRIDGE_IN_SGXUNREFSHAREDPBDESC_TAG
 {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hSharedPBDesc;
 }PVRSRV_BRIDGE_IN_SGXUNREFSHAREDPBDESC;
 
@@ -400,7 +381,6 @@ typedef struct PVRSRV_BRIDGE_OUT_SGXUNREFSHAREDPBDESC_TAG
 
 typedef struct PVRSRV_BRIDGE_IN_SGXADDSHAREDPBDESC_TAG
 {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_UINT32 ui32TotalPBSize;
 	IMG_HANDLE hDevCookie;
 	IMG_HANDLE hSharedPBDescKernelMemInfo;
@@ -420,49 +400,44 @@ typedef struct PVRSRV_BRIDGE_OUT_SGXADDSHAREDPBDESC_TAG
 
 
 #ifdef	PDUMP
-typedef struct PVRSRV_BRIDGE_IN_PDUMP_BUFFER_ARRAY_TAG
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_PDUMP_BUFFER_ARRAY_TAG
 {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
-	SGX_KICKTA_DUMP_BUFFER *psBufferArray;
-	IMG_UINT32 ui32BufferArrayLength;
-	IMG_BOOL bDumpPolls;
+	IMG_HANDLE 				hBufferArray;
+	IMG_UINT32				ui32BufferArrayLength;
+	IMG_BOOL				bDumpPolls;
 } PVRSRV_BRIDGE_IN_PDUMP_BUFFER_ARRAY;
 
-typedef struct PVRSRV_BRIDGE_IN_PDUMP_3D_SIGNATURE_REGISTERS_TAG
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_PDUMP_3D_SIGNATURE_REGISTERS_TAG
 {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
-	IMG_HANDLE hDevCookie;
-	IMG_HANDLE hDevMemContext;
-	IMG_UINT32 ui32DumpFrameNum;
-	IMG_BOOL   bLastFrame;
-	IMG_UINT32 *pui32Registers;
-	IMG_UINT32 ui32NumRegisters;
+	IMG_HANDLE			hDevCookie;
+	IMG_HANDLE			hDevMemContext;
+	IMG_UINT32			ui32DumpFrameNum;
+	IMG_BOOL			bLastFrame;
+	IMG_HANDLE			hRegisters;
+	IMG_UINT32			ui32NumRegisters;
 }PVRSRV_BRIDGE_IN_PDUMP_3D_SIGNATURE_REGISTERS;
 
-typedef struct PVRSRV_BRIDGE_IN_PDUMPCOUNTER_REGISTERS_TAG
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_PDUMPCOUNTER_REGISTERS_TAG
 {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
-	IMG_HANDLE hDevCookie;
-	IMG_UINT32 ui32DumpFrameNum;
-	IMG_BOOL bLastFrame;
-	IMG_UINT32 *pui32Registers;
-	IMG_UINT32 ui32NumRegisters;
+	IMG_HANDLE			hDevCookie;
+	IMG_UINT32			ui32DumpFrameNum;
+	IMG_BOOL			bLastFrame;
+	IMG_HANDLE			hRegisters;
+	IMG_UINT32			ui32NumRegisters;
 }PVRSRV_BRIDGE_IN_PDUMP_COUNTER_REGISTERS;
 
-typedef struct PVRSRV_BRIDGE_IN_PDUMP_TA_SIGNATURE_REGISTERS_TAG
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_PDUMP_TA_SIGNATURE_REGISTERS_TAG
 {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
-	IMG_HANDLE hDevCookie;
-	IMG_UINT32 ui32DumpFrameNum;
-	IMG_UINT32 ui32TAKickCount;
-	IMG_BOOL bLastFrame;
-	IMG_UINT32 *pui32Registers;
-	IMG_UINT32 ui32NumRegisters;
+	IMG_HANDLE			hDevCookie;
+	IMG_UINT32			ui32DumpFrameNum;
+	IMG_UINT32			ui32TAKickCount;
+	IMG_BOOL			bLastFrame;
+	IMG_HANDLE			hRegisters;
+	IMG_UINT32			ui32NumRegisters;
 }PVRSRV_BRIDGE_IN_PDUMP_TA_SIGNATURE_REGISTERS;
 
-typedef struct PVRSRV_BRIDGE_IN_PDUMP_HWPERFCB_TAG
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_PDUMP_HWPERFCB_TAG
 {
-	IMG_UINT32			ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE			hDevCookie;
 	IMG_HANDLE			hDevMemContext;
 	IMG_CHAR			szFileName[PVRSRV_PDUMP_MAX_FILENAME_SIZE];
@@ -471,13 +446,12 @@ typedef struct PVRSRV_BRIDGE_IN_PDUMP_HWPERFCB_TAG
 
 }PVRSRV_BRIDGE_IN_PDUMP_HWPERFCB;
 
-typedef struct PVRSRV_BRIDGE_IN_PDUMP_SAVEMEM
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_PDUMP_SAVEMEM
 {
-	IMG_UINT32			ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE			hDevCookie;
 	IMG_CHAR			szFileName[PVRSRV_PDUMP_MAX_FILENAME_SIZE];
 	IMG_UINT32			ui32FileOffset;
-	IMG_DEV_VIRTADDR 	sDevVAddr;
+	IMG_DEV_VIRTADDR	 	sDevVAddr;
 	IMG_UINT32			ui32Size;
 	IMG_HANDLE			hDevMemContext;
 	IMG_UINT32			ui32PDumpFlags;
@@ -486,61 +460,56 @@ typedef struct PVRSRV_BRIDGE_IN_PDUMP_SAVEMEM
 
 #endif
 
-typedef struct PVRSRV_BRIDGE_IN_SGX_REGISTER_HW_RENDER_CONTEXT_TAG
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_SGX_REGISTER_HW_RENDER_CONTEXT_TAG
 {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
-	IMG_HANDLE hDevCookie;
-    IMG_CPU_VIRTADDR pHWRenderContextCpuVAddr;
-    IMG_UINT32       ui32HWRenderContextSize;
-    IMG_UINT32       ui32OffsetToPDDevPAddr;
-    IMG_HANDLE       hDevMemContext;
+	IMG_HANDLE			hDevCookie;
+	IMG_HANDLE			pHWRenderContextCpuVAddr;
+	IMG_UINT32			ui32HWRenderContextSize;
+	IMG_UINT32			ui32OffsetToPDDevPAddr;
+	IMG_HANDLE			hDevMemContext;
 }PVRSRV_BRIDGE_IN_SGX_REGISTER_HW_RENDER_CONTEXT;
 
 typedef struct PVRSRV_BRIDGE_OUT_SGX_REGISTER_HW_RENDER_CONTEXT_TAG
 {
-	PVRSRV_ERROR eError;
-	IMG_HANDLE hHWRenderContext;
-    IMG_DEV_VIRTADDR sHWRenderContextDevVAddr;
+	PVRSRV_ERROR		eError;
+	IMG_DEV_VIRTADDR	sHWRenderContextDevVAddr;
+	IMG_HANDLE			hHWRenderContext;
 }PVRSRV_BRIDGE_OUT_SGX_REGISTER_HW_RENDER_CONTEXT;
 
-typedef struct PVRSRV_BRIDGE_IN_SGX_UNREGISTER_HW_RENDER_CONTEXT_TAG
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_SGX_UNREGISTER_HW_RENDER_CONTEXT_TAG
 {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
-	IMG_BOOL   bForceCleanup;
-	IMG_HANDLE hDevCookie;
-	IMG_HANDLE hHWRenderContext;
+	IMG_BOOL			bForceCleanup;
+	IMG_HANDLE			hDevCookie;
+	IMG_HANDLE			hHWRenderContext;
 }PVRSRV_BRIDGE_IN_SGX_UNREGISTER_HW_RENDER_CONTEXT;
 
-typedef struct PVRSRV_BRIDGE_IN_SGX_REGISTER_HW_TRANSFER_CONTEXT_TAG
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_SGX_REGISTER_HW_TRANSFER_CONTEXT_TAG
 {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
-	IMG_HANDLE hDevCookie;
-    IMG_CPU_VIRTADDR pHWTransferContextCpuVAddr;
-    IMG_UINT32       ui32HWTransferContextSize;
-    IMG_UINT32       ui32OffsetToPDDevPAddr;
-    IMG_HANDLE       hDevMemContext;
+	IMG_HANDLE			hDevCookie;
+	IMG_HANDLE			pHWTransferContextCpuVAddr;
+	IMG_UINT32			ui32HWTransferContextSize;
+	IMG_UINT32			ui32OffsetToPDDevPAddr;
+	IMG_HANDLE			hDevMemContext;
 }PVRSRV_BRIDGE_IN_SGX_REGISTER_HW_TRANSFER_CONTEXT;
 
 typedef struct PVRSRV_BRIDGE_OUT_SGX_REGISTER_HW_TRANSFER_CONTEXT_TAG
 {
-	PVRSRV_ERROR eError;
-	IMG_HANDLE hHWTransferContext;
-    IMG_DEV_VIRTADDR sHWTransferContextDevVAddr;
+	PVRSRV_ERROR		eError;
+	IMG_DEV_VIRTADDR	sHWTransferContextDevVAddr;
+	IMG_HANDLE			hHWTransferContext;
 }PVRSRV_BRIDGE_OUT_SGX_REGISTER_HW_TRANSFER_CONTEXT;
 
-typedef struct PVRSRV_BRIDGE_IN_SGX_UNREGISTER_HW_TRANSFER_CONTEXT_TAG
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_SGX_UNREGISTER_HW_TRANSFER_CONTEXT_TAG
 {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
-	IMG_BOOL   bForceCleanup;
-	IMG_HANDLE hDevCookie;
-	IMG_HANDLE hHWTransferContext;
+	IMG_BOOL			bForceCleanup;
+	IMG_HANDLE			hDevCookie;
+	IMG_HANDLE			hHWTransferContext;
 }PVRSRV_BRIDGE_IN_SGX_UNREGISTER_HW_TRANSFER_CONTEXT;
 
-typedef struct PVRSRV_BRIDGE_IN_SGX_FLUSH_HW_RENDER_TARGET_TAG
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_SGX_FLUSH_HW_RENDER_TARGET_TAG
 {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
-	IMG_HANDLE hDevCookie;
-	IMG_DEV_VIRTADDR sHWRTDataSetDevVAddr;
+	IMG_HANDLE			hDevCookie;
+	IMG_DEV_VIRTADDR	sHWRTDataSetDevVAddr;
 }PVRSRV_BRIDGE_IN_SGX_FLUSH_HW_RENDER_TARGET;
 
 /*!
@@ -548,24 +517,24 @@ typedef struct PVRSRV_BRIDGE_IN_SGX_FLUSH_HW_RENDER_TARGET_TAG
  *	SGX 2D specific defines
  *****************************************************************************/ 
 #if defined(SGX_FEATURE_2D_HARDWARE)
-typedef struct PVRSRV_BRIDGE_IN_SGX_REGISTER_HW_2D_CONTEXT_TAG
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_SGX_REGISTER_HW_2D_CONTEXT_TAG
 {
 	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hDevCookie;
-    IMG_CPU_VIRTADDR pHW2DContextCpuVAddr;
+    IMG_HANDLE hHW2DContextCpuVAddr;
     IMG_UINT32       ui32HW2DContextSize;
     IMG_UINT32       ui32OffsetToPDDevPAddr;
     IMG_HANDLE       hDevMemContext;
 }PVRSRV_BRIDGE_IN_SGX_REGISTER_HW_2D_CONTEXT;
 
-typedef struct PVRSRV_BRIDGE_OUT_SGX_REGISTER_HW_2D_CONTEXT_TAG
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_OUT_SGX_REGISTER_HW_2D_CONTEXT_TAG
 {
 	PVRSRV_ERROR eError;
 	IMG_HANDLE hHW2DContext;
     IMG_DEV_VIRTADDR sHW2DContextDevVAddr;
 }PVRSRV_BRIDGE_OUT_SGX_REGISTER_HW_2D_CONTEXT;
 
-typedef struct PVRSRV_BRIDGE_IN_SGX_UNREGISTER_HW_2D_CONTEXT_TAG
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_SGX_UNREGISTER_HW_2D_CONTEXT_TAG
 {
 	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_BOOL   bForceCleanup;
@@ -581,12 +550,11 @@ typedef struct PVRSRV_BRIDGE_IN_SGX_UNREGISTER_HW_2D_CONTEXT_TAG
  *****************************************************************************
  *	`bridge in' SGXReadHWPerfCB
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_IN_SGX_READ_HWPERF_CB_TAG
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_SGX_READ_HWPERF_CB_TAG
 {
-	IMG_UINT32					ui32BridgeFlags; /* Must be first member of structure */
-	IMG_HANDLE					hDevCookie;
-	IMG_UINT32					ui32ArraySize;
-	PVRSRV_SGX_HWPERF_CB_ENTRY	*psHWPerfCBData;
+	IMG_HANDLE			hDevCookie;
+	IMG_UINT32			ui32ArraySize;
+	IMG_HANDLE			hHWPerfCBData;		/* PVRSRV_SGX_HWPERF_CB_ENTRY* */
 } PVRSRV_BRIDGE_IN_SGX_READ_HWPERF_CB;
 
 /*!

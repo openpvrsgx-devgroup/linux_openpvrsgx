@@ -1294,7 +1294,7 @@ RA_Delete (RA_ARENA *pArena)
 		if (pBT->type != btt_free)
 		{
 			PVR_DPF ((PVR_DBG_ERROR,"RA_Delete: allocations still exist in the arena that is being destroyed"));
-			PVR_DPF ((PVR_DBG_ERROR,"Likely Cause: client drivers not freeing alocations before destroying devmemcontext"));
+			PVR_DPF ((PVR_DBG_ERROR,"Likely Cause: client drivers not freeing allocations before destroying devmemcontext"));
 			PVR_DPF ((PVR_DBG_ERROR,"RA_Delete: base = 0x" UINTPTR_FMT " size=0x%" SIZE_T_FMT_LEN "x", pBT->base, pBT->uSize));
 		}
 
@@ -1518,9 +1518,22 @@ RA_Alloc (RA_ARENA *pArena,
 			}
 		}
 	}
+#if defined PVRSRV_DEVMEM_TIME_STATS
+	else
+	{
+		/* If sub-allocation succeeded, the allocation was already mapped to Device MMU. So change timing to '0' */
+		if (ppsMapping)
+		{
+			(*ppsMapping)->ui32TimeToDevMap = 0;
+		}
+	}
+#endif
+
 #ifdef RA_STATS
 	if (bResult)
+	{
 		pArena->sStatistics.uCumulativeAllocs++;
+	}
 #endif
 
 	PVR_DPF ((PVR_DBG_MESSAGE,
@@ -1548,8 +1561,7 @@ RA_Alloc (RA_ARENA *pArena,
 	@Description    Validate an arena by checking that adjacent members of the
                     double linked ordered list are compatible. PVR_DBG_BREAK and
                     PVR_DPF messages are used when an error is detected.
-                    NOTE: A DEBUG build is required for PVR_DBG_BREAK and PVR_DPF
-                    to operate.
+                    NOTE: A DEBUG build is required for PVR_DBG_BREAK to operate.
 
 	@Input          pArena - the arena
 

@@ -54,14 +54,6 @@ define one-word-only
 $(if $(filter-out $(firstword $($(1))),$($(1))),$(error In makefile $(THIS_MAKEFILE): $$($(1)) must contain only one word),)
 endef
 
-define target-intermediates-of
-$(addprefix $(TARGET_OUT)/intermediates/$(1)/,$(2))
-endef
-
-define host-intermediates-of
-$(addprefix $(HOST_OUT)/intermediates/$(1)/,$(2))
-endef
-
 define module-library
 $(patsubst lib%.so,%,$(if $($(1)_target),$($(1)_target),$(1).so))
 endef
@@ -71,16 +63,69 @@ define register-module
 INTERNAL_MAKEFILE_FOR_MODULE_$(1) := $(THIS_MAKEFILE)
 endef
 
+define process-module-arch
+MODULE_ARCH := $$(strip $(2))
+include $$(MAKE_TOP)/moduledefs_common.mk
+include $$(MAKE_TOP)/moduledefs/$$(MODULE_ARCH).mk
+include $$(MAKE_TOP)/$$(strip $$($$(THIS_MODULE)_type)).mk
+.SECONDARY: $$(MODULE_INTERMEDIATES_DIR)
+$$(MODULE_INTERMEDIATES_DIR):
+	$$(make-directory)
+MODULE_CLEAN_TARGETS += $$(MODULE_INTERMEDIATES_DIR)
+INTERNAL_TARGETS_FOR_$(1) += $$(MODULE_TARGETS)
+INTERNAL_CLEAN_TARGETS_FOR_$(1) += $$(MODULE_CLEAN_TARGETS)
+INTERNAL_CLOBBER_TARGETS_FOR_$(1) += $$(MODULE_CLEAN_TARGETS) $$(MODULE_CLOBBER_TARGETS) $$(MODULE_TARGETS)
+endef
+
+target_neutral_types := \
+ apk \
+ bison_parser \
+ copy_files \
+ custom \
+ flex_lexer \
+ dex \
+ gen_dispatch \
+ image_header \
+ inline_shaders \
+ java_archive \
+ module_group \
+ pds_header \
+ use_header
+
+doc_types := doc
+
+define calculate-arch-list
+# Work out the target platforms for this module
+MODULE_ARCH_LIST := $(2)
+ifeq ($$(MODULE_ARCH_LIST),)
+ifneq ($$(filter $(1),$(doc_types)),)
+MODULE_ARCH_LIST := doc
+else
+ifneq ($$(filter $(1),$(target_neutral_types)),)
+MODULE_ARCH_LIST := target_neutral
+else
+ifneq ($$(filter $(1),kernel_module),)
+MODULE_ARCH_LIST := $(TARGET_PRIMARY_ARCH)
+else
+MODULE_ARCH_LIST := $(TARGET_ALL_ARCH)
+endif
+endif
+endif
+endif
+endef
+
 define process-module
 THIS_MODULE := $(1)
 THIS_MAKEFILE := $(INTERNAL_MAKEFILE_FOR_MODULE_$(1))
+INTERNAL_TARGETS_FOR_$(1) :=
+INTERNAL_CLEAN_TARGETS_FOR_$(1) :=
+INTERNAL_CLOBBER_TARGETS_FOR_$(1) :=
 include $$(MAKE_TOP)/this_makefile.mk
 $$(call must-be-nonempty,THIS_MAKEFILE)
 $$(call must-be-nonempty,$(1)_type)
-MODULE_HOST_BUILD := $$(if $(filter host_%,$($(1)_type)),true,)
-include $$(MAKE_TOP)/moduledefs.mk
-include $$(MAKE_TOP)/$$(patsubst host_%,%,$($(1)_type)).mk
-INTERNAL_TARGETS_FOR_$(THIS_MODULE) := $(MODULE_TARGETS)
+$$(eval $$(call calculate-arch-list,$$($(1)_type),$$($(1)_arch)))
+INTERNAL_ARCH_LIST_FOR_$(1) := $$(MODULE_ARCH_LIST)
+$$(foreach _m,$$(MODULE_ARCH_LIST),$$(eval $$(call process-module-arch,$(1),$$(_m))))
 endef
 
 # This can be used by module_type.mk files to indicate that they can't be
@@ -98,10 +143,6 @@ $(shell \
 	CC_CHECK=$(patsubst @%,%,$(CC_CHECK)) && \
 	$(patsubst @%,%,$(CHMOD)) +x $$CC_CHECK && \
 	$$CC_CHECK --cc "$(1)" --out "$(2)" $(3))
-endef
-
-define cc-is-64bit
-$(call cc-check,$(1),$(OUT),--64)
 endef
 
 define cc-is-clang
@@ -144,10 +185,14 @@ $(call kernel-cc-option,-W$(if $(W),,no-)$(patsubst -W%,%,$(patsubst -Wno-%,%,$(
 endef
 
 define module-info-line
-$(if $(filter modules,$(D)),$(info $(1)),)
+$(if $(filter modules,$(D)),$(info [$(THIS_MODULE)] <$(MODULE_ARCH)> $(1)),)
 endef
 
 # $(call if-exists,A,B) => A if A is a file which exists, otherwise B
 define if-exists
 $(if $(wildcard $(1)),$(1),$(2))
+endef
+
+define unsupported-module-var
+$(if $(strip $($(THIS_MODULE)_$(1))),$(error In makefile $(THIS_MAKEFILE): Setting '$(THIS_MODULE)_$(1)' has no effect, because $(THIS_MODULE) has type $($(THIS_MODULE)_type)))
 endef

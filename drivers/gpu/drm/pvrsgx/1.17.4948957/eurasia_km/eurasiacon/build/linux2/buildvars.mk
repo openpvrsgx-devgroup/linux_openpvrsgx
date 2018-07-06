@@ -46,6 +46,9 @@
 # COMMON_CFLAGS or COMMON_USER_FLAGS. These flags are shared between
 # host and target, which might use compilers with different capabilities.
 
+# ANOTHER NOTE: All flags here must be architecture-independent (i.e. no
+# -march or toolchain include paths)
+
 # These flags are used for kernel, User C and User C++
 #
 COMMON_FLAGS := -W -Wall
@@ -54,7 +57,7 @@ COMMON_FLAGS := -W -Wall
 #
 COMMON_CFLAGS := $(COMMON_FLAGS) \
  -Wdeclaration-after-statement -Wno-format-zero-length \
- -Wstrict-prototypes
+ -Wmissing-prototypes -Wstrict-prototypes
 
 # User C and User C++ optimization control. Does not affect kernel.
 #
@@ -167,6 +170,7 @@ TESTED_KBUILD_FLAGS := \
  $(call kernel-cc-option,-Wno-pointer-arith) \
  $(call kernel-cc-option,-Wno-aggregate-return) \
  $(call kernel-cc-option,-Wno-unused-but-set-variable) \
+ $(call kernel-cc-option,-Wno-ignored-qualifiers) \
  $(call kernel-cc-option,-Wno-old-style-declaration) \
  $(call kernel-cc-optional-warning,-Wbad-function-cast) \
  $(call kernel-cc-optional-warning,-Wcast-qual) \
@@ -229,24 +233,17 @@ ALL_KBUILD_CFLAGS := $(COMMON_CFLAGS) $(KBUILD_FLAGS) $(TESTED_KBUILD_FLAGS)
 # For the same reason (Darwin 'ld') don't bother checking for text
 # relocations in host binaries.
 #
-ALL_HOST_LDFLAGS := -L$(HOST_OUT)
-ALL_LDFLAGS := \
- -Wl,--warn-shared-textrel \
- -L$(TARGET_OUT) -Xlinker -rpath-link=$(TARGET_OUT)
-
-ifneq ($(strip $(TOOLCHAIN)),)
-ALL_LDFLAGS += -L$(TOOLCHAIN)/lib -Xlinker -rpath-link=$(TOOLCHAIN)/lib
-endif
-
-ifneq ($(strip $(TOOLCHAIN2)),)
-ALL_LDFLAGS += -L$(TOOLCHAIN2)/lib -Xlinker -rpath-link=$(TOOLCHAIN2)/lib
-endif
-
-ifneq ($(strip $(LINKER_RPATH)),)
-ALL_LDFLAGS += $(addprefix -Xlinker -rpath=,$(LINKER_RPATH))
-endif
+ALL_HOST_LDFLAGS :=
+ALL_LDFLAGS := -Wl,--warn-shared-textrel
 
 ALL_LDFLAGS += $(SYS_LDFLAGS)
+
+# Optional security hardening features.
+ifneq ($(FORTIFY),)
+ALL_CFLAGS   += -fstack-protector -Wa,--noexecstack -D_FORTIFY_SOURCE=2
+ALL_CXXFLAGS += -fstack-protector -Wa,--noexecstack -D_FORTIFY_SOURCE=2
+ALL_LDFLAGS  += -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now
+endif
 
 # This variable contains a list of all modules built by kbuild
 ALL_KBUILD_MODULES :=
@@ -255,4 +252,11 @@ ALL_KBUILD_MODULES :=
 ALL_CXX_MODULES :=
 
 # Toolchain triple for cross environment
-CROSS_TRIPLE := $(patsubst %-,%,$(CROSS_COMPILE))
+CROSS_TRIPLE := $(patsubst %-,%,$(notdir $(CROSS_COMPILE)))
+
+ifneq ($(TOOLCHAIN),)
+$(warning **********************************************)
+$(warning  The TOOLCHAIN option has been removed, but)
+$(warning  you have it set (via $(origin TOOLCHAIN)))
+$(warning **********************************************)
+endif

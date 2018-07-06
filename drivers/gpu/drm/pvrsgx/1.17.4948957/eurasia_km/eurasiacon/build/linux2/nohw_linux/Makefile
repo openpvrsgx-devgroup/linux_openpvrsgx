@@ -39,71 +39,75 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ### ###########################################################################
 
+include ../config/window_system.mk
+
 PVR_SYSTEM := sgx_nohw
 
-include ../kernel_version.mk
+KERNEL_COMPONENTS := srvkm
 
-BUFFERCLASS_MODULE ?= bufferclass_example
-KERNEL_COMPONENTS := srvkm $(BUFFERCLASS_MODULE)
+ifeq ($(PVR_LWS_NOBC),)
+ BUFFERCLASS_MODULE ?= bufferclass_example
+ KERNEL_COMPONENTS += $(BUFFERCLASS_MODULE)
+endif
 
-DISPLAY_CONTROLLER := dcnohw
+ifeq ($(PVR_LWS_NODC),)
+ DISPLAY_CONTROLLER := dc_nohw
+ ifeq ($(SUPPORT_DRI_DRM),1)
+  EXTRA_PVRSRVKM_COMPONENTS += $(DISPLAY_CONTROLLER)
+ else
+  KERNEL_COMPONENTS += $(DISPLAY_CONTROLLER)
+ endif
+ DC_NOHW_WIDTH ?= 640
+ DC_NOHW_HEIGHT ?= 480
+else
+ DRM_DISPLAY_CONTROLLER := drm_nulldisp
+ KERNEL_COMPONENTS += $(DRM_DISPLAY_CONTROLLER)
 
-OPK_DEFAULT := libpvrPVR2D_FLIPWSEGL.so
+ PVR_DRM_MODESET_DRIVER_NAME := nulldisp
+ PVR_DRM_MODESET_MODULE_NAME := dumb
+endif
 
 PDUMP ?= 1
 NO_HARDWARE := 1
 
 ifneq ($(SGXCORE),520)
-ifneq ($(SGXCORE),5300)
-SGX_FAST_DPM_INIT ?= 1
-endif
+ ifneq ($(SGXCORE),5300)
+  SGX_FAST_DPM_INIT ?= 1
+ endif
 endif
 
 SUPPORT_SGX_HWPERF ?= 0
 
-DC_NOHW_WIDTH ?= 640
-DC_NOHW_HEIGHT ?= 480
+XORG_EXPLICIT_PVR_SERVICES_LOAD := 1
 
-include ../common/xorg_test.mk
-ifeq ($(SUPPORT_BUILD_XORG),1)
-SUPPORT_DRI_DRM := 1
-OPK_FALLBACK := libpvrPVR2D_DRIWSEGL.so
-else
-OPK_FALLBACK := libpvrEWS_WSEGL.so
-endif
+ifneq ($(strip $(KERNELDIR)),)
+include ../kernel_version.mk
 
 ifeq ($(SUPPORT_DRI_DRM),1)
-EXTRA_PVRSRVKM_COMPONENTS += dc_nohw
-ifeq ($(call kernel-version-at-least,2,6,39),true)
-# For the benefit of DRM, the SGX driver will create a dummy platform
-# device to represent SGX.
-LDM_PCI := 0
-LDM_PLATFORM := 1
-PVR_DRI_DRM_PLATFORM_DEV := 1
-PVR_DRI_DRM_STATIC_BUS_ID := 1
-ifeq ($(call kernel-version-at-least,3,1),true)
-ifeq ($(call kernel-version-at-least,3,4),true)
-PVR_DRI_DRM_DEV_BUS_ID := "\"platform:sgxnohw:00\""
-else
-PVR_DRI_DRM_DEV_BUS_ID := "\"platform:sgxnohw:-1\""
+ # For the benefit of DRM, the SGX driver will create a dummy platform
+ # device to represent SGX.
+ LDM_PCI := 0
+ LDM_PLATFORM := 1
+ PVR_DRI_DRM_PLATFORM_DEV := 1
+ PVR_DRI_DRM_STATIC_BUS_ID := 1
+ ifeq ($(call kernel-version-at-least,3,1),true)
+  ifeq ($(call kernel-version-at-least,3,4),true)
+   PVR_DRI_DRM_DEV_BUS_ID := "\"platform:sgxnohw:00\""
+  else
+   PVR_DRI_DRM_DEV_BUS_ID := "\"platform:sgxnohw:-1\""
+  endif
+ endif
 endif
-endif
-else
-# Build a DRM module that doesn't require a real SGX device to manage.
-# DRM needs to be removed from the Linux kernel configuration for this to
-# work.
-PVR_DRI_DRM_NOT_PCI := 1
-KERNEL_COMPONENTS += linux_drm
-EXTRA_KBUILD_SOURCE := $(KERNELDIR)
-endif
-else
-KERNEL_COMPONENTS += dc_nohw
-endif
+endif # KERNELDIR
+
+include ../common/xorg_test.mk
 
 # Should be last
 include ../config/core.mk
 include ../common/xorg.mk
 include ../common/dridrm.mk
 include ../common/opencl.mk
-$(eval $(call KernelConfigC,DC_NOHW_BUFFER_WIDTH,$(DC_NOHW_WIDTH)))
-$(eval $(call KernelConfigC,DC_NOHW_BUFFER_HEIGHT,$(DC_NOHW_HEIGHT)))
+ifeq ($(PVR_LWS_NODC),)
+ $(eval $(call KernelConfigC,DC_NOHW_BUFFER_WIDTH,$(DC_NOHW_WIDTH)))
+ $(eval $(call KernelConfigC,DC_NOHW_BUFFER_HEIGHT,$(DC_NOHW_HEIGHT)))
+endif

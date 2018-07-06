@@ -55,12 +55,12 @@ extern "C" {
 /* These are privately used by pvr_debug, use the PVR_DBG_ defines instead */
 #define DBGPRIV_FATAL			0x001UL
 #define DBGPRIV_ERROR			0x002UL
-#define DBGPRIV_WARNING			0x004UL
-#define DBGPRIV_MESSAGE			0x008UL
-#define DBGPRIV_VERBOSE			0x010UL
-#define DBGPRIV_CALLTRACE		0x020UL
-#define DBGPRIV_ALLOC			0x040UL
-#define DBGPRIV_BUFFERED		0x080UL
+#define DBGPRIV_BUFFERED		0x004UL
+#define DBGPRIV_WARNING			0x008UL
+#define DBGPRIV_MESSAGE			0x010UL
+#define DBGPRIV_VERBOSE			0x020UL
+#define DBGPRIV_CALLTRACE		0x040UL
+#define DBGPRIV_ALLOC			0x080UL
 #define DBGPRIV_DBGDRV_MESSAGE	0x100UL
 
 #define DBGPRIV_DBGLEVEL_COUNT	9
@@ -139,33 +139,72 @@ IMG_IMPORT IMG_VOID IMG_CALLCONV PVRSRVDebugAssertFail(const IMG_CHAR *pszFile,
 	/* New logging mechanism */
 	#define PVR_DBG_FATAL		DBGPRIV_FATAL
 	#define PVR_DBG_ERROR		DBGPRIV_ERROR
+	#define PVR_DBG_BUFFERED	DBGPRIV_BUFFERED
 	#define PVR_DBG_WARNING		DBGPRIV_WARNING
 	#define PVR_DBG_MESSAGE		DBGPRIV_MESSAGE
 	#define PVR_DBG_VERBOSE		DBGPRIV_VERBOSE
 	#define PVR_DBG_CALLTRACE	DBGPRIV_CALLTRACE
 	#define PVR_DBG_ALLOC		DBGPRIV_ALLOC
-	#define PVR_DBG_BUFFERED	DBGPRIV_BUFFERED
 	#define PVR_DBGDRIV_MESSAGE	DBGPRIV_DBGDRV_MESSAGE
 
 	/* These levels are always on with PVRSRV_NEED_PVR_DPF */
 	#define __PVR_DPF_0x001UL(x...) PVRSRVDebugPrintf(DBGPRIV_FATAL, x)
 	#define __PVR_DPF_0x002UL(x...) PVRSRVDebugPrintf(DBGPRIV_ERROR, x)
-	#define __PVR_DPF_0x080UL(x...) PVRSRVDebugPrintf(DBGPRIV_BUFFERED, x)
+	#define __PVR_DPF_0x004UL(x...) PVRSRVDebugPrintf(DBGPRIV_BUFFERED, x)
 
 	/* Some are compiled out completely in release builds */
 #if defined(DEBUG)
-	#define __PVR_DPF_0x004UL(x...) PVRSRVDebugPrintf(DBGPRIV_WARNING, x)
-	#define __PVR_DPF_0x008UL(x...) PVRSRVDebugPrintf(DBGPRIV_MESSAGE, x)
-	#define __PVR_DPF_0x010UL(x...) PVRSRVDebugPrintf(DBGPRIV_VERBOSE, x)
-	#define __PVR_DPF_0x020UL(x...) PVRSRVDebugPrintf(DBGPRIV_CALLTRACE, x)
-	#define __PVR_DPF_0x040UL(x...) PVRSRVDebugPrintf(DBGPRIV_ALLOC, x)
+	#define __PVR_DPF_0x008UL(x...) PVRSRVDebugPrintf(DBGPRIV_WARNING, x)
+	#define __PVR_DPF_0x010UL(x...) PVRSRVDebugPrintf(DBGPRIV_MESSAGE, x)
+	#define __PVR_DPF_0x020UL(x...) PVRSRVDebugPrintf(DBGPRIV_VERBOSE, x)
+	#define __PVR_DPF_0x040UL(x...) PVRSRVDebugPrintf(DBGPRIV_CALLTRACE, x)
+	#define __PVR_DPF_0x080UL(x...) PVRSRVDebugPrintf(DBGPRIV_ALLOC, x)
+	#define __PVR_DPF_0x100UL(x...) PVRSRVDebugPrintf(DBGPRIV_DBGDRV_MESSAGE, x)
+
+#elif defined(PVR_DBGPRIV_LEVEL)
+
+#if (PVR_DBGPRIV_LEVEL >= DBGPRIV_WARNING)
+	#define __PVR_DPF_0x008UL(x...) PVRSRVDebugPrintf(DBGPRIV_WARNING, x)
+#else
+	#define __PVR_DPF_0x008UL(x...)
+#endif
+
+#if (PVR_DBGPRIV_LEVEL >= DBGPRIV_MESSAGE)
+	#define __PVR_DPF_0x010UL(x...) PVRSRVDebugPrintf(DBGPRIV_MESSAGE, x)
+#else
+	#define __PVR_DPF_0x010UL(x...)
+#endif
+
+#if (PVR_DBGPRIV_LEVEL >= DBGPRIV_VERBOSE)
+	#define __PVR_DPF_0x020UL(x...) PVRSRVDebugPrintf(DBGPRIV_VERBOSE, x)
+#else
+	#define __PVR_DPF_0x020UL(x...)
+#endif
+
+#if (PVR_DBGPRIV_LEVEL >= DBGPRIV_CALLTRACE)
+	#define __PVR_DPF_0x040UL(x...) PVRSRVDebugPrintf(DBGPRIV_CALLTRACE, x)
+#else
+	#define __PVR_DPF_0x040UL(x...)
+#endif
+
+#if (PVR_DBGPRIV_LEVEL >= DBGPRIV_ALLOC)
+	#define __PVR_DPF_0x080UL(x...) PVRSRVDebugPrintf(DBGPRIV_ALLOC, x)
+#else
+	#define __PVR_DPF_0x080UL(x...)
+#endif
+
+#if (PVR_DBGPRIV_LEVEL >= DBGPRIV_DBGDRV_MESSAGE)
 	#define __PVR_DPF_0x100UL(x...) PVRSRVDebugPrintf(DBGPRIV_DBGDRV_MESSAGE, x)
 #else
-	#define __PVR_DPF_0x004UL(x...)
+	#define __PVR_DPF_0x100UL(x...)
+#endif
+
+#else
 	#define __PVR_DPF_0x008UL(x...)
 	#define __PVR_DPF_0x010UL(x...)
 	#define __PVR_DPF_0x020UL(x...)
 	#define __PVR_DPF_0x040UL(x...)
+	#define __PVR_DPF_0x080UL(x...)
 	#define __PVR_DPF_0x100UL(x...)
 #endif
 
@@ -203,6 +242,10 @@ IMG_IMPORT IMG_VOID IMG_CALLCONV PVRSRVDebugPrintf(IMG_UINT32 ui32DebugLevel,
 												   IMG_UINT32 ui32Line,
 												   const IMG_CHAR *pszFormat,
 												   ...) IMG_FORMAT_PRINTF(4, 5);
+
+#if defined(PVR_DBGPRIV_LEVEL) && defined(SUPPORT_ANDROID_PLATFORM)
+IMG_IMPORT IMG_VOID IMG_CALLCONV PVRSRVDebugPrintfSetLevel(IMG_UINT32 ui32DebugLevel);
+#endif
 
 IMG_IMPORT IMG_VOID IMG_CALLCONV PVRSRVDebugPrintfDumpCCB(void);
 

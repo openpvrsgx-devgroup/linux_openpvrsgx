@@ -48,7 +48,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  * threaded environment.  In particular, it is assumed that the code will
  * never be called from an interrupt handler.
  *
- * The implmentation supports movable handle structures, allowing the address
+ * The implementation supports movable handle structures, allowing the address
  * of a handle structure to change without having to fix up pointers in
  * any of the handle structures.  For example, the linked list mechanism
  * used to link subhandles together uses handle array indices rather than
@@ -1137,7 +1137,7 @@ static PVRSRV_ERROR FreeHandle(PVRSRV_HANDLE_BASE *psBase, struct sHandle *psHan
 		else
 		{
 			/*
-			 * Put the handle pointer on the end of the the free
+			 * Put the handle pointer on the end of the free
 			 * handle pointer linked list.
 			 */
 			PVR_ASSERT(psBase->ui32LastFreeIndexPlusOne != 0);

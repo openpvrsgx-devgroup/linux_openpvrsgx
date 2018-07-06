@@ -388,12 +388,12 @@ static PVRSRV_ERROR AcquireGPTimer(SYS_SPECIFIC_DATA *psSysSpecData)
 	IMG_CPU_PHYADDR sTimerRegPhysBase;
 	IMG_HANDLE hTimerEnable;
 	IMG_UINT32 *pui32TimerEnable;
-#if defined(PVR_OMAP_TIMER_BASE_IN_SYS_SPEC_DATA) || (AM_VERSION == 5)
+#if defined(PVR_OMAP_TIMER_BASE_IN_SYS_SPEC_DATA) || (AM_VERSION == 5) || (AM_VERSION == 6)
 	PVR_ASSERT(psSysSpecData->sTimerRegPhysBase.uiAddr == 0);
 #endif
 
 #if defined(PVR_OMAP4_TIMING_PRCM)
-#if (AM_VERSION == 5)
+#if (AM_VERSION == 5) || (AM_VERSION == 6)
 	/* assert our dependence on the GPTIMER11 module */
 	psCLK = clk_get(NULL, "gpt11_fck");
 	if (IS_ERR(psCLK))
@@ -445,7 +445,7 @@ static PVRSRV_ERROR AcquireGPTimer(SYS_SPECIFIC_DATA *psSysSpecData)
 		PVR_DPF((PVR_DBG_ERROR, "EnableSystemClocks: Couldn't enable GPTIMER11 interface clock (%d)", res));
 		goto ExitDisableGPT11FCK;
 	}
-#endif //(AM_VERSION == 5)
+#endif //(AM_VERSION == 5) || (AM_VERSION == 6)
 #endif	/* defined(PVR_OMAP4_TIMING_PRCM) */
 
 	/* Set the timer to non-posted mode */
@@ -494,7 +494,7 @@ static PVRSRV_ERROR AcquireGPTimer(SYS_SPECIFIC_DATA *psSysSpecData)
 		    4,
 		    PVRSRV_HAP_KERNEL_ONLY|PVRSRV_HAP_UNCACHED,
 		    hTimerEnable);
-#if defined(PVR_OMAP_TIMER_BASE_IN_SYS_SPEC_DATA) || (AM_VERSION == 5)
+#if defined(PVR_OMAP_TIMER_BASE_IN_SYS_SPEC_DATA) || (AM_VERSION == 5) || (AM_VERSION == 6)
 	psSysSpecData->sTimerRegPhysBase = sTimerRegPhysBase;
 #endif
 	eError = PVRSRV_OK;
@@ -503,11 +503,11 @@ static PVRSRV_ERROR AcquireGPTimer(SYS_SPECIFIC_DATA *psSysSpecData)
 
 ExitDisableGPT11ICK:
 #if defined(PVR_OMAP4_TIMING_PRCM)
-#if (AM_VERSION == 5)
+#if (AM_VERSION == 5) || (AM_VERSION == 6)
 	clk_disable(psSysSpecData->psGPT11_ICK);
 #endif
 ExitDisableGPT11FCK:
-#if (AM_VERSION == 5)
+#if (AM_VERSION == 5) || (AM_VERSION == 6)
 	clk_disable(psSysSpecData->psGPT11_FCK);
 #endif
 ExitError:
@@ -532,7 +532,7 @@ static void ReleaseGPTimer(SYS_SPECIFIC_DATA *psSysSpecData)
 	IMG_HANDLE hTimerDisable;
 	IMG_UINT32 *pui32TimerDisable;
 
-#if defined(PVR_OMAP_TIMER_BASE_IN_SYS_SPEC_DATA) || (AM_VERSION == 5)
+#if defined(PVR_OMAP_TIMER_BASE_IN_SYS_SPEC_DATA) || (AM_VERSION == 5) || (AM_VERSION == 6)
 	if (psSysSpecData->sTimerRegPhysBase.uiAddr == 0)
 	{
 		return;
@@ -557,11 +557,11 @@ static void ReleaseGPTimer(SYS_SPECIFIC_DATA *psSysSpecData)
 				PVRSRV_HAP_KERNEL_ONLY|PVRSRV_HAP_UNCACHED,
 				hTimerDisable);
 	}
-#if defined(PVR_OMAP_TIMER_BASE_IN_SYS_SPEC_DATA) || (AM_VERSION == 5)
+#if defined(PVR_OMAP_TIMER_BASE_IN_SYS_SPEC_DATA) || (AM_VERSION == 5) || (AM_VERSION == 6)
 	psSysSpecData->sTimerRegPhysBase.uiAddr = 0;
 #endif
 #if defined(PVR_OMAP4_TIMING_PRCM)
-#if (AM_VERSION == 5)
+#if (AM_VERSION == 5) || (AM_VERSION == 6)
 	clk_disable(psSysSpecData->psGPT11_ICK);
 
 	clk_disable(psSysSpecData->psGPT11_FCK);

@@ -1,23 +1,23 @@
 ########################################################################### ###
 #@Copyright     Copyright (c) Imagination Technologies Ltd. All Rights Reserved
 #@License       Dual MIT/GPLv2
-#
+# 
 # The contents of this file are subject to the MIT license as set out below.
-#
+# 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-#
+# 
 # The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
-#
+# 
 # Alternatively, the contents of this file may be used under the terms of
 # the GNU General Public License Version 2 ("GPL") in which case the provisions
 # of GPL are applicable instead of those above.
-#
+# 
 # If you wish to allow use of your version of this file only under the terms of
 # GPL, and not to allow others to use your version of this file under the terms
 # of the MIT license, indicate your decision by deleting the provisions above
@@ -25,10 +25,10 @@
 # out in the file called "GPL-COPYING" included in this distribution. If you do
 # not delete the provisions above, a recipient may use your version of this file
 # under the terms of either the MIT license or GPL.
-#
+# 
 # This License is also included in this distribution in the file called
 # "MIT-COPYING".
-#
+# 
 # EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
 # PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
 # BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
@@ -58,14 +58,11 @@ $(call directory-must-exist,$(TOP))
 
 # RELATIVE_OUT is relative only if it's under $(TOP)
 RELATIVE_OUT		:= $(patsubst $(TOP)/%,%,$(OUT))
-HOST_OUT			:= $(RELATIVE_OUT)/host
-TARGET_OUT			:= $(RELATIVE_OUT)/target
-DOCS_OUT			:= $(RELATIVE_OUT)/docs
-CONFIG_MK			:= $(RELATIVE_OUT)/config.mk
-CONFIG_H			:= $(RELATIVE_OUT)/config.h
+CONFIG_MK		:= $(RELATIVE_OUT)/config.mk
+CONFIG_H		:= $(RELATIVE_OUT)/config.h
 CONFIG_KERNEL_MK	:= $(RELATIVE_OUT)/config_kernel.mk
 CONFIG_KERNEL_H		:= $(RELATIVE_OUT)/config_kernel.h
-MAKE_TOP			:= eurasiacon/build/linux2
+MAKE_TOP		:= eurasiacon/build/linux2
 THIS_MAKEFILE		:= (top-level makefiles)
 
 # Convert commas to spaces in $(D). This is so you can say "make
@@ -82,11 +79,6 @@ ifneq ($(INTERNAL_CLOBBER_ONLY),true)
 # Create the out directory
 #
 $(shell mkdir -p $(OUT))
-
-# Provide rules to create the directories for binaries and documentation
-.SECONDARY: $(HOST_OUT) $(TARGET_OUT) $(DOCS_OUT)
-$(HOST_OUT) $(TARGET_OUT) $(DOCS_OUT):
-	$(make-directory)
 
 # If these generated files differ from any pre-existing ones,
 # replace them, causing affected parts of the driver to rebuild.
@@ -143,16 +135,73 @@ REMAINING_MAKEFILES := $(ALL_MAKEFILES)
 ALL_MODULES :=
 INTERNAL_INCLUDED_ALL_MAKEFILES :=
 
-ifneq ($(INTERNAL_CLOBBER_ONLY),true)
 # Please do not change the format of the following lines
 -include $(CONFIG_KERNEL_MK)
+
+# If we haven't set host/target archs, set some sensible defaults now.
+# This allows things like prune.sh to work
+ifeq ($(HOST_PRIMARY_ARCH),)
+ifneq ($(FORCE_ARCH),)
+HOST_PRIMARY_ARCH := host_i386
+HOST_32BIT_ARCH := host_i386
+endif
+endif
+
+# Output directory for configuration, object code,
+# final programs/libraries, and install/rc scripts.
+HOST_OUT             := $(RELATIVE_OUT)/$(HOST_PRIMARY_ARCH)
+HOST_32BIT_OUT       := $(RELATIVE_OUT)/$(HOST_32BIT_ARCH)
+TARGET_OUT           := $(RELATIVE_OUT)/$(TARGET_PRIMARY_ARCH)
+TARGET_PRIMARY_OUT   := $(RELATIVE_OUT)/$(TARGET_PRIMARY_ARCH)
+TARGET_NEUTRAL_OUT   := $(RELATIVE_OUT)/target_neutral
+GENERATED_CODE_OUT   := $(TARGET_NEUTRAL_OUT)/intermediates
+DOCS_OUT             := $(RELATIVE_OUT)/doc
+
+# Make directories that won't otherwise be made.
+# (This is for the install scripts and other things that aren't made by
+# normal module rules.)
+TARGET_OUT_DIRECTORIES := $(addprefix $(RELATIVE_OUT)/,$(TARGET_ALL_ARCH)) $(TARGET_NEUTRAL_OUT) $(DOCS_OUT)
+.SECONDARY: $(TARGET_OUT_DIRECTORIES)
+$(TARGET_OUT_DIRECTORIES):
+	$(make-directory)
+
+ifneq ($(INTERNAL_CLOBBER_ONLY),true)
 # These files may not exist in GPL km source packages
--include $(MAKE_TOP)/xorgconf.mk
 -include $(MAKE_TOP)/llvm.mk
 endif
 
 include $(MAKE_TOP)/commands.mk
+
+# We don't need to include this if we're just doing a clean or a clobber
+#
+ifneq ($(INTERNAL_CLOBBER_ONLY),true)
 include $(MAKE_TOP)/buildvars.mk
+endif
+
+include $(MAKE_TOP)/pvrversion.mk
+
+ifeq ($(INTERNAL_CLOBBER_ONLY)$(SUPPORT_ANDROID_PLATFORM),)
+ # doing a Linux build.  We need to worry about sysroots.
+
+ ifneq ($(SUPPORT_BUILD_LWS),)
+  -include $(MAKE_TOP)/xorgconf.mk
+
+ else ifneq ($(SYSROOT),)
+  LWS_PREFIX ?= /usr
+
+  ALL_CFLAGS      += --sysroot=${SYSROOT}
+  ALL_CXXFLAGS    += --sysroot=${SYSROOT}
+  ALL_LDFLAGS     += --sysroot=${SYSROOT}
+
+  PKG_CONFIG_SYSROOT_DIR := ${SYSROOT}
+
+  ifneq ($(SYSROOT),/)
+   # Override PKG_CONFIG_PATH to prevent additional host paths from being
+   # searched
+   PKG_CONFIG_PATH :=
+  endif
+ endif
+endif
 
 HOST_INTERMEDIATES := $(HOST_OUT)/intermediates
 TARGET_INTERMEDIATES := $(TARGET_OUT)/intermediates
@@ -167,6 +216,15 @@ else
 $(error Impossible: $(words $(REMAINING_MAKEFILES)) makefiles were mysteriously ignored when reading $$(ALL_MAKEFILES))
 endif
 
+# Compute the isystem paths passed in via SYS_INCLUDES. We'll use this in
+# the module target_xxx makefiles to filter duplicate -isystem and -I flags,
+# to ensure the module can always override the include precedence. (Also
+# calculate any 'residual' non-include flags, as we need to put them back.)
+SYS_INCLUDES_ISYSTEM := \
+ $(subst -isystem,,$(filter -isystem%,$(subst -isystem ,-isystem,$(SYS_INCLUDES))))
+SYS_INCLUDES_RESIDUAL := \
+ $(strip $(filter-out -isystem%,$(subst -isystem ,-isystem,$(SYS_INCLUDES))))
+
 # At this point, all Linux.mks have been included. Now generate rules to build
 # each module: for each module in $(ALL_MODULES), set per-makefile variables
 $(foreach _m,$(ALL_MODULES),$(eval $(call process-module,$(_m))))
@@ -177,27 +235,47 @@ kbuild install:
 ifneq ($(INTERNAL_CLOBBER_ONLY),true)
 -include $(MAKE_TOP)/scripts.mk
 -include $(MAKE_TOP)/kbuild/kbuild.mk
-else
+endif
 # We won't depend on 'build' here so that people can build subsets of
 # components and still have the install script attempt to install the
 # subset.
 install:
-	@if [ ! -d "$(DISCIMAGE)" ]; then \
+	@if [ ! -d "$(DISCIMAGE)" -a -z "$(INSTALL_TARGET)" ]; then \
 		echo; \
 		echo "** DISCIMAGE was not set or does not point to a valid directory."; \
+		echo "** Either use INSTALL_TARGET or set DISCIMAGE."; \
 		echo "** Cannot continue with install."; \
 		echo; \
 		exit 1; \
 	fi
-	@if [ ! -f $(TARGET_OUT)/install.sh ]; then \
+	@if [ ! -f $(RELATIVE_OUT)/install.sh ]; then \
 		echo; \
 		echo "** install.sh not found in $(TARGET_OUT)."; \
 		echo "** Cannot continue with install."; \
 		echo; \
 		exit 1; \
 	fi
-	@cd $(TARGET_OUT) && ./install.sh
-endif
+	@cd $(RELATIVE_OUT) && ./install.sh
+
+.PHONY: uninstall
+uninstall: install_script
+uninstall:
+	@if [ ! -d "$(DISCIMAGE)" -a -z "$(INSTALL_TARGET)" ]; then \
+		echo; \
+		echo "** DISCIMAGE was not set or does not point to a valid directory."; \
+		echo "** Either use INSTALL_TARGET or set DISCIMAGE."; \
+		echo "** Cannot continue with uninstall."; \
+		echo; \
+		exit 1; \
+	fi
+	@if [ ! -f $(RELATIVE_OUT)/install.sh ]; then \
+		echo; \
+		echo "** install.sh not found in $(TARGET_OUT)."; \
+		echo "** Cannot continue with uninstall."; \
+		echo; \
+		exit 1; \
+	fi
+	@cd $(RELATIVE_OUT) && ./install.sh -u
 
 # You can say 'make all_modules' to attempt to make everything, or 'make
 # components' to only make the things which are listed (in the per-build
@@ -210,7 +288,8 @@ docs: $(DOCS)
 
 # Cleaning
 .PHONY: clean clobber
-clean: MODULE_DIRS_TO_REMOVE := $(HOST_OUT) $(TARGET_OUT) $(DOCS_OUT)
+clean: MODULE_DIRS_TO_REMOVE := $(HOST_OUT) $(HOST_32BIT_OUT) \
+  $(TARGET_OUT_DIRECTORIES)
 clean:
 	$(clean-dirs)
 clobber: MODULE_DIRS_TO_REMOVE := $(OUT)
@@ -220,11 +299,11 @@ clobber:
 # Saying 'make clean-MODULE' removes the intermediates for MODULE.
 # clobber-MODULE deletes the output files as well
 clean-%:
-	$(if $(V),,@echo "  RM      " $(call relative-to-top,$(OUT)/host/intermediates/$* $(OUT)/target/intermediates/$* $(OUT)/docs/intermediates/$*))
-	$(RM) -rf $(OUT)/host/intermediates/$*/* $(OUT)/target/intermediates/$*/* $(OUT)/docs/intermediates/$*/*
+	$(if $(V),,@echo "  RM      " $(call relative-to-top,$(INTERNAL_CLEAN_TARGETS_FOR_$*)))
+	$(RM) -rf $(INTERNAL_CLEAN_TARGETS_FOR_$*)
 clobber-%:
-	$(if $(V),,@echo "  RM      " $(call relative-to-top,$(OUT)/host/intermediates/$* $(OUT)/target/intermediates/$* $(INTERNAL_TARGETS_FOR_$*)))
-	$(RM) -rf $(OUT)/host/intermediates/$* $(OUT)/target/intermediates/$* $(OUT)/docs/intermediates/$* $(INTERNAL_TARGETS_FOR_$*)
+	$(if $(V),,@echo "  RM      " $(call relative-to-top,$(INTERNAL_CLOBBER_TARGETS_FOR_$*)))
+	$(RM) -rf $(INTERNAL_CLOBBER_TARGETS_FOR_$*)
 
 include $(MAKE_TOP)/bits.mk
 

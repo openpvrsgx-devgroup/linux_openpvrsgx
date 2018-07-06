@@ -1,5 +1,5 @@
 /*************************************************************************/ /*!
-@Title          Buffer management functions for Linux
+@Title          Buffer management functions
 @Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
 @Description    Manages buffers mapped into two memory spaces - cpu and device,
                 either of which can be virtual or physical.
@@ -96,6 +96,8 @@ DevMemoryFree (BM_MAPPING *pMapping);
     @Input      pvPrivData - opaque private data passed through to allocator
     @Input      ui32PrivDataLength - length of opaque private data
 
+	@Output		pui32TimeToDevMap - Time taken  in us to map the allocated
+					buffer to device MMU. 
 	@Output     pBuf - receives a pointer to a descriptor of the allocated
 					 buffer.
 	@Return 	IMG_TRUE - Success
@@ -115,6 +117,9 @@ AllocMemory (BM_CONTEXT			*pBMContext,
 			 IMG_UINT32			ui32NumVirtChunks,
 			 IMG_UINT32			ui32NumPhysChunks,
 			 IMG_BOOL			*pabMapChunk,
+			 #if defined (PVRSRV_DEVMEM_TIME_STATS)
+			 IMG_UINT32			*pui32TimeToDevMap,
+			 #endif
 			 BM_BUF				*pBuf)
 {
 	BM_MAPPING			*pMapping;
@@ -126,7 +131,7 @@ AllocMemory (BM_CONTEXT			*pBMContext,
 			  uSize, ui32Flags, uDevVAddrAlignment));
 
 	/*
-		what to do depends on combination of DevVaddr generation
+		Decision depends on combination of DevVaddr generation
 		and backing RAM requirement
 	*/
 	if(ui32Flags & PVRSRV_MEM_RAM_BACKED_ALLOCATION)
@@ -160,8 +165,11 @@ AllocMemory (BM_CONTEXT			*pBMContext,
 		{
 			IMG_BOOL bSuccess;
 			IMG_SIZE_T uActualSize;
+#if defined (PVRSRV_DEVMEM_TIME_STATS)
+			IMG_UINT64 ui64TimeStart;
+#endif
 
-			/* Allocate physcial memory */
+			/* Allocate physical memory */
 			bSuccess = BM_ImportMemory(psBMHeap,
 									   ui32ChunkSize * ui32NumPhysChunks,
 									   &uActualSize,
@@ -180,7 +188,7 @@ AllocMemory (BM_CONTEXT			*pBMContext,
 			if (uActualSize != ui32ChunkSize * ui32NumPhysChunks)
 			{
 				/*
-					Most likley the chunksize was not host page multiple so
+					Most likely the chunksize was not host page multiple so
 					return with an error
 				*/
 				PVR_DPF((PVR_DBG_ERROR, "AllocMemory: Failed to allocate memory for sparse allocation"));
@@ -195,6 +203,9 @@ AllocMemory (BM_CONTEXT			*pBMContext,
 			pMapping->ui32NumPhysChunks = ui32NumPhysChunks;
 			pMapping->pabMapChunk = pabMapChunk;
 
+#if defined (PVRSRV_DEVMEM_TIME_STATS)
+			ui64TimeStart = OSClockMonotonicus();
+#endif
 			/* Allocate VA space and map in the physical memory */
 			bSuccess = DevMemoryAlloc (pBMContext,
 										pMapping,
@@ -209,7 +220,10 @@ AllocMemory (BM_CONTEXT			*pBMContext,
 				BM_FreeMemory(pArena, IMG_NULL, pMapping);
 				return IMG_FALSE;
 			}
-		
+
+#if defined (PVRSRV_DEVMEM_TIME_STATS)
+			pMapping->ui32TimeToDevMap = OSClockMonotonicus() - ui64TimeStart;
+#endif
 			/* uDevVAddrAlignment is currently set to zero so QAC generates warning which we override */
 			/* PRQA S 3356,3358 1 */
 			PVR_ASSERT (uDevVAddrAlignment>1?(pMapping->DevVAddr.uiAddr%uDevVAddrAlignment)==0:1);
@@ -339,6 +353,10 @@ AllocMemory (BM_CONTEXT			*pBMContext,
 		pMapping->uSize = uSize;
 		pMapping->hOSMemHandle = 0;
 	}
+
+#if defined (PVRSRV_DEVMEM_TIME_STATS)
+	*pui32TimeToDevMap = pMapping->ui32TimeToDevMap;
+#endif
 
 	/* Record the arena pointer in the mapping. */
 	pMapping->pArena = pArena;
@@ -712,12 +730,18 @@ ZeroBuf(BM_BUF *pBuf, BM_MAPPING *pMapping, IMG_SIZE_T uBytes, IMG_UINT32 ui32Fl
 	@Input      ui32Flags - flags
 	@Input      bFromAllocator - Is this being called by the
 					                 allocator?
+	@Output		pui32TimeToDevUnmap	- When not NULL, this receives time taken in
+				microseconds to unmap the buffer from Device MMU
 
 	@Return 	None.
 
  *****************************************************************************/
 static IMG_VOID
-FreeBuf (BM_BUF *pBuf, IMG_UINT32 ui32Flags, IMG_BOOL bFromAllocator)
+FreeBuf (BM_BUF *pBuf, IMG_UINT32 ui32Flags, IMG_BOOL bFromAllocator
+			#if defined (PVRSRV_DEVMEM_TIME_STATS)
+			,IMG_UINT32 *pui32TimeToDevUnmap
+			#endif
+		)
 {
 	BM_MAPPING *pMapping;
 	PVRSRV_DEVICE_NODE *psDeviceNode;
@@ -729,6 +753,17 @@ FreeBuf (BM_BUF *pBuf, IMG_UINT32 ui32Flags, IMG_BOOL bFromAllocator)
 
 	/* record mapping */
 	pMapping = pBuf->pMapping;
+#if defined (PVRSRV_DEVMEM_TIME_STATS)
+	/* Pass in the storage where we wish to receive the device "unmap" timing info */
+	pMapping->pui32TimeToDevUnmap = pui32TimeToDevUnmap;
+
+	/* Initialise unmap timing to 'zero'. If the mapping is deleted from Device MMU
+	 * we'll get legit value on return */
+	if (pMapping->pui32TimeToDevUnmap)
+	{
+		*(pMapping->pui32TimeToDevUnmap) = 0;
+	}
+#endif
 
 	psDeviceNode = pMapping->pBMHeap->pBMContext->psDeviceNode;
 	if (psDeviceNode->pfnCacheInvalidate)
@@ -874,7 +909,7 @@ static PVRSRV_ERROR BM_DestroyContext_AnyCb(BM_HEAP *psBMHeap)
 	@Function	BM_DestroyContext
 
 	@Description	Destroy a buffer manager context. All allocated buffers must be
-				free'd before calling this function.  This function is called
+				freed before calling this function.  This function is called
 				also to perform cleanup during aborted initialisations so it's
 				fairly careful not to assume any given resource has really been
 				created/allocated.
@@ -1369,7 +1404,7 @@ BM_CreateHeap (IMG_HANDLE hBMContext,
 	/* memory is allocated from the OS as required */
 	psBMHeap->pImportArena = RA_Create (psDevMemHeapInfo->pszBSName,
 										0, 0, IMG_NULL,
-										MAX(HOST_PAGESIZE(), psBMHeap->sDevArena.ui32DataPageSize),
+										MIN(HOST_PAGESIZE(), psBMHeap->sDevArena.ui32DataPageSize),
 										&BM_ImportMemory,
 										&BM_FreeMemory,
 										IMG_NULL,
@@ -1530,6 +1565,9 @@ BM_Alloc (  IMG_HANDLE			hDevMemHeap,
 			IMG_UINT32			ui32NumVirtChunks,
 			IMG_UINT32			ui32NumPhysChunks,
 			IMG_BOOL			*pabMapChunk,
+			#if defined (PVRSRV_DEVMEM_TIME_STATS)
+			IMG_UINT32			*pui32TimeToDevMap,
+			#endif
 			BM_HANDLE			*phBuf)
 {
 	BM_BUF *pBuf;
@@ -1589,6 +1627,9 @@ BM_Alloc (  IMG_HANDLE			hDevMemHeap,
 					ui32NumVirtChunks,
 					ui32NumPhysChunks,
 					pabMapChunk,
+					#if defined (PVRSRV_DEVMEM_TIME_STATS)
+					pui32TimeToDevMap,
+					#endif
 					pBuf) != IMG_TRUE)
 	{
 		OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, sizeof (BM_BUF), pBuf, IMG_NULL);
@@ -1870,7 +1911,11 @@ BM_Wrap (	IMG_HANDLE hDevMemHeap,
 
 		if (!HASH_Insert (psBMContext->pBufferHash, (IMG_UINTPTR_T)sHashAddress.uiAddr, (IMG_UINTPTR_T)pBuf))
 		{
-			FreeBuf (pBuf, ui32Flags, IMG_TRUE);
+			FreeBuf (pBuf, ui32Flags, IMG_TRUE
+						#if defined (PVRSRV_DEVMEM_TIME_STATS)
+						, IMG_NULL
+						#endif
+						);
 			PVR_DPF((PVR_DBG_ERROR, "BM_Wrap: HASH_Insert FAILED"));
 			return IMG_FALSE;
 		}
@@ -1918,26 +1963,6 @@ BM_Export (BM_HANDLE hBuf)
 
 /*!
 ******************************************************************************
- @Function	 	BM_Export
-
- @Description	Export a buffer previously allocated via BM_Alloc.
-
- @Input         hBuf - buffer handle.
-
- @Return   		None.
-**************************************************************************/
-IMG_VOID
-BM_FreeExport(BM_HANDLE hBuf,
-		IMG_UINT32 ui32Flags)
-{
-	BM_BUF *pBuf = (BM_BUF *)hBuf;
-
-	PVRSRVBMBufDecExport(pBuf);
-	FreeBuf (pBuf, ui32Flags, IMG_FALSE);
-}
-
-/*!
-******************************************************************************
  @Function	 	BM_FreeExport
 
  @Description	Free a buffer previously exported via BM_Export.
@@ -1948,8 +1973,37 @@ BM_FreeExport(BM_HANDLE hBuf,
  @Return   		None.
 **************************************************************************/
 IMG_VOID
-BM_Free (BM_HANDLE hBuf,
+BM_FreeExport(BM_HANDLE hBuf,
 		IMG_UINT32 ui32Flags)
+{
+	BM_BUF *pBuf = (BM_BUF *)hBuf;
+
+	PVRSRVBMBufDecExport(pBuf);
+	FreeBuf (pBuf, ui32Flags, IMG_FALSE
+			#if defined (PVRSRV_DEVMEM_TIME_STATS)
+				, IMG_NULL
+			#endif
+			);
+}
+
+/*!
+******************************************************************************
+ @Function	 	BM_Free
+
+ @Description	Free a buffer previously allocated via BM_Alloc	
+
+ @Input         hBuf - buffer handle.
+ @Input         ui32Flags - flags
+
+ @Return   		None.
+**************************************************************************/
+IMG_VOID
+BM_Free (BM_HANDLE hBuf,
+			IMG_UINT32 ui32Flags
+			#if defined (PVRSRV_DEVMEM_TIME_STATS)
+			,IMG_UINT32 *pui32TimeToDevUnmap
+			#endif
+		)
 {
 	BM_BUF *pBuf = (BM_BUF *)hBuf;
 	SYS_DATA *psSysData;
@@ -1975,7 +2029,11 @@ BM_Free (BM_HANDLE hBuf,
 
 			HASH_Remove (pBuf->pMapping->pBMHeap->pBMContext->pBufferHash,	(IMG_UINTPTR_T)sHashAddr.uiAddr);
 		}
-		FreeBuf (pBuf, ui32Flags, IMG_TRUE);
+		FreeBuf (pBuf, ui32Flags, IMG_TRUE
+					#if defined(PVRSRV_DEVMEM_TIME_STATS)
+					,pui32TimeToDevUnmap
+					#endif
+				);
 	}
 }
 
@@ -1985,7 +2043,7 @@ BM_Free (BM_HANDLE hBuf,
 
 	@Function   BM_HandleToCpuVaddr
 
-	@Description	Retreive the cpu virtual address associated with a buffer.
+	@Description	Retrieve the cpu virtual address associated with a buffer.
 
 	@Input      buffer handle.
 
@@ -2016,7 +2074,7 @@ BM_HandleToCpuVaddr (BM_HANDLE hBuf)
 
 	@Function   BM_HandleToDevVaddr
 
-	@Description	Retreive the device virtual address associated with a buffer.
+	@Description	Retrieve the device virtual address associated with a buffer.
 
 	@Input      hBuf - buffer handle.
 
@@ -2046,7 +2104,7 @@ BM_HandleToDevVaddr (BM_HANDLE hBuf)
 
 	@Function   BM_HandleToSysPaddr
 
-	@Description	Retreive the system physical address associated with a buffer.
+	@Description	Retrieve the system physical address associated with a buffer.
 
 	@Input      hBuf - buffer handle.
 
@@ -2076,7 +2134,7 @@ BM_HandleToSysPaddr (BM_HANDLE hBuf)
 
 	@Function   BM_HandleToMemOSHandle
 
-	@Description	Retreive the underlying memory handle associated with a buffer.
+	@Description	Retrieve the underlying memory handle associated with a buffer.
 
 	@Input      hBuf - buffer handle.
 
@@ -2747,9 +2805,12 @@ BM_ImportMemory (IMG_VOID *pH,
 	}
 	pMapping->pBMHeap = pBMHeap;
 	pMapping->ui32Flags = ui32Flags;
+#if defined (PVRSRV_DEVMEM_TIME_STATS)
+	pMapping->pui32TimeToDevUnmap = IMG_NULL;
+#endif
 
 	/*
-	 * If anyone want's to know, pass back the actual size of our allocation.
+	 * If anyone wants to know, pass back the actual size of our allocation.
 	 * There could be up to an extra page's worth of memory which will be marked
 	 * as free in the RA.
 	 */
@@ -2782,7 +2843,7 @@ BM_ImportMemory (IMG_VOID *pH,
 
 		if (uPSize % uDevVAddrAlignment != 0)
 		{
-			PVR_DPF((PVR_DBG_ERROR, "Cannot use use this memory sharing workaround with allocations that might be suballocated"));
+			PVR_DPF((PVR_DBG_ERROR, "Cannot use this memory sharing workaround with allocations that might be suballocated"));
 			goto fail_mapping_alloc;
 		}
 		uDevVAddrAlignment = 0; /* FIXME: find out why it doesn't work if alignment is specified */
@@ -2826,7 +2887,7 @@ BM_ImportMemory (IMG_VOID *pH,
 
             if (uPSize % uDevVAddrAlignment != 0)
             {
-                PVR_DPF((PVR_DBG_ERROR, "Cannot use use this memory sharing workaround with allocations that might be suballocated"));
+                PVR_DPF((PVR_DBG_ERROR, "Cannot use this memory sharing workaround with allocations that might be suballocated"));
                 goto fail_mapping_alloc;
             }
             uDevVAddrAlignment = 0; /* FIXME: find out why it doesn't work if alignment is specified */
@@ -2984,6 +3045,10 @@ BM_ImportMemory (IMG_VOID *pH,
 	 */
 	if ((ui32Flags & PVRSRV_MEM_SPARSE) == 0)
 	{
+#if defined (PVRSRV_DEVMEM_TIME_STATS)
+		IMG_UINT64 ui64TimeStart;
+		ui64TimeStart = OSClockMonotonicus();
+#endif
 		bResult = DevMemoryAlloc (pBMContext,
 									pMapping,
 									IMG_NULL,
@@ -2997,7 +3062,10 @@ BM_ImportMemory (IMG_VOID *pH,
 					pMapping->uSize));
 			goto fail_dev_mem_alloc;
 		}
-	
+#if defined (PVRSRV_DEVMEM_TIME_STATS)
+		pMapping->ui32TimeToDevMap = OSClockMonotonicus() - ui64TimeStart;
+#endif
+
 		/* uDevVAddrAlignment is currently set to zero so QAC generates warning which we override */
 		/* PRQA S 3356,3358 1 */
 		PVR_ASSERT (uDevVAddrAlignment>1?(pMapping->DevVAddr.uiAddr%uDevVAddrAlignment)==0:1);
@@ -3107,7 +3175,21 @@ BM_FreeMemory (IMG_VOID *h, IMG_UINTPTR_T _base, BM_MAPPING *psMapping)
 	*/
 	if (psMapping->DevVAddr.uiAddr)
 	{
+#if defined (PVRSRV_DEVMEM_TIME_STATS)
+		unsigned long ulTimeStart = 0;
+		if (psMapping->pui32TimeToDevUnmap)
+		{
+			/* NON-NULL pointer signifies user has provided space to get timings info in */
+			ulTimeStart = OSClockMonotonicus();
+		}
+#endif
 		DevMemoryFree (psMapping);
+#if defined (PVRSRV_DEVMEM_TIME_STATS)
+		if (psMapping->pui32TimeToDevUnmap)
+		{
+			*(psMapping->pui32TimeToDevUnmap) = OSClockMonotonicus() - ulTimeStart;
+		}
+#endif
 	}
 
 	/* the size is double the actual for interleaved */
@@ -3331,8 +3413,8 @@ IMG_UINT32 BM_GetVirtualSize(IMG_HANDLE hBMHandle)
 ******************************************************************************
  @Function	BM_MapPageAtOffset
 
- @Description	utility function check if the specificed offset in a BM mapping
-                is a page that needs tp be mapped
+ @Description	utility function check if the specified offset in a BM mapping
+                is a page that needs to be mapped
 
  @Input     hBMHandle - Handle to BM mapping
 
@@ -3356,10 +3438,10 @@ IMG_BOOL BM_MapPageAtOffset(IMG_HANDLE hBMHandle, IMG_UINT32 ui32Offset)
 
 /*!
 ******************************************************************************
- @Function	BM_VirtOffsetToPhyscial
+ @Function	BM_VirtOffsetToPhysical
 
  @Description	utility function find of physical offset of a sparse allocation
-                from it's virtual offset.
+                from its virtual offset.
 
  @Input     hBMHandle - Handle to BM mapping
 

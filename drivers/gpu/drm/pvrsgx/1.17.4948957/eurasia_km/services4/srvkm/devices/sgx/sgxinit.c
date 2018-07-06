@@ -68,7 +68,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "srvkm.h"
 #include "ttrace.h"
 
-#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE)
+#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE) && defined(EUR_CR_TIMER)
 #include "systrace.h"
 #endif
 
@@ -2031,19 +2031,19 @@ IMG_BOOL SGX_ISRHandler (IMG_VOID *pvData)
 /*
 	SGX Systrace Handler
 */
-#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE)
+#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE) && defined(EUR_CR_TIMER)
 static IMG_VOID SGXSystraceHandler(PVRSRV_DEVICE_NODE *psDeviceNode)
 {
 	PVRSRV_SGXDEV_INFO *psDevInfo = (PVRSRV_SGXDEV_INFO *)psDeviceNode->pvDevice;
 	IMG_UINT32 ui32SgxClockSpeed, ui32DataCount, ui32HostTimestamp;
 
 	/* NOTE: Not thread safe. MISR should only run in one thread */
-	static PVRSRV_SGX_HWPERF_CB_ENTRY asSGXHWPerf[8];
+	static PVRSRV_SGX_HWPERF_CB_ENTRY asSGXHWPerf[16];
 
 	if(SystraceIsCapturingHWData() && psDevInfo->bSystraceInitialised)
 	{
 		SGXReadHWPerfCBKM((IMG_HANDLE) psDeviceNode, 
-						8,
+						16,
 						asSGXHWPerf,
 						(IMG_UINT32 *)&ui32DataCount,
 						(IMG_UINT32 *)&ui32SgxClockSpeed,
@@ -2076,6 +2076,9 @@ static IMG_VOID SGXSystraceHandler(PVRSRV_DEVICE_NODE *psDeviceNode)
 
 		/* Initialize the first context to be 1 (0 is idle)*/
 		psDevInfo->psSystraceData->ui32CurrentCtxID = 1;
+
+		/* Initialize current GPU ticks and Host Time */
+		SystraceInitializeTimeCorr(psDevInfo);
 	}
 	else if(psDevInfo->bSystraceInitialised)
 	{
@@ -2109,16 +2112,14 @@ static IMG_VOID SGX_MISRHandler (IMG_VOID *pvData)
 		HWRecoveryResetSGX(psDeviceNode, 0, ISR_ID);
 	}
 
-#if defined(OS_SUPPORTS_IN_LISR)
 	if (psDeviceNode->bReProcessDeviceCommandComplete)
 	{
 		SGXScheduleProcessQueuesKM(psDeviceNode);
 	}
-#endif
 
 	SGXTestActivePowerEvent(psDeviceNode, ISR_ID);
 	
-#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE)
+#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE) && defined(EUR_CR_TIMER)
 	SGXSystraceHandler(psDeviceNode);
 #endif
 	
@@ -3620,6 +3621,10 @@ PVRSRV_ERROR SGXReadHWPerfCBKM(IMG_HANDLE					hDevHandle,
 		OSMemCopy(&psClientHWPerfEntry[i].ui32MiscCounters[0][0],
 				  &psMKPerfEntry->ui32MiscCounters[0][0],
 				  sizeof(psMKPerfEntry->ui32MiscCounters));
+
+#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE) && defined(EUR_CR_TIMER)
+		psClientHWPerfEntry[i].ui32SystraceIndex	= psMKPerfEntry->ui32SystraceIndex;
+#endif
 
 		psHWPerfCB->ui32Roff = (psHWPerfCB->ui32Roff + 1) & (SGXMKIF_HWPERF_CB_SIZE - 1);
 	}

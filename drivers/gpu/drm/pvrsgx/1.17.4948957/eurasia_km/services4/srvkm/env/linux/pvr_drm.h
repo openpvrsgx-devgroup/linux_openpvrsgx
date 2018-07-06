@@ -83,6 +83,7 @@ int PVRSRVDriverResume(struct drm_device *pDevice);
 #endif /* !defined(SUPPORT_DRI_DRM_PLUGIN) */
 
 int PVRSRV_BridgeDispatchKM(struct drm_device *dev, void *arg, struct drm_file *pFile);
+int PVRSRV_BridgeCompatDispatchKM(struct drm_device *dev, void *arg, struct drm_file *pFile);
 
 #if defined(SUPPORT_DRI_DRM_EXT)
 #define	DRI_DRM_STATIC

@@ -39,12 +39,9 @@
 ### ###########################################################################
 
 ifeq ($(PVR_DRM_MODESET_DRIVER_NAME),)
-PVR_SECURE_DRM_AUTH_EXPORT := 1
+ PVR_SECURE_DRM_AUTH_EXPORT := 1
 endif
 
 $(eval $(call TunableKernelConfigC,XPROC_WORKAROUND_NUM_SHAREABLES,4095))
 
-ifeq ($(SUPPORT_PVR_REMOTE),1)
-else
-endif
 

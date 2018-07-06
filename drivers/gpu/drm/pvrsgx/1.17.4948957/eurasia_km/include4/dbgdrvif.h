@@ -303,6 +303,7 @@ typedef struct _DBG_STREAM_CONTROL_
 /*
 	Per-buffer control structure.
 */
+#define MAX_STREAM_NAME_LENGTH 30
 typedef struct _DBG_STREAM_
 {
 	struct _DBG_STREAM_ *psNext;
@@ -316,7 +317,7 @@ typedef struct _DBG_STREAM_
 	IMG_UINT32 ui32DataWritten;
 	IMG_UINT32 ui32Marker;			/*!< marker for file splitting */
 	IMG_UINT32 ui32InitPhaseWOff;	/*!< snapshot offset for init phase end for follow-on pdump */
-	IMG_CHAR szName[30];		/* Give this a size, some compilers don't like [] */
+	IMG_CHAR szName[MAX_STREAM_NAME_LENGTH];		/* Give this a size, some compilers don't like [] */
 } DBG_STREAM,*PDBG_STREAM;
 
 /*

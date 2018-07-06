@@ -49,7 +49,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 #endif
 
-#if (AM_VERSION != 5)
+#if (AM_VERSION == 3)  || (AM_VERSION == 4)
 #include <linux/platform_data/sgx-omap.h>
 #endif
 
@@ -152,6 +152,9 @@ IMG_BOOL bInitFailed;
 
 #if !defined(PVR_DRI_DRM_NOT_PCI) && !defined(SUPPORT_DRI_DRM_PLUGIN)
 #if defined(PVR_DRI_DRM_PLATFORM_DEV)
+#if defined(PVR_NEW_STYLE_DRM_PLATFORM_DEV) && !defined(PVR_USE_PRE_REGISTERED_PLATFORM_DEV)
+static struct platform_device *psPlatDev;
+#endif
 struct platform_device *gpsPVRLDMDev;
 #else
 struct pci_dev *gpsPVRLDMDev;
@@ -503,6 +506,21 @@ static PVRSRV_DRM_PLUGIN sPVRDrmPlugin =
 #else	/* defined(SUPPORT_DRI_DRM_PLUGIN) */
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0))
+#if defined(CONFIG_COMPAT)
+static long pvr_compat_ioctl(struct file *file, unsigned int cmd,
+			     unsigned long arg)
+{
+	unsigned int nr = DRM_IOCTL_NR(cmd);
+
+	if (nr < DRM_COMMAND_BASE)
+	{
+		return drm_compat_ioctl(file, cmd, arg);
+	}
+
+	return drm_ioctl(file, cmd, arg);
+}
+#endif /* defined(CONFIG_COMPAT) */
+
 static const struct file_operations sPVRFileOps = 
 {
 	.owner = THIS_MODULE,
@@ -513,6 +531,9 @@ static const struct file_operations sPVRFileOps =
 	.release = PVRSRVDrmRelease,
 #endif
 	PVR_DRM_FOPS_IOCTL = drm_ioctl,
+#if defined(CONFIG_COMPAT)
+	.compat_ioctl  = pvr_compat_ioctl,
+#endif
 	.mmap = PVRMMap,
 	.poll = drm_poll,
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,12,0))
@@ -591,6 +612,18 @@ static struct drm_driver sPVRDrmDriver =
 	},
 #endif
 #endif
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,0)) && (LINUX_VERSION_CODE < KERNEL_VERSION(4,5,0))
+#if defined(LDM_PLATFORM)
+	.set_busid = drm_platform_set_busid,
+#else
+#if defined(LDM_PCI)
+	.set_busid = drm_pci_set_busid,
+#else
+	#error "LDM_PLATFORM or LDM_PCI must be set"
+#endif
+#endif
+#endif
 	.name = "pvr",
 	.desc = PVR_DRM_DESC,
 	.date = PVR_DRM_DATE,
@@ -615,16 +648,10 @@ static struct pci_driver sPVRPCIDriver =
 
 #if defined(PVR_NEW_STYLE_DRM_PLATFORM_DEV)
 #if !defined(PVR_USE_PRE_REGISTERED_PLATFORM_DEV)
-static void PVRSRVDeviceRelease(struct device unref__ *pDevice)
-{
-}
-
-static struct platform_device sPVRPlatDevice = {
+static struct platform_device_info sPVRPlatDeviceInfo = {
 	.name			= PVR_DRM_NAME,
 	.id			= -1,
-	.dev 			= {
-		.release	= PVRSRVDeviceRelease
-	}
+	.dma_mask = DMA_BIT_MASK(32)
 };
 #endif
 
@@ -655,16 +682,16 @@ static struct platform_driver sPVRPlatDriver =
 static int
 PVRSRVDrmProbe(struct platform_device *pDevice)
 {
-#if (AM_VERSION != 5)
-	struct gfx_sgx_platform_data *pdata = dev->platform_data;
-#endif
 	int ret;
 	struct device *dev = &pDevice->dev;
 	struct drm_device *drm_dev;
+#if (AM_VERSION == 3)  || (AM_VERSION == 4)
+	struct gfx_sgx_platform_data *pdata = dev->platform_data;
+#endif
 
 	PVR_TRACE(("PVRSRVDrmProbe"));
 
-#if (AM_VERSION != 5)
+#if (AM_VERSION == 3)  || (AM_VERSION == 4)
 	if (pdata && pdata->deassert_reset) {
 		ret = pdata->deassert_reset(pDevice, pdata->reset_name);
 		if (ret) {
@@ -699,7 +726,7 @@ PVRSRVDrmProbe(struct platform_device *pDevice)
 static int
 PVRSRVDrmRemove(struct platform_device *pDevice)
 {
-#if (AM_VERSION != 5)
+#if (AM_VERSION == 3)  || (AM_VERSION == 4)
 	int ret;
 	struct device *dev = &pDevice->dev;
 	struct gfx_sgx_platform_data *pdata = dev->platform_data;
@@ -709,7 +736,7 @@ PVRSRVDrmRemove(struct platform_device *pDevice)
 	PVR_TRACE(("PVRSRVDrmRemove"));
 
 
-#if (AM_VERSION != 5)
+#if (AM_VERSION == 3)  || (AM_VERSION == 4)
 	if (pdata && pdata->assert_reset) {
 		ret = pdata->assert_reset(pDevice, pdata->reset_name);
 		if (ret) {
@@ -744,9 +771,11 @@ static int __init PVRSRVDrmInit(void)
 #if !defined(PVR_USE_PRE_REGISTERED_PLATFORM_DEV)
 	if (iRes == 0)
 	{
-		iRes = platform_device_register(&sPVRPlatDevice);
-		if (iRes != 0)
+		psPlatDev = platform_device_register_full(&sPVRPlatDeviceInfo);
+		if (IS_ERR(psPlatDev))
 		{
+			iRes = PTR_ERR(psPlatDev);
+			psPlatDev = NULL;
 			platform_driver_unregister(&sPVRPlatDriver);
 		}
 	}
@@ -788,7 +817,7 @@ static void __exit PVRSRVDrmExit(void)
 {
 #if defined(PVR_NEW_STYLE_DRM_PLATFORM_DEV)
 #if !defined(PVR_USE_PRE_REGISTERED_PLATFORM_DEV)
-	platform_device_unregister(&sPVRPlatDevice);
+	platform_device_unregister(psPlatDev);
 #endif
 	platform_driver_unregister(&sPVRPlatDriver);
 #else	/* defined(PVR_NEW_STYLE_DRM_PLATFORM_DEV) */

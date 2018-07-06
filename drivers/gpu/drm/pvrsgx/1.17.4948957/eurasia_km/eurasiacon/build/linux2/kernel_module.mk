@@ -54,7 +54,19 @@ $(if $(wildcard $(abspath $(MODULE_KBUILD_MAKEFILE))),,$(error In makefile $(THI
 
 # $(THIS_MODULE)_target specifies the name of the kernel module
 $(call must-be-nonempty,$(THIS_MODULE)_target)
+MODULE_TARGETS := $($(THIS_MODULE)_target)
 MODULE_KBUILD_OBJECTS := $($(THIS_MODULE)_target:.ko=.o)
+
+$(call module-info-line,kernel module: $(MODULE_TARGETS))
+
+# Unusually, we define $(THIS_MODULE)_install_path if the user didn't, as we
+# can't use MODULE_INSTALL_PATH in the scripts.mk logic.
+ifeq ($($(THIS_MODULE)_install_path),)
+$(THIS_MODULE)_install_path := \
+ $${MOD_DESTDIR}/$(patsubst $(MODULE_OUT)/%,%,$(MODULE_TARGETS))
+endif
+
+MODULE_INSTALL_PATH := $($(THIS_MODULE)_install_path)
 
 # Here we could maybe include $(MODULE_KBUILD_MAKEFILE) and look at
 # $(MODULE_KBUILD_OBJECTS)-y to see which source files might be built
@@ -69,6 +81,12 @@ $(THIS_MODULE):
 	@echo ' Being built:' $(if $(filter $@,$(KERNEL_COMPONENTS)),"yes (separate module)",$(if $(filter $@,$(EXTRA_PVRSRVKM_COMPONENTS)),"yes (into pvrsrvkm)","no"))
 	@echo "Module $@ is a kbuild module. Run 'make kbuild' to make it"
 	@false
+
+$(MODULE_INTERMEDIATES_DIR)/.install: MODULE_TYPE := $($(THIS_MODULE)_type)
+$(MODULE_INTERMEDIATES_DIR)/.install: MODULE_INSTALL_PATH := $(MODULE_INSTALL_PATH)
+$(MODULE_INTERMEDIATES_DIR)/.install: MODULE_TARGETS := $(patsubst $(MODULE_OUT)/%,%,$(MODULE_TARGETS))
+$(MODULE_INTERMEDIATES_DIR)/.install: $(THIS_MAKEFILE) | $(MODULE_INTERMEDIATES_DIR)
+	@echo 'install_file $(MODULE_TARGETS) $(MODULE_INSTALL_PATH) "$(MODULE_TYPE)" 0644 0:0' >$@
 
 ALL_KBUILD_MODULES += $(THIS_MODULE)
 INTERNAL_KBUILD_MAKEFILE_FOR_$(THIS_MODULE) := $(MODULE_KBUILD_MAKEFILE)

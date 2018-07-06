@@ -61,7 +61,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 	pgprot_t pvr_pgprot_writecombine(pgprot_t prot);
 	#define	PGPROT_WC(pv)	pvr_pgprot_writecombine(pv)
 #else
-	#if defined(__arm__) || defined(__sh__)
+	#if defined(__arm__) || defined(__aarch64__) || defined(__sh__)
 		#define	PGPROT_WC(pv)	pgprot_writecombine(pv)
 	#elif defined(__mips__)
 		#define PGPROT_WC(pv)	pgprot_writecombine(pv)
@@ -79,7 +79,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if defined(__i386__) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,26))
 	#define	IOREMAP(pa, bytes)	ioremap_cache(pa, bytes)
 #else	
-	#if defined(__arm__)
+	#if defined(__arm__) || defined(__aarch64__)
 		#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,13,0))
 				#define	IOREMAP(pa, bytes)	ioremap_cache(pa, bytes)
 		#else
@@ -101,7 +101,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 		#define IOREMAP_WC(pa, bytes) ioremap_nocache(pa, bytes)
 	#endif
 #else
-	#if defined(__arm__)
+	#if defined(__arm__) || defined(__aarch64__)
 		#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,27))
 			#define IOREMAP_WC(pa, bytes) ioremap_wc(pa, bytes)
 		#else

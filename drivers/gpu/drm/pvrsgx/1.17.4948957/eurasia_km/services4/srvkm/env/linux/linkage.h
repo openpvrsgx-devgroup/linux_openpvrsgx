@@ -46,6 +46,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #if !defined(SUPPORT_DRI_DRM)
 long PVRSRV_BridgeDispatchKM(struct file *file, unsigned int cmd, unsigned long arg);
+#if defined(CONFIG_COMPAT)
+long PVRSRV_BridgeCompatDispatchKM(struct file *file, unsigned int cmd, unsigned long arg);
+#endif
 #endif
 
 IMG_VOID PVRDPFInit(IMG_VOID);

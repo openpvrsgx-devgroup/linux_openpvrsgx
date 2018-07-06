@@ -678,6 +678,7 @@ skip:
 #if defined(SUPPORT_DMABUF)
 PVRSRV_ERROR PVRSRVDmaBufSyncInfoIncRef2(const IMG_CHAR *pszFile, IMG_INT iLine,
 											IMG_HANDLE hUnique,
+											IMG_HANDLE hPriv,
 											IMG_HANDLE hDevCookie,
 											IMG_HANDLE hDevMemContext,
 											PVRSRV_DMABUF_SYNC_INFO **ppsDmaBufSyncInfo,
@@ -686,6 +687,7 @@ PVRSRV_ERROR PVRSRVDmaBufSyncInfoIncRef2(const IMG_CHAR *pszFile, IMG_INT iLine,
 	PVRSRV_ERROR eError;
 
 	eError = PVRSRVDmaBufSyncAcquire(hUnique,
+										hPriv,
 										hDevCookie,
 										hDevMemContext,
 										ppsDmaBufSyncInfo);

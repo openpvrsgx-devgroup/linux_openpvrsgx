@@ -43,9 +43,9 @@ ccflags-y += \
 	-I$(TOP)/tools/intern/debug/client
 
 dbgdrv-y += \
+	tools/intern/debug/dbgdriv/common/dbgdriv_handle.o \
 	tools/intern/debug/dbgdriv/common/dbgdriv.o \
 	tools/intern/debug/dbgdriv/common/ioctl.o \
-	tools/intern/debug/dbgdriv/common/handle.o \
 	tools/intern/debug/dbgdriv/common/hotkey.o \
 	tools/intern/debug/dbgdriv/linux/main.o \
 	tools/intern/debug/dbgdriv/linux/hostfunc.o

@@ -329,7 +329,7 @@ PVRSRV_ERROR SGXScheduleCCBCommand(PVRSRV_DEVICE_NODE	*psDeviceNode,
 #if defined(FIX_HW_BRN_28889)
 	/*
 		If the data cache and bif cache need invalidating there has been a cleanup
-		request. Therefore, we need to send the invalidate seperately and wait
+		request. Therefore, we need to send the invalidate separately and wait
 		for it to complete.
 	*/
 	if ( (eCmdType != SGXMKIF_CMD_PROCESS_QUEUES) &&
@@ -769,7 +769,7 @@ PVRSRV_ERROR SGXScheduleProcessQueuesKM(PVRSRV_DEVICE_NODE *psDeviceNode)
 	ui32PowerStatus = psHostCtl->ui32PowerStatus;
 	if ((ui32PowerStatus & PVRSRV_USSE_EDM_POWMAN_NO_WORK) != 0)
 	{
-		/* The ukernel has no work to do so don't waste power. */
+		/* The ukernel has no work to be done, so don't waste power. */
 		return PVRSRV_OK;
 	}
 
@@ -897,9 +897,9 @@ PVRSRV_ERROR SGXCleanupRequest(PVRSRV_DEVICE_NODE *psDeviceNode,
 			Pdump the poll as well.
 			Note:
 			We don't expect the cleanup to report busy as the client should have
-			ensured the the resource has been finished with before requesting
-			it's cleanup. This isn't true of the abnormal termination case but
-			we don't expect to PDump that. Unless/until PDump has flow control
+			ensured the resource has been finished with before requesting it's
+			cleanup. This isn't true of the abnormal termination case but we
+			don't expect to PDump that. Unless/until PDump has flow control
 			there isn't anything else we can do.
 		*/
 		PDUMPCOMMENTWITHFLAGS(0, "Host Control - Poll for clean-up request to complete");
@@ -1100,6 +1100,7 @@ IMG_HANDLE SGXRegisterHWRenderContextKM(IMG_HANDLE				hDeviceNode,
     IMG_UINT8 *pDst;
 	PRESMAN_ITEM psResItem;
 	IMG_UINT32 ui32PDDevPAddrInDirListFormat;
+	IMG_UINT8 *pStartPDDevPAddr, *pEndPDDevPAddr;
 
 	eError = OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
 						sizeof(SGX_HW_RENDER_CONTEXT_CLEANUP),
@@ -1134,6 +1135,16 @@ IMG_HANDLE SGXRegisterHWRenderContextKM(IMG_HANDLE				hDeviceNode,
 	{
 		PVR_DPF((PVR_DBG_ERROR, "SGXRegisterHWRenderContextKM: Couldn't allocate device memory for HW Render Context"));
 		goto exit1;
+	}
+	/* Ensure that the offset of Page directory dev physical address field is within the allocated context memory */
+	pStartPDDevPAddr = (IMG_UINT8 *)(psCleanup->psHWRenderContextMemInfo->pvLinAddrKM) + ui32OffsetToPDDevPAddr;
+	pEndPDDevPAddr = pStartPDDevPAddr + sizeof(ui32PDDevPAddrInDirListFormat) - 1;
+
+	if (pStartPDDevPAddr < (IMG_UINT8 *)psCleanup->psHWRenderContextMemInfo->pvLinAddrKM || 
+			pEndPDDevPAddr >= (IMG_UINT8 *)(psCleanup->psHWRenderContextMemInfo->pvLinAddrKM) + ui32HWRenderContextSize)
+	{
+		PVR_DPF((PVR_DBG_ERROR, "SGXRegisterHWRenderContextKM: Offset of page directory device physical address is invalid"));
+		goto exit2;
 	}
 
     eError = OSCopyFromUser(psPerProc,
@@ -1287,6 +1298,7 @@ IMG_HANDLE SGXRegisterHWTransferContextKM(IMG_HANDLE				hDeviceNode,
     IMG_UINT8 *pDst;
 	PRESMAN_ITEM psResItem;
 	IMG_UINT32 ui32PDDevPAddrInDirListFormat;
+	IMG_UINT8 *pStartPDDevPAddr, *pEndPDDevPAddr;
 
 	eError = OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
 						sizeof(SGX_HW_TRANSFER_CONTEXT_CLEANUP),
@@ -1322,6 +1334,17 @@ IMG_HANDLE SGXRegisterHWTransferContextKM(IMG_HANDLE				hDeviceNode,
 	{
 		PVR_DPF((PVR_DBG_ERROR, "SGXRegisterHWTransferContextKM: Couldn't allocate device memory for HW Render Context"));
 		goto exit1;
+	}
+
+	/* Ensure that the offset of Page directory dev physical address field is within the allocated context memory */
+	pStartPDDevPAddr = (IMG_UINT8 *)(psCleanup->psHWTransferContextMemInfo->pvLinAddrKM) + ui32OffsetToPDDevPAddr;
+	pEndPDDevPAddr = pStartPDDevPAddr + sizeof(ui32PDDevPAddrInDirListFormat) - 1;
+
+	if (pStartPDDevPAddr < (IMG_UINT8 *)psCleanup->psHWTransferContextMemInfo->pvLinAddrKM || 
+			pEndPDDevPAddr >= (IMG_UINT8 *)(psCleanup->psHWTransferContextMemInfo->pvLinAddrKM) + ui32HWTransferContextSize)
+	{
+		PVR_DPF((PVR_DBG_ERROR, "SGXRegisterHWTransferContextKM: Offset of page directory device physical address is invalid"));
+		goto exit2;
 	}
 
     eError = OSCopyFromUser(psPerProc,
@@ -1628,6 +1651,7 @@ IMG_HANDLE SGXRegisterHW2DContextKM(IMG_HANDLE				hDeviceNode,
     IMG_UINT8 *pDst;
 	PRESMAN_ITEM psResItem;
 	IMG_UINT32 ui32PDDevPAddrInDirListFormat;
+	IMG_UINT8 *pStartPDDevPAddr, *pEndPDDevPAddr;
 
 	eError = OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
 						sizeof(SGX_HW_2D_CONTEXT_CLEANUP),
@@ -1662,6 +1686,17 @@ IMG_HANDLE SGXRegisterHW2DContextKM(IMG_HANDLE				hDeviceNode,
 	{
 		PVR_DPF((PVR_DBG_ERROR, "SGXRegisterHW2DContextKM: Couldn't allocate device memory for HW Render Context"));
 		goto exit1;
+	}
+
+	/* Ensure that the offset of Page directory dev physical address field is within the allocated context memory */
+	pStartPDDevPAddr = (IMG_UINT8 *)(psCleanup->psHW2DContextMemInfo->pvLinAddrKM) + ui32OffsetToPDDevPAddr;
+	pEndPDDevPAddr = pStartPDDevPAddr + sizeof(ui32PDDevPAddrInDirListFormat) - 1;
+
+	if (pStartPDDevPAddr < (IMG_UINT8 *)psCleanup->psHW2DContextMemInfo->pvLinAddrKM || 
+			pEndPDDevPAddr >= (IMG_UINT8 *)(psCleanup->psHW2DContextMemInfo->pvLinAddrKM) + ui32HW2DContextSize)
+	{
+		PVR_DPF((PVR_DBG_ERROR, "SGXRegisterHWTransferContextKM: Offset of page directory device physical address is invalid"));
+		goto exit2;
 	}
 
     eError = OSCopyFromUser(psPerProc,
@@ -1873,7 +1908,7 @@ PVRSRV_ERROR SGX2DQueryBlitsCompleteKM(PVRSRV_SGXDEV_INFO	*psDevInfo,
 	/* Timed out */
 	PVR_DPF((PVR_DBG_ERROR,"SGX2DQueryBlitsCompleteKM: Timed out. Ops pending."));
 
-#if defined(DEBUG)
+#if defined(PVRSRV_NEED_PVR_TRACE)
 	{
 		PVRSRV_SYNC_DATA *psSyncData = psSyncInfo->psSyncData;
 

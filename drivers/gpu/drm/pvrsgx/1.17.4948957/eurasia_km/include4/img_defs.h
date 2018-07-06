@@ -109,6 +109,11 @@ typedef char				TCHAR, *PTCHAR, *PTSTR;
 				#define IMG_EXPORT		__attribute__((visibility("default")))
 				#define IMG_IMPORT
 				#define IMG_RESTRICT	__restrict__
+			#if defined(USE_64BIT_COMPAT)
+				#define IMG_COMPAT __attribute__ ((packed))
+			#else
+				#define IMG_COMPAT
+			#endif
 
 			#else
 					#error("define an OS")

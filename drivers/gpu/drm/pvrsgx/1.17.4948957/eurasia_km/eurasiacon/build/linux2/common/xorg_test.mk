@@ -38,14 +38,12 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ### ###########################################################################
 
-# FIXME: Will go away when SUPPORT_DRI_DRM is untangled from
-#        the old meaning of SUPPORT_XORG=1.
+ifeq ($(WINDOW_SYSTEM),xorg)
+ # Set for the benefit of those platform Makefiles that test for it,
+ # but no longer used by the build system.
+ SUPPORT_BUILD_XORG := 1
 
-ifeq ($(filter xorg,$(EXCLUDED_APIS)),)
-ifneq ($(wildcard ../common/apis/xorg.mk),)
-SUPPORT_BUILD_XORG := 1
-ifeq ($(PDUMP),1)
-SUPPORT_PDUMP_MULTI_PROCESS := 1
-endif
-endif
+ ifeq ($(PDUMP),1)
+  SUPPORT_PDUMP_MULTI_PROCESS := 1
+ endif
 endif

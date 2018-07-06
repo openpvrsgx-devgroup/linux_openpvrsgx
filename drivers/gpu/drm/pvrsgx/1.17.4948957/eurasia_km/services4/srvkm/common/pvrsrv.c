@@ -1394,7 +1394,7 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVGetMiscInfoKM(PVRSRV_MISC_INFO *psMiscInfo)
 			PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
 			PVRSRV_PER_PROCESS_DATA *psPerProc;
 
-			if(!psMiscInfo->sCacheOpCtl.u.psKernelMemInfo)
+			if(!psMiscInfo->sCacheOpCtl.u.hKernelMemInfo)
 			{
 				PVR_DPF((PVR_DBG_WARNING, "PVRSRVGetMiscInfoKM: "
 						 "Ignoring non-deferred cache op with no meminfo"));
@@ -1412,7 +1412,7 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVGetMiscInfoKM(PVRSRV_MISC_INFO *psMiscInfo)
 
 			if(PVRSRVLookupHandle(psPerProc->psHandleBase,
 								  (IMG_PVOID *)&psKernelMemInfo,
-								  psMiscInfo->sCacheOpCtl.u.psKernelMemInfo,
+								  psMiscInfo->sCacheOpCtl.u.hKernelMemInfo,
 								  PVRSRV_HANDLE_TYPE_MEM_INFO) != PVRSRV_OK)
 			{
 				PVR_DPF((PVR_DBG_ERROR, "PVRSRVGetMiscInfoKM: "
@@ -1460,7 +1460,7 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVGetMiscInfoKM(PVRSRV_MISC_INFO *psMiscInfo)
 
 		if(PVRSRVLookupHandle(psPerProc->psHandleBase,
 							  (IMG_PVOID *)&psKernelMemInfo,
-							  psMiscInfo->sGetRefCountCtl.u.psKernelMemInfo,
+							  psMiscInfo->sGetRefCountCtl.u.hKernelMemInfo,
 							  PVRSRV_HANDLE_TYPE_MEM_INFO) != PVRSRV_OK)
 		{
 			PVR_DPF((PVR_DBG_ERROR, "PVRSRVGetMiscInfoKM: "

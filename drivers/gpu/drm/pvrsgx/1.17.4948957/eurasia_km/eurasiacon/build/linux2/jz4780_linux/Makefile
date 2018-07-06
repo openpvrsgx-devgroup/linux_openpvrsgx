@@ -39,9 +39,13 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ### ###########################################################################
 
+include ../config/window_system.mk
+
 PVR_SYSTEM := sgx_jz4780
 
+ifneq ($(strip $(KERNELDIR)),)
 include ../kernel_version.mk
+endif # KERNELDIR
 
 SYS_CFLAGS := -EL
 SYS_COMMON_LDFLAGS := -EL
@@ -51,10 +55,16 @@ PVR_LDM_DEVICE_TREE := 1
 SUPPORT_DRI_DRM := 1
 SUPPORT_DMABUF := 1
 
-BUFFERCLASS_MODULE ?= bufferclass_example
-KERNEL_COMPONENTS := srvkm $(BUFFERCLASS_MODULE)
+ifeq ($(SYSROOT),)
+ SUPPORT_BUILD_LWS ?= 1
+endif
 
-OPK_DEFAULT := libpvrDRMWSEGL.so
+KERNEL_COMPONENTS := srvkm
+
+ifeq ($(PVR_LWS_NOBC),)
+BUFFERCLASS_MODULE ?= bufferclass_example
+KERNEL_COMPONENTS += $(BUFFERCLASS_MODULE)
+endif
 
 SGXCORE := 540
 SGX_CORE_REV := 130
@@ -64,28 +74,46 @@ SUPPORT_LINUX_USING_WORKQUEUES := 1
 SGX_DYNAMIC_TIMING_INFO := 1
 
 ifneq ($(SGXCORE),520)
-SGX_FAST_DPM_INIT ?= 1
+ SGX_FAST_DPM_INIT ?= 1
 endif
 
 SUPPORT_SGX_HWPERF ?= 1
 
 include ../common/xorg_test.mk
 ifeq ($(SUPPORT_BUILD_XORG),1)
-OPK_FALLBACK := libpvrPVR2D_DRIWSEGL.so
-XORG_PVR_VIDEO ?= generic_drm
+ ifeq ($(PVR_LWS_NODC),)
+  XORG_PVR_VIDEO := genericDRMDC
+ endif
 else
-DISPLAY_CONTROLLER := dc_jz4780
-EXTRA_PVRSRVKM_COMPONENTS += dc_jz4780
-OPK_FALLBACK := libpvrEWS_WSEGL.so
+ ifeq ($(PVR_LWS_NODC),)
+  JZ4780_INCLUDE_DC_MODULE ?= 1
+ else ifneq ($(filter nullws ews,$(WINDOW_SYSTEM)),)
+  # By default, we build the DDK with support for a DRM display driver.
+  # The various Services tests, and EWS, only support Display Class (DC)
+  # drivers, so include one by default for some window system types.
+  JZ4780_INCLUDE_DC_MODULE ?= 1
+ endif
+ ifeq ($(JZ4780_INCLUDE_DC_MODULE),1)
+  DISPLAY_CONTROLLER := dc_jz4780
+  EXTRA_PVRSRVKM_COMPONENTS += dc_jz4780
+ endif
+endif
+
+ifeq ($(PVR_LWS_NODC),1)
+ # Disable legacy displayclass support, we will use DRM
+ override SUPPORT_PVRSRV_DEVICE_CLASS := 0
 endif
 
 PVR_DRI_DRM_PLATFORM_DEV := 1
 PVR_DRM_MODESET_DRIVER_NAME := jz4780
 PVR_DRM_MODESET_MODULE_NAME := dumb
-PVR_DRM_USE_PAGE_FLIP_EVENTS := 0
-PVR_DRM_NEW_SWAP_CHAIN_MODE_SET := 1
 
-LWS_DIST ?= tarballs-debian-8
+XORG_EXPLICIT_PVR_SERVICES_LOAD := 1
+
+# The MIPS version of GDB has trouble debugging shared libraries linked
+# to position independent executables (PIE), so disable PIE for debug
+# drivers.
+PVR_NO_PIE := $(if $(filter debug,$(BUILD)),1)
 
 # Should be last
 include ../config/core.mk

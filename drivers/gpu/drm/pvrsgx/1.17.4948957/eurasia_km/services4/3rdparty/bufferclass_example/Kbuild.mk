@@ -39,7 +39,7 @@
 ### ###########################################################################
 ccflags-y += -I$(TOP)/services4/3rdparty/bufferclass_example
 
-bc_example-y += \
+bufferclass_example-y += \
 	services4/3rdparty/bufferclass_example/bufferclass_example.o \
 	services4/3rdparty/bufferclass_example/bufferclass_example_linux.o \
 	services4/3rdparty/bufferclass_example/bufferclass_example_private.o

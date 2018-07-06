@@ -103,7 +103,7 @@ IMG_UINT32 AtoI(IMG_CHAR *szIn);
 
 IMG_VOID HostMemSet(IMG_VOID *pvDest,IMG_UINT8 ui8Value,IMG_UINT32 ui32Size);
 IMG_VOID HostMemCopy(IMG_VOID *pvDest,IMG_VOID *pvSrc,IMG_UINT32 ui32Size);
-IMG_VOID MonoOut(IMG_CHAR * pszString,IMG_BOOL bNewLine);
+IMG_VOID MonoOut(const IMG_CHAR * pszString,IMG_BOOL bNewLine);
 
 /*****************************************************************************
  Secure handle Function prototypes

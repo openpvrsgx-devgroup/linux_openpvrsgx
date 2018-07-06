@@ -142,6 +142,7 @@ void PVRSRVIonBufferSyncInfoDecRef2(const IMG_CHAR *pszFile, IMG_INT iLine,
 
 PVRSRV_ERROR PVRSRVDmaBufSyncInfoIncRef2(const IMG_CHAR *pszFile, IMG_INT iLine,
 											IMG_HANDLE hUnique,
+											IMG_HANDLE hPriv,
 											IMG_HANDLE hDevCookie,
 											IMG_HANDLE hDevMemContext,
 											PVRSRV_DMABUF_SYNC_INFO **ppsDmaBufSyncInfo,
@@ -262,6 +263,7 @@ static INLINE void PVRSRVIonBufferSyncInfoDecRef(PVRSRV_ION_SYNC_INFO *psIonSync
 
 #if defined(SUPPORT_DMABUF)
 static INLINE PVRSRV_ERROR PVRSRVDmaBufSyncInfoIncRef(IMG_HANDLE hUnique,
+														 IMG_HANDLE hPriv,
 														 IMG_HANDLE hDevCookie,
 														 IMG_HANDLE hDevMemContext,
 														 PVRSRV_DMABUF_SYNC_INFO **ppsDmaBufSyncInfo,
@@ -270,6 +272,7 @@ static INLINE PVRSRV_ERROR PVRSRVDmaBufSyncInfoIncRef(IMG_HANDLE hUnique,
 	PVR_UNREFERENCED_PARAMETER(psKernelMemInfo);
 
 	return PVRSRVDmaBufSyncAcquire(hUnique,
+									  hPriv,
 									  hDevCookie,
 									  hDevMemContext,
 									  ppsDmaBufSyncInfo);

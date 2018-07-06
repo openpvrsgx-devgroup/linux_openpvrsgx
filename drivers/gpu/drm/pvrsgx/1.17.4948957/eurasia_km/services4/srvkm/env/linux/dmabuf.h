@@ -44,22 +44,55 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #if defined(SUPPORT_DMABUF)
 
+#include <linux/version.h>
+
 #include "img_types.h"
 #include "servicesext.h"
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,17,0))
+#include <linux/reservation.h>
+#include "pvr_bridge.h"
+
+struct dmabuf_resvinfo
+{
+	struct reservation_object *resv;
+};
+
+static inline void *DmaBufGetReservationObject(IMG_HANDLE hSync)
+{
+	struct dmabuf_resvinfo *info;
+
+	info = (struct dmabuf_resvinfo *)hSync;
+
+	return info->resv;
+}
+#else
+static inline void *DmaBufGetReservationObject(IMG_HANDLE hSync)
+{
+	(void) hSync;
+
+	return (void *)0;
+}
+#endif
 
 PVRSRV_ERROR DmaBufInit(IMG_VOID);
 
 IMG_VOID DmaBufDeinit(IMG_VOID);
 
-PVRSRV_ERROR DmaBufImportAndAcquirePhysAddr(IMG_INT32 i32DmaBufFD,
-											   IMG_UINT32 *pui32PageCount,
-											   IMG_SYS_PHYADDR **ppsSysPhysAddr,
-											   IMG_PVOID *ppvKernAddr,
-											   IMG_HANDLE *phPriv,
-											   IMG_HANDLE *phUnique);
+PVRSRV_ERROR DmaBufImportAndAcquirePhysAddr(const IMG_INT32 i32DmaBufFD,
+											const IMG_SIZE_T uiDmaBufOffset,
+											const IMG_SIZE_T uiSize,
+											IMG_UINT32 *pui32PageCount,
+											IMG_SYS_PHYADDR **ppsSysPhysAddr,
+											IMG_SIZE_T *puiMemInfoOffset,
+											IMG_PVOID *ppvKernAddr,
+											IMG_HANDLE *phImport,
+											IMG_HANDLE *phUnique);
 
-IMG_VOID DmaBufUnimportAndReleasePhysAddr(IMG_HANDLE hPriv);
+IMG_VOID DmaBufUnimportAndReleasePhysAddr(IMG_HANDLE hImport);
 
+IMG_HANDLE DmaBufGetNativeSyncHandle(IMG_HANDLE hImport);
+void DmaBufFreeNativeSyncHandle(IMG_HANDLE hSync);
 #endif /* defined(SUPPORT_DMABUF) */
 
 #endif /* __IMG_LINUX_DMABUF_H__ */

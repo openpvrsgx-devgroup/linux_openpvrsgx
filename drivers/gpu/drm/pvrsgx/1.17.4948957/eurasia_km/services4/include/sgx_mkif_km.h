@@ -91,7 +91,7 @@ typedef struct _PVRSRV_SGX_KERNEL_CCB_
  *****************************************************************************/
 typedef struct _PVRSRV_SGX_CCB_CTL_
 {
-	IMG_UINT32				ui32WriteOffset;		/*!< write offset into array of commands (MUST be alligned to 16 bytes!) */
+	IMG_UINT32				ui32WriteOffset;		/*!< write offset into array of commands (MUST be aligned to 16 bytes!) */
 	IMG_UINT32				ui32ReadOffset;			/*!< read offset into array of commands */
 } PVRSRV_SGX_CCB_CTL;
 
@@ -141,6 +141,11 @@ typedef struct _SGXMKIF_HOST_CTL_
 
 	IMG_UINT32				ui32OpenCLDelayCount;			/* Counter to keep track OpenCL task completion time in units of regular task time out events */
 	IMG_UINT32				ui32InterruptCount;
+#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE) && defined(EUR_CR_TIMER)
+	volatile IMG_UINT32		ui32SystraceIndex;			/*!< Current index for systrace */
+	volatile IMG_UINT32		ui32SGXPoweredOn;			/*!< if SGX is powered on */
+	volatile IMG_UINT32		ui32TicksAtPowerUp;		/*!< if SGX is powered on */
+#endif
 } SGXMKIF_HOST_CTL;
 
 /*
@@ -177,19 +182,9 @@ typedef struct _SGXMKIF_CMDTA_SHARED_
 	/* sync criteria used for TA/3D dependency synchronisation */
 	PVRSRV_DEVICE_SYNC_OBJECT	sTA3DDependency;
 
-#if defined(SUPPORT_SGX_GENERALISED_SYNCOBJECTS)
-	/* SRC and DST syncs */
-	IMG_UINT32					ui32NumTASrcSyncs;
-	PVRSRV_DEVICE_SYNC_OBJECT	asTASrcSyncs[SGX_MAX_TA_SRC_SYNCS];
-	IMG_UINT32					ui32NumTADstSyncs;
-	PVRSRV_DEVICE_SYNC_OBJECT	asTADstSyncs[SGX_MAX_TA_DST_SYNCS];
-	IMG_UINT32					ui32Num3DSrcSyncs;
-	PVRSRV_DEVICE_SYNC_OBJECT	as3DSrcSyncs[SGX_MAX_3D_SRC_SYNCS];
-#else
 	/* source dependency details */
 	IMG_UINT32			ui32NumSrcSyncs;
 	PVRSRV_DEVICE_SYNC_OBJECT	asSrcSyncs[SGX_MAX_SRC_SYNCS_TA];
-#endif
 
 	CTL_STATUS			sCtlTAStatusInfo[SGX_MAX_TA_STATUS_VALS];
 	CTL_STATUS			sCtl3DStatusInfo[SGX_MAX_3D_STATUS_VALS];
@@ -293,8 +288,8 @@ typedef struct _SGXMKIF_HWDEVICE_SYNC_LIST_
  *****************************************************************************/
 #define PVRSRV_USSE_EDM_POWMAN_IDLE_COMPLETE				(1UL << 2)	/*!< Signal from ukernel->Host indicating SGX is idle */
 #define PVRSRV_USSE_EDM_POWMAN_POWEROFF_COMPLETE			(1UL << 3)	/*!< Signal from ukernel->Host indicating SGX can be powered down */
-#define PVRSRV_USSE_EDM_POWMAN_POWEROFF_RESTART_IMMEDIATE	(1UL << 4)	/*!< Signal from ukernel->Host indicating there is work to do immediately */
-#define PVRSRV_USSE_EDM_POWMAN_NO_WORK						(1UL << 5)	/*!< Signal from ukernel->Host indicating no work to do */
+#define PVRSRV_USSE_EDM_POWMAN_POWEROFF_RESTART_IMMEDIATE	(1UL << 4)	/*!< Signal from ukernel->Host indicating there is work to be done immediately */
+#define PVRSRV_USSE_EDM_POWMAN_NO_WORK						(1UL << 5)	/*!< Signal from ukernel->Host indicating nothing to do */
 
 /*!
  *****************************************************************************
@@ -392,6 +387,9 @@ typedef struct _SGX_MISCINFO_STRUCT_SIZES_
 	IMG_UINT32	ui32Sizeof_HWTRANSFERCONTEXT;
 	IMG_UINT32	ui32Sizeof_HOST_CTL;
 	IMG_UINT32	ui32Sizeof_COMMAND;
+#if defined(USE_64BIT_COMPAT)
+	IMG_UINT32  ui32Padding;
+#endif
 } SGX_MISCINFO_STRUCT_SIZES;
 
 
@@ -448,6 +446,9 @@ typedef struct _SGXMKIF_HWPERF_CB_ENTRY_
 	IMG_UINT32	ui32Info;
 	IMG_UINT32	ui32TimeWraps;
 	IMG_UINT32	ui32Time;
+#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE) && defined(EUR_CR_TIMER)
+	IMG_UINT32	ui32SystraceIndex;
+#endif
 	/* NOTE: There should always be at least as many 3D cores as TA cores. */
 	IMG_UINT32	ui32Counters[SGX_FEATURE_MP_CORE_COUNT_3D][PVRSRV_SGX_HWPERF_NUM_COUNTERS];
 	IMG_UINT32	ui32MiscCounters[SGX_FEATURE_MP_CORE_COUNT_3D][PVRSRV_SGX_HWPERF_NUM_MISC_COUNTERS];

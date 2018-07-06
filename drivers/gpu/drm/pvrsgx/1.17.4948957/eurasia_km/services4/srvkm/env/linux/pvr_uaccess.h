@@ -42,7 +42,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define __PVR_UACCESS_H__
 
 #include <linux/version.h>
-
+#include <linux/sched.h>
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38))
 #ifndef AUTOCONF_INCLUDED
 #include <linux/config.h>

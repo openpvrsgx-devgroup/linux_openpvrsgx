@@ -48,7 +48,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 
 #include <linux/mm.h>
-#include <linux/pfn_t.h>
 #include <linux/module.h>
 #include <linux/vmalloc.h>
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0))
@@ -164,10 +163,6 @@ static struct pvr_proc_dir_entry *g_ProcMMap;
 
 #else	/* !defined(PVR_MAKE_ALL_PFNS_SPECIAL) */
 
-#if PAGE_SHIFT != 12
-#error This build variant has not yet been made non-4KB page-size aware
-#endif
-
 /*
  * Since we no longer have to worry about clashes with the mmap
  * offsets used for pure PFN mappings (VM_PFNMAP), there is greater
@@ -178,13 +173,15 @@ static struct pvr_proc_dir_entry *g_ProcMMap;
 #if defined(PVR_MMAP_OFFSET_BASE)
 #define	FIRST_SPECIAL_PFN 	PVR_MMAP_OFFSET_BASE
 #else
-#define	FIRST_SPECIAL_PFN	0x80000000UL
+#define FIRST_SPECIAL_PFN_BASE 0x80000000UL
+#define FIRST_SPECIAL_PFN (FIRST_SPECIAL_PFN_BASE >> (PAGE_SHIFT - 12))
 #endif
 
 #if defined(PVR_NUM_MMAP_HANDLES)
 #define	MAX_MMAP_HANDLE		PVR_NUM_MMAP_HANDLES
 #else
-#define	MAX_MMAP_HANDLE		0x7fffffffUL
+#define MAX_MMAP_HANDLE_BASE 0x7fffffffUL
+#define MAX_MMAP_HANDLE (MAX_MMAP_HANDLE_BASE >> (PAGE_SHIFT - 12))
 #endif
 
 #endif	/* !defined(PVR_MAKE_ALL_PFNS_SPECIAL) */
@@ -788,7 +785,13 @@ DoMapToUser(LinuxMemArea *psLinuxMemArea,
 #if defined(PVR_MAKE_ALL_PFNS_SPECIAL)
 		    if (bMixedMap)
 		    {
-			result = vm_insert_mixed(ps_vma, ulVMAPos, pfn_to_pfn_t(pfn));
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,5,0))
+			pfn_t pfns = { pfn };
+
+			result = vm_insert_mixed(ps_vma, ulVMAPos, pfns);
+#else
+			result = vm_insert_mixed(ps_vma, ulVMAPos, pfn);
+#endif
 	                if(result != 0)
 	                {
 	                    PVR_DPF((PVR_DBG_ERROR,"%s: Error - vm_insert_mixed failed (%d)", __FUNCTION__, result));

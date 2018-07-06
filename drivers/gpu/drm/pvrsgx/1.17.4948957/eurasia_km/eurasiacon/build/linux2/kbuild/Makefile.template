@@ -40,8 +40,8 @@
 ### ###########################################################################
 
 # This top-level kbuild makefile builds all the Linux kernel modules in the
-# DDK. To run kbuild, this makefile is copied to $(TARGET_OUT)/kbuild/Makefile
-# and make is invoked in $(TARGET_OUT)/kbuild.
+# DDK. To run kbuild, this makefile is copied to $(TARGET_PRIMARY_OUT)/kbuild/Makefile
+# and make is invoked in $(TARGET_PRIMARY_OUT)/kbuild.
 
 # This makefile doesn't define any kbuild special variables apart from
 # ccflags-y and obj-m. The variables for objects are picked up by including
@@ -56,11 +56,11 @@ include $(OUT)/config_kernel.mk
 
 .SECONDARY:
 
-$(OUT)/target/kbuild/external/%.c: $(EXTRA_KBUILD_SOURCE)/%.c
+$(OUT)/$(TARGET_PRIMARY_ARCH)/kbuild/external/%.c: $(EXTRA_KBUILD_SOURCE)/%.c
 	@if [ ! -e $(dir $@) ]; then mkdir -p $(dir $@); fi
 	@if [ ! -h $@ ]; then ln -sf $< $@; fi
 
-$(OUT)/target/kbuild/%.c: $(TOP)/%.c
+$(OUT)/$(TARGET_PRIMARY_ARCH)/kbuild/%.c: $(TOP)/%.c
 	@if [ ! -e $(dir $@) ]; then mkdir -p $(dir $@); fi
 	@if [ ! -h $@ ]; then ln -sf $< $@; fi
 

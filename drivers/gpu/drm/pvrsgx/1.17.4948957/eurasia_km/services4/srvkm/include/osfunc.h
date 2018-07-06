@@ -54,7 +54,7 @@ extern "C" {
 #if defined(__linux__) && defined(__KERNEL__)
 #include <linux/hardirq.h>
 #include <linux/string.h>
-#if defined(__arm__)
+#if defined(__arm__) || defined(__aarch64__)
 #include <asm/memory.h>
 #endif
 #endif
@@ -83,8 +83,15 @@ extern "C" {
 #define PVRSRV_OS_HEAP_MASK			0xf /* host heap flags mask */
 #define PVRSRV_OS_PAGEABLE_HEAP		0x1 /* allocation pageable */
 #define PVRSRV_OS_NON_PAGEABLE_HEAP	0x2 /* allocation non pageable */
+#if defined (__linux__) && defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
+#define PVRSRV_SWAP_BUFFER_ALLOCATION	0x4 /* allocation for swap buffer */
+#else
+#define PVRSRV_SWAP_BUFFER_ALLOCATION	0x0
+#endif
 
-
+#if defined (PVRSRV_DEVMEM_TIME_STATS)
+IMG_UINT64 OSClockMonotonicus(IMG_VOID);
+#endif
 IMG_UINT32 OSClockus(IMG_VOID);
 IMG_UINT32 OSGetPageSize(IMG_VOID);
 PVRSRV_ERROR OSInstallDeviceLISR(IMG_VOID *pvSysData,
@@ -373,15 +380,15 @@ h(x) = ...
 /*If level 3 wrapper is enabled, we add a PVR_TRACE and call the next level, else just call the next level*/
 #ifdef PVRSRV_LOG_MEMORY_ALLOCS
 	#define OSAllocMem(flags, size, linAddr, blockAlloc, logStr) \
-		(PVR_TRACE(("OSAllocMem(" #flags ", " #size ", " #linAddr ", " #blockAlloc "): " logStr " (size = 0x%lx)", size)), \
+		(PVR_TRACE(("OSAllocMem(" #flags ", " #size ", " #linAddr ", " #blockAlloc "): " logStr " (size = 0x%lx)", (unsigned long)size)), \
 			OSAllocMem_Debug_Wrapper(flags, size, linAddr, blockAlloc, __FILE__, __LINE__))
 
 	#define OSAllocPages(flags, size, pageSize, privdata, privdatalength, bmhandle, linAddr, pageAlloc) \
-		(PVR_TRACE(("OSAllocPages(" #flags ", " #size ", " #pageSize ", " #linAddr ", " #pageAlloc "): (size = 0x%lx)", size)), \
-			OSAllocPages_Impl(flags, size, pageSize, linAddr, privdata, privdatalength, bmhandle, pageAlloc))
+		(PVR_TRACE(("OSAllocPages(" #flags ", " #size ", " #pageSize ", " #linAddr ", " #pageAlloc "): (size = 0x%lx)", (unsigned long)size)), \
+			OSAllocPages_Impl(flags, size, pageSize, privdata, privdatalength, bmhandle, linAddr, pageAlloc))
 		
 	#define OSFreeMem(flags, size, linAddr, blockAlloc) \
-		(PVR_TRACE(("OSFreeMem(" #flags ", " #size ", " #linAddr ", " #blockAlloc "): (pointer = 0x%X)", linAddr)), \
+		(PVR_TRACE(("OSFreeMem(" #flags ", " #size ", " #linAddr ", " #blockAlloc "): (pointer = 0x%p)", linAddr)), \
 			OSFreeMem_Debug_Wrapper(flags, size, linAddr, blockAlloc, __FILE__, __LINE__))
 #else
 	#define OSAllocMem(flags, size, linAddr, blockAlloc, logString) \

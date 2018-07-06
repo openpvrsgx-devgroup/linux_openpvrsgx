@@ -94,7 +94,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "pvrmodule.h"
 
-#define DEVNAME	"bc_example"
+#define DEVNAME	"bufferclass_example"
 #define	DRVNAME	DEVNAME
 
 #if defined(BCE_USE_SET_MEMORY)
@@ -166,13 +166,13 @@ unsigned long g_ulMemCurrent = 0;
 
 				The device major number is allocated by the kernel dynamically
 				if AssignedMajorNumber is zero on entry.  This means that the
-				device node (nominally /dev/bc_example) may need to be re-made if
-				the kernel varies the major number it assigns.  The number
-				does seem to stay constant between runs, but I don't think
-				this is guaranteed. The node is made as root on the shell
-				with:
+				device node (nominally /dev/bufferclass_example) may need to
+				be re-made if the kernel varies the major number it assigns.
+				The number does seem to stay constant between runs, but I
+				don't think this is guaranteed. The node is made as root on
+				the shell with:
 
-						mknod /dev/bc_example c ? 0
+						mknod /dev/bufferclass_example c ? 0
 
 				where ? is the major number reported by the printk() - look
 				at the boot log using `dmesg' to see this).

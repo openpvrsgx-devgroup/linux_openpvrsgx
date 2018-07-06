@@ -81,7 +81,7 @@ extern "C" {
 #define SYNC_OP_CLASS_KICKTA		(1<<2)
 #define SYNC_OP_CLASS_TQ_3D			(1<<3)
 #define SYNC_OP_CLASS_TQ_2D			(1<<4)
-
+#define SYNC_OP_CLASS_LINUX_FENCE		(1<<5)
 #define SYNC_OP_TYPE_MASK			0x00f0000UL
 #define SYNC_OP_TYPE_SHIFT			16
 #define SYNC_OP_TYPE_READOP			(1<<0)

@@ -50,8 +50,9 @@ $(foreach _module_to_find,$(patsubst whereis-%,%,$(filter whereis-%,$(MAKECMDGOA
 endif
 
 ifneq ($(filter whatis-%,$(MAKECMDGOALS)),)
-whatis-$(RELATIVE_OUT)/target/%: ;
-whatis-$(RELATIVE_OUT)/host/%: ;
+whatis-$(HOST_OUT)/%: ;
+whatis-$(TARGET_PRIMARY_OUT)/%: ;
+whatis-$(TARGET_NEUTRAL_OUT)/%: ;
 $(foreach _file_to_find,$(patsubst whatis-%,%,$(filter whatis-%,$(MAKECMDGOALS))),$(info $(strip $(foreach _m,$(ALL_MODULES),$(if $(filter $(_file_to_find),$(INTERNAL_TARGETS_FOR_$(_m))),$(_file_to_find) is in $(_m) which is defined in $(INTERNAL_MAKEFILE_FOR_MODULE_$(_m)),)))))
 endif
 

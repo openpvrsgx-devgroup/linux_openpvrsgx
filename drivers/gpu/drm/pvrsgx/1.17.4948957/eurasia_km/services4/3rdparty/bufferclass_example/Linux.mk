@@ -41,5 +41,5 @@
 modules := bufferclass_example
 
 bufferclass_example_type := kernel_module
-bufferclass_example_target := bc_example.ko
+bufferclass_example_target := bufferclass_example.ko
 bufferclass_example_makefile := $(THIS_DIR)/Kbuild.mk

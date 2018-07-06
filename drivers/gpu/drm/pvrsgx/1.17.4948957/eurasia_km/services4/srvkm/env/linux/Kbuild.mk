@@ -81,16 +81,31 @@ endif
 ifeq ($(SUPPORT_ION),1)
 pvrsrvkm-y += \
 	services4/srvkm/env/linux/ion.o
+ifeq ($(LMA),1)
+pvrsrvkm-y += \
+	services4/srvkm/env/linux/lma_heap_ion.o 
+endif
 endif
 
 ifeq ($(SUPPORT_DMABUF),1)
 pvrsrvkm-y += \
-	services4/srvkm/env/linux/dmabuf.o
+	services4/srvkm/env/linux/dmabuf.o \
+	services4/srvkm/env/linux/pvr_linux_fence.o
 endif
 
 ifeq ($(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC),1)
 pvrsrvkm-y += \
-	services4/srvkm/env/linux/pvr_sync.o
+	services4/srvkm/env/linux/pvr_sync.o \
+	services4/srvkm/env/linux/pvr_sync_common.o
+endif
+
+ifeq ($(PVR_ANDROID_NATIVE_WINDOW_HAS_FENCE),1)
+pvrsrvkm-y += \
+	services4/srvkm/env/linux/pvr_sync_common.o \
+	services4/srvkm/env/linux/pvr_fence.o \
+	services4/srvkm/env/linux/dma_fence_sync_native_server.o \
+	services4/srvkm/env/linux/pvr_counting_timeline.o \
+	services4/srvkm/env/linux/pvr_sw_fence.o
 endif
 
 ifeq ($(TTRACE),1)

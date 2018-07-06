@@ -277,6 +277,7 @@ long dbgdrv_ioctl(struct file *file, unsigned int ioctlCmd, unsigned long arg)
 		psStream = SID2PStream(psReadInParams->hStream);
 		if(!psStream)
 		{
+			vfree(ui8Tmp);
 			goto init_failed;
 		}
 

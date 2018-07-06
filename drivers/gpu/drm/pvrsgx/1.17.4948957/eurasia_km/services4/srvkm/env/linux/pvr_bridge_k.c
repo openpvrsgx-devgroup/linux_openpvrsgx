@@ -343,7 +343,7 @@ PVRSRV_BridgeDispatchKM(struct file *pFile, unsigned int unref__ ioctlCmd, unsig
 		case PVRSRV_BRIDGE_MAP_DEV_MEMORY_2:
 		{
 			PVRSRV_BRIDGE_IN_MAP_DEV_MEMORY *psMapDevMemIN =
-				(PVRSRV_BRIDGE_IN_MAP_DEV_MEMORY *)psBridgePackageKM->pvParamIn;
+				(PVRSRV_BRIDGE_IN_MAP_DEV_MEMORY *)(IMG_UINTPTR_T)psBridgePackageKM->hParamIn;
 			PVRSRV_FILE_PRIVATE_DATA *psPrivateData = PRIVATE_DATA(pFile);
 
 			if(!psPrivateData->hKernelMemInfo)
@@ -442,7 +442,7 @@ PVRSRV_BridgeDispatchKM(struct file *pFile, unsigned int unref__ ioctlCmd, unsig
 		case PVRSRV_BRIDGE_EXPORT_DEVICEMEM_2:
 		{
 			PVRSRV_BRIDGE_OUT_EXPORTDEVICEMEM *psExportDeviceMemOUT =
-				(PVRSRV_BRIDGE_OUT_EXPORTDEVICEMEM *)psBridgePackageKM->pvParamOut;
+				(PVRSRV_BRIDGE_OUT_EXPORTDEVICEMEM *)(IMG_UINTPTR_T)psBridgePackageKM->hParamOut;
 			PVRSRV_FILE_PRIVATE_DATA *psPrivateData = PRIVATE_DATA(pFile);
 			IMG_HANDLE hMemInfo;
 			PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
@@ -492,7 +492,7 @@ PVRSRV_BridgeDispatchKM(struct file *pFile, unsigned int unref__ ioctlCmd, unsig
 		case PVRSRV_BRIDGE_MAP_DEV_MEMORY_2:
 		{
 			PVRSRV_BRIDGE_OUT_MAP_DEV_MEMORY *psMapDeviceMemoryOUT =
-				(PVRSRV_BRIDGE_OUT_MAP_DEV_MEMORY *)psBridgePackageKM->pvParamOut;
+				(PVRSRV_BRIDGE_OUT_MAP_DEV_MEMORY *)(IMG_UINTPTR_T)psBridgePackageKM->hParamOut;
 			PVRSRV_FILE_PRIVATE_DATA *psPrivateData = PRIVATE_DATA(pFile);
 			if (pvr_put_user(psPrivateData->ui64Stamp, &psMapDeviceMemoryOUT->sDstClientMemInfo.ui64Stamp) != 0)
 			{
@@ -505,7 +505,7 @@ PVRSRV_BridgeDispatchKM(struct file *pFile, unsigned int unref__ ioctlCmd, unsig
 		case PVRSRV_BRIDGE_MAP_DEVICECLASS_MEMORY:
 		{
 			PVRSRV_BRIDGE_OUT_MAP_DEVICECLASS_MEMORY *psDeviceClassMemoryOUT =
-				(PVRSRV_BRIDGE_OUT_MAP_DEVICECLASS_MEMORY *)psBridgePackageKM->pvParamOut;
+				(PVRSRV_BRIDGE_OUT_MAP_DEVICECLASS_MEMORY *)(IMG_UINTPTR_T)psBridgePackageKM->hParamOut;
 			if (pvr_put_user(++g_ui64MemInfoID, &psDeviceClassMemoryOUT->sClientMemInfo.ui64Stamp) != 0)
 			{
 				err = -EFAULT;
@@ -523,3 +523,239 @@ unlock_and_return:
 	LinuxUnLockMutex(&gPVRSRVLock);
 	return err;
 }
+
+#if defined(CONFIG_COMPAT)
+#if defined(SUPPORT_DRI_DRM)
+int
+PVRSRV_BridgeCompatDispatchKM(struct drm_device unref__ *dev, void *arg, struct drm_file *pFile)
+#else
+long PVRSRV_BridgeCompatDispatchKM(struct file *pFile, unsigned int unref__ ioctlCmd, unsigned long arg)
+#endif
+{
+	struct bridge_package_from_32
+	{
+		IMG_UINT32	bridge_id;              /*!< ioctl bridge group */
+		IMG_UINT32	size;                   /*!< size of structure */
+		IMG_UINT64	addr_param_in;          /*!< input data buffer */
+		IMG_UINT64	addr_param_out;         /*!< output data buffer */
+		IMG_UINT32	in_buffer_size;         /*!< size of input data buffer */
+		IMG_UINT32	out_buffer_size;        /*!< size of output data buffer */
+		IMG_UINT64	hKernelServices;        /*!< kernel servcies handle */
+	};
+
+#if !defined(SUPPORT_DRI_DRM)
+	struct bridge_package_from_32 params;
+	struct bridge_package_from_32 * const params_addr = &params;
+#endif
+	PVRSRV_BRIDGE_PACKAGE sBridgePackageKM;
+	PVRSRV_BRIDGE_PACKAGE *psBridgePackageKM;
+	IMG_UINT32 ui32PID = OSGetCurrentProcessIDKM();
+	PVRSRV_PER_PROCESS_DATA *psPerProc;
+	IMG_INT err = -EFAULT;
+ 
+	LinuxLockMutexNested(&gPVRSRVLock, PVRSRV_LOCK_CLASS_BRIDGE);
+#if defined(SUPPORT_DRI_DRM)
+	sBridgePackageKM = (PVRSRV_BRIDGE_PACKAGE)(*(PVRSRV_BRIDGE_PACKAGE*)arg);
+	psBridgePackageKM = (PVRSRV_BRIDGE_PACKAGE *)arg;
+	PVR_ASSERT(psBridgePackageKM != IMG_NULL);
+#else
+	if(!OSAccessOK(PVR_VERIFY_READ, (void *) arg, sizeof(struct bridge_package_from_32)))
+	{
+		PVR_DPF((PVR_DBG_ERROR, "%s: Received invalid pointer to function arguments", __FUNCTION__));
+		goto unlock_and_return;
+	}
+
+	if(OSCopyFromUser(NULL, params_addr, (void*) arg, sizeof(struct bridge_package_from_32))
+		!= PVRSRV_OK)
+	{
+		goto unlock_and_return;
+	}
+    
+	sBridgePackageKM.ui32BridgeID = PVRSRV_GET_BRIDGE_ID(params_addr->bridge_id);
+	sBridgePackageKM.ui32Size = sizeof(sBridgePackageKM);
+	sBridgePackageKM.hParamIn = (IMG_HANDLE) ((IMG_UINTPTR_T) params_addr->addr_param_in);
+	sBridgePackageKM.hParamOut = (IMG_HANDLE) ((IMG_UINTPTR_T) params_addr->addr_param_out);
+	sBridgePackageKM.ui32InBufferSize = params_addr->in_buffer_size;
+	sBridgePackageKM.ui32OutBufferSize = params_addr->out_buffer_size;
+	sBridgePackageKM.hKernelServices = (IMG_HANDLE) ((IMG_SIZE_T) params_addr->hKernelServices);
+            
+	psBridgePackageKM = &sBridgePackageKM;
+#endif
+	if(sBridgePackageKM.ui32BridgeID != PVRSRV_GET_BRIDGE_ID(PVRSRV_BRIDGE_CONNECT_SERVICES))
+	{
+		PVRSRV_ERROR eError;
+
+		eError = PVRSRVLookupHandle(KERNEL_HANDLE_BASE,
+									(IMG_PVOID *)&psPerProc,
+									psBridgePackageKM->hKernelServices,
+									PVRSRV_HANDLE_TYPE_PERPROC_DATA);
+		if(eError != PVRSRV_OK)
+		{
+			PVR_DPF((PVR_DBG_ERROR, "%s: Invalid kernel services handle (%d)",
+					 __FUNCTION__, eError));
+			goto unlock_and_return;
+		}
+
+		if(psPerProc->ui32PID != ui32PID)
+		{
+			PVR_DPF((PVR_DBG_ERROR, "%s: Process %d tried to access data "
+					 "belonging to process %d", __FUNCTION__, ui32PID,
+					 psPerProc->ui32PID));
+			goto unlock_and_return;
+		}
+	}
+	else
+	{
+		/* lookup per-process data for this process */
+		psPerProc = PVRSRVPerProcessData(ui32PID);
+		if(psPerProc == IMG_NULL)
+		{
+			PVR_DPF((PVR_DBG_ERROR, "PVRSRV_BridgeDispatchKM: "
+					 "Couldn't create per-process data area"));
+			goto unlock_and_return;
+		}
+	}
+
+	switch(sBridgePackageKM.ui32BridgeID)
+	{
+		case PVRSRV_GET_BRIDGE_ID(PVRSRV_BRIDGE_EXPORT_DEVICEMEM_2):
+		{
+			PVRSRV_FILE_PRIVATE_DATA *psPrivateData = PRIVATE_DATA(pFile);
+
+			if(psPrivateData->hKernelMemInfo)
+			{
+				PVR_DPF((PVR_DBG_ERROR, "%s: Can only export one MemInfo "
+						 "per file descriptor", __FUNCTION__));
+				err = -EINVAL;
+				goto unlock_and_return;
+			}
+			break;
+		}
+
+		case PVRSRV_GET_BRIDGE_ID(PVRSRV_BRIDGE_MAP_DEV_MEMORY_2):
+		{
+			PVRSRV_BRIDGE_IN_MAP_DEV_MEMORY *psMapDevMemIN =
+				(PVRSRV_BRIDGE_IN_MAP_DEV_MEMORY *)(IMG_UINTPTR_T)psBridgePackageKM->hParamIn;
+			PVRSRV_FILE_PRIVATE_DATA *psPrivateData = PRIVATE_DATA(pFile);
+
+			if(!psPrivateData->hKernelMemInfo)
+			{
+				PVR_DPF((PVR_DBG_ERROR, "%s: File descriptor has no "
+						 "associated MemInfo handle", __FUNCTION__));
+				err = -EINVAL;
+				goto unlock_and_return;
+			}
+
+			if (pvr_put_user(psPrivateData->hKernelMemInfo, &psMapDevMemIN->hKernelMemInfo) != 0)
+			{
+				err = -EFAULT;
+				goto unlock_and_return;
+			}
+			break;
+		}
+
+		default:
+		{
+			PVRSRV_FILE_PRIVATE_DATA *psPrivateData = PRIVATE_DATA(pFile);
+
+			if(psPrivateData->hKernelMemInfo)
+			{
+				PVR_DPF((PVR_DBG_ERROR, "%s: Import/Export handle tried "
+						 "to use privileged service", __FUNCTION__));
+				goto unlock_and_return;
+			}
+			break;
+		}
+	}
+
+	err = BridgedDispatchKM(psPerProc, psBridgePackageKM);
+	if(err != PVRSRV_OK)
+		goto unlock_and_return;
+
+	switch(sBridgePackageKM.ui32BridgeID)
+	{
+		case PVRSRV_GET_BRIDGE_ID(PVRSRV_BRIDGE_EXPORT_DEVICEMEM_2):
+		{
+			PVRSRV_BRIDGE_OUT_EXPORTDEVICEMEM *psExportDeviceMemOUT =
+				(PVRSRV_BRIDGE_OUT_EXPORTDEVICEMEM *)(IMG_UINTPTR_T)psBridgePackageKM->hParamOut;
+			PVRSRV_FILE_PRIVATE_DATA *psPrivateData = PRIVATE_DATA(pFile);
+			IMG_HANDLE hMemInfo;
+			PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
+
+			if (pvr_get_user(hMemInfo, &psExportDeviceMemOUT->hMemInfo) != 0)
+			{
+				err = -EFAULT;
+				goto unlock_and_return;
+			}
+
+			/* Look up the meminfo we just exported */
+			if(PVRSRVLookupHandle(KERNEL_HANDLE_BASE,
+								  (IMG_PVOID *)&psKernelMemInfo,
+								  hMemInfo,
+								  PVRSRV_HANDLE_TYPE_MEM_INFO) != PVRSRV_OK)
+			{
+				PVR_DPF((PVR_DBG_ERROR, "%s: Failed to look up export handle", __FUNCTION__));
+				err = -EFAULT;
+				goto unlock_and_return;
+			}
+
+			/* Bump the refcount; decremented on release of the fd */
+			PVRSRVKernelMemInfoIncRef(psKernelMemInfo);
+
+			/* Tell the XProc about the export if required */
+			if (psKernelMemInfo->sShareMemWorkaround.bInUse)
+			{
+				BM_XProcIndexAcquire(psKernelMemInfo->sShareMemWorkaround.ui32ShareIndex);
+			}
+
+			psPrivateData->hKernelMemInfo = hMemInfo;
+#if defined(SUPPORT_MEMINFO_IDS)
+			psPrivateData->ui64Stamp = ++g_ui64MemInfoID;
+
+			psKernelMemInfo->ui64Stamp = psPrivateData->ui64Stamp;
+			if (pvr_put_user(psPrivateData->ui64Stamp, &psExportDeviceMemOUT->ui64Stamp) != 0)
+			{
+				err = -EFAULT;
+				goto unlock_and_return;
+			}
+#endif
+			break;
+		}
+
+#if defined(SUPPORT_MEMINFO_IDS)
+		case PVRSRV_GET_BRIDGE_ID(PVRSRV_BRIDGE_MAP_DEV_MEMORY):
+		case PVRSRV_GET_BRIDGE_ID(PVRSRV_BRIDGE_MAP_DEV_MEMORY_2):
+		{
+			PVRSRV_BRIDGE_OUT_MAP_DEV_MEMORY *psMapDeviceMemoryOUT =
+				(PVRSRV_BRIDGE_OUT_MAP_DEV_MEMORY *)(IMG_UINTPTR_T)psBridgePackageKM->hParamOut;
+			PVRSRV_FILE_PRIVATE_DATA *psPrivateData = PRIVATE_DATA(pFile);
+			if (pvr_put_user(psPrivateData->ui64Stamp, &psMapDeviceMemoryOUT->sDstClientMemInfo.ui64Stamp) != 0)
+			{
+				err = -EFAULT;
+				goto unlock_and_return;
+			}
+			break;
+		}
+
+		case PVRSRV_GET_BRIDGE_ID(PVRSRV_BRIDGE_MAP_DEVICECLASS_MEMORY):
+		{
+			PVRSRV_BRIDGE_OUT_MAP_DEVICECLASS_MEMORY *psDeviceClassMemoryOUT =
+				(PVRSRV_BRIDGE_OUT_MAP_DEVICECLASS_MEMORY *)(IMG_UINTPTR_T)psBridgePackageKM->hParamOut;
+			if (pvr_put_user(++g_ui64MemInfoID, &psDeviceClassMemoryOUT->sClientMemInfo.ui64Stamp) != 0)
+			{
+				err = -EFAULT;
+				goto unlock_and_return;
+			}
+			break;
+		}
+#endif /* defined(SUPPORT_MEMINFO_IDS) */
+
+		default:
+			break;
+	}
+
+unlock_and_return:
+	LinuxUnLockMutex(&gPVRSRVLock);
+	return err;
+}
+#endif /* defined(CONFIG_COMPAT) */

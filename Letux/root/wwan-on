@@ -4,7 +4,7 @@
 # and provde interface name
 # may block ~30 seconds if no modem can be found
 #
-# usage: wwan-on
+# usage: wwan-on [Modem | Application]
 #
 
 rfkill unblock wwan
@@ -45,11 +45,13 @@ case $(tr -d '\0' </proc/device-tree/model) in
 	;;
 
 *GTA04* ) # assume GTA04 with OPTION GTM601W
+	CHANNEL="$1"
+	[ "$CHANNEL" ] || CHANNEL=Modem
 	for wait in 1 2 3
 	do
 		for i in $(cd /sys/class/tty/ && echo ttyHS* 2>/dev/null)
 			do
-			if [ "$(cat /sys/class/tty/$i/hsotype 2>/dev/null)" == "Modem" ]
+			if [ "$(cat /sys/class/tty/$i/hsotype 2>/dev/null)" == "$CHANNEL" ]
 				then
 				IF="/dev/$i"
 			fi
@@ -69,6 +71,6 @@ if [ -r "$IF" ]
 then
 	echo $IF
 else
-	echo Modem Application interface not found >&2
+	echo Modem $CHANNEL interface not found >&2
 	exit 1
 fi

@@ -90,7 +90,8 @@ work/hns/freescale-sensors
 
 # almost empty or untested...
 work/letux-base/hns/mmc/txs02612
--work/letux-base/hns/mmc/txs02612-sdio
+-work/letux-base/hns/misc/txs02612
+-work/letux-base/hns/misc/txs02612-sdio
 work/letux-base/tps6105x-flashlight
 work/letux-base/hns/input/crtouch
 

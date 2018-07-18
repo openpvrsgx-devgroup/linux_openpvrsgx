@@ -43,7 +43,6 @@ struct wwan_on_off {
 	struct gpio_desc	*feedback_gpio;	/* may be invalid */
 	struct usb_phy	*usb_phy;	/* USB PHY to monitor for modem activity */
 	bool		is_power_on;	/* current state */
-	spinlock_t	lock;
 	bool		can_turnoff;	/* can also turn off by impulse */
 };
 
@@ -200,8 +199,6 @@ static int wwan_on_off_probe(struct platform_device *pdev)
 	// FIXME: read from of_device_id table
 	wwan->can_turnoff = of_device_is_compatible(dev->of_node, "option,gtm601-power");
 	wwan->is_power_on = false;	/* assume initial power is off */
-
-	spin_lock_init(&wwan->lock);
 
 	rf_kill = rfkill_alloc("WWAN", &pdev->dev,
 				RFKILL_TYPE_WWAN,

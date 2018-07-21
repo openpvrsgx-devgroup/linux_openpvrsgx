@@ -605,6 +605,34 @@
 		compatible = "atmel,24c64";
 		reg = <0x50>;
 	};
+
+	/* camera */
+	ov9655@30 {
+		pinctrl-names = "default";
+		pinctrl-0 = <&camera_pins>;
+		compatible = "ovti,ov9655";
+		reg = <0x30>;
+		reset-gpios = <&gpio3 2 GPIO_ACTIVE_LOW>;	/* reset cam_fld = GPIO_98 */
+		powerdown-gpios = <&gpio6 7 GPIO_ACTIVE_HIGH>;	/* pwdn cam_wen = GPIO_167 */
+		avdd-supply = <&vaux3>;
+		clocks = <&isp 0>;	/* cam_clka */
+		assigned-clocks = <&isp 0>;
+		assigned-clock-rates = <24000000>;
+
+		port {
+			ov9655: endpoint {
+				remote-endpoint = <&parallel_ep>;
+				bus-width = <10>;	/* camera has 10 data lines */
+				data-shift = <2>;	/* Lines 9:2 are used */
+				hsync-active = <0>;	/* Active low */
+				vsync-active = <1>;	/* Active high */
+				data-active = <1>;	/* Active high */
+				pclk-sample = <1>;	/* No pclk reverse (rising edge) */
+				pclk-delay = <2>;	/* 4 ns */
+				output-drive = <3>;	/* 4x */
+			};
+		};
+	};
 };
 
 &i2c3 {
@@ -878,6 +906,7 @@
 		port@0 {
 			reg = <0>;
 			parallel_ep: endpoint {
+				remote-endpoint = <&ov9655>;
 				ti,isp-clock-divisor = <1>;
 				ti,strobe-mode;
 				bus-width = <8>;/* Used data lines */

@@ -75,6 +75,18 @@
 		};
 	};
 
+	wwan_wakeup: wwan-wakeup {
+		compatible = "gpio-keys";
+		// FIXME: pinmux
+
+		wwan_wakeup_button: wwan-wakeup-button {
+			label = "3G_WOE";
+			linux,code = <KEY_UNKNOWN>;
+			gpios = <&gpio1 10 GPIO_ACTIVE_HIGH>;
+			gpio-key,wakeup;
+		};
+	};
+
 	modem_en: modem { /* control modem power through rfkill */
 		compatible = "option,gtm601-power";
 		/* compatible = "gemalto,phs8-power" for Neo900/GTA04b7 */

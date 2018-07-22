@@ -86,7 +86,8 @@ static void wwan_on_off_set_power(struct wwan_on_off *wwan, bool on)
 
 #ifdef DEBUG
 	printk("%s: state %d\n", __func__, state);
-	printk("%s: regulator %d\n", __func__, regulator_is_enabled(wwan->vcc_regulator));
+	if (!IS_ERR_OR_NULL(wwan->vcc_regulator))
+		printk("%s: regulator %d\n", __func__, regulator_is_enabled(wwan->vcc_regulator));
 #endif
 
 	if(state != on) {

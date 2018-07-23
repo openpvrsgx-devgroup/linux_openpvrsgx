@@ -133,7 +133,8 @@ work/letux-base/misc
 work/letux-base/drivers-keyboard
 work/letux-base/mvduin/patch/tiler-fbdev
 
-# not included by default, but carried along and rebased
+# not merged in by default, but carried along and regularily rebased
+-work/hns/dt-upstreaming
 -work/letux-base/marek/upstream-queue
 -work/letux-base/extern/omap5-idle
 -work/letux-base/extern/omap-hsmmc

@@ -1135,7 +1135,19 @@ config SND_SOC_FRAMER
 
 
 config SND_SOC_GTM601
-	tristate 'GTM601 UMTS modem audio codec'
+	tristate "Option GTM601 3G Audio Codec"
+	help
+	  PCM interface to a GTM601 UMTS modem chip. Does not control the Modem through USB.
+
+config SND_SOC_SI47XX
+	tristate "Silicon Labs Si47xx FM Audio Codec"
+	help
+	  PCM interface to a Si47xx chip. Needs to enable some I2C or SPI driver.
+
+config SND_SOC_W2CBW003
+	tristate "Wi2Wi W2CBW003 Bluetooth Audio Codec"
+	help
+	  PCM interface to Bluetooth part of W2CBW003. Does not control the bluetooth headset link.
 
 config SND_SOC_HDAC_HDMI
 	tristate
@@ -2525,20 +2537,5 @@ config SND_SOC_WM2000
 
 config SND_SOC_WM9090
 	tristate
-
-config SND_SOC_GTM601
-	tristate
-	help
-	  PCM interface to a GTM601 UMTS modem chip. Does not control the Modem through USB.
-
-config SND_SOC_SI47XX
-	tristate
-	help
-	  PCM interface to a Si47xx chip. Needs to enable some I2C or SPI driver.
-
-config SND_SOC_W2CBW003
-	tristate
-	help
-	  PCM interface to Bluetooth part of W2CBW003. Does not control the bluetooth headset link.
 
 endmenu

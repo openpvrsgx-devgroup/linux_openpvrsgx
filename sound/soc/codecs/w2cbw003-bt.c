@@ -1,7 +1,10 @@
 /*
- * Tis is a driver for the W2CBW003 Bluetooth PCM interface
+ * This is a driver for the W2CBW003 Bluetooth PCM interface
+ * it does not control setup of bluetooth connection etc.
  *
  * w2cbw003.c
+ *
+ * based on wm8727 driver
  *
  *  Created on: 15-Oct-2009
  *      Author: neil.jones@imgtec.com
@@ -21,11 +24,19 @@
 #include <linux/device.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
-#include <sound/ac97_codec.h>
 #include <sound/initval.h>
 #include <sound/soc.h>
 
-#include "w2cbw003-bt.h"
+static const struct snd_soc_dapm_widget w2cbw003_dapm_widgets[] = {
+SND_SOC_DAPM_OUTPUT("VOUTL"),
+SND_SOC_DAPM_OUTPUT("VOUTR"),
+};
+
+static const struct snd_soc_dapm_route w2cbw003_dapm_routes[] = {
+	{ "VOUTL", NULL, "Playback" },
+	{ "VOUTR", NULL, "Playback" },
+};
+
 /*
  * Note this is a simple chip with no configuration interface, sample rate is
  * determined automatically by examining the Master clock and Bit clock ratios
@@ -56,52 +67,39 @@ struct snd_soc_dai_driver w2cbw003_dai = {
 	},
 };
 
-struct snd_soc_codec_driver soc_codec_dev_w2cbw003;
-
+struct snd_soc_component_driver soc_component_dev_w2cbw003 = {
+	.dapm_widgets		= w2cbw003_dapm_widgets,
+	.num_dapm_widgets	= ARRAY_SIZE(w2cbw003_dapm_widgets),
+	.dapm_routes		= w2cbw003_dapm_routes,
+	.num_dapm_routes	= ARRAY_SIZE(w2cbw003_dapm_routes),
+	.idle_bias_on		= 1,
+	.use_pmdown_time	= 1,
+	.endianness		= 1,
+	.non_legacy_dai_naming	= 1,
+};
 
 static int w2cbw003_platform_probe(struct platform_device *pdev)
 {
-	return snd_soc_register_codec(&pdev->dev,
-			&soc_codec_dev_w2cbw003, &w2cbw003_dai, 1);
+	return devm_snd_soc_register_component(&pdev->dev,
+			&soc_component_dev_w2cbw003, &w2cbw003_dai, 1);
 }
 
-static int w2cbw003_platform_remove(struct platform_device *pdev)
-{
-	snd_soc_unregister_codec(&pdev->dev);
-	return 0;
-}
-
-MODULE_ALIAS("platform:w2cbw003_codec_audio");
-
-#if defined(CONFIG_OF)
-static const struct of_device_id w2cbw003_codec_of_match[] = {
+static const struct of_device_id w2cbw003_component_of_match[] = {
 	{ .compatible = "w2cbw003-codec", },
 	{},
 };
-MODULE_DEVICE_TABLE(of, w2cbw003_codec_of_match);
-#endif
-static struct platform_driver w2cbw003_codec_driver = {
+MODULE_DEVICE_TABLE(of, w2cbw003_component_of_match);
+
+static struct platform_driver w2cbw003_component_driver = {
 	.driver = {
-			.name = "w2cbw003_codec_audio",
-			.owner = THIS_MODULE,
-			.of_match_table = of_match_ptr(w2cbw003_codec_of_match),
+			.name = "w2cbw003_component_audio",
+			.of_match_table = of_match_ptr(w2cbw003_component_of_match),
 	},
 
 	.probe = w2cbw003_platform_probe,
-	.remove = w2cbw003_platform_remove,
 };
 
-static int __init w2cbw003_init(void)
-{
-	return platform_driver_register(&w2cbw003_codec_driver);
-}
-module_init(w2cbw003_init);
-
-static void __exit w2cbw003_exit(void)
-{
-	platform_driver_unregister(&w2cbw003_codec_driver);
-}
-module_exit(w2cbw003_exit);
+module_platform_driver(w2cbw003_component_driver);
 
 MODULE_DESCRIPTION("ASoC W2CBW003 driver");
 MODULE_AUTHOR("Neil Jones");

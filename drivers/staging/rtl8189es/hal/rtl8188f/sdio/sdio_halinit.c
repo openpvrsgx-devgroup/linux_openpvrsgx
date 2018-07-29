@@ -1040,7 +1040,11 @@ static u32 rtl8188fs_hal_init(PADAPTER padapter)
 
 	rtw_write8(padapter, REG_EARLY_MODE_CONTROL, 0);
 
-	if (padapter->registrypriv.mp_mode == 0) {
+	if (padapter->registrypriv.mp_mode == 0
+		#if defined(CONFIG_MP_INCLUDED) && defined(CONFIG_RTW_CUSTOMER_STR)
+		|| padapter->registrypriv.mp_customer_str
+		#endif
+	) {
 		ret = rtl8188f_FirmwareDownload(padapter, _FALSE);
 		if (ret != _SUCCESS) {
 			RT_TRACE(_module_hci_hal_init_c_, _drv_err_, ("%s: Download Firmware failed!!\n", __FUNCTION__));
@@ -1205,7 +1209,11 @@ static u32 rtl8188fs_hal_init(PADAPTER padapter)
 	* 2015.03.19.
 	*/
 	u4Tmp = rtw_read32(padapter, SDIO_LOCAL_BASE|SDIO_REG_TX_CTRL);
+	#if 0
 	u4Tmp &= 0xFFFFFFF8;
+	#else
+	u4Tmp &= 0x0000FFF8;
+	#endif
 	rtw_write32(padapter, SDIO_LOCAL_BASE|SDIO_REG_TX_CTRL, u4Tmp);
 
 	_RfPowerSave(padapter);
@@ -1838,6 +1846,9 @@ _func_enter_;
 
 	pHalFunc->init_recv_priv = &rtl8188fs_init_recv_priv;
 	pHalFunc->free_recv_priv = &rtl8188fs_free_recv_priv;
+#ifdef CONFIG_RECV_THREAD_MODE
+	pHalFunc->recv_hdl = rtl8188fs_recv_hdl;
+#endif
 
 	pHalFunc->InitSwLeds = &rtl8188fs_InitSwLeds;
 	pHalFunc->DeInitSwLeds = &rtl8188fs_DeInitSwLeds;

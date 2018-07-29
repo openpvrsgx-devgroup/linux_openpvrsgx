@@ -398,6 +398,10 @@ static VOID PHY_SetRFPathSwitch_default(
 
 void mpt_InitHWConfig(PADAPTER Adapter)
 {
+	PHAL_DATA_TYPE hal;
+
+	hal = GET_HAL_DATA(Adapter);
+
 	if (IS_HARDWARE_TYPE_8723B(Adapter)) {
 		// TODO: <20130114, Kordan> The following setting is only for DPDT and Fixed board type.
 		// TODO:  A better solution is configure it according EFUSE during the run-time. 
@@ -435,6 +439,14 @@ void mpt_InitHWConfig(PADAPTER Adapter)
 	{
 		PlatformEFIOWrite2Byte(Adapter, REG_RXFLTMAP1_8822B, 0x2000);
 	}*/
+#ifdef CONFIG_RTL8188F
+	else if (IS_HARDWARE_TYPE_8188F(Adapter)) {
+		if (IS_A_CUT(hal->VersionID) || (IS_B_CUT(hal->VersionID) && hal->VersionID.irv == 0xF)) {
+			RTW_INFO("%s() Active large power detection\n", __func__);
+			phy_active_large_power_detection_8188f(&hal->odmpriv);
+		}
+	}
+#endif
 }
 
 #ifdef CONFIG_RTL8188E
@@ -797,7 +809,7 @@ u32 mp_join(PADAPTER padapter,u8 mode)
 	//init mp_start_test status
 	if (check_fwstate(pmlmepriv, _FW_LINKED) == _TRUE) {
 		rtw_disassoc_cmd(padapter, 500, _TRUE);
-		rtw_indicate_disconnect(padapter);
+		rtw_indicate_disconnect(padapter, 0, _FALSE);
 		rtw_free_assoc_resources(padapter, 1);
 	}
 	pmppriv->prev_fw_state = get_fwstate(pmlmepriv);
@@ -936,7 +948,7 @@ void mp_stop_test(PADAPTER padapter)
 		goto end_of_mp_stop_test;
 
 	//3 1. disconnect psudo AdHoc
-	rtw_indicate_disconnect(padapter);
+	rtw_indicate_disconnect(padapter, 0, _FALSE);
 
 	//3 2. clear psta used in mp test mode.
 //	rtw_free_assoc_resources(padapter, 1);

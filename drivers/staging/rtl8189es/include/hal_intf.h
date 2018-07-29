@@ -256,8 +256,11 @@ struct hal_ops {
 
 	/*** recv section ***/
 	s32	(*init_recv_priv)(_adapter *padapter);
-	void	(*free_recv_priv)(_adapter *padapter);	
-#if defined(CONFIG_USB_HCI)||defined(CONFIG_PCI_HCI)
+	void	(*free_recv_priv)(_adapter *padapter);
+#ifdef CONFIG_RECV_THREAD_MODE
+	s32 (*recv_hdl)(_adapter *adapter);
+#endif
+#if defined(CONFIG_USB_HCI) || defined(CONFIG_PCI_HCI)
 	u32	(*inirp_init)(_adapter *padapter);
 	u32	(*inirp_deinit)(_adapter *padapter);
 #endif
@@ -656,7 +659,11 @@ int rtw_hal_iol_cmd(ADAPTER *adapter, struct xmit_frame *xmit_frame, u32 max_wat
 s32 rtw_hal_xmit_thread_handler(_adapter *padapter);
 #endif
 
-void rtw_hal_notch_filter(_adapter * adapter, bool enable);
+#ifdef CONFIG_RECV_THREAD_MODE
+s32 rtw_hal_recv_hdl(_adapter *adapter);
+#endif
+
+void rtw_hal_notch_filter(_adapter *adapter, bool enable);
 
 bool rtw_hal_c2h_valid(_adapter *adapter, u8 *buf);
 s32 rtw_hal_c2h_evt_read(_adapter *adapter, u8 *buf);

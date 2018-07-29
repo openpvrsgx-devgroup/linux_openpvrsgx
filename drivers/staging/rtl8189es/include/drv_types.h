@@ -84,12 +84,6 @@ typedef struct _ADAPTER _adapter, ADAPTER,*PADAPTER;
 #include <xmit_osdep.h>
 #include <rtw_recv.h>
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 7, 0))
-#define ieee80211_band nl80211_band
-#define IEEE80211_BAND_2GHZ NL80211_BAND_2GHZ
-#define IEEE80211_BAND_5GHZ NL80211_BAND_5GHZ
-#define IEEE80211_NUM_BANDS NUM_NL80211_BANDS
-#endif
 #ifdef CONFIG_BEAMFORMING
 #include <rtw_beamforming.h>
 #endif
@@ -206,6 +200,9 @@ struct registry_priv
 	u16	busy_thresh;
 	u8	ack_policy;
 	u8	mp_mode;
+#if defined(CONFIG_MP_INCLUDED) && defined(CONFIG_RTW_CUSTOMER_STR)
+	u8 mp_customer_str;
+#endif
 	u8  mp_dm;
 	u8	software_encrypt;
 	u8	software_decrypt;
@@ -763,6 +760,13 @@ struct dvobj_priv
 
 	_mutex hw_init_mutex;
 	_mutex h2c_fwcmd_mutex;
+
+#ifdef CONFIG_RTW_CUSTOMER_STR
+	_mutex customer_str_mutex;
+	struct submit_ctx *customer_str_sctx;
+	u8 customer_str[RTW_CUSTOMER_STR_LEN];
+#endif
+
 	_mutex setch_mutex;
 	_mutex setbw_mutex;
 	_mutex rf_read_reg_mutex;

@@ -3586,7 +3586,7 @@ u8 ap_free_sta(_adapter *padapter, struct sta_info *psta, bool active, u16 reaso
 		rtw_indicate_sta_disassoc_event(padapter, psta);
 	}
 
-	report_del_sta_event(padapter, psta->hwaddr, reason, enqueue);
+	report_del_sta_event(padapter, psta->hwaddr, reason, enqueue, _FALSE);
 
 	beacon_updated = bss_cap_update_on_sta_leave(padapter, psta);
 

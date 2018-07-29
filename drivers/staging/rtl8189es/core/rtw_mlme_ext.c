@@ -1767,7 +1767,7 @@ unsigned int OnBeacon(_adapter *padapter, union recv_frame *precv_frame)
 				{            // join wrong channel, deauth and reconnect           
 					issue_deauth(padapter, (&(pmlmeinfo->network))->MacAddress, WLAN_REASON_DEAUTH_LEAVING);
 
-					report_del_sta_event(padapter, (&(pmlmeinfo->network))->MacAddress, WLAN_REASON_JOIN_WRONG_CHANNEL, _TRUE);
+					report_del_sta_event(padapter, (&(pmlmeinfo->network))->MacAddress, WLAN_REASON_JOIN_WRONG_CHANNEL, _TRUE, _FALSE);
 					pmlmeinfo->state &= (~WIFI_FW_ASSOC_SUCCESS);    		
 					return _SUCCESS;
 				}        
@@ -1776,7 +1776,7 @@ unsigned int OnBeacon(_adapter *padapter, union recv_frame *precv_frame)
 				ret = rtw_check_bcn_info(padapter, pframe, len);
 				if (!ret) {
 						DBG_871X_LEVEL(_drv_always_, "ap has changed, disconnect now\n ");
-						receive_disconnect(padapter, pmlmeinfo->network.MacAddress , 0);
+						receive_disconnect(padapter, pmlmeinfo->network.MacAddress , 0, _FALSE);
 						return _SUCCESS;
 				}
 				//update WMM, ERP in the beacon
@@ -3113,7 +3113,7 @@ unsigned int OnDeAuth(_adapter *padapter, union recv_frame *precv_frame)
 
 		if ( 0 == ignore_received_deauth )
 		{
-			receive_disconnect(padapter, GetAddr2Ptr(pframe), reason);
+			receive_disconnect(padapter, GetAddr2Ptr(pframe), reason, _FALSE);
 		}
 	}	
 	pmlmepriv->LinkDetectInfo.bBusyTraffic = _FALSE;
@@ -3190,7 +3190,7 @@ unsigned int OnDisassoc(_adapter *padapter, union recv_frame *precv_frame)
 		DBG_871X_LEVEL(_drv_always_, FUNC_ADPT_FMT" reason=%u, ta=%pM\n"
 			, FUNC_ADPT_ARG(padapter), reason, GetAddr2Ptr(pframe));
 
-		receive_disconnect(padapter, GetAddr2Ptr(pframe), reason);
+		receive_disconnect(padapter, GetAddr2Ptr(pframe), reason, _FALSE);
 	}	
 	pmlmepriv->LinkDetectInfo.bBusyTraffic = _FALSE;
 	return _SUCCESS;
@@ -10998,7 +10998,7 @@ void start_clnt_assoc(_adapter* padapter)
 	set_link_timer(pmlmeext, REASSOC_TO);
 }
 
-unsigned int receive_disconnect(_adapter *padapter, unsigned char *MacAddr, unsigned short reason)
+unsigned int receive_disconnect(_adapter *padapter, unsigned char *MacAddr, unsigned short reason, u8 locally_generated)
 {
 	struct mlme_ext_priv	*pmlmeext = &padapter->mlmeextpriv;
 	struct mlme_ext_info	*pmlmeinfo = &(pmlmeext->mlmext_info);
@@ -11010,12 +11010,16 @@ unsigned int receive_disconnect(_adapter *padapter, unsigned char *MacAddr, unsi
 
 	if((pmlmeinfo->state&0x03) == WIFI_FW_STATION_STATE)
 	{
-		if (pmlmeinfo->state & WIFI_FW_ASSOC_SUCCESS) {
-			if (report_del_sta_event(padapter, MacAddr, reason, _TRUE) != _FAIL)
-				pmlmeinfo->state = WIFI_FW_NULL_STATE;
-		} else if (pmlmeinfo->state & WIFI_FW_LINKING_STATE) {
-			if (report_join_res(padapter, -2) != _FAIL)
-				pmlmeinfo->state = WIFI_FW_NULL_STATE;
+		if (pmlmeinfo->state & WIFI_FW_ASSOC_SUCCESS)
+		{
+			pmlmeinfo->state = WIFI_FW_NULL_STATE;
+			report_del_sta_event(padapter, MacAddr, reason, _TRUE, locally_generated);
+
+		}
+		else if (pmlmeinfo->state & WIFI_FW_LINKING_STATE)
+		{
+			pmlmeinfo->state = WIFI_FW_NULL_STATE;
+			report_join_res(padapter, -2);
 		} else
 			DBG_871X(FUNC_ADPT_FMT" - End to Disconnect\n", FUNC_ADPT_ARG(padapter));
 	}
@@ -11426,7 +11430,7 @@ void report_surveydone_event(_adapter *padapter)
 
 }
 
-u32 report_join_res(_adapter *padapter, int res)
+void report_join_res(_adapter *padapter, int res)
 {
 	struct cmd_obj *pcmd_obj;
 	u8	*pevtcmd;
@@ -11436,16 +11440,17 @@ u32 report_join_res(_adapter *padapter, int res)
 	struct mlme_ext_priv		*pmlmeext = &padapter->mlmeextpriv;
 	struct mlme_ext_info	*pmlmeinfo = &(pmlmeext->mlmext_info);
 	struct cmd_priv *pcmdpriv = &padapter->cmdpriv;
-	u32 ret = _FAIL;
 
 	if ((pcmd_obj = (struct cmd_obj*)rtw_zmalloc(sizeof(struct cmd_obj))) == NULL)
-		goto exit;
+	{
+		return;
+	}
 
 	cmdsz = (sizeof(struct joinbss_event) + sizeof(struct C2HEvent_Header));
-	pevtcmd = (u8 *)rtw_zmalloc(cmdsz);
-	if (pevtcmd == NULL) {
+	if ((pevtcmd = (u8*)rtw_zmalloc(cmdsz)) == NULL)
+	{
 		rtw_mfree((u8 *)pcmd_obj, sizeof(struct cmd_obj));
-		goto exit;
+		return;
 	}
 
 	_rtw_init_listhead(&pcmd_obj->list);
@@ -11472,10 +11477,10 @@ u32 report_join_res(_adapter *padapter, int res)
 	rtw_joinbss_event_prehandle(padapter, (u8 *)&pjoinbss_evt->network);
 	
 	
-	ret = rtw_enqueue_cmd(pcmdpriv, pcmd_obj);
+	rtw_enqueue_cmd(pcmdpriv, pcmd_obj);
 
-exit:
-	return ret;
+	return;
+
 }
 
 void report_wmm_edca_update(_adapter *padapter)
@@ -11524,7 +11529,7 @@ void report_wmm_edca_update(_adapter *padapter)
 
 }
 
-u32 report_del_sta_event(_adapter *padapter, unsigned char *MacAddr, unsigned short reason, bool enqueue)
+void report_del_sta_event(_adapter *padapter, unsigned char *MacAddr, unsigned short reason, bool enqueue, u8 locally_generated)
 {
 	struct cmd_obj *pcmd_obj;
 	u8	*pevtcmd;
@@ -11559,6 +11564,7 @@ u32 report_del_sta_event(_adapter *padapter, unsigned char *MacAddr, unsigned sh
 	else
 		mac_id = (-1);
 	pdel_sta_evt->mac_id = mac_id;
+	 pdel_sta_evt->locally_generated = locally_generated;
 
 	if (!enqueue) {
 		/* do directly */
@@ -11588,7 +11594,7 @@ exit:
 	DBG_871X(FUNC_ADPT_FMT" "MAC_FMT" mac_id=%d, enqueue:%d, res:%u\n"
 		, FUNC_ADPT_ARG(padapter), MAC_ARG(MacAddr), mac_id, enqueue, res);
 
-	return res;
+	return;
 }
 
 void report_add_sta_event(_adapter *padapter, unsigned char *MacAddr)
@@ -12147,15 +12153,14 @@ void rtw_delba_check(_adapter *padapter, struct sta_info *psta, u8 from_timer)
 							ret = issue_del_ba_ex(padapter, psta->hwaddr, i, 39, 0, 3, 1);
 						else
 							issue_del_ba(padapter,  psta->hwaddr, i, 39, 0);							
-
 						psta->recvreorder_ctrl[i].enable = _FALSE;
 						if (ret != _FAIL)
 							psta->recvreorder_ctrl[i].ampdu_size = RX_AMPDU_SIZE_INVALID;
-
 						rtw_reset_continual_no_rx_packet(psta, i);
+						}				
 					}
 				}
-			} else {
+			else{   
 				/* The inactivity timer is reset when MPDUs to the TID is received. */
 				rtw_reset_continual_no_rx_packet(psta, i);	
 			}
@@ -12489,7 +12494,7 @@ bypass_active_keep_alive:
 					DBG_871X_LEVEL(_drv_always_, FUNC_ADPT_FMT" disconnect or roaming\n",
 						FUNC_ADPT_ARG(padapter));
 					receive_disconnect(padapter, pmlmeinfo->network.MacAddress
-						, WLAN_REASON_EXPIRATION_CHK);
+						, WLAN_REASON_EXPIRATION_CHK, _FALSE);
 					return;
 				}
 			} else {
@@ -12545,7 +12550,7 @@ bypass_active_keep_alive:
 			rtw_list_delete(&psta->list);
 			DBG_871X(FUNC_ADPT_FMT" ibss expire "MAC_FMT"\n"
 				, FUNC_ADPT_ARG(padapter), MAC_ARG(psta->hwaddr));
-			report_del_sta_event(padapter, psta->hwaddr, WLAN_REASON_EXPIRATION_CHK, from_timer ? _TRUE : _FALSE);
+			report_del_sta_event(padapter, psta->hwaddr, WLAN_REASON_EXPIRATION_CHK, from_timer ? _TRUE : _FALSE, _FALSE);
 		}
 	}
 
@@ -12721,7 +12726,7 @@ void clnt_sa_query_timeout(_adapter *padapter)
 {
 
 	rtw_disassoc_cmd(padapter, 0, _TRUE);
-	rtw_indicate_disconnect(padapter);
+	rtw_indicate_disconnect(padapter, 0,  _FALSE);
 	rtw_free_assoc_resources(padapter, 1);	
 
 	DBG_871X("SA query timeout client disconnect\n");
@@ -14927,7 +14932,7 @@ connect_allow_hdl:
 				&& check_fwstate(mlme, WIFI_ASOC_STATE)
 			) {
 				rtw_disassoc_cmd(iface, 500, _FALSE);
-				rtw_indicate_disconnect(iface);
+				rtw_indicate_disconnect(iface, 0, _FALSE);
 				rtw_free_assoc_resources(iface, 1);
 			}
 		}
@@ -15208,7 +15213,7 @@ u8 set_csa_hdl(_adapter *padapter, unsigned char *pbuf)
 	rtw_hal_set_hwreg(padapter, HW_VAR_TXPAUSE, &gval8);
 
 	rtw_disassoc_cmd(padapter, 0, _FALSE);
-	rtw_indicate_disconnect(padapter);
+	rtw_indicate_disconnect(padapter, 0, _FALSE);
 	rtw_free_assoc_resources(padapter, 1);
 	rtw_free_network_queue(padapter, _TRUE);
 

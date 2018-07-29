@@ -130,6 +130,9 @@ _PHY_PathAStandBy(
 #endif
 	);
 
+void phy_active_large_power_detection_8188f(
+	DM_ODM_T *p_dm_odm
+);
 								
 #endif	// #ifndef __HAL_PHY_RF_8188E_H__								
 

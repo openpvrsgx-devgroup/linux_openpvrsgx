@@ -3661,3 +3661,247 @@ BOOLEAN PHY_QueryRFPathSwitch_8188F(
 }
 #endif
 
+u32 phy_psd_log2base(u32 val)
+{
+	u8	i, j;
+	u32	tmp, tmp2, val_integerdb = 0, tindex, shiftcount = 0;
+	u32	result, val_fractiondb = 0, table_fraction[21] = {0, 432, 332, 274, 232, 200,
+									174, 151, 132, 115, 100, 86,
+									74, 62, 51, 42, 32, 23, 15, 7, 0};
+
+	if (val == 0)
+		return 0;
+
+	tmp = val;
+	while (1) {
+		if (tmp == 1)
+			break;
+
+		else {
+			tmp = (tmp >> 1);
+			shiftcount++;
+		}
+	}
+
+	val_integerdb = shiftcount+1;
+	tmp2 = 1;
+
+	for (j = 1; j <= val_integerdb; j++)
+		tmp2 = tmp2 * 2;
+
+	tmp = (val * 100) / tmp2;
+	tindex = tmp / 5;
+
+	if (tindex > 20)
+		tindex = 20;
+
+	val_fractiondb = table_fraction[tindex];
+
+	result = val_integerdb * 100 - val_fractiondb;
+
+	return result;
+
+
+}
+
+#define RFREGOFFSETMASK bRFRegOffsetMask
+#define MASKH3BYTES bMaskH3Bytes
+#define MASKDWORD bMaskDWord
+
+#define REG_FPGA0_XCD_SWITCH_CONTROL rFPGA0_XCD_SwitchControl
+#define REG_BLUE_TOOTH	rBlue_Tooth
+#define REG_RX_WAIT_CCA	rRx_Wait_CCA
+#define REG_TX_CCK_RFON rTx_CCK_RFON
+#define REG_TX_CCK_BBON rTx_CCK_BBON
+#define REG_TX_OFDM_RFON rTx_OFDM_RFON
+#define REG_TX_OFDM_BBON rTx_OFDM_BBON
+#define REG_TX_TO_RX rTx_To_Rx
+#define REG_TX_TO_TX rTx_To_Tx
+#define REG_RX_CCK rRx_CCK
+#define REG_RX_OFDM rRx_OFDM
+#define REG_RX_WAIT_RIFS rRx_Wait_RIFS
+#define REG_RX_TO_RX rRx_TO_Rx
+#define REG_STANDBY rStandby
+#define REG_SLEEP rSleep
+#define REG_PMPD_ANAEN rPMPD_ANAEN
+#define REG_OFDM_0_TRX_PATH_ENABLE rOFDM0_TRxPathEnable
+#define REG_OFDM_0_TR_MUX_PAR rOFDM0_TRMuxPar
+#define REG_FPGA0_XCD_RF_INTERFACE_SW rFPGA0_XCD_RFInterfaceSW
+#define REG_CONFIG_ANT_A rConfig_AntA
+#define REG_CONFIG_ANT_B rConfig_AntB
+#define REG_FPGA0_XAB_RF_INTERFACE_SW rFPGA0_XAB_RFInterfaceSW
+#define REG_FPGA0_XA_RF_INTERFACE_OE rFPGA0_XA_RFInterfaceOE
+#define REG_FPGA0_XB_RF_INTERFACE_OE rFPGA0_XB_RFInterfaceOE
+#define REG_FPGA0_RFMOD rFPGA0_RFMOD
+#define REG_FPGA0_IQK rFPGA0_IQK
+#define REG_TX_IQK rTx_IQK
+#define REG_RX_IQK rRx_IQK
+#define REG_TX_IQK_TONE_A rTx_IQK_Tone_A
+#define REG_RX_IQK_TONE_A rRx_IQK_Tone_A
+#define REG_TX_IQK_PI_A rTx_IQK_PI_A
+#define REG_RX_IQK_PI_A rRx_IQK_PI_A
+#define REG_IQK_AGC_RSP rIQK_AGC_Rsp
+#define REG_IQK_AGC_PTS rIQK_AGC_Pts
+
+#define _phy_save_adda_registers8188f(odm, adda_reg, adda_backup, register_num) \
+	_PHY_SaveADDARegisters8188F(odm->Adapter, adda_reg, adda_backup, register_num)
+
+#define _phy_save_mac_registers8188f(odm, mac_reg, mac_backup) \
+	_PHY_SaveMACRegisters8188F(odm->Adapter, mac_reg, mac_backup)
+
+#define _phy_path_adda_on8188f(odm, adda_reg, is_path_a_on, is2T) \
+	_PHY_PathADDAOn8188F(odm->Adapter, adda_reg, is_path_a_on, is2T)
+
+#define _phy_reload_adda_registers8188f(odm, adda_reg, adda_backup, regiester_num) \
+	_PHY_ReloadADDARegisters8188F(odm->Adapter, adda_reg, adda_backup, regiester_num)
+
+#define _phy_reload_mac_registers8188f(odm, mac_reg, mac_backup) \
+	_PHY_ReloadMACRegisters8188F(odm->Adapter, mac_reg, mac_backup)
+
+#define odm_get_rf_reg(odm, e_rf_path, reg_addr, bit_mask) \
+	ODM_GetRFReg(odm, e_rf_path, reg_addr, bit_mask)
+
+#define odm_set_rf_reg(odm, e_rf_path, reg_addr, bit_mask, data) \
+	ODM_SetRFReg(odm, e_rf_path, reg_addr, bit_mask, data)
+
+#define odm_get_bb_reg(odm, reg_addr, bit_mask) \
+	ODM_GetBBReg(odm, reg_addr, bit_mask)
+
+#define odm_set_bb_reg(odm, reg_addr, bit_mask, data) \
+	ODM_SetBBReg(odm, reg_addr, bit_mask, data)
+
+void phy_active_large_power_detection_8188f(
+	DM_ODM_T *p_dm_odm
+)
+{
+	u8	i = 1, j = 0, retrycnt = 2;
+	u32	threshold_psd = 56, tmp_psd = 0, tmp_psd_db = 0, rf_mode;
+
+	u32 ADDA_REG[IQK_ADDA_REG_NUM] = {
+		REG_FPGA0_XCD_SWITCH_CONTROL, REG_BLUE_TOOTH,
+		REG_RX_WAIT_CCA, REG_TX_CCK_RFON,
+		REG_TX_CCK_BBON, REG_TX_OFDM_RFON,
+		REG_TX_OFDM_BBON, REG_TX_TO_RX,
+		REG_TX_TO_TX, REG_RX_CCK,
+		REG_RX_OFDM, REG_RX_WAIT_RIFS,
+		REG_RX_TO_RX, REG_STANDBY,
+		REG_SLEEP, REG_PMPD_ANAEN
+	};
+	u32 IQK_MAC_REG[IQK_MAC_REG_NUM] = {
+		REG_TXPAUSE, REG_BCN_CTRL,
+		REG_BCN_CTRL_1, REG_GPIO_MUXCFG
+	};
+
+	/* since 92C & 92D have the different define in IQK_BB_REG */
+	u32 IQK_BB_REG_92C[IQK_BB_REG_NUM] = {
+		REG_OFDM_0_TRX_PATH_ENABLE, REG_OFDM_0_TR_MUX_PAR,
+		REG_FPGA0_XCD_RF_INTERFACE_SW, REG_CONFIG_ANT_A, REG_CONFIG_ANT_B,
+		REG_FPGA0_XAB_RF_INTERFACE_SW, REG_FPGA0_XA_RF_INTERFACE_OE,
+		REG_FPGA0_XB_RF_INTERFACE_OE, REG_FPGA0_RFMOD
+	};
+
+	BOOLEAN goout = FALSE;
+
+	_phy_save_adda_registers8188f(p_dm_odm, ADDA_REG, p_dm_odm->RFCalibrateInfo.ADDA_backup, IQK_ADDA_REG_NUM);
+	_phy_save_mac_registers8188f(p_dm_odm, IQK_MAC_REG, p_dm_odm->RFCalibrateInfo.IQK_MAC_backup);
+	_phy_save_adda_registers8188f(p_dm_odm, IQK_BB_REG_92C, p_dm_odm->RFCalibrateInfo.IQK_BB_backup, IQK_BB_REG_NUM);
+
+	_phy_path_adda_on8188f(p_dm_odm, ADDA_REG, TRUE, FALSE);
+
+	rf_mode = odm_get_rf_reg(p_dm_odm, RF_PATH_A, 0x0, RFREGOFFSETMASK);
+	/*ODM_RT_TRACE(p_dm_odm, ODM_COMP_CALIBRATION, ODM_DBG_LOUD, ("[Act_Large_PWR]Original RF mode = 0x%x\n", odm_get_rf_reg(p_dm_odm, ODM_RF_PATH_A, 0x0, RFREGOFFSETMASK)));*/
+
+	do {
+		switch (i) {
+		case 1: /*initial setting*/
+			ODM_RT_TRACE(p_dm_odm, ODM_COMP_CALIBRATION, ODM_DBG_LOUD, ("[Act_Large_PWR]Loopback test Start!!\n"));
+			odm_set_bb_reg(p_dm_odm, REG_FPGA0_IQK, MASKH3BYTES, 0x000000);
+			odm_set_rf_reg(p_dm_odm, RF_PATH_A, RF_WE_LUT, 0x80000, 0x1);
+			odm_set_rf_reg(p_dm_odm, RF_PATH_A, RF_RCK_OS, RFREGOFFSETMASK, 0x28000);
+			odm_set_rf_reg(p_dm_odm, RF_PATH_A, RF_TXPA_G1, RFREGOFFSETMASK, 0x0000f);
+			odm_set_rf_reg(p_dm_odm, RF_PATH_A, RF_TXPA_G2, RFREGOFFSETMASK, 0x3fffe);
+			odm_set_rf_reg(p_dm_odm, RF_PATH_A, RF_DBG_LP_RX2, 0x00800, 0x1);
+			odm_set_rf_reg(p_dm_odm, RF_PATH_A, 0x56, 0x00fff, 0x67);
+
+			odm_set_bb_reg(p_dm_odm, REG_OFDM_0_TRX_PATH_ENABLE, MASKDWORD, 0x03a05600);
+			odm_set_bb_reg(p_dm_odm, REG_OFDM_0_TR_MUX_PAR, MASKDWORD, 0x000800e4);
+			odm_set_bb_reg(p_dm_odm, REG_FPGA0_XCD_RF_INTERFACE_SW, MASKDWORD, 0x25204000);
+
+			odm_set_bb_reg(p_dm_odm, REG_FPGA0_IQK, MASKH3BYTES, 0x808000);
+			odm_set_bb_reg(p_dm_odm, REG_TX_IQK, MASKDWORD, 0x80007C00);	/*set two tone*/
+			odm_set_bb_reg(p_dm_odm, REG_RX_IQK, MASKDWORD, 0x01004800);
+			odm_set_bb_reg(p_dm_odm, REG_TX_IQK_TONE_A, MASKDWORD, 0x30008c1c);
+			odm_set_bb_reg(p_dm_odm, REG_RX_IQK_TONE_A, MASKDWORD, 0x10009c1c);
+			odm_set_bb_reg(p_dm_odm, REG_TX_IQK_PI_A, MASKDWORD, 0x82160000);
+			odm_set_bb_reg(p_dm_odm, REG_RX_IQK_PI_A, MASKDWORD, 0x2815200f);
+			odm_set_bb_reg(p_dm_odm, REG_IQK_AGC_RSP, MASKDWORD, 0x0046a910);
+
+			odm_set_bb_reg(p_dm_odm, REG_IQK_AGC_PTS, MASKDWORD, 0xf9000000);
+			odm_set_bb_reg(p_dm_odm, REG_IQK_AGC_PTS, MASKDWORD, 0xf8000000);
+			ODM_delay_ms(IQK_DELAY_TIME_8188F);
+
+			if (odm_get_bb_reg(p_dm_odm, 0xea0, MASKDWORD) <= 0xa) {
+
+				ODM_RT_TRACE(p_dm_odm, ODM_COMP_CALIBRATION, ODM_DBG_LOUD, ("[Act_Large_PWR]Skip Activation due to abnormal 0xea0 value (0x%x)\n", odm_get_bb_reg(p_dm_odm, 0xea0, MASKDWORD)));
+				goout = TRUE;
+				break;
+
+			} else {
+				tmp_psd = 3 * (phy_psd_log2base(odm_get_bb_reg(p_dm_odm, 0xea0, MASKDWORD)));
+				tmp_psd_db = tmp_psd / 100;
+
+				ODM_RT_TRACE(p_dm_odm, ODM_COMP_CALIBRATION, ODM_DBG_LOUD, ("[Act_Large_PWR]0xea0 = 0x%x, tmp_PSD_dB = %d, (criterion = %d)\n", odm_get_bb_reg(p_dm_odm, 0xea0, MASKDWORD), tmp_psd_db, threshold_psd));
+
+				i = 2;
+				break;
+			}
+
+		case 2: /*check PSD*/
+			if (tmp_psd_db < threshold_psd) {
+
+				if (j < retrycnt) {
+					ODM_RT_TRACE(p_dm_odm, ODM_COMP_CALIBRATION, ODM_DBG_LOUD, ("[Act_Large_PWR]Activation Start!!\n"));
+					odm_set_bb_reg(p_dm_odm, REG_FPGA0_IQK, MASKH3BYTES, 0x000000);
+					odm_set_bb_reg(p_dm_odm, 0x88c, BIT(20)|BIT(21), 0x3);
+					odm_set_rf_reg(p_dm_odm, RF_PATH_A, 0x58, 0x2, 0x1);
+					/*ODM_RT_TRACE(p_dm_odm, ODM_COMP_CALIBRATION, ODM_DBG_LOUD, ("[Act_Large_PWR]RF mode before set = %x\n", odm_get_rf_reg(p_dm_odm, ODM_RF_PATH_A, 0x0, RFREGOFFSETMASK)));*/
+					odm_set_rf_reg(p_dm_odm, RF_PATH_A, 0x0, 0xf001f, 0x2001f);
+					ODM_RT_TRACE(p_dm_odm, ODM_COMP_CALIBRATION, ODM_DBG_LOUD, ("[Act_Large_PWR]set RF 0x0 = %x\n", odm_get_rf_reg(p_dm_odm, RF_PATH_A, 0x0, RFREGOFFSETMASK)));
+					ODM_delay_ms(200);
+					odm_set_rf_reg(p_dm_odm, RF_PATH_A, 0x0, RFREGOFFSETMASK, rf_mode);
+					odm_set_rf_reg(p_dm_odm, RF_PATH_A, 0x58, 0x2, 0x0);
+					odm_set_bb_reg(p_dm_odm, 0x88c, BIT(20)|BIT(21), 0x0);
+					ODM_delay_ms(100);
+					i = 1;
+					j++;
+					break;
+
+					} else {
+						ODM_RT_TRACE(p_dm_odm, ODM_COMP_CALIBRATION, ODM_DBG_LOUD, ("[Act_Large_PWR]Activation fail!!!\n"));
+						goout = TRUE;
+						break;
+					}
+				} else {
+					ODM_RT_TRACE(p_dm_odm, ODM_COMP_CALIBRATION, ODM_DBG_LOUD, ("[Act_Large_PWR]No need Activation!!!\n"));
+					goout = TRUE;
+					break;
+				}
+
+		}
+	} while (!goout);
+
+		odm_set_bb_reg(p_dm_odm, REG_TX_IQK, MASKDWORD, 0x01007C00);
+		odm_set_bb_reg(p_dm_odm, REG_FPGA0_IQK, MASKH3BYTES, 0x000000);
+		odm_set_rf_reg(p_dm_odm, RF_PATH_A, RF_DBG_LP_RX2, 0x00800, 0x0);
+		odm_set_rf_reg(p_dm_odm, RF_PATH_A, RF_WE_LUT, 0x80000, 0x0);
+		odm_set_rf_reg(p_dm_odm, RF_PATH_A, 0x0, RFREGOFFSETMASK, rf_mode);
+		ODM_RT_TRACE(p_dm_odm, ODM_COMP_CALIBRATION, ODM_DBG_LOUD, ("[Act_Large_PWR]Reload RF mode = 0x%x\n", odm_get_rf_reg(p_dm_odm, RF_PATH_A, 0x0, RFREGOFFSETMASK)));
+
+		_phy_reload_adda_registers8188f(p_dm_odm, ADDA_REG, p_dm_odm->RFCalibrateInfo.ADDA_backup, IQK_ADDA_REG_NUM);
+		_phy_reload_mac_registers8188f(p_dm_odm, IQK_MAC_REG, p_dm_odm->RFCalibrateInfo.IQK_MAC_backup);
+		_phy_reload_adda_registers8188f(p_dm_odm, IQK_BB_REG_92C, p_dm_odm->RFCalibrateInfo.IQK_BB_backup, IQK_BB_REG_NUM);
+
+		ODM_RT_TRACE(p_dm_odm, ODM_COMP_CALIBRATION, ODM_DBG_LOUD, ("[Act_Large_PWR]Activation process finish!!!\n"));
+
+}
+

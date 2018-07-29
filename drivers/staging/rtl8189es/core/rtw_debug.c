@@ -86,6 +86,9 @@ void dump_drv_cfg(void *sel)
 	#ifdef RTW_USE_CFG80211_STA_EVENT
 	DBG_871X_SEL_NL(sel, "RTW_USE_CFG80211_STA_EVENT\n");
 	#endif
+	#ifdef CONFIG_RADIO_WORK
+	DBG_871X_SEL_NL(sel, "CONFIG_RADIO_WORK\n");
+	#endif
 #else
 	DBG_871X_SEL_NL(sel, "WEXT\n");
 #endif

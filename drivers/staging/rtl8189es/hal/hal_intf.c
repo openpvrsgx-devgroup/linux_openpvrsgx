@@ -710,6 +710,13 @@ s32 rtw_hal_xmit_thread_handler(_adapter *padapter)
 }
 #endif
 
+#ifdef CONFIG_RECV_THREAD_MODE
+s32 rtw_hal_recv_hdl(_adapter *adapter)
+{
+	return adapter->HalFunc.recv_hdl(adapter);
+}
+#endif
+
 void rtw_hal_notch_filter(_adapter *adapter, bool enable)
 {
 	if(adapter->HalFunc.hal_notch_filter)
@@ -951,7 +958,13 @@ u8 rtw_hal_ops_check(_adapter *padapter)
 		rtw_hal_error_msg("free_recv_priv");
 		ret = _FAIL;
 	}
-	#if defined(CONFIG_USB_HCI) || defined (CONFIG_PCI_HCI)
+#ifdef CONFIG_RECV_THREAD_MODE
+	if (NULL == padapter->HalFunc.recv_hdl) {
+		rtw_hal_error_msg("recv_hdl");
+		ret = _FAIL;
+	}
+#endif
+	#if defined(CONFIG_USB_HCI) || defined(CONFIG_PCI_HCI)
 	if (NULL == padapter->HalFunc.inirp_init) {
 		rtw_hal_error_msg("inirp_init");
 		ret = _FAIL;

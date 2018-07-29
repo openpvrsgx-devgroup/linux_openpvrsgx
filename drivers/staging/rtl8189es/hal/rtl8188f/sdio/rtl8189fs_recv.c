@@ -140,58 +140,46 @@ static s32 pre_recv_entry(union recv_frame *precvframe, struct recv_buf	*precvbu
 }
 
 #ifdef CONFIG_SDIO_RX_COPY
-static void rtl8188fs_recv_tasklet(void *priv)
+s32 rtl8188fs_recv_hdl(_adapter *padapter)
 {
-	PADAPTER			padapter;
 	PHAL_DATA_TYPE		pHalData;
 	struct recv_priv		*precvpriv;
-	struct recv_buf 	*precvbuf;
+	struct recv_buf *precvbuf;
 	union recv_frame		*precvframe;
 	struct recv_frame_hdr	*phdr;
 	struct rx_pkt_attrib	*pattrib;
-	_irqL	irql;
-	u8		*ptr;
-	u32 	pkt_len, pkt_offset, skb_len, alloc_sz;
-	_pkt		*pkt_copy = NULL;
-	u8		shift_sz = 0, rx_report_sz = 0;
+	u8	*ptr;
+	u32 pkt_len, pkt_offset, skb_len, alloc_sz;
+	_pkt *pkt_copy = NULL;
+	u8 shift_sz = 0, rx_report_sz = 0;
 
-
-	padapter = (PADAPTER)priv;
 	pHalData = GET_HAL_DATA(padapter);
 	precvpriv = &padapter->recvpriv;
 
 	do {
 		precvbuf = rtw_dequeue_recvbuf(&precvpriv->recv_buf_pending_queue);
-		if (NULL == precvbuf) break;
+		if (NULL == precvbuf)
+			break;
 
 		ptr = precvbuf->pdata;
 
-		while (ptr < precvbuf->ptail)
-		{
+		while (ptr < precvbuf->ptail) {
 			precvframe = rtw_alloc_recvframe(&precvpriv->free_recv_queue);
-			if (precvframe == NULL)
-			{
-				DBG_8192C("%s: no enough recv frame!\n", __FUNCTION__);
+			if (precvframe == NULL) {
+				RTW_INFO("%s: no enough recv frame!\n", __FUNCTION__);
 				rtw_enqueue_recvbuf_to_head(precvbuf, &precvpriv->recv_buf_pending_queue);
-
-				// The case of can't allocte recvframe should be temporary,
-				// schedule again and hope recvframe is available next time.
-#ifdef PLATFORM_LINUX
-				tasklet_schedule(&precvpriv->recv_tasklet);
-#endif
-				return;
+				return RTW_RFRAME_UNAVAIL;
 			}
 
-			//rx desc parsing
+			/* rx desc parsing */
 			rtl8188f_query_rx_desc_status(precvframe, ptr);
 
 			pattrib = &precvframe->u.hdr.attrib;
 
-			// fix Hardware RX data error, drop whole recv_buffer
-			if ((!(pHalData->ReceiveConfig & RCR_ACRC32)) && pattrib->crc_err)
-			{
-#if !(MP_DRIVER==1)
-				DBG_8192C("%s()-%d: RX Warning! rx CRC ERROR !!\n", __FUNCTION__, __LINE__);
+			/* fix Hardware RX data error, drop whole recv_buffer */
+			if ((!(pHalData->ReceiveConfig & RCR_ACRC32)) && pattrib->crc_err) {
+#if !(MP_DRIVER == 1)
+				RTW_INFO("%s()-%d: RX Warning! rx CRC ERROR !!\n", __FUNCTION__, __LINE__);
 #endif
 				rtw_free_recvframe(precvframe, &precvpriv->free_recv_queue);
 				break;
@@ -201,31 +189,25 @@ static void rtl8188fs_recv_tasklet(void *priv)
 			pkt_offset = rx_report_sz + pattrib->shift_sz + pattrib->pkt_len;
 
 			if ((ptr + pkt_offset) > precvbuf->ptail) {
-				DBG_8192C("%s()-%d: : next pkt len(%p,%d) exceed ptail(%p)!\n", __FUNCTION__, __LINE__, ptr, pkt_offset, precvbuf->ptail);
+				RTW_INFO("%s()-%d: : next pkt len(%p,%d) exceed ptail(%p)!\n", __FUNCTION__, __LINE__, ptr, pkt_offset, precvbuf->ptail);
 				rtw_free_recvframe(precvframe, &precvpriv->free_recv_queue);
 				break;
 			}
 
-			if ((pattrib->crc_err) || (pattrib->icv_err))
-			{
+			if ((pattrib->crc_err) || (pattrib->icv_err)) {
 #ifdef CONFIG_MP_INCLUDED
-				if (padapter->registrypriv.mp_mode == 1)
-				{
-					if ((check_fwstate(&padapter->mlmepriv, WIFI_MP_STATE) == _TRUE))//&&(padapter->mppriv.check_mp_pkt == 0))
-					{
+				if (padapter->registrypriv.mp_mode == 1) {
+					if ((check_fwstate(&padapter->mlmepriv, WIFI_MP_STATE) == _TRUE)) { /* &&(padapter->mppriv.check_mp_pkt == 0)) */
 						if (pattrib->crc_err == 1)
 							padapter->mppriv.rx_crcerrpktcount++;
 					}
-				}
-				else
+				} else
 #endif
 				{
-					DBG_8192C("%s: crc_err=%d icv_err=%d, skip!\n", __FUNCTION__, pattrib->crc_err, pattrib->icv_err);
+					RTW_INFO("%s: crc_err=%d icv_err=%d, skip!\n", __FUNCTION__, pattrib->crc_err, pattrib->icv_err);
 				}
 				rtw_free_recvframe(precvframe, &precvpriv->free_recv_queue);
-			}
-			else
-			{
+			} else {
 				//	Modified by Albert 20101213
 				//	For 8 bytes IP header alignment.
 				if (pattrib->qos)	//	Qos data, wireless lan header length is 26
@@ -297,24 +279,24 @@ static void rtl8188fs_recv_tasklet(void *priv)
 				}
 
 				recvframe_put(precvframe, skb_len);
-				//recvframe_pull(precvframe, drvinfo_sz + RXDESC_SIZE);
+				/*recvframe_pull(precvframe, drvinfo_sz + RXDESC_SIZE); */
 
 				if (pHalData->ReceiveConfig & RCR_APPFCS)
 					recvframe_pull_tail(precvframe, IEEE80211_FCS_LEN);
 
-				// move to drv info position
+				/* move to drv info position */
 				ptr += RXDESC_SIZE;
 
-				// update drv info
+				/* update drv info */
 				if (pHalData->ReceiveConfig & RCR_APP_BA_SSN) {
-					//rtl8188s_update_bassn(padapter, pdrvinfo);
+					/* rtl8188s_update_bassn(padapter, pdrvinfo); */
 					ptr += 4;
 				}
 
 				if (pattrib->pkt_rpt_type == NORMAL_RX) {
-					// skip the rx packet with abnormal length
-					if (pattrib->pkt_len < 14 || pattrib->pkt_len > 8192) {	
-						DBG_8192C("skip abnormal rx packet(%d)\n", pattrib->pkt_len);
+					/* skip the rx packet with abnormal length */
+					if (pattrib->pkt_len < 14 || pattrib->pkt_len > 8192) {
+						RTW_INFO("skip abnormal rx packet(%d)\n", pattrib->pkt_len);
 						rtw_free_recvframe(precvframe, &precvpriv->free_recv_queue);
 						break;
 					}
@@ -344,7 +326,7 @@ static void rtl8188fs_recv_tasklet(void *priv)
 						rtl8188f_c2h_packet_handler(padapter, precvframe->u.hdr.rx_data, pattrib->pkt_len);
 					}
 					else {
-						DBG_8192C("%s: [WARNNING] RX type(%d) not be handled!\n",
+						RTW_INFO("%s: [WARNNING] RX type(%d) not be handled!\n",
 							__FUNCTION__, pattrib->pkt_rpt_type);
 					}
 #endif
@@ -362,6 +344,23 @@ static void rtl8188fs_recv_tasklet(void *priv)
 		rtw_enqueue_recvbuf(precvbuf, &precvpriv->free_recv_buf_queue);
 	} while (1);
 
+	return _SUCCESS;
+}
+
+static void rtl8188fs_recv_tasklet(void *priv)
+{
+	_adapter *adapter = (_adapter *)priv;
+	s32 ret;
+
+	ret = rtl8188fs_recv_hdl(adapter);
+	if (ret == RTW_RFRAME_UNAVAIL
+		|| ret == RTW_RFRAME_PKT_UNAVAIL
+	) {
+		/* schedule again and hope recvframe/packet is available next time. */
+		#ifdef PLATFORM_LINUX
+		tasklet_schedule(&adapter->recvpriv.recv_tasklet);
+		#endif
+	}
 }
 #else
 static void rtl8188fs_recv_tasklet(void *priv)

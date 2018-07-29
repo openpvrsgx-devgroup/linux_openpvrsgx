@@ -28,15 +28,6 @@
 
 #endif
 
-static u8 rtw_rfc1042_header[] =
-{ 0xaa, 0xaa, 0x03, 0x00, 0x00, 0x00 };
-/* Bridge-Tunnel header (for EtherTypes ETH_P_AARP and ETH_P_IPX) */
-static u8 rtw_bridge_tunnel_header[] =
-{ 0xaa, 0xaa, 0x03, 0x00, 0x00, 0xf8 };
-
-static u8 SNAP_ETH_TYPE_IPX[2] = {0x81, 0x37};
-
-static u8 SNAP_ETH_TYPE_APPLETALK_AARP[2] = {0x80, 0xf3};
 
 #ifdef CONFIG_NEW_SIGNAL_STAT_PROCESS
 void rtw_signal_stat_timer_hdl(RTW_TIMER_HDL_ARGS);
@@ -91,6 +82,11 @@ _func_enter_;
 	//_rtw_memset((unsigned char *)precvpriv, 0, sizeof (struct  recv_priv));
 
 	_rtw_spinlock_init(&precvpriv->lock);
+
+#ifdef CONFIG_RECV_THREAD_MODE
+	_rtw_init_sema(&precvpriv->recv_sema, 0);
+	_rtw_init_sema(&precvpriv->terminate_recvthread_sema, 0);
+#endif
 
 	_rtw_init_queue(&precvpriv->free_recv_queue);
 	_rtw_init_queue(&precvpriv->recv_pending_queue);
@@ -4985,3 +4981,48 @@ void rtw_reset_continual_no_rx_packet(struct sta_info *sta, int tid_index)
 {	
 	ATOMIC_SET(&sta->continual_no_rx_packet[tid_index], 0);	
 }
+
+#ifdef CONFIG_RECV_THREAD_MODE
+thread_return rtw_recv_thread(thread_context context)
+{
+	_adapter *adapter = (_adapter *)context;
+	struct recv_priv *recvpriv = &adapter->recvpriv;
+	s32 err = _SUCCESS;
+
+	thread_enter("RTW_RECV_THREAD");
+
+	RTW_INFO(FUNC_ADPT_FMT" enter\n", FUNC_ADPT_ARG(adapter));
+
+	do {
+		err = _rtw_down_sema(&recvpriv->recv_sema);
+		if (_FAIL == err) {
+			RTW_ERR(FUNC_ADPT_FMT" down recv_sema fail!\n", FUNC_ADPT_ARG(adapter));
+			goto exit;
+		}
+
+		if (RTW_CANNOT_RUN(adapter)) {
+			RTW_INFO(FUNC_ADPT_FMT" DS:%d, SR:%d\n", FUNC_ADPT_ARG(adapter)
+				, rtw_is_drv_stopped(adapter), rtw_is_surprise_removed(adapter));
+			goto exit;
+		}
+
+		err = rtw_hal_recv_hdl(adapter);
+
+		if (err == RTW_RFRAME_UNAVAIL
+			|| err == RTW_RFRAME_PKT_UNAVAIL
+		) {
+			rtw_msleep_os(1);
+			_rtw_up_sema(&recvpriv->recv_sema);
+		}
+
+		flush_signals_thread();
+
+	} while (err != _FAIL);
+
+exit:
+	_rtw_up_sema(&adapter->recvpriv.terminate_recvthread_sema);
+	RTW_INFO(FUNC_ADPT_FMT" exit\n", FUNC_ADPT_ARG(adapter));
+	thread_exit();
+}
+#endif /* CONFIG_RECV_THREAD_MODE */
+

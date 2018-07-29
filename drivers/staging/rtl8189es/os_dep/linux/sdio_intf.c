@@ -972,7 +972,7 @@ static int rtw_sdio_resume(struct device *dev)
 
 }
 
-static int __init rtw_drv_entry(void)
+static int rtw_drv_entry(void)
 {
 	int ret = 0;
 
@@ -1013,12 +1013,13 @@ static int __init rtw_drv_entry(void)
 
 poweroff:
 	platform_wifi_power_off();
+
 exit:
 	DBG_871X_LEVEL(_drv_always_, "module init ret=%d\n", ret);
 	return ret;
 }
 
-static void __exit rtw_drv_halt(void)
+static void rtw_drv_halt(void)
 {
 	DBG_871X_LEVEL(_drv_always_, "module exit start\n");
 

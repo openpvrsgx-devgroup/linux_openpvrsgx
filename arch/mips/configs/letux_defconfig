@@ -1,5 +1,5 @@
 #
-# Linux/mips 4.18.0-rc6 Kernel Configuration
+# Linux/mips 4.18.0-rc7 Kernel Configuration
 #
 
 #
@@ -2541,6 +2541,8 @@ CONFIG_SND_SOC_I2C_AND_SPI=y
 # CONFIG_SND_SOC_ES8328_I2C is not set
 # CONFIG_SND_SOC_ES8328_SPI is not set
 # CONFIG_SND_SOC_GTM601 is not set
+# CONFIG_SND_SOC_SI47XX is not set
+# CONFIG_SND_SOC_W2CBW003 is not set
 # CONFIG_SND_SOC_INNO_RK3036 is not set
 # CONFIG_SND_SOC_MAX98504 is not set
 # CONFIG_SND_SOC_MAX9867 is not set

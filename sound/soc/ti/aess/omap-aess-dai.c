@@ -541,9 +541,10 @@ static void capture_trigger(struct snd_pcm_substream *substream,
 			/* DAI work must be started at least 250us after AESS */
 			udelay(250);
 
+#ifdef FIXME	// was never upstream
 			/* trigger the BE port */
 			snd_soc_dai_trigger(be_substream, cmd, be->cpu_dai);
-
+#endif
 			snd_soc_dpcm_be_set_state(be, stream,
 						  SND_SOC_DPCM_STATE_START);
 		}
@@ -551,8 +552,9 @@ static void capture_trigger(struct snd_pcm_substream *substream,
 		/* does this trigger() apply to the FE ? */
 		if (snd_soc_dpcm_fe_can_update(fe, stream)) {
 			/* Enable Frontend sDMA  */
+#ifdef FIXME	// disappeared in v4.11
 			snd_soc_platform_trigger(substream, cmd, fe->platform);
-
+#endif
 			enable_fe_port(substream, dai, stream);
 			/* unmute FE port */
 			unmute_fe_port(substream, dai, stream);
@@ -572,13 +574,17 @@ static void capture_trigger(struct snd_pcm_substream *substream,
 		break;
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 		/* Enable sDMA */
+#ifdef FIXME	// disappeared in v4.11
 		snd_soc_platform_trigger(substream, cmd, fe->platform);
+#endif
 		enable_fe_port(substream, dai, stream);
 		break;
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 		/* Disable sDMA */
 		disable_fe_port(substream, dai, stream);
+#ifdef FIXME	// disappeared in v4.11
 		snd_soc_platform_trigger(substream, cmd, fe->platform);
+#endif
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
 
@@ -588,7 +594,9 @@ static void capture_trigger(struct snd_pcm_substream *substream,
 			mute_fe_port(substream, dai, stream);
 			/* Disable sDMA */
 			disable_fe_port(substream, dai, stream);
+#ifdef FIXME	// disappeared in v4.11
 			snd_soc_platform_trigger(substream, cmd, fe->platform);
+#endif
 		}
 
 		/* disable BE ports */
@@ -619,9 +627,10 @@ static void capture_trigger(struct snd_pcm_substream *substream,
 			/* DAI work must be stopped at least 250us after AESS */
 			udelay(250);
 
+#ifdef FIXME	// was never upstream
 			/* trigger BE port */
 			snd_soc_dai_trigger(be_substream, cmd, be->cpu_dai);
-
+#endif
 			snd_soc_dpcm_be_set_state(be, stream,
 						  SND_SOC_DPCM_STATE_STOP);
 		}
@@ -672,9 +681,10 @@ static void playback_trigger(struct snd_pcm_substream *substream,
 			/* DAI work must be started at least 250us after AESS */
 			udelay(250);
 
+#ifdef FIXME	// was never upstream
 			/* trigger BE port */
 			snd_soc_dai_trigger(be_substream, cmd, be->cpu_dai);
-
+#endif
 			/* unmute the BE port */
 			unmute_be(be, dai, stream);
 
@@ -686,7 +696,9 @@ static void playback_trigger(struct snd_pcm_substream *substream,
 		if (snd_soc_dpcm_fe_can_update(fe, stream)) {
 
 			/* Enable Frontend sDMA  */
+#ifdef FIXME	// disappeared in v4.11
 			snd_soc_platform_trigger(substream, cmd, fe->platform);
+#endif
 			enable_fe_port(substream, dai, stream);
 		}
 
@@ -695,7 +707,9 @@ static void playback_trigger(struct snd_pcm_substream *substream,
 		break;
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 		/* Enable Frontend sDMA  */
+#ifdef FIXME	// disappeared in v4.11
 		snd_soc_platform_trigger(substream, cmd, fe->platform);
+#endif
 		enable_fe_port(substream, dai, stream);
 
 		/* unmute FE port */
@@ -706,7 +720,9 @@ static void playback_trigger(struct snd_pcm_substream *substream,
 		mute_fe_port(substream, dai, stream);
 		/* disable Frontend sDMA  */
 		disable_fe_port(substream, dai, stream);
+#ifdef FIXME	// disappeared in v4.11
 		snd_soc_platform_trigger(substream, cmd, fe->platform);
+#endif
 
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
@@ -717,7 +733,9 @@ static void playback_trigger(struct snd_pcm_substream *substream,
 			mute_fe_port(substream, dai, stream);
 			/* disable the transfer */
 			disable_fe_port(substream, dai, stream);
+#ifdef FIXME	// disappeared in v4.11
 			snd_soc_platform_trigger(substream, cmd, fe->platform);
+#endif
 
 		}
 
@@ -749,9 +767,10 @@ static void playback_trigger(struct snd_pcm_substream *substream,
 			/* DAI work must be stopped at least 250us after AESS */
 			udelay(250);
 
+#ifdef FIXME	// was never upstream
 			/*  trigger the BE port */
 			snd_soc_dai_trigger(be_substream, cmd, be->cpu_dai);
-
+#endif
 			snd_soc_dpcm_be_set_state(be, stream,
 						  SND_SOC_DPCM_STATE_STOP);
 		}
@@ -770,8 +789,12 @@ static int omap_aess_hwrule_size_step(struct snd_pcm_hw_params *params,
 	rate = (rate == 44100) ? 48000 : rate;
 
 	/* AESS requires chunks of 250us worth of data */
+#ifdef FIXME	// defined in sound/core/pcm_lib.c but not exported
 	return snd_interval_step(hw_param_interval(params, rule->var),
 				 rate / 4000);
+#else
+	return 0;
+#endif
 }
 
 static char *dma_names[OMAP_AESS_DMA_RESOURCES] = {

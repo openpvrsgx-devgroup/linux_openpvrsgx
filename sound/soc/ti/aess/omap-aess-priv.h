@@ -341,12 +341,15 @@ struct omap_aess {
 	int active;
 	int nr_users;	/* Number of external users of omap_aess struct */
 	struct mutex mutex;
+#ifdef FIXME	// mechanism does no longer exist since v4.18 and wasn't used anywhere else for long time
 	int (*get_context_lost_count)(struct device *dev);
+#endif
 	int (*device_scale)(struct device *req_dev,
 			    struct device *target_dev,
 			    unsigned long rate);
+#ifdef FIXME	// mechanism does no longer exist since v4.18 and wasn't used anywhere else for long time
 	u32 context_lost;
-
+#endif
 	struct omap_aess_opp opp;
 	struct omap_aess_dc_offset dc_offset;
 	struct omap_aess_modem modem;
@@ -389,7 +392,7 @@ struct omap_aess {
 
 /* Extern variables, structures, functions */
 extern struct snd_soc_tplg_ops soc_tplg_ops;
-extern struct snd_soc_platform_driver omap_aess_platform;
+extern struct snd_soc_component_driver omap_aess_platform;
 extern struct snd_soc_dai_driver omap_aess_dai[6];
 
 int aess_mixer_enable_mono(struct omap_aess *aess, int id, int enable);

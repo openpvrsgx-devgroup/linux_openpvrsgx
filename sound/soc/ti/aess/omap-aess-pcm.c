@@ -294,9 +294,9 @@ static irqreturn_t aess_irq_handler(int irq, void *dev_id)
 static int omap_aess_pcm_open(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_platform *platform = rtd->platform;
-	struct omap_aess *aess = snd_soc_platform_get_drvdata(platform);
 	struct snd_soc_dai *dai = rtd->cpu_dai;
+	struct snd_soc_component *component = dai->component;
+	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 
 	mutex_lock(&aess->mutex);
 
@@ -323,9 +323,9 @@ static int omap_aess_pcm_hw_params(struct snd_pcm_substream *substream,
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_pcm_runtime *runtime = substream->runtime;
-	struct snd_soc_platform *platform = rtd->platform;
-	struct omap_aess *aess = snd_soc_platform_get_drvdata(platform);
 	struct snd_soc_dai *dai = rtd->cpu_dai;
+	struct snd_soc_component *component = dai->component;
+	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 	struct omap_aess_data_format format;
 	size_t period_size;
 	u32 dst;
@@ -367,9 +367,9 @@ out:
 static int omap_aess_pcm_prepare(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_platform *platform = rtd->platform;
-	struct omap_aess *aess = snd_soc_platform_get_drvdata(platform);
 	struct snd_soc_dai *dai = rtd->cpu_dai;
+	struct snd_soc_component *component = dai->component;
+	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 
 	dev_dbg(dai->dev, "%s: %s\n", __func__, dai->name);
 
@@ -389,9 +389,9 @@ static int omap_aess_pcm_prepare(struct snd_pcm_substream *substream)
 static int omap_aess_pcm_close(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_platform *platform = rtd->platform;
-	struct omap_aess *aess = snd_soc_platform_get_drvdata(platform);
 	struct snd_soc_dai *dai = rtd->cpu_dai;
+	struct snd_soc_component *component = dai->component;
+	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 
 	dev_dbg(dai->dev, "%s: %s\n", __func__, dai->name);
 
@@ -419,9 +419,9 @@ static int omap_aess_pcm_mmap(struct snd_pcm_substream *substream,
 			      struct vm_area_struct *vma)
 {
 	struct snd_soc_pcm_runtime  *rtd = substream->private_data;
-	struct snd_soc_platform *platform = rtd->platform;
-	struct omap_aess *aess = snd_soc_platform_get_drvdata(platform);
 	struct snd_soc_dai *dai = rtd->cpu_dai;
+	struct snd_soc_component *component = dai->component;
+	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 	int offset, size, err;
 
 	if (dai->id != OMAP_AESS_DAI_MM1_LP)
@@ -444,8 +444,9 @@ static int omap_aess_pcm_mmap(struct snd_pcm_substream *substream,
 static snd_pcm_uframes_t omap_aess_pcm_pointer(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_platform *platform = rtd->platform;
-	struct omap_aess *aess = snd_soc_platform_get_drvdata(platform);
+	struct snd_soc_dai *dai = rtd->cpu_dai;
+	struct snd_soc_component *component = dai->component;
+	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 	snd_pcm_uframes_t offset = 0;
 	u32 pingpong;
 
@@ -468,18 +469,18 @@ static struct snd_pcm_ops omap_aess_pcm_ops = {
 	.mmap		= omap_aess_pcm_mmap,
 };
 
-static int omap_aess_pcm_probe(struct snd_soc_platform *platform)
+static int omap_aess_pcm_probe(struct snd_soc_component *component)
 {
-	struct omap_aess *aess = snd_soc_platform_get_drvdata(platform);
+	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 	int ret = 0, i;
 
 	pm_runtime_enable(aess->dev);
 	pm_runtime_irq_safe(aess->dev);
 
-	ret = snd_soc_tplg_component_load(&platform->component, &soc_tplg_ops,
+	ret = snd_soc_tplg_component_load(component, &soc_tplg_ops,
 					  aess->fw, 0);
 	if (ret < 0) {
-		dev_err(platform->dev, "request for AESS FW failed %d\n", ret);
+		dev_err(component->dev, "request for AESS FW failed %d\n", ret);
 		goto out;
 	}
 
@@ -487,14 +488,14 @@ static int omap_aess_pcm_probe(struct snd_soc_platform *platform)
 				   aess_irq_handler, IRQF_ONESHOT, "AESS",
 				   aess);
 	if (ret) {
-		dev_err(platform->dev, "request for AESS IRQ %d failed %d\n",
+		dev_err(component->dev, "request for AESS IRQ %d failed %d\n",
 			aess->irq, ret);
 		goto out;
 	}
 
 	ret = aess_opp_init_initial_opp(aess);
 	if (ret < 0) {
-		dev_info(platform->dev, "No OPP definition\n");
+		dev_info(component->dev, "No OPP definition\n");
 		ret = 0;
 	}
 	/* aess_clk has to be enabled to access hal register.
@@ -530,49 +531,46 @@ out:
 	return ret;
 }
 
-static int omap_aess_pcm_remove(struct snd_soc_platform *platform)
+static void omap_aess_pcm_remove(struct snd_soc_component *component)
 {
-	struct omap_aess *aess = snd_soc_platform_get_drvdata(platform);
+	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 
 	free_irq(aess->irq, aess);
 	aess_cleanup_debugfs(aess);
 	pm_runtime_disable(aess->dev);
-
-	return 0;
 }
 
 /* TODO: map IO directly into AESS memories */
-static unsigned int omap_aess_oppwidget_read(struct snd_soc_platform *platform,
+static unsigned int omap_aess_oppwidget_read(struct snd_soc_component *component,
 					     unsigned int reg)
 {
-	struct omap_aess *aess = snd_soc_platform_get_drvdata(platform);
+	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 
 	if (reg > OMAP_AESS_NUM_DAPM_REG)
 		return 0;
 
-	dev_dbg(platform->dev, "read R%d (Ox%x) = 0x%x\n", reg, reg,
+	dev_dbg(component->dev, "read R%d (Ox%x) = 0x%x\n", reg, reg,
 		aess->opp.widget[reg]);
 	return aess->opp.widget[reg];
 }
 
-static int omap_aess_oppwidget_write(struct snd_soc_platform *platform,
+static int omap_aess_oppwidget_write(struct snd_soc_component *component,
 				     unsigned int reg, unsigned int val)
 {
-	struct omap_aess *aess = snd_soc_platform_get_drvdata(platform);
+	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 
 	if (reg > OMAP_AESS_NUM_DAPM_REG)
 		return 0;
 
 	aess->opp.widget[reg] = val;
-	dev_dbg(platform->dev, "write R%d (Ox%x) = 0x%x\n", reg, reg, val);
+	dev_dbg(component->dev, "write R%d (Ox%x) = 0x%x\n", reg, reg, val);
 	return 0;
 }
 
 static int omap_aess_pcm_stream_event(struct snd_soc_component *component,
 				      int event)
 {
-	struct snd_soc_platform *platform = snd_soc_component_to_platform(component);
-	struct omap_aess *aess = snd_soc_platform_get_drvdata(platform);
+	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 
 	if (aess->active) {
 		dev_dbg(aess->dev, "opp: stream event %d\n", event);
@@ -602,11 +600,13 @@ static int omap_aess_pcm_resume(struct snd_soc_dai *dai)
 	if (!dai->active)
 		return 0;
 
+#ifdef FIXME	// mechanism does no longer exist
 	/* context retained, no need to restore */
 	if (aess->get_context_lost_count &&
 	    aess->get_context_lost_count(aess->dev) == aess->context_lost)
 		return 0;
 	aess->context_lost = aess->get_context_lost_count(aess->dev);
+#endif
 	pm_runtime_get_sync(aess->dev);
 	if (aess->device_scale) {
 		ret = aess->device_scale(aess->dev, aess->dev,
@@ -629,13 +629,11 @@ out:
 #define omap_aess_pcm_resume	NULL
 #endif
 
-struct snd_soc_platform_driver omap_aess_platform = {
+struct snd_soc_component_driver omap_aess_platform = {
 	.ops		= &omap_aess_pcm_ops,
 	.probe		= omap_aess_pcm_probe,
 	.remove		= omap_aess_pcm_remove,
 	.read		= omap_aess_oppwidget_read,
 	.write		= omap_aess_oppwidget_write,
-	.component_driver = {
-		.stream_event	= omap_aess_pcm_stream_event,
-	},
+	.stream_event	= omap_aess_pcm_stream_event,
 };

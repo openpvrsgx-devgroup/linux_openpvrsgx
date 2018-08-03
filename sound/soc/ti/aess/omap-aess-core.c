@@ -42,7 +42,9 @@
 
 #include <sound/soc.h>
 #include <sound/soc-topology.h>
+#ifdef FIXME	// mechanism does no longer exist since v4.18 and wasn't used anywhere else for long time
 #include "../../../arch/arm/mach-omap2/omap-pm.h"
+#endif
 
 #include "omap-aess-priv.h"
 #include "aess_port.h"
@@ -168,9 +170,9 @@ int omap_aess_load_firmware(struct omap_aess *aess, char *fw_name)
 
 	aess->fw = fw;
 
-	ret = snd_soc_register_platform(aess->dev, &omap_aess_platform);
+	ret = snd_soc_register_component(aess->dev, &omap_aess_platform, NULL, 0);
 	if (ret < 0) {
-		dev_err(aess->dev, "failed to register platform %d\n", ret);
+		dev_err(aess->dev, "failed to register PCM %d\n", ret);
 		goto err;
 	}
 
@@ -179,7 +181,6 @@ int omap_aess_load_firmware(struct omap_aess *aess, char *fw_name)
 					 ARRAY_SIZE(omap_aess_dai));
 	if (ret < 0) {
 		dev_err(aess->dev, "failed to register DAIs %d\n", ret);
-		snd_soc_unregister_platform(aess->dev);
 		goto err;
 	}
 
@@ -246,7 +247,9 @@ static int omap_aess_engine_probe(struct platform_device *pdev)
 	dev_set_drvdata(&pdev->dev, aess);
 
 #ifdef CONFIG_PM
+#ifdef FIXME	// mechanism does no longer exist since v4.18 and wasn't used anywhere else for long time
 	aess->get_context_lost_count = omap_pm_get_dev_context_loss_count;
+#endif
 	aess->device_scale = NULL;
 #endif
 	aess->dev = &pdev->dev;
@@ -284,7 +287,10 @@ static int omap_aess_engine_remove(struct platform_device *pdev)
 	the_aess = NULL;
 
 	snd_soc_unregister_component(&pdev->dev);
+#ifdef CHECKME	// we have no platform device any more - is component sufficient?
+// adn we register two components - how do we unregister them individually?
 	snd_soc_unregister_platform(&pdev->dev);
+#endif
 
 	aess->fw_data = NULL;
 	aess->fw_config = NULL;

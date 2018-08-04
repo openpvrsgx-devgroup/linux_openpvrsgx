@@ -213,7 +213,7 @@
 		pinctrl-0 = <&mcbsp1_devconf0_pins>;
 		mcbsp1_devconf0_pins: mcbsp1-devconf0-pins {
 			/*                   offset bits mask */
-			pinctrl-single,bits = <0x00 0x08 0x1c>;	/* set MCBSP1_CLKR */
+			pinctrl-single,bits = <0x00 0x18 0x1c>;	/* set MCBSP1_CLKR */
 		};
 	};
 

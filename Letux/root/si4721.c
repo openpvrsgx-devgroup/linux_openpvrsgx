@@ -37,7 +37,7 @@ static int send_cmd(unsigned char *cmd_data,int cmd_len,unsigned char *resp_data
 			exit(1);
 		}
 	}
-	if (ioctl(fd, I2C_SLAVE, chipaddr) < 0) {
+	if (ioctl(fd, I2C_SLAVE_FORCE, chipaddr) < 0) {
 		printf("Failed to acquire bus access and/or talk to slave: %s\n", strerror(errno));
 		return -1;
 	}

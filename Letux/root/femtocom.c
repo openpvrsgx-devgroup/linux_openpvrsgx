@@ -20,7 +20,7 @@ main(int argc, char *argv[])
 		argv++;
 	}
 	if(!argv[1]) {
-		fprintf(stderr, "usage: %s [-s] [-r] /dev/ttyHS?\n", arg0);
+		fprintf(stderr, "usage: %s [-s] [-r] /dev/tty???\n", arg0);
 		fprintf(stderr, "  -s send \\n as \\n and not as \\r\\n\n");
 		fprintf(stderr, "  -r receive \\r and don't ignore\n");
 		return 1;
@@ -40,21 +40,22 @@ main(int argc, char *argv[])
 	tc.c_iflag |= IGNBRK | IGNPAR | ICRNL | INLCR;
 	tc.c_oflag &= ~OPOST;
 	tc.c_cc[VMIN]	= 1;
-	tc.c_cc[VTIME]	=0;
-	if(tcsetattr(fd, TCSANOW, &tc) < 0) { /* tried to modify */
+	tc.c_cc[VTIME]	= 0;
+	if(tcsetattr(fd, TCSANOW, &tc) < 0) { /* failed to modify */
 		perror("tcsetattr");
 		return 1;
 	}
 	while(1) {
 		fd_set rfd, wfd, efd;
-		FD_SET(0, &rfd);
-		FD_SET(fd, &rfd);
-		FD_SET(1, &wfd);
-		FD_SET(fd, &wfd);
+		FD_ZERO(&rfd);
+		FD_ZERO(&wfd);
+		FD_ZERO(&efd);
+		FD_SET(0, &rfd);	// stdin, i.e. keyboard
+		FD_SET(fd, &rfd);	// our /dev/tty
 		if(select(fd+1, &rfd, &wfd, &efd, NULL) > 0)
 			{ // wait for input from either end and forward to the other
 			char buf[1];
-			if(FD_ISSET(0, &rfd) && FD_ISSET(fd, &wfd))
+			if(FD_ISSET(0, &rfd))
 				{ /* echo stdin -> tty */
 				int n=read(0, buf, 1);
 				if(n < 0)
@@ -69,7 +70,7 @@ main(int argc, char *argv[])
 					}
 				write(fd, buf, n);
 				}
-			if(FD_ISSET(fd, &rfd) && FD_ISSET(1, &wfd))
+			if(FD_ISSET(fd, &rfd))
 				{ /* echo tty -> stdout */
 				int n=read(fd, buf, 1);
 				if(n < 0)

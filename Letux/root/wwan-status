@@ -15,17 +15,18 @@ case "$IF" in
 
 	/dev/ttyHS* ) # GTA04 with OPTION GTM601W
 		(
-		echo "AT\$QCVOLT"; sleep 1
-		echo "AT\$QCSIMSTAT?"; sleep 1
+		echo "AT\$QCVOLT"; sleep 1	# operation voltage
+		echo "AT\$QCSIMSTAT?"; sleep 1	# SIM status
 		echo "AT+CGMI"; sleep 1
 		echo "AT+CGMM"; sleep 1
 		echo "AT+CGMR"; sleep 1
 		echo "AT+CGSN"; sleep 1
 		echo "AT+CIMI"; sleep 1
-		echo "AT+CPIN?"; sleep 1
-		echo "AT+CSQ"; sleep 1
+		echo "AT+CPIN?"; sleep 1	# PIN status
+		echo "AT+COPS?"; sleep 1	# network name
+		echo "AT+CSQ"; sleep 1		# signal quality
 		echo "AT_OLCC=1"; sleep 1
-		echo "AT_OSQI=1"; sleep 1
+		echo "AT_OSQI=1"; sleep 1	# enable _OSIGQ URCs
 		echo "AT_OWANCALL?"; sleep 1
 		echo "AT_OWANDATA?"; sleep 1
 		echo "AT_OWANNWERROR?"; sleep 1
@@ -46,23 +47,26 @@ case "$IF" in
 		fi
 
 		(
-		echo "AT^SBV"; sleep 1
-		echo "AT^SQPORT?"; sleep 1
-# FIXME: find equivalents
-#echo "AT\$QCSIMSTAT?"; sleep 1
+		echo "AT^SQPORT?"; sleep 1	# port (Application, Modem, ...)
+		echo "AT^SCKS?"; sleep 1	# SIM status
 		echo "AT+CGMI"; sleep 1
 		echo "AT+CGMM"; sleep 1
 		echo "AT+CGMR"; sleep 1
 		echo "AT+CGSN"; sleep 1
 		echo "AT+CIMI"; sleep 1
-		echo "AT+CPIN?"; sleep 1
-		echo "AT+CSQ"; sleep 1
+		echo "AT+CPIN?"; sleep 1	# PIN status
+		echo "AT+COPS?"; sleep 1	# network name
+		echo "AT+WS46?"; sleep 1	# network connection
+		echo "AT+CSQ"; sleep 1		# signal quality
 #echo "AT_OLCC=1"; sleep 1
 #echo "AT_OSQI=1"; sleep 1
 #echo "AT_OWANCALL?"; sleep 1
 #echo "AT_OWANDATA?"; sleep 1
 #echo "AT_OWANNWERROR?"; sleep 1
-		echo "AT^SCFG?"; sleep 1	# general settings
+		echo "AT^SBV"; sleep 1		# battery voltage
+		echo "AT^SCTM=0,1"; sleep 1; echo "AT^SCTM?"; sleep 1	# temperature
+		echo "AT^SBV"; sleep 1		# battery voltage
+		echo "AT+CCLK?"; sleep 1	# real time clock
 		echo "AT^SGPSC?"; sleep 1	# GPS/GLONASS status
 		echo "AT^SMONI"; sleep 1	# serving cell
 		echo "AT^SMONP"; sleep 1	# neighbour cell

@@ -65,7 +65,6 @@ case "$IF" in
 #echo "AT_OWANNWERROR?"; sleep 1
 		echo "AT^SBV"; sleep 1		# battery voltage
 		echo "AT^SCTM=0,1"; sleep 1; echo "AT^SCTM?"; sleep 1	# temperature
-		echo "AT^SBV"; sleep 1		# battery voltage
 		echo "AT+CCLK?"; sleep 1	# real time clock
 		echo "AT^SGPSC?"; sleep 1	# GPS/GLONASS status
 		echo "AT^SMONI"; sleep 1	# serving cell

@@ -1,4 +1,4 @@
-#
+#!/bin/bash
 # switch on/off TVout on the GTA04 or BeagleBoard or HDMI on Pyra or OMAP5EVM
 #
 # on GTA04 or OpenPandora the TVout is called "SVIDEO-1"

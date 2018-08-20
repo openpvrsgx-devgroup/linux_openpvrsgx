@@ -114,6 +114,54 @@ parse_dai_end:
 	return 0;
 }
 
+#if 0 // debris left over from merge conflict...
+=======
+	return clk_set_rate(simple_dai->clk, rate);
+}
+
+static int asoc_simple_set_clkdiv(struct snd_soc_dai *dai,
+				  struct asoc_simple_dai *simple_dai)
+{
+	if (!simple_dai->clk_div_set)
+		return 0;
+
+	return snd_soc_dai_set_clkdiv(dai,
+				      simple_dai->clk_div_id,
+				      simple_dai->clk_div);
+}
+
+static int simple_hw_params(struct snd_pcm_substream *substream,
+			    struct snd_pcm_hw_params *params)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
+	struct simple_priv *priv = snd_soc_card_get_drvdata(rtd->card);
+	struct simple_dai_props *dai_props =
+		simple_priv_to_props(priv, rtd->num);
+	unsigned int mclk, mclk_fs = 0;
+	int ret = 0;
+
+	if (dai_props->mclk_fs)
+		mclk_fs = dai_props->mclk_fs;
+
+	if (mclk_fs) {
+		mclk = params_rate(params) * mclk_fs;
+>>>>>>> sound: soc: simple-card: add clk_div support
+
+	ret = asoc_simple_set_clkdiv(codec_dai, dai_props->codec_dai);
+	if (ret < 0)
+		return ret;
+
+	ret = asoc_simple_set_clkdiv(cpu_dai, dai_props->cpu_dai);
+	if (ret < 0)
+		return ret;
+	return 0;
+err:
+	return ret;
+}
+#endif
+
 static void simple_parse_convert(struct device *dev,
 				 struct device_node *np,
 				 struct simple_util_data *adata)

@@ -1065,6 +1065,7 @@
 			format = "i2s";
 			cpu {
 				sound-dai = <&mcbsp1>;
+				clkdiv = <0 37>;
 			};
 			codec {
 				sound-dai = <&si4721_codec>;

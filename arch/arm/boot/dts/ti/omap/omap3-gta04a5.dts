@@ -143,6 +143,10 @@
 	enable-gpios = <&gpio5 9 GPIO_ACTIVE_HIGH>;	/* GPIO_137 */
 };
 
+&w2cbw003_codec {
+	compatible = "ti,wl1837-codec";
+};
+
 &i2c2 {
 	/delete-node/ bmp085@77;
 	/delete-node/ bma180@41;

@@ -87,8 +87,10 @@ static int gtm601_platform_probe(struct platform_device *pdev)
 }
 
 static const struct of_device_id gtm601_codec_of_match[] __maybe_unused = {
-	{ .compatible = "option,gtm601", .data = (void *)&gtm601_dai },
+	{ .compatible = "option,gtm601", .data = (void *)&gtm601_dai },	/* AT_OPCMENABLE=1; AT_OPCMPROF=0; AT+VIP=0 */
 	{ .compatible = "broadmobi,bm818", .data = (void *)&bm818_dai },
+	{ .compatible = "gemalto,phs8", .data = (void *)&gtm601_dai, },
+	{ .compatible = "gemalto,pls8", .data = (void *)&gtm601_dai, },	/* AT^SAIC=3,1,1,0,1,0,1,0 (tbc.) */
 	{},
 };
 MODULE_DEVICE_TABLE(of, gtm601_codec_of_match);

@@ -70,11 +70,11 @@ do
 			echo "ATA" >>/tmp/femtocom
 			FILE=/tmp/$(date "+%Y%m%d%H%M%S")
 			echo "*** CALL accepted, now recording to $FILE ***"
-			# arecord -fS16_LE -r8000 | aplay -Ddefault:CARD=voice &	# microphone -> modem
+			# arecord -fS16_LE -r8000 | aplay -Ddefault:CARD=Telephony &	# microphone -> modem
 			## FIXME: we may have to reduce the sampling rate to -r8000
-			cat $MESSAGE | aplay -Ddefault:CARD=voice &	# play announcement file to modem
-			# arecord -Ddefault:CARD=voice -fS16_LE -r8000 | aplay	# modem -> earpiece, speaker, headset
-			arecord -Ddefault:CARD=voice -fS16_LE -r8000 >$FILE 2>/dev/null	# modem ->file
+			cat $MESSAGE | aplay -Ddefault:CARD=Telephony &	# play announcement file to modem
+			# arecord -Ddefault:CARD=Telephony -fS16_LE -r8000 | aplay	# modem -> earpiece, speaker, headset
+			arecord -Ddefault:CARD=Telephony -fS16_LE -r8000 >$FILE 2>/dev/null	# modem ->file
 			echo "*** CALL recording ended ***"
 			;;
 	esac

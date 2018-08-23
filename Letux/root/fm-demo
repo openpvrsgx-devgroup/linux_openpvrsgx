@@ -29,7 +29,7 @@ echo ./si4721 -t $(python -c "print '%.0f' % ($FREQ*100)")
 sleep 1
 ./si4721 -ts
 # start PCM (incl. clocks)
-arecord -Ddefault:CARD=gta04fm -c2 -fS16_LE -r48000 | tee radio.wav | aplay&	# receiver -> earpiece / speaker / headset
+arecord -Ddefault:CARD=Tuner -c2 -fS16_LE -r48000 | tee radio.wav | aplay&	# receiver -> earpiece / speaker / headset
 # arecord -fS16_LE -c2 -r48000 | aplay -Dhw:4,0 &	# microphone -> transmitter
 # set sample rate (32 .. 48 kHz)
 ./si4721 -r 48000

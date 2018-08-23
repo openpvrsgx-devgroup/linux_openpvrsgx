@@ -137,8 +137,8 @@ function turnoff {
 			echo "ATD$NUMBER;"; sleep 1	# make voice call (the ; is important)
 			if [ "$MODE" = "-sw" ]
 			then
-				arecord -fS16_LE -r8000 | aplay -Ddefault:CARD=voice &	# microphone -> modem
-				arecord -Ddefault:CARD=voice -fS16_LE -r8000 | aplay	# modem -> earpiece, speaker, headset
+				arecord -fS16_LE -r8000 | aplay -Ddefault:CARD=Telephony &	# microphone -> modem
+				arecord -Ddefault:CARD=Telephony -fS16_LE -r8000 | aplay	# modem -> earpiece, speaker, headset
 			else
 				echo "please ctl-C to end the call" >&2
 				arecord -fS16_LE -r8000 >/dev/null	# enable micbias
@@ -165,8 +165,8 @@ function turnoff {
 			echo "ATD$NUMBER;"; sleep 1
 			if [ "$MODE" = "-sw" ]
 			then
-				arecord -fS16_LE -r8000 | aplay -Ddefault:CARD=voice &	# microphone -> modem
-				arecord -Ddefault:CARD=voice -fS16_LE -r8000 | aplay	# modem -> earpiece, speaker, headset
+				arecord -fS16_LE -r8000 | aplay -Ddefault:CARD=Telephony &	# microphone -> modem
+				arecord -Ddefault:CARD=Telephony -fS16_LE -r8000 | aplay	# modem -> earpiece, speaker, headset
 			else
 				echo "please ctl-C to end the call" >&2
 				arecord -fS16_LE -r8000 >/dev/null	# enable micbias

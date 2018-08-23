@@ -85,7 +85,9 @@ static int w2cbw003_platform_probe(struct platform_device *pdev)
 }
 
 static const struct of_device_id w2cbw003_component_of_match[] = {
-	{ .compatible = "w2cbw003-codec", },
+	{ .compatible = "wi2wi,w2cbw003-codec", },
+	{ .compatible = "ti,wl1835-codec", },
+	{ .compatible = "ti,wl1837-codec", },
 	{},
 };
 MODULE_DEVICE_TABLE(of, w2cbw003_component_of_match);

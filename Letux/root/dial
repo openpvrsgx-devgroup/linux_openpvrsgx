@@ -6,14 +6,16 @@
 #   -hs:	enable headset
 #   -hw:	use hardware voice routing (GTA04A4++ only)
 #   -sw:	use software routing (arecord | aplay) [default]
+#
 # to hang up: dial -
 #
-# to unlock with pin, use the ./pin script
+# to unlock with pin, use the /root/pin script
+#
 
 IF="$(/root/wwan-on)"
 
 MODE="-sw"	# default
-HANDSFREE=false
+HANDSFREE=-nhf
 HEADSET=false
 
 while true
@@ -23,7 +25,7 @@ do
 			MODE="$1"
 			shift
 			;;
-		-hf )	HANDSFREE=true
+		-hf )	HANDSFREE=
 			shift
 			;;
 		-hs )	HEADSET=true
@@ -47,55 +49,14 @@ case "$IF" in
 function turnoff {
 	killall arecord
 	killall arecord aplay
-	amixer set 'Voice PCM Out' off
-	amixer set 'Voice PCM Interface' 'inactive'
-	amixer set 'Earpiece Mixer Voice' off
-	amixer set 'HeadsetL Mixer Voice' off
-	amixer set 'HeadsetR Mixer Voice' off
 	(echo "AT+CHUP"; sleep 1) | /root/femtocom $IF
 }
 		trap "turnoff" EXIT
 		trap "exit 1" SIGHUP SIGINT SIGTERM
 
-		# enable phone mixer
-		amixer set 'Voice PCM Interface' 'inactive'
-		amixer set 'Voice PCM Out' off
-		amixer set 'AVADC Clock Priority' 'HiFi high priority'
-		amixer set 'DAC1 Analog' off
-		amixer set 'DAC2 Analog' on
-		#amixer set 'Codec Operation Mode' 'Option 1 (audio)'
-		amixer set 'Codec Operation Mode' 'Option 2 (voice/audio)'
-		amixer set 'Earpiece Mixer Voice' off
-		amixer set Earpiece 30%
-		amixer set 'Earpiece Mixer AudioL1' off
-		amixer set 'Earpiece Mixer AudioL2' on
-		amixer set 'Earpiece Mixer AudioR1' off
-		#amixer set 'Earpiece Mixer AudioR2' off # does not exist
-		amixer set 'Analog' 5
-		amixer set TX1 'Analog'
-		amixer set 'TX1 Digital' 12
-		amixer set 'Analog Left AUXL' nocap
-		amixer set 'Analog Right AUXR' nocap
-		amixer set 'Analog Left Main Mic' cap
-		amixer set 'HeadsetL Mixer AudioL1' off
-		amixer set 'HeadsetL Mixer AudioL2' off
-		amixer set 'HeadsetR Mixer AudioR1' off
-		amixer set 'HeadsetR Mixer AudioR2' off
-
-		if $HANDSFREE
-		then
-			amixer set 'HandsfreeL Mux' AudioL2
-			amixer set 'HandsfreeR Mux' AudioR2
-			amixer set HandsfreeL on
-			amixer set HandsfreeR on
-		else
-			amixer set HandsfreeL off
-			amixer set HandsfreeR off
-		fi
-
 		if $HEADSET
 		then
-			./tvout 0	# disable tvout
+			/root/tvout 0	# disable tvout
 			amixer set 'Analog Left Main Mic' nocap
 			amixer set 'Analog Left Headset Mic' cap
 		else
@@ -126,7 +87,7 @@ function turnoff {
 			echo "AT+CHUP"; sleep 3
 			amixer set 'Voice PCM Out' off
 		else
-			#echo "AT+CPIN=XXXX"; sleep 1	# use the ./pin script to unlock the SIM card
+			#echo "AT+CPIN=XXXX"; sleep 1	# use the /root/pin script to unlock the SIM card
 			echo "AT_ODO=0"; sleep 1
 			echo "AT_OPCMENABLE=1"; sleep 1
 			echo "AT_OPCMPROF=0"; sleep 1	# handset profile
@@ -138,7 +99,7 @@ function turnoff {
 			if [ "$MODE" = "-sw" ]
 			then
 				arecord -fS16_LE -r8000 | aplay -Ddefault:CARD=Telephony &	# microphone -> modem
-				arecord -Ddefault:CARD=Telephony -fS16_LE -r8000 | aplay	# modem -> earpiece, speaker, headset
+				arecord -Ddefault:CARD=Telephony -fS16_LE -r8000 | /root/twl $HANDSFREE -stdin	# modem -> earpiece, speaker, headset
 			else
 				echo "please ctl-C to end the call" >&2
 				arecord -fS16_LE -r8000 >/dev/null	# enable micbias
@@ -150,23 +111,20 @@ function turnoff {
 
 	/dev/ttyACM[0-4] | /dev/ttyUSB[0-4] )	# Neo900 / Pyra
 
-		# FIXME: set up voice PCM by programming twl4030/6040
-
 		(
 		if [ "$NUMBER" == "-" ]
 		then
 			echo "AT+CHUP"; sleep 3
 		else
-			#echo "AT+CPIN=XXXX"; sleep 1	# use the ./pin script to unlock the SIM card
-
-			# FIXME: set up commands to use PCM interface of PHS8/PLS8
+			#echo "AT+CPIN=XXXX"; sleep 1	# use the /root/pin script to unlock the SIM card
 
 			echo "AT+COPS"; sleep 1
-			echo "ATD$NUMBER;"; sleep 1
+			echo "AT^SAIC=3,1,1,0,1,0,1,0"; sleep 1
+			echo "ATD$NUMBER;"; sleep 1	# make voice call (the ; is important)
 			if [ "$MODE" = "-sw" ]
 			then
 				arecord -fS16_LE -r8000 | aplay -Ddefault:CARD=Telephony &	# microphone -> modem
-				arecord -Ddefault:CARD=Telephony -fS16_LE -r8000 | aplay	# modem -> earpiece, speaker, headset
+				arecord -Ddefault:CARD=Telephony -fS16_LE -r8000 | /root/twl $HANDSFREE -stdin	# modem -> earpiece, speaker, headset
 			else
 				echo "please ctl-C to end the call" >&2
 				arecord -fS16_LE -r8000 >/dev/null	# enable micbias

@@ -125,6 +125,7 @@
 		ti,mcpdm = <&mcpdm>;
 		ti,mcbsp1 = <&mcbsp1>;
 		ti,mcbsp2 = <&mcbsp2>;
+		ti,mcbsp3 = <&mcbsp3>;
 
 		ti,twl6040 = <&twl6040>;
 		ti,aess = <&aess>;

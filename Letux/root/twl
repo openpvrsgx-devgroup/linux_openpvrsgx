@@ -1,5 +1,5 @@
 #
-# /root/twl6040: demo for twl6040 sound
+# /root/twl: demo for twl4030 and twl6040 sound
 #
 
 trap "killall volumed 2>/dev/null" EXIT
@@ -7,7 +7,7 @@ trap "exit 1" SIGHUP SIGINT SIGTERM
 
 [ -x /usr/bin/sox ] || apt-get install sox libsox-fmt-mp3
 
-FILE=somefile.mp3	# please provide yourself
+FILE=somefile.mp3	# please provide default file yourself
 
 [ -r /sys/firmware/devicetree/base/sound/ti,twl6040 ] || NOVOLUMED=yes
 
@@ -61,6 +61,8 @@ if [ -r /sys/firmware/devicetree/base/sound/ti,twl6040 ]
 then
 
 echo "TWL6040 (Pandaboard, OMAP5432EVM, Pyra, ...)"
+CARD=L15	# no idea where this "L15" is defined in the kernel
+		# but this is what aplay -L reports
 
 amixer -q set "Aux FM" 0% || exit
 amixer -q set "Capture" 100% || exit
@@ -119,6 +121,7 @@ REMIX_STEREO="remix 1 2 1 2"
 else
 
 echo "TWL4030 (GTA04, ...)"
+CARD=gta04
 
 amixer -q set "AVADC Clock Priority" "HiFi high priority" || exit
 amixer -q set "DAC1 Analog" off || exit
@@ -166,9 +169,9 @@ fi
 
 if [ "$DEMO" ] # demo
 then
-	aplay -q /usr/share/sounds/alsa/*.wav
+	aplay -Ddefault:CARD=$CARD -q /usr/share/sounds/alsa/*.wav
 	# play chirp sound on all 4 channels
-	sox -c 4 -n -t wav - synth 10 sine 10-100 | aplay
+	sox -c 4 -n -t wav - synth 10 sine 10-100 | aplay -Ddefault:CARD=$CARD
 	# remix for Pandaboard/OMAP5 stereo
 	play /usr/share/sounds/alsa/Front_Center.wav $REMIX_MONO
 	# headset only

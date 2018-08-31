@@ -325,6 +325,20 @@ static void dwc3_otg_device_exit(struct dwc3 *dwc)
 	dwc3_writel(dwc->regs, DWC3_OCTL, reg);
 }
 
+static char * otg_role_string(int role)
+{
+	switch (role) {
+	case DWC3_OTG_ROLE_IDLE:
+		return "idle";
+	case DWC3_OTG_ROLE_DEVICE:
+		return "device";
+	case DWC3_OTG_ROLE_HOST:
+		return "host";
+	default:
+		return "invalid";
+	}
+}
+
 void dwc3_otg_update(struct dwc3 *dwc, bool ignore_idstatus)
 {
 	int ret;
@@ -371,6 +385,8 @@ void dwc3_otg_update(struct dwc3 *dwc, bool ignore_idstatus)
 
 	spin_lock_irqsave(&dwc->lock, flags);
 
+	dev_info(dwc->dev, "otg: %s->%s\n", otg_role_string(dwc->current_otg_role),
+		 otg_role_string(dwc->desired_otg_role));
 	dwc->current_otg_role = dwc->desired_otg_role;
 
 	spin_unlock_irqrestore(&dwc->lock, flags);

@@ -629,6 +629,7 @@ static int aess_load_config(struct snd_soc_platform *platform,
 
 /* callback to handle vendor data */
 static int aess_vendor_load(struct snd_soc_component *component,
+			    int index,
 			    struct snd_soc_tplg_hdr *hdr)
 {
 	struct snd_soc_platform *platform = snd_soc_component_to_platform(component);

@@ -48,24 +48,10 @@ then # summary only
 fi
 
 CURRENTBRANCH=$1
-CURRENTLINUS=$2
+[ "$1" ] || CURRENTBRANCH=$(git rev-parse --abbrev-ref HEAD)
 
-[ "$1" ] || CURRENTBRANCH=$(git branch | fgrep '* ' | sed 's/\* //')
-CBRANCH=$(echo $CURRENTBRANCH | sed 's/letux-//')
-
-case "$CBRANCH" in
-	base )
-		VERSION=$(git log -1 -E --grep="^Merge tag 'v[0-9].[0-9]" --format=oneline HEAD | sed "s|.*Merge tag 'v\(.*\)' into .*|\1|g")
-		CURRENTLINUS=v$VERSION
-# echo $CBRANCH $VERSION $CURRENTLINUS
-		;;
-	4.0 )
-		[ "$2" ] || CURRENTLINUS=v$CBRANCH
-		;;
-	* )
-		[ "$2" ] || CURRENTLINUS=$(echo v$CBRANCH | sed 's/\.0$//')	# strip off .0 from 3.14.0 for Linus tag conventions
-		;;
-esac
+CURRENTLINUS=v$(make kernelversion)
+CURRENTLINUS=${CURRENTLINUS%.0}	# convert 4.18.0 to v4.18
 
 COUNT=0
 

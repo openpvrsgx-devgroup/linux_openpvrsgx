@@ -1368,8 +1368,8 @@ static int if_sdio_resume(struct device *dev)
 }
 
 static const struct dev_pm_ops if_sdio_pm_ops = {
-	.suspend	= NULL /*if_sdio_suspend*/,
-	.resume		= NULL /*if_sdio_resume*/,
+	.suspend	= if_sdio_suspend,
+	.resume		= if_sdio_resume,
 };
 
 static struct sdio_driver if_sdio_driver = {

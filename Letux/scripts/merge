@@ -33,7 +33,6 @@
 PUSH=false
 SEQUENTIAL=false
 BASE=letux-base
-HARD=false
 REBASE=false
 MF=true
 WHITESPACE=
@@ -46,7 +45,6 @@ function usage {
 	echo "  -s	sequential merge"
 	echo "  -p	push --force all branches to 'origin'"
 	echo "  -nmf	ignore mergefile"
-	echo "  --hard	hard update to remote version"
 	echo "  -b base	specify base commit"
 	echo "  --	separate options from branches"
 	echo "	branch	branch to merge in addition to mergefile; if starting with - remove from mergefile"
@@ -63,7 +61,6 @@ do
 		-w ) WHITESPACE=--whitespace=fix; REBASE=true; SEQUENTIAL=true; shift ;;
 		-b ) shift; BASE="$1"; shift ;;
 		-nmf ) shift; MF=false; shift ;;
-		--hard ) HARD=true; shift ;;
 		-- ) shift; break ;;
 		-* ) echo "unknown option $1"; usage; exit 1 ;;
 		* ) break;
@@ -77,6 +74,8 @@ then
 	exit 1
 fi
 
+git remote update origin	## someone may have updated a remote feature branch
+
 BRANCHES=""
 
 function latestforbranch {
@@ -88,6 +87,27 @@ function linuxversion {
 # echo linuxversion $1 >&2
 	# extract Linux version from given base branch $1
 	git log -1 -E --grep="^Linux [^0-9]*[0-9].[0-9]+[-.0-9rc]*" $1 | egrep "Linux [^0-9]*[0-9].[0-9]*" | sed "s|.*Linux [^0-9]*||g"
+}
+
+function commitdate { # commit date of branch $1 as timestamp
+	git log -1 --format=%ct "$1" 2>/dev/null	# return empty string for non-existing branch
+}
+
+function pushbranch { # if enabled, push and archive branch
+	REMOTE=$(commitdate "origin/$1")
+	LOCAL=$(commitdate "$1")
+# echo $1: REMOTE $REMOTE vs. LOCAL $LOCAL
+	if [ "$REMOTE" ] && [ "$REMOTE" -gt "$LOCAL" ]
+	then
+		echo "*** origin/$1 is newer than local copy - merge/update first ***"
+		exit 1
+	fi
+	if $PUSH && [ "$REMOTE" != "$LOCAL" ]
+	then
+		echo "*** pushing newer $1 to overwrite older origin/$1 ***"
+		git push --force origin "$1:$1" || exit	# update branch on public server
+		git branch -f "archive/$OUTPUT/$1" "$1" 	# save a copy in the archive
+	fi
 }
 
 function process {
@@ -113,11 +133,7 @@ function process {
 					git merge --no-ff --no-edit $BRANCHES || exit	# try to merge all
 					BRANCHES=""
 				fi
-				if $PUSH
-				then
-					echo "*** pushing $OUTPUT to origin ***"
-					git push --force origin $OUTPUT:$OUTPUT || exit	# update branch on public server
-				fi
+				pushbranch "$OUTPUT"
 				echo "*** creating $NEWOUTPUT from $OUTPUT ***"
 				git checkout -B "$NEWOUTPUT" "$OUTPUT"	# make a copy
 			else
@@ -127,7 +143,6 @@ function process {
 			fi
 			LASTBASE="$OUTPUT"	# remember current "base" for next rebase
 			OUTPUT="$NEWOUTPUT"
-			$PUSH && git branch -f "archive/$OUTPUT/$LASTBASE" "$LASTBASE" 	# save a copy in the archive
 			return
 			;;			
 		'>'* )	# switch to new "base"
@@ -141,17 +156,12 @@ function process {
 					git merge --no-ff --no-edit $BRANCHES || exit	# try to merge all
 					BRANCHES=""
 				fi
-				if $PUSH
-				then
-					echo "*** pushing $OUTPUT to origin ***"
-					git push --force origin $OUTPUT:$OUTPUT || exit	# update branch on public server
-				fi
+				pushbranch "$OUTPUT"
 				echo "*** creating $NEWOUTPUT from $OUTPUT ***"
 				git checkout -B "$NEWOUTPUT" "$OUTPUT"	# make a copy
 			fi
 			LASTBASE="$OUTPUT"	# remember current "base" for next rebase
 			OUTPUT="$NEWOUTPUT"
-			$PUSH && git branch -f "archive/$OUTPUT/$LASTBASE" "$LASTBASE" 	# save a copy in the archive
 			return
 			;;
 		'<'* )	# checkout some base branch
@@ -164,11 +174,7 @@ function process {
 				git checkout "${FEATURE:1}"
 			fi
 			LASTBASE="${FEATURE:1}"	# remember current "base" for next rebase
-			if $PUSH
-			then
-				echo "*** pushing $LASTBASE to origin ***"
-				git push --force origin $LASTBASE:$LASTBASE || exit	# update branch on public server
-			fi
+			pushbranch "$LASTBASE"
 			return
 			;;
 		'-'* )	# strip off "-"
@@ -205,12 +211,23 @@ function process {
 			exit 1
 		fi
 	fi
-	if ! $HIDDEN && $HARD
+	if ! $HIDDEN
 	then
-		echo "*** resetting $FEATURE to origin/$FEATURE ***"
-		# this throws away local commits!
-		git checkout --force $FEATURE || exit
-		git reset --hard origin/$FEATURE || exit
+		REMOTE=$(commitdate "origin/$FEATURE")
+		LOCAL=$(commitdate "$FEATURE")
+# echo $FEATURE: REMOTE $REMOTE vs. LOCAL $LOCAL
+		if [ "$REMOTE" -a "$REMOTE" -gt "$LOCAL" ]
+		then
+			echo "*** origin/$FEATURE is newer than local copy - merge/update first ***"
+echo please run:	git branch -f $FEATURE origin/$FEATURE
+			exit 1
+			echo "*** resetting $FEATURE to origin/$FEATURE ***"
+			# this throws away local commits!
+			git checkout --force $FEATURE || exit
+			git reset --hard origin/$FEATURE || exit
+			# alternative
+			git branch -f $FEATURE origin/$FEATURE || exit
+		fi
 	fi
 	if $REBASE	# even if hidden
 	then
@@ -219,23 +236,23 @@ function process {
 			echo "*** don't know on what to rebase ***"
 			exit
 		fi
-		git checkout "$FEATURE" || exit
-		# now rebase
-		echo "*** rebasing $FEATURE onto $LASTBASE ***"
+		if git merge-base --is-ancestor "$LASTBASE" "$FEATURE"
+		then
+			echo "*** $FEATURE already based on $LASTBASE ***"
+		else
+			git checkout "$FEATURE" || exit
+			# now rebase
+			echo "*** rebasing $FEATURE onto $LASTBASE ***"
 # strategy recursive macht Probleme und macht quasi cherry-pick für jeden einzelnen...
 #		git rebase --strategy=recursive -X theirs --whitespace=fix "$LASTBASE" || exit
 #
 # define and export $ONTO to roll back to an earlier base
 # e.g. ONTO="--onto v4.16" ./merge -r -nos
 
-		git rebase $ONTO $WHITESPACE "$LASTBASE" || exit
+			git rebase $ONTO $WHITESPACE "$LASTBASE" || exit
+		fi
 	fi
-	if $PUSH	# even if hidden (use # to completely remove)
-	then
-		echo "*** pushing $FEATURE to origin ***"
-		git push --force origin $FEATURE:$FEATURE || exit	# update branch on public server
-		git branch -f "archive/$OUTPUT/$FEATURE" "$FEATURE" 	# save a copy in the archive
-	fi
+	pushbranch "$FEATURE"		# even if hidden (use # to completely remove)
 	if ! $HIDDEN
 	then
 		BRANCHES="$BRANCHES $FEATURE"	# collect for octopus
@@ -305,7 +322,6 @@ then # octopus of last set of branches
 	git merge --no-ff --no-edit $BRANCHES || exit	# try to merge all
 fi
 
-$PUSH && echo "*** pushing $OUTPUT to remote ***"
-$PUSH && { git push --force origin $OUTPUT || exit; }	# update letux-$VERSION on public server
+pushbranch "$OUTPUT"	# update letux-$VERSION on public server
 
 echo "*** switched to $(git branch | fgrep '* ' | cut -c 3-) ***"

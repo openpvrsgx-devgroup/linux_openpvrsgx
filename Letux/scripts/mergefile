@@ -45,9 +45,10 @@ work/letux-base/dss-bindings
 
 # Device Trees for Letux devices
 work/letux-base/dt-makefile
-work/letux-base/dt-gta04
-work/letux-base/dt-gta04-common
-work/letux-base/dt-gta04a5
+work/hns/dt-upstreaming	# replaces the 3 following branches
+-work/letux-base/dt-gta04
+-work/letux-base/dt-gta04-common
+-work/letux-base/dt-gta04a5
 work/letux-base/dt-gta04b234
 work/letux-base/dt-beagle
 work/letux-base/dt-evm-pyra
@@ -102,6 +103,7 @@ work/letux-base/marek/am335x-hwmon
 work/letux-base/codecs-for-gta04
 work/letux-base/sound-for-gta04
 work/letux-base/hns/codec/twl4030
+work/letux-base/kemnade/sound-soc
 
 # Pyra sound
 work/hns/aess
@@ -135,7 +137,6 @@ work/letux-base/drivers-keyboard
 work/letux-base/mvduin/patch/tiler-fbdev
 
 # not merged in by default, but carried along and regularily rebased
--work/hns/dt-upstreaming
 -work/letux-base/marek/upstream-queue
 -work/letux-base/extern/omap5-idle
 -work/letux-base/extern/omap-hsmmc

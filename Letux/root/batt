@@ -3,11 +3,12 @@ DURATION="$1"
 
 ## check DT model
 
-# GTA04
-TWL4030_MADC=$(/root/findiio "48070000.i2c:twl@48:madc")	# OMAP3
+# GTA04 defaults
+TWL4030_MADC=$(/root/findiio "48070000.i2c:twl@48:madc")	 # OMAP3
 CHARGER=/sys/class/power_supply/twl4030_usb
 BATTERY=/sys/class/power_supply/bq27000-battery
-# Pyra
+# alternatives
+TWL6037_GPADC=$(/root/findiio "palmas-gpadc")   # OMAP5
 [ -r "$CHARGER" ] || CHARGER=/sys/class/power_supply/bq24297
 [ -r "$BATTERY" ] || BATTERY=/sys/class/power_supply/bq27621-0
 [ -r "$BATTERY" ] || BATTERY=/sys/class/power_supply/bq27421-0
@@ -15,23 +16,40 @@ BATTERY=/sys/class/power_supply/bq27000-battery
 
 while true
 do
-	VBUS=$(cat $TWL4030_MADC/in_voltage8_input 2>/dev/null)
-	VCHG=$(cat $TWL4030_MADC/in_voltage11_input 2>/dev/null)
+	# system ADCs (report mV)
+	if [ -r "$TWL6037_GPADC" ]
+	then
+		VBUS=$(cat $TWL6037_GPADC/in_voltage10_input 2>/dev/null)
+		VSYS=$(cat $TWL6037_GPADC/in_voltage7_input 2>/dev/null)
+		VBAT=$(cat $TWL6037_GPADC/in_voltage6_input 2>/dev/null)
+		TEMP=$(cat $TWL6037_GPADC/in_temp1_input 2>/dev/null)
+		IDPIN=$(cat $TWL6037_GPADC/in_voltage14_input 2>/dev/null)mV
+	else
+		VBUS=$(cat $TWL4030_MADC/in_voltage8_input 2>/dev/null)
+		VCHG=$(cat $TWL4030_MADC/in_voltage11_input 2>/dev/null)
+		VBAT=$(cat $TWL4030_MADC/in_voltage12_input 2>/dev/null)
+		VSYS="$VBAT"
+		ICHG=$(cat $TWL4030_MADC/in_current10_input 2>/dev/null)
+		TEMP=$(cat $TWL4030_MADC/in_temp1_input 2>/dev/null)
+		IDPIN=$(cat /dev/usb_id 2>/dev/null)
+	fi
+	[ "$VBAT" ] && CHG=$(expr \( "$VBAT" - 3200 \) \* 100 / 1050)	# estimate from VBAT
+
+	# charger
 	CHGVOLT=$(cat $CHARGER/voltage_now 2>/dev/null)
 	[ "$CHGVOLT" ] && CHGVOLT=$(expr "$CHGVOLT" / 1000)
-	VBAT=$(cat $TWL4030_MADC/in_voltage12_input 2>/dev/null)
+	STATUS=$(cat $CHARGER/status 2>/dev/null)
+
+	# fuel gauge (reports µV)
 	BQVBAT=$(cat $BATTERY/voltage_now 2>/dev/null)
-	[ "$BQVBAT" ] && BQVBAT=$(expr "$BQVBAT" / 1000)
-	[ "$VBAT" ] && CHG=$(expr \( "$VBAT" - 3200 \) \* 100 / 1050)
 	BQCHG=$(cat $BATTERY/capacity 2>/dev/null)
-	TEMP=$(cat $TWL4030_MADC/in_temp1_input 2>/dev/null)
 	BQTEMP=$(cat $BATTERY/temp 2>/dev/null)
-	IDPIN=$(cat /dev/usb_id 2>/dev/null)
-	[ "$BQTEMP" ] && BQTEMP=$(expr "$BQTEMP" / 10)
-	ICHG=$(cat $TWL4030_MADC/in_current10_input 2>/dev/null)
 	BQCICHG=$(cat $BATTERY/current_now 2>/dev/null)
+	[ "$BQVBAT" ] && BQVBAT=$(expr "$BQVBAT" / 1000)
 	[ "$BQCICHG" ] && BQCICHG=$(expr "$BQCICHG" / 1000)
-	echo "$(date) - ${VBUS}/${CHGVOLT}/${VBAT}/${BQVBAT}/${VCHG}mV - ${CHG}/${BQCHG}% - ${TEMP}/${BQTEMP}C - ${ICHG}/${BQCICHG}mA - ${IDPIN}" | tee -a battlog
+	[ "$BQTEMP" ] && BQTEMP=$(expr "$BQTEMP" / 10)
+
+	echo "$(date) - ${VBUS}/${CHGVOLT}/${VBAT}/${BQVBAT}/${VCHG}mV - ${CHG}/${BQCHG}% - ${VSYS}mV - ${TEMP}/${BQTEMP}C - ${ICHG}/${BQCICHG}mA - ${IDPIN}" | tee -a battlog
 	sync
 	sleep $DURATION
 done

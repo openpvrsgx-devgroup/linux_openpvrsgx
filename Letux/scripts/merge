@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Letux/scripts/merge [ -s -p -r -u -w -nmf ] [ -b base ] { [-]branches... }
+# Letux/scripts/merge [ -s -p -r -u -w ] [ -f mergefile ] [ -b base ] { [-]branches... }
 #
 # merge Letux feature branches on top of the base branch
 #
@@ -24,7 +24,7 @@
 #  -p		push --force all branches to 'origin' and archive in separate branch
 #  -r		rebase branches before merge (implies -s)
 #  -u		upload result
-#  -nmf		no mergefile (ignore)
+#  -f file	use this as mergefile (default: Letux/scripts/mergefile) - use -f '' to ignore
 #  -w		fix whitespace on rebase (implies -s -r)
 #
 # Author: <hns@goldelico.com>
@@ -34,7 +34,7 @@ PUSH=false
 SEQUENTIAL=false
 BASE=letux-base
 REBASE=false
-MF=true
+MERGEFILE=Letux/scripts/mergefile
 WHITESPACE=
 
 OUTPUT=""
@@ -44,7 +44,8 @@ function usage {
 	echo "usage: $0 [ -s ] [ -p ] { branches...}"
 	echo "  -s	sequential merge"
 	echo "  -p	push --force all branches to 'origin'"
-	echo "  -nmf	ignore mergefile"
+	echo "  -f file	use this as mergefile (default: Letux/scripts/mergefile)"
+	echo "  -f ''	use no mergefile"
 	echo "  -b base	specify base commit"
 	echo "  --	separate options from branches"
 	echo "	branch	branch to merge in addition to mergefile; if starting with - remove from mergefile"
@@ -60,7 +61,7 @@ do
 		-nos ) SEQUENTIAL=false; shift ;;
 		-w ) WHITESPACE=--whitespace=fix; REBASE=true; SEQUENTIAL=true; shift ;;
 		-b ) shift; BASE="$1"; shift ;;
-		-nmf ) shift; MF=false; shift ;;
+		-f ) shift; MERGEFILE="$1"; shift ;;
 		-- ) shift; break ;;
 		-* ) echo "unknown option $1"; usage; exit 1 ;;
 		* ) break;
@@ -106,7 +107,10 @@ function pushbranch { # if enabled, push and archive branch
 	then
 		echo "*** pushing newer $1 to overwrite older origin/$1 ***"
 		git push --force origin "$1:$1" || exit	# update branch on public server
-		git branch -f "archive/$OUTPUT/$1" "$1" 	# save a copy in the archive
+		if [ "$OUTPUT" ]
+		then git branch -f "archive/$OUTPUT/$1" "$1" 	# save a copy in the archive
+		else git branch -f "archive/$1" "$1" 	# save a copy in the archive
+		fi
 	fi
 }
 
@@ -270,7 +274,7 @@ echo please run:	git branch -f $FEATURE origin/$FEATURE
 	fi
 }
 
-if $MF
+if [ "$MERGEFILE" ]
 then
 # feature branches provided in mergefile
 while read FEATURE IGNORE
@@ -293,7 +297,7 @@ do
 			process "$FEATURE"
 			;;
 	esac
-done <Letux/scripts/mergefile
+done <"$MERGEFILE"
 fi
 
 # more feature branches provided on command line

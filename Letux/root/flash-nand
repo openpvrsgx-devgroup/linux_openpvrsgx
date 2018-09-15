@@ -5,6 +5,28 @@
 # works only if booted from SD
 #
 
+case "$(tr -d '\0' </proc/device-tree/model)" in
+	*GTA04* )
+		;;
+	*Pyra* | *GTA15* | *LC15* | *"TI OMAP5 uEVM"* )
+		# switch to eMMC
+		./txs e
+		## find out what the eMMC device is
+		DEV=/dev/mmcblk0p
+		mount ${DEV}1 /mnt/mmc0.1
+		mount ${DEV)2 /mnt/mmc0.2
+		# copy uImage and device tree
+		### mount boot partition from SD card
+		# copy rootfs
+		echo not yet done automatically
+		exit
+		;;
+	* )
+		echo unsupported device "$(tr -d '\0' </proc/device-tree/model)"
+		exit 1
+		;;
+esac
+
 # do sanity tests
 # - that the rootfs is not already coming from nand
 # - that boot.scr does not overwrite U-Boot

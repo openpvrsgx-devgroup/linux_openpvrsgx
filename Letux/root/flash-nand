@@ -46,6 +46,29 @@ UIMAGE="/boot/uImage"	# the uImage on the SD card
 
 [ -x /etc/init.d/qtmoko-gta04 ] && /etc/init.d/qtmoko-gta04 stop
 
+function collect {
+echo "cleaning up current rootfs"
+apt-get clean
+apt-get autoclean
+apt-get autoremove
+depmod -a
+
+(
+	echo en_US.UTF-8 UTF-8
+	echo de_DE.UTF-8 UTF-8
+) >/etc/locale.gen
+(
+	echo MANDELETE
+	echo DONTBOTHERNEWLOCALE
+	echo SHOWFREEDSPACE
+	echo en_US.UTF-8 UTF-8
+	echo de_DE.UTF-8 UTF-8
+) >/etc/locale.nopurge
+
+yes | DEBIAN_FRONTEND=noninteractive apt-get install -y localepurge locales
+locale-gen
+localepurge
+
 # copy only modules for the current kernel
 MODULES=$(mkimage -l "$UIMAGE" | fgrep "Image Name:" | sed 's/Image Name: *//' | sed 's/Linux-//')
 
@@ -94,6 +117,7 @@ TAR_SRC+=" --exclude ./usr/share/man/??"
 TAR_SRC+=" --exclude ./usr/share/man/??_*"
 TAR_SRC+=" --exclude ./usr/share/doc"
 TAR_SRC+=" -cf - -C / ."
+}
 
 # check if requested components are available and fit into given space
 
@@ -139,9 +163,10 @@ do
 			fi
 			;;
 		-k )
-			if [ ! -r /boot/uImage ]
+			if [ ! -r "$UIMAGE" ]
 			then
 				echo kernel image missing
+				echo try mount /dev/mmcblk0p1 $(dirname "$UIMAGE")
 				exit 1
 			fi
 			;;
@@ -156,31 +181,11 @@ do
 				exit 1
 			fi
 
+			collect
+
 			NANDSIZE=480
 			read MAJOR MINOR BLOCKS NAME < <(fgrep mtdblock4 /proc/partitions)
 			NANDSIZE=$(expr "$BLOCKS" / 1100)	# sets aside some reserve
-
-			echo "cleaning up current rootfs before copying"
-			apt-get clean
-			apt-get autoclean
-			apt-get autoremove
-			depmod -a
-
-			(
-			echo en_US.UTF-8 UTF-8
-			echo de_DE.UTF-8 UTF-8
-			) >/etc/locale.gen
-			(
-			echo MANDELETE
-			echo DONTBOTHERNEWLOCALE
-			echo SHOWFREEDSPACE
-			echo en_US.UTF-8 UTF-8
-			echo de_DE.UTF-8 UTF-8
-			) >/etc/locale.nopurge
-
-			yes | DEBIAN_FRONTEND=noninteractive apt-get install -y localepurge locales
-			locale-gen
-			localepurge
 
 			read USED PERIOD < <(du -s -m / 2>/dev/null )
 
@@ -261,7 +266,7 @@ do
 
 			UIMAGE="/boot/uImage"	# the uImage on the SD card
 			# we do not use /sys/firmware/fdt because that is "cooked" by booting
-			DTB="$(fw_printenv -n devicetree)"	# hardware dependent device tree blob (if it exists)
+			DTB="$(fw_printenv -n fdtfile)"	# hardware dependent device tree blob (if it exists)
 
 if false
 then
@@ -273,8 +278,8 @@ then
 				ENTRYPOINT=0x$(mkimage -l "$UIMAGE" | fgrep "Entry Point:" | sed 's/Entry Point: *//')
 				ZIMAGE="/tmp/$$-zImage"
 				dd if="$UIMAGE" ibs=64 skip=1 | dd of="$ZIMAGE" ibs=8 skip=1 || exit 1
-				echo appending "/boot/${DTB}.dtb"
-				cat "/boot/${DTB}.dtb" >>"$ZIMAGE" || exit 1
+				echo appending "/boot/${DTB}"
+				cat "/boot/${DTB}" >>"$ZIMAGE" || exit 1
 				UIMAGE="/tmp/$$-uImage" # new UIMAGE file
 				echo repacking into "$UIMAGE"
 				mkimage -A arm -O linux -T kernel -C none -a "$LOADADDRESS" -e "$ENTRYPOINT" -n "$VERSION" -d "$ZIMAGE" "$UIMAGE" || exit 1
@@ -285,8 +290,8 @@ fi
 			nandwrite -p /dev/mtd3 "$UIMAGE" || exit 1
 			if [ "$DTB" ]
 			then
-				echo writing ${DTB}.dtb
-				nandwrite -p /dev/mtd3 -s 0x5c0000 "/boot/${DTB}.dtb" || exit 1
+				echo writing ${DTB}
+				nandwrite -p /dev/mtd3 -s 0x5c0000 "/boot/${DTB}" || exit 1
 			fi
 			;;
 
@@ -330,6 +335,8 @@ fi
 			;;
 
 		-u ) echo flashing Rootfs as UBIFS
+
+			[ "$THEMODULES" ] || collect
 
 			if fgrep -q 'root=/dev/mtdblock4' /proc/cmdline
 			then

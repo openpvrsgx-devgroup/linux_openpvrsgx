@@ -59,9 +59,9 @@ printk("%s: return '%s'\n", __func__, gpiod_get_value_cansleep(wwan->feedback_gp
 		printk("%s: USB phy event %d\n", __func__, wwan->usb_phy->last_event);
 		/* check with PHY if available */
 	}
-	if (IS_ERR_OR_NULL(wwan->feedback_gpio)) {
+	if (IS_ERR_OR_NULL(wwan->on_off_gpio)) {
 #ifdef DEBUG
-printk("%s: in-off invalid\n", __func__);
+printk("%s: on-off invalid\n", __func__);
 printk("%s: return 'true'\n", __func__);
 #endif
 		return true;	/* we can't even control power, assume it is on */
@@ -104,7 +104,7 @@ static void wwan_on_off_set_power(struct wwan_on_off *wwan, bool on)
 #ifdef DEBUG
 		printk("%s: send impulse\n", __func__);
 #endif
-		// use gpiolib to generate impulse
+		// could use gpiolib to generate impulse
 		gpiod_set_value_cansleep(wwan->on_off_gpio, 1);
 		// FIXME: check feedback_gpio for early end of impulse
 		msleep(200);	/* wait 200 ms */
@@ -164,7 +164,7 @@ static int wwan_on_off_probe(struct platform_device *pdev)
 
 	wwan->on_off_gpio = devm_gpiod_get_index(&pdev->dev,
 						   "on-off", 0,
-						   GPIOD_OUT_HIGH);
+						   GPIOD_OUT_LOW);
 	if (IS_ERR_OR_NULL(wwan->on_off_gpio)) {
 		/* defer until we have the gpio */
 		if (PTR_ERR(wwan->on_off_gpio) == -EPROBE_DEFER)

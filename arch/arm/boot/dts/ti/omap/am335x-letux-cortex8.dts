@@ -374,4 +374,34 @@
 			BONE_P9_27 (PIN_OUTPUT_PULLUP | MUX_MODE7)
 		>;
 	};
+
+	i2c1_pins: pinmux_i2c1_pins {
+		pinctrl-single,pins = <
+			0x110	(PIN_INPUT_PULLUP | MUX_MODE3)	// I2C1 SCL
+			0x10c	(PIN_INPUT_PULLUP | MUX_MODE3)	// I2C1 SDA
+		>;
+	};
+
+	i2c2_pins: pinmux_i2c2_pins {
+		pinctrl-single,pins = <
+			BONE_P9_21 (PIN_INPUT_PULLUP | MUX_MODE2)	// I2C2 SCL
+			BONE_P9_22 (PIN_INPUT_PULLUP | MUX_MODE2)	// I2C2 SDA
+		>;
+	};
+};
+
+&i2c1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c1_pins>;
+
+	status = "disabled";
+	clock-frequency = <100000>;
+};
+
+&i2c2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c2_pins>;
+
+	status = "disabled";
+	clock-frequency = <400000>;
 };

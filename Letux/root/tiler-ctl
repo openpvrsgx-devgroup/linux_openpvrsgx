@@ -5,7 +5,7 @@
 #
 
 case "$1" in
-	0 )	ROTATION=0;;
+	0 )	ROTATION=1;;
 	90 )	ROTATION=2;;
 	180 )	ROTATION=4;;
 	270 )	ROTATION=8;;

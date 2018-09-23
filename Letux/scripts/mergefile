@@ -46,6 +46,8 @@ work/letux-base/dss-bindings
 # Device Trees for Letux devices
 work/letux-base/dt-makefile
 work/hns/dt-upstreaming	# replaces the 3 following branches
+# rebase them until significant upstream patches are merged to mainline
+# then they should be empty or show remaining diffs we have missed in work/hns/dt-upstreaming
 -work/letux-base/dt-gta04
 -work/letux-base/dt-gta04-common
 -work/letux-base/dt-gta04a5

@@ -144,6 +144,8 @@ echo mode: $(cat $SUPPLY/mode 2>/dev/null)
 echo volt: $(cat $SUPPLY/voltage_now 2>/dev/null)uV
 echo current: $(cat $SUPPLY/current_now 2>/dev/null)uA
 echo max_current: $(cat $SUPPLY/input_current_limit 2>/dev/null)uA
+TEMP=$(cat $SUPPLY/temp 2>/dev/null)
+[ "$TEMP" ] && echo temperature: $(LC_ALL=C LANGUAGE=C perl -e "print ${TEMP}0 / 100")°C
 echo ID: $(cat /dev/usb_id 2>/dev/null)
 echo
 

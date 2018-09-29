@@ -1085,7 +1085,7 @@ void *omap_gem_vaddr(struct drm_gem_object *obj)
 	if (!omap_obj->vaddr) {
 		if (omap_obj->flags & OMAP_BO_TILED) {
 			// FIXME to avoid contiguous mapping?
-			vaddr = ioremap(omap_obj->dma_addr, obj->size);
+			vaddr = omap_obj->vaddr = ioremap(omap_obj->dma_addr, obj->size);
 			goto unlock;
 		}
 		ret = omap_gem_attach_pages(obj);

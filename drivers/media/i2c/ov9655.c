@@ -1400,14 +1400,16 @@ static int ov9655_registered(struct v4l2_subdev *subdev)
 
 	if (data < 0) {
 		dev_err(&client->dev, "OV9655 not detected, can't read manufacturer id\n");
-		return -ENODEV;
+		ret = -ENODEV;
+		goto nodev;
 	}
 
 	if (data != MID_OV) {
 		dev_err(&client->dev,
 			"OV9655 not detected, wrong manufacturer 0x%04x\n",
 			(unsigned int) data);
-		return -ENODEV;
+		ret = -ENODEV;
+		goto nodev;
 	}
 
 	data =  ov9655_read(client, REG_PID);
@@ -1415,7 +1417,8 @@ static int ov9655_registered(struct v4l2_subdev *subdev)
 		dev_err(&client->dev,
 			"OV9655 not detected, wrong part 0x%02x\n",
 			(unsigned int) data);
-		return -ENODEV;
+		ret = -ENODEV;
+		goto nodev;
 	}
 
 	data =  ov9655_read(client, REG_VER);
@@ -1423,14 +1426,15 @@ static int ov9655_registered(struct v4l2_subdev *subdev)
 		dev_err(&client->dev,
 			"OV9655 not detected, wrong version 0x%02x\n",
 			(unsigned int) data);
-		return -ENODEV;
+		ret = -ENODEV;
+		goto nodev;
 	}
-
+nodev:
 	__ov9655_set_power(ov9655, 0);
-
-	dev_info(&client->dev, "OV9655 %s detected at address 0x%02x\n",
-		 (data == OV9655_CHIP_REV5) ? "REV5" : "REV4",
-		 client->addr);
+	if (!ret)
+		dev_info(&client->dev, "OV9655 %s detected at address 0x%02x\n",
+			 (data == OV9655_CHIP_REV5) ? "REV5" : "REV4",
+			 client->addr);
 
 	return ret;
 }

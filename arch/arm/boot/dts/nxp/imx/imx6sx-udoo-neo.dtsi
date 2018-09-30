@@ -26,6 +26,7 @@
 			label = "udoo-neo:orange:user";
 			gpios = <&gpio4 6 GPIO_ACTIVE_HIGH>;
 			default-state = "keep";
+			linux,default-trigger = "cpu";
 		};
 	};
 

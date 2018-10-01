@@ -10,6 +10,7 @@
 #  -a		all v*.* we find
 #  -u		only those areas where upstreaming appears possible
 #  -s		print summary only
+#  -m		show statistics for branches in mergefile
 #  vers.ion	version number instead of current branch
 #
 # Author: <hns@goldelico.com>
@@ -33,6 +34,46 @@ then # all
 	exit 0
 fi
 
+function latestforbranch {
+	# get latest version for branch $1 (optionally passing $2 to git branch)
+	git branch $2 | cut -c 3- | grep "^$1-v[0-9]*$" | perl -e 'print sort{length($a)<=>length($b) or $a cmp $b} <>' | tail -1
+}
+
+function mergestat {
+	FEATURE=$(latestforbranch "$1")
+	[ "$FEATURE" ] || FEATURE="$1"
+	COUNT="$(git log --oneline $BASE..$FEATURE | wc -l)"
+	if [ "$2" ]	# not merged
+	then
+		printf "%d\t%s\n" "$COUNT" "[$FEATURE]"
+	else
+		printf "%d\t%s\n" "$COUNT" "$FEATURE"
+	fi
+}
+
+if [ "$1" = "-m" ]
+then
+	while read FEATURE OTHER
+	do
+		case "$FEATURE" in
+			'' | '#'* )
+				;;
+			'>'* | '<<'* )
+				;; 
+			'<'* )
+				BASE=${FEATURE:1}
+				;;
+			-* )
+				mergestat ${FEATURE:1} -
+				;;
+			* )
+				mergestat $FEATURE
+				;;
+		esac
+	done <Letux/scripts/mergefile
+	exit
+fi
+
 git fetch --tags linus
 
 if [ "$1" = "-u" ]
@@ -51,7 +92,7 @@ CURRENTBRANCH=$1
 [ "$1" ] || CURRENTBRANCH=$(git rev-parse --abbrev-ref HEAD)
 
 CURRENTLINUS=v$(make kernelversion)
-CURRENTLINUS=${CURRENTLINUS%.0}	# convert 4.18.0 to v4.18
+CURRENTLINUS=$(echo "$CURRENTLINUS" | sed 's/\.0//g')	# convert 4.18.0 to v4.18
 
 COUNT=0
 

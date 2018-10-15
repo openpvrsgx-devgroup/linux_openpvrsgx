@@ -40,7 +40,7 @@ work/letux-base/hw-test
 
 # Diverse drivers and bindings
 work/letux-base/bindings
-work/letux-base/twl4030
+work/letux-base/bindings-madc
 work/letux-base/dss-bindings
 
 # Device Trees for Letux devices
@@ -102,8 +102,8 @@ work/letux-base/hns/input/crtouch
 work/letux-base/marek/am335x-hwmon
 
 # GTA04 sound
+-work/letux-base/sound-for-gta04
 work/letux-base/codecs-for-gta04
-work/letux-base/sound-for-gta04
 work/letux-base/hns/codec/twl4030
 work/letux-base/kemnade/sound-soc
 
@@ -117,11 +117,13 @@ work/letux-base/hns/mipsbook400/dt
 work/letux-base/hns/mipsbook400/pm
 
 # hacks and fixes
+work/letux-base/twl4030
 work/letux-base/hns/hwmon-fixes
 work/letux-base/kemnade/libertas
 work/letux-base/kemnade/musb-fixes
 work/letux-base/kemnade/ehci-usb-pm
 work/letux-base/kemnade/phy-twl
+work/letux-base/kemnade/clk
 work/letux-base/hns/omapdss/tvfix
 work/letux-base/hns/video/dss/displayprobing
 work/letux-base/kemnade/charging_fixes
@@ -130,7 +132,7 @@ work/letux-base/omap2plus
 work/letux-base/hns/gpu/omap-pvr
 work/letux-base/hns/gpu/latest-pvr
 # work/letux-base/extern/sgx544-v2
-work/letux-base/omapdrm
+-work/letux-base/omapdrm
 work/letux-base/mmc
 work/letux-base/ubi-fs
 work/letux-base/extcon

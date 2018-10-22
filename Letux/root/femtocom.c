@@ -2,11 +2,12 @@
 
 #include <stdio.h>
 #include <unistd.h>
+#include <string.h>
 #include <fcntl.h>
 #include <sys/select.h>
 #include <termios.h>
 
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	int fd;
 	int sendcrlf=0;
@@ -34,13 +35,14 @@ main(int argc, char *argv[])
 		perror("tcgetattr");
 		return 1;
 	}
-	tc.c_cflag &= ~(CSIZE | PARENB | CSTOPB | CSIZE);
-	tc.c_cflag |= CS8;
+	tc.c_cflag &= ~(CSIZE | PARENB | CSIZE);
+	tc.c_cflag |= CS8 | CSTOPB;
 	tc.c_lflag &= ~(ICANON | ECHO | ECHOE | ECHOK | ECHONL | INPCK | ISIG);
-	tc.c_iflag |= IGNBRK | IGNPAR | ICRNL | INLCR;
+	tc.c_iflag |= IGNBRK | IGNPAR | ICRNL | INLCR | IXANY;
 	tc.c_oflag &= ~OPOST;
 	tc.c_cc[VMIN]	= 1;
 	tc.c_cc[VTIME]	= 0;
+	cfsetspeed(&tc, B115200);
 	if(tcsetattr(fd, TCSANOW, &tc) < 0) { /* failed to modify */
 		perror("tcsetattr");
 		return 1;
@@ -75,10 +77,11 @@ main(int argc, char *argv[])
 				int n=read(fd, buf, 1);
 				if(n < 0)
 					return 3;	/* read error */
+				if(n == 0)
+					continue;
 				if(!passcr && buf[0] == '\r')
 					continue;	/* ignore received \r and take \n only */
-				if(n > 0)
-					write(1, buf, n);
+				write(1, buf, n);
 				}
 			}
 	}

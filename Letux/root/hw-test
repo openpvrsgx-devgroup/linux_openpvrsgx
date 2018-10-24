@@ -53,6 +53,16 @@ for dev in /sys/class/thermal/thermal_zone*
 done
 }
 
+function findinput {
+for dev in /sys/class/input/input*
+	do
+	if [ "$(cat $dev/name 2>/dev/null)" = "$1" ]
+		then echo /dev/input/$(basename $dev/event*)
+		break
+	fi
+done
+}
+
 function i2c-probe { # bus hex-address
 	[ "$(i2cdetect -y -r $1 0x$2 0x$2 | fgrep $2 | (read ADDR FOUND; echo $FOUND))" ]
 }
@@ -119,6 +129,7 @@ function report { # $1: result $2: test-name $3: values $4: message
 			| test_power_twl4030*-*Pyra* \
 			| test_wlan_libertas-*Pyra* \
 			| test_wlan_libertas-*GTA04A5* \
+			| test_ext_antenna-*Pyra* \
 			) # known to be never available on these models
 				: no message about failure
 				return 0
@@ -373,7 +384,7 @@ function test_misc {
 	test_eeprom 1	# n/a
 	test_eeprom 2	# n/a
 	test_eeprom 3	# Pyra-Display
-	test_eeprom 4	 # Pyra-Mainboard
+	test_eeprom 4	# Pyra-Mainboard
 }
 
 function test_tca6507 { # $1: bus number
@@ -478,7 +489,7 @@ function test_cpu_temperature {
 
 function test_cpu_lpae {
 	grep Features /proc/cpuinfo | head -1 | fgrep -q lpae
-	report $? ${FUNCNAME} "$(gunzip </proc/config.gz | fgrep CONFIG_ARM_LPAE)" "CPU7Kernel support of LPAE"
+	report $? ${FUNCNAME} "$(gunzip </proc/config.gz | fgrep CONFIG_ARM_LPAE)" "Kernel support of LPAE"
 	}
 
 function test_cpu {
@@ -567,6 +578,14 @@ function test_tvout_off {
 	report $? ${FUNCNAME} "" "switching back to LCD"
 }
 
+function test_ext_antenna {
+	# use findinput "antenna-detect"
+	ANTENNA_STATE=$(cd /sys/devices/platform/antenna-detect/input/input*/ && ls -1d event*) 2>/dev/null
+	evtest --query /dev/input/$ANTENNA_STATE EV_SW 13 2>/dev/null
+	report $? ${FUNCNAME} "$ANTENNA_STATE" "external GPS antenna power"
+	# check voltage VSIM=$(findregulator "VSIM") on GTA04
+}
+
 function test_gps {
 	GPS=$(/root/gps-on 2>/dev/null)
 	report $? ${FUNCNAME}_interface "$GPS" "GPS interface"
@@ -574,7 +593,7 @@ function test_gps {
 $GNGNS
 $PSRF' >/dev/null
 	report $? ${FUNCNAME} "$LINE" "GPS startup"
-	# check LNA state and voltage VSIM=$(findregulator "VSIM") on GTA04
+	test_ext_antenna
 }
 
 function test_wwan_usb {

@@ -4,7 +4,7 @@
 # (c) Golden Delicious Computers GmbH&Co. KG, 2011-2017
 # licenced under GPL
 #
-# usage: hw-test [-t] [testname]
+# usage: hw-test [-q] [-t] [testname]
 #
 
 TESTER_VERSION="6.2"
@@ -64,7 +64,7 @@ function report { # $1: result $2: test-name $3: values $4: message
 	if [ "$1" == 0 ]
 	then # successful
 		SEQUENCE=$(expr $SEQUENCE + 1)
-		echo -e "$SEQUENCE\t$2\tok\t$3\t$4"
+		$VERBOSE && echo -e "$SEQUENCE\t$2\tok\t$3\t$4"
 		return 0;
 	else # not successful - outcome depends on device/variant
 # this can be seen as a "database" which knows about hardware variations
@@ -85,7 +85,7 @@ function report { # $1: result $2: test-name $3: values $4: message
 			| test_gpu-* \
 			) # optional feature
 				SEQUENCE=$(expr $SEQUENCE + 1)
-				echo -e "$SEQUENCE\t$2\tnfnd\t$3\t$4"
+				$VERBOSE && echo -e "$SEQUENCE\t$2\tnfnd\t$3\t$4"
 				return 1;
 				;;
 			  test_lis302-* \
@@ -125,7 +125,7 @@ function report { # $1: result $2: test-name $3: values $4: message
 				;;
 			* ) # function is missing on device
 				SEQUENCE=$(expr $SEQUENCE + 1)
-				echo -e "$SEQUENCE\t$2\tnok\t$3\t$4"
+				$VERBOSE && echo -e "$SEQUENCE\t$2\tnok\t$3\t$4"
 				ANYNOK=true
 				return 1
 				;;
@@ -762,12 +762,25 @@ function test_all {
 	test_wlan
 }
 
-if [ "$1" = "-t" ]
-then
-	echo "known tests:"
-	declare -F | sed 's/declare -f //' | fgrep test_ | sed 's/test_//'
-	exit 0
-fi
+VERBOSE=true
+
+while [ "$1" ]
+do
+	case "$1" in
+		-t )
+			echo "known tests:"
+			declare -F | sed 's/declare -f //' | fgrep test_ | sed 's/test_//'
+			exit 0
+			;;
+		-q )
+			VERBOSE=false
+			;;
+		* )
+			break
+			;;
+	esac
+	shift
+done
 
 TEST="$1"; [ "$1" ] || TEST="all"
 TEST=$(echo "$TEST" | sed 's|test_||') # strip off test_ if already given
@@ -786,6 +799,8 @@ fi
 
 killall -9 arecord aplay 2>/dev/null # stop any running audio forwarding
 
+if $VERBOSE
+then
 # show status through all colored LEDs
 (
 if $ANYNOK
@@ -814,6 +829,7 @@ do
 	echo 0 >$i/brightness
 done
 ) 2>/dev/null
+fi
 
 sync	# so that we can almost safely switch off the device after running the test
 

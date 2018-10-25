@@ -722,7 +722,7 @@ function test_wwan {
 
 function test_bluetooth {
 # test if it turns on VAUX4=$(findregulator "VAUX4") on GTA04A[2-4]
-	read ADDR < <(/root/bt-scan 2>/dev/null | fgrep 'BD Address:' | cut -d ':' -f 2-6)
+	read ADDR < <(/root/bt-scan 2>/dev/null | fgrep 'BD Address:' | cut -d ':' -f 2-7 | cut -d ' ' -f 1)
 	[ "$ADDR" ]
 	report $? ${FUNCNAME}_scan "$ADDR" "Bluetooth scan"
 

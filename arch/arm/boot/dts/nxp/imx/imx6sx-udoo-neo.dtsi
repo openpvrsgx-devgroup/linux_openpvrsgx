@@ -432,7 +432,7 @@
 
 &uart3 { /* Bluetooth - only on Extended/Full versions */
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_uart3>;
+	pinctrl-0 = <&pinctrl_uart3 &pinctrl_bt_reg>;
 	uart-has-rtscts;
 	status = "disabled";
 

@@ -76,7 +76,7 @@ static struct serdev_device_ops serdev_ops = {
 #endif
 };
 
-#if !CONFIG_W2CBW003_HCI
+#if !IS_ENABLED(CONFIG_W2CBW003_HCI)
 
 static struct w2cbw_data *w2cbw_get_by_minor(unsigned int minor)
 {
@@ -286,7 +286,7 @@ static int w2cbw_probe(struct serdev_device *serdev)
 
 	hci_uart_register_device(tbd);
 
-#else // CONFIG_W2CBW003_HCI
+#else // IS_ENABLED(CONFIG_W2CBW003_HCI)
 
 #if 1
 	pr_debug("w2cbw alloc_tty_driver\n");
@@ -348,7 +348,7 @@ static int w2cbw_probe(struct serdev_device *serdev)
 #endif
 //	data->port.tty->driver_data = data;	/* make us known in tty_struct */
 
-#endif // CONFIG_W2CBW003_HCI
+#endif // IS_ENABLED(CONFIG_W2CBW003_HCI)
 
 	/* keep off until user space requests the device */
 	if (regulator_is_enabled(data->vdd_regulator))

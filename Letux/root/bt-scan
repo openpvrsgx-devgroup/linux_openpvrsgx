@@ -16,7 +16,7 @@ case $(tr -d '\0' </proc/device-tree/model) in
 	FLAGS=
 	MODE=texas
 	ARGS=
-        ;;
+	;;
 
 *GTA04A5* | *Neo900* | *GTA04b7* ) # WL183x
 	FIRMWARE=/lib/firmware/ti-connectivity/TIInit_11.8.32.bts
@@ -26,7 +26,17 @@ case $(tr -d '\0' </proc/device-tree/model) in
 	FLAGS=
 	MODE=texas
 	ARGS=
-        ;;
+	;;
+
+*'UDOO Neo'* )	# WL1831
+	FIRMWARE=/lib/firmware/ti-connectivity/TIInit_11.8.32.bts
+	[ -r $FIRMWARE ] || wget -O $FIRMWARE https://git.ti.com/ti-bt/service-packs/blobs/raw/5f73abe7c03631bb2596af27e41a94abcc70b009/initscripts/TIInit_12.8.32.bts
+	UART=/dev/ttymxc2	# uart3
+	BTBAUD=115200	# for firmware download
+	FLAGS=
+	MODE=texas
+	ARGS=
+	;;
 
 *GTA04* ) # W2CBW003
 	UART=/dev/ttyO0	# uart1

@@ -26,6 +26,8 @@ do
 	shift
 done
 
+NUM=$(/root/findsoundcard "L15")	# twl6040 on Pyra
+
 while true
 do
 	WHEEL=$(cat $GPADC/in_voltage2_input 2>/dev/null)
@@ -35,19 +37,19 @@ do
 	[ "$VOL" -gt 100 ] && VOL=100
 	# should check for abs($VOL-$LASTVOL) > threshold
 	if [ "$VOL" != "$LASTVOL" ]
-	then # update only if changed since amixer command needs some resources
+	then # update only if changed since amixer -c "$NUM" command needs some resources
 		[ "$QUIET" ] || echo $WHEEL - $VOL%
 		if [ "$NOHANDSFREE" -o "$VOL" = 0 ]
 		then # turn off
-			amixer -q set "Handsfree Left Playback" "Off" || exit
-			amixer -q set "Handsfree Right Playback" "Off" || exit
+			amixer -c "$NUM" -q set "Handsfree Left Playback" "Off" || exit
+			amixer -c "$NUM" -q set "Handsfree Right Playback" "Off" || exit
 		else
-			amixer -q set "Handsfree Left Playback" "HF DAC" || exit
-			amixer -q set "Handsfree Right Playback" "HF DAC" || exit
-			amixer -q set "Handsfree" "$VOL%" || exit
+			amixer -c "$NUM" -q set "Handsfree Left Playback" "HF DAC" || exit
+			amixer -c "$NUM" -q set "Handsfree Right Playback" "HF DAC" || exit
+			amixer -c "$NUM" -q set "Handsfree" "$VOL%" || exit
 		fi
-		amixer -q set "Headset" "$VOL%" || exit
-		amixer -q set "Earphone" "$VOL%" || exit
+		amixer -c "$NUM" -q set "Headset" "$VOL%" || exit
+		amixer -c "$NUM" -q set "Earphone" "$VOL%" || exit
 		LASTVOL=$VOL
 	fi
 	sleep 0.1

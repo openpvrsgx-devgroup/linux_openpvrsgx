@@ -689,8 +689,12 @@
 
 /* bluetooth*/
 &uart1 {
-	/* to be defined */
-	// bt-shutdown = gpio1_15
+	pinctrl-names = "default";
+//	pinctrl-0 = <&uart1_pins &bt_pins>;
+	bluetooth: tiwi {
+		compatible = "ti,wl1251-bt";
+		enable-gpios = <&gpio1 15 GPIO_ACTIVE_HIGH>;	/* GPIO_15 */
+	};
 };
 
 /* spare (expansion connector) */

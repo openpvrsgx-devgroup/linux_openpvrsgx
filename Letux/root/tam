@@ -16,13 +16,15 @@ case "$IF" in
 		killall arecord
 		trap "killall arecord aplay; (echo "AT+CHUP"; sleep 1) | /root/femtocom $IF" EXIT
 		trap "exit 1" SIGHUP SIGINT SIGTERM
+		NUM=$(/root/findsoundcard "gta04")	# GTA04
 
 		# make sure the PCM goes to the SoC
-		amixer set 'Voice PCM Interface' 'inactive'
+		amixer -c "$NUM" set 'Voice PCM Interface' 'inactive'
 		;;
 
 	/dev/ttyACM[0-4] | /dev/ttyUSB[0-4] )	# Neo900 / Pyra
 		echo Not supported on this device >&2
+		NUM=$(/root/findsoundcard "L15")	# Pyra
 		exit 1
 		;;
 esac

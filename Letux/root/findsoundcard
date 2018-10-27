@@ -1,0 +1,18 @@
+# find sound card by name
+
+LIST=false
+if [ "$1" = "-a" ]
+then
+	LIST=true
+	shift
+fi
+
+for dev in /proc/asound/card[0-9]*
+do
+	$LIST && cat $dev/id
+	if [ "$(cat $dev/id 2>/dev/null)" = "$1" ]
+		then echo $(basename $dev) | sed 's/card//g'
+		exit 0
+	fi
+done
+$LIST || exit 1

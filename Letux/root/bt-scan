@@ -1,59 +1,7 @@
+#!/bin/bash
 #
-# scan bluetooth
+# scan for bluetooth clients
 #
-
-case $(tr -d '\0' </proc/device-tree/model) in
-
-*Pyra-Handheld* ) # WL183x
-	# enables the 32kHz clock
-	ifconfig wlan0 up
-	# load firmware if needed
-	FIRMWARE=/lib/firmware/ti-connectivity/TIInit_11.8.32.bts
-	[ -r $FIRMWARE ] || wget -O $FIRMWARE https://git.ti.com/ti-bt/service-packs/blobs/raw/5f73abe7c03631bb2596af27e41a94abcc70b009/initscripts/TIInit_12.8.32.bts
-	# set parameters
-	UART=/dev/ttyO1	# uart2
-	BTBAUD=115200	# for firmware download
-	FLAGS=
-	MODE=texas
-	ARGS=
-	;;
-
-*GTA04A5* | *Neo900* | *GTA04b7* ) # WL183x
-	FIRMWARE=/lib/firmware/ti-connectivity/TIInit_11.8.32.bts
-	[ -r $FIRMWARE ] || wget -O $FIRMWARE https://git.ti.com/ti-bt/service-packs/blobs/raw/5f73abe7c03631bb2596af27e41a94abcc70b009/initscripts/TIInit_12.8.32.bts
-	UART=/dev/ttyO0	# uart1
-	BTBAUD=115200	# for firmware download
-	FLAGS=
-	MODE=texas
-	ARGS=
-	;;
-
-*'UDOO Neo'* )	# WL1831
-	FIRMWARE=/lib/firmware/ti-connectivity/TIInit_11.8.32.bts
-	[ -r $FIRMWARE ] || wget -O $FIRMWARE https://git.ti.com/ti-bt/service-packs/blobs/raw/5f73abe7c03631bb2596af27e41a94abcc70b009/initscripts/TIInit_12.8.32.bts
-	UART=/dev/ttymxc2	# uart3
-	BTBAUD=115200	# for firmware download
-	FLAGS=
-	MODE=texas
-	ARGS=
-	;;
-
-*GTA04* ) # W2CBW003
-	UART=/dev/ttyO0	# uart1
-	BTBAUD=3000000
-	FLAGS="-s $BTBAUD"
-	MODE=any
-	ARGS=flow
-	;;
-
-* )
-	echo "unknown model $(tr -d '\0' </proc/device-tree/model)"
-	exit 1
-	;;
-
-esac
-# override
-[ -r /dev/ttyBT0 ] && UART=/dev/ttyBT0
 
 rfkill unblock bluetooth
 
@@ -62,7 +10,61 @@ rfkill unblock bluetooth
 modprobe -r st_drv
 
 if ! hciconfig | fgrep -q hci0
-then # bluetooth support not configured into kernel - needs to start hciattach
+then # bluetooth support not configured into kernel or not yet running - needs to start hciattach
+
+	case $(tr -d '\0' </proc/device-tree/model) in
+
+	*Pyra-Handheld* ) # WL183x
+		# enables the 32kHz clock
+		ifconfig wlan0 up
+		# load firmware if needed
+		FIRMWARE=/lib/firmware/ti-connectivity/TIInit_11.8.32.bts
+		[ -r $FIRMWARE ] || wget -O $FIRMWARE https://git.ti.com/ti-bt/service-packs/blobs/raw/5f73abe7c03631bb2596af27e41a94abcc70b009/initscripts/TIInit_12.8.32.bts
+		# set parameters
+		UART=/dev/ttyO1	# uart2
+		BTBAUD=115200	# for firmware download
+		FLAGS=
+		MODE=texas
+		ARGS=
+		;;
+
+	*GTA04A5* | *Neo900* | *GTA04b7* ) # WL183x
+		FIRMWARE=/lib/firmware/ti-connectivity/TIInit_11.8.32.bts
+		[ -r $FIRMWARE ] || wget -O $FIRMWARE https://git.ti.com/ti-bt/service-packs/blobs/raw/5f73abe7c03631bb2596af27e41a94abcc70b009/initscripts/TIInit_12.8.32.bts
+		UART=/dev/ttyO0	# uart1
+		BTBAUD=115200	# for firmware download
+		FLAGS=
+		MODE=texas
+		ARGS=
+		;;
+
+	*'UDOO Neo'* )	# WL1831
+		FIRMWARE=/lib/firmware/ti-connectivity/TIInit_11.8.32.bts
+		[ -r $FIRMWARE ] || wget -O $FIRMWARE https://git.ti.com/ti-bt/service-packs/blobs/raw/5f73abe7c03631bb2596af27e41a94abcc70b009/initscripts/TIInit_12.8.32.bts
+		UART=/dev/ttymxc2	# uart3
+		BTBAUD=115200	# for firmware download
+		FLAGS=
+		MODE=texas
+		ARGS=
+		;;
+
+	*GTA04* ) # W2CBW003
+		UART=/dev/ttyO0	# uart1
+		BTBAUD=3000000
+		FLAGS="-s $BTBAUD"
+		MODE=any
+		ARGS=flow
+		;;
+
+	* )
+		echo "unknown model $(tr -d '\0' </proc/device-tree/model)"
+		exit 1
+		;;
+	esac
+
+	# override if wi2wi,w2cbw003-bluetooth driver is loaded
+	[ -r /dev/ttyBT0 ] && UART=/dev/ttyBT0
+
 	if ! ps -ef | fgrep hciattach | fgrep -v -q grep
 	then	# hciattach is not yet running
 		# note we should never kill hciattach or a reattach will fail

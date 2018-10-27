@@ -54,38 +54,40 @@ function turnoff {
 		trap "turnoff" EXIT
 		trap "exit 1" SIGHUP SIGINT SIGTERM
 
+		NUM=$(/root/findsoundcard "gta04")
+
 		if $HEADSET
 		then
 			/root/tvout 0	# disable tvout
-			amixer set 'Analog Left Main Mic' nocap
-			amixer set 'Analog Left Headset Mic' cap
+			amixer -c "$NUM" set 'Analog Left Main Mic' nocap
+			amixer -c "$NUM" set 'Analog Left Headset Mic' cap
 		else
-			amixer set 'Analog Left Main Mic' cap
-			amixer set 'Analog Left Headset Mic' nocap
+			amixer -c "$NUM" set 'Analog Left Main Mic' cap
+			amixer -c "$NUM" set 'Analog Left Headset Mic' nocap
 		fi
 
 		if [ "$MODE" = "-hw" ]	# not available on GTA04A3 boards
 		then
-			amixer set 'AVADC Clock Priority' 'Voice high priority'
-			amixer set 'Voice PCM Interface' 'active'
-			amixer set 'Voice PCM Out' on
-			amixer set 'DAC Voice Analog Downlink' unmute
-			amixer set 'DAC Voice Analog Downlink' 16
-			amixer set 'DAC Voice Digital Downlink' 44
-			amixer set 'Earpiece Mixer Voice' on
-			amixer set 'HeadsetL Mixer Voice' on
-			amixer set 'HeadsetR Mixer Voice' on
+			amixer -c "$NUM" set 'AVADC Clock Priority' 'Voice high priority'
+			amixer -c "$NUM" set 'Voice PCM Interface' 'active'
+			amixer -c "$NUM" set 'Voice PCM Out' on
+			amixer -c "$NUM" set 'DAC Voice Analog Downlink' unmute
+			amixer -c "$NUM" set 'DAC Voice Analog Downlink' 16
+			amixer -c "$NUM" set 'DAC Voice Digital Downlink' 44
+			amixer -c "$NUM" set 'Earpiece Mixer Voice' on
+			amixer -c "$NUM" set 'HeadsetL Mixer Voice' on
+			amixer -c "$NUM" set 'HeadsetR Mixer Voice' on
 		else
-			amixer set 'Earpiece Mixer Voice' off
-			amixer set 'HeadsetL Mixer Voice' off
-			amixer set 'HeadsetR Mixer Voice' off
+			amixer -c "$NUM" set 'Earpiece Mixer Voice' off
+			amixer -c "$NUM" set 'HeadsetL Mixer Voice' off
+			amixer -c "$NUM" set 'HeadsetR Mixer Voice' off
 		fi
 
 		(
 		if [ "$NUMBER" == "-" ]
 		then
 			echo "AT+CHUP"; sleep 3
-			amixer set 'Voice PCM Out' off
+			amixer -c "$NUM" set 'Voice PCM Out' off
 		else
 			#echo "AT+CPIN=XXXX"; sleep 1	# use the /root/pin script to unlock the SIM card
 			echo "AT_ODO=0"; sleep 1
@@ -98,11 +100,11 @@ function turnoff {
 			echo "ATD$NUMBER;"; sleep 1	# make voice call (the ; is important)
 			if [ "$MODE" = "-sw" ]
 			then
-				arecord -fS16_LE -r8000 | aplay -Ddefault:CARD=Telephony &	# microphone -> modem
+				arecord -Ddefault:CARD=gta04 -fS16_LE -r8000 | aplay -Ddefault:CARD=Telephony &	# microphone -> modem
 				arecord -Ddefault:CARD=Telephony -fS16_LE -r8000 | /root/twl $HANDSFREE -stdin	# modem -> earpiece, speaker, headset
 			else
 				echo "please ctl-C to end the call" >&2
-				arecord -fS16_LE -r8000 >/dev/null	# enable micbias
+				arecord -Ddefault:CARD=gta04 -fS16_LE -r8000 >/dev/null	# just enable micbias
 				# sleep 99999	# we can't easily detect end of call (without monitoring femtocom output)
 			fi
 		fi
@@ -112,6 +114,7 @@ function turnoff {
 	/dev/ttyACM[0-4] | /dev/ttyUSB[0-4] )	# Neo900 / Pyra
 
 		(
+		NUM=$(/root/findsoundcard "L15")
 		if [ "$NUMBER" == "-" ]
 		then
 			echo "AT+CHUP"; sleep 3
@@ -123,12 +126,12 @@ function turnoff {
 			echo "ATD$NUMBER;"; sleep 1	# make voice call (the ; is important)
 			if [ "$MODE" = "-sw" ]
 			then
-				arecord -fS16_LE -r8000 | aplay -Ddefault:CARD=Telephony &	# microphone -> modem
+				arecord -Ddefault:CARD=L15 -fS16_LE -r8000 | aplay -Ddefault:CARD=Telephony &	# microphone -> modem
 				arecord -Ddefault:CARD=Telephony -fS16_LE -r8000 | /root/twl $HANDSFREE -stdin	# modem -> earpiece, speaker, headset
 			else
 				echo "please ctl-C to end the call" >&2
-				arecord -fS16_LE -r8000 >/dev/null	# enable micbias
-				amixer set 'Voice PCM Out' on
+				arecord -Ddefault:CARD=L15 -fS16_LE -r8000 >/dev/null	# enable micbias
+				amixer -c "$NUM" set 'Voice PCM Out' on
 				sleep 99999
 			fi
 		fi

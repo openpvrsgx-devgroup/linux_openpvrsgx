@@ -10,14 +10,16 @@ make si4721
 trap "./si4721 -r 0 -dn; killall arecord" EXIT
 trap "exit 1" INT TERM QUIT HUP
 
+NUM=$(/root/findsoundcard "gta04")
+
 echo 1 >/sys/devices/virtual/gpio/gpio55/value  # enable audio out
-amixer set 'Headset' 2
-amixer set 'HeadsetL Mixer AudioL1' off
-amixer set 'HeadsetL Mixer AudioL2' on
-amixer set 'HeadsetL Mixer Voice' off
-amixer set 'HeadsetR Mixer AudioR1' off
-amixer set 'HeadsetR Mixer AudioR2' on
-amixer set 'HeadsetR Mixer Voice' off
+amixer -c "$NUM" set 'Headset' 2
+amixer -c "$NUM" set 'HeadsetL Mixer AudioL1' off
+amixer -c "$NUM" set 'HeadsetL Mixer AudioL2' on
+amixer -c "$NUM" set 'HeadsetL Mixer Voice' off
+amixer -c "$NUM" set 'HeadsetR Mixer AudioR1' off
+amixer -c "$NUM" set 'HeadsetR Mixer AudioR2' on
+amixer -c "$NUM" set 'HeadsetR Mixer Voice' off
 
 FREQ=$1; [ "$1" ] || FREQ=92.4
 

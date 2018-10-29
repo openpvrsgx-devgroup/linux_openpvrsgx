@@ -80,8 +80,8 @@ function report { # $1: result $2: test-name $3: values $4: message
 # this can be seen as a "database" which knows about hardware variations
 		case "$2-$MODEL" in
 			  test_lis302-*GTA04A3* \
-			| test_bno055-*GTA04A5* \
-			| test_bno055-*Pyra* \
+			| test_bno055*-*GTA04A5* \
+			| test_bno055*-*Pyra* \
 			| test_tca6507_*-*Pyra* \
 			| test_crtouch-*Pyra* \
 			| test_bmg160-*Pyra* \
@@ -99,7 +99,7 @@ function report { # $1: result $2: test-name $3: values $4: message
 				return 1;
 				;;
 			  test_lis302-* \
-			| test_bno055-* \
+			| test_bno055*-* \
 			| test_bmc150*-*GTA04[Ab2-4]* \
 			| test_bmg160*-*GTA04[Ab2-4]* \
 			| test_hmc5883-*GTA04A5* \
@@ -114,7 +114,7 @@ function report { # $1: result $2: test-name $3: values $4: message
 			| test_wwan_usb_gemalto-*GTA04* \
 			| test_wwan_hwmon_off-*GTA04* \
 			| test_wwan_usb_option-*Pyra* \
-			| test_power_twl4030_batt_hdq-*GTA04b* \
+			| test_fuel_gauge-*GTA04b* \
 			| test_hmc5883-*Pyra* \
 			| test_itg3200-*Pyra* \
 			| test_camera-*Pyra* \
@@ -124,7 +124,7 @@ function report { # $1: result $2: test-name $3: values $4: message
 			| test_rootfs-*Pyra* \
 			| test_uboot-*Pyra* \
 			| test_memory_nand-*Pyra* \
-			| test_cpu_id-*Pyra* \
+			| test_cpu_cpuid-*Pyra* \
 			| test_cpu_mpurate-*Pyra* \
 			| test_power_twl4030*-*Pyra* \
 			| test_wlan_libertas-*Pyra* \
@@ -219,6 +219,16 @@ function test_barometer {
 	report $? ${FUNCNAME} "${PRESSURE} mBar, ${CENTIGRADE} °C" "Barometer values"
 }
 
+function test_bno055_gyro {
+	GYRO=$(findiio bno055)
+	sleep 1
+	X=$(cat $GYRO/in_anglvel_x_raw 2>/dev/null)
+	Y=$(cat $GYRO/in_anglvel_y_raw 2>/dev/null)
+	Z=$(cat $GYRO/in_anglvel_z_raw 2>/dev/null)
+	[ "$X$Y$Z" ]
+	report $? ${FUNCNAME} "$X, $Y, $Z" "Gyroscope values"
+}
+
 function test_itg3200 {
 	GYRO=$(findiio itg3200)
 	[ "$GYRO" ] && echo 10 >$GYRO/sampling_frequency 2>/dev/null
@@ -252,9 +262,31 @@ function test_bmg160 {
 function test_gyroscope {
 	test_itg3200
 	test_bmg160
+	test_bno055_gyro
+}
+
+function test_bno055_accel {
+	ACCEL=$(findiio bno055)
+	sleep 1
+	X=$(cat $ACCEL/in_accel_x_raw 2>/dev/null)
+	Y=$(cat $ACCEL/in_accel_y_raw 2>/dev/null)
+	Z=$(cat $ACCEL/in_accel_z_raw 2>/dev/null)
+	[ "$X$Y$Z" ]
+	report $? ${FUNCNAME} "$X, $Y, $Z" "Accelerometer values"
 }
 
 function test_bmc150_accel {
+	ACCEL=$(findiio bmc150_accel)
+	[ "$ACCEL" ] && echo 125 >$ACCEL/in_accel_sampling_frequency 2>/dev/null
+	sleep 1
+	X=$(cat $ACCEL/in_accel_x_raw 2>/dev/null)
+	Y=$(cat $ACCEL/in_accel_y_raw 2>/dev/null)
+	Z=$(cat $ACCEL/in_accel_z_raw 2>/dev/null)
+	[ "$X$Y$Z" ]
+	report $? ${FUNCNAME} "$X, $Y, $Z" "Accelerometer values"
+}
+
+function test_input_accel {
 	[ -r /dev/input/accel ] && read -t 1 X Y Z < <(echo $(evtest /dev/input/accel | head -19 | fgrep Value | sed 's/Value//g'))
 	G=$(expr ${X:=0} '*' ${X} + ${Y:=0} '*' ${Y} + ${Z:=0} '*' ${Z})
 	GMIN=$(expr 200 '*' 200)
@@ -269,7 +301,9 @@ function test_lis302 {
 }
 
 function test_accelerometer {
+	test_input_accel
 	test_bmc150_accel
+	test_bno055_accel
 	test_lis302
 }
 
@@ -295,9 +329,20 @@ function test_bmc150_compass {
 	report $? ${FUNCNAME} "$X, $Y, $Z" "Compass values"
 }
 
+function test_bno055_compass {
+	COMPASS=$(findiio bno055)
+	sleep 1
+	X=$(cat $COMPASS/in_magn_x_raw 2>/dev/null)
+	Y=$(cat $COMPASS/in_magn_y_raw 2>/dev/null)
+	Z=$(cat $COMPASS/in_magn_z_raw 2>/dev/null)
+	[ "$X$Y$Z" ]
+	report $? ${FUNCNAME} "$X, $Y, $Z" "Compass values"
+}
+
 function test_compass {
 	test_hmc5883
 	test_bmc150_compass
+	test_bno055_compass
 }
 
 function test_bno055 {
@@ -428,9 +473,10 @@ function test_power_twl4030 {
 	report $? ${FUNCNAME}_batt_backup "${VOLT} mV" "backup battery voltage"
 }
 
-function test_power_hdq {
+function test_fuel_gauge {
 	GAUGE=/sys/class/power_supply/bq27000-battery
-	# if gta04 - for pyra use different device name
+	[ -r "$GAUGE" ] || GAUGE=/sys/class/power_supply/bq27421-0
+
 	STATUS=$(cat ${GAUGE}/status 2>/dev/null)
 	[ "$STATUS" ]
 	report $? ${FUNCNAME}_status "$STATUS" "Status"
@@ -459,7 +505,7 @@ function test_power_generic {
 function test_power {
 	test_power_generic
 	test_power_twl4030
-	test_power_hdq
+	test_fuel_gauge
 }
 
 function test_memory {
@@ -580,7 +626,7 @@ function test_tvout_off {
 
 function test_ext_antenna {
 	# use findinput "antenna-detect"
-	ANTENNA_STATE=$(cd /sys/devices/platform/antenna-detect/input/input*/ && ls -1d event*) 2>/dev/null
+	ANTENNA_STATE=$(cd /sys/devices/platform/antenna-detect/input/input*/ 2>/dev/null && ls -1d event*) 2>/dev/null
 	evtest --query /dev/input/$ANTENNA_STATE EV_SW 13 2>/dev/null
 	report $? ${FUNCNAME} "$ANTENNA_STATE" "external GPS antenna power"
 	# check voltage VSIM=$(findregulator "VSIM") on GTA04

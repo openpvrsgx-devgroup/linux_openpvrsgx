@@ -74,6 +74,7 @@ work/letux-base/hns/misc/w2sg-serdev
 work/letux-base/hns/input/tsc2007
 work/hns/drivers/gpio/gpio-pcal6524
 work/letux-base/hns/video/ov9655-new
+work/bmg160
 
 # almost ready for upstreaming
 work/letux-base/hns/usb/misc/usb3503

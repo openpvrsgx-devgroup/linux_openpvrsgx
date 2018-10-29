@@ -48,22 +48,23 @@ case "$IF" in
 	/dev/ttyACM1 )	# PLS8
 		(
 		# note: * commands report "+CME ERROR: operation failed" if the setting is already done
-		echo 'AT^SGPSC="Engine","0"'; sleep 0.4		# must turn off before enabling GLONASS
+		echo 'AT^SGPSC="Engine","0"'; sleep 1.0		# must turn off before enabling GLONASS
 		echo 'AT^SGPSC="Nmea/Glonass","on"'; sleep 0.4	# * enable GLONASS
 		echo 'AT^SGPSC="Engine","1"'; sleep 0.4		# enable GPS
 		echo 'AT^SGPSC="Nmea/Freq",1'; sleep 0.4		# once a second
 		echo 'AT^SGPSC="Nmea/Output","on"'; sleep 0.4		# enable data stream
 		echo 'AT^SGPSC="Nmea/Urc","on"'; sleep 0.4		# unsolicited reports
-		echo 'AT^SGPSC="Power/Antenna","auto"'; sleep 0.4	# switch LNA to auto mode - will report +CME ERROR if already in auto mode
+		echo 'AT^SGPSC="Power/Antenna","auto"'; sleep 1.0	# * switch LNA to auto mode
 		) | /root/femtocom $IF >&2 &
 		echo /dev/ttyACM2
 		;;
 
 	/dev/ttyUSB[0-4] )	# PHS8 in mutiplexed mode
 		(
-		echo 'AT^SGPSC="Engine","1"'; sleep 0.4		# enable GPS
+		# note: * commands report "+CME ERROR: operation failed" if the setting is already done
+		echo 'AT^SGPSC="Engine","1"'; sleep 1.0		# enable GPS
 		echo 'AT^SGPSC="Nmea/Output","on"'; sleep 0.4		# normal output
-		echo 'AT^SGPSC="Power/Antenna","auto"'; sleep 0.4	# switch LNA to auto mode - will report +CME ERROR if already in auto mode
+		echo 'AT^SGPSC="Power/Antenna","auto"'; sleep 1.0	# * switch LNA to auto mode
 		) | /root/femtocom $IF >&2  &
 		echo /dev/ttyUSB1
 		;;

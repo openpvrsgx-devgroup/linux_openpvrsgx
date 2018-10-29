@@ -28,7 +28,7 @@ rfkill unblock wwan
 
 (cd /root && make femtocom 2>/dev/null >&2)
 
-for wait in 1 2 3 4 5	# 5 times 3 seconds
+for wait in 1 2 3 4 5 6 7 8 9 # 9 times 3 seconds
 do
 	# Bus 001 Device 002: ID 0424:3503 Standard Microsystems Corp.
 	while read Bus BUSNUM Device DEVICENUM ID IDENT NAME
@@ -40,6 +40,7 @@ do
 			[ "$VERBOSE" ] && echo found $MODEM on USB >&2
 			if [ -r /dev/ttyACM1 ]
 			then
+				[ "$wait" != 1 ] && sleep 2.0	# wait for ^SYSSTART before sending AT commands
 				echo /dev/ttyACM1	# PLS8 - Application port
 				exit
 			fi

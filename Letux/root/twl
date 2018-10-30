@@ -187,6 +187,7 @@ then
 	then
 		AUDIODEV="hw:$NUM,0" play $FILE
 	fi
+	exit 0
 fi
 
 # play stereo on headset and main speakers
@@ -194,3 +195,4 @@ if [ "$FILE" ]
 then
 	AUDIODEV="hw:$NUM,0" play ${FORMAT:+-t} ${FORMAT:+$FORMAT} -v 0.98 $FILE $REMIX_STEREO
 fi
+exit 0

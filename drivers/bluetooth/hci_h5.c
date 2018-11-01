@@ -960,6 +960,8 @@ static int h5_btrtl_setup(struct h5 *h5)
 	if (err)
 		goto out_free;
 
+	btrtl_apply_quirks(h5->hu->hdev, btrtl_dev);
+
 	btrtl_set_quirks(h5->hu->hdev, btrtl_dev);
 
 out_free:

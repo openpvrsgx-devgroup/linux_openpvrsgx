@@ -98,6 +98,7 @@ struct h5 {
 	const struct h5_vnd *vnd;
 	const char *id;
 
+	struct gpio_desc *reset_gpio;
 	struct gpio_desc *enable_gpio;
 	struct gpio_desc *device_wake_gpio;
 };
@@ -864,8 +865,21 @@ static int h5_serdev_probe(struct serdev_device *serdev)
 	if (IS_ERR(h5->device_wake_gpio))
 		return PTR_ERR(h5->device_wake_gpio);
 
-	return hci_uart_register_device_priv(&h5->serdev_hu, &h5p,
+	err = hci_uart_register_device_priv(&h5->serdev_hu, &h5p,
 					     h5->vnd->sizeof_priv);
+	if (err)
+		return err;
+
+	if (data->driver_info & H5_INFO_WAKEUP_DISABLE)
+		set_bit(H5_WAKEUP_DISABLE, &h5->flags);
+
+	return 0;
+
+	h5->reset_gpio = devm_gpiod_get_optional(dev, "reset", GPIOD_OUT_HIGH);
+	if (IS_ERR(h5->reset_gpio))
+		return PTR_ERR(h5->reset_gpio);
+
+	return hci_uart_register_device(&h5->serdev_hu, &h5p);
 }
 
 static void h5_serdev_remove(struct serdev_device *serdev)
@@ -981,6 +995,9 @@ static void h5_btrtl_open(struct h5 *h5)
 
 	/* The controller needs up to 500ms to wakeup */
 	gpiod_set_value_cansleep(h5->enable_gpio, 1);
+	/* Take it out of reset */
+	gpiod_set_value_cansleep(h5->reset_gpio, 0);
+	msleep(100);
 	gpiod_set_value_cansleep(h5->device_wake_gpio, 1);
 	msleep(500);
 }
@@ -991,6 +1008,7 @@ static void h5_btrtl_close(struct h5 *h5)
 		pm_runtime_disable(&h5->hu->serdev->dev);
 
 	gpiod_set_value_cansleep(h5->device_wake_gpio, 0);
+	gpiod_set_value_cansleep(h5->reset_gpio, 1);
 	gpiod_set_value_cansleep(h5->enable_gpio, 0);
 }
 

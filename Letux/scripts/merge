@@ -220,7 +220,7 @@ function process {
 		REMOTE=$(commitdate "origin/$FEATURE")
 		LOCAL=$(commitdate "$FEATURE")
 # echo $FEATURE: REMOTE $REMOTE vs. LOCAL $LOCAL
-		if [ "$REMOTE" -a "$REMOTE" -gt "$LOCAL" ]
+		if [ "$REMOTE" ] && [ "$REMOTE" -gt "$LOCAL" ]
 		then
 			echo "*** origin/$FEATURE is newer than local copy - merge/update first ***"
 echo please run:	git branch -f $FEATURE origin/$FEATURE
@@ -276,7 +276,7 @@ echo please run:	git branch -f $FEATURE origin/$FEATURE
 
 if [ "$MERGEFILE" ]
 then
-# feature branches provided in mergefile
+echo usig feature branches provided in $MERGEFILE
 while read FEATURE IGNORE
 do
 	case "$FEATURE" in

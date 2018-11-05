@@ -49,7 +49,7 @@ work/hns/dt-upstreaming	# replaces the 3 following branches
 # rebase them until significant upstream patches are merged to mainline
 # then they should be empty or show remaining diffs we have missed in work/hns/dt-upstreaming
 -work/letux-base/dt-gta04
--work/letux-base/dt-gta04-common
+#-work/letux-base/dt-gta04-common
 -work/letux-base/dt-gta04a5
 work/letux-base/dt-gta04b234
 work/letux-base/dt-beagle
@@ -94,8 +94,8 @@ work/hns/freescale-sensors
 
 # almost empty or untested...
 work/letux-base/hns/mmc/txs02612
--work/letux-base/hns/misc/txs02612
--work/letux-base/hns/misc/txs02612-sdio
+#-work/letux-base/hns/misc/txs02612
+#-work/letux-base/hns/misc/txs02612-sdio
 work/letux-base/tps6105x-flashlight
 work/letux-base/hns/input/crtouch
 
@@ -103,7 +103,7 @@ work/letux-base/hns/input/crtouch
 work/letux-base/marek/am335x-hwmon
 
 # GTA04 sound
--work/letux-base/sound-for-gta04
+#-work/letux-base/sound-for-gta04
 work/letux-base/codecs-for-gta04
 work/letux-base/hns/codec/twl4030
 work/letux-base/kemnade/sound-soc
@@ -133,7 +133,7 @@ work/letux-base/omap2plus
 work/letux-base/hns/gpu/omap-pvr
 work/letux-base/hns/gpu/latest-pvr
 # work/letux-base/extern/sgx544-v2
--work/letux-base/omapdrm
+#-work/letux-base/omapdrm
 work/letux-base/mmc
 work/letux-base/ubi-fs
 work/letux-base/extcon
@@ -142,7 +142,7 @@ work/letux-base/drivers-keyboard
 work/letux-base/mvduin/patch/tiler-fbdev
 
 # not merged in by default, but carried along and regularily rebased
--work/letux-base/marek/upstream-queue
+#-work/letux-base/marek/upstream-queue
 -work/letux-base/extern/omap5-idle
 -work/letux-base/extern/omap-hsmmc
 -work/letux-base/hns/video/dss/antitear

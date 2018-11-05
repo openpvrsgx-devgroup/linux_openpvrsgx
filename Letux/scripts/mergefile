@@ -20,140 +20,121 @@
 >>letux
 
 # scripts (incl. ./merge)
-work/letux-base/scripts
+letux/scripts
 
 # we need some compile fixes for MacOS X cross-compiler
-work/letux-base/compile-fixes
+letux/compile-fixes
 
 # Letux base code
-work/letux-base/Letux
+letux/Letux
 
 # Letux defconfigs
-work/letux-base/arm_defconfig
-work/letux-base/arm_lpae_defconfig
-work/letux-base/arm_udoo_defconfig
-work/letux-base/mips_defconfig
+letux/arm_defconfig
+letux/arm_lpae_defconfig
+letux/arm_udoo_defconfig
+letux/mips_defconfig
 
 # Letux Rootfs
-work/letux-base/rootfs
-work/letux-base/hw-test
+letux/rootfs
+letux/hw-test
 
 # Diverse drivers and bindings
-work/letux-base/bindings
-work/letux-base/bindings-madc
-work/letux-base/dss-bindings
+letux/bindings
+letux/bindings-madc
+letux/dss-bindings
 
 # Device Trees for Letux devices
-work/letux-base/dt-makefile
-work/hns/dt-upstreaming	# replaces the 3 following branches
-# rebase them until significant upstream patches are merged to mainline
-# then they should be empty or show remaining diffs we have missed in work/hns/dt-upstreaming
--work/letux-base/dt-gta04
-#-work/letux-base/dt-gta04-common
--work/letux-base/dt-gta04a5
-work/letux-base/dt-gta04b234
-work/letux-base/dt-beagle
-work/letux-base/dt-evm-pyra
-work/letux-base/hns/dt/lc8
-work/letux-base/dt-lc15
-work/letux-base/dt-panda
-work/letux-base/dt-pandora
-work/letux-base/dt-pyra
-work/letux-base/dt-lc15-evm
-work/letux-base/dt-gta15
-work/hns/dt-udoo-neo
-work/letux-base/hns/dt/omap5-common
-work/letux-base/hns/dt/omap5-uevm
+letux/dt-makefile
+letux/dt-upstreaming	# replaces the 3 following branches
+-letux/dt-gta04
+-letux/dt-gta04a5
+letux/dt-gta04b234
+letux/dt-beagle
+letux/dt-evm-pyra
+letux/dt-lc8
+letux/dt-lc15
+letux/dt-panda
+letux/dt-pandora
+letux/dt-pyra
+letux/dt-lc15-evm
+letux/dt-gta15
+letux/dt-udoo-neo
+letux/dt-omap5-common
+letux/dt-omap5-uevm
 
 # Debian build scripts
-work/letux-base/josua/debian-build
+letux/debian-build
 
 # upstreaming in progress
-work/letux-base/marek/generic-adc-battery
-work/letux-base/hns/misc/w2sg-serdev
-work/letux-base/hns/input/tsc2007
-work/hns/drivers/gpio/gpio-pcal6524
-work/letux-base/hns/video/ov9655-new
-work/bmg160
+letux/generic-adc-battery
+letux/w2sg-serdev
+letux/tsc2007
+letux/gpio-pcal6524
+letux/ov9655-new
+letux/bmg160
 
 # almost ready for upstreaming
-work/letux-base/hns/usb/misc/usb3503
-work/letux-base/hns/misc/wwan
-work/letux-base/hns/input/as5013
-work/letux-base/hns/input/pandora-nub
-work/letux-base/andrey/input/as5013
-work/letux-base/hns/iio-input-bridge
+letux/usb3503
+letux/wwan
+letux/as5013-a
+letux/pandora-nub
+letux/as5013-b
+letux/iio-input-bridge
 
 # not ready for upstreaming but works
-work/letux-base/hns/power/bq27xxx
-work/letux-base/hns/power/bq2429x
-work/letux-base/hns/sound/ts3a225e
-work/letux-base/hns/video/dss/panels+ssd2858
-work/letux-base/extern/bno055
-work/hns/freescale-sensors
+letux/bq27xxx
+letux/bq2429x
+letux/ts3a225e
+letux/panels+ssd2858
+letux/bno055
+letux/freescale-sensors
 
 # almost empty or untested...
-work/letux-base/hns/mmc/txs02612
-#-work/letux-base/hns/misc/txs02612
-#-work/letux-base/hns/misc/txs02612-sdio
-work/letux-base/tps6105x-flashlight
-work/letux-base/hns/input/crtouch
+letux/txs02612
+letux/tps6105x-flashlight
+letux/crtouch
 
 # not for upstreaming
-work/letux-base/marek/am335x-hwmon
+letux/am335x-hwmon
 
 # GTA04 sound
-#-work/letux-base/sound-for-gta04
-work/letux-base/codecs-for-gta04
-work/letux-base/hns/codec/twl4030
-work/letux-base/kemnade/sound-soc
+letux/codecs-for-gta04
+letux/codec-twl4030
+letux/sound-soc
 
 # Pyra sound
-work/hns/aess
-#-work/andrey/aess
+letux/aess
 
 # Mipsbook / JZ4730
-work/letux-base/pboddie/mips/jz4730
-work/letux-base/hns/mipsbook400/dt
-work/letux-base/hns/mipsbook400/pm
+letux/jz4730
+letux/dt-mipsbook400
+letux/pm-mipsbook400
 
 # hacks and fixes
-work/letux-base/twl4030
-work/letux-base/hns/hwmon-fixes
-work/letux-base/kemnade/libertas
-work/letux-base/kemnade/musb-fixes
-work/letux-base/kemnade/ehci-usb-pm
-work/letux-base/kemnade/phy-twl
-work/letux-base/kemnade/clk
-work/letux-base/hns/omapdss/tvfix
-work/letux-base/hns/video/dss/displayprobing
-work/letux-base/kemnade/charging_fixes
-work/letux-base/hacks
-work/letux-base/omap2plus
-work/letux-base/hns/gpu/omap-pvr
-work/letux-base/hns/gpu/latest-pvr
-# work/letux-base/extern/sgx544-v2
-#-work/letux-base/omapdrm
-work/letux-base/mmc
-work/letux-base/ubi-fs
-work/letux-base/extcon
-work/letux-base/misc
-work/letux-base/drivers-keyboard
-work/letux-base/mvduin/patch/tiler-fbdev
+letux/twl4030
+letux/hwmon-fixes
+letux/libertas
+letux/musb-fixes
+letux/ehci-usb-pm
+letux/phy-twl
+letux/clk
+letux/tvfix
+letux/displayprobing
+letux/charging_fixes
+letux/hacks
+letux/omap2plus
+letux/omap-pvr
+letux/latest-pvr
+# letux/sgx544-v2
+letux/mmc
+letux/ubi-fs
+letux/extcon
+letux/misc
+letux/drivers-keyboard
+letux/tiler-fbdev
 
 # not merged in by default, but carried along and regularily rebased
-#-work/letux-base/marek/upstream-queue
--work/letux-base/extern/omap5-idle
--work/letux-base/extern/omap-hsmmc
--work/letux-base/hns/video/dss/antitear
--work/letux-base/lukas/android
-
-# abandoned
-#-work/letux-base/hns/mtd/onenand
-#-work/letux-base/hns/input/tsc2007-pressure
-#-work/letux-base/extern/ov9655
-#-work/letux-base/hns/video/ov9655
-#-work/letux-base/extern/omap/reset-controller
-#work/letux-base/hns/power/twl4030_charger
-# work/letux-base/hns/gta04/pm
-# work/letux-base/serial
+-letux/omap5-idle
+-letux/omap-hsmmc
+-letux/antitear
+-letux/android

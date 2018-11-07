@@ -79,7 +79,7 @@ do
 			done
 			;;
 		esac
-		if [ "$VERSBOSE" -a "$MODEM" ]
+		if [ "$VERBOSE" -a "$MODEM" ]
 		then
 			echo found $MODEM but no interface >&2
 		fi

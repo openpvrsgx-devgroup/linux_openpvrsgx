@@ -10,6 +10,7 @@
 TESTER_VERSION="6.2"
 TESTER_RECOMMENDED_KERNEL="4.10"
 TESTER_DATE="09 Jun 2017"
+SCRIPTPATH="$(dirname "$0")"
 
 MODEL=$(tr -d '\0' </proc/device-tree/model 2>/dev/null)
 
@@ -565,8 +566,8 @@ function test_uboot {
 }
 
 function test_si47xx {
-	(cd /root && make si4721 >/dev/null 2>&1)
-	VAL=$(echo $(/root/si4721 -i /dev/i2c-1 -d -up -dn))
+	(cd $SCRIPTPATH && make si4721 >/dev/null 2>&1)
+	VAL=$(echo $($SCRIPTPATH/si4721 -i /dev/i2c-1 -d -up -dn))
 	case "$VAL" in
 		"init resp: 80 get_chiprev resp: 80 1532300000323042 powered off" | \
 		"init resp: 80 get_chiprev resp: 80 0532300000323042 powered off" )
@@ -586,12 +587,12 @@ function test_usb_ip {
 }
 
 function test_vibra {
-	[ -r /dev/input/rumble ] && ./vibra.py
+	[ -r /dev/input/rumble ] && $SCRIPTPATH/vibra.py
 	report $? ${FUNCNAME} "" "running rumble effect demo"
 }
 
 function test_audio {
-	./twl -d - >/dev/null 2>&1 0<&1
+	$SCRIPTPATH/twl -d - >/dev/null 2>&1
 	report $? ${FUNCNAME} "" "running audio demo"
 }
 
@@ -614,13 +615,13 @@ function test_lcd {
 
 function test_tvout {
 	. x >/dev/null
-	./tvout 1 2>/dev/null
+	$SCRIPTPATH/tvout 1 2>/dev/null
 	report $? ${FUNCNAME} "" "enabling TVOut"
 }
 
 function test_tvout_off {
 	. x >/dev/null
-	./tvout 0 2>/dev/null
+	$SCRIPTPATH/tvout 0 2>/dev/null
 	report $? ${FUNCNAME} "" "switching back to LCD"
 }
 
@@ -633,7 +634,7 @@ function test_ext_antenna {
 }
 
 function test_gps {
-	GPS=$(/root/gps-on 2>/dev/null)
+	GPS=$($SCRIPTPATH/gps-on 2>/dev/null)
 	report $? ${FUNCNAME}_interface "$GPS" "GPS interface"
 	[ "$GPS" ] && read -t 10 LINE <$GPS && echo $LINE | fgrep '$GP
 $GNGNS
@@ -651,9 +652,9 @@ function test_wwan_usb {
 
 function test_wwan_option {
 	# do subtests by sending AT commands
-	(cd /root && make femtocom >/dev/null 2>&1)
-	WWAN=$(/root/wwan-on 2>/dev/null)
-	(echo AT_OID; sleep 1) | ./femtocom "$WWAN" | fgrep ':' >/tmp/$$.values
+	(cd $SCRIPTPATH && make femtocom >/dev/null 2>&1)
+	WWAN=$($SCRIPTPATH/wwan-on 2>/dev/null)
+	(echo AT_OID; sleep 1) | $SCRIPTPATH/femtocom "$WWAN" | fgrep ':' >/tmp/$$.values
 	cat /tmp/$$.values | while read KEY VAL
 		do
 			case "$KEY" in
@@ -679,7 +680,7 @@ function test_wwan_option {
 	#testing "GTM601-Wakeup" "check for 3G Wakeup through AT_ORESET"
 	for i in 1 2 3
 	do
-		if (echo AT_ORESET; sleep 15) | /root/femtocom "$WWAN" >/dev/null | ( evtest /dev/input/incoming & sleep 15; kill $! ) | fgrep -e 'type 1 (Key), code 240 (Unknown), value 1' -e 'type 1 (EV_KEY), code 240 (KEY_UNKNOWN), value 1' 2>/dev/null 1>&2
+		if (echo AT_ORESET; sleep 15) | $SCRIPTPATH/femtocom "$WWAN" >/dev/null | ( evtest /dev/input/incoming & sleep 15; kill $! ) | fgrep -e 'type 1 (Key), code 240 (Unknown), value 1' -e 'type 1 (EV_KEY), code 240 (KEY_UNKNOWN), value 1' 2>/dev/null 1>&2
 		then
 			true
 			break
@@ -696,15 +697,15 @@ function test_wwan_hwmon { # $1: on/off
 }
 
 function test_wwan_gemalto {
-	(cd /root && make femtocom >/dev/null 2>&1)
-	WWAN=$(/root/wwan-on 2>/dev/null)
+	(cd $SCRIPTPATH && make femtocom >/dev/null 2>&1)
+	WWAN=$($SCRIPTPATH/wwan-on 2>/dev/null)
 
 	test_wwan_hwmon on
 
 	(echo AT+CGMI; sleep 0.2
 	 echo AT+CGMM; sleep 0.2
 	 echo AT+CGMR; sleep 0.2
-	 echo AT+CGSN;  sleep 1) | ./femtocom "$WWAN" >/tmp/$$.values
+	 echo AT+CGSN;  sleep 1) | $SCRIPTPATH/femtocom "$WWAN" >/tmp/$$.values
 	AT="?"
 	cat /tmp/$$.values | while read LINE
 		do
@@ -734,7 +735,7 @@ function test_wwan_gemalto {
 
 function test_wwan_off {
 	# known to fail on GTA04A3
-	/root/wwan-off >/dev/null
+	$SCRIPTPATH/wwan-off >/dev/null
 	report $? ${FUNCNAME} "$WWAN" "WWAN power off command"
 	sleep 5
 	## check through lsusb if it is really off
@@ -747,8 +748,8 @@ function test_wwan_off {
 
 function test_wwan {
 # check for USB presence of either OPTION or Gemalto
-	(cd /root && make femtocom >/dev/null 2>&1)
-	WWAN=$(/root/wwan-on 2>/dev/null)
+	(cd $SCRIPTPATH && make femtocom >/dev/null 2>&1)
+	WWAN=$($SCRIPTPATH/wwan-on 2>/dev/null)
 	R=$?
 	test_wwan_usb
 	report $R ${FUNCNAME}_interface "$WWAN" "WWAN interface"
@@ -768,7 +769,7 @@ function test_wwan {
 
 function test_bluetooth {
 # test if it turns on VAUX4=$(findregulator "VAUX4") on GTA04A[2-4]
-	read ADDR < <(/root/bt-scan 2>/dev/null | fgrep 'BD Address:' | cut -d ':' -f 2-7 | cut -d ' ' -f 1)
+	read ADDR < <($SCRIPTPATH/bt-scan 2>/dev/null | fgrep 'BD Address:' | cut -d ':' -f 2-7 | cut -d ' ' -f 1)
 	[ "$ADDR" ]
 	report $? ${FUNCNAME}_scan "$ADDR" "Bluetooth scan"
 
@@ -789,7 +790,7 @@ function test_wlan {
 		lsmod | fgrep -q libertas_sdio >/dev/null
 		report $? ${FUNCNAME}_libertas "" "libertas loaded (chip found on interface)"
 
-		read -t 30 BSS ADDR < <(/root/wlan-scan 2>/dev/null)
+		read -t 30 BSS ADDR < <($SCRIPTPATH/wlan-scan 2>/dev/null)
 		[ "$ADDR" ]
 		report $? ${FUNCNAME}_scan "$ADDR" "WLAN scan"
 

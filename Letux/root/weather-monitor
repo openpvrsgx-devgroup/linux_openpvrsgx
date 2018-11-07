@@ -1,10 +1,11 @@
 #!/bin/bash
 # simple weather monitor
 
+SCRIPTPATH="$(dirname "$0")"
 INTERVAL=60	# seconds
-HUMIDITY=$(./findiio bme280)
+HUMIDITY=$($SCRIPTPATH/findiio bme280)
 PRESSURE="$HUMIDITY"
-[ "$PRESSURE" ] || PRESSURE=$(./findiio bmp085)
+[ "$PRESSURE" ] || PRESSURE=$($SCRIPTPATH/findiio bmp085)
 TEMPERATURE="$PRESSURE"
 # echo $TEMPERATURE $HUMIDITY $PRESSURE
 BATTERY="/sys/class/power_supply/bq27000-battery"

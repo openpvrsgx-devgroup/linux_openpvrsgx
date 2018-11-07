@@ -3,7 +3,8 @@
 # see also http://projects.goldelico.com/p/gta04-kernel/page/GPS/
 #
 
-SERIAL=$(/root/gps-on)
+SCRIPTPATH="$(dirname "$0")"
+SERIAL=$($SCRIPTPATH/gps-on)
 
 echo "### starting gpsd $SERIAL ###"
 killall gpsd	# kill any existing
@@ -25,5 +26,5 @@ then
 fi
 
 echo "### starting foxtrot gps ###"
-. /root/x
+. $SCRIPTPATH/x
 dbus-launch foxtrotgps

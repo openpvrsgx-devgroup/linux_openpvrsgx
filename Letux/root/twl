@@ -1,7 +1,8 @@
 #
-# /root/twl: demo for twl4030 and twl6040 sound
+# twl6040: demo for twl6040 sound
 #
 
+SCRIPTPATH="$(dirname "$0")"
 trap "killall volumed 2>/dev/null" EXIT
 trap "exit 1" SIGHUP SIGINT SIGTERM
 
@@ -63,12 +64,12 @@ then
 echo "TWL6040 (Pandaboard, OMAP5432EVM, Pyra, ...)"
 CARD=L15	# no idea where this "L15" is defined in the kernel
 		# but this is what aplay -L reports
-NUM=$(/root/findsoundcard "$CARD")
+NUM=$($SCRIPTPATH/findsoundcard "$CARD")
 
 if ! [ "$NUM" ]
 then
 	CARD="PandaBoardES"
-	NUM=$(/root/findsoundcard "$CARD")
+	NUM=$($SCRIPTPATH/findsoundcard "$CARD")
 fi
 
 amixer -c "$NUM" -q set "Aux FM" 0% || exit
@@ -97,9 +98,9 @@ if [ ! "$NOVOLUMED" ] # start volumed
 then
 if [ "$NOHANDSFREE" ]
 then
-	/root/volumed -q -nhf &
+	$SCRIPTPATH/volumed -q -nhf &
 else
-	/root/volumed -q &
+	$SCRIPTPATH/volumed -q &
 fi
 fi
 
@@ -129,7 +130,7 @@ else
 
 echo "TWL4030 (GTA04, ...)"
 CARD=gta04
-NUM=$(/root/findsoundcard "$CARD")
+NUM=$($SCRIPTPATH/findsoundcard "$CARD")
 
 amixer -c "$NUM" -q set "AVADC Clock Priority" "HiFi high priority" || exit
 amixer -c "$NUM" -q set "DAC1 Analog" off || exit

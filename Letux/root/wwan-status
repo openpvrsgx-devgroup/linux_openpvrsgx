@@ -5,7 +5,8 @@
 # usage: wwan-status
 #
 
-IF="$(/root/wwan-on)"
+SCRIPTPATH="$(dirname "$0")"
+IF="$($SCRIPTPATH/wwan-on)"
 
 case "$IF" in
 	"" )
@@ -32,11 +33,11 @@ case "$IF" in
 		echo "AT_OWANNWERROR?"; sleep 1
 		echo "AT_ONCI?"; sleep 1
 		sleep 60
-		) | /root/femtocom $IF
+		) | $SCRIPTPATH/femtocom $IF
 		;;
 
 	/dev/ttyACM[0-4] | /dev/ttyUSB[0-4] )	# Neo900 / Pyra with PHS8/PLS8
-		INA231=$(/root/findhwmon ina231)
+		INA231=$($SCRIPTPATH/findhwmon ina231)
 		if [ "$INA231" ]
 		then
 			# echo "shunt resistor: $(cat $INA231/shunt_resistor) uOhm"
@@ -70,7 +71,7 @@ case "$IF" in
 		echo "AT^SMONI"; sleep 1	# serving cell
 		echo "AT^SMONP"; sleep 1	# neighbour cell
 		sleep 10
-		) | /root/femtocom $IF
+		) | $SCRIPTPATH/femtocom $IF
 		;;
 
 esac

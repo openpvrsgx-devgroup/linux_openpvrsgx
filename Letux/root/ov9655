@@ -2,6 +2,7 @@ FORMAT=sxga
 BUS=1
 ADDR=0x30
 
+SCRIPTPATH="$(dirname "$0")"
 # send mplayer output to host
 
 if [ ! "$DISPLAY" ]
@@ -19,7 +20,7 @@ function isrunning {
 function start {
 	if ! isrunning
 	then
-		./camera-demo $FORMAT >/dev/null 2>&1 &
+		$SCRIPTPATH/camera-demo $FORMAT >/dev/null 2>&1 &
 		sleep 8
 	fi
 }

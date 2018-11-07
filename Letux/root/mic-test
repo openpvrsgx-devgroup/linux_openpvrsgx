@@ -1,5 +1,5 @@
 #
-# /root/mictest: demo for twl6040 mic + headset
+# mictest: demo for twl6040 mic + headset
 #
 
 while [ "$1" ]
@@ -26,4 +26,4 @@ done
 # we must delay arecord a little so that the amixer
 # commands by the twl script are already done
 
-(sleep 1; arecord -Ddefault:CARD=L15 -c 2) | tee /tmp/echo.wav | /root/twl $FLAGS -t wav -
+(sleep 1; arecord -c 2) | tee /tmp/echo.wav | $SCRIPTPATH/twl $FLAGS -t wav -

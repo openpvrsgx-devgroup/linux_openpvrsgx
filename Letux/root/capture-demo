@@ -3,7 +3,8 @@
 # see also http://projects.goldelico.com/p/gta04-kernel/page/Camera/
 #
 
-. /root/camera-setup	# load setup script
+SCRIPTPATH="$(dirname "$0")"
+. $SCRIPTPATH/camera-setup	# load setup script
 
 PATH=$PATH:/usr/bin/arm-linux-gnueabihf
 
@@ -14,4 +15,4 @@ setup "$MODE"
 echo "### capturing $CAMERA at $DEVICE ###"
 
 make capture
-./capture -d $DEVICE # -o snapshot.jpg
+$SCRIPTPATH/capture -d $DEVICE # -o snapshot.jpg

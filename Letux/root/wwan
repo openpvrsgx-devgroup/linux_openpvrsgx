@@ -4,8 +4,9 @@
 # usage: wwan
 #
 
+SCRIPTPATH="$(dirname "$0")"
 APN="$(cat wwan.conf)"
-IF="$(/root/wwan-on)"
+IF="$($SCRIPTPATH/wwan-on)"
 
 case "$IF" in
 	"" )
@@ -29,7 +30,7 @@ case "$IF" in
 		echo "AT_OWANNWERROR?"; sleep 30	# give some time to establish registration
 		echo "AT_OWANDATA?"; sleep 60	# should have connected - ask for network data
 		echo "AT_OWANNWERROR?"; sleep 1	# finally check for error
-		) | /root/femtocom $IF | while read MSG C IP GW DNS1 DNS2 NBNS1 NBNS2 SPEED MORE
+		) | $SCRIPTPATH/femtocom $IF | while read MSG C IP GW DNS1 DNS2 NBNS1 NBNS2 SPEED MORE
 			do
 			echo $MSG $C $IP $GW $DNS1 $DNS2 $NBNS1 $NBNS2 $SPEED $MORE
 			# _OWANDATA: 1, 10.152.124.183, 0.0.0.0, 193.189.244.225, 193.189.244.206, 0.0.0.0, 0.0.0.0,144000
@@ -58,7 +59,7 @@ case "$IF" in
 		(
 		# FIXME
 		echo "AT^SBV"; sleep 1
-		) | /root/femtocom $IF
+		) | $SCRIPTPATH/femtocom $IF
 		;;
 
 esac

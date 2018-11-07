@@ -7,6 +7,7 @@
 # usage: otg [1 | 1.5]
 #
 
+SCRIPTPATH="$(dirname "$0")"
 PYRA=false
 
 case $(tr -d '\0' </proc/device-tree/model) in
@@ -24,14 +25,14 @@ esac
 # locate the OTG regulator and its device (the bq24297 charger)
 if $PYRA
 then
-	OTG_REG=$(/root/findregulator "otg")
+	OTG_REG=$($SCRIPTPATH/findregulator "otg")
 	BQ24297=$OTG_REG/device	# same as /sys/class/power_supply/bq24297/device
 else
-	OTG_REG=$(/root/findregulator "smps10")
+	OTG_REG=$($SCRIPTPATH/findregulator "smps10")
 fi
 
 # locate Palmas for ADC
-TWL6037_GPADC=$(/root/findiio "palmas-gpadc")   # OMAP5
+TWL6037_GPADC=$($SCRIPTPATH/findiio "palmas-gpadc")   # OMAP5
 
 # enable/disable
 case "$1" in

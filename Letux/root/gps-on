@@ -5,6 +5,8 @@
 # usage: gps-on
 #
 
+SCRIPTPATH="$(dirname "$0")"
+
 rfkill unblock gps	# turn on LNA etc.
 
 case "$(cat /sys/firmware/devicetree/base/model)" in
@@ -15,7 +17,7 @@ case "$(cat /sys/firmware/devicetree/base/model)" in
 		;;
 esac
 
-IF="$(/root/wwan-on)"
+IF="$($SCRIPTPATH/wwan-on)"
 
 case "$IF" in
 	"" )
@@ -41,7 +43,7 @@ case "$IF" in
 		exit 1
 		(
 		echo "AT^SDPORT=4"; sleep1	# switch to multiplexed data mode
-		) | /root/femtocom $IF >&2
+		) | $SCRIPTPATH/femtocom $IF >&2
 		echo should now make modem re-enumerate and restart this script
 		;;
 
@@ -55,7 +57,7 @@ case "$IF" in
 		echo 'AT^SGPSC="Nmea/Output","on"'; sleep 0.4		# enable data stream
 		echo 'AT^SGPSC="Nmea/Urc","on"'; sleep 0.4		# unsolicited reports
 		echo 'AT^SGPSC="Power/Antenna","auto"'; sleep 1.0	# * switch LNA to auto mode
-		) | /root/femtocom $IF >&2 &
+		) | $SCRIPTPATH/femtocom $IF >&2 &
 		echo /dev/ttyACM2
 		;;
 
@@ -65,7 +67,7 @@ case "$IF" in
 		echo 'AT^SGPSC="Engine","1"'; sleep 1.0		# enable GPS
 		echo 'AT^SGPSC="Nmea/Output","on"'; sleep 0.4		# normal output
 		echo 'AT^SGPSC="Power/Antenna","auto"'; sleep 1.0	# * switch LNA to auto mode
-		) | /root/femtocom $IF >&2  &
+		) | $SCRIPTPATH/femtocom $IF >&2  &
 		echo /dev/ttyUSB1
 		;;
 

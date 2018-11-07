@@ -9,10 +9,11 @@
 #
 # to hang up: dial -
 #
-# to unlock with pin, use the /root/pin script
+# to unlock with pin, use the pin script
 #
 
-IF="$(/root/wwan-on)"
+SCRIPTPATH="$(dirname "$0")"
+IF="$($SCRIPTPATH/wwan-on)"
 
 MODE="-sw"	# default
 HANDSFREE=-nhf
@@ -49,16 +50,16 @@ case "$IF" in
 function turnoff {
 	killall arecord
 	killall arecord aplay
-	(echo "AT+CHUP"; sleep 1) | /root/femtocom $IF
+	(echo "AT+CHUP"; sleep 1) | $SCRIPTPATH/femtocom $IF
 }
 		trap "turnoff" EXIT
 		trap "exit 1" SIGHUP SIGINT SIGTERM
 
-		NUM=$(/root/findsoundcard "gta04")
+		NUM=$($SCRIPTPATH/findsoundcard "gta04")
 
 		if $HEADSET
 		then
-			/root/tvout 0	# disable tvout
+			$SCRIPTPATH/tvout 0	# disable tvout
 			amixer -c "$NUM" set 'Analog Left Main Mic' nocap
 			amixer -c "$NUM" set 'Analog Left Headset Mic' cap
 		else
@@ -89,7 +90,7 @@ function turnoff {
 			echo "AT+CHUP"; sleep 3
 			amixer -c "$NUM" set 'Voice PCM Out' off
 		else
-			#echo "AT+CPIN=XXXX"; sleep 1	# use the /root/pin script to unlock the SIM card
+			#echo "AT+CPIN=XXXX"; sleep 1	# use the pin script to unlock the SIM card
 			echo "AT_ODO=0"; sleep 1
 			echo "AT_OPCMENABLE=1"; sleep 1
 			echo "AT_OPCMPROF=0"; sleep 1	# handset profile
@@ -101,25 +102,25 @@ function turnoff {
 			if [ "$MODE" = "-sw" ]
 			then
 				arecord -Ddefault:CARD=gta04 -fS16_LE -r8000 | aplay -Ddefault:CARD=Telephony &	# microphone -> modem
-				arecord -Ddefault:CARD=Telephony -fS16_LE -r8000 | /root/twl $HANDSFREE -stdin	# modem -> earpiece, speaker, headset
+				arecord -Ddefault:CARD=Telephony -fS16_LE -r8000 | $SCRIPTPATH/twl $HANDSFREE -stdin	# modem -> earpiece, speaker, headset
 			else
 				echo "please ctl-C to end the call" >&2
 				arecord -Ddefault:CARD=gta04 -fS16_LE -r8000 >/dev/null	# just enable micbias
 				# sleep 99999	# we can't easily detect end of call (without monitoring femtocom output)
 			fi
 		fi
-		) | /root/femtocom $IF
+		) | $SCRIPTPATH/femtocom $IF
 		;;
 
 	/dev/ttyACM[0-4] | /dev/ttyUSB[0-4] )	# Neo900 / Pyra
 
 		(
-		NUM=$(/root/findsoundcard "L15")
+		NUM=$($SCRIPTPATH/findsoundcard "L15")
 		if [ "$NUMBER" == "-" ]
 		then
 			echo "AT+CHUP"; sleep 3
 		else
-			#echo "AT+CPIN=XXXX"; sleep 1	# use the /root/pin script to unlock the SIM card
+			#echo "AT+CPIN=XXXX"; sleep 1	# use the pin script to unlock the SIM card
 
 			echo "AT+COPS"; sleep 1
 			echo "AT^SAIC=3,1,1,0,1,0,1,0"; sleep 1
@@ -127,7 +128,7 @@ function turnoff {
 			if [ "$MODE" = "-sw" ]
 			then
 				arecord -Ddefault:CARD=L15 -fS16_LE -r8000 | aplay -Ddefault:CARD=Telephony &	# microphone -> modem
-				arecord -Ddefault:CARD=Telephony -fS16_LE -r8000 | /root/twl $HANDSFREE -stdin	# modem -> earpiece, speaker, headset
+				arecord -Ddefault:CARD=Telephony -fS16_LE -r8000 | $SCRIPTPATH/twl $HANDSFREE -stdin	# modem -> earpiece, speaker, headset
 			else
 				echo "please ctl-C to end the call" >&2
 				arecord -Ddefault:CARD=L15 -fS16_LE -r8000 >/dev/null	# enable micbias
@@ -135,6 +136,6 @@ function turnoff {
 				sleep 99999
 			fi
 		fi
-		) | /root/femtocom $IF
+		) | $SCRIPTPATH/femtocom $IF
 
 esac

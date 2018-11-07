@@ -3,7 +3,8 @@
 #
 # usage: pin number
 
-IF="$(/root/wwan-on)"
+SCRIPTPATH="$(dirname "$0")"
+IF="$($SCRIPTPATH/wwan-on)"
 
 case "$IF" in
 	"" )
@@ -14,7 +15,7 @@ case "$IF" in
 	* )
 		(
 		echo "AT+CPIN=$1"; sleep 3
-		) | /root/femtocom $IF
+		) | $SCRIPTPATH/femtocom $IF
 		;;
 
 esac

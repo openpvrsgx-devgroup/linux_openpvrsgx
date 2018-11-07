@@ -6,7 +6,8 @@
 # LCDs are currently called "Unknown-16" or similar
 #
 
-. /root/x >/dev/null
+SCRIPTPATH="$(dirname "$0")"
+. $SCRIPTPATH/x >/dev/null
 
 if ! [ "$DISPLAY" ]
 then

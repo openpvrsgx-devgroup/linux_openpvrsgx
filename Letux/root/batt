@@ -1,14 +1,15 @@
+SCRIPTPATH="$(dirname "$0")"
 DURATION="$1"
 [ "$DURATION" ] || DURATION=60
 
 ## check DT model
 
 # GTA04 defaults
-TWL4030_MADC=$(/root/findiio "48070000.i2c:twl@48:madc")	 # OMAP3
+TWL4030_MADC=$($SCRIPTPATH/findiio "48070000.i2c:twl@48:madc")	 # OMAP3
 CHARGER=/sys/class/power_supply/twl4030_usb
 BATTERY=/sys/class/power_supply/bq27000-battery
 # alternatives
-TWL6037_GPADC=$(/root/findiio "palmas-gpadc")   # OMAP5
+TWL6037_GPADC=$($SCRIPTPATH/findiio "palmas-gpadc")   # OMAP5
 [ -r "$CHARGER" ] || CHARGER=/sys/class/power_supply/bq24297
 [ -r "$BATTERY" ] || BATTERY=/sys/class/power_supply/bq27621-0
 [ -r "$BATTERY" ] || BATTERY=/sys/class/power_supply/bq27421-0

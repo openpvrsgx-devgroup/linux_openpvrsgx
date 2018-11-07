@@ -1,8 +1,9 @@
 #!/bin/bash
-TWL4030_MADC=$(/root/findiio "48070000.i2c:twl@48:madc")	# OMAP3
-TWL6030_GPADC=$(/root/findiio "48070000.i2c:twl@48:adc")	# OMAP4
-TWL6037_GPADC=$(/root/findiio "palmas-gpadc")	# OMAP5
-INA231=$(/root/findhwmon ina231)	# Pyra modem monitor
+SCRIPTPATH="$(dirname "$0")"
+TWL4030_MADC=$($SCRIPTPATH/findiio "48070000.i2c:twl@48:madc")	# OMAP3
+TWL6030_GPADC=$($SCRIPTPATH/findiio "48070000.i2c:twl@48:adc")	# OMAP4
+TWL6037_GPADC=$($SCRIPTPATH/findiio "palmas-gpadc")	# OMAP5
+INA231=$($SCRIPTPATH/findhwmon ina231)	# Pyra modem monitor
 
 function fuel-level { # $1 is mV; $2 is mA charging current; $3 is resistance, return is % [0..100]
 

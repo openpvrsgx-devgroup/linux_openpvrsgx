@@ -12,17 +12,19 @@
 # -off:	turn off
 #
 # typical invocation for operation
-# ./ssd2858 -r -f 3 -p -s
-# ./ssd2858 -b -d -l
+# ssd2858 -r -f 3 -p -s
+# ssd2858 -b -d -l
+
+SCRIPTPATH="$(dirname "$0")"
 
 if ! [ "$(tr -d '\0' </proc/device-tree/ocp/dss@58000000/encoder@58004000/lcd/compatible)" = "omapdss,mipi,debug" ]
 then
 	echo this script needs the mipi-debug driver!
-	echo use ./panelselect and choose the 'n' driver
+	echo use $SCRIPTPATH/panelselect and choose the 'n' driver
 	exit 1
 fi
 
-./bl 1
+$SCRIPTPATH/bl 1
 
 if [ ! -L dcs ]
 then

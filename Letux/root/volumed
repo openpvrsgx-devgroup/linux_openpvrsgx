@@ -2,8 +2,8 @@
 #
 # Pyra volume control daemon
 #
-
-GPADC=$(/root/findiio "palmas-gpadc")
+SCRIPTPATH="$(dirname "$0")"
+GPADC=$($SCRIPTPATH/findiio "palmas-gpadc")
 
 [ "$GPADC" ] || exit 1
 
@@ -26,7 +26,7 @@ do
 	shift
 done
 
-NUM=$(/root/findsoundcard "L15")	# twl6040 on Pyra
+NUM=$($SCRIPTPATH/findsoundcard "L15")	# twl6040 on Pyra
 
 while true
 do

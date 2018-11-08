@@ -5,12 +5,14 @@
 # works only if booted from SD
 #
 
+SCRIPTPATH="$(dirname "$0")"
+
 case "$(tr -d '\0' </proc/device-tree/model)" in
 	*GTA04* )
 		;;
 	*Pyra* | *GTA15* | *LC15* | *"TI OMAP5 uEVM"* )
 		# switch to eMMC
-		./txs e
+		$SCRIPTPATH/txs e
 		## find out what the eMMC device is
 		DEV=/dev/mmcblk0p
 		mount ${DEV}1 /mnt/mmc0.1

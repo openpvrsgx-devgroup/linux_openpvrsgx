@@ -45,9 +45,9 @@ letux/dss-bindings
 
 # Device Trees for Letux devices
 letux/dt-makefile
-letux/dt-upstreaming	# replaces the 3 following branches
--letux/dt-gta04
--letux/dt-gta04a5
+#letux/dt-upstreaming	# replaces the following branches
+letux/dt-gta04
+#-letux/dt-gta04a5
 letux/dt-gta04b234
 letux/dt-beagle
 letux/dt-evm-pyra

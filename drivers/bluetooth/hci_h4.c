@@ -25,6 +25,7 @@
 #include <linux/signal.h>
 #include <linux/ioctl.h>
 #include <linux/of.h>
+#include <linux/regulator/consumer.h>
 #include <linux/serdev.h>
 #include <linux/skbuff.h>
 #include <asm/unaligned.h>
@@ -37,6 +38,7 @@
 struct h4_device {
 	struct hci_uart hu;
 	bool flow;
+	struct regulator *supply;
 };
 
 struct h4_struct {
@@ -159,6 +161,7 @@ static int hci_h4_probe(struct serdev_device *serdev)
 {
 	struct hci_uart *hu;
 	struct h4_device *h4dev;
+	int ret;
 	u32 speed = 3000000;
 
 	h4dev = devm_kzalloc(&serdev->dev, sizeof(struct h4_device),
@@ -166,6 +169,10 @@ static int hci_h4_probe(struct serdev_device *serdev)
 	if (!h4dev)
 		return -ENOMEM;
 	hu = &h4dev->hu;
+
+	h4dev->supply = devm_regulator_get(&serdev->dev, "vdd");
+	if (IS_ERR(h4dev->supply))
+		return PTR_ERR(h4dev->supply);
 
 	serdev_device_set_drvdata(serdev, h4dev);
 	hu->serdev = serdev;
@@ -175,7 +182,15 @@ static int hci_h4_probe(struct serdev_device *serdev)
 	of_property_read_u32(serdev->dev.of_node, "speed", &speed);
 	hci_uart_set_speeds(hu, speed, speed);
 
-	return hci_uart_register_device(hu, &h4p);
+	ret = regulator_enable(h4dev->supply);
+	if (ret)
+		return ret;
+
+	ret = hci_uart_register_device(hu, &h4p);
+	if (ret)
+		regulator_disable(h4dev->supply);
+
+	return ret;
 }
 
 static void hci_h4_remove(struct serdev_device *serdev)
@@ -183,6 +198,7 @@ static void hci_h4_remove(struct serdev_device *serdev)
 	struct h4_device *h4dev = serdev_device_get_drvdata(serdev);
 
 	hci_uart_unregister_device(&h4dev->hu);
+	regulator_disable(h4dev->supply);
 }
 
 static const struct of_device_id hci_h4_of_match[] = {

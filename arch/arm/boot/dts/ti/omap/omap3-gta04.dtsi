@@ -767,6 +767,8 @@
 
 	bluetooth: bluetooth {
 		compatible = "wi2wi,w2cbw003-bluetooth";
+		speed = <3000000>;
+		flow;
 		vdd-supply = <&vaux4>;
 	};
 };

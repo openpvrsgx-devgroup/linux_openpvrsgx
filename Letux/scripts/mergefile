@@ -74,6 +74,7 @@ letux/ov9655-new
 letux/bmg160
 
 # almost ready for upstreaming
+letux/bluetooth-h4-serdev
 letux/usb3503
 letux/wwan
 letux/as5013-a

@@ -4,7 +4,11 @@
 # (c) Golden Delicious Computers GmbH&Co. KG, 2011-2017
 # licenced under GPL
 #
-# usage: hw-test [-q] [-t] [testname]
+# usage: hw-test [-q] [-r] [-t] [testname]
+#
+#  -q	quiet	report false for unsuccessful test (any result is "nok"); true for all "ok" or "nfnd"
+#  -r	raw	report raw test result (true for "ok", false for "nok" or "nfnd")
+#  -t	tests	list all known tests
 #
 
 TESTER_VERSION="6.2"
@@ -69,9 +73,16 @@ function i2c-probe { # bus hex-address
 }
 
 ANYNOK=false
+VERBOSE=true
+RAW=false
 
 function report { # $1: result $2: test-name $3: values $4: message
 # echo "$2-$MODEL"
+	if $RAW
+	then
+		$VERBOSE && echo -e "$SEQUENCE\t$2\t$1\t$3\t$4"
+		return $1
+	fi
 	if [ "$1" == 0 ]
 	then # successful
 		SEQUENCE=$(expr $SEQUENCE + 1)
@@ -625,7 +636,7 @@ function test_tvout_off {
 	report $? ${FUNCNAME} "" "switching back to LCD"
 }
 
-function test_ext_antenna {
+function test_gps_ext_antenna {
 	# use findinput "antenna-detect"
 	ANTENNA_STATE=$(cd /sys/devices/platform/antenna-detect/input/input*/ 2>/dev/null && ls -1d event*) 2>/dev/null
 	evtest --query /dev/input/$ANTENNA_STATE EV_SW 13 2>/dev/null
@@ -640,7 +651,6 @@ function test_gps {
 $GNGNS
 $PSRF' >/dev/null
 	report $? ${FUNCNAME} "$LINE" "GPS startup"
-	test_ext_antenna
 }
 
 function test_wwan_usb {
@@ -823,12 +833,11 @@ function test_all {
 	test_tvout_off
 	test_sound
 	test_gps
+	test_gps_ext_antenna
 	test_wwan
 	test_bluetooth
 	test_wlan
 }
-
-VERBOSE=true
 
 while [ "$1" ]
 do
@@ -840,6 +849,13 @@ do
 			;;
 		-q )
 			VERBOSE=false
+			;;
+		-r )
+			RAW=true
+			;;
+		-* )
+			echo "unknown option $1" >&2
+			exit 10
 			;;
 		* )
 			break
@@ -855,6 +871,11 @@ TEST=$(echo "$TEST" | sed 's|test_||') # strip off test_ if already given
 
 if [ "$(type -t test_$TEST)" == "function" ]
 then
+	if $RAW
+	then
+		test_$TEST "$@"
+		exit
+	fi
 	test_$TEST "$@"
 else
 	echo "Test not recognised: $TEST"

@@ -17,9 +17,9 @@ case "$(tr -d '\0' </proc/device-tree/model 2>/dev/null)" in
 	*GTA04b2* | *'GTA04 b2'* | *GTA04b6* | *'GTA04 b6'* | *'Letux 3704'* | *'Letux 3714'* )
 		(
 		cd /root
-		[ -x blanviewd ] || make blanviewd
-		# check if already running
-		./blanviewd &
+		NAME=blanviewd
+		[ -x $NAME ] || make $NAME
+		daemon --name=$NAME $PWD/$NAME
 		)
 		PANEL=3.7-640x480;;	# Letux 3704
 	*GTA04b3* | *'GTA04 b3'* | *'Letux 7004'* )

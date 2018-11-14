@@ -18,6 +18,8 @@
 		display1 = &tv0;
 	};
 
+	/delete-node/ spi_lcd;
+
 	lcd_b3: lcd {
 		compatible =	"sharp,lq070y3dg3b",
 				"panel-dpi";
@@ -66,12 +68,9 @@
 	};
 };
 
-&spi_lcd {
-	compatible = "none";
+&omap3_pmx_core2 {
+	/delete-node/ spi_gpio_pinmux;
 };
-
-/* FIXME: &spi_gpio_pins: { }; */
-
 
 &bat {
 	battery-name = "Letux-7004-battery";

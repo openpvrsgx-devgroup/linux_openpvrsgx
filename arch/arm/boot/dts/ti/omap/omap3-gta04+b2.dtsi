@@ -16,6 +16,8 @@
 		display1 = &tv0;
 	};
 
+	/delete-node/ spi_lcd;
+
 	lcd_b2: lcd {
 		compatible =	"ortustech,com37h3m05dtc",
 				"ortustech,com37h3m099dtc",
@@ -65,12 +67,9 @@
 	};
 };
 
-&spi_lcd {
-	status = "disabled";
-	compatible = "none";
+&omap3_pmx_core2 {
+	/delete-node/ spi_gpio_pinmux;
 };
-
-/* FIXME: &spi_gpio_pins: { }; */
 
 /* FIXME: add optional TRF7970 */
 

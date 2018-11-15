@@ -133,9 +133,9 @@ letux/extcon
 letux/misc
 letux/drivers-keyboard
 letux/tiler-fbdev
+letux/omap5-idle
 
 # not merged in by default, but carried along and regularily rebased
--letux/omap5-idle
 -letux/omap-hsmmc
 -letux/antitear
 -letux/android

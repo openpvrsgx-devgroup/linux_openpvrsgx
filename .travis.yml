@@ -5,9 +5,6 @@ sudo: required
 before_install:
   - sudo apt-get update
   - sudo apt-get install -y dpkg  # to upgrade to dpkg >= 1.17.5ubuntu5.8, which fixes https://bugs.launchpad.net/ubuntu/+source/dpkg/+bug/1730627
-  - wget http://security.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.0g-2ubuntu4.1_amd64.deb
-  - sudo dpkg -i libssl1.1_1.1.0g-2ubuntu4.1_amd64.deb
-  - rm libssl1.1_1.1.0g-2ubuntu4.1_amd64.deb
   - export ALL_DEB=$(wget --quiet -O - ${KERNEL_URL}v${KVER}/ | grep -o 'href=".*"' | grep -m1 all | cut -d '"' -f 2)
   - export KVER_BUILD=$(echo $ALL_DEB | cut -d '_' -f 1 | cut -c15-)
   - wget ${KERNEL_URL}v${KVER}/$(wget --quiet -O - ${KERNEL_URL}v${KVER}/ | grep -o 'href=".*"' | grep headers | grep generic | grep -m1 amd64 | cut -d '"' -f 2)
@@ -27,37 +24,45 @@ matrix:
         apt:
           sources:
             - ubuntu-toolchain-r-test
+            - sourceline: 'ppa:ondrej/nginx-mainline'
           packages:
             - gcc-5
             - libelf-dev
-      env: COMPILER=gcc-5 KVER=4.19-rc1
+            - libssl1.1
+      env: COMPILER=gcc-5 KVER=4.20.11
     - compiler: gcc
       addons:
         apt:
           sources:
             - ubuntu-toolchain-r-test
+            - sourceline: 'ppa:ondrej/nginx-mainline'
           packages:
             - gcc-6
             - libelf-dev
-      env: COMPILER=gcc-6 KVER=4.19-rc1
+            - libssl1.1
+      env: COMPILER=gcc-6 KVER=4.20.11
     - compiler: gcc
       addons:
         apt:
           sources:
             - ubuntu-toolchain-r-test
+            - sourceline: 'ppa:ondrej/nginx-mainline'
           packages:
             - gcc-7
             - libelf-dev
-      env: COMPILER=gcc-7 KVER=4.19-rc1
+            - libssl1.1
+      env: COMPILER=gcc-7 KVER=4.20.11
     - compiler: gcc
       addons:
         apt:
           sources:
             - ubuntu-toolchain-r-test
+            - sourceline: 'ppa:ondrej/nginx-mainline'
           packages:
-            - gcc-5
+            - gcc-7
             - libelf-dev
-      env: COMPILER=gcc-5 KVER=4.14.67
+            - libssl1.1
+      env: COMPILER=gcc-7 KVER=4.19.24
     - compiler: gcc
       addons:
         apt:

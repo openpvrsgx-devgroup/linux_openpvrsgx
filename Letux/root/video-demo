@@ -1,9 +1,11 @@
 #
-#
 # video demo
 # needs 160 MByte on Flash card!
+#
 
-FILE=/root/big_buck_bunny_480p_stereo.ogg
+SCRIPTPATH="$(dirname "$0")"
+
+FILE=$SCRIPTPATH/big_buck_bunny_480p_stereo.ogg
 
 [ -r $FILE ] || wget -O "$FILE" "http://ftp.nc.debian.org/media/films/big_buck_bunny_480p_stereo.ogg"
 
@@ -11,8 +13,8 @@ export XAUTHORITY=/.Xauthority
 
 [ -x /usr/bin/mplayer ] || apt-get install -y mplayer
 
-NUM=$(/root/findsoundcard "gta04")	# GTA04
-[ "$NUM" ] || NUM=$(/root/findsoundcard "L15")	# Pyra
+NUM=$($SCRIPTPATH/findsoundcard "gta04")	# GTA04
+[ "$NUM" ] || NUM=$($SCRIPTPATH/findsoundcard "L15")	# Pyra
 
 amixer -c "$NUM" set HandsfreeL on
 amixer -c "$NUM" set HandsfreeR on

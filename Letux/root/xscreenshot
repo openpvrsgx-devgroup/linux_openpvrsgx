@@ -2,9 +2,11 @@
 # capture screen shot as png from X11
 #
 
+SCRIPTPATH="$(dirname "$0")"
+
 [ "$(which convert)" ] || apt-get install graphicsmagick-imagemagick-compat || exit 1
 
-. /root/x
+. $SCRIPTPATH/x
 
 FILE="$1"
 [ "$FILE" ] || FILE=screenshot.png

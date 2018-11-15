@@ -603,7 +603,7 @@ function test_vibra {
 }
 
 function test_audio {
-	$SCRIPTPATH/twl -d - >/dev/null 2>&1
+	$SCRIPTPATH/twl -d >/dev/null 2>&1
 	report $? ${FUNCNAME} "" "running audio demo"
 }
 

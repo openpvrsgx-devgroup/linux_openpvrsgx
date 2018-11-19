@@ -5249,7 +5249,9 @@ CONFIG_VF610_ADC=m
 # Chemical Sensors
 #
 # CONFIG_ATLAS_PH_SENSOR is not set
-# CONFIG_BME680 is not set
+CONFIG_BME680=m
+CONFIG_BME680_I2C=m
+CONFIG_BME680_SPI=m
 # CONFIG_CCS811 is not set
 # CONFIG_IAQCORE is not set
 # CONFIG_VZ89X is not set

@@ -1,3 +1,4 @@
+#!/bin/bash
 # find iio device by name
 
 LIST=false

@@ -1,3 +1,4 @@
+#!/bin/bash
 #
 # initialize Solomon SSD2858 chip with input stream from OMAP5 and panel chained to the output
 # using the panel-mipi-debug driver

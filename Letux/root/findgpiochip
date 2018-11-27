@@ -1,3 +1,4 @@
+#!/bin/bash
 # find gpiochip by name (label)
 # use $(findgpiochip "name")/base to get the base gpio number
 

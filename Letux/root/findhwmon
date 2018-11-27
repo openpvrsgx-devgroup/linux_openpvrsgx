@@ -1,3 +1,4 @@
+#!/bin/bash
 # find hwmon device by name
 
 LIST=false

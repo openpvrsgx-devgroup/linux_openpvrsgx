@@ -1,3 +1,4 @@
+#!/bin/bash
 FORMAT=sxga
 BUS=1
 ADDR=0x30

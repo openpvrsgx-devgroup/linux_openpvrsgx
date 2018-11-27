@@ -1,3 +1,4 @@
+#!/bin/bash
 #
 # log system temperatures (omap3 / omap5) and system operation voltage
 #

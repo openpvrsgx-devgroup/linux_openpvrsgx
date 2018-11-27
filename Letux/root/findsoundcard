@@ -1,3 +1,4 @@
+#!/bin/bash
 # find sound card by name
 
 LIST=false

@@ -1,3 +1,4 @@
+#!/bin/bash
 mount | fgrep -q debugfs || mount -t debugfs none /sys/kernel/debug
 
 case "$1" in

@@ -1,3 +1,4 @@
+#!/bin/bash
 SCRIPTPATH="$(dirname "$0")"
 DURATION="$1"
 [ "$DURATION" ] || DURATION=60

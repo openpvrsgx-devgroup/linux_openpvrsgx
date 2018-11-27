@@ -1,3 +1,4 @@
+#!/bin/bash
 #
 # start GPS NMEA receiver
 # and return the serial port

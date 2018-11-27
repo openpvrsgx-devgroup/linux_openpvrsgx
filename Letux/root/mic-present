@@ -1,3 +1,4 @@
+#!/bin/bash
 # test TS3A225E microphone switch
 
 case $(tr -d '\0' </proc/device-tree/model) in

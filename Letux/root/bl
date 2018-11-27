@@ -1,3 +1,4 @@
+#!/bin/bash
 #
 # /root/bl: turn on/off backlight power
 # -g: use gpio mode

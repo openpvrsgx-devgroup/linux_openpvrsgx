@@ -1,3 +1,4 @@
+#!/bin/bash
 # find thermal device by type
 
 LIST=false

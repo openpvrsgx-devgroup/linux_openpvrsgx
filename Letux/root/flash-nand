@@ -1,3 +1,4 @@
+#!/bin/bash
 #
 # clone the currently running system to NAND/OneNAND
 # for GTA04 devices (and BeagleBoard with NAND)

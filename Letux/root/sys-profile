@@ -1,3 +1,4 @@
+#!/bin/bash
 echo
 echo "*** System Profile ***"
 echo "*** $(tr -d '\0' </proc/device-tree/model ***"

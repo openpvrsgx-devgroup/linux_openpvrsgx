@@ -1,3 +1,4 @@
+#!/bin/bash
 #
 # initialize BOE panel directly connected to OMAP5
 # using the panel-mipi-debug driver

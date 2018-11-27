@@ -1,3 +1,4 @@
+#!/bin/bash
 # generic startup for a MIPI panel directly connected to OMAP5
 # using the panel-mipi-debug driver
 # we are assuming no specific controller (i.e. use the default settings of the panel)

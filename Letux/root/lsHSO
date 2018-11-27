@@ -1,3 +1,4 @@
+#!/bin/bash
 depmod -a
 modprobe hso
 cd /sys/class/tty

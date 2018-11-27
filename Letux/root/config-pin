@@ -1,4 +1,4 @@
-#!/bin/dash
+#!/bin/bash
 # based on https://github.com/cdsteinkuehler/beaglebone-universal-io/blob/master/config-pin
 # adapted for Letux Cortex 8
 

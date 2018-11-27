@@ -1,5 +1,6 @@
+#!/bin/bash
 #
-# GTA04/Pyra hardware test script
+# Letux devices hardware test script
 #
 # (c) Golden Delicious Computers GmbH&Co. KG, 2011-2017
 # licenced under GPL
@@ -11,9 +12,9 @@
 #  -t	tests	list all known tests
 #
 
-TESTER_VERSION="6.2"
+TESTER_VERSION="6.3"
 TESTER_RECOMMENDED_KERNEL="4.10"
-TESTER_DATE="09 Jun 2017"
+TESTER_DATE="27 Nov 2018"
 SCRIPTPATH="$(dirname "$0")"
 
 MODEL=$(tr -d '\0' </proc/device-tree/model 2>/dev/null)

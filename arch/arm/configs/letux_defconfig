@@ -5411,7 +5411,7 @@ CONFIG_BNO055=m
 # CONFIG_TSL2772 is not set
 # CONFIG_TSL4531 is not set
 # CONFIG_US5182D is not set
-# CONFIG_VCNL4000 is not set
+CONFIG_VCNL4000=m
 # CONFIG_VEML6070 is not set
 # CONFIG_VL6180 is not set
 # CONFIG_ZOPT2201 is not set

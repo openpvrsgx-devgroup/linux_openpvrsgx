@@ -20,7 +20,6 @@
 #include <linux/i2c.h>
 #include <linux/idr.h>
 #include <linux/interrupt.h>
-#include <linux/jiffies.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_irq.h>
@@ -99,7 +98,7 @@ static const struct reg_field bq2429x_reg_fields[] = {
 	[F_VINDPM]		= REG_FIELD(REG00, 3, 6),
 	[F_IINLIM]		= REG_FIELD(REG00, 0, 2),
 	[F_REG_RESET]		= REG_FIELD(REG01, 7, 7),
-	[F_WD_RESET]		= REG_FIELD(REG01, 6, 6),
+	[F_WD_RESET]		= REG_FIELD(REG01, 6, 6),		/* should be voltatile... */
 	[F_OTG_CONFIG]		= REG_FIELD(REG01, 5, 5),
 	[F_CHG_CONFIG]		= REG_FIELD(REG01, 4, 4),
 	[F_SYS_MIN]		= REG_FIELD(REG01, 1, 3),
@@ -199,6 +198,7 @@ struct bq2429x_device_info {
 	struct mutex var_lock;
 
 	struct delayed_work usb_detect_work;
+	struct delayed_work watchdog_work;
 	struct work_struct irq_work;
 	struct workqueue_struct	*workqueue;
 
@@ -218,6 +218,8 @@ struct bq2429x_device_info {
 	unsigned int adp_input_current_uA;
 	unsigned int battery_voltage_max_design_uV;
 	unsigned int max_VSYS_uV;
+
+	u32 wdt_timeout;
 };
 
 /* helper tables */
@@ -978,6 +980,33 @@ static int bq2429x_usb_detect(struct bq2429x_device_info *di)
 	return 0;
 }
 
+static void watchdog_work_func(struct work_struct *wp)
+{ /* reset watchdog timer every now and then */
+	struct delayed_work *dwp =
+		(struct delayed_work *)container_of(wp, struct delayed_work,
+						    work);
+	struct bq2429x_device_info *di =
+		(struct bq2429x_device_info *)container_of(dwp,
+				struct bq2429x_device_info, usb_detect_work);
+	int ret;
+
+	ret = bq2429x_field_write(di, F_WD_RESET, 1);
+	if (ret < 0) {
+		dev_err(&di->client->dev, "%s(): Failed to reset the watchdog\n",
+			__func__);
+		return;
+		}
+
+	/* we can not define a single bit as volatile so we have to tell regmap */
+	msleep(1);
+	ret = bq2429x_field_write(di, F_WD_RESET, 0);
+
+	dev_info(di->dev, "%s(%d)\n", __func__, di->wdt_timeout * 70 * HZ / 100);
+
+	/* min. WDT time span is 70% of the nominal value (see section 8.6 in data sheet */
+	schedule_delayed_work(&di->watchdog_work, di->wdt_timeout * 70 * HZ / 100);
+}
+
 static void usb_detect_work_func(struct work_struct *wp)
 { /* polling if we have no interrupt configured */
 	struct delayed_work *dwp =
@@ -1285,7 +1314,7 @@ static int bq2429x_init_registers(struct bq2429x_device_info *di)
 	if (ret < 0)
 		return ret;
 
-	ret = bq2429x_field_write(di, F_WATCHDOG, 0);
+	ret = bq2429x_field_write(di, F_WATCHDOG, 0);	/* disable watchdog */
 	if (ret < 0)
 		return ret;
 
@@ -1334,6 +1363,29 @@ static int bq2429x_init_registers(struct bq2429x_device_info *di)
 	if (ret < 0) {
 		dev_err(di->dev, "failed to get chip state\n");
 		return ret;
+	}
+
+	/* NOTE: the WDT is not for monitoring the processor and shutting down on kernel panic!
+	 * It is for actively resetting the bq2429x to power-on state
+	 *
+	 * NOTE: U-Boot has probably disabled the watchdog because it can't reset the wdt every
+	 * now and then while it is waiting for console commands which may interrupt power
+	 * in a situation without battery.
+	 */
+
+	if (di->wdt_timeout) {
+		ret = -EINVAL;
+		if (di->wdt_timeout == 40)
+			ret = bq2429x_field_write(di, F_WATCHDOG, 1);
+		else if (di->wdt_timeout == 80)
+			ret = bq2429x_field_write(di, F_WATCHDOG, 2);
+		else if (di->wdt_timeout == 160)
+			ret = bq2429x_field_write(di, F_WATCHDOG, 3);
+		if (ret < 0) {
+			dev_err(&di->client->dev, "%s(): Invalid watchdog timeout (%lu) or failed\n",
+				__func__, di->wdt_timeout == 40);
+			return ret;
+		}
 	}
 
 	return 0;
@@ -1571,6 +1623,9 @@ static int bq2429x_parse_dt(struct bq2429x_device_info *di)
 			     &di->usb_input_current_uA);
 	of_property_read_u32(np, "ti,adp-input-current-microamp",
 			     &di->adp_input_current_uA);
+	if (of_property_read_u32(np, "ti,watchdog",
+			     &di->wdt_timeout))
+		di->wdt_timeout = 0;
 
 	/*
 	 * optional dc_det_pin
@@ -1787,6 +1842,7 @@ static int bq2429x_charger_probe(struct i2c_client *client,
 	di->workqueue = create_singlethread_workqueue("bq2429x_irq");
 	INIT_WORK(&di->irq_work, bq2729x_irq_work_func);
 	INIT_DELAYED_WORK(&di->usb_detect_work, usb_detect_work_func);
+	INIT_DELAYED_WORK(&di->watchdog_work, watchdog_work_func);
 	ret = devm_request_threaded_irq(dev, client->irq,
 				NULL, bq2729x_chg_irq_func,
 				IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
@@ -1809,6 +1865,9 @@ static int bq2429x_charger_probe(struct i2c_client *client,
 
 	if (!client->irq)
 		schedule_delayed_work(&di->usb_detect_work, 0);
+
+	if (di->wdt_timeout)
+		schedule_delayed_work(&di->watchdog_work, 0);
 
 	return 0;
 

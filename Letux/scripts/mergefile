@@ -68,6 +68,7 @@ letux/debian-build
 # upstreaming in progress
 letux/generic-adc-battery
 letux/w2sg-serdev
+letux/sirf-gps
 letux/tsc2007
 letux/gpio-pcal6524
 letux/ov9655-new

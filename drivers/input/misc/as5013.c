@@ -658,10 +658,9 @@ static int as5013_probe(struct i2c_client *client,
 	if (ddata == NULL)
 		return -ENOMEM;
 
-	idr_preload(GFP_KERNEL);
 	mutex_lock(&as5013_mutex);
 
-	ret = idr_alloc(&as5013_proc_id, client, 0, 0, GFP_NOWAIT);
+	ret = idr_alloc(&as5013_proc_id, client, 0, 0, GFP_KERNEL);
 	if (ret >= 0) {
 		ddata->proc_id = ret;
 
@@ -671,7 +670,6 @@ static int as5013_probe(struct i2c_client *client,
 	}
 
 	mutex_unlock(&as5013_mutex);
-	idr_preload_end();
 	if (ret < 0) {
 		dev_err(&client->dev, "failed to alloc idr,"
 				" error %d\n", ret);
@@ -790,10 +788,6 @@ static int as5013_remove(struct i2c_client *client)
 	dev_dbg(&client->dev, "remove\n");
 
 	ddata = i2c_get_clientdata(client);
-
-	mutex_lock(&as5013_mutex);
-
-	mutex_unlock(&as5013_mutex);
 
 	device_remove_file(&client->dev, &dev_attr_reset);
 

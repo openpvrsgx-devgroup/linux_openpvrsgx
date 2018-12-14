@@ -140,12 +140,6 @@
 		speaker-amplifier-gpios = <&twl_gpio 7 GPIO_ACTIVE_HIGH>;
 	};
 
-	battery: n900-battery {
-		compatible = "nokia,n900-battery";
-		io-channels = <&twl_madc 0>, <&twl_madc 4>, <&twl_madc 12>;
-		io-channel-names = "temp", "bsi", "vbat";
-	};
-
 	pwm9: dmtimer-pwm {
 		compatible = "ti,omap-dmtimer-pwm";
 		#pwm-cells = <3>;

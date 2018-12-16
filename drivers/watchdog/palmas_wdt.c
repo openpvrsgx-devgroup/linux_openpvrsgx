@@ -132,6 +132,29 @@ static int palmas_wdt_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM
+static int palmas_wdt_suspend(struct platform_device *pdev, pm_message_t state)
+{
+	struct watchdog_device *wdt = platform_get_drvdata(pdev);
+	if (watchdog_active(wdt))
+		return palmas_wdt_stop(wdt);
+
+	return 0;
+}
+
+static int palmas_wdt_resume(struct platform_device *pdev)
+{
+	struct watchdog_device *wdt = platform_get_drvdata(pdev);
+	if (watchdog_active(wdt))
+		return palmas_wdt_start(wdt);
+
+	return 0;
+}
+#else
+#define palmas_wdt_suspend        NULL
+#define palmas_wdt_resume         NULL
+#endif
+
 static struct of_device_id of_palmas_match_tbl[] = {
 	{ .compatible = "ti,palmas-wdt", },
 	{ .compatible = "ti,twl6035-wdt", },
@@ -146,8 +169,9 @@ static struct of_device_id of_palmas_match_tbl[] = {
 static struct platform_driver palmas_wdt_driver = {
 	.probe = palmas_wdt_probe,
 	.remove = palmas_wdt_remove,
+	.suspend = palmas_wdt_suspend,
+	.resume = palmas_wdt_resume,
 	.driver = {
-		.owner = THIS_MODULE,
 		.of_match_table = of_palmas_match_tbl,
 		.name = "palmas-wdt",
 	},

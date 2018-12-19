@@ -140,3 +140,4 @@ letux/omap5-idle
 -letux/omap-hsmmc
 -letux/antitear
 -letux/android
+-letux/pyra-minimal

@@ -82,6 +82,7 @@ letux/as5013-a
 letux/pandora-nub
 letux/as5013-b
 letux/iio-input-bridge
+letux/vcnl4000
 
 # not ready for upstreaming but works
 letux/bq27xxx

@@ -78,9 +78,12 @@
 	};
 
 	/* backlight is here as demo code */
+
+#define BACKLIGHT_FREQ_HZ	83
+
 	backlight {
 		compatible = "pwm-backlight";
-		pwms = <&pwm9 0 12000000 0>;
+		pwms = <&pwm9 0 (1000000000 / BACKLIGHT_FREQ_HZ) 0>;
 		pwm-names = "backlight";
 		brightness-levels = <0 5 7 10 12 14 17 20 25 30 35 40 50 65 80 100>;
 		default-brightness-level = <14>;	/* 80% */

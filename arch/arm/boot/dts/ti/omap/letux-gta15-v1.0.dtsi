@@ -86,22 +86,6 @@
 		NIMP-vbus-supply = <&modem_vbus_hdmi_power>;	/* apply VBUS to the modem */
 	};
 
-	backlight {
-		compatible = "pwm-backlight";
-		pwms = <&pwm9 0 12000000 0>;
-		pwm-names = "backlight";
-		brightness-levels = <0 5 7 10 12 14 17 20 25 30 35 40 50 65 80 100>;
-		default-brightness-level = <14>;	/* 80% */
-		pinctrl-names = "default";
-		pinctrl-0 = <&backlight_pins>;
-	};
-
-	pwm9: dmtimer-pwm@9 {
-		compatible = "ti,omap-dmtimer-pwm";
-		ti,timers = <&timer9>;
-		#pwm-cells = <3>;
-	};
-
 	keyboard-backlight {
 		compatible = "pwm-backlight";
 		pwms = <&pwm8 0 12000000 0>;

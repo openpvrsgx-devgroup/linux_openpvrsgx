@@ -11,4 +11,4 @@ snd-soc-omap-aess-objs := omap-aess-core.o \
 			aess_port.o \
 			port_mgr.o \
 
-obj-$(CONFIG_SND_OMAP_SOC_AESS) += snd-soc-omap-aess.o
+obj-$(CONFIG_SND_SOC_OMAP_AESS) += snd-soc-omap-aess.o

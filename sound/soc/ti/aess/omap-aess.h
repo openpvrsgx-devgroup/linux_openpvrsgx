@@ -74,7 +74,7 @@ enum omap_aess_port_id {
 
 struct omap_aess;
 
-#if IS_ENABLED(CONFIG_SND_OMAP_SOC_AESS)
+#if IS_ENABLED(CONFIG_SND_SOC_OMAP_AESS)
 /* API to get and put aess handle */
 struct omap_aess *omap_aess_get_handle(void);
 void omap_aess_put_handle(struct omap_aess *aess);
@@ -177,6 +177,6 @@ static inline void omap_aess_set_dl1_gains(struct omap_aess *aess, int left,
 {
 }
 
-#endif /* IS_ENABLED(CONFIG_SND_OMAP_SOC_AESS) */
+#endif /* IS_ENABLED(CONFIG_SND_SOC_OMAP_AESS) */
 
 #endif	/* End of __OMAP_AESS_H__ */

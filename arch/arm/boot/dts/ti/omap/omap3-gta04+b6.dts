@@ -19,12 +19,9 @@
 
 	/* overwrite panel definitions */
 
-	aliases {
-		display0 = &lcd_b2;
-		display1 = &tv0;
-	};
+	/delete-node/ spi_lcd;
 
-	lcd_b2: lcd {
+	lcd: lcd {
 		compatible =	"ortustech,com37h3m05dtc",
 				"ortustech,com37h3m099dtc",
 				"panel-dpi";
@@ -52,29 +49,11 @@
 		};
 
 		port {
-			lcd_b2_in: endpoint {
+			lcd_in: endpoint {
 				remote-endpoint = <&dpi_out>;
 			};
 		};
 	};
-};
-
-&dss {
-	pinctrl-names = "default";
-	pinctrl-0 = < &dss_dpi_pins >;
-
-	status = "okay";
-
-	port {
-		dpi_out: endpoint {
-			remote-endpoint = <&lcd_b2_in>;
-			data-lines = <24>;
-		};
-	};
-};
-
-&spi_lcd {
-	compatible = "none";
 };
 
 /* FIXME: &spi_gpio_pins: { }; */

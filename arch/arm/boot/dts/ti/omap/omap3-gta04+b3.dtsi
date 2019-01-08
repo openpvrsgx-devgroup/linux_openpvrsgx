@@ -13,14 +13,9 @@
 
 	/* overwrite panel definitions */
 
-	aliases {
-		display0 = &lcd_b3;
-		display1 = &tv0;
-	};
-
 	/delete-node/ spi_lcd;
 
-	lcd_b3: lcd {
+	lcd: lcd {
 		compatible =	"sharp,lq070y3dg3b",
 				"panel-dpi";
 		label = "lcd";
@@ -47,23 +42,9 @@
 		};
 
 		port {
-			lcd_b3_in: endpoint {
+			lcd_in: endpoint {
 				remote-endpoint = <&dpi_out>;
 			};
-		};
-	};
-};
-
-&dss {
-	pinctrl-names = "default";
-	pinctrl-0 = < &dss_dpi_pins >;
-
-	status = "okay";
-
-	port {
-		dpi_out: endpoint {
-			remote-endpoint = <&lcd_b3_in>;
-			data-lines = <24>;
 		};
 	};
 };

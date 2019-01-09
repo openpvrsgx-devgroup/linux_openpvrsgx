@@ -21,6 +21,7 @@ obj-$(CONFIG_SND_SOC_DAVINCI_MCASP) += snd-soc-davinci-mcasp.o
 obj-$(CONFIG_SND_SOC_OMAP_DMIC) += snd-soc-omap-dmic.o
 obj-$(CONFIG_SND_SOC_OMAP_MCBSP) += snd-soc-omap-mcbsp.o
 obj-$(CONFIG_SND_SOC_OMAP_MCPDM) += snd-soc-omap-mcpdm.o
+obj-$(CONFIG_SND_SOC_OMAP_AESS) += aess/
 
 # Machine drivers
 snd-soc-davinci-evm-y := davinci-evm.o

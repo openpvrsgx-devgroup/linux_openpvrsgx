@@ -407,7 +407,11 @@ static int __devinit PVRSRVDriverProbe(LDM_DEV *pDevice, const struct pci_device
 	PVR_TRACE(("PVRSRVDriverProbe(pDevice=%p)", pDevice));
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0))
 #ifdef CONFIG_RESET_CONTROLLER
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,16,0))
+	rstc = reset_control_get_exclusive(&pDevice->dev, NULL);
+#else
 	rstc = reset_control_get(&pDevice->dev, NULL);
+#endif
 	if (IS_ERR(rstc)) 
 	{
 		dev_err(&pDevice->dev, "%s: error: reset_control_get\n", __func__);

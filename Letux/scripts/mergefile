@@ -62,6 +62,7 @@ letux/dt-gta15
 letux/dt-udoo-neo
 letux/dt-omap5-common
 letux/dt-omap5-uevm
+letux/dt-raspi
 
 # Debian build scripts
 letux/debian-build

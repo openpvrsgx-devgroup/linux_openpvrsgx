@@ -1,0 +1,118 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+/*
+ * Copyright (C) 2015 OpenPandora - http://www.pyra-handheld.com/
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+#include "pyra-mainboard-v5.0.dtsi"
+
+/ {
+	model = "Pyra-Handheld-V4.9";
+
+	pyra_leds { /* historical for V4 main boards */
+		compatible = "gpio-leds";
+		led@1 {
+			label = "pyra-old:red:left";
+			gpios = <&gpio99 5 (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>;
+			linux,default-trigger = "mmc0";
+			default-state = "off";
+		};
+
+		led@2 {
+			label = "pyra-old:green:left";
+			gpios = <&gpio99 6 (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+
+		led@3 {
+			label = "pyra-old:blue:left";
+			gpios = <&gpio99 7 (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+
+		led@4 {
+			label = "pyra-old:red:mid";
+			gpios = <&gpio99 17 (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>;
+			linux,default-trigger = "mmc1";
+			default-state = "off";
+		};
+
+		led@5 {
+			label = "pyra-old:green:mid";
+			gpios = <&gpio99 18 (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+
+		led@6 {
+			label = "pyra-old:blue:mid";
+			gpios = <&gpio99 19 (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>;
+			linux,default-trigger = "timer";
+			default-state = "off";
+		};
+
+		led@7 {
+			label = "pyra-old:red:right";
+			gpios = <&gpio99 21 (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>;
+			linux,default-trigger = "heartbeat";
+			default-state = "off";
+		};
+
+		led@8 {
+			label = "pyra-old:green:right";
+			gpios = <&gpio99 22 (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+
+		led@9 {
+			label = "pyra-old:blue:right";
+			gpios = <&gpio99 23 (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+
+	};
+
+	keypad_leds { /* historical for V4 main boards */
+		compatible = "gpio-leds";
+
+		led@1 {
+			label = "keypad1";
+			gpios = <&gpio99 2 (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+
+		led@2 {
+			label = "keypad2";
+			gpios = <&gpio99 3 (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+
+		led@3 {
+			label = "keypad3";
+			gpios = <&gpio99 12 (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+
+		led@4 {
+			label = "keypad4";
+			gpios = <&gpio99 13 (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+	};
+};
+
+&i2c5 {
+	/delete-node/ leds-left-mid@64;
+	/delete-node/ leds-right@67;
+};

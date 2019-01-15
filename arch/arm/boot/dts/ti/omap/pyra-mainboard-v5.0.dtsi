@@ -1,0 +1,119 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+/*
+ * Copyright (C) 2015 OpenPandora - http://www.pyra-handheld.com/
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+#include "pyra-mainboard-common.dtsi"
+
+/ {
+	model = "Pyra-Mainboard V5.0";
+};
+
+&i2c2 {
+	/* fuel gauge */
+	/delete-node/ bq27421@55;
+
+	bq27621@55 {
+		compatible = "ti,bq27621";
+		reg = <0x55>;
+		monitored-battery = <&bat>;
+	};
+};
+
+&i2c5 {
+	/delete-node/ leds-left-mid-right@64;
+
+	leds-left-mid@64 {
+		compatible = "issi,is31fl3196";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <0x64>;
+
+		left_led1: red_left@1 {
+			label = "pyra:red:left";
+			reg = <1>;
+			linux,default-trigger = "heartbeat";
+		};
+
+		left_led2: green_left@2 {
+			label = "pyra:green:left";
+			reg = <2>;
+			linux,default-trigger = "heartbeat";
+		};
+
+		left_led3: blue_left@3 {
+			label = "pyra:blue:left";
+			reg = <3>;
+			linux,default-trigger = "timer";
+		};
+
+		mid_led4: red_mid@4 {
+			label = "pyra:red:mid";
+			reg = <4>;
+			linux,default-trigger = "default-on";
+		};
+
+		mid_led5: green_mid@5 {
+			label = "pyra:green:mid";
+			reg = <5>;
+			linux,default-trigger = "timer";
+		};
+
+		mid_led6: blue_mid@6 {
+			label = "pyra:blue:mid";
+			reg = <6>;
+			linux,default-trigger = "heartbeat";
+		};
+	};
+
+	leds-right@67 {
+		compatible = "issi,is31fl3196";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <0x67>;
+
+		right_led7: red_right@1 {
+			label = "pyra:red:right";
+			reg = <1>;
+			linux,default-trigger = "heartbeat";
+		};
+
+		right_led8: green_right@2 {
+			label = "pyra:green:right";
+			reg = <2>;
+			linux,default-trigger = "heartbeat";
+		};
+
+		right_led9: blue_right@3 {
+			label = "pyra:blue:right";
+			reg = <3>;
+			linux,default-trigger = "timer";
+		};
+	};
+
+	/* microphone detect */
+	/delete-node/ ts3a227@3b;
+
+	ts3a225@3b {
+		compatible = "ti,ts3a225e";
+		reg = <0x3b>;
+		/* interrupts are broken */
+		ti,micbias = <0>;	/* 2.1V */
+	};
+};
+
+&twl6040 {
+	/* motor connected to L */
+	vibra {
+		ti,viblmotor-res = <32>;
+		ti,vibrmotor-res = <999999>;	/* no motor */
+	};
+};
+
+&wlcore {
+	compatible = "ti,wl1835";
+};

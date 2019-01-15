@@ -1,0 +1,60 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+/*
+ * Copyright (C) 2016-19 Golden Delicous Computers - http://www.goldelico.com/
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+/dts-v1/;
+
+/* this version is for the Letux Cortex 15 CPU board (V5.1) */
+
+#include "omap5-letux-cortex15-common.dtsi"
+
+/ {
+	model = "Letux Cortex 15 V5.1";
+	compatible = "goldelico,lc15-v5.1", "goldelico,lc15", "ti,omap5-uevm", "ti,omap5";
+};
+
+&cpu0 {
+	operating-points = <
+		/* kHz    uV */
+		250000 750000
+		500000 850000
+		750000 950000
+		1000000 1050000
+#if 0	/* V5.1 CPU boards run instable at 1.25 GHz or above unless fixed by U-Boot setup */
+		1250000 1100000
+		1500000 1250000
+		1700000 1250000
+#endif
+	>;
+};
+
+&mmc1 { /* first SD slot */
+	/*
+	 * there is a hardware bug that external pull-up for gpio8_228
+	 * and gpio8_229 are pulled up to 3V3 through 100kOhm. This might
+	 * reduce chip reliability unless the pull-downs are always
+	 * activated (like they are by reset/release state). This has
+	 * the effect that the cd and wp gipos are not really useable.
+	 * Hence we should neither configure different pinmux nor make
+	 * use of the gpios.
+	 *
+	 * And for card insertion/removal to be still detected, we
+	 * need "broken-cd".
+	 */
+	broken-cd;	/* must poll for cards */
+};
+
+&mmc1_pins {
+	/delete-property/ pinctrl-single,pins;
+#if 0	/* NEVER ENABLE on V5.1 board */
+	pinctrl-single,pins = <
+		OMAP5_IOPAD(0x174, PIN_INPUT_PULLDOWN | MUX_MODE7)	/* 0x174:[15:0] sdcard_cd */
+		OMAP5_IOPAD(0x176, PIN_INPUT_PULLDOWN | MUX_MODE7)	/* 0x175:[31:16] sdcard_wp */
+	>;
+#endif
+};

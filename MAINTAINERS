@@ -9176,6 +9176,11 @@ M:	Krzysztof Kozlowski <krzk@kernel.org>
 S:	Maintained
 F:	drivers/reset/reset-gpio.c
 
+GENERIC GPIO PWM DRIVER
+M:	Olliver Schinagl <oliver@schinagl.nl>
+S:	Maintained
+F:	drivers/pwm/pwm-gpio.c
+
 GENERIC HDLC (WAN) DRIVERS
 M:	Krzysztof Halasa <khc@pm.waw.pl>
 S:	Maintained

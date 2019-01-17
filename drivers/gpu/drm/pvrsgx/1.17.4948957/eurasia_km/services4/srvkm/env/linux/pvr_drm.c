@@ -269,6 +269,13 @@ exit:
 DRI_DRM_STATIC void
 PVRSRVDrmUnload(struct drm_device *dev)
 {
+#if (AM_VERSION == 3) || (AM_VERSION == 4)
+	int ret;
+	struct device *pDev = dev->dev;
+	struct platform_device *pDevice	= to_platform_device(pDev);
+	struct gfx_sgx_platform_data *pdata = pDev->platform_data;
+#endif
+
 	PVR_TRACE(("PVRSRVDrmUnload"));
 
 #if defined(DISPLAY_CONTROLLER)
@@ -276,6 +283,15 @@ PVRSRVDrmUnload(struct drm_device *dev)
 #endif
 
 	PVRCore_Cleanup();
+
+#if (AM_VERSION == 3) || (AM_VERSION == 4)
+	if (pdata && pdata->assert_reset) {
+		ret = pdata->assert_reset(pDevice, pdata->reset_name);
+		if (ret) {
+			dev_err(pDev, "Unable to reset SGX!\n");
+		}
+	}
+#endif
 
 #if defined(PDUMP)
 	dbgdrv_cleanup();
@@ -727,24 +743,9 @@ PVRSRVDrmProbe(struct platform_device *pDevice)
 static int
 PVRSRVDrmRemove(struct platform_device *pDevice)
 {
-#if (AM_VERSION == 3)  || (AM_VERSION == 4)
-	int ret;
-	struct device *dev = &pDevice->dev;
-	struct gfx_sgx_platform_data *pdata = dev->platform_data;
-#endif
 	struct drm_device *drm_dev = platform_get_drvdata(pDevice);
 
 	PVR_TRACE(("PVRSRVDrmRemove"));
-
-
-#if (AM_VERSION == 3)  || (AM_VERSION == 4)
-	if (pdata && pdata->assert_reset) {
-		ret = pdata->assert_reset(pDevice, pdata->reset_name);
-		if (ret) {
-			dev_err(dev, "Unable to reset SGX!\n");
-		}
-	}
-#endif
 
 	drm_dev_unregister(drm_dev);
 	drm_dev_unref(drm_dev);

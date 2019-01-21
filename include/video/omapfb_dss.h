@@ -13,6 +13,7 @@
 #include <linux/list.h>
 #include <linux/kobject.h>
 #include <linux/device.h>
+#include <linux/notifier.h>
 #include <linux/interrupt.h>
 #include <linux/platform_data/omapdss.h>
 
@@ -191,6 +192,48 @@ enum omap_dss_output_id {
 	OMAP_DSS_OUTPUT_DSI2	= 1 << 4,
 	OMAP_DSS_OUTPUT_VENC	= 1 << 5,
 	OMAP_DSS_OUTPUT_HDMI	= 1 << 6,
+};
+
+/**
+ * Go event is triggered when all dss caches are clean (including shadow
+ * registers).
+ *
+ * This is used in xserver xv implementation to block writing to overlay until
+ * dss has completed reading same memory area.
+ *
+ * Example use in xv:
+ * If there is manual update triggered by gfx overlay first wait_for_go()
+ * doesn't block but wait_gfx() would block.
+ ** Frame 5 to first "buffer"
+ * wait_for_go()
+ * fill frame
+ * pan to first "buffer"
+ * update_window() for frame 1
+ * request update notify
+ ** Frame 6 to second "buffer" (wait_gfx() would block here)
+ * wait_for_go()
+ * fill frame
+ * pan to second "buffer"
+ ** Frame 7 to first "buffer"
+ * wait_for_go() blocking
+ * First update completes
+ * wait_for_go() returns
+ * update notify arrives
+ * update_window() for frame 2
+ * fill frame
+ * pan to third frame
+ *
+ * Update event is sent when manual update completes. Update event is not
+ * available for automatic update displays (returns -EINVAL).
+ */
+enum omap_dss_notify_event {
+	OMAP_DSS_NOTIFY_NONE		= 0 << 0,
+	OMAP_DSS_NOTIFY_GO_MGR		= 1 << 0,
+	OMAP_DSS_NOTIFY_UPDATE_MGR	= 2 << 0,
+	OMAP_DSS_NOTIFY_MASK_MGR	= 3 << 0,
+	OMAP_DSS_NOTIFY_GO_OVL		= 1 << 2,
+	OMAP_DSS_NOTIFY_UPDATE_OVL	= 2 << 2,
+	OMAP_DSS_NOTIFY_MASK_OVL	= 3 << 2,
 };
 
 /* RFBI */
@@ -380,6 +423,9 @@ struct omap_overlay {
 
 	int (*wait_for_go)(struct omap_overlay *ovl);
 
+	int (*notify)(struct omap_overlay *ovl,
+			enum omap_dss_notify_event events);
+
 	struct omap_dss_device *(*get_device)(struct omap_overlay *ovl);
 };
 
@@ -431,6 +477,8 @@ struct omap_overlay_manager {
 
 	int (*apply)(struct omap_overlay_manager *mgr);
 	int (*wait_for_go)(struct omap_overlay_manager *mgr);
+	int (*notify)(struct omap_overlay_manager *mgr,
+			enum omap_dss_notify_event events);
 	int (*wait_for_vsync)(struct omap_overlay_manager *mgr);
 
 	struct omap_dss_device *(*get_device)(struct omap_overlay_manager *mgr);
@@ -830,6 +878,11 @@ void omapdss_default_get_resolution(struct omap_dss_device *dssdev,
 int omapdss_default_get_recommended_bpp(struct omap_dss_device *dssdev);
 void omapdss_default_get_timings(struct omap_dss_device *dssdev,
 		struct omap_video_timings *timings);
+
+int omap_dss_register_notifier(struct notifier_block *nb);
+int omap_dss_unregister_notifier(struct notifier_block *nb);
+
+int omap_dss_request_notify(enum omap_dss_notify_event event, long value);
 
 int omap_dispc_register_isr(omap_dispc_isr_t isr, void *arg, u32 mask);
 int omap_dispc_unregister_isr(omap_dispc_isr_t isr, void *arg, u32 mask);

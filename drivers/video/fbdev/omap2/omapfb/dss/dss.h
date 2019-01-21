@@ -229,6 +229,8 @@ int dss_init_overlay_managers(void);
 void dss_uninit_overlay_managers(void);
 int dss_init_overlay_managers_sysfs(struct platform_device *pdev);
 void dss_uninit_overlay_managers_sysfs(struct platform_device *pdev);
+int dss_mgr_notify_ovl(struct omap_overlay *ovl,
+		enum omap_dss_notify_event events);
 int dss_mgr_simple_check(struct omap_overlay_manager *mgr,
 		const struct omap_overlay_manager_info *info);
 int dss_mgr_check_timings(struct omap_overlay_manager *mgr,

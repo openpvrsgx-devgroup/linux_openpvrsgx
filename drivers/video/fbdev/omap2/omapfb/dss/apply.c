@@ -19,6 +19,7 @@
 
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/notifier.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
 #include <linux/jiffies.h>
@@ -74,6 +75,8 @@ struct ovl_priv_data {
 	bool enabled;
 	u32 fifo_low, fifo_high;
 
+	enum omap_dss_notify_event requested_events;
+
 	/*
 	 * True if overlay is to be enabled. Used to check and calculate configs
 	 * for the overlay before it is enabled in the HW.
@@ -109,6 +112,8 @@ struct mgr_priv_data {
 
 	void (*framedone_handler)(void *);
 	void *framedone_handler_data;
+
+	enum omap_dss_notify_event requested_events;
 };
 
 static struct {
@@ -118,11 +123,25 @@ static struct {
 	bool irq_enabled;
 } dss_data;
 
+struct dss_wait_notify_event {
+	enum omap_dss_notify_event event;
+	int id;
+	struct completion compl;
+	struct list_head list;
+};
+
+static struct {
+	struct notifier_block nb;
+	spinlock_t lock;
+	struct list_head list;
+} dss_wait_notify;
+
 /* protects dss_data */
 static spinlock_t data_lock;
 /* lock for blocking functions */
 static DEFINE_MUTEX(apply_lock);
 static DECLARE_COMPLETION(extra_updated_completion);
+static ATOMIC_NOTIFIER_HEAD(dss_notifier_list);
 
 static void dss_register_vsync_isr(void);
 
@@ -203,6 +222,112 @@ static bool mgr_manual_update(struct omap_overlay_manager *mgr)
 	struct mgr_priv_data *mp = get_mgr_priv(mgr);
 
 	return mp->lcd_config.stallmode;
+}
+
+static int dss_notifier_call_chain(unsigned long val, void *v)
+{
+	return atomic_notifier_call_chain(&dss_notifier_list, val, v);
+}
+
+/**
+ * Check from events which should be fired now.
+ *
+ * @return: list of events that should fire now.
+ */
+static enum omap_dss_notify_event dss_mgr_notify_check(
+		struct omap_overlay_manager *mgr,
+		struct mgr_priv_data *mp,
+		enum omap_dss_notify_event events)
+{
+	if (!mgr_manual_update(mgr) && mp->enabled &&
+	    (mp->info_dirty || mp->shadow_info_dirty))
+		events = OMAP_DSS_NOTIFY_NONE;
+
+	return events;
+}
+
+static enum omap_dss_notify_event dss_mgr_notify_check_ovl(
+		struct omap_overlay *ovl,
+		struct ovl_priv_data *op,
+		struct mgr_priv_data *mp,
+		enum omap_dss_notify_event events)
+{
+	if (!ovl_manual_update(ovl) && mp->enabled && op->enabled &&
+	    (op->info_dirty || op->shadow_info_dirty))
+		events = OMAP_DSS_NOTIFY_NONE;
+
+	return events;
+}
+
+static enum omap_dss_notify_event check_mgr_notify(
+		struct omap_overlay_manager *mgr)
+{
+	struct mgr_priv_data *mp;
+
+	mp = &dss_data.mgr_priv_data_array[mgr->id];
+
+	if (mp->requested_events == OMAP_DSS_NOTIFY_NONE)
+		return OMAP_DSS_NOTIFY_NONE;
+
+	return dss_mgr_notify_check(mgr, mp, mp->requested_events);
+}
+
+static enum omap_dss_notify_event check_ovl_notify(
+		struct omap_overlay *ovl)
+{
+	struct ovl_priv_data *op;
+	struct mgr_priv_data *mp;
+
+	op = &dss_data.ovl_priv_data_array[ovl->id];
+
+	if (!ovl->manager)
+		return op->requested_events;
+
+	mp = &dss_data.mgr_priv_data_array[ovl->manager->id];
+
+	if (op->requested_events == OMAP_DSS_NOTIFY_NONE)
+		return OMAP_DSS_NOTIFY_NONE;
+
+	return dss_mgr_notify_check_ovl(ovl, op, mp, op->requested_events);
+}
+
+static void dss_run_notifiers(void)
+{
+	struct ovl_priv_data *op;
+	struct mgr_priv_data *mp;
+	int i;
+	struct omap_overlay_manager *mgr;
+	struct omap_overlay *ovl;
+	enum omap_dss_notify_event events;
+
+	for (i = 0; i < omap_dss_get_num_overlay_managers(); i++) {
+		mgr = omap_dss_get_overlay_manager(i);
+
+		events = check_mgr_notify(mgr);
+		if (events == OMAP_DSS_NOTIFY_NONE)
+			continue;
+
+		mp = &dss_data.mgr_priv_data_array[mgr->id];
+
+		mp->requested_events &= ~events;
+
+		dss_notifier_call_chain(events, (void *)(long)mgr->id);
+	}
+
+	for (i = 0; i < omap_dss_get_num_overlays(); ++i) {
+		ovl = omap_dss_get_overlay(i);
+
+		events = check_ovl_notify(ovl);
+		if (events == OMAP_DSS_NOTIFY_NONE)
+			continue;
+
+		op = &dss_data.ovl_priv_data_array[ovl->id];
+
+		op->requested_events &= ~events;
+
+		dss_notifier_call_chain(events,
+					(void *)(long)ovl->id);
+	}
 }
 
 static int dss_check_settings_low(struct omap_overlay_manager *mgr,
@@ -445,6 +570,12 @@ static struct omap_dss_device *dss_ovl_get_device(struct omap_overlay *ovl)
 	return ovl->manager ? dss_mgr_get_device(ovl->manager) : NULL;
 }
 
+static int dss_ovl_notify(struct omap_overlay *ovl,
+		enum omap_dss_notify_event events)
+{
+	return dss_mgr_notify_ovl(ovl, events);
+}
+
 static int dss_mgr_wait_for_vsync(struct omap_overlay_manager *mgr)
 {
 	unsigned long timeout = msecs_to_jiffies(500);
@@ -477,149 +608,75 @@ static int dss_mgr_wait_for_vsync(struct omap_overlay_manager *mgr)
 	return r;
 }
 
-static int dss_mgr_wait_for_go(struct omap_overlay_manager *mgr)
+static int dss_wait_notify_callback(struct notifier_block *nb,
+		unsigned long event, void *data)
+{
+	struct dss_wait_notify_event *e;
+	unsigned long flags;
+
+	spin_lock_irqsave(&dss_wait_notify.lock, flags);
+
+	list_for_each_entry(e, &dss_wait_notify.list, list) {
+		if (!(event & e->event))
+			continue;
+		if ((long)data != e->id)
+			continue;
+		complete(&e->compl);
+	}
+
+	spin_unlock_irqrestore(&dss_wait_notify.lock, flags);
+
+	return 0;
+}
+
+static int dss_wait_notify_event(enum omap_dss_notify_event event, int id)
 {
 	unsigned long timeout = msecs_to_jiffies(500);
-	struct mgr_priv_data *mp = get_mgr_priv(mgr);
-	u32 irq;
+	struct dss_wait_notify_event e = {
+		.event = event,
+		.id = id,
+	};
 	unsigned long flags;
 	int r;
-	int i;
 
-	spin_lock_irqsave(&data_lock, flags);
+	init_completion(&e.compl);
 
-	if (mgr_manual_update(mgr)) {
-		spin_unlock_irqrestore(&data_lock, flags);
-		return 0;
-	}
+	spin_lock_irqsave(&dss_wait_notify.lock, flags);
+	list_add_tail(&e.list, &dss_wait_notify.list);
+	spin_unlock_irqrestore(&dss_wait_notify.lock, flags);
 
-	if (!mp->enabled) {
-		spin_unlock_irqrestore(&data_lock, flags);
-		return 0;
-	}
-
-	spin_unlock_irqrestore(&data_lock, flags);
-
-	r = dispc_runtime_get();
+	r = omap_dss_request_notify(event, id);
 	if (r)
-		return r;
+		goto list_remove;
 
-	irq = dispc_mgr_get_vsync_irq(mgr->id);
+	r = wait_for_completion_interruptible_timeout(&e.compl, timeout);
+	if (!r)
+		r = -ETIMEDOUT;
 
-	i = 0;
-	while (1) {
-		bool shadow_dirty, dirty;
+list_remove:
+	spin_lock_irqsave(&dss_wait_notify.lock, flags);
+	list_del(&e.list);
+	spin_unlock_irqrestore(&dss_wait_notify.lock, flags);
 
-		spin_lock_irqsave(&data_lock, flags);
-		dirty = mp->info_dirty;
-		shadow_dirty = mp->shadow_info_dirty;
-		spin_unlock_irqrestore(&data_lock, flags);
+	return r < 0 ? r : 0;
+}
 
-		if (!dirty && !shadow_dirty) {
-			r = 0;
-			break;
-		}
+static int dss_mgr_wait_for_go(struct omap_overlay_manager *mgr)
+{
+	int r = dss_wait_notify_event(OMAP_DSS_NOTIFY_GO_MGR, mgr->id);
 
-		/* 4 iterations is the worst case:
-		 * 1 - initial iteration, dirty = true (between VFP and VSYNC)
-		 * 2 - first VSYNC, dirty = true
-		 * 3 - dirty = false, shadow_dirty = true
-		 * 4 - shadow_dirty = false */
-		if (i++ == 3) {
-			DSSERR("mgr(%d)->wait_for_go() not finishing\n",
-					mgr->id);
-			r = 0;
-			break;
-		}
-
-		r = omap_dispc_wait_for_irq_interruptible_timeout(irq, timeout);
-		if (r == -ERESTARTSYS)
-			break;
-
-		if (r) {
-			DSSERR("mgr(%d)->wait_for_go() timeout\n", mgr->id);
-			break;
-		}
-	}
-
-	dispc_runtime_put();
+	if (r == -ETIMEDOUT)
+		DSSERR("mgr(%d)->wait_for_go() timeout\n", mgr->id);
 
 	return r;
 }
 
-static int dss_mgr_wait_for_go_ovl(struct omap_overlay *ovl)
+int dss_mgr_wait_for_go_ovl(struct omap_overlay *ovl)
 {
-	unsigned long timeout = msecs_to_jiffies(500);
-	struct ovl_priv_data *op;
-	struct mgr_priv_data *mp;
-	u32 irq;
-	unsigned long flags;
-	int r;
-	int i;
+	int r = dss_wait_notify_event(OMAP_DSS_NOTIFY_GO_OVL, ovl->id);
 
-	if (!ovl->manager)
-		return 0;
-
-	mp = get_mgr_priv(ovl->manager);
-
-	spin_lock_irqsave(&data_lock, flags);
-
-	if (ovl_manual_update(ovl)) {
-		spin_unlock_irqrestore(&data_lock, flags);
-		return 0;
-	}
-
-	if (!mp->enabled) {
-		spin_unlock_irqrestore(&data_lock, flags);
-		return 0;
-	}
-
-	spin_unlock_irqrestore(&data_lock, flags);
-
-	r = dispc_runtime_get();
-	if (r)
-		return r;
-
-	irq = dispc_mgr_get_vsync_irq(ovl->manager->id);
-
-	op = get_ovl_priv(ovl);
-	i = 0;
-	while (1) {
-		bool shadow_dirty, dirty;
-
-		spin_lock_irqsave(&data_lock, flags);
-		dirty = op->info_dirty;
-		shadow_dirty = op->shadow_info_dirty;
-		spin_unlock_irqrestore(&data_lock, flags);
-
-		if (!dirty && !shadow_dirty) {
-			r = 0;
-			break;
-		}
-
-		/* 4 iterations is the worst case:
-		 * 1 - initial iteration, dirty = true (between VFP and VSYNC)
-		 * 2 - first VSYNC, dirty = true
-		 * 3 - dirty = false, shadow_dirty = true
-		 * 4 - shadow_dirty = false */
-		if (i++ == 3) {
-			DSSERR("ovl(%d)->wait_for_go() not finishing\n",
-					ovl->id);
-			r = 0;
-			break;
-		}
-
-		r = omap_dispc_wait_for_irq_interruptible_timeout(irq, timeout);
-		if (r == -ERESTARTSYS)
-			break;
-
-		if (r) {
-			DSSERR("ovl(%d)->wait_for_go() timeout\n", ovl->id);
-			break;
-		}
-	}
-
-	dispc_runtime_put();
+	if (r == -ETIMEDOUT)
+		DSSERR("ovl(%d)->wait_for_go() timeout\n", ovl->id);
 
 	return r;
 }
@@ -817,6 +874,146 @@ static void dss_mgr_disconnect_compat(struct omap_overlay_manager *mgr,
 	mgr->unset_output(mgr);
 }
 
+static int dss_mgr_notify(struct omap_overlay_manager *mgr,
+			  enum omap_dss_notify_event events)
+{
+	struct mgr_priv_data *mp;
+	const int num_mgrs = ARRAY_SIZE(dss_data.mgr_priv_data_array);
+	unsigned long flags;
+	enum omap_dss_notify_event fire_events = OMAP_DSS_NOTIFY_NONE;
+	struct omap_dss_device *dssdev = mgr->output;
+	int r = 0;
+
+	if (mgr->id >= num_mgrs)
+		return -EINVAL;
+
+	if (!dssdev || dssdev->state != OMAP_DSS_DISPLAY_ACTIVE) {
+		dss_notifier_call_chain(events,
+					(void *)(long)mgr->id);
+		return 0;
+	}
+
+	spin_lock_irqsave(&data_lock, flags);
+
+	mp = &dss_data.mgr_priv_data_array[mgr->id];
+
+	if (!mgr_manual_update(mgr) && (events & OMAP_DSS_NOTIFY_UPDATE_MGR)) {
+		r = -EINVAL;
+		goto err_out;
+	}
+
+	fire_events = dss_mgr_notify_check(mgr, mp, events);
+
+	mp->requested_events |= events & ~fire_events;
+
+err_out:
+	spin_unlock_irqrestore(&data_lock, flags);
+
+	if (fire_events != OMAP_DSS_NOTIFY_NONE)
+		dss_notifier_call_chain(fire_events,
+					(void *)(long)mgr->id);
+
+	return r;
+}
+
+int dss_mgr_notify_ovl(struct omap_overlay *ovl,
+		       enum omap_dss_notify_event events)
+{
+	struct ovl_priv_data *oc;
+	struct mgr_priv_data *mp;
+	const int num_ovls = ARRAY_SIZE(dss_data.ovl_priv_data_array);
+	unsigned long flags;
+	enum omap_dss_notify_event fire_events = OMAP_DSS_NOTIFY_NONE;
+	struct omap_dss_device *dssdev;
+	int r = 0;
+
+	if (ovl->id >= num_ovls)
+		return -EINVAL;
+
+	if (!ovl->manager) {
+		dss_notifier_call_chain(events,
+					(void *)(long)ovl->id);
+		return 0;
+	}
+
+	dssdev = ovl->manager->output;
+
+	if (!dssdev || dssdev->state != OMAP_DSS_DISPLAY_ACTIVE) {
+		dss_notifier_call_chain(events,
+					(void *)(long)ovl->id);
+		return 0;
+	}
+
+	spin_lock_irqsave(&data_lock, flags);
+
+	oc = &dss_data.ovl_priv_data_array[ovl->id];
+	mp = &dss_data.mgr_priv_data_array[ovl->manager->id];
+
+	if (!ovl_manual_update(ovl) && (events & OMAP_DSS_NOTIFY_UPDATE_OVL)) {
+		r = -EINVAL;
+		goto err_out;
+	}
+
+	fire_events = dss_mgr_notify_check_ovl(ovl, oc, mp, events);
+
+	oc->requested_events |= events & ~fire_events;
+
+err_out:
+	spin_unlock_irqrestore(&data_lock, flags);
+
+	if (fire_events != OMAP_DSS_NOTIFY_NONE)
+		dss_notifier_call_chain(fire_events,
+					(void *)(long)ovl->id);
+
+	return r;
+}
+
+int omap_dss_request_notify(enum omap_dss_notify_event events,
+			    long value)
+{
+	int r;
+	struct omap_overlay_manager *mgr;
+	struct omap_overlay *ovl;
+
+	if (events & ~(OMAP_DSS_NOTIFY_MASK_MGR | OMAP_DSS_NOTIFY_MASK_OVL))
+		return -EINVAL;
+
+	if (events & OMAP_DSS_NOTIFY_MASK_MGR) {
+		mgr = omap_dss_get_overlay_manager(value);
+		if (!mgr)
+			return -EINVAL;
+		if (!mgr->notify)
+			return -ENOSYS;
+		r = mgr->notify(mgr, events & OMAP_DSS_NOTIFY_MASK_MGR);
+		if (r)
+			return r;
+	}
+	if (events & OMAP_DSS_NOTIFY_MASK_OVL) {
+		ovl = omap_dss_get_overlay(value);
+		if (!ovl)
+			return -EINVAL;
+		if (!ovl->notify)
+			return -ENOSYS;
+		r = ovl->notify(ovl, events & OMAP_DSS_NOTIFY_MASK_OVL);
+		if (r)
+			return r;
+	}
+	return 0;
+}
+EXPORT_SYMBOL(omap_dss_request_notify);
+
+int omap_dss_register_notifier(struct notifier_block *nb)
+{
+	return atomic_notifier_chain_register(&dss_notifier_list, nb);
+}
+EXPORT_SYMBOL(omap_dss_register_notifier);
+
+int omap_dss_unregister_notifier(struct notifier_block *nb)
+{
+	return atomic_notifier_chain_unregister(&dss_notifier_list, nb);
+}
+EXPORT_SYMBOL(omap_dss_unregister_notifier);
+
 static void dss_mgr_start_update_compat(struct omap_overlay_manager *mgr)
 {
 	struct mgr_priv_data *mp = get_mgr_priv(mgr);
@@ -890,10 +1087,11 @@ static void dss_unregister_vsync_isr(void)
 static void dss_apply_irq_handler(void *data, u32 mask)
 {
 	const int num_mgrs = dss_feat_get_num_mgrs();
+	unsigned long flags;
 	int i;
 	bool extra_updating;
 
-	spin_lock(&data_lock);
+	spin_lock_irqsave(&data_lock, flags);
 
 	/* clear busy, updating flags, shadow_dirty flags */
 	for (i = 0; i < num_mgrs; i++) {
@@ -942,7 +1140,8 @@ static void dss_apply_irq_handler(void *data, u32 mask)
 	if (!need_isr())
 		dss_unregister_vsync_isr();
 
-	spin_unlock(&data_lock);
+	dss_run_notifiers();
+	spin_unlock_irqrestore(&data_lock, flags);
 }
 
 static void omap_dss_mgr_apply_ovl(struct omap_overlay *ovl)
@@ -1607,6 +1806,11 @@ int omapdss_compat_init(void)
 
 	apply_init_priv();
 
+	spin_lock_init(&dss_wait_notify.lock);
+	INIT_LIST_HEAD(&dss_wait_notify.list);
+	dss_wait_notify.nb.notifier_call = dss_wait_notify_callback;
+	omap_dss_register_notifier(&dss_wait_notify.nb);
+
 	dss_init_overlay_managers_sysfs(pdev);
 	dss_init_overlays(pdev);
 
@@ -1621,6 +1825,7 @@ int omapdss_compat_init(void)
 		mgr->set_manager_info = &dss_mgr_set_info;
 		mgr->get_manager_info = &dss_mgr_get_info;
 		mgr->wait_for_go = &dss_mgr_wait_for_go;
+		mgr->notify = &dss_mgr_notify;
 		mgr->wait_for_vsync = &dss_mgr_wait_for_vsync;
 		mgr->get_device = &dss_mgr_get_device;
 	}
@@ -1637,6 +1842,7 @@ int omapdss_compat_init(void)
 		ovl->get_overlay_info = &dss_ovl_get_info;
 		ovl->wait_for_go = &dss_mgr_wait_for_go_ovl;
 		ovl->get_device = &dss_ovl_get_device;
+		ovl->notify = &dss_ovl_notify;
 	}
 
 	r = dss_install_mgr_ops(&apply_mgr_ops);
@@ -1696,6 +1902,7 @@ void omapdss_compat_uninit(void)
 
 	dss_uninit_overlay_managers_sysfs(pdev);
 	dss_uninit_overlays(pdev);
+	omap_dss_unregister_notifier(&dss_wait_notify.nb);
 out:
 	mutex_unlock(&compat_init_lock);
 }

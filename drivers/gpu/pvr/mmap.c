@@ -929,13 +929,27 @@ enum PVRSRV_ERROR LinuxMMapPerProcessHandleOptions(struct PVRSRV_HANDLE_BASE
 	return eError;
 }
 
+#ifdef CONFIG_PVR_DEBUG
+static void init_cache(void *foo)
+{
+	memset(foo, 0, sizeof(struct KV_OFFSET_STRUCT));
+}
+#endif
+
 void PVRMMapInit(void)
 {
 	mutex_init(&g_sMMapMutex);
 
+#ifdef CONFIG_PVR_DEBUG
+	g_psMemmapCache =
+	    kmem_cache_create("img-mmap", sizeof(struct KV_OFFSET_STRUCT),
+				   0, 0, init_cache);
+#else
 	g_psMemmapCache =
 	    kmem_cache_create("img-mmap", sizeof(struct KV_OFFSET_STRUCT),
 				   0, 0, NULL);
+#endif
+
 	if (!g_psMemmapCache) {
 		PVR_DPF(PVR_DBG_ERROR, "%s: failed to allocate kmem_cache",
 			 __func__);

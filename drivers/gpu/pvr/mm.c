@@ -152,6 +152,13 @@ static struct DEBUG_LINUX_MEM_AREA_REC *DebugLinuxMemAreaRecordFind(
 static void DebugLinuxMemAreaRecordRemove(struct LinuxMemArea *psLinuxMemArea);
 #endif
 
+#ifdef CONFIG_PVR_DEBUG
+static void init_cache(void *foo)
+{
+	memset(foo, 0, sizeof(struct LinuxMemArea));
+}
+#endif
+
 enum PVRSRV_ERROR LinuxMMInit(void)
 {
 #if defined(DEBUG_LINUX_MEM_AREAS) || defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
@@ -176,9 +183,17 @@ enum PVRSRV_ERROR LinuxMMInit(void)
 			return PVRSRV_ERROR_OUT_OF_MEMORY;
 	}
 #endif
+
+#ifdef CONFIG_PVR_DEBUG
+	psLinuxMemAreaCache =
+	    kmem_cache_create("img-mm", sizeof(struct LinuxMemArea), 0, 0,
+				init_cache);
+#else
 	psLinuxMemAreaCache =
 	    kmem_cache_create("img-mm", sizeof(struct LinuxMemArea), 0, 0,
 				NULL);
+#endif
+
 	if (!psLinuxMemAreaCache) {
 		PVR_DPF(PVR_DBG_ERROR, "%s: failed to allocate kmem_cache",
 			 __func__);

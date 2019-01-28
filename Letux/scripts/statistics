@@ -92,7 +92,7 @@ CURRENTBRANCH=$1
 [ "$1" ] || CURRENTBRANCH=$(git rev-parse --abbrev-ref HEAD)
 
 CURRENTLINUS=v$(make kernelversion)
-CURRENTLINUS=$(echo "$CURRENTLINUS" | sed 's/\.0//g')	# convert 4.18.0 to v4.18
+CURRENTLINUS=$(echo "$CURRENTLINUS" | sed 's/\([0-9]*\.[0-9]*\)\.0/\1/')	# convert e.g. 4.18.0 to v4.18
 
 COUNT=0
 

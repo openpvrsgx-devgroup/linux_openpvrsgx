@@ -177,7 +177,7 @@ static int free_one_res(struct RESMAN_CONTEXT *ctx, u32 restype)
 	freed = FreeResourceByCriteria(ctx, RESMAN_CRITERIA_RESTYPE, restype,
 					NULL, 0, IMG_TRUE);
 	if (freed && warn_unfreed_res())
-		PVR_DPF(DBGPRIV_WARNING, "pvr: %s: cleaning up %d "
+		PVR_DPF(PVR_DBG_WARNING, "pvr: %s: cleaning up %d "
 			   "unfreed resource of type %d\n",
 			   current->comm, freed, restype);
 

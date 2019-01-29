@@ -61,7 +61,7 @@
 
 #define DRVNAME		"pvrsrvkm"
 
-#ifdef CONFIG_PVR_DEBUG_EXTRA
+#ifdef CONFIG_PVR_DEBUG
 static int debug = DBGPRIV_WARNING;
 #include <linux/moduleparam.h>
 module_param(debug, int, 0);
@@ -242,7 +242,7 @@ static int __init pvr_init(void)
 
 	PVR_TRACE("pvr_init");
 
-#ifdef CONFIG_PVR_DEBUG_EXTRA
+#ifdef CONFIG_PVR_DEBUG
 	PVRDebugSetLevel(debug);
 #endif
 

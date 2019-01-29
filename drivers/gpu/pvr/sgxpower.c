@@ -417,7 +417,7 @@ enum PVRSRV_ERROR SGXPostPowerStateExt(void *hDevHandle,
 	if (eError != PVRSRV_OK)
 		return eError;
 
-	PVR_DPF(PVR_DBG_MESSAGE,
+	PVR_DPF(PVR_DBG_WARNING,
 		 "SGXPostPowerState : SGX Power Transition from %d to %d OK",
 		 eCurrentPowerState, eNewPowerState);
 

@@ -210,7 +210,7 @@ void SGXReset(struct PVRSRV_SGXDEV_INFO *psDevInfo, u32 ui32PDUMPFlags)
 
 	SGXResetInvalDC(psDevInfo, ui32PDUMPFlags, IMG_TRUE);
 
-	PVR_DPF(PVR_DBG_MESSAGE, "Soft Reset of SGX");
+	PVR_DPF(PVR_DBG_WARNING, "Soft Reset of SGX");
 	SGXResetSleep(psDevInfo, ui32PDUMPFlags, IMG_TRUE);
 
 	ui32RegVal = 0;

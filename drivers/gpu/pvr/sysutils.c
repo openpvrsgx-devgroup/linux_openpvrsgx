@@ -88,14 +88,14 @@ static int vdd2_post_func(struct notifier_block *n, unsigned long event,
 
 	if (atomic_read(&gpsSysSpecificData->sSGXClocksEnabled) != 0 &&
 	    gpsSysSpecificData->bSGXInitComplete) {
-#if defined(CONFIG_PVR_DEBUG_EXTRA)
+#if defined(CONFIG_PVR_DEBUG)
 		unsigned long rate;
 
 		rate = clk_get_rate(gpsSysSpecificData->psSGX_FCK);
 
 		PVR_ASSERT(rate != 0);
 
-		PVR_TRACE("%s: SGX clock rate: %dMHz", __func__,
+		PVR_TRACE("%s: SGX clock rate: %luMHz", __func__,
 			   HZ_TO_MHZ(rate));
 #endif
 		PVRSRVDevicePostClockSpeedChange(gpsSysSpecificData->
@@ -426,9 +426,19 @@ enum PVRSRV_ERROR EnableSGXClocks(struct SYS_DATA *psSysData)
 	struct SYS_SPECIFIC_DATA *psSysSpecData =
 	    (struct SYS_SPECIFIC_DATA *)psSysData->pvSysSpecificData;
 	enum PVRSRV_ERROR res = PVRSRV_OK;
+#if defined(CONFIG_PVR_DEBUG)
+	unsigned long rate;
+#endif
 
 	if (atomic_xchg(&psSysSpecData->sSGXClocksEnabled, 1))
 		return PVRSRV_OK;
+
+	PVR_TRACE("EnableSGXClocks: Enabling SGX Clocks");
+
+#if defined(CONFIG_PVR_DEBUG)
+	rate = clk_get_rate(psSysSpecData->psMPU_CK);
+	PVR_TRACE("CPU Clock is %dMhz", HZ_TO_MHZ(rate));
+#endif
 
 	/*
 	 * In case of force clocks on we have already enabled the clocks
@@ -454,6 +464,8 @@ void DisableSGXClocks(struct SYS_DATA *psSysData)
 
 	if (!atomic_xchg(&psSysSpecData->sSGXClocksEnabled, 0))
 		return;
+
+	PVR_TRACE("DisableSGXClocks: Disabling SGX Clocks");
 
 	if (!force_clocks_on())
 		sgx_force_disable_clocks(psSysData);
@@ -529,7 +541,7 @@ static void CleanupSgxClocks(struct SYS_DATA *psSysData)
 	}
 }
 
-#if defined(CONFIG_PVR_DEBUG_EXTRA) || defined(TIMING)
+#if defined(CONFIG_PVR_DEBUG) || defined(TIMING)
 static inline u32 gpt_read_reg(struct SYS_DATA *psSysData, u32 reg)
 {
 	struct SYS_SPECIFIC_DATA *psSysSpecData = psSysData->pvSysSpecificData;

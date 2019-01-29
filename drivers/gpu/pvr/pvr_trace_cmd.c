@@ -18,6 +18,7 @@
  */
 
 #include <linux/vmalloc.h>
+#include <linux/sched/clock.h>
 
 #include "img_types.h"
 #include "resman.h"

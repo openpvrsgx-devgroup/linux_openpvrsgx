@@ -113,6 +113,7 @@ static const int bno055_num_channels[] = {
 struct bno055_data {
 	struct regmap *regmap;
 	enum bno055_operation_mode op_mode;
+	struct iio_mount_matrix orientation;
 };
 
 /*
@@ -424,6 +425,18 @@ static void bno055_init_simple_channels(struct iio_chan_spec *p,
 	}
 }
 
+static const struct iio_mount_matrix *
+bno055_get_mount_matrix(const struct iio_dev *indio_dev,
+			      const struct iio_chan_spec *chan)
+{
+	return &((struct bno055_data *)iio_priv(indio_dev))->orientation;
+}
+
+static const struct iio_chan_spec_ext_info bno055_ext_info[] = {
+	IIO_MOUNT_MATRIX(IIO_SHARED_BY_DIR, bno055_get_mount_matrix),
+	{ },
+};
+
 static int bno055_init_channels(struct iio_dev *indio_dev)
 {
 	struct bno055_data *data = iio_priv(indio_dev);
@@ -499,6 +512,8 @@ static int bno055_init_channels(struct iio_dev *indio_dev)
 		.info_mask_separate = BIT(IIO_CHAN_INFO_PROCESSED),
 	};
 
+	p->ext_info = bno055_ext_info;
+
 	indio_dev->channels = channels;
 	indio_dev->num_channels = bno055_num_channels[data->op_mode];
 
@@ -521,6 +536,11 @@ static int bno055_probe(struct i2c_client *client,
 		return -ENOMEM;
 
 	data = iio_priv(indio_dev);
+
+	ret = of_iio_read_mount_matrix(&client->dev, "mount-matrix",
+				&data->orientation);
+	if (ret)
+		return ret;
 
 	data->regmap = devm_regmap_init_i2c(client, &bno055_regmap_config);
 	if (IS_ERR(data->regmap))

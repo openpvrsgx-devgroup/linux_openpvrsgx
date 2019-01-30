@@ -166,6 +166,12 @@ int pvr_trcmd_create_snapshot(u8 **snapshot_ret, size_t *snapshot_size)
 
 	read_idx = tbuf.read_idx;
 	size = tbuf_idx_add(tbuf.write_idx, -read_idx);
+
+	if (!size) {
+		*snapshot_size = 0;
+		return 0;
+	}
+
 	snapshot = vmalloc(size);
 	if (!snapshot)
 		return -ENOMEM;

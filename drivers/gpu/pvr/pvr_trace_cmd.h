@@ -21,6 +21,7 @@
 #define __PVR_TRACE_CMD_H__
 
 #include <linux/mutex.h>
+#include <linux/seq_file.h>
 
 #include "servicesint.h"
 #include "sgxapi_km.h"
@@ -66,9 +67,16 @@ struct pvr_trcmd_sgxtransfer {
 	unsigned long		ctx;
 };
 
+struct trcmd_snapshot {
+	size_t size;
+	u8 *data;
+};
+
 #ifdef CONFIG_PVR_TRACE_CMD
 
-void *pvr_trcmd_alloc(unsigned type, int pid, const char *pname, size_t size);
+extern struct seq_operations trcmd_seq_ops;
+
+void *pvr_trcmd_alloc(unsigned type, pid_t pid, const char *pname, size_t size);
 
 extern struct mutex pvr_trcmd_mutex;
 
@@ -82,11 +90,11 @@ static inline void pvr_trcmd_unlock(void)
 	mutex_unlock(&pvr_trcmd_mutex);
 }
 
-int pvr_trcmd_create_snapshot(u8 **snapshot_ret, size_t *snapshot_size);
-void pvr_trcmd_destroy_snapshot(void *snapshot);
+int pvr_trcmd_create_snapshot(struct trcmd_snapshot *snapshot);
+void pvr_trcmd_destroy_snapshot(struct trcmd_snapshot *snapshot);
 
-size_t pvr_trcmd_print(char *dst, size_t dst_size, const u8 *snapshot,
-		       size_t snapshot_size, loff_t *snapshot_ofs);
+size_t pvr_trcmd_print(char *dst, size_t dst_size,
+		       struct trcmd_snapshot *snapshot, loff_t *snapshot_ofs);
 
 void pvr_trcmd_set_syn(struct pvr_trcmd_syn *ts,
 		       const struct PVRSRV_KERNEL_SYNC_INFO *si);
@@ -118,20 +126,13 @@ static inline void pvr_trcmd_unlock(void)
 }
 
 static inline int
-pvr_trcmd_create_snapshot(u8 **snapshot_ret, size_t *snapshot_size)
+pvr_trcmd_create_snapshot(struct trcmd_snapshot *snapshot)
 {
 	return 0;
 }
 
-static inline void pvr_trcmd_destroy_snapshot(void *snapshot)
+static inline void pvr_trcmd_destroy_snapshot(struct trcmd_snapshot *snapshot)
 {
-}
-
-static inline size_t
-pvr_trcmd_print(char *dst, size_t dst_size, const u8 *snapshot,
-		size_t snapshot_size, loff_t *snapshot_ofs)
-{
-	return 0;
 }
 
 static inline void

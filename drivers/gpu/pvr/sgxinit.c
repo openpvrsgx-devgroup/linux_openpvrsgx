@@ -682,8 +682,7 @@ static void pr_err_sgx_registers(struct PVRSRV_SGXDEV_INFO *psDevInfo)
 #ifdef CONFIG_PVR_TRACE_CMD
 static void pr_err_cmd_trace(void)
 {
-	u8 *snapshot;
-	size_t snapshot_size;
+	struct trcmd_snapshot snapshot;
 	loff_t snapshot_ofs;
 	char *str_buf;
 	size_t str_len;
@@ -697,7 +696,7 @@ static void pr_err_cmd_trace(void)
 
 	pvr_trcmd_lock();
 
-	r = pvr_trcmd_create_snapshot(&snapshot, &snapshot_size);
+	r = pvr_trcmd_create_snapshot(&snapshot);
 	if (r < 0) {
 		pvr_trcmd_unlock();
 		kfree(str_buf);
@@ -710,12 +709,11 @@ static void pr_err_cmd_trace(void)
 
 	snapshot_ofs = 0;
 	do {
-		str_len = pvr_trcmd_print(str_buf, PAGE_SIZE, snapshot,
-					snapshot_size, &snapshot_ofs);
+		str_len = pvr_trcmd_print(str_buf, PAGE_SIZE, &snapshot, &snapshot_ofs);
 		printk(KERN_DEBUG "%s", str_buf);
 	} while (str_len);
 
-	pvr_trcmd_destroy_snapshot(snapshot);
+	pvr_trcmd_destroy_snapshot(&snapshot);
 	kfree(str_buf);
 }
 #endif

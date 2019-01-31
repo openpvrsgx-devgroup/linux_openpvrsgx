@@ -43,8 +43,8 @@ DEFINE_MUTEX(pvr_trcmd_mutex);	/* protects tbuf */
 struct tbuf_frame {
 	unsigned short size;
 	unsigned short type;
-	unsigned long pid;
-	unsigned long long time;
+	pid_t pid;
+	u64 time;
 	char pname[16];
 };
 
@@ -150,67 +150,60 @@ static size_t prn_frame(const struct tbuf_frame *f, char *dst, size_t dst_size)
 	usec_frac = do_div(sec, 1000000000) / 1000;
 
 	len = scnprintf(dst, dst_size, "[%5llu.%06lu] %s[%ld]: %s\n",
-			sec, usec_frac, f->pname, f->pid, desc->name);
+			sec, usec_frac, f->pname, (long)f->pid, desc->name);
 	if (desc->print)
 		len += desc->print(&dst[len], dst_size - len, (void *)(f + 1));
 
 	return len;
 }
 
-int pvr_trcmd_create_snapshot(u8 **snapshot_ret, size_t *snapshot_size)
+int pvr_trcmd_create_snapshot(struct trcmd_snapshot *snapshot)
 {
-	u8 *snapshot;
 	int read_idx;
-	size_t size;
 	size_t tail_size;
 
 	read_idx = tbuf.read_idx;
-	size = tbuf_idx_add(tbuf.write_idx, -read_idx);
+	snapshot->size = tbuf_idx_add(tbuf.write_idx, -read_idx);
 
-	if (!size) {
-		*snapshot_size = 0;
+	if (!snapshot->size)
 		return 0;
-	}
 
-	snapshot = vmalloc(size);
-	if (!snapshot)
+	snapshot->data = vmalloc(snapshot->size);
+	if (!snapshot->data)
 		return -ENOMEM;
 
-	tail_size = min_t(size_t, size, PVR_TBUF_SIZE - read_idx);
-	memcpy(snapshot, &tbuf.data[read_idx], tail_size);
-	memcpy(&snapshot[tail_size], tbuf.data, size - tail_size);
-
-	*snapshot_ret = snapshot;
-	*snapshot_size = size;
+	tail_size = min_t(size_t, snapshot->size, PVR_TBUF_SIZE - read_idx);
+	memcpy(snapshot->data, &tbuf.data[read_idx], tail_size);
+	memcpy(&snapshot->data[tail_size], tbuf.data, snapshot->size - tail_size);
 
 	return 0;
 }
 
-void pvr_trcmd_destroy_snapshot(void *snapshot)
+void pvr_trcmd_destroy_snapshot(struct trcmd_snapshot *snapshot)
 {
-	vfree(snapshot);
+	vfree(snapshot->data);
 }
 
-size_t pvr_trcmd_print(char *dst, size_t dst_size, const u8 *snapshot,
-		       size_t snapshot_size, loff_t *snapshot_ofs)
+size_t pvr_trcmd_print(char *dst, size_t dst_size,
+		       struct trcmd_snapshot *snapshot, loff_t *snapshot_ofs)
 {
 	size_t dst_len;
 
-	if (*snapshot_ofs >= snapshot_size)
+	if (*snapshot_ofs >= snapshot->size)
 		return 0;
 	dst_len = 0;
 
-	snapshot_size -= *snapshot_ofs;
+	snapshot->size -= *snapshot_ofs;
 
-	while (snapshot_size) {
+	while (snapshot->size) {
 		const struct tbuf_frame *f;
 		size_t this_len;
 
-		if (WARN_ON_ONCE(snapshot_size < 4))
+		if (WARN_ON_ONCE(snapshot->size < 4))
 			break;
 
-		f = (struct tbuf_frame *)&snapshot[*snapshot_ofs];
-		if (WARN_ON_ONCE(!f->size || f->size > snapshot_size ||
+		f = (struct tbuf_frame *)&snapshot->data[*snapshot_ofs];
+		if (WARN_ON_ONCE(!f->size || f->size > snapshot->size ||
 				 f->type >= ARRAY_SIZE(trcmd_desc_table)))
 			break;
 
@@ -229,7 +222,7 @@ size_t pvr_trcmd_print(char *dst, size_t dst_size, const u8 *snapshot,
 
 		*snapshot_ofs += f->size;
 		dst_len += this_len;
-		snapshot_size -= f->size;
+		snapshot->size -= f->size;
 	}
 
 	return dst_len;
@@ -302,3 +295,72 @@ void pvr_trcmd_set_syn(struct pvr_trcmd_syn *ts,
 	ts->wr_comp = sd->ui32WriteOpsComplete;
 	ts->addr    = si->sWriteOpsCompleteDevVAddr.uiAddr - 4;
 }
+
+static void *trcmd_seq_start(struct seq_file *s, loff_t *pos)
+{
+	struct trcmd_snapshot *snapshot = s->private;
+	struct tbuf_frame *frame = (struct tbuf_frame *)snapshot->data;
+	void *ptr = frame;
+	void *limit = &snapshot->data[snapshot->size];
+	int i;
+
+	for (i = 0; i < *pos && ptr < limit; i++) {
+		ptr += frame->size;
+		frame = ptr;
+	}
+
+	if (ptr == limit)
+		return NULL;
+
+	if (WARN_ON_ONCE(ptr + frame->size > limit))
+		return NULL;
+
+	return frame;
+}
+
+static void *trcmd_seq_next(struct seq_file *s, void *ptr, loff_t *pos)
+{
+	struct trcmd_snapshot *snapshot = s->private;
+	void *limit = &snapshot->data[snapshot->size];
+	struct tbuf_frame *frame = ptr;
+
+	++*pos;
+	ptr += frame->size;
+	frame = ptr;
+
+	if (ptr == limit)
+		return NULL;
+
+	if (WARN_ON_ONCE(ptr + frame->size > limit))
+		return NULL;
+
+	return frame;
+}
+
+static void trcmd_seq_stop(struct seq_file *s, void *v)
+{
+}
+
+static int trcmd_seq_show(struct seq_file *s, void *v)
+{
+	struct tbuf_frame *f = v;
+	char buf[256] = {0};
+
+	if (WARN_ON_ONCE(!f->size || f->type >= ARRAY_SIZE(trcmd_desc_table)))
+		return -EINVAL;
+
+	if (f->type == PVR_TRCMD_PAD)
+		return 0;
+
+	prn_frame(f, buf, sizeof(buf));
+	seq_printf(s, "%s", buf);
+
+	return 0;
+}
+
+struct seq_operations trcmd_seq_ops = {
+	.start = trcmd_seq_start,
+	.next  = trcmd_seq_next,
+	.stop  = trcmd_seq_stop,
+	.show  = trcmd_seq_show,
+};

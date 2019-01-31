@@ -239,13 +239,11 @@ static const struct file_operations pvr_debugfs_edm_fops = {
 
 #ifdef CONFIG_PVR_TRACE_CMD
 
-static void *trcmd_str_buf;
-static u8 *trcmd_snapshot;
-static size_t trcmd_snapshot_size;
 static int trcmd_open_cnt;
 
 static int pvr_dbg_trcmd_open(struct inode *inode, struct file *file)
 {
+	struct trcmd_snapshot *priv;
 	int r;
 
 	if (trcmd_open_cnt)
@@ -253,8 +251,8 @@ static int pvr_dbg_trcmd_open(struct inode *inode, struct file *file)
 
 	trcmd_open_cnt++;
 
-	trcmd_str_buf = kmalloc(PAGE_SIZE, GFP_KERNEL);
-	if (!trcmd_str_buf) {
+	priv = __seq_open_private(file, &trcmd_seq_ops, sizeof(*priv));
+	if (!priv) {
 		trcmd_open_cnt--;
 
 		return -ENOMEM;
@@ -262,10 +260,10 @@ static int pvr_dbg_trcmd_open(struct inode *inode, struct file *file)
 
 	pvr_trcmd_lock();
 
-	r = pvr_trcmd_create_snapshot(&trcmd_snapshot, &trcmd_snapshot_size);
+	r = pvr_trcmd_create_snapshot(priv);
 	if (r < 0) {
 		pvr_trcmd_unlock();
-		kfree(trcmd_str_buf);
+		seq_release_private(inode, file);
 		trcmd_open_cnt--;
 
 		return r;
@@ -278,33 +276,22 @@ static int pvr_dbg_trcmd_open(struct inode *inode, struct file *file)
 
 static int pvr_dbg_trcmd_release(struct inode *inode, struct file *file)
 {
-	pvr_trcmd_destroy_snapshot(trcmd_snapshot);
-	kfree(trcmd_str_buf);
+	struct seq_file *s = file->private_data;
+	pvr_trcmd_destroy_snapshot(s->private);
+	seq_release_private(inode, file);
 	trcmd_open_cnt--;
 
 	return 0;
-}
-
-static ssize_t pvr_dbg_trcmd_read(struct file *file, char __user *buffer,
-				  size_t count, loff_t *ppos)
-{
-	ssize_t ret;
-
-	ret = pvr_trcmd_print(trcmd_str_buf, max_t(size_t, PAGE_SIZE, count),
-			      trcmd_snapshot, trcmd_snapshot_size, ppos);
-	if (copy_to_user(buffer, trcmd_str_buf, ret))
-		return -EFAULT;
-
-	return ret;
 }
 
 static const struct file_operations pvr_dbg_trcmd_fops = {
 	.owner		= THIS_MODULE,
 	.open		= pvr_dbg_trcmd_open,
 	.release	= pvr_dbg_trcmd_release,
-	.read		= pvr_dbg_trcmd_read,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
 };
-#endif
+#endif /* CONFIG_PVR_TRACE_CMD */
 
 /*
  * llseek helper.

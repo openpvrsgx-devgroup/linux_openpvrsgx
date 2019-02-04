@@ -1,5 +1,5 @@
 #
-# Linux/arm 5.0.0-rc4 Kernel Configuration
+# Linux/arm 5.0.0-rc5 Kernel Configuration
 #
 
 #
@@ -363,6 +363,7 @@ CONFIG_SOC_OMAP3430=y
 # CONFIG_MACH_OMAP3517EVM is not set
 # CONFIG_MACH_OMAP3_PANDORA is not set
 # CONFIG_OMAP3_SDRC_AC_TIMING is not set
+# CONFIG_OMAP3_PM_OFFMODE is not set
 CONFIG_OMAP5_ERRATA_801819=y
 # CONFIG_ARCH_SIRF is not set
 # CONFIG_ARCH_QCOM is not set

@@ -396,6 +396,18 @@ static bool bno055_fusion_mode(struct bno055_data *data)
 	return data->op_mode >= BNO055_MODE_IMU;
 }
 
+static const struct iio_mount_matrix *
+bno055_get_mount_matrix(const struct iio_dev *indio_dev,
+			      const struct iio_chan_spec *chan)
+{
+	return &((struct bno055_data *)iio_priv(indio_dev))->orientation;
+}
+
+static const struct iio_chan_spec_ext_info bno055_ext_info[] = {
+	IIO_MOUNT_MATRIX(IIO_SHARED_BY_DIR, bno055_get_mount_matrix),
+	{ },
+};
+
 static void bno055_init_simple_channels(struct iio_chan_spec *p,
 					enum iio_chan_type type,
 					u8 address,
@@ -421,21 +433,10 @@ static void bno055_init_simple_channels(struct iio_chan_spec *p,
 			.channel2 = IIO_MOD_X + i,
 			/* Each value is stored in two registers. */
 			.address = address + 2 * i,
+			.ext_info = bno055_ext_info,
 		};
 	}
 }
-
-static const struct iio_mount_matrix *
-bno055_get_mount_matrix(const struct iio_dev *indio_dev,
-			      const struct iio_chan_spec *chan)
-{
-	return &((struct bno055_data *)iio_priv(indio_dev))->orientation;
-}
-
-static const struct iio_chan_spec_ext_info bno055_ext_info[] = {
-	IIO_MOUNT_MATRIX(IIO_SHARED_BY_DIR, bno055_get_mount_matrix),
-	{ },
-};
 
 static int bno055_init_channels(struct iio_dev *indio_dev)
 {
@@ -511,8 +512,6 @@ static int bno055_init_channels(struct iio_dev *indio_dev)
 		.type = IIO_TEMP,
 		.info_mask_separate = BIT(IIO_CHAN_INFO_PROCESSED),
 	};
-
-	p->ext_info = bno055_ext_info;
 
 	indio_dev->channels = channels;
 	indio_dev->num_channels = bno055_num_channels[data->op_mode];

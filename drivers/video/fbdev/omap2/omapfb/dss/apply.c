@@ -887,7 +887,8 @@ static int dss_mgr_notify(struct omap_overlay_manager *mgr,
 	if (mgr->id >= num_mgrs)
 		return -EINVAL;
 
-	if (!dssdev || dssdev->state != OMAP_DSS_DISPLAY_ACTIVE) {
+	if (!dssdev || !dssdev->dst ||
+	    dssdev->dst->state != OMAP_DSS_DISPLAY_ACTIVE) {
 		dss_notifier_call_chain(events,
 					(void *)(long)mgr->id);
 		return 0;
@@ -938,7 +939,8 @@ int dss_mgr_notify_ovl(struct omap_overlay *ovl,
 
 	dssdev = ovl->manager->output;
 
-	if (!dssdev || dssdev->state != OMAP_DSS_DISPLAY_ACTIVE) {
+	if (!dssdev || !dssdev->dst ||
+	    dssdev->dst->state != OMAP_DSS_DISPLAY_ACTIVE) {
 		dss_notifier_call_chain(events,
 					(void *)(long)ovl->id);
 		return 0;

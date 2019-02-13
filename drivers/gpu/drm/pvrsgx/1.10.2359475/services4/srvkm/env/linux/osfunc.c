@@ -3269,7 +3269,7 @@ PVRSRV_ERROR OSCopyFromUser( IMG_PVOID pvProcess,
 ******************************************************************************/
 IMG_BOOL OSAccessOK(IMG_VERIFY_TEST eVerification, IMG_VOID *pvUserPtr, IMG_SIZE_T uiBytes)
 {
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,16,0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,0,0))
     return access_ok(pvUserPtr, uiBytes);
 #else
     IMG_INT linuxType;

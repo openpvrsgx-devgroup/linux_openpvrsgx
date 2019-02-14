@@ -408,36 +408,41 @@ static int __devinit PVRSRVDriverProbe(LDM_DEV *pDevice, const struct pci_device
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0))
 #ifdef CONFIG_RESET_CONTROLLER
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,16,0))
-	rstc = reset_control_get_exclusive(&pDevice->dev, NULL);
+	rstc = reset_control_get_optional_exclusive(&pDevice->dev, NULL);
 #else
 	rstc = reset_control_get(&pDevice->dev, NULL);
 #endif
+
 	if (IS_ERR(rstc)) 
 	{
 		dev_err(&pDevice->dev, "%s: error: reset_control_get\n", __func__);
 		return PTR_ERR(rstc);
 	}
-#if 0
-	ret = reset_control_clear_reset(rstc);
 
-	if (ret < 0)
-	{
-		dev_err(dev, "%s: error: reset_control_clear_reset\n", __func__);
-		return ret;
-	}
+	if(rstc) {
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(99,99,99))
+		ret = reset_control_clear_reset(rstc);
+
+		if (ret < 0)
+		{
+			dev_err(dev, "%s: error: reset_control_clear_reset\n", __func__);
+			return ret;
+		}
 #endif
-	ret = reset_control_deassert(rstc);
 
-	if (ret == -EEXIST)
-	{
+		ret = reset_control_deassert(rstc);
+
+		if (ret == -EEXIST)
+		{
 		already_deasserted = true;
+		}
+		else if (ret < 0)
+		{
+			dev_err(dev, "%s: error: reset_control_deassert\n", __func__);
+			return ret;
+		}
 	}
-	else if (ret < 0)
-	{
-		dev_err(dev, "%s: error: reset_control_deassert\n", __func__);
-		return ret;
-	}
-#else
+#else /* CONFIG_RESET_CONTROLLER */
 	if (pdata && pdata->deassert_reset) {
 		ret = pdata->deassert_reset(pDevice, pdata->reset_name);
 		if (ret) {
@@ -476,9 +481,9 @@ static int __devinit PVRSRVDriverProbe(LDM_DEV *pDevice, const struct pci_device
 	}
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0))
 #ifdef CONFIG_RESET_CONTROLLER
-        if (!already_deasserted)
+        if (!already_deasserted && rstc)
         {
-#if 0
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(99,99,99))
                 ret = reset_control_is_reset(rstc);
                 if (ret <= 0)
                 {

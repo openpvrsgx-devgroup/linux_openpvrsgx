@@ -567,7 +567,28 @@ function test_cpu {
 
 function test_gpu {
 	[ -r /proc/pvr/version ]
-	report $? ${FUNCNAME} "$(cat /proc/pvr/version 2>/dev/null)" "GPU device [no kernel driver]"
+	report $? ${FUNCNAME}_version "$(cat /proc/pvr/version 2>/dev/null)" "GPU device [may have no kernel driver]"
+	[ -r /dev/pvrsrvkm ]
+	report $? ${FUNCNAME}_device "GPU device file" "GPU device file [may have no kernel driver]"
+	if [ -r /dev/pvrsrvkm -a "$(which pvrsrvctl)" ]
+	then
+		RESULT=$(pvrsrvctl --start --no-module 2>&1 && echo "ok")
+		case "$RESULT" in
+			"ok" )	# first launch
+				MSG="started"
+				true
+				;;
+			*failed*err=129* )	# already running
+				MSG="already running"
+				true
+				;;
+			* )
+				MSG="error: $(echo $RESULT | sed 's|.*(err=[0-9]*).?|\1|g')"
+				false
+				;;
+		esac
+		report $? ${FUNCNAME}_firmware "GPU device file" "GPU microkernel $MSG"
+	fi
 }
 
 function test_uboot {

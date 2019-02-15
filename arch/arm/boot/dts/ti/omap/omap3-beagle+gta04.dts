@@ -13,4 +13,7 @@
 	/* overwrite device model */
 	model = "BeagleBoard + GTA04";
 
+	chosen {
+		stdout-path = &uart3;
+	};
 };

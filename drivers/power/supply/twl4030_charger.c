@@ -396,7 +396,7 @@ static int twl4030_charger_update_current(struct twl4030_bci *bci)
 	return 0;
 }
 
-static int twl4030_charger_get_current(void);
+static int twl4030_charger_get_current(int *value);
 
 static void twl4030_current_worker(struct work_struct *data)
 {
@@ -411,7 +411,8 @@ static void twl4030_current_worker(struct work_struct *data)
 	else
 		/* BCIVBUS uses ADCIN8, 7/1023 V/step */
 		v = res * 6843;
-	curr = twl4030_charger_get_current();
+	curr = 0;
+	twl4030_charger_get_current(&curr);
 
 	dev_dbg(bci->dev, "v=%d cur=%d limit=%d target=%d\n", v, curr,
 		bci->usb_cur, bci->usb_cur_target);
@@ -737,7 +738,7 @@ twl4030_bci_mode_show(struct device *dev,
 static DEVICE_ATTR(mode, 0644, twl4030_bci_mode_show,
 		   twl4030_bci_mode_store);
 
-static int twl4030_charger_get_current(void)
+static int twl4030_charger_get_current(int *value)
 {
 	int curr;
 	int ret;
@@ -751,7 +752,8 @@ static int twl4030_charger_get_current(void)
 	if (ret)
 		return ret;
 
-	return regval2ua(curr, bcictl1 & TWL4030_CGAIN);
+	*value = regval2ua(curr, bcictl1 & TWL4030_CGAIN);
+	return 0;
 }
 
 /*
@@ -846,10 +848,9 @@ static int twl4030_bci_get_property(struct power_supply *psy,
 		if (!is_charging)
 			return -ENODATA;
 		/* current measurement is shared between AC and USB */
-		ret = twl4030_charger_get_current();
+		ret = twl4030_charger_get_current(&val->intval);
 		if (ret < 0)
 			return ret;
-		val->intval = ret;
 		break;
 	case POWER_SUPPLY_PROP_ONLINE:
 		val->intval = is_charging &&

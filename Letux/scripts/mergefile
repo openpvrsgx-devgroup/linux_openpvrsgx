@@ -130,6 +130,8 @@ letux/charging_fixes
 letux/hacks
 letux/omap2plus
 letux/omap-pvr
+letux/omap-pvr-soc-glue
+letux/omap-pvr-demo
 letux/latest-pvr
 # letux/sgx544-v2
 letux/mmc

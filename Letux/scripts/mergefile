@@ -31,9 +31,10 @@ letux/Letux
 # Letux defconfigs
 letux/arm_defconfig
 letux/arm_lpae_defconfig
-letux/arm_udoo_defconfig
-letux/arm_raspi_defconfig
 letux/mips_defconfig
+# no longer needed - use letux/arm_defconfig
+#letux/arm_udoo_defconfig
+#letux/arm_raspi_defconfig
 
 # Letux Rootfs
 letux/rootfs

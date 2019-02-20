@@ -400,12 +400,14 @@ static const struct iio_mount_matrix *
 bno055_get_mount_matrix(const struct iio_dev *indio_dev,
 			      const struct iio_chan_spec *chan)
 {
-	return &((struct bno055_data *)iio_priv(indio_dev))->orientation;
+	struct bno055_data *data = iio_priv(indio_dev);
+
+	return &data->orientation;
 }
 
 static const struct iio_chan_spec_ext_info bno055_ext_info[] = {
 	IIO_MOUNT_MATRIX(IIO_SHARED_BY_DIR, bno055_get_mount_matrix),
-	{ },
+	{ }
 };
 
 static void bno055_init_simple_channels(struct iio_chan_spec *p,
@@ -536,7 +538,7 @@ static int bno055_probe(struct i2c_client *client,
 
 	data = iio_priv(indio_dev);
 
-	ret = of_iio_read_mount_matrix(&client->dev, "mount-matrix",
+	ret = iio_read_mount_matrix(&client->dev, "mount-matrix",
 				&data->orientation);
 	if (ret)
 		return ret;
@@ -571,13 +573,13 @@ static int bno055_probe(struct i2c_client *client,
 
 static const struct i2c_device_id bno055_id[] = {
 	{"bno055", 0},
-	{ },
+	{ }
 };
 MODULE_DEVICE_TABLE(i2c, bno055_id);
 
 static const struct of_device_id of_bno055_match[] = {
 	{ .compatible = "bosch,bno055", .data = 0, },
-	{},
+	{ }
 };
 
 MODULE_DEVICE_TABLE(of, of_bno055_match);

@@ -58,29 +58,6 @@ SUPPORT_PVRSRV_DEVICE_CLASS := 0
 
 # Customize this build as per the TARGET_PRODUCT setting
 #
-ifneq ($(filter blaze blaze_tablet panda,$(TARGET_PRODUCT)),)
- SGXCORE					:= 540
- SGX_CORE_REV				:= 120
-endif
-ifneq ($(filter blaze.4470 blaze_tablet.4470,$(TARGET_PRODUCT)),)
- SGXCORE					:= 544
- SGX_CORE_REV				:= 112
-endif
-ifneq ($(filter omap5sevm panda5,$(TARGET_PRODUCT)),)
- SGXCORE					:= 544
- SGX_CORE_REV				:= 105
- SGX_FEATURE_MP				:= 1
- SGX_FEATURE_SYSTEM_CACHE		:= 1
- SGX_FEATURE_MP_CORE_COUNT		:= 2
- PVR_OMAPLFB_DRM_FB			:= 0
- SYS_OMAP_HAS_DVFS_FRAMEWORK		:= 1
-
- # OMAP Product Version
- VS_PRODUCT_VERSION			:= 5
-
- # FIXME: Re-enable this ASAP
- SUPPORT_ACTIVE_POWER_MANAGEMENT 	:= 0
-endif
 ifneq ($(filter omap5uevm jacinto6evm,$(TARGET_PRODUCT)),)
  SGXCORE					:= 544
  SGX_CORE_REV				:= 116
@@ -90,9 +67,8 @@ ifneq ($(filter omap5uevm jacinto6evm,$(TARGET_PRODUCT)),)
 
  SYS_OMAP5_UEVM				:= 1
 
- # OMAP Product Version
- VS_PRODUCT_VERSION			:= 5
- AM_VERSION					:= 5
+ # SoC Version
+ AM_VERSION				:= 5
 endif
 
 ifneq ($(filter ti654x,$(TARGET_PRODUCT)),)
@@ -105,8 +81,7 @@ ifneq ($(filter ti654x,$(TARGET_PRODUCT)),)
 
  SYS_OMAP5_UEVM				:= 1
 
- # OMAP Product Version
- VS_PRODUCT_VERSION			:= 5
+ # SoC Version
  AM_VERSION 				:= 6
 endif
 
@@ -119,10 +94,11 @@ ifneq ($(filter ti335x ti437x,$(TARGET_PRODUCT)),)
  # is misleading.
  SYS_OMAP5_UEVM				:= 1
 
+ # SoC Version
  ifeq ($(TARGET_PRODUCT), ti437x)
- AM_VERSION					:= 4
+ AM_VERSION				:= 4
  else
- AM_VERSION					:= 3
+ AM_VERSION				:= 3
  endif
 
 endif
@@ -213,27 +189,15 @@ include ../common/xorg_test.mk
 ifneq ($(strip $(KERNELDIR)),)
 include ../kernel_version.mk
 
-ifeq ($(SYS_OMAP5_UEVM),1)
 XORG_EXPLICIT_PVR_SERVICES_LOAD := 1
-ifeq ($(call kernel-version-at-least,3,8,13),true)
 SUPPORT_DRI_DRM := 1
 LDM_PLATFORM := 1
 PVR_LDM_DEVICE_TREE := 1
 PVR_DRI_DRM_PLATFORM_DEV := 1
 SUPPORT_DMABUF := 1
-ifeq ($(TARGET_PRODUCT),ti335x)
-PVR_DRM_MODESET_DRIVER_NAME := tilcdc
-else
-PVR_DRM_MODESET_DRIVER_NAME := omapdrm
-endif
-PVR_DRM_MODESET_MODULE_NAME := dumb
 # No display class driver.
 DISPLAY_CONTROLLER_COMPONENT :=
 DISPLAY_CONTROLLER :=
-else
-PVR_LDM_PLATFORM_PRE_REGISTERED := 1
-PVR_LDM_PLATFORM_PRE_REGISTERED_DEV := "\"omapdrm_pvr\""
-endif
 ifeq ($(PVR_LWS_NODC),1)
 # No display class driver.
 DISPLAY_CONTROLLER :=
@@ -241,76 +205,16 @@ else
 PVR_OMAPLFB_DRM_FB := 0
 PVR_OMAPLFB_DONT_USE_FB_PAN_DISPLAY := 1
 endif
-else
-ifeq ($(call kernel-version-at-least,2,6,35),true)
-# Work around flipping problems seen with the Taal LCDs on Blaze.
-# The work around is safe to use with other types of screen on Blaze
-# (e.g. HDMI) and on other platforms (e.g. Panda board).
-PVR_OMAPLFB_DONT_USE_FB_PAN_DISPLAY := 1
-ifeq ($(LDM_PLATFORM),1)
-PVR_LDM_PLATFORM_PRE_REGISTERED := 1
-ifeq ($(call kernel-version-at-least,2,6,35,7),true)
-# Not all variants of the OMAP4 kernel have a DRM based framebuffer.
-# Note that a non-X.Org version of the driver does not have to be built
-# with DRM support if the kernel has a DRM based framebuffer.
-PVR_OMAPLFB_DRM_FB ?= 1
-ifeq ($(PVR_OMAPLFB_DRM_FB),1)
-PVR_LDM_PLATFORM_PRE_REGISTERED_DEV := "\"pvrsrvkm_pvr\""
-# There is already a "pvrsrvkm" driver (part of the DRM framebuffer code),
-# so use the pre-registered device name instead.
-PVR_LDM_DRIVER_REGISTRATION_NAME := "\"pvrsrvkm_pvr"\"
-# The DRM library will not load the Services module on behalf of the X Server,
-# as a DRM module has already been loaded (the DRM based framebuffer), so
-# load the Services module before starting the X Server.
-XORG_EXPLICIT_PVR_SERVICES_LOAD := 1
-else
-PVR_LDM_PLATFORM_PRE_REGISTERED_DEV := "\"pvrsrvkm\""
-endif
-endif
-endif
-endif
-endif
 
-ifeq ($(SUPPORT_DRI_DRM),1)
-ifeq ($(SYS_OMAP5_UEVM),1)
 PVR_DRI_DRM_PLATFORM_DEV := 1
-ifneq ($(call kernel-version-at-least,3,8,13),true)
-PVR_DRI_DRM_STATIC_BUS_ID := 1
-PVR_DRI_DRM_DEV_BUS_ID := "\"platform:omapdrm_pvr:00"\"
-endif
-ifeq ($(PVR_LWS_NODC),1)
-PVR_DRM_MODESET_DRIVER_NAME := omapdrm
-PVR_DRM_MODESET_MODULE_NAME := dumb
-endif
-else
-ifeq ($(call kernel-version-at-least,2,6,35),true)
-PVR_DRI_DRM_PLATFORM_DEV := 1
-PVR_DRI_DRM_STATIC_BUS_ID := 1
-ifeq ($(call kernel-version-at-least,2,6,35,7),true)
-ifeq ($(PVR_OMAPLFB_DRM_FB),1)
-SUPPORT_DRI_DRM_PLUGIN := 1
-endif
-ifeq ($(call kernel-version-at-least,2,6,36),true)
-PVR_DRI_DRM_DEV_BUS_ID := "\"platform:pvrsrvkm"\"
-else
-PVR_DRI_DRM_DEV_BUS_ID := "\"platform:pvrsrvkm:00"\"
-endif	# kernel-version-at-least,2,6,36
-endif	# kernel-version-at-least,2,6,35,7
-else	# kernel-version-at-least,2,6,35
-PVR_DRI_DRM_NOT_PCI := 1
-endif	# kernel-version-at-least,2,6,35
-endif	# ($(SYS_OMAP5_UEVM),1)
-endif	# SUPPORT_DRI_DRM
 
 ifeq ($(PVR_LWS_NODC),)
 ifeq ($(SUPPORT_BUILD_XORG),1)
-ifeq ($(call kernel-version-at-least,2,6,35,7),true)
 # A client DRI authorisation failure, whilst switched away from the X Server
 # VT, prevents all other attempts at DRI authorisation, even after
 # switching back to the X server VT, so don't perform a DRM drop master
 # call.
 PVR_XORG_DONT_DROP_MASTER_IN_LEAVE_VT := 1
-endif
 XORG_PVR_VIDEO ?= omap4
 
 ifneq ($(OMAP_NON_FLIP_DISPLAY),1)
@@ -318,16 +222,12 @@ PVR_DISPLAY_CONTROLLER_DRM_IOCTL := 1
 endif
 endif # xorg isn't excluded
 
-ifeq ($(SUPPORT_DRI_DRM),1)
 ifeq ($(PVR_DRI_DRM_NOT_PCI),1)
 KERNEL_COMPONENTS += linux_drm
 EXTRA_KBUILD_SOURCE := $(KERNELDIR)
 endif
 KERNEL_COMPONENTS += $(DISPLAY_CONTROLLER)
-else
-KERNEL_COMPONENTS += $(DISPLAY_CONTROLLER)
-endif
-endif
+endif	# PVR_LWS_NODC
 endif	# KERNELDIR
 
 include ../config/core.mk

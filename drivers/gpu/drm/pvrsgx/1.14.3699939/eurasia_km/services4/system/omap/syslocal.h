@@ -90,7 +90,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if !defined(PVR_NO_OMAP_TIMER)
 #if (AM_VERSION == 5)
 #define	PVR_OMAP_USE_DM_TIMER_API
-#include <plat/dmtimer.h>
+/* not in mainline
+ * #include <plat/dmtimer.h>
+ */
 #endif
 #endif
 #endif

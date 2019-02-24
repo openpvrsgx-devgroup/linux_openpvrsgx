@@ -14,6 +14,16 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/clk.h>
+#include <linux/slab.h>
+#include <linux/version.h>
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0))
+#include <linux/timekeeping.h>
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(5,0,0))
+#include <linux/timekeeping32.h>
+#endif
+
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0))
 #include <linux/pm_opp.h>
 #include <linux/of.h>
@@ -25,7 +35,10 @@
 #endif
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(99,99,0))
+/* not in mainline */
 #include <linux/pm_voltage_domain.h>
+#endif
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3,8,0))
 #include <linux/regulator/consumer.h>
 #endif
@@ -339,8 +352,13 @@ static struct sgxfreq_governor *__find_governor(const char *name)
 
 static void __update_timing_info(bool active)
 {
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0))
 	struct timeval tv;
 	do_gettimeofday(&tv);
+#else
+	struct timespec64 tv;
+	ktime_get_real_ts64(&tv);
+#endif
 	if(active)
 	{
 		if(sfd.sgx_data.active == true) {
@@ -438,8 +456,9 @@ int sgxfreq_init(struct device *dev)
 		return -ENODEV;
 	}
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(99,99,0))
 	np = of_node_get(dev->of_node);
+	/* not available in mainline */
         sfd.clk_nb = of_pm_voltdm_notifier_register(dev, np, sfd.gpu_core_clk, "gpu",
                                                 &voltage_latency);
 

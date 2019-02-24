@@ -14,6 +14,8 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "sgxfreq.h"
+
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,8,0))
 
 #include <linux/thermal.h>

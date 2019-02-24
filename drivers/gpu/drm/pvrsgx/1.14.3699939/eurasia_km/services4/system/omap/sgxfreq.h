@@ -17,6 +17,7 @@
 #ifndef SGXFREQ_H
 #define SGXFREQ_H
 
+#include <linux/version.h>
 #include <linux/device.h>
 #include <linux/time.h>
 

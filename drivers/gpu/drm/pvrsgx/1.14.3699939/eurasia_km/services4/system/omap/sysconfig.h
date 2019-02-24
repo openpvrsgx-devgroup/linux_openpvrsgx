@@ -110,12 +110,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #if defined(__linux__)
 #if defined(PVR_LDM_DEVICE_TREE)
+#if !defined(SYS_SGX_DEV_NAME)
 #if (AM_VERSION == 5)
 #define	SYS_SGX_DEV_NAME	"ti,dra7-sgx544"
 #elif (AM_VERSION == 4)
 #define	SYS_SGX_DEV_NAME	"ti,am4376-sgx530"
 #else
 #define	SYS_SGX_DEV_NAME	"ti,am3352-sgx530"
+#endif
 #endif
 #else
 /*

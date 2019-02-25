@@ -282,9 +282,10 @@ MODULE_DEVICE_TABLE(pci, powervr_id_table);
 
 #if defined(PVR_USE_DEVICE_TREE)
 static struct of_device_id powervr_id_table[] = {
-	{
-		.compatible = SYS_SGX_DEV_NAME
-	},
+	{	.compatible = "ti,am654-sgx544"		},
+	{	.compatible = "ti,dra7-sgx544"		},
+	{	.compatible = "ti,am4376-sgx530"	},
+	{	.compatible = "ti,am3352-sgx530"	},
 	{}
 };
 MODULE_DEVICE_TABLE(of, powervr_id_table);

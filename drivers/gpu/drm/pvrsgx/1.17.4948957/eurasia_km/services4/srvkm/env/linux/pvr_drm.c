@@ -172,9 +172,10 @@ struct drm_device *gpsPVRDRMDev;
 #if !defined(SUPPORT_DRI_DRM_EXT) && !defined(SUPPORT_DRI_DRM_PLUGIN)
 #if defined(PVR_USE_DEVICE_TREE)
 static struct of_device_id asPlatIdList[] = {
-	{
-		.compatible = SYS_SGX_DEV_NAME
-	},
+	{	.compatible = "ti,am654-sgx544"		},
+	{	.compatible = "ti,dra7-sgx544"		},
+	{	.compatible = "ti,am4376-sgx530"	},
+	{	.compatible = "ti,am3352-sgx530"	},
 	{}
 };
 MODULE_DEVICE_TABLE(of,  asPlatIdList);

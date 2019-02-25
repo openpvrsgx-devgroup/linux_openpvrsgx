@@ -1,6 +1,6 @@
 /*************************************************************************/ /*!
-@Title          System Description Header
-@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@Title          System Description Header for DRA7 SoC family
+@Copyright      Copyright (c) Texas Instruments Inc. All Rights Reserved
 @Description    This header provides system-specific declarations and macros
 @License        Dual MIT/GPLv2
 
@@ -40,25 +40,52 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */ /**************************************************************************/
 
-#if !defined(__SYSINFO_H__)
-#define __SYSINFO_H__
+#if !defined(__SOCCONFIG_DRA7_H__)
+#define __SOCCONFIG_DRA7_H__
 
-/*!< System specific poll/timeout details */
-#if defined(PVR_LINUX_USING_WORKQUEUES)
-/*
- * The workqueue based 3rd party display driver may be blocked for up
- * to 500ms waiting for a vsync when the screen goes blank, so we
- * need to wait longer for the hardware if a flush of the swap chain is
- * required.
+#if defined(__linux__)
+#if defined(PVR_LDM_DEVICE_TREE)
+/* In the case of device tree model, the name of the driver, register and irq
+ * mappping info is specified through device DT files in kernel.
+ *
+ * The set of valid compatible strings are set in the module initialization
+ * file.
  */
-#define MAX_HW_TIME_US				(1000000)
-#define WAIT_TRY_COUNT				(20000)
 #else
-#define MAX_HW_TIME_US				(2000000)
-#define WAIT_TRY_COUNT				(40000)
+/* The below is legacy kernels, with no device tree support and the following
+ * info explicitly specified through this config file.
+ *   - Register and IRQ mapping
+ */
+#define SYS_OMAP_SGX_REGS_SYS_PHYS_BASE	0x56000000
+#define SYS_OMAP_SGX_REGS_SIZE		0xFFFF
+#define SYS_OMAP_SGX_IRQ		53
+
+#endif 	/* defined(PVR_LDM_DEVICE_TREE) */
+
+/* Information not coming from DT files */
+#define VS_PRODUCT_NAME	"DRA7"
+#define SYS_SGX_PDS_TIMER_FREQ 		(1000)	// 1ms (1000hz)
+#define SYS_SGX_HWRECOVERY_TIMEOUT_FREQ	(100)	// 10ms (100hz)
+#if defined(SGX540) && (SGX_CORE_REV == 120)
+#define SYS_SGX_CLOCK_SPEED		307200000
+#else
+#define SYS_SGX_CLOCK_SPEED		304742400
 #endif
 
+/* Allow the AP latency to be overridden in the build config */
+#if !defined(SYS_SGX_ACTIVE_POWER_LATENCY_MS)
+#define SYS_SGX_ACTIVE_POWER_LATENCY_MS		(2)
+#endif
 
-#define SYS_DEVICE_COUNT 15 /* SGX, DISPLAYCLASS (external), BUFFERCLASS (external) */
+/* Timer info for debug and timing builds
+ * DRA7 uses GP11 TIMER
+ */
+#define SYS_OMAP_GPTIMER_ENABLE_SYS_PHYS_BASE	0x48088038
+#define SYS_OMAP_GPTIMER_REGS_SYS_PHYS_BASE	0x4808803C
+#define SYS_OMAP_GPTIMER_TSICR_SYS_PHYS_BASE	0x48088054
 
-#endif	/* __SYSINFO_H__ */
+/* Interrupt bits */
+#define DEVICE_SGX_INTERRUPT		(1<<0)
+
+#endif 	/* defined(__linux__) */
+#endif	/* __SYSCONFIG_DRA7_H__ */

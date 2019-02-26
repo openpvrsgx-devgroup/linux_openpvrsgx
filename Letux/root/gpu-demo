@@ -32,6 +32,8 @@ case "$(cat /sys/firmware/devicetree/base/model)" in
 		;;
 	*Pyra* | *omap5* | *'Letux Cortex 15'* )
 		PACKAGE=omap5-sgx-ddk-um-linux		# from /e/a/s/pyra.list
+		PACKAGE=omap-sgx544-100
+		PATH=$PATH:/usr/local/sgx540/bin
 		;;
 	* )
 		echo "unsupported device; $(cat /sys/firmware/devicetree/base/model)"

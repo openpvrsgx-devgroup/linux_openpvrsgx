@@ -110,7 +110,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif /* PVR_LDM_DEVICE_CLASS */
 
 #if defined(DEBUG) && defined(PVR_MANUAL_POWER_CONTROL)
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0)
 #include <asm/uaccess.h>
+#else
+#include <linux/uaccess.h>
+#endif
 #endif
 
 #include "img_defs.h"

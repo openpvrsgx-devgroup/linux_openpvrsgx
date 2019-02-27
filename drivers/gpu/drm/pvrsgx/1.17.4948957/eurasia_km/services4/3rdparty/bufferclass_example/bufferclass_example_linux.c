@@ -71,7 +71,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/fs.h>
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0))
 #include <asm/uaccess.h>
+#else
+#include <linux/uaccess.h>
+#endif
 #include <asm/io.h>
 
 #if defined(LMA)
@@ -102,7 +106,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 
 #if (defined(__i386__) || defined(__x86_64__)) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,26)) && defined(SUPPORT_LINUX_X86_PAT) && defined(SUPPORT_LINUX_X86_WRITECOMBINE)
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,12,0))
+#include <asm/set_memory.h>
+#else
 #include <asm/cacheflush.h>
+#endif
 #define	BCE_USE_SET_MEMORY
 #endif
 

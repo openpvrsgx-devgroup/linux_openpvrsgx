@@ -41,7 +41,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 #ifdef LINUX
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0))
 #include <asm/uaccess.h>
+#else
+#include <linux/uaccess.h>
+#endif
 #include "pvr_uaccess.h"
 #endif /* LINUX */
 

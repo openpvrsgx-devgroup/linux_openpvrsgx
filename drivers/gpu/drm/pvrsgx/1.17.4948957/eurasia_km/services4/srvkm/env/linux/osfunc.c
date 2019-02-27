@@ -52,7 +52,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,22)) && (LINUX_VERSION_CODE < KERNEL_VERSION(3,2,0))
 #include <asm/system.h>
 #endif
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,19,0))
+#include <asm/set_memory.h>
+#else
 #include <asm/cacheflush.h>
+#endif
 #include <linux/mm.h>
 #include <linux/pagemap.h>
 #include <linux/hugetlb.h> 
@@ -70,7 +74,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <linux/time.h>
 #endif
 #include <linux/capability.h>
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0))
 #include <asm/uaccess.h>
+#else
+#include <linux/uaccess.h>
+#endif
 #include <linux/spinlock.h>
 #if defined(PVR_LINUX_MISR_USING_WORKQUEUE) || \
 	defined(PVR_LINUX_MISR_USING_PRIVATE_WORKQUEUE) || \
@@ -2798,15 +2806,27 @@ static void OSTimerCallbackBody(TIMER_CALLBACK_DATA *psTimerCBData)
     mod_timer(&psTimerCBData->sTimer, psTimerCBData->ui32Delay + jiffies);
 }
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0))
+ /*!
+ ******************************************************************************
 
+ @Function      OSTimerCallbackWrapper
+
+ @Description   OS specific timer callback wrapper function
+
+ @Input         psTimer    Timer list structure
+
+*/ /**************************************************************************/
+static void OSTimerCallbackWrapper(struct timer_list *psTimer)
+{
+	TIMER_CALLBACK_DATA *psTimerCBData = from_timer(psTimerCBData, psTimer, sTimer);
+#else
 /*!
 ******************************************************************************
 
  @Function	OSTimerCallbackWrapper
  
- @Description 
- 
- OS specific timer callback wrapper function
+ @Description 	OS specific timer callback wrapper function
  
  @Input    ui32Data : timer callback data
 
@@ -2816,6 +2836,8 @@ static void OSTimerCallbackBody(TIMER_CALLBACK_DATA *psTimerCBData)
 static IMG_VOID OSTimerCallbackWrapper(IMG_UINTPTR_T uiData)
 {
     TIMER_CALLBACK_DATA	*psTimerCBData = (TIMER_CALLBACK_DATA*)uiData;
+
+#endif
 
 #if defined(PVR_LINUX_TIMERS_USING_WORKQUEUES) || defined(PVR_LINUX_TIMERS_USING_SHARED_WORKQUEUE)
     int res;
@@ -2915,6 +2937,10 @@ IMG_HANDLE OSAddTimer(PFN_TIMER_FUNC pfnTimerFunc, IMG_VOID *pvData, IMG_UINT32 
     psTimerCBData->ui32Delay = ((HZ * ui32MsTimeout) < 1000)
                                 ?	1
                                 :	((HZ * ui32MsTimeout) / 1000);
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0))
+    timer_setup(&psTimerCBData->sTimer, OSTimerCallbackWrapper, 0);
+#else
     /* initialise object */
     init_timer(&psTimerCBData->sTimer);
     
@@ -2922,7 +2948,7 @@ IMG_HANDLE OSAddTimer(PFN_TIMER_FUNC pfnTimerFunc, IMG_VOID *pvData, IMG_UINT32 
     /* PRQA S 0307,0563 1 */ /* ignore warning about inconpartible ptr casting */
     psTimerCBData->sTimer.function = (IMG_VOID *)OSTimerCallbackWrapper;
     psTimerCBData->sTimer.data = (IMG_UINTPTR_T)psTimerCBData;
-    
+#endif
     return (IMG_HANDLE)(ui + 1);
 }
 
@@ -3450,6 +3476,9 @@ static IMG_BOOL CPUVAddrToPFN(struct vm_area_struct *psVMArea, IMG_UINTPTR_T uCP
     pud_t *psPUD;
     pmd_t *psPMD;
     pte_t *psPTE;
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4,12,0))
+    p4d_t *psP4D;
+#endif
     struct mm_struct *psMM = psVMArea->vm_mm;
     spinlock_t *psPTLock;
     IMG_BOOL bRet = IMG_FALSE;
@@ -3461,7 +3490,15 @@ static IMG_BOOL CPUVAddrToPFN(struct vm_area_struct *psVMArea, IMG_UINTPTR_T uCP
     if (pgd_none(*psPGD) || pgd_bad(*psPGD))
         return bRet;
 
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4,12,0))
+    psP4D = p4d_offset(psPGD, uCPUVAddr);
+    if (p4d_none(*psP4D) || unlikely(p4d_bad(*psP4D)))
+        return bRet;
+
+    psPUD = pud_offset(psP4D, uCPUVAddr);
+#else
     psPUD = pud_offset(psPGD, uCPUVAddr);
+#endif
     if (pud_none(*psPUD) || pud_bad(*psPUD))
         return bRet;
 
@@ -3737,10 +3774,12 @@ PVRSRV_ERROR OSAcquirePhysPageAddr(IMG_VOID *pvCPUVAddr,
     psInfo->iNumPagesMapped = get_user_pages(
 		current, current->mm,
 		uStartAddr, psInfo->iNumPages, 1, 0, psInfo->ppsPages, NULL);
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0))
+    psInfo->iNumPagesMapped = get_user_pages(
+		uStartAddr, psInfo->iNumPages, 1, 0, psInfo->ppsPages, NULL);
 #else
-    psInfo->iNumPagesMapped = get_user_pages_remote(
-		current, current->mm,
-		uStartAddr, psInfo->iNumPages, FOLL_WRITE, psInfo->ppsPages, NULL, NULL);
+    psInfo->iNumPagesMapped = get_user_pages(
+		uStartAddr, psInfo->iNumPages, 1, psInfo->ppsPages, NULL);
 #endif
 
     if (psInfo->iNumPagesMapped >= 0)

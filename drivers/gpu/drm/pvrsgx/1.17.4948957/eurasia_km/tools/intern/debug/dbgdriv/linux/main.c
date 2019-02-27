@@ -57,7 +57,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <linux/pci.h>
 #endif
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0))
 #include <asm/uaccess.h>
+#else
+#include <linux/uaccess.h>
+#endif
 
 #if defined(SUPPORT_DRI_DRM)
 #include "drmP.h"

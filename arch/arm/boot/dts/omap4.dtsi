@@ -341,7 +341,7 @@
 			status = "disabled";
 		};
 
-		target-module@56000000 {
+		sgx_module: target-module@56000000 {
 			compatible = "ti,sysc-omap4", "ti,sysc";
 			reg = <0x5601fc00 0x4>,
 			      <0x5601fc10 0x4>;
@@ -360,10 +360,13 @@
 			#size-cells = <1>;
 			ranges = <0 0x56000000 0x2000000>;
 
-			/*
-			 * Closed source PowerVR driver, no child device
-			 * binding or driver in mainline
-			 */
+			sgx@fe00 {
+				compatible = "img,sgx540-120", "img,sgx540", "ti,omap-omap4-sgx540-120";
+				reg = <0xfe00 0x200>;
+				reg-names = "sgx";
+				// FIXME: interrupt = <?>;
+				timer = <&timer11>;
+			};
 		};
 
 		dss: dss@58000000 {

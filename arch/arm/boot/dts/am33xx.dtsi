@@ -461,7 +461,7 @@
 			dma-names = "tx", "rx";
 		};
 
-		target-module@56000000 {
+		sgx_module: target-module@56000000 {
 			compatible = "ti,sysc-omap4", "ti,sysc";
 			reg = <0x5600fe00 0x4>,
 			      <0x5600fe10 0x4>;
@@ -480,10 +480,13 @@
 			#size-cells = <1>;
 			ranges = <0 0x56000000 0x1000000>;
 
-			/*
-			 * Closed source PowerVR driver, no child device
-			 * binding or driver in mainline
-			 */
+			sgx@0 {
+				compatible = "img,sgx530-125", "img,sgx530", "ti,omap-am335x-sgx530-125";
+				reg = <0x0fe00 0x200>;
+				reg-names = "sgx";
+				interrupts = <37>;
+				timer = <&timer7>;
+			};
 		};
 	};
 };

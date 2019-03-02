@@ -187,7 +187,7 @@
 		};
 
 		sgx:sgx@56000000 {
-			compatible = "ti,dra7-sgx544", "img,sgx544";
+			compatible = "ti,dra7-sgx544", "ti,sgx", "ti,omap-omap5-sgx544-116", "img,sgx544", "img,sgx544-116";
 			reg = <0x5600fe00 0x200>;
 			reg-names = "gpu_wrapper";
 			interrupts = <GIC_SPI 21 IRQ_TYPE_LEVEL_HIGH>;

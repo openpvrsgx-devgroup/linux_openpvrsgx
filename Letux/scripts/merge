@@ -276,7 +276,7 @@ echo please run:	git branch -f $FEATURE origin/$FEATURE
 
 if [ "$MERGEFILE" ]
 then
-echo usig feature branches provided in $MERGEFILE
+echo using feature branches provided in $MERGEFILE
 while read FEATURE IGNORE
 do
 	case "$FEATURE" in

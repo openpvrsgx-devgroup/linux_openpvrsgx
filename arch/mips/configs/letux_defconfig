@@ -1,5 +1,5 @@
 #
-# Linux/mips 5.0.0-rc8 Kernel Configuration
+# Linux/mips 5.0.0 Kernel Configuration
 #
 
 #
@@ -4424,6 +4424,7 @@ CONFIG_MAGIC_SYSRQ_SERIAL=y
 CONFIG_HAVE_DEBUG_KMEMLEAK=y
 CONFIG_DEBUG_MEMORY_INIT=y
 CONFIG_HAVE_DEBUG_STACKOVERFLOW=y
+CONFIG_KASAN_STACK=1
 
 #
 # Debug Lockups and Hangs

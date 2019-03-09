@@ -82,6 +82,8 @@ static int pvr_open(struct inode unref__ * inode, struct file *filp)
 		goto err_unlock;
 	}
 
+	filp->f_mode |= FMODE_UNSIGNED_OFFSET;
+
 	pid = OSGetCurrentProcessIDKM();
 
 	if (PVRSRVProcessConnect(pid) != PVRSRV_OK)

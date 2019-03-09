@@ -27,7 +27,6 @@
 #ifndef __SERVICES_PROC_H__
 #define __SERVICES_PROC_H__
 
-#include <asm/system.h>
 #include <linux/proc_fs.h>
 
 #define END_OF_FILE ((off_t) -1)

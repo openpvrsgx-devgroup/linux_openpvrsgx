@@ -30,7 +30,7 @@ fi
 
 # autodetect package version to load
 # FIXME: different location on omap5
-PACKAGE=$(egrep -ao '[a-z0-9]*-sgx[0-9]*-[0-9]*' </proc/device-tree/ocp*/gfx@*/compatible)
+PACKAGE=$(egrep -ao '[a-z0-9]*-sgx[0-9]*-[0-9]*' </proc/device-tree/ocp*/*g*x@*/compatible)	# match gfx@ and sgx@
 COMPATIBLE=omap_$(echo "$PACKAGE" | tr '-' '_')
 MODULE=pvr_$COMPATIBLE
 echo autodetected driver package: $PACKAGE
@@ -39,21 +39,35 @@ echo module name: $MODULE
 
 case "$MODEL" in
 	*omap3* )
+# FIXME: how can we decide betweeen the DDK 1.9 and the DDK 1.14 driver to load the correct package?
+if false
+then
 		PACKAGE=omap3-pvrsgx530-gta04	# version detection does not work and we don't have separate pvrsgx-121 / pvrsgx-125 packages
+else
+		PACKAGE=omap3-pvrsgx-1.14
+		PATH=/usr/local/omap3-pvrsgx/bin:$PATH
+		export LD_LIBRARY_PATH=/usr/local/omap3-pvrsgx/lib
+		ldconfig
+fi
 		;;
 	*omap4* )
-		PACKAGE=omap4-pvrsgx540-120
+		PACKAGE=omap4-pvrsgx-1.14
+		PATH=/usr/local/omap4-pvrsgx/bin:$PATH
+		export LD_LIBRARY_PATH=/usr/local/omap4-pvrsgx/lib
+		ldconfig
 		;;
 	*omap5* )
-		PACKAGE=omap-sgx544-100
-		PATH=$PATH:/usr/local/sgx540/bin
+		PACKAGE=omap5-pvrsgx-1.14
+		PATH=/usr/local/omap5-pvrsgx/bin:$PATH
+		export LD_LIBRARY_PATH=/usr/local/omap5-pvrsgx/lib
+		ldconfig
 		;;
 esac
 
 # fetch the microkernel binary and libraries
 [ "$(which pvrsrvctl)" ] || apt-get install -y --force-yes $PACKAGE
 
-# if automatic kernel module loading was blocked, load it now
+# if kernel module was blacklisted, load it now
 lsmod | fgrep -q pvr_ || modprobe $MODULE
 
 # fix clock setup
@@ -75,6 +89,13 @@ fgrep -q 'System Version String: None' /proc/pvr/version && pvrsrvctl --start --
 
 fgrep "System Version String: " /proc/pvr/version
 
-sgx_clipblit_test
+for i in sgx_clipblit_test gles1test1 gles2test1 eglinfo kmscube
+do
+	if [ "$(which $i)" ]
+	then
+		echo Running $i
+		timeout 10 $i
+	fi
+done
 
 # pvrsrvctl --stop

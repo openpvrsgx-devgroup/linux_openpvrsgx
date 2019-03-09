@@ -1,6 +1,6 @@
 menuconfig PVR
 	tristate "PowerVR Services"
-	depends on OMAP2_DSS
+	depends on FB_OMAP2_DSS
 
 if PVR
 

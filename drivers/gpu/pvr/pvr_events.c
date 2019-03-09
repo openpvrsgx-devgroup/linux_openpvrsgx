@@ -15,7 +15,7 @@
 #include <linux/notifier.h>
 #include <linux/slab.h>
 
-#include <video/omapdss.h>
+#include <video/omapfb_dss.h>
 
 static spinlock_t event_lock;
 static struct list_head sync_wait_list;

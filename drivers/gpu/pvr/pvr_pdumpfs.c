@@ -933,19 +933,19 @@ pdumpfs_fs_init(void)
 		return -ENOENT;
 	}
 
-	pdumpfs_file_create("mode", S_IRUSR | S_IWUSR,
+	pdumpfs_file_create("mode", 0600,
 			    &pdumpfs_mode_fops);
-	pdumpfs_file_create("modes_possible", S_IRUSR,
+	pdumpfs_file_create("modes_possible", 0400,
 			    &pdumpfs_modes_possible_fops);
 
-	pdumpfs_file_create("frame_count_max", S_IRUSR | S_IWUSR,
+	pdumpfs_file_create("frame_count_max", 0600,
 			    &pdumpfs_frame_count_max_fops);
 
-	pdumpfs_file_create("init_frame", S_IRUSR,
+	pdumpfs_file_create("init_frame", 0400,
 			    &pdumpfs_init_fops);
-	pdumpfs_file_create("current_frame", S_IRUSR,
+	pdumpfs_file_create("current_frame", 0400,
 			    &pdumpfs_current_fops);
-	pdumpfs_file_create("stream_frames", S_IRUSR,
+	pdumpfs_file_create("stream_frames", 0400,
 			    &pdumpfs_stream_fops);
 
 	return 0;

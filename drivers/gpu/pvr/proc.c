@@ -104,13 +104,14 @@ static int CreateProcEntryInDir(struct proc_dir_entry *pdir, const char *name,
 		return -ENOMEM;
 	}
 
+	/* S_IFREG - regular file */
 	mode = S_IFREG;
 
 	if (rhandler)
-		mode |= S_IRUGO;
+		mode |= 0444;
 
 	if (whandler)
-		mode |= S_IWUSR;
+		mode |= 0200;
 
 	file = create_proc_entry(name, mode, pdir);
 
@@ -226,7 +227,7 @@ int CreateProcReadEntry(const char *name,
 	}
 
 	file =
-	    create_proc_read_entry(name, S_IFREG | S_IRUGO, dir, pvr_read_proc,
+	    create_proc_read_entry(name, S_IFREG | 0444, dir, pvr_read_proc,
 				   (void *)handler);
 
 	if (file)

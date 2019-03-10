@@ -1248,53 +1248,53 @@ int pvr_debugfs_init(void)
 	if (!pvr_debugfs_dir)
 		return -ENODEV;
 
-	if (!debugfs_create_file("reset_sgx", S_IWUSR, pvr_debugfs_dir,
+	if (!debugfs_create_file("reset_sgx", 0200, pvr_debugfs_dir,
 				 &pvr_reset, &pvr_debugfs_reset_fops)) {
 		debugfs_remove(pvr_debugfs_dir);
 		return -ENODEV;
 	}
 
 #ifdef PVRSRV_USSE_EDM_STATUS_DEBUG
-	if (!debugfs_create_file("edm_trace", S_IRUGO, pvr_debugfs_dir, NULL,
+	if (!debugfs_create_file("edm_trace", 0444, pvr_debugfs_dir, NULL,
 				 &pvr_debugfs_edm_fops)) {
 		debugfs_remove_recursive(pvr_debugfs_dir);
 		return -ENODEV;
 	}
 #endif
 #ifdef CONFIG_PVR_TRACE_CMD
-	if (!debugfs_create_file("command_trace", S_IRUGO, pvr_debugfs_dir,
+	if (!debugfs_create_file("command_trace", 0444, pvr_debugfs_dir,
 				 NULL, &pvr_dbg_trcmd_fops)) {
 		debugfs_remove_recursive(pvr_debugfs_dir);
 		return -ENODEV;
 	}
 #endif
 
-	if (!debugfs_create_file("registers", S_IRUSR, pvr_debugfs_dir, NULL,
+	if (!debugfs_create_file("registers", 0400, pvr_debugfs_dir, NULL,
 				 &pvr_debugfs_regs_fops)) {
 		debugfs_remove(pvr_debugfs_dir);
 		return -ENODEV;
 	}
 
-	if (!debugfs_create_file("hwrec_event", S_IRUSR, pvr_debugfs_dir, NULL,
+	if (!debugfs_create_file("hwrec_event", 0400, pvr_debugfs_dir, NULL,
 				 &hwrec_event_fops)) {
 		debugfs_remove_recursive(pvr_debugfs_dir);
 		return -ENODEV;
 	}
 
-	if (!debugfs_create_file("hwrec_time", S_IRUSR, pvr_debugfs_dir, NULL,
+	if (!debugfs_create_file("hwrec_time", 0400, pvr_debugfs_dir, NULL,
 				 &hwrec_time_fops)) {
 		debugfs_remove_recursive(pvr_debugfs_dir);
 		return -ENODEV;
 	}
 
-	if (!debugfs_create_file("hwrec_regs", S_IRUSR, pvr_debugfs_dir, NULL,
+	if (!debugfs_create_file("hwrec_regs", 0400, pvr_debugfs_dir, NULL,
 				 &hwrec_regs_fops)) {
 		debugfs_remove_recursive(pvr_debugfs_dir);
 		return -ENODEV;
 	}
 
 #ifdef CONFIG_PVR_DEBUG
-	if (!debugfs_create_file("hwrec_mem", S_IRUSR, pvr_debugfs_dir, NULL,
+	if (!debugfs_create_file("hwrec_mem", 0400, pvr_debugfs_dir, NULL,
 				 &hwrec_mem_fops)) {
 		debugfs_remove_recursive(pvr_debugfs_dir);
 		return -ENODEV;
@@ -1302,14 +1302,14 @@ int pvr_debugfs_init(void)
 #endif /* CONFIG_PVR_DEBUG */
 
 #ifdef PVRSRV_USSE_EDM_STATUS_DEBUG
-	if (!debugfs_create_file("hwrec_edm", S_IRUSR, pvr_debugfs_dir, NULL,
+	if (!debugfs_create_file("hwrec_edm", 0400, pvr_debugfs_dir, NULL,
 				 &hwrec_edm_fops)) {
 		debugfs_remove_recursive(pvr_debugfs_dir);
 		return -ENODEV;
 	}
 #endif
 
-	if (!debugfs_create_file("hwrec_status", S_IRUSR, pvr_debugfs_dir, NULL,
+	if (!debugfs_create_file("hwrec_status", 0400, pvr_debugfs_dir, NULL,
 				 &hwrec_status_fops)) {
 		debugfs_remove_recursive(pvr_debugfs_dir);
 		return -ENODEV;

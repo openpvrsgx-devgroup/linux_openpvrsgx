@@ -45,27 +45,37 @@ then
 		PACKAGE=omap3-pvrsgx530-gta04	# version detection does not work and we don't have separate pvrsgx-121 / pvrsgx-125 packages
 else
 		PACKAGE=omap3-pvrsgx-1.14
-		PATH=/usr/local/omap3-pvrsgx/bin:$PATH
-		export LD_LIBRARY_PATH=/usr/local/omap3-pvrsgx/lib
+		USERSPACE=/usr/local/omap3-pvrsgx
+		PATH=$USERSPACE/bin:$PATH
+		export LD_LIBRARY_PATH=$USERSPACE/lib
 		ldconfig
 fi
 		;;
 	*omap4* )
 		PACKAGE=omap4-pvrsgx-1.14
-		PATH=/usr/local/omap4-pvrsgx/bin:$PATH
-		export LD_LIBRARY_PATH=/usr/local/omap4-pvrsgx/lib
+		USERSPACE=/usr/local/omap3-pvrsgx
+		PATH=$USERSPACE/bin:$PATH
+		export LD_LIBRARY_PATH=$USERSPACE/lib
 		ldconfig
 		;;
 	*omap5* )
 		PACKAGE=omap5-pvrsgx-1.14
-		PATH=/usr/local/omap5-pvrsgx/bin:$PATH
-		export LD_LIBRARY_PATH=/usr/local/omap5-pvrsgx/lib
+		USERSPACE=/usr/local/omap3-pvrsgx
+		PATH=$USERSPACE/bin:$PATH
+		export LD_LIBRARY_PATH=$USERSPACE/lib
 		ldconfig
 		;;
 esac
 
+# we need a more recent libdrm2 on plain jessie
+case $(dpkg -s libdrm2 2>/dev/null | grep '^Version:') in
+	'' | 'Version: '2.4.58-* )
+		apt-get -t jessie-backports install --reinstall libdrm2
+		;;
+esac
+
 # fetch the microkernel binary and libraries
-[ "$(which pvrsrvctl)" ] || apt-get install -y --force-yes $PACKAGE
+[ -x "$USERSPACE/bin/pvrsrvctl" ] || apt-get install -y --force-yes $PACKAGE
 
 # if kernel module was blacklisted, load it now
 lsmod | fgrep -q pvr_ || modprobe $MODULE
@@ -85,6 +95,7 @@ else
 fi
 
 # start pvr
+: which pvrsrvctl
 fgrep -q 'System Version String: None' /proc/pvr/version && pvrsrvctl --start --no-module
 
 fgrep "System Version String: " /proc/pvr/version

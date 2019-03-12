@@ -31,6 +31,8 @@
 #include "osfunc.h"
 
 #include <linux/kernel.h>
+#include <linux/seq_file.h>
+
 #include "proc.h"
 
 
@@ -82,10 +84,29 @@ struct RA_ARENA {
 };
 
 #if defined(CONFIG_PROC_FS) && defined(CONFIG_PVR_DEBUG_EXTRA)
-static int RA_DumpSegs(char *page, char **start, off_t off, int count, int *eof,
-		       void *data);
-static int RA_DumpInfo(char *page, char **start, off_t off, int count, int *eof,
-		       void *data);
+static void *ProcRASegsSeqStart (struct seq_file *s, loff_t *pos);
+static void *ProcRASegsSeqNext  (struct seq_file *s, void *v, loff_t *pos);
+static void  ProcRASegsSeqStop  (struct seq_file *s, void *v);
+static int   ProcRASegsSeqShow  (struct seq_file *s, void *v);
+
+static struct seq_operations pvr_proc_ra_segs_ops = {
+	.start = ProcRASegsSeqStart,
+	.next  = ProcRASegsSeqNext,
+	.stop  = ProcRASegsSeqStop,
+	.show  = ProcRASegsSeqShow,
+};
+
+static void *ProcRAInfoSeqStart (struct seq_file *s, loff_t *pos);
+static void *ProcRAInfoSeqNext  (struct seq_file *s, void *v, loff_t *pos);
+static void  ProcRAInfoSeqStop  (struct seq_file *s, void *v);
+static int   ProcRAInfoSeqShow  (struct seq_file *s, void *v);
+
+static struct seq_operations pvr_proc_ra_info_ops = {
+	.start = ProcRAInfoSeqStart,
+	.next  = ProcRAInfoSeqNext,
+	.stop  = ProcRAInfoSeqStop,
+	.show  = ProcRAInfoSeqShow,
+};
 #endif
 
 #if defined(CONFIG_PROC_FS) && defined(CONFIG_PVR_DEBUG_EXTRA)
@@ -657,7 +678,8 @@ struct RA_ARENA *RA_Create(char *name, u32 base, size_t uSize,
 			ReplaceSpaces(pArena->szProcInfoName);
 			ret = CreatePerProcessProcEntry(pArena->ui32PID,
 							pArena->szProcInfoName,
-							RA_DumpInfo, pArena);
+							&pvr_proc_ra_info_ops,
+							pArena);
 		} else
 			pArena->szProcInfoName[0] = 0;
 
@@ -674,7 +696,8 @@ struct RA_ARENA *RA_Create(char *name, u32 base, size_t uSize,
 			ReplaceSpaces(pArena->szProcSegsName);
 			ret = CreatePerProcessProcEntry(pArena->ui32PID,
 							pArena->szProcSegsName,
-							RA_DumpSegs, pArena);
+							&pvr_proc_ra_segs_ops,
+							pArena);
 		} else
 			ret = -1;
 
@@ -968,98 +991,150 @@ void RA_Dump(struct RA_ARENA *pArena)
 #endif
 
 #if defined(CONFIG_PROC_FS) && defined(CONFIG_PVR_DEBUG_EXTRA)
-static int RA_DumpSegs(char *page, char **start, off_t off, int count, int *eof,
-		       void *data)
+static int ProcRASegsSeqShow(struct seq_file *s, void *v)
 {
-	struct BT *pBT = NULL;
-	int len = 0;
-	struct RA_ARENA *pArena = (struct RA_ARENA *)data;
+	struct BT *pBT = v;
 
-	if (count < 80) {
-		*start = (char *)0;
+	if (v == SEQ_START_TOKEN) {
+		struct RA_ARENA *pArena = s->private;
+
+		seq_printf(s, "Arena \"%s\"\nBase         Size Type Ref\n",
+			   pArena->name);
+
 		return 0;
 	}
-	*eof = 0;
-	*start = (char *)1;
-	if (off == 0)
-		return printAppend(page, count, 0,
-			"Arena \"%s\"\nBase         Size Type Ref\n",
-			pArena->name);
-	for (pBT = pArena->pHeadSegment; --off && pBT;
-	     pBT = pBT->pNextSegment)
-		;
-	if (pBT)
-		len = printAppend(page, count, 0, "%08x %8x %4s %08x\n",
-				  (unsigned)pBT->base, (unsigned)pBT->uSize,
-				  _BTType(pBT->type), (unsigned)pBT->psMapping);
-	else
-		*eof = 1;
-	return len;
+
+	seq_printf(s, "%08x %8x %4s %08x\n",
+		   (unsigned)pBT->base, (unsigned)pBT->uSize,
+		   _BTType(pBT->type), (unsigned)pBT->psMapping);
+
+	return 0;
 }
 
-static int RA_DumpInfo(char *page, char **start, off_t off, int count, int *eof,
-	    void *data)
+static void *ProcRASegsSeqStart(struct seq_file *s, loff_t *pos)
 {
-	int len = 0;
+	struct BT *pBT;
+	void *data = pvr_proc_file_get_data(s->file);
 	struct RA_ARENA *pArena = (struct RA_ARENA *)data;
+	loff_t i;
 
-	if (count < 80) {
-		*start = (char *)0;
-		return 0;
+	s->private = pArena;
+
+	if (*pos == 0)
+		return SEQ_START_TOKEN;
+
+	pBT = pArena->pHeadSegment;
+
+	for (i = 1; i < *pos && pBT; i++)
+		pBT = pBT->pNextSegment;
+
+	return pBT;
+}
+
+static void *ProcRASegsSeqNext(struct seq_file *s, void *v, loff_t *pos)
+{
+	if (++(*pos) == 1) {
+		struct RA_ARENA *pArena = s->private;
+
+		return pArena->pHeadSegment;
 	}
-	*eof = 0;
-	switch (off) {
+
+	return ((struct BT *)v)->pNextSegment;
+}
+
+static void ProcRASegsSeqStop(struct seq_file *s, void *v)
+{
+	/* Nothing to do */
+}
+
+static int ProcRAInfoSeqShow(struct seq_file *s, void *v)
+{
+	loff_t *pos = v;
+	struct RA_ARENA *pArena = s->private;
+
+	switch (*pos) {
 	case 0:
-		len = printAppend(page, count, 0, "quantum\t\t\t%u\n",
-				  pArena->uQuantum);
+		seq_printf(s, "quantum\t\t\t%u\n", pArena->uQuantum);
 		break;
 	case 1:
-		len = printAppend(page, count, 0, "import_handle\t\t%08X\n",
-				(unsigned)pArena->pImportHandle);
+		seq_printf(s, "import_handle\t\t%08X\n",
+			   (unsigned)pArena->pImportHandle);
 		break;
 #ifdef RA_STATS
 	case 2:
-		len = printAppend(page, count, 0, "span count\t\t%u\n",
-				pArena->sStatistics.uSpanCount);
+		seq_printf(s, "span count\t\t%u\n",
+			   pArena->sStatistics.uSpanCount);
 		break;
 	case 3:
-		len = printAppend(page, count, 0, "live segment count\t%u\n",
-				pArena->sStatistics.uLiveSegmentCount);
+		seq_printf(s, "live segment count\t%u\n",
+			   pArena->sStatistics.uLiveSegmentCount);
 		break;
 	case 4:
-		len = printAppend(page, count, 0, "free segment count\t%u\n",
-				pArena->sStatistics.uFreeSegmentCount);
+		seq_printf(s, "free segment count\t%u\n",
+			   pArena->sStatistics.uFreeSegmentCount);
 		break;
 	case 5:
-		len = printAppend(page, count, 0,
-				"free resource count\t%u (0x%x)\n",
-				pArena->sStatistics.uFreeResourceCount,
-				(unsigned)pArena->sStatistics.
-				uFreeResourceCount);
+		seq_printf(s, "free resource count\t%u (0x%x)\n",
+			   pArena->sStatistics.uFreeResourceCount,
+			   (unsigned)pArena->sStatistics.
+			   uFreeResourceCount);
 		break;
 	case 6:
-		len = printAppend(page, count, 0, "total allocs\t\t%u\n",
-				pArena->sStatistics.uCumulativeAllocs);
+		seq_printf(s, "total allocs\t\t%u\n",
+			   pArena->sStatistics.uCumulativeAllocs);
 		break;
 	case 7:
-		len = printAppend(page, count, 0, "total frees\t\t%u\n",
-				pArena->sStatistics.uCumulativeFrees);
+		seq_printf(s, "total frees\t\t%u\n",
+			   pArena->sStatistics.uCumulativeFrees);
 		break;
 	case 8:
-		len = printAppend(page, count, 0, "import count\t\t%u\n",
-				pArena->sStatistics.uImportCount);
+		seq_printf(s, "import count\t\t%u\n",
+			   pArena->sStatistics.uImportCount);
 		break;
 	case 9:
-		len = printAppend(page, count, 0, "export count\t\t%u\n",
-				pArena->sStatistics.uExportCount);
+		seq_printf(s, "export count\t\t%u\n",
+			   pArena->sStatistics.uExportCount);
 		break;
 #endif
-
-	default:
-		*eof = 1;
 	}
-	*start = (char *)1;
-	return len;
+
+	return 0;
+}
+
+static void *ProcRAInfoSeqStart(struct seq_file *s, loff_t *pos)
+{
+	void *data = pvr_proc_file_get_data(s->file);
+	struct RA_ARENA *pArena = (struct RA_ARENA *)data;
+
+	s->private = pArena;
+
+#ifdef RA_STATS
+	if (*pos > 9)
+		return NULL;
+#else
+	if (*pos > 1)
+		return NULL;
+#endif
+
+	return pos;
+}
+
+static void *ProcRAInfoSeqNext(struct seq_file *s, void *v, loff_t *pos)
+{
+#ifdef RA_STATS
+	if (++(*pos) > 9)
+		return NULL;
+#else
+	if (++(*pos) > 1)
+		return NULL;
+#endif
+
+	return pos;
+}
+
+static void ProcRAInfoSeqStop(struct seq_file *s, void *v)
+{
+	/* Nothing to do */
 }
 #endif
 

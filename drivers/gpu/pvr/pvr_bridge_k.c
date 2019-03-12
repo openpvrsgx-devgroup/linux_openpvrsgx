@@ -25,6 +25,7 @@
  ******************************************************************************/
 
 #include <linux/sched.h>
+#include <linux/seq_file.h>
 
 #include "img_defs.h"
 #include "services.h"
@@ -84,7 +85,17 @@ void pvr_dev_unlock(void)
 }
 
 #if defined(DEBUG_BRIDGE_KM)
-static off_t printLinuxBridgeStats(char *buffer, size_t size, off_t off);
+static void *ProcBridgeStatsSeqStart (struct seq_file *s, loff_t *pos);
+static void *ProcBridgeStatsSeqNext  (struct seq_file *s, void *v, loff_t *pos);
+static void  ProcBridgeStatsSeqStop  (struct seq_file *s, void *v);
+static int   ProcBridgeStatsSeqShow  (struct seq_file *s, void *v);
+
+static struct seq_operations pvr_proc_bridge_stats_ops = {
+	.start = ProcBridgeStatsSeqStart,
+	.next  = ProcBridgeStatsSeqNext,
+	.stop  = ProcBridgeStatsSeqStop,
+	.show  = ProcBridgeStatsSeqShow,
+};
 #endif
 
 enum PVRSRV_ERROR LinuxBridgeInit(void)
@@ -92,8 +103,8 @@ enum PVRSRV_ERROR LinuxBridgeInit(void)
 #if defined(DEBUG_BRIDGE_KM)
 	{
 		int iStatus;
-		iStatus =
-		    CreateProcReadEntry("bridge_stats", printLinuxBridgeStats);
+		iStatus = CreateProcReadEntry("bridge_stats",
+					      &pvr_proc_bridge_stats_ops);
 		if (iStatus != 0)
 			return PVRSRV_ERROR_OUT_OF_MEMORY;
 	}
@@ -109,58 +120,58 @@ void LinuxBridgeDeInit(void)
 }
 
 #if defined(DEBUG_BRIDGE_KM)
-static off_t printLinuxBridgeStats(char *buffer, size_t count, off_t off)
+static int ProcBridgeStatsSeqShow(struct seq_file *s, void *v)
 {
 	struct PVRSRV_BRIDGE_DISPATCH_TABLE_ENTRY *psEntry;
-	off_t Ret;
+	loff_t *pos = v;
 
+	if (*pos == 0) {
+		seq_printf(s, "Total ioctl call count = %u\n"
+			   "Total number of bytes copied via copy_from_user = %u\n"
+			   "Total number of bytes copied via copy_to_user = %u\n"
+			   "Total number of bytes copied via copy_*_user = %u\n\n"
+			   "%-2s | %-40s | %10s | %20s | %10s\n",
+			   g_BridgeGlobalStats.ui32IOCTLCount,
+			   g_BridgeGlobalStats.ui32TotalCopyFromUserBytes,
+			   g_BridgeGlobalStats.ui32TotalCopyToUserBytes,
+			   g_BridgeGlobalStats.ui32TotalCopyFromUserBytes +
+				   g_BridgeGlobalStats.ui32TotalCopyToUserBytes,
+			   "ID", "Wrapper Function", "Call Count",
+			   "copy_from_user Bytes", "copy_to_user Bytes");
+
+		return 0;
+	}
+
+	psEntry = &g_BridgeDispatchTable[*pos - 1];
+	seq_printf(s, "%02lX   %-40s   %-10u   %-20u   %-10u\n",
+		   *pos - 1, psEntry->pszFunctionName, psEntry->ui32CallCount,
+		   psEntry->ui32CopyFromUserTotalBytes,
+		   psEntry->ui32CopyToUserTotalBytes);
+
+	return 0;
+}
+
+static void *ProcBridgeStatsSeqStart(struct seq_file *s, loff_t *pos)
+{
 	pvr_lock();
 
-	if (!off) {
-		if (count < 500) {
-			Ret = 0;
-			goto unlock_and_return;
-		}
-		Ret = printAppend(buffer, count, 0,
-			"Total ioctl call count = %u\n"
-			"Total number of bytes copied via copy_from_user = %u\n"
-			"Total number of bytes copied via copy_to_user = %u\n"
-			"Total number of bytes copied via copy_*_user = %u\n\n"
-			"%-2s | %-40s | %10s | %20s | %10s\n",
-		  g_BridgeGlobalStats.ui32IOCTLCount,
-		  g_BridgeGlobalStats.ui32TotalCopyFromUserBytes,
-		  g_BridgeGlobalStats.ui32TotalCopyToUserBytes,
-		  g_BridgeGlobalStats.ui32TotalCopyFromUserBytes +
-			  g_BridgeGlobalStats.ui32TotalCopyToUserBytes,
-		  "ID", "Wrapper Function",
-		  "Call Count", "copy_from_user Bytes",
-		  "copy_to_user Bytes");
+	if (*pos > BRIDGE_DISPATCH_TABLE_ENTRY_COUNT)
+		return NULL;
 
-		goto unlock_and_return;
-	}
+	return pos;
+}
 
-	if (off > BRIDGE_DISPATCH_TABLE_ENTRY_COUNT) {
-		Ret = END_OF_FILE;
-		goto unlock_and_return;
-	}
+static void *ProcBridgeStatsSeqNext(struct seq_file *s, void *v, loff_t *pos)
+{
+	if (++(*pos) > BRIDGE_DISPATCH_TABLE_ENTRY_COUNT)
+		return NULL;
 
-	if (count < 300) {
-		Ret = 0;
-		goto unlock_and_return;
-	}
+	return pos;
+}
 
-	psEntry = &g_BridgeDispatchTable[off - 1];
-	Ret = printAppend(buffer, count, 0,
-			  "%02lX   %-40s   %-10u   %-20u   %-10u\n",
-			  off - 1, psEntry->pszFunctionName,
-			  psEntry->ui32CallCount,
-			  psEntry->ui32CopyFromUserTotalBytes,
-			  psEntry->ui32CopyToUserTotalBytes);
-
-unlock_and_return:
+static void ProcBridgeStatsSeqStop(struct seq_file *s, void *v)
+{
 	pvr_unlock();
-
-	return Ret;
 }
 #endif
 

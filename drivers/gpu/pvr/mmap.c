@@ -36,6 +36,8 @@
 #include <asm/pgtable.h>
 #include <linux/sched.h>
 #include <asm/current.h>
+#include <linux/seq_file.h>
+
 #include "img_defs.h"
 #include "services.h"
 #include "servicesint.h"
@@ -630,13 +632,33 @@ unlock_and_return:
 }
 
 #if defined(DEBUG_LINUX_MMAP_AREAS)
-static off_t PrintMMapReg_helper(char *buffer, size_t size,
-				 const struct KV_OFFSET_STRUCT *psOffsetStruct,
-				 struct LinuxMemArea *psLinuxMemArea)
+struct ProcMMapSeqData {
+	struct LinuxMemArea *psLinuxMemArea;
+	struct KV_OFFSET_STRUCT *psOffsetStruct;
+};
+
+static int ProcMMapSeqShow(struct seq_file *s, void *v)
 {
-	off_t Ret;
+	struct ProcMMapSeqData *data = v;
+	struct LinuxMemArea *psLinuxMemArea;
+	struct KV_OFFSET_STRUCT *psOffsetStruct;
 	u32 ui32RealByteSize;
 	u32 ui32ByteOffset;
+
+	if (v == SEQ_START_TOKEN) {
+		seq_printf(s, "Allocations registered for mmap: %u\n"
+			   "In total these areas correspond to %u bytes\n"
+			   "psLinuxMemArea UserVAddr KernelVAddr "
+			   "CpuPAddr MMapOffset ByteLength "
+			   "LinuxMemType             "
+			   "Pid   Name     Flags\n",
+			   g_ui32RegisteredAreas, g_ui32TotalByteSize);
+
+		return 0;
+	}
+
+	psLinuxMemArea = data->psLinuxMemArea;
+	psOffsetStruct = data->psOffsetStruct;
 
 	PVR_ASSERT(psOffsetStruct->psLinuxMemArea == psLinuxMemArea);
 
@@ -644,70 +666,118 @@ static off_t PrintMMapReg_helper(char *buffer, size_t size,
 					&ui32RealByteSize,
 					&ui32ByteOffset);
 
-	Ret = printAppend(buffer, size, 0,
-			  "%-8p       %08x %-8p %08x %08x   "
-			  "%-8d   %-24s %-5u %-8s %08x(%s)\n",
-			  psLinuxMemArea,
-			  psOffsetStruct->ui32UserVAddr + ui32ByteOffset,
-			  LinuxMemAreaToCpuVAddr(psLinuxMemArea),
-			  LinuxMemAreaToCpuPAddr(psLinuxMemArea, 0).uiAddr,
-			  psOffsetStruct->ui32MMapOffset,
-			  psLinuxMemArea->ui32ByteSize,
-			  LinuxMemAreaTypeToString(psLinuxMemArea->eAreaType),
-			  psOffsetStruct->ui32PID,
-			  psOffsetStruct->pszName,
-			  psLinuxMemArea->ui32AreaFlags,
-			  HAPFlagsToString(psLinuxMemArea->ui32AreaFlags));
-	return Ret;
+	seq_printf(s, "%-8p       %08x %-8p %08x %08x   "
+		   "%-8d   %-24s %-5u %-8s %08x(%s)\n",
+		   psLinuxMemArea,
+		   psOffsetStruct->ui32UserVAddr + ui32ByteOffset,
+		   LinuxMemAreaToCpuVAddr(psLinuxMemArea),
+		   LinuxMemAreaToCpuPAddr(psLinuxMemArea, 0).uiAddr,
+		   psOffsetStruct->ui32MMapOffset,
+		   psLinuxMemArea->ui32ByteSize,
+		   LinuxMemAreaTypeToString(psLinuxMemArea->eAreaType),
+		   psOffsetStruct->ui32PID,
+		   psOffsetStruct->pszName,
+		   psLinuxMemArea->ui32AreaFlags,
+		   HAPFlagsToString(psLinuxMemArea->ui32AreaFlags));
 
+	return 0;
 }
 
-static off_t PrintMMapRegistrations(char *buffer, size_t size, off_t off)
+static void *ProcMMapSeqStart(struct seq_file *s, loff_t *pos)
 {
 	struct LinuxMemArea *psLinuxMemArea;
-	off_t Ret;
+	struct ProcMMapSeqData *data;
+	loff_t i = 1;
 
 	mutex_lock(&g_sMMapMutex);
 
-	if (!off) {
-		Ret = printAppend(buffer, size, 0,
-				"Allocations registered for mmap: %u\n"
-				"In total these areas correspond to %u bytes\n"
-				"psLinuxMemArea UserVAddr KernelVAddr "
-				"CpuPAddr MMapOffset ByteLength "
-				"LinuxMemType             "
-				"Pid   Name     Flags\n",
-				g_ui32RegisteredAreas, g_ui32TotalByteSize);
+	s->private = kmalloc(sizeof(*data), GFP_KERNEL);
+	if (!s->private)
+		return NULL;
 
-		goto unlock_and_return;
-	}
+	if (*pos == 0)
+		return SEQ_START_TOKEN;
 
-	if (size < 135) {
-		Ret = 0;
-		goto unlock_and_return;
-	}
-
-	PVR_ASSERT(off != 0);
 	list_for_each_entry(psLinuxMemArea, &g_sMMapAreaList, sMMapItem) {
 		struct KV_OFFSET_STRUCT *psOffsetStruct;
 
 		list_for_each_entry(psOffsetStruct,
 				    &psLinuxMemArea->sMMapOffsetStructList,
 				    sAreaItem) {
-			off--;
-			if (off == 0) {
-				Ret = PrintMMapReg_helper(buffer, size,
-						psOffsetStruct, psLinuxMemArea);
-				goto unlock_and_return;
-			}
+			if (i++ < *pos)
+				continue;
+
+			data = s->private;
+			data->psLinuxMemArea = psLinuxMemArea;
+			data->psOffsetStruct = psOffsetStruct;
+
+			return data;
 		}
 	}
-	Ret = END_OF_FILE;
 
-unlock_and_return:
-	mutex_unlock(&g_sMMapMutex);
-	return Ret;
+	return NULL;
 }
+
+static void *ProcMMapSeqNext(struct seq_file *s, void *v, loff_t *pos)
+{
+	struct ProcMMapSeqData *data = v;
+	struct LinuxMemArea *psLinuxMemArea;
+	struct KV_OFFSET_STRUCT *psOffsetStruct;
+
+	if (++(*pos) == 1) {
+		/* Find the first entry */
+		list_for_each_entry(psLinuxMemArea, &g_sMMapAreaList, sMMapItem) {
+			list_for_each_entry(psOffsetStruct,
+					    &psLinuxMemArea->sMMapOffsetStructList,
+					    sAreaItem) {
+				data->psLinuxMemArea = psLinuxMemArea;
+				data->psOffsetStruct = psOffsetStruct;
+
+				return data;
+			}
+		}
+
+		return NULL;  /* No entries found */
+	}
+
+	/* Continue inner loop */
+	psLinuxMemArea = data->psLinuxMemArea;
+	psOffsetStruct = data->psOffsetStruct;
+	list_for_each_entry_continue(psOffsetStruct,
+				     &psLinuxMemArea->sMMapOffsetStructList,
+				     sAreaItem) {
+		data->psOffsetStruct = psOffsetStruct;
+
+		return data;
+	}
+
+	/* Continue outer loop */
+	list_for_each_entry_continue(psLinuxMemArea, &g_sMMapAreaList, sMMapItem) {
+		list_for_each_entry(psOffsetStruct,
+				    &psLinuxMemArea->sMMapOffsetStructList,
+				    sAreaItem) {
+			data->psLinuxMemArea = psLinuxMemArea;
+			data->psOffsetStruct = psOffsetStruct;
+
+			return data;
+		}
+	}
+
+	return NULL;  /* No more entries found */
+}
+
+static void ProcMMapSeqStop(struct seq_file *s, void *v)
+{
+	kfree(s->private);
+	mutex_unlock(&g_sMMapMutex);
+}
+
+static struct seq_operations pvr_proc_mmap_ops = {
+	.start = ProcMMapSeqStart,
+	.next  = ProcMMapSeqNext,
+	.stop  = ProcMMapSeqStop,
+	.show  = ProcMMapSeqShow,
+};
 #endif
 
 enum PVRSRV_ERROR PVRMMapRegisterArea(struct LinuxMemArea *psLinuxMemArea)
@@ -875,7 +945,7 @@ void PVRMMapInit(void)
 		goto error;
 	}
 #if defined(DEBUG_LINUX_MMAP_AREAS)
-	CreateProcReadEntry("mmap", PrintMMapRegistrations);
+	CreateProcReadEntry("mmap", &pvr_proc_mmap_ops);
 #endif
 
 	return;

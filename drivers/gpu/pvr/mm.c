@@ -32,6 +32,7 @@
 #include <linux/highmem.h>
 #include <linux/sched.h>
 #include <linux/dma-mapping.h>
+#include <linux/seq_file.h>
 
 #include "img_defs.h"
 #include "services.h"
@@ -94,7 +95,17 @@ static void DebugMemAllocRecordRemove(enum DEBUG_MEM_ALLOC_TYPE eAllocType,
 static char *DebugMemAllocRecordTypeToString(
 					enum DEBUG_MEM_ALLOC_TYPE eAllocType);
 
-static off_t printMemoryRecords(char *buffer, size_t size, off_t off);
+static void *ProcMemInfoSeqStart (struct seq_file *s, loff_t *pos);
+static void *ProcMemInfoSeqNext  (struct seq_file *s, void *v, loff_t *pos);
+static void  ProcMemInfoSeqStop  (struct seq_file *s, void *v);
+static int   ProcMemInfoSeqShow  (struct seq_file *s, void *v);
+
+static struct seq_operations pvr_proc_meminfo_ops = {
+	.start = ProcMemInfoSeqStart,
+	.next  = ProcMemInfoSeqNext,
+	.stop  = ProcMemInfoSeqStop,
+	.show  = ProcMemInfoSeqShow,
+};
 #endif
 
 #if defined(DEBUG_LINUX_MEM_AREAS)
@@ -115,7 +126,17 @@ static u32 g_LinuxMemAreaCount;
 static u32 g_LinuxMemAreaWaterMark;
 static u32 g_LinuxMemAreaHighWaterMark;
 
-static off_t printLinuxMemAreaRecords(char *buffer, size_t size, off_t off);
+static void *ProcMemAreaSeqStart (struct seq_file *s, loff_t *pos);
+static void *ProcMemAreaSeqNext  (struct seq_file *s, void *v, loff_t *pos);
+static void  ProcMemAreaSeqStop  (struct seq_file *s, void *v);
+static int   ProcMemAreaSeqShow  (struct seq_file *s, void *v);
+
+static struct seq_operations pvr_proc_mem_areas_ops = {
+	.start = ProcMemAreaSeqStart,
+	.next  = ProcMemAreaSeqNext,
+	.stop  = ProcMemAreaSeqStop,
+	.show  = ProcMemAreaSeqShow,
+};
 #endif
 
 static struct kmem_cache *psLinuxMemAreaCache;
@@ -141,7 +162,7 @@ enum PVRSRV_ERROR LinuxMMInit(void)
 	{
 		int iStatus;
 		iStatus =
-		    CreateProcReadEntry("mem_areas", printLinuxMemAreaRecords);
+		    CreateProcReadEntry("mem_areas", &pvr_proc_mem_areas_ops);
 		if (iStatus != 0)
 			return PVRSRV_ERROR_OUT_OF_MEMORY;
 	}
@@ -150,7 +171,7 @@ enum PVRSRV_ERROR LinuxMMInit(void)
 #if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
 	{
 		int iStatus;
-		iStatus = CreateProcReadEntry("meminfo", printMemoryRecords);
+		iStatus = CreateProcReadEntry("meminfo", &pvr_proc_meminfo_ops);
 		if (iStatus != 0)
 			return PVRSRV_ERROR_OUT_OF_MEMORY;
 	}
@@ -1244,20 +1265,12 @@ const char *LinuxMemAreaTypeToString(enum LINUX_MEM_AREA_TYPE eMemAreaType)
 }
 
 #if defined(DEBUG_LINUX_MEM_AREAS)
-static off_t printLinuxMemAreaRecords(char *buffer, size_t count, off_t off)
+static int ProcMemAreaSeqShow(struct seq_file *s, void *v)
 {
-	struct DEBUG_LINUX_MEM_AREA_REC *psRecord;
-	off_t Ret;
+	struct DEBUG_LINUX_MEM_AREA_REC *psRecord = v;
 
-	mutex_lock(&g_sDebugMutex);
-
-	if (!off) {
-		if (count < 500) {
-			Ret = 0;
-			goto unlock_and_return;
-		}
-		Ret = printAppend(buffer, count, 0,
-				  "Number of Linux Memory Areas: %u\n"
+	if (v == SEQ_START_TOKEN) {
+		seq_printf(s, "Number of Linux Memory Areas: %u\n"
 			  "At the current water mark these areas "
 				  "correspond to %u bytes "
 				  "(excluding SUB areas)\n"
@@ -1273,161 +1286,170 @@ static off_t printLinuxMemAreaRecords(char *buffer, size_t count, off_t off)
 			  "LinuxMemType",
 			  "CpuVAddr",
 			  "CpuPAddr", "Bytes", "Pid", "Flags");
-		goto unlock_and_return;
+
+		return 0;
 	}
 
-	for (psRecord = g_LinuxMemAreaRecords; --off && psRecord;
-	     psRecord = psRecord->psNext)
-		;
-	if (!psRecord) {
-		Ret = END_OF_FILE;
-		goto unlock_and_return;
-	}
+	seq_printf(s, "%8p       %-24s %8p %08x %-8d %-5u %08x=(%s)\n",
+		   psRecord->psLinuxMemArea,
+		   LinuxMemAreaTypeToString(psRecord->psLinuxMemArea->
+					    eAreaType),
+		   LinuxMemAreaToCpuVAddr(psRecord->psLinuxMemArea),
+		   LinuxMemAreaToCpuPAddr(psRecord->psLinuxMemArea, 0).uiAddr,
+		   psRecord->psLinuxMemArea->ui32ByteSize, psRecord->pid,
+		   psRecord->ui32Flags, HAPFlagsToString(psRecord->ui32Flags));
 
-	if (count < 500) {
-		Ret = 0;
-		goto unlock_and_return;
-	}
+	return 0;
+}
 
-	Ret = printAppend(buffer, count, 0,
-			  "%8p       %-24s %8p %08x %-8d %-5u %08x=(%s)\n",
-			  psRecord->psLinuxMemArea,
-			  LinuxMemAreaTypeToString(psRecord->psLinuxMemArea->
-						   eAreaType),
-			  LinuxMemAreaToCpuVAddr(psRecord->psLinuxMemArea),
-			  LinuxMemAreaToCpuPAddr(psRecord->psLinuxMemArea,
-						 0).uiAddr,
-			  psRecord->psLinuxMemArea->ui32ByteSize, psRecord->pid,
-			  psRecord->ui32Flags,
-			  HAPFlagsToString(psRecord->ui32Flags)
-	    );
+static void *ProcMemAreaSeqStart(struct seq_file *s, loff_t *pos)
+{
+	struct DEBUG_LINUX_MEM_AREA_REC *psRecord;
+	loff_t i;
 
-unlock_and_return:
+	mutex_lock(&g_sDebugMutex);
+
+	if (*pos == 0)
+		return SEQ_START_TOKEN;
+
+	psRecord = g_LinuxMemAreaRecords;
+
+	for (i = 1; i < *pos && psRecord; i++)
+		psRecord = psRecord->psNext;
+
+	return psRecord;
+}
+
+static void *ProcMemAreaSeqNext(struct seq_file *s, void *v, loff_t *pos)
+{
+	if (++(*pos) == 1)
+		return g_LinuxMemAreaRecords;
+
+	return ((struct DEBUG_LINUX_MEM_AREA_REC *)v)->psNext;
+}
+
+static void ProcMemAreaSeqStop(struct seq_file *s, void *v)
+{
 	mutex_unlock(&g_sDebugMutex);
-	return Ret;
 }
 #endif
 
 #if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
-static off_t printMemoryRecords(char *buffer, size_t count, off_t off)
+static int ProcMemInfoSeqShow(struct seq_file *s, void *v)
 {
-	struct DEBUG_MEM_ALLOC_REC *psRecord;
-	off_t Ret;
+	struct DEBUG_MEM_ALLOC_REC *psRecord = v;
 
-	mutex_lock(&g_sDebugMutex);
+	if (v == SEQ_START_TOKEN) {
+		seq_printf(s, "%-60s: %d bytes\n",
+			   "Current Water Mark of bytes allocated via kmalloc",
+			   g_WaterMarkData[DEBUG_MEM_ALLOC_TYPE_KMALLOC]);
+		seq_printf(s, "%-60s: %d bytes\n",
+			   "Highest Water Mark of bytes allocated via kmalloc",
+			   g_HighWaterMarkData[DEBUG_MEM_ALLOC_TYPE_KMALLOC]);
+		seq_printf(s, "%-60s: %d bytes\n",
+			   "Current Water Mark of bytes allocated via vmalloc",
+			   g_WaterMarkData[DEBUG_MEM_ALLOC_TYPE_VMALLOC]);
+		seq_printf(s, "%-60s: %d bytes\n",
+			   "Highest Water Mark of bytes allocated via vmalloc",
+			   g_HighWaterMarkData[DEBUG_MEM_ALLOC_TYPE_VMALLOC]);
+		seq_printf(s, "%-60s: %d bytes\n",
+			   "Current Water Mark of bytes allocated via alloc_pages",
+			   g_WaterMarkData[DEBUG_MEM_ALLOC_TYPE_ALLOC_PAGES]);
+		seq_printf(s, "%-60s: %d bytes\n",
+			   "Highest Water Mark of bytes allocated via alloc_pages",
+			   g_HighWaterMarkData[DEBUG_MEM_ALLOC_TYPE_ALLOC_PAGES]);
+		seq_printf(s, "%-60s: %d bytes\n",
+			   "Current Water Mark of bytes allocated via ioremap",
+			   g_WaterMarkData[DEBUG_MEM_ALLOC_TYPE_IOREMAP]);
+		seq_printf(s, "%-60s: %d bytes\n",
+			   "Highest Water Mark of bytes allocated via ioremap",
+			   g_HighWaterMarkData[DEBUG_MEM_ALLOC_TYPE_IOREMAP]);
+		seq_printf(s, "%-60s: %d bytes\n",
+			   "Current Water Mark of bytes reserved for "
+			   "\"IO\" memory areas",
+			   g_WaterMarkData[DEBUG_MEM_ALLOC_TYPE_IO]);
+		seq_printf(s, "%-60s: %d bytes\n",
+			   "Highest Water Mark of bytes allocated for "
+			   "\"IO\" memory areas",
+			   g_HighWaterMarkData[DEBUG_MEM_ALLOC_TYPE_IO]);
+		seq_printf(s, "%-60s: %d bytes\n",
+			   "Current Water Mark of bytes allocated via "
+			   "kmem_cache_alloc",
+			   g_WaterMarkData[DEBUG_MEM_ALLOC_TYPE_KMEM_CACHE]);
+		seq_printf(s, "%-60s: %d bytes\n",
+			   "Highest Water Mark of bytes allocated via "
+			   "kmem_cache_alloc",
+			   g_HighWaterMarkData[DEBUG_MEM_ALLOC_TYPE_KMEM_CACHE]);
+		seq_putc(s, '\n');
 
-	if (!off) {
-		if (count < 1000) {
-			Ret = 0;
-			goto unlock_and_return;
-		}
+		seq_printf(s, "%-60s: %d bytes\n",
+			   "The Current Water Mark for memory allocated from system RAM",
+			   g_SysRAMWaterMark);
+		seq_printf(s, "%-60s: %d bytes\n",
+			   "The Highest Water Mark for memory allocated from system RAM",
+			   g_SysRAMHighWaterMark);
+		seq_printf(s, "%-60s: %d bytes\n",
+			   "The Current Water Mark for memory allocated from IO memory",
+			   g_IOMemWaterMark);
+		seq_printf(s, "%-60s: %d bytes\n",
+			   "The Highest Water Mark for memory allocated from IO memory",
+			   g_IOMemHighWaterMark);
+		seq_putc(s, '\n');
 
-		Ret = printAppend(buffer, count, 0, "%-60s: %d bytes\n",
-			  "Current Water Mark of bytes allocated via kmalloc",
-				 g_WaterMarkData[DEBUG_MEM_ALLOC_TYPE_KMALLOC]);
-		Ret = printAppend(buffer, count, Ret, "%-60s: %d bytes\n",
-			"Highest Water Mark of bytes allocated via kmalloc",
-				g_HighWaterMarkData
-				[DEBUG_MEM_ALLOC_TYPE_KMALLOC]);
-		Ret = printAppend(buffer, count, Ret, "%-60s: %d bytes\n",
-			"Current Water Mark of bytes allocated via vmalloc",
-			g_WaterMarkData[DEBUG_MEM_ALLOC_TYPE_VMALLOC]);
-		Ret = printAppend(buffer, count, Ret, "%-60s: %d bytes\n",
-			"Highest Water Mark of bytes allocated via vmalloc",
-				g_HighWaterMarkData
-				[DEBUG_MEM_ALLOC_TYPE_VMALLOC]);
-		Ret = printAppend(buffer, count, Ret, "%-60s: %d bytes\n",
-			"Current Water Mark of bytes allocated via alloc_pages",
-				g_WaterMarkData
-				[DEBUG_MEM_ALLOC_TYPE_ALLOC_PAGES]);
-		Ret = printAppend(buffer, count, Ret, "%-60s: %d bytes\n",
-			"Highest Water Mark of bytes allocated via alloc_pages",
-				g_HighWaterMarkData
-				[DEBUG_MEM_ALLOC_TYPE_ALLOC_PAGES]);
-		Ret = printAppend(buffer, count, Ret, "%-60s: %d bytes\n",
-			"Current Water Mark of bytes allocated via ioremap",
-		g_WaterMarkData[DEBUG_MEM_ALLOC_TYPE_IOREMAP]);
-		Ret = printAppend(buffer, count, Ret, "%-60s: %d bytes\n",
-			"Highest Water Mark of bytes allocated via ioremap",
-				g_HighWaterMarkData
-				[DEBUG_MEM_ALLOC_TYPE_IOREMAP]);
-		Ret = printAppend(buffer, count, Ret, "%-60s: %d bytes\n",
-			"Current Water Mark of bytes reserved for "
-			"\"IO\" memory areas",
-		g_WaterMarkData[DEBUG_MEM_ALLOC_TYPE_IO]);
-		Ret = printAppend(buffer, count, Ret, "%-60s: %d bytes\n",
-			"Highest Water Mark of bytes allocated for "
-			"\"IO\" memory areas",
-		g_HighWaterMarkData[DEBUG_MEM_ALLOC_TYPE_IO]);
-		Ret = printAppend(buffer, count, Ret, "%-60s: %d bytes\n",
-			"Current Water Mark of bytes allocated via "
-			"kmem_cache_alloc",
-				g_WaterMarkData
-				[DEBUG_MEM_ALLOC_TYPE_KMEM_CACHE]);
-		Ret = printAppend(buffer, count, Ret, "%-60s: %d bytes\n",
-			"Highest Water Mark of bytes allocated via "
-			"kmem_cache_alloc",
-				g_HighWaterMarkData
-				[DEBUG_MEM_ALLOC_TYPE_KMEM_CACHE]);
-		Ret = printAppend(buffer, count, Ret, "\n");
+		seq_printf(s, "Details for all known allocations:\n"
+			   "%-16s %-8s %-8s %-10s %-5s %-10s %s\n", "Type",
+			   "CpuVAddr", "CpuPAddr", "Bytes", "PID",
+			   "PrivateData", "Filename:Line");
 
-		Ret = printAppend(buffer, count, Ret, "%-60s: %d bytes\n",
-		  "The Current Water Mark for memory allocated from system RAM",
-		  g_SysRAMWaterMark);
-		Ret = printAppend(buffer, count, Ret, "%-60s: %d bytes\n",
-		  "The Highest Water Mark for memory allocated from system RAM",
-		  g_SysRAMHighWaterMark);
-		Ret = printAppend(buffer, count, Ret, "%-60s: %d bytes\n",
-		  "The Current Water Mark for memory allocated from IO memory",
-		  g_IOMemWaterMark);
-		Ret = printAppend(buffer, count, Ret, "%-60s: %d bytes\n",
-		  "The Highest Water Mark for memory allocated from IO memory",
-		  g_IOMemHighWaterMark);
-
-		Ret = printAppend(buffer, count, Ret, "\n");
-
-		Ret = printAppend(buffer, count, Ret,
-				"Details for all known allocations:\n"
-				"%-16s %-8s %-8s %-10s %-5s %-10s %s\n", "Type",
-				"CpuVAddr", "CpuPAddr", "Bytes", "PID",
-				"PrivateData", "Filename:Line");
-
-
-		goto unlock_and_return;
-	}
-
-	if (count < 1000) {
-		Ret = 0;
-		goto unlock_and_return;
-	}
-
-	for (psRecord = g_MemoryRecords; --off && psRecord;
-	     psRecord = psRecord->psNext)
-		;
-	if (!psRecord) {
-		Ret = END_OF_FILE;
-		goto unlock_and_return;
+		return 0;
 	}
 
 	if (psRecord->eAllocType != DEBUG_MEM_ALLOC_TYPE_KMEM_CACHE)
-		Ret = printAppend(buffer, count, 0,
-			 "%-16s %-8p %08x %-10d %-5d %-10s %s:%d\n",
-			 DebugMemAllocRecordTypeToString(psRecord->eAllocType),
-			 psRecord->pvCpuVAddr, psRecord->ulCpuPAddr,
-			 psRecord->ui32Bytes, psRecord->pid, "NULL",
-			 psRecord->pszFileName, psRecord->ui32Line);
+		seq_printf(s, "%-16s %-8p %08x %-10d %-5d %-10s %s:%d\n",
+			   DebugMemAllocRecordTypeToString(psRecord->eAllocType),
+			   psRecord->pvCpuVAddr, psRecord->ulCpuPAddr,
+			   psRecord->ui32Bytes, psRecord->pid, "NULL",
+			   psRecord->pszFileName, psRecord->ui32Line);
 	else
-		Ret = printAppend(buffer, count, 0,
-			  "%-16s %-8p %08x %-10d %-5d %-10s %s:%d\n",
-			  DebugMemAllocRecordTypeToString(psRecord->eAllocType),
-			  psRecord->pvCpuVAddr, psRecord->ulCpuPAddr,
-			  psRecord->ui32Bytes, psRecord->pid,
-			  KMemCacheNameWrapper(psRecord->pvPrivateData),
-			  psRecord->pszFileName, psRecord->ui32Line);
+		seq_printf(s, "%-16s %-8p %08x %-10d %-5d %-10s %s:%d\n",
+			   DebugMemAllocRecordTypeToString(psRecord->eAllocType),
+			   psRecord->pvCpuVAddr, psRecord->ulCpuPAddr,
+			   psRecord->ui32Bytes, psRecord->pid,
+			   KMemCacheNameWrapper(psRecord->pvPrivateData),
+			   psRecord->pszFileName, psRecord->ui32Line);
 
-unlock_and_return:
+	return 0;
+}
+
+static void *ProcMemInfoSeqStart(struct seq_file *s, loff_t *pos)
+{
+	struct DEBUG_MEM_ALLOC_REC *psRecord;
+	loff_t i;
+
+	mutex_lock(&g_sDebugMutex);
+
+	if (*pos == 0)
+		return SEQ_START_TOKEN;
+
+	psRecord = g_MemoryRecords;
+
+	for (i = 1; i < *pos && psRecord; i++)
+		psRecord = psRecord->psNext;
+
+	return psRecord;
+}
+
+static void *ProcMemInfoSeqNext(struct seq_file *s, void *v, loff_t *pos)
+{
+	if (++(*pos) == 1)
+		return g_psKVOffsetTable;
+
+	return ((struct DEBUG_MEM_ALLOC_REC *)v)->psNext;
+}
+
+static void ProcMemInfoSeqStop(struct seq_file *s, void *v)
+{
 	mutex_unlock(&g_sDebugMutex);
-	return Ret;
 }
 #endif
 

@@ -44,8 +44,8 @@ struct COMMAND_COMPLETE_DATA {
 enum PVRSRV_ERROR PVRSRVProcessQueues(IMG_BOOL bFlush);
 
 #if defined(__KERNEL__)
-#include <linux/types.h>
-off_t QueuePrintQueues(char *buffer, size_t size, off_t off);
+#include <linux/seq_file.h>
+extern struct seq_operations pvr_proc_queue_ops;
 #endif
 
 enum PVRSRV_ERROR PVRSRVCreateCommandQueueKM(u32 ui32QueueSize,

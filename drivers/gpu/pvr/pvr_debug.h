@@ -28,6 +28,7 @@
 #define __PVR_DEBUG_H__
 
 #include <linux/fs.h>
+#include <linux/seq_file.h>
 
 #include "img_types.h"
 
@@ -66,6 +67,8 @@
 #define PVR_TRACE(fmt, ...)						     \
 	PVRSRVTrace(fmt, ##__VA_ARGS__)
 
+extern struct seq_operations pvr_proc_debug_level_ops;
+
 void PVRSRVDebugAssertFail(const char *pszFile, u32 ui32Line);
 void PVRSRVDebugPrintf(u32 ui32DebugLevel, const char *pszFileName,
 		       u32 ui32Line, const char *pszFormat, ...);
@@ -73,8 +76,6 @@ void PVRSRVTrace(const char *pszFormat, ...);
 
 int PVRDebugProcSetLevel(struct file *file, const char __user *buffer,
 			 unsigned long count, void *data);
-int PVRDebugProcGetLevel(char *page, char **start, off_t off, int count,
-			 int *eof, void *data);
 void PVRDebugSetLevel(u32 uDebugLevel);
 
 #define PVR_DBG_BREAK

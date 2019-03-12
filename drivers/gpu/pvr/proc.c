@@ -29,6 +29,9 @@
 #include <linux/version.h>
 #include <linux/fs.h>
 #include <linux/proc_fs.h>
+#include <linux/seq_file.h>
+#include <linux/list.h>
+#include <linux/slab.h>
 
 #include "services_headers.h"
 
@@ -41,102 +44,160 @@
 #include "perproc.h"
 #include "env_perproc.h"
 
-/* The proc entry for our /proc/pvr directory */
-
-static struct proc_dir_entry *dir;
-
-static off_t procDumpSysNodes(char *buf, size_t size, off_t off);
-static off_t procDumpVersion(char *buf, size_t size, off_t off);
-
 static const char PVRProcDirRoot[] = "pvr";
 
-off_t printAppend(char *buffer, size_t size, off_t off, const char *format, ...)
+/* The proc entry for our /proc/pvr directory */
+static struct proc_dir_entry *dir;
+
+struct pvr_proc_dir_entry {
+	struct proc_dir_entry	*pdir;
+	char			*name;
+	struct seq_operations	*rhandlers;
+	write_proc_t		*whandler;
+	void			*data;
+	struct list_head	 list;
+};
+
+/* Keep the list of entries to be able to free memory */
+static LIST_HEAD(ppde_list);
+
+static int pvr_proc_open(struct inode *inode, struct file *file);
+static ssize_t pvr_proc_write(struct file *, const char __user *, size_t, loff_t *);
+
+static struct file_operations pvr_proc_ops =
 {
-	int n;
-	int space = size - off;
-	va_list ap;
+	.owner   = THIS_MODULE,
+	.open    = pvr_proc_open,
+	.read    = seq_read,
+	.write   = pvr_proc_write,
+	.llseek  = seq_lseek,
+	.release = seq_release,
+};
 
-	PVR_ASSERT(space >= 0);
+static void *ProcNodesSeqStart (struct seq_file *s, loff_t *pos);
+static void *ProcNodesSeqNext  (struct seq_file *s, void *v, loff_t *pos);
+static void  ProcNodesSeqStop  (struct seq_file *s, void *v);
+static int   ProcNodesSeqShow  (struct seq_file *s, void *v);
 
-	va_start(ap, format);
-	n = vsnprintf(buffer + off, space, format, ap);
-	va_end(ap);
+static struct seq_operations pvr_proc_nodes_ops = {
+	.start = ProcNodesSeqStart,
+	.next  = ProcNodesSeqNext,
+	.stop  = ProcNodesSeqStop,
+	.show  = ProcNodesSeqShow,
+};
 
-	if (n >= space || n < 0) {
+static void *ProcVersionSeqStart (struct seq_file *s, loff_t *pos);
+static void *ProcVersionSeqNext  (struct seq_file *s, void *v, loff_t *pos);
+static void  ProcVersionSeqStop  (struct seq_file *s, void *v);
+static int   ProcVersionSeqShow  (struct seq_file *s, void *v);
 
-		buffer[size - 1] = 0;
-		return size - 1;
-	} else {
-		return off + n;
-	}
+static struct seq_operations pvr_proc_version_ops = {
+	.start = ProcVersionSeqStart,
+	.next  = ProcVersionSeqNext,
+	.stop  = ProcVersionSeqStop,
+	.show  = ProcVersionSeqShow,
+};
+
+void *pvr_proc_file_get_data(struct file *file)
+{
+	struct inode *inode = file->f_path.dentry->d_inode;
+	struct pvr_proc_dir_entry *ppde = PDE_DATA(inode);
+	return ppde->data;
 }
 
-static int pvr_read_proc(char *page, char **start, off_t off,
-			 int count, int *eof, void *data)
+static int pvr_proc_open(struct inode *inode, struct file *file)
 {
-	off_t (*pprn)(char *, size_t, off_t) = data;
-
-	off_t len = pprn(page, count, off);
-
-	if (len == END_OF_FILE) {
-		len = 0;
-		*eof = 1;
-	} else if (!len) {
-		*start = (char *)0;
-	} else {
-		*start = (char *)1;
-	}
-
-	return len;
+	struct pvr_proc_dir_entry *ppde = PDE_DATA(inode);
+	return seq_open(file, ppde->rhandlers);
 }
 
-static int CreateProcEntryInDir(struct proc_dir_entry *pdir, const char *name,
-				read_proc_t rhandler, write_proc_t whandler,
+static ssize_t pvr_proc_write(struct file *file,
+			      const char __user *buffer,
+			      size_t count,
+			      loff_t *ppos)
+{
+	struct inode *inode = file->f_path.dentry->d_inode;
+	struct pvr_proc_dir_entry *ppde = PDE_DATA(inode);
+
+	if (!ppde->whandler)
+		return -EACCES;
+
+	return ppde->whandler(file, buffer, count, ppde->data);
+}
+
+static int CreateProcEntryInDir(struct proc_dir_entry *pdir,
+				const char *name,
+				struct seq_operations *rhandlers,
+				write_proc_t whandler,
 				void *data)
 {
 	struct proc_dir_entry *file;
+	struct pvr_proc_dir_entry *ppde;
 	mode_t mode;
 
 	if (!pdir) {
 		PVR_DPF(PVR_DBG_ERROR,
-			"CreateProcEntryInDir: parent directory doesn't exist");
+			"%s: parent directory doesn't exist", __func__);
 
-		return -ENOMEM;
+		return -ENOENT;
 	}
 
 	/* S_IFREG - regular file */
 	mode = S_IFREG;
 
-	if (rhandler)
+	if (rhandlers)
 		mode |= 0444;
+	else {
+		/* Write-only proc files handling is not implemented here */
+		PVR_DPF(PVR_DBG_WARNING,
+			"%s: cannot make proc entry %s in %s: no read handler",
+			__func__, name, pdir->name);
+		return -EINVAL;
+	}
 
 	if (whandler)
 		mode |= 0200;
 
-	file = create_proc_entry(name, mode, pdir);
+	ppde = kmalloc(sizeof(*ppde), GFP_KERNEL);
+	if (!ppde)
+		goto no_ppde;
 
-	if (file) {
-		file->read_proc = rhandler;
-		file->write_proc = whandler;
-		file->data = data;
+	ppde->name = kstrdup(name, GFP_KERNEL);
+	if (!ppde->name)
+		goto no_name;
 
-		PVR_DPF(PVR_DBG_MESSAGE, "Created proc entry %s in %s", name,
-			 pdir->name);
+	file = proc_create_data(name, mode, dir, &pvr_proc_ops, ppde);
+	if (!file)
+		goto no_file;
 
-		return 0;
-	}
+	INIT_LIST_HEAD(&ppde->list);
+	list_add(&ppde->list, &ppde_list);
+	ppde->rhandlers = rhandlers;
+	ppde->whandler = whandler;
+	ppde->data = data;
+	ppde->pdir = pdir;
 
+	PVR_DPF(PVR_DBG_MESSAGE, "Created proc entry %s in %s", name,
+		pdir->name);
+
+	return 0;
+
+no_file:
+	kfree(ppde->name);
+no_name:
+	kfree(ppde);
+no_ppde:
 	PVR_DPF(PVR_DBG_ERROR,
-		 "CreateProcEntry: cannot create proc entry %s in %s", name,
-		 pdir->name);
+		"%s: cannot make proc entry %s in %s: no memory",
+		__func__, name, pdir->name);
 
 	return -ENOMEM;
 }
 
-int CreateProcEntry(const char *name, read_proc_t rhandler,
+int CreateProcEntry(const char *name, struct seq_operations *rhandlers,
 		    write_proc_t whandler, void *data)
 {
-	return CreateProcEntryInDir(dir, name, rhandler, whandler, data);
+	return CreateProcEntryInDir(dir, name, rhandlers, whandler, data);
 }
 
 static struct proc_dir_entry *
@@ -190,7 +251,8 @@ ProcessProcDirGet(u32 pid)
 	return psPerProc->psProcDir;
 }
 
-int CreatePerProcessProcEntry(u32 pid, const char *name, read_proc_t rhandler,
+int CreatePerProcessProcEntry(u32 pid, const char *name,
+			      struct seq_operations *rhandlers,
 			      void *data)
 {
 	if (!dir) {
@@ -198,7 +260,7 @@ int CreatePerProcessProcEntry(u32 pid, const char *name, read_proc_t rhandler,
 			 "CreatePerProcessProcEntries: /proc/%s doesn't exist",
 			 PVRProcDirRoot);
 
-		return -ENOMEM;
+		return -ENOENT;
 	}
 
 	if (pid) {
@@ -207,37 +269,15 @@ int CreatePerProcessProcEntry(u32 pid, const char *name, read_proc_t rhandler,
 		if (!pid_dir)
 			return -ENOMEM;
 
-		return CreateProcEntryInDir(pid_dir, name, rhandler, NULL,
-					    data);
+		return CreateProcEntryInDir(pid_dir, name, rhandlers, NULL, data);
 	} else
-		return CreateProcEntryInDir(dir, name, rhandler, NULL, data);
+		return CreateProcEntryInDir(dir, name, rhandlers, NULL, data);
 }
 
 int CreateProcReadEntry(const char *name,
-			off_t (handler)(char *, size_t, off_t))
+			struct seq_operations *rhandlers)
 {
-	struct proc_dir_entry *file;
-
-	if (!dir) {
-		PVR_DPF(PVR_DBG_ERROR, "CreateProcReadEntry: "
-				"cannot make proc entry /proc/%s/%s: no parent",
-			 PVRProcDirRoot, name);
-
-		return -ENOMEM;
-	}
-
-	file =
-	    create_proc_read_entry(name, S_IFREG | 0444, dir, pvr_read_proc,
-				   (void *)handler);
-
-	if (file)
-		return 0;
-
-	PVR_DPF(PVR_DBG_ERROR, "CreateProcReadEntry: "
-				"cannot make proc entry /proc/%s/%s: no memory",
-		 PVRProcDirRoot, name);
-
-	return -ENOMEM;
+	return CreateProcEntry(name, rhandlers, NULL, NULL);
 }
 
 int CreateProcEntries(void)
@@ -252,9 +292,9 @@ int CreateProcEntries(void)
 		return -ENOMEM;
 	}
 
-	if (CreateProcReadEntry("queue", QueuePrintQueues) ||
-	    CreateProcReadEntry("version", procDumpVersion) ||
-	    CreateProcReadEntry("nodes", procDumpSysNodes)) {
+	if (CreateProcReadEntry("queue", &pvr_proc_queue_ops) ||
+	    CreateProcReadEntry("version", &pvr_proc_version_ops) ||
+	    CreateProcReadEntry("nodes", &pvr_proc_nodes_ops)) {
 		PVR_DPF(PVR_DBG_ERROR,
 			 "CreateProcEntries: couldn't make /proc/%s files",
 			 PVRProcDirRoot);
@@ -263,7 +303,7 @@ int CreateProcEntries(void)
 	}
 #ifdef CONFIG_PVR_DEBUG_EXTRA
 	if (CreateProcEntry
-	    ("debug_level", PVRDebugProcGetLevel, PVRDebugProcSetLevel, NULL)) {
+	    ("debug_level", &pvr_proc_debug_level_ops, PVRDebugProcSetLevel, NULL)) {
 		PVR_DPF(PVR_DBG_ERROR,
 			"CreateProcEntries: couldn't make /proc/%s/debug_level",
 			 PVRProcDirRoot);
@@ -275,28 +315,40 @@ int CreateProcEntries(void)
 	return 0;
 }
 
+void RemoveProcEntryFromDir(struct proc_dir_entry *pdir, const char *name)
+{
+	struct pvr_proc_dir_entry *ppde;
+
+	if (!pdir)
+		return;
+
+	list_for_each_entry(ppde, &ppde_list, list) {
+		if (ppde->pdir == pdir && !strcmp(ppde->name, name)) {
+			PVR_DPF(PVR_DBG_MESSAGE, "Removing proc entry %s from %s",
+				name, pdir->name);
+			remove_proc_entry(name, dir);
+			list_del(&ppde->list);
+			kfree(ppde->name);
+			kfree(ppde);
+			return;
+		}
+	}
+
+	PVR_DPF(PVR_DBG_WARNING,
+		"Removing proc entry %s from %s failed: entry not found",
+		name, pdir->name);
+}
+
 void RemoveProcEntry(const char *name)
 {
-	if (dir) {
-		remove_proc_entry(name, dir);
-		PVR_DPF(PVR_DBG_MESSAGE, "Removing /proc/%s/%s",
-			 PVRProcDirRoot, name);
-	}
+	RemoveProcEntryFromDir(dir, name);
 }
 
 void RemovePerProcessProcEntry(u32 pid, const char *name)
 {
-	if (pid) {
-		struct proc_dir_entry *pid_dir = ProcessProcDirGet(pid);
-
-		if (!pid_dir)
-			return;
-
-		remove_proc_entry(name, pid_dir);
-
-		PVR_DPF(PVR_DBG_MESSAGE, "Removing proc entry %s from %s",
-			 name, pid_dir->name);
-	} else
+	if (pid)
+		RemoveProcEntryFromDir(ProcessProcDirGet(pid), name);
+	else
 		RemoveProcEntry(name);
 }
 
@@ -317,6 +369,7 @@ void RemovePerProcessProcDir(struct PVRSRV_ENV_PER_PROCESS_DATA *psPerProc)
 
 void RemoveProcEntries(void)
 {
+	struct pvr_proc_dir_entry *ppde, *next;
 #ifdef CONFIG_PVR_DEBUG_EXTRA
 	RemoveProcEntry("debug_level");
 #endif
@@ -324,42 +377,58 @@ void RemoveProcEntries(void)
 	RemoveProcEntry("nodes");
 	RemoveProcEntry("version");
 
-	while (dir->subdir) {
-		PVR_DPF(PVR_DBG_WARNING, "Belatedly removing /proc/%s/%s",
-			 PVRProcDirRoot, dir->subdir->name);
+	list_for_each_entry_safe(ppde, next, &ppde_list, list) {
+		if (ppde->pdir != dir)
+			continue;
 
-		RemoveProcEntry(dir->subdir->name);
+		PVR_DPF(PVR_DBG_WARNING, "Belatedly removing /proc/%s/%s",
+			PVRProcDirRoot, ppde->name);
+
+		remove_proc_entry(ppde->name, dir);
+		list_del(&ppde->list);
+		kfree(ppde->name);
+		kfree(ppde);
 	}
 
 	remove_proc_entry(PVRProcDirRoot, NULL);
 }
 
-static off_t procDumpVersion(char *buf, size_t size, off_t off)
+static int ProcVersionSeqShow(struct seq_file *s, void *v)
 {
 	struct SYS_DATA *psSysData;
+	char *pszSystemVersionString = "None";
 
-	if (off == 0)
-		return printAppend(buf, size, 0, "Version %s (%s) %s\n",
-				   PVRVERSION_STRING, PVR_BUILD_TYPE,
-				   PVR_BUILD_DIR);
+	if (!v)
+		return 0;
 
 	if (SysAcquireData(&psSysData) != PVRSRV_OK)
-		return PVRSRV_ERROR_GENERIC;
+		return -EIO;
 
-	if (off == 1) {
-		char *pszSystemVersionString = "None";
+	seq_printf(s, "Version %s (%s) %s\n",
+		   PVRVERSION_STRING, PVR_BUILD_TYPE, PVR_BUILD_DIR);
 
-		if (psSysData->pszVersionString)
-			pszSystemVersionString = psSysData->pszVersionString;
+	if (psSysData->pszVersionString)
+		pszSystemVersionString = psSysData->pszVersionString;
 
-		if (strlen(pszSystemVersionString) +
-		    strlen("System Version String: \n") + 1 > size)
-			return 0;
-		return printAppend(buf, size, 0, "System Version String: %s\n",
-				   pszSystemVersionString);
-	}
+	seq_printf(s, "System Version String: %s\n", pszSystemVersionString);
 
-	return END_OF_FILE;
+	return 0;
+}
+
+static void *ProcVersionSeqStart(struct seq_file *s, loff_t *pos)
+{
+	return NULL + (*pos == 0);
+}
+
+static void *ProcVersionSeqNext(struct seq_file *s, void *v, loff_t *pos)
+{
+	++*pos;
+	return NULL;
+}
+
+static void ProcVersionSeqStop(struct seq_file *s, void *v)
+{
+	/* Nothing to do */
 }
 
 static const char *deviceTypeToString(enum PVRSRV_DEVICE_TYPE deviceType)
@@ -399,39 +468,65 @@ static const char *deviceClassToString(enum PVRSRV_DEVICE_CLASS deviceClass)
 	}
 }
 
-static off_t procDumpSysNodes(char *buf, size_t size, off_t off)
+static int ProcNodesSeqShow(struct seq_file *s, void *v)
+{
+	struct PVRSRV_DEVICE_NODE *psDevNode = v;
+
+	if (v == SEQ_START_TOKEN) {
+		seq_puts(s, "Registered nodes\n"
+			 "Addr     Type     Class    Index Ref pvDev     "
+			 "Size Res\n");
+		return 0;
+	}
+
+	seq_printf(s, "%p %-8s %-8s %4d  %2u  %p  %3u  %p\n",
+		   psDevNode,
+		   deviceTypeToString(psDevNode->sDevId.eDeviceType),
+		   deviceClassToString(psDevNode->sDevId.eDeviceClass),
+		   psDevNode->sDevId.eDeviceClass,
+		   psDevNode->ui32RefCount,
+		   psDevNode->pvDevice,
+		   psDevNode->ui32pvDeviceSize,
+		   psDevNode->hResManContext);
+
+	return 0;
+}
+
+static void *ProcNodesSeqStart(struct seq_file *s, loff_t *pos)
 {
 	struct SYS_DATA *psSysData;
 	struct PVRSRV_DEVICE_NODE *psDevNode;
-	off_t len;
-
-	if (size < 80)
-		return 0;
-
-	if (off == 0)
-		return printAppend(buf, size, 0,
-				   "Registered nodes\n"
-		"Addr     Type     Class    Index Ref pvDev     Size Res\n");
+	off_t i;
 
 	if (SysAcquireData(&psSysData) != PVRSRV_OK)
-		return PVRSRV_ERROR_GENERIC;
+		return NULL;
 
-	for (psDevNode = psSysData->psDeviceNodeList;
-	     --off && psDevNode; psDevNode = psDevNode->psNext)
-		;
+	if (*pos == 0)
+		return SEQ_START_TOKEN;
 
-	if (!psDevNode)
-		return END_OF_FILE;
+	psDevNode = psSysData->psDeviceNodeList;
 
-	len = printAppend(buf, size, 0,
-			  "%p %-8s %-8s %4d  %2u  %p  %3u  %p\n",
-			  psDevNode,
-			  deviceTypeToString(psDevNode->sDevId.eDeviceType),
-			  deviceClassToString(psDevNode->sDevId.eDeviceClass),
-			  psDevNode->sDevId.eDeviceClass,
-			  psDevNode->ui32RefCount,
-			  psDevNode->pvDevice,
-			  psDevNode->ui32pvDeviceSize,
-			  psDevNode->hResManContext);
-	return len;
+	for (i = 1; i < *pos && psDevNode; i++)
+		psDevNode = psDevNode->psNext;
+
+	return psDevNode;
+}
+
+static void *ProcNodesSeqNext(struct seq_file *s, void *v, loff_t *pos)
+{
+	struct SYS_DATA *psSysData;
+
+	if (++(*pos) == 1) {
+		if (SysAcquireData(&psSysData) != PVRSRV_OK)
+			return NULL;
+
+		return psSysData->psDeviceNodeList;
+	}
+
+	return ((struct PVRSRV_DEVICE_NODE *)v)->psNext;
+}
+
+static void ProcNodesSeqStop(struct seq_file *s, void *v)
+{
+	/* Nothing to do */
 }

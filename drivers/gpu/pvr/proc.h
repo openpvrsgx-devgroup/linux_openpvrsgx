@@ -28,20 +28,17 @@
 #define __SERVICES_PROC_H__
 
 #include <linux/proc_fs.h>
+#include <linux/seq_file.h>
 
-#define END_OF_FILE ((off_t) -1)
-
-off_t printAppend(char *buffer, size_t size, off_t off,
-		  const char *format, ...)
-		  __attribute__ ((format(printf, 4, 5)));
+void *pvr_proc_file_get_data(struct file *file);
 
 int CreateProcEntries(void);
-int CreateProcReadEntry(const char *name,
-			off_t (handler)(char *, size_t, off_t));
-int CreateProcEntry(const char *name, read_proc_t rhandler,
+int CreateProcReadEntry(const char *name, struct seq_operations *rhandlers);
+int CreateProcEntry(const char *name, struct seq_operations *rhandlers,
 		    write_proc_t whandler, void *data);
 
-int CreatePerProcessProcEntry(u32 pid, const char *name, read_proc_t rhandler,
+int CreatePerProcessProcEntry(u32 pid, const char *name,
+			      struct seq_operations *rhandlers,
 			      void *data);
 
 void RemoveProcEntry(const char *name);

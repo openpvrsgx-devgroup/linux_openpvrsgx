@@ -29,6 +29,7 @@
 #include <linux/hardirq.h>
 #include <linux/module.h>
 #include <linux/spinlock.h>
+#include <linux/seq_file.h>
 
 #include "img_types.h"
 #include "servicesext.h"
@@ -235,16 +236,34 @@ int PVRDebugProcSetLevel(struct file *file, const char __user *buffer,
 	return count;
 }
 
-int PVRDebugProcGetLevel(char *page, char **start, off_t off, int count,
-			 int *eof, void *data)
+static int ProcDebugLevelSeqShow(struct seq_file *s, void *v)
 {
-	if (off == 0) {
-		*start = (char *)1;
-		return printAppend(page, count, 0, "%u\n", gPVRDebugLevel);
-	}
-	*eof = 1;
+	seq_printf(s, "%u\n", gPVRDebugLevel);
 	return 0;
 }
+
+static void *ProcDebugLevelSeqStart(struct seq_file *s, loff_t *pos)
+{
+	return NULL + (*pos == 0);
+}
+
+static void *ProcDebugLevelSeqNext(struct seq_file *s, void *v, loff_t *pos)
+{
+	++*pos;
+	return NULL;
+}
+
+static void ProcDebugLevelSeqStop(struct seq_file *s, void *v)
+{
+	/* Nothing to do */
+}
+
+struct seq_operations pvr_proc_debug_level_ops = {
+	.start = ProcDebugLevelSeqStart,
+	.next  = ProcDebugLevelSeqNext,
+	.stop  = ProcDebugLevelSeqStop,
+	.show  = ProcDebugLevelSeqShow,
+};
 
 #endif
 

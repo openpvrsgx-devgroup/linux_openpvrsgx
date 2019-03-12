@@ -194,7 +194,7 @@ long PVRSRV_BridgeDispatchKM(struct file *filp, unsigned int cmd,
 		return -ENODEV;
 	}
 
-	if (!OSAccessOK(PVR_VERIFY_WRITE, psBridgePackageUM,
+	if (!OSAccessOK(psBridgePackageUM,
 			sizeof(struct PVRSRV_BRIDGE_PACKAGE))) {
 		PVR_DPF(PVR_DBG_ERROR,
 			 "%s: Received invalid pointer to function arguments",

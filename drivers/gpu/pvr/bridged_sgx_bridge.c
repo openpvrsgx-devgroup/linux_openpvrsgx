@@ -1298,8 +1298,7 @@ int SGXAddSharedPBDescBW(u32 ui32BridgeID,
 	if (eError != PVRSRV_OK)
 		goto PVRSRV_BRIDGE_SGX_ADDSHAREDPBDESC_RETURN_RESULT;
 
-	if (!OSAccessOK(PVR_VERIFY_READ,
-			psSGXAddSharedPBDescIN->phKernelMemInfoHandles,
+	if (!OSAccessOK(psSGXAddSharedPBDescIN->phKernelMemInfoHandles,
 			ui32KernelMemInfoHandlesCount * sizeof(void *))) {
 		PVR_DPF(PVR_DBG_ERROR, "%s: PVRSRV_BRIDGE_SGX_ADDSHAREDPBDESC:"
 			 " Invalid phKernelMemInfos pointer", __func__);

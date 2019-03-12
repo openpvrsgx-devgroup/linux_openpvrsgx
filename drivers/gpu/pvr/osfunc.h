@@ -198,13 +198,7 @@ enum PVRSRV_ERROR OSScheduleMISR(void *pvSysData);
 
 IMG_BOOL OSProcHasPrivSrvInit(void);
 
-enum IMG_VERIFY_TEST {
-	PVR_VERIFY_WRITE = 0,
-	PVR_VERIFY_READ
-};
-
-IMG_BOOL OSAccessOK(enum IMG_VERIFY_TEST eVerification,
-		    const void __user *pvUserPtr, u32 ui32Bytes);
+IMG_BOOL OSAccessOK(const void __user *pvUserPtr, u32 ui32Bytes);
 
 enum PVRSRV_ERROR OSCopyToUser(void *pvProcess, void __user *pvDest,
 			const void *pvSrc, u32 ui32Bytes);

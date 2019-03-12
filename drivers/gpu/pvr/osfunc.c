@@ -1129,19 +1129,9 @@ void get_proc_name(int pid, char *buf, size_t buf_size)
 	rcu_read_unlock();
 }
 
-IMG_BOOL OSAccessOK(enum IMG_VERIFY_TEST eVerification,
-		    const void __user *pvUserPtr, u32 ui32Bytes)
+IMG_BOOL OSAccessOK(const void __user *pvUserPtr, u32 ui32Bytes)
 {
-	int linuxType;
-
-	if (eVerification == PVR_VERIFY_READ) {
-		linuxType = VERIFY_READ;
-	} else {
-		PVR_ASSERT(eVerification == PVR_VERIFY_WRITE);
-		linuxType = VERIFY_WRITE;
-	}
-
-	return access_ok(linuxType, pvUserPtr, ui32Bytes);
+	return access_ok(pvUserPtr, ui32Bytes);
 }
 
 enum eWrapMemType {

@@ -866,10 +866,10 @@ struct TIMER_CALLBACK_DATA {
 
 static struct TIMER_CALLBACK_DATA sTimers[OS_MAX_TIMERS];
 static DEFINE_SPINLOCK(sTimerStructLock);
-static void OSTimerCallbackWrapper(unsigned long ui32Data)
+static void OSTimerCallbackWrapper(struct timer_list *t)
 {
 	struct TIMER_CALLBACK_DATA *psTimerCBData =
-					(struct TIMER_CALLBACK_DATA *)ui32Data;
+					from_timer(psTimerCBData, t, sTimer);
 
 	if (!psTimerCBData->bActive)
 		return;
@@ -912,10 +912,8 @@ void *OSAddTimer(void (*pfnTimerFunc)(void *), void *pvData, u32 ui32MsTimeout)
 	psTimerCBData->ui32Delay = ((HZ * ui32MsTimeout) < 1000)
 	    ? 1 : ((HZ * ui32MsTimeout) / 1000);
 
-	init_timer(&psTimerCBData->sTimer);
+	timer_setup(&psTimerCBData->sTimer, OSTimerCallbackWrapper, 0);
 
-	psTimerCBData->sTimer.function = OSTimerCallbackWrapper;
-	psTimerCBData->sTimer.data = (u32) psTimerCBData;
 	psTimerCBData->sTimer.expires = psTimerCBData->ui32Delay + jiffies;
 
 	return (void *)(ui32i + 1);

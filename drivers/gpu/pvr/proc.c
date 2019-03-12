@@ -53,7 +53,7 @@ struct pvr_proc_dir_entry {
 	struct proc_dir_entry	*pdir;
 	char			*name;
 	struct seq_operations	*rhandlers;
-	write_proc_t		*whandler;
+	file_ops_write_t	 whandler;
 	void			*data;
 	struct list_head	 list;
 };
@@ -126,7 +126,7 @@ static ssize_t pvr_proc_write(struct file *file,
 static int CreateProcEntryInDir(struct proc_dir_entry *pdir,
 				const char *name,
 				struct seq_operations *rhandlers,
-				write_proc_t whandler,
+				file_ops_write_t whandler,
 				void *data)
 {
 	struct proc_dir_entry *file;
@@ -193,7 +193,7 @@ no_ppde:
 }
 
 int CreateProcEntry(const char *name, struct seq_operations *rhandlers,
-		    write_proc_t whandler, void *data)
+		    file_ops_write_t whandler, void *data)
 {
 	return CreateProcEntryInDir(dir, name, rhandlers, whandler, data);
 }

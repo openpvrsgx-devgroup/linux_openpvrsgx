@@ -219,7 +219,7 @@ void PVRDebugSetLevel(u32 uDebugLevel)
 }
 
 int PVRDebugProcSetLevel(struct file *file, const char __user *buffer,
-			 unsigned long count, void *data)
+			 size_t count, loff_t *ppos)
 {
 #define	_PROC_SET_BUFFER_SZ		2
 	char data_buffer[_PROC_SET_BUFFER_SZ];

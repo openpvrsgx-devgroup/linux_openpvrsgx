@@ -1403,8 +1403,7 @@ enum PVRSRV_ERROR OSAcquirePhysPageAddr(void *pvCPUVAddr, u32 ui32Bytes,
 		goto error_release_mmap_sem;
 	}
 
-	if ((psVMArea->vm_flags & (VM_IO | VM_RESERVED)) !=
-	    (VM_IO | VM_RESERVED)) {
+	if ((psVMArea->vm_flags & VM_IO) != VM_IO) {
 		PVR_DPF(PVR_DBG_ERROR, "OSAcquirePhysPageAddr: "
 				"Memory region does not represent memory "
 				"mapped I/O (VMA flags: 0x%lx)",

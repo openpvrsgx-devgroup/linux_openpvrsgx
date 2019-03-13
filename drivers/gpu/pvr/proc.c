@@ -58,8 +58,15 @@ struct pvr_proc_dir_entry {
 	struct list_head	 list;
 };
 
+struct pvr_subdir_entry {
+	char			*name;
+	struct proc_dir_entry	*pde;
+	struct list_head	 list;
+};
+
 /* Keep the list of entries to be able to free memory */
 static LIST_HEAD(pvr_pde_list);
+static LIST_HEAD(pvr_sde_list);
 
 static int pvr_proc_open(struct inode *inode, struct file *file);
 static ssize_t pvr_proc_write(struct file *, const char __user *, size_t, loff_t *);
@@ -97,6 +104,22 @@ static struct seq_operations pvr_proc_version_ops = {
 	.stop  = ProcVersionSeqStop,
 	.show  = ProcVersionSeqShow,
 };
+
+/* container_of tries to dereference pointer to incomplete type */
+struct pvr_subdir_entry *to_pvr_sde(struct proc_dir_entry *pde)
+{
+	void *__mptr = (void *)(pde);
+	int offset = offsetof(struct pvr_subdir_entry, pde);
+	return (struct pvr_subdir_entry *)(__mptr - offset);
+}
+
+static inline const char *pde_subdir_name(struct proc_dir_entry *pde)
+{
+	if (pde == dir)
+		return PVRProcDirRoot;
+
+	return to_pvr_sde(pde)->name;
+}
 
 void *pvr_proc_file_get_data(struct file *file)
 {
@@ -161,7 +184,7 @@ static int CreateProcEntryInDir(struct proc_dir_entry *parent,
 		/* Write-only proc files handling is not implemented here */
 		PVR_DPF(PVR_DBG_WARNING,
 			"%s: cannot make proc entry %s in %s: no read handler",
-			__func__, name, parent->name);
+			__func__, name, pde_subdir_name(parent));
 		return -EINVAL;
 	}
 
@@ -188,7 +211,7 @@ static int CreateProcEntryInDir(struct proc_dir_entry *parent,
 	pvr_pde->parent = parent;
 
 	PVR_DPF(PVR_DBG_MESSAGE, "Created proc entry %s in %s", name,
-		parent->name);
+		pde_subdir_name(parent));
 
 	return 0;
 
@@ -199,7 +222,7 @@ no_name:
 no_pvr_pde:
 	PVR_DPF(PVR_DBG_ERROR,
 		"%s: cannot make proc entry %s in %s: no memory",
-		__func__, name, parent->name);
+		__func__, name, pde_subdir_name(parent));
 
 	return -ENOMEM;
 }
@@ -214,6 +237,7 @@ static struct proc_dir_entry *
 ProcessProcDirCreate(u32 pid)
 {
 	struct PVRSRV_ENV_PER_PROCESS_DATA *psPerProc;
+	struct pvr_subdir_entry *pvr_sde;
 	char dirname[16];
 	int ret;
 
@@ -233,12 +257,34 @@ ProcessProcDirCreate(u32 pid)
 		return NULL;
 	}
 
+	pvr_sde = kmalloc(sizeof(*pvr_sde), GFP_KERNEL);
+	if (!pvr_sde)
+		goto no_pvr_sde;
+
+	pvr_sde->name = kstrdup(dirname, GFP_KERNEL);
+	if (!pvr_sde->name)
+		goto no_dirname;
+
 	psPerProc->psProcDir = proc_mkdir(dirname, dir);
 	if (!psPerProc->psProcDir)
-		pr_err("%s: couldn't create /proc/%s/%u\n",
-		       __func__, PVRProcDirRoot, pid);
+		goto no_sde;
+
+	pvr_sde->pde = psPerProc->psProcDir;
+
+	INIT_LIST_HEAD(&pvr_sde->list);
+	list_add(&pvr_sde->list, &pvr_sde_list);
 
 	return psPerProc->psProcDir;
+
+no_sde:
+	kfree(pvr_sde->name);
+no_dirname:
+	kfree(pvr_sde);
+no_pvr_sde:
+	pr_err("%s: couldn't create /proc/%s/%u\n: no memory",
+	       __func__, PVRProcDirRoot, pid);
+
+	return NULL;
 }
 
 static struct proc_dir_entry *
@@ -334,7 +380,7 @@ void RemoveProcEntryFromDir(struct proc_dir_entry *parent, const char *name)
 	list_for_each_entry(pvr_pde, &pvr_pde_list, list) {
 		if (pvr_pde->parent == parent && !strcmp(pvr_pde->name, name)) {
 			PVR_DPF(PVR_DBG_MESSAGE, "Removing proc entry %s from %s",
-				name, parent->name);
+				name, pde_subdir_name(parent));
 			remove_proc_entry(name, dir);
 			list_del(&pvr_pde->list);
 			kfree(pvr_pde->name);
@@ -345,7 +391,7 @@ void RemoveProcEntryFromDir(struct proc_dir_entry *parent, const char *name)
 
 	PVR_DPF(PVR_DBG_WARNING,
 		"Removing proc entry %s from %s failed: entry not found",
-		name, parent->name);
+		name, pde_subdir_name(parent));
 }
 
 void RemoveProcEntry(const char *name)
@@ -363,16 +409,30 @@ void RemovePerProcessProcEntry(u32 pid, const char *name)
 
 void RemovePerProcessProcDir(struct PVRSRV_ENV_PER_PROCESS_DATA *psPerProc)
 {
-	if (psPerProc->psProcDir) {
-		while (psPerProc->psProcDir->subdir) {
-			PVR_DPF(PVR_DBG_WARNING,
-				 "Belatedly removing /proc/%s/%s/%s",
-				 PVRProcDirRoot, psPerProc->psProcDir->name,
-				 psPerProc->psProcDir->subdir->name);
+	struct pvr_subdir_entry   *pvr_sde;
+	struct pvr_proc_dir_entry *pvr_pde;
 
-			RemoveProcEntry(psPerProc->psProcDir->subdir->name);
+	if (psPerProc->psProcDir) {
+		pvr_sde = to_pvr_sde(psPerProc->psProcDir);
+
+		list_for_each_entry(pvr_pde, &pvr_pde_list, list) {
+			if (pvr_pde->parent == pvr_sde->pde) {
+				PVR_DPF(PVR_DBG_WARNING,
+					"Belatedly removing /proc/%s/%s/%s",
+					PVRProcDirRoot, pvr_sde->name,
+					pvr_pde->name);
+
+				remove_proc_entry(pvr_pde->name, pvr_sde->pde);
+				list_del(&pvr_pde->list);
+				kfree(pvr_pde->name);
+				kfree(pvr_pde);
+			}
 		}
-		RemoveProcEntry(psPerProc->psProcDir->name);
+
+		proc_remove(pvr_sde->pde);
+		list_del(&pvr_sde->list);
+		kfree(pvr_sde->name);
+		kfree(pvr_sde);
 	}
 }
 
@@ -387,8 +447,12 @@ void RemoveProcEntries(void)
 	RemoveProcEntry("version");
 
 	list_for_each_entry_safe(pvr_pde, next, &pvr_pde_list, list) {
-		if (pvr_pde->parent != dir)
+		if (pvr_pde->parent != dir) {
+			PVR_DPF(PVR_DBG_WARNING,
+				"Orphan entry detected: /proc/%s/???/%s",
+				PVRProcDirRoot, pvr_pde->name);
 			continue;
+		}
 
 		PVR_DPF(PVR_DBG_WARNING, "Belatedly removing /proc/%s/%s",
 			PVRProcDirRoot, pvr_pde->name);
@@ -399,7 +463,7 @@ void RemoveProcEntries(void)
 		kfree(pvr_pde);
 	}
 
-	remove_proc_entry(PVRProcDirRoot, NULL);
+	proc_remove(dir);
 }
 
 static int ProcVersionSeqShow(struct seq_file *s, void *v)

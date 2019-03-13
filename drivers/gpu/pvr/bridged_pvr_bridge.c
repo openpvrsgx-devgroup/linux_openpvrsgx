@@ -45,6 +45,7 @@
 #include "env_data.h"
 
 #include "mmap.h"
+#include "dma.h"
 
 #include <linux/kernel.h>
 #include <linux/pagemap.h>	/* for cache flush */

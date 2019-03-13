@@ -26,7 +26,7 @@
 
 #include <stddef.h>
 #include <linux/io.h>
-#include <linux/sched.h>
+#include <linux/sched/clock.h>
 
 #include "sgxdefs.h"
 #include "services_headers.h"

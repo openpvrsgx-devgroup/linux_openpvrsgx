@@ -97,7 +97,6 @@ int pvr_flip_event_req(struct PVRSRV_FILE_PRIVATE_DATA *priv,
 			 enum pvr_sync_wait_seq_type type, u64 user_data)
 {
 	struct pvr_pending_flip_event *e;
-	struct timeval now;
 	unsigned long flags;
 
 	e = kzalloc(sizeof(*e), GFP_KERNEL);
@@ -123,7 +122,6 @@ int pvr_flip_event_req(struct PVRSRV_FILE_PRIVATE_DATA *priv,
 	e->base.file_priv = priv;
 	e->base.destroy = (void (*)(struct pvr_pending_event *))kfree;
 
-	do_gettimeofday(&now);
 	spin_lock_irqsave(&event_lock, flags);
 
 	if (priv->event_space < sizeof(e->event)) {

@@ -1237,7 +1237,7 @@ enum PVRSRV_ERROR OSReleasePhysPageAddr(void *hOSWrapMem)
 
 				if (!PageReserved(psPage))
 					SetPageDirty(psPage);
-				page_cache_release(psPage);
+				put_page(psPage);
 			}
 			break;
 		}
@@ -1337,7 +1337,7 @@ enum PVRSRV_ERROR OSAcquirePhysPageAddr(void *pvCPUVAddr, u32 ui32Bytes,
 			       psInfo->iNumPages, iNumPagesMapped);
 
 			for (i = 0; i < iNumPagesMapped; i++)
-				page_cache_release(psInfo->ppsPages[i]);
+				put_page(psInfo->ppsPages[i]);
 
 			goto error_free;
 		}

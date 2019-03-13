@@ -50,16 +50,16 @@ static const char PVRProcDirRoot[] = "pvr";
 static struct proc_dir_entry *dir;
 
 struct pvr_proc_dir_entry {
-	struct proc_dir_entry	*pdir;
+	struct proc_dir_entry	*parent;
 	char			*name;
-	struct seq_operations	*rhandlers;
-	file_ops_write_t	 whandler;
+	struct seq_operations	*ops;
+	file_ops_write_t	 write;
 	void			*data;
 	struct list_head	 list;
 };
 
 /* Keep the list of entries to be able to free memory */
-static LIST_HEAD(ppde_list);
+static LIST_HEAD(pvr_pde_list);
 
 static int pvr_proc_open(struct inode *inode, struct file *file);
 static ssize_t pvr_proc_write(struct file *, const char __user *, size_t, loff_t *);
@@ -100,14 +100,14 @@ static struct seq_operations pvr_proc_version_ops = {
 
 void *pvr_proc_file_get_data(struct file *file)
 {
-	struct pvr_proc_dir_entry *ppde = PDE_DATA(file_inode(file));
-	return ppde->data;
+	struct pvr_proc_dir_entry *pvr_pde = PDE_DATA(file_inode(file));
+	return pvr_pde->data;
 }
 
 static int pvr_proc_open(struct inode *inode, struct file *file)
 {
-	struct pvr_proc_dir_entry *ppde = PDE_DATA(inode);
-	return seq_open(file, ppde->rhandlers);
+	struct pvr_proc_dir_entry *pvr_pde = PDE_DATA(inode);
+	return seq_open(file, pvr_pde->ops);
 }
 
 static ssize_t pvr_proc_write(struct file *file,
@@ -115,25 +115,25 @@ static ssize_t pvr_proc_write(struct file *file,
 			      size_t count,
 			      loff_t *ppos)
 {
-	struct pvr_proc_dir_entry *ppde = PDE_DATA(file_inode(file));
+	struct pvr_proc_dir_entry *pvr_pde = PDE_DATA(file_inode(file));
 
-	if (!ppde->whandler)
+	if (!pvr_pde->write)
 		return -EACCES;
 
-	return ppde->whandler(file, buffer, count, ppde->data);
+	return pvr_pde->write(file, buffer, count, pvr_pde->data);
 }
 
-static int CreateProcEntryInDir(struct proc_dir_entry *pdir,
+static int CreateProcEntryInDir(struct proc_dir_entry *parent,
 				const char *name,
-				struct seq_operations *rhandlers,
-				file_ops_write_t whandler,
+				struct seq_operations *ops,
+				file_ops_write_t write,
 				void *data)
 {
-	struct proc_dir_entry *file;
-	struct pvr_proc_dir_entry *ppde;
+	struct proc_dir_entry *pde;
+	struct pvr_proc_dir_entry *pvr_pde;
 	mode_t mode;
 
-	if (!pdir) {
+	if (!parent) {
 		PVR_DPF(PVR_DBG_ERROR,
 			"%s: parent directory doesn't exist", __func__);
 
@@ -143,59 +143,59 @@ static int CreateProcEntryInDir(struct proc_dir_entry *pdir,
 	/* S_IFREG - regular file */
 	mode = S_IFREG;
 
-	if (rhandlers)
+	if (ops)
 		mode |= 0444;
 	else {
 		/* Write-only proc files handling is not implemented here */
 		PVR_DPF(PVR_DBG_WARNING,
 			"%s: cannot make proc entry %s in %s: no read handler",
-			__func__, name, pdir->name);
+			__func__, name, parent->name);
 		return -EINVAL;
 	}
 
-	if (whandler)
+	if (write)
 		mode |= 0200;
 
-	ppde = kmalloc(sizeof(*ppde), GFP_KERNEL);
-	if (!ppde)
-		goto no_ppde;
+	pvr_pde = kmalloc(sizeof(*pvr_pde), GFP_KERNEL);
+	if (!pvr_pde)
+		goto no_pvr_pde;
 
-	ppde->name = kstrdup(name, GFP_KERNEL);
-	if (!ppde->name)
+	pvr_pde->name = kstrdup(name, GFP_KERNEL);
+	if (!pvr_pde->name)
 		goto no_name;
 
-	file = proc_create_data(name, mode, dir, &pvr_proc_ops, ppde);
-	if (!file)
-		goto no_file;
+	pde = proc_create_data(name, mode, dir, &pvr_proc_ops, pvr_pde);
+	if (!pde)
+		goto no_pde;
 
-	INIT_LIST_HEAD(&ppde->list);
-	list_add(&ppde->list, &ppde_list);
-	ppde->rhandlers = rhandlers;
-	ppde->whandler = whandler;
-	ppde->data = data;
-	ppde->pdir = pdir;
+	INIT_LIST_HEAD(&pvr_pde->list);
+	list_add(&pvr_pde->list, &pvr_pde_list);
+	pvr_pde->ops = ops;
+	pvr_pde->write = write;
+	pvr_pde->data = data;
+	pvr_pde->parent = parent;
 
 	PVR_DPF(PVR_DBG_MESSAGE, "Created proc entry %s in %s", name,
-		pdir->name);
+		parent->name);
 
 	return 0;
 
-no_file:
-	kfree(ppde->name);
+no_pde:
+	kfree(pvr_pde->name);
 no_name:
-	kfree(ppde);
-no_ppde:
+	kfree(pvr_pde);
+no_pvr_pde:
 	PVR_DPF(PVR_DBG_ERROR,
 		"%s: cannot make proc entry %s in %s: no memory",
-		__func__, name, pdir->name);
+		__func__, name, parent->name);
 
 	return -ENOMEM;
 }
 
-int CreateProcEntry(const char *name, struct seq_operations *rhandlers,
-		    file_ops_write_t whandler, void *data)
+int CreateProcEntry(const char *name, struct seq_operations *ops,
+		    file_ops_write_t write, void *data)
 {
-	return CreateProcEntryInDir(dir, name, rhandlers, whandler, data);
+	return CreateProcEntryInDir(dir, name, ops, write, data);
 }
 
 static struct proc_dir_entry *
@@ -250,7 +250,7 @@ ProcessProcDirGet(u32 pid)
 }
 
 int CreatePerProcessProcEntry(u32 pid, const char *name,
-			      struct seq_operations *rhandlers,
+			      struct seq_operations *ops,
 			      void *data)
 {
 	if (!dir) {
@@ -267,15 +267,14 @@ int CreatePerProcessProcEntry(u32 pid, const char *name,
 		if (!pid_dir)
 			return -ENOMEM;
 
-		return CreateProcEntryInDir(pid_dir, name, rhandlers, NULL, data);
+		return CreateProcEntryInDir(pid_dir, name, ops, NULL, data);
 	} else
-		return CreateProcEntryInDir(dir, name, rhandlers, NULL, data);
+		return CreateProcEntryInDir(dir, name, ops, NULL, data);
 }
 
-int CreateProcReadEntry(const char *name,
-			struct seq_operations *rhandlers)
+int CreateProcReadEntry(const char *name, struct seq_operations *ops)
 {
-	return CreateProcEntry(name, rhandlers, NULL, NULL);
+	return CreateProcEntry(name, ops, NULL, NULL);
 }
 
 int CreateProcEntries(void)
@@ -313,28 +312,28 @@ int CreateProcEntries(void)
 	return 0;
 }
 
-void RemoveProcEntryFromDir(struct proc_dir_entry *pdir, const char *name)
+void RemoveProcEntryFromDir(struct proc_dir_entry *parent, const char *name)
 {
-	struct pvr_proc_dir_entry *ppde;
+	struct pvr_proc_dir_entry *pvr_pde;
 
-	if (!pdir)
+	if (!parent)
 		return;
 
-	list_for_each_entry(ppde, &ppde_list, list) {
-		if (ppde->pdir == pdir && !strcmp(ppde->name, name)) {
+	list_for_each_entry(pvr_pde, &pvr_pde_list, list) {
+		if (pvr_pde->parent == parent && !strcmp(pvr_pde->name, name)) {
 			PVR_DPF(PVR_DBG_MESSAGE, "Removing proc entry %s from %s",
-				name, pdir->name);
+				name, parent->name);
 			remove_proc_entry(name, dir);
-			list_del(&ppde->list);
-			kfree(ppde->name);
-			kfree(ppde);
+			list_del(&pvr_pde->list);
+			kfree(pvr_pde->name);
+			kfree(pvr_pde);
 			return;
 		}
 	}
 
 	PVR_DPF(PVR_DBG_WARNING,
 		"Removing proc entry %s from %s failed: entry not found",
-		name, pdir->name);
+		name, parent->name);
 }
 
 void RemoveProcEntry(const char *name)
@@ -367,7 +366,7 @@ void RemovePerProcessProcDir(struct PVRSRV_ENV_PER_PROCESS_DATA *psPerProc)
 
 void RemoveProcEntries(void)
 {
-	struct pvr_proc_dir_entry *ppde, *next;
+	struct pvr_proc_dir_entry *pvr_pde, *next;
 #ifdef CONFIG_PVR_DEBUG_EXTRA
 	RemoveProcEntry("debug_level");
 #endif
@@ -375,17 +374,17 @@ void RemoveProcEntries(void)
 	RemoveProcEntry("nodes");
 	RemoveProcEntry("version");
 
-	list_for_each_entry_safe(ppde, next, &ppde_list, list) {
-		if (ppde->pdir != dir)
+	list_for_each_entry_safe(pvr_pde, next, &pvr_pde_list, list) {
+		if (pvr_pde->parent != dir)
 			continue;
 
 		PVR_DPF(PVR_DBG_WARNING, "Belatedly removing /proc/%s/%s",
-			PVRProcDirRoot, ppde->name);
+			PVRProcDirRoot, pvr_pde->name);
 
-		remove_proc_entry(ppde->name, dir);
-		list_del(&ppde->list);
-		kfree(ppde->name);
-		kfree(ppde);
+		remove_proc_entry(pvr_pde->name, dir);
+		list_del(&pvr_pde->list);
+		kfree(pvr_pde->name);
+		kfree(pvr_pde);
 	}
 
 	remove_proc_entry(PVRProcDirRoot, NULL);

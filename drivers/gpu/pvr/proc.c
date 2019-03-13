@@ -100,8 +100,7 @@ static struct seq_operations pvr_proc_version_ops = {
 
 void *pvr_proc_file_get_data(struct file *file)
 {
-	struct inode *inode = file->f_path.dentry->d_inode;
-	struct pvr_proc_dir_entry *ppde = PDE_DATA(inode);
+	struct pvr_proc_dir_entry *ppde = PDE_DATA(file_inode(file));
 	return ppde->data;
 }
 
@@ -116,8 +115,7 @@ static ssize_t pvr_proc_write(struct file *file,
 			      size_t count,
 			      loff_t *ppos)
 {
-	struct inode *inode = file->f_path.dentry->d_inode;
-	struct pvr_proc_dir_entry *ppde = PDE_DATA(inode);
+	struct pvr_proc_dir_entry *ppde = PDE_DATA(file_inode(file));
 
 	if (!ppde->whandler)
 		return -EACCES;

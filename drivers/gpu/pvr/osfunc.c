@@ -1323,9 +1323,8 @@ enum PVRSRV_ERROR OSAcquirePhysPageAddr(void *pvCPUVAddr, u32 ui32Bytes,
 
 	down_read(&current->mm->mmap_sem);
 
-	iNumPagesMapped = get_user_pages(current, current->mm, ulStartAddr,
-					 psInfo->iNumPages, 1, 0,
-					 psInfo->ppsPages, NULL);
+	iNumPagesMapped = get_user_pages(ulStartAddr, psInfo->iNumPages,
+					 FOLL_WRITE, psInfo->ppsPages, NULL);
 	up_read(&current->mm->mmap_sem);
 
 

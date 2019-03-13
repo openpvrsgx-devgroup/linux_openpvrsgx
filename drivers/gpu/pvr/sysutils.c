@@ -27,11 +27,9 @@
 #include <linux/version.h>
 #include <linux/clk.h>
 #include <linux/err.h>
+#include <linux/cpufreq.h>
 #include <linux/hardirq.h>
-#include <plat/omap-pm.h>
 #include <linux/bug.h>
-#include <plat/clock.h>
-#include <plat/cpu.h>
 #include "sgxdefs.h"
 #include "services_headers.h"
 #include "sysinfo.h"
@@ -42,6 +40,7 @@
 #include "env_data.h"
 #include "ocpdefs.h"
 #include "pvr_bridge_km.h"
+#include "mach-omap2/soc.h"
 
 #define	HZ_TO_MHZ(m) ((m) / 1000000)
 

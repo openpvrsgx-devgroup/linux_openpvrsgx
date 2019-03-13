@@ -218,22 +218,18 @@ void PVRDebugSetLevel(u32 uDebugLevel)
 	gPVRDebugLevel = uDebugLevel;
 }
 
-int PVRDebugProcSetLevel(struct file *file, const char __user *buffer,
-			 size_t count, loff_t *ppos)
+int PVRDebugProcSetLevel(struct file *file, char *buf, size_t size)
 {
 #define	_PROC_SET_BUFFER_SZ		2
-	char data_buffer[_PROC_SET_BUFFER_SZ];
-
-	if (count != _PROC_SET_BUFFER_SZ) {
+	if (size != _PROC_SET_BUFFER_SZ)
 		return -EINVAL;
-	} else {
-		if (copy_from_user(data_buffer, buffer, count))
-			return -EINVAL;
-		if (data_buffer[count - 1] != '\n')
-			return -EINVAL;
-		PVRDebugSetLevel(data_buffer[0] - '0');
-	}
-	return count;
+
+	if (buf[size - 1] != '\n')
+		return -EINVAL;
+
+	PVRDebugSetLevel(buf[0] - '0');
+
+	return 0;
 }
 
 static int ProcDebugLevelSeqShow(struct seq_file *s, void *v)

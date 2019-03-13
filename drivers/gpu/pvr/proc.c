@@ -53,7 +53,7 @@ struct pvr_proc_dir_entry {
 	struct proc_dir_entry	*parent;
 	char			*name;
 	struct seq_operations	*ops;
-	file_ops_write_t	 write;
+	proc_write_t		 write;
 	void			*data;
 	struct list_head	 list;
 };
@@ -111,22 +111,34 @@ static int pvr_proc_open(struct inode *inode, struct file *file)
 }
 
 static ssize_t pvr_proc_write(struct file *file,
-			      const char __user *buffer,
+			      const char __user *ubuf,
 			      size_t count,
 			      loff_t *ppos)
 {
 	struct pvr_proc_dir_entry *pvr_pde = PDE_DATA(file_inode(file));
+	char *buf;
+	int ret;
 
 	if (!pvr_pde->write)
 		return -EACCES;
 
-	return pvr_pde->write(file, buffer, count, pvr_pde->data);
+	if (count == 0 || count > PAGE_SIZE - 1)
+		return -EINVAL;
+
+	buf = memdup_user_nul(ubuf, count);
+	if (IS_ERR(buf))
+		return PTR_ERR(buf);
+
+	ret = pvr_pde->write(file, buf, count);
+	kfree(buf);
+
+	return ret == 0 ? count : ret;
 }
 
 static int CreateProcEntryInDir(struct proc_dir_entry *parent,
 				const char *name,
 				struct seq_operations *ops,
-				file_ops_write_t write,
+				proc_write_t write,
 				void *data)
 {
 	struct proc_dir_entry *pde;
@@ -193,7 +205,7 @@ no_pvr_pde:
 }
 
 int CreateProcEntry(const char *name, struct seq_operations *ops,
-		    file_ops_write_t write, void *data)
+		    proc_write_t write, void *data)
 {
 	return CreateProcEntryInDir(dir, name, ops, write, data);
 }

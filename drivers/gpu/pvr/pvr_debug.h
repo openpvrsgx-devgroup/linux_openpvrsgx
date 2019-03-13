@@ -74,8 +74,7 @@ void PVRSRVDebugPrintf(u32 ui32DebugLevel, const char *pszFileName,
 		       u32 ui32Line, const char *pszFormat, ...);
 void PVRSRVTrace(const char *pszFormat, ...);
 
-int PVRDebugProcSetLevel(struct file *file, const char __user *buffer,
-			 size_t count, loff_t *ppos);
+int PVRDebugProcSetLevel(struct file *file, char *buf, size_t size);
 void PVRDebugSetLevel(u32 uDebugLevel);
 
 #define PVR_DBG_BREAK

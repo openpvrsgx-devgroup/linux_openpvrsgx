@@ -30,14 +30,12 @@
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
 
-typedef ssize_t (*file_ops_write_t) (struct file *, const char __user *, size_t, loff_t *);
-
 void *pvr_proc_file_get_data(struct file *file);
 
 int CreateProcEntries(void);
 int CreateProcReadEntry(const char *name, struct seq_operations *ops);
 int CreateProcEntry(const char *name, struct seq_operations *ops,
-		    file_ops_write_t write, void *data);
+		    proc_write_t write, void *data);
 
 int CreatePerProcessProcEntry(u32 pid, const char *name,
 			      struct seq_operations *ops,

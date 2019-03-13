@@ -199,15 +199,10 @@ err_exit:
 static int pvr_remove(struct platform_device *pdev)
 {
 	struct SYS_DATA *sysdata;
-	int ret;
 
 	PVR_TRACE("pvr_remove(pdev=%p)", pdev);
 
-	ret = misc_deregister(&pvr_miscdevice);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "remove failed (%d)\n", ret);
-		return ret;
-	}
+	misc_deregister(&pvr_miscdevice);
 
 	if (SysAcquireData(&sysdata) == PVRSRV_OK)
 		SysDeinitialise(sysdata);

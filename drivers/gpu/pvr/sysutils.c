@@ -172,7 +172,6 @@ static void UnRegisterConstraintNotifications(struct SYS_SPECIFIC_DATA
 	cpufreq_unregister_notifier(&vdd2_pre_post, CPUFREQ_TRANSITION_NOTIFIER);
 }
 
-static struct device sgx_dev;
 static int sgx_clock_enabled;
 
 /* return value: current sgx load
@@ -273,7 +272,6 @@ static void sgx_lock_perf(struct work_struct *work)
 		high = 0;
 	}
 	if (high != bHigh) {
-		omap_pm_set_min_bus_tput(&sgx_dev, OCP_INITIATOR_AGENT, vdd2);
 		bHigh = high;
 	}
 

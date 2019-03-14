@@ -462,7 +462,7 @@ static const struct file_operations pvr_debugfs_regs_fops = {
  *
  */
 static struct mutex hwrec_mutex[1];
-static struct timeval hwrec_time;
+static struct timespec64 hwrec_time;
 static int hwrec_open_count;
 static DECLARE_WAIT_QUEUE_HEAD(hwrec_wait_queue);
 static int hwrec_event;
@@ -854,9 +854,9 @@ pvr_hwrec_dump(struct PVRSRV_PER_PROCESS_DATA *proc_data,
 		return;
 	}
 
-	do_gettimeofday(&hwrec_time);
-	pr_info("HW Recovery dump generated at %010ld%06ld\n",
-		hwrec_time.tv_sec, hwrec_time.tv_usec);
+	ktime_get_real_ts64(&hwrec_time);
+	pr_info("HW Recovery dump generated at %010lld%06ld\n",
+		hwrec_time.tv_sec, hwrec_time.tv_nsec / NSEC_PER_USEC);
 
 	hwrec_registers_dump(psDevInfo);
 
@@ -916,8 +916,8 @@ hwrec_time_read(struct file *filp, char __user *buf, size_t size,
 	char tmp[20];
 
 	mutex_lock(hwrec_mutex);
-	snprintf(tmp, sizeof(tmp), "%010ld%06ld",
-		 hwrec_time.tv_sec, hwrec_time.tv_usec);
+	snprintf(tmp, sizeof(tmp), "%010lld%06ld",
+		 hwrec_time.tv_sec, hwrec_time.tv_nsec / NSEC_PER_USEC);
 	mutex_unlock(hwrec_mutex);
 
 	return simple_read_from_buffer(buf, size, f_pos, tmp, strlen(tmp));

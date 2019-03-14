@@ -29,10 +29,10 @@ static inline bool is_render_complete(const struct PVRSRV_SYNC_DATA *sync,
 }
 
 static void pvr_signal_sync_event(struct pvr_pending_sync_event *e,
-					const struct timeval *now)
+					const struct timespec64 *now)
 {
 	e->event.tv_sec = now->tv_sec;
-	e->event.tv_usec = now->tv_usec;
+	e->event.tv_usec = now->tv_nsec / NSEC_PER_USEC;
 
 	list_move_tail(&e->base.link, &e->base.file_priv->event_list);
 
@@ -44,7 +44,7 @@ int pvr_sync_event_req(struct PVRSRV_FILE_PRIVATE_DATA *priv,
 			u64 user_data)
 {
 	struct pvr_pending_sync_event *e;
-	struct timeval now;
+	struct timespec64 now;
 	unsigned long flags;
 
 	e = kzalloc(sizeof(*e), GFP_KERNEL);
@@ -60,7 +60,7 @@ int pvr_sync_event_req(struct PVRSRV_FILE_PRIVATE_DATA *priv,
 	e->base.destroy = (void (*)(struct pvr_pending_event *))kfree;
 	e->base.write_ops_pending = sync_info->psSyncData->ui32WriteOpsPending;
 
-	do_gettimeofday(&now);
+	ktime_get_ts64(&now);
 	spin_lock_irqsave(&event_lock, flags);
 
 	if (priv->event_space < sizeof(e->event)) {
@@ -82,10 +82,10 @@ int pvr_sync_event_req(struct PVRSRV_FILE_PRIVATE_DATA *priv,
 }
 
 static void pvr_signal_flip_event(struct pvr_pending_flip_event *e,
-					const struct timeval *now)
+					const struct timespec64 *now)
 {
 	e->event.tv_sec = now->tv_sec;
-	e->event.tv_usec = now->tv_usec;
+	e->event.tv_usec = now->tv_nsec / NSEC_PER_USEC;
 
 	list_move_tail(&e->base.link, &e->base.file_priv->event_list);
 
@@ -247,10 +247,10 @@ void pvr_handle_sync_events(void)
 {
 	struct pvr_pending_sync_event *e;
 	struct pvr_pending_sync_event *t;
-	struct timeval now;
+	struct timespec64 now;
 	unsigned long flags;
 
-	do_gettimeofday(&now);
+	ktime_get_ts64(&now);
 
 	spin_lock_irqsave(&event_lock, flags);
 
@@ -270,11 +270,11 @@ static int dss_notifier_callback(struct notifier_block *nb,
 {
 	struct pvr_pending_flip_event *e;
 	struct pvr_pending_flip_event *t;
-	struct timeval now;
+	struct timespec64 now;
 	unsigned long flags;
 	long overlay = (long) data;
 
-	do_gettimeofday(&now);
+	ktime_get_ts64(&now);
 
 	spin_lock_irqsave(&event_lock, flags);
 

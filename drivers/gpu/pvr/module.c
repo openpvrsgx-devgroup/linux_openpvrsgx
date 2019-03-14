@@ -33,6 +33,7 @@
 #include <linux/miscdevice.h>
 
 #include <linux/platform_device.h>
+#include <linux/of.h>
 
 #include "img_defs.h"
 #include "services.h"
@@ -211,9 +212,18 @@ static int pvr_remove(struct platform_device *pdev)
 }
 
 
+#ifdef CONFIG_OF
+static const struct of_device_id pvr_dt_ids[] = {
+	{ .compatible = "ti,omap3-sgx530", },
+	{ /* sentinel */ },
+};
+MODULE_DEVICE_TABLE(of, pvr_dt_ids);
+#endif
+
 static struct platform_driver pvr_driver = {
 	.driver = {
 		   .name = DRVNAME,
+		   .of_match_table = of_match_ptr(pvr_dt_ids),
 	},
 	.probe		= pvr_probe,
 	.remove		= pvr_remove,

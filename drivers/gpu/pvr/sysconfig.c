@@ -57,14 +57,12 @@ static void *gsSGXRegsCPUVAddr;
 
 static void __iomem *ocp_base;
 
-static enum PVRSRV_ERROR SysLocateDevices(struct SYS_DATA *psSysData)
+static enum PVRSRV_ERROR SysLocateDevices(struct platform_device *pdev)
 {
 #if defined(NO_HARDWARE)
 	enum PVRSRV_ERROR eError;
 	struct IMG_CPU_PHYADDR sCpuPAddr;
 #endif
-
-	PVR_UNREFERENCED_PARAMETER(psSysData);
 
 	gsSGXDeviceMap.ui32Flags = 0x0;
 
@@ -93,7 +91,13 @@ static enum PVRSRV_ERROR SysLocateDevices(struct SYS_DATA *psSysData)
 	    SysSysPAddrToCpuPAddr(gsSGXDeviceMap.sRegsSysPBase);
 	gsSGXDeviceMap.ui32RegsSize = SYS_OMAP3430_SGX_REGS_SIZE;
 
+#ifndef CONFIG_OF
 	gsSGXDeviceMap.ui32IRQ = SYS_OMAP3430_SGX_IRQ;
+#else
+	gsSGXDeviceMap.ui32IRQ = platform_get_irq(pdev, 0);
+	if (gsSGXDeviceMap.ui32IRQ <= 0)
+		return -ENXIO;
+#endif
 
 #endif
 
@@ -318,7 +322,7 @@ enum PVRSRV_ERROR SysInitialise(struct platform_device *pdev)
 
 	gpsSysSpecificData->ui32SrcClockDiv = 3;
 
-	eError = SysLocateDevices(gpsSysData);
+	eError = SysLocateDevices(pdev);
 	if (eError != PVRSRV_OK) {
 		PVR_DPF(PVR_DBG_ERROR,
 			 "SysInitialise: Failed to locate devices");

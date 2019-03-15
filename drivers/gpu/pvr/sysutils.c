@@ -128,22 +128,43 @@ static int vdd2_pre_func(struct notifier_block *n, unsigned long event,
 static int vdd2_pre_post_func(struct notifier_block *n, unsigned long event,
 			      void *ptr)
 {
+#if defined(CONFIG_PVR_DEBUG)
+	struct clk_notifier_data *cnd = ptr;
+#endif
+
 	PVR_UNREFERENCED_PARAMETER(n);
 
-	if (CPUFREQ_PRECHANGE == event) {
+	PVR_TRACE("vdd2_pre_post_func: %s clock rate = %lu",
+		  (PRE_RATE_CHANGE == event) ? "old" :
+		  (POST_RATE_CHANGE == event) ? "new" : "???",
+		  PRE_RATE_CHANGE == event ? cnd->old_rate : cnd->new_rate);
+
+	switch (event) {
+
+	case PRE_RATE_CHANGE:
 		pvr_dev_lock();
-		PVR_TRACE("vdd2_pre_post_func: CPUFREQ_PRECHANGE event");
+		PVR_TRACE("vdd2_pre_post_func: PRE_RATE_CHANGE event");
 		vdd2_pre_func(n, event, ptr);
-	} else if (CPUFREQ_POSTCHANGE == event) {
-		PVR_TRACE("vdd2_pre_post_func: CPUFREQ_POSTCHANGE event");
+		break;
+
+	case POST_RATE_CHANGE:
+		PVR_TRACE("vdd2_pre_post_func: POST_RATE_CHANGE event");
 		vdd2_post_func(n, event, ptr);
 		pvr_dev_unlock();
-	} else {
+		break;
+
+	case ABORT_RATE_CHANGE:
+		PVR_TRACE("vdd2_pre_post_func: ABORT_RATE_CHANGE event");
+		pvr_dev_unlock();
+		break;
+
+	default:
 		printk(KERN_ERR "vdd2_pre_post_func: unexpected event (%lu)\n",
 			event);
 		PVR_DPF(PVR_DBG_ERROR,
 			 "vdd2_pre_post_func: unexpected event (%lu)", event);
 	}
+
 	PVR_TRACE("vdd2_pre_post_func end.");
 	return 0;
 }
@@ -158,8 +179,7 @@ static void RegisterConstraintNotifications(struct SYS_SPECIFIC_DATA
 {
 	PVR_TRACE("Registering constraint notifications");
 
-	cpufreq_register_notifier(&vdd2_pre_post, CPUFREQ_TRANSITION_NOTIFIER);
-
+	clk_notifier_register(psSysSpecData->psSGX_FCK, &vdd2_pre_post);
 	PVR_TRACE("VDD2 constraint notifications registered");
 }
 
@@ -168,7 +188,7 @@ static void UnRegisterConstraintNotifications(struct SYS_SPECIFIC_DATA
 {
 	PVR_TRACE("Unregistering constraint notifications");
 
-	cpufreq_unregister_notifier(&vdd2_pre_post, CPUFREQ_TRANSITION_NOTIFIER);
+	clk_notifier_unregister(psSysSpecData->psSGX_FCK, &vdd2_pre_post);
 }
 
 static int sgx_clock_enabled;

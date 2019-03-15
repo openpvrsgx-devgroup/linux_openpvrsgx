@@ -207,12 +207,9 @@ enum PVRSRV_ERROR PVRMMapOSMemHandleToMMapData(
 
 	mutex_lock(&g_sMMapMutex);
 
-	PVR_ASSERT(PVRSRVGetMaxHandle(psPerProc->psHandleBase) <=
-		   MAX_MMAP_HANDLE);
+	PVR_ASSERT(PVRSRVGetMaxHandle(psPerProc->psHandleBase) <= MAX_MMAP_HANDLE);
 
-	eError =
-	    PVRSRVLookupOSMemHandle(psPerProc->psHandleBase, &hOSMemHandle,
-				    hMHandle);
+	eError = PVRSRVLookupOSMemHandle(psPerProc->psHandleBase, &hOSMemHandle, hMHandle);
 	if (eError != PVRSRV_OK) {
 		PVR_DPF(PVR_DBG_ERROR, "%s: Lookup of handle 0x%lx failed",
 			 __func__, hMHandle);

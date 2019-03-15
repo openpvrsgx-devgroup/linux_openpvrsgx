@@ -702,8 +702,7 @@ static int FlushCacheDRI(u32 ui32Type, u32 ui32Virt, u32 ui32Length)
 #endif
 		return 0;
 	default:
-		PVR_DPF(PVR_DBG_ERROR, "Invalid cflush type 0x%x\n",
-			 ui32Type);
+		PVR_DPF(PVR_DBG_ERROR, "Invalid cflush type 0x%x\n", ui32Type);
 		return -EINVAL;
 	}
 
@@ -2476,8 +2475,7 @@ static int PVRSRVInitSrvDisconnectBW(u32 ui32BridgeID,
 
 	PVRSRVSetInitServerState(PVRSRV_INIT_SERVER_SUCCESSFUL,
 				 (IMG_BOOL)(((psRetOUT->eError == PVRSRV_OK) &&
-					      (psInitSrvDisconnectIN->
-							    bInitSuccesful))));
+					     (psInitSrvDisconnectIN->bInitSuccesful))));
 
 	return 0;
 }
@@ -2577,14 +2575,12 @@ static int bridged_check_cmd(u32 cmd_id)
 {
 	if (PVRSRVGetInitServerState(PVRSRV_INIT_SERVER_RAN)) {
 		if (!PVRSRVGetInitServerState(PVRSRV_INIT_SERVER_SUCCESSFUL)) {
-			pr_err("PVR: ERROR: Initialisation failed. "
-			       "Driver unusable.\n");
+			pr_err("PVR: ERROR: Initialisation failed. Driver unusable.\n");
 			return 1;
 		}
 	} else {
 		if (PVRSRVGetInitServerState(PVRSRV_INIT_SERVER_RUNNING)) {
-			pr_err("PVR: ERROR: Initialisation still in "
-			       "progress.\n");
+			pr_err("PVR: ERROR: Initialisation still in progress.\n");
 			return 1;
 		} else {
 			switch (cmd_id) {
@@ -2598,8 +2594,7 @@ static int bridged_check_cmd(u32 cmd_id)
 				PVRSRV_BRIDGE_INITSRV_DISCONNECT):
 				break;
 			default:
-				pr_err("PVR: ERROR: initialisation not "
-				       "completed yet.\n");
+				pr_err("PVR: ERROR: initialisation not completed yet.\n");
 				return 1;
 			}
 		}

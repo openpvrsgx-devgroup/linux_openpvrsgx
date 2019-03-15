@@ -59,8 +59,7 @@ enum PVRSRV_ERROR PVRSRVSetInitServerState(enum PVRSRV_INIT_SERVER_STATE
 	return PVRSRV_OK;
 }
 
-IMG_BOOL PVRSRVGetInitServerState(
-				enum PVRSRV_INIT_SERVER_STATE eInitServerState)
+IMG_BOOL PVRSRVGetInitServerState(enum PVRSRV_INIT_SERVER_STATE eInitServerState)
 {
 	IMG_BOOL bReturnVal;
 

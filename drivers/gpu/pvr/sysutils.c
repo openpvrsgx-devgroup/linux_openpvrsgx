@@ -447,7 +447,6 @@ static enum PVRSRV_ERROR InitSgxClocks(struct SYS_DATA *psSysData)
 {
 	struct SYS_SPECIFIC_DATA *psSysSpecData = psSysData->pvSysSpecificData;
 	struct clk *psCLK;
-	struct clk *core_ck = NULL;
 	unsigned long rate;
 	int r;
 
@@ -460,15 +459,6 @@ static enum PVRSRV_ERROR InitSgxClocks(struct SYS_DATA *psSysData)
 	if (IS_ERR(psCLK))
 		goto err1;
 	psSysSpecData->psSGX_ICK = psCLK;
-
-	core_ck = clk_get(NULL, "core_ck");
-	if (IS_ERR(core_ck))
-		goto err2;
-	if (clk_set_parent(psSysSpecData->psSGX_FCK, core_ck) < 0) {
-		clk_put(core_ck);
-		goto err2;
-	}
-	clk_put(core_ck);
 
 	/* +1 to account for rounding errors */
 	rate = clk_round_rate(psSysSpecData->psSGX_FCK, sgx_get_max_freq() + 1);
@@ -489,14 +479,12 @@ static enum PVRSRV_ERROR InitSgxClocks(struct SYS_DATA *psSysData)
 	RegisterConstraintNotifications(psSysSpecData);
 	return PVRSRV_OK;
 
-err2:
-	clk_put(psSysSpecData->psSGX_ICK);
 err1:
 	clk_put(psSysSpecData->psSGX_FCK);
 err0:
 	PVR_DPF(PVR_DBG_ERROR,
-		 "%s: couldn't init clocks fck %p ick %p core %p", __func__,
-		 psSysSpecData->psSGX_FCK, psSysSpecData->psSGX_ICK, core_ck);
+		 "%s: couldn't init clocks fck %p ick %p", __func__,
+		 psSysSpecData->psSGX_FCK, psSysSpecData->psSGX_ICK);
 	psSysSpecData->psSGX_FCK = NULL;
 	psSysSpecData->psSGX_ICK = NULL;
 

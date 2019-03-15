@@ -105,6 +105,11 @@
 	thermal_zones: thermal-zones {
 		#include "omap3-cpu-thermal.dtsi"
 	};
+
+	gpu {
+		compatible = "ti,omap3-sgx530";
+		interrupts = <21>;
+	};
 };
 
 &ssi {

@@ -126,15 +126,15 @@ u32 sgx_get_rev(void)
 	if (!regs)
 		return 0;
 
-	err = clk_enable(sysd->psSGX_FCK);
+	err = clk_prepare_enable(sysd->psSGX_FCK);
 	BUG_ON(err);
-	err = clk_enable(sysd->psSGX_ICK);
+	err = clk_prepare_enable(sysd->psSGX_ICK);
 	BUG_ON(err);
 
 	rev = OSReadHWReg(regs, EUR_CR_CORE_REVISION);
 
-	clk_disable(sysd->psSGX_ICK);
-	clk_disable(sysd->psSGX_FCK);
+	clk_disable_unprepare(sysd->psSGX_ICK);
+	clk_disable_unprepare(sysd->psSGX_FCK);
 
 	OSUnMapPhysToLin(regs, SYS_OMAP3430_SGX_REGS_SIZE,
 			 PVRSRV_HAP_UNCACHED | PVRSRV_HAP_KERNEL_ONLY, NULL);

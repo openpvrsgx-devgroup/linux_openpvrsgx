@@ -483,6 +483,9 @@ static enum PVRSRV_ERROR InitSgxClocks(struct SYS_DATA *psSysData)
 		pr_info("SGX clock rate %lu MHz\n", rate / 1000000);
 	};
 
+	clk_prepare(psSysSpecData->psSGX_FCK);
+	clk_prepare(psSysSpecData->psSGX_ICK);
+
 	RegisterConstraintNotifications(psSysSpecData);
 	return PVRSRV_OK;
 
@@ -506,11 +509,13 @@ static void CleanupSgxClocks(struct SYS_DATA *psSysData)
 	UnRegisterConstraintNotifications(psSysSpecData);
 
 	if (psSysSpecData->psSGX_ICK) {
+		clk_unprepare(psSysSpecData->psSGX_ICK);
 		clk_put(psSysSpecData->psSGX_ICK);
 		psSysSpecData->psSGX_ICK = NULL;
 	}
 
 	if (psSysSpecData->psSGX_FCK) {
+		clk_unprepare(psSysSpecData->psSGX_FCK);
 		clk_put(psSysSpecData->psSGX_FCK);
 		psSysSpecData->psSGX_FCK = NULL;
 	}

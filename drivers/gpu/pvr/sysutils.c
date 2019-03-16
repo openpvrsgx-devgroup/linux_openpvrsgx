@@ -502,7 +502,7 @@ static enum PVRSRV_ERROR InitSgxClocks(struct SYS_DATA *psSysData)
 		pr_warning("error %d when setting SGX fclk to %lu Hz, "
 			   "falling back to %lu Hz\n", r, rate, current_rate);
 	} else {
-		pr_info("SGX clock rate %lu MHz\n", rate / 1000000);
+		pr_info("SGX clock rate %lu MHz\n", HZ_TO_MHZ(rate));
 	};
 
 	clk_prepare(psSysSpecData->psSGX_FCK);

@@ -24,7 +24,7 @@ ccflags-y += -DAM_VERSION=$(AM_VERSION)
 # - SGX version (530, 540, 544)
 # - SGX revision
 
-MODULE := pvr_$(SOC_FAMILY)_$(SOC)_$(SGX)_$(SGX_REV)
+MODULE := pvrsrvkm_$(SOC_FAMILY)_$(SOC)_$(SGX)_$(SGX_REV)
 
 # make either $(MODULE)-y or $(MODULE)-m as defined by TARGET_TYPE
 TARGET := $(MODULE)-$(TARGET_TYPE)

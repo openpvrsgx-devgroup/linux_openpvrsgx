@@ -17,6 +17,9 @@
 if egrep -q ti,omap3 </proc/device-tree/compatible
 then
 	MODEL=omap3
+elif egrep -q ti,am335x </proc/device-tree/compatible
+then
+	MODEL=omap3
 elif egrep -q ti,omap4 </proc/device-tree/compatible
 then
 	MODEL=omap4
@@ -32,7 +35,7 @@ fi
 # FIXME: different location on omap5
 PACKAGE=$(egrep -ao '[a-z0-9]*-sgx[0-9]*-[0-9]*' </proc/device-tree/ocp*/*g*x@*/compatible)	# match gfx@ and sgx@
 COMPATIBLE=omap_$(echo "$PACKAGE" | tr '-' '_')
-MODULE=pvr_$COMPATIBLE
+MODULE=pvrsrvkm_$COMPATIBLE
 echo autodetected driver package: $PACKAGE
 echo compatible driver: $COMPATIBLE
 echo module name: $MODULE

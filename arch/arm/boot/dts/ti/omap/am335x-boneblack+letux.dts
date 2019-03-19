@@ -7,10 +7,7 @@
  */
 /dts-v1/;
 
-// FIXME: base on #include "am335x-boneblack.dts"
-
-#include "am33xx.dtsi"
-#include "am335x-bone-common.dtsi"
+#include "am335x-boneblack.dts"
 #include <dt-bindings/input/input.h>
 
 // taken from https://github.com/RobertCNelson/dtb-linux-dev/blob/master/src/arm/
@@ -116,8 +113,9 @@
 
 	/* overwrite device model */
 	model = "BeagleBoneBlack + Letux";
-        compatible = "ti,am335x-bone-black", "ti,am335x-bone", "ti,am33xx";
+};
 
+/ {
 /*
  * we assume a Chipsee BBB-EXP43 with 4.3 inch panel, resistive touch and some LEDs and Buttons
  * http://www.chipsee.com/index.php/evm/beagleboard/cs-bbb-exp43.html
@@ -196,11 +194,12 @@ touch: internal to am335x
 
 	};
 
-	backlight {
+	backlight: backlight {
 		compatible = "pwm-backlight";
 		pwms = <&ehrpwm1 0 50000 0>;
-		brightness-levels = <0 51 53 56 62 75 101 152 255>;
-		default-brightness-level = <8>;
+		pwm-names = "backlight";
+		brightness-levels = <0 1 2 5 10 20 40 60 80 100 150 255>;
+		default-brightness-level = <10>;
 	};
 
 	panel {
@@ -213,6 +212,7 @@ touch: internal to am335x
 		pinctrl-names = "default";
 		pinctrl-0 = <&lcd_24bit_pins>;
 
+		backlight= <&backlight>;
 		enable-gpios = <&gpio3 19 GPIO_ACTIVE_HIGH>;
 
 		panel-info {
@@ -246,7 +246,10 @@ touch: internal to am335x
 			};
 		};
 	};
+};
 
+&epwmss1 {
+	status = "okay";
 };
 
 &ehrpwm1 {
@@ -256,11 +259,12 @@ touch: internal to am335x
 };
 
 &lcdc {
-	status = "okay";
+	/delete-node/ port;
 };
 
-&rtc {
-	system-power-controller;
+&tda19988 {
+	status = "disabled";
+	/delete-node/ ports;
 };
 
 &tscadc {
@@ -276,24 +280,6 @@ touch: internal to am335x
 	adc {
 		ti,adc-channels = <4 5 6 7>;
 	};
-};
-
-&ldo3_reg {
-        regulator-min-microvolt = <1800000>;
-        regulator-max-microvolt = <1800000>;
-        regulator-always-on;
-};
-
-&mmc1 {
-        vmmc-supply = <&vmmcsd_fixed>;
-};
-
-&mmc2 {
-        vmmc-supply = <&vmmcsd_fixed>;
-        pinctrl-names = "default";
-        pinctrl-0 = <&emmc_pins>;
-        bus-width = <8>;
-        status = "okay";
 };
 
 &am33xx_pinmux {
@@ -316,7 +302,7 @@ touch: internal to am335x
 
 	bb_lcd_pwm_backlight_pins: pinmux_bb_lcd_pwm_backlight_pins {
 		pinctrl-single,pins = <
-			BONE_P9_14 (PIN_OUTPUT_PULLUP | MUX_MODE7) /* gpmc_a2.ehrpwm1a */
+			BONE_P9_14 (PIN_OUTPUT_PULLUP | MUX_MODE6) /* gpmc_a2.ehrpwm1a */
 		>;
 	};
 

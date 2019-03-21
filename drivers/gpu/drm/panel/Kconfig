@@ -954,6 +954,15 @@ config DRM_PANEL_FEIXIN_K101_IM2BA02
 	  Say Y here if you want to enable support for the Feixin K101 IM2BA02
 	  series MIPI DSI panel with JD9365 controller.
 
+config DRM_PANEL_PINEPHONE_JD9365DA
+	tristate "Pinephone panel"
+	depends on OF
+	depends on DRM_MIPI_DSI
+	depends on BACKLIGHT_CLASS_DEVICE
+	help
+	  Say Y here if you want to enable support for Pinephone panel using the
+	  JD9365DA controller
+
 config DRM_PANEL_XINGBANGDA_XBD599
 	tristate "Xingbangda XBD599 panel"
 	depends on OF
@@ -962,4 +971,5 @@ config DRM_PANEL_XINGBANGDA_XBD599
 	help
 	  Say Y here if you want to enable support for the Xingbangda XBD599
 	  MIPI DSI Video Mode panel with ST7703 controller.
+
 endmenu

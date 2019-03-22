@@ -108,6 +108,7 @@ struct tsc200x {
 
 	bool			opened;
 	bool			suspended;
+	bool			disabled;
 
 	bool			pen_down;
 
@@ -261,6 +262,46 @@ static void __tsc200x_enable(struct tsc200x *ts)
 	}
 }
 
+static ssize_t tsc200x_disable_show(struct device *dev,
+				    struct device_attribute *attr, char *buf)
+{
+	struct tsc200x *ts = dev_get_drvdata(dev);
+
+	return sprintf(buf, "%u\n", ts->disabled);
+}
+
+static ssize_t tsc200x_disable_store(struct device *dev,
+				     struct device_attribute *attr,
+				     const char *buf, size_t count)
+{
+	struct tsc200x *ts = dev_get_drvdata(dev);
+	unsigned long val;
+	int error;
+
+	error = kstrtoul(buf, 10, &val);
+	if (error)
+		return error;
+
+	mutex_lock(&ts->mutex);
+
+	if (!ts->suspended && ts->opened) {
+		if (val) {
+			if (!ts->disabled)
+				__tsc200x_disable(ts);
+		} else {
+			if (ts->disabled)
+				__tsc200x_enable(ts);
+		}
+	}
+
+	ts->disabled = !!val;
+
+	mutex_unlock(&ts->mutex);
+
+	return count;
+}
+static DEVICE_ATTR(disable, 0664, tsc200x_disable_show, tsc200x_disable_store);
+
 static ssize_t tsc200x_selftest_show(struct device *dev,
 				     struct device_attribute *attr,
 				     char *buf)
@@ -340,6 +381,7 @@ out:
 static DEVICE_ATTR(selftest, S_IRUGO, tsc200x_selftest_show, NULL);
 
 static struct attribute *tsc200x_attrs[] = {
+	&dev_attr_disable.attr,
 	&dev_attr_selftest.attr,
 	NULL
 };
@@ -422,7 +464,7 @@ static int tsc200x_open(struct input_dev *input)
 
 	mutex_lock(&ts->mutex);
 
-	if (!ts->suspended)
+	if (!ts->suspended && !ts->disabled)
 		__tsc200x_enable(ts);
 
 	ts->opened = true;
@@ -438,7 +480,7 @@ static void tsc200x_close(struct input_dev *input)
 
 	mutex_lock(&ts->mutex);
 
-	if (!ts->suspended)
+	if (!ts->suspended && !ts->disabled)
 		__tsc200x_disable(ts);
 
 	ts->opened = false;
@@ -604,7 +646,7 @@ static int __maybe_unused tsc200x_suspend(struct device *dev)
 
 	mutex_lock(&ts->mutex);
 
-	if (!ts->suspended && ts->opened)
+	if (!ts->suspended && !ts->disabled && ts->opened)
 		__tsc200x_disable(ts);
 
 	ts->suspended = true;
@@ -620,7 +662,7 @@ static int __maybe_unused tsc200x_resume(struct device *dev)
 
 	mutex_lock(&ts->mutex);
 
-	if (ts->suspended && ts->opened)
+	if (ts->suspended && !ts->disabled && ts->opened)
 		__tsc200x_enable(ts);
 
 	ts->suspended = false;

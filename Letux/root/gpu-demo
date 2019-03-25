@@ -8,67 +8,11 @@
 # WARNING: this loads and installs packages with NON-FREE
 # firmware for the SGX libraries and runtime support from
 #
-# http://download.goldelico.com/letux-debian-rootfs/debian/dists/jessie/main/binary-armhf/omap3-pvrsgx530-gta04_0.20130811195126_armhf.deb
+# http://download.goldelico.com/letux-debian-rootfs/debian/dists/jessie/main/binary-armhf/
 #
 # It needs a kernel where the GPL'ed SGX kernel driver is
 # properly configured.
 #
-
-if egrep -q ti,omap3 </proc/device-tree/compatible
-then
-	MODEL=omap3
-elif egrep -q ti,am335x </proc/device-tree/compatible
-then
-	MODEL=omap3
-elif egrep -q ti,omap4 </proc/device-tree/compatible
-then
-	MODEL=omap4
-elif egrep -q ti,omap5 </proc/device-tree/compatible
-then
-	MODEL=omap5
-else
-	echo "unsupported device: $(cat /sys/firmware/devicetree/base/model)"
-	exit 1
-fi
-
-# autodetect package version to load
-# FIXME: different location on omap5
-PACKAGE=$(egrep -ao '[a-z0-9]*-sgx[0-9]*-[0-9]*' </proc/device-tree/ocp*/*g*x@*/compatible)	# match gfx@ and sgx@
-COMPATIBLE=omap_$(echo "$PACKAGE" | tr '-' '_')
-MODULE=pvrsrvkm_$COMPATIBLE
-echo autodetected driver package: $PACKAGE
-echo compatible driver: $COMPATIBLE
-echo module name: $MODULE
-
-case "$MODEL" in
-	*omap3* )
-# FIXME: how can we decide betweeen the DDK 1.9 and the DDK 1.14 driver to load the correct package?
-if false
-then
-		PACKAGE=omap3-pvrsgx530-gta04	# version detection does not work and we don't have separate pvrsgx-121 / pvrsgx-125 packages
-else
-		PACKAGE=omap3-pvrsgx-1.14
-		USERSPACE=/usr/local/omap3-pvrsgx
-		PATH=$USERSPACE/bin:$PATH
-		export LD_LIBRARY_PATH=$USERSPACE/lib
-		ldconfig
-fi
-		;;
-	*omap4* )
-		PACKAGE=omap4-pvrsgx-1.14
-		USERSPACE=/usr/local/omap3-pvrsgx
-		PATH=$USERSPACE/bin:$PATH
-		export LD_LIBRARY_PATH=$USERSPACE/lib
-		ldconfig
-		;;
-	*omap5* )
-		PACKAGE=omap5-pvrsgx-1.14
-		USERSPACE=/usr/local/omap3-pvrsgx
-		PATH=$USERSPACE/bin:$PATH
-		export LD_LIBRARY_PATH=$USERSPACE/lib
-		ldconfig
-		;;
-esac
 
 # we need a more recent libdrm2 on plain jessie
 case $(dpkg -s libdrm2 2>/dev/null | grep '^Version:') in
@@ -77,8 +21,14 @@ case $(dpkg -s libdrm2 2>/dev/null | grep '^Version:') in
 		;;
 esac
 
+# autodetect package version to load
+COMPATIBLE=omap_$(egrep -ao '[a-z0-9]*-sgx[0-9]*-[0-9]*' </proc/device-tree/ocp*/*g*x@*/compatible | tr '-' '_')	# match gfx@ and sgx@
+MODULE=pvrsrvkm_$COMPATIBLE
+echo compatible driver: $COMPATIBLE
+echo module name: $MODULE
+
 # fetch the microkernel binary and libraries
-[ -x "$USERSPACE/bin/pvrsrvctl" ] || apt-get install -y --force-yes $PACKAGE
+[ "$(which pvrsrvctl)" ] || apt-get install -y --force-yes omap-pvrsgx-1.14
 
 # if kernel module was blacklisted, load it now
 lsmod | fgrep -q pvr_ || modprobe $MODULE
@@ -103,7 +53,9 @@ fgrep -q 'System Version String: None' /proc/pvr/version && pvrsrvctl --start --
 
 fgrep "System Version String: " /proc/pvr/version
 
-for i in sgx_clipblit_test gles1test1 gles2test1 eglinfo kmscube
+PATH=$PATH:/opt/img-powervr-sdk/Examples/Advanced/NullWS/
+
+for i in sgx_clipblit_test gles1test1 gles2test1 eglinfo kmscube OGLES2Water
 do
 	if [ "$(which $i)" ]
 	then

@@ -47,8 +47,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 #endif
 
+#if defined(CONFIG_OMAP2PLUS)
 #if (AM_VERSION != 5)
 #include <linux/platform_data/sgx-omap.h>
+#endif
 #endif
 
 #if defined(SUPPORT_DRI_DRM) && !defined(SUPPORT_DRI_DRM_PLUGIN)

@@ -49,6 +49,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 
 #include <asm/io.h>
+#include <linux/uaccess.h>
 #include <asm/uaccess.h>
 #include <linux/kernel.h>
 #include <linux/sched.h>

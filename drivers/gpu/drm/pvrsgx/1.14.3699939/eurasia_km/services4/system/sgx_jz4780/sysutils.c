@@ -403,3 +403,12 @@ PVRSRV_ERROR SysDvfsDeinitialize(SYS_SPECIFIC_DATA *psSysSpecificData)
 #endif 
 	return PVRSRV_OK;
 }
+
+IMG_VOID SysSGXIdleEntered(IMG_VOID)
+{
+}
+
+IMG_VOID SysSGXCommandPending(IMG_BOOL bSGXIdle)
+{
+	PVR_UNREFERENCED_PARAMETER(bSGXIdle);
+}

@@ -31,7 +31,7 @@ echo module name: $MODULE
 [ "$(which pvrsrvctl)" ] || apt-get install -y --force-yes omap-pvrsgx-1.14
 
 # if kernel module was blacklisted, load it now
-lsmod | fgrep -q pvr_ || modprobe $MODULE
+lsmod | fgrep -q pvrsrvkm_ || modprobe $MODULE
 
 # fix clock setup
 # should have been done by driver, hwmods and pdata-quirks
@@ -59,7 +59,7 @@ for i in sgx_clipblit_test gles1test1 gles2test1 eglinfo kmscube OGLES2Water
 do
 	if [ "$(which $i)" ]
 	then
-		echo Running $i
+		echo "*** $0: running $i ***"
 		timeout 10 $i
 	fi
 done

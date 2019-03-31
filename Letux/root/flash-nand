@@ -17,7 +17,7 @@ case "$(tr -d '\0' </proc/device-tree/model)" in
 		## find out what the eMMC device is
 		DEV=/dev/mmcblk0p
 		mount ${DEV}1 /mnt/mmc0.1
-		mount ${DEV)2 /mnt/mmc0.2
+		mount ${DEV}2 /mnt/mmc0.2
 		# copy uImage and device tree
 		### mount boot partition from SD card
 		# copy rootfs
@@ -190,7 +190,7 @@ do
 			read MAJOR MINOR BLOCKS NAME < <(fgrep mtdblock4 /proc/partitions)
 			NANDSIZE=$(expr "$BLOCKS" / 1100)	# sets aside some reserve
 
-			read USED PERIOD < <(du -s -m / 2>/dev/null )
+			read USED PERIOD < <(du -s -m / 2>/dev/null)
 
 			echo "Available flash space is ${NANDSIZE} MB"
 			echo "Root file system on SD card is ${USED} MB"

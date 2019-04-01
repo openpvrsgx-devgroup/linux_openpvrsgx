@@ -1,5 +1,5 @@
 #
-# Linux/mips 5.1.0-rc2 Kernel Configuration
+# Linux/mips 5.1.0-rc3 Kernel Configuration
 #
 
 #
@@ -1090,6 +1090,7 @@ CONFIG_NET_CORE=y
 # CONFIG_IPVLAN is not set
 # CONFIG_VXLAN is not set
 # CONFIG_GENEVE is not set
+# CONFIG_GTP is not set
 # CONFIG_MACSEC is not set
 # CONFIG_NETCONSOLE is not set
 # CONFIG_TUN is not set
@@ -4159,6 +4160,7 @@ CONFIG_INTEGRITY=y
 # CONFIG_INTEGRITY_SIGNATURE is not set
 # CONFIG_IMA is not set
 # CONFIG_EVM is not set
+CONFIG_DEFAULT_SECURITY_DAC=y
 CONFIG_LSM="yama,loadpin,safesetid,integrity,selinux,smack,tomoyo,apparmor"
 CONFIG_CRYPTO=y
 

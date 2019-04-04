@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# twl6040: demo for twl6040 sound
+# twl: demo and player for twl4030/twl6040 sound without significant ALSA or PulseAudio setup
 #
 
 SCRIPTPATH="$(dirname "$0")"
@@ -9,6 +9,8 @@ trap "exit 1" SIGHUP SIGINT SIGTERM
 
 [ -x /usr/bin/sox ] || apt-get install sox libsox-fmt-mp3
 [ -r /sys/firmware/devicetree/base/sound/ti,twl6040 ] || NOVOLUMED=yes
+
+MONO=false
 
 while [ "$1" ]
 do
@@ -29,12 +31,16 @@ do
         "-nhf" )
 		NOHANDSFREE=yes
 		;;
+	"-m" )
+		MONO=true
+		;;
 	"-" | "-stdin" )
 		FILE="-"
 		;;
 	-* )
 		echo unknown option $1
 		echo "-d	demo"
+		echo "-m	file is mono (1 channel) or take first channel only"
 		echo "-nv	no volumed"
 		echo "-lp	low power mode"
 		echo "-nhf	keep handsfree off"
@@ -54,7 +60,7 @@ if [ -r /sys/firmware/devicetree/base/sound/ti,twl6040 ]
 then
 
 echo "TWL6040 (Pandaboard, OMAP5432EVM, Pyra, ...)"
-CARD=L15	# no idea where this "L15" is defined in the kernel
+CARD=L15	# I have no idea where this "L15" is defined in the kernel
 		# but this is what aplay -L reports
 NUM=$($SCRIPTPATH/findsoundcard "$CARD")
 
@@ -183,12 +189,14 @@ then
 	exit 0
 fi
 
-# play stereo on headset and main speakers
+# play mono/stereo on headset and main speakers
+$MONO && REMIX="$REMIX_MONO" || REMIX="$REMIX_STEREO"
+
 if [ "$1" ]
 then
 	for FILE in "$@"
 	do
-		AUDIODEV="hw:$NUM,0" play ${FORMAT:+-t} ${FORMAT:+$FORMAT} -v 0.98 $FILE $REMIX_STEREO
+		AUDIODEV="hw:$NUM,0" play ${FORMAT:+-t} ${FORMAT:+$FORMAT} -v 0.98 $FILE $REMIX
 	done
 fi
 exit 0

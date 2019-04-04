@@ -1,15 +1,31 @@
 #!/bin/bash
 #
-# capture screen shot as png from X11
+# capture screen shot from X11
+# format: https://en.wikipedia.org/wiki/Design_rule_for_Camera_File_system
+#
+# you can specify file name.png or filename.jpg etc.
 #
 
 SCRIPTPATH="$(dirname "$0")"
 
 [ "$(which convert)" ] || apt-get install graphicsmagick-imagemagick-compat || exit 1
 
-. $SCRIPTPATH/x
+. $SCRIPTPATH/x >/dev/null
 
 FILE="$1"
-[ "$FILE" ] || FILE=screenshot.png
+PREFIX="IMG"
+SUFFIX="JPG"
 
+if ! [ "$FILE" ]
+then
+	INDEX=0
+	FILE="/"	# should exist...
+	while [ -e "$FILE" ]
+	do # find first free number
+		INDEX="$(expr "$INDEX" + 1)"
+		FILE="/DCIM/100LETUX/$PREFIX$(printf -- '%05d' "$INDEX").$SUFFIX"
+	done
+fi
+
+mkdir -p "$(dirname "$FILE")"
 xwd -root | convert - "$FILE"

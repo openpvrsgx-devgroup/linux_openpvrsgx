@@ -43,6 +43,13 @@ OpenGL        | works, but some applications/libraries might depend on a newer A
 OpenGL ES     | works, but unstable (completly provided by EMGD)
 VA-API        | broken/unknown - testing is needed here
 
+Build recipes
+-------------
+
+ * Xserver: https://code.launchpad.net/~thopiekar/+recipe/xserver-xorg-emgd
+ * Mesa: https://code.launchpad.net/~thopiekar/+recipe/mesa-7.9-emgd
+ * libxfont: https://code.launchpad.net/~thopiekar/+recipe/libxfont-emgd-daily
+
 Kernel
 ------
 

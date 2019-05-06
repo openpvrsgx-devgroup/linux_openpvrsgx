@@ -1,6 +1,20 @@
 /* SPDX-License-Identifier: GPL-2.0 */
+
+#ifdef __APPLE__
+#undef __alloc_size
+# define __alloc_size(x, ...) __malloc
+#include <linux/compiler_types.h> // get define for __user
+#undef __alloc_size
+# define __alloc_size(x, ...) __malloc
+#include <uapi/linux/types.h> // get typedefs for __u16 etc.
+typedef _Bool bool; // get typedef for bool
+#define __ASSEMBLY__   // would conflict over fd_set, dev_t etc. from sys/types of HOSTCC
+#endif
+
 #include <linux/capability.h>
+#ifndef __APPLE__
 #include <linux/socket.h>
+#endif
 
 #define COMMON_FILE_SOCK_PERMS "ioctl", "read", "write", "create", \
     "getattr", "setattr", "lock", "relabelfrom", "relabelto", "append", "map"

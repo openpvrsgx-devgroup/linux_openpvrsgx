@@ -48,13 +48,14 @@ define calculate-compiler-preferred-target
  ifeq ($(2),qcc)
   $(1)_compiler_preferred_target := qcc
  else
-  $(1)_compiler_preferred_target := $$(subst --,-,$$(shell $(2) -dumpmachine))
+  $(1)_compiler_preferred_target := $$(subst --,-,$$(subst unknown,,$$(shell $(2) -dumpmachine)))
   ifeq ($$($(1)_compiler_preferred_target),)
    $$(warning No output from '$(2) -dumpmachine')
    $$(warning Check that the compiler is in your PATH and CROSS_COMPILE is)
    $$(warning set correctly.)
    $$(error Unable to run compiler '$(2)')
   endif
+  $$(warning $(1) $(2))
   ifneq ($$(filter x86_64-%,$$($(1)_compiler_preferred_target)),)
    $(1)_compiler_preferred_target := x86_64-linux-gnu
   endif
@@ -63,6 +64,15 @@ define calculate-compiler-preferred-target
   endif
   ifneq ($$(filter arm-linux-android,$$($(1)_compiler_preferred_target)),)
    $(1)_compiler_preferred_target := arm-linux-androideabi
+  endif
+  ifneq ($$(filter aarch64-%,$$($(1)_compiler_preferred_target)),)
+   $(1)_compiler_preferred_target := aarch64-linux-gnu
+  endif
+  ifneq ($$(filter arm-%-gnueabi armv7a-cros-linux-gnueabi armv7hl-redhat-linux-gnueabi,$$($(1)_compiler_preferred_target)),)
+   $(1)_compiler_preferred_target := arm-linux-gnueabi
+  endif
+  ifneq ($$(filter arm-%-gnueabihf,$$($(1)_compiler_preferred_target)),)
+   $(1)_compiler_preferred_target := arm-linux-gnueabihf
   endif
  endif
 endef

@@ -658,6 +658,13 @@ function test_tvout_off {
 	report $? ${FUNCNAME} "" "switching back to LCD"
 }
 
+function test_lid {
+	LID=$(findinput "pyra-lid-wakeup")
+	if [ "$LID" ]; then evtest --query $LID EV_SW 0 2>/dev/null && STATE=closed || STATE=open; fi
+	[ "$LID" ]
+	report $? ${FUNCNAME} "$STATE" "LID status"
+}
+
 function test_gps_ext_antenna {
 	# use findinput "antenna-detect"
 	ANTENNA_STATE=$(cd /sys/devices/platform/antenna-detect/input/input*/ 2>/dev/null && ls -1d event*) 2>/dev/null

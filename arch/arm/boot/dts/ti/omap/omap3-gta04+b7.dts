@@ -24,14 +24,8 @@
 		display1 = &tv0;
 	};
 
-};
+	/delete-node/ spi_lcd;
 
-&spi_lcd {
-	status = "disabled";
-
-	td028ttec1@0 {
-		status = "disabled";
-	};
 };
 
 &mcspi1 {

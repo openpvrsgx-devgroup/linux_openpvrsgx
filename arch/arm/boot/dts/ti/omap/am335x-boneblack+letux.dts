@@ -112,7 +112,8 @@
 / {
 
 	/* overwrite device model */
-	model = "BeagleBoneBlack + Letux";
+	model = "BeagleBone Black + Letux extensions";
+	compatible = "goldelico,am335x-bone-black+letux", "ti,am335x-bone-black", "ti,am335x-bone", "ti,am33xx";
 };
 
 / {

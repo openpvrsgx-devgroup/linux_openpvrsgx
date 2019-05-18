@@ -123,7 +123,7 @@
 / {
 	/* overwrite device model */
 	model = "Letux Cortex 8";
-	compatible = "ti,am335x-bone-black", "ti,am335x-bone", "ti,am33xx", "octavo,osd3358";
+	compatible = "goldelico,lc8", "ti,am335x-bone-black", "ti,am335x-bone", "ti,am33xx", "octavo,osd3358";
 
 	gpio-leds {
 

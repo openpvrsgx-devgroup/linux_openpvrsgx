@@ -229,6 +229,7 @@ touch: internal to am335x
 		};
 
 		display-timings {
+			compatible = "chipsee,exp43";
 			native-mode = <&timing0>;
 			timing0: 480x272p60 {
 				clock-frequency = <9200000>;

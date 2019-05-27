@@ -1,5 +1,5 @@
 #
-# Linux/arm 5.2.0-rc1 Kernel Configuration
+# Linux/arm 5.2.0-rc2 Kernel Configuration
 #
 
 #
@@ -521,7 +521,6 @@ CONFIG_SECCOMP=y
 # CONFIG_PARAVIRT is not set
 # CONFIG_PARAVIRT_TIME_ACCOUNTING is not set
 # CONFIG_XEN is not set
-CONFIG_STACKPROTECTOR_PER_TASK=y
 # end of Kernel Features
 
 #
@@ -734,15 +733,6 @@ CONFIG_ARCH_HAS_GCOV_PROFILE_ALL=y
 
 CONFIG_PLUGIN_HOSTCC="g++"
 CONFIG_HAVE_GCC_PLUGINS=y
-CONFIG_GCC_PLUGINS=y
-
-#
-# GCC plugins
-#
-# CONFIG_GCC_PLUGIN_LATENT_ENTROPY is not set
-# CONFIG_GCC_PLUGIN_RANDSTRUCT is not set
-CONFIG_GCC_PLUGIN_ARM_SSP_PER_TASK=y
-# end of GCC plugins
 # end of General architecture-dependent options
 
 CONFIG_RT_MUTEXES=y
@@ -3105,7 +3095,6 @@ CONFIG_HDQ_MASTER_OMAP=m
 # CONFIG_W1_SLAVE_DS28E17 is not set
 # end of 1-wire Slaves
 
-CONFIG_CHARGER_BQ2429X=m
 CONFIG_POWER_AVS=y
 # CONFIG_POWER_RESET is not set
 CONFIG_POWER_SUPPLY=y
@@ -3142,6 +3131,7 @@ CONFIG_CHARGER_TWL4030=m
 # CONFIG_CHARGER_BQ24190 is not set
 # CONFIG_CHARGER_BQ24257 is not set
 # CONFIG_CHARGER_BQ24735 is not set
+CONFIG_CHARGER_BQ2429X=m
 # CONFIG_CHARGER_BQ25890 is not set
 # CONFIG_CHARGER_SMB347 is not set
 # CONFIG_CHARGER_TPS65217 is not set
@@ -6362,9 +6352,6 @@ CONFIG_LSM="yama,loadpin,safesetid,integrity,selinux,smack,tomoyo,apparmor"
 # Memory initialization
 #
 CONFIG_INIT_STACK_NONE=y
-# CONFIG_GCC_PLUGIN_STRUCTLEAK_USER is not set
-# CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF is not set
-# CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF_ALL is not set
 # end of Memory initialization
 # end of Kernel hardening options
 # end of Security options
@@ -6691,7 +6678,6 @@ CONFIG_KASAN_STACK=1
 # end of Memory Debugging
 
 CONFIG_ARCH_HAS_KCOV=y
-# CONFIG_KCOV is not set
 
 #
 # Debug Lockups and Hangs

@@ -1,5 +1,5 @@
 #
-# Linux/mips 5.2.0-rc2 Kernel Configuration
+# Linux/mips 5.2.0-rc3 Kernel Configuration
 #
 
 #
@@ -3643,8 +3643,6 @@ CONFIG_INGENIC_CGU_JZ4740=y
 CONFIG_INGENIC_CGU_JZ4770=y
 CONFIG_INGENIC_CGU_JZ4780=y
 # end of Ingenic JZ47xx CGU drivers
-
-# CONFIG_CLK_SIFIVE is not set
 # end of Common Clock Framework
 
 # CONFIG_HWSPINLOCK is not set

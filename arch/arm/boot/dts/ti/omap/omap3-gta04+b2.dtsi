@@ -15,7 +15,7 @@
 
 	lcd: lcd {
 		compatible =	"ortustech,com37h3m05dtc",
-				"ortustech,com37h3m099dtc",
+				"ortustech,com37h3m99dtc",
 				"panel-dpi";
 		label = "lcd";
 		enable-gpios = <&gpio1 20 0>;

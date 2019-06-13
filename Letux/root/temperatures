@@ -2,40 +2,11 @@
 #
 # log system temperatures (omap3 / omap5) and system operation voltage
 #
+SCRIPTPATH="$(dirname "$0")"
 
-function findthermal {
-	for dev in /sys/class/thermal/thermal_zone*/type
-	do
-		if [ "$(cat $dev 2>/dev/null)" = "$1" ]
-			then echo $(dirname $dev)/
-			return
-		fi
-	done
-}
-
-function findiio {
-	for dev in /sys/bus/iio/devices/iio:device*/name
-	do
-		if [ "$(cat $dev 2>/dev/null)" = "$1" ]
-			then echo $(dirname $dev)/
-			exit 0
-		fi
-	done
-}
-
-function findhwmon {
-for dev in /sys/class/hwmon/hwmon*/name /sys/class/hwmon/hwmon*/device/name
-do
-	if [ "$(cat $dev 2>/dev/null)" = "$1" ]
-		then echo $(dirname $dev)/
-		break
-	fi
-done
-}
-
-TWL4030_MADC=$(findiio "48070000.i2c:twl@48:madc")        # OMAP3
-TWL6030_GPADC=$(findiio "48070000.i2c:twl@48:adc")        # OMAP4
-TWL6037_GPADC=$(findiio "palmas-gpadc")   # OMAP5
+TWL4030_MADC=$($SCRIPTPATH/findiio "48070000.i2c:twl@48:madc")        # OMAP3
+TWL6030_GPADC=$($SCRIPTPATH/findiio "48070000.i2c:twl@48:adc")        # OMAP4
+TWL6037_GPADC=$($SCRIPTPATH/findiio "palmas-gpadc")   # OMAP5
 
 #echo $TWL4030_MADC
 #echo $TWL6030_GPADC
@@ -59,17 +30,17 @@ TWL6037_GPADC=$(findiio "palmas-gpadc")   # OMAP5
 # 14 USB ID line voltage
 # 15 test network
 
-[ -r "$CPU" ] || CPU=$(findthermal cpu_thermal)/temp
-[ -r "$CPU" ] || CPU=$(findthermal cpu)/temp
-[ -r "$CPU" ] || CPU=$(findhwmon am335x-bandgap)/temp1_input
+[ -r "$CPU" ] || CPU=$($SCRIPTPATH/findthermal cpu_thermal)/temp
+[ -r "$CPU" ] || CPU=$($SCRIPTPATH/findthermal cpu)/temp
+[ -r "$CPU" ] || CPU=$($SCRIPTPATH/findhwmon am335x-bandgap)/temp1_input
 [ -r "$CPU" ] || CPU=/dev/null
-GPU=$(findthermal gpu_thermal)/temp
-CORE=$(findthermal core_thermal)/temp
+GPU=$($SCRIPTPATH/findthermal gpu_thermal)/temp
+CORE=$($SCRIPTPATH/findthermal core_thermal)/temp
 
-[ -r "$BATTERY" ] || BATTERY=$(findthermal bq27621)/temp
-[ -r "$BATTERY" ] || BATTERY=$(findthermal bq27421-0)/temp
-[ -r "$BATTERY" ] || BATTERY=$(findthermal bq27000-battery)/temp
-[ -r "$BATTERY" ] || BATTERY=$(findthermal bq24297)/temp
+[ -r "$BATTERY" ] || BATTERY=$($SCRIPTPATH/findthermal bq27621)/temp
+[ -r "$BATTERY" ] || BATTERY=$($SCRIPTPATH/findthermal bq27421-0)/temp
+[ -r "$BATTERY" ] || BATTERY=$($SCRIPTPATH/findthermal bq27000-battery)/temp
+[ -r "$BATTERY" ] || BATTERY=$($SCRIPTPATH/findthermal bq24297)/temp
 [ -r "$BATTERY" ] || BATTERY=/dev/null
 
 VSYS=/dev/null

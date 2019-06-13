@@ -51,7 +51,7 @@ do
 	[ "$BQCICHG" ] && BQCICHG=$(expr "$BQCICHG" / 1000)
 	[ "$BQTEMP" ] && BQTEMP=$(expr "$BQTEMP" / 10)
 
-	echo "$(date) - ${VBUS}/${CHGVOLT}/${VBAT}/${BQVBAT}/${VCHG}mV - ${CHG}/${BQCHG}% - ${VSYS}mV - ${TEMP}/${BQTEMP}C - ${ICHG}/${BQCICHG}mA - ${IDPIN}" | tee -a battlog
+	echo "$($SCRIPTPATH/temperatures) - ${VBUS}/${CHGVOLT}/${VBAT}/${BQVBAT}/${VCHG}mV - ${CHG}/${BQCHG}% - ${VSYS}mV - ${TEMP}/${BQTEMP}C - ${ICHG}/${BQCICHG}mA - ${IDPIN}" | tee -a battlog
 	sync
 	sleep $DURATION
 done

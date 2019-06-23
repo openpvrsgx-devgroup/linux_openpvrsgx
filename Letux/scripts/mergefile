@@ -76,6 +76,7 @@ letux/tsc2007
 letux/gpio-pcal6524
 letux/ov9655-new
 letux/bmg160
+letux/panels
 
 # almost ready for upstreaming
 letux/bluetooth-h4-serdev
@@ -146,6 +147,6 @@ letux/omap5-idle
 
 # not merged in by default, but carried along and regularily rebased
 -letux/omap-hsmmc
--letux/antitear
+#-letux/antitear
 -letux/android
 -letux/pyra-minimal

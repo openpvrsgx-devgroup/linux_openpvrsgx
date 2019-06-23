@@ -1,5 +1,5 @@
 #
-# Linux/arm 5.2.0-rc5 Kernel Configuration
+# Linux/arm 5.2.0-rc6 Kernel Configuration
 #
 
 #
@@ -2294,7 +2294,7 @@ CONFIG_SWPHY=y
 #
 # CONFIG_AMD_PHY is not set
 # CONFIG_AQUANTIA_PHY is not set
-# CONFIG_ASIX_PHY is not set
+# CONFIG_AX88796B_PHY is not set
 CONFIG_AT803X_PHY=y
 # CONFIG_BCM7XXX_PHY is not set
 # CONFIG_BCM87XX_PHY is not set

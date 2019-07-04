@@ -13,6 +13,9 @@ case "$1" in
 		;;
 
 	'' )
+		wpa_supplicant -B -i $WLAN -c /etc/wpa_supplicant/wpa_supplicant.conf
+		;;
+	-* )
 		echo "usage: $0 -a | ssid"
 		echo "  -a:     ad hoc mode"
 		echo "  ssid:   SSID to connect to"

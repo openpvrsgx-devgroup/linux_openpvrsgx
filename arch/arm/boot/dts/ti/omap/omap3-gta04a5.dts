@@ -140,6 +140,11 @@
 	accelerometer@10 {
 		compatible = "bosch,bmc150_accel";
 		reg = <0x10>;
+/*		pinctrl-names = "default";
+		pinctrl-0 = <&bmc150_pins>;
+		interrupt-parent = <&gpio6>;
+		interrupts = <9 (IRQ_TYPE_LEVEL_HIGH | IRQ_TYPE_EDGE_RISING)>;	/* gpio6_169 * /
+*/
 	};
 
 	magnetometer@12 {

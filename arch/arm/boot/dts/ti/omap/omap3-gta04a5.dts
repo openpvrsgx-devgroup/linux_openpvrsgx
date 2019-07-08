@@ -56,6 +56,12 @@
 	};
 };
 
+#if 0
+&twl_power {
+	compatible = "ti,twl4030-power-idle-osc-off";
+};
+#endif
+
 &omap3_pmx_core {
 	bt_pins: bt-pins {
 		pinctrl-single,pins = <

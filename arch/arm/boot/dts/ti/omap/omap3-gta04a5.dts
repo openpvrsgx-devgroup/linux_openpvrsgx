@@ -145,6 +145,7 @@
 	magnetometer@12 {
 		compatible = "bosch,bmc150_magn";
 		reg = <0x12>;
+// irq
 	};
 
 	bme280@76 {

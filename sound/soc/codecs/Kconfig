@@ -1139,6 +1139,9 @@ config SND_SOC_FRAMER
 config SND_SOC_GTM601
 	tristate 'GTM601 UMTS modem audio codec'
 
+config SND_SOC_EC25
+	tristate 'EC25 LTE module audio codec'
+
 config SND_SOC_HDAC_HDMI
 	tristate
 	select SND_HDA_EXT_CORE

@@ -1,0 +1,21 @@
+This is a PVR/SGX driver derived from TI Graphics_SDK_5_01_01_02 and omap5-sgx-ddk-linux. 
+It provides IMG sgxddk 1.10 for ARM, MIPS and i86.
+
+ToDo
+====
+* the frame buffer is not found / addressed properly so the samples fail to run
+* replace static #ifdef of errata handlers by dynamic code (checking for e.g. compatible="sgx530-121")
+  this should make the code independent of build-time flags e.g. -DSGX530 or -DREV=125
+* read device tree properties e.g. for timers/pwm, memory etc.
+  this allows to remove SoC/ARCH dependent constants from code
+* remove SoC and ARCH dependencies and make a generic backend
+  this should make the same source compile for TI, Ingenic, others into a single kernel module
+* remove all #if (LINUX_VERSION_CODE >= KERNEL_VERSION(...)) dependencies
+  we only need to handle linus/master since we want to become part of it
+* make Makefile recompile only what is needed
+  currently, the SGX driver is rebuilt every time
+
+please send patches
+===================
+TO: hns@goldelico.com
+CC: Merlijn Wajer <merlijn@wizzup.org>, Pawel Chmiel <pawel.mikolaj.chmiel@gmail.com>, Tony Lindgren <tony@atomide.com>, Philipp Rossak <embed3d@gmail.com>, Adam Ford <aford173@gmail.com>, Tomi Valkeinen <tomi.valkeinen@ti.com>, Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>, moaz korena <moaz@korena.xyz>, Filip Matijević <filip.matijevic.pz@gmail.com>, kernel@pyra-handheld.com, letux-kernel@openphoenux.org, maemo-leste@lists.dyne.org, linux-omap@vger.kernel.org

@@ -14,6 +14,8 @@
 # properly configured.
 #
 
+SCRIPTPATH="$(dirname "$0")"
+
 # we need a more recent libdrm2 on plain jessie
 case $(dpkg -s libdrm2 2>/dev/null | grep '^Version:') in
 	'' | 'Version: '2.4.58-* )
@@ -54,6 +56,8 @@ fgrep -q 'System Version String: None' /proc/pvr/version && pvrsrvctl --start --
 fgrep "System Version String: " /proc/pvr/version
 
 PATH=$PATH:/opt/img-powervr-sdk/Examples/Advanced/NullWS/
+
+. $SCRIPTPATH/x	# needed by eglinfo
 
 for i in sgx_clipblit_test gles1test1 gles2test1 eglinfo kmscube OGLES2Water
 do

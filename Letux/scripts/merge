@@ -87,7 +87,7 @@ function latestforbranch {
 function linuxversion {
 # echo linuxversion $1 >&2
 	# extract Linux version from given base branch $1
-	git log -1 -E --grep="^Linux [^0-9]*[0-9].[0-9]+[-.0-9rc]*" $1 | egrep "Linux [^0-9]*[0-9].[0-9]*" | sed "s|.*Linux [^0-9]*||g"
+	git log -1 -E --grep="^Linu(x|s) [^0-9]*[0-9].[0-9]+[-.0-9rc]*" $1 | sed "s|Linus|Linux|g" | egrep "Linux [^0-9]*[0-9].[0-9]*" | sed "s|.*Linux [^0-9]*||g"
 }
 
 function commitdate { # commit date of branch $1 as timestamp

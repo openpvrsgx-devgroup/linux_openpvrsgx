@@ -38,7 +38,7 @@ echo try $LCD/compatible >&2
 done
 }
 
-findpanel | while read COMPATIBLE
+while read COMPATIBLE < <(findpanel)
 do
 echo check "/etc/X11/$COMPATIBLE.conf" >&2
 	if [ -r "/etc/X11/$COMPATIBLE.conf" ]
@@ -117,8 +117,8 @@ case "$(tr -d '\0' </proc/device-tree/model 2>/dev/null)" in
 		echo mouse > /proc/pandora/nub0/mode	# mouse
 		echo mbuttons > /proc/pandora/nub1/mode	# mouse buttons
 		;;
-	*BeagleBoneBlack* )
-		PANEL=4.3-272x480;;	# BBB with 4.3 inch panel cape
+#	*BeagleBoneBlack* )
+#		PANEL=4.3-272x480;;	# BBB with 4.3 inch panel cape
 	*'Letux Cortex 8'* )
 		PANEL=4.3-272x480;;	# assume a PSP display can be connected
 	*'Raspberry Pi'* )

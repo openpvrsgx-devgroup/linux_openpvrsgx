@@ -186,6 +186,16 @@ config TINYDRM_REPAPER
 
 	  If M is selected the module will be called repaper.
 
+config TINYDRM_GDEPAPER
+	tristate "DRM support for Good Display E-Paper Display"
+	depends on DRM && SPI
+	select DRM_MIPI_DBI
+	help
+	  DRM driver for the following Good Display E-Papar displays:
+	  * GDEW027C44 display (2.7 inch)
+
+	  If M is selected the module will be called gdepaper.
+
 config TINYDRM_ST7586
 	tristate "DRM support for Sitronix ST7586 display panels"
 	depends on DRM && SPI

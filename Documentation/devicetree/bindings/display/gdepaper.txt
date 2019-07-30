@@ -1,0 +1,27 @@
+Good Display/Waveshare e-ink displays
+
+Required properties:
+- compatible:		"gooddisplay,wfi0190cz22" for 2.7" b/w/red displays,
+			replace part number for other displays.
+			Use "gooddisplay,generic_epaper" to manually configure
+			the display's resolution etc.
+
+- dc-gpios:		Data Command
+- reset-gpios:		Reset pin
+- busy-gpios:		Busy pin
+- spi-speed-hz		SPI baud rate to use to when talking to the display
+
+The node for this driver must be a child node of a SPI controller, hence
+all mandatory properties described in ../spi/spi-bus.txt must be specified.
+
+Example:
+
+	epaper@0{
+		compatible = "gooddisplay,gdew042z15";
+		reg = <0>;
+		spi-speed-hz = <1000000>;
+		spi-max-frequency = <6000000>;
+		dc-gpios = <&gpio 25 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&gpio 17 GPIO_ACTIVE_HIGH>;
+		busy-gpios = <&gpio 24 GPIO_ACTIVE_LOW>;
+	};

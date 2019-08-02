@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# set up a UMTS data connection
+# set up a WWAN data connection
 #
 # usage: wwan
 #
@@ -56,11 +56,15 @@ case "$IF" in
 		exit 1
 		;;
 
-	/dev/ttyACM[0-4] | /dev/ttyUSB[0-4] )	# Neo900 / Pyra
+	/dev/ttyACM[0-4] | /dev/ttyUSB[0-4] )	# Neo900 / Pyra with Cinterion PHS8/PLS8
 		(
-		# FIXME
 		echo "AT^SBV"; sleep 1
+		echo "AT+CGATT=1"; sleep 1	# connect to the network
+		echo "AT+CGDCONT=1,\"IP\",\"$APN\""; sleep 1	# set APN
+		echo "AT^SWWAN=1,1,1"; sleep 1	# connect it to wwan0
 		) | $SCRIPTPATH/femtocom $IF
+		dhclient wwan0
+		# FIXME: make this killed when wwan-off is run
 		;;
 
 esac

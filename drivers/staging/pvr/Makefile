@@ -47,59 +47,60 @@ ifneq ($(CONFIG_SGX_114),)
 ifneq ($(CONFIG_ARCH_OMAP3),)
 	@$(kecho) "  MAKE    $(obj): omap3430"
 	$(Q)SOC_VENDOR=ti SOC_FAMILY=omap SOC=omap3 SGX=sgx530 SGX_FLAG=SGX530 SGX_REV=121 AM_VERSION=3 TARGET_TYPE=$(CONFIG_SGX_OMAP) $(MAKE) $(build)=$(SOURCE)
-	$(Q)cat $(SOURCE)/modules.order >>$(obj)/modules.order 2>/dev/null
+	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
 	@$(kecho) "  MAKE    $(obj): omap3630"
 	$(Q)SOC_VENDOR=ti SOC_FAMILY=omap SOC=omap3630 SGX=sgx530 SGX_FLAG=SGX530 SGX_REV=125 AM_VERSION=3 TARGET_TYPE=$(CONFIG_SGX_OMAP) $(MAKE) $(build)=$(SOURCE)
-	$(Q)cat $(SOURCE)/modules.order >>$(obj)/modules.order 2>/dev/null
-endif # CONFIG_ARCH_OMAP3
+	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
 ifneq ($(CONFIG_SOC_AM33XX),)
 	@$(kecho) "  MAKE    $(obj): am335x"
 	$(Q)SOC_VENDOR=ti SOC_FAMILY=omap SOC=am335x SGX=sgx530 SGX_FLAG=SGX530 SGX_REV=125 AM_VERSION=3 TARGET_TYPE=$(CONFIG_SGX_OMAP) $(MAKE) $(build)=$(SOURCE)
-	$(Q)cat $(SOURCE)/modules.order >>$(obj)/modules.order 2>/dev/null
+	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
 endif # CONFIG_SOC_AM33XX
+endif # CONFIG_ARCH_OMAP3
 ifneq ($(CONFIG_ARCH_OMAP4),)
 	@$(kecho) "  MAKE    $(obj): omap4430"
 # ES1 would have REV=110 but that is unsupported by sgxerrata.h
 	$(Q)SOC_VENDOR=ti SOC_FAMILY=omap SOC=omap4430 SGX=sgx540 SGX_FLAG=SGX540 SGX_REV=120 AM_VERSION=4 TARGET_TYPE=$(CONFIG_SGX_OMAP) $(MAKE) $(build)=$(SOURCE)
-	$(Q)cat $(SOURCE)/modules.order >>$(obj)/modules.order 2>/dev/null
+	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
 	@$(kecho) "  MAKE    $(obj): omap4460"
 	$(Q)SOC_VENDOR=ti SOC_FAMILY=omap SOC=omap4460 SGX=sgx540 SGX_FLAG=SGX540 SGX_REV=120 AM_VERSION=4 TARGET_TYPE=$(CONFIG_SGX_OMAP) $(MAKE) $(build)=$(SOURCE)
-	$(Q)cat $(SOURCE)/modules.order >>$(obj)/modules.order 2>/dev/null
+	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
 	@$(kecho) "  MAKE    $(obj): omap4470"
 # see https://pyra-handheld.com/boards/threads/omap4470-sgx-drivers.78480/
 	$(Q)SOC_VENDOR=ti SOC_FAMILY=omap SOC=omap4470 SGX=sgx544 SGX_FLAG=SGX544 SGX_REV=112 AM_VERSION=4 TARGET_TYPE=$(CONFIG_SGX_OMAP) $(MAKE) $(build)=$(SOURCE)
-	$(Q)cat $(SOURCE)/modules.order >>$(obj)/modules.order 2>/dev/null
-endif # CONFIG_ARCH_OMAP4
+	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
 ifneq ($(CONFIG_SOC_AM43XX),)
 	@$(kecho) "  MAKE    $(obj): am43xx"
 	$(Q)SOC_VENDOR=ti SOC_FAMILY=omap SOC=am43xx SGX=sgx544 SGX_FLAG=SGX544 SGX_REV=112 AM_VERSION=4 TARGET_TYPE=$(CONFIG_SGX_OMAP) $(MAKE) $(build)=$(SOURCE)
-	$(Q)cat $(SOURCE)/modules.order >>$(obj)/modules.order 2>/dev/null
+	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
 endif # CONFIG_SOC_AM43XX
+endif # CONFIG_ARCH_OMAP4
 ifneq ($(CONFIG_SOC_OMAP5),)
 	@$(kecho) "  MAKE    $(obj): omap5"
 # ES1 includes 105 and ES2 includes 116
 # see https://e2e.ti.com/support/legacy_forums/omap/f/885/t/263519?OMAP5432-SGX544-Revisions
 	$(Q)SOC_VENDOR=ti SOC_FAMILY=omap SOC=omap5 SGX=sgx544 SGX_FLAG=SGX544 SGX_REV=116 AM_VERSION=5 TARGET_TYPE=$(CONFIG_SGX_OMAP) $(MAKE) $(build)=$(SOURCE)
-	$(Q)cat $(SOURCE)/modules.order >>$(obj)/modules.order 2>/dev/null
+	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
 	@$(kecho) "  MAKE    $(obj): am57xx"
 	$(Q)SOC_VENDOR=ti SOC_FAMILY=omap SOC=am57xx SGX=sgx544 SGX_FLAG=SGX544 SGX_REV=116 AM_VERSION=5 TARGET_TYPE=$(CONFIG_SGX_OMAP) $(MAKE) $(build)=$(SOURCE)
-	$(Q)cat $(SOURCE)/modules.order >>$(obj)/modules.order 2>/dev/null
+	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
 endif	# CONFIG_SOC_OMAP5
 ifneq ($(CONFIG_SOC_DRA7XX),)
 	@$(kecho) "  MAKE    $(obj): dra7xx"
 	$(Q)SOC_VENDOR=ti SOC_FAMILY=omap SOC=dra7xx SGX=sgx544 SGX_FLAG=SGX544 SGX_REV=116 AM_VERSION=5 TARGET_TYPE=$(CONFIG_SGX_OMAP) $(MAKE) $(build)=$(SOURCE)
+	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
 endif	# CONFIG_SOC_DRA7XX
 else # CONFIG_SGX_114
 # kept here for compatibility with omap-pvr tree
 	@$(kecho) "  MAKE    $(obj): omap3"
 	$(Q)TI_PLATFORM=omap3 $(MAKE) $(build)=$(SOURCE)
-	$(Q)cat $(SOURCE)/modules.order >>$(obj)/modules.order 2>/dev/null
+	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
 	@$(kecho) "  MAKE    $(obj): omap3630"
 	$(Q)TI_PLATFORM=omap3630 $(MAKE) $(build)=$(SOURCE)
-	$(Q)cat $(SOURCE)/modules.order >>$(obj)/modules.order 2>/dev/null
+	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
 	@$(kecho) "  MAKE    $(obj): ti335x"
 	$(Q)TI_PLATFORM=ti335x $(MAKE) $(build)=$(SOURCE)
-	$(Q)cat $(SOURCE)/modules.order >>$(obj)/modules.order 2>/dev/null
+	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
 # may add more SOC variants here, e.g.
 # $(Q)CONFIG_SOC=generic $(MAKE) $(build)=$(SOURCE)
 # $(Q)CONFIG_SOC=omap5 $(MAKE) $(build)=$(obj)/omap5
@@ -109,19 +110,19 @@ ifneq ($(CONFIG_SGX_POULSBO),)
 	@$(kecho) "  MAKE    $(obj): poulsbo"
 # Fix versions
 	$(Q)SOC_VENDOR=intel SOC_FAMILY=poulsbo SGX=sgx530 SGX_FLAG=SGX530 SGX_REV=121 $(MAKE) TARGET_TYPE=$(CONFIG_SGX_POULSBO) $(build)=$(SOURCE)
-	$(Q)cat $(SOURCE)/modules.order >>$(obj)/modules.order 2>/dev/null
+	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
 endif # CONFIG_SGX_POULSBO
 ifneq ($(CONFIG_SGX_JZ4780),)
 	@$(kecho) "  MAKE    $(obj): jz4780"
 # see https://elinux.org/CI20-SGX_kernel_module
 	$(Q)SOC_VENDOR=ingenic SOC_FAMILY=sgx_jz4780 SOC=jz4780 SGX=sgx540 SGX_FLAG=SGX540 SGX_REV=120 $(MAKE) TARGET_TYPE=$(CONFIG_SGX_JZ4780) $(build)=$(SOURCE)
-	$(Q)cat $(SOURCE)/modules.order >>$(obj)/modules.order 2>/dev/null
+	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
 endif # CONFIG_SGX_JZ4780
 ifneq ($(CONFIG_SGX_SUNXI),)
 	@$(kecho) "  MAKE    $(obj): sunxi"
 # Fix versions
 	$(Q)SOC_VENDOR=allwinner SOC_FAMILY=sunxi SGX=sgx544 SGX_FLAG=SGX544 SGX_REV=116 $(MAKE) TARGET_TYPE=$(CONFIG_SGX_SUNXI) $(build)=$(SOURCE)
-	$(Q)cat $(SOURCE)/modules.order >>$(obj)/modules.order 2>/dev/null
+	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
 endif # CONFIG_SGX_SUNXI
 #
 # only this should be remaining and be enabled automatically
@@ -131,7 +132,7 @@ ifneq ($(CONFIG_SGX_GENERIC),)
 	@$(kecho) "  MAKE    $(obj): generic"
 # Fix versions
 	$(Q)SOC_VENDOR=generic SOC_FAMILY=any SGX=any SGX_FLAG=any SGX_REV=any $(MAKE) TARGET_TYPE=$(CONFIG_SGX_GENERIC) $(build)=$(SOURCE)
-	$(Q)cat $(SOURCE)/modules.order >>$(obj)/modules.order 2>/dev/null
+	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
 endif # CONFIG_SGX_GENERIC
 
 ifneq ($(CONFIG_SGX),)

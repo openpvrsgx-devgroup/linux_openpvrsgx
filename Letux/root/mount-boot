@@ -1,0 +1,35 @@
+#!/bin/bash
+#
+# mount-boot
+# the MMC device name where we did boot from is not very stable
+# especially for devices with more than one SD slot
+#
+# so try to find out and mount the boot partition
+# and mount to /boot
+#
+
+SCRIPTPATH="$(dirname "$0")"
+
+ROOTFS=$(mount | fgrep "on / type" | cut -d ' ' -f 1)
+
+case "$ROOTFS" in
+	/dev/mmcblk*p* )
+		ROOTDEV=$(echo $ROOTFS | sed 's/\(.*\)p[1-4]/\1/')
+		ROOTPART=$(echo $ROOTFS | sed 's/.*p\([1-4]\)/\1/')
+		;;
+	* )
+		echo "can't find out rootfs device"
+		;;
+esac
+
+echo Rootfs:
+echo "  device: $ROOTDEV"
+echo "  partition: $ROOTPART"
+
+case "$ROOTPART" in
+	2 | 3 | 4 )
+		# assume we did boot from partition 1
+		echo mount ${ROOTDEV}p1 /boot
+		mount ${ROOTDEV}p1 /boot
+		;;
+esac

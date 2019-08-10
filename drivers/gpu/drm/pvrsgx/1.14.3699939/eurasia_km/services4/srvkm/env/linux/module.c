@@ -189,11 +189,13 @@ MODULE_PARM_DESC(gPVRDebugLevel, "Sets the level of debug output (default 0x7)")
 #define __devexit_p
 #endif
 
+#ifdef ODD	// leads to "exported twice" - the real definition is in services4/srvkm/common/deviceclass.c
 #if defined(SUPPORT_PVRSRV_DEVICE_CLASS)
 /* PRQA S 3207 2 */ /* ignore 'not used' warning */
 EXPORT_SYMBOL(PVRGetDisplayClassJTable);
 EXPORT_SYMBOL(PVRGetBufferClassJTable);
 #endif /* defined(SUPPORT_PVRSRV_DEVICE_CLASS) */
+#endif
 
 #if defined(PVR_LDM_DEVICE_CLASS) && !defined(SUPPORT_DRI_DRM)
 /*

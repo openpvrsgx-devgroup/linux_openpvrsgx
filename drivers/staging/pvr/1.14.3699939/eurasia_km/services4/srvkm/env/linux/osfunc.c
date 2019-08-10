@@ -2969,12 +2969,7 @@ PVRSRV_ERROR OSEnableTimer (IMG_HANDLE hTimer)
     /* Start timer arming */
     psTimerCBData->bActive = IMG_TRUE;
 
-    /* set the expire time */
-    psTimerCBData->sTimer.expires = psTimerCBData->ui32Delay + jiffies;
-
-    /* Add the timer to the list */
-    add_timer(&psTimerCBData->sTimer);
-    
+    mod_timer(&psTimerCBData->sTimer, psTimerCBData->ui32Delay + jiffies);
     return PVRSRV_OK;
 }
 

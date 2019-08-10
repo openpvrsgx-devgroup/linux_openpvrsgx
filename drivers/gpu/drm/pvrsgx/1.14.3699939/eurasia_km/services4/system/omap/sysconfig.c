@@ -92,7 +92,7 @@ static PVRSRV_ERROR EnableSGXClocksWrap(SYS_DATA *psSysData)
 		if (gpvOCPRegsLinAddr == IMG_NULL)
 		{
 			PVR_DPF((PVR_DBG_ERROR,"EnableSGXClocksWrap: SGX registers not mapped"));
-			return;
+			return PVRSRV_ERROR_INVALID_DEVICE;
 		}
 		OSWriteHWReg(gpvOCPRegsLinAddr, EUR_CR_OCP_DEBUG_CONFIG, EUR_CR_OCP_DEBUG_CONFIG_THALIA_INT_BYPASS_MASK);
 	}

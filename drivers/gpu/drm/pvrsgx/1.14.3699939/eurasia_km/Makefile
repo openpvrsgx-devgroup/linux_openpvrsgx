@@ -105,7 +105,6 @@ ccflags-y += \
 	-DSUPPORT_PVRSRV_GET_DC_SYSTEM_BUFFER \
 	-DSUPPORT_LINUX_X86_WRITECOMBINE \
 	-DTRANSFER_QUEUE \
-	-DSYS_USING_INTERRUPTS \
 	-DSUPPORT_HW_RECOVERY \
 	-DPVR_SECURE_HANDLES \
 	-DPVR_SECURE_DRM_AUTH_EXPORT \
@@ -200,7 +199,6 @@ ccflags-y += -DSGX_FEATURE_MP
 ccflags-y += -DSGX_FEATURE_SYSTEM_CACHE
 ccflags-y += -DSGX_FEATURE_MP_CORE_COUNT=2
 ccflags-y += -DSYS_OMAP_HAS_DVFS_FRAMEWORK
-ccflags-y += -DSGX_OCP_REGS_ENABLED
 # may be broken...
 ccflags-y += -DSUPPORT_ACTIVE_POWER_MANAGEMENT
 ccflags-y += -DAMVERSION=5
@@ -213,7 +211,7 @@ endif
 ccflags-y += -Iinclude/drm \
 	-I$(src)/services4/3rdparty/linux_drm
 
-ccflags-y += -DSYS_USING_INTERRUPTS
+ccflags-n += -DSYS_USING_INTERRUPTS	# should probably be enabled but leads to paging errors
 ccflags-y += -DPVR_LINUX_USING_WORKQUEUES
 ccflags-y += -DSUPPORT_DRI_DRM
 ccflags-y += -DSUPPORT_DRM_MODESET
@@ -221,10 +219,14 @@ ccflags-y += -DPVR_DRI_DRM_PLATFORM_DEV
 ccflags-y += -DPVRSRV_NEED_PVR_DPF
 ccflags-y += -DMODULE	# this disables some code in AcquireGPTimer in sysutils_linux.c
 ccflags-y += -DSUPPORT_DMABUF
+
+# these must not be set or we can't compile successfully for omap
 ccflags-n += -DSUPPORT_DRI_DRM_EXT
 ccflags-n += -DSUPPORT_DRI_DRM_PLUGIN
 ccflags-n += -DPVR_DISPLAY_CONTROLLER_DRM_IOCTL
 ccflags-n += -DPVR_DRI_DRM_NOT_PCI
+ccflags-n += -DPVR_NO_OMAP_TIMER	# we have omap timers
+ccflags-n += -DSGX_FEATURE_2D_HARDWARE	# leads to problems with EUR_CR_BIF_BANK0_INDEX_2D_SHIFT etc.
 
 # unsure flags...
 
@@ -234,17 +236,16 @@ ccflags-n += -DPVR_DRI_DRM_NOT_PCI
 ccflags-y += -DSUPPORT_PVRSRV_DEVICE_CLASS
 $(TARGET) += services4/srvkm/common/deviceclass.o
 
-ccflags-n += -DPVR_NO_OMAP_TIMER
-ccflags-n += -DSGX_FEATURE_2D_HARDWARE	# leads to problems with EUR_CR_BIF_BANK0_INDEX_2D_SHIFT etc.
-
 else
 
+ccflags-y += -DSYS_USING_INTERRUPTS
 ccflags-y += -DPVR_DRI_DRM_NOT_PCI
 ccflags-y += -DSUPPORT_PVRSRV_DEVICE_CLASS
 $(TARGET) += services4/srvkm/common/deviceclass.o
 
 endif
 
+# this is broken and we do not have it in Kconfig
 ifneq ($(SUPPORT_OMAPLFB),)
 
 ccflags-y += \

@@ -542,8 +542,10 @@ static struct drm_driver sPVRDrmDriver =
 	.postclose = PVRSRVDrmPostClose,
 #endif
 #if !defined(PVR_DRI_DRM_PLATFORM_DEV) && !defined(SUPPORT_DRM_MODESET)
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,8,0))
 	.suspend = PVRSRVDriverSuspend,
 	.resume = PVRSRVDriverResume,
+#endif
 #endif
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,37))
 	.get_map_ofs = drm_core_get_map_ofs,

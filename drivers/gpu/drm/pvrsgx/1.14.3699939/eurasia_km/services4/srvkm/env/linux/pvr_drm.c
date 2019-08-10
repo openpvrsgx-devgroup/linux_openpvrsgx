@@ -533,7 +533,7 @@ static struct drm_driver sPVRDrmDriver =
 #endif
 		,
 	.dev_priv_size = 0,
-#if (LINUX_VERSION_CODE <= KERNEL_VERSION(4,11,0))
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,12,0))
 	.load = PVRSRVDrmLoad,
 	.unload = PVRSRVDrmUnload,
 #endif

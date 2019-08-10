@@ -1798,11 +1798,16 @@ static void drm_setup_crtcs_fb(struct drm_fb_helper *fb_helper)
 
 		modeset->fb = fb_helper->fb;
 
+		if (drm_fbdev_rotation)
+			/* Override orientation declared by panel XXX FIXME */
+			sw_rotations |= DRM_MODE_ROTATE_0;
+		else
 		if (drm_client_rotation(modeset, &rotation))
 			/* Rotating in hardware, fbcon should not rotate */
 			sw_rotations |= DRM_MODE_ROTATE_0;
 		else
 			sw_rotations |= rotation;
+printk("%s: sw_rotations=%x\n", __func__, sw_rotations);
 	}
 	mutex_unlock(&client->modeset_mutex);
 
@@ -1840,6 +1845,7 @@ static void drm_setup_crtcs_fb(struct drm_fb_helper *fb_helper)
 		 */
 		info->fbcon_rotate_hint = FB_ROTATE_UR;
 	}
+printk("%s: fbcon_rotate_hint=%x\n", __func__, info->fbcon_rotate_hint);
 }
 
 /* Note: Drops fb_helper->lock before returning. */

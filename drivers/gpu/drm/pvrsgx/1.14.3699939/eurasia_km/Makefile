@@ -105,7 +105,6 @@ ccflags-y += \
 	-DSUPPORT_PVRSRV_GET_DC_SYSTEM_BUFFER \
 	-DSUPPORT_LINUX_X86_WRITECOMBINE \
 	-DTRANSFER_QUEUE \
-	-DPVR_DRI_DRM_NOT_PCI \
 	-DSYS_USING_INTERRUPTS \
 	-DSUPPORT_HW_RECOVERY \
 	-DSUPPORT_ACTIVE_POWER_MANAGEMENT \
@@ -128,7 +127,6 @@ ccflags-y += \
 
 # new for ddk 1.14 tree
 ccflags-y += \
-	-DSUPPORT_PVRSRV_DEVICE_CLASS \
 	-DPVR_LDM_DEVICE_TREE
 
 ifeq ($(CONFIG_SGX_DEBUG),)
@@ -157,7 +155,6 @@ $(TARGET) += \
 	services4/srvkm/bridged/sgx/bridged_sgx_bridge.o \
 	services4/srvkm/common/buffer_manager.o \
 	services4/srvkm/common/devicemem.o \
-	services4/srvkm/common/deviceclass.o \
 	services4/srvkm/common/handle.o \
 	services4/srvkm/common/hash.o \
 	services4/srvkm/common/lists.o \
@@ -200,21 +197,32 @@ ifneq ($(CONFIG_SGX_DRM),)
 ccflags-y += -Iinclude/drm \
 	-I$(src)/services4/3rdparty/linux_drm
 
-# -Dno means the define exists but we do not set, -Dauto means it is already set automatically
-
 ccflags-y += -DSYS_USING_INTERRUPTS
 ccflags-y += -DPVR_LINUX_USING_WORKQUEUES
-ccflags-y += -DnoPVR_DISPLAY_CONTROLLER_DRM_IOCTL
-ccflags-y += -DnoSUPPORT_DRM_MODESET
-ccflags-y += -DnoSUPPORT_DRI_DRM_EXT
-ccflags-y += -DnoSUPPORT_DRI_DRM_PLUGIN
-ccflags-y += -DnoPVR_DRI_DRM_PLATFORM_DEV
-ccflags-y += -DPVR_NEW_STYLE_DRM_PLATFORM_DEV
-ccflags-y += -DautoPVR_USE_DEVICE_TREE	# automatically set
-ccflags-y += -DSUPPORT_DRI_DRM	# FIXME: leads to $(src)/services4/srvkm/env/linux/pvr_drm.c:448:1: error: size of array is too large
+ccflags-y += -DSUPPORT_DRI_DRM
+ccflags-y += -DSUPPORT_DRM_MODESET
+ccflags-y += -DPVR_DRI_DRM_PLATFORM_DEV
+ccflags-y += -DPVRSRV_NEED_PVR_DPF
+ccflags-n += -DSUPPORT_DRI_DRM_EXT
+ccflags-n += -DSUPPORT_DRI_DRM_PLUGIN
+ccflags-n += -DPVR_DISPLAY_CONTROLLER_DRM_IOCTL
+ccflags-n += -DPVR_DRI_DRM_NOT_PCI
 
-$(TARGET) += \
-	services4/3rdparty/linux_drm/pvr_drm_stubs.o
+# gives duplicate export of drm_pvr_dev_add etc.
+# $(TARGET) += services4/3rdparty/linux_drm/pvr_drm_stubs.o
+
+# unsure...
+# leads to WARNING: drivers/staging/pvr/1.14.3699939/eurasia_km/pvrsrvkm_omap_am57xx_sgx544_116: 'PVRGetBufferClassJTable' exported twice. Previous export was in drivers/staging/pvr/1.14.3699939/eurasia_km/pvrsrvkm_omap_omap5_sgx544_116.ko
+# but removing gives compile errors
+
+ccflags-y += -DSUPPORT_PVRSRV_DEVICE_CLASS
+$(TARGET) += services4/srvkm/common/deviceclass.o
+
+else
+
+ccflags-y += -DPVR_DRI_DRM_NOT_PCI
+ccflags-y += -DSUPPORT_PVRSRV_DEVICE_CLASS
+$(TARGET) += services4/srvkm/common/deviceclass.o
 
 endif
 

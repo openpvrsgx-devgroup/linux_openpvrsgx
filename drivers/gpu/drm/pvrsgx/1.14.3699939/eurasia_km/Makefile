@@ -198,16 +198,20 @@ $(TARGET) += \
 ifneq ($(CONFIG_SGX_DRM),)
 
 ccflags-y += -Iinclude/drm \
-	-I$(src)/services4/3rdparty/linux_drm \
-	-DSYS_USING_INTERRUPTS \
-	-DPVR_LINUX_USING_WORKQUEUES \
-	-DPVR_DISPLAY_CONTROLLER_DRM_IOCTL \
-	-DSUPPORT_DRM_MODESET \
-	-DSUPPORT_DRI_DRM_EXT \
-	-DSUPPORT_DRI_DRM	# FIXME: leads to $(src)/services4/srvkm/env/linux/pvr_drm.c:448:1: error: size of array is too large
+	-I$(src)/services4/3rdparty/linux_drm
 
-ccflags-n += \
-	-DPVR_DRI_DRM_PLATFORM_DEV
+# -Dno means the define exists but we do not set, -Dauto means it is already set automatically
+
+ccflags-y += -DSYS_USING_INTERRUPTS
+ccflags-y += -DPVR_LINUX_USING_WORKQUEUES
+ccflags-y += -DnoPVR_DISPLAY_CONTROLLER_DRM_IOCTL
+ccflags-y += -DnoSUPPORT_DRM_MODESET
+ccflags-y += -DnoSUPPORT_DRI_DRM_EXT
+ccflags-y += -DnoSUPPORT_DRI_DRM_PLUGIN
+ccflags-y += -DnoPVR_DRI_DRM_PLATFORM_DEV
+ccflags-y += -DPVR_NEW_STYLE_DRM_PLATFORM_DEV
+ccflags-y += -DautoPVR_USE_DEVICE_TREE	# automatically set
+ccflags-y += -DSUPPORT_DRI_DRM	# FIXME: leads to $(src)/services4/srvkm/env/linux/pvr_drm.c:448:1: error: size of array is too large
 
 $(TARGET) += \
 	services4/3rdparty/linux_drm/pvr_drm_stubs.o

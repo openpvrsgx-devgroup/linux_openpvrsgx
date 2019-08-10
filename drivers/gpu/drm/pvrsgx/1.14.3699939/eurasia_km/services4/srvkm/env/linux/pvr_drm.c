@@ -418,6 +418,7 @@ PVRDRM_Display_ioctl(struct drm_device *dev, void *arg, struct drm_file *pFile)
 }
 #endif
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0))
 #if defined(SUPPORT_DRM_MODESET)
 static int
 PVRSRVPciProbe(struct pci_dev *dev, const struct pci_device_id *id)
@@ -441,6 +442,7 @@ PVRSRVPciRemove(struct pci_dev *dev)
 	psDrmDev = pci_get_drvdata(dev);
 	drm_put_dev(psDrmDev);
 }
+#endif
 #endif
 
 /*

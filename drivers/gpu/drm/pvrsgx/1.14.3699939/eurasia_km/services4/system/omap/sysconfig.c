@@ -89,6 +89,11 @@ static PVRSRV_ERROR EnableSGXClocksWrap(SYS_DATA *psSysData)
 #if !defined(SGX_OCP_NO_INT_BYPASS)
 	if(eError == PVRSRV_OK)
 	{
+		if (gpvOCPRegsLinAddr == IMG_NULL)
+		{
+			PVR_DPF((PVR_DBG_ERROR,"EnableSGXClocksWrap: SGX registers not mapped"));
+			return;
+		}
 		OSWriteHWReg(gpvOCPRegsLinAddr, EUR_CR_OCP_DEBUG_CONFIG, EUR_CR_OCP_DEBUG_CONFIG_THALIA_INT_BYPASS_MASK);
 	}
 #endif
@@ -979,6 +984,11 @@ IMG_VOID SysClearInterrupts(SYS_DATA* psSysData, IMG_UINT32 ui32ClearBits)
 {
 	PVR_UNREFERENCED_PARAMETER(ui32ClearBits);
 	PVR_UNREFERENCED_PARAMETER(psSysData);
+	if (gpvOCPRegsLinAddr == IMG_NULL)
+	{
+		PVR_DPF((PVR_DBG_ERROR,"SysClearInterrupts: SGX registers not mapped"));
+		return;
+	}
 #if !defined(NO_HARDWARE)
 #if defined(SGX_OCP_NO_INT_BYPASS)
 	OSWriteHWReg(gpvOCPRegsLinAddr, EUR_CR_OCP_IRQSTATUS_2, 0x1);

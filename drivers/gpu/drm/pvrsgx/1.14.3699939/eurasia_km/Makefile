@@ -124,9 +124,6 @@ ccflags-y += \
 	-DSGX_CLK_CORE_DIV5 \
 	-DSUPPORT_SGX_NEW_STATUS_VALS
 
-# may be broken...
-ccflags-n += -DSUPPORT_ACTIVE_POWER_MANAGEMENT
-
 # new for ddk 1.14 tree
 ccflags-y += \
 	-DPVR_LDM_DEVICE_TREE
@@ -203,6 +200,10 @@ ccflags-y += -DSGX_FEATURE_MP
 ccflags-y += -DSGX_FEATURE_SYSTEM_CACHE
 ccflags-y += -DSGX_FEATURE_MP_CORE_COUNT=2
 ccflags-y += -DSYS_OMAP_HAS_DVFS_FRAMEWORK
+ccflags-y += -DSGX_OCP_REGS_ENABLED
+# may be broken...
+ccflags-y += -DSUPPORT_ACTIVE_POWER_MANAGEMENT
+ccflags-y += -DAMVERSION=5
 # PVR_OMAPLFB_DRM_FB			:= 0
 endif
 

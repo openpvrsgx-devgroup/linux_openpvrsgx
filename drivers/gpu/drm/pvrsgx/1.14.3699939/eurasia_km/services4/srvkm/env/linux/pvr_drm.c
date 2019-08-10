@@ -694,7 +694,11 @@ PVRSRVDrmProbe(struct platform_device *pDevice)
 		ret = drm_dev_register(ddev, 0);
 
 	if (ret)
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,0,0))
+		drm_dev_put(ddev);
+#else
 		drm_dev_unref(ddev);
+#endif
 	else
 		gpsPVRLDMDev = pDevice;
 	return ret;

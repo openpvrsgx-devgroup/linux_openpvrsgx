@@ -19,8 +19,10 @@ config SGX_DEBUG
 config SGX_DRM
 	bool "PowerVR SGX build with DRM support"
 	depends on SGX
+	select DRM_LEGACY
 	---help---
 	  Build for using DRM infrastructure.
+	  Note: this selectes DRM_LEGACY with all its issues.
 
 config SGX_CEDARVIEW
 	tristate "PowerVR SGX inside Atom SoC"

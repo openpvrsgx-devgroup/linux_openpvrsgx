@@ -107,7 +107,6 @@ ccflags-y += \
 	-DTRANSFER_QUEUE \
 	-DSYS_USING_INTERRUPTS \
 	-DSUPPORT_HW_RECOVERY \
-	-DSUPPORT_ACTIVE_POWER_MANAGEMENT \
 	-DPVR_SECURE_HANDLES \
 	-DPVR_SECURE_DRM_AUTH_EXPORT \
 	-DUSE_PTHREADS \
@@ -124,6 +123,9 @@ ccflags-y += \
 	-DPVR_NO_FULL_CACHE_OPS \
 	-DSGX_CLK_CORE_DIV5 \
 	-DSUPPORT_SGX_NEW_STATUS_VALS
+
+# may be broken...
+ccflags-n += -DSUPPORT_ACTIVE_POWER_MANAGEMENT
 
 # new for ddk 1.14 tree
 ccflags-y += \
@@ -178,6 +180,7 @@ $(TARGET) += \
 	services4/srvkm/devices/sgx/sgxreset.o \
 	services4/srvkm/devices/sgx/sgxutils.o \
 	services4/srvkm/devices/sgx/sgxtransfer.o \
+	services4/srvkm/env/linux/dmabuf.o \
 	services4/srvkm/env/linux/event.o \
 	services4/srvkm/env/linux/mm.o \
 	services4/srvkm/env/linux/mmap.o \
@@ -194,6 +197,18 @@ $(TARGET) += \
 
 ifneq ($(CONFIG_SGX_DRM),)
 
+# special for omap5/6 according to eurasiacon/build/linux2/omap_linux/Makefile
+ifeq ($(SGX),544)
+ccflags-y += -DSGX_FEATURE_MP
+ccflags-y += -DSGX_FEATURE_SYSTEM_CACHE
+ccflags-y += -DSGX_FEATURE_MP_CORE_COUNT=2
+ccflags-y += -DSYS_OMAP_HAS_DVFS_FRAMEWORK
+# PVR_OMAPLFB_DRM_FB			:= 0
+endif
+
+# gives duplicate export of drm_pvr_dev_add etc.
+# $(TARGET) += services4/3rdparty/linux_drm/pvr_drm_stubs.o
+
 ccflags-y += -Iinclude/drm \
 	-I$(src)/services4/3rdparty/linux_drm
 
@@ -203,20 +218,23 @@ ccflags-y += -DSUPPORT_DRI_DRM
 ccflags-y += -DSUPPORT_DRM_MODESET
 ccflags-y += -DPVR_DRI_DRM_PLATFORM_DEV
 ccflags-y += -DPVRSRV_NEED_PVR_DPF
+ccflags-y += -DMODULE	# this disables some code in AcquireGPTimer in sysutils_linux.c
+ccflags-y += -DSUPPORT_DMABUF
 ccflags-n += -DSUPPORT_DRI_DRM_EXT
 ccflags-n += -DSUPPORT_DRI_DRM_PLUGIN
 ccflags-n += -DPVR_DISPLAY_CONTROLLER_DRM_IOCTL
 ccflags-n += -DPVR_DRI_DRM_NOT_PCI
 
-# gives duplicate export of drm_pvr_dev_add etc.
-# $(TARGET) += services4/3rdparty/linux_drm/pvr_drm_stubs.o
+# unsure flags...
 
-# unsure...
 # leads to WARNING: drivers/staging/pvr/1.14.3699939/eurasia_km/pvrsrvkm_omap_am57xx_sgx544_116: 'PVRGetBufferClassJTable' exported twice. Previous export was in drivers/staging/pvr/1.14.3699939/eurasia_km/pvrsrvkm_omap_omap5_sgx544_116.ko
-# but removing gives compile errors
+# but removing gives many compile errors
 
 ccflags-y += -DSUPPORT_PVRSRV_DEVICE_CLASS
 $(TARGET) += services4/srvkm/common/deviceclass.o
+
+ccflags-n += -DPVR_NO_OMAP_TIMER
+ccflags-n += -DSGX_FEATURE_2D_HARDWARE	# leads to problems with EUR_CR_BIF_BANK0_INDEX_2D_SHIFT etc.
 
 else
 

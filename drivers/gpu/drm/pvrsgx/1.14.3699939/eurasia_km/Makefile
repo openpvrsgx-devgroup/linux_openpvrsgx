@@ -193,12 +193,17 @@ $(TARGET) += \
 
 ifneq ($(CONFIG_SGX_DRM),)
 
+# special for OMAP5
+ifneq ($(CONFIG_SOC_OMAP5),)
+ccflags-y += -DCONFIG_ARCH_OMAP5	# checked for in mmap.c
+endif
+
 # special for omap5/6 according to eurasiacon/build/linux2/omap_linux/Makefile
-ifeq ($(SGX),544)
+ifeq ($(SGX),sgx544)
 ccflags-y += -DSGX_FEATURE_MP
-ccflags-y += -DSGX_FEATURE_SYSTEM_CACHE
+ccflags-n += -DSGX_FEATURE_SYSTEM_CACHE
 ccflags-y += -DSGX_FEATURE_MP_CORE_COUNT=2
-ccflags-y += -DSYS_OMAP_HAS_DVFS_FRAMEWORK
+ccflags-n += -DSYS_OMAP_HAS_DVFS_FRAMEWORK	# sgxfreq extension
 # may be broken...
 ccflags-y += -DSUPPORT_ACTIVE_POWER_MANAGEMENT
 ccflags-y += -DAMVERSION=5
@@ -211,7 +216,8 @@ endif
 ccflags-y += -Iinclude/drm \
 	-I$(src)/services4/3rdparty/linux_drm
 
-ccflags-n += -DSYS_USING_INTERRUPTS	# should probably be enabled but leads to paging errors
+ccflags-y += -DSYS_USING_INTERRUPTS	# should probably be enabled but leads to paging errors
+ccflags-y += -DSUPPORT_HW_RECOVERY
 ccflags-y += -DPVR_LINUX_USING_WORKQUEUES
 ccflags-y += -DSUPPORT_DRI_DRM
 ccflags-y += -DSUPPORT_DRM_MODESET
@@ -226,7 +232,7 @@ ccflags-n += -DSUPPORT_DRI_DRM_PLUGIN
 ccflags-n += -DPVR_DISPLAY_CONTROLLER_DRM_IOCTL
 ccflags-n += -DPVR_DRI_DRM_NOT_PCI
 ccflags-n += -DPVR_NO_OMAP_TIMER	# we have omap timers
-ccflags-n += -DSGX_FEATURE_2D_HARDWARE	# leads to problems with EUR_CR_BIF_BANK0_INDEX_2D_SHIFT etc.
+ccflags-n += -DDISPLAY_CONTROLLER=drm	# would call drm_Init()
 
 # unsure flags...
 

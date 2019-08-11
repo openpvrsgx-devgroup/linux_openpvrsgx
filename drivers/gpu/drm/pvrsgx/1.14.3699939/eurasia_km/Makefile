@@ -236,9 +236,7 @@ ccflags-n += -DDISPLAY_CONTROLLER=drm	# would call drm_Init()
 
 # unsure flags...
 
-# leads to WARNING: drivers/staging/pvr/1.14.3699939/eurasia_km/pvrsrvkm_omap_am57xx_sgx544_116: 'PVRGetBufferClassJTable' exported twice. Previous export was in drivers/staging/pvr/1.14.3699939/eurasia_km/pvrsrvkm_omap_omap5_sgx544_116.ko
-# but removing gives many compile errors
-
+ccflags-n += -DODD	# there is code that seems to export PVRGetBufferClassJTable twice
 ccflags-y += -DSUPPORT_PVRSRV_DEVICE_CLASS
 $(TARGET) += services4/srvkm/common/deviceclass.o
 

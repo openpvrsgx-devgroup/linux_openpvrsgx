@@ -8,5 +8,5 @@
 auto usb2
 iface usb2 inet dhcp
 	pre-up depmod
-	# set up OpenDNS by default
-	up echo nameserver 208.67.222.222 >/etc/resolv.conf
+	# set up dns2.digitalcourage.de by default
+	up echo nameserver 46.182.19.48 >/etc/resolv.conf

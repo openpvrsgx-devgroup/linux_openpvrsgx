@@ -1,0 +1,11 @@
+#
+# interfaces for Letux supported devices
+# GTA04, BeagleBoard, BeagleBoneBlack, Letux Cortex 8,
+# Letux Cortex15, Pandaboard ES, OMAP5EVM, Pyra, OpenPandora
+#
+# the CINTERION PLS8 driver hso creates a wwan0 interface
+
+auto wwan0
+iface wwan0 inet dhcp
+	# set up dns2.digitalcourage.de by default
+	up echo nameserver 46.182.19.48 >/etc/resolv.conf

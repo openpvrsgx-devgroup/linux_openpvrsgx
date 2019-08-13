@@ -201,8 +201,8 @@ endif
 # special for omap5/6 according to eurasiacon/build/linux2/omap_linux/Makefile
 ifeq ($(SGX),sgx544)
 ccflags-y += -DSGX_FEATURE_MP
-ccflags-n += -DSGX_FEATURE_SYSTEM_CACHE
 ccflags-y += -DSGX_FEATURE_MP_CORE_COUNT=2
+ccflags-y += -DSGX_FEATURE_SYSTEM_CACHE	# assumed by client libs
 ccflags-n += -DSYS_OMAP_HAS_DVFS_FRAMEWORK	# sgxfreq extension
 # may be broken...
 ccflags-y += -DSUPPORT_ACTIVE_POWER_MANAGEMENT

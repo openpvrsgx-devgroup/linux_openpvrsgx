@@ -216,7 +216,6 @@ endif
 ccflags-y += -Iinclude/drm \
 	-I$(src)/services4/3rdparty/linux_drm
 
-ccflags-y += -DSYS_USING_INTERRUPTS	# should probably be enabled but leads to paging errors
 ccflags-y += -DSUPPORT_HW_RECOVERY
 ccflags-y += -DPVR_LINUX_USING_WORKQUEUES
 ccflags-y += -DSUPPORT_DRI_DRM
@@ -226,6 +225,7 @@ ccflags-y += -DMODULE	# this disables some code in AcquireGPTimer in sysutils_li
 ccflags-y += -DSUPPORT_DMABUF
 
 # these must not be set or we can't compile successfully for omap
+ccflags-n += -DSYS_USING_INTERRUPTS	# should probably be enabled but leads to paging errors, asynchronous external abort
 ccflags-n += -DSUPPORT_DRI_DRM_EXT
 ccflags-n += -DSUPPORT_DRI_DRM_PLUGIN
 ccflags-n += -DPVR_DISPLAY_CONTROLLER_DRM_IOCTL

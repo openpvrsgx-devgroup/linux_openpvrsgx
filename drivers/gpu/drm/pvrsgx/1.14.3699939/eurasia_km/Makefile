@@ -220,7 +220,6 @@ ccflags-y += -DSYS_USING_INTERRUPTS	# should probably be enabled but leads to pa
 ccflags-y += -DSUPPORT_HW_RECOVERY
 ccflags-y += -DPVR_LINUX_USING_WORKQUEUES
 ccflags-y += -DSUPPORT_DRI_DRM
-ccflags-y += -DSUPPORT_DRM_MODESET
 ccflags-y += -DPVR_DRI_DRM_PLATFORM_DEV
 ccflags-y += -DPVRSRV_NEED_PVR_DPF
 ccflags-y += -DMODULE	# this disables some code in AcquireGPTimer in sysutils_linux.c
@@ -233,6 +232,7 @@ ccflags-n += -DPVR_DISPLAY_CONTROLLER_DRM_IOCTL
 ccflags-n += -DPVR_DRI_DRM_NOT_PCI
 ccflags-n += -DPVR_NO_OMAP_TIMER	# we have omap timers
 ccflags-n += -DDISPLAY_CONTROLLER=drm	# would call drm_Init()
+ccflags-n += -DSUPPORT_DRM_MODESET	# compiles, but fails with NULL deref in drm_modeset_register_all()
 
 # unsure flags...
 

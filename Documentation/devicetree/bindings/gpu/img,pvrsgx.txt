@@ -1,0 +1,42 @@
+Imagination PVR/SGX GPU
+
+Only the Imagination SGX530, SGX540 and SGX544 GPUs are covered by this binding.
+
+Required properties:
+- compatible:	Should be one of
+		"ti,am33xx-gpu", "ti,sgx", "ti,omap-am335x-sgx530-125", "img,sgx530-125";
+		"ti,omap3-gpu", "ti,sgx", "ti,omap-omap3-sgx530-121", "img,sgx530-121";
+		"ti,omap3-gpu", "ti,sgx", "ti,omap-omap3630-sgx530-125", "img,sgx530-125";
+	???	"ti,sysc-omap4", "ti,sysc", "ti,sgx", "img,sgx540-120"; // ??? seems to be incomplete
+		"ti,dra7-sgx544", "ti,sgx", "ti,omap-omap5-sgx544-116", "img,sgx544", "img,sgx544-116";
+
+		Several of these entries are needed temporarily.
+		In the long run, only the img,sgx entry should remain to match drivers.
+
+- reg:		Physical base addresses and lengths of the register areas
+- reg-names:	Names for the register areas.
+- interrupts:	The interrupt numbers.
+- ti,hwmods:	must be "gpu"
+
+Optional properties:
+- clocks:	The core clock the unit runs on
+- resets:	The reset line
+
+Planned properties:
+- img,cores:	number of cores
+
+/ {
+	ocp {
+
+		sgx:sgx@56000000 {
+			compatible = "ti,dra7-sgx544", "ti,sgx", "ti,omap-omap5-sgx544-116", "img,sgx544", "img,sgx544-116";
+			reg = <0x5600fe00 0x200>;
+			reg-names = "gpu_wrapper";
+			interrupts = <GIC_SPI 21 IRQ_TYPE_LEVEL_HIGH>;
+			ti,hwmods = "gpu";
+			clocks = <&l3_iclk_div>, <&gpu_core_gclk_mux>,
+				<&gpu_hyd_gclk_mux>;
+			clock-names = "gpu_iclk", "gpu_fclk1", "gpu_fclk2";
+		};
+	};
+};

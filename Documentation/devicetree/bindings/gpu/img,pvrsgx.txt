@@ -1,0 +1,67 @@
+Imagination PVR/SGX GPU
+
+Only the Imagination SGX530, SGX540 and SGX544 GPUs are currently covered by this binding.
+
+Required properties:
+- compatible:	Should be one of
+		"img,sgx530-121", "img,sgx530", "ti,omap-omap3-sgx530-121";
+		"img,sgx530-125", "img,sgx530", "ti,omap-am335x-sgx530-125";
+		"img,sgx530-125", "img,sgx530", "ti,omap-omap36xx-sgx530-125";
+		"img,sgx540-120", "img,sgx540", "ti,omap-omap4-sgx540-120";
+		"img,sgx544-112", "img,sgx544", "ti,omap-omap4470-sgx544-112";
+		"img,sgx544-116", "img,sgx544", "ti,omap-omap5-sgx544-116";
+		"img,sgx544-116", "img,sgx544", "ti,omap-dra7-sgx544-116";
+
+		For further study:
+			"ti,omap-am3517-sgx530-?"
+			"ti,omap-am43xx-sgx530-?"
+			"ti,ti43xx-sgx"
+			"ti,ti81xx-sgx"
+			"img,jz4780-sgx5??-?"
+			"intel,poulsbo-sgx?"
+			"intel,cedarview-sgx?"
+			"sunxi,sgx-?"
+
+		The "ti,omap" entries are needed temporarily to handle soc
+		specific builds of the kernel module.
+		In the long run, only the "img,sgx$-$" entry should remain
+		to match a generic driver for all architectures.
+
+- reg:		Physical base addresses and lengths of the register areas.
+- reg-names:	Names for the register areas.
+- interrupts:	The interrupt numbers.
+
+Optional properties:
+- timer:	the timer to be used by the driver.
+- img,cores:	number of cores. Defaults to <1>.
+
+/ {
+	ocp {
+		sgx_module: target-module@56000000 {
+			compatible = "ti,sysc-omap4", "ti,sysc";
+			reg = <0x5600fe00 0x4>,
+			      <0x5600fe10 0x4>;
+			reg-names = "rev", "sysc";
+			ti,sysc-midle = <SYSC_IDLE_FORCE>,
+					<SYSC_IDLE_NO>,
+					<SYSC_IDLE_SMART>;
+			ti,sysc-sidle = <SYSC_IDLE_FORCE>,
+					<SYSC_IDLE_NO>,
+					<SYSC_IDLE_SMART>;
+			clocks = <&gpu_clkctrl OMAP5_GPU_CLKCTRL 0>;
+			clock-names = "fck";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0 0x56000000 0x2000000>;
+
+			sgx@fe00 {
+				compatible = "img,sgx544-116", "img,sgx544", "ti,omap-omap5-sgx544-116";
+				reg = <0xfe00 0x200>;
+				reg-names = "sgx";
+				interrupts = <GIC_SPI 21 IRQ_TYPE_LEVEL_HIGH>;
+				timer = <&timer11>;
+				img,cores = <2>;
+			};
+		};
+	};
+};

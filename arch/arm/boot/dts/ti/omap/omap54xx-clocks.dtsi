@@ -1283,6 +1283,20 @@
 		};
 	};
 
+	iva_cm: iva_cm@1200 {
+		compatible = "ti,omap4-cm";
+		reg = <0x1200 0x100>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges = <0 0x1200 0x100>;
+
+		iva_clkctrl: clk@20 {
+			compatible = "ti,clkctrl";
+			reg = <0x20 0xc>;
+			#clock-cells = <2>;
+		};
+	};
+
 	dss_cm: dss_cm@1400 {
 		compatible = "ti,omap4-cm";
 		clock-output-names = "dss_cm";

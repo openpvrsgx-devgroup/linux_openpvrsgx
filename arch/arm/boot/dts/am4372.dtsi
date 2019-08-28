@@ -375,3 +375,32 @@
 
 #include "am437x-l4.dtsi"
 #include "am43xx-clocks.dtsi"
+
+&prcm {
+	prm_gfx: prm@400 {
+		compatible = "ti,am4-prm-inst";
+		reg = <0x400 0x100>;
+		#reset-cells = <1>;
+		clocks = <&gfx_l3_clkctrl AM4_GFX_L3_GFX_CLKCTRL 0>;
+	};
+
+	prm_per: prm@800 {
+		compatible = "ti,am4-prm-inst";
+		reg = <0x800 0x100>;
+		#reset-cells = <1>;
+		clocks = <&pruss_ocp_clkctrl AM4_PRUSS_OCP_PRUSS_CLKCTRL 0>;
+	};
+
+	prm_wkup: prm@2000 {
+		compatible = "ti,am4-prm-inst";
+		reg = <0x2000 0x100>;
+		#reset-cells = <1>;
+		clocks = <&l4_wkup_aon_clkctrl AM4_L4_WKUP_AON_WKUP_M3_CLKCTRL 0>;
+	};
+
+	prm_device: prm@4000 {
+		compatible = "ti,am4-prm-inst";
+		reg = <0x4000 0x100>;
+		#reset-cells = <1>;
+	};
+};

@@ -96,6 +96,10 @@ letux/ts3a225e
 letux/panels+ssd2858
 letux/bno055
 letux/freescale-sensors
+letux/omap-pvr-soc-glue
+letux/omap-pvr-demo
+letux/latest-pvr
+letux/tiler-fbdev
 
 # almost empty or untested...
 letux/txs02612
@@ -133,20 +137,15 @@ letux/charging_fixes
 letux/hacks
 letux/omap2plus
 letux/omap-pvr
-letux/omap-pvr-soc-glue
-letux/omap-pvr-demo
-letux/latest-pvr
-# letux/sgx544-v2
 letux/mmc
 letux/ubi-fs
 letux/extcon
 letux/misc
 letux/drivers-keyboard
-letux/tiler-fbdev
 letux/omap5-idle
 
 # not merged in by default, but carried along and regularily rebased
+-letux/omap3-opp-v2
 -letux/omap-hsmmc
-#-letux/antitear
 -letux/android
 -letux/pyra-minimal

@@ -213,6 +213,11 @@
 		l4_mpuss: interconnect@4b140000 {
 		};
 
+		bandgap@44e10448 {
+			compatible = "ti,am335x-bandgap";
+			reg = <0x44e10448 0x8>;
+		};
+
 		intc: interrupt-controller@48200000 {
 			compatible = "ti,am33xx-intc";
 			interrupt-controller;
@@ -645,11 +650,6 @@
 				reg = <0x0 0x10000>; /* 64kB */
 				interrupts = <37>;
 			};
-		};
-
-		bandgap@44e10448 {
-			compatible = "ti,am335x-bandgap";
-			reg = <0x44e10448 0x8>;
 		};
 	};
 };

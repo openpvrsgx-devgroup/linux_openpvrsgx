@@ -91,14 +91,10 @@ COMMON_USER_FLAGS += \
 #
 TESTED_TARGET_USER_FLAGS := \
  $(call cc-option,-Wno-missing-field-initializers) \
- $(call cc-option,-fdiagnostics-show-option) \
- $(call cc-option,-Wno-self-assign) \
- $(call cc-option,-Wno-parentheses-equality)
+ $(call cc-option,-fdiagnostics-show-option)
 TESTED_HOST_USER_FLAGS := \
  $(call host-cc-option,-Wno-missing-field-initializers) \
- $(call host-cc-option,-fdiagnostics-show-option) \
- $(call host-cc-option,-Wno-self-assign) \
- $(call host-cc-option,-Wno-parentheses-equality)
+ $(call host-cc-option,-fdiagnostics-show-option)
 
 # These flags are clang-specific.
 # -Wno-unused-command-line-argument works around a buggy interaction

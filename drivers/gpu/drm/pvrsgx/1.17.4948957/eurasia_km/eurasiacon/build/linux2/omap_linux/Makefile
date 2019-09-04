@@ -41,9 +41,11 @@
 
 include ../config/window_system.mk
 
-# If a product wasn't specified, we're a J6 EVM.
-#
-TARGET_PRODUCT ?= jacinto6evm
+ifeq ($(TARGET_PRODUCT),)
+ # If a product wasn't specified, error out to prevent building for the wrong platform
+ $(warning *** Unrecognised or empty TARGET_PRODUCT: $(TARGET_PRODUCT))
+ $(error *** Supported Target Systems are: ti335x ti437x jacinto6evm omap5uevm ti654x)
+endif
 
 PVRSRV_NEED_PVR_DPF := 1
 PVRSRV_NEW_PVR_DPF := 1

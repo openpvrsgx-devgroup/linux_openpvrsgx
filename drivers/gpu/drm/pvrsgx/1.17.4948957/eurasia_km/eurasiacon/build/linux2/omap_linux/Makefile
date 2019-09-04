@@ -67,8 +67,6 @@ ifneq ($(filter omap5uevm jacinto6evm,$(TARGET_PRODUCT)),)
  SGX_FEATURE_SYSTEM_CACHE		:= 1
  SGX_FEATURE_MP_CORE_COUNT		:= 2
 
- SYS_OMAP5_UEVM				:= 1
-
  # SoC Version
  AM_VERSION				:= 5
 endif
@@ -81,8 +79,6 @@ ifneq ($(filter ti654x,$(TARGET_PRODUCT)),)
  SGX_FEATURE_MP_CORE_COUNT		:= 1
 # SGX_FEATURE_36BIT_MMU      		:= 1
 
- SYS_OMAP5_UEVM				:= 1
-
  # SoC Version
  AM_VERSION 				:= 6
 endif
@@ -91,10 +87,6 @@ endif
 ifneq ($(filter ti335x ti437x,$(TARGET_PRODUCT)),)
  SGXCORE					:= 530
  SGX_CORE_REV				:= 125
- # Reuse this variable to select the common environment variables for AM3/4/5
- # The method introduces the minimum changes to support AM3/4 although the variable name
- # is misleading.
- SYS_OMAP5_UEVM				:= 1
 
  # SoC Version
  ifeq ($(TARGET_PRODUCT), ti437x)
@@ -237,8 +229,6 @@ include ../common/xorg.mk
 include ../common/dridrm.mk
 include ../common/opencl.mk
 include ../common/omap4.mk
-
-$(eval $(call TunableKernelConfigC,SYS_OMAP5_UEVM,))
 
 $(eval $(call TunableKernelConfigC,SYS_OMAP_HAS_DVFS_FRAMEWORK,))
 

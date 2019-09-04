@@ -81,13 +81,27 @@ endif
 PVRSRV_NEED_PVR_DPF := 1
 PVRSRV_NEW_PVR_DPF := 1
 #PVRSRV_NEED_PVR_TRACE := 1
-PVR_LWS_NOBC := 1
 
 # Disable active power management
 SUPPORT_ACTIVE_POWER_MANAGEMENT 	:= 0
 
 # Disable Device Class
 SUPPORT_PVRSRV_DEVICE_CLASS := 0
+
+# Enable SONAME
+DONT_USE_SONAMES := 0
+
+# Disable  GL_IMG_texture_stream extension in GLES1 and GLES2 to remove
+# invalid unit tests
+GLES1_EXTENSION_EGL_IMAGE_EXTERNAL := 1
+GLES2_EXTENSION_EGL_IMAGE_EXTERNAL := 1
+
+# Specify the output directories
+BIN_DESTDIR := /usr/bin
+SHARE_DESTDIR := /usr/bin
+
+# Disable Buffer Class
+PVR_LWS_NOBC := 1
 
 PVR_NO_OMAP_TIMER := 1
 
@@ -153,7 +167,6 @@ SUPPORT_OMAP4430_NEON ?= 1
 endif
 endif
 
-
 ifeq ($(SUPPORT_OMAP4430_NEON),1)
 SYS_CFLAGS += -ftree-vectorize -mfpu=neon -mfloat-abi=softfp
 endif
@@ -181,6 +194,16 @@ LDM_PLATFORM := 1
 PVR_LDM_DEVICE_TREE := 1
 PVR_DRI_DRM_PLATFORM_DEV := 1
 SUPPORT_DMABUF := 1
+ifeq ($(TARGET_PRODUCT),ti335x)
+PVR_DRM_MODESET_DRIVER_NAME := tilcdc
+else
+ifeq ($(TARGET_PRODUCT),ti654x)
+PVR_DRM_MODESET_DRIVER_NAME := tidss
+else
+PVR_DRM_MODESET_DRIVER_NAME := omapdrm
+endif
+endif
+PVR_DRM_MODESET_MODULE_NAME := dumb
 # No display class driver.
 DISPLAY_CONTROLLER_COMPONENT :=
 DISPLAY_CONTROLLER :=
@@ -192,6 +215,7 @@ PVR_OMAPLFB_DRM_FB := 0
 PVR_OMAPLFB_DONT_USE_FB_PAN_DISPLAY := 1
 endif
 
+OPK_DEFAULT := libpvrDRMWSEGL.so
 PVR_DRI_DRM_PLATFORM_DEV := 1
 
 ifeq ($(PVR_LWS_NODC),)

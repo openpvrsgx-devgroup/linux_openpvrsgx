@@ -41,7 +41,38 @@
 
 include ../config/window_system.mk
 
-ifeq ($(TARGET_PRODUCT),)
+# Customize this build as per the TARGET_PRODUCT setting
+ifneq ($(filter ti335x,$(TARGET_PRODUCT)),)
+ SGXCORE                        := 530
+ SGX_CORE_REV                   := 125
+
+ # SoC Version
+ AM_VERSION                     := 3
+else ifneq ($(filter ti437x,$(TARGET_PRODUCT)),)
+ SGXCORE                        := 530
+ SGX_CORE_REV                   := 125
+
+ # SoC Version
+ AM_VERSION                     := 4
+else ifneq ($(filter jacinto6evm omap5uevm,$(TARGET_PRODUCT)),)
+ SGXCORE                        := 544
+ SGX_CORE_REV                   := 116
+ SGX_FEATURE_MP                 := 1
+ SGX_FEATURE_SYSTEM_CACHE       := 1
+ SGX_FEATURE_MP_CORE_COUNT      := 2
+
+ # SoC Version
+ AM_VERSION                     := 5
+else ifneq ($(filter ti654x,$(TARGET_PRODUCT)),)
+ SGXCORE                        := 544
+ SGX_CORE_REV                   := 117
+ SGX_FEATURE_MP                 := 1
+ SGX_FEATURE_SYSTEM_CACHE       := 1
+ SGX_FEATURE_MP_CORE_COUNT      := 1
+
+ # SoC Version
+ AM_VERSION                     := 6
+else
  # If a product wasn't specified, error out to prevent building for the wrong platform
  $(warning *** Unrecognised or empty TARGET_PRODUCT: $(TARGET_PRODUCT))
  $(error *** Supported Target Systems are: ti335x ti437x jacinto6evm omap5uevm ti654x)
@@ -57,45 +88,6 @@ SUPPORT_ACTIVE_POWER_MANAGEMENT 	:= 0
 
 # Disable Device Class
 SUPPORT_PVRSRV_DEVICE_CLASS := 0
-
-# Customize this build as per the TARGET_PRODUCT setting
-#
-ifneq ($(filter omap5uevm jacinto6evm,$(TARGET_PRODUCT)),)
- SGXCORE					:= 544
- SGX_CORE_REV				:= 116
- SGX_FEATURE_MP				:= 1
- SGX_FEATURE_SYSTEM_CACHE		:= 1
- SGX_FEATURE_MP_CORE_COUNT		:= 2
-
- # SoC Version
- AM_VERSION				:= 5
-endif
-
-ifneq ($(filter ti654x,$(TARGET_PRODUCT)),)
- SGXCORE				:= 544
- SGX_CORE_REV				:= 117
- SGX_FEATURE_MP				:= 1
- SGX_FEATURE_SYSTEM_CACHE		:= 1
- SGX_FEATURE_MP_CORE_COUNT		:= 1
-# SGX_FEATURE_36BIT_MMU      		:= 1
-
- # SoC Version
- AM_VERSION 				:= 6
-endif
-
-
-ifneq ($(filter ti335x ti437x,$(TARGET_PRODUCT)),)
- SGXCORE					:= 530
- SGX_CORE_REV				:= 125
-
- # SoC Version
- ifeq ($(TARGET_PRODUCT), ti437x)
- AM_VERSION				:= 4
- else
- AM_VERSION				:= 3
- endif
-
-endif
 
 PVR_NO_OMAP_TIMER := 1
 

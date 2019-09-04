@@ -54,9 +54,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define PVRVERSION_FAMILY           "sgxddk"
 #define PVRVERSION_BRANCHNAME       "1.17"
 #define PVRVERSION_BUILD             4948957
-#define PVRVERSION_BSCONTROL        "SGX_DDK_Linux_XOrg"
+#define PVRVERSION_BSCONTROL        "SGX_DDK"
 
-#define PVRVERSION_STRING           "SGX_DDK_Linux_XOrg sgxddk 1.17@" PVR_STR2(PVRVERSION_BUILD)
+#define PVRVERSION_STRING           "SGX_DDK sgxddk 1.17@" PVR_STR2(PVRVERSION_BUILD)
 #define PVRVERSION_STRING_SHORT     "1.17@" PVR_STR2(PVRVERSION_BUILD) ""
 
 #define COPYRIGHT_TXT               "Copyright (c) Imagination Technologies Ltd. All Rights Reserved."

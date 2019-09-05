@@ -49,6 +49,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 #endif
 
+#undef AM_VERSION
+#define AM_VERSION 5
+
 #if (AM_VERSION != 5)
 #include <linux/platform_data/sgx-omap.h>
 #endif

@@ -51,6 +51,9 @@ ifneq ($(CONFIG_ARCH_OMAP3),)
 	@$(kecho) "  MAKE    $(obj): omap3630"
 	$(Q)SOC_VENDOR=ti SOC_FAMILY=omap SOC=omap3630 SGX=sgx530 SGX_FLAG=SGX530 SGX_REV=125 AM_VERSION=3 TARGET_TYPE=$(CONFIG_SGX_OMAP) $(MAKE) $(build)=$(SOURCE)
 	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
+	@$(kecho) "  MAKE    $(obj): am3517"
+	$(Q)SOC_VENDOR=ti SOC_FAMILY=omap SOC=am3517 SGX=sgx530 SGX_FLAG=SGX530 SGX_REV=125 AM_VERSION=3 TARGET_TYPE=$(CONFIG_SGX_OMAP) $(MAKE) $(build)=$(SOURCE)
+	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
 ifneq ($(CONFIG_SOC_AM33XX),)
 	@$(kecho) "  MAKE    $(obj): am335x"
 	$(Q)SOC_VENDOR=ti SOC_FAMILY=omap SOC=am335x SGX=sgx530 SGX_FLAG=SGX530 SGX_REV=125 AM_VERSION=3 TARGET_TYPE=$(CONFIG_SGX_OMAP) $(MAKE) $(build)=$(SOURCE)

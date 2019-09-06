@@ -69,6 +69,7 @@ letux/dt-raspi
 letux/debian-build
 
 # upstreaming in progress
+letux/omap3-opp
 letux/generic-adc-battery
 letux/w2sg-serdev
 letux/sirf-gps
@@ -145,7 +146,6 @@ letux/drivers-keyboard
 letux/omap5-idle
 
 # not merged in by default, but carried along and regularily rebased
--letux/omap3-opp-v2
 -letux/omap-hsmmc
 -letux/android
 -letux/pyra-minimal

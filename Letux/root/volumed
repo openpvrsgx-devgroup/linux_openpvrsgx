@@ -4,8 +4,18 @@
 #
 SCRIPTPATH="$(dirname "$0")"
 GPADC=$($SCRIPTPATH/findiio "palmas-gpadc")
+NUM=$($SCRIPTPATH/findsoundcard "L15")	# twl6040 on Pyra
 
-[ "$GPADC" ] || exit 1
+if [ ! "GPADC" ]
+then
+	echo no volume wheel found >&2
+	exit
+fi
+if [ ! "$NUM" ]
+then
+	echo no sound card found >&2
+	exit
+fi
 
 LASTVOL="unknown"
 MAXWHEEL=1200	# reports 0..1250 mV but leave some margin
@@ -25,8 +35,6 @@ do
 	esac
 	shift
 done
-
-NUM=$($SCRIPTPATH/findsoundcard "L15")	# twl6040 on Pyra
 
 while true
 do

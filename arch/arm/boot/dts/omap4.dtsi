@@ -347,9 +347,9 @@
 			#size-cells = <1>;
 			ranges = <0 0x56000000 0x2000000>;
 
-			sgx@0 {
+			sgx@fe00 {
 				compatible = "img,sgx540-120", "img,sgx540", "ti,omap-omap4-sgx540-120";
-				reg = <0x0 0x200>;	// fe00 like on omap5?
+				reg = <0xfe00 0x200>;
 				reg-names = "sgx";
 				// FIXME: interrupt = <?>;
 				timer = <&timer11>;

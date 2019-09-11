@@ -6,6 +6,7 @@
 #include "bcm283x-rpi-led-deprecated.dtsi"
 #include "bcm283x-rpi-usb-host.dtsi"
 #include "bcm283x-rpi-wifi-bt.dtsi"
+#include <dt-bindings/input/input.h>
 
 / {
 	compatible = "raspberrypi,3-model-b-plus", "brcm,bcm2837";
@@ -19,6 +20,18 @@
 	memory@0 {
 		device_type = "memory";
 		reg = <0 0x40000000>;
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+
+		power-button {
+			label = "power";
+			linux,code = <KEY_POWER>;
+			/* pin 5 = "SCL1" as wakeup/power button */
+			gpios = <&gpio 3 GPIO_ACTIVE_LOW>;
+			wakeup-source;
+		};
 	};
 };
 

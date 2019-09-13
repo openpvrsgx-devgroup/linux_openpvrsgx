@@ -21,6 +21,7 @@
 		label = "lcd";
 		enable-gpios = <&gpio1 12 0>;
 
+		backlight = <&backlight>;
 		panel-timing {
 			clock-frequency = <33260000>;
 

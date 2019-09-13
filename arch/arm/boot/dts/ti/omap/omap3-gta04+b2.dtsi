@@ -19,7 +19,7 @@
 				"panel-dpi";
 		label = "lcd";
 		enable-gpios = <&gpio1 20 0>;
-
+		backlight = <&backlight>;
 		panel-timing {
 			clock-frequency = <22153000>;
 

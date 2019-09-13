@@ -33,7 +33,7 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		cpu@0 {
+		cpu: cpu@0 {
 			compatible = "arm,cortex-a8";
 			device_type = "cpu";
 			reg = <0x0>;
@@ -42,7 +42,12 @@
 			clock-names = "cpu";
 
 			clock-latency = <300000>; /* From omap-cpufreq driver */
+			#cooling-cells = <2>;
 		};
+	};
+
+	thermal_zones: thermal-zones {
+		#include "omap3-cpu-thermal.dtsi"
 	};
 
 	pmu@54000000 {

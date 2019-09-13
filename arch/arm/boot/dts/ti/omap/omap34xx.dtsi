@@ -173,10 +173,6 @@
 			};
 		};
 	};
-
-	thermal_zones: thermal-zones {
-		#include "omap3-cpu-thermal.dtsi"
-	};
 };
 
 &ssi {

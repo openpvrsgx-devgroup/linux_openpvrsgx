@@ -11786,6 +11786,7 @@ S:	Maintained
 F:	arch/arm/mach-omap2/
 F:	arch/arm/plat-omap/
 F:	arch/arm/configs/omap2plus_defconfig
+F:	drivers/bus/ti-sysc.c
 F:	drivers/i2c/busses/i2c-omap.c
 F:	drivers/irqchip/irq-omap-intc.c
 F:	drivers/mfd/*omap*.c
@@ -11806,6 +11807,7 @@ F:	drivers/regulator/tps65910-regulator.c
 F:	drivers/regulator/twl-regulator.c
 F:	drivers/regulator/twl6030-regulator.c
 F:	include/linux/platform_data/i2c-omap.h
+F:	include/linux/platform_data/ti-sysc.h
 
 ONION OMEGA2+ BOARD
 M:	Harvey Hunt <harveyhuntnexus@gmail.com>
@@ -13062,6 +13064,15 @@ T:	git git://linuxtv.org/media_tree.git
 S:	Maintained
 F:	drivers/media/usb/pulse8-cec/*
 F:	Documentation/media/cec-drivers/pulse8-cec.rst
+
+PVR/SGX DRIVER FOR OMAP
+M:	Adam Ford <adam.ford@logicpd.com>
+M:	Tony Lindgren <tony@atomide.com>
+M:	Nikolaus Schaller <hns@goldelico.com>
+T:	git https://github.com/goldelico/gta04-kernel/tree/work/letux-base/hns/gpu/pvr-v8
+L:	linux-omap@vger.kernel.org
+S:	Supported
+F:	drivers/staging/pvr
 
 PVRUSB2 VIDEO4LINUX DRIVER
 M:	Mike Isely <isely@pobox.com>

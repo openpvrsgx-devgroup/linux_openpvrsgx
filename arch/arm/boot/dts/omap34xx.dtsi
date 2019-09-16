@@ -100,6 +100,35 @@
 				interrupts = <18>;
 			};
 		};
+
+		/*
+		 * On omap34xx the OCP registers do not seem to be accessible
+		 * at all unlike on 36xx. Maybe SGX is permanently set to
+		 * "OCP bypass mode", or maybe there is OCP_SYSCONFIG that is
+		 * write-only at 0x50000e10. We detect SGX based on the SGX
+		 * revision register instead of the unreadable OCP revision
+		 * register. Also note that on early 34xx es1 revision there
+		 * are also different clocks, but we do not have any dts users
+		 * for it.
+		 */
+		sgx_module: target-module@50000000 {
+			compatible = "ti,sysc-omap2", "ti,sysc";
+			reg = <0x50000014 0x4>;
+			reg-names = "rev";
+			clocks = <&sgx_fck>, <&sgx_ick>;
+			clock-names = "fck", "ick";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0 0x50000000 0x4000>;
+
+			sgx@fe00 {
+				compatible = "img,sgx530-121", "img,sgx530", "ti,omap-omap3-sgx530-121";
+				reg = <0xfe00 0x200>;
+				reg-names = "sgx";
+				interrupts = <21>;
+				timer = <&timer11>;
+			};
+		};
 	};
 
 	thermal_zones: thermal-zones {

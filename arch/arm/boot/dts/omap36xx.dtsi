@@ -139,6 +139,36 @@
 				interrupts = <18>;
 			};
 		};
+
+		/*
+		 * The OCP register layout seems to be a subset of the
+		 * "ti,sysc-omap4" with just sidle and midle bits.
+		 */
+		sgx_module: target-module@50000000 {
+			compatible = "ti,sysc-omap4", "ti,sysc";
+			reg = <0x5000fe00 0x4>,
+			      <0x5000fe10 0x4>;
+			reg-names = "rev", "sysc";
+			ti,sysc-midle = <SYSC_IDLE_FORCE>,
+					<SYSC_IDLE_NO>,
+					<SYSC_IDLE_SMART>;
+			ti,sysc-sidle = <SYSC_IDLE_FORCE>,
+					<SYSC_IDLE_NO>,
+					<SYSC_IDLE_SMART>;
+			clocks = <&sgx_fck>, <&sgx_ick>;
+			clock-names = "fck", "ick";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0 0x50000000 0x2000000>;
+
+			sgx@fe00 {
+				compatible = "img,sgx530-125", "img,sgx530", "ti,omap-omap3630-sgx530-125";
+				reg = <0xfe00 0x200>;
+				reg-names = "sgx";
+				interrupts = <21>;
+				timer = <&timer11>;
+			};
+		};
 	};
 
 	thermal_zones: thermal-zones {

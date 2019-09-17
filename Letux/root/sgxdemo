@@ -6,9 +6,7 @@
 # usage: gpu-demo
 #
 # WARNING: this loads and installs packages with NON-FREE
-# firmware for the SGX libraries and runtime support from
-#
-# http://download.goldelico.com/letux-debian-rootfs/debian/dists/jessie/main/binary-armhf/
+# firmware for the SGX libraries and runtime support
 #
 # It needs a kernel where the GPL'ed SGX kernel driver is
 # properly configured.
@@ -23,42 +21,42 @@ case $(dpkg -s libdrm2 2>/dev/null | grep '^Version:') in
 		;;
 esac
 
-# autodetect package version to load
-COMPATIBLE=omap_$(egrep -ao '[a-z0-9]*-sgx[0-9]*-[0-9]*' </proc/device-tree/ocp*/*g*x@*/compatible | tr '-' '_')	# match gfx@ and sgx@
+yes | apt-get install letux-base libdrm-omap1 libgbm1   # needs some active internet connection on Pyra (ethernet over USB, wwan, wlan)
+
+# autodetect package version to load (so far omap only)
+COMPATIBLE=omap_$(egrep -ao '[a-z0-9]*-sgx[0-9]*-[0-9]*' </proc/device-tree/ocp@*/target-module@5?000000/sgx@*/compatible | tr '-' '_')	# match sgx@
+# could use modprobe -c | fgrep ti,$COMPATIBLE | head 1 | cut ... to translate
 MODULE=pvrsrvkm_$COMPATIBLE
 echo compatible driver: $COMPATIBLE
 echo module name: $MODULE
 
 # fetch the microkernel binary and libraries
-[ "$(which pvrsrvctl)" ] || apt-get install -y --force-yes omap-pvrsgx-1.14
+if ! [ "$(which pvrsrvctl)" ]
+then
+	(cd / || exit
+	wget -O sgx.tar.xz https://packages.pyra-handheld.com/images/extra/sgx.tar.xz
+	tar xvJf sgx.tar.xz
+	cp -R sgx/pvr/etc sgx/pvr/lib .
+	cp -R sgx/pvr/bin sgx/pvr/include ./usr
+	ln -sf libgbm.so.1 usr/lib/arm-linux-gnueabihf/libgbm.so.2    # there is (will be) no libgbm.so.2 in Debian
+	) || exit
+fi
 
 # if kernel module was blacklisted, load it now
 lsmod | fgrep -q pvrsrvkm_ || modprobe $MODULE
 
-# fix clock setup
-# should have been done by driver, hwmods and pdata-quirks
-if fgrep -q AM33XX </proc/cpuinfo
-then
-	: seems to work now with CM_GFX_L3_CLKSTCTRL / CM_GFX_GFX_CLKCTRL hack
-	# devmem2 0x44E00900 w 0x02
-	# devmem2 0x44E00904 w 0x02
-	# devmem2 0x44E0090c w 0x02
-	# devmem2 0x44E00910 w 0x02
-	# devmem2 0x44E00914 w 0x02
-else
-	: no fix needed
-fi
-
-# start pvr
+## start pvr, if not yet
 : which pvrsrvctl
 fgrep -q 'System Version String: None' /proc/pvr/version && pvrsrvctl --start --no-module
 
+# report some infos
 fgrep "System Version String: " /proc/pvr/version
 
 PATH=$PATH:/opt/img-powervr-sdk/Examples/Advanced/NullWS/
 
-. $SCRIPTPATH/x	# needed by eglinfo
+. $SCRIPTPATH/x		# needed by eglinfo
 
+# run some demos
 for i in sgx_clipblit_test gles1test1 gles2test1 eglinfo kmscube OGLES2Water
 do
 	if [ "$(which $i)" ]

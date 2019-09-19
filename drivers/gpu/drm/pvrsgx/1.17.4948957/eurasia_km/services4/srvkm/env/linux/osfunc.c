@@ -64,6 +64,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <linux/vmalloc.h>
 #include <linux/delay.h>
 #include <linux/pci.h>
+#include <linux/platform_device.h>
 
 #include <linux/string.h>
 #include <linux/sched.h>
@@ -125,6 +126,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 #error "A preemptible Linux kernel is required when using workqueues"
 #endif
+
+extern struct platform_device *gpsPVRLDMDev;
 
 #if defined(EMULATOR)
 #define EVENT_OBJECT_TIMEOUT_MS		(2000)
@@ -4086,6 +4089,17 @@ static IMG_BOOL ExternalKVAreaToPhys(LinuxMemArea *psLinuxMemArea,
 	return IMG_TRUE;
 }
 
+static IMG_BOOL CmaPagesToPhys(LinuxMemArea *psLinuxMemArea,
+		IMG_VOID *pvRangeAddrStart,
+		IMG_UINT32 ui32PageNumOffset,
+		IMG_UINT32 ui32PageNum,
+		IMG_CPU_PHYADDR *psStart)
+{
+	*psStart = LinuxMemAreaToCpuPAddr(psLinuxMemArea,
+			PAGES_TO_BYTES(ui32PageNumOffset + ui32PageNum));
+	return IMG_TRUE;
+}
+
 static IMG_BOOL AllocPagesAreaToPhys(LinuxMemArea *psLinuxMemArea,
                                      IMG_VOID *pvRangeAddrStart,
                                      IMG_UINT32 ui32PageNumOffset,
@@ -4350,6 +4364,13 @@ IMG_BOOL CheckExecuteCacheOp(IMG_HANDLE hOSMemHandle,
 				pfnMemAreaToPhys = AllocPagesSparseAreaToPhys;
 			else
 				pfnMemAreaToPhys = AllocPagesAreaToPhys;
+
+			break;
+		}
+		case LINUX_MEM_AREA_CMA:
+		{
+			uPageNumOffset = ((uiAreaOffset & PAGE_MASK) + (pvPhysRangeStart - pvMinVAddr)) >> PAGE_SHIFT;
+			pfnMemAreaToPhys = CmaPagesToPhys;
 
 			break;
 		}

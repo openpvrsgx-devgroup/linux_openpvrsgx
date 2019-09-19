@@ -681,5 +681,7 @@ const IMG_CHAR *LinuxMemAreaTypeToString(LINUX_MEM_AREA_TYPE eMemAreaType);
 const IMG_CHAR *HAPFlagsToString(IMG_UINT32 ui32Flags);
 #endif
 
+IMG_VOID LinuxSetCMARegion(IMG_BOOL bCma);
+
 #endif /* __IMG_LINUX_MM_H__ */
 

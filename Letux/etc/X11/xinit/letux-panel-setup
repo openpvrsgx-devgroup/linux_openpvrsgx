@@ -29,7 +29,7 @@ for LCD in \
 	/proc/device-tree/ocp@68000000/spi@48098000/lcd@1 \
 	/proc/device-tree/ocp/dss@58000000/encoder@58004000/lcd
 do
-echo try $LCD/compatible >&2
+# echo $0: try $LCD/compatible >&2
 	if [ -r $LCD/compatible ]
 	then
 		tr '\0' '\n' <$LCD/compatible 2>/dev/null | sed s/omapdss,//
@@ -40,15 +40,14 @@ done
 
 while read COMPATIBLE < <(findpanel)
 do
-echo check "/etc/X11/$COMPATIBLE.conf" >&2
+# echo check "/etc/X11/$COMPATIBLE.conf" >&2
 	if [ -r "/etc/X11/$COMPATIBLE.conf" ]
 	then
 		# create symlink to chosen config
-echo ln -s $COMPATIBLE.conf /etc/X11/xorg.conf >&2
+echo $0: ln -s $COMPATIBLE.conf /etc/X11/xorg.conf >&2
 		rm -f /etc/X11/xorg.conf
 		ln -s "$COMPATIBLE.conf" /etc/X11/xorg.conf
-		# apply special rules, could look for and run shell script $COMPATIBLE.sh
-
+		# look for and run shell script $COMPATIBLE.sh if it exists
 		[ -x "/etc/X11/$COMPATIBLE.sh" ] && "/etc/X11/$COMPATIBLE.sh"
 		exit 0
 	fi
@@ -56,20 +55,6 @@ done
 
 
 case "$(tr -d '\0' </proc/device-tree/model 2>/dev/null)" in
-#	*GTA04A2* | *GTA04A3* | *GTA04A4* | *GTA04A5* | *GTA04A3+* | *Letux2804* )
-#		PANEL=2.8-640x480;;	# Letux 2804
-#	*'GTA04 b1'* | *OpenMoko-Beagle-Hybrid* )
-#		PANEL=2.8-640x480;;	# OpenmokoBeagleHybrid (with TPO LCD conneced to J4&5)
-#	*GTA04b2* | *'GTA04 b2'* | *GTA04b6* | *'GTA04 b6'* | *'Letux 3704'* | *'Letux 3714'* )
-#		(
-#		cd /root
-#		NAME=blanviewd
-#		[ -x $NAME ] || make $NAME
-#		daemon --name=$NAME $PWD/$NAME
-#		)
-#		PANEL=3.7-640x480;;	# Letux 3704
-#	*GTA04b3* | *'GTA04 b3'* | *'Letux 7004'* )
-#		PANEL=7.0-480x800;;	# Letux 7004
 	*'GTA04 b4'* )
 		PANEL=5.0x640x1024;;	# Letux 5004 (never built)
 	*GTA04b7* | *'GTA04 b7'* | *Neo900* )
@@ -83,32 +68,6 @@ case "$(tr -d '\0' </proc/device-tree/model 2>/dev/null)" in
 		/root/tvout 0   # seems to initialize something we need for switching to HDMI
 		/root/tvout 1   # choose HDMI video as default
 		;;
-#	*Pyra-Handheld* )
-#		PANEL=5.0-720x1280
-#		(
-#		cd /root
-#		if [ "$(tr -d '\0' </proc/device-tree/ocp/dss@58000000/encoder@58004000/lcd/compatible)" = "omapdss,mipi,debug" ]
-#		then
-#			PANEL=5.0-720x1280-debug
-#			if [ -r /sys/bus/i2c/devices/1-0048 ]
-#			then	# old V3 touch&display adapter for display demo/tester
-#				./boe-w677l
-#			else
-#				./ssd2858 -r -p -s	# start ssd
-#			fi
-#			./bl 1
-#		else
-#			# assume we have a native and working panel driver and need to rotate by tiler
-#			./tiler-ctl 270
-#		fi
-#		)
-#		# setup keyboard
-#		cp /etc/X11/Xmodmap.pyra /etc/X11/Xmodmap
-#		# setup nubs
-#		echo mouse > /proc/pandora/nub0/mode	# mouse
-#		echo scroll > /proc/pandora/nub1/mode	# scroll wheel
-#		# mouse buttons are handled by gpio-buttons
-#		;;
 	*Pandora* )
 		PANEL=4.3-480x640
 		# setup keyboard
@@ -117,8 +76,6 @@ case "$(tr -d '\0' </proc/device-tree/model 2>/dev/null)" in
 		echo mouse > /proc/pandora/nub0/mode	# mouse
 		echo mbuttons > /proc/pandora/nub1/mode	# mouse buttons
 		;;
-#	*BeagleBoneBlack* )
-#		PANEL=4.3-272x480;;	# BBB with 4.3 inch panel cape
 	*'Letux Cortex 8'* )
 		PANEL=4.3-272x480;;	# assume a PSP display can be connected
 	*'Raspberry Pi'* )

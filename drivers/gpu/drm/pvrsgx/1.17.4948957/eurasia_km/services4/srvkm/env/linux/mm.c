@@ -108,6 +108,8 @@ extern struct platform_device *gpsPVRLDMDev;
  */
 static atomic_t g_sPagePoolEntryCount = ATOMIC_INIT(0);
 
+static IMG_BOOL bCmaAllocation = IMG_FALSE;
+
 #if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
 typedef enum {
     DEBUG_MEM_ALLOC_TYPE_KMALLOC = 0,
@@ -1511,6 +1513,10 @@ NewAllocCmaLinuxMemArea(IMG_SIZE_T uBytes, IMG_UINT32 ui32AreaFlags)
     dma_addr_t phys;
     void *cookie;
 
+    /* return if there is no device specific cma pool */
+    if (!bCmaAllocation)
+        return NULL;
+
     psLinuxMemArea = LinuxMemAreaStructAlloc();
     if (!psLinuxMemArea)
     {
@@ -2844,3 +2850,12 @@ failed:
     return PVRSRV_ERROR_OUT_OF_MEMORY;
 }
 
+IMG_VOID LinuxSetCMARegion(IMG_BOOL bCma)
+{
+    bCmaAllocation = bCma;
+
+    if (bCma)
+    {
+        PVR_TRACE(("%s:, CMA pool is setup for GPU\n", __FUNCTION__));
+    }
+}

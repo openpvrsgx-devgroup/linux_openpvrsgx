@@ -62,6 +62,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <asm/ioctl.h>
 #include <drm/drmP.h>
 #include <drm/drm.h>
+#include <linux/of_reserved_mem.h>
 
 #include "img_defs.h"
 #include "services.h"
@@ -716,6 +717,9 @@ PVRSRVDrmProbe(struct platform_device *pDevice)
 		}
 	}
 #endif
+
+	LinuxSetCMARegion(of_reserved_mem_device_init(&pDevice->dev) ?
+			IMG_FALSE: IMG_TRUE);
 
 #if defined(PVR_NEW_STYLE_DRM_PLATFORM_DEV)
 	gpsPVRLDMDev = pDevice;

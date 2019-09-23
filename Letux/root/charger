@@ -168,6 +168,9 @@ echo volt: $(cat $SUPPLY/voltage_now 2>/dev/null)uV
 echo current: $(cat $SUPPLY/current_now 2>/dev/null)uA
 echo max_current: $(cat $SUPPLY/input_current_limit 2>/dev/null)uA
 echo
+
+echo 800000 >$SUPPLY/input_current_limit
+
 ;;
 
 Battery )

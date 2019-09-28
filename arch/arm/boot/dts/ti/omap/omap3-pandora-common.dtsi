@@ -675,6 +675,8 @@
 	#address-cells = <1>;
 	#size-cells = <0>;
 
+//	reset-gpios = <&gpio1 23 GPIO_ACTIVE_LOW>;	/* gpio_23 = reset means remove 
+
 	wlan: wifi@1 {
 		compatible = "ti,wl1251";
 

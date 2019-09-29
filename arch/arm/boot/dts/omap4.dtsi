@@ -362,9 +362,9 @@
 
 			sgx: sgx@0 {
 				compatible = "img,sgx540-120", "img,sgx540", "ti,omap-omap4-sgx540-120";
-				reg = <0xfe00 0x200>;
+				reg = <0x0 0x2000000>;	/* 32MB */
 				reg-names = "sgx";
-				// FIXME: interrupt = <?>;
+				interrupts = <GIC_SPI 21 IRQ_TYPE_LEVEL_HIGH>;
 				timer = <&timer11>;
 			};
 		};

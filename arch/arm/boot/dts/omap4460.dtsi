@@ -84,14 +84,6 @@
 			1376000		1	0	0	0	0
 			>;
 		};
-
-#if FIXME_OMAP4470_ONLY	/* 4430, 4440, 4460 have sgx540-120! */
-		target-module@56000000 {
-			sgx@0 {
-				compatible = "img,sgx544-112", "img,sgx544", "ti,omap-omap4470-sgx544-112";
-			};
-		};
-#endif
 	};
 
 };

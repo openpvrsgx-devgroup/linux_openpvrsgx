@@ -61,16 +61,13 @@ ifneq ($(CONFIG_SOC_AM33XX),)
 endif # CONFIG_SOC_AM33XX
 endif # CONFIG_ARCH_OMAP3
 ifneq ($(CONFIG_ARCH_OMAP4),)
-	@$(kecho) "  MAKE    $(obj): omap4430"
+	@$(kecho) "  MAKE    $(obj): omap4430/60"
 # ES1 would have REV=110 but that is unsupported by sgxerrata.h
-	$(Q)SOC_VENDOR=ti SOC_FAMILY=omap SOC=omap4430 SGX=sgx540 SGX_FLAG=SGX540 SGX_REV=120 AM_VERSION=4 TARGET_TYPE=$(CONFIG_SGX_OMAP) $(MAKE) $(build)=$(SOURCE)
-	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
-	@$(kecho) "  MAKE    $(obj): omap4460"
-	$(Q)SOC_VENDOR=ti SOC_FAMILY=omap SOC=omap4460 SGX=sgx540 SGX_FLAG=SGX540 SGX_REV=120 AM_VERSION=4 TARGET_TYPE=$(CONFIG_SGX_OMAP) $(MAKE) $(build)=$(SOURCE)
+	$(Q)SOC_VENDOR=ti SOC_FAMILY=omap SOC=omap4 SGX=sgx540 SGX_FLAG=SGX540 SGX_REV=120 AM_VERSION=4 TARGET_TYPE=$(CONFIG_SGX_OMAP) $(MAKE) $(build)=$(SOURCE)
 	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
 	@$(kecho) "  MAKE    $(obj): omap4470"
 # see https://pyra-handheld.com/boards/threads/omap4470-sgx-drivers.78480/
-	$(Q)SOC_VENDOR=ti SOC_FAMILY=omap SOC=omap4470 SGX=sgx544 SGX_FLAG=SGX544 SGX_REV=112 AM_VERSION=4 TARGET_TYPE=$(CONFIG_SGX_OMAP) $(MAKE) $(build)=$(SOURCE)
+	$(Q)SOC_VENDOR=ti SOC_FAMILY=omap SOC=omap4 SGX=sgx544 SGX_FLAG=SGX544 SGX_REV=112 AM_VERSION=4 TARGET_TYPE=$(CONFIG_SGX_OMAP) $(MAKE) $(build)=$(SOURCE)
 	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
 ifneq ($(CONFIG_SOC_AM43XX),)
 	@$(kecho) "  MAKE    $(obj): am43xx"

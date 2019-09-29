@@ -360,11 +360,11 @@
 			#size-cells = <1>;
 			ranges = <0 0x56000000 0x2000000>;
 
-			sgx@fe00 {
+			sgx@1fc00 {
 				compatible = "img,sgx540-120", "img,sgx540", "ti,omap-omap4-sgx540-120";
-				reg = <0xfe00 0x200>;
+				reg = <0x1fc00 0x200>;
 				reg-names = "sgx";
-				// FIXME: interrupt = <?>;
+				interrupts = <GIC_SPI 21 IRQ_TYPE_LEVEL_HIGH>;
 				timer = <&timer11>;
 			};
 		};

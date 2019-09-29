@@ -124,6 +124,11 @@ letux/dt-mipsbook400
 letux/pm-mipsbook400
 letux/dt-ci20
 
+# E-Book reader
+letux/kobolino/dt-v2
+letux/kobolino/backlight
+letux/kobolino/touch
+
 # hacks and fixes
 letux/twl4030
 letux/hwmon-fixes

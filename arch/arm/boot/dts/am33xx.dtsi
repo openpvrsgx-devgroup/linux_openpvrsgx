@@ -480,7 +480,7 @@
 			#size-cells = <1>;
 			ranges = <0 0x56000000 0x1000000>;
 
-			sgx@0 {
+			sgx@fe00 {
 				compatible = "img,sgx530-125", "img,sgx530", "ti,omap-am335x-sgx530-125";
 				reg = <0x0fe00 0x200>;
 				reg-names = "sgx";

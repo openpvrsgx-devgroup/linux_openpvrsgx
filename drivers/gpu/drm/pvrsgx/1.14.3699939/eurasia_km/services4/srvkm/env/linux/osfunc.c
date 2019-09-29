@@ -3427,6 +3427,9 @@ static IMG_BOOL CPUVAddrToPFN(struct vm_area_struct *psVMArea, IMG_UINTPTR_T uCP
 {
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,10))
     pgd_t *psPGD;
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4,12,0))
+    p4d_t *psP4D;
+#endif
     pud_t *psPUD;
     pmd_t *psPMD;
     pte_t *psPTE;
@@ -3441,7 +3444,14 @@ static IMG_BOOL CPUVAddrToPFN(struct vm_area_struct *psVMArea, IMG_UINTPTR_T uCP
     if (pgd_none(*psPGD) || pgd_bad(*psPGD))
         return bRet;
 
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4,12,0))
+    psP4D = p4d_offset(psPGD, uCPUVAddr);
+    if (p4d_none(*psP4D))
+        return bRet;
+    psPUD = pud_offset(psP4D, uCPUVAddr);
+#else
     psPUD = pud_offset(psPGD, uCPUVAddr);
+#endif
     if (pud_none(*psPUD) || pud_bad(*psPUD))
         return bRet;
 

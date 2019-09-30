@@ -16,7 +16,7 @@ SCRIPTPATH="$(dirname "$0")"
 
 if ! [ "$(dpkg -s libdrm2 2>/dev/null)" ]
 then
-	yes | apt-get install letux-base libdrm2 libdrm-omap1 libgbm1   # needs some active internet connection (ethernet over USB, wwan, wlan)
+	yes | apt-get install letux-base libdrm2 libdrm-omap1 libgbm1 wget tar xz-utils   # needs some active internet connection (ethernet over USB, wwan, wlan)
 fi
 
 # we need a more recent libdrm2 on plain jessie

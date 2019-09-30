@@ -14,17 +14,20 @@
 
 SCRIPTPATH="$(dirname "$0")"
 
+if ! [ "$(dpkg -s libdrm2 2>/dev/null)" ]
+then
+	yes | apt-get install letux-base libdrm2 libdrm-omap1 libgbm1   # needs some active internet connection (ethernet over USB, wwan, wlan)
+fi
+
 # we need a more recent libdrm2 on plain jessie
 case $(dpkg -s libdrm2 2>/dev/null | grep '^Version:') in
-	'' | 'Version: '2.4.58-* )
+	'Version: '2.4.58-* )
 		apt-get -t jessie-backports install --reinstall libdrm2
 		;;
 esac
 
-yes | apt-get install letux-base libdrm-omap1 libgbm1   # needs some active internet connection on Pyra (ethernet over USB, wwan, wlan)
-
 # autodetect package version to load (so far omap only)
-COMPATIBLE=omap_$(egrep -ao '[a-z0-9]*-sgx[0-9]*-[0-9]*' </proc/device-tree/ocp@*/target-module@5?000000/sgx@*/compatible | tr '-' '_')	# match sgx@
+COMPATIBLE=omap_$(egrep -ao '[a-z0-9]*-sgx[0-9]*-[0-9]*' </proc/device-tree/ocp*/target-module@5*/sgx@*/compatible | tr '-' '_')	# match sgx@
 # could use modprobe -c | fgrep ti,$COMPATIBLE | head 1 | cut ... to translate
 MODULE=pvrsrvkm_$COMPATIBLE
 echo compatible driver: $COMPATIBLE

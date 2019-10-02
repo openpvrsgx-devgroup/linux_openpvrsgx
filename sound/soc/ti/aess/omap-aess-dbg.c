@@ -325,8 +325,8 @@ static int aess_open_data(struct inode *inode, struct file *file)
 
 	debug->buffer_bytes = debug->elem_bytes * 4 * debug->buffer_msecs;
 
-	debug->buffer = dma_alloc_writecombine(aess->dev, debug->buffer_bytes,
-					       &debug->buffer_addr, GFP_KERNEL);
+	debug->buffer = dma_alloc_wc(aess->dev, debug->buffer_bytes,
+					&debug->buffer_addr, GFP_KERNEL);
 	if (debug->buffer == NULL) {
 		dev_err(aess->dev, "can't alloc %d bytes for trace DMA buffer\n",
 			debug->buffer_bytes);
@@ -347,8 +347,8 @@ static int aess_release_data(struct inode *inode, struct file *file)
 
 	aess_dbg_stop_dma(aess);
 
-	dma_free_writecombine(aess->dev, debug->buffer_bytes, debug->buffer,
-			      debug->buffer_addr);
+	dma_free_wc(aess->dev, debug->buffer_bytes, debug->buffer,
+		    debug->buffer_addr);
 	return 0;
 }
 

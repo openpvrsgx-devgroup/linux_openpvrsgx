@@ -104,7 +104,6 @@
 		debounce-delay-ms = <10>;
 		interrupt-parent = <&gpio5>;
 		interrupts = <10 IRQ_TYPE_EDGE_BOTH>; /* gpio138 */
-		irq-flags = <IRQ_TYPE_EDGE_BOTH>;
 		gpios = <&gpio5 10 GPIO_ACTIVE_HIGH>; /* gpio138 */
 		state-on = "external";
 		state-off = "internal";

@@ -31,7 +31,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <asm/types.h>	// get definitins for __u16 etc.
+#include <asm-generic/types.h>	// get definitins for __u16 etc.
 #define __ASSEMBLY__	// would conflict over fd_set, dev_t etc. from sys/types of HOSTCC
 
 #include <tools/be_byteshift.h>

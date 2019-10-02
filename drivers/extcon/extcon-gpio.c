@@ -89,13 +89,10 @@ static int gpio_extcon_probe(struct platform_device *pdev)
 		u32 value;
 
 		data->debounce_jiffies = 0;
-		data->irq_flags = 0;
 
 		data->check_on_resume = of_property_read_bool(node, "check-on-resume");
 		if(!of_property_read_u32(node, "debounce-delay-ms", &value))
 			data->debounce_jiffies = value;
-		if(!of_property_read_u32(node, "irq-flags", &value))
-			data->irq_flags = value;
 #ifdef DEBUG
 		printk("extcon gpio %p\n", data->gpiod);
 		printk("extcon debounce %lu\n", data->debounce_jiffies);

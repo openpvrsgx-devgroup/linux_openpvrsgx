@@ -269,7 +269,7 @@
 			ports-implemented = <0x1>;
 		};
 
-		sgx_module: target-module@56000000 {
+		target-module@56000000 {
 			compatible = "ti,sysc-omap4", "ti,sysc";
 			reg = <0x5600fe00 0x4>,
 			      <0x5600fe10 0x4>;
@@ -286,7 +286,7 @@
 			#size-cells = <1>;
 			ranges = <0 0x56000000 0x2000000>;
 
-			sgx@fe00 {
+			sgx: sgx@fe00 {
 				compatible = "img,sgx544-116", "img,sgx544", "ti,omap-omap5-sgx544-116";
 				reg = <0xfe00 0x200>;
 				reg-names = "sgx";

@@ -2,10 +2,15 @@
 echo "*** SGX Register Dump ***"
 
 function registers {
-case $(fgrep Hardware /proc/cpuinfo) in
-*AM33XX* )
+# check which SoC we are running on and
+# provide list of registers (addr + name)
+
+case $(cat /sys/devices/soc0/machine) in
+
+AM335X )
+
 echo on > /sys/bus/platform/devices/5600fe00.target-module/power/control
-cat <<AM33XX
+cat <<END
 44E00900	CM_GFX_L3_CLKSTCTRL
 44E00904	CM_GFX_GFX_CLKCTRL
 44E0090c	CM_GFX_L4LS_GFX_CLKSTCTR
@@ -34,13 +39,35 @@ cat <<AM33XX
 5600ff04	OCP_INTERRUPT_EVENT
 5600ff08	OCP_DEBUG_CONFIG
 5600ff0c	OCP_DEBUG_STATUS
-AM33XX
+END
 ;;
 
-*OMAP3* )
-# see DM37x TRM section 8.4 SGX Register Manual
+OMAP3430/OMAP3530 )
+echo on > /sys/bus/platform/devices/50000014.target-module/power/control
+
+cat <<END
+48004B00	CM_FCLKEN_SGX
+48004B10	CM_ICLKEN_SGX
+48004B20	CM_IDLEST_SGX
+48004B40	CM_CLKSEL_SGX
+48004B44	CM_SLEEPDEP_SGX
+48004B48	CM_CLKSTCTRL_SGX
+48004b4c	CM_CLKSTST_SGX
+48306b58	RM_RSTST_SGX
+48306bc8	PM_WKDEP_SGX
+48306be0	PM_PWSTCTRL_SGX
+48306be4	PM_PWSTST_SGX
+48306be8	PM_PREPWSTST_SGX
+END
+;;
+
+OMAP3630/DM3730 )
+
 echo on > /sys/bus/platform/devices/5000fe00.target-module/power/control
-cat <<OMAP3
+
+# see DM37x TRM section 8.4 SGX Register Manual
+
+cat <<END
 48004B00	CM_FCLKEN_SGX
 48004B10	CM_ICLKEN_SGX
 48004B20	CM_IDLEST_SGX
@@ -72,12 +99,12 @@ cat <<OMAP3
 5000ff04	OCP_INTERRUPT_EVENT
 5000ff08	OCP_DEBUG_CONFIG
 5000ff0c	OCP_DEBUG_STATUS
-OMAP3
+END
 ;;
 
-*OMAP4* )
+OMAP4* )
 echo on > /sys/bus/platform/devices/5601fc00.target-module/power/control
-cat <<OMAP5
+cat <<END
 5600fe00	OCP_REVISION
 5600fe04	OCP_HWINFO
 5600fe10	OCP_SYSCONFIG
@@ -97,12 +124,12 @@ cat <<OMAP5
 5600ff04	OCP_INTERRUPT_EVENT
 5600ff08	OCP_DEBUG_CONFIG
 5600ff0c	OCP_DEBUG_STATUS
-OMAP5
+END
 ;;
 
-*OMAP5* )
+OMAP5* )
 echo on > /sys/bus/platform/devices/5600fe00.target-module/power/control
-cat <<OMAP5
+cat <<END
 5600fe00	OCP_REVISION
 5600fe04	OCP_HWINFO
 5600fe10	OCP_SYSCONFIG
@@ -122,7 +149,12 @@ cat <<OMAP5
 5600ff04	OCP_INTERRUPT_EVENT
 5600ff08	OCP_DEBUG_CONFIG
 5600ff0c	OCP_DEBUG_STATUS
-OMAP5
+END
+;;
+
+*)
+echo "unknown machine $(cat /sys/devices/soc0/machine)" >&2
+exit 1
 ;;
 
 esac

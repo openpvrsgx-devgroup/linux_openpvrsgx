@@ -97,6 +97,7 @@ letux/ts3a225e
 letux/panels+ssd2858
 letux/bno055
 letux/freescale-sensors
+letux/omap-sysc-prm-gfx
 letux/omap-pvr-soc-glue
 letux/omap-pvr-demo
 letux/latest-pvr

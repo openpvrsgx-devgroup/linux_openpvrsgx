@@ -5,7 +5,7 @@ function registers {
 # check which SoC we are running on and
 # provide list of registers (addr + name)
 
-case $(cat /sys/devices/soc0/machine) in
+case "$(tr -d '\0' </sys/devices/soc0/machine)" in
 
 AM335X )
 

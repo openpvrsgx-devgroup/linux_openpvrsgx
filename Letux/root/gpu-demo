@@ -11,20 +11,15 @@
 # It needs a kernel where the GPL'ed SGX kernel driver is
 # properly configured.
 #
+# Should be run on Debian Stretch.
+#
 
 SCRIPTPATH="$(dirname "$0")"
 
-if ! [ "$(dpkg -s libdrm2 2>/dev/null)" ]
+if ! [ "$(dpkg -s libdrm-omap1 2>/dev/null)" ]
 then
-	yes | apt-get install letux-base libdrm2 libdrm-omap1 libgbm1 wget tar xz-utils   # needs some active internet connection (ethernet over USB, wwan, wlan)
+	yes | apt-get install libdrm-omap1 libgbm1 git make   # needs some active internet connection (ethernet over USB, wwan, wlan)
 fi
-
-# we need a more recent libdrm2 on plain jessie
-case $(dpkg -s libdrm2 2>/dev/null | grep '^Version:') in
-	'Version: '2.4.58-* )
-		apt-get -t jessie-backports install --reinstall libdrm2
-		;;
-esac
 
 # autodetect package version to load (so far omap only)
 COMPATIBLE=omap_$(egrep -ao '[a-z0-9]*-sgx[0-9]*-[0-9]*' </proc/device-tree/ocp*/target-module@5*/sgx@*/compatible | tr '-' '_')	# match sgx@
@@ -36,13 +31,38 @@ echo module name: $MODULE
 # fetch the microkernel binary and libraries
 if ! [ "$(which pvrsrvctl)" ]
 then
-	(cd / || exit
-	wget -O sgx.tar.xz https://packages.pyra-handheld.com/images/extra/sgx.tar.xz
-	tar xvJf sgx.tar.xz
-	cp -R sgx/pvr/etc sgx/pvr/lib .
-	cp -R sgx/pvr/bin sgx/pvr/include ./usr
-	ln -sf libgbm.so.1 usr/lib/arm-linux-gnueabihf/libgbm.so.2    # there is (will be) no libgbm.so.2 in Debian
-	) || exit
+	if ! apt-get install --reinstall letux-pvrsgx-1.14
+	then # package not available, install step-by-step
+		(
+		set -e
+		# based on http://blog.0xpebbles.org/PowerVR-SGX-on-the-beaglebone-black-in-2019
+		export DISCIMAGE=/
+		BRANCH=ti-img-sgx/1.14.3699939_k4.4
+		case "$(tr -d '\0' </sys/devices/soc0/machine)" in
+			# FIXME: does this more depend on sgx530,540,544?
+			AM335X | OMAP3430/3530 | OMAP3630/DM3730 ) export TARGET_PRODUCT=ti335x;;
+			OMAP4* ) export TARGET_PRODUCT=ti437x;;
+			OMAP5* ) export TARGET_PRODUCT=jacinto6evm;;
+			*) echo unknown SoC: $(tr -d '\0' </sys/devices/soc0/machine): exit 1;;
+		esac
+		rm -rf omap5-sgx-ddk-um-linux/
+		git clone -b $BRANCH git://git.ti.com/graphics/omap5-sgx-ddk-um-linux.git --depth=1 ||
+		# FIXME: choose correct branch/repo where we keep a copy
+		git clone -b $BRANCH http://git.goldelico.com/letux-rootfs.git --depth=1
+		cd omap5-sgx-ddk-um-linux/
+		echo installing user space files for $TARGET_PRODUCT >&2
+		make install
+		rm -f /usr/lib/arm-linux-gnueabihf/libgbm.so.2
+		ln -s libgbm.so.1 /usr/lib/arm-linux-gnueabihf/libgbm.so.2
+		tee /etc/powervr.ini <<EOF
+[default]
+WindowSystem=libpvrDRMWSEGL.so
+DefaultPixelFormat=RGB888
+EOF
+		cd ..
+		rm -r omap5-sgx-ddk-um-linux/
+		) || exit
+	fi
 fi
 
 # if kernel module was blacklisted, load it now
@@ -55,17 +75,14 @@ fgrep -q 'System Version String: None' /proc/pvr/version && pvrsrvctl --start --
 # report some infos
 fgrep "System Version String: " /proc/pvr/version
 
-PATH=$PATH:/opt/img-powervr-sdk/Examples/Advanced/NullWS/
-
-. $SCRIPTPATH/x		# needed by eglinfo
-
 # run some demos
 for i in sgx_clipblit_test gles1test1 gles2test1 eglinfo kmscube OGLES2Water
 do
 	if [ "$(which $i)" ]
 	then
 		echo "*** $0: running $i ***"
-		timeout 10 $i
+		arg=; case "$i" in gles*test* ) arg="0";; esac
+		timeout 10 $i $arg
 	fi
 done
 

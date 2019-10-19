@@ -126,8 +126,9 @@ letux/pm-mipsbook400
 letux/dt-ci20
 
 # E-Book reader
-letux/kobolino/dt-v2
 letux/kobolino/backlight
+letux/kobolino/dt
+letux/kobolino/rtc
 letux/kobolino/touch
 
 # hacks and fixes

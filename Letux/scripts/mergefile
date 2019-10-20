@@ -32,9 +32,6 @@ letux/Letux
 letux/arm_defconfig
 letux/arm_lpae_defconfig
 letux/mips_defconfig
-# no longer needed - use letux/arm_defconfig
-#letux/arm_udoo_defconfig
-#letux/arm_raspi_defconfig
 
 # Letux Rootfs
 letux/rootfs
@@ -46,10 +43,7 @@ letux/bindings-madc
 letux/dss-bindings
 
 # Device Trees for Letux devices
-letux/dt-makefile
-#letux/dt-upstreaming	# replaces the following branches
 letux/dt-gta04
-#-letux/dt-gta04a5
 letux/dt-gta04b234
 letux/dt-beagle
 letux/dt-evm-pyra
@@ -64,6 +58,7 @@ letux/dt-udoo-neo
 letux/dt-omap5-common
 letux/dt-omap5-uevm
 letux/dt-raspi
+letux/dt-makefile
 
 # Debian build scripts
 letux/debian-build
@@ -116,7 +111,7 @@ letux/codecs-for-gta04
 letux/codec-twl4030
 letux/sound-soc
 
-# Pyra sound
+# Pyra AESS sound
 letux/aess
 
 # Mipsbook / JZ47xx / CI20
@@ -132,6 +127,7 @@ letux/kobolino/rtc
 letux/kobolino/touch
 
 # hacks and fixes
+letux/hacks
 letux/twl4030
 letux/hwmon-fixes
 letux/libertas
@@ -142,15 +138,14 @@ letux/clk
 letux/tvfix
 letux/displayprobing
 letux/charging_fixes
-letux/hacks
 letux/omap2plus
 letux/omap-pvr
+letux/omap5-idle
 letux/mmc
 letux/ubi-fs
 letux/extcon
 letux/misc
 letux/drivers-keyboard
-letux/omap5-idle
 
 # not merged in by default, but carried along and regularily rebased
 -letux/omap-hsmmc

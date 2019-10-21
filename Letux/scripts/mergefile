@@ -65,7 +65,6 @@ letux/debian-build
 
 # upstreaming in progress
 letux/omap3-opp
-letux/generic-adc-battery
 letux/w2sg-serdev
 letux/sirf-gps
 letux/tsc2007
@@ -85,7 +84,7 @@ letux/iio-mount-matrix
 letux/iio-input-bridge
 letux/vcnl4000
 
-# not ready for upstreaming but works
+# not ready for upstreaming but works good enough
 letux/bq27xxx
 letux/bq2429x
 letux/ts3a225e
@@ -98,12 +97,14 @@ letux/omap-pvr-demo
 letux/latest-pvr
 letux/tiler-fbdev
 
-# almost empty or untested...
+# unfinished, almost empty or untested...
 letux/txs02612
 letux/tps6105x-flashlight
 letux/crtouch
+letux/palmas-wdt
+letux/generic-adc-battery
 
-# not for upstreaming
+# not acceptable for upstreaming
 letux/am335x-hwmon
 
 # GTA04 sound

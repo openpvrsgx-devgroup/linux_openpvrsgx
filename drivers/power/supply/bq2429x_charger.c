@@ -173,7 +173,7 @@
 
 /* REG0a vendor status register value */
 #define CHIP_BQ24296		0x20
-#define CHIP_BQ24297		0x30
+#define CHIP_BQ24297		0x60
 
 #define ID_BQ24296		0
 #define ID_BQ24297		1
@@ -214,8 +214,6 @@ struct bq2429x_device_info {
 	unsigned int	usb_input_current_uA;
 	/* alternate power source (not USB) */
 	unsigned int	adp_input_current_uA;
-	unsigned int	precharge_current_uA;
-	unsigned int	charge_term_current_uA;
 	unsigned int	voltage_min_design_uV;
 	unsigned int	battery_voltage_max_design_uV;
 	unsigned int	max_VSYS_uV;
@@ -500,7 +498,7 @@ static int bq2429x_set_charge_current_uA(struct bq2429x_device_info *di, int uA)
 				  (data << CHARGE_CURRENT_OFF),
 				  (CHARGE_CURRENT_MASK << CHARGE_CURRENT_OFF));
 	if (ret < 0) {
-		dev_err(&di->client->dev, "%s(): Failed to set charge current limit (0x%x)\n",
+		dev_err(&di->client->dev, "%s(): Failed to set charge current limit (%d)\n",
 			__func__, uA);
 	}
 	return ret;
@@ -524,6 +522,50 @@ static int bq2429x_get_precharge_current_uA(struct bq2429x_device_info *di)
 
 	return 128000 * ((retval >> PRE_CHARGE_CURRENT_LIMIT_OFF) &
 			 PRE_CHARGE_CURRENT_LIMIT_MASK) + 128000;
+}
+
+static int bq2429x_set_precharge_current_uA(struct bq2429x_device_info *di, int uA)
+{
+	int data;
+	int ret;
+
+	if (uA < 0)
+		return -EINVAL;
+
+	data = (uA - 128000 + 64000) / 128000;
+	data = min(0xf, max(data, 0));	/* limit to 128 mA .. 2048 mA */
+
+	ret = bq2429x_update_reg(di->client,
+				  PRE_CHARGE_TERMINATION_CURRENT_CONTROL_REGISTER,
+				  (data << PRE_CHARGE_CURRENT_LIMIT_OFF),
+				  (PRE_CHARGE_CURRENT_LIMIT_MASK << PRE_CHARGE_CURRENT_LIMIT_OFF));
+	if (ret < 0) {
+		dev_err(&di->client->dev, "%s(): Failed to set precharge charge current (%d)\n",
+			__func__, uA);
+	}
+	return ret;
+}
+
+static int bq2429x_set_charge_term_current_uA(struct bq2429x_device_info *di, int uA)
+{
+	int data;
+	int ret;
+
+	if (uA < 0)
+		return -EINVAL;
+
+	data = (uA - 128000 + 64000) / 128000;
+	data = min(0xf, max(data, 0));	/* limit to 128 mA .. 2048 mA */
+
+	ret = bq2429x_update_reg(di->client,
+				  PRE_CHARGE_TERMINATION_CURRENT_CONTROL_REGISTER,
+				  (data << TERMINATION_CURRENT_LIMIT_OFF),
+				  (PRE_CHARGE_CURRENT_LIMIT_MASK << TERMINATION_CURRENT_LIMIT_OFF));
+	if (ret < 0) {
+		dev_err(&di->client->dev, "%s(): Failed to set charge current limit (%d)\n",
+			__func__, uA);
+	}
+	return ret;
 }
 
 static int bq2429x_en_hiz_disable(struct bq2429x_device_info *di)
@@ -705,7 +747,7 @@ static int bq2429x_get_vendor_id(struct bq2429x_device_info *di)
 	ret = bq2429x_read(di->client, VENDOR_STATS_REGISTER, &retval, 1);
 	if (ret < 0)
 		return ret;
-	return retval & 0xa7;
+	return retval;
 }
 
 static int bq2429x_init_registers(struct bq2429x_device_info *di)
@@ -1425,6 +1467,7 @@ static int bq2429x_parse_dt(struct bq2429x_device_info *di)
 	}
 
 	di->battery_voltage_max_design_uV = 4200000;	/* default for LiIon */
+	di->voltage_min_design_uV = 3200000;
 	di->adp_input_current_uA = 2048000;
 	/* take defaults as set by U-Boot or power-on */
 	di->chg_current_uA = bq2429x_get_charge_current_uA(di);
@@ -1436,22 +1479,27 @@ static int bq2429x_parse_dt(struct bq2429x_device_info *di)
 			     &di->adp_input_current_uA);
 
 	battery_np = of_parse_phandle(np, "monitored-battery", 0);
+
 	if (battery_np) {
+		u32 value;
+
 		of_property_read_u32(battery_np,
 				"voltage-max-design-microvolt",
 				&di->battery_voltage_max_design_uV);
 		of_property_read_u32(battery_np,
-				"constant-charge-current-max-microamp",
-				&di->chg_current_uA);
-		of_property_read_u32(battery_np,
-				"precharge-current-microamp",
-				&di->precharge_current_uA);
-		of_property_read_u32(battery_np,
-				"charge-term-current-microamp",
-				&di->charge_term_current_uA);
-		of_property_read_u32(battery_np,
 				"voltage-min-design-microvolt",
 				&di->voltage_min_design_uV);
+		of_property_read_u32(battery_np,
+				"constant-charge-current-max-microamp",
+				&di->chg_current_uA);
+		if (!of_property_read_u32(battery_np,
+				"precharge-current-microamp",
+				&value));
+			bq2429x_set_precharge_current_uA(di, value);
+		if (!of_property_read_u32(battery_np,
+				"charge-term-current-microamp",
+				&value));
+			bq2429x_set_charge_term_current_uA(di, value);
 		of_node_put(battery_np);
 	}
 
@@ -1537,14 +1585,13 @@ static int bq2429x_charger_probe(struct i2c_client *client,
 				 const struct i2c_device_id *id)
 {
 	struct bq2429x_device_info *di;
-	u8 retval = 0;
 	struct device_node *bq2429x_node;
 	struct power_supply_config psy_cfg = { };
 	struct regulator_config config = { };
 	struct regulator_init_data *init_data;
 	struct regulator_dev *rdev;
 	int i;
-	int ret = -EINVAL;
+	int ret;
 
 	dev_dbg(di->dev, "%s,line=%d\n", __func__, __LINE__);
 
@@ -1567,14 +1614,6 @@ static int bq2429x_charger_probe(struct i2c_client *client,
 	di->prev_r8 = 0xff;
 	di->prev_r9 = 0xff;
 
-	ret = bq2429x_parse_dt(di);
-
-	if (ret < 0) {
-		if (ret != -EPROBE_DEFER)
-			dev_err(&client->dev, "failed to parse DT\n");
-		return ret;
-	}
-
 	ret = bq2429x_get_vendor_id(di);
 
 	if (ret < 0) {
@@ -1587,8 +1626,16 @@ static int bq2429x_charger_probe(struct i2c_client *client,
 	case CHIP_BQ24296:
 	case CHIP_BQ24297:
 	default:
-		dev_err(&client->dev, "not a bq2429x: %02x\n", retval);
+		dev_err(&client->dev, "not a bq2429x: %d %02x\n", ret, ret);
 		return -ENODEV;
+	}
+
+	ret = bq2429x_parse_dt(di);
+
+	if (ret < 0) {
+		if (ret != -EPROBE_DEFER)
+			dev_err(&client->dev, "failed to parse DT\n");
+		return ret;
 	}
 
 	init_data = di->pmic_init_data;
@@ -1599,6 +1646,13 @@ static int bq2429x_charger_probe(struct i2c_client *client,
 	di->workqueue = create_singlethread_workqueue("bq2429x_irq");
 	INIT_WORK(&di->irq_work, bq2729x_irq_work_func);
 	INIT_DELAYED_WORK(&di->usb_detect_work, usb_detect_work_func);
+
+	ret = bq2429x_init_registers(di);
+	if (ret < 0) {
+		dev_err(&client->dev, "failed to initialize registers: %d\n",
+			ret);
+		return ret;
+	}
 
 	psy_cfg.drv_data = di;
 	di->usb = devm_power_supply_register(&client->dev,
@@ -1648,13 +1702,6 @@ static int bq2429x_charger_probe(struct i2c_client *client,
 
 		/* save regulator reference for cleanup */
 		di->rdev[i] = rdev;
-	}
-
-	ret = bq2429x_init_registers(di);
-	if (ret < 0) {
-		dev_err(&client->dev, "failed to initialize registers: %d\n",
-			ret);
-		return ret;
 	}
 
 	ret = devm_request_threaded_irq(&client->dev, client->irq,

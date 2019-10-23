@@ -19,20 +19,22 @@ ccflags-y += -DAM_VERSION=$(AM_VERSION)
 #
 # for the moment we must separate them by module name built from
 #
-# - SoC (omap, sunxi, ...)
+# - SoC family (omap, sunxi, ...)
 # - SoC version (omap3, omap4, omap5, ...)
 # - SGX version (530, 540, 544)
 # - SGX revision
 
-MODULE := pvrsrvkm_$(SOC_FAMILY)_$(SOC)_$(SGX)_$(SGX_REV)
+MODULE := pvrsrvkm_$(SOC)_$(SGX)_$(SGX_REV)
 
 # make either $(MODULE)-y or $(MODULE)-m as defined by TARGET_TYPE
 TARGET := $(MODULE)-$(TARGET_TYPE)
 obj-$(TARGET_TYPE) += $(MODULE).o
+ccflags-y += -DPVR_BUILD_DATE="\"$(shell date "+%Y%m%d" )\""
+
+# this defines the compatible string which must be present in the DTB of the board
+ccflags-y += -DSYS_SGX_DEV_NAME="\"$(SOC_VENDOR),$(SOC)-$(SGX)-$(SGX_REV)\""
 
 ccflags-y += -DSGX_CORE_REV=$(SGX_REV)
-ccflags-y += -DSYS_SGX_DEV_NAME="\"$(SOC_VENDOR),$(SOC_FAMILY)-$(SOC)-$(SGX)-$(SGX_REV)\""
-ccflags-y += -DPVR_BUILD_DATE="\"$(shell date "+%Y%m%d" )\""
 
 ccflags-y += \
 	-Iinclude \
@@ -51,7 +53,7 @@ ccflags-y += \
 	-I$(src)/services4/srvkm/include \
 	-I$(src)/services4/3rdparty/bufferclass_ti
 
-# choose SoC integration variant
+# choose SoC integration variant to choose the right source subtree
 
 ccflags-y += \
 	-I$(src)/services4/system/$(SOC_FAMILY)

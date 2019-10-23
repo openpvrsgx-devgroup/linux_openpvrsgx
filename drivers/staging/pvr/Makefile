@@ -40,7 +40,7 @@ $(obj)/pvr:
 ifneq ($(CONFIG_SGX_CEDARVIEW),)
 	@$(kecho) "  MAKE    $(obj): cedarview"
 # Fix versions
-	$(Q)SOC_VENDOR=intel SOC_FAMILY=cedarview_linux SGX=sgx530 SGX_FLAG=SGX530 SGX_REV=121 $(MAKE) $(build)=$(SOURCE)
+	$(Q)SOC_VENDOR=intel SOC_FAMILY=cedarview_linux SOC=gma3600 SGX=sgx545 SGX_FLAG=SGX545 SGX_REV=999 $(MAKE) $(build)=$(SOURCE)
 endif # CONFIG_SGX_CEDARVIEW
 ifneq ($(CONFIG_SGX_OMAP),)
 ifneq ($(CONFIG_SGX_114),)
@@ -109,21 +109,23 @@ endif # CONFIG_SGX_OMAP
 ifneq ($(CONFIG_SGX_POULSBO),)
 	@$(kecho) "  MAKE    $(obj): poulsbo"
 # Fix versions
-	$(Q)SOC_VENDOR=intel SOC_FAMILY=poulsbo SGX=sgx530 SGX_FLAG=SGX530 SGX_REV=121 $(MAKE) TARGET_TYPE=$(CONFIG_SGX_POULSBO) $(build)=$(SOURCE)
+	$(Q)SOC_VENDOR=intel SOC_FAMILY=poulsbo SOC=gma500 SGX=sgx530 SGX_FLAG=SGX535 SGX_REV=999 $(MAKE) TARGET_TYPE=$(CONFIG_SGX_POULSBO) $(build)=$(SOURCE)
 	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
 endif # CONFIG_SGX_POULSBO
 ifneq ($(CONFIG_SGX_JZ4780),)
 	@$(kecho) "  MAKE    $(obj): jz4780"
 # see https://elinux.org/CI20-SGX_kernel_module
+# assume it is an sgx540-120
 	$(Q)SOC_VENDOR=ingenic SOC_FAMILY=sgx_jz4780 SOC=jz4780 SGX=sgx540 SGX_FLAG=SGX540 SGX_REV=120 $(MAKE) TARGET_TYPE=$(CONFIG_SGX_JZ4780) $(build)=$(SOURCE)
 	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
 endif # CONFIG_SGX_JZ4780
 ifneq ($(CONFIG_SGX_SUNXI),)
 	@$(kecho) "  MAKE    $(obj): sunxi"
 # Fix versions
-	$(Q)SOC_VENDOR=allwinner SOC_FAMILY=sunxi SGX=sgx544 SGX_FLAG=SGX544 SGX_REV=116 $(MAKE) TARGET_TYPE=$(CONFIG_SGX_SUNXI) $(build)=$(SOURCE)
+	$(Q)SOC_VENDOR=allwinner SOC_FAMILY=sunxi SOC=sun8i-a83t SGX=sgx544 SGX_FLAG=SGX544 SGX_REV=116 $(MAKE) TARGET_TYPE=$(CONFIG_SGX_SUNXI) $(build)=$(SOURCE)
 	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
 endif # CONFIG_SGX_SUNXI
+# there is also SOC_FAMILY=sgx_pc_i686_tc3 whatever this is
 #
 # only this should be remaining and be enabled automatically
 # after we have finished work with reworking the driver...

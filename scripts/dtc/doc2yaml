@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/opt/local/bin/python3
 
 import argparse
 import sys
@@ -16,7 +16,7 @@ def filter_maintainers(m):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("docfile", type=str,
-                    help="Filename of YAML encoded devicetree input file")
+                    help="Filename of input text file to be translated to YAML")
     args = ap.parse_args()
 
     yamlfile = os.path.splitext(args.docfile)[0] + '.yaml'

@@ -9,8 +9,5 @@
 /* this version is for GTA15 V0.1 with Letux Cortex 15 CPU board V5.3 */
 
 #include "omap5-letux-cortex15-v5.3.dts"
-
 #include "letux-gta15-v1.0.dtsi"
-
-#define PANEL 1		/* use w677 panel and non-rotating display board */
 #include "pyra-display.dtsi"

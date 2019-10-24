@@ -10,739 +10,83 @@
 // real circuits
 // also adjust keys and LEDs
 
-#include <dt-bindings/input/input.h>
-
-/* overwrite device model */
+#include "pyra-mainboard-common.dtsi"
 
 / {
-	model = "GTA15";
+	model = "Pyra-Handheld-V5.2";
 
-	/* common DC/DC converter for USB Host ports, Modem USB and HDMI 5V */
-	modem_vbus_hdmi_power: tps2505_reg {
+	/delete-node/ keyboard-backlight;
+	/delete-node/ dmtimer-pwm@8;
+
+	pyra_leds { /* alternate LED driver (parallel to is31fl31) */
+		compatible = "gpio-leds";
+		led@1 {
+			label = "pyra-old:red:left";
+			gpios = <&gpio99 5 (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+
+		led@4 {
+			label = "pyra-old:red:mid";
+			gpios = <&gpio99 (1+16) (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+
+		led@7 {
+			label = "pyra-old:red:right";
+			gpios = <&gpio99 (5+16) (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+	};
+
+	/* this is a power switch that connects otg power from bq2429x to the usb socket */
+	otg_path: otg_path {
 		compatible = "regulator-fixed";
-		regulator-name = "modem_vbus_hdmi_power";
+		regulator-name = "otg_path";
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
-		gpio = <&gpio99 8 GPIO_ACTIVE_HIGH>;
+		/* does not handle "gpios" property! */
+		gpio = <&gpio99 (3+2*8) (GPIO_ACTIVE_HIGH)>;	/* P23 of pcal6524 */
 		enable-active-high;
-		startup-delay-us = <70000>;
-		vin-supply = <&vsys_reg>;
-		regulator-always-on;
-	};
-
-	/* this are the DC/DC converters that supply the
-	   5V to USB devices connected to the Host ports.
-	   They should be under the (software) control
-	   of the USB3503A hub on the CPU board */
-
-	host1_vbus_power: host1_vbus_power_reg {
-		compatible = "regulator-fixed";
-		regulator-name = "host1_vbus_power";
-		regulator-min-microvolt = <5000000>;
-		regulator-max-microvolt = <5000000>;
-		gpio = <&gpio99 9 GPIO_ACTIVE_HIGH>;
-		enable-active-high;
-		startup-delay-us = <70000>;
-		vin-supply = <&modem_vbus_hdmi_power>;
-		regulator-always-on;
-	};
-
-	host2_vbus_power: host2_vbus_power_reg {
-		compatible = "regulator-fixed";
-		regulator-name = "host2_vbus_power";
-		regulator-min-microvolt = <5000000>;
-		regulator-max-microvolt = <5000000>;
-		gpio = <&gpio99 10 GPIO_ACTIVE_HIGH>;
-		enable-active-high;
-		startup-delay-us = <70000>;
-		vin-supply = <&modem_vbus_hdmi_power>;
-		regulator-always-on;
-	};
-
-	/* this is the modem power switch (similar to a LDO) */
-	modem_power: modem_power_reg {
-		compatible = "regulator-fixed";
-		regulator-name = "modem_vbus_power";
-		regulator-min-microvolt = <3700000>;
-		regulator-max-microvolt = <3700000>;
-		gpio = <&gpio99 15 GPIO_ACTIVE_HIGH>;
-		enable-active-high;
-		startup-delay-us = <100000>;
-		/* the real input is vsys but it makes no sense
-		   to power the modem without requesting vbus */
-		vin-supply = <&modem_vbus_hdmi_power>;
-		regulator-always-on;
-	};
-
-	modem_en: modem { /* control modem power through rfkill */
-		compatible = "gemalto,pls8-power";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pyra_modem_pins>;
-		NIMP-usb-port = <&hsusb2_phy>; 	/* USB phy where we can check the modem status */
-		on-off-gpio = <&gpio6 11 GPIO_ACTIVE_HIGH>;	/* gpio6_171: trigger to power on modem */
-		on-indicator-gpio = <&gpio6 12 GPIO_ACTIVE_LOW>;	/* gpio6_172: modem power indication feedback GPIO */
-		NIMP-modem-supply = <&modem_power>;		/* enable some external power regulator */
-		/* VBUS supply should probably be controlled through the USB PHY driver for the modem port */
-		NIMP-vbus-supply = <&modem_vbus_hdmi_power>;	/* apply VBUS to the modem */
-	};
-
-	keyboard-backlight {
-		compatible = "pwm-backlight";
-		pwms = <&pwm8 0 12000000 0>;
-		pwm-names = "keyboard";
-		brightness-levels = <0 1 2 5 10 20 40 60 100>;
-		default-brightness-level = <5>;	/* 20% */
-		pinctrl-names = "default";
-		pinctrl-0 = <&keyboard_backlight_pins>;
-	};
-
-	pwm8: dmtimer-pwm@8 {
-		compatible = "ti,omap-dmtimer-pwm";
-		ti,timers = <&timer8>;
-		#pwm-cells = <3>;
-	};
-
-	bat: battery {
-		compatible = "simple-battery", "pyra-battery";
-		voltage-min-design-microvolt = <3200000>;
-		energy-full-design-microwatt-hours = <22200000>;
-		charge-full-design-microamp-hours = <6000000>;
-	};
-
-};
-
-/* add overlay pimmux for pyra on 5432evm */
-
-&omap5_pmx_core {
-
-	pinctrl-0 = <
-			/* copied from original */
-			&usbhost_pins
-			&led_gpio_pins
-
-			/* new entries */
-			&pyra_button_pins
-			&pyra_other_pins
-	>;
-
-/* this is for DragonFly V4 with the letux Cortex15 CPU board
-// inputs
-#define GPIO_LID 6			// lid close sensor - gpio1_wk6 - open collector output
-#define GPIO_3G_PWR 172			// modem power indication - gpio6_172
-#define GPIO_WAKEUP 15			// wakeup from modem - gpio1_wk15
-#define GPIO_PENIRQ 173			// touch screen controller IRQ - gpio6_173
-#define GPIO_LNUB_IRQ 175		// left nub IRQ - gpio6_175
-#define GPIO_RNUB_IRQ 174		// right nub IRQ - gpio6_174
-#define GPIO_KEYIRQ 177			// keyboard controller IRQ - gpio6-177
-#define GPIO_RSH_TOP 179		// right top shoulder button - gpio6-179 - closes to GND
-#define GPIO_RSH_BOT 180		// right bottom shoulder button - gpio6-180 - closes to GND
-#define GPIO_RNUB 181			// right nub center button - gpio6-181 - closes to GND
-#define GPIO_LNUB 187			// left nub center button - gpio6-187 - closes to GND
-#define GPIO_LSH_TOP 183		// left top shoulder button - gpio6-183 - closes to GND
-#define GPIO_LSH_BOT 7			// left bottom shoulder button - gpio1_wk7 - closes to GND
-#define GPIO_VSYNC 189			// VSYNC input (gpio6_189 in: comes from panel)
-// outputs
-#define GPIO_3G_IGNITE 171		// start modem (active high pulse) - gpio6_171
-#define GPIO_DISPEN 162			// enable TPS65133 or ssd2858 - gpio6_162
-#define GPIO_DISPLAY_RESET 176		// panel reset (active low)/enable - gpio6_176
-#define GPIO_PWM 190			// enable 18V backlight (active high) - timer9/gpio6_190 (out) - or input to track what the panel is doing
-#define GPIO_PERIPHERAL_RESET 144	// device reset (active low)/enable - gpio5_144
-*/
-
-/* to find pinmux register offsets, see section A.7.2 in TRM
-
-   note: offsets in the table are relative to 0x4a00 2800
-   but reg = <0x4a002840 0x01b6> for omap5_pmx_core
-
-   Therefore gpio5_153 with Address Offset 0x1D4
-   translates into 0x194 (0xd0-0x40 => 0x90)
-   and because it has [31:16] we have to add 0x02
-   giving a result of 0x196.
-
-   Definitions for bit patterns:
-   0x0007	MUX_MODE0 .. MUX_MODE7
-   0x0008	enable pull up/down
-   0x0010	select pull up
-   0x0020	disable power for I/O cell
-   0x0100	enable input buffer (there is no explicit "enable output buffer" because that is defined by the GPIO direction)
-   0x4000	enable wakeup detection
-
-   or use the OMAP5_IOPAD() macros to do the conversion. You still have to look
-   up the pin and register address offset in the TRM.
-*/
-
-	pyra_button_pins: pinmux_button_gpio_pins {
-		pinctrl-single,pins = <
-			OMAP5_IOPAD(0x1bc, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x1BC:[15:0] gpio5_140 - U */
-			OMAP5_IOPAD(0x1be, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x1BC:[31:16] gpio5_141 - L */
-			OMAP5_IOPAD(0x1c0, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x1C0:[15:0] gpio5_142 - D */
-			OMAP5_IOPAD(0x1c2, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x1C0:[31:16] gpio5_143 - R */
-			OMAP5_IOPAD(0x108, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x108:[15:0]  gpio6_179 - rsh-top */
-			OMAP5_IOPAD(0x106, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x104:[31:16] gpio6_180 - rsh-bot */
-			OMAP5_IOPAD(0x104, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x104:[15:0]  gpio6_181 - right nub */
-			OMAP5_IOPAD(0x132, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x130:[31:16] gpio6_183 - lsh-top */
-			OMAP5_IOPAD(0x13a, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x138:[31:16]  gpio6_187 - left nub */
-			OMAP5_IOPAD(0x102, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x100:[31:16] gpio7_196 - B */
-			OMAP5_IOPAD(0x0fc, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x0FC:[15:0] gpio7_197 - Y */
-			OMAP5_IOPAD(0x0fe, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x0FC:[31:16] gpio7_198 - X */
-			OMAP5_IOPAD(0x100, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x100:[15:0] gpio7_199 - A */
-		>;
-	};
-
-	pyra_other_pins: pinmux_other_gpio_pins {
-		pinctrl-single,pins = <
-/* gpio 3_84-87 = BT HCI uart2 */
-/* gpio 4_97-100 = GSM PCM mcbsp3 */
-/* gpio 4_101-104 = BT PCM mcbsp1 */
-/* gpio 4_105-107 = FM/DAC PCM mcbsp2 */
-/* gpio 5_128-133 = mmc3 = wifi dsio */
-/* gpio 5_134-137 = mmc4 = right SD slot */
-			OMAP5_IOPAD(0x1c4, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x1C4:[15:0]  gpio5_144 - reset I2C peripherals */
-/* gpio 5_155-156 = mmc4 = right SD slot / uart3 debug */
-			OMAP5_IOPAD(0x12c, PIN_INPUT | MUX_MODE6)	/* 0x12C:[15:0]  gpio6_160 - revision 1 */
-			OMAP5_IOPAD(0x12e, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x12C:[31:16]  gpio6_161 - TCA6424 active low interrupt */
-
-/* next should be outputs and controlled by some driver (e.g. regulator-fixed) */
-			OMAP5_IOPAD(0x128, PIN_INPUT_PULLDOWN | MUX_MODE6)	/* 0x128:[15:0]  gpio6_165 - Speaker EN */
-
-/* gpio 5_167-168 = uart3 Pyra console - is handled by MLO! */
-			OMAP5_IOPAD(0x11c, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x11C:[15:0]  gpio6_169 - Accelerometer interrupt */
-			OMAP5_IOPAD(0x11a, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x118:[31:16]  gpio6_170 - Magnetometer interrupt */
-			OMAP5_IOPAD(0x114, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x114:[15:0]  gpio6_173 - touch screen penirq */
-			OMAP5_IOPAD(0x112, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x110:[31:16]  gpio6_174 - right NUB int */
-			OMAP5_IOPAD(0x110, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x110:[15:0]  gpio6_175 - left NUB int */
-			OMAP5_IOPAD(0x10c, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x10C:[15:0]  gpio6_177 - keyboard int */
-			OMAP5_IOPAD(0x10a, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x108:[31:16]  gpio6_178 - fm int */
-			OMAP5_IOPAD(0x130, PIN_INPUT | MUX_MODE6)	/* 0x130:[15:0]  gpio6_182 - revision 2 */
-			OMAP5_IOPAD(0x136, PIN_INPUT | MUX_MODE6)	/* 0x134:[31:16]  gpio6_185 - revision 3 */
-			OMAP5_IOPAD(0x138, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x138:[15:0]  gpio6_186 - Gyroscope interrupt */
-/* gpio 8_228-229 = mmc1 = left SD slot WP/CD */
-		>;
-	};
-
-	pyra_modem_pins: pinmux_modem_gpio_pins {
-		pinctrl-single,pins = <
-			OMAP5_IOPAD(0x118, PIN_OUTPUT_PULLDOWN | MUX_MODE6)	/* 0x118:[15:0]  gpio6_171 - modem ignite */
-			OMAP5_IOPAD(0x116, PIN_INPUT | MUX_MODE6)	/* 0x114:[31:16]  gpio6_172 - modem power indication */
-		>;
-	};
-
-	backlight_pins: pinmux_backlight_pins {
-		pinctrl-single,pins = <
-			/* MUX_MODE0 for PWM_TIMER9, MUX_MODE6 for GPIO, MUX_MODE7 if panel provides the PWM signal */
-			OMAP5_IOPAD(0x0f6, PIN_OUTPUT_PULLDOWN | MUX_MODE0)	/* 0x0F4:[31:16] timer9/gpio6_190 */
-		>;
-	};
-
-	keyboard_backlight_pins: pinmux_keyboard_backlight_pins {
-		pinctrl-single,pins = <
-			/* MUX_MODE0 for PWM_TIMER8, MUX_MODE6 for GPIO */
-			OMAP5_IOPAD(0x178, PIN_OUTPUT_PULLDOWN | MUX_MODE0)	/* 0x178:[15:0] timer8/gpio8_230 */
-		>;
-	};
-
-};
-
-&omap5_pmx_wkup {
-
-	letux_wkup_pins: pinmux_wkup_pins {
-		pinctrl-single,pins = <
-			OMAP5_IOPAD(0x078, PIN_OUTPUT | MUX_MODE6)	/* 0x078:[15:0]  gpio1_wkout4 - second LED on CPU board */
-			OMAP5_IOPAD(0x046, WAKEUP_EN | PIN_INPUT | MUX_MODE6)	/* 0x044:[31:16]  gpio1_wk7 - boot select input */
-		>;
-	};
-
-	lid_pin: pinmux_lid_pin {
-		pinctrl-single,pins = <
-			OMAP5_IOPAD(0x044, WAKEUP_EN | PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x044:[15:0] gpio1_wk6 - lid */
-		>;
-	};
-
-	wwan_pins: pinmux_wwan_pins {
-		pinctrl-single,pins = <
-			OMAP5_IOPAD(0x042, WAKEUP_EN | PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x040:[31:16] gpio1_wk15 - modem wakeup */
-		>;
+		vin-supply = <&otg_reg>;	/* request otg booster of bq24297 */
 	};
 };
 
-/* register devices connected to Peripheral-I2C */
+&gpio99 {
+	/* replace ti,tca6424 in older revisions */
+	compatible = "nxp,pcal6524";
+	interrupt-parent = <&gpio6>;
+	interrupts = <1 IRQ_TYPE_EDGE_FALLING>;	/* gpio6_161 */
+};
+
 &i2c2 {
 
-	/* modem current sensor */
-	ina231@4f {
-		compatible = "ti,ina231";
-		reg = <0x4f>;
-		shunt-resistor = <20000>;	/* 20 mOhm */
-	};
+	/* no nubs, no keyboard matrix controller */
+	/delete-node/ as5013@40;
+	/delete-node/ as5013@41;
+	/delete-node/ tca8418@34;
 
-	/* fuel gauge */
-	bq27621@55 {
-		compatible = "ti,bq27621";
-		reg = <0x55>;
-		monitored-battery = <&bat>;
-	};
-
-	/* charger */
 	bq24297@6b {
-		/* FIXME: driver is quite broken because it is a hack */
-		compatible = "ti,bq24297";
-		reg = <0x6b>;
-		monitored-battery = <&bat>;
-		ti,chg_current = <1000 2000 2000>;	// chg_current (max for the battery), usb_input_current, adp_input_current
-		gpios = <&gpio99 11 0>,		// chg_irq_pin - ignored by driver
-			<0>;			// dc_det_pin - if 0, charger is switched by driver to 2048mA, otherwise 512mA
+		/* interrupts now working with pcal6524 */
 		interrupt-parent = <&gpio99>;
-		interrupts = <11 IRQ_TYPE_EDGE_FALLING>;
-		ti,watchdog = <40>;		// 40 seconds watchdog timer
-		regulators {
-			vsys_reg: vsys_regulator {
-				/* add information */
-				regulator-compatible = "bq2429x-vsys";
-				regulator-name = "vsys";
-//				regulator-min-microvolt = <3500000>;
-//				regulator-max-microvolt = <3700000>;
-				regulator-always-on;
-				regulator-boot-on;
-			};
-			otg_reg: otg_regulator {
-				/* add information */
-				regulator-compatible = "bq2429x-otg";
-				regulator-name = "otg";
-//				regulator-min-microvolt = <4900000>;
-//				regulator-max-microvolt = <5100000>;
-			};
-		};
-	};
-
-};
-
-/* register devices connected to Sensor-I2C */
-&i2c3 {
-	/* optional gyroscope sensor */
-	bmg160@69 {
-		compatible = "bosch,bmg160";
-		reg = <0x69>;
-// irq
-	};
-	/* optional accelerometer sensor */
-	bmc150@10 {
-		compatible = "bosch,bmc150_accel";
-		reg = <0x10>;
-/*		pinctrl-names = "default";
-		pinctrl-0 = <&bmc150_pins>;
-		interrupt-parent = <&gpio6>;
-		interrupts = <9 (IRQ_TYPE_LEVEL_HIGH | IRQ_TYPE_EDGE_RISING)>;	/* gpio6_169 * /
-*/
-	};
-	/* optional compass sensor */
-	bmc150@12 {
-		compatible = "bosch,bmc150_magn";
-		reg = <0x12>;
-// irq
-	};
-	/* optional barometer sensor */
-	bmp180@77 {
-		compatible = "bosch,bmp180";
-		reg = <0x77>;
-	};
-	/* optional barometer/hygrometer sensor */
-	bme280@76 {
-		compatible = "bosch,bme280";
-		reg = <0x76>;
-// power on/off?
-	};
-	/* optional 9-axis sensor */
-	bno055@29 {
-		compatible = "bosch,bno055";
-		reg = <0x29>;
-		bosch,operation-mode = <7>;	/* BNO055_MODE_AMG */
-// irq
-	};
-	/* proximity and ambient light sensor */
-	vcnl4010@13 {
-		compatible = "vishay,vcnl4010";
-		reg = <0x13>;
+		interrupts = <(1*8+3) IRQ_TYPE_EDGE_FALLING>;	/* P13 */
 	};
 };
 
-/* register devices connected to System-I2C */
 &i2c5 {
-	/* microphone detect */
-	ts3a225@3b {
-		compatible = "ti,ts3a225e";
-		reg = <0x3b>;
-//		interrupt-parent = <&gpio99>;
-//		interrupts = <14 IRQ_TYPE_LEVEL_LOW>;
-		ti,micbias = <0>;	/* 2.1V */
-	};
-
-	/* system/keyboard-led and other controls */
-	gpio99: tca6424@22 {
-		compatible = "ti,pcal6524";
-		interrupt-parent = <&gpio6>;
-//		interrupts = <1 IRQ_TYPE_LEVEL_LOW>;	/* gpio6_161 */
-		interrupts = <1 IRQ_TYPE_EDGE_FALLING>;	/* gpio6_161 */
-		interrupt-controller;
-		#interrupt-cells = <2>;
-		vcc-supply = <&vdds_1v8_main>;
-
-		reg = <0x22>;
-		gpio-controller;
-		#gpio-cells = <2>;
-		gpio-line-names =
-			"hdmi-ct-hpd", "hdmi.ls-oe", "p02", "p03", "vibra", "fault2", "p06", "p07",
-			"en-usb", "en-host1", "en-host2", "chg-int", "p14", "p15", "mic-int", "en-modem",
-			"shdn-hs-amp", "chg-status+red", "green", "blue", "en-esata", "fault1", "p26", "p27";
-	};
-
-	leds-left-mid@64 {
-		compatible = "issi,is31fl3196";
-		#address-cells = <1>;
-		#size-cells = <0>;
-		reg = <0x64>;
-
-		left_led1: red_left@1 {
-			label = "pyra:red:left";
-			reg = <1>;
-			linux,default-trigger = "heartbeat";
-		};
-
-		left_led2: green_left@2 {
-			label = "pyra:green:left";
-			reg = <2>;
-			linux,default-trigger = "heartbeat";
-		};
-
-		left_led3: blue_left@3 {
-			label = "pyra:blue:left";
-			reg = <3>;
-			linux,default-trigger = "timer";
-		};
-
-		mid_led4: red_mid@4 {
-			label = "pyra:red:mid";
-			reg = <4>;
-			linux,default-trigger = "default-on";
-		};
-
-		mid_led5: green_mid@5 {
-			label = "pyra:green:mid";
-			reg = <5>;
-			linux,default-trigger = "timer";
-		};
-
-		mid_led6: blue_mid@6 {
-			label = "pyra:blue:mid";
-			reg = <6>;
-			linux,default-trigger = "heartbeat";
-		};
-	};
-
-	leds-right@67 {
-		compatible = "issi,is31fl3196";
-		#address-cells = <1>;
-		#size-cells = <0>;
-		reg = <0x67>;
-
-		right_led7: red_right@1 {
-			label = "pyra:red:right";
-			reg = <1>;
-			linux,default-trigger = "heartbeat";
-		};
-
-		right_led8: green_right@2 {
-			label = "pyra:green:right";
-			reg = <2>;
-			linux,default-trigger = "heartbeat";
-		};
-
-		right_led9: blue_right@3 {
-			label = "pyra:blue:right";
-			reg = <3>;
-			linux,default-trigger = "timer";
-		};
-	};
-
-	eeprom@50 {
-		compatible = "at,24c01";
-		reg = <0x50>;
+	ts3a227@3b {
+		/* interrupts now working with pcal6524 */
+                interrupt-parent = <&gpio99>;
+		interrupts = <14 IRQ_TYPE_EDGE_RISING>;
 	};
 };
-
-/ {
-
-	user-button {
-		/* is bound to gpio1_wk7 which we want to reassign */
-		/delete-node/ BOOTSEL;
-	};
-
-	pyra-gpio-keys@1 {
-		compatible = "gpio-keys";
-
-		#address-cells = <7>;
-		#size-cells = <0>;
-
-		left_shoulder_bottom {
-			label = "Left-Shoulder-Bottom";
-			linux,code = <KEY_RIGHTSHIFT>;
-			gpios = <&gpio1 7 GPIO_ACTIVE_LOW>;	/* gpio1_wk7 */
-			gpio-key,wakeup;
-		};
-
-		left_shoulder_top {
-			label = "Left-Shoulder-Top";
-			linux,code = <KEY_RIGHTMETA>;
-			gpios = <&gpio6 23 GPIO_ACTIVE_LOW>;	/* gpio6_183 */
-			gpio-key,wakeup;
-		};
-
-		right_shoulder_bottom {
-			label = "Right-Shoulder-Bottom";
-			linux,code = <KEY_RIGHTCTRL>;
-			gpios = <&gpio6 20 GPIO_ACTIVE_LOW>;	/* gpio6_180 */
-			gpio-key,wakeup;
-		};
-
-		right_shoulder_top {
-			label = "Right-Shoulder-Top";
-			linux,code = <KEY_RIGHTALT>;
-			gpios = <&gpio6 19 GPIO_ACTIVE_LOW>;	/* gpio6_179 */
-			gpio-key,wakeup;
-		};
-
-		left_nub {
-			label = "Left-Nub";
-			linux,code = <BTN_RIGHT>;
-			gpios = <&gpio6 27 GPIO_ACTIVE_LOW>;	/* gpio6_187 */
-			gpio-key,wakeup;
-		};
-
-		right_nub {
-			label = "Right-Nub";
-			linux,code = <BTN_LEFT>;
-			gpios = <&gpio6 21 GPIO_ACTIVE_LOW>;	/* gpio6_181 */
-			gpio-key,wakeup;
-		};
-
-		button_a {
-			label = "A";
-			linux,code = <KEY_HOME>;
-			gpios = <&gpio7 7 GPIO_ACTIVE_LOW>;	/* gpio7_199 */
-			gpio-key,wakeup;
-		};
-
-		button_b {
-			label = "B";
-			linux,code = <KEY_END>;
-			gpios = <&gpio7 4 GPIO_ACTIVE_LOW>;	/* gpio7_196 */
-			gpio-key,wakeup;
-		};
-
-		button_x {
-			label = "X";
-			linux,code = <KEY_PAGEDOWN>;
-			gpios = <&gpio7 6 GPIO_ACTIVE_LOW>;	/* gpio7_198 */
-			gpio-key,wakeup;
-		};
-
-		button_y {
-			label = "Y";
-			linux,code = <KEY_PAGEUP>;
-			gpios = <&gpio7 5 GPIO_ACTIVE_LOW>;	/* gpio7_197 */
-			gpio-key,wakeup;
-		};
-
-		dpad_left {
-			label = "LEFT";
-			linux,code = <KEY_LEFT>;
-			gpios = <&gpio5 13 GPIO_ACTIVE_LOW>;	/* gpio5_141 */
-			gpio-key,wakeup;
-		};
-
-		dpad_up {
-			label = "UP";
-			linux,code = <KEY_UP>;
-			gpios = <&gpio5 12 GPIO_ACTIVE_LOW>;	/* gpio5_140 */
-			gpio-key,wakeup;
-		};
-
-		dpad_right {
-			label = "RIGHT";
-			linux,code = <KEY_RIGHT>;
-			gpios = <&gpio5 15 GPIO_ACTIVE_LOW>;	/* gpio5_143 */
-			gpio-key,wakeup;
-		};
-
-		dpad_down {
-			label = "DOWN";
-			linux,code = <KEY_DOWN>;
-			gpios = <&gpio5 14 GPIO_ACTIVE_LOW>;	/* gpio5_142 */
-			gpio-key,wakeup;
-		};
-	};
-
-	pyra-gpio-keys@2 {
-		compatible = "gpio-keys";
-
-		#address-cells = <2>;
-		#size-cells = <0>;
-
-		wwan_wakeup {
-			label = "WWAN Wakeup";
-			linux,code = <KEY_UNKNOWN>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&wwan_pins>;
-			gpios = <&gpio1 15 GPIO_ACTIVE_HIGH>;	/* gpio1_wk15 */
-			gpio-key,wakeup;
-			/* debounce-interval */
-		};
-
-		display_lid {
-			label = "Display Lid";
-			pinctrl-names = "default";
-			pinctrl-0 = <&lid_pin>;
-			linux,input-type = <EV_SW>;
-			linux,code = <SW_LID>;
-			gpios = <&gpio1 6 GPIO_ACTIVE_LOW>;	/* gpio1_wk6 */
-			gpio-key,wakeup;
-		};
-
-	};
-
-};
-
-&tpd12s015 {
-	compatible = "ti,tpd12s015";
-	gpios = <&gpio99 0 GPIO_ACTIVE_HIGH>,	/* TCA6424A P01, CT CP HPD */
-		<&gpio99 1 GPIO_ACTIVE_HIGH>,	/* TCA6424A P00, LS OE */
-		<&gpio7 1 GPIO_ACTIVE_HIGH>;	/* GPIO 193, HPD */
-};
-
-/* more things to do
- * add a regulator-gpio for the LCD
- */
-
-/* used in gpio mode for shoulder buttons etc. */
-
-&mcspi1 {
-	status = "disabled";
-};
-
-&mcspi2 {
-	status = "disabled";
-};
-
-/*
- * configure WLAN/Bluetooth module - http://processors.wiki.ti.com/index.php/WL18xx_Platform_Integration_Guide#For_kernels_with_device_tree_support
- * and see http://lxr.free-electrons.com/source/Documentation/devicetree/bindings/net/wireless/ti,wlcore.txt
- */
-
-&wlan_pins {
-	status = "okay";
-	pinctrl-single,pins = <
-		OMAP5_IOPAD(0x126, PIN_OUTPUT | MUX_MODE6)	/* 0x124:[31:16]  gpio6_163 - WLAN EN */
-	>;
-};
-
-&vmmcsdio_fixed {
-	gpio = <&gpio6 3 GPIO_ACTIVE_HIGH>;	/* GPIO6_163 */
-};
-
-&mmc3 { /* we have a WLAN module on mmc3 */
-	status = "okay";
-};
-
-&wlcore {
-	status = "okay";
-	compatible = "ti,wl1835";	/* or "ti,wl1837" */
-};
-
-&omap5_pmx_core {
-	bt_pins: pinmux_bt_pins {
-		pinctrl-single,pins = <
-			OMAP5_IOPAD(0x12a, PIN_OUTPUT | MUX_MODE6)	/* 0x128:[31:16]  gpio6_164 - BT EN */
-		>;
-	};
-
-};
-
-/ {
-	bluetooth_power: bt_en {
-		compatible = "regulator-fixed";
-		pinctrl-names = "default";
-		pinctrl-0 = <&bt_pins>;
-		regulator-name = "bt_power";
-		regulator-min-microvolt = <1800000>;
-		regulator-max-microvolt = <1800000>;
-		gpio = <&gpio6 4 GPIO_ACTIVE_HIGH>;	/* GPIO6_164 */
-		enable-active-high;
-		startup-delay-us = <70000>;
-		vin-supply = <&vsys_reg>;
-	};
-};
-
-&uart2 {
-	bluetooth: tiwi {
-		/* we can (mis)use the w2cbw power control driver */
-		compatible = "wi2wi,w2cbw003-bluetooth";
-		vdd-supply = <&bluetooth_power>;
-	};
-};
-
-/* rearrange to use gpio6_167/168 for console UART3 instead of sdio4_cmd/clk */
-
-&uart3_pins {
-	pinctrl-single,pins = <
-		OMAP5_IOPAD(0x11e, PIN_OUTPUT | MUX_MODE4) /* uart3_tx_irtx gpio6_168 */
-		OMAP5_IOPAD(0x120, PIN_INPUT_PULLUP | MUX_MODE4) /* uart3_rx_irrx gpio6_167 */
-	>;
-};
-
-&uart3 {
-	interrupts-extended = <&wakeupgen GIC_SPI 74 IRQ_TYPE_LEVEL_HIGH>,
-			      <&omap5_pmx_core 0xe0>;
-};
-
-&mmc4 { /* enable second (µ)SD slot (SDIO capable) */
-	status = "okay";
-};
-
-&twl6040 {
-	vddvibl-supply = <&vsys_reg>;
-	vddvibr-supply = <&vsys_reg>;
-
-	vibra {
-		ti,vibldrv-res = <8>;
-		ti,vibrdrv-res = <3>;
-		ti,viblmotor-res = <32>;
-		ti,vibrmotor-res = <999999>;	/* no motor */
-	};
-};
-
-/* we do not use the Palmas OTG step-up converter */
 
 &usb3 {
-	vbus-supply = <&otg_reg>;
+	/* use otg_path regulator */
+	vbus-supply = <&otg_path>;
 };
 
-&smps10_out1_reg {
-	/* never turn on or it may burn the Palmas! */
-	status = "disabled";
-};
-
-#include <dt-bindings/power/power.h>
-
-/ {
-	battery: battery-monitor {
-		compatible = "linux,generic-adc-battery";
-		io-channels = <&gpadc 6>, <&gpadc 11>, <&gpadc 1>;
-		io-channel-names = "voltage", "current", "temperature";
-		monitored-battery = <&bat>;
-		technology = <POWER_SUPPLY_TECHNOLOGY_LION>;
-		battery-name = "pyra-battery";
-		charge_full_design = <6000000>;
-		charge_empty_design = <00>;
-		voltage_min_design = <3200000>;
-		voltage_max_design = <4200000>;
-	};
-};
+// add camera

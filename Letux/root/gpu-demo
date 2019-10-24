@@ -38,20 +38,23 @@ then
 		case "$(tr -d '\0' </sys/devices/soc0/machine)" in
 			# FIXME: does this more depend on sgx530,540,544?
 			AM335X | OMAP3430/3530 | OMAP3630/DM3730 )
+				REPO=git://git.ti.com/graphics/omap5-sgx-ddk-um-linux.git
 				BRANCH=ti-img-sgx/1.14.3699939_k4.4
 				export TARGET_PRODUCT=ti335x;;
 			OMAP4* )
+				REPO=git://git.ti.com/graphics/omap5-sgx-ddk-um-linux.git
 				BRANCH=ti-img-sgx/1.14.3699939
 				# FIXME: this is for am437x which seems to have an SGX530!
 				export TARGET_PRODUCT=ti437x;;
 			OMAP5* )
+				REPO=https://github.com/mvduin/omap5-sgx-ddk-um-linux.git
 				BRANCH=ti-img-sgx/1.14.3699939
 				export TARGET_PRODUCT=jacinto6evm
 				;;
 			*) echo unknown SoC: $(tr -d '\0' </sys/devices/soc0/machine): exit 1;;
 		esac
 		rm -rf omap5-sgx-ddk-um-linux/
-		git clone -b $BRANCH git://git.ti.com/graphics/omap5-sgx-ddk-um-linux.git --depth=1 ||
+		git clone -b $BRANCH $REPO --depth=1 ||
 		# FIXME: choose correct branch/repo where we keep a copy
 		git clone -b $BRANCH http://git.goldelico.com/letux-rootfs.git --depth=1
 		cd omap5-sgx-ddk-um-linux/

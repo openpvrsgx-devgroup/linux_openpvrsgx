@@ -21,10 +21,9 @@ then
 	yes | apt-get install libdrm-omap1 libgbm1 git make   # needs some active internet connection (ethernet over USB, wwan, wlan)
 fi
 
-# autodetect package version to load (so far omap only)
-COMPATIBLE=omap_$(egrep -ao '[a-z0-9]*-sgx[0-9]*-[0-9]*' </proc/device-tree/ocp*/target-module@5*/sgx@*/compatible | tr '-' '_')	# match sgx@
-# could use modprobe -c | fgrep ti,$COMPATIBLE | head 1 | cut ... to translate
-MODULE=pvrsrvkm_$COMPATIBLE
+# autodetect package version to load (omap only)
+COMPATIBLE=$(tr '\0' ';' </proc/device-tree/ocp*/target-module@5*/gpu@*/compatible | cut -d';' -f1)	# read records from matching 'gpu@0' or 'gpu@fe00' and take first
+MODULE=$(modprobe -c | fgrep "*C$(echo "$COMPATIBLE" | tr '-' '_')C*" | cut -d' ' -f3)
 echo compatible driver: $COMPATIBLE
 echo module name: $MODULE
 
@@ -36,13 +35,19 @@ then
 		(
 		set -e
 		# based on http://blog.0xpebbles.org/PowerVR-SGX-on-the-beaglebone-black-in-2019
-		export DISCIMAGE=/
-		BRANCH=ti-img-sgx/1.14.3699939_k4.4
 		case "$(tr -d '\0' </sys/devices/soc0/machine)" in
 			# FIXME: does this more depend on sgx530,540,544?
-			AM335X | OMAP3430/3530 | OMAP3630/DM3730 ) export TARGET_PRODUCT=ti335x;;
-			OMAP4* ) export TARGET_PRODUCT=ti437x;;
-			OMAP5* ) export TARGET_PRODUCT=jacinto6evm;;
+			AM335X | OMAP3430/3530 | OMAP3630/DM3730 )
+				BRANCH=ti-img-sgx/1.14.3699939_k4.4
+				export TARGET_PRODUCT=ti335x;;
+			OMAP4* )
+				BRANCH=ti-img-sgx/1.14.3699939
+				# FIXME: this is for am437x which seems to have an SGX530!
+				export TARGET_PRODUCT=ti437x;;
+			OMAP5* )
+				BRANCH=ti-img-sgx/1.14.3699939
+				export TARGET_PRODUCT=jacinto6evm
+				;;
 			*) echo unknown SoC: $(tr -d '\0' </sys/devices/soc0/machine): exit 1;;
 		esac
 		rm -rf omap5-sgx-ddk-um-linux/
@@ -50,7 +55,8 @@ then
 		# FIXME: choose correct branch/repo where we keep a copy
 		git clone -b $BRANCH http://git.goldelico.com/letux-rootfs.git --depth=1
 		cd omap5-sgx-ddk-um-linux/
-		echo installing user space files for $TARGET_PRODUCT >&2
+		echo installing user space files from $BRANCH for $TARGET_PRODUCT >&2
+		export DISCIMAGE=/
 		make install
 		rm -f /usr/lib/arm-linux-gnueabihf/libgbm.so.2
 		ln -s libgbm.so.1 /usr/lib/arm-linux-gnueabihf/libgbm.so.2

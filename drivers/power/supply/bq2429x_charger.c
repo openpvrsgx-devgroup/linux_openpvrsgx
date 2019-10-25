@@ -169,14 +169,17 @@
 #define CHRG_FAULT_MASK	0x3
 #define BAT_FAULT	0x08
 #define NTC_FAULT_OFF	0
+// FIXME: MP2624 has 3 bits
 #define NTC_FAULT_MASK	0x3
 
 /* REG0a vendor status register value */
 #define CHIP_BQ24296		0x20
 #define CHIP_BQ24297		0x60
+#define CHIP_MP2624		0x04
 
 #define ID_BQ24296		0
 #define ID_BQ24297		1
+#define ID_MP2624		2
 
 struct bq2429x_device_info {
 	struct device			*dev;
@@ -227,7 +230,7 @@ static const unsigned int iinlim_table[] = {
 	500000,
 	900000,
 	1000000,
-	1500000,
+	1500000,	// for bq24, mp26 has 1800000
 	2000000,
 	3000000,
 };
@@ -418,6 +421,9 @@ static int bq2429x_input_current_limit_uA(struct bq2429x_device_info *di)
 	if (((retval >> EN_HIZ_OFF) & EN_HIZ_MASK) == EN_HIZ_ENABLE)
 		return 0;	// High-Z state
 
+	if (di->id->driver_data == CHIP_MP2624 && ((retval >> IINLIM_OFF) & IINLIM_MASK) == 5)
+		return 1800000;
+
 	return iinlim_table[(retval >> IINLIM_OFF) & IINLIM_MASK];
 }
 
@@ -442,6 +448,7 @@ static int bq2429x_set_input_current_limit_uA(struct bq2429x_device_info *di,
 		data = 3;
 	else if (uA < 1200000)
 		data = 4;
+// depends on bq24 vs. mp26
 	else if (uA < 1800000)
 		data = 5;
 	else if (uA < 2200000)
@@ -641,6 +648,7 @@ static int bq2429x_get_otg_voltage_uV(struct bq2429x_device_info *di)
 
 	dev_dbg(di->dev, "%s\n", __func__);
 
+// FIXME: constant for MP2624
 	ret = bq2429x_read(di->client, THERMAL_REGULATION_CONTROL_REGISTER,
 			   &retval, 1);
 	if (ret < 0)
@@ -656,6 +664,8 @@ static int bq2429x_set_otg_voltage_uV(struct bq2429x_device_info *di,
 				      int min_uV, int max_uV)
 {
 	dev_dbg(di->dev, "%s(%d, %d)\n", __func__, min_uV, max_uV);
+
+// FIXME: constant for MP2624
 
 // revisit: the driver should select the voltage closest to min_uV by scanning otg_VSEL_table
 
@@ -704,6 +714,8 @@ static int bq2429x_get_otg_current_limit_uA(struct bq2429x_device_info *di)
 	if (ret < 0)
 		return ret;
 
+// FIXME: different bit(s) and values (500mA 1.3A) in MP2624 in REG02
+
 	return ((retval >> OTG_MODE_CURRENT_CONFIG_OFF) &
 		 OTG_MODE_CURRENT_CONFIG_MASK) ?
 		 1000000 : 1500000;	/* 1.0A or 1.5A */
@@ -728,6 +740,8 @@ static int bq2429x_set_otg_current_limit_uA(struct bq2429x_device_info *di,
 		val = OTG_MODE_CURRENT_CONFIG_500MA;	/* enable 1A */
 	else
 		val = OTG_MODE_CURRENT_CONFIG_1300MA;	/* enable 1.5A */
+
+// FIXME: different bit(s) and values (500mA 1.3A) in MP2624 in REG02
 
 	return bq2429x_update_reg(di->client,
 		POWER_ON_CONFIGURATION_REGISTER,
@@ -790,11 +804,18 @@ static int bq2429x_init_registers(struct bq2429x_device_info *di)
 	 * VSYS may be up to 150 mV above fully charged battery voltage
 	 * if operating from VBUS.
 	 * So to effectively limit VSYS we may have to lower the max. battery
-	 * voltage.
+	 * voltage. The offset can be reduced to 100 mV for the mps,mp2624.
 	 */
 
-	max_uV = di->max_VSYS_uV - 150000;
+	if (di->id->driver_data == CHIP_MP2624)
+// FIXME: can be configured to 50/100mV by additional bit in REG01: VSYS_MAX
+		max_uV = di->max_VSYS_uV - 100000;
+	else
+		max_uV = di->max_VSYS_uV - 150000;
+
 	max_uV = min_t(int, max_uV, (int) di->battery_voltage_max_design_uV);
+
+// MP2624 has slightly different scale and offset
 
 	bits = (max_uV - 3504000) / 16000;
 	bits = max(bits, 0);
@@ -824,6 +845,7 @@ static int bq2429x_init_registers(struct bq2429x_device_info *di)
 
 static inline bool bq2429x_battery_present(struct bq2429x_device_info *di)
 { /* assume if there is an NTC fault there is no battery  */
+// MP2624 has 3 NTC bits
 	return ((di->r9 >> NTC_FAULT_OFF) & NTC_FAULT_MASK) == 0;
 }
 
@@ -1443,6 +1465,15 @@ static const struct power_supply_desc bq2429x_power_supply_desc[] = {
 	.set_property		= bq2429x_set_property,
 	.property_is_writeable	= bq2429x_writeable_property,
 	},
+	[ID_MP2624] = {
+	.name			= "mp2624",
+	.type			= POWER_SUPPLY_TYPE_USB,
+	.properties		= bq2429x_charger_props,
+	.num_properties		= ARRAY_SIZE(bq2429x_charger_props),
+	.get_property		= bq2429x_get_property,
+	.set_property		= bq2429x_set_property,
+	.property_is_writeable	= bq2429x_writeable_property,
+	},
 };
 
 /* device tree support */
@@ -1577,6 +1608,10 @@ static int bq2429x_parse_dt(struct bq2429x_device_info *di)
 static const struct of_device_id bq2429x_charger_of_match[] = {
 	{ .compatible = "ti,bq24296", .data = (void *) 0 },
 	{ .compatible = "ti,bq24297", .data = (void *) 1 },
+	/* almost the same
+	 * can control VSYS-VBATT level but not OTG max power
+	 */
+	{ .compatible = "mps,mp2624", .data = (void *) 2 },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, bq2429x_charger_of_match);
@@ -1625,6 +1660,8 @@ static int bq2429x_charger_probe(struct i2c_client *client,
 	switch (ret) {
 	case CHIP_BQ24296:
 	case CHIP_BQ24297:
+	case CHIP_MP2624:
+		break;
 	default:
 		dev_err(&client->dev, "not a bq2429x: %d %02x\n", ret, ret);
 		return -ENODEV;
@@ -1745,6 +1782,7 @@ static int bq2429x_charger_remove(struct i2c_client *client)
 static const struct i2c_device_id bq2429x_charger_id[] = {
 	{ "bq24296", ID_BQ24296 },
 	{ "bq24297", ID_BQ24297 },
+	{ "mp2624", ID_MP2624 },
 	{ },
 };
 

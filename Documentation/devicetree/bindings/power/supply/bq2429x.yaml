@@ -1,0 +1,122 @@
+# SPDX-License-Identifier: GPL-2.0
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/power/supply/bq2429x.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: TI bq24296/24297 and MPS MP2624 Li-Ion Charger with OTG booster
+
+maintainers:
+  - H. Nikolaus Schaller <hns@goldelico.com>
+
+description: |+
+  This binding will support the bq24296 and bq24297.
+  There are other ICs in the same family but those have
+  not been addressed.
+  The MP2624 is very similar to the bq24297 but not exactly
+  identical.
+  This chip is used by the OMAP5 based Pyra-Handheld.
+
+properties:
+  compatible:
+    oneOf:
+      - const: mps,mp2624
+      - const: ti,bq24296
+      - const: ti,bq24297
+
+  reg:
+    const: 0x6b
+
+  interrupts:
+    minItems: 1
+
+  monitored-battery:
+    - description: phandle to the battery node
+    - allOf:
+      - $ref: /schemas/types.yaml#/definitions/phandle
+# QUESTION : how can we correctly describe that we support only the following phandle properties and ignore the others?
+    - enum:
+      - voltage-max-design-microvolt:
+        - default: 4200000
+      - voltage-min-design-microvolt:
+        - default: 3200000
+      - constant-charge-current-max-microamp:
+        - default: as defined by boot loader
+      - precharge-current-microamp:
+        - default: 128000
+      - charge-term-current-microamp:
+        - default: 128000
+
+  regulators:
+    minItems: 2
+    maxItems: 2
+    items:
+# QUESTION: can we specify that these are to be regulator nodes?
+      - description: |
+          two regulator child nodes for
+          [0] vsys (battery or usb input -> system output)
+          [1] otg (battery input -> usb output).
+
+  dc-det-gpios:
+    items:
+# QUESTION: how do we specify that it should be a gpio?
+      - description: gpio for detecting two different DC sources
+      - default: use usb-input-current-microamp only
+
+  ti,usb-input-current-microamp:
+    items:
+      - description: initial current for USB source (if dc-det is 0)
+      - default: value as defined by boot loader
+
+  ti,adp-input-current-microamp:
+    items:
+      - description: initial current for other source (if dc-det is 1)
+      - default: 2048000µA
+
+required:
+  - compatible
+  - reg
+  - interrupts
+  - regulators
+
+additionalProperties: false
+
+examples:
+  - |
+    #include <dt-bindings/interrupt-controller/irq.h>
+
+    bat: battery {
+      compatible = "simple-battery", "pyra-battery";
+      voltage-min-design-microvolt = <3200000>;
+      voltage-max-design-microvolt = <4200000>;
+      energy-full-design-microwatt-hours = <22200000>;
+      charge-full-design-microamp-hours = <6000000>;
+      charge-term-current-microamp = <128000>;
+      constant-charge-current-max-microamp = <1000000>;
+    };
+
+    bq24297@6b {
+      compatible = "ti,bq24297";
+      reg = <0x6b>;
+      monitored-battery = <&bat>;
+      interrupt-parent = <&gpio99>;
+      interrupts = <(1*8+3) IRQ_TYPE_EDGE_FALLING>;   /* P13 */
+      regulators {
+        vsys_reg: vsys_regulator {
+          regulator-compatible = "bq2429x-vsys";
+          regulator-name = "vsys";
+          regulator-min-microvolt = <3500000>;
+          regulator-max-microvolt = <4200000>;
+          regulator-always-on;
+          regulator-boot-on;
+        };
+        otg_reg: otg_regulator {
+          regulator-compatible = "bq2429x-otg";
+          regulator-name = "otg";
+          regulator-min-microvolt = <4900000>;
+          regulator-max-microvolt = <5100000>;
+        };
+      };
+    };
+
+...

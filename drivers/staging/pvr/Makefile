@@ -86,8 +86,8 @@ ifneq ($(CONFIG_SOC_OMAP5),)
 	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
 endif	# CONFIG_SOC_OMAP5
 ifneq ($(CONFIG_SOC_DRA7XX),)
-	@$(kecho) "  MAKE    $(obj): dra7xx"
-	$(Q)SOC_VENDOR=ti SOC_FAMILY=omap SOC=dra7xx SGX=sgx544 SGX_FLAG=SGX544 SGX_REV=116 AM_VERSION=5 TARGET_TYPE=$(CONFIG_SGX_OMAP) $(MAKE) $(build)=$(SOURCE)
+	@$(kecho) "  MAKE    $(obj): dra7"
+	$(Q)SOC_VENDOR=ti SOC_FAMILY=omap SOC=dra7 SGX=sgx544 SGX_FLAG=SGX544 SGX_REV=116 AM_VERSION=5 TARGET_TYPE=$(CONFIG_SGX_OMAP) $(MAKE) $(build)=$(SOURCE)
 	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
 endif	# CONFIG_SOC_DRA7XX
 else # CONFIG_SGX_114

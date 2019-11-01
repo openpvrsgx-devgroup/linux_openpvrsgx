@@ -22,7 +22,8 @@ then
 fi
 
 # autodetect package version to load (omap only)
-COMPATIBLE=$(tr '\0' ';' </proc/device-tree/ocp*/target-module@5*/gpu@*/compatible | cut -d';' -f1)	# read records from matching 'gpu@0' or 'gpu@fe00' and take first
+# read records from matching 'gpu@0' or 'gpu@fe00' and take first
+COMPATIBLE=$(cat /proc/device-tree/ocp*/target-module@5*/gpu@*/compatible 2>/dev/null | tr '\0' ';' | cut -d';' -f1)
 MODULE=$(modprobe -c | fgrep "*C$(echo "$COMPATIBLE" | tr '-' '_')C*" | cut -d' ' -f3)
 echo compatible driver: $COMPATIBLE
 echo module name: $MODULE
@@ -34,42 +35,57 @@ then
 	then # package not available, install step-by-step
 		(
 		set -e
-		# based on http://blog.0xpebbles.org/PowerVR-SGX-on-the-beaglebone-black-in-2019
-		case "$(tr -d '\0' </sys/devices/soc0/machine)" in
+
+		case "@$(tr '\0' '@' </proc/device-tree/compatible)" in
 			# FIXME: does this more depend on sgx530,540,544?
-			AM335X | OMAP3430/3530 | OMAP3630/DM3730 )
+			*@ti,am33xx@* | *@ti,omap3@* )
 				REPO=git://git.ti.com/graphics/omap5-sgx-ddk-um-linux.git
 				BRANCH=ti-img-sgx/1.14.3699939_k4.4
 				export TARGET_PRODUCT=ti335x;;
-			OMAP4* )
+			*@ti,am43xx@* | *@ti,omap4@* )
+				# FIXME: this is for am437x only which seems to have an SGX530!
 				REPO=git://git.ti.com/graphics/omap5-sgx-ddk-um-linux.git
 				BRANCH=ti-img-sgx/1.14.3699939
-				# FIXME: this is for am437x which seems to have an SGX530!
 				export TARGET_PRODUCT=ti437x;;
-			OMAP5* )
+			*@ti,omap5@* )
 				REPO=https://github.com/mvduin/omap5-sgx-ddk-um-linux.git
 				BRANCH=ti-img-sgx/1.14.3699939
 				export TARGET_PRODUCT=jacinto6evm
 				;;
+			*@ingenic,jz4780@* )
+				wget -O sgx.tar.xz ftp://ftp.radix.pro/3pp/Imagination/ci20//sgx-um/1.14/ci20-sgx-um-1.14.3759903.tar.xz
+				# needs apt-get install xz-utils
+				tar xJf sgx.tar.xz
+				cd ci20-sgx-um-1.14.3759903
+				tar cf - usr | (cd / && tar xvf -)
+				cd ..
+				rm ci20-sgx-um-1.14.3759903 sgx.tar.xz
+				;;
 			*) echo unknown SoC: $(tr -d '\0' </sys/devices/soc0/machine): exit 1;;
 		esac
-		rm -rf omap5-sgx-ddk-um-linux/
-		git clone -b $BRANCH $REPO --depth=1 ||
-		# FIXME: choose correct branch/repo where we keep a copy
-		git clone -b $BRANCH http://git.goldelico.com/letux-rootfs.git --depth=1
-		cd omap5-sgx-ddk-um-linux/
-		echo installing user space files from $BRANCH for $TARGET_PRODUCT >&2
-		export DISCIMAGE=/
-		make install
-		rm -f /usr/lib/arm-linux-gnueabihf/libgbm.so.2
-		ln -s libgbm.so.1 /usr/lib/arm-linux-gnueabihf/libgbm.so.2
+
+		if [ "$REPO" ]
+		then
+			# based on http://blog.0xpebbles.org/PowerVR-SGX-on-the-beaglebone-black-in-2019
+			rm -rf omap5-sgx-ddk-um-linux/
+			git clone -b $BRANCH $REPO --depth=1 ||
+			# FIXME: choose correct branch/repo where we keep a copy
+			git clone -b $BRANCH http://git.goldelico.com/letux-rootfs.git --depth=1
+			cd omap5-sgx-ddk-um-linux/
+			echo installing user space files from $BRANCH for $TARGET_PRODUCT >&2
+			export DISCIMAGE=/
+			make install
+			rm -f /usr/lib/arm-linux-gnueabihf/libgbm.so.2
+			ln -s libgbm.so.1 /usr/lib/arm-linux-gnueabihf/libgbm.so.2
+			cd ..
+			rm -r omap5-sgx-ddk-um-linux/
+		fi
+
 		tee /etc/powervr.ini <<EOF
 [default]
 WindowSystem=libpvrDRMWSEGL.so
 DefaultPixelFormat=RGB888
 EOF
-		cd ..
-		rm -r omap5-sgx-ddk-um-linux/
 		) || exit
 	fi
 fi

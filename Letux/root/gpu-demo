@@ -28,6 +28,29 @@ MODULE=$(modprobe -c | fgrep "*C$(echo "$COMPATIBLE" | tr '-' '_')C*" | cut -d' 
 echo compatible driver: $COMPATIBLE
 echo module name: $MODULE
 
+patch()	# not working
+{ # patch binary file
+	_file="$1"
+	_address="$(($2))"	# should have 0x prefix
+	_byte=echo -en "\x$3"	# no 0x prefix
+	echo -ne \\xe0 | dd conv=notrunc of="$_file" bs=1 seek="$_address"
+}
+
+clone()
+{ # clone a repo and optionally select a specific commit
+	_repo="$1"
+	_branch="$2"
+	_commit="$3"
+	rm -rf sgx-um/
+	echo git clone -b "$_branch" "$_repo" --depth=50 sgx-um
+	git clone -b "$_branch" "$_repo" --depth=50 sgx-um ||
+		# fallback
+		# FIXME: choose correct branch/repo where we keep a copy
+		git clone -b "$_branch" http://git.goldelico.com/letux-rootfs.git --depth=1 || exit
+	cd sgx-um/ || exit
+	[ "$_commit" ] && git checkout "$_commit"	# wants a specific commit
+}
+
 # fetch the microkernel binary and libraries
 if ! [ "$(which pvrsrvctl)" ]
 then
@@ -39,46 +62,60 @@ then
 		case "@$(tr '\0' '@' </proc/device-tree/compatible)" in
 			# FIXME: does this more depend on sgx530,540,544?
 			*@ti,am33xx@* | *@ti,omap3@* )
-				REPO=git://git.ti.com/graphics/omap5-sgx-ddk-um-linux.git
-				BRANCH=ti-img-sgx/1.14.3699939_k4.4
-				export TARGET_PRODUCT=ti335x;;
+				clone git://git.ti.com/graphics/omap5-sgx-ddk-um-linux.git ti-img-sgx/1.14.3699939_k4.4
+				export TARGET_PRODUCT=ti335x
+				;;
 			*@ti,am43xx@* | *@ti,omap4@* )
+				clone git://git.ti.com/graphics/omap5-sgx-ddk-um-linux.git ti-img-sgx/1.14.3699939
 				# FIXME: this is for am437x only which seems to have an SGX530!
-				REPO=git://git.ti.com/graphics/omap5-sgx-ddk-um-linux.git
-				BRANCH=ti-img-sgx/1.14.3699939
-				export TARGET_PRODUCT=ti437x;;
+				export TARGET_PRODUCT=ti437x
+				;;
 			*@ti,omap5@* )
-				REPO=https://github.com/mvduin/omap5-sgx-ddk-um-linux.git
-				BRANCH=ti-img-sgx/1.14.3699939
+				clone git://git.ti.com/graphics/omap5-sgx-ddk-um-linux.git ti-img-sgx/1.14.3699939 3af51eb8	# do not checkout latest version but 3af51eb8
+				# alternates (untested)
+				# clone https://github.com/mvduin/omap5-sgx-ddk-um-linux.git ti-img-sgx/1.14.3699939
+				# clone http://dev.pyra-handheld.com/packages/omap5-sgx-ddk-um-linux.git master
+				# apply magic patch found on https://dev.pyra-handheld.com/packages/omap5-sgx-ddk-um-linux/commit/543c0d0bc7f9472368e58d6e037a1cf35de27da3
+				# patch targetfs/jacinto6evm/lib/libsrv_um.so.1.14.3699939 0x98eb e0
+				dd if=targetfs/jacinto6evm/lib/libsrv_um.so.1.14.3699939 bs=1 count=1 skip=$((0x98eb)) | xxd
+				echo -ne \\xe0 | dd conv=notrunc of=targetfs/jacinto6evm/lib/libsrv_um.so.1.14.3699939 bs=1 seek=$((0x98eb))
+				# read back
+				dd if=targetfs/jacinto6evm/lib/libsrv_um.so.1.14.3699939 bs=1 count=1 skip=$((0x98eb)) | xxd
 				export TARGET_PRODUCT=jacinto6evm
 				;;
 			*@ingenic,jz4780@* )
-				wget -O sgx.tar.xz ftp://ftp.radix.pro/3pp/Imagination/ci20//sgx-um/1.14/ci20-sgx-um-1.14.3759903.tar.xz
-				# needs apt-get install xz-utils
-				tar xJf sgx.tar.xz
-				cd ci20-sgx-um-1.14.3759903
+				if false	# older/other version?
+				then
+					wget -O sgx.tar.xz ftp://ftp.radix.pro/3pp/Imagination/ci20//sgx-um/1.14/ci20-sgx-um-1.14.3759903.tar.xz
+					# needs apt-get install xz-utils
+					tar xJf sgx.tar.xz
+				else
+					wget -O sgx.tar https://web.archive.org/web/20180110041155if_/http://mipscreator.imgtec.com/CI20/sgx/SGX_DDK_Linux_XOrg_ES1_ES2_OGL_MAIN%403759903_binary_um.tar
+					mkdir -p SGX_DDK_Linux_XOrg_ES1_ES2_OGL_MAIN@3759903_binary_um
+					cd SGX_DDK_Linux_XOrg_ES1_ES2_OGL_MAIN@3759903_binary_um
+					tar xf ../sgx.tar
+				fi
+				echo installing user space files for jz4780 >&2
 				tar cf - usr | (cd / && tar xvf -)
+				# libgbm fix needed?
 				cd ..
-				rm ci20-sgx-um-1.14.3759903 sgx.tar.xz
+				rm -f sgx.tar.xz sgx.tar ci20-sgx-um-1.14.3759903 SGX_DDK_Linux_XOrg_ES1_ES2_OGL_MAIN%403759903_binary_um.tar
 				;;
-			*) echo unknown SoC: $(tr -d '\0' </sys/devices/soc0/machine): exit 1;;
+			*)
+				echo unknown SoC: $(tr -d '\0' </sys/devices/soc0/machine)
+				exit 1
+				;;
 		esac
 
-		if [ "$REPO" ]
-		then
-			# based on http://blog.0xpebbles.org/PowerVR-SGX-on-the-beaglebone-black-in-2019
-			rm -rf omap5-sgx-ddk-um-linux/
-			git clone -b $BRANCH $REPO --depth=1 ||
-			# FIXME: choose correct branch/repo where we keep a copy
-			git clone -b $BRANCH http://git.goldelico.com/letux-rootfs.git --depth=1
-			cd omap5-sgx-ddk-um-linux/
-			echo installing user space files from $BRANCH for $TARGET_PRODUCT >&2
+		if [ "$TARGET_PRODUCT" ]
+		then	# install through makefile
+			echo installing user space files for $TARGET_PRODUCT >&2
 			export DISCIMAGE=/
 			make install
 			rm -f /usr/lib/arm-linux-gnueabihf/libgbm.so.2
 			ln -s libgbm.so.1 /usr/lib/arm-linux-gnueabihf/libgbm.so.2
 			cd ..
-			rm -r omap5-sgx-ddk-um-linux/
+			rm -rf sgx-um/
 		fi
 
 		tee /etc/powervr.ini <<EOF

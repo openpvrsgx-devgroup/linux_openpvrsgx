@@ -327,6 +327,7 @@ then # octopus of last set of branches
 fi
 
 pushbranch "$OUTPUT"	# update letux-$VERSION on public server
-git branch -f letux-current "$OUTPUT"	# set current base
+git branch -f letux-current "$OUTPUT"	# make a stable name for the latest build
+pushbranch "letux-current"	# update current head on public server
 
 echo "*** switched to $(git branch | fgrep '* ' | cut -c 3-) ***"

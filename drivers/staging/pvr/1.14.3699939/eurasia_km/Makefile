@@ -34,6 +34,9 @@ ccflags-y += -DPVR_BUILD_DATE="\"$(shell date "+%Y%m%d" )\""
 # this defines the compatible string which must be present in the DTB of the board
 ccflags-y += -DSYS_SGX_DEV_NAME="\"$(SOC_VENDOR),$(SOC)-$(SGX)-$(SGX_REV)\""
 
+# vendor_soc_sgx_rev for macro use
+ccflags-y += -D$(SOC_VENDOR)_$(SOC)_$(SGX)_$(SGX_REV)
+
 ccflags-y += -DSGX_CORE_REV=$(SGX_REV)
 
 ccflags-y += \
@@ -149,6 +152,11 @@ ccflags-y += \
 	-fno-strict-aliasing -Wno-pointer-arith -Wno-sign-conversion
 endif
 
+# Add rewritten driver components here for now
+$(TARGET) += \
+	../../pvr-drv.o \
+
+# Keep Imagination SDK components here
 $(TARGET) += \
 	services4/srvkm/bridged/bridged_pvr_bridge.o \
 	services4/srvkm/bridged/bridged_support.o \
@@ -190,8 +198,7 @@ $(TARGET) += \
 	services4/srvkm/env/linux/pdump.o \
 	services4/srvkm/env/linux/proc.o \
 	services4/srvkm/env/linux/pvr_bridge_k.o \
-	services4/srvkm/env/linux/pvr_debug.o \
-	services4/srvkm/env/linux/pvr_drm.o
+	services4/srvkm/env/linux/pvr_debug.o
 
 ifneq ($(CONFIG_SGX_DRM),)
 

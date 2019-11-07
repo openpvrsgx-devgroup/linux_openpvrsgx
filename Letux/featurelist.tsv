@@ -1,0 +1,39 @@
+Feature	GTA04 L2804	GTA04b2 L3704	GTA04b3 L7004	BeagleBoard C2	BeagleBoard XM	PandaBoard	Pyra	OMAP5432EVM	Openpandora	BeagleBone Black	Udoo neo	Letux 400	PocketBeagle	CI20	GTA15	RasPi3B+	Tolino/Clara
+makesd name	gta04	gta04b2	gta04b3	bb	bb	panda-es	pyra	omap5evm	pandora	bbb	udoo	mipsbook	lc8	ci20	gta15	raspi	tolino3/clara
+SoC	DM3730	DM3730	DM3730	OMAP3	DM3730	OMAP4460	OMAP5	OMAP5	OMAP3	AM335x	iMX6	JZ4730	AM335x	JZ4780	OMAP5	BCM2835	iMX6
+Boot	ok	ok	ok	ok	ok	ok	letux#876	ok	ok	ok	ok	wip	ok	ok		ok	letux
+LCD	ok	letux	letux	n/a	(Openmoko Hybrid)	n/a	l4.19	n/a	ok	n/a	n/a	n/a	n/a	n/a		n/a	no
+LCD rotation	n/a	n/a	n/a	n/a	n/a	n/a	nok#884	nok#884	n/a	n/a	n/a	n/a	n/a	n/a		n/a	n/a
+Touch	ok	ok	ok	n/a	(Openmoko Hybrid)	n/a	l4.19	n/a	ok	n/a	n/a	n/a	n/a	n/a		n/a	l5.4-rc7
+Touch precalibration	letux	letux	letux	n/a	n/a	n/a	letux	n/a	n/a	n/a	n/a	n/a	n/a	n/a		n/a	?
+Keyboard	n/a	n/a	n/a	n/a	n/a	n/a	letux	n/a	letux	n/a	n/a		n/a	n/a	n/a	n/a	n/a
+Nubs	n/a	n/a	n/a	n/a	n/a	n/a	letux	n/a	letux	n/a	n/a	n/a	n/a	n/a	?	n/a	n/a
+DVI/HDMI	n/a	n/a	n/a	n/a	n/a	n/a	letux	ok	n/a	n/a	n/a	n/a	n/a	nok#921	?	ok	n/a
+TV-out	ok	ok	ok	?	?	n/a	n/a	n/a	?	n/a	n/a	n/a	n/a	n/a	n/a		n/a
+Charging	ok	ok	ok	n/a	n/a	n/a	letux	n/a	ok	n/a	n/a		n/a	n/a			n/a
+OTG Client	ok	ok	ok	ok	ok	ok	letux	ok	ok		ok	n/a	?	?#921		n/a	l5.4-rc7
+OTG Host	ok	ok	ok	ok	ok	ok	letux	ok	ok	ok			n/a	ok			n/a
+[[USB]] Host	n/a	n/a	n/a	ok	ok	ok	letux#856	ok	nok#856	ok	ok		n/a	nok		ok	n/a
+MMC	ok	ok	ok	ok	ok	ok	letux	ok	ok	ok	ok		ok	ok	ok		ok
+NAND/eMMC	ok	ok	ok	ok	n/a	n/a	letux	ok	ok	ok	n/a		nok	!#921		n/a	n/a
+SATA	n/a	n/a	n/a	n/a	n/a	n/a	letux	ok	n/a	n/a	n/a	n/a	n/a	n/a	n/a		n/a
+Ethernet	n/a	n/a	n/a	n/a	ok	ok	n/a	ok	n/a	ok	ok	n/a	n/a	wip	n/a	ok	n/a
+WiFi	ok	ok	ok	n/a	n/a	ok	n/a	ok	l5.4-rc3#849	n/a	ok	n/a	n/a	?#921		ok	?
+Bluetooth	letux	letux	letux	n/a	n/a	ok	letux	?	n/a	n/a	ok	n/a	n/a	?		ok	n/a
+Bluetooth Headset	?			n/a	n/a				n/a	n/a		n/a	n/a				n/a
+Infrared	nok#525	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	nok		n/a	n/a
+[[GPS]]	ok	n/a	n/a	n/a	n/a	n/a	ok	n/a	n/a	n/a	n/a	n/a	n/a	n/a		n/a	n/a
+[[Wireless]]	ok	ok	ok	n/a	n/a	n/a	ok	n/a	n/a	n/a	n/a	n/a	n/a	n/a		n/a	n/a
+Telephony	letux	n/a	n/a	n/a	n/a	n/a		n/a	n/a	n/a	n/a	n/a	n/a	n/a		n/a	n/a
+[[Sound]]	ok	ok	ok	?	?	ok	wip#883	ok	nok	n/a	n/a	n/a	n/a			n/a	n/a
+Vibra	ok	ok	ok	n/a	n/a	n/a	ok	n/a	n/a	n/a	n/a	n/a	n/a	n/a		n/a	n/a
+Indicators	ok	ok	ok	ok	ok	ok	ok	ok	ok	ok	ok		ok	ok		letux	l5.4-rc7
+Buttons	ok	ok	ok	ok	ok	ok	ok	ok	ok	ok	ok	n/a	ok				l5.4-rc7
+[[Sensors]]	ok	ok	ok	n/a	n/a	n/a	ok	n/a	n/a	n/a	ok	n/a	n/a	n/a		n/a	n/a
+NFC	n/a	nok	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a		n/a	n/a
+[[Camera]]	wip	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	nok#921		n/a	n/a
+Flash/Torch	nok	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	nok		n/a	n/a
+Lid sensor	n/a	n/a	n/a	n/a	n/a	n/a	letux	n/a	n/a	n/a	n/a	n/a	n/a	n/a		n/a	l5.4-rc7
+FM Radio	wip#483	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a			n/a
+GPU	wip#449	wip#449	wip#449	wip	wip	wip	letux	letux	wip	letux	etnaviv	n/a	wip	wip		nok	etnaviv
+[[Power-Management]]	weak#707	weak	weak	n/a	n/a	n/a	nok	nok	?	n/a	n/a	n/a	n/a			n/a	?

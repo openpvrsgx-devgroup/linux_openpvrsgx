@@ -29,7 +29,7 @@
 ifneq ($(CONFIG_SGX_114),)
 SUBPATH=1.14.3699939/eurasia_km
 else
-SUBPATH=omap3
+SUBPATH=1.9
 endif
 
 SOURCE=$(obj)/$(SUBPATH)

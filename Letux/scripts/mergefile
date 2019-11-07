@@ -93,8 +93,9 @@ letux/bno055
 letux/freescale-sensors
 letux/omap-sysc-prm-gfx
 letux/omap-pvr-soc-glue
-letux/omap-pvr-demo
+letux/older-pvr
 letux/latest-pvr
+letux/pvr-demo
 letux/tiler-fbdev
 
 # unfinished, almost empty or untested...
@@ -140,7 +141,6 @@ letux/tvfix
 letux/displayprobing
 letux/charging_fixes
 letux/omap2plus
-letux/omap-pvr
 letux/omap5-idle
 letux/mmc
 letux/ubi-fs

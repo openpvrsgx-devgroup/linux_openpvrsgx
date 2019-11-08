@@ -75,7 +75,7 @@ void PVRSRVDriverShutdown(struct platform_device *pdev);
 #define AM3517_SGX530_125(comp, dat)
 #endif
 
-#ifdef ti_am335x_sgx530_125
+#ifdef ti_am3352_sgx530_125
 #define AM335X_SGX530_125(comp, dat)	\
 	{				\
 		.compatible = comp,	\

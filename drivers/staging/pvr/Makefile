@@ -70,8 +70,8 @@ ifneq ($(CONFIG_ARCH_OMAP4),)
 	$(Q)SOC_VENDOR=ti SOC_FAMILY=omap SOC=omap4 SGX=sgx544 SGX_FLAG=SGX544 SGX_REV=112 AM_VERSION=4 TARGET_TYPE=$(CONFIG_SGX_OMAP) $(MAKE) $(build)=$(SOURCE)
 	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
 ifneq ($(CONFIG_SOC_AM43XX),)
-	@$(kecho) "  MAKE    $(obj): am43xx"
-	$(Q)SOC_VENDOR=ti SOC_FAMILY=omap SOC=am43xx SGX=sgx544 SGX_FLAG=SGX544 SGX_REV=112 AM_VERSION=4 TARGET_TYPE=$(CONFIG_SGX_OMAP) $(MAKE) $(build)=$(SOURCE)
+	@$(kecho) "  MAKE    $(obj): am4"
+	$(Q)SOC_VENDOR=ti SOC_FAMILY=omap SOC=am4 SGX=sgx530 SGX_FLAG=SGX530 SGX_REV=125 AM_VERSION=4 TARGET_TYPE=$(CONFIG_SGX_OMAP) $(MAKE) $(build)=$(SOURCE)
 	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
 endif # CONFIG_SOC_AM43XX
 endif # CONFIG_ARCH_OMAP4

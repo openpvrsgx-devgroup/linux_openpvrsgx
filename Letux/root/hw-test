@@ -660,6 +660,7 @@ function test_tvout_off {
 
 function test_lid {
 	LID=$(findinput "pyra-lid-wakeup")
+	[ "$LID" ] || LID=$(findinput "gpio-keys")	# kobolino
 	if [ "$LID" ]; then evtest --query $LID EV_SW 0 2>/dev/null && STATE=open || STATE=closed; fi
 	[ "$LID" ]
 	report $? ${FUNCNAME} "$STATE" "LID status"

@@ -217,7 +217,7 @@ static const struct of_device_id pvr_ids[] = {
 	OMAP3_SGX530_121("ti,omap3-sgx530-121", &pvr_omap3)
 	OMAP3630_SGX530_125("ti,omap3-sgx530-125", &pvr_omap3)
 	AM3517_SGX530_125("ti,am3517-sgx530-125", &pvr_omap3)
-	AM335X_SGX530_125("ti,am335x-sgx530-125", &pvr_omap3)
+	AM335X_SGX530_125("ti,am3352-sgx530-125", &pvr_omap3)
 	OMAP4_SGX540_120("ti,omap4-sgx540-120", &pvr_omap4)
 	OMAP4470_SGX544_112("ti,omap4-sgx544-112", &pvr_omap4470)
 	OMAP5_SGX544_116("ti,omap5-sgx544-116", &pvr_omap5)

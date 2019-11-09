@@ -93,8 +93,11 @@ letux/bno055
 letux/freescale-sensors
 letux/omap-sysc-prm-gfx
 letux/omap-pvr-soc-glue
-letux/older-pvr
-letux/latest-pvr
+letux/staging-pvr
+letux/pvrsrvkm-1.9
+letux/pvrsrvkm-1.10
+letux/pvrsrvkm-1.14.3699939
+letux/pvrsrvkm-1.17.4948957
 letux/pvr-demo
 letux/tiler-fbdev
 

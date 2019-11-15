@@ -85,6 +85,16 @@ void PVRSRVDriverShutdown(struct platform_device *pdev);
 #define AM335X_SGX530_125(comp, dat)
 #endif
 
+#ifdef ti_am4_sgx530_125
+#define AM4_SGX530_125(comp, dat)	\
+	{				\
+		.compatible = comp,	\
+		.data = dat,		\
+	},
+#else
+#define AM4_SGX530_125(comp, dat)
+#endif
+
 #ifdef ti_omap4_sgx540_120
 #define OMAP4_SGX540_120(comp, dat)	\
 	{				\

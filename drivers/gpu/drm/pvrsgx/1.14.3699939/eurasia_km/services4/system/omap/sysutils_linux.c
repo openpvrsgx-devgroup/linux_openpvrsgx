@@ -639,7 +639,8 @@ IMG_VOID DisableSystemClocks(SYS_DATA *psSysData)
 PVRSRV_ERROR SysPMRuntimeRegister(void)
 {
 #if defined(LDM_PLATFORM) && !defined(PVR_DRI_DRM_NOT_PCI)
-	pm_runtime_enable(&gpsPVRLDMDev->dev);
+	/* Done, see top level pvr-drv.c */
+	//pm_runtime_enable(&gpsPVRLDMDev->dev);
 #endif
 	return PVRSRV_OK;
 }
@@ -647,7 +648,8 @@ PVRSRV_ERROR SysPMRuntimeRegister(void)
 PVRSRV_ERROR SysPMRuntimeUnregister(void)
 {
 #if defined(LDM_PLATFORM) && !defined(PVR_DRI_DRM_NOT_PCI)
-	pm_runtime_disable(&gpsPVRLDMDev->dev);
+	/* Done, see top level pvr-drv.c */
+	//pm_runtime_disable(&gpsPVRLDMDev->dev);
 #endif
 	return PVRSRV_OK;
 }

@@ -283,19 +283,18 @@ static int pvr_probe(struct platform_device *pdev)
 	}
 
 	ddev = drm_dev_alloc(&pvr_drm_driver, ddata->dev);
-	if (IS_ERR(ddev))
-		return PTR_ERR(ddev);
+	if (IS_ERR(ddev)) {
+		error = PTR_ERR(ddev);
+		goto out_err_idle;
+	}
 
 	error = pvr_drm_load(ddev, 0);
 	if (error)
-		return error;
+		goto out_err_free;
 
 	error = drm_dev_register(ddev, 0);
-	if (error < 0) {
-		pvr_drm_unload(gpsPVRDRMDev);
-
-		return error;
-	}
+	if (error < 0)
+		goto out_err_unload;
 
 	ddata->ddev = ddev;
 	ddev->dev_private = ddata;
@@ -303,6 +302,18 @@ static int pvr_probe(struct platform_device *pdev)
 	gpsPVRLDMDev = pdev;
 
 	return 0;
+
+out_err_unload:
+	pvr_drm_unload(gpsPVRDRMDev);
+
+out_err_free:
+	drm_put_dev(gpsPVRDRMDev);
+
+out_err_idle:
+	pm_runtime_put_sync(ddata->dev);
+	pm_runtime_disable(ddata->dev);
+
+	return error;
 }
 
 static int pvr_remove(struct platform_device *pdev)

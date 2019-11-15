@@ -142,9 +142,12 @@ for i in sgx_clipblit_test gles1test1 gles2test1 eglinfo kmscube OGLES2Water
 do
 	if [ "$(which $i)" ]
 	then
+		(
+		cd "$(dirname "$(which $i)")"		# needed for gles2test1 to find the shader files
 		echo "*** $0: running $i ***"
-		arg=; case "$i" in gles*test* ) arg="0";; esac
+		arg=; case "$i" in gles*test* ) arg="0";; esac	# run forever until stopped by timeout
 		timeout 10 $i $arg
+		)
 	fi
 done
 

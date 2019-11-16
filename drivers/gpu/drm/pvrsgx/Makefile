@@ -40,6 +40,8 @@ else ifeq ($(CONFIG_PVRSGX_1_14_3759903),y)
 SUBPATH=1.14.3759903/eurasia_km
 else ifeq ($(CONFIG_PVRSGX_1_14_3841212),y)
 SUBPATH=1.14.3841212/eurasia_km
+else ifeq ($(CONFIG_PVRSGX_1_15_4564147),y)
+SUBPATH=1.15.4564147/eurasia_km
 else ifeq ($(CONFIG_PVRSGX_1_17_4948957),y)
 SUBPATH=1.17.4948957/eurasia_km
 else

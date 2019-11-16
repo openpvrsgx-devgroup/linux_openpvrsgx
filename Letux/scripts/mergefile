@@ -96,8 +96,11 @@ letux/omap-pvr-soc-glue
 letux/pvrsrvkm
 letux/pvrsrvkm-1.9.2253347
 letux/pvrsrvkm-1.10.2359475
+letux/pvrsrvkm-1.13.3341330
 letux/pvrsrvkm-1.14.3699939
+letux/pvrsrvkm-1.14.3759903
 letux/pvrsrvkm-1.14.3841212
+letux/pvrsrvkm-1.15.4564147
 letux/pvrsrvkm-1.17.4948957
 letux/pvr-demo
 letux/tiler-fbdev

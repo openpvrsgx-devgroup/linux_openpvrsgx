@@ -115,10 +115,12 @@
 		};
 	};
 
-	lcd: lcd {
+	lcd: lcd@0 {
 		/* default to be overwritten by specific panel in derived board file */
 
 		label = "lcd";
+
+		reg = <0>;
 
 		pinctrl-names = "default";
 		pinctrl-0 = <&mipi_display_pins>;

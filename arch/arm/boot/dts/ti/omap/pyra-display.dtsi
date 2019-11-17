@@ -38,10 +38,11 @@
 };
 
 &lcd {
-	backlight = <&backlight>;
+	reg = <0>;
 	compatible = "boe,btl507212-w677l";
-	gpios = <&gpio6 16 0>;	/* goip6_176 = panel reset */
 	rotation = <90>;
+	reset-gpios = <&gpio6 16 0>;	/* goip6_176 = panel reset */
+	backlight = <&backlight>;
 };
 
 /* devices connected to Panel-I2C */

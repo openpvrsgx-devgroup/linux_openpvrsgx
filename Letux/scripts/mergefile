@@ -134,6 +134,7 @@ letux/kobolino/backlight
 letux/kobolino/dt
 letux/kobolino/rtc
 letux/kobolino/touch
+letux/rtl8189fs
 
 # hacks and fixes
 letux/hacks

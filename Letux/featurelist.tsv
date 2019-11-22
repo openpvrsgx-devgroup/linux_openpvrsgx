@@ -36,5 +36,5 @@ NFC	n/a	nok	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a		n/a	n/a
 Flash/Torch	nok	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	nok		n/a	n/a
 Lid sensor	n/a	n/a	n/a	n/a	n/a	n/a	l4.19	n/a	n/a	n/a	n/a	n/a	n/a	n/a		n/a	l5.4-rc7
 FM Radio	wip#483	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a			n/a
-GPU	wip#449	wip#449	wip#449	wip	wip	wip	l4.19	letux	wip	letux	etnaviv	n/a	wip	wip		nok	etnaviv
+GPU	l5.4#449	l5.4#449	l5.4#449	wip	l5.4	wip	l4.19	letux	wip	l5.4	etnaviv	n/a	l5.4	wip		nok	etnaviv
 [[Power-Management]]	weak#707	weak	weak	n/a	n/a	n/a	nok	nok	?	n/a	n/a	n/a	n/a			n/a	?

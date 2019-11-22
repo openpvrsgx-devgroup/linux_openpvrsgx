@@ -60,18 +60,19 @@ then
 		set -e
 
 		case "@$(tr '\0' '@' </proc/device-tree/compatible)" in
-			# FIXME: does this more depend on sgx530,540,544?
-			*@ti,am33xx@* | *@ti,omap3@* )
+			*@ti,am33xx@* )
+				# for SGX530-125 with tilcdc
 				clone git://git.ti.com/graphics/omap5-sgx-ddk-um-linux.git ti-img-sgx/1.14.3699939_k4.4
 				export TARGET_PRODUCT=ti335x
 				;;
-			*@ti,am43xx@* | *@ti,omap4@* )
+			*@ti,am43xx@* | *@ti,omap3630@* | *@ti,omap4@* )
+				# for SGX530-125 with omapdrm
 				clone git://git.ti.com/graphics/omap5-sgx-ddk-um-linux.git ti-img-sgx/1.14.3699939
-				# FIXME: this is for am437x only which seems to have an SGX530!
 				export TARGET_PRODUCT=ti437x
 				;;
 			*@ti,omap5@* )
-				clone git://git.ti.com/graphics/omap5-sgx-ddk-um-linux.git ti-img-sgx/1.14.3699939 3af51eb8	# do not checkout latest version but 3af51eb8
+				# for SGX544 with omapdrm
+				clone git://git.ti.com/graphics/omap5-sgx-ddk-um-linux.git ti-img-sgx/1.14.3699939 3af51eb8	# do not checkout latest version
 				# alternates (untested)
 				# clone https://github.com/mvduin/omap5-sgx-ddk-um-linux.git ti-img-sgx/1.14.3699939
 				# clone http://dev.pyra-handheld.com/packages/omap5-sgx-ddk-um-linux.git master
@@ -89,6 +90,7 @@ then
 					wget -O sgx.tar.xz ftp://ftp.radix.pro/3pp/Imagination/ci20//sgx-um/1.14/ci20-sgx-um-1.14.3759903.tar.xz
 					# needs apt-get install xz-utils
 					tar xJf sgx.tar.xz
+					cd ci20-sgx-um-1.14.3759903
 				else
 					wget -O sgx.tar https://web.archive.org/web/20180110041155if_/http://mipscreator.imgtec.com/CI20/sgx/SGX_DDK_Linux_XOrg_ES1_ES2_OGL_MAIN%403759903_binary_um.tar
 					mkdir -p SGX_DDK_Linux_XOrg_ES1_ES2_OGL_MAIN@3759903_binary_um
@@ -96,13 +98,13 @@ then
 					tar xf ../sgx.tar
 				fi
 				echo installing user space files for jz4780 >&2
-				tar cf - usr | (cd / && tar xvf -)
+				tar cf - usr | (cd / && tar xf -)
 				# libgbm fix needed?
 				cd ..
 				rm -f sgx.tar.xz sgx.tar ci20-sgx-um-1.14.3759903 SGX_DDK_Linux_XOrg_ES1_ES2_OGL_MAIN%403759903_binary_um.tar
 				;;
 			*)
-				echo unknown SoC: $(tr -d '\0' </sys/devices/soc0/machine)
+				echo unknown SoC: $(tr '\0' ' ' </proc/device-tree/compatible)
 				exit 1
 				;;
 		esac
@@ -118,11 +120,15 @@ then
 			rm -rf sgx-um/
 		fi
 
-		tee /etc/powervr.ini <<EOF
+		if [ ! -r /etc/powervr.ini ]
+		then
+			tee /etc/powervr.ini <<EOF
 [default]
 WindowSystem=libpvrDRMWSEGL.so
 DefaultPixelFormat=RGB888
 EOF
+		fi
+
 		) || exit
 	fi
 fi

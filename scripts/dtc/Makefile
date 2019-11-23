@@ -20,7 +20,7 @@ endif
 HOST_EXTRACFLAGS += -DNO_YAML
 else
 dtc-objs	+= yamltree.o
-HOSTLDLIBS_dtc	:= $(shell pkg-config yaml-0.1 --libs)
+HOSTLDLIBS_dtc	:= -L/opt/local/lib -lyaml
 endif
 
 # Generated files need one more search path to include headers in source tree

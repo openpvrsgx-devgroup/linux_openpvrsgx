@@ -116,6 +116,7 @@ then
 			make install
 			rm -f /usr/lib/arm-linux-gnueabihf/libgbm.so.2
 			ln -s libgbm.so.1 /usr/lib/arm-linux-gnueabihf/libgbm.so.2
+			[ -f /usr/lib/libGLESv2.so.1 ] || ln -s libGLESv2.so.2 /usr/lib/libGLESv2.so.1
 			cd ..
 			rm -rf sgx-um/
 		fi

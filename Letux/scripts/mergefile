@@ -104,6 +104,8 @@ letux/pvrsrvkm-1.15.4564147
 letux/pvrsrvkm-1.17.4948957
 letux/pvr-demo
 letux/tiler-fbdev
+-letux/omapdrm-dsi-panel
+-letux/boe-w677-dsi-panel
 
 # unfinished, almost empty or untested...
 letux/txs02612

@@ -113,6 +113,7 @@ then
 		then	# install through makefile
 			echo installing user space files for $TARGET_PRODUCT >&2
 			export DISCIMAGE=/
+			rm targetfs/*/etc/powervr.ini	# don't overwrite by the version from git
 			make install
 			rm -f /usr/lib/arm-linux-gnueabihf/libgbm.so.2
 			ln -s libgbm.so.1 /usr/lib/arm-linux-gnueabihf/libgbm.so.2

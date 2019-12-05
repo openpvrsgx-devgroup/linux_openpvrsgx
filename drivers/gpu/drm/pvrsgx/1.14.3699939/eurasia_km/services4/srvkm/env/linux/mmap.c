@@ -790,7 +790,7 @@ DoMapToUser(LinuxMemArea *psLinuxMemArea,
 		    {
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,20,0))
 			result = vmf_insert_mixed(ps_vma, ulVMAPos, pfn_to_pfn_t(pfn));
-			if(result != 0)
+			if (result & VM_FAULT_ERROR)
 			{
 				PVR_DPF((PVR_DBG_ERROR,"%s: Error - vmf_insert_mixed failed (%x)", __FUNCTION__, result));
 				return IMG_FALSE;

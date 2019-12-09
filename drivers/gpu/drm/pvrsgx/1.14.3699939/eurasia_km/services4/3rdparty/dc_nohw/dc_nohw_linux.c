@@ -79,7 +79,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <linux/pci.h>
 #include <linux/slab.h>
 
-#if defined(SUPPORT_DRI_DRM)
+#if defined(SUPPORT_DRI_DRM) && (LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0))
 #include <drm/drmP.h>
 #endif
 

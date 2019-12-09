@@ -48,7 +48,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <linux/err.h>
 #include <linux/dma-buf.h>
 #include <linux/scatterlist.h>
-#if defined(SUPPORT_DRI_DRM)
+#include <linux/version.h>
+#if defined(SUPPORT_DRI_DRM) && (LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0))
 #include <drm/drmP.h>
 #endif
 

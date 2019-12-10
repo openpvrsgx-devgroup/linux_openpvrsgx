@@ -639,7 +639,7 @@ out:
 #endif
 
 struct snd_soc_component_driver omap_aess_platform = {
-	.ops		= &omap_aess_pcm_ops,
+//	.ops		= &omap_aess_pcm_ops,
 	.probe		= omap_aess_pcm_probe,
 	.remove		= omap_aess_pcm_remove,
 	.read		= omap_aess_oppwidget_read,

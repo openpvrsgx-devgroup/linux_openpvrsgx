@@ -3,10 +3,9 @@
 # test all leds
 #
 
-cd /sys/class/leds
-
-while true
-do
+function onoff()
+{
+	cd /sys/class/leds
 	for i in *
 	do
 		echo $i
@@ -15,15 +14,46 @@ do
 		sleep 0.2
 		echo "none" >$i/trigger
 	done
+}
+
+function on()
+{
+	cd /sys/class/leds
 	for i in *
 	do
 		echo $i
 		echo "default-on" >$i/trigger
 		sleep 0.2
 	done
+}
+
+function allon()
+{
+	cd /sys/class/leds
+	for i in *
+	do
+		echo "default-on" >$i/trigger
+	done
+}
+
+function alloff()
+{
+	cd /sys/class/leds
 	for i in *
 	do
 		echo "none" >$i/trigger
 	done
+}
+
+case "$1" in
+	on ) allon; exit;;
+	off ) alloff; exit;;
+esac
+
+while true
+do
+	onoff
+	on
+	alloff
 	sleep 0.2
 done

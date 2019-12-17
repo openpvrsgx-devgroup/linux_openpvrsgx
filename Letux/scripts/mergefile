@@ -161,4 +161,4 @@ letux/drivers-keyboard
 # not merged in by default, but carried along and regularily rebased
 -letux/omap-hsmmc
 -letux/android
--letux/pyra-minimal
+#-letux/pyra-minimal

@@ -183,13 +183,6 @@ static int __maybe_unused pvr_runtime_resume(struct device *dev)
 static int pvr_suspend(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
-	struct pvr *ddata = dev_get_drvdata(dev);
-	struct drm_device *drm_dev = ddata->ddev;
-	int error;
-
-	error = drm_mode_config_helper_suspend(drm_dev);
-	if (error)
-		dev_warn(dev, "%s: error: %i\n", __func__, error);
 
 	return PVRSRVDriverSuspend(pdev, PMSG_SUSPEND);
 }
@@ -197,13 +190,6 @@ static int pvr_suspend(struct device *dev)
 static int pvr_resume(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
-	struct pvr *ddata = dev_get_drvdata(dev);
-	struct drm_device *drm_dev = ddata->ddev;
-	int error;
-
-	error = drm_mode_config_helper_resume(drm_dev);
-	if (error)
-		dev_warn(dev, "%s: error: %i\n", __func__, error);
 
 	return PVRSRVDriverResume(pdev);
 }

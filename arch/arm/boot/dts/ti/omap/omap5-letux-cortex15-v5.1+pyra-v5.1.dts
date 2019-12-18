@@ -9,7 +9,5 @@
 /* this version is for Pyra V5.1 with Letux Cortex 15 CPU board V5.1 */
 
 #include "omap5-letux-cortex15-v5.1.dts"
-
 #include "pyra-mainboard-v5.1.dtsi"
-
 #include "pyra-display.dtsi"

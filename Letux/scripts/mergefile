@@ -39,8 +39,8 @@ letux/hw-test
 
 # Diverse drivers and bindings
 letux/bindings
-letux/bindings-madc
-letux/dss-bindings
+#letux/bindings-madc
+#letux/dss-bindings
 
 # Device Trees for Letux devices
 letux/dt-gta04

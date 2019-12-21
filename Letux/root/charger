@@ -3,6 +3,7 @@ SCRIPTPATH="$(dirname "$0")"
 TWL4030_MADC=$($SCRIPTPATH/findiio "48070000.i2c:twl@48:madc")	# OMAP3
 TWL6030_GPADC=$($SCRIPTPATH/findiio "48070000.i2c:twl@48:adc")	# OMAP4
 TWL6037_GPADC=$($SCRIPTPATH/findiio "palmas-gpadc")	# OMAP5
+RN5T618_ADC=$($SCRIPTPATH/findiio "rn5t618-adc")	# Kobolino
 INA231=$($SCRIPTPATH/findhwmon ina231)	# Pyra modem monitor
 
 function fuel-level { # $1 is mV; $2 is mA charging current; $3 is resistance, return is % [0..100]
@@ -26,6 +27,25 @@ if [ -d "$TWL4030_MADC" ]
 then # OMAP3 with TWL4030 / TPS65950
 
 # see http://www.mjmwired.net/kernel/Documentation/hwmon/twl4030-madc-hwmon for a list of channels
+
+# twl4030 channels
+# 0	Battery type (BTYPE)
+# 1	BCI: Battery temperature (BTEMP)
+# 2	GP analog input
+# 3	GP analog input
+# 4	GP analog input
+# 5	GP analog input
+# 6	GP analog input
+# 7	GP analog input
+# 8	BCI: VBUS voltage (VBUS)
+# 9	Backup Battery voltage (VBKP)
+# 10	BCI: Battery charger current (ICHG)
+# 11	BCI: Battery charger voltage (VCHG)
+# 12	BCI: Main battery voltage (VBAT)
+# 13	Reserved
+# 14	Reserved
+# 15	VRUSB Supply/Speaker left/Speaker right polarization level
+
 echo "TWL4030 System Status"
 echo "============≠========"
 echo VBUS: $(cat "$TWL4030_MADC/in_voltage8_input")mV
@@ -46,7 +66,7 @@ fi
 if [ -d "$TWL6030_GPADC" ]
 then # OMAP4 with twl6030
 
-# channels (twl6030 only - twl6032 has different channels!)
+# twl6030 channels (twl6030 only - twl6032 has different channels!)
 # 0 battery type
 # 1 battery temp
 # 2 audio/GP
@@ -86,7 +106,7 @@ fi
 if [ -d "$TWL6037_GPADC" ]
 then # OMAP5 with Palmas (TWL6037)
 
-# channels
+# twl6037 channels
 # 0 battery type (source current 0, 5, 15, 20 uA)
 # 1 battery NTC
 # 2 audio accessory/GP
@@ -127,6 +147,31 @@ then
 	echo "PMODEM: $(cat $INA231/power1_input) uW"
 fi
 echo
+
+fi
+
+if [ -d "$RN5T618_ADC" ]
+then # Kobolino with RN5T618
+
+# RN5T618 channels
+# 0	LIMMON
+# 1	VBAT
+# 2	VADP
+# 3	VUSB
+# 4	VSYS
+# 5	VTHM
+# 6	AIN1
+# 7	AIN0
+
+echo "RN5T618 System STATUS"
+echo "==================≠=="
+echo VSYS: $(cat $RN5T618_ADC/in_voltage4_input)mV
+echo VBUS: $(cat $RN5T618_ADC/in_voltage3_input)mV
+echo VCHG: $(cat $RN5T618_ADC/in_voltage2_input)mV
+VOLT=$(cat $RN5T618_ADC/in_voltage1_input)
+AMP=$(cat $RN5T618_ADC/in_current0_input)
+echo VBATT: ${VOLT}mV ca. $(fuel-level "$VOLT" "AMP" 0.1)%
+echo temp: $(cat $RN5T618_ADC/in_voltage5_raw)mV
 
 fi
 

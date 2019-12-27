@@ -1,0 +1,1 @@
+cmd_/home1/prathap/delete/1.9/Graphics_SDK_4_06_00_03/GFX_Linux_KM/services4/3rdparty/dc_omapfb3_linux/built-in.o :=  rm -f /home1/prathap/delete/1.9/Graphics_SDK_4_06_00_03/GFX_Linux_KM/services4/3rdparty/dc_omapfb3_linux/built-in.o; arm-arago-linux-gnueabi-ar rcs /home1/prathap/delete/1.9/Graphics_SDK_4_06_00_03/GFX_Linux_KM/services4/3rdparty/dc_omapfb3_linux/built-in.o

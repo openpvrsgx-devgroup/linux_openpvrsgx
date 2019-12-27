@@ -3604,7 +3604,7 @@ PVRSRV_ERROR OSAcquirePhysPageAddr(IMG_VOID *pvCPUVAddr,
     bMMapSemHeld = IMG_TRUE;
 
     /* Get page list */
-    psInfo->iNumPagesMapped = get_user_pages(current, current->mm, ulStartAddr, psInfo->iNumPages, 1, 0, psInfo->ppsPages, NULL);
+    psInfo->iNumPagesMapped = get_user_pages(ulStartAddr, psInfo->iNumPages, FOLL_WRITE, psInfo->ppsPages, NULL);
 
     if (psInfo->iNumPagesMapped >= 0)
     {

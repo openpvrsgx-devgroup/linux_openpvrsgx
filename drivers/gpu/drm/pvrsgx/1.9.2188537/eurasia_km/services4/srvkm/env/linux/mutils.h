@@ -79,7 +79,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 	#define	IOREMAP(pa, bytes)	ioremap_cache(pa, bytes)
 #else	
 	#if defined(__arm__) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0))
-		#define	IOREMAP(pa, bytes)	ioremap_cached(pa, bytes)
+		#define	IOREMAP(pa, bytes)	ioremap_cache(pa, bytes)
 	#else
 		#define IOREMAP(pa, bytes)	ioremap(pa, bytes)
 	#endif

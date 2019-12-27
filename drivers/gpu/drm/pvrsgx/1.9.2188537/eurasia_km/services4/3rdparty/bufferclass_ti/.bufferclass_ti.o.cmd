@@ -1,0 +1,1 @@
+cmd_/home1/prathap/delete/Graphics_SDK_4_08_00_01/GFX_Linux_KM/services4/3rdparty/bufferclass_ti/bufferclass_ti.o := arm-arago-linux-gnueabi-ld -EL    -r -o /home1/prathap/delete/Graphics_SDK_4_08_00_01/GFX_Linux_KM/services4/3rdparty/bufferclass_ti/bufferclass_ti.o /home1/prathap/delete/Graphics_SDK_4_08_00_01/GFX_Linux_KM/services4/3rdparty/bufferclass_ti/bc_cat.o 

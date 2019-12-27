@@ -3278,19 +3278,7 @@ PVRSRV_ERROR OSCopyFromUser( IMG_PVOID pvProcess,
 ******************************************************************************/
 IMG_BOOL OSAccessOK(IMG_VERIFY_TEST eVerification, IMG_VOID *pvUserPtr, IMG_UINT32 ui32Bytes)
 {
-    IMG_INT linuxType;
-
-    if (eVerification == PVR_VERIFY_READ)
-    {
-        linuxType = VERIFY_READ;
-    }
-    else
-    {
-        PVR_ASSERT(eVerification == PVR_VERIFY_WRITE);
-        linuxType = VERIFY_WRITE;
-    }
-
-    return access_ok(linuxType, pvUserPtr, ui32Bytes);
+    return access_ok(pvUserPtr, ui32Bytes);
 }
 
 typedef enum _eWrapMemType_

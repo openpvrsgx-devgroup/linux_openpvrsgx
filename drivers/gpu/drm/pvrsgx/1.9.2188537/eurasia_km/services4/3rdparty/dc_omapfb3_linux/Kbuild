@@ -17,6 +17,7 @@ EXTRA_CFLAGS =	-DLINUX \
 		-I$(PVR_BUILD_DIR)/services4/include/env/linux \
 		-I$(PVR_BUILD_DIR)/services4/system/include \
 		-I$(KERNELDIR)/drivers/video/omap2 \
+		-I$(KERNELDIR)/drivers/video/fbdev/omap2 \
 		-I$(KERNELDIR)/arch/arm/plat-omap/include \
 		$(SYS_CFLAGS.1) \
 

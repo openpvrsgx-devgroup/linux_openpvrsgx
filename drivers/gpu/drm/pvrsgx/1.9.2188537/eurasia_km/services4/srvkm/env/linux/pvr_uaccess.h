@@ -49,7 +49,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 #endif
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,18))
+#include <linux/uaccess.h>
+#else
 #include <asm/uaccess.h>
+#endif
 
 static inline unsigned long pvr_copy_to_user(void __user *pvTo, const void *pvFrom, unsigned long ulBytes)
 {

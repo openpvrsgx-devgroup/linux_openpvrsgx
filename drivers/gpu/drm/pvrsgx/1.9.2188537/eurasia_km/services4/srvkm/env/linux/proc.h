@@ -44,7 +44,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef __SERVICES_PROC_H__
 #define __SERVICES_PROC_H__
 
-#include <asm/system.h>		// va_list etc
 #include <linux/proc_fs.h>	// read_proc_t etc
 #include <linux/seq_file.h> // seq_file
 

@@ -1,0 +1,60 @@
+SYS_USING_INTERRUPTS = 1
+SUPPORT_OMAP3430_OMAPFB3 =1
+SUPPORT_TI_DSS_FW = 0
+PVR_LINUX_USING_WORKQUEUES = 1
+SUPPORT_DRI_DRM =1
+SYS_CFLAGS.$(SYS_USING_INTERRUPTS)                      += -DSYS_USING_INTERRUPTS
+SYS_CFLAGS.$(SUPPORT_OMAP3430_OMAPFB3)                         += -DSUPPORT_OMAP3430_OMAPFB3
+SYS_CFLAGS.$(SUPPORT_TI_DSS_FW)                         += -DSUPPORT_TI_DSS_FW
+SYS_CFLAGS.$(PVR_LINUX_USING_WORKQUEUES)             += -DPVR_LINUX_USING_WORKQUEUES
+
+EXT_SOURCE_DIR := $(KERNELDIR)/drivers/gpu/drm
+
+EXTRA_CFLAGS =	-DLINUX \
+		-DCONFIG_PCI \
+		-Wno-error \
+		-I$(KERNELDIR)/include/drm \
+		-I$(KERNELDIR)/include/linux \
+		-I$(EXT_SOURCE_DIR) \
+		$(SYS_CFLAGS.1) \
+
+ifeq ($(SUPPORT_DRI_DRM),1)
+EXTRA_CFLAGS += -DPVR_DISPLAY_CONTROLLER_DRM_IOCTL
+ifeq ($(TI_PLATFORM),omap4)
+EXTRA_CFLAGS += -DCONFIG_SLOW_WORK
+endif
+endif
+
+obj-m := drm.o
+ifeq ($(TI_PLATFORM),omap4)
+drm-y := pvr_drm_stubs.o drm_auth.o drm_bufs.o drm_cache.o drm_context.o drm_dma.o drm_drawable.o drm_drv.o drm_fops.o drm_gem.o drm_ioctl.o drm_irq.o \
+	drm_lock.o drm_memory.o drm_proc.o drm_stub.o drm_vm.o \
+	drm_agpsupport.o drm_scatter.o ati_pcigart.o drm_pci.o \
+	drm_sysfs.o drm_hashtab.o drm_sman.o drm_mm.o \
+	drm_crtc.o drm_modes.o drm_edid.o \
+	drm_info.o drm_debugfs.o drm_encoder_slave.o
+else
+drm-y := pvr_drm_stubs.o drm_auth.o drm_bufs.o drm_cache.o drm_context.o drm_dma.o drm_drv.o drm_fops.o drm_gem.o drm_ioctl.o drm_irq.o \
+	drm_lock.o drm_memory.o drm_proc.o drm_stub.o drm_vm.o \
+	drm_agpsupport.o drm_scatter.o ati_pcigart.o drm_pci.o \
+	drm_sysfs.o drm_hashtab.o drm_sman.o drm_mm.o \
+	drm_crtc.o drm_modes.o drm_edid.o \
+	drm_info.o drm_debugfs.o drm_encoder_slave.o drm_global.o drm_platform.o drm_trace_points.o
+endif
+
+# For greater than/equal to 3.4 kernel
+#drm-y := pvr_drm_stubs.o drm_auth.o drm_bufs.o drm_cache.o drm_context.o drm_dma.o drm_drv.o drm_fops.o drm_gem.o drm_ioctl.o drm_irq.o \
+#	drm_lock.o drm_memory.o drm_proc.o drm_stub.o drm_vm.o \
+#	drm_agpsupport.o drm_scatter.o ati_pcigart.o drm_pci.o \
+#	drm_sysfs.o drm_hashtab.o drm_sman.o drm_mm.o \
+#	drm_crtc.o drm_modes.o drm_edid.o \
+#	drm_info.o drm_debugfs.o drm_encoder_slave.o drm_global.o drm_platform.o drm_trace_points.o drm_prime.o
+
+# less than 2.6.32 kernel
+
+#drm-y := pvr_drm_stubs.o drm_auth.o drm_bufs.o drm_cache.o drm_context.o drm_dma.o drm_drawable.o drm_drv.o drm_fops.o drm_gem.o drm_ioctl.o drm_irq.o \
+#        drm_lock.o drm_memory.o drm_proc.o drm_stub.o drm_vm.o \
+#        drm_agpsupport.o drm_scatter.o ati_pcigart.o drm_pci.o \
+#        drm_sysfs.o drm_hashtab.o drm_sman.o drm_mm.o \
+#        drm_crtc.o drm_modes.o drm_edid.o \
+#        drm_info.o drm_debugfs.o drm_encoder_slave.o

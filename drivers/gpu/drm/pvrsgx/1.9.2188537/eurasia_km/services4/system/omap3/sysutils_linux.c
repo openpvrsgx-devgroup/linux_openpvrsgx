@@ -512,7 +512,6 @@ PVRSRV_ERROR EnableSystemClocks(SYS_DATA *psSysData)
 {
 	SYS_SPECIFIC_DATA *psSysSpecData = (SYS_SPECIFIC_DATA *) psSysData->pvSysSpecificData;
 	struct clk *psCLK;
-	IMG_INT res;
 	PVR_TRACE(("EnableSystemClocks: Enabling System Clocks"));
 
 	if (!psSysSpecData->bSysClocksOneTimeInit)

@@ -41,6 +41,8 @@
 #include <linux/mutex.h>
 #endif
 
+#include <linux/uaccess.h>
+
 #if defined(BC_DISCONTIG_BUFFERS)
 #include <linux/vmalloc.h>
 #endif

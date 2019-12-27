@@ -374,6 +374,15 @@ static int __devinit PVRSRVDriverProbe(LDM_DEV *pDevice, const struct pci_device
 	return 0;
 }
 
+void
+__bad_xchg(volatile void *ptr, int size)
+{
+    printk(KERN_ERR "%s: ptr %p size %u\n",
+        __FUNCTION__, ptr, size);
+    BUG();
+}
+EXPORT_SYMBOL(__bad_xchg);
+
 
 /*!
 ******************************************************************************

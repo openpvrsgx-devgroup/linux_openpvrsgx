@@ -545,12 +545,14 @@ PVRSRV_ERROR EnableSystemClocks(SYS_DATA *psSysData)
                 }
                 psSysSpecData->psSGX_ICK = psCLK;
 		
+#if 0
 		res = clk_set_parent(psSysSpecData->psSGX_FCK, psSysSpecData->psCORE_CK);
                 if (res < 0)
                 {
                         PVR_DPF((PVR_DBG_ERROR, "EnableSystemClocks: Couldn't set SGX parent clock (%d)", res));
                         return PVRSRV_ERROR_UNABLE_TO_GET_PARENT_CLOCK;
                 }
+#endif
 
 
 		psSysSpecData->bSysClocksOneTimeInit = IMG_TRUE;

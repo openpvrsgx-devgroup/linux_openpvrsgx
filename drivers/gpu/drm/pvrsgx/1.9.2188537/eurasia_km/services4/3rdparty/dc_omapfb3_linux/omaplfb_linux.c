@@ -161,7 +161,7 @@ MODULE_SUPPORTED_DEVICE(DEVNAME);
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0))
 #define OMAP_DSS_MANAGER(man, dev) struct omap_overlay_manager *man = (dev) != NULL ? (dev)->manager : NULL
 #else
-#define OMAP_DSS_MANAGER(man, dev) struct omap_overlay_manager *man = (dev) != NULL ? (dev)->output->manager : NULL
+#define OMAP_DSS_MANAGER(man, dev) struct omap_overlay_manager *man = (dev) != NULL ? (dev)->src->manager : NULL
 #endif
 #define	WAIT_FOR_VSYNC(man)	((man)->wait_for_vsync)
 #else

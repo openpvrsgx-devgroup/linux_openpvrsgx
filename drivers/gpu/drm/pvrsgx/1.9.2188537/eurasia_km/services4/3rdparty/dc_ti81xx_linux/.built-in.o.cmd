@@ -1,1 +1,0 @@
-cmd_/home1/prathap/delete/Graphics_SDK_4_08_00_01/GFX_Linux_KM/services4/3rdparty/dc_ti81xx_linux/built-in.o :=  rm -f /home1/prathap/delete/Graphics_SDK_4_08_00_01/GFX_Linux_KM/services4/3rdparty/dc_ti81xx_linux/built-in.o; arm-arago-linux-gnueabi-ar rcs /home1/prathap/delete/Graphics_SDK_4_08_00_01/GFX_Linux_KM/services4/3rdparty/dc_ti81xx_linux/built-in.o

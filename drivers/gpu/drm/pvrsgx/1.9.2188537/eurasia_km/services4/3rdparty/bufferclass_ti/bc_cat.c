@@ -1044,7 +1044,7 @@ static long  bc_ioctl(struct file *file,
         {    
             BCIO_package *params = (BCIO_package *)arg;
 
-            if (!access_ok(VERIFY_WRITE, params, sizeof(BCIO_package)))
+            if (!access_ok(params, sizeof(BCIO_package)))
                 return -EFAULT;
 
             params->output = devinfo->sBufferInfo.ui32BufferCount;
@@ -1055,7 +1055,7 @@ static long  bc_ioctl(struct file *file,
             int idx;
             BCIO_package *params = (BCIO_package *)arg;
 
-            if (!access_ok(VERIFY_WRITE, params, sizeof(BCIO_package)))
+            if (!access_ok(params, sizeof(BCIO_package)))
                 return -EFAULT;
 
             idx = params->input;
@@ -1073,7 +1073,7 @@ static long  bc_ioctl(struct file *file,
             BC_CAT_BUFFER  *buffer;
             BCIO_package *params = (BCIO_package *)arg;
 
-            if (!access_ok(VERIFY_WRITE, params, sizeof(BCIO_package)))
+            if (!access_ok(params, sizeof(BCIO_package)))
                 return -EFAULT;
 
             for (idx = 0; idx < devinfo->ulNumBuffers; idx++) {
@@ -1092,7 +1092,7 @@ static long  bc_ioctl(struct file *file,
         {
             bc_buf_params_t *p = (bc_buf_params_t *) arg;
             
-            if (!access_ok(VERIFY_WRITE, p, sizeof(bc_buf_params_t)))
+            if (!access_ok(p, sizeof(bc_buf_params_t)))
                 return -EFAULT;
 
             return BC_CreateBuffers(id, p);

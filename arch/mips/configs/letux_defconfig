@@ -1,5 +1,5 @@
 #
-# Linux/mips 5.5.0-rc2 Kernel Configuration
+# Linux/mips 5.5.0-rc4 Kernel Configuration
 #
 
 #
@@ -5079,17 +5079,6 @@ CONFIG_PROBE_EVENTS=y
 # CONFIG_RING_BUFFER_STARTUP_TEST is not set
 # CONFIG_PREEMPTIRQ_DELAY_TEST is not set
 # CONFIG_TRACE_EVAL_MAP_FILE is not set
-# CONFIG_KUNIT is not set
-# CONFIG_NOTIFIER_ERROR_INJECTION is not set
-# CONFIG_FAULT_INJECTION is not set
-# end of Kernel hacking
-
-#
-# Kernel Testing and Coverage
-#
-CONFIG_ARCH_HAS_KCOV=y
-# CONFIG_RUNTIME_TESTING_MENU is not set
-# CONFIG_MEMTEST is not set
 # CONFIG_SAMPLES is not set
 
 #
@@ -5103,4 +5092,15 @@ CONFIG_CMDLINE="earlycon console=ttyS4,115200 clk_ignore_unused ignore_loglevel"
 # CONFIG_SPINLOCK_TEST is not set
 # CONFIG_SCACHE_DEBUGFS is not set
 # end of mips Debugging
+
+#
+# Kernel Testing and Coverage
+#
+# CONFIG_KUNIT is not set
+# CONFIG_NOTIFIER_ERROR_INJECTION is not set
+# CONFIG_FAULT_INJECTION is not set
+CONFIG_ARCH_HAS_KCOV=y
+# CONFIG_RUNTIME_TESTING_MENU is not set
+# CONFIG_MEMTEST is not set
 # end of Kernel Testing and Coverage
+# end of Kernel hacking

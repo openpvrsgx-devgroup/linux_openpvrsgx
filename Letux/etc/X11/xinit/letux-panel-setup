@@ -53,8 +53,17 @@ echo $0: ln -s $COMPATIBLE.conf /etc/X11/xorg.conf >&2
 	fi
 done
 
+function model_or_compatible {
+	if [ -r /proc/device-tree/model ]
+	then
+		tr -d '\0' </proc/device-tree/model 2>/dev/null
+	else	# prefix and separate with @
+		echo @$(tr '\0' '@' </proc/device-tree/compatible 2>/dev/null)
+		
+	fi
+}
 
-case "$(tr -d '\0' </proc/device-tree/model 2>/dev/null)" in
+case "$(model_or_compatible)" in
 	*'GTA04 b4'* )
 		PANEL=5.0x640x1024;;	# Letux 5004 (never built)
 	*GTA04b7* | *'GTA04 b7'* | *Neo900* )
@@ -82,8 +91,12 @@ case "$(tr -d '\0' </proc/device-tree/model 2>/dev/null)" in
 		PANEL=raspi;;
 	*'UDOO Neo'* )
 		PANEL=udoo;;
+	*@img,ci20@* )
+		PANEL=ci20;;
+	*@letux400,minipc@* )
+		PANEL=7.0-640x480;;
 	* )
-		echo "unknown motherboard $(tr -d '\0' </proc/device-tree/model 2>/dev/null)"
+		echo "unknown motherboard $(model_or_compatible)"
 		echo "we don't know how to configure X11 for the display"
 		exit 1
 		;;

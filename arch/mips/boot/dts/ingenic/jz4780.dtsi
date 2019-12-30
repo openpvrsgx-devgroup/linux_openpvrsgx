@@ -2,6 +2,8 @@
 #include <dt-bindings/clock/ingenic,jz4780-cgu.h>
 #include <dt-bindings/clock/ingenic,tcu.h>
 #include <dt-bindings/dma/jz4780-dma.h>
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/interrupt-controller/irq.h>
 
 / {
 	#address-cells = <1>;
@@ -265,6 +267,12 @@
 
 		interrupt-parent = <&intc>;
 		interrupts = <8>;
+
+		gpio-miso = <&gpe 14 GPIO_ACTIVE_HIGH>;
+		gpio-sck = <&gpe 15 GPIO_ACTIVE_HIGH>;
+		gpio-mosi = <&gpe 17 GPIO_ACTIVE_HIGH>;
+		cs-gpios = <&gpe 16 GPIO_ACTIVE_HIGH
+			    &gpe 18 GPIO_ACTIVE_HIGH>;
 
 		clocks = <&cgu JZ4780_CLK_SSI0>;
 		clock-names = "spi";
@@ -547,6 +555,23 @@
 		dma-names = "rx", "tx";
 
 		status = "disabled";
+	};
+
+	// FIXME: should be sorted somewhere else
+	// but may lead to merge conflict
+	cim: cim@0x13060000 {
+		compatible = "ingenic,jz4780-cim";
+		reg = <0x13060000 0x68>;
+		reg-shift = <2>;
+
+		interrupt-parent = <&intc>;
+		interrupts = <30>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&pins_cim>;
+
+		clocks = <&cgu JZ4780_CLK_CIM>, <&cgu JZ4780_CLK_CIMMCLK>;
+		clock-names = "cim", "module";
 	};
 
 	mmc1: mmc@13460000 {

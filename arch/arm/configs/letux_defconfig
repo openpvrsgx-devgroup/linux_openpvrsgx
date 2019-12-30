@@ -1,5 +1,5 @@
 #
-# Linux/arm 5.5.0-rc2 Kernel Configuration
+# Linux/arm 5.5.0-rc4 Kernel Configuration
 #
 
 #
@@ -6972,15 +6972,6 @@ CONFIG_PROBE_EVENTS=y
 # CONFIG_RING_BUFFER_STARTUP_TEST is not set
 # CONFIG_PREEMPTIRQ_DELAY_TEST is not set
 # CONFIG_TRACE_EVAL_MAP_FILE is not set
-# CONFIG_KUNIT is not set
-# end of Kernel hacking
-
-#
-# Kernel Testing and Coverage
-#
-CONFIG_ARCH_HAS_KCOV=y
-# CONFIG_RUNTIME_TESTING_MENU is not set
-# CONFIG_MEMTEST is not set
 # CONFIG_SAMPLES is not set
 CONFIG_ARCH_HAS_DEVMEM_IS_ALLOWED=y
 CONFIG_STRICT_DEVMEM=y
@@ -7000,4 +6991,13 @@ CONFIG_UNCOMPRESS_INCLUDE="debug/uncompress.h"
 # CONFIG_PID_IN_CONTEXTIDR is not set
 # CONFIG_CORESIGHT is not set
 # end of arm Debugging
+
+#
+# Kernel Testing and Coverage
+#
+# CONFIG_KUNIT is not set
+CONFIG_ARCH_HAS_KCOV=y
+# CONFIG_RUNTIME_TESTING_MENU is not set
+# CONFIG_MEMTEST is not set
 # end of Kernel Testing and Coverage
+# end of Kernel hacking

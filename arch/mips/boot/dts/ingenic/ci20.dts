@@ -234,6 +234,10 @@
 	};
 };
 
+&rtc_dev {
+	system-power-controller;
+};
+
 &uart0 {
 	status = "okay";
 
@@ -385,6 +389,43 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pins_i2c2>;
 
+	camera: ov5640@3c {
+		compatible = "omnivision,ov5640";
+		reg = <0x3c>;
+
+		core-supply = <&vcc_15>;
+		analog-supply = <&vcc_28>;
+
+		gpio-enable = <&gpb 18 0>;
+		gpio-reset = <&gpb 26 0>;
+
+		remote = <&cim>;
+		port {
+			ov5640_1: endpoint {
+				bus-width = <8>;
+				remote-endpoint = <&camera_ep>;
+			};
+		};
+	};
+
+};
+
+&cim {
+	clock-frequency = <24000000>;
+
+	port {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		/* Parallel bus endpoint */
+		camera_ep: endpoint@0 {
+			reg = <0>;		/* Local endpoint # */
+			remote-endpoint = <&ov5640_1>;
+			hsync-active = <1>;	/* Active high */
+			vsync-active = <1>;	/* Active high */
+			pclk-sample = <0>;	/* Falling */
+		};
+	};
 };
 
 &i2c3 {
@@ -616,6 +657,13 @@
 	pins_mmc1: mmc1 {
 		function = "mmc1";
 		groups = "mmc1-1bit-d", "mmc1-4bit-d";
+		bias-disable;
+	};
+
+	pins_cim: cim-pb {
+	/* see https://github.com/freebsd/freebsd/blob/master/sys/gnu/dts/mips/ingenic/jz4780.dtsi */
+		function = "cim";
+		// groups = "cim-???", "cim-???";
 		bias-disable;
 	};
 };

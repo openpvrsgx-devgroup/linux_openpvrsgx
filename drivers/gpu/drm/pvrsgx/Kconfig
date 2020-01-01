@@ -10,6 +10,11 @@ choice
 	  Support for the PowerVR SGX 3D core based on DDK code
 	  variant as selected.
 	
+config PVRSGX_1_9_2188537
+	bool "DDK 1.9.2253347 (TI)"
+	help
+	  This version should work on OMAP3530, AM3517
+
 config PVRSGX_1_9_2253347
 	bool "DDK 1.9.2253347 (TI)"
 

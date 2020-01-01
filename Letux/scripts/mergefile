@@ -94,6 +94,7 @@ letux/freescale-sensors
 letux/omap-sysc-prm-gfx
 letux/omap-pvr-soc-glue
 letux/pvrsrvkm
+letux/pvrsrvkm-1.9.2188537
 letux/pvrsrvkm-1.9.2253347
 letux/pvrsrvkm-1.10.2359475
 letux/pvrsrvkm-1.13.3341330

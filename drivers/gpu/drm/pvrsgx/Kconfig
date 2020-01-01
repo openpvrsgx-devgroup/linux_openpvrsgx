@@ -26,12 +26,16 @@ config PVRSGX_1_13_3341330
 
 config PVRSGX_1_14_3699939
 	bool "DDK 1.14.3699939 (TI)"
+	help
+	  This version is known to work on DM3730, AM335x, OMAP5
 
 config PVRSGX_1_14_3759903
 	bool "DDK 1.14.3759903 (INGENIC)"
 
 config PVRSGX_1_14_3841212
 	bool "DDK 1.14.3841212 (SUNXI)"
+	help
+	  This version should work on JZ4780 at some time
 
 config PVRSGX_1_15_4564147
 	bool "DDK 1.15.4564147 (TI)"

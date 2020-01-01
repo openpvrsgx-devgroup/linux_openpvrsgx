@@ -26,7 +26,9 @@
 #    based on DT information.
 #
 
-ifeq ($(CONFIG_PVRSGX_1_9_2253347),y)
+ifeq ($(CONFIG_PVRSGX_1_9_2188537),y)
+SUBPATH=1.9.2188537/eurasia_km
+else ifeq ($(CONFIG_PVRSGX_1_9_2253347),y)
 SUBPATH=1.9.2253347
 else ifeq ($(CONFIG_PVRSGX_1_10_2359475),y)
 # this is partially working

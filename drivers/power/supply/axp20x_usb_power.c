@@ -456,13 +456,11 @@ static const char * const axp20x_irq_names[] = {
 	"VBUS_REMOVAL",
 	"VBUS_VALID",
 	"VBUS_NOT_VALID",
-	NULL
 };
 
 static const char * const axp22x_irq_names[] = {
 	"VBUS_PLUGIN",
 	"VBUS_REMOVAL",
-	NULL
 };
 
 static int axp192_usb_curr_lim_table[] = {

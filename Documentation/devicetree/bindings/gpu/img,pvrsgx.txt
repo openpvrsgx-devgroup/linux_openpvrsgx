@@ -1,0 +1,61 @@
+Imagination PVR/SGX GPU
+
+Only the Imagination SGX530, SGX540 and SGX544 GPUs are currently covered by this binding.
+
+Required properties:
+- compatible:	Should be one of
+		"ti,omap3-sgx530-121", "img,sgx530-121", "img,sgx530", "img,sgx5"; - BeagleBoard ABC, OpenPandora 600MHz
+		"ti,omap3-sgx530-125", "img,sgx530-125", "img,sgx530", "img,sgx5"; - BeagleBoard XM, GTA04, OpenPandora 1GHz
+		"ti,am3517-sgx530-125", "img,sgx530-125", "img,sgx530", "img,sgx5";
+		"ti,am335x-sgx530-125", "img,sgx530-125", "img,sgx530", "img,sgx5"; - BeagleBone Black
+		"ti,omap4-sgx540-120", "img,sgx540-120", "img,sgx540", "img,sgx5"; - Pandaboard (ES)
+		"ti,omap4-sgx544-112", "img,sgx544-112", "img,sgx544", "img,sgx5";
+		"ti,omap5-sgx544-116", "img,sgx544-116", "img,sgx544", "img,sgx5"; - OMAP5 UEVM, Pyra Handheld
+		"ti,dra7-sgx544-116", "img,sgx544-116", "img,sgx544", "img,sgx5";
+		"ti,am3517-sgx530-?", "img,sgx530-?", "img,sgx530", "img,sgx5";
+		"ti,am43xx-sgx530-?", "img,sgx530-?", "img,sgx530", "img,sgx5";
+		"ti,ti81xx-sgx530-?", "img,sgx530-?", "img,sgx530", "img,sgx5";
+		"img,jz4780-sgx540-?", "img,sgx540-?", "img,sgx540", "img,sgx5"; - CI20
+		"allwinner,sun8i-a83t-sgx544-?", "img,sgx544-116", "img,sgx544", "img,sgx5"; - Banana-Pi-M3 (Allwinner A83T)
+		"intel,poulsbo-gma500-sgx535", "img,sgx535-116", "img,sgx535", "img,sgx5"; - Atom Z5xx
+		"intel,medfield-gma-sgx540", "img,sgx540-116", "img,sgx540", "img,sgx5"; - Atom Z24xx
+		"intel,cedarview-gma3600-sgx545", "img,sgx545-116", "img,sgx545", "img,sgx5"; - Atom N2600, D2500
+
+		The "ti,omap..." entries are needed temporarily to handle SoC
+		specific builds of the kernel module.
+
+		In the long run, only the "img,sgx..." entry should suffice
+		to match a generic driver for all architectures and driver
+		code can dynamically find out on which SoC it is running.
+
+
+- reg:		Physical base address and length of the register area.
+- interrupts:	The interrupt numbers.
+
+/ {
+	ocp {
+		sgx_module: target-module@56000000 {
+			compatible = "ti,sysc-omap4", "ti,sysc";
+			reg = <0x5600fe00 0x4>,
+			      <0x5600fe10 0x4>;
+			reg-names = "rev", "sysc";
+			ti,sysc-midle = <SYSC_IDLE_FORCE>,
+					<SYSC_IDLE_NO>,
+					<SYSC_IDLE_SMART>;
+			ti,sysc-sidle = <SYSC_IDLE_FORCE>,
+					<SYSC_IDLE_NO>,
+					<SYSC_IDLE_SMART>;
+			clocks = <&gpu_clkctrl OMAP5_GPU_CLKCTRL 0>;
+			clock-names = "fck";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0 0x56000000 0x2000000>;
+
+			gpu@fe00 {
+				compatible = "ti,omap-omap5-sgx544-116", "img,sgx544-116", "img,sgx544", "img,sgx5";
+				reg = <0xfe00 0x200>;
+				interrupts = <GIC_SPI 21 IRQ_TYPE_LEVEL_HIGH>;
+			};
+		};
+	};
+};

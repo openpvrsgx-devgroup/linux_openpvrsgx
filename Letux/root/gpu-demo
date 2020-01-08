@@ -32,8 +32,15 @@ patch()	# not working
 { # patch binary file
 	_file="$1"
 	_address="$(($2))"	# should have 0x prefix
-	_byte=echo -en "\x$3"	# no 0x prefix
-	echo -ne \\xe0 | dd conv=notrunc of="$_file" bs=1 seek="$_address"
+	_byte="$3"	# should have 0x prefix
+	perl -e 'print pack("c",('$_byte'))' | dd conv=notrunc of="$_file" bs=1 seek="$_address"
+}
+
+dumpbyte()
+{
+	_file="$1"
+	_address="$(($2))"	# should have 0x prefix
+	echo $2: $(dd if="$_file" bs=1 count=1 skip="$_address" 2>/dev/null | xxd -p)
 }
 
 clone()
@@ -59,7 +66,15 @@ then
 		(
 		set -e
 
+		# FIXME: base on sgx compatible
+		echo "installing for $(tr '\0' '@' </proc/device-tree/compatible)"
 		case "@$(tr '\0' '@' </proc/device-tree/compatible)" in
+			*@ti,omap34??@* | *@ti,am35??@*)
+				# am3517 and omap3430 for SGX530-121 with omapdrm
+				clone https://github.com/jhofstee/Graphics_SDK.git 4_09_00_01_hardfp
+				echo install files from $PWD/gfx_rel_es3.x
+				export TARGET_PRODUCT=ti335x
+				;;
 			*@ti,am33xx@* )
 				# for SGX530-125 with tilcdc
 				clone git://git.ti.com/graphics/omap5-sgx-ddk-um-linux.git ti-img-sgx/1.14.3699939_k4.4
@@ -77,11 +92,9 @@ then
 				# clone https://github.com/mvduin/omap5-sgx-ddk-um-linux.git ti-img-sgx/1.14.3699939
 				# clone http://dev.pyra-handheld.com/packages/omap5-sgx-ddk-um-linux.git master
 				# apply magic patch found on https://dev.pyra-handheld.com/packages/omap5-sgx-ddk-um-linux/commit/543c0d0bc7f9472368e58d6e037a1cf35de27da3
-				# patch targetfs/jacinto6evm/lib/libsrv_um.so.1.14.3699939 0x98eb e0
-				dd if=targetfs/jacinto6evm/lib/libsrv_um.so.1.14.3699939 bs=1 count=1 skip=$((0x98eb)) | xxd
-				echo -ne \\xe0 | dd conv=notrunc of=targetfs/jacinto6evm/lib/libsrv_um.so.1.14.3699939 bs=1 seek=$((0x98eb))
-				# read back
-				dd if=targetfs/jacinto6evm/lib/libsrv_um.so.1.14.3699939 bs=1 count=1 skip=$((0x98eb)) | xxd
+				dumpbyte targetfs/jacinto6evm/lib/libsrv_um.so.1.14.3699939 0x98eb
+				patch targetfs/jacinto6evm/lib/libsrv_um.so.1.14.3699939 0x98eb 0xe0
+				dumpbyte targetfs/jacinto6evm/lib/libsrv_um.so.1.14.3699939 0x98eb
 				export TARGET_PRODUCT=jacinto6evm
 				;;
 			*@ingenic,jz4780@* )

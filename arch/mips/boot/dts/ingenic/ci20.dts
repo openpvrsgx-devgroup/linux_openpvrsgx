@@ -235,6 +235,9 @@
 };
 
 &rtc_dev {
+	clocks = <&extrtc 0>;
+	clock-names = "rtc";
+
 	system-power-controller;
 };
 
@@ -444,8 +447,16 @@
 
 	clock-frequency = <400000>;
 
-		rtc@51 {
+		extrtc: rtc@51 {
+#ifdef BOARD_CI20_V1
+			compatible = "pericom,pt7c4338";
+			/* FIXME: clock out untested */
+			#clock-cells = <1>;
+			clock-output-names = "square", "clkout";
+#else
 			compatible = "nxp,pcf8563";
+			#clock-cells = <1>;
+#endif
 			reg = <0x51>;
 
 			interrupt-parent = <&gpf>;

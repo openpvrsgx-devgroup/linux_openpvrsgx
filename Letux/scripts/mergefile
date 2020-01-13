@@ -128,6 +128,7 @@ letux/aess
 
 # Mipsbook / JZ47xx / CI20
 letux/jz4730
+letux/jz4780
 letux/dt-mipsbook400
 letux/pm-mipsbook400
 letux/dt-ci20

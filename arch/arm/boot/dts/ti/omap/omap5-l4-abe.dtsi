@@ -456,6 +456,10 @@
 			#size-cells = <1>;
 			ranges = <0x0 0xf1000 0x1000>,
 				 <0x490f1000 0x490f1000 0x1000>;
+
+			aess: aess {
+				compatible = "ti,omap4-aess";
+			};
 		};
 	};
 };

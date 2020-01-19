@@ -263,6 +263,14 @@
 	};
 };
 
+/* keep this as long as the txs02612 driver does not exist/work as mmc slave driver */
+/ { /* eMMC / uSD-card */
+	txs02612 {
+		compatible = "ti,txs02612";
+		select-gpio = <&gpio3 18 0>;	/* gpio3_82 soft-select */
+	};
+};
+
 &mmc3 { /* WiFi-SDIO */
 	/* has been predefined for a wl1271 in ompa5-common.dtsi */
 };

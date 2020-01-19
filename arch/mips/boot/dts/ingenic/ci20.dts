@@ -45,13 +45,13 @@
 		led-0 {
 			label = "ci20:red:led0";
 			gpios = <&gpc 3 GPIO_ACTIVE_HIGH>;
-			linux,default-trigger = "none";
+			linux,default-trigger = "heartbeat";
 		};
 
 		led-1 {
 			label = "ci20:red:led1";
 			gpios = <&gpc 2 GPIO_ACTIVE_HIGH>;
-			linux,default-trigger = "nand-disk";
+			linux,default-trigger = "mmc0";
 		};
 
 		led-2 {

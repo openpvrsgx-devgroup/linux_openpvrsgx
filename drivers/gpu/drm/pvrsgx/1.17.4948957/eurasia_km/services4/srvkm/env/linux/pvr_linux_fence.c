@@ -60,7 +60,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #else
 #include <linux/fence.h>
 #endif
-#include <linux/reservation.h>
+#include <linux/dma-resv.h>
 #include <linux/list.h>
 
 #include "dmabuf.h"
@@ -410,10 +410,10 @@ static inline int update_reservation_return_value(int ret, bool blocked_on_write
 	return ret < 0 ? ret : (ret ? 0 : (blocked_on_write ? BLOCKED_ON_WRITE : BLOCKED_ON_READ));
 }
 
-static int update_reservation_object_fences_dst(struct pvr_fence_frame *pvr_fence_frame,
-						struct reservation_object *resv)
+static int update_dma_resv_fences_dst(struct pvr_fence_frame *pvr_fence_frame,
+						struct dma_resv *resv)
 {
-	struct reservation_object_list *flist;
+	struct dma_resv_list *flist;
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0))
 	struct dma_fence *fence_to_signal;
 #else
@@ -424,7 +424,7 @@ static int update_reservation_object_fences_dst(struct pvr_fence_frame *pvr_fenc
 	unsigned i;
 	int ret;
 
-	flist = reservation_object_get_list(resv);
+	flist = dma_resv_get_list(resv);
 	shared_fence_count = flist ? flist->shared_count : 0;
 
 	fence_to_signal = create_fence_to_signal(pvr_fence_frame);
@@ -435,16 +435,16 @@ static int update_reservation_object_fences_dst(struct pvr_fence_frame *pvr_fenc
 
 	if (!pvr_fence_frame->have_blocking_fences)
 	{
-		reservation_object_add_excl_fence(resv, fence_to_signal);
+		dma_resv_add_excl_fence(resv, fence_to_signal);
 		return 0;
 	}
 
 	if (!shared_fence_count)
 	{
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0))
-		struct dma_fence *fence = reservation_object_get_excl(resv);
+		struct dma_fence *fence = dma_resv_get_excl(resv);
 #else
-		struct fence *fence = reservation_object_get_excl(resv);
+		struct fence *fence = dma_resv_get_excl(resv);
 #endif
 
 		if (fence && is_blocking_fence(fence, pvr_fence_frame))
@@ -468,7 +468,7 @@ static int update_reservation_object_fences_dst(struct pvr_fence_frame *pvr_fenc
 			ret = 1;
 		}
 
-		reservation_object_add_excl_fence(resv, fence_to_signal);
+		dma_resv_add_excl_fence(resv, fence_to_signal);
 		return update_reservation_return_value(ret, true);
 	}
 
@@ -476,9 +476,9 @@ static int update_reservation_object_fences_dst(struct pvr_fence_frame *pvr_fenc
 	{
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0))
-		struct dma_fence *fence = rcu_dereference_protected(flist->shared[i], reservation_object_held(resv));
+		struct dma_fence *fence = rcu_dereference_protected(flist->shared[i], dma_resv_held(resv));
 #else
-		struct fence *fence = rcu_dereference_protected(flist->shared[i], reservation_object_held(resv));
+		struct fence *fence = rcu_dereference_protected(flist->shared[i], dma_resv_held(resv));
 #endif
 
 		if (is_blocking_fence(fence, pvr_fence_frame))
@@ -495,9 +495,9 @@ static int update_reservation_object_fences_dst(struct pvr_fence_frame *pvr_fenc
 			for (i = 0; i < blocking_fence_count; i++)
 			{
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0))
-				struct dma_fence *fence = rcu_dereference_protected(flist->shared[i], reservation_object_held(resv));
+				struct dma_fence *fence = rcu_dereference_protected(flist->shared[i], dma_resv_held(resv));
 #else
-				struct fence *fence = rcu_dereference_protected(flist->shared[i], reservation_object_held(resv));
+				struct fence *fence = rcu_dereference_protected(flist->shared[i], dma_resv_held(resv));
 #endif
 
 				if (is_blocking_fence(fence, pvr_fence_frame))
@@ -520,14 +520,14 @@ static int update_reservation_object_fences_dst(struct pvr_fence_frame *pvr_fenc
 		}
 	}
 
-	reservation_object_add_excl_fence(resv, fence_to_signal);
+	dma_resv_add_excl_fence(resv, fence_to_signal);
 	return update_reservation_return_value(ret, false);
 }
 
-static int update_reservation_object_fences_src(struct pvr_fence_frame *pvr_fence_frame,
-						struct reservation_object *resv)
+static int update_dma_resv_fences_src(struct pvr_fence_frame *pvr_fence_frame,
+						struct dma_resv *resv)
 {
-	struct reservation_object_list *flist;
+	struct dma_resv_list *flist;
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0))
 	struct dma_fence *fence_to_signal = NULL;
 	struct dma_fence *blocking_fence = NULL;
@@ -542,7 +542,7 @@ static int update_reservation_object_fences_src(struct pvr_fence_frame *pvr_fenc
 
 	if (!pvr_fence_frame->have_blocking_fences)
 	{
-		ret = reservation_object_reserve_shared(resv);
+		ret = dma_resv_reserve_shared(resv, 1);
 		if (ret)
 		{
 			return ret;
@@ -554,12 +554,12 @@ static int update_reservation_object_fences_src(struct pvr_fence_frame *pvr_fenc
 			return -ENOMEM;
 		}
 
-		reservation_object_add_shared_fence(resv, fence_to_signal);
+		dma_resv_add_shared_fence(resv, fence_to_signal);
 
 		return 0;
 	}
 
-	flist = reservation_object_get_list(resv);
+	flist = dma_resv_get_list(resv);
 	shared_fence_count = flist ? flist->shared_count : 0;
 
 	/*
@@ -571,9 +571,9 @@ static int update_reservation_object_fences_src(struct pvr_fence_frame *pvr_fenc
 	for (i = 0; i < shared_fence_count; i++)
 	{
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0))
-		struct dma_fence *fence = rcu_dereference_protected(flist->shared[i], reservation_object_held(resv));
+		struct dma_fence *fence = rcu_dereference_protected(flist->shared[i], dma_resv_held(resv));
 #else
-		struct fence *fence = rcu_dereference_protected(flist->shared[i], reservation_object_held(resv));
+		struct fence *fence = rcu_dereference_protected(flist->shared[i], dma_resv_held(resv));
 #endif
 
 		if (is_pvr_fence(fence))
@@ -590,7 +590,7 @@ static int update_reservation_object_fences_src(struct pvr_fence_frame *pvr_fenc
 
 	if (reserve)
 	{
-		ret = reservation_object_reserve_shared(resv);
+		ret = dma_resv_reserve_shared(resv, 1);
 		if (ret)
 		{
 			return ret;
@@ -606,9 +606,9 @@ static int update_reservation_object_fences_src(struct pvr_fence_frame *pvr_fenc
 	if (!blocking_fence && !shared_fence_count)
 	{
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0))
-		struct dma_fence *fence = reservation_object_get_excl(resv);
+		struct dma_fence *fence = dma_resv_get_excl(resv);
 #else
-		struct fence *fence = reservation_object_get_excl(resv);
+		struct fence *fence = dma_resv_get_excl(resv);
 #endif
 
 		if (fence && is_blocking_fence(fence, pvr_fence_frame))
@@ -639,7 +639,7 @@ static int update_reservation_object_fences_src(struct pvr_fence_frame *pvr_fenc
 		ret = 1;
 	}
 
-	reservation_object_add_shared_fence(resv, fence_to_signal);
+	dma_resv_add_shared_fence(resv, fence_to_signal);
 
 	return update_reservation_return_value(ret, !shared_fence_count);
 }
@@ -860,7 +860,7 @@ IMG_HANDLE PVRLinuxFenceContextCreate(PVRSRV_KERNEL_SYNC_INFO *psSyncInfo, IMG_H
 	return (IMG_HANDLE)pvr_fence_context;
 }
 
-static int process_reservation_object(struct pvr_fence_context *pvr_fence_context, struct reservation_object *resv, bool is_dst, u32 tag, bool have_blocking_fences)
+static int process_reservation_object(struct pvr_fence_context *pvr_fence_context, struct dma_resv *resv, bool is_dst, u32 tag, bool have_blocking_fences)
 {
 	PVRSRV_KERNEL_SYNC_INFO *psSyncInfo = pvr_fence_context->psSyncInfo;
 	struct pvr_fence_frame *pvr_fence_frame;
@@ -880,8 +880,8 @@ static int process_reservation_object(struct pvr_fence_context *pvr_fence_contex
 	INIT_LIST_HEAD(&pvr_fence_frame->fence_frame_list);
 
 	ret = is_dst ?
-		update_reservation_object_fences_dst(pvr_fence_frame, resv) :
-		update_reservation_object_fences_src(pvr_fence_frame, resv);
+		update_dma_resv_fences_dst(pvr_fence_frame, resv) :
+		update_dma_resv_fences_src(pvr_fence_frame, resv);
 	if (ret < 0)
 	{
 		kfree(pvr_fence_frame);
@@ -915,7 +915,7 @@ static int process_reservation_object(struct pvr_fence_context *pvr_fence_contex
 static int process_syncinfo(PVRSRV_KERNEL_SYNC_INFO *psSyncInfo, bool is_dst, u32 tag, bool have_blocking_fences)
 {
 	struct pvr_fence_context *pvr_fence_context = (struct pvr_fence_context *)psSyncInfo->hFenceContext;
-	struct reservation_object *resv;
+	struct dma_resv *resv;
 	int ret = 0;
 
 	if (!pvr_fence_context)
@@ -982,11 +982,11 @@ static inline bool fence_is_blocking(const struct fence *fence,
 	return true;
 }
 
-static bool resv_is_blocking(struct reservation_object *resv,
+static bool resv_is_blocking(struct dma_resv *resv,
 				      const PVRSRV_KERNEL_SYNC_INFO *psSyncInfo,
 				      bool is_dst)
 {
-	struct reservation_object_list *flist;
+	struct dma_resv_list *flist;
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0))
 	struct dma_fence *fence;
 #else
@@ -1070,7 +1070,7 @@ static unsigned count_reservation_objects(unsigned num_syncs,
 		pvr_fence_context = (struct pvr_fence_context *)psSyncInfo->hFenceContext;
 		if (pvr_fence_context)
 		{
-			struct reservation_object *resv;
+			struct dma_resv *resv;
 
 			if ((resv = DmaBufGetReservationObject(pvr_fence_context->hNativeSync)))
 			{
@@ -1091,7 +1091,7 @@ static unsigned count_reservation_objects(unsigned num_syncs,
 }
 
 static unsigned get_reservation_objects(unsigned num_resvs,
-					struct reservation_object **resvs,
+					struct dma_resv **resvs,
 					unsigned num_syncs,
 					IMG_HANDLE *phSyncInfo,
 					const IMG_BOOL *pbEnabled)
@@ -1113,7 +1113,7 @@ static unsigned get_reservation_objects(unsigned num_resvs,
 		pvr_fence_context = (struct pvr_fence_context *)psSyncInfo->hFenceContext;
 		if (pvr_fence_context)
 		{
-			struct reservation_object *resv;
+			struct dma_resv *resv;
 
 			if ((resv = DmaBufGetReservationObject(pvr_fence_context->hNativeSync)))
 			{
@@ -1127,7 +1127,7 @@ static unsigned get_reservation_objects(unsigned num_resvs,
 }
 
 static void get_all_reservation_objects(unsigned num_resvs,
-					struct reservation_object **resvs,
+					struct dma_resv **resvs,
 					IMG_UINT32 ui32NumSrcSyncs,
 					IMG_HANDLE *phSrcSyncInfo,
 					const IMG_BOOL *pbSrcEnabled,
@@ -1151,7 +1151,7 @@ static void get_all_reservation_objects(unsigned num_resvs,
 }
 
 static void unlock_reservation_objects(unsigned num_resvs,
-					struct reservation_object **resvs)
+					struct dma_resv **resvs)
 {
 	unsigned i;
 
@@ -1167,8 +1167,8 @@ static void unlock_reservation_objects(unsigned num_resvs,
 static int lock_reservation_objects_no_retry(struct ww_acquire_ctx *ww_acquire_ctx,
 						bool interruptible,
 						unsigned num_resvs,
-						struct reservation_object **resvs,
-						struct reservation_object **contended_resv)
+						struct dma_resv **resvs,
+						struct dma_resv **contended_resv)
 {
 	unsigned i;
 
@@ -1220,10 +1220,10 @@ static int lock_reservation_objects_no_retry(struct ww_acquire_ctx *ww_acquire_c
 static int lock_reservation_objects(struct ww_acquire_ctx *ww_acquire_ctx,
 					bool interruptible,
 					unsigned num_resvs,
-					struct reservation_object **resvs)
+					struct dma_resv **resvs)
 {
 	int ret;
-	struct reservation_object *contended_resv = NULL;
+	struct dma_resv *contended_resv = NULL;
 
 	do {
 		ret = lock_reservation_objects_no_retry(ww_acquire_ctx,
@@ -1444,7 +1444,7 @@ PVRSRV_ERROR PVRLinuxFenceProcess(IMG_UINT32 *pui32Tag,
 {
 	u32 tag;
 	struct ww_acquire_ctx ww_acquire_ctx;
-	struct reservation_object **resvs = NULL;
+	struct dma_resv **resvs = NULL;
 	int ret;
 
 	if (!ui32NumResvObjs)

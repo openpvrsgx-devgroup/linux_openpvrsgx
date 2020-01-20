@@ -49,10 +49,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 #endif
 
-#if (AM_VERSION == 3)  || (AM_VERSION == 4)
-#include <linux/platform_data/sgx-omap.h>
-#endif
-
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -272,13 +268,6 @@ exit:
 DRI_DRM_STATIC void
 PVRSRVDrmUnload(struct drm_device *dev)
 {
-#if (AM_VERSION == 3) || (AM_VERSION == 4)
-	int ret;
-	struct device *pDev = dev->dev;
-	struct platform_device *pDevice	= to_platform_device(pDev);
-	struct gfx_sgx_platform_data *pdata = pDev->platform_data;
-#endif
-
 	PVR_TRACE(("PVRSRVDrmUnload"));
 
 #if defined(DISPLAY_CONTROLLER)
@@ -286,15 +275,6 @@ PVRSRVDrmUnload(struct drm_device *dev)
 #endif
 
 	PVRCore_Cleanup();
-
-#if (AM_VERSION == 3) || (AM_VERSION == 4)
-	if (pdata && pdata->assert_reset) {
-		ret = pdata->assert_reset(pDevice, pdata->reset_name);
-		if (ret) {
-			dev_err(pDev, "Unable to reset SGX!\n");
-		}
-	}
-#endif
 
 #if defined(PDUMP)
 	dbgdrv_cleanup();
@@ -705,20 +685,8 @@ PVRSRVDrmProbe(struct platform_device *pDevice)
 	int ret;
 	struct device *dev = &pDevice->dev;
 	struct drm_device *drm_dev;
-#if (AM_VERSION == 3)  || (AM_VERSION == 4)
-	struct gfx_sgx_platform_data *pdata = dev->platform_data;
-#endif
 
 	PVR_TRACE(("PVRSRVDrmProbe"));
-
-#if (AM_VERSION == 3)  || (AM_VERSION == 4)
-	if (pdata && pdata->deassert_reset) {
-		ret = pdata->deassert_reset(pDevice, pdata->reset_name);
-		if (ret) {
-			dev_err(dev, "Unable to reset SGX!\n");
-		}
-	}
-#endif
 
 	LinuxSetCMARegion(of_reserved_mem_device_init(&pDevice->dev) ?
 			IMG_FALSE: IMG_TRUE);
@@ -736,7 +704,7 @@ PVRSRVDrmProbe(struct platform_device *pDevice)
 	ret = drm_dev_register(drm_dev, 0);
 	if (ret != 0) {
 		dev_err(dev, "Unable to register SGX DRM device\n");
-		drm_dev_unref(drm_dev);
+		drm_dev_put(drm_dev);
 	}
 
 	return ret;
@@ -754,7 +722,7 @@ PVRSRVDrmRemove(struct platform_device *pDevice)
 	PVR_TRACE(("PVRSRVDrmRemove"));
 
 	drm_dev_unregister(drm_dev);
-	drm_dev_unref(drm_dev);
+	drm_dev_put(drm_dev);
 
 	return 0;
 }

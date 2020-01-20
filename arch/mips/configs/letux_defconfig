@@ -1,5 +1,5 @@
 #
-# Linux/mips 5.5.0-rc6 Kernel Configuration
+# Linux/mips 5.5.0-rc7 Kernel Configuration
 #
 
 #
@@ -2588,6 +2588,7 @@ CONFIG_DRM_PANEL_BRIDGE=y
 # end of Display Interface Bridges
 
 CONFIG_DRM_INGENIC=m
+# CONFIG_DRM_DW_HDMI_JZ4780 is not set
 # CONFIG_DRM_ETNAVIV is not set
 # CONFIG_DRM_ARCPGU is not set
 # CONFIG_DRM_MXSFB is not set

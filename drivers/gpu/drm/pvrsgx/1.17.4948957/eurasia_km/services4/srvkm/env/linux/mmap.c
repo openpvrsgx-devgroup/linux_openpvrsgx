@@ -709,7 +709,7 @@ DoMapToUser(LinuxMemArea *psLinuxMemArea,
 	 * that attempt to interpret it).
 	 * The only alternative is to use VM_INSERT_PAGE, which requires
 	 * finding the page structure corresponding to each page, or
-	 * if mixed maps are supported (VM_MIXEDMAP), vm_insert_mixed.
+	 * if mixed maps are supported (VM_MIXEDMAP), vmf_insert_mixed.
 	 */
         IMG_UINTPTR_T ulVMAPos;
 	IMG_UINTPTR_T uiByteEnd = uiByteOffset + uiByteSize;
@@ -766,7 +766,7 @@ DoMapToUser(LinuxMemArea *psLinuxMemArea,
 	for(uiPA = uiByteOffset; uiPA < uiByteEnd; uiPA += PAGE_SIZE)
 	{
 	    IMG_UINTPTR_T pfn;
-	    IMG_INT result;
+	    IMG_INT result = 0;
 	    IMG_BOOL bMapPage = IMG_TRUE;
 
 		if (psLinuxMemArea->hBMHandle)
@@ -785,7 +785,14 @@ DoMapToUser(LinuxMemArea *psLinuxMemArea,
 #if defined(PVR_MAKE_ALL_PFNS_SPECIAL)
 		    if (bMixedMap)
 		    {
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,5,0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,20,0))
+			pfn_t pfns = { pfn };
+			vm_fault_t vmf;
+
+			vmf = vmf_insert_mixed(ps_vma, ulVMAPos, pfns);
+			if (vmf & VM_FAULT_ERROR)
+				result = vm_fault_to_errno(vmf, 0);
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4,5,0))
 			pfn_t pfns = { pfn };
 
 			result = vm_insert_mixed(ps_vma, ulVMAPos, pfns);

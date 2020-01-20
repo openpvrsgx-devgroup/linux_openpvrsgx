@@ -494,12 +494,11 @@ endif
 $(eval $(call TunableBothConfigMake,KERNEL_CC,))
 
 # Check the KERNELDIR has a kernel built.
-VMLINUX := 
-#$(strip $(wildcard $(KERNELDIR)/vmlinux))
+VMLINUX := $(strip $(wildcard $(KERNELDIR)/vmlinux))
 
 ifneq ($(wildcard $(VMLINUX)),)
- ifneq ($(shell file $(KERNELDIR)/vmlinux | grep 64-bit >/dev/null && echo 1),$(shell $(_CC) -dM -E - </dev/null | grep __x86_64__ >/dev/null && echo 1))
-  $(error Attempting to build 64-bit DDK against 32-bit kernel, or 32-bit DDK against 64-bit kernel. This is not allowed.)
+ ifneq ($(shell file $(KERNELDIR)/vmlinux | grep 64-bit >/dev/null && echo 1),$(shell $(_CC) -dM -E - </dev/null | grep '__x86_64__\|__aarch64__' >/dev/null && echo 1))
+  $(warning Attempting to build 64-bit DDK against 32-bit kernel, or 32-bit DDK against 64-bit kernel. This is not allowed.)
  endif
  LINUXCFG := $(strip $(wildcard $(KERNELDIR)/.config))
  VMLINUX_IS_64BIT := $(shell file $(VMLINUX) | grep 64-bit >/dev/null || echo false)

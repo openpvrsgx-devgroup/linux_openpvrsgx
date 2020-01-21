@@ -1,5 +1,5 @@
 ########################################################################### ###
-#@Title         Root makefile for OMAP4430 Linux.  Builds everything else.
+#@Title         Root makefile for TI Linux.  Builds everything else.
 #@Copyright     Copyright (c) Imagination Technologies Ltd. All Rights Reserved
 #@License       Dual MIT/GPLv2
 # 
@@ -150,6 +150,9 @@ ifeq ($(CROSS_COMPILE),arm-linux-gnueabi-)
 UBUNTU_TOOLCHAIN = 1
 endif
 ifeq ($(CROSS_COMPILE),arm-linux-gnueabihf-)
+UBUNTU_TOOLCHAIN = 1
+endif
+ifeq ($(CROSS_COMPILE),arm-none-linux-gnueabihf-)
 UBUNTU_TOOLCHAIN = 1
 endif
 

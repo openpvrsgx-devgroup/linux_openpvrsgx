@@ -4569,9 +4569,8 @@ static void pvr_flush_range(phys_addr_t pStart, phys_addr_t pEnd)
 {
 #if defined(__aarch64__)
 	struct device *dev = PVRLDMGetDevice();
-	const struct dma_map_ops *dma_ops = get_dma_ops(dev);
-	dma_ops->sync_single_for_device(dev, pStart, pEnd - pStart, DMA_TO_DEVICE);
-	dma_ops->sync_single_for_cpu(dev, pStart, pEnd - pStart, DMA_FROM_DEVICE);
+	dma_sync_single_for_device(dev, pStart, pEnd - pStart, DMA_TO_DEVICE);
+	dma_sync_single_for_cpu(dev, pStart, pEnd - pStart, DMA_FROM_DEVICE);
 #else
 	arm_dma_ops.sync_single_for_device(NULL, pStart, pEnd - pStart, DMA_TO_DEVICE);
 	arm_dma_ops.sync_single_for_cpu(NULL, pStart, pEnd - pStart, DMA_FROM_DEVICE);
@@ -4582,8 +4581,7 @@ static void pvr_clean_range(phys_addr_t pStart, phys_addr_t pEnd)
 {
 #if defined(__aarch64__)
 	struct device *dev = PVRLDMGetDevice();
-	const struct dma_map_ops *dma_ops = get_dma_ops(dev);
-	dma_ops->sync_single_for_device(dev, pStart, pEnd - pStart, DMA_TO_DEVICE);
+	dma_sync_single_for_device(dev, pStart, pEnd - pStart, DMA_TO_DEVICE);
 #else
 	arm_dma_ops.sync_single_for_device(NULL, pStart, pEnd - pStart, DMA_TO_DEVICE);
 #endif
@@ -4594,8 +4592,7 @@ static void pvr_invalidate_range(phys_addr_t pStart, phys_addr_t pEnd)
 {
 #if defined(__aarch64__)
 	struct device *dev = PVRLDMGetDevice();
-	const struct dma_map_ops *dma_ops = get_dma_ops(dev);
-	dma_ops->sync_single_for_cpu(dev, pStart, pEnd - pStart, DMA_FROM_DEVICE);
+	dma_sync_single_for_cpu(dev, pStart, pEnd - pStart, DMA_FROM_DEVICE);
 #else
 	arm_dma_ops.sync_single_for_cpu(NULL, pStart, pEnd - pStart, DMA_FROM_DEVICE);
 #endif

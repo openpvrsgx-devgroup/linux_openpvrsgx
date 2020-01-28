@@ -68,6 +68,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define	BLOCKED_ON_READ		1
 #define	BLOCKED_ON_WRITE	2
 
+#if defined(CONFIG_PREEMPT_RT_BASE) || defined(CONFIG_PREEMPT_RT)
+ #define PVR_BUILD_FOR_RT_LINUX
+#endif
+
 struct pvr_fence_context
 {
 	struct mutex mutex;
@@ -1000,11 +1004,19 @@ retry:
 	shared_count = 0;
 	blocking = false;
 
+#if defined(PVR_BUILD_FOR_RT_LINUX)
+	seq = read_seqbegin(&resv->seq);
+#else
 	seq = read_seqcount_begin(&resv->seq);
+#endif
 	rcu_read_lock();
 
 	flist = rcu_dereference(resv->fence);
+#if defined(PVR_BUILD_FOR_RT_LINUX)
+	if (read_seqretry(&resv->seq, seq))
+#else
 	if (read_seqcount_retry(&resv->seq, seq))
+#endif
 	{
 		goto unlock_retry;
 	}
@@ -1029,7 +1041,11 @@ retry:
 	if (!blocking && !shared_count)
 	{
 		fence = rcu_dereference(resv->fence_excl);
+#if defined(PVR_BUILD_FOR_RT_LINUX)
+		if (read_seqretry(&resv->seq, seq))
+#else
 		if (read_seqcount_retry(&resv->seq, seq))
+#endif
 		{
 			goto unlock_retry;
 		}

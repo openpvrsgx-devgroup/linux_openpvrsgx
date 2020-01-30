@@ -21,6 +21,7 @@
 
 #include <drv_types.h>
 #include <hal_data.h>
+#include <linux/fs.h>
 
 #if defined(CONFIG_WOWLAN) || defined(CONFIG_AP_WOWLAN)
 	#include <linux/inetdevice.h>

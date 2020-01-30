@@ -257,6 +257,8 @@ enum rt_spinlock_type {
 	#else
 		#define	PHYDM_TESTCHIP_SUPPORT 0
 	#endif
+
+	#define	timer_list	legacy_timer_emu
 #endif
 
 #define READ_NEXT_PAIR(v1, v2, i) do { if (i+2 >= array_len) break; i += 2; v1 = array[i]; v2 = array[i+1]; } while (0)

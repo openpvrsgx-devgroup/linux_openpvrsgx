@@ -55,11 +55,14 @@ int rtw_soft_ap = 0;
 /* int smart_ps = 1; */
 #ifdef CONFIG_POWER_SAVING
 	int rtw_power_mgnt = PS_MODE_MAX;
+		int rtw_ips_mode = IPS_LEVEL_2;
+		/*
 	#ifdef CONFIG_IPS_LEVEL_2
 		int rtw_ips_mode = IPS_LEVEL_2;
 	#else
 		int rtw_ips_mode = IPS_NORMAL;
 	#endif
+	*/
 #else
 	int rtw_power_mgnt = PS_MODE_ACTIVE;
 	int rtw_ips_mode = IPS_NONE;
@@ -203,7 +206,7 @@ module_param(rtw_rf_config, int, 0644);
 /* 0: not check in watch dog, 1: check in watch dog  */
 int rtw_check_hw_status = 0;
 
-int rtw_low_power = 0;
+int rtw_low_power = 1;
 #ifdef CONFIG_WIFI_TEST
 	int rtw_wifi_spec = 1;/* for wifi test */
 #else

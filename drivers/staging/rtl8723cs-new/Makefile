@@ -895,7 +895,7 @@ EXTRA_CFLAGS += -DEFUSE_MAP_PATH=\"/system/etc/wifi/wifi_efuse_$(MODULE_NAME).ma
 endif
 
 #WIFIMAC_PATH
-USER_WIFIMAC_PATH ?=
+USER_WIFIMAC_PATH ?= /lib/firmware/rtlwifi/rtl8723cs_mac.txt
 ifneq ($(USER_WIFIMAC_PATH),)
 EXTRA_CFLAGS += -DWIFIMAC_PATH=\"$(USER_WIFIMAC_PATH)\"
 else

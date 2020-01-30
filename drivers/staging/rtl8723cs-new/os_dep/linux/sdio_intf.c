@@ -601,6 +601,7 @@ _adapter *rtw_sdio_primary_adapter_init(struct dvobj_priv *dvobj)
 {
 	int status = _FAIL;
 	PADAPTER padapter = NULL;
+	PSDIO_DATA psdio = &dvobj->intf_data;
 
 	padapter = (_adapter *)rtw_zvmalloc(sizeof(*padapter));
 	if (padapter == NULL)
@@ -671,7 +672,7 @@ _adapter *rtw_sdio_primary_adapter_init(struct dvobj_priv *dvobj)
 
 	/* 3 8. get WLan MAC address */
 	/* set mac addr */
-	rtw_macaddr_cfg(adapter_mac_addr(padapter),  get_hal_mac_addr(padapter));
+	rtw_macaddr_cfg(&psdio->func->dev, adapter_mac_addr(padapter),  get_hal_mac_addr(padapter));
 
 #ifdef CONFIG_MI_WITH_MBSSID_CAM
 	rtw_mbid_camid_alloc(padapter, adapter_mac_addr(padapter));

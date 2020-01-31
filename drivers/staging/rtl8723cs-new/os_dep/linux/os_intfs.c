@@ -55,14 +55,11 @@ int rtw_soft_ap = 0;
 /* int smart_ps = 1; */
 #ifdef CONFIG_POWER_SAVING
 	int rtw_power_mgnt = PS_MODE_MAX;
-		int rtw_ips_mode = IPS_LEVEL_2;
-		/*
 	#ifdef CONFIG_IPS_LEVEL_2
 		int rtw_ips_mode = IPS_LEVEL_2;
 	#else
 		int rtw_ips_mode = IPS_NORMAL;
 	#endif
-	*/
 #else
 	int rtw_power_mgnt = PS_MODE_ACTIVE;
 	int rtw_ips_mode = IPS_NONE;

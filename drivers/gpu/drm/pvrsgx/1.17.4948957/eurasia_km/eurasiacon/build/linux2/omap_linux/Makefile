@@ -72,10 +72,22 @@ else ifneq ($(filter ti654x,$(TARGET_PRODUCT)),)
 
  # SoC Version
  AM_VERSION                     := 6
+else ifneq ($(filter ti443x,$(TARGET_PRODUCT)),)
+ SGXCORE                        := 540
+ SGX_CORE_REV                   := 120
+
+ # SoC Version
+ AM_VERSION                     := 5
+else ifneq ($(filter ti343x,$(TARGET_PRODUCT)),)
+ SGXCORE                        := 530
+ SGX_CORE_REV                   := 121
+
+ # SoC Version
+ AM_VERSION                     := 5
 else
  # If a product wasn't specified, error out to prevent building for the wrong platform
  $(warning *** Unrecognised or empty TARGET_PRODUCT: $(TARGET_PRODUCT))
- $(error *** Supported Target Systems are: ti335x ti437x jacinto6evm omap5uevm ti654x)
+ $(error *** Supported Target Systems are: ti335x ti437x jacinto6evm omap5uevm ti654x ti443x ti343x)
 endif
 
 PVRSRV_NEED_PVR_DPF := 1

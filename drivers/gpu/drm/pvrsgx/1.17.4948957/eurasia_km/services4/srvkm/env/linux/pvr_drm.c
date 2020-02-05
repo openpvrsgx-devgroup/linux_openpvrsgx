@@ -177,6 +177,8 @@ static struct of_device_id asPlatIdList[] = {
 	{	.compatible = "ti,dra7-sgx544"		},
 	{	.compatible = "ti,am4376-sgx530"	},
 	{	.compatible = "ti,am3352-sgx530"	},
+	{	.compatible = "ti,omap3-sgx530-121"	},
+	{	.compatible = "ti,omap4-sgx540-120"	},
 	{}
 };
 MODULE_DEVICE_TABLE(of,  asPlatIdList);

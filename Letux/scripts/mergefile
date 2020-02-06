@@ -31,6 +31,7 @@ letux/Letux
 # Letux defconfigs
 letux/arm_defconfig
 letux/arm_lpae_defconfig
+letux/arm64_defconfig
 letux/mips_defconfig
 
 # Letux Rootfs

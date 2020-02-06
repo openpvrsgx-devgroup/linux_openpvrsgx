@@ -1493,7 +1493,7 @@ static void bq27xxx_battery_settings(struct bq27xxx_device_info *di)
 {
 	struct power_supply_battery_info *info;
 	unsigned int min, max;
-int ret;
+int ret = 0;
 
 pr_info("%s\n", __func__);
 

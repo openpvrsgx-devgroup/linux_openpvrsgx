@@ -66,7 +66,7 @@ then
 		(
 		set -e
 
-		# FIXME: base on sgx compatible
+		# FIXME: base on 'sgx' compatible
 		echo "installing for $(tr '\0' '@' </proc/device-tree/compatible)"
 		case "@$(tr '\0' '@' </proc/device-tree/compatible)" in
 			*@ti,omap34??@* | *@ti,am35??@*)
@@ -124,10 +124,16 @@ then
 
 		if [ "$TARGET_PRODUCT" ]
 		then	# install through makefile
-			echo installing user space files for $TARGET_PRODUCT >&2
+			echo "installing user space files for \`$TARGET_PRODUCT'" >&2
 			export DISCIMAGE=/
-			rm targetfs/*/etc/powervr.ini	# don't overwrite by the version from git
+			rm targetfs/*/etc/powervr.ini	# don't overwrite what we installed by the version from git
 			make install
+			# FIXME: somehow find out from lcd definition
+			if [ "$TARGET_PRODUCT" = "ti335x" ]
+			then	# fix pixel format for 16 bit LCDC
+				echo "fix /etc/powervr.ini for \`$TARGET_PRODUCT'" >&2
+				sed -i.bak 's/DefaultPixelFormat=RGB[0-9][0-9][0-9]/DefaultPixelFormat=RGB565/g' /etc/powervr.ini
+			fi
 			rm -f /usr/lib/arm-linux-gnueabihf/libgbm.so.2
 			ln -s libgbm.so.1 /usr/lib/arm-linux-gnueabihf/libgbm.so.2
 			[ -f /usr/lib/libGLESv2.so.1 ] || ln -s libGLESv2.so.2 /usr/lib/libGLESv2.so.1

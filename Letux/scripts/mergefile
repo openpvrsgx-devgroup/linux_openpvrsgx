@@ -168,3 +168,4 @@ letux/drivers-keyboard
 -letux/android
 #-letux/pyra-minimal - this is now rebuild automatically from the individual branches
 -letux/ci20-minimal
+-letux/pinephone

@@ -159,7 +159,7 @@
 		 * are also different clocks, but we do not have any dts users
 		 * for it.
 		 */
-		target-module@50000000 {
+		sgx_module: target-module@50000000 {
 			compatible = "ti,sysc-omap2", "ti,sysc";
 			reg = <0x50000014 0x4>;
 			reg-names = "rev";

@@ -42,9 +42,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef __INCLUDED_PRIVATE_DATA_H_
 #define __INCLUDED_PRIVATE_DATA_H_
 
+#include <linux/version.h>
 #if defined(SUPPORT_DRI_DRM) && defined(PVR_SECURE_DRM_AUTH_EXPORT)
 #include <linux/list.h>
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0))
 #include <drm/drmP.h>
+#endif
 #endif
 
 /* This structure is required in the rare case that a process creates

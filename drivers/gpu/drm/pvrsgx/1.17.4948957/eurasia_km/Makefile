@@ -198,7 +198,8 @@ $(TARGET) += \
 	services4/srvkm/env/linux/pdump.o \
 	services4/srvkm/env/linux/proc.o \
 	services4/srvkm/env/linux/pvr_bridge_k.o \
-	services4/srvkm/env/linux/pvr_debug.o
+	services4/srvkm/env/linux/pvr_debug.o \
+	services4/srvkm/env/linux/pvr_linux_fence.o
 
 ifneq ($(CONFIG_SGX_DRM),)
 

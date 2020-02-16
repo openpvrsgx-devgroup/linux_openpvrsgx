@@ -43,23 +43,23 @@ ccflags-y += \
 	-Iinclude \
 	-Iarch/arm/mach-omap2 \
 	-Idrivers/video/fbdev/omap2 \
-	-I$(src)/ \
-	-I$(src)/include4 \
-	-I$(src)/services4/include \
-	-I$(src)/services4/include/env/linux \
-	-I$(src)/services4/system/include \
-	-I$(src)/services4/srvkm/bridged \
-	-I$(src)/services4/srvkm/bridged/sgx \
-	-I$(src)/services4/srvkm/devices/sgx \
-	-I$(src)/services4/srvkm/env/linux \
-	-I$(src)/services4/srvkm/hwdefs \
-	-I$(src)/services4/srvkm/include \
-	-I$(src)/services4/3rdparty/bufferclass_ti
+	-I$(srctree)/$(src)/ \
+	-I$(srctree)/$(src)/include4 \
+	-I$(srctree)/$(src)/services4/include \
+	-I$(srctree)/$(src)/services4/include/env/linux \
+	-I$(srctree)/$(src)/services4/system/include \
+	-I$(srctree)/$(src)/services4/srvkm/bridged \
+	-I$(srctree)/$(src)/services4/srvkm/bridged/sgx \
+	-I$(srctree)/$(src)/services4/srvkm/devices/sgx \
+	-I$(srctree)/$(src)/services4/srvkm/env/linux \
+	-I$(srctree)/$(src)/services4/srvkm/hwdefs \
+	-I$(srctree)/$(src)/services4/srvkm/include \
+	-I$(srctree)/$(src)/services4/3rdparty/bufferclass_ti
 
 # choose SoC integration variant to choose the right source subtree
 
 ccflags-y += \
-	-I$(src)/services4/system/$(SOC_FAMILY)
+	-I$(srctree)/$(src)/services4/system/$(SOC_FAMILY)
 
 ifeq ($(SOC_FAMILY),omap)
 $(TARGET) += \

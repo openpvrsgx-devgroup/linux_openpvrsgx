@@ -26,6 +26,8 @@
 #    based on DT information.
 #
 
+pvr_drv =
+
 ifeq ($(CONFIG_PVRSGX_1_9_2188537),y)
 SUBPATH=1.9.2188537/eurasia_km
 else ifeq ($(CONFIG_PVRSGX_1_9_2253347),y)
@@ -38,6 +40,7 @@ SUBPATH=1.13.3341330/eurasia_km
 else ifeq ($(CONFIG_PVRSGX_1_14_3699939),y)
 # only this is working
 SUBPATH=1.14.3699939/eurasia_km
+pvr_drv := 1
 else ifeq ($(CONFIG_PVRSGX_1_14_3759903),y)
 SUBPATH=1.14.3759903/eurasia_km
 else ifeq ($(CONFIG_PVRSGX_1_14_3841212),y)
@@ -46,6 +49,7 @@ else ifeq ($(CONFIG_PVRSGX_1_15_4564147),y)
 SUBPATH=1.15.4564147/eurasia_km
 else ifeq ($(CONFIG_PVRSGX_1_17_4948957),y)
 SUBPATH=1.17.4948957/eurasia_km
+pvr_drv := 1
 else
 SUBPATH=unknown
 endif
@@ -61,7 +65,7 @@ ifneq ($(CONFIG_SGX_CEDARVIEW),)
 	$(Q)SOC_VENDOR=intel SOC_FAMILY=cedarview_linux SOC=gma3600 SGX=sgx545 SGX_FLAG=SGX545 SGX_REV=999 $(MAKE) $(build)=$(SOURCE)
 endif # CONFIG_SGX_CEDARVIEW
 ifneq ($(CONFIG_SGX_OMAP),)
-ifneq ($(CONFIG_PVRSGX_1_14_3699939),)
+ifdef pvr_drv
 ifneq ($(CONFIG_ARCH_OMAP3),)
 	@$(kecho) "  MAKE    $(obj): omap3430"
 	$(Q)SOC_VENDOR=ti SOC_FAMILY=omap SOC=omap3 SGX=sgx530 SGX_FLAG=SGX530 SGX_REV=121 AM_VERSION=3 TARGET_TYPE=$(CONFIG_SGX_OMAP) $(MAKE) $(build)=$(SOURCE)
@@ -108,7 +112,7 @@ ifneq ($(CONFIG_SOC_DRA7XX),)
 	$(Q)SOC_VENDOR=ti SOC_FAMILY=omap SOC=dra7 SGX=sgx544 SGX_FLAG=SGX544 SGX_REV=116 AM_VERSION=5 TARGET_TYPE=$(CONFIG_SGX_OMAP) $(MAKE) $(build)=$(SOURCE)
 	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
 endif	# CONFIG_SOC_DRA7XX
-else # CONFIG_PVRSGX_1_14_3699939
+else # pvr_drv
 # kept here for compatibility with omap-pvr tree
 	@$(kecho) "  MAKE    $(obj): omap3"
 	$(Q)TI_PLATFORM=omap3 $(MAKE) $(build)=$(SOURCE)

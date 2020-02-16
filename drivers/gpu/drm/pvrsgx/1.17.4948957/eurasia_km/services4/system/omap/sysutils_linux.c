@@ -62,7 +62,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 
 #if defined(SUPPORT_DRI_DRM_PLUGIN)
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0))
 #include <drm/drmP.h>
+#endif
 #include <drm/drm.h>
 
 #include <linux/omap_gpu.h>

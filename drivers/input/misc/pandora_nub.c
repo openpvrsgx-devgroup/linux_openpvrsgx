@@ -554,12 +554,12 @@ static int proc_open_##name(struct inode *inode, struct file *file) \
 { \
 	return single_open(file, readf, PDE_DATA(inode)); \
 } \
-static const struct file_operations pandora_nub_proc_##name = { \
-	.open		= proc_open_##name, \
-	.read		= seq_read, \
-	.llseek		= seq_lseek, \
-	.release	= seq_release, \
-	.write		= writef, \
+static const struct proc_ops pandora_nub_proc_##name = { \
+	.proc_open		= proc_open_##name, \
+	.proc_read		= seq_read, \
+	.proc_lseek		= seq_lseek, \
+	.proc_release		= seq_release, \
+	.proc_write		= writef, \
 }
 
 PANDORA_NUB_PE(mode, pandora_nub_proc_mode_read, pandora_nub_proc_mode_write);

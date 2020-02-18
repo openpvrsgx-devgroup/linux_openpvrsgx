@@ -117,6 +117,9 @@ function pushbranch { # if enabled, push and archive branch
 function process {
 	FEATURE=$1
 	case "$FEATURE" in
+		'>+'* )	# define second name
+			SECONDNAME=${FEATURE:2}
+			;;
 		'>>'* )	# define output branch
 			VERSION=$(linuxversion $LASTBASE)
 #echo LASTBASE $LASTBASE
@@ -150,6 +153,7 @@ function process {
 			return
 			;;			
 		'>'* )	# switch to new "base"
+			SECONDNAME=""
 			NEWOUTPUT=${FEATURE:1}
 			if [ "$OUTPUT" ]
 			then
@@ -181,7 +185,7 @@ function process {
 			pushbranch "$LASTBASE"
 			return
 			;;
-		'-'* )	# strip off "-"
+		'-'* )	# strip off "-" but do not include
 			HIDDEN=true
 			FEATURE="${FEATURE:1}"
 			;;
@@ -327,7 +331,10 @@ then # octopus of last set of branches
 fi
 
 pushbranch "$OUTPUT"	# update letux-$VERSION on public server
-git branch -f letux-current "$OUTPUT"	# make a stable name for the latest build
-pushbranch "letux-current"	# update current head on public server
+if [ "$SECONDNAME" ]
+then
+	git branch -f "$SECONDNAME" "$OUTPUT"	# make a stable name for the latest build
+	pushbranch "$SECONDNAME"	# update current head on public server
+fi
 
 echo "*** switched to $(git branch | fgrep '* ' | cut -c 3-) ***"

@@ -1,0 +1,23 @@
+#!/bin/bash
+# configure kernel (letux_lpae_defconfig) for LPAE
+# run from root of source tree
+
+[ "$PLATFORM" ] || export PLATFORM=letux_lpae
+[ "$ARCH" ] || export ARCH=arm;
+
+# update lpae_defconfig
+CONF="arch/${ARCH}/configs/${PLATFORM}_defconfig"
+
+# ./mkernel will overwrite $CONF from .config and the # auto-generated will be lost!
+(echo "# auto-generated from letux_defconfig"; cat arch/${ARCH}/configs/letux_defconfig) >$CONF
+
+# enable LPAE
+sed -i.bak 's/# CONFIG_ARM_LPAE is not set/CONFIG_ARM_LPAE=y/g' $CONF
+
+# OMAP3&4 have no LPAE
+sed -i.bak 's/CONFIG_ARCH_OMAP3=y/# CONFIG_ARCH_OMAP3 is not set/g' $CONF
+sed -i.bak 's/CONFIG_ARCH_OMAP4=y/# CONFIG_ARCH_OMAP4 is not set/g' $CONF
+# sed -i.bak 's/CONFIG_ARCH_MXC=y/# CONFIG_ARCH_MXC is not set/g' $CONF
+
+# configure for 4GB RAM
+# sed -i.bak 's/CONFIG_CMDLINE="/CONFIG_CMDLINE="mem=2032M@0x80000000 mem=2048M@0x200000000 /g' $CONF

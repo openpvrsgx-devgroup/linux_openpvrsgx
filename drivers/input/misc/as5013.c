@@ -578,12 +578,12 @@ static int proc_open_##name(struct inode *inode, struct file *file) \
 { \
 	return single_open(file, readf, PDE_DATA(inode)); \
 } \
-static const struct file_operations as5013_proc_##name = { \
-	.open		= proc_open_##name, \
-	.read		= seq_read, \
-	.llseek		= seq_lseek, \
-	.release	= seq_release, \
-	.write		= writef, \
+static const struct proc_ops as5013_proc_##name = { \
+	.proc_open		= proc_open_##name, \
+	.proc_read		= seq_read, \
+	.proc_lseek		= seq_lseek, \
+	.proc_release		= seq_release, \
+	.proc_write		= writef, \
 }
 
 AS5013_PE(mode, as5013_proc_mode_read, as5013_proc_mode_write);

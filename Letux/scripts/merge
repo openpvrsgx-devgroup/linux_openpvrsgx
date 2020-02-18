@@ -119,6 +119,7 @@ function process {
 	case "$FEATURE" in
 		'>+'* )	# define second name
 			SECONDNAME=${FEATURE:2}
+			return
 			;;
 		'>>'* )	# define output branch
 			VERSION=$(linuxversion $LASTBASE)
@@ -189,6 +190,42 @@ function process {
 			HIDDEN=true
 			FEATURE="${FEATURE:1}"
 			;;
+		'!' )	# end of file processing
+
+			if [ ! "$BRANCHES" ]
+			then
+				return
+			fi
+
+			# switch to output branch
+			if [ ! "$OUTPUT" ]
+			then
+				echo "*** don't know where to collect results ***"
+				exit
+			fi
+			git checkout $OUTPUT || exit
+
+			if ! $SEQUENTIAL && [ "$BRANCHES" ]
+			then # octopus of last set of branches
+				echo "*** Octopus Merge into $OUTPUT ***"
+				git merge --no-ff --no-edit $BRANCHES || exit	# try to merge all
+			fi
+
+			pushbranch "$OUTPUT"	# update letux-$VERSION on public server
+			if [ "$SECONDNAME" ]
+			then
+				echo "*** Second name $SECONDNAME ***"
+				git branch -f "$SECONDNAME" "$OUTPUT"	# make a stable name for the latest build
+				pushbranch "$SECONDNAME"	# update current head on public server
+			fi
+
+			echo "*** switched to $(git branch | fgrep '* ' | cut -c 3-) ***"
+			SECONDNAME=""
+			OUTPUT=""
+			BRANCHES=""
+			return
+			;;
+
 		* )
 # FIXME: hide if explicitly specified on command line with a - prefix
 			HIDDEN=false
@@ -308,7 +345,7 @@ fi
 for FEATURE
 do
 	case "$FEATURE" in
-		-* ) # ignore has a different meaning on command line
+		-* ) # ignore - has a different meaning on command line
 			;;
 		* )
 			process "$FEATURE"
@@ -316,25 +353,4 @@ do
 	esac
 done
 
-# switch to output branch
-if [ ! "$OUTPUT" ]
-then
-	echo "*** don't know where to collect results ***"
-	exit
-fi
-git checkout $OUTPUT || exit
-
-if ! $SEQUENTIAL && [ "$BRANCHES" ]
-then # octopus of last set of branches
-	echo "*** Octopus Merge into $OUTPUT ***"
-	git merge --no-ff --no-edit $BRANCHES || exit	# try to merge all
-fi
-
-pushbranch "$OUTPUT"	# update letux-$VERSION on public server
-if [ "$SECONDNAME" ]
-then
-	git branch -f "$SECONDNAME" "$OUTPUT"	# make a stable name for the latest build
-	pushbranch "$SECONDNAME"	# update current head on public server
-fi
-
-echo "*** switched to $(git branch | fgrep '* ' | cut -c 3-) ***"
+process "!"	# process end

@@ -42,7 +42,6 @@
 
 #define REAL_HARDWARE 1
 
-#define SYS_SGX_CLOCK_SPEED					(200000000)
 #define SYS_SGX_HWRECOVERY_TIMEOUT_FREQ		(100) // 10ms (100hz)
 #define SYS_SGX_PDS_TIMER_FREQ				(1000) // 1ms (1000hz)
 #ifndef SYS_SGX_ACTIVE_POWER_LATENCY_MS
@@ -1019,6 +1018,16 @@ PVRSRV_ERROR SysPowerLockWrap(IMG_BOOL bTryLock)
 }
 
 IMG_VOID SysPowerLockUnwrap(IMG_VOID)
+{
+	/* FIXME: This should not be empty */
+}
+
+IMG_VOID SysSGXIdleEntered(IMG_VOID)
+{
+	/* FIXME: This should not be empty */
+}
+
+IMG_VOID SysSGXCommandPending(IMG_BOOL bSGXIdle)
 {
 	/* FIXME: This should not be empty */
 }

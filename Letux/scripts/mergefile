@@ -61,6 +61,7 @@ letux/dt-omap5-common
 letux/dt-omap5-uevm
 letux/dt-raspi
 letux/dt-makefile
+letux/omap2plus_defconfig
 
 # Debian build scripts
 letux/debian-build
@@ -142,7 +143,7 @@ letux/jz4780
 letux/jz4780-hdmi
 letux/jz4780-smp
 letux/jz4780-efuse
-letux/ci20-defconfig
+letux/ci20_defconfig
 
 # E-Book reader
 letux/kobolino/backlight
@@ -151,7 +152,7 @@ letux/kobolino/rtc
 letux/kobolino/touch
 letux/rtl8189fs
 letux/kobolino-epdc
-#letux/kobolino-defconfig
+#letux/kobolino_defconfig
 
 # hacks and fixes
 letux/hacks

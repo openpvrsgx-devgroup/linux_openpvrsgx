@@ -33,6 +33,7 @@
 
 #define SGX_REG_SIZE 	0x4000
 #define SGX_SP_SIZE		(0x10000-SGX_REG_SIZE)
+#define SYS_SGX_CLOCK_SPEED	(200000000)
 
 /* Set PCI vendor ID, device ID to 0, the device is not a PCI device ! */
 #define SYS_SGX_DEV_VENDOR_ID		        0

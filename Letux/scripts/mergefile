@@ -154,6 +154,9 @@ letux/rtl8189fs
 letux/kobolino-epdc
 #letux/kobolino_defconfig
 
+# PinePhone
+letux/pinephone
+
 # hacks and fixes
 letux/hacks
 letux/twl4030
@@ -179,4 +182,3 @@ letux/drivers-keyboard
 -letux/android
 #-letux/pyra-minimal - this is now rebuild automatically from the individual branches
 #-letux/ci20-minimal
-#-letux/pinephone

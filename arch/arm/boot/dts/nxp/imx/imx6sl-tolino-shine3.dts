@@ -159,6 +159,28 @@
 		>;
 	};
 
+	pinctrl_tps65185_gpio: tps65185-gpio-grp {
+		fsl,pins = <
+			MX6SL_PAD_EPDC_PWRWAKEUP__GPIO2_IO14        0x40010059 /* EP_PWRALL */
+			MX6SL_PAD_EPDC_VCOM0__GPIO2_IO03            0x40010059 /* VCOM_CTRL0 */
+			MX6SL_PAD_EPDC_PWRCTRL0__GPIO2_IO07            0x40010059 /* EP_PWRCTRL0 WAKEUP */
+			MX6SL_PAD_EPDC_PWRCTRL1__GPIO2_IO08            0x40010059 /* EP_PWRCTRL1 PWRUP */
+			MX6SL_PAD_EPDC_PWRCTRL2__GPIO2_IO09      0x17059 /* EP_PWRCTRL2 EP_INT */
+			MX6SL_PAD_EPDC_PWRSTAT__GPIO2_IO13        0x17059 /* EP_PWRSTAT */
+		>;
+	};
+
+	pinctrl_tps65185_gpio_sleep: tps65185-gpio-sleep-grp {
+		fsl,pins = <
+			MX6SL_PAD_EPDC_PWRWAKEUP__GPIO2_IO14        0x10059 /* EP_PWRALL */
+			MX6SL_PAD_EPDC_VCOM0__GPIO2_IO03                      0x10059 /* VCOM_CTRL0 */
+			MX6SL_PAD_EPDC_PWRCTRL0__GPIO2_IO07      0x10059 /* EP_PWRCTRL0 WAKEUP */
+			MX6SL_PAD_EPDC_PWRCTRL1__GPIO2_IO08      0x10059 /* EP_PWRCTRL1 PWRUP */
+			MX6SL_PAD_EPDC_PWRCTRL2__GPIO2_IO09      0x13059 /* EP_PWRCTRL2 EP_INT */
+			MX6SL_PAD_EPDC_PWRSTAT__GPIO2_IO13        0x13059 /* EP_PWRSTAT */
+		>;
+	};
+
 	pinctrl_uart1: uart1grp {
 		fsl,pins = <
 			MX6SL_PAD_UART1_TXD__UART1_TX_DATA 0x1b0b1
@@ -306,6 +328,12 @@
 &ricoh619 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_ricoh_gpio>;
+};
+
+&tps6518x {
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&pinctrl_tps65185_gpio>;
+	pinctrl-1 = <&pinctrl_tps65185_gpio_sleep>;
 };
 
 &uart1 {

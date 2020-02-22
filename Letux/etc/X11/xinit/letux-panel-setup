@@ -66,11 +66,15 @@ function model_or_compatible {
 case "$(model_or_compatible)" in
 	*'GTA04 b4'* )
 		PANEL=5.0x640x1024;;	# Letux 5004 (never built)
-	*GTA04b7* | *'GTA04 b7'* | *Neo900* )
+	*GTA04b7* | \
+	*'GTA04 b7'* | \
+	*Neo900* )
 		PANEL=3.0-800x480;;	# Neo900
 	*'GTA04 b8'* )
 		PANEL=2.0-320x320;;	# Letux 2204 (never built)
-	*PandaBoard* |	*OMAP5*uEVM* )
+	*PandaBoard* | \
+	*OMAP5*uEVM* | \
+	*PinePhone* )
 		PANEL=none;;
 	*LC15-EVM* )
 		PANEL=5.0-720x1280
@@ -96,12 +100,13 @@ case "$(model_or_compatible)" in
 	*@letux400,minipc@* )
 		PANEL=7.0-640x480;;
 	* )
-		echo "unknown motherboard $(model_or_compatible)"
-		echo "we don't know how to configure X11 for the display"
-		exit 1
+		echo "$0: unknown motherboard $(model_or_compatible)"
+		PANEL=none
 		;;
 esac
 
-# symlink to chosen config
+# symlink to chosen config (if any)
 rm -f /etc/X11/xorg.conf
-ln -s $PANEL.conf /etc/X11/xorg.conf
+if [ -r "$PANEL.conf" ]
+then ln -s $PANEL.conf /etc/X11/xorg.conf
+fi

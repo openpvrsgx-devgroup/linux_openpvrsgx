@@ -84,6 +84,14 @@
 	};
 };
 
+&epdc {
+	safe-ticks-turnoff-ep3v3=<800>;
+	V3P3-supply = <&V3P3_reg>;      
+	VCOM-supply = <&VCOM_reg>;      
+	DISPLAY-supply = <&DISPLAY_reg>; 
+	epd-thermal-zone = "epd-thermal";
+	status = "okay";
+};
 
 &i2c1 {
 	clock-frequency = <100000>;

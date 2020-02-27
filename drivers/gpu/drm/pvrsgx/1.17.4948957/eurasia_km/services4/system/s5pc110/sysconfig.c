@@ -81,7 +81,6 @@ IMG_UINT32   PVRSRV_BridgeDispatchKM( IMG_UINT32  Ioctl,
 									IMG_UINT32  OutBufLen,
 									IMG_UINT32 *pdwBytesTransferred);
 
-#if defined(SUPPORT_ACTIVE_POWER_MANAGEMENT)
 /*
  * We need to keep the memory bus speed up when the GPU is active.
  * On the  S5PV210, it is bound to the CPU freq.
@@ -115,8 +114,6 @@ static PVRSRV_ERROR DisableSGXClocks(void)
 
 	return PVRSRV_OK;
 }
-
-#endif /* defined(SUPPORT_ACTIVE_POWER_MANAGEMENT) */
 
 /*!
 ******************************************************************************
@@ -204,7 +201,6 @@ PVRSRV_ERROR SysInitialise(IMG_VOID)
 	gpsSysData = &gsSysData;
 	OSMemSet(gpsSysData, 0, sizeof(SYS_DATA));
 
-#if defined(SUPPORT_ACTIVE_POWER_MANAGEMENT)
 	{
 		extern struct platform_device *gpsPVRLDMDev;
 		struct device *dev;
@@ -234,7 +230,6 @@ PVRSRV_ERROR SysInitialise(IMG_VOID)
 
 		EnableSGXClocks();
 	}
-#endif
 
 	eError = OSInitEnvData(&gpsSysData->pvEnvSpecificData);
 	if (eError != PVRSRV_OK)
@@ -604,6 +599,10 @@ PVRSRV_ERROR SysDeinitialise (SYS_DATA *psSysData)
 	SysDeinitialiseCommon(gpsSysData);
 
 	gpsSysData = IMG_NULL;
+
+#if !defined(SUPPORT_ACTIVE_POWER_MANAGEMENT)
+	DisableSGXClocks();
+#endif
 
 	return PVRSRV_OK;
 }

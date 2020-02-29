@@ -215,7 +215,7 @@ ccflags-y += -DSGX_FEATURE_MP_CORE_COUNT=2
 ccflags-y += -DSGX_FEATURE_SYSTEM_CACHE	# assumed by client libs
 ccflags-n += -DSYS_OMAP_HAS_DVFS_FRAMEWORK	# sgxfreq extension
 # may be broken...
-ccflags-y += -DSUPPORT_ACTIVE_POWER_MANAGEMENT
+#ccflags-y += -DSUPPORT_ACTIVE_POWER_MANAGEMENT
 ccflags-y += -DAMVERSION=5
 # PVR_OMAPLFB_DRM_FB			:= 0
 endif

@@ -99,6 +99,8 @@ case "$(model_or_compatible)" in
 		PANEL=ci20;;
 	*@letux400,minipc@* )
 		PANEL=7.0-640x480;;
+	*'Tolino Shine 3'* )
+		PANEL=5.8-1448x1072-epd;;
 	* )
 		echo "$0: unknown motherboard $(model_or_compatible)"
 		PANEL=none
@@ -107,6 +109,6 @@ esac
 
 # symlink to chosen config (if any)
 rm -f /etc/X11/xorg.conf
-if [ -r "$PANEL.conf" ]
+if [ -r "/etc/X11/$PANEL.conf" ]
 then ln -s $PANEL.conf /etc/X11/xorg.conf
 fi

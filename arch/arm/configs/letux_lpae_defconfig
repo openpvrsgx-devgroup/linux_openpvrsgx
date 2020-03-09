@@ -1,5 +1,5 @@
 #
-# Linux/arm 5.6.0-rc4 Kernel Configuration
+# Linux/arm 5.6.0-rc5 Kernel Configuration
 #
 
 #
@@ -4282,6 +4282,7 @@ CONFIG_BACKLIGHT_GPIO=m
 # CONFIG_BACKLIGHT_LV5207LP is not set
 # CONFIG_BACKLIGHT_BD6107 is not set
 # CONFIG_BACKLIGHT_ARCXCNN is not set
+# CONFIG_BACKLIGHT_LED is not set
 # end of Backlight & LCD device support
 
 CONFIG_VIDEOMODE_HELPERS=y
@@ -5368,6 +5369,8 @@ CONFIG_DMA_BCM2835=y
 CONFIG_IMX_SDMA=y
 # CONFIG_INTEL_IDMA64 is not set
 CONFIG_MXS_DMA=y
+# CONFIG_MXC_PXP_V2 is not set
+# CONFIG_MXC_PXP_V3 is not set
 CONFIG_MX3_IPU=y
 CONFIG_MX3_IPU_IRQS=4
 # CONFIG_NBPFAXI_DMA is not set
@@ -6842,7 +6845,7 @@ CONFIG_DMA_CMA=y
 #
 # Default contiguous memory area size:
 #
-CONFIG_CMA_SIZE_MBYTES=16
+CONFIG_CMA_SIZE_MBYTES=64
 CONFIG_CMA_SIZE_SEL_MBYTES=y
 # CONFIG_CMA_SIZE_SEL_PERCENTAGE is not set
 # CONFIG_CMA_SIZE_SEL_MIN is not set

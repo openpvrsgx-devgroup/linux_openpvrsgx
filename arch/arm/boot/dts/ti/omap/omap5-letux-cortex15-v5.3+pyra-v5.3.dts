@@ -1,0 +1,25 @@
+/*
+ * Copyright (C) 2020 OpenPandora - http://www.pyra-handheld.com/
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+/* this version is for Pyra V5.3 with Letux Cortex 15 CPU board V5.3 */
+
+#include "omap5-letux-cortex15-v5.3.dts"
+#include "pyra-mainboard-v5.3.dtsi"
+#include "pyra-display.dtsi"
+
+/*
+ * display board shipped with V3 main boards
+ * has a different backlight converter TPS6116x
+ * therefore we need a different PWM frequency
+ * of 8300 Hz
+ */
+
+&backlight {
+	pwms = <&pwm9 0 (1000000000 / 8300) 0>;
+};
+

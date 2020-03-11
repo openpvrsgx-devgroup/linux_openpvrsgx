@@ -185,6 +185,7 @@ dtb-$(CONFIG_SOC_OMAP5) += \
 	omap5-letux-cortex15-v5.1.dtb omap5-letux-cortex15-v5.1+pyra-v5.1.0.dtb omap5-letux-cortex15-v5.1+pyra-v5.1.2.dtb omap5-letux-cortex15-v5.1+pyra-v5.2.dtb \
 	omap5-letux-cortex15-v5.1.dtb omap5-letux-cortex15-v5.1+pyra-v5.1.dtb omap5-letux-cortex15-v5.1+pyra-v5.1.2.dtb omap5-letux-cortex15-v5.1+pyra-v5.2.dtb \
 	omap5-letux-cortex15-v5.3.dtb omap5-letux-cortex15-v5.3+pyra-v5.1.2.dtb omap5-letux-cortex15-v5.3+pyra-v5.2.dtb \
+	omap5-letux-cortex15-v5.3+pyra-v5.3.dtb \
 	omap5-uevm+pyra4.dtb omap5-uevm+pyra4+lg.dtb omap5-uevm+pyra4+boe.dtb omap5-uevm+pyra4+succ.dtb omap5-uevm+pyra4+ssd+boe.dtb omap5-uevm+pyra4+ssd+succ.dtb \
 	omap5-pyra-brokenevm.dtb \
 	omap5-uevm-broken+pyra4.dtb \

@@ -2270,7 +2270,7 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVImportGEMKM(PVRSRV_PER_PROCESS_DATA	*psPerProc,
 	PVRSRV_ENV_PER_PROCESS_DATA *psEnvPerProc =
 			(PVRSRV_ENV_PER_PROCESS_DATA *)PVRSRVProcessPrivateData(psPerProc);
 	struct drm_gem_object *buf =
-			drm_gem_object_lookup(psEnvPerProc->dev, psEnvPerProc->file, bo);
+			drm_gem_object_lookup(psEnvPerProc->file, bo);
 
 	if (!buf)
 	{

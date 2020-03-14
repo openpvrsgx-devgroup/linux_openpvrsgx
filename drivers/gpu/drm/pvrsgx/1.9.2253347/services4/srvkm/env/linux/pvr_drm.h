@@ -42,6 +42,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if !defined(__PVR_DRM_H__)
 #define __PVR_DRM_H__
 
+#include <drm/drm_device.h>
+#include <linux/platform_device.h>
+
 #include "pvr_drm_shared.h"
 
 #if defined(SUPPORT_DRI_DRM)

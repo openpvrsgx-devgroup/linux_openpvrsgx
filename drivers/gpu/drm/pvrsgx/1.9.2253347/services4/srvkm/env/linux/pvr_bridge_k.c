@@ -57,7 +57,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "buffer_manager.h"
 
 #if defined(SUPPORT_DRI_DRM)
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0))
 #include <drm/drmP.h>
+#else
+#include <drm/drm_file.h>
+#endif
 #include "pvr_drm.h"
 #if defined(PVR_SECURE_DRM_AUTH_EXPORT)
 #include "env_perproc.h"

@@ -644,34 +644,6 @@ PVRSRV_ERROR EnableSystemClocks(SYS_DATA *psSysData)
 
 	if (!psSysSpecData->bSysClocksOneTimeInit)
 	{
-		struct clk *sgx_clk, *parent_clk;
-		int res;
-
-		sgx_clk = clk_get(&gpsPVRLDMDev->dev, "gpu_fck");
-		if (IS_ERR_OR_NULL(sgx_clk)) {
-			/* try another name that the sgx clock might be known as.. */
-			sgx_clk = clk_get(&gpsPVRLDMDev->dev, "sgx_clk_mux_ck");
-		}
-		if (IS_ERR_OR_NULL(sgx_clk)) {
-			PVR_DPF((PVR_DBG_ERROR, "EnableSGXClocks: could not get clock (%ld)", -PTR_ERR(sgx_clk)));
-			return PVRSRV_ERROR_UNABLE_TO_ENABLE_CLOCK;
-		}
-
-		parent_clk = clk_get(&gpsPVRLDMDev->dev, "dpll_per_m7x2_ck");
-		if (IS_ERR_OR_NULL(parent_clk)) {
-			PVR_DPF((PVR_DBG_ERROR, "EnableSGXClocks: could not get clock (%ld)", -PTR_ERR(parent_clk)));
-			clk_put(sgx_clk);
-			return PVRSRV_ERROR_UNABLE_TO_ENABLE_CLOCK;
-		}
-
-		res = clk_set_parent(sgx_clk, parent_clk);
-		if (IS_ERR_VALUE(res)) {
-			PVR_DPF((PVR_DBG_ERROR, "EnableSGXClocks: could not set clock (%d)", -res));
-			clk_put(sgx_clk);
-			clk_put(parent_clk);
-			return PVRSRV_ERROR_UNABLE_TO_ENABLE_CLOCK;
-		}
-
 		mutex_init(&psSysSpecData->sPowerLock);
 
 		atomic_set(&psSysSpecData->sSGXClocksEnabled, 0);

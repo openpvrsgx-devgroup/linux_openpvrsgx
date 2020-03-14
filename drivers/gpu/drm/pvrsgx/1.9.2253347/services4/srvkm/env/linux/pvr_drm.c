@@ -60,8 +60,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <drm/drm.h>
 
 #if defined(SUPPORT_DRI_DRM_EXTERNAL)
-#  include <omap_drm.h>
-#  include <omap_drv.h>
+#  include <drm/omap_drm.h>
 #endif
 
 #include "img_defs.h"

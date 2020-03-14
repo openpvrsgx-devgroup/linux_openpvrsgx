@@ -52,9 +52,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,22)) && (LINUX_VERSION_CODE < KERNEL_VERSION(3,2,0))
 #include <asm/system.h>
 #endif
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,19,0))
-#include <asm/set_memory.h>
-#else
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0))
 #include <asm/cacheflush.h>
 #endif
 #include <linux/mm.h>

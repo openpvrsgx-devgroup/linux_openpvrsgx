@@ -56,7 +56,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
-#include <plat/omap_device.h>
 
 #if defined(SYS_OMAP4_HAS_DVFS_FRAMEWORK)
 #include <linux/opp.h>

@@ -71,7 +71,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #define DEVICE_SGX_INTERRUPT		(1<<0)
 
-#define	SYS_SGX_DEV_NAME	"ingenic,jz4780-sgx"
+// #define	SYS_SGX_DEV_NAME	"ingenic,jz4780-sgx"
 
 /*****************************************************************************
  * system specific data structures

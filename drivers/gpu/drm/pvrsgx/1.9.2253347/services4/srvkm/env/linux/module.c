@@ -488,7 +488,7 @@ PVR_MOD_STATIC void PVRSRVDriverShutdown(LDM_DEV *pDevice)
 {
 	PVR_TRACE(("PVRSRVDriverShutdown(pDevice=%p)", pDevice));
 
-	LinuxLockMutex(&gsPMMutex);
+	LinuxLockMutexNested(&gsPMMutex, PVRSRV_LOCK_CLASS_POWER);
 
 	if (!bDriverIsShutdown && !bDriverIsSuspended)
 	{
@@ -553,7 +553,7 @@ PVR_MOD_STATIC int PVRSRVDriverSuspend(LDM_DEV *pDevice, pm_message_t state)
 #if !(defined(DEBUG) && defined(PVR_MANUAL_POWER_CONTROL) && !defined(SUPPORT_DRI_DRM))
 	PVR_TRACE(( "PVRSRVDriverSuspend(pDevice=%p)", pDevice));
 
-	LinuxLockMutex(&gsPMMutex);
+	LinuxLockMutexNested(&gsPMMutex, PVRSRV_LOCK_CLASS_POWER);
 
 	if (!bDriverIsSuspended && !bDriverIsShutdown)
 	{
@@ -609,7 +609,7 @@ PVR_MOD_STATIC int PVRSRVDriverResume(LDM_DEV *pDevice)
 #if !(defined(DEBUG) && defined(PVR_MANUAL_POWER_CONTROL) && !defined(SUPPORT_DRI_DRM))
 	PVR_TRACE(("PVRSRVDriverResume(pDevice=%p)", pDevice));
 
-	LinuxLockMutex(&gsPMMutex);
+	LinuxLockMutexNested(&gsPMMutex, PVRSRV_LOCK_CLASS_POWER);
 
 	if (bDriverIsSuspended && !bDriverIsShutdown)
 	{

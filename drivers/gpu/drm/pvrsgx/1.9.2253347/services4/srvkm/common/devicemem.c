@@ -2513,7 +2513,7 @@ ErrorExitPhase2:
 
 	if (buf)
 	{
-		drm_gem_object_unreference_unlocked(buf);
+		drm_gem_object_put_unlocked(buf);
 	}
 
 	return eError;

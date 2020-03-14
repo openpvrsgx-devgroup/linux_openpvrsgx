@@ -68,7 +68,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <asm/current.h>
 #endif
 #if defined(SUPPORT_DRI_DRM)
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0))
 #include <drm/drmP.h>
+#else
+#include <drm/drm_file.h>
+#endif
 #endif
 
 #include "services_headers.h"

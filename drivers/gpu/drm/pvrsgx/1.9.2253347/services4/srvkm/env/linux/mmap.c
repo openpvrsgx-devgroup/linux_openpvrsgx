@@ -47,8 +47,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 #endif
 
+#include <linux/platform_device.h>
 #include <linux/mm.h>
 #include <linux/module.h>
+#include <linux/pfn_t.h>
 #include <linux/vmalloc.h>
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0))
 #include <linux/wrapper.h>
@@ -88,8 +90,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if !defined(PVR_SECURE_HANDLES) && !defined (SUPPORT_SID_INTERFACE)
 #error "The mmap code requires PVR_SECURE_HANDLES"
 #endif
-
-#define SGX_DRM_MAPPER_ID	(0)
 
 /* WARNING:
  * The mmap code has its own mutex, to prevent a possible deadlock,
@@ -971,12 +971,21 @@ DoMapToUser(LinuxMemArea *psLinuxMemArea,
 #if defined(PVR_MAKE_ALL_PFNS_SPECIAL)
 		    if (bMixedMap)
 		    {
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,20,0))
+			result = vmf_insert_mixed(ps_vma, ulVMAPos, pfn_to_pfn_t(pfn));
+			if(result != 0)
+			{
+			    PVR_DPF((PVR_DBG_ERROR,"%s: Error - vmf_insert_mixed failed (%x)", __FUNCTION__, result));
+			    return IMG_FALSE;
+			}
+#else
 			result = vm_insert_mixed(ps_vma, ulVMAPos, pfn);
 	                if(result != 0)
 	                {
 	                    PVR_DPF((PVR_DBG_ERROR,"%s: Error - vm_insert_mixed failed (%d)", __FUNCTION__, result));
 	                    return IMG_FALSE;
 	                }
+#endif
 		    }
 		    else
 #endif
@@ -1078,7 +1087,7 @@ MMapVCloseNoLock(struct vm_area_struct* ps_vma, PKV_OFFSET_STRUCT psOffsetStruct
     }
 
     obj = ps_vma->vm_private_data;
-    drm_gem_object_unreference(obj);
+    drm_gem_object_put_unlocked(obj);
 
     ps_vma->vm_private_data = NULL;
 }
@@ -1216,7 +1225,7 @@ PVRMMap(struct file* pFile, struct vm_area_struct* ps_vma)
 
 #if !defined(SUPPORT_DRI_DRM_EXT)
         /* Pass unknown requests onto the DRM module */
-        return drm_mmap(pFile, ps_vma);
+	return drm_gem_mmap(pFile, ps_vma);
 #else
         /*
          * Indicate to caller that the request is not for us.
@@ -1362,7 +1371,7 @@ static void
 MMapVOpenExt(struct vm_area_struct* ps_vma)
 {
 	struct drm_gem_object *obj = ps_vma->vm_private_data;
-	void *priv = omap_gem_priv(obj, SGX_DRM_MAPPER_ID);
+	void *priv = omap_gem_priv(obj);
 	PKV_OFFSET_STRUCT psOffsetStruct =
 			FindOffsetStructByPID(priv, OSGetCurrentProcessIDKM());
 	if (WARN_ON(!psOffsetStruct))
@@ -1376,7 +1385,7 @@ static void
 MMapVCloseExt(struct vm_area_struct* ps_vma)
 {
 	struct drm_gem_object *obj = ps_vma->vm_private_data;
-	void *priv = omap_gem_priv(obj, SGX_DRM_MAPPER_ID);
+	void *priv = omap_gem_priv(obj);
 	PKV_OFFSET_STRUCT psOffsetStruct =
 			FindOffsetStructByPID(priv, OSGetCurrentProcessIDKM());
 	if (WARN_ON(!psOffsetStruct))
@@ -1430,7 +1439,7 @@ PVRMMapExt(struct file* pFile, struct vm_area_struct* ps_vma)
 
 	psOffsetStruct->ui32UserVAddr = ps_vma->vm_start;
 
-	omap_gem_set_priv(obj, SGX_DRM_MAPPER_ID, psOffsetStruct->psLinuxMemArea);
+	omap_gem_set_priv(obj, psOffsetStruct->psLinuxMemArea);
 
 
     /* Compute the flush region (if necessary) inside the mmap mutex */

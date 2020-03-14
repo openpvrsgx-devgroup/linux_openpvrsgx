@@ -1771,7 +1771,7 @@ LinuxMemAreaStructAlloc(IMG_VOID)
 }
 
 #if defined(SUPPORT_DRI_DRM_EXTERNAL)
-#  include <omap_drv.h>
+#  include <drm/omap_drm.h>
 #endif /* SUPPORT_DRI_DRM_EXTERNAL */
 
 

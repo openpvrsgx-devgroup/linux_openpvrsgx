@@ -60,7 +60,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 
 #if defined(SUPPORT_DRI_DRM_EXTERNAL)
-#  include <omap_drv.h>
+#  include <drm/omap_drm.h>
 #  include "perproc.h"
 #  include "env_perproc.h"
 extern int pvr_mapper_id;

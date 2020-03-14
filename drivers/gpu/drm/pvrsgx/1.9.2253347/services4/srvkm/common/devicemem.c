@@ -1919,7 +1919,7 @@ static void async_unmap(void *arg)
 	struct async_unmap_data *data = arg;
 	PVRSRV_KERNEL_MEM_INFO *psMemInfo = data->psMemInfo;
 
-	LinuxLockMutex(&gPVRSRVLock);
+	LinuxLockMutexNested(&gPVRSRVLock, PVRSRV_LOCK_CLASS_BRIDGE);
 	ResManFreeResByPtr(psMemInfo->sMemBlk.hResItem, CLEANUP_WITH_POLL);
 	/* decrement the refcnt on the per-proc: */
 	PVRSRVPerProcessDataDisconnect(data->ui32PID);
@@ -1969,7 +1969,7 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVUnmapDeviceMemoryKM (PVRSRV_KERNEL_MEM_INFO *psM
 		LinuxUnLockMutex(&gPVRSRVLock);
 		ret = omap_gem_op_async(buf, OMAP_GEM_READ|OMAP_GEM_WRITE,
 				async_unmap, data);
-		LinuxLockMutex(&gPVRSRVLock);
+		LinuxLockMutexNested(&gPVRSRVLock, PVRSRV_LOCK_CLASS_BRIDGE);
 		if (ret == 0)
 			return PVRSRV_OK;
 		/* otherwise fallthru and delete immediately! */

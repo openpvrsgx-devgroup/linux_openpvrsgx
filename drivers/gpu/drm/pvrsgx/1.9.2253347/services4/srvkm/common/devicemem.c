@@ -1628,15 +1628,8 @@ static PVRSRV_ERROR UnwrapExtMemoryCallBack(IMG_PVOID  pvParam,
 	PVRSRV_KERNEL_MEM_INFO	*psMemInfo = (PVRSRV_KERNEL_MEM_INFO *)pvParam;
 #if defined(SUPPORT_DRI_DRM_EXTERNAL)
 	IMG_BOOL bPhysContig = (IMG_BOOL)ui32Param;
-	struct drm_gem_object *buf =
-			BM_GetGEM(psMemInfo->sMemBlk.hBuffer);
-#endif
-	PVRSRV_ERROR err = FreeMemCallBackCommon(psMemInfo, ui32Param,
-			PVRSRV_FREE_CALLBACK_ORIGIN_ALLOCATOR);
-	
-	PVR_UNREFERENCED_PARAMETER(bDummy);
+	struct drm_gem_object *buf = BM_GetGEM(psMemInfo->sMemBlk.hBuffer);
 
-#if defined(SUPPORT_DRI_DRM_EXTERNAL)
 	if (buf) {
 		if (omap_gem_flags(buf) & OMAP_BO_TILED_MASK) {
 			omap_gem_put_paddr(buf);
@@ -1650,7 +1643,10 @@ static PVRSRV_ERROR UnwrapExtMemoryCallBack(IMG_PVOID  pvParam,
 	}
 #endif /* SUPPORT_DRI_DRM_EXTERNAL */
 
-	return err;
+	PVR_UNREFERENCED_PARAMETER(bDummy);
+
+	return  FreeMemCallBackCommon(psMemInfo, ui32Param,
+			PVRSRV_FREE_CALLBACK_ORIGIN_ALLOCATOR);
 }
 
 

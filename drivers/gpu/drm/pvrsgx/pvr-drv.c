@@ -124,24 +124,10 @@ struct device *PVRLDMGetDevice(void)
 	return gpsPVRDRMDev->dev;
 }
 
-static int pvr_drm_release(struct inode *inode, struct file *filp)
-{
-	struct drm_file *file_priv = filp->private_data;
-	int error;
-
-	error = drm_release(inode, filp);
-	if (error)
-		return error;
-
-	PVRSRVRelease(file_priv->driver_priv);
-
-	return 0;
-}
-
 static const struct file_operations pvr_fops = {
 	.owner = THIS_MODULE,
 	.open = drm_open,
-	.release = pvr_drm_release,
+	.release = drm_release,
 	.unlocked_ioctl = drm_ioctl,
 	.compat_ioctl = drm_compat_ioctl,
 	.mmap = PVRMMap,

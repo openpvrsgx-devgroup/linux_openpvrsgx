@@ -113,12 +113,11 @@ typedef int (*cyttsp5_platform_read) (struct device *dev, void *buf, int size);
 #define CY_TOUCH_SETTINGS_MAX 32
 
 struct cyttsp5_core_platform_data {
-	int irq_gpio;
-	int rst_gpio;
 	int level_irq_udelay;
 	u16 hid_desc_register;
 	u16 vendor_id;
 	u16 product_id;
+	struct gpio_desc * rst_gpio;
 
 	int (*xres)(struct cyttsp5_core_platform_data *pdata,
 		struct device *dev);

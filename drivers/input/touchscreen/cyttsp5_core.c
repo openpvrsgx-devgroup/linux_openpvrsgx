@@ -3634,13 +3634,6 @@ static int cyttsp5_core_sleep_(struct cyttsp5_core_data *cd)
 	int rc=0;
 	extern int cyttsp5_mt_check_busy (void);
 
-	
-#ifdef CONFIG_SOC_IMX6SL
-	if(gpio_get_value(cd->cpdata->irq_gpio)==0 || 0 > cyttsp5_mt_check_busy())
-	{// press button (device information)  at least 10 seconds , the return value of gpio_get_value() will be 0
-		return -1 ;
-	}
-#endif
 	mutex_lock(&cd->system_lock);
 	if (cd->sleep_state == SS_SLEEP_OFF) {
 		cd->sleep_state = SS_SLEEPING;
@@ -4735,10 +4728,12 @@ static int cyttsp5_core_rt_resume(struct device *dev)
 static int cyttsp5_core_suspend_noirq(struct device *dev)
 {
 	struct cyttsp5_core_data *cd = dev_get_drvdata(dev);
+#if 0
 	if(gpio_get_value(cd->cpdata->irq_gpio)==0)
 	{// press button (device information)  at least 10 seconds , the return value of gpio_get_value() will be 0
 		return -1 ;
 	}
+#endif
 
 	return 0;
 }
@@ -5289,11 +5284,11 @@ static ssize_t cyttsp5_platform_data_show(struct device *dev,
 		"%s: %d\n"
 		"%s: %d\n"
 		"%s: %d\n"
-		"%s: %d\n"
-		"%s: %d\n"
 		"%s: %d\n",
+/*
 		"Interrupt GPIO", pdata->core_pdata->irq_gpio,
 		"Reset GPIO", pdata->core_pdata->rst_gpio,
+		*/
 		"Level trigger delay (us)", pdata->core_pdata->level_irq_udelay,
 		"HID descriptor register", pdata->core_pdata->hid_desc_register,
 		"Vendor ID", pdata->core_pdata->vendor_id,
@@ -5745,11 +5740,6 @@ static int cyttsp5_setup_irq_gpio(struct cyttsp5_core_data *cd)
 	unsigned long irq_flags;
 	int rc;
 
-	/* Initialize IRQ */
-	cd->irq = gpio_to_irq(cd->cpdata->irq_gpio);
-	if (cd->irq < 0)
-		return -EINVAL;
-
 	cd->irq_enabled = true;
 
 	dev_dbg(dev, "%s: initialize threaded irq=%d\n", __func__, cd->irq);
@@ -5803,6 +5793,7 @@ int cyttsp5_probe(const struct cyttsp5_bus_ops *ops, struct device *dev,
 	cd->pdata = pdata;
 	cd->cpdata = pdata->core_pdata;
 	cd->bus_ops = ops;
+	cd->irq = irq;
 	scnprintf(cd->core_id, 20, "%s%d", CYTTSP5_CORE_NAME, core_number++);
 
 	/* Initialize mutexes and spinlocks */

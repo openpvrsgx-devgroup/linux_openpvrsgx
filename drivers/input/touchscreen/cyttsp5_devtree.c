@@ -555,24 +555,10 @@ static struct cyttsp5_core_platform_data *create_and_get_core_pdata(
 		goto fail;
 	}
 
-	/* Required fields */
-	rc = of_property_read_u32(core_node, "cy,irq_gpio", &value);
-	if (rc)
-		goto fail_free;
-	pdata->irq_gpio = value;
-
 	rc = of_property_read_u32(core_node, "cy,hid_desc_register", &value);
 	if (rc)
 		goto fail_free;
 	pdata->hid_desc_register = value;
-
-	/* Optional fields */
-	/* rst_gpio is optional since a platform may use
-	 * power cycling instead of using the XRES pin
-	 */
-	rc = of_property_read_u32(core_node, "cy,rst_gpio", &value);
-	if (!rc)
-		pdata->rst_gpio = value;
 
 	rc = of_property_read_u32(core_node, "cy,level_irq_udelay", &value);
 	if (!rc)
@@ -611,10 +597,9 @@ static struct cyttsp5_core_platform_data *create_and_get_core_pdata(
 				touch_setting_names[i]);
 	}
 
-	pr_debug("%s: irq_gpio:%d rst_gpio:%d\n"
+	pr_debug("%s: \n"
 		"hid_desc_register:%d level_irq_udelay:%d vendor_id:%d product_id:%d\n"
 		"flags:%d easy_wakeup_gesture:%d\n", __func__,
-		pdata->irq_gpio, pdata->rst_gpio,
 		pdata->hid_desc_register,
 		pdata->level_irq_udelay, pdata->vendor_id, pdata->product_id,
 		pdata->flags, pdata->easy_wakeup_gesture);
@@ -623,7 +608,6 @@ static struct cyttsp5_core_platform_data *create_and_get_core_pdata(
 	pdata->init = cyttsp5_init;
 	pdata->power = cyttsp5_power;
 	pdata->detect = cyttsp5_detect;
-	pdata->irq_stat = cyttsp5_irq_stat;
 
 	return pdata;
 
@@ -651,6 +635,7 @@ int cyttsp5_devtree_create_and_get_pdata(struct device *adap_dev)
 	struct cyttsp5_platform_data *pdata;
 	struct device_node *core_node, *dev_node, *dev_node_fail;
 	enum cyttsp5_device_type type;
+	struct gpio_desc *rst_gpio;
 	int count = 0;
 	int rc = 0;
 
@@ -662,6 +647,18 @@ int cyttsp5_devtree_create_and_get_pdata(struct device *adap_dev)
 		return -ENOMEM;
 
 	adap_dev->platform_data = pdata;
+	/* Optional fields */
+	/* rst_gpio is optional since a platform may use
+	 * power cycling instead of using the XRES pin
+	 */
+	rst_gpio = devm_gpiod_get_optional(adap_dev, "reset", GPIOD_OUT_HIGH);
+	if (IS_ERR(rst_gpio)) {
+		if (PTR_ERR(rst_gpio) != -EPROBE_DEFER)
+			dev_err(adap_dev, "failed to get gpio: %d\n",
+				PTR_ERR(rst_gpio));
+		return PTR_ERR(rst_gpio);
+	}
+
 	set_pdata_ptr(pdata);
 
 	/* There should be only one core node */
@@ -677,6 +674,8 @@ int cyttsp5_devtree_create_and_get_pdata(struct device *adap_dev)
 			rc = PTR_ERR(pdata->core_pdata);
 			break;
 		}
+
+		pdata->core_pdata->rst_gpio = rst_gpio;
 
 		/* Increment reference count */
 		of_node_get(core_node);

@@ -4539,7 +4539,8 @@ static void pvr_dma_cache_wback_inv(const void *pvStart, const void *pvEnd)
 {
 	size_t uLength = pvr_dma_range_len(pvStart, pvEnd);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)
-	dma_cache_sync(NULL, (void *)pvStart, uLength, DMA_BIDIRECTIONAL);
+	struct device *dev = PVRLDMGetDevice();
+	dma_cache_sync(dev, (void *)pvStart, uLength, DMA_BIDIRECTIONAL);
 #else
 	dma_cache_wback_inv((unsigned long)pvStart, uLength);
 #endif
@@ -4549,7 +4550,8 @@ static void pvr_dma_cache_wback(const void *pvStart, const void *pvEnd)
 {
 	size_t uLength = pvr_dma_range_len(pvStart, pvEnd);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)
-	dma_cache_sync(NULL, (void *)pvStart, uLength, DMA_TO_DEVICE);
+	struct device *dev = PVRLDMGetDevice();
+	dma_cache_sync(dev, (void *)pvStart, uLength, DMA_TO_DEVICE);
 #else
 	dma_cache_wback((unsigned long)pvStart, uLength);
 #endif
@@ -4559,7 +4561,8 @@ static void pvr_dma_cache_inv(const void *pvStart, const void *pvEnd)
 {
 	size_t uLength = pvr_dma_range_len(pvStart, pvEnd);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)
-	dma_cache_sync(NULL, (void *)pvStart, uLength, DMA_FROM_DEVICE);
+	struct device *dev = PVRLDMGetDevice();
+	dma_cache_sync(dev, (void *)pvStart, uLength, DMA_FROM_DEVICE);
 #else
 	dma_cache_inv((unsigned long)pvStart, uLength);
 #endif

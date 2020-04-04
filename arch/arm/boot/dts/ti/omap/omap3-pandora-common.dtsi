@@ -437,7 +437,7 @@
 
 		twl_power: power {
 			compatible = "ti,twl4030-power-reset";
-			ti,use_poweroff;
+			ti,system-power-controller;
 		};
 
 		twl_audio: audio {

@@ -257,8 +257,14 @@ int iio_device_register_inputbridge(struct iio_dev *indio_dev)
 
 void iio_device_unregister_inputbridge(struct iio_dev *indio_dev)
 {
-	struct iio_input_map *map = iio_device_get_drvdata(indio_dev);
-	struct input_dev *input = map->poll_dev->input;
+	struct iio_input_map *map = indio_dev->input_mapping;
+	struct input_dev *input;
+
+	if (!map)
+		return;
+	input = map->poll_dev->input;
+	if (!input)
+		return;
 
 	input_unregister_polled_device(map->poll_dev);
 	kfree(input->name);

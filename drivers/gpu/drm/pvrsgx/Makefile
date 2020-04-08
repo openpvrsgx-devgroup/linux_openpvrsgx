@@ -137,14 +137,13 @@ endif # CONFIG_SGX_POULSBO
 ifneq ($(CONFIG_SGX_JZ4780),)
 	@$(kecho) "  MAKE    $(obj): jz4780"
 # see https://elinux.org/CI20-SGX_kernel_module
-# assume it is an sgx540-120
-	$(Q)SOC_VENDOR=ingenic SOC_FAMILY=sgx_jz4780 SOC=jz4780 SGX=sgx540 SGX_FLAG=SGX540 SGX_REV=120 $(MAKE) TARGET_TYPE=$(CONFIG_SGX_JZ4780) $(build)=$(SOURCE)
+	$(Q)SOC_VENDOR=ingenic SOC_FAMILY=sgx_jz4780 SOC=jz4780 SGX=sgx540 SGX_FLAG=SGX540 SGX_REV=130 $(MAKE) TARGET_TYPE=$(CONFIG_SGX_JZ4780) $(build)=$(SOURCE)
 	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
 endif # CONFIG_SGX_JZ4780
 ifneq ($(CONFIG_SGX_SUNXI),)
 	@$(kecho) "  MAKE    $(obj): sunxi"
 # Fix versions
-	$(Q)SOC_VENDOR=allwinner SOC_FAMILY=sunxi SOC=sun8i-a83t SGX=sgx544 SGX_FLAG=SGX544 SGX_REV=116 $(MAKE) TARGET_TYPE=$(CONFIG_SGX_SUNXI) $(build)=$(SOURCE)
+	$(Q)SOC_VENDOR=allwinner SOC_FAMILY=sunxi SOC=sun8i-a83t SGX=sgx544 SGX_FLAG=SGX544 SGX_REV=115 $(MAKE) TARGET_TYPE=$(CONFIG_SGX_SUNXI) $(build)=$(SOURCE)
 	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
 endif # CONFIG_SGX_SUNXI
 # there is also SOC_FAMILY=sgx_pc_i686_tc3 whatever this is

@@ -1,11 +1,17 @@
 #!/bin/bash
-echo "*** SGX Register Dump ***"
+
+function machine {
+	MACHINE="$([ -r /sys/devices/soc0/machine ] && tr -d '\0' </sys/devices/soc0/machine)"
+	[ "$MACHINE" ] || MACHINE=$(cat /proc/device-tree/model 2>/dev/null)
+	[ "$MACHINE" ] || MACHINE=$(fgrep "system type" /proc/cpuinfo)
+	echo $MACHINE
+}
 
 function registers {
 # check which SoC we are running on and
 # provide list of registers (addr + name)
 
-case "$(tr -d '\0' </sys/devices/soc0/machine)" in
+case "$(machine)" in
 
 AM335X )
 
@@ -70,7 +76,6 @@ END
 ;;
 
 OMAP3630/DM3730 )
-
 echo on > /sys/bus/platform/devices/5000fe00.target-module/power/control
 
 # see DM37x TRM section 8.4 SGX Register Manual
@@ -174,15 +179,35 @@ cat <<END
 END
 ;;
 
+*JZ4780* )
+cat <<END
+13040020	SGX_CORE_VERSION
+13040024	SGX_CORE_REVISION
+END
+;;
+
 *)
-echo "unknown machine $(cat /sys/devices/soc0/machine)" >&2
+echo "unknown machine $MACHINE" >&2
 exit 1
 ;;
 
 esac
 }
 
-registers | while read ADDR REGISTER COMMENT
+case "$(machine)" in
+AM335X )		M=am335x;;
+OMAP3430/3530 )		M=omap34xx/35xx;;
+OMAP3630/DM3730 )	M=am/dm37xx;;
+OMAP4* )		M=omap4;;
+OMAP5* )		M=omap5;;
+*JZ4780* )		M=jz4780;;
+* )			M=unknown;;
+esac
+
+echo "*** SGX Register Dump on $M ***"
+
+registers | (
+while read ADDR REGISTER COMMENT
 do
 	case "$ADDR" in
 	'#'* )	;;
@@ -191,6 +216,33 @@ do
 		VAL=$(devmem2 $ADDR w | fgrep 'Value at address' | cut -d ' ' -f 6)
 		VAL=$(printf %08x $[$VAL])
 		echo $ADDR $VAL $REGISTER $COMMENT
+		[ "$REGISTER" = SGX_CORE_VERSION ] && VERSION="$VAL"
+		[ "$REGISTER" = SGX_CORE_REVISION ] && REVISION="$VAL"
 		;;
 	esac
 done
+
+# echo $VERSION $REVISION
+
+if [ "$VERSION" -a "$REVISION" ]
+then
+# echo "Version = $VERSION"
+# echo "Revision = $REVISION"
+	REV=$(echo "$REVISION" | sed 's/0*\(.\)0\(.\)0\(.\)/\1\2\3/')
+# genauer Code nicht bekannt...
+	case "$VERSION" in
+		01110000 ) SGX=520;;
+		01120000 ) SGX=530;;
+		01130000 ) SGX=535;;
+		01140000 ) SGX=540;;
+		01150000 ) SGX=544;;
+		01160000 ) SGX=545;;
+	esac
+	if [ "$SGX" ]
+	then
+		echo "pvr sgx$SGX-$REV found inside $M";
+	else
+		echo "no sgx found ($VERSION $REVISION)";
+	fi
+fi
+)

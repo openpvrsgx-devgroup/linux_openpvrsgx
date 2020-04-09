@@ -135,8 +135,8 @@ void PVRSRVDriverShutdown(struct platform_device *pdev);
 #define DRA7_SGX544_116(comp, dat)
 #endif
 
-#ifdef ingenic_jz4780_sgx540_120
-#define JZ4780_SGX540_120(comp, dat)	\
+#ifdef ingenic_jz4780_sgx540_130
+#define JZ4780_SGX540_130(comp, dat)	\
 	{				\
 		.compatible = comp,	\
 		.data = dat,		\

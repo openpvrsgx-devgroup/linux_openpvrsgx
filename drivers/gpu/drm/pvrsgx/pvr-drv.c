@@ -188,6 +188,8 @@ static const struct dev_pm_ops pvr_pm_ops = {
 			    NULL)
 };
 
+/* revisit: should we name for different capabilities? pvr_default, pvr_omap4, pvr_smp? */
+
 static const struct pvr_capabilities __maybe_unused pvr_omap3 = {
 };
 
@@ -207,17 +209,68 @@ static const struct pvr_capabilities __maybe_unused pvr_jz4780 = {
 	.smp = true,
 };
 
+static const struct pvr_capabilities __maybe_unused pvr_s5pv210 = {
+	.smp = true,
+};
+
+static const struct pvr_capabilities __maybe_unused pvr_sun8i_a83t = {
+	.smp = true,
+};
+
+/*
+ * The #ifdef are currently needed to prevent the multiple instances of
+ * the driver from trying to probe.
+ */
+
 static const struct of_device_id pvr_ids[] = {
-	OMAP3_SGX530_121("ti,omap3-sgx530-121", &pvr_omap3)
-	OMAP3630_SGX530_125("ti,omap3-sgx530-125", &pvr_omap3)
-	AM3517_SGX530_125("ti,am3517-sgx530-125", &pvr_omap3)
-	AM335X_SGX530_125("ti,am3352-sgx530-125", &pvr_omap3)
-	AM4_SGX530_125("ti,am4-sgx530-125", &pvr_omap3)
-	OMAP4_SGX540_120("ti,omap4-sgx540-120", &pvr_omap4)
-	OMAP4470_SGX544_112("ti,omap4-sgx544-112", &pvr_omap4470)
-	OMAP5_SGX544_116("ti,omap5-sgx544-116", &pvr_omap5)
-	DRA7_SGX544_116("ti,dra7-sgx544-116", &pvr_omap5)
-	JZ4780_SGX540_130("ingenic,jz4780-sgx540-130", &pvr_jz4780)
+#ifdef ti_omap3_sgx530_121
+	{ .compatible = "ti,omap3-sgx530-121", .data =  &pvr_omap3, },
+#endif
+
+#ifdef ti_omap3630_sgx530_125
+	{ .compatible = "ti,omap3-sgx530-125", .data =  &pvr_omap3, },
+#endif
+
+#ifdef ti_am3517_sgx530_125
+	{ .compatible = "ti,am3517-sgx530-125", .data =  &pvr_omap3, },
+#endif
+
+#ifdef ti_am3352_sgx530_125
+	{ .compatible = "ti,am3352-sgx530-125", .data =  &pvr_omap3, },
+#endif
+
+#ifdef ti_am4_sgx530_125
+	{ .compatible = "ti,am4-sgx530-125", .data =  &pvr_omap3, },
+#endif
+
+#ifdef ti_omap4_sgx540_120
+	{ .compatible = "ti,omap4-sgx540-120", .data =  &pvr_omap4, },
+#endif
+
+#ifdef ti_omap4470_sgx544_112
+	{ .compatible = "ti,omap4-sgx544-112", .data =  &pvr_omap4470, },
+#endif
+
+#ifdef ti_omap5_sgx544_116
+	{ .compatible = "ti,omap5-sgx544-116", .data =  &pvr_omap5, },
+#endif
+
+#ifdef ti_dra7_sgx544_116
+	{ .compatible = "ti,dra7-sgx544-116", .data =  &pvr_omap5, },
+#endif
+
+#ifdef ingenic_jz4780_sgx540_130
+	{ .compatible = "ingenic,jz4780-sgx540-130", .data =  &pvr_jz4780, },
+#endif
+
+#ifdef samsung_s5pv210_sgx540_120
+	{ .compatible = "samsung,s5pv210-sgx540-120", .data =  &pvr_s5pv210, },
+#endif
+
+#ifdef allwinner_sun8i_a83t_sgx544_115
+	{ .compatible = "allwinner,sun8i-a83t-sgx544-115", .data =  &pvr_sun8i_a83t, },
+#endif
+
 	{ /* sentinel */ },
 };
 MODULE_DEVICE_TABLE(of, pvr_ids);

@@ -1202,6 +1202,17 @@
 			nvmem-cell-names = "calibration";
 			#thermal-sensor-cells = <1>;
 		};
+
+		gpu: gpu@1c400000 {
+			compatible = "allwinner,sun8i-a83t-sgx544-115",
+				     "img,sgx544-115", "img,sgx544";
+			reg = <0x01c40000 0x10000>;
+			/*
+			 * This node is currently a placeholder for the gpu.
+			 * This will be completed when a full demonstration
+			 * of the openpvrsgx driver is available for this board.
+			 */
+		};
 	};
 
 	thermal-zones {

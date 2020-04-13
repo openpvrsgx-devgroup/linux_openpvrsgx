@@ -140,6 +140,14 @@ struct snd_pcm_substream *
 /* update audio routing between PCMs and any DAI links */
 int snd_soc_dpcm_runtime_update(struct snd_soc_card *card);
 
+/* get the BE runtime state */
+enum snd_soc_dpcm_state
+	snd_soc_dpcm_be_get_state(struct snd_soc_pcm_runtime *be, int stream);
+
+/* set the BE runtime state */
+void snd_soc_dpcm_be_set_state(struct snd_soc_pcm_runtime *be, int stream,
+	enum snd_soc_dpcm_state state);
+
 #ifdef CONFIG_DEBUG_FS
 void soc_dpcm_debugfs_add(struct snd_soc_pcm_runtime *rtd);
 #else

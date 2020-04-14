@@ -89,10 +89,16 @@ then # summary only
 fi
 
 CURRENTBRANCH=$1
-[ "$1" ] || CURRENTBRANCH=$(git rev-parse --abbrev-ref HEAD)
+CURRENTLINUS=$2
 
-CURRENTLINUS=v$(make kernelversion)
-CURRENTLINUS=$(echo "$CURRENTLINUS" | sed 's/\([0-9]*\.[0-9]*\)\.0/\1/')	# convert e.g. 4.18.0 to v4.18
+if ! [ "$1" ]
+then
+# git tag --points-at HEAD?
+	KV="$(make kernelversion | sed 's/\([0-9]*\.[0-9]*\)\.0/\1/')"
+	CURRENTBRANCH=letux-$KV
+	CURRENTLINUS=v$KV
+# echo $KV $CURRENTBRANCH $CURRENTLINUS
+fi
 
 COUNT=0
 
@@ -112,12 +118,14 @@ do
 			.* ) continue;;
 			Documentation/devicetree/* ) GROUP="Documentation changes by being ahead"; CNT=no;;
 			Letux/* | GTA04/* ) GROUP="Letux specific user space kernel support";CNT=no;;
-			arch/arm/boot/dts/* | arch/mips/boot/dts/* ) GROUP="Letux specific Device Tree definitions";CNT=yes;;
-			arch/arm/configs/* | arch/mips/configs/* ) GROUP="Letux specific kernel config";CNT=no;;
-			drivers/gpu/Makefile | drivers/gpu/pvr/* ) GROUP="PVR extensions";CNT=no;;
+			arch/*/boot/dts/* ) GROUP="Letux specific Device Tree definitions";CNT=yes;;
+			arch/*/configs/* ) GROUP="Letux specific configs";CNT=no;;
+			drivers/gpu/Kconfig | drivers/gpu/Makefile | drivers/gpu/pvr/* ) GROUP="PVR extensions";CNT=no;;
+			drivers/gpu/drm/Kconfig | drivers/gpu/drm/Makefile | drivers/gpu/drm/pvrsgx/* ) GROUP="PVR DRM extensions";CNT=no;;
 			drivers/video/omap2/* ) GROUP="Letux specific Panel drivers";CNT=yes;;
-			scripts/* ) GROUP="Make it compile on Darwin gcc";CNT=no;;
-			sound/soc/* ) GROUP="Letux for ALSA Sound";CNT=yes;;
+			scripts/sortextable.c ) GROUP="Make it compile on Darwin gcc";CNT=no;;
+			drivers/staging/* ) GROUP="Staging by others";CNT=no;;
+			sound/soc/* ) GROUP="ALSA Sound";CNT=yes;;
 			* ) GROUP="Other";CNT=yes;;
 		esac
 		if [ "$GROUP" != "$PREVGROUP" ]
@@ -127,7 +135,7 @@ do
 				if [ "$CNT" = yes ]
 				then
 					echo "***"
-					echo $GROUP -- work on upstreaming
+					echo $GROUP -- try upstreaming
 					echo "***"
 				elif ! [ "$UPSTREAMONLY" ]
 				then
@@ -153,7 +161,7 @@ do
 		fi
 	else
 		[ "$SUMMARY" ] || echo $COUNT $FILE $BAR $CHANGES $PLUSMINUS
-		echo "Letux $CURRENTBRANCH is away from Linus/$CURRENTLINUS by $COUNT files with differences to be upstreamed"
+		echo "$CURRENTBRANCH is away from $CURRENTLINUS by $COUNT files with differences to be potentially upstreamed"
 		# " 372 files changed, 139542 insertions(+), 405 deletions(-)"
 	fi
 done

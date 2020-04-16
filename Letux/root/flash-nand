@@ -269,7 +269,7 @@ do
 
 			UIMAGE="/boot/uImage"	# the uImage on the SD card
 			# we do not use /sys/firmware/fdt because that is "cooked" by booting
-			DTB="$(fw_printenv -n fdtfile)"	# hardware dependent device tree blob (if it exists)
+			DTB="$(fw_printenv -n fdtfile | fgrep -v 'Environment OK, copy 0')"	# hardware dependent device tree blob (if it exists)
 
 if false
 then

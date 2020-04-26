@@ -1,5 +1,5 @@
 #
-# Linux/mips 5.7.0-rc2 Kernel Configuration
+# Linux/mips 5.7.0-rc3 Kernel Configuration
 #
 
 #
@@ -3645,12 +3645,11 @@ CONFIG_SYNC_FILE=y
 # CONFIG_UIO is not set
 # CONFIG_VIRT_DRIVERS is not set
 CONFIG_VIRTIO_MENU=y
-# CONFIG_VIRTIO_VDPA is not set
 # CONFIG_VIRTIO_MMIO is not set
-# CONFIG_VDPA_MENU is not set
+# CONFIG_VDPA is not set
+CONFIG_VHOST_DPN=y
 CONFIG_VHOST_MENU=y
 # CONFIG_VHOST_NET is not set
-# CONFIG_VHOST_VDPA is not set
 # CONFIG_VHOST_CROSS_ENDIAN_LEGACY is not set
 
 #

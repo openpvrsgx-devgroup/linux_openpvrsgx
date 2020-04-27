@@ -65,9 +65,6 @@ struct aess_port {
 
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *root;
-	struct dentry *debugfs_lstate;
-	struct dentry *debugfs_lphy;
-	struct dentry *debugfs_lusers;
 #endif
 };
 
@@ -317,12 +314,12 @@ int omap_aess_port_open(struct omap_aess *aess, int logical_id)
 #ifdef CONFIG_DEBUG_FS
 	port->root = debugfs_create_dir(lport_name[logical_id],
 					aess->debugfs_ports_root);
-	port->debugfs_lstate = debugfs_create_u32("state", 0644,
-						  port->root, &port->state);
-	port->debugfs_lphy = debugfs_create_u32("phy", 0644,
-						port->root, &port->physical_id);
-	port->debugfs_lusers = debugfs_create_u32("users", 0644,
-						  port->root, &port->users);
+	debugfs_create_u32("state", 0644,
+			    port->root, &port->state);
+	debugfs_create_u32("phy", 0644,
+			    port->root, &port->physical_id);
+	debugfs_create_u32("users", 0644,
+			    port->root, &port->users);
 #endif
 
 	pr_debug("opened port %s\n", lport_name[logical_id]);

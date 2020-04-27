@@ -72,15 +72,8 @@ struct omap_aess_debug {
 
 	/* debugfs */
 	struct dentry *test_root;
-	struct dentry *d_fmt1;
-	struct dentry *d_fmt2;
-	struct dentry *d_fmt3;
-	struct dentry *d_size;
 	struct dentry *d_data;
-	struct dentry *d_circ;
-	struct dentry *d_elem_bytes;
 
-	struct dentry *d_opp;
 	struct dentry *d_cmem;
 	struct dentry *d_pmem;
 	struct dentry *d_smem;
@@ -534,36 +527,23 @@ void aess_init_debugfs(struct omap_aess *aess)
 	}
 
 	/* Test related files */
-	debug->d_fmt1 = debugfs_create_u32("format1", 0644, debug->test_root,
+	debugfs_create_u32("format1", 0644, debug->test_root,
 					    &debug->format1);
-	if (!debug->d_fmt1)
-		aess_debugfs_failure(aess, "format1");
-
-	debug->d_fmt2 = debugfs_create_u32("format2", 0644, debug->test_root,
+	debugfs_create_u32("format2", 0644, debug->test_root,
 					    &debug->format2);
-	if (!debug->d_fmt2)
-		aess_debugfs_failure(aess, "format2");
 
-	debug->d_fmt3 = debugfs_create_u32("format3", 0644, debug->test_root,
+	debugfs_create_u32("format3", 0644, debug->test_root,
 					    &debug->format3);
-	if (!debug->d_fmt3)
-		aess_debugfs_failure(aess, "format3");
 
-	debug->d_elem_bytes = debugfs_create_u32("element_bytes", 0604,
+	debugfs_create_u32("element_bytes", 0604,
 						 debug->test_root,
 						 &debug->elem_bytes);
-	if (!debug->d_elem_bytes)
-		aess_debugfs_failure(aess, "element size");
 
-	debug->d_size = debugfs_create_u32("msecs", 0644, debug->test_root,
+	debugfs_create_u32("msecs", 0644, debug->test_root,
 					   &debug->buffer_msecs);
-	if (!debug->d_size)
-		aess_debugfs_failure(aess, "buffer size");
 
-	debug->d_circ = debugfs_create_u32("circular", 0644, debug->test_root,
+	debugfs_create_u32("circular", 0644, debug->test_root,
 					    &debug->circular);
-	if (!debug->d_size)
-		aess_debugfs_failure(aess, "circular mode");
 
 	debug->d_data = debugfs_create_file("_data", 0644, debug->test_root,
 					    aess, &omap_aess_fops);
@@ -571,10 +551,8 @@ void aess_init_debugfs(struct omap_aess *aess)
 		aess_debugfs_failure(aess, "_data");
 
 	/* AESS information */
-	debug->d_opp = debugfs_create_u32("opp_level", 0604, aess->debugfs_root,
+	debugfs_create_u32("opp_level", 0604, aess->debugfs_root,
 					  &aess->opp.level);
-	if (!debug->d_opp)
-		aess_debugfs_failure(aess, "OPP");
 
 	debug->d_pmem = debugfs_create_file("pmem", 0644, aess->debugfs_root,
 					    aess, &omap_aess_pmem_fops);

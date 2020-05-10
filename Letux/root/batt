@@ -17,6 +17,11 @@ TWL6037_GPADC=$($SCRIPTPATH/findiio "palmas-gpadc")   # OMAP5
 [ -r "$BATTERY" ] || BATTERY=/sys/class/power_supply/bq27421-0
 [ -r "$BATTERY" ] || BATTERY=/sys/class/power_supply/generic-adc-batt
 
+function iio_scale
+{
+  echo "scale=0; $(<$1_raw) * $(<$1_scale) / 1" | bc
+}
+
 while true
 do
 	# system ADCs (report mV)
@@ -38,11 +43,11 @@ do
 		IDPIN=$(cat /dev/usb_id 2>/dev/null)
 	elif [ -r "$RN5T618_ADC" ]
 	then
-		VBUS=$(cat $RN5T618_ADC/in_voltage3_input 2>/dev/null)
-		VCHG=$(cat $RN5T618_ADC/in_voltage2_input 2>/dev/null)
-		VBAT=$(cat $RN5T618_ADC/in_voltage1_input 2>/dev/null)
-		VSYS=$(cat $RN5T618_ADC/in_voltage4_input 2>/dev/null)
-		ICHG=$(cat $RN5T618_ADC/in_current0_input 2>/dev/null)
+		VBUS=$(iio_scale $RN5T618_ADC/in_voltage3 2>/dev/null)
+		VCHG=$(iio_scale $RN5T618_ADC/in_voltage2 2>/dev/null)
+		VBAT=$(iio_scale $RN5T618_ADC/in_voltage1 2>/dev/null)
+		VSYS=$(iio_scale $RN5T618_ADC/in_voltage4 2>/dev/null)
+		ICHG=$(iio_scale $RN5T618_ADC/in_current0 2>/dev/null)
 		TEMP=$(cat $RN5T618_ADC/in_voltage5_raw 2>/dev/null)
 		IDPIN=""
 	fi

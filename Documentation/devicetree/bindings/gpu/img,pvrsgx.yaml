@@ -139,6 +139,54 @@ required:
 
 additionalProperties: false
 
+allOf:
+  - if:
+      properties:
+        compatible:
+          contains:
+            enum:
+              - "ti,am3352-sgx530-125"
+              - "ti,am3517-sgx530-125"
+              - "ti,am4-sgx530-125"
+              - "ti,omap3-sgx530-125"
+              - "ti,ti81xx-sgx530-125"
+    then:
+      properties:
+        clocks:
+          minItems: 2
+          maxItems: 2
+
+        clock-names:
+          items:
+            - const: core
+            - const: sys
+
+      required:
+        - clocks
+        - clock-names
+
+  - if:
+      properties:
+        compatible:
+          contains:
+            enum:
+              - "ti,omap4-sgx544-112"
+              - "ti,omap5-sgx544-116"
+              - "ti,dra7-sgx544-116"
+    then:
+      properties:
+        clocks:
+          minItems: 1
+          maxItems: 1
+
+        clock-names:
+          items:
+            - const: core
+
+      required:
+        - clocks
+        - clock-names
+
 examples:
   - |+
     #include <dt-bindings/interrupt-controller/arm-gic.h>

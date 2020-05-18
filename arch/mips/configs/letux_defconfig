@@ -1,5 +1,5 @@
 #
-# Linux/mips 5.7.0-rc5 Kernel Configuration
+# Linux/mips 5.7.0-rc6 Kernel Configuration
 #
 
 #
@@ -2186,6 +2186,7 @@ CONFIG_MFD_SYSCON=y
 # CONFIG_TPS6507X is not set
 # CONFIG_MFD_TPS65086 is not set
 # CONFIG_MFD_TPS65090 is not set
+# CONFIG_MFD_TPS6518X is not set
 # CONFIG_MFD_TPS65217 is not set
 # CONFIG_MFD_TI_LP873X is not set
 # CONFIG_MFD_TI_LP87565 is not set
@@ -2260,7 +2261,6 @@ CONFIG_REGULATOR_ACT8865=y
 # CONFIG_REGULATOR_TPS62360 is not set
 # CONFIG_REGULATOR_TPS65023 is not set
 # CONFIG_REGULATOR_TPS6507X is not set
-# CONFIG_REGULATOR_TPS6518X is not set
 # CONFIG_REGULATOR_TPS65132 is not set
 # CONFIG_REGULATOR_TPS6524X is not set
 # CONFIG_REGULATOR_VCTRL is not set

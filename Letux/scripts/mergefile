@@ -75,6 +75,7 @@ letux/gpio-pcal6524
 letux/ov9655-new
 letux/bmg160
 letux/panels
+letux/hdq
 
 # almost ready for upstreaming
 letux/bluetooth-h4-serdev
@@ -87,7 +88,7 @@ letux/iio-mount-matrix
 letux/iio-input-bridge
 letux/vcnl4000
 
-# not ready for upstreaming but works good enough
+# not ready for upstreaming but works good enough for us
 letux/bq27xxx
 letux/bq2429x
 letux/ts3a225e
@@ -157,7 +158,7 @@ letux/kobolino-epdc
 # PinePhone
 letux/pinephone
 
-# hacks and fixes
+# hacks and fixes - we should consider upstreaming...
 letux/hacks
 letux/twl4030
 letux/hwmon-fixes
@@ -180,5 +181,3 @@ letux/drivers-keyboard
 # not merged in by default, but carried along and regularily rebased
 -letux/omap-hsmmc
 -letux/android
-#-letux/pyra-minimal - this is now rebuild automatically from the individual branches
-#-letux/ci20-minimal

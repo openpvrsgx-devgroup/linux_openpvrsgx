@@ -1,5 +1,5 @@
 #
-# Linux/arm 5.7.0-rc6 Kernel Configuration
+# Linux/arm 5.7.0-rc7 Kernel Configuration
 #
 
 #
@@ -883,7 +883,7 @@ CONFIG_UNIX_SCM=y
 # CONFIG_UNIX_DIAG is not set
 # CONFIG_TLS is not set
 CONFIG_XFRM=y
-CONFIG_XFRM_ALGO=m
+CONFIG_XFRM_ALGO=y
 CONFIG_XFRM_USER=m
 # CONFIG_XFRM_INTERFACE is not set
 # CONFIG_XFRM_SUB_POLICY is not set
@@ -4299,6 +4299,7 @@ CONFIG_FB_MX3=y
 # CONFIG_FB_SSD1307 is not set
 # CONFIG_FB_SM712 is not set
 CONFIG_FB_MXC=y
+# CONFIG_FB_MXC_EINK_PANEL is not set
 # CONFIG_FB_MXC_EINK_V2_PANEL is not set
 # end of Frame buffer Devices
 

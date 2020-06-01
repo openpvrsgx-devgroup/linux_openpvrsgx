@@ -615,7 +615,7 @@ function test_si47xx {
 
 function test_usb_ip {
 	read VAL < <(host www.goldelico.com | fgrep 'goldelico.com has address ' | sed "s/[.a-zA-Z]*goldelico\.com has address //g" 2>/dev/null)
-	[ "$VAL" = "83.151.26.121" ]
+	[ "$VAL" = "85.214.17.227" ]
 	report $? ${FUNCNAME} "$VAL" "global IP access through Ethernet over USB/WLAN"
 }
 

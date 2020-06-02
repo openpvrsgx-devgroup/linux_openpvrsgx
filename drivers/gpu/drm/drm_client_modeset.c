@@ -28,6 +28,11 @@
 
 #define DRM_CLIENT_MAX_CLONED_CONNECTORS	8
 
+static bool force_hw_rotation = false;
+module_param_named(force_hw_rotation, force_hw_rotation, bool, 0644);
+MODULE_PARM_DESC(force_hw_rotation,
+		 "Force hardware rotation even for 90/270 degrees [default=false]");
+
 struct drm_client_offset {
 	int x, y;
 };
@@ -975,7 +980,8 @@ bool drm_client_rotation(struct drm_mode_set *modeset, unsigned int *rotation)
 	 * depending on the hardware this may require the framebuffer
 	 * to be in a specific tiling format.
 	 */
-	if (((*rotation & DRM_MODE_ROTATE_MASK) != DRM_MODE_ROTATE_0 &&
+	if ((!force_hw_rotation &&
+		 (*rotation & DRM_MODE_ROTATE_MASK) != DRM_MODE_ROTATE_0 &&
 	     (*rotation & DRM_MODE_ROTATE_MASK) != DRM_MODE_ROTATE_180) ||
 	    !plane->rotation_property)
 		return false;

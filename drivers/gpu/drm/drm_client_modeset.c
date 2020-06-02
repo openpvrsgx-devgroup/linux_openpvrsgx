@@ -28,7 +28,7 @@
 
 #define DRM_CLIENT_MAX_CLONED_CONNECTORS	8
 
-static bool force_hw_rotation = false;
+static bool force_hw_rotation = true;
 module_param_named(force_hw_rotation, force_hw_rotation, bool, 0644);
 MODULE_PARM_DESC(force_hw_rotation,
 		 "Force hardware rotation even for 90/270 degrees [default=false]");

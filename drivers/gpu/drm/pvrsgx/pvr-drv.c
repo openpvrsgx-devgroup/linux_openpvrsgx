@@ -75,6 +75,15 @@ static int pvr_open(struct drm_device *dev, struct drm_file *file)
 	return PVRSRVOpen(dev, file);
 }
 
+static void pvr_postclose(struct drm_device *dev, struct drm_file *file)
+{
+	dev_dbg(dev->dev, "%s\n", __func__);
+
+	PVRSRVRelease(file->driver_priv);
+
+	file->driver_priv = NULL;
+}
+
 static int pvr_ioctl_command(struct drm_device *dev, void *arg, struct drm_file *filp)
 {
 	dev_dbg(dev->dev, "%s: dev: %px arg: %px filp: %px\n", __func__, dev, arg, filp);
@@ -140,6 +149,7 @@ static struct drm_driver pvr_drm_driver = {
 	.driver_features = DRIVER_RENDER,
 	.dev_priv_size = 0,
 	.open = pvr_open,
+	.postclose = pvr_postclose,
 	.ioctls = pvr_ioctls,
 	.num_ioctls = ARRAY_SIZE(pvr_ioctls),
 	.fops = &pvr_fops,

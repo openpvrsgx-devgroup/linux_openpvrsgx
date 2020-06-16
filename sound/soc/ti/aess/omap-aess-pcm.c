@@ -294,7 +294,7 @@ static irqreturn_t aess_irq_handler(int irq, void *dev_id)
 static int omap_aess_pcm_open(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_dai *dai = rtd->cpu_dai;
+	struct snd_soc_dai *dai = asoc_rtd_to_cpu(rtd, 0);
 	struct snd_soc_component *component = dai->component;
 	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 
@@ -323,7 +323,7 @@ static int omap_aess_pcm_hw_params(struct snd_pcm_substream *substream,
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_pcm_runtime *runtime = substream->runtime;
-	struct snd_soc_dai *dai = rtd->cpu_dai;
+	struct snd_soc_dai *dai = asoc_rtd_to_cpu(rtd, 0);
 	struct snd_soc_component *component = dai->component;
 	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 	struct omap_aess_data_format format;
@@ -367,7 +367,7 @@ out:
 static int omap_aess_pcm_prepare(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_dai *dai = rtd->cpu_dai;
+	struct snd_soc_dai *dai = asoc_rtd_to_cpu(rtd, 0);
 	struct snd_soc_component *component = dai->component;
 	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 
@@ -389,7 +389,7 @@ static int omap_aess_pcm_prepare(struct snd_pcm_substream *substream)
 static int omap_aess_pcm_close(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_dai *dai = rtd->cpu_dai;
+	struct snd_soc_dai *dai = asoc_rtd_to_cpu(rtd, 0);
 	struct snd_soc_component *component = dai->component;
 	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 
@@ -419,7 +419,7 @@ static int omap_aess_pcm_mmap(struct snd_pcm_substream *substream,
 			      struct vm_area_struct *vma)
 {
 	struct snd_soc_pcm_runtime  *rtd = substream->private_data;
-	struct snd_soc_dai *dai = rtd->cpu_dai;
+	struct snd_soc_dai *dai = asoc_rtd_to_cpu(rtd, 0);
 	struct snd_soc_component *component = dai->component;
 	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 	int offset, size, err;
@@ -444,7 +444,7 @@ static int omap_aess_pcm_mmap(struct snd_pcm_substream *substream,
 static snd_pcm_uframes_t omap_aess_pcm_pointer(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_dai *dai = rtd->cpu_dai;
+	struct snd_soc_dai *dai = asoc_rtd_to_cpu(rtd, 0);
 	struct snd_soc_component *component = dai->component;
 	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 	snd_pcm_uframes_t offset = 0;
@@ -593,7 +593,7 @@ static int omap_aess_pcm_stream_event(struct snd_soc_component *component,
 static int omap_aess_pcm_suspend(struct snd_soc_dai *dai)
 {
 	dev_dbg(dai->dev, "%s: %s active %d\n", __func__,
-		dai->name, dai->active);
+		dai->name, snd_soc_dai_active(dai));
 
 	return 0;
 }
@@ -604,9 +604,9 @@ static int omap_aess_pcm_resume(struct snd_soc_dai *dai)
 	int ret = 0;
 
 	dev_dbg(dai->dev, "%s: %s active %d\n", __func__,
-		dai->name, dai->active);
+		dai->name, snd_soc_dai_active(dai));
 
-	if (!dai->active)
+	if (!snd_soc_dai_active(dai))
 		return 0;
 
 #ifdef FIXME	// mechanism does no longer exist

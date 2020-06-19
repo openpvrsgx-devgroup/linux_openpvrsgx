@@ -239,9 +239,9 @@ ccflags-y += -DPVR_DRI_DRM_PLATFORM_DEV
 ccflags-y += -DPVRSRV_NEED_PVR_DPF
 ccflags-y += -DMODULE	# this disables some code in AcquireGPTimer in sysutils_linux.c
 ccflags-y += -DSUPPORT_DMABUF
+ccflags-y += -DSYS_USING_INTERRUPTS	# should probably be enabled but leads to paging errors, asynchronous external abort
 
 # these must not be set or we can't compile successfully for omap
-ccflags-n += -DSYS_USING_INTERRUPTS	# should probably be enabled but leads to paging errors, asynchronous external abort
 ccflags-n += -DSUPPORT_DRI_DRM_EXT
 ccflags-n += -DSUPPORT_DRI_DRM_PLUGIN
 ccflags-n += -DPVR_DISPLAY_CONTROLLER_DRM_IOCTL

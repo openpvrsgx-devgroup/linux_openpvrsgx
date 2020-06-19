@@ -71,8 +71,9 @@ struct omap_gem_object {
 	refcount_t pin_cnt;
 
 	/**
-	 * If the buffer has been imported from a dmabuf the OMAP_DB_DMABUF flag
-	 * is set and the sgt field is valid.
+	 * buffer represented as sg table. It is valid if
+	 * - the buffer is imported from dmabuf (OMAP_BO_MEM_DMABUF flag set)
+	 * - the buffer is mapped through dmabuf (also increases dma_addr_cnt)
 	 */
 	struct sg_table *sgt;
 

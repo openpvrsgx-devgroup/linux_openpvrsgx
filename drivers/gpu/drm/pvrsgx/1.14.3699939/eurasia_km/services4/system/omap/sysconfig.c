@@ -984,7 +984,6 @@ IMG_VOID SysClearInterrupts(SYS_DATA* psSysData, IMG_UINT32 ui32ClearBits)
 {
 	PVR_UNREFERENCED_PARAMETER(ui32ClearBits);
 	PVR_UNREFERENCED_PARAMETER(psSysData);
-printk("%s\n", __func__);
 #if defined(SYS_USING_INTERRUPTS)
 	if (gpvOCPRegsLinAddr == IMG_NULL)
 	{

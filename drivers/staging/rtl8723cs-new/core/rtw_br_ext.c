@@ -20,12 +20,14 @@
 #define _RTW_BR_EXT_C_
 
 #ifdef __KERNEL__
+#define sha256_state sha256_state_public	// <drv_types.h> will include a private struct with same name
 	#include <linux/if_arp.h>
 	#include <net/ip.h>
 	#include <net/ipx.h>
 	#include <linux/atalk.h>
 	#include <linux/udp.h>
 	#include <linux/if_pppox.h>
+#undef sha256_state
 #endif
 
 #if 1	/* rtw_wifi_driver */

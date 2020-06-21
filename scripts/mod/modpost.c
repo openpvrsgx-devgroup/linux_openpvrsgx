@@ -138,11 +138,16 @@ char *read_text_file(const char *filename)
 
 char *get_line(char **stringp)
 {
+	char *p;
 	/* do not return the unwanted extra line at EOF */
 	if (*stringp && **stringp == '\0')
 		return NULL;
 
-	return strsep(stringp, "\n");
+	p = *stringp;
+	while (**stringp != '\n')
+		(*stringp)++;
+	*(*stringp)++ = 0;
+	return p;
 }
 
 /* A list of all modules we processed */

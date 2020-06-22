@@ -5463,12 +5463,6 @@ static struct cyttsp5_core_commands _cyttsp5_core_commands = {
 	.nonhid_cmd = &_cyttsp5_core_nonhid_cmd,
 };
 
-struct cyttsp5_core_commands *cyttsp5_get_commands(void)
-{
-	return &_cyttsp5_core_commands;
-}
-EXPORT_SYMBOL_GPL(cyttsp5_get_commands);
-
 static DEFINE_MUTEX(core_list_lock);
 static LIST_HEAD(core_list);
 static DEFINE_MUTEX(module_list_lock);

@@ -1104,7 +1104,6 @@ int cyttsp5_probe(const struct cyttsp5_bus_ops *ops, struct device *dev,
 		u16 irq, size_t xfer_buf_size);
 int cyttsp5_release(struct cyttsp5_core_data *cd);
 
-struct cyttsp5_core_commands *cyttsp5_get_commands(void);
 struct cyttsp5_core_data *cyttsp5_get_core_data(char *id);
 
 int cyttsp5_mt_release(struct device *dev);

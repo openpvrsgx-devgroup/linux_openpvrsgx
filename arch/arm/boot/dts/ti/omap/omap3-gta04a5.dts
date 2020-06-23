@@ -117,6 +117,7 @@
 
 &wifi_pwrseq {
 	/delete-property/ reset-gpios;
+	/delete-property/ power-off-ignore;
 };
 
 &mmc2 {

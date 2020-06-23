@@ -224,6 +224,7 @@
 	wifi_pwrseq: wifi_pwrseq {
 		compatible = "mmc-pwrseq-simple";
 		reset-gpios = <&tca6507 0 GPIO_ACTIVE_LOW>;	/* W2CBW003 reset through tca6507 */
+		power-off-ignore;	/* do not reset bluetooth side if only wifi is powered off (shared reset line) */
 	};
 
 	/* devconf0 setup for mcbsp1 clock pins */

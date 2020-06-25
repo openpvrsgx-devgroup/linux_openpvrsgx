@@ -54,6 +54,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 #include <asm/cacheflush.h>
 #include <linux/mm.h>
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,8,0))
+#else
+#define mmap_sem mmap_lock	// has been renamed by v5.8-rc1
+#endif
 #include <linux/pagemap.h>
 #include <linux/hugetlb.h> 
 #include <linux/slab.h>

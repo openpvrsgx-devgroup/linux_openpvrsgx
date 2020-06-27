@@ -81,12 +81,6 @@ struct param_node {
 	u8 size;
 };
 
-struct module_node {
-	struct list_head node;
-	struct cyttsp5_module *module;
-	void *data;
-};
-
 struct cyttsp5_hid_cmd {
 	u8 opcode;
 	u8 report_type;
@@ -4235,83 +4229,7 @@ static const struct file_operations tthe_debugfs_fops = {
 
 static DEFINE_MUTEX(core_list_lock);
 static LIST_HEAD(core_list);
-static DEFINE_MUTEX(module_list_lock);
-static LIST_HEAD(module_list);
 static int core_number;
-
-static int cyttsp5_probe_module(struct cyttsp5_core_data *cd,
-		struct cyttsp5_module *module)
-{
-	struct module_node *module_node;
-	int rc = 0;
-
-	module_node = kzalloc(sizeof(*module_node), GFP_KERNEL);
-	if (!module_node)
-		return -ENOMEM;
-
-	module_node->module = module;
-
-	mutex_lock(&cd->module_list_lock);
-	list_add(&module_node->node, &cd->module_list);
-	mutex_unlock(&cd->module_list_lock);
-
-	rc = module->probe(cd->dev, &module_node->data);
-	if (rc) {
-		/*
-		 * Remove from the list when probe fails
-		 * in order not to call release
-		 */
-		mutex_lock(&cd->module_list_lock);
-		list_del(&module_node->node);
-		mutex_unlock(&cd->module_list_lock);
-		kfree(module_node);
-		goto exit;
-	}
-
-exit:
-	return rc;
-}
-
-static void cyttsp5_release_module(struct cyttsp5_core_data *cd,
-		struct cyttsp5_module *module)
-{
-	struct module_node *m, *m_n;
-
-	mutex_lock(&cd->module_list_lock);
-	list_for_each_entry_safe(m, m_n, &cd->module_list, node)
-		if (m->module == module) {
-			module->release(cd->dev, m->data);
-			list_del(&m->node);
-			kfree(m);
-			break;
-		}
-	mutex_unlock(&cd->module_list_lock);
-}
-
-static void cyttsp5_probe_modules(struct cyttsp5_core_data *cd)
-{
-	struct cyttsp5_module *m;
-	int rc = 0;
-
-	mutex_lock(&module_list_lock);
-	list_for_each_entry(m, &module_list, node) {
-		rc = cyttsp5_probe_module(cd, m);
-		if (rc)
-			dev_err(cd->dev, "%s: Probe fails for module %s\n",
-				__func__, m->name);
-	}
-	mutex_unlock(&module_list_lock);
-}
-
-static void cyttsp5_release_modules(struct cyttsp5_core_data *cd)
-{
-	struct cyttsp5_module *m;
-
-	mutex_lock(&module_list_lock);
-	list_for_each_entry(m, &module_list, node)
-		cyttsp5_release_module(cd, m);
-	mutex_unlock(&module_list_lock);
-}
 
 struct cyttsp5_core_data *cyttsp5_get_core_data(char *id)
 {
@@ -4352,81 +4270,6 @@ static void cyttsp5_del_core(struct device *dev)
 unlock:
 	mutex_unlock(&core_list_lock);
 }
-
-int cyttsp5_register_module(struct cyttsp5_module *module)
-{
-	struct cyttsp5_module *m;
-	struct cyttsp5_core_data *cd;
-
-	int rc = 0;
-
-	if (!module || !module->probe || !module->release)
-		return -EINVAL;
-
-	mutex_lock(&module_list_lock);
-	list_for_each_entry(m, &module_list, node)
-		if (m == module) {
-			rc = -EEXIST;
-			goto unlock;
-		}
-
-	list_add(&module->node, &module_list);
-
-	/* Probe the module for each core */
-	mutex_lock(&core_list_lock);
-	list_for_each_entry(cd, &core_list, node)
-		cyttsp5_probe_module(cd, module);
-	mutex_unlock(&core_list_lock);
-
-unlock:
-	mutex_unlock(&module_list_lock);
-	return rc;
-}
-EXPORT_SYMBOL_GPL(cyttsp5_register_module);
-
-void cyttsp5_unregister_module(struct cyttsp5_module *module)
-{
-	struct cyttsp5_module *m, *m_n;
-	struct cyttsp5_core_data *cd;
-
-	if (!module)
-		return;
-
-	mutex_lock(&module_list_lock);
-
-	/* Release the module for each core */
-	mutex_lock(&core_list_lock);
-	list_for_each_entry(cd, &core_list, node)
-		cyttsp5_release_module(cd, module);
-	mutex_unlock(&core_list_lock);
-
-	list_for_each_entry_safe(m, m_n, &module_list, node)
-		if (m == module) {
-			list_del(&m->node);
-			break;
-		}
-
-	mutex_unlock(&module_list_lock);
-}
-EXPORT_SYMBOL_GPL(cyttsp5_unregister_module);
-
-void *cyttsp5_get_module_data(struct device *dev, struct cyttsp5_module *module)
-{
-	struct cyttsp5_core_data *cd = dev_get_drvdata(dev);
-	struct module_node *m;
-	void *data = NULL;
-
-	mutex_lock(&cd->module_list_lock);
-	list_for_each_entry(m, &cd->module_list, node)
-		if (m->module == module) {
-			data = m->data;
-			break;
-		}
-	mutex_unlock(&cd->module_list_lock);
-
-	return data;
-}
-EXPORT_SYMBOL(cyttsp5_get_module_data);
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 static void cyttsp5_early_suspend(struct early_suspend *h)
@@ -4561,14 +4404,10 @@ int cyttsp5_probe(const struct cyttsp5_bus_ops *ops, struct device *dev,
 	scnprintf(cd->core_id, 20, "%s%d", CYTTSP5_CORE_NAME, core_number++);
 
 	/* Initialize mutexes and spinlocks */
-	mutex_init(&cd->module_list_lock);
 	mutex_init(&cd->system_lock);
 	mutex_init(&cd->adap_lock);
 	mutex_init(&cd->hid_report_lock);
 	spin_lock_init(&cd->spinlock);
-
-	/* Initialize module list */
-	INIT_LIST_HEAD(&cd->module_list);
 
 	/* Initialize attention lists */
 	for (type = 0; type < CY_ATTEN_NUM_ATTEN; type++)
@@ -4688,9 +4527,6 @@ int cyttsp5_probe(const struct cyttsp5_bus_ops *ops, struct device *dev,
 		goto error_startup_btn;
 	}
 
-	/* Probe registered modules */
-	cyttsp5_probe_modules(cd);
-
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	cyttsp5_setup_early_suspend(cd);
 #elif defined(CONFIG_FB)
@@ -4738,9 +4574,6 @@ EXPORT_SYMBOL_GPL(cyttsp5_probe);
 int cyttsp5_release(struct cyttsp5_core_data *cd)
 {
 	struct device *dev = cd->dev;
-
-	/* Release successfully probed modules */
-	cyttsp5_release_modules(cd);
 
 	cyttsp5_proximity_release(dev);
 	cyttsp5_btn_release(dev);

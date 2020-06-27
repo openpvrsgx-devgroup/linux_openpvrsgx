@@ -888,29 +888,18 @@ struct cyttsp5_features {
 	((LINUX_VERSION_CODE < KERNEL_VERSION(3, 3, 0)) \
 	&& defined(CONFIG_PM_SLEEP) && defined(CONFIG_PM_RUNTIME))
 
-struct cyttsp5_module {
-	struct list_head node;
-	char *name;
-	int (*probe)(struct device *dev, void **data);
-	void (*release)(struct device *dev, void *data);
-};
-
 struct cyttsp5_core_data {
 	struct list_head node;
-	struct list_head module_list; /* List of probed modules */
 	char core_id[20];
 	struct device *dev;
 	struct list_head atten_list[CY_ATTEN_NUM_ATTEN];
 	struct list_head param_list;
-	struct mutex module_list_lock;
 	struct mutex system_lock;
 	struct mutex adap_lock;
 	struct mutex hid_report_lock;
 	enum cyttsp5_mode mode;
 	spinlock_t spinlock;
 	struct cyttsp5_mt_data md;
-	struct cyttsp5_btn_data bd;
-	struct cyttsp5_proximity_data pd;
 	int phys_num;
 	int number_of_open_input_device;
 	int pm_runtime_usage_count;
@@ -1135,11 +1124,5 @@ int _cyttsp5_unsubscribe_attention(struct device *dev,
 struct cyttsp5_sysinfo *_cyttsp5_request_sysinfo(struct device *dev);
 
 extern const struct dev_pm_ops cyttsp5_pm_ops;
-
-int cyttsp5_register_module(struct cyttsp5_module *module);
-void cyttsp5_unregister_module(struct cyttsp5_module *module);
-
-void *cyttsp5_get_module_data(struct device *dev,
-		struct cyttsp5_module *module);
 
 #endif /* _CYTTSP5_REGS_H */

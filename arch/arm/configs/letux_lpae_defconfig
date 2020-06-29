@@ -1,5 +1,5 @@
 #
-# Linux/arm 5.8.0-rc2 Kernel Configuration
+# Linux/arm 5.8.0-rc3 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="arm-linux-gnueabi-gcc (GCC) 4.9.2"
 CONFIG_CC_IS_GCC=y
@@ -888,6 +888,8 @@ CONFIG_XFRM_USER=m
 # CONFIG_XFRM_SUB_POLICY is not set
 CONFIG_XFRM_MIGRATE=y
 # CONFIG_XFRM_STATISTICS is not set
+CONFIG_XFRM_AH=m
+CONFIG_XFRM_ESP=m
 CONFIG_XFRM_IPCOMP=m
 CONFIG_NET_KEY=y
 CONFIG_NET_KEY_MIGRATE=y

@@ -224,7 +224,9 @@ static int __init omap3pandora_soc_init(void)
 {
 	int ret;
 
-	if (!machine_is_omap3_pandora())
+	if (!machine_is_omap3_pandora() &&
+	    !of_machine_is_compatible("openpandora,omap3-pandora-600mhz") &&
+	    !of_machine_is_compatible("openpandora,omap3-pandora-1ghz"))
 		return -ENODEV;
 
 	pr_info("OMAP3 Pandora SoC init\n");

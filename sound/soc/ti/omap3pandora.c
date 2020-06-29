@@ -175,6 +175,7 @@ static const struct snd_soc_ops omap3pandora_ops = {
 };
 
 /* Digital audio interface glue - connects codec <--> CPU */
+#if IS_BUILTIN(CONFIG_SND_SOC_OMAP3_PANDORA)
 SND_SOC_DAILINK_DEFS(out,
 	DAILINK_COMP_ARRAY(COMP_CPU("omap-mcbsp.2")),
 	DAILINK_COMP_ARRAY(COMP_CODEC("twl4030-codec", "twl4030-hifi")),
@@ -184,6 +185,17 @@ SND_SOC_DAILINK_DEFS(in,
 	DAILINK_COMP_ARRAY(COMP_CPU("omap-mcbsp.4")),
 	DAILINK_COMP_ARRAY(COMP_CODEC("twl4030-codec", "twl4030-hifi")),
 	DAILINK_COMP_ARRAY(COMP_PLATFORM("omap-mcbsp.4")));
+#else /* IS_BUILTIN(CONFIG_SND_SOC_OMAP3_PANDORA) */
+SND_SOC_DAILINK_DEFS(out,
+	DAILINK_COMP_ARRAY(COMP_CPU("49022000.mcbsp")),
+	DAILINK_COMP_ARRAY(COMP_CODEC("twl4030-codec", "twl4030-hifi")),
+	DAILINK_COMP_ARRAY(COMP_PLATFORM("49022000.mcbsp")));
+
+SND_SOC_DAILINK_DEFS(in,
+	DAILINK_COMP_ARRAY(COMP_CPU("49026000.mcbsp")),
+	DAILINK_COMP_ARRAY(COMP_CODEC("twl4030-codec", "twl4030-hifi")),
+	DAILINK_COMP_ARRAY(COMP_PLATFORM("49026000.mcbsp")));
+#endif /* IS_BUILTIN(CONFIG_SND_SOC_OMAP3_PANDORA) */
 
 static struct snd_soc_dai_link omap3pandora_dai[] = {
 	{

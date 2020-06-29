@@ -1,5 +1,5 @@
 #
-# Linux/arm64 5.8.0-rc2 Kernel Configuration
+# Linux/arm64 5.8.0-rc3 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="aarch64-linux-gnu-gcc (GCC) 4.9.2"
 CONFIG_CC_IS_GCC=y
@@ -7082,7 +7082,6 @@ CONFIG_DEBUG_MEMORY_INIT=y
 CONFIG_HAVE_ARCH_KASAN=y
 CONFIG_HAVE_ARCH_KASAN_SW_TAGS=y
 CONFIG_CC_HAS_KASAN_GENERIC=y
-# CONFIG_KASAN is not set
 CONFIG_KASAN_STACK=1
 # end of Memory Debugging
 

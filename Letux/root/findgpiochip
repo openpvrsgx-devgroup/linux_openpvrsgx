@@ -11,7 +11,7 @@ fi
 
 for dev in /sys/class/gpio/gpiochip*
 do
-	$LIST && cat $dev/label
+	$LIST && { cat $dev/label; continue; }
 	if [ "$(cat $dev/label 2>/dev/null)" = "$1" ]
 		then echo $dev
 		exit 0

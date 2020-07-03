@@ -10,7 +10,7 @@ fi
 
 for dev in /sys/class/input/input*
 do
-	$LIST && cat $dev/name
+	$LIST && { cat $dev/name; continue; }
 	if [ "$(cat $dev/name 2>/dev/null)" = "$1" ]
 		then echo /dev/input/$(basename $dev/event*)
 		exit 0

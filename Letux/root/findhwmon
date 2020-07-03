@@ -11,7 +11,7 @@ fi
 for dev in /sys/class/hwmon/hwmon*/name /sys/class/hwmon/hwmon*/device/name
 do
 	[ -r $dev ] || continue
-	$LIST && cat $dev
+	$LIST && { cat $dev/name; continue; }
 	if [ "$(cat $dev)" = "$1" ]
 		then echo $(dirname $dev)/
 		exit 0

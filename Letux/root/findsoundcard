@@ -10,7 +10,7 @@ fi
 
 for dev in /proc/asound/card[0-9]*
 do
-	$LIST && cat $dev/id
+	$LIST && { cat $dev/id; continue; }
 	if [ "$(cat $dev/id 2>/dev/null)" = "$1" ]
 		then echo $(basename $dev) | sed 's/card//g'
 		exit 0

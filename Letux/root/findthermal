@@ -10,7 +10,7 @@ fi
 
 for dev in /sys/class/thermal/thermal_zone*
 do
-	$LIST && cat $dev/type
+	$LIST && { cat $dev/type; continue; }
 	if [ "$(cat $dev/type 2>/dev/null)" = "$1" ]
 		then echo $dev
 		exit 0

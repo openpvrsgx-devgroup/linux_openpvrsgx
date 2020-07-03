@@ -75,7 +75,7 @@ case "$(model_or_compatible)" in
 	*PandaBoard* | \
 	*OMAP5*uEVM* | \
 	*PinePhone* )
-		PANEL=none;;
+		PANEL=auto;;	# works well with auto-detection
 	*LC15-EVM* )
 		PANEL=5.0-720x1280
 		/root/tvout 0   # seems to initialize something we need for switching to HDMI

@@ -674,6 +674,8 @@ static const struct platform_device_id axp20x_adc_id_match[] = {
 };
 MODULE_DEVICE_TABLE(platform, axp20x_adc_id_match);
 
+static struct platform_driver axp20x_adc_driver;
+
 static int axp20x_probe(struct platform_device *pdev)
 {
 	struct axp20x_adc_iio *info;
@@ -705,6 +707,10 @@ static int axp20x_probe(struct platform_device *pdev)
 	}
 
 	indio_dev->name = platform_get_device_id(pdev)->name;
+
+	if (!indio_dev->name)
+		indio_dev->name = axp20x_adc_driver.driver.name;
+
 	indio_dev->info = info->data->iio_info;
 	indio_dev->num_channels = info->data->num_channels;
 	indio_dev->channels = info->data->channels;

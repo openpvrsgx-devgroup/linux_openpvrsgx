@@ -3488,7 +3488,16 @@ CONFIG_USB_MUSB_DUAL_ROLE=y
 #
 CONFIG_MUSB_PIO_ONLY=y
 # CONFIG_USB_DWC3 is not set
-# CONFIG_USB_DWC2 is not set
+CONFIG_USB_DWC2=m
+# CONFIG_USB_DWC2_HOST is not set
+
+#
+# Gadget/Dual-role mode requires USB Gadget support to be enabled
+#
+# CONFIG_USB_DWC2_PERIPHERAL is not set
+CONFIG_USB_DWC2_DUAL_ROLE=y
+# CONFIG_USB_DWC2_DEBUG is not set
+# CONFIG_USB_DWC2_TRACK_MISSED_SOFS is not set
 # CONFIG_USB_CHIPIDEA is not set
 # CONFIG_USB_ISP1760 is not set
 
@@ -3585,8 +3594,9 @@ CONFIG_USB_TEST=m
 CONFIG_USB_PHY=y
 CONFIG_NOP_USB_XCEIV=y
 # CONFIG_USB_GPIO_VBUS is not set
+# CONFIG_USB_INGENIC_PHY is not set
 # CONFIG_USB_ISP1301 is not set
-# CONFIG_JZ4770_PHY is not set
+CONFIG_JZ4770_PHY=m
 # end of USB Physical Layer drivers
 
 CONFIG_USB_GADGET=y
@@ -4651,6 +4661,7 @@ CONFIG_GENERIC_PHY=y
 # CONFIG_PHY_CPCAP_USB is not set
 # CONFIG_PHY_MAPPHONE_MDM6600 is not set
 # CONFIG_PHY_OCELOT_SERDES is not set
+# CONFIG_PHY_SAMSUNG_USB2 is not set
 # end of PHY Subsystem
 
 # CONFIG_POWERCAP is not set

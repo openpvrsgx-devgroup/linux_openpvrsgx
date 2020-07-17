@@ -246,7 +246,7 @@
 };
 
 &lcdc {
-	status = "okay";
+	status = "disabled";	/* usually, we have no display connected */
 };
 
 &rtc {

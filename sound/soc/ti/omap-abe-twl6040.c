@@ -451,6 +451,110 @@ static int omap_abe_dmic_init(struct snd_soc_pcm_runtime *rtd)
 	_card->num_links++; \
 	}
 
+/* called after loading firmware */
+static int omap_abe_add_aess_dai_links(struct snd_soc_card *card)
+{
+	struct abe_twl6040 * priv = snd_soc_card_get_drvdata(card);
+	struct device_node *node = card->dev->of_node;
+	struct device_node *dai_node;
+	int ret;
+
+	/* add DAI links for AE */
+	return 0;
+}
+
+static int omap_abe_add_legacy_dai_links(struct snd_soc_card *card)
+{
+	struct abe_twl6040 * priv = snd_soc_card_get_drvdata(card);
+	struct device_node *node = card->dev->of_node;
+	struct device_node *dai_node;
+	int ret;
+
+	return 0;
+}
+
+#if IS_BUILTIN(CONFIG_SND_OMAP_SOC_OMAP_ABE_TWL6040)
+static void omap_abe_fw_ready(const struct firmware *fw, void *context)
+{
+	struct platform_device *pdev = (struct platform_device *)context;
+	struct snd_soc_card *card = &omap_abe_card;
+	struct abe_twl6040 * priv = snd_soc_card_get_drvdata(card);
+	int ret;
+
+	if (unlikely(!fw))
+		dev_warn(&pdev->dev, "%s firmware is not loaded.\n",
+			 AESS_FW_NAME);
+
+	priv->aess = omap_aess_get_handle();
+	if (!priv->aess)
+		dev_err(&pdev->dev, "AESS is not yet available\n");
+
+	ret = omap_aess_load_firmware(priv->aess, AESS_FW_NAME);
+	if (ret) {
+		dev_err(&pdev->dev, "%s firmware was not loaded.\n",
+			AESS_FW_NAME);
+		omap_aess_put_handle(priv->aess);
+		priv->aess = NULL;
+	}
+
+	/* Release the FW here. */
+	release_firmware(fw);
+
+	if (priv->aess) {
+		ret = omap_abe_add_aess_dai_links(card);
+		if (ret < 0)
+			return;
+	}
+
+	ret = omap_abe_add_legacy_dai_links(card);
+	if (ret < 0)
+		return;
+
+	ret = devm_snd_soc_register_card(&pdev->dev, card);
+	if (ret)
+		dev_err(&pdev->dev, "devm_snd_soc_register_card() failed: %d\n",
+			ret);
+	return;
+}
+
+#else /* !IS_BUILTIN(CONFIG_SND_OMAP_SOC_OMAP_ABE_TWL6040) */
+static int omap_abe_load_fw(struct snd_soc_card *card)
+{
+	struct abe_twl6040 * priv = snd_soc_card_get_drvdata(card);
+	const struct firmware *fw;
+	int ret;
+
+	priv->aess = omap_aess_get_handle();
+	if (!priv->aess) {
+		dev_err(card->dev, "AESS is not yet available\n");
+		return -EPROBE_DEFER;
+	}
+
+	ret = request_firmware(&fw, AESS_FW_NAME, card->dev);
+	if (ret) {
+		dev_err(card->dev, "FW request failed: %d\n", ret);
+		return ret;
+	}
+
+	ret = omap_aess_load_firmware(priv->aess, AESS_FW_NAME);
+	if (ret) {
+		dev_err(card->dev, "%s firmware was not loaded.\n",
+			AESS_FW_NAME);
+		omap_aess_put_handle(priv->aess);
+		priv->aess = NULL;
+		ret = 0;
+	}
+
+	if (priv->aess)
+		ret = omap_abe_add_aess_dai_links(card);
+
+	/* Release the FW here. */
+	release_firmware(fw);
+
+	return ret;
+}
+#endif /* IS_BUILTIN(CONFIG_SND_OMAP_SOC_OMAP_ABE_TWL6040) */
+
 static int omap_abe_probe(struct platform_device *pdev)
 {
 	struct device_node *node = pdev->dev.of_node;
@@ -531,10 +635,37 @@ static int omap_abe_probe(struct platform_device *pdev)
 
 	card->fully_routed = 1;
 
-	ret = devm_snd_soc_register_card(&pdev->dev, card);
-	if (ret)
-		dev_err(&pdev->dev, "devm_snd_soc_register_card() failed: %d\n",
-			ret);
+	dai_node = of_parse_phandle(node, "ti,aess", 0);
+
+	if (dai_node) {
+		/* When ABE is in use the AESS needs firmware */
+#if IS_BUILTIN(CONFIG_SND_OMAP_SOC_OMAP_ABE_TWL6040)
+		ret = request_firmware_nowait(THIS_MODULE, 1, AESS_FW_NAME,
+				      &pdev->dev, GFP_KERNEL, pdev,
+				      omap_abe_fw_ready);
+#else
+		ret = omap_abe_load_fw(card);
+#endif
+		if (ret < 0)
+			/* warn only but continue */
+			dev_warn(&pdev->dev, "Failed to load firmware %s: %d\n",
+				AESS_FW_NAME, ret);
+
+#if IS_BUILTIN(CONFIG_SND_OMAP_SOC_OMAP_ABE_TWL6040)
+		/* card is registered after successful firmware load */
+		return ret;
+#endif
+	}
+
+	ret = omap_abe_add_legacy_dai_links(card);
+	if (ret < 0)
+		return ret;
+
+	ret = snd_soc_register_card(card);
+	if (ret) {
+		dev_err(&pdev->dev, "card registration failed: %d\n", ret);
+		return ret;
+	}
 
 	return ret;
 }

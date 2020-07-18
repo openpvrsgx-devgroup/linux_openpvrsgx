@@ -75,10 +75,9 @@ static int omap_abe_hw_params(struct snd_pcm_substream *substream,
 	/* set the codec mclk */
 	ret = snd_soc_dai_set_sysclk(codec_dai, clk_id, freq,
 				SND_SOC_CLOCK_IN);
-	if (ret) {
-		printk(KERN_ERR "can't set codec system clock\n");
-		return ret;
-	}
+	if (ret < 0)
+		dev_err(card->dev, "can't set codec system clock\n");
+
 	return ret;
 }
 
@@ -96,16 +95,15 @@ static int omap_abe_dmic_hw_params(struct snd_pcm_substream *substream,
 	ret = snd_soc_dai_set_sysclk(cpu_dai, OMAP_DMIC_SYSCLK_PAD_CLKS,
 				     19200000, SND_SOC_CLOCK_IN);
 	if (ret < 0) {
-		printk(KERN_ERR "can't set DMIC cpu system clock\n");
+		dev_err(rtd->card->dev, "can't set DMIC in system clock\n");
 		return ret;
 	}
 	ret = snd_soc_dai_set_sysclk(cpu_dai, OMAP_DMIC_ABE_DMIC_CLK, 2400000,
 				     SND_SOC_CLOCK_OUT);
-	if (ret < 0) {
-		printk(KERN_ERR "can't set DMIC output clock\n");
-		return ret;
-	}
-	return 0;
+	if (ret < 0)
+		dev_err(rtd->card->dev, "can't set DMIC output clock\n");
+
+	return ret;
 }
 
 static const struct snd_soc_ops omap_abe_dmic_ops = {

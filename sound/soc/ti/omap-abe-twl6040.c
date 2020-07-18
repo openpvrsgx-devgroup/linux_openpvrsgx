@@ -1,9 +1,21 @@
 // SPDX-License-Identifier: GPL-2.0-only
+
 /*
  * omap-abe-twl6040.c  --  SoC audio for TI OMAP based boards with ABE and
  *			   twl6040 codec
  *
- * Author: Misael Lopez Cruz <misael.lopez@ti.com>
+ * This is a mix of upstream omap-abe-twl6040.c from 4.18ff with TI code
+ * Author: H. N. Schaller <hns@goldelico.com> by porting to OMAP5 based Pyra-Handheld
+ *
+ * TI authors:
+ * Authors: Misael Lopez Cruz <misael.lopez@ti.com>
+ *          Peter Ujfalusi <peter.ujfalusi@ti.com>
+ *          Liam Girdwood <lrg@ti.com>
+ *          Sebastien Guiriec <s-guiriec@ti.com>
+ *
+ * Contact: Misael Lopez Cruz <misael.lopez@ti.com>
+ *          Peter Ujfalusi <peter.ujfalusi@ti.com>
+ *
  */
 
 #include <linux/clk.h>
@@ -349,6 +361,7 @@ static void __exit omap_abe_exit(void)
 module_exit(omap_abe_exit);
 
 MODULE_AUTHOR("Misael Lopez Cruz <misael.lopez@ti.com>");
+MODULE_AUTHOR("H. Nikolaus Schaller <hns@goldelico.com>");
 MODULE_DESCRIPTION("ALSA SoC for OMAP boards with ABE and twl6040 codec");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("platform:omap-abe-twl6040");

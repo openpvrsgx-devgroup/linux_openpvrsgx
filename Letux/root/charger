@@ -6,6 +6,12 @@ TWL6037_GPADC=$($SCRIPTPATH/findiio "palmas-gpadc")	# OMAP5
 RN5T618_ADC=$($SCRIPTPATH/findiio "rn5t618-adc")	# Kobolino
 INA231=$($SCRIPTPATH/findhwmon ina231)	# Pyra modem monitor
 
+function iio_scale
+{
+  echo "scale=0; $(<$1_raw) * $(<$1_scale) / 1" | bc
+}
+
+
 function fuel-level { # $1 is mV; $2 is mA charging current; $3 is resistance, return is % [0..100]
 
 #    u = 0.001 * (u + mA * resistance)
@@ -165,11 +171,11 @@ then # Kobolino with RN5T618
 
 echo "RN5T618 System STATUS"
 echo "==================≠=="
-echo VSYS: $(cat $RN5T618_ADC/in_voltage4_input)mV
-echo VBUS: $(cat $RN5T618_ADC/in_voltage3_input)mV
-echo VCHG: $(cat $RN5T618_ADC/in_voltage2_input)mV
-VOLT=$(cat $RN5T618_ADC/in_voltage1_input)
-AMP=$(cat $RN5T618_ADC/in_current0_input)
+echo VSYS: $(iio_scale $RN5T618_ADC/in_voltage4 2>/dev/null)mV
+echo VBUS: $(iio_scale $RN5T618_ADC/in_voltage3 2>/dev/null)mV
+echo VCHG: $(iio_scale $RN5T618_ADC/in_voltage2 2>/dev/null)mV
+VOLT=$(iio_scale $RN5T618_ADC/in_voltage1 2>/dev/null)
+AMP=$(iio_scale $RN5T618_ADC/in_current0_input 2>/dev/null)
 echo VBATT: ${VOLT}mV ca. $(fuel-level "$VOLT" "AMP" 0.1)%
 echo temp: $(cat $RN5T618_ADC/in_voltage5_raw)mV
 

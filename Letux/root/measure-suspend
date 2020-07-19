@@ -30,6 +30,9 @@ case $(tr -d '\0' </proc/device-tree/model 2>/dev/null) in
 		chg=/sys/class/power_supply/bq27421-0/charge_now
 		[ -r /dev/ttyACM1 ] && MODEM="with modem on"
 		;;
+	*'Tolino Shine 3'* | *'Kobo Clara'* )
+		chg=/sys/class/power_supply/rn5t618-gauge/charge_now
+		;;
 	* )
 		echo "unknown device $(tr -d '\0' </proc/device-tree/model 2>/dev/null)"
 		exit 1

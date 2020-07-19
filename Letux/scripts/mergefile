@@ -151,6 +151,7 @@ letux/kobolino/backlight
 letux/kobolino/dt
 letux/kobolino/rtc
 letux/kobolino/touch
+letux/kobolino/battery
 letux/rtl8189fs
 letux/kobolino-epdc
 #letux/kobolino_defconfig

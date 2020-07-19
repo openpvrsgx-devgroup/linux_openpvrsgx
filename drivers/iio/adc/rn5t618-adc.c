@@ -156,6 +156,15 @@ static int rn5t618_adc_read(struct iio_dev *iio_dev,
 	if (ret < 0)
 		return ret;
 
+	if (mask & IIO_CHAN_INFO_PROCESSED) {
+		int scale, scale_val2;
+		s64 raw64 = raw;
+
+		rn5t618_adc_read(iio_dev, chan, &scale, &scale_val2, IIO_CHAN_INFO_SCALE);
+
+		raw = div_s64(raw64 * (s64)scale, scale_val2);
+	}
+
 	*val = raw;
 
 	return IIO_VAL_INT;
@@ -170,7 +179,8 @@ static const struct iio_info rn5t618_adc_iio_info = {
 	.channel = _channel, \
 	.info_mask_separate = BIT(IIO_CHAN_INFO_RAW) | \
 			      BIT(IIO_CHAN_INFO_AVERAGE_RAW) | \
-			      BIT(IIO_CHAN_INFO_SCALE), \
+			      BIT(IIO_CHAN_INFO_SCALE) | \
+			      BIT(IIO_CHAN_INFO_PROCESSED), \
 	.datasheet_name = _name, \
 	.indexed = 1. \
 }

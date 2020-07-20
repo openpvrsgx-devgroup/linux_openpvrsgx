@@ -8,7 +8,8 @@ INA231=$($SCRIPTPATH/findhwmon ina231)	# Pyra modem monitor
 
 function iio_scale
 {
-  echo "scale=0; $(<$1_raw) * $(<$1_scale) / 1" | bc
+	[ "$(which bc)" ] || apt-get install bc
+	echo "$(<$1_raw) * $(<$1_scale)" / 1 | bc
 }
 
 
@@ -53,7 +54,7 @@ then # OMAP3 with TWL4030 / TPS65950
 # 15	VRUSB Supply/Speaker left/Speaker right polarization level
 
 echo "TWL4030 System Status"
-echo "============≠========"
+echo "====================="
 echo VBUS: $(cat "$TWL4030_MADC/in_voltage8_input")mV
 echo VCHG: $(cat "$TWL4030_MADC/in_voltage11_input")mV
 VOLT=$(cat "$TWL4030_MADC/in_voltage12_input")
@@ -170,7 +171,7 @@ then # Kobolino with RN5T618
 # 7	AIN0
 
 echo "RN5T618 System STATUS"
-echo "==================≠=="
+echo "====================="
 echo VSYS: $(iio_scale $RN5T618_ADC/in_voltage4 2>/dev/null)mV
 echo VBUS: $(iio_scale $RN5T618_ADC/in_voltage3 2>/dev/null)mV
 echo VCHG: $(iio_scale $RN5T618_ADC/in_voltage2 2>/dev/null)mV

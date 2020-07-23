@@ -125,24 +125,9 @@
 	model = "Letux Cortex 8";
 	compatible = "goldelico,lc8", "ti,am335x-bone-black", "ti,am335x-bone", "ti,am33xx", "octavo,osd3358";
 
-	gpio-leds {
-
-		compatible = "gpio-leds";
-
-		pinctrl-names = "default";
-		pinctrl-0 = <&led_pins>;
-
-		led@user {
-			label = "bbb-exp43::user";
-			gpios = <&gpio1 28 GPIO_ACTIVE_HIGH>;
-			linux,default-trigger = "heartbeat";
-			default-state = "on";
-		};
-
-		led@backlight {
-			label = "bbb-exp43::backlight";
-			gpios = <&gpio1 18 GPIO_ACTIVE_HIGH>;
-			default-state = "on";
+	leds {
+		led5 {
+			gpios = <&gpio1 26 GPIO_ACTIVE_HIGH>;
 		};
 	};
 
@@ -152,101 +137,29 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&button_pins>;
 
-		left-button {
-			label = "left";
-			linux,code = <KEY_LEFT>;
-			gpios = <&gpio1 16 GPIO_ACTIVE_LOW>;
-			gpio-key,wakeup;
-		};
-
-		right-button {
-			label = "right";
-			linux,code = <KEY_RIGHT>;
-			gpios = <&gpio1 17 GPIO_ACTIVE_LOW>;
-			gpio-key,wakeup;
-		};
-
-		up-button {
-			label = "up";
-			linux,code = <KEY_UP>;
-			gpios = <&gpio1 19 GPIO_ACTIVE_LOW>;
-			gpio-key,wakeup;
-		};
-
-		down-button {
-			label = "down";
-			linux,code = <KEY_DOWN>;
-			gpios = <&gpio3 16 GPIO_ACTIVE_LOW>;
-			gpio-key,wakeup;
-		};
-
-		enter-button {
-			label = "enter";
+		user-button {
+			label = "user";
 			linux,code = <KEY_ENTER>;
-			gpios = <&gpio0 15 GPIO_ACTIVE_LOW>;
+			gpios = <&gpio2 8 GPIO_ACTIVE_LOW>;
 			gpio-key,wakeup;
 		};
 
 	};
 
-	backlight {
-		compatible = "pwm-backlight";
-		pwms = <&ehrpwm1 0 50000 0>;
-		brightness-levels = <0 51 53 56 62 75 101 152 255>;
-		default-brightness-level = <8>;
-	};
-
-	panel {
-		status = "okay";
-
-		compatible = "ti,tilcdc,panel";
-		pinctrl-names = "default";
-		pinctrl-0 = <&lcd_24bit_pins>;
-
-		enable-gpios = <&gpio3 19 GPIO_ACTIVE_HIGH>;
-
-		panel-info {
-			ac-bias           = <255>;
-			ac-bias-intrpt    = <0>;
-			dma-burst-sz      = <16>;
-			bpp               = <24>;	// uses only RGB565 out of RGB888
-			fdd               = <0x80>;
-			sync-edge         = <0>;
-			sync-ctrl         = <1>;
-			raster-order      = <0>;
-			fifo-th           = <0>;
-		};
-
-		display-timings {
-			native-mode = <&timing0>;
-			timing0: 480x272p60 {
-				clock-frequency = <9200000>;
-				hactive = <480>;
-				vactive = <272>;
-				hfront-porch = <8>;
-				hback-porch = <47>;
-				hsync-len = <41>;
-				vback-porch = <2>;
-				vfront-porch = <3>;
-				vsync-len = <10>;
-				hsync-active = <0>;
-				vsync-active = <0>;
-				de-active = <1>;
-				pixelclk-active = <0>;
-			};
-		};
-	};
-
 };
 
-&ehrpwm1 {
-	status = "okay";
-	pinctrl-names = "default";
-	pinctrl-0 = <&bb_lcd_pwm_backlight_pins>;
+&user_leds_s0 {
+	pinctrl-single,pins = <
+		AM33XX_PADCONF(AM335X_PIN_GPMC_A5, PIN_OUTPUT_PULLDOWN, MUX_MODE7)	/* gpmc_a5.gpio1_21 */
+		AM33XX_PADCONF(AM335X_PIN_GPMC_A6, PIN_OUTPUT_PULLUP, MUX_MODE7)	/* gpmc_a6.gpio1_22 */
+		AM33XX_PADCONF(AM335X_PIN_GPMC_A7, PIN_OUTPUT_PULLDOWN, MUX_MODE7)	/* gpmc_a7.gpio1_23 */
+		AM33XX_PADCONF(AM335X_PIN_GPMC_A10, PIN_OUTPUT_PULLUP, MUX_MODE7)	/* gpmc_a10.gpio1_26 */
+	>;
 };
 
+/* usually, we have no display connected */
 &lcdc {
-	status = "disabled";	/* usually, we have no display connected */
+	status = "disabled";
 };
 
 &rtc {
@@ -263,21 +176,22 @@
 };
 
 &ldo3_reg {
-        regulator-min-microvolt = <1800000>;
-        regulator-max-microvolt = <1800000>;
-        regulator-always-on;
+	regulator-min-microvolt = <1800000>;
+	regulator-max-microvolt = <1800000>;
+	regulator-always-on;
 };
 
 &mmc1 {
-        vmmc-supply = <&vmmcsd_fixed>;
+	vmmc-supply = <&vmmcsd_fixed>;
 };
 
 &mmc2 {
-        vmmc-supply = <&vmmcsd_fixed>;
-        pinctrl-names = "default";
-        pinctrl-0 = <&emmc_pins>;
-        bus-width = <8>;
-        status = "okay";
+	vmmc-supply = <&vmmcsd_fixed>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&emmc_pins>;
+	bus-width = <8>;
+	status = "okay";
+	non-removable;
 };
 
 /* no ethernet */
@@ -289,89 +203,7 @@
 
 	button_pins: pinmux_button_pins {
 		pinctrl-single,pins = <
-			BONE_P9_15 0x2f	/* KEY_LEFT gpmc_a0.gpio1_16, INPUT | PULLDIS | MODE7 */
-			BONE_P9_23 0x2f	/* KEY_RIGHT gpmc_a1.gpio1_17, INPUT | PULLDIS | MODE7 */
-			BONE_P9_16 0x2f	/* KEY_UP gpmc_a3.gpio1_19, INPUT | PULLDIS | MODE7 */
-			BONE_P9_30 0x2f	/* KEY_ENTER gpmc_a2.gpio3_16, INPUT | PULLDIS | MODE7 */
-			BONE_P9_24 0x2f	/* KEY_DOWN uart1_txd.gpio0_15, INPUT | PULLDIS | MODE7 */
-		>;
-	};
-
-	led_pins: pinmux_led_pins {
-		pinctrl-single,pins = <
-			BONE_P9_12 0x2f	/* gpmc_ben1.gpio1_28, OUTPUT | PULLDIS | MODE7 */
-		>;
-	};
-
-	bb_lcd_pwm_backlight_pins: pinmux_bb_lcd_pwm_backlight_pins {
-		pinctrl-single,pins = <
-			BONE_P9_14 (PIN_OUTPUT_PULLUP | MUX_MODE7) /* gpmc_a2.ehrpwm1a */
-		>;
-	};
-
-	lcd_24bit_pins: pinmux_lcd_18bit_pins {
-		pinctrl-single,pins = <
-			/* P8_45: lcd_data0.lcd_data0 */
-			BONE_P8_45 (PIN_OUTPUT | MUX_MODE0)
-			/* P8_46: lcd_data1.lcd_data1 */
-			BONE_P8_46 (PIN_OUTPUT | MUX_MODE0)
-			/* P8_43: lcd_data2.lcd_data2 */
-			BONE_P8_43 (PIN_OUTPUT | MUX_MODE0)
-			/* P8_44: lcd_data3.lcd_data3 */
-			BONE_P8_44 (PIN_OUTPUT | MUX_MODE0)
-			/* P8_41: lcd_data4.lcd_data4 */
-			BONE_P8_41 (PIN_OUTPUT | MUX_MODE0)
-			/* P8_42: lcd_data5.lcd_data5 */
-			BONE_P8_42 (PIN_OUTPUT | MUX_MODE0)
-			/* P8_39: lcd_data6.lcd_data6 */
-			BONE_P8_39 (PIN_OUTPUT | MUX_MODE0)
-			/* P8_40: lcd_data7.lcd_data7 */
-			BONE_P8_40 (PIN_OUTPUT | MUX_MODE0)
-			/* P8_37: lcd_data8.lcd_data8 */
-			BONE_P8_37 (PIN_OUTPUT | MUX_MODE0)
-			/* P8_38: lcd_data9.lcd_data9 */
-			BONE_P8_38 (PIN_OUTPUT | MUX_MODE0)
-			/* P8_36: lcd_data10.lcd_data10 */
-			BONE_P8_36 (PIN_OUTPUT | MUX_MODE0)
-			/* P8_34: lcd_data11.lcd_data11 */
-			BONE_P8_34 (PIN_OUTPUT | MUX_MODE0)
-			/* P8_35: lcd_data12.lcd_data12 */
-			BONE_P8_35 (PIN_OUTPUT | MUX_MODE0)
-			/* P8_33: lcd_data13.lcd_data13 */
-			BONE_P8_33 (PIN_OUTPUT | MUX_MODE0)
-			/* P8_31: lcd_data14.lcd_data14 */
-			BONE_P8_31 (PIN_OUTPUT | MUX_MODE0)
-			/* P8_32: lcd_data15.lcd_data15 */
-			BONE_P8_32 (PIN_OUTPUT | MUX_MODE0)
-
-			/* gpmc_ad15.lcd_data16 */
-			BONE_P8_15 (PIN_OUTPUT | MUX_MODE1)
-			/* gpmc_ad14.lcd_data17 */
-			BONE_P8_16 (PIN_OUTPUT | MUX_MODE1)
-			/* gpmc_ad13.lcd_data18 */
-			BONE_P8_11 (PIN_OUTPUT | MUX_MODE1)
-			/* gpmc_ad12.lcd_data19 */
-			BONE_P8_12 (PIN_OUTPUT | MUX_MODE1)
-			/* gpmc_ad11.lcd_data20 */
-			BONE_P8_17 (PIN_OUTPUT | MUX_MODE1)
-			/* gpmc_ad10.lcd_data21 */
-			BONE_P8_14 (PIN_OUTPUT | MUX_MODE1)
-			/* gpmc_ad9.lcd_data22 */
-			BONE_P8_13 (PIN_OUTPUT | MUX_MODE1)
-			/* gpmc_ad8.lcd_data23 */
-			BONE_P8_19 (PIN_OUTPUT | MUX_MODE1)
-
-			/* P8_27: lcd_vsync.lcd_vsync */
-			BONE_P8_27 (PIN_OUTPUT | MUX_MODE0)
-			/* P8_29: lcd_hsync.lcd_hsync */
-			BONE_P8_29 (PIN_OUTPUT | MUX_MODE0)
-			/* P8_28: lcd_pclk.lcd_pclk*/
-			BONE_P8_28 (PIN_OUTPUT | MUX_MODE0)
-			/* P8_30: lcd_ac_bias_en.lcd_ac_bias_en */
-			BONE_P8_30 (PIN_OUTPUT | MUX_MODE0)
-
-			/* P9_27: gpio3_19 */
-			BONE_P9_27 (PIN_OUTPUT_PULLUP | MUX_MODE7)
+			0x0a8 0x2f	/* KEY_ENTER lcd_data2.gpio2_8, INPUT | PULLDIS | MODE7 */
 		>;
 	};
 

@@ -273,9 +273,25 @@ static const struct snd_soc_dapm_route dmic_audio_map[] = {
 static int omap_abe_dmic_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_dapm_context *dapm = &rtd->card->dapm;
+	struct snd_soc_card *card = rtd->card;
+	struct abe_twl6040 * priv = snd_soc_card_get_drvdata(card);
+	int ret;
 
-	return snd_soc_dapm_add_routes(dapm, dmic_audio_map,
-				ARRAY_SIZE(dmic_audio_map));
+	ret = snd_soc_dapm_new_controls(dapm, dmic_dapm_widgets,
+					ARRAY_SIZE(dmic_dapm_widgets));
+	if (ret)
+		return ret;
+
+	ret = snd_soc_dapm_add_routes(dapm, dmic_audio_map,
+					ARRAY_SIZE(dmic_audio_map));
+	if (ret < 0)
+		return ret;
+
+	snd_soc_dapm_ignore_suspend(dapm, "Digital Mic 0");
+	snd_soc_dapm_ignore_suspend(dapm, "Digital Mic 1");
+	snd_soc_dapm_ignore_suspend(dapm, "Digital Mic 2");
+
+	return 0;
 }
 
 #define ADD_DAILINK(_card, _link, _name, _stream, _ofnode, _init, _ops) { \

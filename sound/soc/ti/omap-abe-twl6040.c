@@ -204,9 +204,28 @@ static int omap_abe_twl6040_init(struct snd_soc_pcm_runtime *rtd)
 	return 0;
 }
 
+static const struct snd_soc_dapm_widget dmic_dapm_widgets[] = {
+	SND_SOC_DAPM_MIC("Digital Mic 0", NULL),
+	SND_SOC_DAPM_MIC("Digital Mic 1", NULL),
+	SND_SOC_DAPM_MIC("Digital Mic 2", NULL),
+};
+
 static const struct snd_soc_dapm_route dmic_audio_map[] = {
 	{"DMic", NULL, "Digital Mic"},
 	{"Digital Mic", NULL, "Digital Mic1 Bias"},
+
+	/* Digital Mics: DMic0, DMic1, DMic2 with bias */
+	{"DMic", NULL, "Digital Mic"},
+	{"Digital Mic", NULL, "Digital Mic1 Bias"},
+	{"Digital Mic1 Bias", NULL, "Digital Mic 0"},
+
+	{"DMic1", NULL, "omap-dmic-abe Capture"},
+	{"omap-dmic-abe Capture", NULL, "Digital Mic1 Bias"},
+	{"Digital Mic1 Bias", NULL, "Digital Mic 1"},
+
+	{"DMic2", NULL, "omap-dmic-abe Capture"},
+	{"omap-dmic-abe Capture", NULL, "Digital Mic1 Bias"},
+	{"Digital Mic1 Bias", NULL, "Digital Mic 2"},
 };
 
 static int omap_abe_dmic_init(struct snd_soc_pcm_runtime *rtd)

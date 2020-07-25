@@ -343,6 +343,7 @@ static int omap_abe_twl6040_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_card *card = rtd->card;
 	struct abe_twl6040 *priv = snd_soc_card_get_drvdata(card);
 	int hs_trim;
+	u32 hsotrim, left_offset, right_offset, step_mV;
 	int ret;
 
 	/*
@@ -365,6 +366,14 @@ static int omap_abe_twl6040_init(struct snd_soc_pcm_runtime *rtd)
 
 	/* DC offset cancellation computation only if ABE is enabled */
 	if (priv->aess) {
+		hsotrim = twl6040_get_trim_value(component, TWL6040_TRIM_HSOTRIM);
+		right_offset = TWL6040_HSF_TRIM_RIGHT(hsotrim);
+		left_offset = TWL6040_HSF_TRIM_LEFT(hsotrim);
+
+		step_mV = twl6040_get_hs_step_size(component);
+		omap_aess_dc_set_hs_offset(priv->aess, left_offset,
+					   right_offset, step_mV);
+
 		/* ABE power control */
 		ret = snd_soc_add_card_controls(card, omap_abe_controls,
 						ARRAY_SIZE(omap_abe_controls));

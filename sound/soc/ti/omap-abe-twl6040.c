@@ -217,13 +217,28 @@ static int omap_abe_dmic_init(struct snd_soc_pcm_runtime *rtd)
 				ARRAY_SIZE(dmic_audio_map));
 }
 
+#define ADD_DAILINK(_card, _link, _name, _stream, _ofnode, _init, _ops) { \
+	_card->dai_link[_card->num_links].name = _name; \
+	_card->dai_link[_card->num_links].stream_name = _stream; \
+	_card->dai_link[_card->num_links].cpus = _link##_cpus; \
+	_card->dai_link[_card->num_links].num_cpus = ARRAY_SIZE(_link##_cpus); \
+	_card->dai_link[_card->num_links].cpus->of_node = _ofnode; \
+	_card->dai_link[_card->num_links].platforms = _link##_platforms; \
+	_card->dai_link[_card->num_links].num_platforms = ARRAY_SIZE(_link##_platforms); \
+	_card->dai_link[_card->num_links].platforms->of_node = _ofnode; \
+	_card->dai_link[_card->num_links].codecs = _link##_codecs; \
+	_card->dai_link[_card->num_links].num_codecs = ARRAY_SIZE(_link##_codecs); \
+	_card->dai_link[_card->num_links].init = _init; \
+	_card->dai_link[_card->num_links].ops = &_ops; \
+	_card->num_links++; \
+	}
+
 static int omap_abe_probe(struct platform_device *pdev)
 {
 	struct device_node *node = pdev->dev.of_node;
 	struct snd_soc_card *card;
 	struct device_node *dai_node;
 	struct abe_twl6040 *priv;
-	int num_links = 0;
 	int ret = 0;
 
 	if (!node) {
@@ -242,6 +257,8 @@ static int omap_abe_probe(struct platform_device *pdev)
 	card->num_dapm_widgets = ARRAY_SIZE(twl6040_dapm_widgets);
 	card->dapm_routes = audio_map;
 	card->num_dapm_routes = ARRAY_SIZE(audio_map);
+	card->dai_link = priv->dai_links;
+	snd_soc_card_set_drvdata(card, priv);
 
 	if (snd_soc_of_parse_card_name(card, "ti,model")) {
 		dev_err(&pdev->dev, "Card name is not provided\n");
@@ -260,37 +277,11 @@ static int omap_abe_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-	priv->dai_links[0].name = "DMIC";
-	priv->dai_links[0].stream_name = "TWL6040";
-	priv->dai_links[0].cpus = link0_cpus;
-	priv->dai_links[0].num_cpus = 1;
-	priv->dai_links[0].cpus->of_node = dai_node;
-	priv->dai_links[0].platforms = link0_platforms;
-	priv->dai_links[0].num_platforms = 1;
-	priv->dai_links[0].platforms->of_node = dai_node;
-	priv->dai_links[0].codecs = link0_codecs;
-	priv->dai_links[0].num_codecs = 1;
-	priv->dai_links[0].init = omap_abe_twl6040_init;
-	priv->dai_links[0].ops = &omap_abe_ops;
+	ADD_DAILINK(card, link0, "DMIC", "TWL6040", dai_node, omap_abe_twl6040_init, omap_abe_ops);
 
 	dai_node = of_parse_phandle(node, "ti,dmic", 0);
-	if (dai_node) {
-		num_links = 2;
-		priv->dai_links[1].name = "TWL6040";
-		priv->dai_links[1].stream_name = "DMIC Capture";
-		priv->dai_links[1].cpus = link1_cpus;
-		priv->dai_links[1].num_cpus = 1;
-		priv->dai_links[1].cpus->of_node = dai_node;
-		priv->dai_links[1].platforms = link1_platforms;
-		priv->dai_links[1].num_platforms = 1;
-		priv->dai_links[1].platforms->of_node = dai_node;
-		priv->dai_links[1].codecs = link1_codecs;
-		priv->dai_links[1].num_codecs = 1;
-		priv->dai_links[1].init = omap_abe_dmic_init;
-		priv->dai_links[1].ops = &omap_abe_dmic_ops;
-	} else {
-		num_links = 1;
-	}
+	if (dai_node)
+		ADD_DAILINK(card, link1, "TWL6040", "DMIC Capture", dai_node, omap_abe_dmic_init, omap_abe_dmic_ops);
 
 	priv->jack_detection = of_property_read_bool(node, "ti,jack-detection");
 	of_property_read_u32(node, "ti,mclk-freq", &priv->mclk_freq);
@@ -303,8 +294,6 @@ static int omap_abe_probe(struct platform_device *pdev)
 
 	card->dai_link = priv->dai_links;
 	card->num_links = num_links;
-
-	snd_soc_card_set_drvdata(card, priv);
 
 	ret = devm_snd_soc_register_card(&pdev->dev, card);
 	if (ret)

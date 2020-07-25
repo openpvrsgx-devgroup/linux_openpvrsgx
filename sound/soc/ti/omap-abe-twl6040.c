@@ -297,6 +297,19 @@ static const struct snd_soc_dapm_route audio_map[] = {
 
 	{"AFML", NULL, "Line In"},
 	{"AFMR", NULL, "Line In"},
+
+	/* Connections between twl6040 and ABE */
+	{"Headset Playback", NULL, "PDM_DL1"},
+	{"Handsfree Playback", NULL, "PDM_DL2"},
+	{"PDM_UL1", NULL, "Analog Capture"},
+
+	/* Bluetooth <--> ABE*/
+	{"omap-mcbsp.1 Playback", NULL, "BT_VX_DL"},
+	{"BT_VX_UL", NULL, "omap-mcbsp.1 Capture"},
+
+	/* FM <--> ABE */
+	{"omap-mcbsp.2 Playback", NULL, "MM_EXT_DL"},
+	{"MM_EXT_UL", NULL, "omap-mcbsp.2 Capture"},
 };
 
 static int omap_abe_stream_event(struct snd_soc_dapm_context *dapm, int event)

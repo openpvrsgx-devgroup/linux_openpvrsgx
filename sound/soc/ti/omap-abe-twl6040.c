@@ -27,6 +27,7 @@
 #include <sound/core.h>
 #include <sound/jack.h>
 #include <sound/pcm.h>
+#include <sound/pcm_params.h>
 #include <sound/soc.h>
 
 #include "../codecs/twl6040.h"
@@ -123,6 +124,17 @@ static int omap_abe_hw_params(struct snd_pcm_substream *substream,
 	return ret;
 }
 
+static int omap_mcpdm_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
+                                    struct snd_pcm_hw_params *params)
+{
+	struct snd_interval *rate = hw_param_interval(params,
+					SNDRV_PCM_HW_PARAM_RATE);
+
+	rate->min = rate->max = 96000;
+
+	return 0;
+}
+
 static const struct snd_soc_ops omap_abe_ops = {
 	.hw_params = omap_abe_hw_params,
 };
@@ -146,6 +158,37 @@ static int omap_abe_dmic_hw_params(struct snd_pcm_substream *substream,
 		dev_err(rtd->card->dev, "can't set DMIC output clock\n");
 
 	return ret;
+}
+
+static int omap_mcbsp_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
+				struct snd_pcm_hw_params *params)
+{
+	struct snd_interval *channels = hw_param_interval(params,
+					SNDRV_PCM_HW_PARAM_CHANNELS);
+	unsigned int be_id = rtd->dai_link->id;
+
+	if (be_id == OMAP_AESS_BE_ID_MM_FM || be_id == OMAP_AESS_BE_ID_BT_VX)
+		channels->min = 2;
+
+	snd_mask_set(&params->masks[SNDRV_PCM_HW_PARAM_FORMAT -
+				    SNDRV_PCM_HW_PARAM_FIRST_MASK],
+				    SNDRV_PCM_FORMAT_S16_LE);
+	return 0;
+}
+
+static int omap_dmic_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
+		struct snd_pcm_hw_params *params)
+{
+	struct snd_interval *rate = hw_param_interval(params,
+			SNDRV_PCM_HW_PARAM_RATE);
+
+	/* The ABE will covert the FE rate to 96k */
+	rate->min = rate->max = 96000;
+
+	snd_mask_set(&params->masks[SNDRV_PCM_HW_PARAM_FORMAT -
+				    SNDRV_PCM_HW_PARAM_FIRST_MASK],
+				    SNDRV_PCM_FORMAT_S32_LE);
+	return 0;
 }
 
 static const struct snd_soc_ops omap_abe_dmic_ops = {

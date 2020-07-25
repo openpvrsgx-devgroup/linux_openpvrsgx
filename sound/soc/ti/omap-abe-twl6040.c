@@ -93,6 +93,7 @@ struct abe_twl6040 {
 	struct snd_soc_dai_link dai_links[2];
 	int	jack_detection;	/* board can detect jack events */
 	int	mclk_freq;	/* MCLK frequency speed for twl6040 */
+	int twl6040_power_mode;
 };
 
 static struct platform_device *dmic_codec_dev;
@@ -212,6 +213,43 @@ static struct snd_soc_jack_pin hs_jack_pins[] = {
 	},
 };
 
+static int omap_abe_get_power_mode(struct snd_kcontrol *kcontrol,
+				   struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct abe_twl6040 *priv = snd_soc_card_get_drvdata(card);
+
+	ucontrol->value.integer.value[0] = priv->twl6040_power_mode;
+
+	return 0;
+}
+
+static int omap_abe_set_power_mode(struct snd_kcontrol *kcontrol,
+				   struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct abe_twl6040 * priv = snd_soc_card_get_drvdata(card);
+
+	if (priv->twl6040_power_mode == ucontrol->value.integer.value[0])
+		return 0;
+
+	priv->twl6040_power_mode = ucontrol->value.integer.value[0];
+	omap_aess_pm_set_mode(priv->aess, priv->twl6040_power_mode);
+
+	return 1;
+}
+
+static const char *power_texts[] = {"Low-Power", "High-Performance"};
+
+static const struct soc_enum omap_abe_enum[] = {
+	SOC_ENUM_SINGLE_EXT(2, power_texts),
+};
+
+static const struct snd_kcontrol_new omap_abe_controls[] = {
+	SOC_ENUM_EXT("TWL6040 Power Mode", omap_abe_enum[0],
+		omap_abe_get_power_mode, omap_abe_set_power_mode),
+};
+
 static const struct snd_soc_dapm_widget twl6040_dapm_widgets[] = {
 	/* Outputs */
 	SND_SOC_DAPM_HP("Headset Stereophone", NULL),
@@ -275,6 +313,22 @@ static int omap_abe_twl6040_init(struct snd_soc_pcm_runtime *rtd)
 	hs_trim = twl6040_get_trim_value(component, TWL6040_TRIM_HSOTRIM);
 	omap_mcpdm_configure_dn_offsets(rtd, TWL6040_HSF_TRIM_LEFT(hs_trim),
 					TWL6040_HSF_TRIM_RIGHT(hs_trim));
+
+	/* allow audio paths from the audio modem to run during suspend */
+	snd_soc_dapm_ignore_suspend(&card->dapm, "Ext Spk");
+	snd_soc_dapm_ignore_suspend(&card->dapm, "AFML");
+	snd_soc_dapm_ignore_suspend(&card->dapm, "AFMR");
+	snd_soc_dapm_ignore_suspend(&card->dapm, "Headset Mic");
+	snd_soc_dapm_ignore_suspend(&card->dapm, "Headset Stereophone");
+
+	/* DC offset cancellation computation only if ABE is enabled */
+	if (priv->aess) {
+		/* ABE power control */
+		ret = snd_soc_add_card_controls(card, omap_abe_controls,
+						ARRAY_SIZE(omap_abe_controls));
+		if (ret)
+			return ret;
+	}
 
 	/* Headset jack detection only if it is supported */
 	if (priv->jack_detection) {

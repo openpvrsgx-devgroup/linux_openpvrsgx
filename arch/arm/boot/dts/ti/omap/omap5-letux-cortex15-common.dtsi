@@ -157,7 +157,7 @@
 		compatible = "smsc,usb3503";
 		reg = <0x08>;
 		intn-gpios = <&gpio3 14 GPIO_ACTIVE_HIGH>;	// gpio3_78 interrupt
-		reset-gpios = <&gpio3 16 GPIO_ACTIVE_HIGH>;	// gpio3_80 reset
+		reset-gpios = <&gpio3 16 GPIO_ACTIVE_LOW>;	// gpio3_80 reset
 		initial-mode = <1>;
 	};
 

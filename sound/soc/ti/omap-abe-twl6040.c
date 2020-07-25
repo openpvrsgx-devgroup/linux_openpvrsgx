@@ -19,6 +19,7 @@
  */
 
 #include <linux/clk.h>
+#include <linux/firmware.h>
 #include <linux/mfd/twl6040.h>
 #include <linux/module.h>
 #include <linux/of.h>
@@ -31,9 +32,12 @@
 #include <sound/soc.h>
 #include <sound/soc-dapm.h>
 
+#include "aess/omap-aess.h"
 #include "../codecs/twl6040.h"
 #include "omap-dmic.h"
 #include "omap-mcpdm.h"
+
+#define AESS_FW_NAME   "omap_aess-adfw.bin"
 
 SND_SOC_DAILINK_DEFS(link0,
 	DAILINK_COMP_ARRAY(COMP_EMPTY()),
@@ -95,6 +99,7 @@ struct abe_twl6040 {
 	int	jack_detection;	/* board can detect jack events */
 	int	mclk_freq;	/* MCLK frequency speed for twl6040 */
 	int	twl6040_power_mode;
+	struct omap_aess	*aess;
 };
 
 static struct platform_device *dmic_codec_dev;

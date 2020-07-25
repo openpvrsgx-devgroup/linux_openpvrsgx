@@ -29,6 +29,7 @@
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
+#include <sound/soc-dapm.h>
 
 #include "../codecs/twl6040.h"
 #include "omap-dmic.h"
@@ -93,7 +94,7 @@ struct abe_twl6040 {
 	struct snd_soc_dai_link dai_links[2];
 	int	jack_detection;	/* board can detect jack events */
 	int	mclk_freq;	/* MCLK frequency speed for twl6040 */
-	int twl6040_power_mode;
+	int	twl6040_power_mode;
 };
 
 static struct platform_device *dmic_codec_dev;
@@ -298,6 +299,26 @@ static const struct snd_soc_dapm_route audio_map[] = {
 	{"AFMR", NULL, "Line In"},
 };
 
+static int omap_abe_stream_event(struct snd_soc_dapm_context *dapm, int event)
+{
+	struct snd_soc_card *card = dapm->card;
+	struct snd_soc_component *component = dapm->component;
+	struct abe_twl6040 * priv = snd_soc_card_get_drvdata(card);
+
+	int gain;
+
+	/*
+	 * set DL1 gains dynamically according to the active output
+	 * (Headset, Earpiece) and HSDAC power mode
+	 */
+
+	gain = twl6040_get_dl1_gain(component) * 100;
+
+	omap_aess_set_dl1_gains(priv->aess, gain, gain);
+
+	return 0;
+}
+
 static int omap_abe_twl6040_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_component *component = snd_soc_rtd_to_codec(rtd, 0)->component;
@@ -313,6 +334,9 @@ static int omap_abe_twl6040_init(struct snd_soc_pcm_runtime *rtd)
 	hs_trim = twl6040_get_trim_value(component, TWL6040_TRIM_HSOTRIM);
 	omap_mcpdm_configure_dn_offsets(rtd, TWL6040_HSF_TRIM_LEFT(hs_trim),
 					TWL6040_HSF_TRIM_RIGHT(hs_trim));
+
+	// FIXME: omap_abe_stream_event.stream_event has disappeared in v5.4
+	// card->dapm.stream_event = omap_abe_stream_event;
 
 	/* allow audio paths from the audio modem to run during suspend */
 	snd_soc_dapm_ignore_suspend(&card->dapm, "Ext Spk");

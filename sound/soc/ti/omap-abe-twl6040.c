@@ -316,7 +316,7 @@ static int omap_abe_probe(struct platform_device *pdev)
 }
 
 static const struct of_device_id omap_abe_of_match[] = {
-	{.compatible = "ti,abe-twl6040", },
+	{ .compatible = "ti,abe-twl6040", },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, omap_abe_of_match);

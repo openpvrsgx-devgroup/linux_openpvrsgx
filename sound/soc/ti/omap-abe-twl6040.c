@@ -125,7 +125,6 @@ static struct snd_soc_jack_pin hs_jack_pins[] = {
 	},
 };
 
-/* SDP4430 machine DAPM */
 static const struct snd_soc_dapm_widget twl6040_dapm_widgets[] = {
 	/* Outputs */
 	SND_SOC_DAPM_HP("Headset Stereophone", NULL),

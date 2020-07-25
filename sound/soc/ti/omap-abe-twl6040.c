@@ -96,6 +96,7 @@ struct abe_twl6040 {
 };
 
 static struct platform_device *dmic_codec_dev;
+static struct platform_device *spdif_codec_dev;
 
 static int omap_abe_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params)
@@ -194,6 +195,7 @@ static int omap_dmic_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 static const struct snd_soc_ops omap_abe_dmic_ops = {
 	.hw_params = omap_abe_dmic_hw_params,
 };
+
 
 /* Headset jack */
 static struct snd_soc_jack hs_jack;
@@ -446,9 +448,18 @@ static int __init omap_abe_init(void)
 		return PTR_ERR(dmic_codec_dev);
 	}
 
+	spdif_codec_dev = platform_device_register_simple("spdif-dit", -1,
+				NULL, 0);
+	if (IS_ERR(spdif_codec_dev)) {
+		pr_err("%s: spdif-dit device registration failed\n", __func__);
+		platform_device_unregister(dmic_codec_dev);
+		return PTR_ERR(spdif_codec_dev);
+	}
+
 	ret = platform_driver_register(&omap_abe_driver);
 	if (ret) {
 		pr_err("%s: platform driver registration failed\n", __func__);
+		platform_device_unregister(spdif_codec_dev);
 		platform_device_unregister(dmic_codec_dev);
 	}
 
@@ -460,6 +471,7 @@ static void __exit omap_abe_exit(void)
 {
 	platform_driver_unregister(&omap_abe_driver);
 	platform_device_unregister(dmic_codec_dev);
+	platform_device_unregister(spdif_codec_dev);
 }
 module_exit(omap_abe_exit);
 

@@ -496,6 +496,27 @@ static int omap_abe_probe(struct platform_device *pdev)
 	if (dai_node)
 		ADD_DAILINK(card, link1, "TWL6040", "DMIC Capture", dai_node, omap_abe_dmic_init, omap_abe_dmic_ops);
 
+	dai_node = of_parse_phandle(node, "ti,mcbsp", 0);
+	if (dai_node)
+		ADD_DAILINK(link_mcbsp, "TWL6040", "DMIC Capture", dai_node, omap_abe_dmic_init, omap_abe_dmic_ops);
+
+	dai_node = of_parse_phandle(node, "ti,mcasp", 0);
+	if (dai_node)
+		ADD_DAILINK(link_mcasp, "TWL6040", "DMIC Capture", dai_node, omap_abe_dmic_init, omap_abe_dmic_ops);
+
+	dai_node = of_parse_phandle(node, "ti,mcbsp2", 0);
+	if (dai_node)
+		ADD_DAILINK(link_mcasp, "TWL6040", "DMIC Capture", dai_node, omap_abe_dmic_init, omap_abe_dmic_ops);
+
+	dai_node = of_parse_phandle(node, "ti,aess", 0);
+	if (dai_node) {
+		ADD_DAILINK(link_fe, "TWL6040", "DMIC Capture", dai_node, omap_abe_dmic_init, omap_abe_dmic_ops);
+		ADD_DAILINK(link_be_mcpdm, "TWL6040", "DMIC Capture", dai_node, omap_abe_dmic_init, omap_abe_dmic_ops);
+		ADD_DAILINK(link_be_mcbsp1, "TWL6040", "DMIC Capture", dai_node, omap_abe_dmic_init, omap_abe_dmic_ops);
+		ADD_DAILINK(link_be_mcbsp2, "TWL6040", "DMIC Capture", dai_node, omap_abe_dmic_init, omap_abe_dmic_ops);
+		ADD_DAILINK(link_be_dmic, "TWL6040", "DMIC Capture", dai_node, omap_abe_dmic_init, omap_abe_dmic_ops);
+	}
+
 	priv->jack_detection = of_property_read_bool(node, "ti,jack-detection");
 	of_property_read_u32(node, "ti,mclk-freq", &priv->mclk_freq);
 	if (!priv->mclk_freq) {

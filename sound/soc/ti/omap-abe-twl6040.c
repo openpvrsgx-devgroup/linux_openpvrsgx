@@ -7,19 +7,19 @@
  */
 
 #include <linux/clk.h>
-#include <linux/platform_device.h>
 #include <linux/mfd/twl6040.h>
 #include <linux/module.h>
 #include <linux/of.h>
+#include <linux/platform_device.h>
 
 #include <sound/core.h>
+#include <sound/jack.h>
 #include <sound/pcm.h>
 #include <sound/soc.h>
-#include <sound/jack.h>
 
+#include "../codecs/twl6040.h"
 #include "omap-dmic.h"
 #include "omap-mcpdm.h"
-#include "../codecs/twl6040.h"
 
 SND_SOC_DAILINK_DEFS(link0,
 	DAILINK_COMP_ARRAY(COMP_EMPTY()),

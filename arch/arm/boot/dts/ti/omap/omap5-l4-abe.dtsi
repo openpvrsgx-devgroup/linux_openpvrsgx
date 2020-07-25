@@ -431,11 +431,45 @@
 			clock-names = "fck";
 			#address-cells = <1>;
 			#size-cells = <1>;
-			ranges = <0x0 0xf1000 0x1000>,
-				 <0x490f1000 0x490f1000 0x1000>;
+
+			/* CHECKME: OMAP4 and OMAP5 may differ in memory sizes */
+			ranges = <0xf1000 0xf1000 0x1000>, /* MPU private access */
+				 <0x80000 0x80000 0x10000>, /* DMEM 64KiB - MPU */
+				 <0xa0000 0xa0000 0x1000>, /* CMEM 4KiB - MPU */
+				 <0xc0000 0xc0000 0x10000>, /* SMEM 64KiB - MPU */
+				 <0xe0000 0xe0000 0x1000>, /* PMEM ?KiB - MPU */
+				 <0x490f1000 0x490f1000 0x1000>, /* L3 Interconnect */
+				 <0x49080000 0x49080000 0x10000>, /* DMEM 64KiB - L3 */
+				 <0x490a0000 0x490a0000 0x1000>, /* CMEM 4KiB - L3 */
+				 <0x490ce000 0x490c0000 0x10000>, /* SMEM 64KiB - L3 */
+				 <0x490e0000 0x490e0000 0x1000>; /* PMEM ?KiB - L3 */
 
 			aess: aess {
 				compatible = "ti,omap4-aess";
+				reg = <0xf1000 0x3ff>, /* MPU private access */
+				      <0x80000 0xffff>, /* DMEM - MPU */
+				      <0xa0000 0xfff>, /* CMEM - MPU */
+				      <0xc0000 0xffff>, /* SMEM - MPU */
+				      <0xe0000 0xfff>, /* PMEM - MPU */
+				      <0x490f1000 0x3ff>, /* L3 Interconnect */
+				      <0x49080000 0xffff>, /* DMEM - L3 */
+				      <0x490a0000 0xfff>, /* CMEM - L3 */
+				      <0x490ce000 0xffff>, /* SMEM - L3 */
+				      <0x490e0000 0xfff>; /* PMEM - L3 */
+				reg-names = "mpu", "dmem", "cmem", "smem", "pmem",
+				      "dma", "dmem_dma", "cmem_dma", "smem_dma",
+				      "pmem_dma";
+				interrupts = <GIC_SPI 99 IRQ_TYPE_LEVEL_HIGH>;
+				dmas = <&sdma 101>,
+				      <&sdma 102>,
+				      <&sdma 103>,
+				      <&sdma 104>,
+				      <&sdma 105>,
+				      <&sdma 106>,
+				      <&sdma 107>,
+				      <&sdma 108>;
+				dma-names = "fifo0", "fifo1", "fifo2", "fifo3", "fifo4",
+				      "fifo5", "fifo6", "fifo7";
 			};
 		};
 	};

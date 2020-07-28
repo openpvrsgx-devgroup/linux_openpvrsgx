@@ -414,33 +414,6 @@
 			};
 		};
 
-		target-module@80000 {			/* 0x40180000, ap 26 1a.0 */
-			compatible = "ti,sysc";
-			status = "disabled";
-			#address-cells = <1>;
-			#size-cells = <1>;
-			ranges = <0x0 0x80000 0x10000>,
-				 <0x49080000 0x49080000 0x10000>;
-		};
-
-		target-module@a0000 {			/* 0x401a0000, ap 28 1c.0 */
-			compatible = "ti,sysc";
-			status = "disabled";
-			#address-cells = <1>;
-			#size-cells = <1>;
-			ranges = <0x0 0xa0000 0x10000>,
-				 <0x490a0000 0x490a0000 0x10000>;
-		};
-
-		target-module@c0000 {			/* 0x401c0000, ap 30 1e.0 */
-			compatible = "ti,sysc";
-			status = "disabled";
-			#address-cells = <1>;
-			#size-cells = <1>;
-			ranges = <0x0 0xc0000 0x10000>,
-				 <0x490c0000 0x490c0000 0x10000>;
-		};
-
 		target-module@f1000 {			/* 0x401f1000, ap 32 20.0 */
 			compatible = "ti,sysc-omap4", "ti,sysc";
 			reg = <0xf1000 0x4>,

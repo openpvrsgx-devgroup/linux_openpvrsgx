@@ -298,6 +298,16 @@ config PWM_IQS620A
 	  To compile this driver as a module, choose M here: the module will
 	  be called pwm-iqs620a.
 
+config PWM_JZ4730
+	tristate "Ingenic JZ4730 PWM support"
+	depends on MACH_JZ4730
+	help
+	  Generic PWM framework driver for Ingenic JZ4730 based
+	  machines.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called pwm-jz4730.
+
 config PWM_JZ4740
 	tristate "Ingenic JZ47xx PWM support"
 	depends on MACH_INGENIC || COMPILE_TEST

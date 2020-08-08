@@ -2,6 +2,9 @@
 /*
  *  Copyright (C) 2010, Paul Cercueil <paul@crapouillou.net>
  *  JZ4740 Watchdog driver
+ *
+ *  Copyright (C) 2017, 2020, Paul Boddie <paul@boddie.org.uk>
+ *  JZ4730 customisations
  */
 
 #include <linux/mfd/ingenic-tcu.h>
@@ -18,6 +21,7 @@
 #include <linux/slab.h>
 #include <linux/err.h>
 #include <linux/of.h>
+#include <linux/of_device.h>
 #include <linux/regmap.h>
 
 #define DEFAULT_HEARTBEAT 5
@@ -36,37 +40,72 @@ MODULE_PARM_DESC(heartbeat,
 		__MODULE_STRING(MAX_HEARTBEAT) ", default "
 		__MODULE_STRING(DEFAULT_HEARTBEAT));
 
+struct jz_wdt_soc_info {
+	const struct watchdog_ops *ops;
+	unsigned int counter;
+	unsigned int enable;
+	unsigned int enable_start;
+};
+
 struct jz4740_wdt_drvdata {
 	struct watchdog_device wdt;
 	struct regmap *map;
 	struct clk *clk;
 	unsigned long clk_rate;
+	const struct jz_wdt_soc_info *soc_info;
 };
 
 static int jz4740_wdt_ping(struct watchdog_device *wdt_dev)
 {
 	struct jz4740_wdt_drvdata *drvdata = watchdog_get_drvdata(wdt_dev);
 
-	regmap_write(drvdata->map, TCU_REG_WDT_TCNT, 0);
+	regmap_write(drvdata->map, drvdata->soc_info->counter, 0);
 
 	return 0;
 }
 
-static int jz4740_wdt_set_timeout(struct watchdog_device *wdt_dev,
-				    unsigned int new_timeout)
+static int jz4730_wdt_set_timeout(struct watchdog_device *wdt_dev,
+				  unsigned int new_timeout)
 {
 	struct jz4740_wdt_drvdata *drvdata = watchdog_get_drvdata(wdt_dev);
+	const struct jz_wdt_soc_info *soc_info = drvdata->soc_info;
+	u16 timeout_value;
+	unsigned int tcer;
+
+	regmap_read(drvdata->map, soc_info->enable, &tcer);
+	regmap_write(drvdata->map, soc_info->enable, 0);
+
+	/* On the JZ4730, the timer limit raises the alarm, and so the timeout
+	 * must be subtracted from the limit to produce a starting value.
+	 */
+
+	timeout_value = 0xffffffff - (u16)(drvdata->clk_rate * new_timeout);
+
+	regmap_write(drvdata->map, soc_info->counter, timeout_value);
+
+	if (tcer & soc_info->enable_start)
+		regmap_write(drvdata->map, soc_info->enable, soc_info->enable_start);
+
+	wdt_dev->timeout = new_timeout;
+	return 0;
+}
+
+static int jz4740_wdt_set_timeout(struct watchdog_device *wdt_dev,
+				  unsigned int new_timeout)
+{
+	struct jz4740_wdt_drvdata *drvdata = watchdog_get_drvdata(wdt_dev);
+	const struct jz_wdt_soc_info *soc_info = drvdata->soc_info;
 	u16 timeout_value = (u16)(drvdata->clk_rate * new_timeout);
 	unsigned int tcer;
 
-	regmap_read(drvdata->map, TCU_REG_WDT_TCER, &tcer);
-	regmap_write(drvdata->map, TCU_REG_WDT_TCER, 0);
+	regmap_read(drvdata->map, soc_info->enable, &tcer);
+	regmap_write(drvdata->map, soc_info->enable, 0);
 
 	regmap_write(drvdata->map, TCU_REG_WDT_TDR, timeout_value);
-	regmap_write(drvdata->map, TCU_REG_WDT_TCNT, 0);
+	regmap_write(drvdata->map, soc_info->counter, 0);
 
-	if (tcer & TCU_WDT_TCER_TCEN)
-		regmap_write(drvdata->map, TCU_REG_WDT_TCER, TCU_WDT_TCER_TCEN);
+	if (tcer & soc_info->enable_start)
+		regmap_write(drvdata->map, soc_info->enable, soc_info->enable_start);
 
 	wdt_dev->timeout = new_timeout;
 	return 0;
@@ -75,6 +114,7 @@ static int jz4740_wdt_set_timeout(struct watchdog_device *wdt_dev,
 static int jz4740_wdt_start(struct watchdog_device *wdt_dev)
 {
 	struct jz4740_wdt_drvdata *drvdata = watchdog_get_drvdata(wdt_dev);
+	const struct jz_wdt_soc_info *soc_info = drvdata->soc_info;
 	unsigned int tcer;
 	int ret;
 
@@ -82,13 +122,13 @@ static int jz4740_wdt_start(struct watchdog_device *wdt_dev)
 	if (ret)
 		return ret;
 
-	regmap_read(drvdata->map, TCU_REG_WDT_TCER, &tcer);
+	regmap_read(drvdata->map, soc_info->enable, &tcer);
 
 	jz4740_wdt_set_timeout(wdt_dev, wdt_dev->timeout);
 
 	/* Start watchdog if it wasn't started already */
-	if (!(tcer & TCU_WDT_TCER_TCEN))
-		regmap_write(drvdata->map, TCU_REG_WDT_TCER, TCU_WDT_TCER_TCEN);
+	if (!(tcer & soc_info->enable_start))
+		regmap_write(drvdata->map, soc_info->enable, soc_info->enable_start);
 
 	return 0;
 }
@@ -96,8 +136,9 @@ static int jz4740_wdt_start(struct watchdog_device *wdt_dev)
 static int jz4740_wdt_stop(struct watchdog_device *wdt_dev)
 {
 	struct jz4740_wdt_drvdata *drvdata = watchdog_get_drvdata(wdt_dev);
+	const struct jz_wdt_soc_info *soc_info = drvdata->soc_info;
 
-	regmap_write(drvdata->map, TCU_REG_WDT_TCER, 0);
+	regmap_write(drvdata->map, soc_info->enable, 0);
 	clk_disable_unprepare(drvdata->clk);
 
 	return 0;
@@ -106,14 +147,25 @@ static int jz4740_wdt_stop(struct watchdog_device *wdt_dev)
 static int jz4740_wdt_restart(struct watchdog_device *wdt_dev,
 			      unsigned long action, void *data)
 {
+	struct jz4740_wdt_drvdata *drvdata = watchdog_get_drvdata(wdt_dev);
+
 	wdt_dev->timeout = 0;
-	jz4740_wdt_start(wdt_dev);
+	drvdata->soc_info->ops->start(wdt_dev);
 	return 0;
 }
 
 static const struct watchdog_info jz4740_wdt_info = {
 	.options = WDIOF_SETTIMEOUT | WDIOF_KEEPALIVEPING | WDIOF_MAGICCLOSE,
 	.identity = "jz4740 Watchdog",
+};
+
+static const struct watchdog_ops jz4730_wdt_ops = {
+	.owner = THIS_MODULE,
+	.start = jz4740_wdt_start,
+	.stop = jz4740_wdt_stop,
+	.ping = jz4740_wdt_ping,
+	.set_timeout = jz4730_wdt_set_timeout,
+	.restart = jz4740_wdt_restart,
 };
 
 static const struct watchdog_ops jz4740_wdt_ops = {
@@ -125,10 +177,25 @@ static const struct watchdog_ops jz4740_wdt_ops = {
 	.restart = jz4740_wdt_restart,
 };
 
+static const struct jz_wdt_soc_info jz4730_wdt_soc_info = {
+	.ops = &jz4730_wdt_ops,
+	.counter = WDT_JZ4730_REG_TCNT,
+	.enable = WDT_JZ4730_REG_TCSR,
+	.enable_start = WDT_JZ4730_TCSR_EN,
+};
+
+static const struct jz_wdt_soc_info jz4740_wdt_soc_info = {
+	.ops = &jz4740_wdt_ops,
+	.counter = TCU_REG_WDT_TCNT,
+	.enable = TCU_REG_WDT_TCER,
+	.enable_start = TCU_WDT_TCER_TCEN,
+};
+
 #ifdef CONFIG_OF
 static const struct of_device_id jz4740_wdt_of_matches[] = {
-	{ .compatible = "ingenic,jz4740-watchdog", },
-	{ .compatible = "ingenic,jz4780-watchdog", },
+	{ .compatible = "ingenic,jz4730-watchdog", .data = &jz4730_wdt_soc_info },
+	{ .compatible = "ingenic,jz4740-watchdog", .data = &jz4740_wdt_soc_info },
+	{ .compatible = "ingenic,jz4780-watchdog", .data = &jz4740_wdt_soc_info },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, jz4740_wdt_of_matches);
@@ -136,11 +203,18 @@ MODULE_DEVICE_TABLE(of, jz4740_wdt_of_matches);
 
 static int jz4740_wdt_probe(struct platform_device *pdev)
 {
+	const struct jz_wdt_soc_info *soc_info;
 	struct device *dev = &pdev->dev;
 	struct jz4740_wdt_drvdata *drvdata;
 	struct watchdog_device *jz4740_wdt;
 	long rate;
 	int ret;
+
+	soc_info = of_device_get_match_data(dev);
+	if (!soc_info) {
+		dev_err(dev, "Missing platform data\n");
+		return -EINVAL;
+	}
 
 	drvdata = devm_kzalloc(dev, sizeof(struct jz4740_wdt_drvdata),
 			       GFP_KERNEL);
@@ -165,7 +239,7 @@ static int jz4740_wdt_probe(struct platform_device *pdev)
 	drvdata->clk_rate = rate;
 	jz4740_wdt = &drvdata->wdt;
 	jz4740_wdt->info = &jz4740_wdt_info;
-	jz4740_wdt->ops = &jz4740_wdt_ops;
+	jz4740_wdt->ops = soc_info->ops;
 	jz4740_wdt->min_timeout = 1;
 	jz4740_wdt->max_timeout = 0xffff / rate;
 	jz4740_wdt->timeout = clamp(heartbeat,

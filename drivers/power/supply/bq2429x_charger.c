@@ -9,8 +9,11 @@
  *
  * Copyright (C) 2016-2019 Golden Delicious Computers GmbH&Co. KG
  * Author: H. Nikolaus Schaller <hns@goldelico.com>
- * I found Rokchip code in some Android driver and modified it to
- * become useable for the Pyra handheld.
+ *     I found Rokchip code in some Android driver and modified it to
+ *     become useable for the Pyra handheld.
+ *
+ * Copyright (C) 2020 Nick Elsmore <nicholaselsmore@gmail.com>
+ *     I converted to use regmap bitfields and fixed some issues.
  */
 
 #include <linux/delay.h>
@@ -37,118 +40,19 @@
 #define OTG_REGULATOR	1
 #define NUM_REGULATORS	2
 
-/* I2C register defines */
-#define INPUT_SOURCE_CONTROL_REGISTER		0x00
-#define POWER_ON_CONFIGURATION_REGISTER		0x01
-#define CHARGE_CURRENT_CONTROL_REGISTER		0x02
-#define PRE_CHARGE_TERMINATION_CURRENT_CONTROL_REGISTER		0x03
-#define CHARGE_VOLTAGE_CONTROL_REGISTER		0x04
-#define TERMINATION_TIMER_CONTROL_REGISTER		0x05
-#define THERMAL_REGULATION_CONTROL_REGISTER		0x06
-#define MISC_OPERATION_CONTROL_REGISTER		0x07
-#define SYSTEM_STATS_REGISTER		0x08
-#define FAULT_STATS_REGISTER		0x09
-#define VENDOR_STATS_REGISTER		0x0A
-
 /* REG00 input source control register value */
 #define EN_HIZ_ENABLE	 1
 #define EN_HIZ_DISABLE	 0
-#define EN_HIZ_OFF	 7
-#define EN_HIZ_MASK	 1
-
-#define VINDPM_OFF		3
-#define VINDPM_MASK		0xf
-
-#define IINLIM_100MA		0
-#define IINLIM_150MA		1
-#define IINLIM_500MA		2
-#define IINLIM_900MA		3
-#define IINLIM_1200MA		4
-#define IINLIM_1500MA		5
-#define IINLIM_2000MA		6
-#define IINLIM_3000MA		7
-#define IINLIM_OFF		0
-#define IINLIM_MASK		7
 
 /* REG01 power-on configuration register value */
 /* OTG Mode Current Config */
 #define OTG_MODE_CURRENT_CONFIG_500MA	0x00
 #define OTG_MODE_CURRENT_CONFIG_1300MA	0x01
-#define OTG_MODE_CURRENT_CONFIG_OFF	0
-#define OTG_MODE_CURRENT_CONFIG_MASK	0x01
-
-/* VSYS Minimum */
-#define SYS_MIN_OFF		1
-#define SYS_MIN_MASK		0x7
 
 /* Charge Mode Config */
 #define CHARGE_MODE_CONFIG_CHARGE_DISABLE	0x00
 #define CHARGE_MODE_CONFIG_CHARGE_BATTERY	0x01
 #define CHARGE_MODE_CONFIG_OTG_OUTPUT		0x02
-#define CHARGE_MODE_CONFIG_OFF			4
-#define CHARGE_MODE_CONFIG_MASK			0x03
-
-/* Watchdog */
-#define WATCHDOG_RESET	0x40
-
-/* Reset */
-#define REGISTER_RESET_ENABLE	 1
-#define REGISTER_RESET_DISABLE	 0
-#define REGISTER_RESET_OFF	 7
-#define REGISTER_RESET_MASK	 1
-
-/* REG02 charge current limit register value */
-#define CHARGE_CURRENT_64MA		0x01
-#define CHARGE_CURRENT_128MA		0x02
-#define CHARGE_CURRENT_256MA		0x04
-#define CHARGE_CURRENT_512MA		0x08
-#define CHARGE_CURRENT_1024MA		0x10
-#define CHARGE_CURRENT_1536MA		0x18
-#define CHARGE_CURRENT_2048MA		0x20
-#define CHARGE_CURRENT_OFF		2
-#define CHARGE_CURRENT_MASK		0x3f
-
-/* REG03 Pre-Charge/Termination Current Control Register value */
-/* Pre-Charge Current Limit */
-#define PRE_CHARGE_CURRENT_LIMIT_128MA		0x00
-#define PRE_CHARGE_CURRENT_LIMIT_256MA		0x01
-#define PRE_CHARGE_CURRENT_LIMIT_OFF		4
-#define PRE_CHARGE_CURRENT_LIMIT_MASK		0x0f
-/* Termination Current Limit */
-#define TERMINATION_CURRENT_LIMIT_128MA		0x00
-#define TERMINATION_CURRENT_LIMIT_256MA		0x01
-#define TERMINATION_CURRENT_LIMIT_OFF		0
-#define TERMINATION_CURRENT_LIMIT_MASK		0x0f
-
-/* REG04 Charge Voltage Register */
-#define VREG_MASK	0x3f
-#define VREG_OFF	2
-
-/* REG05 Charge Termination/Timer control register value */
-#define WATCHDOG_DISABLE	0
-#define WATCHDOG_40S		1
-#define WATCHDOG_80S		2
-#define WATCHDOG_160S		3
-#define WATCHDOG_OFF		4
-#define WATCHDOG_MASK		3
-
-/* REG06 boost voltage/thermal regulation register */
-#define BOOSTV_OFF	4
-#define BOOSTV_MASK	0xf
-
-/* REG07 misc operation control register value */
-#define DPDM_ENABLE	 1
-#define DPDM_DISABLE	 0
-#define DPDM_OFF	 7
-#define DPDM_MASK	 1
-
-/* REG08 system status register value */
-#define VBUS_UNKNOWN		0
-#define VBUS_USB_HOST		1
-#define VBUS_ADAPTER_PORT	2
-#define VBUS_OTG		3
-#define VBUS_OFF		6
-#define VBUS_MASK		3
 
 #define CHRG_NO_CHARGING	0
 #define CHRG_PRE_CHARGE		1
@@ -159,16 +63,10 @@
 
 #define DPM_STAT	0x08
 #define PG_STAT		0x04
-#define THERM_STAT	0x02
-#define VSYS_STAT	0x01
 
 /* REG09 fault status register value */
-
-#define WATCHDOG_FAULT	0x80
-#define OTG_FAULT	0x40
 #define CHRG_FAULT_OFF	4
 #define CHRG_FAULT_MASK	0x3
-#define BAT_FAULT	0x08
 #define NTC_FAULT_OFF	0
 // FIXME: MP2624 has 3 bits
 #define NTC_FAULT_MASK	0x3
@@ -181,6 +79,86 @@
 #define ID_BQ24296		0
 #define ID_BQ24297		1
 #define ID_MP2624		2
+
+#define BQ2429X_MANUFACTURER	"Texas Instruments"
+
+enum bq2429x_regs {
+	REG00 = 0,
+	REG01,
+	REG02,
+	REG03,
+	REG04,
+	REG05,
+	REG06,
+	REG07,
+	REG08,
+	REG09,
+	REG0A
+};
+
+enum bq2429x_fields {
+	F_EN_HIZ, F_VINDPM, F_IINLIM,			/* REG00 */
+	F_REG_RESET, F_WD_RESET, F_OTG_CONFIG,		/* REG01 */
+	F_CHG_CONFIG, F_SYS_MIN, F_BOOST_LIM,
+	F_ICHG, F_BCOLD, F_FORCE_20PCT,			/* REG02 */
+	F_IPRECHG, F_ITERM,				/* REG03 */
+	F_VREG, F_BATLOWV, F_VRECHG,			/* REG04 */
+	F_EN_TERM, F_WATCHDOG, F_EN_TIMER, F_CHG_TIMER, /* REG05 */
+	F_BOOSTV, F_BHOT, F_TREG,			/* REG06 */
+	F_IINDET_EN, F_TMR2X_EN, F_BATFET_DISABLE,	/* REG07 */
+	F_INT_MASK,
+	F_VBUS_STAT, F_CHRG_STAT, F_DPM_STAT,		/* REG08 */
+	F_PG_STAT, F_THERM_STAT, F_VSYS_STAT, F_SYS_STAT_REG,
+	F_WATCHDOG_FAULT, F_OTG_FAULT, F_CHRG_FAULT,	/* REG09 */
+	F_BAT_FAULT, F_NTC_FAULT, F_NEW_FAULT_REG,
+	F_PN_REV,					/* REG0A */
+	F_MAX_FIELDS
+};
+
+static const struct reg_field bq2429x_reg_fields[] = {
+	[F_EN_HIZ] 		= REG_FIELD(REG00, 7, 7),
+	[F_VINDPM]		= REG_FIELD(REG00, 3, 6),
+	[F_IINLIM]		= REG_FIELD(REG00, 0, 2),
+	[F_REG_RESET]		= REG_FIELD(REG01, 7, 7),
+	[F_WD_RESET]		= REG_FIELD(REG01, 6, 6),
+	[F_OTG_CONFIG]		= REG_FIELD(REG01, 5, 5),
+	[F_CHG_CONFIG]		= REG_FIELD(REG01, 4, 4),
+	[F_SYS_MIN]		= REG_FIELD(REG01, 1, 3),
+	[F_BOOST_LIM]		= REG_FIELD(REG01, 0, 0),
+	[F_ICHG]		= REG_FIELD(REG02, 2, 7),
+	[F_BCOLD]		= REG_FIELD(REG02, 1, 1),
+	[F_FORCE_20PCT]		= REG_FIELD(REG02, 0, 0),
+	[F_IPRECHG]		= REG_FIELD(REG03, 4, 7),
+	[F_ITERM]		= REG_FIELD(REG03, 0, 3),
+	[F_VREG]		= REG_FIELD(REG04, 2, 7),
+	[F_BATLOWV]		= REG_FIELD(REG04, 1, 1),
+	[F_VRECHG]		= REG_FIELD(REG04, 0, 0),
+	[F_EN_TERM]		= REG_FIELD(REG05, 7, 7),
+	[F_WATCHDOG]		= REG_FIELD(REG05, 4, 5),
+	[F_EN_TIMER]		= REG_FIELD(REG05, 3, 3),
+	[F_CHG_TIMER]		= REG_FIELD(REG05, 1, 2),
+	[F_BOOSTV]		= REG_FIELD(REG06, 4, 7),
+	[F_BHOT]		= REG_FIELD(REG06, 2, 3),
+	[F_TREG]		= REG_FIELD(REG06, 0, 1),
+	[F_IINDET_EN]		= REG_FIELD(REG07, 7, 7),
+	[F_TMR2X_EN]		= REG_FIELD(REG07, 6, 6),
+	[F_BATFET_DISABLE]	= REG_FIELD(REG07, 5, 5),
+	[F_INT_MASK]		= REG_FIELD(REG07, 0, 1),
+	[F_VBUS_STAT]		= REG_FIELD(REG08, 6, 7),
+	[F_CHRG_STAT]		= REG_FIELD(REG08, 4, 5),
+	[F_DPM_STAT]		= REG_FIELD(REG08, 3, 3),
+	[F_PG_STAT]		= REG_FIELD(REG08, 2, 2),
+	[F_THERM_STAT]		= REG_FIELD(REG08, 1, 1),
+	[F_VSYS_STAT]		= REG_FIELD(REG08, 0, 0),
+	[F_SYS_STAT_REG]	= REG_FIELD(REG08, 0, 7),
+	[F_WATCHDOG_FAULT]	= REG_FIELD(REG09, 7, 7),
+	[F_OTG_FAULT]		= REG_FIELD(REG09, 6, 6),
+	[F_CHRG_FAULT]		= REG_FIELD(REG09, 4, 5),
+	[F_BAT_FAULT]		= REG_FIELD(REG09, 3, 3),
+	[F_NTC_FAULT]		= REG_FIELD(REG09, 0, 1),
+	[F_NEW_FAULT_REG]	= REG_FIELD(REG09, 0, 7),
+	[F_PN_REV]		= REG_FIELD(REG0A, 0, 7),
+};
 
 static const struct regmap_range bq2429x_readonly_reg_ranges[] = {
 	regmap_reg_range(REG08, REG0A)
@@ -216,6 +194,7 @@ struct bq2429x_device_info {
 	const struct i2c_device_id	*id;
 
 	struct regmap *rmap;
+	struct regmap_field *rmap_fields[F_MAX_FIELDS];
 
 	struct power_supply		*usb;
 
@@ -300,99 +279,73 @@ static const unsigned int otg_VSEL_table[] = {
  * Common code for BQ24296 devices read
  */
 
-static int bq2429x_i2c_reg8_read(const struct i2c_client *client,
-				 const char reg, char *buf, int count)
+static char *bq2429x_field_to_string(enum bq2429x_fields field_id)
 {
-	struct i2c_adapter *adap = client->adapter;
-	struct i2c_msg msgs[2];
-	char reg_buf = reg;
-	int ret;
+	switch (field_id) {
+	case F_EN_HIZ: return "EN_HIZ";
+	case F_VINDPM: return "VINDPM";
+	case F_IINLIM: return "IINLIM";
+	case F_REG_RESET: return "REG_RESET";
+	case F_WD_RESET: return "WD_RESET";
+	case F_OTG_CONFIG: return "OTG_CONFIG";
+	case F_CHG_CONFIG: return "CHG_CONFIG";
+	case F_SYS_MIN: return "SYS_MIN";
+	case F_BOOST_LIM: return "BOOST_LIM";
+	case F_ICHG: return "ICHG";
+	case F_BCOLD: return "BCOLD";
+	case F_FORCE_20PCT: return "FORCE_20PCT";
+	case F_IPRECHG: return "IPRECHG";
+	case F_ITERM: return "ITERM";
+	case F_VREG: return "VREG";
+	case F_BATLOWV: return "BATLOWV";
+	case F_VRECHG: return "VRECHG";
+	case F_EN_TERM: return "EN_TERM";
+	case F_WATCHDOG: return "WATCHDOG";
+	case F_EN_TIMER: return "EN_TIMER";
+	case F_CHG_TIMER: return "CHG_TIMER";
+	case F_BOOSTV: return "BOOSTV";
+	case F_BHOT: return "BHOT";
+	case F_TREG: return "TREG";
+	case F_IINDET_EN: return "IINDET_EN";
+	case F_TMR2X_EN: return "TMR2X_EN";
+	case F_BATFET_DISABLE: return "BATFET_DISABLE";
+	case F_INT_MASK: return "INT_MASK";
+	case F_VBUS_STAT: return "VBUS_STAT";
+	case F_CHRG_STAT: return "CHRG_STAT";
+	case F_DPM_STAT: return "DPM_STAT";
+	case F_PG_STAT: return "PG_STAT";
+	case F_THERM_STAT: return "THERM_STAT";
+	case F_VSYS_STAT: return "VSYS_STAT";
+	case F_SYS_STAT_REG: return "SYS_STAT_REG";
+	case F_WATCHDOG_FAULT: return "WATCHDOG_FAULT";
+	case F_OTG_FAULT: return "OTG_FAULT";
+	case F_CHRG_FAULT: return "CHRG_FAULT";
+	case F_BAT_FAULT: return "BAT_FAULT";
+	case F_NTC_FAULT: return "NTC_FAULT";
+	case F_NEW_FAULT_REG: return "NEW_FAULT_REG";
+	case F_PN_REV: return "PN_REV";
+	default: return "UNKNOWN";
+	};
+};
 
-	msgs[0].addr = client->addr;
-	msgs[0].flags = client->flags;
-	msgs[0].len = 1;
-	msgs[0].buf = &reg_buf;
-
-	msgs[1].addr = client->addr;
-	msgs[1].flags = client->flags | I2C_M_RD;
-	msgs[1].len = count;
-	msgs[1].buf = (char *)buf;
-
-	ret = i2c_transfer(adap, msgs, 2);
-
-	return (ret == 2) ? count : ret;
-}
-
-static int bq2429x_i2c_reg8_write(const struct i2c_client *client,
-				  const char reg, const char *buf, int count)
-{
-	struct i2c_adapter *adap = client->adapter;
-	struct i2c_msg msg;
-	char *tx_buf = kmalloc(count + 1, GFP_KERNEL);
-	int ret;
-
-	if (!tx_buf)
-		return -ENOMEM;
-	tx_buf[0] = reg;
-	memcpy(tx_buf+1, buf, count);
-
-	msg.addr = client->addr;
-	msg.flags = client->flags;
-	msg.len = count + 1;
-	msg.buf = (char *)tx_buf;
-
-	ret = i2c_transfer(adap, &msg, 1);
-	kfree(tx_buf);
-	return (ret == 1) ? count : ret;
-}
-
-static inline int bq2429x_read(struct i2c_client *client,
-			       u8 reg, u8 buf[], unsigned int len)
-{
-	int ret;
-
-	ret = bq2429x_i2c_reg8_read(client, reg, buf, len);
-	return ret;
-}
-
-static inline int bq2429x_write(struct i2c_client *client,
-				u8 reg, u8 const buf[], unsigned int len)
+static int bq2429x_field_read(struct bq2429x_device_info *di,
+			      enum bq2429x_fields field_id)
 {
 	int ret;
+	int val;
 
-	ret = bq2429x_i2c_reg8_write(client, reg, buf, (int)len);
-	return ret;
-}
-
-static int bq2429x_update_reg(struct i2c_client *client,
-			      int reg, u8 value, u8 mask)
-{
-	u8 retval = 0;
-	int ret;
-
-	ret = bq2429x_read(client, reg, &retval, 1);
-	if (ret < 0) {
-		dev_err(&client->dev, "%s: err %d\n", __func__, ret);
+	ret = regmap_field_read(di->rmap_fields[field_id], &val);
+	if (ret < 0)
 		return ret;
-	}
-	ret = 0;
 
-	dev_dbg(&client->dev, "%s %02x: ( %02x & %02x ) | %02x -> %02x\n",
-		__func__, reg, retval, (u8) ~mask, value,
-		(u8) ((retval & ~mask) | value));
+	return val;
+}
 
-	if ((retval & mask) != value) {
-		retval = (retval & ~mask) | value;
-		ret = bq2429x_write(client, reg, &retval, 1);
-		if (ret < 0) {
-			dev_err(&client->dev, "%s: err %d\n",
-				__func__, ret);
-			return ret;
-		}
-		ret = 0;
-	}
-
-	return ret;
+static int bq2429x_field_write(struct bq2429x_device_info *di,
+			       enum bq2429x_fields field_id,
+			       u8 val)
+{
+	return regmap_field_write(di->rmap_fields[field_id], val);
 }
 
 /* sysfs tool to show all register values */
@@ -406,12 +359,12 @@ static ssize_t show_registers(struct device *dev, struct device_attribute *attr,
 	int len = 0;
 	int i;
 
-	for (i = 0; i < 11; i++) {
+	for (i = 0; i < ARRAY_SIZE(bq2429x_reg_fields); i++) {
 		int n;
 
-		bq2429x_read(di->client, i, &buffer, 1);
-		n = scnprintf(buf, 256, "reg %02x value %02x\n",
-			      i, buffer);
+		buffer = bq2429x_field_read(di, i);
+		n = scnprintf(buf, 256, "field %s value %02x\n",
+			      bq2429x_field_to_string(i), buffer);
 		buf += n;
 		len += n;
 	}
@@ -424,38 +377,40 @@ DEVICE_ATTR(registers, 0444, show_registers, NULL);
 
 static int bq2429x_get_vindpm_uV(struct bq2429x_device_info *di)
 {
-	u8 retval;
 	int ret;
 
-	ret = bq2429x_read(di->client, INPUT_SOURCE_CONTROL_REGISTER,
-			   &retval, 1);
+	ret = bq2429x_field_read(di, F_VINDPM);
 	if (ret < 0) {
 		dev_err(&di->client->dev, "%s: err %d\n", __func__, ret);
 		return ret;
 	}
 
-	return 3880000 + 80000*((retval >> VINDPM_OFF) & VINDPM_MASK);
+	return 3880000 + 80000 * ret;
 }
 
 static int bq2429x_input_current_limit_uA(struct bq2429x_device_info *di)
 {
 	int ret;
-	u8 retval;
 
-	ret = bq2429x_read(di->client, INPUT_SOURCE_CONTROL_REGISTER,
-			   &retval, 1);
+	ret = bq2429x_field_read(di, F_EN_HIZ);
 	if (ret < 0) {
 		dev_err(&di->client->dev, "%s: err %d\n", __func__, ret);
 		return ret;
 	}
 
-	if (((retval >> EN_HIZ_OFF) & EN_HIZ_MASK) == EN_HIZ_ENABLE)
+	if (ret == EN_HIZ_ENABLE)
 		return 0;	// High-Z state
 
-	if (di->id->driver_data == CHIP_MP2624 && ((retval >> IINLIM_OFF) & IINLIM_MASK) == 5)
+	ret = bq2429x_field_read(di, F_IINLIM);
+	if (ret < 0) {
+		dev_err(&di->client->dev, "%s: err %d\n", __func__, ret);
+		return ret;
+	}
+
+	if (di->id->driver_data == CHIP_MP2624 && (ret == 5))
 		return 1800000;
 
-	return iinlim_table[(retval >> IINLIM_OFF) & IINLIM_MASK];
+	return iinlim_table[ret];
 }
 
 static int bq2429x_set_input_current_limit_uA(struct bq2429x_device_info *di,
@@ -487,15 +442,16 @@ static int bq2429x_set_input_current_limit_uA(struct bq2429x_device_info *di,
 	else
 		data = 7;
 
-	ret = bq2429x_update_reg(di->client,
-				  INPUT_SOURCE_CONTROL_REGISTER,
-				  (((data & IINLIM_MASK) << IINLIM_OFF) |
-					(hiz << EN_HIZ_OFF)),
-				  ((IINLIM_MASK << IINLIM_OFF) |
-					(EN_HIZ_MASK << EN_HIZ_OFF)));
+	ret = bq2429x_field_write(di, F_IINLIM, data);
 	if (ret < 0) {
 		dev_err(&di->client->dev, "%s(): Failed to set input current limit (0x%x)\n",
 				__func__, data);
+	}
+
+	ret = bq2429x_field_write(di, F_EN_HIZ, hiz);
+	if (ret < 0) {
+		dev_err(&di->client->dev, "%s(): Failed to set hiz (0x%x)\n",
+				__func__, hiz);
 	}
 
 	return ret;
@@ -504,20 +460,16 @@ static int bq2429x_set_input_current_limit_uA(struct bq2429x_device_info *di,
 static int bq2429x_get_charge_current_uA(struct bq2429x_device_info *di)
 {
 	int ret;
-	u8 retval;
 
-	ret = bq2429x_read(di->client, CHARGE_CURRENT_CONTROL_REGISTER, &retval,
-			   1);
-	dev_dbg(di->dev, "bq2429x: CHARGE_CURRENT_CONTROL_REGISTER %02x\n",
-		retval);
+	ret = bq2429x_field_read(di, F_ICHG);
+	dev_dbg(di->dev, "bq2429x: F_ICHG %02x\n", ret);
 
 	if (ret < 0) {
 		dev_err(&di->client->dev, "%s: err %d\n", __func__, ret);
 		return ret;
 	}
 
-	return 64000 * ((retval >> CHARGE_CURRENT_OFF) & CHARGE_CURRENT_MASK)
-	       + 512000;
+	return 64000 * ret + 512000;
 }
 
 static int bq2429x_set_charge_current_uA(struct bq2429x_device_info *di, int uA)
@@ -531,10 +483,7 @@ static int bq2429x_set_charge_current_uA(struct bq2429x_device_info *di, int uA)
 	data = (uA - 512000 + 32000) / 64000;
 	data = min(0x27, max(data, 0));	/* limit to 512 mA .. 3008 mA */
 
-	ret = bq2429x_update_reg(di->client,
-				  CHARGE_CURRENT_CONTROL_REGISTER,
-				  (data << CHARGE_CURRENT_OFF),
-				  (CHARGE_CURRENT_MASK << CHARGE_CURRENT_OFF));
+	ret = bq2429x_field_write(di, F_ICHG, data);
 	if (ret < 0) {
 		dev_err(&di->client->dev, "%s(): Failed to set charge current limit (%d)\n",
 			__func__, uA);
@@ -544,22 +493,17 @@ static int bq2429x_set_charge_current_uA(struct bq2429x_device_info *di, int uA)
 
 static int bq2429x_get_precharge_current_uA(struct bq2429x_device_info *di)
 {
-	u8 retval;
 	int ret;
 
-	ret = bq2429x_read(di->client,
-			   PRE_CHARGE_TERMINATION_CURRENT_CONTROL_REGISTER,
-			   &retval, 1);
-	dev_dbg(di->dev, "bq2429x: PRE_CHARGE_TERMINATION_CURRENT_CONTROL_REGISTER %02x\n",
-		retval);
+	ret = bq2429x_field_read(di, F_IPRECHG);
+	dev_dbg(di->dev, "bq2429x: F_IPRECHG %02x\n", ret);
 
 	if (ret < 0) {
 		dev_err(&di->client->dev, "%s: err %d\n", __func__, ret);
 		return ret;
 	}
 
-	return 128000 * ((retval >> PRE_CHARGE_CURRENT_LIMIT_OFF) &
-			 PRE_CHARGE_CURRENT_LIMIT_MASK) + 128000;
+	return 128000 * ret + 128000;
 }
 
 static int bq2429x_set_precharge_current_uA(struct bq2429x_device_info *di, int uA)
@@ -573,10 +517,7 @@ static int bq2429x_set_precharge_current_uA(struct bq2429x_device_info *di, int 
 	data = (uA - 128000 + 64000) / 128000;
 	data = min(0xf, max(data, 0));	/* limit to 128 mA .. 2048 mA */
 
-	ret = bq2429x_update_reg(di->client,
-				  PRE_CHARGE_TERMINATION_CURRENT_CONTROL_REGISTER,
-				  (data << PRE_CHARGE_CURRENT_LIMIT_OFF),
-				  (PRE_CHARGE_CURRENT_LIMIT_MASK << PRE_CHARGE_CURRENT_LIMIT_OFF));
+	ret = bq2429x_field_write(di, F_IPRECHG, data);
 	if (ret < 0) {
 		dev_err(&di->client->dev, "%s(): Failed to set precharge charge current (%d)\n",
 			__func__, uA);
@@ -595,10 +536,7 @@ static int bq2429x_set_charge_term_current_uA(struct bq2429x_device_info *di, in
 	data = (uA - 128000 + 64000) / 128000;
 	data = min(0xf, max(data, 0));	/* limit to 128 mA .. 2048 mA */
 
-	ret = bq2429x_update_reg(di->client,
-				  PRE_CHARGE_TERMINATION_CURRENT_CONTROL_REGISTER,
-				  (data << TERMINATION_CURRENT_LIMIT_OFF),
-				  (PRE_CHARGE_CURRENT_LIMIT_MASK << TERMINATION_CURRENT_LIMIT_OFF));
+	ret = bq2429x_field_write(di, F_ITERM, data);
 	if (ret < 0) {
 		dev_err(&di->client->dev, "%s(): Failed to set charge current limit (%d)\n",
 			__func__, uA);
@@ -610,10 +548,7 @@ static int bq2429x_en_hiz_disable(struct bq2429x_device_info *di)
 {
 	int ret;
 
-	ret = bq2429x_update_reg(di->client,
-				  INPUT_SOURCE_CONTROL_REGISTER,
-				  EN_HIZ_DISABLE << EN_HIZ_OFF,
-				  EN_HIZ_MASK << EN_HIZ_OFF);
+	ret = bq2429x_field_write(di, F_EN_HIZ, EN_HIZ_DISABLE);
 	if (ret < 0) {
 		dev_err(&di->client->dev, "%s(): Failed to set en_hiz_disable\n",
 			__func__);
@@ -625,10 +560,7 @@ static int bq2429x_set_charge_mode(struct bq2429x_device_info *di, u8 mode)
 {
 	int ret;
 
-	ret = bq2429x_update_reg(di->client,
-				  POWER_ON_CONFIGURATION_REGISTER,
-				  mode << CHARGE_MODE_CONFIG_OFF,
-				  CHARGE_MODE_CONFIG_MASK << CHARGE_MODE_CONFIG_OFF);
+	ret = bq2429x_field_write(di, F_CHG_CONFIG, mode);
 	if (ret < 0) {
 		dev_err(&di->client->dev, "%s(): Failed to set charge mode(0x%x)\n",
 				__func__, mode);
@@ -639,20 +571,18 @@ static int bq2429x_set_charge_mode(struct bq2429x_device_info *di, u8 mode)
 
 static int bq2429x_get_vsys_voltage_uV(struct bq2429x_device_info *di)
 {
-	u8 retval;
 	int ret;
 
 	dev_dbg(di->dev, "%s\n", __func__);
 
-	ret = bq2429x_read(di->client, POWER_ON_CONFIGURATION_REGISTER, &retval,
-			   1);
+	ret = bq2429x_field_read(di, F_SYS_MIN);
 	if (ret < 0)
 		return ret;
 
 	dev_dbg(di->dev, " => %d uV\n",
-		vsys_VSEL_table[(retval >> SYS_MIN_OFF) & SYS_MIN_MASK]);
+		vsys_VSEL_table[ret]);
 
-	return vsys_VSEL_table[(retval >> SYS_MIN_OFF) & SYS_MIN_MASK];
+	return vsys_VSEL_table[ret];
 }
 
 static int bq2429x_set_vsys_voltage_uV(struct bq2429x_device_info *di,
@@ -663,32 +593,23 @@ static int bq2429x_set_vsys_voltage_uV(struct bq2429x_device_info *di,
 // revisit: the driver should select the voltage closest to min_uV by scanning vsys_VSEL_table
 
 	return 0;	/* disabled/untested */
-
-	/* set system voltage */
-
-	return bq2429x_update_reg(di->client,
-				  POWER_ON_CONFIGURATION_REGISTER,
-				  0,	/* 3.0V + 0.2V */
-				  SYS_MIN_MASK << SYS_MIN_OFF);
 }
 
 static int bq2429x_get_otg_voltage_uV(struct bq2429x_device_info *di)
 {
-	u8 retval;
 	int ret;
 
 	dev_dbg(di->dev, "%s\n", __func__);
 
 // FIXME: constant for MP2624
-	ret = bq2429x_read(di->client, THERMAL_REGULATION_CONTROL_REGISTER,
-			   &retval, 1);
+	ret = bq2429x_field_read(di, F_BOOSTV);
 	if (ret < 0)
 		return ret;
 
 	dev_dbg(di->dev, " => %d uV\n",
-		otg_VSEL_table[(retval >> BOOSTV_OFF) & BOOSTV_MASK]);
+		otg_VSEL_table[ret]);
 
-	return otg_VSEL_table[(retval >> BOOSTV_OFF) & BOOSTV_MASK];
+	return otg_VSEL_table[ret];
 }
 
 static int bq2429x_set_otg_voltage_uV(struct bq2429x_device_info *di,
@@ -705,13 +626,11 @@ static int bq2429x_set_otg_voltage_uV(struct bq2429x_device_info *di,
 
 static int bq2429x_is_otg_enabled(struct bq2429x_device_info *di)
 { /* check if OTG converter is enabled */
-	u8 retval;
 	int ret;
 
 	dev_dbg(di->dev, "%s\n", __func__);
 
-	ret = bq2429x_read(di->client, POWER_ON_CONFIGURATION_REGISTER, &retval,
-			   1);
+	ret = bq2429x_field_read(di, F_OTG_CONFIG);
 	if (ret < 0)
 		return 0;	/* assume disabled */
 
@@ -722,27 +641,22 @@ static int bq2429x_is_otg_enabled(struct bq2429x_device_info *di)
 	 */
 
 	/* check bit 5 of POWER_ON_CONFIGURATION_REGISTER */
-	return ((retval >> CHARGE_MODE_CONFIG_OFF) & CHARGE_MODE_CONFIG_MASK)
-	       == CHARGE_MODE_CONFIG_OTG_OUTPUT;
+	return ret;
 }
 
 static int bq2429x_get_otg_current_limit_uA(struct bq2429x_device_info *di)
 {
-	u8 retval;
 	int ret;
 
 	dev_dbg(di->dev, "%s\n", __func__);
 
-	ret = bq2429x_read(di->client, POWER_ON_CONFIGURATION_REGISTER, &retval,
-			   1);
+	ret = bq2429x_field_read(di, F_BOOST_LIM);
 	if (ret < 0)
 		return ret;
 
 // FIXME: different bit(s) and values (500mA 1.3A) in MP2624 in REG02
 
-	return ((retval >> OTG_MODE_CURRENT_CONFIG_OFF) &
-		 OTG_MODE_CURRENT_CONFIG_MASK) ?
-		 1000000 : 1500000;	/* 1.0A or 1.5A */
+	return ret ? 1000000 : 1500000;	/* 1.0A or 1.5A */
 }
 
 static int bq2429x_set_otg_current_limit_uA(struct bq2429x_device_info *di,
@@ -750,6 +664,7 @@ static int bq2429x_set_otg_current_limit_uA(struct bq2429x_device_info *di,
 {
 	int enable = true;
 	int val = OTG_MODE_CURRENT_CONFIG_500MA;
+	int ret;
 
 	dev_dbg(di->dev, "%s(%d, %d)\n", __func__, min_uA, max_uA);
 
@@ -767,25 +682,26 @@ static int bq2429x_set_otg_current_limit_uA(struct bq2429x_device_info *di,
 
 // FIXME: different bit(s) and values (500mA 1.3A) in MP2624 in REG02
 
-	return bq2429x_update_reg(di->client,
-		POWER_ON_CONFIGURATION_REGISTER,
-		(enable << 5)|(val << OTG_MODE_CURRENT_CONFIG_OFF),
-		(1 << 5)|
-		(OTG_MODE_CURRENT_CONFIG_MASK << OTG_MODE_CURRENT_CONFIG_OFF));
+	ret = bq2429x_field_write(di, F_BOOST_LIM, val);
+	if (ret < 0) {
+		dev_err(&di->client->dev, "%s(): Failed to set OTG current limit\n",
+			__func__);
+	}
+
+	ret = bq2429x_field_write(di, F_OTG_CONFIG, enable);
+	if (ret < 0) {
+		dev_err(&di->client->dev, "%s(): Failed to set OTG enable\n",
+			__func__);
+	}
+
+	return 0;
 }
 
 /* initialize the chip */
 
 static int bq2429x_get_vendor_id(struct bq2429x_device_info *di)
 {
-	u8 retval;
-	int ret;
-
-	/* get the vendor id */
-	ret = bq2429x_read(di->client, VENDOR_STATS_REGISTER, &retval, 1);
-	if (ret < 0)
-		return ret;
-	return retval;
+	return bq2429x_field_read(di, F_PN_REV);
 }
 
 static int bq2429x_init_registers(struct bq2429x_device_info *di)
@@ -801,10 +717,7 @@ static int bq2429x_init_registers(struct bq2429x_device_info *di)
 	// bq2429x_set_precharge_current_uA(di->precharge_current_uA);
 
 	/* set Pre-Charge Current Limit as 128mA */
-	ret = bq2429x_update_reg(di->client,
-		PRE_CHARGE_TERMINATION_CURRENT_CONTROL_REGISTER,
-		PRE_CHARGE_CURRENT_LIMIT_128MA << PRE_CHARGE_CURRENT_LIMIT_OFF,
-		PRE_CHARGE_CURRENT_LIMIT_MASK << PRE_CHARGE_CURRENT_LIMIT_OFF);
+	ret = bq2429x_field_write(di, F_IPRECHG, 0);
 	if (ret < 0) {
 		dev_err(&di->client->dev, "%s(): Failed to set pre-charge limit 128mA\n",
 				__func__);
@@ -814,10 +727,7 @@ static int bq2429x_init_registers(struct bq2429x_device_info *di)
 	// bq2429x_set_charge_term_current_uA(di->charge_term_current_uA);
 
 	/* set Termination Current Limit as 128mA */
-	ret = bq2429x_update_reg(di->client,
-		PRE_CHARGE_TERMINATION_CURRENT_CONTROL_REGISTER,
-		TERMINATION_CURRENT_LIMIT_128MA << TERMINATION_CURRENT_LIMIT_OFF,
-		TERMINATION_CURRENT_LIMIT_MASK << TERMINATION_CURRENT_LIMIT_OFF);
+	ret = bq2429x_field_write(di, F_ITERM, 0);
 	if (ret < 0) {
 		dev_err(&di->client->dev, "%s(): Failed to set termination limit 128mA\n",
 				__func__);
@@ -852,10 +762,7 @@ static int bq2429x_init_registers(struct bq2429x_device_info *di)
 
 	/* revisit: bq2429x_set_charge_current_uA(di, ?); */
 
-	ret = bq2429x_update_reg(di->client,
-				  CHARGE_VOLTAGE_CONTROL_REGISTER,
-				  bits << VREG_OFF,
-				  VREG_MASK << VREG_OFF);
+	ret = bq2429x_field_write(di, F_VREG, bits);
 	if (ret < 0) {
 		dev_err(&di->client->dev, "%s(): Failed to set max. battery voltage\n",
 				__func__);
@@ -940,23 +847,25 @@ static int bq2429x_usb_detect(struct bq2429x_device_info *di)
 
 	dev_dbg(di->dev, "%s, line=%d\n", __func__, __LINE__);
 
-	ret = bq2429x_read(di->client, SYSTEM_STATS_REGISTER, &di->r8, 1);
-	if (ret != 1) {
+	ret = bq2429x_field_read(di, F_SYS_STAT_REG);
+	if (ret < 0) {
 		mutex_unlock(&di->var_lock);
 
 		dev_err(&di->client->dev, "%s: err %d\n", __func__, ret);
 
 		return ret;
 	}
+	di->r8 = ret;
 
-	ret = bq2429x_read(di->client, FAULT_STATS_REGISTER, &di->r9, 1);
-	if (ret != 1) {
+	ret = bq2429x_field_read(di, F_NEW_FAULT_REG);
+	if (ret < 0) {
 		mutex_unlock(&di->var_lock);
 
 		dev_err(&di->client->dev, "%s: err %d\n", __func__, ret);
 
 		return ret;
 	}
+	di->r9 = ret;
 
 	/* report changes to last state */
 	if (di->r8 != di->prev_r8 || di->r9 != di->prev_r9)
@@ -1679,6 +1588,17 @@ static int bq2429x_charger_probe(struct i2c_client *client,
 		return PTR_ERR(di->rmap);
 	}
 
+	for (i=0; i < ARRAY_SIZE(bq2429x_reg_fields); i++) {
+		const struct reg_field *reg_fields = bq2429x_reg_fields;
+
+		di->rmap_fields[i] = devm_regmap_field_alloc(di->dev, di->rmap,
+								reg_fields[i]);
+		if (IS_ERR(di->rmap_fields[i])) {
+			dev_err(di->dev, "failed to allocate regmap fields\n");
+			return PTR_ERR(di->rmap_fields[i]);
+		}
+	}
+
 	ret = bq2429x_get_vendor_id(di);
 	if (ret < 0) {
 		dev_err(&di->client->dev,
@@ -1834,5 +1754,6 @@ module_i2c_driver(bq2429x_charger_driver);
 
 MODULE_AUTHOR("Rockchip");
 MODULE_AUTHOR("H. Nikolaus Schaller <hns@goldelico.com>");
+MODULE_AUTHOR("Nick Elsmore <nicholaselsmore@gmail.com>");
 MODULE_DESCRIPTION("TI BQ24296/7 charger driver");
 MODULE_LICENSE("GPL");

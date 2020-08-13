@@ -197,6 +197,7 @@ struct bq2429x_device_info {
 	struct regmap_field *rmap_fields[F_MAX_FIELDS];
 
 	struct power_supply *usb;
+	struct power_supply_battery_info bat_info;
 
 	struct regulator_desc desc[NUM_REGULATORS];
 	struct device_node *of_node[NUM_REGULATORS];
@@ -223,13 +224,10 @@ struct bq2429x_device_info {
 	/* is power adapter plugged in */
 	bool adapter_plugged;
 
-	/* charging current limit */
-	unsigned int chg_current_uA;
 	/* default current limit after plugin of USB power */
 	unsigned int usb_input_current_uA;
 	/* alternate power source (not USB) */
 	unsigned int adp_input_current_uA;
-	unsigned int voltage_min_design_uV;
 	unsigned int battery_voltage_max_design_uV;
 	unsigned int max_VSYS_uV;
 };
@@ -712,29 +710,29 @@ static int bq2429x_init_registers(struct bq2429x_device_info *di)
 	int bits;
 	int ret;
 
-	/* revisit: could read from monitored battery properties
-	 * (precharge-current-microamp, charge-term-current-microamp)
-	 */
-
-	// bq2429x_set_precharge_current_uA(di->precharge_current_uA);
-
-	/* set Pre-Charge Current Limit as 128mA */
-	ret = bq2429x_field_write(di, F_IPRECHG, 0);
+	ret = power_supply_get_battery_info(di->usb, &di->bat_info);
 	if (ret < 0) {
-		dev_err(&di->client->dev, "%s(): Failed to set pre-charge limit 128mA\n",
-				__func__);
+		dev_err(di->dev, "unable to get battery info: %d\n", ret);
 		return ret;
 	}
 
-	// bq2429x_set_charge_term_current_uA(di->charge_term_current_uA);
-
-	/* set Termination Current Limit as 128mA */
-	ret = bq2429x_field_write(di, F_ITERM, 0);
-	if (ret < 0) {
-		dev_err(&di->client->dev, "%s(): Failed to set termination limit 128mA\n",
-				__func__);
+	if (di->bat_info.energy_full_design_uwh         == -EINVAL ||
+	    di->bat_info.charge_full_design_uah         == -EINVAL ||
+	    di->bat_info.voltage_min_design_uv          == -EINVAL ||
+	    di->bat_info.voltage_max_design_uv          == -EINVAL ||
+	    di->bat_info.constant_charge_current_max_ua == -EINVAL ||
+	    di->bat_info.constant_charge_voltage_max_uv == -EINVAL)
+	{
+		dev_err(di->dev, "battery info is incomplete\n");
 		return ret;
 	}
+
+	bq2429x_set_precharge_current_uA(di,
+			(di->bat_info.precharge_current_ua == -EINVAL) ?
+			128000 : di->bat_info.precharge_current_ua);
+	bq2429x_set_charge_term_current_uA(di,
+			(di->bat_info.charge_term_current_ua == -EINVAL) ?
+			128000 : di->bat_info.charge_term_current_ua);
 
 	/*
 	 * VSYS may be up to 150 mV above fully charged battery voltage
@@ -749,7 +747,7 @@ static int bq2429x_init_registers(struct bq2429x_device_info *di)
 	else
 		max_uV = di->max_VSYS_uV - 150000;
 
-	max_uV = min_t(int, max_uV, (int) di->battery_voltage_max_design_uV);
+	max_uV = min_t(int, max_uV, di->bat_info.voltage_max_design_uv);
 
 // MP2624 has slightly different scale and offset
 
@@ -757,16 +755,16 @@ static int bq2429x_init_registers(struct bq2429x_device_info *di)
 	bits = max(bits, 0);
 	bits = min(bits, 63);
 
-	dev_dbg(&di->client->dev, "%s(): translated vbatt_max=%u and VSYS_max=%u to VREG=%u (%02x)\n",
+	dev_dbg(di->dev, "%s(): translated vbatt_max=%u and VSYS_max=%u to VREG=%u (%02x)\n",
 		__func__,
-		di->battery_voltage_max_design_uV, di->max_VSYS_uV, max_uV,
+		di->bat_info.voltage_max_design_uv, di->max_VSYS_uV, max_uV,
 		bits);
 
 	/* revisit: bq2429x_set_charge_current_uA(di, ?); */
 
 	ret = bq2429x_field_write(di, F_VREG, bits);
 	if (ret < 0) {
-		dev_err(&di->client->dev, "%s(): Failed to set max. battery voltage\n",
+		dev_err(di->dev, "%s(): Failed to set max. battery voltage\n",
 				__func__);
 		return ret;
 	}
@@ -829,7 +827,7 @@ static void bq2429x_input_available(struct bq2429x_device_info *di, bool state)
 			bq2429x_set_input_current_limit_uA(di,
 					di->usb_input_current_uA);
 
-		bq2429x_set_charge_current_uA(di, di->chg_current_uA);
+		bq2429x_set_charge_current_uA(di, di->bat_info.constant_charge_current_max_ua);
 		bq2429x_set_charge_mode(di, CHARGE_MODE_CONFIG_CHARGE_BATTERY);
 	} else if (!state && di->adapter_plugged) {
 		di->adapter_plugged = false;
@@ -1418,7 +1416,6 @@ static int bq2429x_parse_dt(struct bq2429x_device_info *di)
 	struct device_node *np;
 	struct device_node *regulators;
 	struct device_node *regulator_np;
-	struct device_node *battery_np;
 	int idx = 0, ret;
 	u32 val;
 
@@ -1428,42 +1425,10 @@ static int bq2429x_parse_dt(struct bq2429x_device_info *di)
 		return -EINVAL;
 	}
 
-	di->battery_voltage_max_design_uV = 4200000;	/* default for LiIon */
-	di->voltage_min_design_uV = 3200000;
-	di->adp_input_current_uA = 2048000;
-	/* take defaults as set by U-Boot or power-on */
-	di->chg_current_uA = bq2429x_get_charge_current_uA(di);
-	di->usb_input_current_uA = bq2429x_input_current_limit_uA(di);
-
 	of_property_read_u32(np, "ti,usb-input-current-microamp",
 			     &di->usb_input_current_uA);
 	of_property_read_u32(np, "ti,adp-input-current-microamp",
 			     &di->adp_input_current_uA);
-
-	battery_np = of_parse_phandle(np, "monitored-battery", 0);
-
-	if (battery_np) {
-		u32 value;
-
-		of_property_read_u32(battery_np,
-				"voltage-max-design-microvolt",
-				&di->battery_voltage_max_design_uV);
-		of_property_read_u32(battery_np,
-				"voltage-min-design-microvolt",
-				&di->voltage_min_design_uV);
-		of_property_read_u32(battery_np,
-				"constant-charge-current-max-microamp",
-				&di->chg_current_uA);
-		if (!of_property_read_u32(battery_np,
-				"precharge-current-microamp",
-				&value));
-			bq2429x_set_precharge_current_uA(di, value);
-		if (!of_property_read_u32(battery_np,
-				"charge-term-current-microamp",
-				&value));
-			bq2429x_set_charge_term_current_uA(di, value);
-		of_node_put(battery_np);
-	}
 
 	/*
 	 * optional dc_det_pin
@@ -1666,11 +1631,17 @@ static int bq2429x_charger_probe(struct i2c_client *client,
 		return ret;
 	}
 
+	ret = bq2429x_power_supply_init(di);
+	if (ret) {
+		dev_err(dev,
+			"failed to register as USB power_supply: %ld\n", PTR_ERR(di->usb));
+		return ret;
+	}
+
 	ret = bq2429x_init_registers(di);
 	if (ret < 0) {
-		dev_err(dev, "failed to initialize registers: %d\n",
-			ret);
-		return ret;
+		dev_err(dev, "failed to initialize registers: %d\n", ret);
+		goto err_unreg_psy;
 	}
 
 	di->workqueue = create_singlethread_workqueue("bq2429x_irq");
@@ -1687,14 +1658,6 @@ static int bq2429x_charger_probe(struct i2c_client *client,
 		client->irq = 0;
 	}
 
-	ret = bq2429x_power_supply_init(di);
-	if (ret) {
-		dev_err(dev,
-			"failed to register as USB power_supply: %ld\n", PTR_ERR(di->usb));
-		cancel_work_sync(&di->irq_work);
-		return ret;
-	}
-
 	if (device_create_file(dev, &dev_attr_max_current))
 		dev_warn(dev, "could not create sysfs file max_current\n");
 
@@ -1708,6 +1671,11 @@ static int bq2429x_charger_probe(struct i2c_client *client,
 		schedule_delayed_work(&di->usb_detect_work, 0);
 
 	return 0;
+
+err_unreg_psy:
+	power_supply_unregister(di->usb);
+
+	return ret;
 }
 
 static int bq2429x_charger_remove(struct i2c_client *client)

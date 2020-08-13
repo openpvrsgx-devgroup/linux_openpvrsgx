@@ -108,6 +108,10 @@
 		voltage-max-design-microvolt = <4200000>;
 		energy-full-design-microwatt-hours = <22200000>;
 		charge-full-design-microamp-hours = <6000000>;
+		constant-charge-current-max-microamp = <2048000>;
+		constant-charge-voltage-max-microvolt = <4200000>;
+		precharge-current-microamp = <128000>;
+		charge-term-current-microamp = <128000>;
 	};
 
 	/* Bluetooth audio */

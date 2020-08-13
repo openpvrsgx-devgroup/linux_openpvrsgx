@@ -234,18 +234,32 @@ struct bq2429x_device_info {
 
 /* helper tables */
 
-static const unsigned int iinlim_table[] = {
+enum bq2429x_table_ids {
+	/* range tables */
+	TBL_VINDPM = 0,
+	TBL_ICHG,
+	TBL_IPRECHG,
+	TBL_ITERM,
+	TBL_VREG,
+
+	/* lookup tables */
+	TBL_IINLIM,
+	TBL_BOOSTV,
+	TBL_SYS_MIN,
+};
+
+static const unsigned int bq2429x_iinlim_tbl[] = {
 	100000,
 	150000,
 	500000,
 	900000,
 	1000000,
-	1500000,	// for bq24, mp26 has 1800000
+	1500000,
 	2000000,
-	3000000,
+	3000000
 };
 
-static const unsigned int vsys_VSEL_table[] = {
+static const unsigned int bq2429x_sys_min_tbl[] = {
 	3000000,
 	3100000,
 	3200000,
@@ -256,7 +270,7 @@ static const unsigned int vsys_VSEL_table[] = {
 	3700000,
 };
 
-static const unsigned int otg_VSEL_table[] = {
+static const unsigned int bq2429x_boostv_tbl[] = {
 	4550000,
 	4614000,
 	4678000,
@@ -274,6 +288,67 @@ static const unsigned int otg_VSEL_table[] = {
 	5446000,
 	5510000,
 };
+
+struct bq2429x_range {
+	unsigned int min;
+	unsigned int max;
+	unsigned int step;
+};
+
+struct bq2429x_lookup {
+	const unsigned int *tbl;
+	int size;
+};
+
+static const union {
+	struct bq2429x_range rt;
+	struct bq2429x_lookup lt;
+} bq2429x_tables[] = {
+	[TBL_VINDPM]	= { .rt = {3880000, 5080000, 80000} },
+	[TBL_ICHG]	= { .rt = {512000,  3008000, 64000} },
+	[TBL_IPRECHG]	= { .rt = {128000,  2048000, 128000} },
+	[TBL_ITERM]	= { .rt = {128000,  2048000, 128000} },
+	[TBL_VREG]	= { .rt = {3504000, 4400000, 16000} },
+
+	[TBL_IINLIM]	= { .lt = {bq2429x_iinlim_tbl, ARRAY_SIZE(bq2429x_iinlim_tbl)} },
+	[TBL_BOOSTV]	= { .lt = {bq2429x_boostv_tbl, ARRAY_SIZE(bq2429x_boostv_tbl)} },
+	[TBL_SYS_MIN]	= { .lt = {bq2429x_sys_min_tbl, ARRAY_SIZE(bq2429x_sys_min_tbl)} },
+};
+
+static int bq2429x_find_idx(u32 value, enum bq2429x_table_ids id)
+{
+	int idx;
+
+	if ((id > ARRAY_SIZE(bq2429x_tables)) || id < 0)
+		return -EINVAL;
+
+	if (id >= TBL_IINLIM) {
+		const u32 *tbl = bq2429x_tables[id].lt.tbl;
+		u32 tbl_size = bq2429x_tables[id].lt.size;
+
+		for (idx = 1; idx < tbl_size && tbl[idx] <= value; idx++);
+		idx -= 1;
+
+	} else {
+		const struct bq2429x_range *tbl = &bq2429x_tables[id].rt;
+
+		idx = (value - tbl->min) / tbl->step;
+	}
+
+	return idx;
+}
+
+static u32 bq2429x_find_val(u8 idx, enum bq2429x_table_ids id)
+{
+	const struct bq2429x_range *tbl;
+
+	if (id >= TBL_IINLIM)
+		return bq2429x_tables[id].lt.tbl[idx];
+
+	tbl = &bq2429x_tables[id].rt;
+
+	return (idx * tbl->step) + tbl->min;
+}
 
 /*
  * Common code for BQ24296 devices read
@@ -385,7 +460,7 @@ static int bq2429x_get_vindpm_uV(struct bq2429x_device_info *di)
 		return ret;
 	}
 
-	return 3880000 + 80000 * ret;
+	return bq2429x_find_val(ret, TBL_VINDPM);
 }
 
 static int bq2429x_input_current_limit_uA(struct bq2429x_device_info *di)
@@ -410,37 +485,28 @@ static int bq2429x_input_current_limit_uA(struct bq2429x_device_info *di)
 	if (di->id->driver_data == CHIP_MP2624 && (ret == 5))
 		return 1800000;
 
-	return iinlim_table[ret];
+	return bq2429x_find_val(ret, TBL_IINLIM);
 }
 
 static int bq2429x_set_input_current_limit_uA(struct bq2429x_device_info *di,
 					      int uA)
 {
 	u8 hiz = EN_HIZ_DISABLE;
-	u8 data = 0;
+	int data;
 	int ret;
 
 	dev_dbg(di->dev, "%s(%d)\n", __func__, uA);
 
 	if (uA < 80000)		/* includes negative current limit */
 		hiz = EN_HIZ_ENABLE;
-	else if (uA < 120000)
-		data = 0;
-	else if (uA < 400000)
-		data = 1;
-	else if (uA < 700000)
-		data = 2;
-	else if (uA < 1000000)
-		data = 3;
-	else if (uA < 1200000)
-		data = 4;
-// depends on bq24 vs. mp26
-	else if (uA < 1800000)
+
+	data = bq2429x_find_idx(uA, TBL_IINLIM);
+	if (data < 0)
+		return data;
+
+	/* mp26 idx 5 is 1800000 */
+	if (uA > 1200000 && uA < 2200000)
 		data = 5;
-	else if (uA < 2200000)
-		data = 6;
-	else
-		data = 7;
 
 	ret = bq2429x_field_write(di, F_IINLIM, data);
 	if (ret < 0) {
@@ -469,7 +535,7 @@ static int bq2429x_get_charge_current_uA(struct bq2429x_device_info *di)
 		return ret;
 	}
 
-	return 64000 * ret + 512000;
+	return bq2429x_find_val(ret, TBL_ICHG);
 }
 
 static int bq2429x_set_charge_current_uA(struct bq2429x_device_info *di, int uA)
@@ -477,11 +543,9 @@ static int bq2429x_set_charge_current_uA(struct bq2429x_device_info *di, int uA)
 	int data;
 	int ret;
 
-	if (uA < 0)
-		return -EINVAL;
-
-	data = (uA - 512000 + 32000) / 64000;
-	data = min(0x27, max(data, 0));	/* limit to 512 mA .. 3008 mA */
+	data = bq2429x_find_idx(uA, TBL_ICHG);
+	if (data < 0)
+		return data;
 
 	ret = bq2429x_field_write(di, F_ICHG, data);
 	if (ret < 0) {
@@ -503,7 +567,7 @@ static int bq2429x_get_precharge_current_uA(struct bq2429x_device_info *di)
 		return ret;
 	}
 
-	return 128000 * ret + 128000;
+	return bq2429x_find_val(ret, TBL_IPRECHG);
 }
 
 static int bq2429x_set_precharge_current_uA(struct bq2429x_device_info *di, int uA)
@@ -511,11 +575,9 @@ static int bq2429x_set_precharge_current_uA(struct bq2429x_device_info *di, int 
 	int data;
 	int ret;
 
-	if (uA < 0)
-		return -EINVAL;
-
-	data = (uA - 128000 + 64000) / 128000;
-	data = min(0xf, max(data, 0));	/* limit to 128 mA .. 2048 mA */
+	data = bq2429x_find_idx(uA, TBL_IPRECHG);
+	if (data < 0)
+		return data;
 
 	ret = bq2429x_field_write(di, F_IPRECHG, data);
 	if (ret < 0) {
@@ -530,11 +592,9 @@ static int bq2429x_set_charge_term_current_uA(struct bq2429x_device_info *di, in
 	int data;
 	int ret;
 
-	if (uA < 0)
-		return -EINVAL;
-
-	data = (uA - 128000 + 64000) / 128000;
-	data = min(0xf, max(data, 0));	/* limit to 128 mA .. 2048 mA */
+	data = bq2429x_find_idx(uA, TBL_ITERM);
+	if (data < 0)
+		return data;
 
 	ret = bq2429x_field_write(di, F_ITERM, data);
 	if (ret < 0) {
@@ -580,9 +640,9 @@ static int bq2429x_get_vsys_voltage_uV(struct bq2429x_device_info *di)
 		return ret;
 
 	dev_dbg(di->dev, " => %d uV\n",
-		vsys_VSEL_table[ret]);
+		bq2429x_find_val(ret, TBL_SYS_MIN));
 
-	return vsys_VSEL_table[ret];
+	return bq2429x_find_val(ret, TBL_SYS_MIN);
 }
 
 static int bq2429x_set_vsys_voltage_uV(struct bq2429x_device_info *di,
@@ -590,7 +650,7 @@ static int bq2429x_set_vsys_voltage_uV(struct bq2429x_device_info *di,
 {
 	dev_dbg(di->dev, "%s(%d, %d)\n", __func__, min_uV, max_uV);
 
-// revisit: the driver should select the voltage closest to min_uV by scanning vsys_VSEL_table
+// revisit: the driver should select the voltage closest to min_uV by scanning TBL_SYS_MIN
 
 	return 0;	/* disabled/untested */
 }
@@ -607,9 +667,9 @@ static int bq2429x_get_otg_voltage_uV(struct bq2429x_device_info *di)
 		return ret;
 
 	dev_dbg(di->dev, " => %d uV\n",
-		otg_VSEL_table[ret]);
+		bq2429x_find_val(ret, TBL_BOOSTV));
 
-	return otg_VSEL_table[ret];
+	return bq2429x_find_val(ret, TBL_BOOSTV);
 }
 
 static int bq2429x_set_otg_voltage_uV(struct bq2429x_device_info *di,
@@ -750,10 +810,9 @@ static int bq2429x_init_registers(struct bq2429x_device_info *di)
 	max_uV = min_t(int, max_uV, di->bat_info.voltage_max_design_uv);
 
 // MP2624 has slightly different scale and offset
-
-	bits = (max_uV - 3504000) / 16000;
-	bits = max(bits, 0);
-	bits = min(bits, 63);
+	bits = bq2429x_find_idx(max_uV, TBL_VREG);
+	if (bits < 0)
+		return bits;
 
 	dev_dbg(di->dev, "%s(): translated vbatt_max=%u and VSYS_max=%u to VREG=%u (%02x)\n",
 		__func__,
@@ -1508,13 +1567,13 @@ static int bq2429x_regulator_init(struct bq2429x_device_info *di)
 		switch (i) {
 		case VSYS_REGULATOR:
 			di->desc[i].ops = &vsys_ops;
-			di->desc[i].n_voltages = ARRAY_SIZE(vsys_VSEL_table);
-			di->desc[i].volt_table = vsys_VSEL_table;
+			di->desc[i].n_voltages = ARRAY_SIZE(bq2429x_sys_min_tbl);
+			di->desc[i].volt_table = bq2429x_sys_min_tbl;
 			break;
 		case OTG_REGULATOR:
 			di->desc[i].ops = &otg_ops;
-			di->desc[i].n_voltages = ARRAY_SIZE(otg_VSEL_table);
-			di->desc[i].volt_table = otg_VSEL_table;
+			di->desc[i].n_voltages = ARRAY_SIZE(bq2429x_boostv_tbl);
+			di->desc[i].volt_table = bq2429x_boostv_tbl;
 			break;
 		}
 

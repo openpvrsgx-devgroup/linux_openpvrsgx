@@ -58,18 +58,6 @@
 #define CHRG_PRE_CHARGE		1
 #define CHRG_FAST_CHARGE	2
 #define CHRG_CHRGE_DONE		3
-#define CHRG_OFF		4
-#define CHRG_MASK		3
-
-#define DPM_STAT	0x08
-#define PG_STAT		0x04
-
-/* REG09 fault status register value */
-#define CHRG_FAULT_OFF	4
-#define CHRG_FAULT_MASK	0x3
-#define NTC_FAULT_OFF	0
-// FIXME: MP2624 has 3 bits
-#define NTC_FAULT_MASK	0x3
 
 /* REG0a vendor status register value */
 #define CHIP_BQ24296		0x20
@@ -187,6 +175,19 @@ static const struct regmap_config bq2429x_regmap_config = {
 	.volatile_table = &bq2429x_volatile_regs
 };
 
+struct bq2429x_state {
+	u8 vbus_stat;
+	u8 chrg_stat;
+	u8 dpm_stat;
+	u8 pg_stat;
+	u8 therm_stat;
+	u8 vsys_stat;
+	u8 wd_fault;
+	u8 otg_fault;
+	u8 chrg_fault;
+	u8 bat_fault;
+	u8 ntc_fault;
+};
 
 struct bq2429x_device_info {
 	struct device *dev;
@@ -215,12 +216,8 @@ struct bq2429x_device_info {
 	/* output connected to psel of bq24296 */
 	struct gpio_desc *psel_pin;
 
-	/* status register values from last read */
-	u8 r8;
-	u8 r9;
-	/* second last read for change detection */
-	u8 prev_r8;
-	u8 prev_r9;
+	struct bq2429x_state state;
+
 	/* is power adapter plugged in */
 	bool adapter_plugged;
 
@@ -758,77 +755,61 @@ static int bq2429x_set_otg_current_limit_uA(struct bq2429x_device_info *di,
 }
 
 /* initialize the chip */
+static int bq2429x_get_chip_state(struct bq2429x_device_info *di,
+				  struct bq2429x_state *state)
+{
+	int i;
+	int ret;
+
+	struct {
+		enum bq2429x_fields id;
+		u8 *data;
+	} state_fields[] = {
+		{F_VBUS_STAT,		&state->vbus_stat},
+		{F_CHRG_STAT,		&state->chrg_stat},
+		{F_DPM_STAT,		&state->dpm_stat},
+		{F_PG_STAT,		&state->pg_stat},
+		{F_THERM_STAT,		&state->therm_stat},
+		{F_VSYS_STAT,		&state->vsys_stat},
+		{F_WATCHDOG_FAULT,	&state->wd_fault},
+		{F_OTG_FAULT,		&state->otg_fault}
+		{F_CHRG_FAULT,		&state->chrg_fault},
+		{F_BAT_FAULT,		&state->bat_fault},
+		{F_NTC_FAULT,		&state->ntc_fault},
+	};
+
+	for (i=0; i < ARRAY_SIZE(state_fields); i++) {
+		ret = bq2429x_field_read(di, state_fields[i].id);
+		if (ret < 0)
+			return ret;
+
+		*state_fields[i].data = ret;
+	}
+
+	return 0;
+}
+
+static bool bq2429x_state_changed(struct bq2429x_device_info *di,
+				  struct bq2429x_state *new_state)
+{
+	struct bq2429x_state old_state = di->state;
+
+	return (old_state.vbus_stat != new_state->vbus_stat	||
+		old_state.chrg_stat != new_state->chrg_stat	||
+		old_state.dpm_stat != new_state->dpm_stat	||
+		old_state.pg_stat != new_state->pg_stat		||
+		old_state.therm_stat != new_state->therm_stat	||
+		old_state.vsys_stat != new_state->vsys_stat	||
+		old_state.wd_fault != new_state->wd_fault	||
+		old_state.otg_fault != new_state->otg_fault	||
+		old_state.chrg_fault != new_state->chrg_fault	||
+		old_state.bat_fault != new_state->bat_fault	||
+		old_state.ntc_fault != new_state->ntc_fault);
+}
 
 static int bq2429x_get_vendor_id(struct bq2429x_device_info *di)
 {
 	return bq2429x_field_read(di, F_PN_REV);
-}
-
-static int bq2429x_init_registers(struct bq2429x_device_info *di)
-{
-	int max_uV;
-	int bits;
-	int ret;
-
-	ret = power_supply_get_battery_info(di->usb, &di->bat_info);
-	if (ret < 0) {
-		dev_err(di->dev, "unable to get battery info: %d\n", ret);
-		return ret;
-	}
-
-	if (di->bat_info.energy_full_design_uwh         == -EINVAL ||
-	    di->bat_info.charge_full_design_uah         == -EINVAL ||
-	    di->bat_info.voltage_min_design_uv          == -EINVAL ||
-	    di->bat_info.voltage_max_design_uv          == -EINVAL ||
-	    di->bat_info.constant_charge_current_max_ua == -EINVAL ||
-	    di->bat_info.constant_charge_voltage_max_uv == -EINVAL)
-	{
-		dev_err(di->dev, "battery info is incomplete\n");
-		return ret;
-	}
-
-	bq2429x_set_precharge_current_uA(di,
-			(di->bat_info.precharge_current_ua == -EINVAL) ?
-			128000 : di->bat_info.precharge_current_ua);
-	bq2429x_set_charge_term_current_uA(di,
-			(di->bat_info.charge_term_current_ua == -EINVAL) ?
-			128000 : di->bat_info.charge_term_current_ua);
-
-	/*
-	 * VSYS may be up to 150 mV above fully charged battery voltage
-	 * if operating from VBUS.
-	 * So to effectively limit VSYS we may have to lower the max. battery
-	 * voltage. The offset can be reduced to 100 mV for the mps,mp2624.
-	 */
-
-	if (di->id->driver_data == CHIP_MP2624)
-// FIXME: can be configured to 50/100mV by additional bit in REG01: VSYS_MAX
-		max_uV = di->max_VSYS_uV - 100000;
-	else
-		max_uV = di->max_VSYS_uV - 150000;
-
-	max_uV = min_t(int, max_uV, di->bat_info.voltage_max_design_uv);
-
-// MP2624 has slightly different scale and offset
-	bits = bq2429x_find_idx(max_uV, TBL_VREG);
-	if (bits < 0)
-		return bits;
-
-	dev_dbg(di->dev, "%s(): translated vbatt_max=%u and VSYS_max=%u to VREG=%u (%02x)\n",
-		__func__,
-		di->bat_info.voltage_max_design_uv, di->max_VSYS_uV, max_uV,
-		bits);
-
-	/* revisit: bq2429x_set_charge_current_uA(di, ?); */
-
-	ret = bq2429x_field_write(di, F_VREG, bits);
-	if (ret < 0) {
-		dev_err(di->dev, "%s(): Failed to set max. battery voltage\n",
-				__func__);
-		return ret;
-	}
-
-	return 0;
 }
 
 /* handle USB detection and charging based on status registers */
@@ -836,12 +817,12 @@ static int bq2429x_init_registers(struct bq2429x_device_info *di)
 static inline bool bq2429x_battery_present(struct bq2429x_device_info *di)
 { /* assume if there is an NTC fault there is no battery  */
 // MP2624 has 3 NTC bits
-	return ((di->r9 >> NTC_FAULT_OFF) & NTC_FAULT_MASK) == 0;
+	return di->state.ntc_fault == 0;
 }
 
 static inline bool bq2429x_input_present(struct bq2429x_device_info *di)
 { /* VBUS is available */
-	return (di->r8 & PG_STAT) != 0;
+	return di->state.chrg_fault != 0;
 }
 
 static int bq2429x_battery_temperature_mC(struct bq2429x_device_info *di)
@@ -851,10 +832,9 @@ static int bq2429x_battery_temperature_mC(struct bq2429x_device_info *di)
 	 * revisit: during boost mode deduce values from BHOT and BCOLD
 	 * settings
 	 */
-
-	if (di->r9 & 0x02)
+	if (di->state.ntc_fault & 0x02)
 		return -10000;	/* too cold (-10C) */
-	else if (di->r9 & 0x01)
+	else if (di->state.ntc_fault & 0x01)
 		return 60000;	/* too hot (60C) */
 	return 22500;	/* ok (22.5C) */
 }
@@ -899,85 +879,66 @@ static void bq2429x_input_available(struct bq2429x_device_info *di, bool state)
 
 static int bq2429x_usb_detect(struct bq2429x_device_info *di)
 {
+	struct bq2429x_state state;
+	char string[200];
 	int ret;
 
-	/* lock if interrupt and polling occur at the same time */
 	mutex_lock(&di->var_lock);
 
-	dev_dbg(di->dev, "%s, line=%d\n", __func__, __LINE__);
-
-	ret = bq2429x_field_read(di, F_SYS_STAT_REG);
+	ret = bq2429x_get_chip_state(di, &state);
 	if (ret < 0) {
 		mutex_unlock(&di->var_lock);
-
-		dev_err(&di->client->dev, "%s: err %d\n", __func__, ret);
-
 		return ret;
 	}
-	di->r8 = ret;
 
-	ret = bq2429x_field_read(di, F_NEW_FAULT_REG);
-	if (ret < 0) {
+	if (!bq2429x_state_changed(di, &state)) {
 		mutex_unlock(&di->var_lock);
-
-		dev_err(&di->client->dev, "%s: err %d\n", __func__, ret);
-
-		return ret;
+		return -EAGAIN;
 	}
-	di->r9 = ret;
 
 	/* report changes to last state */
-	if (di->r8 != di->prev_r8 || di->r9 != di->prev_r9)
-		{
-		char string[200];
-		sprintf(string, "r8=%02x", di->r8);
-		switch ((di->r8 >> 6) & 3) {
+	sprintf(string, "state changed: state->[");
+	switch (state.vbus_stat) {
 		case 1: strcat(string, " HOST"); break;
 		case 2: strcat(string, " ADAP"); break;
 		case 3: strcat(string, " OTG"); break;
-		};
-		switch ((di->r8 >> 4) & 3) {
+	};
+	switch (state.chrg_stat) {
 		case 1: strcat(string, " PRECHG"); break;
 		case 2: strcat(string, " FCHG"); break;
 		case 3: strcat(string, " CHGTERM"); break;
-		};
-		if ((di->r8 >> 3) & 1)
-			strcat(string, " INDPM");
-		if ((di->r8 >> 2) & 1)
-			strcat(string, " PWRGOOD");
-		if ((di->r8 >> 1) & 1)
-			strcat(string, " THERMREG");
-		if ((di->r8 >> 0) & 1)
-			strcat(string, " VSYSMIN");
-		sprintf(string+strlen(string), " r9=%02x", di->r9);
-		if ((di->r9 >> 7) & 1)
-			strcat(string, " WDOG");
-		if ((di->r9 >> 6) & 1)
-			strcat(string, " OTGFAULT");
-		switch ((di->r9 >> 4) & 3) {
+	};
+	if (state.dpm_stat)
+		strcat(string, " INDPM");
+	if (state.pg_stat)
+		strcat(string, " PWRGOOD");
+	if (state.therm_stat)
+		strcat(string, " THERMREG");
+	if (state.vsys_stat)
+		strcat(string, " VSYSMIN");
+	strcat(string, "] fault->[");
+	if (state.wd_fault)
+		strcat(string, " WDOG");
+	if (state.otg_fault)
+		strcat(string, " OTGFAULT");
+	switch (state.chrg_fault) {
 		case 1: strcat(string, " UNPLUG"); break;
 		case 2: strcat(string, " THERMAL"); break;
 		case 3: strcat(string, " CHGTIME"); break;
-		};
-		if ((di->r9 >> 3) & 1)
-			strcat(string, " BATFAULT");
-		if ((di->r9 >> 2) & 1)
-			strcat(string, " RESERVED");
-		if ((di->r9 >> 1) & 1)
-			strcat(string, " COLD");
-		if ((di->r9 >> 0) & 1)
-			strcat(string, " HOT");
-		dev_notice(di->dev, "%s: %s\n", __func__, string);
-		di->prev_r8 = di->r8, di->prev_r9 = di->r9;
-		}
+	};
+	if (state.bat_fault)
+		strcat(string, " BATFAULT");
+	if (state.ntc_fault & 2)
+		strcat(string, " COLD");
+	if (state.ntc_fault & 1)
+		strcat(string, " HOT");
+	strcat(string, "]");
+	dev_notice(di->dev, "%s: %s\n", __func__, string);
 
-	if (((di->r8 >> 4) & 3) == 3) {
-		/* charging  terminated */
-		/* power_supply_changed(di->usb); */
-	}
+	di->state = state;
 
 	/* handle (momentarily) disconnect of VBUS */
-	if ((di->r9 >> CHRG_FAULT_OFF) & CHRG_FAULT_MASK)
+	if (state.chrg_fault)
 		bq2429x_input_available(di, false);
 
 	/* since we are polling slowly, VBUS may already be back again */
@@ -1011,8 +972,6 @@ static void bq2729x_irq_work_func(struct work_struct *wp)
 	dev_dbg(di->dev, "%s: di = %px\n", __func__, di);
 
 	bq2429x_usb_detect(di);
-
-	dev_dbg(di->dev, "%s: r8=%02x r9=%02x\n", __func__, di->r8, di->r9);
 }
 
 static irqreturn_t bq2729x_chg_irq_func(int irq, void *dev_id)
@@ -1263,6 +1222,88 @@ static DEVICE_ATTR(max_current, 0644, bq2429x_input_current_limit_uA_show,
 
 static DEVICE_ATTR(otg, 0644, bq2429x_otg_show, bq2429x_otg_store);
 
+static int bq2429x_init_registers(struct bq2429x_device_info *di)
+{
+	int max_uV;
+	int bits;
+	int ret;
+
+	ret = power_supply_get_battery_info(di->usb, &di->bat_info);
+	if (ret < 0) {
+		dev_err(di->dev, "unable to get battery info: %d\n", ret);
+		return ret;
+	}
+
+	if (di->bat_info.energy_full_design_uwh         == -EINVAL ||
+	    di->bat_info.charge_full_design_uah         == -EINVAL ||
+	    di->bat_info.voltage_min_design_uv          == -EINVAL ||
+	    di->bat_info.voltage_max_design_uv          == -EINVAL ||
+	    di->bat_info.constant_charge_current_max_ua == -EINVAL ||
+	    di->bat_info.constant_charge_voltage_max_uv == -EINVAL)
+	{
+		dev_err(di->dev, "battery info is incomplete\n");
+		return ret;
+	}
+
+	/* disable watchdog */
+	ret = bq2429x_field_write(di, F_WD_RESET, 1);
+	if (ret < 0)
+		return ret;
+
+	ret = bq2429x_field_write(di, F_WATCHDOG, 0);
+	if (ret < 0)
+		return ret;
+
+	bq2429x_set_precharge_current_uA(di,
+			(di->bat_info.precharge_current_ua == -EINVAL) ?
+			128000 : di->bat_info.precharge_current_ua);
+	bq2429x_set_charge_term_current_uA(di,
+			(di->bat_info.charge_term_current_ua == -EINVAL) ?
+			128000 : di->bat_info.charge_term_current_ua);
+
+	/*
+	 * VSYS may be up to 150 mV above fully charged battery voltage
+	 * if operating from VBUS.
+	 * So to effectively limit VSYS we may have to lower the max. battery
+	 * voltage. The offset can be reduced to 100 mV for the mps,mp2624.
+	 */
+
+	if (di->id->driver_data == CHIP_MP2624)
+// FIXME: can be configured to 50/100mV by additional bit in REG01: VSYS_MAX
+		max_uV = di->max_VSYS_uV - 100000;
+	else
+		max_uV = di->max_VSYS_uV - 150000;
+
+	max_uV = min_t(int, max_uV, di->bat_info.voltage_max_design_uv);
+
+// MP2624 has slightly different scale and offset
+	bits = bq2429x_find_idx(max_uV, TBL_VREG);
+	if (bits < 0)
+		return bits;
+
+	dev_dbg(di->dev, "%s(): translated vbatt_max=%u and VSYS_max=%u to VREG=%u (%02x)\n",
+		__func__,
+		di->bat_info.voltage_max_design_uv, di->max_VSYS_uV, max_uV,
+		bits);
+
+	/* revisit: bq2429x_set_charge_current_uA(di, ?); */
+
+	ret = bq2429x_field_write(di, F_VREG, bits);
+	if (ret < 0) {
+		dev_err(di->dev, "%s(): Failed to set max. battery voltage\n",
+				__func__);
+		return ret;
+	}
+
+	ret = bq2429x_get_chip_state(di, &di->state);
+	if (ret < 0) {
+		dev_err(di->dev, "failed to get chip state\n");
+		return ret;
+	}
+
+	return 0;
+}
+
 /* power_supply interface */
 
 static int bq2429x_get_property(struct power_supply *psy,
@@ -1270,13 +1311,18 @@ static int bq2429x_get_property(struct power_supply *psy,
 				union power_supply_propval *val)
 {
 	struct bq2429x_device_info *di = power_supply_get_drvdata(psy);
+	struct bq2429x_state state;
 	int ret;
 
 	dev_dbg(di->dev, "%s,line=%d prop=%d\n", __func__, __LINE__, psp);
 
+	mutex_lock(&di->var_lock);
+	state = di->state;
+	mutex_unlock(&di->var_lock);
+
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
-		switch ((di->r8 >> CHRG_OFF) & CHRG_MASK) {
+		switch (state.chrg_stat) {
 		case CHRG_NO_CHARGING:
 			val->intval = POWER_SUPPLY_STATUS_NOT_CHARGING;
 			break;
@@ -1293,7 +1339,7 @@ static int bq2429x_get_property(struct power_supply *psy,
 		break;
 
 	case POWER_SUPPLY_PROP_CHARGE_TYPE:
-		switch ((di->r8 >> CHRG_OFF) & CHRG_MASK) {
+		switch (state.chrg_stat) {
 		case CHRG_NO_CHARGING:
 			val->intval = POWER_SUPPLY_CHARGE_TYPE_NONE;
 			break;
@@ -1310,7 +1356,7 @@ static int bq2429x_get_property(struct power_supply *psy,
 		break;
 
 	case POWER_SUPPLY_PROP_HEALTH:
-		switch ((di->r9 >> CHRG_FAULT_OFF) & CHRG_FAULT_MASK) {
+		switch (state.chrg_fault) {
 		case 0:
 			val->intval = POWER_SUPPLY_HEALTH_GOOD;
 			break;
@@ -1328,7 +1374,7 @@ static int bq2429x_get_property(struct power_supply *psy,
 
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
 		if(bq2429x_input_present(di)) {
-			if ((di->r8 & DPM_STAT) != 0)
+			if (state.vbus_stat != 0)
 				val->intval = bq2429x_get_vindpm_uV(di);
 			else
 				/* power good: assume VBUS 5V */
@@ -1345,7 +1391,7 @@ static int bq2429x_get_property(struct power_supply *psy,
 		break;
 
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
-		switch ((di->r8 >> CHRG_OFF) & CHRG_MASK) {
+		switch (state.chrg_stat) {
 		case CHRG_NO_CHARGING:
 		case CHRG_CHRGE_DONE:
 			/* assume no charging current */
@@ -1641,8 +1687,6 @@ static int bq2429x_charger_probe(struct i2c_client *client,
 	di->client = client;
 	di->id = id;
 	i2c_set_clientdata(client, di);
-	di->prev_r8 = 0xff;
-	di->prev_r9 = 0xff;
 
 	di->rmap = devm_regmap_init_i2c(client, &bq2429x_regmap_config);
 	if (IS_ERR(di->rmap)) {

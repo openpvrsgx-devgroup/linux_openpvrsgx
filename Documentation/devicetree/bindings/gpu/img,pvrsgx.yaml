@@ -39,6 +39,13 @@ properties:
           - const: img,sgx530-125
           - const: img,sgx530
 
+      - description: SGX531 based SoC
+        items:
+          - enum:
+              - csr,atlas7-sgx531
+              - csr,prima2-sgx531
+          - const: img,sgx531
+
       - description: SGX535-116 based SoC
         items:
           - const: intel,poulsbo-gma500-sgx535 # Atom Z5xx

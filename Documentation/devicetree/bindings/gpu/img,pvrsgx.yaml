@@ -36,7 +36,6 @@ properties:
               - ti,am4-sgx530-125
               - ti,omap3-sgx530-125 # BeagleBoard XM, GTA04, OpenPandora 1GHz and similar
               - ti,ti81xx-sgx530-125
-          - const: ti,omap3-sgx530-125
           - const: img,sgx530-125
           - const: img,sgx530
 

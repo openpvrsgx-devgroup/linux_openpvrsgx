@@ -690,6 +690,7 @@ config CHARGER_BQ2429X
 	tristate "TI BQ2429x battery charger driver"
 	depends on I2C
 	depends on GPIOLIB || COMPILE_TEST
+	depends on REGMAP_I2C
 	help
 	  Say Y to enable support for the TI BQ24296/297 battery charger.
 

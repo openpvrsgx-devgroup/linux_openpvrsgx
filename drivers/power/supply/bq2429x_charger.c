@@ -26,6 +26,7 @@
 #include <linux/param.h>
 #include <linux/platform_device.h>
 #include <linux/power_supply.h>
+#include <linux/regmap.h>
 #include <linux/regulator/driver.h>
 #include <linux/regulator/machine.h>
 #include <linux/regulator/of_regulator.h>
@@ -181,10 +182,40 @@
 #define ID_BQ24297		1
 #define ID_MP2624		2
 
+static const struct regmap_range bq2429x_readonly_reg_ranges[] = {
+	regmap_reg_range(REG08, REG0A)
+};
+
+static const struct regmap_access_table bq2429x_writeable_regs = {
+	.no_ranges = bq2429x_readonly_reg_ranges,
+	.n_no_ranges = ARRAY_SIZE(bq2429x_readonly_reg_ranges)
+};
+
+static const struct regmap_range bq2429x_volatile_reg_ranges[] = {
+	regmap_reg_range(REG08, REG09)
+};
+
+static const struct regmap_access_table bq2429x_volatile_regs = {
+	.yes_ranges = bq2429x_volatile_reg_ranges,
+	.n_yes_ranges = ARRAY_SIZE(bq2429x_volatile_reg_ranges)
+};
+
+static const struct regmap_config bq2429x_regmap_config = {
+	.reg_bits = 8,
+	.val_bits = 8,
+	.max_register = REG0A,
+	.cache_type = REGCACHE_RBTREE,
+	.wr_table = &bq2429x_writeable_regs,
+	.volatile_table = &bq2429x_volatile_regs
+};
+
+
 struct bq2429x_device_info {
 	struct device			*dev;
 	struct i2c_client		*client;
 	const struct i2c_device_id	*id;
+
+	struct regmap *rmap;
 
 	struct power_supply		*usb;
 
@@ -670,13 +701,6 @@ static int bq2429x_set_otg_voltage_uV(struct bq2429x_device_info *di,
 // revisit: the driver should select the voltage closest to min_uV by scanning otg_VSEL_table
 
 	return 0;	/* disabled/untested */
-
-	/* set OTG step up converter voltage */
-
-	return bq2429x_update_reg(di->client,
-				  THERMAL_REGULATION_CONTROL_REGISTER,
-				  0,
-				  BOOSTV_MASK << BOOSTV_OFF);
 }
 
 static int bq2429x_is_otg_enabled(struct bq2429x_device_info *di)
@@ -1649,8 +1673,13 @@ static int bq2429x_charger_probe(struct i2c_client *client,
 	di->prev_r8 = 0xff;
 	di->prev_r9 = 0xff;
 
-	ret = bq2429x_get_vendor_id(di);
+	di->rmap = devm_regmap_init_i2c(client, &bq2429x_regmap_config);
+	if (IS_ERR(di->rmap)) {
+		dev_err(di->dev, "failed to allocate register map\n");
+		return PTR_ERR(di->rmap);
+	}
 
+	ret = bq2429x_get_vendor_id(di);
 	if (ret < 0) {
 		dev_err(&di->client->dev,
 			"%s(): Failed reading vendor register\n", __func__);

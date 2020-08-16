@@ -1944,8 +1944,8 @@
 			#size-cells = <1>;
 			ranges = <0x12000000 0x12000000 0x1000000>;
 
-			graphics@12000000 {
-				compatible = "powervr,sgx531";
+			gpu: gpu@12000000 {
+				compatible = "csr,atlas7-sgx531", "img,sgx531";
 				reg = <0x12000000 0x1000000>;
 				interrupts = <0 6 0>;
 				clocks = <&car 126>;

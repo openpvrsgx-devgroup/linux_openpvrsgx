@@ -145,8 +145,8 @@
 			#size-cells = <1>;
 			ranges = <0x98000000 0x98000000 0x8000000>;
 
-			graphics@98000000 {
-				compatible = "powervr,sgx531";
+			gpu: gpu@98000000 {
+				compatible = "csr,prima2-sgx531", "img,sgx531";
 				reg = <0x98000000 0x8000000>;
 				interrupts = <6>;
 				clocks = <&clks 32>;

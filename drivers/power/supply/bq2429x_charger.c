@@ -772,7 +772,7 @@ static int bq2429x_get_chip_state(struct bq2429x_device_info *di,
 		{F_THERM_STAT,		&state->therm_stat},
 		{F_VSYS_STAT,		&state->vsys_stat},
 		{F_WATCHDOG_FAULT,	&state->wd_fault},
-		{F_OTG_FAULT,		&state->otg_fault}
+		{F_OTG_FAULT,		&state->otg_fault},
 		{F_CHRG_FAULT,		&state->chrg_fault},
 		{F_BAT_FAULT,		&state->bat_fault},
 		{F_NTC_FAULT,		&state->ntc_fault},

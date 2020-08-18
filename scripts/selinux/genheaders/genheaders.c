@@ -3,12 +3,20 @@
 /* NOTE: we really do want to use the kernel headers here */
 #define __EXPORTED_HEADERS__
 
+#ifdef __APPLE__
+#include <linux/compiler_types.h> // get define for __user
+#include <uapi/linux/types.h> // get typedefs for __u16 etc.
+typedef _Bool bool; // get typedef for bool
+#define __ASSEMBLY__   // would conflict over fd_set, dev_t etc. from sys/types of HOSTCC
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
 #include <ctype.h>
+
 #include <sys/socket.h>
 
 struct security_class_mapping {

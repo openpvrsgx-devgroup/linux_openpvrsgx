@@ -390,7 +390,7 @@ static int pinephone_unprepare(struct drm_panel *panel)
 
 static const struct drm_display_mode pinephone_default_mode = {
 	.clock = 74000,
-	.vrefresh = 60,
+//	.vrefresh = 60,
 
 	.hdisplay = 720,
 	.hsync_start = 720 + 30,
@@ -418,7 +418,8 @@ static int pinephone_get_modes(struct drm_panel *panel,
 		DRM_DEV_ERROR(&ctx->dsi->dev, "failed to add mode %ux%ux@%u\n",
 			      pinephone_default_mode.hdisplay,
 			      pinephone_default_mode.vdisplay,
-			      pinephone_default_mode.vrefresh);
+//			      pinephone_default_mode.vrefresh);
+			      60);
 		return -ENOMEM;
 	}
 

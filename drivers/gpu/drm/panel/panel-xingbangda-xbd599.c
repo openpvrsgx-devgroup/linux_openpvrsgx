@@ -209,7 +209,6 @@ static const struct drm_display_mode xbd599_default_mode = {
 	.vsync_start = 1440 + 18,
 	.vsync_end   = 1440 + 18 + 10,
 	.vtotal	     = 1440 + 18 + 10 + 17,
-	.vrefresh    = 60,
 	.clock	     = 69000,
 	.flags	     = DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_NVSYNC,
 
@@ -291,7 +290,8 @@ static int xbd599_probe(struct mipi_dsi_device *dsi)
 	DRM_DEV_INFO(dev, "%ux%u@%u %ubpp dsi %udl - ready\n",
 		     xbd599_default_mode.hdisplay,
 		     xbd599_default_mode.vdisplay,
-		     xbd599_default_mode.vrefresh,
+//		     xbd599_default_mode.vrefresh,
+		     60,
 		     mipi_dsi_pixel_format_to_bpp(dsi->format), dsi->lanes);
 
 	return 0;

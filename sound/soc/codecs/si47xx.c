@@ -232,7 +232,9 @@ static int si47xx_set_bias_level(struct snd_soc_component *component,
 
 static struct snd_soc_dai_ops si47xx_dai_ops = {
 	.hw_params	= si47xx_hw_params,
+#ifdef REVISIT
 	.digital_mute	= si47xx_mute,
+#endif
 	.set_fmt	= si47xx_set_dai_fmt,
 };
 

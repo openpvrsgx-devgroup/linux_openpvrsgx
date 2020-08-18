@@ -1,10 +1,4 @@
 /* SPDX-License-Identifier: GPL-2.0 */
-#ifdef __APPLE__
-#include <linux/compiler.h> // get define for __user
-#include <uapi/linux/types.h> // get typedefs for __u16 etc.
-typedef _Bool bool; // get typedef for bool
-#define __ASSEMBLY__   // would conflict over fd_set, dev_t etc. from sys/types of HOSTCC
-#endif
 
 #include <linux/capability.h>
 

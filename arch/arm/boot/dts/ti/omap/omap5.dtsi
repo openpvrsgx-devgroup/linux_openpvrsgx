@@ -322,7 +322,7 @@
 			reg = <0x59000000 0x0700>;
 			interrupts = <GIC_SPI 125 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&dss_clkctrl OMAP5_DSS_CORE_CLKCTRL 8>, // bus: DSS_L3_GICLK
-			         <&dss_clkctrl OMAP5_DSS_CORE_CLKCTRL 13>; // core: BB2D_GFCLK
+			         <&dpll_core_h24x2_ck>; // core: BB2D_GFCLK
 			clock-names = "bus", "core";
 			ti,hwmods = "bb2d";
 		};

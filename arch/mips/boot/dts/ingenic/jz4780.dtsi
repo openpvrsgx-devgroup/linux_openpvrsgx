@@ -2,6 +2,8 @@
 #include <dt-bindings/clock/jz4780-cgu.h>
 #include <dt-bindings/clock/ingenic,tcu.h>
 #include <dt-bindings/dma/jz4780-dma.h>
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/interrupt-controller/irq.h>
 
 / {
 	#address-cells = <1>;
@@ -217,10 +219,11 @@
 		#size-cells = <0>;
 		num-chipselects = <2>;
 
-		gpio-miso = <&gpe 14 0>;
-		gpio-sck = <&gpe 15 0>;
-		gpio-mosi = <&gpe 17 0>;
-		cs-gpios = <&gpe 16 0>, <&gpe 18 0>;
+		gpio-miso = <&gpe 14 GPIO_ACTIVE_HIGH>;
+		gpio-sck = <&gpe 15 GPIO_ACTIVE_HIGH>;
+		gpio-mosi = <&gpe 17 GPIO_ACTIVE_HIGH>;
+		cs-gpios = <&gpe 16 GPIO_ACTIVE_HIGH
+			    &gpe 18 GPIO_ACTIVE_HIGH>;
 
 		spidev@0 {
 			compatible = "spidev";
@@ -378,6 +381,32 @@
 		pinctrl-0 = <&pins_i2c4_data>;
 
 		status = "disabled";
+	};
+
+	gpu: gpu@13040000 {
+		compatible = "ingenic,jz4780-sgx540-130", "img,sgx540-130", "img,sgx540";
+		reg = <0x13040000 0x4000>;
+
+		clocks = <&cgu JZ4780_CLK_GPU>;
+		clock-names = "gpu";
+
+		interrupt-parent = <&intc>;
+		interrupts = <63>;
+	};
+
+	cim: cim@0x13060000 {
+		compatible = "ingenic,jz4780-cim";
+		reg = <0x13060000 0x68>;
+		reg-shift = <2>;
+
+		interrupt-parent = <&intc>;
+		interrupts = <30>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&pins_cim>;
+
+		clocks = <&cgu JZ4780_CLK_CIM>, <&cgu JZ4780_CLK_CIMMCLK>;
+		clock-names = "cim", "module";
 	};
 
 	nemc: nemc@13410000 {

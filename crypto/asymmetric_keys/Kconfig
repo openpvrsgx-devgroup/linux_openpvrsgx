@@ -39,6 +39,7 @@ config X509_CERTIFICATE_PARSER
 	depends on ASYMMETRIC_PUBLIC_KEY_SUBTYPE
 	select ASN1
 	select OID_REGISTRY
+	select SYSTEM_TRUSTED_KEYRING	# compare https://groups.google.com/forum/#!msg/linux.kernel/KsPIrfsdb9w/ynDohizZNw4J
 	help
 	  This option provides support for parsing X.509 format blobs for key
 	  data and provides the ability to instantiate a crypto key from a

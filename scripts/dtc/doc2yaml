@@ -1,0 +1,147 @@
+#!/opt/local/bin/python3
+
+import argparse
+import sys
+import os
+import subprocess
+import re
+
+from ruamel import yaml
+
+def filter_maintainers(m):
+    if 'Herring' in m:
+        return False
+    return True
+
+if __name__ == "__main__":
+    ap = argparse.ArgumentParser()
+    ap.add_argument("docfile", type=str,
+                    help="Filename of input text file to be translated to YAML")
+    args = ap.parse_args()
+
+    yamlfile = os.path.splitext(args.docfile)[0] + '.yaml'
+    if os.path.isfile(yamlfile):
+        exit(0)
+
+    yml = yaml.YAML()
+    # Setup formatting settings
+    yml.indent(mapping=2, sequence=4, offset=2)
+    yml.explicit_start=True
+    yml.preserve_quotes=True
+    yml.version=(1,2)
+
+    try:
+        doc = open(args.docfile).read()
+    except:
+        print("Cannot read %s" % args.docfile)
+        exit(1)
+
+    if not 'compatible' in doc:
+        exit(1)
+
+    rawfile = open('scripts/dtc/template.yaml').read()
+    top_comment = rawfile.partition('%YAML')[0]
+
+    try:
+        yamldata = yml.load(rawfile)
+    except yaml.YAMLError as exc:
+        print(file + ":", exc)
+        exit(1)
+
+    yamldata['$id'] += yamlfile.replace('Documentation/devicetree/', '') + '#'
+
+#    f = sys.stdout #open('/dev/null', 'w')
+
+#    maintainer_email = subprocess.check_output(['scripts/get_maintainer.pl', '--no-l', '--git-blame', '--no-m', '--no-roles', '--no-rolestats', args.docfile]).decode("utf-8").splitlines()
+#    maintainer_email = list(filter(filter_maintainers, maintainer_email))
+
+    # Get the author of the most commits for the maintainer. get_maintainers.pl
+    # doesn't work well because most of the time it is just the DT maintainers.
+    emails = subprocess.check_output(['git', 'log', '--pretty=format:%aN <%aE>', args.docfile]).decode("utf-8").splitlines()
+    maintainer_email = [ max(emails, key=emails.count) ]
+    if emails.count(maintainer_email[0]) == 1:
+        maintainer_email = []
+    else:
+        emails.remove(maintainer_email[0])
+
+    emails.reverse()
+    maintainer_email.append(emails[0])
+    maintainer_email.reverse()
+
+    yamldata['maintainers'] = list(set(maintainer_email))
+
+    # Try to extract a title from the doc
+    title = re.findall(r'.*[A-Za-z0-9]+.*', doc)[0]
+    title = re.sub(r'^[=\-\*]+\s', '', title)
+    title = re.sub(r'\s[=\-\*]+$', '', title)
+    yamldata['title'] = title
+
+    lines = doc.splitlines()
+
+    # skip any blank lines at the top
+    while '' == lines[0]:
+        lines.pop(0)
+    # then skip to next blank line
+    while '' != lines[0]:
+        lines.pop(0)
+    # then find the next non-blank like for the start of the description
+    while '' == lines[0]:
+        lines.pop(0)
+
+    # Any indentation will throw off yaml parser
+    lines[0] = lines[0].lstrip()
+
+    # Try to extract a description. This is all the lines following a blank
+    # line after the title until a line containing "properties".
+    desc_found = False
+    desc = ''
+    for line in lines:
+        if 'properties:' in line.lower():
+            break;
+        desc += line + '\n'
+        desc_found = True
+
+    if desc_found:
+        yamldata['description'] = yaml.scalarstring.PreservedScalarString(desc)
+
+    # Try to extract the example. This is all lines after a line starting with
+    # "example"
+    lines = re.findall(r'^example.*};', doc, re.MULTILINE | re.S | re.I)
+    if len(lines):
+        lines = lines[0]
+
+#        lines = re.sub('\t', '  ', lines)
+
+        lines = lines.splitlines()
+
+        lines.pop(0)
+        while '' == lines[0]:
+            lines.pop(0)
+
+        example = ""
+        if lines[0].startswith('\t'):
+            for line in lines:
+                if line.startswith('\t'):
+                    line = line[1:]
+                example += re.sub('\t', '  ', line) + '\n'
+
+            yamldata['examples'] = []
+            yamldata['examples'].append(yaml.scalarstring.PreservedScalarString(example))
+
+    lines = doc.splitlines()
+    # skip any blank lines at the top
+    while '' == lines[0]:
+        lines.pop(0)
+
+    historical = ""
+    for line in lines:
+        # Already have the example, so bail when we hit it
+        if line.lower().startswith('example'):
+            break
+        historical += line + '\n'
+
+        yamldata['historical'] = yaml.scalarstring.PreservedScalarString(historical)
+
+    f = open(yamlfile, 'w')
+    print(top_comment, file=f, end="")
+    yml.dump(yamldata, f)

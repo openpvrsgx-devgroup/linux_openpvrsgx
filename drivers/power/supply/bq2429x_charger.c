@@ -1070,6 +1070,7 @@ static int bq2429x_otg_enable(struct regulator_dev *dev)
 		return -EBUSY;
 	}
 
+	bq2429x_set_charge_mode(di, CHARGE_MODE_CONFIG_CHARGE_DISABLE);
 	bq2429x_en_hiz_disable(di);
 
 	mdelay(5);

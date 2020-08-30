@@ -979,8 +979,10 @@ static void usb_detect_work_func(struct work_struct *wp)
 
 	ret = bq2429x_usb_detect(di);
 
-	if (ret == 0)
-		schedule_delayed_work(&di->usb_detect_work, 1*HZ);
+	if (ret != 0 && ret != -EAGAIN)
+		dev_warn(di->dev, "%s: %d\n", __func__, ret);
+
+	schedule_delayed_work(&di->usb_detect_work, 1*HZ);
 }
 
 static void bq2729x_irq_work_func(struct work_struct *wp)
@@ -1117,7 +1119,8 @@ static int bq2429x_charger_suspend(struct device *dev, pm_message_t state)
 	struct bq2429x_device_info *di = i2c_get_clientdata(client);
 
 	/* revisit: we may want to turn off otg here */
-	cancel_delayed_work_sync(&di->usb_detect_work);
+	if (!client->irq)
+		cancel_delayed_work_sync(&di->usb_detect_work);
 	return 0;
 }
 
@@ -1126,7 +1129,8 @@ static int bq2429x_charger_resume(struct device *dev)
 	struct i2c_client *client = to_i2c_client(dev);
 	struct bq2429x_device_info *di = i2c_get_clientdata(client);
 
-	schedule_delayed_work(&di->usb_detect_work, msecs_to_jiffies(50));
+	if (!client->irq)
+		schedule_delayed_work(&di->usb_detect_work, msecs_to_jiffies(50));
 	return 0;
 }
 

@@ -447,6 +447,11 @@ DEVICE_ATTR(registers, 0444, show_registers, NULL);
 
 /* getter and setter functions with conversion to/from uA/uV */
 
+static bool is_mp2624(struct bq2429x_device_info *di)
+{
+	return di->id->driver_data == CHIP_MP2624;
+}
+
 static int bq2429x_get_vindpm_uV(struct bq2429x_device_info *di)
 {
 	int ret;
@@ -479,7 +484,7 @@ static int bq2429x_input_current_limit_uA(struct bq2429x_device_info *di)
 		return ret;
 	}
 
-	if (di->id->driver_data == CHIP_MP2624 && (ret == 5))
+	if (is_mp2624(di) && (ret == 5))
 		return 1800000;
 
 	return bq2429x_find_val(ret, TBL_IINLIM);
@@ -501,8 +506,10 @@ static int bq2429x_set_input_current_limit_uA(struct bq2429x_device_info *di,
 	if (data < 0)
 		return data;
 
+// REVISIT: maybe we should use two different tables... TBL_IINLIM vs. TBL_IINLIM_2624
+
 	/* mp26 idx 5 is 1800000 */
-	if (uA > 1200000 && uA < 2200000)
+	if (is_mp2624(di) && uA > 1200000 && uA < 2200000)
 		data = 5;
 
 	ret = bq2429x_field_write(di, F_IINLIM, data);
@@ -656,9 +663,11 @@ static int bq2429x_get_otg_voltage_uV(struct bq2429x_device_info *di)
 {
 	int ret;
 
-	dev_dbg(di->dev, "%s\n", __func__);
+	dev_info(di->dev, "%s\n", __func__);
 
-// FIXME: constant for MP2624
+	if (is_mp2624(di))
+		return 5000000;
+
 	ret = bq2429x_field_read(di, F_BOOSTV);
 	if (ret < 0)
 		return ret;
@@ -672,9 +681,10 @@ static int bq2429x_get_otg_voltage_uV(struct bq2429x_device_info *di)
 static int bq2429x_set_otg_voltage_uV(struct bq2429x_device_info *di,
 				      int min_uV, int max_uV)
 {
-	dev_dbg(di->dev, "%s(%d, %d)\n", __func__, min_uV, max_uV);
+	dev_info(di->dev, "%s(%d, %d)\n", __func__, min_uV, max_uV);
 
-// FIXME: constant for MP2624
+	if (is_mp2624(di))	/* check that 5.0V is chosen */
+		return 0;
 
 // revisit: the driver should select the voltage closest to min_uV by scanning otg_VSEL_table
 
@@ -711,7 +721,8 @@ static int bq2429x_get_otg_current_limit_uA(struct bq2429x_device_info *di)
 	if (ret < 0)
 		return ret;
 
-// FIXME: different bit(s) and values (500mA 1.3A) in MP2624 in REG02
+	if (is_mp2624(di))
+		; // FIXME: different bit(s) and values (500mA 1.3A) in MP2624 in REG02
 
 	return ret ? 1000000 : 1500000;	/* 1.0A or 1.5A */
 }
@@ -737,7 +748,8 @@ static int bq2429x_set_otg_current_limit_uA(struct bq2429x_device_info *di,
 	else
 		val = OTG_MODE_CURRENT_CONFIG_1300MA;	/* enable 1.5A */
 
-// FIXME: different bit(s) and values (500mA 1.3A) in MP2624 in REG02
+	if (is_mp2624(di))
+		; // FIXME: different bit(s) and values (500mA 1.3A) in MP2624 in REG02
 
 	ret = bq2429x_field_write(di, F_BOOST_LIM, val);
 	if (ret < 0) {
@@ -816,7 +828,8 @@ static int bq2429x_get_vendor_id(struct bq2429x_device_info *di)
 
 static inline bool bq2429x_battery_present(struct bq2429x_device_info *di)
 { /* assume if there is an NTC fault there is no battery  */
-// MP2624 has 3 NTC bits
+	if (is_mp2624(di))
+		; // MP2624 has 3 NTC bits
 	return di->state.ntc_fault == 0;
 }
 
@@ -1268,15 +1281,15 @@ static int bq2429x_init_registers(struct bq2429x_device_info *di)
 	 * voltage. The offset can be reduced to 100 mV for the mps,mp2624.
 	 */
 
-	if (di->id->driver_data == CHIP_MP2624)
-// FIXME: can be configured to 50/100mV by additional bit in REG01: VSYS_MAX
+	if (is_mp2624(di))
+// REVISIT: can be configured to 50/100mV by additional bit in REG01: VSYS_MAX
 		max_uV = di->max_VSYS_uV - 100000;
 	else
 		max_uV = di->max_VSYS_uV - 150000;
 
 	max_uV = min_t(int, max_uV, di->bat_info.voltage_max_design_uv);
 
-// MP2624 has slightly different scale and offset
+// REVISIT: MP2624 has slightly different scale and offset
 	bits = bq2429x_find_idx(max_uV, TBL_VREG);
 	if (bits < 0)
 		return bits;

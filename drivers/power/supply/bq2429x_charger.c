@@ -699,22 +699,11 @@ static int bq2429x_set_otg_voltage_uV(struct bq2429x_device_info *di,
 
 static int bq2429x_is_otg_enabled(struct bq2429x_device_info *di)
 { /* check if OTG converter is enabled */
-	int ret;
+//	int ret;
 
-	dev_dbg(di->dev, "%s\n", __func__);
+	
 
-	ret = bq2429x_field_read(di, F_OTG_CONFIG);
-	if (ret < 0)
-		return 0;	/* assume disabled */
-
-	/*
-	 * we could alternatively check r8 for OTG mode
-	 * return ((di->r8 >> VBUS_OFF) && VBUS_MASK) == VBUS_OTG;
-	 * which one is better?
-	 */
-
-	/* check bit 5 of POWER_ON_CONFIGURATION_REGISTER */
-	return ret;
+	return di->state.vbus_stat == 3;
 }
 
 static int bq2429x_get_otg_current_limit_uA(struct bq2429x_device_info *di)

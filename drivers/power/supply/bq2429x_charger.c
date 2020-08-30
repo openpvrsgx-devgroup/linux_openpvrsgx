@@ -319,6 +319,9 @@ static int bq2429x_find_idx(u32 value, enum bq2429x_table_ids id)
 	if ((id > ARRAY_SIZE(bq2429x_tables)) || id < 0)
 		return -EINVAL;
 
+/* revisit: IMHO the table should have a flag which indicates which mode is to be used. */
+/* or it should depend on bq2429x_tables[id].lt.tbl != NULL */
+
 	if (id >= TBL_IINLIM) {
 		const u32 *tbl = bq2429x_tables[id].lt.tbl;
 		u32 tbl_size = bq2429x_tables[id].lt.size;
@@ -338,6 +341,9 @@ static int bq2429x_find_idx(u32 value, enum bq2429x_table_ids id)
 static u32 bq2429x_find_val(u8 idx, enum bq2429x_table_ids id)
 {
 	const struct bq2429x_range *tbl;
+
+/* revisit: IMHO the table should have a flag which indicates which mode is to be used. */
+/* or it should depend on bq2429x_tables[id].lt.tbl != NULL */
 
 	if (id >= TBL_IINLIM)
 		return bq2429x_tables[id].lt.tbl[idx];
@@ -735,6 +741,8 @@ static int bq2429x_set_otg_current_limit_uA(struct bq2429x_device_info *di,
 	int ret;
 
 	dev_dbg(di->dev, "%s(%d, %d)\n", __func__, min_uA, max_uA);
+
+/* revisit: maybe we can also use a Table here instead of magic constants? */
 
 	/*
 	 * set OTG current limit in bit 0 of POWER_ON_CONFIGURATION_REGISTER
@@ -1390,6 +1398,8 @@ static int bq2429x_get_property(struct power_supply *psy,
 			if (state.vbus_stat != 0)
 				val->intval = bq2429x_get_vindpm_uV(di);
 			else
+// REVISIT logic - if input_present checks for vbus_stat != 0 this can not happen
+
 				/* power good: assume VBUS 5V */
 				val->intval = 5000000;
 		} else

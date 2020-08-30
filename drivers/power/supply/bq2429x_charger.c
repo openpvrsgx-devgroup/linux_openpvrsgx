@@ -880,7 +880,12 @@ static void bq2429x_input_available(struct bq2429x_device_info *di, bool state)
 					di->usb_input_current_uA);
 
 		bq2429x_set_charge_current_uA(di, di->bat_info.constant_charge_current_max_ua);
-		bq2429x_set_charge_mode(di, CHARGE_MODE_CONFIG_CHARGE_BATTERY);
+
+		if (di->state.chrg_stat == 0) {
+			bq2429x_set_charge_mode(di, CHARGE_MODE_CONFIG_CHARGE_DISABLE);
+			mdelay(5);
+			bq2429x_set_charge_mode(di, CHARGE_MODE_CONFIG_CHARGE_BATTERY);
+		}
 	} else if (!state && di->adapter_plugged) {
 		di->adapter_plugged = false;
 

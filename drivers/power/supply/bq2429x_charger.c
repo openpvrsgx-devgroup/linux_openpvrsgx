@@ -1094,12 +1094,12 @@ static int bq2429x_otg_is_enabled(struct regulator_dev *dev)
 	return bq2429x_is_otg_enabled(di);
 }
 
-static struct regulator_ops vsys_ops = {
+static const struct regulator_ops vsys_ops = {
 	.get_voltage = bq2429x_get_vsys_voltage,
 	.set_voltage = bq2429x_set_vsys_voltage,
 };
 
-static struct regulator_ops otg_ops = {
+static const struct regulator_ops otg_ops = {
 	.get_voltage = bq2429x_get_otg_voltage,
 	.set_voltage = bq2429x_set_otg_voltage,
 	.get_current_limit = bq2429x_get_otg_current_limit,

@@ -842,11 +842,14 @@ static int bq2429x_battery_temperature_mC(struct bq2429x_device_info *di)
 	 * revisit: during boost mode deduce values from BHOT and BCOLD
 	 * settings
 	 */
-	if (di->state.ntc_fault & 0x02)
-		return -10000;	/* too cold (-10C) */
-	else if (di->state.ntc_fault & 0x01)
-		return 60000;	/* too hot (60C) */
-	return 22500;	/* ok (22.5C) */
+	switch (di->state.ntc_fault) {
+		default:
+			return 22500;	/* ok (22.5C) */
+		case 2:
+			return -10000;	/* too cold (-10C) */
+		case 1:
+			return 60000;	/* too hot (60C) */
+	}
 }
 
 static void bq2429x_input_available(struct bq2429x_device_info *di, bool state)

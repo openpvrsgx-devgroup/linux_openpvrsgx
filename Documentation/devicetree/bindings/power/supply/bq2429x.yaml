@@ -8,6 +8,7 @@ title: TI bq24296/24297 and MPS MP2624 Li-Ion Charger with OTG booster
 
 maintainers:
   - H. Nikolaus Schaller <hns@goldelico.com>
+  - Nick Elsmore <nicholaselsmore@gmail.com>
 
 description: |+
   This binding will support the bq24296 and bq24297.
@@ -34,32 +35,46 @@ properties:
     - description: phandle to the battery node
     - allOf:
       - $ref: /schemas/types.yaml#/definitions/phandle
-# QUESTION : how can we correctly describe that we support only the following phandle properties and ignore the others?
-    - enum:
-      - voltage-max-design-microvolt:
-        - default: 4200000
-      - voltage-min-design-microvolt:
-        - default: 3200000
-      - constant-charge-current-max-microamp:
-        - default: as defined by boot loader
-      - precharge-current-microamp:
-        - default: 128000
-      - charge-term-current-microamp:
-        - default: 128000
+# QUESTION: how can we formally describe that we support only the following phandle properties and ignore the others?
+# QUESTION: should it be comment like for rohm,bd99954.yaml?
+# QUESTION: how can we describe the default to be used by the driver if there is no monitored-battery node?
+#   - enum:
+#     - voltage-max-design-microvolt:
+#       - default: 4200000
+#     - voltage-min-design-microvolt:
+#       - default: 3200000
+#     - constant-charge-current-max-microamp:
+#       - default: as defined by boot loader
+#     - precharge-current-microamp:
+#       - default: 128000
+#     - charge-term-current-microamp:
+#       - default: 128000
 
   regulators:
     minItems: 2
     maxItems: 2
-    items:
-# QUESTION: can we specify that these are to be regulator nodes?
-      - description: |
-          two regulator child nodes for
-          [0] vsys (battery or usb input -> system output)
-          [1] otg (battery input -> usb output).
+    type: object
+    $ref: regulator.yaml#
+
+    description: |
+      two regulator child nodes for
+      [0] vsys (battery or usb input -> system output)
+      [1] otg (battery input -> usb output).
+
+    patternProperties:
+      "^vsys_regulator$":
+        type: object
+        $ref: regulator.yaml#
+
+      "^otg_regulator$":
+        type: object
+        $ref: regulator.yaml#
+
+    additionalProperties: false
 
   dc-det-gpios:
     items:
-# QUESTION: how do we specify that it should be a gpio?
+# QUESTION: how do we specify that it should be connected to a gpio?
       - description: gpio for detecting two different DC sources
       - default: use usb-input-current-microamp only
 
@@ -103,7 +118,6 @@ examples:
       interrupts = <(1*8+3) IRQ_TYPE_EDGE_FALLING>;   /* P13 */
       regulators {
         vsys_reg: vsys_regulator {
-          regulator-compatible = "bq2429x-vsys";
           regulator-name = "vsys";
           regulator-min-microvolt = <3500000>;
           regulator-max-microvolt = <4200000>;
@@ -111,7 +125,6 @@ examples:
           regulator-boot-on;
         };
         otg_reg: otg_regulator {
-          regulator-compatible = "bq2429x-otg";
           regulator-name = "otg";
           regulator-min-microvolt = <4900000>;
           regulator-max-microvolt = <5100000>;

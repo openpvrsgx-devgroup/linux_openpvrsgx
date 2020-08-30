@@ -1396,7 +1396,7 @@ static int bq2429x_get_property(struct power_supply *psy,
 		break;
 
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
-		if(bq2429x_input_present(di)) {
+		if (bq2429x_input_present(di)) {
 			if (state.vbus_stat != 0)
 				val->intval = bq2429x_get_vindpm_uV(di);
 			else

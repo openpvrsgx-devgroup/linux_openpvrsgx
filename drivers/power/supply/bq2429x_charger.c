@@ -832,7 +832,7 @@ static inline bool bq2429x_battery_present(struct bq2429x_device_info *di)
 
 static inline bool bq2429x_input_present(struct bq2429x_device_info *di)
 { /* VBUS is available */
-	return di->state.chrg_fault != 0;
+	return di->state.vbus_stat != 0;
 }
 
 static int bq2429x_battery_temperature_mC(struct bq2429x_device_info *di)

@@ -1,5 +1,5 @@
 #
-# Linux/mips 5.9.0-rc2 Kernel Configuration
+# Linux/mips 5.9.0-rc3 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="mipsel-linux-gnu-gcc (GCC) 4.9.2"
 CONFIG_CC_IS_GCC=y
@@ -1642,7 +1642,6 @@ CONFIG_SERIAL_OF_PLATFORM=y
 #
 # CONFIG_SERIAL_MAX3100 is not set
 # CONFIG_SERIAL_MAX310X is not set
-# CONFIG_SERIAL_IMX_EARLYCON is not set
 # CONFIG_SERIAL_UARTLITE is not set
 CONFIG_SERIAL_CORE=y
 CONFIG_SERIAL_CORE_CONSOLE=y
@@ -2909,15 +2908,11 @@ CONFIG_DRM_PANEL_BRIDGE=y
 # CONFIG_DRM_ANALOGIX_ANX6345 is not set
 # CONFIG_DRM_ANALOGIX_ANX78XX is not set
 # CONFIG_DRM_I2C_ADV7511 is not set
-CONFIG_DRM_DW_HDMI=y
-# CONFIG_DRM_DW_HDMI_AHB_AUDIO is not set
-# CONFIG_DRM_DW_HDMI_I2S_AUDIO is not set
-# CONFIG_DRM_DW_HDMI_CEC is not set
 # end of Display Interface Bridges
 
 CONFIG_DRM_INGENIC=y
 # CONFIG_DRM_INGENIC_IPU is not set
-CONFIG_DRM_DW_HDMI_JZ4780=y
+# CONFIG_DRM_INGENIC_DW_HDMI is not set
 # CONFIG_DRM_ETNAVIV is not set
 # CONFIG_DRM_ARCPGU is not set
 # CONFIG_DRM_MXSFB is not set

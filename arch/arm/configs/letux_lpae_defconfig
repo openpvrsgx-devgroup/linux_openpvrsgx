@@ -1,7 +1,7 @@
 #
-# Linux/arm 5.9.0-rc2 Kernel Configuration
+# Linux/arm 5.9.0-rc3 Kernel Configuration
 #
-CONFIG_CC_VERSION_TEXT="arm-linux-gnueabi-gcc (GCC) 4.9.2"
+CONFIG_CC_VERSION_TEXT="arm-linux-gnueabihf-gcc (GCC) 4.9.2"
 CONFIG_CC_IS_GCC=y
 CONFIG_GCC_VERSION=40902
 CONFIG_CLANG_VERSION=0
@@ -3302,7 +3302,7 @@ CONFIG_CHARGER_BQ2429X=m
 # CONFIG_CHARGER_RT9455 is not set
 # CONFIG_CHARGER_UCS1002 is not set
 # CONFIG_CHARGER_BD99954 is not set
-CONFIG_RN5T618_FUEL_GAUGE=m
+CONFIG_RN5T618_POWER=m
 # CONFIG_POWER_MIPSBOOK_400 is not set
 CONFIG_HWMON=y
 # CONFIG_HWMON_DEBUG_CHIP is not set

@@ -40,19 +40,10 @@
 #define OTG_REGULATOR	1
 #define NUM_REGULATORS	2
 
-/* REG00 input source control register value */
-#define EN_HIZ_ENABLE	 1
-#define EN_HIZ_DISABLE	 0
-
 /* REG01 power-on configuration register value */
 /* OTG Mode Current Config */
 #define OTG_MODE_CURRENT_CONFIG_500MA	0x00
 #define OTG_MODE_CURRENT_CONFIG_1300MA	0x01
-
-/* Charge Mode Config */
-#define CHARGE_MODE_CONFIG_CHARGE_DISABLE	0x00
-#define CHARGE_MODE_CONFIG_CHARGE_BATTERY	0x01
-#define CHARGE_MODE_CONFIG_OTG_OUTPUT		0x02
 
 #define CHRG_NO_CHARGING	0
 #define CHRG_PRE_CHARGE		1
@@ -481,8 +472,8 @@ static int bq2429x_input_current_limit_uA(struct bq2429x_device_info *di)
 		return ret;
 	}
 
-	if (ret == EN_HIZ_ENABLE)
-		return 0;	// High-Z state
+	if (ret == 1)
+		return 0;	/* report High-Z state as 0mA */
 
 	ret = bq2429x_field_read(di, F_IINLIM);
 	if (ret < 0) {
@@ -499,14 +490,14 @@ static int bq2429x_input_current_limit_uA(struct bq2429x_device_info *di)
 static int bq2429x_set_input_current_limit_uA(struct bq2429x_device_info *di,
 					      int uA)
 {
-	u8 hiz = EN_HIZ_DISABLE;
+	u8 hiz = false;
 	int data;
 	int ret;
 
 	dev_dbg(di->dev, "%s(%d)\n", __func__, uA);
 
 	if (uA < 80000)		/* includes negative current limit */
-		hiz = EN_HIZ_ENABLE;
+		hiz = true;
 
 	data = bq2429x_find_idx(uA, TBL_IINLIM);
 	if (data < 0)
@@ -618,7 +609,7 @@ static int bq2429x_en_hiz_disable(struct bq2429x_device_info *di)
 {
 	int ret;
 
-	ret = bq2429x_field_write(di, F_EN_HIZ, EN_HIZ_DISABLE);
+	ret = bq2429x_field_write(di, F_EN_HIZ, false);
 	if (ret < 0) {
 		dev_err(&di->client->dev, "%s(): Failed to set en_hiz_disable\n",
 			__func__);
@@ -631,6 +622,19 @@ static int bq2429x_set_charge_mode(struct bq2429x_device_info *di, u8 mode)
 	int ret;
 
 	ret = bq2429x_field_write(di, F_CHG_CONFIG, mode);
+	if (ret < 0) {
+		dev_err(&di->client->dev, "%s(): Failed to set charge mode(0x%x)\n",
+				__func__, mode);
+	}
+
+	return ret;
+}
+
+static int bq2429x_set_otg_mode(struct bq2429x_device_info *di, u8 mode)
+{
+	int ret;
+
+	ret = bq2429x_field_write(di, F_OTG_CONFIG, mode);
 	if (ret < 0) {
 		dev_err(&di->client->dev, "%s(): Failed to set charge mode(0x%x)\n",
 				__func__, mode);
@@ -754,6 +758,9 @@ static int bq2429x_set_otg_current_limit_uA(struct bq2429x_device_info *di,
 			__func__);
 	}
 
+// REVISIT: should we reset CHG_ENABLE before?
+// should we set this bit only if we really turn on the OTG regulator?
+
 	ret = bq2429x_field_write(di, F_OTG_CONFIG, enable);
 	if (ret < 0) {
 		dev_err(&di->client->dev, "%s(): Failed to set OTG enable\n",
@@ -854,6 +861,10 @@ static int bq2429x_battery_temperature_mC(struct bq2429x_device_info *di)
 
 static void bq2429x_input_available(struct bq2429x_device_info *di, bool state)
 { /* track external power input state and trigger actions on change */
+
+	if (di->state.vbus_stat == 3)
+		return;	/* do not track in OTG mode */
+
 	if (state && !di->adapter_plugged) {
 		di->adapter_plugged = true;
 
@@ -882,9 +893,9 @@ static void bq2429x_input_available(struct bq2429x_device_info *di, bool state)
 		bq2429x_set_charge_current_uA(di, di->bat_info.constant_charge_current_max_ua);
 
 		if (di->state.chrg_stat == 0) {
-			bq2429x_set_charge_mode(di, CHARGE_MODE_CONFIG_CHARGE_DISABLE);
+			bq2429x_set_charge_mode(di, false);
 			mdelay(5);
-			bq2429x_set_charge_mode(di, CHARGE_MODE_CONFIG_CHARGE_BATTERY);
+			bq2429x_set_charge_mode(di, true);
 		}
 	} else if (!state && di->adapter_plugged) {
 		di->adapter_plugged = false;
@@ -1070,12 +1081,12 @@ static int bq2429x_otg_enable(struct regulator_dev *dev)
 		return -EBUSY;
 	}
 
-	bq2429x_set_charge_mode(di, CHARGE_MODE_CONFIG_CHARGE_DISABLE);
+	bq2429x_set_charge_mode(di, false);
 	bq2429x_en_hiz_disable(di);
 
 	mdelay(5);
 
-	return bq2429x_set_charge_mode(di, CHARGE_MODE_CONFIG_OTG_OUTPUT);
+	return bq2429x_set_otg_mode(di, true);
 	/* could check/wait with timeout that r8 indicates OTG mode */
 }
 
@@ -1083,7 +1094,8 @@ static int bq2429x_otg_disable(struct regulator_dev *dev)
 { /* disable OTG step up converter */
 	struct bq2429x_device_info *di = rdev_get_drvdata(dev);
 
-	return bq2429x_set_charge_mode(di, CHARGE_MODE_CONFIG_CHARGE_DISABLE);
+
+	return bq2429x_set_otg_mode(di, false);
 	/* could check/wait with timeout that r8 indicates non-OTG mode */
 }
 

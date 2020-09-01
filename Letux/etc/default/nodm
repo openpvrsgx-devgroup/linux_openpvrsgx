@@ -36,4 +36,6 @@ NODM_MIN_SESSION_TIME=60
 # only runs in initd because nodm-service sources this with $1 = ""
 # systemd should be made to start the letux-panel-setup.service
 # setup xorg.conf and start daemon(s)
-DUMMY=$([ "$1" = "start" ] && /etc/X11/xinit/letux-panel-setup)
+# note: even the sequence inside $() must not fail because there
+# is a set -e in the shell that sources this file
+DUMMY=$([ "$1" = "start" ] && /etc/X11/xinit/letux-panel-setup || true)

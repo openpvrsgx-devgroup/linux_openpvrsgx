@@ -34,8 +34,8 @@ case $(tr -d '\0' </proc/device-tree/model 2>/dev/null) in
 		chg=/sys/class/power_supply/rn5t618-gauge/charge_now
 		;;
 	* )
+		chg=/dev/null
 		echo "unknown device $(tr -d '\0' </proc/device-tree/model 2>/dev/null)"
-		exit 1
 		;;
 esac
 
@@ -49,18 +49,22 @@ stty raw -echo -cread 2>/dev/null
 [ "$power1" ] && echo off > $power1
 [ "$power2" ] && echo off > $power2
 [ "$power3" ] && echo 0 > $power3
-# turn off LEDs
+# turn off all LEDs
 ( cd /sys/class/leds; for i in *; do echo "none" >$i/trigger; echo "0" >$i/brightness; done )
-before=`cat $chg`
-start=`date '+%s'`
+# collect data before suspend
+before=$([ "$chg" ] && cat $chg || echo 0)
+start=$(date '+%s')
+# suspend
 rtcwake -m mem -s $delay
-end=`date '+%s'`
-after=`cat $chg`
+# collect data after wakeup
+end=$(date '+%s')
+after=$([ "$chg" ] && cat $chg || echo 0)
 # wait a little for system components to awake
 sleep 1
 # restart RS232
 [ "$rs232" ] && echo 1 > $rs232
 stty sane 2>/dev/null
+# print results
 echo did wake up >&2
 echo before: $start $before
 echo after: $end $after

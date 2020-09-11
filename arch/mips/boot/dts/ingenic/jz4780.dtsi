@@ -595,6 +595,36 @@
 		status = "disabled";
 	};
 
+	usb_phy: usb_phy {
+		compatible = "usb-nop-xceiv";
+		#phy-cells = <0>;
+	};
+
+	ehci: usb@0x13490000 {
+		compatible = "ingenic,jz4780-ehci", "generic-ehci";
+		reg = <0x13490000 0x10000>;
+
+		interrupt-parent = <&intc>;
+		interrupts = <20>;
+
+		clocks = <&cgu JZ4780_CLK_UHC>;
+
+		phys = <&usb_phy>;
+	};
+
+	ohci: usb@0x134a0000 {
+		compatible = "ingenic,jz4780-ohci", "generic-ohci";
+		reg = <0x134a0000 0x10000>;
+
+		interrupt-parent = <&intc>;
+		interrupts = <5>;
+
+		clocks = <&cgu JZ4780_CLK_UHC>;
+		clock-names = "uhc";
+
+		phys = <&usb_phy>;
+	};
+
 	bch: bch@134d0000 {
 		compatible = "ingenic,jz4780-bch";
 		reg = <0x134d0000 0x10000>;

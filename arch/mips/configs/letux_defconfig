@@ -1,5 +1,5 @@
 #
-# Linux/mips 5.9.0-rc4 Kernel Configuration
+# Linux/mips 5.9.0-rc5 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="mipsel-linux-gnu-gcc (GCC) 4.9.2"
 CONFIG_CC_IS_GCC=y
@@ -2907,6 +2907,10 @@ CONFIG_DRM_PANEL_BRIDGE=y
 # CONFIG_DRM_ANALOGIX_ANX6345 is not set
 # CONFIG_DRM_ANALOGIX_ANX78XX is not set
 # CONFIG_DRM_I2C_ADV7511 is not set
+CONFIG_DRM_DW_HDMI=m
+# CONFIG_DRM_DW_HDMI_AHB_AUDIO is not set
+# CONFIG_DRM_DW_HDMI_I2S_AUDIO is not set
+# CONFIG_DRM_DW_HDMI_CEC is not set
 # end of Display Interface Bridges
 
 CONFIG_DRM_INGENIC=m

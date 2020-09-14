@@ -8,28 +8,28 @@ Touch	ok	ok	ok	n/a	(Openmoko Hybrid)	n/a	l4.19	n/a	ok	n/a	n/a	n/a	n/a	n/a		n/a	l
 Touch precalibration	letux	letux	letux	n/a	n/a	n/a	l4.19	n/a	n/a	n/a	n/a	n/a	n/a	n/a		n/a	?
 Keyboard	n/a	n/a	n/a	n/a	n/a	n/a	l4.19	n/a	letux	n/a	n/a		n/a	n/a	n/a	n/a	n/a
 Nubs	n/a	n/a	n/a	n/a	n/a	n/a	l4.19	n/a	letux	n/a	n/a	n/a	n/a	n/a	?	n/a	n/a
-DVI/HDMI	n/a	n/a	n/a	n/a	n/a	n/a	l4.19	ok	n/a	n/a	n/a	n/a	n/a	nok#921	?	ok	n/a
+DVI/HDMI	n/a	n/a	n/a	n/a	n/a	n/a	l4.19	ok	n/a	n/a	n/a	n/a	n/a	l5.9-rc1	?	ok	n/a
 TV-out	ok	ok	ok	?	?	n/a	n/a	n/a	?	n/a	n/a	n/a	n/a	n/a		n/a	n/a
 Charging	ok	ok	ok	n/a	n/a	n/a	l4.19	n/a	ok	n/a	n/a		n/a	n/a		n/a	nok
 Fuel Gauge	ok	n/a	n/a	n/a	n/a	n/a	wip	n/a	ok	n/a	n/a	n/a	n/a	n/a		n/a	nok
-OTG Client	ok	ok	ok	ok	ok	ok	l4.19	ok	ok		ok	n/a	?	?#921		n/a	l5.4-rc7
+OTG Client	ok	ok	ok	ok	ok	ok	l4.19	ok	ok	ok	ok	n/a	ok	?#921		n/a	l5.4-rc7
 OTG Host	ok	ok	ok	ok	ok	ok	l4.19	ok	ok	ok			n/a	ok			n/a
 [[USB]] Host	n/a	n/a	n/a	ok	ok	ok	l4.19#856	ok	nok#856	ok	ok		n/a	nok		ok	n/a
 MMC	ok	ok	ok	ok	ok	ok	l4.19	ok	ok	ok	ok		ok	ok	ok		ok
 NAND/eMMC	ok	ok	ok	ok	n/a	n/a	l4.19	ok	ok	ok	n/a		nok	!#921		n/a	n/a
 SATA	n/a	n/a	n/a	n/a	n/a	n/a	l4.19	ok	n/a	n/a	n/a	n/a	n/a	n/a	n/a		n/a
-Ethernet	n/a	n/a	n/a	n/a	ok	ok	n/a	ok	n/a	ok	ok	n/a	n/a	wip	n/a	ok	n/a
+Ethernet	n/a	n/a	n/a	n/a	ok	ok	n/a	ok	n/a	ok	ok	n/a	n/a	l5.6	n/a	ok	n/a
 WiFi	ok	ok	ok	n/a	n/a	ok	l4.19	ok	l5.4-rc3#849	n/a	ok	n/a	n/a	?#921		ok	?
 Bluetooth	letux	letux	letux	n/a	n/a	ok	l4.19	?	n/a	n/a	ok	n/a	n/a	?		ok	n/a
 Bluetooth Headset	?			n/a	n/a				n/a	n/a		n/a	n/a				n/a
-Infrared	nok#525	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	nok		n/a	n/a
+Infrared	nok#525	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	?		n/a	n/a
 [[GPS]]	ok	n/a	n/a	n/a	n/a	n/a	l4.19	n/a	n/a	n/a	n/a	n/a	n/a	n/a		n/a	n/a
 [[Wireless]]	ok	ok	ok	n/a	n/a	n/a	l4.19	n/a	n/a	n/a	n/a	n/a	n/a	n/a		n/a	n/a
 Telephony	letux	n/a	n/a	n/a	n/a	n/a		n/a	n/a	n/a	n/a	n/a	n/a	n/a		n/a	n/a
-[[Sound]]	ok	ok	ok	?	?	ok	l4.19#883	ok	nok	n/a	n/a	n/a	n/a			n/a	n/a
+[[Sound]]	ok	ok	ok	?	?	ok	l4.19#883	ok	nok	n/a	n/a	n/a	n/a	nok		n/a	n/a
 Vibra	ok	ok	ok	n/a	n/a	n/a	l4.19	n/a	n/a	n/a	n/a	n/a	n/a	n/a		n/a	n/a
 Indicators	ok	ok	ok	ok	ok	ok	l4.19	ok	ok	ok	ok		ok	ok		letux	l5.4-rc7
-Buttons	ok	ok	ok	ok	ok	ok	l4.19	ok	ok	ok	ok	n/a	ok				l5.4-rc7
+Buttons	ok	ok	ok	ok	ok	ok	l4.19	ok	ok	ok	ok	n/a	ok	ok			l5.4-rc7
 [[Sensors]]	ok	ok	ok	n/a	n/a	n/a	l4.19	n/a	n/a	n/a	ok	n/a	n/a	n/a		n/a	n/a
 NFC	n/a	nok	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a		n/a	n/a
 [[Camera]]	wip	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	nok#921		n/a	n/a
@@ -37,4 +37,4 @@ Flash/Torch	nok	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	nok		n/a	n/a
 Lid sensor	n/a	n/a	n/a	n/a	n/a	n/a	l4.19	n/a	n/a	n/a	n/a	n/a	n/a	n/a		n/a	l5.4-rc7
 FM Radio	wip#483	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a	n/a			n/a
 GPU	l5.4#449	l5.4#449	l5.4#449	wip	l5.4	wip	l4.19	letux	wip	l5.4	etnaviv	n/a	l5.4	wip		nok	etnaviv
-[[Power-Management]]	weak#707	weak	weak	n/a	n/a	n/a	nok	nok	?	n/a	n/a	n/a	n/a			n/a	?
+[[Power-Management]]	weak#707	weak	weak	n/a	n/a	n/a	nok	nok	?	n/a	n/a	n/a	n/a	n/a		n/a	?

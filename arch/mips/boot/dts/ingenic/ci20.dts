@@ -572,6 +572,9 @@
 
 &otg {
 	status = "okay";
+
+	assigned-clocks = <&cgu JZ4780_CLK_OTGPHY>;
+	assigned-clock-rates = <48000000>;
 };
 
 &pinctrl {

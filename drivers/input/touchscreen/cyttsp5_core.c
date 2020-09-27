@@ -1392,6 +1392,26 @@ static int cyttsp5_hid_output_set_param_(struct cyttsp5_core_data *cd,
 	return 0;
 }
 
+static int cyttsp5_hid_output_enter_easywake_state_(
+                struct cyttsp5_core_data *cd, u8 data, u8 *return_data)
+{
+        int write_length = 1;
+        u8 param[1] = { data };
+        int rc;
+        struct cyttsp5_hid_output hid_output = {
+                HID_OUTPUT_APP_COMMAND(HID_OUTPUT_ENTER_EASYWAKE_STATE),
+                .write_length = write_length,
+                .write_buf = param,
+        };
+
+        rc = cyttsp5_hid_send_output_and_wait_(cd, &hid_output);
+        if (rc)
+                return rc;
+
+        *return_data = cd->response_buf[5];
+        return rc;
+}
+
 static int cyttsp5_hid_output_set_param(struct cyttsp5_core_data *cd,
 		u8 param_id, u32 value, u8 size)
 {
@@ -2533,17 +2553,53 @@ static void cyttsp5_watchdog_timer(struct timer_list *t)
 		schedule_work(&cd->watchdog_work);
 }
 
+static int cyttsp5_put_device_into_easy_wakeup_(struct cyttsp5_core_data *cd)
+{
+        int rc;
+        u8 status = 0;
+
+        mutex_lock(&cd->system_lock);
+        cd->wait_until_wake = 0;
+        mutex_unlock(&cd->system_lock);
+
+        rc = cyttsp5_hid_output_enter_easywake_state_(cd,
+                        cd->easy_wakeup_gesture, &status);
+        if (rc || status == 0)
+                return -EBUSY;
+
+        return rc;
+}
+
+static int cyttsp5_put_device_into_deep_sleep_(struct cyttsp5_core_data *cd)
+{
+        int rc;
+
+        rc = cyttsp5_hid_cmd_set_power_(cd, HID_POWER_SLEEP);
+        if (rc)
+                rc = -EBUSY;
+        return rc;
+}
+
+static int cyttsp5_put_device_into_sleep_(struct cyttsp5_core_data *cd)
+{
+        int rc;
+
+        if (IS_DEEP_SLEEP_CONFIGURED(cd->easy_wakeup_gesture))
+                rc = cyttsp5_put_device_into_deep_sleep_(cd);
+        else
+                rc = cyttsp5_put_device_into_easy_wakeup_(cd);
+
+        return rc;
+}
+
+
 static int cyttsp5_core_poweroff_device_(struct cyttsp5_core_data *cd)
 {
 	int rc;
 
 	if (cd->irq_enabled) {
 		cd->irq_enabled = false;
-#ifdef CONFIG_SOC_IMX6SL
-		free_irq(cd->irq, cd);
-#else
 		disable_irq_nosync(cd->irq);
-#endif
 	}
 
 	rc = cd->cpdata->power(cd->cpdata, 0, cd->dev, 0);
@@ -2571,15 +2627,11 @@ static int cyttsp5_core_sleep_(struct cyttsp5_core_data *cd)
 	cyttsp5_stop_wd_timer(cd);
 	cancel_work_sync(&cd->startup_work);
 	cyttsp5_stop_wd_timer(cd);
-#ifdef CONFIG_SOC_IMX6SL
-	rc = cyttsp5_core_poweroff_device_(cd);
-#else
+
 	if (cd->cpdata->flags & CY_CORE_FLAG_POWEROFF_ON_SLEEP)
 		rc = cyttsp5_core_poweroff_device_(cd);
 	else
 		rc = cyttsp5_put_device_into_sleep_(cd);
-#endif
-
 
 	mutex_lock(&cd->system_lock);
 	cd->sleep_state = SS_SLEEP_ON;
@@ -3066,6 +3118,39 @@ struct cyttsp5_sysinfo *_cyttsp5_request_sysinfo(struct device *dev)
 	return NULL;
 }
 
+static int cyttsp5_core_wake_device_from_deep_sleep_(
+                struct cyttsp5_core_data *cd)
+{
+        int rc;
+
+        rc = cyttsp5_hid_cmd_set_power_(cd, HID_POWER_ON);
+        if (rc)
+                rc =  -EAGAIN;
+
+        /* Prevent failure on sequential wake/sleep requests from OS */
+        msleep(20);
+
+        return rc;
+}
+
+static int cyttsp5_core_wake_device_(struct cyttsp5_core_data *cd)
+{
+        if (!IS_DEEP_SLEEP_CONFIGURED(cd->easy_wakeup_gesture)) {
+                mutex_lock(&cd->system_lock);
+                cd->wait_until_wake = 1;
+                mutex_unlock(&cd->system_lock);
+                wake_up(&cd->wait_q);
+                msleep(20);
+
+                if (cd->wake_initiated_by_device) {
+                        cd->wake_initiated_by_device = 0;
+                        return 0;
+                }
+        }
+
+        return cyttsp5_core_wake_device_from_deep_sleep_(cd);
+}
+
 static int cyttsp5_restore_parameters_(struct cyttsp5_core_data *cd)
 {
 	struct param_node *param;
@@ -3160,11 +3245,7 @@ static int cyttsp5_core_poweron_device_(struct cyttsp5_core_data *cd)
 
 	if (!cd->irq_enabled) {
 		cd->irq_enabled = true;
-#ifdef CONFIG_SOC_IMX6SL
-		cyttsp5_setup_irq_gpio(cd);
-#else
 		enable_irq(cd->irq);
-#endif
 	}
 
 	rc = _fast_startup(cd);
@@ -3185,14 +3266,11 @@ static int cyttsp5_core_wake_(struct cyttsp5_core_data *cd)
 	}
 	mutex_unlock(&cd->system_lock);
 
-#ifdef CONFIG_SOC_IMX6SL
-	rc = cyttsp5_core_poweron_device_(cd);
-#else
 	if (cd->cpdata->flags & CY_CORE_FLAG_POWEROFF_ON_SLEEP)
 		rc = cyttsp5_core_poweron_device_(cd);
 	else
 		rc = cyttsp5_core_wake_device_(cd);
-#endif
+
 	mutex_lock(&cd->system_lock);
 	cd->sleep_state = SS_SLEEP_OFF;
 	mutex_unlock(&cd->system_lock);

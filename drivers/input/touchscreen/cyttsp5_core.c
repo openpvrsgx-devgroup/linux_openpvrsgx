@@ -3590,11 +3590,13 @@ static int cyttsp5_core_rt_suspend(struct device *dev)
 	struct cyttsp5_core_data *cd = dev_get_drvdata(dev);
 	int rc;
 
+#if 0
 	rc = cyttsp5_core_sleep(cd);
 	if (rc < 0) {
 		dev_err(dev, "%s: Error on sleep\n", __func__);
 		return -EAGAIN;
 	}
+#endif
 	return 0;
 }
 
@@ -3602,13 +3604,14 @@ static int cyttsp5_core_rt_resume(struct device *dev)
 {
 	struct cyttsp5_core_data *cd = dev_get_drvdata(dev);
 	int rc;
-
+#if 0
 	rc = cyttsp5_core_wake(cd);
 	if (rc < 0) {
 		dev_err(dev, "%s: Error on wake\n", __func__);
 		return -EAGAIN;
 	}
 
+#endif
 	return 0;
 }
 #endif

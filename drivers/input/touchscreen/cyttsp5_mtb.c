@@ -78,15 +78,8 @@ static void cyttsp5_report_slot_liftoff(struct cyttsp5_mt_data *md,
 
 static int cyttsp5_input_register_device(struct input_dev *input, int max_slots)
 {
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 7, 0))
-#ifdef CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP5_EMULATION
 	input_mt_init_slots(input, max_slots, INPUT_MT_DIRECT);
-#else
-	input_mt_init_slots(input, max_slots, 0);
-#endif
-#else
-	input_mt_init_slots(input, max_slots);
-#endif
+
 	return input_register_device(input);
 }
 

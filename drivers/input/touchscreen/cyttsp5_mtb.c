@@ -80,7 +80,7 @@ static int cyttsp5_input_register_device(struct input_dev *input, int max_slots)
 {
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 7, 0))
 #ifdef CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP5_EMULATION
-	input_mt_init_slots(input, max_slots, INPUT_MT_POINTER);
+	input_mt_init_slots(input, max_slots, INPUT_MT_DIRECT);
 #else
 	input_mt_init_slots(input, max_slots, 0);
 #endif

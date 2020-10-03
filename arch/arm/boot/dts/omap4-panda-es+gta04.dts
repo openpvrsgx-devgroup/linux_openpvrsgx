@@ -1,89 +1,10 @@
-// FIXME: rename file to omap4-panda-es-letux and fix Makefile and u-boot file name
-
 /*
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
 
-/* we start with the omap4-panda-es tree */
+/* just an alternate (deprecated) name hard-coded in Letux u-boot */
 
 #include "omap4-panda-es.dts"
 
-/* overwrite device model */
-
-/ {
-	model = "Letux Pandaboard";
-
-	/* Bluetooth audio */
-	sound_bluetooth {
-		compatible = "simple-audio-card";
-		simple-audio-card,name = "Bluetooth";
-		simple-audio-card,bitclock-master = <&bt_link_master>;
-		simple-audio-card,frame-master = <&bt_link_master>;
-		simple-audio-card,format = "i2s";
-
-		simple-audio-card,cpu {
-			sound-dai = <&mcbsp1>;
-		};
-
-		bt_link_master: simple-audio-card,codec {
-			sound-dai = <&bluetooth_codec>;
-		};
-	};
-
-	bluetooth_codec: bluetooth_codec {
-		compatible = "ti,wl1271-codec";
-		#sound-dai-cells = <0>;
-	};
-
-};
-
-&mcbsp2 { // FM radio is mcbsp2
-	pinctrl-names = "default";
-	pinctrl-0 = <&mcbsp2_pins>;
-	status = "okay";
-};
-
-&omap4_pmx_core {
-	bt_pins: pinmux_bt_pins {
-		pinctrl-single,pins = <
-			OMAP4_IOPAD(0x06c, PIN_OUTPUT | MUX_MODE3)		/* gpmc_a22.gpio_46 */
-			OMAP4_IOPAD(0x072, PIN_OUTPUT_PULLUP | MUX_MODE3)	/* gpmc_a25.gpio_49 */
-		>;
-	};
-
-	uart2_pins: pinmux_uart2_pins {
-		pinctrl-single,pins = <
-			OMAP4_IOPAD(0x118, PIN_INPUT_PULLUP | MUX_MODE0)	/* uart2_cts.uart2_cts */
-			OMAP4_IOPAD(0x11a, PIN_OUTPUT | MUX_MODE0)		/* uart2_rts.uart2_rts */
-			OMAP4_IOPAD(0x11c, PIN_INPUT_PULLUP | MUX_MODE0)	/* uart2_rx.uart2_rx */
-			OMAP4_IOPAD(0x11e, PIN_OUTPUT | MUX_MODE0)		/* uart2_tx.uart2_tx */
-		>;
-	};
-
-	mcbsp2_pins: pinmux_mcbsp2_pins {
-		pinctrl-single,pins = <
-			OMAP4_IOPAD(0x0f6, PIN_INPUT | MUX_MODE0)		/* abe_mcbsp2_clkx.abe_mcbsp2_clkx */
-			OMAP4_IOPAD(0x0f8, PIN_INPUT_PULLDOWN | MUX_MODE0)	/* abe_mcbsp2_dr.abe_mcbsp2_dr */
-			OMAP4_IOPAD(0x0fa, PIN_OUTPUT_PULLDOWN | MUX_MODE0)	/* abe_mcbsp2_dx.abe_mcbsp2_dx */
-			OMAP4_IOPAD(0x0fc, PIN_INPUT | MUX_MODE0)		/* abe_mcbsp2_fsx.abe_mcbsp2_fsx */
-		>;
-	};
-};
-
-&wl12xx_gpio {
-	pinctrl-single,pins = <
-		OMAP4_IOPAD(0x066, PIN_OUTPUT | MUX_MODE3)		/* gpmc_a19.gpio_43 */
-		OMAP4_IOPAD(0x070, PIN_OUTPUT_PULLUP | MUX_MODE3)	/* gpmc_a24.gpio_48 */
-	>;
-};
-
-&uart2 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&uart2_pins &bt_pins>;
-	bluetooth: tiwi {
-		compatible = "ti,wl1271-st";
-		enable-gpios = <&gpio2 14 GPIO_ACTIVE_HIGH>;	/* GPIO_46 */
-	};
-};

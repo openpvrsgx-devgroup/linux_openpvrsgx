@@ -1,5 +1,5 @@
 #
-# Linux/arm 5.9.0-rc8 Kernel Configuration
+# Linux/arm 5.9.0 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="arm-linux-gnueabihf-gcc (GCC) 4.9.2"
 CONFIG_CC_IS_GCC=y
@@ -4326,6 +4326,7 @@ CONFIG_FB_TILEBLITTING=y
 #
 # CONFIG_FB_CIRRUS is not set
 # CONFIG_FB_PM2 is not set
+# CONFIG_FB_ARMCLCD is not set
 # CONFIG_FB_IMX is not set
 # CONFIG_FB_CYBER2000 is not set
 # CONFIG_FB_ASILIANT is not set

@@ -312,7 +312,7 @@ PVRSRV_ERROR SysInitialise(IMG_VOID)
 	PVR_ASSERT(gpsPVRLDMDev != IMG_NULL);
 	gsSysSpecificData.psPCIDev = gpsPVRLDMDev;
 #endif
-#if defined(SUPPORT_DRI_DRM)
+#if defined(SUPPORT_DRI_DRM) && 0	// REVISIT - needs pvr_drm.c to be compiled
 	/* Save the DRM device structure pointer */
 	PVR_ASSERT(gpsPVRDRMDev != IMG_NULL);
 	gsSysSpecificData.psDRMDev = gpsPVRDRMDev;

@@ -61,6 +61,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0))
 #define _PAGE_CACHE_WC pgprot_val(cachemode2pgprot(_PAGE_CACHE_MODE_WC))
 #endif
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,8,0))
+#define cachemode2pgprot(pcm) __pgprot(cachemode2protval(pcm))
+#endif
 
 #define	PAT_LINUX_X86_WC	1
 
@@ -101,7 +104,12 @@ PVRLinuxX86PATProbe(IMG_VOID)
 	 * cpu_has_pat indicates whether PAT support is available on the CPU,
 	 * but doesn't indicate if it has been enabled.
 	 */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,7,0))
+	/* cpu_has_pat macro was removed */
+	if (boot_cpu_has(X86_FEATURE_PAT))	/* PRQA S 3335 */ /* ignore 'no function declared' */
+#else
 	if (cpu_has_pat)	/* PRQA S 3335 */ /* ignore 'no function declared' */
+#endif
 	{
 		u64 pat;
 		IMG_UINT pat_index;

@@ -102,3 +102,13 @@ IMG_VOID SysPowerMaybeInit(SYS_DATA *psSysData)
 }
 
 #endif /* defined(PVR_LINUX_USING_WORKQUEUES) */
+
+IMG_VOID SysSGXIdleEntered(IMG_VOID)
+{
+	return;
+}
+
+IMG_VOID SysSGXCommandPending(IMG_BOOL bSGXIdle)
+{
+	return;
+}

@@ -133,7 +133,7 @@ endif # CONFIG_SGX_OMAP
 ifneq ($(CONFIG_SGX_POULSBO),)
 	@$(kecho) "  MAKE    $(obj): poulsbo"
 # Fix versions
-	$(Q)SOC_VENDOR=intel SOC_FAMILY=poulsbo SOC=gma500 SGX=sgx530 SGX_FLAG=SGX535 SGX_REV=126 $(MAKE) TARGET_TYPE=$(CONFIG_SGX_POULSBO) $(build)=$(SOURCE)
+	$(Q)SOC_VENDOR=intel SOC_FAMILY=poulsbo SOC=gma500 SGX=sgx535 SGX_FLAG=SGX535 SGX_REV=126 $(MAKE) TARGET_TYPE=$(CONFIG_SGX_POULSBO) $(build)=$(SOURCE)
 	$(Q)if [ -r $(SOURCE)/modules.order ]; then cat $(SOURCE)/modules.order >>$(obj)/modules.order; fi
 endif # CONFIG_SGX_POULSBO
 

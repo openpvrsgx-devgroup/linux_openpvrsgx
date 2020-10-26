@@ -68,6 +68,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <linux/delay.h>
 #include <linux/pci.h>
 #include <linux/platform_device.h>
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,10,0))
+#else
+#include <linux/dma-map-ops.h>
+#endif
 
 #include <linux/string.h>
 #include <linux/sched.h>

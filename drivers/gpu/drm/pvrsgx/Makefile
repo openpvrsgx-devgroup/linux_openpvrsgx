@@ -28,7 +28,9 @@
 
 pvr_drv=no
 
-ifeq ($(CONFIG_PVRSGX_1_9_2188537),y)
+ifeq ($(CONFIG_PVRSGX_1_7_862890),y)
+SUBPATH=1.7.862890/pvr
+else ifeq ($(CONFIG_PVRSGX_1_9_2188537),y)
 SUBPATH=1.9.2188537/eurasia_km
 else ifeq ($(CONFIG_PVRSGX_1_9_2253347),y)
 SUBPATH=1.9.2253347

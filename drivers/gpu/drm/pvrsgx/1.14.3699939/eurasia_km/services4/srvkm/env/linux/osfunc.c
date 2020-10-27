@@ -58,6 +58,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #else
 #define mmap_sem mmap_lock	// has been renamed by v5.8-rc1
 #endif
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,10,0))
+#else
+#include <linux/dma-map-ops.h>
+#endif
 #include <linux/pagemap.h>
 #include <linux/hugetlb.h> 
 #include <linux/slab.h>

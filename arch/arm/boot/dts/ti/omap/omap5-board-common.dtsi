@@ -633,6 +633,10 @@
 			interrupts = <1 IRQ_TYPE_EDGE_FALLING>;
 			wakeup-source;
 		};
+
+		palmas_wdt: watchdog {
+			compatible = "ti,palmas-wdt";
+		};
 	};
 
 	twl6040: twl@4b {

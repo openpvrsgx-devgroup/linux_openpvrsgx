@@ -1,5 +1,5 @@
 #
-# Linux/arm 5.10.0-rc1 Kernel Configuration
+# Linux/arm 5.10.0-rc2 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="arm-linux-gnueabihf-gcc (GCC) 4.9.2"
 CONFIG_CC_IS_GCC=y
@@ -1853,13 +1853,6 @@ CONFIG_TI_ST=m
 # CONFIG_SENSORS_LIS3_SPI is not set
 CONFIG_SENSORS_LIS3_I2C=m
 # CONFIG_ALTERA_STAPL is not set
-
-#
-# Intel MIC & related support
-#
-# CONFIG_VOP_BUS is not set
-# end of Intel MIC & related support
-
 # CONFIG_ECHO is not set
 # CONFIG_MISC_ALCOR_PCI is not set
 # CONFIG_MISC_RTSX_PCI is not set

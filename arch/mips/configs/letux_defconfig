@@ -1,5 +1,5 @@
 #
-# Linux/mips 5.10.0-rc1 Kernel Configuration
+# Linux/mips 5.10.0-rc2 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="mipsel-linux-gnu-gcc (GCC) 4.9.2"
 CONFIG_CC_IS_GCC=y
@@ -1098,13 +1098,6 @@ CONFIG_EEPROM_93CX6=y
 # CONFIG_SENSORS_LIS3_SPI is not set
 # CONFIG_SENSORS_LIS3_I2C is not set
 # CONFIG_ALTERA_STAPL is not set
-
-#
-# Intel MIC & related support
-#
-# CONFIG_VOP_BUS is not set
-# end of Intel MIC & related support
-
 # CONFIG_ECHO is not set
 # CONFIG_MISC_RTSX_USB is not set
 # CONFIG_W2CBW003 is not set

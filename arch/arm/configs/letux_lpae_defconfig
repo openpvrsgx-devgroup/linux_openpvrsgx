@@ -1,5 +1,5 @@
 #
-# Linux/arm 5.10.0-rc1 Kernel Configuration
+# Linux/arm 5.10.0-rc2 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="arm-linux-gnueabihf-gcc (GCC) 4.9.2"
 CONFIG_CC_IS_GCC=y
@@ -1847,13 +1847,6 @@ CONFIG_TI_ST=m
 # CONFIG_SENSORS_LIS3_SPI is not set
 CONFIG_SENSORS_LIS3_I2C=m
 # CONFIG_ALTERA_STAPL is not set
-
-#
-# Intel MIC & related support
-#
-# CONFIG_VOP_BUS is not set
-# end of Intel MIC & related support
-
 # CONFIG_ECHO is not set
 # CONFIG_MISC_ALCOR_PCI is not set
 # CONFIG_MISC_RTSX_PCI is not set
@@ -3520,7 +3513,7 @@ CONFIG_WATCHDOG_CORE=y
 # CONFIG_WATCHDOG_NOWAYOUT is not set
 CONFIG_WATCHDOG_HANDLE_BOOT_ENABLED=y
 CONFIG_WATCHDOG_OPEN_TIMEOUT=0
-# CONFIG_WATCHDOG_SYSFS is not set
+CONFIG_WATCHDOG_SYSFS=y
 
 #
 # Watchdog Pretimeout Governors
@@ -3532,7 +3525,7 @@ CONFIG_WATCHDOG_OPEN_TIMEOUT=0
 #
 # CONFIG_SOFT_WATCHDOG is not set
 # CONFIG_GPIO_WATCHDOG is not set
-# CONFIG_PALMAS_WATCHDOG is not set
+CONFIG_PALMAS_WATCHDOG=y
 # CONFIG_XILINX_WATCHDOG is not set
 # CONFIG_ZIIRAVE_WATCHDOG is not set
 # CONFIG_ARM_SP805_WATCHDOG is not set

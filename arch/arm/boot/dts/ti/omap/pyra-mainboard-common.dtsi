@@ -90,8 +90,8 @@
 		compatible = "pwm-backlight";
 		pwms = <&pwm8 0 120000 0>; /* 8300Hz */
 		pwm-names = "keyboard";
-		brightness-levels = <0 1 2 5 10 20 40 60 100>;
-		default-brightness-level = <5>;	/* 20% */
+		brightness-levels = <0 1 2 5 7 10 13 25 32 64 128 320 640 1280 2560 3840 6400>;
+		default-brightness-level = <13>;	/* 20% */
 		pinctrl-names = "default";
 		pinctrl-0 = <&pyra_keyboard_backlight_pins>;
 	};

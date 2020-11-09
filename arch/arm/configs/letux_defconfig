@@ -1,5 +1,5 @@
 #
-# Linux/arm 5.10.0-rc2 Kernel Configuration
+# Linux/arm 5.10.0-rc3 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="arm-linux-gnueabihf-gcc (GCC) 4.9.2"
 CONFIG_CC_IS_GCC=y
@@ -6389,7 +6389,6 @@ CONFIG_IRQ_CROSSBAR=y
 CONFIG_IMX_IRQSTEER=y
 CONFIG_IMX_INTMUX=y
 # CONFIG_TI_PRUSS_INTC is not set
-# CONFIG_MST_IRQ is not set
 # end of IRQ chip support
 
 # CONFIG_IPACK_BUS is not set

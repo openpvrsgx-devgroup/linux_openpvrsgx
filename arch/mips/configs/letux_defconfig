@@ -1,5 +1,5 @@
 #
-# Linux/mips 5.10.0-rc2 Kernel Configuration
+# Linux/mips 5.10.0-rc3 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="mipsel-linux-gnu-gcc (GCC) 4.9.2"
 CONFIG_CC_IS_GCC=y
@@ -4689,7 +4689,6 @@ CONFIG_IRQCHIP=y
 CONFIG_IRQ_MIPS_CPU=y
 CONFIG_INGENIC_IRQ=y
 CONFIG_INGENIC_TCU_IRQ=y
-# CONFIG_MST_IRQ is not set
 # end of IRQ chip support
 
 # CONFIG_IPACK_BUS is not set

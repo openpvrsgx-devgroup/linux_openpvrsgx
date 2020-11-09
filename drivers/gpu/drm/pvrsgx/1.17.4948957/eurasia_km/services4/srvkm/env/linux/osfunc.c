@@ -4666,7 +4666,10 @@ static inline size_t pvr_dma_range_len(const void *pvStart, const void *pvEnd)
 static void pvr_dma_cache_wback_inv(const void *pvStart, const void *pvEnd)
 {
 	size_t uLength = pvr_dma_range_len(pvStart, pvEnd);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,5,0)
+	struct device *dev = PVRLDMGetDevice();
+	dma_sync_single_for_device(dev, (dma_addr_t)pvStart, uLength, DMA_BIDIRECTIONAL);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)
 	struct device *dev = PVRLDMGetDevice();
 	dma_cache_sync(dev, (void *)pvStart, uLength, DMA_BIDIRECTIONAL);
 #else
@@ -4677,7 +4680,10 @@ static void pvr_dma_cache_wback_inv(const void *pvStart, const void *pvEnd)
 static void pvr_dma_cache_wback(const void *pvStart, const void *pvEnd)
 {
 	size_t uLength = pvr_dma_range_len(pvStart, pvEnd);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,5,0)
+	struct device *dev = PVRLDMGetDevice();
+	dma_sync_single_for_device(dev, (dma_addr_t)pvStart, uLength, DMA_TO_DEVICE);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)
 	struct device *dev = PVRLDMGetDevice();
 	dma_cache_sync(dev, (void *)pvStart, uLength, DMA_TO_DEVICE);
 #else
@@ -4688,7 +4694,10 @@ static void pvr_dma_cache_wback(const void *pvStart, const void *pvEnd)
 static void pvr_dma_cache_inv(const void *pvStart, const void *pvEnd)
 {
 	size_t uLength = pvr_dma_range_len(pvStart, pvEnd);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,5,0)
+	struct device *dev = PVRLDMGetDevice();
+	dma_sync_single_for_device(dev, (dma_addr_t)pvStart, uLength, DMA_FROM_DEVICE);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)
 	struct device *dev = PVRLDMGetDevice();
 	dma_cache_sync(dev, (void *)pvStart, uLength, DMA_FROM_DEVICE);
 #else

@@ -1,5 +1,5 @@
 #
-# Linux/x86 5.10.0-rc2 Kernel Configuration
+# Linux/x86 5.10.0-rc3 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="i486-linux-gnu-gcc (GCC) 4.9.2"
 CONFIG_CC_IS_GCC=y
@@ -6366,8 +6366,6 @@ CONFIG_SND_SOC_AMD_CZ_RT5645_MACH=m
 # CONFIG_SND_I2S_HI6210_I2S is not set
 # CONFIG_SND_SOC_IMG is not set
 CONFIG_SND_SOC_INTEL_SST_TOPLEVEL=y
-CONFIG_SND_SST_IPC=m
-CONFIG_SND_SST_IPC_ACPI=m
 CONFIG_SND_SOC_INTEL_SST=m
 # CONFIG_SND_SOC_INTEL_CATPT is not set
 CONFIG_SND_SST_ATOM_HIFI2_PLATFORM=m
@@ -8430,7 +8428,6 @@ CONFIG_PWM_LPSS_PLATFORM=m
 #
 # IRQ chip support
 #
-# CONFIG_MST_IRQ is not set
 # end of IRQ chip support
 
 # CONFIG_IPACK_BUS is not set

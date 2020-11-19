@@ -8,5 +8,9 @@
 auto usb1
 iface usb1 inet dhcp
 	pre-up depmod
+	# recommended by https://www.privacy-handbuch.de/handbuch_93d.htm
 	# set up dns2.digitalcourage.de by default
 	up echo nameserver 46.182.19.48 >/etc/resolv.conf
+	up echo nameserver 185.95.218.42 >>/etc/resolv.conf
+	up echo nameserver 91.239.100.100 >>/etc/resolv.conf
+	up echo nameserver 5.1.66.255 >>/etc/resolv.conf

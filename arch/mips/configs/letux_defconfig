@@ -1,5 +1,5 @@
 #
-# Linux/mips 5.10.0-rc4 Kernel Configuration
+# Linux/mips 5.10.0-rc5 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="mipsel-linux-gnu-gcc (GCC) 4.9.2"
 CONFIG_CC_IS_GCC=y
@@ -16,7 +16,7 @@ CONFIG_BUILDTIME_TABLE_SORT=y
 CONFIG_BROKEN_ON_SMP=y
 CONFIG_INIT_ENV_ARG_LIMIT=32
 # CONFIG_COMPILE_TEST is not set
-CONFIG_LOCALVERSION="-letux-mips"
+CONFIG_LOCALVERSION="-letux-ci20"
 # CONFIG_LOCALVERSION_AUTO is not set
 CONFIG_BUILD_SALT=""
 CONFIG_HAVE_KERNEL_GZIP=y

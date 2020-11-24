@@ -131,45 +131,47 @@ do
 			break
 			;;
 		-x )
-			echo "flashing X-Loader from Linux not available (HW-ECC kernel support needed)"
-			exit 1
+			$SCRIPTPATH/mount-boot
 			if [ ! -r /boot/x-load.flash ]
 			then
-				echo x-loader missing
+				echo "x-loader missing: /boot/x-load.flash"
 				exit 1
 			fi
 			# MLO is not stored in NAND but should be in rootfs
 			# so that we can create bootable SD cards
 			if [ ! -r /boot/MLO ]
 			then
-				echo MLO missing
+				echo "MLO missing: /boot/MLO"
 				exit 1
 			fi
+			echo "flashing X-Loader from Linux not available (HW-ECC kernel support needed)"
+			exit 1
 			;;
 		-b )
-			echo "flashing U-Boot from Linux not available (HW-ECC kernel support needed)"
-			exit 1
+			$SCRIPTPATH/mount-boot
 			if [ ! -r /boot/u-boot.bin ]
 			then
-				echo U-Boot missing
+				echo "U-Boot missing: /boot/u-boot.bin"
 				exit 1
 			fi
 			if [ ! -r /boot/boot.scr ]
 			then
-				echo boot script missing
+				echo "boot script missing: /boot/boot.scr"
 				exit 1
 			fi
 			if [ ! -r /boot/menu.rgb16z -a -r /boot/splash.rgb16z ]
 			then
-				echo boot menu images missing
+				echo "boot menu images missing: /boot/{menu|splash}.rgb16z"
 				exit 1
 			fi
+			echo "flashing U-Boot from Linux not available (HW-ECC kernel support needed)"
+			exit 1
 			;;
 		-k )
+			$SCRIPTPATH/mount-boot
 			if [ ! -r "$UIMAGE" ]
 			then
-				echo kernel image missing
-				echo try mount /dev/mmcblk0p1 $(dirname "$UIMAGE")
+				echo "kernel image missing: $UIMAGE"
 				exit 1
 			fi
 			;;

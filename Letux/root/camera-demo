@@ -19,7 +19,7 @@ setup "$MODE"
 
 echo "### starting mplayer in $MODE mode ###"
 
-[ "$(which mplayer)" ] || apt-get install -y mplayer
+[ "$(which mplayer)" ] || yes | apt-get install mplayer
 
 [ -d $HOME/.mplayer ] || mkdir -p $HOME/.mplayer
 [ -r $HOME/.mplayer/input.conf ] || ( echo MOUSE_BTN0 quit ) >$HOME/.mplayer/input.conf

@@ -578,7 +578,7 @@ static int w677l_prepare(struct drm_panel *panel)
 	if (r)
 		dev_err(ctx->dev, "%s failed\n", __func__);
 
-#if 0	/* should be here but prepare is not called for omapdrm */
+#if 1	/* should be here but prepare is not called for omapdrm */
 	r = w677l_init_sequence(ctx);
 	if (r)
 		return r;
@@ -598,7 +598,7 @@ static int w677l_enable(struct drm_panel *panel)
 	if (ctx->enabled)
 		return 0;
 
-#if 1
+#if 0
 	{
 	int ret;
 	ret = w677l_init_sequence(ctx);

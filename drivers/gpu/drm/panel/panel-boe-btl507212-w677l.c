@@ -307,13 +307,11 @@ static w677l_reg init_seq[] = {
 };
 
 static w677l_reg sleep_out[] = {
-//	{ 1, MIPI_DCS_SET_DISPLAY_ON, },
 	{ 1, MIPI_DCS_EXIT_SLEEP_MODE, },
 };
 
 static w677l_reg display_on[] = {
 	{ 1, MIPI_DCS_SET_DISPLAY_ON, },
-//	{ 1, MIPI_DCS_EXIT_SLEEP_MODE, },
 };
 
 static int w677l_write(struct otm1283a *ctx, u8 *buf, int len)
@@ -419,61 +417,6 @@ static int w677l_regulator(struct otm1283a *ctx, int state)
 	return 0;
 }
 
-static int w677l_update_brightness(struct otm1283a *ctx, int level)
-{
-	int r;
-#if 1
-	u8 buf[2];
-	buf[0] = MIPI_DCS_SET_DISPLAY_BRIGHTNESS;
-	buf[1] = level;
-#else
-	u8 buf[3];
-	buf[0] = MIPI_DCS_SET_DISPLAY_BRIGHTNESS;
-	buf[1] = level >> 4;	/* 12 bit mode */
-	buf[2] = buf[1] + ((level & 0x0f) << 4);
-#endif
-
-	dev_dbg(ctx->dev, "%s(%d)\n", __func__, level);
-
-	r = w677l_write(ctx, buf, sizeof(buf));
-	if (r)
-		return r;
-	return 0;
-}
-
-static int w677l_init_sequence(struct otm1283a *ctx)
-{
-	int r;
-#if 0
-	r = w677l_write_sequence(ctx, nop, ARRAY_SIZE(nop));
-	if (r)
-		return r;
-#endif
-	r = w677l_write_sequence(ctx, sleep_out, ARRAY_SIZE(sleep_out));
-	if (r)
-		return r;
-
-	msleep(10);
-
-	r = w677l_write_sequence(ctx, init_seq, ARRAY_SIZE(init_seq));
-	if (r) {
-		dev_err(ctx->dev, "failed to configure panel\n");
-		return r;
-	}
-
-	r = w677l_update_brightness(ctx, 255);
-	if (r)
-		return r;
-
-#if 1	/* this is recommended by the latest data sheet */
-	r = w677l_write_sequence(ctx, display_on, ARRAY_SIZE(display_on));
-	if (r)
-		return r;
-#endif
-
-	return 0;
-}
-
 static void w677l_query_registers(struct otm1283a *ctx)
 { /* read back some registers through DCS commands */
 	u8 ret[8];
@@ -501,6 +444,56 @@ static void w677l_query_registers(struct otm1283a *ctx)
 	printk("%s: [RDID2] = %02x\n", __func__, ret[0]);
 	r = w677l_read(ctx, MCS_READID3, ret, 1);
 	printk("%s: [RDID3] = %02x\n", __func__, ret[0]);
+}
+
+static int w677l_update_brightness(struct otm1283a *ctx, int level)
+{
+	int r;
+#if 1
+	u8 buf[2];
+	buf[0] = MIPI_DCS_SET_DISPLAY_BRIGHTNESS;
+	buf[1] = level;
+#else
+	u8 buf[3];
+	buf[0] = MIPI_DCS_SET_DISPLAY_BRIGHTNESS;
+	buf[1] = level >> 4;	/* 12 bit mode */
+	buf[2] = buf[1] + ((level & 0x0f) << 4);
+#endif
+
+	dev_dbg(ctx->dev, "%s(%d)\n", __func__, level);
+
+	r = w677l_write(ctx, buf, sizeof(buf));
+	if (r)
+		return r;
+	return 0;
+}
+
+static int w677l_init_sequence(struct otm1283a *ctx)
+{
+	int r;
+	r = w677l_write_sequence(ctx, sleep_out, ARRAY_SIZE(sleep_out));
+	if (r)
+		return r;
+
+	msleep(10);
+
+	r = w677l_write_sequence(ctx, init_seq, ARRAY_SIZE(init_seq));
+	if (r) {
+		dev_err(ctx->dev, "failed to configure panel\n");
+		return r;
+	}
+
+	r = w677l_update_brightness(ctx, 255);
+	if (r)
+		return r;
+
+	w677l_query_registers(ctx);
+
+	r = w677l_write_sequence(ctx, display_on, ARRAY_SIZE(display_on));
+	if (r)
+		return r;
+
+	return 0;
 }
 
 static int w677l_disable(struct drm_panel *panel)
@@ -578,11 +571,9 @@ static int w677l_prepare(struct drm_panel *panel)
 	if (r)
 		dev_err(ctx->dev, "%s failed\n", __func__);
 
-#if 1	/* should be here but prepare is not called for omapdrm */
 	r = w677l_init_sequence(ctx);
 	if (r)
 		return r;
-#endif
 
 	ctx->prepared = true;
 
@@ -597,17 +588,6 @@ static int w677l_enable(struct drm_panel *panel)
 
 	if (ctx->enabled)
 		return 0;
-
-#if 0
-	{
-	int ret;
-	ret = w677l_init_sequence(ctx);
-	if (ret)
-		return ret;
-	}
-#endif
-
-	w677l_query_registers(ctx);
 
 	dev_dbg(ctx->dev, "%s() powered on()\n", __func__);
 
@@ -733,10 +713,10 @@ static int w677l_probe(struct mipi_dsi_device *dsi)
 
 	dsi->lanes = 4;
 	dsi->format = MIPI_DSI_FMT_RGB888;
+// CHECKME: with https://elixir.bootlin.com/linux/v5.10-rc5/source/include/drm/drm_mipi_dsi.h#L109
 	dsi->mode_flags = MIPI_DSI_MODE_VIDEO | MIPI_DSI_MODE_VIDEO_BURST |
 			  MIPI_DSI_MODE_LPM;
 
-	dsi->hs_rate = W677L_HS_CLOCK;
 	dsi->hs_rate = 105 * (W677L_HS_CLOCK / 100);	/* allow for 5% overclocking */
 	dsi->lp_rate = W677L_LP_CLOCK;
 

@@ -1,5 +1,5 @@
 #
-# Linux/arm64 5.10.0-rc5 Kernel Configuration
+# Linux/arm64 5.10.0-rc6 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="aarch64-linux-gnu-gcc (GCC) 4.9.2"
 CONFIG_CC_IS_GCC=y
@@ -4232,6 +4232,7 @@ CONFIG_DRM_PANEL=y
 # CONFIG_DRM_PANEL_ASUS_Z00T_TM5P5_NT35596 is not set
 # CONFIG_DRM_PANEL_BOE_HIMAX8279D is not set
 # CONFIG_DRM_PANEL_BOE_TV101WUM_NL6 is not set
+# CONFIG_DRM_PANEL_DSI_CM is not set
 # CONFIG_DRM_PANEL_LVDS is not set
 CONFIG_DRM_PANEL_SIMPLE=m
 # CONFIG_DRM_PANEL_ELIDA_KD35T133 is not set
@@ -6405,7 +6406,6 @@ CONFIG_PHY_QCOM_USB_HS=y
 # CONFIG_PHY_QCOM_USB_HSIC is not set
 CONFIG_PHY_SAMSUNG_USB2=y
 # CONFIG_PHY_TUSB1210 is not set
-# CONFIG_PHY_INTEL_KEEMBAY_EMMC is not set
 # end of PHY Subsystem
 
 # CONFIG_POWERCAP is not set

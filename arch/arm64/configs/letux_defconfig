@@ -4411,9 +4411,7 @@ CONFIG_XEN_FBDEV_FRONTEND=y
 # CONFIG_FB_SIMPLE is not set
 # CONFIG_FB_SSD1307 is not set
 # CONFIG_FB_SM712 is not set
-CONFIG_FB_MXC=y
-# CONFIG_FB_MXC_EINK_PANEL is not set
-# CONFIG_FB_MXC_EINK_V2_PANEL is not set
+# CONFIG_FB_MXC is not set
 # end of Frame buffer Devices
 
 #

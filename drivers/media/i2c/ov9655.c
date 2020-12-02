@@ -898,7 +898,7 @@ static int ov9655_s_stream(struct v4l2_subdev *subdev, int enable)
 		return ret;
 
 	/* take out of soft sleep */
-	return ov9655_update_bits(client, COM2_SLEEP,
+	return ov9655_update_bits(client, REG_COM2,
 				COM2_SLEEP, 0x00);
 }
 

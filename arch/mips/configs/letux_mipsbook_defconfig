@@ -1,10 +1,11 @@
 #
-# Linux/mips 5.10.0-rc6 Kernel Configuration
+# Linux/mips 5.10.0-rc7 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="mipsel-linux-gnu-gcc (GCC) 4.9.2"
 CONFIG_CC_IS_GCC=y
 CONFIG_GCC_VERSION=40902
 CONFIG_CLANG_VERSION=0
+CONFIG_LLD_VERSION=0
 CONFIG_CC_CAN_LINK=y
 CONFIG_CC_HAS_ASM_GOTO=y
 CONFIG_IRQ_WORK=y
@@ -5481,7 +5482,7 @@ CONFIG_PROBE_EVENTS=y
 #
 CONFIG_TRACE_IRQFLAGS_SUPPORT=y
 CONFIG_CMDLINE_BOOL=y
-CONFIG_CMDLINE="mem=128M earlycon=jz4740_uart,mmio32,0x10030000,115200n8 console=ttyS0,115200n8 console=tty0 ignore_loglevel clocksource=jiffies clk_ignore_unused"
+CONFIG_CMDLINE="mem=128M earlycon=jz4740_uart,mmio32,0x10030000,115200n8 ignore_loglevel clocksource=jiffies clk_ignore_unused console=tty0 console=ttyS0,115200n8 root=/dev/mmcblk1p2 rw rootfstype=ext4,ext3 rootwait"
 CONFIG_CMDLINE_OVERRIDE=y
 # CONFIG_DEBUG_ZBOOT is not set
 # CONFIG_SPINLOCK_TEST is not set

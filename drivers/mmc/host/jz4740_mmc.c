@@ -1130,6 +1130,9 @@ static int jz4740_mmc_probe(struct platform_device* pdev)
 	if (ret == -EPROBE_DEFER)
 		goto err_free_irq;
 	host->use_dma = !ret;
+#if IS_ENABLED(CONFIG_MACH_JZ4730)
+	host->use_dma = false;
+#endif
 
 	platform_set_drvdata(pdev, host);
 	ret = mmc_add_host(mmc);

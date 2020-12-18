@@ -11,6 +11,38 @@
 #include <linux/thermal.h>
 #include "epdc_regs.h"
 
+#define GRAYSCALE_8BIT				0x1
+#define GRAYSCALE_8BIT_INVERTED			0x2
+#define GRAYSCALE_4BIT			  0x3
+#define GRAYSCALE_4BIT_INVERTED		 0x4
+
+#define AUTO_UPDATE_MODE_REGION_MODE		0
+#define AUTO_UPDATE_MODE_AUTOMATIC_MODE		1
+
+#define UPDATE_SCHEME_SNAPSHOT			0
+#define UPDATE_SCHEME_QUEUE			1
+#define UPDATE_SCHEME_QUEUE_AND_MERGE		2
+
+#define UPDATE_MODE_PARTIAL			0x0
+#define UPDATE_MODE_FULL			0x1
+
+#define WAVEFORM_MODE_GLR16			4
+#define WAVEFORM_MODE_GLD16			5
+#define WAVEFORM_MODE_AUTO			257
+
+#define TEMP_USE_AMBIENT			0x1000
+
+#define FB_POWERDOWN_DISABLE			-1
+
+struct mxcfb_update_data {
+	struct drm_rect update_region;
+	u32 waveform_mode;
+	u32 update_mode;
+	int temp;
+	int dither_mode;
+	int quant_bit;
+};
+
 struct mxcfb_waveform_modes {
 	int mode_init;
 	int mode_du;
@@ -86,6 +118,27 @@ struct mxc_epdc {
 	bool hw_initializing;
 	bool waiting_for_idle;
 
+	int order_cnt;
+	struct list_head upd_pending_list;
+	struct list_head upd_buf_queue;
+	struct list_head upd_buf_free_list;
+	struct list_head upd_buf_collision_list;
+	struct update_data_list *cur_update;
+	struct mutex queue_mutex;
+	int epdc_irq;
+	struct list_head full_marker_list;
+	u32 *lut_update_order;
+	u64 epdc_colliding_luts;
+	u64 luts_complete_wb;
+	struct completion updates_done;
+	struct delayed_work epdc_done_work;
+	struct workqueue_struct *epdc_submit_workqueue;
+	struct work_struct epdc_submit_work;
+	struct workqueue_struct *epdc_intr_workqueue;
+	struct work_struct epdc_intr_work;
+	bool waiting_for_wb;
+	bool waiting_for_lut;
+	struct completion update_res_free;
 };
 
 static inline u32 epdc_read(struct mxc_epdc *priv, u32 reg)

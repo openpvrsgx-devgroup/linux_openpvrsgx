@@ -16,7 +16,7 @@ jobs:
 
   build:
     needs: fetchKernelData
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04 #need due mising libssl1.0.0
     strategy:
       matrix: 
         version: ${{fromJson(needs.fetchKernelData.outputs.matrix)}}

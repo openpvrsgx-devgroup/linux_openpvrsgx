@@ -249,6 +249,22 @@
 		clock-names = "baud", "module";
 	};
 
+	i2c: i2c@10042000 {
+		compatible = "ingenic,jz4730-i2c";
+		reg = <0x10042000 0x10>;
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		interrupt-parent = <&intc>;
+		interrupts = <1>;
+
+		clocks = <&cgu JZ4740_CLK_I2C>;
+		clock-names = "i2c";
+
+		clock-frequency = <100000>;
+	};
+
 	adc: adc@10070000 {
 		compatible = "ingenic,jz4740-adc";
 		reg = <0x10070000 0x30>;

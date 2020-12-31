@@ -9,7 +9,6 @@
 #include <linux/iio/iio.h>
 #include <linux/iio/types.h>
 #include <linux/input.h>
-#include <linux/input-polldev.h>
 #include <linux/module.h>
 #include <linux/slab.h>
 
@@ -19,7 +18,7 @@
 #define POLLING_MSEC	100
 
 struct iio_input_map {
-	struct input_polled_dev *poll_dev;	/* the input device */
+	struct input_dev *poll_dev;	/* the input device */
 	struct iio_channel channels[3];		/* x, y, z channels */
 	struct matrix {
 		int mxx, myx, mzx;	/* fixed point mount-matrix */
@@ -82,10 +81,9 @@ static void iio_apply_matrix(struct matrix *m, int *in, int *out, int unit)
 
 #define FIXED_POINT_UNIT	1000	/* seems reasonable for accelerometer input */
 
-static void iio_accel_poll(struct input_polled_dev *dev)
+static void iio_accel_poll(struct input_dev *input)
 {
-	struct iio_input_map *map = dev->private;
-	struct input_dev *input = dev->input;
+	struct iio_input_map *map = input->dev.platform_data;
 
 	int values[3];		/* values while processing */
 	int aligned_values[3];	/* mount matrix applied */
@@ -136,7 +134,7 @@ static int iio_input_register_accel_channels(struct iio_dev *indio_dev,
 { /* we found some accelerometer channel */
 	int ret;
 	int cindex;
-	struct input_polled_dev *poll_dev;
+	struct input_dev *poll_dev;
 	struct iio_input_map *map = indio_dev->input_mapping;
 	const struct iio_chan_spec_ext_info *ext_info;
 
@@ -152,17 +150,21 @@ static int iio_input_register_accel_channels(struct iio_dev *indio_dev,
 
 	indio_dev->input_mapping = map;
 
-	poll_dev = devm_input_allocate_polled_device(&indio_dev->dev);
+	poll_dev = devm_input_allocate_device(&indio_dev->dev);
 	if (!poll_dev)
 		return -ENOMEM;
 
-	poll_dev->private = map;
-	poll_dev->poll = iio_accel_poll;
-	poll_dev->poll_interval = POLLING_MSEC;
+	poll_dev->dev.platform_data = map;
 
-	poll_dev->input->name = kasprintf(GFP_KERNEL, "iio-bridge: %s",
+	ret = input_setup_polling(poll_dev, iio_accel_poll);
+	if (ret < 0)
+		return ret;
+
+	input_set_poll_interval(poll_dev, POLLING_MSEC);
+
+	poll_dev->name = kasprintf(GFP_KERNEL, "iio-bridge: %s",
 						    indio_dev->name);
-	poll_dev->input->phys = kasprintf(GFP_KERNEL, "iio:device%d",
+	poll_dev->phys = kasprintf(GFP_KERNEL, "iio:device%d",
 						    indio_dev->id);
 
 // do we need something like this?
@@ -171,23 +173,23 @@ static int iio_input_register_accel_channels(struct iio_dev *indio_dev,
 //	poll_dev->input->id.product = 0x0001;
 //	poll_dev->input->id.version = 0x0001;
 
-	set_bit(INPUT_PROP_ACCELEROMETER, poll_dev->input->propbit);
-	poll_dev->input->evbit[0] = BIT_MASK(EV_ABS);
-	input_alloc_absinfo(poll_dev->input);
-	input_set_abs_params(poll_dev->input, ABS_X, ABSMIN_ACC_VAL,
+	set_bit(INPUT_PROP_ACCELEROMETER, poll_dev->propbit);
+	poll_dev->evbit[0] = BIT_MASK(EV_ABS);
+	input_alloc_absinfo(poll_dev);
+	input_set_abs_params(poll_dev, ABS_X, ABSMIN_ACC_VAL,
 				ABSMAX_ACC_VAL, 0, 0);
-	input_set_abs_params(poll_dev->input, ABS_Y, ABSMIN_ACC_VAL,
+	input_set_abs_params(poll_dev, ABS_Y, ABSMIN_ACC_VAL,
 				ABSMAX_ACC_VAL, 0, 0);
-	input_set_abs_params(poll_dev->input, ABS_Z, ABSMIN_ACC_VAL,
+	input_set_abs_params(poll_dev, ABS_Z, ABSMIN_ACC_VAL,
 				ABSMAX_ACC_VAL, 0, 0);
 
 	map->poll_dev = poll_dev;
 
-	ret = input_register_polled_device(poll_dev);
+	ret = input_register_device(poll_dev);
 
 	if (ret < 0) {
-		kfree(poll_dev->input->name);
-		kfree(poll_dev->input->phys);
+		kfree(poll_dev->name);
+		kfree(poll_dev->phys);
 		return ret;
 	}
 
@@ -262,11 +264,11 @@ void iio_device_unregister_inputbridge(struct iio_dev *indio_dev)
 
 	if (!map)
 		return;
-	input = map->poll_dev->input;
+	input = map->poll_dev;
 	if (!input)
 		return;
 
-	input_unregister_polled_device(map->poll_dev);
+	input_unregister_device(map->poll_dev);
 	kfree(input->name);
 	kfree(input->phys);
 }

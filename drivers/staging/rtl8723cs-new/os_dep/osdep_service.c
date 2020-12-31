@@ -23,6 +23,7 @@
 
 #include <drv_types.h>
 #include <linux/fs.h>
+#include <asm/thread_info.h>
 
 #define RT_TAG	'1178'
 
@@ -2029,8 +2030,8 @@ static int isFileReadable(const char *path, u32 *sz)
 	if (IS_ERR(fp))
 		ret = PTR_ERR(fp);
 	else {
-		oldfs = get_fs();
-		set_fs(KERNEL_DS);
+//		oldfs = get_fs();
+//		set_fs(KERNEL_DS);
 
 		if (1 != readFile(fp, &buf, 1))
 			ret = PTR_ERR(fp);
@@ -2043,7 +2044,7 @@ static int isFileReadable(const char *path, u32 *sz)
 			#endif
 		}
 
-		set_fs(oldfs);
+//		set_fs(oldfs);
 		filp_close(fp, NULL);
 	}
 	return ret;
@@ -2067,10 +2068,10 @@ static int retriveFromFile(const char *path, u8 *buf, u32 sz)
 		if (0 == ret) {
 			RTW_INFO("%s openFile path:%s fp=%p\n", __FUNCTION__, path , fp);
 
-			oldfs = get_fs();
-			set_fs(KERNEL_DS);
+//			oldfs = get_fs();
+//			set_fs(KERNEL_DS);
 			ret = readFile(fp, buf, sz);
-			set_fs(oldfs);
+//			set_fs(oldfs);
 			closeFile(fp);
 
 			RTW_INFO("%s readFile, ret:%d\n", __FUNCTION__, ret);
@@ -2102,10 +2103,10 @@ static int storeToFile(const char *path, u8 *buf, u32 sz)
 		if (0 == ret) {
 			RTW_INFO("%s openFile path:%s fp=%p\n", __FUNCTION__, path , fp);
 
-			oldfs = get_fs();
-			set_fs(KERNEL_DS);
+//			oldfs = get_fs();
+//			set_fs(KERNEL_DS);
 			ret = writeFile(fp, buf, sz);
-			set_fs(oldfs);
+//			set_fs(oldfs);
 			closeFile(fp);
 
 			RTW_INFO("%s writeFile, ret:%d\n", __FUNCTION__, ret);

@@ -31,7 +31,7 @@
 #include <linux/hwmon-sysfs.h>
 #include <linux/err.h>
 #include <linux/hwmon.h>
-#include <linux/input-polldev.h>
+#include <linux/input.h>
 #include <linux/miscdevice.h>
 #include <linux/poll.h>
 #include "fxos8700.h"

@@ -21,18 +21,6 @@
 
 [ "$(which media-ctl)" ] || apt-get install -y v4l-utils
 
-CAM="ov9655 1-0030"		# driver name not camera model! use media-ctl -p to find out
-CAMERA='"'$CAM'"'	# sometimes we need quotes in the variable value
-
-CPATH="$(media-ctl -e "$CAM")"
-if [ ! -r "$CPATH" ]
-then
-	echo "Camera $CAM not found!"
-	exit 1
-fi
-
-echo "Camera: $CPATH"
-
 function media-reset {
 	echo media-ctl -r
 	media-ctl -r
@@ -47,6 +35,37 @@ function media-format { # $1 = entity, $2 = format $3 = widthxheight
 	echo media-ctl -V \'"$1 [$2 $3]"\'
 	media-ctl -V "$1 [$2 $3]"
 }
+
+switch "$(proc/model) in
+	*GTA04* )
+		;;
+	*Pinphone* )
+		FORMAT=uyvy
+		CCDCFORMAT=UYVY2X8
+		WIDTH=1280
+		HEIGHT=720
+		FPS=30
+		# ? media-link '"gc2145 3-003c":0'  '"sun6i-csi":0[0]'
+		media-ctl -d /dev/media1 --links "gc2145 3-003c":0->"sun6i-csi":0[0]
+		# ? media-link '"ov5640 3-004c":0'  '"sun6i-csi":0[0]'
+		media-ctl -d /dev/media1 --links "ov5640 3-004c":0->"sun6i-csi":0[1]
+		# ? media-format '"ov5640 3-004c":0' 'UYVY8_2X8 ${WIDTH}x${HEIGHT}'
+		media-ctl -d /dev/media1 --set-v4l2 '"ov5640 3-004c":0[fmt:UYVY8_2X8/1280x720]'
+		DEVICE=/dev/video1
+		exit 0
+esac
+
+CAM="ov9655 1-0030"		# driver name not camera model! use media-ctl -p to find out
+CAMERA='"'$CAM'"'	# sometimes we need quotes in the variable value
+
+CPATH="$(media-ctl -e "$CAM")"
+if [ ! -r "$CPATH" ]
+then
+	echo "Camera $CAM not found!"
+	exit 1
+fi
+
+echo "Camera: $CPATH"
 
 function setup { # -r: choose resizer; $1 = video resolution
 

@@ -16,6 +16,9 @@
 # Well, in practice we have to see how to handle the mix with touch screens and different
 # panel mount orientation which we do NOT know through the panel compatible string
 
+DEBUG=false
+[ "$1" == -d ] && DEBUG=true
+
 findpanel() { # search panel compatible string at some well known locations
 
 # use something like
@@ -24,13 +27,14 @@ findpanel() { # search panel compatible string at some well known locations
 
 LCDS+=" /proc/device-tree/lcd"
 LCDS+=" /proc/device-tree/panel/display-timings"
+LCDS+=" /proc/device-tree/panel"
 LCDS+=" /proc/device-tree/spi_lcd/td028ttec1@0"	# GTA04
 LCDS+=" /proc/device-tree/ocp@68000000/spi@48098000/lcd@1"	# OMAP3
 LCDS+=" /proc/device-tree/ocp/target-module@58000000/dss@0/target-module@4000/encoder@0/lcd"	# OMAP5
 
 for LCD in $LCDS
 do
-# echo $0: try $LCD/compatible >&2
+$DEBUG && echo $0: try $LCD/compatible >&2
 	if [ -r $LCD/compatible ]
 	then
 		tr '\0' '\n' <$LCD/compatible 2>/dev/null | sed s/omapdss,//
@@ -39,20 +43,22 @@ do
 done
 }
 
-while read COMPATIBLE < <(findpanel)
+findpanel >/tmp/$$
+
+while read COMPATIBLE
 do
-# echo check "/etc/X11/$COMPATIBLE.conf" >&2
+$DEBUG && echo check "/etc/X11/$COMPATIBLE.conf" >&2
 	if [ -r "/etc/X11/$COMPATIBLE.conf" ]
 	then
 		# create symlink to chosen config
-echo $0: ln -s $COMPATIBLE.conf /etc/X11/xorg.conf >&2
+$DEBUG && echo $0: ln -s $COMPATIBLE.conf /etc/X11/xorg.conf >&2
 		rm -f /etc/X11/xorg.conf
 		ln -s "$COMPATIBLE.conf" /etc/X11/xorg.conf
 		# look for and run shell script $COMPATIBLE.sh if it exists
 		[ -x "/etc/X11/$COMPATIBLE.sh" ] && "/etc/X11/$COMPATIBLE.sh"
 		exit 0
 	fi
-done
+done </tmp/$$
 
 function model_or_compatible {
 	if [ -r /proc/device-tree/model ]
@@ -115,3 +121,5 @@ rm -f /etc/X11/xorg.conf
 if [ -r "/etc/X11/$PANEL.conf" ]
 then ln -s $PANEL.conf /etc/X11/xorg.conf
 fi
+
+$DEBUG && ls -l /etc/X11/*.conf

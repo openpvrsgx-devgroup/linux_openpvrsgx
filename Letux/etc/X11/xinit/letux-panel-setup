@@ -45,18 +45,15 @@ done
 
 findpanel >/tmp/$$
 
+PANEL=none
+
 while read COMPATIBLE
-do
+do # check all we find for a matching config file
 $DEBUG && echo check "/etc/X11/$COMPATIBLE.conf" >&2
 	if [ -r "/etc/X11/$COMPATIBLE.conf" ]
-	then
-		# create symlink to chosen config
-$DEBUG && echo $0: ln -s $COMPATIBLE.conf /etc/X11/xorg.conf >&2
-		rm -f /etc/X11/xorg.conf
-		ln -s "$COMPATIBLE.conf" /etc/X11/xorg.conf
-		# look for and run shell script $COMPATIBLE.sh if it exists
-		[ -x "/etc/X11/$COMPATIBLE.sh" ] && "/etc/X11/$COMPATIBLE.sh"
-		exit 0
+	then # found a compatible one
+		PANEL=$COMPATIBLE
+		break
 	fi
 done </tmp/$$
 
@@ -66,9 +63,12 @@ function model_or_compatible {
 		tr -d '\0' </proc/device-tree/model 2>/dev/null
 	else	# prefix and separate with @
 		echo @$(tr '\0' '@' </proc/device-tree/compatible 2>/dev/null)
-		
 	fi
 }
+
+$DEBUG && echo "Model: $(model_or_compatible)"
+
+# special handling - overwrite PANEL if needed
 
 case "$(model_or_compatible)" in
 	*'GTA04 b4'* )
@@ -89,37 +89,37 @@ case "$(model_or_compatible)" in
 		/root/tvout 1   # choose HDMI video as default
 		;;
 	*Pandora* )
-		PANEL=4.3-480x640
 		# setup keyboard
 		# cp /etc/X11/Xmodmap.pandora /etc/X11/Xmodmap
 		# setup nubs
 		echo mouse > /proc/pandora/nub0/mode	# mouse
 		echo mbuttons > /proc/pandora/nub1/mode	# mouse buttons
 		;;
-	*'Letux Cortex 8'* )
-		PANEL=4.3-272x480;;	# assume a PSP display can be connected
-	*'Raspberry Pi'* )
-		PANEL=raspi;;
 	*'UDOO Neo'* )
 		PANEL=udoo;;
-	*@img,ci20@* )
-		PANEL=ci20;;
 	*@letux400,minipc@* )
 		PANEL=7.0-640x480;;
 	*'Tolino Shine 3'* )
 		PANEL=5.8-1072x1448-epd
 		echo 3 >/sys/class/graphics/fb0/rotate
 		;;
-	* )
-		echo "$0: unknown motherboard $(model_or_compatible)"
-		PANEL=none
-		;;
 esac
+
+$DEBUG && echo "Panel: $PANEL"
+
+if [ $PANEL = none ]
+then
+	echo "$0: unknown motherboard $(model_or_compatible)"
+fi
 
 # symlink to chosen config (if any)
 rm -f /etc/X11/xorg.conf
 if [ -r "/etc/X11/$PANEL.conf" ]
-then ln -s $PANEL.conf /etc/X11/xorg.conf
+then
+	ln -s $PANEL.conf /etc/X11/xorg.conf
 fi
+
+# look for and run shell script $COMPATIBLE.sh if it exists
+[ -x "/etc/X11/$COMPATIBLE.sh" ] && "/etc/X11/$COMPATIBLE.sh"
 
 $DEBUG && ls -l /etc/X11/*.conf

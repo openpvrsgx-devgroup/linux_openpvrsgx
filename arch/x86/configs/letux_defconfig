@@ -1,5 +1,5 @@
 #
-# Linux/x86 5.11.0-rc1 Kernel Configuration
+# Linux/x86 5.11.0-rc2 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="i486-linux-gnu-gcc (GCC) 4.9.2"
 CONFIG_CC_IS_GCC=y

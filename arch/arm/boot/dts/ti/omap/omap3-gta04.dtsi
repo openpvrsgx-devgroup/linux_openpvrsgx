@@ -92,8 +92,6 @@
 	modem_en: modem { /* control modem power through rfkill */
 		compatible = "option,gtm601-power";
 		/* compatible = "gemalto,phs8-power" for Neo900/GTA04b7 */
-		gpio-controller;
-		#gpio-cells = <2>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&modem_pins>;
 		usb-port = <&hsusb2_phy>;

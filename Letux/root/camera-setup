@@ -36,23 +36,25 @@ function media-format { # $1 = entity, $2 = format $3 = widthxheight
 	media-ctl -V "$1 [$2 $3]"
 }
 
-switch "$(proc/model) in
+case "$(cat /proc/device-tree/model)" in
 	*GTA04* )
 		;;
-	*Pinphone* )
+	*PinePhone* )
 		FORMAT=uyvy
 		CCDCFORMAT=UYVY2X8
 		WIDTH=1280
 		HEIGHT=720
 		FPS=30
 		# ? media-link '"gc2145 3-003c":0'  '"sun6i-csi":0[0]'
-		media-ctl -d /dev/media1 --links "gc2145 3-003c":0->"sun6i-csi":0[0]
+		media-ctl -d /dev/media1 --links '"gc2145 3-003c":0->"sun6i-csi":0[0]'
 		# ? media-link '"ov5640 3-004c":0'  '"sun6i-csi":0[0]'
-		media-ctl -d /dev/media1 --links "ov5640 3-004c":0->"sun6i-csi":0[1]
+		media-ctl -d /dev/media1 --links '"ov5640 3-004c":0->"sun6i-csi":0[1]'
 		# ? media-format '"ov5640 3-004c":0' 'UYVY8_2X8 ${WIDTH}x${HEIGHT}'
 		media-ctl -d /dev/media1 --set-v4l2 '"ov5640 3-004c":0[fmt:UYVY8_2X8/1280x720]'
 		DEVICE=/dev/video1
 		exit 0
+		function setup { echo setup for Pinephone ignored; }
+		;;
 esac
 
 CAM="ov9655 1-0030"		# driver name not camera model! use media-ctl -p to find out

@@ -1961,7 +1961,7 @@ static int isFileReadable(const char *path, u32 *sz)
 { 
 	struct file *fp;
 	int ret = 0;
-#ifdef set_fs
+#ifdef get_fs
 	mm_segment_t oldfs;
 #endif
 	char buf;
@@ -1971,7 +1971,7 @@ static int isFileReadable(const char *path, u32 *sz)
 		ret = PTR_ERR(fp);
 	}
 	else {
-#ifdef set_fs
+#ifdef get_fs
 		oldfs = get_fs();
 		set_fs(KERNEL_DS);
 #endif
@@ -1985,7 +1985,7 @@ static int isFileReadable(const char *path, u32 *sz)
 			*sz = i_size_read(fp->f_dentry->d_inode);
 			#endif
 		}
-#ifdef set_fs
+#ifdef get_fs
 		set_fs(oldfs);
 #endif
 		filp_close(fp,NULL);
@@ -2003,7 +2003,7 @@ static int isFileReadable(const char *path, u32 *sz)
 static int retriveFromFile(const char *path, u8 *buf, u32 sz)
 {
 	int ret =-1;
-#ifdef set_fs
+#ifdef get_fs
 	mm_segment_t oldfs;
 #endif
 	struct file *fp;
@@ -2011,13 +2011,13 @@ static int retriveFromFile(const char *path, u8 *buf, u32 sz)
 	if(path && buf) {
 		if( 0 == (ret=openFile(&fp,path, O_RDONLY, 0)) ){
 			DBG_871X("%s openFile path:%s fp=%p\n",__FUNCTION__, path ,fp);
-#ifdef set_fs
+#ifdef get_fs
 			oldfs = get_fs();
 			set_fs(KERNEL_DS);
+#endif
 			ret=readFile(fp, buf, sz);
+#ifdef get_fs
 			set_fs(oldfs);
-#else
-			ret=readFile(fp, buf, sz);
 #endif
 			closeFile(fp);
 			
@@ -2043,7 +2043,7 @@ static int retriveFromFile(const char *path, u8 *buf, u32 sz)
 static int storeToFile(const char *path, u8 *buf, u32 sz)
 {
 	int ret =0;
-#ifdef set_fs
+#ifdef get_fs
 	mm_segment_t oldfs;
 #endif
 	struct file *fp;
@@ -2051,15 +2051,16 @@ static int storeToFile(const char *path, u8 *buf, u32 sz)
 	if(path && buf) {
 		if( 0 == (ret=openFile(&fp, path, O_CREAT|O_WRONLY, 0666)) ) {
 			DBG_871X("%s openFile path:%s fp=%p\n",__FUNCTION__, path ,fp);
-#ifdef set_fs
+#ifdef get_fs
 			oldfs = get_fs();
 			set_fs(KERNEL_DS);
-			ret=writeFile(fp, buf, sz);
-			set_fs(oldfs);
-			closeFile(fp);
-#else
-			ret=writeFile(fp, buf, sz);
 #endif
+			ret=writeFile(fp, buf, sz);
+#ifdef get_fs
+			set_fs(oldfs);
+#endif
+			closeFile(fp);
+
 			DBG_871X("%s writeFile, ret:%d\n",__FUNCTION__, ret);
 			
 		} else {

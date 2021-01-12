@@ -323,13 +323,15 @@ static void ingenic_drm_crtc_update_timings(struct ingenic_drm *priv,
 			   JZ_LCD_CTRL_OFUP | JZ_LCD_CTRL_BURST_MASK,
 			   JZ_LCD_CTRL_OFUP | priv->soc_info->max_burst);
 
+	if (IS_ENABLED(CONFIG_DRM_INGENIC_IPU) && priv->ipu_plane) {
 	/*
 	 * IPU restart - specify how much time the LCDC will wait before
 	 * transferring a new frame from the IPU. The value is the one
 	 * suggested in the programming manual.
 	 */
-	regmap_write(priv->map, JZ_REG_LCD_IPUR, JZ_LCD_IPUR_IPUREN |
-		     (ht * vpe / 3) << JZ_LCD_IPUR_IPUR_LSB);
+		regmap_write(priv->map, JZ_REG_LCD_IPUR, JZ_LCD_IPUR_IPUREN |
+			     (ht * vpe / 3) << JZ_LCD_IPUR_IPUR_LSB);
+	}
 }
 
 static int ingenic_drm_crtc_atomic_check(struct drm_crtc *crtc,

@@ -286,6 +286,11 @@ drm_client_buffer_create(struct drm_client_dev *client, u32 width, u32 height,
 	struct drm_gem_object *obj;
 	int ret;
 
+	if (!info) {
+		drm_dbg_kms(dev, "unsupported format 0x%08x\n", format);
+		return ERR_PTR(-EINVAL);
+	}
+
 	buffer = kzalloc(sizeof(*buffer), GFP_KERNEL);
 	if (!buffer)
 		return ERR_PTR(-ENOMEM);

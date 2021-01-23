@@ -16,6 +16,7 @@ properties:
   compatible:
     oneOf:
       - enum:
+          - ingenic,jz4730-dma
           - ingenic,jz4740-dma
           - ingenic,jz4725b-dma
           - ingenic,jz4755-dma

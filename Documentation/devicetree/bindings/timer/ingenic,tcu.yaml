@@ -18,6 +18,7 @@ select:
     compatible:
       contains:
         enum:
+          - ingenic,jz4730-tcu
           - ingenic,jz4740-tcu
           - ingenic,jz4725b-tcu
           - ingenic,jz4760-tcu
@@ -52,6 +53,7 @@ properties:
     oneOf:
       - items:
           - enum:
+              - ingenic,jz4730-tcu
               - ingenic,jz4740-tcu
               - ingenic,jz4725b-tcu
               - ingenic,jz4760-tcu

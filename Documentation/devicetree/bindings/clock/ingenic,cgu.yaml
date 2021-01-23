@@ -20,6 +20,7 @@ select:
     compatible:
       contains:
         enum:
+          - ingenic,jz4730-cgu
           - ingenic,jz4740-cgu
           - ingenic,jz4725b-cgu
           - ingenic,jz4755-cgu

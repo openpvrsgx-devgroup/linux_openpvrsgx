@@ -19,6 +19,7 @@ properties:
   compatible:
     oneOf:
       - enum:
+          - ingenic,jz4730-i2c
           - ingenic,jz4770-i2c
           - ingenic,x1000-i2c
       - items:
@@ -53,6 +54,7 @@ required:
   - interrupts
   - clocks
   - clock-frequency
+# FIXME: jz4730 does not require or allow DMA
   - dmas
   - dma-names
 

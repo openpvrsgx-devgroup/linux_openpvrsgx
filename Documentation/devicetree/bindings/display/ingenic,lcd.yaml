@@ -15,6 +15,7 @@ properties:
 
   compatible:
     enum:
+      - ingenic,jz4730-lcd
       - ingenic,jz4740-lcd
       - ingenic,jz4725b-lcd
       - ingenic,jz4760-lcd
@@ -71,6 +72,7 @@ if:
     compatible:
       contains:
         enum:
+          - ingenic,jz4730-lcd
           - ingenic,jz4740-lcd
           - ingenic,jz4780-lcd
 then:

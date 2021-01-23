@@ -3,6 +3,7 @@
 config MACH_INGENIC_GENERIC
 	bool
 	select MACH_INGENIC
+	select MACH_JZ4730
 	select MACH_JZ4740
 	select MACH_JZ4725B
 	select MACH_JZ4770
@@ -46,6 +47,10 @@ config X1830_CU1830_NEO
 endchoice
 
 config MACH_JZ4725B
+	bool
+	select SYS_HAS_CPU_MIPS32_R1
+
+config MACH_JZ4730
 	bool
 	select SYS_HAS_CPU_MIPS32_R1
 

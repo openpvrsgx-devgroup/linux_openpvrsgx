@@ -1,5 +1,5 @@
 #
-# Linux/arm64 5.11.0-rc4 Kernel Configuration
+# Linux/arm64 5.11.0-rc5 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="aarch64-linux-gnu-gcc (GCC) 4.9.2"
 CONFIG_CC_IS_GCC=y
@@ -3149,7 +3149,7 @@ CONFIG_BATTERY_AXP20X=y
 # CONFIG_CHARGER_CROS_USBPD is not set
 # CONFIG_CHARGER_UCS1002 is not set
 # CONFIG_CHARGER_BD99954 is not set
-# CONFIG_POWER_MIPSBOOK_400 is not set
+# CONFIG_POWER_ALPHA400 is not set
 CONFIG_HWMON=y
 # CONFIG_HWMON_DEBUG_CHIP is not set
 
@@ -5223,7 +5223,6 @@ CONFIG_USB_BDC_UDC=y
 #
 # Platform Support
 #
-CONFIG_USB_BDC_PCI=y
 # CONFIG_USB_AMD5536UDC is not set
 # CONFIG_USB_NET2272 is not set
 # CONFIG_USB_NET2280 is not set

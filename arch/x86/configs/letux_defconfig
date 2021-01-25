@@ -1,5 +1,5 @@
 #
-# Linux/x86 5.11.0-rc4 Kernel Configuration
+# Linux/x86 5.11.0-rc5 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="i486-linux-gnu-gcc (GCC) 4.9.2"
 CONFIG_CC_IS_GCC=y
@@ -4471,7 +4471,7 @@ CONFIG_CHARGER_BQ24190=m
 # CONFIG_BATTERY_GAUGE_LTC2941 is not set
 # CONFIG_CHARGER_RT9455 is not set
 # CONFIG_CHARGER_BD99954 is not set
-# CONFIG_POWER_MIPSBOOK_400 is not set
+# CONFIG_POWER_ALPHA400 is not set
 CONFIG_HWMON=y
 CONFIG_HWMON_VID=m
 # CONFIG_HWMON_DEBUG_CHIP is not set

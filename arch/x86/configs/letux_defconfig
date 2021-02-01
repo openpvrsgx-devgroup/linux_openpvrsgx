@@ -1,5 +1,5 @@
 #
-# Linux/x86 5.11.0-rc5 Kernel Configuration
+# Linux/x86 5.11.0-rc6 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="i486-linux-gnu-gcc (GCC) 4.9.2"
 CONFIG_CC_IS_GCC=y
@@ -7194,6 +7194,10 @@ CONFIG_LEDS_MENF21BMC=m
 # CONFIG_LEDS_USER is not set
 # CONFIG_LEDS_NIC78BX is not set
 # CONFIG_LEDS_TI_LMU_COMMON is not set
+
+#
+# Flash and Torch LED drivers
+#
 
 #
 # LED Triggers

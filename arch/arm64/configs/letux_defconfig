@@ -1,5 +1,5 @@
 #
-# Linux/arm64 5.11.0-rc5 Kernel Configuration
+# Linux/arm64 5.11.0-rc6 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="aarch64-linux-gnu-gcc (GCC) 4.9.2"
 CONFIG_CC_IS_GCC=y
@@ -5403,6 +5403,10 @@ CONFIG_LEDS_SYSCON=y
 # CONFIG_LEDS_USER is not set
 # CONFIG_LEDS_SPI_BYTE is not set
 # CONFIG_LEDS_TI_LMU_COMMON is not set
+
+#
+# Flash and Torch LED drivers
+#
 
 #
 # LED Triggers

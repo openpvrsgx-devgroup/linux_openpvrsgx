@@ -86,6 +86,13 @@ struct drm_bridge_connector {
 	 * connector modes detection, if any (see &DRM_BRIDGE_OP_MODES).
 	 */
 	struct drm_bridge *bridge_modes;
+	/**
+	 * @bridge_cec:
+	 *
+	 * The last bridge in the chain (closest to the connector) that provides
+	 * cec adapter support, if any (see &DRM_BRIDGE_OP_CEC).
+	 */
+	struct drm_bridge *bridge_cec;
 };
 
 #define to_drm_bridge_connector(x) \
@@ -197,6 +204,17 @@ static void drm_bridge_connector_destroy(struct drm_connector *connector)
 {
 	struct drm_bridge_connector *bridge_connector =
 		to_drm_bridge_connector(connector);
+
+	if (bridge_connector->bridge_cec) {
+		struct drm_bridge *cec = bridge_connector->bridge_cec;
+
+		cec->funcs->cec_exit(cec);
+	}
+	if (bridge_connector->bridge_hpd) {
+		struct drm_bridge *hpd = bridge_connector->bridge_hpd;
+
+		drm_bridge_hpd_disable(hpd);
+	}
 
 	drm_connector_unregister(connector);
 	drm_connector_cleanup(connector);
@@ -361,6 +379,8 @@ struct drm_connector *drm_bridge_connector_init(struct drm_device *drm,
 			bridge_connector->bridge_detect = bridge;
 		if (bridge->ops & DRM_BRIDGE_OP_MODES)
 			bridge_connector->bridge_modes = bridge;
+		if (bridge->ops & DRM_BRIDGE_OP_CEC)
+			bridge_connector->bridge_cec = bridge;
 
 		if (!drm_bridge_get_next_bridge(bridge))
 			connector_type = bridge->type;
@@ -398,6 +418,15 @@ struct drm_connector *drm_bridge_connector_init(struct drm_device *drm,
 	else if (bridge_connector->bridge_detect)
 		connector->polled = DRM_CONNECTOR_POLL_CONNECT
 				  | DRM_CONNECTOR_POLL_DISCONNECT;
+	if (bridge_connector->bridge_cec) {
+		struct drm_bridge *bridge = bridge_connector->bridge_cec;
+		int ret = bridge->funcs->cec_init(bridge, connector);
+
+		if (ret) {
+			drm_bridge_connector_destroy(connector);
+			return ERR_PTR(ret);
+		}
+	}
 
 	if (panel_bridge)
 		drm_panel_bridge_set_orientation(connector, panel_bridge);

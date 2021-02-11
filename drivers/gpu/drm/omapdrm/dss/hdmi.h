@@ -261,6 +261,7 @@ struct hdmi_core_data {
 	struct hdmi_wp_data *wp;
 	unsigned int core_pwr_cnt;
 	struct cec_adapter *adap;
+	struct clk *cec_clk;
 };
 
 static inline void hdmi_write_reg(void __iomem *base_addr, const u32 idx,

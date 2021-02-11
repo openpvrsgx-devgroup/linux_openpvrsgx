@@ -30,8 +30,18 @@
 #define HDMI_CORE_IH_PHY_STAT0			0x00410
 #define HDMI_CORE_IH_I2CM_STAT0			0x00414
 #define HDMI_CORE_IH_CEC_STAT0			0x00418
+#define CEC_STAT_DONE				BIT(0)
+#define CEC_STAT_EOM				BIT(1)
+#define CEC_STAT_NACK				BIT(2)
+#define CEC_STAT_ARBLOST			BIT(3)
+#define CEC_STAT_ERROR_INIT			BIT(4)
+#define CEC_STAT_ERROR_FOLL			BIT(5)
+#define CEC_STAT_WAKEUP				BIT(6)
+
 #define HDMI_CORE_IH_VP_STAT0			0x0041C
 #define HDMI_CORE_IH_I2CMPHY_STAT0		0x00420
+#define HDMI_CORE_IH_MUTE_I2CM_STAT0            0x00614
+#define HDMI_CORE_IH_MUTE_CEC_STAT0		0x00618
 #define HDMI_CORE_IH_MUTE			0x007FC
 
 /* HDMI Video Sampler */
@@ -233,9 +243,6 @@
 /* HDMI HDCP */
 #define HDMI_CORE_HDCP_MASK			0x14020
 
-/* HDMI CEC */
-#define HDMI_CORE_CEC_MASK			0x17408
-
 /* HDMI I2C Master */
 #define HDMI_CORE_I2CM_SLAVE			0x157C8
 #define HDMI_CORE_I2CM_ADDRESS			0x157CC
@@ -257,6 +264,24 @@
 #define HDMI_CORE_I2CM_FS_SCL_LCNT_1_ADDR	0x1580C
 #define HDMI_CORE_I2CM_FS_SCL_LCNT_0_ADDR	0x15810
 #define HDMI_CORE_I2CM_SDA_HOLD_ADDR		0x15814
+
+/* HDMI CEC */
+#define HDMI_CORE_CEC_CTRL			0x153C8
+#define CEC_CTRL_START				BIT(0)
+#define CEC_CTRL_FRAME_TYP			(3 << 1)
+#define CEC_CTRL_RETRY				(0 << 1)
+#define CEC_CTRL_NORMAL				(1 << 1)
+#define CEC_CTRL_IMMED				(2 << 1)
+
+#define HDMI_CORE_CEC_MASK			0x153D0
+#define HDMI_CORE_CEC_ADDR_L			0x153DC
+#define HDMI_CORE_CEC_ADDR_H			0x153E0
+#define HDMI_CORE_CEC_TX_CNT			0x153E4
+#define HDMI_CORE_CEC_RX_CNT			0x153E8
+#define HDMI_CORE_CEC_TX_DATA0			0x15408
+#define HDMI_CORE_CEC_RX_DATA0			0x15448
+#define HDMI_CORE_CEC_LOCK			0x15488
+#define HDMI_CORE_CEC_WKUPCTRL			0x1548C
 
 enum hdmi_core_packet_mode {
 	HDMI_PACKETMODERESERVEDVALUE = 0,
@@ -290,6 +315,8 @@ int hdmi5_core_handle_irqs(struct hdmi_core_data *core);
 void hdmi5_configure(struct hdmi_core_data *core, struct hdmi_wp_data *wp,
 			struct hdmi_config *cfg);
 int hdmi5_core_init(struct platform_device *pdev, struct hdmi_core_data *core);
+int hdmi5_core_enable(struct omap_hdmi *hdmi);
+void hdmi5_core_disable(struct omap_hdmi *hdmi);
 
 int hdmi5_audio_config(struct hdmi_core_data *core, struct hdmi_wp_data *wp,
 			struct omap_dss_audio *audio, u32 pclk);

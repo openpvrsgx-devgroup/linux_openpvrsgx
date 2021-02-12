@@ -4,23 +4,25 @@ BUS="$1"
 [ "$BUS" ] || BUS=0
 
 function cmd {
+	sleep 0.1
 	echo $@ >&2
 	$@
+	sleep 0.1
 }
 
-# read 1 byte
+echo "read 1 byte"
 cmd i2cget -f -y $BUS 0x28
-# write 1 + read 1
+echo "write 1 + read 1"
 cmd i2cget -f -y $BUS 0x28 0
-# write 1 + read 2
+echo "write 1 + read 2"
 cmd i2cget -f -y $BUS 0x28 0 w
-# read 2 (no responder)
+echo "read 2 (no responder)"
 cmd i2cget -f -y $BUS 0x29 0 w
-# write 1
+echo "write 1"
 cmd i2cset -f -y $BUS 0x13 0
-# write 2
+echo "write 2"
 cmd i2cset -f -y $BUS 0x13 0 0x00
-# read 1 at each address
+echo "read 1 at each address"
 cmd i2cdetect -y -r $BUS 0x27 0x29 >/tmp/$$ && cat /tmp/$$
-# write 0 bytes at each address
+echo "write 0 bytes at each address"
 cmd i2cdetect -y $BUS 0x27 0x29 >/tmp/$$ && cat /tmp/$$

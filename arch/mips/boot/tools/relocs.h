@@ -11,9 +11,16 @@
 #include <errno.h>
 #include <unistd.h>
 #include <elf.h>
-#include <byteswap.h>
 #define USE_BSD
-#include <endian.h>
+#if defined(__APPLE__)
+# include <libkern/OSByteOrder.h>
+# define bswap_16 OSSwapInt16
+# define bswap_32 OSSwapInt32
+# define bswap_64 OSSwapInt64
+#else
+# include <byteswap.h>
+# include <endian.h>
+#endif
 #include <regex.h>
 
 void die(char *fmt, ...);

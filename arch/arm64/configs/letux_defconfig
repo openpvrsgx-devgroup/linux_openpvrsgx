@@ -1,5 +1,5 @@
 #
-# Linux/arm64 5.11.0-rc7 Kernel Configuration
+# Linux/arm64 5.11.0 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="aarch64-linux-gnu-gcc (GCC) 4.9.2"
 CONFIG_CC_IS_GCC=y

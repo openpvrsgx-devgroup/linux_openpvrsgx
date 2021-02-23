@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# IBM device configuration.
+#
+
+config NET_VENDOR_INGENIC
+	bool "INGENIC devices"
+	default y
+	help
+	  If you have a network (Ethernet) card belonging to this class, say Y.
+
+if NET_VENDOR_INGENIC
+
+config INGENIC_ETH_JZ4730
+	tristate "Ingenic JZ4730 Ethernet support"
+	help
+	  This driver supports the MII Ethernet controller in the
+	  and jz4730 SoC.
+
+	  To compile this driver as a module, choose M here. The module will
+	  be called jz4730_eth.
+
+endif # NET_VENDOR_INGENIC

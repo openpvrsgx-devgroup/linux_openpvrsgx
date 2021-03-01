@@ -3645,6 +3645,7 @@ CONFIG_MFD_CORE=y
 # CONFIG_EZX_PCAP is not set
 # CONFIG_MFD_CPCAP is not set
 # CONFIG_MFD_VIPERBOARD is not set
+# CONFIG_MFD_NTXEC is not set
 # CONFIG_MFD_RETU is not set
 # CONFIG_MFD_PCF50633 is not set
 # CONFIG_MFD_PM8XXX is not set

@@ -360,6 +360,7 @@ static int napi_recv(_adapter *padapter, int budget)
 		rx_ok = _FALSE;
 
 #ifdef CONFIG_RTW_GRO
+#define GRO_DROP -1	/* has been removed by commit 	1d11fa696733ffb9ac24771716b1b1b9953e5a48 and will never be returned */
 		if (pregistrypriv->en_gro) {
 			if (rtw_napi_gro_receive(&padapter->napi, pskb) != GRO_DROP)
 				rx_ok = _TRUE;

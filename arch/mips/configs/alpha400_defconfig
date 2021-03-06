@@ -453,6 +453,6 @@ CONFIG_PANIC_TIMEOUT=10
 # CONFIG_RCU_TRACE is not set
 CONFIG_BOOTTIME_TRACING=y
 CONFIG_CMDLINE_BOOL=y
-CONFIG_CMDLINE="mem=128M earlycon=jz4740_uart,mmio32,0x10030000,115200n8 ignore_loglevel clocksource=jiffies clk_ignore_unused console=tty0 console=ttyS0,115200n8 root=/dev/mmcblk0p2 rw rootfstype=ext4,ext3 rootwait"
+CONFIG_CMDLINE="mem=128M earlycon=jz4740_uart,mmio32,0x10030000,115200n8 ignore_loglevel console=tty0 console=ttyS0,115200n8 root=/dev/mmcblk0p2 rw rootfstype=ext4,ext3 rootwait"
 CONFIG_CMDLINE_OVERRIDE=y
 # CONFIG_RUNTIME_TESTING_MENU is not set

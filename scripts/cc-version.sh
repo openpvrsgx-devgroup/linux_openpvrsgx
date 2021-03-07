@@ -14,9 +14,9 @@ icc_min_version=16.0.3 # temporary
 
 # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=63293
 # https://lore.kernel.org/r/20210107111841.GN1551@shell.armlinux.org.uk
-if [ "$SRCARCH" = arm64 ]; then
-	gcc_min_version=5.1.0
-fi
+#if [ "$SRCARCH" = arm64 ]; then
+#	gcc_min_version=5.1.0
+#fi
 
 # Print the compiler name and some version components.
 get_compiler_info()

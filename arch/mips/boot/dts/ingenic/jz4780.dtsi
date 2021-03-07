@@ -109,6 +109,8 @@
 			 <&cgu JZ4780_CLK_PCLK>;
 		clock-names = "rtc", "ext", "pclk";
 
+		// this is nonsense
+		// but for some reason the ingenic-timer.c driver fails without
 		interrupt-controller;
 		#interrupt-cells = <1>;
 

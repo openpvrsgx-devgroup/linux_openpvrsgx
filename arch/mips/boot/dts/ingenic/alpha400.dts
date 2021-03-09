@@ -484,8 +484,8 @@
 	};
 
 	pins_mac: pins_mac {
-		function = "mac";
-		groups = "mac";
+		function = "mii";
+		groups = "mii";
 	};
 };
 

@@ -535,10 +535,3 @@
 		reg = <16>;
 	};
 };
-
-/*
- * TODO:
- * finalize sound / codec setup
- * add i2c and i2s drivers to the SoC
- * add special power_supply driver to probe two gpios to detect/report battery charging status and AC present
- */

@@ -487,6 +487,11 @@
 		function = "mii";
 		groups = "mii";
 	};
+
+	pins_i2s: pins_i2s {
+		function = "i2s";
+		groups = "i2s-data", "i2s-master";
+	};
 };
 
 &i2c {
@@ -496,6 +501,8 @@
 	};
 
 	ak4642: codec@13 {
+		pinctrl-names = "default";
+		pinctrl-0 = <&pins_i2s>;
 		compatible = "asahi-kasei,ak4642";
 		reg = <0x13>;
 		#clock-cells = <0>;

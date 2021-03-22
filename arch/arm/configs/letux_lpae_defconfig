@@ -1,5 +1,5 @@
 #
-# Linux/arm 5.12.0-rc3 Kernel Configuration
+# Linux/arm 5.12.0-rc4 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="arm-linux-gnueabihf-gcc (GCC) 4.9.2"
 CONFIG_CC_IS_GCC=y
@@ -4765,7 +4765,6 @@ CONFIG_SND_SOC_W2CBW003=m
 # CONFIG_SND_SOC_SGTL5000 is not set
 # CONFIG_SND_SOC_SIMPLE_AMPLIFIER is not set
 # CONFIG_SND_SOC_SIMPLE_MUX is not set
-# CONFIG_SND_SOC_SIRF_AUDIO_CODEC is not set
 CONFIG_SND_SOC_SPDIF=m
 # CONFIG_SND_SOC_SSM2305 is not set
 # CONFIG_SND_SOC_SSM2602_SPI is not set

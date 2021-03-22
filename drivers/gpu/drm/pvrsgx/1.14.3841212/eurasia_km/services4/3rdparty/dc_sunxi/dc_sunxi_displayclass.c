@@ -69,7 +69,6 @@ extern IMG_BOOL IMG_IMPORT PVRGetDisplayClassJTable(PVRSRV_DC_DISP2SRV_KMJTABLE 
 #endif
 
 #if !defined(SUPPORT_DRI_DRM)
-MODULE_SUPPORTED_DEVICE(DEVNAME);
 #endif //SUPPORT_DRI_DRM
 
 /* DC_SUNXI buffer structure */

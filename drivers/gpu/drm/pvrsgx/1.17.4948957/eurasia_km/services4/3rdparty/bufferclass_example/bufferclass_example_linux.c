@@ -114,7 +114,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define	BCE_USE_SET_MEMORY
 #endif
 
-MODULE_SUPPORTED_DEVICE(DEVNAME);
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36))
 static long BC_Example_Bridge_Unlocked(struct file *file, unsigned int cmd, unsigned long arg);

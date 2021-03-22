@@ -114,7 +114,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define DRVNAME "dcnohw"
 
 #if !defined(SUPPORT_DRI_DRM)
-MODULE_SUPPORTED_DEVICE(DRVNAME);
 #endif
 
 #define unref__ __attribute__ ((unused))

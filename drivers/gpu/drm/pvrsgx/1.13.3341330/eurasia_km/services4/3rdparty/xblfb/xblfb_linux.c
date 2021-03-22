@@ -93,7 +93,6 @@
 #error "PVR_LINUX_USING_WORKQUEUES must be defined"
 #endif
 
-MODULE_SUPPORTED_DEVICE(DEVNAME);
 
 #if defined(SUPPORT_DRI_DRM)
 int PVR_DRM_MAKENAME(DISPLAY_CONTROLLER, _Suspend)(struct drm_device unref__ *dev)

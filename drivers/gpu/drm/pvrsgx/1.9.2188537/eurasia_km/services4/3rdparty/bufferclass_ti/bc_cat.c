@@ -58,7 +58,6 @@
 #endif
 
 
-MODULE_SUPPORTED_DEVICE(DEVNAME);
 
 #define unref__ __attribute__ ((unused))
 

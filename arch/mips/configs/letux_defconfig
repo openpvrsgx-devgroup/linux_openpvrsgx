@@ -1,5 +1,5 @@
 #
-# Linux/mips 5.12.0-rc3 Kernel Configuration
+# Linux/mips 5.12.0-rc4 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="mipsel-linux-gnu-gcc (GCC) 4.9.2"
 CONFIG_CC_IS_GCC=y
@@ -3292,7 +3292,6 @@ CONFIG_SND_SOC_JZ4725B_CODEC=y
 # CONFIG_SND_SOC_SGTL5000 is not set
 # CONFIG_SND_SOC_SIMPLE_AMPLIFIER is not set
 # CONFIG_SND_SOC_SIMPLE_MUX is not set
-# CONFIG_SND_SOC_SIRF_AUDIO_CODEC is not set
 # CONFIG_SND_SOC_SPDIF is not set
 # CONFIG_SND_SOC_SSM2305 is not set
 # CONFIG_SND_SOC_SSM2602_SPI is not set
@@ -4051,6 +4050,7 @@ CONFIG_SYNC_FILE=y
 
 # CONFIG_AUXDISPLAY is not set
 # CONFIG_UIO is not set
+# CONFIG_VFIO is not set
 # CONFIG_VIRT_DRIVERS is not set
 CONFIG_VIRTIO_MENU=y
 # CONFIG_VIRTIO_MMIO is not set

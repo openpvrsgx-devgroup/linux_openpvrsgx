@@ -162,7 +162,6 @@ int unregister_vsync_cb(vsync_callback_t handler, void *arg, int idx);
 #error "PVR_LINUX_USING_WORKQUEUES must be defined"
 #endif
 
-MODULE_SUPPORTED_DEVICE(DEVNAME);
 
 
 void *OMAPLFBAllocKernelMem(unsigned long ulSize)

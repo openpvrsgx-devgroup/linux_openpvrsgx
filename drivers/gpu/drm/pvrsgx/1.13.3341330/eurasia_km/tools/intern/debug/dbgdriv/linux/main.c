@@ -82,7 +82,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #else /* defined(SUPPORT_DRI_DRM) */
 
 #define DRVNAME "dbgdrv"
-MODULE_SUPPORTED_DEVICE(DRVNAME);
 
 #if (defined(LDM_PLATFORM) || defined(LDM_PCI)) && !defined(SUPPORT_DRI_DRM)
 static struct class *psDbgDrvClass;

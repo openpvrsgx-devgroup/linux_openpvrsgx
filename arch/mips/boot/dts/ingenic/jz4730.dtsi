@@ -323,7 +323,7 @@
 	emc: memory-controller@13010000 {
 		#address-cells = <0>;
 		#size-cells = <0>;
-		compatible = "ingenic,jz4730-emc", "simple-mfd";
+		compatible = "ingenic,jz4730-nemc", "simple-mfd";
 		reg = <0x13010000 0xf000>;
 
 		nand: nand-controller {

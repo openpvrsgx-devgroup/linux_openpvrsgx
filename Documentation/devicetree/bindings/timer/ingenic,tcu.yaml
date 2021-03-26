@@ -122,6 +122,7 @@ patternProperties:
       compatible:
         oneOf:
           - enum:
+              - ingenic,jz4730-watchdog
               - ingenic,jz4740-watchdog
               - ingenic,jz4780-watchdog
           - items:

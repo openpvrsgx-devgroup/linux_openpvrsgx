@@ -16,6 +16,7 @@ properties:
   compatible:
     oneOf:
       - enum:
+          - ingenic,jz4730-nemc
           - ingenic,jz4740-nemc
           - ingenic,jz4780-nemc
       - items:

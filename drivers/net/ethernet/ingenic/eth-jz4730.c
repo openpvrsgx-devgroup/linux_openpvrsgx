@@ -644,12 +644,12 @@ static const char *media_types[] = {
 	"100baseTx-FD", "100baseT4", 0
 };
 
-typedef struct {
-	unsigned int status;
-	unsigned int desc1;
-	unsigned int buf1_addr;
-	unsigned int next_addr;
-} jz_desc_t;
+struct jz_desc {
+	u32 status;
+	u32 desc1;
+	u32 buf1_addr;
+	u32 next_addr;
+};
 
 struct jz_eth_private {
 	struct device		*dev;
@@ -659,8 +659,8 @@ struct jz_eth_private {
 	void *base;
 #define ETH_BASE (np->base)
 
-	jz_desc_t tx_ring[NUM_TX_DESCS];	/* transmit descriptors */
-	jz_desc_t rx_ring[NUM_RX_DESCS];	/* receive descriptors */
+	struct jz_desc tx_ring[NUM_TX_DESCS];	/* transmit descriptors */
+	struct jz_desc rx_ring[NUM_RX_DESCS];	/* receive descriptors */
 	dma_addr_t dma_tx_ring;		/* bus address of tx ring */
 	dma_addr_t dma_rx_ring;		/* bus address of rx ring */
 	dma_addr_t dma_rx_buf;			/* DMA address of rx buffer  */
@@ -772,7 +772,7 @@ static int get_mac_address(struct net_device *dev)
 		}
 	}
 
-	if ((dev->dev_addr[0] & 0xc0) || (flag0 == 0) || (flag1 == 0xff)) {
+	if ((dev->dev_addr[0] & 0xc0) || flag0 == 0 || flag1 == 0xff) {
 		dev_warn(np->dev, "There is no MAC valid address, use default ..\n");
 		dev->dev_addr[0] = 0x00;
 		dev->dev_addr[1] = 0xef;
@@ -884,13 +884,12 @@ static void eth_dbg_rx(struct sk_buff *skb, int len)
 	       len);
 	for (j = 0; len > 0; j += 16, len -= 16) {
 		printk("    %03x: ", j);
-		for (i = 0; i < 16 && i < len; i++) {
+		for (i = 0; i < 16 && i < len; i++)
 			printk("%02x ", (u8)skb->data[i + j]);
-		}
 		printk("\n");
 	}
 	return;
-  }
+}
 #endif
 
 /*
@@ -1010,7 +1009,7 @@ static u16 jz_hashtable_index(u8 *addr)
 			msb = crc >> 31;
 			crc <<= 1;
 			if (msb ^ (byte & 1))
-crc ^= POLYNOMIAL;
+				crc ^= POLYNOMIAL;
 			byte >>= 1;
 		}
 	}
@@ -1309,7 +1308,7 @@ static int jz_eth_open(struct net_device *dev)
 		np->rx_ring[i].status = cpu_to_le32(R_OWN);
 		np->rx_ring[i].desc1 = cpu_to_le32(RX_BUF_SIZE | RD_RCH);
 		np->rx_ring[i].buf1_addr = cpu_to_le32(np->dma_rx_buf + i * RX_BUF_SIZE);
-		np->rx_ring[i].next_addr = cpu_to_le32(np->dma_rx_ring + (i + 1) * sizeof(jz_desc_t));
+		np->rx_ring[i].next_addr = cpu_to_le32(np->dma_rx_ring + (i + 1) * sizeof(struct jz_desc));
 	}
 	np->rx_ring[NUM_RX_DESCS - 1].next_addr = cpu_to_le32(np->dma_rx_ring);
 
@@ -1317,12 +1316,13 @@ static int jz_eth_open(struct net_device *dev)
 		np->tx_ring[i].status = cpu_to_le32(0);
 		np->tx_ring[i].desc1  = cpu_to_le32(TD_TCH);
 		np->tx_ring[i].buf1_addr = 0;
-		np->tx_ring[i].next_addr = cpu_to_le32(np->dma_tx_ring + (i + 1) * sizeof(jz_desc_t));
+		np->tx_ring[i].next_addr = cpu_to_le32(np->dma_tx_ring + (i + 1) * sizeof(struct jz_desc));
 	}
 	np->tx_ring[NUM_TX_DESCS - 1].next_addr = cpu_to_le32(np->dma_tx_ring);
 
 	np->rx_head = 0;
-	np->tx_head = np->tx_tail = 0;
+	np->tx_head = 0;
+	np->tx_tail = 0;
 
 	jz_init_hw(dev);
 
@@ -1600,17 +1600,18 @@ static void eth_txdone(struct net_device *dev)
 		if (status & TD_ES) {       /* Error summary */
 			np->ndev->stats.tx_errors++;
 			if (status & TD_NC)
- np->ndev->stats.tx_carrier_errors++;
+				np->ndev->stats.tx_carrier_errors++;
 			if (status & TD_LC)
- np->ndev->stats.tx_window_errors++;
+				np->ndev->stats.tx_window_errors++;
 			if (status & TD_UF)
- np->ndev->stats.tx_fifo_errors++;
+				np->ndev->stats.tx_fifo_errors++;
 			if (status & TD_DE)
- np->ndev->stats.tx_aborted_errors++;
+				np->ndev->stats.tx_aborted_errors++;
 			if (np->tx_head != np->tx_tail)
 				writel(1, DMA_TPD);  /* Restart a stalled TX */
-		} else
+		} else {
 			np->ndev->stats.tx_packets++;
+		}
 
 		/* Update the collision counter */
 		np->ndev->stats.collisions += ((status & TD_EC) ? 16 : ((status & TD_CC) >> 3));
@@ -1653,9 +1654,9 @@ static int jz_eth_send_packet(struct sk_buff *skb, struct net_device *dev)
 	struct jz_eth_private *np = netdev_priv(dev);
 	u32 length;
 
-	if (np->tx_full) {
+	if (np->tx_full)
 		return 0;
-	}
+
 	udelay(500);	/* FIXME: can we remove this delay ? */
 	length = (skb->len < ETH_ZLEN) ? ETH_ZLEN : skb->len;
 // FIXME:	dma_sync_single_for_device(np->dev, (dma_addr_t) skb->data, length, DMA_BIDIRECTIONAL);	// 1. kernel panics, 2. DMA_TO_DEVICE?
@@ -1718,7 +1719,7 @@ static irqreturn_t jz_eth_interrupt(int irq, void *dev_id)
 				omr &= ~(OMR_ST | OMR_SR);
 				writel(omr, DMA_OMR);
 				while (readl(DMA_STS) & STS_TS)
-;  /* wait for stop */
+					;  /* wait for stop */
 				if ((omr & OMR_TR) < OMR_TR) {  /* ? */
 					omr += TR_24;
 				} else {
@@ -1747,9 +1748,8 @@ static int jz_eth_suspend(struct net_device *dev, int state)
 
 	dev_info(np->dev, "ETH suspend.\n");
 
-	if (!netif_running(dev)) {
+	if (!netif_running(dev))
 		return 0;
-	}
 
 	netif_device_detach(dev);
 

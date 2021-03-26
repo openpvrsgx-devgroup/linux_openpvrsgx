@@ -6,6 +6,9 @@ $schema: http://devicetree.org/meta-schemas/core.yaml#
 
 title: BOE BTL507212-W677L Panel
 
+allOf:
+  - $ref: panel-common.yaml#
+
 maintainers:
   - H. Nikolaus Schaller <hns@goldelico.com>
 
@@ -38,9 +41,11 @@ required:
   - compatible
   - port
 
+additionalProperties: false
+
 examples:
   - |+
-    lcd: btl507212-w677l@0 {
+    lcd: btl507212-w677l {
       label = "lcd";
       backlight = <&backlight>;
       gpios = <&gpio6 16 0>;	/* goip6_176 = panel reset */

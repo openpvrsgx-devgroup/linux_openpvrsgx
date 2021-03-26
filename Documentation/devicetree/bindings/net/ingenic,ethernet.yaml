@@ -1,0 +1,47 @@
+# SPDX-License-Identifier: GPL-2.0
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/net/ingenic,ethernet.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Ingenic JZ4730 Ethernet Mac Controller Device Tree Bindings
+
+allOf:
+  - $ref: "ethernet-controller.yaml#"
+
+maintainers:
+  - H. Nikolaus Schaller <hns@goldelico.com>
+
+properties:
+  compatible:
+    const: ingenic,jz4730-ethernet
+
+  reg:
+    maxItems: 1
+
+  interrupts:
+    maxItems: 1
+
+required:
+  - compatible
+  - reg
+  - interrupts
+
+unevaluatedProperties: false
+
+examples:
+  - |
+    ethernet: ethernet@13100000 {
+        compatible = "ingenic,jz4730-ethernet";
+        reg = <0x13100000 0x1000>;
+
+        interrupt-parent = <&intc>;
+        interrupts = <19>;
+
+        mdio: mdio {
+            #address-cells = <1>;
+            #size-cells = <0>;
+        };
+    };
+
+...

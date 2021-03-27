@@ -317,6 +317,10 @@
 	panel: claa070vc01 {
 		compatible = "chunghwa,claa070vc01", "panel-dpi";
 
+		bpc = <8>;
+		bus-format = <0x1017>;	/* MEDIA_BUS_FMT_RGB565_1X16 */
+		connector-type = <17>;	/* DRM_MODE_CONNECTOR_DPI */
+
 		width-mm = <150>;
 		height-mm = <90>;
 

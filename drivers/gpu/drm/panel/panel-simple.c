@@ -70,7 +70,7 @@ struct panel_desc {
 	unsigned int num_timings;
 
 	/** @bpc: Bits per color. */
-	unsigned int bpc;
+	u32 bpc;
 
 	/** @size: Structure containing the physical size of this panel. */
 	struct {
@@ -133,7 +133,7 @@ struct panel_desc {
 	u32 bus_flags;
 
 	/** @connector_type: LVDS, eDP, DSI, DPI, etc. */
-	int connector_type;
+	u32 connector_type;
 };
 
 struct panel_simple {
@@ -498,6 +498,11 @@ static int panel_dpi_probe(struct device *dev,
 
 	/* We do not know the connector for the DT node, so guess it */
 	desc->connector_type = DRM_MODE_CONNECTOR_DPI;
+
+	of_property_read_u32(np, "bpc", &desc->bpc);
+	of_property_read_u32(np, "bus-flags", &desc->bus_flags);
+	of_property_read_u32(np, "bus-format", &desc->bus_format);
+	of_property_read_u32(np, "connector-type", &desc->connector_type);
 
 	panel->desc = desc;
 

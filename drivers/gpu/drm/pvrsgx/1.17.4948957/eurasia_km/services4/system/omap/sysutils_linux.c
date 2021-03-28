@@ -53,6 +53,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "sysconfig.h"
 #include "sgxinfokm.h"
 #include "syslocal.h"
+#include "dm_timer_wrapper.h"
 
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>

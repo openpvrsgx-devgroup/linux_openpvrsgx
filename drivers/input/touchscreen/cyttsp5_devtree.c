@@ -655,7 +655,7 @@ int cyttsp5_devtree_create_and_get_pdata(struct device *adap_dev)
 	if (IS_ERR(rst_gpio)) {
 		if (PTR_ERR(rst_gpio) != -EPROBE_DEFER)
 			dev_err(adap_dev, "failed to get gpio: %d\n",
-				PTR_ERR(rst_gpio));
+				(int) PTR_ERR(rst_gpio));
 		return PTR_ERR(rst_gpio);
 	}
 

@@ -888,9 +888,10 @@ static void bq2429x_input_available(struct bq2429x_device_info *di, bool state)
 			else
 				bq2429x_set_input_current_limit_uA(di,
 					di->usb_input_current_uA);
-		} else
+		} else if(di->usb_input_current_uA) {
 			bq2429x_set_input_current_limit_uA(di,
 					di->usb_input_current_uA);
+		}
 
 		bq2429x_set_charge_current_uA(di, di->bat_info.constant_charge_current_max_ua);
 
@@ -1534,12 +1535,16 @@ static int bq2429x_set_property(struct power_supply *psy,
 				const union power_supply_propval *val)
 {
 	struct bq2429x_device_info *di = power_supply_get_drvdata(psy);
+	int ret;
 
 	dev_dbg(di->dev, "%s,line=%d prop=%d\n", __func__, __LINE__, psp);
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT:
-		return bq2429x_set_input_current_limit_uA(di, val->intval);
+		ret = bq2429x_set_input_current_limit_uA(di, val->intval);
+		if (ret >= 0)
+			di->usb_input_current_uA = val->intval;	/* restore after unplug/replug */
+		return ret;
 	default:
 		return -EPERM;
 	}

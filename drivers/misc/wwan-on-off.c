@@ -93,6 +93,10 @@ static void wwan_on_off_set_power(struct wwan_on_off *wwan, bool on)
 	if(state != on) {
 		if (on && !IS_ERR_OR_NULL(wwan->vcc_regulator) && !regulator_is_enabled(wwan->vcc_regulator)) {
 			int ret = regulator_enable(wwan->vcc_regulator);	/* turn on regulator */
+			if (ret < 0) {
+				printk("%s: can't turn oon regulator\n", __func__);
+				return;
+			}
 			mdelay(2000);
 		}
 		if (!on && !wwan->can_turnoff) {
@@ -191,7 +195,7 @@ static int wwan_on_off_probe(struct platform_device *pdev)
 	}
 
 	wwan->usb_phy = devm_usb_get_phy_by_phandle(dev, "usb-port", 0);
-	printk("%s: onoff = %p indicator = %p %d usb_phy = %ld\n", __func__, wwan->on_off_gpio, wwan->feedback_gpio, PTR_ERR(wwan->usb_phy));
+	printk("%s: onoff = %p indicator = %p usb_phy = %ld\n", __func__, wwan->on_off_gpio, wwan->feedback_gpio, PTR_ERR(wwan->usb_phy));
 	// get optional reference to USB PHY (through "usb-port")
 #ifdef DEBUG
 	printk("%s: wwan_on_off_probe() wwan=%p\n", __func__, wwan);
@@ -233,7 +237,7 @@ err:
 
 static int wwan_on_off_remove(struct platform_device *pdev)
 {
-	struct wwan_on_off *wwan = platform_get_drvdata(pdev);
+//	struct wwan_on_off *wwan = platform_get_drvdata(pdev);
 	return 0;
 }
 
@@ -246,8 +250,8 @@ static int wwan_on_off_remove(struct platform_device *pdev)
 
 static int wwan_on_off_suspend(struct device *dev)
 {
+//	struct wwan_on_off *wwan = dev_get_drvdata(dev);
 #ifdef DEBUG
-	struct wwan_on_off *wwan = dev_get_drvdata(dev);
 	printk("%s: WWAN suspend\n", __func__);
 #endif
 	/* set gpio to harmless mode */
@@ -256,8 +260,8 @@ static int wwan_on_off_suspend(struct device *dev)
 
 static int wwan_on_off_resume(struct device *dev)
 {
+//	struct wwan_on_off *wwan = dev_get_drvdata(dev);
 #ifdef DEBUG
-	struct wwan_on_off *wwan = dev_get_drvdata(dev);
 	printk("%s: WWAN resume\n", __func__);
 #endif
 	/* restore gpio */

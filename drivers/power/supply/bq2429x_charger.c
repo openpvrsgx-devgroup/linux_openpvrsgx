@@ -1382,8 +1382,8 @@ static int bq2429x_init_registers(struct bq2429x_device_info *di)
 		else if (di->wdt_timeout == 160)
 			ret = bq2429x_field_write(di, F_WATCHDOG, 3);
 		if (ret < 0) {
-			dev_err(&di->client->dev, "%s(): Invalid watchdog timeout (%lu) or failed\n",
-				__func__, di->wdt_timeout == 40);
+			dev_err(&di->client->dev, "%s(): Invalid watchdog timeout (%u) or failed\n",
+				__func__, di->wdt_timeout);
 			return ret;
 		}
 	}

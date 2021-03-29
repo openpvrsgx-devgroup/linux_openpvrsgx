@@ -841,7 +841,9 @@ static inline bool bq2429x_battery_present(struct bq2429x_device_info *di)
 
 static inline bool bq2429x_input_present(struct bq2429x_device_info *di)
 { /* VBUS is available */
-	return di->state.vbus_stat != 0;
+	if (di->state.chrg_stat != 0)
+		return true;	/* assume power if we are charging */
+	return di->state.vbus_stat != 0;	/* detected something */
 }
 
 static int bq2429x_battery_temperature_mC(struct bq2429x_device_info *di)
@@ -1462,12 +1464,10 @@ static int bq2429x_get_property(struct power_supply *psy,
 
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
 		if (bq2429x_input_present(di)) {
-			if (state.vbus_stat != 0)
+			if (state.dpm_stat)
 				val->intval = bq2429x_get_vindpm_uV(di);
 			else
-// REVISIT logic - if input_present checks for vbus_stat != 0 this can not happen
-
-				/* power good: assume VBUS 5V */
+				/* power good and not in DPM: assume VBUS 5V */
 				val->intval = 5000000;
 		} else
 			/* power not good: assume 0V */

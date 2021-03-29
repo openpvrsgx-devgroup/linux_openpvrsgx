@@ -1190,54 +1190,6 @@ static void bq2429x_charger_shutdown(struct i2c_client *client)
 /* SYSFS interface */
 
 /*
- * sysfs input_current_limit store
- * set the max current drawn from USB
- */
-
-static ssize_t
-bq2429x_input_current_limit_uA_store(struct device *dev,
-	struct device_attribute *attr,
-	const char *buf, size_t n)
-{
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bq2429x_device_info *di = i2c_get_clientdata(client);
-	int cur = 0;
-	int status = 0;
-
-	status = kstrtoint(buf, 10, &cur);
-	if (status)
-		return status;
-	if (cur < 0)
-		return -EINVAL;
-
-	status = bq2429x_set_input_current_limit_uA(di, cur);
-	if (status < 0)
-		return status;
-
-	di->usb_input_current_uA = cur;	/* restore after unplug/replug */
-
-	return n;
-}
-
-/*
- * sysfs input_current_limit show
- * reports current drawn from VBUS
- */
-
-static ssize_t bq2429x_input_current_limit_uA_show(struct device *dev,
-	struct device_attribute *attr, char *buf)
-{
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bq2429x_device_info *di = i2c_get_clientdata(client);
-	int cur = bq2429x_input_current_limit_uA(di);
-
-	if (cur < 0)
-		return cur;
-
-	return scnprintf(buf, PAGE_SIZE, "%u\n", cur);
-}
-
-/*
  * sysfs otg max current store
  */
 
@@ -1283,9 +1235,6 @@ static ssize_t bq2429x_otg_show(struct device *dev,
 
 	return scnprintf(buf, PAGE_SIZE, "%u\n", cur);
 }
-
-static DEVICE_ATTR(max_current, 0644, bq2429x_input_current_limit_uA_show,
-			bq2429x_input_current_limit_uA_store);
 
 static DEVICE_ATTR(otg, 0644, bq2429x_otg_show, bq2429x_otg_store);
 
@@ -1859,9 +1808,6 @@ static int bq2429x_charger_probe(struct i2c_client *client,
 		client->irq = 0;
 	}
 
-	if (device_create_file(dev, &dev_attr_max_current))
-		dev_warn(dev, "could not create sysfs file max_current\n");
-
 	if (device_create_file(dev, &dev_attr_otg))
 		dev_warn(dev, "could not create sysfs file otg\n");
 
@@ -1886,7 +1832,6 @@ static int bq2429x_charger_remove(struct i2c_client *client)
 {
 	struct bq2429x_device_info *di = i2c_get_clientdata(client);
 
-	device_remove_file(di->dev, &dev_attr_max_current);
 	device_remove_file(di->dev, &dev_attr_otg);
 	device_remove_file(di->dev, &dev_attr_registers);
 	return 0;

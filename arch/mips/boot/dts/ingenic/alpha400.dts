@@ -275,21 +275,51 @@
 		};
 	};
 
+	amp: analog-amplifier {
+		compatible = "simple-audio-amplifier";
+		enable-gpios = <&gpa 24 GPIO_ACTIVE_HIGH>;
+		VCC-supply = <&vcc>;
+		sound-name-prefix = "Speaker Amp";
+	};
+
 	sound: sound {
 		compatible = "simple-audio-card";
 
 		simple-audio-card,name = "Alpha 400";
-		simple-audio-card,format = "i2s";
+		simple-audio-card,format = "i2s";	// "left_j"? see r8a7791 and mach-se/7724?
 
 		simple-audio-card,bitclock-master = <&sndcodec>;
 		simple-audio-card,frame-master = <&sndcodec>;
 
 		simple-audio-card,convert-rate = <48000>;
 
+		simple-audio-card,hp-det-gpio = <&gpa 25 GPIO_ACTIVE_LOW>;
+		simple-audio-card,aux-devs = <&amp>;
+
 		simple-audio-card,prefix = "ak4642";
+
+		/* see https://elinux.org/images/b/b5/Belloni-alsa-asoc.pdf page 19 */
 		simple-audio-card,widgets =
+			/* define board connectors */
+			/* "template-wname", "user-supplied-wname" */
+			/* "template-wname" one of: "Microphone", "Line", "Headphone" and "Speaker" */
 			"Speaker", "Speaker",
-			"Microphone", "Mic";
+			"Headphone", "Headphones",
+			"Microphone", "Microphone";
+
+		simple-audio-card,routing =
+			/* sink, source ("user-supplied-wname" oder defined by codec + sound-name-prefix) */
+			/* valid names for sources and sinks are the codec's pins, and the jacks on the board */
+			/* SND_SOC_DAPM_OUTPUT: HPOUTL, HPOUTR, LINEOUT */
+			/* SND_SOC_DAPM_INPUT: there is no Mic support in the driver? */
+			/* ak4642.c: It can use headphone output / stereo input only */
+	//		"MIC_IN", "Microphone",
+			"Headphones", "HPOUTL",
+			"Headphones", "HPOUTR",
+			"Speaker Amp INL", "LINEOUT",
+			"Speaker Amp INR", "LINEOUT",
+			"Speaker", "Speaker Amp OUTL",
+			"Speaker", "Speaker Amp OUTR";
 
 		sndcpu: simple-audio-card,cpu {
 			sound-dai = <&i2s>;
@@ -297,7 +327,7 @@
 
 		sndcodec: simple-audio-card,codec {
 			sound-dai = <&ak4642>;
-			system-clock-frequency = <11289600>;
+			system-clock-frequency = <12000000>;
 		};
 	};
 

@@ -443,6 +443,18 @@
 	pinctrl-0 = <&pins_uart0>;
 };
 
+&uart1 { // pins used for HPEN, HPDET
+	status = "disabled";
+};
+
+&uart2 { // pins used for KBC
+	status = "disabled";
+};
+
+&uart3 { // pins used for SD_EN and Touch buttons
+	status = "disabled";
+};
+
 &pinctrl {
 	pins_lcd: lcd0 {
 		function = "lcd";

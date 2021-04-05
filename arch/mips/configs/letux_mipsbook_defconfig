@@ -1,5 +1,5 @@
 #
-# Linux/mips 5.12.0-rc5 Kernel Configuration
+# Linux/mips 5.12.0-rc6 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="mipsel-linux-gnu-gcc (GCC) 4.9.2"
 CONFIG_CC_IS_GCC=y
@@ -346,6 +346,10 @@ CONFIG_BUILTIN_DTB=y
 CONFIG_MIPS_NO_APPENDED_DTB=y
 # CONFIG_MIPS_ELF_APPENDED_DTB is not set
 # CONFIG_MIPS_RAW_APPENDED_DTB is not set
+# CONFIG_MIPS_CMDLINE_FROM_DTB is not set
+# CONFIG_MIPS_CMDLINE_DTB_EXTEND is not set
+# CONFIG_MIPS_CMDLINE_FROM_BOOTLOADER is not set
+CONFIG_MIPS_CMDLINE_BUILTIN_EXTEND=y
 # end of Kernel type
 
 CONFIG_LOCKDEP_SUPPORT=y
@@ -5554,8 +5558,8 @@ CONFIG_PROBE_EVENTS=y
 #
 CONFIG_TRACE_IRQFLAGS_SUPPORT=y
 CONFIG_CMDLINE_BOOL=y
-CONFIG_CMDLINE="mem=128M earlycon=jz4740_uart,mmio32,0x10030000,115200n8 ignore_loglevel console=tty0 console=ttyS0,115200n8 root=/dev/mmcblk0p2 rw rootfstype=ext4,ext3 rootwait"
-CONFIG_CMDLINE_OVERRIDE=y
+CONFIG_CMDLINE="mem=128M earlycon=jz4740_uart,mmio32,0x10030000,115200n8 ignore_loglevel console=tty0 console=ttyS0,115200n8 root=/dev/mmcblk0p2 rw rootfstype=ext4,ext3 rootwait ethaddr=00:21:4D:01:00:EF"
+# CONFIG_CMDLINE_OVERRIDE is not set
 # CONFIG_DEBUG_ZBOOT is not set
 # CONFIG_SPINLOCK_TEST is not set
 # CONFIG_SCACHE_DEBUGFS is not set

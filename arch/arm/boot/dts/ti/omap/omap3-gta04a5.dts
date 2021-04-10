@@ -5,6 +5,13 @@
 
 #include "omap3-gta04.dtsi"
 
+&cpu0_opp_table {
+	/* is unreliable on gta04a5 - enable by echo 1 >/sys/devices/system/cpu/cpufreq/boost */
+	opp1g-1000000000 {
+		turbo-mode;
+	};
+};
+
 / {
 	model = "Goldelico GTA04A5/Letux 2804";
 

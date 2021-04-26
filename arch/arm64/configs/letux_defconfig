@@ -7248,13 +7248,7 @@ CONFIG_DEBUG_BUGVERBOSE=y
 #
 # Compile-time checks and compiler options
 #
-CONFIG_DEBUG_INFO=y
-# CONFIG_DEBUG_INFO_REDUCED is not set
-# CONFIG_DEBUG_INFO_SPLIT is not set
-CONFIG_DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT=y
-# CONFIG_DEBUG_INFO_DWARF4 is not set
-# CONFIG_DEBUG_INFO_BTF is not set
-# CONFIG_GDB_SCRIPTS is not set
+# CONFIG_DEBUG_INFO is not set
 CONFIG_FRAME_WARN=2048
 # CONFIG_STRIP_ASM_SYMS is not set
 # CONFIG_READABLE_ASM is not set
@@ -7412,7 +7406,6 @@ CONFIG_STRICT_DEVMEM=y
 # arm64 Debugging
 #
 # CONFIG_PID_IN_CONTEXTIDR is not set
-# CONFIG_DEBUG_EFI is not set
 # CONFIG_ARM64_RELOC_TEST is not set
 # CONFIG_CORESIGHT is not set
 # end of arm64 Debugging

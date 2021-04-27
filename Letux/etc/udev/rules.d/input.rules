@@ -14,6 +14,8 @@ SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*a0,1,
 SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*k74,*", SYMLINK+="input/power"
 # user/aus button (if available)
 SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*kA9,*", SYMLINK+="input/aux"
+# built-in mouse buttons (Alpha 400)
+SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,k110,*", SYMLINK+="input/buttons"
 # 3G/4G incoming call/message event
 SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*kF0,*", SYMLINK+="input/incoming"
 # tca8418 keyboard

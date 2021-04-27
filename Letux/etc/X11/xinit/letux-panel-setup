@@ -98,9 +98,9 @@ case "$(model_or_compatible)" in
 		echo mbuttons > /proc/pandora/nub1/mode	# mouse buttons
 		;;
 	*'UDOO Neo'* )
-		PANEL=udoo;;
+		PANEL=auto;;	# works well with auto-detection
 	*'Skytone Alpha 400'* )
-		PANEL=7.0-640x480;;
+		PANEL=alpha400;;
 	*'Tolino Shine 3'* )
 		PANEL=5.8-1072x1448-epd
 		echo 3 >/sys/class/graphics/fb0/rotate

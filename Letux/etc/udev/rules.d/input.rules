@@ -1,32 +1,33 @@
 # make stable /dev/input file names for Letux devices
 # to find the patterns to match against, use e.g. udevadm info -a -p /sys/class/input/event5
-# and cat /sys/devices/platform/68000000.ocp/48072000.i2c/i2c-1/1-0048/input/input5/modalias
+# and e.g. cat /sys/class/input/event2/device/modalias
+# for an explanation of the patterns, see: https://wiki.archlinux.org/index.php/Modalias#What_is_a_modalias_file?
 
-# rumble/vibra force feedback
+# rumble/vibra force feedback (GTA04, Pyra) - input:b0000v0000p0000e0001-e0,15,kramlsf50,51,58,59,5A,60,w
 SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,15,*f50,51*", SYMLINK="input/rumble"
-# touchscreen
+# touchscreen - input:b0018v0000p0000e0000-e0,1,3,k14A,ra0,1,18,mlsfw
 SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*14?,*", SYMLINK+="input/touchscreen"
 # main accelerometer
 SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,3,*a0,1,2,*", SYMLINK+="input/accel"
-# optional second
+# optional secondary accelerometer
 SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*a0,1,2,*", SYMLINK+="input/accel2"
-# twl4030/6030 power button
+# twl4030/6030 power button - input:b0000v0000p0000e0000-e0,1,k74,ramlsfw
 SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*k74,*", SYMLINK+="input/power"
-# user/aus button (if available)
+# user/aux button (if available) - input:b0019v0001p0001e0100-e0,1,kA9,ramlsfw
 SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*kA9,*", SYMLINK+="input/aux"
-# built-in mouse buttons (Alpha 400)
+# built-in mouse buttons (Alpha 400) - input:b0019v0001p0001e0100-e0,1,k110,111,ramlsfw
 SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,k110,*", SYMLINK+="input/buttons"
-# 3G/4G incoming call/message event
+# 3G/4G incoming call/message event - input:b0019v0001p0001e0100-e0,1,kF0,ramlsfw
 SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*kF0,*", SYMLINK+="input/incoming"
-# tca8418 keyboard
+# tca8418 or matrix keyboard - input:b0019v0000p0000e0000-e0,1,4,14,k77,BD,F5,1D0,ram4,lsfw
 SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*k77,*", SYMLINK+="input/keyboard"
-# twl4030 keyboard
+# twl4030 keyboard (OpenPandora)
 SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*k1D0,*", SYMLINK+="input/keyboard"
 # gpio buttons (OpenPandora, Pyra)
 SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0,1,*k7e,*", SYMLINK+="input/keyboard2"
 
-# check with /sys/devices/platform/*/input/input*/modalias if they are unique
-# headset jack plug/unplug
-# SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0*,5,*w[24678D]*", SYMLINK+="input/jack"
-# external GPS antenna plug/unplug
-SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0*,5,*w[24678D]*", SYMLINK+="input/antenna-detect"
+# check with /sys/class/input/event2/device/modalias if they are unique
+# headset jack plug/unplug (GTA04a5, Pyra, Alpha 400) - input:b0000v0000p0000e0000-e0,5,kramlsfw2,4,
+SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0*,5,*w2,*", SYMLINK+="input/jack"
+# external GPS antenna plug/unplug (GTA04) - input:b0019v0001p0001e0100-e0,5,kramlsfwD,
+SUBSYSTEM=="input", KERNEL=="event[0-9]*", ATTRS{modalias}=="input:*-e0*,5,*wD,*", SYMLINK+="input/antenna-detect"

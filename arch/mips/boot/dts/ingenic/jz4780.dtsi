@@ -276,6 +276,39 @@
 		status = "disabled";
 	};
 
+	/* it is not clear if there is an i2s1 - it is mentioned in power control and interrupts
+	   (AIC0 and AIC1) but there is no base address known */
+	i2s0: i2s@10020000 {
+		compatible = "ingenic,jz4780-i2s";
+		reg = <0x10020000 0x94>;
+
+		#sound-dai-cells = <0>;
+
+		interrupt-parent = <&intc>;
+		interrupts = <1>;
+
+		clocks = <&cgu JZ4780_CLK_AIC>, <&cgu JZ4780_CLK_I2SPLL>;
+		clock-names = "aic", "i2s";
+
+		dmas = <&dma JZ4780_DMA_I2S0_RX 0xffffffff>, <&dma JZ4780_DMA_I2S0_TX 0xffffffff>;
+		dma-names = "rx", "tx";
+
+	};
+
+	codec: audio-codec@100200a4 {
+		compatible = "ingenic,jz4780-codec";
+		reg = <0x100200a4 0x8>;
+
+		#sound-dai-cells = <0>;
+
+		/* Programming Manual: CODEC shares the interrupt with AIC module. */
+		interrupt-parent = <&intc>;
+		interrupts = <1>;	/* assume AIC0 interrupt */
+
+		clocks = <&cgu JZ4780_CLK_I2SPLL>;
+		clock-names = "i2s";
+	};
+
 	uart0: serial@10030000 {
 		compatible = "ingenic,jz4780-uart";
 		reg = <0x10030000 0x100>;

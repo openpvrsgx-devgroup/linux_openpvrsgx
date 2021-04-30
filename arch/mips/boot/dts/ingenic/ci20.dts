@@ -67,6 +67,46 @@
 		};
 	};
 
+	sound {
+		compatible = "ingenic,ci20-audio";
+
+		ingenic,i2s-controller = <&i2s0>;
+		ingenic,codec = <&codec>;
+
+		ingenic,hp-det-gpio = <&gpe 7 GPIO_ACTIVE_HIGH>;	/* 135 */
+		ingenic,hp-mute-gpio = <&gpd 13 GPIO_ACTIVE_HIGH>;	/* 109 */
+		ingenic,mic-detect-gpio = <&gpf 14 GPIO_ACTIVE_HIGH>;	/* 174 */
+
+#if SIMPLE_AUDIO_CARD
+		simple-audio-card,name = "CI20";
+		simple-audio-card,format = "i2s";
+
+		simple-audio-card,widgets =
+			"Speaker", "Speaker",
+			"Microphone", "Mic";
+		simple-audio-card,routing =
+			"MIC", "Mic",
+			"Speaker", "OUTL",
+			"Speaker", "OUTR",
+			"INL", "LOUT",
+			"INR", "ROUT";
+
+		simple-audio-card,bitclock-master = <&dai_codec>;
+		simple-audio-card,frame-master = <&dai_codec>;
+
+		simple-audio-card,hp-det-gpio = <&gpe 7 GPIO_ACTIVE_LOW>;
+		/* can't handle mic detect gpio */
+
+		dai_cpu: simple-audio-card,cpu {
+			sound-dai = <&i2s0>;
+		};
+
+		dai_codec: simple-audio-card,codec {
+			sound-dai = <&codec>;
+		};
+#endif
+	};
+
 	eth0_power: fixedregulator-0 {
 		compatible = "regulator-fixed";
 

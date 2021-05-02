@@ -150,6 +150,7 @@ letux/jz4780-hdmi
 letux/jz4780-smp
 letux/jz4780-efuse
 letux/ci20_defconfig
+letux/jz4780-sound	# contains defconfig fixes...
 
 # E-Book reader
 letux/kobolino/backlight

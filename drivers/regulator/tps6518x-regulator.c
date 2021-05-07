@@ -432,19 +432,6 @@ static int tps6518x_display_is_enabled(struct regulator_dev *reg)
 */
 }
 
-static int tps6518x_tmst_get_temperature(struct regulator_dev *reg)
-{
-	struct tps6518x *tps6518x = rdev_get_drvdata(reg);
-	const int iDefaultTemp = 25;
-	int iTemperature = iDefaultTemp;
-
-	if(tps6518x_get_temperature(tps6518x,&iTemperature)<0) { 
-		iTemperature = iDefaultTemp;
-	}
-
-	return iTemperature;
-}
-
 /*
  * Regulator operations
  */
@@ -469,10 +456,6 @@ static struct regulator_ops tps6518x_v3p3_ops = {
 	.is_enabled = tps6518x_v3p3_is_enabled,
 };
 
-static struct regulator_ops tps6518x_tmst_ops = {
-	.get_voltage = tps6518x_tmst_get_temperature,
-};
-
 /*
  * Regulator descriptors
  */
@@ -495,13 +478,6 @@ static struct regulator_desc tps6518x_reg[TPS6518x_NUM_REGULATORS] = {
 	.name = "V3P3",
 	.id = TPS6518x_V3P3,
 	.ops = &tps6518x_v3p3_ops,
-	.type = REGULATOR_VOLTAGE,
-	.owner = THIS_MODULE,
-},
-{
-	.name = "TMST",
-	.id = TPS6518x_TMST,
-	.ops = &tps6518x_tmst_ops,
 	.type = REGULATOR_VOLTAGE,
 	.owner = THIS_MODULE,
 },

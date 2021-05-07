@@ -334,7 +334,6 @@ enum {
     TPS6518x_DISPLAY, /* virtual master enable */
     TPS6518x_VCOM,
     TPS6518x_V3P3,
-    TPS6518x_TMST,
     TPS6518x_NUM_REGULATORS,
 };
 

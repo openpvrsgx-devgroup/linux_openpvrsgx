@@ -488,7 +488,7 @@
 &pinctrl {
 	pins_lcd: lcd0 {
 		function = "lcd";
-		groups = "lcd-8bit", "lcd-16bit", "lcd-16bit-tft";
+		groups = "lcd-8bit", "lcd-16bit", "lcd-special", "lcd-generic";
 	};
 
 	pins_mmc: mmc {

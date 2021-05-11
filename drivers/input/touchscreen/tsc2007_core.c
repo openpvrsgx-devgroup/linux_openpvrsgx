@@ -255,16 +255,16 @@ static int tsc2007_probe_properties(struct device *dev, struct tsc2007 *ts)
 
 	touchscreen_parse_properties(ts->input, false, &ts->prop);
 
-	if (!of_property_read_u32(np, "ti,min-x", &val32))
+	if (!device_property_read_u32(dev, "ti,min-x", &val32))
 		ts->min_x = val32;
-	if (!of_property_read_u32(np, "ti,max-x", &val32))
+	if (!device_property_read_u32(dev, "ti,max-x", &val32))
 		ts->max_x = val32;
 	else
 		ts->max_x = MAX_12BIT;
 
-	if (!of_property_read_u32(np, "ti,min-y", &val32))
+	if (!device_property_read_u32(dev, "ti,min-y", &val32))
 		ts->min_y = val32;
-	if (!of_property_read_u32(np, "ti,max-y", &val32))
+	if (!device_property_read_u32(dev, "ti,max-y", &val32))
 		ts->max_y = val32;
 	else
 		ts->max_y = MAX_12BIT;
@@ -290,21 +290,16 @@ static int tsc2007_probe_properties(struct device *dev, struct tsc2007 *ts)
 	else
 		dev_warn(dev, "Pen down GPIO is not specified in properties\n");
 
-	dev_dbg(&client->dev,
-			"min/max_x (%4d,%4d)\n",
+	dev_dbg(dev, "min/max_x (%4d,%4d)\n",
 			ts->min_x, ts->max_x);
-	dev_dbg(&client->dev,
-			"min/max_y (%4d,%4d)\n",
+	dev_dbg(dev, "min/max_y (%4d,%4d)\n",
 			ts->min_y, ts->max_y);
-	dev_dbg(&client->dev,
-			"max_rt (%4d)\n",
+	dev_dbg(dev, "max_rt (%4d)\n",
 			ts->max_rt);
-	dev_dbg(&client->dev,
-			"size (%4d,%4d)\n",
+	dev_dbg(dev, "size (%4d,%4d)\n",
 			ts->prop.max_x, ts->prop.max_y);
-	dev_dbg(&client->dev,
-			"ts-gpio: %d\n",
-			ts->gpio);
+	dev_dbg(dev, "ts-gpio: %px\n",
+			ts->gpiod);
 
 	return 0;
 }
@@ -397,23 +392,12 @@ static int tsc2007_probe(struct i2c_client *client)
 
 	input_set_capability(input_dev, EV_KEY, BTN_TOUCH);
 
-	if (pdata) {
-		err = tsc2007_probe_pdev(client, ts, pdata, id);
-		if (err)
-			return err;
-		input_set_abs_params(input_dev, ABS_X, 0, ts->max_x-ts->min_x,
-							  ts->fuzzx, 0);
-		input_set_abs_params(input_dev, ABS_Y, 0, ts->max_y-ts->min_y,
-							  ts->fuzzy, 0);
-		input_set_abs_params(input_dev, ABS_PRESSURE, 0, ts->max_rt,
-							  ts->fuzzz, 0);
-	} else {
-		err = tsc2007_probe_dt(client, ts);
-		if (err)
-			return err;
-	}
+	input_set_abs_params(input_dev, ABS_X, 0, ts->max_x-ts->min_x, ts->fuzzx, 0);
+	input_set_abs_params(input_dev, ABS_Y, 0, ts->max_y-ts->min_y, ts->fuzzy, 0);
+	input_set_abs_params(input_dev, ABS_PRESSURE, 0, ts->max_rt, ts->fuzzz, 0);
 
 	if (pdata) {
+
 		if (pdata->exit_platform_hw) {
 			err = devm_add_action(&client->dev,
 					      tsc2007_call_exit_platform_hw,

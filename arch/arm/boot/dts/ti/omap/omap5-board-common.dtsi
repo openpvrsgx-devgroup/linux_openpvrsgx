@@ -763,5 +763,5 @@
 };
 
 &bb2d {
-	status = "ok";
+	status = "disabled";
 };

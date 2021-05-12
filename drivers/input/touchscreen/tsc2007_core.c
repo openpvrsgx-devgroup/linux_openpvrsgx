@@ -330,6 +330,10 @@ static int tsc2007_probe_pdev(struct device *dev, struct tsc2007 *ts,
 		return -EINVAL;
 	}
 
+	input_set_abs_params(ts->input, ABS_X, ts->min_x, ts->max_x-ts->min_x, ts->fuzzx, 0);
+	input_set_abs_params(ts->input, ABS_Y, ts->min_y, ts->max_y-ts->min_y, ts->fuzzy, 0);
+	input_set_abs_params(ts->input, ABS_PRESSURE, 0, ts->max_rt, ts->fuzzz, 0);
+
 	return 0;
 }
 
@@ -358,13 +362,6 @@ static int tsc2007_probe(struct i2c_client *client)
 	if (!ts)
 		return -ENOMEM;
 
-	if (pdata)
-		err = tsc2007_probe_pdev(&client->dev, ts, pdata, id);
-	else
-		err = tsc2007_probe_properties(&client->dev, ts);
-	if (err)
-		return err;
-
 	input_dev = devm_input_allocate_device(&client->dev);
 	if (!input_dev)
 		return -ENOMEM;
@@ -374,6 +371,13 @@ static int tsc2007_probe(struct i2c_client *client)
 	ts->client = client;
 	ts->irq = client->irq;
 	ts->input = input_dev;
+
+	if (pdata)
+		err = tsc2007_probe_pdev(&client->dev, ts, pdata, id);
+	else
+		err = tsc2007_probe_properties(&client->dev, ts);
+	if (err)
+		return err;
 
 	init_waitqueue_head(&ts->wait);
 	mutex_init(&ts->mlock);
@@ -391,10 +395,6 @@ static int tsc2007_probe(struct i2c_client *client)
 	input_set_drvdata(input_dev, ts);
 
 	input_set_capability(input_dev, EV_KEY, BTN_TOUCH);
-
-	input_set_abs_params(input_dev, ABS_X, 0, ts->max_x-ts->min_x, ts->fuzzx, 0);
-	input_set_abs_params(input_dev, ABS_Y, 0, ts->max_y-ts->min_y, ts->fuzzy, 0);
-	input_set_abs_params(input_dev, ABS_PRESSURE, 0, ts->max_rt, ts->fuzzz, 0);
 
 	if (pdata) {
 

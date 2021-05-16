@@ -36,15 +36,18 @@ do
 	do
 		[ "$VERBOSE" ] && echo try $IDENT >&2
 		case "$IDENT" in
-		1e2d:0061 )
-			MODEM="PLS8"
+		0af0:8800 )
+			MODEM="GTM601W"
 			[ "$VERBOSE" ] && echo found $MODEM on USB >&2
-			if [ -r /dev/ttyACM1 ]
-			then
-				[ "$wait" != 1 ] && sleep 2.0	# wait for ^SYSSTART before sending AT commands
-				echo /dev/ttyACM1	# PLS8 - Application port
-				exit
-			fi
+			for i in $(cd /sys/class/tty/ && echo ttyHS* 2>/dev/null) ""
+			do
+				[ "$VERBOSE" ] && echo "try /sys/class/tty/$i/hsotype => $(cat /sys/class/tty/$i/hsotype 2>/dev/null) = $CHANNEL" >&2
+				if [ "$(cat /sys/class/tty/$i/hsotype 2>/dev/null)" = "$CHANNEL" ]
+				then
+					echo /dev/$i
+					exit
+				fi
+			done
 			;;
 		1e2d:0054 )
 			MODEM="PHS8"
@@ -66,18 +69,25 @@ do
 				echo 1e2d 0053 >/sys/bus/usb-serial/drivers/generic/new_id
 			fi
 			;;
-		0af0:8800 )
-			MODEM="GTM601W"
+		1e2d:0061 )
+			MODEM="PLS8"
 			[ "$VERBOSE" ] && echo found $MODEM on USB >&2
-			for i in $(cd /sys/class/tty/ && echo ttyHS* 2>/dev/null) ""
-			do
-				[ "$VERBOSE" ] && echo "try /sys/class/tty/$i/hsotype => $(cat /sys/class/tty/$i/hsotype 2>/dev/null) = $CHANNEL" >&2
-				if [ "$(cat /sys/class/tty/$i/hsotype 2>/dev/null)" = "$CHANNEL" ]
-				then
-					echo /dev/$i
-					exit
-				fi
-			done
+			if [ -r /dev/ttyACM1 ]
+			then
+				[ "$wait" != 1 ] && sleep 2.0	# wait for ^SYSSTART before sending AT commands
+				echo /dev/ttyACM1	# PLS8 - Application port
+				exit
+			fi
+			;;
+		1e2d:0068 | 1e2d:0069 )
+			MODEM="PLSx3"	# PLS83W
+			[ "$VERBOSE" ] && echo found $MODEM on USB >&2
+			if [ -r /dev/ttyACM1 ]
+			then
+				[ "$wait" != 1 ] && sleep 2.0	# wait for ^SYSSTART before sending AT commands
+				echo /dev/ttyACM1	# PLS83W - Application port
+				exit
+			fi
 			;;
 		esac
 		if [ "$VERBOSE" -a "$MODEM" ]

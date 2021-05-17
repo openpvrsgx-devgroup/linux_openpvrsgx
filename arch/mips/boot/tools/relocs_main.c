@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <endian.h>
 #include <elf.h>
 
 #include "relocs.h"

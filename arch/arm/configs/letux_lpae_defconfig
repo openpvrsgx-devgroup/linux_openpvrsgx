@@ -1,5 +1,5 @@
 #
-# Linux/arm 5.13.0-rc1 Kernel Configuration
+# Linux/arm 5.13.0-rc2 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="arm-linux-gnueabihf-gcc (GCC) 4.9.2"
 CONFIG_CC_IS_GCC=y
@@ -3648,7 +3648,7 @@ CONFIG_MFD_CORE=y
 # CONFIG_EZX_PCAP is not set
 # CONFIG_MFD_CPCAP is not set
 # CONFIG_MFD_VIPERBOARD is not set
-# CONFIG_MFD_NTXEC is not set
+CONFIG_MFD_NTXEC=m
 # CONFIG_MFD_RETU is not set
 # CONFIG_MFD_PCF50633 is not set
 # CONFIG_MFD_PM8XXX is not set
@@ -5559,6 +5559,7 @@ CONFIG_RTC_I2C_AND_SPI=y
 # CONFIG_RTC_DRV_RP5C01 is not set
 # CONFIG_RTC_DRV_V3020 is not set
 # CONFIG_RTC_DRV_ZYNQMP is not set
+CONFIG_RTC_DRV_NTXEC=m
 
 #
 # on-CPU RTC drivers
@@ -6425,6 +6426,7 @@ CONFIG_PWM_BCM2835=m
 # CONFIG_PWM_IMX1 is not set
 # CONFIG_PWM_IMX27 is not set
 # CONFIG_PWM_IMX_TPM is not set
+CONFIG_PWM_NTXEC=m
 CONFIG_PWM_OMAP_DMTIMER=m
 # CONFIG_PWM_PCA9685 is not set
 # CONFIG_PWM_RASPBERRYPI_POE is not set

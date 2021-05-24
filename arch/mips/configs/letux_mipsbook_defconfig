@@ -1,5 +1,5 @@
 #
-# Linux/mips 5.13.0-rc2 Kernel Configuration
+# Linux/mips 5.13.0-rc3 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="mipsel-linux-gnu-gcc (GCC) 4.9.2"
 CONFIG_CC_IS_GCC=y
@@ -4176,7 +4176,7 @@ CONFIG_TIMER_OF=y
 CONFIG_TIMER_PROBE=y
 CONFIG_INGENIC_TIMER=y
 # CONFIG_INGENIC_SYSOST is not set
-# CONFIG_INGENIC_OST is not set
+CONFIG_INGENIC_OST=y
 # CONFIG_MICROCHIP_PIT64B is not set
 # end of Clock Source drivers
 

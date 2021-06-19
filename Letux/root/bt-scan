@@ -3,13 +3,16 @@
 # scan for bluetooth clients
 #
 
+DEV="$1"
+[ "$1" ] || DEV=hci0
+
 rfkill unblock bluetooth
 
 # load TI Shared Transport driver (if configured into the kernel)
 
 modprobe -r st_drv
 
-if ! hciconfig | fgrep -q hci0
+if ! hciconfig | fgrep -q $DEV
 then # bluetooth support not configured into kernel or not yet running - needs to start hciattach
 
 	case $(tr -d '\0' </proc/device-tree/model) in
@@ -77,12 +80,19 @@ echo starting: hciattach $FLAGS $UART $MODE $BTBAUD $ARGS
 	fi
 fi
 
-if ! hciconfig hci0 up
+if ! hciconfig $DEV up
 then
-	echo hciconfig hci0 up failed
+	echo hciconfig $DEV up failed
 	exit 1
 fi
 
-timeout --foreground -k 3 30 hcitool scan --info
-# reports in a different format
+# hcitool scan no longer reports anything
+# timeout --foreground -k 3 30 hcitool scan --info
+
+# timeout --foreground -k 3 30 hcitool lescan
+
+# reports in a different format (more detailled, multiple lines per device)
 # timeout --foreground -k 3 30 bt-adapter -d
+
+# this seems to be the most modern variant
+(echo "scan on"; sleep 10; echo quit) | bluetoothctl | fgrep Device

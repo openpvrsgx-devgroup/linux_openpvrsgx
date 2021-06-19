@@ -6,25 +6,38 @@
 read -t 5 WLAN OTHER < <(iwconfig 2>&1 | fgrep 'wlan')
 [ "$WLAN" ] || WLAN=wlan0
 
+while [ "$1" ]
+do
 case "$1" in
-	-a ) # ad hoc network
-		iwconfig $WLAN mode ad-hoc essid Letux enc off channel 6 &&
-		ifconfig $WLAN 10.1.1.1
+	-d ) # set interface
+		shift
+		WLAN="$1"
+		shift
 		;;
-
-	'' )
-		wpa_supplicant -B -i $WLAN -c /etc/wpa_supplicant/wpa_supplicant.conf
+	-a ) # create ad hoc network
+		iwconfig "$WLAN" mode ad-hoc essid Letux enc off channel 6 &&
+		ifconfig "$WLAN" 10.1.1.1
+		exit
 		;;
 	-* )
-		echo "usage: $0 -a | ssid"
+		echo "usage: $0 [-d dev] -a | [ssid]"
+		echo "  -d dev: set interface"
 		echo "  -a:     ad hoc mode"
 		echo "  ssid:   SSID to connect to"
+		echo "  :       start wpa_supplicant"
+		exit;
 		;;
-
 	* ) # simple client
-		ifconfig $WLAN up &&
-		iwconfig $WLAN essid "$1" &&
-		dhclient $WLAN
+		SSID="$1"
 		;;
-
 esac
+done
+
+if [ "$SSID" ]
+then
+	ifconfig "$WLAN" up &&
+	iwconfig "$WLAN" essid "$1" &&
+	dhclient "$WLAN"
+else
+	wpa_supplicant -B -i "$WLAN" -c /etc/wpa_supplicant/wpa_supplicant.conf
+fi

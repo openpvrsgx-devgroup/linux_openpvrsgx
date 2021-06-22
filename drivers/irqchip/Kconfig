@@ -337,6 +337,13 @@ config INGENIC_IRQ
 	depends on MACH_INGENIC
 	default y
 
+config IRQ_INGENIC_CPU
+	bool
+	select GENERIC_IRQ_CHIP
+	select GENERIC_IRQ_IPI if SYS_SUPPORTS_MULTITHREADING
+	select IRQ_DOMAIN
+	select GENERIC_IRQ_EFFECTIVE_AFF_MASK
+
 config INGENIC_TCU_IRQ
 	bool "Ingenic JZ47xx TCU interrupt controller"
 	default MACH_INGENIC

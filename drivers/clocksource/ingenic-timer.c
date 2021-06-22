@@ -48,6 +48,8 @@ struct ingenic_tcu {
 
 static struct ingenic_tcu *ingenic_tcu;
 
+extern unsigned int *ingenic_tcu_intc_affinity;
+
 static u64 notrace ingenic_tcu_timer_read(void)
 {
 	struct ingenic_tcu *tcu = ingenic_tcu;
@@ -179,6 +181,8 @@ static int ingenic_tcu_setup_cevt(unsigned int cpu)
 	if (err)
 		goto err_irq_dispose_mapping;
 
+	ingenic_tcu_intc_affinity[cpu] = BIT(timer->channel);
+
 	timer->cpu = smp_processor_id();
 	timer->cevt.cpumask = cpumask_of(smp_processor_id());
 	timer->cevt.features = CLOCK_EVT_FEAT_ONESHOT;
@@ -289,6 +293,11 @@ static int __init ingenic_tcu_init(struct device_node *np)
 	tcu = kzalloc(struct_size(tcu, timers, num_possible_cpus()),
 		      GFP_KERNEL);
 	if (!tcu)
+		return -ENOMEM;
+
+	ingenic_tcu_intc_affinity = kzalloc(sizeof(unsigned int) * num_possible_cpus(),
+		      GFP_KERNEL);
+	if (!ingenic_tcu_intc_affinity)
 		return -ENOMEM;
 
 	/*

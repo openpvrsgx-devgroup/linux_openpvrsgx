@@ -21,6 +21,8 @@ struct ingenic_tcu {
 	u32 parent_irqs[3];
 };
 
+unsigned int *ingenic_tcu_intc_affinity;
+
 static void ingenic_tcu_intc_cascade(struct irq_desc *desc)
 {
 	struct irq_chip *irq_chip = irq_data_get_irq_chip(&desc->irq_data);
@@ -35,6 +37,13 @@ static void ingenic_tcu_intc_cascade(struct irq_desc *desc)
 	regmap_read(map, TCU_REG_TMR, &irq_mask);
 
 	chained_irq_enter(irq_chip, desc);
+
+	if(IS_ENABLED(CONFIG_JZ4780_CI20) && IS_ENABLED(CONFIG_SMP)) {
+		if (smp_processor_id())
+			irq_mask |= ingenic_tcu_intc_affinity[0];
+		else
+			irq_mask |= ingenic_tcu_intc_affinity[1];
+	}
 
 	irq_reg &= ~irq_mask;
 	bits = irq_reg;

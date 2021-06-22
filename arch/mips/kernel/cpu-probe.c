@@ -563,7 +563,8 @@ static inline unsigned int decode_config4(struct cpuinfo_mips *c)
 	config4 = read_c0_config4();
 
 	if (cpu_has_tlb) {
-		if (((config4 & MIPS_CONF4_IE) >> 29) == 2)
+		if (((config4 & MIPS_CONF4_IE) >> 29) == 2 ||
+				((config4 & MIPS_CONF4_IE) >> 29) == 3)
 			c->options |= MIPS_CPU_TLBINV;
 
 		/*

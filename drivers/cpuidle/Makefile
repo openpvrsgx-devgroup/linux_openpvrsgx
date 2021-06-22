@@ -30,6 +30,7 @@ obj-$(CONFIG_ARM_QCOM_SPM_CPUIDLE)	+= cpuidle-qcom-spm.o
 ###############################################################################
 # MIPS drivers
 obj-$(CONFIG_MIPS_CPS_CPUIDLE)		+= cpuidle-cps.o
+obj-$(CONFIG_MIPS_JZ4780_CPUIDLE)	+= cpuidle-jz4780.o
 
 ###############################################################################
 # POWERPC drivers

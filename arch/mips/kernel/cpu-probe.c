@@ -1761,12 +1761,12 @@ static inline void cpu_probe_ingenic(struct cpuinfo_mips *c, unsigned int cpu)
 	case PRID_IMP_XBURST_REV1:
 
 		/*
-		 * The XBurst core by default attempts to avoid branch target
+		 * The XBurst®1 core by default attempts to avoid branch target
 		 * buffer lookups by detecting & special casing loops. This
 		 * feature will cause BogoMIPS and lpj calculate in error.
 		 * Set cp0 config7 bit 4 to disable this feature.
 		 */
-		set_c0_config7(MIPS_CONF7_BTB_LOOP_EN);
+		set_c0_config7(XBURST_CONF7_BTB_LOOP_EN);
 
 		switch (c->processor_id & PRID_COMP_MASK) {
 
@@ -1795,7 +1795,7 @@ static inline void cpu_probe_ingenic(struct cpuinfo_mips *c, unsigned int cpu)
 		 * getting stuck.
 		 */
 		case PRID_COMP_INGENIC_D1:
-			write_c0_page_ctrl(XBURST_PAGECTRL_HPTLB_DIS);
+			write_c0_ingenic_pagectl(XBURST_PAGECTL_HPTLB_DIS);
 			break;
 
 		default:
@@ -1813,7 +1813,7 @@ static inline void cpu_probe_ingenic(struct cpuinfo_mips *c, unsigned int cpu)
 
 	/* XBurst®2 with MXU2.1 SIMD ISA */
 	case PRID_IMP_XBURST2:
-		c->cputype = CPU_XBURST;
+		c->cputype = CPU_XBURST2;
 		__cpu_name[cpu] = "Ingenic XBurst II";
 		break;
 

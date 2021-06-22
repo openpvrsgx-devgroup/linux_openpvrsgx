@@ -868,10 +868,14 @@
 #define MIPS_CONF7_AR		(_ULCAST_(1) << 16)
 
 /* Ingenic HPTLB off bits */
-#define XBURST_PAGECTRL_HPTLB_DIS 0xa9000000
+#define XBURST_PAGECTL_HPTLB_DIS	0xa9000000
 
 /* Ingenic Config7 bits */
-#define MIPS_CONF7_BTB_LOOP_EN	(_ULCAST_(1) << 4)
+#define XBURST_CONF7_BTB_LOOP_EN	(_ULCAST_(1) << 4)
+
+/* Ingenic ErrCtl bits */
+#define XBURST_ERRCTL_WST_EN		(_ULCAST_(1) << 29)
+#define XBURST_ERRCTL_WST_DIS		(_ULCAST_(0) << 29)
 
 /* Config7 Bits specific to MIPS Technologies. */
 
@@ -2190,8 +2194,10 @@ do {									\
 #define read_c0_brcm_sleepcount()	__read_32bit_c0_register($22, 7)
 #define write_c0_brcm_sleepcount(val)	__write_32bit_c0_register($22, 7, val)
 
-/* Ingenic page ctrl register */
-#define write_c0_page_ctrl(val)	__write_32bit_c0_register($5, 4, val)
+/* Ingenic XBurst SoCs specific registers */
+#define write_c0_ingenic_pagectl(val)	__write_32bit_c0_register($5, 4, val)
+
+#define write_c0_ingenic_errctl(val)	__write_32bit_c0_register($26, 0, val)
 
 /*
  * Macros to access the guest system control coprocessor

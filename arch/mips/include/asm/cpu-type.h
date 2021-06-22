@@ -57,6 +57,7 @@ static inline int __pure __get_cpu_type(const int cpu_type)
 #ifdef CONFIG_SYS_HAS_CPU_MIPS32_R5
 	case CPU_M5150:
 	case CPU_P5600:
+	case CPU_XBURST2:
 #endif
 
 #if defined(CONFIG_SYS_HAS_CPU_MIPS32_R2) || \

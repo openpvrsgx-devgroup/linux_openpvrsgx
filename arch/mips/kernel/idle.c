@@ -164,6 +164,7 @@ void __init check_wait(void)
 	case CPU_CAVIUM_OCTEON2:
 	case CPU_CAVIUM_OCTEON3:
 	case CPU_XBURST:
+	case CPU_XBURST2:
 	case CPU_LOONGSON32:
 		cpu_wait = r4k_wait;
 		break;

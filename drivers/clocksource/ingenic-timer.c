@@ -57,6 +57,8 @@ struct ingenic_tcu {
 
 static struct ingenic_tcu *ingenic_tcu;
 
+extern unsigned int *ingenic_tcu_intc_affinity;
+
 static u64 notrace ingenic_tcu_timer_read(void)
 {
 	struct ingenic_tcu *tcu = ingenic_tcu;
@@ -222,6 +224,8 @@ static int ingenic_tcu_setup_cevt(unsigned int cpu)
 			  timer->name, timer);
 	if (err)
 		goto err_irq_dispose_mapping;
+
+	ingenic_tcu_intc_affinity[cpu] = BIT(timer->channel);
 
 	timer->cpu = smp_processor_id();
 	timer->cevt.cpumask = cpumask_of(smp_processor_id());
@@ -392,6 +396,11 @@ static int __init ingenic_tcu_init(struct device_node *np)
 			goto err_free_ingenic_tcu;
 		}
 	}
+
+	ingenic_tcu_intc_affinity = kzalloc(sizeof(unsigned int) * num_possible_cpus(),
+		      GFP_KERNEL);
+	if (!ingenic_tcu_intc_affinity)
+		return -ENOMEM;
 
 	/*
 	 * Enable all TCU channels for PWM use by default except channels 0/1,

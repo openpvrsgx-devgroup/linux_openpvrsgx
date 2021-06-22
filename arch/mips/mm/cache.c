@@ -210,8 +210,20 @@ void cpu_cache_init(void)
 	if (IS_ENABLED(CONFIG_CPU_R4K_CACHE_TLB) && cpu_has_4k_cache)
 		r4k_cache_init();
 
+	if (cpu_has_tx39_cache) {
+		extern void __weak tx39_cache_init(void);
+
+		tx39_cache_init();
+	}
+
 	if (IS_ENABLED(CONFIG_CPU_CAVIUM_OCTEON) && cpu_has_octeon_cache)
 		octeon_cache_init();
+
+	if (cpu_has_ingenic_cache) {
+		extern void __weak ingenic_cache_init(void);
+
+		ingenic_cache_init();
+	}
 
 	setup_protection_map();
 }

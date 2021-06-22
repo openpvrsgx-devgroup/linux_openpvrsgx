@@ -2178,7 +2178,7 @@ config CPU_R4K_FPU
 
 config CPU_R4K_CACHE_TLB
 	bool
-	default y if !(CPU_R3K_TLB || CPU_SB1 || CPU_CAVIUM_OCTEON)
+	default y if !(CPU_R3K_TLB || CPU_SB1 || CPU_CAVIUM_OCTEON || MACH_INGENIC)
 
 config MIPS_MT_SMP
 	bool "MIPS MT SMP support (1 TC on each available VPE)"

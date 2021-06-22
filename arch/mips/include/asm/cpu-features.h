@@ -140,6 +140,9 @@
 	__res;								\
 })
 #endif
+#ifndef cpu_has_ingenic_cache
+#define cpu_has_ingenic_cache	0
+#endif
 /* Don't override `cpu_has_fpu' to 1 or the "nofpu" option won't work.  */
 #ifndef cpu_has_fpu
 # ifdef CONFIG_MIPS_FP_SUPPORT

@@ -80,11 +80,11 @@ static inline int has_valid_asid(const struct mm_struct *mm)
 {
 	unsigned int cpu;
 
-	if (mips_machtype >= MACH_INGENIC_X2000)
+	if (mips_machtype >= MACH_INGENIC_X2000) {
 		for_each_cpu(cpu, cpu_present_mask)
 			if (cpu_context(cpu, mm))
 				return 1;
-	else
+	} else
 		return cpu_context(smp_processor_id(), mm);
 
 	return 0;

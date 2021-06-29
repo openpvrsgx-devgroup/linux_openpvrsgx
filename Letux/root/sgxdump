@@ -2,7 +2,7 @@
 
 function machine {
 	MACHINE="$([ -r /sys/devices/soc0/machine ] && tr -d '\0' </sys/devices/soc0/machine)"
-	[ "$MACHINE" ] || MACHINE=$(cat /proc/device-tree/model 2>/dev/null)
+	[ "$MACHINE" ] || MACHINE=$(tr -d '\0' </proc/device-tree/model 2>/dev/null)
 	[ "$MACHINE" ] || MACHINE=$(fgrep "system type" /proc/cpuinfo)
 	echo $MACHINE
 }

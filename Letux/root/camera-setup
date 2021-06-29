@@ -36,7 +36,7 @@ function media-format { # $1 = entity, $2 = format $3 = widthxheight
 	media-ctl -V "$1 [$2 $3]"
 }
 
-case "$(cat /proc/device-tree/model)" in
+case "$(tr -d '\0' </proc/device-tree/model)" in
 	*GTA04* )
 		;;
 	*PinePhone* )

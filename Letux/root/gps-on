@@ -10,7 +10,7 @@ SCRIPTPATH="$(dirname "$0")"
 
 rfkill unblock gps	# turn on LNA etc.
 
-case "$(cat /sys/firmware/devicetree/base/model)" in
+case "$(tr -d '\0' </sys/firmware/devicetree/base/model)" in
 	*GTA04*/Letux* )
 		# print first file we find
 		ls -1 /dev/ttyGPS0 /dev/gnss0 /dev/ttyO1 2>/dev/null | head -1

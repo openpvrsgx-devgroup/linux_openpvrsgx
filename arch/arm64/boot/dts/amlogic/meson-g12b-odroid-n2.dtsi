@@ -9,6 +9,8 @@
 / {
 	aliases {
 		ethernet0 = &ethmac;
+		i2c0 = &i2c2;
+		i2c1 = &i2c3;
 		rtc0 = &rtc;
 		serial0 = &uart_AO;
 		serial1 = &uart_A;
@@ -251,6 +253,47 @@
 	};
 };
 
+&hdmi_tx {
+	status = "okay";
+	pinctrl-0 = <&hdmitx_hpd_pins>, <&hdmitx_ddc_pins>;
+	pinctrl-names = "default";
+	hdmi-supply = <&vcc_5v>;
+};
+
+&hdmi_tx_tmds_port {
+	hdmi_tx_tmds_out: endpoint {
+		remote-endpoint = <&hdmi_connector_in>;
+	};
+};
+
+&ir {
+	status = "okay";
+	pinctrl-0 = <&remote_input_ao_pins>;
+	pinctrl-names = "default";
+	linux,rc-map-name = "rc-odroid";
+};
+
+&i2c2 {
+	status = "okay";
+	pinctrl-0 = <&i2c2_sda_x_pins>, <&i2c2_sck_x_pins>;
+	pinctrl-names = "default";
+	clock-frequency = <400000>;
+};
+
+&i2c2_sda_x_pins {
+	mux {
+		/delete-property/ bias-disable;
+		bias-pull-up;
+	};
+};
+
+&i2c2_sck_x_pins {
+	mux {
+		/delete-property/ bias-disable;
+		bias-pull-up;
+	};
+};
+
 &i2c3 {
 	status = "okay";
 	pinctrl-0 = <&i2c3_sda_a_pins>, <&i2c3_sck_a_pins>;
@@ -263,9 +306,28 @@
 	};
 };
 
+<<<<<<< HEAD
 &ir {
 	status = "okay";
 	pinctrl-0 = <&remote_input_ao_pins>;
+=======
+&i2c3_sda_a_pins {
+	mux {
+		/delete-property/ bias-disable;
+		bias-pull-up;
+	};
+};
+
+&i2c3_sck_a_pins {
+	mux {
+		/delete-property/ bias-disable;
+		bias-pull-up;
+	};
+};
+
+&pwm_ab {
+	pinctrl-0 = <&pwm_a_e_pins>;
+>>>>>>> 0ef114fadf259 (ODROID-N2/N2Plus: fix I2C bus hardware properties)
 	pinctrl-names = "default";
 	linux,rc-map-name = "rc-odroid";
 };

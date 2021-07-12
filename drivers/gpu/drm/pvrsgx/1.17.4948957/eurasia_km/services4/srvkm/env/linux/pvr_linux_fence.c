@@ -428,7 +428,11 @@ static int update_dma_resv_fences_dst(struct pvr_fence_frame *pvr_fence_frame,
 	unsigned i;
 	int ret;
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0))
+	flist = dma_resv_shared_list(resv);
+#else
 	flist = dma_resv_get_list(resv);
+#endif
 	shared_fence_count = flist ? flist->shared_count : 0;
 
 	fence_to_signal = create_fence_to_signal(pvr_fence_frame);
@@ -445,7 +449,9 @@ static int update_dma_resv_fences_dst(struct pvr_fence_frame *pvr_fence_frame,
 
 	if (!shared_fence_count)
 	{
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0))
+		struct dma_fence *fence = dma_resv_excl_fence(resv);
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0))
 		struct dma_fence *fence = dma_resv_get_excl(resv);
 #else
 		struct fence *fence = dma_resv_get_excl(resv);
@@ -479,7 +485,9 @@ static int update_dma_resv_fences_dst(struct pvr_fence_frame *pvr_fence_frame,
 	for (i = 0, blocking_fence_count = 0; i < shared_fence_count; i++)
 	{
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0))
+		struct dma_fence *fence = rcu_dereference_check(flist->shared[i], dma_resv_held(resv));
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0))
 		struct dma_fence *fence = rcu_dereference_protected(flist->shared[i], dma_resv_held(resv));
 #else
 		struct fence *fence = rcu_dereference_protected(flist->shared[i], dma_resv_held(resv));
@@ -498,7 +506,9 @@ static int update_dma_resv_fences_dst(struct pvr_fence_frame *pvr_fence_frame,
 		{
 			for (i = 0; i < blocking_fence_count; i++)
 			{
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0))
+				struct dma_fence *fence = rcu_dereference_check(flist->shared[i], dma_resv_held(resv));
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0))
 				struct dma_fence *fence = rcu_dereference_protected(flist->shared[i], dma_resv_held(resv));
 #else
 				struct fence *fence = rcu_dereference_protected(flist->shared[i], dma_resv_held(resv));
@@ -563,7 +573,11 @@ static int update_dma_resv_fences_src(struct pvr_fence_frame *pvr_fence_frame,
 		return 0;
 	}
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0))
+	flist = dma_resv_shared_list(resv);
+#else
 	flist = dma_resv_get_list(resv);
+#endif
 	shared_fence_count = flist ? flist->shared_count : 0;
 
 	/*
@@ -574,7 +588,9 @@ static int update_dma_resv_fences_src(struct pvr_fence_frame *pvr_fence_frame,
 	 */
 	for (i = 0; i < shared_fence_count; i++)
 	{
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0))
+		struct dma_fence *fence = rcu_dereference_check(flist->shared[i], dma_resv_held(resv));
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0))
 		struct dma_fence *fence = rcu_dereference_protected(flist->shared[i], dma_resv_held(resv));
 #else
 		struct fence *fence = rcu_dereference_protected(flist->shared[i], dma_resv_held(resv));
@@ -609,7 +625,9 @@ static int update_dma_resv_fences_src(struct pvr_fence_frame *pvr_fence_frame,
 
 	if (!blocking_fence && !shared_fence_count)
 	{
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0))
+		struct dma_fence *fence = dma_resv_excl_fence(resv);
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0))
 		struct dma_fence *fence = dma_resv_get_excl(resv);
 #else
 		struct fence *fence = dma_resv_get_excl(resv);

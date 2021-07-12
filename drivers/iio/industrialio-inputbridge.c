@@ -164,8 +164,8 @@ static int iio_input_register_accel_channels(struct iio_dev *indio_dev,
 
 	poll_dev->name = kasprintf(GFP_KERNEL, "iio-bridge: %s",
 						    indio_dev->name);
-	poll_dev->phys = kasprintf(GFP_KERNEL, "iio:device%d",
-						    indio_dev->id);
+	poll_dev->phys = kasprintf(GFP_KERNEL, "iio:%s",
+						    indio_dev->name);
 
 // do we need something like this?
 //	poll_dev->input->id.bustype = BUS_IIO;

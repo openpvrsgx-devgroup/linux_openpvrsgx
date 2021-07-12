@@ -538,8 +538,7 @@ static int bno055_probe(struct i2c_client *client,
 
 	data = iio_priv(indio_dev);
 
-	ret = iio_read_mount_matrix(&client->dev, "mount-matrix",
-				&data->orientation);
+	ret = iio_read_mount_matrix(&client->dev, &data->orientation);
 	if (ret)
 		return ret;
 

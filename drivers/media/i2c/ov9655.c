@@ -903,7 +903,7 @@ static int ov9655_s_stream(struct v4l2_subdev *subdev, int enable)
 }
 
 static int ov9655_enum_mbus_code(struct v4l2_subdev *subdev,
-				 struct v4l2_subdev_pad_config *cfg,
+				 struct v4l2_subdev_state *sd_state,
 				 struct v4l2_subdev_mbus_code_enum *code)
 {
 	if (code->index >= ARRAY_SIZE(ov9655_formats))
@@ -914,7 +914,7 @@ static int ov9655_enum_mbus_code(struct v4l2_subdev *subdev,
 }
 
 static int ov9655_enum_frame_size(struct v4l2_subdev *subdev,
-				   struct v4l2_subdev_pad_config *cfg,
+				   struct v4l2_subdev_state *sd_state,
 				   struct v4l2_subdev_frame_size_enum *fse)
 {
 	int i = ARRAY_SIZE(ov9655_formats);
@@ -937,7 +937,7 @@ static int ov9655_enum_frame_size(struct v4l2_subdev *subdev,
 }
 
 static struct v4l2_mbus_framefmt *
-__ov9655_get_pad_format(struct ov9655 *ov9655, struct v4l2_subdev_pad_config *cfg,
+__ov9655_get_pad_format(struct ov9655 *ov9655, struct v4l2_subdev_state *sd_state,
 			 unsigned int pad, u32 which)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&ov9655->subdev);
@@ -948,7 +948,7 @@ __ov9655_get_pad_format(struct ov9655 *ov9655, struct v4l2_subdev_pad_config *cf
 
 	switch (which) {
 	case V4L2_SUBDEV_FORMAT_TRY:
-		return v4l2_subdev_get_try_format(&ov9655->subdev, cfg, pad);
+		return v4l2_subdev_get_try_format(&ov9655->subdev, sd_state, pad);
 	case V4L2_SUBDEV_FORMAT_ACTIVE:
 		return &ov9655->format;
 	default:
@@ -957,7 +957,7 @@ __ov9655_get_pad_format(struct ov9655 *ov9655, struct v4l2_subdev_pad_config *cf
 }
 
 static struct v4l2_rect *
-__ov9655_get_pad_crop(struct ov9655 *ov9655, struct v4l2_subdev_pad_config *cfg,
+__ov9655_get_pad_crop(struct ov9655 *ov9655, struct v4l2_subdev_state *sd_state,
 		     unsigned int pad, u32 which)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&ov9655->subdev);
@@ -968,7 +968,7 @@ __ov9655_get_pad_crop(struct ov9655 *ov9655, struct v4l2_subdev_pad_config *cfg,
 
 	switch (which) {
 	case V4L2_SUBDEV_FORMAT_TRY:
-		return v4l2_subdev_get_try_crop(&ov9655->subdev, cfg, pad);
+		return v4l2_subdev_get_try_crop(&ov9655->subdev, sd_state, pad);
 	case V4L2_SUBDEV_FORMAT_ACTIVE:
 		return &ov9655->crop;
 	default:
@@ -986,7 +986,7 @@ static void ov9655_get_default_format(struct v4l2_mbus_framefmt *mf)
 }
 
 static int ov9655_get_format(struct v4l2_subdev *subdev,
-			      struct v4l2_subdev_pad_config *cfg,
+			      struct v4l2_subdev_state *sd_state,
 			      struct v4l2_subdev_format *fmt)
 {
 	struct ov9655 *ov9655 = to_ov9655(subdev);
@@ -994,7 +994,7 @@ static int ov9655_get_format(struct v4l2_subdev *subdev,
 
 	dev_info(&client->dev, "%s\n", __func__);
 
-	fmt->format = *__ov9655_get_pad_format(ov9655, cfg, fmt->pad,
+	fmt->format = *__ov9655_get_pad_format(ov9655, sd_state, fmt->pad,
 						fmt->which);
 	printmbusfmt(client, &fmt->format);
 
@@ -1002,7 +1002,7 @@ static int ov9655_get_format(struct v4l2_subdev *subdev,
 }
 
 static int ov9655_set_format(struct v4l2_subdev *subdev,
-				struct v4l2_subdev_pad_config *cfg,
+				struct v4l2_subdev_state *sd_state,
 				struct v4l2_subdev_format *fmt)
 {
 	unsigned int index = ARRAY_SIZE(ov9655_formats);
@@ -1022,8 +1022,8 @@ static int ov9655_set_format(struct v4l2_subdev *subdev,
 	mf->field	= V4L2_FIELD_NONE;
 
 	if (fmt->which == V4L2_SUBDEV_FORMAT_TRY) {
-		if (!cfg) {
-			mf = v4l2_subdev_get_try_format(subdev, cfg, fmt->pad);
+		if (!sd_state) {
+			mf = v4l2_subdev_get_try_format(subdev, sd_state, fmt->pad);
 			*mf = fmt->format;
 		}
 	} else
@@ -1036,7 +1036,7 @@ static int ov9655_set_format(struct v4l2_subdev *subdev,
 }
 
 static int ov9655_get_selection(struct v4l2_subdev *subdev,
-			    struct v4l2_subdev_pad_config *cfg,
+			    struct v4l2_subdev_state *sd_state,
 				 struct v4l2_subdev_selection *sel)
 {
 	struct ov9655 *ov9655 = to_ov9655(subdev);
@@ -1047,12 +1047,12 @@ static int ov9655_get_selection(struct v4l2_subdev *subdev,
 	if (sel->target != V4L2_SEL_TGT_CROP)
 		return -EINVAL;
 
-	sel->r = *__ov9655_get_pad_crop(ov9655, cfg, sel->pad, sel->which);
+	sel->r = *__ov9655_get_pad_crop(ov9655, sd_state, sel->pad, sel->which);
 	return 0;
 }
 
 static int ov9655_set_selection(struct v4l2_subdev *subdev,
-			    struct v4l2_subdev_pad_config *cfg,
+			    struct v4l2_subdev_state *sd_state,
 				 struct v4l2_subdev_selection *sel)
 {
 	struct ov9655 *ov9655 = to_ov9655(subdev);
@@ -1085,13 +1085,13 @@ static int ov9655_set_selection(struct v4l2_subdev *subdev,
 	rect.height = min_t(unsigned int, rect.height,
 			OV9655_PIXEL_ARRAY_HEIGHT - rect.top);
 
-	__crop = __ov9655_get_pad_crop(ov9655, cfg, sel->pad, sel->which);
+	__crop = __ov9655_get_pad_crop(ov9655, sd_state, sel->pad, sel->which);
 
 	if (rect.width != __crop->width || rect.height != __crop->height) {
 		/* Reset the output image size if the crop rectangle size has
 		 * been modified.
 		 */
-		__format = __ov9655_get_pad_format(ov9655, cfg, sel->pad,
+		__format = __ov9655_get_pad_format(ov9655, sd_state, sel->pad,
 						    sel->which);
 		__format->width = rect.width;
 		__format->height = rect.height;
@@ -1448,13 +1448,13 @@ static int ov9655_open(struct v4l2_subdev *subdev, struct v4l2_subdev_fh *fh)
 	dev_info(&client->dev, "%s\n", __func__);
 
 	// v4l2_subdev_get_try_crop
-	crop = v4l2_subdev_get_try_crop(subdev, fh->pad, 0);
+	crop = v4l2_subdev_get_try_crop(subdev, fh->state, 0);
 	crop->left = OV9655_COLUMN_START_DEF;
 	crop->top = OV9655_ROW_START_DEF;
 	crop->width = OV9655_WINDOW_WIDTH_DEF;
 	crop->height = OV9655_WINDOW_HEIGHT_DEF;
 
-	format = v4l2_subdev_get_try_format(subdev, fh->pad, 0);
+	format = v4l2_subdev_get_try_format(subdev, fh->state, 0);
 
 	ov9655_get_default_format(format);
 

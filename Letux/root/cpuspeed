@@ -1,0 +1,5 @@
+#!/bin/bash
+
+PROCESSORS=$(nproc --all)
+
+sysbench --num-threads=$PROCESSORS --test=cpu --cpu-max-prime=1 run

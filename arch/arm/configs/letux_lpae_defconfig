@@ -1,5 +1,5 @@
 #
-# Linux/arm 5.14.0-rc2 Kernel Configuration
+# Linux/arm 5.14.0-rc3 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="arm-linux-gnueabihf-gcc (GCC) 4.9.2"
 CONFIG_CC_IS_GCC=y
@@ -4826,6 +4826,7 @@ CONFIG_SND_SOC_W2CBW003=m
 # CONFIG_SND_SOC_SIMPLE_MUX is not set
 CONFIG_SND_SOC_SPDIF=m
 # CONFIG_SND_SOC_SSM2305 is not set
+# CONFIG_SND_SOC_SSM2518 is not set
 # CONFIG_SND_SOC_SSM2602_SPI is not set
 # CONFIG_SND_SOC_SSM2602_I2C is not set
 # CONFIG_SND_SOC_SSM4567 is not set
@@ -4881,7 +4882,6 @@ CONFIG_SND_SOC_TWL6040=m
 # CONFIG_SND_SOC_WM8978 is not set
 # CONFIG_SND_SOC_WM8985 is not set
 # CONFIG_SND_SOC_ZL38060 is not set
-# CONFIG_SND_SOC_ZX_AUD96P22 is not set
 # CONFIG_SND_SOC_MAX9759 is not set
 # CONFIG_SND_SOC_MT6351 is not set
 # CONFIG_SND_SOC_MT6358 is not set

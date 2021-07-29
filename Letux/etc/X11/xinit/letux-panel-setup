@@ -63,8 +63,11 @@ function model_or_compatible {
 	if [ -r /proc/device-tree/model ]
 	then
 		tr -d '\0' </proc/device-tree/model 2>/dev/null
-	else	# prefix and separate with @
+	elif [ -r /proc/device-tree/compatible ]	# prefix and separate with @
+	then
 		echo @$(tr '\0' '@' </proc/device-tree/compatible 2>/dev/null)
+	else
+		echo "x86"
 	fi
 }
 
@@ -105,6 +108,8 @@ case "$(model_or_compatible)" in
 		PANEL=5.8-1072x1448-epd
 		echo 3 >/sys/class/graphics/fb0/rotate
 		;;
+	*x86* )
+		PANEL=auto;;	# works well with auto-detection
 esac
 
 $DEBUG && echo "Panel: $PANEL"

@@ -485,6 +485,58 @@ AllocFlagsToPGProt(pgprot_t *pPGProtFlags, IMG_UINT32 ui32AllocFlags)
     return IMG_TRUE;
 }
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,8,0))
+#else
+/* provide pre-5.8 __vmalloc() with 3 parameters */
+
+#include <linux/kallsyms.h>
+
+static void *__old_vmalloc_node(unsigned long size, unsigned long align,
+			    gfp_t gfp_mask, pgprot_t prot,
+			    int node, const void *caller)
+{
+#if 0
+/* unfortunately this does no longer work
+ * because now kallsyms_lookup_name() itself is no longer
+ * exported
+ * See: https://lwn.net/Articles/813350/
+*/
+	/* look up a function that is not exported by EXPORT_SYMBOL
+	 * so that we can link a kernel module
+	 * see: https://www.programmersought.com/article/40296591069/
+	 */
+
+	typedef void *ft(unsigned long size, unsigned long align,
+			unsigned long start, unsigned long end, gfp_t gfp_mask,
+			pgprot_t prot, unsigned long vm_flags, int node,
+			const void *caller);
+
+	ft *fp = (ft *) kallsyms_lookup_name("__vmalloc_node_range");
+
+	if (!fp)
+		return NULL;
+
+	return fp(size, align, VMALLOC_START, VMALLOC_END,
+				gfp_mask, prot, 0, node, caller);
+#else
+/* this works
+ * if we add EXPORT_SYMBOL(__vmalloc_node_range);
+ * to vmalloc.c */
+
+	return __vmalloc_node_range(size, align, VMALLOC_START, VMALLOC_END,
+				    gfp_mask, prot, 0, node, caller);
+
+
+#endif
+}
+
+static void *__old_vmalloc(unsigned long size, gfp_t gfp_mask, pgprot_t prot)
+{
+	return __old_vmalloc_node(size, 1, gfp_mask, prot, NUMA_NO_NODE,
+				__builtin_return_address(0));
+}
+#endif
+
 IMG_VOID *
 _VMallocWrapper(IMG_SIZE_T uiBytes,
                 IMG_UINT32 ui32AllocFlags,
@@ -509,10 +561,12 @@ _VMallocWrapper(IMG_SIZE_T uiBytes,
 #endif
 
 	/* Allocate virtually contiguous pages */
+//printk("%s: PGProtFlags = %0lx\n", __func__, (long) PGProtFlags);
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5,8,0))
     pvRet = __vmalloc(uiBytes, gfp_mask, PGProtFlags);
 #else
-    pvRet = __vmalloc(uiBytes, gfp_mask);
+// if(PGProtFlags != PAGE_KERNEL) printk("%s: PGProtFlags != PAGE_KERNEL\n", __func__);
+    pvRet = __old_vmalloc(uiBytes, gfp_mask, PGProtFlags);
 #endif
 
 #if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)

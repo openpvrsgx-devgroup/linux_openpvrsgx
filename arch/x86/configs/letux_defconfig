@@ -1,5 +1,5 @@
 #
-# Linux/x86 5.14.0-rc3 Kernel Configuration
+# Linux/x86 5.14.0-rc4 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="i486-linux-gnu-gcc (GCC) 4.9.2"
 CONFIG_CC_IS_GCC=y
@@ -9009,7 +9009,6 @@ CONFIG_SG_POOL=y
 CONFIG_MEMREGION=y
 CONFIG_ARCH_STACKWALK=y
 CONFIG_SBITMAP=y
-# CONFIG_STRING_SELFTEST is not set
 # end of Library routines
 
 CONFIG_PLDMFW=y

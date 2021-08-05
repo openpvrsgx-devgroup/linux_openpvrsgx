@@ -22,16 +22,8 @@
 	#size-cells = <1>;
 
 	aliases {
-		serial0 = &uart1;
-		serial1 = &uart0;
-//		serial0 = "/soc/serial@7e215040";
-//		serial1 = "/soc/serial@7e201000";
-//		uart0 = "/soc/serial@7e201000";
-//		uart1 = "/soc/serial@7e215040";
-//		uart0 = &uart0;
-//		uart1 = &uart1;
-//		uart0 = &uart1;
-//		uart1 = &uart0;
+		serial0 = &uart0;
+		serial1 = &uart1;
 	};
 
 	chosen {

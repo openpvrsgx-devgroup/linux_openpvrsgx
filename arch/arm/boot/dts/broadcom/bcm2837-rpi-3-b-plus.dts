@@ -138,6 +138,7 @@
 
 &led_act {
 	gpios = <&gpio 29 GPIO_ACTIVE_HIGH>;
+	linux,default-trigger = "mmc0";
 };
 
 &leds {

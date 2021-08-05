@@ -7,11 +7,6 @@
 		led-act {
 			label = "ACT";
 			default-state = "keep";
-			linux,default-trigger = "mmc0";
-		};
-
-		pwr {
-			label = "PWR";
 			linux,default-trigger = "heartbeat";
 		};
 	};

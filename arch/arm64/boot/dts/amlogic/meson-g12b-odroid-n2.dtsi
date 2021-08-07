@@ -12,8 +12,11 @@
 		i2c0 = &i2c2;
 		i2c1 = &i2c3;
 		rtc0 = &rtc;
+		rtc1 = &vrtc;
 		serial0 = &uart_AO;
 		serial1 = &uart_A;
+		serial2 = &uart_B;
+		spi0 = &spicc0;
 	};
 
 	dio2133: audio-amplifier-0 {
@@ -306,11 +309,11 @@
 	};
 };
 
-<<<<<<< HEAD
 &ir {
 	status = "okay";
 	pinctrl-0 = <&remote_input_ao_pins>;
-=======
+};
+
 &i2c3_sda_a_pins {
 	mux {
 		/delete-property/ bias-disable;
@@ -327,7 +330,6 @@
 
 &pwm_ab {
 	pinctrl-0 = <&pwm_a_e_pins>;
->>>>>>> 0ef114fadf259 (ODROID-N2/N2Plus: fix I2C bus hardware properties)
 	pinctrl-names = "default";
 	linux,rc-map-name = "rc-odroid";
 };
@@ -373,10 +375,31 @@
 	status = "okay";
 };
 
+&spicc0 {
+	status = "disabled";
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&spicc0_x_pins>;
+
+	spidev@0 {
+		status = "okay";
+
+		compatible = "linux,spidev";
+		reg = <0>;
+		spi-max-frequency = <100000000>;
+	};
+};
+
 &uart_A {
 	status = "okay";
 	pinctrl-names = "default";
 	pinctrl-0 = <&uart_a_pins>;
+};
+
+&uart_B {
+        status = "disabled";
+        pinctrl-names = "default";
+        pinctrl-0 = <&uart_b_pins>;
 };
 
 &uart_AO {

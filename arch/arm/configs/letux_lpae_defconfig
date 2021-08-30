@@ -1,5 +1,5 @@
 #
-# Linux/arm 5.14.0-rc7 Kernel Configuration
+# Linux/arm 5.14.0 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="arm-linux-gnueabihf-gcc (GCC) 4.9.2"
 CONFIG_CC_IS_GCC=y
@@ -6513,7 +6513,6 @@ CONFIG_IMX_INTMUX=y
 # CONFIG_IPACK_BUS is not set
 CONFIG_ARCH_HAS_RESET_CONTROLLER=y
 CONFIG_RESET_CONTROLLER=y
-# CONFIG_RESET_MCHP_SPARX5 is not set
 CONFIG_RESET_RASPBERRYPI=m
 CONFIG_RESET_SIMPLE=y
 # CONFIG_RESET_TI_SYSCON is not set

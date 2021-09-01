@@ -304,6 +304,7 @@
 			/* IR_3V3 */
 			ldo1_reg: LDO1  {
 				regulator-name = "LDO1";
+				regulator-always-on;
 				regulator-boot-on;
 			};
 

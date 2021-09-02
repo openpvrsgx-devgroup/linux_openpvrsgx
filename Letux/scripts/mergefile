@@ -159,7 +159,8 @@ letux/kobolino/rtc
 letux/kobolino/touch
 letux/kobolino/battery
 letux/rtl8189fs
-letux/kobolino-epdc
+letux/kobolino/epdc-pmic
+letux/kobolino/epdc-drm
 #letux/kobolino_defconfig
 
 # PinePhone

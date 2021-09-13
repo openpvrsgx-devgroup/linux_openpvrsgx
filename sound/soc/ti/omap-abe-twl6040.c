@@ -292,9 +292,6 @@ static int omap_abe_probe(struct platform_device *pdev)
 
 	card->fully_routed = 1;
 
-	card->dai_link = priv->dai_links;
-	card->num_links = num_links;
-
 	ret = devm_snd_soc_register_card(&pdev->dev, card);
 	if (ret)
 		dev_err(&pdev->dev, "devm_snd_soc_register_card() failed: %d\n",

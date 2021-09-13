@@ -45,7 +45,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /* instruct QAC to ignore warnings about the following custom formatted macros */
 /* PRQA S 0881,3410 ++ */
-#include <stdarg.h>
+#include <linux/stdarg.h>
 #include "img_types.h"
 
 /*

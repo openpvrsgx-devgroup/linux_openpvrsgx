@@ -28,28 +28,7 @@
 
 pvr_drv=no
 
-ifeq ($(CONFIG_PVRSGX_1_7_862890),y)
-SUBPATH=1.7.862890/pvr
-else ifeq ($(CONFIG_PVRSGX_1_9_2188537),y)
-SUBPATH=1.9.2188537/eurasia_km
-else ifeq ($(CONFIG_PVRSGX_1_9_2253347),y)
-SUBPATH=1.9.2253347
-else ifeq ($(CONFIG_PVRSGX_1_10_2359475),y)
-# this is partially working
-SUBPATH=1.10.2359475
-else ifeq ($(CONFIG_PVRSGX_1_13_3341330),y)
-SUBPATH=1.13.3341330/eurasia_km
-else ifeq ($(CONFIG_PVRSGX_1_14_3699939),y)
-# only this is working
-SUBPATH=1.14.3699939/eurasia_km
-pvr_drv=yes
-else ifeq ($(CONFIG_PVRSGX_1_14_3759903),y)
-SUBPATH=1.14.3759903/eurasia_km
-else ifeq ($(CONFIG_PVRSGX_1_14_3841212),y)
-SUBPATH=1.14.3841212/eurasia_km
-else ifeq ($(CONFIG_PVRSGX_1_15_4564147),y)
-SUBPATH=1.15.4564147/eurasia_km
-else ifeq ($(CONFIG_PVRSGX_1_17_4948957),y)
+ifeq ($(CONFIG_PVRSGX_1_17_4948957),y)
 SUBPATH=1.17.4948957/eurasia_km
 pvr_drv=yes
 else

@@ -8,12 +8,12 @@ then
 	shift
 fi
 
-for dev in /sys/class/hwmon/hwmon*/name /sys/class/hwmon/hwmon*/device/name
+for dev in /sys/class/hwmon/hwmon*/device
 do
 	[ -r $dev ] || continue
 	$LIST && { cat $dev/name; continue; }
-	if [ "$(cat $dev)" = "$1" ]
-		then echo $(dirname $dev)/
+	if [ "$(cat $dev/name 2>/dev/null)" = "$1" ]
+		then echo $dev
 		exit 0
 	fi
 done

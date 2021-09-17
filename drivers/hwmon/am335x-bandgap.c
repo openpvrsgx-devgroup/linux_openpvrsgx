@@ -111,7 +111,8 @@ static int am335x_bandgap_probe(struct platform_device *pdev)
 		return err;
 	}
 
-	data->hwmon_dev = hwmon_device_register(&pdev->dev);
+	data->hwmon_dev = hwmon_device_register_with_info(&pdev->dev, "am335x",
+		data, NULL, NULL);
 	if (IS_ERR(data->hwmon_dev)) {
 		err = PTR_ERR(data->hwmon_dev);
 		dev_err(&pdev->dev, "Class registration failed (%d)\n", err);

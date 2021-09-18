@@ -80,7 +80,7 @@ static const struct ingenic_cgu_clk_info jz4730_cgu_clocks[] = {
 		"cclkdiv", CGU_CLK_DIV,
 		.parents = { JZ4730_CLK_PLL, -1, -1, -1 },
 		.div = {
-			CGU_REG_CFCR, 0, 1, 4, 20, -1, -1, -1,
+			CGU_REG_CFCR, 0, 1, 4, 20, -1, -1, 0,
 			jz4730_cgu_cfcr_div_table,
 		},
 	},
@@ -95,7 +95,7 @@ static const struct ingenic_cgu_clk_info jz4730_cgu_clocks[] = {
 		"hclkdiv", CGU_CLK_DIV,
 		.parents = { JZ4730_CLK_PLL, -1, -1, -1 },
 		.div = {
-			CGU_REG_CFCR, 4, 1, 4, 20, -1, -1, -1,
+			CGU_REG_CFCR, 4, 1, 4, 20, -1, -1, 0,
 			jz4730_cgu_cfcr_div_table,
 		},
 	},
@@ -110,7 +110,7 @@ static const struct ingenic_cgu_clk_info jz4730_cgu_clocks[] = {
 		"pclkdiv", CGU_CLK_DIV,
 		.parents = { JZ4730_CLK_PLL, -1, -1, -1 },
 		.div = {
-			CGU_REG_CFCR, 8, 1, 4, 20, -1, -1, -1,
+			CGU_REG_CFCR, 8, 1, 4, 20, -1, -1, 0,
 			jz4730_cgu_cfcr_div_table,
 		},
 	},
@@ -125,7 +125,7 @@ static const struct ingenic_cgu_clk_info jz4730_cgu_clocks[] = {
 		"mclkdiv", CGU_CLK_DIV,
 		.parents = { JZ4730_CLK_PLL, -1, -1, -1 },
 		.div = {
-			CGU_REG_CFCR, 16, 1, 4, 20, -1, -1, -1,
+			CGU_REG_CFCR, 16, 1, 4, 20, -1, -1, 0,
 			jz4730_cgu_cfcr_div_table,
 		},
 	},
@@ -140,7 +140,7 @@ static const struct ingenic_cgu_clk_info jz4730_cgu_clocks[] = {
 		"lcddiv", CGU_CLK_DIV | CGU_CLK_GATE,
 		.parents = { JZ4730_CLK_PLL, -1, -1, -1 },
 		.div = {
-			CGU_REG_CFCR, 12, 1, 4, 20, -1, -1, -1,
+			CGU_REG_CFCR, 12, 1, 4, 20, -1, -1, 0,
 			jz4730_cgu_cfcr_div_table,
 		},
 		.gate = { CGU_REG_MSCR, 7 },
@@ -155,7 +155,7 @@ static const struct ingenic_cgu_clk_info jz4730_cgu_clocks[] = {
 	[JZ4730_CLK_LCD_PCLK] = {
 		"lcd_pclk", CGU_CLK_DIV,
 		.parents = { JZ4730_CLK_PLL, -1, -1, -1 },
-		.div = { CGU_REG_CFCR2, 0, 1, 9, -1, -1, -1, -1, },
+		.div = { CGU_REG_CFCR2, 0, 1, 9, -1, -1, -1, 0, },
 	},
 
 	[JZ4730_CLK_I2S] = {
@@ -182,7 +182,7 @@ static const struct ingenic_cgu_clk_info jz4730_cgu_clocks[] = {
 	[JZ4730_CLK_UHC_IN] = {
 		"uhcdiv", CGU_CLK_DIV,
 		.parents = { JZ4730_CLK_PLL, -1, -1, -1 },
-		.div = { CGU_REG_CFCR, 25, 1, 3, 20, -1, -1, -1, },
+		.div = { CGU_REG_CFCR, 25, 1, 3, 20, -1, -1, 0, },
 	},
 
 	[JZ4730_CLK_UHC] = {

@@ -6897,7 +6897,15 @@ static struct cfg80211_ops rtw_cfg80211_ops = {
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 37)) || defined(COMPAT_KERNEL_RELEASE)
 	.mgmt_tx = cfg80211_rtw_mgmt_tx,
-	.update_mgmt_frame_registrations = cfg80211_rtw_mgmt_frame_register,
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,8,0))
+	.mgmt_frame_register = cfg80211_rtw_mgmt_frame_register,
+#else
+#warning "please fix .update_mgmt_frame_registrations"
+	// renamed to update_mgmt_frame_registrations and uses different parameters
+	// for examples see: 6cd536fe62ef5
+	// and especially at drivers/net/wireless/broadcom/brcm80211/brcmfmac/cfg80211.c
+	// please also fix drivers/staging/rtl8189es/os_dep/linux/ioctl_cfg80211.c
+#endif
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 34) && LINUX_VERSION_CODE <= KERNEL_VERSION(2, 6, 35))
 	.action = cfg80211_rtw_mgmt_tx,
 #endif

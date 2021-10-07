@@ -216,7 +216,6 @@ struct bq2429x_device_info {
 	unsigned int usb_input_current_uA;
 	/* alternate power source (not USB) */
 	unsigned int adp_input_current_uA;
-	unsigned int battery_voltage_max_design_uV;
 	unsigned int max_VSYS_uV;
 
 	u32 wdt_timeout;

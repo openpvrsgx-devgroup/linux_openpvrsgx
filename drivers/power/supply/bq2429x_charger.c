@@ -606,6 +606,45 @@ static int bq2429x_set_charge_term_current_uA(struct bq2429x_device_info *di, in
 	return ret;
 }
 
+static int bq2429x_get_charge_term_voltage_uV(struct bq2429x_device_info *di)
+{
+	int ret;
+
+	ret = bq2429x_field_read(di, F_VREG);
+	dev_dbg(di->dev, "bq2429x: F_VREG %02x\n", ret);
+
+	if (ret < 0) {
+		dev_err(&di->client->dev, "%s: err %d\n", __func__, ret);
+		return ret;
+	}
+
+	return bq2429x_find_val(ret, TBL_VREG);
+}
+
+static int bq2429x_set_charge_term_voltage_uV(struct bq2429x_device_info *di, int max_uV)
+{
+	int bits;
+	int ret;
+
+	/* limit to battery design by device tree */
+	max_uV = min_t(int, max_uV, di->bat_info.voltage_max_design_uv);
+
+	bits = bq2429x_find_idx(max_uV, TBL_VREG);
+	if (bits < 0)
+		return bits;
+
+	dev_dbg(di->dev, "%s(): translated vbatt_max=%u and VREG=%u (%02x)\n",
+		__func__,
+		di->bat_info.voltage_max_design_uv, max_uV,
+		bits);
+
+	ret = bq2429x_field_write(di, F_VREG, bits);
+	if (ret < 0)
+		dev_err(di->dev, "%s(): Failed to set max. battery voltage\n",
+				__func__);
+	return ret;
+}
+
 static int bq2429x_en_hiz_disable(struct bq2429x_device_info *di)
 {
 	int ret;
@@ -1240,7 +1279,6 @@ static DEVICE_ATTR(otg, 0644, bq2429x_otg_show, bq2429x_otg_store);
 static int bq2429x_init_registers(struct bq2429x_device_info *di)
 {
 	int max_uV;
-	int bits;
 	int ret;
 
 	ret = power_supply_get_battery_info(di->usb, &di->bat_info);
@@ -1289,26 +1327,15 @@ static int bq2429x_init_registers(struct bq2429x_device_info *di)
 	else
 		max_uV = di->max_VSYS_uV - 150000;
 
-	max_uV = min_t(int, max_uV, di->bat_info.voltage_max_design_uv);
-
-// REVISIT: MP2624 has slightly different scale and offset
-	bits = bq2429x_find_idx(max_uV, TBL_VREG);
-	if (bits < 0)
-		return bits;
-
-	dev_dbg(di->dev, "%s(): translated vbatt_max=%u and VSYS_max=%u to VREG=%u (%02x)\n",
+	dev_dbg(di->dev, "%s(): translated VSYS_max=%u to VBATT_MAX=%u\n",
 		__func__,
-		di->bat_info.voltage_max_design_uv, di->max_VSYS_uV, max_uV,
-		bits);
+		di->max_VSYS_uV, max_uV);
+
+	ret = bq2429x_set_charge_term_voltage_uV(di, max_uV);
+	if (ret < 0)
+		return ret;
 
 	/* revisit: bq2429x_set_charge_current_uA(di, ?); */
-
-	ret = bq2429x_field_write(di, F_VREG, bits);
-	if (ret < 0) {
-		dev_err(di->dev, "%s(): Failed to set max. battery voltage\n",
-				__func__);
-		return ret;
-	}
 
 	ret = bq2429x_get_chip_state(di, &di->state);
 	if (ret < 0) {
@@ -1425,7 +1452,12 @@ static int bq2429x_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT:
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
 		val->intval = bq2429x_input_current_limit_uA(di);
-		dev_dbg(di->dev, "bq2429x CURRENT_MAX: %u mA\n", val->intval);
+		dev_dbg(di->dev, "bq2429x CURRENT_MAX: %u uA\n", val->intval);
+		break;
+
+	case POWER_SUPPLY_PROP_CONSTANT_CHARGE_VOLTAGE_MAX:
+		val->intval = bq2429x_get_charge_term_voltage_uV(di);
+		dev_dbg(di->dev, "bq2429x VOLTAGE: %u uV\n", val->intval);
 		break;
 
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
@@ -1493,6 +1525,8 @@ static int bq2429x_set_property(struct power_supply *psy,
 		if (ret >= 0)
 			di->usb_input_current_uA = val->intval;	/* restore after unplug/replug */
 		return ret;
+	case POWER_SUPPLY_PROP_CONSTANT_CHARGE_VOLTAGE_MAX:
+		return bq2429x_set_charge_term_voltage_uV(di, val->intval);
 	default:
 		return -EPERM;
 	}
@@ -1505,6 +1539,7 @@ static int bq2429x_writeable_property(struct power_supply *psy,
 {
 	switch (psp) {
 	case POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT:
+	case POWER_SUPPLY_PROP_CONSTANT_CHARGE_VOLTAGE_MAX:
 		return 1;
 	default:
 		break;
@@ -1520,6 +1555,7 @@ static enum power_supply_property bq2429x_charger_props[] = {
 	POWER_SUPPLY_PROP_VOLTAGE_NOW,
 	POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT,
 	POWER_SUPPLY_PROP_CURRENT_MAX,
+	POWER_SUPPLY_PROP_CONSTANT_CHARGE_VOLTAGE_MAX,
 	POWER_SUPPLY_PROP_CURRENT_NOW,
 	POWER_SUPPLY_PROP_TEMP,
 	POWER_SUPPLY_PROP_PRESENT,

@@ -237,7 +237,7 @@ enum bq2429x_table_ids {
 	TBL_SYS_MIN,
 };
 
-static const unsigned int bq2429x_iinlim_tbl[] = {
+static const int bq2429x_iinlim_tbl[] = {
 	100000,
 	150000,
 	500000,
@@ -248,7 +248,7 @@ static const unsigned int bq2429x_iinlim_tbl[] = {
 	3000000
 };
 
-static const unsigned int bq2429x_sys_min_tbl[] = {
+static const int bq2429x_sys_min_tbl[] = {
 	3000000,
 	3100000,
 	3200000,
@@ -259,7 +259,7 @@ static const unsigned int bq2429x_sys_min_tbl[] = {
 	3700000,
 };
 
-static const unsigned int bq2429x_boostv_tbl[] = {
+static const int bq2429x_boostv_tbl[] = {
 	4550000,
 	4614000,
 	4678000,
@@ -279,9 +279,9 @@ static const unsigned int bq2429x_boostv_tbl[] = {
 };
 
 struct bq2429x_range {
-	unsigned int min;
-	unsigned int max;
-	unsigned int step;
+	int min;
+	int max;
+	int step;
 };
 
 struct bq2429x_lookup {
@@ -304,7 +304,9 @@ static const union {
 	[TBL_SYS_MIN]	= { .lt = {bq2429x_sys_min_tbl, ARRAY_SIZE(bq2429x_sys_min_tbl)} },
 };
 
-static int bq2429x_find_idx(u32 value, enum bq2429x_table_ids id)
+// CHECKME: this may silently convert negative values to big values!!!
+
+static int bq2429x_find_idx(int value, enum bq2429x_table_ids id)
 {
 	int idx;
 
@@ -320,9 +322,13 @@ static int bq2429x_find_idx(u32 value, enum bq2429x_table_ids id)
 
 		for (idx = 1; idx < tbl_size && tbl[idx] <= value; idx++);
 		idx -= 1;
-
 	} else {
 		const struct bq2429x_range *tbl = &bq2429x_tables[id].rt;
+
+		if (value < tbl->min)
+			return 0;
+		if (value > tbl->max)
+			return (tbl->max - tbl->min) / tbl->step;
 
 		idx = (value - tbl->min) / tbl->step;
 	}

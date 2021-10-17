@@ -1,5 +1,6 @@
 config SGX
 	bool "PowerVR SGX"
+	depends on DRM
 	help
 	  Support for the PowerVR SGX 3D core.
 

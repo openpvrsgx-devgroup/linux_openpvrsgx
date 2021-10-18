@@ -1,5 +1,5 @@
 #
-# Linux/mips 5.15.0-rc5 Kernel Configuration
+# Linux/mips 5.15.0-rc6 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="mipsel-linux-gnu-gcc (GCC) 6.3.0"
 CONFIG_CC_IS_GCC=y
@@ -916,7 +916,6 @@ CONFIG_DMA_SHARED_BUFFER=y
 #
 # CONFIG_BRCMSTB_GISB_ARB is not set
 # CONFIG_MOXTET is not set
-# CONFIG_SIMPLE_PM_BUS is not set
 # CONFIG_MHI_BUS is not set
 # end of Bus devices
 

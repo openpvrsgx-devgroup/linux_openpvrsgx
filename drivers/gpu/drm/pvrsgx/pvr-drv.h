@@ -31,6 +31,35 @@ struct pvr_unpriv {
 #define	DRM_IOCTL_PVR_DBGDRV	DRM_IOWR(DRM_COMMAND_BASE + DRM_PVR_DBGDRV, struct pvr_ioctl)
 #define	DRM_IOCTL_PVR_DISP	DRM_IOWR(DRM_COMMAND_BASE + DRM_PVR_DISP, drm_pvr_display_cmd)
 
+/* OCP registers from OCP base, at least omaps have these */
+#define SGX_OCP_REVISION		0x000
+#define SGX_OCP_HWINFO			0x004
+#define SGX_OCP_SYSCONFIG		0x010
+#define SGX_OCP_IRQSTATUS_RAW_0		0x024
+#define SGX_OCP_IRQSTATUS_RAW_1		0x028
+#define SGX_OCP_IRQSTATUS_RAW_2		0x02c
+#define SGX_OCP_IRQSTATUS_0		0x030
+#define SGX_OCP_IRQSTATUS_1		0x034
+#define SGX_OCP_IRQSTATUS_2		0x038
+#define SGX_OCP_IRQENABLE_SET_0		0x03c
+#define SGX_OCP_IRQENABLE_SET_1		0x040
+#define SGX_OCP_IRQENABLE_SET_2		0x044
+#define SGX_OCP_IRQENABLE_CLR_0		0x048
+#define SGX_OCP_IRQENABLE_CLR_1		0x04c
+#define SGX_OCP_IRQENABLE_CLR_2		0x050
+#define SGX_OCP_PAGE_CONFIG		0x100
+#define SGX_OCP_INTERRUPT_EVENT		0x104
+#define SGX_OCP_DEBUG_CONFIG		0x108
+#define SGX_OCP_DEBUG_STATUS_0		0x10c
+#define SGX_OCP_DEBUG_STATUS_1		0x110	/* Only on omap4470 and later */
+
+struct pvr;
+
+u32 pvr_sgx_readl(struct pvr *ddata, unsigned short offset);
+void pvr_sgx_writel(struct pvr *ddata, u32 val, unsigned short offset);
+u32 pvr_ocp_readl(struct pvr *ddata, unsigned short offset);
+void pvr_ocp_writel(struct pvr *ddata, u32 val, unsigned short offset);
+
 /* We are currently calling these from the Imagination SDK */
 int PVRCore_Init(void);
 void PVRCore_Cleanup(void);

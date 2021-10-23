@@ -686,15 +686,14 @@ fail:
  * When a page is mapped to the CPU in read/write mode the device can't access
  * it and omap_obj->dma_addrs[i] is NULL. When a page is mapped to the device
  * the omap_obj->dma_addrs[i] is set to the DMA address, and the page is
- * unmapped from the CPU. See omap_gem_new() for the flags set, and see also
- * omap_gem_attach_pages() for the OMAP_BO_WC | OMAP_BO_UNCACHED handling.
+ * unmapped from the CPU.
  */
-static inline bool omap_gem_is_using_page_faults(struct drm_gem_object *obj)
+static inline bool omap_gem_is_cached_coherent(struct drm_gem_object *obj)
 {
 	struct omap_gem_object *omap_obj = to_omap_bo(obj);
 
-	return (omap_obj->flags & OMAP_BO_MEM_SHMEM) &&
-		(omap_obj->flags & (OMAP_BO_WC | OMAP_BO_UNCACHED));
+	return !((omap_obj->flags & OMAP_BO_MEM_SHMEM) &&
+		((omap_obj->flags & OMAP_BO_CACHE_MASK) == OMAP_BO_CACHED));
 }
 
 /* Sync the buffer for CPU access.. note pages should already be
@@ -705,7 +704,7 @@ void omap_gem_cpu_sync_page(struct drm_gem_object *obj, int pgoff)
 	struct drm_device *dev = obj->dev;
 	struct omap_gem_object *omap_obj = to_omap_bo(obj);
 
-	if (!omap_gem_is_using_page_faults(obj))
+	if (omap_gem_is_cached_coherent(obj))
 		return;
 
 	if (omap_obj->dma_addrs[pgoff]) {
@@ -725,19 +724,8 @@ void omap_gem_dma_sync_buffer(struct drm_gem_object *obj,
 	struct page **pages = omap_obj->pages;
 	bool dirty = false;
 
-	if (omap_gem_is_using_page_faults(obj)) {
-		for (i = 0; i < npages; i++) {
-			if (!omap_obj->dma_addrs[i])
-				continue;
-
-			dma_sync_single_for_device(dev->dev,
-						   omap_obj->dma_addrs[i],
-						   PAGE_SIZE,
-						   DMA_TO_DEVICE);
-		}
-
+	if (omap_gem_is_cached_coherent(obj))
 		return;
-	}
 
 	for (i = 0; i < npages; i++) {
 		if (!omap_obj->dma_addrs[i]) {

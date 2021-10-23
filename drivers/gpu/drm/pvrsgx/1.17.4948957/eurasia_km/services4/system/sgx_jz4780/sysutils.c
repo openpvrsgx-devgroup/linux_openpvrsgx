@@ -212,8 +212,6 @@ PVRSRV_ERROR EnableSGXClocks(SYS_DATA *psSysData)
 	}
 #endif 
 
-	SysEnableSGXInterrupts(psSysData);
-
 	atomic_set(&psSysSpecData->sSGXClocksEnabled, 1);
 
 	return PVRSRV_OK;
@@ -227,8 +225,6 @@ IMG_VOID DisableSGXClocks(SYS_DATA *psSysData)
 		return;
 
 	PVR_DPF((PVR_DBG_MESSAGE, "DisableSGXClocks: Disabling SGX Clocks"));
-
-	SysDisableSGXInterrupts(psSysData);
 
 #if defined(SYS_XB47_HAS_DVFS_FRAMEWORK)
 	{

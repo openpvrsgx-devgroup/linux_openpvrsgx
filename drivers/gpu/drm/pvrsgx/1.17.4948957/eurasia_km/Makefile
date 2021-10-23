@@ -95,8 +95,8 @@ endif
 ccflags-y += \
 	-DLINUX -D__linux__ \
 	-DPVR_BUILD_DIR="\"omap_sgx\"" \
-	-DPVR_LDM_DRIVER_REGISTRATION_NAME="\"pvrsrvkm\"" \
-	-DPVRSRV_MODNAME="\"pvrsrvkm\"" \
+	-DPVR_LDM_DRIVER_REGISTRATION_NAME="\"pvrsrvkm"\" \
+	-DPVRSRV_MODNAME="\"pvrsrvkm"\" \
 	-DPM_RUNTIME_SUPPORT \
 	-DSERVICES4 \
 	-D_XOPEN_SOURCE=600 \

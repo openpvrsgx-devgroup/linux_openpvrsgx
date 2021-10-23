@@ -1088,7 +1088,7 @@ PVRSRV_ERROR FreeMemCallBackCommon(PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 			case PVRSRV_MEMTYPE_ION:
 			case PVRSRV_MEMTYPE_DMABUF:
 				freeExternal(psMemInfo);
-				/* FALLTHRU */
+				fallthrough;
 			case PVRSRV_MEMTYPE_DEVICE:
 			case PVRSRV_MEMTYPE_DEVICECLASS:
 #if defined(SUPPORT_ION)

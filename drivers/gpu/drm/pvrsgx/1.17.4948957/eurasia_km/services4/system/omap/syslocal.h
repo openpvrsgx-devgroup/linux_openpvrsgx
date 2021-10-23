@@ -199,14 +199,6 @@ typedef struct _SYS_SPECIFIC_DATA_TAG_
 
 extern SYS_SPECIFIC_DATA *gpsSysSpecificData;
 
-#if defined(SGX_OCP_REGS_ENABLED) && defined(SGX_OCP_NO_INT_BYPASS)
-IMG_VOID SysEnableSGXInterrupts(SYS_DATA* psSysData);
-IMG_VOID SysDisableSGXInterrupts(SYS_DATA* psSysData);
-#else
-#define	SysEnableSGXInterrupts(psSysData)
-#define SysDisableSGXInterrupts(psSysData)
-#endif
-
 #if defined(SYS_CUSTOM_POWERLOCK_WRAP)
 IMG_BOOL WrapSystemPowerChange(SYS_SPECIFIC_DATA *psSysSpecData);
 IMG_VOID UnwrapSystemPowerChange(SYS_SPECIFIC_DATA *psSysSpecData);

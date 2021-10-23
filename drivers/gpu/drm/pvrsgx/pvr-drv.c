@@ -39,10 +39,13 @@
 struct pvr_capabilities {
 	u32 quirks;
 	unsigned long smp:1;
+	u16 ocp_offset;
 };
 
 struct pvr {
 	struct device *dev;
+	void __iomem *sgx_base;
+	void __iomem *ocp_base;
 	struct drm_device *ddev;
 	const struct pvr_capabilities *cap;
 	u32 quirks;
@@ -50,6 +53,26 @@ struct pvr {
 
 struct platform_device *gpsPVRLDMDev;
 static struct drm_device *gpsPVRDRMDev;
+
+u32 pvr_sgx_readl(struct pvr *ddata, unsigned short offset)
+{
+	return readl_relaxed(ddata->sgx_base + offset);
+}
+
+void pvr_sgx_writel(struct pvr *ddata, u32 val, unsigned short offset)
+{
+	writel_relaxed(val, ddata->sgx_base + offset);
+}
+
+u32 pvr_ocp_readl(struct pvr *ddata, unsigned short offset)
+{
+	return readl_relaxed(ddata->ocp_base + offset);
+}
+
+void pvr_ocp_writel(struct pvr *ddata, u32 val, unsigned short offset)
+{
+	writel_relaxed(val, ddata->ocp_base + offset);
+}
 
 static int pvr_drm_load(struct drm_device *dev, unsigned long flags)
 {
@@ -163,14 +186,32 @@ static struct drm_driver pvr_drm_driver = {
 
 static int __maybe_unused pvr_runtime_suspend(struct device *dev)
 {
+	struct pvr *ddata = dev_get_drvdata(dev);
+
 	dev_dbg(dev, "%s\n", __func__);
+
+	/* Nothing to do if no OCP */
+	if (!ddata->ocp_base)
+		return 0;
+
+	pvr_ocp_writel(ddata, BIT(0), SGX_OCP_IRQENABLE_CLR_2);
 
 	return 0;
 }
 
 static int __maybe_unused pvr_runtime_resume(struct device *dev)
 {
+	struct pvr *ddata = dev_get_drvdata(dev);
+
 	dev_dbg(dev, "%s\n", __func__);
+
+	/* Nothing to do if no OCP */
+	if (!ddata->ocp_base)
+		return 0;
+
+	pvr_ocp_writel(ddata, BIT(31), SGX_OCP_DEBUG_CONFIG);
+	pvr_ocp_writel(ddata, BIT(0), SGX_OCP_IRQSTATUS_2);
+	pvr_ocp_writel(ddata, BIT(0), SGX_OCP_IRQENABLE_SET_2);
 
 	return 0;
 }
@@ -200,18 +241,26 @@ static const struct dev_pm_ops pvr_pm_ops = {
 
 /* revisit: should we name for different capabilities? pvr_default, pvr_omap4, pvr_smp? */
 
-static const struct pvr_capabilities __maybe_unused pvr_omap3 = {
+static const struct pvr_capabilities __maybe_unused pvr_omap34xx = {
+	/* Has OCP registers but not accessible */
+};
+
+static const struct pvr_capabilities __maybe_unused pvr_omap36xx = {
+	.ocp_offset = 0xfe00,
 };
 
 static const struct pvr_capabilities __maybe_unused pvr_omap4 = {
+	.ocp_offset = 0xfe00,
 	.quirks = PVR_QUIRK_OMAP4,
 };
 
 static const struct pvr_capabilities __maybe_unused pvr_omap4470 = {
+	.ocp_offset = 0xfe00,
 	.smp = true,
 };
 
 static const struct pvr_capabilities __maybe_unused pvr_omap5 = {
+	.ocp_offset = 0xfe00,
 	.smp = true,
 };
 
@@ -234,23 +283,23 @@ static const struct pvr_capabilities __maybe_unused pvr_sun8i_a83t = {
 
 static const struct of_device_id pvr_ids[] = {
 #ifdef ti_omap3_sgx530_121
-	{ .compatible = "ti,omap3-sgx530-121", .data =  &pvr_omap3, },
+	{ .compatible = "ti,omap3-sgx530-121", .data =  &pvr_omap34xx, },
 #endif
 
 #ifdef ti_omap3630_sgx530_125
-	{ .compatible = "ti,omap3-sgx530-125", .data =  &pvr_omap3, },
+	{ .compatible = "ti,omap3-sgx530-125", .data =  &pvr_omap36xx, },
 #endif
 
 #ifdef ti_am3517_sgx530_125
-	{ .compatible = "ti,am3517-sgx530-125", .data =  &pvr_omap3, },
+	{ .compatible = "ti,am3517-sgx530-125", .data =  &pvr_omap36xx, },
 #endif
 
 #ifdef ti_am3352_sgx530_125
-	{ .compatible = "ti,am3352-sgx530-125", .data =  &pvr_omap3, },
+	{ .compatible = "ti,am3352-sgx530-125", .data =  &pvr_omap36xx, },
 #endif
 
 #ifdef ti_am4_sgx530_125
-	{ .compatible = "ti,am4-sgx530-125", .data =  &pvr_omap3, },
+	{ .compatible = "ti,am4-sgx530-125", .data =  &pvr_omap36xx, },
 #endif
 
 #ifdef ti_omap4_sgx540_120
@@ -317,6 +366,13 @@ static int pvr_probe(struct platform_device *pdev)
 	error = pvr_init_match(ddata);
 	if (error)
 		return error;
+
+	ddata->sgx_base = devm_platform_ioremap_resource(pdev, 0);
+	if (IS_ERR(ddata->sgx_base))
+		return PTR_ERR(ddata->sgx_base);
+
+	if (ddata->cap->ocp_offset)
+		ddata->ocp_base = ddata->sgx_base + ddata->cap->ocp_offset;
 
 	pm_runtime_enable(ddata->dev);
 	error = pm_runtime_get_sync(ddata->dev);

@@ -223,8 +223,6 @@ PVRSRV_ERROR EnableSGXClocks(SYS_DATA *psSysData)
 #endif /* defined(SYS_OMAP_HAS_DVFS_FRAMEWORK) */
 #endif /* defined(LDM_PLATFORM) && !defined(PVR_DRI_DRM_NOT_PCI) */
 
-	SysEnableSGXInterrupts(psSysData);
-
 	/* Indicate that the SGX clocks are enabled */
 	atomic_set(&psSysSpecData->sSGXClocksEnabled, 1);
 
@@ -257,8 +255,6 @@ IMG_VOID DisableSGXClocks(SYS_DATA *psSysData)
 	}
 
 	PVR_DPF((PVR_DBG_MESSAGE, "DisableSGXClocks: Disabling SGX Clocks"));
-
-	SysDisableSGXInterrupts(psSysData);
 
 #if defined(LDM_PLATFORM) && !defined(PVR_DRI_DRM_NOT_PCI)
 	pm_runtime_mark_last_busy(&gpsPVRLDMDev->dev);

@@ -691,9 +691,16 @@ fail:
 static inline bool omap_gem_is_cached_coherent(struct drm_gem_object *obj)
 {
 	struct omap_gem_object *omap_obj = to_omap_bo(obj);
+	u32 mask;
 
-	return !((omap_obj->flags & OMAP_BO_MEM_SHMEM) &&
-		((omap_obj->flags & OMAP_BO_CACHE_MASK) == OMAP_BO_CACHED));
+	if (!(omap_obj->flags & OMAP_BO_MEM_SHMEM))
+		return true;
+
+	mask = omap_obj->flags & OMAP_BO_CACHE_MASK;
+	if (mask == OMAP_BO_WC || mask == OMAP_BO_CACHED)
+		return false;
+
+	return true;
 }
 
 /* Sync the buffer for CPU access.. note pages should already be

@@ -735,7 +735,11 @@ void omap_gem_dma_sync_buffer(struct drm_gem_object *obj,
 		return;
 
 	for (i = 0; i < npages; i++) {
-		if (!omap_obj->dma_addrs[i]) {
+		if (omap_obj->dma_addrs[i]) {
+			dma_sync_single_for_device(dev->dev,
+						   omap_obj->dma_addrs[i],
+						   PAGE_SIZE, DMA_TO_DEVICE);
+		} else {
 			dma_addr_t addr;
 
 			addr = dma_map_page(dev->dev, pages[i], 0,

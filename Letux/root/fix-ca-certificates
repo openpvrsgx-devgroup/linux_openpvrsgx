@@ -1,4 +1,4 @@
-# fix SSL zertificates for Let's encrypt
+# fix SSL certificates for Let's encrypt
 # https://download.goldelico.com is encrypted through Let's encrypt certificates
 # on Sept 30, 2021 the root certificate used so far did expire
 # after that date wget and apt-get did fail on Jessie and Stretch
@@ -15,4 +15,6 @@ esac
 #   W: GPG error: http://archive.debian.org jessie Release: The following signatures were invalid: KEYEXPIRED 1587841717
 #   this can be solved by...
 
-# add missing key here
+case "$(cat /etc/debian_version)" in
+	8.* ) sed -i.bak 's|deb http://archive.debian.org/debian jessie main|deb http://httpredir.debian.org/debian jessie main|g' /etc/apt/sources.list;;
+esac

@@ -654,6 +654,8 @@
 		pendown-gpio = <&gpio3 30 GPIO_ACTIVE_LOW>;
 		vcc-supply = <&vaux4>;
 
+		touchscreen-min-x = <0>;
+		touchscreen-min-y = <0>;
 		touchscreen-size-x = <800>;
 		touchscreen-size-y = <480>;
 		touchscreen-max-pressure = <1000>;

@@ -1,5 +1,5 @@
 #
-# Linux/mips 5.15.0-rc7 Kernel Configuration
+# Linux/mips 5.15.0 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="mipsel-linux-gnu-gcc (GCC) 6.3.0"
 CONFIG_CC_IS_GCC=y
@@ -4838,6 +4838,7 @@ CONFIG_INGENIC_TCU_IRQ=y
 
 # CONFIG_IPACK_BUS is not set
 CONFIG_RESET_CONTROLLER=y
+# CONFIG_RESET_PISTACHIO is not set
 # CONFIG_RESET_TI_SYSCON is not set
 
 #

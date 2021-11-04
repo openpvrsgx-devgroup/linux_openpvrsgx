@@ -19,7 +19,7 @@
 
 	/* overwrite panel definitions */
 
-	/delete-node/ spi_lcd;
+	/delete-node/ spi;
 
 	lcd: lcd {
 		compatible =	"ortustech,com37h3m05dtc",

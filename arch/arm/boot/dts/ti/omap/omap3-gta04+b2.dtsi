@@ -11,9 +11,9 @@
 
 	/* overwrite panel definitions */
 
-	/delete-node/ spi_lcd;
+	/delete-node/ spi;
 
-	lcd: lcd {
+	lcd: lcd-dpi {
 		compatible =	"ortustech,com37h3m05dtc",
 				"ortustech,com37h3m99dtc",
 				"panel-dpi";

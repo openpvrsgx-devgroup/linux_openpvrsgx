@@ -5,7 +5,7 @@
 # we can fix that by disabling (yes!) DST_Root_CA_X3.crt
 
 case "$(cat /etc/debian_version)" in
-	7.* | 8.* ) sed -i.bak 's|^mozilla/DST_Root_CA_X3.crt|!mozilla/DST_Root_CA_X3.crt|' /etc/ca-certificates.conf && update-ca-certificates;;
+	7.* | 8.* | 9.* ) sed -i.bak 's|^mozilla/DST_Root_CA_X3.crt|!mozilla/DST_Root_CA_X3.crt|' /etc/ca-certificates.conf && update-ca-certificates;;
 esac
 
 # Debian Jessie archive.debian.org has an issue with the GPG key

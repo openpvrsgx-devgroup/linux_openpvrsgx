@@ -90,7 +90,31 @@
 	VCOM-supply = <&VCOM_reg>;      
 	DISPLAY-supply = <&DISPLAY_reg>; 
 	epd-thermal-zone = "epd-thermal";
+
+	vscan-holdoff = <4>;
+	sdoed-width = <10>;
+	sdoed-delay = <20>;
+	sdoez-width = <10>;
+	sdoez-delay = <20>;
+	gdclk-hp-offs = <562>;
+	gdsp-offs = <662>;
+	gdoe-offs = <0>;
+	gdclk-offs = <225>;
+	num-ce = <3>;
+
 	status = "okay";
+
+	timing {
+		clock-frequency = <80000000>;
+		hactive = <1448>;
+		hback-porch = <16>;
+		hfront-porch = <102>;
+		hsync-len = <28>;
+		vactive = <1072>;
+		vback-porch = <4>;
+		vfront-porch = <4>;
+		vsync-len = <2>;
+	};
 };
 
 &i2c1 {

@@ -57,6 +57,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 #endif
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,6,0))
+#define ioremap_nocache ioremap
+// #define ioremap_cache(physaddr, size) memremap((physaddr), (size), MEMREMAP_WB)
+// #define ioremap_wt(physaddr, size) memremap((physaddr), (size), MEMREMAP_WT)
+#endif
+
 #if defined(SUPPORT_LINUX_X86_PAT)
 	pgprot_t pvr_pgprot_writecombine(pgprot_t prot);
 	#define	PGPROT_WC(pv)	pvr_pgprot_writecombine(pv)

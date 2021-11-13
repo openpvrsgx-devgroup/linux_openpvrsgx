@@ -123,9 +123,31 @@ static int pvr_ioctl_drm_is_master(struct drm_device *dev, void *arg, struct drm
 
 static int pvr_ioctl_unpriv(struct drm_device *dev, void *arg, struct drm_file *filp)
 {
+	int ret = 0;
+
 	dev_dbg(dev->dev, "%s: dev: %px arg: %px filp: %px\n", __func__, dev, arg, filp);
 
-	return 0;
+	if (arg == NULL)
+	{
+		ret = -EFAULT;
+	}
+	else
+	{
+		struct pvr_unpriv *unpriv = (struct pvr_unpriv *)arg;
+
+		switch (unpriv->cmd)
+		{
+			case PVR_UNPRIV_INIT_SUCCESFUL:
+				unpriv->res = PVRSRVGetInitServerState(PVRSRV_INIT_SERVER_SUCCESSFUL) ? 1 : 0;
+				break;
+
+			default:
+				ret = -EFAULT;
+		}
+
+	}
+
+	return ret;
 }
 
 static int pvr_ioctl_dbgdrv(struct drm_device *dev, void *arg, struct drm_file *filp)

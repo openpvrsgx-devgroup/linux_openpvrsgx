@@ -18,6 +18,8 @@ struct pvr_unpriv {
 	u32 res;
 };
 
+#define PVR_UNPRIV_INIT_SUCCESFUL 0
+
 #define DRM_PVR_SRVKM		0x0
 #define DRM_PVR_DISP		0x1
 #define DRM_PVR_BC		0x2
@@ -53,6 +55,17 @@ struct pvr_unpriv {
 #define SGX_OCP_DEBUG_STATUS_0		0x10c
 #define SGX_OCP_DEBUG_STATUS_1		0x110	/* Only on omap4470 and later */
 
+typedef enum _PVRSRV_INIT_SERVER_STATE_
+{
+	PVRSRV_INIT_SERVER_Unspecified		= -1,
+	PVRSRV_INIT_SERVER_RUNNING			= 0,
+	PVRSRV_INIT_SERVER_RAN				= 1,
+	PVRSRV_INIT_SERVER_SUCCESSFUL		= 2,
+	PVRSRV_INIT_SERVER_NUM				= 3,
+	PVRSRV_INIT_SERVER_FORCE_I32 = 0x7fffffff
+
+} PVRSRV_INIT_SERVER_STATE, *PPVRSRV_INIT_SERVER_STATE;
+
 struct pvr;
 
 u32 pvr_sgx_readl(struct pvr *ddata, unsigned short offset);
@@ -69,3 +82,4 @@ int PVRSRV_BridgeDispatchKM(struct drm_device *dev, void *arg, struct drm_file *
 int PVRSRVDriverSuspend(struct platform_device *pdev, pm_message_t state);
 int PVRSRVDriverResume(struct platform_device *pdev);
 void PVRSRVDriverShutdown(struct platform_device *pdev);
+int PVRSRVGetInitServerState(PVRSRV_INIT_SERVER_STATE eInitServerState);

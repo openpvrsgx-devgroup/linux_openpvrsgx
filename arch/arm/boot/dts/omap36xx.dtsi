@@ -204,6 +204,7 @@
 			ti,sysc-sidle = <SYSC_IDLE_FORCE>,
 					<SYSC_IDLE_NO>,
 					<SYSC_IDLE_SMART>;
+			power-domains = <&prm_gfx>;
 			clocks = <&sgx_fck>, <&sgx_ick>;
 			clock-names = "fck", "ick";
 			#address-cells = <1>;

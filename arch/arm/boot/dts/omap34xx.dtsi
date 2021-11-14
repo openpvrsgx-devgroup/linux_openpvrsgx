@@ -163,6 +163,7 @@
 			compatible = "ti,sysc-omap2", "ti,sysc";
 			reg = <0x50000014 0x4>;
 			reg-names = "rev";
+			power-domains = <&prm_gfx>;
 			clocks = <&sgx_fck>, <&sgx_ick>;
 			clock-names = "fck", "ick";
 			#address-cells = <1>;

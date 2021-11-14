@@ -216,6 +216,9 @@
 			compatible = "ti,omap3-prm";
 			reg = <0x48306000 0x4000>;
 			interrupts = <11>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0 0x48306000 0x2000>;
 
 			prm_clocks: clocks {
 				#address-cells = <1>;
@@ -1004,6 +1007,14 @@
 					     <70>;
 			};
 		};
+	};
+};
+
+&prm {
+	prm_gfx: prm@b00 {
+		compatible = "ti,omap3-prm-inst", "ti,omap-prm-inst";
+		reg = <0xb00 0x100>;
+		#power-domain-cells = <0>;
 	};
 };
 

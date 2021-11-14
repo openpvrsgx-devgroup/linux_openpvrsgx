@@ -113,6 +113,12 @@ static const struct omap_prm_domain_map omap_prm_noinact = {
 	.logicretstate = 1,
 };
 
+static const struct omap_prm_domain_map omap_prm_noinact_nostate = {
+	.usable_modes = BIT(OMAP_PRMD_ON_ACTIVE) | BIT(OMAP_PRMD_RETENTION) |
+			BIT(OMAP_PRMD_OFF),
+	.logicretstate = 1,
+};
+
 static const struct omap_prm_domain_map omap_prm_nooff = {
 	.usable_modes = BIT(OMAP_PRMD_ON_ACTIVE) | BIT(OMAP_PRMD_ON_INACTIVE) |
 			BIT(OMAP_PRMD_RETENTION),
@@ -151,6 +157,15 @@ static const struct omap_rst_map rst_map_012[] = {
 	{ .rst = 1, .st = 1 },
 	{ .rst = 2, .st = 2 },
 	{ .rst = -1 },
+};
+
+static const struct omap_prm_data omap3_prm_data[] = {
+	{
+		.name = "gfx", .base = 0x48306b00,
+		.pwrstctrl = 0xe0, .pwrstst = 0xe4,
+		.dmap = &omap_prm_noinact_nostate,
+	},
+	{ },
 };
 
 static const struct omap_prm_data omap4_prm_data[] = {
@@ -492,6 +507,7 @@ static const struct omap_prm_data am4_prm_data[] = {
 };
 
 static const struct of_device_id omap_prm_id_table[] = {
+	{ .compatible = "ti,omap3-prm-inst", .data = omap3_prm_data },
 	{ .compatible = "ti,omap4-prm-inst", .data = omap4_prm_data },
 	{ .compatible = "ti,omap5-prm-inst", .data = omap5_prm_data },
 	{ .compatible = "ti,dra7-prm-inst", .data = dra7_prm_data },

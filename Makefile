@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: GPL-2.0
 VERSION = 5
 PATCHLEVEL = 15
-SUBLEVEL = 0
-EXTRAVERSION = -rc2
-NAME = Opossums on Parade
+SUBLEVEL = 2
+EXTRAVERSION =
+NAME = Trick or Treat
 
 # *DOCUMENTATION*
 # To see a list of typical targets execute "make help"

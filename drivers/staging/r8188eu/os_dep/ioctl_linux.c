@@ -1978,7 +1978,7 @@ static int rtw_wx_set_enc_ext(struct net_device *dev,
 	struct ieee_param *param = NULL;
 	struct iw_point *pencoding = &wrqu->encoding;
 	struct iw_encode_ext *pext = (struct iw_encode_ext *)extra;
-	int ret = 0;
+	int ret = -1;
 
 	param_len = sizeof(struct ieee_param) + pext->key_len;
 	param = kzalloc(param_len, GFP_KERNEL);
@@ -2004,7 +2004,7 @@ static int rtw_wx_set_enc_ext(struct net_device *dev,
 		alg_name = "CCMP";
 		break;
 	default:
-		return -1;
+		goto out;
 	}
 
 	strncpy((char *)param->u.crypt.alg, alg_name, IEEE_CRYPT_ALG_NAME_LEN);
@@ -2031,6 +2031,7 @@ static int rtw_wx_set_enc_ext(struct net_device *dev,
 
 	ret =  wpa_set_encryption(dev, param, param_len);
 
+out:
 	kfree(param);
 	return ret;
 }
@@ -5372,8 +5373,8 @@ static int rtw_mp_read_reg(struct net_device *dev,
 
 			pnext++;
 			if (*pnext != '\0') {
-				  strtout = simple_strtoul(pnext, &ptmp, 16);
-				  sprintf(extra, "%s %d", extra, strtout);
+				strtout = simple_strtoul(pnext, &ptmp, 16);
+				sprintf(extra + strlen(extra), " %d", strtout);
 			} else {
 				  break;
 			}
@@ -5405,7 +5406,7 @@ static int rtw_mp_read_reg(struct net_device *dev,
 			pnext++;
 			if (*pnext != '\0') {
 				strtout = simple_strtoul(pnext, &ptmp, 16);
-				sprintf(extra, "%s %d", extra, strtout);
+				sprintf(extra + strlen(extra), " %d", strtout);
 			} else {
 				break;
 			}
@@ -5512,7 +5513,7 @@ static int rtw_mp_read_rf(struct net_device *dev,
 		pnext++;
 		if (*pnext != '\0') {
 			  strtou = simple_strtoul(pnext, &ptmp, 16);
-			  sprintf(extra, "%s %d", extra, strtou);
+			  sprintf(extra + strlen(extra), " %d", strtou);
 		} else {
 			  break;
 		}

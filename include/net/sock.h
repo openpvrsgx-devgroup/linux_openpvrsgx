@@ -307,6 +307,7 @@ struct bpf_local_storage;
   *	@sk_priority: %SO_PRIORITY setting
   *	@sk_type: socket type (%SOCK_STREAM, etc)
   *	@sk_protocol: which protocol this socket belongs in this network family
+  *	@sk_peer_lock: lock protecting @sk_peer_pid and @sk_peer_cred
   *	@sk_peer_pid: &struct pid for this socket's peer
   *	@sk_peer_cred: %SO_PEERCRED setting
   *	@sk_rcvlowat: %SO_RCVLOWAT setting
@@ -488,8 +489,10 @@ struct sock {
 	u8			sk_prefer_busy_poll;
 	u16			sk_busy_poll_budget;
 #endif
+	spinlock_t		sk_peer_lock;
 	struct pid		*sk_peer_pid;
 	const struct cred	*sk_peer_cred;
+
 	long			sk_rcvtimeo;
 	ktime_t			sk_stamp;
 #if BITS_PER_LONG==32
@@ -1205,7 +1208,7 @@ struct proto {
 #endif
 
 	bool			(*stream_memory_free)(const struct sock *sk, int wake);
-	bool			(*stream_memory_read)(const struct sock *sk);
+	bool			(*sock_is_readable)(struct sock *sk);
 	/* Memory pressure */
 	void			(*enter_memory_pressure)(struct sock *sk);
 	void			(*leave_memory_pressure)(struct sock *sk);
@@ -1623,7 +1626,36 @@ void release_sock(struct sock *sk);
 				SINGLE_DEPTH_NESTING)
 #define bh_unlock_sock(__sk)	spin_unlock(&((__sk)->sk_lock.slock))
 
-bool lock_sock_fast(struct sock *sk) __acquires(&sk->sk_lock.slock);
+bool __lock_sock_fast(struct sock *sk) __acquires(&sk->sk_lock.slock);
+
+/**
+ * lock_sock_fast - fast version of lock_sock
+ * @sk: socket
+ *
+ * This version should be used for very small section, where process wont block
+ * return false if fast path is taken:
+ *
+ *   sk_lock.slock locked, owned = 0, BH disabled
+ *
+ * return true if slow path is taken:
+ *
+ *   sk_lock.slock unlocked, owned = 1, BH enabled
+ */
+static inline bool lock_sock_fast(struct sock *sk)
+{
+	/* The sk_lock has mutex_lock() semantics here. */
+	mutex_acquire(&sk->sk_lock.dep_map, 0, 0, _RET_IP_);
+
+	return __lock_sock_fast(sk);
+}
+
+/* fast socket lock variant for caller already holding a [different] socket lock */
+static inline bool lock_sock_fast_nested(struct sock *sk)
+{
+	mutex_acquire(&sk->sk_lock.dep_map, SINGLE_DEPTH_NESTING, 0, _RET_IP_);
+
+	return __lock_sock_fast(sk);
+}
 
 /**
  * unlock_sock_fast - complement of lock_sock_fast
@@ -1640,6 +1672,7 @@ static inline void unlock_sock_fast(struct sock *sk, bool slow)
 		release_sock(sk);
 		__release(&sk->sk_lock.slock);
 	} else {
+		mutex_release(&sk->sk_lock.dep_map, _RET_IP_);
 		spin_unlock_bh(&sk->sk_lock.slock);
 	}
 }
@@ -2787,4 +2820,10 @@ void sock_set_sndtimeo(struct sock *sk, s64 secs);
 
 int sock_bind_add(struct sock *sk, struct sockaddr *addr, int addr_len);
 
+static inline bool sk_is_readable(struct sock *sk)
+{
+	if (sk->sk_prot->sock_is_readable)
+		return sk->sk_prot->sock_is_readable(sk);
+	return false;
+}
 #endif	/* _SOCK_H */

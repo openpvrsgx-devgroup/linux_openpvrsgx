@@ -148,7 +148,7 @@ CONFIG_GENERIC_SCHED_CLOCK=y
 #
 # end of Scheduler features
 
-CONFIG_CC_IMPLICIT_FALLTHROUGH="-Wimplicit-fallthrough=5"
+CONFIG_CC_IMPLICIT_FALLTHROUGH="-Wno-implicit-fallthrough"
 CONFIG_CGROUPS=y
 # CONFIG_MEMCG is not set
 # CONFIG_BLK_CGROUP is not set

@@ -49,6 +49,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <linux/dma-buf.h>
 #include <linux/scatterlist.h>
 #include <linux/version.h>
+#if !LINUX_VERSION_CODE < KERNEL_VERSION(5,16,0)
+#include <linux/module.h>
+MODULE_IMPORT_NS(DMA_BUF);
+#endif
 #if defined(SUPPORT_DRI_DRM) && (LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0))
 #include <drm/drmP.h>
 #endif

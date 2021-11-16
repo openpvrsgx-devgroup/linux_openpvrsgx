@@ -54,7 +54,8 @@ ccflags-y += \
 	-I$(srctree)/$(src)/services4/srvkm/env/linux \
 	-I$(srctree)/$(src)/services4/srvkm/hwdefs \
 	-I$(srctree)/$(src)/services4/srvkm/include \
-	-I$(srctree)/$(src)/services4/3rdparty/bufferclass_ti
+	-I$(srctree)/$(src)/services4/3rdparty/bufferclass_ti \
+	-Iinclude/linux
 
 # choose SoC integration variant to choose the right source subtree
 
@@ -217,6 +218,12 @@ ccflags-n += -DSYS_OMAP_HAS_DVFS_FRAMEWORK	# sgxfreq extension
 ccflags-y += -DSUPPORT_ACTIVE_POWER_MANAGEMENT
 ccflags-y += -DAMVERSION=5
 # PVR_OMAPLFB_DRM_FB			:= 0
+endif
+
+ifeq ($(SOC_FAMILY),sgx_jz4780)
+ccflags-y += -DSGX_FAST_DPM_INIT
+ccflags-y += -DSGX_FEATURE_SYSTEM_CACHE
+ccflags-y += -DSUPPORT_ACTIVE_POWER_MANAGEMENT
 endif
 
 # gives duplicate export of drm_pvr_dev_add etc.

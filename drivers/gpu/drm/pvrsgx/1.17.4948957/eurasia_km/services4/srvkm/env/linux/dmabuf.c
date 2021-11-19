@@ -161,7 +161,8 @@ PVRSRV_ERROR DmaBufImportAndAcquirePhysAddr(const IMG_INT32 i32FD,
 		goto error;
 	}
 
-	buf_size = uiSize ? uiSize : import->dma_buf->size;
+	/* dma_buf memory must be page aligned an its size should account for that */
+	buf_size = PAGE_ALIGN(uiSize ? uiSize : import->dma_buf->size);
 
 	if ((uiDmaBufOffset + buf_size) > import->dma_buf->size ||
 		(size_t)(uiDmaBufOffset + buf_size) < buf_size)
@@ -193,7 +194,46 @@ PVRSRV_ERROR DmaBufImportAndAcquirePhysAddr(const IMG_INT32 i32FD,
 
 	*puiMemInfoOffset = (uiDmaBufOffset - start_offset);
 
-	npages = (end_offset - start_offset) >> PAGE_SHIFT;
+	/* Calculate the number of pages needed for mapping the scatterlist */
+	buf_offset = 0;
+	remainder = buf_size;
+	start_offset = PAGE_MASK & uiDmaBufOffset;
+	end_offset = PAGE_ALIGN(uiDmaBufOffset + buf_size);
+
+	for_each_sg(import->sg_table->sgl, sg, import->sg_table->nents, i)
+	{
+		size_t dma_len = PAGE_ALIGN(sg_dma_len(sg));
+
+		if (buf_offset >= end_offset)
+		{
+			break;
+		}
+
+		if ((start_offset >= buf_offset) && (start_offset < buf_offset + dma_len))
+		{
+			size_t sg_start;
+			size_t sg_pos;
+			size_t sg_remainder;
+
+
+			sg_start = start_offset - buf_offset;
+
+			sg_remainder = MIN(dma_len - sg_start, remainder);
+
+			for (sg_pos = sg_start; sg_pos < sg_start + sg_remainder; sg_pos += PAGE_SIZE)
+			{
+				npages++;
+			}
+
+			remainder -= sg_remainder;
+			buf_offset += dma_len;
+			start_offset = buf_offset;
+		}
+		else
+		{
+			buf_offset += dma_len;
+		}
+	}
 
 	/* The following allocation will be freed by the caller */
 	eError = OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
@@ -209,16 +249,17 @@ PVRSRV_ERROR DmaBufImportAndAcquirePhysAddr(const IMG_INT32 i32FD,
 	buf_offset = 0;
 	remainder = buf_size;
 	start_offset = PAGE_MASK & uiDmaBufOffset;
-	end_offset = PAGE_ALIGN(uiDmaBufOffset + buf_size);
 
 	for_each_sg(import->sg_table->sgl, sg, import->sg_table->nents, i)
 	{
+		size_t dma_len = PAGE_ALIGN(sg_dma_len(sg));
+
 		if (buf_offset >= end_offset)
 		{
 			break;
 		}
 
-		if ((start_offset >= buf_offset) && (start_offset < buf_offset + sg_dma_len(sg)))
+		if ((start_offset >= buf_offset) && (start_offset < buf_offset + dma_len))
 		{
 			size_t sg_start;
 			size_t sg_pos;
@@ -226,7 +267,7 @@ PVRSRV_ERROR DmaBufImportAndAcquirePhysAddr(const IMG_INT32 i32FD,
 
 			sg_start = start_offset - buf_offset;
 
-			sg_remainder = MIN(sg_dma_len(sg) - sg_start, remainder);
+			sg_remainder = MIN(dma_len - sg_start, remainder);
 
 			for (sg_pos = sg_start; sg_pos < sg_start + sg_remainder; sg_pos += PAGE_SIZE)
 			{
@@ -239,12 +280,12 @@ PVRSRV_ERROR DmaBufImportAndAcquirePhysAddr(const IMG_INT32 i32FD,
 			}
 
 			remainder -= sg_remainder;
-			buf_offset += sg_dma_len(sg);
+			buf_offset += dma_len;
 			start_offset = buf_offset;
 		}
 		else
 		{
-			buf_offset += sg_dma_len(sg);
+			buf_offset += dma_len;
 		}
 	}
 	BUG_ON(remainder);

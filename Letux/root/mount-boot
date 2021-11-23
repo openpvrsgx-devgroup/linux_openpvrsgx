@@ -1,8 +1,8 @@
 #!/bin/bash
 #
 # mount-boot
-# the MMC device name where we did boot from is not very stable
-# especially for devices with more than one SD slot
+# the MMC or USB device name where we did boot from is not
+# very stable especially for devices with more than one slot
 #
 # so try to find out and mount the boot partition
 # and mount to /boot
@@ -14,11 +14,16 @@ ROOTFS=$(mount | fgrep "on / type" | cut -d ' ' -f 1)
 
 case "$ROOTFS" in
 	/dev/mmcblk*p* )
-		ROOTDEV=$(echo $ROOTFS | sed 's/\(.*\)p[1-4]/\1/')
-		ROOTPART=$(echo $ROOTFS | sed 's/.*p\([1-4]\)/\1/')
+		ROOTDEV=$(echo $ROOTFS | sed 's/\(.*p\)\([1-4]\)/\1/')	# include the p
+		ROOTPART=$(echo $ROOTFS | sed 's/s/\(.*p\)\([1-4]\)/\2/')	# partition number
+		;;
+	/dev/sd* )
+		ROOTDEV=$(echo $ROOTFS | sed 's|\(/dev/sd[a-z]\)\([1-9]\)|\1|')
+		ROOTPART=$(echo $ROOTFS | sed 's|\(/dev/sd[a-z]\)\([1-9]\)|\2|')	# partition number
 		;;
 	* )
 		echo "can't find out rootfs device"
+		exit 1
 		;;
 esac
 
@@ -27,9 +32,17 @@ echo "  device: $ROOTDEV"
 echo "  partition: $ROOTPART"
 
 case "$ROOTPART" in
-	2 | 3 | 4 )
+	1 )
+		# root and boot partition are likely the same
+		# i.e. /boot is already mounted through /
+		;;
+	2 | 3 | 4 | 5 | 6 | 7 )
 		# assume we did boot from partition 1
-		echo mount ${ROOTDEV}p1 /boot
-		mount ${ROOTDEV}p1 /boot
+		echo mount ${ROOTDEV}1 /boot
+		mount ${ROOTDEV}1 /boot
+		;;
+	* )
+		echo no idea what to mount as boot partition
+		exit 1
 		;;
 esac

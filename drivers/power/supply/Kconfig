@@ -677,6 +677,17 @@ config CHARGER_BQ256XX
 	  charge management and system power path management devices for single
 	  cell Li-ion and Li-polymer batteries.
 
+config CHARGER_SMB136
+	tristate "SMB136 Charger IC"
+	depends on I2C
+	select REGMAP_I2C
+	default y
+	help
+	  Say Y to enable support for the SMB136 charger and sysfs.
+	  The driver supports controlling charger-enable and current-limit
+	  pins based on the status of charger connections with interrupt
+	  handlers.
+
 config CHARGER_SMB347
 	tristate "Summit Microelectronics SMB3XX Battery Charger"
 	depends on I2C

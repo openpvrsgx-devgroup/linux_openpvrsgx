@@ -419,6 +419,12 @@
 			OMAP4_IOPAD(0x05c, PIN_INPUT_PULLDOWN | MUX_MODE3)
 		>;
 	};
+
+	gp2a_irq: pinmux_gp2a_irq {
+		pinctrl-single,pins = <
+			OMAP4_IOPAD(0x042, WAKEUP_EN | PIN_INPUT_PULLUP | MUX_MODE3)
+		>;
+	};
 };
 
 &i2c1 {
@@ -476,8 +482,8 @@
 	accelerometer@18 {
 		compatible = "bosch,bma254";
 		reg = <0x18>;
-		vdd-supply = <&ldo5>;
-		vddio-supply = <&vaux2>;
+		vdd-supply = <&vaux2>;
+		vddio-supply = <&ldo5>;
 		interrupt-parent = <&gpio4>;
 		interrupts = <25 (IRQ_TYPE_LEVEL_HIGH | IRQ_TYPE_EDGE_RISING)> , <26 (IRQ_TYPE_LEVEL_HIGH | IRQ_TYPE_EDGE_RISING)>;
 		mount-matrix =  "-1",  "0",  "0",
@@ -488,11 +494,38 @@
 	magnetometer@2e {
 		compatible = "yamaha,yas530";
 		reg = <0x2e>;
-		vdd-supply = <&ldo5>;
-		iovdd-supply = <&vaux2>;
+		vdd-supply = <&vaux2>;
+		iovdd-supply = <&ldo5>;
 		reset-gpios = <&gpio5 29 GPIO_ACTIVE_LOW>;
 		interrupts = <&gpio6 10 IRQ_TYPE_EDGE_RISING>;
-        };
+    };
+
+	light-sensor@44 {
+		compatible = "sharp,gp2ap002a00f";
+		reg = <0x44>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <1 IRQ_TYPE_EDGE_FALLING>;
+		vdd-supply = <&vaux2>; //
+		vio-supply = <&vaux2>; //
+		io-channels = <&gp2a_shunt>;
+		io-channel-names = "alsout";
+		sharp,proximity-far-hysteresis = /bits/ 8 <0x40>;
+		sharp,proximity-close-hysteresis = /bits/ 8 <0x20>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&gp2a_irq>;
+	};
+};
+
+&gpadc {
+	status = "okay";
+
+	gp2a_shunt: current-sense-shunt {
+		compatible = "current-sense-shunt";
+		io-channels = <&gpadc 4>;
+		shunt-resistor-micro-ohms = <47000000>; /* 47 ohms */
+		#io-channel-cells = <0>;
+		io-channel-ranges;
+	};
 };
 
 &dss {

@@ -550,7 +550,7 @@
 
 &usb_otg_hs {
 	interface-type = <1>;
-	mode = <3>;
+	mode = <1>;
 	power = <50>;
 };
 

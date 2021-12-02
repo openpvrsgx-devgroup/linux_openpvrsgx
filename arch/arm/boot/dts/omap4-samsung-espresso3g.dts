@@ -170,7 +170,7 @@
 		compatible = "pwm-backlight";
 		pinctrl-names = "default";
 		pinctrl-0 = <&backlight_pins>;
-		pwms = <&pwm10 0 500000 0>;
+		pwms = <&pwm10 0 5000000 0>;
 		power-supply = <&reg_lcd>;
 		enable-gpios = <&gpio3 31 GPIO_ACTIVE_HIGH>;
 		brightness-levels = <0 4 8 16 32 64 128 255>;

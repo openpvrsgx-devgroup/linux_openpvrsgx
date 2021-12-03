@@ -151,7 +151,8 @@
 	};
 
 	rtc_dev: rtc@10003000 {
-		compatible = "ingenic,jz4780-rtc";
+		compatible = "ingenic,jz4780-rtc",
+			     "ingenic,jz4760-rtc";
 		reg = <0x10003000 0x4c>;
 
 		interrupt-parent = <&intc>;

@@ -62,7 +62,7 @@
 		clock-frequency = <32768>;
 	};
 
-	cgu: jz4780-cgu@10000000 {
+	cgu: clock-controller@10000000 {
 		compatible = "ingenic,jz4780-cgu", "simple-mfd";
 		reg = <0x10000000 0x100>;
 		#address-cells = <1>;

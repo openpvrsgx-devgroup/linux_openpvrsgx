@@ -524,7 +524,7 @@
 			#address-cells = <1>;
 			#size-cells = <1>;
 
-			eth0_addr: eth-mac-addr@22 {
+			eth0_addr: eth-mac-addr-cells@22 {
 				reg = <0x22 0x6>;
 			};
 		};

@@ -40,27 +40,27 @@ ccflags-y += -D$(SOC_VENDOR)_$(SOC)_$(SGX)_$(SGX_REV)
 ccflags-y += -DSGX_CORE_REV=$(SGX_REV)
 
 ccflags-y += \
-	-Iinclude \
-	-Iarch/arm/mach-omap2 \
-	-Idrivers/video/fbdev/omap2 \
-	-I$(src)/ \
-	-I$(src)/include4 \
-	-I$(src)/services4/include \
-	-I$(src)/services4/include/env/linux \
-	-I$(src)/services4/system/include \
-	-I$(src)/services4/srvkm/bridged \
-	-I$(src)/services4/srvkm/bridged/sgx \
-	-I$(src)/services4/srvkm/devices/sgx \
-	-I$(src)/services4/srvkm/env/linux \
-	-I$(src)/services4/srvkm/hwdefs \
-	-I$(src)/services4/srvkm/include \
-	-I$(src)/services4/3rdparty/bufferclass_ti \
-	-Iinclude/linux
+	-I$(srctree)/include \
+	-I$(srctree)/arch/arm/mach-omap2 \
+	-I$(srctree)/drivers/video/fbdev/omap2 \
+	-I$(srctree)/$(src)/ \
+	-I$(srctree)/$(src)/include4 \
+	-I$(srctree)/$(src)/services4/include \
+	-I$(srctree)/$(src)/services4/include/env/linux \
+	-I$(srctree)/$(src)/services4/system/include \
+	-I$(srctree)/$(src)/services4/srvkm/bridged \
+	-I$(srctree)/$(src)/services4/srvkm/bridged/sgx \
+	-I$(srctree)/$(src)/services4/srvkm/devices/sgx \
+	-I$(srctree)/$(src)/services4/srvkm/env/linux \
+	-I$(srctree)/$(src)/services4/srvkm/hwdefs \
+	-I$(srctree)/$(src)/services4/srvkm/include \
+	-I$(srctree)/$(src)/services4/3rdparty/bufferclass_ti \
+	-I$(srctree)/include/linux
 
 # choose SoC integration variant to choose the right source subtree
 
 ccflags-y += \
-	-I$(src)/services4/system/$(SOC_FAMILY)
+	-I$(srctree)/$(src)/services4/system/$(SOC_FAMILY)
 
 ifeq ($(SOC_FAMILY),omap)
 $(TARGET) += \
@@ -229,8 +229,8 @@ endif
 # gives duplicate export of drm_pvr_dev_add etc.
 # $(TARGET) += services4/3rdparty/linux_drm/pvr_drm_stubs.o
 
-ccflags-y += -Iinclude/drm \
-	-I$(src)/services4/3rdparty/linux_drm
+ccflags-y += -I$(srctree)/include/drm \
+	-I$(srctree)/$(src)/services4/3rdparty/linux_drm
 
 ccflags-y += -DSUPPORT_HW_RECOVERY
 ccflags-y += -DPVR_LINUX_USING_WORKQUEUES
@@ -269,7 +269,7 @@ endif
 ifneq ($(SUPPORT_OMAPLFB),)
 
 ccflags-y += \
-	-I$(src)/services4/3rdparty/dc_omapfb3_linux \
+	-I$(srctree)/$(src)/services4/3rdparty/dc_omapfb3_linux \
 	-DFBDEV_PRESENT=1 \
 	-DSUPPORT_OMAP3430_OMAPFB3 \
 	-DDISPLAY_CONTROLLER=omaplfb \

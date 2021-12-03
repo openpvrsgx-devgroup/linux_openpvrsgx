@@ -11,6 +11,8 @@
 / {
 	compatible = "img,ci20", "ingenic,jz4780";
 
+	model = "Imagination creator CI20";
+
 	aliases {
 		serial0 = &uart0;
 		serial1 = &uart1;

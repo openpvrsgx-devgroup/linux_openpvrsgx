@@ -140,7 +140,7 @@
 		};
 
 		ost: timer@e0 {
-			compatible = "ingenic,jz4780-ost", "ingenic,jz4770-ost";
+			compatible = "ingenic,jz4780-ost", "ingenic,jz4760b-ost";
 			reg = <0xe0 0x20>;
 
 			clocks = <&tcu TCU_CLK_OST>;

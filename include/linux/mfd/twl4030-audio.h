@@ -244,6 +244,9 @@
 #define TWL4030_VIBRA_SEL		0x10
 #define TWL4030_VIBRA_DIR_SEL		0x20
 
+/* clock ID used for setting APLL rate */
+#define TWL4030_CLOCK_APLL		0xffff
+
 /* TWL4030 codec resource IDs */
 enum twl4030_audio_res {
 	TWL4030_AUDIO_RES_POWER = 0,

@@ -201,6 +201,38 @@ static void twl4030_codec_enable(struct snd_soc_component *component, int enable
 	udelay(10);
 }
 
+static int twl4030_perform_writes(struct snd_soc_component *component,
+				  const unsigned int *regs,
+				  const unsigned int *vals,
+				  unsigned int n)
+{
+	struct twl4030_priv *twl4030 = snd_soc_component_get_drvdata(component);
+	int reboot_codec = twl4030->codec_powered;
+	unsigned int i;
+	int ret;
+
+	if (reboot_codec)
+		twl4030_codec_enable(component, 0);
+
+	for (i = 0; i < n; ++i) {
+		ret = twl4030_write(component, regs[i], vals[i]);
+		if (ret)
+			return ret;
+	}
+
+	if (reboot_codec)
+		twl4030_codec_enable(component, 1);
+
+	return 0;
+}
+
+static inline int
+twl4030_perform_single_write(struct snd_soc_component *component,
+			     unsigned int reg, unsigned int val)
+{
+	return twl4030_perform_writes(component, &reg, &val, 1);
+}
+
 static void
 twl4030_get_board_param_values(struct twl4030_board_params *board_params,
 			       struct device_node *node)
@@ -1694,38 +1726,16 @@ static void twl4030_shutdown(struct snd_pcm_substream *substream,
 		twl4030_tdm_enable(component, substream->stream, 0);
 }
 
-static int twl4030_hw_params(struct snd_pcm_substream *substream,
-			     struct snd_pcm_hw_params *params,
-			     struct snd_soc_dai *dai)
+static int twl4030_get_codec_mode_for_apll_rate(struct snd_soc_component *component,
+						unsigned int rate, u8 *res)
 {
-	struct snd_soc_component *component = dai->component;
-	struct twl4030_priv *twl4030 = snd_soc_component_get_drvdata(component);
-	u8 mode, old_mode, format, old_format;
+	u8 old_mode, mode;
 
-	 /* If the substream has 4 channel, do the necessary setup */
-	if (params_channels(params) == 4) {
-		format = twl4030_read(component, TWL4030_REG_AUDIO_IF);
-		mode = twl4030_read(component, TWL4030_REG_CODEC_MODE);
-
-		/* Safety check: are we in the correct operating mode and
-		 * the interface is in TDM mode? */
-		if ((mode & TWL4030_OPTION_1) &&
-		    ((format & TWL4030_AIF_FORMAT) == TWL4030_AIF_FORMAT_TDM))
-			twl4030_tdm_enable(component, substream->stream, 1);
-		else
-			return -EINVAL;
-	}
-
-	if (twl4030->configured)
-		/* Ignoring hw_params for already configured DAI */
-		return 0;
-
-	/* bit rate */
 	old_mode = twl4030_read(component,
 				TWL4030_REG_CODEC_MODE) & ~TWL4030_CODECPDZ;
 	mode = old_mode & ~TWL4030_APLL_RATE;
 
-	switch (params_rate(params)) {
+	switch (rate) {
 	case 8000:
 		mode |= TWL4030_APLL_RATE_8000;
 		break;
@@ -1757,10 +1767,49 @@ static int twl4030_hw_params(struct snd_pcm_substream *substream,
 		mode |= TWL4030_APLL_RATE_96000;
 		break;
 	default:
-		dev_err(component->dev, "%s: unknown rate %d\n", __func__,
-			params_rate(params));
+		dev_err(component->dev, "%s: unknown rate %u\n", __func__,
+			rate);
 		return -EINVAL;
 	}
+
+	*res = mode;
+
+	return mode != old_mode ? 1 : 0;
+}
+
+static int twl4030_hw_params(struct snd_pcm_substream *substream,
+			     struct snd_pcm_hw_params *params,
+			     struct snd_soc_dai *dai)
+{
+	struct snd_soc_component *component = dai->component;
+	struct twl4030_priv *twl4030 = snd_soc_component_get_drvdata(component);
+	u8 mode, format, old_format;
+	int s;
+	unsigned int regs[2], vals[2];
+
+	 /* If the substream has 4 channel, do the necessary setup */
+	if (params_channels(params) == 4) {
+		format = twl4030_read(component, TWL4030_REG_AUDIO_IF);
+		mode = twl4030_read(component, TWL4030_REG_CODEC_MODE);
+
+		/* Safety check: are we in the correct operating mode and
+		 * the interface is in TDM mode?
+		 */
+		if ((mode & TWL4030_OPTION_1) &&
+		    ((format & TWL4030_AIF_FORMAT) == TWL4030_AIF_FORMAT_TDM))
+			twl4030_tdm_enable(component, substream->stream, 1);
+		else
+			return -EINVAL;
+	}
+
+	if (twl4030->configured)
+		/* Ignoring hw_params for already configured DAI */
+		return 0;
+
+	s = twl4030_get_codec_mode_for_apll_rate(component,
+						 params_rate(params), &mode);
+	if (s < 0)
+		return s;
 
 	/* sample size */
 	old_format = twl4030_read(component, TWL4030_REG_AUDIO_IF);
@@ -1779,20 +1828,12 @@ static int twl4030_hw_params(struct snd_pcm_substream *substream,
 		return -EINVAL;
 	}
 
-	if (format != old_format || mode != old_mode) {
-		if (twl4030->codec_powered) {
-			/*
-			 * If the codec is powered, than we need to toggle the
-			 * codec power.
-			 */
-			twl4030_codec_enable(component, 0);
-			twl4030_write(component, TWL4030_REG_CODEC_MODE, mode);
-			twl4030_write(component, TWL4030_REG_AUDIO_IF, format);
-			twl4030_codec_enable(component, 1);
-		} else {
-			twl4030_write(component, TWL4030_REG_CODEC_MODE, mode);
-			twl4030_write(component, TWL4030_REG_AUDIO_IF, format);
-		}
+	if (format != old_format || s) {
+		regs[0] = TWL4030_REG_CODEC_MODE;
+		vals[0] = mode;
+		regs[1] = TWL4030_REG_AUDIO_IF;
+		vals[1] = format;
+		twl4030_perform_writes(component, regs, vals, ARRAY_SIZE(regs));
 	}
 
 	/* Store the important parameters for the DAI configuration and set
@@ -1817,6 +1858,21 @@ static int twl4030_set_dai_sysclk(struct snd_soc_dai *codec_dai, int clk_id,
 {
 	struct snd_soc_component *component = codec_dai->component;
 	struct twl4030_priv *twl4030 = snd_soc_component_get_drvdata(component);
+	int s;
+	u8 mode;
+
+	if (clk_id == TWL4030_CLOCK_APLL) {
+		s = twl4030_get_codec_mode_for_apll_rate(component,
+							 freq, &mode);
+		if (s < 0)
+			return s;
+
+		if (s)
+			return twl4030_perform_single_write(component,
+					TWL4030_REG_CODEC_MODE, mode);
+
+		return 0;
+	}
 
 	switch (freq) {
 	case 19200000:

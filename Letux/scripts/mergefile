@@ -43,7 +43,7 @@ letux/rootfs
 letux/hw-test
 
 # Diverse drivers and bindings
-letux/bindings
+#letux/bindings
 #letux/bindings-madc
 #letux/dss-bindings
 
@@ -72,13 +72,13 @@ letux/debian-build
 # upstreaming in progress
 letux/omap3-opp
 letux/w2sg-serdev
-letux/sirf-gps
+#letux/sirf-gps
 letux/tsc2007
 letux/gpio-pcal6524
 letux/ov9655-new
-letux/bmg160
+#letux/bmg160
 letux/panels
-letux/hdq
+#letux/hdq
 
 # almost ready for upstreaming
 letux/bluetooth-h4-serdev
@@ -95,7 +95,7 @@ letux/vcnl4000
 letux/bq27xxx
 letux/bq2429x
 letux/ts3a225e
-letux/panels+ssd2858
+#letux/panels+ssd2858
 letux/bno055
 letux/freescale-sensors
 letux/tiler-fbdev
@@ -141,23 +141,23 @@ letux/aess
 # Mipsbook / JZ4730
 letux/jz4730
 letux/dt-alpha400
-letux/pm-alpha400
+#letux/pm-alpha400
 
 # CI20 / JZ4780
 letux/dt-ci20
 letux/jz4780
 letux/jz4780-hdmi
 letux/jz4780-smp
-letux/jz4780-efuse
+#letux/jz4780-efuse
 letux/ci20_defconfig
 letux/jz4780-sound	# contains defconfig fixes...
 
 # E-Book reader
 letux/kobolino/backlight
 letux/kobolino/dt
-letux/kobolino/rtc
+#letux/kobolino/rtc
 letux/kobolino/touch
-letux/kobolino/battery
+#letux/kobolino/battery
 letux/rtl8189fs
 letux/kobolino/epdc-pmic
 letux/kobolino/epdc-drm
@@ -174,9 +174,9 @@ letux/libertas
 letux/musb-fixes
 letux/ehci-usb-pm
 letux/phy-twl
-letux/clk
+#letux/clk
 letux/tvfix
-letux/displayprobing
+#letux/displayprobing
 letux/charging_fixes
 letux/omap2plus
 letux/omap5-idle

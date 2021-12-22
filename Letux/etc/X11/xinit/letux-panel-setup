@@ -108,6 +108,7 @@ case "$(model_or_compatible)" in
 		PANEL=5.8-1072x1448-epd
 		echo 3 >/sys/class/graphics/fb0/rotate
 		;;
+	*CI20* | \
 	*x86* )
 		PANEL=auto;;	# works well with auto-detection
 esac

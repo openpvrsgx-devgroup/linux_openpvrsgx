@@ -15,7 +15,7 @@ ROOTFS=$(mount | fgrep "on / type" | cut -d ' ' -f 1)
 case "$ROOTFS" in
 	/dev/mmcblk*p* )
 		ROOTDEV=$(echo $ROOTFS | sed 's/\(.*p\)\([1-4]\)/\1/')	# include the p
-		ROOTPART=$(echo $ROOTFS | sed 's/s/\(.*p\)\([1-4]\)/\2/')	# partition number
+		ROOTPART=$(echo $ROOTFS | sed 's/\(.*p\)\([1-4]\)/\2/')	# partition number
 		;;
 	/dev/sd* )
 		ROOTDEV=$(echo $ROOTFS | sed 's|\(/dev/sd[a-z]\)\([1-9]\)|\1|')

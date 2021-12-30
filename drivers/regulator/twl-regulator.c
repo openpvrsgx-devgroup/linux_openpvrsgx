@@ -451,6 +451,16 @@ static const struct regulator_ops twl4030fixed_ops = {
 	.get_status	= twl4030reg_get_status,
 };
 
+static const struct regulator_ops twl4030signal_ops = {
+	.enable		= twl4030reg_enable,
+	.disable	= twl4030reg_disable,
+	.is_enabled	= twl4030reg_is_enabled,
+
+	.set_mode	= twl4030reg_set_mode,
+
+	.get_status	= twl4030reg_get_status,
+};
+
 /*----------------------------------------------------------------------*/
 
 #define TWL4030_ADJUSTABLE_LDO(label, offset, num, turnon_delay, remap_conf) \
@@ -511,6 +521,24 @@ static const struct twlreg_info TWLFIXED_INFO_##label = { \
 		}, \
 	}
 
+#define TWL4030_SIGNAL(label, offset, num, remap_conf) \
+static const struct twlreg_info TWLSIGNAL_INFO_##label = { \
+	.base = offset, \
+	.id = num, \
+	.remap = remap_conf, \
+	.desc = { \
+		.name = #label, \
+		.id = TWL4030_REG_##label, \
+		.n_voltages = 1, \
+		.fixed_uV = 0, /* filled in from DT later */ \
+		.ops = &twl4030signal_ops, \
+		.type = REGULATOR_VOLTAGE, \
+		.owner = THIS_MODULE, \
+		.enable_time = 0, /* also filled in from DT */ \
+		.of_map_mode = twl4030reg_map_mode, \
+		}, \
+	}
+
 /*
  * We list regulators here if systems need some level of
  * software control over them after boot.
@@ -536,6 +564,7 @@ TWL4030_FIXED_LDO(VINTDIG, 0x47, 1500, 13, 100, 0x08);
 TWL4030_FIXED_LDO(VUSB1V5, 0x71, 1500, 17, 100, 0x08);
 TWL4030_FIXED_LDO(VUSB1V8, 0x74, 1800, 18, 100, 0x08);
 TWL4030_FIXED_LDO(VUSB3V1, 0x77, 3100, 19, 150, 0x08);
+TWL4030_SIGNAL(REGEN, 0x7f, 21, 0x08);
 
 #define TWL_OF_MATCH(comp, family, label) \
 	{ \
@@ -548,6 +577,7 @@ TWL4030_FIXED_LDO(VUSB3V1, 0x77, 3100, 19, 150, 0x08);
 #define TWL6032_OF_MATCH(comp, label) TWL_OF_MATCH(comp, TWL6032, label)
 #define TWLFIXED_OF_MATCH(comp, label) TWL_OF_MATCH(comp, TWLFIXED, label)
 #define TWLSMPS_OF_MATCH(comp, label) TWL_OF_MATCH(comp, TWLSMPS, label)
+#define TWLSIGNAL_OF_MATCH(comp, label) TWL_OF_MATCH(comp, TWLSIGNAL, label)
 
 static const struct of_device_id twl_of_match[] = {
 	TWL4030_OF_MATCH("ti,twl4030-vaux1", VAUX1),
@@ -570,6 +600,7 @@ static const struct of_device_id twl_of_match[] = {
 	TWLFIXED_OF_MATCH("ti,twl4030-vusb1v5", VUSB1V5),
 	TWLFIXED_OF_MATCH("ti,twl4030-vusb1v8", VUSB1V8),
 	TWLFIXED_OF_MATCH("ti,twl4030-vusb3v1", VUSB3V1),
+	TWLSIGNAL_OF_MATCH("ti,twl4030-regen", REGEN),
 	{},
 };
 MODULE_DEVICE_TABLE(of, twl_of_match);
@@ -583,6 +614,7 @@ static int twlreg_probe(struct platform_device *pdev)
 	struct regulation_constraints	*c;
 	struct regulator_dev		*rdev;
 	struct regulator_config		config = { };
+	int ret;
 
 	template = of_device_get_match_data(&pdev->dev);
 	if (!template)
@@ -615,6 +647,26 @@ static int twlreg_probe(struct platform_device *pdev)
 	case TWL4030_REG_VINTANA2:
 	case TWL4030_REG_VINTDIG:
 		c->always_on = true;
+		break;
+	case TWL4030_REG_REGEN:
+		if (c->min_uV == 0 || c->max_uV == 0) {
+			dev_err(&pdev->dev, "minimum or maximum regulator voltage zero in DT\n");
+			return -EINVAL;
+		}
+
+		if (c->min_uV != c->max_uV) {
+			dev_err(&pdev->dev, "minimum and maximum voltage are different in DT\n");
+			return -EINVAL;
+		}
+		info->desc.fixed_uV = c->min_uV;
+
+		ret = of_property_read_u32(pdev->dev.of_node, "startup-delay-us",
+					   &info->desc.enable_time);
+		if (ret) {
+			dev_err(&pdev->dev, "no valid startup delay set in DT: %d\n", ret);
+			return ret;
+		}
+
 		break;
 	default:
 		break;

@@ -493,6 +493,14 @@
 	regulator-always-on;
 };
 
+&regen {
+	regulator-min-microvolt = <5000000>;
+	regulator-max-microvolt = <5000000>;
+	startup-delay-us = <5000>;
+	regulator-always-on;
+	status = "okay";
+};
+
 &i2c2 {
 	clock-frequency = <100000>;
 	/* no clients so we should disable clock */

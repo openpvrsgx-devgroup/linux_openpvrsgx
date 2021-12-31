@@ -49,6 +49,13 @@
 		status = "okay";
 	};
 
+	sound: omap3pandora-sound {
+		compatible = "openpandora,omap3pandora-sound";
+		amp-gpio = <&gpio1 14 GPIO_ACTIVE_HIGH>;
+		amp-supply = <&regen>;
+		status = "okay";
+	};
+
 	gpio-leds {
 
 		compatible = "gpio-leds";

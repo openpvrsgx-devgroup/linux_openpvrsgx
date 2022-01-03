@@ -1,5 +1,5 @@
 #
-# Linux/mips 5.16.0-rc7 Kernel Configuration
+# Linux/mips 5.16.0-rc8 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="mipsel-linux-gnu-gcc (GCC) 6.3.0"
 CONFIG_CC_IS_GCC=y
@@ -3450,6 +3450,7 @@ CONFIG_SND_SOC_SIMPLE_AMPLIFIER=m
 # CONFIG_SND_SOC_WM8978 is not set
 # CONFIG_SND_SOC_WM8985 is not set
 # CONFIG_SND_SOC_ZL38060 is not set
+# CONFIG_SND_SOC_PCM1773 is not set
 # CONFIG_SND_SOC_MAX9759 is not set
 # CONFIG_SND_SOC_MT6351 is not set
 # CONFIG_SND_SOC_MT6358 is not set

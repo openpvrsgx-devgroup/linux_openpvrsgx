@@ -39,6 +39,9 @@
 
 #define AESS_FW_NAME   "omap_aess-adfw.bin"
 
+// SND_SOC_DAILINK_DEFS(name, cpu, codec, platform...)
+// COMP_CODEC(_name, _dai_name)
+
 SND_SOC_DAILINK_DEFS(link0,
 	DAILINK_COMP_ARRAY(COMP_EMPTY()),
 	DAILINK_COMP_ARRAY(COMP_CODEC("twl6040-codec",
@@ -51,6 +54,7 @@ SND_SOC_DAILINK_DEFS(link1,
 				      "dmic-hifi")),
 	DAILINK_COMP_ARRAY(COMP_EMPTY()));
 
+// ab hier nicht integriert?
 SND_SOC_DAILINK_DEFS(link_mcbsp,
 	DAILINK_COMP_ARRAY(COMP_EMPTY()),
 	DAILINK_COMP_ARRAY(COMP_CODEC("snd-soc-dummy",
@@ -276,6 +280,7 @@ static const struct snd_soc_dapm_widget twl6040_dapm_widgets[] = {
 
 static const struct snd_soc_dapm_route audio_map[] = {
 	/* Routings for outputs */
+// Destination Widget <=== Path Name <=== Source Widget
 	{"Headset Stereophone", NULL, "HSOL"},
 	{"Headset Stereophone", NULL, "HSOR"},
 
@@ -357,12 +362,16 @@ static int omap_abe_twl6040_init(struct snd_soc_pcm_runtime *rtd)
 	// FIXME: omap_abe_stream_event.stream_event has disappeared in v5.4
 	// card->dapm.stream_event = omap_abe_stream_event;
 
+#if 0	// REVISIT
 	/* allow audio paths from the audio modem to run during suspend */
 	snd_soc_dapm_ignore_suspend(&card->dapm, "Ext Spk");
+// AFML/AFMR belong to the codec twl6040.c and will not be found by &card->dapm
+// which is some generic context but not the one pointing to the codec
 	snd_soc_dapm_ignore_suspend(&card->dapm, "AFML");
 	snd_soc_dapm_ignore_suspend(&card->dapm, "AFMR");
 	snd_soc_dapm_ignore_suspend(&card->dapm, "Headset Mic");
 	snd_soc_dapm_ignore_suspend(&card->dapm, "Headset Stereophone");
+#endif
 
 	/* DC offset cancellation computation only if ABE is enabled */
 	if (priv->aess) {
@@ -468,7 +477,7 @@ static int omap_abe_add_aess_dai_links(struct snd_soc_card *card)
 	struct device_node *dai_node;
 	int ret;
 
-	/* add DAI links for AE */
+	/* FIXME: add DAI links for AE */
 	return 0;
 }
 
@@ -479,6 +488,7 @@ static int omap_abe_add_legacy_dai_links(struct snd_soc_card *card)
 	struct device_node *dai_node;
 	int ret;
 
+	/* FIXME: */
 	return 0;
 }
 

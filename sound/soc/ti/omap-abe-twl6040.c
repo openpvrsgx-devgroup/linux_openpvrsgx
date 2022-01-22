@@ -39,7 +39,8 @@
 
 #define AESS_FW_NAME   "omap_aess-adfw.bin"
 
-// SND_SOC_DAILINK_DEFS(name, cpu, codec, platform...)
+// this defines the DAI-Links
+// SND_SOC_DAILINK_DEFS(name, cpu, codec, platform...) i.e. these macros define _name##_cpus etc.
 // COMP_CODEC(_name, _dai_name)
 
 SND_SOC_DAILINK_DEFS(link0,
@@ -68,43 +69,81 @@ SND_SOC_DAILINK_DEFS(link_mcasp,
 	DAILINK_COMP_ARRAY(COMP_EMPTY()));
 
 SND_SOC_DAILINK_DEFS(link_fe,
-	DAILINK_COMP_ARRAY(COMP_EMPTY()),
-	DAILINK_COMP_ARRAY(COMP_CODEC("abc",
-				      "def")),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+	DAILINK_COMP_ARRAY(COMP_CPU("fe")),
+	DAILINK_COMP_ARRAY(COMP_CODEC("snd-soc-dummy",
+				      "snd-soc-dummy-dai")),
+	DAILINK_COMP_ARRAY(COMP_PLATFORM("dsp-audio")));
 
 SND_SOC_DAILINK_DEFS(link_be_mcpdm,
-	DAILINK_COMP_ARRAY(COMP_EMPTY()),
-	DAILINK_COMP_ARRAY(COMP_CODEC("abc",
-				      "def")),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+	DAILINK_COMP_ARRAY(COMP_CPU("mcpdm-dai.0")),
+	DAILINK_COMP_ARRAY(COMP_CODEC("snd-soc-dummy",
+				      "snd-soc-dummy-dai")),
+	DAILINK_COMP_ARRAY(COMP_PLATFORM("snd-soc-dummy")));
 
 SND_SOC_DAILINK_DEFS(link_be_mcbsp1,
-	DAILINK_COMP_ARRAY(COMP_EMPTY()),
-	DAILINK_COMP_ARRAY(COMP_CODEC("abc",
-				      "def")),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+	DAILINK_COMP_ARRAY(COMP_CPU("mcbsp.1")),
+	DAILINK_COMP_ARRAY(COMP_CODEC("snd-soc-dummy",
+				      "snd-soc-dummy-dai")),
+	DAILINK_COMP_ARRAY(COMP_PLATFORM("snd-soc-dummy")));
 
 SND_SOC_DAILINK_DEFS(link_be_mcbsp2,
-	DAILINK_COMP_ARRAY(COMP_EMPTY()),
-	DAILINK_COMP_ARRAY(COMP_CODEC("abc",
-				      "def")),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+	DAILINK_COMP_ARRAY(COMP_CPU("mcbsp.2")),
+	DAILINK_COMP_ARRAY(COMP_CODEC("snd-soc-dummy",
+				      "snd-soc-dummy-dai")),
+	DAILINK_COMP_ARRAY(COMP_PLATFORM("snd-soc-dummy")));
+
+// mcbsp3?
 
 SND_SOC_DAILINK_DEFS(link_be_dmic,
-	DAILINK_COMP_ARRAY(COMP_EMPTY()),
-	DAILINK_COMP_ARRAY(COMP_CODEC("abc",
-				      "def")),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+	DAILINK_COMP_ARRAY(COMP_CPU("dmic.0")),
+	DAILINK_COMP_ARRAY(COMP_CODEC("snd-soc-dummy",
+				      "snd-soc-dummy-dai")),
+	DAILINK_COMP_ARRAY(COMP_PLATFORM("snd-soc-dummy")));
+
+// dmic.1 dmic.2?
 
 struct abe_twl6040 {
 	struct snd_soc_card card;
-	struct snd_soc_dai_link dai_links[2];
+	struct snd_soc_dai_link dai_links[9];	/* as many as we add by ADD_DAILINK */
 	int	jack_detection;	/* board can detect jack events */
 	int	mclk_freq;	/* MCLK frequency speed for twl6040 */
 	int	twl6040_power_mode;
 	struct omap_aess	*aess;
 };
+
+/*
+ * helper macros to fill the _card->dai_link array
+ */
+
+#ifdef DEBUG	/* FIXME: complains about ARRAY_SIZE(_card->dai_link) here */
+#define ADD_DAILINK_COMPONENT(_card, _link, _component, _value) \
+	BUG_ON(_card->num_links >= ARRAY_SIZE(_card->dai_link)); \
+	_card->dai_link[_card->num_links]._component = (_value)
+#else
+#define ADD_DAILINK_COMPONENT(_card, _link, _component, _value) \
+	_card->dai_link[_card->num_links]._component = (_value)
+#endif
+
+// FIXME: we should also be able to set .dynamic, .no_pcm, .ignore_suspend/pmdown_time, .be_hw_params_fixup, .dpcm_placback, .dpcm_capture, .trigger
+// there could also be a .params list but we don't use
+// .id and even more...
+// we can build macros for them grouping ADD_DAILINK_COMPONENT()
+
+#define ADD_DAILINK(_card, _link, _name, _stream, _ofnode, _init, _ops) { \
+	ADD_DAILINK_COMPONENT(_card, _link, name, _name); \
+	ADD_DAILINK_COMPONENT(_card, _link, stream_name, _stream); \
+	ADD_DAILINK_COMPONENT(_card, _link, cpus, _link##_cpus); \
+	ADD_DAILINK_COMPONENT(_card, _link, num_cpus, ARRAY_SIZE(_link##_cpus)); \
+	ADD_DAILINK_COMPONENT(_card, _link, cpus->of_node, _ofnode); \
+	ADD_DAILINK_COMPONENT(_card, _link, platforms, _link##_platforms); \
+	ADD_DAILINK_COMPONENT(_card, _link, num_platforms, ARRAY_SIZE(_link##_platforms)); \
+	ADD_DAILINK_COMPONENT(_card, _link, platforms->of_node, _ofnode); \
+	ADD_DAILINK_COMPONENT(_card, _link, codecs, _link##_codecs); \
+	ADD_DAILINK_COMPONENT(_card, _link, num_codecs, ARRAY_SIZE(_link##_codecs)); \
+	ADD_DAILINK_COMPONENT(_card, _link, init, _init); \
+	ADD_DAILINK_COMPONENT(_card, _link, ops, &_ops); \
+	_card->num_links++; \
+	}
 
 static struct platform_device *dmic_codec_dev;
 static struct platform_device *spdif_codec_dev;
@@ -452,22 +491,6 @@ static int omap_abe_dmic_init(struct snd_soc_pcm_runtime *rtd)
 
 	return 0;
 }
-
-#define ADD_DAILINK(_card, _link, _name, _stream, _ofnode, _init, _ops) { \
-	_card->dai_link[_card->num_links].name = _name; \
-	_card->dai_link[_card->num_links].stream_name = _stream; \
-	_card->dai_link[_card->num_links].cpus = _link##_cpus; \
-	_card->dai_link[_card->num_links].num_cpus = ARRAY_SIZE(_link##_cpus); \
-	_card->dai_link[_card->num_links].cpus->of_node = _ofnode; \
-	_card->dai_link[_card->num_links].platforms = _link##_platforms; \
-	_card->dai_link[_card->num_links].num_platforms = ARRAY_SIZE(_link##_platforms); \
-	_card->dai_link[_card->num_links].platforms->of_node = _ofnode; \
-	_card->dai_link[_card->num_links].codecs = _link##_codecs; \
-	_card->dai_link[_card->num_links].num_codecs = ARRAY_SIZE(_link##_codecs); \
-	_card->dai_link[_card->num_links].init = _init; \
-	_card->dai_link[_card->num_links].ops = &_ops; \
-	_card->num_links++; \
-	}
 
 /* called after loading firmware */
 static int omap_abe_add_aess_dai_links(struct snd_soc_card *card)

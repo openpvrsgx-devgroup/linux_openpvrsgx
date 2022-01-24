@@ -147,6 +147,10 @@ static void* ProcSeqOff2ElementSysNodes(struct seq_file * sfile, loff_t off);
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
 #define PDE_DATA(x)    PDE(x)->data;
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(5,16,0))
+// defined in proc_fs.h
+#else
+#define PDE_DATA pde_data	// renamed to lower case
 #endif
 
 #ifdef DEBUG

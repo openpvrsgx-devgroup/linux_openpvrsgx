@@ -552,7 +552,7 @@ pandora_nub_dt_init(struct i2c_client *client)
 #define PANDORA_NUB_PE(name, readf, writef) \
 static int proc_open_##name(struct inode *inode, struct file *file) \
 { \
-	return single_open(file, readf, PDE_DATA(inode)); \
+	return single_open(file, readf, pde_data(inode)); \
 } \
 static const struct proc_ops pandora_nub_proc_##name = { \
 	.proc_open		= proc_open_##name, \

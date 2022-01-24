@@ -763,24 +763,23 @@ static int get_mac_address(struct net_device *dev)
 	unsigned char flag0 = 0;
 	unsigned char flag1 = 0xff;
 	struct jz_eth_private *np = netdev_priv(dev);
+	char a[6];
 
-	if (strlen(ethaddr) > 0 && str2eaddr(dev->dev_addr, ethaddr)) {
+	if (strlen(ethaddr) > 0 && str2eaddr(a, ethaddr)) {
 		/* check whether valid MAC address */
 		for (i = 0; i < 6; i++) {
-			flag0 |= dev->dev_addr[i];
-			flag1 &= dev->dev_addr[i];
+			flag0 |= a[i];
+			flag1 &= a[i];
 		}
 	}
 
-	if ((dev->dev_addr[0] & 0xc0) || flag0 == 0 || flag1 == 0xff) {
+	if ((a[0] & 0xc0) || flag0 == 0 || flag1 == 0xff) {
+		char addr[] = { 0x00, 0xef, 0xa3, 0xc1, 0x00, 0x03 };
 		dev_warn(np->dev, "There is no MAC valid address, use default ..\n");
-		dev->dev_addr[0] = 0x00;
-		dev->dev_addr[1] = 0xef;
-		dev->dev_addr[2] = 0xa3;
-		dev->dev_addr[3] = 0xc1;
-		dev->dev_addr[4] = 0x00;
-		dev->dev_addr[5] = 0x03;
-	}
+		dev_addr_mod(dev, 0, addr, sizeof(addr));
+	} else
+		dev_addr_mod(dev, 0, a, sizeof(a));
+
 	return 0;
 }
 

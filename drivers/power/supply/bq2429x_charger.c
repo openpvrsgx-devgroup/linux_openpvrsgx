@@ -188,7 +188,7 @@ struct bq2429x_device_info {
 	struct regmap_field *rmap_fields[F_MAX_FIELDS];
 
 	struct power_supply *usb;
-	struct power_supply_battery_info bat_info;
+	struct power_supply_battery_info *bat_info;
 
 	struct regulator_desc desc[NUM_REGULATORS];
 	struct device_node *of_node[NUM_REGULATORS];
@@ -633,7 +633,7 @@ static int bq2429x_set_charge_term_voltage_uV(struct bq2429x_device_info *di, in
 	int ret;
 
 	/* limit to battery design by device tree */
-	max_uV = min_t(int, max_uV, di->bat_info.voltage_max_design_uv);
+	max_uV = min_t(int, max_uV, di->bat_info->voltage_max_design_uv);
 
 	bits = bq2429x_find_idx(max_uV, TBL_VREG);
 	if (bits < 0)
@@ -641,7 +641,7 @@ static int bq2429x_set_charge_term_voltage_uV(struct bq2429x_device_info *di, in
 
 	dev_dbg(di->dev, "%s(): translated vbatt_max=%u and VREG=%u (%02x)\n",
 		__func__,
-		di->bat_info.voltage_max_design_uv, max_uV,
+		di->bat_info->voltage_max_design_uv, max_uV,
 		bits);
 
 	ret = bq2429x_field_write(di, F_VREG, bits);
@@ -939,7 +939,7 @@ static void bq2429x_input_available(struct bq2429x_device_info *di, bool state)
 					di->usb_input_current_uA);
 		}
 
-		bq2429x_set_charge_current_uA(di, di->bat_info.constant_charge_current_max_ua);
+		bq2429x_set_charge_current_uA(di, di->bat_info->constant_charge_current_max_ua);
 
 		if (di->state.chrg_stat == 0) {
 			bq2429x_set_charge_mode(di, false);
@@ -1293,12 +1293,12 @@ static int bq2429x_init_registers(struct bq2429x_device_info *di)
 		return ret;
 	}
 
-	if (di->bat_info.energy_full_design_uwh         == -EINVAL ||
-	    di->bat_info.charge_full_design_uah         == -EINVAL ||
-	    di->bat_info.voltage_min_design_uv          == -EINVAL ||
-	    di->bat_info.voltage_max_design_uv          == -EINVAL ||
-	    di->bat_info.constant_charge_current_max_ua == -EINVAL ||
-	    di->bat_info.constant_charge_voltage_max_uv == -EINVAL)
+	if (di->bat_info->energy_full_design_uwh         == -EINVAL ||
+	    di->bat_info->charge_full_design_uah         == -EINVAL ||
+	    di->bat_info->voltage_min_design_uv          == -EINVAL ||
+	    di->bat_info->voltage_max_design_uv          == -EINVAL ||
+	    di->bat_info->constant_charge_current_max_ua == -EINVAL ||
+	    di->bat_info->constant_charge_voltage_max_uv == -EINVAL)
 	{
 		dev_err(di->dev, "battery info is incomplete\n");
 		return ret;
@@ -1314,11 +1314,11 @@ static int bq2429x_init_registers(struct bq2429x_device_info *di)
 		return ret;
 
 	bq2429x_set_precharge_current_uA(di,
-			(di->bat_info.precharge_current_ua == -EINVAL) ?
-			128000 : di->bat_info.precharge_current_ua);
+			(di->bat_info->precharge_current_ua == -EINVAL) ?
+			128000 : di->bat_info->precharge_current_ua);
 	bq2429x_set_charge_term_current_uA(di,
-			(di->bat_info.charge_term_current_ua == -EINVAL) ?
-			128000 : di->bat_info.charge_term_current_ua);
+			(di->bat_info->charge_term_current_ua == -EINVAL) ?
+			128000 : di->bat_info->charge_term_current_ua);
 
 	/*
 	 * VSYS may be up to 150 mV above fully charged battery voltage

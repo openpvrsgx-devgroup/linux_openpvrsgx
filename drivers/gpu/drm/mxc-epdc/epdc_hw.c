@@ -447,7 +447,7 @@ int mxc_epdc_init_hw(struct mxc_epdc *priv)
 
 	priv->v3p3_regulator = devm_regulator_get(priv->drm.dev, "V3P3");
 	if (IS_ERR(priv->v3p3_regulator))
-		return dev_err_probe(priv->drm.dev, PTR_ERR(priv->vcom_regulator),
+		return dev_err_probe(priv->drm.dev, PTR_ERR(priv->v3p3_regulator),
 				     "Unable to get V3P3 regulator\n");
 
 	of_property_read_string(priv->drm.dev->of_node,

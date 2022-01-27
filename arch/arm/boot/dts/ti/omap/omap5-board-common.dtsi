@@ -131,25 +131,15 @@
 		ti,aess = <&aess>;
 
 		/* Audio routing */
-// checkme: duplicate to audio_map in driver???
 		ti,audio-routing =
 			"Headset Stereophone", "HSOL",
 			"Headset Stereophone", "HSOR",
-			"Ext Spk", "HFL",
-			"Ext Spk", "HFR",
 			"Line Out", "AUXL",
 			"Line Out", "AUXR",
 			"HSMIC", "Headset Mic",
 			"Headset Mic", "Headset Mic Bias",
 			"AFML", "Line In",
-			"AFMR", "Line In"/*,
-			"Headset Playback", "PDM_DL1",
-			"Handsfree Playback", "PDM_DL2",
-			"PDM_UL1", "Analog Capture",
-			"40122000.mcbsp Playback", "BT_VX_DL",
-			"BT_VX_UL", "40122000.mcbsp Capture",
-			"40124000.mcbsp Playback", "MM_EXT_DL",
-			"MM_EXT_UL", "40124000.mcbsp Capture" */;
+			"AFMR", "Line In";
 	};
 };
 

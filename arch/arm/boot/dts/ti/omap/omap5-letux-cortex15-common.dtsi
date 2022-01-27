@@ -429,12 +429,12 @@
 		"Ext Spk", "HFR",
 		"Line Out", "AUXL",
 		"Line Out", "AUXR",
-		"AFML", "Line In",
-		"AFMR", "Line In",
 		"HSMIC", "Headset Mic",
 		"Headset Mic", "Headset Mic Bias",
 		"MAINMIC", "Main Handset Mic",
-		"Main Handset Mic", "Main Mic Bias";
+		"Main Handset Mic", "Main Mic Bias",
+		"AFML", "Line In",
+		"AFMR", "Line In";
 };
 
 &twl6040_pins {

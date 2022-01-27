@@ -11,10 +11,15 @@ trap "exit 1" SIGHUP SIGINT SIGTERM
 [ -r /sys/firmware/devicetree/base/sound/ti,twl6040 ] || NOVOLUMED=yes
 
 MONO=false
+CARD="$($SCRIPTPATH/findsoundcard -a | head -1)"
 
 while [ "$1" ]
 do
         case "$1" in
+        "-c" )
+		shift
+		CARD="$1"
+		;;
         "-d" )
 		DEMO=yes
 		;;
@@ -39,6 +44,7 @@ do
 		;;
 	-* )
 		echo unknown option $1
+		echo "-c dev	device"
 		echo "-d	demo"
 		echo "-m	file is mono (1 channel) or take first channel only"
 		echo "-nv	no volumed"
@@ -56,19 +62,19 @@ do
 	shift
 done
 
+NUM=$($SCRIPTPATH/findsoundcard "$CARD")
+if [ ! "$NUM" ]
+then
+	echo sound card "$CARD" not found >&2
+	exit
+fi
+
+# FIXME: make this all depend on presence of amixer controls
+
 if [ -r /sys/firmware/devicetree/base/sound/ti,twl6040 ]
 then
 
 echo "TWL6040 (Pandaboard, OMAP5432EVM, Pyra, ...)"
-CARD=L15	# I have no idea where this "L15" is defined in the kernel
-		# but this is what aplay -L reports
-NUM=$($SCRIPTPATH/findsoundcard "$CARD")
-
-if ! [ "$NUM" ]
-then
-	CARD="PandaBoardES"
-	NUM=$($SCRIPTPATH/findsoundcard "$CARD")
-fi
 
 amixer -c "$NUM" -q set "Aux FM" 0% || exit
 amixer -c "$NUM" -q set "Capture" 100% || exit
@@ -96,9 +102,9 @@ if [ ! "$NOVOLUMED" ] # start volumed
 then
 if [ "$NOHANDSFREE" ]
 then
-	$SCRIPTPATH/volumed -q -nhf &
+	$SCRIPTPATH/volumed -c "$CARD" -q -nhf &
 else
-	$SCRIPTPATH/volumed -q &
+	$SCRIPTPATH/volumed -c "$CARD" -q &
 fi
 fi
 
@@ -127,7 +133,6 @@ REMIX_STEREO="remix 1 2 1 2"
 else
 
 echo "TWL4030 (GTA04, ...)"
-CARD=gta04
 NUM=$($SCRIPTPATH/findsoundcard "$CARD")
 
 amixer -c "$NUM" -q set "AVADC Clock Priority" "HiFi high priority" || exit

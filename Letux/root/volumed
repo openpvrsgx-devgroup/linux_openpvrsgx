@@ -3,31 +3,44 @@
 # Pyra volume control daemon
 #
 SCRIPTPATH="$(dirname "$0")"
+
+case "$(cat /proc/device-tree/model)" in
+	Pyra-* | LC15-EVM* )	# only Pyra and LC15EVM have a potentiometer connected to the GPADC
+		;;
+	* )
+		exit 1
+		;;
+esac
+
 GPADC=$($SCRIPTPATH/findiio "palmas-gpadc")
-NUM=$($SCRIPTPATH/findsoundcard "L15")	# twl6040 on Pyra
+CARD="$($SCRIPTPATH/findsoundcard -a | head -1)"
 
 if [ ! "GPADC" ]
 then
 	echo no volume wheel found >&2
 	exit
 fi
-if [ ! "$NUM" ]
-then
-	echo no sound card found >&2
-	exit
-fi
-
 LASTVOL="unknown"
 MAXWHEEL=1200	# reports 0..1250 mV but leave some margin
 
 while [ "$1" ]
 do
-        case "$1" in
-        "-q" )
+	case "$1" in
+	"-c" )
+		shift
+		CARD="$1"
+		;;
+	"-q" )
 		QUIET=true
 		;;
         "-nhf" )
 		NOHANDSFREE=yes
+		;;
+	-* )
+		echo unknown option $1
+		echo "-c dev	device"
+		echo "-q	quiet"
+		exit 1
 		;;
 	* )
 		break
@@ -36,7 +49,14 @@ do
 	shift
 done
 
-while true
+NUM=$($SCRIPTPATH/findsoundcard "$CARD")
+if [ ! "$NUM" ]
+then
+	echo sound card "$CARD" not found >&2
+	exit
+fi
+
+while true	# run as daemon in background
 do
 	WHEEL=$(cat $GPADC/in_voltage2_input 2>/dev/null)
 	# could apply non-linear scale for more intuitive control

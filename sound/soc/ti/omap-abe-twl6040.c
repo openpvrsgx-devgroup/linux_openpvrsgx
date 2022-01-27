@@ -881,9 +881,12 @@ static int omap_abe_add_legacy_dai_links(struct snd_soc_card *card)
 printk("%s\n", __func__);
 
 	dai_node = of_parse_phandle(node, "ti,mcpdm", 0);
-	if (dai_node)
-// #define ADD_DAILINK(_card, _platform_of_node, _cpu_of_node, dai_link_single) {
-		ADD_DAILINK(card, dai_node, dai_node, legacy_mcpdm_dai);
+	if (!dai_node) {
+		dev_err(card->dev, "McPDM node is not provided\n");
+		return -EINVAL;
+	}
+
+	ADD_DAILINK(card, dai_node, dai_node, legacy_mcpdm_dai);
 
 	dai_node = of_parse_phandle(node, "ti,dmic", 0);
 	if (dai_node)
@@ -894,9 +897,11 @@ printk("%s\n", __func__);
 	dai_node = of_parse_phandle(node, "ti,mcbsp2", 0);
 	if (dai_node)
 		ADD_DAILINK(card, dai_node, NULL, legacy_mcbsp_dai);
+#endif
 
+#if 0
 	/* Add the Legacy McASP */
-	dai_node = of_parse_phandle(node, "ti,mcbsp2", 0);
+	dai_node = of_parse_phandle(node, "ti,mcasp", 0);
 	if (dai_node)
 		ADD_DAILINK(card, dai_node, NULL, legacy_mcasp_dai);
 #endif
@@ -917,8 +922,10 @@ static void omap_abe_fw_ready(const struct firmware *fw, void *context)
 			 AESS_FW_NAME);
 
 	priv->aess = omap_aess_get_handle();
-	if (!priv->aess)
+	if (!priv->aess) {
 		dev_err(&pdev->dev, "AESS is not yet available\n");
+		return;
+	}
 
 	ret = omap_aess_load_firmware(priv->aess, AESS_FW_NAME);
 	if (ret) {
@@ -931,19 +938,17 @@ static void omap_abe_fw_ready(const struct firmware *fw, void *context)
 	/* Release the FW here. */
 	release_firmware(fw);
 
-	if (priv->aess) {
-		ret = omap_abe_add_aess_dai_links(card);
-		if (ret < 0)
-			return;
-	}
-
 	ret = omap_abe_add_legacy_dai_links(card);
+	if (ret < 0)
+		return;
+
+	ret = omap_abe_add_aess_dai_links(card);
 	if (ret < 0)
 		return;
 
 	ret = devm_snd_soc_register_card(&pdev->dev, card);
 	if (ret)
-		dev_err(&pdev->dev, "devm_snd_soc_register_card() failed: %d\n",
+		dev_err(&pdev->dev, "card registration failed after successful firmware load: %d\n",
 			ret);
 	return;
 }
@@ -1008,7 +1013,7 @@ static int omap_abe_probe(struct platform_device *pdev)
 	card->owner = THIS_MODULE;
 	card->dapm_widgets = twl6040_dapm_widgets;
 	card->num_dapm_widgets = ARRAY_SIZE(twl6040_dapm_widgets);
-	card->dapm_routes = audio_map;
+	card->dapm_routes = audio_map;	/* default map */
 	card->num_dapm_routes = ARRAY_SIZE(audio_map);
 	card->dai_link = priv->dai_links;
 	snd_soc_card_set_drvdata(card, priv);
@@ -1018,46 +1023,11 @@ static int omap_abe_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
+	/* additional mapping (static) */
 	ret = snd_soc_of_parse_audio_routing(card, "ti,audio-routing");
 	if (ret) {
 		dev_err(&pdev->dev, "Error while parsing DAPM routing\n");
 		return ret;
-	}
-
-	dai_node = of_parse_phandle(node, "ti,mcpdm", 0);
-	if (!dai_node) {
-		dev_err(&pdev->dev, "McPDM node is not provided\n");
-		return -EINVAL;
-	}
-
-#if 0
-// CHECKME: does this better go to omap_abe_add_legacy_dai_links?
-	ADD_DAILINK(card, link_mcpdm, "PDM Play", "TWL6040", dai_node, omap_abe_twl6040_init, omap_abe_ops);
-
-	dai_node = of_parse_phandle(node, "ti,dmic", 0);
-	if (dai_node)
-		ADD_DAILINK(card, link_dmic, "TWL6040", "DMIC Capture", dai_node, omap_abe_dmic_init, omap_abe_dmic_ops);
-#endif
-
-	dai_node = of_parse_phandle(node, "ti,mcbsp", 0);
-	if (dai_node)
-		ADD_DAILINK(link_mcbsp, "TWL6040", "DMIC Capture", dai_node, omap_abe_dmic_init, omap_abe_dmic_ops);
-
-	dai_node = of_parse_phandle(node, "ti,mcasp", 0);
-	if (dai_node)
-		ADD_DAILINK(link_mcasp, "TWL6040", "DMIC Capture", dai_node, omap_abe_dmic_init, omap_abe_dmic_ops);
-
-	dai_node = of_parse_phandle(node, "ti,mcbsp2", 0);
-	if (dai_node)
-		ADD_DAILINK(link_mcasp, "TWL6040", "DMIC Capture", dai_node, omap_abe_dmic_init, omap_abe_dmic_ops);
-
-	dai_node = of_parse_phandle(node, "ti,aess", 0);
-	if (dai_node) {
-		ADD_DAILINK(link_fe, "TWL6040", "DMIC Capture", dai_node, omap_abe_dmic_init, omap_abe_dmic_ops);
-		ADD_DAILINK(link_be_mcpdm, "TWL6040", "DMIC Capture", dai_node, omap_abe_dmic_init, omap_abe_dmic_ops);
-		ADD_DAILINK(link_be_mcbsp1, "TWL6040", "DMIC Capture", dai_node, omap_abe_dmic_init, omap_abe_dmic_ops);
-		ADD_DAILINK(link_be_mcbsp2, "TWL6040", "DMIC Capture", dai_node, omap_abe_dmic_init, omap_abe_dmic_ops);
-		ADD_DAILINK(link_be_dmic, "TWL6040", "DMIC Capture", dai_node, omap_abe_dmic_init, omap_abe_dmic_ops);
 	}
 
 	priv->jack_detection = of_property_read_bool(node, "ti,jack-detection");

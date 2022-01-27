@@ -123,9 +123,9 @@
 		ti,mclk-freq = <19200000>;
 
 		ti,mcpdm = <&mcpdm>;
-		ti,mcbsp1 = <&mcbsp1>;
-		ti,mcbsp2 = <&mcbsp2>;
-		ti,mcbsp3 = <&mcbsp3>;
+		ti,mcbsp1 = <&mcbsp1>;	/* bluetooth */
+		ti,mcbsp2 = <&mcbsp2>;	/* fm radio */
+		ti,mcbsp3 = <&mcbsp3>;	/* modem */
 
 		ti,twl6040 = <&twl6040>;
 		ti,aess = <&aess>;

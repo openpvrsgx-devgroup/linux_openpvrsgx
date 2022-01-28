@@ -701,7 +701,7 @@
 };
 
 &mcspi1 {
-
+	status = "disabled";
 };
 
 &mcspi2 {
@@ -712,6 +712,10 @@
 &mcspi3 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&mcspi3_pins>;
+};
+
+&mcspi4 {
+	status = "disabled";
 };
 
 &uart1 {

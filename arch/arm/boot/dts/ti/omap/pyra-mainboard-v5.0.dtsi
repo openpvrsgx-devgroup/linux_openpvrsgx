@@ -10,7 +10,7 @@
 #include "pyra-mainboard-common.dtsi"
 
 / {
-	model = "Pyra-Mainboard V5.0";
+	model = "Pyra-Handheld-V5.0";
 };
 
 &i2c2 {

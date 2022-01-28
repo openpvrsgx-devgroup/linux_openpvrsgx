@@ -10,7 +10,7 @@
 #include "pyra-mainboard-common.dtsi"
 
 / {
-	model = "Pyra-Mainboard-V5.1";
+	model = "Pyra-Handheld-V5.1";
 
 	pyra_leds { /* alternate LED driver (parallel to is31fl31) */
 		compatible = "gpio-leds";

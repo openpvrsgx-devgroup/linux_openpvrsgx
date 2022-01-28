@@ -385,6 +385,7 @@ struct abe_twl6040 {
 	for (i = 0; i < ARRAY_SIZE(dai_link_array); i++, _card->num_links++) { \
 		BUG_ON(_card->num_links >= TOTAL_DAI_LINKS); \
 		_card->dai_link[_card->num_links] = (dai_link_array)[i]; \
+		_card->dai_link[_card->num_links].platforms[0].name = NULL; \
 		_card->dai_link[_card->num_links].platforms[0].of_node = (_of_node); \
 		} \
 	}
@@ -796,6 +797,21 @@ printk("%s\n", __func__);
 	ADD_DAILINKS(card, aess_node, abe_be_dmic_dai);
 
 #ifdef MATERIAL
+// CHECKME: https://git.ti.com/cgit/ti-linux-kernel/ti-linux-kernel/tree/sound/soc/omap/omap-abe-twl6040.c?id=41b605f2887879d5e428928b197e24ffb44d9b82#n693
+	if (node) {
+		struct device_node *dai_node, *aess_node;
+
+		aess_node = of_parse_phandle(node, "ti,aess", 0);
+		if (!aess_node) {
+			dev_err(card->dev, "AESS node is not provided\n");
+			return -EINVAL;
+		}
+
+		for (i = 4; i < ARRAY_SIZE(abe_fe_dai); i++) {
+			abe_fe_dai[i].platform_name  = NULL;
+			abe_fe_dai[i].platform_of_node = aess_node;
+		}
+
 		dai_node = of_parse_phandle(node, "ti,mcpdm", 0);
 		if (!dai_node) {
 				dev_err(card->dev, "McPDM node is not provided\n");

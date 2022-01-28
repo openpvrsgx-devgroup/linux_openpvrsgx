@@ -743,6 +743,14 @@
 	status = "disabled";
 };
 
+&mcspi3 {
+	status = "disabled";
+};
+
+&mcspi4 {
+	status = "disabled";
+};
+
 &mmc3 {
 	/* we have a WLAN module on mmc3 */
 	status = "okay";

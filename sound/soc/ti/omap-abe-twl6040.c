@@ -82,37 +82,37 @@ SND_SOC_DAILINK_DEFS(link_fe_media1,
 	DAILINK_COMP_ARRAY(COMP_CPU("Media1")),
 	DAILINK_COMP_ARRAY(COMP_CODEC("snd-soc-dummy",
 				      "snd-soc-dummy-dai")),
-	DAILINK_COMP_ARRAY(COMP_PLATFORM("dsp-audio")));
+	DAILINK_COMP_ARRAY(COMP_PLATFORM(NULL)));	// code will set .of_node
 
 SND_SOC_DAILINK_DEFS(link_fe_media2,
 	DAILINK_COMP_ARRAY(COMP_CPU("Media2")),
 	DAILINK_COMP_ARRAY(COMP_CODEC("snd-soc-dummy",
 				      "snd-soc-dummy-dai")),
-	DAILINK_COMP_ARRAY(COMP_PLATFORM("dsp-audio")));
+	DAILINK_COMP_ARRAY(COMP_PLATFORM(NULL)));
 
 SND_SOC_DAILINK_DEFS(link_fe_tones,
 	DAILINK_COMP_ARRAY(COMP_CPU("Tones")),
 	DAILINK_COMP_ARRAY(COMP_CODEC("snd-soc-dummy",
 				      "snd-soc-dummy-dai")),
-	DAILINK_COMP_ARRAY(COMP_PLATFORM("dsp-audio")));
+	DAILINK_COMP_ARRAY(COMP_PLATFORM(NULL)));
 
 SND_SOC_DAILINK_DEFS(link_fe_voice,
 	DAILINK_COMP_ARRAY(COMP_CPU("Tones")),
 	DAILINK_COMP_ARRAY(COMP_CODEC("snd-soc-dummy",
 				      "snd-soc-dummy-dai")),
-	DAILINK_COMP_ARRAY(COMP_PLATFORM("dsp-audio")));
+	DAILINK_COMP_ARRAY(COMP_PLATFORM(NULL)));
 
 SND_SOC_DAILINK_DEFS(link_fe_modem,
 	DAILINK_COMP_ARRAY(COMP_CPU("Modem")),
 	DAILINK_COMP_ARRAY(COMP_CODEC("snd-soc-dummy",
 				      "snd-soc-dummy-dai")),
-	DAILINK_COMP_ARRAY(COMP_PLATFORM("dsp-audio")));
+	DAILINK_COMP_ARRAY(COMP_PLATFORM(NULL)));
 
 SND_SOC_DAILINK_DEFS(link_fe_lp,
 	DAILINK_COMP_ARRAY(COMP_CPU("LP Ping-Pong")),
 	DAILINK_COMP_ARRAY(COMP_CODEC("snd-soc-dummy",
 				      "snd-soc-dummy-dai")),
-	DAILINK_COMP_ARRAY(COMP_PLATFORM("dsp-audio")));
+	DAILINK_COMP_ARRAY(COMP_PLATFORM(NULL)));
 
 // CHECKME: https://git.ti.com/cgit/ti-linux-kernel/ti-linux-kernel/tree/sound/soc/omap/omap-abe-twl6040.c?id=41b605f2887879d5e428928b197e24ffb44d9b82#n609
 
@@ -121,19 +121,19 @@ SND_SOC_DAILINK_DEFS(link_be_mcpdm,
 	DAILINK_COMP_ARRAY(COMP_CPU("mcpdm-dai.0")),
 	DAILINK_COMP_ARRAY(COMP_CODEC("snd-soc-dummy",
 				      "snd-soc-dummy-dai")),
-	DAILINK_COMP_ARRAY(COMP_PLATFORM("snd-soc-dummy")));
+	DAILINK_COMP_ARRAY(COMP_PLATFORM(NULL)));
 
 SND_SOC_DAILINK_DEFS(link_be_mcbsp1,
 	DAILINK_COMP_ARRAY(COMP_CPU("mcbsp.1")),
 	DAILINK_COMP_ARRAY(COMP_CODEC("snd-soc-dummy",
 				      "snd-soc-dummy-dai")),
-	DAILINK_COMP_ARRAY(COMP_PLATFORM("snd-soc-dummy")));
+	DAILINK_COMP_ARRAY(COMP_PLATFORM(NULL)));
 
 SND_SOC_DAILINK_DEFS(link_be_mcbsp2,
 	DAILINK_COMP_ARRAY(COMP_CPU("mcbsp.2")),
 	DAILINK_COMP_ARRAY(COMP_CODEC("snd-soc-dummy",
 				      "snd-soc-dummy-dai")),
-	DAILINK_COMP_ARRAY(COMP_PLATFORM("snd-soc-dummy")));
+	DAILINK_COMP_ARRAY(COMP_PLATFORM(NULL)));
 
 // mcbsp3?
 
@@ -141,14 +141,12 @@ SND_SOC_DAILINK_DEFS(link_be_dmic,
 	DAILINK_COMP_ARRAY(COMP_CPU("dmic.0")),
 	DAILINK_COMP_ARRAY(COMP_CODEC("snd-soc-dummy",
 				      "snd-soc-dummy-dai")),
-	DAILINK_COMP_ARRAY(COMP_PLATFORM("snd-soc-dummy")));
+	DAILINK_COMP_ARRAY(COMP_PLATFORM(NULL)));
 
 // dmic.1 dmic.2?
 
 // from https://git.ti.com/cgit/ti-linux-kernel/ti-linux-kernel/tree/sound/soc/omap/omap-abe-twl6040.c?id=41b605f2887879d5e428928b197e24ffb44d9b82
 // and https://kernel.googlesource.com/pub/scm/linux/kernel/git/lrg/asoc/+/omap/v3.10%5E2..omap/v3.10/
-
-// auch stream_name setzen??? https://elixir.bootlin.com/linux/v5.17-rc1/source/sound/soc/ti/omap-abe-twl6040.c#L254
 
 #define SND_SOC_DAI_CONNECT(_name, _stream_name, _linkname) \
 	.name = _name, .stream_name = _stream_name, SND_SOC_DAILINK_REG(_linkname)
@@ -220,13 +218,6 @@ static struct snd_soc_dai_link abe_fe_dai[] = {
 	SND_SOC_DAI_OPS(NULL, omap_abe_twl6040_fe_init),
 	SND_SOC_DAI_IGNORE_PMDOWN,
 },
-#if 0	// why duplicate?
-{
-	/* ABE Media Capture */
-	SND_SOC_DAI_FE_LINK("OMAP ABE Media2", link_fe_media2),
-	SND_SOC_DAI_FE_TRIGGER(SND_SOC_DPCM_TRIGGER_BESPOKE, SND_SOC_DPCM_TRIGGER_BESPOKE),
-},
-#endif
 {
 	/* ABE Voice */
 	SND_SOC_DAI_FE_LINK("OMAP ABE Voice", link_fe_voice),
@@ -908,19 +899,15 @@ printk("%s\n", __func__);
 	if (dai_node)
 		ADD_DAILINK(card, dai_node, dai_node, legacy_dmic_dai);
 
-#if 0
 	/* Add the Legacy McBSP(2) */
 	dai_node = of_parse_phandle(node, "ti,mcbsp2", 0);
 	if (dai_node)
 		ADD_DAILINK(card, dai_node, NULL, legacy_mcbsp_dai);
-#endif
 
-#if 0
 	/* Add the Legacy McASP */
 	dai_node = of_parse_phandle(node, "ti,mcasp", 0);
 	if (dai_node)
 		ADD_DAILINK(card, dai_node, NULL, legacy_mcasp_dai);
-#endif
 
 	return 0;
 }

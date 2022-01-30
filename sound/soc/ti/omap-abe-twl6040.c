@@ -285,7 +285,7 @@ static struct snd_soc_dai_link abe_be_mcpdm_dai[] = {
 	SND_SOC_DAI_IGNORE_SUSPEND, SND_SOC_DAI_IGNORE_PMDOWN,
 },
 {
-	/* McPDM UL1 - Analog Capture */
+	/* McPDM UL1 - Analog Capture (Headset) */
 	SND_SOC_DAI_CONNECT("McPDM-UL1", "Backend", link_be_mcpdm),
 	SND_SOC_DAI_BE_LINK(OMAP_ABE_DAI_PDM_UL, omap_mcpdm_be_hw_params_fixup),
 	SND_SOC_DAI_OPS(&omap_abe_ops, NULL),

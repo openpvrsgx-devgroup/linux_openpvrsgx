@@ -1,0 +1,159 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/display/imx/fsl,mxc-epdc.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Freescale i.MX6 EPDC
+
+maintainers:
+  - Andreas Kemnade <andreas@kemnade.info>
+
+description: |
+  The EPDC is a controller for handling electronic paper displays found in
+  i.MX6 SoCs.
+
+properties:
+  compatible:
+    enum:
+      - fsl,imx6sl-epdc
+      - fsl,imx6sll-epdc
+
+  reg:
+    maxItems: 1
+
+  clocks:
+    items:
+      - description: Bus clock
+      - description: Pixel clock
+
+  clock-names:
+    items:
+      - const: axi
+      - const: pix
+
+  interrupts:
+    maxItems: 1
+
+  vscan-holdoff:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    maxItems: 1
+
+  sdoed-width:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    maxItems: 1
+
+  sdoed-delay:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    maxItems: 1
+
+  sdoez-width:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    maxItems: 1
+
+  sdoez-delay:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    maxItems: 1
+
+  gdclk-hp-offs:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    maxItems: 1
+
+  gdsp-offs:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    maxItems: 1
+
+  gdoe-offs:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    maxItems: 1
+
+  gdclk-offs:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    maxItems: 1
+
+  num-ce:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    maxItems: 1
+
+  timing:
+    $ref: /display/panel/panel-timing.yaml#
+
+  DISPLAY-supply:
+    description:
+      A couple of +/- voltages automatically powered on in a defintive order
+
+  VCOM-supply:
+    description: compensation voltage
+
+  V3P3-supply:
+    description: V3P3 supply
+
+  epd-thermal-zone:
+    description: 
+      Zone to get temperature of the EPD from, practically ambient temperature.
+
+
+
+required:
+  - compatible
+  - reg
+  - clocks
+  - clock-names
+  - interrupts
+  - vscan-holdoff
+  - sdoed-width
+  - sdoed-delay
+  - sdoez-width
+  - sdoez-delay
+  - gdclk-hp-offs
+  - gdsp-offs
+  - gdoe-offs
+  - gdclk-offs
+  - num-ce
+
+additionalProperties: false
+
+examples:
+  - |
+    #include <dt-bindings/clock/imx6sl-clock.h>
+    #include <dt-bindings/interrupt-controller/arm-gic.h>
+
+    epdc: epdc@20f4000 {
+        compatible = "fsl,imx6sl-epdc";
+        reg = <0x020f4000 0x4000>;
+        interrupts = <0 97 IRQ_TYPE_LEVEL_HIGH>;
+        clocks = <&clks IMX6SL_CLK_EPDC_AXI>, <&clks IMX6SL_CLK_EPDC_PIX>;
+        clock-names = "axi", "pix";
+
+        pinctrl-names = "default";
+        pinctrl-0 = <&pinctrl_epdc0>;
+        V3P3-supply = <&V3P3_reg>;
+        VCOM-supply = <&VCOM_reg>;
+        DISPLAY-supply = <&DISPLAY_reg>;
+        epd-thermal-zone = "epd-thermal";
+
+        vscan-holdoff = <4>;
+        sdoed-width = <10>;
+        sdoed-delay = <20>;
+        sdoez-width = <10>;
+        sdoez-delay = <20>;
+        gdclk-hp-offs = <562>;
+        gdsp-offs = <662>;
+        gdoe-offs = <0>;
+        gdclk-offs = <225>;
+        num-ce = <3>;
+        status = "okay";
+
+        timing {
+                clock-frequency = <80000000>;
+                hactive = <1448>;
+                hback-porch = <16>;
+                hfront-porch = <102>;
+                hsync-len = <28>;
+                vactive = <1072>;
+                vback-porch = <4>;
+                vfront-porch = <4>;
+                vsync-len = <2>;
+        };
+    };
+...

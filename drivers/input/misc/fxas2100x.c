@@ -318,9 +318,9 @@ static long fxas2100x_ioctl(struct file *file, unsigned int cmd, unsigned long a
 			}
 			break;
 		case SENSOR_SET_DELAY_TIME:
-			if(copy_from_user(&delay,argp,sizeof(int)));
+			if(copy_from_user(&delay,argp,sizeof(int)))
 			{
-				printk(KERN_ERR "SENSOR_GET_DELAY_TIME copy_to_user failed.");
+				printk(KERN_ERR "SENSOR_SET_DELAY_TIME copy_to_user failed.");
 				ret = -EFAULT;
 			}
 			if(pdata->client && delay > 0 && delay <= 500){

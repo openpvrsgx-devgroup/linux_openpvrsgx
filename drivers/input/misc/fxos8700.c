@@ -296,7 +296,7 @@ static long fxos8700_acc_ioctl(struct file *file, unsigned int cmd, unsigned lon
 			}
 			break;
 		case SENSOR_SET_DELAY_TIME:
-			if(copy_from_user(&delay,argp,sizeof(int)));
+			if(copy_from_user(&delay,argp,sizeof(int)))
 			{
 				printk(KERN_ERR "SENSOR_SET_DELAY_TIME copy_to_user failed.");
 				ret = -EFAULT;
@@ -402,7 +402,7 @@ static long fxos8700_mag_ioctl(struct file *file, unsigned int cmd, unsigned lon
 			}
 			break;
 		case SENSOR_SET_DELAY_TIME:
-			if(copy_from_user(&delay,argp,sizeof(int)));
+			if(copy_from_user(&delay,argp,sizeof(int)))
 			{
 				printk(KERN_ERR "SENSOR_SET_DELAY_TIME copy_to_user failed.");
 				ret = -EFAULT;

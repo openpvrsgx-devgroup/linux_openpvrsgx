@@ -120,7 +120,7 @@ SND_SOC_DAILINK_DEFS(link_fe_lp,
 /* Backend DAIs - i.e. dynamically matched interfaces, invisible to userspace */
 SND_SOC_DAILINK_DEFS(link_be_mcpdm,
 	DAILINK_COMP_ARRAY(COMP_CPU("40132000.mcpdm")),
-	DAILINK_COMP_ARRAY(COMP_CODEC("snd-soc-dummy",
+	DAILINK_COMP_ARRAY(COMP_CODEC("twl6040-codec",
 				      "snd-soc-dummy-dai")),
 	DAILINK_COMP_ARRAY(COMP_PLATFORM(NULL)));
 
@@ -132,15 +132,15 @@ SND_SOC_DAILINK_DEFS(link_be_mcbsp1,
 
 SND_SOC_DAILINK_DEFS(link_be_mcbsp2,
 	DAILINK_COMP_ARRAY(COMP_CPU("40124000.mcbsp")),
-	DAILINK_COMP_ARRAY(COMP_CODEC("snd-soc-dummy",
+	DAILINK_COMP_ARRAY(COMP_CODEC("40124000.mcbsp",
 				      "snd-soc-dummy-dai")),
 	DAILINK_COMP_ARRAY(COMP_PLATFORM(NULL)));
 
 // mcbsp3?
 
 SND_SOC_DAILINK_DEFS(link_be_dmic,
-	DAILINK_COMP_ARRAY(COMP_CPU("dmic.0 - fixme")),
-	DAILINK_COMP_ARRAY(COMP_CODEC("snd-soc-dummy",
+	DAILINK_COMP_ARRAY(COMP_CPU("dmic.0")),
+	DAILINK_COMP_ARRAY(COMP_CODEC("dmic-codec",
 				      "snd-soc-dummy-dai")),
 	DAILINK_COMP_ARRAY(COMP_PLATFORM(NULL)));
 

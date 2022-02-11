@@ -121,7 +121,7 @@ SND_SOC_DAILINK_DEFS(link_fe_lp,
 /* Backend DAIs - i.e. dynamically matched interfaces, invisible to userspace */
 SND_SOC_DAILINK_DEFS(link_be_mcpdm,
 	DAILINK_COMP_ARRAY(COMP_CPU("40132000.mcpdm")),
-	DAILINK_COMP_ARRAY(COMP_CODEC("twl6040-codec",
+	DAILINK_COMP_ARRAY(COMP_CODEC("snd-soc-dummy",
 				      "snd-soc-dummy-dai")),
 	DAILINK_COMP_ARRAY(COMP_PLATFORM(NULL)));
 
@@ -285,7 +285,7 @@ static struct snd_soc_dai_link abe_be_mcpdm_dai[] = {
 	/* McPDM DL1 - Headset */
 	SND_SOC_DAI_CONNECT("McPDM-DL1", "Backend", link_be_mcpdm),
 	SND_SOC_DAI_BE_LINK(OMAP_ABE_DAI_PDM_DL1, omap_mcpdm_be_hw_params_fixup),
-	SND_SOC_DAI_OPS(&omap_abe_ops, omap_abe_twl6040_init),
+	SND_SOC_DAI_OPS(&omap_abe_ops, NULL/*omap_abe_twl6040_init*/),
 	SND_SOC_DAI_IGNORE_SUSPEND, SND_SOC_DAI_IGNORE_PMDOWN,
 },
 {

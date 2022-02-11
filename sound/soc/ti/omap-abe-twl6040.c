@@ -629,7 +629,8 @@ static int omap_abe_stream_event(struct snd_soc_dapm_context *dapm, int event)
 
 static int omap_abe_twl6040_dl2_init(struct snd_soc_pcm_runtime *rtd)
 {
-#if MATERIAL
+printk("%s\n", __func__);
+#ifdef MATERIAL
 	struct snd_soc_component *component = asoc_rtd_to_codec(rtd, 0)->component;
 	struct snd_soc_codec *codec = rtd->codec;
 	struct snd_soc_card *card = codec->card;
@@ -675,8 +676,18 @@ static int omap_abe_twl6040_init(struct snd_soc_pcm_runtime *rtd)
 					TWL6040_HSF_TRIM_RIGHT(hsotrim));
 
 	// FIXME: dapm.stream_event has disappeared in v5.4
-	// what is the replacement?
 	// card->dapm.stream_event = omap_abe_stream_event;
+	// what is the replacement?
+	// component->driver->stream_event = omap_abe_stream_event;
+/* better in abe_probe?
+
+static const struct snd_soc_component_driver something = {
+	.stream_event = omap_abe_stream_event;
+}
+
+	ret = devm_snd_soc_register_component(dev, &something,
+					      &some_dai, 1);
+*/
 
 #if 0	// REVISIT
 	/* allow audio paths from the audio modem to run during suspend */
@@ -772,7 +783,6 @@ static int omap_abe_add_aess_dai_links(struct snd_soc_card *card)
 	struct device_node *node = card->dev->of_node;
 	struct device_node *aess_node;
 	struct device_node *dai_node;
-	int ret;
 
 printk("%s\n", __func__);
 
@@ -797,6 +807,8 @@ printk("%s\n", __func__);
 
 #ifdef MATERIAL
 // CHECKME: https://git.ti.com/cgit/ti-linux-kernel/ti-linux-kernel/tree/sound/soc/omap/omap-abe-twl6040.c?id=41b605f2887879d5e428928b197e24ffb44d9b82#n693
+	int ret;
+
 	if (node) {
 		struct device_node *dai_node, *aess_node;
 
@@ -1076,6 +1088,7 @@ static int omap_abe_probe(struct platform_device *pdev)
 	if (ret < 0)
 		return ret;
 
+/* replace by devm_snd_soc_register_component and register the stream event
 	ret = snd_soc_register_card(card);
 	if (ret) {
 		dev_err(&pdev->dev, "card registration failed: %d\n", ret);

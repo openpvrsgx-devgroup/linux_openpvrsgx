@@ -59,11 +59,12 @@ SND_SOC_DAILINK_DEFS(link1,
 				      "dmic-hifi")),
 	DAILINK_COMP_ARRAY(COMP_EMPTY()));
 
+/* brauchen wir das überhaupt??? */
 SND_SOC_DAILINK_DEFS(link_mcbsp,
 	DAILINK_COMP_ARRAY(COMP_EMPTY()),
 // erzeugt einen codec-dai mit dem Namen "omap-mcbsp.2" und dem dai_name "snd-soc-dummy-dai"
 // was ist der Unterschied der beiden Namen?
-	DAILINK_COMP_ARRAY(COMP_CODEC("40124000.mcbsp",
+	DAILINK_COMP_ARRAY(COMP_CODEC("snd-soc-dummy",
 				      "snd-soc-dummy-dai")),
 	DAILINK_COMP_ARRAY(COMP_EMPTY()));
 
@@ -132,16 +133,16 @@ SND_SOC_DAILINK_DEFS(link_be_mcbsp1,
 
 SND_SOC_DAILINK_DEFS(link_be_mcbsp2,
 	DAILINK_COMP_ARRAY(COMP_CPU("40124000.mcbsp")),
-	DAILINK_COMP_ARRAY(COMP_CODEC("40124000.mcbsp",
+	DAILINK_COMP_ARRAY(COMP_CODEC("snd-soc-dummy",
 				      "snd-soc-dummy-dai")),
 	DAILINK_COMP_ARRAY(COMP_PLATFORM(NULL)));
 
-// mcbsp3?
+// mcbsp3? modem? codec für PLS8?
 
 SND_SOC_DAILINK_DEFS(link_be_dmic,
 	DAILINK_COMP_ARRAY(COMP_CPU("dmic.0")),
 	DAILINK_COMP_ARRAY(COMP_CODEC("dmic-codec",
-				      "snd-soc-dummy-dai")),
+				      "dmic-hifi")),
 	DAILINK_COMP_ARRAY(COMP_PLATFORM(NULL)));
 
 // dmic.1 dmic.2?
@@ -185,6 +186,7 @@ static struct snd_soc_dai_link legacy_mcpdm_dai = {
 
 static const struct snd_soc_ops omap_abe_mcbsp_ops;
 
+/* brauchen wir das??? */
 static struct snd_soc_dai_link legacy_mcbsp_dai = {
 	/* Legacy McBSP */
 	SND_SOC_DAI_CONNECT("Legacy McBSP", "TWL6040", link_mcbsp),
@@ -192,6 +194,7 @@ static struct snd_soc_dai_link legacy_mcbsp_dai = {
 	SND_SOC_DAI_IGNORE_SUSPEND,
 };
 
+/* brauchen wir das??? */
 static struct snd_soc_dai_link legacy_mcasp_dai = {
 	/* Legacy SPDIF */
 	SND_SOC_DAI_CONNECT("Legacy SPDIF", "TWL6040", link_mcasp),
@@ -261,6 +264,7 @@ static struct snd_soc_dai_link abe_fe_dai[] = {
 #define OMAP_ABE_DAI_DMIC1			8
 #define OMAP_ABE_DAI_DMIC2			9
 
+/*these constants are not used? */
 #define OMAP_ABE_BE_PDM_DL1		"PDM-DL1"
 #define OMAP_ABE_BE_PDM_UL1		"PDM-UL1"
 #define OMAP_ABE_BE_PDM_DL2		"PDM-DL2"

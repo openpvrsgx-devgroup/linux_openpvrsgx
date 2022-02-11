@@ -68,6 +68,10 @@ config SND_SOC_OMAP_AESS
 	tristate "Audio Engine SubSystem (AESS) support"
 	depends on ARCH_OMAP4 || SOC_OMAP5 || COMPILE_TEST
 	select SND_SOC_TOPOLOGY
+	select SND_SOC_DAVINCI_MCASP
+	select SND_SOC_OMAP_MCBSP
+	select SND_DYNAMIC_MINORS
+	select FW_LOADER
 	help
 	  Say Y or M here if you want to have support for AESS IP found in
 	  OMAP4 and OMAP5.
@@ -123,11 +127,6 @@ config SND_SOC_OMAP_ABE_TWL6040
 	select SND_SOC_OMAP_DMIC
 	select SND_SOC_OMAP_MCPDM
 	select SND_SOC_TWL6040
-	select SND_SOC_DAVINCI_MCASP
-	select SND_SOC_OMAP_MCBSP
-	select SND_SOC_OMAP_AESS
-	select SND_DYNAMIC_MINORS
-	select FW_LOADER
 	help
 	  Say Y or M if you want to add support for SoC audio on OMAP boards
 	  using ABE and twl6040 codec. This driver currently supports:

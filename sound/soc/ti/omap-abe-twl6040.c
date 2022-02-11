@@ -518,13 +518,15 @@ static int omap_abe_set_power_mode(struct snd_kcontrol *kcontrol,
 				   struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
-	struct abe_twl6040 * priv = snd_soc_card_get_drvdata(card);
+	struct abe_twl6040 *priv = snd_soc_card_get_drvdata(card);
 
 	if (priv->twl6040_power_mode == ucontrol->value.integer.value[0])
 		return 0;
 
 	priv->twl6040_power_mode = ucontrol->value.integer.value[0];
+#if IS_ENABLED(CONFIG_SND_SOC_OMAP_AESS)
 	omap_aess_pm_set_mode(priv->aess, priv->twl6040_power_mode);
+#endif
 
 	return 1;
 }
@@ -611,7 +613,7 @@ static int omap_abe_stream_event(struct snd_soc_dapm_context *dapm, int event)
 {
 	struct snd_soc_card *card = dapm->card;
 	struct snd_soc_component *component = dapm->component;
-	struct abe_twl6040 * priv = snd_soc_card_get_drvdata(card);
+	struct abe_twl6040 *priv = snd_soc_card_get_drvdata(card);
 
 	int gain;
 
@@ -622,28 +624,31 @@ static int omap_abe_stream_event(struct snd_soc_dapm_context *dapm, int event)
 
 	gain = twl6040_get_dl1_gain(component) * 100;
 
+#if IS_ENABLED(CONFIG_SND_SOC_OMAP_AESS)
 	omap_aess_set_dl1_gains(priv->aess, gain, gain);
+#endif
 
 	return 0;
 }
 
 static int omap_abe_twl6040_dl2_init(struct snd_soc_pcm_runtime *rtd)
 {
-printk("%s\n", __func__);
-#ifdef MATERIAL
 	struct snd_soc_component *component = asoc_rtd_to_codec(rtd, 0)->component;
-	struct snd_soc_codec *codec = rtd->codec;
-	struct snd_soc_card *card = codec->card;
-	struct omap_abe_data *card_data = snd_soc_card_get_drvdata(card);
+	struct snd_soc_card *card = rtd->card;
+	struct abe_twl6040 *priv = snd_soc_card_get_drvdata(card);
 	u32 hfotrim, left_offset, right_offset;
 
+#ifdef FIXME	// component is NOT the twl6040!?!
 	/* DC offset cancellation computation */
-	hfotrim = twl6040_get_trim_value(codec, TWL6040_TRIM_HFOTRIM);
+	hfotrim = twl6040_get_trim_value(component, TWL6040_TRIM_HFOTRIM);
+#endif
 	right_offset = TWL6040_HSF_TRIM_RIGHT(hfotrim);
 	left_offset = TWL6040_HSF_TRIM_LEFT(hfotrim);
 
-	omap_abe_dc_set_hf_offset(component, left_offset, right_offset);
+#if IS_ENABLED(CONFIG_SND_SOC_OMAP_AESS)
+	omap_aess_dc_set_hf_offset(priv->aess, left_offset, right_offset);
 #endif
+
 	return 0;
 }
 static int omap_abe_twl6040_fe_init(struct snd_soc_pcm_runtime *rtd)
@@ -651,11 +656,12 @@ static int omap_abe_twl6040_fe_init(struct snd_soc_pcm_runtime *rtd)
 #ifdef MATERIAL
 	struct snd_soc_component *component = asoc_rtd_to_codec(rtd, 0)->component;
 	struct snd_soc_card *card = rtd->card;
-	struct omap_abe_data *card_data = snd_soc_card_get_drvdata(card);
+	struct abe_twl6040 *priv = snd_soc_card_get_drvdata(card);
 
-	card_data->abe_platform = component;
+
+// FIXME: what should that do in modern code?
+//	card_data->abe_platform = component;
 #endif
-
 	return 0;
 }
 
@@ -707,8 +713,11 @@ static const struct snd_soc_component_driver something = {
 		left_offset = TWL6040_HSF_TRIM_LEFT(hsotrim);
 
 		step_mV = twl6040_get_hs_step_size(component);
+
+#if IS_ENABLED(CONFIG_SND_SOC_OMAP_AESS)
 		omap_aess_dc_set_hs_offset(priv->aess, left_offset,
 					   right_offset, step_mV);
+#endif
 
 		/* ABE power control */
 		ret = snd_soc_add_card_controls(card, omap_abe_controls,
@@ -756,7 +765,7 @@ static int omap_abe_dmic_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_dapm_context *dapm = &rtd->card->dapm;
 	struct snd_soc_card *card = rtd->card;
-	struct abe_twl6040 * priv = snd_soc_card_get_drvdata(card);
+	struct abe_twl6040 *priv = snd_soc_card_get_drvdata(card);
 	int ret;
 
 	ret = snd_soc_dapm_new_controls(dapm, dmic_dapm_widgets,
@@ -776,15 +785,47 @@ static int omap_abe_dmic_init(struct snd_soc_pcm_runtime *rtd)
 	return 0;
 }
 
+static int omap_abe_add_legacy_dai_links(struct snd_soc_card *card)
+{
+	struct abe_twl6040 *priv = snd_soc_card_get_drvdata(card);
+	struct device_node *node = card->dev->of_node;
+	struct device_node *dai_node;
+	int ret;
+
+	dai_node = of_parse_phandle(node, "ti,mcpdm", 0);
+	if (!dai_node) {
+		dev_err(card->dev, "McPDM node is not provided\n");
+		return -EINVAL;
+	}
+
+	ADD_DAILINK(card, dai_node, dai_node, legacy_mcpdm_dai);
+
+	dai_node = of_parse_phandle(node, "ti,dmic", 0);
+	if (dai_node)
+		ADD_DAILINK(card, dai_node, dai_node, legacy_dmic_dai);
+
+	/* Add the Legacy McBSP(2) */
+	dai_node = of_parse_phandle(node, "ti,mcbsp2", 0);
+	if (false && dai_node)
+		ADD_DAILINK(card, dai_node, dai_node, legacy_mcbsp_dai);
+
+	/* Add the Legacy McASP */
+	dai_node = of_parse_phandle(node, "ti,mcasp", 0);
+	if (false && dai_node)
+		ADD_DAILINK(card, dai_node, dai_node, legacy_mcasp_dai);
+
+	return 0;
+}
+
+#if IS_ENABLED(CONFIG_SND_SOC_OMAP_AESS)
+
 /* called after loading firmware */
 static int omap_abe_add_aess_dai_links(struct snd_soc_card *card)
 {
-	struct abe_twl6040 * priv = snd_soc_card_get_drvdata(card);
+	struct abe_twl6040 *priv = snd_soc_card_get_drvdata(card);
 	struct device_node *node = card->dev->of_node;
 	struct device_node *aess_node;
 	struct device_node *dai_node;
-
-printk("%s\n", __func__);
 
 	/* FIXME: add DAI links for AE */
 
@@ -898,46 +939,12 @@ printk("%s\n", __func__);
 	return 0;
 }
 
-static int omap_abe_add_legacy_dai_links(struct snd_soc_card *card)
-{
-	struct abe_twl6040 * priv = snd_soc_card_get_drvdata(card);
-	struct device_node *node = card->dev->of_node;
-	struct device_node *dai_node;
-	int ret;
-
-printk("%s\n", __func__);
-
-	dai_node = of_parse_phandle(node, "ti,mcpdm", 0);
-	if (!dai_node) {
-		dev_err(card->dev, "McPDM node is not provided\n");
-		return -EINVAL;
-	}
-
-	ADD_DAILINK(card, dai_node, dai_node, legacy_mcpdm_dai);
-
-	dai_node = of_parse_phandle(node, "ti,dmic", 0);
-	if (dai_node)
-		ADD_DAILINK(card, dai_node, dai_node, legacy_dmic_dai);
-
-	/* Add the Legacy McBSP(2) */
-	dai_node = of_parse_phandle(node, "ti,mcbsp2", 0);
-	if (false && dai_node)
-		ADD_DAILINK(card, dai_node, dai_node, legacy_mcbsp_dai);
-
-	/* Add the Legacy McASP */
-	dai_node = of_parse_phandle(node, "ti,mcasp", 0);
-	if (false && dai_node)
-		ADD_DAILINK(card, dai_node, dai_node, legacy_mcasp_dai);
-
-	return 0;
-}
-
 #if IS_BUILTIN(CONFIG_SND_OMAP_SOC_OMAP_ABE_TWL6040)
 static void omap_abe_fw_ready(const struct firmware *fw, void *context)
 {
 	struct platform_device *pdev = (struct platform_device *)context;
 	struct snd_soc_card *card = &omap_abe_card;
-	struct abe_twl6040 * priv = snd_soc_card_get_drvdata(card);
+	struct abe_twl6040 *priv = snd_soc_card_get_drvdata(card);
 	int ret;
 
 	if (unlikely(!fw))
@@ -979,7 +986,7 @@ static void omap_abe_fw_ready(const struct firmware *fw, void *context)
 #else /* !IS_BUILTIN(CONFIG_SND_OMAP_SOC_OMAP_ABE_TWL6040) */
 static int omap_abe_load_fw(struct snd_soc_card *card)
 {
-	struct abe_twl6040 * priv = snd_soc_card_get_drvdata(card);
+	struct abe_twl6040 *priv = snd_soc_card_get_drvdata(card);
 	const struct firmware *fw;
 	int ret;
 
@@ -1013,6 +1020,7 @@ static int omap_abe_load_fw(struct snd_soc_card *card)
 	return ret;
 }
 #endif /* IS_BUILTIN(CONFIG_SND_OMAP_SOC_OMAP_ABE_TWL6040) */
+#endif /* IS_ENABLED(CONFIG_SND_SOC_OMAP_AESS) */
 
 static int omap_abe_probe(struct platform_device *pdev)
 {
@@ -1062,6 +1070,7 @@ static int omap_abe_probe(struct platform_device *pdev)
 
 	card->fully_routed = 1;
 
+#if IS_ENABLED(CONFIG_SND_SOC_OMAP_AESS)
 	dai_node = of_parse_phandle(node, "ti,aess", 0);
 
 	if (dai_node) {
@@ -1083,12 +1092,13 @@ static int omap_abe_probe(struct platform_device *pdev)
 		return ret;
 #endif
 	}
+#endif
 
 	ret = omap_abe_add_legacy_dai_links(card);
 	if (ret < 0)
 		return ret;
 
-/* replace by devm_snd_soc_register_component and register the stream event
+/* replace by devm_snd_soc_register_component and register the stream event */
 	ret = snd_soc_register_card(card);
 	if (ret) {
 		dev_err(&pdev->dev, "card registration failed: %d\n", ret);

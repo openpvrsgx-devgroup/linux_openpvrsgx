@@ -121,8 +121,8 @@ SND_SOC_DAILINK_DEFS(link_fe_lp,
 /* Backend DAIs - i.e. dynamically matched interfaces, invisible to userspace */
 SND_SOC_DAILINK_DEFS(link_be_mcpdm,
 	DAILINK_COMP_ARRAY(COMP_CPU("40132000.mcpdm")),
-	DAILINK_COMP_ARRAY(COMP_CODEC("snd-soc-dummy",
-				      "snd-soc-dummy-dai")),
+	DAILINK_COMP_ARRAY(COMP_CODEC("twl6040-codec",
+				      "twl6040-legacy")),
 	DAILINK_COMP_ARRAY(COMP_PLATFORM(NULL)));
 
 SND_SOC_DAILINK_DEFS(link_be_mcbsp1,
@@ -285,7 +285,7 @@ static struct snd_soc_dai_link abe_be_mcpdm_dai[] = {
 	/* McPDM DL1 - Headset */
 	SND_SOC_DAI_CONNECT("McPDM-DL1", "Backend", link_be_mcpdm),
 	SND_SOC_DAI_BE_LINK(OMAP_ABE_DAI_PDM_DL1, omap_mcpdm_be_hw_params_fixup),
-	SND_SOC_DAI_OPS(&omap_abe_ops, NULL/*omap_abe_twl6040_init*/),
+	SND_SOC_DAI_OPS(&omap_abe_ops, omap_abe_twl6040_init),
 	SND_SOC_DAI_IGNORE_SUSPEND, SND_SOC_DAI_IGNORE_PMDOWN,
 },
 {
@@ -638,10 +638,8 @@ static int omap_abe_twl6040_dl2_init(struct snd_soc_pcm_runtime *rtd)
 	struct abe_twl6040 *priv = snd_soc_card_get_drvdata(card);
 	u32 hfotrim, left_offset, right_offset;
 
-#ifdef FIXME	// component is NOT the twl6040!?!
 	/* DC offset cancellation computation */
 	hfotrim = twl6040_get_trim_value(component, TWL6040_TRIM_HFOTRIM);
-#endif
 	right_offset = TWL6040_HSF_TRIM_RIGHT(hfotrim);
 	left_offset = TWL6040_HSF_TRIM_LEFT(hfotrim);
 

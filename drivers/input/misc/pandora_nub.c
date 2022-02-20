@@ -8,7 +8,6 @@
 	the Free Software Foundation; version 2 of the License.
 */
 
-#define DEBUG
 #include <linux/kernel.h>
 #include <linux/slab.h>
 #include <linux/init.h>
@@ -26,7 +25,6 @@
 #include <linux/seq_file.h>
 #include <linux/of.h>
 #include <linux/of_gpio.h>
-
 
 #define PANDORA_NUB_INTERVAL		25
 

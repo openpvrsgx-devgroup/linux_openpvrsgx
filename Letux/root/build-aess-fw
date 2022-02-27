@@ -5,7 +5,6 @@
 # tested on Debian 9.13
 #
 # Firware comes from https://github.com/omap-audio
-# and https://android.googlesource.com/kernel/msm/+archive/529e46df76c9818f5e86ffe438d60c735e6e60cc
 #
 # Caveats:
 # - we have no idea where to find audio-test.git
@@ -42,25 +41,25 @@ function gitfetch { # $1 = repo, $2 = subdir
 }
 
 echo +++ fetch the "(complete)" letux kernel source tree with minimal effort
-gitfetch "--depth 1 -b $BRANCH https://github.com/goldelico/letux-kernel.git" letux-kernel || exit 1
+gitfetch "--depth 1 -b $BRANCH https://github.com/goldelico/letux-kernel.git" letux-kernel.git || exit 1
 
-LINUX="$PWD/letux-kernel"
+LINUX="$PWD/letux-kernel.git"
 
 echo +++ fetch the omap4/5 firmware into a subdirectory
-gitfetch "-b master https://github.com/omap-audio/abefw" abefw || exit 1
+gitfetch "-b master https://github.com/omap-audio/abefw" abefw.git || exit 1
 
 echo +++ fetch the audio-test code
-gitfetch "-b master https://github.com/omap-audio/audio-test.git" audio-test
+gitfetch "-b master https://github.com/omap-audio/audio-test.git" audio-test.git
 
 echo +++ fetch the asoc-fw tools
-gitfetch "-b master https://github.com/omap-audio/asoc-fw.git" asoc-fw
+gitfetch "-b master https://github.com/omap-audio/asoc-fw.git" asoc-fw.git
 
 #
 # build kernel headers
 #
 
 echo +++ configure kernel and build generated headers
-[ -f $LINUX/include/generated/uapi/linux/version.h ] || (cd $LINUX && make ARCH=arm letux_lpae_defconfig modules_prepare && ln -sf asm-generic include/asm) || exit 1
+[ -f $LINUX/include/generated/uapi/linux/version.h ] || (cd $LINUX && make ARCH=arm letux_lpae_defconfig modules_prepare headers_install INSTALL_HDR_PATH=$LINUX/../linux-headers && ln -sf asm-generic include/asm) || exit 1
 
 #
 # patch and build firmware
@@ -68,7 +67,7 @@ echo +++ configure kernel and build generated headers
 #
 
 (
-cd abefw
+cd abefw.git || exit
 
 #echo +++ merge hack with HAL source "(we have not found a good and modern git repo)"
 #[ -d letux-kernel.git/sound/soc/ti/abe ] || wget -O - https://android.googlesource.com/kernel/msm/+archive/529e46df76c9818f5e86ffe438d60c735e6e60cc.tar.gz |
@@ -136,7 +135,8 @@ LC_ALL=C ./autogen.sh || exit 1
 echo +++ avoid ./configure: line 4646: CC_NOUNDEFINED: command not found
 sed -i.bak 's|CC_NOUNDEFINED||g' configure
 
-echo +++ the configure option --with-hal-dir does not exist "(contrary to README)"
+echo +++ configure
+# the configure option --with-hal-dir does not exist "(contrary to README)"
 # ./configure --with-linux-dir=$LINUX --with-hal-dir=$PWD/hal || exit 1
 ./configure --with-linux-dir=$LINUX || exit 1
 
@@ -180,12 +180,89 @@ fi
 
 # we misuse this line for all the CFLAGS...
 sed -i.bak "s|DEFAULT_INCLUDES =.*|DEFAULT_INCLUDES =$INCLUDES|g" tasks/Makefile
-# fgrep 'DEFAULT_INCLUDES = -I' tasks/Makefile
 
 echo +++ make and install
 make || exit 1
 make install || exit 1
 
 echo +++ generate data files
-scripts/abe-tool.sh $VERSION
-)
+scripts/abe-tool.sh $VERSION || exit 1
+) || exit
+
+(
+cd asoc-fw.git || exit
+
+#echo +++ work around type conflicts between kernel source and /usr/include/stdint.h for uintptr_t or dev_t
+#fgrep -q host_uintptr_t src/abegen.h || sed -i.bak -e "s/#define __ABEGEN_H/#define __ABEGEN_H\n#define uintptr_t host_uintptr_t/" src/abegen.h
+fgrep -q _SYS_TYPES_H src/lib.c || sed -i.bak -e "s/#include <stdlib.h>/#define _SYS_TYPES_H\n#include <stdlib.h>/" src/lib.c
+fgrep -q '#undef' src/lib.c || sed -i.bak -e "s/#include <stdlib.h>/typedef int int32_t;\n#include <stdlib.h>\n#undef __always_inline\n#undef __extern_always_inline\n#undef __attribute_const__/" src/lib.c
+
+# src/lib.c verwendet viele undefined wie z.B. SND_SOC_FW_TEXT_SIZE, SOC_CONTROL_ID, SOC_CONTROL_GET_ID_GET, SOC_CONTROL_TYPE_VOLSW_SX...
+# war das früher im Kernel definiert?
+# angeblich ja (applied): https://alsa-devel.alsa-project.narkive.com/3d94ItQx/patch-1-4-asoc-firmware-add-support-for-fw-based-kcontrols
+# https://mailman.alsa-project.org/pipermail/alsa-devel/2012-November/057156.html
+
+echo +++ build the Makefiles
+LC_ALL=C ./autogen.sh || exit
+
+echo +++ configure
+LINUX=$LINUX/../linux-headers	# use processed headers and not kernel tree
+./configure --with-linux-dir=$LINUX --enable-omap4 || exit
+
+echo +++ patch include file search paths and some compiler options
+# typical kernel gcc call: arm-linux-gnueabihf-gcc -Wp,-MMD,arch/arm/kernel/.perf_regs.o.d  -nostdinc -I./arch/arm/include -I./arch/arm/include/generated  -I./include -I./arch/arm/include/uapi -I./arch/arm/include/generated/uapi -I./include/uapi -I./include/generated/uapi -include ./include/linux/compiler-version.h -include ./include/linux/kconfig.h -include ./include/linux/compiler_types.h -D__KERNEL__ -mlittle-endian -Wall -Wundef -Werror=strict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -fshort-wchar -fno-PIE -Werror=implicit-function-declaration -Werror=implicit-int -Werror=return-type -Wno-format-security -std=gnu89 -fno-dwarf2-cfi-asm -fno-ipa-sra -mabi=aapcs-linux -mfpu=vfp -funwind-tables -mtp=cp15 -marm -Wa,-mno-warn-deprecated -D__LINUX_ARM_ARCH__=7 -march=armv7-a -msoft-float -Uarm -fno-delete-null-pointer-checks -Wno-frame-address -Os --param=allow-store-data-races=0 -Wframe-larger-than=1024 -fstack-protector-strong -Wno-main -Wno-unused-but-set-variable -Wno-unused-const-variable -fomit-frame-pointer -fno-inline-functions-called-once -Wdeclaration-after-statement -Wvla -Wno-pointer-sign -Wno-array-bounds -Wno-maybe-uninitialized -fno-strict-overflow -fno-stack-check -fconserve-stack -Werror=date-time -Werror=incompatible-pointer-types -Werror=designated-init    -DKBUILD_MODFILE='"arch/arm/kernel/perf_regs"' -DKBUILD_BASENAME='"perf_regs"' -DKBUILD_MODNAME='"perf_regs"' -D__KBUILD_MODNAME=kmod_perf_regs -c -o arch/arm/kernel/perf_regs.o arch/arm/kernel/perf_regs.c
+# include linux headers
+#INCLUDES+=" -I $LINUX/arch/arm/include"
+#INCLUDES+=" -I $LINUX/arch/arm/include/generated"
+#INCLUDES+=" -I $LINUX/include"
+#INCLUDES+=" -I $LINUX/arch/arm/include/uapi"
+#INCLUDES+=" -I $LINUX/arch/arm/include/generated/uapi"
+#INCLUDES+=" -I $LINUX/include/uapi"
+#INCLUDES+=" -I $LINUX/include/generated/uapi"
+INCLUDES+=" -D__KERNEL__"
+# -mlittle-endian -fno-strict-aliasing -fno-common -fshort-wchar -fno-PIE
+# -mabi=aapcs-linux -mfpu=vfp -funwind-tables -mtp=cp15 -marm
+INCLUDES+=" -D__LINUX_ARM_ARCH__=7"
+#INCLUDES+=" -D__LINUX_COMPILER_ATTRIBUTES_H"
+#INCLUDES+=" -D_SYS_CDEFS_H"
+INCLUDES+=" -D_SYS_STAT_H"
+#INCLUDES+=" -D_FCNTL_H"
+# -march=armv7-a -msoft-float -Uarm -fno-delete-null-pointer-checks -Os
+# INCLUDES+=" -D__ASSEMBLY__"
+# INCLUDES+=" -DARCH=arm"
+# the following is the result of experimentation
+#INCLUDES+=" -I ../include"
+#INCLUDES+=" -I ."
+#INCLUDES+=" -I $PWD/include/$VERSION"
+#INCLUDES+=" -I $PWD/tasks"
+#INCLUDES+=" -I $PWD/../audio-test/tools/abe/abe_hal"	# for abe_api.h
+# try fine control over system headers which may conflict with linux kernel tree headers
+if false
+then
+INCLUDES+=" -nostdinc"
+INCLUDES+=" -I /usr/lib/gcc/arm-linux-gnueabihf/6/include"
+INCLUDES+=" -I /usr/local/include"
+INCLUDES+=" -I /usr/lib/gcc/arm-linux-gnueabihf/6/include-fixed"
+INCLUDES+=" -I /usr/include/arm-linux-gnueabihf"
+INCLUDES+=" -I /usr/include"
+fi
+# include some relevant kernel files
+#INCLUDES+=" -include $LINUX/include/linux/compiler-version.h"
+#INCLUDES+=" -include $LINUX/include/linux/kconfig.h"
+#INCLUDES+=" -include $LINUX/include/linux/compiler_types.h"
+#INCLUDES+=" -include $LINUX/include/linux/types.h"
+INCLUDES+=" -I $LINUX/include"
+
+# we misuse this line for all the CFLAGS...
+sed -i.bak \
+	-e "s|DEFAULT_INCLUDES =.*|DEFAULT_INCLUDES =$INCLUDES|g" \
+	-e "s|-D __EXPORTED_HEADERS__||g" \
+	src/Makefile
+
+echo +++ make and install
+make || exit 1
+make install || exit 1
+
+echo +++ generate firmware binary
+scripts/abegen.sh || exit 1
+) || exit

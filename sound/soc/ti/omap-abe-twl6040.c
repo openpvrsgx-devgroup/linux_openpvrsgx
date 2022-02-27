@@ -158,8 +158,8 @@ SND_SOC_DAILINK_DEFS(link_be_dmic,
 #define SND_SOC_DAI_IGNORE_PMDOWN .ignore_pmdown_time = 1
 #define SND_SOC_DAI_BE_LINK(_id, _fixup) \
 	.id = _id, .be_hw_params_fixup = _fixup, .no_pcm = 1
-#define SND_SOC_DAI_FE_LINK(_name, _linkname) \
-	.name = _name, SND_SOC_DAILINK_REG(_linkname), .dynamic = 1
+#define SND_SOC_DAI_FE_LINK() \
+	.dynamic = 1 /* , .dpcm_capture = 1, .dpcm_playback = 1 */
 #define SND_SOC_DAI_FE_TRIGGER(_play, _capture) \
 	.trigger = {_play, _capture}
 //#define SND_SOC_DAI_LINK_NO_HOST	.no_host_mode = 1
@@ -210,31 +210,36 @@ static struct snd_soc_dai_link abe_fe_dai[] = {
  */
 {
 	/* ABE Media Capture */
-	SND_SOC_DAI_FE_LINK("OMAP ABE Media1", link_fe_media1),
+	SND_SOC_DAI_CONNECT("OMAP ABE Media1", "Frontend", link_fe_media1),
+	SND_SOC_DAI_FE_LINK(),
 	SND_SOC_DAI_FE_TRIGGER(SND_SOC_DPCM_TRIGGER_BESPOKE, SND_SOC_DPCM_TRIGGER_BESPOKE),
 	SND_SOC_DAI_OPS(NULL, omap_abe_twl6040_fe_init),
 	SND_SOC_DAI_IGNORE_PMDOWN,
 },
 {
 	/* ABE Media Capture */
-	SND_SOC_DAI_FE_LINK("OMAP ABE Media2", link_fe_media2),
+	SND_SOC_DAI_CONNECT("OMAP ABE Media2", "Frontend", link_fe_media2),
+	SND_SOC_DAI_FE_LINK(),
 	SND_SOC_DAI_FE_TRIGGER(SND_SOC_DPCM_TRIGGER_BESPOKE, SND_SOC_DPCM_TRIGGER_BESPOKE),
 	SND_SOC_DAI_OPS(NULL, omap_abe_twl6040_fe_init),
 	SND_SOC_DAI_IGNORE_PMDOWN,
 },
 {
 	/* ABE Voice */
-	SND_SOC_DAI_FE_LINK("OMAP ABE Voice", link_fe_voice),
+	SND_SOC_DAI_CONNECT("OMAP ABE Voice", "Frontend", link_fe_voice),
+	SND_SOC_DAI_FE_LINK(),
 	SND_SOC_DAI_FE_TRIGGER(SND_SOC_DPCM_TRIGGER_BESPOKE, SND_SOC_DPCM_TRIGGER_BESPOKE),
 },
 {
 	/* ABE Tones */
-	SND_SOC_DAI_FE_LINK("OMAP ABE Tones", link_fe_tones),
+	SND_SOC_DAI_CONNECT("OMAP ABE Tones", "Frontend", link_fe_tones),
+	SND_SOC_DAI_FE_LINK(),
 	SND_SOC_DAI_FE_TRIGGER(SND_SOC_DPCM_TRIGGER_BESPOKE, SND_SOC_DPCM_TRIGGER_BESPOKE),
 },
 {
 	/* MODEM */
-	SND_SOC_DAI_FE_LINK("OMAP ABE MODEM", link_fe_modem),
+	SND_SOC_DAI_CONNECT("OMAP ABE MODEM", "Frontend", link_fe_modem),
+	SND_SOC_DAI_FE_LINK(),
 	SND_SOC_DAI_FE_TRIGGER(SND_SOC_DPCM_TRIGGER_BESPOKE, SND_SOC_DPCM_TRIGGER_BESPOKE),
 	SND_SOC_DAI_OPS(NULL, omap_abe_twl6040_fe_init),
 	SND_SOC_DAI_IGNORE_SUSPEND, SND_SOC_DAI_IGNORE_PMDOWN,
@@ -242,7 +247,8 @@ static struct snd_soc_dai_link abe_fe_dai[] = {
 },
 {
 	/* Low power ping - pong */
-	SND_SOC_DAI_FE_LINK("OMAP ABE Media LP", link_fe_lp),
+	SND_SOC_DAI_CONNECT("OMAP ABE Media LP", "Frontend", link_fe_lp),
+	SND_SOC_DAI_FE_LINK(),
 	SND_SOC_DAI_FE_TRIGGER(SND_SOC_DPCM_TRIGGER_BESPOKE, SND_SOC_DPCM_TRIGGER_BESPOKE),
 },
 };

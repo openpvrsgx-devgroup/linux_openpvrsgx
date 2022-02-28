@@ -43,7 +43,8 @@ function gitfetch { # $1 = repo, $2 = subdir
 echo +++ fetch the "(complete)" letux kernel source tree with minimal effort
 gitfetch "--depth 1 -b $BRANCH https://github.com/goldelico/letux-kernel.git" letux-kernel.git || exit 1
 
-LINUX="$PWD/letux-kernel.git"
+LETUX="$PWD/letux-kernel.git"	# full source tree
+LINUX="$PWD/linux-headers"	# installed headers
 
 echo +++ fetch the omap4/5 firmware into a subdirectory
 gitfetch "-b master https://github.com/omap-audio/abefw" abefw.git || exit 1
@@ -59,7 +60,7 @@ gitfetch "-b master https://github.com/omap-audio/asoc-fw.git" asoc-fw.git
 #
 
 echo +++ configure kernel and build generated headers
-[ -f $LINUX/include/generated/uapi/linux/version.h ] || (cd $LINUX && make ARCH=arm letux_lpae_defconfig modules_prepare headers_install INSTALL_HDR_PATH=$LINUX/../linux-headers && ln -sf asm-generic include/asm) || exit 1
+[ -f $LETUX/include/generated/uapi/linux/version.h ] || (cd $LETUX && make ARCH=arm letux_lpae_defconfig modules_prepare headers_install INSTALL_HDR_PATH=$LINUX && ln -sf asm-generic include/asm) || exit 1
 
 #
 # patch and build firmware
@@ -124,7 +125,7 @@ sed -i.bak -e "s/OMAP_ABE_VX_DL_PORT/OMAP_AESS_PHY_PORT_VX_DL/" \
 ##include <abe_mem.h>" >>include/009590/abe_define.h
 
 echo +++ script assumes a different location of kernel sources in $HOME/source/linux.git
-sed -i.bak "s|~/source/linux.git|$LINUX|g" scripts/abe-tool.sh
+sed -i.bak "s|~/source/linux.git|$LETUX|g" scripts/abe-tool.sh
 
 echo +++ fix automake for subdir-objects
 sed -i.bak 's|no-define dist-bzip2|no-define subdir-objects dist-bzip2|g' configure.ac
@@ -137,23 +138,23 @@ sed -i.bak 's|CC_NOUNDEFINED||g' configure
 
 echo +++ configure
 # the configure option --with-hal-dir does not exist "(contrary to README)"
-# ./configure --with-linux-dir=$LINUX --with-hal-dir=$PWD/hal || exit 1
-./configure --with-linux-dir=$LINUX || exit 1
+# ./configure --with-linux-dir=$LETUX --with-hal-dir=$PWD/hal || exit 1
+./configure --with-linux-dir=$LETUX || exit 1
 
 echo +++ patch include file search paths and some compiler options
 # typical kernel gcc call: arm-linux-gnueabihf-gcc -Wp,-MMD,arch/arm/kernel/.perf_regs.o.d  -nostdinc -I./arch/arm/include -I./arch/arm/include/generated  -I./include -I./arch/arm/include/uapi -I./arch/arm/include/generated/uapi -I./include/uapi -I./include/generated/uapi -include ./include/linux/compiler-version.h -include ./include/linux/kconfig.h -include ./include/linux/compiler_types.h -D__KERNEL__ -mlittle-endian -Wall -Wundef -Werror=strict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -fshort-wchar -fno-PIE -Werror=implicit-function-declaration -Werror=implicit-int -Werror=return-type -Wno-format-security -std=gnu89 -fno-dwarf2-cfi-asm -fno-ipa-sra -mabi=aapcs-linux -mfpu=vfp -funwind-tables -mtp=cp15 -marm -Wa,-mno-warn-deprecated -D__LINUX_ARM_ARCH__=7 -march=armv7-a -msoft-float -Uarm -fno-delete-null-pointer-checks -Wno-frame-address -Os --param=allow-store-data-races=0 -Wframe-larger-than=1024 -fstack-protector-strong -Wno-main -Wno-unused-but-set-variable -Wno-unused-const-variable -fomit-frame-pointer -fno-inline-functions-called-once -Wdeclaration-after-statement -Wvla -Wno-pointer-sign -Wno-array-bounds -Wno-maybe-uninitialized -fno-strict-overflow -fno-stack-check -fconserve-stack -Werror=date-time -Werror=incompatible-pointer-types -Werror=designated-init    -DKBUILD_MODFILE='"arch/arm/kernel/perf_regs"' -DKBUILD_BASENAME='"perf_regs"' -DKBUILD_MODNAME='"perf_regs"' -D__KBUILD_MODNAME=kmod_perf_regs -c -o arch/arm/kernel/perf_regs.o arch/arm/kernel/perf_regs.c
 # include linux headers
-INCLUDES+=" -I $LINUX/arch/arm/include"
-INCLUDES+=" -I $LINUX/arch/arm/include/generated"
-INCLUDES+=" -I $LINUX/include"
-INCLUDES+=" -I $LINUX/arch/arm/include/uapi"
-INCLUDES+=" -I $LINUX/arch/arm/include/generated/uapi"
-INCLUDES+=" -I $LINUX/include/uapi"
-INCLUDES+=" -I $LINUX/include/generated/uapi"
-INCLUDES+=" -include $LINUX/include/linux/compiler-version.h"
-INCLUDES+=" -include $LINUX/include/linux/kconfig.h"
-INCLUDES+=" -include $LINUX/include/linux/compiler_types.h"
-INCLUDES+=" -include $LINUX/include/linux/types.h"
+INCLUDES+=" -I $PWD//arch/arm/include"
+INCLUDES+=" -I $LETUX/arch/arm/include/generated"
+INCLUDES+=" -I $LETUX/include"
+INCLUDES+=" -I $LETUX/arch/arm/include/uapi"
+INCLUDES+=" -I $LETUX/arch/arm/include/generated/uapi"
+INCLUDES+=" -I $LETUX/include/uapi"
+INCLUDES+=" -I $LETUX/include/generated/uapi"
+INCLUDES+=" -include $LETUX/include/linux/compiler-version.h"
+INCLUDES+=" -include $LETUX/include/linux/kconfig.h"
+INCLUDES+=" -include $LETUX/include/linux/compiler_types.h"
+INCLUDES+=" -include $LETUX/include/linux/types.h"
 INCLUDES+=" -D__KERNEL__"
 # -mlittle-endian -fno-strict-aliasing -fno-common -fshort-wchar -fno-PIE
 # -mabi=aapcs-linux -mfpu=vfp -funwind-tables -mtp=cp15 -marm
@@ -206,19 +207,18 @@ echo +++ build the Makefiles
 LC_ALL=C ./autogen.sh || exit
 
 echo +++ configure
-LINUX=$LINUX/../linux-headers	# use processed headers and not kernel tree
 ./configure --with-linux-dir=$LINUX --enable-omap4 || exit
 
 echo +++ patch include file search paths and some compiler options
 # typical kernel gcc call: arm-linux-gnueabihf-gcc -Wp,-MMD,arch/arm/kernel/.perf_regs.o.d  -nostdinc -I./arch/arm/include -I./arch/arm/include/generated  -I./include -I./arch/arm/include/uapi -I./arch/arm/include/generated/uapi -I./include/uapi -I./include/generated/uapi -include ./include/linux/compiler-version.h -include ./include/linux/kconfig.h -include ./include/linux/compiler_types.h -D__KERNEL__ -mlittle-endian -Wall -Wundef -Werror=strict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -fshort-wchar -fno-PIE -Werror=implicit-function-declaration -Werror=implicit-int -Werror=return-type -Wno-format-security -std=gnu89 -fno-dwarf2-cfi-asm -fno-ipa-sra -mabi=aapcs-linux -mfpu=vfp -funwind-tables -mtp=cp15 -marm -Wa,-mno-warn-deprecated -D__LINUX_ARM_ARCH__=7 -march=armv7-a -msoft-float -Uarm -fno-delete-null-pointer-checks -Wno-frame-address -Os --param=allow-store-data-races=0 -Wframe-larger-than=1024 -fstack-protector-strong -Wno-main -Wno-unused-but-set-variable -Wno-unused-const-variable -fomit-frame-pointer -fno-inline-functions-called-once -Wdeclaration-after-statement -Wvla -Wno-pointer-sign -Wno-array-bounds -Wno-maybe-uninitialized -fno-strict-overflow -fno-stack-check -fconserve-stack -Werror=date-time -Werror=incompatible-pointer-types -Werror=designated-init    -DKBUILD_MODFILE='"arch/arm/kernel/perf_regs"' -DKBUILD_BASENAME='"perf_regs"' -DKBUILD_MODNAME='"perf_regs"' -D__KBUILD_MODNAME=kmod_perf_regs -c -o arch/arm/kernel/perf_regs.o arch/arm/kernel/perf_regs.c
 # include linux headers
-#INCLUDES+=" -I $LINUX/arch/arm/include"
-#INCLUDES+=" -I $LINUX/arch/arm/include/generated"
-#INCLUDES+=" -I $LINUX/include"
-#INCLUDES+=" -I $LINUX/arch/arm/include/uapi"
-#INCLUDES+=" -I $LINUX/arch/arm/include/generated/uapi"
-#INCLUDES+=" -I $LINUX/include/uapi"
-#INCLUDES+=" -I $LINUX/include/generated/uapi"
+#INCLUDES+=" -I $LETUX/arch/arm/include"
+#INCLUDES+=" -I $LETUX/arch/arm/include/generated"
+#INCLUDES+=" -I $LETUX/include"
+#INCLUDES+=" -I $LETUX/arch/arm/include/uapi"
+#INCLUDES+=" -I $LETUX/arch/arm/include/generated/uapi"
+#INCLUDES+=" -I $LETUX/include/uapi"
+#INCLUDES+=" -I $LETUX/include/generated/uapi"
 INCLUDES+=" -D__KERNEL__"
 # -mlittle-endian -fno-strict-aliasing -fno-common -fshort-wchar -fno-PIE
 # -mabi=aapcs-linux -mfpu=vfp -funwind-tables -mtp=cp15 -marm
@@ -247,11 +247,34 @@ INCLUDES+=" -I /usr/include/arm-linux-gnueabihf"
 INCLUDES+=" -I /usr/include"
 fi
 # include some relevant kernel files
-#INCLUDES+=" -include $LINUX/include/linux/compiler-version.h"
-#INCLUDES+=" -include $LINUX/include/linux/kconfig.h"
-#INCLUDES+=" -include $LINUX/include/linux/compiler_types.h"
-#INCLUDES+=" -include $LINUX/include/linux/types.h"
+#INCLUDES+=" -include $LETUX/include/linux/compiler-version.h"
+#INCLUDES+=" -include $LETUX/include/linux/kconfig.h"
+#INCLUDES+=" -include $LETUX/include/linux/compiler_types.h"
+#INCLUDES+=" -include $LETUX/include/linux/types.h"
 INCLUDES+=" -I $LINUX/include"
+# include some headers usually not exported from source tree
+#INCLUDES+=" -include $LETUX/include/linux/compiler_types.h"
+#INCLUDES+=" -include $LETUX/include/linux/compiler.h"
+### FIXME: how can we skip include <linux/nospec.h> in include/sound/control.h
+### by creating an empty linux/nospec.h in the search path
+#INCLUDES+=" -D_LINUX_NOSPEC_H"
+INCLUDES+=" -D__user=''"
+mkdir -p src/linux src/sound	# there is -I ../src
+### sound/control.h and others needs list_head
+echo "struct list_head { struct list_head *next, *prev; };" >src/linux/list.h
+(
+echo "struct list_head { struct list_head *next, *prev; };"
+echo "typedef int wait_queue_head_t;"
+echo "typedef int spinlock_t;"
+echo "typedef int bool;"
+echo "#define array_index_nospec(A, B) (0*A*B)"
+echo "#define IS_MODULE(A) (0)"
+) > src/linux/nospec.h	# do not try to inlcude the nested file from full kernel tree
+ln -sf "$LETUX/include/sound/control.h" src/sound
+ln -sf "$LETUX/include/sound/soc-topology.h" src/sound
+# INCLUDES+=" -include $LETUX/include/linux/nospec.h"
+INCLUDES+=" -include $LETUX/include/sound/control.h"
+INCLUDES+=" -include $LETUX/include/sound/soc-dapm.h"
 
 # we misuse this line for all the CFLAGS...
 sed -i.bak \

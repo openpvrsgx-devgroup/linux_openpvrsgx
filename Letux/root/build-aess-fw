@@ -79,7 +79,7 @@ find tasks -type f -a ! -name '*.bak' -exec fgrep -q soc/omap {} \; -exec sed -i
 
 echo +++ work around type conflicts between kernel source and /usr/include/stdint.h for uintptr_t or dev_t
 fgrep -q host_uintptr_t src/abegen.h || sed -i.bak -e "s/#define __ABEGEN_H/#define __ABEGEN_H\n#define uintptr_t host_uintptr_t/" src/abegen.h
-fgrep -q _SYS_TYPES_H tasks/009590/abe_asrc.c || sed -i.bak -e "s/#include <stddef.h>/#define _SYS_TYPES_H\n#include <stddef.h>/" tasks/009590/abe_asrc.c
+fgrep -q _SYS_TYPES_H tasks/009590/abe_asrc.c || sed -i.bak -e "s/#include <stddef.h>/#define _SYS_TYPES_H 1\n#include <stddef.h>/" tasks/009590/abe_asrc.c
 
 
 echo +++ modern kernel has renamed some constants from ABE to AESS
@@ -195,8 +195,9 @@ cd asoc-fw.git || exit
 
 #echo +++ work around type conflicts between kernel source and /usr/include/stdint.h for uintptr_t or dev_t
 #fgrep -q host_uintptr_t src/abegen.h || sed -i.bak -e "s/#define __ABEGEN_H/#define __ABEGEN_H\n#define uintptr_t host_uintptr_t/" src/abegen.h
-fgrep -q _SYS_TYPES_H src/lib.c || sed -i.bak -e "s/#include <stdlib.h>/#define _SYS_TYPES_H\n#include <stdlib.h>/" src/lib.c
+fgrep -q _SYS_TYPES_H src/lib.c || sed -i.bak -e "s/#include <stdlib.h>/#define _SYS_TYPES_H 1\n#include <stdlib.h>/" src/lib.c
 fgrep -q '#undef' src/lib.c || sed -i.bak -e "s/#include <stdlib.h>/typedef int int32_t;\n#include <stdlib.h>\n#undef __always_inline\n#undef __extern_always_inline\n#undef __attribute_const__/" src/lib.c
+fgrep -q '#include <sound/soc-dapm.h>' src/socfw.h || sed -i.bak -e "s|#include <sound/asound.h>|#include <sound/soc-dapm.h>\n#include <sound/asound.h>|" src/socfw.h
 
 # src/lib.c verwendet viele undefined wie z.B. SND_SOC_FW_TEXT_SIZE, SOC_CONTROL_ID, SOC_CONTROL_GET_ID_GET, SOC_CONTROL_TYPE_VOLSW_SX...
 # war das früher im Kernel definiert?
@@ -259,22 +260,38 @@ INCLUDES+=" -I $LINUX/include"
 ### by creating an empty linux/nospec.h in the search path
 #INCLUDES+=" -D_LINUX_NOSPEC_H"
 INCLUDES+=" -D__user=''"
+INCLUDES+=" -D_LINUX_WAIT_H"
+# define some minimalistic private headers so that we do not include the full kernel tree
+# if we would include the full kernel tree we will get conficts about dev_t and other types
 mkdir -p src/linux src/sound	# there is -I ../src
 ### sound/control.h and others needs list_head
-echo "struct list_head { struct list_head *next, *prev; };" >src/linux/list.h
 (
+echo "#ifndef _LINUX_LIST_H"
+echo "#define _LINUX_LIST_H"
 echo "struct list_head { struct list_head *next, *prev; };"
+echo "#endif"
+) >src/linux/list.h
+(
+echo "#ifndef _LINUX_NOSPEC_H"
+echo "#define _LINUX_NOSPEC_H"
+echo "#include <linux/list.h>"
 echo "typedef int wait_queue_head_t;"
 echo "typedef int spinlock_t;"
 echo "typedef int bool;"
+# assume we are on a 32 bit machine like omap4/5
 echo "#define array_index_nospec(A, B) (0*A*B)"
 echo "#define IS_MODULE(A) (0)"
-) > src/linux/nospec.h	# do not try to inlcude the nested file from full kernel tree
+echo "struct snd_pcm_substream { };"
+echo "struct dentry { };"
+echo "#include \"socfw.h\""
+echo "#endif"
+) > src/linux/nospec.h	# do not try to include the nested file from full kernel tree
 ln -sf "$LETUX/include/sound/control.h" src/sound
 ln -sf "$LETUX/include/sound/soc-topology.h" src/sound
+ln -sf "$LETUX/include/sound/soc-dapm.h" src/sound
 # INCLUDES+=" -include $LETUX/include/linux/nospec.h"
-INCLUDES+=" -include $LETUX/include/sound/control.h"
-INCLUDES+=" -include $LETUX/include/sound/soc-dapm.h"
+# INCLUDES+=" -include $LETUX/include/sound/soc-dapm.h"
+# INCLUDES+=" -include $LETUX/include/sound/control.h"
 
 # we misuse this line for all the CFLAGS...
 sed -i.bak \

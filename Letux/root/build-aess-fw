@@ -198,12 +198,15 @@ fgrep -q _SYS_TYPES_H src/lib.c || sed -i.bak -e "s/#include <stdlib.h>/#define 
 fgrep -q '#undef' src/lib.c || sed -i.bak -e "s/#include <stdlib.h>/typedef int int32_t;\n#include <stdlib.h>\n#undef __always_inline\n#undef __extern_always_inline\n#undef __attribute_const__/" src/lib.c
 fgrep -q '#include <sound/soc-dapm.h>' src/socfw.h || sed -i.bak -e "s|int8_t s8;|int8_t s8;\n\n#include <sound/soc-dapm.h>|" src/socfw.h
 fgrep -q 'disable redefinition of these structs' src/socfw.h || sed -i.bak -e "s|/\* mixer control \*/|/* mixer control */\n\n#if 0 /* disable redefinition of these structs */|" -e "s|#endif|#endif\n#endif|" src/socfw.h
+fgrep -q '// ec.max = ' src/lib.c || sed -i.bak -e "s|ec.max = menum->max;|// ec.max = menum->max; broken but not needed|" src/lib.c
+fgrep -q '// ec.reg2 = ' src/lib.c || sed -i.bak -e "s|ec.reg2 = menum->reg2;|// ec.reg2 = menum->reg2; broken but not needed|" src/lib.c
+fgrep -q '// widget.invert = ' src/lib.c || sed -i.bak -e "s|widget.invert = |// widget.invert = widgets[i].invert; broken but not needed|" src/lib.c
+
 fgrep -q "struct snd_soc_fw_hdr {" src/socfw.h || cat >>src/socfw.h <<END
 
 // taken from https://git.ti.com/cgit/lcpd-agross/omapdrm/plain/include/uapi/sound/asoc.h?id=c15a2d5a683de12f6768d0efb8df7ecd6aa9b3ed
 // we should not append here but add to include/uapi/sound/asoc.h in a way to the Letux kernel sources so that we can eventually upstream it as a patch
 
-#include <sound/soc.h>
 /*
  * linux/uapi/sound/asoc.h -- ALSA SoC Firmware Controls and DAPM
  *
@@ -1058,6 +1061,47 @@ struct snd_soc_file_coeff_data {
 } __attribute__((packed));
 
 #endif	// __LINUX_UAPI_SND_ASOC_SOCFW_H
+
+// we should #include <sound/soc.h> for
+// struct soc_mixer_control
+// struct soc_enum
+// but this is NOT uapi!
+// hence we add a copy for the moment
+// beware: this must be synced to the kernel (but is quite unlikely to change often)
+
+#ifndef __LINUX_SND_SOC_H
+#define __LINUX_SND_SOC_H
+
+/* mixer control */
+struct soc_mixer_control {
+	int min, max, platform_max;
+	int reg, rreg;
+	unsigned int shift, rshift;
+	unsigned int sign_bit;
+	unsigned int invert:1;
+	unsigned int autodisable:1;
+#ifdef CONFIG_SND_SOC_TOPOLOGY
+	struct snd_soc_dobj dobj;
+#endif
+};
+
+/* enumerated kcontrol */
+struct soc_enum {
+	int reg;
+	unsigned char shift_l;
+	unsigned char shift_r;
+	unsigned int items;
+	unsigned int mask;
+	const char * const *texts;
+	const unsigned int *values;
+	unsigned int autodisable:1;
+#ifdef CONFIG_SND_SOC_TOPOLOGY
+	struct snd_soc_dobj dobj;
+#endif
+};
+
+#endif // __LINUX_SND_SOC_H
+
 END
 
 # src/lib.c verwendet viele undefined wie z.B. SND_SOC_FW_TEXT_SIZE, SOC_CONTROL_ID, SOC_CONTROL_GET_ID_GET, SOC_CONTROL_TYPE_VOLSW_SX...
@@ -1150,7 +1194,7 @@ echo "#endif"
 ln -sf "$LETUX/include/sound/control.h" src/sound
 ln -sf "$LETUX/include/sound/soc-topology.h" src/sound
 ln -sf "$LETUX/include/sound/soc-dapm.h" src/sound
-# ln -sf "$LETUX/include/sound/soc.h" src/sound
+ln -sf "$LETUX/include/sound/soc.h" src/sound
 # INCLUDES+=" -include $LETUX/include/linux/nospec.h"
 # INCLUDES+=" -include $LETUX/include/sound/soc-dapm.h"
 # INCLUDES+=" -include $LETUX/include/sound/control.h"
@@ -1161,10 +1205,17 @@ sed -i.bak \
 	-e "s|-D __EXPORTED_HEADERS__||g" \
 	src/Makefile
 
+### patch the plugins and coeffs sources and Makefile
+
 echo +++ make and install
 make || exit 1
 make install || exit 1
 
-echo +++ finally generate firmware binary
+echo "+++ finally generate firmware binary"
+
 scripts/abegen.sh || exit 1
+echo "+++ install as omap_aess-adfw.bin"
+cp omap4_abe_new /lib/firmware/omap_aess-adfw.bin || exit 1
+echo "+++ success ++"
+ls -l /lib/firmware/omap_aess-adfw.bin
 ) || exit

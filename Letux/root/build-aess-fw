@@ -198,6 +198,7 @@ cd asoc-fw.git || exit
 fgrep -q _SYS_TYPES_H src/lib.c || sed -i.bak -e "s/#include <stdlib.h>/#define _SYS_TYPES_H 1\n#include <stdlib.h>/" src/lib.c
 fgrep -q '#undef' src/lib.c || sed -i.bak -e "s/#include <stdlib.h>/typedef int int32_t;\n#include <stdlib.h>\n#undef __always_inline\n#undef __extern_always_inline\n#undef __attribute_const__/" src/lib.c
 fgrep -q '#include <sound/soc-dapm.h>' src/socfw.h || sed -i.bak -e "s|int8_t s8;|int8_t s8;\n\n#include <sound/soc-dapm.h>|" src/socfw.h
+fgrep -q 'disable redefinition of these structs' src/socfw.h || sed -i.bak -e "s|/\* mixer control \*/|/* mixer control */\n\n#if 0 /* disable redefinition of these structs */|" -e "s|#endif|#endif\n#endif|" src/socfw.h
 
 # src/lib.c verwendet viele undefined wie z.B. SND_SOC_FW_TEXT_SIZE, SOC_CONTROL_ID, SOC_CONTROL_GET_ID_GET, SOC_CONTROL_TYPE_VOLSW_SX...
 # war das früher im Kernel definiert?

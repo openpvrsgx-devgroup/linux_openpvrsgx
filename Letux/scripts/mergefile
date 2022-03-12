@@ -137,6 +137,9 @@ letux/sound-soc
 
 # Pyra AESS sound
 letux/aess
+letux/aess-asoc-fw
+letux/aess-audio-test
+letux/aess-abefw
 
 # Mipsbook / JZ4730
 letux/jz4730

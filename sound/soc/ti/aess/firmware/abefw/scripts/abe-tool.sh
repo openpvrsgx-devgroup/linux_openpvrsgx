@@ -1,6 +1,6 @@
 FW_PATH=./fw/.libs
 TASK_PATH=./tasks/.libs
-LINUX_PATH=~/source/linux.git
+LINUX_PATH=/root/aess/letux-kernel.git
 
 if [ $# -lt 1 ]; then
 	echo Usage: $0 version 

@@ -1,5 +1,5 @@
 #
-# Linux/mips 5.17.0-rc7 Kernel Configuration
+# Linux/mips 5.17.0-rc8 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="mipsel-linux-gnu-gcc (GCC) 6.3.0"
 CONFIG_CC_IS_GCC=y
@@ -395,6 +395,7 @@ CONFIG_PM=y
 # CONFIG_PM_DEBUG is not set
 CONFIG_PM_CLK=y
 # CONFIG_WQ_POWER_EFFICIENT_DEFAULT is not set
+CONFIG_CPU_PM=y
 # end of Power management options
 
 CONFIG_MIPS_EXTERNAL_TIMER=y
@@ -412,7 +413,15 @@ CONFIG_MIPS_EXTERNAL_TIMER=y
 #
 # CPU Idle
 #
-# CONFIG_CPU_IDLE is not set
+CONFIG_CPU_IDLE=y
+# CONFIG_CPU_IDLE_GOV_LADDER is not set
+CONFIG_CPU_IDLE_GOV_MENU=y
+# CONFIG_CPU_IDLE_GOV_TEO is not set
+
+#
+# MIPS CPU Idle Drivers
+#
+# end of MIPS CPU Idle Drivers
 # end of CPU Idle
 # end of CPU Power Management
 

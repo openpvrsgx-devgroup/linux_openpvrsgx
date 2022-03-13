@@ -1,0 +1,1 @@
+/root/aess/letux-kernel.git/include/sound/soc.h

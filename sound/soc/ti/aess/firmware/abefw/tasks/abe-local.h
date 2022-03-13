@@ -59,7 +59,7 @@
 #ifndef _ABE_LOCAL_H_
 #define _ABE_LOCAL_H_
 
-#include <sound/soc/omap/aess/aess-fw.h>
+#include <sound/soc/ti/aess/aess-fw.h>
 
 struct ABE_STask {
 	/* 0 ... Index of called function */

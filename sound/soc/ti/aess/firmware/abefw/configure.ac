@@ -5,7 +5,7 @@ AC_INIT([abegen], [0.1])
 AC_CONFIG_SRCDIR([src/abegen.c])
 AC_CONFIG_MACRO_DIR([m4])
 #AC_CONFIG_HEADERS([config.h])
-AM_INIT_AUTOMAKE([gnits 0.1 no-define dist-bzip2])
+AM_INIT_AUTOMAKE([gnits 0.1 no-define subdir-objects dist-bzip2])
 
 
 AC_PROG_CC

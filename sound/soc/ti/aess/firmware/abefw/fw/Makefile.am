@@ -7,7 +7,7 @@ AM_LDFLAGS = $(NODELETE_LDFLAGS)
 
 MODULE_LDFLAGS = $(AM_LDFLAGS) -module -disable-static -avoid-version $(LDFLAGS_NOUNDEFINED)
 
-OMAP4CFLAGS = -I $(LINUX_DIR)/sound/soc/omap/abe
+OMAP4CFLAGS = -I $(LINUX_DIR)/sound/soc/ti/abe
 
 fw009530dir = $(libdir)/abe/
 fw009530_LTLIBRARIES = fw009530.la

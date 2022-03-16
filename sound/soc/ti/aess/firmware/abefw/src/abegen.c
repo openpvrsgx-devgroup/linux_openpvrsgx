@@ -56,6 +56,14 @@
  *
  */
 
+// move away host definitions of dev_t etc. conflicting with kernel
+#define dev_t host_dev_t
+#define mode_t host_mode_t
+#define timer_t host_timer_t
+#define fd_set host_fd_set
+#define blkcnt_t host_blkcnt_t
+#define uintptr_t host_uintptr_t
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>

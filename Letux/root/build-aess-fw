@@ -62,125 +62,16 @@ gitfetch "-b master https://github.com/omap-audio/asoc-fw.git" asoc-fw.git
 echo +++ configure kernel and build generated headers
 [ -f $LETUX/include/generated/uapi/linux/version.h ] || (cd $LETUX && make ARCH=arm letux_lpae_defconfig modules_prepare headers_install INSTALL_HDR_PATH=$LINUX && ln -sf asm-generic include/asm) || exit 1
 
-#
-# patch and build firmware
-# NOTE: we should better fork the firmware repo and add a proper patch set...
-#
-
 (
 cd abefw.git || exit
 
-#echo +++ merge hack with HAL source "(we have not found a good and modern git repo)"
-#[ -d letux-kernel.git/sound/soc/ti/abe ] || wget -O - https://android.googlesource.com/kernel/msm/+archive/529e46df76c9818f5e86ffe438d60c735e6e60cc.tar.gz |
-#		(cd letux-kernel.git && tar xvzf - sound/soc/omap/abe --transform='s|/omap/|/ti/|' ) || exit 1
-
-echo +++ modern kernel has replaced sound/soc/omap by sound/soc/ti
-find tasks -type f -a ! -name '*.bak' -exec fgrep -q soc/omap {} \; -exec sed -i.bak 's|soc/omap|soc/ti|g' {} \;
-
-echo +++ work around type conflicts between kernel source and /usr/include/stdint.h for uintptr_t or dev_t
-fgrep -q host_uintptr_t src/abegen.h || sed -i.bak -e "s/#define __ABEGEN_H/#define __ABEGEN_H\n#define uintptr_t host_uintptr_t/" src/abegen.h
-fgrep -q _SYS_TYPES_H tasks/009590/abe_asrc.c || sed -i.bak -e "s/#include <stddef.h>/#define _SYS_TYPES_H 1\n#include <stddef.h>/" tasks/009590/abe_asrc.c
-
-
-echo +++ modern kernel has renamed some constants from ABE to AESS
-#### falsch!!! abe_addr.c macht einen #include <abe_initxxx_labels.h> wo MM_DL_44P1_WPTR_labelID eigentlich drin sein sollte
-# (nicht OMAP_AESS_PORT_)
-# aber die Suchpfade stimmen nicht
-#sed -i.bak -e 's/OMAP_AESS_PORT_/OMAP_AESS_PROTOCOL_/' \
-#	    -e 's/MM_DL_44P1_WPTR_labelID/OMAP_AESS_SMEM_MM_DL_44P1_ID/' \
-#	tasks/009590/abe_addr.c
-
-# NOTE: modern aess-fw has no serial/dmareq ports...
-sed -i.bak -e "s/OMAP_ABE_DMEM/OMAP_AESS_BANK_DMEM/" \
-	   -e "s/OMAP_ABE_CMEM/OMAP_AESS_BANK_CMEM/" \
-	   -e "s/OMAP_ABE_SMEM/OMAP_AESS_BANK_SMEM/" \
-	   -e "s/OMAP_ABE_PORT_ACTIVITY_IDLE/OMAP_AESS_PORT_ACTIVITY_IDLE/" \
-	   -e "s/OMAP_AESS_PORT_DMIC/OMAP_AESS_PHY_PORT_DMIC/" \
-	   -e "s/OMAP_AESS_PORT_MCPDMUL/OMAP_AESS_PHY_PORT_PDM_UL/" \
-	   -e "s/OMAP_AESS_PORT_MCPDMDL/OMAP_AESS_PHY_PORT_PDM_DL/" \
-	   -e "s/OMAP_AESS_PORT_SERIAL/OMAP_AESS_LAST_PHY_PORT_ID/" \
-	   -e "s/OMAP_AESS_PORT_DMAREQ/OMAP_AESS_LAST_PHY_PORT_ID/" \
-	   -e "s/LAST_PORT_ID/OMAP_AESS_LAST_PHY_PORT_ID/" \
-	   -e "s/ABE_DMASTATUS_RAW/AESS_DMASTATUS_RAW/" \
-	tasks/009590/abe_addr.c
-sed -i.bak -e "s/OMAP_ABE_VX_DL_PORT/OMAP_AESS_PHY_PORT_VX_DL/" \
-	   -e "s/OMAP_ABE_VX_UL_PORT/OMAP_AESS_PHY_PORT_VX_UL/" \
-	   -e "s/OMAP_ABE_BT_VX_UL_PORT/OMAP_AESS_PHY_PORT_BT_VX_UL/" \
-	   -e "s/OMAP_ABE_BT_VX_DL_PORT/OMAP_AESS_PHY_PORT_BT_VX_DL/" \
-	tasks/009590/abe_asrc.c
-
-#echo +++ modern kernel already defines some constants in aess-fw.h which conflict with older abe_def.h and elsewhere
-#sed -i.bak -e "s/#define CIRCULAR_BUFFER_PERIPHERAL_R__.*//" \
-#	   -e "s/#define SRC_P .*//" \
-#	   -e "s/#define SNK_P .*//" \
-#	   -e "s/#define SRC_P .*//" \
-#	   -e "s/#define SABE_TASK_ID_.*//" \
-#	$LINUX/sound/soc/ti/abe/abe_def.h
-#sed -i.bak -e "s/#define FEAT_.*//" $LINUX/sound/soc/ti/abe/abe_typ.h
-#sed -i.bak -e "s/#define ABE_TASK_ID.*//" $LINUX/sound/soc/ti/abe/abe_api.h
-
-#echo +++ append some central includes which are not included otherwise
-#fgrep -q abe_api include/009590/abe_define.h || echo "#include <abe_api.h>
-##include <abe_def.h>
-##include <abe_mem.h>" >>include/009590/abe_define.h
-
-echo +++ script assumes a different location of kernel sources in $HOME/source/linux.git
-sed -i.bak "s|~/source/linux.git|$LETUX|g" scripts/abe-tool.sh
-
-echo +++ fix automake for subdir-objects
-sed -i.bak 's|no-define dist-bzip2|no-define subdir-objects dist-bzip2|g' configure.ac
-
 echo +++ build the Makefiles
 LC_ALL=C ./autogen.sh || exit 1
-
-echo +++ avoid ./configure: line 4646: CC_NOUNDEFINED: command not found
-sed -i.bak 's|CC_NOUNDEFINED||g' configure
 
 echo +++ configure
 # the configure option --with-hal-dir does not exist "(contrary to README)"
 # ./configure --with-linux-dir=$LETUX --with-hal-dir=$PWD/hal || exit 1
 ./configure --with-linux-dir=$LETUX || exit 1
-
-echo +++ patch include file search paths and some compiler options
-# typical kernel gcc call: arm-linux-gnueabihf-gcc -Wp,-MMD,arch/arm/kernel/.perf_regs.o.d  -nostdinc -I./arch/arm/include -I./arch/arm/include/generated  -I./include -I./arch/arm/include/uapi -I./arch/arm/include/generated/uapi -I./include/uapi -I./include/generated/uapi -include ./include/linux/compiler-version.h -include ./include/linux/kconfig.h -include ./include/linux/compiler_types.h -D__KERNEL__ -mlittle-endian -Wall -Wundef -Werror=strict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -fshort-wchar -fno-PIE -Werror=implicit-function-declaration -Werror=implicit-int -Werror=return-type -Wno-format-security -std=gnu89 -fno-dwarf2-cfi-asm -fno-ipa-sra -mabi=aapcs-linux -mfpu=vfp -funwind-tables -mtp=cp15 -marm -Wa,-mno-warn-deprecated -D__LINUX_ARM_ARCH__=7 -march=armv7-a -msoft-float -Uarm -fno-delete-null-pointer-checks -Wno-frame-address -Os --param=allow-store-data-races=0 -Wframe-larger-than=1024 -fstack-protector-strong -Wno-main -Wno-unused-but-set-variable -Wno-unused-const-variable -fomit-frame-pointer -fno-inline-functions-called-once -Wdeclaration-after-statement -Wvla -Wno-pointer-sign -Wno-array-bounds -Wno-maybe-uninitialized -fno-strict-overflow -fno-stack-check -fconserve-stack -Werror=date-time -Werror=incompatible-pointer-types -Werror=designated-init    -DKBUILD_MODFILE='"arch/arm/kernel/perf_regs"' -DKBUILD_BASENAME='"perf_regs"' -DKBUILD_MODNAME='"perf_regs"' -D__KBUILD_MODNAME=kmod_perf_regs -c -o arch/arm/kernel/perf_regs.o arch/arm/kernel/perf_regs.c
-# include linux headers
-INCLUDES+=" -I $PWD//arch/arm/include"
-INCLUDES+=" -I $LETUX/arch/arm/include/generated"
-INCLUDES+=" -I $LETUX/include"
-INCLUDES+=" -I $LETUX/arch/arm/include/uapi"
-INCLUDES+=" -I $LETUX/arch/arm/include/generated/uapi"
-INCLUDES+=" -I $LETUX/include/uapi"
-INCLUDES+=" -I $LETUX/include/generated/uapi"
-INCLUDES+=" -include $LETUX/include/linux/compiler-version.h"
-INCLUDES+=" -include $LETUX/include/linux/kconfig.h"
-INCLUDES+=" -include $LETUX/include/linux/compiler_types.h"
-INCLUDES+=" -include $LETUX/include/linux/types.h"
-INCLUDES+=" -D__KERNEL__"
-# -mlittle-endian -fno-strict-aliasing -fno-common -fshort-wchar -fno-PIE
-# -mabi=aapcs-linux -mfpu=vfp -funwind-tables -mtp=cp15 -marm
-INCLUDES+=" -D__LINUX_ARM_ARCH__=7"
-# -march=armv7-a -msoft-float -Uarm -fno-delete-null-pointer-checks -Os
-# INCLUDES+=" -D__ASSEMBLY__"
-# INCLUDES+=" -DARCH=arm"
-# the following is the result of experimentation
-#INCLUDES+=" -I ../include"
-#INCLUDES+=" -I ."
-#INCLUDES+=" -I $PWD/include/$VERSION"
-INCLUDES+=" -I $PWD/tasks"
-#INCLUDES+=" -I $PWD/../audio-test/tools/abe/abe_hal"	# for abe_api.h
-# try fine control over system headers which may conflict with linux kernel tree headers
-if false
-then
-INCLUDES+=" -nostdinc"
-INCLUDES+=" -I /usr/lib/gcc/arm-linux-gnueabihf/6/include"
-INCLUDES+=" -I /usr/local/include"
-INCLUDES+=" -I /usr/lib/gcc/arm-linux-gnueabihf/6/include-fixed"
-INCLUDES+=" -I /usr/include/arm-linux-gnueabihf"
-INCLUDES+=" -I /usr/include"
-fi
-
-# we misuse this line for all the CFLAGS...
-sed -i.bak "s|DEFAULT_INCLUDES =.*|DEFAULT_INCLUDES =$INCLUDES|g" tasks/Makefile
 
 echo +++ make and install
 make || exit 1

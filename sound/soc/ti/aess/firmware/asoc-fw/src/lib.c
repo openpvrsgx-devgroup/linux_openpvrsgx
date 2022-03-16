@@ -19,7 +19,12 @@
   in the file called LICENSE.GPL.
 */
 
+#define _SYS_TYPES_H 1
+typedef int int32_t;
 #include <stdlib.h>
+#undef __always_inline
+#undef __extern_always_inline
+#undef __attribute_const__
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdint.h>
@@ -595,7 +600,7 @@ int socfw_import_dapm_widgets(struct soc_fw_priv *soc_fw,
 		widget.reg = widgets[i].reg;
 		widget.shift = widgets[i].shift;
 		widget.mask = widgets[i].mask;
-		widget.invert = widgets[i].invert;
+		// widget.invert = widgets[i].invert; broken but not neededwidgets[i].invert;
 		widget.kcontrol.count = widgets[i].num_kcontrols;
 
 		verbose(soc_fw, " widget: \"%s\" R 0x%x shift %d\n",

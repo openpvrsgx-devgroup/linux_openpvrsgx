@@ -66,7 +66,7 @@
 #include <abe_initxxx_labels.h>
 #include <abe_taskid.h>
 
-#include <sound/soc/omap/aess/aess-fw.h>
+#include <sound/soc/ti/aess/aess-fw.h>
 
 #include "abe-local.h"
 

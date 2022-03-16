@@ -18,8 +18,6 @@ if test "x$M4" = xno ; then
    AC_MSG_ERROR([m4 missing])
 fi
 
-CC_NOUNDEFINED
-
 LT_PREREQ(2.2)
 LT_INIT([dlopen])
 

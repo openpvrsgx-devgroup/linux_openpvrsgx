@@ -25,7 +25,6 @@
 #define blkcnt_t host_blkcnt_t
 typedef int int32_t;
 
-#define _SYS_TYPES_H 1
 #include <stdlib.h>
 #undef __always_inline
 #undef __extern_always_inline

@@ -19,6 +19,7 @@ AM_CFLAGS = \
 	-D__KERNEL__ \
 	-D__LINUX_ARM_ARCH__=7 \
 	-D_SYS_STAT_H \
+	-D_SYS_TYPES_H \
 	-D_LINUX_WAIT_H \
 	-D__user=''
 

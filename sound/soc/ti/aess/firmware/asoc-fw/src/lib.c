@@ -234,7 +234,7 @@ static int import_enum_control(struct soc_fw_priv *soc_fw,
 	ec.hdr.tlv_size = tlv_size(kcontrol);
 
 	ec.mask = menum->mask;
-	ec.items = menum->items;
+	ec.max = menum->max;
 	ec.reg = menum->reg;
 	ec.shift_l = menum->shift_l;
 	ec.shift_r = menum->shift_r;

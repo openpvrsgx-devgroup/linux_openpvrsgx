@@ -19,13 +19,31 @@
  *
  */
 
+#define uintptr_t host_uintptr_t
+#define mode_t host_mode_t
+#define dev_t host_dev_t
+#define blkcnt_t host_blkcnt_t
+typedef int int32_t;
+
+#define _SYS_TYPES_H 1
+#include <stdlib.h>
+#undef __always_inline
+#undef __extern_always_inline
+#undef __attribute_const__
+#include <stdio.h>
 #include <stdint.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <sys/types.h>
 
 #include "socfw.h"
 
-#include <aess/aess-fw.h>
+// #include <aess/aess-fw.h>
+#undef SOC_CONTROL_ID_PUT
+#undef SOC_CONTROL_ID_PUT
+#undef SOC_CONTROL_ID_GET
+#undef SOC_CONTROL_ID_GET
+#undef SOC_CONTROL_ID
 #include <aess/omap-aess-priv.h>
 
 /* Media DL1 volume control from -120 to 30 dB in 1 dB steps */

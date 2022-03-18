@@ -62,6 +62,40 @@ struct snd_soc_fw_coeff {
 	const struct snd_soc_fw_coeff_elem *elems;	/* elements */
 };
 
+// simplified versions for initialization in plugins and serialization into firmware
+// main reason is that info, get and put are function pointers in kernel headers
+
+struct snd_kcontrol_new {
+	snd_ctl_elem_iface_t iface;	/* interface identifier */
+	unsigned int device;		/* device/client number */
+	unsigned int subdevice;		/* subdevice (substream) number */
+	const unsigned char *name;	/* ASCII name of item */
+	unsigned int index;		/* index of item */
+	unsigned int access;		/* access rights */
+	unsigned int count;		/* count of same elements */
+	u32 info;
+	u32 get;
+	u32 put;
+	union {
+		const unsigned int *p;
+	} tlv;
+	unsigned long private_value;};
+
+struct snd_soc_dapm_widget {
+	int id;
+	const char *name;		/* widget name */
+	const char *sname;	/* stream name */
+	int reg;				/* negative reg = no direct dapm */
+	unsigned char shift;			/* bits to shift */
+	unsigned int mask;			/* non-shifted mask */
+	unsigned int on_val;			/* on state value */
+	unsigned int off_val;			/* off state value */
+	/* kcontrols that relate to this widget */
+	int num_kcontrols;
+	const struct snd_kcontrol_new *kcontrol_news;
+	u32 channel;
+};
+
 /*
  * PLUGIN API.
  */
@@ -210,7 +244,12 @@ int ____ilog2_NaN(void);
 #define snd_soc_get_strobe		SOC_CONTROL_TYPE_STROBE
 #define snd_soc_put_strobe		SOC_CONTROL_TYPE_STROBE
 
+// this includes kernel sound/control.h but we need private defs for some structs
+#define snd_kcontrol_new kernel_snd_kcontrol_new
+#define snd_soc_dapm_widget kernel_snd_soc_dapm_widget
 #include <sound/soc-dapm.h>
+#undef snd_kcontrol_new
+#undef snd_soc_dapm_widget
 
 #define ARRAY_SIZE(x)	(sizeof(x) / sizeof(x[0]))
 
@@ -227,6 +266,7 @@ int ____ilog2_NaN(void);
 
 // taken from https://git.ti.com/cgit/lcpd-agross/omapdrm/plain/include/uapi/sound/asoc.h?id=c15a2d5a683de12f6768d0efb8df7ecd6aa9b3ed
 // we should not append here but add to include/uapi/sound/asoc.h in a way to the Letux kernel sources so that we can eventually upstream it as a patch
+// or create some abe-fw header there
 
 /*
  * linux/uapi/sound/asoc.h -- ALSA SoC Firmware Controls and DAPM
@@ -308,11 +348,13 @@ int ____ilog2_NaN(void);
  * Numeric IDs for stock mixer types that are used to enumerate FW based mixers.
  */
 
-// we add a cast to int because p and g are function pointers (strangely)
-#define SOC_CONTROL_ID_PUT(p)	((((int)p) & 0xff) << 16)
-#define SOC_CONTROL_ID_GET(g)	((((int)g) & 0xff) << 8)
+// we add a cast to int because p and g are function pointers (strangely) in libc.
+#define SOC_CONTROL_ID_PUT(p)	((p & 0xff) << 16)
+#define SOC_CONTROL_ID_GET(g)	((g & 0xff) << 8)
 #define SOC_CONTROL_ID_INFO(i)	((i & 0xff) << 0)
-#define SOC_CONTROL_ID(g, p, i)		(SOC_CONTROL_ID_PUT(p) | SOC_CONTROL_ID_GET(g) |	SOC_CONTROL_ID_INFO(i))
+#define SOC_CONTROL_ID(g, p, i)	\
+(SOC_CONTROL_ID_PUT(p) | SOC_CONTROL_ID_GET(g) |\
+SOC_CONTROL_ID_INFO(i))
 
 #define SOC_CONTROL_GET_ID_PUT(id)	((id & 0xff0000) >> 16)
 #define SOC_CONTROL_GET_ID_GET(id)	((id & 0x00ff00) >> 8)
@@ -530,7 +572,7 @@ struct soc_enum {
 	int reg;
 	unsigned char shift_l;
 	unsigned char shift_r;
-	unsigned int items;
+	unsigned int max;
 	unsigned int mask;
 	const char * const *texts;
 	const unsigned int *values;

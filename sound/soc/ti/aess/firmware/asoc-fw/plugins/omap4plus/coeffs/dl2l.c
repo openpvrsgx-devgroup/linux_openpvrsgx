@@ -14,6 +14,13 @@
  * Default Coefficients for DL2
  */
 
+#define uintptr_t host_uintptr_t
+#define mode_t host_mode_t
+#define dev_t host_dev_t
+#define blkcnt_t host_blkcnt_t
+typedef int int32_t;
+struct timespec { int seconds; };
+
 #include <socfw.h>
 #include <aess/omap-aess-priv.h>
 #include <aess/aess-fw.h>

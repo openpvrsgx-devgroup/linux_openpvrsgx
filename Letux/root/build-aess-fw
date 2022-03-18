@@ -17,7 +17,7 @@
 THIS="$PWD"
 # FIXME: base on $(uname -r) -> 5.17.0-rc6-letux-lpae+
 # strip off the -letux suffix, strip off the .0 version
-BRANCH=letux-5.16-rc8
+BRANCH=letux-5.17-rc8
 VERSION=009590
 
 #
@@ -43,30 +43,22 @@ function gitfetch { # $1 = repo, $2 = subdir
 }
 
 echo "+++ fetch the (complete) letux kernel source tree with minimal effort"
-gitfetch "--depth 1 -b $BRANCH https://github.com/goldelico/letux-kernel.git" letux-kernel.git || exit 1
+gitfetch "--depth 1 -b $BRANCH https://github.com/goldelico/letux-kernel.git" letux-kernel || exit 1
 
-LETUX="$PWD/letux-kernel.git"	# full source tree
-LINUX="$PWD/linux-headers"	# installed headers
-
-echo +++ fetch the omap4/5 firmware into a subdirectory
-gitfetch "-b master https://github.com/omap-audio/abefw" abefw.git || exit 1
-
-echo +++ fetch the audio-test code
-gitfetch "-b master https://github.com/omap-audio/audio-test.git" audio-test.git
-
-echo +++ fetch the asoc-fw tools
-gitfetch "-b master https://github.com/omap-audio/asoc-fw.git" asoc-fw.git
+LINUX="$PWD/letux-kernel"			# full source tree (for headers)
+DEST="$LINUX/sound/soc/ti/aess/firmware"	# subtree where we find the firmware
 
 #
-# build kernel headers
+# build generated kernel headers
 #
 
 echo +++ configure kernel and build generated headers
 (
-cd $LETUX || exit
+cd $LINUX || exit
 
-[ -f $LETUX/include/generated/uapi/linux/version.h ] || ( make ARCH=arm letux_lpae_defconfig modules_prepare headers_install INSTALL_HDR_PATH=$LINUX && ln -sf asm-generic include/asm)
+[ -f include/generated/uapi/linux/version.h ] || ( make ARCH=arm letux_lpae_defconfig modules_prepare headers_install INSTALL_HDR_PATH=../linux-headers && ln -sf asm-generic include/asm)
 ) || exit
+
 
 #
 # build firmware tools and firmware
@@ -74,16 +66,15 @@ cd $LETUX || exit
 
 echo +++ configure abefw
 (
-cd abefw.git || exit
-# cd $LETUX/Letux/src/aess/abefw || exit
+cd $DEST/abefw || exit
 
 echo +++ autogen the Makefiles
 LC_ALL=C ./autogen.sh || exit 1
 
 echo +++ configure
 # the configure option --with-hal-dir does not exist "(contrary to README)"
-# ./configure --with-linux-dir=$LETUX --with-hal-dir=$PWD/hal || exit 1
-./configure --with-linux-dir=$LETUX || exit 1
+# ./configure --with-linux-dir=$LINUX --with-hal-dir=$PWD/hal || exit 1
+./configure --with-linux-dir=$LINUX || exit 1
 
 echo +++ make and install
 make || exit 1
@@ -95,8 +86,7 @@ scripts/abe-tool.sh $VERSION || exit 1
 
 echo +++ configure asoc-fw
 (
-cd asoc-fw.git || exit
-# cd $LETUX/Letux/src/aess/asoc-fw || exit
+cd $DEST/asoc-fw || exit
 
 echo +++ autogen the Makefiles
 LC_ALL=C ./autogen.sh || exit
@@ -118,3 +108,5 @@ cp omap4_abe_new /lib/firmware/omap_aess-adfw.bin || exit 1
 echo "+++ success ++"
 ls -l /lib/firmware/omap_aess-adfw.bin
 ) || exit
+
+# FIXME: build audio tools as/if needed

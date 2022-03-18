@@ -18,6 +18,8 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#define SNDRV_CTL_ELEM_ID_NAME_MAXLEN 44	// from include/uapi/sound/asound.h
+
 #include <sound/asound.h>
 #include <sound/asoc.h>
 #include <sound/tlv.h>

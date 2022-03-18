@@ -1,12 +1,14 @@
 #ifndef _LINUX_NOSPEC_H
 #define _LINUX_NOSPEC_H
-#include <linux/list.h>
+
+// surrogate definitions to avoid name clashes
+
 typedef int wait_queue_head_t;
 typedef int spinlock_t;
-typedef int bool;
+// assume we are on a 32 bit machine like omap4/5
 #define array_index_nospec(A, B) (0*A*B)
-#define IS_MODULE(A) (0)
+// #define IS_MODULE(A) (0)
 struct snd_pcm_substream { };
 struct dentry { };
-#include "socfw.h"
+
 #endif

@@ -1,1 +1,1 @@
-/root/aess/letux-kernel.git/include/sound/soc.h
+../../../../../../../../include/sound/soc.h

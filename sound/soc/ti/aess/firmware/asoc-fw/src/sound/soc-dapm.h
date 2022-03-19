@@ -1,1 +1,1 @@
-/root/aess/letux-kernel.git/include/sound/soc-dapm.h
+../../../../../../../../include/sound/soc-dapm.h

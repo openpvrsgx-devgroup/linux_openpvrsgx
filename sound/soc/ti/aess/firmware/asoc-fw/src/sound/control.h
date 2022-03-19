@@ -1,1 +1,1 @@
-/root/aess/letux-kernel.git/include/sound/control.h
+../../../../../../../../include/sound/control.h

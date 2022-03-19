@@ -19,6 +19,7 @@
 #include <stdint.h>
 
 #define SNDRV_CTL_ELEM_ID_NAME_MAXLEN 44	// from include/uapi/sound/asound.h
+struct __kernel_timespec { int time; };
 
 #include <sound/asound.h>
 #include <sound/asoc.h>

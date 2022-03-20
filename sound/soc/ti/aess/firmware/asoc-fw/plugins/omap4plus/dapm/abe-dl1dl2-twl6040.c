@@ -35,14 +35,21 @@ typedef int int32_t;
 #include <stdlib.h>
 #include <sys/types.h>
 
+#define __OMAP_AESS_PRIV_H__	// do not define struct snd_soc_file_coeff_data
 #include "socfw.h"
+#undef __OMAP_AESS_PRIV_H__	// we want to include it later as it defines struct snd_soc_file_coeff_data
 
-// #include <aess/aess-fw.h>
+#include <aess/aess-fw.h>
 #undef SOC_CONTROL_ID_PUT
 #undef SOC_CONTROL_ID_PUT
 #undef SOC_CONTROL_ID_GET
 #undef SOC_CONTROL_ID_GET
 #undef SOC_CONTROL_ID
+
+struct snd_soc_dai_driver {
+	/* DAI description */
+	const char *name;
+};
 #include <aess/omap-aess-priv.h>
 
 /* Media DL1 volume control from -120 to 30 dB in 1 dB steps */

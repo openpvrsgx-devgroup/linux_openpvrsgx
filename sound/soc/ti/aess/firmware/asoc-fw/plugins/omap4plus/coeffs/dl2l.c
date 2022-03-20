@@ -21,7 +21,14 @@
 typedef int int32_t;
 struct timespec { int seconds; };
 
+#define __OMAP_AESS_PRIV_H__	// do not define struct snd_soc_file_coeff_data
 #include <socfw.h>
+#undef __OMAP_AESS_PRIV_H__	// we want to include it later as it defines struct snd_soc_file_coeff_data
+struct snd_soc_dai_driver {
+	/* DAI description */
+	const char *name;
+};
+
 #include <aess/omap-aess-priv.h>
 #include <aess/aess-fw.h>
 

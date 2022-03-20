@@ -1,17 +1,10 @@
 #!/bin/bash
 #
 # build AESS firmware on destination device (e.g. PandaBoard, OMAP5EVM, Pyra, ...)
-# cross-compile may need different approach
-# tested on Debian 9.13
+# cross-compile may/will need different approach
+# tested on Debian 9.13 on letux devices
 #
-# Firware comes from https://github.com/omap-audio
-#
-# Caveats:
-# - we have no idea where to find audio-test.git
-# - the tests subdirectory assumes headers and constants (e.g. OMAP_ABE_DMEM)
-# - these are nowhere available on an upstream Linux kernel
-# - some location is e.g. https://android.googlesource.com/kernel/msm/+/android-msm-mako-3.4-jb-mr1.1/sound/soc/omap/abe/abe_mem.h
-# - so we mix the letux kernel tree (headers) with this stuff
+# Source code comes originally from https://github.com/omap-audio
 #
 
 THIS="$PWD"

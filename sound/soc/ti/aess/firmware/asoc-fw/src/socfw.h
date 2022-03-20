@@ -20,6 +20,7 @@
 
 #define SNDRV_CTL_ELEM_ID_NAME_MAXLEN 44	// from include/uapi/sound/asound.h
 struct __kernel_timespec { int time; };
+struct mutex { int dummy; };
 
 #include <sound/asound.h>
 #include <sound/asoc.h>
@@ -533,6 +534,10 @@ struct snd_soc_fw_dapm_elems {
 	/* elements here */
 } __attribute__((packed));
 
+// also defined in aess/omap-aess-priv.h
+// resp. aess/aess-fw.h
+
+#ifndef __OMAP_AESS_PRIV_H__
 /*
  * Coeffcient File Data.
  */
@@ -542,6 +547,7 @@ struct snd_soc_file_coeff_data {
 	__le32 id; /* associated mixer ID */
 	/* data here */
 } __attribute__((packed));
+#endif	// __OMAP_AESS_PRIV_H__
 
 #endif	// __LINUX_UAPI_SND_ASOC_SOCFW_H
 

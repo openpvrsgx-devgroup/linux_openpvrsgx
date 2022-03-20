@@ -40,6 +40,7 @@ typedef int int32_t;
 #include <sys/stat.h>
 #include <dlfcn.h>
 
+#undef __OMAP_AESS_PRIV_H__
 #include "socfw.h"
 
 #define CHUNK_SIZE 	4096

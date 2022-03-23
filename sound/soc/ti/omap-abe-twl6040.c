@@ -960,7 +960,7 @@ static void omap_abe_fw_ready(const struct firmware *fw, void *context)
 		return;
 	}
 
-	ret = omap_aess_load_firmware(priv->aess, AESS_FW_NAME);
+	ret = omap_aess_load_firmware(priv->aess, fw);
 	if (ret) {
 		dev_err(&pdev->dev, "%s firmware was not loaded.\n",
 			AESS_FW_NAME);
@@ -1005,7 +1005,7 @@ static int omap_abe_load_fw(struct snd_soc_card *card)
 		return ret;
 	}
 
-	ret = omap_aess_load_firmware(priv->aess, AESS_FW_NAME);
+	ret = omap_aess_load_firmware(priv->aess, fw);
 	if (ret) {
 		dev_err(card->dev, "%s firmware was not loaded.\n",
 			AESS_FW_NAME);

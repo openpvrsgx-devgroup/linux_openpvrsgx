@@ -480,7 +480,7 @@ static int omap_aess_pcm_probe(struct snd_soc_component *component)
 	ret = snd_soc_tplg_component_load(component, &soc_tplg_ops,
 					  aess->fw);
 	if (ret < 0) {
-		dev_err(component->dev, "request for AESS FW failed %d\n", ret);
+		dev_err(component->dev, "loading toplogy from AESS FW failed %d\n", ret);
 #if 0
 /*
  * fw loading fails because header size seems to be wrong

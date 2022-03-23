@@ -143,27 +143,18 @@ void omap_aess_pm_set_mode(struct omap_aess *aess, int mode)
 }
 EXPORT_SYMBOL(omap_aess_pm_set_mode);
 
-int omap_aess_load_firmware(struct omap_aess *aess, char *fw_name)
+int omap_aess_load_firmware(struct omap_aess *aess, const struct firmware *fw)
 {
-	const struct firmware *fw;
 	int ret;
 
-	if (!aess)
+	if (!aess || !fw)
 		return -EINVAL;
 
 	if (aess->fw_loaded)
 		return 0;
 
-	ret = request_firmware(&fw, fw_name, aess->dev);
-	if (ret) {
-		dev_err(aess->dev, "%s firmware loading error %d\n",
-			fw_name, ret);
-		return ret;
-	}
-
 	if (unlikely(!fw->data)) {
-		dev_err(aess->dev, "Loaded %s firmware is empty\n",
-			fw_name);
+		dev_err(aess->dev, "Loaded firmware is empty\n");
 		ret = -EINVAL;
 		goto err;
 	}
@@ -188,7 +179,6 @@ int omap_aess_load_firmware(struct omap_aess *aess, char *fw_name)
 	return 0;
 err:
 	aess->fw_loaded = false;
-	release_firmware(fw);
 	return ret;
 }
 EXPORT_SYMBOL(omap_aess_load_firmware);

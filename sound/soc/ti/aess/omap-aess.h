@@ -79,7 +79,7 @@ struct omap_aess;
 struct omap_aess *omap_aess_get_handle(void);
 void omap_aess_put_handle(struct omap_aess *aess);
 
-int omap_aess_load_firmware(struct omap_aess *aess, char *fw_name);
+int omap_aess_load_firmware(struct omap_aess *aess, const struct firmware *fw);
 
 int omap_aess_port_open(struct omap_aess *aess, int logical_id);
 void omap_aess_port_close(struct omap_aess *aess, int logical_id);

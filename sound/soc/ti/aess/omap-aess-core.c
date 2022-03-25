@@ -278,7 +278,7 @@ static int omap_aess_engine_remove(struct platform_device *pdev)
 
 	snd_soc_unregister_component(&pdev->dev);
 #ifdef CHECKME	// we have no platform device any more - is component sufficient?
-// adn we register two components - how do we unregister them individually?
+// and we register two components - how do we unregister them individually?
 	snd_soc_unregister_platform(&pdev->dev);
 #endif
 

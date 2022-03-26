@@ -28,7 +28,7 @@
  */
 
 #include <linux/pm_runtime.h>
-
+#include <linux/firmware.h>
 
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
@@ -471,8 +471,15 @@ static struct snd_pcm_ops omap_aess_pcm_ops = {
 
 static int omap_aess_pcm_probe(struct snd_soc_component *component)
 {
-	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
+	struct omap_aess *aess = omap_aess_get_handle();
 	int ret = 0, i;
+
+	if (!aess->fw || !aess->fw->data) {
+		dev_warn(component->dev, "AESS FW not yet loaded\n");
+		omap_aess_put_handle(aess);
+		return -EPROBE_DEFER;	/* firmware not yet loaded */
+}
+	snd_soc_component_set_drvdata(component, aess);
 
 	pm_runtime_enable(aess->dev);
 	pm_runtime_irq_safe(aess->dev);
@@ -534,8 +541,10 @@ static int omap_aess_pcm_probe(struct snd_soc_component *component)
 	aess_init_debugfs(aess);
 
 out:
-	if (ret)
+	if (ret) {
 		pm_runtime_disable(aess->dev);
+		omap_aess_put_handle(aess);
+	}
 
 	return ret;
 }
@@ -547,6 +556,8 @@ static void omap_aess_pcm_remove(struct snd_soc_component *component)
 	free_irq(aess->irq, aess);
 	aess_cleanup_debugfs(aess);
 	pm_runtime_disable(aess->dev);
+	omap_aess_put_handle(aess);
+	release_firmware(aess->fw);
 }
 
 /* TODO: map IO directly into AESS memories */

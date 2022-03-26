@@ -969,7 +969,7 @@ static void omap_abe_fw_ready(const struct firmware *fw, void *context)
 	}
 
 	/* Release the FW here. */
-	release_firmware(fw);
+//	release_firmware(fw);
 
 	ret = omap_abe_add_legacy_dai_links(card);
 	if (ret < 0)
@@ -1018,7 +1018,11 @@ static int omap_abe_load_fw(struct snd_soc_card *card)
 		ret = omap_abe_add_aess_dai_links(card);
 
 	/* Release the FW here. */
-	release_firmware(fw);
+// oops - why???
+// and: what about error paths? We should have sort of devm_request_firmware
+//	release_firmware(fw);
+
+printk("%s: fw=%px fw->data=%px\n", __func__, fw, fw->data);
 
 	return ret;
 }

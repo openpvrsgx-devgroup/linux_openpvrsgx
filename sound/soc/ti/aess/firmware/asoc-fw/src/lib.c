@@ -77,16 +77,19 @@ static void verbose(struct soc_fw_priv *soc_fw, const char *fmt, ...)
 static int write_header(struct soc_fw_priv *soc_fw, u32 type,
 	u32 vendor_type, u32 version, size_t size)
 {
-	struct snd_soc_fw_hdr hdr;
+	struct snd_soc_tplg_hdr hdr;
 	size_t bytes;
 	int offset = lseek(soc_fw->out_fd, 0, SEEK_CUR);
 
-	hdr.magic = SND_SOC_FW_MAGIC;
-	hdr.abi = SND_SOC_FW_ABI_VERSION;
-	hdr.type = type;
-	hdr.vendor_type = vendor_type;
+	hdr.magic = SND_SOC_TPLG_MAGIC;
+	hdr.abi = SND_SOC_TPLG_ABI_VERSION;
 	hdr.version = version;
-	hdr.size = size;
+	hdr.type = type;
+	hdr.size = sizeof(hdr);
+	hdr.vendor_type = vendor_type;
+	hdr.payload_size = size;
+	hdr.index = 0;
+	hdr.count = 1;
 
 	/* make sure the file offset is aligned with the calculated HDR offset */
 	if (offset != soc_fw->next_hdr_pos) {
@@ -101,7 +104,7 @@ static int write_header(struct soc_fw_priv *soc_fw, u32 type,
 		"version %d at offset 0x%x\n", type, (long unsigned int)size, (long int)size, vendor_type,
 		version, offset);
 
-	soc_fw->next_hdr_pos += hdr.size + sizeof(hdr);
+	soc_fw->next_hdr_pos += hdr.size + hdr.payload_size;
 
 	bytes = write(soc_fw->out_fd, &hdr, sizeof(hdr));
 	if (bytes != sizeof(hdr)) {
@@ -121,39 +124,56 @@ static int tlv_size(const struct snd_kcontrol_new *kcontrol)
 
 	tlv = (struct snd_ctl_tlv *)kcontrol->tlv.p;
 
-	return sizeof(struct snd_soc_fw_ctl_tlv) + tlv->length;
+// length limited to SND_SOC_TPLG_TLV_SIZE?
+	return sizeof(struct snd_soc_tplg_ctl_tlv) + tlv->length;
 }
 
 static int import_mixer(struct soc_fw_priv *soc_fw,
 	const struct snd_kcontrol_new *kcontrol)
 {
-	struct snd_soc_fw_mixer_control mc;
+	struct snd_soc_tplg_mixer_control mc;
 	struct soc_mixer_control *mixer =
 		(struct soc_mixer_control *)kcontrol->private_value;
 	size_t bytes;
 
 	memset(&mc, 0, sizeof(mc));
 
-	strncpy(mc.hdr.name, (const char*)kcontrol->name, SND_SOC_FW_TEXT_SIZE);
+	mc.hdr.size = sizeof(mc /* or .hdr? */);
+	mc.hdr.type = SND_SOC_TPLG_TYPE_MIXER;
+	strncpy(mc.hdr.name, (const char*)kcontrol->name, sizeof(mc.hdr.name));
+	mc.hdr.access = kcontrol->access;
+#if 0
 	mc.hdr.index = kcontrol->index |
 		SOC_CONTROL_ID(kcontrol->get, kcontrol->put, 0);
-	mc.hdr.access = kcontrol->access;
-	mc.hdr.tlv_size = tlv_size(kcontrol);
+#endif
+	// FIXME: where does kcontrol->index go to?
+	mc.hdr.ops.get = kcontrol->get;
+	mc.hdr.ops.put = kcontrol->put;
+	mc.hdr.ops.info = kcontrol->info;
+	mc.hdr.tlv.size = tlv_size(kcontrol);
+	mc.hdr.tlv.type = 0xaaaa;	// checkme
 
+	mc.size = sizeof(mc /* or .hdr? and depends on num_channels? */);
 	mc.min = mixer->min;
 	mc.max = mixer->max;
 	mc.platform_max = mixer->platform_max;
-	mc.reg = mixer->reg;
-	mc.rreg = mixer->rreg;
-	mc.shift = mixer->shift;
-	mc.rshift = mixer->rshift;
 	mc.invert = mixer->invert;
 
+	mc.num_channels = 2;
+	mc.channel[0].size = sizeof(mc.channel[0]);
+	mc.channel[0].reg = mixer->reg;
+	mc.channel[0].shift = mixer->shift;
+	mc.channel[0].id = 0;
+	mc.channel[1].size = sizeof(mc.channel[0]);
+	mc.channel[1].reg = mixer->rreg;
+	mc.channel[1].shift = mixer->rshift;
+	mc.channel[1].id = 1;
+
 	verbose(soc_fw," mixer: \"%s\" R1/2 0x%x/0x%x shift L/R %d/%d (g,p,i) %d:%d:%d\n",
-		mc.hdr.name, mc.reg, mc.rreg, mc.shift, mc.rshift,
-		SOC_CONTROL_GET_ID_GET(mc.hdr.index),
-		SOC_CONTROL_GET_ID_PUT(mc.hdr.index),
-		SOC_CONTROL_GET_ID_INFO(mc.hdr.index));
+		mc.hdr.name, mc.channel[0].reg, mc.channel[1].reg, mc.channel[0].shift, mc.channel[1].shift,
+		mc.hdr.ops.get,
+		mc.hdr.ops.put,
+		mc.hdr.ops.info);
 
 	bytes = write(soc_fw->out_fd, &mc, sizeof(mc));
 	if (bytes != sizeof(mc)) {
@@ -167,7 +187,7 @@ static int import_mixer(struct soc_fw_priv *soc_fw,
 static int import_tlv(struct soc_fw_priv *soc_fw,
 	const struct snd_kcontrol_new *kcontrol)
 {
-	struct snd_soc_fw_ctl_tlv *fw_tlv;
+	struct snd_soc_tplg_ctl_tlv *fw_tlv;
 	struct snd_ctl_tlv *tlv;
 	size_t bytes, size;
 
@@ -176,15 +196,15 @@ static int import_tlv(struct soc_fw_priv *soc_fw,
 
 	tlv = (struct snd_ctl_tlv *)kcontrol->tlv.p;
 	verbose(soc_fw, " tlv: type %d length %d\n", tlv->numid, tlv->length);
-
-	size = sizeof(*fw_tlv) + tlv->length;
+// if (tlv->length > sizeof(fw_tlv->data) return -EINVAL;
+	size = sizeof(*fw_tlv) - sizeof(fw_tlv->data) + tlv->length;
 	fw_tlv = calloc(1, size);
 	if (!fw_tlv)
 		return -ENOMEM;
 
-	fw_tlv->numid = tlv->numid;
-	fw_tlv->length = tlv->length;
-	memcpy(fw_tlv + 1, tlv->tlv, tlv->length);
+	fw_tlv->type = tlv->numid;
+	fw_tlv->size = tlv->length;
+	memcpy(fw_tlv->data, tlv->tlv, tlv->length);
 
 	bytes = write(soc_fw->out_fd, fw_tlv, size);
 	free(fw_tlv);
@@ -197,7 +217,7 @@ static int import_tlv(struct soc_fw_priv *soc_fw,
 }
 
 static void import_enum_control_data(struct soc_fw_priv *soc_fw, int count,
-	struct snd_soc_fw_enum_control *ec, struct soc_enum *menum)
+	struct snd_soc_tplg_enum_control *ec, struct soc_enum *menum)
 {
 	int i;
 
@@ -207,7 +227,7 @@ static void import_enum_control_data(struct soc_fw_priv *soc_fw, int count,
 		}
 	} else {
 		for (i = 0; i < count; i++) {
-			strncpy(ec->texts[i], menum->texts[i], SND_SOC_FW_TEXT_SIZE);
+			strncpy(ec->texts[i], menum->texts[i], sizeof(ec->texts[0]));
 		}
 	}
 }
@@ -215,38 +235,55 @@ static void import_enum_control_data(struct soc_fw_priv *soc_fw, int count,
 static int import_enum_control(struct soc_fw_priv *soc_fw,
 	const struct snd_kcontrol_new *kcontrol)
 {
-	struct snd_soc_fw_enum_control ec;
+	struct snd_soc_tplg_enum_control ec;
 	struct soc_enum *menum =
 		(struct soc_enum *)kcontrol->private_value;
 	size_t bytes;
 
 	memset(&ec, 0, sizeof(ec));
 
-	if (kcontrol->count >= SND_SOC_FW_NUM_TEXTS) {
+	if (kcontrol->count >= ARRAY_SIZE(ec.texts)) {
 		fprintf(stderr, "error: too many enum values %d\n",
 			kcontrol->count);
 		return -EINVAL;
 	}
 
-	strncpy(ec.hdr.name, (const char*)kcontrol->name, SND_SOC_FW_TEXT_SIZE);
+	ec.hdr.size = sizeof(ec /* or .hdr? */);
+	ec.hdr.type = SND_SOC_TPLG_TYPE_ENUM;
+	strncpy(ec.hdr.name, (const char*)kcontrol->name, sizeof(ec.hdr.name));
+#if 0
 	ec.hdr.index = kcontrol->index |
 		SOC_CONTROL_ID(kcontrol->get, kcontrol->put, 0);
+#endif
 	ec.hdr.access = kcontrol->access;
-	ec.hdr.tlv_size = tlv_size(kcontrol);
+	ec.hdr.ops.get = kcontrol->get;
+	ec.hdr.ops.put = kcontrol->put;
+	ec.hdr.ops.info = kcontrol->info;
+	ec.hdr.tlv.size = tlv_size(kcontrol);
+	ec.hdr.tlv.type = 0xaaaa;	// checkme
 
+	ec.size = sizeof(ec);	// checkme
+	ec.num_channels = 2;
+	ec.channel[0].size = sizeof(ec.channel[0]);
+	ec.channel[0].reg = menum->reg;
+	ec.channel[0].shift = menum->shift_l;
+	ec.channel[0].id = 0;
+	ec.channel[1].size = sizeof(ec.channel[0]);
+	ec.channel[1].reg = menum->reg;	// same reg?
+	ec.channel[1].shift =  menum->shift_r;
+	ec.channel[1].id = 1;
+
+	ec.items = menum->max;
 	ec.mask = menum->mask;
-	ec.max = menum->max;
-	ec.reg = menum->reg;
-	ec.shift_l = menum->shift_l;
-	ec.shift_r = menum->shift_r;
-
-	verbose(soc_fw, " enum: \"%s\" R 0x%x shift L/R %d/%d (g,p,i) %d:%d:%d\n",
-		ec.hdr.name, ec.reg, ec.shift_l, ec.shift_r,
-		SOC_CONTROL_GET_ID_GET(ec.hdr.index),
-		SOC_CONTROL_GET_ID_PUT(ec.hdr.index),
-		SOC_CONTROL_GET_ID_INFO(ec.hdr.index));
+	ec.count = menum->max;
 
 	import_enum_control_data(soc_fw, ec.items, &ec, menum);
+
+	verbose(soc_fw, " enum: \"%s\" R 0x%x shift L/R %d/%d (g,p,i) %d:%d:%d\n",
+		ec.hdr.name, ec.channel[0].reg, ec.channel[0].shift, ec.channel[1].shift,
+		ec.hdr.ops.get,
+		ec.hdr.ops.put,
+		ec.hdr.ops.info);
 
 	bytes = write(soc_fw->out_fd, &ec, sizeof(ec));
 	if (bytes != sizeof(ec)) {
@@ -260,13 +297,16 @@ static int import_enum_control(struct soc_fw_priv *soc_fw,
 int socfw_import_controls(struct soc_fw_priv *soc_fw,
 	const struct snd_kcontrol_new *kcontrols, int kcontrol_count)
 {
-	struct snd_soc_fw_kcontrol kc;
-	int i, mixers = 0, enums = 0;
-	size_t bytes, size = sizeof(struct snd_soc_fw_kcontrol);
+//	struct snd_soc_tplg_bytes_control kc;
+	int i /*, mixers = 0, enums = 0 */;
+//	size_t bytes, size = sizeof(kc);
 	int err;
 
 	if (kcontrol_count == 0)
 		return 0;
+#if 0
+// collection of kcontrols
+// does not have an equivalent in soc-topology???
 
 	for (i = 0; i < kcontrol_count; i++) {
 		const struct snd_kcontrol_new *kn =
@@ -278,13 +318,13 @@ int socfw_import_controls(struct soc_fw_priv *soc_fw,
 		case SOC_CONTROL_TYPE_VOLSW_S8:
 		case SOC_CONTROL_TYPE_VOLSW_XR_SX:
 		case SOC_CONTROL_TYPE_EXT:
-			size += sizeof(struct snd_soc_fw_mixer_control);
+			size += sizeof(struct snd_soc_tplg_mixer_control);
 			size += tlv_size(kn);
 			mixers++;
 			break;
 		case SOC_CONTROL_TYPE_ENUM:
 		case SOC_CONTROL_TYPE_ENUM_EXT:
-			size += sizeof(struct snd_soc_fw_enum_control);
+			size += sizeof(struct snd_soc_tplg_enum_control);
 			size += tlv_size(kn);
 			enums++;
 			break;
@@ -301,7 +341,7 @@ int socfw_import_controls(struct soc_fw_priv *soc_fw,
 	verbose(soc_fw, "kcontrols: %d mixers %d enums %d size %lu bytes\n",
 		mixers + enums, mixers, enums, size);
 
-	err = write_header(soc_fw, SND_SOC_FW_MIXER, 0, soc_fw->version, size);
+	err = write_header(soc_fw, SND_SOC_TPLG_TYPE_MIXER, 0, soc_fw->version, size);
 	if (err < 0)
 		return err;
 
@@ -313,6 +353,7 @@ int socfw_import_controls(struct soc_fw_priv *soc_fw,
 		fprintf(stderr, "error: can't write mixer %lu\n", (long unsigned int)bytes);
 		return bytes;
 	}
+#endif
 
 	for (i = 0; i < kcontrol_count; i++) {
 		const struct snd_kcontrol_new *kn =
@@ -358,65 +399,97 @@ int socfw_import_controls(struct soc_fw_priv *soc_fw,
 
 static void import_coeff_enum_control_data(struct soc_fw_priv *soc_fw,
 	const struct snd_soc_fw_coeff *coeff,
-	struct snd_soc_fw_enum_control *ec)
+	struct snd_soc_tplg_enum_control *ec)
 {
 	int i;
 
 	for (i = 0; i < coeff->count; i++)
 		strncpy(ec->texts[i], coeff->elems[i].description,
-			SND_SOC_FW_TEXT_SIZE);
+			sizeof(ec->texts[0]));
 }
 
 static int import_enum_coeff_control(struct soc_fw_priv *soc_fw,
 	const struct snd_soc_fw_coeff *coeff)
 {
-	struct snd_soc_fw_kcontrol kc;
-	struct snd_soc_fw_enum_control ec;
+//	struct snd_soc_fw_kcontrol kc;
+	struct snd_soc_tplg_enum_control ec;
 	struct snd_soc_file_coeff_data cd;
 	size_t bytes;
 	int err, i;
 
-	memset(&kc, 0, sizeof(kc));
+//	memset(&kc, 0, sizeof(kc));
 	memset(&ec, 0, sizeof(ec));
 
-	kc.count = coeff->count;
+//	kc.count = coeff->count;
 	cd.count = coeff->count;
 	cd.size = cd.count * coeff->elems[0].size;
 	cd.id = coeff->id;
 
-	if (coeff->count >= SND_SOC_FW_NUM_TEXTS) {
+	if (coeff->count >= SND_SOC_TPLG_NUM_TEXTS) {
 		fprintf(stderr, "error: too many enum values %d\n",
 			coeff->count);
 		return -EINVAL;
 	}
 
-	strncpy(ec.hdr.name, coeff->description, SND_SOC_FW_TEXT_SIZE);
+#if 0 // old
+
+	strncpy(ec.hdr.name, coeff->description, sizeof(ec.hdr.name));
 	ec.hdr.index = coeff->index;
 	ec.hdr.access = SNDRV_CTL_ELEM_ACCESS_READWRITE;
 	ec.mask = (coeff->count < 1) - 1;
 	ec.items = coeff->count;
 	ec.reg = coeff->id;
+#endif
 
-	verbose(soc_fw, " coeff 0x%x enum: \"%s\" R 0x%x shift L/R %d/%d (g,p,i) %d:%d:%d\n",
-		cd.id, ec.hdr.name, ec.reg, ec.shift_l, ec.shift_r,
-		SOC_CONTROL_GET_ID_GET(ec.hdr.index),
-		SOC_CONTROL_GET_ID_PUT(ec.hdr.index),
-		SOC_CONTROL_GET_ID_INFO(ec.hdr.index));
+// new
+
+	ec.hdr.size = sizeof(ec /* or .hdr? */);
+	ec.hdr.type = SND_SOC_TPLG_TYPE_ENUM;
+	strncpy(ec.hdr.name, coeff->description, sizeof(ec.hdr.name));
+#if 0
+	ec.hdr.index = coeff->index;
+#endif
+	ec.hdr.access = SNDRV_CTL_ELEM_ACCESS_READWRITE;
+	ec.hdr.ops.get = 0;
+	ec.hdr.ops.put = 0;
+	ec.hdr.ops.info = 0;
+//	ec.hdr.tlv.size = tlv_size(kcontrol);
+//	ec.hdr.tlv.type = 0xaaaa;	// checkme
+
+	ec.size = sizeof(ec);	// checkme
+	ec.num_channels = 1;
+	ec.channel[0].size = sizeof(ec.channel[0]);
+	ec.channel[0].reg = coeff->id;
+	ec.channel[0].shift = 0;
+	ec.channel[0].id = 0;
+
+	ec.items = coeff->count;
+	ec.mask = (coeff->count < 1) - 1;
+	ec.count = coeff->count;
 
 	import_coeff_enum_control_data(soc_fw, coeff, &ec);
 
+	verbose(soc_fw, " coeff 0x%x enum: \"%s\" R 0x%x shift L/R %d/%d (g,p,i) %d:%d:%d\n",
+		cd.id, ec.hdr.name, ec.channel[0].reg, ec.channel[0].shift, ec.channel[1].shift,
+		ec.hdr.ops.get,
+		ec.hdr.ops.put,
+		ec.hdr.ops.info);
+
+#if 0
 	bytes = write(soc_fw->out_fd, &kc, sizeof(kc));
 	if (bytes != sizeof(kc)) {
 		fprintf(stderr, "error: can't write mixer %lu\n", (long unsigned int)bytes);
 		return bytes;
 	}
+#endif
+
 	bytes = write(soc_fw->out_fd, &ec, sizeof(ec));
 	if (bytes != sizeof(ec)) {
 		fprintf(stderr, "error: can't write mixer %lu\n", (long unsigned int)bytes);
 		return bytes;
 	}
 
-	err = write_header(soc_fw, SND_SOC_FW_COEFF, SND_SOC_FW_VENDOR_COEFF,
+	err = write_header(soc_fw,  SND_SOC_TPLG_TYPE_PDATA, SND_SOC_TPLG_TYPE_VENDOR_COEFF,
 		soc_fw->version, cd.size + sizeof(cd));
 	if (err < 0)
 		return err;
@@ -449,15 +522,15 @@ int socfw_import_coeffs(struct soc_fw_priv *soc_fw,
 		return 0;
 
 	for (i = 0; i < coeff_count; i++) {
-		size += sizeof(struct snd_soc_fw_kcontrol)
-			+ sizeof(struct snd_soc_fw_enum_control);
+		size += sizeof(struct snd_soc_tplg_bytes_control)
+			+ sizeof(struct snd_soc_tplg_enum_control);
 		for (j = 0; j < coeffs[i].count; j++)
 			enums++;
 	}
 	verbose(soc_fw, " coeffs: num coeffs %d enums %d size 0x%lx/%lu bytes\n",
 		coeff_count, enums, size, size);
 
-	err = write_header(soc_fw,  SND_SOC_FW_COEFF, 0,
+	err = write_header(soc_fw,  SND_SOC_TPLG_TYPE_PDATA, 0,
 		soc_fw->version, size);
 	if (err < 0)
 		return err;
@@ -524,8 +597,8 @@ static int socfw_calc_widget_size(struct soc_fw_priv *soc_fw,
 	int widget_count)
 {
 	int i, j;
-	int size = sizeof(struct snd_soc_fw_dapm_elems) +
-		sizeof(struct snd_soc_fw_dapm_widget) * widget_count;
+	int size = sizeof(*widgets) +
+		sizeof(struct snd_soc_tplg_dapm_widget) * widget_count;
 
 	for (i = 0; i < widget_count; i++) {
 		const struct snd_kcontrol_new *kn = widgets[i].kcontrol_news;
@@ -539,13 +612,13 @@ static int socfw_calc_widget_size(struct soc_fw_priv *soc_fw,
 			case SOC_CONTROL_TYPE_VOLSW_XR_SX:
 			case SOC_CONTROL_TYPE_EXT:
 			case SOC_DAPM_TYPE_VOLSW:
-				size +=	sizeof(struct snd_soc_fw_mixer_control);
+				size +=	sizeof(struct snd_soc_tplg_mixer_control);
 				break;
 			case SOC_CONTROL_TYPE_ENUM:
 			case SOC_CONTROL_TYPE_ENUM_EXT:
 			case SOC_DAPM_TYPE_ENUM_DOUBLE:
 			case SOC_DAPM_TYPE_ENUM_EXT:
-				size += sizeof(struct snd_soc_fw_enum_control);
+				size += sizeof(struct snd_soc_tplg_enum_control);
 				break;
 			case SOC_DAPM_TYPE_PIN:
 			default:
@@ -563,8 +636,8 @@ static int socfw_calc_widget_size(struct soc_fw_priv *soc_fw,
 int socfw_import_dapm_widgets(struct soc_fw_priv *soc_fw,
 	const struct snd_soc_dapm_widget *widgets, int widget_count)
 {
-	struct snd_soc_fw_dapm_widget widget;
-	struct snd_soc_fw_dapm_elems delems;
+	struct snd_soc_tplg_dapm_widget widget;
+	struct snd_soc_tplg_hdr delems;
 	size_t bytes;
 	int i, err, size;
 
@@ -578,7 +651,7 @@ int socfw_import_dapm_widgets(struct soc_fw_priv *soc_fw,
 	verbose(soc_fw, "widgets: widgets %d size %lu bytes\n",
 		widget_count, size);
 
-	err = write_header(soc_fw, SND_SOC_FW_DAPM_WIDGET, 0,
+	err = write_header(soc_fw, SND_SOC_TPLG_TYPE_DAPM_WIDGET, 0,
 		soc_fw->version, size);
 	if (err < 0)
 		return err;
@@ -595,19 +668,24 @@ int socfw_import_dapm_widgets(struct soc_fw_priv *soc_fw,
 
 		memset(&widget, 0, sizeof(widget));
 
+		widget.size = 0;
+		widget.id = widgets[i].id;
 		strncpy(widget.name, widgets[i].name,
-			SND_SOC_FW_TEXT_SIZE);
+			sizeof(widget.name));
 
 		if (widgets[i].sname)
 			strncpy(widget.sname, widgets[i].sname,
-				SND_SOC_FW_TEXT_SIZE);
+				sizeof(widget.sname));
 
-		widget.id = widgets[i].id;
 		widget.reg = widgets[i].reg;
 		widget.shift = widgets[i].shift;
 		widget.mask = widgets[i].mask;
-		// widget.invert = widgets[i].invert; broken but not neededwidgets[i].invert;
-		widget.kcontrol.count = widgets[i].num_kcontrols;
+		widget.subseq = 0;
+		widget.invert = (widgets[i].on_val == 0);
+		widget.ignore_suspend = 0;	/* kept enabled over suspend */
+		widget.event_flags = 0;
+		widget.event_type = 0;
+		widget.num_kcontrols = widgets[i].num_kcontrols;
 
 		verbose(soc_fw, " widget: \"%s\" R 0x%x shift %d\n",
 			widget.name, widget.reg, widget.shift);
@@ -631,8 +709,8 @@ int socfw_import_dapm_widgets(struct soc_fw_priv *soc_fw,
 int socfw_import_dapm_graph(struct soc_fw_priv *soc_fw,
 	const struct snd_soc_dapm_route *graph, int graph_count)
 {
-	struct snd_soc_fw_dapm_graph_elem elem;
-	struct snd_soc_fw_dapm_elems elem_hdr;
+	struct snd_soc_tplg_dapm_graph_elem elem;
+	struct snd_soc_tplg_hdr elem_hdr;
 	size_t bytes;
 	int i, err;
 
@@ -642,7 +720,7 @@ int socfw_import_dapm_graph(struct soc_fw_priv *soc_fw,
 	verbose(soc_fw, "graph: routes %d size %lu bytes\n",
 		graph_count, sizeof(elem_hdr) + sizeof(elem) * graph_count);
 
-	err = write_header(soc_fw, SND_SOC_FW_DAPM_GRAPH, 0, soc_fw->version,
+	err = write_header(soc_fw, SND_SOC_TPLG_TYPE_DAPM_GRAPH, 0, soc_fw->version,
 		sizeof(elem_hdr) + sizeof(elem) * graph_count);
 	if (err < 0)
 		return err;
@@ -656,13 +734,13 @@ int socfw_import_dapm_graph(struct soc_fw_priv *soc_fw,
 	}
 
 	for (i = 0; i <graph_count; i++) {
-		strncpy(elem.sink, graph[i].sink, SND_SOC_FW_TEXT_SIZE);
-		strncpy(elem.source, graph[i].source, SND_SOC_FW_TEXT_SIZE);
+		strncpy(elem.sink, graph[i].sink, sizeof(elem.sink));
+		strncpy(elem.source, graph[i].source, sizeof(elem.source));
 		if (graph[i].control)
 			strncpy(elem.control, graph[i].control,
-				SND_SOC_FW_TEXT_SIZE);
+				sizeof(elem.control));
 		else
-			memset(elem.control, 0, SND_SOC_FW_TEXT_SIZE);
+			memset(elem.control, 0, sizeof(elem.control));
 
 		verbose(soc_fw, " graph: %s -> %s -> %s\n",
 			elem.source, elem.control, elem.sink); 

@@ -75,10 +75,12 @@ int main(int argc, char *argv[])
 	if (argc < 4)
 		usage(argv[0]);
 
+	setvbuf(stdout, NULL, _IONBF, 0);
+
 	soc_fw = socfw_new(argv[1], 1);
 	if (soc_fw < 0) {
 		fprintf(stderr, "failed to open %s\n", argv[argc - 1]);
-		exit(0);
+		exit(1);
 	}
 
 	for (i = 2 ; i < argc - 1; i++) {
@@ -97,28 +99,29 @@ int main(int argc, char *argv[])
 			if (++i == argc)
 				usage(argv[0]);
 
-			socfw_import_vendor(soc_fw, argv[i], SND_SOC_FW_VENDOR_FW);
+			socfw_import_vendor(soc_fw, argv[i], SND_SOC_TPLG_TYPE_VENDOR_FW);
 			continue;
 		}
 		if (!strcmp("-vcf", argv[i])) {
 			if (++i == argc)
 				usage(argv[0]);
 
-			socfw_import_vendor(soc_fw, argv[i], SND_SOC_FW_VENDOR_COEFF);
+			socfw_import_vendor(soc_fw, argv[i], SND_SOC_TPLG_TYPE_VENDOR_CONFIG);
 			continue;
 		}
 		if (!strcmp("-vco", argv[i])) {
 			if (++i == argc)
 				usage(argv[0]);
 
-			socfw_import_vendor(soc_fw, argv[i], SND_SOC_FW_VENDOR_CODEC);
+			socfw_import_vendor(soc_fw, argv[i], SND_SOC_TPLG_TYPE_VENDOR_COEFF);
 			continue;
 		}
 		if (!strcmp("-vcn", argv[i])) {
 			if (++i == argc)
 				usage(argv[0]);
 
-			socfw_import_vendor(soc_fw, argv[i], SND_SOC_FW_VENDOR_CONFIG);
+// NOTE: missing _ typo in include/uapi/sound/asoc.h
+			socfw_import_vendor(soc_fw, argv[i], SND_SOC_TPLG_TYPEVENDOR_CODEC);
 			continue;
 		}
 	}

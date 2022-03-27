@@ -34,7 +34,7 @@ jobs:
         KVER=$(echo $ALL_DEB | cut -d '_' -f 2 | rev | cut -c14- | rev)-generic
         wget -nv ${KERNEL_URL}v${VERSION}/$(echo "$KERNEL_URL_DETAILS" | grep -m1 "amd64.deb" | cut -d '"' -f 2)
         wget -nv ${KERNEL_URL}v${VERSION}/$ALL_DEB
-        wget -nv http://mirrors.kernel.org/ubuntu/pool/main/g/glibc/libc6_2.34-0ubuntu2_amd64.deb
+        wget -nv http://mirrors.edge.kernel.org/ubuntu/pool/main/g/glibc/libc6_2.34-0ubuntu3_amd64.deb
         sudo dpkg --force-all -i *.deb
         echo "KVER=$KVER" >> $GITHUB_ENV
     - name: build

@@ -663,7 +663,7 @@ static int omap_abe_twl6040_fe_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_component *component = asoc_rtd_to_codec(rtd, 0)->component;
 	struct snd_soc_card *card = rtd->card;
 	struct abe_twl6040 *priv = snd_soc_card_get_drvdata(card);
-
+#endif
 
 	return 0;
 }
@@ -1021,8 +1021,6 @@ static int omap_abe_load_fw(struct snd_soc_card *card)
 // oops - why???
 // and: what about error paths? We should have sort of devm_request_firmware
 //	release_firmware(fw);
-
-printk("%s: fw=%px fw->data=%px\n", __func__, fw, fw->data);
 
 	return ret;
 }

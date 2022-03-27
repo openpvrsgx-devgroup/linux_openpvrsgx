@@ -215,7 +215,7 @@ function process {
 			if [ "$SECONDNAME" ]
 			then
 				echo "*** Second name $SECONDNAME ***"
-				git branch -f "$SECONDNAME" "$OUTPUT"	# make a stable name for the latest build
+				git checkout -B "$SECONDNAME"	# make a stable name for the latest build
 				pushbranch "$SECONDNAME"	# update current head on public server
 			fi
 

@@ -22,7 +22,7 @@ VERSION=009590
 #
 
 echo +++ make sure we have the required build tools
-apt-get install build-essential bison flex bc libssl-dev git autogen automake libtool || exit 1
+yes | apt-get -yinstall build-essential bison flex bc libssl-dev git autogen automake libtool || exit 1
 
 echo +++ create and go to $PWD/aess
 mkdir -p aess && cd aess || exit 1
@@ -42,7 +42,7 @@ function gitfetch { # $1 = repo, $2 = subdir
 LINUX="$PWD/letux-kernel"			# full source tree (for headers)
 DEST="$LINUX/sound/soc/ti/aess/firmware"	# subtree where we find the firmware
 
-echo "+++ fetch the (complete) $BRANCH kernel source tree with minimal effort"
+echo "+++ make sure we have the (complete) kernel source tree ($BRANCH)"
 ( gitfetch "--depth 1 -b $BRANCH https://github.com/goldelico/letux-kernel.git" letux-kernel && [ -r "$DEST" ] ) ||
 ( echo "--- fallback to $FALLBACK"; rm -rf letux-kernel; gitfetch "--depth 1 -b $FALLBACK https://github.com/goldelico/letux-kernel.git" letux-kernel ) || exit 1
 

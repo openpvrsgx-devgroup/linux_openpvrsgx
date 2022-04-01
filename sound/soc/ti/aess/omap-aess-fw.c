@@ -605,12 +605,12 @@ static int aess_load_fw(struct snd_soc_component *component,
 
 	/* get firmware and coefficients header info */
 	memcpy(&aess->hdr, fw_data, sizeof(struct fw_header));
-	if (hdr->size > OMAP_AESS_MAX_FW_SIZE) {
+	if (hdr->payload_size > OMAP_AESS_MAX_FW_SIZE) {
 		dev_err(aess->dev, "Firmware too large (%d bytes)\n",
-			hdr->size);
+			hdr->payload_size);
 		return -ENOMEM;
 	}
-	dev_info(aess->dev, "AESS firmware size %d bytes\n", hdr->size);
+	dev_info(aess->dev, "AESS firmware size %d bytes\n", hdr->payload_size);
 	dev_info(aess->dev, "AESS mem P %d C %d D %d S %d bytes\n",
 		 aess->hdr.pmem_size, aess->hdr.cmem_size,
 		 aess->hdr.dmem_size, aess->hdr.smem_size);
@@ -630,7 +630,7 @@ static int aess_load_config(struct snd_soc_component *component,
 	const void *fw_data = snd_soc_tplg_get_data(hdr);
 
 	/* store AESS config for later context restore */
-	dev_info(aess->dev, "AESS Config size %d bytes\n", hdr->size);
+	dev_info(aess->dev, "AESS Config size %d bytes\n", hdr->payload_size);
 
 	aess->fw_config = fw_data;
 
@@ -654,6 +654,7 @@ static int aess_vendor_load(struct snd_soc_component *component,
 	default:
 		dev_err(component->dev, "vendor type %d:%d not supported\n",
 			hdr->type, hdr->vendor_type);
+		/* ignore errors */
 		return 0;
 	}
 	return 0;

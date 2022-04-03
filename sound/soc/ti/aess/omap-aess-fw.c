@@ -521,13 +521,13 @@ static int aess_put_equalizer(struct snd_kcontrol *kcontrol,
 }
 
 static const struct snd_soc_tplg_kcontrol_ops omap_aess_fw_ops[] = {
-{OMAP_CONTROL_DEFAULT,	aess_get_mixer, aess_put_mixer, NULL},
-{OMAP_CONTROL_VOLUME,	aess_vol_get_mixer, aess_vol_put_mixer, NULL},
-{OMAP_CONTROL_ROUTER,	aess_ul_mux_get_route, aess_ul_mux_put_route, NULL},
-{OMAP_CONTROL_EQU,	aess_get_equalizer, aess_put_equalizer, NULL},
-{OMAP_CONTROL_GAIN,	aess_vol_get_gain, aess_vol_put_gain, NULL},
-{OMAP_CONTROL_MONO,	aess_get_mono_mixer, aess_put_mono_mixer, NULL},
-{OMAP_CONTROL_SWITCH,	NULL, aess_put_switch, NULL},
+{OMAP_AESS_MIXER_DEFAULT,	aess_get_mixer, aess_put_mixer, NULL},
+{OMAP_AESS_MIXER_VOLUME,	aess_vol_get_mixer, aess_vol_put_mixer, NULL},
+{OMAP_AESS_MIXER_ROUTER,	aess_ul_mux_get_route, aess_ul_mux_put_route, NULL},
+{OMAP_AESS_MIXER_EQU,	aess_get_equalizer, aess_put_equalizer, NULL},
+{OMAP_AESS_MIXER_GAIN,	aess_vol_get_gain, aess_vol_put_gain, NULL},
+{OMAP_AESS_MIXER_MONO,	aess_get_mono_mixer, aess_put_mono_mixer, NULL},
+{OMAP_AESS_MIXER_SWITCH,	NULL, aess_put_switch, NULL},
 };
 
 static int aess_load_coeffs(struct snd_soc_component *component,

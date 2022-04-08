@@ -563,7 +563,7 @@
 
 	// FIXME: should be sorted somewhere else
 	// but may lead to merge conflict
-	cim: cim@0x13060000 {
+	cim: cim@13060000 {
 		compatible = "ingenic,jz4780-cim";
 		reg = <0x13060000 0x68>;
 		reg-shift = <2>;

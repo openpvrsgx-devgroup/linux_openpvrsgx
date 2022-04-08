@@ -603,7 +603,7 @@
 		#phy-cells = <0>;
 	};
 
-	ehci: usb@0x13490000 {
+	ehci: usb@13490000 {
 		compatible = "ingenic,jz4780-ehci", "generic-ehci";
 		reg = <0x13490000 0x10000>;
 
@@ -615,7 +615,7 @@
 		phys = <&usb_phy>;
 	};
 
-	ohci: usb@0x134a0000 {
+	ohci: usb@134a0000 {
 		compatible = "ingenic,jz4780-ohci", "generic-ohci";
 		reg = <0x134a0000 0x10000>;
 

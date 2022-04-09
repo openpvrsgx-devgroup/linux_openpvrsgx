@@ -278,7 +278,7 @@
 
 	/* it is not clear if there is an i2s1 - it is mentioned in power control and interrupts
 	   (AIC0 and AIC1) but there is no base address known */
-	i2s0: i2s@10020000 {
+	i2s0: audio-controller@10020000 {
 		compatible = "ingenic,jz4780-i2s";
 		reg = <0x10020000 0x94>;
 

@@ -327,14 +327,6 @@ static int jz4780_codec_hw_params(struct snd_pcm_substream *substream,
 		return -EINVAL;
 	}
 
-/* REMOVEME if works
-int snd_soc_update_bits(struct snd_soc_codec *codec, unsigned int reg,
-				unsigned int mask, unsigned int value);
-=>
-int regmap_update_bits(struct regmap *map, unsigned int reg,
-		       unsigned int mask, unsigned int val);
-*/
-
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
 		regmap_update_bits(regmap, REG_FCR_DAC, REG_FCR_DAC_MASK, val);
 	else
@@ -377,7 +369,7 @@ int regmap_update_bits(struct regmap *map, unsigned int reg,
 	return 0;
 }
 
-static int jz4780_codec_mute(struct snd_soc_dai *dai, int mute)
+static int jz4780_codec_mute(struct snd_soc_dai *dai, int mute, int stream)
 {
 	struct snd_soc_component *codec = dai->component;
 	struct jz4780_codec *jzc = snd_soc_component_get_drvdata(codec);
@@ -390,7 +382,7 @@ static int jz4780_codec_mute(struct snd_soc_dai *dai, int mute)
 
 static struct snd_soc_dai_ops jz4780_codec_dai_ops = {
 	.hw_params = jz4780_codec_hw_params,
-//	.digital_mute = jz4780_codec_mute,
+	.mute_stream = jz4780_codec_mute,
 };
 
 static struct snd_soc_dai_driver jz4780_codec_dai = {
@@ -494,10 +486,9 @@ static int jz4780_codec_dev_probe(struct snd_soc_component *codec)
 	return 0;
 }
 
-static int jz4780_codec_dev_remove(struct snd_soc_component *codec)
+static void jz4780_codec_dev_remove(struct snd_soc_component *codec)
 {
 	jz4780_codec_set_bias_level(codec, SND_SOC_BIAS_OFF);
-	return 0;
 }
 
 #ifdef CONFIG_PM_SLEEP
@@ -519,17 +510,10 @@ static int jz4780_codec_resume(struct snd_soc_component *codec)
 
 static struct snd_soc_component_driver soc_codec_dev_jz4780_codec = {
 	.probe = jz4780_codec_dev_probe,
-/* FIXME
 	.remove = jz4780_codec_dev_remove,
 	.suspend = jz4780_codec_suspend,
-*/
 	.resume = jz4780_codec_resume,
 	.set_bias_level = jz4780_codec_set_bias_level,
-/* FIXME
-	.reg_cache_default = jz4780_codec_reg_defaults,
-	.reg_word_size = sizeof(uint8_t),
-	.reg_cache_size	= 0x40,
-*/
 	.controls = jz4780_codec_controls,
 	.num_controls = ARRAY_SIZE(jz4780_codec_controls),
 	.dapm_widgets = jz4780_codec_dapm_widgets,

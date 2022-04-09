@@ -175,8 +175,9 @@ static struct snd_soc_ops ci20_audio_dai_ops = {
 	.hw_params = ci20_audio_hw_params,
 };
 
+// I2S, normal clock/frame, codec clock&frame provider
 #define CI20_DAIFMT (SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF \
-					| SND_SOC_DAIFMT_CBM_CFM)
+					| SND_SOC_DAIFMT_CBP_CFP)
 
 static struct snd_soc_dai_link_component dai_link0_cpus[] = {
 	{ .name = "jz4780-i2s", },

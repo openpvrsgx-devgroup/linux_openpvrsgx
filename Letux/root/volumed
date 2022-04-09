@@ -4,7 +4,7 @@
 #
 SCRIPTPATH="$(dirname "$0")"
 
-case "$(cat /proc/device-tree/model)" in
+case "$(tr -d '\0' </proc/device-tree/model)" in
 	Pyra-* | LC15-EVM* )	# only Pyra and LC15EVM have a potentiometer connected to the GPADC
 		;;
 	* )

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# twl: demo and player for twl4030/twl6040 sound without significant ALSA or PulseAudio setup
+# twl: demo and player sound without significant ALSA or PulseAudio setup
 #
 
 SCRIPTPATH="$(dirname "$0")"
@@ -8,9 +8,18 @@ trap "killall volumed 2>/dev/null" EXIT
 trap "exit 1" SIGHUP SIGINT SIGTERM
 
 [ -x /usr/bin/sox ] || apt-get install sox libsox-fmt-mp3
-[ -r /sys/firmware/devicetree/base/sound/ti,twl6040 ] || NOVOLUMED=yes
+
+case "$(tr -d '\0' </proc/device-tree/model)" in
+        Pyra-* | LC15-EVM* )    # only Pyra and LC15EVM have a potentiometer connected to the GPADC
+                HASVOLUMED=yes
+		;;
+        * )
+                HASVOLUMED=
+                ;;
+esac
 
 MONO=false
+HANDSFREE=yes
 CARD="$($SCRIPTPATH/findsoundcard -a | head -1)"
 
 while [ "$1" ]
@@ -28,13 +37,13 @@ do
 		FORMAT="$1";
 		;;
         "-nv" )
-		NOVOLUMED=yes
+		VOLUMED=
 		;;
         "-lp" )
 		LPMODE=yes
 		;;
         "-nhf" )
-		NOHANDSFREE=yes
+		HANDSFREE=
 		;;
 	"-m" )
 		MONO=true
@@ -70,6 +79,12 @@ then
 fi
 
 # FIXME: make this all depend on presence of amixer controls
+# e.g.
+# root@letux:~# amixer scontrols
+# Simple mixer control 'Master',0
+# Simple mixer control 'Headphone',0
+# Simple mixer control 'Mic',0
+# Simple mixer control 'ADC',0
 
 if [ -r /sys/firmware/devicetree/base/sound/ti,twl6040 ]
 then
@@ -89,22 +104,22 @@ amixer -c "$NUM" -q set "Headset" 100% || exit
 amixer -c "$NUM" -q set "Earphone" 100% || exit
 amixer -c "$NUM" -q set "Handsfree" 100% || exit
 
-if [ "$NOHANDSFREE" ] # handsfree on/off
+if [ "$HANDSFREE" ] # handsfree on/off
 then
-	amixer -c "$NUM" -q set "Handsfree Left Playback" "Off" || exit
-	amixer -c "$NUM" -q set "Handsfree Right Playback" "Off" || exit
-else
 	amixer -c "$NUM" -q set "Handsfree Left Playback" "HF DAC" || exit
 	amixer -c "$NUM" -q set "Handsfree Right Playback" "HF DAC" || exit
+else
+	amixer -c "$NUM" -q set "Handsfree Left Playback" "Off" || exit
+	amixer -c "$NUM" -q set "Handsfree Right Playback" "Off" || exit
 fi
 
-if [ ! "$NOVOLUMED" ] # start volumed
+if [ "$HASVOLUMED" ] # start volumed
 then
 if [ "$NOHANDSFREE" ]
 then
-	$SCRIPTPATH/volumed -c "$CARD" -q -nhf &
-else
 	$SCRIPTPATH/volumed -c "$CARD" -q &
+else
+	$SCRIPTPATH/volumed -c "$CARD" -q -nhf &
 fi
 fi
 
@@ -130,10 +145,10 @@ amixer -c "$NUM" -q set "Vibra Right Playback" "Input FF" || exit
 REMIX_MONO="remix 1 1 1 1"
 REMIX_STEREO="remix 1 2 1 2"
 
-else
+elif [ -r /sys/firmware/devicetree/base/sound/ti,twl6040 ]
+then
 
 echo "TWL4030 (GTA04, ...)"
-NUM=$($SCRIPTPATH/findsoundcard "$CARD")
 
 amixer -c "$NUM" -q set "AVADC Clock Priority" "HiFi high priority" || exit
 amixer -c "$NUM" -q set "DAC1 Analog" off || exit
@@ -177,18 +192,34 @@ amixer -c "$NUM" -q set "HandsfreeR Mux" AudioR2 || exit
 
 REMIX_MONO=""
 REMIX_STEREO=""
+
+elif false
+then
+
+echo "CI20 or simplesoundcard"
+
+root@letux:~# amixer -c "0" -q set "Master" 100%
+root@letux:~# amixer -c "0" -q set "Headphone" 100%
+root@letux:~# amixer -c "0" -q set "Mic" 100%
+root@letux:~# amixer -c "0" -q set "ADC" "AIP2"
+
+REMIX_MONO=""
+REMIX_STEREO=""
+
 fi
 
 if [ "$DEMO" ] # demo
 then
+	echo CARD: $CARD NUM: $NUM
+	echo "play default sounds (Front Center etc.)"
 	aplay -Ddefault:CARD=$CARD -q /usr/share/sounds/alsa/*.wav
-	# play chirp sound on all 4 channels
+	echo "play chirp sound on all channels"
 	sox -c 4 -n -t wav - synth 10 sine 10-100 | aplay -Ddefault:CARD=$CARD
-	# remix for Pandaboard/OMAP5 stereo
+	echo "remix for Pandaboard/OMAP5 stereo"
 	AUDIODEV="hw:$NUM,0" play /usr/share/sounds/alsa/Front_Center.wav $REMIX_MONO
-	# headset only
 	if [ "$FILE" ]
 	then
+		echo play $FILE
 		AUDIODEV="hw:$NUM,0" play $FILE
 	fi
 	exit 0

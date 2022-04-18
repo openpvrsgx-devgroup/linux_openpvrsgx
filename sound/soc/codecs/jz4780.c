@@ -493,7 +493,7 @@ static void jz4780_codec_dev_remove(struct snd_soc_component *codec)
 
 #ifdef CONFIG_PM_SLEEP
 
-static int jz4780_codec_suspend(struct snd_soc_component *codec, pm_message_t state)
+static int jz4780_codec_suspend(struct snd_soc_component *codec)
 {
 	return jz4780_codec_set_bias_level(codec, SND_SOC_BIAS_OFF);
 }

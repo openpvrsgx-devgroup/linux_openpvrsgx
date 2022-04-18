@@ -18,6 +18,9 @@
 	#include <linux/fs.h>
 #endif
 #include <drv_types.h>
+#ifdef CONFIG_OF
+#include <linux/of.h>
+#endif
 
 
 u8 RTW_WPA_OUI_TYPE[] = { 0x00, 0x50, 0xf2, 1 };
@@ -1552,9 +1555,11 @@ void rtw_macaddr_cfg(struct device *dev, u8 *out, const u8 *hw_mac_addr)
 {
 #define DEFAULT_RANDOM_MACADDR 1
 	u8 mac[ETH_ALEN];
+#ifdef CONFIG_OF
 	struct device_node *np = dev->of_node;
 	const unsigned char *addr;
 	int len;
+#endif
 
 	if (out == NULL) {
 		rtw_warn_on(1);
@@ -1585,11 +1590,13 @@ void rtw_macaddr_cfg(struct device *dev, u8 *out, const u8 *hw_mac_addr)
 
 err_chk:
 	if (rtw_check_invalid_mac_address(mac, _TRUE) == _TRUE) {
+#ifdef CONFIG_OF
 		if (np &&
 		    (addr = of_get_property(np, "local-mac-address", &len)) &&
 		    len == ETH_ALEN) {
 			memcpy(mac, addr, ETH_ALEN);
 		} else {
+#endif
 #if DEFAULT_RANDOM_MACADDR
 			RTW_ERR("invalid mac addr:"MAC_FMT", assign random MAC\n", MAC_ARG(mac));
 			*((u32 *)(&mac[2])) = rtw_random32();
@@ -1605,7 +1612,9 @@ err_chk:
 			mac[4] = 0x00;
 			mac[5] = 0x00;
 #endif
+#ifdef CONFIG_OF
 		}
+#endif
 	}
 
 	_rtw_memcpy(out, mac, ETH_ALEN);

@@ -4860,7 +4860,11 @@ int rtw_dev_nlo_info_set(struct pno_nlo_info *nlo_info, pno_ssid_t *ssid,
 
 	if (source != NULL) {
 		len = vfs_read(fp, source, len, &pos);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0))
+		len = kernel_read(fp, source, len, &pos);
+#else
 		rtw_parse_cipher_list(nlo_info, source);
+#endif
 		rtw_mfree(source, 2048);
 	}
 

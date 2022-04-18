@@ -1477,14 +1477,16 @@ unsigned int rtw_classify8021d(struct sk_buff *skb)
 
 static u16 rtw_select_queue(struct net_device *dev, struct sk_buff *skb
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 13, 0)
-	#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0)
-	, struct net_device *sb_dev
-	#else
-	, void *accel_priv
-	#endif
-	#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)
-	, select_queue_fallback_t fallback
-	#endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0)
+				, struct net_device *sb_dev
+#else
+				, void *accel_priv
+#endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 2, 0)
+				, select_queue_fallback_t fallback
+#endif
+#endif
 #endif
 )
 {
@@ -4133,7 +4135,9 @@ static int route_dump(u32 *gw_addr , int *gw_index)
 	struct msghdr msg;
 	struct iovec iov;
 	struct sockaddr_nl nladdr;
+#ifdef get_fs
 	mm_segment_t oldfs;
+#endif
 	char *pg;
 	int size = 0;
 
@@ -4172,14 +4176,18 @@ static int route_dump(u32 *gw_addr , int *gw_index)
 	msg.msg_controllen = 0;
 	msg.msg_flags = MSG_DONTWAIT;
 
+#ifdef get_fs
 	oldfs = get_fs();
 	set_fs(KERNEL_DS);
+#endif
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 1, 0))
 	err = sock_sendmsg(sock, &msg);
 #else
 	err = sock_sendmsg(sock, &msg, sizeof(req));
 #endif
+#ifdef get_fs
 	set_fs(oldfs);
+#endif
 
 	if (err < 0)
 		goto out_sock;
@@ -4204,14 +4212,18 @@ restart:
 		iov_iter_init(&msg.msg_iter, READ, &iov, 1, PAGE_SIZE);
 #endif
 
+#ifdef get_fs
 		oldfs = get_fs();
 		set_fs(KERNEL_DS);
+#endif
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 7, 0))
 		err = sock_recvmsg(sock, &msg, MSG_DONTWAIT);
 #else
 		err = sock_recvmsg(sock, &msg, PAGE_SIZE, MSG_DONTWAIT);
 #endif
+#ifdef get_fs
 		set_fs(oldfs);
+#endif
 
 		if (err < 0)
 			goto out_sock_pg;
@@ -4282,14 +4294,18 @@ done:
 		msg.msg_controllen = 0;
 		msg.msg_flags = MSG_DONTWAIT;
 
+#ifdef get_fs
 		oldfs = get_fs();
 		set_fs(KERNEL_DS);
+#endif
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 1, 0))
 		err = sock_sendmsg(sock, &msg);
 #else
 		err = sock_sendmsg(sock, &msg, sizeof(req));
 #endif
+#ifdef get_fs
 		set_fs(oldfs);
+#endif
 
 		if (err > 0)
 			goto restart;

@@ -125,6 +125,8 @@ rm -f /etc/X11/xorg.conf
 if [ -r "/etc/X11/$PANEL.conf" ]
 then
 	ln -s $PANEL.conf /etc/X11/xorg.conf
+	# omap_drv is gone with Stretch
+	[ -r /usr/lib/xorg/modules/drivers/omap_drv.so ] || sed -i.bak 's/"omap"/"fbdev"/' /etc/X11/xorg.conf
 fi
 
 # look for and run shell script $COMPATIBLE.sh if it exists

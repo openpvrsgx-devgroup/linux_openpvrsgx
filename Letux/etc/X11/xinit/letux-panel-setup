@@ -28,7 +28,7 @@ findpanel() { # search panel compatible string at some well known locations
 LCDS+=" /proc/device-tree/lcd"
 LCDS+=" /proc/device-tree/panel/display-timings"
 LCDS+=" /proc/device-tree/panel"
-LCDS+=" /proc/device-tree/spi_lcd/td028ttec1@0"	# GTA04
+LCDS+=" /proc/device-tree/spi/td028ttec1@0"	# GTA04
 LCDS+=" /proc/device-tree/ocp@68000000/spi@48098000/lcd@1"	# OMAP3
 LCDS+=" /proc/device-tree/ocp/target-module@58000000/dss@0/target-module@4000/encoder@0/lcd@0"	# OMAP5 newer
 LCDS+=" /proc/device-tree/ocp/target-module@58000000/dss@0/target-module@4000/encoder@0/lcd"	# OMAP5

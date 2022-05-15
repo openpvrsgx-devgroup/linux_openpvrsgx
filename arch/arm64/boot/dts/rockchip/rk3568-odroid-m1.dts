@@ -93,6 +93,7 @@
 			"Headphones", "HPOL",
 			"Headphones", "HPOR",
 			"Speaker", "SPKO";
+		status = "okay";
 
 		simple-audio-card,cpu {
 			sound-dai = <&i2s1_8ch>;
@@ -229,6 +230,11 @@
 	hdmi_in_vp0: endpoint {
 		remote-endpoint = <&vp0_out_hdmi>;
 	};
+};
+
+&hdmi_sound {
+	simple-audio-card,name = "ODROID-M1-HDMI";
+	status = "okay";
 };
 
 &hdmi_out {
@@ -473,6 +479,10 @@
 					regulator-off-in-suspend;
 				};
 			};
+		};
+
+		codec {
+			mic-in-differential;
 		};
 	};
 };

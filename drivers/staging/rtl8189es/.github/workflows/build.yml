@@ -16,14 +16,13 @@ jobs:
 
   build:
     needs: fetchKernelData
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix: 
         version: ${{fromJson(needs.fetchKernelData.outputs.matrix)}}
         #version: [4.9.248, 4.4.248]
     steps:
-    - uses: actions/checkout@v2
     - name: download-Kernel
       env: 
         VERSION: ${{matrix.version }}
@@ -31,11 +30,13 @@ jobs:
         KERNEL_URL=https://kernel.ubuntu.com/~kernel-ppa/mainline/
         KERNEL_URL_DETAILS=$(wget --quiet -O - ${KERNEL_URL}v${VERSION}/ | grep -A8 "Build for amd64\|Test amd64")
         ALL_DEB=$(echo "$KERNEL_URL_DETAILS" |  grep -m1 'all.deb' | cut -d '"' -f 2)
-        KVER=$(echo $ALL_DEB | cut -d '_' -f 2 | rev | cut -c14- | rev)-generic
-        wget -nv ${KERNEL_URL}v${VERSION}/$(echo "$KERNEL_URL_DETAILS" | grep -m1 "amd64.deb" | cut -d '"' -f 2)
+        AMD64_DEB=$(echo "$KERNEL_URL_DETAILS" | grep -m1 "amd64.deb" | cut -d '"' -f 2)
+        [  -z "$ALL_DEB" ] && exit 1
+        [  -z "$AMD64_DEB" ] && exit 2
+        wget -nv ${KERNEL_URL}v${VERSION}/$AMD64_DEB
         wget -nv ${KERNEL_URL}v${VERSION}/$ALL_DEB
-        wget -nv http://mirrors.edge.kernel.org/ubuntu/pool/main/g/glibc/libc6_2.34-0ubuntu3_amd64.deb
         sudo dpkg --force-all -i *.deb
-        echo "KVER=$KVER" >> $GITHUB_ENV
+        echo "KVER=$(echo $ALL_DEB | cut -d '_' -f 2 | rev | cut -c14- | rev)-generic" >> $GITHUB_ENV
+    - uses: actions/checkout@v2
     - name: build
       run: make KVER=$KVER CONFIG_PLATFORM_I386_PC=y

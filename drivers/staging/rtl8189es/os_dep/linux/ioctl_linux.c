@@ -9821,7 +9821,7 @@ static int rtw_mp_efuse_set(struct net_device *dev,
 		/* set mac addr*/
 		psdio = &adapter_to_dvobj(padapter)->intf_data;
 		rtw_macaddr_cfg(&psdio->func->dev, adapter_mac_addr(padapter), get_hal_mac_addr(padapter));
-		_rtw_memcpy(padapter->pnetdev->dev_addr, get_hal_mac_addr(padapter), ETH_ALEN); /* set mac addr to net_device */
+		eth_hw_addr_set(padapter->pnetdev, get_hal_mac_addr(padapter)); /* set mac addr to net_device */
 
 #ifdef CONFIG_P2P
 		rtw_init_wifidirect_addrs(padapter, adapter_mac_addr(padapter), adapter_mac_addr(padapter));

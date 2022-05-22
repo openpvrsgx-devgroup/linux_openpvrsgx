@@ -165,7 +165,7 @@ fgrep -q 'System Version String: None' /proc/pvr/version && pvrsrvctl --start --
 fgrep "System Version String: " /proc/pvr/version
 
 # run some demos
-for i in sgx_clipblit_test gles1test1 gles2test1 eglinfo kmscube OGLES2Water
+for i in sgx_clipblit_test gles1test1 gles2test1 eglinfo kmscube OGLES2Water glxgears
 do
 	if [ "$(which $i)" ]
 	then
@@ -177,5 +177,7 @@ do
 		)
 	fi
 done
+
+glxinfo | grep rendering
 
 # pvrsrvctl --stop

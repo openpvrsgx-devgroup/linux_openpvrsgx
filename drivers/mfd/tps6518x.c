@@ -478,11 +478,11 @@ static int tps6518x_probe(struct i2c_client *client)
 	if (ret)
 		return ret;
 
+	tps6518x->pdata = pdata;
+
 	devm_mfd_add_devices(tps6518x->dev, -1, tps6518x_devs,
 			ARRAY_SIZE(tps6518x_devs),
 			NULL, 0, NULL);
-
-	tps6518x->pdata = pdata;
 
 	dev_info(&client->dev, "PMIC TPS6518x for eInk display\n");
 

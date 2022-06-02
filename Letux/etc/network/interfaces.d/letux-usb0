@@ -20,11 +20,4 @@ iface usb0 inet static
 	post-up route add default gw 192.168.0.200 metric 203
 	pre-down route del default gw 192.168.0.200
 	post-down rmmod g_ether
-	# recommended by https://www.privacy-handbuch.de/handbuch_93d.htm
-	# set up dns2.digitalcourage.de by default
-	post-up echo nameserver 46.182.19.48 >/etc/resolv.conf
-	post-up echo nameserver 185.95.218.42 >>/etc/resolv.conf
-	post-up echo nameserver 91.239.100.100 >>/etc/resolv.conf
-	post-up echo nameserver 5.1.66.255 >>/etc/resolv.conf
-	post-up echo nameserver 46.182.19.48 >/etc/resolv.conf
-	post-up echo nameserver 46.182.19.48 >/etc/resolv.conf.tail
+	up /etc/network/letux-setup-resolv-conf.sh

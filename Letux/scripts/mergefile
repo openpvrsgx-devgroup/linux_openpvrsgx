@@ -169,6 +169,9 @@ letux/kobolino/epdc-drm
 # PinePhone
 letux/pinephone
 
+# Odroid M1
+letux/odroid-m1
+
 # hacks and fixes - we should consider upstreaming...
 letux/hacks
 letux/twl4030

@@ -223,7 +223,9 @@
 	};
 
 	ethernet: ethernet@3 {
+		// isn't this an smsc,smsc95xx?
 		compatible = "usb424,9730";
+		mac-address = [ 3a 6e 63 0c 19 cd ];
 		reg = <3>;
 	};
 };

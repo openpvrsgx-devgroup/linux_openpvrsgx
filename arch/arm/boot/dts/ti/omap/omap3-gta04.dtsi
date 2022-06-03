@@ -506,6 +506,10 @@
 	};
 };
 
+&aes2 {
+	status = "disabled";
+};
+
 &i2c1 {
 	clock-frequency = <2600000>;
 

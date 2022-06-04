@@ -13,6 +13,10 @@
 # Therefore connecting two device nodes in /sys is beyond udev rules
 # and we need a helper script.
 #
+# On the Pyra we detect charging changes and wwan state changes since we
+# have to limit max. battery voltage ot the wwan module will turn itself
+# off. The exact rule is handled by the helper script.
+#
 
 # 1. provide stable name to access the id pin of the USB connector and the max_current setting for the usb charger
 # /dev/usb_id -> /sys/devices/platform/68000000.ocp/48070000.i2c/i2c-0/0-0048/48070000.i2c:twl@48:twl4030-usb/id
@@ -25,10 +29,11 @@ ACTION=="add", SUBSYSTEM=="power_supply", KERNEL=="twl4030_usb", ATTR{type}=="US
 # 2. default to 500 mA right after boot (independently what the ID pin says)
 ACTION=="add", SUBSYSTEM=="power_supply", KERNEL=="twl4030_usb", ATTR{type}=="USB", ATTR{input_current_limit}="500000"
 
-# 3. this is preparation for the Pyra but neither tested nor complete nor working
-ACTION=="add", SUBSYSTEM=="power_supply", KERNEL=="bq24297", ATTR{type}=="USB", RUN+="/bin/ln -s /sys%p/id /dev/usb_id"
-ACTION=="add", SUBSYSTEM=="power_supply", KERNEL=="bq24297", ATTR{type}=="USB", RUN+="/bin/ln -s /sys%p/input_current_limit /dev/usb_max_current"
+# 3. Pyra: charging rule triggers by wwan or charger or extcon
+ACTION=="add", SUBSYSTEM=="power_supply", KERNEL=="bq24297", ATTR{type}=="USB", RUN+="/etc/udev/rules.d/charging.sh pyra"
+ACTION=="*", SUBSYSTEM=="rfkill", KERNEL=="rfkill*", DRIVERS=="wwan-on-off", RUN+="/etc/udev/rules.d/charging.sh pyra"
+ACTION=="*", SUBSYSTEM=="extcon", KERNEL=="extcon0", DRIVERS=="", RUN+="/etc/udev/rules.d/charging.sh pyra"
 
-# 4. charger has been plugged in (or removed): run external script
+# 4. GTA04: charger has been plugged in (or removed): run external script
 # this script reads the id pin value and make a decision for the current setting of /dev/usb_max_current
-ACTION=="change", SUBSYSTEM=="power_supply", KERNEL=="twl4030_usb", ATTR{type}=="USB", RUN+="/etc/udev/rules.d/charging.sh"
+ACTION=="change", SUBSYSTEM=="power_supply", KERNEL=="twl4030_usb", ATTR{type}=="USB", RUN+="/etc/udev/rules.d/charging.sh gta04"

@@ -292,10 +292,11 @@ static int txs_probe(struct platform_device *dev)
 
 	mutex_init(&data->lock);
 
-	if (1 || !IS_ERR_OR_NULL(data->host)) {
+#if 0	// if we keep this enabled despite manual switch mode __mmc_stop_host() will fail to stop these virtual mmc hosts and loop in cancel_delayed_work_sync()
+	if (!IS_ERR_OR_NULL(data->host)) {
 		/* setup our client ports */
 
-		// alternatively loop over OF children
+		// alternatively loop over OF children we do find
 
 		for (port = 0; port < 2; port++) {
 			data->mmc[port] = mmc_alloc_host(sizeof(struct mmc_host), &dev->dev);
@@ -313,6 +314,7 @@ static int txs_probe(struct platform_device *dev)
 			}
 		}
 	}
+#endif
 
 	dev_err(&dev->dev, "probed\n");
 

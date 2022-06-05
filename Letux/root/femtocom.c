@@ -1,6 +1,7 @@
 /* femtocom.c - gcc -o femtocom femtocom.c */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <fcntl.h>
@@ -12,18 +13,21 @@ int main(int argc, char *argv[])
 	int fd;
 	int sendcrlf=0;
 	int passcr=0;
+	int baud=B115200;
 	struct termios tc;
 	char *arg0=argv[0];
 	while(argv[1] && argv[1][0] == '-') {
 		if(strcmp(argv[1], "-s") == 0) sendcrlf=1;
 		else if(strcmp(argv[1], "-r") == 0) passcr=1;
+		else if(strncmp(argv[1], "-b", 2) == 0) baud=atoi(argv[1]+2);
 		else (argv--)[1]=NULL;
 		argv++;
 	}
 	if(!argv[1]) {
-		fprintf(stderr, "usage: %s [-s] [-r] /dev/tty???\n", arg0);
+		fprintf(stderr, "usage: %s [-s] [-r] [b###] /dev/ttyUSB\n", arg0);
 		fprintf(stderr, "  -s send \\n as \\n and not as \\r\\n\n");
 		fprintf(stderr, "  -r receive \\r and don't ignore\n");
+		fprintf(stderr, "  -b#### set baud rate\n");
 		return 1;
 	}
 	fd=open(argv[1], O_RDWR);
@@ -42,7 +46,7 @@ int main(int argc, char *argv[])
 	tc.c_oflag &= ~OPOST;
 	tc.c_cc[VMIN]	= 1;
 	tc.c_cc[VTIME]	= 0;
-	cfsetspeed(&tc, B115200);
+	cfsetspeed(&tc, baud);
 	if(tcsetattr(fd, TCSANOW, &tc) < 0) { /* failed to modify */
 		perror("tcsetattr");
 		return 1;

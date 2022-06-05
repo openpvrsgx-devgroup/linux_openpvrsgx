@@ -8,7 +8,7 @@ then
 	shift
 fi
 
-for dev in /sys/class/hwmon/hwmon*/device
+for dev in /sys/class/hwmon/hwmon*
 do
 	[ -r $dev ] || continue
 	$LIST && { cat $dev/name; continue; }

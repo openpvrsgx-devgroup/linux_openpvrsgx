@@ -417,6 +417,7 @@ static inline int update_reservation_return_value(int ret, bool blocked_on_write
 static int update_dma_resv_fences_dst(struct pvr_fence_frame *pvr_fence_frame,
 						struct dma_resv *resv)
 {
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,19,0))
 	struct dma_resv_list *flist;
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0))
 	struct dma_fence *fence_to_signal;
@@ -536,11 +537,16 @@ static int update_dma_resv_fences_dst(struct pvr_fence_frame *pvr_fence_frame,
 
 	dma_resv_add_excl_fence(resv, fence_to_signal);
 	return update_reservation_return_value(ret, false);
+#else // (LINUX_VERSION_CODE < KERNEL_VERSION(5,19,0))
+#warning FIXME like in 548e7432dc2da475a18077b612e8d55b8ff51891
+	return -EINVAL;
+#endif
 }
 
 static int update_dma_resv_fences_src(struct pvr_fence_frame *pvr_fence_frame,
 						struct dma_resv *resv)
 {
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,19,0))
 	struct dma_resv_list *flist;
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0))
 	struct dma_fence *fence_to_signal = NULL;
@@ -664,6 +670,10 @@ static int update_dma_resv_fences_src(struct pvr_fence_frame *pvr_fence_frame,
 	dma_resv_add_shared_fence(resv, fence_to_signal);
 
 	return update_reservation_return_value(ret, !shared_fence_count);
+#else // (LINUX_VERSION_CODE < KERNEL_VERSION(5,19,0))
+#warning FIXME like in 548e7432dc2da475a18077b612e8d55b8ff51891
+	return -EINVAL;
+#endif
 }
 
 /* Must be called with pvr_fence_context mutex held */
@@ -1008,6 +1018,7 @@ static bool resv_is_blocking(struct dma_resv *resv,
 				      const PVRSRV_KERNEL_SYNC_INFO *psSyncInfo,
 				      bool is_dst)
 {
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,19,0))
 	struct dma_resv_list *flist;
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0))
 	struct dma_fence *fence;
@@ -1078,6 +1089,10 @@ retry:
 unlock_retry:
 	rcu_read_unlock();
 	goto retry;
+#else
+	// FIXME: there is no resv-seq any more since 8f94eda39952a8c7323bad2bf752bdfe78101b20
+	return true;
+#endif
 }
 
 static unsigned count_reservation_objects(unsigned num_syncs,

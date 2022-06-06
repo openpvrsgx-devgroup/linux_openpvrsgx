@@ -1766,7 +1766,7 @@ static void mod_set_crcs(struct module *mod)
 	buf = read_text_file(objlist);
 	p = buf;
 
-	while ((obj = strsep(&p, "\n")) && obj[0])
+	while ((obj = get_line(&p)) && obj[0])
 		extract_crcs_for_object(obj, mod);
 
 	free(buf);

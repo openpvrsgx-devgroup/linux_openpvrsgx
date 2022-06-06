@@ -193,7 +193,7 @@ MODULE_PARM_DESC(gPVRDebugLevel, "Sets the level of debug output (default 0x7)")
 #define __devexit_p(x) (&(x))
 #endif
 
-#if defined(SUPPORT_PVRSRV_DEVICE_CLASS)
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,19,0)) && defined(SUPPORT_PVRSRV_DEVICE_CLASS)
 /* PRQA S 3207 2 */ /* ignore 'not used' warning */
 EXPORT_SYMBOL(PVRGetDisplayClassJTable);
 EXPORT_SYMBOL(PVRGetBufferClassJTable);

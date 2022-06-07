@@ -1,19 +1,20 @@
 /* femtocom.c - gcc -o femtocom femtocom.c */
 
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
-#include <fcntl.h>
+#include <sys/ioctl.h>
 #include <sys/select.h>
 #include <termios.h>
+#include <unistd.h>
 
 int main(int argc, char *argv[])
 {
 	int fd;
 	int sendcrlf=0;
 	int passcr=0;
-	int baud=B115200;
+	speed_t baud=B115200;
 	struct termios tc;
 	char *arg0=argv[0];
 	while(argv[1] && argv[1][0] == '-') {
@@ -48,8 +49,15 @@ int main(int argc, char *argv[])
 	tc.c_cc[VTIME]	= 0;
 	cfsetspeed(&tc, baud);
 	if(tcsetattr(fd, TCSANOW, &tc) < 0) { /* failed to modify */
-		perror("tcsetattr");
-		return 1;
+#ifdef __APPLE__
+#define IOSSIOSPEED _IOW('T', 2, speed_t)
+		cfsetspeed(&tc, B9600);
+		if(tcsetattr(fd, TCSANOW, &tc) < 0 || ioctl(fd, IOSSIOSPEED, &baud))
+#endif
+		{
+			perror("tcsetattr");
+			return 1;
+		}
 	}
 	while(1) {
 		fd_set rfd, wfd, efd;

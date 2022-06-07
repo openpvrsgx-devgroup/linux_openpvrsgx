@@ -141,7 +141,7 @@ static int ci20_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_component *codec = dai->component;
 	struct snd_soc_dapm_context *dapm = &codec->dapm;
 
-	snd_soc_card_jack_new(card, "Headphone Jack", SND_JACK_HEADPHONE,
+	snd_soc_card_jack_new_pins(card, "Headphone Jack", SND_JACK_HEADPHONE,
 			&ci20_hp_jack, ci20_hp_jack_pins, ARRAY_SIZE(ci20_hp_jack_pins));
 	snd_soc_jack_add_gpios(&ci20_hp_jack, 1, &ci20_hp_jack_gpio);
 
@@ -163,7 +163,7 @@ static int ci20_hdmi_init(struct snd_soc_pcm_runtime *rtd)
 	snd_soc_dapm_enable_pin(dapm, "HDMI");
 
 	/* Enable headphone jack detection */
-	snd_soc_card_jack_new(card, "HDMI Jack", SND_JACK_LINEOUT,
+	snd_soc_card_jack_new_pins(card, "HDMI Jack", SND_JACK_LINEOUT,
 			 &ci20_hdmi_jack, NULL, 0);
 
 	/* Jack is connected (it just is) */

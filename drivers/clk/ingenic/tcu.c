@@ -39,13 +39,6 @@ enum tcu_clk_parent {
 	TCU_JZ4730_PARENT_EXT		= 5,
 };
 
-struct ingenic_soc_info {
-	unsigned int num_channels;
-	bool has_ost;
-	bool has_tcu_clk;
-	bool allow_missing_tcu_clk;
-};
-
 struct ingenic_tcu_clk_info {
 	struct clk_init_data init_data;
 	u8 gate_bit;
@@ -57,6 +50,7 @@ struct ingenic_soc_info {
 	bool has_ost;
 	bool has_wdt;
 	bool has_tcu_clk;
+	bool allow_missing_tcu_clk;
 	bool has_prescale;
 	bool jz4740_regs;
 	const struct ingenic_tcu_clk_info *clk_info;

@@ -577,6 +577,57 @@ static int socfw_calc_widget_size(struct soc_fw_priv *soc_fw,
 	return size;
 }
 
+/*
+ * this table is copied from sound/soc/soc-topology.c because it is not directly available
+ * please keep in sync
+ */
+
+struct soc_tplg_map {
+	int uid;
+	int kid;
+};
+
+/* mapping of widget types from UAPI IDs to kernel IDs */
+static const struct soc_tplg_map dapm_map[] = {
+	{SND_SOC_TPLG_DAPM_INPUT, snd_soc_dapm_input},
+	{SND_SOC_TPLG_DAPM_OUTPUT, snd_soc_dapm_output},
+	{SND_SOC_TPLG_DAPM_MUX, snd_soc_dapm_mux},
+	{SND_SOC_TPLG_DAPM_MIXER, snd_soc_dapm_mixer},
+	{SND_SOC_TPLG_DAPM_PGA, snd_soc_dapm_pga},
+	{SND_SOC_TPLG_DAPM_OUT_DRV, snd_soc_dapm_out_drv},
+	{SND_SOC_TPLG_DAPM_ADC, snd_soc_dapm_adc},
+	{SND_SOC_TPLG_DAPM_DAC, snd_soc_dapm_dac},
+	{SND_SOC_TPLG_DAPM_SWITCH, snd_soc_dapm_switch},
+	{SND_SOC_TPLG_DAPM_PRE, snd_soc_dapm_pre},
+	{SND_SOC_TPLG_DAPM_POST, snd_soc_dapm_post},
+	{SND_SOC_TPLG_DAPM_AIF_IN, snd_soc_dapm_aif_in},
+	{SND_SOC_TPLG_DAPM_AIF_OUT, snd_soc_dapm_aif_out},
+	{SND_SOC_TPLG_DAPM_DAI_IN, snd_soc_dapm_dai_in},
+	{SND_SOC_TPLG_DAPM_DAI_OUT, snd_soc_dapm_dai_out},
+	{SND_SOC_TPLG_DAPM_DAI_LINK, snd_soc_dapm_dai_link},
+	{SND_SOC_TPLG_DAPM_BUFFER, snd_soc_dapm_buffer},
+	{SND_SOC_TPLG_DAPM_SCHEDULER, snd_soc_dapm_scheduler},
+	{SND_SOC_TPLG_DAPM_EFFECT, snd_soc_dapm_effect},
+	{SND_SOC_TPLG_DAPM_SIGGEN, snd_soc_dapm_siggen},
+	{SND_SOC_TPLG_DAPM_SRC, snd_soc_dapm_src},
+	{SND_SOC_TPLG_DAPM_ASRC, snd_soc_dapm_asrc},
+	{SND_SOC_TPLG_DAPM_ENCODER, snd_soc_dapm_encoder},
+	{SND_SOC_TPLG_DAPM_DECODER, snd_soc_dapm_decoder},
+};
+
+/* inverse of get_widget_id */
+static int unget_widget_id(int kid)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(dapm_map); i++) {
+		if (kid == dapm_map[i].kid)
+			return dapm_map[i].uid;
+	}
+
+	return -EINVAL;
+}
+
 int socfw_import_dapm_widgets(struct soc_fw_priv *soc_fw,
 	const struct snd_soc_dapm_widget *widgets, int widget_count)
 {
@@ -604,7 +655,9 @@ int socfw_import_dapm_widgets(struct soc_fw_priv *soc_fw,
 		memset(&widget, 0, sizeof(widget));
 
 		widget.size = sizeof(widget);
-		widget.id = widgets[i].id;
+		widget.id = unget_widget_id(widgets[i].id);
+		if(widget.id < 0)
+			return widget.id;
 		strncpy(widget.name, widgets[i].name,
 			sizeof(widget.name));
 

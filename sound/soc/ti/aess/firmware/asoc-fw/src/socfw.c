@@ -43,16 +43,11 @@ typedef int int32_t;
 
 struct soc_fw_priv;
 
-struct soc_fw_priv *socfw_new(const char *name, int verbose);
-void socfw_free(struct soc_fw_priv *soc_fw);
-int socfw_import_plugin(struct soc_fw_priv *soc_fw, const char *name);
-int socfw_import_vendor(struct soc_fw_priv *soc_fw, const char *name, int type);
-int socfw_import_dapm_graph(struct soc_fw_priv *soc_fw,
-	const struct snd_soc_dapm_route *graph, int graph_count);
-int socfw_import_dapm_widgets(struct soc_fw_priv *soc_fw,
-	const struct snd_soc_dapm_widget *widgets, int widget_count);
-int socfw_import_controls(struct soc_fw_priv *soc_fw,
-	const struct snd_kcontrol_new *kcontrols, int kcontrol_count);
+/* defined in lib.c */
+extern struct soc_fw_priv *socfw_new(const char *name, int verbose);
+extern void socfw_free(struct soc_fw_priv *soc_fw);
+extern int socfw_import_plugin(struct soc_fw_priv *soc_fw, const char *name);
+extern int socfw_import_vendor(struct soc_fw_priv *soc_fw, const char *name, int type);
 
 static void usage(char *name)
 {

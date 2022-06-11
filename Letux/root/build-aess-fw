@@ -22,7 +22,7 @@ VERSION=009590
 #
 
 echo +++ make sure we have the required build tools
-yes | apt-get -yinstall build-essential bison flex bc libssl-dev git autogen automake libtool || exit 1
+yes | apt-get -y install build-essential bison flex bc libssl-dev git autogen automake libtool || exit 1
 
 echo +++ create and go to $PWD/aess
 mkdir -p aess && cd aess || exit 1

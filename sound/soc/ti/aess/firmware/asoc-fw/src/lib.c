@@ -595,7 +595,7 @@ int socfw_import_dapm_widgets(struct soc_fw_priv *soc_fw,
 		widget_count, size);
 
 	err = write_header(soc_fw, SND_SOC_TPLG_TYPE_DAPM_WIDGET, 0,
-		soc_fw->version, size, widget_count, 0);
+		soc_fw->version, size, 0, widget_count);
 	if (err < 0)
 		return err;
 

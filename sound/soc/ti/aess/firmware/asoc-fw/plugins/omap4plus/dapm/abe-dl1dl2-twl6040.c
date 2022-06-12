@@ -123,6 +123,7 @@ static const char *route_ul_texts[] = {
 
 /* ROUTE_UL Mux table */
 static const struct soc_enum abe_enum[] = {
+		/* this magic 15 = ARRAY_SIZE(route_ul_texts) */
 		SOC_ENUM_SINGLE(OMAP_AESS_MUX_MM_UL10, 0, 15, route_ul_texts),
 		SOC_ENUM_SINGLE(OMAP_AESS_MUX_MM_UL11, 0, 15, route_ul_texts),
 		SOC_ENUM_SINGLE(OMAP_AESS_MUX_MM_UL12, 0, 15, route_ul_texts),

@@ -376,7 +376,7 @@ int socfw_import_controls(struct soc_fw_priv *soc_fw,
 	return 0;
 }
 
-#if 0	// FIXME
+#if 1	// FIXME
 
 static void import_coeff_enum_control_data(struct soc_fw_priv *soc_fw,
 	const struct snd_soc_fw_coeff *coeff,
@@ -482,7 +482,7 @@ int socfw_import_coeffs(struct soc_fw_priv *soc_fw,
 	verbose(soc_fw, " coeffs: description: \"%s\" num coeffs %d enums %d size 0x%lx/%lu bytes\n",
 		coeffs->description, coeff_count, enums, size, size);
 
-#if 0	// FIXME
+#if 1	// FIXME
 	err = write_header(soc_fw, SND_SOC_TPLG_TYPE_PDATA, 0,
 		soc_fw->version, size, 0, 1);
 	if (err < 0)

@@ -1,5 +1,5 @@
 #
-# Linux/x86 5.19.0-rc1 Kernel Configuration
+# Linux/x86 5.19.0-rc2 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="i486-linux-gnu-gcc (GCC) 6.3.0"
 CONFIG_CC_IS_GCC=y
@@ -168,6 +168,7 @@ CONFIG_HAVE_UNSTABLE_SCHED_CLOCK=y
 # end of Scheduler features
 
 CONFIG_ARCH_WANT_BATCHED_UNMAP_TLB_FLUSH=y
+CONFIG_GCC12_NO_ARRAY_BOUNDS=y
 CONFIG_CGROUPS=y
 CONFIG_PAGE_COUNTER=y
 CONFIG_MEMCG=y
@@ -5898,6 +5899,7 @@ CONFIG_XEN_PCIDEV_BACKEND=y
 # CONFIG_XEN_PRIVCMD is not set
 CONFIG_XEN_AUTO_XLATE=y
 CONFIG_XEN_ACPI=y
+# CONFIG_XEN_VIRTIO is not set
 # end of Xen driver support
 
 # CONFIG_GREYBUS is not set

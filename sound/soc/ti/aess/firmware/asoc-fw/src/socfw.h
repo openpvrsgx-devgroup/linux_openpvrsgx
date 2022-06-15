@@ -84,7 +84,7 @@ struct snd_kcontrol_new {
 	unsigned long private_value;};
 
 struct snd_soc_dapm_widget {
-	int id;
+	int id;		/* snd_soc_dapm_type */
 	const char *name;		/* widget name */
 	const char *sname;	/* stream name */
 	int reg;				/* negative reg = no direct dapm */
@@ -218,33 +218,37 @@ int ____ilog2_NaN(void);
 /*
  * Kcontrol and DAPM get/put/info types.
  */
-#define snd_soc_info_enum_ext		SOC_CONTROL_TYPE_ENUM_EXT
-#define snd_soc_info_enum_double	SOC_CONTROL_TYPE_ENUM
-#define snd_soc_get_enum_double		SOC_CONTROL_TYPE_ENUM
-#define snd_soc_put_enum_double		SOC_CONTROL_TYPE_ENUM
-#define snd_soc_info_volsw		SOC_CONTROL_TYPE_VOLSW
-#define snd_soc_info_volsw_ext		SOC_CONTROL_TYPE_VOLSW_EXT
-#define snd_soc_info_bool_ext		SOC_CONTROL_TYPE_BOOL
-#define snd_soc_get_volsw		SOC_CONTROL_TYPE_VOLSW
-#define snd_soc_put_volsw		SOC_CONTROL_TYPE_VOLSW
-#define snd_soc_get_volsw_2r 		snd_soc_get_volsw
-#define snd_soc_put_volsw_2r 		snd_soc_put_volsw
-#define snd_soc_get_volsw_sx		SOC_CONTROL_TYPE_VOLSW_SX
-#define snd_soc_put_volsw_sx		SOC_CONTROL_TYPE_VOLSW_SX
-#define snd_soc_info_volsw_s8		SOC_CONTROL_TYPE_VOLSW_S8
-#define snd_soc_get_volsw_s8		SOC_CONTROL_TYPE_VOLSW_S8
-#define snd_soc_put_volsw_s8		SOC_CONTROL_TYPE_VOLSW_S8
-#define snd_soc_info_volsw_range	SOC_CONTROL_TYPE_RANGE
-#define snd_soc_put_volsw_range		SOC_CONTROL_TYPE_RANGE
-#define snd_soc_get_volsw_range		SOC_CONTROL_TYPE_RANGE
-#define snd_soc_bytes_info		SOC_CONTROL_TYPE_BYTES
-#define snd_soc_bytes_get		SOC_CONTROL_TYPE_BYTES
-#define snd_soc_bytes_put		SOC_CONTROL_TYPE_BYTES
-#define snd_soc_info_xr_sx		SOC_CONTROL_TYPE_XR_SX
-#define snd_soc_get_xr_sx		SOC_CONTROL_TYPE_XR_SX
-#define snd_soc_put_xr_sx		SOC_CONTROL_TYPE_XR_SX
-#define snd_soc_get_strobe		SOC_CONTROL_TYPE_STROBE
-#define snd_soc_put_strobe		SOC_CONTROL_TYPE_STROBE
+
+/* map function pointers in struct snd_soc_tplg_kcontrol_ops io_ops[] to integers */ 
+/* unfortunately this is ambiguous... */
+
+//#define snd_soc_info_enum_ext		SOC_CONTROL_TYPE_ENUM_EXT
+#define snd_soc_info_enum_double	SND_SOC_TPLG_CTL_ENUM	/* SND_SOC_TPLG_DAPM_CTL_ENUM_DOUBLE? */
+#define snd_soc_get_enum_double		SND_SOC_TPLG_CTL_ENUM	/* SND_SOC_TPLG_CTL_ENUM_VALUE? */
+#define snd_soc_put_enum_double		SND_SOC_TPLG_CTL_ENUM	/* SND_SOC_TPLG_CTL_ENUM_VALUE? */
+#define snd_soc_info_volsw		SND_SOC_TPLG_CTL_VOLSW	/* SND_SOC_TPLG_DAPM_CTL_VOLSW */
+//#define snd_soc_info_volsw_ext	SOC_CONTROL_TYPE_VOLSW_EXT
+//#define snd_soc_info_bool_ext		SOC_CONTROL_TYPE_BOOL
+#define snd_soc_get_volsw		SND_SOC_TPLG_CTL_VOLSW
+#define snd_soc_put_volsw		SND_SOC_TPLG_CTL_VOLSW
+//#define snd_soc_get_volsw_2r 		snd_soc_get_volsw
+//#define snd_soc_put_volsw_2r 		snd_soc_put_volsw
+#define snd_soc_get_volsw_sx		SND_SOC_TPLG_CTL_VOLSW_SX
+#define snd_soc_put_volsw_sx		SND_SOC_TPLG_CTL_VOLSW_SX
+//#define snd_soc_info_volsw_s8		SOC_CONTROL_TYPE_VOLSW_S8
+//#define snd_soc_get_volsw_s8		SOC_CONTROL_TYPE_VOLSW_S8
+//#define snd_soc_put_volsw_s8		SOC_CONTROL_TYPE_VOLSW_S8
+#define snd_soc_info_volsw_range	SND_SOC_TPLG_CTL_RANGE
+#define snd_soc_put_volsw_range		SND_SOC_TPLG_CTL_RANGE
+#define snd_soc_get_volsw_range		SND_SOC_TPLG_CTL_RANGE
+#define snd_soc_bytes_info		SND_SOC_TPLG_CTL_BYTES
+#define snd_soc_bytes_get		SND_SOC_TPLG_CTL_BYTES
+#define snd_soc_bytes_put		SND_SOC_TPLG_CTL_BYTES
+#define snd_soc_info_xr_sx		SND_SOC_TPLG_CTL_VOLSW_XR_SX
+#define snd_soc_get_xr_sx		SND_SOC_TPLG_CTL_VOLSW_XR_SX
+#define snd_soc_put_xr_sx		SND_SOC_TPLG_CTL_VOLSW_XR_SX
+#define snd_soc_get_strobe		SND_SOC_TPLG_CTL_STROBE
+#define snd_soc_put_strobe		SND_SOC_TPLG_CTL_STROBE
 
 // this includes kernel sound/control.h but we need private defs for some structs
 #define snd_kcontrol_new kernel_snd_kcontrol_new

@@ -74,6 +74,19 @@ static void verbose(struct soc_fw_priv *soc_fw, const char *fmt, ...)
 	va_end(va);
 }
 
+static int check_write(struct soc_fw_priv *soc_fw)
+{
+	int offset = lseek(soc_fw->out_fd, 0, SEEK_CUR);
+	if (offset != soc_fw->next_hdr_pos) {
+		fprintf(stderr, "error: Next header will be at offset 0x%x but file"
+			 " offset 0x%x is %s by %d bytes\n", soc_fw->next_hdr_pos,
+			offset, offset > soc_fw->next_hdr_pos ? "ahead" : "behind",
+			 abs(offset - soc_fw->next_hdr_pos));
+		exit(EINVAL);
+	}
+	return 0;
+}
+
 static int write_header(struct soc_fw_priv *soc_fw, u32 type,
 	u32 vendor_type, u32 version, size_t payload_size,
 	u32 index, u32 count)
@@ -91,15 +104,6 @@ static int write_header(struct soc_fw_priv *soc_fw, u32 type,
 	hdr.payload_size = payload_size;
 	hdr.index = index;
 	hdr.count = count;	/* array count */
-
-	/* make sure the file offset is aligned with the calculated HDR offset */
-	if (offset != soc_fw->next_hdr_pos) {
-		fprintf(stderr, "error: New header is at offset 0x%x but file"
-			 " offset 0x%x is %s by %d bytes\n", soc_fw->next_hdr_pos,
-			offset, offset > soc_fw->next_hdr_pos ? "ahead" : "behind",
-			 abs(offset - soc_fw->next_hdr_pos));
-		exit(EINVAL);
-	}
 
 	fprintf(stdout, "New header type %d payload_size 0x%lx/%ld vendor_type %d "
 		"version %d at offset 0x%x index %d count %d\n", type, (long unsigned int)payload_size, (long int)payload_size, vendor_type,
@@ -164,16 +168,23 @@ static int import_mixer(struct soc_fw_priv *soc_fw,
 	struct soc_mixer_control *mixer =
 		(struct soc_mixer_control *)kcontrol->private_value;
 	size_t bytes;
-fprintf(stderr, "%s name=%s\n", __func__, kcontrol->name);
+fprintf(stdout, "%s name=%s\n", __func__, kcontrol->name);
 
 	memset(&mc, 0, sizeof(mc));
 
 	mc.hdr.size = sizeof(mc.hdr);
+
+// abhängig von kcontrol->type machen?
+// snd_soc_dapm_mux
+
+// oder SND_SOC_TPLG_CTL_ENUM?
+
 	mc.hdr.type = SND_SOC_TPLG_CTL_VOLSW;
 	strncpy(mc.hdr.name, (const char*)kcontrol->name, sizeof(mc.hdr.name));
 	mc.hdr.access = kcontrol->access;
 	mc.hdr.ops.get = kcontrol->get;
 	mc.hdr.ops.put = kcontrol->put;
+fprintf(stdout, "%s info=%d\n", __func__, kcontrol->info);
 	mc.hdr.ops.info = kcontrol->info;
 	import_tlv(soc_fw, &mc.hdr.tlv, kcontrol);
 
@@ -249,6 +260,8 @@ static void import_enum_control_data(struct soc_fw_priv *soc_fw, int count,
 {
 	int i;
 
+fprintf(stdout, "%s\n", __func__);
+
 	if (menum->values) {
 		for (i = 0; i < count; i++) {
 			ec->values[i] = menum->values[i];
@@ -268,7 +281,8 @@ static int import_enum_control(struct soc_fw_priv *soc_fw,
 		(struct soc_enum *)kcontrol->private_value;
 	size_t bytes;
 
-fprintf(stderr, "%s\n", __func__);
+fprintf(stdout, "%s\n", __func__);
+
 	memset(&ec, 0, sizeof(ec));
 
 	if (kcontrol->count >= ARRAY_SIZE(ec.texts)) {
@@ -284,6 +298,7 @@ fprintf(stderr, "%s\n", __func__);
 	ec.hdr.ops.get = kcontrol->get;
 	ec.hdr.ops.put = kcontrol->put;
 	ec.hdr.ops.info = kcontrol->info;
+fprintf(stdout, "%s info=%d\n", __func__, kcontrol->info);
 	import_tlv(soc_fw, &ec.hdr.tlv, kcontrol);
 
 	ec.size = sizeof(ec);
@@ -323,6 +338,7 @@ int socfw_import_controls(struct soc_fw_priv *soc_fw,
 {
 	int i /*, mixers = 0, enums = 0 */;
 	int err;
+	const struct snd_kcontrol_new *kn = kcontrols;
 
 	verbose(soc_fw, " controls: controls %d \n",
 		kcontrol_count);
@@ -331,15 +347,15 @@ int socfw_import_controls(struct soc_fw_priv *soc_fw,
 		return 0;
 
 	for (i = 0; i < kcontrol_count; i++) {
-		const struct snd_kcontrol_new *kn =
-			&kcontrols[i];
 
-		switch (kn->index) {
-		case SOC_CONTROL_TYPE_VOLSW:
-		case SOC_CONTROL_TYPE_VOLSW_SX:
-		case SOC_CONTROL_TYPE_VOLSW_S8:
-		case SOC_CONTROL_TYPE_VOLSW_XR_SX:
-		case SOC_CONTROL_TYPE_EXT:
+fprintf(stdout, "%s: name=%s index=%d info=%d\n", __func__, kn->name, kn->index, kn->info);
+
+		switch (kn->info) {
+		case SND_SOC_TPLG_CTL_VOLSW:
+		case SND_SOC_TPLG_CTL_VOLSW_SX:
+		case SND_SOC_TPLG_CTL_VOLSW_XR_SX:
+		case SND_SOC_TPLG_CTL_RANGE:
+		case SND_SOC_TPLG_DAPM_CTL_VOLSW:
 			err = write_header(soc_fw, SND_SOC_TPLG_TYPE_MIXER, 0,
 				soc_fw->version, sizeof(struct snd_soc_tplg_mixer_control), i, 1);
 			if (err < 0)
@@ -349,9 +365,13 @@ int socfw_import_controls(struct soc_fw_priv *soc_fw,
 			if (err < 0)
 				return err;
 
+			check_write(soc_fw);
 			break;
-		case SOC_CONTROL_TYPE_ENUM:
-		case SOC_CONTROL_TYPE_ENUM_EXT:
+		case SND_SOC_TPLG_CTL_ENUM:
+		case SND_SOC_TPLG_CTL_ENUM_VALUE:
+		case SND_SOC_TPLG_DAPM_CTL_ENUM_DOUBLE:
+		case SND_SOC_TPLG_DAPM_CTL_ENUM_VIRT:
+		case SND_SOC_TPLG_DAPM_CTL_ENUM_VALUE:
 			err = write_header(soc_fw, SND_SOC_TPLG_TYPE_ENUM, 0,
 				soc_fw->version, sizeof(struct snd_soc_tplg_enum_control), i, 1);
 			if (err < 0)
@@ -361,26 +381,29 @@ int socfw_import_controls(struct soc_fw_priv *soc_fw,
 			if (err < 0)
 				return err;
 
+			check_write(soc_fw);
 			break;
-		case SOC_CONTROL_TYPE_BYTES:
-		case SOC_CONTROL_TYPE_BOOL_EXT:
-		case SOC_CONTROL_TYPE_STROBE:
-		case SOC_CONTROL_TYPE_RANGE:
+		case SND_SOC_TPLG_CTL_BYTES:
+		case SND_SOC_TPLG_CTL_STROBE:
+		case SND_SOC_TPLG_DAPM_CTL_PIN:
 		default:
 			fprintf(stderr, "error: mixer %s type %d not supported atm\n",
-				kn->name, kn->index);
+				kn->name, kn->info);
 			return -EINVAL;
 		}
+		kn++;
 	}
+
+fprintf(stdout, "%s: done\n", __func__);
 
 	return 0;
 }
 
-#if 1	// FIXME
-
-static void import_coeff_enum_control_data(struct soc_fw_priv *soc_fw,
+#if 0
+// here we would use the description...
+static void import_coeff_control_data(struct soc_fw_priv *soc_fw,
 	const struct snd_soc_fw_coeff *coeff,
-	struct snd_soc_tplg_bytes_control *ec)	// is this the right structure?
+	struct  snd_soc_tplg_enum_control *ec)
 {
 	int i;
 
@@ -388,112 +411,87 @@ static void import_coeff_enum_control_data(struct soc_fw_priv *soc_fw,
 		strncpy(ec->texts[i], coeff->elems[i].description,
 			sizeof(ec->texts[0]));
 }
+#endif
 
-static int import_enum_coeff_control(struct soc_fw_priv *soc_fw,
+static int import_coeff_control(struct soc_fw_priv *soc_fw,
 	const struct snd_soc_fw_coeff *coeff)
 {
-	struct snd_soc_tplg_bytes_control ec;	// is this the right structure?
 	struct snd_soc_file_coeff_data cd;
 	size_t bytes;
-	int i;
+	int j;
 
-	memset(&ec, 0, sizeof(ec));
-
-	if (coeff->count >= SND_SOC_TPLG_NUM_TEXTS) {
-		fprintf(stderr, "error: too many enum values %d\n",
-			coeff->count);
-		return -EINVAL;
-	}
-
-	ec.hdr.size = sizeof(ec.hdr);
-	ec.hdr.type = SND_SOC_TPLG_CTL_BYTES;	// is this the right type?
-	strncpy(ec.hdr.name, coeff->description, sizeof(ec.hdr.name));
-	ec.hdr.access = SNDRV_CTL_ELEM_ACCESS_READWRITE;
-	ec.hdr.ops.get = 0;
-	ec.hdr.ops.put = 0;
-	ec.hdr.ops.info = 0;
-//	ec.hdr.tlv.size = tlv_size(kcontrol);
-//	ec.hdr.tlv.type = 0xaaaa;	// checkme
-//	memcpy(ec.hdr.tlv.data, (struct snd_ctl_tlv *)kcontrol->tlv.p, sizeof(ec.hdr.tlv.data));
-
-	ec.size = sizeof(ec);
-
-// coeff->id?
-	ec.max = coeff->count;
-	ec.mask = (coeff->count < 1) - 1;
-	ec.base = coeff->count;
-	ec.num_regs = coeff->count;
-
-	import_coeff_enum_control_data(soc_fw, coeff, &ec);
-
-	verbose(soc_fw, " coeff 0x%x enum: \"%s\" R 0x%x shift L/R %d/%d (g,p,i) %d:%d:%d\n",
-		cd.id, ec.hdr.name, ec.channel[0].reg, ec.channel[0].shift, ec.channel[1].shift,
-		ec.hdr.ops.get,
-		ec.hdr.ops.put,
-		ec.hdr.ops.info);
-
-	bytes = write(soc_fw->out_fd, &ec, sizeof(ec));
-	if (bytes != sizeof(ec)) {
-		fprintf(stderr, "error: can't write mixer %lu\n", (long unsigned int)bytes);
-		return bytes;
-	}
-
-// FIXME: this is wrong - the coefficients do not "follow" the snd_soc_tplg_bytes_control
-// but are stored in ec.priv - or is this not event an snd_soc_tplg_bytes_control but something else???
+fprintf(stdout, "%s: 1 id=%d\n", __func__, coeff->id);
 
 	cd.count = coeff->count;
-	cd.size = cd.count * coeff->elems[0].size;
+	cd.size = 0;
+	for (j = 0; j < cd.count; j++) {
+		cd.size += coeff->elems[j].size;
+	}
+
 	cd.id = coeff->id;
+
+#if 0	// .description is not stored in firmware - see snd_soc_file_coeff_data definition in omap-aess-priv.h
+	import_coeff_control_data(soc_fw, coeff, NULL);
+#endif
+
+fprintf(stdout, "%s: 2 count = %d size = %d id = %d\n", __func__, cd.count, cd.size, cd.id);
 
 	bytes = write(soc_fw->out_fd, &cd, sizeof(cd));
 	if (bytes != sizeof(cd)) {
-		fprintf(stderr, "error: can't write coeff data %lu\n", (long unsigned int)bytes);
+		fprintf(stderr, "error: can't write coeff data header %lu\n", (long unsigned int)bytes);
 		return bytes;
 	}
 
-	for (i = 0; i < coeff->count; i++) {
-		bytes = write(soc_fw->out_fd, coeff->elems[i].coeffs,
-			coeff->elems[i].size);
-		if (bytes != coeff->elems[i].size) {
+	for (j = 0; j < coeff->count; j++) {
+		bytes = write(soc_fw->out_fd, coeff->elems[j].coeffs,
+			coeff->elems[j].size);
+		if (bytes != coeff->elems[j].size) {
 			fprintf(stderr, "error: can't write coeff data %lu\n", (long unsigned int)bytes);
 			return bytes;
 		}
 	}
+
+fprintf(stdout, "%s: 3\n", __func__);
+
 	return 0;
 }
-#endif
 
 int socfw_import_coeffs(struct soc_fw_priv *soc_fw,
 	const struct snd_soc_fw_coeff *coeffs, int coeff_count)
 {
-	int i, j, enums = 0;
+	int i, j;
 	size_t size = 0;
-//	int err;
+	int err;
+
+fprintf(stdout, "%s: 1 count = %d\n", __func__, coeff_count);
 
 	if (coeff_count == 0)
 		return 0;
 
 	for (i = 0; i < coeff_count; i++) {
-		size += sizeof(struct snd_soc_tplg_bytes_control)
-			+ sizeof(struct snd_soc_tplg_enum_control);
-		for (j = 0; j < coeffs[i].count; j++)
-			enums++;
-	}
-	verbose(soc_fw, " coeffs: description: \"%s\" num coeffs %d enums %d size 0x%lx/%lu bytes\n",
-		coeffs->description, coeff_count, enums, size, size);
+		size += sizeof(struct snd_soc_file_coeff_data);
 
-#if 1	// FIXME
-	err = write_header(soc_fw, SND_SOC_TPLG_TYPE_PDATA, 0,
+		for (j = 0; j < coeffs[i].count; j++) {
+			size += coeffs[i].elems[j].size;
+		}
+	}
+	verbose(soc_fw, " coeffs: description: \"%s\" num coeffs %d size 0x%lx/%lu bytes\n",
+		coeffs->description, coeff_count, size, size);
+
+	/* SND_SOC_TPLG_TYPE_VENDOR_COEFF will call aess_load_coeffs() in aess_vendor_load() */
+	err = write_header(soc_fw, SND_SOC_TPLG_TYPE_VENDOR_COEFF, 0,
 		soc_fw->version, size, 0, 1);
 	if (err < 0)
 		return err;
 
+	/* vendor coefficients are simply added behind the header */
+
 	for (i = 0; i < coeff_count; i++) {
-		err = import_enum_coeff_control(soc_fw, &coeffs[i]);
+		err = import_coeff_control(soc_fw, &coeffs[i]);
 		if (err < 0)
 			return err;
 	}
-#endif
+	check_write(soc_fw);
 	return 0;
 }
 
@@ -502,30 +500,36 @@ static int import_dapm_widgets_controls(struct soc_fw_priv *soc_fw, int count,
 {
 	int i, err;
 
+fprintf(stdout, "%s:\n", __func__);
+
 	for (i = 0; i < count; i++) {
 
-		switch (kn->index) {
-		case SOC_CONTROL_TYPE_VOLSW:
-		case SOC_CONTROL_TYPE_VOLSW_SX:
-		case SOC_CONTROL_TYPE_VOLSW_S8:
-		case SOC_CONTROL_TYPE_VOLSW_XR_SX:
-		case SOC_CONTROL_TYPE_EXT:
-		case SOC_DAPM_TYPE_VOLSW:
+fprintf(stdout, "%s: name=%s index=%d info=%d\n", __func__, kn->name, kn->index, kn->info);
+
+		switch (kn->info) {
+		case SND_SOC_TPLG_CTL_VOLSW:
+		case SND_SOC_TPLG_CTL_VOLSW_SX:
+		case SND_SOC_TPLG_CTL_VOLSW_XR_SX:
+		case SND_SOC_TPLG_CTL_RANGE:
+		case SND_SOC_TPLG_DAPM_CTL_VOLSW:
 			err = import_mixer(soc_fw, kn);
 			if (err < 0)
 				return err;
 
 			break;
-		case SOC_CONTROL_TYPE_ENUM:
-		case SOC_CONTROL_TYPE_ENUM_EXT:
-		case SOC_DAPM_TYPE_ENUM_DOUBLE:
-		case SOC_DAPM_TYPE_ENUM_EXT:
+		case SND_SOC_TPLG_CTL_ENUM:
+		case SND_SOC_TPLG_CTL_ENUM_VALUE:
+		case SND_SOC_TPLG_DAPM_CTL_ENUM_DOUBLE:
+		case SND_SOC_TPLG_DAPM_CTL_ENUM_VIRT:
+		case SND_SOC_TPLG_DAPM_CTL_ENUM_VALUE:
 			err = import_enum_control(soc_fw, kn);
 			if (err < 0)
 				return err;
 
 			break;
-		case SOC_DAPM_TYPE_PIN:
+		case SND_SOC_TPLG_CTL_BYTES:
+		case SND_SOC_TPLG_CTL_STROBE:
+		case SND_SOC_TPLG_DAPM_CTL_PIN:
 		default:
 			fprintf(stderr, "error: widget mixer %s type %d not supported atm\n",
 				kn->name, kn->index);
@@ -544,27 +548,36 @@ static int socfw_calc_widget_size(struct soc_fw_priv *soc_fw,
 	int i, j;
 	int size = widget_count * sizeof(struct snd_soc_tplg_dapm_widget);
 
+fprintf(stdout, "%s: count = %d, widgets = %p\n", __func__, widget_count, widgets);
+
 	for (i = 0; i < widget_count; i++) {
 		const struct snd_kcontrol_new *kn = widgets[i].kcontrol_news;
 
+fprintf(stdout, "%s: name = %s num_kcontrols = %d\n", __func__, widgets[i].name, widgets[i].num_kcontrols);
+
 		for (j = 0; j < widgets[i].num_kcontrols; j++) {
 
-			switch (kn->index) {
-			case SOC_CONTROL_TYPE_VOLSW:
-			case SOC_CONTROL_TYPE_VOLSW_SX:
-			case SOC_CONTROL_TYPE_VOLSW_S8:
-			case SOC_CONTROL_TYPE_VOLSW_XR_SX:
-			case SOC_CONTROL_TYPE_EXT:
-			case SOC_DAPM_TYPE_VOLSW:
+fprintf(stdout, "%s: kn name = %s info = %d\n", __func__, kn->name, kn->info);
+
+			switch (kn->info) {
+			case SND_SOC_TPLG_CTL_VOLSW:
+			case SND_SOC_TPLG_CTL_VOLSW_SX:
+			case SND_SOC_TPLG_CTL_VOLSW_XR_SX:
+			case SND_SOC_TPLG_CTL_RANGE:
+			case SND_SOC_TPLG_DAPM_CTL_VOLSW:
 				size +=	sizeof(struct snd_soc_tplg_mixer_control);
 				break;
-			case SOC_CONTROL_TYPE_ENUM:
-			case SOC_CONTROL_TYPE_ENUM_EXT:
-			case SOC_DAPM_TYPE_ENUM_DOUBLE:
-			case SOC_DAPM_TYPE_ENUM_EXT:
+			case SND_SOC_TPLG_CTL_ENUM:
+			case SND_SOC_TPLG_CTL_ENUM_VALUE:
+			case SND_SOC_TPLG_DAPM_CTL_ENUM_DOUBLE:
+			case SND_SOC_TPLG_DAPM_CTL_ENUM_VIRT:
+			case SND_SOC_TPLG_DAPM_CTL_ENUM_VALUE:
+// FIXME: does this also depend on enum values?
 				size += sizeof(struct snd_soc_tplg_enum_control);
 				break;
-			case SOC_DAPM_TYPE_PIN:
+			case SND_SOC_TPLG_CTL_BYTES:
+			case SND_SOC_TPLG_CTL_STROBE:
+			case SND_SOC_TPLG_DAPM_CTL_PIN:
 			default:
 				fprintf(stderr, "error: widget %s mixer %s type %d not supported atm\n",
 					widgets[i].name, kn->name, kn->index);
@@ -573,6 +586,8 @@ static int socfw_calc_widget_size(struct soc_fw_priv *soc_fw,
 			kn++;
 		}
 	}
+
+fprintf(stdout, "%s: size=%d\n", __func__, size);
 
 	return size;
 }
@@ -635,6 +650,8 @@ int socfw_import_dapm_widgets(struct soc_fw_priv *soc_fw,
 	size_t bytes;
 	int i, err, size;
 
+fprintf(stdout, "%s:\n", __func__);
+
 	if (widget_count == 0)
 		return 0;
 
@@ -651,6 +668,8 @@ int socfw_import_dapm_widgets(struct soc_fw_priv *soc_fw,
 		return err;
 
 	for (i = 0; i < widget_count; i++) {
+
+fprintf(stdout, "%s: name=%s\n", __func__, widgets[i].name);
 
 		memset(&widget, 0, sizeof(widget));
 
@@ -691,6 +710,7 @@ int socfw_import_dapm_widgets(struct soc_fw_priv *soc_fw,
 		if (err < 0)
 			return err;
 	}
+	check_write(soc_fw);
 
 	return 0;
 }
@@ -731,6 +751,7 @@ int socfw_import_dapm_graph(struct soc_fw_priv *soc_fw,
 			return bytes;
 		}
 	}
+	check_write(soc_fw);
 
 	return 0;
 }
@@ -789,6 +810,7 @@ int socfw_import_vendor(struct soc_fw_priv *soc_fw, const char *name, int type)
 		fprintf(stderr, "error: can't write vendor data %lu\n", (long unsigned int)bytes);
 		return bytes;
 	}
+	check_write(soc_fw);
 
 	return 0;
 }
@@ -799,7 +821,7 @@ int socfw_import_plugin(struct soc_fw_priv *soc_fw, const char *name)
 	void *plugin_handle;
 	int ret;
 
-	fprintf(stdout, "plugin: loading %s\n", name);
+fprintf(stdout, "plugin: loading %s\n", name);
 
 	/* load the plugin */
 	plugin_handle = dlopen(name, RTLD_LAZY);
@@ -817,8 +839,12 @@ int socfw_import_plugin(struct soc_fw_priv *soc_fw, const char *name)
 		return -EINVAL;
 	}
 
+fprintf(stdout, "%s 1\n", __func__);
+
 	/* dump some plugin info */
-	fprintf(stdout, "plugin: loaded %s\n", name);
+
+fprintf(stdout, "plugin: loaded %s\n", name);
+
 	if (plugin->graph_count > 0)
 		fprintf(stdout, " dapm: found graph with %d routes\n",
 			plugin->graph_count);
@@ -844,20 +870,29 @@ int socfw_import_plugin(struct soc_fw_priv *soc_fw, const char *name)
 		fprintf(stdout, " coeff: no coefficients found\n");
 
 	soc_fw->version = plugin->version;
+
+fprintf(stdout, "%s 2\n", __func__);
+
 	ret = socfw_import_controls(soc_fw, plugin->kcontrols,
 		plugin->kcontrol_count);
 	if (ret < 0)
 		goto out;
+
+fprintf(stdout, "%s 3\n", __func__);
 
 	ret = socfw_import_coeffs(soc_fw, plugin->coeffs,
 		plugin->coeff_count);
 	if (ret < 0)
 		goto out;
 
+fprintf(stdout, "%s 4\n", __func__);
+
 	ret = socfw_import_dapm_widgets(soc_fw, plugin->widgets,
 		plugin->widget_count);
 	if (ret < 0)
 		goto out;
+
+fprintf(stdout, "%s 5\n", __func__);
 
 	ret = socfw_import_dapm_graph(soc_fw, plugin->graph,
 		plugin->graph_count);

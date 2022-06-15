@@ -52,6 +52,8 @@ struct snd_soc_dai_driver {
 };
 #include <aess/omap-aess-priv.h>
 
+/* NOTE: DECLARE_TLV_DB_SCALE is historical in sound/tlv.h and should be replaced by UAPI */
+
 /* Media DL1 volume control from -120 to 30 dB in 1 dB steps */
 static DECLARE_TLV_DB_SCALE(mm_dl1_tlv, -12000, 100, 3000);
 

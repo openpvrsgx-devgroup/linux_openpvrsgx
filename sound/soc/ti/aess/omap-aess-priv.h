@@ -341,15 +341,13 @@ struct omap_aess {
 	int active;
 	int nr_users;	/* Number of external users of omap_aess struct */
 	struct mutex mutex;
-#ifdef FIXME	// mechanism does no longer exist since v4.18 and wasn't used anywhere else for long time
+#ifdef FIXME	// context mechanism does no longer exist since v4.18 and wasn't used anywhere else for long time
+	u32 context_lost;
 	int (*get_context_lost_count)(struct device *dev);
 #endif
 	int (*device_scale)(struct device *req_dev,
 			    struct device *target_dev,
 			    unsigned long rate);
-#ifdef FIXME	// mechanism does no longer exist since v4.18 and wasn't used anywhere else for long time
-	u32 context_lost;
-#endif
 	struct omap_aess_opp opp;
 	struct omap_aess_dc_offset dc_offset;
 	struct omap_aess_modem modem;
@@ -358,14 +356,15 @@ struct omap_aess {
 	struct omap_aess_mixer mixer;
 
 	/* firmware */
-	struct fw_header hdr;
-	const void *fw_config;
-	const void *fw_data;
-	const struct firmware *fw;
+	const struct firmware *fw;	// the firmware object
+	const void *fw_config;	// firmware config (within fw)
+	const void *fw_data;	// firmware binary (within fw)
+	struct fw_header fw_hdr;	// REVISIT: copy of first bytes of fw_data
+	struct omap_aess_mapping fw_info;	// REVISIT: never initialized?
+	u32 firmware_version_number;	// REVISIT: as loaded from header (unused) - same as fw_hdr.version */
 	bool fw_loaded;
 
 	/* from former omap_aess struct */
-	u32 firmware_version_number;
 	u16 MultiFrame[25][8];
 
 	/* Housekeeping for gains */
@@ -375,7 +374,6 @@ struct omap_aess {
 	struct omap_aess_pingppong pingpong;
 
 	u32 irq_dbg_read_ptr;
-	struct omap_aess_mapping fw_info;
 
 	/* List of open AESS logical ports */
 	struct list_head ports;

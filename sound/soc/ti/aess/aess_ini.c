@@ -182,6 +182,11 @@ static void omap_aess_load_fw_param(struct omap_aess *aess, const void *data)
 {
 	u32 pmem_size, dmem_size, smem_size, cmem_size;
 	u32 *pmem_ptr, *dmem_ptr, *smem_ptr, *cmem_ptr;
+
+printk("%s\n", __func__);
+
+#if 0	// OLD
+
 	u32 *fw_ptr = (u32*) data;
 
 	/* Analyze FW memories banks sizes */
@@ -194,7 +199,18 @@ static void omap_aess_load_fw_param(struct omap_aess *aess, const void *data)
 	cmem_ptr = pmem_ptr + (pmem_size >> 2);
 	dmem_ptr = cmem_ptr + (cmem_size >> 2);
 	smem_ptr = dmem_ptr + (dmem_size >> 2);
-
+#else
+	/* Take FW memories banks sizes */
+	aess->firmware_version_number = aess->fw_hdr.version;
+	pmem_size = aess->fw_hdr.pmem_size;
+	cmem_size = aess->fw_hdr.cmem_size;
+	dmem_size = aess->fw_hdr.dmem_size;
+	smem_size = aess->fw_hdr.smem_size;
+	pmem_ptr = (u32 *) aess->fw_data;
+	cmem_ptr = pmem_ptr + (pmem_size >> 2);
+	dmem_ptr = cmem_ptr + (cmem_size >> 2);
+	smem_ptr = dmem_ptr + (dmem_size >> 2);
+#endif
 	omap_aess_write(aess, OMAP_AESS_BANK_PMEM, 0, pmem_ptr, pmem_size);
 	omap_aess_write(aess, OMAP_AESS_BANK_CMEM, 0, cmem_ptr, cmem_size);
 	omap_aess_write(aess, OMAP_AESS_BANK_SMEM, 0, smem_ptr, smem_size);

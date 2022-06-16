@@ -488,14 +488,8 @@ static int omap_aess_pcm_probe(struct snd_soc_component *component)
 					  aess->fw);
 	if (ret < 0) {
 		dev_err(component->dev, "loading toplogy from AESS FW failed %d\n", ret);
-#if 0
-/*
- * fw loading fails because header size seems to be wrong
- *	[    7.404714] aess 401f1000.aess: ASoC: invalid header size for type 0 at offset 0x0 size 0x1a5e8.
- */
 
 		goto out;
-#endif
 	}
 
 	ret = request_threaded_irq(aess->irq, NULL,
@@ -507,7 +501,6 @@ static int omap_aess_pcm_probe(struct snd_soc_component *component)
 		goto out;
 	}
 
-#if 0	// failed firmware load leads to missing/wrong opp and failed omap_aess_init_mem
 	ret = aess_opp_init_initial_opp(aess);
 	if (ret < 0) {
 		dev_info(component->dev, "No OPP definition\n");
@@ -518,7 +511,7 @@ static int omap_aess_pcm_probe(struct snd_soc_component *component)
 	 */
 	pm_runtime_get_sync(aess->dev);
 
-	omap_aess_init_mem(aess, aess->fw_config);
+	omap_aess_init_mem(aess);
 
 	omap_aess_reset_hal(aess);
 
@@ -537,7 +530,6 @@ static int omap_aess_pcm_probe(struct snd_soc_component *component)
 	omap_aess_disable_irq(aess);
 
 	pm_runtime_put_sync(aess->dev);
-#endif
 	aess_init_debugfs(aess);
 
 out:

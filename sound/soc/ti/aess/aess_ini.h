@@ -61,8 +61,8 @@
 
 struct omap_aess;
 
-void omap_aess_init_mem(struct omap_aess *aess, const void *fw_config);
-void omap_aess_load_fw(struct omap_aess *aess, const void *firmware);
-void omap_aess_reload_fw(struct omap_aess *aess, const void *firmware);
+void omap_aess_init_mem(struct omap_aess *aess);
+void omap_aess_load_fw(struct omap_aess *aess);
+void omap_aess_reload_fw(struct omap_aess *aess);
 
 #endif /* _AESS_INI_H_ */

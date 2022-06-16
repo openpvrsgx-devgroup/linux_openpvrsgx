@@ -604,7 +604,7 @@ static int aess_load_fw(struct snd_soc_component *component,
 	const void *fw_data = snd_soc_tplg_get_data(hdr);
 
 	/* get firmware and coefficients header info */
-	memcpy(&aess->hdr, fw_data, sizeof(struct fw_header));
+	memcpy(&aess->fw_hdr, fw_data, sizeof(struct fw_header));
 	if (hdr->payload_size > OMAP_AESS_MAX_FW_SIZE) {
 		dev_err(aess->dev, "Firmware too large (%d bytes)\n",
 			hdr->payload_size);
@@ -612,10 +612,10 @@ static int aess_load_fw(struct snd_soc_component *component,
 	}
 	dev_info(aess->dev, "AESS firmware size %d bytes\n", hdr->payload_size);
 	dev_info(aess->dev, "AESS mem P %d C %d D %d S %d bytes\n",
-		 aess->hdr.pmem_size, aess->hdr.cmem_size,
-		 aess->hdr.dmem_size, aess->hdr.smem_size);
+		 aess->fw_hdr.pmem_size, aess->fw_hdr.cmem_size,
+		 aess->fw_hdr.dmem_size, aess->fw_hdr.smem_size);
 
-	dev_info(aess->dev, "AESS Firmware version %x\n", aess->hdr.version);
+	dev_info(aess->dev, "AESS Firmware version %x\n", aess->fw_hdr.version);
 
 	/* store AESS firmware for later context restore */
 	aess->fw_data = fw_data;

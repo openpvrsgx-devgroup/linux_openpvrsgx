@@ -520,7 +520,7 @@ static int omap_aess_pcm_probe(struct snd_soc_component *component)
 		aess->mixer.route_ul[i] = omap_aess_get_label_data(aess,
 						      OMAP_AESS_BUFFER_ZERO_ID);
 
-	omap_aess_load_fw(aess, aess->fw_data);
+	omap_aess_load_fw(aess);
 
 	/* "tick" of the audio engine */
 	omap_aess_write_event_generator(aess, EVENT_TIMER);
@@ -629,7 +629,7 @@ static int omap_aess_pcm_resume(struct snd_soc_dai *dai)
 		}
 	}
 
-	omap_aess_reload_fw(aess, aess->fw_data);
+	omap_aess_reload_fw(aess);
 
 	aess_reconfigure_profile(aess);
 out:

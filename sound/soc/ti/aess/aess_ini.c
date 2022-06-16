@@ -183,7 +183,7 @@ if(!fw_header)
  *
  * Load the different AESS memories PMEM/DMEM/SMEM/DMEM
  */
-static void omap_aess_load_fw_param(struct omap_aess *aess, const void *data)
+static void omap_aess_load_fw_param(struct omap_aess *aess)
 {
 	u32 pmem_size, dmem_size, smem_size, cmem_size;
 	u32 *pmem_ptr, *dmem_ptr, *smem_ptr, *cmem_ptr;
@@ -250,9 +250,9 @@ static void omap_aess_build_scheduler_table(struct omap_aess *aess)
  * @firmware: Pointer on the AESS firmware (after the header)
  *
  */
-void omap_aess_load_fw(struct omap_aess *aess, const void *firmware)
+void omap_aess_load_fw(struct omap_aess *aess)
 {
-	omap_aess_load_fw_param(aess, firmware);
+	omap_aess_load_fw_param(aess);
 	omap_aess_reset_all_ports(aess);
 	omap_aess_init_gains(aess);
 	omap_aess_init_gain_ramp(aess);
@@ -265,9 +265,9 @@ void omap_aess_load_fw(struct omap_aess *aess, const void *firmware)
  * @aess: Pointer on aess handle
  * @firmware: Pointer on the AESS firmware (after the header)
  */
-void omap_aess_reload_fw(struct omap_aess *aess, const void *firmware)
+void omap_aess_reload_fw(struct omap_aess *aess)
 {
-	omap_aess_load_fw_param(aess, firmware);
+	omap_aess_load_fw_param(aess);
 	omap_aess_init_gain_ramp(aess);
 	omap_aess_build_scheduler_table(aess);
 	/* IRQ circular read pointer in DMEM */

@@ -101,22 +101,22 @@ int main(int argc, char *argv[])
 			if (++i == argc)
 				usage(argv[0]);
 
-			socfw_import_vendor(soc_fw, argv[i], SND_SOC_TPLG_TYPE_VENDOR_CONFIG);
+			socfw_import_vendor(soc_fw, argv[i], SND_SOC_TPLG_TYPE_VENDOR_COEFF);
 			continue;
 		}
-		if (!strcmp("-vco", argv[i])) {
+		if (!strcmp("-vcd", argv[i])) {
 			if (++i == argc)
 				usage(argv[0]);
 
-			socfw_import_vendor(soc_fw, argv[i], SND_SOC_TPLG_TYPE_VENDOR_COEFF);
+// NOTE: missing _ by typo in include/uapi/sound/asoc.h
+			socfw_import_vendor(soc_fw, argv[i], SND_SOC_TPLG_TYPEVENDOR_CODEC);
 			continue;
 		}
 		if (!strcmp("-vcn", argv[i])) {
 			if (++i == argc)
 				usage(argv[0]);
 
-// NOTE: missing _ typo in include/uapi/sound/asoc.h
-			socfw_import_vendor(soc_fw, argv[i], SND_SOC_TPLG_TYPEVENDOR_CODEC);
+			socfw_import_vendor(soc_fw, argv[i], SND_SOC_TPLG_TYPE_VENDOR_CONFIG);
 			continue;
 		}
 	}

@@ -1,5 +1,5 @@
 #
-# Linux/mips 5.19.0-rc2 Kernel Configuration
+# Linux/mips 5.19.0-rc3 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="mipsel-linux-gnu-gcc (GCC) 6.3.0"
 CONFIG_CC_IS_GCC=y
@@ -5096,6 +5096,7 @@ CONFIG_PWM_JZ4740=y
 CONFIG_IRQCHIP=y
 # CONFIG_AL_FIC is not set
 CONFIG_IRQ_MIPS_CPU=y
+# CONFIG_XILINX_INTC is not set
 CONFIG_INGENIC_IRQ=y
 CONFIG_INGENIC_TCU_IRQ=y
 # end of IRQ chip support
@@ -5657,6 +5658,7 @@ CONFIG_CRYPTO_LIB_POLY1305_RSIZE=2
 CONFIG_CRYPTO_LIB_SHA256=y
 # end of Crypto library routines
 
+CONFIG_LIB_MEMNEQ=y
 CONFIG_CRC_CCITT=y
 CONFIG_CRC16=y
 CONFIG_CRC_T10DIF=y

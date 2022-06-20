@@ -1,5 +1,5 @@
 #
-# Linux/arm64 5.19.0-rc2 Kernel Configuration
+# Linux/arm64 5.19.0-rc3 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="aarch64-linux-gnu-gcc (GCC) 6.3.0"
 CONFIG_CC_IS_GCC=y
@@ -6946,6 +6946,7 @@ CONFIG_ARM_GIC_V3_ITS_PCI=y
 # CONFIG_AL_FIC is not set
 CONFIG_SUN6I_R_INTC=y
 CONFIG_SUNXI_NMI_INTC=y
+# CONFIG_XILINX_INTC is not set
 CONFIG_PARTITION_PERCPU=y
 # end of IRQ chip support
 
@@ -7601,6 +7602,7 @@ CONFIG_CRYPTO_LIB_POLY1305_RSIZE=9
 CONFIG_CRYPTO_LIB_SHA256=y
 # end of Crypto library routines
 
+CONFIG_LIB_MEMNEQ=y
 CONFIG_CRC_CCITT=m
 CONFIG_CRC16=y
 CONFIG_CRC_T10DIF=y

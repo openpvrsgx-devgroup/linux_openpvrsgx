@@ -109,15 +109,15 @@ uint32_t *cmem = NULL;
 #else
 #if 1
 uint32_t dmem[] = {
-#include "dmem.txt"
+#include "../abe_dump/dmem.txt"
 };
 
 uint32_t smem[] = {
-#include "smem.txt"
+#include "../abe_dump/smem.txt"
 };
 
 uint32_t cmem[] = {
-#include "cmem.txt"
+#include "../abe_dump/cmem.txt"
 };
 #else
 uint32_t dmem[] = {

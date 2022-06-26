@@ -81,8 +81,8 @@ struct omap_aess_filter {
 static int aess_put_mixer(struct snd_kcontrol *kcontrol,
 			  struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_dapm_context *dapm = snd_soc_dapm_kcontrol_dapm(kcontrol);
-	struct snd_soc_component *component = dapm->component;
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_dapm_context *dapm = snd_soc_component_get_dapm(component);
 	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
@@ -110,8 +110,7 @@ static int aess_put_mixer(struct snd_kcontrol *kcontrol,
 static int aess_get_mixer(struct snd_kcontrol *kcontrol,
 			  struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_dapm_context *dapm = snd_soc_dapm_kcontrol_dapm(kcontrol);
-	struct snd_soc_component *component = dapm->component;
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
 	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
@@ -148,8 +147,7 @@ int aess_mixer_enable_mono(struct omap_aess *aess, int id, int enable)
 static int aess_put_mono_mixer(struct snd_kcontrol *kcontrol,
 			       struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_dapm_context *dapm = snd_soc_dapm_kcontrol_dapm(kcontrol);
-	struct snd_soc_component *component = dapm->component;
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
 	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
@@ -164,8 +162,7 @@ static int aess_put_mono_mixer(struct snd_kcontrol *kcontrol,
 static int aess_get_mono_mixer(struct snd_kcontrol *kcontrol,
 			       struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_dapm_context *dapm = snd_soc_dapm_kcontrol_dapm(kcontrol);
-	struct snd_soc_component *component = dapm->component;
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
 	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
@@ -242,8 +239,13 @@ static int aess_ul_mux_put_route(struct snd_kcontrol *kcontrol,
 static int aess_ul_mux_get_route(struct snd_kcontrol *kcontrol,
 				 struct snd_ctl_elem_value *ucontrol)
 {
+#if 0
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_dapm_context *dapm = snd_soc_component_get_dapm(component);
+#else
 	struct snd_soc_dapm_context *dapm = snd_soc_dapm_kcontrol_dapm(kcontrol);
 	struct snd_soc_component *component = dapm->component;
+#endif
 	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
 	int reg = e->reg - OMAP_AESS_MUX(0), i, rval = 0;
@@ -271,8 +273,13 @@ static int aess_ul_mux_get_route(struct snd_kcontrol *kcontrol,
 static int aess_put_switch(struct snd_kcontrol *kcontrol,
 			   struct snd_ctl_elem_value *ucontrol)
 {
+#if 0
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_dapm_context *dapm = snd_soc_component_get_dapm(component);
+#else
 	struct snd_soc_dapm_context *dapm = snd_soc_dapm_kcontrol_dapm(kcontrol);
 	struct snd_soc_component *component = dapm->component;
+#endif
 	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
@@ -298,8 +305,7 @@ static int aess_put_switch(struct snd_kcontrol *kcontrol,
 static int aess_vol_put_mixer(struct snd_kcontrol *kcontrol,
 			      struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_dapm_context *dapm = snd_soc_dapm_kcontrol_dapm(kcontrol);
-	struct snd_soc_component *component = dapm->component;
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
 	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
@@ -313,8 +319,7 @@ static int aess_vol_put_mixer(struct snd_kcontrol *kcontrol,
 static int aess_vol_put_gain(struct snd_kcontrol *kcontrol,
 			     struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_dapm_context *dapm = snd_soc_dapm_kcontrol_dapm(kcontrol);
-	struct snd_soc_component *component = dapm->component;
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
 	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
@@ -330,8 +335,7 @@ static int aess_vol_put_gain(struct snd_kcontrol *kcontrol,
 static int aess_vol_get_mixer(struct snd_kcontrol *kcontrol,
 			      struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_dapm_context *dapm = snd_soc_dapm_kcontrol_dapm(kcontrol);
-	struct snd_soc_component *component = dapm->component;
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
 	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
@@ -346,8 +350,7 @@ static int aess_vol_get_mixer(struct snd_kcontrol *kcontrol,
 static int aess_vol_get_gain(struct snd_kcontrol *kcontrol,
 			     struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_dapm_context *dapm = snd_soc_dapm_kcontrol_dapm(kcontrol);
-	struct snd_soc_component *component = dapm->component;
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
 	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
@@ -472,8 +475,13 @@ int aess_mixer_set_equ_profile(struct omap_aess *aess, unsigned int id,
 static int aess_get_equalizer(struct snd_kcontrol *kcontrol,
 			      struct snd_ctl_elem_value *ucontrol)
 {
+#if 0
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_dapm_context *dapm = snd_soc_component_get_dapm(component);
+#else
 	struct snd_soc_dapm_context *dapm = snd_soc_dapm_kcontrol_dapm(kcontrol);
 	struct snd_soc_component *component = dapm->component;
+#endif
 	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 	struct soc_enum *eqc = (struct soc_enum *)kcontrol->private_value;
 
@@ -506,8 +514,13 @@ static int aess_get_equalizer(struct snd_kcontrol *kcontrol,
 static int aess_put_equalizer(struct snd_kcontrol *kcontrol,
 			      struct snd_ctl_elem_value *ucontrol)
 {
+#if 0
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_dapm_context *dapm = snd_soc_component_get_dapm(component);
+#else
 	struct snd_soc_dapm_context *dapm = snd_soc_dapm_kcontrol_dapm(kcontrol);
 	struct snd_soc_component *component = dapm->component;
+#endif
 	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 	struct soc_enum *eqc = (struct soc_enum *)kcontrol->private_value;
 	u16 val = ucontrol->value.enumerated.item[0];

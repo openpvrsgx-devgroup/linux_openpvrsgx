@@ -52,70 +52,68 @@ struct snd_soc_dai_driver {
 };
 #include <aess/omap-aess-priv.h>
 
-/* NOTE: DECLARE_TLV_DB_SCALE is historical in sound/tlv.h and should be replaced by UAPI */
+/* Media DL1 volume control from -120 to 30 dB in 1 dB steps */
+static SNDRV_CTL_TLVD_DECLARE_DB_SCALE(mm_dl1_tlv, -12000, 100, 3000);
 
 /* Media DL1 volume control from -120 to 30 dB in 1 dB steps */
-static DECLARE_TLV_DB_SCALE(mm_dl1_tlv, -12000, 100, 3000);
+static SNDRV_CTL_TLVD_DECLARE_DB_SCALE(tones_dl1_tlv, -12000, 100, 3000);
 
 /* Media DL1 volume control from -120 to 30 dB in 1 dB steps */
-static DECLARE_TLV_DB_SCALE(tones_dl1_tlv, -12000, 100, 3000);
+static SNDRV_CTL_TLVD_DECLARE_DB_SCALE(voice_dl1_tlv, -12000, 100, 3000);
 
 /* Media DL1 volume control from -120 to 30 dB in 1 dB steps */
-static DECLARE_TLV_DB_SCALE(voice_dl1_tlv, -12000, 100, 3000);
-
-/* Media DL1 volume control from -120 to 30 dB in 1 dB steps */
-static DECLARE_TLV_DB_SCALE(capture_dl1_tlv, -12000, 100, 3000);
+static SNDRV_CTL_TLVD_DECLARE_DB_SCALE(capture_dl1_tlv, -12000, 100, 3000);
 
 /* Media DL2 volume control from -120 to 30 dB in 1 dB steps */
-static DECLARE_TLV_DB_SCALE(mm_dl2_tlv, -12000, 100, 3000);
+static SNDRV_CTL_TLVD_DECLARE_DB_SCALE(mm_dl2_tlv, -12000, 100, 3000);
 
 /* Media DL2 volume control from -120 to 30 dB in 1 dB steps */
-static DECLARE_TLV_DB_SCALE(tones_dl2_tlv, -12000, 100, 3000);
+static SNDRV_CTL_TLVD_DECLARE_DB_SCALE(tones_dl2_tlv, -12000, 100, 3000);
 
 /* Media DL2 volume control from -120 to 30 dB in 1 dB steps */
-static DECLARE_TLV_DB_SCALE(voice_dl2_tlv, -12000, 100, 3000);
+static SNDRV_CTL_TLVD_DECLARE_DB_SCALE(voice_dl2_tlv, -12000, 100, 3000);
 
 /* Media DL2 volume control from -120 to 30 dB in 1 dB steps */
-static DECLARE_TLV_DB_SCALE(capture_dl2_tlv, -12000, 100, 3000);
+static SNDRV_CTL_TLVD_DECLARE_DB_SCALE(capture_dl2_tlv, -12000, 100, 3000);
 
 /* SDT volume control from -120 to 30 dB in 1 dB steps */
-static DECLARE_TLV_DB_SCALE(sdt_ul_tlv, -12000, 100, 3000);
+static SNDRV_CTL_TLVD_DECLARE_DB_SCALE(sdt_ul_tlv, -12000, 100, 3000);
 
 /* SDT volume control from -120 to 30 dB in 1 dB steps */
-static DECLARE_TLV_DB_SCALE(sdt_dl_tlv, -12000, 100, 3000);
+static SNDRV_CTL_TLVD_DECLARE_DB_SCALE(sdt_dl_tlv, -12000, 100, 3000);
 
 /* AUDUL volume control from -120 to 30 dB in 1 dB steps */
-static DECLARE_TLV_DB_SCALE(audul_mm_tlv, -12000, 100, 3000);
+static SNDRV_CTL_TLVD_DECLARE_DB_SCALE(audul_mm_tlv, -12000, 100, 3000);
 
 /* AUDUL volume control from -120 to 30 dB in 1 dB steps */
-static DECLARE_TLV_DB_SCALE(audul_tones_tlv, -12000, 100, 3000);
+static SNDRV_CTL_TLVD_DECLARE_DB_SCALE(audul_tones_tlv, -12000, 100, 3000);
 
 /* AUDUL volume control from -120 to 30 dB in 1 dB steps */
-static DECLARE_TLV_DB_SCALE(audul_vx_ul_tlv, -12000, 100, 3000);
+static SNDRV_CTL_TLVD_DECLARE_DB_SCALE(audul_vx_ul_tlv, -12000, 100, 3000);
 
 /* AUDUL volume control from -120 to 30 dB in 1 dB steps */
-static DECLARE_TLV_DB_SCALE(audul_vx_dl_tlv, -12000, 100, 3000);
+static SNDRV_CTL_TLVD_DECLARE_DB_SCALE(audul_vx_dl_tlv, -12000, 100, 3000);
 
 /* VXREC volume control from -120 to 30 dB in 1 dB steps */
-static DECLARE_TLV_DB_SCALE(vxrec_mm_dl_tlv, -12000, 100, 3000);
+static SNDRV_CTL_TLVD_DECLARE_DB_SCALE(vxrec_mm_dl_tlv, -12000, 100, 3000);
 
 /* VXREC volume control from -120 to 30 dB in 1 dB steps */
-static DECLARE_TLV_DB_SCALE(vxrec_tones_tlv, -12000, 100, 3000);
+static SNDRV_CTL_TLVD_DECLARE_DB_SCALE(vxrec_tones_tlv, -12000, 100, 3000);
 
 /* VXREC volume control from -120 to 30 dB in 1 dB steps */
-static DECLARE_TLV_DB_SCALE(vxrec_vx_dl_tlv, -12000, 100, 3000);
+static SNDRV_CTL_TLVD_DECLARE_DB_SCALE(vxrec_vx_dl_tlv, -12000, 100, 3000);
 
 /* VXREC volume control from -120 to 30 dB in 1 dB steps */
-static DECLARE_TLV_DB_SCALE(vxrec_vx_ul_tlv, -12000, 100, 3000);
+static SNDRV_CTL_TLVD_DECLARE_DB_SCALE(vxrec_vx_ul_tlv, -12000, 100, 3000);
 
 /* DMIC volume control from -120 to 30 dB in 1 dB steps */
-static DECLARE_TLV_DB_SCALE(dmic_tlv, -12000, 100, 3000);
+static SNDRV_CTL_TLVD_DECLARE_DB_SCALE(dmic_tlv, -12000, 100, 3000);
 
 /* BT UL volume control from -120 to 30 dB in 1 dB steps */
-static DECLARE_TLV_DB_SCALE(btul_tlv, -12000, 100, 3000);
+static SNDRV_CTL_TLVD_DECLARE_DB_SCALE(btul_tlv, -12000, 100, 3000);
 
 /* AMIC volume control from -120 to 30 dB in 1 dB steps */
-static DECLARE_TLV_DB_SCALE(amic_tlv, -12000, 100, 3000);
+static SNDRV_CTL_TLVD_DECLARE_DB_SCALE(amic_tlv, -12000, 100, 3000);
 
 static const char *route_ul_texts[] = {
 	"None", "DMic0L", "DMic0R", "DMic1L", "DMic1R", "DMic2L", "DMic2R",

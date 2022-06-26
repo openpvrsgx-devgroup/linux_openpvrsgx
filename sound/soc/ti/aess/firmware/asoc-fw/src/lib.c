@@ -151,7 +151,7 @@ static int import_tlv(struct soc_fw_priv *soc_fw,
 	tc->size = 0;
 	if (tlv && tlv->length) {
 		tc->size = tlv->length;
-		tc->type = tlv->numid;	// checkme /* SNDRV_CTL_TLVT_*, type of TLV */
+		tc->type = tlv->numid;
 		if (tc->size > ARRAY_SIZE(tc->data))
 			tc->size = ARRAY_SIZE(tc->data);
 		memcpy(tc->data, tlv, tlv->length*sizeof(tc->data[0]));
@@ -171,38 +171,35 @@ static int import_mixer(struct soc_fw_priv *soc_fw,
 fprintf(stdout, "%s name=%s\n", __func__, kcontrol->name);
 
 	memset(&mc, 0, sizeof(mc));
+	mc.size = sizeof(mc);
 
 	mc.hdr.size = sizeof(mc.hdr);
-
-// abhängig von kcontrol->type machen?
-// snd_soc_dapm_mux
-
-// oder SND_SOC_TPLG_CTL_ENUM?
-
-	mc.hdr.type = SND_SOC_TPLG_CTL_VOLSW;
+	mc.hdr.type = SND_SOC_TPLG_TYPE_MIXER;
 	strncpy(mc.hdr.name, (const char*)kcontrol->name, sizeof(mc.hdr.name));
 	mc.hdr.access = kcontrol->access;
 	mc.hdr.ops.get = kcontrol->get;
 	mc.hdr.ops.put = kcontrol->put;
-fprintf(stdout, "%s info=%d\n", __func__, kcontrol->info);
 	mc.hdr.ops.info = kcontrol->info;
+fprintf(stdout, "%s info=%d\n", __func__, kcontrol->info);
+
 	import_tlv(soc_fw, &mc.hdr.tlv, kcontrol);
 
-	mc.size = sizeof(mc);
-	mc.min = mixer->min;
-	mc.max = mixer->max;
-	mc.platform_max = mixer->platform_max;
-	mc.invert = mixer->invert;
-
+// REVISTI: cpu_to_le32() where needed - see soc_tplg_dmixer_create()
 	mc.num_channels = 2;
 	mc.channel[0].size = sizeof(mc.channel[0]);
 	mc.channel[0].reg = mixer->reg;
 	mc.channel[0].shift = mixer->shift;
-	mc.channel[0].id = 0;
-	mc.channel[1].size = sizeof(mc.channel[0]);
+	mc.channel[0].id = SNDRV_CHMAP_FL;
+	mc.channel[1].size = sizeof(mc.channel[1]);
 	mc.channel[1].reg = mixer->rreg;
 	mc.channel[1].shift = mixer->rshift;
-	mc.channel[1].id = 1;
+	mc.channel[1].id = SNDRV_CHMAP_FR;
+
+	mc.min = mixer->min;
+	mc.max = mixer->max;
+	mc.platform_max = mixer->platform_max;
+	mc.invert = mixer->invert;
+	/* REVISIT: mc.autodisable = mixer->autodisable */
 
 	verbose(soc_fw," mixer: \"%s\" R1/2 0x%x/0x%x shift L/R %d/%d (g,p,i) %d:%d:%d\n",
 		mc.hdr.name, mc.channel[0].reg, mc.channel[1].reg, mc.channel[0].shift, mc.channel[1].shift,
@@ -283,16 +280,17 @@ static int import_enum_control(struct soc_fw_priv *soc_fw,
 
 fprintf(stdout, "%s\n", __func__);
 
-	memset(&ec, 0, sizeof(ec));
-
 	if (kcontrol->count >= ARRAY_SIZE(ec.texts)) {
 		fprintf(stderr, "error: too many enum values %d\n",
 			kcontrol->count);
 		return -EINVAL;
 	}
 
+	memset(&ec, 0, sizeof(ec));
+	ec.size = sizeof(ec);
+
 	ec.hdr.size = sizeof(ec.hdr);
-	ec.hdr.type = SND_SOC_TPLG_CTL_ENUM;
+	ec.hdr.type = SND_SOC_TPLG_TYPE_ENUM;
 	strncpy(ec.hdr.name, (const char*)kcontrol->name, sizeof(ec.hdr.name));
 	ec.hdr.access = kcontrol->access;
 	ec.hdr.ops.get = kcontrol->get;
@@ -301,16 +299,15 @@ fprintf(stdout, "%s\n", __func__);
 fprintf(stdout, "%s info=%d\n", __func__, kcontrol->info);
 	import_tlv(soc_fw, &ec.hdr.tlv, kcontrol);
 
-	ec.size = sizeof(ec);
 	ec.num_channels = 2;
 	ec.channel[0].size = sizeof(ec.channel[0]);
 	ec.channel[0].reg = menum->reg;
 	ec.channel[0].shift = menum->shift_l;
-	ec.channel[0].id = 0;
+	ec.channel[0].id = SNDRV_CHMAP_FL;
 	ec.channel[1].size = sizeof(ec.channel[0]);
 	ec.channel[1].reg = menum->reg;	// same reg?
 	ec.channel[1].shift =  menum->shift_r;
-	ec.channel[1].id = 1;
+	ec.channel[1].id = SNDRV_CHMAP_FR;
 
 	ec.items = menum->max;
 	ec.mask = menum->mask;
@@ -672,8 +669,8 @@ fprintf(stdout, "%s:\n", __func__);
 fprintf(stdout, "%s: name=%s\n", __func__, widgets[i].name);
 
 		memset(&widget, 0, sizeof(widget));
-
 		widget.size = sizeof(widget);
+
 		widget.id = unget_widget_id(widgets[i].id);
 		if(widget.id < 0)
 			return widget.id;

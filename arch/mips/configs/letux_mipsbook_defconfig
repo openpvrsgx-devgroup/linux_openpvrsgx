@@ -1,5 +1,5 @@
 #
-# Linux/mips 5.19.0-rc3 Kernel Configuration
+# Linux/mips 5.19.0-rc4 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="mipsel-linux-gnu-gcc (GCC) 6.3.0"
 CONFIG_CC_IS_GCC=y
@@ -4530,7 +4530,6 @@ CONFIG_EXTCON_ADC_JACK=m
 # CONFIG_EXTCON_USB_GPIO is not set
 # CONFIG_EXTCON_USBC_TUSB320 is not set
 CONFIG_MEMORY=y
-# CONFIG_OMAP_GPMC is not set
 CONFIG_JZ4780_NEMC=y
 CONFIG_IIO=y
 CONFIG_IIO_BUFFER=y
@@ -5572,6 +5571,7 @@ CONFIG_X509_CERTIFICATE_PARSER=y
 CONFIG_PKCS7_MESSAGE_PARSER=y
 # CONFIG_PKCS7_TEST_KEY is not set
 # CONFIG_SIGNED_PE_FILE_VERIFICATION is not set
+# CONFIG_FIPS_SIGNATURE_SELFTEST is not set
 
 #
 # Certificates for signature checking

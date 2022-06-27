@@ -1,5 +1,5 @@
 #
-# Linux/arm64 5.19.0-rc3 Kernel Configuration
+# Linux/arm64 5.19.0-rc4 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="aarch64-linux-gnu-gcc (GCC) 6.3.0"
 CONFIG_CC_IS_GCC=y
@@ -6389,7 +6389,6 @@ CONFIG_EXTCON_USBC_CROS_EC=y
 # CONFIG_EXTCON_USBC_TUSB320 is not set
 CONFIG_MEMORY=y
 # CONFIG_ARM_PL172_MPMC is not set
-# CONFIG_OMAP_GPMC is not set
 CONFIG_IIO=y
 CONFIG_IIO_BUFFER=y
 # CONFIG_IIO_BUFFER_CB is not set
@@ -7553,6 +7552,7 @@ CONFIG_X509_CERTIFICATE_PARSER=y
 CONFIG_PKCS7_MESSAGE_PARSER=y
 # CONFIG_PKCS7_TEST_KEY is not set
 # CONFIG_SIGNED_PE_FILE_VERIFICATION is not set
+# CONFIG_FIPS_SIGNATURE_SELFTEST is not set
 
 #
 # Certificates for signature checking

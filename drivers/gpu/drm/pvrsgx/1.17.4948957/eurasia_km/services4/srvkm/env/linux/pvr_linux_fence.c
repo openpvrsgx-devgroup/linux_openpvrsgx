@@ -538,8 +538,99 @@ static int update_dma_resv_fences_dst(struct pvr_fence_frame *pvr_fence_frame,
 	dma_resv_add_excl_fence(resv, fence_to_signal);
 	return update_reservation_return_value(ret, false);
 #else // (LINUX_VERSION_CODE < KERNEL_VERSION(5,19,0))
-#warning FIXME like in 548e7432dc2da475a18077b612e8d55b8ff51891
-	return -EINVAL;
+	struct dma_fence *fence_to_signal;
+	unsigned blocking_fence_count;
+	int ret;
+
+	struct dma_resv_iter cursor;
+	struct dma_fence *fence;
+
+	dma_resv_lock(resv, NULL);
+
+	fence_to_signal = create_fence_to_signal(pvr_fence_frame);
+	if (!fence_to_signal)
+	{
+		ret = -ENOMEM;
+		goto unlock;
+	}
+
+	if (!pvr_fence_frame->have_blocking_fences)
+	{
+		dma_resv_add_fence(resv, fence_to_signal, DMA_RESV_USAGE_WRITE);
+		dma_resv_unlock(resv);
+		return 0;
+	}
+
+	dma_resv_for_each_fence(&cursor, resv, DMA_RESV_USAGE_READ, fence) {
+		if (dma_resv_iter_usage(&cursor) == DMA_RESV_USAGE_READ)
+			break;
+
+		if (is_blocking_fence(fence, pvr_fence_frame))
+		{
+			if (allocate_blocking_fence_storage(pvr_fence_frame, 1))
+			{
+				ret = install_and_get_blocking_fence(pvr_fence_frame, 0, fence);
+			}
+			else
+			{
+				dma_fence_put(fence_to_signal);
+				ret = -ENOMEM;
+				goto unlock;
+			}
+		}
+		else
+		{
+			ret = 1;
+		}
+
+		dma_resv_add_fence(resv, fence_to_signal, DMA_RESV_USAGE_WRITE);
+		dma_resv_unlock(resv);
+		return update_reservation_return_value(ret, true);
+	}
+
+	dma_resv_for_each_fence(&cursor, resv, DMA_RESV_USAGE_READ, fence) {
+		if (dma_resv_iter_usage(&cursor) < DMA_RESV_USAGE_READ)
+			continue;
+
+		if (is_blocking_fence(fence, pvr_fence_frame))
+		{
+			blocking_fence_count++;
+		}
+	}
+
+	ret = 1;
+	if (blocking_fence_count)
+	{
+		if (allocate_blocking_fence_storage(pvr_fence_frame, blocking_fence_count))
+		{
+			dma_resv_for_each_fence(&cursor, resv, DMA_RESV_USAGE_READ, fence) {
+				if (dma_resv_iter_usage(&cursor) < DMA_RESV_USAGE_READ)
+					continue;
+
+				if (is_blocking_fence(fence, pvr_fence_frame))
+				{
+					if (!install_and_get_blocking_fence(pvr_fence_frame, cursor.index, fence))
+					{
+						ret = 0;
+					}
+				}
+			}
+		}
+		else
+		{
+			dma_fence_put(fence_to_signal);
+			ret = -ENOMEM;
+			goto unlock;
+		}
+	}
+
+	dma_resv_add_fence(resv, fence_to_signal, DMA_RESV_USAGE_WRITE);
+	dma_resv_unlock(resv);
+
+	return update_reservation_return_value(ret, false);
+unlock:
+	dma_resv_unlock(resv);
+	return ret;
 #endif
 }
 
@@ -671,8 +762,100 @@ static int update_dma_resv_fences_src(struct pvr_fence_frame *pvr_fence_frame,
 
 	return update_reservation_return_value(ret, !shared_fence_count);
 #else // (LINUX_VERSION_CODE < KERNEL_VERSION(5,19,0))
-#warning FIXME like in 548e7432dc2da475a18077b612e8d55b8ff51891
-	return -EINVAL;
+	struct dma_resv_iter cursor;
+	struct dma_fence *fence;
+	struct dma_fence *fence_to_signal = NULL;
+	struct dma_fence *blocking_fence = NULL;
+	bool reserve = true;
+	unsigned shared_fence_count;
+	int ret;
+
+	dma_resv_lock(resv, NULL);
+
+	if (!pvr_fence_frame->have_blocking_fences)
+	{
+		ret = dma_resv_reserve_fences(resv, 1);
+		if (ret)
+		{
+			goto unlock;
+		}
+
+		fence_to_signal = create_fence_to_signal(pvr_fence_frame);
+		if (!fence_to_signal)
+		{
+			ret = -ENOMEM;
+			goto unlock;
+		}
+
+		dma_resv_add_fence(resv, fence_to_signal, DMA_RESV_USAGE_READ);
+
+		ret = 0;
+		goto unlock;
+	}
+
+	shared_fence_count = 0;
+	dma_resv_for_each_fence(&cursor, resv, DMA_RESV_USAGE_READ, fence) {
+		if (dma_resv_iter_usage(&cursor) <= DMA_RESV_USAGE_WRITE)
+			continue;
+
+		shared_fence_count++;
+
+		if (is_pvr_fence(fence))
+		{
+			reserve = false;
+
+			if (is_blocking_fence(fence, pvr_fence_frame))
+			{
+				blocking_fence = fence;
+			}
+			break;
+		}
+	}
+
+	if (reserve)
+	{
+		ret = dma_resv_reserve_fences(resv, 1);
+		if (ret)
+		{
+			goto unlock;
+		}
+	}
+
+	fence_to_signal = create_fence_to_signal(pvr_fence_frame);
+	if (!fence_to_signal)
+	{
+		ret = -ENOMEM;
+		goto unlock;
+	}
+
+	ret = 1;
+	if (!blocking_fence && !shared_fence_count)
+	{
+		dma_resv_for_each_fence(&cursor, resv, DMA_RESV_USAGE_WRITE, fence) {
+			if (is_blocking_fence(fence, pvr_fence_frame))
+			{
+				if (allocate_blocking_fence_storage(pvr_fence_frame, 1))
+				{
+					ret = install_and_get_blocking_fence(pvr_fence_frame, 0, fence);
+				}
+				else
+				{
+					ret = -ENOMEM;
+					dma_fence_put(fence_to_signal);
+					goto unlock;
+				}
+				break;
+			}
+		}
+	}
+
+	dma_resv_add_fence(resv, fence_to_signal, DMA_RESV_USAGE_READ);
+	dma_resv_unlock(resv);
+
+	return update_reservation_return_value(ret, !shared_fence_count);
+unlock:
+	dma_resv_lock(resv, NULL);
+	return ret;
 #endif
 }
 
@@ -1090,8 +1273,47 @@ unlock_retry:
 	rcu_read_unlock();
 	goto retry;
 #else
-	// FIXME: there is no resv-seq any more since 8f94eda39952a8c7323bad2bf752bdfe78101b20
-	return true;
+	struct dma_resv_iter cursor;
+	struct dma_fence *fence;
+	bool blocking;
+
+	blocking = false;
+
+	rcu_read_lock();
+
+	if (is_dst)
+	{
+		dma_resv_iter_begin(&cursor, resv, DMA_RESV_USAGE_READ);
+		dma_resv_for_each_fence_unlocked(&cursor, fence) {
+			if (dma_resv_iter_usage(&cursor) <= DMA_RESV_USAGE_WRITE)
+				continue;
+
+			blocking = fence_is_blocking(fence, psSyncInfo);
+			if (blocking)
+				break;
+		}
+		dma_resv_iter_end(&cursor);
+	}
+
+	if (!blocking)
+	{
+		dma_resv_iter_begin(&cursor, resv, DMA_RESV_USAGE_READ);
+		dma_resv_for_each_fence_unlocked(&cursor, fence) {
+			if (dma_resv_iter_usage(&cursor) == DMA_RESV_USAGE_READ) {
+				break;
+			}
+
+			if (fence_is_blocking(fence, psSyncInfo)) {
+				blocking = true;
+				break;
+			}
+		}
+		dma_resv_iter_end(&cursor);
+	}
+
+	rcu_read_unlock();
+
+	return blocking;
 #endif
 }
 

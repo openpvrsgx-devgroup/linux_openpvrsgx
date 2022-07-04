@@ -1,5 +1,5 @@
 #
-# Linux/mips 5.19.0-rc4 Kernel Configuration
+# Linux/mips 5.19.0-rc5 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="mipsel-linux-gnu-gcc (GCC) 6.3.0"
 CONFIG_CC_IS_GCC=y
@@ -4363,6 +4363,7 @@ CONFIG_SYNC_FILE=y
 # CONFIG_VFIO is not set
 # CONFIG_VIRT_DRIVERS is not set
 CONFIG_VIRTIO_MENU=y
+# CONFIG_VIRTIO_HARDEN_NOTIFICATION is not set
 # CONFIG_VIRTIO_MMIO is not set
 # CONFIG_VDPA is not set
 CONFIG_VHOST_MENU=y

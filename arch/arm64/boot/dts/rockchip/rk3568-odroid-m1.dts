@@ -29,6 +29,25 @@
 		stdout-path = "serial2:1500000n8";
 	};
 
+	memory {
+		device_type = "memory";
+/* REVISIT: why are there multiple ranges with holes? */
+		reg = <0x00000000 0x00200000 0x00000000 0x01770000
+		       0x00000000 0x01a40000 0x00000000 0x069c0000
+		       0x00000000 0x09400000 0x00000000 0x00d00000
+		       0x00000000 0x0a121000 0x00000000 0x000df000
+		       0x00000000 0x0a51c000 0x00000000 0x763e4000
+		       0x00000000 0x80a00000 0x00000000 0x695e9000
+		       0x00000000 0xee28d000 0x00000000 0x00d6a000
+#if 0	// FIXME: this may be the 8GB memory range
+		       0x00000001 0xf0000000 0x00000000 0x0a600000
+		       0x00000001 0xfae00000 0x00000000 0x0015b000
+		       0x00000001 0xffe00000 0x00000000 0x000a5000
+		       0x00000001 0xfff5a000 0x00000000 0x00002000
+#endif
+		>;
+	};
+
 	dc_12v: dc-12v-regulator {
 		compatible = "regulator-fixed";
 		regulator-name = "dc_12v";

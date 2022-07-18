@@ -1,6 +1,6 @@
 #!/bin/bash
 
-[ "$(which sysbench)" ] || apt-get install sysbench
+[ "$(which sysbench)" ] || yes | apt-get install -y sysbench
 
 PROCESSORS=$(nproc --all)
 

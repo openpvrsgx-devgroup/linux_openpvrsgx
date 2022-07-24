@@ -1,9 +1,97 @@
 #!/bin/bash
 
-[ "$(which sysbench)" ] || yes | apt-get install -y sysbench
+PROCESSORS="$1"
+[ "$PROCESSORS" ] || PROCESSORS=$(nproc --all)
 
-PROCESSORS=$(nproc --all)
+cat >cpu-speed-core.c <<END
+#include <inttypes.h>
+#include <pthread.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/time.h>
+#include <time.h>
 
-uname -a
-echo sysbench --num-threads=$PROCESSORS --test=cpu --cpu-max-prime=1000 run
-sysbench --num-threads=$PROCESSORS --test=cpu --cpu-max-prime=1000 run
+#define LOOPS	5000
+#define MAXPRIME	1000
+
+unsigned total_primes = 0;
+int numthreads;
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+unsigned int primes[MAXPRIME/2*LOOPS];
+
+int calculate(int first)
+{
+	unsigned int candidate;
+	for(candidate=first; candidate < MAXPRIME; candidate+=2*numthreads)
+		{
+		unsigned divisor;
+// printf("try %d\n", candidate);
+		for(divisor=2; divisor < candidate; divisor++)
+			{
+			if(candidate % divisor == 0)
+				break;
+			}
+		if(divisor == candidate)
+			{ // no divisor found
+			pthread_mutex_lock(&mutex);
+// printf("found %d\n", candidate);
+			if (total_primes >= sizeof(primes)/sizeof(primes[0]))
+				{
+				fprintf(stderr, "increase size of primes[]\n");
+				exit(1);
+				}
+			primes[total_primes++]=candidate;
+			total_primes++;
+			pthread_mutex_unlock(&mutex);
+			}
+		}
+	return total_primes;
+}
+
+void *thread_function(void *arg)
+{
+	int num=(uintptr_t) arg;
+	int loop;
+// trim so that omap5/rk3568 needs ca. 2 - 10 seconds
+	for(loop=0; loop < LOOPS; loop++)
+		calculate(2*num+1);	// try 1 3 5 7...
+}
+
+int main(int argc, char *argv[])
+{
+	uintptr_t t;
+	pthread_t threads[16];
+	struct timeval start, end;
+	numthreads=argv[1] ? atoi(argv[1]) : 1;
+	printf("Number of threads: %u\n", numthreads);
+	printf("Prime numbers limit: %u\n", MAXPRIME);
+	gettimeofday(&start, NULL);
+	// run $1 threads in parallel
+	for(t=0; t < numthreads; t++)
+		{
+		int r;
+		r=pthread_create(&threads[t], NULL, thread_function, (void *) t);
+		}
+	for(t=0; t < numthreads; t++)
+		{
+		pthread_join(threads[t], NULL);
+		}
+	gettimeofday(&end, NULL);
+	if(start.tv_usec <= end.tv_usec)
+		end.tv_usec-=start.tv_usec;
+	else
+		{
+		end.tv_usec=end.tv_usec+1000000-start.tv_usec;
+		end.tv_sec-=1;
+		}
+	end.tv_sec-=start.tv_sec;
+	printf("execution time : %d.%06d\n", end.tv_sec, end.tv_usec);
+	exit(0);
+}
+END
+
+gcc -o cpu-speed-core cpu-speed-core.c -lpthread
+
+# uname -a
+./cpu-speed-core $PROCESSORS

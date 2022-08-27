@@ -4563,7 +4563,7 @@ static void pvr_dmac_clean_range(const void *pvStart, const void *pvEnd)
 
 static void pvr_flush_range(phys_addr_t pStart, phys_addr_t pEnd)
 {
-#if defined(__aarch64__)
+#if defined(__aarch64__) || (LINUX_VERSION_CODE >= KERNEL_VERSION(6,0,0))
 	struct device *dev = PVRLDMGetDevice();
 	dma_sync_single_for_device(dev, pStart, pEnd - pStart, DMA_TO_DEVICE);
 	dma_sync_single_for_cpu(dev, pStart, pEnd - pStart, DMA_FROM_DEVICE);
@@ -4575,7 +4575,7 @@ static void pvr_flush_range(phys_addr_t pStart, phys_addr_t pEnd)
 
 static void pvr_clean_range(phys_addr_t pStart, phys_addr_t pEnd)
 {
-#if defined(__aarch64__)
+#if defined(__aarch64__) || (LINUX_VERSION_CODE >= KERNEL_VERSION(6,0,0))
 	struct device *dev = PVRLDMGetDevice();
 	dma_sync_single_for_device(dev, pStart, pEnd - pStart, DMA_TO_DEVICE);
 #else
@@ -4586,7 +4586,7 @@ static void pvr_clean_range(phys_addr_t pStart, phys_addr_t pEnd)
 
 static void pvr_invalidate_range(phys_addr_t pStart, phys_addr_t pEnd)
 {
-#if defined(__aarch64__)
+#if defined(__aarch64__) || (LINUX_VERSION_CODE >= KERNEL_VERSION(6,0,0))
 	struct device *dev = PVRLDMGetDevice();
 	dma_sync_single_for_cpu(dev, pStart, pEnd - pStart, DMA_FROM_DEVICE);
 #else

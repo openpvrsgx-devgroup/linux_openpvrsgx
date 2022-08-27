@@ -1531,7 +1531,7 @@ static void eth_rxready(struct net_device *dev)
 			if (status & RD_TL)
 				np->ndev->stats.rx_length_errors++;
 		} else {
-			pkt_ptr = bus_to_virt(le32_to_cpu(np->rx_ring[np->rx_head].buf1_addr));
+			pkt_ptr = phys_to_virt(le32_to_cpu(np->rx_ring[np->rx_head].buf1_addr));
 			pkt_len = ((status & RD_FL) >> 16) - 4;
 
 			skb = dev_alloc_skb(pkt_len + 2);
@@ -1868,8 +1868,8 @@ static int jz4730_eth_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	np->dma_rx_ring = virt_to_bus(np->rx_ring);
-	np->dma_tx_ring = virt_to_bus(np->tx_ring);
+	np->dma_rx_ring = virt_to_phys(np->rx_ring);
+	np->dma_tx_ring = virt_to_phys(np->tx_ring);
 	np->full_duplex = 1;
 	np->link_state = 1;
 	INIT_DELAYED_WORK(&np->check_work, link_check_worker);

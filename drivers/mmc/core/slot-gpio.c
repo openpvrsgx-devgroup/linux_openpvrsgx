@@ -237,7 +237,7 @@ void mmc_gpio_free_rs(struct mmc_host *host)
 	gpio = desc_to_gpio(ctx->rs_gpio);
 	ctx->rs_gpio = NULL;
 
-	devm_gpio_free(&host->class_dev, gpio);
+	gpio_free(gpio);
 }
 EXPORT_SYMBOL(mmc_gpio_free_rs);
 

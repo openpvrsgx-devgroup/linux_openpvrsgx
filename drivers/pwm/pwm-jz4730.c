@@ -61,8 +61,11 @@ static void pwm_jz4730_update_reg(struct pwm_chip *chip, struct pwm_device *pwm,
 	regmap_update_bits(jzpc->map, offset + reg, affected, value);
 }
 
-static int jz4730_pwm_enable(struct pwm_chip *chip, struct pwm_device *pwm)
+static int jz4730_pwm_enable(struct pwm_chip *chip, struct pwm_device *pwm, enum pwm_polarity polarity)
 {
+	if (polarity != PWM_POLARITY_NORMAL)
+		return -EINVAL;
+
 	pwm_jz4730_update_reg(chip, pwm, JZ4730_PWM_REG_CTR,
 		JZ4730_PWM_CTR_EN, JZ4730_PWM_CTR_EN);
 	return 0;
@@ -163,9 +166,37 @@ static int jz4730_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 		JZ4730_PWM_CTR_PRESCALE, prescaler - 1);
 
 	if (is_enabled)
-		jz4730_pwm_enable(chip, pwm);
+		jz4730_pwm_enable(chip, pwm, PWM_POLARITY_NORMAL);
 
 	return 0;
+}
+
+static int jz4730_pwm_apply(struct pwm_chip *chip, struct pwm_device *pwm,
+			    const struct pwm_state *state)
+{
+	int err;
+	bool enabled = pwm->state.enabled;
+
+	if (state->polarity != pwm->state.polarity && pwm->state.enabled) {
+		jz4730_pwm_disable(chip, pwm);
+		enabled = false;
+	}
+
+	if (!state->enabled) {
+		if (enabled)
+			jz4730_pwm_disable(chip, pwm);
+
+		return 0;
+	}
+
+	err = jz4730_pwm_config(pwm->chip, pwm, state->duty_cycle, state->period);
+	if (err)
+		return err;
+
+	if (!enabled)
+		err = jz4730_pwm_enable(chip, pwm, state->polarity);
+
+	return err;
 }
 
 static const struct regmap_config ingenic_pwm_regmap_config = {
@@ -175,9 +206,7 @@ static const struct regmap_config ingenic_pwm_regmap_config = {
 };
 
 static const struct pwm_ops jz4730_pwm_ops = {
-	.config = jz4730_pwm_config,
-	.enable = jz4730_pwm_enable,
-	.disable = jz4730_pwm_disable,
+	.apply = jz4730_pwm_apply,
 	.owner = THIS_MODULE,
 };
 

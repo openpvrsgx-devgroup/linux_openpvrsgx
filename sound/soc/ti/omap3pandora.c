@@ -8,6 +8,7 @@
 #include <linux/clk.h>
 #include <linux/platform_device.h>
 #include <linux/gpio.h>
+#include <linux/gpio/consumer.h>
 #include <linux/delay.h>
 #include <linux/regulator/consumer.h>
 #include <linux/module.h>
@@ -23,10 +24,8 @@
 
 #include "omap-mcbsp.h"
 
-#define AMP_GPIO_NAME			  "amp-gpio"
-
 struct omap3pandora_sound {
-	int amp_gpio;
+	struct gpio_desc *amp_gpio;
 	struct regulator *amp_regulator;
 
 	struct snd_pcm_substream *playback_stream;
@@ -267,9 +266,9 @@ static int omap3pandora_hp_event(struct snd_soc_dapm_widget *w,
 			return ret;
 		}
 
-		gpio_set_value(ctx->amp_gpio, 1);
+		gpiod_set_value(ctx->amp_gpio, 1);
 	} else {
-		gpio_set_value(ctx->amp_gpio, 0);
+		gpiod_set_value(ctx->amp_gpio, 0);
 
 		ret = regulator_disable(ctx->amp_regulator);
 		if (ret) {
@@ -430,75 +429,40 @@ static int omap3pandora_probe(struct platform_device *pdev)
 {
 	int ret;
 	struct device *dev = &pdev->dev;
-	struct device_node *of_node = dev->of_node;
 	struct snd_soc_card *card = &snd_soc_card_omap3pandora;
 	struct omap3pandora_sound *ctx;
-	int amp_gpio;
-	struct regulator *reg;
-
-	if (!of_node) {
-		dev_err(dev, "No DT data present; cannot determine amplifier powerup GPIO\n");
-		return -EINVAL;
-	}
 
 	ctx = devm_kzalloc(dev, sizeof(*ctx), GFP_KERNEL);
 	if (!ctx) {
 		dev_dbg(dev, "cannot allocate space for runtime data\n");
 		return -ENOMEM;
 	}
-	ctx->amp_gpio = -1;
+
 	mutex_init(&ctx->sample_rate_lock);
 
-	ret = of_get_named_gpio(of_node, AMP_GPIO_NAME, 0);
-	if (ret < 0) {
-		dev_err(dev, "cannot find GPIO named " AMP_GPIO_NAME " in device tree\n");
-		goto fail;
-	}
-	amp_gpio = ret;
-
-	ret = gpio_request(amp_gpio, "amplifier power");
-	if (ret) {
-		dev_err(dev, "Failed to request amplifier powerup GPIO %d: %d\n",
-			ctx->amp_gpio, ret);
-		goto fail;
-	}
-	ctx->amp_gpio = amp_gpio;
-
-	ret = gpio_direction_output(ctx->amp_gpio, 0);
-	if (ret) {
-		dev_err(dev, "Failed to set amplifier powerup GPIO direction: %d\n",
-			ret);
-		goto fail;
+	ctx->amp_gpio = devm_gpiod_get(dev, "amp", GPIOD_OUT_LOW);
+	if (IS_ERR(ctx->amp_gpio)) {
+		dev_err(dev, "cannot find amplifier gpio");
+		return PTR_ERR(ctx->amp_gpio);
 	}
 
-	reg = regulator_get(dev, "amp");
-	if (IS_ERR(reg)) {
-		ret = PTR_ERR(reg);
+	ctx->amp_regulator = devm_regulator_get(dev, "amp");
+	if (IS_ERR(ctx->amp_regulator)) {
+		ret = PTR_ERR(ctx->amp_regulator);
 		dev_err(dev, "Failed to request regulator for amplifier power: %d\n", ret);
-		goto fail;
+		return PTR_ERR(ctx->amp_regulator);
 	}
-	ctx->amp_regulator = reg;
 
 	card->dev = dev;
 	ret = snd_soc_register_card(card);
 	if (ret) {
 		dev_err(dev, "Failed to register sound card: %d\n", ret);
-		goto fail;
+		return ret;
 	}
 
 	snd_soc_card_set_drvdata(card, ctx);
 
 	return 0;
-
-fail:
-	if (ctx) {
-		if (ctx->amp_gpio >= 0)
-			gpio_free(ctx->amp_gpio);
-		if (ctx->amp_regulator)
-			regulator_put(ctx->amp_regulator);
-	}
-
-	return ret;
 }
 
 static int omap3pandora_remove(struct platform_device *pdev)
@@ -507,12 +471,6 @@ static int omap3pandora_remove(struct platform_device *pdev)
 	struct omap3pandora_sound *ctx = snd_soc_card_get_drvdata(card);
 
 	snd_soc_unregister_card(card);
-
-	if (ctx->amp_gpio >= 0)
-		gpio_free(ctx->amp_gpio);
-
-	if (ctx->amp_regulator)
-		regulator_put(ctx->amp_regulator);
 
 	mutex_destroy(&ctx->sample_rate_lock);
 

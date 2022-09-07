@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: None
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/bindings/sound/pcm1773.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Texas Instruments pcm1773 DT bindings
+
+maintainers:
+  - tbd.
+
+description: |+
+  PCM1771 is a simple audio codec that can be enabled
+  through a gpio.
+
+properties:
+  compatible: ti,pcm1773
+
+examples:
+  - |
+    audio-codec {
+      compatible = "ti,pcm1773";
+      enable-gpios = <&gpio4 22 GPIO_ACTIVE_LOW>;
+    };
+
+...

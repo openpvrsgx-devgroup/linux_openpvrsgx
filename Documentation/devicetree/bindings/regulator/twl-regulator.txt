@@ -54,6 +54,18 @@ For twl4030 regulators/LDOs
   - "ti,twl4030-vusb1v5" for VUSB1V5 LDO
   - "ti,twl4030-vusb1v8" for VUSB1V8 LDO
   - "ti,twl4030-vusb3v1" for VUSB3V1 LDO
+  - "ti,twl4030-regen" for REGEN external regulator enable signal
+
+Reguired properties:
+For twl3040 REGEN signal:
+ - regulator-min-microvolt:
+  - Same meaning as in bindings/regulator/regulator.yaml, but must match
+    regulator-max-microvolt.
+ - regulator-max-microvolt:
+  - Same meaning as in bindings/regulator/regulator.yaml, but must match
+    regulator-min-microvolt.
+ - startup-delay-us:
+  - Same meaning as in bindings/regulator/fixed-regulator.yaml.
 
 Optional properties:
 - Any optional property defined in bindings/regulator/regulator.txt

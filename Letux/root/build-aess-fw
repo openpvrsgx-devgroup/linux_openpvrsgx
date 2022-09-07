@@ -8,7 +8,7 @@
 #
 
 THIS="$PWD"
-BRANCH=letux-$(uname -r | sed -e 's/-letux.*+//' -e 's/-rc[0-9]*//' -e 's/\([0-9]*\.[0-9]\)*\.0/\1/')
+BRANCH=letux-$(uname -r | sed -e 's/-letux.*+//' -e 's/\([0-9]*\.[0-9]\)*\.0/\1/')
 FALLBACK=letux-5.17
 case "$BRANCH" in
 	letux-[1-4].* | letux-5.[0-9] | letux-5.[0-9].* | letux-5.[0-9]-rc )

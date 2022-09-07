@@ -112,6 +112,20 @@
 		regulator-max-microvolt = <3000000>;
 	};
 
+	regen: regulator-regen {
+		compatible = "ti,twl4030-regen";
+		/*
+		 * Since REGEN is technically just a signal that actuates an
+		 * external regulator, we do not know what voltage it will
+		 * eventually have, or what it's on/off timing should be.
+		 * Therefore, disable it here; boards that use it can override
+		 * the status to "okay" once they have set the
+		 * regulator-{min,max}-microvolt and startup-delay-us
+		 * attributes.
+		 */
+		status = "disabled";
+	};
+
 	twl_gpio: gpio {
 		compatible = "ti,twl4030-gpio";
 		gpio-controller;

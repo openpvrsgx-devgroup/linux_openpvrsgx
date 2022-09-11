@@ -81,18 +81,21 @@
 		compatible = "ti,abe-twl6040";
 		ti,model = "PandaBoard";
 
-		ti,mclk-freq = <38400000>;
+		ti,jack-detection;
+		ti,mclk-freq = <38400000>;	// CHECKME: 19200000?
 
 		ti,mcpdm = <&mcpdm>;
+		ti,mcbsp1 = <&mcbsp1>;	/* bluetooth */
+		ti,mcbsp2 = <&mcbsp2>;	/* fm radio */
+		ti,mcbsp3 = <&mcbsp3>;	/* modem */
 
 		ti,twl6040 = <&twl6040>;
+		ti,aess = <&aess>;
 
 		/* Audio routing */
 		ti,audio-routing =
 			"Headset Stereophone", "HSOL",
 			"Headset Stereophone", "HSOR",
-			"Ext Spk", "HFL",
-			"Ext Spk", "HFR",
 			"Line Out", "AUXL",
 			"Line Out", "AUXR",
 			"HSMIC", "Headset Mic",
@@ -225,6 +228,10 @@
 			};
 		};
 	};
+};
+
+&aess {
+	status = "okay";
 };
 
 &omap4_pmx_core {

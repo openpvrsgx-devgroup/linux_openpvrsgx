@@ -561,6 +561,7 @@
 
 		ethernet: ethernet@1 {
 			compatible = "usb424,ec00";
+			mac-address = [ 3a 6e 63 0c 19 ce ];
 			reg = <1>;
 		};
 	};

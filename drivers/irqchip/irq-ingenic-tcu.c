@@ -38,7 +38,7 @@ static void ingenic_tcu_intc_cascade(struct irq_desc *desc)
 
 	chained_irq_enter(irq_chip, desc);
 
-	if(IS_ENABLED(CONFIG_JZ4780_CI20) && IS_ENABLED(CONFIG_SMP)) {
+	if(IS_ENABLED(CONFIG_MACH_JZ4780) && IS_ENABLED(CONFIG_SMP)) {
 		if (smp_processor_id())
 			irq_mask |= ingenic_tcu_intc_affinity[0];
 		else

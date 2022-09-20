@@ -80,7 +80,7 @@ static irqreturn_t ingenic_intc_cascade(int irq, void *data)
 		}
 	}
 
-	if(IS_ENABLED(CONFIG_JZ4780_CI20))
+	if(IS_ENABLED(CONFIG_MACH_JZ4780))
 		IF_ENABLED(CONFIG_SMP, jz4780_smp_switch_irqcpu(smp_processor_id()));
 
 	return IRQ_HANDLED;

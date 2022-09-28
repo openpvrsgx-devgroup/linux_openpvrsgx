@@ -14,9 +14,10 @@ set -o pipefail
 # Run the last element of a pipeline in the current shell.
 # Without this, the while-loop would be executed in a subshell, and
 # the changes made to 'symbol_types' and 'export_symbols' would be lost.
-shopt -s lastpipe
+#shopt -s lastpipe
 
-declare -A symbol_types
+# declare -A symbol_types
+symbol_types=""
 declare -a export_symbols
 
 exit_code=0
@@ -39,7 +40,7 @@ do
 	#
 	# case 1)
 	#   For undefined symbols, the first field (value) is empty.
-	#   The outout looks like this:
+	#   The output looks like this:
 	#     "                 U _printk"
 	#   It is unneeded to record undefined symbols.
 	#
@@ -51,7 +52,9 @@ do
 	fi
 
 	# save (name, type) in the associative array
-	symbol_types[${name}]=${type}
+	#symbol_types[${name}]=${type}
+	symbol_types="$symbol_types
+${name}=${type}"
 
 	# append the exported symbol to the array
 	if [[ ${name} == __ksymtab_* ]]; then
@@ -59,10 +62,14 @@ do
 	fi
 done
 
+# Catch error in the process substitution
+# wait $!
+
 for name in "${export_symbols[@]}"
 do
 	# nm(3) says "If lowercase, the symbol is usually local"
-	if [[ ${symbol_types[$name]} =~ [a-z] ]]; then
+#	if [[ ${symbol_types[$name]} =~ [a-z] ]]; then
+	if echo "symbol_types" | grep -q "$name="; then
 		echo "$@: error: local symbol '${name}' was exported" >&2
 		exit_code=1
 	fi

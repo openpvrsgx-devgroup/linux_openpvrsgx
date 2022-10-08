@@ -20,8 +20,7 @@ AM_CFLAGS = \
 	-D_SYS_STAT_H \
 	-D_LINUX_WAIT_H \
 	-D_LINUX_TIME_H \
-	-D__ASM_ARM_BYTEORDER_H \
-	-D__user=''
+	-D__ASM_ARM_BYTEORDER_H
 
 bin_PROGRAMS = socfw
 

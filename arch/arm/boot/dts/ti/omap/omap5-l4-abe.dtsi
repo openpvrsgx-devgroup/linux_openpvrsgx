@@ -446,6 +446,7 @@
 
 			aess: aess {
 				compatible = "ti,omap4-aess";
+				status = "disabled";
 				reg = <0 0xfff>, /* MPU private access */
 				      <0x80000 0xffff>, /* DMEM - MPU */
 				      <0xa0000 0xffff>, /* CMEM - MPU */

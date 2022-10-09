@@ -525,6 +525,10 @@
 	status = "okay";
 };
 
+&mcbsp2 {
+	status = "okay";
+};
+
 &twl_usb_comparator {
 	usb-supply = <&vusb>;
 };

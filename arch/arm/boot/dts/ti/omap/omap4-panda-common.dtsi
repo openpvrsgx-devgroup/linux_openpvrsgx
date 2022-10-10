@@ -469,6 +469,18 @@
 	clock-frequency = <400000>;
 };
 
+&mcspi2 {
+	status = "disabled";
+};
+
+&mcspi3 {
+	status = "disabled";
+};
+
+&mcspi4 {
+	status = "disabled";
+};
+
 &mmc1 {
 	vmmc-supply = <&vmmc>;
 	bus-width = <8>;

@@ -61,17 +61,31 @@ static const int32_t dmic_20kHz_m15db_coeffs[] = {
 };
 
 static const struct snd_soc_fw_coeff_elem elems[] = {
-	SND_SOC_FW_COEFF_ELEM("20kHz LPF 0dB", dmic_20kHz_0dB_coeffs),
-	SND_SOC_FW_COEFF_ELEM("20kHz LPF -12dB", dmic_20kHz_m12db_coeffs),
-	SND_SOC_FW_COEFF_ELEM("20kHz LPF -15dB", dmic_20kHz_m15db_coeffs),
+	SND_SOC_FW_COEFF_ELEM(dmic_20kHz_0dB_coeffs),
+	SND_SOC_FW_COEFF_ELEM(dmic_20kHz_m12db_coeffs),
+	SND_SOC_FW_COEFF_ELEM(dmic_20kHz_m15db_coeffs),
+};
+
+static const char * const texts[] = {
+	"20kHz LPF 0dB",
+	"20kHz LPF -12dB",
+	"20kHz LPF -15dB",
 };
 
 static const struct snd_soc_fw_coeff dmic[] = {
-	SND_SOC_FW_COEFFICIENT(OMAP_AESS_CMEM_96_48_DMIC_COEFS_ID,
-	 OMAP_CONTROL_EQU, "DMic Equalizer", elems),
+	SND_SOC_FW_COEFFICIENT(OMAP_AESS_CMEM_96_48_DMIC_COEFS_ID, OMAP_CONTROL_EQU,
+	"DMic Equalizer", elems),
+};
+
+static const struct snd_kcontrol_new controls[] = {
+	/* DMic equalizer control */
+	SND_SOC_ENUM_COEFFS("DMic Equalizer", OMAP_AESS_CMEM_96_48_DMIC_COEFS_ID,
+		OMAP_AESS_MIXER_EQU, OMAP_AESS_MIXER_EQU, texts),
 };
 
 const struct snd_soc_fw_plugin plugin = {
+	.kcontrols 	= controls,
+	.kcontrol_count	= ARRAY_SIZE(controls),
 	.coeffs 	= dmic,
 	.coeff_count	= ARRAY_SIZE(dmic),
 	.version	= 996000,

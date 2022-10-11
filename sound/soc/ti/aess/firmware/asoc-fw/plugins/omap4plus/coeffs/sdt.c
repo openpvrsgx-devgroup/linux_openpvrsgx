@@ -57,18 +57,33 @@ static const int32_t sdt_800Hz_m20db_coeffs[] = {
 };
 
 static const struct snd_soc_fw_coeff_elem elems[] = {
-	SND_SOC_FW_COEFF_ELEM("Flat Response", sdt_flat_coeffs),
-	SND_SOC_FW_COEFF_ELEM("800Hz HPF 0dB", sdt_800Hz_0db_coeffs),
-	SND_SOC_FW_COEFF_ELEM("800Hz HPF -12dB", sdt_800Hz_m12db_coeffs),
-	SND_SOC_FW_COEFF_ELEM("800Hz HPF -20dB", sdt_800Hz_m20db_coeffs),
+	SND_SOC_FW_COEFF_ELEM(sdt_flat_coeffs),
+	SND_SOC_FW_COEFF_ELEM(sdt_800Hz_0db_coeffs),
+	SND_SOC_FW_COEFF_ELEM(sdt_800Hz_m12db_coeffs),
+	SND_SOC_FW_COEFF_ELEM(sdt_800Hz_m20db_coeffs),
+};
+
+static const char * const texts[] = {
+	"Flat Response",
+	"800Hz HPF 0dB",
+	"800Hz HPF -12dB",
+	"800Hz HPF -20dB",
 };
 
 static const struct snd_soc_fw_coeff sdt[] = {
-	SND_SOC_FW_COEFFICIENT(OMAP_AESS_CMEM_SDT_COEFS_ID, 
-	 OMAP_CONTROL_EQU, "SDT Equalizer", elems),
+	SND_SOC_FW_COEFFICIENT(OMAP_AESS_CMEM_SDT_COEFS_ID, OMAP_CONTROL_EQU,
+	"SDT Equalizer", elems),
+};
+
+static const struct snd_kcontrol_new controls[] = {
+	/* DL2 left equalizer control */
+	SND_SOC_ENUM_COEFFS("SDT Equalizer", OMAP_AESS_CMEM_SDT_COEFS_ID,
+		OMAP_AESS_MIXER_EQU, OMAP_AESS_MIXER_EQU, texts),
 };
 
 const struct snd_soc_fw_plugin plugin = {
+	.kcontrols 	= controls,
+	.kcontrol_count	= ARRAY_SIZE(controls),
 	.coeffs 	= sdt,
 	.coeff_count	= ARRAY_SIZE(sdt),
 	.version	= 996000,

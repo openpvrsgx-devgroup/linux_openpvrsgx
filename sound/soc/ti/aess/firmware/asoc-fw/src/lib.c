@@ -120,27 +120,6 @@ static int write_header(struct soc_fw_priv *soc_fw, u32 type,
 	return 0;
 }
 
-#if 0	// OLD
-static int tlv_size(const struct snd_kcontrol_new *kcontrol)	// is this really variable any more?
-{
-	struct snd_ctl_tlv *tlv;
-	struct snd_soc_tplg_ctl_tlv tc;
-
-fprintf(stderr, "%s kcontrol=%p\n", __func__, kcontrol);
-
-	tlv = (struct snd_ctl_tlv *)kcontrol->tlv.p;
-	if (!tlv)
-		return 0;
-fprintf(stderr, "%s tlv=%p\n", __func__, tlv);
-fprintf(stderr, "%s length=%d\n", __func__, tlv->length);
-
-	if (tlv->length > sizeof(tc.data))
-		return -EINVAL;
-
-	return sizeof(struct snd_soc_tplg_ctl_tlv) + tlv->length;
-}
-#endif
-
 static int import_tlv(struct soc_fw_priv *soc_fw,
 	struct snd_soc_tplg_ctl_tlv *tc,
 	const struct snd_kcontrol_new *kcontrol)
@@ -215,42 +194,6 @@ fprintf(stdout, "%s info=%d\n", __func__, kcontrol->info);
 
 	return 0;
 }
-
-#if 0 // OLD	// we may need something similar to copy data to the existing snd_soc_tplg_ctl_hdr, but not with a write()
-static int import_tlv(struct soc_fw_priv *soc_fw,
-	const struct snd_kcontrol_new *kcontrol)
-{
-	struct snd_soc_tplg_ctl_tlv *fw_tlv;
-	struct snd_ctl_tlv *tlv;
-	size_t bytes, size;
-
-	if (!kcontrol->tlv.p)
-		return 0;
-
-	tlv = (struct snd_ctl_tlv *)kcontrol->tlv.p;
-	verbose(soc_fw, " tlv: type %d length %d\n", tlv->numid, tlv->length);
-	if (tlv->length > sizeof(fw_tlv->data))
-		return -EINVAL;
-
-	size = sizeof(*fw_tlv) - sizeof(fw_tlv->data) + tlv->length;
-	fw_tlv = calloc(1, size);
-	if (!fw_tlv)
-		return -ENOMEM;
-
-	fw_tlv->type = tlv->numid;
-	fw_tlv->size = tlv->length;
-	memcpy(fw_tlv->data, tlv->tlv, tlv->length);
-
-	bytes = write(soc_fw->out_fd, fw_tlv, size);
-	free(fw_tlv);
-	if (bytes != size) {
-		fprintf(stderr, "error: can't write mixer %lu\n", (long unsigned int)bytes);
-		return bytes;
-	}
-
-	return 0;
-}
-#endif
 
 static void import_enum_control_data(struct soc_fw_priv *soc_fw, int count,
 	struct snd_soc_tplg_enum_control *ec, struct soc_enum *menum)
@@ -396,20 +339,6 @@ fprintf(stdout, "%s: done\n", __func__);
 	return 0;
 }
 
-#if 0
-// here we would use the description...
-static void import_coeff_control_data(struct soc_fw_priv *soc_fw,
-	const struct snd_soc_fw_coeff *coeff,
-	struct  snd_soc_tplg_enum_control *ec)
-{
-	int i;
-
-	for (i = 0; i < coeff->count; i++)
-		strncpy(ec->texts[i], coeff->elems[i].description,
-			sizeof(ec->texts[0]));
-}
-#endif
-
 static int import_coeff_control(struct soc_fw_priv *soc_fw,
 	const struct snd_soc_fw_coeff *coeff)
 {
@@ -426,10 +355,6 @@ fprintf(stdout, "%s: 1 id=%d\n", __func__, coeff->id);
 	}
 
 	cd.id = coeff->id;
-
-#if 0	// .description is not stored in firmware - see snd_soc_file_coeff_data definition in omap-aess-priv.h
-	import_coeff_control_data(soc_fw, coeff, NULL);
-#endif
 
 fprintf(stdout, "%s: 2 count = %d size = %d id = %d\n", __func__, cd.count, cd.size, cd.id);
 

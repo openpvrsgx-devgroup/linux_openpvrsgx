@@ -40,8 +40,8 @@ typedef	int8_t s8;
  * Generic Coefficients with Kcontrols
  */
 
-#define SND_SOC_FW_COEFF_ELEM(text, c) \
-	{.description = text, \
+#define SND_SOC_FW_COEFF_ELEM(c) \
+	{ \
 	.coeffs = (const void*)c, \
 	.size = ARRAY_SIZE(c) * sizeof(c[0])}
 
@@ -53,7 +53,6 @@ typedef	int8_t s8;
 struct snd_soc_fw_coeff_elem {
 	const void *coeffs;		/* coefficient data */
 	u32 size;			/* coefficient data size bytes */
-	const char *description;	/* description e.g. "4kHz LPF 0dB" */
 };
 
 struct snd_soc_fw_coeff {
@@ -329,7 +328,7 @@ int ____ilog2_NaN(void);
 #define SOC_DOUBLE_EXT_TLV(xname, xreg, shift_left, shift_right, xmax, xinvert,	 xhandler_get, xhandler_put, tlv_array) {	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = (xname), 	.access = SNDRV_CTL_ELEM_ACCESS_TLV_READ | 		 SNDRV_CTL_ELEM_ACCESS_READWRITE, 	.tlv.p = (tlv_array), 	.info = snd_soc_info_volsw, .index = SOC_CONTROL_IO_EXT,	.get = xhandler_get, .put = xhandler_put, 	.private_value = SOC_DOUBLE_VALUE(xreg, shift_left, shift_right, 					  xmax, xinvert) }
 #define SOC_DOUBLE_R_EXT_TLV(xname, reg_left, reg_right, xshift, xmax, xinvert,	 xhandler_get, xhandler_put, tlv_array) {	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = (xname), 	.access = SNDRV_CTL_ELEM_ACCESS_TLV_READ | 		 SNDRV_CTL_ELEM_ACCESS_READWRITE, 	.tlv.p = (tlv_array), 	.info = snd_soc_info_volsw, .index = SOC_CONTROL_IO_EXT, 	.get = xhandler_get, .put = xhandler_put, 	.private_value = SOC_DOUBLE_R_VALUE(reg_left, reg_right, xshift, 					    xmax, xinvert) }
 #define SOC_SINGLE_BOOL_EXT(xname, xdata, xhandler_get, xhandler_put) {	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = xname, 	.info = snd_soc_info_bool_ext, .index = SOC_CONTROL_IO_BOOL_EXT, 	.get = xhandler_get, .put = xhandler_put, 	.private_value = xdata }
-#define SOC_ENUM_EXT(xname, xenum, xhandler_get, xhandler_put) {	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = xname, 	.info = snd_soc_info_enum_ext, .index = SOC_CONTROL_IO_ENUM_EXT, 	.get = xhandler_get, .put = xhandler_put, 	.private_value = (unsigned long)&xenum }
+#define SOC_ENUM_EXT(xname, xenum, xhandler_get, xhandler_put) {	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = xname, 	.info = snd_soc_info_enum_double, .index = SOC_CONTROL_IO_ENUM_EXT, 	.get = xhandler_get, .put = xhandler_put, 	.private_value = (unsigned long)&xenum }
 
 #define SND_SOC_BYTES(xname, xbase, xregs)		      {	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = xname,   	.info = snd_soc_bytes_info, .get = snd_soc_bytes_get, 	.index = SOC_CONTROL_IO_BYTES, 	.put = snd_soc_bytes_put, .private_value =	      		((unsigned long)&(struct soc_bytes)           		{.base = xbase, .num_regs = xregs }) }
 
@@ -338,6 +337,15 @@ int ____ilog2_NaN(void);
 #define SOC_SINGLE_XR_SX(xname, xregbase, xregcount, xnbits, 		xmin, xmax, xinvert) {	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = (xname), 	.info = snd_soc_info_xr_sx, .get = snd_soc_get_xr_sx, 	.put = snd_soc_put_xr_sx, 	.index = SOC_CONTROL_IO_VOLSW_XR_SX, 	.private_value = (unsigned long)&(struct soc_mreg_control) 		{.regbase = xregbase, .regcount = xregcount, .nbits = xnbits, 		.invert = xinvert, .min = xmin, .max = xmax} }
 
 #define SOC_SINGLE_STROBE(xname, xreg, xshift, xinvert) 	SOC_SINGLE_EXT(xname, xreg, xshift, 1, xinvert, 		snd_soc_get_strobe, snd_soc_put_strobe)
+#define SND_SOC_ENUM_COEFFS(xname, xreg, xhandler_get, xhandler_put, xtexts) \
+{	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = xname, \
+	.access = SNDRV_CTL_ELEM_ACCESS_TLV_READ |\
+		 SNDRV_CTL_ELEM_ACCESS_READWRITE,\
+	.info = snd_soc_info_enum_double, \
+	.get = xhandler_get, .put = xhandler_put, \
+	.private_value = (unsigned long)&(struct soc_enum) \
+		SOC_ENUM_SINGLE(xreg, 0, ARRAY_SIZE(xtexts), xtexts) }
+
 
 /*
  * Simplified versions of above macros, declaring a struct and calculating

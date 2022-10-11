@@ -822,6 +822,17 @@ static int omap_abe_add_legacy_dai_links(struct snd_soc_card *card)
 
 #if IS_ENABLED(CONFIG_SND_SOC_OMAP_AESS)
 
+static int snd_soc_card_new_dai_links(struct snd_soc_card *card,
+	struct snd_soc_dai_link *new, int count)
+{
+	int ret = 0;
+
+	while (count-- > 0 && ret >= 0)
+		ret = snd_soc_card_add_dai_link(card, new++);
+
+	return ret;
+}
+
 /* called after loading firmware */
 static int omap_abe_add_aess_dai_links(struct snd_soc_card *card)
 {
@@ -829,13 +840,14 @@ static int omap_abe_add_aess_dai_links(struct snd_soc_card *card)
 	struct device_node *node = card->dev->of_node;
 	struct device_node *aess_node;
 	struct device_node *dai_node;
+	int ret;
 
 	/* FIXME: add DAI links for AE */
 
 	aess_node = of_parse_phandle(node, "ti,aess", 0);
 
-// FIXME: cpu_of_node und platform_of_node unterscheiden!
-// cpu_of_node ist z.B. der ti,mcbsp1 und platform der ti,aess
+// FIXME: separate cpu_of_node and platform_of_node!
+// cpu_of_node is e.g. the ti,mcbsp1 and platform the ti,aess
 
 	ADD_DAILINKS(card, aess_node, abe_fe_dai);
 	ADD_DAILINKS(card, aess_node, abe_be_mcpdm_dai);
@@ -903,6 +915,7 @@ static int omap_abe_add_aess_dai_links(struct snd_soc_card *card)
 		abe_be_mcbsp2_dai.platform_name  = NULL;
 		abe_be_mcbsp2_dai.platform_of_node = aess_node;
 	}
+#endif
 
 	/* Add the ABE FEs */
 	ret = snd_soc_card_new_dai_links(card, abe_fe_dai,
@@ -926,14 +939,16 @@ static int omap_abe_add_aess_dai_links(struct snd_soc_card *card)
 	if (ret < 0)
 		return ret;
 	/* DMIC BEs */
-	if (card_data->has_dmic) {
+	if (of_parse_phandle(node, "ti,dmic", 0)) {
 		ret = snd_soc_card_new_dai_links(card, abe_be_dmic_dai,
 			ARRAY_SIZE(abe_be_dmic_dai));
 		if (ret < 0)
 			return ret;
 	}
 
-	ret = snd_soc_dapm_add_routes(dapm, aess_audio_map,
+#if MATERIAL
+// seems to have an uninitialized mutex?
+	ret = snd_soc_dapm_add_routes(&card->dapm, aess_audio_map,
 					ARRAY_SIZE(aess_audio_map));
 	if (ret < 0)
 		return ret;

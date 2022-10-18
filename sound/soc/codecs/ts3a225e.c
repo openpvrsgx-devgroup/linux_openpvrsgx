@@ -222,10 +222,10 @@ static int ts3a225_i2c_probe(struct i2c_client *client,
 	return ts3a225_probe(&client->dev, regmap, client->irq);
 }
 
-static int ts3a225_i2c_remove(struct i2c_client *client)
+static void ts3a225_i2c_remove(struct i2c_client *client)
 {
-	return 0;
-//	return ts3a225_remove(&client->dev);
+	return;
+//	ts3a225_remove(&client->dev);
 }
 
 static const struct i2c_device_id ts3a225_id[] = {

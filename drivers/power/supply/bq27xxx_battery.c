@@ -880,6 +880,7 @@ enum bq27xxx_dm_reg_id {
  * 27500, and perhaps not others as well
  */
 
+#if 0 /* not yet tested */
 static struct bq27xxx_dm_reg bq27500_dm_regs[] = {
 	[BQ27XXX_DM_DESIGN_CAPACITY]   = { 48, 10, 2,    0, 65535 },
 	[BQ27XXX_DM_DESIGN_ENERGY]     = {  0,  0, 0,    0, 65535 }, /* missing on chip */

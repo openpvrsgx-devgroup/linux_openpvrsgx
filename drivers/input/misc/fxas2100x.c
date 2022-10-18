@@ -593,14 +593,13 @@ err_regsiter_misc:
 err_out:
 	return result;
 }
-static int fxas2100x_remove(struct i2c_client *client)
+static void fxas2100x_remove(struct i2c_client *client)
 {
 	struct fxas2100x_data *pdata = i2c_get_clientdata(client);
 	fxas2100x_device_stop(client);
 	misc_deregister(&fxas2100x_device);
 	if(pdata != NULL)
 		kfree(pdata);
-	return 0;
 }
 
 #ifdef CONFIG_PM_SLEEP

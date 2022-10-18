@@ -134,18 +134,16 @@ static int minipc_mcu_probe(struct i2c_client *client,
 	return 0;
 }
 
-static int minipc_mcu_remove(struct i2c_client *client)
+static void minipc_mcu_remove(struct i2c_client *client)
 {
 	if (!mcu)
-		return 0;
+		return;
 	if (!minipc_battery_desc.use_for_apm)
 		power_supply_unregister(minipc_battery);
 	if (!minipc_psu_desc.use_for_apm)
 		power_supply_unregister(minipc_psu);
 	pm_power_off = NULL;
 	mcu = NULL;
-
-	return 0;
 }
 
 static const struct i2c_device_id minipc_mcu_id[] = {

@@ -892,17 +892,16 @@ err_out:
 	return result;
 }
 
-static int fxos8700_remove(struct i2c_client *client)
+static void fxos8700_remove(struct i2c_client *client)
 {
 	struct fxos8700_data *pdata =  i2c_get_clientdata(client);
 	if(!pdata)
-		return 0;
-    fxos8700_device_stop(client);
+		return;
+	fxos8700_device_stop(client);
 	fxos8700_unregister_sysfs_device(pdata);
 	misc_deregister(&fxos8700_acc_device);
 	misc_deregister(&fxos8700_mag_device);
-    kfree(pdata);		
-	return 0;
+	kfree(pdata);
 }
 
 #ifdef CONFIG_PM_SLEEP

@@ -490,14 +490,12 @@ static int pinephone_dsi_probe(struct mipi_dsi_device *dsi)
 	return mipi_dsi_attach(dsi);
 }
 
-static int pinephone_dsi_remove(struct mipi_dsi_device *dsi)
+static void pinephone_dsi_remove(struct mipi_dsi_device *dsi)
 {
 	struct pinephone *ctx = mipi_dsi_get_drvdata(dsi);
 
 	mipi_dsi_detach(dsi);
 	drm_panel_remove(&ctx->panel);
-
-	return 0;
 }
 
 static const struct of_device_id pinephone_of_match[] = {

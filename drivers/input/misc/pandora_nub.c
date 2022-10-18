@@ -755,7 +755,7 @@ err_idr:
 	return ret;
 }
 
-static int pandora_nub_remove(struct i2c_client *client)
+static void pandora_nub_remove(struct i2c_client *client)
 {
 	struct pandora_nub_drvdata *ddata;
 	char buff[32];
@@ -791,8 +791,6 @@ static int pandora_nub_remove(struct i2c_client *client)
 	gpio_free(ddata->irq_gpio);
 	regulator_put(ddata->reg);
 	kfree(ddata);
-
-	return 0;
 }
 
 #ifdef CONFIG_PM_SLEEP

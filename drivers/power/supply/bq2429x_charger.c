@@ -1869,13 +1869,12 @@ err_unreg_psy:
 	return ret;
 }
 
-static int bq2429x_charger_remove(struct i2c_client *client)
+static void bq2429x_charger_remove(struct i2c_client *client)
 {
 	struct bq2429x_device_info *di = i2c_get_clientdata(client);
 
 	device_remove_file(di->dev, &dev_attr_otg);
 	device_remove_file(di->dev, &dev_attr_registers);
-	return 0;
 }
 
 static const struct i2c_device_id bq2429x_charger_id[] = {

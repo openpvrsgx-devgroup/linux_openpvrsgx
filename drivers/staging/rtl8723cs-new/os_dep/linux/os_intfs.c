@@ -1450,7 +1450,7 @@ int rtw_os_ndev_register(_adapter *adapter, const char *name)
 
 
 #ifdef CONFIG_RTW_NAPI
-	netif_napi_add(ndev, &adapter->napi, rtw_recv_napi_poll, RTL_NAPI_WEIGHT);
+	netif_napi_add(ndev, &adapter->napi, rtw_recv_napi_poll);
 #endif /* CONFIG_RTW_NAPI */
 
 #if defined(CONFIG_IOCTL_CFG80211)

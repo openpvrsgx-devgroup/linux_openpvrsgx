@@ -1401,12 +1401,9 @@ exit:
 }
 
 static int cfg80211_rtw_add_key(struct wiphy *wiphy, struct net_device *ndev,
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 37)) || defined(COMPAT_KERNEL_RELEASE)
-	u8 key_index, bool pairwise, const u8 *mac_addr,
-#else	/* (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 37)) */
-	u8 key_index, const u8 *mac_addr,
-#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 37)) */
-	struct key_params *params)
+				int link_id,
+				u8 key_index, bool pairwise, const u8 *mac_addr,
+				struct key_params *params)
 {
 	char *alg_name;
 	u32 param_len;
@@ -1538,13 +1535,11 @@ addkey_end:
 }
 
 static int cfg80211_rtw_get_key(struct wiphy *wiphy, struct net_device *ndev,
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 37)) || defined(COMPAT_KERNEL_RELEASE)
-	u8 key_index, bool pairwise, const u8 *mac_addr,
-#else	/* (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 37)) */
-	u8 key_index, const u8 *mac_addr,
-#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 37)) */
-	void *cookie,
-	void (*callback)(void *cookie, struct key_params *))
+				int link_id,
+				u8 key_index, bool pairwise, const u8 *mac_addr,
+				void *cookie,
+				void (*callback)(void *cookie,
+						 struct key_params*))
 {
 #if 0
 	struct iwm_priv *iwm = ndev_to_iwm(ndev);
@@ -1570,11 +1565,8 @@ static int cfg80211_rtw_get_key(struct wiphy *wiphy, struct net_device *ndev,
 }
 
 static int cfg80211_rtw_del_key(struct wiphy *wiphy, struct net_device *ndev,
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 37)) || defined(COMPAT_KERNEL_RELEASE)
+				int link_id,
 				u8 key_index, bool pairwise, const u8 *mac_addr)
-#else	/* (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 37)) */
-				u8 key_index, const u8 *mac_addr)
-#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 37)) */
 {
 	_adapter *padapter = (_adapter *)rtw_netdev_priv(ndev);
 	struct security_priv *psecuritypriv = &padapter->securitypriv;
@@ -1590,11 +1582,8 @@ static int cfg80211_rtw_del_key(struct wiphy *wiphy, struct net_device *ndev,
 }
 
 static int cfg80211_rtw_set_default_key(struct wiphy *wiphy,
-	struct net_device *ndev, u8 key_index
-	#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 38)) || defined(COMPAT_KERNEL_RELEASE)
-	, bool unicast, bool multicast
-	#endif
-)
+	struct net_device *ndev, int link_id, u8 key_index,
+	bool unicast, bool multicast)
 {
 	_adapter *padapter = (_adapter *)rtw_netdev_priv(ndev);
 	struct security_priv *psecuritypriv = &padapter->securitypriv;

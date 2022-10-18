@@ -313,7 +313,7 @@ static void xbd599_shutdown(struct mipi_dsi_device *dsi)
 			      ret);
 }
 
-static int xbd599_remove(struct mipi_dsi_device *dsi)
+static void xbd599_remove(struct mipi_dsi_device *dsi)
 {
 	struct xbd599 *ctx = mipi_dsi_get_drvdata(dsi);
 	int ret;
@@ -326,8 +326,6 @@ static int xbd599_remove(struct mipi_dsi_device *dsi)
 			      ret);
 
 	drm_panel_remove(&ctx->panel);
-
-	return 0;
 }
 
 static const struct of_device_id xbd599_of_match[] = {

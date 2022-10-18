@@ -780,7 +780,7 @@ err_idr:
 	return ret;
 }
 
-static int as5013_remove(struct i2c_client *client)
+static void as5013_remove(struct i2c_client *client)
 {
 	struct as5013_drvdata *ddata;
 	char buff[32];
@@ -815,8 +815,6 @@ static int as5013_remove(struct i2c_client *client)
 	as5013_input_unregister(ddata);
 	gpio_free(ddata->irq_gpio);
 	kfree(ddata);
-
-	return 0;
 }
 
 #ifdef CONFIG_PM_SLEEP

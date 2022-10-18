@@ -775,7 +775,7 @@ err_dsi_attach:
 	return ret;
 }
 
-static int w677l_remove(struct mipi_dsi_device *dsi)
+static void w677l_remove(struct mipi_dsi_device *dsi)
 {
 	struct otm1283a *ctx = mipi_dsi_get_drvdata(dsi);
 
@@ -789,8 +789,6 @@ static int w677l_remove(struct mipi_dsi_device *dsi)
 #endif
 
 	w677l_reset(ctx, true);	/* activate reset */
-
-	return 0;
 }
 
 static const struct of_device_id w677l_of_match[] = {

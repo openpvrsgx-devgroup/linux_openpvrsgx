@@ -158,10 +158,11 @@ SND_SOC_DAILINK_DEFS(link_be_dmic,
 #define SND_SOC_DAI_IGNORE_PMDOWN .ignore_pmdown_time = 1
 #define SND_SOC_DAI_BE_LINK(_id, _fixup) \
 	.id = _id, .be_hw_params_fixup = _fixup, .no_pcm = 1
-#define SND_SOC_DAI_FE_LINK() \
-	.dynamic = 1 /* , .dpcm_capture = 1, .dpcm_playback = 1 */
+#define SND_SOC_DAI_FE_LINK(_name, _stream_name, _linkname) \
+	SND_SOC_DAI_CONNECT(_name, _stream_name, _linkname), \
+	.dynamic = 1
 #define SND_SOC_DAI_FE_TRIGGER(_play, _capture) \
-	.trigger = {_play, _capture}
+	.trigger = {_play, _capture }
 //#define SND_SOC_DAI_LINK_NO_HOST	.no_host_mode = 1
 
 static const struct snd_soc_ops omap_abe_dmic_ops;
@@ -209,47 +210,49 @@ static struct snd_soc_dai_link abe_fe_dai[] = {
  * Frontend DAIs - i.e. userspace visible interfaces (ALSA PCMs)
  */
 {
-	/* ABE Media Capture */
-	SND_SOC_DAI_CONNECT("OMAP ABE Media1", "Frontend", link_fe_media1),
-	SND_SOC_DAI_FE_LINK(),
+	/* ABE Media Playback/Capture */
+	SND_SOC_DAI_FE_LINK("OMAP ABE Media1", "Frontend", link_fe_media1),
 	SND_SOC_DAI_FE_TRIGGER(SND_SOC_DPCM_TRIGGER_BESPOKE, SND_SOC_DPCM_TRIGGER_BESPOKE),
 	SND_SOC_DAI_OPS(NULL, omap_abe_twl6040_fe_init),
 	SND_SOC_DAI_IGNORE_PMDOWN,
+	.dpcm_playback = 1,
+	.dpcm_capture = 1,
 },
 {
 	/* ABE Media Capture */
-	SND_SOC_DAI_CONNECT("OMAP ABE Media2", "Frontend", link_fe_media2),
-	SND_SOC_DAI_FE_LINK(),
+	SND_SOC_DAI_FE_LINK("OMAP ABE Media2", "Frontend", link_fe_media2),
 	SND_SOC_DAI_FE_TRIGGER(SND_SOC_DPCM_TRIGGER_BESPOKE, SND_SOC_DPCM_TRIGGER_BESPOKE),
 	SND_SOC_DAI_OPS(NULL, omap_abe_twl6040_fe_init),
-	SND_SOC_DAI_IGNORE_PMDOWN,
+	.dpcm_capture = 1,
 },
 {
 	/* ABE Voice */
-	SND_SOC_DAI_CONNECT("OMAP ABE Voice", "Frontend", link_fe_voice),
-	SND_SOC_DAI_FE_LINK(),
+	SND_SOC_DAI_FE_LINK("OMAP ABE Voice", "Frontend", link_fe_voice),
 	SND_SOC_DAI_FE_TRIGGER(SND_SOC_DPCM_TRIGGER_BESPOKE, SND_SOC_DPCM_TRIGGER_BESPOKE),
+	.dpcm_playback = 1,
+	.dpcm_capture = 1,
 },
 {
 	/* ABE Tones */
-	SND_SOC_DAI_CONNECT("OMAP ABE Tones", "Frontend", link_fe_tones),
-	SND_SOC_DAI_FE_LINK(),
+	SND_SOC_DAI_FE_LINK("OMAP ABE Tones", "Frontend", link_fe_tones),
 	SND_SOC_DAI_FE_TRIGGER(SND_SOC_DPCM_TRIGGER_BESPOKE, SND_SOC_DPCM_TRIGGER_BESPOKE),
+	.dpcm_playback = 1,
 },
 {
 	/* MODEM */
-	SND_SOC_DAI_CONNECT("OMAP ABE MODEM", "Frontend", link_fe_modem),
-	SND_SOC_DAI_FE_LINK(),
+	SND_SOC_DAI_FE_LINK("OMAP ABE MODEM", "Frontend", link_fe_modem),
 	SND_SOC_DAI_FE_TRIGGER(SND_SOC_DPCM_TRIGGER_BESPOKE, SND_SOC_DPCM_TRIGGER_BESPOKE),
 	SND_SOC_DAI_OPS(NULL, omap_abe_twl6040_fe_init),
 	SND_SOC_DAI_IGNORE_SUSPEND, SND_SOC_DAI_IGNORE_PMDOWN,
 //	SND_SOC_DAI_LINK_NO_HOST,
+	.dpcm_playback = 1,
+	.dpcm_capture = 1,
 },
 {
 	/* Low power ping - pong */
-	SND_SOC_DAI_CONNECT("OMAP ABE Media LP", "Frontend", link_fe_lp),
-	SND_SOC_DAI_FE_LINK(),
+	SND_SOC_DAI_FE_LINK("OMAP ABE Media LP", "Frontend", link_fe_lp),
 	SND_SOC_DAI_FE_TRIGGER(SND_SOC_DPCM_TRIGGER_BESPOKE, SND_SOC_DPCM_TRIGGER_BESPOKE),
+	.dpcm_playback = 1,
 },
 };
 
@@ -270,7 +273,7 @@ static struct snd_soc_dai_link abe_fe_dai[] = {
 #define OMAP_ABE_DAI_DMIC1			8
 #define OMAP_ABE_DAI_DMIC2			9
 
-/*these constants are not used? */
+/* these constants are not used? */
 #define OMAP_ABE_BE_PDM_DL1		"PDM-DL1"
 #define OMAP_ABE_BE_PDM_UL1		"PDM-UL1"
 #define OMAP_ABE_BE_PDM_DL2		"PDM-DL2"
@@ -293,6 +296,7 @@ static struct snd_soc_dai_link abe_be_mcpdm_dai[] = {
 	SND_SOC_DAI_BE_LINK(OMAP_ABE_DAI_PDM_DL1, omap_mcpdm_be_hw_params_fixup),
 	SND_SOC_DAI_OPS(&omap_abe_ops, NULL/*omap_abe_twl6040_init*/),
 	SND_SOC_DAI_IGNORE_SUSPEND, SND_SOC_DAI_IGNORE_PMDOWN,
+	.dpcm_playback = 1,
 },
 {
 	/* McPDM UL1 - Analog Capture (Headset) */
@@ -300,6 +304,7 @@ static struct snd_soc_dai_link abe_be_mcpdm_dai[] = {
 	SND_SOC_DAI_BE_LINK(OMAP_ABE_DAI_PDM_UL, omap_mcpdm_be_hw_params_fixup),
 	SND_SOC_DAI_OPS(&omap_abe_ops, NULL),
 	SND_SOC_DAI_IGNORE_SUSPEND, SND_SOC_DAI_IGNORE_PMDOWN,
+	.dpcm_capture = 1,
 },
 {
 	/* McPDM DL2 - Handsfree */
@@ -307,6 +312,7 @@ static struct snd_soc_dai_link abe_be_mcpdm_dai[] = {
 	SND_SOC_DAI_BE_LINK(OMAP_ABE_DAI_PDM_DL2, omap_mcpdm_be_hw_params_fixup),
 	SND_SOC_DAI_OPS(&omap_abe_ops, omap_abe_twl6040_dl2_init),
 	SND_SOC_DAI_IGNORE_SUSPEND, SND_SOC_DAI_IGNORE_PMDOWN,
+	.dpcm_playback = 1,
 },
 };
 
@@ -316,6 +322,8 @@ static struct snd_soc_dai_link abe_be_mcbsp1_dai = {
 	SND_SOC_DAI_BE_LINK(OMAP_ABE_DAI_BT_VX,	omap_mcbsp_be_hw_params_fixup),
 	SND_SOC_DAI_OPS(&omap_abe_mcbsp_ops, NULL),
 	SND_SOC_DAI_IGNORE_SUSPEND, SND_SOC_DAI_IGNORE_PMDOWN,
+	.dpcm_playback = 1,
+	.dpcm_capture = 1,
 };
 
 static struct snd_soc_dai_link abe_be_mcbsp2_dai = {
@@ -324,6 +332,8 @@ static struct snd_soc_dai_link abe_be_mcbsp2_dai = {
 	SND_SOC_DAI_BE_LINK(OMAP_ABE_DAI_MM_FM,	omap_mcbsp_be_hw_params_fixup),
 	SND_SOC_DAI_OPS(&omap_abe_mcbsp_ops, NULL),
 	SND_SOC_DAI_IGNORE_SUSPEND, SND_SOC_DAI_IGNORE_PMDOWN,
+	.dpcm_playback = 1,
+	.dpcm_capture = 1,
 };
 
 // mcbsp3...
@@ -336,18 +346,21 @@ static struct snd_soc_dai_link abe_be_dmic_dai[] = {
 	SND_SOC_DAI_CONNECT("DMIC-0", "Backend", link_be_dmic),
 	SND_SOC_DAI_BE_LINK(OMAP_ABE_DAI_DMIC0,	omap_dmic_be_hw_params_fixup),
 	SND_SOC_DAI_OPS(&omap_abe_dmic_ops, NULL),
+	.dpcm_capture = 1,
 },
 {
 	/* DMIC1 */
 	SND_SOC_DAI_CONNECT("DMIC-1", "Backend", link_be_dmic),
 	SND_SOC_DAI_BE_LINK(OMAP_ABE_DAI_DMIC1,	omap_dmic_be_hw_params_fixup),
 	SND_SOC_DAI_OPS(&omap_abe_dmic_ops, NULL),
+	.dpcm_capture = 1,
 },
 {
 	/* DMIC2 */
 	SND_SOC_DAI_CONNECT("DMIC-2", "Backend", link_be_dmic),
 	SND_SOC_DAI_BE_LINK(OMAP_ABE_DAI_DMIC2,	omap_dmic_be_hw_params_fixup),
 	SND_SOC_DAI_OPS(&omap_abe_dmic_ops, NULL),
+	.dpcm_capture = 1,
 },
 };
 

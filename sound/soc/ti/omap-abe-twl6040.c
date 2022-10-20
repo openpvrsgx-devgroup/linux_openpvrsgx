@@ -379,32 +379,6 @@ struct abe_twl6040 {
 	struct omap_aess	*aess;
 };
 
-/*
- * helper macro to fill the dynamic _card->dai_link array from
- * static array of struct snd_soc_dai_link and insert of_node
- */
-
-// can't we directly call ret = snd_soc_card_new_dai_links(_card, dai_link_array, ARRAY_SIZE(dai_link_array));
-// we assume single entries for cpus, codecs, platform etc.
-
-#define ADD_DAILINK(_card, _platform_of_node, _cpu_of_node, dai_link_single) { \
-	BUG_ON(_card->num_links >= TOTAL_DAI_LINKS); \
-	_card->dai_link[_card->num_links] = (dai_link_single); \
-	_card->dai_link[_card->num_links].cpus[0].of_node = (_cpu_of_node); \
-	_card->dai_link[_card->num_links].platforms[0].of_node = (_platform_of_node); \
-	_card->num_links++; \
-	}
-
-#define ADD_DAILINKS(_card, _of_node, dai_link_array) { \
-	int i; \
-	for (i = 0; i < ARRAY_SIZE(dai_link_array); i++, _card->num_links++) { \
-		BUG_ON(_card->num_links >= TOTAL_DAI_LINKS); \
-		_card->dai_link[_card->num_links] = (dai_link_array)[i]; \
-		_card->dai_link[_card->num_links].platforms[0].name = NULL; \
-		_card->dai_link[_card->num_links].platforms[0].of_node = (_of_node); \
-		} \
-	}
-
 static struct platform_device *dmic_codec_dev;
 static struct platform_device *spdif_codec_dev;
 
@@ -801,40 +775,6 @@ static int omap_abe_dmic_init(struct snd_soc_pcm_runtime *rtd)
 	return 0;
 }
 
-static int omap_abe_add_legacy_dai_links(struct snd_soc_card *card)
-{
-	struct abe_twl6040 *priv = snd_soc_card_get_drvdata(card);
-	struct device_node *node = card->dev->of_node;
-	struct device_node *dai_node;
-	int ret;
-
-	dai_node = of_parse_phandle(node, "ti,mcpdm", 0);
-	if (!dai_node) {
-		dev_err(card->dev, "McPDM node is not provided\n");
-		return -EINVAL;
-	}
-
-	ADD_DAILINK(card, dai_node, dai_node, legacy_mcpdm_dai);
-
-	dai_node = of_parse_phandle(node, "ti,dmic", 0);
-	if (dai_node)
-		ADD_DAILINK(card, dai_node, dai_node, legacy_dmic_dai);
-
-	/* Add the Legacy McBSP(2) */
-	dai_node = of_parse_phandle(node, "ti,mcbsp2", 0);
-	if (false && dai_node)
-		ADD_DAILINK(card, dai_node, dai_node, legacy_mcbsp_dai);
-
-	/* Add the Legacy McASP */
-	dai_node = of_parse_phandle(node, "ti,mcasp", 0);
-	if (false && dai_node)
-		ADD_DAILINK(card, dai_node, dai_node, legacy_mcasp_dai);
-
-	return 0;
-}
-
-#if IS_ENABLED(CONFIG_SND_SOC_OMAP_AESS)
-
 static int snd_soc_card_new_dai_links(struct snd_soc_card *card,
 	struct snd_soc_dai_link *new, int count)
 {
@@ -859,6 +799,94 @@ static int snd_soc_card_new_dai_links(struct snd_soc_card *card,
 	return 0;
 }
 
+/*
+ * helper macros to fill the dynamic _card->dai_link array from
+ * static array of struct snd_soc_dai_link and insert of_node
+ */
+
+static int snd_soc_card_new_dai_links_with_cpu_node(struct snd_soc_card *card,
+	struct snd_soc_dai_link *new, int count, struct device_node *cpu_of_node,
+	struct device_node *platform_of_node)
+{
+	int ret;
+	int i;
+
+	if (!cpu_of_node)
+		return 0;	/* ignore */
+
+	ret = snd_soc_card_new_dai_links(card, new, count);
+	if (ret < 0)
+		return ret;
+
+	for (i = 0; i < count; i++) {
+		card->dai_link[card->num_links-i-1].cpus[0].of_node = cpu_of_node;
+		card->dai_link[card->num_links-i-1].platforms[0].of_node = platform_of_node;
+	}
+
+	return 0;
+}
+
+static int snd_soc_card_new_dai_links_with_platform_node(struct snd_soc_card *card,
+	struct snd_soc_dai_link *new, int count, struct device_node *platform_of_node)
+{
+	int ret;
+	int i;
+
+	if (!platform_of_node)
+		return 0;	/* ignore */
+
+	ret = snd_soc_card_new_dai_links(card, new, count);
+	if (ret < 0)
+		return ret;
+
+	for (i = 0; i < count; i++) {
+		card->dai_link[card->num_links-i-1].platforms[0].name = NULL;
+		card->dai_link[card->num_links-i-1].platforms[0].of_node = platform_of_node;
+	}
+
+	return 0;
+}
+
+static int omap_abe_add_legacy_dai_links(struct snd_soc_card *card)
+{
+	struct abe_twl6040 *priv = snd_soc_card_get_drvdata(card);
+	struct device_node *node = card->dev->of_node;
+	struct device_node *dai_node;
+	int ret;
+
+	dai_node = of_parse_phandle(node, "ti,mcpdm", 0);
+	if (!dai_node) {
+		dev_err(card->dev, "McPDM node is not provided\n");
+		return -EINVAL;
+	}
+
+	/* Add the Legacy McPDM */
+	ret = snd_soc_card_new_dai_links_with_cpu_node(card, &legacy_mcpdm_dai, 1, dai_node, dai_node);
+	if (ret < 0)
+		return ret;
+
+	/* Add the Legacy McBSP(2) */
+	dai_node = of_parse_phandle(node, "ti,mcbsp2", 0);
+	ret = snd_soc_card_new_dai_links_with_cpu_node(card, &legacy_mcbsp_dai, 1, dai_node, dai_node);
+	if (ret < 0)
+		return ret;
+
+	/* Add the Legacy McASP */
+	dai_node = of_parse_phandle(node, "ti,mcasp", 0);
+	ret = snd_soc_card_new_dai_links_with_cpu_node(card, &legacy_mcasp_dai, 1, dai_node, dai_node);
+	if (ret < 0)
+		return ret;
+
+	/* Add the Legacy DMICs */
+	dai_node = of_parse_phandle(node, "ti,dmic", 0);
+	if (dai_node)
+		ret = snd_soc_card_new_dai_links_with_cpu_node(card, &legacy_dmic_dai, 1, dai_node, dai_node);
+
+	return 0;
+}
+
+#if IS_ENABLED(CONFIG_SND_SOC_OMAP_AESS)
+
 /* called after loading firmware */
 static int omap_abe_add_aess_dai_links(struct snd_soc_card *card)
 {
@@ -872,20 +900,28 @@ static int omap_abe_add_aess_dai_links(struct snd_soc_card *card)
 
 	aess_node = of_parse_phandle(node, "ti,aess", 0);
 
-// FIXME: separate cpu_of_node and platform_of_node!
-// cpu_of_node is e.g. the ti,mcbsp1 and platform the ti,aess
+	ret = snd_soc_card_new_dai_links_with_platform_node(card, abe_fe_dai, ARRAY_SIZE(abe_fe_dai), aess_node);
+	if (ret < 0)
+		return ret;
 
-	ADD_DAILINKS(card, aess_node, abe_fe_dai);
-	ADD_DAILINKS(card, aess_node, abe_be_mcpdm_dai);
+	ret = snd_soc_card_new_dai_links_with_platform_node(card, abe_be_mcpdm_dai, ARRAY_SIZE(abe_be_mcpdm_dai), aess_node);
+	if (ret < 0)
+		return ret;
+
 	dai_node = of_parse_phandle(node, "ti,mcbsp1", 0);
-	if (dai_node)
-		ADD_DAILINK(card, aess_node, dai_node, abe_be_mcbsp1_dai);
+	ret = snd_soc_card_new_dai_links_with_cpu_node(card, &legacy_mcasp_dai, 1, dai_node, aess_node);
+	if (ret < 0)
+		return ret;
+
 	dai_node = of_parse_phandle(node, "ti,mcbsp2", 0);
-	if (dai_node)
-		ADD_DAILINK(card, aess_node, dai_node, abe_be_mcbsp2_dai);
+	ret = snd_soc_card_new_dai_links_with_cpu_node(card, &legacy_mcasp_dai, 1, dai_node, aess_node);
+	if (ret < 0)
+		return ret;
+
 	dai_node = of_parse_phandle(node, "ti,dmic", 0);
-	if (dai_node)
-		ADD_DAILINKS(card, aess_node, abe_be_dmic_dai);
+	ret = snd_soc_card_new_dai_links_with_platform_node(card, abe_be_dmic_dai, ARRAY_SIZE(abe_be_dmic_dai), dai_node);
+	if (ret < 0)
+		return ret;
 
 #ifdef MATERIAL
 // CHECKME: https://git.ti.com/cgit/ti-linux-kernel/ti-linux-kernel/tree/sound/soc/omap/omap-abe-twl6040.c?id=41b605f2887879d5e428928b197e24ffb44d9b82#n693
@@ -941,7 +977,6 @@ static int omap_abe_add_aess_dai_links(struct snd_soc_card *card)
 		abe_be_mcbsp2_dai.platform_name  = NULL;
 		abe_be_mcbsp2_dai.platform_of_node = aess_node;
 	}
-#endif
 
 	/* Add the ABE FEs */
 	ret = snd_soc_card_new_dai_links(card, abe_fe_dai,
@@ -971,6 +1006,7 @@ static int omap_abe_add_aess_dai_links(struct snd_soc_card *card)
 		if (ret < 0)
 			return ret;
 	}
+#endif
 
 #if MATERIAL
 // seems to have an uninitialized mutex?

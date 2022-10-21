@@ -21,6 +21,7 @@ esac
 MONO=false
 HANDSFREE=yes
 CARD="$($SCRIPTPATH/findsoundcard -a | head -1)"
+DEV=0
 
 while [ "$1" ]
 do
@@ -28,6 +29,10 @@ do
         "-c" )
 		shift
 		CARD="$1"
+		;;
+        "-D" )
+		shift
+		DEV="$1"
 		;;
         "-d" )
 		DEMO=yes
@@ -78,6 +83,11 @@ then
 	exit
 fi
 
+echo CARD:$CARD DEV:$DEV NUM:$NUM
+AUDIOCARD="hw:CARD=$CARD"
+AUDIOCARDDEV="hw:CARD=$CARD,DEV=$DEV"
+export AUDIODEV="hw:$NUM,$DEV"
+
 # FIXME: make this all depend on presence of amixer controls
 # e.g.
 # root@letux:~# amixer scontrols
@@ -91,26 +101,26 @@ then
 
 echo "TWL6040 (Pandaboard, OMAP5432EVM, Pyra, ...)"
 
-amixer -c "$NUM" -q set "Aux FM" 0% || exit
-amixer -c "$NUM" -q set "Capture" 100% || exit
-amixer -c "$NUM" -q set "Capture Preamplifier" 100% || exit
-amixer -c "$NUM" -q set "AUXL" "off" || exit
-amixer -c "$NUM" -q set "AUXR" "off" || exit
-amixer -c "$NUM" -q set "Analog Left" "Main Mic" || exit
-amixer -c "$NUM" -q set "Analog Right" "Headset Mic" || exit
+amixer -D"$AUDIOCARD" -q set "Aux FM" 0% || exit
+amixer -D"$AUDIOCARD" -q set "Capture" 100% || exit
+amixer -D"$AUDIOCARD" -q set "Capture Preamplifier" 100% || exit
+amixer -D"$AUDIOCARD" -q set "AUXL" "off" || exit
+amixer -D"$AUDIOCARD" -q set "AUXR" "off" || exit
+amixer -D"$AUDIOCARD" -q set "Analog Left" "Main Mic" || exit
+amixer -D"$AUDIOCARD" -q set "Analog Right" "Headset Mic" || exit
 
 # set defaults if we have no volumed
-amixer -c "$NUM" -q set "Headset" 100% || exit
-amixer -c "$NUM" -q set "Earphone" 100% || exit
-amixer -c "$NUM" -q set "Handsfree" 100% || exit
+amixer -D"$AUDIOCARD" -q set "Headset" 100% || exit
+amixer -D"$AUDIOCARD" -q set "Earphone" 100% || exit
+amixer -D"$AUDIOCARD" -q set "Handsfree" 100% || exit
 
 if [ "$HANDSFREE" ] # handsfree on/off
 then
-	amixer -c "$NUM" -q set "Handsfree Left Playback" "HF DAC" || exit
-	amixer -c "$NUM" -q set "Handsfree Right Playback" "HF DAC" || exit
+	amixer -D"$AUDIOCARD" -q set "Handsfree Left Playback" "HF DAC" || exit
+	amixer -D"$AUDIOCARD" -q set "Handsfree Right Playback" "HF DAC" || exit
 else
-	amixer -c "$NUM" -q set "Handsfree Left Playback" "Off" || exit
-	amixer -c "$NUM" -q set "Handsfree Right Playback" "Off" || exit
+	amixer -D"$AUDIOCARD" -q set "Handsfree Left Playback" "Off" || exit
+	amixer -D"$AUDIOCARD" -q set "Handsfree Right Playback" "Off" || exit
 fi
 
 if [ "$HASVOLUMED" ] # start volumed
@@ -123,24 +133,24 @@ else
 fi
 fi
 
-amixer -c "$NUM" -q set "Headset Left Playback" "HS DAC" || exit
-amixer -c "$NUM" -q set "Headset Right Playback" "HS DAC" || exit
-amixer -c "$NUM" -q set "Analog Left" "Main Mic" || exit
+amixer -D"$AUDIOCARD" -q set "Headset Left Playback" "HS DAC" || exit
+amixer -D"$AUDIOCARD" -q set "Headset Right Playback" "HS DAC" || exit
+amixer -D"$AUDIOCARD" -q set "Analog Left" "Main Mic" || exit
 
 if [ "$LPMODE" ] # low power mode
 then
-	amixer -c "$NUM" -q set "Headset Power Mode" "Low-Power" || exit
-	amixer -c "$NUM" -q set "PLL Selection" "Low-Power" || exit
+	amixer -D"$AUDIOCARD" -q set "Headset Power Mode" "Low-Power" || exit
+	amixer -D"$AUDIOCARD" -q set "PLL Selection" "Low-Power" || exit
 else
-	amixer -c "$NUM" -q set "Headset Power Mode" "High-Performance" || exit
-	amixer -c "$NUM" -q set "PLL Selection" "High-Performance" || exit
+	amixer -D"$AUDIOCARD" -q set "Headset Power Mode" "High-Performance" || exit
+	amixer -D"$AUDIOCARD" -q set "PLL Selection" "High-Performance" || exit
 fi
 
-amixer -c "$NUM" -q set "Vibra Left Playback" "Input FF" || exit
-amixer -c "$NUM" -q set "Vibra Right Playback" "Input FF" || exit
+amixer -D"$AUDIOCARD" -q set "Vibra Left Playback" "Input FF" || exit
+amixer -D"$AUDIOCARD" -q set "Vibra Right Playback" "Input FF" || exit
 
-: amixer -c "$NUM" -q set "Vibra Left Playback" "Audio PDM" || exit
-: amixer -c "$NUM" -q set "Vibra Right Playback" "Audio PDM" || exit
+: amixer -D"$AUDIOCARD" -q set "Vibra Left Playback" "Audio PDM" || exit
+: amixer -D"$AUDIOCARD" -q set "Vibra Right Playback" "Audio PDM" || exit
 
 REMIX_MONO="remix 1 1 1 1"
 REMIX_STEREO="remix 1 2 1 2"
@@ -150,45 +160,45 @@ then
 
 echo "TWL4030 (GTA04, ...)"
 
-amixer -c "$NUM" -q set "AVADC Clock Priority" "HiFi high priority" || exit
-amixer -c "$NUM" -q set "DAC1 Analog" off || exit
-amixer -c "$NUM" -q set "DAC2 Analog" on || exit
-amixer -c "$NUM" -q set "DAC2 Analog" 5 || exit        # so that total gain is < 1
-amixer -c "$NUM" -q set "Codec Operation Mode" "Option 2 (voice/audio)" || exit
+amixer -D"$AUDIOCARD" -q set "AVADC Clock Priority" "HiFi high priority" || exit
+amixer -D"$AUDIOCARD" -q set "DAC1 Analog" off || exit
+amixer -D"$AUDIOCARD" -q set "DAC2 Analog" on || exit
+amixer -D"$AUDIOCARD" -q set "DAC2 Analog" 5 || exit        # so that total gain is < 1
+amixer -D"$AUDIOCARD" -q set "Codec Operation Mode" "Option 2 (voice/audio)" || exit
 
-amixer -c "$NUM" -q set "Earpiece" 100% || exit
-amixer -c "$NUM" -q set "Earpiece Mixer AudioL1" off || exit
-amixer -c "$NUM" -q set "Earpiece Mixer AudioL2" on || exit
-amixer -c "$NUM" -q set "Earpiece Mixer AudioR1" off || exit
-amixer -c "$NUM" -q set "Earpiece Mixer Voice" off || exit
+amixer -D"$AUDIOCARD" -q set "Earpiece" 100% || exit
+amixer -D"$AUDIOCARD" -q set "Earpiece Mixer AudioL1" off || exit
+amixer -D"$AUDIOCARD" -q set "Earpiece Mixer AudioL2" on || exit
+amixer -D"$AUDIOCARD" -q set "Earpiece Mixer AudioR1" off || exit
+amixer -D"$AUDIOCARD" -q set "Earpiece Mixer Voice" off || exit
 
-amixer -c "$NUM" -q set 'Headset' 2 || exit
-amixer -c "$NUM" -q set 'HeadsetL Mixer AudioL1' off || exit
-amixer -c "$NUM" -q set 'HeadsetL Mixer AudioL2' on || exit
-amixer -c "$NUM" -q set 'HeadsetL Mixer Voice' off || exit
-amixer -c "$NUM" -q set 'HeadsetR Mixer AudioR1' off || exit
-amixer -c "$NUM" -q set 'HeadsetR Mixer AudioR2' on || exit
-amixer -c "$NUM" -q set 'HeadsetR Mixer Voice' off || exit
+amixer -D"$AUDIOCARD" -q set 'Headset' 2 || exit
+amixer -D"$AUDIOCARD" -q set 'HeadsetL Mixer AudioL1' off || exit
+amixer -D"$AUDIOCARD" -q set 'HeadsetL Mixer AudioL2' on || exit
+amixer -D"$AUDIOCARD" -q set 'HeadsetL Mixer Voice' off || exit
+amixer -D"$AUDIOCARD" -q set 'HeadsetR Mixer AudioR1' off || exit
+amixer -D"$AUDIOCARD" -q set 'HeadsetR Mixer AudioR2' on || exit
+amixer -D"$AUDIOCARD" -q set 'HeadsetR Mixer Voice' off || exit
 
-amixer -c "$NUM" -q set "TX1" "Analog" || exit
-amixer -c "$NUM" -q set "TX1 Digital" 12 || exit
+amixer -D"$AUDIOCARD" -q set "TX1" "Analog" || exit
+amixer -D"$AUDIOCARD" -q set "TX1 Digital" 12 || exit
 
-amixer -c "$NUM" -q set "Analog Left AUXL" nocap || exit
-amixer -c "$NUM" -q set "Analog Right AUXR" nocap || exit
-amixer -c "$NUM" -q set "Analog Left Main Mic" cap || exit
-amixer -c "$NUM" -q set "Analog Left Headset Mic" nocap || exit
+amixer -D"$AUDIOCARD" -q set "Analog Left AUXL" nocap || exit
+amixer -D"$AUDIOCARD" -q set "Analog Right AUXR" nocap || exit
+amixer -D"$AUDIOCARD" -q set "Analog Left Main Mic" cap || exit
+amixer -D"$AUDIOCARD" -q set "Analog Left Headset Mic" nocap || exit
 
 if [ "$NOHANDSFREE" ] # handsfree on/off
 then
-amixer -c "$NUM" -q set HandsfreeL off || exit
-amixer -c "$NUM" -q set HandsfreeR off || exit
+amixer -D"$AUDIOCARD" -q set HandsfreeL off || exit
+amixer -D"$AUDIOCARD" -q set HandsfreeR off || exit
 else
-amixer -c "$NUM" -q set HandsfreeL on || exit
-amixer -c "$NUM" -q set HandsfreeR on || exit
+amixer -D"$AUDIOCARD" -q set HandsfreeL on || exit
+amixer -D"$AUDIOCARD" -q set HandsfreeR on || exit
 fi
-amixer -c "$NUM" -q set "Analog" 5 || exit
-amixer -c "$NUM" -q set "HandsfreeL Mux" AudioL2 || exit
-amixer -c "$NUM" -q set "HandsfreeR Mux" AudioR2 || exit
+amixer -D"$AUDIOCARD" -q set "Analog" 5 || exit
+amixer -D"$AUDIOCARD" -q set "HandsfreeL Mux" AudioL2 || exit
+amixer -D"$AUDIOCARD" -q set "HandsfreeR Mux" AudioR2 || exit
 
 REMIX_MONO=""
 REMIX_STEREO=""
@@ -210,17 +220,16 @@ fi
 
 if [ "$DEMO" ] # demo
 then
-	echo CARD: $CARD NUM: $NUM
 	echo "play default sounds (Front Center etc.)"
-	aplay -Ddefault:CARD=$CARD -q /usr/share/sounds/alsa/*.wav
+	aplay -D"$AUDIOCARDDEV" -q /usr/share/sounds/alsa/*.wav
 	echo "play chirp sound on all channels"
-	sox -c 4 -n -t wav - synth 10 sine 10-100 | aplay -Ddefault:CARD=$CARD
+	sox -c 4 -n -t wav - synth 10 sine 10-100 | aplay -D"$AUDIOCARDDEV"
 	echo "remix for Pandaboard/OMAP5 stereo"
-	AUDIODEV="hw:$NUM,0" play /usr/share/sounds/alsa/Front_Center.wav $REMIX_MONO
+	play /usr/share/sounds/alsa/Front_Center.wav $REMIX_MONO
 	if [ "$FILE" ]
 	then
 		echo play $FILE
-		AUDIODEV="hw:$NUM,0" play $FILE
+		play $FILE
 	fi
 	exit 0
 fi
@@ -232,7 +241,7 @@ if [ "$1" ]
 then
 	for FILE in "$@"
 	do
-		AUDIODEV="hw:$NUM,0" play ${FORMAT:+-t} ${FORMAT:+$FORMAT} -v 0.98 $FILE $REMIX
+		play ${FORMAT:+-t} ${FORMAT:+$FORMAT} -v 0.98 $FILE $REMIX
 	done
 fi
 exit 0

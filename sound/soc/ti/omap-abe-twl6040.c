@@ -786,7 +786,7 @@ static int snd_soc_card_new_dai_links(struct snd_soc_card *card,
 	if (!links)
 		return -ENOMEM;
 
-	if (card->dai_link) {
+	if (card->num_links > 0) {
 		memcpy(links, card->dai_link,
 			card->num_links * sizeof(struct snd_soc_dai_link));
 		devm_kfree(card->dev, card->dai_link);
@@ -871,11 +871,13 @@ static int omap_abe_add_legacy_dai_links(struct snd_soc_card *card)
 	if (ret < 0)
 		return ret;
 
+#if 0	// is already added somewhere?
 	/* Add the Legacy McASP */
 	dai_node = of_parse_phandle(node, "ti,mcasp", 0);
 	ret = snd_soc_card_new_dai_links_with_cpu_node(card, &legacy_mcasp_dai, 1, dai_node, dai_node);
 	if (ret < 0)
 		return ret;
+#endif
 
 	/* Add the Legacy DMICs */
 	dai_node = of_parse_phandle(node, "ti,dmic", 0);
@@ -909,12 +911,12 @@ static int omap_abe_add_aess_dai_links(struct snd_soc_card *card)
 		return ret;
 
 	dai_node = of_parse_phandle(node, "ti,mcbsp1", 0);
-	ret = snd_soc_card_new_dai_links_with_cpu_node(card, &legacy_mcasp_dai, 1, dai_node, aess_node);
+	ret = snd_soc_card_new_dai_links_with_platform_node(card, &abe_be_mcbsp1_dai, 1, aess_node);
 	if (ret < 0)
 		return ret;
 
 	dai_node = of_parse_phandle(node, "ti,mcbsp2", 0);
-	ret = snd_soc_card_new_dai_links_with_cpu_node(card, &legacy_mcasp_dai, 1, dai_node, aess_node);
+	ret = snd_soc_card_new_dai_links_with_platform_node(card, &abe_be_mcbsp2_dai, 1, aess_node);
 	if (ret < 0)
 		return ret;
 

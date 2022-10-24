@@ -81,7 +81,6 @@
 		compatible = "ti,abe-twl6040";
 		ti,model = "PandaBoard";
 
-		ti,jack-detection;
 		ti,mclk-freq = <38400000>;	// CHECKME: 19200000?
 
 		ti,mcpdm = <&mcpdm>;

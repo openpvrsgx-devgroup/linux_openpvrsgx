@@ -37,6 +37,10 @@ jobs:
         wget -nv ${KERNEL_URL}v${VERSION}/$ALL_DEB
         sudo dpkg --force-all -i *.deb
         echo "KVER=$(echo $ALL_DEB | cut -d '_' -f 2 | rev | cut -c14- | rev)-generic" >> $GITHUB_ENV
+    - name: Set up GCC
+      uses: egor-tensin/setup-gcc@v1
+      with:
+        version: 12
     - uses: actions/checkout@v2
     - name: build
-      run: make KVER=$KVER CONFIG_PLATFORM_I386_PC=y
+      run: make KVER=$KVER CONFIG_PLATFORM_I386_PC=y CC=cc

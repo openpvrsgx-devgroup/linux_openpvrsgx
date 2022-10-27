@@ -4,10 +4,10 @@ LD := $(CROSS_COMPILE)gcc
 
 CPPFLAGS := -D_GNU_SOURCE
 CFLAGS :=
-LDFLAGS :=
+LDFLAGS := -lc
 
 TARGET := pyra_vol_mon
-SRCS := pyra_vol.c iio_utils.c
+SRCS := pyra_vol.c iio_utils.c config.c iio_event.c
 OBJS := $(SRCS:.c=.o)
 
 $(TARGET): $(OBJS)

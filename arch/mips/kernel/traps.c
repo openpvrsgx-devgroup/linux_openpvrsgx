@@ -508,6 +508,12 @@ out:
 #define SC     0xe0000000
 #define SPEC0  0x00000000
 #define SPEC3  0x7c000000
+#define SPEC3_EXT    0x00
+#define SPEC3_INS    0x04
+#define SPEC3_BSHFL  0x20
+#define SPEC3_WSBH   0x02
+#define SPEC3_SEB    0x10
+#define SPEC3_SEH    0x18
 #define RD     0x0000f800
 #define FUNC   0x0000003f
 #define SYNC   0x0000000f
@@ -704,6 +710,101 @@ static int simulate_sync(struct pt_regs *regs, unsigned int opcode)
 	}
 
 	return -1;			/* Must be something else ... */
+}
+
+/*
+ * simulate MIPS R2 instructions on R1 used e.g. by Debian >= 9
+ */
+static int simulate_spec3(struct pt_regs *regs, unsigned int opcode)
+{
+	int lsb, msb, msbd;
+	int rs, rt, rd;
+	u32 mask, value;
+	int subop;
+
+	if ((opcode & OPCODE) != SPEC3)
+		return -1;
+
+	switch (opcode & FUNC) {
+	case SPEC3_EXT:
+		lsb = (opcode & GENMASK(10,6)) >> 6;
+		msbd = (opcode & RD) >> 11;
+		rt = (opcode & RT) >> 16;
+		rs = (opcode & BASE) >> 21;
+		mask = GENMASK(lsb+msbd, lsb);
+
+		perf_sw_event(PERF_COUNT_SW_EMULATION_FAULTS,
+			1, regs, 0);
+
+		regs->regs[rt] = (regs->regs[rs] & mask) >> lsb;
+
+		return 0;
+	case SPEC3_INS:
+		lsb = (opcode & GENMASK(10,6)) >> 6;
+		msb = (opcode & RD) >> 11;
+		rt = (opcode & RT) >> 16;
+		rs = (opcode & BASE) >> 21;
+		mask = GENMASK(msb, lsb);
+
+		perf_sw_event(PERF_COUNT_SW_EMULATION_FAULTS,
+			1, regs, 0);
+
+		value = regs->regs[rt] & ~mask;
+		value |= (regs->regs[rs] << lsb) & mask;
+		regs->regs[rt] = value;
+
+		return 0;
+	case SPEC3_BSHFL:
+		subop = (opcode & GENMASK(10,6)) >> 6;
+
+		switch (subop) {
+		case SPEC3_WSBH:
+			rd = (opcode & RD) >> 11;
+			rt = (opcode & RT) >> 16;
+
+			perf_sw_event(PERF_COUNT_SW_EMULATION_FAULTS,
+				1, regs, 0);
+
+			regs->regs[rt] = ((regs->regs[rd] << 8) & 0xff00ff00) |
+					 ((regs->regs[rd] >> 8) & 0x00ff00ff);
+
+			return 0;
+		case SPEC3_SEB:
+			rd = (opcode & RD) >> 11;
+			rt = (opcode & RT) >> 16;
+
+			perf_sw_event(PERF_COUNT_SW_EMULATION_FAULTS,
+				1, regs, 0);
+
+#if 1	// VARIANT 1
+			/* some compilers might emit another SEB instruction */
+			regs->regs[rt] = (s8) regs->regs[rd];
+#elif 0	// VARIANT 2
+			__asm__ __volatile__(
+				"sll     %0,%1,0x18\n"
+				"sra     %0,%0,0x18\n"
+				: "=r"(regs->regs[rt])
+				: "r"(regs->regs[rd])
+				);
+#else	// VARIANT 3
+			/*
+			 * define in a way that it is unlikely the kernel (cross)
+			 * compiler detects optimization into another SEB instruction
+			 */
+				value = regs->regs[rd];
+			regs->regs[rt] = (value & 0x80) ?
+							 (value | ~0x7f) :
+							 (value & 0xff);
+#endif
+
+			return 0;
+		case SPEC3_SEH:
+			break;
+		}
+	}
+
+	/* Not ours.  */
+	return -1;
 }
 
 /*
@@ -1202,6 +1303,9 @@ no_r2_instr:
 
 		if (!cpu_has_llsc && status < 0)
 			status = simulate_llsc(regs, opcode);
+
+		if (status < 0)
+			status = simulate_spec3(regs, opcode);
 
 		if (status < 0)
 			status = simulate_rdhwr_normal(regs, opcode);

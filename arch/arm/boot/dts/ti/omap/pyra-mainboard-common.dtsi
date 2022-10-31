@@ -114,6 +114,7 @@
 		charge-term-current-microamp = <128000>;
 	};
 
+#if 0
 	/* Bluetooth audio */
 	sound_bluetooth {
 		compatible = "simple-audio-card";
@@ -180,6 +181,7 @@
 		compatible = "gemalto,pls8";
 		#sound-dai-cells = <0>;
 	};
+#endif
 
 	user-buttons {
 		/* is bound to gpio1_wk7 by LC15 which we want to reassign */

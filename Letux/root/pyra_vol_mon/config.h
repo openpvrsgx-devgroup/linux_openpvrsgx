@@ -5,6 +5,7 @@ struct pyra_volume_config {
 	unsigned int	min;
 	unsigned int	max;
 	unsigned int	step;
+	const char*	executable;
 };
 
-int read_config_from_file(const char* filename, struct pyra_volume_config *cfg);
+int pyra_get_config(struct pyra_volume_config *cfg, int argc, char *argv[]);

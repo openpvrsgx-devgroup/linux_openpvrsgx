@@ -39,19 +39,13 @@ static int parse_number(const char* str)
 	return val;
 }
 
-int read_config_from_file(const char* filename, struct pyra_volume_config *cfg)
+int pyra_get_config(struct pyra_volume_config *cfg, int argc, char *argv[])
 {
-	int fd;
-	int res;
-
-	fd = open(filename, O_RDONLY);
-	if (fd < 0) {
-		perror(filename);
-		cfg->channel = DEFAULT_CHANNEL;
-		cfg->min = DEFAULT_MIN;
-		cfg->max = DEFAULT_MAX;
-		cfg->step = DEFAULT_STEP;
-	}
+	cfg->channel = DEFAULT_CHANNEL;
+	cfg->min = DEFAULT_MIN;
+	cfg->max = DEFAULT_MAX;
+	cfg->step = DEFAULT_STEP;
+	cfg->executable = argv[1];
 
 	return 0;
 }

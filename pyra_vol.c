@@ -106,7 +106,6 @@ static int execute_callback(const char* prog, int value)
 int main(int argc, char **argv)
 {
 	struct iio_event_data event;
-	const char *executable;
 	int ret;
 	int event_fd;
 	struct pyra_volume_config config;
@@ -117,9 +116,7 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	executable = argv[1];
-
-	ret = read_config_from_file("/etc/pyra_volume_monitor.conf", &config);
+	ret = pyra_get_config(&config, argc, argv);
 	if (ret < 0)
 		return ret;
 
@@ -155,7 +152,7 @@ int main(int argc, char **argv)
 
 		value = read_value_and_update_thresholds(&config, &iio_event_handle);
 		if (value >= 0)
-			execute_callback(executable, value);
+			execute_callback(config.executable, value);
 	}
 
 	if (close(event_fd) == -1)

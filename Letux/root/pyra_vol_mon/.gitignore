@@ -1,3 +1,4 @@
 *.o
 pyra_vol_mon
 tags
+.deps/

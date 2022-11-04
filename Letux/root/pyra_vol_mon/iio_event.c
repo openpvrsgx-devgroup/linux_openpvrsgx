@@ -13,6 +13,15 @@
 
 #define PYRA_DEVICE_NAME	"palmas-gpadc"
 
+struct pyra_iio_event_handle {
+	const char *dev_dir_name;
+	const char *input;
+	const char *upper_enable;
+	const char *upper_threshold;
+	const char *lower_enable;
+	const char *lower_threshold;
+};
+
 static int open_event_fd(int dev_num)
 {
 	int ret;
@@ -94,8 +103,9 @@ static int disable_threshold(const char* dev_dir_name,
 	return 0;
 }
 
-int pyra_iio_event_open(struct pyra_iio_event_handle* handle, int channel)
+int pyra_iio_event_open(struct pyra_iio_event_handle** handle, int channel)
 {
+	struct pyra_iio_event_handle* h;
 	const char* device_name = PYRA_DEVICE_NAME;
 	char* dev_dir_name = NULL;
 	char* input_file = NULL;
@@ -147,12 +157,21 @@ int pyra_iio_event_open(struct pyra_iio_event_handle* handle, int channel)
 	if (ret < 0)
 		goto error_free;
 
-	handle->dev_dir_name = dev_dir_name;
-	handle->input = input_file;
-	handle->upper_enable = upper_threshold_enable;
-	handle->upper_threshold = upper_threshold_value;
-	handle->lower_enable = lower_threshold_enable;
-	handle->lower_threshold = lower_threshold_value;
+
+	h = (struct pyra_iio_event_handle*)malloc(sizeof(*handle));
+	if (!h) {
+		ret = -ENOMEM;
+		goto error_free;
+	}
+
+	h->dev_dir_name = dev_dir_name;
+	h->input = input_file;
+	h->upper_enable = upper_threshold_enable;
+	h->upper_threshold = upper_threshold_value;
+	h->lower_enable = lower_threshold_enable;
+	h->lower_threshold = lower_threshold_value;
+
+	*handle = h;
 
 	return ret;
 error_free:
@@ -173,6 +192,7 @@ void pyra_iio_event_free(struct pyra_iio_event_handle* handle)
 	free((char*)handle->upper_enable);
 	free((char*)handle->input);
 	free((char*)handle->dev_dir_name);
+	free(handle);
 }
 
 int pyra_iio_get_value(struct pyra_iio_event_handle* handle)

@@ -103,7 +103,7 @@ int main(int argc, char **argv)
 	int ret;
 	int event_fd;
 	struct pyra_volume_config config;
-	struct pyra_iio_event_handle iio_event_handle;
+	struct pyra_iio_event_handle *iio_event_handle;
 
 	ret = pyra_get_config(&config, argc, argv);
 	if (ret < 0)
@@ -113,7 +113,7 @@ int main(int argc, char **argv)
 	if (event_fd < 0)
 		return event_fd;
 
-	ret = read_value_and_update_thresholds(&config, &iio_event_handle);
+	ret = read_value_and_update_thresholds(&config, iio_event_handle);
 	if (ret >= 0)
 		execute_callback(config.executable, ret);
 
@@ -141,7 +141,7 @@ int main(int argc, char **argv)
 		if (!event_is_ours(&event, config.channel))
 			continue;
 
-		value = read_value_and_update_thresholds(&config, &iio_event_handle);
+		value = read_value_and_update_thresholds(&config, iio_event_handle);
 		if (value >= 0)
 			execute_callback(config.executable, value);
 	}
@@ -149,7 +149,7 @@ int main(int argc, char **argv)
 	if (close(event_fd) == -1)
 		perror("Failed to close event file");
 
-	pyra_iio_event_free(&iio_event_handle);
+	pyra_iio_event_free(iio_event_handle);
 
 	return ret;
 }

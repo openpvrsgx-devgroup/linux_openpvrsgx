@@ -1,4 +1,4 @@
-CROSS_COMPILE ?= arm-linux-
+CROSS_COMPILE ?=
 CC := $(CROSS_COMPILE)gcc
 LD := $(CROSS_COMPILE)gcc
 
@@ -13,7 +13,7 @@ OBJS := $(SRCS:.c=.o)
 $(TARGET): $(OBJS)
 	$(LD) $(LDFLAGS) $^ -o $@
 
-%.o: %.c
+%.o: %.c Makefile
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c -o $@ $<
 
 .PHONY: clean

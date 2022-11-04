@@ -105,11 +105,6 @@ int main(int argc, char **argv)
 	struct pyra_volume_config config;
 	struct pyra_iio_event_handle iio_event_handle;
 
-	if (argc <= 1) {
-		fprintf(stderr, "Usage: %s <executable>\n", argv[0]);
-		return -1;
-	}
-
 	ret = pyra_get_config(&config, argc, argv);
 	if (ret < 0)
 		return ret;

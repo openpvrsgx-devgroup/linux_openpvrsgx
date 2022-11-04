@@ -108,7 +108,7 @@ int pyra_iio_event_open(struct pyra_iio_event_handle* handle, int channel)
 
 	dev_num = find_type_by_name(device_name, "iio:device");
 	if (dev_num < 0) {
-		printf("Could not find IIO device with name %s\n", device_name);
+		fprintf(stderr, "Could not find IIO device with name %s\n", device_name);
 		return -ENODEV;
 	}
 

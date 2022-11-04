@@ -791,15 +791,42 @@ static int simulate_spec3(struct pt_regs *regs, unsigned int opcode)
 			 * define in a way that it is unlikely the kernel (cross)
 			 * compiler detects optimization into another SEB instruction
 			 */
-				value = regs->regs[rd];
+			value = regs->regs[rd];
 			regs->regs[rt] = (value & 0x80) ?
-							 (value | ~0x7f) :
-							 (value & 0xff);
+							 (value | ~0x0000007f) :
+							 (value & 0x000000ff);
 #endif
 
 			return 0;
 		case SPEC3_SEH:
-			break;
+			rd = (opcode & RD) >> 11;
+			rt = (opcode & RT) >> 16;
+
+			perf_sw_event(PERF_COUNT_SW_EMULATION_FAULTS,
+				1, regs, 0);
+
+#if 1	// VARIANT 1
+			/* some compilers might emit another SEH instruction */
+			regs->regs[rt] = (s16) regs->regs[rd];
+#elif 0	// VARIANT 2
+			__asm__ __volatile__(
+				"sll     %0,%1,0x10\n"
+				"sra     %0,%0,0x10\n"
+				: "=r"(regs->regs[rt])
+				: "r"(regs->regs[rd])
+				);
+#else	// VARIANT 3
+			/*
+			 * define in a way that it is unlikely the kernel (cross)
+			 * compiler detects optimization into another SEB instruction
+			 */
+			value = regs->regs[rd];
+			regs->regs[rt] = (value & 0x8000) ?
+							 (value | ~0x00007fff) :
+							 (value & 0x0000ffff);
+#endif
+
+			return 0;
 		}
 	}
 

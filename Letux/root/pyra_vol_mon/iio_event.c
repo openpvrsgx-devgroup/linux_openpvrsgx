@@ -195,15 +195,15 @@ void pyra_iio_event_free(struct pyra_iio_event_handle* handle)
 	free(handle);
 }
 
-int pyra_iio_get_value(struct pyra_iio_event_handle* handle)
+int pyra_iio_get_value(const struct pyra_iio_event_handle* handle)
 {
-	struct pyra_iio_event_handle* iio = handle;
+	const struct pyra_iio_event_handle* iio = handle;
 	return read_sysfs_posint(iio->input, iio->dev_dir_name);
 }
 
-int pyra_iio_enable_upper_threshold(struct pyra_iio_event_handle* handle, int threshold)
+int pyra_iio_enable_upper_threshold(const struct pyra_iio_event_handle* handle, int threshold)
 {
-	struct pyra_iio_event_handle* iio = handle;
+	const struct pyra_iio_event_handle* iio = handle;
 
 	return enable_threshold(iio->dev_dir_name,
 				iio->upper_enable,
@@ -211,16 +211,16 @@ int pyra_iio_enable_upper_threshold(struct pyra_iio_event_handle* handle, int th
 				threshold);
 }
 
-int pyra_iio_disable_upper_threshold(struct pyra_iio_event_handle* handle)
+int pyra_iio_disable_upper_threshold(const struct pyra_iio_event_handle* handle)
 {
-	struct pyra_iio_event_handle* iio = handle;
+	const struct pyra_iio_event_handle* iio = handle;
 
 	return disable_threshold(iio->dev_dir_name, iio->upper_enable);
 }
 
-int pyra_iio_enable_lower_threshold(struct pyra_iio_event_handle* handle, int threshold)
+int pyra_iio_enable_lower_threshold(const struct pyra_iio_event_handle* handle, int threshold)
 {
-	struct pyra_iio_event_handle* iio = handle;
+	const struct pyra_iio_event_handle* iio = handle;
 
 	return enable_threshold(iio->dev_dir_name,
 				iio->lower_enable,
@@ -228,9 +228,9 @@ int pyra_iio_enable_lower_threshold(struct pyra_iio_event_handle* handle, int th
 				threshold);
 }
 
-int pyra_iio_disable_lower_threshold(struct pyra_iio_event_handle* handle)
+int pyra_iio_disable_lower_threshold(const struct pyra_iio_event_handle* handle)
 {
-	struct pyra_iio_event_handle* iio = handle;
+	const struct pyra_iio_event_handle* iio = handle;
 
 	return disable_threshold(iio->dev_dir_name, iio->lower_enable);
 }

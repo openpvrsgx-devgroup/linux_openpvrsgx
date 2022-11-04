@@ -4,8 +4,8 @@
 #include "pyra_vol_mon.h"
 
 int read_value_and_update_thresholds(
-		struct pyra_volume_config *config,
-		struct pyra_iio_event_handle *iio)
+		const struct pyra_volume_config *config,
+		const struct pyra_iio_event_handle *iio)
 {
 	int ret;
 	int value;

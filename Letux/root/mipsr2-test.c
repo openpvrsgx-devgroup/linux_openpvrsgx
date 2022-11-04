@@ -1,4 +1,4 @@
-// make mipsr2-test && ./mipsr2-test
+// gcc -o mipsr2-test -march=mips32r2 mipsr2-test.c && ./mipsr2-test
 
 #include <stdio.h>
 #include <stdlib.h>

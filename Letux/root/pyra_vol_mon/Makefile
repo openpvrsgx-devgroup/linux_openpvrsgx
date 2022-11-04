@@ -23,10 +23,21 @@ $(OBJDIR)/%.o: %.c $(DEPDIR)/%.d Makefile | $(OBJDIR) $(DEPDIR)
 
 $(OBJDIR) $(DEPDIR): ; @mkdir -p $@
 
-$(DEPFILES):
+DEPFILES += $(DEPDIR)/test.d
 
-.PHONY: clean
+$(OBJDIR)/test.o: tests/test.c $(DEPDIR)/test.d Makefile | $(OBJDIR) $(DEPDIR)
+	$(CC) -MT $@ -MMD -MP -MF $(DEPDIR)/test.d $(CFLAGS) $(CPPFLAGS) -g -I. -c -o $@ $<
+
+test.bin: $(addprefix $(OBJDIR)/,test.o pyra_vol_mon.o iio_event.o)
+	$(LD) $(LDFLAGS) $^ -o $@
+
+test: test.bin
+	./$<
+
+.PHONY: clean test
 clean:
 	rm -rf $(TARGET) $(OBJDIR) $(DEPDIR)
+
+$(DEPFILES):
 
 include $(wildcard $(DEPFILES))

@@ -7,7 +7,7 @@ CFLAGS :=
 LDFLAGS := -lc
 
 TARGET := pyra_vol_mon
-SRCS := pyra_vol.c iio_utils.c config.c iio_event.c
+SRCS := pyra_vol_mon.c iio_utils.c config.c iio_event.c main.c
 OBJS := $(SRCS:.c=.o)
 
 $(TARGET): $(OBJS)

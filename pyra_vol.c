@@ -8,7 +8,6 @@
 
 #include "config.h"
 #include "iio_event.h"
-#include "iio_utils.h"
 
 static bool event_is_ours(struct iio_event_data *event, int channel)
 {
@@ -37,7 +36,7 @@ static int read_value_and_update_thresholds(
 	int value;
 	int threshold;
 
-	ret = read_sysfs_posint(iio->input, iio->dev_dir_name);
+	ret = pyra_iio_get_value(iio);
 	if (ret < 0) {
 		fprintf(stderr, "Error reading current value: %d\n", ret);
 		return -EAGAIN;
@@ -46,41 +45,36 @@ static int read_value_and_update_thresholds(
 	value = ret;
 
 	/* update upper threshold */
-	ret = write_sysfs_int_and_verify(iio->upper_enable, iio->dev_dir_name, 0);
-	if (ret < 0)
-		fprintf(stderr, "Failed to disable upper threshold: %d\n", ret);
-
 	threshold = value + config->step;
 	if (threshold > config->max)
 		threshold = config->max;
 
 	if (threshold > value) {
-		ret = write_sysfs_int_and_verify(iio->upper_threshold, iio->dev_dir_name, threshold);
-		if (ret < 0)
-			fprintf(stderr, "Failed to write upper threshold: %d\n", ret);
-
-		ret = write_sysfs_int_and_verify(iio->upper_enable, iio->dev_dir_name, 1);
-		if (ret < 0)
+		ret = pyra_iio_enable_upper_threshold(iio, threshold);
+		if (ret)
 			fprintf(stderr, "Failed to enable upper threshold: %d\n", ret);
+	}
+	else {
+		ret = pyra_iio_disable_upper_threshold(iio);
+		if (ret < 0)
+			fprintf(stderr, "Failed to disable upper threshold: %d\n", ret);
 	}
 
 	/* update lower threshold */
-	ret = write_sysfs_int_and_verify(iio->lower_enable, iio->dev_dir_name, 0);
-	if (ret < 0)
-		fprintf(stderr, "Failed to disable lower threshold: %d\n", ret);
-
 	threshold = value - config->step;
 	if (threshold < (int)config->min)
 		threshold = config->min;
 
+	/* avoid enabling a threshold that's below the step value */
 	if (threshold < value && threshold > config->step) {
-		ret = write_sysfs_int_and_verify(iio->lower_threshold, iio->dev_dir_name, threshold);
-		if (ret < 0)
-			fprintf(stderr, "Failed to write lower threshold %d: %d\n", threshold, ret);
-
-		ret = write_sysfs_int_and_verify(iio->lower_enable, iio->dev_dir_name, 1);
+		ret = pyra_iio_enable_lower_threshold(iio, threshold);
 		if (ret < 0)
 			fprintf(stderr, "Failed to enable lower threshold: %d\n", ret);
+	}
+	else {
+		ret = pyra_iio_disable_lower_threshold(iio);
+		if (ret < 0)
+			fprintf(stderr, "Failed to disable lower threshold: %d\n", ret);
 	}
 
 	return value;

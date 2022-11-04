@@ -58,6 +58,42 @@ out_free:
 	return ret;
 }
 
+static int enable_threshold(const char* dev_dir_name,
+			    const char* enable,
+			    const char* threshold,
+			    const int value)
+{
+	int ret;
+
+	/* it's currently necessary to disable threshold before updating it. Future
+	* updates to the palmas_gpadc module might fix this. */
+	ret = write_sysfs_int_and_verify(enable, dev_dir_name, 0);
+	if (ret < 0)
+		return ret;
+
+	ret = write_sysfs_int_and_verify(threshold, dev_dir_name, value);
+	if (ret < 0)
+		return ret;
+
+	ret = write_sysfs_int_and_verify(enable, dev_dir_name, 1);
+	if (ret < 0)
+		return ret;
+
+	return 0;
+}
+
+static int disable_threshold(const char* dev_dir_name,
+			     const char* enable)
+{
+	int ret;
+
+	ret = write_sysfs_int_and_verify(enable, dev_dir_name, 0);
+	if (ret < 0)
+		return ret;
+
+	return 0;
+}
+
 int pyra_iio_event_open(struct pyra_iio_event_handle* handle, int channel)
 {
 	const char* device_name = PYRA_DEVICE_NAME;
@@ -137,4 +173,44 @@ void pyra_iio_event_free(struct pyra_iio_event_handle* handle)
 	free((char*)handle->upper_enable);
 	free((char*)handle->input);
 	free((char*)handle->dev_dir_name);
+}
+
+int pyra_iio_get_value(struct pyra_iio_event_handle* handle)
+{
+	struct pyra_iio_event_handle* iio = handle;
+	return read_sysfs_posint(iio->input, iio->dev_dir_name);
+}
+
+int pyra_iio_enable_upper_threshold(struct pyra_iio_event_handle* handle, int threshold)
+{
+	struct pyra_iio_event_handle* iio = handle;
+
+	return enable_threshold(iio->dev_dir_name,
+				iio->upper_enable,
+				iio->upper_threshold,
+				threshold);
+}
+
+int pyra_iio_disable_upper_threshold(struct pyra_iio_event_handle* handle)
+{
+	struct pyra_iio_event_handle* iio = handle;
+
+	return disable_threshold(iio->dev_dir_name, iio->upper_enable);
+}
+
+int pyra_iio_enable_lower_threshold(struct pyra_iio_event_handle* handle, int threshold)
+{
+	struct pyra_iio_event_handle* iio = handle;
+
+	return enable_threshold(iio->dev_dir_name,
+				iio->lower_enable,
+				iio->lower_threshold,
+				threshold);
+}
+
+int pyra_iio_disable_lower_threshold(struct pyra_iio_event_handle* handle)
+{
+	struct pyra_iio_event_handle* iio = handle;
+
+	return disable_threshold(iio->dev_dir_name, iio->lower_enable);
 }

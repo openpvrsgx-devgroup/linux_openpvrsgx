@@ -5,20 +5,21 @@
 #include <stdint.h>
 
 #define try3(func, result, msg) if((func) != (result)) printf("%s: %08x != %08x%s\n", #func, (func), (result), msg);
-#define try(func, result) try3(func, result, "");
+#define try(func, result) if((func) != (result)) printf("%s: %08x != %08x\n", #func, (func), (result));
 
-int32_t ext(uint32_t in, uint32_t lsb, uint32_t msb)
-{
-	int32_t out;
-
-	__asm__ __volatile__(
-      		"seb     %0,%1\n"
-		: "=r"(out)
-    		: "r"(in)
-     		);
-
-	return out;
-}
+#define extD(IN, LSB, MSBD) \
+({ \
+	int32_t out; \
+\
+	__asm__ __volatile__( \
+	"ext     %0,%1," #LSB "," #MSBD"\n" \
+		: "=r"(out) \
+		: "r"(IN) \
+		); \
+\
+	out; \
+})
+#define ext(IN, LSB, MSB) extD(IN, LSB, (MSB+1-LSB))
 
 void test_ext(void)
 {
@@ -27,23 +28,24 @@ void test_ext(void)
 	try(ext(0xdeadbeef, 0, 0), 0x1);
 	try(ext(0xdeadbeef, 4, 4), 0x0);
 	try(ext(0xdeadbeef, 8, 15), 0xbe);
-	try(ext(0xdeadbeef, 16, 21), 0xad);
-	try(ext(0xdeadbeef, 22, 31), 0xde);
-	try3(ext(0xdeadbeef, 22, 31), 0xde, " intentionally fail");
+	try(ext(0xdeadbeef, 16, 23), 0xad);
+	try(ext(0xdeadbeef, 24, 31), 0xde);
+	try3(ext(0xdeadbeef, 22, 31), 0xde, " intentionally fails");
 }
 
-int32_t ins(uint32_t in, uint32_t lsb, uint32_t msb, uint32_t value)
-{
-	int32_t out;
-
-	__asm__ __volatile__(
-      		"seb     %0,%1\n"
-		: "=r"(out)
-    		: "r"(in)
-     		);
-
-	return out;
-}
+#define insS(IN, LSB, SIZE, VALUE) \
+({ \
+	int32_t out = IN; \
+\
+	__asm__ __volatile__( \
+		"ins     %0,%1," #LSB "," #SIZE"\n" \
+		: "=r"(out) \
+		: "r"(VALUE) \
+		); \
+\
+	out; \
+})
+#define ins(IN, LSB, MSB, VALUE) insS(IN, LSB, (MSB+1-LSB), VALUE)
 
 void test_ins(void)
 {
@@ -54,7 +56,7 @@ void test_ins(void)
 	try(ins(0xdeadbeef, 0, 31, 0x5aa5a55a), 0x5aa5a55a);
 	try(ins(0xdeadbeef, 31, 31, 0x5aa5a55a), 0x3eadbeef);
 	try(ins(0xdeadbeef, 30, 30, 0xdeadbeef), 0xfeadbeef);
-	try3(ins(0xdeadbeef, 31, 31, 0x5aa5a55a), 0xdeadbeef, " intentionally fail");
+	try3(ins(0xdeadbeef, 31, 31, 0x5aa5a55a), 0xdeadbeef, " intentionally fails");
 }
 
 int32_t wsbh(uint32_t in)
@@ -62,7 +64,7 @@ int32_t wsbh(uint32_t in)
 	int32_t out;
 
 	__asm__ __volatile__(
-      		"wsbh     %0,%1\n"
+		"wsbh     %0,%1\n"
 		: "=r"(out)
     		: "r"(in)
      		);
@@ -77,7 +79,7 @@ void test_wsbh(void)
 	try(wsbh(0x55aa55aa), 0xaa55aa55);
 	try(wsbh(0x0000005a), 0x00005a00);
 	try(wsbh(0x00005a00), 0x0000005a);
-	try3(wsbh(0xff), 0xff, " intentionally fail");
+	try3(wsbh(0xff), 0xff, " intentionally fails");
 }
 
 int32_t seh(uint32_t in)
@@ -85,10 +87,10 @@ int32_t seh(uint32_t in)
 	int32_t out;
 
 	__asm__ __volatile__(
-      		"seh     %0,%1\n"
+		"seh     %0,%1\n"
 		: "=r"(out)
-    		: "r"(in)
-     		);
+		: "r"(in)
+		);
 
 	return out;
 }
@@ -109,7 +111,7 @@ void test_seh(void)
 	try(seh(0xffffff00), 0xffffff00);
 	try(seh(0x55aa55aa), 0x000055aa);
 	try(seh(0xa5a5a5a5), 0xffffa5a5);
-	try3(seh(0xffff), 0xffff, " intentionally fail");
+	try3(seh(0xffff), 0xffff, " intentionally fails");
 }
 
 int32_t seb(uint32_t in)
@@ -117,10 +119,10 @@ int32_t seb(uint32_t in)
 	int32_t out;
 
 	__asm__ __volatile__(
-      		"seb     %0,%1\n"
+		"seb     %0,%1\n"
 		: "=r"(out)
-    		: "r"(in)
-     		);
+		: "r"(in)
+		);
 
 	return out;
 }
@@ -135,7 +137,7 @@ void test_seb(void)
 	try(seb(0xff00), 0x00);
 	try(seb(0xffffff00), 0x00);
 	try(seb(0x55aa55aa), 0xffffffaa);
-	try3(seb(0xff), 0xff, " intentionally fail");
+	try3(seb(0xff), 0xff, " intentionally fails");
 }
 
 int main()

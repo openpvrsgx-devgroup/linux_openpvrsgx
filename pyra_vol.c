@@ -124,7 +124,9 @@ int main(int argc, char **argv)
 	if (event_fd < 0)
 		return event_fd;
 
-	read_value_and_update_thresholds(&config, &iio_event_handle);
+	ret = read_value_and_update_thresholds(&config, &iio_event_handle);
+	if (ret >= 0)
+		execute_callback(config.executable, ret);
 
 	while (true) {
 		int value;

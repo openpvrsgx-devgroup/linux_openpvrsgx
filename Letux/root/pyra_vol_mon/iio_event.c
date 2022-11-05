@@ -158,7 +158,7 @@ int pyra_iio_event_open(struct pyra_iio_event_handle** handle, int channel)
 		goto error_free;
 
 
-	h = (struct pyra_iio_event_handle*)malloc(sizeof(*handle));
+	h = (struct pyra_iio_event_handle*)malloc(sizeof(*h));
 	if (!h) {
 		ret = -ENOMEM;
 		goto error_free;

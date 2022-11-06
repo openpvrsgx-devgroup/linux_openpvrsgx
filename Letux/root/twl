@@ -4,19 +4,9 @@
 #
 
 SCRIPTPATH="$(dirname "$0")"
-trap "killall volumed 2>/dev/null" EXIT
 trap "exit 1" SIGHUP SIGINT SIGTERM
 
 [ -x /usr/bin/sox ] || apt-get install sox libsox-fmt-mp3
-
-case "$(tr -d '\0' </proc/device-tree/model)" in
-        Pyra-* | LC15-EVM* )    # only Pyra and LC15EVM have a potentiometer connected to the GPADC
-                HASVOLUMED=yes
-		;;
-        * )
-                HASVOLUMED=
-                ;;
-esac
 
 MONO=false
 HANDSFREE=yes
@@ -41,9 +31,6 @@ do
 		shift
 		FORMAT="$1";
 		;;
-        "-nv" )
-		VOLUMED=
-		;;
         "-lp" )
 		LPMODE=yes
 		;;
@@ -61,7 +48,6 @@ do
 		echo "-c dev	device"
 		echo "-d	demo"
 		echo "-m	file is mono (1 channel) or take first channel only"
-		echo "-nv	no volumed"
 		echo "-lp	low power mode"
 		echo "-nhf	keep handsfree off"
 		echo "-t fmt	define format"
@@ -121,16 +107,6 @@ then
 else
 	amixer -D"$AUDIOCARD" -q set "Handsfree Left Playback" "Off" || exit
 	amixer -D"$AUDIOCARD" -q set "Handsfree Right Playback" "Off" || exit
-fi
-
-if [ "$HASVOLUMED" ] # start volumed
-then
-if [ "$NOHANDSFREE" ]
-then
-	$SCRIPTPATH/volumed -c "$CARD" -q &
-else
-	$SCRIPTPATH/volumed -c "$CARD" -q -nhf &
-fi
 fi
 
 amixer -D"$AUDIOCARD" -q set "Headset Left Playback" "HS DAC" || exit

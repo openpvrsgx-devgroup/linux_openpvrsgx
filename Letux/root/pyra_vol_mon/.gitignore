@@ -1,5 +1,5 @@
 pyra_vol_mon
-test.bin
+test_*
 tags
 .deps/
 .objs/

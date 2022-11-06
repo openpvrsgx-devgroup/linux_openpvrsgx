@@ -29,7 +29,7 @@ define CREATE_TEST
   $(eval $(call CREATE_TEST_INTERNAL,$(1),$(2)))
 endef
 
-$(call CREATE_TEST,pyra_vol_mon,test.c pyra_vol_mon.c iio_event.c)
+$(call CREATE_TEST,threshold_handling,test_threshold_handling.c pyra_vol_mon.c iio_event.c)
 
 .PHONY: test $(TEST_TARGETS)
 test: $(TEST_TARGETS)

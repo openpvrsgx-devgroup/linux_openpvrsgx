@@ -59,38 +59,38 @@ static bool g_lower_enable;
 
 int read_sysfs_posint(const char *filename, const char *basedir)
 {
-    if (strcmp(basedir, g_iio.dev_dir_name))
-        return -1;
-    if (strcmp(filename, g_iio.input))
-        return -1;
-    return g_input_value;
+	if (strcmp(basedir, g_iio.dev_dir_name))
+		return -1;
+	if (strcmp(filename, g_iio.input))
+		return -1;
+	return g_input_value;
 }
 
 int write_sysfs_int_and_verify(const char *filename, const char *basedir, int val)
 {
-    if (strcmp(basedir, g_iio.dev_dir_name))
-        return -1;
+	if (strcmp(basedir, g_iio.dev_dir_name))
+		return -1;
 
-    if (!strcmp(filename, g_iio.input))
-	    return -1; // can't write to "input" file
-    else if (!strcmp(filename, g_iio.upper_enable)) {
-	    g_upper_enable = val;
-	    return val;
-    }
-    else if (!strcmp(filename, g_iio.upper_threshold)) {
-	    g_upper_threshold = val;
-	    return val;
-    }
-    else if (!strcmp(filename, g_iio.lower_enable)) {
-	    g_lower_enable = val;
-	    return val;
-    }
-    else if (!strcmp(filename, g_iio.lower_threshold)) {
-	    g_lower_threshold = val;
-	    return val;
-    }
+	if (!strcmp(filename, g_iio.input))
+		return -1; // can't write to "input" file
+	else if (!strcmp(filename, g_iio.upper_enable)) {
+		g_upper_enable = val;
+		return val;
+	}
+	else if (!strcmp(filename, g_iio.upper_threshold)) {
+		g_upper_threshold = val;
+		return val;
+	}
+	else if (!strcmp(filename, g_iio.lower_enable)) {
+		g_lower_enable = val;
+		return val;
+	}
+	else if (!strcmp(filename, g_iio.lower_threshold)) {
+		g_lower_threshold = val;
+		return val;
+	}
 
-    return -1;
+	return -1;
 }
 
 /*
@@ -98,7 +98,7 @@ int write_sysfs_int_and_verify(const char *filename, const char *basedir, int va
  */
 int find_type_by_name()
 {
-    return -1;
+	return -1;
 }
 
 /*
@@ -106,74 +106,74 @@ int find_type_by_name()
  */
 static int test_disable_lower_threshold(void)
 {
-    int ret;
+	int ret;
 
-    g_config.step = 10;
-    g_input_value = g_config.min = 10;
-    g_upper_enable = false;
-    g_upper_threshold = 0;
-    g_lower_enable = true;
+	g_config.step = 10;
+	g_input_value = g_config.min = 10;
+	g_upper_enable = false;
+	g_upper_threshold = 0;
+	g_lower_enable = true;
 
-    ret = read_value_and_update_thresholds(&g_config, &g_iio);
-    ASSERT(ret == g_input_value);
-    ASSERT(g_upper_enable);
-    ASSERT(g_upper_threshold == 20);
-    ASSERT(!g_lower_enable);
+	ret = read_value_and_update_thresholds(&g_config, &g_iio);
+	ASSERT(ret == g_input_value);
+	ASSERT(g_upper_enable);
+	ASSERT(g_upper_threshold == 20);
+	ASSERT(!g_lower_enable);
 
-    g_config.min = 0;
-    g_upper_enable = false;
-    g_upper_threshold = 0;
-    g_lower_enable = true;
-    g_input_value = g_config.step;
+	g_config.min = 0;
+	g_upper_enable = false;
+	g_upper_threshold = 0;
+	g_lower_enable = true;
+	g_input_value = g_config.step;
 
-    ret = read_value_and_update_thresholds(&g_config, &g_iio);
+	ret = read_value_and_update_thresholds(&g_config, &g_iio);
 
-    ASSERT(ret == g_input_value);
-    ASSERT(g_upper_enable);
-    ASSERT(g_upper_threshold == (g_input_value + g_config.step));
-    ASSERT(!g_lower_enable);
+	ASSERT(ret == g_input_value);
+	ASSERT(g_upper_enable);
+	ASSERT(g_upper_threshold == (g_input_value + g_config.step));
+	ASSERT(!g_lower_enable);
 
-    return 0;
+	return 0;
 }
 
 static int test_disable_upper_threshold(void)
 {
-    int ret;
+	int ret;
 
-    g_config.step = 10;
-    g_input_value = g_config.max = 500;
-    g_upper_enable = true;
-    g_lower_enable = false;
-    g_lower_threshold = 0;
+	g_config.step = 10;
+	g_input_value = g_config.max = 500;
+	g_upper_enable = true;
+	g_lower_enable = false;
+	g_lower_threshold = 0;
 
-    ret = read_value_and_update_thresholds(&g_config, &g_iio);
-    ASSERT(ret == g_input_value);
-    ASSERT(!g_upper_enable);
-    ASSERT(g_lower_enable);
-    ASSERT(g_lower_threshold == 490);
+	ret = read_value_and_update_thresholds(&g_config, &g_iio);
+	ASSERT(ret == g_input_value);
+	ASSERT(!g_upper_enable);
+	ASSERT(g_lower_enable);
+	ASSERT(g_lower_threshold == 490);
 
-    return 0;
+	return 0;
 }
 
 static int test_enable_both_thresholds(void)
 {
-    int ret;
+	int ret;
 
-    g_config.step = 10;
-    g_input_value = 100;
-    g_upper_enable = false;
-    g_lower_enable = false;
-    g_upper_threshold = 0;
-    g_lower_threshold = 0;
+	g_config.step = 10;
+	g_input_value = 100;
+	g_upper_enable = false;
+	g_lower_enable = false;
+	g_upper_threshold = 0;
+	g_lower_threshold = 0;
 
-    ret = read_value_and_update_thresholds(&g_config, &g_iio);
-    ASSERT(ret == g_input_value);
-    ASSERT(g_upper_enable);
-    ASSERT(g_upper_threshold == 110);
-    ASSERT(g_lower_enable);
-    ASSERT(g_lower_threshold == 90);
+	ret = read_value_and_update_thresholds(&g_config, &g_iio);
+	ASSERT(ret == g_input_value);
+	ASSERT(g_upper_enable);
+	ASSERT(g_upper_threshold == 110);
+	ASSERT(g_lower_enable);
+	ASSERT(g_lower_threshold == 90);
 
-    return 0;
+	return 0;
 }
 
 static int test_clamp_lower_threshold(void)

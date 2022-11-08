@@ -2,6 +2,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,6 +22,19 @@ struct pyra_iio_event_handle {
 	const char *lower_enable;
 	const char *lower_threshold;
 };
+
+__attribute__((format(printf, 2, 3)))
+static int safe_asprintf(char **str, const char *fmt, ...)
+{
+	va_list ap;
+	int n;
+	va_start(ap, fmt);
+	n = vasprintf(str, fmt, ap);
+	if (n < 0)
+		*str = NULL;
+	va_end(ap);
+	return n;
+}
 
 static int open_event_fd(int dev_num)
 {
@@ -129,26 +143,26 @@ int pyra_iio_event_open(struct pyra_iio_event_handle** handle, int channel)
 	if (ret < 0)
 		return ret;
 
-	ret = asprintf(&input_file, "in_voltage%d_input", channel);
+	ret = safe_asprintf(&input_file, "in_voltage%d_input", channel);
 	if (ret < 0)
 		goto error_free;
 
-	ret = asprintf(&lower_threshold_enable,
+	ret = safe_asprintf(&lower_threshold_enable,
 			"events/in_voltage%d_thresh_falling_en", channel);
 	if (ret < 0)
 		goto error_free;
 
-	ret = asprintf(&lower_threshold_value,
+	ret = safe_asprintf(&lower_threshold_value,
 			"events/in_voltage%d_thresh_falling_value", channel);
 	if (ret < 0)
 		goto error_free;
 
-	ret = asprintf(&upper_threshold_enable,
+	ret = safe_asprintf(&upper_threshold_enable,
 			"events/in_voltage%d_thresh_rising_en", channel);
 	if (ret < 0)
 		goto error_free;
 
-	ret = asprintf(&upper_threshold_value,
+	ret = safe_asprintf(&upper_threshold_value,
 			"events/in_voltage%d_thresh_rising_value", channel);
 	if (ret < 0)
 		goto error_free;

@@ -40,6 +40,7 @@ static int open_event_fd(int dev_num)
 {
 	int ret;
 	int fd, event_fd;
+	int flags;
 	char *chrdev_name;
 
 	ret = asprintf(&chrdev_name, "/dev/iio:device%d", dev_num);
@@ -66,6 +67,11 @@ static int open_event_fd(int dev_num)
 
 		goto out_free;
 	}
+
+	if ((flags = fcntl(event_fd, F_GETFD)) < 0)
+		perror("Warning: Failed to read event file descriptor flags");
+	else if (fcntl(event_fd, F_SETFD, flags | FD_CLOEXEC))
+		perror("Warning: Failed to set close-on-exec flag on event file descriptor");
 
 	if (close(fd) == -1)  {
 		ret = -errno;

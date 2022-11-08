@@ -14,7 +14,7 @@
 } while (0)
 #define ASSERT(cond) do {\
 		if (!(cond)) { \
-			printf("\n\t%s: Assertion failed: " #cond "\n", __func__); \
+			printf("\n\t%s:%d: Assertion failed: " #cond "\n", __func__, __LINE__); \
 			return -1; \
 		} \
 	} while (0)
@@ -109,22 +109,28 @@ static int test_disable_lower_threshold(void)
 	int ret;
 
 	g_config.step = 10;
-	g_input_value = g_config.min = 10;
+	g_config.min = 10;
+
 	g_upper_enable = false;
 	g_upper_threshold = 0;
 	g_lower_enable = true;
+	g_lower_threshold = 100;
+
+	g_input_value = 10;
 
 	ret = read_value_and_update_thresholds(&g_config, &g_iio);
 	ASSERT(ret == g_input_value);
 	ASSERT(g_upper_enable);
-	ASSERT(g_upper_threshold == 20);
+	ASSERT(g_upper_threshold == (g_input_value + g_config.step));
 	ASSERT(!g_lower_enable);
 
 	g_config.min = 0;
+
 	g_upper_enable = false;
 	g_upper_threshold = 0;
 	g_lower_enable = true;
-	g_input_value = g_config.step;
+
+	g_input_value = 10;
 
 	ret = read_value_and_update_thresholds(&g_config, &g_iio);
 
@@ -141,16 +147,19 @@ static int test_disable_upper_threshold(void)
 	int ret;
 
 	g_config.step = 10;
-	g_input_value = g_config.max = 500;
+	g_config.max = 500;
+
 	g_upper_enable = true;
 	g_lower_enable = false;
 	g_lower_threshold = 0;
+
+	g_input_value = 500;
 
 	ret = read_value_and_update_thresholds(&g_config, &g_iio);
 	ASSERT(ret == g_input_value);
 	ASSERT(!g_upper_enable);
 	ASSERT(g_lower_enable);
-	ASSERT(g_lower_threshold == 490);
+	ASSERT(g_lower_threshold == (g_input_value - g_config.step));
 
 	return 0;
 }
@@ -160,18 +169,20 @@ static int test_enable_both_thresholds(void)
 	int ret;
 
 	g_config.step = 10;
-	g_input_value = 100;
+
 	g_upper_enable = false;
 	g_lower_enable = false;
 	g_upper_threshold = 0;
 	g_lower_threshold = 0;
 
+	g_input_value = 100;
+
 	ret = read_value_and_update_thresholds(&g_config, &g_iio);
 	ASSERT(ret == g_input_value);
 	ASSERT(g_upper_enable);
-	ASSERT(g_upper_threshold == 110);
+	ASSERT(g_upper_threshold == (g_input_value + g_config.step));
 	ASSERT(g_lower_enable);
-	ASSERT(g_lower_threshold == 90);
+	ASSERT(g_lower_threshold == (g_input_value - g_config.step));
 
 	return 0;
 }
@@ -182,11 +193,13 @@ static int test_clamp_lower_threshold(void)
 
 	g_config.step = 10;
 	g_config.min = 50;
-	g_input_value = 55;
+
 	g_lower_enable = false;
 	g_lower_threshold = 0;
 	g_upper_enable = true;
 	g_upper_threshold = 100;
+
+	g_input_value = 55;
 
 	ret = read_value_and_update_thresholds(&g_config, &g_iio);
 	ASSERT(ret == g_input_value);
@@ -205,11 +218,13 @@ static int test_clamp_upper_threshold(void)
 	g_config.step = 10;
 	g_config.min = 0;
 	g_config.max = 500;
-	g_input_value = 495;
+
 	g_lower_enable = false;
 	g_lower_threshold = 0;
 	g_upper_enable = false;
 	g_upper_threshold = 100;
+
+	g_input_value = 495;
 
 	ret = read_value_and_update_thresholds(&g_config, &g_iio);
 	ASSERT(ret == g_input_value);

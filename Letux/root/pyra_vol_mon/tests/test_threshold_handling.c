@@ -130,7 +130,7 @@ static int test_disable_lower_threshold(void)
 	g_upper_threshold = 0;
 	g_lower_enable = true;
 
-	g_input_value = 10;
+	g_input_value = 0;
 
 	ret = read_value_and_update_thresholds(&g_config, &g_iio);
 
@@ -183,6 +183,20 @@ static int test_enable_both_thresholds(void)
 	ASSERT(g_upper_threshold == (g_input_value + g_config.step));
 	ASSERT(g_lower_enable);
 	ASSERT(g_lower_threshold == (g_input_value - g_config.step));
+
+	g_upper_enable = false;
+	g_lower_enable = false;
+	g_upper_threshold = 0;
+	g_lower_threshold = 0;
+
+	g_input_value = 10;
+
+	ret = read_value_and_update_thresholds(&g_config, &g_iio);
+	ASSERT(ret == g_input_value);
+	ASSERT(g_upper_enable);
+	ASSERT(g_upper_threshold == (g_input_value + g_config.step));
+	ASSERT(g_lower_enable);
+	ASSERT(g_lower_threshold == 1);
 
 	return 0;
 }

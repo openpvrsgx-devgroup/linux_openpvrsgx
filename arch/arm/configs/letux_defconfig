@@ -1,5 +1,5 @@
 #
-# Linux/arm 6.1.0-rc4 Kernel Configuration
+# Linux/arm 6.1.0-rc5 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="arm-linux-gnueabihf-gcc (GCC) 6.3.0"
 CONFIG_CC_IS_GCC=y
@@ -4607,7 +4607,7 @@ CONFIG_DRM_I2C_NXP_TDA998X=m
 CONFIG_DRM_ATMEL_HLCDC=m
 # CONFIG_DRM_RCAR_DW_HDMI is not set
 # CONFIG_DRM_RCAR_USE_LVDS is not set
-# CONFIG_DRM_RCAR_MIPI_DSI is not set
+# CONFIG_DRM_RCAR_USE_MIPI_DSI is not set
 CONFIG_DRM_OMAP=m
 # CONFIG_OMAP2_DSS_DEBUG is not set
 # CONFIG_OMAP2_DSS_DEBUGFS is not set

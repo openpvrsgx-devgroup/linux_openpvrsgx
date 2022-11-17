@@ -26,15 +26,26 @@ static bool event_is_ours(struct iio_event_data *event, int channel)
 	return true;
 }
 
-static int execute_callback(const char* prog, int value)
+static int execute_callback(const struct pyra_volume_config *config, int value)
 {
 	pid_t my_pid;
 	char value_string[32];
+	char min_string[32];
+	char max_string[32];
+	char *const argv[] = {
+		(char*)config->executable,
+		value_string,
+		min_string,
+		max_string,
+		NULL,
+	};
 
 	snprintf(value_string, sizeof(value_string), "%d", value);
+	snprintf(min_string, sizeof(min_string), "%d", config->min);
+	snprintf(max_string, sizeof(max_string), "%d", config->max);
 
 	if (0 == (my_pid = fork())) {
-		if (-1 == execlp(prog, prog, value_string, 0)) {
+		if (-1 == execvp(config->executable, argv)) {
 			perror("child process execve failed");
 			return -1;
 		}
@@ -61,7 +72,7 @@ int main(int argc, char **argv)
 
 	ret = read_value_and_update_thresholds(&config, iio_event_handle);
 	if (ret >= 0)
-		execute_callback(config.executable, ret);
+		execute_callback(&config, ret);
 
 	while (true) {
 		int value;
@@ -89,7 +100,7 @@ int main(int argc, char **argv)
 
 		value = read_value_and_update_thresholds(&config, iio_event_handle);
 		if (value >= 0)
-			execute_callback(config.executable, value);
+			execute_callback(&config, value);
 	}
 
 	if (close(event_fd) == -1)

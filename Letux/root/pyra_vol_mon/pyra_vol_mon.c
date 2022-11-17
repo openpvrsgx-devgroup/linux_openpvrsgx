@@ -24,15 +24,15 @@ int read_value_and_update_thresholds(
 	if (threshold > config->max)
 		threshold = config->max;
 
-	if (threshold > value) {
-		ret = pyra_iio_enable_upper_threshold(iio, threshold);
-		if (ret)
-			fprintf(stderr, "Failed to enable upper threshold: %d\n", ret);
-	}
-	else {
+	if (value >= threshold) {
 		ret = pyra_iio_disable_upper_threshold(iio);
 		if (ret < 0)
 			fprintf(stderr, "Failed to disable upper threshold: %d\n", ret);
+	}
+	else {
+		ret = pyra_iio_enable_upper_threshold(iio, threshold);
+		if (ret)
+			fprintf(stderr, "Failed to enable upper threshold: %d\n", ret);
 	}
 
 	/* update lower threshold */

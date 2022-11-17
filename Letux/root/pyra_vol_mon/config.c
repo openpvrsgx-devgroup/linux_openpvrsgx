@@ -53,7 +53,7 @@ static const char* usage_string =
 	"\n"
 	"EXECUTABLE will be called like this:\n"
 	"\n"
-	"    EXECUTABLE <adc value>\n"
+	"    EXECUTABLE <adc value> <min> <max>\n"
 	"\n";
 
 static int parse_number(const char* str)

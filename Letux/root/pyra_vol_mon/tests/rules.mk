@@ -31,5 +31,9 @@ endef
 
 $(call CREATE_TEST,threshold_handling,test_threshold_handling.c pyra_vol_mon.c iio_event.c)
 
-.PHONY: test $(TEST_TARGETS)
+.PHONY: test $(TEST_TARGETS) clean_test
 test: $(TEST_TARGETS)
+
+clean: clean_test
+clean_test:
+	rm -rf $(TEST_TARGETS) $(TEST_OBJDIR) $(TEST_DEPDIR)

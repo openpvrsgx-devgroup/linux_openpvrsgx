@@ -135,7 +135,8 @@ letux/codecs-for-gta04
 letux/codec-twl4030
 letux/sound-soc
 
-# Pyra AESS sound
+# Pyra sound and AESS
+letux/pyra-vol-mon
 letux/aess
 letux/aess-asoc-fw
 letux/aess-audio-test

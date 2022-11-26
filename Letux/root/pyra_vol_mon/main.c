@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <linux/iio/events.h>
 #include <linux/iio/types.h>
@@ -102,8 +103,10 @@ int main(int argc, char **argv)
 			continue;
 
 		value = read_value_and_update_thresholds(&config, iio_event_handle);
-		if (value >= 0)
+		if (value >= 0) {
+			waitpid(-1, NULL, WNOHANG);
 			execute_callback(&config, value);
+		}
 	}
 
 	if (close(event_fd) == -1)

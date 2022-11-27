@@ -974,6 +974,7 @@ static int bq2429x_usb_detect(struct bq2429x_device_info *di)
 		return -EAGAIN;
 	}
 
+#if 0
 	/* report changes to last state */
 	sprintf(string, "state changed: state->[");
 	switch (state.vbus_stat) {
@@ -1012,6 +1013,7 @@ static int bq2429x_usb_detect(struct bq2429x_device_info *di)
 		strcat(string, " HOT");
 	strcat(string, "]");
 	dev_notice(di->dev, "%s: %s\n", __func__, string);
+#endif
 
 	di->state = state;
 

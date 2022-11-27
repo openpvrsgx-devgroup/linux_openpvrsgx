@@ -3,12 +3,16 @@
 # Pyra volume control
 #
 # run as: /root/pyra_vol_mon/pyra_vol_mon pyra_vol_ctl
+# $1 is current volume
+# $2 is minimum
+# $3 is maximum
 #
 
 SCRIPTPATH="$(dirname "$0")/.."
 
-WHEEL="$1"
-MAXWHEEL=1200	# reports 0..1250 mV but leave some margin
+WHEEL="${1:-0}"
+MINWHEEL="${2:-0}"
+MAXWHEEL="${3:-1250}"	# gpadc reports 0..1250 mV but leave some margin
 
 CARD="$($SCRIPTPATH/findsoundcard -a | head -1)"	# first channel
 CARD=L15	# this is the sound card...
@@ -25,10 +29,13 @@ then
 	exit
 fi
 
-# could apply non-linear scale for more intuitive control
+# could apply a non-linear scale for more intuitive control
 
-VOL=$(( 100 * ${WHEEL:-0} / $MAXWHEEL ))
+VOL=$(( 100 * ( $WHEEL - $MINWHEEL ) / ( $MAXWHEEL - $MINWHEEL ) ))
 
+# echo $WHEEL $MINWHEEL $MAXWHEEL $VOL
+
+# clamp to 0..100%
 [ "$VOL" -lt 0 ] && VOL=0
 [ "$VOL" -gt 100 ] && VOL=100
 

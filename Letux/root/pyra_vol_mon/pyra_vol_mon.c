@@ -19,45 +19,45 @@ int read_value_and_update_thresholds(
 
 	value = ret;
 
-	/* update upper threshold */
-	threshold = value + config->step;
-	if (threshold > config->max)
-		threshold = config->max;
-
-	if (value >= threshold) {
-		ret = pyra_iio_disable_upper_threshold(iio);
-		if (ret < 0)
-			fprintf(stderr, "Failed to disable upper threshold: %d\n", ret);
-	}
-	else {
-		ret = pyra_iio_enable_upper_threshold(iio, threshold);
-		if (ret)
-			fprintf(stderr, "Failed to enable upper threshold: %d\n", ret);
-	}
-
-	/* update lower threshold */
-	if (value == 0 || value <= config->min) {
-		ret = pyra_iio_disable_lower_threshold(iio);
-		if (ret < 0)
-			fprintf(stderr, "Failed to disable lower threshold: %d\n", ret);
-	}
-	else {
-		threshold = value - config->step;
-		if (threshold < (int)config->min)
-			threshold = config->min;
-		if (threshold <= 0)
-			threshold = 1;
-
-		ret = pyra_iio_enable_lower_threshold(iio, threshold);
-		if (ret < 0)
-			fprintf(stderr, "Failed to enable lower threshold: %d\n", ret);
-	}
-
 	/* clamp value to [min, max] */
 	if (value > config->max)
 		value = config->max;
 	else if (value < config->min)
 		value = config->min;
+
+	fprintf(stderr, "value %d threshold %d min %d max %d\n", value, threshold, config->min, config->max);
+
+	/* update upper threshold */
+	if (value == config->max) {
+		ret = pyra_iio_disable_upper_threshold(iio);
+		if (ret < 0)
+			fprintf(stderr, "Failed to disable upper threshold %d: %d\n", threshold, ret);
+	} else {
+
+		threshold = value + config->step;
+		if (threshold > (int)config->max)
+			threshold = config->max - 1;	// set to last step
+
+		ret = pyra_iio_enable_upper_threshold(iio, threshold);
+		if (ret < 0)
+			fprintf(stderr, "Failed to enable upper threshold %d: %d\n", threshold, ret);
+	}
+
+	/* update lower threshold */
+	if (value == config->min) {
+		ret = pyra_iio_disable_lower_threshold(iio);
+		if (ret < 0)
+			fprintf(stderr, "Failed to disable lower threshold %d: %d\n", threshold, ret);
+	} else {
+
+		threshold = value - config->step;
+		if (threshold < (int)config->min)
+			threshold = config->min + 1;	// set to last step
+
+		ret = pyra_iio_enable_lower_threshold(iio, threshold);
+		if (ret < 0)
+			fprintf(stderr, "Failed to enable lower threshold %d: %d\n", threshold, ret);
+	}
 
 	return value;
 }

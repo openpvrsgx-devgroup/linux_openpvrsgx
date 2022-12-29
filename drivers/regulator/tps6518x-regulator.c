@@ -638,7 +638,7 @@ static int tps6518x_regulator_probe(struct platform_device *pdev)
 		config.driver_data = tps6518x;
 		config.of_node = pdata->regulators[i].reg_node;
 
-		rdev[i] = regulator_register(&tps6518x_reg[id], &config);
+		rdev[i] = regulator_register(&pdev->dev, &tps6518x_reg[id], &config);
 		if (IS_ERR(rdev[i])) {
 			ret = PTR_ERR(rdev[i]);
 			dev_err(&pdev->dev, "regulator init failed for %d\n",

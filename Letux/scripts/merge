@@ -77,11 +77,20 @@ fi
 
 git remote update origin	## someone may have updated a remote feature branch
 
+if false
+then
+git branch -r | fgrep -v origin/HEAD | fgrep origin/ | sed 's|origin/||' | while read BRANCH
+do # check if someone has pushed a new branch to origin
+	[ "$(git rev-parse --verify $BRANCH 2>/dev/null)" ] || echo git branch $BRANCH origin/$BRANCH
+done
+fi
+
 BRANCHES=""
 
 function latestforbranch {
 	# get latest version for branch $1 (optionally passing $2 to git branch)
-	git branch $2 | cut -c 3- | grep "^$1-v[0-9]*$" | perl -e 'print sort{length($a)<=>length($b) or $a cmp $b} <>' | tail -1
+# echo git branch $2 "|" cut -c 3- "|" grep "\"^$1-v[0-9]*$\"" "|" sed "\"s/.*-v\(.*\)/\1/\"" "|" sort -n "|" tail -1 >&2
+	git branch $2 | cut -c 3- | grep "^$1-v[0-9]*$" | sed "s/.*-v\(.*\)/\1/" | sort -n | tail -1
 }
 
 function linuxversion {
@@ -232,29 +241,28 @@ function process {
 			;;
 	esac
 	echo "*** process $FEATURE ***"
+	REMOTE=$(latestforbranch "origin/$FEATURE" -r)
 	LATEST=$(latestforbranch "$FEATURE")
-	if [ "$LATEST" ]
+	if [ "${REMOTE:-0}" -gt "${LATEST:-0}" ]
+	then # there is a newer -v available upstream
+		echo "*** checking out and taking origin/$FEATURE-v${REMOTE:-0} instead of $FEATURE-v${LATEST:-0} ***"
+#echo FEATURE: $FEATURE
+#echo REMOTE: $REMOTE
+#echo LATEST: $LATEST
+#echo git checkout --track origin/$FEATURE-v$REMOTE
+echo please run:	git checkout --track origin/$FEATURE-v$REMOTE
+exit 1
+		FEATURE="$FEATURE-v$REMOTE"	# take new one instead
+	elif [ "$LATEST" ]
 	then # there is a latest with -v
-		echo "*** taking $FEATURE -> $LATEST ***"
-		FEATURE="$LATEST"	# take latest instead
+		echo "*** taking $FEATURE-v$LATEST ***"
+		FEATURE="$FEATURE-v$LATEST"	# take latest instead
 	elif git show-ref --verify --quiet "refs/heads/${FEATURE}" >/dev/null
 	then # a local version w/o -v exists
 		echo "*** taking $FEATURE ***"
 	else # nothing exists locally - check with remote
-		LATEST=$(latestforbranch "$FEATURE" -r)
-		if [ "$LATEST" ]
-		then # there is a remote latest with -v
-			echo "*** checking out and taking $FEATURE -> $LATEST ***"
-			git checkout --track origin/$LATEST
-			FEATURE="$LATEST"	# take new one instead
-		elif git ls-remote --heads --quiet origin "${FEATURE}" >/dev/null
-		then # a remote version w/o -v exists
-			echo "*** checking out and taking $FEATURE ***"
-			git checkout --track origin/$FEATURE
-		else
-			echo "*** $FEATURE nowhere found ***"
-			exit 1
-		fi
+		echo "*** $FEATURE nowhere found ***"
+		exit 1
 	fi
 	if ! $HIDDEN
 	then
@@ -263,9 +271,9 @@ function process {
 # echo $FEATURE: REMOTE $REMOTE vs. LOCAL $LOCAL
 		if [ "$REMOTE" ] && [ "$REMOTE" -gt "$LOCAL" ]
 		then
-			echo "*** origin/$FEATURE is newer than local copy - merge/update first ***"
+			echo "*** origin/$FEATURE is newer ($REMOTE) than local copy $FEATURE ($LOCAL) - merge/update first ***"
 echo please run:	git branch -f $FEATURE origin/$FEATURE
-			exit 1
+exit 1
 			echo "*** resetting $FEATURE to origin/$FEATURE ***"
 			# this throws away local commits!
 			git checkout --force $FEATURE || exit

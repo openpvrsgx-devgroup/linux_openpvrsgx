@@ -199,7 +199,7 @@
 #define OMAP_AESS_BANK_CMEM	1
 #define OMAP_AESS_BANK_SMEM	2
 #define OMAP_AESS_BANK_PMEM	3
-#define OMAP_AESS_BANK_IP	4
+#define OMAP_AESS_BANK_AESS	4
 
 /* AESS memory IDs in omap_aess_addr[] struct */
 #define OMAP_AESS_DMEM_MULTIFRAME_ID			0

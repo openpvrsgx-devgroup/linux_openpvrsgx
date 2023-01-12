@@ -83,7 +83,7 @@ static inline void omap_aess_read(struct omap_aess *aess, int bank, u32 offset,
 static inline u32 omap_aess_reg_read(struct omap_aess *aess, u32 offset)
 {
 	if (pm_runtime_active(aess->dev))
-		return __raw_readl(aess->io_base[OMAP_AESS_BANK_IP] + offset);
+		return __raw_readl(aess->io_base[OMAP_AESS_BANK_AESS] + offset);
 
 	return 0;
 }
@@ -92,7 +92,7 @@ static inline void omap_aess_reg_write(struct omap_aess *aess, u32 offset,
 				       u32 val)
 {
 	if (pm_runtime_active(aess->dev))
-		__raw_writel(val, (aess->io_base[OMAP_AESS_BANK_IP] + offset));
+		__raw_writel(val, (aess->io_base[OMAP_AESS_BANK_AESS] + offset));
 }
 
 static inline void *omap_aess_clear(struct omap_aess *aess, int bank,

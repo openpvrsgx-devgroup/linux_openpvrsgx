@@ -109,7 +109,7 @@ void omap_aess_init_mem(struct omap_aess *aess)
 	dev_dbg(aess->dev, "PMEM bank at 0x%p\n",
 		aess->io_base[OMAP_AESS_BANK_PMEM]);
 	dev_dbg(aess->dev, "AESS bank at 0x%p\n",
-		aess->io_base[OMAP_AESS_BANK_IP]);
+		aess->io_base[OMAP_AESS_BANK_AESS]);
 
 if(!fw_header)
 {

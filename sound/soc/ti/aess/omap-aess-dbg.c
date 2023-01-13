@@ -535,7 +535,7 @@ void aess_init_debugfs(struct omap_aess *aess)
 	debugfs_create_u32("format3", 0644, debug->test_root,
 					    &debug->format3);
 
-	debugfs_create_u32("element_bytes", 0604,
+	debugfs_create_u32("element_bytes", 0644,
 						 debug->test_root,
 						 &debug->elem_bytes);
 
@@ -551,7 +551,7 @@ void aess_init_debugfs(struct omap_aess *aess)
 		aess_debugfs_failure(aess, "_data");
 
 	/* AESS information */
-	debugfs_create_u32("opp_level", 0604, aess->debugfs_root,
+	debugfs_create_u32("opp_level", 0644, aess->debugfs_root,
 					  &aess->opp.level);
 
 	debug->d_pmem = debugfs_create_file("pmem", 0644, aess->debugfs_root,

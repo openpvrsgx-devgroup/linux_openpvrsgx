@@ -110,19 +110,19 @@ SND_SOC_DAILINK_DEFS(link_fe_lp,
 
 /* Backend DAIs - i.e. dynamically matched interfaces, invisible to userspace */
 SND_SOC_DAILINK_DEFS(link_be_mcpdm_dl1,
-	DAILINK_COMP_ARRAY(COMP_CPU("40132000.mcpdm")),
+	DAILINK_COMP_ARRAY(COMP_CPU("mcpdm-legacy")),
 	DAILINK_COMP_ARRAY(COMP_CODEC("twl6040-codec",
 				      "twl6040-dl1")),
 	DAILINK_COMP_ARRAY(COMP_PLATFORM("aess")));
 
 SND_SOC_DAILINK_DEFS(link_be_mcpdm_ul,
-	DAILINK_COMP_ARRAY(COMP_CPU("40132000.mcpdm")),
+	DAILINK_COMP_ARRAY(COMP_CPU("mcpdm-legacy")),
 	DAILINK_COMP_ARRAY(COMP_CODEC("twl6040-codec",
 				      "twl6040-ul")),
 	DAILINK_COMP_ARRAY(COMP_PLATFORM("aess")));
 
 SND_SOC_DAILINK_DEFS(link_be_mcpdm_dl2,
-	DAILINK_COMP_ARRAY(COMP_CPU("40132000.mcpdm")),
+	DAILINK_COMP_ARRAY(COMP_CPU("mcpdm-legacy")),
 	DAILINK_COMP_ARRAY(COMP_CODEC("twl6040-codec",
 				      "twl6040-dl2")),
 	DAILINK_COMP_ARRAY(COMP_PLATFORM("aess")));
@@ -194,12 +194,14 @@ static struct snd_soc_dai_link legacy_mcbsp_dai = {
 	SND_SOC_DAI_IGNORE_SUSPEND,
 };
 
-/* bdo we need this??? */
+#if 0
+/* do we need this??? */
 static struct snd_soc_dai_link legacy_mcasp_dai = {
 	/* Legacy SPDIF */
 	SND_SOC_DAI_CONNECT("Legacy SPDIF","Legacy SPDIF", link_mcasp),
 	SND_SOC_DAI_IGNORE_SUSPEND,
 };
+#endif
 
 static int omap_abe_twl6040_fe_init(struct snd_soc_pcm_runtime *rtd);
 
@@ -870,7 +872,7 @@ static int omap_abe_add_legacy_dai_links(struct snd_soc_card *card)
 	if (ret < 0)
 		return ret;
 
-#if 0	// is already added somewhere?
+#if 0	// is already added somewhere? Or not?
 	/* Add the Legacy McASP */
 	dai_node = of_parse_phandle(node, "ti,mcasp", 0);
 	ret = snd_soc_card_new_dai_links_with_cpu_node(card, &legacy_mcasp_dai, 1, dai_node, dai_node);

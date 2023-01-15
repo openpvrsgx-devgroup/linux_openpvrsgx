@@ -675,7 +675,7 @@ static int omap_abe_twl6040_init(struct snd_soc_pcm_runtime *rtd)
 	// FIXME: dapm.stream_event has disappeared in v5.4
 	// card->dapm.stream_event = omap_abe_stream_event;
 	// what is the replacement?
-	// component->driver->stream_event = omap_abe_stream_event;
+	// maybe: component->driver->stream_event = omap_abe_stream_event;
 /* better in abe_probe?
 
 static const struct snd_soc_component_driver something = {
@@ -898,8 +898,6 @@ static int omap_abe_add_aess_dai_links(struct snd_soc_card *card)
 	struct device_node *aess_node;
 	struct device_node *dai_node;
 	int ret;
-
-	/* FIXME: add DAI links for AE */
 
 	aess_node = of_parse_phandle(node, "ti,aess", 0);
 

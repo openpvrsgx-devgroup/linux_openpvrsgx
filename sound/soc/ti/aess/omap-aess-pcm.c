@@ -291,11 +291,11 @@ static irqreturn_t aess_irq_handler(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static int omap_aess_pcm_open(struct snd_pcm_substream *substream)
+static int omap_aess_pcm_open(struct snd_soc_component *component,
+			      struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *dai = asoc_rtd_to_cpu(rtd, 0);
-	struct snd_soc_component *component = dai->component;
 	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 
 	mutex_lock(&aess->mutex);
@@ -318,13 +318,13 @@ static int omap_aess_pcm_open(struct snd_pcm_substream *substream)
 	return 0;
 }
 
-static int omap_aess_pcm_hw_params(struct snd_pcm_substream *substream,
+static int omap_aess_pcm_hw_params(struct snd_soc_component *component,
+				   struct snd_pcm_substream *substream,
 				   struct snd_pcm_hw_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct snd_soc_dai *dai = asoc_rtd_to_cpu(rtd, 0);
-	struct snd_soc_component *component = dai->component;
 	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 	struct omap_aess_data_format format;
 	size_t period_size;
@@ -364,11 +364,11 @@ out:
 	return ret;
 }
 
-static int omap_aess_pcm_prepare(struct snd_pcm_substream *substream)
+static int omap_aess_pcm_prepare(struct snd_soc_component *component,
+				 struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *dai = asoc_rtd_to_cpu(rtd, 0);
-	struct snd_soc_component *component = dai->component;
 	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 
 	dev_dbg(dai->dev, "%s: %s\n", __func__, dai->name);
@@ -386,11 +386,11 @@ static int omap_aess_pcm_prepare(struct snd_pcm_substream *substream)
 	return 0;
 }
 
-static int omap_aess_pcm_close(struct snd_pcm_substream *substream)
+static int omap_aess_pcm_close(struct snd_soc_component *component,
+			       struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *dai = asoc_rtd_to_cpu(rtd, 0);
-	struct snd_soc_component *component = dai->component;
 	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 
 	dev_dbg(dai->dev, "%s: %s\n", __func__, dai->name);
@@ -415,12 +415,12 @@ static int omap_aess_pcm_close(struct snd_pcm_substream *substream)
 	return 0;
 }
 
-static int omap_aess_pcm_mmap(struct snd_pcm_substream *substream,
+static int omap_aess_pcm_mmap(struct snd_soc_component *component,
+			      struct snd_pcm_substream *substream,
 			      struct vm_area_struct *vma)
 {
 	struct snd_soc_pcm_runtime  *rtd = substream->private_data;
 	struct snd_soc_dai *dai = asoc_rtd_to_cpu(rtd, 0);
-	struct snd_soc_component *component = dai->component;
 	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 	int offset, size, err;
 
@@ -441,11 +441,9 @@ static int omap_aess_pcm_mmap(struct snd_pcm_substream *substream,
 	return 0;
 }
 
-static snd_pcm_uframes_t omap_aess_pcm_pointer(struct snd_pcm_substream *substream)
+static snd_pcm_uframes_t omap_aess_pcm_pointer(struct snd_soc_component *component,
+					       struct snd_pcm_substream *substream)
 {
-	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_dai *dai = asoc_rtd_to_cpu(rtd, 0);
-	struct snd_soc_component *component = dai->component;
 	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 	snd_pcm_uframes_t offset = 0;
 	u32 pingpong;
@@ -460,18 +458,9 @@ static snd_pcm_uframes_t omap_aess_pcm_pointer(struct snd_pcm_substream *substre
 	return offset;
 }
 
-static struct snd_pcm_ops omap_aess_pcm_ops = {
-	.open           = omap_aess_pcm_open,
-	.hw_params	= omap_aess_pcm_hw_params,
-	.prepare	= omap_aess_pcm_prepare,
-	.close	        = omap_aess_pcm_close,
-	.pointer	= omap_aess_pcm_pointer,
-	.mmap		= omap_aess_pcm_mmap,
-};
-
 static int omap_aess_pcm_probe(struct snd_soc_component *component)
 {
-	struct omap_aess *aess = omap_aess_get_handle();
+	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 	int ret = 0, i;
 
 	if (!aess->fw || !aess->fw->data) {
@@ -593,32 +582,43 @@ static int omap_aess_pcm_stream_event(struct snd_soc_component *component,
 }
 
 #ifdef CONFIG_PM
-static int omap_aess_pcm_suspend(struct snd_soc_dai *dai)
+static int omap_aess_pcm_suspend(struct snd_soc_component *component)
 {
-	dev_dbg(dai->dev, "%s: %s active %d\n", __func__,
-		dai->name, snd_soc_dai_active(dai));
+	struct snd_soc_dai *dai;
+
+	for_each_component_dais(component, dai) {
+		dev_dbg(dai->dev, "%s: %s active %d\n", __func__,
+			dai->name, snd_soc_dai_active(dai));
+	}
 
 	return 0;
 }
 
-static int omap_aess_pcm_resume(struct snd_soc_dai *dai)
+static int omap_aess_pcm_resume(struct snd_soc_component *component)
 {
-	struct omap_aess *aess = snd_soc_dai_get_drvdata(dai);
+	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
+	struct snd_soc_dai *dai;
 	int ret = 0;
+	bool any = false;
 
-	dev_dbg(dai->dev, "%s: %s active %d\n", __func__,
-		dai->name, snd_soc_dai_active(dai));
+	for_each_component_dais(component, dai) {
+		dev_dbg(dai->dev, "%s: %s active %d\n", __func__,
+			dai->name, snd_soc_dai_active(dai));
+		if (snd_soc_dai_active(dai))
+			any = true;
+	}
 
-	if (!snd_soc_dai_active(dai))
+	if (!any)
 		return 0;
 
-#ifdef FIXME	// mechanism does no longer exist
+#ifdef FIXME	// context mechanism does no longer exist since v4.18 and wasn't used anywhere else for long time
 	/* context retained, no need to restore */
 	if (aess->get_context_lost_count &&
 	    aess->get_context_lost_count(aess->dev) == aess->context_lost)
 		return 0;
 	aess->context_lost = aess->get_context_lost_count(aess->dev);
 #endif
+
 	pm_runtime_get_sync(aess->dev);
 	if (aess->device_scale) {
 		ret = aess->device_scale(aess->dev, aess->dev,
@@ -642,7 +642,16 @@ out:
 #endif
 
 struct snd_soc_component_driver omap_aess_platform = {
-//	.ops		= &omap_aess_pcm_ops,
+	.name		= "omap-aess",
+	.suspend	= omap_aess_pcm_suspend,
+	.resume		= omap_aess_pcm_resume,
+	.legacy_dai_naming	= 1,
+	.open           = omap_aess_pcm_open,
+	.hw_params	= omap_aess_pcm_hw_params,
+	.prepare	= omap_aess_pcm_prepare,
+	.close	        = omap_aess_pcm_close,
+	.pointer	= omap_aess_pcm_pointer,
+	.mmap		= omap_aess_pcm_mmap,
 	.probe		= omap_aess_pcm_probe,
 	.remove		= omap_aess_pcm_remove,
 	.read		= omap_aess_oppwidget_read,

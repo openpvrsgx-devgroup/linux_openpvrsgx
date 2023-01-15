@@ -1633,7 +1633,7 @@ void get_abe_data(const char *name, uint32_t **data)
 	int fd;
 	int size, bytes;
 
-	sprintf(filename, "/sys/kernel/debug/omap-abe/%s", name);
+	sprintf(filename, "/sys/kernel/debug/omap-aess/%s", name);
 
 	fd = open(filename, O_RDONLY);
 	if (fd < 0) {

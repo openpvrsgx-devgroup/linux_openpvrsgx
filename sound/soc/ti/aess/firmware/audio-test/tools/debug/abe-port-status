@@ -1,8 +1,10 @@
 # Usage abe-port-status
 
-for file in /sys/kernel/debug/abe_port/*
+echo "ABE Port status dump"
+for file in /sys/kernel/debug/omap-aess/ports/*
 do
 	echo -n ${file} " = "
-	cat ${file}
+	cat ${file}/state
 done
+echo "ABE port status dump complete"
 

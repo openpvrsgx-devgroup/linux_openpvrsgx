@@ -32,6 +32,7 @@ TWL6037_GPADC=$($SCRIPTPATH/findiio "palmas-gpadc")   # OMAP5
 
 [ -r "$CPU" ] || CPU=$($SCRIPTPATH/findthermal cpu_thermal)/temp
 [ -r "$CPU" ] || CPU=$($SCRIPTPATH/findthermal cpu-thermal)/temp
+[ -r "$CPU" ] || CPU=$($SCRIPTPATH/findthermal soc-thermal)/temp
 [ -r "$CPU" ] || CPU=$($SCRIPTPATH/findthermal cpu)/temp
 [ -r "$CPU" ] || CPU=$($SCRIPTPATH/findhwmon am335x-bandgap)/temp1_input
 [ -r "$CPU" ] || CPU=/dev/null

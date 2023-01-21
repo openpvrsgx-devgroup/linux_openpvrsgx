@@ -109,6 +109,7 @@
 
 		gpio = <&gpb 19 0>;
 		enable-active-high;
+		regulator-always-on;
 	};
 
 	otg_power: fixedregulator-2 {
@@ -194,10 +195,13 @@
 	status = "okay";
 
 	bus-width = <4>;
-	max-frequency = <50000000>;
+	max-frequency = <25000000>;
 
 	pinctrl-names = "default";
 	pinctrl-0 = <&pins_mmc0>;
+
+	vmmc-supply = <&vcc_33>;
+	vqmmc-supply = <&vcc_33>;	/* VDDIOMSC */
 
 	cd-gpios = <&gpf 20 GPIO_ACTIVE_LOW>;
 	vmmc-supply = <&vcc_33v>;
@@ -221,7 +225,7 @@
 	#size-cells = <0>;
 
 	wifi@1 {
-		compatible = "brcm,bcm4329-fmac";
+		compatible = "brcm,bcm4330-fmac";
 		reg = <1>;
 
 		interrupt-parent = <&gpd>;
@@ -267,6 +271,9 @@
 		reset-gpios = <&gpf 8 GPIO_ACTIVE_LOW>;
 		device-wakeup-gpios = <&gpf 5 GPIO_ACTIVE_HIGH>;
 		shutdown-gpios = <&gpf 4 GPIO_ACTIVE_HIGH>;
+
+		max-speed = <115200>;	/* stay with default data rate */
+		brcm,bt-pcm-int-params = [01 02 00 01 01];
 	};
 };
 
@@ -298,8 +305,8 @@
 
 		regulators {
 			vddcore: DCDC1 {
-				regulator-min-microvolt = <1125000>;
-				regulator-max-microvolt = <1125000>;
+				regulator-min-microvolt = <1000000>;
+				regulator-max-microvolt = <1200000>;
 				vp1-supply = <&vcc_33v>;
 				regulator-always-on;
 			};

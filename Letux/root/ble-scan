@@ -1,0 +1,101 @@
+#!/bin/bash
+#
+# scan for Bluetooth/BLE devices, e.g. TI CC2650STK
+#
+
+while [ "$1" ]
+do
+	case "$1" in
+		-i ) INFO=yes; shift;;
+		-* ) echo "unknown option $1"; exit 1;;
+		* ) break;;
+	esac
+done
+
+function devices() {
+	(echo scan on; sleep 1; echo devices; echo quit) | bluetoothctl | grep ^Device | while read _Device_ _MAC _NAME
+	do
+		echo $_MAC
+	#	echo $_NAME
+	#	echo $_MAC: $_NAME >&2		
+	done
+}
+
+function info() {
+local MAC="$1"
+	(echo info "$MAC"; echo quit) | bluetoothctl | grep "	[a-zA-Z0-9]*:" | sed "s/	//g"
+}
+
+function connected() {
+local MAC="$1"
+	info "$MAC" | fgrep 'Connected: yes' >/dev/null
+}
+
+function name() {
+local MAC="$1"
+	info "$MAC" | fgrep 'Name: ' | sed "s/Name: //"g
+}
+
+function btconnect() {
+local MAC="$1"
+	echo connect $MAC >&2
+	(echo connect "$MAC"; echo quit) | bluetoothctl >/dev/null
+}
+
+function btdisconnect() {
+local MAC="$1"
+	echo disconnect $MAC >&2
+	(echo connect "$MAC"; echo quit) | bluetoothctl >/dev/null
+}
+
+function bleconnect() {
+local MAC="$1"
+	echo connect $MAC >&2
+	(echo connect; echo quit) | gatttool -t random -b "$MAC" -I >/dev/null
+}
+
+function bledisconnect() {
+local MAC="$1"
+	echo disconnect $MAC >&2
+	(echo connect "$MAC"; echo quit) | gatttool -t random -b "$MAC" -I >/dev/null
+}
+
+function sensorread() {
+local MAC="$1"
+local UUID="$2"
+	echo sensorread $MAC $UUID >&2
+## FIXME: does not connect - always does timeout...
+	gatttool -t random -b "$MAC" --char-read -u "$UUID"
+}
+
+function sensortag() {
+local MAC="$1"
+	bleconnect "$MAC"
+	sensorread "$MAC" 00001800-0000-1000-8000-00805f9b34fb	# Generic Access
+	sensorread "$MAC" 00001801-0000-1000-8000-00805f9b34fb	# Generic Attribute
+	sensorread "$MAC" 0000180a-0000-1000-8000-00805f9b34fb	# Device Information
+	sensorread "$MAC" 0000180f-0000-1000-8000-00805f9b34fb	# Battery Service
+	sensorread "$MAC" 0000ffef-0000-1000-8000-00805f9b34fb	# Unknown
+	sensorread "$MAC" f000aa00-0451-4000-b000-000000000000	# ...
+	sensorread "$MAC" f000aa20-0451-4000-b000-000000000000	# ...
+	sensorread "$MAC" f000aa40-0451-4000-b000-000000000000	# ...
+	sensorread "$MAC" f000aa64-0451-4000-b000-000000000000	# ...
+	sensorread "$MAC" f000aa70-0451-4000-b000-000000000000	# ...
+	sensorread "$MAC" f000aa80-0451-4000-b000-000000000000	# ...
+	sensorread "$MAC" f000ac00-0451-4000-b000-000000000000	# ...
+	sensorread "$MAC" f000cc00-0451-4000-b000-000000000000	# ...
+	sensorread "$MAC" f000ffc0-0451-4000-b000-000000000000	# ...
+}
+
+for DEV in $(devices)
+do
+	if connected "$DEV"
+	then
+		echo "$DEV $(name "$DEV") is connected"
+		btdisconnect "$MAC"
+		sensortag "$DEV"
+	else
+		echo "$DEV $(name "$DEV") is not connected"
+	fi
+	[ "$INFO" ] && info "$DEV"
+done

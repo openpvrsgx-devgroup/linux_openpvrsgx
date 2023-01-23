@@ -1,0 +1,103 @@
+#!/bin/bash
+
+PATH=.:$PATH:/usr/bin/$(echo $MACHTYPE | sed s/unknown-//g)
+
+BASE=10000000	# CGU
+
+function lcdcregisters {
+
+cat <<END
+/* CGU register offsets */
+#define CGU_REG_CFCR		0x00 /* CPCCR in jz4740 */
+#define CGU_REG_PLCR1		0x10 /* CPPCR in jz4740 */
+#define CGU_REG_OCR		0x1c
+#define CGU_REG_CFCR2		0x60 /* LPCDR in jz4740 */
+
+/* PMU registers */
+#define CGU_REG_LPCR		0x04 /* LCR in jz4740 */
+#define CGU_REG_MSCR		0x20 /* CLKGR in jz4740 */
+/* 0x24 - 0x48 are hibernate control */
+
+/* Reset control */
+#define CGU_REG_RSR		0x08
+
+/* OS Timers */
+
+#define TCU_JZ4730_REG_TER	0x2000
+#define TCU_JZ4730_REG_TRDR0	0x2010
+#define TCU_JZ4730_REG_TCNT0	0x2014
+#define TCU_JZ4730_REG_TCSR0	0x2018
+#define TCU_JZ4730_REG_TCSD0	0x201c
+#define TCU_JZ4730_REG_TRDR1	0x2030
+#define TCU_JZ4730_REG_TCNT1	0x2034
+#define TCU_JZ4730_REG_TCSR1	0x2038
+#define TCU_JZ4730_REG_TCSD1	0x203c
+#define TCU_JZ4730_REG_TRDR2	0x2050
+#define TCU_JZ4730_REG_TCNT2	0x2054
+#define TCU_JZ4730_REG_TCSR2	0x2058
+#define TCU_JZ4730_REG_TCSD2	0x205c
+
+/* Watchdog */
+#define WDT_JZ4730_REG_TCSR	0x4000
+#define WDT_JZ4730_REG_TCNT	0x4004
+
+/* GPIO */
+#define JZ4730_GPD0	0x10000
+#define JZ4730_GPDIR0	0x10004
+#define JZ4730_GPPE0	0x1000c
+#define JZ4730_GPPFSL0	0x10010
+#define JZ4730_GPPFSH0	0x10014
+#define JZ4730_GPITL0	0x10018
+#define JZ4730_GPITH0	0x1001c
+#define JZ4730_GPIE0	0x10020
+#define JZ4730_GPIM0	0x10024
+#define JZ4730_GPIRQ0	0x10028
+
+#define JZ4730_GPD1	0x10030
+#define JZ4730_GPDIR1	0x10034
+#define JZ4730_GPPE1	0x1003c
+#define JZ4730_GPPFSL1	0x10040
+#define JZ4730_GPPFSH1	0x10044
+#define JZ4730_GPITL1	0x10048
+#define JZ4730_GPITH1	0x1004c
+#define JZ4730_GPIE1	0x10050
+#define JZ4730_GPIM1	0x10054
+#define JZ4730_GPIRQ1	0x10058
+
+#define JZ4730_GPD2	0x10060
+#define JZ4730_GPDIR2	0x10064
+#define JZ4730_GPPE2	0x1006c
+#define JZ4730_GPPFSL2	0x10070
+#define JZ4730_GPPFSH2	0x10074
+#define JZ4730_GPITL2	0x10078
+#define JZ4730_GPITH2	0x1007c
+#define JZ4730_GPIE2	0x10080
+#define JZ4730_GPIM2	0x10084
+#define JZ4730_GPIRQ2	0x10088
+
+#define JZ4730_GPD3	0x10090
+#define JZ4730_GPDIR3	0x10094
+#define JZ4730_GPPE3	0x1009c
+#define JZ4730_GPPFSL3	0x100a0
+#define JZ4730_GPPFSH3	0x100a4
+#define JZ4730_GPITL3	0x100a8
+#define JZ4730_GPITH3	0x100ac
+#define JZ4730_GPIE3	0x100b0
+#define JZ4730_GPIM3	0x100b4
+#define JZ4730_GPIRQ3	0x100b8
+
+END
+}
+
+lcdcregisters | while read DEFINE REGISTER OFFSET COMMENT
+do
+	case "$DEFINE" in
+	'#define' )
+		ADDR=
+		ADDR=$(printf "0x%x" $((0x$BASE + $OFFSET)))
+		VAL=$(devmem2 $ADDR w | fgrep 'Value at address' | cut -d ' ' -f 6)
+		VAL=$(printf %08x $[$VAL])
+		echo $ADDR $VAL $REGISTER
+		;;
+	esac
+done

@@ -1,0 +1,54 @@
+#!/bin/bash
+
+PATH=.:$PATH:/usr/bin/$(echo $MACHTYPE | sed s/unknown-//g)
+
+BASE=0x10010000		# GPIO base
+
+function readw {
+	# prints as 0x with upper case
+	devmem2 $[$1+$2] w | fgrep 'Value at address' | cut -d ' ' -f 6
+}
+
+function strip0x {
+	echo $[$1]
+}
+
+printf "GPIO num: data DIR PULL FUNC IT IE IM IRQ\n"
+printf "0x%08x %03s: %s\n" 0 "---" "d D P F T E M I"
+for gpio in 0 1 2 3
+do
+	GPIO=$[BASE+0x30*gpio]	# get base address of gpio block
+	D=$(readw $GPIO 0)
+	DIR=$(readw $GPIO 4)
+	PE=$(readw $GPIO 0xc)
+	FSL=$(readw $GPIO 0x10)
+	FSH=$(readw $GPIO 0x14)
+	ITL=$(readw $GPIO 0x18)
+	ITH=$(readw $GPIO 0x1c)
+	IE=$(readw $GPIO 0x20)
+	IM=$(readw $GPIO 0x24)
+	IIRQ=$(readw $GPIO 0x28)
+	FS=$[FSH*0x100000000+FSL]	# bash seems to be able to do 64 bit arithmetic
+	IT=$[ITH*0x100000000+ITL]
+#echo $D $DIR $PE $FSL $FSH $FS
+	for pin in 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
+	do
+		P=$[32*gpio+pin]
+		d=$[D%2]
+		dir=$([ $[DIR%2] == 1 ] && echo O || echo I)
+		pull=$([ $[PE%2] == 1 ] && echo P || echo -)
+		func=$[FS%4]
+		it=$[IT%4]
+		ie=$([ $[IE%2] == 1 ] && echo E || echo -)
+		im=$([ $[IM%2] == 1 ] && echo M || echo -)
+		irq=$([ $[IRQ%2] == 1 ] && echo I || echo -)
+		printf "0x%08x %03d: %s\n" $GPIO $P "$d $dir $pull $func $it $ie $im $irq"
+		DIR=$[DIR/2]
+		PE=$[PE/2]
+		FS=$[FS/4]
+		IT=$[IT/4]
+		IE=$[IE/2]
+		IM=$[IM/2]
+		IRQ=$[IRQ/2]
+	done
+done

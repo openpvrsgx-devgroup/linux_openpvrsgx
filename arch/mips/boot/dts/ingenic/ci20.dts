@@ -507,6 +507,12 @@
 	status = "okay";
 };
 
+&usb_phy {
+	status = "okay";
+
+	vcc-supply = <&otg_power>;
+};
+
 &otg_phy {
 	status = "okay";
 

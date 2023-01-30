@@ -983,85 +983,6 @@ static void omap_aess_dai_shutdown(struct snd_pcm_substream *substream,
 	mutex_unlock(&aess->mutex);
 }
 
-#ifdef CONFIG_PM
-static int omap_aess_dai_suspend(struct snd_soc_dai *dai)
-{
-	struct omap_aess *aess = snd_soc_dai_get_drvdata(dai);
-
-	dev_dbg(dai->dev, "%s: %s active %d\n", __func__,
-		dai->name, snd_soc_dai_active(dai));
-
-	if (!snd_soc_dai_active(dai))
-		return 0;
-
-	if (++aess->dai.num_suspended < aess->dai.num_active)
-		return 0;
-
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXSDT_UL);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXSDT_DL);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXAUDUL_MM_DL);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXAUDUL_TONES);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXAUDUL_UPLINK);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXAUDUL_VX_DL);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXVXREC_TONES);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXVXREC_VX_DL);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXVXREC_MM_DL);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXVXREC_VX_UL);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXDL1_MM_DL);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXDL1_MM_UL2);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXDL1_VX_DL);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXDL1_TONES);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXDL2_MM_DL);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXDL2_MM_UL2);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXDL2_VX_DL);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXDL2_TONES);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXECHO_DL1);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXECHO_DL2);
-
-	return 0;
-}
-
-static int omap_aess_dai_resume(struct snd_soc_dai *dai)
-{
-	struct omap_aess *aess = snd_soc_dai_get_drvdata(dai);
-
-	dev_dbg(dai->dev, "%s: %s active %d\n", __func__,
-		dai->name, snd_soc_dai_active(dai));
-
-	if (!snd_soc_dai_active(dai))
-		return 0;
-
-	if (aess->dai.num_suspended-- < aess->dai.num_active)
-		return 0;
-
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXSDT_UL);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXSDT_DL);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXAUDUL_MM_DL);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXAUDUL_TONES);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXAUDUL_UPLINK);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXAUDUL_VX_DL);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXVXREC_TONES);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXVXREC_VX_DL);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXVXREC_MM_DL);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXVXREC_VX_UL);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXDL1_MM_DL);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXDL1_MM_UL2);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXDL1_VX_DL);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXDL1_TONES);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXDL2_MM_DL);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXDL2_MM_UL2);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXDL2_VX_DL);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXDL2_TONES);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXECHO_DL1);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXECHO_DL2);
-
-	return 0;
-}
-#else
-#define omap_aess_dai_suspend	NULL
-#define omap_aess_dai_resume		NULL
-#endif
-
 static int omap_aess_dai_probe(struct snd_soc_dai *dai)
 {
 	struct omap_aess *aess = snd_soc_dai_get_drvdata(dai);
@@ -1124,8 +1045,6 @@ struct snd_soc_dai_driver omap_aess_dai[] = {
 		.id = OMAP_AESS_DAI_MM1,
 		.probe = omap_aess_dai_probe,
 		.remove = omap_aess_dai_remove,
-//		.suspend = omap_aess_dai_suspend,
-//		.resume = omap_aess_dai_resume,
 		.playback = {
 			.stream_name = "MM1 Playback",
 			.channels_min = 1,
@@ -1146,8 +1065,6 @@ struct snd_soc_dai_driver omap_aess_dai[] = {
 	{	/* Multimedia Capture */
 		.name = "MultiMedia2",
 		.id = OMAP_AESS_DAI_MM2_CAPTURE,
-//		.suspend = omap_aess_dai_suspend,
-//		.resume = omap_aess_dai_resume,
 		.capture = {
 			.stream_name = "MM2 Capture",
 			.channels_min = 1,
@@ -1161,8 +1078,6 @@ struct snd_soc_dai_driver omap_aess_dai[] = {
 	{	/* Voice Playback and Capture */
 		.name = "Voice",
 		.id = OMAP_AESS_DAI_VOICE,
-//		.suspend = omap_aess_dai_suspend,
-//		.resume = omap_aess_dai_resume,
 		.playback = {
 			.stream_name = "Voice Playback",
 			.channels_min = 1,
@@ -1186,8 +1101,6 @@ struct snd_soc_dai_driver omap_aess_dai[] = {
 	{	/* Tones Playback */
 		.name = "Tones",
 		.id = OMAP_AESS_DAI_TONES,
-//		.suspend = omap_aess_dai_suspend,
-//		.resume = omap_aess_dai_resume,
 		.playback = {
 			.stream_name = "Tones Playback",
 			.channels_min = 1,
@@ -1201,8 +1114,6 @@ struct snd_soc_dai_driver omap_aess_dai[] = {
 	{	/* MODEM Voice Playback and Capture */
 		.name = "MODEM",
 		.id = OMAP_AESS_DAI_MODEM,
-//		.suspend = omap_aess_dai_suspend,
-//		.resume = omap_aess_dai_resume,
 		.playback = {
 			.stream_name = "Modem Playback",
 			.channels_min = 1,
@@ -1224,8 +1135,6 @@ struct snd_soc_dai_driver omap_aess_dai[] = {
 	{	/* Low Power HiFi Playback */
 		.name = "MultiMedia1 LP",
 		.id = OMAP_AESS_DAI_MM1_LP,
-//		.suspend = omap_aess_dai_suspend,
-//		.resume = omap_aess_dai_resume,
 		.playback = {
 			.stream_name = "MMLP Playback",
 			.channels_min = 2,

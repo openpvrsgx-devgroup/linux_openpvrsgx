@@ -684,6 +684,7 @@ int snd_soc_pcm_dai_trigger(struct snd_pcm_substream *substream,
 
 	return ret;
 }
+EXPORT_SYMBOL_GPL(snd_soc_pcm_dai_trigger);
 
 int snd_soc_pcm_dai_bespoke_trigger(struct snd_pcm_substream *substream,
 				    int cmd)

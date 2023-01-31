@@ -1062,6 +1062,7 @@ int snd_interval_list(struct snd_interval *i, unsigned int count,
 		      const unsigned int *list, unsigned int mask);
 int snd_interval_ranges(struct snd_interval *i, unsigned int count,
 			const struct snd_interval *list, unsigned int mask);
+int snd_interval_step(struct snd_interval *i, unsigned int step);
 int snd_interval_ratnum(struct snd_interval *i,
 			unsigned int rats_count, const struct snd_ratnum *rats,
 			unsigned int *nump, unsigned int *denp);

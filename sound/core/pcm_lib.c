@@ -1106,7 +1106,7 @@ int snd_interval_ranges(struct snd_interval *i, unsigned int count,
 }
 EXPORT_SYMBOL(snd_interval_ranges);
 
-static int snd_interval_step(struct snd_interval *i, unsigned int step)
+int snd_interval_step(struct snd_interval *i, unsigned int step)
 {
 	unsigned int n;
 	int changed = 0;
@@ -1128,6 +1128,7 @@ static int snd_interval_step(struct snd_interval *i, unsigned int step)
 	}
 	return changed;
 }
+EXPORT_SYMBOL(snd_interval_step);
 
 /* Info constraints helpers */
 

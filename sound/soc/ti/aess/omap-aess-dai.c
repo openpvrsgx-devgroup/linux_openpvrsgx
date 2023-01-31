@@ -767,12 +767,8 @@ static int omap_aess_hwrule_size_step(struct snd_pcm_hw_params *params,
 	rate = (rate == 44100) ? 48000 : rate;
 
 	/* AESS requires chunks of 250us worth of data */
-#ifdef FIXME	// defined in sound/core/pcm_lib.c but not exported
 	return snd_interval_step(hw_param_interval(params, rule->var),
 				 rate / 4000);
-#else
-	return 0;
-#endif
 }
 
 static char *dma_names[OMAP_AESS_DMA_RESOURCES] = {

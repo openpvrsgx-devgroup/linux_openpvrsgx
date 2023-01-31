@@ -72,7 +72,7 @@
 		buttonS2 {
 			label = "button S2";
 			gpios = <&gpio4 25 GPIO_ACTIVE_LOW>;	/* gpio_121 */
-			linux,code = <BTN_0>;
+			linux,code = <KEY_F13>;
 			wakeup-source;
 		};
 	};

@@ -221,6 +221,7 @@ static int jz4740_wdt_probe(struct platform_device *pdev)
 	if (!drvdata)
 		return -ENOMEM;
 
+	drvdata->soc_info = soc_info;
 	drvdata->clk = devm_clk_get(&pdev->dev, "wdt");
 	if (IS_ERR(drvdata->clk)) {
 		dev_err(&pdev->dev, "cannot find WDT clock\n");

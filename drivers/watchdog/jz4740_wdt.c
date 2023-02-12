@@ -75,11 +75,11 @@ static int jz4730_wdt_set_timeout(struct watchdog_device *wdt_dev,
 	regmap_read(drvdata->map, soc_info->enable, &tcer);
 	regmap_write(drvdata->map, soc_info->enable, 0);
 
-	/* On the JZ4730, the timer limit raises the alarm, and so the timeout
+	/* On the JZ4730, the timer overflow raises the alarm, and so the timeout
 	 * must be subtracted from the limit to produce a starting value.
 	 */
 
-	timeout_value = 0xffffffff - (u16)(drvdata->clk_rate * new_timeout);
+	timeout_value = -1 - (u16)(drvdata->clk_rate * new_timeout);
 
 	regmap_write(drvdata->map, soc_info->counter, timeout_value);
 

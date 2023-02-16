@@ -704,6 +704,8 @@ static int omap_abe_twl6040_init(struct snd_soc_pcm_runtime *rtd)
 
 #if FIXME	// dapm.stream_event has disappeared in v5.4
 
+	card->dapm.stream_event = omap_abe_stream_event;
+
 	// what is the replacement?
 	// maybe: component->driver->stream_event = omap_abe_stream_event;
 /* better in abe_probe?
@@ -717,6 +719,7 @@ static const struct snd_soc_component_driver something = {
 
 #endif
 
+#if FIXME	// REVISIT
 	/* allow audio paths from the audio modem to run during suspend */
 	snd_soc_dapm_ignore_suspend(&card->dapm, "Ext Spk");
 // AFML/AFMR belong to the codec twl6040.c and will not be found by &card->dapm

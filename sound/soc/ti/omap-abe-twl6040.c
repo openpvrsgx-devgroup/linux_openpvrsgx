@@ -183,7 +183,7 @@ static const struct snd_soc_ops omap_abe_ops;
 
 static struct snd_soc_dai_link legacy_mcpdm_dai = {
 	/* Legacy McPDM */
-// passt das als .name?
+// CHECKME: does this fit as .name?
 	SND_SOC_DAI_CONNECT("Legacy McPDM", "Legacy McPDM", link0),
 	SND_SOC_DAI_OPS(&omap_abe_ops, omap_abe_twl6040_init),
 };
@@ -197,7 +197,7 @@ static struct snd_soc_dai_link legacy_mcbsp_dai = {
 	SND_SOC_DAI_IGNORE_SUSPEND,
 };
 
-#if 0
+#if FIXME
 /* do we need this??? */
 static struct snd_soc_dai_link legacy_mcasp_dai = {
 	/* Legacy SPDIF */
@@ -561,7 +561,7 @@ static const struct snd_soc_dapm_widget twl6040_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("Digital Mic", NULL),
 };
 
-/// this all seems to duplicate the audio-routing in the DTS!
+// CHECKME: this all seems to duplicate the audio-routing in the DTS!
 
 static const struct snd_soc_dapm_route audio_map[] = {
 	/* Routings for outputs: Destination Widget <=== Path Name <=== Source Widget */
@@ -689,20 +689,19 @@ static int omap_abe_twl6040_init(struct snd_soc_pcm_runtime *rtd)
 
 #if FIXME	// dapm.stream_event has disappeared in v5.4
 
-	card->dapm.stream_event = omap_abe_stream_event;
-
 	// what is the replacement?
 	// maybe: component->driver->stream_event = omap_abe_stream_event;
 /* better in abe_probe?
 
 static const struct snd_soc_component_driver something = {
 	.stream_event = omap_abe_stream_event;
-}
+};
 
-#endif
 	ret = devm_snd_soc_register_component(dev, &something,
 					      &some_dai, 1);
-#if 0	// REVISIT
+
+#endif
+
 	/* allow audio paths from the audio modem to run during suspend */
 	snd_soc_dapm_ignore_suspend(&card->dapm, "Ext Spk");
 // AFML/AFMR belong to the codec twl6040.c and will not be found by &card->dapm
@@ -885,7 +884,7 @@ static int omap_abe_add_legacy_dai_links(struct snd_soc_card *card)
 	if (ret < 0)
 		return ret;
 
-#if 0	// is already added somewhere? Or not?
+#if FIXME	// is already added somewhere? Or not?
 	/* Add the Legacy McASP */
 	dai_node = of_parse_phandle(node, "ti,mcasp", 0);
 	ret = snd_soc_card_new_dai_links_with_cpu_node(card, &legacy_mcasp_dai, 1, dai_node, dai_node);
@@ -1145,12 +1144,15 @@ static int omap_abe_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
+
+#if FIXME	// this loads duplicates of audio_map
 	/* additional mapping (static) */
 	ret = snd_soc_of_parse_audio_routing(card, "ti,audio-routing");
 	if (ret) {
 		dev_err(&pdev->dev, "Error while parsing DAPM routing\n");
 		return ret;
 	}
+#endif
 
 	priv->jack_detection = of_property_read_bool(node, "ti,jack-detection");
 	of_property_read_u32(node, "ti,mclk-freq", &priv->mclk_freq);
@@ -1180,6 +1182,11 @@ static int omap_abe_probe(struct platform_device *pdev)
 
 #if IS_BUILTIN(CONFIG_SND_OMAP_SOC_OMAP_ABE_TWL6040)
 		/* card is already registered after successful firmware load */
+#if FIXME	// do this here as well???
+		ret = snd_soc_dapm_add_routes(&card->dapm, aess_audio_map,
+					ARRAY_SIZE(aess_audio_map));
+		// we could also goto behind_snd_soc_register;
+#endif
 		return ret;
 #endif
 	}

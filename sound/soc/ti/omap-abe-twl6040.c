@@ -609,7 +609,6 @@ static const struct snd_soc_dapm_route aess_audio_map[] = {
 	{"Handsfree Playback", NULL, "PDM_DL2"},
 	{"PDM_UL1", NULL, "Capture"},
 
-#if 0 // FIXME	/* there is neither omap-mcbsp1 nor 40122000.mcbsp in the widget list */
 	/* Bluetooth <--> ABE*/
 	{"40122000.mcbsp Playback", NULL, "BT_VX_DL"},
 	{"BT_VX_UL", NULL, "40122000.mcbsp Capture"},
@@ -617,7 +616,6 @@ static const struct snd_soc_dapm_route aess_audio_map[] = {
 	/* FM <--> ABE */
 	{"40124000.mcbsp Playback", NULL, "MM_EXT_DL"},
 	{"MM_EXT_UL", NULL, "40124000.mcbsp Capture"},
-#endif
 
 #if FIXME	/* for direct modem access? Likely needs firmware modifications. */
 	/* Modem <--> ABE*/
@@ -1027,7 +1025,6 @@ static int omap_abe_add_aess_dai_links(struct snd_soc_card *card)
 			return ret;
 	}
 #endif
-
 	return 0;
 }
 
@@ -1193,11 +1190,6 @@ static int omap_abe_probe(struct platform_device *pdev)
 
 #if IS_BUILTIN(CONFIG_SND_OMAP_SOC_OMAP_ABE_TWL6040)
 		/* card is already registered after successful firmware load */
-#if FIXME	// do this here as well???
-		ret = snd_soc_dapm_add_routes(&card->dapm, aess_audio_map,
-					ARRAY_SIZE(aess_audio_map));
-		// we could also goto behind_snd_soc_register;
-#endif
 		return ret;
 #endif
 	}
@@ -1207,10 +1199,20 @@ static int omap_abe_probe(struct platform_device *pdev)
 	if (ret < 0)
 		return ret;
 
-/* replace by devm_snd_soc_register_component and register the stream event */
+#if FIXME
+/* can we replace by devm_snd_soc_register_component and register the stream event here? */
+#endif
 	ret = devm_snd_soc_register_card(&pdev->dev, card);
 	if (ret) {
 		dev_err(&pdev->dev, "card registration failed: %d\n", ret);
+		return ret;
+	}
+
+	ret = snd_soc_dapm_add_routes(&card->dapm, aess_audio_map,
+				ARRAY_SIZE(aess_audio_map));
+
+	if (ret) {
+		dev_err(&pdev->dev, "could not add AESS routes: %d\n", ret);
 		return ret;
 	}
 

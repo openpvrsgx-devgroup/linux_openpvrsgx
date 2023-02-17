@@ -39,13 +39,8 @@
 
 #define AESS_FW_NAME   "omap_aess-adfw.bin"
 
-// this defines the DAI-Link endpoints
-// not the links itself!!!
-
-// SND_SOC_DAILINK_DEFS(name, cpu, codec, platform...) i.e. these macros define _name##_cpus etc.
-// COMP_CODEC(_name, _dai_name)
-
 // CHECKME: https://git.ti.com/cgit/ti-linux-kernel/ti-linux-kernel/tree/sound/soc/omap/omap-abe-twl6040.c?id=41b605f2887879d5e428928b197e24ffb44d9b82#n532
+
 /* legacy links with CPU (userspace visible) */
 SND_SOC_DAILINK_DEFS(link0,
 	DAILINK_COMP_ARRAY(COMP_EMPTY()),
@@ -64,7 +59,9 @@ SND_SOC_DAILINK_DEFS(link_mcbsp2,
 	DAILINK_COMP_ARRAY(COMP_DUMMY()),
 	DAILINK_COMP_ARRAY(COMP_EMPTY()));
 
+#if FIXME
 // mcbsp1 & 3?
+#endif
 
 SND_SOC_DAILINK_DEFS(link_mcasp,
 	DAILINK_COMP_ARRAY(COMP_EMPTY()),
@@ -76,10 +73,9 @@ SND_SOC_DAILINK_DEFS(link_mcasp,
 
 /* Frontend DAIs - i.e. userspace visible interfaces (ALSA PCMs) */
 SND_SOC_DAILINK_DEFS(link_fe_media1,
-	DAILINK_COMP_ARRAY(COMP_CPU("MultiMedia1")),	// must match with struct snd_soc_dai_driver omap_aess_dai in omap-aess-dai.c
-
+	DAILINK_COMP_ARRAY(COMP_CPU("MultiMedia1")),	/* must match with struct snd_soc_dai_driver omap_aess_dai in omap-aess-dai.c */
 	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_PLATFORM("omap-pcm-audio")));	// code will set .of_node
+	DAILINK_COMP_ARRAY(COMP_PLATFORM("omap-pcm-audio")));	/* code will set .of_node later */
 
 SND_SOC_DAILINK_DEFS(link_fe_media2,
 	DAILINK_COMP_ARRAY(COMP_CPU("MultiMedia2")),
@@ -137,11 +133,15 @@ SND_SOC_DAILINK_DEFS(link_be_mcbsp2,
 	DAILINK_COMP_ARRAY(COMP_DUMMY()),
 	DAILINK_COMP_ARRAY(COMP_PLATFORM("aess")));
 
+#if FIXME
 // mcbsp3?
+#endif
 
 SND_SOC_DAILINK_DEFS(link_be_dmic,
 	DAILINK_COMP_ARRAY(COMP_CPU("dmic.0")),
+#if FIXME
 // dmic.1 dmic.2?
+#endif
 	DAILINK_COMP_ARRAY(COMP_CODEC("dmic-codec",
 				      "dmic-hifi")),
 	DAILINK_COMP_ARRAY(COMP_PLATFORM("aess")));
@@ -163,7 +163,10 @@ SND_SOC_DAILINK_DEFS(link_be_dmic,
 	.dynamic = 1
 #define SND_SOC_DAI_FE_TRIGGER(_play, _capture) \
 	.trigger = {_play, _capture }
-//#define SND_SOC_DAI_LINK_NO_HOST	.no_host_mode = 1
+
+#if FIXME
+#define SND_SOC_DAI_LINK_NO_HOST	.no_host_mode = 1
+#endif
 
 static const struct snd_soc_ops omap_abe_dmic_ops;
 static int omap_abe_dmic_init(struct snd_soc_pcm_runtime *rtd);
@@ -245,7 +248,9 @@ static struct snd_soc_dai_link abe_fe_dai[] = {
 	SND_SOC_DAI_FE_TRIGGER(SND_SOC_DPCM_TRIGGER_BESPOKE, SND_SOC_DPCM_TRIGGER_BESPOKE),
 	SND_SOC_DAI_OPS(NULL, omap_abe_twl6040_fe_init),
 	SND_SOC_DAI_IGNORE_SUSPEND, SND_SOC_DAI_IGNORE_PMDOWN,
-//	SND_SOC_DAI_LINK_NO_HOST,
+#if FIXME
+	SND_SOC_DAI_LINK_NO_HOST,
+#endif
 	.dpcm_playback = 1,
 	.dpcm_capture = 1,
 },
@@ -337,7 +342,9 @@ static struct snd_soc_dai_link abe_be_mcbsp2_dai = {
 	.dpcm_capture = 1,
 };
 
+#if FIXME
 // mcbsp3...
+#endif
 
 static int omap_dmic_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd, struct snd_pcm_hw_params *params);
 
@@ -557,8 +564,7 @@ static const struct snd_soc_dapm_widget twl6040_dapm_widgets[] = {
 /// this all seems to duplicate the audio-routing in the DTS!
 
 static const struct snd_soc_dapm_route audio_map[] = {
-	/* Routings for outputs */
-// Destination Widget <=== Path Name <=== Source Widget
+	/* Routings for outputs: Destination Widget <=== Path Name <=== Source Widget */
 	{"Headset Stereophone", NULL, "HSOL"},
 	{"Headset Stereophone", NULL, "HSOR"},
 
@@ -585,15 +591,13 @@ static const struct snd_soc_dapm_route audio_map[] = {
 
 	{"AFML", NULL, "Line In"},
 	{"AFMR", NULL, "Line In"},
-};
-
-static const struct snd_soc_dapm_route aess_audio_map[] = {
-	/* Routings for outputs */
+#if IS_ENABLED(CONFIG_SND_SOC_OMAP_AESS)
 	/* Connections between twl6040 and ABE */
 	{"Headset Playback", NULL, "PDM_DL1"},
 	{"Handsfree Playback", NULL, "PDM_DL2"},
 	{"PDM_UL1", NULL, "Capture"},
 
+#if FIXME	/* there is no omap-mcbsp1 or 40122000.mcbsp in the widget list */
 	/* Bluetooth <--> ABE*/
 	{"omap-mcbsp.1 Playback", NULL, "BT_VX_DL"},
 	{"BT_VX_UL", NULL, "omap-mcbsp.1 Capture"},
@@ -601,6 +605,15 @@ static const struct snd_soc_dapm_route aess_audio_map[] = {
 	/* FM <--> ABE */
 	{"omap-mcbsp.2 Playback", NULL, "MM_EXT_DL"},
 	{"MM_EXT_UL", NULL, "omap-mcbsp.2 Capture"},
+#endif
+
+#if FIXME	/* for direct modem access? Likely needs firmware modifications. */
+	/* Modem <--> ABE*/
+	{"omap-mcbsp3 Playback", NULL, "PH_EXT_DL"},
+	{"PH_EXT_UL", NULL, "omap-mcbsp3 Capture"},
+#endif
+
+#endif
 };
 
 static int omap_abe_stream_event(struct snd_soc_dapm_context *dapm, int event)
@@ -647,10 +660,12 @@ static int omap_abe_twl6040_dl2_init(struct snd_soc_pcm_runtime *rtd)
 }
 static int omap_abe_twl6040_fe_init(struct snd_soc_pcm_runtime *rtd)
 {
-#ifdef MATERIAL
 	struct snd_soc_component *component = asoc_rtd_to_codec(rtd, 0)->component;
 	struct snd_soc_card *card = rtd->card;
 	struct abe_twl6040 *priv = snd_soc_card_get_drvdata(card);
+
+#if FIXME	// FIXME: what should that do in modern code?
+//	card_data->abe_platform = component;
 #endif
 
 	return 0;
@@ -672,8 +687,10 @@ static int omap_abe_twl6040_init(struct snd_soc_pcm_runtime *rtd)
 	omap_mcpdm_configure_dn_offsets(rtd, TWL6040_HSF_TRIM_LEFT(hsotrim),
 					TWL6040_HSF_TRIM_RIGHT(hsotrim));
 
-	// FIXME: dapm.stream_event has disappeared in v5.4
-	// card->dapm.stream_event = omap_abe_stream_event;
+#if FIXME	// dapm.stream_event has disappeared in v5.4
+
+	card->dapm.stream_event = omap_abe_stream_event;
+
 	// what is the replacement?
 	// maybe: component->driver->stream_event = omap_abe_stream_event;
 /* better in abe_probe?
@@ -682,10 +699,9 @@ static const struct snd_soc_component_driver something = {
 	.stream_event = omap_abe_stream_event;
 }
 
+#endif
 	ret = devm_snd_soc_register_component(dev, &something,
 					      &some_dai, 1);
-*/
-
 #if 0	// REVISIT
 	/* allow audio paths from the audio modem to run during suspend */
 	snd_soc_dapm_ignore_suspend(&card->dapm, "Ext Spk");
@@ -755,8 +771,6 @@ static const struct snd_soc_dapm_widget dmic_dapm_widgets[] = {
 static int omap_abe_dmic_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_dapm_context *dapm = &rtd->card->dapm;
-	struct snd_soc_card *card = rtd->card;
-	struct abe_twl6040 *priv = snd_soc_card_get_drvdata(card);
 	int ret;
 
 	ret = snd_soc_dapm_new_controls(dapm, dmic_dapm_widgets,
@@ -850,7 +864,6 @@ static int snd_soc_card_new_dai_links_with_platform_node(struct snd_soc_card *ca
 
 static int omap_abe_add_legacy_dai_links(struct snd_soc_card *card)
 {
-	struct abe_twl6040 *priv = snd_soc_card_get_drvdata(card);
 	struct device_node *node = card->dev->of_node;
 	struct device_node *dai_node;
 	int ret;
@@ -893,7 +906,6 @@ static int omap_abe_add_legacy_dai_links(struct snd_soc_card *card)
 /* called after loading firmware */
 static int omap_abe_add_aess_dai_links(struct snd_soc_card *card)
 {
-	struct abe_twl6040 *priv = snd_soc_card_get_drvdata(card);
 	struct device_node *node = card->dev->of_node;
 	struct device_node *aess_node;
 	struct device_node *dai_node;
@@ -1008,15 +1020,6 @@ static int omap_abe_add_aess_dai_links(struct snd_soc_card *card)
 			return ret;
 	}
 #endif
-
-#if MATERIAL
-// seems to have an uninitialized mutex?
-	ret = snd_soc_dapm_add_routes(&card->dapm, aess_audio_map,
-					ARRAY_SIZE(aess_audio_map));
-	if (ret < 0)
-		return ret;
-
-#endif
 	return 0;
 }
 
@@ -1047,8 +1050,9 @@ static void omap_abe_fw_ready(const struct firmware *fw, void *context)
 	}
 
 	/* Release the FW here. */
-//	release_firmware(fw);
-
+#if FIXME // if we do this some problem I do not remember arises...
+	release_firmware(fw);
+#endif
 	ret = omap_abe_add_legacy_dai_links(card);
 	if (ret < 0)
 		return;
@@ -1061,6 +1065,7 @@ static void omap_abe_fw_ready(const struct firmware *fw, void *context)
 	if (ret)
 		dev_err(&pdev->dev, "card registration failed after successful firmware load: %d\n",
 			ret);
+
 	return;
 }
 
@@ -1096,9 +1101,11 @@ static int omap_abe_load_fw(struct snd_soc_card *card)
 		ret = omap_abe_add_aess_dai_links(card);
 
 	/* Release the FW here. */
+#if FIXME
 // oops - why???
 // and: what about error paths? We should have sort of devm_request_firmware
 //	release_firmware(fw);
+#endif
 
 	return ret;
 }

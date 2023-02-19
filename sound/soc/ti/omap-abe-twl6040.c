@@ -55,9 +55,9 @@ SND_SOC_DAILINK_DEFS(link1,
 	DAILINK_COMP_ARRAY(COMP_EMPTY()));
 
 SND_SOC_DAILINK_DEFS(link_mcbsp2,
-	DAILINK_COMP_ARRAY(COMP_EMPTY()),
+	DAILINK_COMP_ARRAY(COMP_EMPTY()),	// NOTE: of_node of mcbsp2 inserted by code
 	DAILINK_COMP_ARRAY(COMP_DUMMY()),
-	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+	DAILINK_COMP_ARRAY(COMP_EMPTY()));	// NOTE: of_node of aesss inserted by code
 
 #if FIXME
 // mcbsp1 & 3?
@@ -124,12 +124,12 @@ SND_SOC_DAILINK_DEFS(link_be_mcpdm_dl2,
 	DAILINK_COMP_ARRAY(COMP_PLATFORM("aess")));
 
 SND_SOC_DAILINK_DEFS(link_be_mcbsp1,
-	DAILINK_COMP_ARRAY(COMP_CPU("40122000.mcbsp")),
+	DAILINK_COMP_ARRAY(COMP_CPU("omap-mcbsp.1")),	// NOTE: will be overwritten by OF node
 	DAILINK_COMP_ARRAY(COMP_DUMMY()),
 	DAILINK_COMP_ARRAY(COMP_PLATFORM("aess")));
 
 SND_SOC_DAILINK_DEFS(link_be_mcbsp2,
-	DAILINK_COMP_ARRAY(COMP_CPU("40124000.mcbsp")),
+	DAILINK_COMP_ARRAY(COMP_CPU("omap-mcbsp.2")),	// NOTE: will be overwritten by OF node
 	DAILINK_COMP_ARRAY(COMP_DUMMY()),
 	DAILINK_COMP_ARRAY(COMP_PLATFORM("aess")));
 
@@ -332,7 +332,7 @@ static struct snd_soc_dai_link abe_be_mcpdm_dai[] = {
 
 static struct snd_soc_dai_link abe_be_mcbsp1_dai = {
 	/* McBSP 1 - Bluetooth */
-	SND_SOC_DAI_CONNECT("McBSP-1", "snd-soc-dummy-dai", link_be_mcbsp1),
+	SND_SOC_DAI_CONNECT("McBSP-1", "mcbsp-1", link_be_mcbsp1),
 	SND_SOC_DAI_BE_LINK(OMAP_ABE_DAI_BT_VX,	omap_mcbsp_be_hw_params_fixup),
 	SND_SOC_DAI_OPS(&omap_abe_mcbsp_ops, NULL),
 	SND_SOC_DAI_IGNORE_SUSPEND, SND_SOC_DAI_IGNORE_PMDOWN,
@@ -342,7 +342,7 @@ static struct snd_soc_dai_link abe_be_mcbsp1_dai = {
 
 static struct snd_soc_dai_link abe_be_mcbsp2_dai = {
 	/* McBSP 2 - MODEM or FM */
-	SND_SOC_DAI_CONNECT("McBSP-2", "snd-soc-dummy-dai", link_be_mcbsp2),
+	SND_SOC_DAI_CONNECT("McBSP-2", "mcbsp-2", link_be_mcbsp2),
 	SND_SOC_DAI_BE_LINK(OMAP_ABE_DAI_MM_FM,	omap_mcbsp_be_hw_params_fixup),
 	SND_SOC_DAI_OPS(&omap_abe_mcbsp_ops, NULL),
 	SND_SOC_DAI_IGNORE_SUSPEND, SND_SOC_DAI_IGNORE_PMDOWN,
@@ -606,20 +606,20 @@ static const struct snd_soc_dapm_route audio_map[] = {
 	{"Handsfree Playback", NULL, "PDM_DL2"},
 	{"PDM_UL1", NULL, "Capture"},
 
-#if FIXME	/* there is no omap-mcbsp1 or 40122000.mcbsp in the widget list */
+#if 0 // FIXME	/* there is neither omap-mcbsp1 nor 40122000.mcbsp in the widget list */
 	/* Bluetooth <--> ABE*/
-	{"omap-mcbsp.1 Playback", NULL, "BT_VX_DL"},
-	{"BT_VX_UL", NULL, "omap-mcbsp.1 Capture"},
+	{"40122000.mcbsp Playback", NULL, "BT_VX_DL"},
+	{"BT_VX_UL", NULL, "40122000.mcbsp Capture"},
 
 	/* FM <--> ABE */
-	{"omap-mcbsp.2 Playback", NULL, "MM_EXT_DL"},
-	{"MM_EXT_UL", NULL, "omap-mcbsp.2 Capture"},
+	{"40124000.mcbsp Playback", NULL, "MM_EXT_DL"},
+	{"MM_EXT_UL", NULL, "40124000.mcbsp Capture"},
 #endif
 
 #if FIXME	/* for direct modem access? Likely needs firmware modifications. */
 	/* Modem <--> ABE*/
-	{"omap-mcbsp3 Playback", NULL, "PH_EXT_DL"},
-	{"PH_EXT_UL", NULL, "omap-mcbsp3 Capture"},
+	{"40126000.mcbsp Playback", NULL, "PH_EXT_DL"},
+	{"PH_EXT_UL", NULL, "40126000.mcbsp Capture"},
 #endif
 
 #endif
@@ -829,48 +829,31 @@ static int snd_soc_card_new_dai_links(struct snd_soc_card *card,
 }
 
 /*
- * helper macros to fill the dynamic _card->dai_link array from
- * static array of struct snd_soc_dai_link and insert of_node
+ * helper to fill the dynamic _card->dai_link array from
+ * static array of struct snd_soc_dai_link and insert of_node if defined
  */
 
-static int snd_soc_card_new_dai_links_with_cpu_node(struct snd_soc_card *card,
+static int snd_soc_card_new_dai_links_with_nodes(struct snd_soc_card *card,
 	struct snd_soc_dai_link *new, int count, struct device_node *cpu_of_node,
 	struct device_node *platform_of_node)
 {
 	int ret;
 	int i;
 
-	if (!cpu_of_node)
-		return 0;	/* ignore */
-
 	ret = snd_soc_card_new_dai_links(card, new, count);
 	if (ret < 0)
 		return ret;
 
 	for (i = 0; i < count; i++) {
-		card->dai_link[card->num_links-i-1].cpus[0].of_node = cpu_of_node;
-		card->dai_link[card->num_links-i-1].platforms[0].of_node = platform_of_node;
-	}
-
-	return 0;
-}
-
-static int snd_soc_card_new_dai_links_with_platform_node(struct snd_soc_card *card,
-	struct snd_soc_dai_link *new, int count, struct device_node *platform_of_node)
-{
-	int ret;
-	int i;
-
-	if (!platform_of_node)
-		return 0;	/* ignore */
-
-	ret = snd_soc_card_new_dai_links(card, new, count);
-	if (ret < 0)
-		return ret;
-
-	for (i = 0; i < count; i++) {
-		card->dai_link[card->num_links-i-1].platforms[0].name = NULL;
-		card->dai_link[card->num_links-i-1].platforms[0].of_node = platform_of_node;
+		if (cpu_of_node) {
+			card->dai_link[card->num_links-i-1].cpus[0].name = NULL;
+			card->dai_link[card->num_links-i-1].cpus[0].dai_name = NULL;
+			card->dai_link[card->num_links-i-1].cpus[0].of_node = cpu_of_node;
+		}
+		if (platform_of_node) {
+			card->dai_link[card->num_links-i-1].platforms[0].name = NULL;
+			card->dai_link[card->num_links-i-1].platforms[0].of_node = platform_of_node;
+		}
 	}
 
 	return 0;
@@ -889,20 +872,20 @@ static int omap_abe_add_legacy_dai_links(struct snd_soc_card *card)
 	}
 
 	/* Add the Legacy McPDM */
-	ret = snd_soc_card_new_dai_links_with_cpu_node(card, &legacy_mcpdm_dai, 1, dai_node, dai_node);
+	ret = snd_soc_card_new_dai_links_with_nodes(card, &legacy_mcpdm_dai, 1, dai_node, dai_node);
 	if (ret < 0)
 		return ret;
 
 	/* Add the Legacy McBSP(2) */
 	dai_node = of_parse_phandle(node, "ti,mcbsp2", 0);
-	ret = snd_soc_card_new_dai_links_with_cpu_node(card, &legacy_mcbsp_dai, 1, dai_node, dai_node);
+	ret = snd_soc_card_new_dai_links_with_nodes(card, &legacy_mcbsp_dai, 1, dai_node, dai_node);
 	if (ret < 0)
 		return ret;
 
 #if FIXME	// is already added somewhere? Or not?
 	/* Add the Legacy McASP */
 	dai_node = of_parse_phandle(node, "ti,mcasp", 0);
-	ret = snd_soc_card_new_dai_links_with_cpu_node(card, &legacy_mcasp_dai, 1, dai_node, dai_node);
+	ret = snd_soc_card_new_dai_links_with_nodes(card, &legacy_mcasp_dai, 1, dai_node, dai_node);
 	if (ret < 0)
 		return ret;
 #endif
@@ -910,7 +893,7 @@ static int omap_abe_add_legacy_dai_links(struct snd_soc_card *card)
 	/* Add the Legacy DMICs */
 	dai_node = of_parse_phandle(node, "ti,dmic", 0);
 	if (dai_node)
-		ret = snd_soc_card_new_dai_links_with_cpu_node(card, &legacy_dmic_dai, 1, dai_node, dai_node);
+		ret = snd_soc_card_new_dai_links_with_nodes(card, &legacy_dmic_dai, 1, dai_node, dai_node);
 
 	return 0;
 }
@@ -927,28 +910,33 @@ static int omap_abe_add_aess_dai_links(struct snd_soc_card *card)
 
 	aess_node = of_parse_phandle(node, "ti,aess", 0);
 
-	ret = snd_soc_card_new_dai_links_with_platform_node(card, abe_fe_dai, ARRAY_SIZE(abe_fe_dai), aess_node);
+	ret = snd_soc_card_new_dai_links_with_nodes(card, abe_fe_dai, ARRAY_SIZE(abe_fe_dai), NULL, aess_node);
 	if (ret < 0)
 		return ret;
 
-	ret = snd_soc_card_new_dai_links_with_platform_node(card, abe_be_mcpdm_dai, ARRAY_SIZE(abe_be_mcpdm_dai), aess_node);
+#if FIXME	// not done in https://git.goldelico.com/?p=letux-kernel.git;a=blob;f=sound/soc/omap/omap-abe-twl6040.c;h=208e93cdde40944d6e717e5a1db0e56877516d05;hb=refs/heads/omap-audio-3.15#l694
+	dai_node = of_parse_phandle(node, "ti,mcpdm", 0);
+#endif
+	ret = snd_soc_card_new_dai_links_with_nodes(card, abe_be_mcpdm_dai, ARRAY_SIZE(abe_be_mcpdm_dai), NULL, aess_node);
 	if (ret < 0)
 		return ret;
 
 	dai_node = of_parse_phandle(node, "ti,mcbsp1", 0);
-	ret = snd_soc_card_new_dai_links_with_platform_node(card, &abe_be_mcbsp1_dai, 1, aess_node);
+	ret = snd_soc_card_new_dai_links_with_nodes(card, &abe_be_mcbsp1_dai, 1, dai_node, aess_node);
 	if (ret < 0)
 		return ret;
 
 	dai_node = of_parse_phandle(node, "ti,mcbsp2", 0);
-	ret = snd_soc_card_new_dai_links_with_platform_node(card, &abe_be_mcbsp2_dai, 1, aess_node);
+	ret = snd_soc_card_new_dai_links_with_nodes(card, &abe_be_mcbsp2_dai, 1, dai_node, aess_node);
 	if (ret < 0)
 		return ret;
 
+#if FIXME	// this requires a ti,dmic node and fails if it is missing rather than using an internal fallback
 	dai_node = of_parse_phandle(node, "ti,dmic", 0);
-	ret = snd_soc_card_new_dai_links_with_platform_node(card, abe_be_dmic_dai, ARRAY_SIZE(abe_be_dmic_dai), dai_node);
+	ret = snd_soc_card_new_dai_links_with_nodes(card, abe_be_dmic_dai, ARRAY_SIZE(abe_be_dmic_dai), dai_node, aess_node);
 	if (ret < 0)
 		return ret;
+#endif
 
 #ifdef MATERIAL
 // CHECKME: https://git.ti.com/cgit/ti-linux-kernel/ti-linux-kernel/tree/sound/soc/omap/omap-abe-twl6040.c?id=41b605f2887879d5e428928b197e24ffb44d9b82#n693

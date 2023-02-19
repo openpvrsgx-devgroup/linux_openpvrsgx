@@ -150,6 +150,10 @@ SND_SOC_DAILINK_DEFS(link_be_dmic,
 // from https://git.ti.com/cgit/ti-linux-kernel/ti-linux-kernel/tree/sound/soc/omap/omap-abe-twl6040.c?id=41b605f2887879d5e428928b197e24ffb44d9b82
 // and https://kernel.googlesource.com/pub/scm/linux/kernel/git/lrg/asoc/+/omap/v3.10%5E2..omap/v3.10/
 
+#if FIXME
+// the stream_name may not be necessary to be initialized and can likely be removed
+// or replaced by _name
+#endif
 #define SND_SOC_DAI_CONNECT(_name, _stream_name, _link) \
 	.name = _name, .stream_name = _stream_name, SND_SOC_DAILINK_REG(_link)
 #define SND_SOC_DAI_OPS(_ops, _init) \
@@ -300,7 +304,11 @@ static struct snd_soc_dai_link abe_be_mcpdm_dai[] = {
 	/* McPDM DL1 - Headset */
 	SND_SOC_DAI_CONNECT("McPDM-DL1", "twl6040-dl1", link_be_mcpdm_dl1),
 	SND_SOC_DAI_BE_LINK(OMAP_ABE_DAI_PDM_DL1, omap_mcpdm_be_hw_params_fixup),
-	SND_SOC_DAI_OPS(&omap_abe_ops, NULL/*omap_abe_twl6040_init*/),
+#if FIXME	// makes omap_abe_twl6040_init being called twice
+	SND_SOC_DAI_OPS(&omap_abe_ops, omap_abe_twl6040_init),
+#else
+	SND_SOC_DAI_OPS(&omap_abe_ops, NULL),
+#endif
 	SND_SOC_DAI_IGNORE_SUSPEND, SND_SOC_DAI_IGNORE_PMDOWN,
 	.dpcm_playback = 1,
 },
@@ -562,6 +570,7 @@ static const struct snd_soc_dapm_widget twl6040_dapm_widgets[] = {
 };
 
 // CHECKME: this all seems to duplicate the audio-routing in the DTS!
+// Should be a fallback if there is no ti,audio-routing available
 
 static const struct snd_soc_dapm_route audio_map[] = {
 	/* Routings for outputs: Destination Widget <=== Path Name <=== Source Widget */
@@ -670,6 +679,12 @@ static int omap_abe_twl6040_fe_init(struct snd_soc_pcm_runtime *rtd)
 
 	return 0;
 }
+
+#if FIXME
+// this is called twice!
+// once for rtd->dev->name=McPDM-DL1 and
+// once for rtd->dev->name=Legacy McPDM
+#endif
 
 static int omap_abe_twl6040_init(struct snd_soc_pcm_runtime *rtd)
 {

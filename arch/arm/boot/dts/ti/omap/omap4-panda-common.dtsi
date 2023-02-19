@@ -95,10 +95,17 @@
 		ti,audio-routing =
 			"Headset Stereophone", "HSOL",
 			"Headset Stereophone", "HSOR",
+			"Earphone Spk", "EP",
 			"Line Out", "AUXL",
 			"Line Out", "AUXR",
+			"Vibrator", "VIBRAL",
+			"Vibrator", "VIBRAR",
 			"HSMIC", "Headset Mic",
 			"Headset Mic", "Headset Mic Bias",
+			"MAINMIC", "Main Handset Mic",
+			"Main Handset Mic", "Main Mic Bias",
+			"SUBMIC", "Sub Handset Mic",
+			"Sub Handset Mic", "Main Mic Bias",
 			"AFML", "Line In",
 			"AFMR", "Line In";
 	};

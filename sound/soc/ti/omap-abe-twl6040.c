@@ -600,7 +600,10 @@ static const struct snd_soc_dapm_route audio_map[] = {
 
 	{"AFML", NULL, "Line In"},
 	{"AFMR", NULL, "Line In"},
+};
+
 #if IS_ENABLED(CONFIG_SND_SOC_OMAP_AESS)
+static const struct snd_soc_dapm_route aess_audio_map[] = {
 	/* Connections between twl6040 and ABE */
 	{"Headset Playback", NULL, "PDM_DL1"},
 	{"Handsfree Playback", NULL, "PDM_DL2"},
@@ -621,9 +624,8 @@ static const struct snd_soc_dapm_route audio_map[] = {
 	{"40126000.mcbsp Playback", NULL, "PH_EXT_DL"},
 	{"PH_EXT_UL", NULL, "40126000.mcbsp Capture"},
 #endif
-
-#endif
 };
+#endif
 
 static int omap_abe_stream_event(struct snd_soc_dapm_context *dapm, int event)
 {
@@ -1071,6 +1073,9 @@ static void omap_abe_fw_ready(const struct firmware *fw, void *context)
 	if (ret)
 		dev_err(&pdev->dev, "card registration failed after successful firmware load: %d\n",
 			ret);
+
+	ret = snd_soc_dapm_add_routes(&card->dapm, aess_audio_map,
+				ARRAY_SIZE(aess_audio_map));
 
 	return;
 }

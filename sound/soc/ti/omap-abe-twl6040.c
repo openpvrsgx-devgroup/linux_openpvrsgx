@@ -569,9 +569,6 @@ static const struct snd_soc_dapm_widget twl6040_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("Digital Mic", NULL),
 };
 
-// CHECKME: this all seems to duplicate the audio-routing in the DTS!
-// Should be a fallback if there is no ti,audio-routing available
-
 static const struct snd_soc_dapm_route audio_map[] = {
 	/* Routings for outputs: Destination Widget <=== Path Name <=== Source Widget */
 	{"Headset Stereophone", NULL, "HSOL"},
@@ -762,6 +759,12 @@ static const struct snd_soc_component_driver something = {
 		twl6040_hs_jack_detect(component, &hs_jack, SND_JACK_HEADSET);
 	}
 
+#if FIXME	// can we add the aess routes here?
+#if IS_ENABLED(CONFIG_SND_SOC_OMAP_AESS)
+	ret = snd_soc_dapm_add_routes(&card->dapm, aess_audio_map,
+				ARRAY_SIZE(aess_audio_map));
+#endif
+#endif
 	return 0;
 }
 
@@ -941,90 +944,6 @@ static int omap_abe_add_aess_dai_links(struct snd_soc_card *card)
 		return ret;
 #endif
 
-#ifdef MATERIAL
-// CHECKME: https://git.ti.com/cgit/ti-linux-kernel/ti-linux-kernel/tree/sound/soc/omap/omap-abe-twl6040.c?id=41b605f2887879d5e428928b197e24ffb44d9b82#n693
-	int ret;
-
-	if (node) {
-		struct device_node *dai_node, *aess_node;
-
-		aess_node = of_parse_phandle(node, "ti,aess", 0);
-		if (!aess_node) {
-			dev_err(card->dev, "AESS node is not provided\n");
-			return -EINVAL;
-		}
-
-		for (i = 4; i < ARRAY_SIZE(abe_fe_dai); i++) {
-			abe_fe_dai[i].platform_name  = NULL;
-			abe_fe_dai[i].platform_of_node = aess_node;
-		}
-
-		dai_node = of_parse_phandle(node, "ti,mcpdm", 0);
-		if (!dai_node) {
-				dev_err(card->dev, "McPDM node is not provided\n");
-				return -EINVAL;
-		}
-
-		for (i = 0; i < ARRAY_SIZE(abe_be_mcpdm_dai); i++) {
-			abe_be_mcpdm_dai[i].platform_name  = NULL;
-			abe_be_mcpdm_dai[i].platform_of_node = aess_node;
-		}
-
-		for (i = 0; i < ARRAY_SIZE(abe_be_dmic_dai); i++) {
-			abe_be_dmic_dai[i].platform_name  = NULL;
-			abe_be_dmic_dai[i].platform_of_node = aess_node;
-		}
-
-		dai_node = of_parse_phandle(node, "ti,mcbsp1", 0);
-		if (!dai_node) {
-			dev_err(card->dev,"McBSP1 node is not provided\n");
-			return -EINVAL;
-		}
-		abe_be_mcbsp1_dai.cpu_dai_name  = NULL;
-		abe_be_mcbsp1_dai.cpu_of_node = dai_node;
-		abe_be_mcbsp1_dai.platform_name  = NULL;
-		abe_be_mcbsp1_dai.platform_of_node = aess_node;
-
-		dai_node = of_parse_phandle(node, "ti,mcbsp2", 0);
-		if (!dai_node) {
-			dev_err(card->dev,"McBSP2 node is not provided\n");
-			return -EINVAL;
-		}
-		abe_be_mcbsp2_dai.cpu_dai_name  = NULL;
-		abe_be_mcbsp2_dai.cpu_of_node = dai_node;
-		abe_be_mcbsp2_dai.platform_name  = NULL;
-		abe_be_mcbsp2_dai.platform_of_node = aess_node;
-	}
-
-	/* Add the ABE FEs */
-	ret = snd_soc_card_new_dai_links(card, abe_fe_dai,
-		ARRAY_SIZE(abe_fe_dai));
-	if (ret < 0)
-		return ret;
-
-	/* McPDM BEs */
-	ret = snd_soc_card_new_dai_links(card, abe_be_mcpdm_dai,
-		ARRAY_SIZE(abe_be_mcpdm_dai));
-	if (ret < 0)
-		return ret;
-
-	/* McBSP1 BEs */
-	ret = snd_soc_card_new_dai_links(card, &abe_be_mcbsp1_dai, 1);
-	if (ret < 0)
-		return ret;
-
-	/* McBSP2 BEs */
-	ret = snd_soc_card_new_dai_links(card, &abe_be_mcbsp2_dai, 1);
-	if (ret < 0)
-		return ret;
-	/* DMIC BEs */
-	if (of_parse_phandle(node, "ti,dmic", 0)) {
-		ret = snd_soc_card_new_dai_links(card, abe_be_dmic_dai,
-			ARRAY_SIZE(abe_be_dmic_dai));
-		if (ret < 0)
-			return ret;
-	}
-#endif
 	return 0;
 }
 
@@ -1071,6 +990,9 @@ static void omap_abe_fw_ready(const struct firmware *fw, void *context)
 		dev_err(&pdev->dev, "card registration failed after successful firmware load: %d\n",
 			ret);
 
+#if FIXME
+// can we move that to omap_abe_twl6040_init?
+#endif
 	ret = snd_soc_dapm_add_routes(&card->dapm, aess_audio_map,
 				ARRAY_SIZE(aess_audio_map));
 
@@ -1142,8 +1064,6 @@ static int omap_abe_probe(struct platform_device *pdev)
 	card->owner = THIS_MODULE;
 	card->dapm_widgets = twl6040_dapm_widgets;
 	card->num_dapm_widgets = ARRAY_SIZE(twl6040_dapm_widgets);
-	card->dapm_routes = audio_map;	/* default map */
-	card->num_dapm_routes = ARRAY_SIZE(audio_map);
 	card->dai_link = priv->dai_links;
 	snd_soc_card_set_drvdata(card, priv);
 
@@ -1153,14 +1073,18 @@ static int omap_abe_probe(struct platform_device *pdev)
 	}
 
 
-#if FIXME	// this loads duplicates of audio_map
-	/* additional mapping (static) */
+	/* mapping (static) */
 	ret = snd_soc_of_parse_audio_routing(card, "ti,audio-routing");
 	if (ret) {
 		dev_err(&pdev->dev, "Error while parsing DAPM routing\n");
 		return ret;
 	}
-#endif
+
+	/* fall back to default routing (static) */
+	if (card->num_of_dapm_routes == 0) {
+		card->dapm_routes = audio_map;	/* default map */
+		card->num_dapm_routes = ARRAY_SIZE(audio_map);
+	}
 
 	priv->jack_detection = of_property_read_bool(node, "ti,jack-detection");
 	of_property_read_u32(node, "ti,mclk-freq", &priv->mclk_freq);
@@ -1208,6 +1132,10 @@ static int omap_abe_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+#if IS_ENABLED(CONFIG_SND_SOC_OMAP_AESS)
+#if FIXME
+// can we move that to omap_abe_twl6040_init?
+#endif
 	ret = snd_soc_dapm_add_routes(&card->dapm, aess_audio_map,
 				ARRAY_SIZE(aess_audio_map));
 
@@ -1215,6 +1143,7 @@ static int omap_abe_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "could not add AESS routes: %d\n", ret);
 		return ret;
 	}
+#endif
 
 	return ret;
 }

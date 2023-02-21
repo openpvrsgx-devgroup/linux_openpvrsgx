@@ -761,8 +761,10 @@ static const struct snd_soc_component_driver something = {
 
 #if FIXME	// can we add the aess routes here?
 #if IS_ENABLED(CONFIG_SND_SOC_OMAP_AESS)
-	ret = snd_soc_dapm_add_routes(&card->dapm, aess_audio_map,
-				ARRAY_SIZE(aess_audio_map));
+	if (priv->aess) {
+		ret = snd_soc_dapm_add_routes(&card->dapm, aess_audio_map,
+					ARRAY_SIZE(aess_audio_map));
+	}
 #endif
 #endif
 	return 0;
@@ -1136,12 +1138,14 @@ static int omap_abe_probe(struct platform_device *pdev)
 #if FIXME
 // can we move that to omap_abe_twl6040_init?
 #endif
-	ret = snd_soc_dapm_add_routes(&card->dapm, aess_audio_map,
-				ARRAY_SIZE(aess_audio_map));
+	if (priv->aess) {
+		ret = snd_soc_dapm_add_routes(&card->dapm, aess_audio_map,
+					ARRAY_SIZE(aess_audio_map));
 
-	if (ret) {
-		dev_err(&pdev->dev, "could not add AESS routes: %d\n", ret);
-		return ret;
+		if (ret) {
+			dev_err(&pdev->dev, "could not add AESS routes: %d\n", ret);
+			return ret;
+		}
 	}
 #endif
 

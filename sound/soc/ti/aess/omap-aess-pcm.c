@@ -27,8 +27,9 @@
  *
  */
 
-#include <linux/pm_runtime.h>
+#include <linux/debugfs.h>
 #include <linux/firmware.h>
+#include <linux/pm_runtime.h>
 
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
@@ -584,7 +585,38 @@ static int omap_aess_pcm_stream_event(struct snd_soc_component *component,
 #ifdef CONFIG_PM
 static int omap_aess_pcm_suspend(struct snd_soc_component *component)
 {
+	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 	struct snd_soc_dai *dai;
+
+#undef dev_dbg
+#define dev_dbg dev_info
+
+	dev_dbg(component->dev, "%s: %s active %d\n", __func__,
+		component->name, component->active);
+
+	if (!component->active)
+		return 0;
+
+	omap_aess_mute_gain(aess, OMAP_AESS_MIXSDT_UL);
+	omap_aess_mute_gain(aess, OMAP_AESS_MIXSDT_DL);
+	omap_aess_mute_gain(aess, OMAP_AESS_MIXAUDUL_MM_DL);
+	omap_aess_mute_gain(aess, OMAP_AESS_MIXAUDUL_TONES);
+	omap_aess_mute_gain(aess, OMAP_AESS_MIXAUDUL_UPLINK);
+	omap_aess_mute_gain(aess, OMAP_AESS_MIXAUDUL_VX_DL);
+	omap_aess_mute_gain(aess, OMAP_AESS_MIXVXREC_TONES);
+	omap_aess_mute_gain(aess, OMAP_AESS_MIXVXREC_VX_DL);
+	omap_aess_mute_gain(aess, OMAP_AESS_MIXVXREC_MM_DL);
+	omap_aess_mute_gain(aess, OMAP_AESS_MIXVXREC_VX_UL);
+	omap_aess_mute_gain(aess, OMAP_AESS_MIXDL1_MM_DL);
+	omap_aess_mute_gain(aess, OMAP_AESS_MIXDL1_MM_UL2);
+	omap_aess_mute_gain(aess, OMAP_AESS_MIXDL1_VX_DL);
+	omap_aess_mute_gain(aess, OMAP_AESS_MIXDL1_TONES);
+	omap_aess_mute_gain(aess, OMAP_AESS_MIXDL2_MM_DL);
+	omap_aess_mute_gain(aess, OMAP_AESS_MIXDL2_MM_UL2);
+	omap_aess_mute_gain(aess, OMAP_AESS_MIXDL2_VX_DL);
+	omap_aess_mute_gain(aess, OMAP_AESS_MIXDL2_TONES);
+	omap_aess_mute_gain(aess, OMAP_AESS_MIXECHO_DL1);
+	omap_aess_mute_gain(aess, OMAP_AESS_MIXECHO_DL2);
 
 	for_each_component_dais(component, dai) {
 		dev_dbg(dai->dev, "%s: %s active %d\n", __func__,
@@ -600,6 +632,33 @@ static int omap_aess_pcm_resume(struct snd_soc_component *component)
 	struct snd_soc_dai *dai;
 	int ret = 0;
 	bool any = false;
+
+	dev_dbg(component->dev, "%s: %s active %d\n", __func__,
+		component->name, component->active);
+
+	if (!component->active)
+		return 0;
+
+	omap_aess_unmute_gain(aess, OMAP_AESS_MIXSDT_UL);
+	omap_aess_unmute_gain(aess, OMAP_AESS_MIXSDT_DL);
+	omap_aess_unmute_gain(aess, OMAP_AESS_MIXAUDUL_MM_DL);
+	omap_aess_unmute_gain(aess, OMAP_AESS_MIXAUDUL_TONES);
+	omap_aess_unmute_gain(aess, OMAP_AESS_MIXAUDUL_UPLINK);
+	omap_aess_unmute_gain(aess, OMAP_AESS_MIXAUDUL_VX_DL);
+	omap_aess_unmute_gain(aess, OMAP_AESS_MIXVXREC_TONES);
+	omap_aess_unmute_gain(aess, OMAP_AESS_MIXVXREC_VX_DL);
+	omap_aess_unmute_gain(aess, OMAP_AESS_MIXVXREC_MM_DL);
+	omap_aess_unmute_gain(aess, OMAP_AESS_MIXVXREC_VX_UL);
+	omap_aess_unmute_gain(aess, OMAP_AESS_MIXDL1_MM_DL);
+	omap_aess_unmute_gain(aess, OMAP_AESS_MIXDL1_MM_UL2);
+	omap_aess_unmute_gain(aess, OMAP_AESS_MIXDL1_VX_DL);
+	omap_aess_unmute_gain(aess, OMAP_AESS_MIXDL1_TONES);
+	omap_aess_unmute_gain(aess, OMAP_AESS_MIXDL2_MM_DL);
+	omap_aess_unmute_gain(aess, OMAP_AESS_MIXDL2_MM_UL2);
+	omap_aess_unmute_gain(aess, OMAP_AESS_MIXDL2_VX_DL);
+	omap_aess_unmute_gain(aess, OMAP_AESS_MIXDL2_TONES);
+	omap_aess_unmute_gain(aess, OMAP_AESS_MIXECHO_DL1);
+	omap_aess_unmute_gain(aess, OMAP_AESS_MIXECHO_DL2);
 
 	for_each_component_dais(component, dai) {
 		dev_dbg(dai->dev, "%s: %s active %d\n", __func__,

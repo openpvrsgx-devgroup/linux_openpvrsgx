@@ -64,88 +64,6 @@ static const char *aess_memory_bank[5] = {
 	"mpu"
 };
 
-#ifdef CONFIG_PM
-static int omap_aess_component_suspend(struct snd_soc_component *component)
-{
-	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
-
-#undef dev_dbg
-#define dev_dbg dev_info
-
-	dev_dbg(component->dev, "%s: %s active %d\n", __func__,
-		component->name, component->active);
-
-	if (!component->active)
-		return 0;
-
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXSDT_UL);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXSDT_DL);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXAUDUL_MM_DL);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXAUDUL_TONES);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXAUDUL_UPLINK);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXAUDUL_VX_DL);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXVXREC_TONES);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXVXREC_VX_DL);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXVXREC_MM_DL);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXVXREC_VX_UL);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXDL1_MM_DL);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXDL1_MM_UL2);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXDL1_VX_DL);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXDL1_TONES);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXDL2_MM_DL);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXDL2_MM_UL2);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXDL2_VX_DL);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXDL2_TONES);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXECHO_DL1);
-	omap_aess_mute_gain(aess, OMAP_AESS_MIXECHO_DL2);
-
-	return 0;
-}
-
-static int omap_aess_component_resume(struct snd_soc_component *component)
-{
-	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
-
-	dev_dbg(component->dev, "%s: %s active %d\n", __func__,
-		component->name, component->active);
-
-	if (!component->active)
-		return 0;
-
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXSDT_UL);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXSDT_DL);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXAUDUL_MM_DL);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXAUDUL_TONES);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXAUDUL_UPLINK);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXAUDUL_VX_DL);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXVXREC_TONES);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXVXREC_VX_DL);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXVXREC_MM_DL);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXVXREC_VX_UL);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXDL1_MM_DL);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXDL1_MM_UL2);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXDL1_VX_DL);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXDL1_TONES);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXDL2_MM_DL);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXDL2_MM_UL2);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXDL2_VX_DL);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXDL2_TONES);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXECHO_DL1);
-	omap_aess_unmute_gain(aess, OMAP_AESS_MIXECHO_DL2);
-
-	return 0;
-}
-#else
-#define omap_aess_dai_suspend	NULL
-#define omap_aess_dai_resume		NULL
-#endif
-
-static const struct snd_soc_component_driver omap_aess_component = {
-	.name		= "omap-aess",
-	.suspend	= omap_aess_component_suspend,
-	.resume		= omap_aess_component_resume,
-};
-
 static struct omap_aess *the_aess = NULL;
 
 struct omap_aess *omap_aess_get_handle(void)
@@ -240,17 +158,10 @@ int omap_aess_load_firmware(struct omap_aess *aess, const struct firmware *fw)
 
 	aess->fw = fw;
 
-	ret = snd_soc_register_component(aess->dev, &omap_aess_platform, NULL, 0);
-	if (ret < 0) {
-		dev_err(aess->dev, "failed to register PCM %d\n", ret);
-		goto err;
-	}
-
-	ret = snd_soc_register_component(aess->dev, &omap_aess_component,
-					 omap_aess_dai,
+	ret = snd_soc_register_component(aess->dev, &omap_aess_platform, omap_aess_dai,
 					 ARRAY_SIZE(omap_aess_dai));
 	if (ret < 0) {
-		dev_err(aess->dev, "failed to register DAIs %d\n", ret);
+		dev_err(aess->dev, "failed to register PCM %d\n", ret);
 		goto err;
 	}
 

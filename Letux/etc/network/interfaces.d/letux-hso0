@@ -7,5 +7,4 @@
 
 auto hso0
 iface hso0 inet dhcp
-	pre-up depmod
 	up /etc/network/letux-setup-resolv-conf.sh

@@ -7,5 +7,4 @@
 
 auto usb1
 iface usb1 inet dhcp
-	pre-up depmod
 	up /etc/network/letux-setup-resolv-conf.sh

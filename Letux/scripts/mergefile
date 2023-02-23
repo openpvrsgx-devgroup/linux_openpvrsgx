@@ -35,6 +35,7 @@ letux/arm_lpae_defconfig
 letux/pyra_defconfig
 letux/arm64_defconfig
 letux/mips_defconfig
+letux/mips_ci20_defconfig
 letux/mips_alpha400_defconfig
 letux/x86_defconfig
 

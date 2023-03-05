@@ -25,6 +25,13 @@
 / {
 	compatible = "fsl,imx6sx";
 
+	aliases {
+		mmc0 = &usdhc2;
+		mmc1 = &usdhc3;
+		/delete-property/ mmc2;
+		/delete-property/ mmc3;
+	};
+
 	chosen {
 		stdout-path = "serial0:115200n8";
 	};
@@ -613,7 +620,7 @@
 	display = <&display0>;
 	status = "okay";
 
-	display0: display {
+	display0: display0 {
 		bits-per-pixel = <32>;
 		bus-width = <24>;
 

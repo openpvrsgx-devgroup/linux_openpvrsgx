@@ -35,7 +35,6 @@
 #include <linux/vga_switcheroo.h>
 
 #include <drm/drm_atomic.h>
-#include <drm/drm_blend.h>
 #include <drm/drm_drv.h>
 #include <drm/drm_fb_helper.h>
 #include <drm/drm_fourcc.h>
@@ -1513,8 +1512,6 @@ static int __drm_fb_helper_find_sizes(struct drm_fb_helper *fb_helper,
 	struct drm_mode_set *mode_set;
 	uint32_t surface_format = DRM_FORMAT_INVALID;
 	const struct drm_format_info *info;
-	int best_depth = 0;
-	int rotation = 0;
 
 	memset(sizes, 0, sizeof(*sizes));
 	sizes->fb_width = (u32)-1;
@@ -1572,7 +1569,7 @@ static int __drm_fb_helper_find_sizes(struct drm_fb_helper *fb_helper,
 	crtc_count = 0;
 	drm_client_for_each_modeset(mode_set, client) {
 		struct drm_display_mode *desired_mode;
-		int width, height, x, y, j;
+		int x, y, j;
 		/* in case of tile group, are we the last tile vert or horiz?
 		 * If no tile group you are always the last one both vertically
 		 * and horizontally
@@ -1584,31 +1581,15 @@ static int __drm_fb_helper_find_sizes(struct drm_fb_helper *fb_helper,
 		if (!desired_mode)
 			continue;
 
-		rotation = 0;
-
-		if (drm_client_rotation(mode_set, &rotation) &&
-			drm_rotation_90_or_270(rotation)) {
-			height = desired_mode->hdisplay;
-			width = desired_mode->vdisplay;
-		} else {
-			width = desired_mode->hdisplay;
-			height = desired_mode->vdisplay;
-		}
-
 		crtc_count++;
 
 		x = mode_set->x;
 		y = mode_set->y;
 
-<<<<<<< HEAD
 		sizes->surface_width  =
 			max_t(u32, desired_mode->hdisplay + x, sizes->surface_width);
 		sizes->surface_height =
 			max_t(u32, desired_mode->vdisplay + y, sizes->surface_height);
-=======
-		sizes.surface_width  = max_t(u32, width + x, sizes.surface_width);
-		sizes.surface_height = max_t(u32, height + y, sizes.surface_height);
->>>>>>> 20631c920773e (drm: drm_kms_helper, drm_client_modeset: Fix TILER rotation support on newer kernels)
 
 		for (j = 0; j < mode_set->num_connectors; j++) {
 			struct drm_connector *connector = mode_set->connectors[j];
@@ -1811,7 +1792,6 @@ static void drm_setup_crtcs_fb(struct drm_fb_helper *fb_helper)
 			sw_rotations |= DRM_MODE_ROTATE_0;
 		else
 			sw_rotations |= rotation;
-printk("%s: sw_rotations=%x\n", __func__, sw_rotations);
 	}
 	mutex_unlock(&client->modeset_mutex);
 
@@ -1820,7 +1800,6 @@ printk("%s: sw_rotations=%x\n", __func__, sw_rotations);
 
 		/* use first connected connector for the physical dimensions */
 		if (connector->status == connector_status_connected) {
-			/* FIXME for rotation */
 			info->var.width = connector->display_info.width_mm;
 			info->var.height = connector->display_info.height_mm;
 			break;
@@ -1849,7 +1828,6 @@ printk("%s: sw_rotations=%x\n", __func__, sw_rotations);
 		 */
 		info->fbcon_rotate_hint = FB_ROTATE_UR;
 	}
-printk("%s: fbcon_rotate_hint=%x\n", __func__, info->fbcon_rotate_hint);
 }
 
 /* Note: Drops fb_helper->lock before returning. */
@@ -1985,8 +1963,6 @@ EXPORT_SYMBOL(drm_fb_helper_initial_config);
 int drm_fb_helper_hotplug_event(struct drm_fb_helper *fb_helper)
 {
 	int err = 0;
-	unsigned width, height;
-	int rotation = 0;
 
 	if (!drm_fbdev_emulation || !fb_helper)
 		return 0;
@@ -2007,16 +1983,7 @@ int drm_fb_helper_hotplug_event(struct drm_fb_helper *fb_helper)
 
 	drm_dbg_kms(fb_helper->dev, "\n");
 
-	/* XXX FIXME */
-	if (drm_client_rotation(fb_helper->client.modesets, &rotation) &&
-		drm_rotation_90_or_270(rotation)) {
-		width = fb_helper->fb->height;
-		height = fb_helper->fb->width;
-	} else {
-		width = fb_helper->fb->width;
-		height = fb_helper->fb->height;
-	}
-	drm_client_modeset_probe(&fb_helper->client, width, height);
+	drm_client_modeset_probe(&fb_helper->client, fb_helper->fb->width, fb_helper->fb->height);
 	drm_setup_crtcs_fb(fb_helper);
 	mutex_unlock(&fb_helper->lock);
 

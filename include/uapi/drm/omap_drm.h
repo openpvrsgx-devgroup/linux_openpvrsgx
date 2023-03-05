@@ -46,10 +46,6 @@ struct drm_omap_param {
 #define OMAP_BO_WC		0x00000002
 #define OMAP_BO_UNCACHED	0x00000004
 #define OMAP_BO_CACHE_MASK	0x00000006
-#define OMAP_BO_SYNC		0x00000006	/* strongly-ordered */
-
-/* allow use of normal memory types even when this is hazardous */
-#define OMAP_BO_FORCE		0x00000010
 
 /* Use TILER for the buffer. The TILER container unit can be 8, 16 or 32 bits. */
 #define OMAP_BO_TILED_8		0x00000100

@@ -510,25 +510,6 @@ pandora_nub_set_reset(struct device *dev, struct device_attribute *attr,
 static DEVICE_ATTR(reset, S_IRUGO | S_IWUSR,
 	pandora_nub_show_reset, pandora_nub_set_reset);
 
-#ifdef CONFIG_OF
-static struct pandora_nub_platform_data *
-pandora_nub_dt_init(struct i2c_client *client)
-{
-	// the task is to initialize dynamic pdata from the device tree properties
-	struct device_node *np = client->dev.of_node;
-	struct pandora_nub_platform_data *pdata;
-
-	pdata = devm_kzalloc(&client->dev,
-		 sizeof(struct pandora_nub_platform_data), GFP_KERNEL);
-	if (!pdata)
-		return ERR_PTR(-ENOMEM);
-
-	pdata->gpio_irq = of_get_gpio(np, 0);
-	pdata->gpio_reset = of_get_gpio(np, 1);	// not used
-
-	return pdata;
-}
-
 static struct of_device_id pandora_nub_dt_match[] = {
 	{
 	.compatible = "pandora,pandora-nub",
@@ -537,15 +518,6 @@ static struct of_device_id pandora_nub_dt_match[] = {
 };
 
 MODULE_DEVICE_TABLE(of, pandora_nub_dt_match);
-
-#else
-static struct pandora_nub_platform_data *
-pandora_nub_dt_init(struct i2c_client *client)
-{
-	return ERR_PTR(-ENODEV);
-}
-
-#endif
 
 #define PANDORA_NUB_PE(name, readf, writef) \
 static int proc_open_##name(struct inode *inode, struct file *file) \
@@ -576,14 +548,6 @@ static int pandora_nub_probe(struct i2c_client *client,
 	struct pandora_nub_drvdata *ddata;
 	char buff[32];
 	int ret;
-
-	if (pdata == NULL) {
-		pdata = pandora_nub_dt_init(client);
-		if (IS_ERR(pdata)) {
-			dev_err(&client->dev, "Needs entries in device tree\n");
-			return PTR_ERR(pdata);
-		}
-	}
 
 	if (i2c_check_functionality(client->adapter, I2C_FUNC_I2C) == 0) {
 		dev_err(&client->dev, "can't talk I2C?\n");
@@ -629,29 +593,12 @@ static int pandora_nub_probe(struct i2c_client *client,
 
 	mutex_unlock(&pandora_nub_mutex);
 
-	ret = gpio_request_one(pdata->gpio_irq, GPIOF_IN, client->name);
-	if (ret < 0) {
-		dev_err(&client->dev, "failed to request GPIO %d,"
-			" error %d\n", pdata->gpio_irq, ret);
-		goto err_gpio_irq;
-	}
-
-	ret = gpio_to_irq(pdata->gpio_irq);
-	if (ret < 0) {
-		dev_err(&client->dev, "unable to get irq number for GPIO %d, "
-			"error %d\n", pdata->gpio_irq, ret);
-		goto err_gpio_to_irq;
-	}
-	client->irq = ret;
-
 	snprintf(ddata->dev_name, sizeof(ddata->dev_name),
 		 "nub%d", ddata->proc_id);
 
 	INIT_DELAYED_WORK(&ddata->work, pandora_nub_work);
 	ddata->mode = PANDORA_NUB_MODE_ABS;
 	ddata->client = client;
-	ddata->reset_gpio = pdata->gpio_reset;
-	ddata->irq_gpio = pdata->gpio_irq;
 	ddata->mouse_multiplier = 170 * 256 / 100;
 	ddata->scrollx_multiplier =
 	ddata->scrolly_multiplier = 8 * 256 / 100;
@@ -701,8 +648,8 @@ static int pandora_nub_probe(struct i2c_client *client,
 
 	}
 
-	dev_dbg(&client->dev, "probe %02x, gpio %i, irq %i, \"%s\"\n",
-		client->addr, pdata->gpio_irq, client->irq, client->name);
+	dev_dbg(&client->dev, "probe %02x, irq %i, \"%s\"\n",
+		client->addr, client->irq, client->name);
 
 	snprintf(buff, sizeof(buff), "pandora/nub%d", ddata->proc_id);
 	ddata->proc_root = proc_mkdir(buff, NULL);
@@ -744,10 +691,6 @@ err_input_register:
 err_regulator_enable:
 	regulator_put(ddata->reg);
 err_regulator_get:
-err_gpio_to_irq:
-	gpio_free(pdata->gpio_irq);
-err_gpio_irq:
-	gpio_free(pdata->gpio_reset);
 err_gpio_reset:
 	idr_remove(&pandora_nub_proc_id, ddata->proc_id);
 err_idr:

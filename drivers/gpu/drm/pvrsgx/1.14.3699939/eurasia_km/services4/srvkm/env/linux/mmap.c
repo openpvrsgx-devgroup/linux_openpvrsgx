@@ -764,7 +764,7 @@ DoMapToUser(LinuxMemArea *psLinuxMemArea,
 #if defined(PVR_MAKE_ALL_PFNS_SPECIAL)
 		if (bMixedMap)
 		{
-		        ps_vma->vm_flags |= VM_MIXEDMAP;
+			vm_flags_set(ps_vma, VM_MIXEDMAP);
 		}
 #endif
 	/* Second pass, get the page structures and insert the pages */
@@ -1086,20 +1086,22 @@ PVRMMap(struct file* pFile, struct vm_area_struct* ps_vma)
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0))
     /* This is probably superfluous and implied by VM_IO */
-    ps_vma->vm_flags |= VM_RESERVED;
+   ps_vma->vm_flags |= VM_RESERVED;
 #else
-    ps_vma->vm_flags |= VM_DONTDUMP;
+    vm_flags_set(ps_vma, VM_DONTDUMP);
 #endif
-    ps_vma->vm_flags |= VM_IO;
+    vm_flags_set(ps_vma, VM_IO);
 
     /*
      * Disable mremap because our nopage handler assumes all
      * page requests have already been validated.
      */
-    ps_vma->vm_flags |= VM_DONTEXPAND;
+ /* NOTE: probably deprecated - nowhere used in the kernel any more! */
+   vm_flags_set(ps_vma, VM_DONTEXPAND);
     
     /* Don't allow mapping to be inherited across a process fork */
-    ps_vma->vm_flags |= VM_DONTCOPY;
+/* NOTE: probably deprecated - nowhere used in the kernel any more! */
+    vm_flags_set(ps_vma, VM_DONTCOPY);
 
     ps_vma->vm_private_data = (void *)psOffsetStruct;
     

@@ -47,7 +47,6 @@ struct as5013_drvdata {
 	struct i2c_client *client;
 
 	int x_old, y_old;
-	int irq_gpio;
 	int mode;
 	int proc_id;
 	struct delayed_work work;
@@ -538,23 +537,6 @@ as5013_set_reset(struct device *dev, struct device_attribute *attr,
 static DEVICE_ATTR(reset, S_IRUGO | S_IWUSR,
 	as5013_show_reset, as5013_set_reset);
 
-#ifdef CONFIG_OF
-static struct as5013_platform_data *
-as5013_dt_init(struct i2c_client *client)
-{ /*  the task is to initialize dynamic pdata from the device tree properties */
-	struct device_node *np = client->dev.of_node;
-	struct as5013_platform_data *pdata;
-
-	pdata = devm_kzalloc(&client->dev,
-						 sizeof(struct as5013_platform_data), GFP_KERNEL);
-	if (!pdata)
-		return ERR_PTR(-ENOMEM);
-
-	pdata->gpio_irq = of_get_gpio(np, 0);
-
-	return pdata;
-}
-
 static struct of_device_id as5013_dt_match[] = {
 	{
 	.compatible = "ams,as5013",
@@ -563,15 +545,6 @@ static struct of_device_id as5013_dt_match[] = {
 };
 
 MODULE_DEVICE_TABLE(of, as5013_dt_match);
-
-#else
-static struct as5013_platform_data *
-as5013_dt_init(struct i2c_client *client)
-{
-	return ERR_PTR(-ENODEV);
-}
-
-#endif
 
 #define AS5013_PE(name, readf, writef) \
 static int proc_open_##name(struct inode *inode, struct file *file) \
@@ -598,19 +571,10 @@ AS5013_PE(mbutton_delay, as5013_proc_int_read, as5013_proc_int_write);
 static int as5013_probe(struct i2c_client *client,
 			 const struct i2c_device_id *id)
 {
-	struct as5013_platform_data *pdata = dev_get_platdata(&client->dev);
 	struct as5013_drvdata *ddata;
 	uint8_t value = 0;
 	char buff[32];
 	int i, ret;
-
-	if (pdata == NULL) {
-		pdata = as5013_dt_init(client);
-		if (IS_ERR(pdata)) {
-			dev_err(&client->dev, "Needs entries in device tree\n");
-			return PTR_ERR(pdata);
-		}
-	}
 
 	if (i2c_check_functionality(client->adapter, I2C_FUNC_I2C) == 0) {
 		dev_err(&client->dev, "can't talk I2C?\n");
@@ -676,31 +640,12 @@ static int as5013_probe(struct i2c_client *client,
 		goto err_idr;
 	}
 
-	if(gpio_is_valid(pdata->gpio_irq)) {
-	ret = gpio_request_one(pdata->gpio_irq, GPIOF_IN, client->name);
-	if (ret < 0) {
-		dev_err(&client->dev, "failed to request GPIO %d,"
-			" error %d\n", pdata->gpio_irq, ret);
-		goto err_gpio_irq;
-	}
-
-	ret = gpio_to_irq(pdata->gpio_irq);
-	if (ret < 0) {
-		dev_err(&client->dev, "unable to get irq number for GPIO %d, "
-			"error %d\n", pdata->gpio_irq, ret);
-		goto err_gpio_to_irq;
-	}
-	client->irq = ret;
-	} else
-		client->irq = 0;
-
 	snprintf(ddata->dev_name, sizeof(ddata->dev_name),
 		 "nub%d", ddata->proc_id);
 
 	INIT_DELAYED_WORK(&ddata->work, as5013_work);
 	ddata->mode = AS5013_MODE_ABS;
 	ddata->client = client;
-	ddata->irq_gpio = pdata->gpio_irq;
 	ddata->mouse_multiplier = 170 * 256 / 100;
 	ddata->scrollx_multiplier =
 	ddata->scrolly_multiplier = 8 * 256 / 100;
@@ -731,8 +676,8 @@ static int as5013_probe(struct i2c_client *client,
 
 	}
 
-	dev_dbg(&client->dev, "probe %02x, gpio %i, irq %i, \"%s\"\n",
-		client->addr, pdata->gpio_irq, client->irq, client->name);
+	dev_dbg(&client->dev, "probe %02x, irq %i, \"%s\"\n",
+		client->addr, client->irq, client->name);
 
 	snprintf(buff, sizeof(buff), "pandora/nub%d", ddata->proc_id);
 	ddata->proc_root = proc_mkdir(buff, NULL);
@@ -771,9 +716,6 @@ static int as5013_probe(struct i2c_client *client,
 err_request_irq:
 	as5013_input_unregister(ddata);
 err_input_register:
-err_gpio_to_irq:
-	gpio_free(pdata->gpio_irq);
-err_gpio_irq:
 	idr_remove(&as5013_proc_id, ddata->proc_id);
 err_idr:
 	kfree(ddata);
@@ -813,7 +755,6 @@ static void as5013_remove(struct i2c_client *client)
 
 	free_irq(client->irq, ddata);
 	as5013_input_unregister(ddata);
-	gpio_free(ddata->irq_gpio);
 	kfree(ddata);
 }
 

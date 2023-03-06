@@ -264,7 +264,6 @@ static const struct drm_simple_display_pipe_funcs mxc_epdc_funcs = {
 	.enable	 = mxc_epdc_pipe_enable,
 	.disable = mxc_epdc_pipe_disable,
 	.update	= mxc_epdc_pipe_update,
-	.prepare_fb = drm_gem_simple_display_pipe_prepare_fb,
 };
 
 

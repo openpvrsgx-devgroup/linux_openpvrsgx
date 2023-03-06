@@ -428,7 +428,7 @@ static int omap_aess_pcm_mmap(struct snd_soc_component *component,
 	if (dai->id != OMAP_AESS_DAI_MM1_LP)
 		return -EINVAL;
 
-	vma->vm_flags |= VM_IO;
+	vm_flags_set(vma, VM_IO);
 	vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
 	size = vma->vm_end - vma->vm_start;
 	offset = vma->vm_pgoff << PAGE_SHIFT;

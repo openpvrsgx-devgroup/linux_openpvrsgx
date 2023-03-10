@@ -55,11 +55,13 @@ static struct idle_statedata omap5_idle_data[] = {
 		.mpu_state = PWRDM_POWER_ON,
 		.mpu_logic_state = PWRDM_POWER_ON,
 	},
+#if 0
 	{
 		.cpu_state = PWRDM_POWER_RET,
 		.mpu_state = PWRDM_POWER_RET,
 		.mpu_logic_state = PWRDM_POWER_RET,
 	},
+#endif
 };
 
 static struct idle_statedata dra7_idle_data[] = {
@@ -293,6 +295,7 @@ static struct cpuidle_driver omap5_idle_driver = {
 			.name = "C1",
 			.desc = "CPUx WFI, MPUSS ON"
 		},
+#if 0
 		{
 			/* C2 - CPU0 RET + CPU1 RET + MPU CSWR */
 			.exit_latency = 48 + 60,
@@ -303,6 +306,7 @@ static struct cpuidle_driver omap5_idle_driver = {
 			.name = "C2",
 			.desc = "CPUx CSWR, MPUSS CSWR",
 		},
+#endif
 	},
 	.state_count = ARRAY_SIZE(omap5_idle_data),
 	.safe_state_index = 0,

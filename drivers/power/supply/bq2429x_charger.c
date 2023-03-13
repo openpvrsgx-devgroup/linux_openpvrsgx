@@ -1758,8 +1758,7 @@ static const struct of_device_id bq2429x_charger_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, bq2429x_charger_of_match);
 
-static int bq2429x_charger_probe(struct i2c_client *client,
-				 const struct i2c_device_id *id)
+static int bq2429x_charger_probe(struct i2c_client *client)
 {
 	struct bq2429x_device_info *di;
 	struct device *dev = &client->dev;
@@ -1774,7 +1773,7 @@ static int bq2429x_charger_probe(struct i2c_client *client,
 
 	di->dev = dev;
 	di->client = client;
-	di->id = id;
+	di->id =  i2c_client_get_device_id(client);
 	i2c_set_clientdata(client, di);
 
 	di->rmap = devm_regmap_init_i2c(client, &bq2429x_regmap_config);

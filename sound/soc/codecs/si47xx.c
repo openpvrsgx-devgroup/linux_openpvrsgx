@@ -338,8 +338,7 @@ static struct spi_driver si47xx_spi_driver = {
 #endif /* CONFIG_SPI_MASTER */
 
 #if IS_ENABLED(CONFIG_I2C)
-static int si47xx_i2c_probe(struct i2c_client *i2c,
-				      const struct i2c_device_id *id)
+static int si47xx_i2c_probe(struct i2c_client *i2c)
 {
 	struct si47xx_priv *si47xx;
 	int ret;

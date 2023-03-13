@@ -525,8 +525,7 @@ static const struct iio_info bno055_info = {
 	.read_raw_multi = &bno055_read_raw_multi,
 };
 
-static int bno055_probe(struct i2c_client *client,
-			const struct i2c_device_id *id)
+static int bno055_probe(struct i2c_client *client)
 {
 	int ret;
 	struct iio_dev *indio_dev;

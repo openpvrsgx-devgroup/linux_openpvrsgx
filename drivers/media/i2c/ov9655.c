@@ -1496,8 +1496,7 @@ static const struct v4l2_subdev_internal_ops ov9655_subdev_internal_ops = {
  * Driver initialization and probing
  */
 
-static int ov9655_probe(struct i2c_client *client,
-			 const struct i2c_device_id *did)
+static int ov9655_probe(struct i2c_client *client)
 {
 	struct device_node *np;
 	struct i2c_adapter *adapter = to_i2c_adapter(client->dev.parent);

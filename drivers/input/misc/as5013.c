@@ -568,8 +568,7 @@ AS5013_PE(mbutton_threshold, as5013_proc_int_read, as5013_proc_treshold_write);
 AS5013_PE(mbutton_threshold_y, as5013_proc_int_read, as5013_proc_treshold_write);
 AS5013_PE(mbutton_delay, as5013_proc_int_read, as5013_proc_int_write);
 
-static int as5013_probe(struct i2c_client *client,
-			 const struct i2c_device_id *id)
+static int as5013_probe(struct i2c_client *client)
 {
 	struct as5013_drvdata *ddata;
 	uint8_t value = 0;

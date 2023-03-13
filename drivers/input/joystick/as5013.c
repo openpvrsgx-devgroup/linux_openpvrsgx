@@ -221,8 +221,7 @@ static int as5013_dt_init(struct as5013_drvdata *ddata)
 
 #endif
 
-static int as5013_probe(struct i2c_client *client,
-			const struct i2c_device_id *id)
+static int as5013_probe(struct i2c_client *client)
 {
 	struct as5013_drvdata *ddata;
 	uint8_t value = 0;

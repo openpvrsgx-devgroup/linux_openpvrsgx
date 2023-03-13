@@ -101,8 +101,7 @@ static void minipc_mcu_power_off(void)
 	i2c_smbus_write_byte_data(mcu, 0xd8, 0x01);
 }
 
-static int minipc_mcu_probe(struct i2c_client *client,
-			    const struct i2c_device_id *id)
+static int minipc_mcu_probe(struct i2c_client *client)
 {
 	struct power_supply_config psy_cfg = {};
 

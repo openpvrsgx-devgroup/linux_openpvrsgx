@@ -501,8 +501,7 @@ static irqreturn_t fxas2100x_irq_handler(int irq, void *dev)
 	}
 	return IRQ_HANDLED;
 }
-static int fxas2100x_probe(struct i2c_client *client,
-				   const struct i2c_device_id *id)
+static int fxas2100x_probe(struct i2c_client *client)
 {
 	int result, chip_id;
 	struct fxas2100x_data *pdata;

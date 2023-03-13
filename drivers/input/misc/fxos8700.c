@@ -803,8 +803,7 @@ static irqreturn_t fxos8700_irq_handler(int irq, void *dev)
 	return IRQ_HANDLED;
 }
 
-static int fxos8700_probe(struct i2c_client *client, 
-			const struct i2c_device_id *id)
+static int fxos8700_probe(struct i2c_client *client)
 {
 	int result, client_id;
 	struct fxos8700_data * pdata;

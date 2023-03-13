@@ -541,8 +541,7 @@ PANDORA_NUB_PE(mbutton_threshold, pandora_nub_proc_int_read, pandora_nub_proc_tr
 PANDORA_NUB_PE(mbutton_threshold_y, pandora_nub_proc_int_read, pandora_nub_proc_treshold_write);
 PANDORA_NUB_PE(mbutton_delay, pandora_nub_proc_int_read, pandora_nub_proc_int_write);
 
-static int pandora_nub_probe(struct i2c_client *client,
-			 const struct i2c_device_id *id)
+static int pandora_nub_probe(struct i2c_client *client)
 {
 	struct pandora_nub_platform_data *pdata = dev_get_platdata(&client->dev);
 	struct pandora_nub_drvdata *ddata;

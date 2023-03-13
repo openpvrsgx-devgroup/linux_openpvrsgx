@@ -374,8 +374,7 @@ int read_resolution(struct crtouch_data *crtouch)
 	return 0;
 }
 
-static int crtouch_probe(struct i2c_client *client,
-			 const struct i2c_device_id *id)
+static int crtouch_probe(struct i2c_client *client)
 {
 	int result = 0;
 	struct input_dev *input_dev;

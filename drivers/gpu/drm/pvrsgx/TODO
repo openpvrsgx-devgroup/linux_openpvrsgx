@@ -1,0 +1,69 @@
+This is a PVR/SGX driver derived from
+a) TI Graphics_SDK_5_01_01_02 providing 1.10.2359475 for OMAP3 framebuffer
+b) omap5-sgx-ddk-linux providing IMG DDK 1.14 ED3699939 for ARM, MIPS and i86 for DRM
+
+Diffs to Original
+=================
+* includes internal API fixes for kernels up to v5.3
+* lives in drivers/staging/pvr/1.14.3699939 - so that we can ask for inclusion in linux-next
+* has Kconfig and Makefiles for in-kernel configuration (no separate build system)
+* builds separate kernel modules for omap3430, omap3630, am335x, omap4, omap5, dra7 etc.
+  pvrsrvkm -> e.g. pvrsrvkm_omap_omap5_sgx544_116
+* the correct kernel module is automatically probed by matching .compatible in device tree
+  so that the code is multi-platform friendly and /lib/modules can contain all variations
+* code base should also support JZ4780/CI20 and some Intel Atom processors (CedarView, Poulsbo)
+
+Status
+======
+* builds separate kernel modules
+* works on Pyra/OMAP5 (if TILER framebuffer rotation and X11 are disabled)
+
+ToDo
+====
+* replace static #ifdef of errata handlers by dynamic code (checking for e.g. compatible="sgx530-121")
+  => this should make the code more independent of build-time flags e.g. -DSGX530 or -DREV=125
+* read device tree properties e.g. for timers/pwm, memory etc.
+  => this allows to remove SoC/ARCH dependent constants from code
+* add new device tree node/properties for SGX features like number of cores (SGX_FEATURE_MP_CORE_COUNT)
+  => this allows to reduce compile-time flags and better describes the hardware features
+* remove SoC and ARCH dependencies and collapse eurasia_km/services4/system into a generic backend
+  controlled by CONFIGs and device tree
+  => this should make the same source compile for TI, Ingenic, others into a single kernel module
+* remove all #if (LINUX_VERSION_CODE >= KERNEL_VERSION(...)) dependencies
+  => we finally only need to handle current linus/master since we want to become part of it
+* make Makefile recompile only what is needed
+  => currently, the SGX driver is rebuilt every time
+
+Configure
+=========
+CONFIG_SGX=y
+CONFIG_SGX_114=y	# build 1.14 instead of 1.10
+# CONFIG_SGX_DEBUG is not set
+CONFIG_SGX_DRM=y
+# CONFIG_SGX_CEDARVIEW is not set
+CONFIG_SGX_OMAP=m	# build OMAP variant
+# CONFIG_SGX_POULSBO is not set
+# CONFIG_SGX_JZ4780 is not set
+# CONFIG_SGX_SUNXI is not set
+# CONFIG_SGX_GENERIC is not set
+
+User-Space
+==========
+downloads: to be defined
+
+# modprobe pvrsrvkm_omap_omap5_sgx544_116 - unless loaded through device tree
+pvrsrvctl --start --no-module
+cat /proc/pvr/*	# check that PVR was loaded successfully
+eglinfo		# show some info
+gles1test1 0	# run rotating triangle demo
+
+Please send Patches and Comments
+================================
+To: H. Nikolaus Schaller <hns@goldelico.com>
+CC: Merlijn Wajer <merlijn@wizzup.org>, Pawel Chmiel <pawel.mikolaj.chmiel@gmail.com>,
+    Tony Lindgren <tony@atomide.com>, Philipp Rossak <embed3d@gmail.com>,
+    Adam Ford <aford173@gmail.com>, Tomi Valkeinen <tomi.valkeinen@ti.com>,
+    Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>, moaz korena <moaz@korena.xyz>,
+    Filip Matijević <filip.matijevic.pz@gmail.com>,
+    kernel@pyra-handheld.com, letux-kernel@openphoenux.org, maemo-leste@lists.dyne.org, linux-omap@vger.kernel.org,
+    linux-kernel@vger.kernel.org

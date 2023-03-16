@@ -1,0 +1,56 @@
+
+SGX Embedded Systems DDK for Linux kernel.
+Copyright (C) Imagination Technologies Ltd. All rights reserved.
+======================================================================
+
+
+About 
+-------------------------------------------
+
+This is the Imagination Technologies SGX DDK for the Linux kernel for
+Linux OMAP/Jacinto6 platforms.
+
+This is version 1.9.11 of the TI DDK. It is based on IMG's 1.9 DDK 
+post-beta engineering drop (ED2253347) delivery to TI.
+
+
+License
+-------------------------------------------
+
+You may use, distribute and copy this software under the terms of the MIT
+license.  Details of this license can be found in the file "MIT-COPYING".
+
+Alternatively, you may use, distribute and copy this software under the terms
+of the GNU General Public License version 2.  The full GNU General Public
+License version 2 can be found in the file "GPL-COPYING".
+
+
+Build and Install Instructions
+-------------------------------------------
+
+Setup the necessary environment variables. For details see the "INSTALL" file.
+
+Ensure that the Linux kernel has been built with CONFIG_PREEMPT=y
+
+Set the environment variables
+$ export ARCH=arm
+$ export CROSS_COMPILE=arm-linux-gnueabi-hf-
+$ export PATH=$PATH:<path to cross compiler toolchain>
+$ export KERNELDIR=<your kernel directory>
+$ export DISCIMAGE=<kernel module installation path>
+
+To build for OMAP5430/DRA7xx, change to the appropriate target directory:
+$ cd eurasia_km/eurasiacon/build/linux2/omap5430_linux
+
+Issue the make command:
+$ make
+
+The DDK software must be installed by the sudo user.  
+$ sudo -E make kbuild_install
+
+
+Contact information:
+-------------------------------------------
+
+Imagination Technologies Ltd. <gpl-support@imgtec.com>
+Home Park Estate, Kings Langley, Herts, WD4 8LZ, UK

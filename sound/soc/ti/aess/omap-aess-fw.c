@@ -322,8 +322,6 @@ if(!aess) { printk("%s: aess=%px\n", __func__, aess); return 0; }
 	update.reg = mc->reg;
 	update.mask = 0x1 << mc->shift;
 
-return 1;
-
 	if (value) {
 		update.val = value << mc->shift;;
 		aess->opp.widget[mc->reg] |= value << mc->shift;

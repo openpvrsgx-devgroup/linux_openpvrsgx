@@ -26,9 +26,6 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define LOG 1
-#define OPTIONAL 0
-
 #include <linux/backlight.h>
 #include <linux/delay.h>
 #include <linux/gpio/consumer.h>
@@ -41,18 +38,13 @@
 #include <drm/drm_modes.h>
 #include <drm/drm_panel.h>
 
-#if LOG
-#undef dev_dbg
-#define dev_dbg dev_info
-#endif
-
 /* extended DCS commands (not defined in mipi_display.h) */
-#define DCS_READ_DDB_START		0x02
-#define DCS_READ_NUM_ERRORS		0x05
-#define DCS_READ_BRIGHTNESS		0x52	/* read brightness */
+#define DCS_READ_DDB_START	0x02
+#define DCS_READ_NUM_ERRORS	0x05
+#define DCS_READ_BRIGHTNESS	0x52	/* read brightness */
 #define DCS_READ_CTRL_DISPLAY	0x53	/* read control */
-#define DCS_WRITE_CABC			0x55
-#define DCS_READ_CABC			0x56
+#define DCS_WRITE_CABC		0x55
+#define DCS_READ_CABC		0x56
 #define MCS_READID1		0xda
 #define MCS_READID2		0xdb
 #define MCS_READID3		0xdc
@@ -319,15 +311,6 @@ static int w677l_write(struct otm1283a *ctx, u8 *buf, int len)
 	int r;
 	struct mipi_dsi_device *dsi = to_mipi_dsi_device(ctx->dev);
 
-#if LOG
-	int i;
-	static char logbuf[256];
-	sprintf(logbuf, "%s", IS_MCS(buf[0], len) ? "gen" : "dcs");
-	for (i = 0; i < len; i++)
-		sprintf(logbuf + strlen(logbuf), " %02x", buf[i]);
-	printk("dsi: %s(%s) [%d]", __func__, logbuf, dsi->channel);
-#endif
-
 	if (IS_MCS(buf[0], len))
 		{
 		/* this is a "manufacturer command" that must be sent as a "generic write command" */
@@ -370,18 +353,6 @@ static int w677l_read(struct otm1283a *ctx, u8 dcs_cmd, u8 *buf, int len)
 		dev_err(ctx->dev, "read cmd/reg(%02x, %d) failed: %d\n",
 				dcs_cmd, len, r);
 
-#if LOG
-	{
-	int i;
-	static char logbuf[256];
-
-	sprintf(logbuf, "%02x:", dcs_cmd);
-	for (i = 0; i < len; i++)
-		sprintf(logbuf + strlen(logbuf), " %02x", buf[i]);
-	printk("dsi: %s(%s) [%d] -> %d\n", __func__, logbuf, dsi->channel, r);
-	}
-#endif
-
 	return r;
 }
 
@@ -406,6 +377,7 @@ static int w677l_reset(struct otm1283a *ctx, int activate)
 	dev_dbg(ctx->dev, "%s(%s)\n", __func__, activate?"active":"inactive");
 
 	gpiod_set_value(ctx->reset_gpio, !activate);
+
 	return 0;
 }
 
@@ -414,6 +386,7 @@ static int w677l_regulator(struct otm1283a *ctx, int state)
 	dev_dbg(ctx->dev, "%s(%s)\n", __func__, state?"on":"off");
 
 	gpiod_set_value(ctx->regulator_gpio, state);	/* switch regulator */
+
 	return 0;
 }
 
@@ -677,10 +650,6 @@ static const struct backlight_ops w677l_bl_dev_ops  = {
 	.update_status = w677l_set_brightness,
 };
 
-#if OPTIONAL
-// dsicm_attr_group
-#endif
-
 static int w677l_probe(struct mipi_dsi_device *dsi)
 {
 	struct device *dev = &dsi->dev;
@@ -725,7 +694,6 @@ static int w677l_probe(struct mipi_dsi_device *dsi)
 	drm_panel_init(&ctx->panel, dev, &w677l_panel_funcs, DRM_MODE_CONNECTOR_DSI);
 
 	ret = drm_panel_of_backlight(&ctx->panel);
-printk("%s: drm_panel_of_backlight -> r=%d bl=%px", __func__, ret, ctx->panel.backlight);
 	if (ret)
 		return ret;
 
@@ -748,14 +716,6 @@ printk("%s: drm_panel_of_backlight -> r=%d bl=%px", __func__, ret, ctx->panel.ba
 		ctx->bl_dev->props.type = BACKLIGHT_RAW;
 	}
 
-#if OPTIONAL	/* register some additional tools */
-	ret = sysfs_create_group(&dev->kobj, &dsicm_attr_group);
-	if (ret) {
-		dev_err(dev, "failed to create sysfs files\n");
-		return ret;
-	}
-#endif
-
 	drm_panel_add(&ctx->panel);
 
 	ret = mipi_dsi_attach(dsi);
@@ -768,10 +728,8 @@ printk("%s: drm_panel_of_backlight -> r=%d bl=%px", __func__, ret, ctx->panel.ba
 
 err_dsi_attach:
 	drm_panel_remove(&ctx->panel);
-#if OPTIONAL
-	sysfs_remove_group(&dsi->dev.kobj, &dsicm_attr_group);
-#endif
 	dev_dbg(dev, "%s nok\n", __func__);
+
 	return ret;
 }
 
@@ -784,9 +742,6 @@ static void w677l_remove(struct mipi_dsi_device *dsi)
 	mipi_dsi_detach(dsi);
 
 	drm_panel_remove(&ctx->panel);
-#if OPTIONAL
-	sysfs_remove_group(&dsi->dev.kobj, &dsicm_attr_group);
-#endif
 
 	w677l_reset(ctx, true);	/* activate reset */
 }

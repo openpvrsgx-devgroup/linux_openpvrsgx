@@ -37,10 +37,6 @@
 static DEFINE_IDR(as5013_proc_id);
 static DEFINE_MUTEX(as5013_mutex);
 
-struct as5013_platform_data {
-	int gpio_irq;
-};
-
 struct as5013_drvdata {
 	char dev_name[12];
 	struct input_dev *input;
@@ -71,6 +67,7 @@ struct as5013_drvdata {
 	} mbutton;
 };
 
+#if 0	// unused
 static int as5013_i2c_write(struct i2c_client *client,
 			    uint8_t aregaddr,
 			    uint8_t avalue)
@@ -84,6 +81,7 @@ static int as5013_i2c_write(struct i2c_client *client,
 	error = i2c_transfer(client->adapter, &msg, 1);
 	return error < 0 ? error : 0;
 }
+#endif
 
 static int as5013_i2c_read(struct i2c_client *client,
 			   uint8_t aregaddr, uint8_t *value)
@@ -136,6 +134,8 @@ static irqreturn_t as5013_axis_interrupt(int irq, void *dev_id)
 	int update_pending = 0;
 	int ret, pos, l, m, r;
 	uint8_t value;
+
+// flooded by IRQs...	dev_dbg(&client->dev, "soft irq %d\n", irq);
 
 	ret = as5013_i2c_read(client, 0x10, &value);
 	if (ret < 0) {
@@ -279,12 +279,8 @@ static int as5013_open(struct input_dev *dev)
 
 static int as5013_input_register(struct as5013_drvdata *ddata, int mode)
 {
-	struct input_dev *input;
+	struct input_dev *input = ddata->input;
 	int ret;
-
-	input = input_allocate_device();
-	if (input == NULL)
-		return -ENOMEM;
 
 	if (mode != AS5013_MODE_ABS) {
 		/* pretend to be a mouse */
@@ -310,7 +306,6 @@ static int as5013_input_register(struct as5013_drvdata *ddata, int mode)
 
 	input->open = as5013_open;
 
-	ddata->input = input;
 	input_set_drvdata(input, ddata);
 
 	ret = input_register_device(input);
@@ -389,7 +384,14 @@ static ssize_t as5013_proc_mode_write(struct file *file, const char __user *buff
 	if ((mode == AS5013_MODE_ABS && ddata->mode != AS5013_MODE_ABS) ||
 	    (mode != AS5013_MODE_ABS && ddata->mode == AS5013_MODE_ABS)) {
 		disable_irq(ddata->client->irq);
+
 		as5013_input_unregister(ddata);
+
+		/* needs a new struct input_dev */
+		ddata->input = devm_input_allocate_device(&ddata->client->dev);
+		if (!ddata->input)
+			return -ENOMEM;
+
 		ret = as5013_input_register(ddata, mode);
 		if (ret)
 			dev_err(&ddata->client->dev, "failed to re-register "
@@ -534,6 +536,7 @@ as5013_set_reset(struct device *dev, struct device_attribute *attr,
 
 	return count;
 }
+
 static DEVICE_ATTR(reset, S_IRUGO | S_IWUSR,
 	as5013_show_reset, as5013_set_reset);
 
@@ -567,6 +570,8 @@ AS5013_PE(scroll_rate, as5013_proc_rate_read, as5013_proc_rate_write);
 AS5013_PE(mbutton_threshold, as5013_proc_int_read, as5013_proc_treshold_write);
 AS5013_PE(mbutton_threshold_y, as5013_proc_int_read, as5013_proc_treshold_write);
 AS5013_PE(mbutton_delay, as5013_proc_int_read, as5013_proc_int_write);
+
+static void as5013_remove(struct i2c_client *client);
 
 static int as5013_probe(struct i2c_client *client)
 {
@@ -617,8 +622,12 @@ static int as5013_probe(struct i2c_client *client)
 		return -ENODEV;
 	}
 
-	ddata = kzalloc(sizeof(struct as5013_drvdata), GFP_KERNEL);
-	if (ddata == NULL)
+	ddata = devm_kzalloc(&client->dev, sizeof(struct as5013_drvdata), GFP_KERNEL);
+	if (!ddata)
+		return -ENOMEM;
+
+	ddata->input = devm_input_allocate_device(&client->dev);
+	if (!ddata->input)
 		return -ENOMEM;
 
 	mutex_lock(&as5013_mutex);
@@ -636,7 +645,7 @@ static int as5013_probe(struct i2c_client *client)
 	if (ret < 0) {
 		dev_err(&client->dev, "failed to alloc idr,"
 				" error %d\n", ret);
-		goto err_idr;
+		return ret;
 	}
 
 	snprintf(ddata->dev_name, sizeof(ddata->dev_name),
@@ -653,27 +662,6 @@ static int as5013_probe(struct i2c_client *client)
 	ddata->mbutton.threshold_y = 26;
 	ddata->mbutton.delay = 1;
 	i2c_set_clientdata(client, ddata);
-
-	ret = as5013_input_register(ddata, ddata->mode);
-	if (ret) {
-		dev_err(&client->dev, "failed to register input device, "
-			"error %d\n", ret);
-		goto err_input_register;
-	}
-
-	if(client->irq) {
-	ret = request_threaded_irq(client->irq, NULL,
-				     as5013_axis_interrupt,
-				     IRQF_ONESHOT |
-				     IRQF_TRIGGER_FALLING,
-				     "as5013_joystick", ddata);
-	if (ret) {
-		dev_err(&client->dev, "unable to claim irq %d, error %d\n",
-			client->irq, ret);
-		goto err_request_irq;
-	}
-
-	}
 
 	dev_dbg(&client->dev, "probe %02x, irq %i, \"%s\"\n",
 		client->addr, client->irq, client->name);
@@ -709,15 +697,33 @@ static int as5013_probe(struct i2c_client *client)
 		dev_err(&client->dev, "can't create proc dir");
 
 	ret = device_create_file(&client->dev, &dev_attr_reset);
+	if (ret)
+		;
 
-	return 0;
+#if 0	// dows not run well run with interrupts enabled
+	ret = devm_request_threaded_irq(&client->dev, client->irq,
+				     NULL, as5013_axis_interrupt,
+				     IRQF_ONESHOT |
+				     IRQF_TRIGGER_FALLING,
+				     "as5013_joystick", ddata);
+	if (ret) {
+		dev_err(&client->dev, "unable to claim irq %d, error %d\n",
+			client->irq, ret);
 
-err_request_irq:
-	as5013_input_unregister(ddata);
-err_input_register:
-	idr_remove(&as5013_proc_id, ddata->proc_id);
-err_idr:
-	kfree(ddata);
+		as5013_remove(client);
+
+		return ret;
+	}
+#endif
+
+	ret = as5013_input_register(ddata, ddata->mode);
+	if (ret) {
+		dev_err(&client->dev, "failed to register input device, "
+			"error %d\n", ret);
+		idr_remove(&as5013_proc_id, ddata->proc_id);
+		return ret;
+	}
+
 	return ret;
 }
 
@@ -743,6 +749,8 @@ static void as5013_remove(struct i2c_client *client)
 	snprintf(buff, sizeof(buff), "pandora/nub%d", ddata->proc_id);
 	remove_proc_entry(buff, NULL);
 
+	as5013_input_unregister(ddata);
+
 	mutex_lock(&as5013_mutex);
 	idr_remove(&as5013_proc_id, ddata->proc_id);
 
@@ -751,10 +759,6 @@ static void as5013_remove(struct i2c_client *client)
 		remove_proc_entry("pandora", NULL);
 
 	mutex_unlock(&as5013_mutex);
-
-	free_irq(client->irq, ddata);
-	as5013_input_unregister(ddata);
-	kfree(ddata);
 }
 
 #ifdef CONFIG_PM_SLEEP

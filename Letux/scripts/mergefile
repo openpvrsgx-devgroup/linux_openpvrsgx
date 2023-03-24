@@ -128,7 +128,7 @@ letux/crtouch
 letux/palmas-wdt
 letux/generic-adc-battery
 
-# not acceptable for upstreaming
+# not acceptable/accepted for upstreaming
 letux/am335x-hwmon
 
 # GTA04 sound
@@ -136,8 +136,11 @@ letux/codecs-for-gta04
 letux/codec-twl4030
 letux/sound-soc
 
-# Pyra sound and AESS
+# Pyra sound
+letux/palmas-gpadc
 letux/pyra-vol-mon
+
+# AESS
 letux/aess
 letux/aess-asoc-fw
 letux/aess-audio-test

@@ -718,6 +718,8 @@
 };
 
 &sound {
+	ti,model = "Pyra";
+
 	ti,audio-routing =
 		"Headset Stereophone", "HSOL",
 		"Headset Stereophone", "HSOR",

@@ -995,8 +995,14 @@ static void omap_abe_fw_ready(const struct firmware *fw, void *context)
 #if FIXME
 // can we move that to omap_abe_twl6040_init?
 #endif
-	ret = snd_soc_dapm_add_routes(&card->dapm, aess_audio_map,
+	if (priv->aess) {
+		ret = snd_soc_dapm_add_routes(&card->dapm, aess_audio_map,
 				ARRAY_SIZE(aess_audio_map));
+		if (ret) {
+			dev_err(&pdev->dev, "could not add AESS routes: %d\n", ret);
+			return ret;
+		}
+	}
 
 	return;
 }
@@ -1017,6 +1023,8 @@ static int omap_abe_load_fw(struct snd_soc_card *card)
 	ret = request_firmware(&fw, AESS_FW_NAME, card->dev);
 	if (ret) {
 		dev_err(card->dev, "FW request failed: %d\n", ret);
+		omap_aess_put_handle(priv->aess);
+		priv->aess = NULL;
 		return ret;
 	}
 

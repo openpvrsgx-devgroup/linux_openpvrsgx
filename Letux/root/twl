@@ -8,13 +8,15 @@ trap "exit 1" SIGHUP SIGINT SIGTERM
 
 [ -x /usr/bin/sox ] || apt-get install sox libsox-fmt-mp3
 
-MONO=false
-HANDSFREE=yes
 for C in GTA04 PandaBoardES omap5uevm Pyra L15
 do
+	CARD=$(./findsoundcard $C)
 	[ "$CARD" ] && break
 done
+
 DEV=0
+MONO=false
+HANDSFREE=yes
 
 while [ "$1" ]
 do
@@ -51,8 +53,10 @@ do
 		;;
 	-* )
 		echo unknown option $1
-		echo "-c dev	device"
+		echo "-c card	card"
+		echo "-D dev	subdevice"
 		echo "-d	demo"
+		echo "-H	HDMI sound card"
 		echo "-m	file is mono (1 channel) or take first channel only"
 		echo "-lp	low power mode"
 		echo "-nhf	keep handsfree off"
@@ -84,10 +88,15 @@ AUDIOCARDDEV="hw:CARD=$CARD,DEV=$DEV"
 # Simple mixer control 'Mic',0
 # Simple mixer control 'ADC',0
 
-if [ -r /sys/firmware/devicetree/base/sound/ti,twl6040 ]
+if [ "$(cat /proc/asound/card$CARD/id)" == H58040000encode ]	# card is HDMI
 then
 
-echo "TWL6040 (Pandaboard, OMAP5432EVM, Pyra, ...)"
+	: has no mixers
+
+elif [ -r /sys/firmware/devicetree/base/sound/ti,twl6040 ]
+then
+
+echo "TWL6040 found (Pandaboard, OMAP5432EVM, Pyra, ...)"
 
 amixer -c $CARD -q set "Aux FM" 0% || exit
 amixer -c $CARD -q set "Capture" 100% || exit
@@ -136,7 +145,7 @@ REMIX_STEREO="remix 1 2 1 2"
 elif [ -r /sys/firmware/devicetree/base/sound/ti,twl6040 ]
 then
 
-echo "TWL4030 (GTA04, ...)"
+echo "TWL4030 found (GTA04, ...)"
 
 amixer -c $CARD -q set "AVADC Clock Priority" "HiFi high priority" || exit
 amixer -c $CARD -q set "DAC1 Analog" off || exit
@@ -184,12 +193,12 @@ REMIX_STEREO=""
 elif false
 then
 
-echo "CI20 or simplesoundcard"
+echo "CI20 or simplesoundcard found"
 
-root@letux:~# amixer -c "0" -q set "Master" 100%
-root@letux:~# amixer -c "0" -q set "Headphone" 100%
-root@letux:~# amixer -c "0" -q set "Mic" 100%
-root@letux:~# amixer -c "0" -q set "ADC" "AIP2"
+amixer -c $CARD -q set "Master" 100%
+amixer -c $CARD -q set "Headphone" 100%
+amixer -c $CARD -q set "Mic" 100%
+amixer -c $CARD -q set "ADC" "AIP2"
 
 REMIX_MONO=""
 REMIX_STEREO=""

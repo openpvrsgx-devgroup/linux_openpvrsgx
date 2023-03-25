@@ -63,11 +63,14 @@ SND_SOC_DAILINK_DEFS(link_mcbsp2,
 // mcbsp1 & 3?
 #endif
 
+#if FIXME
+/* do we need this??? */
 SND_SOC_DAILINK_DEFS(link_mcasp,
 	DAILINK_COMP_ARRAY(COMP_EMPTY()),
 	DAILINK_COMP_ARRAY(COMP_CODEC("spdif-dit",
 				      "dit-hifi")),
 	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+#endif
 
 // CHECKME: https://git.ti.com/cgit/ti-linux-kernel/ti-linux-kernel/tree/sound/soc/omap/omap-abe-twl6040.c?id=41b605f2887879d5e428928b197e24ffb44d9b82#n566
 

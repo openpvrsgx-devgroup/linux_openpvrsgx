@@ -304,7 +304,7 @@ static void omap_mcpdm_dai_shutdown(struct snd_pcm_substream *substream,
 	mcpdm->active--;
 
 	if (!mcpdm->active) {
-                if (omap_mcpdm_active(mcpdm)) {
+		if (omap_mcpdm_active(mcpdm)) {
 			if (dai->id == OMAP_MCPDM_LEGACY_DAI) {
 				omap_mcpdm_stop(mcpdm);
 				omap_mcpdm_close_streams(mcpdm);
@@ -455,9 +455,10 @@ static int omap_mcpdm_prepare(struct snd_pcm_substream *substream,
 		cpu_latency_qos_add_request(pm_qos_req, latency);
 
 	if (!omap_mcpdm_active(mcpdm)) {
-			if (dai->id == OMAP_MCPDM_ABE_DAI) {
-			/* Check if ABE McPDM DL/UL is already started */
 #if IS_ENABLED(CONFIG_SND_SOC_OMAP_AESS)
+		if (dai->id == OMAP_MCPDM_ABE_DAI) {
+			/* Check if ABE McPDM DL/UL is already started */
+
 			if (!mcpdm->aess)
 				return -EINVAL;	/* not available */
 
@@ -479,8 +480,8 @@ static int omap_mcpdm_prepare(struct snd_pcm_substream *substream,
 
 			/* wait 250us for ABE tick */
 			usleep_range(250, 300);
-#endif
 		}
+#endif
 
 		omap_mcpdm_start(mcpdm);
 		omap_mcpdm_reg_dump(mcpdm);
@@ -504,6 +505,8 @@ static int omap_mcpdm_probe(struct snd_soc_dai *dai)
 	struct omap_mcpdm *mcpdm = snd_soc_dai_get_drvdata(dai);
 	int ret;
 
+	mcpdm->aess = NULL;
+
 #if IS_ENABLED(CONFIG_SND_SOC_OMAP_AESS)
 	mcpdm->aess = omap_aess_get_handle();
 
@@ -521,8 +524,6 @@ static int omap_mcpdm_probe(struct snd_soc_dai *dai)
 			return ret;
 		}
 	}
-#else
-	mcpdm->aess = NULL;
 #endif
 
 	pm_runtime_enable(mcpdm->dev);

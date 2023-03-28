@@ -666,16 +666,16 @@ static int omap_abe_twl6040_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_component *component = snd_soc_rtd_to_codec(rtd, 0)->component;
 	struct snd_soc_card *card = rtd->card;
 	struct abe_twl6040 *priv = snd_soc_card_get_drvdata(card);
-	int hs_trim;
+	int hsotrim;
 	int ret;
 
 	/*
 	 * Configure McPDM offset cancellation based on the HSOTRIM value from
 	 * twl6040.
 	 */
-	hs_trim = twl6040_get_trim_value(component, TWL6040_TRIM_HSOTRIM);
-	omap_mcpdm_configure_dn_offsets(rtd, TWL6040_HSF_TRIM_LEFT(hs_trim),
-					TWL6040_HSF_TRIM_RIGHT(hs_trim));
+	hsotrim = twl6040_get_trim_value(component, TWL6040_TRIM_HSOTRIM);
+	omap_mcpdm_configure_dn_offsets(rtd, TWL6040_HSF_TRIM_LEFT(hsotrim),
+					TWL6040_HSF_TRIM_RIGHT(hsotrim));
 
 	/* Headset jack detection only if it is supported */
 	if (priv->jack_detection) {
@@ -698,7 +698,7 @@ static int omap_abe_twl6040_aess_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_component *component = asoc_rtd_to_codec(rtd, 0)->component;
 	struct snd_soc_card *card = rtd->card;
 	struct abe_twl6040 *priv = snd_soc_card_get_drvdata(card);
-	u32 hsotrim, left_offset, right_offset, step_mV;
+	u32 hfotrim, left_offset, right_offset, step_mV;
 	int ret;
 
 #if FIXME	// dapm.stream_event has disappeared in v5.4
@@ -731,9 +731,9 @@ static const struct snd_soc_component_driver something = {
 
 	/* DC offset cancellation computation only if ABE is enabled */
 	if (priv->aess) {
-		hsotrim = twl6040_get_trim_value(component, TWL6040_TRIM_HFOTRIM);
-		right_offset = TWL6040_HSF_TRIM_RIGHT(hsotrim);
-		left_offset = TWL6040_HSF_TRIM_LEFT(hsotrim);
+		hfotrim = twl6040_get_trim_value(component, TWL6040_TRIM_HFOTRIM);
+		right_offset = TWL6040_HSF_TRIM_RIGHT(hfotrim);
+		left_offset = TWL6040_HSF_TRIM_LEFT(hfotrim);
 
 		step_mV = twl6040_get_hs_step_size(component);
 

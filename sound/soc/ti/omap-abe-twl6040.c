@@ -707,7 +707,7 @@ static int omap_abe_twl6040_aess_init(struct snd_soc_pcm_runtime *rtd)
 
 	// what is the replacement?
 	// maybe: component->driver->stream_event = omap_abe_stream_event;
-/* better in abe_probe?
+/* better in abe_probe? */
 
 static const struct snd_soc_component_driver something = {
 	.stream_event = omap_abe_stream_event;
@@ -1090,7 +1090,16 @@ static int omap_abe_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
+#if FIXME	/*
+		 * we must not set fully_routed since this disables
+		 * dapm_update_widget_flags() to set the is_ep flags
+		 * for BE:OUT if AESS is loaded
+		 * Not sure, if this is the right workaround especially
+		 * if there is no AESS (compiled or firmware available)
+		 */
+
 	card->fully_routed = 1;
+#endif
 
 #if IS_ENABLED(CONFIG_SND_SOC_OMAP_AESS)
 	dai_node = of_parse_phandle(node, "ti,aess", 0);

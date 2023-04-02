@@ -54,7 +54,10 @@ echo +++ configure kernel and build generated headers
 (
 cd $LINUX || exit
 
-[ -f include/generated/uapi/linux/version.h ] || ( make ARCH=arm letux_lpae_defconfig modules_prepare headers_install INSTALL_HDR_PATH=../linux-headers && ln -sf asm-generic include/asm)
+DEFCONFIG=letux_defconfig
+uname -r | fgrep -q lpae && DEFCONFIG=letux_lpae_defconfig
+
+[ -f include/generated/uapi/linux/version.h ] || ( make ARCH=arm $DEFCONFIG modules_prepare headers_install INSTALL_HDR_PATH=../linux-headers && ln -sf asm-generic include/asm)
 ) || exit
 
 

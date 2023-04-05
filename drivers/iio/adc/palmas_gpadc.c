@@ -459,6 +459,7 @@ static int palmas_gpadc_get_calibrated_code(struct palmas_gpadc *adc,
  * the gain error drift. These paramenters vary depending on device and whether
  * the channel is calibrated (trimmed) or not.
  */
+
 static int palmas_gpadc_threshold_with_tolerance(int val, const int INL,
 						 const int gain_error,
 						 const int offset_error)
@@ -472,6 +473,7 @@ static int palmas_gpadc_threshold_with_tolerance(int val, const int INL,
  * The values below are taken from the datasheet of TWL6035, TWL6037.
  * todo: get max INL, gain error, and offset error from OF.
  */
+
 static int palmas_gpadc_get_high_threshold_raw(struct palmas_gpadc *adc,
 					       struct palmas_adc_event *ev)
 {
@@ -507,6 +509,7 @@ static int palmas_gpadc_get_high_threshold_raw(struct palmas_gpadc *adc,
  * The values below are taken from the datasheet of TWL6035, TWL6037.
  * todo: get min INL, gain error, and offset error from OF.
  */
+
 static int palmas_gpadc_get_low_threshold_raw(struct palmas_gpadc *adc,
 					      struct palmas_adc_event *ev)
 {

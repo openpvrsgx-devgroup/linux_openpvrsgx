@@ -18,9 +18,7 @@
 #include <linux/iio/consumer.h>
 #include <linux/iio/types.h>
 #include <linux/of.h>
-#include <linux/of_gpio.h>
 #include <linux/devm-helpers.h>
-#include <linux/power/generic-fuel-gauge.h>
 
 #define JITTER_DEFAULT 10 /* hope 10ms is enough */
 
@@ -47,12 +45,9 @@ struct gab {
 	struct power_supply *psy;
 	struct power_supply_desc psy_desc;
 	struct iio_channel *channel[GAB_MAX_CHAN_TYPE];
-// CHECKME: maintainers might suggest to remove pdata support
-	struct gab_platform_data	*pdata;
 	struct delayed_work bat_work;
 	int status;
 	struct gpio_desc *charge_finished;
-	bool charger_detected;
 };
 
 static struct gab *to_generic_bat(struct power_supply *psy)
@@ -69,17 +64,6 @@ static void gab_ext_power_changed(struct power_supply *psy)
 
 static const enum power_supply_property gab_props[] = {
 	POWER_SUPPLY_PROP_STATUS,
-	POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN,
-	POWER_SUPPLY_PROP_CHARGE_EMPTY_DESIGN,
-	POWER_SUPPLY_PROP_CHARGE_NOW,
-	POWER_SUPPLY_PROP_VOLTAGE_NOW,
-	POWER_SUPPLY_PROP_CURRENT_NOW,
-	POWER_SUPPLY_PROP_TECHNOLOGY,
-	POWER_SUPPLY_PROP_VOLTAGE_MIN_DESIGN,
-	POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN,
-	POWER_SUPPLY_PROP_MODEL_NAME,
-	POWER_SUPPLY_PROP_TEMP,
-	POWER_SUPPLY_PROP_CAPACITY,
 };
 
 /*
@@ -106,43 +90,12 @@ static int gab_read_channel(struct gab *adc_bat, enum gab_chan_type channel,
 	int ret;
 
 	ret = iio_read_channel_processed(adc_bat->channel[channel], result);
-
-	if (ret == -EINVAL && channel == GAB_TEMP) {
-		/* Palmas gpadc1 does not return processed values */
-		*result=20000;
-		return 0;
-	}
-
 	if (ret < 0)
 		dev_err(&adc_bat->psy->dev, "read channel error: %d\n", ret);
 	else
 		*result *= 1000;
 
 	return ret;
-}
-
-static int gab_get_status(struct gab *adc_bat)
-{
-	struct gab_platform_data *pdata = adc_bat->pdata;
-	struct power_supply_info *bat_info;
-
-	bat_info = &pdata->battery_info;
-	// level is never updated and we don't have yes charge_full_design defined thus we
-	// still get FULL status which is not correct
-	if (adc_bat->level == bat_info->charge_full_design && (adc_bat->level != 0))
-		return POWER_SUPPLY_STATUS_FULL;
-
-	// if we don't get notifications from core
-	if (!pdata->charger_detected) {
-		int result, ret;
-		// read current
-		ret = read_channel(adc_bat, POWER_SUPPLY_PROP_CURRENT_NOW , &result);
-		if (ret < 0)
-			goto err;
-		return (result > 0) ? POWER_SUPPLY_STATUS_CHARGING : POWER_SUPPLY_STATUS_DISCHARGING;
-	}
-err:
-	return adc_bat->status;
 }
 
 static int gab_get_property(struct power_supply *psy,
@@ -154,23 +107,6 @@ static int gab_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_STATUS:
 		val->intval = adc_bat->status;
 		return 0;
-	case POWER_SUPPLY_PROP_CHARGE_EMPTY_DESIGN:
-		val->intval = 0;
-		break;
-	case POWER_SUPPLY_PROP_CHARGE_NOW:
-		if(!pdata->cal_charge) {
-/* FIXME: refactor fetching fuel level into static function */
-			int ret, curr, voltage;
-
-			ret = read_channel(adc_bat, POWER_SUPPLY_PROP_CURRENT_NOW, &curr);
-			ret |= read_channel(adc_bat, POWER_SUPPLY_PROP_VOLTAGE_NOW, &voltage);
-			if (ret < 0)
-				goto err;
-
-			val->intval = (bat_info->charge_full_design * fuel_level_LiIon(voltage, curr, 10)) / 100;
-		} else
-			val->intval = pdata->cal_charge(result);
-		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
 		return gab_read_channel(adc_bat, GAB_VOLTAGE, &val->intval);
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
@@ -179,33 +115,6 @@ static int gab_get_property(struct power_supply *psy,
 		return gab_read_channel(adc_bat, GAB_POWER, &val->intval);
 	case POWER_SUPPLY_PROP_TEMP:
 		return gab_read_channel(adc_bat, GAB_TEMP, &val->intval);
-	case POWER_SUPPLY_PROP_TECHNOLOGY:
-		val->intval = bat_info->technology;
-		break;
-	case POWER_SUPPLY_PROP_VOLTAGE_MIN_DESIGN:
-		val->intval = bat_info->voltage_min_design;
-		break;
-	case POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN:
-		val->intval = bat_info->voltage_max_design;
-		break;
-	case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
-		val->intval = bat_info->charge_full_design;
-		break;
-	case POWER_SUPPLY_PROP_MODEL_NAME:
-		val->strval = bat_info->name;
-		break;
-	case POWER_SUPPLY_PROP_CAPACITY:
-		{
-		int ret, curr, voltage;
-
-		ret = read_channel(adc_bat, POWER_SUPPLY_PROP_CURRENT_NOW, &curr);
-		ret |= read_channel(adc_bat, POWER_SUPPLY_PROP_VOLTAGE_NOW, &voltage);
-		if (ret < 0)
-			goto err;
-
-		val->intval = fuel_level_LiIon(voltage, curr, 10);
-		}
-		break;
 	default:
 		return -EINVAL;
 	}
@@ -216,19 +125,12 @@ static void gab_work(struct work_struct *work)
 	struct gab *adc_bat;
 	struct delayed_work *delayed_work;
 	int status;
-	int ret, iio_charge;
 
 	delayed_work = to_delayed_work(work);
 	adc_bat = container_of(delayed_work, struct gab, bat_work);
 	status = adc_bat->status;
 
-	ret = read_channel(adc_bat, POWER_SUPPLY_PROP_CURRENT_NOW, &iio_charge);
-	if (ret < 0) {
-		pr_info("Cannot read current channel, ret:%d\n", ret);
-		iio_charge = 0;
-	}
-
-	if (!power_supply_am_i_supplied(adc_bat->psy) && iio_charge <= 0)
+	if (!power_supply_am_i_supplied(adc_bat->psy))
 		adc_bat->status =  POWER_SUPPLY_STATUS_DISCHARGING;
 	else if (gab_charge_finished(adc_bat))
 		adc_bat->status = POWER_SUPPLY_STATUS_NOT_CHARGING;
@@ -249,71 +151,6 @@ static irqreturn_t gab_charged(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-#ifdef CONFIG_OF
-static struct gab_platform_data *gab_dt_probe(struct platform_device *pdev)
-{
-	struct gab_platform_data *pdata;
-	struct device_node *np = pdev->dev.of_node;
-	const char *name;
-	u32 val;
-	int err;
-
-	pdata = devm_kzalloc(&pdev->dev,
-			sizeof(struct gab_platform_data),
-			GFP_KERNEL);
-	if (!pdata)
-		return ERR_PTR(-ENOMEM);
-
-	/* parse and fill power_supply_info struct */
-	err = of_property_read_u32(np, "technology", &val);
-	if (err) {
-		dev_info(&pdev->dev, "Battery technology unknown\n");
-		val = 0;
-	}
-	pdata->battery_info.technology = val;
-
-	err = of_property_read_string(np, "battery-name", &name);
-	if (err) {
-		dev_info(&pdev->dev, "Battery name empty, setting default\n");
-	}
-	pdata->battery_info.name = name;
-
-	val = 0;
-	err = of_property_read_u32(np, "charge_empty_design", &val);
-	pdata->battery_info.charge_empty_design = val;
-
-	val = 0;
-	err = of_property_read_u32(np, "charge_full_design", &val);
-	pdata->battery_info.charge_full_design = val;
-
-	val = 0;
-	err = of_property_read_u32(np, "voltage_min_design", &val);
-	pdata->battery_info.voltage_min_design = val;
-
-	val = 0;
-	err = of_property_read_u32(np, "voltage_max-design", &val);
-	pdata->battery_info.voltage_max_design = val;
-
-	if (of_find_property(np, "power-supplies", NULL) != NULL) {
-		pdata->charger_detected = true;
-	}
-
-	return pdata;
-}
-
-static const struct of_device_id of_gab_match[] = {
-	{ .compatible = "linux,generic-adc-battery", },
-	{},
-};
-MODULE_DEVICE_TABLE(of, of_gab_match);
-
-#else
-static struct gab_platform_data gab_dt_probe(struct platform_device *pdev)
-{
-	ERR_PTR(-ENODEV);
-}
-#endif
-
 static int gab_probe(struct platform_device *pdev)
 {
 	struct gab *adc_bat;
@@ -330,7 +167,6 @@ static int gab_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	psy_cfg.of_node = pdev->dev.of_node;
-
 	psy_cfg.drv_data = adc_bat;
 	psy_desc = &adc_bat->psy_desc;
 	psy_desc->name = dev_name(&pdev->dev);

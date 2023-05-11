@@ -34,7 +34,6 @@ static void ingenic_cache_noop(void) {}
 static void ingenic_cache_noop0(void) {while(1) printk("-------0\n");}
 static void ingenic_cache_noop1(void) {while(1) printk("-------1\n");}
 static void ingenic_cache_noop2(void) {while(1) printk("-------2\n");}
-static void ingenic_cache_noop7(void) {while(1) printk("-------7\n");}
 
 static void (*ingenic_blast_scache)(void);
 static void (*ingenic_blast_scache_range)(unsigned long start, unsigned long end);
@@ -457,7 +456,6 @@ void ingenic_cache_init(void)
 	flush_icache_range = ingenic_flush_icache_range;
 	flush_icache_all = ingenic_cache_noop;
 
-	local_flush_data_cache_page = (void *)ingenic_cache_noop7;
 	flush_data_cache_page = blast_dcache32_page;
 
 	_dma_cache_wback_inv = ingenic_dma_cache_wback_inv;

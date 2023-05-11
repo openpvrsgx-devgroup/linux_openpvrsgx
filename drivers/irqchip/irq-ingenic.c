@@ -17,6 +17,7 @@
 #include <linux/timex.h>
 #include <linux/slab.h>
 #include <linux/delay.h>
+#include <linux/cpuhotplug.h>
 
 #include <asm/io.h>
 #include <asm/mach-ingenic/smp.h>

@@ -635,10 +635,8 @@ static int omap_abe_twl6040_dl2_init(struct snd_soc_pcm_runtime *rtd)
 	struct abe_twl6040 *priv = snd_soc_card_get_drvdata(card);
 	u32 hfotrim, left_offset, right_offset;
 
-#ifdef FIXME	// component is NOT the twl6040!?!
 	/* DC offset cancellation computation */
 	hfotrim = twl6040_get_trim_value(component, TWL6040_TRIM_HFOTRIM);
-#endif
 	right_offset = TWL6040_HSF_TRIM_RIGHT(hfotrim);
 	left_offset = TWL6040_HSF_TRIM_LEFT(hfotrim);
 

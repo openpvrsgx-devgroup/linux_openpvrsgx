@@ -1,5 +1,5 @@
 #
-# Linux/arm 6.4.0-rc2 Kernel Configuration
+# Linux/arm 6.4.0-rc3 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="arm-linux-gnueabihf-gcc (GCC) 6.3.0"
 CONFIG_CC_IS_GCC=y
@@ -2538,7 +2538,6 @@ CONFIG_CAN_NETLINK=y
 CONFIG_CAN_CALC_BITTIMING=y
 CONFIG_CAN_RX_OFFLOAD=y
 CONFIG_CAN_AT91=m
-# CONFIG_CAN_BXCAN is not set
 # CONFIG_CAN_CAN327 is not set
 CONFIG_CAN_FLEXCAN=m
 # CONFIG_CAN_GRCAN is not set

@@ -277,8 +277,10 @@ static int omap_abe_twl6040_dl2_init(struct snd_soc_pcm_runtime *rtd);
 static int omap_abe_twl6040_aess_init(struct snd_soc_pcm_runtime *rtd);
 static int omap_mcpdm_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd, struct snd_pcm_hw_params *params);
 static int omap_mcbsp_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd, struct snd_pcm_hw_params *params);
+#endif
 
 static struct snd_soc_dai_link abe_be_mcpdm_dai[] = {
+#if IS_ENABLED(CONFIG_SND_SOC_OMAP_AESS)
 {
 	/* McPDM DL1 - Headset */
 	SND_SOC_DAI_CONNECT("McPDM-DL1", "twl6040-dl1", link_be_mcpdm_dl1),
@@ -303,8 +305,10 @@ static struct snd_soc_dai_link abe_be_mcpdm_dai[] = {
 	SND_SOC_DAI_IGNORE_SUSPEND, SND_SOC_DAI_IGNORE_PMDOWN,
 	.dpcm_playback = 1,
 },
+#endif
 };
 
+#if IS_ENABLED(CONFIG_SND_SOC_OMAP_AESS)
 static struct snd_soc_dai_link abe_be_mcbsp1_dai = {
 	/* McBSP 1 - Bluetooth */
 	SND_SOC_DAI_CONNECT("McBSP-1", "mcbsp-1", link_be_mcbsp1),
@@ -338,6 +342,7 @@ static struct snd_soc_dai_link abe_be_mcbsp3_dai = {
 #endif
 
 #endif
+
 static int omap_dmic_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd, struct snd_pcm_hw_params *params);
 
 static struct snd_soc_dai_link abe_be_dmic_dai[] = {

@@ -1,0 +1,5 @@
+imported manually
+
+as Graphics_SDK_setuplinux_4_08_00_02.bin
+through 'Graphics_SDK_setuplinux_4_08_00_02.bin'
+found at http://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/gfxsdk/latest/index_FDS.html

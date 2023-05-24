@@ -232,3 +232,19 @@
 	ti,timers = <&timer3>;
 	ti,watchdog-timers = <&timer9>, <&timer11>;
 };
+
+&mcspi1 {
+	status = "disabled";	/* pins used as WLAN/BT control gpios */
+};
+
+&mcspi2 {
+	status = "okay";	/* J17 */
+};
+
+&mcspi3 {
+	status = "okay";	/* J17/J20 */
+};
+
+&mcspi4 {
+	status = "disabled";	/* pins used as WL SDIO */
+};

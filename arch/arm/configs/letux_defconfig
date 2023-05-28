@@ -1,5 +1,5 @@
 #
-# Linux/arm 6.4.0-rc3 Kernel Configuration
+# Linux/arm 6.4.0-rc4 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="arm-linux-gnueabihf-gcc (GCC) 6.3.0"
 CONFIG_CC_IS_GCC=y
@@ -7424,7 +7424,7 @@ CONFIG_CIFS_ALLOW_INSECURE_LEGACY=y
 # CONFIG_CIFS_SWN_UPCALL is not set
 # CONFIG_CIFS_FSCACHE is not set
 # CONFIG_SMB_SERVER is not set
-CONFIG_SMBFS_COMMON=m
+CONFIG_SMBFS=m
 # CONFIG_CODA_FS is not set
 # CONFIG_AFS_FS is not set
 # CONFIG_9P_FS is not set

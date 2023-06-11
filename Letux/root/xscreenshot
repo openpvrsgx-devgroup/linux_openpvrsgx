@@ -9,6 +9,7 @@
 SCRIPTPATH="$(dirname "$0")"
 
 [ "$(which convert)" ] || apt-get install graphicsmagick-imagemagick-compat || exit 1
+[ "$(which xwd)" ] || apt-get install x11-apps || exit 1
 
 . $SCRIPTPATH/x >/dev/null
 

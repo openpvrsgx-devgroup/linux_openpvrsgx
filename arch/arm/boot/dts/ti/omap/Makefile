@@ -36,6 +36,7 @@ dtb-$(CONFIG_ARCH_OMAP3) += \
 	omap3-echo.dtb \
 	omap3-evm.dtb \
 	omap3-evm-37xx.dtb \
+	omap3-gta04a2.dtb \
 	omap3-gta04a3.dtb \
 	omap3-gta04a4.dtb \
 	omap3-gta04a5.dtb \
@@ -181,19 +182,10 @@ dtb-$(CONFIG_SOC_OMAP5) += \
 	omap5-igep0050.dtb \
 	omap5-sbc-t54.dtb \
 	omap5-letux-cortex15-v5.0.dtb omap5-letux-cortex15-v5.0+pyra-v5.0.dtb omap5-letux-cortex15-v5.1+pyra-v5.0.dtb \
-	omap5-letux-cortex15-v5.1.dtb omap5-letux-cortex15-v5.1+pyra-v5.1.0.dtb omap5-letux-cortex15-v5.1+pyra-v5.1.2.dtb omap5-letux-cortex15-v5.1+pyra-v5.2.dtb \
+	omap5-letux-cortex15-v5.1.dtb omap5-letux-cortex15-v5.1+pyra-v5.1.dtb omap5-letux-cortex15-v5.1+pyra-v5.1.2.dtb omap5-letux-cortex15-v5.1+pyra-v5.2.dtb \
 	omap5-letux-cortex15-v5.2.dtb omap5-letux-cortex15-v5.2+pyra-v5.1.2.dtb omap5-letux-cortex15-v5.2+pyra-v5.2.dtb \
 	omap5-letux-cortex15-v5.3.dtb omap5-letux-cortex15-v5.3+pyra-v5.1.2.dtb omap5-letux-cortex15-v5.3+pyra-v5.2.dtb \
 	omap5-letux-cortex15-v5.3+pyra-v5.3.dtb \
-	omap5-uevm+pyra4.dtb omap5-uevm+pyra4+lg.dtb omap5-uevm+pyra4+boe.dtb omap5-uevm+pyra4+succ.dtb omap5-uevm+pyra4+ssd+boe.dtb omap5-uevm+pyra4+ssd+succ.dtb \
-	omap5-pyra-brokenevm.dtb \
-	omap5-uevm-broken+pyra4.dtb \
-	omap5-letux-cortex15-v4.9.dtb omap5-letux-cortex15-v4.9+pyra-v5.0.dtb \
-	omap5-letux-cortex15-v5.1+pyra-v5.2.dtb \
-	omap5-letux-cortex15-v5.1+evm-v1.0.dtb \
-	omap5-letux-cortex15-v5.2+evm-v1.0.dtb \
-	omap5-letux-cortex15-v5.3+evm-v1.0.dtb \
-	omap5-letux-cortex15-v5.3+gta15-v1.0.dtb \
 	omap5-uevm.dtb
 dtb-$(CONFIG_SOC_TI81XX) += \
 	am3874-iceboard.dtb \

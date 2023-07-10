@@ -3597,6 +3597,7 @@ CONFIG_MFD_KEMPLD=y
 # CONFIG_MFD_88PM805 is not set
 # CONFIG_MFD_88PM860X is not set
 # CONFIG_MFD_MAX14577 is not set
+# CONFIG_MFD_MAX77541 is not set
 # CONFIG_MFD_MAX77693 is not set
 # CONFIG_MFD_MAX77843 is not set
 # CONFIG_MFD_MAX8907 is not set
@@ -4052,6 +4053,7 @@ CONFIG_MEDIA_ATTACH=y
 # CONFIG_VIDEO_MT9V032 is not set
 # CONFIG_VIDEO_MT9V111 is not set
 # CONFIG_VIDEO_OG01A1B is not set
+# CONFIG_VIDEO_OV01A10 is not set
 # CONFIG_VIDEO_OV02A10 is not set
 # CONFIG_VIDEO_OV08D10 is not set
 # CONFIG_VIDEO_OV08X40 is not set
@@ -5578,6 +5580,7 @@ CONFIG_USB_NET2280=y
 # CONFIG_USB_GOKU is not set
 CONFIG_USB_EG20T=y
 # CONFIG_USB_MAX3420_UDC is not set
+# CONFIG_USB_CDNS2_UDC is not set
 # CONFIG_USB_DUMMY_HCD is not set
 # end of USB Peripheral Controller
 
@@ -5660,6 +5663,7 @@ CONFIG_TYPEC=m
 # CONFIG_TYPEC_MUX_FSA4480 is not set
 # CONFIG_TYPEC_MUX_GPIO_SBU is not set
 # CONFIG_TYPEC_MUX_PI3USB30532 is not set
+# CONFIG_TYPEC_MUX_NB7VPQ904M is not set
 # end of USB Type-C Multiplexer/DeMultiplexer Switch support
 
 #
@@ -5716,6 +5720,7 @@ CONFIG_LEDS_BRIGHTNESS_HW_CHANGED=y
 # LED drivers
 #
 CONFIG_LEDS_APU=y
+# CONFIG_LEDS_AW200XX is not set
 # CONFIG_LEDS_LM3530 is not set
 # CONFIG_LEDS_LM3532 is not set
 # CONFIG_LEDS_LM3642 is not set
@@ -5750,7 +5755,6 @@ CONFIG_LEDS_MENF21BMC=y
 # CONFIG_LEDS_MLXREG is not set
 # CONFIG_LEDS_USER is not set
 # CONFIG_LEDS_NIC78BX is not set
-# CONFIG_LEDS_TI_LMU_COMMON is not set
 
 #
 # Flash and Torch LED drivers
@@ -6665,6 +6669,7 @@ CONFIG_IIO_CONSUMERS_PER_TRIGGER=2
 # CONFIG_SENSORS_ISL29028 is not set
 # CONFIG_ISL29125 is not set
 # CONFIG_JSA1212 is not set
+# CONFIG_ROHM_BU27008 is not set
 # CONFIG_ROHM_BU27034 is not set
 # CONFIG_RPR0521 is not set
 # CONFIG_LTR501 is not set
@@ -6674,6 +6679,7 @@ CONFIG_IIO_CONSUMERS_PER_TRIGGER=2
 # CONFIG_MAX44009 is not set
 # CONFIG_NOA1305 is not set
 # CONFIG_OPT3001 is not set
+# CONFIG_OPT4001 is not set
 # CONFIG_PA12203001 is not set
 # CONFIG_SI1133 is not set
 # CONFIG_SI1145 is not set
@@ -6751,6 +6757,7 @@ CONFIG_IIO_CONSUMERS_PER_TRIGGER=2
 # CONFIG_MCP4531 is not set
 # CONFIG_MCP41010 is not set
 # CONFIG_TPL0102 is not set
+# CONFIG_X9250 is not set
 # end of Digital potentiometers
 
 #
@@ -6771,6 +6778,7 @@ CONFIG_IIO_CONSUMERS_PER_TRIGGER=2
 # CONFIG_MPL115_I2C is not set
 # CONFIG_MPL115_SPI is not set
 # CONFIG_MPL3115 is not set
+# CONFIG_MPRLS0025PA is not set
 # CONFIG_MS5611 is not set
 # CONFIG_MS5637 is not set
 # CONFIG_IIO_ST_PRESS is not set

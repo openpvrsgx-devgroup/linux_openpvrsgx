@@ -10,7 +10,7 @@ rfkill unblock bluetooth
 
 # load TI Shared Transport driver (if configured into the kernel)
 
-modprobe -r st_drv
+modprobe -r st_drv 2>/dev/null
 
 if ! hciconfig | fgrep -q $DEV
 then # bluetooth support not configured into kernel or not yet running - needs to start hciattach

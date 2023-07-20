@@ -2393,12 +2393,17 @@ static int x1600_cim_pins[] = {
 	0x14, 0x16, 0x15, 0x18, 0x13,
 	0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
 };
-static int x1600_lcd_8bit_pins[] = {
+static int x1600_slcd_8bit_pins[] = {
 	0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-	0x18, 0x19, 0x1a, 0x1b,
+	0x17, 0x19, 0x1a, 0x1b,
+};
+static int x1600_slcd_16bit_pins[] = {
+	0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
 };
 static int x1600_lcd_16bit_pins[] = {
+	0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
 	0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+	0x18, 0x19, 0x1a, 0x1b,
 };
 static int x1600_lcd_18bit_pins[] = {
 	0x10, 0x11,
@@ -2453,8 +2458,18 @@ static int x1600_i2s_clk_rx_funcs[] = { 0, 0, };
 static int x1600_i2s_clk_tx_funcs[] = { 0, 0, };
 static int x1600_i2s_sysclk_funcs[] = { 0, 0, };
 static int x1600_cim_funcs[] = { 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, };
-static int x1600_lcd_8bit_funcs[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, };
-static int x1600_lcd_16bit_funcs[] = { 0, 0, 0, 0, 0, 0, 0, 0, };
+static int x1600_slcd_8bit_funcs[] = {
+	1, 1, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1,
+};
+static int x1600_slcd_16bit_funcs[] = {
+	1, 1, 1, 1, 1, 1, 1, 1,
+};
+static int x1600_lcd_16bit_funcs[] = {
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0,
+};
 static int x1600_lcd_18bit_funcs[] = { 0, 0, };
 static int x1600_lcd_24bit_funcs[] = { 0, 0, 0, 0, 0, 0, };
 static int x1600_pwm_pwm0_funcs[] = { 0, };
@@ -2503,7 +2518,8 @@ static const struct group_desc x1600_groups[] = {
 	INGENIC_PIN_GROUP("i2s-clk-tx", x1600_i2s_clk_tx),
 	INGENIC_PIN_GROUP("i2s-sysclk", x1600_i2s_sysclk),
 	INGENIC_PIN_GROUP("cim-data", x1600_cim),
-	INGENIC_PIN_GROUP("lcd-8bit", x1600_lcd_8bit),
+	INGENIC_PIN_GROUP("slcd-8bit", x1600_slcd_8bit),
+	INGENIC_PIN_GROUP("slcd-16bit", x1600_slcd_16bit),
 	INGENIC_PIN_GROUP("lcd-16bit", x1600_lcd_16bit),
 	INGENIC_PIN_GROUP("lcd-18bit", x1600_lcd_18bit),
 	INGENIC_PIN_GROUP("lcd-24bit", x1600_lcd_24bit),
@@ -2539,7 +2555,7 @@ static const char *x1600_i2s_groups[] = {
 	"i2s-data-tx", "i2s-data-rx", "i2s-clk-rx", "i2s-clk-tx", "i2s-sysclk",
 };
 static const char *x1600_cim_groups[] = { "cim-data", };
-static const char *x1600_lcd_groups[] = { "lcd-8bit", "lcd-16bit", "lcd-18bit", "lcd-24bit", "lcd-no-pins", };
+static const char *x1600_lcd_groups[] = { "slcd-8bit", "slcd-16bit", "lcd-16bit", "lcd-18bit", "lcd-24bit", "lcd-no-pins", };
 static const char *x1600_pwm0_groups[] = { "pwm0", };
 static const char *x1600_pwm1_groups[] = { "pwm1", };
 static const char *x1600_pwm2_groups[] = { "pwm2", };

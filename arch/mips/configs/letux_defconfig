@@ -1,5 +1,5 @@
 #
-# Linux/mips 6.5.0-rc2 Kernel Configuration
+# Linux/mips 6.5.0-rc3 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="mipsel-linux-gnu-gcc (GCC) 6.3.0"
 CONFIG_CC_IS_GCC=y
@@ -868,6 +868,7 @@ CONFIG_BT_HCIUART_BCSP=y
 # CONFIG_BT_HCIUART_3WIRE is not set
 # CONFIG_BT_HCIUART_INTEL is not set
 CONFIG_BT_HCIUART_BCM=y
+# CONFIG_BT_HCIUART_RTL is not set
 # CONFIG_BT_HCIUART_QCA is not set
 # CONFIG_BT_HCIUART_AG6XX is not set
 # CONFIG_BT_HCIUART_MRVL is not set

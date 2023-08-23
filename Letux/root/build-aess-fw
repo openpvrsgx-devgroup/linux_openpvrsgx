@@ -44,7 +44,7 @@ DEST="$LINUX/sound/soc/ti/aess/firmware"	# subtree where we find the firmware
 
 echo "+++ make sure we have the (complete) kernel source tree ($BRANCH)"
 ( gitfetch "--depth 1 -b $BRANCH https://github.com/goldelico/letux-kernel.git" letux-kernel && [ -r "$DEST" ] ) ||
-( echo "--- fallback to $FALLBACK"; rm -rf letux-kernel; gitfetch "--depth 1 -b $FALLBACK https://github.com/goldelico/letux-kernel.git" letux-kernel ) || exit 1
+( echo "--- fallback to $FALLBACK"; rm -rf letux-kernel; gitfetch "--depth 1 -b $FALLBACK https://github.com/goldelico/letux-kernel.git" letux-kernel ) || exit 1
 
 #
 # build generated kernel headers

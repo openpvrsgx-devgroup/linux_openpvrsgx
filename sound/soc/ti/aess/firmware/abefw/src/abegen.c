@@ -63,6 +63,7 @@
 #define fd_set host_fd_set
 #define blkcnt_t host_blkcnt_t
 #define uintptr_t host_uintptr_t
+#define intptr_t host_intptr_t
 
 #include <stdlib.h>
 #include <stdio.h>

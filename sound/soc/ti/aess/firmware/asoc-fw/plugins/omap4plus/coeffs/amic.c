@@ -11,6 +11,7 @@
  */
 
 #define uintptr_t host_uintptr_t
+#define intptr_t host_intptr_t
 #define mode_t host_mode_t
 #define dev_t host_dev_t
 #define blkcnt_t host_blkcnt_t

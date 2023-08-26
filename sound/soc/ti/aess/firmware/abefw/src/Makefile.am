@@ -22,4 +22,5 @@ abegen_CFLAGS = $(AM_CFLAGS) -Werror -Wall \
 	-include $(LINUX_DIR)/include/linux/compiler_types.h \
 	-include $(LINUX_DIR)/include/linux/types.h \
 	-D__KERNEL__ \
-	-D__LINUX_ARM_ARCH__=7
+	-D__LINUX_ARM_ARCH__=7 \
+	-D_LINUX_STAT_H

@@ -835,6 +835,29 @@ out:
 	return ret;
 }
 
+static long manifest_location;
+static struct snd_soc_tplg_manifest manifest;
+
+static int socfw_write_manifest(struct soc_fw_priv *soc_fw)
+{
+	int err;
+	int bytes;
+
+	err = write_header(soc_fw, SND_SOC_TPLG_TYPE_MANIFEST, 0,
+			soc_fw->version, sizeof(manifest), 0, 1);
+	if (err < 0)
+		return err;
+
+	manifest.size = sizeof(manifest);
+	bytes = write(soc_fw->out_fd, &manifest, sizeof(manifest));
+	if (bytes != sizeof(manifest)) {
+		fprintf(stderr, "error: can't write manifest %lu\n", (long unsigned int)bytes);
+		return -1;
+	}
+
+	return 0;
+}
+
 struct soc_fw_priv *socfw_new(const char *name, int verbose)
 {
 	struct soc_fw_priv * soc_fw;
@@ -856,11 +879,15 @@ struct soc_fw_priv *socfw_new(const char *name, int verbose)
 	}
 
 	soc_fw->out_fd = fd;
+	manifest_location=lseek(soc_fw->out_fd, 0, SEEK_CUR);	// get position
+	socfw_write_manifest(soc_fw);
 	return soc_fw;
 }
 
 void socfw_free(struct soc_fw_priv *soc_fw)
 {
+	lseek(soc_fw->out_fd, manifest_location, SEEK_SET);	// rewind
+	socfw_write_manifest(soc_fw);	// overwrite
 	close(soc_fw->out_fd);
 	free(soc_fw);
 }

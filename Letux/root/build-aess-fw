@@ -9,7 +9,7 @@
 
 THIS="$PWD"
 BRANCH=letux-$(uname -r | sed -e 's/-letux.*+//' -e 's/\([0-9]*\.[0-9]\)*\.0/\1/')
-FALLBACK=letux-6.1
+FALLBACK=letux-6.1.y
 case "$BRANCH" in
 	letux-[1-4].* | letux-5.[0-9] | letux-5.[0-9].* | letux-5.[0-9]-rc )
 		BRANCH=$FALLBACK
@@ -60,6 +60,10 @@ uname -r | fgrep -q lpae && DEFCONFIG=letux_lpae_defconfig
 [ -f include/generated/uapi/linux/version.h ] || ( make ARCH=arm $DEFCONFIG modules_prepare headers_install INSTALL_HDR_PATH=../linux-headers && ln -sf asm-generic include/asm)
 ) || exit
 
+# patch issue with host defined __attribute_alloc_size__
+
+sed -i.bak 's|^#define __alloc_size__(x, ...)|// #define __alloc_size__(x, ...)|' $LINUX/include/linux/compiler_attributes.h
+fgrep __alloc_size__ $LINUX/include/linux/compiler_attributes.h
 
 #
 # build firmware tools and firmware

@@ -18,3 +18,7 @@ iface enx3a6e630c19cd inherits eth0
 # Ethernet interface on RasPi3b+
 auto enxb827ebb03dc9
 iface enxb827ebb03dc9 inherits eth0
+
+# Ethernet interface on Panda ES
+auto enx3a6e630c19ce
+iface enx3a6e630c19ce inherits eth0

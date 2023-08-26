@@ -31,6 +31,8 @@ typedef int int32_t;
 #undef __always_inline
 #undef __extern_always_inline
 #undef __attribute_const__
+#define __attribute_const__
+#define noreturn
 #include <stdio.h>
 #include <stdint.h>
 #include <fcntl.h>

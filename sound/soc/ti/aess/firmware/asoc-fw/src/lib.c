@@ -64,6 +64,14 @@ struct soc_fw_priv {
 	u32 next_hdr_pos;
 };
 
+char *our_strncpy(char *dest, const char *src, size_t n)
+{ /* avoids "error: 'strncpy' specified bound 44 equals destination size [-Werror=stringop-truncation]" */
+	int l = strnlen(src, n);
+	memcpy(dest, src, l);	/* copy max n characters */
+	memset(dest + l, 0, n - l);	/* zero fill remainder up to n */
+	return dest;
+}
+
 static void verbose(struct soc_fw_priv *soc_fw, const char *fmt, ...)
 {
 	int offset = lseek(soc_fw->out_fd, 0, SEEK_CUR);
@@ -157,7 +165,7 @@ fprintf(stdout, "%s name=%s\n", __func__, kcontrol->name);
 
 	mc.hdr.size = sizeof(mc.hdr);
 	mc.hdr.type = SND_SOC_TPLG_TYPE_MIXER;
-	strncpy(mc.hdr.name, (const char*)kcontrol->name, sizeof(mc.hdr.name));
+	our_strncpy(mc.hdr.name, (const char*)kcontrol->name, sizeof(mc.hdr.name));
 	mc.hdr.access = kcontrol->access;
 	mc.hdr.ops.get = kcontrol->get;
 	mc.hdr.ops.put = kcontrol->put;
@@ -211,7 +219,7 @@ fprintf(stdout, "%s\n", __func__);
 		}
 	} else {
 		for (i = 0; i < count; i++) {
-			strncpy(ec->texts[i], menum->texts[i], sizeof(ec->texts[0]));
+			our_strncpy(ec->texts[i], menum->texts[i], sizeof(ec->texts[0]));
 		}
 	}
 }
@@ -237,7 +245,7 @@ fprintf(stdout, "%s\n", __func__);
 
 	ec.hdr.size = sizeof(ec.hdr);
 	ec.hdr.type = SND_SOC_TPLG_TYPE_ENUM;
-	strncpy(ec.hdr.name, (const char*)kcontrol->name, sizeof(ec.hdr.name));
+	our_strncpy(ec.hdr.name, (const char*)kcontrol->name, sizeof(ec.hdr.name));
 	ec.hdr.access = kcontrol->access;
 	ec.hdr.ops.get = kcontrol->get;
 	ec.hdr.ops.put = kcontrol->put;
@@ -602,11 +610,11 @@ fprintf(stdout, "%s: name=%s\n", __func__, widgets[i].name);
 		widget.id = unget_widget_id(widgets[i].id);
 		if(widget.id < 0)
 			return widget.id;
-		strncpy(widget.name, widgets[i].name,
+		our_strncpy(widget.name, widgets[i].name,
 			sizeof(widget.name));
 
 		if (widgets[i].sname)
-			strncpy(widget.sname, widgets[i].sname,
+			our_strncpy(widget.sname, widgets[i].sname,
 				sizeof(widget.sname));
 
 		widget.reg = widgets[i].reg;
@@ -660,10 +668,10 @@ int socfw_import_dapm_graph(struct soc_fw_priv *soc_fw,
 
 	for (i = 0; i <graph_count; i++) {
 
-		strncpy(elem.sink, graph[i].sink, sizeof(elem.sink));
-		strncpy(elem.source, graph[i].source, sizeof(elem.source));
+		our_strncpy(elem.sink, graph[i].sink, sizeof(elem.sink));
+		our_strncpy(elem.source, graph[i].source, sizeof(elem.source));
 		if (graph[i].control)
-			strncpy(elem.control, graph[i].control,
+			our_strncpy(elem.control, graph[i].control,
 				sizeof(elem.control));
 		else
 			memset(elem.control, 0, sizeof(elem.control));

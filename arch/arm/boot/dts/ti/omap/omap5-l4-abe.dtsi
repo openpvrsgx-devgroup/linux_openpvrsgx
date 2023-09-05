@@ -427,8 +427,8 @@
 					<SYSC_IDLE_NO>,
 					<SYSC_IDLE_SMART>;
 			/* Domains (V, P, C): iva, abe_pwrdm, abe_clkdm */
-			clocks = <&abe_clkctrl OMAP5_AESS_CLKCTRL 0>;
-			clock-names = "fck";
+			clocks = <&abe_clkctrl OMAP5_AESS_CLKCTRL 0>, <&abe_iclk>;
+			clock-names = "fck", "ick";
 			#address-cells = <1>;
 			#size-cells = <1>;
 

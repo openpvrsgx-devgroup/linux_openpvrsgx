@@ -87,9 +87,6 @@ void *nulldisp_gem_prime_vmap(struct drm_gem_object *obj);
 
 void nulldisp_gem_prime_vunmap(struct drm_gem_object *obj, void *vaddr);
 
-int nulldisp_gem_prime_mmap(struct drm_gem_object *obj,
-				struct vm_area_struct *vma);
-
 struct reservation_object *nulldisp_gem_prime_res_obj(
 				struct drm_gem_object *obj);
 

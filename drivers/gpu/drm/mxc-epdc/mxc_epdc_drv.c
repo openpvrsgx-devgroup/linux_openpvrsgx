@@ -275,10 +275,7 @@ static struct drm_driver mxc_epdc_driver = {
 	.driver_features = DRIVER_GEM | DRIVER_MODESET | DRIVER_ATOMIC,
 	.fops = &fops,
 	.dumb_create	    = drm_gem_dma_dumb_create,
-	.prime_handle_to_fd     = drm_gem_prime_handle_to_fd,
-	.prime_fd_to_handle     = drm_gem_prime_fd_to_handle,
 	.gem_prime_import_sg_table = drm_gem_dma_prime_import_sg_table,
-	.gem_prime_mmap	 = drm_gem_prime_mmap,
 
 	.name = DRIVER_NAME,
 	.desc = DRIVER_DESC,

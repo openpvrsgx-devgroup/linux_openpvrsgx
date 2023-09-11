@@ -1,3 +1,4 @@
+
 /* -*- mode: c; indent-tabs-mode: t; c-basic-offset: 8; tab-width: 8 -*- */
 /* vi: set ts=8 sw=8 sts=8: */
 /*************************************************************************/ /*!
@@ -1503,9 +1504,6 @@ static struct drm_driver nulldisp_drm_driver = {
 	.enable_vblank			= nulldisp_enable_vblank,
 	.disable_vblank			= nulldisp_disable_vblank,
 
-
-	.prime_handle_to_fd		= drm_gem_prime_handle_to_fd,
-	.prime_fd_to_handle		= drm_gem_prime_fd_to_handle,
 	.gem_prime_import		= drm_gem_prime_import,
 
 	.gem_free_object		= nulldisp_gem_object_free,
@@ -1516,7 +1514,6 @@ static struct drm_driver nulldisp_drm_driver = {
 	.gem_prime_import_sg_table	= nulldisp_gem_prime_import_sg_table,
 	.gem_prime_vmap			= nulldisp_gem_prime_vmap,
 	.gem_prime_vunmap		= nulldisp_gem_prime_vunmap,
-	.gem_prime_mmap			= nulldisp_gem_prime_mmap,
 	.gem_prime_res_obj		= nulldisp_gem_prime_res_obj,
 
 	.dumb_create			= nulldisp_gem_dumb_create,

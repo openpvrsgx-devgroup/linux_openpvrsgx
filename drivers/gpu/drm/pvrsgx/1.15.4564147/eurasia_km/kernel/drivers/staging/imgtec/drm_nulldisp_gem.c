@@ -279,19 +279,6 @@ void nulldisp_gem_prime_vunmap(struct drm_gem_object *obj, void *vaddr)
 	vunmap(vaddr);
 }
 
-int nulldisp_gem_prime_mmap(struct drm_gem_object *obj,
-				   struct vm_area_struct *vma)
-{
-	int err;
-
-	mutex_lock(&obj->dev->struct_mutex);
-	(void) nulldisp_gem_object_get_pages(obj);
-	err = drm_gem_mmap_obj(obj, obj->size, vma);
-	mutex_unlock(&obj->dev->struct_mutex);
-
-	return err;
-}
-
 struct reservation_object *
 nulldisp_gem_prime_res_obj(struct drm_gem_object *obj)
 {

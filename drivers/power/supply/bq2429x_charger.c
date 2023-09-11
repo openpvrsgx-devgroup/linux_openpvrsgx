@@ -958,7 +958,9 @@ static void bq2429x_input_available(struct bq2429x_device_info *di, bool state)
 static int bq2429x_usb_detect(struct bq2429x_device_info *di)
 {
 	struct bq2429x_state state;
+#if DEBUG
 	char string[200];
+#endif
 	int ret;
 
 	mutex_lock(&di->var_lock);
@@ -974,7 +976,7 @@ static int bq2429x_usb_detect(struct bq2429x_device_info *di)
 		return -EAGAIN;
 	}
 
-#if 0
+#if DEBUG
 	/* report changes to last state */
 	sprintf(string, "state changed: state->[");
 	switch (state.vbus_stat) {

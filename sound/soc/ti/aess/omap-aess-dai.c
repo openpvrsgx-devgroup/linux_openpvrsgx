@@ -1033,6 +1033,8 @@ static int omap_aess_dai_remove(struct snd_soc_dai *dai)
 }
 
 static struct snd_soc_dai_ops omap_aess_dai_ops = {
+	.probe		= omap_aess_dai_probe,
+	.remove		= omap_aess_dai_remove,
 	.startup	= omap_aess_dai_startup,
 	.shutdown	= omap_aess_dai_shutdown,
 	.hw_params	= omap_aess_dai_hw_params,
@@ -1043,8 +1045,6 @@ struct snd_soc_dai_driver omap_aess_dai[] = {
 	{	/* Multimedia Playback and Capture */
 		.name = "MultiMedia1",
 		.id = OMAP_AESS_DAI_MM1,
-		.probe = omap_aess_dai_probe,
-		.remove = omap_aess_dai_remove,
 		.playback = {
 			.stream_name = "MM1 Playback",
 			.channels_min = 1,

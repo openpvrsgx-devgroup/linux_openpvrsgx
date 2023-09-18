@@ -1,5 +1,5 @@
 #
-# Linux/x86 6.6.0-rc1 Kernel Configuration
+# Linux/x86 6.6.0-rc2 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="i486-linux-gnu-gcc (GCC) 6.3.0"
 CONFIG_CC_IS_GCC=y
@@ -2896,7 +2896,6 @@ CONFIG_I2C_MUX=y
 # CONFIG_I2C_MUX_MLXCPLD is not set
 # end of Multiplexer I2C Chip support
 
-# CONFIG_I2C_ATR is not set
 CONFIG_I2C_HELPER_AUTO=y
 CONFIG_I2C_SMBUS=y
 CONFIG_I2C_ALGOBIT=y

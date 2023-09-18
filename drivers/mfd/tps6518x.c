@@ -646,7 +646,7 @@ static struct i2c_driver tps6518x_i2c_driver = {
 		   .of_match_table = tps6518x_dt_ids,
 		   .pm = &tps6518x_dev_pm_ops,
 	},
-	.probe_new = tps6518x_probe,
+	.probe = tps6518x_probe,
 };
 
 module_i2c_driver(tps6518x_i2c_driver);

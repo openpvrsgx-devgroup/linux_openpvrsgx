@@ -2547,7 +2547,7 @@ static const char *x1600_ssi_groups[] = {
 	"ssi-ce0-a", "ssi-ce0-b",
 	"ssi-ce1-a", "ssi-ce1-b",
 };
-static const char *x1600_mmc0_groups[] = { "mmc0-1bit-b", "mmc0-4bit-b", "mmc0-1bit-c", "mmc-4bit-c", };
+static const char *x1600_mmc0_groups[] = { "mmc0-1bit-b", "mmc0-4bit-b", "mmc0-1bit-c", "mmc0-4bit-c", };
 static const char *x1600_mmc1_groups[] = { "mmc1-1bit", "mmc1-4bit", };
 static const char *x1600_i2c0_groups[] = { "i2c0-data-a", "i2c0-data-b", };
 static const char *x1600_i2c1_groups[] = { "i2c1-data-b-15", "i2c1-data-b-19", };

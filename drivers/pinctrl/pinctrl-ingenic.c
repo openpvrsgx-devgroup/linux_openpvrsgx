@@ -2570,6 +2570,7 @@ static const struct function_desc x1600_functions[] = {
 	{ "uart0", x1600_uart0_groups, ARRAY_SIZE(x1600_uart0_groups), },
 	{ "uart1", x1600_uart1_groups, ARRAY_SIZE(x1600_uart1_groups), },
 	{ "uart2", x1600_uart2_groups, ARRAY_SIZE(x1600_uart2_groups), },
+	{ "uart3", x1600_uart3_groups, ARRAY_SIZE(x1600_uart3_groups), },
 	{ "sfc", x1600_sfc_groups, ARRAY_SIZE(x1600_sfc_groups), },
 	{ "ssi", x1600_sfc_groups, ARRAY_SIZE(x1600_ssi_groups), },
 	{ "mmc0", x1600_mmc0_groups, ARRAY_SIZE(x1600_mmc0_groups), },

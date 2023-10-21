@@ -13,6 +13,7 @@ if NET_VENDOR_INGENIC
 
 config INGENIC_ETH_JZ4730
 	tristate "Ingenic JZ4730 Ethernet support"
+	select MII
 	help
 	  This driver supports the MII Ethernet controller in the
 	  and jz4730 SoC.

@@ -1,5 +1,5 @@
 #
-# Linux/arm64 6.6.0-rc6 Kernel Configuration
+# Linux/arm64 6.6.0-rc7 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="aarch64-linux-gnu-gcc (GCC) 6.3.0"
 CONFIG_CC_IS_GCC=y
@@ -7183,8 +7183,6 @@ CONFIG_PHY_SUN6I_MIPI_DPHY=m
 # CONFIG_PHY_OCELOT_SERDES is not set
 CONFIG_PHY_QCOM_USB_HS=y
 # CONFIG_PHY_QCOM_USB_HSIC is not set
-# CONFIG_PHY_RTK_RTD_USB2PHY is not set
-# CONFIG_PHY_RTK_RTD_USB3PHY is not set
 # CONFIG_PHY_ROCKCHIP_DP is not set
 # CONFIG_PHY_ROCKCHIP_DPHY_RX0 is not set
 # CONFIG_PHY_ROCKCHIP_EMMC is not set

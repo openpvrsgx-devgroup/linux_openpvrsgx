@@ -1,5 +1,5 @@
 #
-# Linux/arm 6.6.0-rc6 Kernel Configuration
+# Linux/arm 6.6.0-rc7 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="arm-linux-gnueabihf-gcc (GCC) 6.3.0"
 CONFIG_CC_IS_GCC=y
@@ -7185,8 +7185,6 @@ CONFIG_GENERIC_PHY=y
 # CONFIG_PHY_OCELOT_SERDES is not set
 # CONFIG_PHY_QCOM_USB_HS is not set
 # CONFIG_PHY_QCOM_USB_HSIC is not set
-# CONFIG_PHY_RTK_RTD_USB2PHY is not set
-# CONFIG_PHY_RTK_RTD_USB3PHY is not set
 # CONFIG_PHY_SAMSUNG_USB2 is not set
 # CONFIG_PHY_DM816X_USB is not set
 CONFIG_OMAP_CONTROL_PHY=y

@@ -1,0 +1,549 @@
+/dts-v1/;
+
+#include "x1600.dtsi"
+#include <dt-bindings/clock/ingenic,tcu.h>
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+
+/ {
+	compatible = "goldelico,letux-x16", "ingenic,halley6_v10", "ingenic,halley6_v10";
+
+	model = "Letux LX16";
+
+	/*chosen {
+		bootargs = "console=ttyS1,115200 mem=128M@0x0ip=off init=/linuxrc ubi.mtd=3 root=ubi0:rootfs ubi.mtd=4 rootfstype=ubifs rw";
+	};*/
+
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges =<>;
+
+		reserved_memory: reserved_mem@0x2000000{
+		      compatible = "shared-dma-pool";
+		      reg = <0x02000000 0x2000000>;
+		};
+	};
+
+};
+
+&pinctrl {
+	uart0_pb: uart0-pb {
+		function = "uart0";
+		groups = "uart0-data", "uart0-hwflow";
+		bias-pull-up;
+	};
+
+	uart1_pb: uart1-pb {
+		function = "uart1";
+		groups = "uart1-data";
+		bias-pull-up;
+	};
+
+	uart2_pb: uart2-pb {
+		function = "uart2";
+		groups = "uart2-data-b";
+		bias-pull-up;
+	};
+
+	uart3_pb: uart3-pb {
+		function = "uart3";
+		groups = "uart3-data-b";
+		bias-pull-up;
+	};
+
+	spi0_pb: spi0-pb {
+		function = "ssi";
+		groups = "ssi-dt-a", "ssi-dr-a", "ssi-clk-a", "ssi-ce0-a", "ssi-ce1-b";
+		bias-disable;
+	};
+
+	msc0_4bit_f1: msc0 {
+		function = "mmc0";
+		groups = "mmc0-1bit-c", "mmc0-4bit-c";
+		bias-disable;
+	};
+
+	msc1_4bit: msc1 {
+		function = "mmc1";
+		groups = "mmc1-1bit", "mmc1-4bit";
+		bias-disable;
+	};
+
+	pwm0_pc: pwm0 {
+		function = "pwm0";
+		groups = "pwm0";
+		bias-disable;
+	};
+
+	i2c0_pa: i2c0 {
+		function = "i2c0";
+		groups = "i2c0-data-a";
+		bias-pull-up;
+	};
+
+	i2c1_pb: i2c1 {
+		function = "i2c1";
+		groups = "i2c1-data-b-19";
+		bias-pull-up;
+	};
+
+// FIXME:
+	spi_slv_pa: fixme {
+		ingenic,pinmux = <&gpa 28 31>;
+//		ingenic,pinmux-funcsel = <PINCTL_FUNCTION1>;
+		bias-disable;
+	};
+
+	aic_pb: fixme {
+		ingenic,pinmux = <&gpb 21 28>;
+//		ingenic,pinmux-funcsel = <PINCTL_FUNCTION0>;
+		bias-disable;
+	};
+
+	pwm_tcu_trig_pa: fixme {
+		ingenic,pinmux = <&gpa 31 31>;
+//		ingenic,pinmux-funcsel = <PINCTL_FUNCTION3>;
+		bias-disable;
+	};
+
+	rtc32k_enable: fixme {
+		ingenic,pinmux = <&gpc 26 26>;
+//		ingenic,pinmux-funcsel = <PINCTL_FUNCTION0>;
+		bias-disable;
+	};
+
+	rtc32k_disable: fixme {
+		ingenic,pinmux = <&gpc 26 26>;
+//		ingenic,pinmux-funcsel = <PINCTL_FUNCTIONS>;
+		bias-disable;
+	};
+
+	can0_pd: fixme {
+		ingenic,pinmux = <&gpd 2 3>;
+//		ingenic,pinmux-funcsel = <PINCTL_FUNCTION1>;
+		bias-disable;
+	};
+
+	can1_pd: fixme {
+		ingenic,pinmux = <&gpd 4 5>;
+//		ingenic,pinmux-funcsel = <PINCTL_FUNCTION1>;
+		bias-disable;
+	};
+
+	mac0_rmii_p0_normal: fixme {
+		ingenic,pinmux = <&gpb 19 20>, <&gpb 23 24>;
+//		ingenic,pinmux-funcsel = <PINCTL_FUNCTION1>;
+		bias-disable;
+	};
+
+	mac0_rmii_p1_normal: fixme {
+		ingenic,pinmux = <&gpb 21 21>, <&gpb 25 28>;
+//		ingenic,pinmux-funcsel = <PINCTL_FUNCTION1>;
+		bias-disable;
+	};
+
+	mac0_rmii_p0_rst: fixme {
+		ingenic,pinmux = <&gpb 19 20>, <&gpb 23 24>;
+//		ingenic,pinmux-funcsel = <PINCTL_FUNCTION1>;
+		bias-disable;
+	};
+
+	sfc_pc: fixme {
+		ingenic,pinmux = <&gpc 17 22>;
+//		ingenic,pinmux-funcsel = <PINCTL_FUNCTION0>;
+		bias-disable;
+	};
+};
+
+&uart0 {
+	status = "disable";
+	/* dma-mode; */
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart0_pb>;
+};
+
+&uart1 {
+	status = "disable";
+	/* dma-mode; */
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart1_pb>;
+};
+
+&uart2 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart2_pb>;
+};
+
+&uart3 {
+	status = "disable";
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart3_pb>;
+};
+
+&cpufreq {
+	status = "okay";
+	operating-points = <
+		/*KHZ uV */
+		1200000	900000
+		750000	900000
+		600000	900000
+		500000	900000
+		400000	900000
+		375000	900000
+		300000	900000
+		200000	900000
+			>;
+
+};
+
+&pdma {
+	status = "okay";
+};
+
+&tcu {
+	status = "disable ";
+	pinctrl-names = "default";
+	pinctrl-0 = <&pwm_tcu_trig_pa>;
+};
+
+&can0 {
+	status = "disable";
+	pinctrl-names = "default";
+	pinctrl-0 = <&can0_pd>;
+	ingenic,clk-freq = <12000000>;
+};
+
+&can1 {
+	status = "disable";
+	pinctrl-names = "default";
+	pinctrl-0 = <&can1_pd>;
+	ingenic,clk-freq = <12000000>;
+};
+
+&cim {
+	status = "disable";
+	memory-region=<&reserved_memory>;
+};
+
+&i2c0 {
+	status = "disable";
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c0_pa>;
+};
+
+&i2c1 {
+	status = "disable";
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c1_pb>;
+};
+
+&msc0 {
+	status = "okay";
+	pinctrl-names ="default", "enable", "disable";
+	pinctrl-0 = <&msc0_4bit_f1>;	// on gpc
+	pinctrl-1 = <&rtc32k_enable>;
+	pinctrl-2 = <&rtc32k_disable>;
+
+	cap-sd-highspeed;
+	max-frequency = <50000000>;
+	bus-width = <4>;
+	voltage-ranges = <1800 3300>;
+	broken-cd;
+	ingenic,sdio_clk = <1>;
+
+	/* special property */
+	ingenic,wp-gpios = <0>;
+	ingenic,cd-gpios = <0>;
+	ingenic,rst-gpios = <0>;
+	ingenic,removal-dontcare; /*removal-dontcare, removal-nonremovable, removal-removable, removal-manual*/
+};
+
+&msc1 {
+	status = "okay";
+	pinctrl-names ="default", "enable", "disable";
+	pinctrl-0 = <&msc1_4bit>;
+	pinctrl-1 = <&rtc32k_enable>;
+	pinctrl-2 = <&rtc32k_disable>;
+
+	cap-sd-highspeed;
+	max-frequency = <50000000>;
+	bus-width = <4>;
+	voltage-ranges = <1800 3300>;
+	broken-cd;
+	ingenic,sdio_clk = <1>;
+
+	/* special property */
+	ingenic,wp-gpios = <0>;
+	ingenic,cd-gpios = <0>;
+	ingenic,rst-gpios = <0>;
+	ingenic,removal-dontcare; /*removal-dontcare, removal-nonremovable, removal-removable, removal-manual*/
+};
+
+&mac0 {
+	pinctrl-names = "default", "reset";
+	pinctrl-0 = <&mac0_rmii_p0_normal>, <&mac0_rmii_p1_normal>;
+	pinctrl-1 = <&mac0_rmii_p0_rst>, <&mac0_rmii_p1_normal>;
+	status = "disable";
+	ingenic,pwr-gpio = <&gpb 30 GPIO_ACTIVE_HIGH>;
+	ingenic,rst-gpio = <&gpb 31 GPIO_ACTIVE_LOW>;
+	ingenic,rst-ms = <10>;
+	ingenic,mac-mode = <RMII>;
+	ingenic,mode-reg = <0xb0000054>;
+	ingenic,phy-clk-freq = <50000000>;
+};
+
+&sfc {
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&sfc_pc>;
+	ingenic,sfc-init-frequency = <200000000>;
+	ingenic,sfc-max-frequency = <400000000>;
+	ingenic,use_ofpart_info  = /bits/ 8 <0>;
+	ingenic,spiflash_param_offset = <0>;
+
+	norflash@0 {
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			/* spi nor flash partition */
+			uboot@0 {
+				label = "uboot";
+				reg = <0x0000000 0x40000>;
+				/*read-only;*/
+			};
+
+			kernel@40000 {
+				label = "kernel";
+				reg = <0x40000 0x300000>;
+			};
+
+			rootfs@360000 {
+				label = "rootfs";
+				reg = <0x360000 0xca0000>;
+			};
+		};
+	};
+
+	nandflash@1 {
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			/* spi nand flash partition */
+			partition@0 {
+				label = "uboot";
+				reg = <0x0000000 0x100000>;
+				/*read-only;*/
+			};
+
+			partition@100000 {
+				label = "kernel";
+				reg = <0x100000 0x800000>;
+			};
+
+			partition@900000 {
+				label = "rootfs";
+				reg = <0x900000 0xf700000>;
+			};
+		};
+	};
+
+};
+
+&spi0 {
+	status = "disable";
+	pinctrl-names = "default";
+	pinctrl-0 = <&spi0_pb>;
+	spi-max-frequency = <54000000>;
+	num-cs = <2>;
+	/* cs-gpios = <0>, <0>; */
+	/* cs-gpios = <&gpb 17 GPIO_ACTIVE_HIGH>, <&gpb 16 GPIO_ACTIVE_HIGH>; */
+	ingenic,chnl = <0>;
+	ingenic,allow_cs_same = <1>;
+	ingenic,bus_num = <0>;
+	ingenic,has_dma_support = <0>;
+	ingenic,spi-src-clk = <1>;/*0.ext; 1.ssi*/
+
+	/* Add SPI interface device */
+	spidev: spidev@0 {
+		compatible = "rohm,dh2228fv";
+		reg = <0>;
+		spi-max-frequency = <10000000>;
+	};
+};
+
+&spi_slv0 {
+	status = "disable";
+	pinctrl-names = "default";
+	pinctrl-0 = <&spi_slv_pa>;
+	ingenic,has_dma_support = <1>;
+};
+
+&dtrng {
+	status = "okay";
+};
+
+&pwm {
+#ifdef PWM_LED	// intereferes with gpc 0 led
+	status = "okay";
+#else
+	status = "disabled";
+#endif
+	pinctrl-names = "default";
+	pinctrl-0 = <&pwm0_pc>;
+};
+
+&otg {
+	g-use-dma;
+	dr_mode = "otg"; // host,peripheral,otg
+	device-using-dma = <1>;
+	status = "okay";
+};
+
+&otg_phy {
+	status = "okay";
+	ingenic,vbus-dete-gpio = <&gpc 24 GPIO_ACTIVE_LOW>;
+};
+
+&aic {
+	status = "disable";
+	pinctrl-names = "default";
+	pinctrl-0 = <&aic_pb>;
+};
+
+&efuse {
+	status = "disable";
+};
+
+
+/ {
+
+	extclk: extclk {
+		clock-frequency = <24000000>;
+	};
+
+	leds: leds {
+#ifdef PWM_LED
+		compatible = "pwm-leds";
+#else
+		compatible = "gpio-leds";
+#endif
+
+		led-0 {
+			linux,default-trigger = "heartbeat";
+#ifdef PWM_LED
+			pwms = <&pwm 2 100000>;
+			max-brightness = <255>;
+#else
+			gpios = <&gpc 0 GPIO_ACTIVE_HIGH>;
+#endif
+		};
+	};
+
+	gpio_keys: gpio_keys {
+		compatible = "gpio-keys";
+
+		wakeup {
+			label = "WAKEUP";
+			linux,code = <KEY_WAKEUP>;
+			gpios = <&gpc 31 GPIO_ACTIVE_LOW>;
+			gpio-key,wakeup;
+		   };
+
+		bootsel0 {
+			status = "disabled";	// is not independent of bootsel1
+			label = "bootsel0";
+			linux,code = <KEY_HOME>;
+			gpios = <&gpc 27 GPIO_ACTIVE_HIGH>;
+		   };
+
+		bootsel1 {
+			label = "bootsel1";
+			linux,code = <KEY_BACK>;
+			gpios = <&gpc 28 GPIO_ACTIVE_HIGH>;
+		};
+	};
+
+	dump_pcm_codec:dump_pcm_codec{
+		compatible = "ingenic,pcm-dump-codec";
+		status = "disable";
+	};
+
+	sound_halley6_ecdc {
+		status = "disable";
+		compatible = "ingenic,x1600-sound";
+		ingenic,model = "halley6";
+		ingenic,dai-link = "i2s-ecodec", "i2s-tloop";
+		ingenic,stream = "i2s-ecodec", "i2s-tloop";
+		ingenic,cpu-dai = <&i2s>, <&i2s_tloop>;
+		ingenic,platform = <&aic>, <&i2s_tloop>;
+		ingenic,codec = <&dump_pcm_codec>, <&dump_pcm_codec>;
+		ingenic,codec-dai = "pcm-dump", "pcm-dump";
+		ingenic,en3v3-gpios = <&gpb 30 GPIO_ACTIVE_HIGH>;
+	};
+
+#if 0
+	backlight {
+		compatible = "pwm-backlight";
+		pwms = <&pwm 2 100000>; /* arg1: pwm channel id [0~15]. arg2: period in ns. */
+		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15>;
+		default-brightness-level = <5>;
+	};
+#endif
+
+	spi_gpio {
+		status = "disable";
+	};
+
+#ifdef CONFIG_LINUX_PMEM
+	linux_pmem {
+		status = "okay";
+		compatible = "linux_pmem";
+		linux_pmem,name = "pmem";
+		linux_pmem,no_allocator = <0>;
+		linux_pmem,cached       = <1>;
+		linux_pmem,start        = <0>;
+		linux_pmem,size         = CONFIG_PMEM_RESERVE_SIZE;
+    };
+#endif
+};
+
+#if 0
+&gpa {
+	ingenic,gpio-sleep-pullup 	= <>;
+	ingenic,gpio-sleep-pulldown 	= <>;
+	ingenic,gpio-sleep-hiz		= <26>;
+	ingenic,gpio-sleep-low		= <>;
+	ingenic,gpio-sleep-high		= <>;
+};
+
+&gpb {
+	ingenic,gpio-sleep-pullup 	= <>;
+	ingenic,gpio-sleep-pulldown 	= <>;
+	ingenic,gpio-sleep-hiz		= <>;
+	ingenic,gpio-sleep-low		= <>;
+	ingenic,gpio-sleep-high		= <>;
+};
+
+&gpc {
+	ingenic,gpio-sleep-pullup 	= <>;
+	ingenic,gpio-sleep-pulldown 	= <>;
+	ingenic,gpio-sleep-hiz		= <>;
+	ingenic,gpio-sleep-low		= <>;
+	ingenic,gpio-sleep-high		= <>;
+};
+
+&gpd {
+	ingenic,gpio-sleep-pullup 	= <>;
+	ingenic,gpio-sleep-pulldown 	= <>;
+	ingenic,gpio-sleep-hiz		= <>;
+	ingenic,gpio-sleep-low		= <>;
+	ingenic,gpio-sleep-high		= <>;
+};
+#endif

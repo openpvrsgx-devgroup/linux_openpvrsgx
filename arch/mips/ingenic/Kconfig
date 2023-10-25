@@ -8,7 +8,9 @@ config MACH_INGENIC_GENERIC
 	select MACH_JZ4770
 	select MACH_JZ4780
 	select MACH_X1000
+	select MACH_X1600
 	select MACH_X1830
+	select MACH_X2000
 
 choice
 	prompt "Machine type"
@@ -42,6 +44,10 @@ config X1000_CU1000_NEO
 config X1830_CU1830_NEO
 	bool "YSH & ATIL CU1830 Module with Neo backplane"
 	select MACH_X1830
+
+config X1600_LX16
+	bool "Goldelico X1600 based SBC"
+	select MACH_X1600
 
 endchoice
 

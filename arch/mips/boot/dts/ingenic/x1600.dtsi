@@ -55,7 +55,7 @@
 
 	};
 
-	core_intc: core-intc@0x10001000 {
+	core_intc: core-intc@10001000 {
 		compatible = "ingenic,ingenic-intc";
 		reg = <0x10001000 0x100>;
 		interrupt-controller;
@@ -65,7 +65,7 @@
 		interrupt-names ="intc";
 	};
 
-	core_ost: core-ost@0x12000000 {
+	core_ost: core-ost@12000000 {
 		compatible = "ingenic,x1600-ost";
 		reg = <0x12000000 0x100>;
 		interrupt-parent = <&cpuintc>;
@@ -94,7 +94,7 @@
 		#size-cells = <1>;
 		ranges = <>;
 
-		clock: clock-controller@0x10000000 {
+		clock: clock-controller@10000000 {
 			compatible = "ingenic,x1600-clocks";
 			reg = <0x10000000 0x100>;
 			clocks = <&extclk>, <&rtcclk>;
@@ -112,7 +112,7 @@
 			status = "ok";
 		};
 
-		tcu: tcu@0x10002000 {
+		tcu: tcu@10002000 {
 			compatible = "ingenic,tcu";
 			reg = <0x10002000 0x1000>;
 			interrupt-parent = <&core_intc>;
@@ -121,7 +121,7 @@
 			status = "ok";
 		};
 
-		watchdog: watchdog@0x10002000 {
+		watchdog: watchdog@10002000 {
 			compatible = "ingenic,watchdog";
 			reg = <0x10002000 0x40>;
 			interrupt-parent = <&core_intc>;
@@ -129,7 +129,7 @@
 			status = "ok";
 		};
 
-		rtc: rtc@0x10003000 {
+		rtc: rtc@10003000 {
 			compatible = "ingenic,rtc-x1600";
 			reg = <0x10003000 0x4c>;
 			interrupt-parent = <&core_intc>;
@@ -139,7 +139,7 @@
 			status = "ok";
 		};
 
-		pinctrl: pinctrl@0x10010000 {
+		pinctrl: pinctrl@10010000 {
 			compatible = "ingenic,x1600-pinctrl";
 			reg = <0x10010000 0x1000>;
 			ingenic,num-chips = <4>;
@@ -226,7 +226,7 @@
 
 		};
 
-		uart0: serial@0x10030000 {
+		uart0: serial@10030000 {
 			compatible = "ingenic,8250-uart";
 			reg = <0x10030000 0x100>;
 			reg-shift = <2>;
@@ -241,7 +241,7 @@
 			#size-cells = <0>;
 		};
 
-		uart1: serial@0x10031000 {
+		uart1: serial@10031000 {
 			compatible = "ingenic,8250-uart";
 			reg = <0x10031000 0x100>;
 			reg-shift = <2>;
@@ -254,7 +254,7 @@
 			#size-cells = <0>;
 		};
 
-		uart2: serial@0x10032000 {
+		uart2: serial@10032000 {
 			compatible = "ingenic,8250-uart";
 			reg = <0x10032000 0x100>;
 			reg-shift = <2>;
@@ -267,7 +267,7 @@
 			#size-cells = <0>;
 		};
 
-		uart3: serial@0x10033000 {
+		uart3: serial@10033000 {
 			compatible = "ingenic,8250-uart";
 			reg = <0x10033000 0x100>;
 			reg-shift = <2>;
@@ -280,7 +280,7 @@
 			#size-cells = <0>;
 		};
 
-		i2c0: i2c@0x10050000 {
+		i2c0: i2c@10050000 {
 			compatible = "ingenic,x1600-i2c";
 			reg = <0x10050000 0x1000>;
 			interrupt-parent = <&core_intc>;
@@ -290,7 +290,7 @@
 			status = "okay";
 		};
 
-		i2c1: i2c@0x10051000 {
+		i2c1: i2c@10051000 {
 			compatible = "ingenic,x1600-i2c";
 			reg = <0x10051000 0x1000>;
 			interrupt-parent = <&core_intc>;
@@ -300,7 +300,7 @@
 			status = "disabled";
 		};
 
-		spi0: spi@0x10043000 {
+		spi0: spi@10043000 {
 			compatible = "ingenic,x1600-spi";
 			reg = <0x10043000 0x1000>;
 			interrupt-parent = <&core_intc>;
@@ -312,7 +312,8 @@
 			#size-cells = <0>;
 			status = "disabled";
 		};
-		spi_slv0: slv@0x10045000 {
+
+		spi_slv0: slv@10045000 {
 			compatible = "ingenic,slv";
 			reg = <0x10045000 0x1000>;
 			interrupt-parent = <&core_intc>;
@@ -325,7 +326,7 @@
 			status = "disabled";
 		};
 
-		dtrng: dtrng@0x10072000 {
+		dtrng: dtrng@10072000 {
 			compatible = "ingenic,dtrng";
 			reg = <0x10072000 0x100>;
 			interrupt-parent = <&core_intc>;
@@ -342,7 +343,7 @@
 
 		};
 
-		aic: aic@0x10079000 {
+		aic: aic@10079000 {
 			compatible = "ingenic,x1600-aic";
 			reg = <0x10079000 0x100>;
 			interrupt-parent = <&core_intc>;
@@ -370,7 +371,7 @@
 		#size-cells = <1>;
 		ranges = <>;
 
-		msc0: msc@0x13450000 {
+		msc0: msc@13450000 {
 			compatible = "ingenic,x1600-mmc";
 			reg = <0x13450000 0x10000>;
 			status = "disable";
@@ -378,7 +379,7 @@
 			interrupts = <IRQ_MSC0>;
 		};
 
-		msc1: msc@0x13460000 {
+		msc1: msc@13460000 {
 			compatible = "ingenic,x1600-mmc";
 			reg = <0x13460000 0x10000>;
 			status = "disable";
@@ -386,7 +387,7 @@
 			interrupts = <IRQ_MSC1>;
 		};
 
-		can0: can@0x13560000 {
+		can0: can@13560000 {
 			compatible = "ingenic,x1600-can";
 			reg = <0x13560000 0x10000>;
 			status = "okay";
@@ -399,7 +400,7 @@
 			#size-cells = <0>;
 		};
 
-		can1: can@0x13570000 {
+		can1: can@13570000 {
 			compatible = "ingenic,x1600-can";
 			reg = <0x13570000 0x10000>;
 			status = "okay";
@@ -412,7 +413,7 @@
 			#size-cells = <0>;
 		};
 
-		cdbus: cdbus@0x13430000 {
+		cdbus: cdbus@13430000 {
 			compatible = "ingenic,x1600-cdbus";
 			reg = <0x13550000 0x10000>;
 			interrupt-parent = <&core_intc>;
@@ -420,7 +421,7 @@
 			status = "ok";
 		};
 
-		aes: aes@0x13430000 {
+		aes: aes@13430000 {
 			compatible = "ingenic,aes";
 			reg = <0x13430000 0x10000>;
 			interrupt-parent = <&core_intc>;
@@ -428,7 +429,7 @@
 			status = "ok";
 		};
 
-		hash: hash@0x13470000 {
+		hash: hash@13470000 {
 			compatible = "ingenic,hash";
 			reg = <0x13470000 0x10000>;
 			interrupt-parent = <&core_intc>;
@@ -436,7 +437,7 @@
 			status = "ok";
 		};
 
-		mac0: mac@0x134b0000 {
+		mac0: mac@134b0000 {
 			compatible = "ingenic,x1600-mac";
 			reg = <0x134b0000 0x2000>;
 			interrupt-parent = <&core_intc>;
@@ -444,14 +445,14 @@
 			ingenic,rst-ms = <10>;
 		};
 
-		sfc: sfc@0x13440000 {
+		sfc: sfc@13440000 {
 			compatible = "ingenic,x1600-sfc";
 			reg = <0x13440000 0x10000>;
 			interrupt-parent = <&core_intc>;
 			interrupts = <IRQ_SFC>;
 		};
 
-		pdma: dma@0x13420000 {
+		pdma: dma@13420000 {
 			compatible = "ingenic,x1600-pdma";
 			reg = <0x13420000 0x10000>;
 			interrupt-parent = <&core_intc>;
@@ -462,7 +463,7 @@
 			ingenic,reserved-chs = <0x3>;
 		};
 
-		mcu: mcu@0x13420000 {
+		mcu: mcu@13420000 {
 			compatible = "ingenic,x1600-mcu";
 			reg = <0x13420000 0x10000>;
 			interrupt-parent = <&core_intc>;
@@ -471,7 +472,7 @@
 			ingenic,tcsm_size = <32768>;
 		};
 
-		pwm: pwm@0x134c0000 {
+		pwm: pwm@134c0000 {
 			compatible = "ingenic,x1600-pwm";
 			#pwm-cells = <2>;
 			reg = <0x134c0000 0x10000>;
@@ -488,7 +489,7 @@
 			dma-names = "0", "1", "2", "3", "4", "5", "6", "7";
 		};
 
-		otg: otg@0x13500000 {
+		otg: otg@13500000 {
 			compatible = "ingenic,x1600-dwc2-hsotg";
 			reg = <0x13500000 0x40000>;
 			interrupt-parent = <&core_intc>;
@@ -501,7 +502,7 @@
 			status = "okay";
 		};
 
-		efuse: efuse@0x13540000 {
+		efuse: efuse@13540000 {
 			compatible = "ingenic,x1600-efuse";
 			reg = <0x13540000 0x10000>;
 			status = "okay";
@@ -522,7 +523,7 @@
 		#size-cells = <1>;
 		ranges = <>;
 
-		cim: cim@0x13060000 {
+		cim: cim@13060000 {
 			compatible = "ingenic,x1600-cim";
 			reg = <0x13060000 0x10000>;
 			interrupt-parent = <&core_intc>;
@@ -532,7 +533,7 @@
 			status = "disable";
 		};
 
-		dpu: dpu@0x13050000 {
+		dpu: dpu@13050000 {
 			compatible = "ingenic,x1600-dpu";
 			reg = <0x13050000 0x10000>;
 			interrupt-parent = <&core_intc>;

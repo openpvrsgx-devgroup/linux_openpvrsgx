@@ -37,6 +37,7 @@ letux/arm64_defconfig
 letux/mips_defconfig
 letux/mips_ci20_defconfig
 letux/mips_alpha400_defconfig
+letux/mips_lx16_defconfig
 letux/x86_defconfig
 
 # Letux Rootfs
@@ -159,6 +160,10 @@ letux/jz4780-smp
 #letux/jz4780-efuse
 letux/ci20_defconfig
 letux/jz4780-sound	# contains defconfig fixes...
+
+# LX16 / X1600
+letux/x1600
+letux/dt-lx16
 
 # E-Book reader
 letux/kobolino/backlight

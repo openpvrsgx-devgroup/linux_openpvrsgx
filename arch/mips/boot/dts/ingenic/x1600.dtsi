@@ -227,7 +227,7 @@
 		};
 
 		uart0: serial@10030000 {
-			compatible = "ingenic,8250-uart";
+			compatible = "ingenic,x1600-uart";
 			reg = <0x10030000 0x100>;
 			reg-shift = <2>;
 			interrupt-parent = <&core_intc>;
@@ -242,7 +242,7 @@
 		};
 
 		uart1: serial@10031000 {
-			compatible = "ingenic,8250-uart";
+			compatible = "ingenic,x1600-uart";
 			reg = <0x10031000 0x100>;
 			reg-shift = <2>;
 			interrupt-parent = <&core_intc>;
@@ -255,20 +255,20 @@
 		};
 
 		uart2: serial@10032000 {
-			compatible = "ingenic,8250-uart";
+			compatible = "ingenic,x1600-uart";
 			reg = <0x10032000 0x100>;
-			reg-shift = <2>;
+//			reg-shift = <2>;
 			interrupt-parent = <&core_intc>;
 			interrupts = <IRQ_UART2>;
-			dmas = <&pdma INGENIC_DMA_TYPE(INGENIC_DMA_REQ_UART2_TX)>,
-				   <&pdma INGENIC_DMA_TYPE(INGENIC_DMA_REQ_UART2_RX)>;
+//			dmas = <&pdma INGENIC_DMA_TYPE(INGENIC_DMA_REQ_UART2_TX)>,
+//				   <&pdma INGENIC_DMA_TYPE(INGENIC_DMA_REQ_UART2_RX)>;
 			dma-names = "tx", "rx";
 			#address-cells = <1>;
 			#size-cells = <0>;
 		};
 
 		uart3: serial@10033000 {
-			compatible = "ingenic,8250-uart";
+			compatible = "ingenic,x1600-uart";
 			reg = <0x10033000 0x100>;
 			reg-shift = <2>;
 			interrupt-parent = <&core_intc>;

@@ -12,7 +12,7 @@
 	model = "Letux LX16";
 
 	/*chosen {
-		bootargs = "console=ttyS1,115200 mem=128M@0x0ip=off init=/linuxrc ubi.mtd=3 root=ubi0:rootfs ubi.mtd=4 rootfstype=ubifs rw";
+		bootargs = "earlycon console=ttyS2,115200 mem=128M@0x0ip=off init=/linuxrc ubi.mtd=3 root=ubi0:rootfs ubi.mtd=4 rootfstype=ubifs rw";
 	};*/
 
 	reserved-memory {

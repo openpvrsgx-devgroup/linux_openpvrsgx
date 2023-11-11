@@ -286,7 +286,9 @@ CONFIG_JZ4730_ALPHA400=y
 # CONFIG_JZ4770_GCW0 is not set
 # CONFIG_JZ4780_CI20 is not set
 # CONFIG_X1000_CU1000_NEO is not set
+# CONFIG_X1600_LX16 is not set
 # CONFIG_X1830_CU1830_NEO is not set
+# CONFIG_X2000_LX20 is not set
 CONFIG_MACH_JZ4730=y
 # end of Machine selection
 

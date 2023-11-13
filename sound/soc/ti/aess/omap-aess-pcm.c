@@ -296,7 +296,7 @@ static int omap_aess_pcm_open(struct snd_soc_component *component,
 			      struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_dai *dai = asoc_rtd_to_cpu(rtd, 0);
+	struct snd_soc_dai *dai = snd_soc_rtd_to_cpu(rtd, 0);
 	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 
 	mutex_lock(&aess->mutex);
@@ -325,7 +325,7 @@ static int omap_aess_pcm_hw_params(struct snd_soc_component *component,
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_pcm_runtime *runtime = substream->runtime;
-	struct snd_soc_dai *dai = asoc_rtd_to_cpu(rtd, 0);
+	struct snd_soc_dai *dai = snd_soc_rtd_to_cpu(rtd, 0);
 	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 	struct omap_aess_data_format format;
 	size_t period_size;
@@ -369,7 +369,7 @@ static int omap_aess_pcm_prepare(struct snd_soc_component *component,
 				 struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_dai *dai = asoc_rtd_to_cpu(rtd, 0);
+	struct snd_soc_dai *dai = snd_soc_rtd_to_cpu(rtd, 0);
 	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 
 	dev_dbg(dai->dev, "%s: %s\n", __func__, dai->name);
@@ -391,7 +391,7 @@ static int omap_aess_pcm_close(struct snd_soc_component *component,
 			       struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_dai *dai = asoc_rtd_to_cpu(rtd, 0);
+	struct snd_soc_dai *dai = snd_soc_rtd_to_cpu(rtd, 0);
 	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 
 	dev_dbg(dai->dev, "%s: %s\n", __func__, dai->name);
@@ -421,7 +421,7 @@ static int omap_aess_pcm_mmap(struct snd_soc_component *component,
 			      struct vm_area_struct *vma)
 {
 	struct snd_soc_pcm_runtime  *rtd = substream->private_data;
-	struct snd_soc_dai *dai = asoc_rtd_to_cpu(rtd, 0);
+	struct snd_soc_dai *dai = snd_soc_rtd_to_cpu(rtd, 0);
 	struct omap_aess *aess = snd_soc_component_get_drvdata(component);
 	int offset, size, err;
 

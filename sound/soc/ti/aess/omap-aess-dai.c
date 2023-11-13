@@ -72,7 +72,7 @@ static void mute_be(struct snd_soc_pcm_runtime *be, struct snd_soc_dai *dai,
 {
 	struct omap_aess *aess = snd_soc_dai_get_drvdata(dai);
 
-	dev_dbg(be->dev, "%s: %s %d\n", __func__, asoc_rtd_to_cpu(be, 0)->name, stream);
+	dev_dbg(be->dev, "%s: %s %d\n", __func__, snd_soc_rtd_to_cpu(be, 0)->name, stream);
 
 	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		switch (be->dai_link->id) {
@@ -131,7 +131,7 @@ static void unmute_be(struct snd_soc_pcm_runtime *be,struct snd_soc_dai *dai,
 {
 	struct omap_aess *aess = snd_soc_dai_get_drvdata(dai);
 
-	dev_dbg(be->dev, "%s: %s %d\n", __func__, asoc_rtd_to_cpu(be, 0)->name, stream);
+	dev_dbg(be->dev, "%s: %s %d\n", __func__, snd_soc_rtd_to_cpu(be, 0)->name, stream);
 
 	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		switch (be->dai_link->id) {
@@ -190,7 +190,7 @@ static void enable_be_port(struct snd_soc_pcm_runtime *be,
 	struct omap_aess *aess = snd_soc_dai_get_drvdata(dai);
 	struct omap_aess_data_format format;
 
-	dev_dbg(be->dev, "%s: %s %d\n", __func__, asoc_rtd_to_cpu(be, 0)->name, stream);
+	dev_dbg(be->dev, "%s: %s %d\n", __func__, snd_soc_rtd_to_cpu(be, 0)->name, stream);
 
 	switch (be->dai_link->id) {
 	case OMAP_AESS_BE_ID_PDM_DL1:
@@ -319,7 +319,7 @@ static void disable_be_port(struct snd_soc_pcm_runtime *be,
 {
 	struct omap_aess *aess = snd_soc_dai_get_drvdata(dai);
 
-	dev_dbg(be->dev, "%s: %s %d\n", __func__, asoc_rtd_to_cpu(be, 0)->name, stream);
+	dev_dbg(be->dev, "%s: %s %d\n", __func__, snd_soc_rtd_to_cpu(be, 0)->name, stream);
 
 	switch (be->dai_link->id) {
 	/* McPDM is a special case, handled by McPDM driver */
@@ -406,7 +406,7 @@ static void mute_fe_port_capture(struct snd_soc_pcm_runtime *fe,
 	dev_dbg(fe->dev, "%s: %s FE %s\n", __func__, mute ? "mute" : "unmute",
 		fe->dai_link->name);
 
-	switch (asoc_rtd_to_cpu(fe, 0)->id) {
+	switch (snd_soc_rtd_to_cpu(fe, 0)->id) {
 	case OMAP_AESS_DAI_MM2_CAPTURE:
 		if (mute) {
 			omap_aess_mute_gain(aess, OMAP_AESS_MIXDL1_MM_UL2);
@@ -440,7 +440,7 @@ static void mute_fe_port_playback(struct snd_soc_pcm_runtime *fe,
 	dev_dbg(fe->dev, "%s: %s FE %s\n", __func__, mute ? "mute" : "unmute",
 		fe->dai_link->name);
 
-	switch (asoc_rtd_to_cpu(fe, 0)->id) {
+	switch (snd_soc_rtd_to_cpu(fe, 0)->id) {
 	case OMAP_AESS_DAI_MM1:
 	case OMAP_AESS_DAI_MM1_LP:
 		if (mute) {
@@ -511,7 +511,7 @@ static void capture_trigger(struct snd_pcm_substream *substream,
 	struct snd_pcm_substream *be_substream;
 	enum snd_soc_dpcm_state state;
 
-	dev_dbg(fe->dev, "%s: %s %d\n", __func__, asoc_rtd_to_cpu(fe, 0)->name, stream);
+	dev_dbg(fe->dev, "%s: %s %d\n", __func__, snd_soc_rtd_to_cpu(fe, 0)->name, stream);
 
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
@@ -638,7 +638,7 @@ static void playback_trigger(struct snd_pcm_substream *substream,
 	struct snd_pcm_substream *be_substream;
 	enum snd_soc_dpcm_state state;
 
-	dev_dbg(fe->dev, "%s: %s %d\n", __func__, asoc_rtd_to_cpu(fe, 0)->name, stream);
+	dev_dbg(fe->dev, "%s: %s %d\n", __func__, snd_soc_rtd_to_cpu(fe, 0)->name, stream);
 
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:

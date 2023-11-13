@@ -207,7 +207,6 @@ static const struct regmap_config ingenic_pwm_regmap_config = {
 
 static const struct pwm_ops jz4730_pwm_ops = {
 	.apply = jz4730_pwm_apply,
-	.owner = THIS_MODULE,
 };
 
 static int jz4730_pwm_probe(struct platform_device *pdev)

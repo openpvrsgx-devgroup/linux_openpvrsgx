@@ -1,5 +1,5 @@
 #
-# Linux/mips 6.6.0 Kernel Configuration
+# Linux/mips 6.7.0-rc1 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="mipsel-linux-gnu-gcc (GCC) 6.3.0"
 CONFIG_CC_IS_GCC=y
@@ -220,7 +220,6 @@ CONFIG_MACH_INGENIC=y
 #
 # CONFIG_MIPS_GENERIC_KERNEL is not set
 # CONFIG_MIPS_ALCHEMY is not set
-# CONFIG_AR7 is not set
 # CONFIG_ATH25 is not set
 # CONFIG_ATH79 is not set
 # CONFIG_BMIPS_GENERIC is not set
@@ -587,6 +586,7 @@ CONFIG_COMPACT_UNEVICTABLE_DEFAULT=1
 # CONFIG_PAGE_REPORTING is not set
 CONFIG_MIGRATION=y
 CONFIG_CONTIG_ALLOC=y
+CONFIG_PCP_BATCH_SCALE_MAX=5
 CONFIG_BOUNCE=y
 # CONFIG_KSM is not set
 CONFIG_DEFAULT_MMAP_MIN_ADDR=4096
@@ -817,7 +817,6 @@ CONFIG_DMA_SHARED_BUFFER=y
 #
 # Bus devices
 #
-# CONFIG_BRCMSTB_GISB_ARB is not set
 # CONFIG_MIPS_CDMM is not set
 # CONFIG_MHI_BUS is not set
 # CONFIG_MHI_BUS_EP is not set
@@ -844,6 +843,11 @@ CONFIG_PROC_EVENTS=y
 # CONFIG_GOOGLE_FIRMWARE is not set
 
 #
+# Qualcomm firmware drivers
+#
+# end of Qualcomm firmware drivers
+
+#
 # Tegra firmware driver
 #
 # end of Tegra firmware driver
@@ -856,7 +860,6 @@ CONFIG_MTD=y
 #
 # Partition parsers
 #
-# CONFIG_MTD_AR7_PARTS is not set
 CONFIG_MTD_CMDLINE_PARTS=y
 CONFIG_MTD_OF_PARTS=y
 # CONFIG_MTD_REDBOOT_PARTS is not set
@@ -1018,7 +1021,6 @@ CONFIG_BLK_DEV_RAM_SIZE=16384
 # EEPROM support
 #
 CONFIG_EEPROM_AT24=m
-# CONFIG_EEPROM_LEGACY is not set
 # CONFIG_EEPROM_MAX6875 is not set
 CONFIG_EEPROM_93CX6=y
 # CONFIG_EEPROM_IDT_89HPESX is not set
@@ -1809,7 +1811,6 @@ CONFIG_BACKLIGHT_PWM=m
 #
 # Console display driver support
 #
-CONFIG_VGA_CONSOLE=y
 CONFIG_DUMMY_CONSOLE=y
 CONFIG_DUMMY_CONSOLE_COLUMNS=80
 CONFIG_DUMMY_CONSOLE_ROWS=25
@@ -2273,6 +2274,7 @@ CONFIG_LEDS_TRIGGER_HEARTBEAT=y
 CONFIG_LEDS_TRIGGER_BACKLIGHT=m
 CONFIG_LEDS_TRIGGER_CPU=y
 # CONFIG_LEDS_TRIGGER_ACTIVITY is not set
+# CONFIG_LEDS_TRIGGER_GPIO is not set
 CONFIG_LEDS_TRIGGER_DEFAULT_ON=y
 
 #
@@ -2582,6 +2584,31 @@ CONFIG_SOC_TI=y
 # end of Xilinx SoC drivers
 # end of SOC (System On Chip) specific Drivers
 
+#
+# PM Domains
+#
+
+#
+# Amlogic PM Domains
+#
+# end of Amlogic PM Domains
+
+#
+# Broadcom PM Domains
+#
+# end of Broadcom PM Domains
+
+#
+# i.MX PM Domains
+#
+# end of i.MX PM Domains
+
+#
+# Qualcomm PM Domains
+#
+# end of Qualcomm PM Domains
+# end of PM Domains
+
 # CONFIG_PM_DEVFREQ is not set
 CONFIG_EXTCON=y
 
@@ -2730,6 +2757,7 @@ CONFIG_F2FS_STAT_FS=y
 # CONFIG_F2FS_FAULT_INJECTION is not set
 # CONFIG_F2FS_FS_COMPRESSION is not set
 CONFIG_F2FS_IOSTAT=y
+# CONFIG_BCACHEFS_FS is not set
 CONFIG_FS_POSIX_ACL=y
 CONFIG_EXPORTFS=y
 # CONFIG_EXPORTFS_BLOCK_OPS is not set
@@ -3138,7 +3166,9 @@ CONFIG_CRYPTO_DRBG_HMAC=y
 # CONFIG_CRYPTO_DRBG_CTR is not set
 CONFIG_CRYPTO_DRBG=m
 CONFIG_CRYPTO_JITTERENTROPY=m
-# CONFIG_CRYPTO_JITTERENTROPY_TESTINTERFACE is not set
+CONFIG_CRYPTO_JITTERENTROPY_MEMORY_BLOCKS=64
+CONFIG_CRYPTO_JITTERENTROPY_MEMORY_BLOCKSIZE=32
+CONFIG_CRYPTO_JITTERENTROPY_OSR=1
 # end of Random number generation
 
 #
@@ -3281,6 +3311,7 @@ CONFIG_GENERIC_GETTIMEOFDAY=y
 CONFIG_SG_POOL=y
 CONFIG_STACKDEPOT=y
 CONFIG_SBITMAP=y
+# CONFIG_LWQ_TEST is not set
 # end of Library routines
 
 CONFIG_GENERIC_LIB_ASHLDI3=y

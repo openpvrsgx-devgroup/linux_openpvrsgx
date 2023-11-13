@@ -106,7 +106,7 @@ static int grab_sample_rate(struct omap3pandora_sound *ctx,
 	struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params)
 {
-	struct snd_soc_pcm_runtime *rtd = asoc_substream_to_rtd(substream);
+	struct snd_soc_pcm_runtime *rtd = snd_soc_substream_to_rtd(substream);
 	struct device *dev = rtd->dev;
 	int ret;
 
@@ -140,7 +140,7 @@ err:
 static int omap3pandora_playback_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params)
 {
-	struct snd_soc_pcm_runtime *rtd = asoc_substream_to_rtd(substream);
+	struct snd_soc_pcm_runtime *rtd = snd_soc_substream_to_rtd(substream);
 	struct snd_soc_card *card = rtd->card;
 	struct omap3pandora_sound *ctx = snd_soc_card_get_drvdata(card);
 	struct device *dev = rtd->dev;
@@ -164,7 +164,7 @@ static int omap3pandora_playback_hw_params(struct snd_pcm_substream *substream,
 		return -EINVAL;
 	}
 
-	ret = snd_soc_dai_set_sysclk(asoc_rtd_to_codec(twl4030_rtd, 0),
+	ret = snd_soc_dai_set_sysclk(snd_soc_rtd_to_codec(twl4030_rtd, 0),
 				     TWL4030_CLOCK_APLL, params_rate(params),
 				     SND_SOC_CLOCK_OUT);
 	if (ret) {
@@ -186,8 +186,8 @@ static int omap3pandora_playback_hw_params(struct snd_pcm_substream *substream,
 static int omap3pandora_capture_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params)
 {
-	struct snd_soc_pcm_runtime *rtd = asoc_substream_to_rtd(substream);
-	struct snd_soc_dai *codec_dai = asoc_rtd_to_codec(rtd, 0);
+	struct snd_soc_pcm_runtime *rtd = snd_soc_substream_to_rtd(substream);
+	struct snd_soc_dai *codec_dai = snd_soc_rtd_to_codec(rtd, 0);
 	struct device *dev = rtd->dev;
 	struct snd_soc_card *card = rtd->card;
 	struct omap3pandora_sound *ctx = snd_soc_card_get_drvdata(card);
@@ -213,7 +213,7 @@ static int omap3pandora_capture_hw_params(struct snd_pcm_substream *substream,
 
 static int omap3pandora_playback_hw_free(struct snd_pcm_substream *substream)
 {
-	struct snd_soc_pcm_runtime *rtd = asoc_substream_to_rtd(substream);
+	struct snd_soc_pcm_runtime *rtd = snd_soc_substream_to_rtd(substream);
 	struct snd_soc_card *card = rtd->card;
 	struct omap3pandora_sound *ctx = snd_soc_card_get_drvdata(card);
 
@@ -226,7 +226,7 @@ static int omap3pandora_playback_hw_free(struct snd_pcm_substream *substream)
 
 static int omap3pandora_common_startup(struct snd_pcm_substream *substream)
 {
-	struct snd_soc_pcm_runtime *rtd = asoc_substream_to_rtd(substream);
+	struct snd_soc_pcm_runtime *rtd = snd_soc_substream_to_rtd(substream);
 	struct snd_soc_card *card = rtd->card;
 	struct omap3pandora_sound *ctx = snd_soc_card_get_drvdata(card);
 	unsigned int sample_rate = ctx->sample_rate;
@@ -239,7 +239,7 @@ static int omap3pandora_common_startup(struct snd_pcm_substream *substream)
 
 static int omap3pandora_capture_hw_free(struct snd_pcm_substream *substream)
 {
-	struct snd_soc_pcm_runtime *rtd = asoc_substream_to_rtd(substream);
+	struct snd_soc_pcm_runtime *rtd = snd_soc_substream_to_rtd(substream);
 	struct snd_soc_card *card = rtd->card;
 	struct omap3pandora_sound *ctx = snd_soc_card_get_drvdata(card);
 

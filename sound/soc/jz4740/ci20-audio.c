@@ -95,7 +95,7 @@ static int ci20_audio_hw_params(struct snd_pcm_substream *substream,
 				struct snd_pcm_hw_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_dai *cpu_dai = asoc_rtd_to_cpu(rtd, 0);
+	struct snd_soc_dai *cpu_dai = snd_soc_rtd_to_cpu(rtd, 0);
 	unsigned int dai_fmt = rtd->dai_link->dai_fmt;
 	int mclk, ret;
 
@@ -137,7 +137,7 @@ static int ci20_audio_hw_params(struct snd_pcm_substream *substream,
 static int ci20_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_card *card = rtd->card;
-	struct snd_soc_dai *dai = asoc_rtd_to_codec(rtd, 0);
+	struct snd_soc_dai *dai = snd_soc_rtd_to_codec(rtd, 0);
 	struct snd_soc_component *codec = dai->component;
 	struct snd_soc_dapm_context *dapm = &codec->dapm;
 
@@ -156,7 +156,7 @@ static int ci20_init(struct snd_soc_pcm_runtime *rtd)
 static int ci20_hdmi_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_card *card = rtd->card;
-	struct snd_soc_dai *dai = asoc_rtd_to_codec(rtd, 0);
+	struct snd_soc_dai *dai = snd_soc_rtd_to_codec(rtd, 0);
 	struct snd_soc_component *codec = dai->component;
 	struct snd_soc_dapm_context *dapm = &codec->dapm;
 
@@ -243,13 +243,13 @@ static struct snd_soc_card ci20_audio_card = {
 	.num_dapm_routes = ARRAY_SIZE(ci20_routes),
 };
 
-static const struct of_device_id ingenic_asoc_ci20_dt_ids[] = {
+static const struct of_device_id ingenic_snd_soc_ci20_dt_ids[] = {
 	{ .compatible = "ingenic,ci20-audio", },
 	{ }
 };
-MODULE_DEVICE_TABLE(of, ingenic_asoc_ci20_dt_ids);
+MODULE_DEVICE_TABLE(of, ingenic_snd_soc_ci20_dt_ids);
 
-static int ingenic_asoc_ci20_probe(struct platform_device *pdev)
+static int ingenic_snd_soc_ci20_probe(struct platform_device *pdev)
 {
 	int ret;
 
@@ -294,7 +294,7 @@ static int ingenic_asoc_ci20_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static int ingenic_asoc_ci20_remove(struct platform_device *pdev)
+static int ingenic_snd_soc_ci20_remove(struct platform_device *pdev)
 {
 	snd_soc_jack_free_gpios(&ci20_hp_jack, 1, &ci20_hp_jack_gpio);
 
@@ -305,10 +305,10 @@ static struct platform_driver ingenic_ci20_audio_driver = {
 	.driver = {
 		.name = "ingenic-ci20-audio",
 		.owner = THIS_MODULE,
-		.of_match_table = ingenic_asoc_ci20_dt_ids,
+		.of_match_table = ingenic_snd_soc_ci20_dt_ids,
 	},
-	.probe = ingenic_asoc_ci20_probe,
-	.remove = ingenic_asoc_ci20_remove,
+	.probe = ingenic_snd_soc_ci20_probe,
+	.remove = ingenic_snd_soc_ci20_remove,
 };
 
 module_platform_driver(ingenic_ci20_audio_driver);

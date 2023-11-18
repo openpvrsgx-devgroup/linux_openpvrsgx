@@ -1,0 +1,23 @@
+# all pins connected to the RasPi header
+
+GPIOS="63 62 88 42 36 37 30 29 31 52 66 54 90 60 58"
+GPIOS="$GPIOS 40 39 59 56 55 35 28 34 51 89 41 53 57"
+
+for GPIO in $GPIOS
+do
+	echo $GPIO >/sys/class/gpio/unexport 2>/dev/null
+	echo $GPIO >/sys/class/gpio/export
+	echo out >/sys/class/gpio/gpio$GPIO/direction
+done
+
+while true
+do
+	for VALUE in 1 0
+	do
+		for GPIO in $GPIOS
+		do
+			[ -w /sys/class/gpio/gpio$GPIO/value ] && echo $VALUE >/sys/class/gpio/gpio$GPIO/value
+		done
+		sleep 0.5
+	done
+done

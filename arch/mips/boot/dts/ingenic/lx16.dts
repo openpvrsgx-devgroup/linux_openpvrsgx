@@ -402,13 +402,14 @@
 &otg {
 	g-use-dma;
 	dr_mode = "otg"; // host,peripheral,otg
+	dr_mode = "peripheral"; // host,peripheral,otg
 	device-using-dma = <1>;
 	status = "okay";
 };
 
 &otg_phy {
 	status = "okay";
-	ingenic,vbus-dete-gpio = <&gpc 24 GPIO_ACTIVE_LOW>;
+//	ingenic,vbus-dete-gpio = <&gpc 24 GPIO_ACTIVE_LOW>;
 };
 
 &aic {

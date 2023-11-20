@@ -36,6 +36,12 @@
  * @od_bits: the size of the post-VCO divider field in bits, or 0 if no
  *	     OD field exists (then the OD is fixed to 1)
  * @od_max: the maximum post-VCO divider value
+ * @od1_shift: the number of bits to shift the secondary post-VCO divider
+ *             value by (ie. the index of the lowest bit of the post-VCO
+ *             divider value in the PLL's control register)
+ * @od1_bits: the size of the secondary post-VCO divider field in bits, or 0
+ *            if no OD1 field exists (then the OD1 is fixed to 1)
+ * @od1_max: the maximum secondary post-VCO divider value
  * @od_encoding: a pointer to an array mapping post-VCO divider values to
  *               their encoded values in the PLL control register, or -1 for
  *               unsupported values
@@ -56,13 +62,15 @@ struct ingenic_cgu_pll_info {
 	u8 m_shift, m_bits, m_offset;
 	u8 n_shift, n_bits, n_offset;
 	u8 od_shift, od_bits, od_max;
+	u8 od1_shift, od1_bits, od1_max;
 	unsigned bypass_reg;
 	s8 bypass_bit;
 	s8 enable_bit;
 	s8 stable_bit;
 	void (*calc_m_n_od)(const struct ingenic_cgu_pll_info *pll_info,
 			    unsigned long rate, unsigned long parent_rate,
-			    unsigned int *m, unsigned int *n, unsigned int *od);
+			    unsigned int *m, unsigned int *n, unsigned int *od,
+			    unsigned int *od1);
 	void (*set_rate_hook)(const struct ingenic_cgu_pll_info *pll_info,
 			      unsigned long rate, unsigned long parent_rate);
 };
@@ -102,6 +110,46 @@ struct ingenic_cgu_div_info {
 	u8 shift;
 	u8 div;
 	u8 bits;
+	s8 ce_bit;
+	s8 busy_bit;
+	s8 stop_bit;
+	u8 bypass_mask;
+	const u8 *div_table;
+};
+
+/**
+ * struct ingenic_cgu_div_m_n_info - information about a divider
+ * @reg: offset of the divider control register within the CGU
+ * @m_shift: number of bits to left shift the M divide value by (ie. the index
+ *           of the lowest bit of the divide value within its control
+ *           register)
+ * @m_div: number to divide the M divider value by (i.e. if the
+ *	   effective divider value is the value written to the register
+ *	   multiplied by some constant)
+ * @m_bits: the size of the M divide value in bits
+ * @n_shift: number of bits to left shift the N divide value by (ie. the index
+ *           of the lowest bit of the divide value within its control
+ *           register)
+ * @n_div: number to divide the N divider value by (i.e. if the
+ *	   effective divider value is the value written to the register
+ *	   multiplied by some constant)
+ * @n_bits: the size of the N divide value in bits
+ * @ce_bit: the index of the change enable bit within reg, or -1 if there
+ *          isn't one
+ * @busy_bit: the index of the busy bit within reg, or -1 if there isn't one
+ * @stop_bit: the index of the stop bit within reg, or -1 if there isn't one
+ * @bypass_mask: mask of parent clocks for which the divider does not apply
+ * @div_table: optional table to map the value read from the register to the
+ *             actual divider value
+ */
+struct ingenic_cgu_div_m_n_info {
+	unsigned reg;
+	u8 m_shift;
+	u8 m_div;
+	u8 m_bits;
+	u8 n_shift;
+	u8 n_div;
+	u8 n_bits;
 	s8 ce_bit;
 	s8 busy_bit;
 	s8 stop_bit;
@@ -181,6 +229,7 @@ struct ingenic_cgu_clk_info {
 			struct ingenic_cgu_mux_info mux;
 			struct ingenic_cgu_div_info div;
 			struct ingenic_cgu_fixdiv_info fixdiv;
+			struct ingenic_cgu_div_m_n_info mndiv;
 		};
 
 		struct ingenic_cgu_custom_info custom;

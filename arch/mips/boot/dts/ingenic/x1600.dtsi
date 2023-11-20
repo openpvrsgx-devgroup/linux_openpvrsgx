@@ -88,6 +88,13 @@
 		clock-frequency = <32768>;
 	};
 
+	clk12m: clk12m {
+		compatible = "ingenic,fixed-clock";
+		clock-output-names ="clk12m";
+		#clock-cells = <0>;
+		clock-frequency  = <12000000>;
+	};
+
 	apb {
 		compatible = "simple-bus";
 		#address-cells = <1>;

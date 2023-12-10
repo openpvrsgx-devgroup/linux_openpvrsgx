@@ -20,4 +20,10 @@ do
 		done
 		sleep 0.5
 	done
+	for GPIO in $GPIOS
+	do
+		[ -w /sys/class/gpio/gpio$GPIO/value ] && echo 1 >/sys/class/gpio/gpio$GPIO/value
+		sleep 0.1
+		[ -w /sys/class/gpio/gpio$GPIO/value ] && echo 0 >/sys/class/gpio/gpio$GPIO/value
+	done
 done

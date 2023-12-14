@@ -160,9 +160,7 @@
 //				#ingenic,pinmux-cells = <2>;
 				interrupts = <IRQ_GPIO0>;
 				interrupt-parent = <&core_intc>;
-#ifndef CONFIG_DISABLE_GPIOA_IRQ_CONTROLLER
 				interrupt-controller;
-#endif
 				#interrupt-cells = <3>;
 //				ingenic,pull-bitmap = <0xffffffff>;
 			};
@@ -179,9 +177,7 @@
 //				#ingenic,pinmux-cells = <2>;
 				interrupts = <IRQ_GPIO1>;
 				interrupt-parent = <&core_intc>;
-#ifndef CONFIG_DISABLE_GPIOB_IRQ_CONTROLLER
 				interrupt-controller;
-#endif
 				#interrupt-cells = <3>;
 //				ingenic,pull-bitmap = <0xffffffff>;
 			};
@@ -198,9 +194,7 @@
 //				#ingenic,pinmux-cells = <2>;
 				interrupts = <IRQ_GPIO2>;
 				interrupt-parent = <&core_intc>;
-#ifndef CONFIG_DISABLE_GPIOC_IRQ_CONTROLLER
 				interrupt-controller;
-#endif
 				#interrupt-cells = <3>;
 //				ingenic,pull-bitmap = <0xffffffff>;
 			};
@@ -217,9 +211,7 @@
 //				#ingenic,pinmux-cells = <2>;
 				interrupts = <IRQ_GPIO3>;
 				interrupt-parent = <&core_intc>;
-#ifndef CONFIG_DISABLE_GPIOD_IRQ_CONTROLLER
 				interrupt-controller;
-#endif
 				#interrupt-cells = <3>;
 //				ingenic,pull-bitmap = <0xffffffff>;
 			};

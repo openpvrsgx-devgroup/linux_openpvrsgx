@@ -94,10 +94,6 @@ static const struct clk_ops x1600_otg_phy_ops = {
 	.is_enabled	= x1600_otg_phy_is_enabled,
 };
 
-static const s8 pll_od_encoding[8] = {
-	0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7,
-};
-
 static const struct ingenic_cgu_clk_info x1600_cgu_clocks[] = {
 
 	/* External clocks */
@@ -123,7 +119,7 @@ static const struct ingenic_cgu_clk_info x1600_cgu_clocks[] = {
 	.od1_shift = 11, \
 	.od1_bits = 3, \
 	.od1_max = 8, \
-	.od_encoding = pll_od_encoding, \
+	.od_encoding = 0, \
 	.stable_bit = 2, \
 	.enable_bit = 0, \
 }

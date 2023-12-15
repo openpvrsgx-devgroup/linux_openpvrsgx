@@ -88,9 +88,19 @@ ingenic_pll_recalc_rate_od(u32 ctl, u8 od_shift, u8 od_bits, u8 od_max,
 		od_enc &= GENMASK(od_bits - 1, 0);
 	}
 
-	for (od = 0; od < od_max; od++)
-		if (od_encoding[od] == od_enc)
-			break;
+	/*
+	 * Use the encoding table if indicated. Otherwise, use the value
+	 * directly, interpreting an encoded value of zero as a divider
+	 * value of one.
+	 */
+	if (od_encoding)
+	{
+		for (od = 0; od < od_max; od++)
+			if (od_encoding[od] == od_enc)
+				break;
+	}
+	else
+		od = od_enc ? od_enc : 1;
 
 	/* if od_max = 0, od_bits should be 0 and od is fixed to 1. */
 	if (od_max == 0)
@@ -148,17 +158,23 @@ ingenic_pll_calc_m_n_od(const struct ingenic_cgu_pll_info *pll_info,
 			unsigned int *pm, unsigned int *pn, unsigned int *pod,
 			unsigned int *pod1)
 {
-	/* PAUL: Does od even get changed here? */
 	unsigned int m, n, od = 1, od1 = 1;
 
 	/*
 	 * The frequency after the input divider must be between 10 and 50 MHz.
+	 * (A source is needed for this observation. The JZ4740 programming
+	 * manual indicates a 1 to 15 MHz range. The JZ4780 manual indicates a
+	 * 183 kHz to 1.5 GHz range.)
 	 * The highest divider yields the best resolution.
 	 */
 	n = parent_rate / (10 * MHZ);
 	n = min_t(unsigned int, n, 1 << pll_info->n_bits);
 	n = max_t(unsigned int, n, pll_info->n_offset);
 
+	/*
+	 * The frequency after the VCO stage (parent * m / n) must be between
+	 * 100 and 500 MHz for the JZ4740, 300 MHz and 1.5 GHz for the JZ4780.
+	 */
 	m = (rate / MHZ) * od * od1 * n / (parent_rate / MHZ);
 	m = min_t(unsigned int, m, 1 << pll_info->m_bits);
 	m = max_t(unsigned int, m, pll_info->m_offset);

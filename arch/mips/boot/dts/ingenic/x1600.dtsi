@@ -156,15 +156,15 @@
 				gpio-ranges = <&pinctrl 0 0 32>;
 				#gpio-cells = <2>;
 
-				#ingenic,pincfg-cells = <3>;
-				#ingenic,pinmux-cells = <2>;
+//				#ingenic,pincfg-cells = <3>;
+//				#ingenic,pinmux-cells = <2>;
 				interrupts = <IRQ_GPIO0>;
 				interrupt-parent = <&core_intc>;
 #ifndef CONFIG_DISABLE_GPIOA_IRQ_CONTROLLER
 				interrupt-controller;
 #endif
 				#interrupt-cells = <3>;
-				ingenic,pull-bitmap = <0xffffffff>;
+//				ingenic,pull-bitmap = <0xffffffff>;
 			};
 
 			gpb: gpio@1 {
@@ -175,15 +175,15 @@
 				gpio-ranges = <&pinctrl 0 32 32>;
 				#gpio-cells = <2>;
 
-				#ingenic,pincfg-cells = <3>;
-				#ingenic,pinmux-cells = <2>;
+//				#ingenic,pincfg-cells = <3>;
+//				#ingenic,pinmux-cells = <2>;
 				interrupts = <IRQ_GPIO1>;
 				interrupt-parent = <&core_intc>;
 #ifndef CONFIG_DISABLE_GPIOB_IRQ_CONTROLLER
 				interrupt-controller;
 #endif
 				#interrupt-cells = <3>;
-				ingenic,pull-bitmap = <0xffffffff>;
+//				ingenic,pull-bitmap = <0xffffffff>;
 			};
 
 			gpc: gpio@2 {
@@ -194,15 +194,15 @@
 				gpio-ranges = <&pinctrl 0 64 32>;
 				#gpio-cells = <2>;
 
-				#ingenic,pincfg-cells = <3>;
-				#ingenic,pinmux-cells = <2>;
+//				#ingenic,pincfg-cells = <3>;
+//				#ingenic,pinmux-cells = <2>;
 				interrupts = <IRQ_GPIO2>;
 				interrupt-parent = <&core_intc>;
 #ifndef CONFIG_DISABLE_GPIOC_IRQ_CONTROLLER
 				interrupt-controller;
 #endif
 				#interrupt-cells = <3>;
-				ingenic,pull-bitmap = <0xffffffff>;
+//				ingenic,pull-bitmap = <0xffffffff>;
 			};
 
 			gpd: gpio@3 {
@@ -213,15 +213,15 @@
 				gpio-ranges = <&pinctrl 0 96 32>;
 				#gpio-cells = <2>;
 
-				#ingenic,pincfg-cells = <3>;
-				#ingenic,pinmux-cells = <2>;
+//				#ingenic,pincfg-cells = <3>;
+//				#ingenic,pinmux-cells = <2>;
 				interrupts = <IRQ_GPIO3>;
 				interrupt-parent = <&core_intc>;
 #ifndef CONFIG_DISABLE_GPIOD_IRQ_CONTROLLER
 				interrupt-controller;
 #endif
 				#interrupt-cells = <3>;
-				ingenic,pull-bitmap = <0xffffffff>;
+//				ingenic,pull-bitmap = <0xffffffff>;
 			};
 
 		};

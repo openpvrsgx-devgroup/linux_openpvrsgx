@@ -172,7 +172,8 @@ static const struct clk_ops x1000_otg_phy_ops = {
 static void
 x1000_i2spll_calc_m_n_od(const struct ingenic_cgu_pll_info *pll_info,
 			 unsigned long rate, unsigned long parent_rate,
-			 unsigned int *pm, unsigned int *pn, unsigned int *pod)
+			 unsigned int *pm, unsigned int *pn, unsigned int *pod,
+			 unsigned int *pod1)
 {
 	const unsigned long m_max = GENMASK(pll_info->m_bits - 1, 0);
 	const unsigned long n_max = GENMASK(pll_info->n_bits - 1, 0);

@@ -182,7 +182,7 @@ static const struct ingenic_cgu_clk_info x1600_cgu_clocks[] = {
 
 	[X1600_CLK_AHB0] = {
 		"ahb0", CGU_CLK_MUX | CGU_CLK_DIV | CGU_CLK_GATE,
-		.parents = { -1, JZ4780_CLK_SCLKA, JZ4780_CLK_MPLL, -1 },
+		.parents = { -1, X1600_CLK_SCLKA, X1600_CLK_MPLL, -1 },
 		.mux = { CGU_REG_CLOCKCONTROL, 26, 2 },
 		.div = { CGU_REG_CLOCKCONTROL, 8, 1, 4, 21, -1, -1 },
 		.gate = { CGU_REG_CLKGR0, 29 },
@@ -190,7 +190,7 @@ static const struct ingenic_cgu_clk_info x1600_cgu_clocks[] = {
 
 	[X1600_CLK_AHB2PMUX] = {
 		"ahb2_apb_mux", CGU_CLK_MUX,
-		.parents = { -1, JZ4780_CLK_SCLKA, JZ4780_CLK_MPLL, -1 },
+		.parents = { -1, X1600_CLK_SCLKA, X1600_CLK_MPLL, -1 },
 		.mux = { CGU_REG_CLOCKCONTROL, 24, 2 },
 	},
 

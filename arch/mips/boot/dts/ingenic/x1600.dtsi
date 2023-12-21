@@ -3,6 +3,7 @@
 #include <dt-bindings/interrupt-controller/x1600-irq.h>
 #include <dt-bindings/clock/ingenic-tcu.h>
 #include <dt-bindings/clock/ingenic-x1600.h>
+#include <dt-bindings/clock/ingenic,x1600-cgu.h>
 #include <dt-bindings/sound/ingenic-baic.h>
 #include <dt-bindings/net/ingenic_gmac.h>
 #include <dt-bindings/dma/ingenic-pdma.h>
@@ -102,7 +103,8 @@
 		ranges = <>;
 
 		clock: clock-controller@10000000 {
-			compatible = "ingenic,x1600-clocks";
+//			compatible = "ingenic,x1600-clocks";
+			compatible = "ingenic,x1600-cgu", "simple-mfd";
 			reg = <0x10000000 0x100>;
 			clocks = <&extclk>, <&rtcclk>;
 			clock-names = "ext", "rtc_ext";
@@ -231,8 +233,8 @@
 			reg-shift = <2>;
 			interrupt-parent = <&core_intc>;
 			interrupts = <IRQ_UART0>;
-			clocks = <&extclk 0>;
-			clock-names = "uart0";
+			clocks = <&extclk 0>, <&clock X1600_CLK_UART0>;
+			clock-names = "baud", "module";
 			dmas = <&pdma INGENIC_DMA_TYPE(INGENIC_DMA_REQ_UART0_TX)>,
 				   <&pdma INGENIC_DMA_TYPE(INGENIC_DMA_REQ_UART0_RX)>;
 			dma-names = "tx", "rx";
@@ -246,6 +248,8 @@
 			reg-shift = <2>;
 			interrupt-parent = <&core_intc>;
 			interrupts = <IRQ_UART1>;
+			clocks = <&extclk 0>, <&clock X1600_CLK_UART1>;
+			clock-names = "baud", "module";
 			dmas = <&pdma INGENIC_DMA_TYPE(INGENIC_DMA_REQ_UART1_TX)>,
 				   <&pdma INGENIC_DMA_TYPE(INGENIC_DMA_REQ_UART1_RX)>;
 			dma-names = "tx", "rx";
@@ -259,6 +263,8 @@
 //			reg-shift = <2>;
 			interrupt-parent = <&core_intc>;
 			interrupts = <IRQ_UART2>;
+			clocks = <&extclk 0>, <&clock X1600_CLK_UART2>;
+			clock-names = "baud", "module";
 //			dmas = <&pdma INGENIC_DMA_TYPE(INGENIC_DMA_REQ_UART2_TX)>,
 //				   <&pdma INGENIC_DMA_TYPE(INGENIC_DMA_REQ_UART2_RX)>;
 			dma-names = "tx", "rx";
@@ -272,6 +278,8 @@
 			reg-shift = <2>;
 			interrupt-parent = <&core_intc>;
 			interrupts = <IRQ_UART3>;
+			clocks = <&extclk 0>, <&clock X1600_CLK_UART3>;
+			clock-names = "baud", "module";
 			dmas = <&pdma INGENIC_DMA_TYPE(INGENIC_DMA_REQ_UART3_TX)>,
 				   <&pdma INGENIC_DMA_TYPE(INGENIC_DMA_REQ_UART3_RX)>;
 			dma-names = "tx", "rx";

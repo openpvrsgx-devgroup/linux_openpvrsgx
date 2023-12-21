@@ -56,7 +56,8 @@ static const u8 jz4760_cgu_pll_half_div_table[] = {
 static void
 jz4760_cgu_calc_m_n_od(const struct ingenic_cgu_pll_info *pll_info,
 		       unsigned long rate, unsigned long parent_rate,
-		       unsigned int *pm, unsigned int *pn, unsigned int *pod)
+		       unsigned int *pm, unsigned int *pn, unsigned int *pod,
+		       unsigned int *pod1)
 {
 	unsigned int m, n, od, m_max = (1 << pll_info->m_bits) - 1;
 

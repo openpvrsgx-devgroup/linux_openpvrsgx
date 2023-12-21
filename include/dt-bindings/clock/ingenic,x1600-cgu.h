@@ -14,6 +14,7 @@
 
 #define X1600_CLK_EXCLK			0
 #define X1600_CLK_RTCLK			1
+#define X1600_CLK_12M		42
 #define X1600_CLK_APLL			2
 #define X1600_CLK_EPLL			3
 #define X1600_CLK_MPLL			4
@@ -26,11 +27,33 @@
 #define X1600_CLK_AHB2			11
 #define X1600_CLK_PCLK			12
 #define X1600_CLK_DDR			13
+#define X1600_CLK_I2S0		43
+#define X1600_CLK_I2S1		44
+#define X1600_CLK_LCDPIXCLK	45
 #define X1600_CLK_MAC			14
-#define X1600_CLK_LCD			15
-#define X1600_CLK_MSCMUX		16
 #define X1600_CLK_MSC0			17
 #define X1600_CLK_MSC1			18
+#define X1600_CLK_SSI0		46
+#define X1600_CLK_CIMMCLK	47
+#define X1600_CLK_EXCLK_DIV512		36
+#define X1600_CLK_RTC			37
+#define X1600_CLK_OTGPHY	48
+#define X1600_CLK_NEMC		49
+#define X1600_CLK_OTG0		50
+#define X1600_CLK_SMB0		51
+#define X1600_CLK_SMB1		52
+#define X1600_CLK_AIC			38
+#define X1600_CLK_SADC		53
+#define X1600_CLK_UART0			29
+#define X1600_CLK_UART1			30
+#define X1600_CLK_UART2			31
+#define X1600_CLK_UART3		54
+#define X1600_CLK_PDMA			35
+#define X1600_CLK_AES		55
+
+/*
+#define X1600_CLK_LCD			15
+#define X1600_CLK_MSCMUX		16
 #define X1600_CLK_OTG			19
 #define X1600_CLK_SSIPLL		20
 #define X1600_CLK_SSIPLL_DIV2	21
@@ -41,18 +64,12 @@
 #define X1600_CLK_I2C0			26
 #define X1600_CLK_I2C1			27
 #define X1600_CLK_I2C2			28
-#define X1600_CLK_UART0			29
-#define X1600_CLK_UART1			30
-#define X1600_CLK_UART2			31
 #define X1600_CLK_TCU			32
 #define X1600_CLK_SSI			33
 #define X1600_CLK_OST			34
-#define X1600_CLK_PDMA			35
-#define X1600_CLK_EXCLK_DIV512	36
-#define X1600_CLK_RTC			37
-#define X1600_CLK_AIC			38
 #define X1600_CLK_I2SPLLMUX		39
 #define X1600_CLK_I2SPLL		40
 #define X1600_CLK_I2S			41
+*/
 
 #endif /* __DT_BINDINGS_CLOCK_X1600_CGU_H__ */

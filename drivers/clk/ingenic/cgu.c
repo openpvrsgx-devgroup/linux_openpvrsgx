@@ -195,7 +195,7 @@ ingenic_pll_calc(const struct ingenic_cgu_clk_info *clk_info,
 	unsigned int m, n, od, od1 = 1;
 
 	if (pll_info->calc_m_n_od)
-		(*pll_info->calc_m_n_od)(pll_info, rate, parent_rate, &m, &n, &od);
+		(*pll_info->calc_m_n_od)(pll_info, rate, parent_rate, &m, &n, &od, NULL);
 	else
 		ingenic_pll_calc_m_n_od(pll_info, rate, parent_rate, &m, &n, &od, &od1);
 
@@ -219,7 +219,7 @@ ingenic_pll_round_rate(struct clk_hw *hw, unsigned long req_rate,
 	struct ingenic_clk *ingenic_clk = to_ingenic_clk(hw);
 	const struct ingenic_cgu_clk_info *clk_info = to_clk_info(ingenic_clk);
 
-	return ingenic_pll_calc(clk_info, req_rate, *prate, NULL, NULL, NULL);
+	return ingenic_pll_calc(clk_info, req_rate, *prate, NULL, NULL, NULL, NULL);
 }
 
 static inline int ingenic_pll_check_stable(struct ingenic_cgu *cgu,

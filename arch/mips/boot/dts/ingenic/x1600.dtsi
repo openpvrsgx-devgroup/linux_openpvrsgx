@@ -106,8 +106,7 @@
 		ranges = <>;
 
 		clock: clock-controller@10000000 {
-//			compatible = "ingenic,x1600-clocks";
-			compatible = "ingenic,x1600-cgu", "simple-mfd";
+			compatible = "ingenic,x1600-cgu" /*, "simple-mfd" */;
 			reg = <0x10000000 0x100>;
 			clocks = <&extclk>, <&rtcclk>, <&clk12m>;
 			clock-names = "ext", "rtc", "clk12m";

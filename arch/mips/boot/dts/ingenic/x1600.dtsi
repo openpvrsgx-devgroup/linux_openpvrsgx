@@ -39,6 +39,9 @@
 			compatible = "ingenic,xburst";
 			reg = <0x000>;
 			clock-frequency = <800000000>;
+
+			clocks = <&clock X1600_CLK_CPU>;
+			clock-names = "cpu";
 		};
 
 	};
@@ -76,21 +79,21 @@
 
 
 	extclk: extclk {
-		compatible = "ingenic,fixed-clock";
+		compatible = "fixed-clock";
 		clock-output-names ="ext";
 		#clock-cells = <0>;
 		clock-frequency  = <24000000>;
 	};
 
 	rtcclk: rtcclk {
-		compatible = "ingenic,fixed-clock";
-		clock-output-names ="rtc_ext";
+		compatible = "fixed-clock";
+		clock-output-names ="rtc";
 		#clock-cells = <0>;
 		clock-frequency = <32768>;
 	};
 
 	clk12m: clk12m {
-		compatible = "ingenic,fixed-clock";
+		compatible = "fixed-clock";
 		clock-output-names ="clk12m";
 		#clock-cells = <0>;
 		clock-frequency  = <12000000>;
@@ -106,8 +109,8 @@
 //			compatible = "ingenic,x1600-clocks";
 			compatible = "ingenic,x1600-cgu", "simple-mfd";
 			reg = <0x10000000 0x100>;
-			clocks = <&extclk>, <&rtcclk>;
-			clock-names = "ext", "rtc_ext";
+			clocks = <&extclk>, <&rtcclk>, <&clk12m>;
+			clock-names = "ext", "rtc", "clk12m";
 			#clock-cells = <1>;
 			little-endian;
 		};

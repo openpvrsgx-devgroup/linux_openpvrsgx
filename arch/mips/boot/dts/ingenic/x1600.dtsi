@@ -235,7 +235,7 @@
 			reg-shift = <2>;
 			interrupt-parent = <&core_intc>;
 			interrupts = <IRQ_UART0>;
-			clocks = <&extclk 0>, <&clock X1600_CLK_UART0>;
+			clocks = <&extclk>, <&clock X1600_CLK_UART0>;
 			clock-names = "baud", "module";
 			dmas = <&pdma INGENIC_DMA_TYPE(INGENIC_DMA_REQ_UART0_TX)>,
 				   <&pdma INGENIC_DMA_TYPE(INGENIC_DMA_REQ_UART0_RX)>;
@@ -250,7 +250,7 @@
 			reg-shift = <2>;
 			interrupt-parent = <&core_intc>;
 			interrupts = <IRQ_UART1>;
-			clocks = <&extclk 0>, <&clock X1600_CLK_UART1>;
+			clocks = <&extclk>, <&clock X1600_CLK_UART1>;
 			clock-names = "baud", "module";
 			dmas = <&pdma INGENIC_DMA_TYPE(INGENIC_DMA_REQ_UART1_TX)>,
 				   <&pdma INGENIC_DMA_TYPE(INGENIC_DMA_REQ_UART1_RX)>;
@@ -265,7 +265,7 @@
 //			reg-shift = <2>;
 			interrupt-parent = <&core_intc>;
 			interrupts = <IRQ_UART2>;
-			clocks = <&extclk 0>, <&clock X1600_CLK_UART2>;
+			clocks = <&extclk>, <&clock X1600_CLK_UART2>;
 			clock-names = "baud", "module";
 //			dmas = <&pdma INGENIC_DMA_TYPE(INGENIC_DMA_REQ_UART2_TX)>,
 //				   <&pdma INGENIC_DMA_TYPE(INGENIC_DMA_REQ_UART2_RX)>;
@@ -280,7 +280,7 @@
 			reg-shift = <2>;
 			interrupt-parent = <&core_intc>;
 			interrupts = <IRQ_UART3>;
-			clocks = <&extclk 0>, <&clock X1600_CLK_UART3>;
+			clocks = <&extclk>, <&clock X1600_CLK_UART3>;
 			clock-names = "baud", "module";
 			dmas = <&pdma INGENIC_DMA_TYPE(INGENIC_DMA_REQ_UART3_TX)>,
 				   <&pdma INGENIC_DMA_TYPE(INGENIC_DMA_REQ_UART3_RX)>;

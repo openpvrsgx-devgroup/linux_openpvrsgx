@@ -304,9 +304,11 @@ static const struct ingenic_cgu_clk_info x1600_cgu_clocks[] = {
 	/* Custom (SoC-specific) OTG PHY */
 
 	[X1600_CLK_OTGPHY] = {
-		"otg_phy", CGU_CLK_CUSTOM,
+// FIXME: this asks for .get_parent implementation
+// __clk_core_init: otg_phy must implement .get_parent as it has multi parents
+		"otg_phy", CGU_CLK_GATE,	// CGU_CLK_CUSTOM,
 		.parents = { X1600_CLK_12M },
-		.custom = { &x1600_otg_phy_ops },
+//		.custom = { &x1600_otg_phy_ops },
 	},
 
 	/* Gate-only clocks */
@@ -378,7 +380,7 @@ static const struct ingenic_cgu_clk_info x1600_cgu_clocks[] = {
 	},
 
 	[X1600_CLK_AES] = {
-		"des", CGU_CLK_GATE,
+		"aes", CGU_CLK_GATE,
 		.parents = { X1600_CLK_AHB2, -1, -1, -1 },
 		.gate = { CGU_REG_CLKGR1, 24 },
 	},

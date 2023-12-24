@@ -1,5 +1,5 @@
 #
-# Linux/x86 6.7.0-rc6 Kernel Configuration
+# Linux/x86 6.7.0-rc7 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="i486-linux-gnu-gcc (GCC) 6.3.0"
 CONFIG_CC_IS_GCC=y
@@ -2178,7 +2178,6 @@ CONFIG_BCACHE=y
 # CONFIG_BCACHE_DEBUG is not set
 # CONFIG_BCACHE_ASYNC_REGISTRATION is not set
 # CONFIG_BLK_DEV_DM is not set
-CONFIG_DM_AUDIT=y
 # CONFIG_TARGET_CORE is not set
 CONFIG_FUSION=y
 # CONFIG_FUSION_SPI is not set

@@ -638,6 +638,8 @@ static int omap_mcpdm_resume(struct snd_soc_component *component)
 
 static struct snd_soc_dai_driver omap_mcpdm_dai[] = {
 {
+	.name = "mcpdm-legacy",
+	.id     = OMAP_MCPDM_LEGACY_DAI,
 	.playback = {
 		.channels_min = 1,
 		.channels_max = 5,

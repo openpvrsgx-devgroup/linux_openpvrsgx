@@ -1,5 +1,5 @@
 #
-# Linux/mips 6.7.0-rc7 Kernel Configuration
+# Linux/mips 6.7.0-rc8 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="mipsel-linux-gnu-gcc (GCC) 6.3.0"
 CONFIG_CC_IS_GCC=y
@@ -4555,6 +4555,7 @@ CONFIG_INGENIC_CGU_JZ4760=y
 CONFIG_INGENIC_CGU_JZ4770=y
 CONFIG_INGENIC_CGU_JZ4780=y
 CONFIG_INGENIC_CGU_X1000=y
+CONFIG_INGENIC_CGU_X1600=y
 CONFIG_INGENIC_CGU_X1830=y
 CONFIG_INGENIC_TCU_CLK=y
 # end of Ingenic SoCs drivers

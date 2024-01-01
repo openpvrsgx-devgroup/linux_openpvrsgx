@@ -1,5 +1,5 @@
 #
-# Linux/mips 6.7.0-rc7 Kernel Configuration
+# Linux/mips 6.7.0-rc8 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="mipsel-linux-gnu-gcc (GCC) 6.3.0"
 CONFIG_CC_IS_GCC=y
@@ -2491,9 +2491,6 @@ CONFIG_INGENIC_CGU_X1830=y
 CONFIG_INGENIC_TCU_CLK=y
 # end of Ingenic SoCs drivers
 
-CONFIG_COMMON_CLK_INGENIC=y
-CONFIG_INGENIC_CLK_DEBUG_FS=y
-CONFIG_CLK_X1600=y
 # CONFIG_COMMON_CLK_PISTACHIO is not set
 # CONFIG_XILINX_VCU is not set
 # CONFIG_COMMON_CLK_XLNX_CLKWZRD is not set

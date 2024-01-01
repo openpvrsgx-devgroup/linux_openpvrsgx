@@ -581,7 +581,7 @@ static int omap_mcpdm_remove(struct snd_soc_dai *dai)
 	return 0;
 }
 
-static const struct snd_soc_dai_ops omap_mcpdm_dai_ops = {
+static const struct snd_soc_dai_ops omap_mcpdm_legacy_dai_ops = {
 	.probe		= omap_mcpdm_probe,
 	.remove		= omap_mcpdm_remove,
 	.startup	= omap_mcpdm_dai_startup,
@@ -591,6 +591,17 @@ static const struct snd_soc_dai_ops omap_mcpdm_dai_ops = {
 	.probe_order	= SND_SOC_COMP_ORDER_LATE,
 	.remove_order	= SND_SOC_COMP_ORDER_EARLY,
 };
+
+#if IS_ENABLED(CONFIG_SND_SOC_OMAP_AESS)
+static const struct snd_soc_dai_ops omap_mcpdm_abe_dai_ops = {
+	.startup	= omap_mcpdm_dai_startup,
+	.shutdown	= omap_mcpdm_dai_shutdown,
+	.hw_params	= omap_mcpdm_dai_hw_params,
+	.prepare	= omap_mcpdm_prepare,
+	.probe_order	= SND_SOC_COMP_ORDER_LATE,
+	.remove_order	= SND_SOC_COMP_ORDER_EARLY,
+};
+#endif
 
 #ifdef CONFIG_PM_SLEEP
 static int omap_mcpdm_suspend(struct snd_soc_component *component)
@@ -654,7 +665,7 @@ static struct snd_soc_dai_driver omap_mcpdm_dai[] = {
 		.formats = OMAP_MCPDM_FORMATS,
 		.sig_bits = 24,
 	},
-	.ops = &omap_mcpdm_dai_ops,
+	.ops = &omap_mcpdm_legacy_dai_ops,
 },
 #if IS_ENABLED(CONFIG_SND_SOC_OMAP_AESS)
 {
@@ -672,7 +683,7 @@ static struct snd_soc_dai_driver omap_mcpdm_dai[] = {
 		.rates = OMAP_MCPDM_RATES,
 		.formats = OMAP_MCPDM_FORMATS,
 	},
-	.ops = &omap_mcpdm_dai_ops,
+	.ops = &omap_mcpdm_abe_dai_ops,
 },
 #endif
 };

@@ -460,6 +460,17 @@
 		status = "disabled";
 	};
 
+	gpu: gpu@13040000 {
+		compatible = "ingenic,jz4780-gpu", "img,powervr-sgx540";
+		reg = <0x13040000 0x4000>;
+
+		clocks = <&cgu JZ4780_CLK_GPU>;
+		clock-names = "core";
+
+		interrupt-parent = <&intc>;
+		interrupts = <63>;
+	};
+
 	lcdc0: lcdc0@13050000 {
 		compatible = "ingenic,jz4780-lcd";
 		reg = <0x13050000 0x1800>;

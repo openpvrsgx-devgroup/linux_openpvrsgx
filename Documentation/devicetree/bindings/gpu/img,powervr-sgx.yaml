@@ -1,6 +1,5 @@
 # SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
 # Copyright (c) 2023 Imagination Technologies Ltd.
-# Copyright (C) 2024 Texas Instruments Incorporated - https://www.ti.com/
 %YAML 1.2
 ---
 $id: http://devicetree.org/schemas/gpu/img,powervr-sgx.yaml#
@@ -39,9 +38,7 @@ properties:
   interrupts:
     maxItems: 1
 
-  clocks:
-    minItems: 1
-    maxItems: 3
+  clocks: true
 
   clock-names:
     minItems: 1
@@ -57,6 +54,8 @@ required:
   - compatible
   - reg
   - interrupts
+
+additionalProperties: false
 
 allOf:
   - if:
@@ -78,6 +77,31 @@ allOf:
               - allwinner,sun6i-a31-gpu
               - ingenic,jz4780-gpu
     then:
+      allOf:
+        - if:
+            properties:
+              compatible:
+                contains:
+                  const: allwinner,sun6i-a31-gpu
+          then:
+            properties:
+              clocks:
+                minItems: 2
+                maxItems: 2
+              clock-names:
+                minItems: 2
+                maxItems: 2
+        - if:
+            properties:
+              compatible:
+                contains:
+                  const: ingenic,jz4780-gpu
+          then:
+            properties:
+              clocks:
+                maxItems: 1
+              clock-names:
+                maxItems: 1
       required:
         - clocks
         - clock-names
@@ -85,32 +109,6 @@ allOf:
       properties:
         clocks: false
         clock-names: false
-  - if:
-      properties:
-        compatible:
-          contains:
-            const: allwinner,sun6i-a31-gpu
-    then:
-      properties:
-        clocks:
-          minItems: 2
-          maxItems: 2
-        clock-names:
-          minItems: 2
-          maxItems: 2
-  - if:
-      properties:
-        compatible:
-          contains:
-            const: ingenic,jz4780-gpu
-    then:
-      properties:
-        clocks:
-          maxItems: 1
-        clock-names:
-          maxItems: 1
-
-additionalProperties: false
 
 examples:
   - |
@@ -123,16 +121,4 @@ examples:
         reg = <0x7000000 0x10000>;
         interrupts = <GIC_SPI 162 IRQ_TYPE_LEVEL_HIGH>;
         power-domains = <&k3_pds 65 TI_SCI_PD_EXCLUSIVE>;
-    };
-
-  - |
-    #include <dt-bindings/interrupt-controller/irq.h>
-    #include <dt-bindings/interrupt-controller/arm-gic.h>
-
-    gpu: gpu@1c40000 {
-        compatible = "allwinner,sun6i-a31-gpu", "img,powervr-sgx544";
-        reg = <0x01c40000 0x10000>;
-        interrupts = <GIC_SPI 97 IRQ_TYPE_LEVEL_HIGH>;
-        clocks = <&ccu 1>, <&ccu 2>;
-        clock-names = "core", "mem";
     };

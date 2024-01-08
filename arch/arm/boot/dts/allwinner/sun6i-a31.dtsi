@@ -962,6 +962,15 @@
 			};
 		};
 
+		gpu: gpu@1c40000 {
+			compatible = "allwinner,sun6i-a31-gpu", "img,powervr-sgx544";
+			reg = <0x01c40000 0x10000>;
+			interrupts = <GIC_SPI 97 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&ccu CLK_GPU_CORE>, <&ccu CLK_GPU_MEMORY>;
+			clock-names = "core", "mem";
+			status = "disabled";
+		};
+
 		crypto: crypto-engine@1c15000 {
 			compatible = "allwinner,sun6i-a31-crypto",
 				     "allwinner,sun4i-a10-crypto";

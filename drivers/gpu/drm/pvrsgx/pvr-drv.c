@@ -40,6 +40,8 @@ struct pvr_capabilities {
 	u32 quirks;
 	unsigned long smp:1;
 	u16 ocp_offset;
+	u16 sgx_version;
+	u16 sgx_revision;
 };
 
 struct pvr {
@@ -265,37 +267,64 @@ static const struct dev_pm_ops pvr_pm_ops = {
 
 static const struct pvr_capabilities __maybe_unused pvr_omap34xx = {
 	/* Has OCP registers but not accessible */
+	.sgx_version = 530,
+	.sgx_revision = 121,
 };
 
 static const struct pvr_capabilities __maybe_unused pvr_omap36xx = {
 	.ocp_offset = 0xfe00,
+	.sgx_version = 530,
+	.sgx_revision = 125,
 };
 
-static const struct pvr_capabilities __maybe_unused pvr_omap4 = {
+static const struct pvr_capabilities __maybe_unused pvr_sirf = {
+	.ocp_offset = 0xfe00,	// CHECKME
+	.sgx_version = 531,
+	.sgx_revision = 125,	// CHECKME
+};
+
+static const struct pvr_capabilities __maybe_unused pvr_omap4430 = {
 	.ocp_offset = 0xfe00,
 	.quirks = PVR_QUIRK_OMAP4,
+	.sgx_version = 540,
+	.sgx_revision = 120,
 };
 
 static const struct pvr_capabilities __maybe_unused pvr_omap4470 = {
 	.ocp_offset = 0xfe00,
 	.smp = true,
+	.sgx_version = 544,
+	.sgx_revision = 112,
 };
 
 static const struct pvr_capabilities __maybe_unused pvr_omap5 = {
 	.ocp_offset = 0xfe00,
 	.smp = true,
+	.sgx_version = 544,
+	.sgx_revision = 116,
 };
 
 static const struct pvr_capabilities __maybe_unused pvr_jz4780 = {
 	.smp = true,
+	.sgx_version = 540,
+	.sgx_revision = 130,
 };
 
 static const struct pvr_capabilities __maybe_unused pvr_s5pv210 = {
 	.smp = true,
+	.sgx_version = 540,
+	.sgx_revision = 120,
+};
+
+static const struct pvr_capabilities __maybe_unused pvr_sun8i_a31 = {
+	.sgx_version = 544,
+	.sgx_revision = 115,
 };
 
 static const struct pvr_capabilities __maybe_unused pvr_sun8i_a83t = {
 	.smp = true,
+	.sgx_version = 544,
+	.sgx_revision = 115,
 };
 
 /*
@@ -305,51 +334,62 @@ static const struct pvr_capabilities __maybe_unused pvr_sun8i_a83t = {
 
 static const struct of_device_id pvr_ids[] = {
 #ifdef ti_omap3_sgx530_121
-	{ .compatible = "ti,omap3-sgx530-121", .data =  &pvr_omap34xx, },
+	{ .compatible = "ti,omap3430-gpu", .data =  &pvr_omap34xx, },
 #endif
 
 #ifdef ti_omap3630_sgx530_125
-	{ .compatible = "ti,omap3-sgx530-125", .data =  &pvr_omap36xx, },
+	{ .compatible = "ti,omap3630-gpu", .data =  &pvr_omap36xx, },
 #endif
 
 #ifdef ti_am3517_sgx530_125
-	{ .compatible = "ti,am3517-sgx530-125", .data =  &pvr_omap36xx, },
+	{ .compatible = "ti,am3517-gpu", .data =  &pvr_omap36xx, },
 #endif
 
 #ifdef ti_am3352_sgx530_125
-	{ .compatible = "ti,am3352-sgx530-125", .data =  &pvr_omap36xx, },
+	{ .compatible = "ti,am3352-gpu", .data =  &pvr_omap36xx, },
 #endif
 
 #ifdef ti_am4_sgx530_125
-	{ .compatible = "ti,am4-sgx530-125", .data =  &pvr_omap36xx, },
+	{ .compatible = "ti,am4-gpu", .data =  &pvr_omap36xx, },
+	{ .compatible = "ti,am6548-gpu", .data =  &pvr_omap5, },
+#endif
+
+#if 0
+	{ .compatible = "csr,atlas7-sgx531", .data =  &pvr_sirf, },
+	{ .compatible = "csr,prima2-sgx531", .data =  &pvr_sirf, },
 #endif
 
 #ifdef ti_omap4_sgx540_120
-	{ .compatible = "ti,omap4-sgx540-120", .data =  &pvr_omap4, },
+	{ .compatible = "ti,omap4430-gpu", .data =  &pvr_omap4430, },
 #endif
 
 #ifdef ti_omap4470_sgx544_112
-	{ .compatible = "ti,omap4-sgx544-112", .data =  &pvr_omap4470, },
+	{ .compatible = "ti,omap4470-gpu", .data =  &pvr_omap4470, },
 #endif
 
 #ifdef ti_omap5_sgx544_116
-	{ .compatible = "ti,omap5-sgx544-116", .data =  &pvr_omap5, },
+	{ .compatible = "ti,omap5432-gpu", .data =  &pvr_omap5, },
 #endif
 
 #ifdef ti_dra7_sgx544_116
-	{ .compatible = "ti,dra7-sgx544-116", .data =  &pvr_omap5, },
+	{ .compatible = "ti,am5728-gpu", .data =  &pvr_omap5, },
 #endif
 
 #ifdef ingenic_jz4780_sgx540_130
-	{ .compatible = "ingenic,jz4780-sgx540-130", .data =  &pvr_jz4780, },
+	{ .compatible = "ingenic,jz4780-gpu", .data =  &pvr_jz4780, },
 #endif
 
 #ifdef samsung_s5pv210_sgx540_120
-	{ .compatible = "samsung,s5pv210-sgx540-120", .data =  &pvr_s5pv210, },
+	{ .compatible = "samsung,s5pv210-gpu", .data =  &pvr_s5pv210, },
+#endif
+
+#if 0
+	{ .compatible = "allwinner,sun6i-a31-gpu", .data =  &pvr_sun8i_a31, },
+	{ .compatible = "allwinner,sun8i-a31s-gpu", .data =  &pvr_sun8i_a31, },
 #endif
 
 #ifdef allwinner_sun8i_a83t_sgx544_115
-	{ .compatible = "allwinner,sun8i-a83t-sgx544-115", .data =  &pvr_sun8i_a83t, },
+	{ .compatible = "allwinner,sun8i-a83t-gpu", .data =  &pvr_sun8i_a83t, },
 #endif
 
 	{ /* sentinel */ },

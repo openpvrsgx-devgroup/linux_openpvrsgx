@@ -56,7 +56,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define PVRVERSION_BUILD             3759903
 #define PVRVERSION_BSCONTROL        "SGX_DDK_Linux_XOrg"
 
-#define PVRVERSION_STRING           "SGX_DDK_Linux_XOrg sgxddk MAIN@" PVR_STR2(PVRVERSION_BUILD)
+#define PVRVERSION_STRING           "SGX_DDK_Linux_XOrg sgxddk 1.14@" PVR_STR2(PVRVERSION_BUILD)
 #define PVRVERSION_STRING_SHORT     "1.14@" PVR_STR2(PVRVERSION_BUILD) " (MAIN)"
 
 #define COPYRIGHT_TXT               "Copyright (c) Imagination Technologies Ltd. All Rights Reserved."

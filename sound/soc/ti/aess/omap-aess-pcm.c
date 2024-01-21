@@ -671,6 +671,9 @@ static int omap_aess_pcm_resume(struct snd_soc_component *component)
 		return 0;
 
 #ifdef FIXME	// context mechanism does no longer exist since v4.18 and wasn't used anywhere else for long time
+/* within prm memory range prm->base - how do we get a pointer to prm? */
+#define OMAP4_RM_ABE_AESS_CONTEXT_OFFSET		0x002c
+#define OMAP4430_LOSTMEM_AESSMEM_MASK			(1 << 8)
 	/* context retained, no need to restore */
 	if (aess->get_context_lost_count &&
 	    aess->get_context_lost_count(aess->dev) == aess->context_lost)

@@ -325,6 +325,7 @@ static void omap_mcpdm_dai_shutdown(struct snd_pcm_substream *substream,
 				omap_mcpdm_close_streams(mcpdm);
 #if IS_ENABLED(CONFIG_SND_SOC_OMAP_AESS)
 				if (mcpdm->aess) {
+					/* may be duplicate to omap_aess_pcm_close() */
 					omap_aess_pm_shutdown(mcpdm->aess);
 					omap_aess_pm_put(mcpdm->aess);
 				}

@@ -1,5 +1,10 @@
 /* SPDX-License-Identifier: (GPL-2.0 OR MIT) */
 
+#include <linux/platform_device.h>
+#include <linux/pm.h>
+#include <drm/drm_device.h>
+#include <drm/drm_file.h>
+
 struct pvr_ioctl {
 	u32 ui32Cmd;			/* ioctl command */
 	u32 ui32Size;			/* needs to be correctly set */

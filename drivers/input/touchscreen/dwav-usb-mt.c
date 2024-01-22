@@ -459,7 +459,7 @@ static int dwav_usb_mt_probe(struct usb_interface *intf,
 	dwav_usb_mt->interface  = intf;
 
 	if (udev->manufacturer)
-		strlcpy(dwav_usb_mt->name,
+		strscpy(dwav_usb_mt->name,
 				udev->manufacturer, sizeof(dwav_usb_mt->name));
 
 	if (udev->product) {

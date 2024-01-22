@@ -73,7 +73,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <linux/platform_device.h>
 #endif
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,0))
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6,8,0))
 #include <drm/drm_legacy.h>
+#endif
 #endif
 #endif
 
@@ -106,7 +108,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if defined(SUPPORT_DRI_DRM) && (LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,0))
 static inline int drm_mmap(struct file *filp, struct vm_area_struct *vma)
 {
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6,8,0))
 	return drm_legacy_mmap(filp, vma);
+#else
+	/* FIXME if necessary and/or possible */
+	pr_err("call to drm_legacy_mmap has been removed in v6.8-rc1\n");
+	return -EINVAL;
+#endif
 }
 #endif
 

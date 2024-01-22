@@ -11,6 +11,8 @@
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/mod_devicetable.h>
+#include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/pm_runtime.h>
 
@@ -194,7 +196,6 @@ static const struct file_operations pvr_fops = {
 
 static struct drm_driver pvr_drm_driver = {
 	.driver_features = DRIVER_RENDER,
-	.dev_priv_size = 0,
 	.open = pvr_open,
 	.postclose = pvr_postclose,
 	.ioctls = pvr_ioctls,

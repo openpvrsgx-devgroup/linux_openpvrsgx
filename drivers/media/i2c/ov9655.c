@@ -677,6 +677,8 @@ static int __ov9655_set_power(struct ov9655 *ov9655, int on)
  */
 
 #if 1	// our private development testing code because dev_info can't be controlled that easily
+void printfmt(struct i2c_client *client, struct v4l2_format *format);
+void printmbusfmt(struct i2c_client *client, struct v4l2_mbus_framefmt *format);
 
 void printfmt(struct i2c_client *client, struct v4l2_format *format)
 {
@@ -948,7 +950,7 @@ __ov9655_get_pad_format(struct ov9655 *ov9655, struct v4l2_subdev_state *sd_stat
 
 	switch (which) {
 	case V4L2_SUBDEV_FORMAT_TRY:
-		return v4l2_subdev_get_try_format(&ov9655->subdev, sd_state, pad);
+		return v4l2_subdev_state_get_format(sd_state, pad);
 	case V4L2_SUBDEV_FORMAT_ACTIVE:
 		return &ov9655->format;
 	default:
@@ -968,7 +970,7 @@ __ov9655_get_pad_crop(struct ov9655 *ov9655, struct v4l2_subdev_state *sd_state,
 
 	switch (which) {
 	case V4L2_SUBDEV_FORMAT_TRY:
-		return v4l2_subdev_get_try_crop(&ov9655->subdev, sd_state, pad);
+		return v4l2_subdev_state_get_crop(sd_state, pad);
 	case V4L2_SUBDEV_FORMAT_ACTIVE:
 		return &ov9655->crop;
 	default:
@@ -1023,7 +1025,7 @@ static int ov9655_set_format(struct v4l2_subdev *subdev,
 
 	if (fmt->which == V4L2_SUBDEV_FORMAT_TRY) {
 		if (!sd_state) {
-			mf = v4l2_subdev_get_try_format(subdev, sd_state, fmt->pad);
+			mf = v4l2_subdev_state_get_format(sd_state, fmt->pad);
 			*mf = fmt->format;
 		}
 	} else
@@ -1448,13 +1450,13 @@ static int ov9655_open(struct v4l2_subdev *subdev, struct v4l2_subdev_fh *fh)
 	dev_info(&client->dev, "%s\n", __func__);
 
 	// v4l2_subdev_get_try_crop
-	crop = v4l2_subdev_get_try_crop(subdev, fh->state, 0);
+	crop = v4l2_subdev_state_get_crop(fh->state, 0);
 	crop->left = OV9655_COLUMN_START_DEF;
 	crop->top = OV9655_ROW_START_DEF;
 	crop->width = OV9655_WINDOW_WIDTH_DEF;
 	crop->height = OV9655_WINDOW_HEIGHT_DEF;
 
-	format = v4l2_subdev_get_try_format(subdev, fh->state, 0);
+	format = v4l2_subdev_state_get_format(fh->state, 0);
 
 	ov9655_get_default_format(format);
 

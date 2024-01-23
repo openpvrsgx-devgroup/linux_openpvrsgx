@@ -56,7 +56,7 @@ static void pwm_jz4730_update_reg(struct pwm_chip *chip, struct pwm_device *pwm,
 					u32 reg, u32 affected, u32 value)
 {
 	struct jz4730_pwm_chip *jzpc = to_jz4730(chip);
-	u32 offset = pwm->pwm * JZ4730_PWM_OFFSET;
+	u32 offset = pwm->hwpwm * JZ4730_PWM_OFFSET;
 
 	regmap_update_bits(jzpc->map, offset + reg, affected, value);
 }
@@ -80,7 +80,7 @@ static void jz4730_pwm_disable(struct pwm_chip *chip, struct pwm_device *pwm)
 static int jz4730_pwm_is_enabled(struct pwm_chip *chip, struct pwm_device *pwm)
 {
 	struct jz4730_pwm_chip *jzpc = to_jz4730(chip);
-	u32 offset = pwm->pwm * JZ4730_PWM_OFFSET;
+	u32 offset = pwm->hwpwm * JZ4730_PWM_OFFSET;
 	unsigned int val;
 
 	regmap_read(jzpc->map, offset + JZ4730_PWM_REG_CTR, &val);
@@ -240,7 +240,6 @@ static int jz4730_pwm_probe(struct platform_device *pdev)
 	jzpc->chip.dev = &pdev->dev;
 	jzpc->chip.ops = &jz4730_pwm_ops;
 	jzpc->chip.npwm = NUM_PWM;
-	jzpc->chip.base = 0;
 
 	platform_set_drvdata(pdev, jzpc);
 

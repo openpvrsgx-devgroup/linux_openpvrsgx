@@ -2424,64 +2424,10 @@ static int x1600_mac_pins[] = {
 	0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b, 0x3c,
 };
 
-//static int x1600_uart0_data_funcs[] = { 0, 0, };
-//static int x1600_uart0_hwflow_funcs[] = { 0, 0, };
-//static int x1600_uart1_data_funcs[] = { 1, 1, };
-//static int x1600_uart1_hwflow_funcs[] = { 1, 1, };
-//static int x1600_uart2_data_a_funcs[] = { 2, 2, };
-//static int x1600_uart2_data_b_funcs[] = { 1, 1, };
-//static int x1600_uart3_data_b_funcs[] = { 0, 0, };
-//static int x1600_uart3_data_d_funcs[] = { 2, 2, };
 static int x1600_sfc_funcs[] = { 0, 0, 0, 0, 0, 0, 2, };
-//static int x1600_ssi_dt_a_funcs[] = { 0, };
-//static int x1600_ssi_dt_b_funcs[] = { 1, };
-//static int x1600_ssi_dr_a_funcs[] = { 0, };
-//static int x1600_ssi_dr_b_funcs[] = { 1, };
-//static int x1600_ssi_clk_a_funcs[] = { 0, };
-//static int x1600_ssi_clk_b_funcs[] = { 1, };
-//static int x1600_ssi_ce0_a_funcs[] = { 0, };
-//static int x1600_ssi_ce0_b_funcs[] = { 1, };
-//static int x1600_ssi_ce1_a_funcs[] = { 2, };
-//static int x1600_ssi_ce1_b_funcs[] = { 1, };
-//static int x1600_mmc0_1bit_b_funcs[] = { 0, 0, 0, };
-//static int x1600_mmc0_4bit_b_funcs[] = { 0, 0, 0, };
-//static int x1600_mmc0_1bit_c_funcs[] = { 1, 1, 1, };
-//static int x1600_mmc0_4bit_c_funcs[] = { 1, 1, 1, };
-//static int x1600_mmc1_1bit_funcs[] = { 0, 0, 0, };
-//static int x1600_mmc1_4bit_funcs[] = { 0, 0, 0, };
-//static int x1600_i2c0_a_funcs[] = { 2, 2, };
-//static int x1600_i2c0_b_funcs[] = { 0, 0, };
-//static int x1600_i2c1_b_15_funcs[] = { 2, 2, };
-//static int x1600_i2c1_b_19_funcs[] = { 0, 0, };
-//static int x1600_i2s_data_tx_funcs[] = { 0, };
-//static int x1600_i2s_data_rx_funcs[] = { 0, };
-//static int x1600_i2s_clk_rx_funcs[] = { 0, 0, };
-//static int x1600_i2s_clk_tx_funcs[] = { 0, 0, };
-//static int x1600_i2s_sysclk_funcs[] = { 0, 0, };
-//static int x1600_cim_funcs[] = { 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, };
-//static int x1600_slcd_8bit_funcs[] = {
-//	1, 1, 1, 1, 1, 1, 1, 1,
-//	1, 1, 1, 1,
-//};
-//static int x1600_slcd_16bit_funcs[] = {
-//	1, 1, 1, 1, 1, 1, 1, 1,
-//};
-//static int x1600_lcd_16bit_funcs[] = {
-//	0, 0, 0, 0, 0, 0, 0, 0,
-//	0, 0, 0, 0, 0, 0, 0, 0,
-//	0, 0, 0, 0,
-//};
-//static int x1600_lcd_18bit_funcs[] = { 0, 0, };
-//static int x1600_lcd_24bit_funcs[] = { 0, 0, 0, 0, 0, 0, };
-//static int x1600_pwm_pwm0_funcs[] = { 0, };
-//static int x1600_pwm_pwm1_funcs[] = { 0, };
-//static int x1600_pwm_pwm2_funcs[] = { 0, };
-//static int x1600_pwm_pwm3_funcs[] = { 1, };
-//static int x1600_pwm_pwm4_funcs[] = { 1, };
 static int x1600_pwm_pwm5_funcs[] = { 2, 1, };
 static int x1600_pwm_pwm6_funcs[] = { 1, 2, };
 static int x1600_pwm_pwm7_funcs[] = { 1, 2, };
-//static int x1600_mac_funcs[] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, };
 
 static const struct group_desc x1600_groups[] = {
 	INGENIC_PIN_GROUP("uart0-data", x1600_uart0_data, 0),

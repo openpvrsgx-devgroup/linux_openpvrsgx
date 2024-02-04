@@ -2,6 +2,7 @@
 /*
  * JZ47xx SoCs TCU clocks driver
  * Copyright (C) 2019 Paul Cercueil <paul@crapouillou.net>
+ * Copyright (C) 2019, 2020, 2024 Paul Boddie <paul@boddie.org.uk>
  */
 
 #include <linux/clk.h>
@@ -318,7 +319,21 @@ static const struct ingenic_soc_info jz4770_soc_info = {
 
 static const struct ingenic_soc_info x1000_soc_info = {
 	.num_channels = 8,
-	.has_ost = false, /* X1000 has OST, but it not belong TCU */
+	.has_ost = false, /* X1000 has OST, but it does not belong to TCU */
+	.has_tcu_clk = true,
+	.allow_missing_tcu_clk = true,
+	.has_wdt = true,
+	.has_tcu_clk = false,
+	.has_prescale = true,
+	.jz4740_regs = true,
+	.clk_info = ingenic_tcu_clk_info,
+	.parent_rtc = TCU_PARENT_RTC,
+	.parent_ext = TCU_PARENT_EXT,
+};
+
+static const struct ingenic_soc_info x1600_soc_info = {
+	.num_channels = 8,
+	.has_ost = false, /* X1600 has OST, but it does not belong to TCU */
 	.has_tcu_clk = true,
 	.allow_missing_tcu_clk = true,
 };
@@ -329,6 +344,7 @@ static const struct of_device_id __maybe_unused ingenic_tcu_of_match[] __initcon
 	{ .compatible = "ingenic,jz4760-tcu", .data = &jz4770_soc_info, },
 	{ .compatible = "ingenic,jz4770-tcu", .data = &jz4770_soc_info, },
 	{ .compatible = "ingenic,x1000-tcu", .data = &x1000_soc_info, },
+	{ .compatible = "ingenic,x1600-tcu", .data = &x1600_soc_info, },
 	{ /* sentinel */ }
 };
 
@@ -494,3 +510,4 @@ CLK_OF_DECLARE_DRIVER(jz4725b_cgu, "ingenic,jz4725b-tcu", ingenic_tcu_init);
 CLK_OF_DECLARE_DRIVER(jz4760_cgu, "ingenic,jz4760-tcu", ingenic_tcu_init);
 CLK_OF_DECLARE_DRIVER(jz4770_cgu, "ingenic,jz4770-tcu", ingenic_tcu_init);
 CLK_OF_DECLARE_DRIVER(x1000_cgu, "ingenic,x1000-tcu", ingenic_tcu_init);
+CLK_OF_DECLARE_DRIVER(x1600_cgu, "ingenic,x1600-tcu", ingenic_tcu_init);

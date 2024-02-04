@@ -40,7 +40,7 @@
 			reg = <0x000>;
 			clock-frequency = <800000000>;
 
-			clocks = <&clock X1600_CLK_CPU>;
+			clocks = <&cgu X1600_CLK_CPU>;
 			clock-names = "cpu";
 		};
 
@@ -60,7 +60,7 @@
 	};
 
 	core_intc: core-intc@10001000 {
-		compatible = "ingenic,x1000-intc", "ingenic,jz4780-intc";
+		compatible = "ingenic,x1600-intc";
 		reg = <0x10001000 0x100>;
 		interrupt-controller;
 		#interrupt-cells = <1>;
@@ -105,7 +105,7 @@
 		#size-cells = <1>;
 		ranges = <>;
 
-		clock: clock-controller@10000000 {
+		cgu: clock-controller@10000000 {
 			compatible = "ingenic,x1600-cgu" /*, "simple-mfd" */;
 			reg = <0x10000000 0x100>;
 			clocks = <&extclk>, <&rtcclk>, <&clk12m>;
@@ -123,12 +123,23 @@
 			status = "ok";
 		};
 
-		tcu: tcu@10002000 {
-			compatible = "ingenic,tcu";
+		tcu: timer@10002000 {
+			compatible = "ingenic,x1600-tcu";
 			reg = <0x10002000 0x1000>;
+
+			interrupt-controller;
+			#interrupt-cells = <1>;
+
 			interrupt-parent = <&core_intc>;
-			interrupt-names = "default";
-			interrupts = <IRQ_TCU0 IRQ_TCU1>;
+			interrupts = <IRQ_TCU0 IRQ_TCU1 IRQ_TCU2>;
+
+			#clock-cells = <1>;
+
+			clocks = <&cgu X1600_CLK_RTCLK>,
+				 <&cgu X1600_CLK_EXCLK>,
+				 <&cgu X1600_CLK_PCLK>;
+			clock-names = "rtc", "ext", "pclk";
+
 			status = "ok";
 		};
 
@@ -235,7 +246,7 @@
 			reg-shift = <2>;
 			interrupt-parent = <&core_intc>;
 			interrupts = <IRQ_UART0>;
-			clocks = <&extclk>, <&clock X1600_CLK_UART0>;
+			clocks = <&extclk>, <&cgu X1600_CLK_UART0>;
 			clock-names = "baud", "module";
 			dmas = <&pdma INGENIC_DMA_TYPE(INGENIC_DMA_REQ_UART0_TX)>,
 				   <&pdma INGENIC_DMA_TYPE(INGENIC_DMA_REQ_UART0_RX)>;
@@ -250,7 +261,7 @@
 			reg-shift = <2>;
 			interrupt-parent = <&core_intc>;
 			interrupts = <IRQ_UART1>;
-			clocks = <&extclk>, <&clock X1600_CLK_UART1>;
+			clocks = <&extclk>, <&cgu X1600_CLK_UART1>;
 			clock-names = "baud", "module";
 			dmas = <&pdma INGENIC_DMA_TYPE(INGENIC_DMA_REQ_UART1_TX)>,
 				   <&pdma INGENIC_DMA_TYPE(INGENIC_DMA_REQ_UART1_RX)>;
@@ -265,7 +276,7 @@
 //			reg-shift = <2>;
 			interrupt-parent = <&core_intc>;
 			interrupts = <IRQ_UART2>;
-			clocks = <&extclk>, <&clock X1600_CLK_UART2>;
+			clocks = <&extclk>, <&cgu X1600_CLK_UART2>;
 			clock-names = "baud", "module";
 //			dmas = <&pdma INGENIC_DMA_TYPE(INGENIC_DMA_REQ_UART2_TX)>,
 //				   <&pdma INGENIC_DMA_TYPE(INGENIC_DMA_REQ_UART2_RX)>;
@@ -280,7 +291,7 @@
 			reg-shift = <2>;
 			interrupt-parent = <&core_intc>;
 			interrupts = <IRQ_UART3>;
-			clocks = <&extclk>, <&clock X1600_CLK_UART3>;
+			clocks = <&extclk>, <&cgu X1600_CLK_UART3>;
 			clock-names = "baud", "module";
 			dmas = <&pdma INGENIC_DMA_TYPE(INGENIC_DMA_REQ_UART3_TX)>,
 				   <&pdma INGENIC_DMA_TYPE(INGENIC_DMA_REQ_UART3_RX)>;
@@ -537,7 +548,7 @@
 			reg = <0x13060000 0x10000>;
 			interrupt-parent = <&core_intc>;
 			interrupts = <IRQ_CIM>;
-			clocks = <&clock CLK_DIV_CIM>, <&clock CLK_GATE_CIM>, <&clock CLK_GATE_MIPI_CSI>;
+			clocks = <&cgu CLK_DIV_CIM>, <&cgu CLK_GATE_CIM>, <&cgu CLK_GATE_MIPI_CSI>;
 			clock-names = "div_cim", "gate_cim", "gate_mipi";
 			status = "disable";
 		};

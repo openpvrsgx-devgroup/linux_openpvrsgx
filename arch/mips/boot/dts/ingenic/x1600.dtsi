@@ -69,14 +69,21 @@
 		interrupt-names ="intc";
 	};
 
-	core_ost: core-ost@12000000 {
-		compatible = "ingenic,x1600-ost";
-		reg = <0x12000000 0x100>;
+	ost: timer@12000000 {
+		compatible = "ingenic,x1000-ost";
+		reg = <0x12000000 0x3c>;
+
+		interrupt-controller;
+		#interrupt-cells = <1>;
+
+		#clock-cells = <1>;
+
+		clocks = <&cgu X1600_CLK_EXCLK>;
+		clock-names = "ost";
+
 		interrupt-parent = <&cpuintc>;
-		interrupt-names = "sys_ost";
 		interrupts = <CORE_SYS_OST_IRQ>;
 	};
-
 
 	extclk: extclk {
 		compatible = "fixed-clock";

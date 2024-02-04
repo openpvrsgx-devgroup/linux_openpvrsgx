@@ -2,7 +2,7 @@
 /*
  * JZ47xx SoCs TCU clocks driver
  * Copyright (C) 2019 Paul Cercueil <paul@crapouillou.net>
- * Copyright (C) 2019, 2020 Paul Boddie <paul@boddie.org.uk>
+ * Copyright (C) 2019, 2020, 2024 Paul Boddie <paul@boddie.org.uk>
  */
 
 #include <linux/clk.h>

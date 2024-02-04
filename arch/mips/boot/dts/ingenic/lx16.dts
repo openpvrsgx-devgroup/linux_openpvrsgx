@@ -203,12 +203,6 @@
 	status = "okay";
 };
 
-&tcu {
-	status = "disable ";
-	pinctrl-names = "default";
-	pinctrl-0 = <&pwm_tcu_trig_pa>;
-};
-
 &can0 {
 	status = "disable";
 	pinctrl-names = "default";

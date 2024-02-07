@@ -25,7 +25,6 @@
 		      reg = <0x02000000 0x2000000>;
 		};
 	};
-
 };
 
 &pinctrl {
@@ -199,7 +198,7 @@
 
 };
 
-&pdma {
+&dma {
 	status = "okay";
 };
 
@@ -234,18 +233,20 @@
 	pinctrl-0 = <&i2c1_pb>;
 };
 
-&msc0 {
+&mmc0 {
 	status = "okay";
-	pinctrl-names ="default", "enable", "disable";
-	pinctrl-0 = <&msc0_4bit_f1>;	// on gpc
-	pinctrl-1 = <&rtc32k_enable>;
-	pinctrl-2 = <&rtc32k_disable>;
 
-	cap-sd-highspeed;
-	max-frequency = <50000000>;
 	bus-width = <4>;
-	voltage-ranges = <1800 3300>;
+	max-frequency = <50000000>;
+
+	pinctrl-names ="default";
+	pinctrl-0 = <&msc0_4bit_f1>;	// on gpc
+
 	broken-cd;
+
+	voltage-ranges = <1800 3300>;
+
+#if 0
 	ingenic,sdio_clk = <1>;
 
 	/* special property */
@@ -253,14 +254,13 @@
 	ingenic,cd-gpios = <0>;
 	ingenic,rst-gpios = <0>;
 	ingenic,removal-dontcare; /*removal-dontcare, removal-nonremovable, removal-removable, removal-manual*/
+#endif
 };
 
-&msc1 {
+&mmc1 {
 	status = "okay";
-	pinctrl-names ="default", "enable", "disable";
+	pinctrl-names ="default";
 	pinctrl-0 = <&msc1_4bit>;
-	pinctrl-1 = <&rtc32k_enable>;
-	pinctrl-2 = <&rtc32k_disable>;
 
 	cap-sd-highspeed;
 	max-frequency = <50000000>;

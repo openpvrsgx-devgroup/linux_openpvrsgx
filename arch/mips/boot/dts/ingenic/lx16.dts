@@ -259,6 +259,8 @@
 
 &mmc1 {
 	status = "okay";
+	pinctrl-names ="default";
+	pinctrl-0 = <&msc1_4bit>;
 
 	bus-width = <4>;
 	max-frequency = <50000000>;

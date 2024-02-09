@@ -259,14 +259,18 @@
 
 &mmc1 {
 	status = "okay";
+
+	bus-width = <4>;
+	max-frequency = <50000000>;
+
 	pinctrl-names ="default";
 	pinctrl-0 = <&msc1_4bit>;
 
-	cap-sd-highspeed;
-	max-frequency = <50000000>;
-	bus-width = <4>;
-	voltage-ranges = <1800 3300>;
 	broken-cd;
+
+	voltage-ranges = <1800 3300>;
+
+#if 0
 	ingenic,sdio_clk = <1>;
 
 	/* special property */
@@ -274,6 +278,7 @@
 	ingenic,cd-gpios = <0>;
 	ingenic,rst-gpios = <0>;
 	ingenic,removal-dontcare; /*removal-dontcare, removal-nonremovable, removal-removable, removal-manual*/
+#endif
 };
 
 &mac0 {

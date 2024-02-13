@@ -242,8 +242,7 @@
 	status = "okay";
 
 	bus-width = <4>;
-//	max-frequency = <50000000>;
-	max-frequency = <5000000>;
+	max-frequency = <50000000>;
 
 	pinctrl-names ="default";
 	pinctrl-0 = <&msc0_4bit_f1>;	// on gpc
@@ -269,8 +268,7 @@
 	pinctrl-0 = <&msc1_4bit>;
 
 	bus-width = <4>;
-//	max-frequency = <50000000>;
-	max-frequency = <5000000>;
+	max-frequency = <50000000>;
 
 	pinctrl-names ="default";
 	pinctrl-0 = <&msc1_4bit>;

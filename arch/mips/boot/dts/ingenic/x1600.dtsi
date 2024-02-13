@@ -157,10 +157,17 @@
 		};
 
 		rtc: rtc@10003000 {
-			compatible = "ingenic,rtc-x1600";
+			compatible = "ingenic,x1600-rtc", "ingenic,jz4780-rtc";
 			reg = <0x10003000 0x4c>;
+
 			interrupt-parent = <&core_intc>;
 			interrupts = <IRQ_RTC>;
+
+			clocks = <&cgu X1600_CLK_RTCLK>,
+				 <&cgu X1600_CLK_EXCLK>,
+				 <&cgu X1600_CLK_PCLK>;
+			clock-names = "rtc", "ext", "pclk";
+
 			system-power-controller;
 			power-on-press-ms = <1000>;
 			status = "ok";

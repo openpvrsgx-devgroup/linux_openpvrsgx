@@ -192,7 +192,7 @@ static void omap_aess_load_fw_param(struct omap_aess *aess)
 	cmem_size = aess->fw_hdr.cmem_size;
 	dmem_size = aess->fw_hdr.dmem_size;
 	smem_size = aess->fw_hdr.smem_size;
-	pmem_ptr = (u32 *) aess->fw_data;
+	pmem_ptr = (u32 *) (aess->fw_data + sizeof(struct fw_header));
 	cmem_ptr = pmem_ptr + (pmem_size >> 2);
 	dmem_ptr = cmem_ptr + (cmem_size >> 2);
 	smem_ptr = dmem_ptr + (dmem_size >> 2);

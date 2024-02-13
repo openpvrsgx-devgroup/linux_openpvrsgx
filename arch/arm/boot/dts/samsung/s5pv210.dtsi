@@ -484,6 +484,19 @@
 			#interrupt-cells = <1>;
 		};
 
+		gpu: gpu@0 {
+			compatible = "samsung,s5pv210-gpu", "img,powervr-sgx540";
+			reg = <0xf3000000 0x10000>;
+			interrupt-parent = <&vic2>;
+			interrupts = <10>;
+			clock-names = "core";
+			clocks = <&clocks CLK_G3D>;
+
+			assigned-clocks = <&clocks MOUT_G3D>, <&clocks DOUT_G3D>;
+			assigned-clock-rates = <0>, <66700000>;
+			assigned-clock-parents = <&clocks MOUT_MPLL>;
+		};
+
 		fimd: fimd@f8000000 {
 			compatible = "samsung,s5pv210-fimd";
 			interrupt-parent = <&vic2>;

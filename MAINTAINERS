@@ -10471,7 +10471,8 @@ M:	Donald Robson <donald.robson@imgtec.com>
 M:	Matt Coster <matt.coster@imgtec.com>
 S:	Supported
 T:	git git://anongit.freedesktop.org/drm/drm-misc
-F:	Documentation/devicetree/bindings/gpu/img,powervr.yaml
+F:	Documentation/devicetree/bindings/gpu/img,powervr-rogue.yaml
+F:	Documentation/devicetree/bindings/gpu/img,powervr-sgx.yaml
 F:	Documentation/gpu/imagination/
 F:	drivers/gpu/drm/imagination/
 F:	include/uapi/drm/pvr_drm.h
@@ -17728,6 +17729,16 @@ M:	Srinivasan Raju <srini.raju@purelifi.com>
 L:	linux-wireless@vger.kernel.org
 S:	Supported
 F:	drivers/net/wireless/purelifi/plfxlc/
+
+PVR/SGX DRIVER FOR OMAP
+M:	Adam Ford <adam.ford@logicpd.com>
+M:	Tony Lindgren <tony@atomide.com>
+M:	Nikolaus Schaller <hns@goldelico.com>
+T:	git https://github.com/openpvrsgx-devgroup/linux_openpvrsgx
+L:	openpvrsgx-devgroup@letux.org
+L:	linux-omap@vger.kernel.org
+S:	Supported
+F:	drivers/gpu/drm/pvrsgx/
 
 PVRUSB2 VIDEO4LINUX DRIVER
 M:	Mike Isely <isely@pobox.com>

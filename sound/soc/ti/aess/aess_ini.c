@@ -89,7 +89,6 @@ static void omap_aess_reset_all_ports(struct omap_aess *aess)
 /**
  * omap_aess_init_mem - Allocate Kernel space memory map for AESS
  * @aess: Pointer on aess handle
- * @fw_header: Pointer on the firmware header commit from the FS.
  *
  * Memory map of AESS memory space for PMEM/DMEM/SMEM/DMEM
  */
@@ -179,7 +178,6 @@ if(!fw_header)
 /**
  * omap_aess_load_fw_param - Load the AESS FW inside AESS memories
  * @aess: Pointer on aess handle
- * @data: Pointer on the AESS firmware (after the header)
  *
  * Load the different AESS memories PMEM/DMEM/SMEM/DMEM
  */
@@ -247,7 +245,6 @@ static void omap_aess_build_scheduler_table(struct omap_aess *aess)
 /**
  * omap_aess_load_fw - Load AESS Firmware and initialize memories
  * @aess: Pointer on aess handle
- * @firmware: Pointer on the AESS firmware (after the header)
  *
  */
 void omap_aess_load_fw(struct omap_aess *aess)
@@ -263,7 +260,6 @@ void omap_aess_load_fw(struct omap_aess *aess)
 /**
  * omap_aess_reload_fw - Reload AESS Firmware after OFF mode
  * @aess: Pointer on aess handle
- * @firmware: Pointer on the AESS firmware (after the header)
  */
 void omap_aess_reload_fw(struct omap_aess *aess)
 {

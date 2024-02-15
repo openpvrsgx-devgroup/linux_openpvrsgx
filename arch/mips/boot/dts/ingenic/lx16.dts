@@ -448,6 +448,16 @@
 			gpios = <&gpc 0 GPIO_ACTIVE_HIGH>;
 #endif
 		};
+
+		led-1 {
+			linux,default-trigger = "mmc0";
+#ifdef PWM_LED
+			pwms = <&pwm 3 100000>;
+			max-brightness = <255>;
+#else
+			gpios = <&gpc 1 GPIO_ACTIVE_HIGH>;
+#endif
+		};
 	};
 
 	gpio_keys: gpio_keys {

@@ -1,5 +1,5 @@
 #
-# Linux/arm64 6.8.0-rc4 Kernel Configuration
+# Linux/arm64 6.8.0-rc5 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="aarch64-linux-gnu-gcc (GCC) 6.3.0"
 CONFIG_CC_IS_GCC=y
@@ -625,7 +625,6 @@ CONFIG_ACPI_PCC=y
 # CONFIG_ACPI_FFH is not set
 # CONFIG_PMIC_OPREGION is not set
 CONFIG_ACPI_PRMT=y
-CONFIG_IRQ_BYPASS_MANAGER=y
 CONFIG_HAVE_KVM=y
 CONFIG_VIRTUALIZATION=y
 # CONFIG_KVM is not set
@@ -6227,6 +6226,7 @@ CONFIG_VFIO_PCI=y
 # CONFIG_VFIO_AMBA is not set
 # end of VFIO support for platform devices
 
+CONFIG_IRQ_BYPASS_MANAGER=y
 # CONFIG_VIRT_DRIVERS is not set
 CONFIG_VIRTIO_ANCHOR=y
 CONFIG_VIRTIO=y
@@ -6957,6 +6957,7 @@ CONFIG_IIO_ST_SENSORS_CORE=m
 # CONFIG_DHT11 is not set
 # CONFIG_HDC100X is not set
 # CONFIG_HDC2010 is not set
+# CONFIG_HDC3020 is not set
 # CONFIG_HTS221 is not set
 # CONFIG_HTU21 is not set
 # CONFIG_SI7005 is not set

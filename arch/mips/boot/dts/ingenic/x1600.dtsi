@@ -129,14 +129,17 @@
 		};
 
 		tcu: timer@10002000 {
-			compatible = "ingenic,x1600-tcu";
+			compatible = "ingenic,x1600-tcu, simple-mfd";
 			reg = <0x10002000 0x1000>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0x0 0x10002000 0x1000>;
 
 			interrupt-controller;
 			#interrupt-cells = <1>;
 
 			interrupt-parent = <&core_intc>;
-			interrupts = <IRQ_TCU0 IRQ_TCU1 IRQ_TCU2>;
+			interrupts = <IRQ_TCU0>, <IRQ_TCU1>, <IRQ_TCU2>;
 
 			#clock-cells = <1>;
 

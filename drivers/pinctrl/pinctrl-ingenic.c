@@ -3924,7 +3924,7 @@ static int ingenic_pinmux_set_pin_fn(struct ingenic_pinctrl *jzpc,
 	dev_dbg(jzpc->dev, "set pin P%c%u to function %u\n",
 			'A' + offt, idx, func);
 
-	if (!(enabled_socs & (1 << ID_X1600)) && is_soc_or_above(jzpc, ID_X1000)) {
+	if (is_soc_or_above(jzpc, ID_X1000)) {
 		ingenic_shadow_config_pin(jzpc, pin, JZ4770_GPIO_INT, false);
 		ingenic_shadow_config_pin(jzpc, pin, GPIO_MSK, false);
 		ingenic_shadow_config_pin(jzpc, pin, JZ4770_GPIO_PAT1, func & 0x2);
@@ -3993,7 +3993,7 @@ static int ingenic_pinmux_gpio_set_direction(struct pinctrl_dev *pctldev,
 	dev_dbg(pctldev->dev, "set pin P%c%u to %sput\n",
 			'A' + offt, idx, input ? "in" : "out");
 
-	if (!(enabled_socs & (1 << ID_X1600)) && is_soc_or_above(jzpc, ID_X1000)) {
+	if (is_soc_or_above(jzpc, ID_X1000)) {
 		ingenic_shadow_config_pin(jzpc, pin, JZ4770_GPIO_INT, false);
 		ingenic_shadow_config_pin(jzpc, pin, GPIO_MSK, true);
 		ingenic_shadow_config_pin(jzpc, pin, JZ4770_GPIO_PAT1, input);

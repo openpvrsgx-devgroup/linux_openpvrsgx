@@ -2547,6 +2547,7 @@ static const struct ingenic_chip_info x1600_chip_info = {
 	.num_functions = ARRAY_SIZE(x1600_functions),
 	.pull_ups = x1600_pull_ups,
 	.pull_downs = x1600_pull_downs,
+	.access_table = &x1000_access_table,
 };
 
 static const u32 x1830_pull_ups[4] = {

@@ -11,9 +11,10 @@
 
 	model = "Letux LX16";
 
-	/*chosen {
-		bootargs = "earlycon console=ttyS2,115200 mem=128M@0x0ip=off init=/linuxrc ubi.mtd=3 root=ubi0:rootfs ubi.mtd=4 rootfstype=ubifs rw";
-	};*/
+	chosen {
+		stdout-path = &uart2;
+//		bootargs = "earlycon console=ttyS2,115200 mem=128M@0x0ip=off init=/linuxrc ubi.mtd=3 root=ubi0:rootfs ubi.mtd=4 rootfstype=ubifs rw";
+	};
 
 	reserved-memory {
 		#address-cells = <1>;
@@ -157,15 +158,13 @@
 };
 
 &uart0 {
-	status = "disable";
-	/* dma-mode; */
+	status = "okay";
 	pinctrl-names = "default";
 	pinctrl-0 = <&uart0_pb>;
 };
 
 &uart1 {
-	status = "disable";
-	/* dma-mode; */
+	status = "okay";
 	pinctrl-names = "default";
 	pinctrl-0 = <&uart1_pb>;
 };
@@ -177,7 +176,7 @@
 };
 
 &uart3 {
-	status = "disable";
+	status = "okay";
 	pinctrl-names = "default";
 	pinctrl-0 = <&uart3_pb>;
 };
@@ -427,11 +426,6 @@
 
 
 / {
-
-	extclk: extclk {
-		clock-frequency = <24000000>;
-	};
-
 	leds: leds {
 #ifdef PWM_LED
 		compatible = "pwm-leds";

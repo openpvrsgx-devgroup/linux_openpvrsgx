@@ -83,14 +83,14 @@
 		interrupts = <CORE_SYS_OST_IRQ>;
 	};
 
-	extclk: extclk {
+	ext: ext {
 		compatible = "fixed-clock";
 		clock-output-names ="ext";
 		#clock-cells = <0>;
 		clock-frequency  = <24000000>;
 	};
 
-	rtcclk: rtcclk {
+	rtc: rtc {
 		compatible = "fixed-clock";
 		clock-output-names ="rtc";
 		#clock-cells = <0>;
@@ -113,7 +113,7 @@
 		cgu: clock-controller@10000000 {
 			compatible = "ingenic,x1600-cgu" /*, "simple-mfd" */;
 			reg = <0x10000000 0x100>;
-			clocks = <&extclk>, <&rtcclk>, <&clk12m>;
+			clocks = <&ext>, <&rtc>, <&clk12m>;
 			clock-names = "ext", "rtc", "clk12m";
 			#clock-cells = <1>;
 			little-endian;
@@ -159,7 +159,7 @@
 			status = "ok";
 		};
 
-		rtc: rtc@10003000 {
+		rtc_dev: rtc@10003000 {
 			compatible = "ingenic,x1600-rtc", "ingenic,jz4780-rtc";
 			reg = <0x10003000 0x4c>;
 
@@ -258,61 +258,49 @@
 		uart0: serial@10030000 {
 			compatible = "ingenic,x1600-uart";
 			reg = <0x10030000 0x100>;
-			reg-shift = <2>;
 			interrupt-parent = <&core_intc>;
 			interrupts = <IRQ_UART0>;
-			clocks = <&extclk>, <&cgu X1600_CLK_UART0>;
+			clocks = <&ext>, <&cgu X1600_CLK_UART0>;
 			clock-names = "baud", "module";
 			dmas = <&dma X1600_DMA_UART0_TX 0xffffffff>,
 				   <&dma X1600_DMA_UART0_RX 0xffffffff>;
 			dma-names = "tx", "rx";
-			#address-cells = <1>;
-			#size-cells = <0>;
 		};
 
 		uart1: serial@10031000 {
 			compatible = "ingenic,x1600-uart";
 			reg = <0x10031000 0x100>;
-			reg-shift = <2>;
 			interrupt-parent = <&core_intc>;
 			interrupts = <IRQ_UART1>;
-			clocks = <&extclk>, <&cgu X1600_CLK_UART1>;
+			clocks = <&ext>, <&cgu X1600_CLK_UART1>;
 			clock-names = "baud", "module";
 			dmas = <&dma X1600_DMA_UART1_TX 0xffffffff>,
 				   <&dma X1600_DMA_UART1_RX 0xffffffff>;
 			dma-names = "tx", "rx";
-			#address-cells = <1>;
-			#size-cells = <0>;
 		};
 
 		uart2: serial@10032000 {
 			compatible = "ingenic,x1600-uart";
 			reg = <0x10032000 0x100>;
-//			reg-shift = <2>;
 			interrupt-parent = <&core_intc>;
 			interrupts = <IRQ_UART2>;
-			clocks = <&extclk>, <&cgu X1600_CLK_UART2>;
+			clocks = <&ext>, <&cgu X1600_CLK_UART2>;
 			clock-names = "baud", "module";
-//			dmas = <&dma X1600_DMA_UART2_TX 0xffffffff>,
-//				   <&dma X1600_DMA_UART2_RX 0xffffffff>;
+			dmas = <&dma X1600_DMA_UART2_TX 0xffffffff>,
+				   <&dma X1600_DMA_UART2_RX 0xffffffff>;
 			dma-names = "tx", "rx";
-			#address-cells = <1>;
-			#size-cells = <0>;
 		};
 
 		uart3: serial@10033000 {
 			compatible = "ingenic,x1600-uart";
 			reg = <0x10033000 0x100>;
-			reg-shift = <2>;
 			interrupt-parent = <&core_intc>;
 			interrupts = <IRQ_UART3>;
-			clocks = <&extclk>, <&cgu X1600_CLK_UART3>;
+			clocks = <&ext>, <&cgu X1600_CLK_UART3>;
 			clock-names = "baud", "module";
 			dmas = <&dma X1600_DMA_UART3_TX 0xffffffff>,
 				   <&dma X1600_DMA_UART3_RX 0xffffffff>;
 			dma-names = "tx", "rx";
-			#address-cells = <1>;
-			#size-cells = <0>;
 		};
 
 		i2c0: i2c@10050000 {

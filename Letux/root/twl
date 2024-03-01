@@ -14,13 +14,24 @@ do
 	[ "$CARD" ] && break
 done
 
-DEV=0
+AESS=false
+if [ -r "/sys/bus/platform/drivers/omap-abe-twl6040/sound/OMAP ABE Media1" ]
+then
+	AESS=true	# assume aess has been loaded and is up and running
+fi
+
 MONO=false
 HANDSFREE=yes
 
 while [ "$1" ]
 do
         case "$1" in
+        "-a" )
+		AESS=true
+		;;
+        "-noa" )
+		AESS=false
+		;;
         "-c" )
 		shift
 		CARD="$1"
@@ -42,7 +53,10 @@ do
         "-lp" )
 		LPMODE=yes
 		;;
-        "-nhf" )
+        "-hf" )
+		HANDSFREE=yes
+		;;
+        "-nohf" )
 		HANDSFREE=
 		;;
 	"-m" )
@@ -50,6 +64,9 @@ do
 		;;
 	"-" | "-stdin" )
 		FILE="-"
+		;;
+	-s )
+		STRACE=strace
 		;;
 	-* )
 		echo unknown option $1
@@ -78,6 +95,11 @@ then
 	exit 1
 fi
 
+if [ ! "$DEV" ]
+then
+	$AESS && DEV=11 || DEV=0	# default with AESS to legacy
+fi
+
 AUDIOCARDDEV="hw:CARD=$CARD,DEV=$DEV"
 
 # FIXME: make this all depend on presence of amixer controls
@@ -96,7 +118,28 @@ then
 elif [ -r /sys/firmware/devicetree/base/sound/ti,twl6040 ]
 then
 
+if $AESS
+then
+
+echo "TWL6040+AESS found (Pandaboard, OMAP5432EVM, Pyra, ...)"
+
+amixer -c $CARD -q cset name='Headset Left Playback' 1 || exit
+amixer -c $CARD -q cset name='Headset Right Playback' 1 || exit
+amixer -c $CARD -q cset name='Headset Playback Volume' 12 || exit
+amixer -c $CARD -q cset name='DL1 PDM Switch' 1 || exit
+amixer -c $CARD -q cset name='Sidetone Mixer Playback' 1 || exit
+amixer -c $CARD -q cset name='SDT DL Volume' 120 || exit
+amixer -c $CARD -q cset name='DL1 Mixer Multimedia' 1 || exit
+amixer -c $CARD -q cset name='DL1 Media Playback Volume' 110 || exit
+amixer -c $CARD -q set 'AUDUL Media',0 149 || exit
+amixer -c $CARD -q set 'MUX_UL00,0' AMic0 || exit
+amixer -c $CARD -q set 'MUX_UL01,0' AMic1 || exit
+amixer -c $CARD -q set 'AMIC UL',0 120 || exit
+else
+
 echo "TWL6040 found (Pandaboard, OMAP5432EVM, Pyra, ...)"
+
+fi
 
 amixer -c $CARD -q set "Aux FM" 0% || exit
 amixer -c $CARD -q set "Capture" 100% || exit
@@ -205,6 +248,8 @@ REMIX_STEREO=""
 
 fi
 
+echo using $AUDIOCARDDEV
+
 if [ "$DEMO" ] # demo
 then
 	echo "play default sounds (Front Center etc.)"
@@ -228,7 +273,12 @@ if [ "$1" ]
 then
 	for FILE in "$@"
 	do
-		AUDIODEV=hw:$CARD,$DEV play ${FORMAT:+-t} ${FORMAT:+$FORMAT} -v 0.98 $FILE $REMIX
+		if [ "$STRACE" ]
+		then
+			AUDIODEV=hw:$CARD,$DEV strace play ${FORMAT:+-t} ${FORMAT:+$FORMAT} -v 0.98 $FILE $REMIX 2>$DEV.out
+		else
+			AUDIODEV=hw:$CARD,$DEV play ${FORMAT:+-t} ${FORMAT:+$FORMAT} -v 0.98 $FILE $REMIX
+		fi
 	done
 fi
 exit 0

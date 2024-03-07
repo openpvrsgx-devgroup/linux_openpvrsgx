@@ -324,7 +324,7 @@
 		};
 
 		spi0: spi@10043000 {
-			compatible = "ingenic,x1600-spi";
+			compatible = "ingenic,x1000-spi";
 			reg = <0x10043000 0x1000>;
 			interrupt-parent = <&core_intc>;
 			interrupts = <IRQ_SSI0>;

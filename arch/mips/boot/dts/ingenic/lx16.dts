@@ -13,7 +13,7 @@
 
 	chosen {
 		stdout-path = &uart2;
-//		bootargs = "earlycon console=ttyS2,115200 mem=128M@0x0ip=off init=/linuxrc ubi.mtd=3 root=ubi0:rootfs ubi.mtd=4 rootfstype=ubifs rw";
+//		bootargs = "earlycon console=ttyS2,115200 mem=128M@0x0 ip=off init=/linuxrc ubi.mtd=3 root=ubi0:rootfs ubi.mtd=4 rootfstype=ubifs rw";
 	};
 
 	reserved-memory {
@@ -23,7 +23,7 @@
 
 		reserved_memory: reserved_mem@2000000{
 		      compatible = "shared-dma-pool";
-		      reg = <0x02000000 0x2000000>;
+		      reg = <0x02000000 0x20000>;
 		};
 	};
 };

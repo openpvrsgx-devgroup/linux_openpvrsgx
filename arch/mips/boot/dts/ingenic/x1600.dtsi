@@ -326,6 +326,9 @@
 		spi0: spi@10043000 {
 			compatible = "ingenic,x1000-spi";
 			reg = <0x10043000 0x1000>;
+
+			clocks = <&cgu X1600_CLK_SSI0>;
+
 			interrupt-parent = <&core_intc>;
 			interrupts = <IRQ_SSI0>;
 			dmas = <&dma X1600_DMA_SSI0_TX 0xffffffff>,

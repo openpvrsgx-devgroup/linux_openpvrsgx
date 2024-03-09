@@ -501,6 +501,7 @@ static const struct of_device_id spi_ingenic_of_match[] = {
 	{ .compatible = "ingenic,jz4775-spi", .data = &jz4780_soc_info },
 	{ .compatible = "ingenic,jz4780-spi", .data = &jz4780_soc_info },
 	{ .compatible = "ingenic,x1000-spi", .data = &x1000_soc_info },
+	{ .compatible = "ingenic,x1600-spi", .data = &x1000_soc_info },
 	{ .compatible = "ingenic,x2000-spi", .data = &x2000_soc_info },
 	{}
 };

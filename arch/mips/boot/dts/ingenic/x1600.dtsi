@@ -360,13 +360,15 @@
 			status = "disabled";
 		};
 
-		otg_phy: otg_phy {
-			#address-cells = <1>;
-			#size-cells = <1>;
-			compatible = "ingenic,usbphy-x1600";
-			reg = <0x10000000 0x100 0x10078000 0x110>;
+		otg_phy: otg_phy@1000003c {
+			compatible = "ingenic,x1600-phy";
+			reg = <0x1000003c 0x10>;
+
+			clocks = <&cgu X1600_CLK_OTGPHY>;
+
 			#phy-cells = <0>;
 
+			status = "disabled";
 		};
 
 		aic: aic@10079000 {
@@ -542,16 +544,23 @@
 		};
 
 		otg: otg@13500000 {
-			compatible = "ingenic,x1600-dwc2-hsotg";
+			compatible = "ingenic,x1600-otg";
 			reg = <0x13500000 0x40000>;
+
 			interrupt-parent = <&core_intc>;
 			interrupts = <IRQ_OTG>;
-			ingenic,usbphy=<&otg_phy>;
+
+			clocks = <&cgu X1600_CLK_OTG0>;
+			clock-names = "otg";
+
+			phys = <&otg_phy>;
+			phy-names = "usb2-phy";
 
 			g-rx-fifo-size = <1096>;
 			g-np-tx-fifo-size = <512>;
 			g-tx-fifo-size = <16 16 16 128 256 256 512 768>;
-			status = "okay";
+
+			status = "disabled";
 		};
 
 		efuse: efuse@13540000 {

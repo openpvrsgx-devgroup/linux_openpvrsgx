@@ -330,7 +330,7 @@
 		};
 
 		spi0: spi@10043000 {
-			compatible = "ingenic,x1000-spi";
+			compatible = "ingenic,x1600-spi";
 			reg = <0x10043000 0x1000>;
 
 			clocks = <&cgu X1600_CLK_SSI0>;

@@ -58,6 +58,8 @@
 #define JZ4770_GPIO_FLAG			0x50
 #define JZ4770_GPIO_PEN				0x70
 
+#define X1600_GPIO_PU				0x80
+
 #define X1830_GPIO_PEL				0x110
 #define X1830_GPIO_PEH				0x120
 #define X1830_GPIO_SR				0x150
@@ -4059,7 +4061,9 @@ static int ingenic_pinconf_get(struct pinctrl_dev *pctldev,
 		pulldown = (bias == GPIO_PULL_DOWN) && (jzpc->info->pull_downs[offt] & BIT(idx));
 
 	} else {
-		if (is_soc_or_above(jzpc, ID_JZ4770))
+		if (is_soc_or_above(jzpc, ID_X1600))
+			pull = ingenic_get_pin_config(jzpc, pin, X1600_GPIO_PU);
+		else if (is_soc_or_above(jzpc, ID_JZ4770))
 			pull = !ingenic_get_pin_config(jzpc, pin, JZ4770_GPIO_PEN);
 		else if (is_soc_or_above(jzpc, ID_JZ4740))
 			pull = !ingenic_get_pin_config(jzpc, pin, JZ4740_GPIO_PULL_DIS);
@@ -4158,6 +4162,8 @@ static void ingenic_set_bias(struct ingenic_pinctrl *jzpc,
 					REG_SET(X1830_GPIO_PEH), bias << idxh);
 		}
 
+	} else if (is_soc_or_above(jzpc, ID_X1600)) {
+		ingenic_config_pin(jzpc, pin, X1600_GPIO_PU, bias);
 	} else if (is_soc_or_above(jzpc, ID_JZ4770)) {
 		ingenic_config_pin(jzpc, pin, JZ4770_GPIO_PEN, !bias);
 	} else if (is_soc_or_above(jzpc, ID_JZ4740)) {

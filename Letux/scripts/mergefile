@@ -192,6 +192,7 @@ letux/ehci-usb-pm
 letux/phy-twl
 #letux/clk
 letux/tvfix
+letux/gdepaper
 #letux/displayprobing
 letux/charging_fixes
 letux/omap2plus

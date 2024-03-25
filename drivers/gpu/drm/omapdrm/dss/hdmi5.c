@@ -453,6 +453,7 @@ static const struct drm_edid *hdmi5_bridge_edid_read(struct drm_bridge *bridge,
 {
 	struct omap_hdmi *hdmi = drm_bridge_to_hdmi(bridge);
 	const struct drm_edid *drm_edid;
+	unsigned int cec_addr;
 	bool need_enable;
 	int idlemode;
 	int r;
@@ -477,6 +478,11 @@ static const struct drm_edid *hdmi5_bridge_edid_read(struct drm_bridge *bridge,
 
 	drm_edid = drm_edid_read_custom(connector, hdmi5_core_ddc_read, &hdmi->core);
 
+	const struct edid *edid = drm_edid_raw(drm_edid);
+	unsigned int len = (edid->extensions + 1) * EDID_LENGTH;
+
+	cec_addr = cec_get_edid_phys_addr((u8 *)edid, len, NULL);
+
 	hdmi5_core_ddc_uninit(&hdmi->core);
 
 	REG_FLD_MOD(hdmi->wp.base, HDMI_WP_SYSCONFIG, idlemode, 3, 2);
@@ -484,7 +490,7 @@ static const struct drm_edid *hdmi5_bridge_edid_read(struct drm_bridge *bridge,
 	hdmi_runtime_put(hdmi);
 	mutex_unlock(&hdmi->lock);
 
-	hdmi5_cec_set_phys_addr(&hdmi->core, drm_edid);
+	hdmi5_cec_set_phys_addr(&hdmi->core, edid);
 
 	if (need_enable)
 		hdmi5_core_disable(hdmi);

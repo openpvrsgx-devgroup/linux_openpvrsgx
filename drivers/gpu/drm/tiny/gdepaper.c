@@ -395,7 +395,7 @@ static size_t tinydrm_spi_max_transfer_size(struct spi_device *spi, size_t max_l
 {
 	size_t ret;
 
-	ret = min(spi_max_transfer_size(spi), spi->master->max_dma_len);
+	ret = min(spi_max_transfer_size(spi), spi->controller->max_dma_len);
 	if (max_len)
 		ret = min(ret, max_len);
 	if (spi_max)
@@ -419,7 +419,7 @@ static size_t tinydrm_spi_max_transfer_size(struct spi_device *spi, size_t max_l
  */
 static bool tinydrm_spi_bpw_supported(struct spi_device *spi, u8 bpw)
 {
-	u32 bpw_mask = spi->master->bits_per_word_mask;
+	u32 bpw_mask = spi->controller->bits_per_word_mask;
 
 	if (bpw == 8)
 		return true;

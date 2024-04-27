@@ -34,7 +34,7 @@ case "$(tr -d '\0' </proc/device-tree/model)" in
 		PWMMODE=0x011b
 		GPIO=57
 		;;
-	*'Mipsbook 400'* ) # PWM connected to PWM0/GP94 = GPIO bank 2 # 30 mode 1
+	*'Alpha 400'* ) # PWM connected to PWM0/GP94 = GPIO bank 2 # 30 mode 1
 		if [ "$1" = 1 ]
 		then
 			devmem2 0x10050000 b 0x8d	# enable PWM

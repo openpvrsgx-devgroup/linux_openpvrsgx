@@ -147,7 +147,7 @@ letux/aess-asoc-fw
 letux/aess-audio-test
 letux/aess-abefw
 
-# Mipsbook / JZ4730
+# Alpha400 / JZ4730
 letux/jz4730
 letux/dt-alpha400
 #letux/pm-alpha400

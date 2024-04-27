@@ -1,4 +1,4 @@
-Feature	GTA04 L2804	GTA04b2 L3704	GTA04b3 L7004	BeagleBoard C2	BeagleBoard XM	PandaBoard	Pyra	OMAP5432EVM	Openpandora	BeagleBone Black	Udoo neo	Letux 400	PocketBeagle	CI20	GTA15	RasPi3B+	Tolino/Clara
+Feature	GTA04 L2804	GTA04b2 L3704	GTA04b3 L7004	BeagleBoard C2	BeagleBoard XM	PandaBoard	Pyra	OMAP5432EVM	Openpandora	BeagleBone Black	Udoo neo	Alpha 400	PocketBeagle	CI20	GTA15	RasPi3B+	Tolino/Clara
 makesd name	gta04	gta04b2	gta04b3	bb	bb	panda-es	pyra	omap5evm	pandora	bbb	udoo	mipsbook	lc8	ci20	gta15	raspi	tolino3/clara
 SoC	DM3730	DM3730	DM3730	OMAP3	DM3730	OMAP4460	OMAP5	OMAP5	OMAP3	AM335x	iMX6	JZ4730	AM335x	JZ4780	OMAP5	BCM2835	iMX6
 Boot	ok	ok	ok	ok	ok	ok	l4.19#876	ok	ok	ok	ok	wip	ok	ok		ok	letux

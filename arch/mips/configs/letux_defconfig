@@ -1,5 +1,5 @@
 #
-# Linux/mips 6.9.0-rc5 Kernel Configuration
+# Linux/mips 6.9.0-rc6 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="mipsel-linux-gnu-gcc (GCC) 6.3.0"
 CONFIG_CC_IS_GCC=y
@@ -447,6 +447,7 @@ CONFIG_MIPS_JZ4780_CPUIDLE=y
 # end of CPU Power Management
 
 # CONFIG_VIRTUALIZATION is not set
+CONFIG_CPU_MITIGATIONS=y
 
 #
 # General architecture-dependent options
@@ -5523,6 +5524,7 @@ CONFIG_FAT_DEFAULT_IOCHARSET="iso8859-1"
 # CONFIG_FAT_DEFAULT_UTF8 is not set
 # CONFIG_EXFAT_FS is not set
 # CONFIG_NTFS3_FS is not set
+# CONFIG_NTFS_FS is not set
 # end of DOS/FAT/EXFAT/NT Filesystems
 
 #

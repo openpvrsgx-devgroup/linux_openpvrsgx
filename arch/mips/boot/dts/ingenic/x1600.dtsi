@@ -363,7 +363,7 @@
 		otg_phy: otg_phy@10007800 {
 			compatible = "ingenic,x1600-phy";
 			reg = <0x1000003c 0x10>,
-			      <0x10007800 0x100>;	/* extended register set */
+			      <0x10078000 0x128>;	/* extended register set */
 
 			clocks = <&cgu X1600_CLK_OTGPHY>;
 

@@ -360,9 +360,10 @@
 			status = "disabled";
 		};
 
-		otg_phy: otg_phy@1000003c {
+		otg_phy: otg_phy@10007800 {
 			compatible = "ingenic,x1600-phy";
-			reg = <0x1000003c 0x10>;
+			reg = <0x1000003c 0x10>,
+			      <0x10007800 0x100>;	/* extended register set */
 
 			clocks = <&cgu X1600_CLK_OTGPHY>;
 

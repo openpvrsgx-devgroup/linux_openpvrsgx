@@ -62,6 +62,7 @@
 
 /* bits within the OPCR register */
 #define OPCR_SPENDN0		BIT(7)
+#define OPCR_GATEUSBPHYCLK	BIT(23)
 
 static struct ingenic_cgu *cgu;
 
@@ -69,7 +70,7 @@ static int x1600_otg_phy_enable(struct clk_hw *hw)
 {
 	void __iomem *reg_opcr		= cgu->base + CGU_REG_OPCR;
 
-	writel(readl(reg_opcr) | OPCR_SPENDN0, reg_opcr);
+	writel((readl(reg_opcr) & ~OPCR_GATEUSBPHYCLK) | OPCR_SPENDN0, reg_opcr);
 
 	return 0;
 }
@@ -78,20 +79,27 @@ static void x1600_otg_phy_disable(struct clk_hw *hw)
 {
 	void __iomem *reg_opcr		= cgu->base + CGU_REG_OPCR;
 
-	writel(readl(reg_opcr) & ~OPCR_SPENDN0, reg_opcr);
+	writel((readl(reg_opcr) & ~OPCR_SPENDN0) | OPCR_GATEUSBPHYCLK, reg_opcr);
 }
 
 static int x1600_otg_phy_is_enabled(struct clk_hw *hw)
 {
 	void __iomem *reg_opcr		= cgu->base + CGU_REG_OPCR;
 
-	return (readl(reg_opcr) & OPCR_SPENDN0);
+	return (readl(reg_opcr) & (OPCR_SPENDN0 | OPCR_GATEUSBPHYCLK)) == OPCR_SPENDN0;
+}
+
+static u8 x1600_otg_phy_get_parent(struct clk_hw *hw)
+{
+	(void) hw;
+	return 0;
 }
 
 static const struct clk_ops x1600_otg_phy_ops = {
 	.enable		= x1600_otg_phy_enable,
 	.disable	= x1600_otg_phy_disable,
 	.is_enabled	= x1600_otg_phy_is_enabled,
+	.get_parent	= x1600_otg_phy_get_parent,
 };
 
 static const struct ingenic_cgu_clk_info x1600_cgu_clocks[] = {
@@ -304,11 +312,9 @@ static const struct ingenic_cgu_clk_info x1600_cgu_clocks[] = {
 	/* Custom (SoC-specific) OTG PHY */
 
 	[X1600_CLK_OTGPHY] = {
-// FIXME: this asks for .get_parent implementation
-// __clk_core_init: otg_phy must implement .get_parent as it has multi parents
-		"otg_phy", CGU_CLK_GATE,	// CGU_CLK_CUSTOM,
+		"otg_phy", CGU_CLK_CUSTOM,
 		.parents = { X1600_CLK_12M },
-//		.custom = { &x1600_otg_phy_ops },
+		.custom = { &x1600_otg_phy_ops },
 	},
 
 	/* Gate-only clocks */

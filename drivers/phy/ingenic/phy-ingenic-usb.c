@@ -92,6 +92,7 @@ struct ingenic_usb_phy {
 
 	struct phy *phy;
 	void __iomem *base;
+	void __iomem *extra;
 	struct clk *clk;
 	struct regulator *vcc_supply;
 };
@@ -260,6 +261,97 @@ static void x1000_usb_phy_init(struct phy *phy)
 	writel(reg, priv->base + REG_USBPCR_OFFSET);
 }
 
+static void x1600_usb_phy_init(struct phy *phy)
+{
+	struct ingenic_usb_phy *priv = phy_get_drvdata(phy);
+	u32 reg;
+
+printk("%s: priv->base + REG_USBPCR_OFFSET = %px", __func__, priv->base + REG_USBPCR_OFFSET);	// should be 0x3c
+printk("%s: priv->base + REG_USBPCR1_OFFSET = %px", __func__, priv->base + REG_USBPCR1_OFFSET);	// should be 0x48
+
+#if 0 // from copy&paste x1000 - maybe we can use the bit patterns and code style
+	reg = readl(priv->base + REG_USBPCR1_OFFSET) | USBPCR1_WORD_IF_16BIT;
+	writel(reg, priv->base + REG_USBPCR1_OFFSET);
+
+	reg = USBPCR_TXPREEMPHTUNE | USBPCR_COMMONONN | USBPCR_POR |
+		FIELD_PREP(USBPCR_SQRXTUNE_MASK, USBPCR_SQRXTUNE_DCR_20PCT) |
+		FIELD_PREP(USBPCR_TXHSXVTUNE_MASK, USBPCR_TXHSXVTUNE_DCR_15MV) |
+		FIELD_PREP(USBPCR_TXVREFTUNE_MASK, USBPCR_TXVREFTUNE_INC_25PPT);
+	writel(reg, priv->base + REG_USBPCR_OFFSET);
+#endif
+
+// NOTE: we use a different DTS base (0x1000003c) than the vendor kernel (0x10000000) where this fragment comes from
+#define CPM_USBPCR                      (0x3C)-(0x3c)
+// #define CPM_USBRDT                      (0x40)-(0x3c)
+// #define CPM_USBVBFIL                    (0x44)-(0x3c)
+#define CPM_USBPCR1                     (0x48)-(0x3c)
+
+	/* vbus signal always valid, id pin always pullup */
+
+printk("%s: priv->base + CPM_USBPCR1 = %px", __func__, priv->base + CPM_USBPCR1);
+
+	writel(0x00200000, priv->base + CPM_USBPCR1);
+//	usb_cpm_writel(usb_phy, 0x80400000, CPM_USBPCR);
+	writel(0x80400000, priv->base + CPM_USBPCR);
+	udelay(500);
+//	usb_cpm_writel(usb_phy, 0x80000000, CPM_USBPCR);
+	writel(0x80000000, priv->base + CPM_USBPCR);
+//	usb_cpm_writel(usb_phy, 0x70000000, CPM_USBPCR1);
+	writel(0x70000000, priv->base + CPM_USBPCR1);
+	udelay(500);
+
+printk("%s: priv->extra + 0x30 = %px", __func__, priv->extra + 0x30);
+
+	/* always enable pre-emphasis */
+//	reg = usb_phy_readl(usb_phy, 0x30);
+	reg = readl(priv->extra + 0x30);
+	// reg &= ~(0x7 << 0);
+	reg |= 0x7 << 0;
+	writel(reg, priv->extra + 0x30);
+//	usb_phy_writel(usb_phy, value, 0x30);
+
+	/* Tx HS pre_emphasize strength configure */
+//	reg = usb_phy_readl(usb_phy, 0x40);
+	reg = readl(priv->extra + 0x40);
+	// reg &= ~(0x7 << 3);
+	reg |= 0x7 << 3;
+	writel(reg, priv->extra + 0x40);
+//	usb_phy_writel(usb_phy, value, 0x40);
+
+	/* Vbus 5V mode */
+//	reg = usb_phy_readl(usb_phy, 0x10C);
+	reg = readl(priv->extra + 0x10c);
+	reg &= ~((0x7 << 0) | (0x7 << 3));
+	reg |= ((0x5 << 0) | (0x5 << 3));
+//	usb_phy_writel(usb_phy, value, 0x10C);
+	writel(reg, priv->extra + 0x10c);
+
+	/* Vbus 5V mode */
+//	reg = usb_phy_readl(usb_phy, 0x110);
+	reg = readl(priv->extra + 0x110);
+	reg &= ~((0x7 << 0) | (0x7 << 3));
+	reg |= ((0x5 << 0) | (0x5 << 3));
+//	usb_phy_writel(usb_phy, value, 0x110);
+//	writel(reg, priv->extra + 0x110);
+
+#ifdef CONFIG_USB_DWC2_EXT_VBUS_DETECT
+	/* VBUS voltage level detection power down. */
+//	reg = usb_phy_readl(usb_phy, 0x108);
+	reg = readl(priv->extra + 0x108);
+	reg |= 0x1 << 3;
+//	usb_phy_writel(usb_phy, value, 0x108);
+//	writel(reg, priv->extra + 0x108);
+#endif
+
+	/* HS eye height tuning */
+//	reg = usb_phy_readl(usb_phy, 0x124);
+	reg = readl(priv->extra + 0x124);
+	reg &= ~(0x7 << 2);
+	reg |= 0x1 << 2;
+//	usb_phy_writel(usb_phy, value, 0x124);
+	writel(reg, priv->extra + 0x124);
+}
+
 static void x1830_usb_phy_init(struct phy *phy)
 {
 	struct ingenic_usb_phy *priv = phy_get_drvdata(phy);
@@ -306,7 +398,7 @@ static const struct ingenic_soc_info x1000_soc_info = {
 };
 
 static const struct ingenic_soc_info x1600_soc_info = {
-	.usb_phy_init = x1830_usb_phy_init,
+	.usb_phy_init = x1600_usb_phy_init,
 };
 
 static const struct ingenic_soc_info x1830_soc_info = {
@@ -339,6 +431,9 @@ static int ingenic_usb_phy_probe(struct platform_device *pdev)
 		dev_err(dev, "Failed to map registers\n");
 		return PTR_ERR(priv->base);
 	}
+
+	priv->extra = devm_platform_ioremap_resource(pdev, 1);
+	/* may be missing */
 
 	priv->clk = devm_clk_get(dev, NULL);
 	if (IS_ERR(priv->clk)) {

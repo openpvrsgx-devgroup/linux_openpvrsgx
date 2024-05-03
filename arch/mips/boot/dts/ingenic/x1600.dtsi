@@ -129,7 +129,8 @@
 		};
 
 		tcu: timer@10002000 {
-			compatible = "ingenic,x1600-tcu, simple-mfd";
+			compatible = "ingenic,x1600-tcu",
+				     "simple-mfd";
 			reg = <0x10002000 0x1000>;
 			#address-cells = <1>;
 			#size-cells = <1>;
@@ -149,14 +150,19 @@
 			clock-names = "rtc", "ext", "pclk";
 
 			status = "ok";
-		};
 
-		watchdog: watchdog@10002000 {
-			compatible = "ingenic,watchdog";
-			reg = <0x10002000 0x40>;
-			interrupt-parent = <&core_intc>;
-			interrupts = <IRQ_TCU0>;
-			status = "ok";
+			watchdog: watchdog@0 {
+				compatible = "ingenic,x1600-watchdog", "ingenic,jz4780-watchdog";
+				reg = <0 0x10>;
+
+				clocks = <&cgu X1600_CLK_RTCLK>;
+				clock-names = "wdt";
+
+			// data sheet mentiones a "half interrupt"
+			//	interrupt-parent = <&core_intc>;
+			//	interrupts = <IRQ_TCU0>;
+			};
+
 		};
 
 		rtc_dev: rtc@10003000 {

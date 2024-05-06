@@ -1,5 +1,5 @@
 #
-# Linux/x86 6.9.0-rc6 Kernel Configuration
+# Linux/x86 6.9.0-rc7 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="i486-linux-gnu-gcc (GCC) 6.3.0"
 CONFIG_CC_IS_GCC=y
@@ -4626,6 +4626,7 @@ CONFIG_DRM_PANEL=y
 # Display Panels
 #
 # CONFIG_DRM_PANEL_AUO_A030JTN01 is not set
+# CONFIG_DRM_PANEL_ILITEK_ILI9341 is not set
 # CONFIG_DRM_PANEL_ORISETECH_OTA5601A is not set
 # CONFIG_DRM_PANEL_RASPBERRYPI_TOUCHSCREEN is not set
 # CONFIG_DRM_PANEL_WIDECHIPS_WS2401 is not set

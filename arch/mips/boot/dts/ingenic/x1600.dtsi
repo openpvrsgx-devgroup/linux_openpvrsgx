@@ -144,10 +144,8 @@
 
 			#clock-cells = <1>;
 
-			clocks = <&cgu X1600_CLK_RTCLK>,
-				 <&cgu X1600_CLK_EXCLK>,
-				 <&cgu X1600_CLK_PCLK>;
-			clock-names = "rtc", "ext", "pclk";
+			clocks = <&cgu X1600_CLK_EXCLK>;
+			clock-names = "ext";
 
 			status = "ok";
 

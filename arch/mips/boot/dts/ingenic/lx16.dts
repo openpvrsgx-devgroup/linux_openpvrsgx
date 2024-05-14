@@ -83,6 +83,12 @@
 		bias-pull-up;
 	};
 
+	i2c0_pb: i2c0 {
+		function = "i2c0";
+		groups = "i2c0-data-b";
+		bias-pull-up;
+	};
+
 	i2c1_pb: i2c1 {
 		function = "i2c1";
 		groups = "i2c1-data-b-19";

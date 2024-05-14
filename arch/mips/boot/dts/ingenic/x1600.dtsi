@@ -308,8 +308,12 @@
 		};
 
 		i2c0: i2c@10050000 {
-			compatible = "ingenic,x1600-i2c";
+			compatible = "ingenic,x1000-i2c";
 			reg = <0x10050000 0x1000>;
+
+			clocks = <&cgu X1600_CLK_SMB0>;
+			clock-frequency = <100000>;
+
 			interrupt-parent = <&core_intc>;
 			interrupts = <IRQ_I2C0>;
 			#address-cells = <1>;
@@ -318,8 +322,12 @@
 		};
 
 		i2c1: i2c@10051000 {
-			compatible = "ingenic,x1600-i2c";
+			compatible = "ingenic,x1000-i2c";
 			reg = <0x10051000 0x1000>;
+
+			clocks = <&cgu X1600_CLK_SMB1>;
+			clock-frequency = <100000>;
+
 			interrupt-parent = <&core_intc>;
 			interrupts = <IRQ_I2C1>;
 			#address-cells = <1>;

@@ -26,6 +26,8 @@
 		pwm = &pwm;
 		can0 = &can0;
 		can1 = &can1;
+		mmc0 = &mmc0;
+		mmc1 = &mmc1;
 	};
 
 	cpus: cpus {
@@ -318,7 +320,6 @@
 			interrupts = <IRQ_I2C0>;
 			#address-cells = <1>;
 			#size-cells = <0>;
-			status = "okay";
 		};
 
 		i2c1: i2c@10051000 {
@@ -332,7 +333,6 @@
 			interrupts = <IRQ_I2C1>;
 			#address-cells = <1>;
 			#size-cells = <0>;
-			status = "disabled";
 		};
 
 		spi0: spi@10043000 {

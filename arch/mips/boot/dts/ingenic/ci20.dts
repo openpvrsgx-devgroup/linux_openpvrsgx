@@ -536,6 +536,7 @@
 	dm9000@6 {
 		compatible = "davicom,dm9000";
 		davicom,no-eeprom;
+		local-mac-address = [00 00 de ad be ef];
 
 		pinctrl-names = "default";
 		pinctrl-0 = <&pins_nemc_cs6>;

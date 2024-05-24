@@ -41,6 +41,9 @@ typedef void* (pvr_off2element_proc_seq_t)(struct seq_file *, loff_t);
 typedef void (pvr_show_proc_seq_t)(struct seq_file *,void*);
 typedef void (pvr_startstop_proc_seq_t)(struct seq_file *, IMG_BOOL start);
 
+typedef	int (pvr_proc_write_t)(struct file *file, const char __user *buffer,
+                               unsigned long count, void *data);
+
 typedef struct _PVR_PROC_SEQ_HANDLERS_ {
 	pvr_next_proc_seq_t *next;	
 	pvr_show_proc_seq_t *show;	
@@ -58,13 +61,13 @@ off_t printAppend(IMG_CHAR * buffer, size_t size, off_t off, const IMG_CHAR * fo
 	__attribute__((format(printf, 4, 5)));
 
 IMG_INT CreateProcEntries(IMG_VOID);
-
+/*
 IMG_INT CreateProcReadEntry (const IMG_CHAR * name, pvr_read_proc_t handler);
 
 IMG_INT CreateProcEntry(const IMG_CHAR * name, read_proc_t rhandler, write_proc_t whandler, IMG_VOID *data);
 
 IMG_INT CreatePerProcessProcEntry(const IMG_CHAR * name, read_proc_t rhandler, write_proc_t whandler, IMG_VOID *data);
-
+*/
 IMG_VOID RemoveProcEntry(const IMG_CHAR * name);
 
 IMG_VOID RemovePerProcessProcEntry(const IMG_CHAR * name);
@@ -87,7 +90,7 @@ struct proc_dir_entry* CreateProcEntrySeq (
 								pvr_show_proc_seq_t show_handler,
 								pvr_off2element_proc_seq_t off2element_handler,
 								pvr_startstop_proc_seq_t startstop_handler,
-								write_proc_t whandler
+								pvr_proc_write_t whandler
 							   );
 
 struct proc_dir_entry* CreatePerProcessProcEntrySeq (
@@ -97,7 +100,7 @@ struct proc_dir_entry* CreatePerProcessProcEntrySeq (
 								pvr_show_proc_seq_t show_handler,
 								pvr_off2element_proc_seq_t off2element_handler,
 								pvr_startstop_proc_seq_t startstop_handler,
-								write_proc_t whandler
+								pvr_proc_write_t whandler
 							   );
 
 

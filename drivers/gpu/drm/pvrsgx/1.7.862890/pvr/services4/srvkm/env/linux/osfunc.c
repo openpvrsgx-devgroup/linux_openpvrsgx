@@ -34,11 +34,16 @@
 
 #include <asm/io.h>
 #include <asm/page.h>
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,22))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,22)) && (LINUX_VERSION_CODE < KERNEL_VERSION(3,2,0))
 #include <asm/system.h>
 #endif
 #include <asm/cacheflush.h>
 #include <linux/mm.h>
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,8,0))
+#else
+#define mmap_sem mmap_lock	// has been renamed by v5.8-rc1
+#endif
+
 #include <linux/pagemap.h>
 #include <linux/hugetlb.h> 
 #include <linux/slab.h>
@@ -1785,11 +1790,12 @@ PVRSRV_ERROR OSPCIResumeDev(PVRSRV_PCI_DEV_HANDLE hPVRPCI)
 
 #define	OS_MAX_TIMERS	8
 
+/* Timer callback strucure used by OSAddTimer */
 typedef struct TIMER_CALLBACK_DATA_TAG
 {
     IMG_BOOL			bInUse;
     PFN_TIMER_FUNC		pfnTimerFunc;
-    IMG_VOID 			*pvData;	
+    IMG_VOID 			*pvData;
     struct timer_list		sTimer;
     IMG_UINT32			ui32Delay;
     IMG_BOOL			bActive;
@@ -1858,27 +1864,26 @@ static void OSTimerWorkQueueCallBack(struct work_struct *psWork)
 IMG_HANDLE OSAddTimer(PFN_TIMER_FUNC pfnTimerFunc, IMG_VOID *pvData, IMG_UINT32 ui32MsTimeout)
 {
     TIMER_CALLBACK_DATA	*psTimerCBData;
-    IMG_UINT32		ui32i;
+    IMG_UINTPTR_T		ui;
 #if !(defined(PVR_LINUX_TIMERS_USING_WORKQUEUES) || defined(PVR_LINUX_TIMERS_USING_SHARED_WORKQUEUE))
     unsigned long		ulLockFlags;
 #endif
 
-    
+    /* check callback */
     if(!pfnTimerFunc)
     {
-        PVR_DPF((PVR_DBG_ERROR, "OSAddTimer: passed invalid callback"));		
-        return IMG_NULL;		
+        PVR_DPF((PVR_DBG_ERROR, "OSAddTimer: passed invalid callback"));
+        return IMG_NULL;
     }
-    
-    
+
 #if defined(PVR_LINUX_TIMERS_USING_WORKQUEUES) || defined(PVR_LINUX_TIMERS_USING_SHARED_WORKQUEUE)
     mutex_lock(&sTimerStructLock);
 #else
     spin_lock_irqsave(&sTimerStructLock, ulLockFlags);
 #endif
-    for (ui32i = 0; ui32i < OS_MAX_TIMERS; ui32i++)
+    for (ui = 0; ui < OS_MAX_TIMERS; ui++)
     {
-        psTimerCBData = &sTimers[ui32i];
+        psTimerCBData = &sTimers[ui];
         if (!psTimerCBData->bInUse)
         {
             psTimerCBData->bInUse = IMG_TRUE;
@@ -1890,31 +1895,36 @@ IMG_HANDLE OSAddTimer(PFN_TIMER_FUNC pfnTimerFunc, IMG_VOID *pvData, IMG_UINT32 
 #else
     spin_unlock_irqrestore(&sTimerStructLock, ulLockFlags);
 #endif
-    if (ui32i >= OS_MAX_TIMERS)
+    if (ui >= OS_MAX_TIMERS)
     {
-        PVR_DPF((PVR_DBG_ERROR, "OSAddTimer: all timers are in use"));		
-        return IMG_NULL;	
+        PVR_DPF((PVR_DBG_ERROR, "OSAddTimer: all timers are in use"));
+        return IMG_NULL;
     }
 
     psTimerCBData->pfnTimerFunc = pfnTimerFunc;
     psTimerCBData->pvData = pvData;
     psTimerCBData->bActive = IMG_FALSE;
-    
-    
 
-
+    /*
+        HZ = ticks per second
+        ui32MsTimeout = required ms delay
+        ticks = (Hz * ui32MsTimeout) / 1000
+    */
     psTimerCBData->ui32Delay = ((HZ * ui32MsTimeout) < 1000)
                                 ?	1
                                 :	((HZ * ui32MsTimeout) / 1000);
-    
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0))
+    timer_setup(&psTimerCBData->sTimer, OSTimerCallbackWrapper, 0);
+#else
+    /* initialise object */
     init_timer(&psTimerCBData->sTimer);
-    
-    
-     
+
+    /* setup timer object */
+    /* PRQA S 0307,0563 1 */ /* ignore warning about inconpartible ptr casting */
     psTimerCBData->sTimer.function = (IMG_VOID *)OSTimerCallbackWrapper;
     psTimerCBData->sTimer.data = (IMG_UINT32)psTimerCBData;
-    
-    return (IMG_HANDLE)(ui32i + 1);
+#endif
+    return (IMG_HANDLE)(ui + 1);
 }
 
 
@@ -2190,17 +2200,10 @@ PVRSRV_ERROR OSCopyFromUser( IMG_PVOID pvProcess,
         return PVRSRV_ERROR_FAILED_TO_COPY_VIRT_MEMORY;
 }
 
-IMG_BOOL OSAccessOK(IMG_VERIFY_TEST eVerification, IMG_VOID *pvUserPtr, IMG_UINT32 ui32Bytes)
+IMG_BOOL OSAccessOK(IMG_VERIFY_TEST eVerification, IMG_VOID *pvUserPtr, IMG_SIZE_T uiBytes)
 {
-    if (eVerification == PVR_VERIFY_READ)
-    {
-	return access_ok(VERIFY_READ, pvUserPtr, ui32Bytes);
-    }
-    else
-    {
-        PVR_ASSERT(eVerification == PVR_VERIFY_WRITE);
-	return access_ok(VERIFY_WRITE, pvUserPtr, ui32Bytes);
-    }
+    (void)eVerification; /* unused */
+    return access_ok(pvUserPtr, uiBytes);
 }
 
 typedef enum _eWrapMemType_
@@ -2226,13 +2229,17 @@ typedef struct _sWrapMemInfo_
 } sWrapMemInfo;
 
 
-static IMG_BOOL CPUVAddrToPFN(struct vm_area_struct *psVMArea, IMG_UINT32 ulCPUVAddr, IMG_UINT32 *pulPFN, struct page **ppsPage)
+static IMG_BOOL CPUVAddrToPFN(struct vm_area_struct *psVMArea, IMG_UINTPTR_T uCPUVAddr, IMG_UINT32 *pui32PFN, struct page **ppsPage)
 {
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6,6,0))
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,10))
     pgd_t *psPGD;
     pud_t *psPUD;
     pmd_t *psPMD;
     pte_t *psPTE;
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4,12,0))
+    p4d_t *psP4D;
+#endif
     struct mm_struct *psMM = psVMArea->vm_mm;
     spinlock_t *psPTLock;
     IMG_BOOL bRet = IMG_FALSE;
@@ -2240,11 +2247,19 @@ static IMG_BOOL CPUVAddrToPFN(struct vm_area_struct *psVMArea, IMG_UINT32 ulCPUV
     *pulPFN = 0;
     *ppsPage = NULL;
 
-    psPGD = pgd_offset(psMM, ulCPUVAddr);
+    psPGD = pgd_offset(psMM, uCPUVAddr);
     if (pgd_none(*psPGD) || pgd_bad(*psPGD))
         return bRet;
 
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4,12,0))
+    psP4D = p4d_offset(psPGD, uCPUVAddr);
+    if (p4d_none(*psP4D) || unlikely(p4d_bad(*psP4D)))
+        return bRet;
+
+    psPUD = pud_offset(psP4D, uCPUVAddr);
+#else
     psPUD = pud_offset(psPGD, ulCPUVAddr);
+#endif
     if (pud_none(*psPUD) || pud_bad(*psPUD))
         return bRet;
 
@@ -2272,6 +2287,28 @@ static IMG_BOOL CPUVAddrToPFN(struct vm_area_struct *psVMArea, IMG_UINT32 ulCPUV
     return bRet;
 #else
     return IMG_FALSE;
+#endif
+#else	/* #if (LINUX_VERSION_CODE < KERNEL_VERSION(6,6,0)) */
+	spinlock_t *ptl;
+	pte_t *ptep;
+	int ret;
+
+	if (!(psVMArea->vm_flags & (VM_IO | VM_PFNMAP)))
+		return IMG_FALSE;
+
+	ret = follow_pte(psVMArea->vm_mm, uCPUVAddr, &ptep, &ptl);
+	if (ret < 0)
+		return IMG_FALSE;
+
+	*pui32PFN = pte_pfn(ptep_get(ptep));
+	if (!pfn_valid(*pui32PFN))
+		return IMG_FALSE;
+
+	*ppsPage = pfn_to_page(*pui32PFN);
+	get_page(*ppsPage);
+	pte_unmap_unlock(ptep, ptl);
+
+	return IMG_TRUE;
 #endif
 }
 
@@ -2303,7 +2340,12 @@ PVRSRV_ERROR OSReleasePhysPageAddr(IMG_HANDLE hOSWrapMem)
 
 		PVR_ASSERT(psPage != NULL);
 
-                
+                /*
+		 * If the number of pages mapped is not the same as
+		 * the number of pages in the address range, then
+		 * get_user_pages must have failed, so we are cleaning
+		 * up after failure, and the pages can't be dirty.
+                 */
 		if (psInfo->iNumPagesMapped == psInfo->iNumPages)
 		{
                     if (!PageReserved(psPage))
@@ -2311,7 +2353,11 @@ PVRSRV_ERROR OSReleasePhysPageAddr(IMG_HANDLE hOSWrapMem)
                         SetPageDirty(psPage);
                     }
 	        }
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,6,0))
                 page_cache_release(psPage);
+#else
+                put_page(psPage);
+#endif
 	    }
             break;
         }
@@ -2350,17 +2396,17 @@ PVRSRV_ERROR OSReleasePhysPageAddr(IMG_HANDLE hOSWrapMem)
 }
 
 PVRSRV_ERROR OSAcquirePhysPageAddr(IMG_VOID *pvCPUVAddr, 
-                                    IMG_UINT32 ui32Bytes, 
+                                    IMG_SIZE_T uiBytes,
                                     IMG_SYS_PHYADDR *psSysPAddr,
                                     IMG_HANDLE *phOSWrapMem)
 {
-    IMG_UINT32 ulStartAddrOrig = (IMG_UINT32) pvCPUVAddr;
-    IMG_UINT32 ulAddrRangeOrig = (IMG_UINT32) ui32Bytes;
-    IMG_UINT32 ulBeyondEndAddrOrig = ulStartAddrOrig + ulAddrRangeOrig;
-    IMG_UINT32 ulStartAddr;
-    IMG_UINT32 ulAddrRange;
-    IMG_UINT32 ulBeyondEndAddr;
-    IMG_UINT32 ulAddr;
+    IMG_UINTPTR_T uStartAddrOrig = (IMG_UINTPTR_T) pvCPUVAddr;
+    IMG_SIZE_T uAddrRangeOrig = uiBytes;
+    IMG_UINTPTR_T uBeyondEndAddrOrig = uStartAddrOrig + uAddrRangeOrig;
+    IMG_UINTPTR_T uStartAddr;
+    IMG_SIZE_T uAddrRange;
+    IMG_UINTPTR_T uBeyondEndAddr;
+    IMG_UINTPTR_T uAddr;
     IMG_INT i;
     struct vm_area_struct *psVMArea;
     sWrapMemInfo *psInfo = NULL;
@@ -2370,21 +2416,24 @@ PVRSRV_ERROR OSAcquirePhysPageAddr(IMG_VOID *pvCPUVAddr,
     IMG_BOOL bMMapSemHeld = IMG_FALSE;
     PVRSRV_ERROR eError = PVRSRV_ERROR_OUT_OF_MEMORY;
 
-    
-    ulStartAddr = ulStartAddrOrig & PAGE_MASK;
-    ulBeyondEndAddr = PAGE_ALIGN(ulBeyondEndAddrOrig);
-    ulAddrRange = ulBeyondEndAddr - ulStartAddr;
+    /* Align start and end addresses to page boundaries */
+    uStartAddr = uStartAddrOrig & PAGE_MASK;
+    uBeyondEndAddr = PAGE_ALIGN(uBeyondEndAddrOrig);
+    uAddrRange = uBeyondEndAddr - uStartAddr;
 
-    
-    if (ulBeyondEndAddr <= ulStartAddr)
+    /*
+     * Check for address range calculation overflow, and attempts to wrap
+     * zero bytes.
+     */
+    if (uBeyondEndAddr <= uStartAddr)
     {
         PVR_DPF((PVR_DBG_ERROR,
             "OSAcquirePhysPageAddr: Invalid address range (start %x, length %x)",
-		ulStartAddrOrig, ulAddrRangeOrig));
+		uStartAddrOrig, uAddrRangeOrig));
         goto error;
     }
 
-    
+    /* Allocate information structure */
     psInfo = kmalloc(sizeof(*psInfo), GFP_KERNEL);
     if (psInfo == NULL)
     {
@@ -2395,49 +2444,62 @@ PVRSRV_ERROR OSAcquirePhysPageAddr(IMG_VOID *pvCPUVAddr,
     memset(psInfo, 0, sizeof(*psInfo));
 
 #if defined(DEBUG)
-    psInfo->ulStartAddr = ulStartAddrOrig;
-    psInfo->ulBeyondEndAddr = ulBeyondEndAddrOrig;
+    psInfo->uStartAddr = uStartAddrOrig;
+    psInfo->uBeyondEndAddr = uBeyondEndAddrOrig;
 #endif
 
-    psInfo->iNumPages = (IMG_INT)(ulAddrRange >> PAGE_SHIFT);
-    psInfo->iPageOffset = (IMG_INT)(ulStartAddrOrig & ~PAGE_MASK);
+    psInfo->iNumPages = (IMG_INT)(uAddrRange >> PAGE_SHIFT);
+    psInfo->iPageOffset = (IMG_INT)(uStartAddrOrig & ~PAGE_MASK);
 
-    
+    /* Allocate physical address array */
     psInfo->psPhysAddr = kmalloc((size_t)psInfo->iNumPages * sizeof(*psInfo->psPhysAddr), GFP_KERNEL);
     if (psInfo->psPhysAddr == NULL)
     {
         PVR_DPF((PVR_DBG_ERROR,
-            "OSAcquirePhysPageAddr: Couldn't allocate page array"));		
+            "OSAcquirePhysPageAddr: Couldn't allocate page array"));
         goto error;
     }
     memset(psInfo->psPhysAddr, 0, (size_t)psInfo->iNumPages * sizeof(*psInfo->psPhysAddr));
 
-    
+    /* Allocate page array */
     psInfo->ppsPages = kmalloc((size_t)psInfo->iNumPages * sizeof(*psInfo->ppsPages),  GFP_KERNEL);
     if (psInfo->ppsPages == NULL)
     {
         PVR_DPF((PVR_DBG_ERROR,
-            "OSAcquirePhysPageAddr: Couldn't allocate page array"));		
+            "OSAcquirePhysPageAddr: Couldn't allocate page array"));
         goto error;
     }
     memset(psInfo->ppsPages, 0, (size_t)psInfo->iNumPages * sizeof(*psInfo->ppsPages));
 
-    
+    /* Default error code from now on */
     eError = PVRSRV_ERROR_BAD_MAPPING;
 
-    
+    /* Set the mapping type to aid clean up */
     psInfo->eType = WRAP_TYPE_GET_USER_PAGES;
 
-    
+     /* Lock down user memory */
     down_read(&current->mm->mmap_sem);
     bMMapSemHeld = IMG_TRUE;
 
-    
-    psInfo->iNumPagesMapped = get_user_pages(current, current->mm, ulStartAddr, psInfo->iNumPages, 1, 0, psInfo->ppsPages, NULL);
+    /* Get page list */
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,6,0))
+    psInfo->iNumPagesMapped = get_user_pages(
+		current, current->mm,
+		uStartAddr, psInfo->iNumPages, 1, 0, psInfo->ppsPages, NULL);
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0))
+    psInfo->iNumPagesMapped = get_user_pages(
+		uStartAddr, psInfo->iNumPages, 1, 0, psInfo->ppsPages, NULL);
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(6,5,0))
+    psInfo->iNumPagesMapped = get_user_pages(
+		uStartAddr, psInfo->iNumPages, 1, psInfo->ppsPages, NULL);
+#else
+    psInfo->iNumPagesMapped = get_user_pages(
+		uStartAddr, psInfo->iNumPages, 1, psInfo->ppsPages);
+#endif
 
     if (psInfo->iNumPagesMapped >= 0)
     {
-        
+        /* See if we got all the pages we wanted */
         if (psInfo->iNumPagesMapped != psInfo->iNumPages)
         {
             PVR_TRACE(("OSAcquirePhysPageAddr: Couldn't map all the pages needed (wanted: %d, got %d)", psInfo->iNumPages, psInfo->iNumPagesMapped));
@@ -2445,18 +2507,18 @@ PVRSRV_ERROR OSAcquirePhysPageAddr(IMG_VOID *pvCPUVAddr,
             goto error;
         }
 
-        
+        /* Build list of physical page addresses */
         for (i = 0; i < psInfo->iNumPages; i++)
         {
             IMG_CPU_PHYADDR CPUPhysAddr;
-	    IMG_UINT32 ulPFN;
+	    IMG_UINT32 ui32PFN;
 
-            ulPFN = page_to_pfn(psInfo->ppsPages[i]);
-            CPUPhysAddr.uiAddr = ulPFN << PAGE_SHIFT;
-	    if ((CPUPhysAddr.uiAddr >> PAGE_SHIFT) != ulPFN)
+            ui32PFN = page_to_pfn(psInfo->ppsPages[i]);
+            CPUPhysAddr.uiAddr = ui32PFN << PAGE_SHIFT;
+	    if ((CPUPhysAddr.uiAddr >> PAGE_SHIFT) != ui32PFN)
 	    {
                 PVR_DPF((PVR_DBG_ERROR,
-		    "OSAcquirePhysPageAddr: Page frame number out of range (%x)", ulPFN));
+		    "OSAcquirePhysPageAddr: Page frame number out of range (%x)", ui32PFN));
 
 		    goto error;
 	    }
@@ -2469,21 +2531,21 @@ PVRSRV_ERROR OSAcquirePhysPageAddr(IMG_VOID *pvCPUVAddr,
     }
 
     PVR_DPF((PVR_DBG_MESSAGE, "OSAcquirePhysPageAddr: get_user_pages failed (%d), using CPU page table", psInfo->iNumPagesMapped));
-    
-    
+
+    /* Reset some fields */
     psInfo->eType = WRAP_TYPE_NULL;
     psInfo->iNumPagesMapped = 0;
     memset(psInfo->ppsPages, 0, (size_t)psInfo->iNumPages * sizeof(*psInfo->ppsPages));
 
-    
-    
+
+    /* Set the mapping type to aid clean up */
     psInfo->eType = WRAP_TYPE_FIND_VMA;
 
-    psVMArea = find_vma(current->mm, ulStartAddrOrig);
+    psVMArea = find_vma(current->mm, uStartAddrOrig);
     if (psVMArea == NULL)
     {
         PVR_DPF((PVR_DBG_ERROR,
-            "OSAcquirePhysPageAddr: Couldn't find memory region containing start address %x", ulStartAddrOrig));
+            "OSAcquirePhysPageAddr: Couldn't find memory region containing start address %x", uStartAddrOrig));
         
         goto error;
     }
@@ -2491,31 +2553,34 @@ PVRSRV_ERROR OSAcquirePhysPageAddr(IMG_VOID *pvCPUVAddr,
     psInfo->psVMArea = psVMArea;
 #endif
 
-    
-    if (ulStartAddrOrig < psVMArea->vm_start)
+    /*
+     * find_vma locates a region with an end point past a given
+     * virtual address.  So check the address is actually in the region.
+     */
+    if (uStartAddrOrig < psVMArea->vm_start)
     {
         PVR_DPF((PVR_DBG_ERROR,
-            "OSAcquirePhysPageAddr: Start address %x is outside of the region returned by find_vma", ulStartAddrOrig));
+            "OSAcquirePhysPageAddr: Start address %x is outside of the region returned by find_vma", uStartAddrOrig));
         goto error;
     }
 
-    
-    if (ulBeyondEndAddrOrig > psVMArea->vm_end)
+    /* Now check the end address is in range */
+    if (uBeyondEndAddrOrig > psVMArea->vm_end)
     {
         PVR_DPF((PVR_DBG_ERROR,
-            "OSAcquirePhysPageAddr: End address %x is outside of the region returned by find_vma", ulBeyondEndAddrOrig));
+            "OSAcquirePhysPageAddr: End address %x is outside of the region returned by find_vma", uBeyondEndAddrOrig));
         goto error;
     }
 
-    
-    if ((psVMArea->vm_flags & (VM_IO | VM_RESERVED)) != (VM_IO | VM_RESERVED))
+    /* Does the region represent memory mapped I/O? */
+    if (!(psVMArea->vm_flags & VM_IO))
     {
         PVR_DPF((PVR_DBG_ERROR,
             "OSAcquirePhysPageAddr: Memory region does not represent memory mapped I/O (VMA flags: 0x%lx)", psVMArea->vm_flags));
         goto error;
     }
 
-    
+    /* We require read and write access */
     if ((psVMArea->vm_flags & (VM_READ | VM_WRITE)) != (VM_READ | VM_WRITE))
     {
         PVR_DPF((PVR_DBG_ERROR,
@@ -2523,14 +2588,14 @@ PVRSRV_ERROR OSAcquirePhysPageAddr(IMG_VOID *pvCPUVAddr,
         goto error;
     }
 
-    for (ulAddr = ulStartAddrOrig, i = 0; ulAddr < ulBeyondEndAddrOrig; ulAddr += PAGE_SIZE, i++)
+    for (uAddr = uStartAddrOrig, i = 0; uAddr < uBeyondEndAddrOrig; uAddr += PAGE_SIZE, i++)
     {
 	IMG_CPU_PHYADDR CPUPhysAddr;
-	IMG_UINT32 ulPFN = 0;
+	IMG_UINT32 ui32PFN = 0;
 
 	PVR_ASSERT(i < psInfo->iNumPages);
 
-	if (!CPUVAddrToPFN(psVMArea, ulAddr, &ulPFN, &psInfo->ppsPages[i]))
+	if (!CPUVAddrToPFN(psVMArea, uAddr, &ui32PFN, &psInfo->ppsPages[i]))
 	{
             PVR_DPF((PVR_DBG_ERROR,
 	       "OSAcquirePhysPageAddr: Invalid CPU virtual address"));
@@ -2545,9 +2610,9 @@ PVRSRV_ERROR OSAcquirePhysPageAddr(IMG_VOID *pvCPUVAddr,
 #if defined(VM_PFNMAP)
 	    if ((psVMArea->vm_flags & VM_PFNMAP) != 0)
 	    {
-	        IMG_UINT32 ulPFNRaw = ((ulAddr - psVMArea->vm_start) >> PAGE_SHIFT) + psVMArea->vm_pgoff;
+	        IMG_UINT32 ulPFNRaw = ((uAddr - psVMArea->vm_start) >> PAGE_SHIFT) + psVMArea->vm_pgoff;
 
-	        if (ulPFNRaw != ulPFN)
+	        if (ulPFNRaw != ui32PFN)
 	        {
 			bPFNMismatch = IMG_TRUE;
 	        }
@@ -2560,11 +2625,11 @@ PVRSRV_ERROR OSAcquirePhysPageAddr(IMG_VOID *pvCPUVAddr,
 
 	    psInfo->iNumPagesMapped++;
 
-	    PVR_ASSERT(ulPFN == page_to_pfn(psInfo->ppsPages[i]));
+	    PVR_ASSERT(ui32PFN == page_to_pfn(psInfo->ppsPages[i]));
 	}
 
-        CPUPhysAddr.uiAddr = ulPFN << PAGE_SHIFT;
-	if ((CPUPhysAddr.uiAddr >> PAGE_SHIFT) != ulPFN)
+        CPUPhysAddr.uiAddr = ui32PFN << PAGE_SHIFT;
+	if ((CPUPhysAddr.uiAddr >> PAGE_SHIFT) != ui32PFN)
 	{
                 PVR_DPF((PVR_DBG_ERROR,
 		    "OSAcquirePhysPageAddr: Page frame number out of range (%x)", ulPFN));

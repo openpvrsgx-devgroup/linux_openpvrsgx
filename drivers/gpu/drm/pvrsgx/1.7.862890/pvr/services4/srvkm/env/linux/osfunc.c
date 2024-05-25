@@ -97,21 +97,21 @@
 #endif 
 
 #if !defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
-PVRSRV_ERROR OSAllocMem_Impl(IMG_UINT32 ui32Flags, IMG_UINT32 ui32Size, IMG_PVOID *ppvCpuVAddr, IMG_HANDLE *phBlockAlloc)
+PVRSRV_ERROR OSAllocMem_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T uiSize, IMG_PVOID *ppvCpuVAddr, IMG_HANDLE *phBlockAlloc)
 #else
-PVRSRV_ERROR OSAllocMem_Impl(IMG_UINT32 ui32Flags, IMG_UINT32 ui32Size, IMG_PVOID *ppvCpuVAddr, IMG_HANDLE *phBlockAlloc, IMG_CHAR *pszFilename, IMG_UINT32 ui32Line)
+PVRSRV_ERROR OSAllocMem_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T uiSize, IMG_PVOID *ppvCpuVAddr, IMG_HANDLE *phBlockAlloc, IMG_CHAR *pszFilename, IMG_UINT32 ui32Line)
 #endif
 {
     PVR_UNREFERENCED_PARAMETER(ui32Flags);
     PVR_UNREFERENCED_PARAMETER(phBlockAlloc);
 
-    if (ui32Size > PAGE_SIZE)
+    if (uiSize > PAGE_SIZE)
     {
         
 #if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
-        *ppvCpuVAddr = _VMallocWrapper(ui32Size, PVRSRV_HAP_CACHED, pszFilename, ui32Line);
+        *ppvCpuVAddr = _VMallocWrapper(uiSize, PVRSRV_HAP_CACHED, pszFilename, ui32Line);
 #else
-        *ppvCpuVAddr = VMallocWrapper(ui32Size, PVRSRV_HAP_CACHED);
+        *ppvCpuVAddr = VMallocWrapper(uiSize, PVRSRV_HAP_CACHED);
 #endif
         if (*ppvCpuVAddr)
         {
@@ -120,9 +120,9 @@ PVRSRV_ERROR OSAllocMem_Impl(IMG_UINT32 ui32Flags, IMG_UINT32 ui32Size, IMG_PVOI
     }
 
 #if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
-    *ppvCpuVAddr = _KMallocWrapper(ui32Size, GFP_KERNEL | __GFP_NOWARN, pszFilename, ui32Line);
+    *ppvCpuVAddr = _KMallocWrapper(uiSize, GFP_KERNEL | __GFP_NOWARN, pszFilename, ui32Line);
 #else
-    *ppvCpuVAddr = KMallocWrapper(ui32Size, GFP_KERNEL | __GFP_NOWARN);
+    *ppvCpuVAddr = KMallocWrapper(uiSize, GFP_KERNEL | __GFP_NOWARN);
 #endif
     if (!*ppvCpuVAddr)
     {
@@ -143,13 +143,13 @@ static inline int is_vmalloc_addr(const void *pvCpuVAddr)
 #endif 
 
 #if !defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
-PVRSRV_ERROR OSFreeMem_Impl(IMG_UINT32 ui32Flags, IMG_UINT32 ui32Size, IMG_PVOID pvCpuVAddr, IMG_HANDLE hBlockAlloc)
+PVRSRV_ERROR OSFreeMem_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T uiSize, IMG_PVOID pvCpuVAddr, IMG_HANDLE hBlockAlloc)
 #else
-PVRSRV_ERROR OSFreeMem_Impl(IMG_UINT32 ui32Flags, IMG_UINT32 ui32Size, IMG_PVOID pvCpuVAddr, IMG_HANDLE hBlockAlloc, IMG_CHAR *pszFilename, IMG_UINT32 ui32Line)
+PVRSRV_ERROR OSFreeMem_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T uiSize, IMG_PVOID pvCpuVAddr, IMG_HANDLE hBlockAlloc, IMG_CHAR *pszFilename, IMG_UINT32 ui32Line)
 #endif
 {	
     PVR_UNREFERENCED_PARAMETER(ui32Flags);
-    PVR_UNREFERENCED_PARAMETER(ui32Size);
+    PVR_UNREFERENCED_PARAMETER(uiSize);
     PVR_UNREFERENCED_PARAMETER(hBlockAlloc);
 
     if (is_vmalloc_addr(pvCpuVAddr))
@@ -1829,11 +1829,39 @@ static void OSTimerCallbackBody(TIMER_CALLBACK_DATA *psTimerCBData)
     mod_timer(&psTimerCBData->sTimer, psTimerCBData->ui32Delay + jiffies);
 }
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0))
+ /*!
+ ******************************************************************************
 
-static IMG_VOID OSTimerCallbackWrapper(IMG_UINT32 ui32Data)
+ @Function      OSTimerCallbackWrapper
+
+ @Description   OS specific timer callback wrapper function
+
+ @Input         psTimer    Timer list structure
+
+*/ /**************************************************************************/
+static void OSTimerCallbackWrapper(struct timer_list *psTimer)
 {
-    TIMER_CALLBACK_DATA	*psTimerCBData = (TIMER_CALLBACK_DATA*)ui32Data;
-    
+	TIMER_CALLBACK_DATA *psTimerCBData = from_timer(psTimerCBData, psTimer, sTimer);
+#else
+/*!
+******************************************************************************
+
+ @Function	OSTimerCallbackWrapper
+
+ @Description 	OS specific timer callback wrapper function
+
+ @Input    ui32Data : timer callback data
+
+ @Return   NONE
+
+******************************************************************************/
+static IMG_VOID OSTimerCallbackWrapper(IMG_UINTPTR_T uiData)
+{
+    TIMER_CALLBACK_DATA	*psTimerCBData = (TIMER_CALLBACK_DATA*)uiData;
+
+#endif
+
 #if defined(PVR_LINUX_TIMERS_USING_WORKQUEUES) || defined(PVR_LINUX_TIMERS_USING_SHARED_WORKQUEUE)
     int res;
 
@@ -2769,11 +2797,11 @@ IMG_VOID *FindMMapBaseVAddr(struct list_head *psMMapOffsetStructList,
 		if(OSGetCurrentProcessIDKM() != psOffsetStruct->ui32PID)
 			continue;
 
-		pvMinVAddr = (IMG_VOID *)psOffsetStruct->ui32UserVAddr;
+		pvMinVAddr = (IMG_VOID *)psOffsetStruct->uiUserVAddr;
 
 		
 		if(pvRangeAddrStart >= pvMinVAddr &&
-		   ui32Length <= psOffsetStruct->ui32RealByteSize)
+		   ui32Length <= psOffsetStruct->uiRealByteSize)
 			return pvMinVAddr;
 	}
 
@@ -2783,34 +2811,35 @@ IMG_VOID *FindMMapBaseVAddr(struct list_head *psMMapOffsetStructList,
 static
 IMG_BOOL CheckExecuteCacheOp(IMG_HANDLE hOSMemHandle,
 							 IMG_VOID *pvRangeAddrStart,
-							 IMG_UINT32 ui32Length,
+							 IMG_SIZE_T uiLength,
 							 InnerCacheOp_t pfnInnerCacheOp,
 							 OuterCacheOp_t pfnOuterCacheOp)
 {
 	LinuxMemArea *psLinuxMemArea = (LinuxMemArea *)hOSMemHandle;
-	IMG_UINT32 ui32AreaLength, ui32AreaOffset = 0;
+	IMG_SIZE_T uiAreaLength;
+        IMG_UINTPTR_T uiAreaOffset = 0;
 	struct list_head *psMMapOffsetStructList;
 	IMG_VOID *pvMinVAddr;
 
 #if defined(CONFIG_OUTER_CACHE)
 	MemAreaToPhys_t pfnMemAreaToPhys = IMG_NULL;
-	IMG_UINT32 ui32PageNumOffset = 0;
+	IMG_UINTPTR_T uiPageNumOffset = 0;
 #endif
 
 	PVR_ASSERT(psLinuxMemArea != IMG_NULL);
 
-	ui32AreaLength = psLinuxMemArea->ui32ByteSize;
+	uiAreaLength = psLinuxMemArea->uiByteSize;
 	psMMapOffsetStructList = &psLinuxMemArea->sMMapOffsetStructList;
 
-	PVR_ASSERT(ui32Length <= ui32AreaLength);
+	PVR_ASSERT(uiLength <= uiAreaLength);
 
 	if(psLinuxMemArea->eAreaType == LINUX_MEM_AREA_SUB_ALLOC)
 	{
-		ui32AreaOffset = psLinuxMemArea->uData.sSubAlloc.ui32ByteOffset;
+		uiAreaOffset = psLinuxMemArea->uData.sSubAlloc.uiByteOffset;
 		psLinuxMemArea = psLinuxMemArea->uData.sSubAlloc.psParentLinuxMemArea;
 	}
 
-	
+	/* Recursion surely isn't possible? */
 	PVR_ASSERT(psLinuxMemArea->eAreaType != LINUX_MEM_AREA_SUB_ALLOC);
 
 	switch(psLinuxMemArea->eAreaType)
@@ -2819,30 +2848,32 @@ IMG_BOOL CheckExecuteCacheOp(IMG_HANDLE hOSMemHandle,
 		{
 			if(is_vmalloc_addr(pvRangeAddrStart))
 			{
-				pvMinVAddr = psLinuxMemArea->uData.sVmalloc.pvVmallocAddress + ui32AreaOffset;
+				pvMinVAddr = psLinuxMemArea->uData.sVmalloc.pvVmallocAddress + uiAreaOffset;
 
-				
+				/* Outside permissible range */
 				if(pvRangeAddrStart < pvMinVAddr)
 					goto err_blocked;
 
-				pfnInnerCacheOp(pvRangeAddrStart, pvRangeAddrStart + ui32Length);
+				pfnInnerCacheOp(pvRangeAddrStart, pvRangeAddrStart + uiLength);
 			}
 			else
 			{
-				
-				
+				/* If this isn't a vmalloc address, assume we're flushing by
+				 * user-virtual. Compute the mmap base vaddr and use this to
+				 * compute the offset in vmalloc space.
+				 */
 
 				pvMinVAddr = FindMMapBaseVAddr(psMMapOffsetStructList,
-											   pvRangeAddrStart, ui32Length);
+											   pvRangeAddrStart, uiLength);
 				if(!pvMinVAddr)
 					goto err_blocked;
 
-				pfnInnerCacheOp(pvRangeAddrStart, pvRangeAddrStart + ui32Length);
+				pfnInnerCacheOp(pvRangeAddrStart, pvRangeAddrStart + uiLength);
 
 #if defined(CONFIG_OUTER_CACHE)
 				
 				pvRangeAddrStart = psLinuxMemArea->uData.sVmalloc.pvVmallocAddress +
-								   (ui32AreaOffset & PAGE_MASK) + (pvRangeAddrStart - pvMinVAddr);
+								   (uiAreaOffset & PAGE_MASK) + (pvRangeAddrStart - pvMinVAddr);
 			}
 
 			pfnMemAreaToPhys = VMallocAreaToPhys;
@@ -2873,14 +2904,14 @@ IMG_BOOL CheckExecuteCacheOp(IMG_HANDLE hOSMemHandle,
 			
 
 			pvMinVAddr = FindMMapBaseVAddr(psMMapOffsetStructList,
-										   pvRangeAddrStart, ui32Length);
+										   pvRangeAddrStart, uiLength);
 			if(!pvMinVAddr)
 				goto err_blocked;
 
-			pfnInnerCacheOp(pvRangeAddrStart, pvRangeAddrStart + ui32Length);
+			pfnInnerCacheOp(pvRangeAddrStart, pvRangeAddrStart + uiLength);
 
 #if defined(CONFIG_OUTER_CACHE)
-			ui32PageNumOffset = ((ui32AreaOffset & PAGE_MASK) + (pvRangeAddrStart - pvMinVAddr)) >> PAGE_SHIFT;
+			uiPageNumOffset = ((uiAreaOffset & PAGE_MASK) + (pvRangeAddrStart - pvMinVAddr)) >> PAGE_SHIFT;
 			pfnMemAreaToPhys = ExternalKVAreaToPhys;
 #endif
 			break;
@@ -2889,14 +2920,14 @@ IMG_BOOL CheckExecuteCacheOp(IMG_HANDLE hOSMemHandle,
 		case LINUX_MEM_AREA_ALLOC_PAGES:
 		{
 			pvMinVAddr = FindMMapBaseVAddr(psMMapOffsetStructList,
-										   pvRangeAddrStart, ui32Length);
+										   pvRangeAddrStart, uiLength);
 			if(!pvMinVAddr)
 				goto err_blocked;
 
-			pfnInnerCacheOp(pvRangeAddrStart, pvRangeAddrStart + ui32Length);
+			pfnInnerCacheOp(pvRangeAddrStart, pvRangeAddrStart + uiLength);
 
 #if defined(CONFIG_OUTER_CACHE)
-			ui32PageNumOffset = ((ui32AreaOffset & PAGE_MASK) + (pvRangeAddrStart - pvMinVAddr)) >> PAGE_SHIFT;
+			uiPageNumOffset = ((uiAreaOffset & PAGE_MASK) + (pvRangeAddrStart - pvMinVAddr)) >> PAGE_SHIFT;
 			pfnMemAreaToPhys = AllocPagesAreaToPhys;
 #endif
 			break;

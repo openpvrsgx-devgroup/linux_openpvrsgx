@@ -61,7 +61,11 @@
 #include <linux/proc_fs.h>
 
 #if defined(SUPPORT_DRI_DRM)
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0))
 #include <drm/drmP.h>
+#else
+#include <drm/drm_file.h>
+#endif
 #if defined(PVR_SECURE_DRM_AUTH_EXPORT)
 #include "env_perproc.h"
 #endif
@@ -103,9 +107,9 @@
 #if defined(SUPPORT_DRI_DRM)
 #include "pvr_drm.h"
 #endif
-#define PVRSRV_MODNAME	"PowerVR"
-#define DRVNAME		PVRSRV_MODNAME
-#define DEVNAME		PVRSRV_MODNAME
+//#define PVRSRV_MODNAME	"PowerVR"
+//#define DRVNAME		PVRSRV_MODNAME
+//#define DEVNAME		PVRSRV_MODNAME
 
 #if defined(SUPPORT_DRI_DRM)
 #define PRIVATE_DATA(pFile) ((pFile)->driver_priv)
@@ -113,7 +117,7 @@
 #define PRIVATE_DATA(pFile) ((pFile)->private_data)
 #endif
 
-MODULE_SUPPORTED_DEVICE(DEVNAME);
+//MODULE_SUPPORTED_DEVICE(DEVNAME);
 
 #if defined(PVRSRV_NEED_PVR_DPF)
 #include <linux/moduleparam.h>

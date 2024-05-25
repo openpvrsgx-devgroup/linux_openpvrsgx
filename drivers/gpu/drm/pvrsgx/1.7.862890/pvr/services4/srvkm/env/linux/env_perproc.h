@@ -28,8 +28,8 @@
 #define __ENV_PERPROC_H__
 
 #include <linux/list.h>
-#include <linux/proc_fs.h>
 
+#include "proc.h"
 #include "services.h"
 #include "handle.h"
 

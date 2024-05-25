@@ -70,7 +70,7 @@
 #endif
 #endif
 
-static inline IMG_UINT32 VMallocToPhys(IMG_VOID *pCpuVAddr)
+static inline IMG_UINTPTR_T VMallocToPhys(IMG_VOID *pCpuVAddr)
 {
 	return (page_to_phys(vmalloc_to_page(pCpuVAddr)) + ADDR_TO_PAGE_OFFSET(pCpuVAddr));
 		
@@ -78,33 +78,43 @@ static inline IMG_UINT32 VMallocToPhys(IMG_VOID *pCpuVAddr)
 
 typedef enum {
     LINUX_MEM_AREA_IOREMAP,
-	LINUX_MEM_AREA_EXTERNAL_KV,
+    LINUX_MEM_AREA_EXTERNAL_KV,
     LINUX_MEM_AREA_IO,
     LINUX_MEM_AREA_VMALLOC,
     LINUX_MEM_AREA_ALLOC_PAGES,
     LINUX_MEM_AREA_SUB_ALLOC,
+#if defined(PVR_LINUX_MEM_AREA_USE_VMAP)
+    LINUX_MEM_AREA_VMAP,
+#endif
+    LINUX_MEM_AREA_CMA,
     LINUX_MEM_AREA_TYPE_COUNT
 }LINUX_MEM_AREA_TYPE;
 
 typedef struct _LinuxMemArea LinuxMemArea;
 
 
+/* FIXME - describe this structure. */
 struct _LinuxMemArea {
     LINUX_MEM_AREA_TYPE eAreaType;
     union _uData
     {
         struct _sIORemap
         {
-            
+            /* Note: The memory this represents is _not_ implicitly
+             * page aligned, neither is its size */
             IMG_CPU_PHYADDR CPUPhysAddr;
             IMG_VOID *pvIORemapCookie;
         }sIORemap;
         struct _sExternalKV
         {
-            
+            /* Note: The memory this represents is _not_ implicitly
+             * page aligned, neither is its size */
 	    IMG_BOOL bPhysContig;
 	    union {
-		    
+		    /*
+		     * SYSPhysAddr is valid if bPhysContig is true, else
+		     * pSysPhysAddr is valid
+		     */
 		    IMG_SYS_PHYADDR SysPhysAddr;
 		    IMG_SYS_PHYADDR *pSysPhysAddr;
 	    } uPhysAddr;
@@ -112,40 +122,58 @@ struct _LinuxMemArea {
         }sExternalKV;
         struct _sIO
         {
-            
+            /* Note: The memory this represents is _not_ implicitly
+             * page aligned, neither is its size */
             IMG_CPU_PHYADDR CPUPhysAddr;
         }sIO;
         struct _sVmalloc
         {
-            
+            /* Note the memory this represents _is_ implicitly
+             * page aligned _and_ so is its size */
             IMG_VOID *pvVmallocAddress;
+#if defined(PVR_LINUX_MEM_AREA_USE_VMAP)
+            struct page **ppsPageList;
+	    IMG_HANDLE hBlockPageList;
+#endif
         }sVmalloc;
         struct _sPageList
         {
-            
+            /* Note the memory this represents _is_ implicitly
+             * page aligned _and_ so is its size */
             struct page **pvPageList;
 	    IMG_HANDLE hBlockPageList;
         }sPageList;
         struct _sSubAlloc
         {
-            
+            /* Note: The memory this represents is _not_ implicitly
+             * page aligned, neither is its size */
             LinuxMemArea *psParentLinuxMemArea;
-            IMG_UINT32 ui32ByteOffset;
+            IMG_UINTPTR_T uiByteOffset;
         }sSubAlloc;
+        struct _sCmaRegion
+        {
+            IMG_VOID *hCookie;
+            dma_addr_t dmaHandle;
+        }sCmaRegion;
     }uData;
 
-    IMG_UINT32 ui32ByteSize;		
+    IMG_SIZE_T uiByteSize;		/* Size of memory area */
 
-    IMG_UINT32 ui32AreaFlags;		
+    IMG_UINT32 ui32AreaFlags;		/* Flags passed at creation time */
 
-    IMG_BOOL bMMapRegistered;		
+    IMG_BOOL bMMapRegistered;		/* Registered with mmap code */
 
-    IMG_BOOL bNeedsCacheInvalidate;	
+    IMG_BOOL bNeedsCacheInvalidate;	/* Cache should be invalidated on first map? */
 
-    
+    IMG_HANDLE hBMHandle;		/* Handle back to BM for this allocation */
+
+    /* List entry for global list of areas registered for mmap */
     struct list_head	sMMapItem;
 
-    
+    /*
+     * Head of list of all mmap offset structures associated with this
+     * memory area.
+     */
     struct list_head	sMMapOffsetStructList;
 };
 
@@ -163,27 +191,27 @@ IMG_VOID LinuxMMCleanup(IMG_VOID);
 
 
 #if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
-#define KMallocWrapper(ui32ByteSize, uFlags) _KMallocWrapper(ui32ByteSize, uFlags, __FILE__, __LINE__)
+#define KMallocWrapper(uByteSize, uFlags) _KMallocWrapper(uByteSize, uFlags, __FILE__, __LINE__, IMG_FALSE)
 #else
-#define KMallocWrapper(ui32ByteSize, uFlags) _KMallocWrapper(ui32ByteSize, uFlags, NULL, 0)
+#define KMallocWrapper(uByteSize, uFlags) _KMallocWrapper(uByteSize, uFlags, NULL, 0, IMG_FALSE)
 #endif
-IMG_VOID *_KMallocWrapper(IMG_UINT32 ui32ByteSize, gfp_t uFlags, IMG_CHAR *szFileName, IMG_UINT32 ui32Line);
+IMG_VOID *_KMallocWrapper(IMG_SIZE_T uiByteSize, gfp_t uFlags, IMG_CHAR *szFileName, IMG_UINT32 ui32Line, IMG_BOOL bSwapAlloc);
 
 
 #if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
-#define KFreeWrapper(pvCpuVAddr) _KFreeWrapper(pvCpuVAddr, __FILE__, __LINE__)
+#define KFreeWrapper(pvCpuVAddr) _KFreeWrapper(pvCpuVAddr, __FILE__, __LINE__, IMG_FALSE)
 #else
-#define KFreeWrapper(pvCpuVAddr) _KFreeWrapper(pvCpuVAddr, NULL, 0)
+#define KFreeWrapper(pvCpuVAddr) _KFreeWrapper(pvCpuVAddr, NULL, 0, IMG_FALSE)
 #endif
-IMG_VOID _KFreeWrapper(IMG_VOID *pvCpuVAddr, IMG_CHAR *pszFileName, IMG_UINT32 ui32Line);
+IMG_VOID _KFreeWrapper(IMG_VOID *pvCpuVAddr, IMG_CHAR *pszFileName, IMG_UINT32 ui32Line, IMG_BOOL bSwapAlloc);
 
 
 #if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
-#define VMallocWrapper(ui32Bytes, ui32AllocFlags) _VMallocWrapper(ui32Bytes, ui32AllocFlags, __FILE__, __LINE__)
+#define VMallocWrapper(uiBytes, ui32AllocFlags) _VMallocWrapper(uiBytes, ui32AllocFlags, __FILE__, __LINE__)
 #else
-#define VMallocWrapper(ui32Bytes, ui32AllocFlags) _VMallocWrapper(ui32Bytes, ui32AllocFlags, NULL, 0)
+#define VMallocWrapper(uiBytes, ui32AllocFlags) _VMallocWrapper(uiBytes, ui32AllocFlags, NULL, 0)
 #endif
-IMG_VOID *_VMallocWrapper(IMG_UINT32 ui32Bytes, IMG_UINT32 ui32AllocFlags, IMG_CHAR *pszFileName, IMG_UINT32 ui32Line);
+IMG_VOID *_VMallocWrapper(IMG_SIZE_T uiBytes, IMG_UINT32 ui32AllocFlags, IMG_CHAR *pszFileName, IMG_UINT32 ui32Line);
 
 
 #if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
@@ -194,32 +222,32 @@ IMG_VOID *_VMallocWrapper(IMG_UINT32 ui32Bytes, IMG_UINT32 ui32AllocFlags, IMG_C
 IMG_VOID _VFreeWrapper(IMG_VOID *pvCpuVAddr, IMG_CHAR *pszFileName, IMG_UINT32 ui32Line);
 
 
-LinuxMemArea *NewVMallocLinuxMemArea(IMG_UINT32 ui32Bytes, IMG_UINT32 ui32AreaFlags);
+LinuxMemArea *NewVMallocLinuxMemArea(IMG_SIZE_T uBytes, IMG_UINT32 ui32AreaFlags);
 
 
 IMG_VOID FreeVMallocLinuxMemArea(LinuxMemArea *psLinuxMemArea);
 
 
 #if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
-#define IORemapWrapper(BasePAddr, ui32Bytes, ui32MappingFlags) \
-    _IORemapWrapper(BasePAddr, ui32Bytes, ui32MappingFlags, __FILE__, __LINE__)
+#define IORemapWrapper(BasePAddr, uiBytes, ui32MappingFlags) \
+    _IORemapWrapper(BasePAddr, uiBytes, ui32MappingFlags, __FILE__, __LINE__)
 #else
-#define IORemapWrapper(BasePAddr, ui32Bytes, ui32MappingFlags) \
-    _IORemapWrapper(BasePAddr, ui32Bytes, ui32MappingFlags, NULL, 0)
+#define IORemapWrapper(BasePAddr, uiBytes, ui32MappingFlags) \
+    _IORemapWrapper(BasePAddr, uiBytes, ui32MappingFlags, NULL, 0)
 #endif
 IMG_VOID *_IORemapWrapper(IMG_CPU_PHYADDR BasePAddr,
-                          IMG_UINT32 ui32Bytes,
+                          IMG_SIZE_T uiBytes,
                           IMG_UINT32 ui32MappingFlags,
                           IMG_CHAR *pszFileName,
                           IMG_UINT32 ui32Line);
 
 
-LinuxMemArea *NewIORemapLinuxMemArea(IMG_CPU_PHYADDR BasePAddr, IMG_UINT32 ui32Bytes, IMG_UINT32 ui32AreaFlags);
+LinuxMemArea *NewIORemapLinuxMemArea(IMG_CPU_PHYADDR BasePAddr, IMG_SIZE_T uiBytes, IMG_UINT32 ui32AreaFlags);
 
 
 IMG_VOID FreeIORemapLinuxMemArea(LinuxMemArea *psLinuxMemArea);
 
-LinuxMemArea *NewExternalKVLinuxMemArea(IMG_SYS_PHYADDR *pBasePAddr, IMG_VOID *pvCPUVAddr, IMG_UINT32 ui32Bytes, IMG_BOOL bPhysContig, IMG_UINT32 ui32AreaFlags);
+LinuxMemArea *NewExternalKVLinuxMemArea(IMG_SYS_PHYADDR *pBasePAddr, IMG_VOID *pvCPUVAddr, IMG_SIZE_T uBytes, IMG_BOOL bPhysContig, IMG_UINT32 ui32AreaFlags);
 
 
 IMG_VOID FreeExternalKVLinuxMemArea(LinuxMemArea *psLinuxMemArea);
@@ -267,21 +295,21 @@ IMG_VOID _KMemCacheFreeWrapper(LinuxKMemCache *psCache, IMG_VOID *pvObject, IMG_
 const IMG_CHAR *KMemCacheNameWrapper(LinuxKMemCache *psCache);
 
 
-LinuxMemArea *NewIOLinuxMemArea(IMG_CPU_PHYADDR BasePAddr, IMG_UINT32 ui32Bytes, IMG_UINT32 ui32AreaFlags);
+LinuxMemArea *NewIOLinuxMemArea(IMG_CPU_PHYADDR BasePAddr, IMG_SIZE_T uiBytes, IMG_UINT32 ui32AreaFlags);
 
 
 IMG_VOID FreeIOLinuxMemArea(LinuxMemArea *psLinuxMemArea);
 
 
-LinuxMemArea *NewAllocPagesLinuxMemArea(IMG_UINT32 ui32Bytes, IMG_UINT32 ui32AreaFlags);
+LinuxMemArea *NewAllocPagesLinuxMemArea(IMG_SIZE_T uiBytes, IMG_UINT32 ui32AreaFlags);
 
 
 IMG_VOID FreeAllocPagesLinuxMemArea(LinuxMemArea *psLinuxMemArea);
 
 
 LinuxMemArea *NewSubLinuxMemArea(LinuxMemArea *psParentLinuxMemArea,
-                                 IMG_UINT32 ui32ByteOffset,
-                                 IMG_UINT32 ui32Bytes);
+                                 IMG_UINTPTR_T uByteOffset,
+                                 IMG_SIZE_T uBytes);
 
 
 IMG_VOID LinuxMemAreaDeepFree(LinuxMemArea *psLinuxMemArea);
@@ -297,10 +325,10 @@ IMG_VOID LinuxMemAreaRegister(LinuxMemArea *psLinuxMemArea);
 IMG_VOID *LinuxMemAreaToCpuVAddr(LinuxMemArea *psLinuxMemArea);
 
 
-IMG_CPU_PHYADDR LinuxMemAreaToCpuPAddr(LinuxMemArea *psLinuxMemArea, IMG_UINT32 ui32ByteOffset);
+IMG_CPU_PHYADDR LinuxMemAreaToCpuPAddr(LinuxMemArea *psLinuxMemArea, IMG_UINTPTR_T uByteOffset);
 
 
-#define	 LinuxMemAreaToCpuPFN(psLinuxMemArea, ui32ByteOffset) PHYS_TO_PFN(LinuxMemAreaToCpuPAddr(psLinuxMemArea, ui32ByteOffset).uiAddr)
+#define	 LinuxMemAreaToCpuPFN(psLinuxMemArea, uByteOffset) PHYS_TO_PFN(LinuxMemAreaToCpuPAddr(psLinuxMemArea, uByteOffset).uiAddr)
 
 IMG_BOOL LinuxMemAreaPhysIsContig(LinuxMemArea *psLinuxMemArea);
 

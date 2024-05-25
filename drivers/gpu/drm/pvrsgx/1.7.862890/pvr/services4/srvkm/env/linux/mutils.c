@@ -77,20 +77,32 @@ pvr_pat_entry(u64 pat, IMG_UINT index)
 static IMG_VOID
 PVRLinuxX86PATProbe(IMG_VOID)
 {
-	
-	if (cpu_has_pat)	 
+        /*
+	 * cpu_has_pat indicates whether PAT support is available on the CPU,
+	 * but doesn't indicate if it has been enabled.
+	 */
+	if (boot_cpu_has(X86_FEATURE_PAT))/* PRQA S 3335 */ /* ignore 'no function declared' */
 	{
 		u64 pat;
 		IMG_UINT pat_index;
 		IMG_UINT pat_entry;
 
 		PVR_TRACE(("%s: PAT available", __FUNCTION__));
-		
+		/*
+		 * There is no Linux API for finding out if write combining
+		 * is avaialable through the PAT, so we take the direct
+		 * approach, and see if the PAT MSR contains a write combining
+		 * entry.
+		 */
 		rdmsrl(MSR_IA32_CR_PAT, pat);
 		PVR_TRACE(("%s: Top 32 bits of PAT: 0x%.8x", __FUNCTION__, (IMG_UINT)(pat >> 32)));
 		PVR_TRACE(("%s: Bottom 32 bits of PAT: 0x%.8x", __FUNCTION__, (IMG_UINT)(pat)));
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0))
+                pat_index = pvr_pat_index(_PAGE_CACHE_MODE_WC);
+#else
 		pat_index = pvr_pat_index(_PAGE_CACHE_WC);
+#endif
 		PVR_TRACE(("%s: PAT index for write combining: %u", __FUNCTION__, pat_index));
 
 		pat_entry = pvr_pat_entry(pat, pat_index);
@@ -119,12 +131,23 @@ PVRLinuxX86PATProbe(IMG_VOID)
 pgprot_t
 pvr_pgprot_writecombine(pgprot_t prot)
 {
-    
-     
+    /*
+     * It would be worth checking from time to time to see if a
+     * pgprot_writecombine function (or similar) is introduced on Linux for
+     * x86 processors.  If so, this function, and PVRLinuxX86PATProbe can be
+     * removed, and a macro used to select between pgprot_writecombine and
+     * pgprot_noncached, dpending on the value for of
+     * SUPPORT_LINUX_X86_WRITECOMBINE.
+     */
+    /* PRQA S 0481,0482 2 */ /* scalar expressions */
     return (g_write_combining_available) ?
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0))
+		__pgprot((pgprot_val(prot) & ~_PAGE_CACHE_MASK) | _PAGE_CACHE_MODE_WC) : pgprot_noncached(prot);
+#else
 		__pgprot((pgprot_val(prot) & ~_PAGE_CACHE_MASK) | _PAGE_CACHE_WC) : pgprot_noncached(prot);
+#endif
 }
-#endif	
+#endif	/* defined(SUPPORT_LINUX_X86_PAT) */
 
 IMG_VOID
 PVRLinuxMUtilsInit(IMG_VOID)

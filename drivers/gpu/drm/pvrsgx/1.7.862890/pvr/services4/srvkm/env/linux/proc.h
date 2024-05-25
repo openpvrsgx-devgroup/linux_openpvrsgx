@@ -74,7 +74,7 @@ IMG_VOID RemovePerProcessProcEntry(const IMG_CHAR * name);
 
 IMG_VOID RemoveProcEntries(IMG_VOID);
 
-struct proc_dir_entry* CreateProcReadEntrySeq (
+struct pvr_proc_dir_entry* CreateProcReadEntrySeq (
 								const IMG_CHAR* name, 
 								IMG_VOID* data,
 								pvr_next_proc_seq_t next_handler, 
@@ -83,7 +83,7 @@ struct proc_dir_entry* CreateProcReadEntrySeq (
 								pvr_startstop_proc_seq_t startstop_handler
 							   );
 
-struct proc_dir_entry* CreateProcEntrySeq (
+struct pvr_proc_dir_entry* CreateProcEntrySeq (
 								const IMG_CHAR* name, 
 								IMG_VOID* data,
 								pvr_next_proc_seq_t next_handler, 
@@ -93,7 +93,7 @@ struct proc_dir_entry* CreateProcEntrySeq (
 								pvr_proc_write_t whandler
 							   );
 
-struct proc_dir_entry* CreatePerProcessProcEntrySeq (
+struct pvr_proc_dir_entry* CreatePerProcessProcEntrySeq (
 								const IMG_CHAR* name, 
 								IMG_VOID* data,
 								pvr_next_proc_seq_t next_handler, 
@@ -104,7 +104,7 @@ struct proc_dir_entry* CreatePerProcessProcEntrySeq (
 							   );
 
 
-IMG_VOID RemoveProcEntrySeq(struct proc_dir_entry* proc_entry);
-IMG_VOID RemovePerProcessProcEntrySeq(struct proc_dir_entry* proc_entry);
+IMG_VOID RemoveProcEntrySeq(struct pvr_proc_dir_entry* proc_entry);
+IMG_VOID RemovePerProcessProcEntrySeq(struct pvr_proc_dir_entry* proc_entry);
 
 #endif

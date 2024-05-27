@@ -54,6 +54,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 #include <asm/cacheflush.h>
 #include <linux/mm.h>
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,8,0))
+#else
+#define mmap_sem mmap_lock	// has been renamed by v5.8-rc1
+#endif
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,10,0))
+#else
+#include <linux/dma-map-ops.h>
+#endif
 #include <linux/pagemap.h>
 #include <linux/hugetlb.h> 
 #include <linux/slab.h>
@@ -105,7 +113,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define ON_EACH_CPU(func, info, wait) on_each_cpu(func, info, 0, wait)
 #endif
 
-#if defined(PVR_LINUX_USING_WORKQUEUES) && !defined(CONFIG_PREEMPT)
+#if defined(PVR_LINUX_USING_WORKQUEUES) && !defined(CONFIG_PREEMPT) && !defined(CONFIG_PREEMPT_VOLUNTARY)
 /* 
  * Services spins at certain points waiting for events (e.g. swap
  * chain destrucion).  If those events rely on workqueues running,
@@ -562,10 +570,28 @@ IMG_VOID OSBreakResourceLock (PVRSRV_RESOURCE *psResource, IMG_UINT32 ui32ID)
 ******************************************************************************/
 PVRSRV_ERROR OSCreateResource(PVRSRV_RESOURCE *psResource)
 {
+#if !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__)
+	PVRSRV_ERROR eError = PVRSRV_OK;
+#endif
+
     psResource->ui32ID = 0;
     psResource->ui32Lock = 0;
+#if !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__)
+	psResource->pOSSyncPrimitive = IMG_NULL;
 
-    return PVRSRV_OK;
+	eError = OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP, sizeof(spinlock_t), (IMG_VOID**)&psResource->pOSSyncPrimitive, IMG_NULL,
+		"Resource Spinlock");
+
+	if (eError != PVRSRV_OK)
+	{
+		PVR_DPF((PVR_DBG_ERROR,"OSCreateResource: Spinlock could not be alloc'd"));
+		return eError;
+	}
+
+	spin_lock_init((spinlock_t*)psResource->pOSSyncPrimitive);
+#endif /* !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__) */
+
+	return PVRSRV_OK;
 }
 
 
@@ -583,6 +609,13 @@ PVRSRV_ERROR OSCreateResource(PVRSRV_RESOURCE *psResource)
 ******************************************************************************/
 PVRSRV_ERROR OSDestroyResource (PVRSRV_RESOURCE *psResource)
 {
+#if !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__)
+	if (psResource->pOSSyncPrimitive)
+	{
+		OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, sizeof(spinlock_t), (IMG_VOID*)psResource->pOSSyncPrimitive, IMG_NULL);
+	}
+#endif /* !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__) */
+
     OSBreakResourceLock (psResource, psResource->ui32ID);
 
     return PVRSRV_OK;
@@ -1548,6 +1581,81 @@ PVRSRV_ERROR OSUnlockResource (PVRSRV_RESOURCE *psResource, IMG_UINT32 ui32ID)
     
     return eError;
 }
+
+
+#if !defined(PVR_LINUX_USING_WORKQUEUES)
+/*!
+******************************************************************************
+
+ @Function OSLockResourceAndBlockMISR
+
+ @Description locks an OS dependant Resource and blocks MISR interrupts
+
+ @Input phResource - pointer to OS dependent Resource
+ @Input bBlock - do we want to block?
+
+ @Return error status
+
+******************************************************************************/
+PVRSRV_ERROR OSLockResourceAndBlockMISR ( PVRSRV_RESOURCE 	*psResource,
+								IMG_UINT32 			ui32ID)
+
+{
+	PVRSRV_ERROR eError = PVRSRV_OK;
+
+	spin_lock_bh(psResource->pOSSyncPrimitive);
+
+	if(!OS_TAS(&psResource->ui32Lock))
+		psResource->ui32ID = ui32ID;
+	else
+		eError = PVRSRV_ERROR_UNABLE_TO_LOCK_RESOURCE;
+
+	return eError;
+}
+
+
+/*!
+******************************************************************************
+
+ @Function OSUnlockResourceAndUnblockMISR
+
+ @Description unlocks an OS dependant resource and unblocks MISR interrupts
+
+ @Input phResource - pointer to OS dependent resource structure
+
+ @Return
+
+******************************************************************************/
+PVRSRV_ERROR OSUnlockResourceAndUnblockMISR (PVRSRV_RESOURCE *psResource, IMG_UINT32 ui32ID)
+{
+	volatile IMG_UINT32 *pui32Access = (volatile IMG_UINT32 *)&psResource->ui32Lock;
+	PVRSRV_ERROR eError = PVRSRV_OK;
+
+	if(*pui32Access)
+	{
+		if(psResource->ui32ID == ui32ID)
+		{
+			psResource->ui32ID = 0;
+			smp_mb();
+			*pui32Access = 0;
+			spin_unlock_bh(psResource->pOSSyncPrimitive);
+		}
+		else
+		{
+			PVR_DPF((PVR_DBG_ERROR,"OSUnlockResourceAndUnblockMISR: Resource %p is not locked with expected value.", psResource));
+			PVR_DPF((PVR_DBG_MESSAGE,"Should be %x is actually %x", ui32ID, psResource->ui32ID));
+			eError = PVRSRV_ERROR_INVALID_LOCK_ID;
+		}
+	}
+	else
+	{
+		PVR_DPF((PVR_DBG_ERROR,"OSUnlockResourceAndUnblockMISR: Resource %p is not locked", psResource));
+		eError = PVRSRV_ERROR_RESOURCE_NOT_LOCKED;
+	}
+
+	return eError;
+}
+#endif
 
 
 /*!
@@ -2684,10 +2792,16 @@ static void OSTimerCallbackBody(TIMER_CALLBACK_DATA *psTimerCBData)
  @Return   NONE
 
 ******************************************************************************/
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,15,0))
+static IMG_VOID OSTimerCallbackWrapper(struct timer_list *t)
+{
+    TIMER_CALLBACK_DATA	*psTimerCBData = from_timer(psTimerCBData, t, sTimer);
+#else
 static IMG_VOID OSTimerCallbackWrapper(IMG_UINTPTR_T uiData)
 {
     TIMER_CALLBACK_DATA	*psTimerCBData = (TIMER_CALLBACK_DATA*)uiData;
-    
+#endif
+   
 #if defined(PVR_LINUX_TIMERS_USING_WORKQUEUES) || defined(PVR_LINUX_TIMERS_USING_SHARED_WORKQUEUE)
     int res;
 
@@ -2787,12 +2901,16 @@ IMG_HANDLE OSAddTimer(PFN_TIMER_FUNC pfnTimerFunc, IMG_VOID *pvData, IMG_UINT32 
                                 ?	1
                                 :	((HZ * ui32MsTimeout) / 1000);
     /* initialise object */
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,15,0))
+    timer_setup(&psTimerCBData->sTimer, OSTimerCallbackWrapper, 0);
+#else
     init_timer(&psTimerCBData->sTimer);
-    
     /* setup timer object */
     /* PRQA S 0307,0563 1 */ /* ignore warning about inconpartible ptr casting */
     psTimerCBData->sTimer.function = (IMG_VOID *)OSTimerCallbackWrapper;
     psTimerCBData->sTimer.data = (IMG_UINTPTR_T)psTimerCBData;
+#endif
     
     return (IMG_HANDLE)(ui + 1);
 }
@@ -2859,12 +2977,7 @@ PVRSRV_ERROR OSEnableTimer (IMG_HANDLE hTimer)
     /* Start timer arming */
     psTimerCBData->bActive = IMG_TRUE;
 
-    /* set the expire time */
-    psTimerCBData->sTimer.expires = psTimerCBData->ui32Delay + jiffies;
-
-    /* Add the timer to the list */
-    add_timer(&psTimerCBData->sTimer);
-    
+    mod_timer(&psTimerCBData->sTimer, psTimerCBData->ui32Delay + jiffies);
     return PVRSRV_OK;
 }
 
@@ -3254,6 +3367,9 @@ PVRSRV_ERROR OSCopyFromUser( IMG_PVOID pvProcess,
 ******************************************************************************/
 IMG_BOOL OSAccessOK(IMG_VERIFY_TEST eVerification, IMG_VOID *pvUserPtr, IMG_SIZE_T uiBytes)
 {
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,0,0))
+	return access_ok(pvUserPtr, uiBytes);
+#else
     IMG_INT linuxType;
 
     if (eVerification == PVR_VERIFY_READ)
@@ -3267,6 +3383,7 @@ IMG_BOOL OSAccessOK(IMG_VERIFY_TEST eVerification, IMG_VOID *pvUserPtr, IMG_SIZE
     }
 
     return access_ok(linuxType, pvUserPtr, uiBytes);
+#endif
 }
 
 typedef enum _eWrapMemType_
@@ -3318,6 +3435,9 @@ static IMG_BOOL CPUVAddrToPFN(struct vm_area_struct *psVMArea, IMG_UINTPTR_T uCP
 {
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,10))
     pgd_t *psPGD;
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4,12,0))
+    p4d_t *psP4D;
+#endif
     pud_t *psPUD;
     pmd_t *psPMD;
     pte_t *psPTE;
@@ -3332,7 +3452,14 @@ static IMG_BOOL CPUVAddrToPFN(struct vm_area_struct *psVMArea, IMG_UINTPTR_T uCP
     if (pgd_none(*psPGD) || pgd_bad(*psPGD))
         return bRet;
 
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4,12,0))
+    psP4D = p4d_offset(psPGD, uCPUVAddr);
+    if (p4d_none(*psP4D))
+        return bRet;
+    psPUD = pud_offset(psP4D, uCPUVAddr);
+#else
     psPUD = pud_offset(psPGD, uCPUVAddr);
+#endif
     if (pud_none(*psPUD) || pud_bad(*psPUD))
         return bRet;
 
@@ -3418,7 +3545,7 @@ PVRSRV_ERROR OSReleasePhysPageAddr(IMG_HANDLE hOSWrapMem)
                         SetPageDirty(psPage);
                     }
 	        }
-                page_cache_release(psPage);
+                put_page(psPage);
 	    }
             break;
         }
@@ -3600,8 +3727,13 @@ PVRSRV_ERROR OSAcquirePhysPageAddr(IMG_VOID *pvCPUVAddr,
     bMMapSemHeld = IMG_TRUE;
 
     /* Get page list */
-    psInfo->iNumPagesMapped = get_user_pages(current, current->mm, uStartAddr, psInfo->iNumPages, 1, 0, psInfo->ppsPages, NULL);
-
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,9,0))
+    psInfo->iNumPagesMapped = get_user_pages_remote(current->mm, uStartAddr, psInfo->iNumPages, FOLL_WRITE, psInfo->ppsPages, NULL, NULL);
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0))
+    psInfo->iNumPagesMapped = get_user_pages_remote(current, current->mm, uStartAddr, psInfo->iNumPages, FOLL_WRITE, psInfo->ppsPages, NULL, NULL);
+#else
+    psInfo->iNumPagesMapped = get_user_pages_remote(current, current->mm, uStartAddr, psInfo->iNumPages, FOLL_WRITE, psInfo->ppsPages, NULL);
+#endif
     if (psInfo->iNumPagesMapped >= 0)
     {
         /* See if we got all the pages we wanted */
@@ -4416,8 +4548,12 @@ static inline size_t pvr_dma_range_len(const void *pvStart, const void *pvEnd)
 static void pvr_dma_cache_wback_inv(const void *pvStart, const void *pvEnd)
 {
 	size_t uLength = pvr_dma_range_len(pvStart, pvEnd);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)
-	dma_cache_sync(NULL, (void *)pvStart, uLength, DMA_BIDIRECTIONAL);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,5,0)
+	struct device *dev = PVRLDMGetDevice();
+	dma_sync_single_for_device(dev, (dma_addr_t)pvStart, uLength, DMA_BIDIRECTIONAL);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)
+	struct device *dev = PVRLDMGetDevice();
+	dma_cache_sync(dev, (void *)pvStart, uLength, DMA_BIDIRECTIONAL);
 #else
 	dma_cache_wback_inv((unsigned long)pvStart, uLength);
 #endif
@@ -4426,8 +4562,12 @@ static void pvr_dma_cache_wback_inv(const void *pvStart, const void *pvEnd)
 static void pvr_dma_cache_wback(const void *pvStart, const void *pvEnd)
 {
 	size_t uLength = pvr_dma_range_len(pvStart, pvEnd);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)
-	dma_cache_sync(NULL, (void *)pvStart, uLength, DMA_TO_DEVICE);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,5,0)
+	struct device *dev = PVRLDMGetDevice();
+	dma_sync_single_for_device(dev, (dma_addr_t)pvStart, uLength, DMA_TO_DEVICE);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)
+	struct device *dev = PVRLDMGetDevice();
+	dma_cache_sync(dev, (void *)pvStart, uLength, DMA_TO_DEVICE);
 #else
 	dma_cache_wback((unsigned long)pvStart, uLength);
 #endif
@@ -4436,8 +4576,12 @@ static void pvr_dma_cache_wback(const void *pvStart, const void *pvEnd)
 static void pvr_dma_cache_inv(const void *pvStart, const void *pvEnd)
 {
 	size_t uLength = pvr_dma_range_len(pvStart, pvEnd);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)
-	dma_cache_sync(NULL, (void *)pvStart, uLength, DMA_FROM_DEVICE);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,5,0)
+	struct device *dev = PVRLDMGetDevice();
+	dma_sync_single_for_device(dev, (dma_addr_t)pvStart, uLength, DMA_FROM_DEVICE);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)
+	struct device *dev = PVRLDMGetDevice();
+	dma_cache_sync(dev, (void *)pvStart, uLength, DMA_FROM_DEVICE);
 #else
 	dma_cache_inv((unsigned long)pvStart, uLength);
 #endif

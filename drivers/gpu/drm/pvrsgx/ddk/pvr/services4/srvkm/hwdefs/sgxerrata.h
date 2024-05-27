@@ -57,14 +57,38 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 	#if SGX_CORE_REV == 111
 	#else
+	#if SGX_CORE_REV == 112
+	#else
 	#if SGX_CORE_REV == SGX_CORE_REV_HEAD
 		/* RTL head - no BRNs to apply */
 	#else
 		#error "sgxerrata.h: SGX520 Core Revision unspecified"
 	#endif
 	#endif
+	#endif
 	/* signal that the Core Version has a valid definition */
 	#define SGX_CORE_DEFINED
+#endif
+
+#if defined(SGX5300) && !defined(SGX_CORE_DEFINED)
+	/* define the _current_ SGX5300 RTL head revision */
+	#define SGX_CORE_REV_HEAD	0
+	#if defined(USE_SGX_CORE_REV_HEAD)
+		/* build config selects Core Revision to be the Head */
+		#define SGX_CORE_REV	SGX_CORE_REV_HEAD
+	#endif
+
+	#if SGX_CORE_REV == 112
+	#else
+	#if SGX_CORE_REV == SGX_CORE_REV_HEAD
+		/* RTL head - no BRNs to apply */
+	#else
+		#error "sgxerrata.h: SGX5300 Core Revision unspecified"
+	#endif
+	#endif
+	/* signal that the Core Version has a valid definition */
+	#define SGX_CORE_DEFINED
+
 #endif
 
 #if defined(SGX530) && !defined(SGX_CORE_DEFINED)

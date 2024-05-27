@@ -228,7 +228,9 @@ _CLANG	:= \
 ifeq ($(_CLANG),true)
 _CC		:= $(_CC) -target $(patsubst %-,%,$(CROSS_COMPILE))
 else
+ifeq (,$(findstring $(CROSS_COMPILE), $(_CC)))
 _CC		:= $(CROSS_COMPILE)$(_CC)
+endif
 endif
 HOST_CC	?= gcc
 
@@ -360,7 +362,7 @@ $$(warning *** Setting $(1) via $$(origin $(1)) is deprecated)
 $$(error If you are trying to disable a component, use e.g. EXCLUDED_APIS="opengles1 opengl")
 endif
 endef
-$(foreach _o,SYS_CFLAGS SYS_CXXFLAGS SYS_INCLUDES SYS_EXE_LDFLAGS SYS_LIB_LDFLAGS SYS_EXE_LDFLAGS_CXX SYS_LIB_LDFLAGS_CXX SUPPORT_EWS SUPPORT_OPENGLES1 SUPPORT_OPENGLES2 SUPPORT_OPENCL SUPPORT_RSCOMPUTE SUPPORT_OPENGL SUPPORT_UNITTESTS SUPPORT_XORG,$(eval $(call sanity-check-support-option-origin,$(_o))))
+$(foreach _o,SYS_CFLAGS SYS_CXXFLAGS SYS_INCLUDES SYS_COMMON_LDFLAGS SYS_EXE_LDFLAGS SYS_LIB_LDFLAGS SYS_EXE_LDFLAGS_CXX SYS_LIB_LDFLAGS_CXX SUPPORT_EWS SUPPORT_OPENGLES1 SUPPORT_OPENGLES2 SUPPORT_OPENCL SUPPORT_RSCOMPUTE SUPPORT_OPENGL SUPPORT_UNITTESTS SUPPORT_XORG,$(eval $(call sanity-check-support-option-origin,$(_o))))
 
 # Check for words in EXCLUDED_APIS that aren't understood by the
 # common/apis/*.mk files. This should be kept in sync with all the tests on
@@ -437,8 +439,10 @@ VMLINUX_IS_64BIT := $(shell file $(VMLINUX) | grep 64-bit >/dev/null || echo fal
 VMLINUX_HAS_PAE36 := $(shell cat $(LINUXCFG) | grep CONFIG_X86_PAE=y >/dev/null || echo false)
 VMLINUX_HAS_PAE40 := $(shell cat $(LINUXCFG) | grep CONFIG_ARM_LPAE=y >/dev/null || echo false)
 VMLINUX_HAS_DMA32 := $(shell cat $(LINUXCFG) | grep CONFIG_ZONE_DMA32=y >/dev/null || echo false)
+VMLINUX_HAS_DMA := $(shell cat $(LINUXCFG) | grep CONFIG_ZONE_DMA=y >/dev/null || echo false)
 
-# $(error 64BIT=$(VMLINUX_IS_64BIT) PAE36=$(VMLINUX_HAS_PAE36) PAE40=$(VMLINUX_HAS_PAE40) DMA32=$(VMLINUX_HAS_DMA32) MMU36=$(SGX_FEATURE_36BIT_MMU))
+
+# $(error 64BIT=$(VMLINUX_IS_64BIT) PAE36=$(VMLINUX_HAS_PAE36) PAE40=$(VMLINUX_HAS_PAE40) DMA=$(VMLINUX_HAS_DMA) DMA32=$(VMLINUX_HAS_DMA32) MMU36=$(SGX_FEATURE_36BIT_MMU))
 
 ifneq ($(VMLINUX_IS_64BIT),false)
 $(warning $$(KERNELDIR)/vmlinux: Note: vmlinux is 64-bit, which is supported but currently experimental.)
@@ -449,8 +453,8 @@ endif
 endif
 
 ifneq ($(VMLINUX_HAS_PAE40),false)
-ifeq ($(VMLINUX_HAS_DMA32),false)
-$(warning SGX MMUs are currently supported up to only 36 bits max. Your Kernel is built with 40-bit PAE but does not have CONFIG_ZONE_DMA32.)
+ifeq ($(VMLINUX_HAS_DMA),false)
+$(warning SGX MMUs are currently supported up to only 36 bits max. Your Kernel is built with 40-bit PAE but does not have CONFIG_ZONE_DMA.)
 $(warning This means you must ensure the runtime system has <= 4GB of RAM, or there will be BIG problems...)
 endif 
 endif
@@ -465,8 +469,8 @@ endif
 else
  # Kernel is 32-bit
 ifneq ($(VMLINUX_HAS_PAE36),false)
-ifeq ($(VMLINUX_HAS_DMA32),false)
-$(warning SGX is configured with 32-bit MMU. Your Kernel is 32-bit PAE, but does not have CONFIG_ZONE_DMA32. )
+ifeq ($(VMLINUX_HAS_DMA),false)
+$(warning SGX is configured with 32-bit MMU. Your Kernel is 32-bit PAE, but does not have CONFIG_ZONE_DMA. )
 $(warning This means you must ensure the runtime system has <= 4GB of RAM, or there will be BIG problems...)
 endif
 endif
@@ -500,7 +504,9 @@ $(eval $(call BothConfigC,PVR_SECURE_HANDLES,))
 # on SPM platforms the LISR and MISR can run at the same time and
 # thus during powerdown we need to drain all pending LISRs before
 # proceeding to do the actual powerdown
+ifneq ($(SUPPORT_LISR_MISR_SYNC),)
 $(eval $(call KernelConfigC,SUPPORT_LISR_MISR_SYNC))
+endif
 
 ifneq ($(DISPLAY_CONTROLLER),)
 $(eval $(call BothConfigC,DISPLAY_CONTROLLER,$(DISPLAY_CONTROLLER)))
@@ -578,6 +584,7 @@ $(eval $(call TunableBothConfigC,PVRSRV_NEED_PVR_ASSERT,))
 $(eval $(call TunableBothConfigC,PVRSRV_NEED_PVR_TRACE,))
 $(eval $(call TunableBothConfigC,SUPPORT_SECURE_33657_FIX,))
 $(eval $(call TunableBothConfigC,SUPPORT_ION,))
+$(eval $(call TunableBothConfigC,SUPPORT_DMABUF,))
 $(eval $(call TunableBothConfigC,SUPPORT_HWRECOVERY_TRACE_LIMIT,))
 $(eval $(call TunableBothConfigC,SUPPORT_PVRSRV_DEVICE_CLASS,))
 $(eval $(call TunableBothConfigC,SUPPORT_PVRSRV_GET_DC_SYSTEM_BUFFER,1))
@@ -592,13 +599,13 @@ $(eval $(call TunableKernelConfigC,SUPPORT_LINUX_X86_PAT,1))
 $(eval $(call TunableKernelConfigC,SGX_DYNAMIC_TIMING_INFO,))
 $(eval $(call TunableKernelConfigC,SYS_SGX_ACTIVE_POWER_LATENCY_MS,))
 $(eval $(call TunableKernelConfigC,SYS_CUSTOM_POWERLOCK_WRAP,))
-$(eval $(call TunableKernelConfigC,SYS_SUPPORTS_SGX_IDLE_CALLBACK,))
 $(eval $(call TunableKernelConfigC,PVR_LINUX_USING_WORKQUEUES,))
 $(eval $(call TunableKernelConfigC,PVR_LINUX_MISR_USING_WORKQUEUE,))
 $(eval $(call TunableKernelConfigC,PVR_LINUX_MISR_USING_PRIVATE_WORKQUEUE,))
 $(eval $(call TunableKernelConfigC,PVR_LINUX_TIMERS_USING_WORKQUEUES,))
 $(eval $(call TunableKernelConfigC,PVR_LINUX_TIMERS_USING_SHARED_WORKQUEUE,))
 $(eval $(call TunableKernelConfigC,LDM_PLATFORM,))
+$(eval $(call TunableKernelConfigC,PVR_LDM_DEVICE_TREE,))
 $(eval $(call TunableKernelConfigC,PVR_LDM_PLATFORM_PRE_REGISTERED,))
 $(eval $(call TunableKernelConfigC,PVR_LDM_PLATFORM_PRE_REGISTERED_DEV,))
 $(eval $(call TunableKernelConfigC,PVR_LDM_DRIVER_REGISTRATION_NAME,"\"$(PVRSRV_MODNAME)\""))
@@ -620,6 +627,7 @@ $(eval $(call TunableKernelConfigC,SUPPORT_FORCE_SYNC_DUMP,))
 
 $(eval $(call TunableBothConfigMake,OPTIM,))
 $(eval $(call TunableBothConfigMake,SUPPORT_ION,))
+$(eval $(call TunableBothConfigMake,SUPPORT_DMABUF,))
 $(eval $(call TunableBothConfigMake,SUPPORT_PVRSRV_DEVICE_CLASS,))
 
 

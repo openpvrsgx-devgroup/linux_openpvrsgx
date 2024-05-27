@@ -649,6 +649,12 @@ IMG_VOID SGXReset(PVRSRV_SGXDEV_INFO	*psDevInfo,
 	PDUMPREGWITHFLAGS(SGX_PDUMPREG_NAME, EUR_CR_BIF_TWOD_REQ_BASE, SGX_2D_HEAP_BASE, ui32PDUMPFlags);
 #endif
 
+#if defined(SGX_FEATURE_ADDRESS_SPACE_EXTENSION)
+	/*TODO: Set up USEC requestor base, here its set to ZERO (hard-coded) */
+	OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_BIF_USEC_REQ_BASE, 0);
+	PDUMPREGWITHFLAGS(SGX_PDUMPREG_NAME, EUR_CR_BIF_USEC_REQ_BASE, 0, ui32PDUMPFlags);
+#endif
+
 	/* Invalidate BIF Directory cache. */
 	SGXResetInvalDC(psDevInfo, ui32PDUMPFlags, IMG_TRUE);
 

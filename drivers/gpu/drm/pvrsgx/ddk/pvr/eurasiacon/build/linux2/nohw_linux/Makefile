@@ -54,7 +54,9 @@ PDUMP ?= 1
 NO_HARDWARE := 1
 
 ifneq ($(SGXCORE),520)
+ifneq ($(SGXCORE),5300)
 SGX_FAST_DPM_INIT ?= 1
+endif
 endif
 
 SUPPORT_SGX_HWPERF ?= 0

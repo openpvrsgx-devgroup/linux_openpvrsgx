@@ -88,7 +88,7 @@ endef
 define target-executable-from-o
 $(if $(V),,@echo "  LD      " $(call relative-to-top,$@))
 $(CC) \
-	$(SYS_EXE_LDFLAGS) $(MODULE_LDFLAGS) -o $@ \
+	$(SYS_EXE_LDFLAGS) $(SYS_COMMON_LDFLAGS) $(MODULE_LDFLAGS) -o $@ \
 	$(SYS_EXE_CRTBEGIN) $(sort $(MODULE_ALL_OBJECTS)) $(SYS_EXE_CRTEND) \
 	$(MODULE_LIBRARY_DIR_FLAGS) $(MODULE_LIBRARY_FLAGS) $(LIBGCC)
 endef
@@ -96,7 +96,7 @@ endef
 define target-executable-cxx-from-o
 $(if $(V),,@echo "  LD      " $(call relative-to-top,$@))
 $(CXX) \
-	$(SYS_EXE_LDFLAGS_CXX) $(SYS_EXE_LDFLAGS) $(MODULE_LDFLAGS) -o $@ \
+	$(SYS_EXE_LDFLAGS_CXX) $(SYS_EXE_LDFLAGS) $(SYS_COMMON_LDFLAGS) $(MODULE_LDFLAGS) -o $@ \
 	$(SYS_EXE_CRTBEGIN) $(sort $(MODULE_ALL_OBJECTS)) $(SYS_EXE_CRTEND) \
 	$(MODULE_LIBRARY_DIR_FLAGS) $(MODULE_LIBRARY_FLAGS) $(LIBGCC)
 endef
@@ -104,7 +104,7 @@ endef
 define target-shared-library-from-o
 $(if $(V),,@echo "  LD      " $(call relative-to-top,$@))
 $(CC) -shared -Wl,-Bsymbolic \
-	$(SYS_LIB_LDFLAGS) $(MODULE_LDFLAGS) -o $@ \
+	$(SYS_LIB_LDFLAGS) $(SYS_COMMON_LDFLAGS) $(MODULE_LDFLAGS) -o $@ \
 	$(SYS_LIB_CRTBEGIN) $(sort $(MODULE_ALL_OBJECTS)) $(SYS_LIB_CRTEND) \
 	$(MODULE_LIBRARY_DIR_FLAGS) $(MODULE_LIBRARY_FLAGS) $(LIBGCC)
 endef
@@ -114,7 +114,7 @@ endef
 define target-shared-library-cxx-from-o
 $(if $(V),,@echo "  LD      " $(call relative-to-top,$@))
 $(CXX) -shared -Wl,-Bsymbolic \
-	$(SYS_LIB_LDFLAGS_CXX) $(SYS_LIB_LDFLAGS) $(MODULE_LDFLAGS) -o $@ \
+	$(SYS_LIB_LDFLAGS_CXX) $(SYS_LIB_LDFLAGS) $(SYS_COMMON_LDFLAGS) $(MODULE_LDFLAGS) -o $@ \
 	$(SYS_LIB_CRTBEGIN) $(sort $(MODULE_ALL_OBJECTS)) $(SYS_LIB_CRTEND) \
 	$(MODULE_LIBRARY_DIR_FLAGS) $(MODULE_LIBRARY_FLAGS) $(LIBGCC)
 endef
@@ -183,7 +183,11 @@ define make-directory
 $(MKDIR) -p $@
 endef
 
+define check-exports-from-file
+endef
+
 define check-exports
+$(call check-exports-from-file,$(if $1,$1,$(notdir $@).txt))
 endef
 
 # Programs used in recipes
@@ -220,7 +224,11 @@ override CXX := $(if $(V),,@)$(CCACHE) $(CXX) \
  -target $(patsubst %-,%,$(CROSS_COMPILE)) \
  -B$(dir $(shell which $(CROSS_COMPILE)gcc))
 else
+ifeq (,$(findstring $(CROSS_COMPILE), $(CC)))
 override CC  := $(if $(V),,@)$(CCACHE) $(CROSS_COMPILE)$(CC)
+else
+override CC  := $(if $(V),,@)$(CCACHE) $(CC)
+endif
 override CXX := $(if $(V),,@)$(CCACHE) $(CROSS_COMPILE)$(CXX)
 endif
 else

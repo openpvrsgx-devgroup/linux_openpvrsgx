@@ -458,7 +458,7 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVInit(PSYS_DATA psSysData)
 	g_ui32InitFlags |= INIT_DATA_ENABLE_PDUMPINIT;
 #endif
 
-#if defined(SUPPORT_ION)
+#if defined(SUPPORT_ION) || defined(SUPPORT_DMABUF)
 	eError = PVRSRVInitDeviceMem();
 	if (eError != PVRSRV_OK)
 		goto Error;
@@ -502,7 +502,7 @@ IMG_VOID IMG_CALLCONV PVRSRVDeInit(PSYS_DATA psSysData)
 	PERFDEINIT();
 
 
-#if defined(SUPPORT_ION)
+#if defined(SUPPORT_ION) || defined(SUPPORT_DMABUF)
 	if ((g_ui32InitFlags & INIT_DATA_ENABLE_DEVMEM) > 0)
 	{
 		PVRSRVDeInitDeviceMem();

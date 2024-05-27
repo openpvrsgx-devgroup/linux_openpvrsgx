@@ -486,8 +486,13 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVCreateCommandQueueKM(IMG_SIZE_T uQueueSize,
 	}
 
 	/* Ensure we don't corrupt queue list, by blocking access */
+#if !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__)
+	eError = OSLockResourceAndBlockMISR(&psSysData->sQProcessResource,
+							KERNEL_ID);
+#else /* !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__) */
 	eError = OSLockResource(&psSysData->sQProcessResource,
 							KERNEL_ID);
+#endif /* !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__) */
 	if (eError != PVRSRV_OK)
 	{
 		goto ErrorExit;
@@ -496,7 +501,11 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVCreateCommandQueueKM(IMG_SIZE_T uQueueSize,
 	psQueueInfo->psNextKM = psSysData->psQueueList;
 	psSysData->psQueueList = psQueueInfo;
 
+#if !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__)
+	eError = OSUnlockResourceAndUnblockMISR(&psSysData->sQProcessResource, KERNEL_ID);
+#else /* !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__) */
 	eError = OSUnlockResource(&psSysData->sQProcessResource, KERNEL_ID);
+#endif /* !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__) */
 	if (eError != PVRSRV_OK)
 	{
 		goto ErrorExit;
@@ -577,8 +586,13 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVDestroyCommandQueueKM(PVRSRV_QUEUE_INFO *psQueue
 	}
 
 	/* Ensure we don't corrupt queue list, by blocking access */
+#if !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__)
+	eError = OSLockResourceAndBlockMISR(&psSysData->sQProcessResource,
+								KERNEL_ID);
+#else /* !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__) */
 	eError = OSLockResource(&psSysData->sQProcessResource,
 								KERNEL_ID);
+#endif /* !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__) */
 	if (eError != PVRSRV_OK)
 	{
 		goto ErrorExit;
@@ -632,7 +646,11 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVDestroyCommandQueueKM(PVRSRV_QUEUE_INFO *psQueue
 
 		if(!psQueue)
 		{
+#if !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__)
+			eError = OSUnlockResourceAndUnblockMISR(&psSysData->sQProcessResource, KERNEL_ID);
+#else /* !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__) */
 			eError = OSUnlockResource(&psSysData->sQProcessResource, KERNEL_ID);
+#endif /* !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__) */
 			if (eError != PVRSRV_OK)
 			{
 				goto ErrorExit;
@@ -643,7 +661,11 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVDestroyCommandQueueKM(PVRSRV_QUEUE_INFO *psQueue
 	}
 
 	/*  unlock the Q list lock resource */
+#if !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__)
+	eError = OSUnlockResourceAndUnblockMISR(&psSysData->sQProcessResource, KERNEL_ID);
+#else /* !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__) */
 	eError = OSUnlockResource(&psSysData->sQProcessResource, KERNEL_ID);
+#endif /* !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__) */
 	if (eError != PVRSRV_OK)
 	{
 		goto ErrorExit;
@@ -1221,7 +1243,17 @@ PVRSRV_ERROR PVRSRVProcessQueues(IMG_BOOL	bFlush)
 	/* Ensure we don't corrupt queue list, by blocking access. This is required for OSs where
 	    multiple ISR threads may exist simultaneously (eg WinXP DPC routines)
 	*/
+	if (psSysData->psQueueList == IMG_NULL)
+	{
+		PVR_DPF((PVR_DBG_MESSAGE,"No Queues installed - cannot process commands"));
+		return PVRSRV_OK;
+	}
+
+#if !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__)
+	while (OSLockResourceAndBlockMISR(&psSysData->sQProcessResource, ISR_ID) != PVRSRV_OK)
+#else /* !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__) */
 	while (OSLockResource(&psSysData->sQProcessResource, ISR_ID) != PVRSRV_OK)
+#endif /* !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__) */
 	{
 		OSWaitus(1);
 	};
@@ -1265,11 +1297,18 @@ PVRSRV_ERROR PVRSRVProcessQueues(IMG_BOOL	bFlush)
 	List_PVRSRV_DEVICE_NODE_ForEach(psSysData->psDeviceNodeList,
 									&PVRSRVProcessQueues_ForEachCb);
 
+#if !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__)
+	OSUnlockResourceAndUnblockMISR(&psSysData->sQProcessResource, ISR_ID);
+#else /* !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__) */
 	OSUnlockResource(&psSysData->sQProcessResource, ISR_ID);
+#endif /* !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__) */
 
 	return PVRSRV_OK;
 }
 
+#if defined(SYS_OMAP_HAS_DVFS_FRAMEWORK)
+extern void sgxfreq_notif_sgx_frame_done(void);
+#endif /* (SYS_OMAP4_HAS_DVFS_FRAMEWORK) */
 
 /*!
 ******************************************************************************
@@ -1291,6 +1330,10 @@ IMG_VOID PVRSRVCommandCompleteKM(IMG_HANDLE	hCmdCookie,
 	IMG_UINT32				i;
 	COMMAND_COMPLETE_DATA	*psCmdCompleteData = (COMMAND_COMPLETE_DATA *)hCmdCookie;
 	SYS_DATA				*psSysData;
+
+#if defined(SYS_OMAP_HAS_DVFS_FRAMEWORK)
+	sgxfreq_notif_sgx_frame_done();
+#endif /* (SYS_OMAP_HAS_DVFS_FRAMEWORK) */
 
 	SysAcquireData(&psSysData);
 

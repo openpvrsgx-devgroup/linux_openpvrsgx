@@ -84,7 +84,12 @@ extern "C" {
 #define SGX_VPB_TILED_HEAP_ID			14
 #endif
 
-#define SGX_MAX_HEAP_ID							15
+#if defined(SGX_FEATURE_ADDRESS_SPACE_EXTENSION)
+		#define SGX_TEXTURE_HEAP_ID                     15      
+		#define SGX_MAX_HEAP_ID                         16      
+#else
+		#define SGX_MAX_HEAP_ID 						15
+#endif
 
 /*
  * Keep SGX_3DPARAMETERS_HEAP_ID as TQ full custom

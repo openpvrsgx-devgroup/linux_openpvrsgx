@@ -353,6 +353,7 @@ static PVRSRV_ERROR CreateDCSwapChain(IMG_HANDLE hDevice,
 	DC_NOHW_SWAPCHAIN *psSwapChain;
 	DC_NOHW_BUFFER *psBuffer;
 	IMG_UINT32 i;
+	PVRSRV_ERROR eError;
 
 	UNREFERENCED_PARAMETER(ui32OEMFlags);
 	UNREFERENCED_PARAMETER(pui32SwapChainID);
@@ -386,11 +387,11 @@ static PVRSRV_ERROR CreateDCSwapChain(IMG_HANDLE hDevice,
 
 	if (ui32BufferCount)
 	{
-	
 		/* check the buffer count */
 		if(ui32BufferCount > DC_NOHW_MAX_BACKBUFFERS)
 		{
-			return (PVRSRV_ERROR_TOOMANYBUFFERS);
+			eError = PVRSRV_ERROR_TOOMANYBUFFERS;
+			goto ExitError;
 		}
 	
 		/*
@@ -403,7 +404,8 @@ static PVRSRV_ERROR CreateDCSwapChain(IMG_HANDLE hDevice,
 		|| psDstSurfAttrib->sDims.ui32Height != psDevInfo->sSysDims.ui32Height)
 		{
 			/* DST doesn't match the current mode */
-			return (PVRSRV_ERROR_INVALID_PARAMS);
+			eError = PVRSRV_ERROR_INVALID_PARAMS;
+			goto ExitError;
 		}
 	
 		if(psDstSurfAttrib->pixelformat != psSrcSurfAttrib->pixelformat
@@ -412,19 +414,18 @@ static PVRSRV_ERROR CreateDCSwapChain(IMG_HANDLE hDevice,
 		|| psDstSurfAttrib->sDims.ui32Height != psSrcSurfAttrib->sDims.ui32Height)
 		{
 			/* DST doesn't match the SRC */
-			return (PVRSRV_ERROR_INVALID_PARAMS);
+			eError = PVRSRV_ERROR_INVALID_PARAMS;
+			goto ExitError;
 		}
 	
 		/* INTEGRATION_POINT: check the flags */
 		UNREFERENCED_PARAMETER(ui32Flags);
 	
-	
-	
 		psBuffer = (DC_NOHW_BUFFER*)AllocKernelMem(sizeof(DC_NOHW_BUFFER) * ui32BufferCount);
 		if(!psBuffer)
 		{
-			FreeKernelMem(psSwapChain);
-			return (PVRSRV_ERROR_OUT_OF_MEMORY);
+			eError = PVRSRV_ERROR_OUT_OF_MEMORY;
+			goto ExitError;
 		}
 	
 		/* initialise allocations */
@@ -469,6 +470,10 @@ static PVRSRV_ERROR CreateDCSwapChain(IMG_HANDLE hDevice,
 	/* INTEGRATION_POINT: enable Vsync ISR */
 
 	return (PVRSRV_OK);
+
+ExitError:
+	FreeKernelMem(psSwapChain);
+	return eError;
 }
 
 
@@ -644,7 +649,7 @@ static IMG_BOOL ProcessFlip(IMG_HANDLE	hCmdCookie,
 	/* validate data packet */
 	psFlipCmd = (DISPLAYCLASS_FLIP_COMMAND*)pvData;
 	/* Under android, this may be a DISPLAYCLASS_FLIP_COMMAND2, but the structs
-	 * are compatable for everything used by dc_nohw so it makes no difference */
+	 * are compatible for everything used by dc_nohw so it makes no difference */
 	if (psFlipCmd == IMG_NULL)
 	{
 		return (IMG_FALSE);

@@ -447,6 +447,9 @@ typedef struct _PVRSRV_CLIENT_MEM_INFO_
 #if defined(SUPPORT_ION)
 	IMG_SIZE_T							uiIonBufferSize;
 #endif /* defined(SUPPORT_ION) */
+#if defined(SUPPORT_DMABUF)
+	IMG_SIZE_T							uiDmaBufSize;
+#endif /* defined(SUPPORT_ION) */
 
 	/*
 		ptr to next mem info
@@ -793,6 +796,18 @@ PVRSRV_ERROR PVRSRVUnmapIonHandle(const PVRSRV_DEV_DATA *psDevData,
 								  PVRSRV_CLIENT_MEM_INFO *psMemInfo);
 #endif /* defined (SUPPORT_ION) */
 
+#if defined(SUPPORT_DMABUF)
+IMG_IMPORT
+PVRSRV_ERROR PVRSRVMapDmaBuf(const PVRSRV_DEV_DATA *psDevData,
+								IMG_HANDLE hDevMemHeap,
+								IMG_INT iDmaBufFD,
+								IMG_UINT32 ui32Attribs,
+								PVRSRV_CLIENT_MEM_INFO **ppsMemInfo);
+
+IMG_IMPORT
+PVRSRV_ERROR PVRSRVUnmapDmaBuf(const PVRSRV_DEV_DATA *psDevData,
+								  PVRSRV_CLIENT_MEM_INFO *psMemInfo);
+#endif /* SUPPORT_DMABUF */
 
 IMG_IMPORT
 PVRSRV_ERROR IMG_CALLCONV PVRSRVAllocDeviceMemSparse(const PVRSRV_DEV_DATA *psDevData,

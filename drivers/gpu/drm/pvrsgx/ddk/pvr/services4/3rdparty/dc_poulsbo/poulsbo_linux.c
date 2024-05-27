@@ -76,6 +76,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "pvr_drm.h"
 #include "3rdparty_dc_drm_shared.h"
 #include <drm/drm_mode.h>
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0))
+#include <drm/drm_plane_helper.h>
+#endif
 #else
 #include "pvrmodule.h"
 #include <linux/fb.h>
@@ -131,6 +134,10 @@ static const struct GTF_TIMINGS_DEF gsGtfTimings[] =
 #define VMALLOC_TO_PAGE_PHYS(addr)	page_to_phys(vmalloc_to_page(addr))
 
 #if !defined(SUPPORT_DRI_DRM)
+#endif
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0))
+#define _PAGE_CACHE_WC cachemode2protval(_PAGE_CACHE_MODE_WC)
 #endif
 
 /*******************************************************************************
@@ -640,16 +647,16 @@ static int CrtcHelperModeSet(struct drm_crtc *psCrtc, struct drm_display_mode *p
 
 	ui32RegVal = 0;
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0))
-	ui32RegVal = PVRPSB_DSPSTRIDE_STRIDE_SET(ui32RegVal, psCrtc->fb->pitch);
+	ui32RegVal = PVRPSB_DSPSTRIDE_STRIDE_SET(ui32RegVal, crtc_to_fb(psCrtc)->pitch);
 #else
-	ui32RegVal = PVRPSB_DSPSTRIDE_STRIDE_SET(ui32RegVal, psCrtc->fb->pitches[0]);
+	ui32RegVal = PVRPSB_DSPSTRIDE_STRIDE_SET(ui32RegVal, crtc_to_fb(psCrtc)->pitches[0]);
 #endif
 	PVROSWriteMMIOReg(psDevInfo, ui32DspStride, ui32RegVal);
 
 
-	if (psCrtc->fb)
+	if (crtc_to_fb(psCrtc))
 	{
-		PVRPSB_FRAMEBUFFER *psPVRFramebuffer = to_pvr_framebuffer(psCrtc->fb);
+		PVRPSB_FRAMEBUFFER *psPVRFramebuffer = to_pvr_framebuffer(crtc_to_fb(psCrtc));
 
 		ui32FbOffset = psPVRFramebuffer->psBuffer->sDevVAddr.uiAddr - psDevInfo->sGTTInfo.sGMemDevVAddr.uiAddr;
 	}
@@ -1196,8 +1203,11 @@ PSB_ERROR PVROSModeSetInit(PVRPSB_DEVINFO *psDevInfo)
 
 	mutex_lock(&psDrmDev->mode_config.mutex);
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,17,0))
+	drm_fb_helper_prepare(psDrmDev, &psDevInfo->sDrmFbHelper, &sFbHelperFuncs);
+#else
 	psDevInfo->sDrmFbHelper.funcs = &sFbHelperFuncs;
-
+#endif
 	iResult = drm_fb_helper_init(psDrmDev, &psDevInfo->sDrmFbHelper, psDrmDev->mode_config.num_crtc, psDrmDev->mode_config.num_connector);
 	if (iResult < 0)
 	{

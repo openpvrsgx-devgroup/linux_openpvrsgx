@@ -43,8 +43,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if !defined(__SYSINFO_H__)
 #define __SYSINFO_H__
 
-#define SYS_SGX_CLOCK_SPEED					(400000000)
-//#define SYS_SGX_CLOCK_SPEED			(304742400)
+#define SYS_SGX_CLOCK_SPEED			(400000000)
 
 /*!< System specific poll/timeout details */
 #define MAX_HW_TIME_US				(1000000)

@@ -211,6 +211,10 @@ typedef char				TCHAR, *PTCHAR, *PTSTR;
 	#define IMG_UINT64_FMT "ll" /* May need to be updated as required, for other OSs */
 #endif
 
+/*
+	Some versions of MSVC don't have snprintf, vsnprintf in their CRTs.
+	Remap to the deprecated unix compatibility versions.
+*/
 
 #endif /* #if !defined (__IMG_DEFS_H__) */
 /*****************************************************************************

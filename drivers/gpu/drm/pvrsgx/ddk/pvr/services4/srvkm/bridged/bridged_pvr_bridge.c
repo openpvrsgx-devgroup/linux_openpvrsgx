@@ -1540,6 +1540,155 @@ PVRSRVUnmapIonHandleBW(IMG_UINT32 ui32BridgeID,
 }
 #endif	/* SUPPORT_ION */
 
+#if defined(SUPPORT_DMABUF)
+static IMG_INT
+PVRSRVMapDmaBufBW(IMG_UINT32 ui32BridgeID,
+					   PVRSRV_BRIDGE_IN_MAP_DMABUF *psMapDmaBufIN,
+					   PVRSRV_BRIDGE_OUT_MAP_DMABUF *psMapDmaBufOUT,
+					   PVRSRV_PER_PROCESS_DATA *psPerProc)
+{
+	PVRSRV_KERNEL_MEM_INFO  *psKernelMemInfo;
+	IMG_UINT64 ui64Stamp;
+
+	psMapDmaBufOUT->eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
+											 &psMapDmaBufIN->hDevCookie,
+											 psMapDmaBufIN->hDevCookie,
+											 PVRSRV_HANDLE_TYPE_DEV_NODE);
+	if (psMapDmaBufOUT->eError != PVRSRV_OK)
+	{
+		PVR_DPF((PVR_DBG_ERROR, "%s: Failed to lookup device node handle", __FUNCTION__));
+		return 0;
+	}
+
+	psMapDmaBufOUT->eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
+											 &psMapDmaBufIN->hDevMemHeap,
+											 psMapDmaBufIN->hDevMemHeap,
+											 PVRSRV_HANDLE_TYPE_DEV_MEM_HEAP);
+	if (psMapDmaBufOUT->eError != PVRSRV_OK)
+	{
+		PVR_DPF((PVR_DBG_ERROR, "%s: Failed to lookup memory context handle", __FUNCTION__));
+		return 0;
+	}
+
+	psMapDmaBufOUT->eError = PVRSRVMapDmaBufKM(psPerProc,
+											   psMapDmaBufIN->hDevCookie,
+											   psMapDmaBufIN->hDevMemHeap,
+											   psMapDmaBufIN->i32DmaBufFD,
+											   psMapDmaBufIN->ui32Attribs,
+											   &psMapDmaBufOUT->uiDmaBufSize,
+											   &psKernelMemInfo,
+											   &ui64Stamp);
+	if (psMapDmaBufOUT->eError != PVRSRV_OK)
+	{
+		PVR_DPF((PVR_DBG_ERROR, "%s: Failed to map dma-buf handle", __FUNCTION__));
+		return 0;
+	}
+
+	OSMemSet(&psMapDmaBufOUT->sClientMemInfo,
+			 0,
+			 sizeof(psMapDmaBufOUT->sClientMemInfo));
+
+	psMapDmaBufOUT->sClientMemInfo.pvLinAddrKM =
+			psKernelMemInfo->pvLinAddrKM;
+
+	psMapDmaBufOUT->sClientMemInfo.pvLinAddr = 0;
+	psMapDmaBufOUT->sClientMemInfo.sDevVAddr = psKernelMemInfo->sDevVAddr;
+	psMapDmaBufOUT->sClientMemInfo.ui32Flags = psKernelMemInfo->ui32Flags;
+	psMapDmaBufOUT->sClientMemInfo.uAllocSize = psKernelMemInfo->uAllocSize;
+
+	/* No mapping info, we map through dma_buf */
+	psMapDmaBufOUT->sClientMemInfo.hMappingInfo = IMG_NULL;
+
+#if defined(SUPPORT_MEMINFO_IDS)
+	psMapDmaBufOUT->sClientMemInfo.ui64Stamp = ui64Stamp;
+#endif
+
+	PVRSRVAllocHandleNR(psPerProc->psHandleBase,
+						&psMapDmaBufOUT->sClientMemInfo.hKernelMemInfo,
+						psKernelMemInfo,
+						PVRSRV_HANDLE_TYPE_MEM_INFO,
+						PVRSRV_HANDLE_ALLOC_FLAG_NONE);
+
+	if(psMapDmaBufIN->ui32Attribs & PVRSRV_MEM_NO_SYNCOBJ)
+	{
+		/* signal no syncinfo */
+		OSMemSet(&psMapDmaBufOUT->sClientSyncInfo,
+				 0,
+				 sizeof (PVRSRV_CLIENT_SYNC_INFO));
+		psMapDmaBufOUT->sClientMemInfo.psClientSyncInfo = IMG_NULL;
+	}
+	else
+	{
+		/* and setup the sync info */
+#if !defined(PVRSRV_DISABLE_UM_SYNCOBJ_MAPPINGS)
+		psMapDmaBufOUT->sClientSyncInfo.psSyncData =
+			psKernelMemInfo->psKernelSyncInfo->psSyncData;
+		psMapDmaBufOUT->sClientSyncInfo.sWriteOpsCompleteDevVAddr =
+			psKernelMemInfo->psKernelSyncInfo->sWriteOpsCompleteDevVAddr;
+		psMapDmaBufOUT->sClientSyncInfo.sReadOpsCompleteDevVAddr =
+			psKernelMemInfo->psKernelSyncInfo->sReadOpsCompleteDevVAddr;
+		psMapDmaBufOUT->sClientSyncInfo.sReadOps2CompleteDevVAddr =
+			psKernelMemInfo->psKernelSyncInfo->sReadOps2CompleteDevVAddr;
+
+		psMapDmaBufOUT->sClientSyncInfo.hMappingInfo =
+			psKernelMemInfo->psKernelSyncInfo->psSyncDataMemInfoKM->sMemBlk.hOSMemHandle;
+#endif
+
+		/*
+		 * If the DMA Buffer is imported into the same process that
+		 * exported it, there will be two handles for the same sync
+		 * info, hence the PVRSRV_HANDLE_ALLOC_FLAG_MULTI flag.
+		 */
+		PVRSRVAllocSubHandleNR(psPerProc->psHandleBase,
+							   &psMapDmaBufOUT->sClientSyncInfo.hKernelSyncInfo,
+							   psKernelMemInfo->psKernelSyncInfo,
+							   PVRSRV_HANDLE_TYPE_SYNC_INFO,
+							   PVRSRV_HANDLE_ALLOC_FLAG_MULTI,
+							   psMapDmaBufOUT->sClientMemInfo.hKernelMemInfo);
+
+		psMapDmaBufOUT->sClientMemInfo.psClientSyncInfo =
+			&psMapDmaBufOUT->sClientSyncInfo;
+	}
+	return 0;
+}
+
+static IMG_INT
+PVRSRVUnmapDmaBufBW(IMG_UINT32 ui32BridgeID,
+					   PVRSRV_BRIDGE_IN_UNMAP_DMABUF *psUnmapDmaBufIN,
+					   PVRSRV_BRIDGE_RETURN *psUnmapDmaBufOUT,
+					   PVRSRV_PER_PROCESS_DATA *psPerProc)
+{
+	IMG_VOID *pvKernelMemInfo;
+
+	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID, PVRSRV_BRIDGE_UNMAP_DMABUF);
+
+	psUnmapDmaBufOUT->eError =
+        PVRSRVLookupHandle(psPerProc->psHandleBase,
+                           &pvKernelMemInfo,
+						   psUnmapDmaBufIN->psKernelMemInfo,
+						   PVRSRV_HANDLE_TYPE_MEM_INFO);
+
+	if(psUnmapDmaBufOUT->eError != PVRSRV_OK)
+	{
+		return 0;
+	}
+
+	psUnmapDmaBufOUT->eError = PVRSRVUnmapDmaBufKM(pvKernelMemInfo);
+
+	if(psUnmapDmaBufOUT->eError != PVRSRV_OK)
+	{
+		return 0;
+	}
+
+	psUnmapDmaBufOUT->eError =
+		PVRSRVReleaseHandle(psPerProc->psHandleBase,
+							psUnmapDmaBufIN->psKernelMemInfo,
+							PVRSRV_HANDLE_TYPE_MEM_INFO);
+
+	return 0;
+}
+#endif	/* SUPPORT_DMABUF */
+
 static IMG_INT
 PVRSRVGetFreeDeviceMemBW(IMG_UINT32 ui32BridgeID,
 						 PVRSRV_BRIDGE_IN_GETFREEDEVICEMEM *psGetFreeDeviceMemIN,
@@ -4492,6 +4641,10 @@ CommonBridgeInit(IMG_VOID)
 #if defined(SUPPORT_ION)
 	SetDispatchTableEntry(PVRSRV_BRIDGE_MAP_ION_HANDLE, PVRSRVMapIonHandleBW);
 	SetDispatchTableEntry(PVRSRV_BRIDGE_UNMAP_ION_HANDLE, PVRSRVUnmapIonHandleBW);
+#endif
+#if defined(SUPPORT_DMABUF)
+	SetDispatchTableEntry(PVRSRV_BRIDGE_MAP_DMABUF, PVRSRVMapDmaBufBW);
+	SetDispatchTableEntry(PVRSRV_BRIDGE_UNMAP_DMABUF, PVRSRVUnmapDmaBufBW);
 #endif
 
 	/* SIM */

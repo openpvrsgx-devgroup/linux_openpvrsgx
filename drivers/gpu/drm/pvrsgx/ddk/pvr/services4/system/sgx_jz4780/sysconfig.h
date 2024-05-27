@@ -51,16 +51,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #define SYS_SGX_USSE_COUNT					(1)
 
-#define SYS_JZ4780_SGX_REG_BASE					0x13040000
-
+#if defined(NO_HARDWARE)
 #if defined(SGX_FEATURE_MP)
 /* One block for each core plus one for the all-cores bank and one for the master bank.*/
 #define SGX_REG_SIZE 	(0x4000 * (SGX_FEATURE_MP_CORE_COUNT_3D + 2))
 #else
 #define SGX_REG_SIZE 	(0x4000)
 #endif /* SGX_FEATURE_MP */
-
-#define SYS_JZ4780_SGX_IRQ					IRQ_GPU
+#endif /* NO_HARDWARE */
 
 #if defined(SGX_FEATURE_HOST_PORT)
 	/* INTEGRATION_POINT: change these dummy values if host port is needed */
@@ -70,10 +68,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 
 #define SYS_SGX_ACTIVE_POWER_LATENCY_MS				2
+#define SYS_SGX_PDS_TIMER_FREQ			(1000) // 1ms (1000hz)
+#define SYS_SGX_HWRECOVERY_TIMEOUT_FREQ		(100)	// 10ms (100hz)
 
 #define DEVICE_SGX_INTERRUPT		(1<<0)
 
-#define	SYS_SGX_DEV_NAME	"jz4780-sgx"
+#ifndef SYS_SGX_DEV_NAME
+#define	SYS_SGX_DEV_NAME	"ingenic,jz4780-sgx"
+#endif
 
 /*****************************************************************************
  * system specific data structures

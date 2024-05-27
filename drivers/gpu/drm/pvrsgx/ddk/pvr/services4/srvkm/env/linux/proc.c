@@ -91,6 +91,7 @@ static const IMG_CHAR PVRProcDirRoot[] = "pvr";
 static IMG_INT pvr_proc_open(struct inode *inode,struct file *file);
 static ssize_t pvr_proc_write(struct file *file, const char __user *buffer, size_t count, loff_t *ppos);
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0))
 static struct file_operations pvr_proc_operations =
 {
 	.open		= pvr_proc_open,
@@ -99,6 +100,16 @@ static struct file_operations pvr_proc_operations =
 	.llseek		= seq_lseek,
 	.release	= seq_release,
 };
+#else
+static struct proc_ops pvr_proc_operations =
+{
+	.proc_open	= pvr_proc_open,
+	.proc_read	= seq_read,
+	.proc_write	= pvr_proc_write,
+	.proc_lseek	= seq_lseek,
+	.proc_release	= seq_release,
+};
+#endif
 
 static void *pvr_proc_seq_start (struct seq_file *m, loff_t *pos);
 static void *pvr_proc_seq_next (struct seq_file *m, void *v, loff_t *pos);

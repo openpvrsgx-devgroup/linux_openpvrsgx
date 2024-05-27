@@ -521,6 +521,12 @@ PVRSRV_ERROR OSUnmapPhysToUserSpace(IMG_HANDLE hDevCookie,
 
 PVRSRV_ERROR OSLockResource(PVRSRV_RESOURCE *psResource, IMG_UINT32 ui32ID);
 PVRSRV_ERROR OSUnlockResource(PVRSRV_RESOURCE *psResource, IMG_UINT32 ui32ID);
+
+#if !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__)
+PVRSRV_ERROR OSLockResourceAndBlockMISR(PVRSRV_RESOURCE *psResource, IMG_UINT32 ui32ID);
+PVRSRV_ERROR OSUnlockResourceAndUnblockMISR(PVRSRV_RESOURCE *psResource, IMG_UINT32 ui32ID);
+#endif /* !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__) */
+
 IMG_BOOL OSIsResourceLocked(PVRSRV_RESOURCE *psResource, IMG_UINT32 ui32ID);
 PVRSRV_ERROR OSCreateResource(PVRSRV_RESOURCE *psResource);
 PVRSRV_ERROR OSDestroyResource(PVRSRV_RESOURCE *psResource);

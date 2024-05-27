@@ -567,7 +567,7 @@ WrapMemory (BM_HEAP *psBMHeap,
 	{
 		if(!ZeroBuf(pBuf, pMapping, uSize, ui32Flags))
 		{
-			return IMG_FALSE;
+			goto fail_cleanup;
 		}
 	}
 
@@ -588,7 +588,8 @@ fail_cleanup:
 		OSReleaseSubMemHandle(pBuf->hOSMemHandle, ui32Attribs);
 	}
 
-	if(pMapping && (pMapping->CpuVAddr || pMapping->hOSMemHandle))
+	/* pMapping must be valid: if the allocation failed, we'd have returned */
+	if(pMapping->CpuVAddr || pMapping->hOSMemHandle)
 	{
 		switch(pMapping->eCpuMemoryOrigin)
 		{
@@ -3010,7 +3011,8 @@ BM_ImportMemory (IMG_VOID *pH,
 	return IMG_TRUE;
 
 fail_dev_mem_alloc:
-	if (pMapping && (pMapping->CpuVAddr || pMapping->hOSMemHandle))
+	/* pMapping must be valid: if the allocation failed, we'd have jumped to fail_exit */
+	if (pMapping->CpuVAddr || pMapping->hOSMemHandle)
 	{
 		/* the size is double the actual size for interleaved allocations */
 		if(pMapping->ui32Flags & PVRSRV_MEM_INTERLEAVED)

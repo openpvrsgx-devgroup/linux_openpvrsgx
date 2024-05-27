@@ -46,6 +46,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if defined(SUPPORT_ION)
 #include "ion_sync.h"
 #endif /* defined(SUPPORT_ION) */
+#if defined(SUPPORT_DMABUF)
+#include "dmabuf_sync.h"
+#endif /* defined(SUPPORT_DMABUF) */
 
 #if defined(PVRSRV_REFCOUNT_DEBUG)
 
@@ -130,6 +133,24 @@ void PVRSRVIonBufferSyncInfoDecRef2(const IMG_CHAR *pszFile, IMG_INT iLine,
 									PVRSRV_ION_SYNC_INFO *psIonSyncInfo,
 									PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo);
 #endif /* defined (SUPPORT_ION) */
+
+#if defined(SUPPORT_DMABUF)
+#define PVRSRVDmaBufSyncInfoIncRef(x...) \
+	PVRSRVDmaBufSyncInfoIncRef2(__FILE__, __LINE__, x)
+#define PVRSRVDmaBufSyncInfoDecRef(x...) \
+	PVRSRVDmaBufSyncInfoDecRef2(__FILE__, __LINE__, x)
+
+PVRSRV_ERROR PVRSRVDmaBufSyncInfoIncRef2(const IMG_CHAR *pszFile, IMG_INT iLine,
+											IMG_HANDLE hUnique,
+											IMG_HANDLE hDevCookie,
+											IMG_HANDLE hDevMemContext,
+											PVRSRV_DMABUF_SYNC_INFO **ppsDmaBufSyncInfo,
+											PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo);
+
+void PVRSRVDmaBufSyncInfoDecRef2(const IMG_CHAR *pszFile, IMG_INT iLine,
+									PVRSRV_DMABUF_SYNC_INFO *psDmaBufSyncInfo,
+									PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo);
+#endif /* defined (SUPPORT_DMABUF) */
 
 #endif /* defined(__linux__) */
 
@@ -238,6 +259,29 @@ static INLINE void PVRSRVIonBufferSyncInfoDecRef(PVRSRV_ION_SYNC_INFO *psIonSync
 	PVRSRVIonBufferSyncRelease(psIonSyncInfo);
 }
 #endif	/* defined (SUPPORT_ION) */
+
+#if defined(SUPPORT_DMABUF)
+static INLINE PVRSRV_ERROR PVRSRVDmaBufSyncInfoIncRef(IMG_HANDLE hUnique,
+														 IMG_HANDLE hDevCookie,
+														 IMG_HANDLE hDevMemContext,
+														 PVRSRV_DMABUF_SYNC_INFO **ppsDmaBufSyncInfo,
+														 PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo)
+{
+	PVR_UNREFERENCED_PARAMETER(psKernelMemInfo);
+
+	return PVRSRVDmaBufSyncAcquire(hUnique,
+									  hDevCookie,
+									  hDevMemContext,
+									  ppsDmaBufSyncInfo);
+}
+
+static INLINE void PVRSRVDmaBufSyncInfoDecRef(PVRSRV_DMABUF_SYNC_INFO *psDmaBufSyncInfo,
+										   PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo)
+{
+	PVR_UNREFERENCED_PARAMETER(psKernelMemInfo);
+	PVRSRVDmaBufSyncRelease(psDmaBufSyncInfo);
+}
+#endif	/* defined (SUPPORT_DMABUF) */
 
 #endif /* defined(__linux__) */
 

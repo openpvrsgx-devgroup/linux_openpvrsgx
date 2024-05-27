@@ -1,30 +1,45 @@
-/**********************************************************************
- *
- * Copyright (C) Imagination Technologies Ltd. All rights reserved.
- * 
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- * 
- * This program is distributed in the hope it will be useful but, except 
- * as otherwise stated in writing, without any warranty; without even the 
- * implied warranty of merchantability or fitness for a particular purpose. 
- * See the GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- * 
- * The full GNU General Public License is included in this distribution in
- * the file called "COPYING".
- *
- * Contact Information:
- * Imagination Technologies Ltd. <gpl-support@imgtec.com>
- * Home Park Estate, Kings Langley, Herts, WD4 8LZ, UK 
- *
- ******************************************************************************/
+/*************************************************************************/ /*!
+@Title          System configuration support
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@Description    System configuration support functions.
+@License        Dual MIT/GPLv2
 
-#include <linux/version.h>
+The contents of this file are subject to the MIT license as set out below.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/ /**************************************************************************/
+
 #include <linux/clk.h>
 #include <linux/err.h>
 #include <linux/hardirq.h>
@@ -47,29 +62,42 @@
 #include <linux/opp.h>
 #endif
 
-#if defined(SUPPORT_DRI_DRM_PLUGIN)
-#include <drm/drmP.h>
-#include <drm/drm.h>
-
-#include <linux/xb_gpu.h>
-
-#include "pvr_drm.h"
-#endif
-
-#include <mach/jzcpm_pwc.h>
-
 /* Defines for HW Recovery */
 #define SYS_SGX_HWRECOVERY_TIMEOUT_FREQ		(100) // 10ms (100hz)
-#define SYS_SGX_PDS_TIMER_FREQ				(1000) // 1ms (1000hz)
+#define SYS_SGX_PDS_TIMER_FREQ			(1000) // 1ms (1000hz)
 
-#define	ONE_MHZ	1000000
-#define	HZ_TO_MHZ(m) ((m) / ONE_MHZ)
-
-#define SGX_PARENT_CLOCK "core_ck"
-
-#if defined(LDM_PLATFORM) && !defined(PVR_DRI_DRM_NOT_PCI)
 extern struct platform_device *gpsPVRLDMDev;
-#endif
+
+/*
+ * Stubs for cpm_pwc_* functions present in the Linux 3.0.8 kernel, but not
+ * in 3.18.
+ */
+
+void *cpm_pwc_get(char *name)
+{
+	(void) name;
+
+	return (void *)(uintptr_t)1;
+}
+
+void cpm_pwc_put(void *handle)
+{
+	(void) handle;
+}
+
+int cpm_pwc_enable(void *handle)
+{
+	(void) handle;
+
+	return 0;
+}
+
+int cpm_pwc_disable(void *handle)
+{
+	(void) handle;
+
+	return 0;
+}
 
 static PVRSRV_ERROR PowerLockWrap(SYS_SPECIFIC_DATA *psSysSpecData, IMG_BOOL bTryLock)
 {
@@ -155,7 +183,6 @@ PVRSRV_ERROR EnableSGXClocks(SYS_DATA *psSysData)
 
 	PVR_DPF((PVR_DBG_MESSAGE, "EnableSGXClocks: Enabling SGX Clocks"));
 
-#if defined(LDM_PLATFORM) && !defined(PVR_DRI_DRM_NOT_PCI)
 #if defined(SYS_XB47_HAS_DVFS_FRAMEWORK)
 	{
 		struct gpu_platform_data *pdata;
@@ -188,7 +215,6 @@ PVRSRV_ERROR EnableSGXClocks(SYS_DATA *psSysData)
 		}
 	}
 #endif 
-#endif 
 
 	SysEnableSGXInterrupts(psSysData);
 
@@ -196,7 +222,6 @@ PVRSRV_ERROR EnableSGXClocks(SYS_DATA *psSysData)
 
 	return PVRSRV_OK;
 }
-
 
 IMG_VOID DisableSGXClocks(SYS_DATA *psSysData)
 {
@@ -209,7 +234,6 @@ IMG_VOID DisableSGXClocks(SYS_DATA *psSysData)
 
 	SysDisableSGXInterrupts(psSysData);
 
-#if defined(LDM_PLATFORM) && !defined(PVR_DRI_DRM_NOT_PCI)
 #if defined(SYS_XB47_HAS_DVFS_FRAMEWORK)
 	{
 		struct gpu_platform_data *pdata;
@@ -241,8 +265,6 @@ IMG_VOID DisableSGXClocks(SYS_DATA *psSysData)
 		}
 	}
 #endif
-#endif
-
 	atomic_set(&psSysSpecData->sSGXClocksEnabled, 0);
 }
 
@@ -260,17 +282,10 @@ PVRSRV_ERROR EnableSystemClocks(SYS_DATA *psSysData)
 		return PVRSRV_ERROR_UNKNOWN_POWER_STATE;
 	}
 
-	/* ungate clock */
-	err = clk_enable(psSysSpecData->psSGXClockGate);
-	if (err) {
-		PVR_DPF((PVR_DBG_ERROR, "%s failed to ungate GPU clock: %d", __func__, err));
-		return PVRSRV_ERROR_CLOCK_REQUEST_FAILED;
-	}
-
 	/* enable clock */
 	err = clk_set_rate(psSysSpecData->psSGXClock, SYS_SGX_CLOCK_SPEED);
 	if (!err)
-		err = clk_enable(psSysSpecData->psSGXClock);
+		err = clk_prepare_enable(psSysSpecData->psSGXClock);
 	if (err) {
 		PVR_DPF((PVR_DBG_ERROR, "%s failed to initialise GPU clock: %d", __func__, err));
 		return PVRSRV_ERROR_CLOCK_REQUEST_FAILED;
@@ -288,8 +303,7 @@ IMG_VOID DisableSystemClocks(SYS_DATA *psSysData)
 	DisableSGXClocks(psSysData);
 
 	/* disable & gate clock, power down */
-	clk_disable(psSysSpecData->psSGXClock);
-	clk_disable(psSysSpecData->psSGXClockGate);
+	clk_disable_unprepare(psSysSpecData->psSGXClock);
 	cpm_pwc_disable(psSysSpecData->pCPMHandle);
 }
 
@@ -310,7 +324,6 @@ PVRSRV_ERROR SysDvfsInitialize(SYS_SPECIFIC_DATA *psSysSpecificData)
 	unsigned long freq;
 	struct opp *opp;
 
-	
 	rcu_read_lock();
 	opp_count = opp_get_opp_count(&gpsPVRLDMDev->dev);
 	if (opp_count < 1)
@@ -353,7 +366,6 @@ PVRSRV_ERROR SysDvfsInitialize(SYS_SPECIFIC_DATA *psSysSpecificData)
 	
 	psSysSpecificData->ui32SGXFreqListIndex = opp_count;
 #endif 
-
 	return PVRSRV_OK;
 }
 
@@ -389,6 +401,14 @@ PVRSRV_ERROR SysDvfsDeinitialize(SYS_SPECIFIC_DATA *psSysSpecificData)
 	psSysSpecificData->pui32SGXFreqList = 0;
 	psSysSpecificData->ui32SGXFreqListSize = 0;
 #endif 
-
 	return PVRSRV_OK;
+}
+
+IMG_VOID SysSGXIdleEntered(IMG_VOID)
+{
+}
+
+IMG_VOID SysSGXCommandPending(IMG_BOOL bSGXIdle)
+{
+	PVR_UNREFERENCED_PARAMETER(bSGXIdle);
 }

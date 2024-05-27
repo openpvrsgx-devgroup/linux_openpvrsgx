@@ -164,6 +164,21 @@ IMG_IMPORT
 PVRSRV_ERROR IMG_CALLCONV PVRSRVUnmapIonHandleKM(PVRSRV_KERNEL_MEM_INFO *psMemInfo);
 #endif /* SUPPORT_ION */
 
+#if defined(SUPPORT_DMABUF)
+IMG_IMPORT
+PVRSRV_ERROR PVRSRVMapDmaBufKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
+								  IMG_HANDLE hDevCookie,
+								  IMG_HANDLE hDevMemHeap,
+								  IMG_INT32  i32DmaBufFD,
+								  IMG_UINT32 ui32Flags,
+								  IMG_SIZE_T *puiDmaBufSize,
+								  PVRSRV_KERNEL_MEM_INFO **ppsKernelMemInfo,
+								  IMG_UINT64 *pui64Stamp);
+
+IMG_IMPORT
+PVRSRV_ERROR IMG_CALLCONV PVRSRVUnmapDmaBufKM(PVRSRV_KERNEL_MEM_INFO *psMemInfo);
+#endif /* SUPPORT_DMABUF */
+
 IMG_IMPORT
 PVRSRV_ERROR IMG_CALLCONV PVRSRVDissociateDeviceMemKM(IMG_HANDLE			hDevCookie,
 												PVRSRV_KERNEL_MEM_INFO	*psMemInfo);

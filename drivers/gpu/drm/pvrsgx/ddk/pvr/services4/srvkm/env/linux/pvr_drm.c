@@ -49,6 +49,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 #endif
 
+#undef AM_VERSION
+#define AM_VERSION 5
+
+#if (AM_VERSION != 5)
+#include <linux/platform_data/sgx-omap.h>
+#endif
+
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -56,7 +63,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <linux/proc_fs.h>
 #include <linux/sched.h>
 #include <asm/ioctl.h>
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0))
 #include <drm/drmP.h>
+#endif
 #include <drm/drm.h>
 
 #include "img_defs.h"
@@ -84,7 +93,19 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "pvr_drm_mod.h"
 #endif
 
-#if (defined(PVR_DRI_DRM_PLATFORM_DEV) && !defined(PVR_LDM_PLATFORM_PRE_REGISTERED)) || defined(NO_HARDWARE)
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,16,0))
+#define DRM_ARRAY_SIZE(x) ARRAY_SIZE(x)
+#endif
+
+#if (defined(PVR_LDM_PLATFORM_PRE_REGISTERED) || defined(PVR_LDM_DEVICE_TREE)) && !defined(NO_HARDWARE)
+#define PVR_USE_PRE_REGISTERED_PLATFORM_DEV
+#endif
+
+#if defined(PVR_LDM_DEVICE_TREE) && !defined(NO_HARDWARE)
+#define PVR_USE_DEVICE_TREE
+#endif
+
+#if (defined(PVR_DRI_DRM_PLATFORM_DEV) && !defined(PVR_USE_PRE_REGISTERED_PLATFORM_DEV)) || defined(NO_HARDWARE)
 #define PVR_DRM_NAME	SYS_SGX_DEV_NAME
 #else
 #define PVR_DRM_NAME	PVRSRV_MODNAME
@@ -116,6 +137,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define	PVR_DRI_DRM_USE_POST_CLOSE
 #endif
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,12,0))
+#define PVR_DRM_DRIVER_RENDER	DRIVER_RENDER
+#define PVR_DRM_RENDER_ALLOW	DRM_RENDER_ALLOW
+#else
+#define PVR_DRM_DRIVER_RENDER	0
+#define PVR_DRM_RENDER_ALLOW	0
+#endif
+
 DECLARE_WAIT_QUEUE_HEAD(sWaitForInit);
 
 #if defined(SUPPORT_DRM_MODESET)
@@ -143,6 +172,15 @@ struct drm_device *gpsPVRDRMDev;
 #define PVR_DRM_FILE struct drm_file *
 
 #if !defined(SUPPORT_DRI_DRM_EXT) && !defined(SUPPORT_DRI_DRM_PLUGIN)
+#if defined(PVR_USE_DEVICE_TREE)
+static struct of_device_id asPlatIdList[] = {
+	{
+		.compatible = SYS_SGX_DEV_NAME
+	},
+	{}
+};
+MODULE_DEVICE_TABLE(of,  asPlatIdList);
+#else
 #if defined(PVR_DRI_DRM_PLATFORM_DEV)
 static struct platform_device_id asPlatIdList[] = {
 	{SYS_SGX_DEV_NAME, 0},
@@ -161,7 +199,14 @@ static struct pci_device_id asPciIdList[] = {
 	{0}
 };
 #endif	/* defined(PVR_DRI_DRM_PLATFORM_DEV) */
+#endif	/* defined(PVR_DEVICE_TREE) */
 #endif	/* !defined(SUPPORT_DRI_DRM_EXT) */
+
+struct device *
+PVRLDMGetDevice(void)
+{
+	return gpsPVRDRMDev->dev;
+}
 
 DRI_DRM_STATIC int
 PVRSRVDrmLoad(struct drm_device *dev, unsigned long flags)
@@ -173,7 +218,7 @@ PVRSRVDrmLoad(struct drm_device *dev, unsigned long flags)
 	gpsPVRDRMDev = dev;
 #if !defined(PVR_DRI_DRM_NOT_PCI) && !defined(SUPPORT_DRI_DRM_PLUGIN)
 #if defined(PVR_DRI_DRM_PLATFORM_DEV)
-	gpsPVRLDMDev = dev->platformdev;
+	gpsPVRLDMDev = to_platform_device(dev->dev);
 #else
 	gpsPVRLDMDev = dev->pdev;
 #endif
@@ -378,6 +423,7 @@ PVRDRM_Display_ioctl(struct drm_device *dev, void *arg, struct drm_file *pFile)
 }
 #endif
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0))
 #if defined(SUPPORT_DRM_MODESET)
 static int
 PVRSRVPciProbe(struct pci_dev *dev, const struct pci_device_id *id)
@@ -402,6 +448,7 @@ PVRSRVPciRemove(struct pci_dev *dev)
 	drm_put_dev(psDrmDev);
 }
 #endif
+#endif
 
 /*
  * For Linux 2.6.33 and above, the DRM ioctl entry point is of the unlocked
@@ -418,23 +465,20 @@ PVRSRVPciRemove(struct pci_dev *dev)
 #define	PVR_DRM_UNLOCKED	0
 #endif
 
-#if !defined(SUPPORT_DRI_DRM_EXT)
-
-#if defined(DRM_IOCTL_DEF)
-#define	PVR_DRM_IOCTL_DEF(ioctl, _func, _flags) DRM_IOCTL_DEF(DRM_##ioctl, _func, _flags)
-#else
-#define	PVR_DRM_IOCTL_DEF(ioctl, _func, _flags) DRM_IOCTL_DEF_DRV(ioctl, _func, _flags)
+#if !defined(DRM_IOCTL_DEF_DRV)
+#define DRM_IOCTL_DEF_DRV(ioctl, _func, _flags) DRM_IOCTL_DEF(DRM_##ioctl, _func, _flags)
 #endif
 
+#if !defined(SUPPORT_DRI_DRM_EXT)
 struct drm_ioctl_desc sPVRDrmIoctls[] = {
-	PVR_DRM_IOCTL_DEF(PVR_SRVKM, PVRSRV_BridgeDispatchKM, PVR_DRM_UNLOCKED),
-	PVR_DRM_IOCTL_DEF(PVR_IS_MASTER, PVRDRMIsMaster, DRM_MASTER | PVR_DRM_UNLOCKED),
-	PVR_DRM_IOCTL_DEF(PVR_UNPRIV, PVRDRMUnprivCmd, PVR_DRM_UNLOCKED),
+	DRM_IOCTL_DEF_DRV(PVR_SRVKM, PVRSRV_BridgeDispatchKM, PVR_DRM_RENDER_ALLOW | PVR_DRM_UNLOCKED),
+	DRM_IOCTL_DEF_DRV(PVR_IS_MASTER, PVRDRMIsMaster, PVR_DRM_RENDER_ALLOW | DRM_MASTER | PVR_DRM_UNLOCKED),
+	DRM_IOCTL_DEF_DRV(PVR_UNPRIV, PVRDRMUnprivCmd, PVR_DRM_RENDER_ALLOW | PVR_DRM_UNLOCKED),
 #if defined(PDUMP)
-	PVR_DRM_IOCTL_DEF(PVR_DBGDRV, dbgdrv_ioctl, PVR_DRM_UNLOCKED),
+	DRM_IOCTL_DEF_DRV(PVR_DBGDRV, dbgdrv_ioctl, PVR_DRM_RENDER_ALLOW | PVR_DRM_UNLOCKED),
 #endif
 #if defined(DISPLAY_CONTROLLER) && defined(PVR_DISPLAY_CONTROLLER_DRM_IOCTL)
-	PVR_DRM_IOCTL_DEF(PVR_DISP, PVRDRM_Display_ioctl, DRM_MASTER | PVR_DRM_UNLOCKED)
+	DRM_IOCTL_DEF_DRV(PVR_DISP, PVRDRM_Display_ioctl, DRM_MASTER | PVR_DRM_UNLOCKED)
 #endif
 };
 
@@ -488,21 +532,25 @@ static const struct file_operations sPVRFileOps =
 
 static struct drm_driver sPVRDrmDriver = 
 {
+	.driver_features = PVR_DRM_DRIVER_RENDER
 #if defined(PVR_OLD_STYLE_DRM_PLATFORM_DEV)
-	.driver_features = DRIVER_USE_PLATFORM_DEVICE,
-#else
-	.driver_features = 0,
+		| DRIVER_USE_PLATFORM_DEVICE
 #endif
+		,
 	.dev_priv_size = 0,
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,12,0))
 	.load = PVRSRVDrmLoad,
 	.unload = PVRSRVDrmUnload,
+#endif
 	.open = PVRSRVDrmOpen,
 #if defined(PVR_DRI_DRM_USE_POST_CLOSE)
 	.postclose = PVRSRVDrmPostClose,
 #endif
 #if !defined(PVR_DRI_DRM_PLATFORM_DEV) && !defined(SUPPORT_DRM_MODESET)
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,8,0))
 	.suspend = PVRSRVDriverSuspend,
 	.resume = PVRSRVDriverResume,
+#endif
 #endif
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,37))
 	.get_map_ofs = drm_core_get_map_ofs,
@@ -556,7 +604,7 @@ static struct drm_driver sPVRDrmDriver =
 	},
 #endif
 #endif
-	.name = PVR_DRM_NAME,
+	.name = "pvr",
 	.desc = PVR_DRM_DESC,
 	.date = PVR_DRM_DATE,
 	.major = PVRVERSION_MAJ,
@@ -579,7 +627,7 @@ static struct pci_driver sPVRPCIDriver =
 #endif
 
 #if defined(PVR_NEW_STYLE_DRM_PLATFORM_DEV)
-#if !defined(PVR_LDM_PLATFORM_PRE_REGISTERED) || defined(NO_HARDWARE)
+#if !defined(PVR_USE_PRE_REGISTERED_PLATFORM_DEV)
 static void PVRSRVDeviceRelease(struct device unref__ *pDevice)
 {
 }
@@ -595,10 +643,15 @@ static struct platform_device sPVRPlatDevice = {
 
 static struct platform_driver sPVRPlatDriver =
 {
+#if !defined(PVR_USE_DEVICE_TREE)
 	.id_table = asPlatIdList,
+#endif
 	.driver =
 	{
 		.name = PVR_DRM_NAME,
+#if defined(PVR_USE_DEVICE_TREE)
+		.of_match_table = asPlatIdList,
+#endif
 	},
 	.probe = PVRSRVDrmProbe,
 	.remove = PVRSRVDrmRemove,
@@ -615,12 +668,49 @@ static struct platform_driver sPVRPlatDriver =
 static int
 PVRSRVDrmProbe(struct platform_device *pDevice)
 {
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,12,0))
+	struct drm_device *ddev;
+#endif
+	int ret = 0;
+#if (AM_VERSION != 5)
+	struct device *dev = &pDevice->dev;
+	struct gfx_sgx_platform_data *pdata = dev->platform_data;
+#endif
+
 	PVR_TRACE(("PVRSRVDrmProbe"));
 
-#if defined(PVR_NEW_STYLE_DRM_PLATFORM_DEV)
-	gpsPVRLDMDev = pDevice;
+#if (AM_VERSION != 5)
+	if (pdata && pdata->deassert_reset) {
+		ret = pdata->deassert_reset(pDevice, pdata->reset_name);
+		if (ret) {
+			dev_err(dev, "Unable to reset SGX!\n");
+		}
+	}
+#endif
 
+#if defined(PVR_NEW_STYLE_DRM_PLATFORM_DEV)
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,12,0))
+	ddev = drm_dev_alloc(&sPVRDrmDriver, &pDevice->dev);
+	if (IS_ERR(ddev))
+		return PTR_ERR(ddev);
+
+	ret = PVRSRVDrmLoad(ddev, 0);
+	if (!ret)
+		ret = drm_dev_register(ddev, 0);
+
+	if (ret)
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,0,0))
+		drm_dev_put(ddev);
+#else
+		drm_dev_unref(ddev);
+#endif
+	else
+		gpsPVRLDMDev = pDevice;
+	return ret;
+#else
+	gpsPVRLDMDev = pDevice;
 	return drm_platform_init(&sPVRDrmDriver, gpsPVRLDMDev);
+#endif
 #else
 	return drm_get_platform_dev(pDevice, &sPVRDrmDriver);
 #endif
@@ -629,13 +719,35 @@ PVRSRVDrmProbe(struct platform_device *pDevice)
 static int
 PVRSRVDrmRemove(struct platform_device *pDevice)
 {
+#if (AM_VERSION != 5)
+	int ret;
+	struct device *dev = &pDevice->dev;
+	struct gfx_sgx_platform_data *pdata = dev->platform_data;
+#endif
+
 	PVR_TRACE(("PVRSRVDrmRemove"));
 
-#if defined(PVR_NEW_STYLE_DRM_PLATFORM_DEV)
+#if defined(PVR_NEW_STYLE_DRM_PLATFORM_DEV) && (LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0))
 	drm_platform_exit(&sPVRDrmDriver, gpsPVRLDMDev);
 #else
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,12,0))
+	PVRSRVDrmUnload(gpsPVRDRMDev);
+#endif
 	drm_put_dev(gpsPVRDRMDev);
 #endif
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,12,0))
+	gpsPVRDRMDev = NULL;
+#endif
+
+#if (AM_VERSION != 5)
+	if (pdata && pdata->assert_reset) {
+		ret = pdata->assert_reset(pDevice, pdata->reset_name);
+		if (ret) {
+			dev_err(dev, "Unable to reset SGX!\n");
+		}
+	}
+#endif
+
 	return 0;
 }
 #endif
@@ -656,7 +768,7 @@ static int __init PVRSRVDrmInit(void)
 
 #if defined(PVR_NEW_STYLE_DRM_PLATFORM_DEV)
 	iRes = platform_driver_register(&sPVRPlatDriver);
-#if !defined(PVR_LDM_PLATFORM_PRE_REGISTERED) || defined(NO_HARDWARE)
+#if !defined(PVR_USE_PRE_REGISTERED_PLATFORM_DEV)
 	if (iRes == 0)
 	{
 		iRes = platform_device_register(&sPVRPlatDevice);
@@ -702,7 +814,7 @@ static int __init PVRSRVDrmInit(void)
 static void __exit PVRSRVDrmExit(void)
 {
 #if defined(PVR_NEW_STYLE_DRM_PLATFORM_DEV)
-#if !defined(PVR_LDM_PLATFORM_PRE_REGISTERED) || defined(NO_HARDWARE)
+#if !defined(PVR_USE_PRE_REGISTERED_PLATFORM_DEV)
 	platform_device_unregister(&sPVRPlatDevice);
 #endif
 	platform_driver_unregister(&sPVRPlatDriver);

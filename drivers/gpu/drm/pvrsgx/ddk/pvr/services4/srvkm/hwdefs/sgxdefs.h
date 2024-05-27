@@ -48,6 +48,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if defined(SGX520)
 #include "sgx520defs.h"
 #else
+#if defined(SGX5300)
+#include "sgx5300defs.h"
+#else
 #if defined(SGX530)
 #include "sgx530defs.h"
 #else
@@ -78,6 +81,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #else
 #if defined(SGX554)
 #include "sgx554defs.h"
+#endif
 #endif
 #endif
 #endif

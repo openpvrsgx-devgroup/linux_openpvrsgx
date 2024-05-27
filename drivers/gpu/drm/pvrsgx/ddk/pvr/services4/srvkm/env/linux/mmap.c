@@ -48,6 +48,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 
 #include <linux/mm.h>
+#include <linux/pfn_t.h>
 #include <linux/module.h>
 #include <linux/vmalloc.h>
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0))
@@ -66,7 +67,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <asm/current.h>
 #endif
 #if defined(SUPPORT_DRI_DRM)
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0))
 #include <drm/drmP.h>
+#else
+#include <linux/platform_device.h>
+#endif
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,0))
+#include <drm/drm_legacy.h>
+#endif
 #endif
 
 #ifdef CONFIG_ARCH_OMAP5
@@ -93,6 +101,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #if !defined(PVR_SECURE_HANDLES)
 #error "The mmap code requires PVR_SECURE_HANDLES"
+#endif
+
+#if defined(SUPPORT_DRI_DRM) && (LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,0))
+static inline int drm_mmap(struct file *filp, struct vm_area_struct *vma)
+{
+	return drm_legacy_mmap(filp, vma);
+}
 #endif
 
 /* WARNING:
@@ -777,12 +792,21 @@ DoMapToUser(LinuxMemArea *psLinuxMemArea,
 #if defined(PVR_MAKE_ALL_PFNS_SPECIAL)
 		    if (bMixedMap)
 		    {
-			result = vm_insert_mixed(ps_vma, ulVMAPos, pfn);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,20,0))
+			result = vmf_insert_mixed(ps_vma, ulVMAPos, pfn_to_pfn_t(pfn));
+			if (result & VM_FAULT_ERROR)
+			{
+				PVR_DPF((PVR_DBG_ERROR,"%s: Error - vmf_insert_mixed failed (%x)", __FUNCTION__, result));
+				return IMG_FALSE;
+			}
+#else
+			result = vm_insert_mixed(ps_vma, ulVMAPos, pfn_to_pfn_t(pfn));
 	                if(result != 0)
 	                {
 	                    PVR_DPF((PVR_DBG_ERROR,"%s: Error - vm_insert_mixed failed (%d)", __FUNCTION__, result));
 	                    return IMG_FALSE;
 	                }
+#endif
 		    }
 		    else
 #endif

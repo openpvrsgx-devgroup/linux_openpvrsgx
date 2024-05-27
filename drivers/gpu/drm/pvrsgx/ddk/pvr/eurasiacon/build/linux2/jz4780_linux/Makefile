@@ -1,5 +1,5 @@
 ########################################################################### ###
-#@Title         Root makefile for JZ4780 Linux.  Builds everything else.
+#@Title         Makefile for JZ4780 Linux.
 #@Copyright     Copyright (c) Imagination Technologies Ltd. All Rights Reserved
 #@License       Dual MIT/GPLv2
 # 
@@ -41,21 +41,20 @@
 
 PVR_SYSTEM := sgx_jz4780
 
-
-SGXCORE := 540
-SGX_CORE_REV := 130
-
 include ../kernel_version.mk
+
+SYS_CFLAGS := -EL
+SYS_COMMON_LDFLAGS := -EL
+
+LDM_PLATFORM := 1
+PVR_LDM_DEVICE_TREE := 1
+SUPPORT_DRI_DRM := 1
+SUPPORT_DMABUF := 1
 
 BUFFERCLASS_MODULE ?= bufferclass_example
 KERNEL_COMPONENTS := srvkm $(BUFFERCLASS_MODULE)
 
-DISPLAY_CONTROLLER := dc_xbfb3_linux
-
-# Ingenic still needs the DC, for hwc reasons
-SUPPORT_PVRSRV_DEVICE_CLASS := 1
-
-OPK_DEFAULT := libpvrPVR2D_FLIPWSEGL.so
+OPK_DEFAULT := libpvrDRMWSEGL.so
 
 SGXCORE := 540
 SGX_CORE_REV := 130
@@ -70,63 +69,26 @@ endif
 
 SUPPORT_SGX_HWPERF ?= 1
 
-#SUPPORT_GL3 := 1
-
-#PDUMP ?= 1
-NO_HARDWARE := 0
-
-SGX_FAST_DPM_INIT ?= 1
-SUPPORT_SGX_HWPERF ?= 1
-SUPPORT_SLC := 1
-SUPPORT_LINUX_USING_WORKQUEUES := 1
-
-DC_JZ4780_WIDTH ?= 1920
-DC_JZ4780_HEIGHT ?= 1080
-
 include ../common/xorg_test.mk
 ifeq ($(SUPPORT_BUILD_XORG),1)
-SUPPORT_DRI_DRM := 1
-PVR_DRI_DRM_STATIC_BUS_ID := 1
 OPK_FALLBACK := libpvrPVR2D_DRIWSEGL.so
+XORG_PVR_VIDEO ?= generic_drm
 else
+DISPLAY_CONTROLLER := dc_jz4780
+EXTRA_PVRSRVKM_COMPONENTS += dc_jz4780
 OPK_FALLBACK := libpvrEWS_WSEGL.so
 endif
 
-ifeq ($(SUPPORT_DRI_DRM),1)
-EXTRA_PVRSRVKM_COMPONENTS += $(DISPLAY_CONTROLLER)
-ifeq ($(call kernel-version-at-least,2,6,39),true)
-# For the benefit of DRM, the SGX driver will create a dummy platform
-# device to represent SGX.
-LDM_PCI := 0
-LDM_PLATFORM := 1
 PVR_DRI_DRM_PLATFORM_DEV := 1
-PVR_DRI_DRM_STATIC_BUS_ID := 1
-ifeq ($(call kernel-version-at-least,3,1),true)
-ifeq ($(call kernel-version-at-least,3,4),true)
-PVR_DRI_DRM_DEV_BUS_ID := "\"platform:jz4780-sgx:00\""
-else
-PVR_DRI_DRM_DEV_BUS_ID := "\"platform:jz4780-sgx:-1\""
-endif
-endif
-else
-# Build a DRM module that doesn't require a real SGX device to manage.
-# DRM needs to be removed from the Linux kernel configuration for this to
-# work.
-PVR_DRI_DRM_NOT_PCI := 1
-KERNEL_COMPONENTS += linux_drm
-EXTRA_KBUILD_SOURCE := $(KERNELDIR)
-endif
-else
-KERNEL_COMPONENTS += $(DISPLAY_CONTROLLER)
-endif
+PVR_DRM_MODESET_DRIVER_NAME := jz4780
+PVR_DRM_MODESET_MODULE_NAME := dumb
+PVR_DRM_USE_PAGE_FLIP_EVENTS := 0
+PVR_DRM_NEW_SWAP_CHAIN_MODE_SET := 1
 
-SYS_CFLAGS   := -march=mips32r2 -EL
-SYS_CXXFLAGS := -march=mips32r2 -EL
+LWS_DIST ?= tarballs-debian-8
 
 # Should be last
 include ../config/core.mk
 include ../common/xorg.mk
 include ../common/dridrm.mk
-
-$(eval $(call KernelConfigC,DC_NOHW_BUFFER_WIDTH,$(DC_JZ4780_WIDTH)))
-$(eval $(call KernelConfigC,DC_NOHW_BUFFER_HEIGHT,$(DC_JZ4780_HEIGHT)))
+include ../common/opencl.mk

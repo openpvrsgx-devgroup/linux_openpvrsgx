@@ -42,26 +42,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef __IMG_LINUX_ION_H__
 #define __IMG_LINUX_ION_H__
 
-#include <linux/ion.h>
-#if defined (CONFIG_ION_OMAP)
-#include <linux/omap_ion.h>
-#endif
-#if defined (SUPPORT_ION)
+#if defined(SUPPORT_ION)
+
+#include SUPPORT_ION_HEADER
+
 #include "img_types.h"
 #include "servicesext.h"
-#endif
-
-#if !defined(SUPPORT_ION) && defined(CONFIG_ION_OMAP)
-
-void PVRSRVExportFDToIONHandles(int fd, struct ion_client **client,
-								struct ion_handle *handles[2]);
-
-struct ion_handle *PVRSRVExportFDToIONHandle(int fd,
-											 struct ion_client **client);
-
-#endif /* !defined(SUPPORT_ION) && defined(CONFIG_ION_OMAP) */
-
-#if defined(SUPPORT_ION)
 
 PVRSRV_ERROR IonInit(IMG_VOID);
 

@@ -1404,7 +1404,7 @@ BM_CreateHeap (IMG_HANDLE hBMContext,
 	/* memory is allocated from the OS as required */
 	psBMHeap->pImportArena = RA_Create (psDevMemHeapInfo->pszBSName,
 										0, 0, IMG_NULL,
-										MAX(HOST_PAGESIZE(), psBMHeap->sDevArena.ui32DataPageSize),
+										MIN(HOST_PAGESIZE(), psBMHeap->sDevArena.ui32DataPageSize),
 										&BM_ImportMemory,
 										&BM_FreeMemory,
 										IMG_NULL,

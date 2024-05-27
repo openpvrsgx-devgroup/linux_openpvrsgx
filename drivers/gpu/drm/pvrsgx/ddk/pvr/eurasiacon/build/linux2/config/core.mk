@@ -223,18 +223,55 @@ endif
 # require things like SGXCORE to be set
 ifneq ($(INTERNAL_CLOBBER_ONLY),true)
 
-# These are defined by the core build system, but we might need them
-# earlier to feature-check the compilers
-#
-_CC		:= $(if $(filter default,$(origin CC)),gcc,$(CC))
-_CLANG	:= \
- $(shell $(TOP)/eurasiacon/build/linux2/tools/cc-check.sh --clang --cc $(_CC))
-ifeq ($(_CLANG),true)
-_CC		:= $(_CC) -target $(patsubst %-,%,$(CROSS_COMPILE))
+# GNU Make has builtin values for CC/CXX which we don't want to trust. This
+# is because $(CROSS_COMPILE)$(CC) doesn't always expand to a cross compiler
+# toolchain binary name (e.g. most toolchains have 'gcc' but not 'cc').
+
+ifeq ($(origin CC),default)
+ _CC      := $(CROSS_COMPILE)gcc
+ CC       := gcc
 else
-_CC		:= $(CROSS_COMPILE)$(_CC)
+ _CLANG   := $(shell $(TOP)/eurasiacon/build/linux2/tools/cc-check.sh --clang --cc $(CC))
+ _CC      := $(CC)
+ ifeq ($(_CLANG),true)
+  ifneq ($(strip $(CROSS_COMPILE)),)
+    _CC     := $(CC) -target $(patsubst %-,%,$(CROSS_COMPILE)) -Qunused-arguments -fcolor-diagnostics
+  else
+    _CC     := $(CC) -Qunused-arguments -fcolor-diagnostics
+  endif
+ endif
 endif
-HOST_CC	?= gcc
+
+ifeq ($(origin CXX),default)
+ _CXX     := $(CROSS_COMPILE)g++
+ CXX      := g++
+else
+ _CLANGXX := $(shell $(TOP)/eurasiacon/build/linux2/tools/cc-check.sh --clang --cc $(CXX))
+ _CXX    := $(CXX)
+ ifeq ($(_CLANGXX),true)
+   ifneq ($(strip $(CROSS_COMPILE)),)
+    _CXX    := $(CXX) -target $(patsubst %-,%,$(CROSS_COMPILE)) -Qunused-arguments -fcolor-diagnostics
+   else
+    _CXX    := $(CXX) -Qunused-arguments -fcolor-diagnostics
+   endif
+ endif
+endif
+
+CC_SECONDARY ?= $(CC)
+HOST_CC      ?= gcc
+
+# Work out if we are targeting ARM before we start tweaking _CC.
+TARGETING_AARCH64 := $(shell \
+ $(_CC) -dM -E - </dev/null | grep -q __aarch64__ && echo 1)
+
+TARGETING_ARM := $(shell \
+ $(_CC) -dM -E - </dev/null | grep __arm__ >/dev/null 2>&1 && echo 1)
+
+TARGETING_MIPS := $(shell \
+ $(_CC) -dM -E - </dev/null | grep __mips__ >/dev/null 2>&1 && echo 1)
+
+HOST_CC_IS_LINUX := $(shell \
+ $(HOST_CC) -dM -E - </dev/null | grep __linux__ >/dev/null 2>&1 && echo 1)
 
 -include ../config/user-defs.mk
 
@@ -348,6 +385,11 @@ PVRSRV_MODNAME ?= pvrsrvkm
 #
 SUPPORT_PVRSRV_DEVICE_CLASS ?= 1
 
+# Default place for binaries and shared libraries
+BIN_DESTDIR ?= /usr/local/bin
+SHARE_DESTDIR ?= /usr/local/share
+SHLIB_DESTDIR ?= /usr/lib
+
 # The user didn't set CROSS_COMPILE. There's probably nothing wrong
 # with that, but we'll let them know anyway.
 #
@@ -366,12 +408,12 @@ $$(warning *** Setting $(1) via $$(origin $(1)) is deprecated)
 $$(error If you are trying to disable a component, use e.g. EXCLUDED_APIS="opengles1 opengl")
 endif
 endef
-$(foreach _o,SYS_CFLAGS SYS_CXXFLAGS SYS_INCLUDES SYS_COMMON_LDFLAGS SYS_EXE_LDFLAGS SYS_LIB_LDFLAGS SYS_EXE_LDFLAGS_CXX SYS_LIB_LDFLAGS_CXX SUPPORT_EWS SUPPORT_OPENGLES1 SUPPORT_OPENGLES2 SUPPORT_OPENCL SUPPORT_RSCOMPUTE SUPPORT_OPENGL SUPPORT_UNITTESTS SUPPORT_XORG,$(eval $(call sanity-check-support-option-origin,$(_o))))
+$(foreach _o,SYS_CFLAGS SYS_CXXFLAGS SYS_INCLUDES SYS_COMMON_LDFLAGS SYS_EXE_LDFLAGS SYS_LIB_LDFLAGS SYS_EXE_LDFLAGS_CXX SYS_LIB_LDFLAGS_CXX SUPPORT_EWS SUPPORT_NULLWS SUPPORT_OPENGLES1 SUPPORT_OPENGLES2 SUPPORT_OPENCL SUPPORT_OPENGL SUPPORT_SURFACELESS SUPPORT_UNITTESTS SUPPORT_XORG SUPPORT_WAYLAND,$(eval $(call sanity-check-support-option-origin,$(_o))))
 
 # Check for words in EXCLUDED_APIS that aren't understood by the
 # common/apis/*.mk files. This should be kept in sync with all the tests on
 # EXCLUDED_APIS in those files
-_excludable_apis := rscompute opencl opengl opengles1 opengles2 openvg unittests scripts composerhal camerahal memtrackhal
+_excludable_apis := opencl opengl opengles1 opengles2 unittests scripts composerhal camerahal memtrackhal sensorhal
 _excluded_apis := $(subst $(comma),$(space),$(EXCLUDED_APIS))
 _unrecognised := $(strip $(filter-out $(_excludable_apis),$(_excluded_apis)))
 ifneq ($(_unrecognised),)
@@ -385,6 +427,9 @@ override EXCLUDED_APIS := $(filter $(_excludable_apis), $(_excluded_apis))
 # Build's selected list of components
 #
 -include components.mk
+
+# Set up the host and target compiler.
+include ../config/compiler.mk
 
 # PDUMP needs extra components
 #
@@ -427,11 +472,10 @@ $(if $(filter config,$(D)),$(info Build configuration:))
 #
 ifneq ($(strip $(KERNELDIR)),)
 include ../kernel_version.mk
-MOD_ROOTDIR ?= /lib/modules/$(KERNEL_ID)
-PVRSRV_MODULE_BASEDIR ?= $(MOD_ROOTDIR)/extra/
-$(eval $(call KernelConfigMake,KERNELDIR,$(KERNELDIR)))
+PVRSRV_MODULE_BASEDIR ?= /lib/modules/$(KERNEL_ID)/extra
+$(eval $(call BothConfigMake,KERNELDIR,$(KERNELDIR)))
 # Needed only by install script
-$(eval $(call KernelConfigMake,MOD_ROOTDIR,$(MOD_ROOTDIR)))
+$(eval $(call BothConfigMake,KERNEL_ID,$(KERNEL_ID)))
 $(eval $(call KernelConfigMake,PVRSRV_MODULE_BASEDIR,$(PVRSRV_MODULE_BASEDIR)))
 $(eval $(call KernelConfigMake,KERNEL_COMPONENTS,$(KERNEL_COMPONENTS)))
 $(eval $(call TunableKernelConfigMake,EXTRA_PVRSRVKM_COMPONENTS,))
@@ -451,15 +495,17 @@ $(eval $(call TunableBothConfigMake,KERNEL_CC,))
 
 # Check the KERNELDIR has a kernel built.
 VMLINUX := $(strip $(wildcard $(KERNELDIR)/vmlinux))
+
 ifneq ($(wildcard $(VMLINUX)),)
- ifneq ($(shell file $(KERNELDIR)/vmlinux | grep 64-bit >/dev/null && echo 1),$(shell $(_CC) -dM -E - </dev/null | grep __x86_64__ >/dev/null && echo 1))
-  $(error Attempting to build 64-bit DDK against 32-bit kernel, or 32-bit DDK against 64-bit kernel. This is not allowed.)
+ ifneq ($(shell file $(KERNELDIR)/vmlinux | grep 64-bit >/dev/null && echo 1),$(shell $(_CC) -dM -E - </dev/null | grep '__x86_64__\|__aarch64__' >/dev/null && echo 1))
+  $(warning Attempting to build 64-bit DDK against 32-bit kernel, or 32-bit DDK against 64-bit kernel. This is not allowed.)
  endif
  LINUXCFG := $(strip $(wildcard $(KERNELDIR)/.config))
  VMLINUX_IS_64BIT := $(shell file $(VMLINUX) | grep 64-bit >/dev/null || echo false)
  VMLINUX_HAS_PAE36 := $(shell cat $(LINUXCFG) | grep CONFIG_X86_PAE=y >/dev/null || echo false)
  VMLINUX_HAS_PAE40 := $(shell cat $(LINUXCFG) | grep CONFIG_ARM_LPAE=y >/dev/null || echo false)
  VMLINUX_HAS_DMA32 := $(shell cat $(LINUXCFG) | grep CONFIG_ZONE_DMA32=y >/dev/null || echo false)
+ VMLINUX_HAS_DMA := $(shell cat $(LINUXCFG) | grep CONFIG_ZONE_DMA=y >/dev/null || echo false)
  ifneq ($(VMLINUX_IS_64BIT),false)
   $(warning $$(KERNELDIR)/vmlinux: Note: vmlinux is 64-bit, which is supported but currently experimental.)
  endif
@@ -470,8 +516,8 @@ endif
 endif # KERNELDIR
 
 ifneq ($(VMLINUX_HAS_PAE40),false)
-ifeq ($(VMLINUX_HAS_DMA32),false)
-$(warning SGX MMUs are currently supported up to only 36 bits max. Your Kernel is built with 40-bit PAE but does not have CONFIG_ZONE_DMA32.)
+ifeq ($(VMLINUX_HAS_DMA),false)
+$(warning SGX MMUs are currently supported up to only 36 bits max. Your Kernel is built with 40-bit PAE but does not have CONFIG_ZONE_DMA.)
 $(warning This means you must ensure the runtime system has <= 4GB of RAM, or there will be BIG problems...)
 endif 
 endif
@@ -486,8 +532,8 @@ endif
 else
  # Kernel is 32-bit
 ifneq ($(VMLINUX_HAS_PAE36),false)
-ifeq ($(VMLINUX_HAS_DMA32),false)
-$(warning SGX is configured with 32-bit MMU. Your Kernel is 32-bit PAE, but does not have CONFIG_ZONE_DMA32. )
+ifeq ($(VMLINUX_HAS_DMA),false)
+$(warning SGX is configured with 32-bit MMU. Your Kernel is 32-bit PAE, but does not have CONFIG_ZONE_DMA. )
 $(warning This means you must ensure the runtime system has <= 4GB of RAM, or there will be BIG problems...)
 endif
 endif
@@ -497,6 +543,7 @@ endif
 
 # Ideally configured by platform Makefiles, as necessary
 #
+SHADER_DESTDIR := $(SHARE_DESTDIR)/pvr/shaders/
 
 # Invariant options for Linux
 #
@@ -505,9 +552,11 @@ $(eval $(call BothConfigC,LINUX,))
 $(eval $(call BothConfigC,PVR_BUILD_DIR,"\"$(PVR_BUILD_DIR)\""))
 $(eval $(call BothConfigC,PVR_BUILD_TYPE,"\"$(BUILD)\""))
 $(eval $(call BothConfigC,PVRSRV_MODNAME,"\"$(PVRSRV_MODNAME)\""))
-$(eval $(call KernelConfigMake,PVRSRV_MODNAME,$(PVRSRV_MODNAME)))
+$(eval $(call BothConfigMake,PVRSRV_MODNAME,$(PVRSRV_MODNAME)))
 $(eval $(call BothConfigMake,PVR_BUILD_DIR,$(PVR_BUILD_DIR)))
+$(eval $(call BothConfigMake,PVR_BUILD_TYPE,$(BUILD)))
 
+$(eval $(call TunableBothConfigC,USE_64BIT_COMPAT,))
 $(eval $(call TunableBothConfigC,SGXCORE,))
 $(eval $(call BothConfigC,SGX$(SGXCORE),))
 $(eval $(call BothConfigC,SUPPORT_SGX$(SGXCORE),))
@@ -524,15 +573,21 @@ $(eval $(call BothConfigC,PVR_SECURE_HANDLES,))
 # on SPM platforms the LISR and MISR can run at the same time and
 # thus during powerdown we need to drain all pending LISRs before
 # proceeding to do the actual powerdown
+ifneq ($(SUPPORT_LISR_MISR_SYNC),)
 $(eval $(call KernelConfigC,SUPPORT_LISR_MISR_SYNC))
+endif
 
 ifneq ($(DISPLAY_CONTROLLER),)
 $(eval $(call BothConfigC,DISPLAY_CONTROLLER,$(DISPLAY_CONTROLLER)))
-$(eval $(call KernelConfigMake,DISPLAY_CONTROLLER,$(DISPLAY_CONTROLLER)))
+$(eval $(call BothConfigMake,DISPLAY_CONTROLLER,$(DISPLAY_CONTROLLER)))
 endif
 
 ifneq ($(DRM_DISPLAY_CONTROLLER),)
 $(eval $(call KernelConfigMake,DRM_DISPLAY_CONTROLLER,$(DRM_DISPLAY_CONTROLLER)))
+endif
+
+ifneq ($(BUFFERCLASS_MODULE),)
+$(eval $(call BothConfigMake,BUFFERCLASS_MODULE,$(BUFFERCLASS_MODULE)))
 endif
 
 ifneq ($(strip $(KERNELDIR)),)
@@ -626,7 +681,6 @@ $(eval $(call TunableKernelConfigC,SUPPORT_LINUX_X86_PAT,1))
 $(eval $(call TunableKernelConfigC,SGX_DYNAMIC_TIMING_INFO,))
 $(eval $(call TunableKernelConfigC,SYS_SGX_ACTIVE_POWER_LATENCY_MS,))
 $(eval $(call TunableKernelConfigC,SYS_CUSTOM_POWERLOCK_WRAP,))
-$(eval $(call TunableKernelConfigC,SYS_SUPPORTS_SGX_IDLE_CALLBACK,))
 $(eval $(call TunableKernelConfigC,PVR_LINUX_USING_WORKQUEUES,))
 $(eval $(call TunableKernelConfigC,PVR_LINUX_MISR_USING_WORKQUEUE,))
 $(eval $(call TunableKernelConfigC,PVR_LINUX_MISR_USING_PRIVATE_WORKQUEUE,))
@@ -669,6 +723,10 @@ $(eval $(call TunableBothConfigMake,SUPPORT_PVRSRV_DEVICE_CLASS,))
 
 
 $(eval $(call TunableKernelConfigMake,TTRACE,))
+
+
+$(if $(USE_CCACHE),$(if $(USE_DISTCC),$(error\
+Enabling both USE_CCACHE and USE_DISTCC at the same time is not supported)))
 
 SUPPORT_SGX_LOW_LATENCY_SCHEDULING ?= 1
 SUPPORT_SGX_CONTEXT_PRIORITY_PER_THREAD ?= 0

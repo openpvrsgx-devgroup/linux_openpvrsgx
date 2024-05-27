@@ -101,7 +101,7 @@ PVRLinuxX86PATProbe(IMG_VOID)
 	 * cpu_has_pat indicates whether PAT support is available on the CPU,
 	 * but doesn't indicate if it has been enabled.
 	 */
-	if (cpu_has_pat)	/* PRQA S 3335 */ /* ignore 'no function declared' */
+	if (boot_cpu_has(X86_FEATURE_PAT))/* PRQA S 3335 */ /* ignore 'no function declared' */
 	{
 		u64 pat;
 		IMG_UINT pat_index;

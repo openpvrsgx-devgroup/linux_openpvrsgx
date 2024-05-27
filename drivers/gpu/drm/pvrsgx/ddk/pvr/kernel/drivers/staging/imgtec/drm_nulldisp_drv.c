@@ -1129,7 +1129,11 @@ nulldisp_fb_create(struct drm_device *dev,
 	struct nulldisp_framebuffer *nulldisp_framebuffer;
 	int err;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 7, 0))
 	obj = drm_gem_object_lookup(dev, file_priv, mode_cmd->handles[0]);
+#else
+	obj = drm_gem_object_lookup(file_priv, mode_cmd->handles[0]);
+#endif
 	if (!obj) {
 		DRM_ERROR("failed to find buffer with handle %u\n",
 			  mode_cmd->handles[0]);

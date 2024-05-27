@@ -192,9 +192,9 @@ void nulldisp_gem_object_free(struct drm_gem_object *obj)
 
 	WARN_ON(atomic_read(&nulldisp_obj->pg_refcnt) != 0);
 
-	drm_gem_free_mmap_offset(obj);
-
 	reservation_object_fini(nulldisp_obj->resv);
+
+	drm_gem_object_release(obj);
 
 	kfree(nulldisp_obj);
 }
@@ -353,8 +353,11 @@ int nulldisp_gem_dumb_map_offset(struct drm_file *file,
 	int err;
 
 	mutex_lock(&dev->struct_mutex);
-
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 7, 0))
 	obj = drm_gem_object_lookup(dev, file, handle);
+#else
+	obj = drm_gem_object_lookup(file, handle);
+#endif
 	if (!obj) {
 		err = -ENOENT;
 		goto exit_unlock;

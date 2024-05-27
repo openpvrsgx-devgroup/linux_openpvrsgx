@@ -79,8 +79,7 @@ typedef enum _SGXMKIF_CMD_TYPE_
 
 } SGXMKIF_CMD_TYPE;
 
-
-typedef struct _SGX_BRIDGE_INIT_INFO_
+typedef struct IMG_COMPAT _SGX_BRIDGE_INIT_INFO_
 {
 	IMG_HANDLE	hKernelCCBMemInfo;
 	IMG_HANDLE	hKernelCCBCtlMemInfo;
@@ -93,10 +92,10 @@ typedef struct _SGX_BRIDGE_INIT_INFO_
 	IMG_HANDLE	hKernelSGXMiscMemInfo;
 
 	IMG_UINT32	aui32HostKickAddr[SGXMKIF_CMD_MAX];
+	IMG_UINT32	ui32ClientBuildOptions;
 
 	SGX_INIT_SCRIPTS sScripts;
 
-	IMG_UINT32	ui32ClientBuildOptions;
 	SGX_MISCINFO_STRUCT_SIZES	sSGXStructSizes;
 
 #if defined(SGX_SUPPORT_HWPROFILING)
@@ -144,6 +143,8 @@ typedef struct _SGX_BRIDGE_INIT_INFO_
 
 #if defined(SGX_FEATURE_AUTOCLOCKGATING)
 	IMG_BOOL bDisableClockGating;
+#elif defined(USE_64BIT_COMPAT)
+	IMG_UINT32  ui32Padding;
 #endif
 	IMG_UINT32 ui32CacheControl;
 
@@ -177,8 +178,7 @@ typedef struct _SGX_INTERNEL_STATUS_UPDATE_
 	IMG_HANDLE				hKernelMemInfo;
 } SGX_INTERNEL_STATUS_UPDATE;
 
-
-typedef struct _SGX_CCB_KICK_
+typedef struct IMG_COMPAT _SGX_CCB_KICK_
 {
 	SGXMKIF_COMMAND		sCommand;
 	IMG_HANDLE	hCCBKernelMemInfo;
@@ -187,7 +187,7 @@ typedef struct _SGX_CCB_KICK_
 	IMG_HANDLE	hKernelHWSyncListMemInfo;
 
 	/* DST syncs */
-	IMG_HANDLE	*pahDstSyncHandles;
+	IMG_HANDLE	hDstSyncHandles;
 
 	IMG_UINT32	ui32NumTAStatusVals;
 	IMG_UINT32	ui32Num3DStatusVals;
@@ -246,21 +246,17 @@ typedef struct _SGX_CCB_KICK_
  ******************************************************************************
  * Client device information structure for SGX
  *****************************************************************************/
-typedef struct _SGX_CLIENT_INFO_
+typedef struct IMG_COMPAT _SGX_CLIENT_INFO_
 {
 	IMG_UINT32					ui32ProcessID;			/*!< ID of process controlling SGX device */
-	IMG_VOID					*pvProcess;				/*!< pointer to OS specific 'process' structure */
-	PVRSRV_MISC_INFO			sMiscInfo;				/*!< Misc. Information, inc. SOC specifics */
-
 	IMG_UINT32					asDevData[SGX_MAX_DEV_DATA];
-
 } SGX_CLIENT_INFO;
 
 /*!
  ******************************************************************************
  * Internal device information structure for SGX
  *****************************************************************************/
-typedef struct _SGX_INTERNAL_DEVINFO_
+typedef struct IMG_COMPAT _SGX_INTERNAL_DEVINFO_
 {
 	IMG_HANDLE			hHostCtlKernelMemInfoHandle;
 	IMG_BOOL			bForcePTOff;
@@ -276,7 +272,7 @@ typedef struct _SGX_INTERNAL_DEVINFO_KM_
 
 
 #if defined(TRANSFER_QUEUE)
-typedef struct _PVRSRV_TRANSFER_SGX_KICK_
+typedef struct IMG_COMPAT _PVRSRV_TRANSFER_SGX_KICK_
 {
 	IMG_HANDLE		hCCBMemInfo;
 	IMG_UINT32		ui32SharedCmdCCBOffset;
@@ -299,14 +295,14 @@ typedef struct _PVRSRV_TRANSFER_SGX_KICK_
 	IMG_UINT32		ui32CCBDumpWOff;
 #endif
 	IMG_HANDLE		hDevMemContext;
-#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
+#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC) || defined(PVR_ANDROID_NATIVE_WINDOW_HAS_FENCE)
 	/* Android >JB MR1 doesn't use ahSrcSyncInfo for synchronization */
-	IMG_INT			iFenceFd;
+	IMG_INT64			iFenceFd;
 #endif
 } PVRSRV_TRANSFER_SGX_KICK, *PPVRSRV_TRANSFER_SGX_KICK;
 
 #if defined(SGX_FEATURE_2D_HARDWARE)
-typedef struct _PVRSRV_2D_SGX_KICK_
+typedef struct IMG_COMPAT _PVRSRV_2D_SGX_KICK_
 {
 	IMG_HANDLE		hCCBMemInfo;
 	IMG_UINT32		ui32SharedCmdCCBOffset;
@@ -330,7 +326,7 @@ typedef struct _PVRSRV_2D_SGX_KICK_
 	IMG_UINT32		ui32CCBDumpWOff;
 #endif
 	IMG_HANDLE		hDevMemContext;
-#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
+#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC) || defined(PVR_ANDROID_NATIVE_WINDOW_HAS_FENCE)
 	/* Android >JB MR1 doesn't use ahSrcSyncInfo for synchronization */
 	IMG_INT			iFenceFd;
 #endif

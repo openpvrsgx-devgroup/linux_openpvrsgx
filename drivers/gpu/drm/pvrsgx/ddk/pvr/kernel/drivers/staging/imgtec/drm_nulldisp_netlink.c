@@ -47,7 +47,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <linux/random.h>
 #include <linux/slab.h>
 #include <linux/atomic.h>
-
+#include <linux/version.h>
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 6, 0))
+#include <uapi/linux/if_macsec.h>
+#endif
 #include "drm_nulldisp_netlink.h"
 
 struct nlpvrdpy {
@@ -326,7 +329,7 @@ static int nlpvrdpy_put_fb_attributes(struct sk_buff *msg,
 	err = nla_put_u32(msg, NLPVRDPY_ATTR_MINOR, NLPVRDPY_MINOR(nlpvrdpy));
 	if (err)
 		return err;
-
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 7, 0))
 	err = nla_put_u64(msg, NLPVRDPY_ATTR_MMAP_OFFSET, mmap_offset);
 	if (err)
 		return err;
@@ -334,7 +337,15 @@ static int nlpvrdpy_put_fb_attributes(struct sk_buff *msg,
 	err = nla_put_u64(msg, NLPVRDPY_ATTR_SIZE, size);
 	if (err)
 		return err;
+#else
+	err = nla_put_u64_64bit(msg, NLPVRDPY_ATTR_MMAP_OFFSET, mmap_offset, MACSEC_RXSC_STATS_ATTR_PAD);
+	if (err)
+		return err;
 
+	err = nla_put_u64_64bit(msg, NLPVRDPY_ATTR_SIZE, size, MACSEC_RXSC_STATS_ATTR_PAD);
+	if (err)
+		return err;
+#endif
 	err = nla_put_u32(msg, NLPVRDPY_ATTR_WIDTH, fb->width);
 	if (err)
 		return err;

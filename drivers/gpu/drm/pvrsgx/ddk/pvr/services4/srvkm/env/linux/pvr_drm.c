@@ -49,10 +49,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 #endif
 
-#if (VS_PRODUCT_VERSION != 5)
-#include <linux/platform_data/sgx-omap.h>
-#endif
-
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -62,6 +58,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <asm/ioctl.h>
 #include <drm/drmP.h>
 #include <drm/drm.h>
+#include <linux/of_reserved_mem.h>
 
 #include "img_defs.h"
 #include "services.h"
@@ -172,9 +169,12 @@ struct drm_device *gpsPVRDRMDev;
 #if !defined(SUPPORT_DRI_DRM_EXT) && !defined(SUPPORT_DRI_DRM_PLUGIN)
 #if defined(PVR_USE_DEVICE_TREE)
 static struct of_device_id asPlatIdList[] = {
-	{
-		.compatible = SYS_SGX_DEV_NAME
-	},
+	{	.compatible = "ti,am654-sgx544"		},
+	{	.compatible = "ti,dra7-sgx544"		},
+	{	.compatible = "ti,am4376-sgx530"	},
+	{	.compatible = "ti,am3352-sgx530"	},
+	{	.compatible = "ti,omap3-sgx530-121"	},
+	{	.compatible = "ti,omap4-sgx540-120"	},
 	{}
 };
 MODULE_DEVICE_TABLE(of,  asPlatIdList);
@@ -216,7 +216,7 @@ PVRSRVDrmLoad(struct drm_device *dev, unsigned long flags)
 	gpsPVRDRMDev = dev;
 #if !defined(PVR_DRI_DRM_NOT_PCI) && !defined(SUPPORT_DRI_DRM_PLUGIN)
 #if defined(PVR_DRI_DRM_PLATFORM_DEV)
-	gpsPVRLDMDev = dev->platformdev;
+	gpsPVRLDMDev = to_platform_device(dev->dev);
 #else
 	gpsPVRLDMDev = dev->pdev;
 #endif
@@ -265,7 +265,7 @@ exit:
 	return iRes;
 }
 
-DRI_DRM_STATIC int
+DRI_DRM_STATIC void
 PVRSRVDrmUnload(struct drm_device *dev)
 {
 	PVR_TRACE(("PVRSRVDrmUnload"));
@@ -279,8 +279,6 @@ PVRSRVDrmUnload(struct drm_device *dev)
 #if defined(PDUMP)
 	dbgdrv_cleanup();
 #endif
-
-	return 0;
 }
 
 DRI_DRM_STATIC int
@@ -508,6 +506,21 @@ static PVRSRV_DRM_PLUGIN sPVRDrmPlugin =
 #else	/* defined(SUPPORT_DRI_DRM_PLUGIN) */
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0))
+#if defined(CONFIG_COMPAT)
+static long pvr_compat_ioctl(struct file *file, unsigned int cmd,
+			     unsigned long arg)
+{
+	unsigned int nr = DRM_IOCTL_NR(cmd);
+
+	if (nr < DRM_COMMAND_BASE)
+	{
+		return drm_compat_ioctl(file, cmd, arg);
+	}
+
+	return drm_ioctl(file, cmd, arg);
+}
+#endif /* defined(CONFIG_COMPAT) */
+
 static const struct file_operations sPVRFileOps = 
 {
 	.owner = THIS_MODULE,
@@ -518,6 +531,9 @@ static const struct file_operations sPVRFileOps =
 	.release = PVRSRVDrmRelease,
 #endif
 	PVR_DRM_FOPS_IOCTL = drm_ioctl,
+#if defined(CONFIG_COMPAT)
+	.compat_ioctl  = pvr_compat_ioctl,
+#endif
 	.mmap = PVRMMap,
 	.poll = drm_poll,
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,12,0))
@@ -596,6 +612,18 @@ static struct drm_driver sPVRDrmDriver =
 	},
 #endif
 #endif
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,0)) && (LINUX_VERSION_CODE < KERNEL_VERSION(4,5,0))
+#if defined(LDM_PLATFORM)
+	.set_busid = drm_platform_set_busid,
+#else
+#if defined(LDM_PCI)
+	.set_busid = drm_pci_set_busid,
+#else
+	#error "LDM_PLATFORM or LDM_PCI must be set"
+#endif
+#endif
+#endif
 	.name = "pvr",
 	.desc = PVR_DRM_DESC,
 	.date = PVR_DRM_DATE,
@@ -654,27 +682,33 @@ static struct platform_driver sPVRPlatDriver =
 static int
 PVRSRVDrmProbe(struct platform_device *pDevice)
 {
-#if (VS_PRODUCT_VERSION != 5)
 	int ret;
 	struct device *dev = &pDevice->dev;
-	struct gfx_sgx_platform_data *pdata = dev->platform_data;
-#endif
+	struct drm_device *drm_dev;
 
 	PVR_TRACE(("PVRSRVDrmProbe"));
 
-#if (VS_PRODUCT_VERSION != 5)
-	if (pdata && pdata->deassert_reset) {
-		ret = pdata->deassert_reset(pDevice, pdata->reset_name);
-		if (ret) {
-			dev_err(dev, "Unable to reset SGX!\n");
-		}
-	}
-#endif
+	LinuxSetCMARegion(of_reserved_mem_device_init(&pDevice->dev) ?
+			IMG_FALSE: IMG_TRUE);
 
 #if defined(PVR_NEW_STYLE_DRM_PLATFORM_DEV)
 	gpsPVRLDMDev = pDevice;
 
-	return drm_platform_init(&sPVRDrmDriver, gpsPVRLDMDev);
+	drm_dev = drm_dev_alloc(&sPVRDrmDriver, dev);
+	if (IS_ERR(drm_dev)) {
+		dev_err(dev, "Unable to allocate SGX DRM device!\n");
+		return -ENOMEM;
+	}
+
+	platform_set_drvdata(pDevice, drm_dev);
+	ret = drm_dev_register(drm_dev, 0);
+	if (ret != 0) {
+		dev_err(dev, "Unable to register SGX DRM device\n");
+		drm_dev_put(drm_dev);
+	}
+
+	return ret;
+
 #else
 	return drm_get_platform_dev(pDevice, &sPVRDrmDriver);
 #endif
@@ -683,28 +717,12 @@ PVRSRVDrmProbe(struct platform_device *pDevice)
 static int
 PVRSRVDrmRemove(struct platform_device *pDevice)
 {
-#if (VS_PRODUCT_VERSION != 5)
-	int ret;
-	struct device *dev = &pDevice->dev;
-	struct gfx_sgx_platform_data *pdata = dev->platform_data;
-#endif
+	struct drm_device *drm_dev = platform_get_drvdata(pDevice);
 
 	PVR_TRACE(("PVRSRVDrmRemove"));
 
-#if defined(PVR_NEW_STYLE_DRM_PLATFORM_DEV) && (LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0))
-	drm_platform_exit(&sPVRDrmDriver, gpsPVRLDMDev);
-#else
-	drm_put_dev(gpsPVRDRMDev);
-#endif
-
-#if (VS_PRODUCT_VERSION != 5)
-	if (pdata && pdata->assert_reset) {
-		ret = pdata->assert_reset(pDevice, pdata->reset_name);
-		if (ret) {
-			dev_err(dev, "Unable to reset SGX!\n");
-		}
-	}
-#endif
+	drm_dev_unregister(drm_dev);
+	drm_dev_put(drm_dev);
 
 	return 0;
 }

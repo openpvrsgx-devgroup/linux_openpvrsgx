@@ -54,7 +54,7 @@ extern "C" {
 #if defined(__linux__) && defined(__KERNEL__)
 #include <linux/hardirq.h>
 #include <linux/string.h>
-#if defined(__arm__)
+#if defined(__arm__) || defined(__aarch64__)
 #include <asm/memory.h>
 #endif
 #endif

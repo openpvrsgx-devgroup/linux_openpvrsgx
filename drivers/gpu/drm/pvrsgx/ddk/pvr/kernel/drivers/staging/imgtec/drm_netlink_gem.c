@@ -74,7 +74,11 @@ int netlink_gem_mmap(struct file *file, struct vm_area_struct *vma)
 	/* Allow Netlink clients to mmap any object for reading */
 	if (!capable(CAP_SYS_RAWIO) || (vma->vm_flags & VM_WRITE))
 	{
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0))
+		if (!drm_vma_node_is_allowed(node, file_priv)) {
+#else
 		if (!drm_vma_node_is_allowed(node, file)) {
+#endif
 			err = -EACCES;
 			goto exit_unref_obj;
 		}

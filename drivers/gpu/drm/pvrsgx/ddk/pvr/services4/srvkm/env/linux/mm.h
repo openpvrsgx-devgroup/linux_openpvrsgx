@@ -104,6 +104,7 @@ typedef enum {
 #if defined(PVR_LINUX_MEM_AREA_USE_VMAP)
     LINUX_MEM_AREA_VMAP,
 #endif
+    LINUX_MEM_AREA_CMA,
     LINUX_MEM_AREA_TYPE_COUNT
 }LINUX_MEM_AREA_TYPE;
 
@@ -167,6 +168,11 @@ struct _LinuxMemArea {
             LinuxMemArea *psParentLinuxMemArea;
             IMG_UINTPTR_T uiByteOffset;
         }sSubAlloc;
+        struct _sCmaRegion
+        {
+            IMG_VOID *hCookie;
+            dma_addr_t dmaHandle;
+        }sCmaRegion;
     }uData;
 
     IMG_SIZE_T uiByteSize;		    /* Size of memory area */
@@ -513,6 +519,10 @@ LinuxMemArea *NewIOLinuxMemArea(IMG_CPU_PHYADDR BasePAddr, IMG_SIZE_T uiBytes, I
 IMG_VOID FreeIOLinuxMemArea(LinuxMemArea *psLinuxMemArea);
 
 
+LinuxMemArea *NewAllocCmaLinuxMemArea(IMG_SIZE_T uiBytes, IMG_UINT32 ui32AreaFlags);
+
+IMG_VOID FreeAllocCmaLinuxMemArea(LinuxMemArea *psLinuxMemArea);
+
 /*!
  *******************************************************************************
  * @brief 
@@ -670,6 +680,8 @@ const IMG_CHAR *LinuxMemAreaTypeToString(LINUX_MEM_AREA_TYPE eMemAreaType);
 #if defined(DEBUG) || defined(DEBUG_LINUX_MEM_AREAS)
 const IMG_CHAR *HAPFlagsToString(IMG_UINT32 ui32Flags);
 #endif
+
+IMG_VOID LinuxSetCMARegion(IMG_BOOL bCma);
 
 #endif /* __IMG_LINUX_MM_H__ */
 

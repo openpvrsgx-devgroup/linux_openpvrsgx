@@ -43,16 +43,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if !defined(__SYSINFO_H__)
 #define __SYSINFO_H__
 
-#if (VS_PRODUCT_VERSION == 5)
-#if defined(SGX540) && (SGX_CORE_REV == 120)
-#define SYS_SGX_CLOCK_SPEED		307200000
-#else
-#define SYS_SGX_CLOCK_SPEED		304742400
-#endif
-#else // (VS_PRODUCT_VERSION == 5)
-#define SYS_SGX_CLOCK_SPEED		200000000
-#endif
-
 /*!< System specific poll/timeout details */
 #if defined(PVR_LINUX_USING_WORKQUEUES)
 /*
@@ -64,8 +54,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define MAX_HW_TIME_US				(1000000)
 #define WAIT_TRY_COUNT				(20000)
 #else
-#define MAX_HW_TIME_US				(500000)
-#define WAIT_TRY_COUNT				(10000)
+#define MAX_HW_TIME_US				(2000000)
+#define WAIT_TRY_COUNT				(40000)
 #endif
 
 

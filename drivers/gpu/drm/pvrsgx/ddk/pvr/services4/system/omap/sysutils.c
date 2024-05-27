@@ -58,6 +58,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-#if defined(__QNXNTO__)
+#if defined(__QNXNTO__) 
 #include "sysutils_nto.c"
 #endif

@@ -53,6 +53,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "sysconfig.h"
 #include "sgxinfokm.h"
 #include "syslocal.h"
+#include "dm_timer_wrapper.h"
 
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
@@ -62,7 +63,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 
 #if defined(SUPPORT_DRI_DRM_PLUGIN)
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0))
 #include <drm/drmP.h>
+#endif
 #include <drm/drm.h>
 
 #include <linux/omap_gpu.h>
@@ -258,13 +261,8 @@ IMG_VOID DisableSGXClocks(SYS_DATA *psSysData)
 	SysDisableSGXInterrupts(psSysData);
 
 #if defined(LDM_PLATFORM) && !defined(PVR_DRI_DRM_NOT_PCI)
-	{
-		int res = pm_runtime_put_sync(&gpsPVRLDMDev->dev);
-		if (res < 0)
-		{
-			PVR_DPF((PVR_DBG_ERROR, "DisableSGXClocks: pm_runtime_put_sync failed (%d)", -res));
-		}
-	}
+	pm_runtime_mark_last_busy(&gpsPVRLDMDev->dev);
+	pm_runtime_put_autosuspend(&gpsPVRLDMDev->dev);
 #if defined(SYS_OMAP_HAS_DVFS_FRAMEWORK)
 	sgxfreq_notif_sgx_clk_off();
 #endif /* defined(SYS_OMAP_HAS_DVFS_FRAMEWORK) */
@@ -312,7 +310,7 @@ static PVRSRV_ERROR AcquireGPTimer(SYS_SPECIFIC_DATA *psSysSpecData)
 	psSysSpecData->psGPTimer = omap_dm_timer_request_specific(GPTIMER_TO_USE);
 	if (psSysSpecData->psGPTimer == NULL)
 	{
-
+	
 		PVR_DPF((PVR_DBG_WARNING, "%s: omap_dm_timer_request_specific failed", __FUNCTION__));
 		return PVRSRV_ERROR_CLOCK_REQUEST_FAILED;
 	}
@@ -351,7 +349,7 @@ static void ReleaseGPTimer(SYS_SPECIFIC_DATA *psSysSpecData)
 {
 	if (psSysSpecData->psGPTimer != NULL)
 	{
-		/* Always returns 0 */
+		/* Always returns 0 */	
 		(void) omap_dm_timer_stop(psSysSpecData->psGPTimer);
 
 		omap_dm_timer_disable(psSysSpecData->psGPTimer);
@@ -388,12 +386,12 @@ static PVRSRV_ERROR AcquireGPTimer(SYS_SPECIFIC_DATA *psSysSpecData)
 	IMG_CPU_PHYADDR sTimerRegPhysBase;
 	IMG_HANDLE hTimerEnable;
 	IMG_UINT32 *pui32TimerEnable;
-#if defined(PVR_OMAP_TIMER_BASE_IN_SYS_SPEC_DATA) || (VS_PRODUCT_VERSION == 5)
+#if defined(PVR_OMAP_TIMER_BASE_IN_SYS_SPEC_DATA) || (AM_VERSION == 5) || (AM_VERSION == 6)
 	PVR_ASSERT(psSysSpecData->sTimerRegPhysBase.uiAddr == 0);
 #endif
 
 #if defined(PVR_OMAP4_TIMING_PRCM)
-#if (VS_PRODUCT_VERSION == 5)
+#if (AM_VERSION == 5) || (AM_VERSION == 6)
 	/* assert our dependence on the GPTIMER11 module */
 	psCLK = clk_get(NULL, "gpt11_fck");
 	if (IS_ERR(psCLK))
@@ -445,7 +443,7 @@ static PVRSRV_ERROR AcquireGPTimer(SYS_SPECIFIC_DATA *psSysSpecData)
 		PVR_DPF((PVR_DBG_ERROR, "EnableSystemClocks: Couldn't enable GPTIMER11 interface clock (%d)", res));
 		goto ExitDisableGPT11FCK;
 	}
-#endif //(VS_PRODUCT_VERSION == 5)
+#endif //(AM_VERSION == 5) || (AM_VERSION == 6)
 #endif	/* defined(PVR_OMAP4_TIMING_PRCM) */
 
 	/* Set the timer to non-posted mode */
@@ -494,7 +492,7 @@ static PVRSRV_ERROR AcquireGPTimer(SYS_SPECIFIC_DATA *psSysSpecData)
 		    4,
 		    PVRSRV_HAP_KERNEL_ONLY|PVRSRV_HAP_UNCACHED,
 		    hTimerEnable);
-#if defined(PVR_OMAP_TIMER_BASE_IN_SYS_SPEC_DATA) || (VS_PRODUCT_VERSION == 5)
+#if defined(PVR_OMAP_TIMER_BASE_IN_SYS_SPEC_DATA) || (AM_VERSION == 5) || (AM_VERSION == 6)
 	psSysSpecData->sTimerRegPhysBase = sTimerRegPhysBase;
 #endif
 	eError = PVRSRV_OK;
@@ -503,11 +501,11 @@ static PVRSRV_ERROR AcquireGPTimer(SYS_SPECIFIC_DATA *psSysSpecData)
 
 ExitDisableGPT11ICK:
 #if defined(PVR_OMAP4_TIMING_PRCM)
-#if (VS_PRODUCT_VERSION == 5)
+#if (AM_VERSION == 5) || (AM_VERSION == 6)
 	clk_disable(psSysSpecData->psGPT11_ICK);
 #endif
 ExitDisableGPT11FCK:
-#if (VS_PRODUCT_VERSION == 5)
+#if (AM_VERSION == 5) || (AM_VERSION == 6)
 	clk_disable(psSysSpecData->psGPT11_FCK);
 #endif
 ExitError:
@@ -532,7 +530,7 @@ static void ReleaseGPTimer(SYS_SPECIFIC_DATA *psSysSpecData)
 	IMG_HANDLE hTimerDisable;
 	IMG_UINT32 *pui32TimerDisable;
 
-#if defined(PVR_OMAP_TIMER_BASE_IN_SYS_SPEC_DATA) || (VS_PRODUCT_VERSION == 5)
+#if defined(PVR_OMAP_TIMER_BASE_IN_SYS_SPEC_DATA) || (AM_VERSION == 5) || (AM_VERSION == 6)
 	if (psSysSpecData->sTimerRegPhysBase.uiAddr == 0)
 	{
 		return;
@@ -557,11 +555,11 @@ static void ReleaseGPTimer(SYS_SPECIFIC_DATA *psSysSpecData)
 				PVRSRV_HAP_KERNEL_ONLY|PVRSRV_HAP_UNCACHED,
 				hTimerDisable);
 	}
-#if defined(PVR_OMAP_TIMER_BASE_IN_SYS_SPEC_DATA) || (VS_PRODUCT_VERSION == 5)
+#if defined(PVR_OMAP_TIMER_BASE_IN_SYS_SPEC_DATA) || (AM_VERSION == 5) || (AM_VERSION == 6)
 	psSysSpecData->sTimerRegPhysBase.uiAddr = 0;
 #endif
 #if defined(PVR_OMAP4_TIMING_PRCM)
-#if (VS_PRODUCT_VERSION == 5)
+#if (AM_VERSION == 5) || (AM_VERSION == 6)
 	clk_disable(psSysSpecData->psGPT11_ICK);
 
 	clk_disable(psSysSpecData->psGPT11_FCK);
@@ -638,17 +636,11 @@ IMG_VOID DisableSystemClocks(SYS_DATA *psSysData)
 
 PVRSRV_ERROR SysPMRuntimeRegister(void)
 {
-#if defined(LDM_PLATFORM) && !defined(PVR_DRI_DRM_NOT_PCI)
-	pm_runtime_enable(&gpsPVRLDMDev->dev);
-#endif
 	return PVRSRV_OK;
 }
 
 PVRSRV_ERROR SysPMRuntimeUnregister(void)
 {
-#if defined(LDM_PLATFORM) && !defined(PVR_DRI_DRM_NOT_PCI)
-	pm_runtime_disable(&gpsPVRLDMDev->dev);
-#endif
 	return PVRSRV_OK;
 }
 

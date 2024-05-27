@@ -47,10 +47,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 #endif
 
-#if (VS_PRODUCT_VERSION != 5)
-#include <linux/platform_data/sgx-omap.h>
-#endif
-
 #if defined(SUPPORT_DRI_DRM) && !defined(SUPPORT_DRI_DRM_PLUGIN)
 #define	PVR_MOD_STATIC
 #else
@@ -91,7 +87,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <linux/fs.h>
 
 #if defined(SUPPORT_DRI_DRM)
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0))
 #include <drm/drmP.h>
+#else
+#include <drm/drm_file.h>
+#endif
 #if defined(PVR_SECURE_DRM_AUTH_EXPORT)
 #include "env_perproc.h"
 #endif
@@ -110,7 +110,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif /* PVR_LDM_DEVICE_CLASS */
 
 #if defined(DEBUG) && defined(PVR_MANUAL_POWER_CONTROL)
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0)
 #include <asm/uaccess.h>
+#else
+#include <linux/uaccess.h>
+#endif
 #endif
 
 #include "img_defs.h"
@@ -134,8 +138,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "lock.h"
 #include "linkage.h"
 #include "buffer_manager.h"
-#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
-#include "pvr_sync.h"
+#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC) || defined(PVR_ANDROID_NATIVE_WINDOW_HAS_FENCE)
+#include "pvr_sync_common.h"
 #endif
 
 #if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE) && defined(EUR_CR_TIMER)
@@ -222,6 +226,9 @@ static struct file_operations pvrsrv_fops =
 {
 	.owner=THIS_MODULE,
 	.unlocked_ioctl = PVRSRV_BridgeDispatchKM,
+#if defined(CONFIG_COMPAT)
+	.compat_ioctl	= PVRSRV_BridgeCompatDispatchKM,
+#endif
 	.open=PVRSRVOpen,
 	.release=PVRSRVRelease,
 	.mmap=PVRMMap,
@@ -278,9 +285,12 @@ MODULE_DEVICE_TABLE(pci, powervr_id_table);
 
 #if defined(PVR_USE_DEVICE_TREE)
 static struct of_device_id powervr_id_table[] = {
-	{
-		.compatible = SYS_SGX_DEV_NAME
-	},
+	{	.compatible = "ti,am654-sgx544"		},
+	{	.compatible = "ti,dra7-sgx544"		},
+	{	.compatible = "ti,am4376-sgx530"	},
+	{	.compatible = "ti,am3352-sgx530"	},
+	{	.compatible = "ti,omap3-sgx530-121"	},
+	{	.compatible = "ti,omap4-sgx540-120"	},
 	{}
 };
 MODULE_DEVICE_TABLE(of, powervr_id_table);
@@ -361,21 +371,8 @@ static int __devinit PVRSRVDriverProbe(LDM_DEV *pDevice, const struct pci_device
 #endif
 {
 	SYS_DATA *psSysData;
-#if (VS_PRODUCT_VERSION != 5)
-	int ret;
-	struct device *dev = &pDevice->dev;
-	struct gfx_sgx_platform_data *pdata = dev->platform_data;
-#endif
 
 	PVR_TRACE(("PVRSRVDriverProbe(pDevice=%p)", pDevice));
-#if (VS_PRODUCT_VERSION != 5)
-	if (pdata && pdata->deassert_reset) {
-		ret = pdata->deassert_reset(pDevice, pdata->reset_name);
-		if (ret) {
-			dev_err(dev, "Unable to reset SGX!\n");
-		}
-	}
-#endif
 
 #if 0   /* INTEGRATION_POINT */
 	/* Some systems require device-specific system initialisation.
@@ -401,7 +398,6 @@ static int __devinit PVRSRVDriverProbe(LDM_DEV *pDevice, const struct pci_device
 			return -ENODEV;
 		}
 	}
-
 	return 0;
 }
 
@@ -1121,7 +1117,7 @@ static int __init PVRCore_Init(void)
 	SystraceCreateFS();
 #endif
 
-#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
+#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC) || defined(PVR_ANDROID_NATIVE_WINDOW_HAS_FENCE)
 	PVRSyncDeviceInit();
 #endif
 	return 0;
@@ -1215,7 +1211,7 @@ static void __exit PVRCore_Cleanup(void)
 	SysAcquireData(&psSysData);
 #endif
 
-#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
+#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC) || defined(PVR_ANDROID_NATIVE_WINDOW_HAS_FENCE)
 	PVRSyncDeviceDeInit();
 #endif
 

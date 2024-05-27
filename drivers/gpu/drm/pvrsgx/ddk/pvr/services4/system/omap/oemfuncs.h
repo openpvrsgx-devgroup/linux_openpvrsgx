@@ -49,7 +49,7 @@ extern "C" {
 /* function in/out data structures: */
 typedef IMG_UINT32   (*PFN_SRV_BRIDGEDISPATCH)( IMG_UINT32  Ioctl,
 												IMG_BYTE   *pInBuf,
-												IMG_UINT32  InBufLen,
+												IMG_UINT32  InBufLen, 
 											    IMG_BYTE   *pOutBuf,
 												IMG_UINT32  OutBufLen,
 												IMG_UINT32 *pdwBytesTransferred);
@@ -76,3 +76,5 @@ typedef struct PVRSRV_DC_OEM_JTABLE_TAG
 /*****************************************************************************
  End of file (oemfuncs.h)
 *****************************************************************************/
+
+

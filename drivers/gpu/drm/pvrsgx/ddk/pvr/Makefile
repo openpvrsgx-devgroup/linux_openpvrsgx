@@ -43,23 +43,23 @@ ccflags-y += \
 	-Iinclude \
 	-Iarch/arm/mach-omap2 \
 	-Idrivers/video/fbdev/omap2 \
-	-I$(src)/ \
-	-I$(src)/include4 \
-	-I$(src)/services4/include \
-	-I$(src)/services4/include/env/linux \
-	-I$(src)/services4/system/include \
-	-I$(src)/services4/srvkm/bridged \
-	-I$(src)/services4/srvkm/bridged/sgx \
-	-I$(src)/services4/srvkm/devices/sgx \
-	-I$(src)/services4/srvkm/env/linux \
-	-I$(src)/services4/srvkm/hwdefs \
-	-I$(src)/services4/srvkm/include \
-	-I$(src)/services4/3rdparty/bufferclass_ti
+	-I$(srctree)/$(src)/ \
+	-I$(srctree)/$(src)/include4 \
+	-I$(srctree)/$(src)/services4/include \
+	-I$(srctree)/$(src)/services4/include/env/linux \
+	-I$(srctree)/$(src)/services4/system/include \
+	-I$(srctree)/$(src)/services4/srvkm/bridged \
+	-I$(srctree)/$(src)/services4/srvkm/bridged/sgx \
+	-I$(srctree)/$(src)/services4/srvkm/devices/sgx \
+	-I$(srctree)/$(src)/services4/srvkm/env/linux \
+	-I$(srctree)/$(src)/services4/srvkm/hwdefs \
+	-I$(srctree)/$(src)/services4/srvkm/include \
+	-I$(srctree)/$(src)/services4/3rdparty/bufferclass_ti
 
 # choose SoC integration variant to choose the right source subtree
 
 ccflags-y += \
-	-I$(src)/services4/system/$(SOC_FAMILY)
+	-I$(srctree)/$(src)/services4/system/$(SOC_FAMILY)
 
 ifeq ($(SOC_FAMILY),omap)
 $(TARGET) += \
@@ -126,7 +126,9 @@ ccflags-y += \
 	-DSYS_CUSTOM_POWERLOCK_WRAP \
 	-DPVR_NO_FULL_CACHE_OPS \
 	-DSGX_CLK_CORE_DIV5 \
-	-DSUPPORT_SGX_NEW_STATUS_VALS
+	-DSUPPORT_SGX_NEW_STATUS_VALS \
+	-DSYS_USING_INTERRUPTS \
+	-DSUPPORT_ACTIVE_POWER_MANAGEMENT
 
 # new for ddk 1.14 tree
 ccflags-y += \
@@ -198,7 +200,8 @@ $(TARGET) += \
 	services4/srvkm/env/linux/pdump.o \
 	services4/srvkm/env/linux/proc.o \
 	services4/srvkm/env/linux/pvr_bridge_k.o \
-	services4/srvkm/env/linux/pvr_debug.o
+	services4/srvkm/env/linux/pvr_debug.o \
+	services4/srvkm/env/linux/pvr_linux_fence.o
 
 ifneq ($(CONFIG_SGX_DRM),)
 
@@ -214,7 +217,6 @@ ccflags-y += -DSGX_FEATURE_MP_CORE_COUNT=2
 ccflags-y += -DSGX_FEATURE_SYSTEM_CACHE	# assumed by client libs
 ccflags-n += -DSYS_OMAP_HAS_DVFS_FRAMEWORK	# sgxfreq extension
 # may be broken...
-ccflags-y += -DSUPPORT_ACTIVE_POWER_MANAGEMENT
 ccflags-y += -DAMVERSION=5
 # PVR_OMAPLFB_DRM_FB			:= 0
 endif
@@ -234,7 +236,6 @@ ccflags-y += -DMODULE	# this disables some code in AcquireGPTimer in sysutils_li
 ccflags-y += -DSUPPORT_DMABUF
 
 # these must not be set or we can't compile successfully for omap
-ccflags-n += -DSYS_USING_INTERRUPTS	# should probably be enabled but leads to paging errors, asynchronous external abort
 ccflags-n += -DSUPPORT_DRI_DRM_EXT
 ccflags-n += -DSUPPORT_DRI_DRM_PLUGIN
 ccflags-n += -DPVR_DISPLAY_CONTROLLER_DRM_IOCTL

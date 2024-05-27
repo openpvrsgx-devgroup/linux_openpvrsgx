@@ -42,19 +42,19 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define __PVR_UACCESS_H__
 
 #include <linux/version.h>
-
+#include <linux/sched.h>
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38))
 #ifndef AUTOCONF_INCLUDED
 #include <linux/config.h>
 #endif
 #endif
 
-#include <asm/uaccess.h>
+#include <linux/uaccess.h>
 
 static inline unsigned long pvr_copy_to_user(void __user *pvTo, const void *pvFrom, unsigned long ulBytes)
 {
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33))
-    if (access_ok(VERIFY_WRITE, pvTo, ulBytes))
+    if (access_ok(pvTo, ulBytes))
     {
 	return __copy_to_user(pvTo, pvFrom, ulBytes);
     }
@@ -71,7 +71,7 @@ static inline unsigned long pvr_copy_from_user(void *pvTo, const void __user *pv
      * The compile time correctness checking introduced for copy_from_user in
      * Linux 2.6.33 isn't fully comaptible with our usage of the function.
      */
-    if (access_ok(VERIFY_READ, pvFrom, ulBytes))
+    if (access_ok(pvFrom, ulBytes))
     {
 	return __copy_from_user(pvTo, pvFrom, ulBytes);
     }

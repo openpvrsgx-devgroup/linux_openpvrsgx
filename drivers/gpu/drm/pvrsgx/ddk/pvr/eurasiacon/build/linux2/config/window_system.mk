@@ -85,15 +85,14 @@ else ifeq ($(WINDOW_SYSTEM),nulldrmws)
  PVR_LWS_NODC := 1
 endif
 
-ifeq ($(MESA_EGL),1)
- OGLES1_BASENAME := GLESv1_PVR_MESA
- OGLES2_BASENAME := GLESv2_PVR_MESA
-endif
-
 # Mesa supports external EGL images, which excludes IMG texture stream
 # support.
 PVR_LWS_NOBC := $(MESA_EGL)
 
 ifeq ($(PVR_LWS_NODC),1)
  SUPPORT_DMABUF := $(SUPPORT_DRI_DRM)
+endif
+
+ifeq ($(MESA_EGL),1)
+ EGL_BASENAME_SUFFIX := _PVR_MESA
 endif

@@ -66,7 +66,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <asm/current.h>
 #endif
 #if defined(SUPPORT_DRI_DRM)
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0))
 #include <drm/drmP.h>
+#else
+#include <linux/platform_device.h>
+#endif
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,0))
 #include <drm/drm_legacy.h>
 #endif
@@ -163,10 +167,6 @@ static struct pvr_proc_dir_entry *g_ProcMMap;
 
 #else	/* !defined(PVR_MAKE_ALL_PFNS_SPECIAL) */
 
-#if PAGE_SHIFT != 12
-#error This build variant has not yet been made non-4KB page-size aware
-#endif
-
 /*
  * Since we no longer have to worry about clashes with the mmap
  * offsets used for pure PFN mappings (VM_PFNMAP), there is greater
@@ -177,13 +177,15 @@ static struct pvr_proc_dir_entry *g_ProcMMap;
 #if defined(PVR_MMAP_OFFSET_BASE)
 #define	FIRST_SPECIAL_PFN 	PVR_MMAP_OFFSET_BASE
 #else
-#define	FIRST_SPECIAL_PFN	0x80000000UL
+#define FIRST_SPECIAL_PFN_BASE 0x80000000UL
+#define FIRST_SPECIAL_PFN (FIRST_SPECIAL_PFN_BASE >> (PAGE_SHIFT - 12))
 #endif
 
 #if defined(PVR_NUM_MMAP_HANDLES)
 #define	MAX_MMAP_HANDLE		PVR_NUM_MMAP_HANDLES
 #else
-#define	MAX_MMAP_HANDLE		0x7fffffffUL
+#define MAX_MMAP_HANDLE_BASE 0x7fffffffUL
+#define MAX_MMAP_HANDLE (MAX_MMAP_HANDLE_BASE >> (PAGE_SHIFT - 12))
 #endif
 
 #endif	/* !defined(PVR_MAKE_ALL_PFNS_SPECIAL) */
@@ -711,7 +713,7 @@ DoMapToUser(LinuxMemArea *psLinuxMemArea,
 	 * that attempt to interpret it).
 	 * The only alternative is to use VM_INSERT_PAGE, which requires
 	 * finding the page structure corresponding to each page, or
-	 * if mixed maps are supported (VM_MIXEDMAP), vm_insert_mixed.
+	 * if mixed maps are supported (VM_MIXEDMAP), vmf_insert_mixed.
 	 */
         IMG_UINTPTR_T ulVMAPos;
 	IMG_UINTPTR_T uiByteEnd = uiByteOffset + uiByteSize;
@@ -768,7 +770,7 @@ DoMapToUser(LinuxMemArea *psLinuxMemArea,
 	for(uiPA = uiByteOffset; uiPA < uiByteEnd; uiPA += PAGE_SIZE)
 	{
 	    IMG_UINTPTR_T pfn;
-	    IMG_INT result;
+	    IMG_INT result = 0;
 	    IMG_BOOL bMapPage = IMG_TRUE;
 
 		if (psLinuxMemArea->hBMHandle)
@@ -787,7 +789,14 @@ DoMapToUser(LinuxMemArea *psLinuxMemArea,
 #if defined(PVR_MAKE_ALL_PFNS_SPECIAL)
 		    if (bMixedMap)
 		    {
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,5,0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,20,0))
+			pfn_t pfns = { pfn };
+			vm_fault_t vmf;
+
+			vmf = vmf_insert_mixed(ps_vma, ulVMAPos, pfns);
+			if (vmf & VM_FAULT_ERROR)
+				result = vm_fault_to_errno(vmf, 0);
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4,5,0))
 			pfn_t pfns = { pfn };
 
 			result = vm_insert_mixed(ps_vma, ulVMAPos, pfns);

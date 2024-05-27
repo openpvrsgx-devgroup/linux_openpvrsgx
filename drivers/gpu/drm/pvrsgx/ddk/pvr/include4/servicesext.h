@@ -863,9 +863,7 @@ typedef struct DISPLAY_MODE_INFO_TAG
 	IMG_UINT32				ui32OEMFlags;
 } DISPLAY_MODE_INFO;
 
-
-
-#define MAX_DISPLAY_NAME_SIZE	(50) /* arbitrary choice! */
+#define MAX_DISPLAY_NAME_SIZE	(64) /* arbitrary choice! */
 
 /*
 	Display info structure definition

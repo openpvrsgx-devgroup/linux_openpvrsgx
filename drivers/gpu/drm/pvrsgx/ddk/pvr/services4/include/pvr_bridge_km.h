@@ -263,7 +263,11 @@ PVRSRV_ERROR PVRSRVCreateDCSwapChainKM(PVRSRV_PER_PROCESS_DATA	*psPerProc,
 									   IMG_UINT32				ui32BufferCount,
 									   IMG_UINT32				ui32OEMFlags,
 									   IMG_HANDLE				*phSwapChain,
-									   IMG_UINT32				*pui32SwapChainID);
+									   IMG_UINT32				*pui32SwapChainID
+#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_FENCE)
+									  ,IMG_INT32				i32TimelineFd
+#endif
+									  );
 IMG_IMPORT
 PVRSRV_ERROR PVRSRVDestroyDCSwapChainKM(IMG_HANDLE	hSwapChain);
 IMG_IMPORT

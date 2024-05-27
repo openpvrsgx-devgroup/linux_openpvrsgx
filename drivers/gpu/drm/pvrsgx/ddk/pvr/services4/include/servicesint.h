@@ -228,6 +228,9 @@ typedef struct _PVRSRV_KERNEL_SYNC_INFO_
 	/* Unique ID of the sync object */
 	IMG_UINT32		ui32UID;
 
+#if defined(SUPPORT_DMABUF)
+	IMG_HANDLE		hFenceContext;
+#endif
 	/* Pointer for list manager */
 	struct _PVRSRV_KERNEL_SYNC_INFO_ *psNext;
 	struct _PVRSRV_KERNEL_SYNC_INFO_ **ppsThis;

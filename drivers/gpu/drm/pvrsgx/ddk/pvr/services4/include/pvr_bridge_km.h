@@ -169,10 +169,13 @@ IMG_IMPORT
 PVRSRV_ERROR PVRSRVMapDmaBufKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 								  IMG_HANDLE hDevCookie,
 								  IMG_HANDLE hDevMemHeap,
-								  IMG_INT32  i32DmaBufFD,
 								  IMG_UINT32 ui32Flags,
-								  IMG_SIZE_T *puiDmaBufSize,
+								  IMG_INT32 ui32DmaBufFD,
+								  IMG_SIZE_T uiDmaBufOffset,
+								  IMG_SIZE_T uiDmaBufSize,
 								  PVRSRV_KERNEL_MEM_INFO **ppsKernelMemInfo,
+								  IMG_SIZE_T *puiSize,
+								  IMG_SIZE_T *puiMemInfoOffset,
 								  IMG_UINT64 *pui64Stamp);
 
 IMG_IMPORT

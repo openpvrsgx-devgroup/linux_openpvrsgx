@@ -574,7 +574,9 @@ typedef struct PVRSRV_BRIDGE_IN_UNMAP_ION_HANDLE_TAG
 typedef struct _PVRSRV_BRIDGE_IN_MAP_DMABUF_
 {
 	IMG_UINT32			ui32BridgeFlags; /* Must be first member of structure */
-	IMG_INT32			i32DmaBufFD;
+	IMG_INT32			i32FD;
+	IMG_SIZE_T			uiOffset;
+	IMG_SIZE_T			uiSize;
 	IMG_UINT32			ui32Attribs;
 	IMG_HANDLE			hDevCookie;
 	IMG_HANDLE			hDevMemHeap;
@@ -1471,7 +1473,8 @@ typedef struct _PVRSRV_BRIDGE_OUT_MAP_DMABUF_
 	PVRSRV_KERNEL_MEM_INFO	*psKernelMemInfo;
 	PVRSRV_CLIENT_MEM_INFO  sClientMemInfo;
 	PVRSRV_CLIENT_SYNC_INFO sClientSyncInfo;
-	IMG_SIZE_T		uiDmaBufSize;
+	IMG_SIZE_T		uiSize;
+	IMG_SIZE_T		uiOffset;
 } PVRSRV_BRIDGE_OUT_MAP_DMABUF;
 
 /******************************************************************************

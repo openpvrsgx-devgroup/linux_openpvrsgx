@@ -71,7 +71,7 @@ extern "C" {
 
 /*Forward declaration*/
 typedef struct _PVRSRV_STUB_PBDESC_ PVRSRV_STUB_PBDESC;
-#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE)
+#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE) && defined(EUR_CR_TIMER)
 typedef struct _PVRSRV_SYSTRACE_JOB_
 {
 	IMG_UINT32 ui32JobID;
@@ -93,13 +93,22 @@ typedef struct _PVRSRV_SYSTRACE_CONTEXT_
 	
 } PVRSRV_SYSTRACE_CONTEXT;
 
+typedef struct _PVRSRV_SYSTRACE_TIMECORR_
+{
+	IMG_UINT64 ui64HostTime;
+	IMG_UINT32 ui32SGXClocksx16;
+} PVRSRV_SYSTRACE_TIMECORR;
+
 typedef struct _PVRSRV_SYSTRACE_DATA_
 {
-	IMG_UINT64 ui64LastHostTimestamp;
-	IMG_UINT32 ui32LastSGXClocksx16;
 	IMG_UINT32 ui32Index;
 	IMG_UINT32 ui32CurrentCtxID;
+
 	PVRSRV_SYSTRACE_CONTEXT asSystraceContext[8];
+	PVRSRV_SYSTRACE_TIMECORR asTimeCorrArray[32]; /* Array to store HostTime and corresponding SGXClks (Max value is PVRSRV_SYSTRACE_TIMEINDEX_LIMIT set in systrace.c */
+	IMG_UINT32 ui32TimeCorrIndex;				  /* Global current index */
+
+	IMG_BOOL bLastPowerDown;					  /* During last MISR Device was powered off */
 } PVRSRV_SYSTRACE_DATA;	
 #endif
 
@@ -290,7 +299,7 @@ typedef struct _PVRSRV_SGXDEV_INFO_
 	IMG_HANDLE			hKernelMMUContext;
 #endif
 
-#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE)
+#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE) && defined(EUR_CR_TIMER)
 	IMG_BOOL			bSystraceInitialised;
 	PVRSRV_SYSTRACE_DATA *psSystraceData;
 #endif
@@ -472,19 +481,9 @@ typedef struct _SGX_CCB_KICK_KM_
 	/* CCB offset of data structure associated with this kick */
 	IMG_UINT32	ui32CCBOffset;
 
-#if defined(SUPPORT_SGX_GENERALISED_SYNCOBJECTS)
-	/* SRC and DST syncs */
-	IMG_UINT32	ui32NumTASrcSyncs;
-	IMG_HANDLE	ahTASrcKernelSyncInfo[SGX_MAX_TA_SRC_SYNCS];
-	IMG_UINT32	ui32NumTADstSyncs;
-	IMG_HANDLE	ahTADstKernelSyncInfo[SGX_MAX_TA_DST_SYNCS];
-	IMG_UINT32	ui32Num3DSrcSyncs;
-	IMG_HANDLE	ah3DSrcKernelSyncInfo[SGX_MAX_3D_SRC_SYNCS];
-#else
 	/* SRC syncs */
 	IMG_UINT32	ui32NumSrcSyncs;
 	IMG_HANDLE	ahSrcKernelSyncInfo[SGX_MAX_SRC_SYNCS_TA];
-#endif
 
 	/* TA/3D dependency data */
 	IMG_BOOL	bTADependency;

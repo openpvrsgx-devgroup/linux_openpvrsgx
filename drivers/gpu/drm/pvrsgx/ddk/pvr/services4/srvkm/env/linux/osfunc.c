@@ -94,9 +94,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
 #include "pvr_sync.h"
 #endif
-
 #if defined (SUPPORT_ION)
 #include "ion.h"
+#endif
+#if defined(SUPPORT_DMABUF)
+#include "pvr_linux_fence.h"
 #endif
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,27))
@@ -105,7 +107,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define ON_EACH_CPU(func, info, wait) on_each_cpu(func, info, 0, wait)
 #endif
 
-#if defined(PVR_LINUX_USING_WORKQUEUES) && !defined(CONFIG_PREEMPT)
+#define PVR_ALLOW_NON_PAGE_STRUCT_MEMORY_IMPORT
+
+#if defined(PVR_LINUX_USING_WORKQUEUES) && !defined(CONFIG_PREEMPT) && !defined(CONFIG_PREEMPT_VOLUNTARY)
 /* 
  * Services spins at certain points waiting for events (e.g. swap
  * chain destrucion).  If those events rely on workqueues running,
@@ -146,7 +150,7 @@ PVRSRV_ERROR OSAllocMem_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T uiSize, IMG_PVOID 
     }
 
 #if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
-    *ppvCpuVAddr = _KMallocWrapper(uiSize, GFP_KERNEL | __GFP_NOWARN, pszFilename, ui32Line);
+    *ppvCpuVAddr = _KMallocWrapper(uiSize, GFP_KERNEL | __GFP_NOWARN, pszFilename, ui32Line, ui32Flags & PVRSRV_SWAP_BUFFER_ALLOCATION);
 #else
     *ppvCpuVAddr = KMallocWrapper(uiSize, GFP_KERNEL | __GFP_NOWARN);
 #endif
@@ -189,7 +193,7 @@ PVRSRV_ERROR OSFreeMem_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T uiSize, IMG_PVOID p
     else
     {
 #if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
-        _KFreeWrapper(pvCpuVAddr, pszFilename, ui32Line);
+        _KFreeWrapper(pvCpuVAddr, pszFilename, ui32Line, ui32Flags & PVRSRV_SWAP_BUFFER_ALLOCATION);
 #else
         KFreeWrapper(pvCpuVAddr);
 #endif
@@ -1167,6 +1171,9 @@ static void MISRWrapper(
 
 #if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
 	PVRSyncUpdateAllSyncs();
+#endif
+#if defined(SUPPORT_DMABUF)
+	PVRLinuxFenceCheckAll();
 #endif
 }
 
@@ -2164,7 +2171,7 @@ PVRSRV_ERROR OSBaseAllocContigMemory(IMG_SIZE_T uiSize, IMG_CPU_VIRTADDR *pvLinA
     IMG_VOID *pvKernLinAddr;
 
 #if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
-    pvKernLinAddr = _KMallocWrapper(uiSize, GFP_KERNEL, __FILE__, __LINE__);
+    pvKernLinAddr = _KMallocWrapper(uiSize, GFP_KERNEL, __FILE__, __LINE__, IMG_FALSE);
 #else
     pvKernLinAddr = KMallocWrapper(uiSize, GFP_KERNEL);
 #endif
@@ -3542,7 +3549,11 @@ PVRSRV_ERROR OSReleasePhysPageAddr(IMG_HANDLE hOSWrapMem)
                         SetPageDirty(psPage);
                     }
 	        }
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,6,0))
                 page_cache_release(psPage);
+#else
+                put_page(psPage);
+#endif
 	    }
             break;
         }
@@ -3724,7 +3735,13 @@ PVRSRV_ERROR OSAcquirePhysPageAddr(IMG_VOID *pvCPUVAddr,
     bMMapSemHeld = IMG_TRUE;
 
     /* Get page list */
-    psInfo->iNumPagesMapped = get_user_pages(current, current->mm, uStartAddr, psInfo->iNumPages, 1, 0, psInfo->ppsPages, NULL);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,6,0))
+    psInfo->iNumPagesMapped = get_user_pages(
+		current, current->mm,
+		uStartAddr, psInfo->iNumPages, 1, 0, psInfo->ppsPages, NULL);
+#else
+    psInfo->iNumPagesMapped = get_user_pages_remote(current, current->mm, uStartAddr, psInfo->iNumPages, FOLL_WRITE, psInfo->ppsPages, NULL);
+#endif
 
     if (psInfo->iNumPagesMapped >= 0)
     {
@@ -3910,17 +3927,30 @@ PVRSRV_ERROR OSAcquirePhysPageAddr(IMG_VOID *pvCPUVAddr,
 exit:
     PVR_ASSERT(bMMapSemHeld);
     up_read(&current->mm->mmap_sem);
+    bMMapSemHeld = IMG_FALSE;
 
-    /* Return the cookie */
-    *phOSWrapMem = (IMG_HANDLE)psInfo;
+    PVR_ASSERT(psInfo->eType != 0);
 
     if (bHaveNoPageStructs)
     {
+#if defined(PVR_ALLOW_NON_PAGE_STRUCT_MEMORY_IMPORT)
+	/*
+	 * Allowing the GPU to access pages that can't be locked down is
+	 * potentially unsafe. For recent versions of Linux, there are
+	 * safer ways to get access to such memory, such as DMA Buffer
+	 * sharing (DMABUF).
+	 */
         PVR_DPF((PVR_DBG_MESSAGE,
             "OSAcquirePhysPageAddr: Region contains pages which can't be locked down (no page structures)"));
+#else
+        PVR_DPF((PVR_DBG_ERROR,
+            "OSAcquirePhysPageAddr: Region contains pages which can't be locked down (no page structures)"));
+	goto error;
+#endif
     }
 
-    PVR_ASSERT(psInfo->eType != 0);
+    /* Return the cookie */
+    *phOSWrapMem = (IMG_HANDLE)psInfo;
 
     return PVRSRV_OK;
 
@@ -4758,10 +4788,9 @@ PVRSRV_ERROR PVROSFuncInit(IMG_VOID)
     }
 #endif
 
-#if defined (SUPPORT_ION)
+#if defined(SUPPORT_ION) && !defined(LMA)
 	{
 		PVRSRV_ERROR eError;
-
 		eError = IonInit();
 		if (eError != PVRSRV_OK)
 		{

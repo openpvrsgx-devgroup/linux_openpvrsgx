@@ -147,12 +147,39 @@ ifneq ($(INTERNAL_CLOBBER_ONLY),true)
 # Please do not change the format of the following lines
 -include $(CONFIG_KERNEL_MK)
 # These files may not exist in GPL km source packages
--include $(MAKE_TOP)/xorgconf.mk
 -include $(MAKE_TOP)/llvm.mk
 endif
 
 include $(MAKE_TOP)/commands.mk
 include $(MAKE_TOP)/buildvars.mk
+
+ifeq ($(INTERNAL_CLOBBER_ONLY)$(SUPPORT_ANDROID_PLATFORM),)
+ # doing a Linux build.  We need to worry about sysroots.
+
+ ifneq ($(SUPPORT_BUILD_LWS),)
+  -include $(MAKE_TOP)/xorgconf.mk
+
+ else ifneq ($(SYSROOT),)
+  LWS_PREFIX ?= /usr
+
+  ALL_CFLAGS      += --sysroot=${SYSROOT}
+  ALL_CXXFLAGS    += --sysroot=${SYSROOT}
+  ALL_LDFLAGS     += --sysroot=${SYSROOT}
+
+  PKG_CONFIG_SYSROOT_DIR := ${SYSROOT}
+
+  ifneq ($(SYSROOT),/)
+   # Override PKG_CONFIG_PATH to prevent additional host paths from being
+   # searched
+   PKG_CONFIG_PATH :=
+  endif
+ endif
+endif
+
+MULTIARCH_DIR ?= $(shell $(CROSS_COMPILE)gcc -dumpmachine)
+ifeq ($(ARCH),i386)
+ MULTIARCH_DIR := i386-linux-gnu
+endif
 
 HOST_INTERMEDIATES := $(HOST_OUT)/intermediates
 TARGET_INTERMEDIATES := $(TARGET_OUT)/intermediates
@@ -177,7 +204,7 @@ kbuild install:
 ifneq ($(INTERNAL_CLOBBER_ONLY),true)
 -include $(MAKE_TOP)/scripts.mk
 -include $(MAKE_TOP)/kbuild/kbuild.mk
-else
+endif
 # We won't depend on 'build' here so that people can build subsets of
 # components and still have the install script attempt to install the
 # subset.
@@ -197,7 +224,6 @@ install:
 		exit 1; \
 	fi
 	@cd $(TARGET_OUT) && ./install.sh
-endif
 
 # You can say 'make all_modules' to attempt to make everything, or 'make
 # components' to only make the things which are listed (in the per-build

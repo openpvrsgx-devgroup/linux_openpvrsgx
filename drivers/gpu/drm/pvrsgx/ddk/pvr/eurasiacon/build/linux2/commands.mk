@@ -201,6 +201,7 @@ JAR ?= jar
 JAVA ?= java
 JAVAC ?= javac
 ZIP ?= zip
+PKG_CONFIG ?= pkg-config
 
 ifeq ($(USE_CCACHE),1)
 CCACHE ?= ccache
@@ -232,10 +233,10 @@ override CC  := $(if $(V),,@)$(CCACHE) $(CC)
 override CXX := $(if $(V),,@)$(CCACHE) $(CXX)
 endif
 
-override AR				:= $(if $(V),,@)$(CROSS_COMPILE)ar
+override AR			:= $(if $(V),,@)$(CROSS_COMPILE)ar
 override BISON			:= $(if $(V),,@)$(BISON)
 override BZIP2			:= $(if $(V),,@)bzip2 -9
-override CP				:= $(if $(V),,@)cp
+override CP			:= $(if $(V),,@)cp
 override ECHO			:= $(if $(V),,@)echo
 override FLEX			:= $(if $(V),,@)flex
 override GAWK			:= $(if $(V),,@)gawk
@@ -248,13 +249,14 @@ override INSTALL		:= $(if $(V),,@)install
 override JAR			:= $(if $(V),,@)$(JAR)
 override JAVA			:= $(if $(V),,@)$(JAVA)
 override JAVAC			:= $(if $(V),,@)$(JAVAC)
-override M4				:= $(if $(V),,@)m4
+override LN			:= $(if $(V),,@)ln -f
+override M4			:= $(if $(V),,@)m4
 override MKDIR			:= $(if $(V),,@)mkdir
-override MV				:= $(if $(V),,@)mv
+override MV			:= $(if $(V),,@)mv
 override OBJCOPY		:= $(if $(V),,@)$(CROSS_COMPILE)objcopy
 override PDSASM			:= $(if $(V),,@)$(HOST_OUT)/pdsasm
 override RANLIB			:= $(if $(V),,@)$(CROSS_COMPILE)ranlib
-override RM				:= $(if $(V),,@)rm -f
+override RM			:= $(if $(V),,@)rm -f
 override SED			:= $(if $(V),,@)sed
 override STRIP			:= $(if $(V),,@)$(CROSS_COMPILE)strip
 override TAR			:= $(if $(V),,@)tar

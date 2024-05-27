@@ -47,6 +47,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 #endif
 
+#if (VS_PRODUCT_VERSION != 5)
+#include <linux/platform_data/sgx-omap.h>
+#endif
+
 #if defined(SUPPORT_DRI_DRM) && !defined(SUPPORT_DRI_DRM_PLUGIN)
 #define	PVR_MOD_STATIC
 #else
@@ -134,13 +138,18 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "pvr_sync.h"
 #endif
 
-#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE)
+#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE) && defined(EUR_CR_TIMER)
 #include "systrace.h"
 #endif
 
 #if defined(SUPPORT_DRI_DRM)
 #include "pvr_drm.h"
 #endif
+
+#if defined(SUPPORT_DMABUF)
+#include "pvr_linux_fence.h"
+#endif
+
 /*
  * DRVNAME is the name we use to register our driver.
  * DEVNAME is the name we use to register actual device nodes.
@@ -177,7 +186,7 @@ MODULE_PARM_DESC(gPVRDebugLevel, "Sets the level of debug output (default 0x7)")
 #define __devexit
 #endif
 #if !defined(__devexit_p)
-#define __devexit_p
+#define __devexit_p(x) (&(x))
 #endif
 
 #if defined(SUPPORT_PVRSRV_DEVICE_CLASS)
@@ -352,8 +361,21 @@ static int __devinit PVRSRVDriverProbe(LDM_DEV *pDevice, const struct pci_device
 #endif
 {
 	SYS_DATA *psSysData;
+#if (VS_PRODUCT_VERSION != 5)
+	int ret;
+	struct device *dev = &pDevice->dev;
+	struct gfx_sgx_platform_data *pdata = dev->platform_data;
+#endif
 
 	PVR_TRACE(("PVRSRVDriverProbe(pDevice=%p)", pDevice));
+#if (VS_PRODUCT_VERSION != 5)
+	if (pdata && pdata->deassert_reset) {
+		ret = pdata->deassert_reset(pDevice, pdata->reset_name);
+		if (ret) {
+			dev_err(dev, "Unable to reset SGX!\n");
+		}
+	}
+#endif
 
 #if 0   /* INTEGRATION_POINT */
 	/* Some systems require device-specific system initialisation.
@@ -992,9 +1014,16 @@ static int __init PVRCore_Init(void)
 		goto init_failed;
 	}
 
+#if defined(SUPPORT_DMABUF)
+	if (PVRLinuxFenceInit())
+	{
+		error = -ENOMEM;
+		goto init_failed;
+	}
+#endif
+
 	LinuxBridgeInit();
 	
-
 	PVRMMapInit();
 
 #if defined(PVR_LDM_MODULE)
@@ -1088,7 +1117,7 @@ static int __init PVRCore_Init(void)
 #endif /* defined(PVR_LDM_DEVICE_CLASS) */
 #endif /* !defined(SUPPORT_DRI_DRM) */
 
-#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE)
+#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE) && defined(EUR_CR_TIMER)
 	SystraceCreateFS();
 #endif
 
@@ -1136,6 +1165,9 @@ init_failed:
 	PVRMMapCleanup();
 	LinuxMMCleanup();
 	LinuxBridgeDeInit();
+#if defined(SUPPORT_DMABUF)
+	PVRLinuxFenceDeInit();
+#endif
 	PVROSFuncDeInit();
 	RemoveProcEntries();
 	return error;
@@ -1241,11 +1273,15 @@ static void __exit PVRCore_Cleanup(void)
 
 	LinuxBridgeDeInit();
 
+#if defined(SUPPORT_DMABUF)
+	PVRLinuxFenceDeInit();
+#endif
+
 	PVROSFuncDeInit();
 
 	RemoveProcEntries();
 
-#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE)
+#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE) && defined(EUR_CR_TIMER)
 	SystraceDestroyFS();
 #endif
 

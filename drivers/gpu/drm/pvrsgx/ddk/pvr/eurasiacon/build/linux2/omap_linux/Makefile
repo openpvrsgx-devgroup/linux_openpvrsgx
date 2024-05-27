@@ -2,23 +2,23 @@
 #@Title         Root makefile for OMAP4430 Linux.  Builds everything else.
 #@Copyright     Copyright (c) Imagination Technologies Ltd. All Rights Reserved
 #@License       Dual MIT/GPLv2
-# 
+#
 # The contents of this file are subject to the MIT license as set out below.
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
-# 
+#
 # Alternatively, the contents of this file may be used under the terms of
 # the GNU General Public License Version 2 ("GPL") in which case the provisions
 # of GPL are applicable instead of those above.
-# 
+#
 # If you wish to allow use of your version of this file only under the terms of
 # GPL, and not to allow others to use your version of this file under the terms
 # of the MIT license, indicate your decision by deleting the provisions above
@@ -26,10 +26,10 @@
 # out in the file called "GPL-COPYING" included in this distribution. If you do
 # not delete the provisions above, a recipient may use your version of this file
 # under the terms of either the MIT license or GPL.
-# 
+#
 # This License is also included in this distribution in the file called
 # "MIT-COPYING".
-# 
+#
 # EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
 # PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
 # BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
@@ -39,9 +39,17 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ### ###########################################################################
 
-# If a product wasn't specified, we're an OMAP4430 blaze.
+include ../config/window_system.mk
+
+# If a product wasn't specified, we're a J6 EVM.
 #
-TARGET_PRODUCT ?= omap5uevm
+TARGET_PRODUCT ?= jacinto6evm
+
+PVRSRV_NEED_PVR_DPF := 1
+PVRSRV_NEW_PVR_DPF := 1
+
+# Disable active power management
+SUPPORT_ACTIVE_POWER_MANAGEMENT 	:= 0
 
 # Customize this build as per the TARGET_PRODUCT setting
 #
@@ -68,7 +76,7 @@ ifneq ($(filter omap5sevm panda5,$(TARGET_PRODUCT)),)
  # FIXME: Re-enable this ASAP
  SUPPORT_ACTIVE_POWER_MANAGEMENT 	:= 0
 endif
-ifneq ($(filter omap5uevm,$(TARGET_PRODUCT)),)
+ifneq ($(filter jacinto6evm omap5uevm,$(TARGET_PRODUCT)),)
  SGXCORE					:= 544
  SGX_CORE_REV				:= 116
  SGX_FEATURE_MP				:= 1
@@ -81,9 +89,34 @@ ifneq ($(filter omap5uevm,$(TARGET_PRODUCT)),)
  VS_PRODUCT_VERSION			:= 5
 endif
 
+ifneq ($(filter ti335x ti437x,$(TARGET_PRODUCT)),)
+ SGXCORE					:= 530
+ SGX_CORE_REV				:= 125
+ # Reuse this variable to select the common environment variables for AM3/4/5
+ # The method introduces the minimum changes to support AM3/4 although the variable name
+ # is misleading.
+ SYS_OMAP5_UEVM				:= 1
+
+ ifeq ($(TARGET_PRODUCT), ti437x)
+ VS_PRODUCT_VERSION 		:= 4
+ else
+ VS_PRODUCT_VERSION			:= 3
+ endif
+
+ # FIXME: Re-enable this ASAP
+ SUPPORT_ACTIVE_POWER_MANAGEMENT 	:= 0
+endif
+
+PVR_NO_OMAP_TIMER := 1
+
 PVR_SYSTEM		:= omap
 
-KERNEL_COMPONENTS := srvkm bufferclass_example
+KERNEL_COMPONENTS := srvkm
+
+ifeq ($(PVR_LWS_NOBC),)
+BUFFERCLASS_MODULE ?= bufferclass_example
+KERNEL_COMPONENTS += $(BUFFERCLASS_MODULE)
+endif
 
 SUPPORT_OLD_ION_API := 1
 
@@ -99,8 +132,10 @@ LDM_PLATFORM ?= 1
 
 ifeq ($(LDM_PLATFORM),1)
 SUPPORT_LINUX_USING_WORKQUEUES := 1
-DISPLAY_CONTROLLER_COMPONENT += dc_omapfb3_linux
-DISPLAY_CONTROLLER := omaplfb
+#With DRM EGL and display, omaplfb is not needed
+# and it will be overwritten later
+#DISPLAY_CONTROLLER_COMPONENT += dc_omapfb3_linux
+#DISPLAY_CONTROLLER := omaplfb
 else
 SUPPORT_LINUX_USING_SHARED_WORKQUEUES := 1
 OMAP_NON_FLIP_DISPLAY := 1
@@ -140,12 +175,6 @@ LIBGCC := $(shell $(CROSS_COMPILE)gcc -print-libgcc-file-name)
 SGX_DYNAMIC_TIMING_INFO := 1
 SYS_CUSTOM_POWERLOCK_WRAP := 1
 
-ifeq ($(OMAP_NON_FLIP_DISPLAY),1)
-OPK_DEFAULT := libpvrPVR2D_BLITWSEGL.so
-else
-OPK_DEFAULT := libpvrPVR2D_FLIPWSEGL.so
-endif
-
 ifeq ($(SYS_OMAP5_UEVM),1)
 XORG_EXPLICIT_PVR_SERVICES_LOAD := 1
 ifeq ($(call kernel-version-at-least,3,8,13),true)
@@ -154,7 +183,11 @@ LDM_PLATFORM := 1
 PVR_LDM_DEVICE_TREE := 1
 PVR_DRI_DRM_PLATFORM_DEV := 1
 SUPPORT_DMABUF := 1
+ifeq ($(TARGET_PRODUCT),ti335x)
+PVR_DRM_MODESET_DRIVER_NAME := tilcdc
+else
 PVR_DRM_MODESET_DRIVER_NAME := omapdrm
+endif
 PVR_DRM_MODESET_MODULE_NAME := dumb
 # No display class driver.
 DISPLAY_CONTROLLER_COMPONENT :=
@@ -238,15 +271,9 @@ PVR_XORG_DONT_DROP_MASTER_IN_LEAVE_VT := 1
 endif
 XORG_PVR_VIDEO ?= omap4
 
-OPK_FALLBACK := libpvrPVR2D_DRIWSEGL.so
-
 ifneq ($(OMAP_NON_FLIP_DISPLAY),1)
 PVR_DISPLAY_CONTROLLER_DRM_IOCTL := 1
 endif
-
-else  # xorg isn't excluded
-
-OPK_FALLBACK := libpvrPVR2D_BLITWSEGL.so
 
 endif # xorg isn't excluded
 
@@ -262,10 +289,16 @@ endif
 else	# ($(PVR_DRM_MODESET_DRIVER_NAME),)
 OPK_DEFAULT := libpvrDRMWSEGL.so
 ifeq ($(SUPPORT_BUILD_XORG),1)
-OPK_FALLBACK := libpvrPVR2D_DRIWSEGL.so
-XORG_PVR_VIDEO ?= generic_drm
+ ifeq ($(PVR_LWS_NODC),)
+  XORG_PVR_VIDEO := genericDRMDC
+ endif
 endif
 endif
+
+# The MIPS version of GDB has trouble debugging shared libraries linked
+# to position independent executables (PIE), so disable PIE for debug
+# drivers.
+PVR_NO_PIE := $(if $(filter debug,$(BUILD)),1)
 
 include ../config/core.mk
 include ../common/xorg.mk

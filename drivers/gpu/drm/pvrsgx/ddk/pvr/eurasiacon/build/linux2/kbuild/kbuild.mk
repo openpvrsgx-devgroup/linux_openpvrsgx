@@ -60,6 +60,7 @@ kbuild: $(TARGET_OUT)/kbuild/Makefile
 		EXTRA_KBUILD_SOURCE="$(EXTRA_KBUILD_SOURCE)" \
 		CROSS_COMPILE="$(CCACHE) $(KERNEL_CROSS_COMPILE)" \
 		EXTRA_CFLAGS="$(ALL_KBUILD_CFLAGS)" \
+		CC=$(if $(KERNEL_CC),$(KERNEL_CC),$(KERNEL_CROSS_COMPILE)gcc) \
 		V=$(V) W=$(W) \
 		TOP=$(TOP)
 	@for kernel_module in $(addprefix $(TARGET_OUT)/kbuild/,$(INTERNAL_KBUILD_OBJECTS:.o=.ko)); do \
@@ -74,9 +75,12 @@ kbuild_clean: $(TARGET_OUT)/kbuild/Makefile
 		EXTRA_KBUILD_SOURCE="$(EXTRA_KBUILD_SOURCE)" \
 		CROSS_COMPILE="$(CCACHE) $(KERNEL_CROSS_COMPILE)" \
 		EXTRA_CFLAGS="$(ALL_KBUILD_CFLAGS)" \
+		CC=$(if $(KERNEL_CC),$(KERNEL_CC),$(KERNEL_CROSS_COMPILE)gcc) \
 		V=$(V) W=$(W) \
 		TOP=$(TOP) clean
 
+ifneq ($(wildcard $(PVR_BUILD_DIR)/install.sh.m4),)
+# Old style install script.
 kbuild_install: $(TARGET_OUT)/kbuild/Makefile
 	@: $(if $(strip $(DISCIMAGE)),,$(error $$(DISCIMAGE) was empty or unset while trying to use it to set INSTALL_MOD_PATH for modules_install))
 	@$(MAKE) -Rr --no-print-directory -C $(KERNELDIR) M=$(abspath $(TARGET_OUT)/kbuild) \
@@ -86,6 +90,12 @@ kbuild_install: $(TARGET_OUT)/kbuild/Makefile
 		EXTRA_KBUILD_SOURCE="$(EXTRA_KBUILD_SOURCE)" \
 		CROSS_COMPILE="$(CCACHE) $(KERNEL_CROSS_COMPILE)" \
 		EXTRA_CFLAGS="$(ALL_KBUILD_CFLAGS)" \
+		CC=$(if $(KERNEL_CC),$(KERNEL_CC),$(KERNEL_CROSS_COMPILE)gcc) \
 		INSTALL_MOD_PATH="$(DISCIMAGE)" \
 		V=$(V) W=$(W) \
 		TOP=$(TOP) modules_install
+else
+# New style install script: We just have to generate the install script and run it as normal.
+kbuild_install: install
+kbuild: install_script_km
+endif

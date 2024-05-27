@@ -1586,10 +1586,13 @@ PVRSRVMapDmaBufBW(IMG_UINT32 ui32BridgeID,
 	psMapDmaBufOUT->eError = PVRSRVMapDmaBufKM(psPerProc,
 											   psMapDmaBufIN->hDevCookie,
 											   psMapDmaBufIN->hDevMemHeap,
-											   psMapDmaBufIN->i32DmaBufFD,
 											   psMapDmaBufIN->ui32Attribs,
-											   &psMapDmaBufOUT->uiDmaBufSize,
+											   psMapDmaBufIN->i32FD,
+											   psMapDmaBufIN->uiOffset,
+											   psMapDmaBufIN->uiSize,
 											   &psKernelMemInfo,
+											   &psMapDmaBufOUT->uiSize,
+											   &psMapDmaBufOUT->uiOffset,
 											   &ui64Stamp);
 	if (psMapDmaBufOUT->eError != PVRSRV_OK)
 	{
@@ -3124,7 +3127,7 @@ PVRSRVSwapToDCBuffer2BW(IMG_UINT32 ui32BridgeID,
 
 	if(psSwapDispClassBufferIN->ui32PrivDataLength > 0)
 	{
-		if(OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
+		if(OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP | PVRSRV_SWAP_BUFFER_ALLOCATION,
 					  psSwapDispClassBufferIN->ui32PrivDataLength,
 					  (IMG_VOID **)&pvPrivData, IMG_NULL,
 					  "Swap Command Private Data") != PVRSRV_OK)
@@ -3140,7 +3143,7 @@ PVRSRVSwapToDCBuffer2BW(IMG_UINT32 ui32BridgeID,
 							   psSwapDispClassBufferIN->ui32PrivDataLength) != PVRSRV_OK)
 		{
 			PVR_DPF((PVR_DBG_ERROR, "PVRSRVSwapToDCBuffer2BW: Failed to copy private data"));
-			OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP,
+			OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP | PVRSRV_SWAP_BUFFER_ALLOCATION,
 					  psSwapDispClassBufferIN->ui32PrivDataLength,
 					  pvPrivData, IMG_NULL);
 	        return -EFAULT;

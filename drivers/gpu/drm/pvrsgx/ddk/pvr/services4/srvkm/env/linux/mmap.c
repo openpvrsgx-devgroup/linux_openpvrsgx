@@ -787,7 +787,13 @@ DoMapToUser(LinuxMemArea *psLinuxMemArea,
 #if defined(PVR_MAKE_ALL_PFNS_SPECIAL)
 		    if (bMixedMap)
 		    {
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,5,0))
+			pfn_t pfns = { pfn };
+
+			result = vm_insert_mixed(ps_vma, ulVMAPos, pfns);
+#else
 			result = vm_insert_mixed(ps_vma, ulVMAPos, pfn);
+#endif
 	                if(result != 0)
 	                {
 	                    PVR_DPF((PVR_DBG_ERROR,"%s: Error - vm_insert_mixed failed (%d)", __FUNCTION__, result));

@@ -142,29 +142,16 @@ IMG_VOID SGXTestActivePowerEvent (PVRSRV_DEVICE_NODE	*psDeviceNode,
 	PVRSRV_SGXDEV_INFO	*psDevInfo = psDeviceNode->pvDevice;
 	SGXMKIF_HOST_CTL	*psSGXHostCtl = psDevInfo->psSGXHostCtl;
 
-#if defined(SYS_SUPPORTS_SGX_IDLE_CALLBACK)
-	if (!psDevInfo->bSGXIdle &&
-		((psSGXHostCtl->ui32InterruptFlags & PVRSRV_USSE_EDM_INTERRUPT_IDLE) != 0))
-	{
-		psDevInfo->bSGXIdle = IMG_TRUE;
-		SysSGXIdleTransition(psDevInfo->bSGXIdle);
-	}
-	else if (psDevInfo->bSGXIdle &&
-			((psSGXHostCtl->ui32InterruptFlags & PVRSRV_USSE_EDM_INTERRUPT_IDLE) == 0))
-	{
-		psDevInfo->bSGXIdle = IMG_FALSE;
-		SysSGXIdleTransition(psDevInfo->bSGXIdle);
-	}
-#endif /* SYS_SUPPORTS_SGX_IDLE_CALLBACK */
-
 	/*
-	 * Quickly check (without lock) if there is an APM event we should handle.
+	 * Quickly check (without lock) if there is an IDLE or APM event we should handle.
 	 * This check fails most of the time so we don't want to incur lock overhead.
 	 * Check the flags in the reverse order that microkernel clears them to prevent
 	 * us from seeing an inconsistent state.
 	 */
-	if (((psSGXHostCtl->ui32InterruptClearFlags & PVRSRV_USSE_EDM_INTERRUPT_ACTIVE_POWER) == 0) &&
-		((psSGXHostCtl->ui32InterruptFlags & PVRSRV_USSE_EDM_INTERRUPT_ACTIVE_POWER) != 0))
+	if ((((psSGXHostCtl->ui32InterruptClearFlags & PVRSRV_USSE_EDM_INTERRUPT_IDLE) == 0) &&
+		((psSGXHostCtl->ui32InterruptFlags & PVRSRV_USSE_EDM_INTERRUPT_IDLE) != 0)) ||
+		(((psSGXHostCtl->ui32InterruptClearFlags & PVRSRV_USSE_EDM_INTERRUPT_ACTIVE_POWER) == 0) &&
+		((psSGXHostCtl->ui32InterruptFlags & PVRSRV_USSE_EDM_INTERRUPT_ACTIVE_POWER) != 0)))
 	{
 		eError = PVRSRVPowerLock(ui32CallerID, IMG_FALSE);
 		if (eError == PVRSRV_ERROR_RETRY)
@@ -179,44 +166,56 @@ IMG_VOID SGXTestActivePowerEvent (PVRSRV_DEVICE_NODE	*psDeviceNode,
 		}
 
 		/*
+		 * Check again (with lock) if IDLE event has been cleared or handled. A race
+		 * condition may allow multiple threads to pass the quick check.
+		 */
+		if(((psSGXHostCtl->ui32InterruptClearFlags & PVRSRV_USSE_EDM_INTERRUPT_IDLE) == 0) &&
+			((psSGXHostCtl->ui32InterruptFlags & PVRSRV_USSE_EDM_INTERRUPT_IDLE) != 0))
+		{
+			psSGXHostCtl->ui32InterruptClearFlags |= PVRSRV_USSE_EDM_INTERRUPT_IDLE;
+			if (psDevInfo->bSGXIdle == IMG_FALSE)
+			{
+				psDevInfo->bSGXIdle = IMG_TRUE;
+				SysSGXIdleEntered();
+			}
+		}
+
+		/*
 		 * Check again (with lock) if APM event has been cleared or handled. A race
 		 * condition may allow multiple threads to pass the quick check.
 		 */
-		if (((psSGXHostCtl->ui32InterruptClearFlags & PVRSRV_USSE_EDM_INTERRUPT_ACTIVE_POWER) != 0) ||
-			((psSGXHostCtl->ui32InterruptFlags & PVRSRV_USSE_EDM_INTERRUPT_ACTIVE_POWER) == 0))
+		if (((psSGXHostCtl->ui32InterruptClearFlags & PVRSRV_USSE_EDM_INTERRUPT_ACTIVE_POWER) == 0) &&
+			((psSGXHostCtl->ui32InterruptFlags & PVRSRV_USSE_EDM_INTERRUPT_ACTIVE_POWER) != 0))
 		{
-			PVRSRVPowerUnlock(ui32CallerID);
-			return;
-		}
-
-		/* Microkernel is idle and is requesting to be powered down. */
-		psSGXHostCtl->ui32InterruptClearFlags |= PVRSRV_USSE_EDM_INTERRUPT_ACTIVE_POWER;
+			/* Microkernel is idle and is requesting to be powered down. */
+			psSGXHostCtl->ui32InterruptClearFlags |= PVRSRV_USSE_EDM_INTERRUPT_ACTIVE_POWER;
 
 #if !defined(SUPPORT_PDUMP_MULTI_PROCESS)
 		/* Suspend pdumping. */
-		PDUMPSUSPEND();
+			PDUMPSUSPEND();
 #endif
 
 #if defined(SYS_CUSTOM_POWERDOWN)
-		/*
-		 	Some power down code cannot be executed inside an MISR on
-		 	some platforms that use mutexes inside the power code.
-		 */
-		eError = SysPowerDownMISR(psDeviceNode, ui32CallerID);
+			/*
+				Some power down code cannot be executed inside an MISR on
+				some platforms that use mutexes inside the power code.
+			 */
+			eError = SysPowerDownMISR(psDeviceNode, ui32CallerID);
 #else
-		eError = PVRSRVSetDevicePowerStateKM(psDeviceNode->sDevId.ui32DeviceIndex,
-											 PVRSRV_DEV_POWER_STATE_OFF);
-		if (eError == PVRSRV_OK)
-		{
-			SGXPostActivePowerEvent(psDeviceNode, ui32CallerID);
-		}
+			eError = PVRSRVSetDevicePowerStateKM(psDeviceNode->sDevId.ui32DeviceIndex,
+								PVRSRV_DEV_POWER_STATE_OFF);
 #endif
-		PVRSRVPowerUnlock(ui32CallerID);
-
+			if (eError == PVRSRV_OK)
+			{
+				SGXPostActivePowerEvent(psDeviceNode, ui32CallerID);
+			}
 #if !defined(SUPPORT_PDUMP_MULTI_PROCESS)
-		/* Resume pdumping */
-		PDUMPRESUME();
+			/* Resume pdumping */
+			PDUMPRESUME();
 #endif
+		}
+
+		PVRSRVPowerUnlock(ui32CallerID);
 	}
 
 	if (eError != PVRSRV_OK)
@@ -330,7 +329,7 @@ PVRSRV_ERROR SGXScheduleCCBCommand(PVRSRV_DEVICE_NODE	*psDeviceNode,
 #if defined(FIX_HW_BRN_28889)
 	/*
 		If the data cache and bif cache need invalidating there has been a cleanup
-		request. Therefore, we need to send the invalidate seperately and wait
+		request. Therefore, we need to send the invalidate separately and wait
 		for it to complete.
 	*/
 	if ( (eCmdType != SGXMKIF_CMD_PROCESS_QUEUES) &&
@@ -603,10 +602,11 @@ PVRSRV_ERROR SGXScheduleCCBCommand(PVRSRV_DEVICE_NODE	*psDeviceNode,
 	*psDevInfo->pui32KernelCCBEventKicker = (*psDevInfo->pui32KernelCCBEventKicker + 1) & 0xFF;
 
 	/*
-	 * New command submission is considered a proper handling of any pending APM
-	 * event, so mark it as handled to prevent other host threads from taking
-	 * action.
+	 * New command submission is considered a proper handling of any pending
+	 * IDLE or APM event, so mark them as handled to prevent other host threads
+	 * from taking action.
 	 */
+	psSGXHostCtl->ui32InterruptClearFlags |= PVRSRV_USSE_EDM_INTERRUPT_IDLE;
 	psSGXHostCtl->ui32InterruptClearFlags |= PVRSRV_USSE_EDM_INTERRUPT_ACTIVE_POWER;
 
 	OSWriteMemoryBarrier();
@@ -668,6 +668,7 @@ PVRSRV_ERROR SGXScheduleCCBCommandKM(PVRSRV_DEVICE_NODE		*psDeviceNode,
 									 IMG_BOOL				bLastInScene)
 {
 	PVRSRV_ERROR	eError;
+	PVRSRV_SGXDEV_INFO	*psDevInfo = psDeviceNode->pvDevice;
 
 	eError = PVRSRVPowerLock(ui32CallerID, IMG_FALSE);
 	if (eError == PVRSRV_ERROR_RETRY)
@@ -729,6 +730,9 @@ PVRSRV_ERROR SGXScheduleCCBCommandKM(PVRSRV_DEVICE_NODE		*psDeviceNode,
 		return eError;
 	}
 
+	SysSGXCommandPending(psDevInfo->bSGXIdle);
+	psDevInfo->bSGXIdle = IMG_FALSE;
+
 	eError = SGXScheduleCCBCommand(psDeviceNode, eCmdType, psCommandData, ui32CallerID, ui32PDumpFlags, hDevMemContext, bLastInScene);
 
 	PVRSRVPowerUnlock(ui32CallerID);
@@ -765,7 +769,7 @@ PVRSRV_ERROR SGXScheduleProcessQueuesKM(PVRSRV_DEVICE_NODE *psDeviceNode)
 	ui32PowerStatus = psHostCtl->ui32PowerStatus;
 	if ((ui32PowerStatus & PVRSRV_USSE_EDM_POWMAN_NO_WORK) != 0)
 	{
-		/* The ukernel has no work to do so don't waste power. */
+		/* The ukernel has no work to be done, so don't waste power. */
 		return PVRSRV_OK;
 	}
 
@@ -893,9 +897,9 @@ PVRSRV_ERROR SGXCleanupRequest(PVRSRV_DEVICE_NODE *psDeviceNode,
 			Pdump the poll as well.
 			Note:
 			We don't expect the cleanup to report busy as the client should have
-			ensured the the resource has been finished with before requesting
-			it's cleanup. This isn't true of the abnormal termination case but
-			we don't expect to PDump that. Unless/until PDump has flow control
+			ensured the resource has been finished with before requesting it's
+			cleanup. This isn't true of the abnormal termination case but we
+			don't expect to PDump that. Unless/until PDump has flow control
 			there isn't anything else we can do.
 		*/
 		PDUMPCOMMENTWITHFLAGS(0, "Host Control - Poll for clean-up request to complete");
@@ -1096,6 +1100,7 @@ IMG_HANDLE SGXRegisterHWRenderContextKM(IMG_HANDLE				hDeviceNode,
     IMG_UINT8 *pDst;
 	PRESMAN_ITEM psResItem;
 	IMG_UINT32 ui32PDDevPAddrInDirListFormat;
+	IMG_UINT8 *pStartPDDevPAddr, *pEndPDDevPAddr;
 
 	eError = OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
 						sizeof(SGX_HW_RENDER_CONTEXT_CLEANUP),
@@ -1130,6 +1135,16 @@ IMG_HANDLE SGXRegisterHWRenderContextKM(IMG_HANDLE				hDeviceNode,
 	{
 		PVR_DPF((PVR_DBG_ERROR, "SGXRegisterHWRenderContextKM: Couldn't allocate device memory for HW Render Context"));
 		goto exit1;
+	}
+	/* Ensure that the offset of Page directory dev physical address field is within the allocated context memory */
+	pStartPDDevPAddr = (IMG_UINT8 *)(psCleanup->psHWRenderContextMemInfo->pvLinAddrKM) + ui32OffsetToPDDevPAddr;
+	pEndPDDevPAddr = pStartPDDevPAddr + sizeof(ui32PDDevPAddrInDirListFormat) - 1;
+
+	if (pStartPDDevPAddr < (IMG_UINT8 *)psCleanup->psHWRenderContextMemInfo->pvLinAddrKM || 
+			pEndPDDevPAddr >= (IMG_UINT8 *)(psCleanup->psHWRenderContextMemInfo->pvLinAddrKM) + ui32HWRenderContextSize)
+	{
+		PVR_DPF((PVR_DBG_ERROR, "SGXRegisterHWRenderContextKM: Offset of page directory device physical address is invalid"));
+		goto exit2;
 	}
 
     eError = OSCopyFromUser(psPerProc,
@@ -1283,6 +1298,7 @@ IMG_HANDLE SGXRegisterHWTransferContextKM(IMG_HANDLE				hDeviceNode,
     IMG_UINT8 *pDst;
 	PRESMAN_ITEM psResItem;
 	IMG_UINT32 ui32PDDevPAddrInDirListFormat;
+	IMG_UINT8 *pStartPDDevPAddr, *pEndPDDevPAddr;
 
 	eError = OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
 						sizeof(SGX_HW_TRANSFER_CONTEXT_CLEANUP),
@@ -1318,6 +1334,17 @@ IMG_HANDLE SGXRegisterHWTransferContextKM(IMG_HANDLE				hDeviceNode,
 	{
 		PVR_DPF((PVR_DBG_ERROR, "SGXRegisterHWTransferContextKM: Couldn't allocate device memory for HW Render Context"));
 		goto exit1;
+	}
+
+	/* Ensure that the offset of Page directory dev physical address field is within the allocated context memory */
+	pStartPDDevPAddr = (IMG_UINT8 *)(psCleanup->psHWTransferContextMemInfo->pvLinAddrKM) + ui32OffsetToPDDevPAddr;
+	pEndPDDevPAddr = pStartPDDevPAddr + sizeof(ui32PDDevPAddrInDirListFormat) - 1;
+
+	if (pStartPDDevPAddr < (IMG_UINT8 *)psCleanup->psHWTransferContextMemInfo->pvLinAddrKM || 
+			pEndPDDevPAddr >= (IMG_UINT8 *)(psCleanup->psHWTransferContextMemInfo->pvLinAddrKM) + ui32HWTransferContextSize)
+	{
+		PVR_DPF((PVR_DBG_ERROR, "SGXRegisterHWTransferContextKM: Offset of page directory device physical address is invalid"));
+		goto exit2;
 	}
 
     eError = OSCopyFromUser(psPerProc,
@@ -1624,6 +1651,7 @@ IMG_HANDLE SGXRegisterHW2DContextKM(IMG_HANDLE				hDeviceNode,
     IMG_UINT8 *pDst;
 	PRESMAN_ITEM psResItem;
 	IMG_UINT32 ui32PDDevPAddrInDirListFormat;
+	IMG_UINT8 *pStartPDDevPAddr, *pEndPDDevPAddr;
 
 	eError = OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
 						sizeof(SGX_HW_2D_CONTEXT_CLEANUP),
@@ -1658,6 +1686,17 @@ IMG_HANDLE SGXRegisterHW2DContextKM(IMG_HANDLE				hDeviceNode,
 	{
 		PVR_DPF((PVR_DBG_ERROR, "SGXRegisterHW2DContextKM: Couldn't allocate device memory for HW Render Context"));
 		goto exit1;
+	}
+
+	/* Ensure that the offset of Page directory dev physical address field is within the allocated context memory */
+	pStartPDDevPAddr = (IMG_UINT8 *)(psCleanup->psHW2DContextMemInfo->pvLinAddrKM) + ui32OffsetToPDDevPAddr;
+	pEndPDDevPAddr = pStartPDDevPAddr + sizeof(ui32PDDevPAddrInDirListFormat) - 1;
+
+	if (pStartPDDevPAddr < (IMG_UINT8 *)psCleanup->psHW2DContextMemInfo->pvLinAddrKM || 
+			pEndPDDevPAddr >= (IMG_UINT8 *)(psCleanup->psHW2DContextMemInfo->pvLinAddrKM) + ui32HW2DContextSize)
+	{
+		PVR_DPF((PVR_DBG_ERROR, "SGXRegisterHWTransferContextKM: Offset of page directory device physical address is invalid"));
+		goto exit2;
 	}
 
     eError = OSCopyFromUser(psPerProc,

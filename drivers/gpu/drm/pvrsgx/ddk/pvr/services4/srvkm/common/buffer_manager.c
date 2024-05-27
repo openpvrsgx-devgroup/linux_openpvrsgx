@@ -1,5 +1,5 @@
 /*************************************************************************/ /*!
-@Title          Buffer management functions for Linux
+@Title          Buffer management functions
 @Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
 @Description    Manages buffers mapped into two memory spaces - cpu and device,
                 either of which can be virtual or physical.
@@ -131,7 +131,7 @@ AllocMemory (BM_CONTEXT			*pBMContext,
 			  uSize, ui32Flags, uDevVAddrAlignment));
 
 	/*
-		what to do depends on combination of DevVaddr generation
+		Decision depends on combination of DevVaddr generation
 		and backing RAM requirement
 	*/
 	if(ui32Flags & PVRSRV_MEM_RAM_BACKED_ALLOCATION)
@@ -169,7 +169,7 @@ AllocMemory (BM_CONTEXT			*pBMContext,
 			IMG_UINT64 ui64TimeStart;
 #endif
 
-			/* Allocate physcial memory */
+			/* Allocate physical memory */
 			bSuccess = BM_ImportMemory(psBMHeap,
 									   ui32ChunkSize * ui32NumPhysChunks,
 									   &uActualSize,
@@ -188,7 +188,7 @@ AllocMemory (BM_CONTEXT			*pBMContext,
 			if (uActualSize != ui32ChunkSize * ui32NumPhysChunks)
 			{
 				/*
-					Most likley the chunksize was not host page multiple so
+					Most likely the chunksize was not host page multiple so
 					return with an error
 				*/
 				PVR_DPF((PVR_DBG_ERROR, "AllocMemory: Failed to allocate memory for sparse allocation"));
@@ -909,7 +909,7 @@ static PVRSRV_ERROR BM_DestroyContext_AnyCb(BM_HEAP *psBMHeap)
 	@Function	BM_DestroyContext
 
 	@Description	Destroy a buffer manager context. All allocated buffers must be
-				free'd before calling this function.  This function is called
+				freed before calling this function.  This function is called
 				also to perform cleanup during aborted initialisations so it's
 				fairly careful not to assume any given resource has really been
 				created/allocated.
@@ -2043,7 +2043,7 @@ BM_Free (BM_HANDLE hBuf,
 
 	@Function   BM_HandleToCpuVaddr
 
-	@Description	Retreive the cpu virtual address associated with a buffer.
+	@Description	Retrieve the cpu virtual address associated with a buffer.
 
 	@Input      buffer handle.
 
@@ -2074,7 +2074,7 @@ BM_HandleToCpuVaddr (BM_HANDLE hBuf)
 
 	@Function   BM_HandleToDevVaddr
 
-	@Description	Retreive the device virtual address associated with a buffer.
+	@Description	Retrieve the device virtual address associated with a buffer.
 
 	@Input      hBuf - buffer handle.
 
@@ -2104,7 +2104,7 @@ BM_HandleToDevVaddr (BM_HANDLE hBuf)
 
 	@Function   BM_HandleToSysPaddr
 
-	@Description	Retreive the system physical address associated with a buffer.
+	@Description	Retrieve the system physical address associated with a buffer.
 
 	@Input      hBuf - buffer handle.
 
@@ -2134,7 +2134,7 @@ BM_HandleToSysPaddr (BM_HANDLE hBuf)
 
 	@Function   BM_HandleToMemOSHandle
 
-	@Description	Retreive the underlying memory handle associated with a buffer.
+	@Description	Retrieve the underlying memory handle associated with a buffer.
 
 	@Input      hBuf - buffer handle.
 
@@ -2810,7 +2810,7 @@ BM_ImportMemory (IMG_VOID *pH,
 #endif
 
 	/*
-	 * If anyone want's to know, pass back the actual size of our allocation.
+	 * If anyone wants to know, pass back the actual size of our allocation.
 	 * There could be up to an extra page's worth of memory which will be marked
 	 * as free in the RA.
 	 */
@@ -2843,7 +2843,7 @@ BM_ImportMemory (IMG_VOID *pH,
 
 		if (uPSize % uDevVAddrAlignment != 0)
 		{
-			PVR_DPF((PVR_DBG_ERROR, "Cannot use use this memory sharing workaround with allocations that might be suballocated"));
+			PVR_DPF((PVR_DBG_ERROR, "Cannot use this memory sharing workaround with allocations that might be suballocated"));
 			goto fail_mapping_alloc;
 		}
 		uDevVAddrAlignment = 0; /* FIXME: find out why it doesn't work if alignment is specified */
@@ -2887,7 +2887,7 @@ BM_ImportMemory (IMG_VOID *pH,
 
             if (uPSize % uDevVAddrAlignment != 0)
             {
-                PVR_DPF((PVR_DBG_ERROR, "Cannot use use this memory sharing workaround with allocations that might be suballocated"));
+                PVR_DPF((PVR_DBG_ERROR, "Cannot use this memory sharing workaround with allocations that might be suballocated"));
                 goto fail_mapping_alloc;
             }
             uDevVAddrAlignment = 0; /* FIXME: find out why it doesn't work if alignment is specified */
@@ -3413,8 +3413,8 @@ IMG_UINT32 BM_GetVirtualSize(IMG_HANDLE hBMHandle)
 ******************************************************************************
  @Function	BM_MapPageAtOffset
 
- @Description	utility function check if the specificed offset in a BM mapping
-                is a page that needs tp be mapped
+ @Description	utility function check if the specified offset in a BM mapping
+                is a page that needs to be mapped
 
  @Input     hBMHandle - Handle to BM mapping
 
@@ -3438,10 +3438,10 @@ IMG_BOOL BM_MapPageAtOffset(IMG_HANDLE hBMHandle, IMG_UINT32 ui32Offset)
 
 /*!
 ******************************************************************************
- @Function	BM_VirtOffsetToPhyscial
+ @Function	BM_VirtOffsetToPhysical
 
  @Description	utility function find of physical offset of a sparse allocation
-                from it's virtual offset.
+                from its virtual offset.
 
  @Input     hBMHandle - Handle to BM mapping
 

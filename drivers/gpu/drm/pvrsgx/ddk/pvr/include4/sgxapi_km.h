@@ -111,20 +111,12 @@ extern "C" {
 #define SGX_MAX_TA_STATUS_VALS	32
 #define SGX_MAX_3D_STATUS_VALS	4
 
-#if defined(SUPPORT_SGX_GENERALISED_SYNCOBJECTS)
-/* sync info structure array size */
-#define SGX_MAX_TA_DST_SYNCS			1
-#define SGX_MAX_TA_SRC_SYNCS			1
-#define SGX_MAX_3D_SRC_SYNCS			4
-/* note: there is implicitly 1 3D Dst Sync */
-#else
 /* sync info structure array size */
 #define SGX_MAX_SRC_SYNCS_TA				32
 #define SGX_MAX_DST_SYNCS_TA				1
 /* note: only one dst sync is supported by the 2D paths */
 #define SGX_MAX_SRC_SYNCS_TQ				6
 #define SGX_MAX_DST_SYNCS_TQ				2
-#endif
 
 
 #if defined(SGX_FEATURE_EXTENDED_PERF_COUNTERS)
@@ -229,6 +221,9 @@ typedef struct _PVRSRV_SGX_HWPERF_CB_ENTRY_
 	IMG_UINT32	ui32Ordinal;
 	IMG_UINT32	ui32Info;
 	IMG_UINT32	ui32Clocksx16;
+#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE) && defined(EUR_CR_TIMER)
+	IMG_UINT32	ui32SystraceIndex;
+#endif
 	/* NOTE: There should always be at least as many 3D cores as TA cores. */	
 	IMG_UINT32	ui32Counters[SGX_FEATURE_MP_CORE_COUNT_3D][PVRSRV_SGX_HWPERF_NUM_COUNTERS];
 	IMG_UINT32	ui32MiscCounters[SGX_FEATURE_MP_CORE_COUNT_3D][PVRSRV_SGX_HWPERF_NUM_MISC_COUNTERS];

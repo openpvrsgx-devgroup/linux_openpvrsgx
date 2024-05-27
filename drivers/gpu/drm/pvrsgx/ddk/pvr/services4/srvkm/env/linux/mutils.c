@@ -118,7 +118,11 @@ PVRLinuxX86PATProbe(IMG_VOID)
 		PVR_TRACE(("%s: Top 32 bits of PAT: 0x%.8x", __FUNCTION__, (IMG_UINT)(pat >> 32)));
 		PVR_TRACE(("%s: Bottom 32 bits of PAT: 0x%.8x", __FUNCTION__, (IMG_UINT)(pat)));
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0))		
+		pat_index = pvr_pat_index(_PAGE_CACHE_MODE_WC);
+#else
 		pat_index = pvr_pat_index(_PAGE_CACHE_WC);
+#endif
 		PVR_TRACE(("%s: PAT index for write combining: %u", __FUNCTION__, pat_index));
 
 		pat_entry = pvr_pat_entry(pat, pat_index);
@@ -157,7 +161,11 @@ pvr_pgprot_writecombine(pgprot_t prot)
      */
     /* PRQA S 0481,0482 2 */ /* scalar expressions */
     return (g_write_combining_available) ?
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0))		
+		__pgprot((pgprot_val(prot) & ~_PAGE_CACHE_MASK) | _PAGE_CACHE_MODE_WC) : pgprot_noncached(prot);
+#else
 		__pgprot((pgprot_val(prot) & ~_PAGE_CACHE_MASK) | _PAGE_CACHE_WC) : pgprot_noncached(prot);
+#endif
 }
 #endif	/* defined(SUPPORT_LINUX_X86_PAT) */
 

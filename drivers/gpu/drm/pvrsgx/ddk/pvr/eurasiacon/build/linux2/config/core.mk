@@ -178,7 +178,11 @@ $(call directory-must-exist,$(TOP)/eurasiacon/build/linux2/$(PVR_BUILD_DIR))
 # final programs/libraries, and install/rc scripts.
 #
 BUILD	?= release
-OUT		?= $(TOP)/eurasiacon/binary2_$(PVR_BUILD_DIR)_$(BUILD)
+ifneq ($(WINDOW_SYSTEM),)
+OUT ?= $(TOP)/eurasiacon/binary_$(PVR_BUILD_DIR)_$(WINDOW_SYSTEM)_$(BUILD)
+else
+OUT ?= $(TOP)/eurasiacon/binary2_$(PVR_BUILD_DIR)_$(BUILD)
+endif
 override OUT := $(if $(filter /%,$(OUT)),$(OUT),$(TOP)/$(OUT))
 
 CONFIG_MK			:= $(OUT)/config.mk
@@ -269,7 +273,9 @@ ifeq ($(SUPPORT_LINUX_USING_WORKQUEUES),1)
 override PVR_LINUX_USING_WORKQUEUES := 1
 override PVR_LINUX_MISR_USING_PRIVATE_WORKQUEUE := 1
 override PVR_LINUX_TIMERS_USING_WORKQUEUES := 1
+ifneq ($(SUPPORT_ANDROID_FPGA),1)
 override SYS_CUSTOM_POWERLOCK_WRAP := 1
+endif
 else ifeq ($(SUPPORT_LINUX_USING_SHARED_WORKQUEUES),1)
 override PVR_LINUX_USING_WORKQUEUES := 1
 override PVR_LINUX_MISR_USING_WORKQUEUE := 1
@@ -365,7 +371,7 @@ $(foreach _o,SYS_CFLAGS SYS_CXXFLAGS SYS_INCLUDES SYS_COMMON_LDFLAGS SYS_EXE_LDF
 # Check for words in EXCLUDED_APIS that aren't understood by the
 # common/apis/*.mk files. This should be kept in sync with all the tests on
 # EXCLUDED_APIS in those files
-_excludable_apis := rscompute opencl opengl opengles1 opengles2 openvg ews unittests xorg xorg_unittests scripts composerhal camerahal memtrackhal
+_excludable_apis := rscompute opencl opengl opengles1 opengles2 openvg unittests scripts composerhal camerahal memtrackhal
 _excluded_apis := $(subst $(comma),$(space),$(EXCLUDED_APIS))
 _unrecognised := $(strip $(filter-out $(_excludable_apis),$(_excluded_apis)))
 ifneq ($(_unrecognised),)
@@ -393,13 +399,24 @@ KERNEL_COMPONENTS += dbgdrv
 endif
 endif
 
-ifeq ($(SUPPORT_PVR_REMOTE),1)
-ifneq ($(filter pvr2d,$(COMPONENTS)),)
-COMPONENTS += null_pvr2d_remote
+ifneq ($(WINDOW_SYSTEM),)
 endif
-COMPONENTS += pvrvncsrv
-COMPONENTS += pvrvncinput
+ifeq ($(MESA_EGL),1)
+ SUPPORT_OPENGLES1_V1_ONLY := 1
+ GLES1_EXTENSION_EGL_IMAGE_EXTERNAL := 1
+ GLES2_EXTENSION_EGL_IMAGE_EXTERNAL := 1
+else
 endif
+
+ifneq ($(SUPPORT_BUILD_LWS),)
+ ifneq ($(SYSROOT),)
+  $(info WARNING: You have specified a SYSROOT (or are using a buildroot compiler) and enabled SUPPORT_BUILD_LWS.)
+  $(info          We will ignore the sysroot and will build all required LWS components.)
+  $(info          Unset SUPPORT_BUILD_LWS if this is not what you want.)
+ endif
+ override SYSROOT:=
+endif
+
 
 $(if $(filter config,$(D)),$(info Build configuration:))
 
@@ -410,9 +427,12 @@ $(if $(filter config,$(D)),$(info Build configuration:))
 #
 ifneq ($(strip $(KERNELDIR)),)
 include ../kernel_version.mk
-PVRSRV_MODULE_BASEDIR ?= /lib/modules/$(KERNEL_ID)/extra/
+MOD_ROOTDIR ?= /lib/modules/$(KERNEL_ID)
+PVRSRV_MODULE_BASEDIR ?= $(MOD_ROOTDIR)/extra/
 $(eval $(call KernelConfigMake,KERNELDIR,$(KERNELDIR)))
 # Needed only by install script
+$(eval $(call KernelConfigMake,MOD_ROOTDIR,$(MOD_ROOTDIR)))
+$(eval $(call KernelConfigMake,PVRSRV_MODULE_BASEDIR,$(PVRSRV_MODULE_BASEDIR)))
 $(eval $(call KernelConfigMake,KERNEL_COMPONENTS,$(KERNEL_COMPONENTS)))
 $(eval $(call TunableKernelConfigMake,EXTRA_PVRSRVKM_COMPONENTS,))
 $(eval $(call TunableKernelConfigMake,EXTRA_KBUILD_SOURCE,))
@@ -425,28 +445,29 @@ KERNEL_CROSS_COMPILE ?= $(CROSS_COMPILE)
 $(eval $(call TunableBothConfigMake,KERNEL_CROSS_COMPILE,))
 endif
 
+# Alternatively, allow the CC used for kbuild to be overridden
+# exactly, bypassing any KERNEL_CROSS_COMPILE configuration.
+$(eval $(call TunableBothConfigMake,KERNEL_CC,))
+
 # Check the KERNELDIR has a kernel built.
 VMLINUX := $(strip $(wildcard $(KERNELDIR)/vmlinux))
-LINUXCFG := $(strip $(wildcard $(KERNELDIR)/.config))
-
-ifneq ($(VMLINUX),)
-ifneq ($(shell file $(KERNELDIR)/vmlinux | grep 64-bit >/dev/null && echo 1),$(shell $(_CC) -dM -E - </dev/null | grep __x86_64__ >/dev/null && echo 1))
-$(error Attempting to build 64-bit DDK against 32-bit kernel, or 32-bit DDK against 64-bit kernel. This is not allowed.)
-endif
-VMLINUX_IS_64BIT := $(shell file $(VMLINUX) | grep 64-bit >/dev/null || echo false)
-VMLINUX_HAS_PAE36 := $(shell cat $(LINUXCFG) | grep CONFIG_X86_PAE=y >/dev/null || echo false)
-VMLINUX_HAS_PAE40 := $(shell cat $(LINUXCFG) | grep CONFIG_ARM_LPAE=y >/dev/null || echo false)
-VMLINUX_HAS_DMA32 := $(shell cat $(LINUXCFG) | grep CONFIG_ZONE_DMA32=y >/dev/null || echo false)
-
-# $(error 64BIT=$(VMLINUX_IS_64BIT) PAE36=$(VMLINUX_HAS_PAE36) PAE40=$(VMLINUX_HAS_PAE40) DMA32=$(VMLINUX_HAS_DMA32) MMU36=$(SGX_FEATURE_36BIT_MMU))
-
-ifneq ($(VMLINUX_IS_64BIT),false)
-$(warning $$(KERNELDIR)/vmlinux: Note: vmlinux is 64-bit, which is supported but currently experimental.)
-endif
+ifneq ($(wildcard $(VMLINUX)),)
+ ifneq ($(shell file $(KERNELDIR)/vmlinux | grep 64-bit >/dev/null && echo 1),$(shell $(_CC) -dM -E - </dev/null | grep __x86_64__ >/dev/null && echo 1))
+  $(error Attempting to build 64-bit DDK against 32-bit kernel, or 32-bit DDK against 64-bit kernel. This is not allowed.)
+ endif
+ LINUXCFG := $(strip $(wildcard $(KERNELDIR)/.config))
+ VMLINUX_IS_64BIT := $(shell file $(VMLINUX) | grep 64-bit >/dev/null || echo false)
+ VMLINUX_HAS_PAE36 := $(shell cat $(LINUXCFG) | grep CONFIG_X86_PAE=y >/dev/null || echo false)
+ VMLINUX_HAS_PAE40 := $(shell cat $(LINUXCFG) | grep CONFIG_ARM_LPAE=y >/dev/null || echo false)
+ VMLINUX_HAS_DMA32 := $(shell cat $(LINUXCFG) | grep CONFIG_ZONE_DMA32=y >/dev/null || echo false)
+ ifneq ($(VMLINUX_IS_64BIT),false)
+  $(warning $$(KERNELDIR)/vmlinux: Note: vmlinux is 64-bit, which is supported but currently experimental.)
+ endif
 else
-$(warning $$(KERNELDIR)/vmlinux does not exist. Kbuild may fail.)
+ $(warning $$(KERNELDIR)/vmlinux does not exist. Kbuild may fail.)
 endif
-endif
+
+endif # KERNELDIR
 
 ifneq ($(VMLINUX_HAS_PAE40),false)
 ifeq ($(VMLINUX_HAS_DMA32),false)
@@ -484,6 +505,8 @@ $(eval $(call BothConfigC,LINUX,))
 $(eval $(call BothConfigC,PVR_BUILD_DIR,"\"$(PVR_BUILD_DIR)\""))
 $(eval $(call BothConfigC,PVR_BUILD_TYPE,"\"$(BUILD)\""))
 $(eval $(call BothConfigC,PVRSRV_MODNAME,"\"$(PVRSRV_MODNAME)\""))
+$(eval $(call KernelConfigMake,PVRSRV_MODNAME,$(PVRSRV_MODNAME)))
+$(eval $(call BothConfigMake,PVR_BUILD_DIR,$(PVR_BUILD_DIR)))
 
 $(eval $(call TunableBothConfigC,SGXCORE,))
 $(eval $(call BothConfigC,SGX$(SGXCORE),))
@@ -496,6 +519,7 @@ $(eval $(call TunableBothConfigC,USE_SGX_CORE_REV_HEAD,))
 $(eval $(call BothConfigC,TRANSFER_QUEUE,))
 $(eval $(call BothConfigC,PVR_SECURE_HANDLES,))
 
+
 # Support syncing LISR & MISR. This is required for OS's where
 # on SPM platforms the LISR and MISR can run at the same time and
 # thus during powerdown we need to drain all pending LISRs before
@@ -504,6 +528,11 @@ $(eval $(call KernelConfigC,SUPPORT_LISR_MISR_SYNC))
 
 ifneq ($(DISPLAY_CONTROLLER),)
 $(eval $(call BothConfigC,DISPLAY_CONTROLLER,$(DISPLAY_CONTROLLER)))
+$(eval $(call KernelConfigMake,DISPLAY_CONTROLLER,$(DISPLAY_CONTROLLER)))
+endif
+
+ifneq ($(DRM_DISPLAY_CONTROLLER),)
+$(eval $(call KernelConfigMake,DRM_DISPLAY_CONTROLLER,$(DRM_DISPLAY_CONTROLLER)))
 endif
 
 ifneq ($(strip $(KERNELDIR)),)
@@ -537,6 +566,7 @@ $(eval $(call KernelConfigC,DEBUG_BRIDGE_KM,))
 else ifeq ($(BUILD),release)
 $(eval $(call BothConfigC,RELEASE,))
 $(eval $(call TunableBothConfigMake,DEBUGLINK,1))
+$(eval $(call TunableBothConfigC,PVR_DBGPRIV_LEVEL,))
 else ifeq ($(BUILD),timing)
 $(eval $(call BothConfigC,TIMING,))
 $(eval $(call TunableBothConfigMake,DEBUGLINK,1))
@@ -553,6 +583,8 @@ $(eval $(call TunableBothConfigC,SUPPORT_HW_RECOVERY,1))
 $(eval $(call TunableBothConfigC,SUPPORT_ACTIVE_POWER_MANAGEMENT,1))
 $(eval $(call TunableBothConfigC,SUPPORT_SGX_HWPERF,1))
 $(eval $(call TunableBothConfigC,SUPPORT_SGX_LOW_LATENCY_SCHEDULING,1))
+$(eval $(call TunableBothConfigC,SUPPORT_SGX_CONTEXT_PRIORITY_PER_THREAD,))
+
 $(eval $(call TunableBothConfigC,SUPPORT_MEMINFO_IDS,))
 $(eval $(call TunableBothConfigC,SUPPORT_SGX_NEW_STATUS_VALS,1))
 $(eval $(call TunableBothConfigC,SUPPORT_PDUMP_MULTI_PROCESS,))
@@ -619,6 +651,15 @@ $(eval $(call TunableKernelConfigC,SUPPORT_PDUMP_SYNC_DEBUG,))
 $(eval $(call TunableKernelConfigC,SUPPORT_PER_SYNC_DEBUG,))
 $(eval $(call TunableKernelConfigC,SUPPORT_FORCE_SYNC_DUMP,))
 
+ifneq ($(filter opengl,$(COMPONENTS)),)
+SUPPORT_OPENGL = 1
+endif
+ifneq ($(filter opengles1,$(COMPONENTS)),)
+endif
+ifneq ($(filter opengles2,$(COMPONENTS)),)
+endif
+ifneq ($(filter opencl,$(COMPONENTS)),)
+endif
 
 
 $(eval $(call TunableBothConfigMake,OPTIM,))
@@ -628,6 +669,21 @@ $(eval $(call TunableBothConfigMake,SUPPORT_PVRSRV_DEVICE_CLASS,))
 
 
 $(eval $(call TunableKernelConfigMake,TTRACE,))
+
+SUPPORT_SGX_LOW_LATENCY_SCHEDULING ?= 1
+SUPPORT_SGX_CONTEXT_PRIORITY_PER_THREAD ?= 0
+
+ifeq ($(SUPPORT_SGX_CONTEXT_PRIORITY_PER_THREAD),1)
+ifeq ($(SUPPORT_OPENGL),)
+ifeq ($(SUPPORT_SGX_LOW_LATENCY_SCHEDULING),1)
+$(eval $(call BothConfigC,SGX_FEATURE_CONTEXT_PRIORITY_PER_THREAD,))
+else
+$(info SGX_CONTEXT_PRIORITY_PER_THREAD requires Low latency scheduling to be enabled)
+endif
+else
+$(info SGX_CONTEXT_PRIORITY_PER_THREAD requires OpenGL support to be disabled)
+endif
+endif
 
 endif # INTERNAL_CLOBBER_ONLY
 

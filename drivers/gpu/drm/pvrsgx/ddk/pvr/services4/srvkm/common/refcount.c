@@ -71,9 +71,11 @@ static DEFINE_SPINLOCK(gsCCBLock);
 #if defined(__linux__)
 #define PVRSRV_REFCOUNT_CCB_DEBUG_MMAP		(1U << 16)
 #define PVRSRV_REFCOUNT_CCB_DEBUG_MMAP2		(1U << 17)
+#define PVRSRV_REFCOUNT_CCB_DEBUG_ION_SYNC	(1U << 18)
 #else
 #define PVRSRV_REFCOUNT_CCB_DEBUG_MMAP		0
 #define PVRSRV_REFCOUNT_CCB_DEBUG_MMAP2		0
+#define PVRSRV_REFCOUNT_CCB_DEBUG_ION_SYNC	0
 #endif
 
 #define PVRSRV_REFCOUNT_CCB_DEBUG_ALL		~0U
@@ -81,6 +83,9 @@ static DEFINE_SPINLOCK(gsCCBLock);
 /*static const IMG_UINT guiDebugMask = PVRSRV_REFCOUNT_CCB_DEBUG_ALL;*/
 static const IMG_UINT guiDebugMask =
 	PVRSRV_REFCOUNT_CCB_DEBUG_SYNCINFO |
+#if defined(SUPPORT_ION)
+	PVRSRV_REFCOUNT_CCB_DEBUG_ION_SYNC |
+#endif
 	PVRSRV_REFCOUNT_CCB_DEBUG_MMAP2;
 
 typedef struct
@@ -120,7 +125,7 @@ void PVRSRVDumpRefCountCCB(void)
 
 		/* Early on, we won't have MAX_REFCOUNT_CCB_SIZE messages */
 		if(!psRefCountCCBEntry->pszFile)
-			break;
+			continue;
 
 		PVR_LOG(("%s %d %s:%d", psRefCountCCBEntry->pcMesg,
 								psRefCountCCBEntry->ui32PID,
@@ -477,7 +482,7 @@ void PVRSRVOffsetStructIncRef2(const IMG_CHAR *pszFile, IMG_INT iLine,
 			 psOffsetStruct,
 			 psOffsetStruct->ui32RefCount,
 			 psOffsetStruct->ui32RefCount + 1,
-			 psOffsetStruct->ui32RealByteSize);
+			 psOffsetStruct->uiRealByteSize);
 	gsRefCountCCB[giOffset].pcMesg[PVRSRV_REFCOUNT_CCB_MESG_MAX - 1] = 0;
 	giOffset = (giOffset + 1) % PVRSRV_REFCOUNT_CCB_MAX;
 
@@ -509,7 +514,7 @@ void PVRSRVOffsetStructDecRef2(const IMG_CHAR *pszFile, IMG_INT iLine,
 			 psOffsetStruct,
 			 psOffsetStruct->ui32RefCount,
 			 psOffsetStruct->ui32RefCount - 1,
-			 psOffsetStruct->ui32RealByteSize);
+			 psOffsetStruct->uiRealByteSize);
 	gsRefCountCCB[giOffset].pcMesg[PVRSRV_REFCOUNT_CCB_MESG_MAX - 1] = 0;
 	giOffset = (giOffset + 1) % PVRSRV_REFCOUNT_CCB_MAX;
 
@@ -541,7 +546,7 @@ void PVRSRVOffsetStructIncMapped2(const IMG_CHAR *pszFile, IMG_INT iLine,
 			 psOffsetStruct,
 			 psOffsetStruct->ui32Mapped,
 			 psOffsetStruct->ui32Mapped + 1,
-			 psOffsetStruct->ui32RealByteSize);
+			 psOffsetStruct->uiRealByteSize);
 	gsRefCountCCB[giOffset].pcMesg[PVRSRV_REFCOUNT_CCB_MESG_MAX - 1] = 0;
 	giOffset = (giOffset + 1) % PVRSRV_REFCOUNT_CCB_MAX;
 
@@ -573,7 +578,7 @@ void PVRSRVOffsetStructDecMapped2(const IMG_CHAR *pszFile, IMG_INT iLine,
 			 psOffsetStruct,
 			 psOffsetStruct->ui32Mapped,
 			 psOffsetStruct->ui32Mapped - 1,
-			 psOffsetStruct->ui32RealByteSize);
+			 psOffsetStruct->uiRealByteSize);
 	gsRefCountCCB[giOffset].pcMesg[PVRSRV_REFCOUNT_CCB_MESG_MAX - 1] = 0;
 	giOffset = (giOffset + 1) % PVRSRV_REFCOUNT_CCB_MAX;
 
@@ -582,6 +587,88 @@ void PVRSRVOffsetStructDecMapped2(const IMG_CHAR *pszFile, IMG_INT iLine,
 skip:
 	psOffsetStruct->ui32Mapped--;
 }
+
+#if defined(SUPPORT_ION)
+PVRSRV_ERROR PVRSRVIonBufferSyncInfoIncRef2(const IMG_CHAR *pszFile, IMG_INT iLine,
+											IMG_HANDLE hUnique,
+											IMG_HANDLE hDevCookie,
+											IMG_HANDLE hDevMemContext,
+											PVRSRV_ION_SYNC_INFO **ppsIonSyncInfo,
+											PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo)
+{
+	PVRSRV_ERROR eError;
+
+	/*
+		We have to do the call 1st as we need to Ion syninfo which it returns
+	*/
+	eError = PVRSRVIonBufferSyncAcquire(hUnique,
+										hDevCookie,
+										hDevMemContext,
+										ppsIonSyncInfo);
+
+	if (eError == PVRSRV_OK)
+	{
+		if(!(guiDebugMask & PVRSRV_REFCOUNT_CCB_DEBUG_ION_SYNC))
+			goto skip;
+
+		PVRSRV_LOCK_CCB();
+
+		gsRefCountCCB[giOffset].pszFile = pszFile;
+		gsRefCountCCB[giOffset].iLine = iLine;
+		gsRefCountCCB[giOffset].ui32PID = OSGetCurrentProcessIDKM();
+		snprintf(gsRefCountCCB[giOffset].pcMesg,
+				 PVRSRV_REFCOUNT_CCB_MESG_MAX - 1,
+				 PVRSRV_REFCOUNT_CCB_FMT_STRING,
+				 "ION_SYNC",
+				 (*ppsIonSyncInfo)->psSyncInfo,
+				 psKernelMemInfo,
+				 NULL,
+				 *ppsIonSyncInfo,
+				 (*ppsIonSyncInfo)->ui32RefCount - 1,
+				 (*ppsIonSyncInfo)->ui32RefCount,
+				 0);
+		gsRefCountCCB[giOffset].pcMesg[PVRSRV_REFCOUNT_CCB_MESG_MAX - 1] = 0;
+		giOffset = (giOffset + 1) % PVRSRV_REFCOUNT_CCB_MAX;
+
+		PVRSRV_UNLOCK_CCB();
+	}
+
+skip:
+	return eError;
+}
+
+void PVRSRVIonBufferSyncInfoDecRef2(const IMG_CHAR *pszFile, IMG_INT iLine,
+									PVRSRV_ION_SYNC_INFO *psIonSyncInfo,
+									PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo)
+{
+	if(!(guiDebugMask & PVRSRV_REFCOUNT_CCB_DEBUG_ION_SYNC))
+		goto skip;
+
+	PVRSRV_LOCK_CCB();
+
+	gsRefCountCCB[giOffset].pszFile = pszFile;
+	gsRefCountCCB[giOffset].iLine = iLine;
+	gsRefCountCCB[giOffset].ui32PID = OSGetCurrentProcessIDKM();
+	snprintf(gsRefCountCCB[giOffset].pcMesg,
+			 PVRSRV_REFCOUNT_CCB_MESG_MAX - 1,
+			 PVRSRV_REFCOUNT_CCB_FMT_STRING,
+			 "ION_SYNC",
+			 psIonSyncInfo->psSyncInfo,
+			 psKernelMemInfo,
+			 NULL,
+			 psIonSyncInfo,
+			 psIonSyncInfo->ui32RefCount,
+			 psIonSyncInfo->ui32RefCount - 1,
+			 0);
+	gsRefCountCCB[giOffset].pcMesg[PVRSRV_REFCOUNT_CCB_MESG_MAX - 1] = 0;
+	giOffset = (giOffset + 1) % PVRSRV_REFCOUNT_CCB_MAX;
+
+	PVRSRV_UNLOCK_CCB();
+skip:
+	PVRSRVIonBufferSyncRelease(psIonSyncInfo);
+}
+
+#endif /* defined (SUPPORT_ION) */
 
 #endif /* defined(__linux__) */
 

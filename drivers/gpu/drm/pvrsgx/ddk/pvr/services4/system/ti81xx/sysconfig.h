@@ -30,7 +30,7 @@
 
 #define VS_PRODUCT_NAME	"TI81xx"
 
-//#define SYS_SGX_CLOCK_SPEED		200000000
+#define SYS_SGX_CLOCK_SPEED		200000000
 #define SYS_387x_SGX_CLOCK_SPEED	200000000
 
 /* Allowed SGX Clock Speeds on Netra 

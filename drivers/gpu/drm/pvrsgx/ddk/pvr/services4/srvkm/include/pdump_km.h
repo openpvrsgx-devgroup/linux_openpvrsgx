@@ -77,6 +77,8 @@ extern IMG_UINT32 g_ui32EveryLineCounter;
 #define MAKEUNIQUETAG(hMemInfo)	(0)
 #endif
 
+IMG_BOOL _PDumpIsProcessActive(IMG_VOID);
+
 #ifdef PDUMP
 
 #define MAKEUNIQUETAG(hMemInfo)	(((BM_BUF *)(((PVRSRV_KERNEL_MEM_INFO *)(hMemInfo))->sMemBlk.hBuffer))->pMapping)
@@ -267,8 +269,8 @@ extern IMG_UINT32 g_ui32EveryLineCounter;
 								  IMG_HANDLE				hOSMemHandle,
 								  IMG_UINT32				ui32NumBytes,
 								  IMG_UINT32				ui32PageSize,
-		                          IMG_BOOL			  		bShared,
-								  IMG_HANDLE				hUniqueTag);
+								  IMG_HANDLE				hUniqueTag,
+								  IMG_UINT32				ui32Flags);
 	PVRSRV_ERROR PDumpMallocPageTable(PVRSRV_DEVICE_IDENTIFIER	*psDevId,
 									  IMG_HANDLE            hOSMemHandle,
 									  IMG_UINT32            ui32Offset,
@@ -282,7 +284,8 @@ extern IMG_UINT32 g_ui32EveryLineCounter;
 							IMG_UINT32			ui32PageSize,
 							IMG_HANDLE      	hUniqueTag,
 							IMG_BOOL			bInterleaved,
-							IMG_BOOL			bSparse);
+							IMG_BOOL			bSparse,
+							IMG_UINT32			ui32Flags);
 	PVRSRV_ERROR PDumpFreePageTable(PVRSRV_DEVICE_IDENTIFIER *psDevID,
 									IMG_HANDLE          hOSMemHandle,
 									IMG_CPU_VIRTADDR	pvLinAddr,

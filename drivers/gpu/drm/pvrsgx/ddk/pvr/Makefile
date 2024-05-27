@@ -1,486 +1,244 @@
-export KERNELDIR = /opt/oe/stuff/build/tmp/work/beagleboard-angstrom-linux-gnueabi/linux-omap-2.6.29-r44/git/
+# derived from some SDK4 Makefiles
 
-export KERNEL_PATH=$(KERNELDIR)
-export KERNEL_SRC=$(KERNELDIR)
-export KDIR=$(KERNELDIR)
+# although e.g. both omap3630 and am335x have the same SGX530 version
+# we need to compile different kernel modules because the interfaces
+# are not the same and we don't have a generic driver (yet) that
+# uses DT for all TI_PLATFORM variance.
 
-export BUILD = release
+REV := generic
+SGX := sgx
 
-export KBUILD_EXTRA_SYMBOLS = `pwd`/services4/srvkm/env/linux/kbuild/Module.symvers
-
-OMAP_KERNEL_VER         := $(shell grep "^VERSION = " \
-                                        $(KERNELDIR)/Makefile | cut -f3 -d' ')
-OMAP_KERNEL_REL         := $(shell grep "^PATCHLEVEL = " \
-                                        $(KERNELDIR)/Makefile | cut -f3 -d' ')
-OMAP_KERNEL_SUBREL              := $(shell grep "^SUBLEVEL = " \
-                                        $(KERNELDIR)/Makefile | cut -f3 -d' ')
-
-OMAP_KERNEL_AT_LEAST_2_6_29 := $(shell test $(OMAP_KERNEL_VER) -ge 2 -a \
-                        $(OMAP_KERNEL_REL) -ge 6 -a \
-                        $(OMAP_KERNEL_SUBREL) -ge 29 && echo 1 || echo 0)
-
-ifeq ($(OMAP_KERNEL_AT_LEAST_2_6_29),1)
-SUPPORT_OMAP3430_OMAPFB3 = 1
-SUPPORT_LINUX_USING_WORKQUEUES = 1
-SYS_CFLAGS += -DPVR_HAS_BROKEN_OMAPFB_H
-endif
-OPTIM                   = -Os
-
-ifeq ($(TI_PLATFORM),omap4)
-SGXCORE = 540
-else
-SGXCORE = 530
-endif
-
-ifeq ($(TI_PLATFORM),ti335x)
-CORE = -DSGX530 -DSUPPORT_SGX530 -DSGX_CORE_REV=125
-else
-ifeq ($(TI_PLATFORM),omap4)
-CORE = -DSGX540 -DSUPPORT_SGX540 -DSGX_CORE_REV=120
-else
-ifeq ($(TI_PLATFORM),ti81xx)
-CORE = -DPLAT_TI81xx -DSGX530 -DSUPPORT_SGX530 -DSGX_CORE_REV=125
-else
-ifeq ($(TI_PLATFORM),omap3630)
-CORE = -DSGX530 -DSUPPORT_SGX530 -DSGX_CORE_REV=125
-else
 ifeq ($(TI_PLATFORM),omap3)
-ifeq ($(OMAPES),3.x)
-CORE = -DSGX530 -DSUPPORT_SGX530 -DSGX_CORE_REV=121
-else
-CORE = -DSGX530 -DSUPPORT_SGX530 -DSGX_CORE_REV=103
+REV := 121
+SGX := sgx530
+ccflags-y += -DSGX530
 endif
+ifeq ($(TI_PLATFORM),omap3630)
+REV := 125
+SGX := sgx530
+ccflags-y += -DSGX530
 endif
-endif
-endif
-endif
-endif
-
-SUPPORT_SGX = 1
-SUPPORT_HW_RECOVERY = 1
-SUPPORT_SGX_HWPERF = 1
-SYS_USING_INTERRUPTS = 1
-SUPPORT_TI_PM = 0
-
-PVR2D_ALT_2DHW = 1
-
-LDM_PLATFORM ?= 1
-SUPPORT_XORG ?=0
-SUPPORT_DRI_DRM_NOT_PCI ?= 0
-
-ifeq ($(SUPPORT_XORG),1)
-SUPPORT_DRI_DRM = 1
-SUPPORT_DRI_DRM_NOT_PCI = 1
-endif
-
-
-ifeq ($(SUPPORT_DRI_DRM_NOT_PCI),1)
-KBUILD_EXTRA_SYMBOLS = `pwd`/services4/3rdparty/linux_drm/kbuild/Module.symvers
-endif
-
-SUPPORT_DRI_DRM ?= $(SUPPORT_XORG)
-SUPPORT_DRI_DRM_EXT ?= 0
-SUPPORT_DRI_DRM_NO_DROPMASTER ?= 0
-#SUPPORT_SECURE_DRM_AUTH_EXPORT ?= $(SUPPORT_XORG)
-
-SUPPORT_DRI_DRM_NO_LIBDRM ?= 0
-ifneq ($(SUPPORT_XORG),1)
-ifeq ($(SUPPORT_DRI_DRM),1)
-SUPPORT_DRI_DRM_NO_LIBDRM = 1
-endif
-endif
-
 ifeq ($(TI_PLATFORM),ti335x)
-ifneq ($(SUPPORT_XORG),1)
-ifeq ($(PM_RUNTIME),1)
-PM_RUNTIME_SUPPORT = 1
+REV := 125
+SGX := sgx530
+ccflags-y += -DSGX530
 endif
+ifeq ($(TI_PLATFORM),omap4430)
+REV := 110
+SGX := sgx540
+ccflags-y += -DSGX540
 endif
+ifeq ($(TI_PLATFORM),omap4460)
+REV := 120
+SGX := sgx540
+ccflags-y += -DSGX540
+endif
+ifeq ($(TI_PLATFORM),omap4470)
+REV := 100
+SGX := sgx544
+ccflags-y += -DSGX540
+endif
+ifeq ($(TI_PLATFORM),omap5)
+REV := 100
+SGX := sgx544
+ccflags-y += -DSGX544
 endif
 
+MODULE := pvr_$(TI_PLATFORM)_$(SGX)_$(REV)
+TARGET := $(MODULE)-$(CONFIG_SGX_OMAP)
 
-# Only enable active power management if passive power management is
-# enabled, as indicated by LDM_PLATFORM being set to 1.  On OMAP,
-# the system can suspend in the case where active power management is
-# enabled in the SGX driver, but passive power management isn't. As
-# passive power management isn't enabled, the driver won't see the
-# system suspend/resume events, and so won't take appropriate action.
-ifeq ($(LDM_PLATFORM),1)
-ifeq ($(TI_PLATFORM),ti335x)
-SUPPORT_ACTIVE_POWER_MANAGEMENT ?= 0
+
+obj-$(CONFIG_SGX_OMAP) += $(MODULE).o
+
+ccflags-y += -DSGX_CORE_REV=$(REV) -DSGX_COMPATIBLE="\"ti,omap-$(TI_PLATFORM)-$(SGX)-$(REV)\""
+ccflags-y += -DPVR_BUILD_DATE="\"$(shell date "+%Y%m%d" )\""
+
+ccflags-y += \
+	-Iinclude \
+	-Iarch/arm/mach-omap2 \
+	-Idrivers/video/fbdev/omap2 \
+	-I$(src)/ \
+	-I$(src)/include4 \
+	-I$(src)/services4/include \
+	-I$(src)/services4/include/env/linux \
+	-I$(src)/services4/system/include \
+	-I$(src)/services4/system/$(TI_PLATFORM) \
+	-I$(src)/services4/srvkm/bridged \
+	-I$(src)/services4/srvkm/bridged/sgx \
+	-I$(src)/services4/srvkm/devices/sgx \
+	-I$(src)/services4/srvkm/env/linux \
+	-I$(src)/services4/srvkm/hwdefs \
+	-I$(src)/services4/srvkm/include \
+	-I$(src)/services4/3rdparty/bufferclass_ti
+
+#
+# many of the following options must match the compiled binary pvrsrvinit or you will see e.g.:
+#
+# SGXInit: Mismatch in driver and microkernel build options; extra options present in driver: (0x1)
+# SGXInit: Mismatch in driver and microkernel build options; extra options present in microkernel: (0x210008) [1297, drivers/gpu/pvr/omap3/services4/srvkm/devices/sgx/sgxinit.c]
+#
+
+ccflags-y += \
+	-DLINUX -D__linux__ \
+	-DPVR_BUILD_DIR="\"omap_sgx\"" \
+	-DPVRSRV_MODNAME="\"pvrsrvkm"\" \
+	-DPVR_USE_PRE_REGISTERED_PLATFORM_DEV \
+	-DPM_RUNTIME_SUPPORT \
+	-DSERVICES4 \
+	-D_XOPEN_SOURCE=600 \
+	-D_POSIX_C_SOURCE=199309 \
+	-DPVR2D_VALIDATE_INPUT_PARAMS \
+	-DDEBUG_LOG_PATH_TRUNCATE="\"\"" \
+	-DSUPPORT_SRVINIT \
+	-DSUPPORT_SGX \
+	-DSUPPORT_PERCONTEXT_PB \
+	-DDISABLE_SGX_PB_GROW_SHRINK \
+	-DSUPPORT_PVRSRV_GET_DC_SYSTEM_BUFFER \
+	-DSUPPORT_LINUX_X86_WRITECOMBINE \
+	-DTRANSFER_QUEUE \
+	-DPVR_DRI_DRM_NOT_PCI \
+	-DSYS_USING_INTERRUPTS \
+	-DSUPPORT_HW_RECOVERY \
+	-DSUPPORT_ACTIVE_POWER_MANAGEMENT \
+	-DPVR_SECURE_HANDLES \
+	-DPVR_SECURE_DRM_AUTH_EXPORT \
+	-DUSE_PTHREADS \
+	-DSUPPORT_SGX_EVENT_OBJECT \
+	-DLDM_PLATFORM \
+	-DPVR2D_ALT_2DHW \
+	-DSUPPORT_SGX_HWPERF \
+	-DSUPPORT_SGX_LOW_LATENCY_SCHEDULING \
+	-DSUPPORT_LINUX_X86_PAT \
+	-DPVR_LINUX_USING_WORKQUEUES \
+	-DPVR_LINUX_MISR_USING_PRIVATE_WORKQUEUE \
+	-DPVR_LINUX_TIMERS_USING_WORKQUEUES \
+	-DSYS_CUSTOM_POWERLOCK_WRAP \
+	-DPVR_NO_FULL_CACHE_OPS \
+	-DSGX_CLK_CORE_DIV5 \
+	-DSUPPORT_SGX_NEW_STATUS_VALS
+
+ifeq ($(CONFIG_SGX_DEBUG),)
+ccflags-y += \
+	-DPVR_BUILD_TYPE="\"release\"" \
+	-DRELEASE \
+	-g -Os \
+	-fno-strict-aliasing -Wno-pointer-arith -Wno-sign-conversion
 else
-ifeq ($(TI_PLATFORM),ti81xx)
-SUPPORT_ACTIVE_POWER_MANAGEMENT ?= 0
-else
-SUPPORT_ACTIVE_POWER_MANAGEMENT = 1
-endif
-endif
-else
-SUPPORT_ACTIVE_POWER_MANAGEMENT = 0
-endif
-
-#if 0
-ifeq ($(LDM_PLATFORM),1)
-DISPLAY_CONTROLLER                      = omaplfb
-OMAP_NON_FLIP_DISPLAY                   = 0
-else
-DISPLAY_CONTROLLER                      = pvrlfb
-DISPLAY_CONTROLLER_DIR                  = 3rdparty/linux_framebuffer
-OMAP_NON_FLIP_DISPLAY                   = 1
-endif
-#endif
-
-PVR_NO_FULL_CACHE_OPS := 1
-SGX_DYNAMIC_TIMING_INFO := 1
-SYS_CUSTOM_POWERLOCK_WRAP := 1
-PVR_LDM_PLATFORM_PRE_REGISTERED := 0
-PVR_SECURE_HANDLES :=1
-DEBUGLINK :=1 
-PVRSRV_MODNAME ?= pvrsrvkm
-
-SYS_CFLAGS += -DPVRSRV_MODNAME="\"$(PVRSRV_MODNAME)"\"
-
-#ARCH_CFLAGS             += -ftree-vectorize -mfpu=neon -mfloat-abi=hard
-ARCH_CFLAGS     += -Wno-sign-conversion
-
-
-export PVR_BUILD_DIR := $(shell pwd)
-
-DATE := $(shell date "+%a %B %d %Z %Y" )
-
-CBUILD			=	-DPVR_BUILD_DIR="\"$(PVR_BUILD_DIR)\"" \
-				-DPVR_BUILD_DATE="\"$(DATE)\"" \
-				-DPVR_BUILD_TYPE="\"$(BUILD)\""
-
-#  Don't support HW recovery on debug builds
-CBUILD.debug	= -DDEBUG
-CBUILD.timing	= -DTIMING
-CBUILD.release	= -DRELEASE
-CFLAGS.debug	= -g -O0 -DDLL_METRIC=1
-CFLAGS.timing	= $(OPTIM) -g -DDLL_METRIC=1 -DTIMING
-CFLAGS.release	= $(OPTIM) -g
-CFLAGS          = $(CFLAGS.$(BUILD))
-
-ifeq ($(EXTRA_EXTRA_WARNINGS),1)
-EXTRA_WARNINGS=1
-endif
-ifeq ($(EXTRA_WARNINGS),1)
-CCFLAGS_KERNEL  +=
-ifeq ($(EXTRA_EXTRA_WARNINGS),1)
-CCFLAGS_KERNEL  += -Wwrite-strings
-endif
+ccflags-y += \
+	-O0 \
+	-DPVR_BUILD_TYPE="\"debug\"" \
+	-DDEBUG \
+	-DDEBUG_LINUX_MEMORY_ALLOCATIONS \
+	-DDEBUG_LINUX_MEM_AREAS \
+	-DDEBUG_LINUX_MMAP_AREAS \
+	-DDEBUG_BRIDGE_KM \
+	-g -O0 \
+	-DDLL_METRIC=1 \
+	-fno-strict-aliasing -Wno-pointer-arith -Wno-sign-conversion
 endif
 
-CCFLAGS_KERNEL  += -Wall -Wdeclaration-after-statement -Wpointer-arith
-CCFLAGS_KERNEL  += -Wmissing-format-attribute -Wno-format-zero-length
-CCFLAGS_KERNEL  += -Wmissing-prototypes -Wstrict-prototypes
+$(TARGET) := \
+	services4/srvkm/bridged/bridged_pvr_bridge.o \
+	services4/srvkm/bridged/bridged_support.o \
+	services4/srvkm/bridged/sgx/bridged_sgx_bridge.o \
+	services4/srvkm/common/buffer_manager.o \
+	services4/srvkm/common/devicemem.o \
+	services4/srvkm/common/deviceclass.o \
+	services4/srvkm/common/handle.o \
+	services4/srvkm/common/hash.o \
+	services4/srvkm/common/lists.o \
+	services4/srvkm/common/mem.o \
+	services4/srvkm/common/mem_debug.o \
+	services4/srvkm/common/metrics.o \
+	services4/srvkm/common/osfunc_common.o \
+	services4/srvkm/common/pdump_common.o \
+	services4/srvkm/common/perproc.o \
+	services4/srvkm/common/power.o \
+	services4/srvkm/common/pvrsrv.o \
+	services4/srvkm/common/queue.o \
+	services4/srvkm/common/ra.o \
+	services4/srvkm/common/resman.o \
+	services4/srvkm/common/refcount.o \
+	services4/srvkm/devices/sgx/mmu.o \
+	services4/srvkm/devices/sgx/pb.o \
+	services4/srvkm/devices/sgx/sgxinit.o \
+	services4/srvkm/devices/sgx/sgxkick.o \
+	services4/srvkm/devices/sgx/sgxpower.o \
+	services4/srvkm/devices/sgx/sgxreset.o \
+	services4/srvkm/devices/sgx/sgxutils.o \
+	services4/srvkm/devices/sgx/sgxtransfer.o \
+	services4/srvkm/env/linux/event.o \
+	services4/srvkm/env/linux/mm.o \
+	services4/srvkm/env/linux/mmap.o \
+	services4/srvkm/env/linux/module.o \
+	services4/srvkm/env/linux/mutex.o \
+	services4/srvkm/env/linux/mutils.o \
+	services4/srvkm/env/linux/osfunc.o \
+	services4/srvkm/env/linux/osperproc.o \
+	services4/srvkm/env/linux/pdump.o \
+	services4/srvkm/env/linux/proc.o \
+	services4/srvkm/env/linux/pvr_bridge_k.o \
+	services4/srvkm/env/linux/pvr_debug.o \
+	services4/srvkm/env/linux/pvr_drm.o \
+	services4/system/$(TI_PLATFORM)/sysconfig.o \
+	services4/system/$(TI_PLATFORM)/sysutils.o
 
+ifneq ($(CONFIG_SGX_DRM),)
 
-CCFLAGS                 := $(CCFLAGS_KERNEL) -Wunused-parameter
+ccflags-y += -Iinclude/drm \
+	-I$(src)/services4/3rdparty/linux_drm \
+	-DSYS_USING_INTERRUPTS \
+	-DPVR_LINUX_USING_WORKQUEUES \
+	-DPVR_DISPLAY_CONTROLLER_DRM_IOCTL \
+	-DSUPPORT_DRM_MODESET \
+	-DSUPPORT_DRI_DRM_EXT \
+	-DSUPPORT_DRI_DRM	# FIXME: leads to $(src)/services4/srvkm/env/linux/pvr_drm.c:448:1: error: size of array is too large
 
+ccflags-n += \
+	-DPVR_DRI_DRM_PLATFORM_DEV
 
-CCFLAGS_HOST    := $(CCFLAGS)
-CCFLAGS                 += -W -Wno-missing-field-initializers
-CCFLAGS_KERNEL  += -Wno-unused-parameter -Wno-sign-compare
+$(TARGET) += \
+	services4/3rdparty/linux_drm/pvr_drm_stubs.o
 
-ifneq ($(SUPPORT_DRI_DRM_EXT),1)
-ifeq ($(EXTRA_WARNINGS),1)
-SYS_CFLAGS              += -Wno-error
-else
-CCFLAGS_KERNEL  += -Werror
-endif
-endif
-
-CPPFLAGS  = -W -Wall -Wmissing-format-attribute -Wpointer-arith
-CPPFLAGS += -Wno-missing-field-initializers
-
-
-
-
-ifeq ("$(BUILD)", "debug")
-DEBUG_LINUX_MEMORY_ALLOCATIONS	?= 1
-DEBUG_LINUX_MEM_AREAS		?= 1
-DEBUG_LINUX_MMAP_AREAS		?= 1
-DEBUG_LINUX_XML_PROC_FILES	?= 0
-DEBUG_LINUX_SLAB_ALLOCATIONS	?= 0
-DEBUG_BRIDGE_KM			?= 1
-DEBUG_TRACE_BRIDGE_KM		?= 0
-DEBUG_BRIDGE_KM_DISPATCH_TABLE ?= 0
-PVRSRV_LOG_MEMORY_ALLOCS ?= 0
-PVRSRV_DEBUG_OS_MEMORY ?= 0
-endif
-
-ifneq ($(SUPPORT_XORG),1)
-SUPPORT_XWS        ?= 1
-XWS_SERVER_ONLY    ?= 0
-else
-SUPPORT_XWS        = 0
-XWS_SERVER_ONLY    = 0
-SUPPORT_EWS        = 0
-endif
-
-SUPPORT_DRI_DRM ?= $(SUPPORT_XORG)
-SUPPORT_SECURE_DRM_AUTH_EXPORT ?= $(SUPPORT_XORG)
-SUPPORT_DRI_DRM_EXT ?= 0
-SUPPORT_LIBDRM_LITE ?= 0
-
-ifeq ($(SUPPORT_EWS),1)
-SUPPORT_SECURE_FD_EXPORT        ?= 1
-else
-SUPPORT_SECURE_FD_EXPORT        ?= 0
-endif
-
-SUPPORT_DRI_DRM_NO_LIBDRM ?= 0
-
-TRANSFER_QUEUE				?= 1
-SUPPORT_SGX_EVENT_OBJECT		?= 1
-SUPPORT_SECURE_HANDLES			= 1
-SUPPORT_SRVINIT				= 1
-SUPPORT_PERCONTEXT_PB			= 1
-DISABLE_SGX_PB_GROW_SHRINK             ?= 1
-SUPPORT_LINUX_X86_PAT 			?=1
-SUPPORT_LINUX_X86_WRITECOMBINE 		?=1
-SUPPORT_SGX_LOW_LATENCY_SCHEDULING 	?=1
-SUPPORT_PVRSRV_GET_DC_SYSTEM_BUFFER	?=1
-
-ifeq ($(SUPPORT_XORG),1)
-SUPPORT_PDUMP_MULTI_PROCESS = 1
 endif
 
+ifneq ($(SUPPORT_OMAPLFB),)
 
-SUPPORT_OMAP3430_SGXFCLK_96M ?= 0
-SUPPORT_OMAP3430_OMAPFB3 ?= 0
+ccflags-y += \
+	-I$(src)/services4/3rdparty/dc_omapfb3_linux \
+	-DFBDEV_PRESENT=1 \
+	-DSUPPORT_OMAP3430_OMAPFB3 \
+	-DDISPLAY_CONTROLLER=omaplfb \
+	-DPVR_OMAPLFB_DRM_FB	# tries to #include <linux/omap_gpu.h>
 
-SUPPORT_MEMINFO_IDS ?= 0
+# FIXME: this is also TI_PLATFORM specific (different FB address for OMAP3 and AM33xx)
+$(TARGET) += \
+	services4/3rdparty/dc_omapfb3_linux/omaplfb_displayclass.o \
+	services4/3rdparty/dc_omapfb3_linux/omaplfb_linux.o
 
-SUPPORT_PVR_PDP_LINUX_FB ?= $(SUPPORT_XWS)
-
-SUPPORT_LINUX_USING_WORKQUEUES ?= 1
-ifeq ($(SUPPORT_OMAP3430_OMAPFB3),1)
-SUPPORT_LINUX_USING_WORKQUEUES = 1
 endif
 
-SUPPORT_SGX_NEW_STATUS_VALS ?= 1
-
-PVR_LINUX_USING_WORKQUEUES := 1
-PVR_LINUX_MISR_USING_PRIVATE_WORKQUEUE := 1
-PVR_LINUX_TIMERS_USING_WORKQUEUES := 1
-SYS_CUSTOM_POWERLOCK_WRAP := 1
-
-
-DC_NOHW_WIDTH ?= 640
-DC_NOHW_HEIGHT ?= 480
-
-DISPLAY_CONTROLLER ?=
-
-SYS_CFLAGS += -DSERVICES4 -D_XOPEN_SOURCE=600 -D_POSIX_C_SOURCE=199309 -DPVR2D_VALIDATE_INPUT_PARAMS
-
-#SYS_CFLAGS += -DSERVICES4 -D_XOPEN_SOURCE=600 -DPVR2D_VALIDATE_INPUT_PARAMS
-
-# Thread support
-USE_PTHREADS ?= 1
-USE_GCC__thread_KEYWORD ?= 0
-OPTIMISE_NON_NPTL_SINGLE_THREAD_TLS_LOOKUP ?= 0
-DISABLE_THREADS ?= 0
-
-#PVRSRV_USSE_EDM_STATUS_DEBUG := 1
-#PVRSRV_DUMP_MK_TRACE := 1
-
-# Automatically define C compiler macros for features possible (or not) in use.
-
-SYS_CFLAGS.$(SUPPORT_SRVINIT)				+= -DSUPPORT_SRVINIT
-SYS_CFLAGS.$(SUPPORT_VGX)                               += -DSUPPORT_VGX
-SYS_CFLAGS.$(SUPPORT_SGX)				+= -DSUPPORT_SGX
-SYS_CFLAGS.$(SUPPORT_XWS)				+= -DSUPPORT_XWS
-SYS_CFLAGS.$(PDUMP)					+= -DPDUMP
-SYS_CFLAGS.$(VGX_PDUMP_FROM_FIRMWARE)           += -DVGX_PDUMP_FROM_FIRMWARE
-SYS_CFLAGS.$(OVG_ALWAYS_CONVERT_DATA)           += -DOVG_ALWAYS_CONVERT_DATA
-
-SYS_CFLAGS.$(SUPPORT_POWER_MANAGEMENT)			+= -DSUPPORT_POWER_MANAGEMENT
-SYS_CFLAGS.$(SUPPORT_BUFFER_CLASS)			+= -DSUPPORT_BUFFER_CLASS
-
-SYS_CFLAGS.$(SUPPORT_PERCONTEXT_PB)			+= -DSUPPORT_PERCONTEXT_PB 
-SYS_CFLAGS.$(SUPPORT_DYNAMIC_PBRESIZE)			+= -DSUPPORT_DYNAMIC_PBRESIZE
-SYS_CFLAGS.$(DISABLE_SGX_PB_GROW_SHRINK)        += -DDISABLE_SGX_PB_GROW_SHRINK
-SYS_CFLAGS.$(SUPPORT_PVRSRV_GET_DC_SYSTEM_BUFFER) += -DSUPPORT_PVRSRV_GET_DC_SYSTEM_BUFFER
-
-SYS_CFLAGS.$(USE_FBDEV)					+= -DUSE_FBDEV
-SYS_CFLAGS.$(USE_FBDEV)					+= -DFBDEV_NAME="\"$(FBDEV_NAME)\""
-SYS_CFLAGS.$(SUPPORT_DYNAMIC_3DCLOCKGATING) 		+= -DSUPPORT_DYNAMIC_3DCLOCKGATING
-SYS_CFLAGS.$(REENTRANCY_PROTECTION)			+= -DREENTRANCY_PROTECTION
-SYS_CFLAGS.$(SCHEDULER_CONTROL_SUPPORT) 		+= -DSCHEDULER_CONTROL_SUPPORT
-SYS_CFLAGS.$(USE_IMG_POWER_DOMAIN_FUNCTION) 		+= -DUSE_IMG_POWER_DOMAIN_FUNCTION
-
-SYS_CFLAGS.$(USE_DMALLOC)				+= -DDMALLOC
-
-SYS_CFLAGS.$(DEBUG_LINUX_MEMORY_ALLOCATIONS)		+= -DDEBUG_LINUX_MEMORY_ALLOCATIONS
-SYS_CFLAGS.$(DEBUG_LINUX_MEM_AREAS)			+= -DDEBUG_LINUX_MEM_AREAS
-SYS_CFLAGS.$(DEBUG_LINUX_MMAP_AREAS)			+= -DDEBUG_LINUX_MMAP_AREAS
-SYS_CFLAGS.$(DEBUG_LINUX_XML_PROC_FILES)		+= -DDEBUG_LINUX_XML_PROC_FILES
-SYS_CFLAGS.$(DEBUG_LINUX_SLAB_ALLOCATIONS)		+= -DDEBUG_LINUX_SLAB_ALLOCATIONS
-SYS_CFLAGS.$(DEBUG_BRIDGE_KM)				+= -DDEBUG_BRIDGE_KM
-SYS_CFLAGS.$(DEBUG_TRACE_BRIDGE_KM)			+= -DDEBUG_TRACE_BRIDGE_KM
-SYS_CFLAGS.$(DEBUG_BRIDGE_KM_DISPATCH_TABLE)		+= -DDEBUG_BRIDGE_KM_DISPATCH_TABLE
-
-SYS_CFLAGS.$(PVRSRV_LOG_MEMORY_ALLOCS)                  += -DPVRSRV_LOG_MEMORY_ALLOCS
-SYS_CFLAGS.$(PVRSRV_DEBUG_OS_MEMORY)                    += -DPVRSRV_DEBUG_OS_MEMORY
-SYS_CFLAGS.$(DEBUG_MESA_OGL_TRACE)                              += -DDEBUG_MESA_OGL_TRACE
-
-
-SYS_CFLAGS.$(SUPPORT_LINUX_X86_WRITECOMBINE)		+= -DSUPPORT_LINUX_X86_WRITECOMBINE
-
-SYS_CFLAGS.$(SGX_PDS_EVENTS_DISABLED)			+= -DSGX_PDS_EVENTS_DISABLED
-SYS_CFLAGS.$(USE_SUPPORT_NO_TA3D_OVERLAP)		+= -DUSE_SUPPORT_NO_TA3D_OVERLAP
-SYS_CFLAGS.$(SUPPORT_SGX_TILING)			+= -DSUPPORT_SGX_TILING
-SYS_CFLAGS.$(TRANSFER_QUEUE)				+= -DTRANSFER_QUEUE
-
-SYS_CFLAGS.$(SUPPORT_SGX_MMU_DUMMY_PAGE)		+= -DSUPPORT_SGX_MMU_DUMMY_PAGE
-SYS_CFLAGS.$(PVRSRV_DUMP_MK_TRACE)                      += -DPVRSRV_DUMP_MK_TRACE
-SYS_CFLAGS.$(PVRSRV_DUMP_KERNEL_CCB)                    += -DPVRSRV_DUMP_KERNEL_CCB
-SYS_CFLAGS.$(EDM_USSE_HWDEBUG)                          += -DEDM_USSE_HWDEBUG
-
-
-
-SYS_CFLAGS.$(PVRSRV_USSE_EDM_STATUS_DEBUG)		+= -DPVRSRV_USSE_EDM_STATUS_DEBUG
-SYS_CFLAGS.$(USE_SUPPORT_STATUSVALS_DEBUG)              += -DUSE_SUPPORT_STATUSVALS_DEBUG
-SYS_CFLAGS.$(SGX_FAST_DPM_INIT)                         += -DSGX_FAST_DPM_INIT
-SYS_CFLAGS.$(SGX_DISABLE_UKERNEL_SECONDARY_STATE)       += -DSGX_DISABLE_UKERNEL_SECONDARY_STATE
-SYS_CFLAGS.$(DBGBREAK_ON_SPM)                           += -DDBGBREAK_ON_SPM
-SYS_CFLAGS.$(PVR_DBG_BREAK_ASSERT_FAIL)                 += -DPVR_DBG_BREAK_ASSERT_FAIL
-
-SYS_CFLAGS.$(PVRSRV_RESET_ON_HWTIMEOUT)                 += -DPVRSRV_RESET_ON_HWTIMEOUT
-SYS_CFLAGS.$(PVRSRV_CLIENT_RESET_ON_HWTIMEOUT)  += -DPVRSRV_CLIENT_RESET_ON_HWTIMEOUT
-SYS_CFLAGS.$(NO_HARDWARE)                                               += -DNO_HARDWARE
-
-SYS_CFLAGS.$(SUPPORT_DRI_DRM)                                   += -DSUPPORT_DRI_DRM
-SYS_CFLAGS.$(SUPPORT_DRI_DRM_EXT)                               += -DSUPPORT_DRI_DRM_EXT
-SYS_CFLAGS.$(SUPPORT_DRI_DRM_NOT_PCI)                           += -DPVR_DRI_DRM_NOT_PCI
-SYS_CFLAGS.$(SUPPORT_DRI_DRM_NO_DROPMASTER)             += -DSUPPORT_DRI_DRM_NO_DROPMASTER
-SYS_CFLAGS.$(SUPPORT_DRI_DRM_NO_LIBDRM)                         += -DSUPPORT_DRI_DRM_NO_LIBDRM
-SYS_CFLAGS.$(DRM_PVR_RESERVED_INTEL_ORDER)              += -DDRM_PVR_RESERVED_INTEL_ORDER
-SYS_CFLAGS.$(DRM_PVR_USE_INTEL_FB)                              += -DDRM_PVR_USE_INTEL_FB
-
-
-
-
-SYS_CFLAGS.$(SUPPORT_LIBDRM_LITE)                               += -DSUPPORT_LIBDRM_LITE
-
-ifneq ("$(NO_HARDWARE)", "1")
-SYS_CFLAGS.$(SYS_USING_INTERRUPTS)              += -DSYS_USING_INTERRUPTS
-SYS_CFLAGS.$(SUPPORT_HW_RECOVERY)               += -DSUPPORT_HW_RECOVERY
-SYS_CFLAGS.$(SUPPORT_ACTIVE_POWER_MANAGEMENT)   += -DSUPPORT_ACTIVE_POWER_MANAGEMENT
-endif
-
-ifeq ("$(PDUMP)", "1")
-SUPPORT_DBGDRV_EVENT_OBJECTS ?=1
-SYS_CFLAGS.$(SUPPORT_DBGDRV_EVENT_OBJECTS)      += -DSUPPORT_DBGDRV_EVENT_OBJECTS
-SYS_CFLAGS.$(PDUMP_DEBUG_OUTFILES)                      += -DPDUMP_DEBUG_OUTFILES
-endif
-
-
-
-SYS_CFLAGS.$(SYS_USING_INTERRUPTS)			+= -DSYS_USING_INTERRUPTS
-SYS_CFLAGS.$(SUPPORT_HW_RECOVERY)			+= -DSUPPORT_HW_RECOVERY
-SYS_CFLAGS.$(SUPPORT_ACTIVE_POWER_MANAGEMENT)		+= -DSUPPORT_ACTIVE_POWER_MANAGEMENT
-
-SYS_CFLAGS.$(SUPPORT_SECURE_HANDLES)			+= -DPVR_SECURE_HANDLES
-SYS_CFLAGS.$(SUPPORT_SECURE_FD_EXPORT)			+= -DPVR_SECURE_FD_EXPORT
-SYS_CFLAGS.$(SUPPORT_SECURE_DRM_AUTH_EXPORT)    += -DPVR_SECURE_DRM_AUTH_EXPORT
-
-SYS_CFLAGS.$(USE_PTHREADS)				+= -DUSE_PTHREADS
-SYS_CFLAGS.$(USE_GCC__thread_KEYWORD)			+= -DUSE_GCC__thread_KEYWORD
-SYS_CFLAGS.$(OPTIMISE_NON_NPTL_SINGLE_THREAD_TLS_LOOKUP)	+= -DOPTIMISE_NON_NPTL_SINGLE_THREAD_TLS_LOOKUP
-SYS_CFLAGS.$(DISABLE_THREADS)				+= -DDISABLE_THREADS
-SYS_CFLAGS.$(SUPPORT_SGX_EVENT_OBJECT)			+= -DSUPPORT_SGX_EVENT_OBJECT
-SYS_CFLAGS.$(LDM_PLATFORM)				+= -DLDM_PLATFORM
-SYS_CFLAGS.$(LDM_PCI)					+= -DLDM_PCI
-SYS_CFLAGS.$(PVR_MANUAL_POWER_CONTROL)			+= -DPVR_MANUAL_POWER_CONTROL
-
-SYS_CFLAGS.$(PVR2D_ALT_2DHW)				+= -DPVR2D_ALT_2DHW
-
-SYS_CFLAGS.$(SUPPORT_SGX_HWPERF)			+= -DSUPPORT_SGX_HWPERF
-
-SYS_CFLAGS.$(SUPPORT_SGX_LOW_LATENCY_SCHEDULING)	+= -DSUPPORT_SGX_LOW_LATENCY_SCHEDULING
-
-SYS_CFLAGS.$(SUPPORT_SLC)                               += -DSGX_FEATURE_SYSTEM_CACHE
-SYS_CFLAGS.$(BYPASS_SLC)                                += -DSGX_BYPASS_SYSTEM_CACHE
-SYS_CFLAGS.$(BYPASS_DCU)                                += -DSGX_BYPASS_DCU
-SYS_CFLAGS.$(SUPPORT_SGX_LOW_LATENCY_SCHEDULING)                                += -DSUPPORT_SGX_LOW_LATENCY_SCHEDULING
-SYS_CFLAGS.$(SGX_SUPPORT_VDM_TIMER_BASED_SWITCHING)     += -DSGX_SUPPORT_VDM_TIMER_BASED_SWITCHING
-SYS_CFLAGS.$(SGX_SUPPORT_ISP_TIMER_BASED_SWITCHING)     += -DSGX_SUPPORT_ISP_TIMER_BASED_SWITCHING
-
-
-
-SYS_CFLAGS.$(SUPPORT_LINUX_X86_PAT)			+= -DSUPPORT_LINUX_X86_PAT
-
-
-SYS_CFLAGS.$(SUPPORT_TI_PM)                             += -DSUPPORT_TI_PM
-
-SYS_CFLAGS.$(SUPPORT_OMAP3430_SGXFCLK_96M)      += -DSUPPORT_OMAP3430_SGXFCLK_96M
-SYS_CFLAGS.$(SUPPORT_OMAP3430_OMAPFB3)          += -DSUPPORT_OMAP3430_OMAPFB3
-
-SYS_CFLAGS.$(SUPPORT_CACHEFLUSH_ON_ALLOC)       += -DSUPPORT_CACHEFLUSH_ON_ALLOC
-SYS_CFLAGS.$(SUPPORT_MEMINFO_IDS)                       += -DSUPPORT_MEMINFO_IDS
-
-SYS_CFLAGS.$(SUPPORT_SGX_EDM_MEMORY_DEBUG)      += -DSUPPORT_SGX_EDM_MEMORY_DEBUG
-
-SYS_CFLAGS.$(SUPPORT_GRAPHICS_HAL)                      += -DSUPPORT_GRAPHICS_HAL
-SYS_CFLAGS.$(SUPPORT_GRAPHICS_HAL)                      += -DGRALLOC_VARIANT="\"$(GRALLOC_VARIANT)\""
-
-SYS_CFLAGS.$(SUPPORT_EGL_IMAGE_SYNC_DEPENDENCY)                 += -DSUPPORT_EGL_IMAGE_SYNC_DEPENDENCY
-SYS_CFLAGS.$(SUPPORT_PVR_PDP_LINUX_FB) += -DPVR_PDP_LINUX_FB
-
-#SYS_CFLAGS.$(SUPPORT_LINUX_USING_WORKQUEUES) += -DPVR_LINUX_USING_WORKQUEUES \
-                                -DPVR_LINUX_MISR_USING_PRIVATE_WORKQUEUE 
-SYS_CFLAGS.$(SUPPORT_LINUX_USING_WORKQUEUES) += -DPVR_LINUX_USING_WORKQUEUES \
-                                -DPVR_LINUX_MISR_USING_PRIVATE_WORKQUEUE \
-                                -DPVR_LINUX_TIMERS_USING_WORKQUEUES \
-                                -DSYS_CUSTOM_POWERLOCK_WRAP \
-				-DPVR_NO_FULL_CACHE_OPS \
-				-DSGX_CLK_CORE_DIV5
-
-
-SYS_CFLAGS.$(SUPPORT_SGX_NEW_STATUS_VALS)       += -DSUPPORT_SGX_NEW_STATUS_VALS
-
-ifneq ("$(DISPLAY_CONTROLLER)", "")
-SYS_CFLAGS += -DDISPLAY_CONTROLLER=$(DISPLAY_CONTROLLER)
-endif
-
-ifeq ("$(PVR_SYSTEM)", "sgx_nohw")
-ifndef RTSIM
-SYS_CFLAGS += -DNO_HARDWARE
-endif
-SYS_CFLAGS += -DDC_NOHW_BUFFER_WIDTH=$(DC_NOHW_WIDTH) -DDC_NOHW_BUFFER_HEIGHT=$(DC_NOHW_HEIGHT)
-endif
-
-ifeq ("$(PVR_SYSTEM)", "vgx_nohw")
-SYS_CFLAGS += -DNO_HARDWARE -DDC_NOHW_BUFFER_WIDTH=$(DC_NOHW_WIDTH) -DDC_NOHW_BUFFER_HEIGHT=$(DC_NOHW_HEIGHT)
-endif
-
-SYS_CFLAGS += -DDEBUG_LOG_PATH_TRUNCATE=\"$(EURASIAROOT)\"
-
-SYS_INCLUDES    =       -I$(EURASIAROOT)/include4 \
-                                        -I$(EURASIAROOT)/eurasiacon/includeext \
-                                        -I$(SYSBIN) \
-                                        -isystem $(KERNELDIR)/include
-
-
-
-export ALL_CFLAGS =	-DLINUX \
-			$(CBUILD) $(CBUILD.$(BUILD)) \
-			$(SYS_CFLAGS) $(SYS_CFLAGS.1) \
-			$(MODULE_CFLAGS) $(MODULE_CFLAGS.$(BUILD)) \
-			$(CORE) -fno-strict-aliasing -Wno-pointer-arith \
-			$(CFLAGS) $(ARCH_CFLAGS)
-ifdef SUPPORT_DRI_DRM_NO_TTM
-export SUPPORT_DRI_DRM_NO_TTM
-endif
-
-all:
-	$(MAKE) -C $(KERNELDIR) M=`pwd` $*
-
-clean:
-	@find . -name "*.o" -exec rm -r {} \;
-	@find . -name "*.ko" -exec rm -r {} \;
-
-
+# old stuff (compile options which may no longer be available/relevant)
+# CHECKME: should grep the source code if they exist and are still useful
+
+ccflags-n += \
+	-DSGX_DYNAMIC_TIMING_INFO \
+	-DSUPPORT_XWS \
+	-DPVR_SECURE_FD_EXPORT \
+	-DSYS_CUSTOM_POWERLOCK_WRAP \
+	-DSUPPORT_MEMINFO_IDS \
+	-DCLIENT_DRIVER_DEFAULT_WAIT_RETRIES=50 \
+	-DFLIP_TECHNIQUE_OVERLAY \
+	-DSUPPORT_SGX_NEW_STATUS_VALS \
+	-DSGX_EARLYSUSPEND
+
+ # we are NOT compiling on/for Android
+ccflags-n += \
+	-DANDROID \
+	-DSUPPORT_ANDROID_PLATFORM \
+	-DSYS_SGX_ACTIVE_POWER_LATENCY_MS=100
+
+ccflags-n += \
+	-DDEBUG_BRIDGE_KM_DISPATCH_TABLE \
+	-DPVRSRV_USSE_EDM_STATUS_DEBUG \
+	-DPVRSRV_DUMP_MK_TRACE

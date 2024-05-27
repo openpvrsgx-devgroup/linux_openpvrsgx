@@ -123,7 +123,7 @@ PVRSRVTimeTraceAllocItem(IMG_UINT32 **pui32Item, IMG_UINT32 ui32Size)
 	{
 		PVRSRV_ERROR eError;
 
-		PVR_DPF((PVR_DBG_MESSAGE, "PVRSRVTimeTraceAllocItem: Creating buffer for PID %u", (IMG_UINT32) ui32PID));
+		PVR_DPF((PVR_DBG_MESSAGE, "PVRSRVTimeTraceAllocItem: Creating buffer for PID %u", ui32PID));
 		eError = PVRSRVTimeTraceBufferCreate(ui32PID);
 		if (eError != PVRSRV_OK)
 		{
@@ -171,7 +171,7 @@ PVRSRVTimeTraceAllocItem(IMG_UINT32 **pui32Item, IMG_UINT32 ui32Size)
 	psBuffer->ui32Woff = psBuffer->ui32Woff + ui32Size;
 	psBuffer->ui32ByteCount += ui32Size;
 
-	/* This allocation will start overwritting past our read pointer, move the read pointer along */
+	/* This allocation will start overwriting past our read pointer, move the read pointer along */
 	while (psBuffer->ui32ByteCount > TIME_TRACE_BUFFER_SIZE)
 	{
 		IMG_UINT32 *psReadItem = (IMG_UINT32 *) &psBuffer->ui8Data[psBuffer->ui32Roff];

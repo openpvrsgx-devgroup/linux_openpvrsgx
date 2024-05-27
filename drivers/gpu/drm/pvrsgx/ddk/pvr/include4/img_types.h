@@ -75,17 +75,16 @@ typedef signed long		IMG_INT32,	*IMG_PINT32;
 #endif
 
 #if  defined(USE_CODE)
-
-typedef unsigned __int64	IMG_UINT64, *IMG_PUINT64;
-typedef __int64				IMG_INT64,  *IMG_PINT64;
-
+	typedef unsigned __int64	IMG_UINT64, *IMG_PUINT64;
+	typedef __int64				IMG_INT64,  *IMG_PINT64;
+#elif defined(LINUX) && defined (__x86_64)
+	typedef unsigned long		IMG_UINT64,	*IMG_PUINT64;
+	typedef long 				IMG_INT64,	*IMG_PINT64;
+#elif defined(LINUX) || defined(__METAG) || defined (__QNXNTO__)
+	typedef unsigned long long		IMG_UINT64,	*IMG_PUINT64;
+	typedef long long 				IMG_INT64,	*IMG_PINT64;
 #else
- #if defined(LINUX) || defined(__METAG) || defined (__QNXNTO__)
-		typedef unsigned long long		IMG_UINT64,	*IMG_PUINT64;
-		typedef long long 				IMG_INT64,	*IMG_PINT64;
-	#else
-		#error("define an OS")
-	#endif
+	#error("define an OS")
 #endif
 
 #if !(defined(LINUX) && defined (__KERNEL__))
@@ -107,11 +106,19 @@ typedef IMG_INT32       IMG_RESULT;
 
 #if defined(_WIN64)
 	typedef unsigned __int64	IMG_UINTPTR_T;
+    typedef signed   __int64    IMG_INTPTR_T;
 	typedef signed __int64		IMG_PTRDIFF_T;
 	typedef IMG_UINT64			IMG_SIZE_T;
 #else
-	typedef unsigned int	IMG_UINTPTR_T;
-	typedef IMG_UINT32		IMG_SIZE_T;
+    #if defined (__x86_64__)
+    	typedef IMG_UINT64		IMG_SIZE_T;
+        typedef unsigned long   IMG_UINTPTR_T;
+        typedef signed long     IMG_INTPTR_T;
+    #else
+    	typedef IMG_UINT32		IMG_SIZE_T;
+        typedef unsigned long	IMG_UINTPTR_T;
+        typedef signed long     IMG_INTPTR_T;
+    #endif
 #endif
 
 typedef IMG_PVOID       IMG_HANDLE;
@@ -121,9 +128,9 @@ typedef void**          IMG_HVOID,	* IMG_PHVOID;
 #define IMG_NULL        0 
 
 /* services/stream ID */
-typedef IMG_UINT32      IMG_SID;
+typedef IMG_UINTPTR_T      IMG_SID;
 
-typedef IMG_UINT32      IMG_EVENTSID;
+typedef IMG_UINTPTR_T      IMG_EVENTSID;
 
 /*
  * Address types.
@@ -168,7 +175,6 @@ typedef IMG_UINT32      IMG_EVENTSID;
  */
 
 typedef IMG_PVOID IMG_CPU_VIRTADDR;
-#define IMG_INVALID_DEV_VIRTADDR (0x00)
 
 /* device virtual address */
 typedef struct _IMG_DEV_VIRTADDR
@@ -185,7 +191,12 @@ typedef IMG_UINT32 IMG_DEVMEM_SIZE_T;
 typedef struct _IMG_CPU_PHYADDR
 {
 	/* variable sized type (32,64) */
-	IMG_UINTPTR_T uiAddr;
+#if IMG_ADDRSPACE_PHYSADDR_BITS == 32
+	/* variable sized type (32,64) */
+	IMG_UINT32 uiAddr;
+#else
+	IMG_UINT64 uiAddr;
+#endif
 } IMG_CPU_PHYADDR;
 
 /* device physical address */
@@ -193,10 +204,9 @@ typedef struct _IMG_DEV_PHYADDR
 {
 #if IMG_ADDRSPACE_PHYSADDR_BITS == 32
 	/* variable sized type (32,64) */
-	IMG_UINTPTR_T uiAddr;
-#else
 	IMG_UINT32 uiAddr;
-	IMG_UINT32 uiHighAddr;
+#else
+	IMG_UINT64 uiAddr;
 #endif
 } IMG_DEV_PHYADDR;
 
@@ -204,7 +214,12 @@ typedef struct _IMG_DEV_PHYADDR
 typedef struct _IMG_SYS_PHYADDR
 {
 	/* variable sized type (32,64) */
-	IMG_UINTPTR_T uiAddr;
+#if IMG_ADDRSPACE_PHYSADDR_BITS == 32
+	/* variable sized type (32,64) */
+	IMG_UINT32 uiAddr;
+#else
+	IMG_UINT64 uiAddr;
+#endif
 } IMG_SYS_PHYADDR;
 
 #include "img_defs.h"

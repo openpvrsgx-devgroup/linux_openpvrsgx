@@ -606,7 +606,6 @@ PVRSRV_ERROR SysFinalise(IMG_VOID)
 	if (!gpsSysData->pszVersionString)
 	{
 		PVR_DPF((PVR_DBG_ERROR,"SysFinalise: Failed to create a system version string"));
-		return PVRSRV_ERROR_INIT_FAILURE;
 	}
 	else
 	{

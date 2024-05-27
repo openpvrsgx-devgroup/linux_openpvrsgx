@@ -167,13 +167,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 		#define SGX_CORE_REV	SGX_CORE_REV_HEAD
 	#endif
 
-	#if SGX_CORE_REV == 101
-		#define FIX_HW_BRN_25499/* Workaround in sgx featuredefs */
-		#define FIX_HW_BRN_25503/* Workaround in code (services) */
-		#define FIX_HW_BRN_26620/* Workaround in services (srvkm) */
-		#define FIX_HW_BRN_28011/* Workaround in services (srvkm) */
-		#define FIX_HW_BRN_34028/* Workaround in services (srvkm) */
-	#else
 	#if SGX_CORE_REV == 110
 		#define FIX_HW_BRN_25503/* Workaround in code (services) */
 		#define FIX_HW_BRN_26620/* Workaround in services (srvkm) */
@@ -201,7 +194,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 	#endif
 	#endif
 	#endif
-	#endif
 	/* signal that the Core Version has a valid definition */
 	#define SGX_CORE_DEFINED
 #endif
@@ -224,9 +216,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 		#define FIX_HW_BRN_31272/* workaround in services (srvclient) and uKernel */
 		#define FIX_HW_BRN_31278/* disabled prefetching in MMU */
 		#define FIX_HW_BRN_31542/* workaround in uKernel and Services */
- 		#if defined(SGX_FEATURE_MP)
-			#define FIX_HW_BRN_31559/* workaround in services and uKernel */
-		#endif
 		#define FIX_HW_BRN_31620/* workaround in services */
 		#define FIX_HW_BRN_31780/* workaround in uKernel */
 		#define FIX_HW_BRN_32044 /* workaround in uKernel, services and client drivers */
@@ -243,9 +232,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         #define FIX_HW_BRN_31195/* workaround in services */
 		#define FIX_HW_BRN_31272/* workaround in services (srvclient) and uKernel */
 		#define FIX_HW_BRN_31278/* disabled prefetching in MMU */
- 		#if defined(SGX_FEATURE_MP)
-			#define FIX_HW_BRN_31559/* workaround in services and uKernel */
-		#endif
 		#define FIX_HW_BRN_31542/* workaround in uKernel and Services */
 		#define FIX_HW_BRN_31671/* workaround in uKernel */		
  		#define FIX_HW_BRN_31780/* workaround in uKernel */
@@ -260,9 +246,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 	#else
 	#if SGX_CORE_REV == 141
 		#define FIX_HW_BRN_29954/* turns off regbank split feature */
- 		#if defined(SGX_FEATURE_MP)
-			#define FIX_HW_BRN_31559/* workaround in services and uKernel */
-		#endif
 		#define FIX_HW_BRN_31671 /* workaround in uKernel */
  		#define FIX_HW_BRN_31780/* workaround in uKernel */
 		#if defined(SUPPORT_SGX_LOW_LATENCY_SCHEDULING) && defined(SGX_FEATURE_MP)
@@ -273,9 +256,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 	#else
 	#if SGX_CORE_REV == 142
 		#define FIX_HW_BRN_29954/* turns off regbank split feature */
- 		#if defined(SGX_FEATURE_MP)
-			#define FIX_HW_BRN_31559/* workaround in services and uKernel */
-		#endif
 		#define FIX_HW_BRN_31671 /* workaround in uKernel */
  		#define FIX_HW_BRN_31780/* workaround in uKernel */
 		#if defined(SUPPORT_SGX_LOW_LATENCY_SCHEDULING) && defined(SGX_FEATURE_MP)
@@ -291,9 +271,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 		#define FIX_HW_BRN_31272/* workaround in services (srvclient) and uKernel */
 		#define FIX_HW_BRN_31278/* disabled prefetching in MMU */
 		#define FIX_HW_BRN_31542/* workaround in uKernel and Services */
- 		#if defined(SGX_FEATURE_MP)
-			#define FIX_HW_BRN_31559/* workaround in services and uKernel */
-		#endif
 		#define FIX_HW_BRN_31620/* workaround in services */
  		#define FIX_HW_BRN_31780/* workaround in uKernel */
 		#define FIX_HW_BRN_32044 /* workaround in uKernel, services and client drivers */
@@ -307,9 +284,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 	#else
 	#if SGX_CORE_REV == 213
 		#define FIX_HW_BRN_31272/* workaround in services (srvclient) and uKernel */
- 		#if defined(SGX_FEATURE_MP)
-			#define FIX_HW_BRN_31559/* workaround in services and uKernel */
-		#endif
 		#define FIX_HW_BRN_31671 /* workaround in uKernel */
  		#define FIX_HW_BRN_31780/* workaround in uKernel */
 		#define FIX_HW_BRN_32085 /* workaround in services: prefetch fix applied, investigating PT based fix */
@@ -330,13 +304,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 		#if defined(SUPPORT_SGX_LOW_LATENCY_SCHEDULING) && defined(SGX_FEATURE_MP)
 			#define FIX_HW_BRN_33657/* workaround in ukernel*/
 		#endif
-	#define FIX_HW_BRN_36513 /* workaround in uKernel and Services */
+		#define FIX_HW_BRN_36513 /* workaround in uKernel and Services */
 	#else
 	#if SGX_CORE_REV == 303
 		#if defined(SUPPORT_SGX_LOW_LATENCY_SCHEDULING) && defined(SGX_FEATURE_MP)
 			#define FIX_HW_BRN_33657/* workaround in ukernel*/
 		#endif
-	#define FIX_HW_BRN_36513 /* workaround in uKernel and Services */
+		#define FIX_HW_BRN_36513 /* workaround in uKernel and Services */
 	#else
 	#if SGX_CORE_REV == SGX_CORE_REV_HEAD
 		#if defined(SUPPORT_SGX_LOW_LATENCY_SCHEDULING) && defined(SGX_FEATURE_MP)
@@ -372,9 +346,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 		#define FIX_HW_BRN_31195/* workaround in services */
 		#define FIX_HW_BRN_31272/* workaround in services (srvclient) and uKernel */
 		#define FIX_HW_BRN_31278/* disabled prefetching in MMU */
- 		#if defined(SGX_FEATURE_MP)
- 			#define FIX_HW_BRN_31559/* workaround in services and uKernel */
- 		#endif
 		#define FIX_HW_BRN_31542 /* workaround in uKernel and Services */
  		#define FIX_HW_BRN_31620/* workaround in services */
 		#define FIX_HW_BRN_31671 /* workaround in uKernel */
@@ -388,9 +359,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 		#define FIX_HW_BRN_36513 /* workaround in uKernel and Services */
 	#else	
 	#if SGX_CORE_REV == 105
- 		#if defined(SGX_FEATURE_MP)
- 			#define FIX_HW_BRN_31559/* workaround in services and uKernel */
- 		#endif
  		#define FIX_HW_BRN_31780/* workaround in uKernel */
 		#if defined(SUPPORT_SGX_LOW_LATENCY_SCHEDULING) && defined(SGX_FEATURE_MP)
 			#define FIX_HW_BRN_33657/* workaround in ukernel*/
@@ -421,8 +389,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 		#if defined(SUPPORT_SGX_LOW_LATENCY_SCHEDULING) && defined(SGX_FEATURE_MP)
 			#define FIX_HW_BRN_33657/* workaround in ukernel */
 		#endif
-		//FIXME: This causes DMM/EMIF lockup
-		//#define FIX_HW_BRN_33809/* workaround in kernel (enable burst combiner) */
+		#define FIX_HW_BRN_33809/* workaround in kernel (enable burst combiner) */
 		#define FIX_HW_BRN_36513 /* workaround in uKernel and Services */
 	#else
 	#if SGX_CORE_REV == SGX_CORE_REV_HEAD
@@ -450,11 +417,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 		#define SGX_CORE_REV	SGX_CORE_REV_HEAD
 	#endif
 
-	#if SGX_CORE_REV == 109
-		#define FIX_HW_BRN_29702/* Workaround in services */
-		#define FIX_HW_BRN_29823/* Workaround in services */
-		#define FIX_HW_BRN_31939/* workaround in uKernel */
-	#else
 	#if SGX_CORE_REV == 10131
 	#else
 	#if SGX_CORE_REV == 1014
@@ -465,7 +427,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 		/* RTL head - no BRNs to apply */
 	#else
 		#error "sgxerrata.h: SGX545 Core Revision unspecified"
-	#endif
 	#endif
 	#endif
 	#endif

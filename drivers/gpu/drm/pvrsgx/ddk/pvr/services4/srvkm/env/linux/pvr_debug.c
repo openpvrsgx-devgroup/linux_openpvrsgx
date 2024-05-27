@@ -128,7 +128,7 @@ static inline void GetBufferLock(unsigned long *pulLockFlags)
 #if !defined(PVR_DEBUG_ALWAYS_USE_SPINLOCK)
 	else
 	{
-		LinuxLockMutexNested(&gsDebugMutexNonIRQ, PVRSRV_LOCK_CLASS_MM_DEBUG);
+		LinuxLockMutexNested(&gsDebugMutexNonIRQ, PVRSRV_LOCK_CLASS_PVR_DEBUG);
 	}
 #endif
 }

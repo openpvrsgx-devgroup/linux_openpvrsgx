@@ -235,8 +235,14 @@ static PVRSRV_ERROR OpenDCDevice(IMG_UINT32 uiPVRDevID,
 {
 	OMAPLFB_DEVINFO *psDevInfo;
 	OMAPLFB_ERROR eError;
-	unsigned uiMaxFBDevIDPlusOne = OMAPLFBMaxFBDevIDPlusOne();
+	unsigned uiMaxFBDevIDPlusOne;
 	unsigned i;
+
+	if (!try_module_get(THIS_MODULE))
+	{
+		return PVRSRV_ERROR_UNABLE_TO_OPEN_DC_DEVICE;
+	}
+	uiMaxFBDevIDPlusOne = OMAPLFBMaxFBDevIDPlusOne();
 
 	for (i = 0; i < uiMaxFBDevIDPlusOne; i++)
 	{
@@ -250,7 +256,8 @@ static PVRSRV_ERROR OpenDCDevice(IMG_UINT32 uiPVRDevID,
 	{
 		DEBUG_PRINTK((KERN_WARNING DRIVER_PREFIX
 			": %s: PVR Device %u not found\n", __FUNCTION__, uiPVRDevID));
-		return PVRSRV_ERROR_INVALID_DEVICE;
+		eError = PVRSRV_ERROR_INVALID_DEVICE;
+		goto ErrorModulePut;
 	}
 
 	/* store the system surface sync data */
@@ -261,13 +268,18 @@ static PVRSRV_ERROR OpenDCDevice(IMG_UINT32 uiPVRDevID,
 	{
 		DEBUG_PRINTK((KERN_WARNING DRIVER_PREFIX
 			": %s: Device %u: OMAPLFBUnblankDisplay failed (%d)\n", __FUNCTION__, psDevInfo->uiFBDevID, eError));
-		return PVRSRV_ERROR_UNBLANK_DISPLAY_FAILED;
+		eError = PVRSRV_ERROR_UNBLANK_DISPLAY_FAILED;
+		goto ErrorModulePut;
 	}
 
 	/* return handle to the devinfo */
 	*phDevice = (IMG_HANDLE)psDevInfo;
 	
 	return PVRSRV_OK;
+
+ErrorModulePut:
+	module_put(THIS_MODULE);
+	return eError;
 }
 
 /*
@@ -284,6 +296,7 @@ static PVRSRV_ERROR CloseDCDevice(IMG_HANDLE hDevice)
 #else
 	UNREFERENCED_PARAMETER(hDevice);
 #endif
+	module_put(THIS_MODULE);
 	return PVRSRV_OK;
 }
 

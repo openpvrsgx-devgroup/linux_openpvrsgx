@@ -44,11 +44,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "env_perproc.h"
 #include "proc.h"
-#if defined (SUPPORT_ION)
-#include "linux/ion.h"
 
-extern struct ion_device *psIonDev;
+#if defined (SUPPORT_ION)
+#include "ion.h"
+extern struct ion_device *gpsIonDev;
 #endif
+
 extern IMG_UINT32 gui32ReleasePID;
 
 PVRSRV_ERROR OSPerProcessPrivateDataInit(IMG_HANDLE *phOsPrivateData)
@@ -83,13 +84,19 @@ PVRSRV_ERROR OSPerProcessPrivateDataInit(IMG_HANDLE *phOsPrivateData)
 	/* Linked list of PVRSRV_FILE_PRIVATE_DATA structures */
 	INIT_LIST_HEAD(&psEnvPerProc->sDRMAuthListHead);
 #endif
+
 #if defined(SUPPORT_ION)
 	OSSNPrintf(psEnvPerProc->azIonClientName, ION_CLIENT_NAME_SIZE, "pvr_ion_client-%d", OSGetCurrentProcessIDKM());
 	psEnvPerProc->psIONClient =
-		ion_client_create(psIonDev,
-						  1 << ION_HEAP_TYPE_SYSTEM_CONTIG |
-						  1 << ION_HEAP_TYPE_SYSTEM,
-						  psEnvPerProc->azIonClientName);
+		ion_client_create(gpsIonDev,
+#if defined(CONFIG_ION_OMAP)
+						  /*1 << ION_HEAP_TYPE_SYSTEM_CONTIG |*/
+						    1 << ION_HEAP_TYPE_SYSTEM
+						  | 1 << OMAP_ION_HEAP_TYPE_TILER
+#else /* defined(CONFIG_ION_OMAP) */
+						  -1
+#endif /* defined(CONFIG_ION_OMAP) */
+						  , psEnvPerProc->azIonClientName);
  
 	if (IS_ERR_OR_NULL(psEnvPerProc->psIONClient))
 	{
@@ -97,7 +104,8 @@ PVRSRV_ERROR OSPerProcessPrivateDataInit(IMG_HANDLE *phOsPrivateData)
 								"ion client for per process data"));
 		return PVRSRV_ERROR_OUT_OF_MEMORY;
 	}
-#endif /* SUPPORT_ION */
+#endif /* defined(SUPPORT_ION) */
+
 	return PVRSRV_OK;
 }
 

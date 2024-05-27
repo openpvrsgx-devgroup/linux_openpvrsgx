@@ -43,6 +43,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define __REFCOUNT_H__
 
 #include "pvr_bridge_km.h"
+#if defined(SUPPORT_ION)
+#include "ion_sync.h"
+#endif /* defined(SUPPORT_ION) */
 
 #if defined(PVRSRV_REFCOUNT_DEBUG)
 
@@ -110,6 +113,23 @@ void PVRSRVOffsetStructIncMapped2(const IMG_CHAR *pszFile, IMG_INT iLine,
 								  PKV_OFFSET_STRUCT psOffsetStruct);
 void PVRSRVOffsetStructDecMapped2(const IMG_CHAR *pszFile, IMG_INT iLine,
 								  PKV_OFFSET_STRUCT psOffsetStruct);
+
+#if defined(SUPPORT_ION)
+#define PVRSRVIonBufferSyncInfoIncRef(x...) \
+	PVRSRVIonBufferSyncInfoIncRef2(__FILE__, __LINE__, x)
+#define PVRSRVIonBufferSyncInfoDecRef(x...) \
+	PVRSRVIonBufferSyncInfoDecRef2(__FILE__, __LINE__, x)
+
+PVRSRV_ERROR PVRSRVIonBufferSyncInfoIncRef2(const IMG_CHAR *pszFile, IMG_INT iLine,
+											IMG_HANDLE hUnique,
+											IMG_HANDLE hDevCookie,
+											IMG_HANDLE hDevMemContext,
+											PVRSRV_ION_SYNC_INFO **ppsIonSyncInfo,
+											PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo);
+void PVRSRVIonBufferSyncInfoDecRef2(const IMG_CHAR *pszFile, IMG_INT iLine,
+									PVRSRV_ION_SYNC_INFO *psIonSyncInfo,
+									PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo);
+#endif /* defined (SUPPORT_ION) */
 
 #endif /* defined(__linux__) */
 
@@ -195,6 +215,29 @@ static INLINE void PVRSRVOffsetStructDecMapped(PKV_OFFSET_STRUCT psOffsetStruct)
 {
 	psOffsetStruct->ui32Mapped--;
 }
+
+#if defined(SUPPORT_ION)
+static INLINE PVRSRV_ERROR PVRSRVIonBufferSyncInfoIncRef(IMG_HANDLE hUnique,
+														 IMG_HANDLE hDevCookie,
+														 IMG_HANDLE hDevMemContext,
+														 PVRSRV_ION_SYNC_INFO **ppsIonSyncInfo,
+														 PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo)
+{
+	PVR_UNREFERENCED_PARAMETER(psKernelMemInfo);
+
+	return PVRSRVIonBufferSyncAcquire(hUnique,
+									  hDevCookie,
+									  hDevMemContext,
+									  ppsIonSyncInfo);
+}
+
+static INLINE void PVRSRVIonBufferSyncInfoDecRef(PVRSRV_ION_SYNC_INFO *psIonSyncInfo,
+										   PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo)
+{
+	PVR_UNREFERENCED_PARAMETER(psKernelMemInfo);
+	PVRSRVIonBufferSyncRelease(psIonSyncInfo);
+}
+#endif	/* defined (SUPPORT_ION) */
 
 #endif /* defined(__linux__) */
 

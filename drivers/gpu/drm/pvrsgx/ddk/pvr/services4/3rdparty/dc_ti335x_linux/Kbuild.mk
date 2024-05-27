@@ -36,13 +36,12 @@
 # COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 # IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-#   
 ### ###########################################################################
 
 ccflags-y += \
 	-I$(TOP)/services4/3rdparty/dc_omapfb3_linux \
-	-I$(KERNELDIR)/drivers/video/omap2 \
-	-I$(KERNELDIR)/arch/arm/plat-omap/include
+	-Idrivers/video/omap2 \
+	-Iarch/arm/plat-omap/include
 
 omaplfb-y += \
 	services4/3rdparty/dc_omapfb3_linux/omaplfb_displayclass.o \

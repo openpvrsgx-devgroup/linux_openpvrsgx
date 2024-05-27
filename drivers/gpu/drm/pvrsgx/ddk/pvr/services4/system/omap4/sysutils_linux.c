@@ -62,11 +62,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 
 #if defined(SUPPORT_DRI_DRM_PLUGIN)
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0))
 #include <drm/drmP.h>
-#else
-#include <drm/drm_file.h>
-#endif
 #include <drm/drm.h>
 
 #include <linux/omap_gpu.h>
@@ -276,7 +272,6 @@ PVRSRV_ERROR EnableSGXClocks(SYS_DATA *psSysData)
 ******************************************************************************/
 IMG_VOID DisableSGXClocks(SYS_DATA *psSysData)
 {
-#if 0
 #if !defined(NO_HARDWARE)
 	SYS_SPECIFIC_DATA *psSysSpecData = (SYS_SPECIFIC_DATA *) psSysData->pvSysSpecificData;
 
@@ -342,7 +337,6 @@ IMG_VOID DisableSGXClocks(SYS_DATA *psSysData)
 #else	/* !defined(NO_HARDWARE) */
 	PVR_UNREFERENCED_PARAMETER(psSysData);
 #endif	/* !defined(NO_HARDWARE) */
-#endif
 }
 
 #if (defined(DEBUG) || defined(TIMING)) && !defined(PVR_NO_OMAP_TIMER)
@@ -686,8 +680,7 @@ IMG_VOID DisableSystemClocks(SYS_DATA *psSysData)
 PVRSRV_ERROR SysPMRuntimeRegister(void)
 {
 #if defined(LDM_PLATFORM) && !defined(PVR_DRI_DRM_NOT_PCI)
-	/* Done, see top level pvr-drv.c */
-	//pm_runtime_enable(&gpsPVRLDMDev->dev);
+	pm_runtime_enable(&gpsPVRLDMDev->dev);
 #endif
 	return PVRSRV_OK;
 }
@@ -695,8 +688,7 @@ PVRSRV_ERROR SysPMRuntimeRegister(void)
 PVRSRV_ERROR SysPMRuntimeUnregister(void)
 {
 #if defined(LDM_PLATFORM) && !defined(PVR_DRI_DRM_NOT_PCI)
-	/* Done, see top level pvr-drv.c */
-	//pm_runtime_disable(&gpsPVRLDMDev->dev);
+	pm_runtime_disable(&gpsPVRLDMDev->dev);
 #endif
 	return PVRSRV_OK;
 }

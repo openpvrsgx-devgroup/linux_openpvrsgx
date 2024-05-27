@@ -94,12 +94,12 @@ static struct file_operations pvr_proc_operations =
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0))
 static ssize_t pvr_proc_read(struct file *file, char __user *buffer, size_t count, loff_t *ppos);
 static struct file_operations pvr_read_proc_operations =
-{
-	.open		= pvr_proc_open,
-	.read		= pvr_proc_read,
-	.write		= pvr_proc_write,
-	.llseek		= seq_lseek,
-	.release	= seq_release,
+{ 
+.open           = pvr_proc_open,
+.read           = pvr_proc_read,
+.write          = pvr_proc_write,
+.llseek         = seq_lseek,
+.release        = seq_release,
 };
 #endif
 
@@ -270,7 +270,6 @@ static IMG_INT pvr_proc_open(struct inode *inode,struct file *file)
 	PVR_PROC_SEQ_HANDLERS *data = (PVR_PROC_SEQ_HANDLERS *) PDE_DATA(inode);
 	seq->private = data;
 #endif
-
 	return ret;
 }
 
@@ -285,11 +284,11 @@ static IMG_INT pvr_proc_open(struct inode *inode,struct file *file)
  it calls proc_dir_entry->write_proc for writing procedure.
 
 *****************************************************************************/
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0))
 static ssize_t pvr_proc_write(struct file *file, const char __user *buffer,
 		size_t count, loff_t *ppos)
 {
 	struct inode *inode = file->f_path.dentry->d_inode;
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0))
 	struct proc_dir_entry * dp;
 
 	PVR_UNREFERENCED_PARAMETER(ppos);
@@ -299,22 +298,14 @@ static ssize_t pvr_proc_write(struct file *file, const char __user *buffer,
 		return -EIO;
 
 	return dp->write_proc(file, buffer, count, dp->data);
-}
 #else
-static ssize_t pvr_proc_write(struct file *file, const char __user *buffer,
-		size_t count, loff_t *ppos)
-{
-	struct inode *inode = file->f_path.dentry->d_inode;
-
 	PVR_PROC_SEQ_HANDLERS *data = (PVR_PROC_SEQ_HANDLERS *) PDE_DATA(inode);
 	PVR_UNREFERENCED_PARAMETER(ppos);
-
 	if (!data->write_proc)
 		return -EIO;
-
 	return data->write_proc(file, buffer, count, data);
-}
 #endif
+}
 
 
 /*!
@@ -463,36 +454,36 @@ static struct proc_dir_entry* CreateProcEntryInDirSeq(
 									   )
 {
 
-    struct proc_dir_entry * file;
+	struct proc_dir_entry * file;
 	mode_t mode;
 	PVR_PROC_SEQ_HANDLERS *seq_handlers;
 
-    if (!dir)
-    {
-        PVR_DPF((PVR_DBG_ERROR, "CreateProcEntryInDirSeq: cannot make proc entry /proc/%s/%s: no parent", PVRProcDirRoot, name));
-        return NULL;
-    }
+	if (!dir)
+	{
+		PVR_DPF((PVR_DBG_ERROR, "CreateProcEntryInDirSeq: cannot make proc entry /proc/%s/%s: no parent", PVRProcDirRoot, name));
+		return NULL;
+	}
 
 	mode = S_IFREG;
 
-    if (show_handler)
-    {
+	if (show_handler)
+	{
 		mode |= S_IRUGO;
-    }
+	}
 
-    if (whandler)
-    {
+	if (whandler)
+	{
 		mode |= S_IWUSR;
-    }
+	}
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0))
 	file=create_proc_entry(name, mode, pdir);
 
-    if (file)
-    {
+	if (file)
+	{
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,30))
-        file->owner = THIS_MODULE;
+		file->owner = THIS_MODULE;
 #endif
 
 		file->proc_fops = &pvr_proc_operations;
@@ -511,22 +502,23 @@ static struct proc_dir_entry* CreateProcEntryInDirSeq(
 
         	return file;
 		}
-    }
-#else
-	seq_handlers = (PVR_PROC_SEQ_HANDLERS*) kmalloc(sizeof(PVR_PROC_SEQ_HANDLERS), GFP_KERNEL);
-	if (seq_handlers)
-	{
-		seq_handlers->next = next_handler;
-		seq_handlers->show = show_handler;
-		seq_handlers->off2element = off2element_handler;
-		seq_handlers->startstop = startstop_handler;
-		seq_handlers->data = data;
-		seq_handlers->write_proc = whandler;
-		file = proc_create_data(name, mode, pdir, &pvr_proc_operations, seq_handlers);
-		if (file) return file;
-
-		kfree(seq_handlers);
 	}
+#else
+/* Pass the handlers */
+		seq_handlers = (PVR_PROC_SEQ_HANDLERS*) kmalloc(sizeof(PVR_PROC_SEQ_HANDLERS), GFP_KERNEL);
+		if(seq_handlers)
+		{		
+			seq_handlers->next = next_handler;
+			seq_handlers->show = show_handler;
+			seq_handlers->off2element = off2element_handler;
+			seq_handlers->startstop = startstop_handler;
+			seq_handlers->data = data;
+			seq_handlers->write_proc = whandler;
+			file=proc_create_data(name, mode, pdir, &pvr_proc_operations,seq_handlers);
+			if (file)                       
+				return file;
+			kfree (seq_handlers);
+		}
 #endif
 
     PVR_DPF((PVR_DBG_ERROR, "CreateProcEntryInDirSeq: cannot make proc entry /proc/%s/%s: no memory", PVRProcDirRoot, name));
@@ -745,17 +737,16 @@ struct proc_dir_entry* CreatePerProcessProcEntrySeq (
 IMG_VOID RemoveProcEntrySeq( struct proc_dir_entry* proc_entry )
 {
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0))
-    if (dir)
-    {
+	if (dir)
+	{
 		void* data = proc_entry->data ;
-        PVR_DPF((PVR_DBG_MESSAGE, "Removing /proc/%s/%s", PVRProcDirRoot, proc_entry->name));
-
-        remove_proc_entry(proc_entry->name, dir);
+		PVR_DPF((PVR_DBG_MESSAGE, "Removing /proc/%s/%s", PVRProcDirRoot, proc_entry->name));
+		remove_proc_entry(proc_entry->name, dir);
 		if( data)
 			kfree( data );
-
-    }
+	}
 #endif
+
 }
 
 /*!
@@ -776,30 +767,30 @@ IMG_VOID RemoveProcEntrySeq( struct proc_dir_entry* proc_entry )
 *****************************************************************************/
 IMG_VOID RemovePerProcessProcEntrySeq(struct proc_dir_entry* proc_entry)
 {
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0))
     PVRSRV_ENV_PER_PROCESS_DATA *psPerProc;
 
     psPerProc = LinuxTerminatingProcessPrivateData();
-    if (!psPerProc)
-    {
-        psPerProc = PVRSRVFindPerProcessPrivateData();
-        if (!psPerProc)
-        {
-            PVR_DPF((PVR_DBG_ERROR, "CreatePerProcessProcEntries: can't "
-                                    "remove %s, no per process data", proc_entry->name));
-            return;
-        }
-    }
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0))
+	if (!psPerProc)
+	{
+		psPerProc = PVRSRVFindPerProcessPrivateData();
+		if (!psPerProc)
+		{
+			PVR_DPF((PVR_DBG_ERROR, "CreatePerProcessProcEntries: can't "
+			"remove %s, no per process data", proc_entry->name));
+			return;
+		}
+	}
 
-    if (psPerProc->psProcDir)
-    {
+	if (psPerProc->psProcDir)
+	{
 		void* data = proc_entry->data ;
-        PVR_DPF((PVR_DBG_MESSAGE, "Removing proc entry %s from %s", proc_entry->name, psPerProc->psProcDir->name));
+		PVR_DPF((PVR_DBG_MESSAGE, "Removing proc entry %s from %s", proc_entry->name, psPerProc->psProcDir->name));
 
-        remove_proc_entry(proc_entry->name, psPerProc->psProcDir);
+		remove_proc_entry(proc_entry->name, psPerProc->psProcDir);
 		if(data)
 			kfree( data );
-    }
+	}
 #endif
 }
 
@@ -840,30 +831,33 @@ IMG_VOID RemovePerProcessProcEntrySeq(struct proc_dir_entry* proc_entry)
 
 *****************************************************************************/
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0))
+
 static IMG_INT pvr_read_proc(IMG_CHAR *page, IMG_CHAR **start, off_t off,
                          IMG_INT count, IMG_INT *eof, IMG_VOID *data)
 {
 	/* PRQA S 0307 1 */ /* ignore warning about casting to different pointer type */
-    pvr_read_proc_t *pprn = (pvr_read_proc_t *)data;
+	pvr_read_proc_t *pprn = (pvr_read_proc_t *)data;
 
-    off_t len = pprn (page, (size_t)count, off);
+	off_t len = pprn (page, (size_t)count, off);
 
-    if (len == END_OF_FILE)
-    {
-        len  = 0;
-        *eof = 1;
-    }
-    else if (!len)             /* not enough space in the buffer */
-    {
-        *start = (IMG_CHAR *) 0;   /* don't advance the offset */
-    }
-    else
-    {
-        *start = (IMG_CHAR *) 1;
-    }
+	if (len == END_OF_FILE)
+	{
+		len  = 0;
+		*eof = 1;
+	}
+	else if (!len)             /* not enough space in the buffer */
+	{
+		*start = (IMG_CHAR *) 0;   /* don't advance the offset */
+	}
+	else
+	{
+		*start = (IMG_CHAR *) 1;
+	}
 
-    return len;
+	return len;
 }
+
+
 #else
 static ssize_t pvr_proc_read(struct file *file, char __user *buffer,size_t count, loff_t *ppos)
 {
@@ -872,14 +866,11 @@ static ssize_t pvr_proc_read(struct file *file, char __user *buffer,size_t count
 	PVR_UNREFERENCED_PARAMETER(ppos);
 	if (!data->read_proc)
 		return -EIO;
-
 	return -EIO;
+
 }
 #endif
-
-
-/*!
-******************************************************************************
+/******************************************************************************
 
  @Function : CreateProcEntryInDir
 
@@ -901,38 +892,36 @@ static ssize_t pvr_proc_read(struct file *file, char __user *buffer,size_t count
 *****************************************************************************/
 static IMG_INT CreateProcEntryInDir(struct proc_dir_entry *pdir, const IMG_CHAR * name, read_proc_t rhandler, write_proc_t whandler, IMG_VOID *data)
 {
-    struct proc_dir_entry * file;
-    mode_t mode;
+	struct proc_dir_entry * file;
+	mode_t mode;
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0))
-    PVR_PROC_SEQ_HANDLERS *handlers;
+	PVR_PROC_SEQ_HANDLERS *handlers;
 #endif
+	if (!pdir)
+	{
+		PVR_DPF((PVR_DBG_ERROR, "CreateProcEntryInDir: parent directory doesn't exist"));
 
-    if (!pdir)
-    {
-        PVR_DPF((PVR_DBG_ERROR, "CreateProcEntryInDir: parent directory doesn't exist"));
+		return -ENOMEM;
+	}
 
-        return -ENOMEM;
-    }
+	mode = S_IFREG;
 
-    mode = S_IFREG;
+	if (rhandler)
+	{
+		mode |= S_IRUGO;
+	}
 
-    if (rhandler)
-    {
-	mode |= S_IRUGO;
-    }
-
-    if (whandler)
-    {
-	mode |= S_IWUSR;
-    }
-
+	if (whandler)
+	{
+		mode |= S_IWUSR;
+	}
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0))
-    file = create_proc_entry(name, mode, pdir);
+	file = create_proc_entry(name, mode, pdir);
 
-    if (file)
-    {
+	if (file)
+	{
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,30))
-        file->owner = THIS_MODULE;
+		file->owner = THIS_MODULE;
 #endif
 		file->read_proc = rhandler;
 		file->write_proc = whandler;
@@ -940,25 +929,26 @@ static IMG_INT CreateProcEntryInDir(struct proc_dir_entry *pdir, const IMG_CHAR 
 
 		PVR_DPF((PVR_DBG_MESSAGE, "Created proc entry %s in %s", name, pdir->name));
 
-        return 0;
-    }
+	return 0;
+	}
 #else
-    handlers = (PVR_PROC_SEQ_HANDLERS *)kmalloc(sizeof(PVR_PROC_SEQ_HANDLERS), GFP_KERNEL);
-    if (handlers)
-    {
-	    handlers->data = data;
-	    handlers->read_proc = rhandler;
-	    handlers->write_proc = whandler;
-	    file = proc_create_data(name, mode, pdir, &pvr_read_proc_operations, handlers);
-	    if (file)
-	    {
-		    PVR_DPF((PVR_DBG_MESSAGE, "Created proc entry %s", name));
-		    return 0;
-	    }
-    }
+	handlers = (PVR_PROC_SEQ_HANDLERS*) kmalloc(sizeof(PVR_PROC_SEQ_HANDLERS), GFP_KERNEL);
+ 	if (handlers)
+	{
+		handlers->data = data;
+		handlers->read_proc = rhandler;
+		handlers->write_proc = whandler;
+		file = proc_create_data(name, mode, pdir, &pvr_read_proc_operations, handlers);
+		if (file)
+		{
+			PVR_DPF((PVR_DBG_MESSAGE, "Created proc entry %s in %s", name, "?" /*pdir->name*/));
+			return 0;
+		}
+		kfree (handlers);
+	}
+	PVR_DPF((PVR_DBG_ERROR, "CreateProcEntry: cannot create proc entry %s in %s", name, "?" /*pdir->name*/));
 #endif
 
-    PVR_DPF((PVR_DBG_ERROR, "CreateProcEntry: cannot create proc entry %s", name));
 
     return -ENOMEM;
 }
@@ -1095,21 +1085,21 @@ IMG_INT CreateProcReadEntry(const IMG_CHAR * name, pvr_read_proc_t handler)
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0))
 	/* PRQA S 0307 1 */ /* ignore warning about casting to different pointer type */
-    file = create_proc_read_entry (name, S_IFREG | S_IRUGO, dir, pvr_read_proc, (IMG_VOID *)handler);
+	file = create_proc_read_entry (name, S_IFREG | S_IRUGO, dir, pvr_read_proc, (IMG_VOID *)handler);
 
-    if (file)
-    {
+	if (file)
+	{
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,30))
-        file->owner = THIS_MODULE;
+		file->owner = THIS_MODULE;
 #endif
-        return 0;
-    }
+		return 0;
+	}
 #else
-    file = proc_create_data (name, S_IFREG | S_IRUGO, dir, &pvr_read_proc_operations, handler);
-    if (file)
-	    return 0;
+// use file_ops pointing to pvr_read_proc
+	file = proc_create_data (name, S_IFREG | S_IRUGO, dir, &pvr_read_proc_operations, handler); 
+	if(file)
+		return 0;
 #endif
-
     PVR_DPF((PVR_DBG_ERROR, "CreateProcReadEntry: cannot make proc entry /proc/%s/%s: no memory", PVRProcDirRoot, name));
 
     return -ENOMEM;
@@ -1243,14 +1233,13 @@ IMG_VOID RemovePerProcessProcEntry(const IMG_CHAR *name)
         }
     }
 
-    if (psPerProc->psProcDir)
-    {
+	if (psPerProc->psProcDir)
+	{
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0))
-        remove_proc_entry(name, psPerProc->psProcDir);
-
-        PVR_DPF((PVR_DBG_MESSAGE, "Removing proc entry %s from %s", name, psPerProc->psProcDir->name));
+		remove_proc_entry(name, psPerProc->psProcDir);
+		PVR_DPF((PVR_DBG_MESSAGE, "Removing proc entry %s from %s", name, psPerProc->psProcDir->name));
 #endif
-    }
+	}
 }
 
 
@@ -1270,18 +1259,18 @@ IMG_VOID RemovePerProcessProcEntry(const IMG_CHAR *name)
 *****************************************************************************/
 IMG_VOID RemovePerProcessProcDir(PVRSRV_ENV_PER_PROCESS_DATA *psPerProc)
 {
+	if (psPerProc->psProcDir)
+	{
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0))
-    if (psPerProc->psProcDir)
-    {
-        while (psPerProc->psProcDir->subdir)
-        {
-            PVR_DPF((PVR_DBG_WARNING, "Belatedly removing /proc/%s/%s/%s", PVRProcDirRoot, psPerProc->psProcDir->name, psPerProc->psProcDir->subdir->name));
+		while (psPerProc->psProcDir->subdir)
+		{
+			PVR_DPF((PVR_DBG_WARNING, "Belatedly removing /proc/%s/%s/%s", PVRProcDirRoot, psPerProc->psProcDir->name, psPerProc->psProcDir->subdir->name));
 
-            RemoveProcEntry(psPerProc->psProcDir->subdir->name);
-        }
-        RemoveProcEntry(psPerProc->psProcDir->name);
-    }
+			RemoveProcEntry(psPerProc->psProcDir->subdir->name);
+		}
+		RemoveProcEntry(psPerProc->psProcDir->name);
 #endif
+	}
 }
 
 /*!
@@ -1312,7 +1301,6 @@ IMG_VOID RemoveProcEntries(IMG_VOID)
 	RemoveProcEntrySeq(g_pProcQueue);
 	RemoveProcEntrySeq(g_pProcVersion);
 	RemoveProcEntrySeq(g_pProcSysNodes);
-
 	while (dir->subdir)
 	{
 		PVR_DPF((PVR_DBG_WARNING, "Belatedly removing /proc/%s/%s", PVRProcDirRoot, dir->subdir->name));

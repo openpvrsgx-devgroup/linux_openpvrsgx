@@ -83,6 +83,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define	PVR_OMAP4_TIMING_PRCM
 #endif
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,35))
+#include <plat/gpu.h>
+#if !defined(PVR_NO_OMAP_TIMER)
+#define	PVR_OMAP_USE_DM_TIMER_API
+#include <plat/dmtimer.h>
+#endif
+#endif
+
 #if !defined(PVR_NO_OMAP_TIMER)
 #define PVR_OMAP_TIMER_BASE_IN_SYS_SPEC_DATA
 #endif
@@ -93,11 +101,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define SGX_OCP_REGS_ENABLED
 #endif
 
-#if 0  /* need to avoid defining SGX_OCP_NO_INT_BYPASS otherwise we get not irqs */
 #if defined(__linux__)
 #if defined(SGX_OCP_REGS_ENABLED)
 #define SGX_OCP_NO_INT_BYPASS
-#endif
 #endif
 #endif
 

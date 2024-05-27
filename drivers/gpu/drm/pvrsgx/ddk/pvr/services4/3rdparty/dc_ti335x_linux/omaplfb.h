@@ -37,7 +37,6 @@ PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
 COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-  
 */ /**************************************************************************/
 #ifndef __OMAPLFB_H__
 #define __OMAPLFB_H__
@@ -65,6 +64,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define	OMAPLFB_CONSOLE_LOCK()		acquire_console_sem()
 #define	OMAPLFB_CONSOLE_UNLOCK()	release_console_sem()
 #endif
+
+#if defined(CONFIG_ION_OMAP)
+#include <linux/ion.h>
+#include <linux/omap_ion.h>
+#endif /* defined(CONFIG_ION_OMAP) */
 
 #define unref__ __attribute__ ((unused))
 
@@ -225,6 +229,10 @@ typedef struct OMAPLFB_DEVINFO_TAG
 
 #if defined(SUPPORT_DRI_DRM)
 	OMAPLFB_ATOMIC_BOOL     sLeaveVT;
+#endif
+
+#if defined(CONFIG_ION_OMAP)
+	struct ion_client      *psIONClient;
 #endif
 
 }  OMAPLFB_DEVINFO;

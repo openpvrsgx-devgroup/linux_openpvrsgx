@@ -41,8 +41,6 @@
 #include <linux/mutex.h>
 #endif
 
-#include <linux/uaccess.h>
-
 #if defined(BC_DISCONTIG_BUFFERS)
 #include <linux/vmalloc.h>
 #endif
@@ -50,7 +48,7 @@
 #define DEVNAME             "bccat"
 #define DRVNAME             DEVNAME
 #define DEVICE_COUNT        10
-#define BC_EXAMPLE_NUM_BUFFERS  3
+#define BC_MAX_NUM_BUFFERS  32
 #define BUFFERCLASS_DEVICE_NAME "Example Bufferclass Device (SW)"
 
 #ifndef UNREFERENCED_PARAMETER
@@ -318,6 +316,7 @@ static int BC_CreateBuffers(int id, bc_buf_params_t *p)
     unsigned long ulSize;
     PVRSRV_PIXEL_FORMAT pixel_fmt;
 //IMG_UINT32 ui32MaxWidth = 320 * 4;
+  
     if (p->count <= 0)
         return -EINVAL;
 
@@ -379,11 +378,13 @@ static int BC_CreateBuffers(int id, bc_buf_params_t *p)
 
 
     psDevInfo->buf_type = p->type;
-    psDevInfo->psSystemBuffer =
-            BCAllocKernelMem(sizeof(BC_CAT_BUFFER) * p->count);
+/*    psDevInfo->psSystemBuffer =  BCAllocKernelMem(sizeof(BC_CAT_BUFFER) * p->count);
 
     if (!psDevInfo->psSystemBuffer)
-        return -ENOMEM;
+        return -ENOMEM; */
+
+    if (p->count > BC_MAX_NUM_BUFFERS)
+       return -ENOMEM;
 
     memset(psDevInfo->psSystemBuffer, 0, sizeof(BC_CAT_BUFFER) * p->count);
 
@@ -439,12 +440,14 @@ static int BC_CreateBuffers(int id, bc_buf_params_t *p)
     psDevInfo->sBufferInfo.ui32Flags = PVRSRV_BC_FLAGS_YUVCSC_FULL_RANGE |
                                        PVRSRV_BC_FLAGS_YUVCSC_BT601;
 
+#if 0
 psDevInfo->sBCJTable.ui32TableSize    = sizeof(PVRSRV_BC_SRV2BUFFER_KMJTABLE);
         psDevInfo->sBCJTable.pfnOpenBCDevice  = OpenBCDevice0;
         psDevInfo->sBCJTable.pfnCloseBCDevice = CloseBCDevice;
         psDevInfo->sBCJTable.pfnGetBCBuffer   = GetBCBuffer;
         psDevInfo->sBCJTable.pfnGetBCInfo     = GetBCInfo;
         psDevInfo->sBCJTable.pfnGetBufferAddr = GetBCBufferAddr;
+#endif
 /*
 if (psDevInfo->sBufferInfo.ui32Width < ui32MaxWidth)
 	{
@@ -542,7 +545,7 @@ static PVRSRV_ERROR BC_DestroyBuffers(int id)
 static PVRSRV_ERROR BC_Register(id)
 {
     BC_CAT_DEVINFO  *psDevInfo;
-    
+
 //psDevInfo = GetAnchorPtr();
    psDevInfo = GetAnchorPtr(id);
 
@@ -569,7 +572,7 @@ static PVRSRV_ERROR BC_Register(id)
 
     psDevInfo->ulNumBuffers = 0;
 
-    psDevInfo->psSystemBuffer = BCAllocKernelMem(sizeof(BC_CAT_BUFFER) * BC_EXAMPLE_NUM_BUFFERS);
+    psDevInfo->psSystemBuffer = BCAllocKernelMem(sizeof(BC_CAT_BUFFER) * BC_MAX_NUM_BUFFERS);
 
     psDevInfo->sBufferInfo.pixelformat = PVRSRV_PIXEL_FORMAT_UNKNOWN;
     psDevInfo->sBufferInfo.ui32Width = 0;
@@ -630,7 +633,7 @@ static PVRSRV_ERROR BC_Unregister(int id)
 {
     BC_CAT_DEVINFO *psDevInfo;
 //    PVRSRV_BC_BUFFER2SRV_KMJTABLE *psJTable;
-    
+
     if ((psDevInfo = GetAnchorPtr(id)) == IMG_NULL)
         return PVRSRV_ERROR_DEVICE_REGISTER_FAILED;
     
@@ -964,10 +967,10 @@ static int bc_release(struct inode *i, struct file *f)
     if ((devinfo = GetAnchorPtr(id)) == IMG_NULL)
         return -ENODEV;
 
-    for (id = 0; id < DEVICE_COUNT; id++) {
+//    for (id = 0; id < DEVICE_COUNT; id++) {
         if (BC_DestroyBuffers(id) != PVRSRV_OK) {
             printk(KERN_ERR DRVNAME ": can't free texture buffer \n");
-        }
+//        }
     }
 
     if (devinfo->ref)
@@ -1045,7 +1048,7 @@ static long  bc_ioctl(struct file *file,
         {    
             BCIO_package *params = (BCIO_package *)arg;
 
-            if (!access_ok(params, sizeof(BCIO_package)))
+            if (!access_ok(VERIFY_WRITE, params, sizeof(BCIO_package)))
                 return -EFAULT;
 
             params->output = devinfo->sBufferInfo.ui32BufferCount;
@@ -1056,7 +1059,7 @@ static long  bc_ioctl(struct file *file,
             int idx;
             BCIO_package *params = (BCIO_package *)arg;
 
-            if (!access_ok(params, sizeof(BCIO_package)))
+            if (!access_ok(VERIFY_WRITE, params, sizeof(BCIO_package)))
                 return -EFAULT;
 
             idx = params->input;
@@ -1074,7 +1077,7 @@ static long  bc_ioctl(struct file *file,
             BC_CAT_BUFFER  *buffer;
             BCIO_package *params = (BCIO_package *)arg;
 
-            if (!access_ok(params, sizeof(BCIO_package)))
+            if (!access_ok(VERIFY_WRITE, params, sizeof(BCIO_package)))
                 return -EFAULT;
 
             for (idx = 0; idx < devinfo->ulNumBuffers; idx++) {
@@ -1093,7 +1096,7 @@ static long  bc_ioctl(struct file *file,
         {
             bc_buf_params_t *p = (bc_buf_params_t *) arg;
             
-            if (!access_ok(p, sizeof(bc_buf_params_t)))
+            if (!access_ok(VERIFY_WRITE, p, sizeof(bc_buf_params_t)))
                 return -EFAULT;
 
             return BC_CreateBuffers(id, p);

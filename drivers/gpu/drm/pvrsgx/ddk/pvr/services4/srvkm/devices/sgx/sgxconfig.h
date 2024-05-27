@@ -56,13 +56,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define SGX_KERNEL_DATA_HEAP_OFFSET		0x00000000
 #endif
 
-#if !defined(ION_HEAP_SIZE) && defined(SUPPORT_ION)
-	/* Default the Ion heap to 16MB */
-	#define ION_HEAP_SIZE						0x01000000
-#else
-	#define ION_HEAP_SIZE						0
-#endif
-
 
 #if SGX_FEATURE_ADDRESS_SPACE_SIZE == 32
 #if defined(FIX_HW_BRN_31620)
@@ -78,7 +71,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 	 * For hybrid PB we have to split virtual PB range between the shared
 	 * PB and percontext PB due to the fact we only have one heap config
 	 * per device.
-	 * If hybrid PB is enabled we split the space acording to HYBRID_SHARED_PB_SIZE.
+	 * If hybrid PB is enabled we split the space according to HYBRID_SHARED_PB_SIZE.
 	 * i.e. HYBRID_SHARED_PB_SIZE defines the size of the shared PB and the
 	 * remainder is the size of the percontext PB.
 	 * If hybrid PB is not enabled then we still create both heaps (helps keep
@@ -109,10 +102,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 
 	#define SGX_SHARED_3DPARAMETERS_HEAP_BASE		 0xC0000000
-	/* Size is defiend above */
+	/* Size is defined above */
 
 	#define SGX_PERCONTEXT_3DPARAMETERS_HEAP_BASE		 (SGX_SHARED_3DPARAMETERS_HEAP_BASE + SGX_SHARED_3DPARAMETERS_SIZE)
-	/* Size is defiend above */
+	/* Size is defined above */
 
 	#define SGX_TADATA_HEAP_BASE				 0xD0000000
 	#define SGX_TADATA_HEAP_SIZE				(0x0D000000-0x00001000)
@@ -151,16 +144,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 	#endif
 
 	#if !defined(SUPPORT_MEMORY_TILING)
-		#if defined (SUPPORT_ION)
-			#define SGX_GENERAL_HEAP_BASE				 0x10000000
-			#define SGX_GENERAL_HEAP_SIZE				(0xC2000000-ION_HEAP_SIZE-0x00001000)
-
-			#define SGX_ION_HEAP_BASE					(SGX_GENERAL_HEAP_BASE+SGX_GENERAL_HEAP_SIZE+0x00001000)
-			#define SGX_ION_HEAP_SIZE					(ION_HEAP_SIZE-0x00001000)
-		#else
-			#define SGX_GENERAL_HEAP_BASE				 0x10000000
-			#define SGX_GENERAL_HEAP_SIZE				(0xC2000000-0x00001000)
-		#endif
+		#define SGX_GENERAL_HEAP_BASE				 0x10000000
+		#define SGX_GENERAL_HEAP_SIZE				(0xC2000000-0x00001000)
 	#else
 		#include <sgx_msvdx_defs.h>
 		/* Create heaps with memory tiling enabled.
@@ -185,7 +170,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 	 * For hybrid PB we have to split virtual PB range between the shared
 	 * PB and percontext PB due to the fact we only have one heap config
 	 * per device.
-	 * If hybrid PB is enabled we split the space acording to HYBRID_SHARED_PB_SIZE.
+	 * If hybrid PB is enabled we split the space according to HYBRID_SHARED_PB_SIZE.
 	 * i.e. HYBRID_SHARED_PB_SIZE defines the size of the shared PB and the
 	 * remainder is the size of the percontext PB.
 	 * If hybrid PB is not enabled then we still create both heaps (helps keep
@@ -216,10 +201,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 
 	#define SGX_SHARED_3DPARAMETERS_HEAP_BASE		 0xD2000000
-	/* Size is defiend above */
+	/* Size is defined above */
 
 	#define SGX_PERCONTEXT_3DPARAMETERS_HEAP_BASE		 (SGX_SHARED_3DPARAMETERS_HEAP_BASE + SGX_SHARED_3DPARAMETERS_SIZE)
-	/* Size is defiend above */
+	/* Size is defined above */
 
 	#define SGX_TADATA_HEAP_BASE				 0xE2000000
 	#define SGX_TADATA_HEAP_SIZE				(0x0D000000-0x00001000)
@@ -258,26 +243,22 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 	#define SGX_GENERAL_MAPPING_HEAP_SIZE		(0x01800000-0x00001000-0x00001000)
 
 	#define SGX_GENERAL_HEAP_BASE				 0x01800000
-	#define SGX_GENERAL_HEAP_SIZE				(0x07000000-ION_HEAP_SIZE-0x00001000)
+	#define SGX_GENERAL_HEAP_SIZE				(0x07000000-0x00001000)
 
 #else
 	#define SGX_GENERAL_HEAP_BASE				 0x00001000
 #if defined(SUPPORT_LARGE_GENERAL_HEAP)
-	#define SGX_GENERAL_HEAP_SIZE				(0x0B800000-ION_HEAP_SIZE-0x00001000-0x00001000)
+	#define SGX_GENERAL_HEAP_SIZE				(0x0B800000-0x00001000-0x00001000)
 #else
-	#define SGX_GENERAL_HEAP_SIZE				(0x08800000-ION_HEAP_SIZE-0x00001000-0x00001000)
+	#define SGX_GENERAL_HEAP_SIZE				(0x08800000-0x00001000-0x00001000)
 #endif
 #endif
 
-#if defined(SUPPORT_ION)
-	#define SGX_ION_HEAP_BASE					(SGX_GENERAL_HEAP_BASE+SGX_GENERAL_HEAP_SIZE+0x00001000)
-	#define SGX_ION_HEAP_SIZE					(ION_HEAP_SIZE-0x00001000)
-#endif
 	/*
 	 * For hybrid PB we have to split virtual PB range between the shared
 	 * PB and percontext PB due to the fact we only have one heap config
 	 * per device.
- 	 * If hybrid PB is enabled we split the space acording to HYBRID_SHARED_PB_SIZE.
+ 	 * If hybrid PB is enabled we split the space according to HYBRID_SHARED_PB_SIZE.
 	 * i.e. HYBRID_SHARED_PB_SIZE defines the size of the shared PB and the
 	 * remainder is the size of the percontext PB.
 	 * If hybrid PB is not enabled then we still create both heaps (helps keep
@@ -428,11 +409,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 		#error "sgxconfig.h: ERROR: SGX_VPB_TILED_HEAP overlaps SGX_3DPARAMETERS_HEAP"
 	#endif
 #else
-	#if defined(SUPPORT_ION)
-		#if ((SGX_ION_HEAP_BASE + SGX_ION_HEAP_SIZE) >= SGX_SHARED_3DPARAMETERS_HEAP_BASE)
-			#error "sgxconfig.h: ERROR: SGX_ION_HEAP overlaps SGX_3DPARAMETERS_HEAP"
-		#endif
-	#endif
 	#if ((SGX_GENERAL_HEAP_BASE + SGX_GENERAL_HEAP_SIZE) >= SGX_SHARED_3DPARAMETERS_HEAP_BASE)
 		#error "sgxconfig.h: ERROR: SGX_GENERAL_HEAP overlaps SGX_3DPARAMETERS_HEAP"
 	#endif

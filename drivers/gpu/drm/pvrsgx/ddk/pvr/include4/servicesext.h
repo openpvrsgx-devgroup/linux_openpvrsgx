@@ -645,6 +645,9 @@ typedef enum _PVRSRV_PIXEL_FORMAT_ {
 	PVRSRV_PIXEL_FORMAT_RAW512				= 224,
 	PVRSRV_PIXEL_FORMAT_RAW1024				= 225,
 
+	/* Same as NV12 but with interleaved VU rather than interleaved UV */
+	PVRSRV_PIXEL_FORMAT_NV21				= 226,
+
 	PVRSRV_PIXEL_FORMAT_FORCE_I32			= 0x7fffffff
 
 } PVRSRV_PIXEL_FORMAT;
@@ -744,17 +747,10 @@ typedef struct _PVRSRV_CLIENT_SYNC_INFO_
 	IMG_DEV_VIRTADDR		sReadOps2CompleteDevVAddr;
 
 	/* handle to client mapping data (OS specific) */
-#if defined (SUPPORT_SID_INTERFACE)
-	IMG_SID					hMappingInfo;
-
-	/* handle to kernel sync info */
-	IMG_SID					hKernelSyncInfo;
-#else
 	IMG_HANDLE					hMappingInfo;
 
 	/* handle to kernel sync info */
 	IMG_HANDLE					hKernelSyncInfo;
-#endif
 
 } PVRSRV_CLIENT_SYNC_INFO, *PPVRSRV_CLIENT_SYNC_INFO;
 
@@ -803,7 +799,7 @@ typedef struct _IMG_RECT_16_
 typedef PVRSRV_ERROR (*PFN_GET_BUFFER_ADDR)(IMG_HANDLE,
 											IMG_HANDLE,
 											IMG_SYS_PHYADDR**,
-											IMG_SIZE_T*,
+											IMG_UINT32*,
 											IMG_VOID**,
 											IMG_HANDLE*,
 											IMG_BOOL*,

@@ -91,8 +91,17 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define DEVICE_DISP_INTERRUPT		(1<<2)
 
 #if defined(__linux__)
-#define	SYS_SGX_DEV_NAME	"omapdrm_pvr"
-#endif	
+/*
+ * Recent OMAP4 kernels register SGX as platform device "omap_gpu".
+ * This device must be used with the Linux power management calls
+ * in sysutils_linux.c, in order for SGX to be powered on.
+ */
+#if defined(PVR_LDM_PLATFORM_PRE_REGISTERED_DEV)
+#define	SYS_SGX_DEV_NAME	PVR_LDM_PLATFORM_PRE_REGISTERED_DEV
+#else
+#define	SYS_SGX_DEV_NAME	"omap_gpu"
+#endif	/* defined(PVR_LDM_PLATFORM_PRE_REGISTERED_DEV) */
+#endif	/* defined(__linux__) */
 
 /*****************************************************************************
  * system specific data structures

@@ -309,7 +309,7 @@ DebugMemAllocRecordAdd(DEBUG_MEM_ALLOC_TYPE eAllocType,
 {
     DEBUG_MEM_ALLOC_REC *psRecord;
 
-    LinuxLockMutex(&g_sDebugMutex);
+    LinuxLockMutexNested(&g_sDebugMutex, PVRSRV_LOCK_CLASS_MM_DEBUG);
 
     psRecord = kmalloc(sizeof(DEBUG_MEM_ALLOC_REC), GFP_KERNEL);
 
@@ -404,7 +404,7 @@ DebugMemAllocRecordRemove(DEBUG_MEM_ALLOC_TYPE eAllocType, IMG_VOID *pvKey, IMG_
 {
 /*    DEBUG_MEM_ALLOC_REC **ppsCurrentRecord;*/
 
-    LinuxLockMutex(&g_sDebugMutex);
+    LinuxLockMutexNested(&g_sDebugMutex, PVRSRV_LOCK_CLASS_MM_DEBUG);
 
     /* Locate the corresponding allocation entry */
 	if (!List_DEBUG_MEM_ALLOC_REC_IMG_BOOL_Any_va(g_MemoryRecords,
@@ -1770,10 +1770,29 @@ LinuxMemAreaStructAlloc(IMG_VOID)
 #endif
 }
 
+#if defined(SUPPORT_DRI_DRM_EXTERNAL)
+#  include <drm/omap_drm.h>
+#endif /* SUPPORT_DRI_DRM_EXTERNAL */
+
 
 static IMG_VOID
 LinuxMemAreaStructFree(LinuxMemArea *psLinuxMemArea)
 {
+	struct page **pages = NULL;
+#if defined(SUPPORT_DRI_DRM_EXTERNAL)
+	if (psLinuxMemArea->buf){
+#define OMAP_BO_EXT_MEM		0x04000000	/* externally allocated memory */
+		if(omap_gem_flags(psLinuxMemArea->buf) & OMAP_BO_EXT_MEM){
+#undef OMAP_BO_EXT_MEM
+			omap_gem_get_pages(psLinuxMemArea->buf, &pages, 0);
+		}
+		drm_gem_object_put_unlocked(psLinuxMemArea->buf);
+
+		if(pages)
+			kfree(pages);
+	}
+
+#endif /* SUPPORT_DRI_DRM_EXTERNAL */
     KMemCacheFreeWrapper(g_PsLinuxMemAreaCache, psLinuxMemArea);
     /* debug */
     //printk(KERN_ERR "%s(%p)\n", __FUNCTION__, psLinuxMemArea);
@@ -1821,7 +1840,7 @@ DebugLinuxMemAreaRecordAdd(LinuxMemArea *psLinuxMemArea, IMG_UINT32 ui32Flags)
     DEBUG_LINUX_MEM_AREA_REC *psNewRecord;
     const IMG_CHAR *pi8FlagsString;
     
-    LinuxLockMutex(&g_sDebugMutex);
+    LinuxLockMutexNested(&g_sDebugMutex, PVRSRV_LOCK_CLASS_MM_DEBUG);
 
     if (psLinuxMemArea->eAreaType != LINUX_MEM_AREA_SUB_ALLOC)
     {
@@ -1890,7 +1909,7 @@ DebugLinuxMemAreaRecordFind(LinuxMemArea *psLinuxMemArea)
 {
     DEBUG_LINUX_MEM_AREA_REC *psCurrentRecord;
 
-    LinuxLockMutex(&g_sDebugMutex);
+    LinuxLockMutexNested(&g_sDebugMutex, PVRSRV_LOCK_CLASS_MM_DEBUG);
 	psCurrentRecord = List_DEBUG_LINUX_MEM_AREA_REC_Any_va(g_LinuxMemAreaRecords,
 														MatchLinuxMemArea_AnyVaCb,
 														psLinuxMemArea);
@@ -1907,7 +1926,7 @@ DebugLinuxMemAreaRecordRemove(LinuxMemArea *psLinuxMemArea)
 {
     DEBUG_LINUX_MEM_AREA_REC *psCurrentRecord;
 
-    LinuxLockMutex(&g_sDebugMutex);
+    LinuxLockMutexNested(&g_sDebugMutex, PVRSRV_LOCK_CLASS_MM_DEBUG);
 
     if (psLinuxMemArea->eAreaType != LINUX_MEM_AREA_SUB_ALLOC)
     {
@@ -1939,6 +1958,10 @@ DebugLinuxMemAreaRecordRemove(LinuxMemArea *psLinuxMemArea)
 IMG_VOID *
 LinuxMemAreaToCpuVAddr(LinuxMemArea *psLinuxMemArea)
 {
+	if (!psLinuxMemArea)
+	{
+		return NULL;
+	}
     switch (psLinuxMemArea->eAreaType)
     {
         case LINUX_MEM_AREA_VMALLOC:
@@ -1966,9 +1989,12 @@ LinuxMemAreaToCpuVAddr(LinuxMemArea *psLinuxMemArea)
 IMG_CPU_PHYADDR
 LinuxMemAreaToCpuPAddr(LinuxMemArea *psLinuxMemArea, IMG_UINT32 ui32ByteOffset)
 {
-    IMG_CPU_PHYADDR CpuPAddr;
-    
-    CpuPAddr.uiAddr = 0;
+    IMG_CPU_PHYADDR CpuPAddr = {0};
+
+	if (!psLinuxMemArea)
+	{
+		return CpuPAddr;
+	}
 
     switch (psLinuxMemArea->eAreaType)
     {
@@ -2112,7 +2138,7 @@ static void ProcSeqStartstopDebugMutex(struct seq_file *sfile, IMG_BOOL start)
 {
 	if (start) 
 	{
-	    LinuxLockMutex(&g_sDebugMutex);		
+	    LinuxLockMutexNested(&g_sDebugMutex, PVRSRV_LOCK_CLASS_MM_DEBUG);
 	}
 	else
 	{

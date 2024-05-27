@@ -57,7 +57,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "buffer_manager.h"
 
 #if defined(SUPPORT_DRI_DRM)
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0))
 #include <drm/drmP.h>
+#else
+#include <drm/drm_file.h>
+#endif
 #include "pvr_drm.h"
 #if defined(PVR_SECURE_DRM_AUTH_EXPORT)
 #include "env_perproc.h"
@@ -75,12 +79,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 
 #include "bridged_pvr_bridge.h"
-
-#if defined(SUPPORT_DRI_DRM)
-#define	PRIVATE_DATA(pFile) ((pFile)->driver_priv)
-#else
-#define	PRIVATE_DATA(pFile) ((pFile)->private_data)
-#endif
 
 #if defined(DEBUG_BRIDGE_KM)
 
@@ -141,7 +139,7 @@ static void ProcSeqStartstopBridgeStats(struct seq_file *sfile,IMG_BOOL start)
 {
 	if(start) 
 	{
-		LinuxLockMutex(&gPVRSRVLock);
+		LinuxLockMutexNested(&gPVRSRVLock, PVRSRV_LOCK_CLASS_BRIDGE);
 	}
 	else
 	{
@@ -237,7 +235,7 @@ static void ProcSeqShowBridgeStats(struct seq_file *sfile,void* el)
 
 #if defined(SUPPORT_DRI_DRM)
 int
-PVRSRV_BridgeDispatchKM(struct drm_device unref__ *dev, void *arg, struct drm_file *pFile)
+PVRSRV_BridgeDispatchKM(struct drm_device *dev, void *arg, struct drm_file *pFile)
 #else
 long
 PVRSRV_BridgeDispatchKM(struct file *pFile, unsigned int unref__ ioctlCmd, unsigned long arg)
@@ -253,7 +251,7 @@ PVRSRV_BridgeDispatchKM(struct file *pFile, unsigned int unref__ ioctlCmd, unsig
 	PVRSRV_PER_PROCESS_DATA *psPerProc;
 	IMG_INT err = -EFAULT;
 
-	LinuxLockMutex(&gPVRSRVLock);
+	LinuxLockMutexNested(&gPVRSRVLock, PVRSRV_LOCK_CLASS_BRIDGE);
 
 #if defined(SUPPORT_DRI_DRM)
 	psBridgePackageKM = (PVRSRV_BRIDGE_PACKAGE *)arg;
@@ -327,7 +325,7 @@ PVRSRV_BridgeDispatchKM(struct file *pFile, unsigned int unref__ ioctlCmd, unsig
 	{
 		case PVRSRV_BRIDGE_EXPORT_DEVICEMEM_2:
 		{
-			PVRSRV_FILE_PRIVATE_DATA *psPrivateData = PRIVATE_DATA(pFile);
+			PVRSRV_FILE_PRIVATE_DATA *psPrivateData = get_private(pFile);
 
 			if(psPrivateData->hKernelMemInfo)
 			{
@@ -343,7 +341,7 @@ PVRSRV_BridgeDispatchKM(struct file *pFile, unsigned int unref__ ioctlCmd, unsig
 		{
 			PVRSRV_BRIDGE_IN_MAP_DEV_MEMORY *psMapDevMemIN =
 				(PVRSRV_BRIDGE_IN_MAP_DEV_MEMORY *)psBridgePackageKM->pvParamIn;
-			PVRSRV_FILE_PRIVATE_DATA *psPrivateData = PRIVATE_DATA(pFile);
+			PVRSRV_FILE_PRIVATE_DATA *psPrivateData = get_private(pFile);
 
 			if(!psPrivateData->hKernelMemInfo)
 			{
@@ -363,7 +361,7 @@ PVRSRV_BridgeDispatchKM(struct file *pFile, unsigned int unref__ ioctlCmd, unsig
 
 		default:
 		{
-			PVRSRV_FILE_PRIVATE_DATA *psPrivateData = PRIVATE_DATA(pFile);
+			PVRSRV_FILE_PRIVATE_DATA *psPrivateData = get_private(pFile);
 
 			if(psPrivateData->hKernelMemInfo)
 			{
@@ -432,6 +430,15 @@ PVRSRV_BridgeDispatchKM(struct file *pFile, unsigned int unref__ ioctlCmd, unsig
 	}
 #endif /* defined(SUPPORT_DRI_DRM) && defined(PVR_SECURE_DRM_AUTH_EXPORT) */
 
+#if defined(SUPPORT_DRI_DRM_EXTERNAL)
+	{
+	PVRSRV_ENV_PER_PROCESS_DATA *psEnvPerProc =
+			(PVRSRV_ENV_PER_PROCESS_DATA *)PVRSRVProcessPrivateData(psPerProc);
+	psEnvPerProc->dev = dev;
+	psEnvPerProc->file = pFile;
+	}
+#endif /* SUPPORT_DRI_DRM_EXTERNAL */
+
 	err = BridgedDispatchKM(psPerProc, psBridgePackageKM);
 	if(err != PVRSRV_OK)
 		goto unlock_and_return;
@@ -442,7 +449,7 @@ PVRSRV_BridgeDispatchKM(struct file *pFile, unsigned int unref__ ioctlCmd, unsig
 		{
 			PVRSRV_BRIDGE_OUT_EXPORTDEVICEMEM *psExportDeviceMemOUT =
 				(PVRSRV_BRIDGE_OUT_EXPORTDEVICEMEM *)psBridgePackageKM->pvParamOut;
-			PVRSRV_FILE_PRIVATE_DATA *psPrivateData = PRIVATE_DATA(pFile);
+			PVRSRV_FILE_PRIVATE_DATA *psPrivateData = get_private(pFile);
 			IMG_HANDLE hMemInfo;
 			PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
 
@@ -492,7 +499,7 @@ PVRSRV_BridgeDispatchKM(struct file *pFile, unsigned int unref__ ioctlCmd, unsig
 		{
 			PVRSRV_BRIDGE_OUT_MAP_DEV_MEMORY *psMapDeviceMemoryOUT =
 				(PVRSRV_BRIDGE_OUT_MAP_DEV_MEMORY *)psBridgePackageKM->pvParamOut;
-			PVRSRV_FILE_PRIVATE_DATA *psPrivateData = PRIVATE_DATA(pFile);
+			PVRSRV_FILE_PRIVATE_DATA *psPrivateData = get_private(pFile);
 			if (pvr_put_user(psPrivateData->ui64Stamp, &psMapDeviceMemoryOUT->sDstClientMemInfo.ui64Stamp) != 0)
 			{
 				err = -EFAULT;

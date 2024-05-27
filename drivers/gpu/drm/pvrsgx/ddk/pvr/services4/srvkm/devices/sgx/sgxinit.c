@@ -40,6 +40,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */ /**************************************************************************/
 
 #include <stddef.h>
+
 #include "sgxdefs.h"
 #include "sgxmmu.h"
 #include "services_headers.h"
@@ -67,9 +68,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "srvkm.h"
 #include "ttrace.h"
 
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(3,7,0))
-#include <soc.h>
-#endif
+IMG_UINT32 g_ui32HostIRQCountSample = 0;
 
 #if defined(PVRSRV_USSE_EDM_STATUS_DEBUG)
 
@@ -575,15 +574,6 @@ PVRSRV_ERROR SGXInitialise(PVRSRV_SGXDEV_INFO	*psDevInfo,
 		return eError;
 	}
 	PDUMPCOMMENTWITHFLAGS(PDUMP_FLAGS_CONTINUOUS, "End of SGX initialisation script part 2\n");
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,5,0))
-	if(!(cpu_is_omap3530() || cpu_is_omap3517()))
-#else
-	if(!(cpu_is_omap3430() || soc_is_am35xx()))
-#endif
-        {
-               OSWriteHWReg(psDevInfo->pvRegsBaseKM, 0xFF08, 0x80000000);//OCP Bypass mode
-        }
 
 	/* Record the system timestamp for the microkernel */
 	psSGXHostCtl->ui32HostClock = OSClockus();
@@ -1285,6 +1275,11 @@ IMG_VOID SGXDumpDebugInfo (PVRSRV_SGXDEV_INFO	*psDevInfo,
 
 	PVR_LOG(("SGX debug (%s)", PVRVERSION_STRING));
 
+#if defined (TRUNCATE_SGX_HWRECOVERY_DUMP)
+	PVR_LOG(("Truncating SGX HW recovery traces"));
+	return;
+#endif
+
 	if (bDumpSGXRegs)
 	{
 		PVR_DPF((PVR_DBG_ERROR,"SGX Register Base Address (Linear):   0x%08X", (IMG_UINTPTR_T)psDevInfo->pvRegsBaseKM));
@@ -1882,6 +1877,12 @@ IMG_BOOL SGX_ISRHandler (IMG_VOID *pvData)
 			/* clear the events */
 			OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_EVENT_HOST_CLEAR, ui32EventClear);
 			OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_EVENT_HOST_CLEAR2, ui32EventClear2);
+
+			/*
+				Sample the current count from the uKernel _after_ we've cleared the
+				interrupt.
+			*/
+			g_ui32HostIRQCountSample = psDevInfo->psSGXHostCtl->ui32InterruptCount;
 		}
 	}
 

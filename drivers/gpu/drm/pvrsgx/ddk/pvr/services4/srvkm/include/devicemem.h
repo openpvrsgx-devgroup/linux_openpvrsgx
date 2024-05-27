@@ -1,7 +1,6 @@
 /*************************************************************************/ /*!
-@Title          System Description Header
+@Title          KM internal device memory functions
 @Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
-@Description    This header provides system-specific declarations and macros
 @License        Dual MIT/GPLv2
 
 The contents of this file are subject to the MIT license as set out below.
@@ -40,62 +39,14 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */ /**************************************************************************/
 
-#if !defined(__SOCCONFIG_H__)
-#define __SOCCONFIG_H__
+#include "img_defs.h"
+#include "img_types.h"
+#include "servicesext.h"
 
-#define VS_PRODUCT_NAME	"OMAP4"
+#ifndef __DEVICEMEM_H__
+#define __DEVICEMEM_H__
 
-#if defined(SGX540) && (SGX_CORE_REV == 120)
-#define SYS_SGX_CLOCK_SPEED		307200000
-#else
-#define SYS_SGX_CLOCK_SPEED		304742400
-#endif
+PVRSRV_ERROR IMG_CALLCONV PVRSRVInitDeviceMem(IMG_VOID);
+IMG_VOID IMG_CALLCONV PVRSRVDeInitDeviceMem(IMG_VOID);
 
-#define SYS_SGX_HWRECOVERY_TIMEOUT_FREQ		(100)	// 10ms (100hz)
-#define SYS_SGX_PDS_TIMER_FREQ				(1000)	// 1ms (1000hz)
-
-/* Allow the AP latency to be overridden in the build config */
-#if !defined(SYS_SGX_ACTIVE_POWER_LATENCY_MS)
-#define SYS_SGX_ACTIVE_POWER_LATENCY_MS		(2)
-#endif
-
-
-#define SYS_OMAP4430_SGX_REGS_SYS_PHYS_BASE  0x56000000
-#define SYS_OMAP4430_SGX_REGS_SIZE           0xFFFF
-
-#define SYS_OMAP4430_SGX_IRQ				 53 /* OMAP4 IRQ's are offset by 32 */
-
-#define SYS_OMAP4430_DSS_REGS_SYS_PHYS_BASE  0x58000000
-#define SYS_OMAP4430_DSS_REGS_SIZE           0x7000
-
-#define SYS_OMAP4430_DSS_HDMI_INTERRUPT_STATUS_REG 0x6028
-#define SYS_OMAP4430_DSS_HDMI_INTERRUPT_ENABLE_REG 0x602c
-
-#define SYS_OMAP4430_DSS_HDMI_INTERRUPT_VSYNC_ENABLE_MASK 0x10000
-#define SYS_OMAP4430_DSS_HDMI_INTERRUPT_VSYNC_STATUS_MASK 0x10000
-
-#define SYS_OMAP4430_DSS_LCD_INTERRUPT_STATUS_REG 0x1018
-#define SYS_OMAP4430_DSS_LCD_INTERRUPT_ENABLE_REG 0x101c
-
-#define SYS_OMAP4430_DSS_LCD_INTERRUPT_VSYNC_ENABLE_MASK 0x40002
-#define SYS_OMAP4430_DSS_LCD_INTERRUPT_VSYNC_STATUS_MASK 0x40002
-
-
-#define SYS_OMAP4430_GP11TIMER_ENABLE_SYS_PHYS_BASE	0x48088038
-#define SYS_OMAP4430_GP11TIMER_REGS_SYS_PHYS_BASE	0x4808803C
-#define SYS_OMAP4430_GP11TIMER_TSICR_SYS_PHYS_BASE	0x48088054
-
-/* Interrupt bits */
-#define DEVICE_SGX_INTERRUPT		(1<<0)
-#define DEVICE_MSVDX_INTERRUPT		(1<<1)
-#define DEVICE_DISP_INTERRUPT		(1<<2)
-
-#if defined(__linux__)
-#define	SYS_SGX_DEV_NAME	"omapdrm_pvr"
-#endif	
-
-/*****************************************************************************
- * system specific data structures
- *****************************************************************************/
- 
-#endif	/* __SYSCONFIG_H__ */
+#endif /* __DEVICEMEM_H__ */

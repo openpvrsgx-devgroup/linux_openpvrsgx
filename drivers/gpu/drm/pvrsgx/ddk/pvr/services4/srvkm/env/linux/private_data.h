@@ -42,9 +42,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef __INCLUDED_PRIVATE_DATA_H_
 #define __INCLUDED_PRIVATE_DATA_H_
 
+#include <linux/version.h>
 #if defined(SUPPORT_DRI_DRM) && defined(PVR_SECURE_DRM_AUTH_EXPORT)
 #include <linux/list.h>
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0))
 #include <drm/drmP.h>
+#else
+#include <drm/drm_file.h>
+#endif
 #endif
 
 /* This structure is required in the rare case that a process creates
@@ -90,6 +95,38 @@ typedef struct
 #endif
 }
 PVRSRV_FILE_PRIVATE_DATA;
+
+#if defined(SUPPORT_DRI_DRM_EXTERNAL)
+#include <drm/omap_drm.h>
+extern int pvr_mapper_id;
+static inline PVRSRV_FILE_PRIVATE_DATA * get_private(struct drm_file *file)
+{
+	return omap_drm_file_priv(file, pvr_mapper_id);
+}
+static inline void set_private(struct drm_file *file, PVRSRV_FILE_PRIVATE_DATA *priv)
+{
+	omap_drm_file_set_priv(file, pvr_mapper_id, priv);
+}
+#elif defined(SUPPORT_DRI_DRM)
+static inline PVRSRV_FILE_PRIVATE_DATA * get_private(struct drm_file *file)
+{
+	return file->driver_priv;
+}
+static inline void set_private(struct drm_file *file, PVRSRV_FILE_PRIVATE_DATA *priv)
+{
+	file->driver_priv = priv;
+}
+#else
+static inline PVRSRV_FILE_PRIVATE_DATA * get_private(struct file *file)
+{
+	return file->private_data;
+}
+static inline void set_private(struct file *file, PVRSRV_FILE_PRIVATE_DATA *priv)
+{
+	file->private_data = priv;
+}
+#endif
+
 
 #endif /* __INCLUDED_PRIVATE_DATA_H_ */
 

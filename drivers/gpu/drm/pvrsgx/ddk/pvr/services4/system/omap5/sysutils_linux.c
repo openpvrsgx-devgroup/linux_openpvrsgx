@@ -38,6 +38,7 @@ PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
 COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+  
 */ /**************************************************************************/
 #include <linux/version.h>
 #include <linux/clk.h>
@@ -56,8 +57,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(3, 7, 0))
+#include "../arch/arm/mach-omap2/omap_device.h"
+#else
+#include <plat/omap_device.h>
+#endif
 
-#if defined(SYS_OMAP4_HAS_DVFS_FRAMEWORK)
+#if defined(SYS_OMAP5_HAS_DVFS_FRAMEWORK)
 #include <linux/opp.h>
 #endif
 
@@ -160,10 +166,10 @@ IMG_VOID SysGetSGXTimingInformation(SGX_TIMING_INFORMATION *psTimingInfo)
 #if !defined(NO_HARDWARE)
 	PVR_ASSERT(atomic_read(&gpsSysSpecificData->sSGXClocksEnabled) != 0);
 #endif
-#if defined(SYS_OMAP4_HAS_DVFS_FRAMEWORK)
+#if defined(SYS_OMAP5_HAS_DVFS_FRAMEWORK)
 	psTimingInfo->ui32CoreClockSpeed =
 		gpsSysSpecificData->pui32SGXFreqList[gpsSysSpecificData->ui32SGXFreqListIndex];
-#else /* defined(SYS_OMAP4_HAS_DVFS_FRAMEWORK) */
+#else /* defined(SYS_OMAP5_HAS_DVFS_FRAMEWORK) */
 	psTimingInfo->ui32CoreClockSpeed = SYS_SGX_CLOCK_SPEED;
 #endif
 	psTimingInfo->ui32HWRecoveryFreq = SYS_SGX_HWRECOVERY_TIMEOUT_FREQ;
@@ -200,7 +206,7 @@ PVRSRV_ERROR EnableSGXClocks(SYS_DATA *psSysData)
 	PVR_DPF((PVR_DBG_MESSAGE, "EnableSGXClocks: Enabling SGX Clocks"));
 
 #if defined(LDM_PLATFORM) && !defined(PVR_DRI_DRM_NOT_PCI)
-#if defined(SYS_OMAP4_HAS_DVFS_FRAMEWORK)
+#if defined(SYS_OMAP5_HAS_DVFS_FRAMEWORK)
 	{
 		struct gpu_platform_data *pdata;
 		IMG_UINT32 max_freq_index;
@@ -237,7 +243,7 @@ PVRSRV_ERROR EnableSGXClocks(SYS_DATA *psSysData)
 			}
 		}
 	}
-#endif /* defined(SYS_OMAP4_HAS_DVFS_FRAMEWORK) */
+#endif /* defined(SYS_OMAP5_HAS_DVFS_FRAMEWORK) */
 	{
 		/*
 		 * pm_runtime_get_sync returns 1 after the module has
@@ -298,7 +304,7 @@ IMG_VOID DisableSGXClocks(SYS_DATA *psSysData)
 			PVR_DPF((PVR_DBG_ERROR, "DisableSGXClocks: pm_runtime_put_sync failed (%d)", -res));
 		}
 	}
-#if defined(SYS_OMAP4_HAS_DVFS_FRAMEWORK)
+#if defined(SYS_OMAP5_HAS_DVFS_FRAMEWORK)
 	{
 		struct gpu_platform_data *pdata;
 		int res;
@@ -333,7 +339,7 @@ IMG_VOID DisableSGXClocks(SYS_DATA *psSysData)
 			}
 		}
 	}
-#endif /* defined(SYS_OMAP4_HAS_DVFS_FRAMEWORK) */
+#endif /* defined(SYS_OMAP5_HAS_DVFS_FRAMEWORK) */
 #endif /* defined(LDM_PLATFORM) && !defined(PVR_DRI_DRM_NOT_PCI) */
 
 	/* Indicate that the SGX clocks are disabled */
@@ -389,7 +395,7 @@ static PVRSRV_ERROR AcquireGPTimer(SYS_SPECIFIC_DATA *psSysSpecData)
 	 * The DM timer API doesn't have a mechansim for obtaining the
 	 * physical address of the counter register.
 	 */
-	psSysSpecData->sTimerRegPhysBase.uiAddr = SYS_OMAP4430_GP11TIMER_REGS_SYS_PHYS_BASE;
+	psSysSpecData->sTimerRegPhysBase.uiAddr = SYS_OMAP5430_GP11TIMER_REGS_SYS_PHYS_BASE;
 
 	return PVRSRV_OK;
 }
@@ -434,7 +440,7 @@ static void ReleaseGPTimer(SYS_SPECIFIC_DATA *psSysSpecData)
 ******************************************************************************/
 static PVRSRV_ERROR AcquireGPTimer(SYS_SPECIFIC_DATA *psSysSpecData)
 {
-#if defined(PVR_OMAP4_TIMING_PRCM)
+#if defined(PVR_OMAP5_TIMING_PRCM)
 	struct clk *psCLK;
 	IMG_INT res;
 	struct clk *sys_ck;
@@ -448,7 +454,7 @@ static PVRSRV_ERROR AcquireGPTimer(SYS_SPECIFIC_DATA *psSysSpecData)
 
 	PVR_ASSERT(psSysSpecData->sTimerRegPhysBase.uiAddr == 0);
 
-#if defined(PVR_OMAP4_TIMING_PRCM)
+#if defined(PVR_OMAP5_TIMING_PRCM)
 	/* assert our dependence on the GPTIMER11 module */
 	psCLK = clk_get(NULL, "gpt11_fck");
 	if (IS_ERR(psCLK))
@@ -500,10 +506,10 @@ static PVRSRV_ERROR AcquireGPTimer(SYS_SPECIFIC_DATA *psSysSpecData)
 		PVR_DPF((PVR_DBG_ERROR, "EnableSystemClocks: Couldn't enable GPTIMER11 interface clock (%d)", res));
 		goto ExitDisableGPT11FCK;
 	}
-#endif	/* defined(PVR_OMAP4_TIMING_PRCM) */
+#endif	/* defined(PVR_OMAP5_TIMING_PRCM) */
 
 	/* Set the timer to non-posted mode */
-	sTimerRegPhysBase.uiAddr = SYS_OMAP4430_GP11TIMER_TSICR_SYS_PHYS_BASE;
+	sTimerRegPhysBase.uiAddr = SYS_OMAP5430_GP11TIMER_TSICR_SYS_PHYS_BASE;
 	pui32TimerEnable = OSMapPhysToLin(sTimerRegPhysBase,
                   4,
                   PVRSRV_HAP_KERNEL_ONLY|PVRSRV_HAP_UNCACHED,
@@ -529,7 +535,7 @@ static PVRSRV_ERROR AcquireGPTimer(SYS_SPECIFIC_DATA *psSysSpecData)
 		    hTimerEnable);
 
 	/* Enable the timer */
-	sTimerRegPhysBase.uiAddr = SYS_OMAP4430_GP11TIMER_ENABLE_SYS_PHYS_BASE;
+	sTimerRegPhysBase.uiAddr = SYS_OMAP5430_GP11TIMER_ENABLE_SYS_PHYS_BASE;
 	pui32TimerEnable = OSMapPhysToLin(sTimerRegPhysBase,
                   4,
                   PVRSRV_HAP_KERNEL_ONLY|PVRSRV_HAP_UNCACHED,
@@ -556,12 +562,12 @@ static PVRSRV_ERROR AcquireGPTimer(SYS_SPECIFIC_DATA *psSysSpecData)
 	goto Exit;
 
 ExitDisableGPT11ICK:
-#if defined(PVR_OMAP4_TIMING_PRCM)
+#if defined(PVR_OMAP5_TIMING_PRCM)
 	clk_disable(psSysSpecData->psGPT11_ICK);
 ExitDisableGPT11FCK:
 	clk_disable(psSysSpecData->psGPT11_FCK);
 ExitError:
-#endif	/* defined(PVR_OMAP4_TIMING_PRCM) */
+#endif	/* defined(PVR_OMAP5_TIMING_PRCM) */
 	eError = PVRSRV_ERROR_CLOCK_REQUEST_FAILED;
 Exit:
 	return eError;
@@ -609,11 +615,11 @@ static void ReleaseGPTimer(SYS_SPECIFIC_DATA *psSysSpecData)
 
 	psSysSpecData->sTimerRegPhysBase.uiAddr = 0;
 
-#if defined(PVR_OMAP4_TIMING_PRCM)
+#if defined(PVR_OMAP5_TIMING_PRCM)
 	clk_disable(psSysSpecData->psGPT11_ICK);
 
 	clk_disable(psSysSpecData->psGPT11_FCK);
-#endif	/* defined(PVR_OMAP4_TIMING_PRCM) */
+#endif	/* defined(PVR_OMAP5_TIMING_PRCM) */
 }
 #endif	/* PVR_OMAP_USE_DM_TIMER_API */
 #else	/* (DEBUG || TIMING) && !PVR_NO_OMAP_TIMER */
@@ -647,6 +653,35 @@ PVRSRV_ERROR EnableSystemClocks(SYS_DATA *psSysData)
 
 	if (!psSysSpecData->bSysClocksOneTimeInit)
 	{
+#if 0
+		struct clk *sgx_clk, *parent_clk;
+		int res;
+
+		sgx_clk = clk_get(&gpsPVRLDMDev->dev, "gpu_fck");
+		if (IS_ERR_OR_NULL(sgx_clk)) {
+			/* try another name that the sgx clock might be known as.. */
+			sgx_clk = clk_get(&gpsPVRLDMDev->dev, "sgx_clk_mux_ck");
+		}
+		if (IS_ERR_OR_NULL(sgx_clk)) {
+			PVR_DPF((PVR_DBG_ERROR, "EnableSGXClocks: could not get clock (%ld)", -PTR_ERR(sgx_clk)));
+			return PVRSRV_ERROR_UNABLE_TO_ENABLE_CLOCK;
+		}
+
+		parent_clk = clk_get(&gpsPVRLDMDev->dev, "dpll_per_m7x2_ck");
+		if (IS_ERR_OR_NULL(parent_clk)) {
+			PVR_DPF((PVR_DBG_ERROR, "EnableSGXClocks: could not get clock (%ld)", -PTR_ERR(parent_clk)));
+			clk_put(sgx_clk);
+			return PVRSRV_ERROR_UNABLE_TO_ENABLE_CLOCK;
+		}
+
+		res = clk_set_parent(sgx_clk, parent_clk);
+		if (IS_ERR_VALUE(res)) {
+			PVR_DPF((PVR_DBG_ERROR, "EnableSGXClocks: could not set clock (%d)", -res));
+			clk_put(sgx_clk);
+			clk_put(parent_clk);
+			return PVRSRV_ERROR_UNABLE_TO_ENABLE_CLOCK;
+		}
+#endif
 		mutex_init(&psSysSpecData->sPowerLock);
 
 		atomic_set(&psSysSpecData->sSGXClocksEnabled, 0);
@@ -703,9 +738,9 @@ PVRSRV_ERROR SysPMRuntimeUnregister(void)
 
 PVRSRV_ERROR SysDvfsInitialize(SYS_SPECIFIC_DATA *psSysSpecificData)
 {
-#if !defined(SYS_OMAP4_HAS_DVFS_FRAMEWORK)
+#if !defined(SYS_OMAP5_HAS_DVFS_FRAMEWORK)
 	PVR_UNREFERENCED_PARAMETER(psSysSpecificData);
-#else /* !defined(SYS_OMAP4_HAS_DVFS_FRAMEWORK) */
+#else /* !defined(SYS_OMAP5_HAS_DVFS_FRAMEWORK) */
 	IMG_UINT32 i, *freq_list;
 	IMG_INT32 opp_count;
 	unsigned long freq;
@@ -766,16 +801,16 @@ PVRSRV_ERROR SysDvfsInitialize(SYS_SPECIFIC_DATA *psSysSpecificData)
 
 	/* Start in unknown state - no frequency request to DVFS yet made */
 	psSysSpecificData->ui32SGXFreqListIndex = opp_count;
-#endif /* !defined(SYS_OMAP4_HAS_DVFS_FRAMEWORK) */
+#endif /* !defined(SYS_OMAP5_HAS_DVFS_FRAMEWORK) */
 
 	return PVRSRV_OK;
 }
 
 PVRSRV_ERROR SysDvfsDeinitialize(SYS_SPECIFIC_DATA *psSysSpecificData)
 {
-#if !defined(SYS_OMAP4_HAS_DVFS_FRAMEWORK)
+#if !defined(SYS_OMAP5_HAS_DVFS_FRAMEWORK)
 	PVR_UNREFERENCED_PARAMETER(psSysSpecificData);
-#else /* !defined(SYS_OMAP4_HAS_DVFS_FRAMEWORK) */
+#else /* !defined(SYS_OMAP5_HAS_DVFS_FRAMEWORK) */
 	/*
 	 * We assume this function is only called if SysDvfsInitialize() was
 	 * completed successfully before.
@@ -812,7 +847,7 @@ PVRSRV_ERROR SysDvfsDeinitialize(SYS_SPECIFIC_DATA *psSysSpecificData)
 	kfree(psSysSpecificData->pui32SGXFreqList);
 	psSysSpecificData->pui32SGXFreqList = 0;
 	psSysSpecificData->ui32SGXFreqListSize = 0;
-#endif /* !defined(SYS_OMAP4_HAS_DVFS_FRAMEWORK) */
+#endif /* !defined(SYS_OMAP5_HAS_DVFS_FRAMEWORK) */
 
 	return PVRSRV_OK;
 }

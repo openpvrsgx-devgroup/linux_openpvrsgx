@@ -449,6 +449,11 @@ else alias to level 0 and declare the functions without the extra debugging para
 #endif
 
 
+#if defined(SUPPORT_DRI_DRM_EXTERNAL)
+IMG_VOID OSMemHandleSetGEM(IMG_VOID *hOSMemHandle, IMG_HANDLE buf);
+IMG_HANDLE OSMemHandleGetGEM(IMG_VOID *hOSMemHandle);
+#endif /* SUPPORT_DRI_DRM_EXTERNAL */
+
 #if defined(__linux__) || defined(__QNXNTO__)
 IMG_CPU_PHYADDR OSMemHandleToCpuPAddr(IMG_VOID *hOSMemHandle, IMG_SIZE_T ui32ByteOffset);
 #else

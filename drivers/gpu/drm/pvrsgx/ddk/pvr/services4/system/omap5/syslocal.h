@@ -38,6 +38,7 @@ PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
 COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+  
 */ /**************************************************************************/
 
 #if !defined(__SYSLOCAL_H__)
@@ -80,7 +81,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  * We need to explicitly enable the GPTIMER11 clocks, or we'll get an
  * abort when we try to access the timer registers.
  */
-#define	PVR_OMAP4_TIMING_PRCM
+#define	PVR_OMAP5_TIMING_PRCM
+#endif
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,35))
+#if !defined(PVR_NO_OMAP_TIMER)
+#define	PVR_OMAP_USE_DM_TIMER_API
+#include <plat/dmtimer.h>
+#endif
 #endif
 
 #if !defined(PVR_NO_OMAP_TIMER)
@@ -95,8 +103,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #if 0  /* need to avoid defining SGX_OCP_NO_INT_BYPASS otherwise we get not irqs */
 #if defined(__linux__)
-#if defined(SGX_OCP_REGS_ENABLED)
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,35)) && defined(SGX_OCP_REGS_ENABLED)
+/* FIXME: Temporary workaround for OMAP4470 and OMAP543x */
+#if !defined(SGX544)
 #define SGX_OCP_NO_INT_BYPASS
+#endif
 #endif
 #endif
 #endif

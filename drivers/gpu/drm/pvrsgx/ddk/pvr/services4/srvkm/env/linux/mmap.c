@@ -47,6 +47,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 #endif
 
+#include <linux/platform_device.h>
 #include <linux/mm.h>
 #include <linux/module.h>
 #include <linux/pfn_t.h>
@@ -67,7 +68,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <asm/current.h>
 #endif
 #if defined(SUPPORT_DRI_DRM)
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0))
 #include <drm/drmP.h>
+#else
+#include <drm/drm_file.h>
+#endif
 #endif
 
 #include "services_headers.h"
@@ -112,6 +117,7 @@ static IMG_UINT32 g_ui32RegisteredAreas = 0;
 static IMG_UINT32 g_ui32TotalByteSize = 0;
 #endif
 
+static inline PKV_OFFSET_STRUCT FindOffsetStructByPID(LinuxMemArea *psLinuxMemArea, IMG_UINT32 ui32PID);
 
 #if defined(DEBUG_LINUX_MMAP_AREAS)
 static struct proc_dir_entry *g_ProcMMap;
@@ -364,6 +370,110 @@ DetermineUsersSizeAndByteOffset(LinuxMemArea *psLinuxMemArea,
     *pui32RealByteSize = PAGE_ALIGN(psLinuxMemArea->ui32ByteSize + ui32PageAlignmentOffset);
 }
 
+#if defined(SUPPORT_DRI_DRM_EXTERNAL)
+#include <drm/omap_drm.h>
+#include "syscommon.h"
+static struct omap_gem_vm_ops gem_ops;
+static struct drm_gem_object *
+create_gem_wrapper(struct drm_device *dev, struct drm_file *file,
+		IMG_HANDLE handle, LinuxMemArea *psLinuxMemArea,
+		IMG_UINT32 ui32ByteOffset, IMG_UINT32 ui32ByteSize)
+{
+	/* create a new GEM buffer wrapping this mem-area.. */
+	union omap_gem_size gsize;
+	uint32_t flags;
+	struct page **pages = NULL;
+	unsigned long paddr = 0;
+	int i, npages = PAGE_ALIGN(ui32ByteSize) / PAGE_SIZE;
+
+
+	/* from GEM buffer object point of view, we are either mapping
+	 * in terms of an array of struct pages for (potentially)
+	 * discontiguous RAM, or in terms of a physically contiguous
+	 * area (which could be RAM or IO) specified in terms of a
+	 * base physical address.  So try and convert the mem-area
+	 * to one of these two types.
+	 *
+	 * TODO double check this.. I don't see any evidence that PVR
+	 * is doing anything like remapping discontiguous IO regions
+	 * into one contiguous virtual user mapping..
+	 */
+	switch(psLinuxMemArea->eAreaType) {
+	case LINUX_MEM_AREA_IOREMAP:
+		paddr = psLinuxMemArea->uData.sIORemap.CPUPhysAddr.uiAddr;
+		paddr += ui32ByteOffset;
+		break;
+	case LINUX_MEM_AREA_EXTERNAL_KV:
+		if (psLinuxMemArea->uData.sExternalKV.bPhysContig) {
+			paddr = SysSysPAddrToCpuPAddr(
+					psLinuxMemArea->uData.sExternalKV.uPhysAddr.SysPhysAddr).uiAddr;
+			paddr += ui32ByteOffset;
+		} else {
+			IMG_UINT32 ui32PageIndex = PHYS_TO_PFN(ui32ByteOffset);
+			pages = kmalloc(sizeof(pages) * npages, GFP_KERNEL);
+			for (i = 0; i < npages; i++) {
+				IMG_SYS_PHYADDR SysPAddr =
+						psLinuxMemArea->uData.sExternalKV.uPhysAddr.pSysPhysAddr[ui32PageIndex];
+				pages[i] = phys_to_page(SysSysPAddrToCpuPAddr(SysPAddr).uiAddr);
+			}
+		}
+		break;
+	case LINUX_MEM_AREA_IO:
+		paddr = psLinuxMemArea->uData.sIO.CPUPhysAddr.uiAddr;
+		paddr += ui32ByteOffset;
+		break;
+	case LINUX_MEM_AREA_VMALLOC:
+		pages = kmalloc(sizeof(pages) * npages, GFP_KERNEL);
+		for (i = 0; i < npages; i++) {
+			char *vaddr = ((char *)psLinuxMemArea->uData.sVmalloc.pvVmallocAddress) +
+					(i * PAGE_SIZE) + ui32ByteOffset;
+			pages[i] = vmalloc_to_page(vaddr);
+		}
+		break;
+	case LINUX_MEM_AREA_ALLOC_PAGES:
+		pages = kmalloc(sizeof(pages) * npages, GFP_KERNEL);
+		for (i = 0; i < npages; i++) {
+			pages[i] = psLinuxMemArea->uData.sPageList.ppsPageList[i + PHYS_TO_PFN(ui32ByteOffset)];
+		}
+		break;
+	case LINUX_MEM_AREA_SUB_ALLOC:
+		return create_gem_wrapper(dev, file, handle,
+				psLinuxMemArea->uData.sSubAlloc.psParentLinuxMemArea,
+				psLinuxMemArea->uData.sSubAlloc.ui32ByteOffset + ui32ByteOffset,
+				ui32ByteSize);
+		break;
+	default:
+		PVR_DPF((PVR_DBG_ERROR, "%s: Unknown LinuxMemArea type (%d)\n",
+				__FUNCTION__, psLinuxMemArea->eAreaType));
+		return NULL;
+	}
+
+	/* map PVR cache type flags to GEM.. */
+	switch(psLinuxMemArea->ui32AreaFlags & PVRSRV_HAP_CACHETYPE_MASK) {
+	case PVRSRV_HAP_CACHED:
+		flags = OMAP_BO_CACHED;
+		break;
+	case PVRSRV_HAP_WRITECOMBINE:
+		flags = OMAP_BO_WC;
+		break;
+	case PVRSRV_HAP_UNCACHED:
+		flags = OMAP_BO_UNCACHED;
+		break;
+	default:
+		PVR_DPF((PVR_DBG_ERROR, "%s: unknown cache type", __FUNCTION__));
+		return NULL;
+	}
+
+	/* we need to give GEM page aligned address, because that is what will
+	 * be mapped.. userspace will figure out the offset..
+	 */
+	paddr &= ~(PAGE_SIZE-1);
+
+	gsize.bytes = ui32ByteSize;
+	return omap_gem_new_ext(dev, file, handle, gsize, flags, paddr, pages, &gem_ops);
+}
+#endif /* SUPPORT_DRI_DRM_EXTERNAL */
+
 
 /*!
  *******************************************************************************
@@ -408,8 +518,15 @@ PVRMMapOSMemHandleToMMapData(PVRSRV_PER_PROCESS_DATA *psPerProc,
     PKV_OFFSET_STRUCT psOffsetStruct;
     IMG_HANDLE hOSMemHandle;
     PVRSRV_ERROR eError;
+#if defined(SUPPORT_DRI_DRM_EXTERNAL)
+	PVRSRV_ENV_PER_PROCESS_DATA *psEnvPerProc =
+			(PVRSRV_ENV_PER_PROCESS_DATA *)PVRSRVProcessPrivateData(psPerProc);
+	struct drm_gem_object *buf = NULL;
+        IMG_UINT32 *puiHandle;
+	IMG_UINT32 ret;
+#endif /* SUPPORT_DRI_DRM_EXTERNAL */
 
-    LinuxLockMutex(&g_sMMapMutex);
+    LinuxLockMutexNested(&g_sMMapMutex, PVRSRV_LOCK_CLASS_MMAP);
 
     PVR_ASSERT(PVRSRVGetMaxHandle(psPerProc->psHandleBase) <= MAX_MMAP_HANDLE);
 
@@ -426,8 +543,9 @@ PVRMMapOSMemHandleToMMapData(PVRSRV_PER_PROCESS_DATA *psPerProc,
     }
 
     psLinuxMemArea = (LinuxMemArea *)hOSMemHandle;
+    puiHandle = &psLinuxMemArea->uiHandle;
 
-	/* Sparse mappings have to ask the BM for the virtual size */
+        /* Sparse mappings have to ask the BM for the virtual size */
 	if (psLinuxMemArea->hBMHandle)
 	{
 		*pui32RealByteSize = BM_GetVirtualSize(psLinuxMemArea->hBMHandle);
@@ -440,11 +558,48 @@ PVRMMapOSMemHandleToMMapData(PVRSRV_PER_PROCESS_DATA *psPerProc,
 										pui32ByteOffset);
 	}
 
-    /* Check whether this memory area has already been mapped */
-    list_for_each_entry(psOffsetStruct, &psLinuxMemArea->sMMapOffsetStructList, sAreaItem)
+#if defined(SUPPORT_DRI_DRM_EXTERNAL)
+    /* if we are using DRM/GEM, then let GEM generate the buffer offset..
+     * this is done by creating a wrapper object.
+     */
+    if (psEnvPerProc->dev && psEnvPerProc->file)
     {
-        if (psPerProc->ui32PID == psOffsetStruct->ui32PID)
+        buf = psLinuxMemArea->buf;
+        if (!buf)
         {
+            buf = create_gem_wrapper(psEnvPerProc->dev, psEnvPerProc->file, hMHandle,
+                    psLinuxMemArea, 0, *pui32RealByteSize);
+	    if(buf){
+		ret = drm_gem_handle_create(psEnvPerProc->file, (struct drm_gem_object *)buf, puiHandle);
+		if(ret) {
+			/*This means we are royaly screwed up. Go home. */
+			/*Please don't worry about not freeing the GEM. */
+			/*DRM core will take care of it, eventually.    */
+			buf = NULL;
+		}
+	    }
+            if (!buf)
+            {
+                PVR_DPF((PVR_DBG_ERROR, "%s: Screw you guys, I'm going home..", __FUNCTION__));
+                eError = PVRSRV_ERROR_OUT_OF_MEMORY;
+                goto exit_unlock;
+            }
+
+            psLinuxMemArea->buf = buf;
+        } else {
+		ret = drm_gem_handle_create(psEnvPerProc->file, (struct drm_gem_object *)buf, puiHandle);
+		if(ret) {
+			PVR_DPF((PVR_DBG_ERROR, "%s: Screw you guys, I'm going home..", __FUNCTION__));
+			eError = PVRSRV_ERROR_OUT_OF_MEMORY;
+			goto exit_unlock;
+		}
+	}
+    }
+#endif /* SUPPORT_DRI_DRM_EXTERNAL */
+
+    psOffsetStruct = FindOffsetStructByPID(psLinuxMemArea, psPerProc->ui32PID);
+    if (psOffsetStruct)
+    {
 			if (!psLinuxMemArea->hBMHandle)
 			{
 				PVR_ASSERT(*pui32RealByteSize == psOffsetStruct->ui32RealByteSize);
@@ -463,7 +618,6 @@ PVRMMapOSMemHandleToMMapData(PVRSRV_PER_PROCESS_DATA *psPerProc,
 
 	   eError = PVRSRV_OK;
 	   goto exit_unlock;
-        }
     }
 
     /* Memory area won't have been mapped yet */
@@ -483,6 +637,17 @@ PVRMMapOSMemHandleToMMapData(PVRSRV_PER_PROCESS_DATA *psPerProc,
         PVR_ASSERT(PFNIsSpecial(*pui32MMapOffset));
 #endif
     }
+
+#if defined(SUPPORT_DRI_DRM_EXTERNAL)
+	if (buf)
+	{
+        /* note: omap_gem_mmap_offset() gives us a byte offset that is multiple
+         * of pages, which can be passed to mmap().. but PVR wants a page offset
+         * that can be passed to mmap2().  So convert it back to pages:
+         */
+	    *pui32MMapOffset = omap_gem_mmap_offset(buf) >> PAGE_SHIFT;
+	}
+#endif /* SUPPORT_DRI_DRM_EXTERNAL */
 
     psOffsetStruct = CreateOffsetStruct(psLinuxMemArea, *pui32MMapOffset, *pui32RealByteSize);
     if (psOffsetStruct == IMG_NULL)
@@ -510,6 +675,7 @@ PVRMMapOSMemHandleToMMapData(PVRSRV_PER_PROCESS_DATA *psPerProc,
 	*pui32MMapOffset = *pui32MMapOffset << (PAGE_SHIFT - 12);
 
 exit_unlock:
+
     LinuxUnLockMutex(&g_sMMapMutex);
 
     return eError;
@@ -554,8 +720,12 @@ PVRMMapReleaseMMapData(PVRSRV_PER_PROCESS_DATA *psPerProc,
     IMG_HANDLE hOSMemHandle;
     PVRSRV_ERROR eError;
     IMG_UINT32 ui32PID = OSGetCurrentProcessIDKM();
+#if defined(SUPPORT_DRI_DRM_EXTERNAL)
+	PVRSRV_ENV_PER_PROCESS_DATA *psEnvPerProc =
+			(PVRSRV_ENV_PER_PROCESS_DATA *)PVRSRVProcessPrivateData(psPerProc);
+#endif /* SUPPORT_DRI_DRM_EXTERNAL */
 
-    LinuxLockMutex(&g_sMMapMutex);
+    LinuxLockMutexNested(&g_sMMapMutex, PVRSRV_LOCK_CLASS_MMAP);
 
     PVR_ASSERT(PVRSRVGetMaxHandle(psPerProc->psHandleBase) <= MAX_MMAP_HANDLE);
 
@@ -573,11 +743,16 @@ PVRMMapReleaseMMapData(PVRSRV_PER_PROCESS_DATA *psPerProc,
 
     psLinuxMemArea = (LinuxMemArea *)hOSMemHandle;
 
-    /* Find the offset structure */
-    list_for_each_entry(psOffsetStruct, &psLinuxMemArea->sMMapOffsetStructList, sAreaItem)
+#if defined(SUPPORT_DRI_DRM_EXTERNAL)
+    if (psLinuxMemArea->uiHandle) {
+	drm_gem_handle_delete(psEnvPerProc->file, psLinuxMemArea->uiHandle);
+	psLinuxMemArea->uiHandle = 0;
+    }
+#endif
+
+    psOffsetStruct = FindOffsetStructByPID(psLinuxMemArea, ui32PID);
+    if (psOffsetStruct)
     {
-        if (psOffsetStruct->ui32PID == ui32PID)
-        {
 	    if (psOffsetStruct->ui32RefCount == 0)
 	    {
 		PVR_DPF((PVR_DBG_ERROR, "%s: Attempt to release mmap data with zero reference count for offset struct 0x%p, memory area %p", __FUNCTION__, psOffsetStruct, psLinuxMemArea));
@@ -594,7 +769,6 @@ PVRMMapReleaseMMapData(PVRSRV_PER_PROCESS_DATA *psPerProc,
 
 	    eError = PVRSRV_OK;
 	    goto exit_unlock;
-        }
     }
 
     /* MMap data not found */
@@ -642,7 +816,19 @@ FindOffsetStructByOffset(IMG_UINT32 ui32Offset, IMG_UINT32 ui32RealByteSize)
     return IMG_NULL;
 }
 
-
+static inline PKV_OFFSET_STRUCT
+FindOffsetStructByPID(LinuxMemArea *psLinuxMemArea, IMG_UINT32 ui32PID)
+{
+	PKV_OFFSET_STRUCT psOffsetStruct;
+	list_for_each_entry(psOffsetStruct, &psLinuxMemArea->sMMapOffsetStructList, sAreaItem)
+	{
+		if (psOffsetStruct->ui32PID == ui32PID)
+		{
+			return psOffsetStruct;
+		}
+	}
+	return NULL;
+}
 /*
  * Map a memory area into user space.
  * Note, the ui32ByteOffset is _not_ implicitly page aligned since
@@ -787,16 +973,25 @@ DoMapToUser(LinuxMemArea *psLinuxMemArea,
 			pfn =  LinuxMemAreaToCpuPFN(psLinuxMemArea, ui32AdjustedPA);
 
 #if defined(PVR_MAKE_ALL_PFNS_SPECIAL)
-			if (bMixedMap)
+		    if (bMixedMap)
+		    {
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,20,0))
+			result = vmf_insert_mixed(ps_vma, ulVMAPos, pfn_to_pfn_t(pfn));
+			if(result != 0)
 			{
-				result = vmf_insert_mixed(ps_vma, ulVMAPos, pfn_to_pfn_t(pfn));
-				if(result & VM_FAULT_ERROR)
-				{
-					PVR_DPF((PVR_DBG_ERROR,"%s: Error - vmf_insert_mixed failed (%x)", __FUNCTION__, result));
-					return IMG_FALSE;
-				}
+			    PVR_DPF((PVR_DBG_ERROR,"%s: Error - vmf_insert_mixed failed (%x)", __FUNCTION__, result));
+			    return IMG_FALSE;
 			}
-			else
+#else
+			result = vm_insert_mixed(ps_vma, ulVMAPos, pfn);
+	                if(result != 0)
+	                {
+	                    PVR_DPF((PVR_DBG_ERROR,"%s: Error - vm_insert_mixed failed (%d)", __FUNCTION__, result));
+	                    return IMG_FALSE;
+	                }
+#endif
+		    }
+		    else
 #endif
 		    {
 			struct page *psPage;
@@ -823,10 +1018,8 @@ DoMapToUser(LinuxMemArea *psLinuxMemArea,
 
 
 static IMG_VOID
-MMapVOpenNoLock(struct vm_area_struct* ps_vma)
+MMapVOpenNoLock(struct vm_area_struct* ps_vma, PKV_OFFSET_STRUCT psOffsetStruct)
 {
-    PKV_OFFSET_STRUCT psOffsetStruct = (PKV_OFFSET_STRUCT)ps_vma->vm_private_data;
-
     PVR_ASSERT(psOffsetStruct != IMG_NULL);
     PVR_ASSERT(!psOffsetStruct->bOnMMapList);
 
@@ -857,19 +1050,23 @@ MMapVOpenNoLock(struct vm_area_struct* ps_vma)
 static void
 MMapVOpen(struct vm_area_struct* ps_vma)
 {
-    LinuxLockMutex(&g_sMMapMutex);
+    LinuxLockMutexNested(&g_sMMapMutex, PVRSRV_LOCK_CLASS_MMAP);
 
-    MMapVOpenNoLock(ps_vma);
+    MMapVOpenNoLock(ps_vma, ps_vma->vm_private_data);
 
     LinuxUnLockMutex(&g_sMMapMutex);
 }
 
 
 static IMG_VOID
-MMapVCloseNoLock(struct vm_area_struct* ps_vma)
+MMapVCloseNoLock(struct vm_area_struct* ps_vma, PKV_OFFSET_STRUCT psOffsetStruct)
 {
-    PKV_OFFSET_STRUCT psOffsetStruct = (PKV_OFFSET_STRUCT)ps_vma->vm_private_data;
-    PVR_ASSERT(psOffsetStruct != IMG_NULL);
+    struct drm_gem_object *obj;
+
+    WARN_ON(!psOffsetStruct);
+    if (!psOffsetStruct) {
+        return;
+    }
 
 #if defined(DEBUG_LINUX_MMAP_AREAS)
     PVR_DPF((PVR_DBG_MESSAGE,
@@ -893,6 +1090,9 @@ MMapVCloseNoLock(struct vm_area_struct* ps_vma)
 	DestroyOffsetStruct(psOffsetStruct);
     }
 
+    obj = ps_vma->vm_private_data;
+    drm_gem_object_put_unlocked(obj);
+
     ps_vma->vm_private_data = NULL;
 }
 
@@ -902,9 +1102,9 @@ MMapVCloseNoLock(struct vm_area_struct* ps_vma)
 static void
 MMapVClose(struct vm_area_struct* ps_vma)
 {
-    LinuxLockMutex(&g_sMMapMutex);
+    LinuxLockMutexNested(&g_sMMapMutex, PVRSRV_LOCK_CLASS_MMAP);
 
-    MMapVCloseNoLock(ps_vma);
+    MMapVCloseNoLock(ps_vma, ps_vma->vm_private_data);
 
     LinuxUnLockMutex(&g_sMMapMutex);
 }
@@ -924,7 +1124,7 @@ static int MMapVAccess(struct vm_area_struct *ps_vma, unsigned long addr,
 	int iRetVal = -EINVAL;
 	IMG_VOID *pvKernelAddr;
 
-	LinuxLockMutex(&g_sMMapMutex);
+	LinuxLockMutexNested(&g_sMMapMutex, PVRSRV_LOCK_CLASS_MMAP);
 
 	psOffsetStruct = (PKV_OFFSET_STRUCT)ps_vma->vm_private_data;
 	psLinuxMemArea = psOffsetStruct->psLinuxMemArea;
@@ -1010,7 +1210,7 @@ PVRMMap(struct file* pFile, struct vm_area_struct* ps_vma)
 
     PVR_UNREFERENCED_PARAMETER(pFile);
 
-    LinuxLockMutex(&g_sMMapMutex);
+    LinuxLockMutexNested(&g_sMMapMutex, PVRSRV_LOCK_CLASS_MMAP);
     
     ui32ByteSize = ps_vma->vm_end - ps_vma->vm_start;
     
@@ -1029,7 +1229,7 @@ PVRMMap(struct file* pFile, struct vm_area_struct* ps_vma)
 
 #if !defined(SUPPORT_DRI_DRM_EXT)
         /* Pass unknown requests onto the DRM module */
-        return drm_mmap(pFile, ps_vma);
+	return drm_gem_mmap(pFile, ps_vma);
 #else
         /*
          * Indicate to caller that the request is not for us.
@@ -1065,12 +1265,11 @@ PVRMMap(struct file* pFile, struct vm_area_struct* ps_vma)
     PVR_DPF((PVR_DBG_MESSAGE, "%s: Mapped psLinuxMemArea 0x%p\n",
          __FUNCTION__, psOffsetStruct->psLinuxMemArea));
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0))
-    ps_vma->vm_flags |= VM_RESERVED;
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(3, 6, 0))
+    ps_vma->vm_flags |= VM_DONTEXPAND | VM_DONTDUMP;
 #else
-    ps_vma->vm_flags |= VM_DONTEXPAND | VM_DONTDUMP; /* Don't swap */
+    ps_vma->vm_flags |= VM_RESERVED;
 #endif
-
     ps_vma->vm_flags |= VM_IO;
 
     /*
@@ -1141,9 +1340,10 @@ PVRMMap(struct file* pFile, struct vm_area_struct* ps_vma)
         psFlushMemArea->bNeedsCacheInvalidate = IMG_FALSE;
     }
 
-    /* Call the open routine to increment the usage count */
-    MMapVOpenNoLock(ps_vma);
 
+    /* Call the open routine to increment the usage count */
+    MMapVOpenNoLock(ps_vma, ps_vma->vm_private_data);
+    
     PVR_DPF((PVR_DBG_MESSAGE, "%s: Mapped area at offset 0x%08lx\n",
              __FUNCTION__, ps_vma->vm_pgoff));
 
@@ -1164,6 +1364,122 @@ unlock_and_return:
     return iRetVal;
 }
 
+#if defined(SUPPORT_DRI_DRM_EXTERNAL)
+/* note: currently we stuff memarea struct in bo->private_data.. but there
+ * must be a better way.  Currently PVR's mapper-private data is the
+ * PVRSRV_KERNEL_SYNC_INFO..  I'm not sure if there is a way to go back
+ * and forth between this an the offset struct?
+ */
+
+static void
+MMapVOpenExt(struct vm_area_struct* ps_vma)
+{
+	struct drm_gem_object *obj = ps_vma->vm_private_data;
+	void *priv = omap_gem_priv(obj);
+	PKV_OFFSET_STRUCT psOffsetStruct =
+			FindOffsetStructByPID(priv, OSGetCurrentProcessIDKM());
+	if (WARN_ON(!psOffsetStruct))
+		return;
+	LinuxLockMutexNested(&g_sMMapMutex, PVRSRV_LOCK_CLASS_MMAP);
+	MMapVOpenNoLock(ps_vma, psOffsetStruct);
+	LinuxUnLockMutex(&g_sMMapMutex);
+}
+
+static void
+MMapVCloseExt(struct vm_area_struct* ps_vma)
+{
+	struct drm_gem_object *obj = ps_vma->vm_private_data;
+	void *priv = omap_gem_priv(obj);
+	PKV_OFFSET_STRUCT psOffsetStruct =
+			FindOffsetStructByPID(priv, OSGetCurrentProcessIDKM());
+	if (WARN_ON(!psOffsetStruct))
+		return;
+	LinuxLockMutexNested(&g_sMMapMutex, PVRSRV_LOCK_CLASS_MMAP);
+	MMapVCloseNoLock(ps_vma, psOffsetStruct);
+	LinuxUnLockMutex(&g_sMMapMutex);
+}
+
+/* this function doesn't actually handle user mapping.. but does update some
+ * internal data structures that would otherwise not get updated if we didn't
+ * have a callback to notify of the user mapping.  It is used when something
+ * outside of the PVR driver (ie. DRM) is handling the userspace mapping
+ */
+static void
+PVRMMapExt(struct file* pFile, struct vm_area_struct* ps_vma)
+{
+	struct drm_gem_object *obj = ps_vma->vm_private_data;
+    IMG_UINT32 ui32ByteSize;
+    PKV_OFFSET_STRUCT psOffsetStruct;
+
+    /* for cache maintenance: */
+    LinuxMemArea *psFlushMemArea = IMG_NULL;
+    IMG_VOID *pvBase = IMG_NULL;
+    IMG_UINT32 ui32ByteOffset = 0;	/* Keep compiler happy */
+
+    PVR_UNREFERENCED_PARAMETER(pFile);
+
+    LinuxLockMutexNested(&g_sMMapMutex, PVRSRV_LOCK_CLASS_MMAP);
+
+    ui32ByteSize = ps_vma->vm_end - ps_vma->vm_start;
+
+    ps_vma->vm_flags |= VM_DONTCOPY;
+
+	psOffsetStruct = FindOffsetStructByOffset(ps_vma->vm_pgoff, ui32ByteSize);
+	if (psOffsetStruct == IMG_NULL)
+	{
+	    PVR_DPF((PVR_DBG_WARNING, "%s: No mapped area at offset 0x%08lx, size=%d\n",
+	             __FUNCTION__, ps_vma->vm_pgoff, ui32ByteSize));
+		goto unlock_and_return;
+	}
+	list_del(&psOffsetStruct->sMMapItem);
+	psOffsetStruct->bOnMMapList = IMG_FALSE;
+
+    if(!DoMapToUser(psOffsetStruct->psLinuxMemArea, ps_vma, 0))
+    {
+        goto unlock_and_return;
+    }
+
+	PVR_ASSERT(psOffsetStruct->ui32UserVAddr == 0);
+
+	psOffsetStruct->ui32UserVAddr = ps_vma->vm_start;
+
+	omap_gem_set_priv(obj, psOffsetStruct->psLinuxMemArea);
+
+
+    /* Compute the flush region (if necessary) inside the mmap mutex */
+    if(psOffsetStruct->psLinuxMemArea->bNeedsCacheInvalidate)
+    {
+        IMG_UINT32 ui32DummyByteSize;
+
+        DetermineUsersSizeAndByteOffset(psOffsetStruct->psLinuxMemArea,
+                                        &ui32DummyByteSize,
+                                        &ui32ByteOffset);
+
+        pvBase = (IMG_VOID *)ps_vma->vm_start + ui32ByteOffset;
+        psFlushMemArea = psOffsetStruct->psLinuxMemArea;
+
+        psOffsetStruct->psLinuxMemArea->bNeedsCacheInvalidate = IMG_FALSE;
+    }
+
+    /* Call the open routine to increment the usage count */
+	MMapVOpenNoLock(ps_vma, psOffsetStruct);
+
+unlock_and_return:
+	LinuxUnLockMutex(&g_sMMapMutex);
+
+    if(psFlushMemArea)
+    {
+        OSInvalidateCPUCacheRangeKM(psFlushMemArea, ui32ByteOffset, pvBase,
+									psFlushMemArea->ui32ByteSize);
+    }
+}
+
+static struct omap_gem_vm_ops gem_ops = {
+		.open  = MMapVOpenExt,
+		.close = MMapVCloseExt,
+		.mmap  = PVRMMapExt,
+};
+#endif
 
 #if defined(DEBUG_LINUX_MMAP_AREAS)
 
@@ -1178,7 +1494,7 @@ static void ProcSeqStartstopMMapRegistations(struct seq_file *sfile,IMG_BOOL sta
 {
 	if(start) 
 	{
-	    LinuxLockMutex(&g_sMMapMutex);		
+	    LinuxLockMutexNested(&g_sMMapMutex, PVRSRV_LOCK_CLASS_MMAP);		
 	}
 	else
 	{
@@ -1337,9 +1653,10 @@ PVRMMapRegisterArea(LinuxMemArea *psLinuxMemArea)
     PVRSRV_ERROR eError;
 #if defined(DEBUG) || defined(DEBUG_LINUX_MMAP_AREAS)
     const IMG_CHAR *pszName = LinuxMemAreaTypeToString(LinuxMemAreaRootType(psLinuxMemArea));
+    (void)pszName; /* Ignore fatal warning. */
 #endif
 
-    LinuxLockMutex(&g_sMMapMutex);
+    LinuxLockMutexNested(&g_sMMapMutex, PVRSRV_LOCK_CLASS_MMAP);
 
 #if defined(DEBUG) || defined(DEBUG_LINUX_MMAP_AREAS)
     PVR_DPF((PVR_DBG_MESSAGE,
@@ -1404,7 +1721,7 @@ PVRMMapRemoveRegisteredArea(LinuxMemArea *psLinuxMemArea)
     PVRSRV_ERROR eError;
     PKV_OFFSET_STRUCT psOffsetStruct, psTmpOffsetStruct;
 
-    LinuxLockMutex(&g_sMMapMutex);
+    LinuxLockMutexNested(&g_sMMapMutex, PVRSRV_LOCK_CLASS_MMAP);
 
     PVR_ASSERT(psLinuxMemArea->bMMapRegistered);
 
@@ -1497,7 +1814,7 @@ LinuxMMapPerProcessDisconnect(PVRSRV_ENV_PER_PROCESS_DATA *psEnvPerProc)
 
     PVR_UNREFERENCED_PARAMETER(psEnvPerProc);
 
-    LinuxLockMutex(&g_sMMapMutex);
+    LinuxLockMutexNested(&g_sMMapMutex, PVRSRV_LOCK_CLASS_MMAP);
 
     list_for_each_entry_safe(psOffsetStruct, psTmpOffsetStruct, &g_sMMapOffsetStructList, sMMapItem)
     {

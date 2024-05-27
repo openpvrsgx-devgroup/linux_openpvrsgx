@@ -3543,11 +3543,12 @@ MMU_MapScatter (MMU_HEAP *pMMUHeap,
 		DevPAddr = SysSysPAddrToDevPAddr(PVRSRV_DEVICE_TYPE_SGX, sSysAddr);
 
 		MMU_MapPage (pMMUHeap, DevVAddr, DevPAddr, ui32MemFlags);
-		DevVAddr.uiAddr += pMMUHeap->ui32DataPageSize;
 
 		PVR_DPF ((PVR_DBG_MESSAGE,
 				 "MMU_MapScatter: devVAddr=%08X, SysAddr=%08X, size=0x%x/0x%x",
 				  DevVAddr.uiAddr, sSysAddr.uiAddr, uCount, uSize));
+
+		DevVAddr.uiAddr += pMMUHeap->ui32DataPageSize;
 	}
 
 #if defined(PDUMP)

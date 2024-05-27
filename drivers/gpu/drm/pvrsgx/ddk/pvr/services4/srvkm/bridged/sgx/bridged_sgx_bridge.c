@@ -201,6 +201,8 @@ SGXDoKickBW(IMG_UINT32 ui32BridgeID,
 	IMG_HANDLE *phKernelSyncInfoHandles = IMG_NULL;
 #endif
 
+	OSWriteMemoryBarrier();
+
 	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID, PVRSRV_BRIDGE_SGX_DOKICK);
 
 	psRetOUT->eError =

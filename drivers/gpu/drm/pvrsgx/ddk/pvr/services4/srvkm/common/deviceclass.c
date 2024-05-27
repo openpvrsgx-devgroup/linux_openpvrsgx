@@ -1,4 +1,5 @@
 /*************************************************************************/ /*!
+@File
 @Title          Device class services functions
 @Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
 @Description    Kernel services functions for device class devices
@@ -414,7 +415,8 @@ PVRSRV_ERROR PVRSRVRegisterDCDeviceKM (PVRSRV_DC_SRV2DISP_KMJTABLE *psFuncTable,
 	/* allocate a unique device id */
 	if (AllocateDeviceID(psSysData, &psDeviceNode->sDevId.ui32DeviceIndex) != PVRSRV_OK)
 	{
-		PVR_DPF((PVR_DBG_ERROR,"PVRSRVRegisterBCDeviceKM: Failed to allocate Device ID"));
+		PVR_DPF((PVR_DBG_ERROR, "PVRSRVRegisterDCDeviceKM: "\
+			"Failed to allocate Device ID"));
 		goto ErrorExit;
 	}
 	psDCInfo->ui32DeviceID = psDeviceNode->sDevId.ui32DeviceIndex;
@@ -1425,7 +1427,7 @@ PVRSRV_ERROR PVRSRVCreateDCSwapChainKM (PVRSRV_PER_PROCESS_DATA	*psPerProc,
 	psSwapChain->ui32RefCount = 1;
 	psSwapChain->ui32Flags = ui32Flags;
 
-	/* Save pointer in DC structure if ti's shared struct */
+	/* Save pointer in DC structure if it's shared struct */
 	if( ui32Flags & PVRSRV_CREATE_SWAPCHAIN_SHARED )
 	{
    		if(! psDCInfo->psDCSwapChainShared ) 
@@ -2462,7 +2464,9 @@ static PVRSRV_ERROR CloseBCDeviceCallBack(IMG_PVOID  pvParam,
 					i,
 					&psBCInfo->psBuffer[i].sDeviceClassBuffer,
 					psBCInfo->psBuffer[i].sDeviceClassBuffer.ui32MemMapRefCount));
+#if 0
 			return PVRSRV_ERROR_STILL_MAPPED;
+#endif
 		}
 	}
 

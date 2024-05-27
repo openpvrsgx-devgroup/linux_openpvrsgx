@@ -58,6 +58,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "sgxutils.h"
 #include "ttrace.h"
 
+#if defined (__linux__)
+#include "mmap.h"
+#endif
+
 #if defined (SUPPORT_SID_INTERFACE)
 IMG_EXPORT PVRSRV_ERROR SGXSubmitTransferKM(IMG_HANDLE hDevHandle, PVRSRV_TRANSFER_SGX_KICK_KM *psKick)
 #else
@@ -71,9 +75,9 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmitTransferKM(IMG_HANDLE hDevHandle, PVRSRV_TRANSF
 	PVRSRV_ERROR				eError;
 	IMG_UINT32					loop;
 	IMG_HANDLE					hDevMemContext = IMG_NULL;
-	IMG_BOOL					abSrcSyncEnable[SGX_MAX_TRANSFER_SYNC_OPS];
+	IMG_UINT32					uiSrcSyncEnable = ~(~0 << SGX_MAX_TRANSFER_SYNC_OPS);
 	IMG_UINT32					ui32RealSrcSyncNum = 0;
-	IMG_BOOL					abDstSyncEnable[SGX_MAX_TRANSFER_SYNC_OPS];
+	IMG_UINT32					uiDstSyncEnable = ~(~0 << SGX_MAX_TRANSFER_SYNC_OPS);
 	IMG_UINT32					ui32RealDstSyncNum = 0;
 
 
@@ -96,12 +100,6 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmitTransferKM(IMG_HANDLE hDevHandle, PVRSRV_TRANSF
 	hDevMemContext = psKick->hDevMemContext;
 #endif
 	PVR_TTRACE(PVRSRV_TRACE_GROUP_TRANSFER, PVRSRV_TRACE_CLASS_FUNCTION_ENTER, TRANSFER_TOKEN_SUBMIT);
-
-	for (loop = 0; loop < SGX_MAX_TRANSFER_SYNC_OPS; loop++)
-	{
-		abSrcSyncEnable[loop] = IMG_TRUE;
-		abDstSyncEnable[loop] = IMG_TRUE;
-	}
 
 	if (!CCB_OFFSET_IS_VALID(SGXMKIF_TRANSFERCMD_SHARED, psCCBMemInfo, psKick, ui32SharedCmdCCBOffset))
 	{
@@ -167,19 +165,19 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmitTransferKM(IMG_HANDLE hDevHandle, PVRSRV_TRANSF
 	
 		for (i = 0; i < loop; i++)	
 		{
-			if (abSrcSyncEnable[i])
+			if (uiSrcSyncEnable & (1 << i))
 			{
 				psSyncInfo = (PVRSRV_KERNEL_SYNC_INFO *)psKick->ahSrcSyncInfo[i];
 
 				if (psSyncInfo->sWriteOpsCompleteDevVAddr.uiAddr == psMySyncInfo->sWriteOpsCompleteDevVAddr.uiAddr)
 				{
-					PVR_DPF((PVR_DBG_WARNING, "SGXSubmitTransferKM : Same src synchronized multiple times!"));
-					abSrcSyncEnable[loop] = IMG_FALSE;
+					PVR_DPF((PVR_DBG_MESSAGE, "SGXSubmitTransferKM : Same src synchronized multiple times!"));
+					uiSrcSyncEnable &= ~(1 << loop);
 					break;
 				}
 			}
 		}
-		if (abSrcSyncEnable[loop])
+		if (uiSrcSyncEnable & (1 << loop))
 		{
 			ui32RealSrcSyncNum++;
 		}
@@ -192,19 +190,19 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmitTransferKM(IMG_HANDLE hDevHandle, PVRSRV_TRANSF
 	
 		for (i = 0; i < loop; i++)	
 		{
-			if (abDstSyncEnable[i])
+			if (uiDstSyncEnable & (1 << i))
 			{
 				psSyncInfo = (PVRSRV_KERNEL_SYNC_INFO *)psKick->ahDstSyncInfo[i];
 
 				if (psSyncInfo->sWriteOpsCompleteDevVAddr.uiAddr == psMySyncInfo->sWriteOpsCompleteDevVAddr.uiAddr)
 				{
-					PVR_DPF((PVR_DBG_WARNING, "SGXSubmitTransferKM : Same dst synchronized multiple times!"));
-					abDstSyncEnable[loop] = IMG_FALSE;
+					PVR_DPF((PVR_DBG_MESSAGE, "SGXSubmitTransferKM : Same dst synchronized multiple times!"));
+					uiDstSyncEnable &= ~(1 << loop);
 					break;
 				}
 			}
 		}
-		if (abDstSyncEnable[loop])
+		if (uiDstSyncEnable & (1 << loop))
 		{
 			ui32RealDstSyncNum++;
 		}
@@ -219,7 +217,7 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmitTransferKM(IMG_HANDLE hDevHandle, PVRSRV_TRANSF
 
 		for (loop = 0; loop < psKick->ui32NumSrcSync; loop++)
 		{
-			if (abSrcSyncEnable[loop])
+			if (uiSrcSyncEnable & (1 << loop))
 			{
 				psSyncInfo = (PVRSRV_KERNEL_SYNC_INFO *)psKick->ahSrcSyncInfo[loop];
 
@@ -239,7 +237,7 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmitTransferKM(IMG_HANDLE hDevHandle, PVRSRV_TRANSF
 		i = 0;
 		for (loop = 0; loop < psKick->ui32NumDstSync; loop++)
 		{
-			if (abDstSyncEnable[loop])
+			if (uiDstSyncEnable & (1 << loop))
 			{
 				psSyncInfo = (PVRSRV_KERNEL_SYNC_INFO *)psKick->ahDstSyncInfo[loop];
 
@@ -268,7 +266,7 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmitTransferKM(IMG_HANDLE hDevHandle, PVRSRV_TRANSF
 		 */
 		for (loop = 0; loop < psKick->ui32NumSrcSync; loop++)
 		{
-			if (abSrcSyncEnable[loop])
+			if (uiSrcSyncEnable & (1 << loop))
 			{
 				psSyncInfo = (PVRSRV_KERNEL_SYNC_INFO *)psKick->ahSrcSyncInfo[loop];
 				psSyncInfo->psSyncData->ui32ReadOpsPending++;
@@ -276,7 +274,7 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmitTransferKM(IMG_HANDLE hDevHandle, PVRSRV_TRANSF
 		}
 		for (loop = 0; loop < psKick->ui32NumDstSync; loop++)
 		{
-			if (abDstSyncEnable[loop])
+			if (uiDstSyncEnable & (1 << loop))
 			{
 				psSyncInfo = (PVRSRV_KERNEL_SYNC_INFO *)psKick->ahDstSyncInfo[loop];
 				psSyncInfo->psSyncData->ui32WriteOpsPending++;
@@ -303,7 +301,7 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmitTransferKM(IMG_HANDLE hDevHandle, PVRSRV_TRANSF
 
 			for (loop = 0; loop < psKick->ui32NumSrcSync; loop++)
 			{
-				if (abSrcSyncEnable[loop])
+				if (uiSrcSyncEnable & (1 << loop))
 				{
 					psSyncInfo = psKick->ahSrcSyncInfo[loop];
 
@@ -329,7 +327,7 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmitTransferKM(IMG_HANDLE hDevHandle, PVRSRV_TRANSF
 			i = 0;
 			for (loop = 0; loop < psKick->ui32NumDstSync; loop++)
 			{
-				if (abDstSyncEnable[i])
+				if (uiDstSyncEnable & (1 << loop))
 				{
 					IMG_UINT32 ui32PDumpReadOp2 = 0;
 					psSyncInfo = psKick->ahDstSyncInfo[loop];
@@ -369,7 +367,7 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmitTransferKM(IMG_HANDLE hDevHandle, PVRSRV_TRANSF
 			 */
 			for (loop = 0; loop < (psKick->ui32NumSrcSync); loop++)
 			{
-				if (abSrcSyncEnable[loop])
+				if (uiSrcSyncEnable & (1 << loop))
 				{	
 					psSyncInfo = (PVRSRV_KERNEL_SYNC_INFO *)psKick->ahSrcSyncInfo[loop];
 					psSyncInfo->psSyncData->ui32LastReadOpDumpVal++;
@@ -378,7 +376,7 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmitTransferKM(IMG_HANDLE hDevHandle, PVRSRV_TRANSF
 
 			for (loop = 0; loop < (psKick->ui32NumDstSync); loop++)
 			{
-				if (abDstSyncEnable[loop])
+				if (uiDstSyncEnable & (1 << i))
 				{
 					psSyncInfo = (PVRSRV_KERNEL_SYNC_INFO *)psKick->ahDstSyncInfo[0];
 					psSyncInfo->psSyncData->ui32LastOpDumpVal++;
@@ -432,7 +430,7 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmitTransferKM(IMG_HANDLE hDevHandle, PVRSRV_TRANSF
 		{
 			for (loop = 0; loop < psKick->ui32NumSrcSync; loop++)
 			{
-				if (abSrcSyncEnable[loop])
+				if (uiSrcSyncEnable & (1 << loop))
 				{
 					psSyncInfo = (PVRSRV_KERNEL_SYNC_INFO *)psKick->ahSrcSyncInfo[loop];
 					psSyncInfo->psSyncData->ui32ReadOpsPending--;
@@ -447,7 +445,7 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmitTransferKM(IMG_HANDLE hDevHandle, PVRSRV_TRANSF
 			}
 			for (loop = 0; loop < psKick->ui32NumDstSync; loop++)
 			{
-				if (abDstSyncEnable[loop])
+				if (uiDstSyncEnable & (1 << loop))
 				{
 					psSyncInfo = (PVRSRV_KERNEL_SYNC_INFO *)psKick->ahDstSyncInfo[loop];
 					psSyncInfo->psSyncData->ui32WriteOpsPending--;
@@ -492,7 +490,7 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmitTransferKM(IMG_HANDLE hDevHandle, PVRSRV_TRANSF
 		/* Update sync objects pretending that we have done the job*/
 		for (loop = 0; loop < psKick->ui32NumSrcSync; loop++)
 		{
-			if (abSrcSyncEnable[loop])
+			if (uiSrcSyncEnable & (1 << loop))
 			{
 				psSyncInfo = (PVRSRV_KERNEL_SYNC_INFO *)psKick->ahSrcSyncInfo[loop];
 				psSyncInfo->psSyncData->ui32ReadOpsComplete = psSyncInfo->psSyncData->ui32ReadOpsPending;
@@ -501,7 +499,7 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmitTransferKM(IMG_HANDLE hDevHandle, PVRSRV_TRANSF
 
 		for (loop = 0; loop < psKick->ui32NumDstSync; loop++)
 		{
-			if (abDstSyncEnable[loop])
+			if (uiDstSyncEnable & (1 << loop))
 			{
 				psSyncInfo = (PVRSRV_KERNEL_SYNC_INFO *)psKick->ahDstSyncInfo[loop];
 				psSyncInfo->psSyncData->ui32WriteOpsComplete = psSyncInfo->psSyncData->ui32WriteOpsPending;

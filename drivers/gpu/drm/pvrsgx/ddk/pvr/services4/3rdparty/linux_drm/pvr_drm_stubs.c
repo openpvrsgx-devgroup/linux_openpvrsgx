@@ -47,9 +47,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <linux/version.h>
 #include <linux/kernel.h>
-#include <linux/module.h>
 #include <linux/pci.h>
-#include <asm/system.h>
 
 #include "pvr_drm_mod.h"
 

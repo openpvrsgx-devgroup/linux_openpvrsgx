@@ -38,64 +38,28 @@ PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
 COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+  
 */ /**************************************************************************/
 
-#if !defined(__SOCCONFIG_H__)
-#define __SOCCONFIG_H__
+#if !defined(__SYSINFO_H__)
+#define __SYSINFO_H__
 
-#define VS_PRODUCT_NAME	"OMAP4"
-
-#if defined(SGX540) && (SGX_CORE_REV == 120)
-#define SYS_SGX_CLOCK_SPEED		307200000
+/*!< System specific poll/timeout details */
+#if defined(PVR_LINUX_USING_WORKQUEUES)
+/*
+ * The workqueue based 3rd party display driver may be blocked for up
+ * to 500ms waiting for a vsync when the screen goes blank, so we
+ * need to wait longer for the hardware if a flush of the swap chain is
+ * required.
+ */
+#define MAX_HW_TIME_US				(1000000)
+#define WAIT_TRY_COUNT				(20000)
 #else
-#define SYS_SGX_CLOCK_SPEED		304742400
-#endif
-
-#define SYS_SGX_HWRECOVERY_TIMEOUT_FREQ		(100)	// 10ms (100hz)
-#define SYS_SGX_PDS_TIMER_FREQ				(1000)	// 1ms (1000hz)
-
-/* Allow the AP latency to be overridden in the build config */
-#if !defined(SYS_SGX_ACTIVE_POWER_LATENCY_MS)
-#define SYS_SGX_ACTIVE_POWER_LATENCY_MS		(2)
+#define MAX_HW_TIME_US				(500000)
+#define WAIT_TRY_COUNT				(10000)
 #endif
 
 
-#define SYS_OMAP4430_SGX_REGS_SYS_PHYS_BASE  0x56000000
-#define SYS_OMAP4430_SGX_REGS_SIZE           0xFFFF
+#define SYS_DEVICE_COUNT 15 /* SGX, DISPLAYCLASS (external), BUFFERCLASS (external) */
 
-#define SYS_OMAP4430_SGX_IRQ				 53 /* OMAP4 IRQ's are offset by 32 */
-
-#define SYS_OMAP4430_DSS_REGS_SYS_PHYS_BASE  0x58000000
-#define SYS_OMAP4430_DSS_REGS_SIZE           0x7000
-
-#define SYS_OMAP4430_DSS_HDMI_INTERRUPT_STATUS_REG 0x6028
-#define SYS_OMAP4430_DSS_HDMI_INTERRUPT_ENABLE_REG 0x602c
-
-#define SYS_OMAP4430_DSS_HDMI_INTERRUPT_VSYNC_ENABLE_MASK 0x10000
-#define SYS_OMAP4430_DSS_HDMI_INTERRUPT_VSYNC_STATUS_MASK 0x10000
-
-#define SYS_OMAP4430_DSS_LCD_INTERRUPT_STATUS_REG 0x1018
-#define SYS_OMAP4430_DSS_LCD_INTERRUPT_ENABLE_REG 0x101c
-
-#define SYS_OMAP4430_DSS_LCD_INTERRUPT_VSYNC_ENABLE_MASK 0x40002
-#define SYS_OMAP4430_DSS_LCD_INTERRUPT_VSYNC_STATUS_MASK 0x40002
-
-
-#define SYS_OMAP4430_GP11TIMER_ENABLE_SYS_PHYS_BASE	0x48088038
-#define SYS_OMAP4430_GP11TIMER_REGS_SYS_PHYS_BASE	0x4808803C
-#define SYS_OMAP4430_GP11TIMER_TSICR_SYS_PHYS_BASE	0x48088054
-
-/* Interrupt bits */
-#define DEVICE_SGX_INTERRUPT		(1<<0)
-#define DEVICE_MSVDX_INTERRUPT		(1<<1)
-#define DEVICE_DISP_INTERRUPT		(1<<2)
-
-#if defined(__linux__)
-#define	SYS_SGX_DEV_NAME	"omapdrm_pvr"
-#endif	
-
-/*****************************************************************************
- * system specific data structures
- *****************************************************************************/
- 
-#endif	/* __SYSCONFIG_H__ */
+#endif	/* __SYSINFO_H__ */

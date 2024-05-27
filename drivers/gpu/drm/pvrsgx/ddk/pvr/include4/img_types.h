@@ -168,6 +168,7 @@ typedef IMG_UINT32      IMG_EVENTSID;
  */
 
 typedef IMG_PVOID IMG_CPU_VIRTADDR;
+#define IMG_INVALID_DEV_VIRTADDR (0x00)
 
 /* device virtual address */
 typedef struct _IMG_DEV_VIRTADDR

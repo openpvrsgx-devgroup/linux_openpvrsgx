@@ -86,6 +86,17 @@ struct _BM_MAPPING_
     IMG_HANDLE          hOSMemHandle;
 	IMG_UINT32			ui32Flags;
 
+	/* possibly this could be tracked in ui32Flags, but to be
+	 * less intrusive for now I'm keeping it a separate variable
+	 */
+	IMG_BOOL			bUnmapped;
+
+	/* need to track the original required alignment to make sure
+	 * that an unmapped buffer which is later remapped to device
+	 * is remapped with the original alignment restrictions.
+	 */
+	IMG_UINT32			ui32DevVAddrAlignment;
+
 	/* Sparse mapping data */
 	IMG_UINT32			ui32ChunkSize;
 	IMG_UINT32			ui32NumVirtChunks;
@@ -358,6 +369,13 @@ BM_Free (BM_HANDLE hBuf,
 		IMG_UINT32 ui32Flags);
 
 
+
+#if defined(SUPPORT_DRI_DRM_EXTERNAL)
+IMG_VOID BM_SetGEM(BM_HANDLE hBuf, IMG_HANDLE buf);
+IMG_HANDLE BM_GetGEM(BM_HANDLE hBuf);
+#endif /* SUPPORT_DRI_DRM_EXTERNAL */
+
+
 /**
  *  @Function   BM_HandleToCpuVaddr
  *
@@ -410,6 +428,14 @@ BM_HandleToSysPaddr (BM_HANDLE hBuf);
  */
 IMG_HANDLE
 BM_HandleToOSMemHandle (BM_HANDLE hBuf);
+
+
+IMG_BOOL
+BM_RemapToDev(BM_HANDLE hBuf);
+
+IMG_BOOL
+BM_UnmapFromDev(BM_HANDLE hBuf);
+
 
 /**
  *  @Function   BM_GetPhysPageAddr

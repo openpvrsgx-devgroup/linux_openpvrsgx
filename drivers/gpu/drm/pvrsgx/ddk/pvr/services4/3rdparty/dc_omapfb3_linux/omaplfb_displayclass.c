@@ -37,7 +37,6 @@ PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
 COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-  
 */ /**************************************************************************/
 
 /**************************************************************************
@@ -108,8 +107,7 @@ extern struct ion_client *gpsIONClient;
 
 #define	OMAPLFB_VSYNC_SETTLE_COUNT	5
 
-//#define	OMAPLFB_MAX_NUM_DEVICES		FB_MAX
-#define	OMAPLFB_MAX_NUM_DEVICES		1
+#define	OMAPLFB_MAX_NUM_DEVICES		FB_MAX
 #if (OMAPLFB_MAX_NUM_DEVICES > FB_MAX)
 #error "OMAPLFB_MAX_NUM_DEVICES must not be greater than FB_MAX"
 #endif

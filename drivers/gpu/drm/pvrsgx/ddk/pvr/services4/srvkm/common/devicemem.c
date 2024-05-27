@@ -47,10 +47,23 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "pdump_km.h"
 #include "pvr_bridge_km.h"
 #include "osfunc.h"
+#include "mutex.h"
+#include "lock.h"
+
+#if defined (__linux__)
+#include "mmap.h"
+#endif
 
 #if defined(SUPPORT_ION)
 #include "ion.h"
 #include "env_perproc.h"
+#endif
+
+#if defined(SUPPORT_DRI_DRM_EXTERNAL)
+#  include <drm/omap_drm.h>
+#  include "perproc.h"
+#  include "env_perproc.h"
+extern int pvr_mapper_id;
 #endif
 
 /* local function prototypes */
@@ -885,12 +898,38 @@ PVRSRV_ERROR FreeMemCallBackCommon(PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 			case PVRSRV_MEMTYPE_WRAPPED:
 			case PVRSRV_MEMTYPE_ION:
 				freeExternal(psMemInfo);
-				/* fallthrough */
+				/* Fall through */
 			case PVRSRV_MEMTYPE_DEVICE:
 			case PVRSRV_MEMTYPE_DEVICECLASS:
 				if (psMemInfo->psKernelSyncInfo)
 				{
-					PVRSRVKernelSyncInfoDecRef(psMemInfo->psKernelSyncInfo, psMemInfo);
+					/* note: we have to inline PVRSRVReleaseSyncInfoKM here
+					 * because we need clean up the GEM obj's ptr to the
+					 * sync obj..  need to see if we can find a cleaner
+					 * way..
+					 */
+					PVRSRV_KERNEL_SYNC_INFO	*psKernelSyncInfo = psMemInfo->psKernelSyncInfo;
+					if (OSAtomicDecAndTest(psKernelSyncInfo->pvRefCount))
+					{
+#if defined(SUPPORT_DRI_DRM_EXTERNAL)
+						struct drm_gem_object *buf =
+								BM_GetGEM(psMemInfo->sMemBlk.hBuffer);
+						if (buf)
+						{
+							omap_gem_set_priv(buf, pvr_mapper_id, NULL);
+							omap_gem_set_sync_object(buf, NULL);
+						}
+#endif
+
+						FreeDeviceMem(psKernelSyncInfo->psSyncDataMemInfoKM);
+
+						/* Catch anyone who is trying to access the freed structure */
+						psKernelSyncInfo->psSyncDataMemInfoKM = IMG_NULL;
+						psKernelSyncInfo->psSyncData = IMG_NULL;
+						OSAtomicFree(psKernelSyncInfo->pvRefCount);
+						(IMG_VOID)OSFreeMem(PVRSRV_PAGEABLE_SELECT, sizeof(PVRSRV_KERNEL_SYNC_INFO), psKernelSyncInfo, IMG_NULL);
+						/*not nulling pointer, copy on stack*/
+					}
 				}
 				break;
 			default:
@@ -980,6 +1019,89 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVFreeDeviceMemKM(IMG_HANDLE				hDevCookie,
 	}
 
 	return eError;
+}
+
+
+/*!
+******************************************************************************
+
+ @Function	PVRSRVRemapToDevKM
+
+ @Description
+
+ Remaps buffer to GPU virtual address space
+
+ @Input    psMemInfo
+
+ @Return   PVRSRV_ERROR :
+
+******************************************************************************/
+IMG_EXPORT
+PVRSRV_ERROR IMG_CALLCONV PVRSRVRemapToDevKM(IMG_HANDLE	hDevCookie,
+		PVRSRV_KERNEL_MEM_INFO *psMemInfo, IMG_DEV_VIRTADDR *psDevVAddr)
+{
+	PVRSRV_MEMBLK *psMemBlock;
+
+	PVR_UNREFERENCED_PARAMETER(hDevCookie);
+
+	if (!psMemInfo)
+	{
+		PVR_DPF((PVR_DBG_ERROR,"PVRSRVRemapToDevKM: invalid parameters"));
+		return PVRSRV_ERROR_INVALID_PARAMS;
+	}
+
+	psMemBlock = &(psMemInfo->sMemBlk);
+
+	if (! BM_RemapToDev(psMemBlock->hBuffer))
+	{
+		PVR_DPF((PVR_DBG_ERROR,"PVRSRVRemapToDevKM: could not remap"));
+		return PVRSRV_ERROR_OUT_OF_MEMORY;
+	}
+
+	psMemBlock->sDevVirtAddr = BM_HandleToDevVaddr(psMemBlock->hBuffer);
+	psMemInfo->sDevVAddr = psMemBlock->sDevVirtAddr;
+	*psDevVAddr = psMemBlock->sDevVirtAddr;
+
+	return PVRSRV_OK;
+}
+
+/*!
+******************************************************************************
+
+ @Function	PVRSRVUnmapFromDevKM
+
+ @Description
+
+ Unmaps buffer from GPU virtual address space
+
+ @Input    psMemInfo
+
+ @Return   PVRSRV_ERROR :
+
+******************************************************************************/
+IMG_EXPORT
+PVRSRV_ERROR IMG_CALLCONV PVRSRVUnmapFromDevKM(IMG_HANDLE	hDevCookie,
+		PVRSRV_KERNEL_MEM_INFO *psMemInfo)
+{
+	PVRSRV_MEMBLK *psMemBlock;
+
+	PVR_UNREFERENCED_PARAMETER(hDevCookie);
+
+	if (!psMemInfo)
+	{
+		PVR_DPF((PVR_DBG_ERROR,"PVRSRVUnmapFromDevKM: invalid parameters"));
+		return PVRSRV_ERROR_INVALID_PARAMS;
+	}
+
+	psMemBlock = &(psMemInfo->sMemBlk);
+
+	if (! BM_UnmapFromDev(psMemBlock->hBuffer))
+	{
+		PVR_DPF((PVR_DBG_ERROR,"PVRSRVUnmapFromDevKM: could not unmap"));
+		return PVRSRV_ERROR_OUT_OF_MEMORY; // XXX hmm, should pick better error code
+	}
+
+	return PVRSRV_OK;
 }
 
 
@@ -1505,11 +1627,27 @@ static PVRSRV_ERROR UnwrapExtMemoryCallBack(IMG_PVOID  pvParam,
 											IMG_BOOL   bDummy)
 {
 	PVRSRV_KERNEL_MEM_INFO	*psMemInfo = (PVRSRV_KERNEL_MEM_INFO *)pvParam;
-	
+#if defined(SUPPORT_DRI_DRM_EXTERNAL)
+	IMG_BOOL bPhysContig = (IMG_BOOL)ui32Param;
+	struct drm_gem_object *buf = BM_GetGEM(psMemInfo->sMemBlk.hBuffer);
+
+	if (buf) {
+		if (omap_gem_flags(buf) & OMAP_BO_TILED_MASK) {
+			omap_gem_unpin(buf);
+		} else {
+			if (bPhysContig) {
+				omap_gem_unpin(buf);
+			} else {
+				omap_gem_put_pages(buf);
+			}
+		}
+	}
+#endif /* SUPPORT_DRI_DRM_EXTERNAL */
+
 	PVR_UNREFERENCED_PARAMETER(bDummy);
 
-	return FreeMemCallBackCommon(psMemInfo, ui32Param,
-								 PVRSRV_FREE_CALLBACK_ORIGIN_ALLOCATOR);
+	return  FreeMemCallBackCommon(psMemInfo, ui32Param,
+			PVRSRV_FREE_CALLBACK_ORIGIN_ALLOCATOR);
 }
 
 
@@ -1609,6 +1747,18 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVWrapExtMemoryKM(IMG_HANDLE				hDevCookie,
   		   we shouldn't trust what the user says here
   		*/
 		bPhysContig = IMG_FALSE;
+	}
+	else
+	{
+		if (psExtSysPAddr)
+		{
+			PVR_DPF((PVR_DBG_ERROR, "PVRSRVWrapExtMemoryKM: invalid parameter, physical address passing is not supported"));
+		}
+		else
+		{
+			PVR_DPF((PVR_DBG_ERROR, "PVRSRVWrapExtMemoryKM: invalid parameter, no address specificed"));
+		}
+		return PVRSRV_ERROR_INVALID_PARAMS;
 	}
 
 	/* Choose the heap to map to */
@@ -1760,6 +1910,24 @@ ErrorExitPhase1:
 	return eError;
 }
 
+struct async_unmap_data {
+	PVRSRV_KERNEL_MEM_INFO *psMemInfo;
+	IMG_UINT32 ui32PID;
+};
+
+static void async_unmap(void *arg)
+{
+	struct async_unmap_data *data = arg;
+	PVRSRV_KERNEL_MEM_INFO *psMemInfo = data->psMemInfo;
+
+	LinuxLockMutexNested(&gPVRSRVLock, PVRSRV_LOCK_CLASS_BRIDGE);
+	ResManFreeResByPtr(psMemInfo->sMemBlk.hResItem, CLEANUP_WITH_POLL);
+	/* decrement the refcnt on the per-proc: */
+	PVRSRVPerProcessDataDisconnect(data->ui32PID);
+	LinuxUnLockMutex(&gPVRSRVLock);
+
+	kfree(data);
+}
 
 /*!
 ******************************************************************************
@@ -1775,11 +1943,37 @@ ErrorExitPhase1:
 
 ******************************************************************************/
 IMG_EXPORT
-PVRSRV_ERROR IMG_CALLCONV PVRSRVUnmapDeviceMemoryKM (PVRSRV_KERNEL_MEM_INFO *psMemInfo)
+PVRSRV_ERROR IMG_CALLCONV PVRSRVUnmapDeviceMemoryKM (PVRSRV_KERNEL_MEM_INFO *psMemInfo,
+		PVRSRV_PER_PROCESS_DATA *psPerProc)
 {
+	struct drm_gem_object *buf;
+
 	if (!psMemInfo)
 	{
 		return PVRSRV_ERROR_INVALID_PARAMS;
+	}
+
+	buf = BM_GetGEM(psMemInfo->sMemBlk.hBuffer);
+	if (buf)
+	{
+		struct async_unmap_data *data = kmalloc(sizeof *data, GFP_KERNEL);
+		int ret;
+
+		/* need to hold a ref to the per-proc, so an exiting/crashing
+		 * app while there are still pending buffers for async free
+		 * doesn't trigger premature cleanup..
+		 */
+		PVRSRVPerProcessDataConnect(psPerProc->ui32PID, 0);
+		data->psMemInfo = psMemInfo;
+		data->ui32PID   = psPerProc->ui32PID;
+
+		LinuxUnLockMutex(&gPVRSRVLock);
+		ret = omap_gem_op_async(buf, OMAP_GEM_READ|OMAP_GEM_WRITE,
+				async_unmap, data);
+		LinuxLockMutexNested(&gPVRSRVLock, PVRSRV_LOCK_CLASS_BRIDGE);
+		if (ret == 0)
+			return PVRSRV_OK;
+		/* otherwise fallthru and delete immediately! */
 	}
 
 	return ResManFreeResByPtr(psMemInfo->sMemBlk.hResItem, CLEANUP_WITH_POLL);
@@ -2044,6 +2238,287 @@ ErrorExit:
 	return eError;
 }
 
+
+#if defined(SUPPORT_DRI_DRM_EXTERNAL)
+IMG_EXPORT
+PVRSRV_ERROR IMG_CALLCONV PVRSRVImportGEMKM(PVRSRV_PER_PROCESS_DATA	*psPerProc,
+											IMG_HANDLE				hDstDevMemHeap,
+											IMG_UINT32				bo,
+											PVRSRV_KERNEL_MEM_INFO	**ppsDstMemInfo)
+{
+	PVRSRV_KERNEL_MEM_INFO *psMemInfo = IMG_NULL;
+	IMG_SIZE_T			ui32HostPageSize = HOST_PAGESIZE();
+	BM_HANDLE 			hBuffer;
+	PVRSRV_MEMBLK		*psMemBlock;
+	IMG_BOOL			bBMError;
+	PVRSRV_ERROR		eError;
+	IMG_UINT32			i;
+	IMG_UINT32			j;
+	IMG_SIZE_T 			uByteSize = 0;
+	IMG_SIZE_T			uPageOffset;
+	IMG_SIZE_T			uTilerStride = 0;
+	IMG_UINT32			uTilerBPP = 0;
+	IMG_SIZE_T			uPagesPerRow = 0;
+	IMG_UINT16			uTiledBufWidth;
+	IMG_UINT16			uTiledBufHeight;
+	IMG_BOOL			bPhysContig;
+	IMG_SYS_PHYADDR		*psSysPAddr; /* array of page addresses */
+	IMG_UINT32			ui32Flags;
+	IMG_SIZE_T			uPageCount = 0;
+	dma_addr_t			paddr = 0;
+	struct page **pages = NULL;
+	PVRSRV_ENV_PER_PROCESS_DATA *psEnvPerProc =
+			(PVRSRV_ENV_PER_PROCESS_DATA *)PVRSRVProcessPrivateData(psPerProc);
+	struct drm_gem_object *buf =
+			drm_gem_object_lookup(psEnvPerProc->file, bo);
+
+	if (!buf)
+	{
+		PVR_DPF((PVR_DBG_ERROR,"PVRSRVImportGEMKM: no object"));
+		return PVRSRV_ERROR_INVALID_PARAMS;
+	}
+
+	ui32Flags = PVRSRV_HAP_GPU_PAGEABLE | PVRSRV_MEM_READ | PVRSRV_MEM_WRITE;
+
+	switch (omap_gem_flags(buf) & OMAP_BO_CACHE_MASK)
+	{
+	case OMAP_BO_WC:
+		ui32Flags |= PVRSRV_HAP_WRITECOMBINE;
+		break;
+	case OMAP_BO_UNCACHED:
+		ui32Flags |= PVRSRV_HAP_UNCACHED;
+		break;
+	default:
+		ui32Flags |= PVRSRV_HAP_CACHED;
+		break;
+	}
+
+	if (omap_gem_flags(buf) & OMAP_BO_TILED_MASK)
+	{
+		if (!omap_gem_pin(buf, &paddr, true))
+		{
+			if (omap_gem_tiled_size(buf, &uTiledBufWidth, &uTiledBufHeight))
+			{
+				PVR_DPF((PVR_DBG_ERROR,"PVRSRVImportGEMKM: Failed to get TILED buffer size. Maybe buf is not tiled after all ?"));
+				return PVRSRV_ERROR_INVALID_PARAMS;
+			}
+			switch (omap_gem_flags(buf) & OMAP_BO_TILED_MASK) {
+				case OMAP_BO_TILED_8:
+					uTilerBPP = 1;
+					break;
+				case OMAP_BO_TILED_16:
+					uTilerBPP = 2;
+					break;
+				case OMAP_BO_TILED_32:
+					uTilerBPP = 4;
+					break;
+				default:
+					PVR_DPF((PVR_DBG_ERROR,"PVRSRVImportGEMKM: Wrong GEM bo format for rotation !"));
+					return PVRSRV_ERROR_INVALID_PARAMS;
+			}
+			uPageOffset = paddr & (ui32HostPageSize - 1);
+			paddr &= ~(ui32HostPageSize - 1);
+			bPhysContig  = IMG_FALSE;
+			uTilerStride = omap_gem_tiled_stride(buf, 0);
+			uPagesPerRow = ((uTiledBufWidth * uTilerBPP) + uPageOffset + PAGE_SIZE - 1) / PAGE_SIZE;
+			uPageCount = uPagesPerRow * uTiledBufHeight;
+			uByteSize = (uPageCount * PAGE_SIZE) - uPageOffset;
+		}
+		else
+		{
+			PVR_DPF((PVR_DBG_ERROR,"PVRSRVImportGEMKM: Failed to get paddr of TILED buffer"));
+			return PVRSRV_ERROR_INVALID_PARAMS;
+		}
+	}
+	else
+	{
+		if (!omap_gem_pin(buf, &paddr, false))
+		{
+			uPageOffset = paddr & (ui32HostPageSize - 1);
+			paddr &= ~(ui32HostPageSize - 1);
+			bPhysContig = IMG_TRUE;
+		}
+		else if (!omap_gem_get_pages(buf, &pages, true))
+		{
+			uPageOffset = 0;
+			bPhysContig = IMG_FALSE;
+		}
+		else
+		{
+			PVR_DPF((PVR_DBG_ERROR,"PVRSRVImportGEMKM: hrm?"));
+			return PVRSRV_ERROR_INVALID_PARAMS;
+		}
+
+		uByteSize = buf->size;
+		uPageCount = HOST_PAGEALIGN(uByteSize + uPageOffset) / ui32HostPageSize;
+	}
+
+	PVR_DPF((PVR_DBG_MESSAGE,"paddr=%08x, pages=%p, uByteSize=%d, uPageCount=%d",
+			(u32)paddr, pages, uByteSize, uPageCount));
+
+	if(OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
+					uPageCount * sizeof(IMG_SYS_PHYADDR),
+					(IMG_VOID **)&psSysPAddr, IMG_NULL,
+					"Array of Page Addresses") != PVRSRV_OK)
+	{
+		PVR_DPF((PVR_DBG_ERROR,"PVRSRVImportGEMKM: Failed to alloc memory for block"));
+		return PVRSRV_ERROR_OUT_OF_MEMORY;
+	}
+
+	if (omap_gem_flags(buf) & OMAP_BO_TILED_MASK)
+	{
+		for (i = 0; i < uTiledBufHeight; i++)
+		{
+			for (j = 0; j < uPagesPerRow; j++)
+			{
+				psSysPAddr[(i * uPagesPerRow) + j].uiAddr = paddr + (i * uTilerStride) + (j * PAGE_SIZE);
+			}
+		}
+	}
+	else
+	{
+		if (bPhysContig)
+		{
+			for (i = 0; i < uPageCount; i++)
+			{
+				psSysPAddr[i].uiAddr = paddr;
+				paddr += PAGE_SIZE;
+			}
+		}
+		else
+		{
+			for (i = 0; i < uPageCount; i++)
+			{
+				psSysPAddr[i].uiAddr = (IMG_UINTPTR_T)page_to_phys(pages[i]);
+			}
+		}
+	}
+
+	if(OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
+					sizeof(PVRSRV_KERNEL_MEM_INFO),
+					(IMG_VOID **)&psMemInfo, IMG_NULL,
+					"Kernel Memory Info") != PVRSRV_OK)
+	{
+		PVR_DPF((PVR_DBG_ERROR,"PVRSRVImportGEMKM: Failed to alloc memory for block"));
+		eError = PVRSRV_ERROR_OUT_OF_MEMORY;
+		goto ErrorExitPhase2;
+	}
+
+	OSMemSet(psMemInfo, 0, sizeof(*psMemInfo));
+	psMemInfo->ui32Flags = ui32Flags;
+
+	psMemBlock = &(psMemInfo->sMemBlk);
+
+	bBMError = BM_Wrap(hDstDevMemHeap,
+					   uByteSize,
+					   uPageOffset,
+					   bPhysContig,
+					   psSysPAddr,
+					   IMG_NULL,
+					   &psMemInfo->ui32Flags,
+					   &hBuffer);
+	if (!bBMError)
+	{
+		PVR_DPF((PVR_DBG_ERROR,"PVRSRVImportGEMKM: BM_Wrap Failed"));
+		eError = PVRSRV_ERROR_BAD_MAPPING;
+		goto ErrorExitPhase3;
+	}
+
+
+	psMemBlock->sDevVirtAddr = BM_HandleToDevVaddr(hBuffer);
+	psMemBlock->hOSMemHandle = BM_HandleToOSMemHandle(hBuffer);
+	psMemBlock->psIntSysPAddr = psSysPAddr;
+
+
+	psMemBlock->hBuffer = (IMG_HANDLE)hBuffer;
+
+
+	psMemInfo->pvLinAddrKM = BM_HandleToCpuVaddr(hBuffer);
+	psMemInfo->sDevVAddr = psMemBlock->sDevVirtAddr;
+	psMemInfo->uAllocSize = uByteSize;
+
+
+
+	psMemInfo->pvSysBackupBuffer = IMG_NULL;
+
+
+	psMemInfo->psKernelSyncInfo = omap_gem_priv(buf, pvr_mapper_id);
+	if (!psMemInfo->psKernelSyncInfo)
+	{
+		/* allocate sync-object on the first time we import a GEM buffer,
+		 * and on subsequent imports, re-use the existing sync-object.
+		 */
+		BM_HEAP *psBMHeap = (BM_HEAP*)hDstDevMemHeap;
+
+		eError = PVRSRVAllocSyncInfoKM(IMG_NULL,
+				(IMG_HANDLE)psBMHeap->pBMContext,
+				&psMemInfo->psKernelSyncInfo);
+
+		if(eError != PVRSRV_OK)
+		{
+			goto ErrorExitPhase4;
+		}
+
+		omap_gem_set_priv(buf, pvr_mapper_id, psMemInfo->psKernelSyncInfo);
+
+		omap_gem_set_sync_object(buf, psMemInfo->psKernelSyncInfo->psSyncData);
+	}
+	else
+	{
+		PVRSRVKernelSyncInfoIncRef(psMemInfo->psKernelSyncInfo, psMemInfo);
+	}
+
+	psMemInfo->ui32RefCount++;
+
+	psMemInfo->memType = PVRSRV_MEMTYPE_WRAPPED;
+
+	BM_SetGEM(hBuffer, buf);
+
+	psMemInfo->sMemBlk.hResItem = ResManRegisterRes(psPerProc->hResManContext,
+													RESMAN_TYPE_DEVICEMEM_WRAP,
+													psMemInfo,
+													bPhysContig,
+													&UnwrapExtMemoryCallBack);
+
+
+	*ppsDstMemInfo = psMemInfo;
+
+	return PVRSRV_OK;
+
+
+
+ErrorExitPhase4:
+	if(psMemInfo)
+	{
+		FreeDeviceMem(psMemInfo);
+
+
+
+		psMemInfo = IMG_NULL;
+	}
+
+ErrorExitPhase3:
+	if(psMemInfo)
+	{
+		OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, sizeof(PVRSRV_KERNEL_MEM_INFO), psMemInfo, IMG_NULL);
+
+	}
+
+ErrorExitPhase2:
+	if(psSysPAddr)
+	{
+		OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, uPageCount * sizeof(IMG_SYS_PHYADDR), psSysPAddr, IMG_NULL);
+
+	}
+
+	if (buf)
+	{
+		drm_gem_object_put_unlocked(buf);
+	}
+
+	return eError;
+}
+#endif /* SUPPORT_DRI_DRM_EXTERNAL */
 
 /*!
 ******************************************************************************

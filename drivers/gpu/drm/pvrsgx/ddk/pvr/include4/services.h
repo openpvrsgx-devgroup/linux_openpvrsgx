@@ -106,11 +106,13 @@ extern "C" {
 #define PVRSRV_HAP_MULTI_PROCESS			(1U<<17)
 #define PVRSRV_HAP_FROM_EXISTING_PROCESS	(1U<<18)
 #define PVRSRV_HAP_NO_CPU_VIRTUAL			(1U<<19)
+#define PVRSRV_HAP_GPU_PAGEABLE				(1U<<21)
 #define PVRSRV_HAP_MAPTYPE_MASK				(PVRSRV_HAP_KERNEL_ONLY \
                                             |PVRSRV_HAP_SINGLE_PROCESS \
                                             |PVRSRV_HAP_MULTI_PROCESS \
                                             |PVRSRV_HAP_FROM_EXISTING_PROCESS \
-                                            |PVRSRV_HAP_NO_CPU_VIRTUAL)
+                                            |PVRSRV_HAP_NO_CPU_VIRTUAL\
+                                            |PVRSRV_HAP_GPU_PAGEABLE)
 
 /*
 	Allows user allocations to override heap attributes
@@ -141,6 +143,7 @@ extern "C" {
 */
 #define PVRSRV_MEM_SPARSE					(1U<<31)
 
+#define PVR_FULL_CACHE_OP_THRESHOLD	(0x7D000)
 
 /*
  * How much context we lose on a (power) mode change
@@ -210,6 +213,7 @@ extern "C" {
 */
 #define PVRSRV_PDUMP_FLAGS_CONTINUOUS		0x1
 
+#define PVR_FULL_CACHE_OP_THRESHOLD	(0x7D000)
 
 /******************************************************************************
  * Enums
@@ -511,7 +515,11 @@ typedef enum
 {
 	PVRSRV_MISC_INFO_CPUCACHEOP_NONE = 0,
 	PVRSRV_MISC_INFO_CPUCACHEOP_CLEAN,
-	PVRSRV_MISC_INFO_CPUCACHEOP_FLUSH
+	PVRSRV_MISC_INFO_CPUCACHEOP_FLUSH,
+	PVRSRV_MISC_INFO_CPUCACHEOP_CUSTOM_FLUSH,
+	PVRSRV_MISC_INFO_CPUCACHEOP_CUSTOM_INV,
+	PVRSRV_MISC_INFO_CPUCACHEOP_CLEAN_REGIONS,
+	PVRSRV_MISC_INFO_CPUCACHEOP_INV_REGIONS,
 } PVRSRV_MISC_INFO_CPUCACHEOP_TYPE;
 
 /*!
@@ -582,6 +590,22 @@ typedef struct _PVRSRV_MISC_INFO_
 
 		/*!< Length of range to perform cache op  */
 		IMG_UINT32	ui32Length;
+
+#define PVRSRV_MISC_INFO_MAX_REGIONS 10
+		/* the following three fields are applicable for
+		 * PVRSRV_MISC_INFO_CPUCACHEOP_{CLEAN,INV}_REGIONS
+		 */
+		IMG_INT32 i32StrideInBytes;
+		IMG_UINT32 ui32NumRegions;
+		struct
+		{
+			/* note: coordinates are translated to byte offsets by userspace..
+			 * ie. if the buffer is 32bit/pixel then the pixel coordinates are
+			 * multiplied by 4 by the caller
+			 */
+			IMG_UINT16 x, y, w, h;
+		} sRegions[PVRSRV_MISC_INFO_MAX_REGIONS];
+
 	} sCacheOpCtl;
 
 	/*!< Meminfo refcount controls: */
@@ -753,6 +777,14 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVAllocDeviceMem(IMG_CONST PVRSRV_DEV_DATA	*psDevD
 
 IMG_IMPORT
 PVRSRV_ERROR IMG_CALLCONV PVRSRVFreeDeviceMem(IMG_CONST PVRSRV_DEV_DATA	*psDevData,
+								PVRSRV_CLIENT_MEM_INFO		*psMemInfo);
+
+IMG_IMPORT
+PVRSRV_ERROR IMG_CALLCONV PVRSRVRemapToDev(IMG_CONST PVRSRV_DEV_DATA	*psDevData,
+								PVRSRV_CLIENT_MEM_INFO		*psMemInfo);
+
+IMG_IMPORT
+PVRSRV_ERROR IMG_CALLCONV PVRSRVUnmapFromDev(IMG_CONST PVRSRV_DEV_DATA	*psDevData,
 								PVRSRV_CLIENT_MEM_INFO		*psMemInfo);
 
 IMG_IMPORT

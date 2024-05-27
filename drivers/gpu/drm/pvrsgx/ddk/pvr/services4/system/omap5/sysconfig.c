@@ -38,6 +38,7 @@ PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
 COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+  
 */ /**************************************************************************/
 
 #include "sysconfig.h"
@@ -163,7 +164,7 @@ static PVRSRV_ERROR SysLocateDevices(SYS_DATA *psSysData)
 	 */
 
 	/* Registers */
-	gsSGXDeviceMap.ui32RegsSize = SYS_OMAP4430_SGX_REGS_SIZE;
+	gsSGXDeviceMap.ui32RegsSize = SYS_OMAP5430_SGX_REGS_SIZE;
 
 	eError = OSBaseAllocContigMemory(gsSGXDeviceMap.ui32RegsSize,
 									 &gsSGXRegsCPUVAddr,
@@ -221,11 +222,11 @@ static PVRSRV_ERROR SysLocateDevices(SYS_DATA *psSysData)
 	gsSGXDeviceMap.ui32IRQ = dev_irq;
 	PVR_TRACE(("SGX IRQ: %d", gsSGXDeviceMap.ui32IRQ));
 #else	/* defined(PVR_LINUX_DYNAMIC_SGX_RESOURCE_INFO) */
-	gsSGXDeviceMap.sRegsSysPBase.uiAddr = SYS_OMAP4430_SGX_REGS_SYS_PHYS_BASE;
+	gsSGXDeviceMap.sRegsSysPBase.uiAddr = SYS_OMAP5430_SGX_REGS_SYS_PHYS_BASE;
 	gsSGXDeviceMap.sRegsCpuPBase = SysSysPAddrToCpuPAddr(gsSGXDeviceMap.sRegsSysPBase);
-	gsSGXDeviceMap.ui32RegsSize = SYS_OMAP4430_SGX_REGS_SIZE;
+	gsSGXDeviceMap.ui32RegsSize = SYS_OMAP5430_SGX_REGS_SIZE;
 
-	gsSGXDeviceMap.ui32IRQ = SYS_OMAP4430_SGX_IRQ;
+	gsSGXDeviceMap.ui32IRQ = SYS_OMAP5430_SGX_IRQ;
 
 #endif	/* defined(PVR_LINUX_DYNAMIC_SGX_RESOURCE_INFO) */
 #if defined(SGX_OCP_REGS_ENABLED)
@@ -289,8 +290,15 @@ static IMG_CHAR *SysCreateVersionString(void)
 		return IMG_NULL;
 	}
 
+#if SGX_CORE_REV == 105
+       ui32SGXRevision = 0x10005;
+#elif SGX_CORE_REV == 116
+       ui32SGXRevision = 0x10106;
+#else
 	ui32SGXRevision = OSReadHWReg((IMG_PVOID)((IMG_PBYTE)pvRegsLinAddr),
 								  EUR_CR_CORE_REVISION);
+#endif
+
 #else
 	ui32SGXRevision = 0;
 #endif
@@ -309,7 +317,7 @@ static IMG_CHAR *SysCreateVersionString(void)
 
 #if !defined(NO_HARDWARE)
 	OSUnMapPhysToLin(pvRegsLinAddr,
-					 SYS_OMAP4430_SGX_REGS_SIZE,
+					 SYS_OMAP5430_SGX_REGS_SIZE,
 					 PVRSRV_HAP_UNCACHED|PVRSRV_HAP_KERNEL_ONLY,
 					 IMG_NULL);
 #endif
@@ -536,7 +544,7 @@ PVRSRV_ERROR SysInitialise(IMG_VOID)
 #if defined(PVR_OMAP_TIMER_BASE_IN_SYS_SPEC_DATA)
 	TimerRegPhysBase = gsSysSpecificData.sTimerRegPhysBase;
 #else
-	TimerRegPhysBase.uiAddr = SYS_OMAP4430_GP11TIMER_REGS_SYS_PHYS_BASE;
+	TimerRegPhysBase.uiAddr = SYS_OMAP5430_GP11TIMER_REGS_SYS_PHYS_BASE;
 #endif
 	gpsSysData->pvSOCTimerRegisterKM = IMG_NULL;
 	gpsSysData->hSOCTimerRegisterOSMemHandle = 0;
@@ -741,7 +749,7 @@ PVRSRV_ERROR SysDeinitialise (SYS_DATA *psSysData)
 	{
 #if defined(NO_HARDWARE)
 		/* Free hardware resources. */
-		OSBaseFreeContigMemory(SYS_OMAP4430_SGX_REGS_SIZE, gsSGXRegsCPUVAddr, gsSGXDeviceMap.sRegsCpuPBase);
+		OSBaseFreeContigMemory(SYS_OMAP5430_SGX_REGS_SIZE, gsSGXRegsCPUVAddr, gsSGXDeviceMap.sRegsCpuPBase);
 #else
 #if defined(SGX_OCP_REGS_ENABLED)
 		OSUnMapPhysToLin(gsSGXRegsCPUVAddr,

@@ -1,44 +1,28 @@
-/*************************************************************************/ /*!
-@Title          SGX KM API Header
-@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
-@Description    Exported SGX API details
-@License        Dual MIT/GPLv2
-
-The contents of this file are subject to the MIT license as set out below.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-Alternatively, the contents of this file may be used under the terms of
-the GNU General Public License Version 2 ("GPL") in which case the provisions
-of GPL are applicable instead of those above.
-
-If you wish to allow use of your version of this file only under the terms of
-GPL, and not to allow others to use your version of this file under the terms
-of the MIT license, indicate your decision by deleting the provisions above
-and replace them with the notice and other provisions required by GPL as set
-out in the file called "GPL-COPYING" included in this distribution. If you do
-not delete the provisions above, a recipient may use your version of this file
-under the terms of either the MIT license or GPL.
-
-This License is also included in this distribution in the file called
-"MIT-COPYING".
-
-EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
-PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
-BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
-PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*/ /**************************************************************************/
+/**********************************************************************
+ *
+ * Copyright (C) Imagination Technologies Ltd. All rights reserved.
+ * 
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ * 
+ * This program is distributed in the hope it will be useful but, except 
+ * as otherwise stated in writing, without any warranty; without even the 
+ * implied warranty of merchantability or fitness for a particular purpose. 
+ * See the GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+ * 
+ * The full GNU General Public License is included in this distribution in
+ * the file called "COPYING".
+ *
+ * Contact Information:
+ * Imagination Technologies Ltd. <gpl-support@imgtec.com>
+ * Home Park Estate, Kings Langley, Herts, WD4 8LZ, UK 
+ *
+ ******************************************************************************/
 
 #ifndef __SGXAPI_KM_H__
 #define __SGXAPI_KM_H__
@@ -49,7 +33,7 @@ extern "C" {
 
 #include "sgxdefs.h"
 
-#if defined(__linux__) && !defined(USE_CODE)
+#if (defined(__linux__) || defined(__QNXNTO__)) && !defined(USE_CODE)
 	#if defined(__KERNEL__)
 		#include <asm/unistd.h>
 	#else
@@ -57,11 +41,6 @@ extern "C" {
 	#endif
 #endif
 
-/******************************************************************************
- Some defines...
-******************************************************************************/
-
-/* SGX Heap IDs, note: not all heaps are available to clients */
 #define SGX_UNDEFINED_HEAP_ID					(~0LU)
 #define SGX_GENERAL_HEAP_ID						0
 #define SGX_TADATA_HEAP_ID						1
@@ -72,40 +51,55 @@ extern "C" {
 #define SGX_PDSPIXEL_CODEDATA_HEAP_ID			6
 #define SGX_PDSVERTEX_CODEDATA_HEAP_ID			7
 #define SGX_SYNCINFO_HEAP_ID					8
-#define SGX_3DPARAMETERS_HEAP_ID				9
+#define SGX_SHARED_3DPARAMETERS_HEAP_ID				9
+#define SGX_PERCONTEXT_3DPARAMETERS_HEAP_ID			10
 #if defined(SUPPORT_SGX_GENERAL_MAPPING_HEAP)
-#define SGX_GENERAL_MAPPING_HEAP_ID				10
+#define SGX_GENERAL_MAPPING_HEAP_ID				11
 #endif
 #if defined(SGX_FEATURE_2D_HARDWARE)
-#define SGX_2D_HEAP_ID							11
+#define SGX_2D_HEAP_ID							12
 #else
 #if defined(FIX_HW_BRN_26915)
-#define SGX_CGBUFFER_HEAP_ID					12
+#define SGX_CGBUFFER_HEAP_ID					13
 #endif
 #endif
-#if defined(SUPPORT_SGX_VIDEO_HEAP)
-#define SGX_VIDEO_HEAP_ID						13
-#define SGX_MAX_HEAP_ID							14
+#if defined(FIX_HW_BRN_SAMPLE_CACHE)
+#define SGX_TEXTURE_HEAP_ID					14
+#endif
+
+#define SGX_MAX_HEAP_ID						15
+
+#if (defined(SUPPORT_PERCONTEXT_PB) || defined(SUPPORT_HYBRID_PB))
+#define SGX_3DPARAMETERS_HEAP_ID			SGX_PERCONTEXT_3DPARAMETERS_HEAP_ID	
 #else
-#define SGX_MAX_HEAP_ID							13
+#define SGX_3DPARAMETERS_HEAP_ID			SGX_SHARED_3DPARAMETERS_HEAP_ID
+#endif
+#if defined(SGX543) || defined(SGX544) || defined(SGX554)
+#define SGX_USE_CODE_SEGMENT_RANGE_BITS		23
+#else
+#define SGX_USE_CODE_SEGMENT_RANGE_BITS		19
 #endif
 
 #define SGX_MAX_TA_STATUS_VALS	32
-#define SGX_MAX_3D_STATUS_VALS	3
+#define SGX_MAX_3D_STATUS_VALS	4
 
 #if defined(SUPPORT_SGX_GENERALISED_SYNCOBJECTS)
-/* sync info structure array size */
 #define SGX_MAX_TA_DST_SYNCS			1
 #define SGX_MAX_TA_SRC_SYNCS			1
 #define SGX_MAX_3D_SRC_SYNCS			4
-/* note: there is implicitly 1 3D Dst Sync */
 #else
-#define SGX_MAX_SRC_SYNCS				4
+#define SGX_MAX_SRC_SYNCS				8
+#define SGX_MAX_DST_SYNCS				1
 #endif
 
-#ifdef SUPPORT_SGX_HWPERF
 
+#if defined(SGX_FEATURE_EXTENDED_PERF_COUNTERS)
+#define	PVRSRV_SGX_HWPERF_NUM_COUNTERS	8
+#define	PVRSRV_SGX_HWPERF_NUM_MISC_COUNTERS 11
+#else
 #define	PVRSRV_SGX_HWPERF_NUM_COUNTERS	9
+#define	PVRSRV_SGX_HWPERF_NUM_MISC_COUNTERS 8
+#endif 
 
 #define PVRSRV_SGX_HWPERF_INVALID					0x1
 
@@ -113,11 +107,21 @@ extern "C" {
 #define PVRSRV_SGX_HWPERF_TA						0x3
 #define PVRSRV_SGX_HWPERF_3D						0x4
 #define PVRSRV_SGX_HWPERF_2D						0x5
+#define PVRSRV_SGX_HWPERF_POWER						0x6
+#define PVRSRV_SGX_HWPERF_PERIODIC					0x7
+#define PVRSRV_SGX_HWPERF_3DSPM						0x8
 
 #define PVRSRV_SGX_HWPERF_MK_EVENT					0x101
 #define PVRSRV_SGX_HWPERF_MK_TA						0x102
 #define PVRSRV_SGX_HWPERF_MK_3D						0x103
 #define PVRSRV_SGX_HWPERF_MK_2D						0x104
+#define PVRSRV_SGX_HWPERF_MK_TRANSFER_DUMMY				0x105
+#define PVRSRV_SGX_HWPERF_MK_TA_DUMMY					0x106
+#define PVRSRV_SGX_HWPERF_MK_3D_DUMMY					0x107
+#define PVRSRV_SGX_HWPERF_MK_2D_DUMMY					0x108
+#define PVRSRV_SGX_HWPERF_MK_TA_LOCKUP					0x109
+#define PVRSRV_SGX_HWPERF_MK_3D_LOCKUP					0x10A
+#define PVRSRV_SGX_HWPERF_MK_2D_LOCKUP					0x10B
 
 #define PVRSRV_SGX_HWPERF_TYPE_STARTEND_BIT			28
 #define PVRSRV_SGX_HWPERF_TYPE_OP_MASK				((1UL << PVRSRV_SGX_HWPERF_TYPE_STARTEND_BIT) - 1)
@@ -132,6 +136,22 @@ extern "C" {
 #define PVRSRV_SGX_HWPERF_TYPE_3D_END				(PVRSRV_SGX_HWPERF_3D | PVRSRV_SGX_HWPERF_TYPE_OP_END)
 #define PVRSRV_SGX_HWPERF_TYPE_2D_START				(PVRSRV_SGX_HWPERF_2D | PVRSRV_SGX_HWPERF_TYPE_OP_START)
 #define PVRSRV_SGX_HWPERF_TYPE_2D_END				(PVRSRV_SGX_HWPERF_2D | PVRSRV_SGX_HWPERF_TYPE_OP_END)
+#define PVRSRV_SGX_HWPERF_TYPE_POWER_START			(PVRSRV_SGX_HWPERF_POWER | PVRSRV_SGX_HWPERF_TYPE_OP_START)
+#define PVRSRV_SGX_HWPERF_TYPE_POWER_END			(PVRSRV_SGX_HWPERF_POWER | PVRSRV_SGX_HWPERF_TYPE_OP_END)
+#define PVRSRV_SGX_HWPERF_TYPE_PERIODIC				(PVRSRV_SGX_HWPERF_PERIODIC)
+#define PVRSRV_SGX_HWPERF_TYPE_3DSPM_START			(PVRSRV_SGX_HWPERF_3DSPM | PVRSRV_SGX_HWPERF_TYPE_OP_START)
+#define PVRSRV_SGX_HWPERF_TYPE_3DSPM_END			(PVRSRV_SGX_HWPERF_3DSPM | PVRSRV_SGX_HWPERF_TYPE_OP_END)
+#define PVRSRV_SGX_HWPERF_TYPE_MK_TRANSFER_DUMMY_START		(PVRSRV_SGX_HWPERF_MK_TRANSFER_DUMMY | PVRSRV_SGX_HWPERF_TYPE_OP_START)
+#define PVRSRV_SGX_HWPERF_TYPE_MK_TRANSFER_DUMMY_END		(PVRSRV_SGX_HWPERF_MK_TRANSFER_DUMMY | PVRSRV_SGX_HWPERF_TYPE_OP_END)
+#define PVRSRV_SGX_HWPERF_TYPE_MK_TA_DUMMY_START		(PVRSRV_SGX_HWPERF_MK_TA_DUMMY | PVRSRV_SGX_HWPERF_TYPE_OP_START)
+#define PVRSRV_SGX_HWPERF_TYPE_MK_TA_DUMMY_END			(PVRSRV_SGX_HWPERF_MK_TA_DUMMY | PVRSRV_SGX_HWPERF_TYPE_OP_END)
+#define PVRSRV_SGX_HWPERF_TYPE_MK_3D_DUMMY_START		(PVRSRV_SGX_HWPERF_MK_3D_DUMMY | PVRSRV_SGX_HWPERF_TYPE_OP_START)
+#define PVRSRV_SGX_HWPERF_TYPE_MK_3D_DUMMY_END			(PVRSRV_SGX_HWPERF_MK_3D_DUMMY | PVRSRV_SGX_HWPERF_TYPE_OP_END)
+#define PVRSRV_SGX_HWPERF_TYPE_MK_2D_DUMMY_START		(PVRSRV_SGX_HWPERF_MK_2D_DUMMY | PVRSRV_SGX_HWPERF_TYPE_OP_START)
+#define PVRSRV_SGX_HWPERF_TYPE_MK_2D_DUMMY_END			(PVRSRV_SGX_HWPERF_MK_2D_DUMMY | PVRSRV_SGX_HWPERF_TYPE_OP_END)
+#define PVRSRV_SGX_HWPERF_TYPE_MK_TA_LOCKUP			(PVRSRV_SGX_HWPERF_MK_TA_LOCKUP)
+#define PVRSRV_SGX_HWPERF_TYPE_MK_3D_LOCKUP			(PVRSRV_SGX_HWPERF_MK_3D_LOCKUP)
+#define PVRSRV_SGX_HWPERF_TYPE_MK_2D_LOCKUP			(PVRSRV_SGX_HWPERF_MK_2D_LOCKUP)
 
 #define PVRSRV_SGX_HWPERF_TYPE_MK_EVENT_START		(PVRSRV_SGX_HWPERF_MK_EVENT | PVRSRV_SGX_HWPERF_TYPE_OP_START)
 #define PVRSRV_SGX_HWPERF_TYPE_MK_EVENT_END			(PVRSRV_SGX_HWPERF_MK_EVENT | PVRSRV_SGX_HWPERF_TYPE_OP_END)
@@ -142,46 +162,26 @@ extern "C" {
 #define PVRSRV_SGX_HWPERF_TYPE_MK_2D_START			(PVRSRV_SGX_HWPERF_MK_2D | PVRSRV_SGX_HWPERF_TYPE_OP_START)
 #define PVRSRV_SGX_HWPERF_TYPE_MK_2D_END			(PVRSRV_SGX_HWPERF_MK_2D | PVRSRV_SGX_HWPERF_TYPE_OP_END)
 
-#define PVRSRV_SGX_HWPERF_OFF						(0x0)
-#define PVRSRV_SGX_HWPERF_GRAPHICS_ON				(1UL << 0)
-#define PVRSRV_SGX_HWPERF_MK_EXECUTION_ON			(1UL << 1)
+#define PVRSRV_SGX_HWPERF_STATUS_OFF				(0x0)
+#define PVRSRV_SGX_HWPERF_STATUS_RESET_COUNTERS		(1UL << 0)
+#define PVRSRV_SGX_HWPERF_STATUS_GRAPHICS_ON		(1UL << 1)
+#define PVRSRV_SGX_HWPERF_STATUS_PERIODIC_ON		(1UL << 2)
+#define PVRSRV_SGX_HWPERF_STATUS_MK_EXECUTION_ON	(1UL << 3)
 
 
-/*!
- *****************************************************************************
- * One entry in the HWPerf Circular Buffer. 
- *****************************************************************************/
 typedef struct _PVRSRV_SGX_HWPERF_CB_ENTRY_
 {
 	IMG_UINT32	ui32FrameNo;
+	IMG_UINT32	ui32PID;
+	IMG_UINT32	ui32RTData;
 	IMG_UINT32	ui32Type;
 	IMG_UINT32	ui32Ordinal;
+	IMG_UINT32	ui32Info;
 	IMG_UINT32	ui32Clocksx16;
-	IMG_UINT32	ui32Counters[PVRSRV_SGX_HWPERF_NUM_COUNTERS];
+		
+	IMG_UINT32	ui32Counters[SGX_FEATURE_MP_CORE_COUNT_3D][PVRSRV_SGX_HWPERF_NUM_COUNTERS];
+	IMG_UINT32	ui32MiscCounters[SGX_FEATURE_MP_CORE_COUNT_3D][PVRSRV_SGX_HWPERF_NUM_MISC_COUNTERS];
 } PVRSRV_SGX_HWPERF_CB_ENTRY;
-
-
-typedef struct _PVRSRV_SGX_HWPERF_CBDATA_
-{
-	IMG_UINT32	ui32FrameNo;
-	IMG_UINT32	ui32Type;
-	IMG_UINT32	ui32StartTimeWraps;
-	IMG_UINT32	ui32StartTime;
-	IMG_UINT32	ui32EndTimeWraps;
-	IMG_UINT32	ui32EndTime;
-	IMG_UINT32	ui32ClockSpeed;
-	IMG_UINT32	ui32TimeMax;
-} PVRSRV_SGX_HWPERF_CBDATA;
-
-
-typedef struct _SGX_MISC_INFO_HWPERF_RETRIEVE_CB
-{
-	PVRSRV_SGX_HWPERF_CBDATA*	psHWPerfData;
-	IMG_UINT32					ui32ArraySize;
-	IMG_UINT32					ui32DataCount;
-	IMG_UINT32					ui32Time;
-} SGX_MISC_INFO_HWPERF_RETRIEVE_CB;
-#endif
 
 
 typedef struct _CTL_STATUS_
@@ -191,9 +191,6 @@ typedef struct _CTL_STATUS_
 } CTL_STATUS;
 
 
-/*!
-	List of possible requests/commands to SGXGetMiscInfo()
-*/
 typedef enum _SGX_MISC_INFO_REQUEST_
 {
 	SGX_MISC_INFO_REQUEST_CLOCKSPEED = 0,
@@ -201,92 +198,141 @@ typedef enum _SGX_MISC_INFO_REQUEST_
 	SGX_MISC_INFO_REQUEST_DRIVER_SGXREV,
 #if defined(SUPPORT_SGX_EDM_MEMORY_DEBUG)
 	SGX_MISC_INFO_REQUEST_MEMREAD,
-#endif
-#if defined(SUPPORT_SGX_HWPERF)
+	SGX_MISC_INFO_REQUEST_MEMCOPY,
+#endif 
 	SGX_MISC_INFO_REQUEST_SET_HWPERF_STATUS,
-	SGX_MISC_INFO_REQUEST_HWPERF_CB_ON,
-	SGX_MISC_INFO_REQUEST_HWPERF_CB_OFF,
-	SGX_MISC_INFO_REQUEST_HWPERF_RETRIEVE_CB,
-#endif
 #if defined(SGX_FEATURE_DATA_BREAKPOINTS)
 	SGX_MISC_INFO_REQUEST_SET_BREAKPOINT,
-#endif
+	SGX_MISC_INFO_REQUEST_POLL_BREAKPOINT,
+	SGX_MISC_INFO_REQUEST_RESUME_BREAKPOINT,
+#endif 
 	SGX_MISC_INFO_DUMP_DEBUG_INFO,
 	SGX_MISC_INFO_PANIC,
+	SGX_MISC_INFO_REQUEST_SPM,
+	SGX_MISC_INFO_REQUEST_ACTIVEPOWER,
+	SGX_MISC_INFO_REQUEST_LOCKUPS,
 	SGX_MISC_INFO_REQUEST_FORCE_I16 				=  0x7fff
 } SGX_MISC_INFO_REQUEST;
 
 
-/******************************************************************************
- * Struct for passing SGX core rev/features from ukernel to driver.
- * This is accessed from the kernel part of the driver and microkernel; it is
- * only accessed in user space during buffer allocation in srvinit.
- ******************************************************************************/
 typedef struct _PVRSRV_SGX_MISCINFO_FEATURES
 {
-	IMG_UINT32			ui32CoreRev;
-	IMG_UINT32			ui32CoreID;
-	IMG_UINT32			ui32DDKVersion;
-	IMG_UINT32			ui32DDKBuild;
-	IMG_UINT32			ui32CoreIdSW;
-	IMG_UINT32			ui32CoreRevSW;
-	IMG_UINT32			ui32BuildOptions;
+	IMG_UINT32			ui32CoreRev;	
+	IMG_UINT32			ui32CoreID;		
+	IMG_UINT32			ui32DDKVersion;	
+	IMG_UINT32			ui32DDKBuild;	
+	IMG_UINT32			ui32CoreIdSW;	
+	IMG_UINT32			ui32CoreRevSW;	
+	IMG_UINT32			ui32BuildOptions;	
 #if defined(SUPPORT_SGX_EDM_MEMORY_DEBUG)
-	IMG_UINT32			ui32DeviceMemValue;
+	IMG_UINT32			ui32DeviceMemValue;		
+#endif
+#if defined(PVRSRV_USSE_EDM_STATUS_DEBUG)
+	IMG_DEV_VIRTADDR	sDevVAEDMStatusBuffer;	
+	IMG_PVOID			pvEDMStatusBuffer;		
 #endif
 } PVRSRV_SGX_MISCINFO_FEATURES;
+
+
+typedef struct _PVRSRV_SGX_MISCINFO_LOCKUPS
+{
+	IMG_UINT32			ui32HostDetectedLockups; 
+	IMG_UINT32			ui32uKernelDetectedLockups; 
+} PVRSRV_SGX_MISCINFO_LOCKUPS;
+
+
+typedef struct _PVRSRV_SGX_MISCINFO_ACTIVEPOWER
+{
+	IMG_UINT32			ui32NumActivePowerEvents; 
+} PVRSRV_SGX_MISCINFO_ACTIVEPOWER;
+
+
+typedef struct _PVRSRV_SGX_MISCINFO_SPM
+{
+	IMG_HANDLE			hRTDataSet;				
+	IMG_UINT32			ui32NumOutOfMemSignals; 
+	IMG_UINT32			ui32NumSPMRenders;	
+} PVRSRV_SGX_MISCINFO_SPM;
 
 
 #if defined(SGX_FEATURE_DATA_BREAKPOINTS)
 typedef struct _SGX_BREAKPOINT_INFO
 {
-	/* set/clear BP boolean */
+	
 	IMG_BOOL					bBPEnable;
-
-
-
+	
 	IMG_UINT32					ui32BPIndex;
-
-	IMG_DEV_VIRTADDR			sBPDevVAddr;
+	
+	IMG_UINT32                  ui32DataMasterMask;
+	
+	IMG_DEV_VIRTADDR			sBPDevVAddr, sBPDevVAddrEnd;
+	
+	IMG_BOOL                    bTrapped;
+	
+	IMG_BOOL                    bRead;
+	
+	IMG_BOOL                    bWrite;
+	
+	IMG_BOOL                    bTrappedBP;
+	
+	IMG_UINT32                  ui32CoreNum;
+	IMG_DEV_VIRTADDR            sTrappedBPDevVAddr;
+	IMG_UINT32                  ui32TrappedBPBurstLength;
+	IMG_BOOL                    bTrappedBPRead;
+	IMG_UINT32                  ui32TrappedBPDataMaster;
+	IMG_UINT32                  ui32TrappedBPTag;
 } SGX_BREAKPOINT_INFO;
-#endif
+#endif 
+
+
+typedef struct _PVRSRV_SGX_MISCINFO_SET_HWPERF_STATUS
+{
+	
+	IMG_UINT32	ui32NewHWPerfStatus;
+	
+	#if defined(SGX_FEATURE_EXTENDED_PERF_COUNTERS)
+	
+	IMG_UINT32	aui32PerfGroup[PVRSRV_SGX_HWPERF_NUM_COUNTERS];
+	
+	IMG_UINT32	aui32PerfBit[PVRSRV_SGX_HWPERF_NUM_COUNTERS];
+	#else
+	
+	IMG_UINT32	ui32PerfGroup;
+	#endif 
+} PVRSRV_SGX_MISCINFO_SET_HWPERF_STATUS;
+
 
 typedef struct _SGX_MISC_INFO_
 {
-	SGX_MISC_INFO_REQUEST	eRequest;
+	SGX_MISC_INFO_REQUEST	eRequest;	
+	IMG_UINT32				ui32Padding;
 #if defined(SUPPORT_SGX_EDM_MEMORY_DEBUG)
-	IMG_DEV_VIRTADDR			sDevVAddr;
-	IMG_HANDLE					hDevMemContext;
+	IMG_DEV_VIRTADDR			sDevVAddrSrc;		
+	IMG_DEV_VIRTADDR			sDevVAddrDest;		
+	IMG_HANDLE					hDevMemContext;		
 #endif
 	union
 	{
-		IMG_UINT32	reserved;
+		IMG_UINT32	reserved;	
 		PVRSRV_SGX_MISCINFO_FEATURES						sSGXFeatures;
 		IMG_UINT32											ui32SGXClockSpeed;
+		PVRSRV_SGX_MISCINFO_ACTIVEPOWER						sActivePower;
+		PVRSRV_SGX_MISCINFO_LOCKUPS							sLockups;
+		PVRSRV_SGX_MISCINFO_SPM								sSPM;
 #if defined(SGX_FEATURE_DATA_BREAKPOINTS)
 		SGX_BREAKPOINT_INFO									sSGXBreakpointInfo;
 #endif
-#ifdef SUPPORT_SGX_HWPERF
-		IMG_UINT32											ui32NewHWPerfStatus;
-		SGX_MISC_INFO_HWPERF_RETRIEVE_CB					sRetrieveCB;
-#endif
+		PVRSRV_SGX_MISCINFO_SET_HWPERF_STATUS				sSetHWPerfStatus;
 	} uData;
 } SGX_MISC_INFO;
 
 #if defined(SGX_FEATURE_2D_HARDWARE)
-/*
- * The largest number of source sync objects that can be associated with a blit
- * command.  Allows for src, pattern, and mask
- */
 #define PVRSRV_MAX_BLT_SRC_SYNCS		3
 #endif
 
 
 #define SGX_KICKTA_DUMPBITMAP_MAX_NAME_LENGTH		256
 
-/*
-	Structure for dumping bitmaps
-*/
 typedef struct _SGX_KICKTA_DUMPBITMAP_
 {
 	IMG_DEV_VIRTADDR	sDevBaseAddr;
@@ -301,63 +347,68 @@ typedef struct _SGX_KICKTA_DUMPBITMAP_
 
 #define PVRSRV_SGX_PDUMP_CONTEXT_MAX_BITMAP_ARRAY_SIZE	(16)
 
-/*!
- ******************************************************************************
- * Data required only when dumping parameters
- *****************************************************************************/
 typedef struct _PVRSRV_SGX_PDUMP_CONTEXT_
 {
-
+	
 	IMG_UINT32						ui32CacheControl;
 
 } PVRSRV_SGX_PDUMP_CONTEXT;
 
 
+#if !defined (SUPPORT_SID_INTERFACE)
 typedef struct _SGX_KICKTA_DUMP_ROFF_
 {
-	IMG_HANDLE			hKernelMemInfo;
-	IMG_UINT32			uiAllocIndex;
-	IMG_UINT32			ui32Offset;
-	IMG_UINT32			ui32Value;
-	IMG_PCHAR			pszName;
+	IMG_HANDLE			hKernelMemInfo;						
+	IMG_UINT32			uiAllocIndex;						
+	IMG_UINT32			ui32Offset;							
+	IMG_UINT32			ui32Value;							
+	IMG_PCHAR			pszName;							
 } SGX_KICKTA_DUMP_ROFF, *PSGX_KICKTA_DUMP_ROFF;
+#endif
 
+#if defined (SUPPORT_SID_INTERFACE)
+typedef struct _SGX_KICKTA_DUMP_BUFFER_KM_
+#else
 typedef struct _SGX_KICKTA_DUMP_BUFFER_
+#endif
 {
 	IMG_UINT32			ui32SpaceUsed;
-	IMG_UINT32			ui32Start;
-	IMG_UINT32			ui32End;
-	IMG_UINT32			ui32BufferSize;
-	IMG_UINT32			ui32BackEndLength;
+	IMG_UINT32			ui32Start;							
+	IMG_UINT32			ui32End;							
+	IMG_UINT32			ui32BufferSize;						
+	IMG_UINT32			ui32BackEndLength;					
 	IMG_UINT32			uiAllocIndex;
-	IMG_HANDLE			hKernelMemInfo;
+	IMG_HANDLE			hKernelMemInfo;						
 	IMG_PVOID			pvLinAddr;
 #if defined(SUPPORT_SGX_NEW_STATUS_VALS)
-	IMG_HANDLE			hCtrlKernelMemInfo;
-	IMG_DEV_VIRTADDR	sCtrlDevVAddr;
+	IMG_HANDLE			hCtrlKernelMemInfo;					
+	IMG_DEV_VIRTADDR	sCtrlDevVAddr;						
 #endif
-	IMG_PCHAR			pszName;
+	IMG_PCHAR			pszName;							
+#if defined (SUPPORT_SID_INTERFACE)
+} SGX_KICKTA_DUMP_BUFFER_KM, *PSGX_KICKTA_DUMP_BUFFER_KM;
+#else
 } SGX_KICKTA_DUMP_BUFFER, *PSGX_KICKTA_DUMP_BUFFER;
+#endif
 
+#if !defined (SUPPORT_SID_INTERFACE)
 #ifdef PDUMP
-/*
-	PDUMP version of above kick structure
-*/
 typedef struct _SGX_KICKTA_PDUMP_
 {
-
+	
 	PSGX_KICKTA_DUMPBITMAP		psPDumpBitmapArray;
 	IMG_UINT32						ui32PDumpBitmapSize;
 
-
+	
 	PSGX_KICKTA_DUMP_BUFFER	psBufferArray;
 	IMG_UINT32						ui32BufferArraySize;
 
-
+	
 	PSGX_KICKTA_DUMP_ROFF		psROffArray;
 	IMG_UINT32						ui32ROffArraySize;
 } SGX_KICKTA_PDUMP, *PSGX_KICKTA_PDUMP;
-#endif
+#endif	
+#endif 
 
 #if defined(TRANSFER_QUEUE)
 #if defined(SGX_FEATURE_2D_HARDWARE)
@@ -372,8 +423,5 @@ typedef struct _SGX_KICKTA_PDUMP_
 }
 #endif
 
-#endif /* __SGXAPI_KM_H__ */
+#endif 
 
-/******************************************************************************
- End of file (sgxapi_km.h)
-******************************************************************************/

@@ -1,44 +1,28 @@
-/*************************************************************************/ /*!
-@Title          PVR Bridge Functionality
-@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
-@Description    Header for the PVR Bridge code
-@License        Dual MIT/GPLv2
-
-The contents of this file are subject to the MIT license as set out below.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-Alternatively, the contents of this file may be used under the terms of
-the GNU General Public License Version 2 ("GPL") in which case the provisions
-of GPL are applicable instead of those above.
-
-If you wish to allow use of your version of this file only under the terms of
-GPL, and not to allow others to use your version of this file under the terms
-of the MIT license, indicate your decision by deleting the provisions above
-and replace them with the notice and other provisions required by GPL as set
-out in the file called "GPL-COPYING" included in this distribution. If you do
-not delete the provisions above, a recipient may use your version of this file
-under the terms of either the MIT license or GPL.
-
-This License is also included in this distribution in the file called
-"MIT-COPYING".
-
-EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
-PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
-BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
-PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*/ /**************************************************************************/
+/**********************************************************************
+ *
+ * Copyright (C) Imagination Technologies Ltd. All rights reserved.
+ * 
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ * 
+ * This program is distributed in the hope it will be useful but, except 
+ * as otherwise stated in writing, without any warranty; without even the 
+ * implied warranty of merchantability or fitness for a particular purpose. 
+ * See the GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+ * 
+ * The full GNU General Public License is included in this distribution in
+ * the file called "COPYING".
+ *
+ * Contact Information:
+ * Imagination Technologies Ltd. <gpl-support@imgtec.com>
+ * Home Park Estate, Kings Langley, Herts, WD4 8LZ, UK 
+ *
+ ******************************************************************************/
 
 #ifndef __PVR_BRIDGE_KM_H_
 #define __PVR_BRIDGE_KM_H_
@@ -50,9 +34,6 @@ extern "C" {
 #include "pvr_bridge.h"
 #include "perproc.h"
 
-/******************************************************************************
- * Function prototypes
- *****************************************************************************/
 #if defined(__linux__)
 PVRSRV_ERROR LinuxBridgeInit(IMG_VOID);
 IMG_VOID LinuxBridgeDeInit(IMG_VOID);
@@ -66,7 +47,7 @@ IMG_IMPORT
 PVRSRV_ERROR IMG_CALLCONV PVRSRVAcquireDeviceDataKM(IMG_UINT32			uiDevIndex,
 													PVRSRV_DEVICE_TYPE	eDeviceType,
 													IMG_HANDLE			*phDevCookie);
-
+							
 IMG_IMPORT
 PVRSRV_ERROR IMG_CALLCONV PVRSRVCreateCommandQueueKM(IMG_SIZE_T ui32QueueSize,
 													 PVRSRV_QUEUE_INFO **ppsQueueInfo);
@@ -76,14 +57,22 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVDestroyCommandQueueKM(PVRSRV_QUEUE_INFO *psQueue
 
 IMG_IMPORT
 PVRSRV_ERROR IMG_CALLCONV PVRSRVGetDeviceMemHeapsKM(IMG_HANDLE hDevCookie,
+#if defined (SUPPORT_SID_INTERFACE)
+													PVRSRV_HEAP_INFO_KM *psHeapInfo);
+#else
 													PVRSRV_HEAP_INFO *psHeapInfo);
+#endif
 
 IMG_IMPORT
 PVRSRV_ERROR IMG_CALLCONV PVRSRVCreateDeviceMemContextKM(IMG_HANDLE					hDevCookie,
 														 PVRSRV_PER_PROCESS_DATA	*psPerProc,
 														 IMG_HANDLE					*phDevMemContext,
 														 IMG_UINT32					*pui32ClientHeapCount,
+#if defined (SUPPORT_SID_INTERFACE)
+														 PVRSRV_HEAP_INFO_KM		*psHeapInfo,
+#else
 														 PVRSRV_HEAP_INFO			*psHeapInfo,
+#endif
 														 IMG_BOOL					*pbCreated,
 														 IMG_BOOL					*pbShared);
 
@@ -98,7 +87,11 @@ IMG_IMPORT
 PVRSRV_ERROR IMG_CALLCONV PVRSRVGetDeviceMemHeapInfoKM(IMG_HANDLE				hDevCookie,
 															IMG_HANDLE			hDevMemContext,
 															IMG_UINT32			*pui32ClientHeapCount,
+#if defined (SUPPORT_SID_INTERFACE)
+															PVRSRV_HEAP_INFO_KM	*psHeapInfo,
+#else
 															PVRSRV_HEAP_INFO	*psHeapInfo,
+#endif
 															IMG_BOOL 			*pbShared
 					);
 
@@ -116,7 +109,7 @@ PVRSRV_ERROR IMG_CALLCONV _PVRSRVAllocDeviceMemKM(IMG_HANDLE					hDevCookie,
 #if defined(PVRSRV_LOG_MEMORY_ALLOCS)
 	#define PVRSRVAllocDeviceMemKM(devCookie, perProc, devMemHeap, flags, size, alignment, memInfo, logStr) \
 		(PVR_TRACE(("PVRSRVAllocDeviceMemKM(" #devCookie ", " #perProc ", " #devMemHeap ", " #flags ", " #size \
-			", " #alignment "," #memInfo "): " logStr " (size = 0x%;x)", size)),\
+			", " #alignment "," #memInfo "): " logStr " (size = 0x%x)", size)),\
 			_PVRSRVAllocDeviceMemKM(devCookie, perProc, devMemHeap, flags, size, alignment, memInfo))
 #else
 	#define PVRSRVAllocDeviceMemKM(devCookie, perProc, devMemHeap, flags, size, alignment, memInfo, logStr) \
@@ -155,7 +148,7 @@ IMG_IMPORT
 PVRSRV_ERROR IMG_CALLCONV PVRSRVWrapExtMemoryKM(IMG_HANDLE				hDevCookie,
 												PVRSRV_PER_PROCESS_DATA	*psPerProc,
 												IMG_HANDLE				hDevMemContext,
-												IMG_SIZE_T 				ui32ByteSize,
+												IMG_SIZE_T 				ui32ByteSize, 
 												IMG_SIZE_T				ui32PageOffset,
 												IMG_BOOL				bPhysContig,
 												IMG_SYS_PHYADDR	 		*psSysAddr,
@@ -258,16 +251,17 @@ PVRSRV_ERROR PVRSRVGetBCBufferKM(IMG_HANDLE	hDeviceKM,
 								 IMG_UINT32	ui32BufferIndex,
 								 IMG_HANDLE	*phBuffer);
 
-IMG_EXPORT
-PVRSRV_ERROR PVRSRVGetBCBufferIdFromTagKM(IMG_HANDLE hDeviceKM,
-								  IMG_UINT32 ui32BufferIndex,
-								  IMG_HANDLE pidx);
+
 IMG_IMPORT
 PVRSRV_ERROR IMG_CALLCONV PVRSRVMapDeviceClassMemoryKM(PVRSRV_PER_PROCESS_DATA	*psPerProc,
 													   IMG_HANDLE				hDevMemContext,
 													   IMG_HANDLE				hDeviceClassBuffer,
 													   PVRSRV_KERNEL_MEM_INFO	**ppsMemInfo,
 													   IMG_HANDLE				*phOSMapInfo);
+
+IMG_EXPORT
+PVRSRV_ERROR IMG_CALLCONV PVRSRVChangeDeviceMemoryAttributesKM(IMG_HANDLE hKernelMemInfo,
+															   IMG_UINT32 ui32Attribs);
 
 IMG_IMPORT
 PVRSRV_ERROR IMG_CALLCONV PVRSRVUnmapDeviceClassMemoryKM(PVRSRV_KERNEL_MEM_INFO *psMemInfo);
@@ -285,10 +279,11 @@ IMG_IMPORT
 PVRSRV_ERROR IMG_CALLCONV PVRSRVFreeSyncInfoKM(PVRSRV_KERNEL_SYNC_INFO	*psKernelSyncInfo);
 
 IMG_IMPORT
+#if defined (SUPPORT_SID_INTERFACE)
+PVRSRV_ERROR IMG_CALLCONV PVRSRVGetMiscInfoKM(PVRSRV_MISC_INFO_KM *psMiscInfo);
+#else
 PVRSRV_ERROR IMG_CALLCONV PVRSRVGetMiscInfoKM(PVRSRV_MISC_INFO *psMiscInfo);
-
-PVRSRV_ERROR PVRSRVGetFBStatsKM(IMG_SIZE_T	*pui32Total,
-								IMG_SIZE_T	*pui32Available);
+#endif
 
 IMG_IMPORT PVRSRV_ERROR
 PVRSRVAllocSharedSysMemoryKM(PVRSRV_PER_PROCESS_DATA	*psPerProc,
@@ -296,46 +291,15 @@ PVRSRVAllocSharedSysMemoryKM(PVRSRV_PER_PROCESS_DATA	*psPerProc,
 							 IMG_SIZE_T 				ui32Size,
 							 PVRSRV_KERNEL_MEM_INFO		**ppsKernelMemInfo);
 
-/*!
- * *****************************************************************************
- * @brief Frees memory allocated via PVRSRVAllocSharedSysMemoryKM (Note you must
- *        be sure any additional kernel references you created have been
- *        removed before freeing the memory)
- *
- * @param psKernelMemInfo
- *
- * @return PVRSRV_ERROR
- ********************************************************************************/
 IMG_IMPORT PVRSRV_ERROR
 PVRSRVFreeSharedSysMemoryKM(PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo);
 
-/*!
-******************************************************************************
-
- @brief	Dissociates memory from the process that allocates it.  Intended for
- transfering the ownership of system memory from a particular process
- to the kernel.  Unlike PVRSRVDissociateDeviceMemKM, ownership is not
- transfered to the kernel context, so the Resource Manager will not
- automatically clean up such memory.
-
- @param	   psKernelMemInfo:
-
- @return   PVRSRV_ERROR:
-******************************************************************************/
 IMG_IMPORT PVRSRV_ERROR
 PVRSRVDissociateMemFromResmanKM(PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo);
-
-IMG_IMPORT PVRSRV_ERROR
-PVRSRVGetPageListKM(PVRSRV_KERNEL_MEM_INFO *psMemInfo, struct page ***pvPageList,
-	unsigned long *numpages,
-	unsigned long *offset);
 
 #if defined (__cplusplus)
 }
 #endif
 
-#endif /* __PVR_BRIDGE_KM_H_ */
+#endif 
 
-/******************************************************************************
- End of file (pvr_bridge_km.h)
-******************************************************************************/

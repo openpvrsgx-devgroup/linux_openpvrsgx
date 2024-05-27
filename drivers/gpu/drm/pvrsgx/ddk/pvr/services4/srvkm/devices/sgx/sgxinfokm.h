@@ -1,44 +1,29 @@
-/*************************************************************************/ /*!
-@Title          SGX kernel services structues/functions
-@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
-@Description    Structures and inline functions for KM services component
-@License        Dual MIT/GPLv2
+/**********************************************************************
+ *
+ * Copyright (C) Imagination Technologies Ltd. All rights reserved.
+ * 
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ * 
+ * This program is distributed in the hope it will be useful but, except 
+ * as otherwise stated in writing, without any warranty; without even the 
+ * implied warranty of merchantability or fitness for a particular purpose. 
+ * See the GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+ * 
+ * The full GNU General Public License is included in this distribution in
+ * the file called "COPYING".
+ *
+ * Contact Information:
+ * Imagination Technologies Ltd. <gpl-support@imgtec.com>
+ * Home Park Estate, Kings Langley, Herts, WD4 8LZ, UK 
+ *
+ ******************************************************************************/
 
-The contents of this file are subject to the MIT license as set out below.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-Alternatively, the contents of this file may be used under the terms of
-the GNU General Public License Version 2 ("GPL") in which case the provisions
-of GPL are applicable instead of those above.
-
-If you wish to allow use of your version of this file only under the terms of
-GPL, and not to allow others to use your version of this file under the terms
-of the MIT license, indicate your decision by deleting the provisions above
-and replace them with the notice and other provisions required by GPL as set
-out in the file called "GPL-COPYING" included in this distribution. If you do
-not delete the provisions above, a recipient may use your version of this file
-under the terms of either the MIT license or GPL.
-
-This License is also included in this distribution in the file called
-"MIT-COPYING".
-
-EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
-PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
-BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
-PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*/ /**************************************************************************/
 #ifndef __SGXINFOKM_H__
 #define __SGXINFOKM_H__
 
@@ -53,12 +38,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 extern "C" {
 #endif
 
-/****************************************************************************/
-/* kernel only defines: 													*/
-/****************************************************************************/
-/* SGXDeviceMap Flag defines */
 #define		SGX_HOSTPORT_PRESENT			0x00000001UL
 
+
+#define SGX_PDUMPREG_NAME		"SGXREG"
 
 typedef struct _PVRSRV_STUB_PBDESC_ PVRSRV_STUB_PBDESC;
 
@@ -75,115 +58,121 @@ typedef struct _PVRSRV_SGXDEV_INFO_
 	IMG_UINT32				ui32CoreConfig;
 	IMG_UINT32				ui32CoreFlags;
 
-	/* Kernel mode linear address of device registers */
+	
 	IMG_PVOID				pvRegsBaseKM;
 
 #if defined(SGX_FEATURE_HOST_PORT)
-	/* Kernel mode linear address of host port */
+	
 	IMG_PVOID				pvHostPortBaseKM;
-	/* HP size */
+	
 	IMG_UINT32				ui32HPSize;
-	/* HP syspaddr */
+	
 	IMG_SYS_PHYADDR			sHPSysPAddr;
 #endif
 
-	/* FIXME: The alloc for this should go through OSAllocMem in future */
+	
 	IMG_HANDLE				hRegMapping;
 
-	/* System physical address of device registers*/
+	
 	IMG_SYS_PHYADDR			sRegsPhysBase;
-	/*  Register region size in bytes */
+	
 	IMG_UINT32				ui32RegSize;
 
 #if defined(SUPPORT_EXTERNAL_SYSTEM_CACHE)
-	/* external system cache register region size in bytes */
+	
 	IMG_UINT32				ui32ExtSysCacheRegsSize;
-	/* external system cache register device relative physical address */
+	
 	IMG_DEV_PHYADDR			sExtSysCacheRegsDevPBase;
-	/* ptr to page table  */
+	
 	IMG_UINT32				*pui32ExtSystemCacheRegsPT;
-	/* handle to page table alloc/mapping */
+	
 	IMG_HANDLE				hExtSystemCacheRegsPTPageOSMemHandle;
-	/* sys phys addr of PT */
+	
 	IMG_SYS_PHYADDR			sExtSystemCacheRegsPTSysPAddr;
 #endif
 
-	/*  SGX clock speed */
+	
 	IMG_UINT32				ui32CoreClockSpeed;
 	IMG_UINT32				ui32uKernelTimerClock;
 
 	PVRSRV_STUB_PBDESC		*psStubPBDescListKM;
 
 
-	/* kernel memory context info */
+	
 	IMG_DEV_PHYADDR			sKernelPDDevPAddr;
 
 	IMG_VOID				*pvDeviceMemoryHeap;
-	PPVRSRV_KERNEL_MEM_INFO	psKernelCCBMemInfo;
-	PVRSRV_SGX_KERNEL_CCB	*psKernelCCB;
-	PPVRSRV_SGX_CCB_INFO	psKernelCCBInfo;
-	PPVRSRV_KERNEL_MEM_INFO	psKernelCCBCtlMemInfo;
-	PVRSRV_SGX_CCB_CTL		*psKernelCCBCtl;
-	PPVRSRV_KERNEL_MEM_INFO psKernelCCBEventKickerMemInfo;
-	IMG_UINT32				*pui32KernelCCBEventKicker;
+	PPVRSRV_KERNEL_MEM_INFO	psKernelCCBMemInfo;			
+	PVRSRV_SGX_KERNEL_CCB	*psKernelCCB;			
+	PPVRSRV_SGX_CCB_INFO	psKernelCCBInfo;		
+	PPVRSRV_KERNEL_MEM_INFO	psKernelCCBCtlMemInfo;	
+	PVRSRV_SGX_CCB_CTL		*psKernelCCBCtl;		
+	PPVRSRV_KERNEL_MEM_INFO psKernelCCBEventKickerMemInfo; 
+	IMG_UINT32				*pui32KernelCCBEventKicker; 
 #if defined(PDUMP)
-	IMG_UINT32				ui32KernelCCBEventKickerDumpVal;
-#endif /* PDUMP */
-	PVRSRV_KERNEL_MEM_INFO	*psKernelSGXMiscMemInfo;
-	IMG_UINT32				aui32HostKickAddr[SGXMKIF_CMD_MAX];
+	IMG_UINT32				ui32KernelCCBEventKickerDumpVal; 
+#endif 
+ 	PVRSRV_KERNEL_MEM_INFO	*psKernelSGXMiscMemInfo;	
+	IMG_UINT32				aui32HostKickAddr[SGXMKIF_CMD_MAX];		
 #if defined(SGX_SUPPORT_HWPROFILING)
 	PPVRSRV_KERNEL_MEM_INFO psKernelHWProfilingMemInfo;
 #endif
-	IMG_UINT32				ui32KickTACounter;
-	IMG_UINT32				ui32KickTARenderCounter;
-#if defined(SUPPORT_SGX_HWPERF)
-	PPVRSRV_KERNEL_MEM_INFO		psKernelHWPerfCBMemInfo;
-	IMG_UINT32					ui32HWGroupRequested;
-	IMG_UINT32					ui32HWReset;
+	PPVRSRV_KERNEL_MEM_INFO		psKernelHWPerfCBMemInfo;		
+	PPVRSRV_KERNEL_MEM_INFO		psKernelTASigBufferMemInfo;		
+	PPVRSRV_KERNEL_MEM_INFO		psKernel3DSigBufferMemInfo;		
+#if defined(FIX_HW_BRN_29702)
+	PPVRSRV_KERNEL_MEM_INFO psKernelCFIMemInfo;	
 #endif
-#ifdef PVRSRV_USSE_EDM_STATUS_DEBUG
-	PPVRSRV_KERNEL_MEM_INFO	psKernelEDMStatusBufferMemInfo;
+#if defined(FIX_HW_BRN_29823)
+	PPVRSRV_KERNEL_MEM_INFO	psKernelDummyTermStreamMemInfo; 
 #endif
-#if defined(SGX_FEATURE_OVERLAPPED_SPM)
-	PPVRSRV_KERNEL_MEM_INFO	psKernelTmpRgnHeaderMemInfo;
+#if defined(SGX_FEATURE_VDM_CONTEXT_SWITCH) && defined(FIX_HW_BRN_31425)
+	PPVRSRV_KERNEL_MEM_INFO	psKernelVDMSnapShotBufferMemInfo; 
+	PPVRSRV_KERNEL_MEM_INFO	psKernelVDMCtrlStreamBufferMemInfo; 
 #endif
-#if defined(SGX_FEATURE_SPM_MODE_0)
-	PPVRSRV_KERNEL_MEM_INFO	psKernelTmpDPMStateMemInfo;
+#if defined(SGX_FEATURE_VDM_CONTEXT_SWITCH) && \
+	defined(FIX_HW_BRN_33657) && defined(SUPPORT_SECURE_33657_FIX)
+	PPVRSRV_KERNEL_MEM_INFO	psKernelVDMStateUpdateBufferMemInfo; 
 #endif
-
-	/* Client reference count */
+#if defined(PVRSRV_USSE_EDM_STATUS_DEBUG)
+	PPVRSRV_KERNEL_MEM_INFO	psKernelEDMStatusBufferMemInfo; 
+#endif
+	
 	IMG_UINT32				ui32ClientRefCount;
 
-	/* cache control word for micro kernel cache flush/invalidates */
+	
 	IMG_UINT32				ui32CacheControl;
 
-	/* client-side build options */
+	
 	IMG_UINT32				ui32ClientBuildOptions;
 
-	/* client-side microkernel structure sizes */
+	
 	SGX_MISCINFO_STRUCT_SIZES	sSGXStructSizes;
 
-	/*
-		if we don't preallocate the pagetables we must 
-		insert newly allocated page tables dynamically 
-	*/
+	
+
+
 	IMG_VOID				*pvMMUContextList;
 
-	/* Copy of registry ForcePTOff entry */
+	
 	IMG_BOOL				bForcePTOff;
 
 	IMG_UINT32				ui32EDMTaskReg0;
 	IMG_UINT32				ui32EDMTaskReg1;
 
+	IMG_UINT32				ui32ClkGateCtl;
+	IMG_UINT32				ui32ClkGateCtl2;
 	IMG_UINT32				ui32ClkGateStatusReg;
 	IMG_UINT32				ui32ClkGateStatusMask;
 #if defined(SGX_FEATURE_MP)
 	IMG_UINT32				ui32MasterClkGateStatusReg;
 	IMG_UINT32				ui32MasterClkGateStatusMask;
-#endif
+	IMG_UINT32				ui32MasterClkGateStatus2Reg;
+	IMG_UINT32				ui32MasterClkGateStatus2Mask;
+#endif 
 	SGX_INIT_SCRIPTS		sScripts;
 
-	/* Members associated with dummy PD needed for BIF reset */
+	
 	IMG_HANDLE 				hBIFResetPDOSMemHandle;
 	IMG_DEV_PHYADDR 		sBIFResetPDDevPAddr;
 	IMG_DEV_PHYADDR 		sBIFResetPTDevPAddr;
@@ -192,7 +181,7 @@ typedef struct _PVRSRV_SGXDEV_INFO_
 	IMG_UINT32				*pui32BIFResetPT;
 
 #if defined(FIX_HW_BRN_22997) && defined(FIX_HW_BRN_23030) && defined(SGX_FEATURE_HOST_PORT)
-
+	
 	IMG_HANDLE				hBRN22997PTPageOSMemHandle;
 	IMG_HANDLE				hBRN22997PDPageOSMemHandle;
 	IMG_DEV_PHYADDR 		sBRN22997PTDevPAddr;
@@ -200,33 +189,40 @@ typedef struct _PVRSRV_SGXDEV_INFO_
 	IMG_UINT32				*pui32BRN22997PT;
 	IMG_UINT32				*pui32BRN22997PD;
 	IMG_SYS_PHYADDR 		sBRN22997SysPAddr;
-#endif
+#endif 
 
 #if defined(SUPPORT_HW_RECOVERY)
-	/* Timeout callback handle */
+	
 	IMG_HANDLE				hTimer;
-	/* HW recovery Time stamp */
+	
 	IMG_UINT32				ui32TimeStamp;
 #endif
 
-	/* Number of SGX resets */
+	
 	IMG_UINT32				ui32NumResets;
 
-	/* host control */
+	
 	PVRSRV_KERNEL_MEM_INFO			*psKernelSGXHostCtlMemInfo;
 	SGXMKIF_HOST_CTL				*psSGXHostCtl;
 
-	/* TA/3D control */
+	
 	PVRSRV_KERNEL_MEM_INFO			*psKernelSGXTA3DCtlMemInfo;
 
+#if defined(FIX_HW_BRN_31272) || defined(FIX_HW_BRN_31780) || defined(FIX_HW_BRN_33920)
+	PVRSRV_KERNEL_MEM_INFO			*psKernelSGXPTLAWriteBackMemInfo;
+#endif
+
 	IMG_UINT32				ui32Flags;
+
+	
+	IMG_UINT32				ui32MemTilingUsage;
 
 	#if defined(PDUMP)
 	PVRSRV_SGX_PDUMP_CONTEXT	sPDContext;
 	#endif
 
 #if defined(SUPPORT_SGX_MMU_DUMMY_PAGE)
-	/* SGX MMU dummy page details */
+	
 	IMG_VOID				*pvDummyPTPageCpuVAddr;
 	IMG_DEV_PHYADDR			sDummyPTDevPAddr;
 	IMG_HANDLE				hDummyPTPageOSMemHandle;
@@ -234,8 +230,24 @@ typedef struct _PVRSRV_SGXDEV_INFO_
 	IMG_DEV_PHYADDR 		sDummyDataDevPAddr;
 	IMG_HANDLE				hDummyDataPageOSMemHandle;
 #endif
-
+#if defined(PDUMP)
+	PDUMP_MMU_ATTRIB sMMUAttrib;
+#endif
 	IMG_UINT32				asSGXDevData[SGX_MAX_DEV_DATA];
+
+#if defined(FIX_HW_BRN_31620)
+	
+	IMG_VOID			*pvBRN31620DummyPageCpuVAddr;
+	IMG_HANDLE			hBRN31620DummyPageOSMemHandle;
+	IMG_DEV_PHYADDR			sBRN31620DummyPageDevPAddr;
+
+	
+	IMG_VOID			*pvBRN31620DummyPTCpuVAddr;
+	IMG_HANDLE			hBRN31620DummyPTOSMemHandle;
+	IMG_DEV_PHYADDR			sBRN31620DummyPTDevPAddr;
+
+	IMG_HANDLE			hKernelMMUContext;
+#endif
 
 } PVRSRV_SGXDEV_INFO;
 
@@ -249,13 +261,11 @@ typedef struct _SGX_TIMING_INFORMATION_
 	IMG_UINT32			ui32uKernelFreq;
 } SGX_TIMING_INFORMATION;
 
-/* FIXME Rename this structure to sg more generalised as it's been extended*/
-/* SGX device map */
 typedef struct _SGX_DEVICE_MAP_
 {
 	IMG_UINT32				ui32Flags;
 
-	/* Registers */
+	
 	IMG_SYS_PHYADDR			sRegsSysPBase;
 	IMG_CPU_PHYADDR			sRegsCpuPBase;
 	IMG_CPU_VIRTADDR		pvRegsCpuVBase;
@@ -267,7 +277,7 @@ typedef struct _SGX_DEVICE_MAP_
 	IMG_UINT32				ui32HPSize;
 #endif
 
-	/* Local Device Memory Region: (if present) */
+	
 	IMG_SYS_PHYADDR			sLocalMemSysPBase;
 	IMG_DEV_PHYADDR			sLocalMemDevPBase;
 	IMG_CPU_PHYADDR			sLocalMemCpuPBase;
@@ -278,12 +288,16 @@ typedef struct _SGX_DEVICE_MAP_
 	IMG_DEV_PHYADDR			sExtSysCacheRegsDevPBase;
 #endif
 
-	/* device interrupt IRQ */
+	
 	IMG_UINT32				ui32IRQ;
 
 #if !defined(SGX_DYNAMIC_TIMING_INFO)
-	/* timing information*/
+	
 	SGX_TIMING_INFORMATION	sTimingInfo;
+#endif
+#if defined(PDUMP)
+	
+	IMG_CHAR				*pszPDumpDevName;
 #endif
 } SGX_DEVICE_MAP;
 
@@ -299,42 +313,218 @@ struct _PVRSRV_STUB_PBDESC_
 	IMG_HANDLE		hDevCookie;
 	PVRSRV_KERNEL_MEM_INFO  *psBlockKernelMemInfo;
 	PVRSRV_KERNEL_MEM_INFO  *psHWBlockKernelMemInfo;
+	IMG_DEV_VIRTADDR	sHWPBDescDevVAddr;
 	PVRSRV_STUB_PBDESC	*psNext;
 	PVRSRV_STUB_PBDESC	**ppsThis;
 };
 
-/*!
- ******************************************************************************
- * CCB control structure for SGX
- *****************************************************************************/
 typedef struct _PVRSRV_SGX_CCB_INFO_
 {
-	PVRSRV_KERNEL_MEM_INFO	*psCCBMemInfo;
-	PVRSRV_KERNEL_MEM_INFO	*psCCBCtlMemInfo;
-	SGXMKIF_COMMAND		*psCommands;
-	IMG_UINT32				*pui32WriteOffset;
-	volatile IMG_UINT32		*pui32ReadOffset;
+	PVRSRV_KERNEL_MEM_INFO	*psCCBMemInfo;			
+	PVRSRV_KERNEL_MEM_INFO	*psCCBCtlMemInfo;		
+	SGXMKIF_COMMAND		*psCommands;			
+	IMG_UINT32				*pui32WriteOffset;		
+	volatile IMG_UINT32		*pui32ReadOffset;		
 #if defined(PDUMP)
-	IMG_UINT32				ui32CCBDumpWOff;
+	IMG_UINT32				ui32CCBDumpWOff;		
 #endif
 } PVRSRV_SGX_CCB_INFO;
+
+
+typedef struct _SGX_BRIDGE_INIT_INFO_KM_
+{
+	IMG_HANDLE	hKernelCCBMemInfo;
+	IMG_HANDLE	hKernelCCBCtlMemInfo;
+	IMG_HANDLE	hKernelCCBEventKickerMemInfo;
+	IMG_HANDLE	hKernelSGXHostCtlMemInfo;
+	IMG_HANDLE	hKernelSGXTA3DCtlMemInfo;
+#if defined(FIX_HW_BRN_31272) || defined(FIX_HW_BRN_31780) || defined(FIX_HW_BRN_33920)
+	IMG_HANDLE	hKernelSGXPTLAWriteBackMemInfo;
+#endif
+	IMG_HANDLE	hKernelSGXMiscMemInfo;
+
+	IMG_UINT32	aui32HostKickAddr[SGXMKIF_CMD_MAX];
+
+	SGX_INIT_SCRIPTS sScripts;
+
+	IMG_UINT32	ui32ClientBuildOptions;
+	SGX_MISCINFO_STRUCT_SIZES	sSGXStructSizes;
+
+#if defined(SGX_SUPPORT_HWPROFILING)
+	IMG_HANDLE	hKernelHWProfilingMemInfo;
+#endif
+#if defined(SUPPORT_SGX_HWPERF)
+	IMG_HANDLE	hKernelHWPerfCBMemInfo;
+#endif
+	IMG_HANDLE	hKernelTASigBufferMemInfo;
+	IMG_HANDLE	hKernel3DSigBufferMemInfo;
+
+#if defined(FIX_HW_BRN_29702)
+	IMG_HANDLE	hKernelCFIMemInfo;
+#endif
+#if defined(FIX_HW_BRN_29823)
+	IMG_HANDLE	hKernelDummyTermStreamMemInfo;
+#endif
+#if defined(PVRSRV_USSE_EDM_STATUS_DEBUG)
+	IMG_HANDLE	hKernelEDMStatusBufferMemInfo;
+#endif
+
+	IMG_UINT32 ui32EDMTaskReg0;
+	IMG_UINT32 ui32EDMTaskReg1;
+
+	IMG_UINT32 ui32ClkGateStatusReg;
+	IMG_UINT32 ui32ClkGateStatusMask;
+#if defined(SGX_FEATURE_MP)
+#endif 
+
+	IMG_UINT32 ui32CacheControl;
+
+	IMG_UINT32	asInitDevData[SGX_MAX_DEV_DATA];
+	IMG_HANDLE	asInitMemHandles[SGX_MAX_INIT_MEM_HANDLES];
+
+} SGX_BRIDGE_INIT_INFO_KM;
+
+
+typedef struct _SGX_INTERNEL_STATUS_UPDATE_KM_
+{
+	CTL_STATUS				sCtlStatus;
+	IMG_HANDLE				hKernelMemInfo;
+} SGX_INTERNEL_STATUS_UPDATE_KM;
+
+
+typedef struct _SGX_CCB_KICK_KM_
+{
+	SGXMKIF_COMMAND		sCommand;
+	IMG_HANDLE	hCCBKernelMemInfo;
+
+	IMG_UINT32	ui32NumDstSyncObjects;
+	IMG_HANDLE	hKernelHWSyncListMemInfo;
+
+	
+	IMG_HANDLE	*pahDstSyncHandles;
+
+	IMG_UINT32	ui32NumTAStatusVals;
+	IMG_UINT32	ui32Num3DStatusVals;
+
+#if defined(SUPPORT_SGX_NEW_STATUS_VALS)
+	SGX_INTERNEL_STATUS_UPDATE_KM	asTAStatusUpdate[SGX_MAX_TA_STATUS_VALS];
+	SGX_INTERNEL_STATUS_UPDATE_KM	as3DStatusUpdate[SGX_MAX_3D_STATUS_VALS];
+#else
+	IMG_HANDLE	ahTAStatusSyncInfo[SGX_MAX_TA_STATUS_VALS];
+	IMG_HANDLE	ah3DStatusSyncInfo[SGX_MAX_3D_STATUS_VALS];
+#endif
+
+	IMG_BOOL	bFirstKickOrResume;
+#if (defined(NO_HARDWARE) || defined(PDUMP))
+	IMG_BOOL	bTerminateOrAbort;
+#endif
+
+	
+	IMG_UINT32	ui32CCBOffset;
+
+#if defined(SUPPORT_SGX_GENERALISED_SYNCOBJECTS)
+	
+	IMG_UINT32	ui32NumTASrcSyncs;
+	IMG_HANDLE	ahTASrcKernelSyncInfo[SGX_MAX_TA_SRC_SYNCS];
+	IMG_UINT32	ui32NumTADstSyncs;
+	IMG_HANDLE	ahTADstKernelSyncInfo[SGX_MAX_TA_DST_SYNCS];
+	IMG_UINT32	ui32Num3DSrcSyncs;
+	IMG_HANDLE	ah3DSrcKernelSyncInfo[SGX_MAX_3D_SRC_SYNCS];
+#else
+	
+	IMG_UINT32	ui32NumSrcSyncs;
+	IMG_HANDLE	ahSrcKernelSyncInfo[SGX_MAX_SRC_SYNCS];
+#endif
+
+	
+	IMG_BOOL	bTADependency;
+	IMG_HANDLE	hTA3DSyncInfo;
+
+	IMG_HANDLE	hTASyncInfo;
+	IMG_HANDLE	h3DSyncInfo;
+#if defined(PDUMP)
+	IMG_UINT32	ui32CCBDumpWOff;
+#endif
+#if defined(NO_HARDWARE)
+	IMG_UINT32	ui32WriteOpsPendingVal;
+#endif
+} SGX_CCB_KICK_KM;
+
+
+#if defined(TRANSFER_QUEUE)
+typedef struct _PVRSRV_TRANSFER_SGX_KICK_KM_
+{
+	IMG_HANDLE		hCCBMemInfo;
+	IMG_UINT32		ui32SharedCmdCCBOffset;
+
+	IMG_DEV_VIRTADDR 	sHWTransferContextDevVAddr;
+
+	IMG_HANDLE		hTASyncInfo;
+	IMG_HANDLE		h3DSyncInfo;
+
+	IMG_UINT32		ui32NumSrcSync;
+	IMG_HANDLE		ahSrcSyncInfo[SGX_MAX_TRANSFER_SYNC_OPS];
+
+	IMG_UINT32		ui32NumDstSync;
+	IMG_HANDLE		ahDstSyncInfo[SGX_MAX_TRANSFER_SYNC_OPS];
+
+	IMG_UINT32		ui32Flags;
+
+	IMG_UINT32		ui32PDumpFlags;
+#if defined(PDUMP)
+	IMG_UINT32		ui32CCBDumpWOff;
+#endif
+} PVRSRV_TRANSFER_SGX_KICK_KM, *PPVRSRV_TRANSFER_SGX_KICK_KM;
+
+#if defined(SGX_FEATURE_2D_HARDWARE)
+typedef struct _PVRSRV_2D_SGX_KICK_KM_
+{
+	IMG_HANDLE		hCCBMemInfo;
+	IMG_UINT32		ui32SharedCmdCCBOffset;
+
+	IMG_DEV_VIRTADDR 	sHW2DContextDevVAddr;
+
+	IMG_UINT32		ui32NumSrcSync;
+	IMG_HANDLE		ahSrcSyncInfo[SGX_MAX_2D_SRC_SYNC_OPS];
+
+	
+	IMG_HANDLE 		hDstSyncInfo;
+
+	
+	IMG_HANDLE		hTASyncInfo;
+
+	
+	IMG_HANDLE		h3DSyncInfo;
+
+	IMG_UINT32		ui32PDumpFlags;
+#if defined(PDUMP)
+	IMG_UINT32		ui32CCBDumpWOff;
+#endif
+} PVRSRV_2D_SGX_KICK_KM, *PPVRSRV_2D_SGX_KICK_KM;
+#endif	
+#endif 
 
 PVRSRV_ERROR SGXRegisterDevice (PVRSRV_DEVICE_NODE *psDeviceNode);
 
 IMG_VOID SGXOSTimer(IMG_VOID *pvData);
 
 IMG_VOID SGXReset(PVRSRV_SGXDEV_INFO	*psDevInfo,
-				  IMG_UINT32			 ui32PDUMPFlags);
+				  IMG_BOOL				bHardwareRecovery,
+				  IMG_UINT32			ui32PDUMPFlags);
 
-PVRSRV_ERROR SGXInitialise(PVRSRV_SGXDEV_INFO	*psDevInfo);
+IMG_VOID SGXInitClocks(PVRSRV_SGXDEV_INFO	*psDevInfo,
+					   IMG_UINT32			ui32PDUMPFlags);
+
+PVRSRV_ERROR SGXInitialise(PVRSRV_SGXDEV_INFO	*psDevInfo,
+						   IMG_BOOL				bHardwareRecovery);
 PVRSRV_ERROR SGXDeinitialise(IMG_HANDLE hDevCookie);
 
-PVRSRV_ERROR SGXPrePowerState(IMG_HANDLE				hDevHandle,
-							  PVRSRV_DEV_POWER_STATE	eNewPowerState,
+PVRSRV_ERROR SGXPrePowerState(IMG_HANDLE				hDevHandle, 
+							  PVRSRV_DEV_POWER_STATE	eNewPowerState, 
 							  PVRSRV_DEV_POWER_STATE	eCurrentPowerState);
 
-PVRSRV_ERROR SGXPostPowerState(IMG_HANDLE				hDevHandle,
-							   PVRSRV_DEV_POWER_STATE	eNewPowerState,
+PVRSRV_ERROR SGXPostPowerState(IMG_HANDLE				hDevHandle, 
+							   PVRSRV_DEV_POWER_STATE	eNewPowerState, 
 							   PVRSRV_DEV_POWER_STATE	eCurrentPowerState);
 
 PVRSRV_ERROR SGXPreClockSpeedChange(IMG_HANDLE				hDevHandle,
@@ -345,7 +535,7 @@ PVRSRV_ERROR SGXPostClockSpeedChange(IMG_HANDLE				hDevHandle,
 									 IMG_BOOL				bIdleDevice,
 									 PVRSRV_DEV_POWER_STATE	eCurrentPowerState);
 
-IMG_VOID SGXPanic(PVRSRV_DEVICE_NODE	*psDeviceNode);
+IMG_VOID SGXPanic(PVRSRV_SGXDEV_INFO	*psDevInfo);
 
 PVRSRV_ERROR SGXDevInitCompatCheck(PVRSRV_DEVICE_NODE *psDeviceNode);
 
@@ -353,9 +543,6 @@ PVRSRV_ERROR SGXDevInitCompatCheck(PVRSRV_DEVICE_NODE *psDeviceNode);
 IMG_VOID SysGetSGXTimingInformation(SGX_TIMING_INFORMATION *psSGXTimingInfo);
 #endif
 
-/****************************************************************************/
-/* kernel only functions: 													*/
-/****************************************************************************/
 #if defined(NO_HARDWARE)
 static INLINE IMG_VOID NoHardwareGenerateEvent(PVRSRV_SGXDEV_INFO		*psDevInfo,
 												IMG_UINT32 ui32StatusRegister,
@@ -377,8 +564,5 @@ static INLINE IMG_VOID NoHardwareGenerateEvent(PVRSRV_SGXDEV_INFO		*psDevInfo,
 }
 #endif
 
-#endif /* __SGXINFOKM_H__ */
+#endif 
 
-/*****************************************************************************
- End of file (sgxinfokm.h)
-*****************************************************************************/

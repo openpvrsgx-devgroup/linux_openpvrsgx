@@ -59,6 +59,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 HASH_TABLE *g_psIonSyncHash = IMG_NULL;
 #endif
 
+#include "lists.h"
+
 /* local function prototypes */
 static PVRSRV_ERROR AllocDeviceMem(IMG_HANDLE		hDevCookie,
 								   IMG_HANDLE		hDevMemHeap,
@@ -87,6 +89,8 @@ typedef struct _RESMAN_MAP_DEVICE_MEM_DATA_
 	PVRSRV_KERNEL_MEM_INFO	*psSrcMemInfo;
 } RESMAN_MAP_DEVICE_MEM_DATA;
 
+#if defined(SUPPORT_PVRSRV_DEVICE_CLASS)
+
 /*
 	map device class resman memory storage structure
 */
@@ -99,7 +103,103 @@ typedef struct _PVRSRV_DC_MAPINFO_
 	PVRSRV_DEVICECLASS_BUFFER	*psDeviceClassBuffer;
 } PVRSRV_DC_MAPINFO;
 
+#endif /* defined(SUPPORT_PVRSRV_DEVICE_CLASS) */
+
 static IMG_UINT32 g_ui32SyncUID = 0;
+#if defined (MEM_TRACK_INFO_DEBUG)
+PVRSRV_MEM_TRACK_INFO *g_psMemTrackInfoHead = NULL;
+PVRSRV_MEM_TRACK_INFO *g_psMemTrackInfoTail = NULL;
+IMG_UINT32	g_ui32NumOfOpsRecorded = 0;
+#endif
+
+static PVRSRV_KERNEL_SYNC_INFO *g_psSyncInfoList = IMG_NULL;
+
+#if defined (MEM_TRACK_INFO_DEBUG)
+/*!
+******************************************************************************
+
+ @Function	PVRSRVAddMemTrackInfo
+
+ @Description
+
+ Adds the current psMemTrackInfo instance to the head of list represented by gMemTrackInfo
+
+ @Input	   psMemTrackInfo :
+ @Output 
+
+ @Return
+
+******************************************************************************/
+IMG_EXPORT
+IMG_VOID IMG_CALLCONV PVRSRVAddMemTrackInfo(PVRSRV_MEM_TRACK_INFO *psMemTrackInfo)
+{
+	g_ui32NumOfOpsRecorded++;
+	psMemTrackInfo->next = g_psMemTrackInfoHead;
+	psMemTrackInfo->prev = IMG_NULL;
+	if(g_psMemTrackInfoHead)
+	{
+		g_psMemTrackInfoHead->prev = psMemTrackInfo;
+	}
+	else
+		g_psMemTrackInfoTail = psMemTrackInfo;
+	g_psMemTrackInfoHead = psMemTrackInfo;
+	if(g_ui32NumOfOpsRecorded > MAX_MEM_TRACK_OPS)
+	{
+		PVRSRV_MEM_TRACK_INFO *psFreePtr;
+		psFreePtr = g_psMemTrackInfoTail;
+		g_psMemTrackInfoTail = g_psMemTrackInfoTail->prev; 
+		g_psMemTrackInfoTail->next = IMG_NULL;
+		OSFreeMem(PVRSRV_PAGEABLE_SELECT,
+						sizeof(PVRSRV_MEM_TRACK_INFO), 
+						psFreePtr, IMG_NULL);
+		g_ui32NumOfOpsRecorded--;
+	}
+}
+
+/*!
+******************************************************************************
+
+ @Function	PVRSRVPrintMemTrackInfo
+
+ @Description
+
+ Dumps the mem tracking info
+
+ @Input	   ui32FaultAddr:
+ @Output   
+
+ @Return  
+
+******************************************************************************/
+IMG_EXPORT
+IMG_VOID IMG_CALLCONV PVRSRVPrintMemTrackInfo(IMG_UINT32 ui32FaultAddr)
+{
+	PVRSRV_MEM_TRACK_INFO *psMemTrackInfo;
+	const IMG_CHAR *apszMemOpNames[] = {"UNKNOWN", "DEVICE", "DEVICECLASS", "WRAPPED", "MAPPED", "ION", "ALLOC", "FREE"};
+	psMemTrackInfo = g_psMemTrackInfoHead;
+
+	PVR_DPF((PVR_DBG_MESSAGE,"PVRSRVMemTrackInfo: Dumping mem tracking info\n"));
+	PVR_DPF((PVR_DBG_MESSAGE,"DevVAddr  |  Size  |  Memory Op | Process ID | Ref Count |   Task Name   | Heap ID | Time Stamp(uSec)\n"));
+	while(psMemTrackInfo)
+	{
+		if((ui32FaultAddr >= psMemTrackInfo->sDevVAddr.uiAddr) &&
+				(ui32FaultAddr < (psMemTrackInfo->sDevVAddr.uiAddr + psMemTrackInfo->uSize)))
+		{
+			PVR_DPF((PVR_DBG_MESSAGE,"***************************\n"));
+		}
+		PVR_DPF((PVR_DBG_MESSAGE,"0x%-8x | 0x%-8zx | %-13s | %-11d | %-6u  | %-15s | %10s | %-15u ",	
+				psMemTrackInfo->sDevVAddr.uiAddr,
+				psMemTrackInfo->uSize,
+				apszMemOpNames[psMemTrackInfo->eOp],
+				psMemTrackInfo->ui32Pid,
+				psMemTrackInfo->ui32RefCount,
+				psMemTrackInfo->asTaskName,
+				psMemTrackInfo->heapId,
+				psMemTrackInfo->ui32TimeStampUSecs));
+		psMemTrackInfo = psMemTrackInfo->next;
+	}
+}
+#endif
 
 /*!
 ******************************************************************************
@@ -707,6 +807,15 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVAllocSyncInfoKM(IMG_HANDLE					hDevCookie,
 	psSyncData->ui32LastReadOpDumpVal = 0;
 	psSyncData->ui64LastWrite = 0;
 
+#if defined(SUPPORT_PER_SYNC_DEBUG)
+	psKernelSyncInfo->ui32OperationMask = 0;
+	memset(psKernelSyncInfo->aui32OpInfo, 0, sizeof(psKernelSyncInfo->aui32OpInfo));
+	memset(psKernelSyncInfo->aui32ReadOpSample, 0, sizeof(psKernelSyncInfo->aui32ReadOpSample));
+	memset(psKernelSyncInfo->aui32WriteOpSample, 0, sizeof(psKernelSyncInfo->aui32WriteOpSample));
+	memset(psKernelSyncInfo->aui32ReadOp2Sample, 0, sizeof(psKernelSyncInfo->aui32ReadOp2Sample));
+	psKernelSyncInfo->ui32HistoryIndex = 0;
+#endif
+
 	/*
 		Note:
 		PDumping here means that we PDump syncs that we might not
@@ -717,7 +826,13 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVAllocSyncInfoKM(IMG_HANDLE					hDevCookie,
 		issued a POL on it before that point)
 	*/
 #if defined(PDUMP)
-	PDUMPCOMMENT("Allocating kernel sync object");
+	PDUMPCOMMENTWITHFLAGS(
+#if defined(SUPPORT_PDUMP_MULTI_PROCESS)
+						  PDUMP_FLAGS_PERSISTENT,
+#else
+						  PDUMP_FLAGS_CONTINUOUS,
+#endif
+						  "Allocating kernel sync object");
 	PDUMPMEM(psKernelSyncInfo->psSyncDataMemInfoKM->pvLinAddrKM,
 			psKernelSyncInfo->psSyncDataMemInfoKM,
 			0,
@@ -739,6 +854,9 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVAllocSyncInfoKM(IMG_HANDLE					hDevCookie,
 	psKernelSyncInfo->psSyncDataMemInfoKM->psKernelSyncInfo = IMG_NULL;
 
 	OSAtomicInc(psKernelSyncInfo->pvRefCount);
+
+	/* Add the SyncInfo to a global list */
+	List_PVRSRV_KERNEL_SYNC_INFO_Insert(&g_psSyncInfoList, psKernelSyncInfo);
 
 	/* return result */
 	*ppsKernelSyncInfo = psKernelSyncInfo;
@@ -769,8 +887,32 @@ IMG_VOID IMG_CALLCONV PVRSRVReleaseSyncInfoKM(PVRSRV_KERNEL_SYNC_INFO	*psKernelS
 {
 	if (OSAtomicDecAndTest(psKernelSyncInfo->pvRefCount))
 	{
+		/* Remove the SyncInfo to a global list */
+		List_PVRSRV_KERNEL_SYNC_INFO_Remove(psKernelSyncInfo);
+
+		#if defined(PDUMP)
+		PDUMPCOMMENTWITHFLAGS(PDUMP_FLAGS_CONTINUOUS, "Wait for write ops to flush to PDump value (%d)",
+								psKernelSyncInfo->psSyncData->ui32LastOpDumpVal);
+		PDUMPMEMPOL(psKernelSyncInfo->psSyncDataMemInfoKM,
+					offsetof(PVRSRV_SYNC_DATA, ui32WriteOpsComplete),
+					psKernelSyncInfo->psSyncData->ui32LastOpDumpVal,
+					0xffffffff,
+					PDUMP_POLL_OPERATOR_EQUAL,
+					PDUMP_FLAGS_CONTINUOUS,
+					MAKEUNIQUETAG(psKernelSyncInfo->psSyncDataMemInfoKM));
+		PDUMPCOMMENTWITHFLAGS(PDUMP_FLAGS_CONTINUOUS, "Wait for read ops to flush to PDump value (%d)",
+								psKernelSyncInfo->psSyncData->ui32LastReadOpDumpVal);
+		PDUMPMEMPOL(psKernelSyncInfo->psSyncDataMemInfoKM,
+					offsetof(PVRSRV_SYNC_DATA, ui32ReadOpsComplete),
+					psKernelSyncInfo->psSyncData->ui32LastReadOpDumpVal,
+					0xffffffff,
+					PDUMP_POLL_OPERATOR_EQUAL,
+					PDUMP_FLAGS_CONTINUOUS,
+					MAKEUNIQUETAG(psKernelSyncInfo->psSyncDataMemInfoKM));
+		#endif
+
 		FreeDeviceMem(psKernelSyncInfo->psSyncDataMemInfoKM);
-	
+
 		/* Catch anyone who is trying to access the freed structure */
 		psKernelSyncInfo->psSyncDataMemInfoKM = IMG_NULL;
 		psKernelSyncInfo->psSyncData = IMG_NULL;
@@ -847,11 +989,33 @@ PVRSRV_ERROR FreeMemCallBackCommon(PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 								   PVRSRV_FREE_CALLBACK_ORIGIN eCallbackOrigin)
 {
 	PVRSRV_ERROR eError = PVRSRV_OK;
-
+#if defined (MEM_TRACK_INFO_DEBUG)
+	PVRSRV_MEM_TRACK_INFO  *psMemTrackInfo;
+#endif
 	PVR_UNREFERENCED_PARAMETER(ui32Param);
 
 	/* decrement the refcount */
 	PVRSRVKernelMemInfoDecRef(psMemInfo);
+
+#if defined (MEM_TRACK_INFO_DEBUG)
+	eError = OSAllocMem(PVRSRV_PAGEABLE_SELECT,
+						sizeof(PVRSRV_MEM_TRACK_INFO), 
+						(IMG_VOID **)&psMemTrackInfo, IMG_NULL,
+						"Mem tracking info");
+	if (eError != PVRSRV_OK)
+		return eError;
+	psMemTrackInfo->sDevVAddr = psMemInfo->sDevVAddr;
+	psMemTrackInfo->uSize     = psMemInfo->uAllocSize;
+	psMemTrackInfo->ui32Pid = OSGetCurrentProcessIDKM();
+	psMemTrackInfo->ui32RefCount = psMemInfo->ui32RefCount;
+	psMemTrackInfo->eOp = PVRSRV_MEMTYPE_FREE;
+	psMemTrackInfo->ui32TimeStampUSecs = OSGetCurrentTimeInUSecsKM();
+
+	OSGetCurrentProcessNameKM(psMemTrackInfo->asTaskName, 128);
+
+	OSStringCopy(psMemTrackInfo->heapId, psMemInfo->heapId);
+	PVRSRVAddMemTrackInfo(psMemTrackInfo);
+#endif
 
 	/* check no other processes has this meminfo mapped */
 	if (psMemInfo->ui32RefCount == 0)
@@ -1037,6 +1201,13 @@ PVRSRV_ERROR IMG_CALLCONV _PVRSRVAllocDeviceMemKM(IMG_HANDLE				hDevCookie,
 	PVRSRV_ERROR 			eError;
 	BM_HEAP					*psBMHeap;
 	IMG_HANDLE				hDevMemContext;
+#if defined (MEM_TRACK_INFO_DEBUG)
+	PVRSRV_MEM_TRACK_INFO  *psMemTrackInfo;
+	IMG_UINT32 i;
+	IMG_CHAR 				*pszName = "Heap not found";
+	DEVICE_MEMORY_INFO *psDevMemoryInfo;
+	DEVICE_MEMORY_HEAP_INFO *psDeviceMemoryHeap;
+#endif
 
 	if (!hDevMemHeap ||
 		((ui32Size == 0) && ((ui32Flags & PVRSRV_MEM_SPARSE) == 0)) ||
@@ -1124,7 +1295,23 @@ PVRSRV_ERROR IMG_CALLCONV _PVRSRVAllocDeviceMemKM(IMG_HANDLE				hDevCookie,
 			goto free_mainalloc;
 		}
 	}
+#if defined (MEM_TRACK_INFO_DEBUG)
+	psBMHeap = (BM_HEAP*)hDevMemHeap;
+	hDevMemContext = (IMG_HANDLE)psBMHeap->pBMContext;
+	psDevMemoryInfo = &((BM_CONTEXT*)hDevMemContext)->psDeviceNode->sDevMemoryInfo;
+	psDeviceMemoryHeap = psDevMemoryInfo->psDeviceMemoryHeap;
 
+	for(i=0; i<PVRSRV_MAX_CLIENT_HEAPS; i++)
+	{
+        	if(HEAP_IDX(psDeviceMemoryHeap[i].ui32HeapID) == psDevMemoryInfo->ui32MappingHeapID)
+	        {
+    			pszName = psDeviceMemoryHeap[i].pszName;
+	        	break;
+        	}
+    	}
+
+	OSStringCopy(psMemInfo->heapId, pszName);
+#endif
 	/*
 	 * Setup the output.
 	 */
@@ -1154,6 +1341,26 @@ PVRSRV_ERROR IMG_CALLCONV _PVRSRVAllocDeviceMemKM(IMG_HANDLE				hDevCookie,
 
 	psMemInfo->memType = PVRSRV_MEMTYPE_DEVICE;
 
+#if defined (MEM_TRACK_INFO_DEBUG)
+	eError = OSAllocMem(PVRSRV_PAGEABLE_SELECT,
+						sizeof(PVRSRV_MEM_TRACK_INFO), 
+						(IMG_VOID **)&psMemTrackInfo, IMG_NULL,
+						"Mem tracking info");
+	if (eError != PVRSRV_OK)
+		return eError;
+	psMemTrackInfo->sDevVAddr = psMemInfo->sDevVAddr;
+	psMemTrackInfo->uSize     = psMemInfo->uAllocSize;
+	psMemTrackInfo->ui32Pid = OSGetCurrentProcessIDKM();
+	psMemTrackInfo->ui32RefCount = psMemInfo->ui32RefCount;
+	psMemTrackInfo->eOp = PVRSRV_MEMTYPE_ALLOC;
+	psMemTrackInfo->ui32TimeStampUSecs = OSGetCurrentTimeInUSecsKM();
+
+	OSGetCurrentProcessNameKM(psMemTrackInfo->asTaskName, 128);
+
+	OSStringCopy(psMemTrackInfo->heapId, psMemInfo->heapId);
+	
+	PVRSRVAddMemTrackInfo(psMemTrackInfo);
+#endif
 	/*
 	 * And I think we're done for now....
 	 */
@@ -1709,8 +1916,11 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVWrapExtMemoryKM(IMG_HANDLE				hDevCookie,
 	IMG_VOID 			*pvPageAlignedCPUVAddr;
 	IMG_SYS_PHYADDR	 	*psIntSysPAddr = IMG_NULL;
 	IMG_HANDLE			hOSWrapMem = IMG_NULL;
-	DEVICE_MEMORY_HEAP_INFO *psDeviceMemoryHeap;
-	IMG_UINT32		i;
+	DEVICE_MEMORY_HEAP_INFO *psDeviceMemoryHeap;IMG_UINT32		i;
+#if defined (MEM_TRACK_INFO_DEBUG)
+	PVRSRV_MEM_TRACK_INFO  *psMemTrackInfo;
+	IMG_CHAR 			*pszName="Heap not found";
+#endif
 	IMG_SIZE_T          uPageCount = 0;
 
 	PVR_DPF ((PVR_DBG_MESSAGE,
@@ -1771,6 +1981,7 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVWrapExtMemoryKM(IMG_HANDLE				hDevCookie,
   		*/
 		bPhysContig = IMG_FALSE;
 	}
+#if !defined(__QNXNTO__)
 	else
 	{
 		if (psExtSysPAddr)
@@ -1783,6 +1994,8 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVWrapExtMemoryKM(IMG_HANDLE				hDevCookie,
 		}
 		return PVRSRV_ERROR_INVALID_PARAMS;
 	}
+#endif
+
 
 	/* Choose the heap to map to */
 	psDevMemoryInfo = &((BM_CONTEXT*)hDevMemContext)->psDeviceNode->sDevMemoryInfo;
@@ -1796,6 +2009,9 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVWrapExtMemoryKM(IMG_HANDLE				hDevCookie,
 				if (psDeviceMemoryHeap[i].ui32HeapSize > 0)
 				{
 					hDevMemHeap = BM_CreateHeap(hDevMemContext, &psDeviceMemoryHeap[i]);
+				#if defined (MEM_TRACK_INFO_DEBUG)
+					pszName = psDeviceMemoryHeap[i].pszName;
+				#endif
 				}
 				else
 				{
@@ -1805,6 +2021,9 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVWrapExtMemoryKM(IMG_HANDLE				hDevCookie,
 			else
 			{
 				hDevMemHeap = psDevMemoryInfo->psDeviceMemoryHeap[i].hDevMemHeap;
+			#if defined (MEM_TRACK_INFO_DEBUG)
+				pszName = psDeviceMemoryHeap[i].pszName;
+			#endif
 			}
 			break;
 		}
@@ -1895,9 +2114,31 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVWrapExtMemoryKM(IMG_HANDLE				hDevCookie,
 													psMemInfo,
 													0,
 													&UnwrapExtMemoryCallBack);
-
+#if defined (MEM_TRACK_INFO_DEBUG)
+	OSStringCopy(psMemInfo->heapId, pszName);
+#endif
 	/* return the meminfo */
 	*ppsMemInfo = psMemInfo;
+
+#if defined (MEM_TRACK_INFO_DEBUG)
+	eError = OSAllocMem(PVRSRV_PAGEABLE_SELECT,
+						sizeof(PVRSRV_MEM_TRACK_INFO), 
+						(IMG_VOID **)&psMemTrackInfo, IMG_NULL,
+						"Mem tracking info");
+	if (eError != PVRSRV_OK)
+		return eError;
+	psMemTrackInfo->sDevVAddr = psMemInfo->sDevVAddr;
+	psMemTrackInfo->uSize     = psMemInfo->uAllocSize;
+	psMemTrackInfo->ui32Pid = OSGetCurrentProcessIDKM();
+	psMemTrackInfo->ui32RefCount = psMemInfo->ui32RefCount;
+	psMemTrackInfo->eOp = PVRSRV_MEMTYPE_WRAPPED;
+	psMemTrackInfo->ui32TimeStampUSecs = OSGetCurrentTimeInUSecsKM();
+
+	OSGetCurrentProcessNameKM(psMemTrackInfo->asTaskName, 128);
+
+	OSStringCopy(psMemTrackInfo->heapId, psMemInfo->heapId);
+	PVRSRVAddMemTrackInfo(psMemTrackInfo);
+#endif
 
 	return PVRSRV_OK;
 
@@ -2051,6 +2292,13 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVMapDeviceMemoryKM(PVRSRV_PER_PROCESS_DATA	*psPer
 	PVRSRV_DEVICE_NODE			*psDeviceNode;
 	IMG_VOID 					*pvPageAlignedCPUVAddr;
 	RESMAN_MAP_DEVICE_MEM_DATA	*psMapData = IMG_NULL;
+#if defined (MEM_TRACK_INFO_DEBUG)
+	PVRSRV_MEM_TRACK_INFO  		*psMemTrackInfo;
+	DEVICE_MEMORY_INFO  		*psDevMemoryInfo;
+	DEVICE_MEMORY_HEAP_INFO 	*psDeviceMemoryHeap;
+	BM_HEAP 					*psBMHeap;
+	IMG_HANDLE  				hDevMemContext;
+#endif
 
 	/* check params */
 	if(!psSrcMemInfo || !hDstDevMemHeap || !ppsDstMemInfo)
@@ -2193,9 +2441,49 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVMapDeviceMemoryKM(PVRSRV_PER_PROCESS_DATA	*psPer
 													psMapData,
 													0,
 													&UnmapDeviceMemoryCallBack);
+#if defined (MEM_TRACK_INFO_DEBUG)
+	psBMHeap = (BM_HEAP*)hDstDevMemHeap;
+	hDevMemContext = (IMG_HANDLE)psBMHeap->pBMContext;
+    	psDevMemoryInfo = &((BM_CONTEXT*)hDevMemContext)->psDeviceNode->sDevMemoryInfo;
+    	psDeviceMemoryHeap = psDevMemoryInfo->psDeviceMemoryHeap;
+
+    	for(i=0; i<PVRSRV_MAX_CLIENT_HEAPS; i++)
+    	{
+        	if(HEAP_IDX(psDeviceMemoryHeap[i].ui32HeapID) == psDevMemoryInfo->ui32MappingHeapID)
+            	break;
+    	}
+
+    	if(i == PVRSRV_MAX_CLIENT_HEAPS)
+    	{
+        	PVR_DPF((PVR_DBG_ERROR,"PVRSRVMapDeviceMemoryKM: unable to find mapping heap"));
+        	eError = PVRSRV_ERROR_UNABLE_TO_FIND_MAPPING_HEAP;
+		OSStringCopy(psMemInfo->heapId, "Heap not found");
+    	}
+	else
+	    	OSStringCopy(psMemInfo->heapId, psDeviceMemoryHeap[i].pszName);
+#endif
 
 	*ppsDstMemInfo = psMemInfo;
 
+#if defined (MEM_TRACK_INFO_DEBUG)
+	eError = OSAllocMem(PVRSRV_PAGEABLE_SELECT,
+						sizeof(PVRSRV_MEM_TRACK_INFO), 
+						(IMG_VOID **)&psMemTrackInfo, IMG_NULL,
+						"Mem tracking info");
+	if (eError != PVRSRV_OK)
+		return eError;
+	psMemTrackInfo->sDevVAddr = psMemInfo->sDevVAddr;
+	psMemTrackInfo->uSize     = psMemInfo->uAllocSize;
+	psMemTrackInfo->ui32Pid = OSGetCurrentProcessIDKM();
+	psMemTrackInfo->ui32RefCount = psMemInfo->ui32RefCount;
+	psMemTrackInfo->eOp = PVRSRV_MEMTYPE_MAPPED;
+	psMemTrackInfo->ui32TimeStampUSecs = OSGetCurrentTimeInUSecsKM();
+
+	OSGetCurrentProcessNameKM(psMemTrackInfo->asTaskName, 128);
+	OSStringCopy(psMemTrackInfo->heapId, psMemInfo->heapId);
+
+	PVRSRVAddMemTrackInfo(psMemTrackInfo);
+#endif
 	return PVRSRV_OK;
 
 	/* error handling: */
@@ -2226,6 +2514,7 @@ ErrorExit:
 	return eError;
 }
 
+#if defined(SUPPORT_PVRSRV_DEVICE_CLASS)
 
 /*!
 ******************************************************************************
@@ -2339,7 +2628,10 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVMapDeviceClassMemoryKM(PVRSRV_PER_PROCESS_DATA	*
 	IMG_BOOL		bBMError;
 	IMG_UINT32 i;
 	PVRSRV_DC_MAPINFO *psDCMapInfo = IMG_NULL;
-
+#if defined (MEM_TRACK_INFO_DEBUG)
+	PVRSRV_MEM_TRACK_INFO  *psMemTrackInfo;
+	IMG_CHAR *pszName = "Heap not found";
+#endif
 	if(!hDeviceClassBuffer || !ppsMemInfo || !phOSMapInfo || !hDevMemContext)
 	{
 		PVR_DPF((PVR_DBG_ERROR,"PVRSRVMapDeviceClassMemoryKM: invalid parameters"));
@@ -2407,6 +2699,9 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVMapDeviceClassMemoryKM(PVRSRV_PER_PROCESS_DATA	*
 				if (psDeviceMemoryHeap[i].ui32HeapSize > 0)
 				{
 					hDevMemHeap = BM_CreateHeap(hDevMemContext, &psDeviceMemoryHeap[i]);
+				#if defined (MEM_TRACK_INFO_DEBUG)
+					pszName = psDeviceMemoryHeap[i].pszName;
+				#endif
 				}
 				else
 				{
@@ -2416,6 +2711,9 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVMapDeviceClassMemoryKM(PVRSRV_PER_PROCESS_DATA	*
 			else
 			{
 				hDevMemHeap = psDevMemoryInfo->psDeviceMemoryHeap[i].hDevMemHeap;
+			#if defined (MEM_TRACK_INFO_DEBUG)
+				pszName = psDeviceMemoryHeap[i].pszName;
+			#endif
 			}
 			break;
 		}
@@ -2530,9 +2828,31 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVMapDeviceClassMemoryKM(PVRSRV_PER_PROCESS_DATA	*
 	PVRSRVKernelMemInfoIncRef(psMemInfo);
 
 	psMemInfo->memType = PVRSRV_MEMTYPE_DEVICECLASS;
+#if defined (MEM_TRACK_INFO_DEBUG)
+	OSStringCopy(psMemInfo->heapId, pszName);
+#endif
 
 	/* return the meminfo */
 	*ppsMemInfo = psMemInfo;
+#if defined (MEM_TRACK_INFO_DEBUG)
+	eError = OSAllocMem(PVRSRV_PAGEABLE_SELECT,
+						sizeof(PVRSRV_MEM_TRACK_INFO), 
+						(IMG_VOID **)&psMemTrackInfo, IMG_NULL,
+						"Mem tracking info");
+	if (eError != PVRSRV_OK)
+		return eError;
+	psMemTrackInfo->sDevVAddr = psMemInfo->sDevVAddr;
+	psMemTrackInfo->uSize     = psMemInfo->uAllocSize;
+	psMemTrackInfo->ui32Pid = OSGetCurrentProcessIDKM();
+	psMemTrackInfo->ui32RefCount = psMemInfo->ui32RefCount;
+	psMemTrackInfo->eOp = PVRSRV_MEMTYPE_DEVICECLASS;
+	psMemTrackInfo->ui32TimeStampUSecs = OSGetCurrentTimeInUSecsKM();
+
+	OSGetCurrentProcessNameKM(psMemTrackInfo->asTaskName, 128);
+
+	OSStringCopy(psMemTrackInfo->heapId, psMemInfo->heapId);
+	PVRSRVAddMemTrackInfo(psMemTrackInfo);
+#endif
 
 #if defined(SUPPORT_PDUMP_MULTI_PROCESS)
 	/* If the 3PDD supplies a kernel virtual address, we can PDUMP it */
@@ -2587,6 +2907,7 @@ ErrorExitPhase1:
 	return eError;
 }
 
+#endif /* defined(SUPPORT_PVRSRV_DEVICE_CLASS) */
 
 IMG_EXPORT
 PVRSRV_ERROR IMG_CALLCONV PVRSRVChangeDeviceMemoryAttributesKM(IMG_HANDLE hKernelMemInfo, IMG_UINT32 ui32Attribs)
@@ -2638,9 +2959,163 @@ IMG_VOID IMG_CALLCONV PVRSRVDeInitDeviceMem(IMG_VOID)
 #endif
 }
 
+#if defined(MEM_TRACK_INFO_DEBUG)
+/*!
+******************************************************************************
+
+ @Function 	PVRSRVFreeMemOps
+
+ @Description
+ Frees the list of tracked mem ops represented by g_psMemTrackInfoHead
+
+ @Input
+ @Output
+
+ @Return
+
+******************************************************************************/
+IMG_VOID IMG_CALLCONV PVRSRVFreeMemOps(IMG_VOID)
+{
+	PVRSRV_MEM_TRACK_INFO *psFreePtr;
+	while(g_psMemTrackInfoHead)
+	{
+		psFreePtr = g_psMemTrackInfoHead;
+		g_psMemTrackInfoHead = g_psMemTrackInfoHead->next;
+		OSFreeMem(PVRSRV_PAGEABLE_SELECT,
+						sizeof(PVRSRV_MEM_TRACK_INFO),
+						psFreePtr, IMG_NULL);
+	}
+}
+#endif		
+
+static PVRSRV_ERROR PVRSRVDumpSync(PVRSRV_KERNEL_SYNC_INFO *psKernelSyncInfo)
+{
+	PVR_LOG(("\tSyncInfo %d:", psKernelSyncInfo->ui32UID));
+	PVR_LOG(("\t\tWrite ops (0x%08x): P/C = %d/%d (0x%08x/0x%08x)",
+				psKernelSyncInfo->sWriteOpsCompleteDevVAddr.uiAddr,
+				psKernelSyncInfo->psSyncData->ui32WriteOpsPending,
+				psKernelSyncInfo->psSyncData->ui32WriteOpsComplete,
+				psKernelSyncInfo->psSyncData->ui32WriteOpsPending,
+				psKernelSyncInfo->psSyncData->ui32WriteOpsComplete));
+	PVR_LOG(("\t\tRead ops (0x%08x): P/C = %d/%d (0x%08x/0x%08x)",
+				psKernelSyncInfo->sReadOpsCompleteDevVAddr.uiAddr,
+				psKernelSyncInfo->psSyncData->ui32ReadOpsPending,
+				psKernelSyncInfo->psSyncData->ui32ReadOpsComplete,
+				psKernelSyncInfo->psSyncData->ui32ReadOpsPending,
+				psKernelSyncInfo->psSyncData->ui32ReadOpsComplete));
+	PVR_LOG(("\t\tRead ops 2 (0x%08x): P/C = %d/%d (0x%08x/0x%08x)",
+				psKernelSyncInfo->sReadOps2CompleteDevVAddr.uiAddr,
+				psKernelSyncInfo->psSyncData->ui32ReadOps2Pending,
+				psKernelSyncInfo->psSyncData->ui32ReadOps2Complete,
+				psKernelSyncInfo->psSyncData->ui32ReadOps2Pending,
+				psKernelSyncInfo->psSyncData->ui32ReadOps2Complete));
+
+#if defined(SUPPORT_PER_SYNC_DEBUG)
+	{
+		IMG_UINT32 i;
+		PVR_LOG(("\t\t --- Per sync debug ---"));
+
+		PVR_LOG(("\t\tOperationMask = 0x%08x", psKernelSyncInfo->ui32OperationMask));
 
 
+		for (i=0;i<PER_SYNC_HISTORY;i++)
+		{
+			IMG_UINT32 ui32Index = (i + psKernelSyncInfo->ui32HistoryIndex) % PER_SYNC_HISTORY;
+			IMG_UINT32 ui32OpInfo = psKernelSyncInfo->aui32OpInfo[ui32Index];
+
+			if (ui32OpInfo & SYNC_OP_HAS_DATA)
+			{
+				IMG_UINT32 ui32OpClass = (ui32OpInfo & SYNC_OP_CLASS_MASK) >> SYNC_OP_CLASS_SHIFT;
+				IMG_UINT32 ui32OpType = (ui32OpInfo & SYNC_OP_TYPE_MASK) >> SYNC_OP_TYPE_SHIFT;
+				IMG_CHAR *pzClass;
+				IMG_CHAR *pzType;
+
+				PVR_LOG(("\t\tOperation last - %d\n", PER_SYNC_HISTORY - i));
+
+				switch(ui32OpClass)
+				{
+					case SYNC_OP_CLASS_MODOBJ:
+								pzClass = "MODOBJ";
+								break;
+					case SYNC_OP_CLASS_QUEUE:
+								pzClass = "QUEUE";
+								break;
+					case SYNC_OP_CLASS_KICKTA:
+								pzClass = "KICKTA";
+								break;
+					case SYNC_OP_CLASS_TQ_3D:
+								pzClass = "TQ_3D";
+								break;
+					case SYNC_OP_CLASS_TQ_2D:
+								pzClass = "TQ_2D";
+								break;
+					default:
+								pzClass = "Unknown";
+				}
+				switch(ui32OpType)
+				{
+					case SYNC_OP_TYPE_READOP:
+								pzType = "READOP";
+								break;
+					case SYNC_OP_TYPE_WRITEOP:
+								pzType = "WRITEOP";
+								break;
+					case SYNC_OP_TYPE_READOP2:
+								pzType = "READOP2";
+								break;
+					default:
+								pzType = "Unknown";
+				}
+				PVR_LOG(("\t\t\tui32OpType = 0x%08x", ui32OpInfo));
+				PVR_LOG(("\t\t\t\t%s, %s, %s, %s",
+							pzClass,
+							pzType,
+							(ui32OpInfo & SYNC_OP_TAKE) ?"TAKE":"No TAKE",
+							(ui32OpInfo & SYNC_OP_ROLLBACK) ?"ROLLBACK":"No ROLLBACK"));
+
+				PVR_LOG(("\t\t\ti32ReadOpSample = %d (0x%08x)",
+							psKernelSyncInfo->aui32ReadOpSample[ui32Index],
+							psKernelSyncInfo->aui32ReadOpSample[ui32Index]));
+				PVR_LOG(("\t\t\taui32WriteOpSample = %d (0x%08x)",
+							psKernelSyncInfo->aui32WriteOpSample[ui32Index],
+							psKernelSyncInfo->aui32WriteOpSample[ui32Index]));
+				PVR_LOG(("\t\t\taui32ReadOp2Sample = %d (0x%08x)",
+							psKernelSyncInfo->aui32ReadOp2Sample[ui32Index],
+							psKernelSyncInfo->aui32ReadOp2Sample[ui32Index]));
+			}
+		}
+	}
+#endif
+	return PVRSRV_OK;
+}
+
+
+static PVRSRV_ERROR PVRSRVDumpActiveSync(PVRSRV_KERNEL_SYNC_INFO *psKernelSyncInfo)
+{
+	if ((psKernelSyncInfo->psSyncData->ui32WriteOpsComplete != psKernelSyncInfo->psSyncData->ui32WriteOpsPending) ||
+		(psKernelSyncInfo->psSyncData->ui32ReadOpsComplete != psKernelSyncInfo->psSyncData->ui32ReadOpsPending) ||
+		(psKernelSyncInfo->psSyncData->ui32ReadOps2Complete != psKernelSyncInfo->psSyncData->ui32ReadOps2Pending))
+	{
+		PVRSRVDumpSync(psKernelSyncInfo);
+	}
+	return PVRSRV_OK;
+}
+
+
+IMG_EXPORT
+IMG_VOID IMG_CALLCONV PVRSRVDumpSyncs(IMG_BOOL bActiveOnly)
+{
+	if (bActiveOnly)
+	{
+		PVR_LOG(("Active syncs"));
+		List_PVRSRV_KERNEL_SYNC_INFO_PVRSRV_ERROR_Any(g_psSyncInfoList, PVRSRVDumpActiveSync);
+	}
+	else
+	{
+		PVR_LOG(("All syncs"));
+		List_PVRSRV_KERNEL_SYNC_INFO_PVRSRV_ERROR_Any(g_psSyncInfoList, PVRSRVDumpSync);
+	}
+}
 /******************************************************************************
  End of file (devicemem.c)
 ******************************************************************************/
-

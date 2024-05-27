@@ -46,7 +46,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "ttrace.h"
 
 #if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
+#include <linux/version.h>
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0))
 #include <linux/sw_sync.h>
+#else
+#include <../drivers/staging/android/sw_sync.h>
+#endif
 static struct sync_fence *AllocQueueFence(struct sw_sync_timeline *psTimeline, IMG_UINT32 ui32FenceValue, const char *szName)
 {
 	struct sync_fence *psFence = IMG_NULL;
@@ -69,11 +74,17 @@ static struct sync_fence *AllocQueueFence(struct sw_sync_timeline *psTimeline, I
 /*
  * The number of commands of each type which can be in flight at once.
  */
+
+#define DC_MAX_SUPPORTED_QUEUES			1
 #if defined(SUPPORT_DC_CMDCOMPLETE_WHEN_NO_LONGER_DISPLAYED)
-#define DC_NUM_COMMANDS_PER_TYPE		2
+#define DC_NUM_COMMANDS_PER_QUEUE		2
 #else
-#define DC_NUM_COMMANDS_PER_TYPE		1
+#define DC_NUM_COMMANDS_PER_QUEUE		1
 #endif
+
+#define DC_NUM_COMMANDS_PER_TYPE (DC_NUM_COMMANDS_PER_QUEUE * DC_MAX_SUPPORTED_QUEUES)
+
+static IMG_UINT32 ui32NoOfSwapchainCreated = 0;
 
 /*
  * List of private command processing function pointer tables and command
@@ -248,7 +259,7 @@ IMG_UINT32 PVRSRVGetWriteOpsPending(PVRSRV_KERNEL_SYNC_INFO *psSyncInfo, IMG_BOO
 			Note: This needs to be atomic and is provided the
 			kernel driver is single threaded (non-rentrant)
 		*/
-		ui32WriteOpsPending = psSyncInfo->psSyncData->ui32WriteOpsPending++;
+		ui32WriteOpsPending = SyncTakeWriteOp(psSyncInfo, SYNC_OP_CLASS_QUEUE);
 	}
 
 	return ui32WriteOpsPending;
@@ -275,7 +286,7 @@ IMG_UINT32 PVRSRVGetReadOpsPending(PVRSRV_KERNEL_SYNC_INFO *psSyncInfo, IMG_BOOL
 
 	if(bIsReadOp)
 	{
-		ui32ReadOpsPending = psSyncInfo->psSyncData->ui32ReadOps2Pending++;
+		ui32ReadOpsPending = SyncTakeReadOp2(psSyncInfo, SYNC_OP_CLASS_QUEUE);
 	}
 	else
 	{
@@ -412,6 +423,12 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVCreateCommandQueueKM(IMG_SIZE_T uQueueSize,
 	PVRSRV_ERROR		eError;
 	IMG_HANDLE			hMemBlock;
 
+	if (ui32NoOfSwapchainCreated >= DC_NUM_COMMANDS_PER_TYPE)
+	{
+		PVR_DPF((PVR_DBG_ERROR,"PVRSRVCreateCommandQueueKM: Swapchain already exists, increament DC_MAX_SUPPORTED_QUEUES to support more than one swapchain"));
+		return PVRSRV_ERROR_FLIP_CHAIN_EXISTS;
+	}
+
 	SysAcquireData(&psSysData);
 
 	/* allocate an internal queue info structure */
@@ -486,6 +503,8 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVCreateCommandQueueKM(IMG_SIZE_T uQueueSize,
 	}
 
 	*ppsQueueInfo = psQueueInfo;
+
+	ui32NoOfSwapchainCreated++;
 
 	return PVRSRV_OK;
 
@@ -564,6 +583,8 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVDestroyCommandQueueKM(PVRSRV_QUEUE_INFO *psQueue
 	{
 		goto ErrorExit;
 	}
+
+	ui32NoOfSwapchainCreated--;
 
 #if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
 	sync_timeline_destroy(psQueueInfo->pvTimeline);
@@ -663,8 +684,6 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVGetQueueSpaceKM(PVRSRV_QUEUE_INFO *psQueue,
 												IMG_SIZE_T uParamSize,
 												IMG_VOID **ppvSpace)
 {
-	IMG_BOOL bTimeout = IMG_TRUE;
-
 	/*	round to 4byte units */
 	uParamSize =  (uParamSize + 3) & 0xFFFFFFFC;
 
@@ -674,26 +693,14 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVGetQueueSpaceKM(PVRSRV_QUEUE_INFO *psQueue,
 		return PVRSRV_ERROR_CMD_TOO_BIG;
 	}
 
-	/* PRQA S 3415,4109 1 */ /* macro format critical - leave alone */
-	LOOP_UNTIL_TIMEOUT(MAX_HW_TIME_US)
+	if (GET_SPACE_IN_CMDQ(psQueue) > uParamSize)
 	{
-		if (GET_SPACE_IN_CMDQ(psQueue) > uParamSize)
-		{
-			bTimeout = IMG_FALSE;
-			break;
-		}
-		OSSleepms(1);
-	} END_LOOP_UNTIL_TIMEOUT();
-
-	if (bTimeout == IMG_TRUE)
-	{
-		*ppvSpace = IMG_NULL;
-
-		return PVRSRV_ERROR_CANNOT_GET_QUEUE_SPACE;
+		*ppvSpace = (IMG_VOID *)((IMG_UINTPTR_T)psQueue->pvLinQueueUM + psQueue->uWriteOffset);
 	}
 	else
 	{
-		*ppvSpace = (IMG_VOID *)((IMG_UINTPTR_T)psQueue->pvLinQueueUM + psQueue->uWriteOffset);
+		*ppvSpace = IMG_NULL;
+		return PVRSRV_ERROR_CANNOT_GET_QUEUE_SPACE;
 	}
 
 	return PVRSRV_OK;
@@ -1262,43 +1269,6 @@ PVRSRV_ERROR PVRSRVProcessQueues(IMG_BOOL	bFlush)
 
 	return PVRSRV_OK;
 }
-
-#if defined(SUPPORT_CUSTOM_SWAP_OPERATIONS)
-/*!
-******************************************************************************
-
- @Function	PVRSRVFreeCommandCompletePacketKM
-
- @Description	Updates non-private command complete sync objects
-
- @Input		hCmdCookie : command cookie
- @Input		bScheduleMISR : obsolete parameter
-
- @Return	PVRSRV_ERROR
-
-******************************************************************************/
-IMG_INTERNAL
-IMG_VOID PVRSRVFreeCommandCompletePacketKM(IMG_HANDLE	hCmdCookie,
-										   IMG_BOOL		bScheduleMISR)
-{
-	COMMAND_COMPLETE_DATA	*psCmdCompleteData = (COMMAND_COMPLETE_DATA *)hCmdCookie;
-	SYS_DATA				*psSysData;
-
-	PVR_UNREFERENCED_PARAMETER(bScheduleMISR);
-
-	SysAcquireData(&psSysData);
-
-	/* free command complete storage */
-	psCmdCompleteData->bInUse = IMG_FALSE;
-
-	/* FIXME: This may cause unrelated devices to be woken up. */
-	PVRSRVScheduleDeviceCallbacks();
-
-	/* the MISR is always scheduled, regardless of bScheduleMISR */
-	OSScheduleMISR(psSysData);
-}
-
-#endif /* (SUPPORT_CUSTOM_SWAP_OPERATIONS) */
 
 
 /*!

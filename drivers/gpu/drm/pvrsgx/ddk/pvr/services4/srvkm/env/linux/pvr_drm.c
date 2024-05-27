@@ -74,7 +74,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "handle.h"
 #include "pvr_bridge_km.h"
 #include "pvr_bridge.h"
-#include "proc.h"
 #include "pvrmodule.h"
 #include "pvrversion.h"
 #include "lock.h"
@@ -85,7 +84,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "pvr_drm_mod.h"
 #endif
 
-#if defined(NO_HARDWARE)
+#if (defined(PVR_DRI_DRM_PLATFORM_DEV) && !defined(PVR_LDM_PLATFORM_PRE_REGISTERED)) || defined(NO_HARDWARE)
 #define PVR_DRM_NAME	SYS_SGX_DEV_NAME
 #else
 #define PVR_DRM_NAME	PVRSRV_MODNAME
@@ -101,10 +100,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #else
 #define PVR_OLD_STYLE_DRM_PLATFORM_DEV
 #endif
-#endif
-
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,16,0))
-#define DRM_ARRAY_SIZE(x) ARRAY_SIZE(x)
 #endif
 
 /*
@@ -149,12 +144,10 @@ struct drm_device *gpsPVRDRMDev;
 
 #if !defined(SUPPORT_DRI_DRM_EXT) && !defined(SUPPORT_DRI_DRM_PLUGIN)
 #if defined(PVR_DRI_DRM_PLATFORM_DEV)
-#if defined(PVR_LDM_PLATFORM_PRE_REGISTERED) || defined(NO_HARDWARE)
 static struct platform_device_id asPlatIdList[] = {
 	{SYS_SGX_DEV_NAME, 0},
 	{}
 };
-#endif
 #else	/* defined(PVR_DRI_DRM_PLATFORM_DEV) */
 static struct pci_device_id asPciIdList[] = {
 #if defined(PVR_DRI_DRM_NOT_PCI)
@@ -229,11 +222,8 @@ exit:
 	return iRes;
 }
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,11,0))
-DRI_DRM_STATIC int PVRSRVDrmUnload(struct drm_device *dev)
-#else
-DRI_DRM_STATIC void PVRSRVDrmUnload(struct drm_device *dev)
-#endif
+DRI_DRM_STATIC int
+PVRSRVDrmUnload(struct drm_device *dev)
 {
 	PVR_TRACE(("PVRSRVDrmUnload"));
 
@@ -247,9 +237,7 @@ DRI_DRM_STATIC void PVRSRVDrmUnload(struct drm_device *dev)
 	dbgdrv_cleanup();
 #endif
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,11,0))
 	return 0;
-#endif
 }
 
 DRI_DRM_STATIC int
@@ -355,14 +343,12 @@ PVRDRMUnprivCmd(struct drm_device *dev, void *arg, struct drm_file *pFile)
 	}
 	else
 	{
-		IMG_UINT32 *pui32Args = (IMG_UINT32 *)arg;
-		IMG_UINT32 ui32Cmd = pui32Args[0];
-		IMG_UINT32 *pui32OutArg = (IMG_UINT32 *)arg;
+		drm_pvr_unpriv_cmd *psArgs = (drm_pvr_unpriv_cmd *)arg;
 
-		switch (ui32Cmd)
+		switch (psArgs->cmd)
 		{
 			case PVR_DRM_UNPRIV_INIT_SUCCESFUL:
-				*pui32OutArg = PVRSRVGetInitServerState(PVRSRV_INIT_SERVER_SUCCESSFUL) ? 1 : 0;
+				psArgs->res = PVRSRVGetInitServerState(PVRSRV_INIT_SERVER_SUCCESSFUL) ? 1 : 0;
 				break;
 
 			default:
@@ -440,10 +426,6 @@ PVRSRVPciRemove(struct pci_dev *dev)
 #define	PVR_DRM_IOCTL_DEF(ioctl, _func, _flags) DRM_IOCTL_DEF_DRV(ioctl, _func, _flags)
 #endif
 
-#define XSTR(x) STR(x)
-#define STR(x) #x
-#pragma message "The value of ABC: " XSTR(PVR_DRM_IOCTL_DEF(PVR_SRVKM, PVRSRV_BridgeDispatchKM, PVR_DRM_UNLOCKED))
-
 struct drm_ioctl_desc sPVRDrmIoctls[] = {
 	PVR_DRM_IOCTL_DEF(PVR_SRVKM, PVRSRV_BridgeDispatchKM, PVR_DRM_UNLOCKED),
 	PVR_DRM_IOCTL_DEF(PVR_IS_MASTER, PVRDRMIsMaster, DRM_MASTER | PVR_DRM_UNLOCKED),
@@ -500,8 +482,6 @@ static const struct file_operations sPVRFileOps =
 	.poll = drm_poll,
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,12,0))
 	.fasync = drm_fasync,
-#else
-#warning provide replacement for drm_fasync - http://elixir.free-electrons.com/linux/v3.11.10/source/drivers/gpu/drm/drm_fops.c#L392
 #endif
 };
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)) */
@@ -599,7 +579,7 @@ static struct pci_driver sPVRPCIDriver =
 #endif
 
 #if defined(PVR_NEW_STYLE_DRM_PLATFORM_DEV)
-#if defined(NO_HARDWARE)
+#if !defined(PVR_LDM_PLATFORM_PRE_REGISTERED) || defined(NO_HARDWARE)
 static void PVRSRVDeviceRelease(struct device unref__ *pDevice)
 {
 }
@@ -676,7 +656,7 @@ static int __init PVRSRVDrmInit(void)
 
 #if defined(PVR_NEW_STYLE_DRM_PLATFORM_DEV)
 	iRes = platform_driver_register(&sPVRPlatDriver);
-#if defined(NO_HARDWARE)
+#if !defined(PVR_LDM_PLATFORM_PRE_REGISTERED) || defined(NO_HARDWARE)
 	if (iRes == 0)
 	{
 		iRes = platform_device_register(&sPVRPlatDevice);
@@ -701,8 +681,6 @@ static int __init PVRSRVDrmInit(void)
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,39))
 #if defined(PVR_DRI_DRM_PLATFORM_DEV)
 	iRes = drm_platform_init(&sPVRDrmDriver, gpsPVRLDMDev);
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0))
-#warning provide replacement for drm_pci_init -- http://elixir.free-electrons.com/linux/v4.13.16/source/drivers/gpu/drm/drm_pci.c#L283
 #else
 	iRes = drm_pci_init(&sPVRDrmDriver, &sPVRPCIDriver);
 #endif
@@ -724,7 +702,7 @@ static int __init PVRSRVDrmInit(void)
 static void __exit PVRSRVDrmExit(void)
 {
 #if defined(PVR_NEW_STYLE_DRM_PLATFORM_DEV)
-#if defined(NO_HARDWARE)
+#if !defined(PVR_LDM_PLATFORM_PRE_REGISTERED) || defined(NO_HARDWARE)
 	platform_device_unregister(&sPVRPlatDevice);
 #endif
 	platform_driver_unregister(&sPVRPlatDriver);
@@ -735,8 +713,6 @@ static void __exit PVRSRVDrmExit(void)
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,39))
 #if defined(PVR_DRI_DRM_PLATFORM_DEV)
 	drm_platform_exit(&sPVRDrmDriver, gpsPVRLDMDev);
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0))
-#warning provide replacement for drm_pci_exit
 #else
 	drm_pci_exit(&sPVRDrmDriver, &sPVRPCIDriver);
 #endif

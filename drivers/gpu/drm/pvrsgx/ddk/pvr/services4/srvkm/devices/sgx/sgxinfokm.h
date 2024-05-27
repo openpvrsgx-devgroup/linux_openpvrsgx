@@ -71,7 +71,37 @@ extern "C" {
 
 /*Forward declaration*/
 typedef struct _PVRSRV_STUB_PBDESC_ PVRSRV_STUB_PBDESC;
+#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE)
+typedef struct _PVRSRV_SYSTRACE_JOB_
+{
+	IMG_UINT32 ui32JobID;
+	IMG_UINT32 ui32FrameNum;
+	IMG_UINT32 ui32RTData;
+	
+} PVRSRV_SYSTRACE_JOB;
 
+typedef struct _PVRSRV_SYSTRACE_CONTEXT_
+{
+	IMG_UINT32 ui32PID;
+	IMG_UINT32 ui32CtxID;
+
+	/*Every PID has a circular buffer of jobs*/
+	IMG_UINT32 ui32Start;
+	IMG_UINT32 ui32End;
+	IMG_UINT32 ui32CurrentJobID;
+	PVRSRV_SYSTRACE_JOB asJobs[16];
+	
+} PVRSRV_SYSTRACE_CONTEXT;
+
+typedef struct _PVRSRV_SYSTRACE_DATA_
+{
+	IMG_UINT64 ui64LastHostTimestamp;
+	IMG_UINT32 ui32LastSGXClocksx16;
+	IMG_UINT32 ui32Index;
+	IMG_UINT32 ui32CurrentCtxID;
+	PVRSRV_SYSTRACE_CONTEXT asSystraceContext[8];
+} PVRSRV_SYSTRACE_DATA;	
+#endif
 
 typedef struct _PVRSRV_SGX_CCB_INFO_ *PPVRSRV_SGX_CCB_INFO;
 
@@ -257,6 +287,11 @@ typedef struct _PVRSRV_SGXDEV_INFO_
 	IMG_DEV_PHYADDR			sBRN31620DummyPTDevPAddr;
 
 	IMG_HANDLE			hKernelMMUContext;
+#endif
+
+#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE)
+	IMG_BOOL			bSystraceInitialised;
+	PVRSRV_SYSTRACE_DATA *psSystraceData;
 #endif
 
 } PVRSRV_SGXDEV_INFO;
@@ -553,6 +588,8 @@ PVRSRV_ERROR SGXPostClockSpeedChange(IMG_HANDLE				hDevHandle,
 									 PVRSRV_DEV_POWER_STATE	eCurrentPowerState);
 
 IMG_VOID SGXPanic(PVRSRV_SGXDEV_INFO	*psDevInfo);
+
+IMG_VOID RunSGXREGDebugScripts(PVRSRV_SGXDEV_INFO	*psDevInfo);
 
 IMG_VOID SGXDumpDebugInfo (PVRSRV_SGXDEV_INFO	*psDevInfo,
 						   IMG_BOOL				bDumpSGXRegs);

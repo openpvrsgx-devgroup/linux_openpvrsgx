@@ -62,7 +62,7 @@ IMG_UINT32	g_ui32InitFlags;
 
 /* mark which parts of Services were initialised */
 #define		INIT_DATA_ENABLE_PDUMPINIT	0x1U
-#define		INIT_DATA_ENABLE_TTARCE		0x2U
+#define		INIT_DATA_ENABLE_TTRACE		0x2U
 #define		INIT_DATA_ENABLE_DEVMEM		0x4U
 
 /*!
@@ -156,7 +156,37 @@ PVRSRV_ERROR FreeDeviceID(SYS_DATA *psSysData, IMG_UINT32 ui32DevID)
 
 	return PVRSRV_ERROR_INVALID_DEVICEID;
 }
+/*!
+******************************************************************************
 
+ @Function		PVRSRVCompatCheckKM
+
+ @Description   	UM/KM ddk branch Compatibility check function
+
+ @input 		psUserModeDDKDetails: User mode DDK version
+
+ @output		In case of incompatibility, returns PVRSRV_ERROR_DDK_VERSION_MISMATCH
+
+ @Return   		PVRSRV_ERROR
+
+******************************************************************************/
+IMG_VOID IMG_CALLCONV PVRSRVCompatCheckKM(PVRSRV_BRIDGE_IN_COMPAT_CHECK *psUserModeDDKDetails, PVRSRV_BRIDGE_RETURN *psRetOUT)
+{
+
+	if(psUserModeDDKDetails->ui32DDKVersion != ((PVRVERSION_MAJ << 16) | (PVRVERSION_MIN << 8))
+		|| (psUserModeDDKDetails->ui32DDKBuild != PVRVERSION_BUILD))
+	{
+		psRetOUT->eError = PVRSRV_ERROR_DDK_VERSION_MISMATCH;
+		PVR_LOG(("(FAIL) UM-KM DDK Mismatch UM-(%d) KM-(%d).",
+						psUserModeDDKDetails->ui32DDKBuild, PVRVERSION_BUILD));
+	}
+	else
+	{
+		psRetOUT->eError = PVRSRV_OK;
+		PVR_LOG(("UM DDK-(%d) and KM DDK-(%d) match. [ OK ]",
+						psUserModeDDKDetails->ui32DDKBuild ,PVRVERSION_BUILD));
+	}
+}
 
 /*!
 ******************************************************************************
@@ -396,16 +426,16 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVInit(PSYS_DATA psSysData)
 	psSysData->eFailedPowerState = PVRSRV_SYS_POWER_STATE_Unspecified;
 
 	/* Create an event object */
-	if(OSAllocMem( PVRSRV_PAGEABLE_SELECT,
+	if((eError = OSAllocMem( PVRSRV_PAGEABLE_SELECT,
 					 sizeof(PVRSRV_EVENTOBJECT) ,
 					 (IMG_VOID **)&psSysData->psGlobalEventObject, 0,
-					 "Event Object") != PVRSRV_OK)
+					 "Event Object")) != PVRSRV_OK)
 	{
 
 		goto Error;
 	}
 
-	if(OSEventObjectCreateKM("PVRSRV_GLOBAL_EVENTOBJECT", psSysData->psGlobalEventObject) != PVRSRV_OK)
+	if((eError = OSEventObjectCreateKM("PVRSRV_GLOBAL_EVENTOBJECT", psSysData->psGlobalEventObject)) != PVRSRV_OK)
 	{
 		goto Error;
 	}
@@ -419,12 +449,14 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVInit(PSYS_DATA psSysData)
 	eError = PVRSRVTimeTraceInit();
 	if (eError != PVRSRV_OK)
 		goto Error;
-	g_ui32InitFlags |= INIT_DATA_ENABLE_TTARCE;
+	g_ui32InitFlags |= INIT_DATA_ENABLE_TTRACE;
 #endif
 
+#if defined(PDUMP)
 	/* Initialise pdump */
 	PDUMPINIT();
 	g_ui32InitFlags |= INIT_DATA_ENABLE_PDUMPINIT;
+#endif
 
 #if defined(SUPPORT_ION)
 	eError = PVRSRVInitDeviceMem();
@@ -469,6 +501,7 @@ IMG_VOID IMG_CALLCONV PVRSRVDeInit(PSYS_DATA psSysData)
 
 	PERFDEINIT();
 
+
 #if defined(SUPPORT_ION)
 	if ((g_ui32InitFlags & INIT_DATA_ENABLE_DEVMEM) > 0)
 	{
@@ -476,19 +509,27 @@ IMG_VOID IMG_CALLCONV PVRSRVDeInit(PSYS_DATA psSysData)
 	}
 #endif
 
+#if defined(MEM_TRACK_INFO_DEBUG)
+	/* Free the list of memory operations */
+	PVRSRVFreeMemOps();
+#endif
+
 #if defined(TTRACE)
 	/* deinitialise ttrace */
-	if ((g_ui32InitFlags & INIT_DATA_ENABLE_TTARCE) > 0)
+	if ((g_ui32InitFlags & INIT_DATA_ENABLE_TTRACE) > 0)
 	{
 		PVRSRVTimeTraceDeinit();
 	}
 #endif
+
+#if defined(PDUMP)
 	/* deinitialise pdump */
 	if( (g_ui32InitFlags & INIT_DATA_ENABLE_PDUMPINIT) > 0)
 	{
 		PDUMPDEINIT();
 	}
-	
+#endif
+
 	/* destroy event object */
 	if(psSysData->psGlobalEventObject)
 	{
@@ -974,18 +1015,23 @@ PVRSRV_ERROR IMG_CALLCONV PollForValueKM (volatile IMG_UINT32*	pui32LinMemAddr,
 		/* For the Emulator we want the system to stop when a lock-up is detected so the state can be analysed.
 		 * Also the Emulator is much slower than real silicon so timeouts are not valid. 
 		 */
+		if((*pui32LinMemAddr & ui32Mask) == ui32Value)
+		{
+			return PVRSRV_OK;
+		}
+
 		do
 		{
-			if((*pui32LinMemAddr & ui32Mask) == ui32Value)
-			{
-				return PVRSRV_OK;
-			}
-
 			#if defined(__linux__)
 			OSWaitus(ui32PollPeriodus);
 			#else
 			OSReleaseThreadQuanta();
 			#endif	
+
+			if((*pui32LinMemAddr & ui32Mask) == ui32Value)
+			{
+				return PVRSRV_OK;
+			}
 
 		} while (ui32Timeoutus); /* Endless loop only for the Emulator */
 	}
@@ -998,15 +1044,15 @@ PVRSRV_ERROR IMG_CALLCONV PollForValueKM (volatile IMG_UINT32*	pui32LinMemAddr,
 			PVR_ASSERT(ui32PollPeriodus >= 1000);
 		}
 
+		ui32ActualValue = (*pui32LinMemAddr & ui32Mask);
+		if(ui32ActualValue == ui32Value)
+		{
+			return PVRSRV_OK;
+		}
+
 		/* PRQA S 3415,4109 1 */ /* macro format critical - leave alone */
 		LOOP_UNTIL_TIMEOUT(ui32Timeoutus)
 		{
-			ui32ActualValue = (*pui32LinMemAddr & ui32Mask);
-			if(ui32ActualValue == ui32Value)
-			{
-				return PVRSRV_OK;
-			}
-			
 			if (bAllowPreemption)
 			{
 				OSSleepms(ui32PollPeriodus / 1000);
@@ -1015,6 +1061,13 @@ PVRSRV_ERROR IMG_CALLCONV PollForValueKM (volatile IMG_UINT32*	pui32LinMemAddr,
 			{
 				OSWaitus(ui32PollPeriodus);
 			}
+
+			ui32ActualValue = (*pui32LinMemAddr & ui32Mask);
+			if(ui32ActualValue == ui32Value)
+			{
+				return PVRSRV_OK;
+			}
+
 		} END_LOOP_UNTIL_TIMEOUT();
 	
 		PVR_DPF((PVR_DBG_ERROR,"PollForValueKM: Timeout. Expected 0x%x but found 0x%x (mask 0x%x).",
@@ -1369,12 +1422,15 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVGetMiscInfoKM(PVRSRV_MISC_INFO *psMiscInfo)
 
 			if(psMiscInfo->sCacheOpCtl.eCacheOpType == PVRSRV_MISC_INFO_CPUCACHEOP_FLUSH)
 			{
-				if(!OSFlushCPUCacheRangeKM(psKernelMemInfo->sMemBlk.hOSMemHandle,
-										   0,
-										   psMiscInfo->sCacheOpCtl.pvBaseVAddr,
-										   psMiscInfo->sCacheOpCtl.ui32Length))
+				if(psMiscInfo->sCacheOpCtl.ui32Length!=0)
 				{
-					return PVRSRV_ERROR_CACHEOP_FAILED;
+					if(!OSFlushCPUCacheRangeKM(psKernelMemInfo->sMemBlk.hOSMemHandle,
+											   0,
+											   psMiscInfo->sCacheOpCtl.pvBaseVAddr,
+											   psMiscInfo->sCacheOpCtl.ui32Length))
+					{
+						return PVRSRV_ERROR_CACHEOP_FAILED;
+					}
 				}
 			}
 			else if(psMiscInfo->sCacheOpCtl.eCacheOpType == PVRSRV_MISC_INFO_CPUCACHEOP_CLEAN)
@@ -1429,11 +1485,13 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVGetMiscInfoKM(PVRSRV_MISC_INFO *psMiscInfo)
 	}
 #endif /* #if defined(PVRSRV_RESET_ON_HWTIMEOUT) */
 
+#if defined(SUPPORT_PVRSRV_DEVICE_CLASS)
 	if ((psMiscInfo->ui32StateRequest & PVRSRV_MISC_INFO_FORCE_SWAP_TO_SYSTEM_PRESENT) != 0UL)
 	{
-		PVRSRVSetDCState(DC_STATE_FORCE_SWAP_TO_SYSTEM);
+		PVRSRVProcessQueues(IMG_TRUE);
 		psMiscInfo->ui32StatePresent |= PVRSRV_MISC_INFO_FORCE_SWAP_TO_SYSTEM_PRESENT;
 	}
+#endif /* defined(SUPPORT_PVRSRV_DEVICE_CLASS) */
 
 	return PVRSRV_OK;
 }
@@ -1591,11 +1649,13 @@ IMG_VOID IMG_CALLCONV PVRSRVMISR(IMG_VOID *pvSysData)
 	List_PVRSRV_DEVICE_NODE_ForEach(psSysData->psDeviceNodeList,
 									&PVRSRVMISR_ForEachCb);
 
+#if defined(SUPPORT_PVRSRV_DEVICE_CLASS)
 	/* Process the queues. */
 	if (PVRSRVProcessQueues(IMG_FALSE) == PVRSRV_ERROR_PROCESSING_BLOCKED)
 	{
 		PVRSRVProcessQueues(IMG_FALSE);
 	}
+#endif /* defined(SUPPORT_PVRSRV_DEVICE_CLASS) */
 
 	/* signal global event object */
 	if (psSysData->psGlobalEventObject)

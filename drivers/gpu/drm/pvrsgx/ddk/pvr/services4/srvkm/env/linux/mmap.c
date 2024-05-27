@@ -67,9 +67,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 #if defined(SUPPORT_DRI_DRM)
 #include <drm/drmP.h>
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,0))
-#include "drm/drm_legacy.h"
-#endif
 #endif
 
 #ifdef CONFIG_ARCH_OMAP5
@@ -122,7 +119,7 @@ static IMG_SIZE_T g_uiTotalByteSize = 0;
 
 
 #if defined(DEBUG_LINUX_MMAP_AREAS)
-static struct proc_dir_entry *g_ProcMMap;
+static struct pvr_proc_dir_entry *g_ProcMMap;
 #endif /* defined(DEBUG_LINUX_MMAP_AREAS) */
 
 #if !defined(PVR_MAKE_ALL_PFNS_SPECIAL)
@@ -676,7 +673,7 @@ DoMapToUser(LinuxMemArea *psLinuxMemArea,
 		IMG_INT result;
 
 		PVR_ASSERT(LinuxMemAreaPhysIsContig(psLinuxMemArea));
-		PVR_ASSERT(LinuxMemAreaToCpuPFN(psLinuxMemArea, ui32ByteOffset) == ps_vma->vm_pgoff);
+		PVR_ASSERT(LinuxMemAreaToCpuPFN(psLinuxMemArea, uiByteOffset) == ps_vma->vm_pgoff);
         /*
 	 * Since the memory is contiguous, we can map the whole range in one
 	 * go .
@@ -716,7 +713,7 @@ DoMapToUser(LinuxMemArea *psLinuxMemArea,
 	/* First pass, validate the page frame numbers */
 	for(uiPA = uiByteOffset; uiPA < uiByteEnd; uiPA += PAGE_SIZE)
 	{
-	    IMG_UINTPTR_T pfn;
+		IMG_UINTPTR_T pfn;
 	    IMG_BOOL bMapPage = IMG_TRUE;
 
 		if (psLinuxMemArea->hBMHandle)
@@ -741,7 +738,9 @@ DoMapToUser(LinuxMemArea *psLinuxMemArea,
 			}
 		    else if (0 == page_count(pfn_to_page(pfn)))
 		    {
+#if defined(PVR_MAKE_ALL_PFNS_SPECIAL)
 		        bMixedMap = IMG_TRUE;
+#endif
 		    }
 			uiAdjustedPA += PAGE_SIZE;
 		}
@@ -778,21 +777,12 @@ DoMapToUser(LinuxMemArea *psLinuxMemArea,
 #if defined(PVR_MAKE_ALL_PFNS_SPECIAL)
 		    if (bMixedMap)
 		    {
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,20,0))
-			result = vmf_insert_mixed(ps_vma, ulVMAPos, pfn_to_pfn_t(pfn));
-	                if(result != 0)
-	                {
-	                    PVR_DPF((PVR_DBG_ERROR,"%s: Error - vmf_insert_mixed failed (%x)", __FUNCTION__, result));
-	                    return IMG_FALSE;
-	                }
-#else
-			result = vm_insert_mixed(ps_vma, ulVMAPos, pfn_to_pfn_t(pfn));
+			result = vm_insert_mixed(ps_vma, ulVMAPos, pfn);
 	                if(result != 0)
 	                {
 	                    PVR_DPF((PVR_DBG_ERROR,"%s: Error - vm_insert_mixed failed (%d)", __FUNCTION__, result));
 	                    return IMG_FALSE;
 	                }
-#endif
 		    }
 		    else
 #endif
@@ -948,8 +938,7 @@ static int MMapVAccess(struct vm_area_struct *ps_vma, unsigned long addr,
 	}
 	else
 	{
-		IMG_UINTPTR_T uiOffsetInPage;
-		IMG_UINTPTR_T pfn;
+		IMG_UINTPTR_T pfn, uiOffsetInPage;
 		struct page *page;
 
 		pfn = LinuxMemAreaToCpuPFN(psLinuxMemArea, ulOffset);
@@ -1035,11 +1024,7 @@ PVRMMap(struct file* pFile, struct vm_area_struct* ps_vma)
 
 #if !defined(SUPPORT_DRI_DRM_EXT)
 		/* Pass unknown requests onto the DRM module */
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0))
 		return drm_mmap(pFile, ps_vma);
-#else
-		return drm_legacy_mmap(pFile, ps_vma);
-#endif
 #else
         /*
          * Indicate to caller that the request is not for us.
@@ -1076,11 +1061,11 @@ PVRMMap(struct file* pFile, struct vm_area_struct* ps_vma)
          __FUNCTION__, psOffsetStruct->psLinuxMemArea));
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0))
+    /* This is probably superfluous and implied by VM_IO */
     ps_vma->vm_flags |= VM_RESERVED;
 #else
-    ps_vma->vm_flags |= VM_DONTEXPAND | VM_DONTDUMP; /* Don't swap */
+    ps_vma->vm_flags |= VM_DONTDUMP;
 #endif
-
     ps_vma->vm_flags |= VM_IO;
 
     /*
@@ -1114,15 +1099,6 @@ PVRMMap(struct file* pFile, struct vm_area_struct* ps_vma)
 #ifdef CONFIG_ARCH_OMAP5
     {
 	IMG_BOOL bModPageProt = IMG_FALSE;
-
-	/* In OMAP5, the Cortex A15 no longer masks an issue with the L2
-	 * interconnect. Write-combined access to the TILER aperture will
-	 * generate SIGBUS / "non-line fetch abort" errors due to L2
-	 * interconnect bus accesses. The workaround is to use a shared
-	 * device access.
-	 */
-
-	bModPageProt |= (psOffsetStruct->psLinuxMemArea->eAreaType == LINUX_MEM_AREA_ION);
 
 #ifdef CONFIG_DSSCOMP
 	bModPageProt |= is_tiler_addr(LinuxMemAreaToCpuPAddr(psOffsetStruct->psLinuxMemArea, 0).uiAddr);
@@ -1191,7 +1167,7 @@ unlock_and_return:
 
     LinuxUnLockMutex(&g_sMMapMutex);
 
-    if(psFlushMemArea)
+    if(psFlushMemArea && uiFlushSize)
     {
         OSInvalidateCPUCacheRangeKM(psFlushMemArea, uiByteOffset, pvBase,
 									uiFlushSize);
@@ -1271,7 +1247,6 @@ static void* ProcSeqNextMMapRegistrations(struct seq_file *sfile,void* el,loff_t
 {
 	return ProcSeqOff2ElementMMapRegistrations(sfile,off);
 }
-
 
 /*
  * Show MMap element (called when reading /proc/mmap file)

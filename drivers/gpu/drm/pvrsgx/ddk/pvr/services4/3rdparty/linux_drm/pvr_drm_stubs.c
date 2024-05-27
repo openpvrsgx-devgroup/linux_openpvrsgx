@@ -47,14 +47,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <linux/version.h>
 #include <linux/kernel.h>
-#include <linux/module.h>
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0))
-#define CONFIG_PCI	# do not load new static inline stubs but external declaration
-#endif
 #include <linux/pci.h>
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,15,0))
 #include <asm/system.h>
-#endif
 
 #include "pvr_drm_mod.h"
 
@@ -88,14 +82,6 @@ static void
 release_device(struct device *dev)
 {
 }
-
-int pci_bus_read_config_dword(struct pci_bus *bus, unsigned int devfn,int where, u32 *val) 
-{ 
-	return 0;
- 
-}
-
-
 
 int
 drm_pvr_dev_add(void)

@@ -43,9 +43,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "osperproc.h"
 
 #include "env_perproc.h"
-#include "proc.h"
 
 #if defined (SUPPORT_ION)
+#include <linux/err.h>
 #include "ion.h"
 extern struct ion_device *gpsIonDev;
 #endif
@@ -89,14 +89,7 @@ PVRSRV_ERROR OSPerProcessPrivateDataInit(IMG_HANDLE *phOsPrivateData)
 	OSSNPrintf(psEnvPerProc->azIonClientName, ION_CLIENT_NAME_SIZE, "pvr_ion_client-%d", OSGetCurrentProcessIDKM());
 	psEnvPerProc->psIONClient =
 		ion_client_create(gpsIonDev,
-#if defined(CONFIG_ION_OMAP)
-						  /*1 << ION_HEAP_TYPE_SYSTEM_CONTIG |*/
-						    1 << ION_HEAP_TYPE_SYSTEM
-						  | 1 << OMAP_ION_HEAP_TYPE_TILER
-#else /* defined(CONFIG_ION_OMAP) */
-						  -1
-#endif /* defined(CONFIG_ION_OMAP) */
-						  , psEnvPerProc->azIonClientName);
+						  psEnvPerProc->azIonClientName);
  
 	if (IS_ERR_OR_NULL(psEnvPerProc->psIONClient))
 	{
@@ -120,6 +113,14 @@ PVRSRV_ERROR OSPerProcessPrivateDataDeInit(IMG_HANDLE hOsPrivateData)
 	}
 
 	psEnvPerProc = (PVRSRV_ENV_PER_PROCESS_DATA *)hOsPrivateData;
+
+#if defined(SUPPORT_ION)
+	if (psEnvPerProc->psIONClient)
+	{
+		ion_client_destroy(psEnvPerProc->psIONClient);
+		psEnvPerProc->psIONClient = IMG_NULL;
+	}
+#endif /* defined(SUPPORT_ION) */
 
 	/* Linux specific mmap processing */
 	LinuxMMapPerProcessDisconnect(psEnvPerProc);

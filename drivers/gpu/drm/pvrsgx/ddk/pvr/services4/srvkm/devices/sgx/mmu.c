@@ -274,6 +274,10 @@ struct _MMU_HEAP_
 static IMG_VOID
 _DeferredFreePageTable (MMU_HEAP *pMMUHeap, IMG_UINT32 ui32PTIndex, IMG_BOOL bOSFreePT);
 
+#if defined (MEM_TRACK_INFO_DEBUG)
+IMG_IMPORT IMG_VOID PVRSRVPrintMemTrackInfo(IMG_UINT32 ui32FaultAddr);
+#endif
+
 #if defined(PDUMP)
 static IMG_VOID
 MMU_PDumpPageTables	(MMU_HEAP *pMMUHeap,
@@ -303,8 +307,7 @@ static IMG_VOID DumpPT(MMU_PT_INFO *psPTInfoList)
 	/* 1024 entries in a 4K page table */
 	for(i = 0; i < 1024; i += 8)
 	{
-		PVR_DPF((PVR_DBG_ERROR,
-				 "%08X %08X %08X %08X %08X %08X %08X %08X\n",
+		PVR_LOG(("%08X %08X %08X %08X %08X %08X %08X %08X",
 				 p[i + 0], p[i + 1], p[i + 2], p[i + 3],
 				 p[i + 4], p[i + 5], p[i + 6], p[i + 7]));
 	}
@@ -329,10 +332,10 @@ static IMG_VOID CheckPT(MMU_PT_INFO *psPTInfoList)
 
 	if(psPTInfoList->ui32ValidPTECount != ui32Count)
 	{
-		PVR_DPF((PVR_DBG_ERROR, "ui32ValidPTECount: %u ui32Count: %u\n",
+		PVR_DPF((PVR_DBG_ERROR, "ui32ValidPTECount: %u ui32Count: %u",
 				 psPTInfoList->ui32ValidPTECount, ui32Count));
 		DumpPT(psPTInfoList);
-		BUG();
+		PVR_DBG_BREAK;
 	}
 }
 #else /* PT_DEBUG */
@@ -348,7 +351,7 @@ static INLINE IMG_VOID CheckPT(MMU_PT_INFO *psPTInfoList)
 	it read/write when we alter it. This allows us
 	to check that our memory isn't being overwritten
 */
-#if defined(PVRSRV_MMU_MAKE_READWRITE_ON_DEMAND)
+#if defined(__linux__) && defined(PVRSRV_MMU_MAKE_READWRITE_ON_DEMAND)
 
 #include <linux/version.h>
 
@@ -3154,10 +3157,19 @@ MMU_Alloc (MMU_HEAP *pMMUHeap,
 							&uiAddr);
 		if(!bStatus)
 		{
-			PVR_DPF((PVR_DBG_ERROR,"MMU_Alloc: RA_Alloc of VMArena failed"));
-			PVR_DPF((PVR_DBG_ERROR,"MMU_Alloc: Alloc of DevVAddr failed from heap %s ID%d",
-									pMMUHeap->psDevArena->pszName,
-									pMMUHeap->psDevArena->ui32HeapID));
+			IMG_CHAR asCurrentProcessName[128];
+
+			PVR_DPF((PVR_DBG_ERROR,"MMU_Alloc: RA_Alloc of VMArena failed"));	
+			OSGetCurrentProcessNameKM(asCurrentProcessName, 128);
+			PVR_DPF((PVR_DBG_ERROR,"MMU_Alloc: Alloc of DevVAddr failed from heap %s ID%d, pid: %d, task: %s",
+ 									pMMUHeap->psDevArena->pszName,
+									pMMUHeap->psDevArena->ui32HeapID,
+									OSGetCurrentProcessIDKM(),
+									asCurrentProcessName));									
+		#if defined (MEM_TRACK_INFO_DEBUG)
+			PVRSRVPrintMemTrackInfo(0);
+		#endif
+
 			return bStatus;
 		}
 
@@ -3599,6 +3611,10 @@ MMU_MapScatter (MMU_HEAP *pMMUHeap,
 				  DevVAddr.uiAddr, sSysAddr.uiAddr, uCount, uSize));
 	}
 
+#if (SGX_FEATURE_PT_CACHE_ENTRIES_PER_LINE > 1)
+	MMU_InvalidatePageTableCache(pMMUHeap->psMMUContext->psDevInfo);
+#endif
+
 #if defined(PDUMP)
 	MMU_PDumpPageTables (pMMUHeap, MapBaseDevVAddr, uSize, IMG_FALSE, hUniqueTag);
 #endif /* #if defined(PDUMP) */
@@ -3675,6 +3691,10 @@ MMU_MapPages (MMU_HEAP *pMMUHeap,
 		DevVAddr.uiAddr += ui32VAdvance;
 		DevPAddr.uiAddr += ui32PAdvance;
 	}
+
+#if (SGX_FEATURE_PT_CACHE_ENTRIES_PER_LINE > 1)
+	MMU_InvalidatePageTableCache(pMMUHeap->psMMUContext->psDevInfo);
+#endif
 
 #if defined(PDUMP)
 	MMU_PDumpPageTables (pMMUHeap, MapBaseDevVAddr, uSize, IMG_FALSE, hUniqueTag);
@@ -3768,6 +3788,10 @@ MMU_MapPagesSparse (MMU_HEAP *pMMUHeap,
 		DevVAddr.uiAddr += ui32VAdvance;
 	}
 	pMMUHeap->bHasSparseMappings = IMG_TRUE;
+
+#if (SGX_FEATURE_PT_CACHE_ENTRIES_PER_LINE > 1)
+	MMU_InvalidatePageTableCache(pMMUHeap->psMMUContext->psDevInfo);
+#endif
 
 #if defined(PDUMP)
 	MMU_PDumpPageTables (pMMUHeap, MapBaseDevVAddr, uSizeVM, IMG_FALSE, hUniqueTag);
@@ -3879,6 +3903,10 @@ MMU_MapShadow (MMU_HEAP          *pMMUHeap,
 		MapDevVAddr.uiAddr += ui32VAdvance;
 		uOffset += ui32PAdvance;
 	}
+
+#if (SGX_FEATURE_PT_CACHE_ENTRIES_PER_LINE > 1)
+	MMU_InvalidatePageTableCache(pMMUHeap->psMMUContext->psDevInfo);
+#endif
 
 #if defined(PDUMP)
 	MMU_PDumpPageTables (pMMUHeap, MapBaseDevVAddr, uByteSize, IMG_FALSE, hUniqueTag);
@@ -4008,6 +4036,11 @@ MMU_MapShadowSparse (MMU_HEAP          *pMMUHeap,
 	}
 
 	pMMUHeap->bHasSparseMappings = IMG_TRUE;
+
+#if (SGX_FEATURE_PT_CACHE_ENTRIES_PER_LINE > 1)
+	MMU_InvalidatePageTableCache(pMMUHeap->psMMUContext->psDevInfo);
+#endif
+
 #if defined(PDUMP)
 	MMU_PDumpPageTables (pMMUHeap, MapBaseDevVAddr, uiSizeVM, IMG_FALSE, hUniqueTag);
 #endif /* #if defined(PDUMP) */

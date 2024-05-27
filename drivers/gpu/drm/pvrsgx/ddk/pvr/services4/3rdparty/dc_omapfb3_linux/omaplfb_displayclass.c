@@ -109,8 +109,7 @@ extern struct ion_device *omap_ion_device;
 
 #define	OMAPLFB_VSYNC_SETTLE_COUNT	5
 
-//#define	OMAPLFB_MAX_NUM_DEVICES		FB_MAX
-#define OMAPLFB_MAX_NUM_DEVICES         1
+#define	OMAPLFB_MAX_NUM_DEVICES		FB_MAX
 #if (OMAPLFB_MAX_NUM_DEVICES > FB_MAX)
 #error "OMAPLFB_MAX_NUM_DEVICES must not be greater than FB_MAX"
 #endif
@@ -215,13 +214,16 @@ static IMG_VOID SetDCState(IMG_HANDLE hDevice, IMG_UINT32 ui32State)
 	switch (ui32State)
 	{
 		case DC_STATE_FLUSH_COMMANDS:
+			/* Flush out any 'real' operation waiting for another flip.
+			 * In flush state we won't pass any 'real' operations along
+			 * to dsscomp_gralloc_queue(); we'll just CmdComplete them
+			 * immediately.
+			 */
+			OMAPLFBFlip(psDevInfo, &psDevInfo->sSystemBuffer);
 			OMAPLFBAtomicBoolSet(&psDevInfo->sFlushCommands, OMAPLFB_TRUE);
 			break;
 		case DC_STATE_NO_FLUSH_COMMANDS:
 			OMAPLFBAtomicBoolSet(&psDevInfo->sFlushCommands, OMAPLFB_FALSE);
-			break;
-		case DC_STATE_FORCE_SWAP_TO_SYSTEM:
-			OMAPLFBFlip(psDevInfo, &psDevInfo->sSystemBuffer);
 			break;
 		default:
 			break;
@@ -960,6 +962,7 @@ void OMAPLFBSwapHandler(OMAPLFB_BUFFER *psBuffer)
 		switch(eMode)
 		{
 			case OMAPLFB_UPDATE_MODE_AUTO:
+			case OMAPLFB_UPDATE_MODE_VSYNC:
 				psSwapChain->bNotVSynced = OMAPLFB_FALSE;
 
 				if (bPreviouslyNotVSynced || psSwapChain->iBlankEvents != iBlankEvents)
@@ -1075,6 +1078,47 @@ static IMG_BOOL ProcessFlipV2(IMG_HANDLE hCmdCookie,
 	asMemInfo[5] = {};
 	int res;
 
+	if(!psDssData)
+	{
+		if(ui32NumMemInfos == 1)
+		{
+			OMAPLFB_BUFFER sBuffer;
+			IMG_CPU_PHYADDR phyAddr;
+
+			psDevInfo->sPVRJTable.pfnPVRSRVDCMemInfoGetCpuPAddr(ppsMemInfos[0], 0, &phyAddr);
+
+			/* Fake up an OMAPLFB_BUFFER */
+			sBuffer.psNext				= NULL;
+			sBuffer.psDevInfo			= psDevInfo;
+			sBuffer.ulYOffset			= 0;
+			sBuffer.sSysAddr.uiAddr		= phyAddr.uiAddr;
+			sBuffer.sCPUVAddr			= 0;
+			sBuffer.psSyncData			= NULL;
+			sBuffer.hCmdComplete		= (OMAPLFB_HANDLE)hCmdCookie;
+			sBuffer.ulSwapInterval		= 0;
+
+			/* If we got a meminfo but no private data, assume the 'null' HWC
+			 * backend is in use, and emulate a swapchain-less ProcessFlipV1.
+			 */
+			OMAPLFBFlip(psDevInfo, &sBuffer);
+
+			/* FIXME: Why do this? Shouldn't we use the hCmdCookie correctly,
+			 * like ProcessFlipV1 does?
+			 */
+			psDevInfo->sPVRJTable.pfnPVRSRVCmdComplete(hCmdCookie, IMG_TRUE);
+		}
+		else
+		{
+			printk(KERN_WARNING DRIVER_PREFIX
+				   ": %s: Device %u: WARNING: psDispcData was NULL. "
+				   "The HWC probably has a bug. Silently ignoring.",
+				   __FUNCTION__, psDevInfo->uiFBDevID);
+		}
+
+		psDevInfo->sPVRJTable.pfnPVRSRVCmdComplete(hCmdCookie, IMG_TRUE);
+		return IMG_TRUE;
+	}
+
 	if(ui32DssDataLength != sizeof(*psDssData))
 	{
 		WARN(1, "invalid size of private data (%d vs %d)",
@@ -1086,6 +1130,12 @@ static IMG_BOOL ProcessFlipV2(IMG_HANDLE hCmdCookie,
 	{
 		WARN(1, "must have at least one layer");
 		return IMG_FALSE;
+	}
+
+	if(DontWaitForVSync(psDevInfo))
+	{
+		psDevInfo->sPVRJTable.pfnPVRSRVCmdComplete(hCmdCookie, IMG_TRUE);
+		return IMG_TRUE;
 	}
 
 	for(i = k = 0; i < ui32NumMemInfos && k < ARRAY_SIZE(asMemInfo); i++, k++)
@@ -1604,8 +1654,10 @@ static OMAPLFB_DEVINFO *OMAPLFBInitDev(unsigned uiFBDevID)
 #if defined(CONFIG_ION_OMAP)
 	psDevInfo->psIONClient =
 		ion_client_create(omap_ion_device,
+#if defined(SUPPORT_OLD_ION_API)
 						  1 << ION_HEAP_TYPE_CARVEOUT |
 						  1 << OMAP_ION_HEAP_TYPE_TILER,
+#endif
 						  "dc_omapfb3_linux");
 	if (IS_ERR_OR_NULL(psDevInfo->psIONClient))
 	{
@@ -1616,7 +1668,6 @@ static OMAPLFB_DEVINFO *OMAPLFBInitDev(unsigned uiFBDevID)
 	}
 #endif /* defined(CONFIG_ION_OMAP) */
 
-#ifdef FBDEV_PRESENT
 	/* Save private fbdev information structure in the dev. info. */
 	if(OMAPLFBInitFBDev(psDevInfo) != OMAPLFB_OK)
 	{
@@ -1659,17 +1710,6 @@ static OMAPLFB_DEVINFO *OMAPLFBInitDev(unsigned uiFBDevID)
 	psDevInfo->sSystemBuffer.psDevInfo = psDevInfo;
 
 	OMAPLFBInitBufferForSwap(&psDevInfo->sSystemBuffer);
-#else
-psDevInfo->sSystemBuffer.sCPUVAddr = 0x100;
-//                psDevInfo->sSystemBuffer.ulBufferSize = 600*3200;
-
-                psDevInfo->sDisplayFormat.pixelformat = 20;
-                psDevInfo->sFBInfo.ulWidth      =  800;
-                psDevInfo->sFBInfo.ulHeight     =  600;
-                psDevInfo->sFBInfo.ulByteStride =  3200;
-                psDevInfo->sFBInfo.ulFBSize     =  8388608;
-                psDevInfo->sFBInfo.ulBufferSize = 600*3200;
-#endif
 
 #if defined(CONFIG_DSSCOMP) && defined(SUPPORT_PVRSRV_GET_DC_SYSTEM_BUFFER)
 	OMAPLFBFlip(psDevInfo, &psDevInfo->sSystemBuffer);
@@ -1835,9 +1875,8 @@ static OMAPLFB_BOOL OMAPLFBDeInitDev(OMAPLFB_DEVINFO *psDevInfo)
 	OMAPLFBAtomicBoolDeInit(&psDevInfo->sLeaveVT);
 #endif
 
-#ifdef FBDEV_PRESENT
 	OMAPLFBDeInitFBDev(psDevInfo);
-#endif
+
 #if defined(CONFIG_ION_OMAP)
 	ion_client_destroy(psDevInfo->psIONClient);
 #endif

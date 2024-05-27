@@ -209,6 +209,36 @@ PVRSRV_ERROR PDumpSetFrameKM(IMG_UINT32 ui32Frame)
 #endif
 }
 
+static IMG_BOOL _PDumpWillCapture(IMG_UINT32 ui32Flags)
+{
+	/*
+		FIXME:
+		We really need to know if the PDump client is connected so we can
+		check if the continuous data will be saved or not.
+	*/
+	if ((ui32Flags & PDUMP_FLAGS_PERSISTENT) || (ui32Flags & PDUMP_FLAGS_CONTINUOUS))
+	{
+		return IMG_TRUE;
+	}
+	else
+	{
+		return PDumpIsCaptureFrameKM();
+	}
+}
+
+IMG_BOOL PDumpWillCapture(IMG_UINT32 ui32Flags)
+{
+#if defined(SUPPORT_PDUMP_MULTI_PROCESS)
+	if( _PDumpIsProcessActive() )
+	{
+		return _PDumpWillCapture(ui32Flags);
+	}
+	return PVRSRV_OK;
+#else
+	return _PDumpWillCapture(ui32Flags);
+#endif
+}
+
 /**************************************************************************
  * Function Name  : PDumpRegWithFlagsKM
  * Inputs         : pszPDumpDevName, Register offset, and value to write
@@ -2501,13 +2531,15 @@ PVRSRV_ERROR PDumpMemUM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 			if the a page exists at that address
 		*/
 		IMG_UINT32 ui32BytesRemain = ui32Bytes;
+		IMG_UINT32 ui32BytesToCopy = 0;
 		IMG_UINT32 ui32InPageStart = ui32Offset & (~HOST_PAGEMASK);
 		IMG_UINT32 ui32PageOffset = ui32Offset & (HOST_PAGEMASK);
-		IMG_UINT32 ui32BytesToCopy = MIN(HOST_PAGESIZE() - ui32InPageStart, ui32BytesRemain);
 
 		do
 		{
-			if (BM_MapPageAtOffset(BM_MappingHandleFromBuffer(psMemInfo->sMemBlk.hBuffer), ui32PageOffset))
+			ui32BytesToCopy = MIN(HOST_PAGESIZE() - ui32PageOffset, ui32BytesRemain);
+
+			if (BM_MapPageAtOffset(BM_MappingHandleFromBuffer(psMemInfo->sMemBlk.hBuffer), ui32InPageStart))
 			{
 				eError = OSCopyFromUser(psPerProc,
 							   pvAddrKM,
@@ -2547,8 +2579,9 @@ PVRSRV_ERROR PDumpMemUM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 
 			VPTR_INC(pvAddrUM, ui32BytesToCopy);
 			ui32BytesRemain -= ui32BytesToCopy;
-			ui32InPageStart = 0;
-			ui32PageOffset += HOST_PAGESIZE();
+			ui32InPageStart += HOST_PAGESIZE();
+			ui32PageOffset = 0;
+
 		} while(ui32BytesRemain);
 	}
 	else

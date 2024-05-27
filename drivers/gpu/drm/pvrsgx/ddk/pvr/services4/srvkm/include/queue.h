@@ -43,6 +43,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef QUEUE_H
 #define QUEUE_H
 
+#if defined(SUPPORT_PVRSRV_DEVICE_CLASS)
 
 #if defined(__cplusplus)
 extern "C" {
@@ -143,6 +144,8 @@ PVRSRV_ERROR PVRSRVRemoveCmdProcListKM(IMG_UINT32	ui32DevIndex,
 #if defined (__cplusplus)
 }
 #endif
+
+#endif /* defined(SUPPORT_PVRSRV_DEVICE_CLASS) */
 
 #endif /* QUEUE_H */
 

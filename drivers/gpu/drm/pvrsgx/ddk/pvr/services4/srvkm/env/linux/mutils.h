@@ -63,13 +63,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #else
 	#if defined(__arm__) || defined(__sh__)
 		#define	PGPROT_WC(pv)	pgprot_writecombine(pv)
+	#elif defined(__mips__)
+		#define PGPROT_WC(pv)	pgprot_writecombine(pv)
+	#elif defined(__i386__) || defined(__x86_64)
+		/* PAT support supersedes this */
+		#define	PGPROT_WC(pv)	pgprot_noncached(pv)
 	#else
-		#if defined(__i386__) || defined(__x86_64) || defined(__mips__)
-			#define	PGPROT_WC(pv)	pgprot_noncached(pv)
-		#else
-			#define PGPROT_WC(pv)	pgprot_noncached(pv)
-			#error  Unsupported architecture!
-		#endif
+		#define PGPROT_WC(pv)	pgprot_noncached(pv)
+		#error  Unsupported architecture!
 	#endif
 #endif
 
@@ -79,11 +80,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 	#define	IOREMAP(pa, bytes)	ioremap_cache(pa, bytes)
 #else	
 	#if defined(__arm__) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0))
-		#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,13,0))
-			#define	IOREMAP(pa, bytes)	ioremap_cache(pa, bytes)
-		#else
-			#define	IOREMAP(pa, bytes)	ioremap_cached(pa, bytes)
-		#endif
+		#define	IOREMAP(pa, bytes)	ioremap_cached(pa, bytes)
 	#else
 		#define IOREMAP(pa, bytes)	ioremap(pa, bytes)
 	#endif

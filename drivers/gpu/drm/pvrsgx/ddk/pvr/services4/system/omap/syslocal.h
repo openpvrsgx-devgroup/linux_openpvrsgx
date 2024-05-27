@@ -237,16 +237,18 @@ static INLINE PVRSRV_ERROR SysPMRuntimeUnregister(void)
 #ifdef INLINE_IS_PRAGMA
 #pragma inline(SysDvfsInitialize)
 #endif
-static INLINE PVRSRV_ERROR SysDvfsInitialize(void)
+static INLINE PVRSRV_ERROR SysDvfsInitialize(SYS_SPECIFIC_DATA *psSysSpecificData)
 {
+	PVR_UNREFERENCED_PARAMETER(psSysSpecificData);
 	return PVRSRV_OK;
 }
 
 #ifdef INLINE_IS_PRAGMA
 #pragma inline(SysDvfsDeinitialize)
 #endif
-static INLINE PVRSRV_ERROR SysDvfsDeinitialize(void)
+static INLINE PVRSRV_ERROR SysDvfsDeinitialize(SYS_SPECIFIC_DATA *psSysSpecificData)
 {
+	PVR_UNREFERENCED_PARAMETER(psSysSpecificData);
 	return PVRSRV_OK;
 }
 

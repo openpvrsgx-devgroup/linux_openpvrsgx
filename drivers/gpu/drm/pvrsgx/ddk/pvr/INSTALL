@@ -33,18 +33,14 @@ $ export PATH=$PATH:/path/to/toolchain
 $CROSS_COMPILE
 Since the SGX DDK Build scripts are geared toward a cross-compilation
 workflow, the CROSS_COMPILE environment variable needs to be set
-$ export CROSS_COMPILE=arm-linux-gnueabihf-
-
-$ARCH
-This should be set to arm
-$ export ARCH=arm
+$ export CROSS_COMPILE=toolchain-prefix-
 
 
 Build and Install Instructions
 -------------------------------------------
 
 The SGX DDK configures different target builds within directories under
-eurasiacon/build/linux2:
+eurasiacon/build/linux/.
 
 The supported build targets are:
 
@@ -57,16 +53,20 @@ The following variables may be set on the command line to influence a build.
 
 	BUILD	The type of build being performed.
 			Alternatives are release, timing or debug.
-			Both user mode and kernel mode should be built with 
-			same BUILD flag
 	CFLAGS	Build dependent	optimisations and debug information flags.
 	SILENT	Determines whether text of commands is produced during build.
 
-To build for OMAP5430/DRA7xx, change to the appropriate target directory:
-$ cd eurasiacon/build/linux2/omap5430_linux
+To build for, change to the appropriate target directory, e.g.:
+$ cd eurasiacon/build/linux/platform/kbuild
 
 Issue the make command:
-$ make
+$ make BUILD=debug all
 
-The DDK software must be installed by the sudo user.
-$ sudo -E make kbuild_install
+The DDK software must be installed by the root user.  Become the root user:
+$ su
+
+Install the DDK software:
+$ make install
+
+Become an ordinary user again:
+$ exit

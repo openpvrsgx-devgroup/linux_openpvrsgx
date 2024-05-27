@@ -44,6 +44,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if !defined (__KERNELDISPLAY_H__)
 #define __KERNELDISPLAY_H__
 
+#if defined(SUPPORT_PVRSRV_DEVICE_CLASS)
+
 #if defined (__cplusplus)
 extern "C" {
 #endif
@@ -107,7 +109,6 @@ typedef struct PVRSRV_DC_SRV2DISP_KMJTABLE_TAG
 	PFN_GET_DC_BUFFERS				pfnGetDCBuffers;
 	PFN_SWAP_TO_DC_BUFFER			pfnSwapToDCBuffer;
 	PFN_SET_DC_STATE				pfnSetDCState;
-	PFN_QUERY_SWAP_COMMAND_ID		pfnQuerySwapCommandID;
 
 } PVRSRV_DC_SRV2DISP_KMJTABLE;
 
@@ -149,7 +150,6 @@ typedef struct PVRSRV_DC_DISP2SRV_KMJTABLE_TAG
 	PFN_DC_CMD_COMPLETE				pfnPVRSRVCmdComplete;
 	PFN_DC_REGISTER_SYS_ISR			pfnPVRSRVRegisterSystemISRHandler;
 	PFN_DC_REGISTER_POWER			pfnPVRSRVRegisterPowerDevice;
-	PFN_DC_CMD_COMPLETE				pfnPVRSRVFreeCmdCompletePacket;
 	PFN_DC_MEMINFO_GET_CPU_VADDR	pfnPVRSRVDCMemInfoGetCpuVAddr;
 	PFN_DC_MEMINFO_GET_CPU_PADDR	pfnPVRSRVDCMemInfoGetCpuPAddr;
 	PFN_DC_MEMINFO_GET_BYTE_SIZE	pfnPVRSRVDCMemInfoGetByteSize;
@@ -218,7 +218,6 @@ typedef struct DISPLAYCLASS_FLIP_COMMAND2_TAG
 /* States used in PFN_SET_DC_STATE */
 #define DC_STATE_NO_FLUSH_COMMANDS		0
 #define DC_STATE_FLUSH_COMMANDS			1
-#define DC_STATE_FORCE_SWAP_TO_SYSTEM	2
 
 /* function to retrieve kernel services function table from kernel services */
 typedef IMG_BOOL (*PFN_DC_GET_PVRJTABLE)(PPVRSRV_DC_DISP2SRV_KMJTABLE);
@@ -230,6 +229,8 @@ IMG_IMPORT IMG_BOOL PVRGetDisplayClassJTable(PVRSRV_DC_DISP2SRV_KMJTABLE *psJTab
 #if defined (__cplusplus)
 }
 #endif
+
+#endif /* defined(SUPPORT_PVRSRV_DEVICE_CLASS) */
 
 #endif/* #if !defined (__KERNELDISPLAY_H__) */
 

@@ -43,8 +43,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define __ENV_PERPROC_H__
 
 #include <linux/list.h>
-#include <linux/proc_fs.h>
 
+#include "proc.h"
 #include "services.h"
 #include "handle.h"
 

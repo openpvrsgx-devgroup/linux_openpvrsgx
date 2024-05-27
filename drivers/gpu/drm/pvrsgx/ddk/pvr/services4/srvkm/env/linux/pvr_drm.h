@@ -42,9 +42,18 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if !defined(__PVR_DRM_H__)
 #define __PVR_DRM_H__
 
+#if defined (PDUMP)
+#include "linuxsrv.h"
+#endif
+
 #include "pvr_drm_shared.h"
 
 #if defined(SUPPORT_DRI_DRM)
+
+#if defined(PVR_DISPLAY_CONTROLLER_DRM_IOCTL)
+#include "3rdparty_dc_drm_shared.h"
+#endif
+
 #define	PVR_DRM_MAKENAME_HELPER(x, y) x ## y
 #define	PVR_DRM_MAKENAME(x, y) PVR_DRM_MAKENAME_HELPER(x, y)
 
@@ -79,11 +88,7 @@ int PVRSRV_BridgeDispatchKM(struct drm_device *dev, void *arg, struct drm_file *
 #define	DRI_DRM_STATIC
 /*Exported functions to common drm layer*/
 int PVRSRVDrmLoad(struct drm_device *dev, unsigned long flags);
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,11,0))
 int PVRSRVDrmUnload(struct drm_device *dev);
-#else
-void PVRSRVDrmUnload(struct drm_device *dev);
-#endif
 int PVRSRVDrmOpen(struct drm_device *dev, struct drm_file *file);
 #if defined(PVR_LINUX_USING_WORKQUEUES)
 DRI_DRM_STATIC int PVRSRVDrmRelease(struct inode *inode, struct file *filp);
@@ -128,12 +133,27 @@ IMG_INT dbgdrv_ioctl(struct drm_device *dev, IMG_VOID *arg, struct drm_file *pFi
 #define	DRM_PVR_DBGDRV		PVR_DRM_DBGDRV_CMD
 #define	DRM_PVR_DISP		PVR_DRM_DISP_CMD
 
+/*
+ * Some versions of the kernel will dereference a NULL pointer if data is
+ * is passed to an ioctl that doesn't expect any, so avoid using the _IO
+ * macro, and use _IOW instead, specifying a dummy argument.
+*/
+typedef struct {
+	char dummy[4];
+} drm_pvr_dummy_arg;
+
 /* IOCTL numbers, relative to DRM_COMMAND_BASE */
-#define	DRM_IOCTL_PVR_SRVKM		_IO(0, DRM_PVR_SRVKM)
-#define	DRM_IOCTL_PVR_IS_MASTER 	_IO(0, DRM_PVR_IS_MASTER)
-#define	DRM_IOCTL_PVR_UNPRIV		_IO(0, DRM_PVR_UNPRIV)
-#define	DRM_IOCTL_PVR_DBGDRV		_IO(0, DRM_PVR_DBGDRV)
-#define	DRM_IOCTL_PVR_DISP		_IO(0, DRM_PVR_DISP)
+#define	DRM_IOCTL_PVR_SRVKM	_IOWR(0, DRM_PVR_SRVKM, PVRSRV_BRIDGE_PACKAGE)
+#define	DRM_IOCTL_PVR_IS_MASTER _IOW(0, DRM_PVR_IS_MASTER, drm_pvr_dummy_arg)
+#define	DRM_IOCTL_PVR_UNPRIV	_IOWR(0, DRM_PVR_UNPRIV, drm_pvr_unpriv_cmd)
+
+#if defined(PDUMP)
+#define	DRM_IOCTL_PVR_DBGDRV	_IOWR(0, DRM_PVR_DBGDRV, IOCTL_PACKAGE)
+#endif
+
+#if defined(PVR_DISPLAY_CONTROLLER_DRM_IOCTL)
+#define	DRM_IOCTL_PVR_DISP	_IOWR(0, DRM_PVR_DISP, drm_pvr_display_cmd)
+#endif
 #endif	/* !defined(SUPPORT_DRI_DRM_EXT) */
 
 #if defined(SUPPORT_DRI_DRM_PLUGIN)

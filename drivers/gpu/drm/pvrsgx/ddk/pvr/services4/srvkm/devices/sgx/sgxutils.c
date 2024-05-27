@@ -713,8 +713,9 @@ PVRSRV_ERROR SGXScheduleCCBCommandKM(PVRSRV_DEVICE_NODE		*psDeviceNode,
 	}
 	else
 	{
-		PVR_DPF((PVR_DBG_ERROR,"SGXScheduleCCBCommandKM failed to acquire lock - "
+		PVR_DPF((PVR_DBG_ERROR,"SGXScheduleCCBCommandKM failed to power up device - "
 				 "ui32CallerID:%d eError:%u", ui32CallerID, eError));
+		PVRSRVPowerUnlock(ui32CallerID);
 		return eError;
 	}
 
@@ -739,9 +740,17 @@ PVRSRV_ERROR SGXScheduleProcessQueuesKM(PVRSRV_DEVICE_NODE *psDeviceNode)
 {
 	PVRSRV_ERROR 		eError;
 	PVRSRV_SGXDEV_INFO 	*psDevInfo = psDeviceNode->pvDevice;
-	SGXMKIF_HOST_CTL	*psHostCtl = psDevInfo->psKernelSGXHostCtlMemInfo->pvLinAddrKM;
+	SGXMKIF_HOST_CTL	*psHostCtl;
 	IMG_UINT32			ui32PowerStatus;
 	SGXMKIF_COMMAND		sCommand = {0};
+
+	if (psDevInfo->psKernelSGXHostCtlMemInfo == IMG_NULL)
+	{
+		/* Part2 hasn't run yet, we can't do anything */
+		return PVRSRV_OK;
+	}
+
+	psHostCtl = psDevInfo->psKernelSGXHostCtlMemInfo->pvLinAddrKM;
 
 	ui32PowerStatus = psHostCtl->ui32PowerStatus;
 	if ((ui32PowerStatus & PVRSRV_USSE_EDM_POWMAN_NO_WORK) != 0)

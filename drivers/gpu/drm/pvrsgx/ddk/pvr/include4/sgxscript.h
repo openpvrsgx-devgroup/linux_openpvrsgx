@@ -48,7 +48,7 @@ extern "C" {
 #endif
 
 #define	SGX_MAX_INIT_COMMANDS	64
-#define	SGX_MAX_PRINT_COMMANDS	96
+#define	SGX_MAX_PRINT_COMMANDS	64
 #define	SGX_MAX_DEINIT_COMMANDS	16
 
 typedef	enum _SGX_INIT_OPERATION
@@ -74,6 +74,7 @@ typedef union _SGX_INIT_COMMAND
 	struct {
 		SGX_INIT_OPERATION eOp;
 		IMG_UINT32 ui32Offset;
+		IMG_UINT32 ui32Value;
 	} sReadHWReg;
 #if defined(PDUMP)
 	struct {
@@ -90,9 +91,9 @@ typedef struct _SGX_INIT_SCRIPTS_
 	SGX_INIT_COMMAND asInitCommandsPart2[SGX_MAX_INIT_COMMANDS];
 	SGX_INIT_COMMAND asDeinitCommands[SGX_MAX_DEINIT_COMMANDS];
 #if defined(SGX_FEATURE_MP)
-	SGX_INIT_COMMAND asSGXREGDebugCommandsPart1[SGX_MAX_PRINT_COMMANDS];
+	SGX_INIT_COMMAND asSGXREGDebugCommandsMaster[SGX_MAX_PRINT_COMMANDS];
 #endif
-	SGX_INIT_COMMAND *apsSGXREGDebugCommandsPart2[SGX_FEATURE_MP_CORE_COUNT_3D];
+	SGX_INIT_COMMAND asSGXREGDebugCommandsSlave[SGX_MAX_PRINT_COMMANDS];
 } SGX_INIT_SCRIPTS;
 
 #if defined(__cplusplus)

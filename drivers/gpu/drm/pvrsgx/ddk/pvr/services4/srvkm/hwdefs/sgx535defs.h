@@ -1,32 +1,48 @@
-/**********************************************************************
- *
- * Copyright (C) Imagination Technologies Ltd. All rights reserved.
- * 
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- * 
- * This program is distributed in the hope it will be useful but, except 
- * as otherwise stated in writing, without any warranty; without even the 
- * implied warranty of merchantability or fitness for a particular purpose. 
- * See the GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- * 
- * The full GNU General Public License is included in this distribution in
- * the file called "COPYING".
- *
- * Contact Information:
- * Imagination Technologies Ltd. <gpl-support@imgtec.com>
- * Home Park Estate, Kings Langley, Herts, WD4 8LZ, UK 
- *
- ******************************************************************************/
+/*************************************************************************/ /*!
+@Title          Hardware defs for SGX535.
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@License        Dual MIT/GPLv2
+
+The contents of this file are subject to the MIT license as set out below.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/ /**************************************************************************/
 
 #ifndef _SGX535DEFS_KM_H_
 #define _SGX535DEFS_KM_H_
 
+/* Register EUR_CR_CLKGATECTL */
 #define EUR_CR_CLKGATECTL                   0x0000
 #define EUR_CR_CLKGATECTL_2D_CLKG_MASK      0x00000003U
 #define EUR_CR_CLKGATECTL_2D_CLKG_SHIFT     0
@@ -42,6 +58,7 @@
 #define EUR_CR_CLKGATECTL_USE_CLKG_SHIFT    20
 #define EUR_CR_CLKGATECTL_AUTO_MAN_REG_MASK 0x01000000U
 #define EUR_CR_CLKGATECTL_AUTO_MAN_REG_SHIFT 24
+/* Register EUR_CR_CLKGATESTATUS */
 #define EUR_CR_CLKGATESTATUS                0x0004
 #define EUR_CR_CLKGATESTATUS_2D_CLKS_MASK   0x00000001
 #define EUR_CR_CLKGATESTATUS_2D_CLKS_SHIFT  0
@@ -55,6 +72,7 @@
 #define EUR_CR_CLKGATESTATUS_DPM_CLKS_SHIFT 16
 #define EUR_CR_CLKGATESTATUS_USE_CLKS_MASK  0x00100000U
 #define EUR_CR_CLKGATESTATUS_USE_CLKS_SHIFT 20
+/* Register EUR_CR_CLKGATECTLOVR */
 #define EUR_CR_CLKGATECTLOVR                0x0008
 #define EUR_CR_CLKGATECTLOVR_2D_CLKO_MASK   0x00000003U
 #define EUR_CR_CLKGATECTLOVR_2D_CLKO_SHIFT  0
@@ -68,11 +86,13 @@
 #define EUR_CR_CLKGATECTLOVR_DPM_CLKO_SHIFT 16
 #define EUR_CR_CLKGATECTLOVR_USE_CLKO_MASK  0x00300000U
 #define EUR_CR_CLKGATECTLOVR_USE_CLKO_SHIFT 20
+/* Register EUR_CR_CORE_ID */
 #define EUR_CR_CORE_ID                      0x0010
 #define EUR_CR_CORE_ID_CONFIG_MASK          0x0000FFFFU
 #define EUR_CR_CORE_ID_CONFIG_SHIFT         0
 #define EUR_CR_CORE_ID_ID_MASK              0xFFFF0000U
 #define EUR_CR_CORE_ID_ID_SHIFT             16
+/* Register EUR_CR_CORE_REVISION */
 #define EUR_CR_CORE_REVISION                0x0014
 #define EUR_CR_CORE_REVISION_MAINTENANCE_MASK 0x000000FFU
 #define EUR_CR_CORE_REVISION_MAINTENANCE_SHIFT 0
@@ -82,12 +102,15 @@
 #define EUR_CR_CORE_REVISION_MAJOR_SHIFT    16
 #define EUR_CR_CORE_REVISION_DESIGNER_MASK  0xFF000000U
 #define EUR_CR_CORE_REVISION_DESIGNER_SHIFT 24
+/* Register EUR_CR_DESIGNER_REV_FIELD1 */
 #define EUR_CR_DESIGNER_REV_FIELD1          0x0018
 #define EUR_CR_DESIGNER_REV_FIELD1_DESIGNER_REV_FIELD1_MASK 0xFFFFFFFFU
 #define EUR_CR_DESIGNER_REV_FIELD1_DESIGNER_REV_FIELD1_SHIFT 0
+/* Register EUR_CR_DESIGNER_REV_FIELD2 */
 #define EUR_CR_DESIGNER_REV_FIELD2          0x001C
 #define EUR_CR_DESIGNER_REV_FIELD2_DESIGNER_REV_FIELD2_MASK 0xFFFFFFFFU
 #define EUR_CR_DESIGNER_REV_FIELD2_DESIGNER_REV_FIELD2_SHIFT 0
+/* Register EUR_CR_SOFT_RESET */
 #define EUR_CR_SOFT_RESET                   0x0080
 #define EUR_CR_SOFT_RESET_BIF_RESET_MASK    0x00000001U
 #define EUR_CR_SOFT_RESET_BIF_RESET_SHIFT   0
@@ -103,6 +126,7 @@
 #define EUR_CR_SOFT_RESET_ISP_RESET_SHIFT   5
 #define EUR_CR_SOFT_RESET_TSP_RESET_MASK    0x00000040U
 #define EUR_CR_SOFT_RESET_TSP_RESET_SHIFT   6
+/* Register EUR_CR_EVENT_HOST_ENABLE2 */
 #define EUR_CR_EVENT_HOST_ENABLE2           0x0110
 #define EUR_CR_EVENT_HOST_ENABLE2_TRIG_TA_MASK 0x00000080U
 #define EUR_CR_EVENT_HOST_ENABLE2_TRIG_TA_SHIFT 7
@@ -120,6 +144,7 @@
 #define EUR_CR_EVENT_HOST_ENABLE2_DPM_3D_FREE_LOAD_SHIFT 1
 #define EUR_CR_EVENT_HOST_ENABLE2_DPM_TA_FREE_LOAD_MASK 0x00000001U
 #define EUR_CR_EVENT_HOST_ENABLE2_DPM_TA_FREE_LOAD_SHIFT 0
+/* Register EUR_CR_EVENT_HOST_CLEAR2 */
 #define EUR_CR_EVENT_HOST_CLEAR2            0x0114
 #define EUR_CR_EVENT_HOST_CLEAR2_TRIG_TA_MASK 0x00000080U
 #define EUR_CR_EVENT_HOST_CLEAR2_TRIG_TA_SHIFT 7
@@ -137,6 +162,7 @@
 #define EUR_CR_EVENT_HOST_CLEAR2_DPM_3D_FREE_LOAD_SHIFT 1
 #define EUR_CR_EVENT_HOST_CLEAR2_DPM_TA_FREE_LOAD_MASK 0x00000001U
 #define EUR_CR_EVENT_HOST_CLEAR2_DPM_TA_FREE_LOAD_SHIFT 0
+/* Register EUR_CR_EVENT_STATUS2 */
 #define EUR_CR_EVENT_STATUS2                0x0118U
 #define EUR_CR_EVENT_STATUS2_TRIG_TA_MASK   0x00000080U
 #define EUR_CR_EVENT_STATUS2_TRIG_TA_SHIFT  7
@@ -154,6 +180,7 @@
 #define EUR_CR_EVENT_STATUS2_DPM_3D_FREE_LOAD_SHIFT 1
 #define EUR_CR_EVENT_STATUS2_DPM_TA_FREE_LOAD_MASK 0x00000001U
 #define EUR_CR_EVENT_STATUS2_DPM_TA_FREE_LOAD_SHIFT 0
+/* Register EUR_CR_EVENT_STATUS */
 #define EUR_CR_EVENT_STATUS                 0x012CU
 #define EUR_CR_EVENT_STATUS_MASTER_INTERRUPT_MASK 0x80000000U
 #define EUR_CR_EVENT_STATUS_MASTER_INTERRUPT_SHIFT 31
@@ -217,6 +244,7 @@
 #define EUR_CR_EVENT_STATUS_DPM_OUT_OF_MEMORY_MT_SHIFT 1
 #define EUR_CR_EVENT_STATUS_DPM_3D_MEM_FREE_MASK 0x00000001U
 #define EUR_CR_EVENT_STATUS_DPM_3D_MEM_FREE_SHIFT 0
+/* Register EUR_CR_EVENT_HOST_ENABLE */
 #define EUR_CR_EVENT_HOST_ENABLE            0x0130
 #define EUR_CR_EVENT_HOST_ENABLE_MASTER_INTERRUPT_MASK 0x80000000U
 #define EUR_CR_EVENT_HOST_ENABLE_MASTER_INTERRUPT_SHIFT 31
@@ -280,6 +308,7 @@
 #define EUR_CR_EVENT_HOST_ENABLE_DPM_OUT_OF_MEMORY_MT_SHIFT 1
 #define EUR_CR_EVENT_HOST_ENABLE_DPM_3D_MEM_FREE_MASK 0x00000001U
 #define EUR_CR_EVENT_HOST_ENABLE_DPM_3D_MEM_FREE_SHIFT 0
+/* Register EUR_CR_EVENT_HOST_CLEAR */
 #define EUR_CR_EVENT_HOST_CLEAR             0x0134
 #define EUR_CR_EVENT_HOST_CLEAR_MASTER_INTERRUPT_MASK 0x80000000U
 #define EUR_CR_EVENT_HOST_CLEAR_MASTER_INTERRUPT_SHIFT 31
@@ -343,38 +372,49 @@
 #define EUR_CR_EVENT_HOST_CLEAR_DPM_OUT_OF_MEMORY_MT_SHIFT 1
 #define EUR_CR_EVENT_HOST_CLEAR_DPM_3D_MEM_FREE_MASK 0x00000001U
 #define EUR_CR_EVENT_HOST_CLEAR_DPM_3D_MEM_FREE_SHIFT 0
+/* Register EUR_CR_PDS_EXEC_BASE */
 #define EUR_CR_PDS_EXEC_BASE                0x0AB8
 #define EUR_CR_PDS_EXEC_BASE_ADDR_MASK      0xFFF00000U
 #define EUR_CR_PDS_EXEC_BASE_ADDR_SHIFT     20
+/* Register EUR_CR_EVENT_KICKER */
 #define EUR_CR_EVENT_KICKER                 0x0AC4
 #define EUR_CR_EVENT_KICKER_ADDRESS_MASK    0xFFFFFFF0U
 #define EUR_CR_EVENT_KICKER_ADDRESS_SHIFT   4
+/* Register EUR_CR_EVENT_KICK */
 #define EUR_CR_EVENT_KICK                   0x0AC8
 #define EUR_CR_EVENT_KICK_NOW_MASK          0x00000001U
 #define EUR_CR_EVENT_KICK_NOW_SHIFT         0
+/* Register EUR_CR_EVENT_TIMER */
 #define EUR_CR_EVENT_TIMER                  0x0ACC
 #define EUR_CR_EVENT_TIMER_ENABLE_MASK      0x01000000U
 #define EUR_CR_EVENT_TIMER_ENABLE_SHIFT     24
 #define EUR_CR_EVENT_TIMER_VALUE_MASK       0x00FFFFFFU
 #define EUR_CR_EVENT_TIMER_VALUE_SHIFT      0
+/* Register EUR_CR_PDS_INV0 */
 #define EUR_CR_PDS_INV0                     0x0AD0
 #define EUR_CR_PDS_INV0_DSC_MASK            0x00000001U
 #define EUR_CR_PDS_INV0_DSC_SHIFT           0
+/* Register EUR_CR_PDS_INV1 */
 #define EUR_CR_PDS_INV1                     0x0AD4
 #define EUR_CR_PDS_INV1_DSC_MASK            0x00000001U
 #define EUR_CR_PDS_INV1_DSC_SHIFT           0
+/* Register EUR_CR_PDS_INV2 */
 #define EUR_CR_PDS_INV2                     0x0AD8
 #define EUR_CR_PDS_INV2_DSC_MASK            0x00000001U
 #define EUR_CR_PDS_INV2_DSC_SHIFT           0
+/* Register EUR_CR_PDS_INV3 */
 #define EUR_CR_PDS_INV3                     0x0ADC
 #define EUR_CR_PDS_INV3_DSC_MASK            0x00000001U
 #define EUR_CR_PDS_INV3_DSC_SHIFT           0
+/* Register EUR_CR_PDS_INV_CSC */
 #define EUR_CR_PDS_INV_CSC                  0x0AE0
 #define EUR_CR_PDS_INV_CSC_KICK_MASK        0x00000001U
 #define EUR_CR_PDS_INV_CSC_KICK_SHIFT       0
+/* Register EUR_CR_PDS_PC_BASE */
 #define EUR_CR_PDS_PC_BASE                  0x0B2C
 #define EUR_CR_PDS_PC_BASE_ADDRESS_MASK     0x3FFFFFFFU
 #define EUR_CR_PDS_PC_BASE_ADDRESS_SHIFT    0
+/* Register EUR_CR_BIF_CTRL */
 #define EUR_CR_BIF_CTRL                     0x0C00
 #define EUR_CR_BIF_CTRL_NOREORDER_MASK      0x00000001U
 #define EUR_CR_BIF_CTRL_NOREORDER_SHIFT     0
@@ -404,6 +444,7 @@
 #define EUR_CR_BIF_CTRL_MMU_BYPASS_USE_SHIFT 15
 #define EUR_CR_BIF_CTRL_MMU_BYPASS_HOST_MASK 0x00010000U
 #define EUR_CR_BIF_CTRL_MMU_BYPASS_HOST_SHIFT 16
+/* Register EUR_CR_BIF_INT_STAT */
 #define EUR_CR_BIF_INT_STAT                 0x0C04
 #define EUR_CR_BIF_INT_STAT_FAULT_MASK      0x00003FFFU
 #define EUR_CR_BIF_INT_STAT_FAULT_SHIFT     0
@@ -411,9 +452,11 @@
 #define EUR_CR_BIF_INT_STAT_PF_N_RW_SHIFT   14
 #define EUR_CR_BIF_INT_STAT_FLUSH_COMPLETE_MASK 0x00008000U
 #define EUR_CR_BIF_INT_STAT_FLUSH_COMPLETE_SHIFT 15
+/* Register EUR_CR_BIF_FAULT */
 #define EUR_CR_BIF_FAULT                    0x0C08
 #define EUR_CR_BIF_FAULT_ADDR_MASK          0xFFFFF000U
 #define EUR_CR_BIF_FAULT_ADDR_SHIFT         12
+/* Register EUR_CR_BIF_TILE0 */
 #define EUR_CR_BIF_TILE0                    0x0C0C
 #define EUR_CR_BIF_TILE0_MIN_ADDRESS_MASK   0x00000FFFU
 #define EUR_CR_BIF_TILE0_MIN_ADDRESS_SHIFT  0
@@ -421,6 +464,7 @@
 #define EUR_CR_BIF_TILE0_MAX_ADDRESS_SHIFT  12
 #define EUR_CR_BIF_TILE0_CFG_MASK           0x0F000000U
 #define EUR_CR_BIF_TILE0_CFG_SHIFT          24
+/* Register EUR_CR_BIF_TILE1 */
 #define EUR_CR_BIF_TILE1                    0x0C10
 #define EUR_CR_BIF_TILE1_MIN_ADDRESS_MASK   0x00000FFFU
 #define EUR_CR_BIF_TILE1_MIN_ADDRESS_SHIFT  0
@@ -428,6 +472,7 @@
 #define EUR_CR_BIF_TILE1_MAX_ADDRESS_SHIFT  12
 #define EUR_CR_BIF_TILE1_CFG_MASK           0x0F000000U
 #define EUR_CR_BIF_TILE1_CFG_SHIFT          24
+/* Register EUR_CR_BIF_TILE2 */
 #define EUR_CR_BIF_TILE2                    0x0C14
 #define EUR_CR_BIF_TILE2_MIN_ADDRESS_MASK   0x00000FFFU
 #define EUR_CR_BIF_TILE2_MIN_ADDRESS_SHIFT  0
@@ -435,6 +480,7 @@
 #define EUR_CR_BIF_TILE2_MAX_ADDRESS_SHIFT  12
 #define EUR_CR_BIF_TILE2_CFG_MASK           0x0F000000U
 #define EUR_CR_BIF_TILE2_CFG_SHIFT          24
+/* Register EUR_CR_BIF_TILE3 */
 #define EUR_CR_BIF_TILE3                    0x0C18
 #define EUR_CR_BIF_TILE3_MIN_ADDRESS_MASK   0x00000FFFU
 #define EUR_CR_BIF_TILE3_MIN_ADDRESS_SHIFT  0
@@ -442,6 +488,7 @@
 #define EUR_CR_BIF_TILE3_MAX_ADDRESS_SHIFT  12
 #define EUR_CR_BIF_TILE3_CFG_MASK           0x0F000000U
 #define EUR_CR_BIF_TILE3_CFG_SHIFT          24
+/* Register EUR_CR_BIF_TILE4 */
 #define EUR_CR_BIF_TILE4                    0x0C1C
 #define EUR_CR_BIF_TILE4_MIN_ADDRESS_MASK   0x00000FFFU
 #define EUR_CR_BIF_TILE4_MIN_ADDRESS_SHIFT  0
@@ -449,6 +496,7 @@
 #define EUR_CR_BIF_TILE4_MAX_ADDRESS_SHIFT  12
 #define EUR_CR_BIF_TILE4_CFG_MASK           0x0F000000U
 #define EUR_CR_BIF_TILE4_CFG_SHIFT          24
+/* Register EUR_CR_BIF_TILE5 */
 #define EUR_CR_BIF_TILE5                    0x0C20
 #define EUR_CR_BIF_TILE5_MIN_ADDRESS_MASK   0x00000FFFU
 #define EUR_CR_BIF_TILE5_MIN_ADDRESS_SHIFT  0
@@ -456,6 +504,7 @@
 #define EUR_CR_BIF_TILE5_MAX_ADDRESS_SHIFT  12
 #define EUR_CR_BIF_TILE5_CFG_MASK           0x0F000000U
 #define EUR_CR_BIF_TILE5_CFG_SHIFT          24
+/* Register EUR_CR_BIF_TILE6 */
 #define EUR_CR_BIF_TILE6                    0x0C24
 #define EUR_CR_BIF_TILE6_MIN_ADDRESS_MASK   0x00000FFFU
 #define EUR_CR_BIF_TILE6_MIN_ADDRESS_SHIFT  0
@@ -463,6 +512,7 @@
 #define EUR_CR_BIF_TILE6_MAX_ADDRESS_SHIFT  12
 #define EUR_CR_BIF_TILE6_CFG_MASK           0x0F000000U
 #define EUR_CR_BIF_TILE6_CFG_SHIFT          24
+/* Register EUR_CR_BIF_TILE7 */
 #define EUR_CR_BIF_TILE7                    0x0C28
 #define EUR_CR_BIF_TILE7_MIN_ADDRESS_MASK   0x00000FFFU
 #define EUR_CR_BIF_TILE7_MIN_ADDRESS_SHIFT  0
@@ -470,6 +520,7 @@
 #define EUR_CR_BIF_TILE7_MAX_ADDRESS_SHIFT  12
 #define EUR_CR_BIF_TILE7_CFG_MASK           0x0F000000U
 #define EUR_CR_BIF_TILE7_CFG_SHIFT          24
+/* Register EUR_CR_BIF_TILE8 */
 #define EUR_CR_BIF_TILE8                    0x0C2C
 #define EUR_CR_BIF_TILE8_MIN_ADDRESS_MASK   0x00000FFFU
 #define EUR_CR_BIF_TILE8_MIN_ADDRESS_SHIFT  0
@@ -477,6 +528,7 @@
 #define EUR_CR_BIF_TILE8_MAX_ADDRESS_SHIFT  12
 #define EUR_CR_BIF_TILE8_CFG_MASK           0x0F000000U
 #define EUR_CR_BIF_TILE8_CFG_SHIFT          24
+/* Register EUR_CR_BIF_TILE9 */
 #define EUR_CR_BIF_TILE9                    0x0C30
 #define EUR_CR_BIF_TILE9_MIN_ADDRESS_MASK   0x00000FFFU
 #define EUR_CR_BIF_TILE9_MIN_ADDRESS_SHIFT  0
@@ -484,54 +536,71 @@
 #define EUR_CR_BIF_TILE9_MAX_ADDRESS_SHIFT  12
 #define EUR_CR_BIF_TILE9_CFG_MASK           0x0F000000U
 #define EUR_CR_BIF_TILE9_CFG_SHIFT          24
+/* Register EUR_CR_BIF_DIR_LIST_BASE1 */
 #define EUR_CR_BIF_DIR_LIST_BASE1           0x0C38
 #define EUR_CR_BIF_DIR_LIST_BASE1_ADDR_MASK 0xFFFFF000U
 #define EUR_CR_BIF_DIR_LIST_BASE1_ADDR_SHIFT 12
+/* Register EUR_CR_BIF_DIR_LIST_BASE2 */
 #define EUR_CR_BIF_DIR_LIST_BASE2           0x0C3C
 #define EUR_CR_BIF_DIR_LIST_BASE2_ADDR_MASK 0xFFFFF000U
 #define EUR_CR_BIF_DIR_LIST_BASE2_ADDR_SHIFT 12
+/* Register EUR_CR_BIF_DIR_LIST_BASE3 */
 #define EUR_CR_BIF_DIR_LIST_BASE3           0x0C40
 #define EUR_CR_BIF_DIR_LIST_BASE3_ADDR_MASK 0xFFFFF000U
 #define EUR_CR_BIF_DIR_LIST_BASE3_ADDR_SHIFT 12
+/* Register EUR_CR_BIF_DIR_LIST_BASE4 */
 #define EUR_CR_BIF_DIR_LIST_BASE4           0x0C44
 #define EUR_CR_BIF_DIR_LIST_BASE4_ADDR_MASK 0xFFFFF000U
 #define EUR_CR_BIF_DIR_LIST_BASE4_ADDR_SHIFT 12
+/* Register EUR_CR_BIF_DIR_LIST_BASE5 */
 #define EUR_CR_BIF_DIR_LIST_BASE5           0x0C48
 #define EUR_CR_BIF_DIR_LIST_BASE5_ADDR_MASK 0xFFFFF000U
 #define EUR_CR_BIF_DIR_LIST_BASE5_ADDR_SHIFT 12
+/* Register EUR_CR_BIF_DIR_LIST_BASE6 */
 #define EUR_CR_BIF_DIR_LIST_BASE6           0x0C4C
 #define EUR_CR_BIF_DIR_LIST_BASE6_ADDR_MASK 0xFFFFF000U
 #define EUR_CR_BIF_DIR_LIST_BASE6_ADDR_SHIFT 12
+/* Register EUR_CR_BIF_DIR_LIST_BASE7 */
 #define EUR_CR_BIF_DIR_LIST_BASE7           0x0C50
 #define EUR_CR_BIF_DIR_LIST_BASE7_ADDR_MASK 0xFFFFF000U
 #define EUR_CR_BIF_DIR_LIST_BASE7_ADDR_SHIFT 12
+/* Register EUR_CR_BIF_DIR_LIST_BASE8 */
 #define EUR_CR_BIF_DIR_LIST_BASE8           0x0C54
 #define EUR_CR_BIF_DIR_LIST_BASE8_ADDR_MASK 0xFFFFF000U
 #define EUR_CR_BIF_DIR_LIST_BASE8_ADDR_SHIFT 12
+/* Register EUR_CR_BIF_DIR_LIST_BASE9 */
 #define EUR_CR_BIF_DIR_LIST_BASE9           0x0C58
 #define EUR_CR_BIF_DIR_LIST_BASE9_ADDR_MASK 0xFFFFF000U
 #define EUR_CR_BIF_DIR_LIST_BASE9_ADDR_SHIFT 12
+/* Register EUR_CR_BIF_DIR_LIST_BASE10 */
 #define EUR_CR_BIF_DIR_LIST_BASE10          0x0C5C
 #define EUR_CR_BIF_DIR_LIST_BASE10_ADDR_MASK 0xFFFFF000U
 #define EUR_CR_BIF_DIR_LIST_BASE10_ADDR_SHIFT 12
+/* Register EUR_CR_BIF_DIR_LIST_BASE11 */
 #define EUR_CR_BIF_DIR_LIST_BASE11          0x0C60
 #define EUR_CR_BIF_DIR_LIST_BASE11_ADDR_MASK 0xFFFFF000U
 #define EUR_CR_BIF_DIR_LIST_BASE11_ADDR_SHIFT 12
+/* Register EUR_CR_BIF_DIR_LIST_BASE12 */
 #define EUR_CR_BIF_DIR_LIST_BASE12          0x0C64
 #define EUR_CR_BIF_DIR_LIST_BASE12_ADDR_MASK 0xFFFFF000U
 #define EUR_CR_BIF_DIR_LIST_BASE12_ADDR_SHIFT 12
+/* Register EUR_CR_BIF_DIR_LIST_BASE13 */
 #define EUR_CR_BIF_DIR_LIST_BASE13          0x0C68
 #define EUR_CR_BIF_DIR_LIST_BASE13_ADDR_MASK 0xFFFFF000U
 #define EUR_CR_BIF_DIR_LIST_BASE13_ADDR_SHIFT 12
+/* Register EUR_CR_BIF_DIR_LIST_BASE14 */
 #define EUR_CR_BIF_DIR_LIST_BASE14          0x0C6C
 #define EUR_CR_BIF_DIR_LIST_BASE14_ADDR_MASK 0xFFFFF000U
 #define EUR_CR_BIF_DIR_LIST_BASE14_ADDR_SHIFT 12
+/* Register EUR_CR_BIF_DIR_LIST_BASE15 */
 #define EUR_CR_BIF_DIR_LIST_BASE15          0x0C70
 #define EUR_CR_BIF_DIR_LIST_BASE15_ADDR_MASK 0xFFFFF000U
 #define EUR_CR_BIF_DIR_LIST_BASE15_ADDR_SHIFT 12
+/* Register EUR_CR_BIF_BANK_SET */
 #define EUR_CR_BIF_BANK_SET                 0x0C74
 #define EUR_CR_BIF_BANK_SET_SELECT_MASK     0x000003FFU
 #define EUR_CR_BIF_BANK_SET_SELECT_SHIFT    0
+/* Register EUR_CR_BIF_BANK0 */
 #define EUR_CR_BIF_BANK0                    0x0C78
 #define EUR_CR_BIF_BANK0_INDEX_EDM_MASK     0x0000000FU
 #define EUR_CR_BIF_BANK0_INDEX_EDM_SHIFT    0
@@ -543,6 +612,7 @@
 #define EUR_CR_BIF_BANK0_INDEX_3D_SHIFT     12
 #define EUR_CR_BIF_BANK0_INDEX_2D_MASK      0x000F0000U
 #define EUR_CR_BIF_BANK0_INDEX_2D_SHIFT     16
+/* Register EUR_CR_BIF_BANK1 */
 #define EUR_CR_BIF_BANK1                    0x0C7C
 #define EUR_CR_BIF_BANK1_INDEX_EDM_MASK     0x0000000FU
 #define EUR_CR_BIF_BANK1_INDEX_EDM_SHIFT    0
@@ -554,18 +624,23 @@
 #define EUR_CR_BIF_BANK1_INDEX_3D_SHIFT     12
 #define EUR_CR_BIF_BANK1_INDEX_2D_MASK      0x000F0000U
 #define EUR_CR_BIF_BANK1_INDEX_2D_SHIFT     16
+/* Register EUR_CR_BIF_ADT_TTE */
 #define EUR_CR_BIF_ADT_TTE                  0x0C80
 #define EUR_CR_BIF_ADT_TTE_VALUE_MASK       0x000000FFU
 #define EUR_CR_BIF_ADT_TTE_VALUE_SHIFT      0
+/* Register EUR_CR_BIF_DIR_LIST_BASE0 */
 #define EUR_CR_BIF_DIR_LIST_BASE0           0x0C84
 #define EUR_CR_BIF_DIR_LIST_BASE0_ADDR_MASK 0xFFFFF000U
 #define EUR_CR_BIF_DIR_LIST_BASE0_ADDR_SHIFT 12
+/* Register EUR_CR_BIF_TWOD_REQ_BASE */
 #define EUR_CR_BIF_TWOD_REQ_BASE            0x0C88
 #define EUR_CR_BIF_TWOD_REQ_BASE_ADDR_MASK  0xFFF00000U
 #define EUR_CR_BIF_TWOD_REQ_BASE_ADDR_SHIFT 20
+/* Register EUR_CR_BIF_TA_REQ_BASE */
 #define EUR_CR_BIF_TA_REQ_BASE              0x0C90
 #define EUR_CR_BIF_TA_REQ_BASE_ADDR_MASK    0xFFF00000U
 #define EUR_CR_BIF_TA_REQ_BASE_ADDR_SHIFT   20
+/* Register EUR_CR_BIF_MEM_ARB_FLOWRATES_1 */
 #define EUR_CR_BIF_MEM_ARB_FLOWRATES_1      0x0C94
 #define EUR_CR_BIF_MEM_ARB_FLOWRATES_1_MMU_MASK 0x00000007U
 #define EUR_CR_BIF_MEM_ARB_FLOWRATES_1_MMU_SHIFT 0
@@ -579,6 +654,7 @@
 #define EUR_CR_BIF_MEM_ARB_FLOWRATES_1_TWOD_SHIFT 12
 #define EUR_CR_BIF_MEM_ARB_FLOWRATES_1_PBE_MASK 0x00038000U
 #define EUR_CR_BIF_MEM_ARB_FLOWRATES_1_PBE_SHIFT 15
+/* Register EUR_CR_BIF_MEM_ARB_FLOWRATES_2 */
 #define EUR_CR_BIF_MEM_ARB_FLOWRATES_2      0x0C98
 #define EUR_CR_BIF_MEM_ARB_FLOWRATES_2_HOST_MASK 0x00000007U
 #define EUR_CR_BIF_MEM_ARB_FLOWRATES_2_HOST_SHIFT 0
@@ -588,6 +664,7 @@
 #define EUR_CR_BIF_MEM_ARB_FLOWRATES_2_ISP_SHIFT 6
 #define EUR_CR_BIF_MEM_ARB_FLOWRATES_2_TSPP_MASK 0x00000E00U
 #define EUR_CR_BIF_MEM_ARB_FLOWRATES_2_TSPP_SHIFT 9
+/* Register EUR_CR_BIF_MEM_ARB_CONFIG */
 #define EUR_CR_BIF_MEM_ARB_CONFIG           0x0CA0
 #define EUR_CR_BIF_MEM_ARB_CONFIG_PAGE_SIZE_MASK 0x0000000FU
 #define EUR_CR_BIF_MEM_ARB_CONFIG_PAGE_SIZE_SHIFT 0
@@ -595,25 +672,31 @@
 #define EUR_CR_BIF_MEM_ARB_CONFIG_BEST_CNT_SHIFT 4
 #define EUR_CR_BIF_MEM_ARB_CONFIG_TTE_THRESH_MASK 0x00FFF000U
 #define EUR_CR_BIF_MEM_ARB_CONFIG_TTE_THRESH_SHIFT 12
+/* Register EUR_CR_BIF_MEM_REQ_STAT */
 #define EUR_CR_BIF_MEM_REQ_STAT             0x0CA8
 #define EUR_CR_BIF_MEM_REQ_STAT_READS_MASK  0x000000FFU
 #define EUR_CR_BIF_MEM_REQ_STAT_READS_SHIFT 0
+/* Register EUR_CR_BIF_3D_REQ_BASE */
 #define EUR_CR_BIF_3D_REQ_BASE              0x0CAC
 #define EUR_CR_BIF_3D_REQ_BASE_ADDR_MASK    0xFFF00000U
 #define EUR_CR_BIF_3D_REQ_BASE_ADDR_SHIFT   20
+/* Register EUR_CR_BIF_ZLS_REQ_BASE */
 #define EUR_CR_BIF_ZLS_REQ_BASE             0x0CB0
 #define EUR_CR_BIF_ZLS_REQ_BASE_ADDR_MASK   0xFFF00000U
 #define EUR_CR_BIF_ZLS_REQ_BASE_ADDR_SHIFT  20
+/* Register EUR_CR_BIF_BANK_STATUS */
 #define EUR_CR_BIF_BANK_STATUS              0x0CB4
 #define EUR_CR_BIF_BANK_STATUS_3D_CURRENT_BANK_MASK 0x00000001U
 #define EUR_CR_BIF_BANK_STATUS_3D_CURRENT_BANK_SHIFT 0
 #define EUR_CR_BIF_BANK_STATUS_TA_CURRENT_BANK_MASK 0x00000002U
 #define EUR_CR_BIF_BANK_STATUS_TA_CURRENT_BANK_SHIFT 1
+/* Register EUR_CR_2D_BLIT_STATUS */
 #define EUR_CR_2D_BLIT_STATUS               0x0E04
 #define EUR_CR_2D_BLIT_STATUS_COMPLETE_MASK 0x00FFFFFFU
 #define EUR_CR_2D_BLIT_STATUS_COMPLETE_SHIFT 0
 #define EUR_CR_2D_BLIT_STATUS_BUSY_MASK     0x01000000U
 #define EUR_CR_2D_BLIT_STATUS_BUSY_SHIFT    24
+/* Register EUR_CR_2D_VIRTUAL_FIFO_0 */
 #define EUR_CR_2D_VIRTUAL_FIFO_0            0x0E10
 #define EUR_CR_2D_VIRTUAL_FIFO_0_ENABLE_MASK 0x00000001U
 #define EUR_CR_2D_VIRTUAL_FIFO_0_ENABLE_SHIFT 0
@@ -623,6 +706,7 @@
 #define EUR_CR_2D_VIRTUAL_FIFO_0_FLOWRATE_DIV_SHIFT 4
 #define EUR_CR_2D_VIRTUAL_FIFO_0_FLOWRATE_MUL_MASK 0x0000F000U
 #define EUR_CR_2D_VIRTUAL_FIFO_0_FLOWRATE_MUL_SHIFT 12
+/* Register EUR_CR_2D_VIRTUAL_FIFO_1 */
 #define EUR_CR_2D_VIRTUAL_FIFO_1            0x0E14
 #define EUR_CR_2D_VIRTUAL_FIFO_1_MIN_ACC_MASK 0x00000FFFU
 #define EUR_CR_2D_VIRTUAL_FIFO_1_MIN_ACC_SHIFT 0
@@ -630,21 +714,26 @@
 #define EUR_CR_2D_VIRTUAL_FIFO_1_MAX_ACC_SHIFT 12
 #define EUR_CR_2D_VIRTUAL_FIFO_1_MIN_METRIC_MASK 0xFF000000U
 #define EUR_CR_2D_VIRTUAL_FIFO_1_MIN_METRIC_SHIFT 24
+/* Register EUR_CR_2D_SOCIF */
 #define EUR_CR_2D_SOCIF                     0x0E18
 #define EUR_CR_2D_SOCIF_FREESPACE_MASK      0x000000FFU
 #define EUR_CR_2D_SOCIF_FREESPACE_SHIFT     0
+/* Register EUR_CR_2D_ALPHA */
 #define EUR_CR_2D_ALPHA                     0x0E1C
 #define EUR_CR_2D_ALPHA_COMPONENT_ONE_MASK  0x0000FF00U
 #define EUR_CR_2D_ALPHA_COMPONENT_ONE_SHIFT 8
 #define EUR_CR_2D_ALPHA_COMPONENT_ZERO_MASK 0x000000FFU
 #define EUR_CR_2D_ALPHA_COMPONENT_ZERO_SHIFT 0
+/* Table EUR_CR_USE_CODE_BASE */
+/* Register EUR_CR_USE_CODE_BASE */
 #define EUR_CR_USE_CODE_BASE(X)     (0x0A0C + (4 * (X)))
 #define EUR_CR_USE_CODE_BASE_ADDR_MASK      0x01FFFFFFU
 #define EUR_CR_USE_CODE_BASE_ADDR_SHIFT     0
 #define EUR_CR_USE_CODE_BASE_DM_MASK        0x06000000U
 #define EUR_CR_USE_CODE_BASE_DM_SHIFT       25
+/* Number of entries in table EUR_CR_USE_CODE_BASE */
 #define EUR_CR_USE_CODE_BASE_SIZE_UINT32 16
 #define EUR_CR_USE_CODE_BASE_NUM_ENTRIES 16
 
-#endif 
+#endif /* _SGX535DEFS_KM_H_ */
 

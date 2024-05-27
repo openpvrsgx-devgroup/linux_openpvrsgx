@@ -368,7 +368,7 @@ PVRSRV_ERROR SGXPrePowerState (IMG_HANDLE				hDevHandle,
 		#endif /* PDUMP */
 
 		/* Wait for the pending ukernel to host interrupts to come back. */
-		#if !defined(NO_HARDWARE)
+		#if !defined(NO_HARDWARE) && defined(SUPPORT_LISR_MISR_SYNC)
 		if (PollForValueKM(&g_ui32HostIRQCountSample,
 							psDevInfo->psSGXHostCtl->ui32InterruptCount,
 							0xffffffff,
@@ -380,7 +380,7 @@ PVRSRV_ERROR SGXPrePowerState (IMG_HANDLE				hDevHandle,
 			SGXDumpDebugInfo(psDevInfo, IMG_FALSE);
 			PVR_DBG_BREAK;
 		}
-		#endif /* NO_HARDWARE */
+		#endif /* NO_HARDWARE && SUPPORT_LISR_MISR_SYNC*/
 #if defined(SGX_FEATURE_MP)
 		ui32CoresEnabled = ((OSReadHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_MASTER_CORE) & EUR_CR_MASTER_CORE_ENABLE_MASK) >> EUR_CR_MASTER_CORE_ENABLE_SHIFT) + 1;
 #else

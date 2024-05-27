@@ -57,17 +57,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <asm/io.h>
 
-#include <linux/pfn_t.h>
+#define	PHYS_TO_PFN(phys) ((phys) >> PAGE_SHIFT)
+#define PFN_TO_PHYS(pfn) ((pfn) << PAGE_SHIFT)
 
-// #define	PHYS_TO_PFN(phys) PHYS_PFN(phys)	// exists >= 4.4.0
-#define	PHYS_TO_PFN(phys) ((unsigned long) PFN_DOWN(phys))	// extsts >= 2.6.17
-#define PFN_TO_PHYS(pfn) PFN_PHYS(pfn)
+#define RANGE_TO_PAGES(range) (((range) + (PAGE_SIZE - 1)) >> PAGE_SHIFT)
 
-#define RANGE_TO_PAGES(range) PFN_UP(range)
+#define	ADDR_TO_PAGE_OFFSET(addr) (((unsigned long)(addr)) & (PAGE_SIZE - 1))
 
-#define	ADDR_TO_PAGE_OFFSET(addr) (((unsigned long)(addr)) & (PAGE_SIZE - 1))	// don't round like PFN_ALIGN would do
-
-#define	PAGES_TO_BYTES(pages) PFN_PHYS(pages)
+#define	PAGES_TO_BYTES(pages) ((pages) << PAGE_SHIFT)
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,10))
 #define	REMAP_PFN_RANGE(vma, addr, pfn, size, prot) remap_pfn_range(vma, addr, pfn, size, prot)
@@ -104,7 +101,6 @@ typedef enum {
     LINUX_MEM_AREA_VMALLOC,
     LINUX_MEM_AREA_ALLOC_PAGES,
     LINUX_MEM_AREA_SUB_ALLOC,
-    LINUX_MEM_AREA_ION,
 #if defined(PVR_LINUX_MEM_AREA_USE_VMAP)
     LINUX_MEM_AREA_VMAP,
 #endif
@@ -164,13 +160,6 @@ struct _LinuxMemArea {
             struct page **ppsPageList;
 	    IMG_HANDLE hBlockPageList;
         }sPageList;
-        struct _sIONTilerAlloc
-        {
-            /* Note the memory this represents _is_ implicitly
-             * page aligned _and_ so is its size */
-            IMG_CPU_PHYADDR *pCPUPhysAddrs;
-            struct ion_handle *psIONHandle[2];
-        }sIONTilerAlloc;
         struct _sSubAlloc
         {
             /* Note: The memory this represents is _not_ implicitly
@@ -547,55 +536,6 @@ LinuxMemArea *NewAllocPagesLinuxMemArea(IMG_SIZE_T uiBytes, IMG_UINT32 ui32AreaF
  * @return 
  ******************************************************************************/
 IMG_VOID FreeAllocPagesLinuxMemArea(LinuxMemArea *psLinuxMemArea);
-
-
-#if defined(CONFIG_ION_OMAP)
-
-/*!
- *******************************************************************************
- * @brief 
- *
- * @param uiBytes  
- * @param ui32AreaFlags  E.g Heap caching and mapping Flags
- *
- * @return 
- ******************************************************************************/
-LinuxMemArea *
-NewIONLinuxMemArea(IMG_SIZE_T uiBytes, IMG_UINT32 ui32AreaFlags,
-                   IMG_PVOID pvPrivData, IMG_SIZE_T uiPrivDataLength);
-
-
-/*!
- *******************************************************************************
- * @brief 
- *
- * @param psLinuxMemArea  
- *
- * @return 
- ******************************************************************************/
-IMG_VOID FreeIONLinuxMemArea(LinuxMemArea *psLinuxMemArea);
-
-#else /* defined(CONFIG_ION_OMAP) */
-
-static inline LinuxMemArea *
-NewIONLinuxMemArea(IMG_SIZE_T uBytes, IMG_UINT32 ui32AreaFlags,
-                   IMG_PVOID pvPrivData, IMG_SIZE_T uPrivDataLength)
-{
-    PVR_UNREFERENCED_PARAMETER(uBytes);
-    PVR_UNREFERENCED_PARAMETER(ui32AreaFlags);
-    PVR_UNREFERENCED_PARAMETER(pvPrivData);
-    PVR_UNREFERENCED_PARAMETER(uPrivDataLength);
-    BUG();
-    return IMG_NULL;
-}
-
-static inline IMG_VOID FreeIONLinuxMemArea(LinuxMemArea *psLinuxMemArea)
-{
-    PVR_UNREFERENCED_PARAMETER(psLinuxMemArea);
-    BUG();
-}
-
-#endif /* defined(CONFIG_ION_OMAP) */
 
 
 /*!

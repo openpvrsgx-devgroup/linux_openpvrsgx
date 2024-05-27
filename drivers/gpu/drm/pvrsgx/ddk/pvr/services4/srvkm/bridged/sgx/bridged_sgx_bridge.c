@@ -989,7 +989,6 @@ SGXDevInitPart2BW(IMG_UINT32 ui32BridgeID,
 	IMG_BOOL bReleaseFailed = IMG_FALSE;
 	IMG_HANDLE hDummy;
 	IMG_UINT32 i;
-	IMG_VOID *pCommands = IMG_NULL;
 
 	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID, PVRSRV_BRIDGE_SGX_DEVINITPART2);
 
@@ -1010,40 +1009,6 @@ SGXDevInitPart2BW(IMG_UINT32 ui32BridgeID,
 	if(psSGXDevInitPart2OUT->eError != PVRSRV_OK)
 	{
 		return 0;
-	}
-
-	/* Copy debug script commands from UM to KM */
-	for(i = 0; i < SGX_FEATURE_MP_CORE_COUNT_3D; i++)
-	{
-		/* Allocate memory in KM */
-		psSGXDevInitPart2OUT->eError = OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
-							SGX_MAX_PRINT_COMMANDS * sizeof(SGX_INIT_COMMAND),
-							(IMG_VOID **) &pCommands,
-							0,
-							"debug script commands kernel copy");
-		
-		if(psSGXDevInitPart2OUT->eError != PVRSRV_OK)
-		{
-			return 0;
-		}
-
-		/* Copy commands */
-		if(CopyFromUserWrapper(psPerProc,
-							ui32BridgeID,
-							pCommands,
-							psSGXDevInitPart2IN->sInitInfo.sScripts.apsSGXREGDebugCommandsPart2[i],
-							SGX_MAX_PRINT_COMMANDS * sizeof(SGX_INIT_COMMAND)) != PVRSRV_OK)
-		{
-			OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP,
-					SGX_MAX_PRINT_COMMANDS * sizeof(SGX_INIT_COMMAND),
-					pCommands,
-					0);
-			return -EFAULT;
-
-		}
-		/* update pointer */
-		psSGXDevInitPart2IN->sInitInfo.sScripts.apsSGXREGDebugCommandsPart2[i] = pCommands;
-		
 	}
 	
 	/* Check all the meminfo handles */

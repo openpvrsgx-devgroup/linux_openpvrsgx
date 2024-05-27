@@ -79,6 +79,8 @@ extern IMG_UINT32 g_ui32EveryLineCounter;
 
 IMG_BOOL _PDumpIsProcessActive(IMG_VOID);
 
+IMG_BOOL PDumpWillCapture(IMG_UINT32 ui32Flags);
+
 #ifdef PDUMP
 
 #define MAKEUNIQUETAG(hMemInfo)	(((BM_BUF *)(((PVRSRV_KERNEL_MEM_INFO *)(hMemInfo))->sMemBlk.hBuffer))->pMapping)

@@ -43,6 +43,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #if defined(SUPPORT_DRI_DRM)
 
+typedef struct drm_pvr_unpriv_cmd_tag
+{
+    uint32_t cmd;
+    uint32_t res;
+} drm_pvr_unpriv_cmd;
+
 /* DRM command numbers, relative to DRM_COMMAND_BASE */
 #if defined(SUPPORT_DRI_DRM_EXT)
 #define PVR_DRM_SRVKM_CMD	DRM_PVR_RESERVED1	/* Used for PVR Services ioctls */

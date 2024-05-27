@@ -233,6 +233,12 @@ typedef struct _SGX_CCB_KICK_
 	IMG_UINT32	ui32WriteOpsPendingVal;
 #endif
 	IMG_HANDLE	hDevMemContext;
+	IMG_DEV_VIRTADDR	sHWRTDataSetDevAddr;
+	IMG_DEV_VIRTADDR	sHWRTDataDevAddr;
+	IMG_UINT32			ui32FrameNum;
+#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE)	
+	IMG_BOOL	bIsFirstKick;
+#endif
 } SGX_CCB_KICK;
 
 

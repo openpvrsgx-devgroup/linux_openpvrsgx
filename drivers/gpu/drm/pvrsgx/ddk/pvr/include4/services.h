@@ -132,7 +132,7 @@ extern "C" {
  */
 #define PVRSRV_MAP_NOUSERVIRTUAL            (1UL<<27)
 #define PVRSRV_MEM_XPROC  					(1U<<28)
-#define PVRSRV_MEM_ION						(1U<<29)
+/* Bit 29 is unused */
 #define PVRSRV_MEM_ALLOCATENONCACHEDMEM		(1UL<<30)
 
 /*
@@ -194,9 +194,11 @@ extern "C" {
 	Flags for PVRSRVModifySyncOps
 	WO_INC		-	Used to increment "WriteOpsPending/complete of sync info"
 	RO_INC		-	Used to increment "ReadOpsPending/complete of sync info"
+	RO2_INC		-	Used to increment "ReadOps2Pending/complete of sync info"
 */
-#define PVRSRV_MODIFYSYNCOPS_FLAGS_WO_INC			0x00000001
-#define PVRSRV_MODIFYSYNCOPS_FLAGS_RO_INC			0x00000002
+#define PVRSRV_MODIFYSYNCOPS_FLAGS_WO_INC				(1U<<0)
+#define PVRSRV_MODIFYSYNCOPS_FLAGS_RO_INC				(1U<<1)
+#define PVRSRV_MODIFYSYNCOPS_FLAGS_RO2_INC				(1U<<2)
 
 /*
 	Flags for Services connection.
@@ -276,6 +278,7 @@ typedef enum
 	IMG_OPENCL			= 0x0000000F,
 #endif
 
+	IMG_MODULE_UNDEF	= 0xFFFFFFFF
 } IMG_MODULE_ID;
 
 
@@ -600,7 +603,7 @@ typedef struct _PVRSRV_SYNC_TOKEN_
  *****************************************************************************/
 typedef enum _PVRSRV_CLIENT_EVENT_
 {
-	PVRSRV_CLIENT_EVENT_HWTIMEOUT = 0,
+	PVRSRV_CLIENT_EVENT_HWTIMEOUT = 0
 } PVRSRV_CLIENT_EVENT;
 
 typedef IMG_VOID (*PFN_QUEUE_COMMAND_COMPLETE)(IMG_HANDLE hCallbackData);
@@ -750,15 +753,6 @@ PVRSRV_ERROR PVRSRVChangeDeviceMemoryAttributes(IMG_CONST PVRSRV_DEV_DATA			*psD
 												IMG_UINT32				ui32Attribs);
 
 IMG_IMPORT
-PVRSRV_ERROR IMG_CALLCONV PVRSRVMapDeviceClassMemory (IMG_CONST PVRSRV_DEV_DATA *psDevData,
-										IMG_HANDLE hDevMemContext,
-										IMG_HANDLE hDeviceClassBuffer,
-										PVRSRV_CLIENT_MEM_INFO **ppsMemInfo);
-IMG_IMPORT
-PVRSRV_ERROR IMG_CALLCONV PVRSRVUnmapDeviceClassMemory (IMG_CONST PVRSRV_DEV_DATA *psDevData,
-										PVRSRV_CLIENT_MEM_INFO *psMemInfo);
-
-IMG_IMPORT
 PVRSRV_ERROR IMG_CALLCONV PVRSRVMapPhysToUserSpace(IMG_CONST PVRSRV_DEV_DATA *psDevData,
 									  IMG_SYS_PHYADDR sSysPhysAddr,
 									  IMG_UINT32 uiSizeInBytes,
@@ -818,7 +812,7 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVAllocDeviceMemSparse(const PVRSRV_DEV_DATA *psDe
 typedef enum _PVRSRV_SYNCVAL_MODE_
 {
 	PVRSRV_SYNCVAL_READ				= IMG_TRUE,
-	PVRSRV_SYNCVAL_WRITE			= IMG_FALSE,
+	PVRSRV_SYNCVAL_WRITE			= IMG_FALSE
 
 } PVRSRV_SYNCVAL_MODE, *PPVRSRV_SYNCVAL_MODE;
 
@@ -845,6 +839,16 @@ IMG_IMPORT IMG_BOOL PVRSRVTestAllOpsNotComplete(PPVRSRV_CLIENT_MEM_INFO psMemInf
 IMG_IMPORT PVRSRV_SYNCVAL PVRSRVGetPendingOpSyncVal(PPVRSRV_CLIENT_MEM_INFO psMemInfo,
 	PVRSRV_SYNCVAL_MODE eMode);
 
+#if defined(SUPPORT_PVRSRV_DEVICE_CLASS)
+
+IMG_IMPORT
+PVRSRV_ERROR IMG_CALLCONV PVRSRVMapDeviceClassMemory (IMG_CONST PVRSRV_DEV_DATA *psDevData,
+										IMG_HANDLE hDevMemContext,
+										IMG_HANDLE hDeviceClassBuffer,
+										PVRSRV_CLIENT_MEM_INFO **ppsMemInfo);
+IMG_IMPORT
+PVRSRV_ERROR IMG_CALLCONV PVRSRVUnmapDeviceClassMemory (IMG_CONST PVRSRV_DEV_DATA *psDevData,
+										PVRSRV_CLIENT_MEM_INFO *psMemInfo);
 
 /******************************************************************************
  * Common Device Class Enumeration
@@ -979,6 +983,7 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVGetBCBuffer(IMG_HANDLE hDevice,
 												IMG_HANDLE *phBuffer
 	);
 
+#endif /* #if defined(SUPPORT_PVRSRV_DEVICE_CLASS) */
 
 /******************************************************************************
  * PDUMP Function prototypes...

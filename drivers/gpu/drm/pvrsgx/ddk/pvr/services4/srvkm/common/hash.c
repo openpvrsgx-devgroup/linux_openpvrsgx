@@ -285,6 +285,7 @@ _Resize (HASH_TABLE *pHash, IMG_UINT32 uNewSize)
 
         if (_Rehash (pHash, pHash->ppBucketTable, pHash->uSize, ppNewTable, uNewSize) != PVRSRV_OK)
 		{
+			OSFreeMem (PVRSRV_PAGEABLE_SELECT, sizeof(BUCKET *) * uNewSize, ppNewTable, IMG_NULL);
 			return IMG_FALSE;
 		}
 

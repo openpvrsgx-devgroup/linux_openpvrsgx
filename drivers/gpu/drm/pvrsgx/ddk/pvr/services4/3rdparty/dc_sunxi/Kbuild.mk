@@ -40,7 +40,7 @@
 
 ccflags-y += \
 	-I$(TOP)/services4/3rdparty/dc_sunxi \
-	-Idrivers/video
+	-I$(KERNELDIR)/drivers/video/
 
 dc_sunxi-y += \
 	services4/3rdparty/dc_sunxi/dc_sunxi_displayclass.o

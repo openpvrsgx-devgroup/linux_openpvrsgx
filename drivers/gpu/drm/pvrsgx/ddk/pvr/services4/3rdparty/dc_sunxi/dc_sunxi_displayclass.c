@@ -1,67 +1,44 @@
 /*************************************************************************/ /*!
 @Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
-@License        Dual MIT/GPLv2
-
-The contents of this file are subject to the MIT license as set out below.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-Alternatively, the contents of this file may be used under the terms of
-the GNU General Public License Version 2 ("GPL") in which case the provisions
-of GPL are applicable instead of those above.
-
-If you wish to allow use of your version of this file only under the terms of
-GPL, and not to allow others to use your version of this file under the terms
-of the MIT license, indicate your decision by deleting the provisions above
-and replace them with the notice and other provisions required by GPL as set
-out in the file called "GPL-COPYING" included in this distribution. If you do
-not delete the provisions above, a recipient may use your version of this file
-under the terms of either the MIT license or GPL.
-
-This License is also included in this distribution in the file called
-"MIT-COPYING".
-
-EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
-PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
-BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
-PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+@License        Strictly Confidential.
 */ /**************************************************************************/
 
 #include <linux/version.h>
 #include <linux/kernel.h>
 #include <linux/console.h>
 #include <linux/fb.h>
+
+#if defined(SUPPORT_DRI_DRM)
+#include <drm/drmP.h>
+#endif //SUPPORT_DRI_DRM
+
 #include <linux/module.h>
 #include <linux/string.h>
 #include <linux/notifier.h>
 
-
-#if defined(SUPPORT_DRI_DRM)
-#include <drm/drmP.h>
-#endif
-
 /* IMG services headers */
+#include "pvrmodule.h"
 #include "img_defs.h"
 #include "servicesext.h"
 #include "kerneldisplay.h"
-#include "linux/drv_display.h"
+#include "video/sunxi_display2.h"
+
+#ifdef DEBUG
+#define AWDEBUG(fmt,args...) printk("[DC_SUNXI_DEBUG] [%d]%s, " fmt "\n",__LINE__, __func__, args);
+#else
+#define AWDEBUG(fmt,args...)
+#endif
+
+extern IMG_BOOL IMG_IMPORT PVRGetDisplayClassJTable(PVRSRV_DC_DISP2SRV_KMJTABLE *psJTable);
 
 #if defined(SUPPORT_DRI_DRM)
 #include "pvr_drm.h"
-#else
-#include "pvrmodule.h"
-#endif
+#include "3rdparty_dc_drm_shared.h"
+#endif //SUPPORT_DRI_DRM
+
+#if defined(SUPPORT_DRI_DRM)
+#define DISPLAY_CONTROLLER dc_sunxi
+#endif //SUPPORT_DRI_DRM
 
 #define DC_SUNXI_COMMAND_COUNT		    1
 
@@ -82,7 +59,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define	DEBUG_PRINTK(x)
 #endif
 
-#define DISPLAY_DEVICE_NAME		"SUNXI Linux Display Driver"
+#define DISPLAY_DEVICE_NAME		"SUNXI Display"
 #define	DRVNAME					"dc_sunxi"
 #define	DEVNAME					DRVNAME
 #define	DRIVER_PREFIX			DRVNAME
@@ -92,7 +69,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 
 #if !defined(SUPPORT_DRI_DRM)
-#endif
+#endif //SUPPORT_DRI_DRM
 
 /* DC_SUNXI buffer structure */
 typedef struct DC_SUNXI_BUFFER_TAG
@@ -216,6 +193,10 @@ typedef struct DC_SUNXI_DEVINFO_TAG
 	/* Number of blank/unblank events */
 	atomic_t					sBlankEvents;
 
+#ifdef SUPPORT_DRI_DRM
+  atomic_t    sLeaveVT;
+#endif //SUPPORT_DRI_DRM
+
 }  DC_SUNXI_DEVINFO;
 
 typedef enum _DC_SUNXI_ERROR_
@@ -235,7 +216,11 @@ static PFN_DC_GET_PVRJTABLE gpfnGetPVRJTable;
 /* Don't wait for vertical sync */
 static inline bool DontWaitForVSync(DC_SUNXI_DEVINFO *psDevInfo)
 {
+#ifdef SUPPORT_DRI_DRM
+  return atomic_read(&psDevInfo->sFlushCommands) || atomic_read(&psDevInfo->sLeaveVT);
+#else
 	return atomic_read(&psDevInfo->sFlushCommands);
+#endif //SUPPORT_DRI_DRM
 }
 
 /*
@@ -297,7 +282,12 @@ static void DC_SUNXISwapHandler(DC_SUNXI_BUFFER *psBuffer)
 	DC_SUNXI_SWAPCHAIN *psSwapChain = psDevInfo->psSwapChain;
 	bool bPreviouslyNotVSynced;
 
-	DC_SUNXIFlip(psDevInfo, psBuffer);
+#if defined(SUPPORT_DRI_DRM)
+  if(!atomic_read(&psDevInfo->sLeaveVT))
+#endif //SUPPORT_DRI_DRM
+  {
+	  DC_SUNXIFlip(psDevInfo, psBuffer);
+	}
 
 	bPreviouslyNotVSynced = psSwapChain->bNotVSynced;
 	psSwapChain->bNotVSynced = true;
@@ -423,6 +413,7 @@ static DC_SUNXI_DEVINFO *DC_SUNXIGetDevInfoPtr(unsigned uiFBDevID)
 
 	if (uiFBDevID >= DC_SUNXI_MAX_NUM_DEVICES)
 	{
+                AWDEBUG("uiFBDevID = %d, but DC_SUNXI_MAX_NUM_DEVICES = %d ", uiFBDevID, DC_SUNXI_MAX_NUM_DEVICES);
 		return NULL;
 	}
 
@@ -434,11 +425,162 @@ static inline void DC_SUNXISetDevInfoPtr(unsigned uiFBDevID, DC_SUNXI_DEVINFO *p
 {
 	WARN_ON(uiFBDevID >= DC_SUNXI_MAX_NUM_DEVICES);
 
-	if (uiFBDevID < DC_SUNXI_MAX_NUM_DEVICES)
+        AWDEBUG("Try to set %d", uiFBDevID);
+
+        if (uiFBDevID < DC_SUNXI_MAX_NUM_DEVICES)
 	{
+                AWDEBUG("gapsDevInfo[%d] = %p", uiFBDevID, psDevInfo);
 		gapsDevInfo[uiFBDevID] = psDevInfo;
 	}
 }
+
+#if defined(SUPPORT_DRI_DRM) && defined(PVR_DISPLAY_CONTROLLER_DRM_IOCTL)
+static DC_SUNXI_DEVINFO* DC_SUNXIGetDevInfoPtrByPVRDevID(unsigned uiPVRDevID)
+{
+    int i;
+    AWDEBUG("Get DEVINFO Ptr By PVRDevID[%u]", uiPVRDevID);
+ 
+    
+    for(i = 0; i < DC_SUNXI_MAX_NUM_DEVICES; i++){
+        if(gapsDevInfo[i] != NULL && gapsDevInfo[i]->uiPVRDevID == uiPVRDevID){
+            return gapsDevInfo[i];
+        }
+    }
+
+    AWDEBUG("Can not find DEVINFO Ptr which PVRDEVID[%u]",uiPVRDevID);
+    return NULL;
+}
+int PVR_DRM_MAKENAME(DISPLAY_CONTROLLER, _Ioctl)(struct drm_device unref__ *dev, void *arg, struct drm_file unref__ *pFile)
+{
+	drm_pvr_display_cmd *psArgs;
+	DC_SUNXI_DEVINFO *psDevInfo;
+	int ret = 0;
+
+	if (arg == NULL)
+	{
+		return -EFAULT;
+	}
+
+
+        //FIXED:
+#if 0
+	psArgs = (drm_pvr_display_cmd *)arg;
+	psDevInfo = DC_SUNXIGetDevInfoPtr(psArgs->dev);
+#else
+        psArgs = (drm_pvr_display_cmd *)arg; 
+        psDevInfo = DC_SUNXIGetDevInfoPtrByPVRDevID(psArgs->dev);
+#endif
+	if (psDevInfo == NULL)
+	{
+            AWDEBUG("get DC_SUNXI_DEVINFO = NULL.  psArgs->dev = %d", psArgs->dev);
+	    return -EINVAL;
+	}
+
+	switch (psArgs->cmd)
+	{
+		case PVR_DRM_DISP_CMD_LEAVE_VT:
+		case PVR_DRM_DISP_CMD_ENTER_VT:
+		{
+			bool bLeaveVT = (psArgs->cmd == PVR_DRM_DISP_CMD_LEAVE_VT);
+			DEBUG_PRINTK((KERN_WARNING DRIVER_PREFIX ": %s: PVR Device %u: %s\n",
+				__FUNCTION__, psArgs->dev,
+				bLeaveVT ? "Leave VT" : "Enter VT"));
+
+      mutex_lock(&psDevInfo->sCreateSwapChainMutex);
+      atomic_set(&psDevInfo->sLeaveVT,bLeaveVT);
+      if (psDevInfo->psSwapChain != NULL)
+      {
+      	flush_workqueue(psDevInfo->psSwapChain->psWorkQueue);
+      	if(bLeaveVT)
+      	{
+      		DC_SUNXIFlip(psDevInfo, &psDevInfo->sSystemBuffer);
+      	}
+      }
+      mutex_unlock(&psDevInfo->sCreateSwapChainMutex);
+      DC_SUNXIUnblankDisplay(psDevInfo);
+			break;
+		}
+		case PVR_DRM_DISP_CMD_ON:
+		case PVR_DRM_DISP_CMD_STANDBY:
+		case PVR_DRM_DISP_CMD_SUSPEND:
+		case PVR_DRM_DISP_CMD_OFF:
+		{
+			int iFBMode;
+#if defined(DEBUG)
+			{
+				const char *pszMode;
+				switch(psArgs->cmd)
+				{
+					case PVR_DRM_DISP_CMD_ON:
+						pszMode = "On";
+						break;
+					case PVR_DRM_DISP_CMD_STANDBY:
+						pszMode = "Standby";
+						break;
+					case PVR_DRM_DISP_CMD_SUSPEND:
+						pszMode = "Suspend";
+						break;
+					case PVR_DRM_DISP_CMD_OFF:
+						pszMode = "Off";
+						break;
+					default:
+						pszMode = "(Unknown Mode)";
+						break;
+				}
+				printk(KERN_WARNING DRIVER_PREFIX ": %s: PVR Device %u: Display %s\n",
+				__FUNCTION__, psArgs->dev, pszMode);
+			}
+#endif
+			switch(psArgs->cmd)
+			{
+				case PVR_DRM_DISP_CMD_ON:
+					iFBMode = FB_BLANK_UNBLANK;
+					break;
+				case PVR_DRM_DISP_CMD_STANDBY:
+					iFBMode = FB_BLANK_HSYNC_SUSPEND;
+					break;
+				case PVR_DRM_DISP_CMD_SUSPEND:
+					iFBMode = FB_BLANK_VSYNC_SUSPEND;
+					break;
+				case PVR_DRM_DISP_CMD_OFF:
+					iFBMode = FB_BLANK_POWERDOWN;
+					break;
+				default:
+					return -EINVAL;
+			}
+			
+			mutex_lock(&psDevInfo->sCreateSwapChainMutex);
+			if (psDevInfo->psSwapChain != NULL)
+			{
+				flush_workqueue(psDevInfo->psSwapChain->psWorkQueue);
+			}
+			if (!lock_fb_info(psDevInfo->psLINFBInfo))
+			{
+				ret = -ENODEV;
+			}
+			else
+			{
+				console_lock();
+				psDevInfo->psLINFBInfo->flags |= FBINFO_MISC_USEREVENT;
+				ret = fb_blank(psDevInfo->psLINFBInfo, iFBMode);
+				psDevInfo->psLINFBInfo->flags &= ~FBINFO_MISC_USEREVENT;
+				console_unlock();
+				unlock_fb_info(psDevInfo->psLINFBInfo);
+			}
+			mutex_unlock(&psDevInfo->sCreateSwapChainMutex);
+			break;
+		}
+		default:
+		{
+			ret = -EINVAL;
+			break;
+		}
+	}
+
+	return ret;
+}
+#endif //SUPPORT_DRI_DRM PVR_DISPLAY_CONTROLLER_DRM_IOCTL
+
 
 static inline bool SwapChainHasChanged(DC_SUNXI_DEVINFO *psDevInfo, DC_SUNXI_SWAPCHAIN *psSwapChain)
 {
@@ -446,51 +588,50 @@ static inline bool SwapChainHasChanged(DC_SUNXI_DEVINFO *psDevInfo, DC_SUNXI_SWA
 		   (psDevInfo->uiSwapChainID != psSwapChain->uiSwapChainID);
 }
 
-extern int dispc_gralloc_queue(setup_dispc_data_t *psDispcData, int ui32DispcDataLength, void (*cb_fn)(void *, int), void *cb_arg);
-
+extern int dispc_gralloc_queue_for_IMG(disp_layer_config *psDispcData, int ui32DispcDataLength, void (*cb_fn)(void *, int), void *cb_arg);
 static void
-QueueBufferImmediate(DC_SUNXI_DEVINFO *psDevInfo, IMG_SYS_PHYADDR sSysAddr,
+QueueBufferImmediate(DC_SUNXI_DEVINFO *psDevInfo, DC_SUNXI_BUFFER *psBuffer,
 					 void (*cb_fn)(void *, int), void *cb_arg)
 {
-	setup_dispc_data_t sDispcData =
-	{
-		.post2_layers				= 1,
-		.primary_display_layer_num	= 1,
-		.layer_info =
-		{
-			[0] =
-			{
-				.mode				= DISP_LAYER_WORK_MODE_NORMAL,
-				.src_win =
-				{
-					.width			= psDevInfo->sFBInfo.ulWidth,
-					.height			= psDevInfo->sFBInfo.ulHeight
-				},
-				.scn_win =
-				{
-					.width			= psDevInfo->sFBInfo.ulWidth,
-					.height			= psDevInfo->sFBInfo.ulHeight
-				},
-				.alpha_en			= 1,
-				.alpha_val			= 0xff,
-				.fb =
-				{
-					.mode			= DISP_MOD_INTERLEAVED,
-					.format			= DISP_FORMAT_ARGB8888,
-					.seq			= DISP_SEQ_ARGB,
-					.pre_multiply	= 1,
-					.size			=
-					{
-						.width		= psDevInfo->sFBInfo.ulWidth,
-						.height		= psDevInfo->sFBInfo.ulHeight
-					},
-					.addr[0]		= sSysAddr.uiAddr,
-				},
-			},
-		},
-	};
 
-	dispc_gralloc_queue(&sDispcData, sizeof(setup_dispc_data_t), cb_fn, cb_arg);
+	disp_layer_config sDispcData =
+    {
+        .enable = 1,
+        .channel  = 1,
+        .layer_id = 0,
+        .info =
+        {
+            .mode = 0,
+            .zorder = 0,
+            .screen_win =
+            {
+                .x = 0,
+                .y = 0,
+                .width = psDevInfo->sFBInfo.ulWidth,
+                .height = psDevInfo->sFBInfo.ulHeight
+            },
+
+            .fb =
+            {
+                .addr[0] = psBuffer->sSysAddr.uiAddr + (psBuffer->ulYOffset *psDevInfo->sFBInfo.ulWidth * psDevInfo->sFBInfo.ulHeight * 4),
+                .size[0] = 
+                {
+                    .width = psDevInfo->sFBInfo.ulWidth,
+                    .height = psDevInfo->sFBInfo.ulHeight
+                },
+                .crop = 
+                {
+                    .x = 0,
+                    .y = 0,
+                    .width = ((long long)psDevInfo->sFBInfo.ulWidth)<<32,
+                    .height = ((long long)psDevInfo->sFBInfo.ulHeight)<<32
+                },
+                .format = DISP_FORMAT_ARGB_8888
+            },
+        },
+    };
+
+	dispc_gralloc_queue_for_IMG(&sDispcData, sizeof(disp_layer_config), cb_fn, cb_arg);
 }
 
 static void dispc_proxy_cmdcomplete(void * cookie, int i)
@@ -521,7 +662,9 @@ static IMG_VOID SetDCState(IMG_HANDLE hDevice, IMG_UINT32 ui32State)
 			 * to dispc_gralloc_queue(); we'll just CmdComplete them
 			 * immediately.
 			 */
-			QueueBufferImmediate(psDevInfo, psDevInfo->sSystemBuffer.sSysAddr,
+			 //printk("####SetDCState############\n");
+
+			QueueBufferImmediate(psDevInfo, &psDevInfo->sSystemBuffer,
 								 dispc_proxy_cmdcomplete, (void *)0xdeadbeef);
 			atomic_set(&psDevInfo->sFlushCommands, true);
 			break;
@@ -543,14 +686,7 @@ static PVRSRV_ERROR OpenDCDevice(IMG_UINT32 uiPVRDevID,
 {
 	DC_SUNXI_DEVINFO *psDevInfo;
 	DC_SUNXI_ERROR eError;
-	unsigned int i, uiMaxFBDevIDPlusOne;
-
-	if (!try_module_get(THIS_MODULE))
-	{
-		return PVRSRV_ERROR_UNABLE_TO_OPEN_DC_DEVICE;
-	}
-
-	uiMaxFBDevIDPlusOne = DC_SUNXIMaxFBDevIDPlusOne();
+	unsigned int i, uiMaxFBDevIDPlusOne = DC_SUNXIMaxFBDevIDPlusOne();
 
 	for (i = 0; i < uiMaxFBDevIDPlusOne; i++)
 	{
@@ -565,8 +701,7 @@ static PVRSRV_ERROR OpenDCDevice(IMG_UINT32 uiPVRDevID,
 	{
 		DEBUG_PRINTK((KERN_WARNING DRIVER_PREFIX
 					  ": %s: PVR Device %u not found\n", __FUNCTION__, uiPVRDevID));
-		eError = PVRSRV_ERROR_INVALID_DEVICE;
-		goto ErrorModulePut;
+		return PVRSRV_ERROR_INVALID_DEVICE;
 	}
 
 	/* store the system surface sync data */
@@ -577,19 +712,13 @@ static PVRSRV_ERROR OpenDCDevice(IMG_UINT32 uiPVRDevID,
 	{
 		DEBUG_PRINTK((KERN_WARNING DRIVER_PREFIX
 					  ": %s: Device %u: DC_SUNXIUnblankDisplay failed (%d)\n", __FUNCTION__, psDevInfo->uiFBDevID, eError));
-		eError = PVRSRV_ERROR_UNBLANK_DISPLAY_FAILED;
-		goto ErrorModulePut;
+		return PVRSRV_ERROR_UNBLANK_DISPLAY_FAILED;
 	}
 
 	/* return handle to the devinfo */
 	*phDevice = (IMG_HANDLE)psDevInfo;
 
 	return PVRSRV_OK;
-
-ErrorModulePut:
-	module_put(THIS_MODULE);
-
-	return eError;
 }
 
 /*
@@ -598,10 +727,15 @@ ErrorModulePut:
  */
 static PVRSRV_ERROR CloseDCDevice(IMG_HANDLE hDevice)
 {
+#ifdef SUPPORT_DRI_DRM
+  DC_SUNXI_DEVINFO *psDevInfo = (DC_SUNXI_DEVINFO *)hDevice;
+  atomic_set(&psDevInfo->sLeaveVT, (int)false);
+  DC_SUNXIUnblankDisplay(psDevInfo);
+#else
 	UNREFERENCED_PARAMETER(hDevice);
+#endif //SUPPORT_DRI_DRM
 
-	module_put(THIS_MODULE);
-
+  //module_put(THIS_MODULE);
 	return PVRSRV_OK;
 }
 
@@ -1172,7 +1306,9 @@ static IMG_BOOL ProcessFlipV1(IMG_HANDLE hCmdCookie,
 		/* Not enabled by default yet until we have a way to CmdComplete
 		 * after vblank rather than after next programming!
 		 */
-		QueueBufferImmediate(psDevInfo, psBuffer->sSysAddr,
+		 			 printk("####ProcessFlipV1############\n");
+
+		QueueBufferImmediate(psDevInfo, psBuffer,
 							 dispc_proxy_cmdcomplete, (void *)0xdeadbeef);
 
 		/* When dispc_gralloc_queue() can call back after programming,
@@ -1203,45 +1339,27 @@ static IMG_BOOL ProcessFlipV2(IMG_HANDLE hCmdCookie,
 							  DC_SUNXI_DEVINFO *psDevInfo,
 							  PDC_MEM_INFO *ppsMemInfos,
 							  IMG_UINT32 ui32NumMemInfos,
-							  setup_dispc_data_t *psDispcData,
+							  void *psDispcData,
 							  IMG_UINT32 ui32DispcDataLength)
 {
 	int i;
 
 	if(!psDispcData)
 	{
-		if(ui32NumMemInfos == 1)
-		{
-			IMG_CPU_PHYADDR phyAddr;
-			IMG_SYS_PHYADDR sSysAddr;
-
-			psDevInfo->sPVRJTable.pfnPVRSRVDCMemInfoGetCpuPAddr(ppsMemInfos[0], 0, &phyAddr);
-			sSysAddr.uiAddr = phyAddr.uiAddr;
-
-			/* If we got a meminfo but no private data, assume the 'null' HWC
-			 * backend is in use, and emulate a swapchain-less ProcessFlipV1.
-			 */
-			QueueBufferImmediate(psDevInfo, sSysAddr,
-								 dispc_proxy_cmdcomplete, hCmdCookie);
-		}
-		else
-		{
-			printk(KERN_WARNING DRIVER_PREFIX
-				   ": %s: Device %u: WARNING: psDispcData was NULL. "
-				   "The HWC probably has a bug. Silently ignoring.",
-				   __FUNCTION__, psDevInfo->uiFBDevID);
-			gapsDevInfo[0]->sPVRJTable.pfnPVRSRVCmdComplete(hCmdCookie, IMG_TRUE);
-		}
-
+		printk(KERN_WARNING DRIVER_PREFIX
+			   ": %s: Device %u: WARNING: psDispcData was NULL. "
+			   "The HWC probably has a bug. Silently ignoring.",
+			   __FUNCTION__, psDevInfo->uiFBDevID);
+		gapsDevInfo[0]->sPVRJTable.pfnPVRSRVCmdComplete(hCmdCookie, IMG_TRUE);
 		return IMG_TRUE;
 	}
 
-	if(ui32DispcDataLength != sizeof(setup_dispc_data_t))
+	if(ui32DispcDataLength != sizeof(disp_layer_info))
 	{
 		printk(KERN_WARNING DRIVER_PREFIX
 			   ": %s: Device %u: WARNING: Unexpected private data size, %u vs %u.",
 			   __FUNCTION__, psDevInfo->uiFBDevID, ui32DispcDataLength,
-			   sizeof(setup_dispc_data_t));
+			   sizeof(disp_layer_info));
 		gapsDevInfo[0]->sPVRJTable.pfnPVRSRVCmdComplete(hCmdCookie, IMG_TRUE);
 		return IMG_TRUE;
 	}
@@ -1259,10 +1377,10 @@ static IMG_BOOL ProcessFlipV2(IMG_HANDLE hCmdCookie,
 
 		psDevInfo->sPVRJTable.pfnPVRSRVDCMemInfoGetCpuPAddr(ppsMemInfos[i], 0, &phyAddr);
 
-		psDispcData->layer_info[i].fb.addr[0] = phyAddr.uiAddr;
+		//psDispcData->layer_info[i].fb.addr[0] = phyAddr.uiAddr;
 	}
-
-	dispc_gralloc_queue(psDispcData, ui32DispcDataLength, dispc_proxy_cmdcomplete, (void *)hCmdCookie);
+    printk("####ProcessFlipV2############\n");
+	dispc_gralloc_queue_for_IMG(psDispcData, ui32DispcDataLength, dispc_proxy_cmdcomplete, (void *)hCmdCookie);
 
 	return IMG_TRUE;
 }
@@ -1319,6 +1437,8 @@ static DC_SUNXI_ERROR DC_SUNXIInitFBDev(DC_SUNXI_DEVINFO *psDevInfo)
 	DC_SUNXI_FBINFO *psPVRFBInfo = &psDevInfo->sFBInfo;
 	DC_SUNXI_ERROR eError = DC_SUNXI_ERROR_GENERIC;
 	unsigned int uiFBDevID = psDevInfo->uiFBDevID;
+
+        AWDEBUG("DC_SUNXIInitFBDev get DevID[%u]", uiFBDevID);
 
 	console_lock();
 
@@ -1528,12 +1648,13 @@ static DC_SUNXI_DEVINFO *DC_SUNXIInitDev(unsigned uiFBDevID)
 	{
 		printk(KERN_ERR DRIVER_PREFIX
 		": %s: Device %u: Couldn't allocate device information structure\n", __FUNCTION__, uiFBDevID);
-		
 		goto ErrorExit;
 	}
 
 	/* Any fields not set will be zero */
 	memset(psDevInfo, 0, sizeof(DC_SUNXI_DEVINFO));
+
+        AWDEBUG("DC_SUNXIInitDev get DevID[%u]", uiFBDevID);
 
 	psDevInfo->uiFBDevID = uiFBDevID;
 
@@ -1605,6 +1726,7 @@ static DC_SUNXI_DEVINFO *DC_SUNXIInitDev(unsigned uiFBDevID)
 	psDevInfo->sDCJTable.pfnSetDCState = SetDCState;
 
 	/* Register device with services and retrieve device index */
+        AWDEBUG("Register DCDevice ID[%u]", psDevInfo->uiPVRDevID);
 	if(psDevInfo->sPVRJTable.pfnPVRSRVRegisterDCDevice(
 		&psDevInfo->sDCJTable,
 		&psDevInfo->uiPVRDevID) != PVRSRV_OK)
@@ -1614,6 +1736,9 @@ static DC_SUNXI_DEVINFO *DC_SUNXIInitDev(unsigned uiFBDevID)
 
 		goto ErrorDeInitFBDev;
 	}
+
+
+        AWDEBUG("After register DCDevice ID[%u]", psDevInfo->uiPVRDevID);
 
 	DEBUG_PRINTK((KERN_INFO DRIVER_PREFIX ": Device %u: PVR Device ID: %u\n",
 				  psDevInfo->uiFBDevID, psDevInfo->uiPVRDevID));
@@ -1639,7 +1764,9 @@ static DC_SUNXI_DEVINFO *DC_SUNXIInitDev(unsigned uiFBDevID)
 
 	atomic_set(&psDevInfo->sBlankEvents, 0);
 	atomic_set(&psDevInfo->sFlushCommands, false);
-
+#if defined(SUPPORT_DRI_DRM)
+  atomic_set(&psDevInfo->sLeaveVT, false);
+#endif
 	return psDevInfo;
 
 ErrorUnregisterDevice:
@@ -1655,29 +1782,34 @@ ErrorExit:
 
 static DC_SUNXI_ERROR DC_SUNXIInit(void)
 {
+/*
 	unsigned int i, uiMaxFBDevIDPlusOne = DC_SUNXIMaxFBDevIDPlusOne();
 	unsigned int uiDevicesFound = 0;
-
+        DC_SUNXI_DEVINFO *psDevInfo = NULL;
 	gpfnGetPVRJTable = PVRGetDisplayClassJTable;
-
-	/*
-	 * We search for frame buffer devices backwards, as the last device
-	 * registered with PVR Services will be the first device enumerated
-	 * by PVR Services.
-	 */
 	for(i = uiMaxFBDevIDPlusOne; i-- != 0;)
 	{
-		DC_SUNXI_DEVINFO *psDevInfo = DC_SUNXIInitDev(i);
+		//DC_SUNXI_DEVINFO *psDevInfo = DC_SUNXIInitDev(i);
+                DC_SUNXI_DEVINFO *psDevInfo = DC_SUNXIInitDev(i-1);
 
 		if (psDevInfo != NULL)
 		{
-			/* Set the top-level anchor */
 			DC_SUNXISetDevInfoPtr(psDevInfo->uiFBDevID, psDevInfo);
 			uiDevicesFound++;
 		}
 	}
-
 	return (uiDevicesFound != 0) ? DC_SUNXI_OK : DC_SUNXI_ERROR_INIT_FAILURE;
+*/
+        DC_SUNXI_DEVINFO *psDevInfo = NULL;
+	gpfnGetPVRJTable = PVRGetDisplayClassJTable;
+        psDevInfo = DC_SUNXIInitDev(0);
+        if(psDevInfo != NULL){
+            DC_SUNXISetDevInfoPtr(psDevInfo->uiFBDevID, psDevInfo);
+        }else{
+            AWDEBUG("DC_SUNXIInitDev return NULL. func:%s line:%d", __func__,__LINE__);
+            return DC_SUNXI_ERROR_INIT_FAILURE;
+        }
+        return DC_SUNXI_OK;
 }
 
 static bool DC_SUNXIDeInitDev(DC_SUNXI_DEVINFO *psDevInfo)
@@ -1707,6 +1839,10 @@ static bool DC_SUNXIDeInitDev(DC_SUNXI_DEVINFO *psDevInfo)
 	/* De-allocate data structure */
 	kfree(psDevInfo);
 
+#if defined(SUPPORT_DRI_DRM)
+  //Nothing to do with psDevInfo->sLeaveVT.
+#endif //SUPPORT_DRI_DRM
+
 	return true;
 }
 
@@ -1727,12 +1863,11 @@ static DC_SUNXI_ERROR DC_SUNXIDeInit(void)
 
 	return (bError) ? DC_SUNXI_ERROR_INIT_FAILURE : DC_SUNXI_OK;
 }
-
 #if defined(SUPPORT_DRI_DRM)
 int PVR_DRM_MAKENAME(DISPLAY_CONTROLLER, _Init)(struct drm_device unref__ *dev)
 #else
 static int __init DC_SUNXI_Init(void)
-#endif
+#endif //SUPPORT_DRI_DRM
 {
 	if(DC_SUNXIInit() != DC_SUNXI_OK)
 	{
@@ -1746,8 +1881,9 @@ static int __init DC_SUNXI_Init(void)
 #if defined(SUPPORT_DRI_DRM)
 void PVR_DRM_MAKENAME(DISPLAY_CONTROLLER, _Cleanup)(struct drm_device unref__ *dev)
 #else
+
 static void __exit DC_SUNXI_Cleanup(void)
-#endif
+#endif //SUPPORT_DRI_DRM
 {
 	if(DC_SUNXIDeInit() != DC_SUNXI_OK)
 	{
@@ -1758,7 +1894,8 @@ static void __exit DC_SUNXI_Cleanup(void)
 #if !defined(SUPPORT_DRI_DRM)
 late_initcall(DC_SUNXI_Init);
 module_exit(DC_SUNXI_Cleanup);
-#endif
+#endif //!SUPPORT_DRI_DRM
+
 /******************************************************************************
  * End of file (dc_sunxi_displayclass.c)
  ******************************************************************************/

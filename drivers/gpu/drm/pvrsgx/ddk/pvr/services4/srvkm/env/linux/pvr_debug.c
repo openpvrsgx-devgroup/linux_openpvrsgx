@@ -49,7 +49,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 
 #include <asm/io.h>
-#include <linux/uaccess.h>
 #include <asm/uaccess.h>
 #include <linux/kernel.h>
 #include <linux/sched.h>
@@ -506,7 +505,7 @@ IMG_INT PVRDebugProcSetLevel(struct file *file, const IMG_CHAR *buffer, IMG_UINT
 			return -EINVAL;
 		if (data_buffer[count - 1] != '\n')
 			return -EINVAL;
-		if (sscanf(data_buffer, "%i", &gPVRDebugLevel) == 0)
+		if (sscanf(data_buffer, "%u", &gPVRDebugLevel) == 0)
 			return -EINVAL;
 		gPVRDebugLevel &= (1 << DBGPRIV_DBGLEVEL_COUNT) - 1;
 	}

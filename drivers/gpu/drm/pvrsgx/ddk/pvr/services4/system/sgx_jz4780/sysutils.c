@@ -311,13 +311,6 @@ PVRSRV_ERROR SysDvfsInitialize(SYS_SPECIFIC_DATA *psSysSpecificData)
 {
 #if !defined(SYS_XB47_HAS_DVFS_FRAMEWORK)
 	PVR_UNREFERENCED_PARAMETER(psSysSpecificData);
-
-        // james
-        /* clk = clk_get(&gpsPVRLDMDev->dev, SYS_XB4780_GPU_TIMER_NAME); */
-	/* if(!clk) { */
-        /*     PVR_DPF((PVR_DBG_ERROR, "SysDvfsInitialize: Could not get clock for GPU")); */
-        /*     return PVRSRV_ERROR_NOT_SUPPORTED; */
-	/* } */
 #else 
 	IMG_UINT32 i, *freq_list;
 	IMG_INT32 opp_count;
@@ -402,13 +395,4 @@ PVRSRV_ERROR SysDvfsDeinitialize(SYS_SPECIFIC_DATA *psSysSpecificData)
 	psSysSpecificData->ui32SGXFreqListSize = 0;
 #endif 
 	return PVRSRV_OK;
-}
-
-IMG_VOID SysSGXIdleEntered(IMG_VOID)
-{
-}
-
-IMG_VOID SysSGXCommandPending(IMG_BOOL bSGXIdle)
-{
-	PVR_UNREFERENCED_PARAMETER(bSGXIdle);
 }

@@ -47,12 +47,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 #endif
 
-#if defined(CONFIG_OMAP2PLUS)
-#if (AM_VERSION != 5)
-#include <linux/platform_data/sgx-omap.h>
-#endif
-#endif
-
 #if defined(SUPPORT_DRI_DRM) && !defined(SUPPORT_DRI_DRM_PLUGIN)
 #define	PVR_MOD_STATIC
 #else
@@ -85,21 +79,15 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #if defined(PVR_LDM_DEVICE_TREE) && !defined(NO_HARDWARE)
 #define PVR_USE_DEVICE_TREE
-#include <linux/mod_devicetable.h>
 #endif
 
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/fs.h>
-#include <linux/reset.h>
 
 #if defined(SUPPORT_DRI_DRM)
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0))
 #include <drm/drmP.h>
-#else
-#include <drm/drm_file.h>
-#endif
 #if defined(PVR_SECURE_DRM_AUTH_EXPORT)
 #include "env_perproc.h"
 #endif
@@ -192,13 +180,11 @@ MODULE_PARM_DESC(gPVRDebugLevel, "Sets the level of debug output (default 0x7)")
 #define __devexit_p
 #endif
 
-#ifdef ODD	// leads to "exported twice" - the real definition is in services4/srvkm/common/deviceclass.c
 #if defined(SUPPORT_PVRSRV_DEVICE_CLASS)
 /* PRQA S 3207 2 */ /* ignore 'not used' warning */
 EXPORT_SYMBOL(PVRGetDisplayClassJTable);
 EXPORT_SYMBOL(PVRGetBufferClassJTable);
 #endif /* defined(SUPPORT_PVRSRV_DEVICE_CLASS) */
-#endif
 
 #if defined(PVR_LDM_DEVICE_CLASS) && !defined(SUPPORT_DRI_DRM)
 /*
@@ -327,11 +313,6 @@ static LDM_DRV powervr_driver = {
 
 LDM_DEV *gpsPVRLDMDev;
 
-#ifdef CONFIG_RESET_CONTROLLER
-struct reset_control *rstc;
-bool already_deasserted = false;
-#endif
-
 #if defined(MODULE) && defined(PVR_LDM_PLATFORM_MODULE) && \
 	!defined(PVR_USE_PRE_REGISTERED_PLATFORM_DEV)
 static void PVRSRVDeviceRelease(struct device unref__ *pDevice)
@@ -371,60 +352,8 @@ static int __devinit PVRSRVDriverProbe(LDM_DEV *pDevice, const struct pci_device
 #endif
 {
 	SYS_DATA *psSysData;
-	int ret;
-#ifndef CONFIG_RESET_CONTROLLER
-	struct device *dev = &pDevice->dev;
-	struct gfx_sgx_platform_data *pdata = dev->platform_data;
-#endif
 
 	PVR_TRACE(("PVRSRVDriverProbe(pDevice=%p)", pDevice));
-#ifdef CONFIG_RESET_CONTROLLER
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,16,0))
-	rstc = reset_control_get_optional_exclusive(&pDevice->dev, NULL);
-#else
-	rstc = reset_control_get(&pDevice->dev, NULL);
-#endif
-
-	if (IS_ERR(rstc))
-	{
-		dev_err(&pDevice->dev, "%s: error: reset_control_get\n", __func__);
-		return PTR_ERR(rstc);
-	}
-
-	if(rstc) {
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(99,99,99))
-		ret = reset_control_clear_reset(rstc);
-
-		if (ret < 0)
-		{
-			dev_err(&pDevice->dev, "%s: error: reset_control_clear_reset\n", __func__);
-			return ret;
-		}
-#endif
-
-		ret = reset_control_deassert(rstc);
-
-		if (ret == -EEXIST)
-		{
-		already_deasserted = true;
-		}
-		else if (ret < 0)
-		{
-			dev_err(&pDevice->dev, "%s: error: reset_control_deassert\n", __func__);
-			return ret;
-		}
-	}
-#else /* CONFIG_RESET_CONTROLLER */
-	if (pdata && pdata->deassert_reset) {
-		ret = pdata->deassert_reset(pDevice, pdata->reset_name);
-		if (ret) {
-			dev_err(dev, "Unable to reset SGX!\n");
-		}
-	} else {
-		dev_err(dev, "SGX Platform data missing deassert_reset!\n");
-		return -ENODEV;
-	}
-#endif  /* CONFIG_RESET_CONTROLLER */
 
 #if 0   /* INTEGRATION_POINT */
 	/* Some systems require device-specific system initialisation.
@@ -450,20 +379,6 @@ static int __devinit PVRSRVDriverProbe(LDM_DEV *pDevice, const struct pci_device
 			return -ENODEV;
 		}
 	}
-
-#ifdef CONFIG_RESET_CONTROLLER
-        if (!already_deasserted && rstc)
-        {
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(99,99,99))
-                ret = reset_control_is_reset(rstc);
-                if (ret <= 0)
-                {
-                        PVR_DPF((PVR_DBG_MESSAGE, "reset control reset"));
-                }
-#endif
-        }
-        reset_control_put(rstc);
-#endif /* CONFIG_RESET_CONTROLLER */
 
 	return 0;
 }
@@ -855,10 +770,6 @@ static int PVRSRVOpen(struct inode unref__ * pInode, struct file *pFile)
 #endif
 
 	LinuxLockMutexNested(&gPVRSRVLock, PVRSRV_LOCK_CLASS_BRIDGE);
-
-#if !defined(SUPPORT_DRI_DRM)
-	pFile->f_mode |= FMODE_UNSIGNED_OFFSET;
-#endif
 
 	ui32PID = OSGetCurrentProcessIDKM();
 

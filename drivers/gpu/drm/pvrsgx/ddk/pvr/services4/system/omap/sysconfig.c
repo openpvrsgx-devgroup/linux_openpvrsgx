@@ -89,11 +89,7 @@ static PVRSRV_ERROR EnableSGXClocksWrap(SYS_DATA *psSysData)
 #if !defined(SGX_OCP_NO_INT_BYPASS)
 	if(eError == PVRSRV_OK)
 	{
-		if (gpvOCPRegsLinAddr == IMG_NULL)
-		{
-			PVR_DPF((PVR_DBG_ERROR,"EnableSGXClocksWrap: SGX registers not mapped"));
-			return PVRSRV_ERROR_INVALID_DEVICE;
-		}
+		OSWriteHWReg(gpvOCPRegsLinAddr, EUR_CR_OCP_SYSCONFIG, 0x14);
 		OSWriteHWReg(gpvOCPRegsLinAddr, EUR_CR_OCP_DEBUG_CONFIG, EUR_CR_OCP_DEBUG_CONFIG_THALIA_INT_BYPASS_MASK);
 	}
 #endif
@@ -213,12 +209,8 @@ static PVRSRV_ERROR SysLocateDevices(SYS_DATA *psSysData)
 		PVR_DPF((PVR_DBG_ERROR, "%s: platform_get_irq failed (%d)", __FUNCTION__, -dev_irq));
 		return PVRSRV_ERROR_INVALID_DEVICE;
 	}
-
-    #if (AM_VERSION == 5)
-	gsSGXDeviceMap.sRegsSysPBase.uiAddr = SYS_OMAP_SGX_REGS_SYS_PHYS_BASE;
-    #else
+	
 	gsSGXDeviceMap.sRegsSysPBase.uiAddr = dev_res->start;
-    #endif
 	gsSGXDeviceMap.sRegsCpuPBase =
 		SysSysPAddrToCpuPAddr(gsSGXDeviceMap.sRegsSysPBase);
 	PVR_TRACE(("SGX register base: 0x%lx", (unsigned long)gsSGXDeviceMap.sRegsCpuPBase.uiAddr));
@@ -522,7 +514,7 @@ PVRSRV_ERROR SysInitialise(IMG_VOID)
 #if defined(PVR_OMAP_TIMER_BASE_IN_SYS_SPEC_DATA)
 	TimerRegPhysBase = gsSysSpecificData.sTimerRegPhysBase;
 #else
-	TimerRegPhysBase.uiAddr = SYS_OMAP_GPTIMER_REGS_SYS_PHYS_BASE;
+	TimerRegPhysBase.uiAddr = SYS_OMAP_GP11TIMER_REGS_SYS_PHYS_BASE;
 #endif
 	gpsSysData->pvSOCTimerRegisterKM = IMG_NULL;
 	gpsSysData->hSOCTimerRegisterOSMemHandle = 0;
@@ -984,13 +976,6 @@ IMG_VOID SysClearInterrupts(SYS_DATA* psSysData, IMG_UINT32 ui32ClearBits)
 {
 	PVR_UNREFERENCED_PARAMETER(ui32ClearBits);
 	PVR_UNREFERENCED_PARAMETER(psSysData);
-printk("%s\n", __func__);
-#if defined(SYS_USING_INTERRUPTS)
-	if (gpvOCPRegsLinAddr == IMG_NULL)
-	{
-		PVR_DPF((PVR_DBG_ERROR,"SysClearInterrupts: SGX registers not mapped"));
-		return;
-	}
 #if !defined(NO_HARDWARE)
 #if defined(SGX_OCP_NO_INT_BYPASS)
 	OSWriteHWReg(gpvOCPRegsLinAddr, EUR_CR_OCP_IRQSTATUS_2, 0x1);
@@ -998,7 +983,6 @@ printk("%s\n", __func__);
 	/* Flush posted writes */
 	OSReadHWReg(((PVRSRV_SGXDEV_INFO *)gpsSGXDevNode->pvDevice)->pvRegsBaseKM, EUR_CR_EVENT_HOST_CLEAR);
 #endif	/* defined(NO_HARDWARE) */
-#endif
 }
 
 #if defined(SGX_OCP_NO_INT_BYPASS)
@@ -1018,11 +1002,6 @@ IMG_VOID SysEnableSGXInterrupts(SYS_DATA *psSysData)
 	SYS_SPECIFIC_DATA *psSysSpecData = (SYS_SPECIFIC_DATA *)psSysData->pvSysSpecificData;
 	if (SYS_SPECIFIC_DATA_TEST(psSysSpecData, SYS_SPECIFIC_DATA_ENABLE_LISR) && !SYS_SPECIFIC_DATA_TEST(psSysSpecData, SYS_SPECIFIC_DATA_IRQ_ENABLED))
 	{
-		if (gpvOCPRegsLinAddr == IMG_NULL)
-		{
-			PVR_DPF((PVR_DBG_ERROR,"SysEnableSGXInterrupts: SGX registers not mapped"));
-			return;
-		}
 		OSWriteHWReg(gpvOCPRegsLinAddr, EUR_CR_OCP_IRQSTATUS_2, 0x1);
 		OSWriteHWReg(gpvOCPRegsLinAddr, EUR_CR_OCP_IRQENABLE_SET_2, 0x1);
 		SYS_SPECIFIC_DATA_SET(psSysSpecData, SYS_SPECIFIC_DATA_IRQ_ENABLED);
@@ -1044,14 +1023,8 @@ IMG_VOID SysDisableSGXInterrupts(SYS_DATA *psSysData)
 {
 	SYS_SPECIFIC_DATA *psSysSpecData = (SYS_SPECIFIC_DATA *)psSysData->pvSysSpecificData;
 
-printk("%s\n", __func__);
 	if (SYS_SPECIFIC_DATA_TEST(psSysSpecData, SYS_SPECIFIC_DATA_IRQ_ENABLED))
 	{
-		if (gpvOCPRegsLinAddr == IMG_NULL)
-		{
-			PVR_DPF((PVR_DBG_ERROR,"SysDisableSGXInterrupts: SGX registers not mapped"));
-			return;
-		}
 		OSWriteHWReg(gpvOCPRegsLinAddr, EUR_CR_OCP_IRQENABLE_CLR_2, 0x1);
 		SYS_SPECIFIC_DATA_CLEAR(psSysSpecData, SYS_SPECIFIC_DATA_IRQ_ENABLED);
 	}
@@ -1253,6 +1226,15 @@ PVRSRV_ERROR SysDevicePostPowerState(IMG_UINT32				ui32DeviceIndex,
 
 	return eError;
 }
+
+#if defined(SYS_SUPPORTS_SGX_IDLE_CALLBACK)
+
+IMG_VOID SysSGXIdleTransition(IMG_BOOL bSGXIdle)
+{
+	PVR_DPF((PVR_DBG_MESSAGE, "SysSGXIdleTransition switch to %u", bSGXIdle));
+}
+
+#endif /* defined(SYS_SUPPORTS_SGX_IDLE_CALLBACK) */
 
 /*****************************************************************************
  @Function        SysOEMFunction

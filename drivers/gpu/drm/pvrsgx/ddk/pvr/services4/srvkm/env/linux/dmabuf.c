@@ -48,8 +48,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <linux/err.h>
 #include <linux/dma-buf.h>
 #include <linux/scatterlist.h>
-#include <linux/version.h>
-#if defined(SUPPORT_DRI_DRM) && (LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0))
+#if defined(SUPPORT_DRI_DRM)
 #include <drm/drmP.h>
 #endif
 
@@ -128,7 +127,7 @@ PVRSRV_ERROR DmaBufImportAndAcquirePhysAddr(IMG_INT32 i32DmaBufFD,
 
 	for_each_sg(import->sg_table->sgl, sg, import->sg_table->nents, i)
 	{
-		npages += (PAGE_ALIGN(sg_dma_len(sg)) / PAGE_SIZE);
+		npages += PAGE_ALIGN(sg_dma_len(sg) / PAGE_SIZE);
 	}
 
        /* The following allocation will be freed by the caller */

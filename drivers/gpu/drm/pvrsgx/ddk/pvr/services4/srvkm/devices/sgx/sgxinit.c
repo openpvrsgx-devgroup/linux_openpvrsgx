@@ -837,9 +837,6 @@ static PVRSRV_ERROR DevInitSGXPart1 (IMG_VOID *pvDeviceNode)
 	psDevInfo->eDeviceType 		= DEV_DEVICE_TYPE;
 	psDevInfo->eDeviceClass 	= DEV_DEVICE_CLASS;
 
-	/* Initialize SGX idle status */
-	psDevInfo->bSGXIdle = IMG_TRUE;
-
 	/* Store the devinfo as its needed by dynamically enumerated systems called from BM */
 	psDeviceNode->pvDevice = (IMG_PVOID)psDevInfo;
 
@@ -2109,12 +2106,10 @@ static IMG_VOID SGX_MISRHandler (IMG_VOID *pvData)
 		HWRecoveryResetSGX(psDeviceNode, 0, ISR_ID);
 	}
 
-#if defined(OS_SUPPORTS_IN_LISR)
 	if (psDeviceNode->bReProcessDeviceCommandComplete)
 	{
 		SGXScheduleProcessQueuesKM(psDeviceNode);
 	}
-#endif
 
 	SGXTestActivePowerEvent(psDeviceNode, ISR_ID);
 	

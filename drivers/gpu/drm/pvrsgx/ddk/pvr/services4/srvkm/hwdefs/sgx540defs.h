@@ -1,32 +1,48 @@
-/**********************************************************************
- *
- * Copyright (C) Imagination Technologies Ltd. All rights reserved.
- * 
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- * 
- * This program is distributed in the hope it will be useful but, except 
- * as otherwise stated in writing, without any warranty; without even the 
- * implied warranty of merchantability or fitness for a particular purpose. 
- * See the GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- * 
- * The full GNU General Public License is included in this distribution in
- * the file called "COPYING".
- *
- * Contact Information:
- * Imagination Technologies Ltd. <gpl-support@imgtec.com>
- * Home Park Estate, Kings Langley, Herts, WD4 8LZ, UK 
- *
- ******************************************************************************/
+/*************************************************************************/ /*!
+@Title          Hardware defs for SGX540.
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@License        Dual MIT/GPLv2
+
+The contents of this file are subject to the MIT license as set out below.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/ /**************************************************************************/
 
 #ifndef _SGX540DEFS_KM_H_
 #define _SGX540DEFS_KM_H_
 
+/* Register EUR_CR_CLKGATECTL */
 #define EUR_CR_CLKGATECTL                   0x0000
 #define EUR_CR_CLKGATECTL_ISP_CLKG_MASK     0x00000003U
 #define EUR_CR_CLKGATECTL_ISP_CLKG_SHIFT    0
@@ -52,6 +68,7 @@
 #define EUR_CR_CLKGATECTL_AUTO_MAN_REG_SHIFT 24
 #define EUR_CR_CLKGATECTL_SYSTEM_CLKG_MASK  0x10000000U
 #define EUR_CR_CLKGATECTL_SYSTEM_CLKG_SHIFT 28
+/* Register EUR_CR_CLKGATECTL2 */
 #define EUR_CR_CLKGATECTL2                  0x0004
 #define EUR_CR_CLKGATECTL2_PBE_CLKG_MASK    0x00000003U
 #define EUR_CR_CLKGATECTL2_PBE_CLKG_SHIFT   0
@@ -75,6 +92,7 @@
 #define EUR_CR_CLKGATECTL2_TEX1_CLKG_SHIFT  18
 #define EUR_CR_CLKGATECTL2_MADD1_CLKG_MASK  0x00300000U
 #define EUR_CR_CLKGATECTL2_MADD1_CLKG_SHIFT 20
+/* Register EUR_CR_CLKGATESTATUS */
 #define EUR_CR_CLKGATESTATUS                0x0008
 #define EUR_CR_CLKGATESTATUS_ISP_CLKS_MASK  0x00000001U
 #define EUR_CR_CLKGATESTATUS_ISP_CLKS_SHIFT 0
@@ -118,6 +136,7 @@
 #define EUR_CR_CLKGATESTATUS_IDXFIFO_CLKS_SHIFT 19
 #define EUR_CR_CLKGATESTATUS_TA_CLKS_MASK   0x00100000U
 #define EUR_CR_CLKGATESTATUS_TA_CLKS_SHIFT  20
+/* Register EUR_CR_CLKGATECTLOVR */
 #define EUR_CR_CLKGATECTLOVR                0x000C
 #define EUR_CR_CLKGATECTLOVR_ISP_CLKO_MASK  0x00000003U
 #define EUR_CR_CLKGATECTLOVR_ISP_CLKO_SHIFT 0
@@ -139,14 +158,17 @@
 #define EUR_CR_CLKGATECTLOVR_IDXFIFO_CLKO_SHIFT 16
 #define EUR_CR_CLKGATECTLOVR_TA_CLKO_MASK   0x000C0000U
 #define EUR_CR_CLKGATECTLOVR_TA_CLKO_SHIFT  18
+/* Register EUR_CR_POWER */
 #define EUR_CR_POWER                        0x001C
 #define EUR_CR_POWER_PIPE_DISABLE_MASK      0x00000001U
 #define EUR_CR_POWER_PIPE_DISABLE_SHIFT     0
+/* Register EUR_CR_CORE_ID */
 #define EUR_CR_CORE_ID                      0x0020
 #define EUR_CR_CORE_ID_CONFIG_MASK          0x0000FFFFU
 #define EUR_CR_CORE_ID_CONFIG_SHIFT         0
 #define EUR_CR_CORE_ID_ID_MASK              0xFFFF0000U
 #define EUR_CR_CORE_ID_ID_SHIFT             16
+/* Register EUR_CR_CORE_REVISION */
 #define EUR_CR_CORE_REVISION                0x0024
 #define EUR_CR_CORE_REVISION_MAINTENANCE_MASK 0x000000FFU
 #define EUR_CR_CORE_REVISION_MAINTENANCE_SHIFT 0
@@ -156,12 +178,15 @@
 #define EUR_CR_CORE_REVISION_MAJOR_SHIFT    16
 #define EUR_CR_CORE_REVISION_DESIGNER_MASK  0xFF000000U
 #define EUR_CR_CORE_REVISION_DESIGNER_SHIFT 24
+/* Register EUR_CR_DESIGNER_REV_FIELD1 */
 #define EUR_CR_DESIGNER_REV_FIELD1          0x0028
 #define EUR_CR_DESIGNER_REV_FIELD1_DESIGNER_REV_FIELD1_MASK 0xFFFFFFFFU
 #define EUR_CR_DESIGNER_REV_FIELD1_DESIGNER_REV_FIELD1_SHIFT 0
+/* Register EUR_CR_DESIGNER_REV_FIELD2 */
 #define EUR_CR_DESIGNER_REV_FIELD2          0x002C
 #define EUR_CR_DESIGNER_REV_FIELD2_DESIGNER_REV_FIELD2_MASK 0xFFFFFFFFU
 #define EUR_CR_DESIGNER_REV_FIELD2_DESIGNER_REV_FIELD2_SHIFT 0
+/* Register EUR_CR_SOFT_RESET */
 #define EUR_CR_SOFT_RESET                   0x0080
 #define EUR_CR_SOFT_RESET_BIF_RESET_MASK    0x00000001U
 #define EUR_CR_SOFT_RESET_BIF_RESET_SHIFT   0
@@ -199,6 +224,7 @@
 #define EUR_CR_SOFT_RESET_IDXFIFO_RESET_SHIFT 16
 #define EUR_CR_SOFT_RESET_TA_RESET_MASK     0x00020000U
 #define EUR_CR_SOFT_RESET_TA_RESET_SHIFT    17
+/* Register EUR_CR_EVENT_HOST_ENABLE2 */
 #define EUR_CR_EVENT_HOST_ENABLE2           0x0110
 #define EUR_CR_EVENT_HOST_ENABLE2_TRIG_TA_MASK 0x00000010U
 #define EUR_CR_EVENT_HOST_ENABLE2_TRIG_TA_SHIFT 4
@@ -210,6 +236,7 @@
 #define EUR_CR_EVENT_HOST_ENABLE2_DPM_3D_FREE_LOAD_SHIFT 1
 #define EUR_CR_EVENT_HOST_ENABLE2_DPM_TA_FREE_LOAD_MASK 0x00000001U
 #define EUR_CR_EVENT_HOST_ENABLE2_DPM_TA_FREE_LOAD_SHIFT 0
+/* Register EUR_CR_EVENT_HOST_CLEAR2 */
 #define EUR_CR_EVENT_HOST_CLEAR2            0x0114
 #define EUR_CR_EVENT_HOST_CLEAR2_TRIG_TA_MASK 0x00000010U
 #define EUR_CR_EVENT_HOST_CLEAR2_TRIG_TA_SHIFT 4
@@ -221,6 +248,7 @@
 #define EUR_CR_EVENT_HOST_CLEAR2_DPM_3D_FREE_LOAD_SHIFT 1
 #define EUR_CR_EVENT_HOST_CLEAR2_DPM_TA_FREE_LOAD_MASK 0x00000001U
 #define EUR_CR_EVENT_HOST_CLEAR2_DPM_TA_FREE_LOAD_SHIFT 0
+/* Register EUR_CR_EVENT_STATUS2 */
 #define EUR_CR_EVENT_STATUS2                0x0118
 #define EUR_CR_EVENT_STATUS2_TRIG_TA_MASK   0x00000010U
 #define EUR_CR_EVENT_STATUS2_TRIG_TA_SHIFT  4
@@ -232,6 +260,7 @@
 #define EUR_CR_EVENT_STATUS2_DPM_3D_FREE_LOAD_SHIFT 1
 #define EUR_CR_EVENT_STATUS2_DPM_TA_FREE_LOAD_MASK 0x00000001U
 #define EUR_CR_EVENT_STATUS2_DPM_TA_FREE_LOAD_SHIFT 0
+/* Register EUR_CR_EVENT_STATUS */
 #define EUR_CR_EVENT_STATUS                 0x012CU
 #define EUR_CR_EVENT_STATUS_MASTER_INTERRUPT_MASK 0x80000000U
 #define EUR_CR_EVENT_STATUS_MASTER_INTERRUPT_SHIFT 31
@@ -295,6 +324,7 @@
 #define EUR_CR_EVENT_STATUS_DPM_OUT_OF_MEMORY_MT_SHIFT 1
 #define EUR_CR_EVENT_STATUS_DPM_3D_MEM_FREE_MASK 0x00000001U
 #define EUR_CR_EVENT_STATUS_DPM_3D_MEM_FREE_SHIFT 0
+/* Register EUR_CR_EVENT_HOST_ENABLE */
 #define EUR_CR_EVENT_HOST_ENABLE            0x0130
 #define EUR_CR_EVENT_HOST_ENABLE_MASTER_INTERRUPT_MASK 0x80000000U
 #define EUR_CR_EVENT_HOST_ENABLE_MASTER_INTERRUPT_SHIFT 31
@@ -358,6 +388,7 @@
 #define EUR_CR_EVENT_HOST_ENABLE_DPM_OUT_OF_MEMORY_MT_SHIFT 1
 #define EUR_CR_EVENT_HOST_ENABLE_DPM_3D_MEM_FREE_MASK 0x00000001U
 #define EUR_CR_EVENT_HOST_ENABLE_DPM_3D_MEM_FREE_SHIFT 0
+/* Register EUR_CR_EVENT_HOST_CLEAR */
 #define EUR_CR_EVENT_HOST_CLEAR             0x0134
 #define EUR_CR_EVENT_HOST_CLEAR_MASTER_INTERRUPT_MASK 0x80000000U
 #define EUR_CR_EVENT_HOST_CLEAR_MASTER_INTERRUPT_SHIFT 31
@@ -421,47 +452,61 @@
 #define EUR_CR_EVENT_HOST_CLEAR_DPM_OUT_OF_MEMORY_MT_SHIFT 1
 #define EUR_CR_EVENT_HOST_CLEAR_DPM_3D_MEM_FREE_MASK 0x00000001U
 #define EUR_CR_EVENT_HOST_CLEAR_DPM_3D_MEM_FREE_SHIFT 0
+/* Register EUR_CR_TIMER */
 #define EUR_CR_TIMER                        0x0144
 #define EUR_CR_TIMER_VALUE_MASK             0xFFFFFFFFU
 #define EUR_CR_TIMER_VALUE_SHIFT            0
+/* Register EUR_CR_EVENT_KICK1 */
 #define EUR_CR_EVENT_KICK1                  0x0AB0
 #define EUR_CR_EVENT_KICK1_NOW_MASK         0x000000FFU
 #define EUR_CR_EVENT_KICK1_NOW_SHIFT        0
+/* Register EUR_CR_PDS_EXEC_BASE */
 #define EUR_CR_PDS_EXEC_BASE                0x0AB8
 #define EUR_CR_PDS_EXEC_BASE_ADDR_MASK      0x0FF00000U
 #define EUR_CR_PDS_EXEC_BASE_ADDR_SHIFT     20
+/* Register EUR_CR_EVENT_KICK2 */
 #define EUR_CR_EVENT_KICK2                  0x0AC0
 #define EUR_CR_EVENT_KICK2_NOW_MASK         0x00000001U
 #define EUR_CR_EVENT_KICK2_NOW_SHIFT        0
+/* Register EUR_CR_EVENT_KICKER */
 #define EUR_CR_EVENT_KICKER                 0x0AC4
 #define EUR_CR_EVENT_KICKER_ADDRESS_MASK    0x0FFFFFF0U
 #define EUR_CR_EVENT_KICKER_ADDRESS_SHIFT   4
+/* Register EUR_CR_EVENT_KICK */
 #define EUR_CR_EVENT_KICK                   0x0AC8
 #define EUR_CR_EVENT_KICK_NOW_MASK          0x00000001U
 #define EUR_CR_EVENT_KICK_NOW_SHIFT         0
+/* Register EUR_CR_EVENT_TIMER */
 #define EUR_CR_EVENT_TIMER                  0x0ACC
 #define EUR_CR_EVENT_TIMER_ENABLE_MASK      0x01000000U
 #define EUR_CR_EVENT_TIMER_ENABLE_SHIFT     24
 #define EUR_CR_EVENT_TIMER_VALUE_MASK       0x00FFFFFFU
 #define EUR_CR_EVENT_TIMER_VALUE_SHIFT      0
+/* Register EUR_CR_PDS_INV0 */
 #define EUR_CR_PDS_INV0                     0x0AD0
 #define EUR_CR_PDS_INV0_DSC_MASK            0x00000001U
 #define EUR_CR_PDS_INV0_DSC_SHIFT           0
+/* Register EUR_CR_PDS_INV1 */
 #define EUR_CR_PDS_INV1                     0x0AD4
 #define EUR_CR_PDS_INV1_DSC_MASK            0x00000001U
 #define EUR_CR_PDS_INV1_DSC_SHIFT           0
+/* Register EUR_CR_EVENT_KICK3 */
 #define EUR_CR_EVENT_KICK3                  0x0AD8
 #define EUR_CR_EVENT_KICK3_NOW_MASK         0x00000001U
 #define EUR_CR_EVENT_KICK3_NOW_SHIFT        0
+/* Register EUR_CR_PDS_INV3 */
 #define EUR_CR_PDS_INV3                     0x0ADC
 #define EUR_CR_PDS_INV3_DSC_MASK            0x00000001U
 #define EUR_CR_PDS_INV3_DSC_SHIFT           0
+/* Register EUR_CR_PDS_INV_CSC */
 #define EUR_CR_PDS_INV_CSC                  0x0AE0
 #define EUR_CR_PDS_INV_CSC_KICK_MASK        0x00000001U
 #define EUR_CR_PDS_INV_CSC_KICK_SHIFT       0
+/* Register EUR_CR_PDS_PC_BASE */
 #define EUR_CR_PDS_PC_BASE                  0x0B2C
 #define EUR_CR_PDS_PC_BASE_ADDRESS_MASK     0x00FFFFFFU
 #define EUR_CR_PDS_PC_BASE_ADDRESS_SHIFT    0
+/* Register EUR_CR_BIF_CTRL */
 #define EUR_CR_BIF_CTRL                     0x0C00
 #define EUR_CR_BIF_CTRL_NOREORDER_MASK      0x00000001U
 #define EUR_CR_BIF_CTRL_NOREORDER_SHIFT     0
@@ -487,6 +532,7 @@
 #define EUR_CR_BIF_CTRL_MMU_BYPASS_ISP_SHIFT 14
 #define EUR_CR_BIF_CTRL_MMU_BYPASS_USE_MASK 0x00008000U
 #define EUR_CR_BIF_CTRL_MMU_BYPASS_USE_SHIFT 15
+/* Register EUR_CR_BIF_INT_STAT */
 #define EUR_CR_BIF_INT_STAT                 0x0C04
 #define EUR_CR_BIF_INT_STAT_FAULT_MASK      0x00003FFFU
 #define EUR_CR_BIF_INT_STAT_FAULT_SHIFT     0
@@ -494,31 +540,39 @@
 #define EUR_CR_BIF_INT_STAT_PF_N_RW_SHIFT   14
 #define EUR_CR_BIF_INT_STAT_FLUSH_COMPLETE_MASK 0x00008000U
 #define EUR_CR_BIF_INT_STAT_FLUSH_COMPLETE_SHIFT 15
+/* Register EUR_CR_BIF_FAULT */
 #define EUR_CR_BIF_FAULT                    0x0C08
 #define EUR_CR_BIF_FAULT_SB_MASK            0x000001F0U
 #define EUR_CR_BIF_FAULT_SB_SHIFT           4
 #define EUR_CR_BIF_FAULT_ADDR_MASK          0x0FFFF000U
 #define EUR_CR_BIF_FAULT_ADDR_SHIFT         12
+/* Register EUR_CR_BIF_DIR_LIST_BASE0 */
 #define EUR_CR_BIF_DIR_LIST_BASE0           0x0C84
 #define EUR_CR_BIF_DIR_LIST_BASE0_ADDR_MASK 0xFFFFF000U
 #define EUR_CR_BIF_DIR_LIST_BASE0_ADDR_SHIFT 12
+/* Register EUR_CR_BIF_TA_REQ_BASE */
 #define EUR_CR_BIF_TA_REQ_BASE              0x0C90
 #define EUR_CR_BIF_TA_REQ_BASE_ADDR_MASK    0x0FF00000U
 #define EUR_CR_BIF_TA_REQ_BASE_ADDR_SHIFT   20
+/* Register EUR_CR_BIF_MEM_REQ_STAT */
 #define EUR_CR_BIF_MEM_REQ_STAT             0x0CA8
 #define EUR_CR_BIF_MEM_REQ_STAT_READS_MASK  0x000000FFU
 #define EUR_CR_BIF_MEM_REQ_STAT_READS_SHIFT 0
+/* Register EUR_CR_BIF_3D_REQ_BASE */
 #define EUR_CR_BIF_3D_REQ_BASE              0x0CAC
 #define EUR_CR_BIF_3D_REQ_BASE_ADDR_MASK    0x0FF00000U
 #define EUR_CR_BIF_3D_REQ_BASE_ADDR_SHIFT   20
+/* Register EUR_CR_BIF_ZLS_REQ_BASE */
 #define EUR_CR_BIF_ZLS_REQ_BASE             0x0CB0
 #define EUR_CR_BIF_ZLS_REQ_BASE_ADDR_MASK   0x0FF00000U
 #define EUR_CR_BIF_ZLS_REQ_BASE_ADDR_SHIFT  20
+/* Register EUR_CR_2D_BLIT_STATUS */
 #define EUR_CR_2D_BLIT_STATUS               0x0E04
 #define EUR_CR_2D_BLIT_STATUS_COMPLETE_MASK 0x00FFFFFFU
 #define EUR_CR_2D_BLIT_STATUS_COMPLETE_SHIFT 0
 #define EUR_CR_2D_BLIT_STATUS_BUSY_MASK     0x01000000U
 #define EUR_CR_2D_BLIT_STATUS_BUSY_SHIFT    24
+/* Register EUR_CR_2D_VIRTUAL_FIFO_0 */
 #define EUR_CR_2D_VIRTUAL_FIFO_0            0x0E10
 #define EUR_CR_2D_VIRTUAL_FIFO_0_ENABLE_MASK 0x00000001U
 #define EUR_CR_2D_VIRTUAL_FIFO_0_ENABLE_SHIFT 0
@@ -528,6 +582,7 @@
 #define EUR_CR_2D_VIRTUAL_FIFO_0_FLOWRATE_DIV_SHIFT 4
 #define EUR_CR_2D_VIRTUAL_FIFO_0_FLOWRATE_MUL_MASK 0x0000F000U
 #define EUR_CR_2D_VIRTUAL_FIFO_0_FLOWRATE_MUL_SHIFT 12
+/* Register EUR_CR_2D_VIRTUAL_FIFO_1 */
 #define EUR_CR_2D_VIRTUAL_FIFO_1            0x0E14
 #define EUR_CR_2D_VIRTUAL_FIFO_1_MIN_ACC_MASK 0x00000FFFU
 #define EUR_CR_2D_VIRTUAL_FIFO_1_MIN_ACC_SHIFT 0
@@ -535,13 +590,16 @@
 #define EUR_CR_2D_VIRTUAL_FIFO_1_MAX_ACC_SHIFT 12
 #define EUR_CR_2D_VIRTUAL_FIFO_1_MIN_METRIC_MASK 0xFF000000U
 #define EUR_CR_2D_VIRTUAL_FIFO_1_MIN_METRIC_SHIFT 24
+/* Table EUR_CR_USE_CODE_BASE */
+/* Register EUR_CR_USE_CODE_BASE */
 #define EUR_CR_USE_CODE_BASE(X)     (0x0A0C + (4 * (X)))
 #define EUR_CR_USE_CODE_BASE_ADDR_MASK      0x00FFFFFFU
 #define EUR_CR_USE_CODE_BASE_ADDR_SHIFT     0
 #define EUR_CR_USE_CODE_BASE_DM_MASK        0x03000000U
 #define EUR_CR_USE_CODE_BASE_DM_SHIFT       24
+/* Number of entries in table EUR_CR_USE_CODE_BASE */
 #define EUR_CR_USE_CODE_BASE_SIZE_UINT32 16
 #define EUR_CR_USE_CODE_BASE_NUM_ENTRIES 16
 
-#endif 
+#endif /* _SGX540DEFS_KM_H_ */
 

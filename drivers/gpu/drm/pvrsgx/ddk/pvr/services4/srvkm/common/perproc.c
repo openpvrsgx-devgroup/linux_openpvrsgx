@@ -45,6 +45,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "handle.h"
 #include "perproc.h"
 #include "osperproc.h"
+#if defined(TTRACE)
+#include "ttrace.h"
+#endif
 
 #define	HASH_TAB_INIT_SIZE 32
 
@@ -175,13 +178,16 @@ PVRSRV_PER_PROCESS_DATA *PVRSRVPerProcessData(IMG_UINT32 ui32PID)
  @Return	PVRSRV_ERROR
 
 ******************************************************************************/
-PVRSRV_ERROR PVRSRVPerProcessDataConnect(IMG_UINT32	ui32PID)
+PVRSRV_ERROR PVRSRVPerProcessDataConnect(IMG_UINT32	ui32PID, IMG_UINT32 ui32Flags)
 {
 	PVRSRV_PER_PROCESS_DATA *psPerProc;
 	IMG_HANDLE hBlockAlloc;
 	PVRSRV_ERROR eError = PVRSRV_OK;
 
-	PVR_ASSERT(psHashTab != IMG_NULL);
+	if (psHashTab == IMG_NULL)
+	{
+		return PVRSRV_ERROR_INIT_FAILURE;
+	}
 
 	/* Look for existing per-process data area */
 	psPerProc = (PVRSRV_PER_PROCESS_DATA *)HASH_Retrieve(psHashTab, (IMG_UINTPTR_T)ui32PID);
@@ -205,13 +211,21 @@ PVRSRV_ERROR PVRSRVPerProcessDataConnect(IMG_UINT32	ui32PID)
 		if (!HASH_Insert(psHashTab, (IMG_UINTPTR_T)ui32PID, (IMG_UINTPTR_T)psPerProc))
 		{
 			PVR_DPF((PVR_DBG_ERROR, "PVRSRVPerProcessDataConnect: Couldn't insert per-process data into hash table"));
-			eError = PVRSRV_ERROR_GENERIC;
+			eError = PVRSRV_ERROR_INSERT_HASH_TABLE_DATA_FAILED;
 			goto failure;
 		}
 
 		psPerProc->ui32PID = ui32PID;
 		psPerProc->ui32RefCount = 0;
 
+#if defined(SUPPORT_PDUMP_MULTI_PROCESS)
+		if (ui32Flags == SRV_FLAGS_PDUMP_ACTIVE)
+		{
+			psPerProc->bPDumpActive = IMG_TRUE;
+		}
+#else
+		PVR_UNREFERENCED_PARAMETER(ui32Flags);
+#endif
 
 		/* Call environment specific per process init function */
 		eError = OSPerProcessPrivateDataInit(&psPerProc->hOsPrivateData);
@@ -256,8 +270,11 @@ PVRSRV_ERROR PVRSRVPerProcessDataConnect(IMG_UINT32	ui32PID)
 			PVR_DPF((PVR_DBG_ERROR, "PVRSRVPerProcessDataConnect: Couldn't register with the resource manager"));
 			goto failure;
 		}
+#if defined (TTRACE)
+		PVRSRVTimeTraceBufferCreate(ui32PID);
+#endif
 	}
-
+	
 	psPerProc->ui32RefCount++;
 	PVR_DPF((PVR_DBG_MESSAGE,
 			"PVRSRVPerProcessDataConnect: Process 0x%x has ref-count %d",
@@ -307,6 +324,9 @@ IMG_VOID PVRSRVPerProcessDataDisconnect(IMG_UINT32	ui32PID)
 			/* Close the Resource Manager connection */
 			PVRSRVResManDisconnect(psPerProc->hResManContext, IMG_FALSE);
 
+#if defined (TTRACE)
+			PVRSRVTimeTraceBufferDestroy(ui32PID);
+#endif
 
 			/* Free the per-process data */
 			eError = FreePerProcessData(psPerProc);
@@ -344,7 +364,7 @@ PVRSRV_ERROR PVRSRVPerProcessDataInit(IMG_VOID)
 	if (psHashTab == IMG_NULL)
 	{
 		PVR_DPF((PVR_DBG_ERROR, "PVRSRVPerProcessDataInit: Couldn't create per-process data hash table"));
-		return PVRSRV_ERROR_GENERIC;
+		return PVRSRV_ERROR_UNABLE_TO_CREATE_HASH_TABLE;
 	}
 
 	return PVRSRV_OK;

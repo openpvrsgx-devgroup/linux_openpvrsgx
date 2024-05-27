@@ -1,29 +1,44 @@
-/**********************************************************************
- *
- * Copyright (C) Imagination Technologies Ltd. All rights reserved.
- * 
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- * 
- * This program is distributed in the hope it will be useful but, except 
- * as otherwise stated in writing, without any warranty; without even the 
- * implied warranty of merchantability or fitness for a particular purpose. 
- * See the GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- * 
- * The full GNU General Public License is included in this distribution in
- * the file called "COPYING".
- *
- * Contact Information:
- * Imagination Technologies Ltd. <gpl-support@imgtec.com>
- * Home Park Estate, Kings Langley, Herts, WD4 8LZ, UK 
- *
- ******************************************************************************/
+/*************************************************************************/ /*!
+@Title          OS functions header
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@Description    OS specific API definitions
+@License        Dual MIT/GPLv2
 
+The contents of this file are subject to the MIT license as set out below.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/ /**************************************************************************/
 #ifdef DEBUG_RELEASE_BUILD
 #pragma optimize( "", off )
 #define DEBUG		1
@@ -45,9 +60,13 @@ extern "C" {
 #endif
 
 
-	
+/* setup conditional pageable / non-pageable select */
+	/* Other OSs only need pageable */
 	#define PVRSRV_PAGEABLE_SELECT		PVRSRV_OS_PAGEABLE_HEAP
 
+/******************************************************************************
+ * Static defines
+ *****************************************************************************/
 #define KERNEL_ID			0xffffffffL
 #define POWER_MANAGER_ID	0xfffffffeL
 #define ISR_ID				0xfffffffdL
@@ -58,9 +77,12 @@ extern "C" {
 #define HOST_PAGEMASK			(HOST_PAGESIZE()-1)
 #define HOST_PAGEALIGN(addr)	(((addr) + HOST_PAGEMASK) & ~HOST_PAGEMASK)
 
-#define PVRSRV_OS_HEAP_MASK			0xf 
-#define PVRSRV_OS_PAGEABLE_HEAP		0x1 
-#define PVRSRV_OS_NON_PAGEABLE_HEAP	0x2 
+/******************************************************************************
+ *	Host memory heaps
+ *****************************************************************************/
+#define PVRSRV_OS_HEAP_MASK			0xf /* host heap flags mask */
+#define PVRSRV_OS_PAGEABLE_HEAP		0x1 /* allocation pageable */
+#define PVRSRV_OS_NON_PAGEABLE_HEAP	0x2 /* allocation non pageable */
 
 
 IMG_UINT32 OSClockus(IMG_VOID);
@@ -79,8 +101,15 @@ IMG_VOID OSMemCopy(IMG_VOID *pvDst, IMG_VOID *pvSrc, IMG_SIZE_T ui32Size);
 IMG_VOID *OSMapPhysToLin(IMG_CPU_PHYADDR BasePAddr, IMG_SIZE_T ui32Bytes, IMG_UINT32 ui32Flags, IMG_HANDLE *phOSMemHandle);
 IMG_BOOL OSUnMapPhysToLin(IMG_VOID *pvLinAddr, IMG_SIZE_T ui32Bytes, IMG_UINT32 ui32Flags, IMG_HANDLE hOSMemHandle);
 
-PVRSRV_ERROR OSReservePhys(IMG_CPU_PHYADDR BasePAddr, IMG_SIZE_T ui32Bytes, IMG_UINT32 ui32Flags, IMG_VOID **ppvCpuVAddr, IMG_HANDLE *phOSMemHandle);
+PVRSRV_ERROR OSReservePhys(IMG_CPU_PHYADDR BasePAddr, IMG_SIZE_T ui32Bytes, IMG_UINT32 ui32Flags, IMG_HANDLE hBMHandle, IMG_VOID **ppvCpuVAddr, IMG_HANDLE *phOSMemHandle);
 PVRSRV_ERROR OSUnReservePhys(IMG_VOID *pvCpuVAddr, IMG_SIZE_T ui32Bytes, IMG_UINT32 ui32Flags, IMG_HANDLE hOSMemHandle);
+
+/* Some terminology:
+ *
+ *  FLUSH		Flush w/ invalidate
+ *  CLEAN		Flush w/o invalidate
+ *  INVALIDATE	Invalidate w/o flush
+ */
 
 #if defined(__linux__) && defined(__KERNEL__)
 
@@ -89,16 +118,19 @@ IMG_VOID OSFlushCPUCacheKM(IMG_VOID);
 IMG_VOID OSCleanCPUCacheKM(IMG_VOID);
 
 IMG_BOOL OSFlushCPUCacheRangeKM(IMG_HANDLE hOSMemHandle,
+								IMG_UINT32 ui32ByteOffset,
 								IMG_VOID *pvRangeAddrStart,
 								IMG_UINT32 ui32Length);
 IMG_BOOL OSCleanCPUCacheRangeKM(IMG_HANDLE hOSMemHandle,
+								IMG_UINT32 ui32ByteOffset,
 								IMG_VOID *pvRangeAddrStart,
 								IMG_UINT32 ui32Length);
 IMG_BOOL OSInvalidateCPUCacheRangeKM(IMG_HANDLE hOSMemHandle,
+									 IMG_UINT32 ui32ByteOffset,
 									 IMG_VOID *pvRangeAddrStart,
 									 IMG_UINT32 ui32Length);
 
-#else 
+#else /* defined(__linux__) && defined(__KERNEL__) */
 
 #ifdef INLINE_IS_PRAGMA
 #pragma inline(OSFlushCPUCacheKM)
@@ -114,10 +146,12 @@ static INLINE IMG_VOID OSCleanCPUCacheKM(IMG_VOID) {}
 #pragma inline(OSFlushCPUCacheRangeKM)
 #endif
 static INLINE IMG_BOOL OSFlushCPUCacheRangeKM(IMG_HANDLE hOSMemHandle,
+											  IMG_UINT32 ui32ByteOffset,
 											  IMG_VOID *pvRangeAddrStart,
 											  IMG_UINT32 ui32Length)
 {
 	PVR_UNREFERENCED_PARAMETER(hOSMemHandle);
+	PVR_UNREFERENCED_PARAMETER(ui32ByteOffset);
 	PVR_UNREFERENCED_PARAMETER(pvRangeAddrStart);
 	PVR_UNREFERENCED_PARAMETER(ui32Length);
 	return IMG_FALSE;
@@ -127,10 +161,12 @@ static INLINE IMG_BOOL OSFlushCPUCacheRangeKM(IMG_HANDLE hOSMemHandle,
 #pragma inline(OSCleanCPUCacheRangeKM)
 #endif
 static INLINE IMG_BOOL OSCleanCPUCacheRangeKM(IMG_HANDLE hOSMemHandle,
+											  IMG_UINT32 ui32ByteOffset,
 											  IMG_VOID *pvRangeAddrStart,
 											  IMG_UINT32 ui32Length)
 {
 	PVR_UNREFERENCED_PARAMETER(hOSMemHandle);
+	PVR_UNREFERENCED_PARAMETER(ui32ByteOffset);
 	PVR_UNREFERENCED_PARAMETER(pvRangeAddrStart);
 	PVR_UNREFERENCED_PARAMETER(ui32Length);
 	return IMG_FALSE;
@@ -140,18 +176,20 @@ static INLINE IMG_BOOL OSCleanCPUCacheRangeKM(IMG_HANDLE hOSMemHandle,
 #pragma inline(OSInvalidateCPUCacheRangeKM)
 #endif
 static INLINE IMG_BOOL OSInvalidateCPUCacheRangeKM(IMG_HANDLE hOSMemHandle,
+												   IMG_UINT32 ui32ByteOffset,
 												   IMG_VOID *pvRangeAddrStart,
 												   IMG_UINT32 ui32Length)
 {
 	PVR_UNREFERENCED_PARAMETER(hOSMemHandle);
+	PVR_UNREFERENCED_PARAMETER(ui32ByteOffset);
 	PVR_UNREFERENCED_PARAMETER(pvRangeAddrStart);
 	PVR_UNREFERENCED_PARAMETER(ui32Length);
 	return IMG_FALSE;
 }
 
-#endif 
+#endif /* defined(__linux__) && defined(__KERNEL__) */
 
-#if (defined(__linux__) || defined(__QNXNTO__))
+#if defined(__linux__) || defined(__QNXNTO__)
 PVRSRV_ERROR OSRegisterDiscontigMem(IMG_SYS_PHYADDR *pBasePAddr,
 									IMG_VOID *pvCpuVAddr, 
 									IMG_SIZE_T ui32Bytes,
@@ -161,7 +199,7 @@ PVRSRV_ERROR OSUnRegisterDiscontigMem(IMG_VOID *pvCpuVAddr,
 									IMG_SIZE_T ui32Bytes,
 									IMG_UINT32 ui32Flags,
 									IMG_HANDLE hOSMemHandle);
-#else	
+#else	/* defined(__linux__) */
 #ifdef INLINE_IS_PRAGMA
 #pragma inline(OSRegisterDiscontigMem)
 #endif
@@ -195,10 +233,10 @@ static INLINE PVRSRV_ERROR OSUnRegisterDiscontigMem(IMG_VOID *pvCpuVAddr,
 
 	return PVRSRV_ERROR_NOT_SUPPORTED;
 }
-#endif	
+#endif	/* defined(__linux__) */
 
 
-#if (defined(__linux__) || defined(__QNXNTO__))
+#if  defined(__linux__) || defined(__QNXNTO__)
 #ifdef INLINE_IS_PRAGMA
 #pragma inline(OSReserveDiscontigPhys)
 #endif
@@ -210,8 +248,16 @@ static INLINE PVRSRV_ERROR OSReserveDiscontigPhys(IMG_SYS_PHYADDR *pBasePAddr, I
 #else
 	extern IMG_CPU_PHYADDR SysSysPAddrToCpuPAddr(IMG_SYS_PHYADDR SysPAddr);
 
-	
-	return OSReservePhys(SysSysPAddrToCpuPAddr(pBasePAddr[0]), ui32Bytes, ui32Flags, ppvCpuVAddr, phOSMemHandle);
+	/*
+	 * On uITRON we know:
+	 * 1. We will only be called with a non-contig physical if we
+	 *    already have a contiguous CPU linear
+	 * 2. There is a one->one mapping of CpuPAddr -> CpuVAddr
+	 * 3. Looking up the first CpuPAddr will find the first CpuVAddr
+	 * 4. We don't need to unmap
+	 */
+
+	return OSReservePhys(SysSysPAddrToCpuPAddr(pBasePAddr[0]), ui32Bytes, ui32Flags, IMG_NULL, ppvCpuVAddr, phOSMemHandle);
 #endif	
 }
 
@@ -220,10 +266,10 @@ static INLINE PVRSRV_ERROR OSUnReserveDiscontigPhys(IMG_VOID *pvCpuVAddr, IMG_SI
 #if defined(__linux__) || defined(__QNXNTO__) 
 	OSUnRegisterDiscontigMem(pvCpuVAddr, ui32Bytes, ui32Flags, hOSMemHandle);
 #endif
-	
+	/* We don't need to unmap */
 	return PVRSRV_OK;
 }
-#else	
+#else	/* defined(__linux__) */
 
 
 #ifdef INLINE_IS_PRAGMA
@@ -252,7 +298,7 @@ static INLINE PVRSRV_ERROR OSUnReserveDiscontigPhys(IMG_VOID *pvCpuVAddr, IMG_SI
 
 	return PVRSRV_ERROR_NOT_SUPPORTED;
 }
-#endif	
+#endif	/* defined(__linux__) */
 
 PVRSRV_ERROR OSRegisterMem(IMG_CPU_PHYADDR BasePAddr,
 							IMG_VOID *pvCpuVAddr,
@@ -303,18 +349,33 @@ IMG_UINT32 OSGetCurrentProcessIDKM(IMG_VOID);
 IMG_UINTPTR_T OSGetCurrentThreadID( IMG_VOID );
 IMG_VOID OSMemSet(IMG_VOID *pvDest, IMG_UINT8 ui8Value, IMG_SIZE_T ui32Size);
 
-PVRSRV_ERROR OSAllocPages_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size, IMG_UINT32 ui32PageSize, IMG_PVOID *ppvLinAddr, IMG_HANDLE *phPageAlloc);
+PVRSRV_ERROR OSAllocPages_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size, IMG_UINT32 ui32PageSize,
+							   IMG_PVOID pvPrivData, IMG_UINT32 ui32PrivDataLength, IMG_HANDLE hBMHandle, IMG_PVOID *ppvLinAddr, IMG_HANDLE *phPageAlloc);
 PVRSRV_ERROR OSFreePages(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size, IMG_PVOID pvLinAddr, IMG_HANDLE hPageAlloc);
 
 
+/*---------------------
+The set of macros below follows this pattern:
+
+f(x) = if F -> f2(g(x))
+       else -> g(x)
+
+g(x) = if G -> g2(h(x))
+       else -> h(x)
+
+h(x) = ...
+
+-----------------------*/
+
+/*If level 3 wrapper is enabled, we add a PVR_TRACE and call the next level, else just call the next level*/
 #ifdef PVRSRV_LOG_MEMORY_ALLOCS
 	#define OSAllocMem(flags, size, linAddr, blockAlloc, logStr) \
 		(PVR_TRACE(("OSAllocMem(" #flags ", " #size ", " #linAddr ", " #blockAlloc "): " logStr " (size = 0x%lx)", size)), \
 			OSAllocMem_Debug_Wrapper(flags, size, linAddr, blockAlloc, __FILE__, __LINE__))
 
-	#define OSAllocPages(flags, size, pageSize, linAddr, pageAlloc) \
+	#define OSAllocPages(flags, size, pageSize, privdata, privdatalength, bmhandle, linAddr, pageAlloc) \
 		(PVR_TRACE(("OSAllocPages(" #flags ", " #size ", " #pageSize ", " #linAddr ", " #pageAlloc "): (size = 0x%lx)", size)), \
-			OSAllocPages_Impl(flags, size, pageSize, linAddr, pageAlloc))
+			OSAllocPages_Impl(flags, size, pageSize, linAddr, privdata, privdatalength, bmhandle, pageAlloc))
 		
 	#define OSFreeMem(flags, size, linAddr, blockAlloc) \
 		(PVR_TRACE(("OSFreeMem(" #flags ", " #size ", " #linAddr ", " #blockAlloc "): (pointer = 0x%X)", linAddr)), \
@@ -329,6 +390,8 @@ PVRSRV_ERROR OSFreePages(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size, IMG_PVOID pv
 			OSFreeMem_Debug_Wrapper(flags, size, linAddr, blockAlloc, __FILE__, __LINE__)
 #endif
  
+/*If level 2 wrapper is enabled declare the function,
+else alias to level 1 wrapper, else the wrapper function will be used*/
 #ifdef PVRSRV_DEBUG_OS_MEMORY
 
 	PVRSRV_ERROR OSAllocMem_Debug_Wrapper(IMG_UINT32 ui32Flags,
@@ -359,14 +422,16 @@ PVRSRV_ERROR OSFreePages(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size, IMG_PVOID pv
 		} eValid;
 	} OSMEM_DEBUG_INFO;
 	
-	#define TEST_BUFFER_PADDING_STATUS (sizeof(OSMEM_DEBUG_INFO)) 
-	#define TEST_BUFFER_PADDING_AFTER  (8) 
+	#define TEST_BUFFER_PADDING_STATUS (sizeof(OSMEM_DEBUG_INFO))
+	#define TEST_BUFFER_PADDING_AFTER  (8)
 	#define TEST_BUFFER_PADDING (TEST_BUFFER_PADDING_STATUS + TEST_BUFFER_PADDING_AFTER)
 #else
 	#define OSAllocMem_Debug_Wrapper OSAllocMem_Debug_Linux_Memory_Allocations
 	#define OSFreeMem_Debug_Wrapper OSFreeMem_Debug_Linux_Memory_Allocations
 #endif
  
+/*If level 1 wrapper is enabled declare the functions with extra parameters
+else alias to level 0 and declare the functions without the extra debugging parameters*/
 #if (defined(__linux__) || defined(__QNXNTO__)) && defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
 	PVRSRV_ERROR OSAllocMem_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size, IMG_PVOID *ppvLinAddr, IMG_HANDLE *phBlockAlloc, IMG_CHAR *pszFilename, IMG_UINT32 ui32Line);
 	PVRSRV_ERROR OSFreeMem_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size, IMG_PVOID pvLinAddr, IMG_HANDLE hBlockAlloc, IMG_CHAR *pszFilename, IMG_UINT32 ui32Line);
@@ -399,6 +464,20 @@ static INLINE IMG_CPU_PHYADDR OSMemHandleToCpuPAddr(IMG_HANDLE hOSMemHandle, IMG
 	return sCpuPAddr;
 }
 #endif
+
+#if defined(__linux__)
+IMG_BOOL OSMemHandleIsPhysContig(IMG_VOID *hOSMemHandle);
+#else
+#ifdef INLINE_IS_PRAGMA
+#pragma inline(OSMemHandleIsPhysContig)
+#endif
+static INLINE IMG_BOOL OSMemHandleIsPhysContig(IMG_HANDLE hOSMemHandle)
+{
+	PVR_UNREFERENCED_PARAMETER(hOSMemHandle);
+	return IMG_FALSE;
+}
+#endif
+
 PVRSRV_ERROR OSInitEnvData(IMG_PVOID *ppvEnvSpecificData);
 PVRSRV_ERROR OSDeInitEnvData(IMG_PVOID pvEnvSpecificData);
 IMG_CHAR* OSStringCopy(IMG_CHAR *pszDest, const IMG_CHAR *pszSrc);
@@ -425,7 +504,7 @@ PVRSRV_ERROR OSEventObjectOpenKM(PVRSRV_EVENTOBJECT *psEventObject,
 											IMG_HANDLE *phOSEvent);
 PVRSRV_ERROR OSEventObjectCloseKM(PVRSRV_EVENTOBJECT *psEventObject,
 											IMG_HANDLE hOSEventKM);
-#endif 
+#endif /* #if defined (SUPPORT_SID_INTERFACE) */
 
 
 PVRSRV_ERROR OSBaseAllocContigMemory(IMG_SIZE_T ui32Size, IMG_CPU_VIRTADDR *pLinAddr, IMG_CPU_PHYADDR *pPhysAddr);
@@ -460,15 +539,57 @@ IMG_VOID OSBreakResourceLock(PVRSRV_RESOURCE *psResource, IMG_UINT32 ui32ID);
 #define OSPowerLockWrap SysPowerLockWrap
 #define OSPowerLockUnwrap SysPowerLockUnwrap
 #else
+/******************************************************************************
+ @Function	OSPowerLockWrap
+
+ @Description	OS-specific wrapper around the power lock
+
+ @Input bTryLock - don't block on lock contention
+
+ @Return	PVRSRV_ERROR
+******************************************************************************/
 PVRSRV_ERROR OSPowerLockWrap(IMG_BOOL bTryLock);
 
-IMG_VOID OSPowerLockUnwrap(IMG_VOID);
-#endif 
+/******************************************************************************
+ @Function	OSPowerLockUnwrap
 
+ @Description	OS-specific wrapper around the power unlock
+
+ @Return	IMG_VOID
+******************************************************************************/
+IMG_VOID OSPowerLockUnwrap(IMG_VOID);
+#endif /* SYS_CUSTOM_POWERLOCK_WRAP */
+
+/*!
+******************************************************************************
+
+ @Function OSWaitus
  
+ @Description 
+    This function implements a busy wait of the specified microseconds
+    This function does NOT release thread quanta
+ 
+ @Input ui32Timeus - (us)
+
+ @Return IMG_VOID
+
+******************************************************************************/ 
 IMG_VOID OSWaitus(IMG_UINT32 ui32Timeus);
 
+/*!
+******************************************************************************
+
+ @Function OSSleepms
  
+ @Description 
+    This function implements a sleep of the specified milliseconds
+    This function may allow pre-emption if implemented
+ 
+ @Input ui32Timems - (ms)
+
+ @Return IMG_VOID
+
+******************************************************************************/ 
 IMG_VOID OSSleepms(IMG_UINT32 ui32Timems);
 
 IMG_HANDLE OSFuncHighResTimerCreate(IMG_VOID);
@@ -477,6 +598,14 @@ IMG_VOID OSFuncHighResTimerDestroy(IMG_HANDLE hTimer);
 IMG_VOID OSReleaseThreadQuanta(IMG_VOID);
 IMG_UINT32 OSPCIReadDword(IMG_UINT32 ui32Bus, IMG_UINT32 ui32Dev, IMG_UINT32 ui32Func, IMG_UINT32 ui32Reg);
 IMG_VOID OSPCIWriteDword(IMG_UINT32 ui32Bus, IMG_UINT32 ui32Dev, IMG_UINT32 ui32Func, IMG_UINT32 ui32Reg, IMG_UINT32 ui32Value);
+
+IMG_IMPORT
+IMG_UINT32 ReadHWReg(IMG_PVOID pvLinRegBaseAddr, IMG_UINT32 ui32Offset);
+
+IMG_IMPORT
+IMG_VOID WriteHWReg(IMG_PVOID pvLinRegBaseAddr, IMG_UINT32 ui32Offset, IMG_UINT32 ui32Value);
+
+IMG_IMPORT IMG_VOID WriteHWRegs(IMG_PVOID pvLinRegBaseAddr, IMG_UINT32 ui32Count, PVRSRV_HWREG *psHWRegs);
 
 #ifndef OSReadHWReg
 IMG_UINT32 OSReadHWReg(IMG_PVOID pvLinRegBaseAddr, IMG_UINT32 ui32Offset);
@@ -517,6 +646,17 @@ PVRSRV_ERROR OSPCIResumeDev(PVRSRV_PCI_DEV_HANDLE hPVRPCI);
 
 PVRSRV_ERROR OSScheduleMISR(IMG_VOID *pvSysData);
 
+/******************************************************************************
+
+ @Function		OSPanic
+
+ @Description	Take action in response to an unrecoverable driver error
+
+ @Input    IMG_VOID
+
+ @Return   IMG_VOID
+
+******************************************************************************/
 IMG_VOID OSPanic(IMG_VOID);
 
 IMG_BOOL OSProcHasPrivSrvInit(IMG_VOID);
@@ -532,7 +672,7 @@ IMG_BOOL OSAccessOK(IMG_VERIFY_TEST eVerification, IMG_VOID *pvUserPtr, IMG_SIZE
 PVRSRV_ERROR OSCopyToUser(IMG_PVOID pvProcess, IMG_VOID *pvDest, IMG_VOID *pvSrc, IMG_SIZE_T ui32Bytes);
 PVRSRV_ERROR OSCopyFromUser(IMG_PVOID pvProcess, IMG_VOID *pvDest, IMG_VOID *pvSrc, IMG_SIZE_T ui32Bytes);
 
-#if (defined(__linux__) || defined(__QNXNTO__))
+#if defined(__linux__) || defined(__QNXNTO__)
 PVRSRV_ERROR OSAcquirePhysPageAddr(IMG_VOID* pvCPUVAddr, 
 									IMG_SIZE_T ui32Bytes, 
 									IMG_SYS_PHYADDR *psSysPAddr,
@@ -583,7 +723,7 @@ static inline IMG_VOID OSMemoryBarrier(IMG_VOID)
 	mb();
 }
 
-#else 
+#else /* defined(__linux__) && defined(__KERNEL__) */
 
 #ifdef INLINE_IS_PRAGMA
 #pragma inline(OSWriteMemoryBarrier)
@@ -595,11 +735,58 @@ static INLINE IMG_VOID OSWriteMemoryBarrier(IMG_VOID) { }
 #endif
 static INLINE IMG_VOID OSMemoryBarrier(IMG_VOID) { }
 
-#endif 
+#endif /* defined(__linux__) && defined(__KERNEL__) */
+
+/* Atomic functions */
+PVRSRV_ERROR OSAtomicAlloc(IMG_PVOID *ppvRefCount);
+IMG_VOID OSAtomicFree(IMG_PVOID pvRefCount);
+IMG_VOID OSAtomicInc(IMG_PVOID pvRefCount);
+IMG_BOOL OSAtomicDecAndTest(IMG_PVOID pvRefCount);
+IMG_UINT32 OSAtomicRead(IMG_PVOID pvRefCount);
+
+PVRSRV_ERROR OSTimeCreateWithUSOffset(IMG_PVOID *pvRet, IMG_UINT32 ui32MSOffset);
+IMG_BOOL OSTimeHasTimePassed(IMG_PVOID pvData);
+IMG_VOID OSTimeDestroy(IMG_PVOID pvData);
+
+#if defined(__linux__)
+IMG_VOID OSReleaseBridgeLock(IMG_VOID);
+IMG_VOID OSReacquireBridgeLock(IMG_VOID);
+#else
+
+#ifdef INLINE_IS_PRAGMA
+#pragma inline(OSReleaseBridgeLock)
+#endif
+static INLINE IMG_VOID OSReleaseBridgeLock(IMG_VOID) { }
+
+#ifdef INLINE_IS_PRAGMA
+#pragma inline(OSReacquireBridgeLock)
+#endif
+static INLINE IMG_VOID OSReacquireBridgeLock(IMG_VOID) { }
+
+#endif
+
+#if defined(__linux__)
+IMG_VOID OSGetCurrentProcessNameKM(IMG_CHAR *pszName, IMG_UINT32 ui32Size);
+#else
+
+#ifdef INLINE_IS_PRAGMA
+#pragma inline(OSGetCurrentProcessNameKM)
+#endif
+static INLINE IMG_VOID OSGetCurrentProcessNameKM(IMG_CHAR *pszName, IMG_UINT32 ui32Size)
+{
+	PVR_UNREFERENCED_PARAMETER(pszName);
+	PVR_UNREFERENCED_PARAMETER(ui32Size);
+}
+
+#endif
 
 #if defined (__cplusplus)
 }
 #endif
 
-#endif 
+#endif /* __OSFUNC_H__ */
+
+/******************************************************************************
+ End of file (osfunc.h)
+******************************************************************************/
 

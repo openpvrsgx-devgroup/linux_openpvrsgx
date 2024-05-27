@@ -43,6 +43,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <linux/module.h>
 #include <linux/fs.h>
 #include <linux/kernel.h>
+#include <linux/slab.h>
 #include <linux/mm.h>
 #include <linux/string.h>
 #include <asm/page.h>
@@ -59,18 +60,17 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <linux/wait.h>
 #include <linux/jiffies.h>
 #include <linux/delay.h>
-#endif
-
-#include <linux/slab.h>
+#endif	/* defined(SUPPORT_DBGDRV_EVENT_OBJECTS) */
 
 #include "img_types.h"
 #include "pvr_debug.h"
 
 #include "dbgdrvif.h"
-#include "dbgdriv/common/hostfunc.h"
+#include "hostfunc.h"
+#include "dbgdriv.h"
 
-#if !defined(SUPPORT_DRI_DRM)
-IMG_UINT32	gPVRDebugLevel = DBGPRIV_WARNING;
+#if defined(MODULE) && defined(DEBUG) && !defined(SUPPORT_DRI_DRM)
+IMG_UINT32	gPVRDebugLevel = (DBGPRIV_FATAL | DBGPRIV_ERROR | DBGPRIV_WARNING);
 
 #define PVR_STRING_TERMINATOR		'\0'
 #define PVR_IS_FILE_SEPARATOR(character) ( ((character) == '\\') || ((character) == '/') )
@@ -101,7 +101,7 @@ void PVRSRVDebugPrintf	(
 						...
 					)
 {
-	IMG_BOOL bTrace, bDebug;
+	IMG_BOOL bTrace;
 #if !defined(__sh__)
 	IMG_CHAR *pszLeafName;
 
@@ -113,70 +113,79 @@ void PVRSRVDebugPrintf	(
 	}
 #endif /* __sh__ */
 
-	bTrace = gPVRDebugLevel & ui32DebugLevel & DBGPRIV_CALLTRACE;
-	bDebug = ((gPVRDebugLevel & DBGPRIV_ALLLEVELS) >= ui32DebugLevel);
+	bTrace = (IMG_BOOL)(ui32DebugLevel & DBGPRIV_CALLTRACE) ? IMG_TRUE : IMG_FALSE;
 
-	if (bTrace || bDebug)
+	if (gPVRDebugLevel & ui32DebugLevel)
 	{
 		va_list vaArgs;
-		static char szBuffer[256];
+		char szBuffer[256];
+		char *szBufferEnd = szBuffer;
+		char *szBufferLimit = szBuffer + sizeof(szBuffer) - 1;
 
-		va_start (vaArgs, pszFormat);
+		/* The Limit - End pointer arithmetic we're doing in snprintf
+		   ensures that our buffer remains null terminated from this */
+		*szBufferLimit = '\0';
 
+		snprintf(szBufferEnd, szBufferLimit - szBufferEnd, "PVR_K:");
+		szBufferEnd += strlen(szBufferEnd);
 
-		if (bDebug)
+		/* Add in the level of warning */
+		if (bTrace == IMG_FALSE)
 		{
 			switch(ui32DebugLevel)
 			{
 				case DBGPRIV_FATAL:
 				{
-					strcpy (szBuffer, "PVR_K:(Fatal): ");
+					snprintf(szBufferEnd, szBufferLimit - szBufferEnd, "(Fatal):");
 					break;
 				}
 				case DBGPRIV_ERROR:
 				{
-					strcpy (szBuffer, "PVR_K:(Error): ");
+					snprintf(szBufferEnd, szBufferLimit - szBufferEnd, "(Error):");
 					break;
 				}
 				case DBGPRIV_WARNING:
 				{
-					strcpy (szBuffer, "PVR_K:(Warning): ");
+					snprintf(szBufferEnd, szBufferLimit - szBufferEnd, "(Warning):");
 					break;
 				}
 				case DBGPRIV_MESSAGE:
 				{
-					strcpy (szBuffer, "PVR_K:(Message): ");
+					snprintf(szBufferEnd, szBufferLimit - szBufferEnd, "(Message):");
 					break;
 				}
 				case DBGPRIV_VERBOSE:
 				{
-					strcpy (szBuffer, "PVR_K:(Verbose): ");
+					snprintf(szBufferEnd, szBufferLimit - szBufferEnd, "(Verbose):");
 					break;
 				}
 				default:
 				{
-					strcpy (szBuffer, "PVR_K:(Unknown message level)");
+					snprintf(szBufferEnd, szBufferLimit - szBufferEnd, "(Unknown message level)");
 					break;
 				}
 			}
+			szBufferEnd += strlen(szBufferEnd);
 		}
-		else
+		snprintf(szBufferEnd, szBufferLimit - szBufferEnd, " ");
+		szBufferEnd += strlen(szBufferEnd);
+
+		va_start (vaArgs, pszFormat);
+		vsnprintf(szBufferEnd, szBufferLimit - szBufferEnd, pszFormat, vaArgs);
+		va_end (vaArgs);
+		szBufferEnd += strlen(szBufferEnd);
+
+ 		/*
+ 		 * Metrics and Traces don't need a location
+ 		 */
+ 		if (bTrace == IMG_FALSE)
 		{
-			strcpy (szBuffer, "PVR_K: ");
-		}
-
-		vsprintf (&szBuffer[strlen(szBuffer)], pszFormat, vaArgs);
-
-
-
-		if (!bTrace)
-		{
-			sprintf (&szBuffer[strlen(szBuffer)], " [%d, %s]", (int)ui32Line, pszFileName);
+			snprintf(szBufferEnd, szBufferLimit - szBufferEnd, 
+			         " [%d, %s]", (int)ui32Line, pszFileName);
+			szBufferEnd += strlen(szBufferEnd);
 		}
 
 		printk(KERN_INFO "%s\r\n", szBuffer);
-
-		va_end (vaArgs);
 	}
 }
 #endif	/* defined(DEBUG) && !defined(SUPPORT_DRI_DRM) */
@@ -275,17 +284,31 @@ IMG_VOID HostCreateRegDeclStreams(IMG_VOID)
     /* FIXME: Not yet implemented */
 }
 
-IMG_VOID * HostCreateMutex(IMG_VOID)
-{
-	struct semaphore *psSem;
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37))
+typedef	struct mutex		MUTEX;
+#define	INIT_MUTEX(m)		mutex_init(m)
+#define	DOWN_TRYLOCK(m)		(!mutex_trylock(m))
+#define	DOWN(m)			mutex_lock(m)
+#define UP(m)			mutex_unlock(m)
+#else
+typedef	struct semaphore	MUTEX;
+#define	INIT_MUTEX(m)		init_MUTEX(m)
+#define	DOWN_TRYLOCK(m)		down_trylock(m)
+#define	DOWN(m)			down(m)
+#define UP(m)			up(m)
+#endif
 
-	psSem = kmalloc(sizeof(*psSem), GFP_KERNEL);
-	if (psSem)
+IMG_VOID *HostCreateMutex(IMG_VOID)
+{
+	MUTEX *psMutex;
+
+	psMutex = kmalloc(sizeof(*psMutex), GFP_KERNEL);
+	if (psMutex)
 	{
-		init_MUTEX(psSem);
+		INIT_MUTEX(psMutex);
 	}
 
-	return psSem;
+	return psMutex;
 }
 
 IMG_VOID HostAquireMutex(IMG_VOID * pvMutex)
@@ -293,19 +316,19 @@ IMG_VOID HostAquireMutex(IMG_VOID * pvMutex)
 	BUG_ON(in_interrupt());
 
 #if defined(PVR_DEBUG_DBGDRV_DETECT_HOST_MUTEX_COLLISIONS)
-	if (down_trylock((struct semaphore *)pvMutex))
+	if (DOWN_TRYLOCK((MUTEX *)pvMutex))
 	{
 		printk(KERN_INFO "HostAquireMutex: Waiting for mutex\n");
-		down((struct semaphore *)pvMutex);
+		DOWN((MUTEX *)pvMutex);
 	}
 #else
-	down((struct semaphore *)pvMutex);
+	DOWN((MUTEX *)pvMutex);
 #endif
 }
 
 IMG_VOID HostReleaseMutex(IMG_VOID * pvMutex)
 {
-	up((struct semaphore *)pvMutex);
+	UP((MUTEX *)pvMutex);
 }
 
 IMG_VOID HostDestroyMutex(IMG_VOID * pvMutex)

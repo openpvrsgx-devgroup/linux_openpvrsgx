@@ -46,12 +46,15 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "pvr_bridge.h"
 #include "perproc.h"
 #include "mutex.h"
-#include "sysconfig.h"
+#include "syscommon.h"
 #include "pvr_debug.h"
 #include "proc.h"
 #include "private_data.h"
 #include "linkage.h"
 #include "pvr_bridge_km.h"
+#include "pvr_uaccess.h"
+#include "refcount.h"
+#include "buffer_manager.h"
 
 #if defined(SUPPORT_DRI_DRM)
 #include <drm/drmP.h>
@@ -61,21 +64,17 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 #endif
 
+/* VGX: */
 #if defined(SUPPORT_VGX)
 #include "vgx_bridge.h"
 #endif
 
+/* SGX: */
 #if defined(SUPPORT_SGX)
 #include "sgx_bridge.h"
 #endif
 
 #include "bridged_pvr_bridge.h"
-
-#ifdef MODULE_TEST
-#include "pvr_test_bridge.h"
-#include "kern_test.h"
-#endif
-
 
 #if defined(SUPPORT_DRI_DRM)
 #define	PRIVATE_DATA(pFile) ((pFile)->driver_priv)
@@ -85,20 +84,15 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #if defined(DEBUG_BRIDGE_KM)
 
-#ifdef PVR_PROC_USE_SEQ_FILE
 static struct proc_dir_entry *g_ProcBridgeStats =0;
 static void* ProcSeqNextBridgeStats(struct seq_file *sfile,void* el,loff_t off);
 static void ProcSeqShowBridgeStats(struct seq_file *sfile,void* el);
 static void* ProcSeqOff2ElementBridgeStats(struct seq_file * sfile, loff_t off);
 static void ProcSeqStartstopBridgeStats(struct seq_file *sfile,IMG_BOOL start);
 
-#else
-static off_t printLinuxBridgeStats(IMG_CHAR * buffer, size_t size, off_t off);
 #endif
 
-#endif
-
-extern struct mutex gPVRSRVLock;
+extern PVRSRV_LINUX_MUTEX gPVRSRVLock;
 
 #if defined(SUPPORT_MEMINFO_IDS)
 static IMG_UINT64 ui64Stamp;
@@ -109,22 +103,15 @@ LinuxBridgeInit(IMG_VOID)
 {
 #if defined(DEBUG_BRIDGE_KM)
 	{
-		IMG_INT iStatus;
-#ifdef PVR_PROC_USE_SEQ_FILE
 		g_ProcBridgeStats = CreateProcReadEntrySeq(
-												  "bridge_stats",
+												  "bridge_stats", 
 												  NULL,
 												  ProcSeqNextBridgeStats,
 												  ProcSeqShowBridgeStats,
 												  ProcSeqOff2ElementBridgeStats,
 												  ProcSeqStartstopBridgeStats
 						  						 );
-		iStatus = !g_ProcBridgeStats ? -1 : 0;
-#else
-		iStatus = CreateProcReadEntry("bridge_stats", printLinuxBridgeStats);
-#endif
-
-		if(iStatus!=0)
+		if(!g_ProcBridgeStats)
 		{
 			return PVRSRV_ERROR_OUT_OF_MEMORY;
 		}
@@ -137,27 +124,28 @@ IMG_VOID
 LinuxBridgeDeInit(IMG_VOID)
 {
 #if defined(DEBUG_BRIDGE_KM)
-#ifdef PVR_PROC_USE_SEQ_FILE
     RemoveProcEntrySeq(g_ProcBridgeStats);
-#else
-	RemoveProcEntry("bridge_stats");
-#endif
 #endif
 }
 
 #if defined(DEBUG_BRIDGE_KM)
 
-#ifdef PVR_PROC_USE_SEQ_FILE
-
-static void ProcSeqStartstopBridgeStats(struct seq_file *sfile,IMG_BOOL start)
+/*
+ * Lock MMap regions list (called on page start/stop while reading /proc/mmap)
+ *
+ * sfile : seq_file that handles /proc file
+ * start : TRUE if it's start, FALSE if it's stop
+ *  
+ */
+static void ProcSeqStartstopBridgeStats(struct seq_file *sfile,IMG_BOOL start) 
 {
-	if(start)
+	if(start) 
 	{
-		mutex_lock(&gPVRSRVLock);
+		LinuxLockMutex(&gPVRSRVLock);
 	}
 	else
 	{
-		mutex_unlock(&gPVRSRVLock);
+		LinuxUnLockMutex(&gPVRSRVLock);
 	}
 }
 
@@ -174,7 +162,7 @@ static void ProcSeqStartstopBridgeStats(struct seq_file *sfile,IMG_BOOL start)
 */
 static void* ProcSeqOff2ElementBridgeStats(struct seq_file *sfile, loff_t off)
 {
-	if(!off)
+	if(!off) 
 	{
 		return PVR_PROC_SEQ_START_TOKEN;
 	}
@@ -214,13 +202,13 @@ static void ProcSeqShowBridgeStats(struct seq_file *sfile,void* el)
 {
 	PVRSRV_BRIDGE_DISPATCH_TABLE_ENTRY *psEntry = (	PVRSRV_BRIDGE_DISPATCH_TABLE_ENTRY*)el;
 
-	if(el == PVR_PROC_SEQ_START_TOKEN)
+	if(el == PVR_PROC_SEQ_START_TOKEN) 
 	{
 		seq_printf(sfile,
-						  "Total ioctl call count = %lu\n"
-						  "Total number of bytes copied via copy_from_user = %lu\n"
-						  "Total number of bytes copied via copy_to_user = %lu\n"
-						  "Total number of bytes copied via copy_*_user = %lu\n\n"
+						  "Total ioctl call count = %u\n"
+						  "Total number of bytes copied via copy_from_user = %u\n"
+						  "Total number of bytes copied via copy_to_user = %u\n"
+						  "Total number of bytes copied via copy_*_user = %u\n\n"
 						  "%-45s | %-40s | %10s | %20s | %10s\n",
 						  g_BridgeGlobalStats.ui32IOCTLCount,
 						  g_BridgeGlobalStats.ui32TotalCopyFromUserBytes,
@@ -236,7 +224,7 @@ static void ProcSeqShowBridgeStats(struct seq_file *sfile,void* el)
 	}
 
 	seq_printf(sfile,
-				   "%-45s   %-40s   %-10lu   %-20lu   %-10lu\n",
+				   "%-45s   %-40s   %-10u   %-20u   %-10u\n",
 				   psEntry->pszIOCName,
 				   psEntry->pszFunctionName,
 				   psEntry->ui32CallCount,
@@ -244,78 +232,15 @@ static void ProcSeqShowBridgeStats(struct seq_file *sfile,void* el)
 				   psEntry->ui32CopyToUserTotalBytes);
 }
 
-#else
-
-static off_t
-printLinuxBridgeStats(IMG_CHAR * buffer, size_t count, off_t off)
-{
-	PVRSRV_BRIDGE_DISPATCH_TABLE_ENTRY *psEntry;
-	off_t Ret;
-
-	mutex_lock(&gPVRSRVLock);
-
-	if(!off)
-	{
-		if(count < 500)
-		{
-			Ret = 0;
-			goto unlock_and_return;
-		}
-		Ret = printAppend(buffer, count, 0,
-						  "Total ioctl call count = %lu\n"
-						  "Total number of bytes copied via copy_from_user = %lu\n"
-						  "Total number of bytes copied via copy_to_user = %lu\n"
-						  "Total number of bytes copied via copy_*_user = %lu\n\n"
-						  "%-45s | %-40s | %10s | %20s | %10s\n",
-						  g_BridgeGlobalStats.ui32IOCTLCount,
-						  g_BridgeGlobalStats.ui32TotalCopyFromUserBytes,
-						  g_BridgeGlobalStats.ui32TotalCopyToUserBytes,
-						  g_BridgeGlobalStats.ui32TotalCopyFromUserBytes+g_BridgeGlobalStats.ui32TotalCopyToUserBytes,
-						  "Bridge Name",
-						  "Wrapper Function",
-						  "Call Count",
-						  "copy_from_user Bytes",
-						  "copy_to_user Bytes"
-						 );
-		goto unlock_and_return;
-	}
-
-	if(off > BRIDGE_DISPATCH_TABLE_ENTRY_COUNT)
-	{
-		Ret = END_OF_FILE;
-		goto unlock_and_return;
-	}
-
-	if(count < 300)
-	{
-		Ret = 0;
-		goto unlock_and_return;
-	}
-
-	psEntry = &g_BridgeDispatchTable[off-1];
-	Ret =  printAppend(buffer, count, 0,
-					   "%-45s   %-40s   %-10lu   %-20lu   %-10lu\n",
-					   psEntry->pszIOCName,
-					   psEntry->pszFunctionName,
-					   psEntry->ui32CallCount,
-					   psEntry->ui32CopyFromUserTotalBytes,
-					   psEntry->ui32CopyToUserTotalBytes);
-
-unlock_and_return:
-	mutex_unlock(&gPVRSRVLock);
-	return Ret;
-}
-#endif
-#endif
-
+#endif /* DEBUG_BRIDGE_KM */
 
 
 #if defined(SUPPORT_DRI_DRM)
-IMG_INT
-PVRSRV_BridgeDispatchKM(struct drm_device *dev, IMG_VOID *arg, struct drm_file *pFile)
+int
+PVRSRV_BridgeDispatchKM(struct drm_device unref__ *dev, void *arg, struct drm_file *pFile)
 #else
-IMG_INT32
-PVRSRV_BridgeDispatchKM(struct file *pFile, IMG_UINT unref__ ioctlCmd, IMG_UINT32 arg)
+long
+PVRSRV_BridgeDispatchKM(struct file *pFile, unsigned int unref__ ioctlCmd, unsigned long arg)
 #endif
 {
 	IMG_UINT32 cmd;
@@ -328,16 +253,12 @@ PVRSRV_BridgeDispatchKM(struct file *pFile, IMG_UINT unref__ ioctlCmd, IMG_UINT3
 	PVRSRV_PER_PROCESS_DATA *psPerProc;
 	IMG_INT err = -EFAULT;
 
-	mutex_lock(&gPVRSRVLock);
+	LinuxLockMutex(&gPVRSRVLock);
 
 #if defined(SUPPORT_DRI_DRM)
-	PVR_UNREFERENCED_PARAMETER(dev);
-
 	psBridgePackageKM = (PVRSRV_BRIDGE_PACKAGE *)arg;
 	PVR_ASSERT(psBridgePackageKM != IMG_NULL);
 #else
-	PVR_UNREFERENCED_PARAMETER(ioctlCmd);
-
 	psBridgePackageKM = &sBridgePackageKM;
 
 	if(!OSAccessOK(PVR_VERIFY_WRITE,
@@ -364,151 +285,7 @@ PVRSRV_BridgeDispatchKM(struct file *pFile, IMG_UINT unref__ ioctlCmd, IMG_UINT3
 #endif
 
 	cmd = psBridgePackageKM->ui32BridgeID;
-
-#if defined(MODULE_TEST)
-	switch (cmd)
-	{
-		case PVRSRV_BRIDGE_SERVICES_TEST_MEM1:
-			{
-				PVRSRV_ERROR eError = MemTest1();
-				if (psBridgePackageKM->ui32OutBufferSize == sizeof(PVRSRV_BRIDGE_RETURN))
-				{
-					PVRSRV_BRIDGE_RETURN* pReturn = (PVRSRV_BRIDGE_RETURN*)psBridgePackageKM->pvParamOut ;
-					pReturn->eError = eError;
-				}
-			}
-			err = 0;
-			goto unlock_and_return;
-		case PVRSRV_BRIDGE_SERVICES_TEST_MEM2:
-			{
-				PVRSRV_ERROR eError = MemTest2();
-				if (psBridgePackageKM->ui32OutBufferSize == sizeof(PVRSRV_BRIDGE_RETURN))
-				{
-					PVRSRV_BRIDGE_RETURN* pReturn = (PVRSRV_BRIDGE_RETURN*)psBridgePackageKM->pvParamOut ;
-					pReturn->eError = eError;
-				}
-			}
-			err = 0;
-			goto unlock_and_return;
-
-		case PVRSRV_BRIDGE_SERVICES_TEST_RESOURCE:
-			{
-				PVRSRV_ERROR eError = ResourceTest();
-				if (psBridgePackageKM->ui32OutBufferSize == sizeof(PVRSRV_BRIDGE_RETURN))
-				{
-					PVRSRV_BRIDGE_RETURN* pReturn = (PVRSRV_BRIDGE_RETURN*)psBridgePackageKM->pvParamOut ;
-					pReturn->eError = eError;
-				}
-			}
-			err = 0;
-			goto unlock_and_return;
-
-		case PVRSRV_BRIDGE_SERVICES_TEST_EVENTOBJECT:
-			{
-				PVRSRV_ERROR eError = EventObjectTest();
-				if (psBridgePackageKM->ui32OutBufferSize == sizeof(PVRSRV_BRIDGE_RETURN))
-				{
-					PVRSRV_BRIDGE_RETURN* pReturn = (PVRSRV_BRIDGE_RETURN*)psBridgePackageKM->pvParamOut ;
-					pReturn->eError = eError;
-				}
-			}
-			err = 0;
-			goto unlock_and_return;
-
-		case PVRSRV_BRIDGE_SERVICES_TEST_MEMMAPPING:
-			{
-				PVRSRV_ERROR eError = MemMappingTest();
-				if (psBridgePackageKM->ui32OutBufferSize == sizeof(PVRSRV_BRIDGE_RETURN))
-				{
-					PVRSRV_BRIDGE_RETURN* pReturn = (PVRSRV_BRIDGE_RETURN*)psBridgePackageKM->pvParamOut ;
-					pReturn->eError = eError;
-				}
-			}
-			err = 0;
-			goto unlock_and_return;
-
-		case PVRSRV_BRIDGE_SERVICES_TEST_PROCESSID:
-			{
-				PVRSRV_ERROR eError = ProcessIDTest();
-				if (psBridgePackageKM->ui32OutBufferSize == sizeof(PVRSRV_BRIDGE_RETURN))
-				{
-					PVRSRV_BRIDGE_RETURN* pReturn = (PVRSRV_BRIDGE_RETURN*)psBridgePackageKM->pvParamOut ;
-					pReturn->eError = eError;
-				}
-			}
-			err = 0;
-			goto unlock_and_return;
-
-		case PVRSRV_BRIDGE_SERVICES_TEST_CLOCKUSWAITUS:
-			{
-				PVRSRV_ERROR eError = ClockusWaitusTest();
-				if (psBridgePackageKM->ui32OutBufferSize == sizeof(PVRSRV_BRIDGE_RETURN))
-				{
-					PVRSRV_BRIDGE_RETURN* pReturn = (PVRSRV_BRIDGE_RETURN*)psBridgePackageKM->pvParamOut ;
-					pReturn->eError = eError;
-				}
-			}
-			err = 0;
-			goto unlock_and_return;
-
-		case PVRSRV_BRIDGE_SERVICES_TEST_TIMER:
-			{
-				PVRSRV_ERROR eError = TimerTest();
-				if (psBridgePackageKM->ui32OutBufferSize == sizeof(PVRSRV_BRIDGE_RETURN))
-				{
-					PVRSRV_BRIDGE_RETURN* pReturn = (PVRSRV_BRIDGE_RETURN*)psBridgePackageKM->pvParamOut ;
-					pReturn->eError = eError;
-				}
-			}
-			err = 0;
-			goto unlock_and_return;
-
-		case PVRSRV_BRIDGE_SERVICES_TEST_PRIVSRV:
-			{
-				PVRSRV_ERROR eError = PrivSrvTest();
-				if (psBridgePackageKM->ui32OutBufferSize == sizeof(PVRSRV_BRIDGE_RETURN))
-				{
-					PVRSRV_BRIDGE_RETURN* pReturn = (PVRSRV_BRIDGE_RETURN*)psBridgePackageKM->pvParamOut ;
-					pReturn->eError = eError;
-				}
-			}
-			err = 0;
-			goto unlock_and_return;
-		case PVRSRV_BRIDGE_SERVICES_TEST_COPYDATA:
-		{
-			IMG_UINT32               ui32PID;
-			PVRSRV_PER_PROCESS_DATA *psPerProc;
-			PVRSRV_ERROR eError;
-
-			ui32PID = OSGetCurrentProcessIDKM();
-
-			PVRSRVTrace("PVRSRV_BRIDGE_SERVICES_TEST_COPYDATA %d", ui32PID);
-
-			psPerProc = PVRSRVPerProcessData(ui32PID);
-
-			eError = CopyDataTest(psBridgePackageKM->pvParamIn, psBridgePackageKM->pvParamOut, psPerProc);
-
-			*(PVRSRV_ERROR*)psBridgePackageKM->pvParamOut = eError;
-			err = 0;
-			goto unlock_and_return;
-		}
-
-
-		case PVRSRV_BRIDGE_SERVICES_TEST_POWERMGMT:
-			{
-				PVRSRV_ERROR eError = PowerMgmtTest();
-				if (psBridgePackageKM->ui32OutBufferSize == sizeof(PVRSRV_BRIDGE_RETURN))
-				{
-					PVRSRV_BRIDGE_RETURN* pReturn = (PVRSRV_BRIDGE_RETURN*)psBridgePackageKM->pvParamOut ;
-					pReturn->eError = eError;
-				}
-			}
-			err = 0;
-			goto unlock_and_return;
-
-	}
-#endif
-
+	
 	if(cmd != PVRSRV_BRIDGE_CONNECT_SERVICES)
 	{
 		PVRSRV_ERROR eError;
@@ -546,10 +323,9 @@ PVRSRV_BridgeDispatchKM(struct file *pFile, IMG_UINT unref__ ioctlCmd, IMG_UINT3
 
 	psBridgePackageKM->ui32BridgeID = PVRSRV_GET_BRIDGE_ID(psBridgePackageKM->ui32BridgeID);
 
-#if defined(PVR_SECURE_FD_EXPORT)
 	switch(cmd)
 	{
-		case PVRSRV_BRIDGE_EXPORT_DEVICEMEM:
+		case PVRSRV_BRIDGE_EXPORT_DEVICEMEM_2:
 		{
 			PVRSRV_FILE_PRIVATE_DATA *psPrivateData = PRIVATE_DATA(pFile);
 
@@ -563,7 +339,7 @@ PVRSRV_BridgeDispatchKM(struct file *pFile, IMG_UINT unref__ ioctlCmd, IMG_UINT3
 			break;
 		}
 
-		case PVRSRV_BRIDGE_MAP_DEV_MEMORY:
+		case PVRSRV_BRIDGE_MAP_DEV_MEMORY_2:
 		{
 			PVRSRV_BRIDGE_IN_MAP_DEV_MEMORY *psMapDevMemIN =
 				(PVRSRV_BRIDGE_IN_MAP_DEV_MEMORY *)psBridgePackageKM->pvParamIn;
@@ -577,7 +353,11 @@ PVRSRV_BridgeDispatchKM(struct file *pFile, IMG_UINT unref__ ioctlCmd, IMG_UINT3
 				goto unlock_and_return;
 			}
 
-			psMapDevMemIN->hKernelMemInfo = psPrivateData->hKernelMemInfo;
+			if (pvr_put_user(psPrivateData->hKernelMemInfo, &psMapDevMemIN->hKernelMemInfo) != 0)
+			{
+				err = -EFAULT;
+				goto unlock_and_return;
+			}
 			break;
 		}
 
@@ -594,7 +374,7 @@ PVRSRV_BridgeDispatchKM(struct file *pFile, IMG_UINT unref__ ioctlCmd, IMG_UINT3
 			break;
 		}
 	}
-#endif
+
 #if defined(SUPPORT_DRI_DRM) && defined(PVR_SECURE_DRM_AUTH_EXPORT)
 	switch(cmd)
 	{
@@ -650,7 +430,7 @@ PVRSRV_BridgeDispatchKM(struct file *pFile, IMG_UINT unref__ ioctlCmd, IMG_UINT3
 		default:
 			break;
 	}
-#endif
+#endif /* defined(SUPPORT_DRI_DRM) && defined(PVR_SECURE_DRM_AUTH_EXPORT) */
 
 	err = BridgedDispatchKM(psPerProc, psBridgePackageKM);
 	if(err != PVRSRV_OK)
@@ -658,28 +438,66 @@ PVRSRV_BridgeDispatchKM(struct file *pFile, IMG_UINT unref__ ioctlCmd, IMG_UINT3
 
 	switch(cmd)
 	{
-#if defined(PVR_SECURE_FD_EXPORT)
-		case PVRSRV_BRIDGE_EXPORT_DEVICEMEM:
+		case PVRSRV_BRIDGE_EXPORT_DEVICEMEM_2:
 		{
 			PVRSRV_BRIDGE_OUT_EXPORTDEVICEMEM *psExportDeviceMemOUT =
 				(PVRSRV_BRIDGE_OUT_EXPORTDEVICEMEM *)psBridgePackageKM->pvParamOut;
 			PVRSRV_FILE_PRIVATE_DATA *psPrivateData = PRIVATE_DATA(pFile);
+			IMG_HANDLE hMemInfo;
+			PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
 
-			psPrivateData->hKernelMemInfo = psExportDeviceMemOUT->hMemInfo;
+			if (pvr_get_user(hMemInfo, &psExportDeviceMemOUT->hMemInfo) != 0)
+			{
+				err = -EFAULT;
+				goto unlock_and_return;
+			}
+
+			/* Look up the meminfo we just exported */
+			if(PVRSRVLookupHandle(KERNEL_HANDLE_BASE,
+								  (IMG_PVOID *)&psKernelMemInfo,
+								  hMemInfo,
+								  PVRSRV_HANDLE_TYPE_MEM_INFO) != PVRSRV_OK)
+			{
+				PVR_DPF((PVR_DBG_ERROR, "%s: Failed to look up export handle", __FUNCTION__));
+				err = -EFAULT;
+				goto unlock_and_return;
+			}
+
+			/* Bump the refcount; decremented on release of the fd */
+			PVRSRVKernelMemInfoIncRef(psKernelMemInfo);
+
+			/* Tell the XProc about the export if required */
+			if (psKernelMemInfo->sShareMemWorkaround.bInUse)
+			{
+				BM_XProcIndexAcquire(psKernelMemInfo->sShareMemWorkaround.ui32ShareIndex);
+			}
+
+			psPrivateData->hKernelMemInfo = hMemInfo;
 #if defined(SUPPORT_MEMINFO_IDS)
-			psExportDeviceMemOUT->ui64Stamp = psPrivateData->ui64Stamp = ++ui64Stamp;
+			psPrivateData->ui64Stamp = ++ui64Stamp;
+
+			psKernelMemInfo->ui64Stamp = psPrivateData->ui64Stamp;
+			if (pvr_put_user(psPrivateData->ui64Stamp, &psExportDeviceMemOUT->ui64Stamp) != 0)
+			{
+				err = -EFAULT;
+				goto unlock_and_return;
+			}
 #endif
 			break;
 		}
-#endif
 
 #if defined(SUPPORT_MEMINFO_IDS)
 		case PVRSRV_BRIDGE_MAP_DEV_MEMORY:
+		case PVRSRV_BRIDGE_MAP_DEV_MEMORY_2:
 		{
 			PVRSRV_BRIDGE_OUT_MAP_DEV_MEMORY *psMapDeviceMemoryOUT =
 				(PVRSRV_BRIDGE_OUT_MAP_DEV_MEMORY *)psBridgePackageKM->pvParamOut;
 			PVRSRV_FILE_PRIVATE_DATA *psPrivateData = PRIVATE_DATA(pFile);
-			psMapDeviceMemoryOUT->sDstClientMemInfo.ui64Stamp =	psPrivateData->ui64Stamp;
+			if (pvr_put_user(psPrivateData->ui64Stamp, &psMapDeviceMemoryOUT->sDstClientMemInfo.ui64Stamp) != 0)
+			{
+				err = -EFAULT;
+				goto unlock_and_return;
+			}
 			break;
 		}
 
@@ -687,16 +505,20 @@ PVRSRV_BridgeDispatchKM(struct file *pFile, IMG_UINT unref__ ioctlCmd, IMG_UINT3
 		{
 			PVRSRV_BRIDGE_OUT_MAP_DEVICECLASS_MEMORY *psDeviceClassMemoryOUT =
 				(PVRSRV_BRIDGE_OUT_MAP_DEVICECLASS_MEMORY *)psBridgePackageKM->pvParamOut;
-			psDeviceClassMemoryOUT->sClientMemInfo.ui64Stamp = ++ui64Stamp;
+			if (pvr_put_user(++ui64Stamp, &psDeviceClassMemoryOUT->sClientMemInfo.ui64Stamp) != 0)
+			{
+				err = -EFAULT;
+				goto unlock_and_return;
+			}
 			break;
 		}
-#endif
+#endif /* defined(SUPPORT_MEMINFO_IDS) */
 
 		default:
 			break;
 	}
 
 unlock_and_return:
-	mutex_unlock(&gPVRSRVLock);
+	LinuxUnLockMutex(&gPVRSRVLock);
 	return err;
 }

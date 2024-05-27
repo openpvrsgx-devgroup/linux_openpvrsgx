@@ -41,7 +41,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */ /**************************************************************************/
 
 
-#if !defined(LINUX)
+#if !defined(LINUX) && !defined(__QNXNTO__)
 #include <ntddk.h>
 #include <windef.h>
 #endif
@@ -93,7 +93,6 @@ IMG_VOID ReadInHotKeys(IMG_VOID)
 	*/
 	HostReadRegistryDWORDFromString("DEBUG\\Streams", "ui32ScanCode"  , &g_PrivateHotKeyData.ui32ScanCode);
 	HostReadRegistryDWORDFromString("DEBUG\\Streams", "ui32ShiftState", &g_PrivateHotKeyData.ui32ShiftState);
-#endif
 }
 
 /******************************************************************************
@@ -120,6 +119,10 @@ IMG_VOID RegisterKeyPressed(IMG_UINT32 dwui32ScanCode, PHOTKEYINFO pInfo)
 
 		if (!g_bHotKeyPressed)
 		{
+			/*
+				Capture the next frame.
+			*/
+			g_ui32HotKeyFrame = psStream->psCtrl->ui32Current + 2;
 
 			/*
 				Do the flag.

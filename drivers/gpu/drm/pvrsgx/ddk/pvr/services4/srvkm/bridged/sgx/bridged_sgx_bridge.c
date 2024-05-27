@@ -57,6 +57,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "power.h"
 #include "pvr_bridge_km.h"
 #include "sgx_bridge_km.h"
+#include "sgx_options.h"
 
 #if defined(SUPPORT_MSVDX)
 	#include "msvdx_bridge.h"
@@ -65,6 +66,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "bridged_pvr_bridge.h"
 #include "bridged_sgx_bridge.h"
 #include "sgxutils.h"
+#include "buffer_manager.h"
 #include "pdump_km.h"
 
 static IMG_INT
@@ -78,7 +80,8 @@ SGXGetClientInfoBW(IMG_UINT32 ui32BridgeID,
 	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID, PVRSRV_BRIDGE_SGX_GETCLIENTINFO);
 
 	psGetClientInfoOUT->eError =
-		PVRSRVLookupHandle(psPerProc->psHandleBase, &hDevCookieInt,
+		PVRSRVLookupHandle(psPerProc->psHandleBase,
+						   &hDevCookieInt,
 						   psGetClientInfoIN->hDevCookie,
 						   PVRSRV_HANDLE_TYPE_DEV_NODE);
 	if(psGetClientInfoOUT->eError != PVRSRV_OK)
@@ -104,7 +107,8 @@ SGXReleaseClientInfoBW(IMG_UINT32 ui32BridgeID,
 	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID, PVRSRV_BRIDGE_SGX_RELEASECLIENTINFO);
 
 	psRetOUT->eError =
-		PVRSRVLookupHandle(psPerProc->psHandleBase, &hDevCookieInt,
+		PVRSRVLookupHandle(psPerProc->psHandleBase,
+						   &hDevCookieInt,
 						   psReleaseClientInfoIN->hDevCookie,
 						   PVRSRV_HANDLE_TYPE_DEV_NODE);
 	if(psRetOUT->eError != PVRSRV_OK)
@@ -116,8 +120,14 @@ SGXReleaseClientInfoBW(IMG_UINT32 ui32BridgeID,
 
 	PVR_ASSERT(psDevInfo->ui32ClientRefCount > 0);
 
-	psDevInfo->ui32ClientRefCount--;
-
+	/* 
+	 * psDevInfo->ui32ClientRefCount can be zero if an error occurred before SGXGetClientInfo is called
+	 */
+	if (psDevInfo->ui32ClientRefCount > 0)
+	{
+		psDevInfo->ui32ClientRefCount--;
+	}
+	
 	psRetOUT->eError = PVRSRV_OK;
 
 	return 0;
@@ -131,11 +141,15 @@ SGXGetInternalDevInfoBW(IMG_UINT32 ui32BridgeID,
 						PVRSRV_PER_PROCESS_DATA *psPerProc)
 {
 	IMG_HANDLE hDevCookieInt;
+#if defined (SUPPORT_SID_INTERFACE)
+	SGX_INTERNAL_DEVINFO_KM sSGXInternalDevInfo;
+#endif
 
 	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID, PVRSRV_BRIDGE_SGX_GETINTERNALDEVINFO);
 
 	psSGXGetInternalDevInfoOUT->eError =
-		PVRSRVLookupHandle(psPerProc->psHandleBase, &hDevCookieInt,
+		PVRSRVLookupHandle(psPerProc->psHandleBase,
+						   &hDevCookieInt,
 						   psSGXGetInternalDevInfoIN->hDevCookie,
 						   PVRSRV_HANDLE_TYPE_DEV_NODE);
 	if(psSGXGetInternalDevInfoOUT->eError != PVRSRV_OK)
@@ -145,13 +159,24 @@ SGXGetInternalDevInfoBW(IMG_UINT32 ui32BridgeID,
 
 	psSGXGetInternalDevInfoOUT->eError =
 		SGXGetInternalDevInfoKM(hDevCookieInt,
+#if defined (SUPPORT_SID_INTERFACE)
+								&sSGXInternalDevInfo);
+#else
 								&psSGXGetInternalDevInfoOUT->sSGXInternalDevInfo);
+#endif
 
-
+	/*
+	 * Handle is not allocated in batch mode, as there is no resource
+	 * allocation to undo if the handle allocation fails.
+	 */
 	psSGXGetInternalDevInfoOUT->eError =
 		PVRSRVAllocHandle(psPerProc->psHandleBase,
 						  &psSGXGetInternalDevInfoOUT->sSGXInternalDevInfo.hHostCtlKernelMemInfoHandle,
+#if defined (SUPPORT_SID_INTERFACE)
+						  sSGXInternalDevInfo.hHostCtlKernelMemInfoHandle,
+#else
 						  psSGXGetInternalDevInfoOUT->sSGXInternalDevInfo.hHostCtlKernelMemInfoHandle,
+#endif
 						  PVRSRV_HANDLE_TYPE_MEM_INFO,
 						  PVRSRV_HANDLE_ALLOC_FLAG_SHARED);
 
@@ -169,7 +194,12 @@ SGXDoKickBW(IMG_UINT32 ui32BridgeID,
 	IMG_UINT32 i;
 	IMG_INT ret = 0;
 	IMG_UINT32 ui32NumDstSyncs;
+#if defined (SUPPORT_SID_INTERFACE)
+	SGX_CCB_KICK_KM sCCBKickKM = {{0}};
+	IMG_HANDLE	ahSyncInfoHandles[16];
+#else
 	IMG_HANDLE *phKernelSyncInfoHandles = IMG_NULL;
+#endif
 
 	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID, PVRSRV_BRIDGE_SGX_DOKICK);
 
@@ -186,7 +216,11 @@ SGXDoKickBW(IMG_UINT32 ui32BridgeID,
 
 	psRetOUT->eError =
 		PVRSRVLookupHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+						   &sCCBKickKM.hCCBKernelMemInfo,
+#else
 						   &psDoKickIN->sCCBKick.hCCBKernelMemInfo,
+#endif
 						   psDoKickIN->sCCBKick.hCCBKernelMemInfo,
 						   PVRSRV_HANDLE_TYPE_MEM_INFO);
 
@@ -195,11 +229,24 @@ SGXDoKickBW(IMG_UINT32 ui32BridgeID,
 		return 0;
 	}
 
+#if defined (SUPPORT_SID_INTERFACE)
+	if (psDoKickIN->sCCBKick.ui32NumDstSyncObjects > 16)
+	{
+		return 0;
+	}
+			
+	if(psDoKickIN->sCCBKick.hTA3DSyncInfo != 0)
+#else
 	if(psDoKickIN->sCCBKick.hTA3DSyncInfo != IMG_NULL)
+#endif
 	{
 		psRetOUT->eError =
 			PVRSRVLookupHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+							   &sCCBKickKM.hTA3DSyncInfo,
+#else
 							   &psDoKickIN->sCCBKick.hTA3DSyncInfo,
+#endif
 							   psDoKickIN->sCCBKick.hTA3DSyncInfo,
 							   PVRSRV_HANDLE_TYPE_SYNC_INFO);
 
@@ -209,11 +256,19 @@ SGXDoKickBW(IMG_UINT32 ui32BridgeID,
 		}
 	}
 
+#if defined (SUPPORT_SID_INTERFACE)
+	if(psDoKickIN->sCCBKick.hTASyncInfo != 0)
+#else
 	if(psDoKickIN->sCCBKick.hTASyncInfo != IMG_NULL)
+#endif
 	{
 		psRetOUT->eError =
 			PVRSRVLookupHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+							   &sCCBKickKM.hTASyncInfo,
+#else
 							   &psDoKickIN->sCCBKick.hTASyncInfo,
+#endif
 							   psDoKickIN->sCCBKick.hTASyncInfo,
 							   PVRSRV_HANDLE_TYPE_SYNC_INFO);
 
@@ -223,11 +278,33 @@ SGXDoKickBW(IMG_UINT32 ui32BridgeID,
 		}
 	}
 
+#if defined(FIX_HW_BRN_31620)
+	/* We need to lookup the mem context and pass it through */
+	psRetOUT->eError =
+		PVRSRVLookupHandle(psPerProc->psHandleBase,
+						   &psDoKickIN->sCCBKick.hDevMemContext,
+						   psDoKickIN->sCCBKick.hDevMemContext,
+						   PVRSRV_HANDLE_TYPE_DEV_MEM_CONTEXT);
+
+	if(psRetOUT->eError != PVRSRV_OK)
+	{
+		return 0;
+	}
+#endif
+
+#if defined (SUPPORT_SID_INTERFACE)
+	if(psDoKickIN->sCCBKick.h3DSyncInfo != 0)
+#else
 	if(psDoKickIN->sCCBKick.h3DSyncInfo != IMG_NULL)
+#endif
 	{
 		psRetOUT->eError =
 			PVRSRVLookupHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+							   &sCCBKickKM.h3DSyncInfo,
+#else
 							   &psDoKickIN->sCCBKick.h3DSyncInfo,
+#endif
 							   psDoKickIN->sCCBKick.h3DSyncInfo,
 							   PVRSRV_HANDLE_TYPE_SYNC_INFO);
 
@@ -246,11 +323,18 @@ SGXDoKickBW(IMG_UINT32 ui32BridgeID,
 		return 0;
 	}
 
+#if defined (SUPPORT_SID_INTERFACE)
+	sCCBKickKM.ui32NumTASrcSyncs = psDoKickIN->sCCBKick.ui32NumTASrcSyncs;
+#endif
 	for(i=0; i<psDoKickIN->sCCBKick.ui32NumTASrcSyncs; i++)
 	{
 		psRetOUT->eError =
 			PVRSRVLookupHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+							   &sCCBKickKM.ahTASrcKernelSyncInfo[i],
+#else
 							   &psDoKickIN->sCCBKick.ahTASrcKernelSyncInfo[i],
+#endif
 							   psDoKickIN->sCCBKick.ahTASrcKernelSyncInfo[i],
 							   PVRSRV_HANDLE_TYPE_SYNC_INFO);
 
@@ -266,11 +350,18 @@ SGXDoKickBW(IMG_UINT32 ui32BridgeID,
 		return 0;
 	}
 
+#if defined (SUPPORT_SID_INTERFACE)
+	sCCBKickKM.ui32NumTADstSyncs = psDoKickIN->sCCBKick.ui32NumTADstSyncs;
+#endif
 	for(i=0; i<psDoKickIN->sCCBKick.ui32NumTADstSyncs; i++)
 	{
 		psRetOUT->eError =
 			PVRSRVLookupHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+							   &sCCBKickKM.ahTADstKernelSyncInfo[i],
+#else
 							   &psDoKickIN->sCCBKick.ahTADstKernelSyncInfo[i],
+#endif
 							   psDoKickIN->sCCBKick.ahTADstKernelSyncInfo[i],
 							   PVRSRV_HANDLE_TYPE_SYNC_INFO);
 
@@ -286,11 +377,18 @@ SGXDoKickBW(IMG_UINT32 ui32BridgeID,
 		return 0;
 	}
 
+#if defined (SUPPORT_SID_INTERFACE)
+	sCCBKickKM.ui32Num3DSrcSyncs = psDoKickIN->sCCBKick.ui32Num3DSrcSyncs;
+#endif
 	for(i=0; i<psDoKickIN->sCCBKick.ui32Num3DSrcSyncs; i++)
 	{
 		psRetOUT->eError =
 			PVRSRVLookupHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+							   &sCCBKickKM.ah3DSrcKernelSyncInfo[i],
+#else
 							   &psDoKickIN->sCCBKick.ah3DSrcKernelSyncInfo[i],
+#endif
 							   psDoKickIN->sCCBKick.ah3DSrcKernelSyncInfo[i],
 							   PVRSRV_HANDLE_TYPE_SYNC_INFO);
 
@@ -299,18 +397,26 @@ SGXDoKickBW(IMG_UINT32 ui32BridgeID,
 			return 0;
 		}
 	}
-#else
-
-	if (psDoKickIN->sCCBKick.ui32NumSrcSyncs > SGX_MAX_SRC_SYNCS)
+#else/* #if defined(SUPPORT_SGX_GENERALISED_SYNCOBJECTS) */
+	/* texture dependency details */
+	if (psDoKickIN->sCCBKick.ui32NumSrcSyncs > SGX_MAX_SRC_SYNCS_TA)
 	{
 		psRetOUT->eError = PVRSRV_ERROR_INVALID_PARAMS;
 		return 0;
 	}
+
+#if defined (SUPPORT_SID_INTERFACE)
+	sCCBKickKM.ui32NumSrcSyncs = psDoKickIN->sCCBKick.ui32NumSrcSyncs;
+#endif
 	for(i=0; i<psDoKickIN->sCCBKick.ui32NumSrcSyncs; i++)
 	{
 		psRetOUT->eError =
 			PVRSRVLookupHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+							   &sCCBKickKM.ahSrcKernelSyncInfo[i],
+#else
 							   &psDoKickIN->sCCBKick.ahSrcKernelSyncInfo[i],
+#endif
 							   psDoKickIN->sCCBKick.ahSrcKernelSyncInfo[i],
 							   PVRSRV_HANDLE_TYPE_SYNC_INFO);
 
@@ -319,7 +425,7 @@ SGXDoKickBW(IMG_UINT32 ui32BridgeID,
 			return 0;
 		}
 	}
-#endif
+#endif/* #if defined(SUPPORT_SGX_GENERALISED_SYNCOBJECTS) */
 
 	if (psDoKickIN->sCCBKick.ui32NumTAStatusVals > SGX_MAX_TA_STATUS_VALS)
 	{
@@ -331,12 +437,25 @@ SGXDoKickBW(IMG_UINT32 ui32BridgeID,
 		psRetOUT->eError =
 #if defined(SUPPORT_SGX_NEW_STATUS_VALS)
 			PVRSRVLookupHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+							   &sCCBKickKM.asTAStatusUpdate[i].hKernelMemInfo,
+#else
 							   &psDoKickIN->sCCBKick.asTAStatusUpdate[i].hKernelMemInfo,
+#endif
 							   psDoKickIN->sCCBKick.asTAStatusUpdate[i].hKernelMemInfo,
 							   PVRSRV_HANDLE_TYPE_MEM_INFO);
+
+#if defined (SUPPORT_SID_INTERFACE)
+		sCCBKickKM.asTAStatusUpdate[i].sCtlStatus = psDoKickIN->sCCBKick.asTAStatusUpdate[i].sCtlStatus;
+#endif
+
 #else
 			PVRSRVLookupHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+							   &sCCBKickKM.ahTAStatusSyncInfo[i],
+#else
 							   &psDoKickIN->sCCBKick.ahTAStatusSyncInfo[i],
+#endif
 							   psDoKickIN->sCCBKick.ahTAStatusSyncInfo[i],
 							   PVRSRV_HANDLE_TYPE_SYNC_INFO);
 #endif
@@ -356,12 +475,24 @@ SGXDoKickBW(IMG_UINT32 ui32BridgeID,
 		psRetOUT->eError =
 #if defined(SUPPORT_SGX_NEW_STATUS_VALS)
 			PVRSRVLookupHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+							   &sCCBKickKM.as3DStatusUpdate[i].hKernelMemInfo,
+#else
 							   &psDoKickIN->sCCBKick.as3DStatusUpdate[i].hKernelMemInfo,
+#endif
 							   psDoKickIN->sCCBKick.as3DStatusUpdate[i].hKernelMemInfo,
 							   PVRSRV_HANDLE_TYPE_MEM_INFO);
+							   
+#if defined (SUPPORT_SID_INTERFACE)
+		sCCBKickKM.as3DStatusUpdate[i].sCtlStatus = psDoKickIN->sCCBKick.as3DStatusUpdate[i].sCtlStatus;
+#endif
 #else
 			PVRSRVLookupHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+							   &sCCBKickKM.ah3DStatusSyncInfo[i],
+#else
 							   &psDoKickIN->sCCBKick.ah3DStatusSyncInfo[i],
+#endif
 							   psDoKickIN->sCCBKick.ah3DStatusSyncInfo[i],
 							   PVRSRV_HANDLE_TYPE_SYNC_INFO);
 #endif
@@ -395,6 +526,9 @@ SGXDoKickBW(IMG_UINT32 ui32BridgeID,
 			return 0;
 		}
 
+#if defined (SUPPORT_SID_INTERFACE)
+		sCCBKickKM.pahDstSyncHandles = phKernelSyncInfoHandles;
+#else
 		if(CopyFromUserWrapper(psPerProc,
 							ui32BridgeID,
 							phKernelSyncInfoHandles,
@@ -407,12 +541,17 @@ SGXDoKickBW(IMG_UINT32 ui32BridgeID,
 
 		/* Set sCCBKick.pahDstSyncHandles to point to the local memory */
 		psDoKickIN->sCCBKick.pahDstSyncHandles = phKernelSyncInfoHandles;
+#endif
 
 		for( i = 0; i < ui32NumDstSyncs; i++)
 		{
 			psRetOUT->eError =
 				PVRSRVLookupHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+									&sCCBKickKM.pahDstSyncHandles[i],
+#else
 									&psDoKickIN->sCCBKick.pahDstSyncHandles[i],
+#endif
 									psDoKickIN->sCCBKick.pahDstSyncHandles[i],
 									PVRSRV_HANDLE_TYPE_SYNC_INFO);
 
@@ -425,7 +564,11 @@ SGXDoKickBW(IMG_UINT32 ui32BridgeID,
 
 		psRetOUT->eError =
 					PVRSRVLookupHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+									   &sCCBKickKM.hKernelHWSyncListMemInfo,
+#else
 									   &psDoKickIN->sCCBKick.hKernelHWSyncListMemInfo,
+#endif
 									   psDoKickIN->sCCBKick.hKernelHWSyncListMemInfo,
 									   PVRSRV_HANDLE_TYPE_MEM_INFO);
 
@@ -435,9 +578,34 @@ SGXDoKickBW(IMG_UINT32 ui32BridgeID,
 		}
 	}
 
+#if defined (SUPPORT_SID_INTERFACE)
+	OSMemCopy(&sCCBKickKM.sCommand, &psDoKickIN->sCCBKick.sCommand, sizeof(sCCBKickKM.sCommand));
+
+	sCCBKickKM.ui32NumDstSyncObjects = psDoKickIN->sCCBKick.ui32NumDstSyncObjects;
+	sCCBKickKM.ui32NumTAStatusVals   = psDoKickIN->sCCBKick.ui32NumTAStatusVals;
+	sCCBKickKM.ui32Num3DStatusVals   = psDoKickIN->sCCBKick.ui32Num3DStatusVals;
+	sCCBKickKM.bFirstKickOrResume    = psDoKickIN->sCCBKick.bFirstKickOrResume;
+	sCCBKickKM.ui32CCBOffset         = psDoKickIN->sCCBKick.ui32CCBOffset;
+	sCCBKickKM.bTADependency         = psDoKickIN->sCCBKick.bTADependency;
+
+#if defined(NO_HARDWARE) || defined(PDUMP)
+	sCCBKickKM.bTerminateOrAbort = psDoKickIN->sCCBKick.bTerminateOrAbort;
+#endif
+#if defined(PDUMP)
+	sCCBKickKM.ui32CCBDumpWOff = psDoKickIN->sCCBKick.ui32CCBDumpWOff;
+#endif
+
+#if defined(NO_HARDWARE)
+	sCCBKickKM.ui32WriteOpsPendingVal = psDoKickIN->sCCBKick.ui32WriteOpsPendingVal;
+#endif
+#endif /* #if defined (SUPPORT_SID_INTERFACE) */
 	psRetOUT->eError =
 		SGXDoKickKM(hDevCookieInt,
+#if defined (SUPPORT_SID_INTERFACE)
+					&sCCBKickKM);
+#else
 					&psDoKickIN->sCCBKick);
+#endif
 
 PVRSRV_BRIDGE_SGX_DOKICK_RETURN_RESULT:
 
@@ -489,12 +657,29 @@ SGXSubmitTransferBW(IMG_UINT32 ui32BridgeID,
 {
 	IMG_HANDLE hDevCookieInt;
 	PVRSRV_TRANSFER_SGX_KICK *psKick;
+#if defined (SUPPORT_SID_INTERFACE)
+	PVRSRV_TRANSFER_SGX_KICK_KM sKickKM = {0};
+#endif
 	IMG_UINT32 i;
 
 	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID, PVRSRV_BRIDGE_SGX_SUBMITTRANSFER);
 	PVR_UNREFERENCED_PARAMETER(ui32BridgeID);
 
 	psKick = &psSubmitTransferIN->sKick;
+
+#if defined(FIX_HW_BRN_31620)
+	/* We need to lookup the mem context and pass it through */
+	psRetOUT->eError =
+		PVRSRVLookupHandle(psPerProc->psHandleBase,
+						   &psKick->hDevMemContext,
+						   psKick->hDevMemContext,
+						   PVRSRV_HANDLE_TYPE_DEV_MEM_CONTEXT);
+
+	if(psRetOUT->eError != PVRSRV_OK)
+	{
+		return 0;
+	}
+#endif
 
 	psRetOUT->eError =
 		PVRSRVLookupHandle(psPerProc->psHandleBase,
@@ -508,7 +693,11 @@ SGXSubmitTransferBW(IMG_UINT32 ui32BridgeID,
 
 	psRetOUT->eError =
 		PVRSRVLookupHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+						   &sKickKM.hCCBMemInfo,
+#else
 						   &psKick->hCCBMemInfo,
+#endif
 						   psKick->hCCBMemInfo,
 						   PVRSRV_HANDLE_TYPE_MEM_INFO);
 	if(psRetOUT->eError != PVRSRV_OK)
@@ -520,7 +709,11 @@ SGXSubmitTransferBW(IMG_UINT32 ui32BridgeID,
 	{
 		psRetOUT->eError =
 			PVRSRVLookupHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+							   &sKickKM.hTASyncInfo,
+#else
 							   &psKick->hTASyncInfo,
+#endif
 							   psKick->hTASyncInfo,
 							   PVRSRV_HANDLE_TYPE_SYNC_INFO);
 		if(psRetOUT->eError != PVRSRV_OK)
@@ -533,7 +726,11 @@ SGXSubmitTransferBW(IMG_UINT32 ui32BridgeID,
 	{
 		psRetOUT->eError =
 			PVRSRVLookupHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+							   &sKickKM.h3DSyncInfo,
+#else
 							   &psKick->h3DSyncInfo,
+#endif
 							   psKick->h3DSyncInfo,
 							   PVRSRV_HANDLE_TYPE_SYNC_INFO);
 		if(psRetOUT->eError != PVRSRV_OK)
@@ -551,7 +748,11 @@ SGXSubmitTransferBW(IMG_UINT32 ui32BridgeID,
 	{
 		psRetOUT->eError =
 			PVRSRVLookupHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+							   &sKickKM.ahSrcSyncInfo[i],
+#else
 							   &psKick->ahSrcSyncInfo[i],
+#endif
 							   psKick->ahSrcSyncInfo[i],
 							   PVRSRV_HANDLE_TYPE_SYNC_INFO);
 		if(psRetOUT->eError != PVRSRV_OK)
@@ -569,7 +770,11 @@ SGXSubmitTransferBW(IMG_UINT32 ui32BridgeID,
 	{
 		psRetOUT->eError =
 			PVRSRVLookupHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+							   &sKickKM.ahDstSyncInfo[i],
+#else
 							   &psKick->ahDstSyncInfo[i],
+#endif
 							   psKick->ahDstSyncInfo[i],
 							   PVRSRV_HANDLE_TYPE_SYNC_INFO);
 		if(psRetOUT->eError != PVRSRV_OK)
@@ -578,9 +783,107 @@ SGXSubmitTransferBW(IMG_UINT32 ui32BridgeID,
 		}
 	}
 
+#if defined (SUPPORT_SID_INTERFACE)
+	sKickKM.sHWTransferContextDevVAddr = psKick->sHWTransferContextDevVAddr;
+	sKickKM.ui32SharedCmdCCBOffset = psKick->ui32SharedCmdCCBOffset;
+	sKickKM.ui32NumSrcSync         = psKick->ui32NumSrcSync;
+	sKickKM.ui32NumDstSync         = psKick->ui32NumDstSync;
+	sKickKM.ui32Flags              = psKick->ui32Flags;
+	sKickKM.ui32PDumpFlags         = psKick->ui32PDumpFlags;
+#if defined(PDUMP)
+	sKickKM.ui32CCBDumpWOff        = psKick->ui32CCBDumpWOff;
+#endif
+
+	psRetOUT->eError = SGXSubmitTransferKM(hDevCookieInt, &sKickKM);
+#else
 	psRetOUT->eError = SGXSubmitTransferKM(hDevCookieInt, psKick);
+#endif
 
 	return 0;
+}
+
+static IMG_INT
+SGXSetTransferContextPriorityBW(IMG_UINT32 ui32BridgeID,
+                        PVRSRV_BRIDGE_IN_SGX_SET_TRANSFER_CONTEXT_PRIORITY *psSGXSetTransferContextPriorityIN,
+                        PVRSRV_BRIDGE_RETURN *psRetOUT,
+                        PVRSRV_PER_PROCESS_DATA *psPerProc)
+{
+	IMG_HANDLE hDevCookieInt;
+    IMG_HANDLE hTransferContextInt;
+
+	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID, PVRSRV_BRIDGE_SGX_SET_TRANSFER_CONTEXT_PRIORITY);
+
+	psRetOUT->eError =
+		PVRSRVLookupHandle(psPerProc->psHandleBase,
+						   &hDevCookieInt,
+						   psSGXSetTransferContextPriorityIN->hDevCookie,
+						   PVRSRV_HANDLE_TYPE_DEV_NODE);
+
+	if(psRetOUT->eError != PVRSRV_OK)
+	{
+		return 0;
+	}
+
+	psRetOUT->eError =
+		PVRSRVLookupHandle(psPerProc->psHandleBase,
+						   &hTransferContextInt,
+						   psSGXSetTransferContextPriorityIN->hHWTransferContext,
+						   PVRSRV_HANDLE_TYPE_SGX_HW_TRANSFER_CONTEXT);
+
+	if(psRetOUT->eError != PVRSRV_OK)
+	{
+		return 0;
+	}
+
+    psRetOUT->eError = SGXSetTransferContextPriorityKM(
+            hDevCookieInt, 
+            hTransferContextInt,
+            psSGXSetTransferContextPriorityIN->ui32Priority,
+            psSGXSetTransferContextPriorityIN->ui32OffsetOfPriorityField);
+
+    return 0;
+}
+
+static IMG_INT
+SGXSetRenderContextPriorityBW(IMG_UINT32 ui32BridgeID,
+                        PVRSRV_BRIDGE_IN_SGX_SET_RENDER_CONTEXT_PRIORITY *psSGXSetRenderContextPriorityIN,
+                        PVRSRV_BRIDGE_RETURN *psRetOUT,
+                        PVRSRV_PER_PROCESS_DATA *psPerProc)
+{
+	IMG_HANDLE hDevCookieInt;
+    IMG_HANDLE hRenderContextInt;
+
+	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID, PVRSRV_BRIDGE_SGX_SET_RENDER_CONTEXT_PRIORITY);
+
+	psRetOUT->eError =
+		PVRSRVLookupHandle(psPerProc->psHandleBase,
+						   &hDevCookieInt,
+						   psSGXSetRenderContextPriorityIN->hDevCookie,
+						   PVRSRV_HANDLE_TYPE_DEV_NODE);
+
+	if(psRetOUT->eError != PVRSRV_OK)
+	{
+		return 0;
+	}
+
+	psRetOUT->eError =
+		PVRSRVLookupHandle(psPerProc->psHandleBase,
+						   &hRenderContextInt,
+						   psSGXSetRenderContextPriorityIN->hHWRenderContext,
+						   PVRSRV_HANDLE_TYPE_SGX_HW_RENDER_CONTEXT);
+
+	if(psRetOUT->eError != PVRSRV_OK)
+	{
+		return 0;
+	}
+
+    psRetOUT->eError = SGXSetRenderContextPriorityKM(
+            hDevCookieInt, 
+            hRenderContextInt,
+            psSGXSetRenderContextPriorityIN->ui32Priority,
+            psSGXSetRenderContextPriorityIN->ui32OffsetOfPriorityField);
+
+    return 0;
 }
 
 
@@ -592,11 +895,31 @@ SGXSubmit2DBW(IMG_UINT32 ui32BridgeID,
 			PVRSRV_PER_PROCESS_DATA *psPerProc)
 {
 	IMG_HANDLE hDevCookieInt;
-	PVRSRV_2D_SGX_KICK *psKick;
+	PVRSRV_2D_SGX_KICK   *psKick;
+#if defined (SUPPORT_SID_INTERFACE)
+	PVRSRV_2D_SGX_KICK_KM sKickKM;
+#endif
 	IMG_UINT32 i;
 
 	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID, PVRSRV_BRIDGE_SGX_SUBMIT2D);
 	PVR_UNREFERENCED_PARAMETER(ui32BridgeID);
+
+	psKick = &psSubmit2DIN->sKick;
+
+#if defined(FIX_HW_BRN_31620)
+	/* We need to lookup the mem context and pass it through */
+	psRetOUT->eError =
+		PVRSRVLookupHandle(psPerProc->psHandleBase,
+						   &psKick->hDevMemContext,
+						   psKick->hDevMemContext,
+						   PVRSRV_HANDLE_TYPE_DEV_MEM_CONTEXT);
+
+	if(psRetOUT->eError != PVRSRV_OK)
+	{
+		return 0;
+	}
+#endif
+
 
 	psRetOUT->eError =
 		PVRSRVLookupHandle(psPerProc->psHandleBase,
@@ -609,11 +932,14 @@ SGXSubmit2DBW(IMG_UINT32 ui32BridgeID,
 		return 0;
 	}
 
-	psKick = &psSubmit2DIN->sKick;
 
 	psRetOUT->eError =
 		PVRSRVLookupHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+						   &sKickKM.hCCBMemInfo,
+#else
 						   &psKick->hCCBMemInfo,
+#endif
 						   psKick->hCCBMemInfo,
 						   PVRSRV_HANDLE_TYPE_MEM_INFO);
 	if(psRetOUT->eError != PVRSRV_OK)
@@ -621,11 +947,19 @@ SGXSubmit2DBW(IMG_UINT32 ui32BridgeID,
 		return 0;
 	}
 
+#if defined (SUPPORT_SID_INTERFACE)
+	if (psKick->hTASyncInfo != 0)
+#else
 	if (psKick->hTASyncInfo != IMG_NULL)
+#endif
 	{
 		psRetOUT->eError =
 			PVRSRVLookupHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+							   &sKickKM.hTASyncInfo,
+#else
 							   &psKick->hTASyncInfo,
+#endif
 							   psKick->hTASyncInfo,
 							   PVRSRV_HANDLE_TYPE_SYNC_INFO);
 		if(psRetOUT->eError != PVRSRV_OK)
@@ -633,12 +967,22 @@ SGXSubmit2DBW(IMG_UINT32 ui32BridgeID,
 			return 0;
 		}
 	}
+#if defined (SUPPORT_SID_INTERFACE)
+	else
+	{
+		sKickKM.hTASyncInfo = IMG_NULL;
+	}
+#endif
 
 	if (psKick->h3DSyncInfo != IMG_NULL)
 	{
 		psRetOUT->eError =
 			PVRSRVLookupHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+							   &sKickKM.h3DSyncInfo,
+#else
 							   &psKick->h3DSyncInfo,
+#endif
 							   psKick->h3DSyncInfo,
 							   PVRSRV_HANDLE_TYPE_SYNC_INFO);
 		if(psRetOUT->eError != PVRSRV_OK)
@@ -646,12 +990,39 @@ SGXSubmit2DBW(IMG_UINT32 ui32BridgeID,
 			return 0;
 		}
 	}
+#if defined (SUPPORT_SID_INTERFACE)
+	else
+	{
+		sKickKM.h3DSyncInfo = IMG_NULL;
+	}
+#endif
 
 	if (psKick->ui32NumSrcSync > SGX_MAX_2D_SRC_SYNC_OPS)
 	{
 		psRetOUT->eError = PVRSRV_ERROR_INVALID_PARAMS;
 		return 0;
 	}
+#if defined (SUPPORT_SID_INTERFACE)
+	for (i = 0; i < SGX_MAX_2D_SRC_SYNC_OPS; i++)
+	{
+		if (i < psKick->ui32NumSrcSync)
+		{
+			psRetOUT->eError =
+				PVRSRVLookupHandle(psPerProc->psHandleBase,
+								   &sKickKM.ahSrcSyncInfo[i],
+								   psKick->ahSrcSyncInfo[i],
+								   PVRSRV_HANDLE_TYPE_SYNC_INFO);
+			if(psRetOUT->eError != PVRSRV_OK)
+			{
+				return 0;
+			}
+		}
+		else
+		{
+			sKickKM.ahSrcSyncInfo[i] = IMG_NULL;
+		}
+	}
+#else
 	for (i = 0; i < psKick->ui32NumSrcSync; i++)
 	{
 		psRetOUT->eError =
@@ -664,12 +1035,17 @@ SGXSubmit2DBW(IMG_UINT32 ui32BridgeID,
 			return 0;
 		}
 	}
+#endif
 
 	if (psKick->hDstSyncInfo != IMG_NULL)
 	{
 		psRetOUT->eError =
 			PVRSRVLookupHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+							   &sKickKM.hDstSyncInfo,
+#else
 							   &psKick->hDstSyncInfo,
+#endif
 							   psKick->hDstSyncInfo,
 							   PVRSRV_HANDLE_TYPE_SYNC_INFO);
 		if(psRetOUT->eError != PVRSRV_OK)
@@ -677,9 +1053,28 @@ SGXSubmit2DBW(IMG_UINT32 ui32BridgeID,
 			return 0;
 		}
 	}
+#if defined (SUPPORT_SID_INTERFACE)
+	else
+	{
+		sKickKM.hDstSyncInfo = IMG_NULL;
+	}
+
+	/* copy common members across */
+	sKickKM.ui32SharedCmdCCBOffset = psKick->ui32SharedCmdCCBOffset;
+	sKickKM.ui32NumSrcSync         = psKick->ui32NumSrcSync;
+	sKickKM.ui32PDumpFlags         = psKick->ui32PDumpFlags;
+	sKickKM.sHW2DContextDevVAddr   = psKick->sHW2DContextDevVAddr;
+#if defined(PDUMP)
+	sKickKM.ui32CCBDumpWOff        = psKick->ui32CCBDumpWOff;
+#endif
+#endif
 
 	psRetOUT->eError =
+#if defined (SUPPORT_SID_INTERFACE)
+		SGXSubmit2DKM(hDevCookieInt, &sKickKM);
+#else
 		SGXSubmit2DKM(hDevCookieInt, psKick);
+#endif
 
 	return 0;
 }
@@ -748,60 +1143,6 @@ SGXGetMiscInfoBW(IMG_UINT32 ui32BridgeID,
 		return -EFAULT;
 	}
 
-#ifdef SUPPORT_SGX_HWPERF
-	if (sMiscInfo.eRequest == SGX_MISC_INFO_REQUEST_HWPERF_RETRIEVE_CB)
-	{
-
-		IMG_VOID           * pAllocated;
-		IMG_HANDLE           hAllocatedHandle;
-		IMG_VOID           * psTmpUserData;
-		IMG_UINT32           allocatedSize;
-
-		allocatedSize = (IMG_UINT32)(sMiscInfo.uData.sRetrieveCB.ui32ArraySize * sizeof(PVRSRV_SGX_HWPERF_CBDATA));
-
-		ASSIGN_AND_EXIT_ON_ERROR(psRetOUT->eError,
-		                    OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
-		                    allocatedSize,
-		                    &pAllocated,
-		                    &hAllocatedHandle,
-							"Array of Hardware Performance Circular Buffer Data"));
-
-
-		psTmpUserData = sMiscInfo.uData.sRetrieveCB.psHWPerfData;
-		sMiscInfo.uData.sRetrieveCB.psHWPerfData = pAllocated;
-
-		psRetOUT->eError = SGXGetMiscInfoKM(psDevInfo, &sMiscInfo, psDeviceNode, 0);
-		if (psRetOUT->eError != PVRSRV_OK)
-		{
-			OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP,
-					  allocatedSize,
-					  pAllocated,
-					  hAllocatedHandle);
-
-			return 0;
-		}
-
-
-		psRetOUT->eError = CopyToUserWrapper(psPerProc,
-					                         ui32BridgeID,
-					                         psTmpUserData,
-					                         sMiscInfo.uData.sRetrieveCB.psHWPerfData,
-					                         allocatedSize);
-
-		sMiscInfo.uData.sRetrieveCB.psHWPerfData = psTmpUserData;
-
-		OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP,
-				  allocatedSize,
-				  pAllocated,
-			      hAllocatedHandle);
-
-		if (psRetOUT->eError != PVRSRV_OK)
-		{
-			return -EFAULT;
-		}
-	}
-	else
-#endif
 	{
 		psRetOUT->eError = SGXGetMiscInfoKM(psDevInfo, &sMiscInfo, psDeviceNode, hDevMemContextInt);
 
@@ -821,42 +1162,6 @@ SGXGetMiscInfoBW(IMG_UINT32 ui32BridgeID,
 	{
 		return -EFAULT;
 	}
-	return 0;
-}
-
-
-#if defined(SUPPORT_SGX_HWPERF)
-static IMG_INT
-SGXReadDiffCountersBW(IMG_UINT32									ui32BridgeID,
-						PVRSRV_BRIDGE_IN_SGX_READ_DIFF_COUNTERS		*psSGXReadDiffCountersIN,
-						PVRSRV_BRIDGE_OUT_SGX_READ_DIFF_COUNTERS	*psSGXReadDiffCountersOUT,
-						PVRSRV_PER_PROCESS_DATA						*psPerProc)
-{
-	IMG_HANDLE			hDevCookieInt;
-
-	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID, PVRSRV_BRIDGE_SGX_READ_DIFF_COUNTERS);
-
-	psSGXReadDiffCountersOUT->eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
-							&hDevCookieInt,
-							psSGXReadDiffCountersIN->hDevCookie,
-							PVRSRV_HANDLE_TYPE_DEV_NODE);
-
-	if(psSGXReadDiffCountersOUT->eError != PVRSRV_OK)
-	{
-		return 0;
-	}
-
-	psSGXReadDiffCountersOUT->eError = SGXReadDiffCountersKM(hDevCookieInt,
-							psSGXReadDiffCountersIN->ui32Reg,
-							&psSGXReadDiffCountersOUT->ui32Old,
-							psSGXReadDiffCountersIN->bNew,
-							psSGXReadDiffCountersIN->ui32New,
-							psSGXReadDiffCountersIN->ui32NewReset,
-							psSGXReadDiffCountersIN->ui32CountersReg,
-							psSGXReadDiffCountersIN->ui32Reg2,
-							&psSGXReadDiffCountersOUT->bActive,
-							&psSGXReadDiffCountersOUT->sDiffs);
-
 	return 0;
 }
 
@@ -916,37 +1221,46 @@ SGXReadHWPerfCBBW(IMG_UINT32							ui32BridgeID,
 
 	return 0;
 }
-#endif
 
 
 static IMG_INT
 SGXDevInitPart2BW(IMG_UINT32 ui32BridgeID,
 				  PVRSRV_BRIDGE_IN_SGXDEVINITPART2 *psSGXDevInitPart2IN,
-				  PVRSRV_BRIDGE_RETURN *psRetOUT,
+				  PVRSRV_BRIDGE_OUT_SGXDEVINITPART2 *psSGXDevInitPart2OUT,
 				  PVRSRV_PER_PROCESS_DATA *psPerProc)
 {
 	IMG_HANDLE hDevCookieInt;
+#if defined (SUPPORT_SID_INTERFACE)
+	PVRSRV_ERROR eError = PVRSRV_OK;
+#else
 	PVRSRV_ERROR eError;
+#endif
 	IMG_BOOL bDissociateFailed = IMG_FALSE;
 	IMG_BOOL bLookupFailed = IMG_FALSE;
 	IMG_BOOL bReleaseFailed = IMG_FALSE;
 	IMG_HANDLE hDummy;
 	IMG_UINT32 i;
+#if defined (SUPPORT_SID_INTERFACE)
+	SGX_BRIDGE_INIT_INFO_KM asInitInfoKM = {0};
+#endif
 
 	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID, PVRSRV_BRIDGE_SGX_DEVINITPART2);
 
+	/* Report the kernel-side build options to UM */
+	psSGXDevInitPart2OUT->ui32KMBuildOptions = SGX_BUILD_OPTIONS;
+
 	if(!psPerProc->bInitProcess)
 	{
-		psRetOUT->eError = PVRSRV_ERROR_GENERIC;
+		psSGXDevInitPart2OUT->eError = PVRSRV_ERROR_PROCESS_NOT_INITIALISED;
 		return 0;
 	}
 
-	psRetOUT->eError =
+	psSGXDevInitPart2OUT->eError =
 		PVRSRVLookupHandle(psPerProc->psHandleBase,
 						   &hDevCookieInt,
 						   psSGXDevInitPart2IN->hDevCookie,
 						   PVRSRV_HANDLE_TYPE_DEV_NODE);
-	if(psRetOUT->eError != PVRSRV_OK)
+	if(psSGXDevInitPart2OUT->eError != PVRSRV_OK)
 	{
 		return 0;
 	}
@@ -956,45 +1270,76 @@ SGXDevInitPart2BW(IMG_UINT32 ui32BridgeID,
 						   &hDummy,
 						   psSGXDevInitPart2IN->sInitInfo.hKernelCCBMemInfo,
 						   PVRSRV_HANDLE_TYPE_MEM_INFO);
-	bLookupFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+	if (eError != PVRSRV_OK)
+	{
+		bLookupFailed = IMG_TRUE;
+	}
 
 	eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
 						   &hDummy,
 						   psSGXDevInitPart2IN->sInitInfo.hKernelCCBCtlMemInfo,
 						   PVRSRV_HANDLE_TYPE_MEM_INFO);
-	bLookupFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+	if (eError != PVRSRV_OK)
+	{
+		bLookupFailed = IMG_TRUE;
+	}
 
 	eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
 						   &hDummy,
 						   psSGXDevInitPart2IN->sInitInfo.hKernelCCBEventKickerMemInfo,
 						   PVRSRV_HANDLE_TYPE_MEM_INFO);
-	bLookupFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+	if (eError != PVRSRV_OK)
+	{
+		bLookupFailed = IMG_TRUE;
+	}
 
 	eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
 						   &hDummy,
 						   psSGXDevInitPart2IN->sInitInfo.hKernelSGXHostCtlMemInfo,
 						   PVRSRV_HANDLE_TYPE_MEM_INFO);
-	bLookupFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+	if (eError != PVRSRV_OK)
+	{
+		bLookupFailed = IMG_TRUE;
+	}
 
 	eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
 						   &hDummy,
 						   psSGXDevInitPart2IN->sInitInfo.hKernelSGXTA3DCtlMemInfo,
 						   PVRSRV_HANDLE_TYPE_MEM_INFO);
-	bLookupFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+	if (eError != PVRSRV_OK)
+	{
+		bLookupFailed = IMG_TRUE;
+	}
 
+#if defined(FIX_HW_BRN_31272) || defined(FIX_HW_BRN_31780) || defined(FIX_HW_BRN_33920)
+	eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
+						   &hDummy,
+						   psSGXDevInitPart2IN->sInitInfo.hKernelSGXPTLAWriteBackMemInfo,
+						   PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bLookupFailed = IMG_TRUE;
+	}
+#endif
 
 	eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
 						   &hDummy,
 						   psSGXDevInitPart2IN->sInitInfo.hKernelSGXMiscMemInfo,
 						   PVRSRV_HANDLE_TYPE_MEM_INFO);
-	bLookupFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+	if (eError != PVRSRV_OK)
+	{
+		bLookupFailed = IMG_TRUE;
+	}
 
 #if defined(SGX_SUPPORT_HWPROFILING)
 	eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
 						   &hDummy,
 						   psSGXDevInitPart2IN->sInitInfo.hKernelHWProfilingMemInfo,
 						   PVRSRV_HANDLE_TYPE_MEM_INFO);
-	bLookupFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+	if (eError != PVRSRV_OK)
+	{
+		bLookupFailed = IMG_TRUE;
+	}
 #endif
 
 #if defined(SUPPORT_SGX_HWPERF)
@@ -1002,7 +1347,151 @@ SGXDevInitPart2BW(IMG_UINT32 ui32BridgeID,
 						   &hDummy,
 						   psSGXDevInitPart2IN->sInitInfo.hKernelHWPerfCBMemInfo,
 						   PVRSRV_HANDLE_TYPE_MEM_INFO);
-	bLookupFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+	if (eError != PVRSRV_OK)
+	{
+		PVR_DPF((PVR_DBG_ERROR, "SGXDevInitPart2BW: Failed to look up HWPerf meminfo (possibly due to SUPPORT_SGX_HWPERF option mismatch)"));
+		bLookupFailed = IMG_TRUE;
+	}
+#endif
+
+	eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
+								&hDummy,
+								psSGXDevInitPart2IN->sInitInfo.hKernelTASigBufferMemInfo,
+								PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bLookupFailed = IMG_TRUE;
+	}
+
+	eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
+								&hDummy,
+								psSGXDevInitPart2IN->sInitInfo.hKernel3DSigBufferMemInfo,
+								PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bLookupFailed = IMG_TRUE;
+	}
+
+#if defined(FIX_HW_BRN_29702)
+	eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
+						   &hDummy,
+						   psSGXDevInitPart2IN->sInitInfo.hKernelCFIMemInfo,
+						   PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bLookupFailed = IMG_TRUE;
+	}
+#endif
+
+#if defined(FIX_HW_BRN_29823)
+	eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
+						   &hDummy,
+						   psSGXDevInitPart2IN->sInitInfo.hKernelDummyTermStreamMemInfo,
+						   PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bLookupFailed = IMG_TRUE;
+	}
+#endif
+
+
+#if defined(FIX_HW_BRN_31542) || defined(FIX_HW_BRN_36513)
+	eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
+						   &hDummy,
+						   psSGXDevInitPart2IN->sInitInfo.hKernelClearClipWAVDMStreamMemInfo,
+						   PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bLookupFailed = IMG_TRUE;
+	}
+	eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
+						   &hDummy,
+						   psSGXDevInitPart2IN->sInitInfo.hKernelClearClipWAIndexStreamMemInfo,
+						   PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bLookupFailed = IMG_TRUE;
+	}
+	eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
+						   &hDummy,
+						   psSGXDevInitPart2IN->sInitInfo.hKernelClearClipWAPDSMemInfo,
+						   PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bLookupFailed = IMG_TRUE;
+	}
+	eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
+						   &hDummy,
+						   psSGXDevInitPart2IN->sInitInfo.hKernelClearClipWAUSEMemInfo,
+						   PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bLookupFailed = IMG_TRUE;
+	}
+	eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
+						   &hDummy,
+						   psSGXDevInitPart2IN->sInitInfo.hKernelClearClipWAParamMemInfo,
+						   PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bLookupFailed = IMG_TRUE;
+	}
+	eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
+						   &hDummy,
+						   psSGXDevInitPart2IN->sInitInfo.hKernelClearClipWAPMPTMemInfo,
+						   PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bLookupFailed = IMG_TRUE;
+	}
+	
+	eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
+						   &hDummy,
+						   psSGXDevInitPart2IN->sInitInfo.hKernelClearClipWATPCMemInfo,
+						   PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bLookupFailed = IMG_TRUE;
+	}
+	eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
+						   &hDummy,
+						   psSGXDevInitPart2IN->sInitInfo.hKernelClearClipWAPSGRgnHdrMemInfo,
+						   PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bLookupFailed = IMG_TRUE;
+	}
+#endif
+
+#if defined(SGX_FEATURE_VDM_CONTEXT_SWITCH) && defined(FIX_HW_BRN_31559)
+	eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
+						   &hDummy,
+						   psSGXDevInitPart2IN->sInitInfo.hKernelVDMSnapShotBufferMemInfo,
+						   PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bLookupFailed = IMG_TRUE;
+	}
+
+	eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
+						   &hDummy,
+						   psSGXDevInitPart2IN->sInitInfo.hKernelVDMCtrlStreamBufferMemInfo,
+						   PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bLookupFailed = IMG_TRUE;
+	}
+#endif
+#if defined(SGX_FEATURE_VDM_CONTEXT_SWITCH) && \
+	defined(FIX_HW_BRN_33657) && defined(SUPPORT_SECURE_33657_FIX)
+	eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
+						   &hDummy,
+						   psSGXDevInitPart2IN->sInitInfo.hKernelVDMStateUpdateBufferMemInfo,
+						   PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bLookupFailed = IMG_TRUE;
+	}
 #endif
 
 #if defined(PVRSRV_USSE_EDM_STATUS_DEBUG)
@@ -1010,22 +1499,25 @@ SGXDevInitPart2BW(IMG_UINT32 ui32BridgeID,
 						   &hDummy,
 						   psSGXDevInitPart2IN->sInitInfo.hKernelEDMStatusBufferMemInfo,
 						   PVRSRV_HANDLE_TYPE_MEM_INFO);
-	bLookupFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
-#endif
-
-#if defined(SGX_FEATURE_SPM_MODE_0)
-	eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
-						   &hDummy,
-						   psSGXDevInitPart2IN->sInitInfo.hKernelTmpDPMStateMemInfo,
-						   PVRSRV_HANDLE_TYPE_MEM_INFO);
-	bLookupFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+	if (eError != PVRSRV_OK)
+	{
+		bLookupFailed = IMG_TRUE;
+	}
 #endif
 
 	for (i = 0; i < SGX_MAX_INIT_MEM_HANDLES; i++)
 	{
+#if defined (SUPPORT_SID_INTERFACE)
+		IMG_SID hHandle = psSGXDevInitPart2IN->sInitInfo.asInitMemHandles[i];
+#else
 		IMG_HANDLE hHandle = psSGXDevInitPart2IN->sInitInfo.asInitMemHandles[i];
+#endif
 
+#if defined (SUPPORT_SID_INTERFACE)
+		if (hHandle == 0)
+#else
 		if (hHandle == IMG_NULL)
+#endif
 		{
 			continue;
 		}
@@ -1034,198 +1526,736 @@ SGXDevInitPart2BW(IMG_UINT32 ui32BridgeID,
 							   &hDummy,
 							   hHandle,
 							   PVRSRV_HANDLE_TYPE_MEM_INFO);
-		bLookupFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+		if (eError != PVRSRV_OK)
+		{
+			bLookupFailed = IMG_TRUE;
+		}
 	}
 
 	if (bLookupFailed)
 	{
-		PVR_DPF((PVR_DBG_ERROR, "DevInitSGXPart2BW: A handle lookup failed"));
-		psRetOUT->eError = PVRSRV_ERROR_GENERIC;
+		PVR_DPF((PVR_DBG_ERROR, "SGXDevInitPart2BW: A handle lookup failed"));
+		psSGXDevInitPart2OUT->eError = PVRSRV_ERROR_INIT2_PHASE_FAILED;
 		return 0;
+	}
+
+	/* Lookup and release the device memory handles */
+	eError = PVRSRVLookupAndReleaseHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+						   &asInitInfoKM.hKernelCCBMemInfo,
+#else
+						   &psSGXDevInitPart2IN->sInitInfo.hKernelCCBMemInfo,
+#endif
+						   psSGXDevInitPart2IN->sInitInfo.hKernelCCBMemInfo,
+						   PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bReleaseFailed = IMG_TRUE;
+	}
+
+	eError = PVRSRVLookupAndReleaseHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+						   &asInitInfoKM.hKernelCCBCtlMemInfo,
+#else
+						   &psSGXDevInitPart2IN->sInitInfo.hKernelCCBCtlMemInfo,
+#endif
+						   psSGXDevInitPart2IN->sInitInfo.hKernelCCBCtlMemInfo,
+						   PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bReleaseFailed = IMG_TRUE;
+	}
+
+	eError = PVRSRVLookupAndReleaseHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+						   &asInitInfoKM.hKernelCCBEventKickerMemInfo,
+#else
+						   &psSGXDevInitPart2IN->sInitInfo.hKernelCCBEventKickerMemInfo,
+#endif
+						   psSGXDevInitPart2IN->sInitInfo.hKernelCCBEventKickerMemInfo,
+						   PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bReleaseFailed = IMG_TRUE;
 	}
 
 
 	eError = PVRSRVLookupAndReleaseHandle(psPerProc->psHandleBase,
-						   &psSGXDevInitPart2IN->sInitInfo.hKernelCCBMemInfo,
-						   psSGXDevInitPart2IN->sInitInfo.hKernelCCBMemInfo,
-						   PVRSRV_HANDLE_TYPE_MEM_INFO);
-	bReleaseFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
-
-	eError = PVRSRVLookupAndReleaseHandle(psPerProc->psHandleBase,
-						   &psSGXDevInitPart2IN->sInitInfo.hKernelCCBCtlMemInfo,
-						   psSGXDevInitPart2IN->sInitInfo.hKernelCCBCtlMemInfo,
-						   PVRSRV_HANDLE_TYPE_MEM_INFO);
-	bReleaseFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
-
-	eError = PVRSRVLookupAndReleaseHandle(psPerProc->psHandleBase,
-						   &psSGXDevInitPart2IN->sInitInfo.hKernelCCBEventKickerMemInfo,
-						   psSGXDevInitPart2IN->sInitInfo.hKernelCCBEventKickerMemInfo,
-						   PVRSRV_HANDLE_TYPE_MEM_INFO);
-	bReleaseFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
-
-
-	eError = PVRSRVLookupAndReleaseHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+						   &asInitInfoKM.hKernelSGXHostCtlMemInfo,
+#else
 						   &psSGXDevInitPart2IN->sInitInfo.hKernelSGXHostCtlMemInfo,
+#endif
 						   psSGXDevInitPart2IN->sInitInfo.hKernelSGXHostCtlMemInfo,
 						   PVRSRV_HANDLE_TYPE_MEM_INFO);
-	bReleaseFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+	if (eError != PVRSRV_OK)
+	{
+		bReleaseFailed = IMG_TRUE;
+	}
 
 	eError = PVRSRVLookupAndReleaseHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+						   &asInitInfoKM.hKernelSGXTA3DCtlMemInfo,
+#else
 						   &psSGXDevInitPart2IN->sInitInfo.hKernelSGXTA3DCtlMemInfo,
+#endif
 						   psSGXDevInitPart2IN->sInitInfo.hKernelSGXTA3DCtlMemInfo,
 						   PVRSRV_HANDLE_TYPE_MEM_INFO);
-	bReleaseFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+	if (eError != PVRSRV_OK)
+	{
+		bReleaseFailed = IMG_TRUE;
+	}
+
+#if defined(FIX_HW_BRN_31272) || defined(FIX_HW_BRN_31780) || defined(FIX_HW_BRN_33920)
+	eError = PVRSRVLookupAndReleaseHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+						   &asInitInfoKM.hKernelSGXPTLAWriteBackMemInfo,
+#else
+						   &psSGXDevInitPart2IN->sInitInfo.hKernelSGXPTLAWriteBackMemInfo,
+#endif
+						   psSGXDevInitPart2IN->sInitInfo.hKernelSGXPTLAWriteBackMemInfo,
+						   PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bReleaseFailed = IMG_TRUE;
+	}
+#endif
 
 	eError = PVRSRVLookupAndReleaseHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+						   &asInitInfoKM.hKernelSGXMiscMemInfo,
+#else
 						   &psSGXDevInitPart2IN->sInitInfo.hKernelSGXMiscMemInfo,
+#endif
 						   psSGXDevInitPart2IN->sInitInfo.hKernelSGXMiscMemInfo,
 						   PVRSRV_HANDLE_TYPE_MEM_INFO);
-	bReleaseFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+	if (eError != PVRSRV_OK)
+	{
+		bReleaseFailed = IMG_TRUE;
+	}
 
 
-	#if defined(SGX_SUPPORT_HWPROFILING)
+#if defined(SGX_SUPPORT_HWPROFILING)
 	eError = PVRSRVLookupAndReleaseHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+						   &asInitInfoKM.hKernelHWProfilingMemInfo,
+#else
 						   &psSGXDevInitPart2IN->sInitInfo.hKernelHWProfilingMemInfo,
+#endif
 						   psSGXDevInitPart2IN->sInitInfo.hKernelHWProfilingMemInfo,
 						   PVRSRV_HANDLE_TYPE_MEM_INFO);
-	bReleaseFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+	if (eError != PVRSRV_OK)
+	{
+		bReleaseFailed = IMG_TRUE;
+	}
 #endif
 
 #if defined(SUPPORT_SGX_HWPERF)
 	eError = PVRSRVLookupAndReleaseHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+						   &asInitInfoKM.hKernelHWPerfCBMemInfo,
+#else
 						   &psSGXDevInitPart2IN->sInitInfo.hKernelHWPerfCBMemInfo,
+#endif
 						   psSGXDevInitPart2IN->sInitInfo.hKernelHWPerfCBMemInfo,
 						   PVRSRV_HANDLE_TYPE_MEM_INFO);
-	bReleaseFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+	if (eError != PVRSRV_OK)
+	{
+		bReleaseFailed = IMG_TRUE;
+	}
+#endif
+
+	eError = PVRSRVLookupAndReleaseHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+										  &asInitInfoKM.hKernelTASigBufferMemInfo,
+#else
+										  &psSGXDevInitPart2IN->sInitInfo.hKernelTASigBufferMemInfo,
+#endif
+										  psSGXDevInitPart2IN->sInitInfo.hKernelTASigBufferMemInfo,
+										  PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bReleaseFailed = IMG_TRUE;
+	}
+
+	eError = PVRSRVLookupAndReleaseHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+										  &asInitInfoKM.hKernel3DSigBufferMemInfo,
+#else
+										  &psSGXDevInitPart2IN->sInitInfo.hKernel3DSigBufferMemInfo,
+#endif
+										  psSGXDevInitPart2IN->sInitInfo.hKernel3DSigBufferMemInfo,
+										  PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bReleaseFailed = IMG_TRUE;
+	}
+
+#if defined(FIX_HW_BRN_29702)
+	eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+						   &asInitInfoKM.hKernelCFIMemInfo,
+#else
+						   &psSGXDevInitPart2IN->sInitInfo.hKernelCFIMemInfo,
+#endif
+						   psSGXDevInitPart2IN->sInitInfo.hKernelCFIMemInfo,
+						   PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bLookupFailed = IMG_TRUE;
+	}
+#endif
+
+#if defined(FIX_HW_BRN_29823)
+	eError = PVRSRVLookupAndReleaseHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+						   &asInitInfoKM.hKernelDummyTermStreamMemInfo,
+#else
+						   &psSGXDevInitPart2IN->sInitInfo.hKernelDummyTermStreamMemInfo,
+#endif
+						   psSGXDevInitPart2IN->sInitInfo.hKernelDummyTermStreamMemInfo,
+						   PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bReleaseFailed = IMG_TRUE;
+	}
+#endif
+
+
+#if defined(FIX_HW_BRN_31542) || defined(FIX_HW_BRN_36513)
+	eError = PVRSRVLookupAndReleaseHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+						   &asInitInfoKM.hKernelClearClipWAVDMStreamMemInfo,
+#else
+						   &psSGXDevInitPart2IN->sInitInfo.hKernelClearClipWAVDMStreamMemInfo,
+#endif
+						   psSGXDevInitPart2IN->sInitInfo.hKernelClearClipWAVDMStreamMemInfo,
+						   PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bReleaseFailed = IMG_TRUE;
+	}
+	eError = PVRSRVLookupAndReleaseHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+						   &asInitInfoKM.hKernelClearClipWAIndexStreamMemInfo,
+#else
+						   &psSGXDevInitPart2IN->sInitInfo.hKernelClearClipWAIndexStreamMemInfo,
+#endif
+						   psSGXDevInitPart2IN->sInitInfo.hKernelClearClipWAIndexStreamMemInfo,
+						   PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bReleaseFailed = IMG_TRUE;
+	}
+	eError = PVRSRVLookupAndReleaseHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+						   &asInitInfoKM.hKernelClearClipWAPDSMemInfo,
+#else
+						   &psSGXDevInitPart2IN->sInitInfo.hKernelClearClipWAPDSMemInfo,
+#endif
+						   psSGXDevInitPart2IN->sInitInfo.hKernelClearClipWAPDSMemInfo,
+						   PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bReleaseFailed = IMG_TRUE;
+	}
+	eError = PVRSRVLookupAndReleaseHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+						   &asInitInfoKM.hKernelClearClipWAUSEMemInfo,
+#else
+						   &psSGXDevInitPart2IN->sInitInfo.hKernelClearClipWAUSEMemInfo,
+#endif
+						   psSGXDevInitPart2IN->sInitInfo.hKernelClearClipWAUSEMemInfo,
+						   PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bReleaseFailed = IMG_TRUE;
+	}
+	eError = PVRSRVLookupAndReleaseHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+						   &asInitInfoKM.hKernelClearClipWAParamMemInfo,
+#else
+						   &psSGXDevInitPart2IN->sInitInfo.hKernelClearClipWAParamMemInfo,
+#endif
+						   psSGXDevInitPart2IN->sInitInfo.hKernelClearClipWAParamMemInfo,
+						   PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bReleaseFailed = IMG_TRUE;
+	}
+	eError = PVRSRVLookupAndReleaseHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+						   &asInitInfoKM.hKernelClearClipWAPMPTMemInfo,
+#else
+						   &psSGXDevInitPart2IN->sInitInfo.hKernelClearClipWAPMPTMemInfo,
+#endif
+						   psSGXDevInitPart2IN->sInitInfo.hKernelClearClipWAPMPTMemInfo,
+						   PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bReleaseFailed = IMG_TRUE;
+	}
+	eError = PVRSRVLookupAndReleaseHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+						   &asInitInfoKM.hKernelClearClipWATPCMemInfo,
+#else
+						   &psSGXDevInitPart2IN->sInitInfo.hKernelClearClipWATPCMemInfo,
+#endif
+						   psSGXDevInitPart2IN->sInitInfo.hKernelClearClipWATPCMemInfo,
+						   PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bReleaseFailed = IMG_TRUE;
+	}
+	eError = PVRSRVLookupAndReleaseHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+						   &asInitInfoKM.hKernelClearClipWAPSGRgnHdrMemInfo,
+#else
+						   &psSGXDevInitPart2IN->sInitInfo.hKernelClearClipWAPSGRgnHdrMemInfo,
+#endif
+						   psSGXDevInitPart2IN->sInitInfo.hKernelClearClipWAPSGRgnHdrMemInfo,
+						   PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bReleaseFailed = IMG_TRUE;
+	}
+#endif
+#if defined(SGX_FEATURE_VDM_CONTEXT_SWITCH) && defined(FIX_HW_BRN_31559)
+	eError = PVRSRVLookupAndReleaseHandle(psPerProc->psHandleBase,
+						   &psSGXDevInitPart2IN->sInitInfo.hKernelVDMSnapShotBufferMemInfo,
+						   psSGXDevInitPart2IN->sInitInfo.hKernelVDMSnapShotBufferMemInfo,
+						   PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bReleaseFailed = IMG_TRUE;
+	}
+
+	eError = PVRSRVLookupAndReleaseHandle(psPerProc->psHandleBase,
+						   &psSGXDevInitPart2IN->sInitInfo.hKernelVDMCtrlStreamBufferMemInfo,
+						   psSGXDevInitPart2IN->sInitInfo.hKernelVDMCtrlStreamBufferMemInfo,
+						   PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bReleaseFailed = IMG_TRUE;
+	}
+#endif
+#if defined(SGX_FEATURE_VDM_CONTEXT_SWITCH) && \
+	defined(FIX_HW_BRN_33657) && defined(SUPPORT_SECURE_33657_FIX)
+	eError = PVRSRVLookupAndReleaseHandle(psPerProc->psHandleBase,
+						   &psSGXDevInitPart2IN->sInitInfo.hKernelVDMStateUpdateBufferMemInfo,
+						   psSGXDevInitPart2IN->sInitInfo.hKernelVDMStateUpdateBufferMemInfo,
+						   PVRSRV_HANDLE_TYPE_MEM_INFO);
+	if (eError != PVRSRV_OK)
+	{
+		bReleaseFailed = IMG_TRUE;
+	}
 #endif
 
 #if defined(PVRSRV_USSE_EDM_STATUS_DEBUG)
 	eError = PVRSRVLookupAndReleaseHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+						   &asInitInfoKM.hKernelEDMStatusBufferMemInfo,
+#else
 						   &psSGXDevInitPart2IN->sInitInfo.hKernelEDMStatusBufferMemInfo,
+#endif
 						   psSGXDevInitPart2IN->sInitInfo.hKernelEDMStatusBufferMemInfo,
 						   PVRSRV_HANDLE_TYPE_MEM_INFO);
-	bReleaseFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+	if (eError != PVRSRV_OK)
+	{
+		bReleaseFailed = IMG_TRUE;
+	}
 #endif
-
-#if defined(SGX_FEATURE_SPM_MODE_0)
-	eError = PVRSRVLookupAndReleaseHandle(psPerProc->psHandleBase,
-						   &psSGXDevInitPart2IN->sInitInfo.hKernelTmpDPMStateMemInfo,
-						   psSGXDevInitPart2IN->sInitInfo.hKernelTmpDPMStateMemInfo,
-						   PVRSRV_HANDLE_TYPE_MEM_INFO);
-	bReleaseFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
-#endif
-
 
 	for (i = 0; i < SGX_MAX_INIT_MEM_HANDLES; i++)
 	{
+#if defined (SUPPORT_SID_INTERFACE)
+		IMG_SID hHandle = psSGXDevInitPart2IN->sInitInfo.asInitMemHandles[i];
+		IMG_HANDLE *phHandleKM = &asInitInfoKM.asInitMemHandles[i];
+
+		if (hHandle == 0)
+#else
 		IMG_HANDLE *phHandle = &psSGXDevInitPart2IN->sInitInfo.asInitMemHandles[i];
 
 		if (*phHandle == IMG_NULL)
+#endif
 			continue;
 
 		eError = PVRSRVLookupAndReleaseHandle(psPerProc->psHandleBase,
+#if defined (SUPPORT_SID_INTERFACE)
+							   phHandleKM,
+							   hHandle,
+#else
 							   phHandle,
 							   *phHandle,
+#endif
 							   PVRSRV_HANDLE_TYPE_MEM_INFO);
-		bReleaseFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+		if (eError != PVRSRV_OK)
+		{
+			bReleaseFailed = IMG_TRUE;
+		}
 	}
 
 	if (bReleaseFailed)
 	{
-		PVR_DPF((PVR_DBG_ERROR, "DevInitSGXPart2BW: A handle release failed"));
-		psRetOUT->eError = PVRSRV_ERROR_GENERIC;
-
+		PVR_DPF((PVR_DBG_ERROR, "SGXDevInitPart2BW: A handle release failed"));
+		psSGXDevInitPart2OUT->eError = PVRSRV_ERROR_INIT2_PHASE_FAILED;
+		/*
+		 * Given that we checked the handles before release, a release
+		 * failure is unexpected.
+		 */
 		PVR_DBG_BREAK;
 		return 0;
 	}
 
-
+	/* Dissociate device memory from caller */
+#if defined (SUPPORT_SID_INTERFACE)
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, asInitInfoKM.hKernelCCBMemInfo);
+#else
 	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, psSGXDevInitPart2IN->sInitInfo.hKernelCCBMemInfo);
-	bDissociateFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+#endif
+	if (eError != PVRSRV_OK)
+	{
+		bDissociateFailed = IMG_TRUE;
+	}
 
+#if defined (SUPPORT_SID_INTERFACE)
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, asInitInfoKM.hKernelCCBCtlMemInfo);
+#else
 	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, psSGXDevInitPart2IN->sInitInfo.hKernelCCBCtlMemInfo);
-	bDissociateFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+#endif
+	if (eError != PVRSRV_OK)
+	{
+		bDissociateFailed = IMG_TRUE;
+	}
 
+#if defined (SUPPORT_SID_INTERFACE)
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, asInitInfoKM.hKernelCCBEventKickerMemInfo);
+#else
 	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, psSGXDevInitPart2IN->sInitInfo.hKernelCCBEventKickerMemInfo);
-	bDissociateFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+#endif
+	if (eError != PVRSRV_OK)
+	{
+		bDissociateFailed = IMG_TRUE;
+	}
 
+#if defined (SUPPORT_SID_INTERFACE)
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, asInitInfoKM.hKernelSGXHostCtlMemInfo);
+#else
 	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, psSGXDevInitPart2IN->sInitInfo.hKernelSGXHostCtlMemInfo);
-	bDissociateFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+#endif
+	if (eError != PVRSRV_OK)
+	{
+		bDissociateFailed = IMG_TRUE;
+	}
 
+#if defined (SUPPORT_SID_INTERFACE)
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, asInitInfoKM.hKernelSGXTA3DCtlMemInfo);
+#else
 	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, psSGXDevInitPart2IN->sInitInfo.hKernelSGXTA3DCtlMemInfo);
-	bDissociateFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+#endif
+	if (eError != PVRSRV_OK)
+	{
+		bDissociateFailed = IMG_TRUE;
+	}
 
+#if defined(FIX_HW_BRN_31272) || defined(FIX_HW_BRN_31780) || defined(FIX_HW_BRN_33920)
+#if defined (SUPPORT_SID_INTERFACE)
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, asInitInfoKM.hKernelSGXPTLAWriteBackMemInfo);
+#else
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, psSGXDevInitPart2IN->sInitInfo.hKernelSGXPTLAWriteBackMemInfo);
+#endif
+	if (eError != PVRSRV_OK)
+	{
+		bDissociateFailed = IMG_TRUE;
+	}
+#endif
 
+	/* Dissociate SGX MiscInfo buffer from user space */
+#if defined (SUPPORT_SID_INTERFACE)
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, asInitInfoKM.hKernelSGXMiscMemInfo);
+#else
 	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, psSGXDevInitPart2IN->sInitInfo.hKernelSGXMiscMemInfo);
-	bDissociateFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+#endif
+	if (eError != PVRSRV_OK)
+	{
+		bDissociateFailed = IMG_TRUE;
+	}
 
 
 #if defined(SGX_SUPPORT_HWPROFILING)
+#if defined (SUPPORT_SID_INTERFACE)
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, asInitInfoKM.hKernelHWProfilingMemInfo);
+	if (eError != PVRSRV_OK)
+	{
+		bDissociateFailed = IMG_TRUE;
+	}
+#else
 	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, psSGXDevInitPart2IN->sInitInfo.hKernelHWProfilingMemInfo);
 	bDissociateFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
 #endif
+#endif
 
 #if defined(SUPPORT_SGX_HWPERF)
+#if defined (SUPPORT_SID_INTERFACE)
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, asInitInfoKM.hKernelHWPerfCBMemInfo);
+#else
 	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, psSGXDevInitPart2IN->sInitInfo.hKernelHWPerfCBMemInfo);
+#endif
+	if (eError != PVRSRV_OK)
+	{
+		bDissociateFailed = IMG_TRUE;
+	}
+#endif
+
+#if defined (SUPPORT_SID_INTERFACE)
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, asInitInfoKM.hKernelTASigBufferMemInfo);
+#else
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, psSGXDevInitPart2IN->sInitInfo.hKernelTASigBufferMemInfo);
+#endif
+	if (eError != PVRSRV_OK)
+	{
+		bDissociateFailed = IMG_TRUE;
+	}
+
+#if defined (SUPPORT_SID_INTERFACE)
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, asInitInfoKM.hKernel3DSigBufferMemInfo);
+#else
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, psSGXDevInitPart2IN->sInitInfo.hKernel3DSigBufferMemInfo);
+#endif
+	if (eError != PVRSRV_OK)
+	{
+		bDissociateFailed = IMG_TRUE;
+	}
+
+#if defined(FIX_HW_BRN_29702)
+#if defined (SUPPORT_SID_INTERFACE)
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, asInitInfoKM.hKernelCFIMemInfo);
+	if (eError != PVRSRV_OK)
+	{
+		bDissociateFailed = IMG_TRUE;
+	}
+#else
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, psSGXDevInitPart2IN->sInitInfo.hKernelCFIMemInfo);
+	bDissociateFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+#endif
+#endif
+
+#if defined(FIX_HW_BRN_29823)
+#if defined (SUPPORT_SID_INTERFACE)
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, asInitInfoKM.hKernelDummyTermStreamMemInfo);
+	if (eError != PVRSRV_OK)
+	{
+		bDissociateFailed = IMG_TRUE;
+	}
+#else
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, psSGXDevInitPart2IN->sInitInfo.hKernelDummyTermStreamMemInfo);
+	bDissociateFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+#endif
+#endif
+
+#if defined(FIX_HW_BRN_31542) || defined(FIX_HW_BRN_36513)
+#if defined (SUPPORT_SID_INTERFACE)
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, asInitInfoKM.hKernelClearClipWAVDMStreamMemInfo);
+	if (eError != PVRSRV_OK)
+	{
+		bDissociateFailed = IMG_TRUE;
+	}
+#else
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, psSGXDevInitPart2IN->sInitInfo.hKernelClearClipWAVDMStreamMemInfo);
+	bDissociateFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+#endif
+#if defined (SUPPORT_SID_INTERFACE)
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, asInitInfoKM.hKernelClearClipWAIndexStreamMemInfo);
+	if (eError != PVRSRV_OK)
+	{
+		bDissociateFailed = IMG_TRUE;
+	}
+#else
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, psSGXDevInitPart2IN->sInitInfo.hKernelClearClipWAIndexStreamMemInfo);
+	bDissociateFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+#endif
+#if defined (SUPPORT_SID_INTERFACE)
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, asInitInfoKM.hKernelClearClipWAPDSMemInfo);
+	if (eError != PVRSRV_OK)
+	{
+		bDissociateFailed = IMG_TRUE;
+	}
+#else
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, psSGXDevInitPart2IN->sInitInfo.hKernelClearClipWAPDSMemInfo);
+	bDissociateFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+#endif
+#if defined (SUPPORT_SID_INTERFACE)
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, asInitInfoKM.hKernelClearClipWAUSEMemInfo);
+	if (eError != PVRSRV_OK)
+	{
+		bDissociateFailed = IMG_TRUE;
+	}
+#else
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, psSGXDevInitPart2IN->sInitInfo.hKernelClearClipWAUSEMemInfo);
+	bDissociateFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+#endif
+#if defined (SUPPORT_SID_INTERFACE)
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, asInitInfoKM.hKernelClearClipWAParamMemInfo);
+	if (eError != PVRSRV_OK)
+	{
+		bDissociateFailed = IMG_TRUE;
+	}
+#else
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, psSGXDevInitPart2IN->sInitInfo.hKernelClearClipWAParamMemInfo);
+	bDissociateFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+#endif
+#if defined (SUPPORT_SID_INTERFACE)
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, asInitInfoKM.hKernelClearClipWAPMPTMemInfo);
+	if (eError != PVRSRV_OK)
+	{
+		bDissociateFailed = IMG_TRUE;
+	}
+#else
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, psSGXDevInitPart2IN->sInitInfo.hKernelClearClipWAPMPTMemInfo);
+	bDissociateFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+#endif
+#if defined (SUPPORT_SID_INTERFACE)
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, asInitInfoKM.hKernelClearClipWATPCMemInfo);
+	if (eError != PVRSRV_OK)
+	{
+		bDissociateFailed = IMG_TRUE;
+	}
+#else
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, psSGXDevInitPart2IN->sInitInfo.hKernelClearClipWATPCMemInfo);
+	bDissociateFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+#endif
+#if defined (SUPPORT_SID_INTERFACE)
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, asInitInfoKM.hKernelClearClipWAPSGRgnHdrMemInfo);
+	if (eError != PVRSRV_OK)
+	{
+		bDissociateFailed = IMG_TRUE;
+	}
+#else
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, psSGXDevInitPart2IN->sInitInfo.hKernelClearClipWAPSGRgnHdrMemInfo);
+	bDissociateFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+#endif
+#endif
+
+#if defined(SGX_FEATURE_VDM_CONTEXT_SWITCH) && defined(FIX_HW_BRN_31559)
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, psSGXDevInitPart2IN->sInitInfo.hKernelVDMSnapShotBufferMemInfo);
+	bDissociateFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+	
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, psSGXDevInitPart2IN->sInitInfo.hKernelVDMCtrlStreamBufferMemInfo);
+	bDissociateFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+#endif
+#if defined(SGX_FEATURE_VDM_CONTEXT_SWITCH) && \
+	defined(FIX_HW_BRN_33657) && defined(SUPPORT_SECURE_33657_FIX)
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, psSGXDevInitPart2IN->sInitInfo.hKernelVDMStateUpdateBufferMemInfo);
 	bDissociateFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
 #endif
 
 #if defined(PVRSRV_USSE_EDM_STATUS_DEBUG)
+#if defined (SUPPORT_SID_INTERFACE)
+	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, asInitInfoKM.hKernelEDMStatusBufferMemInfo);
+	if (eError != PVRSRV_OK)
+	{
+		bDissociateFailed = IMG_TRUE;
+	}
+#else
 	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, psSGXDevInitPart2IN->sInitInfo.hKernelEDMStatusBufferMemInfo);
 	bDissociateFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
 #endif
-
-#if defined(SGX_FEATURE_SPM_MODE_0)
-	eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, psSGXDevInitPart2IN->sInitInfo.hKernelTmpDPMStateMemInfo);
-	bDissociateFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
 #endif
 
 	for (i = 0; i < SGX_MAX_INIT_MEM_HANDLES; i++)
 	{
+#if defined (SUPPORT_SID_INTERFACE)
+		IMG_HANDLE hHandle = asInitInfoKM.asInitMemHandles[i];
+#else
 		IMG_HANDLE hHandle = psSGXDevInitPart2IN->sInitInfo.asInitMemHandles[i];
+#endif
 
 		if (hHandle == IMG_NULL)
 			continue;
 
 		eError = PVRSRVDissociateDeviceMemKM(hDevCookieInt, hHandle);
-		bDissociateFailed |= (IMG_BOOL)(eError != PVRSRV_OK);
+		if (eError != PVRSRV_OK)
+		{
+			bDissociateFailed = IMG_TRUE;
+		}
 	}
 
-
-
-
+	/* If any dissociations failed, free all the device memory passed in */
 	if(bDissociateFailed)
 	{
+#if defined (SUPPORT_SID_INTERFACE)
+		PVRSRVFreeDeviceMemKM(hDevCookieInt, asInitInfoKM.hKernelCCBMemInfo);
+		PVRSRVFreeDeviceMemKM(hDevCookieInt, asInitInfoKM.hKernelCCBCtlMemInfo);
+		PVRSRVFreeDeviceMemKM(hDevCookieInt, asInitInfoKM.hKernelSGXHostCtlMemInfo);
+		PVRSRVFreeDeviceMemKM(hDevCookieInt, asInitInfoKM.hKernelSGXTA3DCtlMemInfo);
+#if defined(FIX_HW_BRN_31272) || defined(FIX_HW_BRN_31780) || defined(FIX_HW_BRN_33920)
+		PVRSRVFreeDeviceMemKM(hDevCookieInt, asInitInfoKM.hKernelSGXPTLAWriteBackMemInfo);
+#endif
+		PVRSRVFreeDeviceMemKM(hDevCookieInt, asInitInfoKM.hKernelSGXMiscMemInfo);
+#else
 		PVRSRVFreeDeviceMemKM(hDevCookieInt, psSGXDevInitPart2IN->sInitInfo.hKernelCCBMemInfo);
 		PVRSRVFreeDeviceMemKM(hDevCookieInt, psSGXDevInitPart2IN->sInitInfo.hKernelCCBCtlMemInfo);
 		PVRSRVFreeDeviceMemKM(hDevCookieInt, psSGXDevInitPart2IN->sInitInfo.hKernelSGXHostCtlMemInfo);
 		PVRSRVFreeDeviceMemKM(hDevCookieInt, psSGXDevInitPart2IN->sInitInfo.hKernelSGXTA3DCtlMemInfo);
+#if defined(FIX_HW_BRN_31272) || defined(FIX_HW_BRN_31780) || defined(FIX_HW_BRN_33920)
+		PVRSRVFreeDeviceMemKM(hDevCookieInt, psSGXDevInitPart2IN->sInitInfo.hKernelSGXPTLAWriteBackMemInfo);
+#endif
 		PVRSRVFreeDeviceMemKM(hDevCookieInt, psSGXDevInitPart2IN->sInitInfo.hKernelSGXMiscMemInfo);
+#endif
 
 		for (i = 0; i < SGX_MAX_INIT_MEM_HANDLES; i++)
 		{
+#if defined (SUPPORT_SID_INTERFACE)
+			IMG_HANDLE hHandle = asInitInfoKM.asInitMemHandles[i];
+
+			if (hHandle == 0)
+#else
 			IMG_HANDLE hHandle = psSGXDevInitPart2IN->sInitInfo.asInitMemHandles[i];
 
 			if (hHandle == IMG_NULL)
+#endif
 				continue;
 
 			PVRSRVFreeDeviceMemKM(hDevCookieInt, (PVRSRV_KERNEL_MEM_INFO *)hHandle);
 
 		}
 
-		PVR_DPF((PVR_DBG_ERROR, "DevInitSGXPart2BW: A dissociate failed"));
+		PVR_DPF((PVR_DBG_ERROR, "SGXDevInitPart2BW: A dissociate failed"));
 
-		psRetOUT->eError = PVRSRV_ERROR_GENERIC;
+		psSGXDevInitPart2OUT->eError = PVRSRV_ERROR_INIT2_PHASE_FAILED;
 
-
+		/* A dissociation failure is unexpected */
 		PVR_DBG_BREAK;
 		return 0;
 	}
 
-	psRetOUT->eError =
+#if defined (SUPPORT_SID_INTERFACE)
+	asInitInfoKM.sScripts               = psSGXDevInitPart2IN->sInitInfo.sScripts;
+	asInitInfoKM.ui32ClientBuildOptions = psSGXDevInitPart2IN->sInitInfo.ui32ClientBuildOptions;
+	asInitInfoKM.sSGXStructSizes        = psSGXDevInitPart2IN->sInitInfo.sSGXStructSizes;
+	asInitInfoKM.ui32CacheControl       = psSGXDevInitPart2IN->sInitInfo.ui32CacheControl;
+	asInitInfoKM.ui32EDMTaskReg0        = psSGXDevInitPart2IN->sInitInfo.ui32EDMTaskReg0;
+	asInitInfoKM.ui32EDMTaskReg1        = psSGXDevInitPart2IN->sInitInfo.ui32EDMTaskReg1;
+	asInitInfoKM.ui32ClkGateStatusReg   = psSGXDevInitPart2IN->sInitInfo.ui32ClkGateStatusReg;
+	asInitInfoKM.ui32ClkGateStatusMask  = psSGXDevInitPart2IN->sInitInfo.ui32ClkGateStatusMask;
+
+	OSMemCopy(&asInitInfoKM.asInitDevData ,
+			  &psSGXDevInitPart2IN->sInitInfo.asInitDevData,
+			  sizeof(asInitInfoKM.asInitDevData));
+	OSMemCopy(&asInitInfoKM.aui32HostKickAddr,
+			  &psSGXDevInitPart2IN->sInitInfo.aui32HostKickAddr,
+			  sizeof(asInitInfoKM.aui32HostKickAddr));
+
+	psSGXDevInitPart2OUT->eError =
+		DevInitSGXPart2KM(psPerProc,
+						  hDevCookieInt,
+						  &asInitInfoKM);
+#else
+	psSGXDevInitPart2OUT->eError =
 		DevInitSGXPart2KM(psPerProc,
 						  hDevCookieInt,
 						  &psSGXDevInitPart2IN->sInitInfo);
+#endif
 
 	return 0;
 }
@@ -1238,6 +2268,7 @@ SGXRegisterHWRenderContextBW(IMG_UINT32 ui32BridgeID,
 							 PVRSRV_PER_PROCESS_DATA *psPerProc)
 {
 	IMG_HANDLE hDevCookieInt;
+//	PVRSRV_SGXDEV_INFO *psDevInfo;
 	IMG_HANDLE hHWRenderContextInt;
 
 	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID, PVRSRV_BRIDGE_SGX_REGISTER_HW_RENDER_CONTEXT);
@@ -1256,12 +2287,16 @@ SGXRegisterHWRenderContextBW(IMG_UINT32 ui32BridgeID,
 
 	hHWRenderContextInt =
 		SGXRegisterHWRenderContextKM(hDevCookieInt,
-									 &psSGXRegHWRenderContextIN->sHWRenderContextDevVAddr,
-									 psPerProc);
+                                     psSGXRegHWRenderContextIN->pHWRenderContextCpuVAddr,
+                                     psSGXRegHWRenderContextIN->ui32HWRenderContextSize,
+                                     psSGXRegHWRenderContextIN->ui32OffsetToPDDevPAddr,
+                                     psSGXRegHWRenderContextIN->hDevMemContext,
+                                     &psSGXRegHWRenderContextOUT->sHWRenderContextDevVAddr,
+                                     psPerProc);
 
 	if (hHWRenderContextInt == IMG_NULL)
 	{
-		psSGXRegHWRenderContextOUT->eError = PVRSRV_ERROR_GENERIC;
+		psSGXRegHWRenderContextOUT->eError = PVRSRV_ERROR_UNABLE_TO_REGISTER_CONTEXT;
 		return 0;
 	}
 
@@ -1297,7 +2332,8 @@ SGXUnregisterHWRenderContextBW(IMG_UINT32 ui32BridgeID,
 		return 0;
 	}
 
-	psRetOUT->eError = SGXUnregisterHWRenderContextKM(hHWRenderContextInt);
+	psRetOUT->eError = SGXUnregisterHWRenderContextKM(hHWRenderContextInt,
+													  psSGXUnregHWRenderContextIN->bForceCleanup);
 	if(psRetOUT->eError != PVRSRV_OK)
 	{
 		return 0;
@@ -1337,12 +2373,16 @@ SGXRegisterHWTransferContextBW(IMG_UINT32 ui32BridgeID,
 
 	hHWTransferContextInt =
 		SGXRegisterHWTransferContextKM(hDevCookieInt,
-									   &psSGXRegHWTransferContextIN->sHWTransferContextDevVAddr,
+									   psSGXRegHWTransferContextIN->pHWTransferContextCpuVAddr,
+                                       psSGXRegHWTransferContextIN->ui32HWTransferContextSize,
+                                       psSGXRegHWTransferContextIN->ui32OffsetToPDDevPAddr,
+                                       psSGXRegHWTransferContextIN->hDevMemContext,
+                                       &psSGXRegHWTransferContextOUT->sHWTransferContextDevVAddr,
 									   psPerProc);
 
 	if (hHWTransferContextInt == IMG_NULL)
 	{
-		psSGXRegHWTransferContextOUT->eError = PVRSRV_ERROR_GENERIC;
+		psSGXRegHWTransferContextOUT->eError = PVRSRV_ERROR_UNABLE_TO_REGISTER_CONTEXT;
 		return 0;
 	}
 
@@ -1364,7 +2404,11 @@ SGXUnregisterHWTransferContextBW(IMG_UINT32 ui32BridgeID,
 							   PVRSRV_BRIDGE_RETURN *psRetOUT,
 							   PVRSRV_PER_PROCESS_DATA *psPerProc)
 {
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_HANDLE hHWTransferContextInt = 0;
+#else
 	IMG_HANDLE hHWTransferContextInt;
+#endif
 
 	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID, PVRSRV_BRIDGE_SGX_UNREGISTER_HW_TRANSFER_CONTEXT);
 
@@ -1378,7 +2422,8 @@ SGXUnregisterHWTransferContextBW(IMG_UINT32 ui32BridgeID,
 		return 0;
 	}
 
-	psRetOUT->eError = SGXUnregisterHWTransferContextKM(hHWTransferContextInt);
+	psRetOUT->eError = SGXUnregisterHWTransferContextKM(hHWTransferContextInt,
+														psSGXUnregHWTransferContextIN->bForceCleanup);
 	if(psRetOUT->eError != PVRSRV_OK)
 	{
 		return 0;
@@ -1419,12 +2464,16 @@ SGXRegisterHW2DContextBW(IMG_UINT32 ui32BridgeID,
 
 	hHW2DContextInt =
 		SGXRegisterHW2DContextKM(hDevCookieInt,
-								 &psSGXRegHW2DContextIN->sHW2DContextDevVAddr,
+								 psSGXRegHW2DContextIN->pHW2DContextCpuVAddr,
+                                 psSGXRegHW2DContextIN->ui32HW2DContextSize,
+                                 psSGXRegHW2DContextIN->ui32OffsetToPDDevPAddr,
+								 psSGXRegHW2DContextIN->hDevMemContext,
+                                 &psSGXRegHW2DContextOUT->sHW2DContextDevVAddr,
 								 psPerProc);
 
 	if (hHW2DContextInt == IMG_NULL)
 	{
-		psSGXRegHW2DContextOUT->eError = PVRSRV_ERROR_GENERIC;
+		psSGXRegHW2DContextOUT->eError = PVRSRV_ERROR_UNABLE_TO_REGISTER_CONTEXT;
 		return 0;
 	}
 
@@ -1460,7 +2509,8 @@ SGXUnregisterHW2DContextBW(IMG_UINT32 ui32BridgeID,
 		return 0;
 	}
 
-	psRetOUT->eError = SGXUnregisterHW2DContextKM(hHW2DContextInt);
+	psRetOUT->eError = SGXUnregisterHW2DContextKM(hHW2DContextInt,
+												  psSGXUnregHW2DContextIN->bForceCleanup);
 	if(psRetOUT->eError != PVRSRV_OK)
 	{
 		return 0;
@@ -1482,6 +2532,8 @@ SGXFlushHWRenderTargetBW(IMG_UINT32 ui32BridgeID,
 						  PVRSRV_PER_PROCESS_DATA *psPerProc)
 {
 	IMG_HANDLE hDevCookieInt;
+//	PVRSRV_SGXDEV_INFO *psDevInfo;
+
 	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID, PVRSRV_BRIDGE_SGX_FLUSH_HW_RENDER_TARGET);
 
 	psRetOUT->eError =
@@ -1494,7 +2546,9 @@ SGXFlushHWRenderTargetBW(IMG_UINT32 ui32BridgeID,
 		return 0;
 	}
 
-	SGXFlushHWRenderTargetKM(hDevCookieInt, psSGXFlushHWRenderTargetIN->sHWRTDataSetDevVAddr);
+//	psDevInfo = (PVRSRV_SGXDEV_INFO *)((PVRSRV_DEVICE_NODE *)hDevCookieInt)->pvDevice;
+
+	psRetOUT->eError = SGXFlushHWRenderTargetKM(hDevCookieInt, psSGXFlushHWRenderTargetIN->sHWRTDataSetDevVAddr, IMG_FALSE);
 
 	return 0;
 }
@@ -1513,7 +2567,8 @@ SGX2DQueryBlitsCompleteBW(IMG_UINT32 ui32BridgeID,
 	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID, PVRSRV_BRIDGE_SGX_2DQUERYBLTSCOMPLETE);
 
 	psRetOUT->eError =
-		PVRSRVLookupHandle(psPerProc->psHandleBase, &hDevCookieInt,
+		PVRSRVLookupHandle(psPerProc->psHandleBase,
+						   &hDevCookieInt,
 						   ps2DQueryBltsCompleteIN->hDevCookie,
 						   PVRSRV_HANDLE_TYPE_DEV_NODE);
 	if(psRetOUT->eError != PVRSRV_OK)
@@ -1522,7 +2577,8 @@ SGX2DQueryBlitsCompleteBW(IMG_UINT32 ui32BridgeID,
 	}
 
 	psRetOUT->eError =
-		PVRSRVLookupHandle(psPerProc->psHandleBase, &pvSyncInfo,
+		PVRSRVLookupHandle(psPerProc->psHandleBase,
+						   &pvSyncInfo,
 						   ps2DQueryBltsCompleteIN->hKernSyncInfo,
 						   PVRSRV_HANDLE_TYPE_SYNC_INFO);
 	if(psRetOUT->eError != PVRSRV_OK)
@@ -1729,7 +2785,11 @@ SGXAddSharedPBDescBW(IMG_UINT32 ui32BridgeID,
 	IMG_UINT32 ui32KernelMemInfoHandlesCount =
 		psSGXAddSharedPBDescIN->ui32KernelMemInfoHandlesCount;
 	IMG_INT ret = 0;
+#if defined (SUPPORT_SID_INTERFACE)
+	IMG_SID *phKernelMemInfoHandles = 0;
+#else
 	IMG_HANDLE *phKernelMemInfoHandles = IMG_NULL;
+#endif
 	PVRSRV_KERNEL_MEM_INFO **ppsKernelMemInfos = IMG_NULL;
 	IMG_UINT32 i;
 	PVRSRV_ERROR eError;
@@ -1889,7 +2949,8 @@ SGXAddSharedPBDescBW(IMG_UINT32 ui32BridgeID,
 								  psSGXAddSharedPBDescIN->ui32TotalPBSize,
 								  &hSharedPBDesc,
 								  ppsKernelMemInfos,
-								  ui32KernelMemInfoHandlesCount);
+								  ui32KernelMemInfoHandlesCount,
+								  psSGXAddSharedPBDescIN->sHWPBDescDevVAddr);
 
 
 	if (eError != PVRSRV_OK)
@@ -1938,13 +2999,16 @@ SGXGetInfoForSrvinitBW(IMG_UINT32 ui32BridgeID,
 {
 	IMG_HANDLE hDevCookieInt;
 	IMG_UINT32 i;
+#if defined (SUPPORT_SID_INTERFACE)
+	PVRSRV_HEAP_INFO_KM asHeapInfo[PVRSRV_MAX_CLIENT_HEAPS];
+#endif
 	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID, PVRSRV_BRIDGE_SGXINFO_FOR_SRVINIT);
 
 	NEW_HANDLE_BATCH_OR_ERROR(psSGXInfoForSrvinitOUT->eError, psPerProc, PVRSRV_MAX_CLIENT_HEAPS);
 
 	if(!psPerProc->bInitProcess)
 	{
-		psSGXInfoForSrvinitOUT->eError = PVRSRV_ERROR_GENERIC;
+		psSGXInfoForSrvinitOUT->eError = PVRSRV_ERROR_PROCESS_NOT_INITIALISED;
 		return 0;
 	}
 
@@ -1960,7 +3024,12 @@ SGXGetInfoForSrvinitBW(IMG_UINT32 ui32BridgeID,
 
 	psSGXInfoForSrvinitOUT->eError =
 		SGXGetInfoForSrvinitKM(hDevCookieInt,
+#if defined (SUPPORT_SID_INTERFACE)
+							   &asHeapInfo[0],
+							   &psSGXInfoForSrvinitOUT->sInitInfo.sPDDevPAddr);
+#else
 							   &psSGXInfoForSrvinitOUT->sInitInfo);
+#endif
 
 	if(psSGXInfoForSrvinitOUT->eError != PVRSRV_OK)
 	{
@@ -1973,6 +3042,28 @@ SGXGetInfoForSrvinitBW(IMG_UINT32 ui32BridgeID,
 
 		psHeapInfo = &psSGXInfoForSrvinitOUT->sInitInfo.asHeapInfo[i];
 
+#if defined (SUPPORT_SID_INTERFACE)
+		if ((asHeapInfo[i].ui32HeapID != (IMG_UINT32)SGX_UNDEFINED_HEAP_ID) &&
+			(asHeapInfo[i].hDevMemHeap != IMG_NULL))
+		{
+			/* Allocate heap handle */
+			PVRSRVAllocHandleNR(psPerProc->psHandleBase,
+							  &psHeapInfo->hDevMemHeap,
+							  asHeapInfo[i].hDevMemHeap,
+							  PVRSRV_HANDLE_TYPE_DEV_MEM_HEAP,
+							  PVRSRV_HANDLE_ALLOC_FLAG_SHARED);
+		}
+		else
+		{
+			psHeapInfo->hDevMemHeap = 0;
+		}
+
+		psHeapInfo->ui32HeapID       = asHeapInfo[i].ui32HeapID;
+		psHeapInfo->sDevVAddrBase    = asHeapInfo[i].sDevVAddrBase;
+		psHeapInfo->ui32HeapByteSize = asHeapInfo[i].ui32HeapByteSize;
+		psHeapInfo->ui32Attribs      = asHeapInfo[i].ui32Attribs;
+		psHeapInfo->ui32XTileStride  = asHeapInfo[i].ui32XTileStride;
+#else
 		if (psHeapInfo->ui32HeapID != (IMG_UINT32)SGX_UNDEFINED_HEAP_ID)
 		{
 			IMG_HANDLE hDevMemHeapExt;
@@ -1988,6 +3079,7 @@ SGXGetInfoForSrvinitBW(IMG_UINT32 ui32BridgeID,
 				psHeapInfo->hDevMemHeap = hDevMemHeapExt;
 			}
 		}
+#endif
 	}
 
 	COMMIT_HANDLE_BATCH_OR_ERROR(psSGXInfoForSrvinitOUT->eError, psPerProc);
@@ -2004,17 +3096,25 @@ SGXGetInfoForSrvinitBW(IMG_UINT32 ui32BridgeID,
  RETURNS	:
 *****************************************************************************/
 static IMG_VOID
-DumpBufferArray(PVRSRV_PER_PROCESS_DATA *psPerProc,
+DumpBufferArray(PVRSRV_PER_PROCESS_DATA   *psPerProc,
+#if defined (SUPPORT_SID_INTERFACE)
+				PSGX_KICKTA_DUMP_BUFFER_KM psBufferArray,
+#else
 				PSGX_KICKTA_DUMP_BUFFER	psBufferArray,
-				IMG_UINT32						ui32BufferArrayLength,
-				IMG_BOOL						bDumpPolls)
+#endif
+				IMG_UINT32                 ui32BufferArrayLength,
+				IMG_BOOL                   bDumpPolls)
 {
 	IMG_UINT32	i;
 
 	for (i=0; i<ui32BufferArrayLength; i++)
 	{
+#if defined (SUPPORT_SID_INTERFACE)
+		PSGX_KICKTA_DUMP_BUFFER_KM psBuffer;
+#else
 		PSGX_KICKTA_DUMP_BUFFER	psBuffer;
-		PVRSRV_KERNEL_MEM_INFO 	*psCtrlMemInfoKM;
+#endif
+		PVRSRV_KERNEL_MEM_INFO    *psCtrlMemInfoKM;
 		IMG_CHAR * pszName;
 		IMG_HANDLE hUniqueTag;
 		IMG_UINT32	ui32Offset;
@@ -2125,25 +3225,43 @@ SGXPDumpBufferArrayBW(IMG_UINT32 ui32BridgeID,
 				   PVRSRV_PER_PROCESS_DATA *psPerProc)
 {
 	IMG_UINT32 i;
+#if defined (SUPPORT_SID_INTERFACE)
+	SGX_KICKTA_DUMP_BUFFER *psUMPtr;
+	SGX_KICKTA_DUMP_BUFFER_KM *psKickTADumpBufferKM, *psKMPtr;
+#else
+#if defined(__QNXNTO__)
+    const IMG_UINT32 NAME_BUFFER_SIZE = 30;
+    IMG_PCHAR pszNameBuffer, pszName;
+    IMG_UINT32 ui32NameBufferArraySize, ui32NameLength;
+#endif
 	SGX_KICKTA_DUMP_BUFFER *psKickTADumpBuffer;
+#endif
 	IMG_UINT32 ui32BufferArrayLength =
 		psPDumpBufferArrayIN->ui32BufferArrayLength;
 	IMG_UINT32 ui32BufferArraySize =
 		ui32BufferArrayLength * sizeof(SGX_KICKTA_DUMP_BUFFER);
-	PVRSRV_ERROR eError = PVRSRV_ERROR_GENERIC;
+	PVRSRV_ERROR eError = PVRSRV_ERROR_TOO_FEW_BUFFERS;
 
 	PVR_UNREFERENCED_PARAMETER(psBridgeOut);
 
 	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID, PVRSRV_BRIDGE_SGX_PDUMP_BUFFER_ARRAY);
 
+#if defined (SUPPORT_SID_INTERFACE)
+	if(OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
+				  ui32BufferArraySize,
+				  (IMG_PVOID *)&psKickTADumpBufferKM, 0,
+				  "Array of Kick Tile Accelerator Dump Buffer") != PVRSRV_OK)
+#else
 	if(OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
 				  ui32BufferArraySize,
 				  (IMG_PVOID *)&psKickTADumpBuffer, 0,
 				  "Array of Kick Tile Accelerator Dump Buffer") != PVRSRV_OK)
+#endif				  
 	{
 		return -ENOMEM;
 	}
 
+#if !defined (SUPPORT_SID_INTERFACE)
 	if(CopyFromUserWrapper(psPerProc,
 			               ui32BridgeID,
 						   psKickTADumpBuffer,
@@ -2155,13 +3273,63 @@ SGXPDumpBufferArrayBW(IMG_UINT32 ui32BridgeID,
 		return -EFAULT;
 	}
 
+#if defined (__QNXNTO__)
+    ui32NameBufferArraySize = ui32BufferArrayLength * NAME_BUFFER_SIZE;
+    if (OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP, ui32NameBufferArraySize,
+            (IMG_PVOID *)&pszNameBuffer, 0,
+            "Kick Tile Accelerator Dump Buffer names") != PVRSRV_OK)
+    {
+        OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, ui32BufferArraySize, psKickTADumpBuffer, 0);
+        return -ENOMEM;
+    }
+
+    pszName = pszNameBuffer;
+
+    for (i=0; i<ui32BufferArrayLength; i++)
+    {
+        if (psKickTADumpBuffer[i].pszName)
+        {
+            ui32NameLength = psKickTADumpBuffer[i].ui32NameLength;
+            if (ui32NameLength >= NAME_BUFFER_SIZE)
+            {
+                ui32NameLength = NAME_BUFFER_SIZE - 1;
+            }
+
+            if (ui32NameLength && 
+                (CopyFromUserWrapper(psPerProc, ui32BridgeID, pszName, 
+                    psKickTADumpBuffer[i].pszName, ui32NameLength + 1) == PVRSRV_OK))
+            {
+                pszName[NAME_BUFFER_SIZE - 1] = 0;
+                psKickTADumpBuffer[i].pszName = pszName;
+                pszName += NAME_BUFFER_SIZE;
+            }
+            else 
+            {
+                PVR_DPF((PVR_DBG_WARNING, "Failed to read PDUMP buffer name"));
+                psKickTADumpBuffer[i].pszName = 0;
+            }
+        }
+    }
+#endif
+#endif
+
 	for(i = 0; i < ui32BufferArrayLength; i++)
 	{
+#if defined (SUPPORT_SID_INTERFACE)
+		IMG_VOID *pvMemInfo = IMG_NULL;
+		psUMPtr = &psPDumpBufferArrayIN->psBufferArray[i];
+		psKMPtr = &psKickTADumpBufferKM[i];
+#else
 		IMG_VOID *pvMemInfo;
+#endif
 
 		eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
 									&pvMemInfo,
+#if defined (SUPPORT_SID_INTERFACE)
+									psUMPtr->hKernelMemInfo,
+#else
 									psKickTADumpBuffer[i].hKernelMemInfo,
+#endif
 									PVRSRV_HANDLE_TYPE_MEM_INFO);
 
 		if(eError != PVRSRV_OK)
@@ -2170,12 +3338,20 @@ SGXPDumpBufferArrayBW(IMG_UINT32 ui32BridgeID,
 					 "PVRSRVLookupHandle failed (%d)", eError));
 			break;
 		}
+#if defined (SUPPORT_SID_INTERFACE)
+		psKMPtr->hKernelMemInfo = pvMemInfo;
+#else
 		psKickTADumpBuffer[i].hKernelMemInfo = pvMemInfo;
+#endif
 
 #if defined(SUPPORT_SGX_NEW_STATUS_VALS)
 		eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
 									&pvMemInfo,
+#if defined (SUPPORT_SID_INTERFACE)
+									psUMPtr->hCtrlKernelMemInfo,
+#else
 									psKickTADumpBuffer[i].hCtrlKernelMemInfo,
+#endif
 									PVRSRV_HANDLE_TYPE_MEM_INFO);
 
 		if(eError != PVRSRV_OK)
@@ -2184,20 +3360,47 @@ SGXPDumpBufferArrayBW(IMG_UINT32 ui32BridgeID,
 					 "PVRSRVLookupHandle failed (%d)", eError));
 			break;
 		}
+#if defined (SUPPORT_SID_INTERFACE)
+		psKMPtr->hCtrlKernelMemInfo = pvMemInfo;
+		psKMPtr->sCtrlDevVAddr = psUMPtr->sCtrlDevVAddr;
+#else
 		psKickTADumpBuffer[i].hCtrlKernelMemInfo = pvMemInfo;
+#endif
+#endif
+
+#if defined (SUPPORT_SID_INTERFACE)
+		psKMPtr->ui32SpaceUsed     = psUMPtr->ui32SpaceUsed;
+		psKMPtr->ui32Start         = psUMPtr->ui32Start;
+		psKMPtr->ui32End           = psUMPtr->ui32End;
+		psKMPtr->ui32BufferSize    = psUMPtr->ui32BufferSize;
+		psKMPtr->ui32BackEndLength = psUMPtr->ui32BackEndLength;
+		psKMPtr->uiAllocIndex      = psUMPtr->uiAllocIndex;
+		psKMPtr->pvLinAddr         = psUMPtr->pvLinAddr;
+		psKMPtr->pszName           = psUMPtr->pszName;
 #endif
 	}
 
 	if(eError == PVRSRV_OK)
 	{
 		DumpBufferArray(psPerProc,
+#if defined (SUPPORT_SID_INTERFACE)
+						psKickTADumpBufferKM,
+#else
 						psKickTADumpBuffer,
+#endif
 						ui32BufferArrayLength,
 						psPDumpBufferArrayIN->bDumpPolls);
 	}
 
+#if defined (SUPPORT_SID_INTERFACE)
+	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, ui32BufferArraySize, psKickTADumpBufferKM, 0);
+#else
 	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, ui32BufferArraySize, psKickTADumpBuffer, 0);
-
+#if defined (__QNXNTO__)
+	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, ui32NameBufferArraySize, pszNameBuffer, 0);
+#endif
+#endif
+	/*not nulling pointer, out of scope*/
 
 	return 0;
 }
@@ -2210,11 +3413,13 @@ SGXPDump3DSignatureRegistersBW(IMG_UINT32 ui32BridgeID,
 {
 	IMG_UINT32 ui32RegisterArraySize =  psPDump3DSignatureRegistersIN->ui32NumRegisters * sizeof(IMG_UINT32);
 	IMG_UINT32 *pui32Registers = IMG_NULL;
+	PVRSRV_SGXDEV_INFO	*psDevInfo;
 #if defined(SGX_FEATURE_MP)	&& defined(FIX_HW_BRN_27270)
-	PVRSRV_SGXDEV_INFO	*psDevInfo = IMG_NULL;
-	IMG_HANDLE 	hDevCookieInt;
 	IMG_UINT32	ui32RegVal = 0;
 #endif
+	PVRSRV_DEVICE_NODE *psDeviceNode;
+	IMG_HANDLE hDevMemContextInt = 0;
+	IMG_UINT32 ui32MMUContextID;
 	IMG_INT ret = -EFAULT;
 
 	PVR_UNREFERENCED_PARAMETER(psRetOUT);
@@ -2226,9 +3431,9 @@ SGXPDump3DSignatureRegistersBW(IMG_UINT32 ui32BridgeID,
 		goto ExitNoError;
 	}
 
-#if defined(SGX_FEATURE_MP)	&& defined(FIX_HW_BRN_27270)
 	psRetOUT->eError =
-		PVRSRVLookupHandle(psPerProc->psHandleBase, &hDevCookieInt,
+		PVRSRVLookupHandle(psPerProc->psHandleBase,
+						   (IMG_VOID**)&psDeviceNode,
 						   psPDump3DSignatureRegistersIN->hDevCookie,
 						   PVRSRV_HANDLE_TYPE_DEV_NODE);
 	if(psRetOUT->eError != PVRSRV_OK)
@@ -2237,13 +3442,14 @@ SGXPDump3DSignatureRegistersBW(IMG_UINT32 ui32BridgeID,
 		goto Exit;
 	}
 
-	psDevInfo = ((PVRSRV_DEVICE_NODE *)hDevCookieInt)->pvDevice;
+	psDevInfo = (PVRSRV_SGXDEV_INFO*)psDeviceNode->pvDevice;
 
-
+#if defined(SGX_FEATURE_MP)	&& defined(FIX_HW_BRN_27270)
+	/* Enable all cores available */
 	ui32RegVal = OSReadHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_MASTER_CORE);
 	OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_MASTER_CORE, (SGX_FEATURE_MP_CORE_COUNT - 1) << EUR_CR_MASTER_CORE_ENABLE_SHIFT);
 #if defined(PDUMP)
-	PDUMPREGWITHFLAGS(EUR_CR_MASTER_CORE, (SGX_FEATURE_MP_CORE_COUNT - 1) << EUR_CR_MASTER_CORE_ENABLE_SHIFT,
+	PDUMPREGWITHFLAGS(SGX_PDUMPREG_NAME, EUR_CR_MASTER_CORE, (SGX_FEATURE_MP_CORE_COUNT - 1) << EUR_CR_MASTER_CORE_ENABLE_SHIFT,
 						psPDump3DSignatureRegistersIN->bLastFrame ? PDUMP_FLAGS_LASTFRAME : 0);
 #endif
 #endif
@@ -2267,10 +3473,38 @@ SGXPDump3DSignatureRegistersBW(IMG_UINT32 ui32BridgeID,
 		goto Exit;
 	}
 
-	PDump3DSignatureRegisters(psPDump3DSignatureRegistersIN->ui32DumpFrameNum,
+	PDump3DSignatureRegisters(&psDeviceNode->sDevId,
+					psPDump3DSignatureRegistersIN->ui32DumpFrameNum,
 					psPDump3DSignatureRegistersIN->bLastFrame,
 					pui32Registers,
 					psPDump3DSignatureRegistersIN->ui32NumRegisters);
+
+	psRetOUT->eError =
+		PVRSRVLookupHandle(	psPerProc->psHandleBase,
+							&hDevMemContextInt,
+							psPDump3DSignatureRegistersIN->hDevMemContext,
+							PVRSRV_HANDLE_TYPE_DEV_MEM_CONTEXT);
+	if(psRetOUT->eError != PVRSRV_OK)
+	{
+		return 0;
+	}
+
+	/* look up the MMU context ID */
+	PVR_ASSERT(psDeviceNode->pfnMMUGetContextID != IMG_NULL);
+	ui32MMUContextID = psDeviceNode->pfnMMUGetContextID((IMG_HANDLE)psDeviceNode->sDevMemoryInfo.pBMKernelContext);
+
+	PDumpSignatureBuffer(&psDeviceNode->sDevId,
+						 "out.tasig", "TA", 0,
+						 psDevInfo->psKernelTASigBufferMemInfo->sDevVAddr,
+						 (IMG_UINT32)psDevInfo->psKernelTASigBufferMemInfo->uAllocSize,
+						 ui32MMUContextID,
+						 0 /*ui32PDumpFlags*/);
+	PDumpSignatureBuffer(&psDeviceNode->sDevId,
+						 "out.3dsig", "3D", 0,
+						 psDevInfo->psKernel3DSigBufferMemInfo->sDevVAddr,
+						 (IMG_UINT32)psDevInfo->psKernel3DSigBufferMemInfo->uAllocSize,
+						 ui32MMUContextID,
+						 0 /*ui32PDumpFlags*/);
 
 ExitNoError:
 	psRetOUT->eError = PVRSRV_OK;
@@ -2286,7 +3520,7 @@ Exit:
 	{
 		OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_MASTER_CORE, ui32RegVal);
 #if defined(PDUMP)
-		PDUMPREGWITHFLAGS(EUR_CR_MASTER_CORE, ui32RegVal,
+		PDUMPREGWITHFLAGS(SGX_PDUMPREG_NAME, EUR_CR_MASTER_CORE, ui32RegVal,
 							psPDump3DSignatureRegistersIN->bLastFrame ? PDUMP_FLAGS_LASTFRAME : 0);
 #endif
 	}
@@ -2303,6 +3537,7 @@ SGXPDumpCounterRegistersBW(IMG_UINT32 ui32BridgeID,
 {
 	IMG_UINT32 ui32RegisterArraySize =  psPDumpCounterRegistersIN->ui32NumRegisters * sizeof(IMG_UINT32);
 	IMG_UINT32 *pui32Registers = IMG_NULL;
+	PVRSRV_DEVICE_NODE *psDeviceNode ;
 	IMG_INT ret = -EFAULT;
 
 	PVR_UNREFERENCED_PARAMETER(psBridgeOut);
@@ -2312,6 +3547,16 @@ SGXPDumpCounterRegistersBW(IMG_UINT32 ui32BridgeID,
 	if (ui32RegisterArraySize == 0)
 	{
 		goto ExitNoError;
+	}
+
+	if(PVRSRVLookupHandle(psPerProc->psHandleBase,
+						  (IMG_VOID**)&psDeviceNode,
+						  psPDumpCounterRegistersIN->hDevCookie,
+						  PVRSRV_HANDLE_TYPE_DEV_NODE) != PVRSRV_OK)
+	{
+		PVR_DPF((PVR_DBG_ERROR, "SGXPDumpCounterRegistersBW: hDevCookie lookup failed"));
+		ret = -ENOMEM;
+		goto Exit;
 	}
 
 	if(OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
@@ -2334,7 +3579,8 @@ SGXPDumpCounterRegistersBW(IMG_UINT32 ui32BridgeID,
 		goto Exit;
 	}
 
-	PDumpCounterRegisters(psPDumpCounterRegistersIN->ui32DumpFrameNum,
+	PDumpCounterRegisters(&psDeviceNode->sDevId,
+					psPDumpCounterRegistersIN->ui32DumpFrameNum,
 					psPDumpCounterRegistersIN->bLastFrame,
 					pui32Registers,
 					psPDumpCounterRegistersIN->ui32NumRegisters);
@@ -2360,9 +3606,9 @@ SGXPDumpTASignatureRegistersBW(IMG_UINT32 ui32BridgeID,
 	IMG_UINT32 *pui32Registers = IMG_NULL;
 #if defined(SGX_FEATURE_MP)	&& defined(FIX_HW_BRN_27270)
 	PVRSRV_SGXDEV_INFO	*psDevInfo = IMG_NULL;
-	IMG_HANDLE hDevCookieInt;
 	IMG_UINT32	ui32RegVal = 0;
 #endif
+	PVRSRV_DEVICE_NODE *psDeviceNode;
 	IMG_INT ret = -EFAULT;
 
 	PVR_UNREFERENCED_PARAMETER(psRetOUT);
@@ -2374,9 +3620,8 @@ SGXPDumpTASignatureRegistersBW(IMG_UINT32 ui32BridgeID,
 		goto ExitNoError;
 	}
 
-#if defined(SGX_FEATURE_MP)	&& defined(FIX_HW_BRN_27270)
 	psRetOUT->eError =
-		PVRSRVLookupHandle(psPerProc->psHandleBase, &hDevCookieInt,
+		PVRSRVLookupHandle(psPerProc->psHandleBase, (IMG_VOID**)&psDeviceNode,
 						   psPDumpTASignatureRegistersIN->hDevCookie,
 						   PVRSRV_HANDLE_TYPE_DEV_NODE);
 	if(psRetOUT->eError != PVRSRV_OK)
@@ -2385,13 +3630,15 @@ SGXPDumpTASignatureRegistersBW(IMG_UINT32 ui32BridgeID,
 		goto Exit;
 	}
 
-	psDevInfo = ((PVRSRV_DEVICE_NODE *)hDevCookieInt)->pvDevice;
+#if defined(SGX_FEATURE_MP)	&& defined(FIX_HW_BRN_27270)
 
+	psDevInfo = (PVRSRV_SGXDEV_INFO*)psDeviceNode->pvDevice;
 
+	/* Enable all cores available */
 	ui32RegVal = OSReadHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_MASTER_CORE);
 	OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_MASTER_CORE, (SGX_FEATURE_MP_CORE_COUNT - 1) << EUR_CR_MASTER_CORE_ENABLE_SHIFT);
 #if defined(PDUMP)
-	PDUMPREGWITHFLAGS(EUR_CR_MASTER_CORE, (SGX_FEATURE_MP_CORE_COUNT - 1) << EUR_CR_MASTER_CORE_ENABLE_SHIFT,
+	PDUMPREGWITHFLAGS(SGX_PDUMPREG_NAME, EUR_CR_MASTER_CORE, (SGX_FEATURE_MP_CORE_COUNT - 1) << EUR_CR_MASTER_CORE_ENABLE_SHIFT,
 						psPDumpTASignatureRegistersIN->bLastFrame ? PDUMP_FLAGS_LASTFRAME : 0);
 #endif
 #endif
@@ -2416,7 +3663,8 @@ SGXPDumpTASignatureRegistersBW(IMG_UINT32 ui32BridgeID,
 		goto Exit;
 	}
 
-	PDumpTASignatureRegisters(psPDumpTASignatureRegistersIN->ui32DumpFrameNum,
+	PDumpTASignatureRegisters(&psDeviceNode->sDevId,
+					psPDumpTASignatureRegistersIN->ui32DumpFrameNum,
 					psPDumpTASignatureRegistersIN->ui32TAKickCount,
 					psPDumpTASignatureRegistersIN->bLastFrame,
 					pui32Registers,
@@ -2436,7 +3684,7 @@ Exit:
 	{
 		OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_MASTER_CORE, ui32RegVal);
 #if defined(PDUMP)
-		PDUMPREGWITHFLAGS(EUR_CR_MASTER_CORE, ui32RegVal,
+		PDUMPREGWITHFLAGS(SGX_PDUMPREG_NAME, EUR_CR_MASTER_CORE, ui32RegVal,
 							psPDumpTASignatureRegistersIN->bLastFrame ? PDUMP_FLAGS_LASTFRAME : 0);
 #endif
 	}
@@ -2456,12 +3704,14 @@ SGXPDumpHWPerfCBBW(IMG_UINT32						ui32BridgeID,
 #if defined(SUPPORT_SGX_HWPERF)
 #if defined(__linux__)
 	PVRSRV_SGXDEV_INFO	*psDevInfo;
-	IMG_HANDLE			hDevCookieInt;
+	PVRSRV_DEVICE_NODE *psDeviceNode;
+	IMG_HANDLE hDevMemContextInt = 0;
+	IMG_UINT32 ui32MMUContextID = 0;
 
 	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID, PVRSRV_BRIDGE_SGX_PDUMP_HWPERFCB);
 
 	psRetOUT->eError =
-		PVRSRVLookupHandle(psPerProc->psHandleBase, &hDevCookieInt,
+		PVRSRVLookupHandle(psPerProc->psHandleBase, (IMG_VOID**)&psDeviceNode,
 						   psPDumpHWPerfCBIN->hDevCookie,
 						   PVRSRV_HANDLE_TYPE_DEV_NODE);
 	if(psRetOUT->eError != PVRSRV_OK)
@@ -2469,12 +3719,28 @@ SGXPDumpHWPerfCBBW(IMG_UINT32						ui32BridgeID,
 		return 0;
 	}
 
-	psDevInfo = ((PVRSRV_DEVICE_NODE *)hDevCookieInt)->pvDevice;
+	psDevInfo = psDeviceNode->pvDevice;
 
-	PDumpHWPerfCBKM(&psPDumpHWPerfCBIN->szFileName[0],
+	psRetOUT->eError =
+		PVRSRVLookupHandle(	psPerProc->psHandleBase,
+							&hDevMemContextInt,
+							psPDumpHWPerfCBIN->hDevMemContext,
+							PVRSRV_HANDLE_TYPE_DEV_MEM_CONTEXT);
+	if(psRetOUT->eError != PVRSRV_OK)
+	{
+		return 0;
+	}
+
+	/* look up the MMU context ID */
+	PVR_ASSERT(psDeviceNode->pfnMMUGetContextID != IMG_NULL);
+	ui32MMUContextID = psDeviceNode->pfnMMUGetContextID(hDevMemContextInt);
+
+	PDumpHWPerfCBKM(&psDeviceNode->sDevId,
+					&psPDumpHWPerfCBIN->szFileName[0],
 					psPDumpHWPerfCBIN->ui32FileOffset,
 					psDevInfo->psKernelHWPerfCBMemInfo->sDevVAddr,
-					psDevInfo->psKernelHWPerfCBMemInfo->ui32AllocSize,
+					psDevInfo->psKernelHWPerfCBMemInfo->uAllocSize,
+					ui32MMUContextID,
 					psPDumpHWPerfCBIN->ui32PDumpFlags);
 
 	return 0;
@@ -2494,9 +3760,57 @@ SGXPDumpHWPerfCBBW(IMG_UINT32						ui32BridgeID,
 #endif /* defined(SUPPORT_SGX_HWPERF) */
 }
 
-#endif
+
+static IMG_INT
+SGXPDumpSaveMemBW(IMG_UINT32						ui32BridgeID,
+				  PVRSRV_BRIDGE_IN_PDUMP_SAVEMEM	*psPDumpSaveMem,
+				  PVRSRV_BRIDGE_RETURN 				*psRetOUT,
+				  PVRSRV_PER_PROCESS_DATA 			*psPerProc)
+{
+	PVRSRV_DEVICE_NODE *psDeviceNode;
+	IMG_HANDLE hDevMemContextInt = 0;
+	IMG_UINT32 ui32MMUContextID;
+
+	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID, PVRSRV_BRIDGE_SGX_PDUMP_SAVEMEM);
+
+	psRetOUT->eError =
+		PVRSRVLookupHandle(psPerProc->psHandleBase,
+						   (IMG_VOID**)&psDeviceNode,
+						   psPDumpSaveMem->hDevCookie,
+						   PVRSRV_HANDLE_TYPE_DEV_NODE);
+	if(psRetOUT->eError != PVRSRV_OK)
+	{
+		return 0;
+	}
+
+	psRetOUT->eError =
+		PVRSRVLookupHandle(	psPerProc->psHandleBase,
+							&hDevMemContextInt,
+							psPDumpSaveMem->hDevMemContext,
+							PVRSRV_HANDLE_TYPE_DEV_MEM_CONTEXT);
+	if(psRetOUT->eError != PVRSRV_OK)
+	{
+		return 0;
+	}
+
+	/* look up the MMU context ID */
+	PVR_ASSERT(psDeviceNode->pfnMMUGetContextID != IMG_NULL);
+	ui32MMUContextID = psDeviceNode->pfnMMUGetContextID(hDevMemContextInt);
+
+	PDumpSaveMemKM(&psDeviceNode->sDevId,
+				   &psPDumpSaveMem->szFileName[0],
+				   psPDumpSaveMem->ui32FileOffset,
+				   psPDumpSaveMem->sDevVAddr,
+				   psPDumpSaveMem->ui32Size,
+				   ui32MMUContextID,
+				   psPDumpSaveMem->ui32PDumpFlags);
+	return 0;
+}
+
+#endif /* PDUMP */
 
 
+/* PRQA S 0313,3635 END_SET_SGX */ /* function macro required this format */
 IMG_VOID SetSGXDispatchTableEntry(IMG_VOID)
 {
 
@@ -2508,8 +3822,6 @@ IMG_VOID SetSGXDispatchTableEntry(IMG_VOID)
 	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_READREGISTRYDWORD, DummyBW);
 
 	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_2DQUERYBLTSCOMPLETE, SGX2DQueryBlitsCompleteBW);
-
-	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_GETMMUPDADDR, DummyBW);
 
 #if defined(TRANSFER_QUEUE)
 	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_SUBMITTRANSFER, SGXSubmitTransferBW);
@@ -2534,10 +3846,9 @@ IMG_VOID SetSGXDispatchTableEntry(IMG_VOID)
 
 	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_SCHEDULE_PROCESS_QUEUES, SGXScheduleProcessQueuesBW);
 
-#if defined(SUPPORT_SGX_HWPERF)
-	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_READ_DIFF_COUNTERS, SGXReadDiffCountersBW);
 	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_READ_HWPERF_CB, SGXReadHWPerfCBBW);
-#endif
+    SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_SET_RENDER_CONTEXT_PRIORITY, SGXSetRenderContextPriorityBW);
+    SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_SET_TRANSFER_CONTEXT_PRIORITY, SGXSetTransferContextPriorityBW);
 
 #if defined(PDUMP)
 	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_PDUMP_BUFFER_ARRAY, SGXPDumpBufferArrayBW);
@@ -2545,6 +3856,7 @@ IMG_VOID SetSGXDispatchTableEntry(IMG_VOID)
 	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_PDUMP_COUNTER_REGISTERS, SGXPDumpCounterRegistersBW);
 	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_PDUMP_TA_SIGNATURE_REGISTERS, SGXPDumpTASignatureRegistersBW);
 	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_PDUMP_HWPERFCB, SGXPDumpHWPerfCBBW);
+	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_PDUMP_SAVEMEM, SGXPDumpSaveMemBW);
 #endif
 }
 /* PRQA L:END_SET_SGX */ /* end of setup overrides */

@@ -1,28 +1,44 @@
-/**********************************************************************
- *
- * Copyright (C) Imagination Technologies Ltd. All rights reserved.
- * 
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- * 
- * This program is distributed in the hope it will be useful but, except 
- * as otherwise stated in writing, without any warranty; without even the 
- * implied warranty of merchantability or fitness for a particular purpose. 
- * See the GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- * 
- * The full GNU General Public License is included in this distribution in
- * the file called "COPYING".
- *
- * Contact Information:
- * Imagination Technologies Ltd. <gpl-support@imgtec.com>
- * Home Park Estate, Kings Langley, Herts, WD4 8LZ, UK 
- *
- ******************************************************************************/
+/*************************************************************************/ /*!
+@Title          Debug driver
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@Description    Debug Driver Interface
+@License        Dual MIT/GPLv2
+
+The contents of this file are subject to the MIT license as set out below.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/ /**************************************************************************/
 
 #ifndef _DBGDRVIF_
 #define _DBGDRVIF_
@@ -43,6 +59,9 @@
 
 #endif
 
+/*****************************************************************************
+ Stream mode stuff.
+*****************************************************************************/
 #define DEBUG_CAPMODE_FRAMED			0x00000001UL
 #define DEBUG_CAPMODE_CONTINUOUS		0x00000002UL
 #define DEBUG_CAPMODE_HOTKEY			0x00000004UL
@@ -61,6 +80,10 @@
 
 #define DEBUG_FLAGS_TEXTSTREAM			0x80000000UL
 
+/*****************************************************************************
+ Debug level control. Only bothered with the first 12 levels, I suspect you
+ get the idea...
+*****************************************************************************/
 #define DEBUG_LEVEL_0					0x00000001UL
 #define DEBUG_LEVEL_1					0x00000003UL
 #define DEBUG_LEVEL_2					0x00000007UL
@@ -87,6 +110,9 @@
 #define DEBUG_LEVEL_SEL10				0x00000400UL
 #define DEBUG_LEVEL_SEL11				0x00000800UL
 
+/*****************************************************************************
+ IOCTL values.
+*****************************************************************************/
 #define DEBUG_SERVICE_IOCTL_BASE		0x800UL
 #define DEBUG_SERVICE_CREATESTREAM		CTL_CODE(FILE_DEVICE_UNKNOWN, DEBUG_SERVICE_IOCTL_BASE + 0x01, METHOD_BUFFERED, FILE_ANY_ACCESS)
 #define DEBUG_SERVICE_DESTROYSTREAM		CTL_CODE(FILE_DEVICE_UNKNOWN, DEBUG_SERVICE_IOCTL_BASE + 0x02, METHOD_BUFFERED, FILE_ANY_ACCESS)
@@ -121,6 +147,9 @@ typedef enum _DBG_EVENT_
 } DBG_EVENT;
 
 
+/*****************************************************************************
+ In/Out Structures
+*****************************************************************************/
 typedef struct _DBG_IN_CREATESTREAM_
 {
 	union
@@ -247,23 +276,33 @@ typedef struct _DBG_IN_WRITE_LF_
 	IMG_UINT32 ui32BufferSize;
 } DBG_IN_WRITE_LF, *PDBG_IN_WRITE_LF;
 
+/*
+	Flags for above struct
+*/
 #define WRITELF_FLAGS_RESETBUF		0x00000001UL
 
+/*
+	Common control structure (don't duplicate control in main stream
+	and init phase stream).
+*/
 typedef struct _DBG_STREAM_CONTROL_
 {
-	IMG_BOOL   bInitPhaseComplete;	
-	IMG_UINT32 ui32Flags;			
+	IMG_BOOL   bInitPhaseComplete;		/*!< init phase has finished */
+	IMG_UINT32 ui32Flags;			/*!< flags (see DEBUG_FLAGS above) */
 
-	IMG_UINT32 ui32CapMode;			
-	IMG_UINT32 ui32OutMode;			
+	IMG_UINT32 ui32CapMode;			/*!< capturing mode framed/hot key */
+	IMG_UINT32 ui32OutMode;			/*!< output mode, e.g. files */
 	IMG_UINT32 ui32DebugLevel;
 	IMG_UINT32 ui32DefaultMode;
-	IMG_UINT32 ui32Start;			
-	IMG_UINT32 ui32End;				
-	IMG_UINT32 ui32Current;			
-	IMG_UINT32 ui32SampleRate;		
+	IMG_UINT32 ui32Start;			/*!< first capture frame */
+	IMG_UINT32 ui32End;				/*!< last frame */
+	IMG_UINT32 ui32Current;			/*!< current frame */
+	IMG_UINT32 ui32SampleRate;		/*!< capture frequency */
 	IMG_UINT32 ui32Reserved;
 } DBG_STREAM_CONTROL, *PDBG_STREAM_CONTROL;
+/*
+	Per-buffer control structure.
+*/
 typedef struct _DBG_STREAM_
 {
 	struct _DBG_STREAM_ *psNext;
@@ -275,20 +314,24 @@ typedef struct _DBG_STREAM_
 	IMG_UINT32 ui32RPtr;
 	IMG_UINT32 ui32WPtr;
 	IMG_UINT32 ui32DataWritten;
-	IMG_UINT32 ui32Marker;			
-	IMG_UINT32 ui32InitPhaseWOff;	
-	
-	
-	
-	
-	IMG_CHAR szName[30];		
+	IMG_UINT32 ui32Marker;			/*!< marker for file splitting */
+	IMG_UINT32 ui32InitPhaseWOff;	/*!< snapshot offset for init phase end for follow-on pdump */
+	IMG_CHAR szName[30];		/* Give this a size, some compilers don't like [] */
 } DBG_STREAM,*PDBG_STREAM;
 
+/*
+ * Allows dbgdrv to notify services when events happen, e.g. pdump.exe starts.
+ * (better than resetting psDevInfo->psKernelCCBInfo->ui32CCBDumpWOff = 0
+ * in SGXGetClientInfoKM.)
+ */
 typedef struct _DBGKM_CONNECT_NOTIFIER_
 {
 	IMG_VOID (IMG_CALLCONV *pfnConnectNotifier)		(IMG_VOID);
 } DBGKM_CONNECT_NOTIFIER, *PDBGKM_CONNECT_NOTIFIER;
 
+/*****************************************************************************
+ Kernel mode service table
+*****************************************************************************/
 typedef struct _DBGKM_SERVICE_TABLE_
 {
 	IMG_UINT32 ui32Size;
@@ -324,5 +367,15 @@ typedef struct _DBGKM_SERVICE_TABLE_
 	IMG_UINT32 	(IMG_CALLCONV *pfnWritePersist)			(PDBG_STREAM psStream,IMG_UINT8 *pui8InBuf,IMG_UINT32 ui32InBuffSize,IMG_UINT32 ui32Level);
 } DBGKM_SERVICE_TABLE, *PDBGKM_SERVICE_TABLE;
 
+#if defined(__linux__)
+/*****************************************************************************
+ Function to export service table from debug driver to the PDUMP component.
+*****************************************************************************/
+IMG_VOID DBGDrvGetServiceTable(DBGKM_SERVICE_TABLE **fn_table);
+#endif
+
 
 #endif
+/*****************************************************************************
+ End of file (DBGDRVIF.H)
+*****************************************************************************/

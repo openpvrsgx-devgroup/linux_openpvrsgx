@@ -1,5 +1,4 @@
 /*************************************************************************/ /*!
-@File
 @Title          Device class services functions
 @Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
 @Description    Kernel services functions for device class devices
@@ -44,17 +43,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "services_headers.h"
 #include "buffer_manager.h"
 #include "kernelbuffer.h"
+#include "kerneldisplay.h"
 #include "pvr_bridge_km.h"
+#include "pdump_km.h"
+#include "deviceid.h"
 
 #include "lists.h"
-#include "emgd_drm.h"
-
-DECLARE_LIST_ANY_VA(PVRSRV_DEVICE_NODE);
-DECLARE_LIST_FOR_EACH_VA(PVRSRV_DEVICE_NODE);
-DECLARE_LIST_INSERT(PVRSRV_DEVICE_NODE);
-DECLARE_LIST_REMOVE(PVRSRV_DEVICE_NODE);
-
-IMG_VOID* MatchDeviceKM_AnyVaCb(PVRSRV_DEVICE_NODE* psDeviceNode, va_list va);
 
 PVRSRV_ERROR AllocateDeviceID(SYS_DATA *psSysData, IMG_UINT32 *pui32DevID);
 PVRSRV_ERROR FreeDeviceID(SYS_DATA *psSysData, IMG_UINT32 ui32DevID);
@@ -91,14 +85,20 @@ typedef struct PVRSRV_DC_SWAPCHAIN_TAG
 {
 	IMG_HANDLE							hExtSwapChain;
 	IMG_UINT32							ui32SwapChainID;
-	IMG_UINT32							ui32Flags;
 	IMG_UINT32							ui32RefCount;
+	IMG_UINT32							ui32Flags;
 	PVRSRV_QUEUE_INFO					*psQueue;
 	PVRSRV_DC_BUFFER					asBuffer[PVRSRV_MAX_DC_SWAPCHAIN_BUFFERS];
 	IMG_UINT32							ui32BufferCount;
 	PVRSRV_DC_BUFFER					*psLastFlipBuffer;
-	struct PVRSRV_DC_SWAPCHAIN_TAG		*psNext;
+	IMG_UINT32							ui32MinSwapInterval;
+	IMG_UINT32							ui32MaxSwapInterval;
+#if !defined(SUPPORT_DC_CMDCOMPLETE_WHEN_NO_LONGER_DISPLAYED)
+	PVRSRV_KERNEL_SYNC_INFO				**ppsLastSyncInfos;
+	IMG_UINT32							ui32LastNumSyncInfos;
+#endif /* !defined(SUPPORT_DC_CMDCOMPLETE_WHEN_NO_LONGER_DISPLAYED) */
 	struct PVRSRV_DISPLAYCLASS_INFO_TAG *psDCInfo;
+	struct PVRSRV_DC_SWAPCHAIN_TAG		*psNext;
 } PVRSRV_DC_SWAPCHAIN;
 
 
@@ -108,7 +108,7 @@ typedef struct PVRSRV_DC_SWAPCHAIN_TAG
 typedef struct PVRSRV_DC_SWAPCHAIN_REF_TAG
 {
 	struct PVRSRV_DC_SWAPCHAIN_TAG		*psSwapChain;
-	IMG_HANDLE							hResItem;
+	IMG_HANDLE							hResItem;	
 } PVRSRV_DC_SWAPCHAIN_REF;
 
 
@@ -244,7 +244,7 @@ static PVRSRV_BUFFERCLASS_INFO* BCDeviceHandleToBCInfo (IMG_HANDLE hDeviceKM)
 							ppui32DevID		- The pointer to the device IDs pointer (to be updated and increased)
 							peDeviceClass	- The pointer to the device class of the psDeviceNode's to be enumerated.
 ******************************************************************************/
-IMG_VOID PVRSRVEnumerateDCKM_ForEachVaCb(PVRSRV_DEVICE_NODE *psDeviceNode, va_list va)
+static IMG_VOID PVRSRVEnumerateDCKM_ForEachVaCb(PVRSRV_DEVICE_NODE *psDeviceNode, va_list va)
 {
 	IMG_UINT *pui32DevCount;
 	IMG_UINT32 **ppui32DevID;
@@ -296,14 +296,12 @@ PVRSRV_ERROR PVRSRVEnumerateDCKM (PVRSRV_DEVICE_CLASS DeviceClass,
 	/*PVRSRV_DEVICE_NODE	*psDeviceNode;*/
 	IMG_UINT			ui32DevCount = 0;
 	SYS_DATA 			*psSysData;
-	IMG_UINT32			pui32Temp[PVRSRV_MAX_DEVICES];
-	int					i;
 
 	SysAcquireData(&psSysData);
 
 	/* search devonode list for devices in specified class and return the device ids */
 	List_PVRSRV_DEVICE_NODE_ForEach_va(psSysData->psDeviceNodeList,
-										PVRSRVEnumerateDCKM_ForEachVaCb,
+										&PVRSRVEnumerateDCKM_ForEachVaCb,
 										&ui32DevCount,
 										&pui32DevID,
 										DeviceClass);
@@ -318,26 +316,27 @@ PVRSRV_ERROR PVRSRVEnumerateDCKM (PVRSRV_DEVICE_CLASS DeviceClass,
 		return (PVRSRV_ERROR_INVALID_PARAMS);
 	}
 
-
-
-	/* Note: The above macro returns the device IDs in the opposite order that
-	 * they were registered in, which messes up EMGD's DIH (dual independant
-	 * head) code.  To fix that, we need to reverse the order of the device
-	 * IDs:
-	 */
-	/* 1st) make a temporary copy of the array, in the correct order: */
-	for (i=0; i<ui32DevCount; i++) {
-		pui32Temp[i] = *(--pui32DevID);
-	}
-	/* 2nd) make a final version of the array, in the correct order: */
-	for (i=0; i<ui32DevCount; i++) {
-		pui32DevID[i] = pui32Temp[i];
-	}
-
 	return PVRSRV_OK;
 }
 
 
+/*!
+******************************************************************************
+
+ @Function	PVRSRVRegisterDCDeviceKM
+
+ @Description
+
+ registers an external device with the system
+
+ @Input		psFuncTable		: device function table
+
+ @Output	pui32DeviceID	: unique device key (for case of multiple identical devices)
+
+ @Return	PVRSRV_ERROR 	:
+
+******************************************************************************/
+static
 PVRSRV_ERROR PVRSRVRegisterDCDeviceKM (PVRSRV_DC_SRV2DISP_KMJTABLE *psFuncTable,
 									   IMG_UINT32 *pui32DeviceID)
 {
@@ -395,7 +394,7 @@ PVRSRV_ERROR PVRSRVRegisterDCDeviceKM (PVRSRV_DC_SRV2DISP_KMJTABLE *psFuncTable,
 	*psDCInfo->psFuncTable = *psFuncTable;
 
 	/* Allocate device node */
-	if(OSAllocMem( PVRSRV_OS_PAGEABLE_HEAP,
+	if(OSAllocMem( PVRSRV_OS_NON_PAGEABLE_HEAP,
 					 sizeof(PVRSRV_DEVICE_NODE),
 					 (IMG_VOID **)&psDeviceNode, IMG_NULL,
 					 "Device Node") != PVRSRV_OK)
@@ -446,7 +445,21 @@ ErrorExit:
 	return PVRSRV_ERROR_OUT_OF_MEMORY;
 }
 
-PVRSRV_ERROR PVRSRVRemoveDCDeviceKM(IMG_UINT32 ui32DevIndex)
+/*!
+******************************************************************************
+
+ @Function	PVRSRVRemoveDCDeviceKM
+
+ @Description
+
+ Removes external device from services system record
+
+ @Input	   ui32DeviceIndex		: unique device key (for case of multiple identical devices)
+
+ @Return   PVRSRV_ERROR  :
+
+******************************************************************************/
+static PVRSRV_ERROR PVRSRVRemoveDCDeviceKM(IMG_UINT32 ui32DevIndex)
 {
 	SYS_DATA					*psSysData;
 	PVRSRV_DEVICE_NODE			*psDeviceNode;
@@ -457,7 +470,7 @@ PVRSRV_ERROR PVRSRVRemoveDCDeviceKM(IMG_UINT32 ui32DevIndex)
 	/*search the node matching the devindex and display class*/
 	psDeviceNode = (PVRSRV_DEVICE_NODE*)
 		List_PVRSRV_DEVICE_NODE_Any_va(psSysData->psDeviceNodeList,
-									   MatchDeviceKM_AnyVaCb,
+									   &MatchDeviceKM_AnyVaCb,
 									   ui32DevIndex,
 									   IMG_FALSE,
 									   PVRSRV_DEVICE_CLASS_DISPLAY);
@@ -465,7 +478,7 @@ PVRSRV_ERROR PVRSRVRemoveDCDeviceKM(IMG_UINT32 ui32DevIndex)
 	{
 		/*device not found*/
 		PVR_DPF((PVR_DBG_ERROR,"PVRSRVRemoveDCDeviceKM: requested device %d not present", ui32DevIndex));
-		return PVRSRV_ERROR_GENERIC;
+		return PVRSRV_ERROR_NO_DEVICENODE_FOUND;
 	}
 
 	/* setup DCInfo ptr */
@@ -501,7 +514,7 @@ PVRSRV_ERROR PVRSRVRemoveDCDeviceKM(IMG_UINT32 ui32DevIndex)
 	else
 	{
 		PVR_DPF((PVR_DBG_ERROR,"PVRSRVRemoveDCDeviceKM: failed as %d Services DC API connections are still open", psDCInfo->ui32RefCount));
-		return PVRSRV_ERROR_GENERIC;
+		return PVRSRV_ERROR_UNABLE_TO_REMOVE_DEVICE;
 	}
 
 	return PVRSRV_OK;
@@ -523,7 +536,7 @@ PVRSRV_ERROR PVRSRVRemoveDCDeviceKM(IMG_UINT32 ui32DevIndex)
  @Return   PVRSRV_ERROR  :
 
 ******************************************************************************/
-
+static
 PVRSRV_ERROR PVRSRVRegisterBCDeviceKM (PVRSRV_BC_SRV2BUFFER_KMJTABLE *psFuncTable,
 									   IMG_UINT32	*pui32DeviceID)
 {
@@ -578,8 +591,8 @@ PVRSRV_ERROR PVRSRVRegisterBCDeviceKM (PVRSRV_BC_SRV2BUFFER_KMJTABLE *psFuncTabl
 	/* copy the jump table */
 	*psBCInfo->psFuncTable = *psFuncTable;
 
-
-	if(OSAllocMem( PVRSRV_OS_PAGEABLE_HEAP,
+	/* Allocate device node */
+	if(OSAllocMem( PVRSRV_OS_NON_PAGEABLE_HEAP,
 					 sizeof(PVRSRV_DEVICE_NODE),
 					 (IMG_VOID **)&psDeviceNode, IMG_NULL,
 					 "Device Node") != PVRSRV_OK)
@@ -628,7 +641,21 @@ ErrorExit:
 }
 
 
-PVRSRV_ERROR PVRSRVRemoveBCDeviceKM(IMG_UINT32 ui32DevIndex)
+/*!
+******************************************************************************
+
+ @Function	PVRSRVRemoveBCDeviceKM
+
+ @Description
+
+ Removes external device from services system record
+
+ @Input	   ui32DeviceIndex		: unique device key (for case of multiple identical devices)
+
+ @Return   PVRSRV_ERROR  :
+
+******************************************************************************/
+static PVRSRV_ERROR PVRSRVRemoveBCDeviceKM(IMG_UINT32 ui32DevIndex)
 {
 	SYS_DATA					*psSysData;
 	PVRSRV_DEVICE_NODE			*psDevNode;
@@ -639,7 +666,7 @@ PVRSRV_ERROR PVRSRVRemoveBCDeviceKM(IMG_UINT32 ui32DevIndex)
 	/*search the device node with the devindex and buffer class*/
 	psDevNode = (PVRSRV_DEVICE_NODE*)
 		List_PVRSRV_DEVICE_NODE_Any_va(psSysData->psDeviceNodeList,
-									   MatchDeviceKM_AnyVaCb,
+									   &MatchDeviceKM_AnyVaCb,
 									   ui32DevIndex,
 									   IMG_FALSE,
 									   PVRSRV_DEVICE_CLASS_BUFFER);
@@ -647,7 +674,7 @@ PVRSRV_ERROR PVRSRVRemoveBCDeviceKM(IMG_UINT32 ui32DevIndex)
 	if (!psDevNode)
 	{
 		PVR_DPF((PVR_DBG_ERROR,"PVRSRVRemoveBCDeviceKM: requested device %d not present", ui32DevIndex));
-		return PVRSRV_ERROR_GENERIC;
+		return PVRSRV_ERROR_NO_DEVICENODE_FOUND;
 	}
 
 	/* set-up devnode ptr */
@@ -681,7 +708,7 @@ PVRSRV_ERROR PVRSRVRemoveBCDeviceKM(IMG_UINT32 ui32DevIndex)
 	else
 	{
 		PVR_DPF((PVR_DBG_ERROR,"PVRSRVRemoveBCDeviceKM: failed as %d Services BC API connections are still open", psBCInfo->ui32RefCount));
-		return PVRSRV_ERROR_GENERIC;
+		return PVRSRV_ERROR_UNABLE_TO_REMOVE_DEVICE;
 	}
 
 	return PVRSRV_OK;
@@ -704,33 +731,39 @@ PVRSRV_ERROR PVRSRVRemoveBCDeviceKM(IMG_UINT32 ui32DevIndex)
 
 ******************************************************************************/
 IMG_EXPORT
-PVRSRV_ERROR PVRSRVCloseDCDeviceKM (IMG_HANDLE	hDeviceKM,
-									IMG_BOOL	bResManCallback)
+PVRSRV_ERROR PVRSRVCloseDCDeviceKM (IMG_HANDLE	hDeviceKM)
 {
 	PVRSRV_ERROR eError;
 	PVRSRV_DISPLAYCLASS_PERCONTEXT_INFO *psDCPerContextInfo;
 
-	PVR_UNREFERENCED_PARAMETER(bResManCallback);
-
 	psDCPerContextInfo = (PVRSRV_DISPLAYCLASS_PERCONTEXT_INFO *)hDeviceKM;
 
-
-	eError = ResManFreeResByPtr(psDCPerContextInfo->hResItem);
+	/* Remove the item from the resman list and trigger the callback. */
+	eError = ResManFreeResByPtr(psDCPerContextInfo->hResItem, CLEANUP_WITH_POLL);
 
 	return eError;
 }
 
 
-static PVRSRV_ERROR CloseDCDeviceCallBack(IMG_PVOID		pvParam,
-										  IMG_UINT32	ui32Param)
+static PVRSRV_ERROR CloseDCDeviceCallBack(IMG_PVOID  pvParam,
+										  IMG_UINT32 ui32Param,
+										  IMG_BOOL   bDummy)
 {
 	PVRSRV_DISPLAYCLASS_PERCONTEXT_INFO *psDCPerContextInfo;
 	PVRSRV_DISPLAYCLASS_INFO *psDCInfo;
 
 	PVR_UNREFERENCED_PARAMETER(ui32Param);
+	PVR_UNREFERENCED_PARAMETER(bDummy);
 
 	psDCPerContextInfo = (PVRSRV_DISPLAYCLASS_PERCONTEXT_INFO *)pvParam;
 	psDCInfo = psDCPerContextInfo->psDCInfo;
+
+	if(psDCInfo->sSystemBuffer.sDeviceClassBuffer.ui32MemMapRefCount != 0)
+	{
+		PVR_DPF((PVR_DBG_MESSAGE,"CloseDCDeviceCallBack: system buffer (0x%p) still mapped (refcount = %d)",
+				&psDCInfo->sSystemBuffer.sDeviceClassBuffer,
+				psDCInfo->sSystemBuffer.sDeviceClassBuffer.ui32MemMapRefCount));
+	}
 
 	psDCInfo->ui32RefCount--;
 	if(psDCInfo->ui32RefCount == 0)
@@ -738,10 +771,7 @@ static PVRSRV_ERROR CloseDCDeviceCallBack(IMG_PVOID		pvParam,
 		/* close the external device */
 		psDCInfo->psFuncTable->pfnCloseDCDevice(psDCInfo->hExtDevice);
 
-		if (--psDCInfo->sSystemBuffer.sDeviceClassBuffer.psKernelSyncInfo->ui32RefCount == 0)
-		{
-			PVRSRVFreeSyncInfoKM(psDCInfo->sSystemBuffer.sDeviceClassBuffer.psKernelSyncInfo);
-		}
+		PVRSRVKernelSyncInfoDecRef(psDCInfo->sSystemBuffer.sDeviceClassBuffer.psKernelSyncInfo, IMG_NULL);
 
 		psDCInfo->hDevMemContext = IMG_NULL;
 		psDCInfo->hExtDevice = IMG_NULL;
@@ -788,7 +818,7 @@ PVRSRV_ERROR PVRSRVOpenDCDeviceKM (PVRSRV_PER_PROCESS_DATA	*psPerProc,
 	if(!phDeviceKM || !hDevCookie)
 	{
 		PVR_DPF((PVR_DBG_ERROR,"PVRSRVOpenDCDeviceKM: Invalid params"));
-		return PVRSRV_ERROR_GENERIC;
+		return PVRSRV_ERROR_INVALID_PARAMS;
 	}
 
 	SysAcquireData(&psSysData);
@@ -796,14 +826,14 @@ PVRSRV_ERROR PVRSRVOpenDCDeviceKM (PVRSRV_PER_PROCESS_DATA	*psPerProc,
 	/* find the matching devicenode */
 	psDeviceNode = (PVRSRV_DEVICE_NODE*)
 			List_PVRSRV_DEVICE_NODE_Any_va(psSysData->psDeviceNodeList,
-										   MatchDeviceKM_AnyVaCb,
+										   &MatchDeviceKM_AnyVaCb,
 										   ui32DeviceID,
 										   IMG_FALSE,
 										   PVRSRV_DEVICE_CLASS_DISPLAY);
 	if (!psDeviceNode)
 	{
 		PVR_DPF((PVR_DBG_ERROR,"PVRSRVOpenDCDeviceKM: no devnode matching index %d", ui32DeviceID));
-		return PVRSRV_ERROR_GENERIC;
+		return PVRSRV_ERROR_NO_DEVICENODE_FOUND;
 	}
 	psDCInfo = (PVRSRV_DISPLAYCLASS_INFO*)psDeviceNode->pvDevice;
 
@@ -842,25 +872,37 @@ PVRSRV_ERROR PVRSRVOpenDCDeviceKM (PVRSRV_PER_PROCESS_DATA	*psPerProc,
 
 		/* open the external device */
 		eError = psDCInfo->psFuncTable->pfnOpenDCDevice(ui32DeviceID,
-	&psDCInfo->hExtDevice,
+                                                        	&psDCInfo->hExtDevice,
 								(PVRSRV_SYNC_DATA*)psDCInfo->sSystemBuffer.sDeviceClassBuffer.psKernelSyncInfo->psSyncDataMemInfoKM->pvLinAddrKM);
 		if(eError != PVRSRV_OK)
 		{
 			PVR_DPF((PVR_DBG_ERROR,"PVRSRVOpenDCDeviceKM: Failed to open external DC device"));
 			psDCInfo->ui32RefCount--;
-			PVRSRVFreeSyncInfoKM(psDCInfo->sSystemBuffer.sDeviceClassBuffer.psKernelSyncInfo);
+			PVRSRVKernelSyncInfoDecRef(psDCInfo->sSystemBuffer.sDeviceClassBuffer.psKernelSyncInfo, IMG_NULL);
 			return eError;
 		}
 
-		psDCInfo->sSystemBuffer.sDeviceClassBuffer.psKernelSyncInfo->ui32RefCount++;
+		psDCPerContextInfo->psDCInfo = psDCInfo;
+		eError = PVRSRVGetDCSystemBufferKM(psDCPerContextInfo, IMG_NULL);
+		if(eError != PVRSRV_OK)
+		{
+			PVR_DPF((PVR_DBG_ERROR,"PVRSRVOpenDCDeviceKM: Failed to get system buffer"));
+			psDCInfo->ui32RefCount--;
+			PVRSRVKernelSyncInfoDecRef(psDCInfo->sSystemBuffer.sDeviceClassBuffer.psKernelSyncInfo, IMG_NULL);
+			return eError;
+		}
+		psDCInfo->sSystemBuffer.sDeviceClassBuffer.ui32MemMapRefCount = 0;
+	}
+	else
+	{
+		psDCPerContextInfo->psDCInfo = psDCInfo;
 	}
 
-	psDCPerContextInfo->psDCInfo = psDCInfo;
 	psDCPerContextInfo->hResItem = ResManRegisterRes(psPerProc->hResManContext,
 													 RESMAN_TYPE_DISPLAYCLASS_DEVICE,
 													 psDCPerContextInfo,
 													 0,
-													 CloseDCDeviceCallBack);
+													 &CloseDCDeviceCallBack);
 
 	/* return a reference to the DCPerContextInfo */
 	*phDeviceKM = (IMG_HANDLE)psDCPerContextInfo;
@@ -892,13 +934,7 @@ PVRSRV_ERROR PVRSRVEnumDCFormatsKM (IMG_HANDLE hDeviceKM,
 {
 	PVRSRV_DISPLAYCLASS_INFO *psDCInfo;
 
-	/* Note: It is acceptable for psFormat to be NULL.  In fact, this is the
-	 * desired way in which to find out the number of pixel formats, so that
-	 * memory can be allocated before a second call to this function, in order
-	 * to get the pixel formats.
-	 */
-	/*	if(!hDeviceKM || !pui32Count || !psFormat)*/
-	if(!hDeviceKM || !pui32Count)
+	if(!hDeviceKM || !pui32Count || !psFormat)
 	{
 		PVR_DPF((PVR_DBG_ERROR,"PVRSRVEnumDCFormatsKM: Invalid parameters"));
 		return PVRSRV_ERROR_INVALID_PARAMS;
@@ -937,7 +973,7 @@ PVRSRV_ERROR PVRSRVEnumDCDimsKM (IMG_HANDLE hDeviceKM,
 {
 	PVRSRV_DISPLAYCLASS_INFO *psDCInfo;
 
-	if(!hDeviceKM || !pui32Count || !psFormat)
+	if(!hDeviceKM || !pui32Count || !psFormat)	//  psDim==NULL to query number of dims
 	{
 		PVR_DPF((PVR_DBG_ERROR,"PVRSRVEnumDCDimsKM: Invalid parameters"));
 		return PVRSRV_ERROR_INVALID_PARAMS;
@@ -945,7 +981,7 @@ PVRSRV_ERROR PVRSRVEnumDCDimsKM (IMG_HANDLE hDeviceKM,
 
 	psDCInfo = DCDeviceHandleToDCInfo(hDeviceKM);
 
-
+	/* call into the display device driver to get info */
 	return psDCInfo->psFuncTable->pfnEnumDCDims(psDCInfo->hExtDevice, psFormat, pui32Count, psDim);
 }
 
@@ -973,7 +1009,7 @@ PVRSRV_ERROR PVRSRVGetDCSystemBufferKM (IMG_HANDLE hDeviceKM,
 	PVRSRV_DISPLAYCLASS_INFO *psDCInfo;
 	IMG_HANDLE hExtBuffer;
 
-	if(!hDeviceKM || !phBuffer)
+	if(!hDeviceKM)
 	{
 		PVR_DPF((PVR_DBG_ERROR,"PVRSRVGetDCSystemBufferKM: Invalid parameters"));
 		return PVRSRV_ERROR_INVALID_PARAMS;
@@ -1066,7 +1102,7 @@ PVRSRV_ERROR PVRSRVDestroyDCSwapChainKM(IMG_HANDLE hSwapChainRef)
 
 	psSwapChainRef = hSwapChainRef;
 
-	eError = ResManFreeResByPtr(psSwapChainRef->hResItem);
+	eError = ResManFreeResByPtr(psSwapChainRef->hResItem, CLEANUP_WITH_POLL);
 
 	return eError;
 }
@@ -1077,7 +1113,6 @@ static PVRSRV_ERROR DestroyDCSwapChain(PVRSRV_DC_SWAPCHAIN *psSwapChain)
 	PVRSRV_ERROR				eError;
 	PVRSRV_DISPLAYCLASS_INFO	*psDCInfo = psSwapChain->psDCInfo;
 	IMG_UINT32 i;
-	int timeout = 30;
 
 	/* Update shared swapchains list */
 	if( psDCInfo->psDCSwapChainShared )
@@ -1086,34 +1121,25 @@ static PVRSRV_ERROR DestroyDCSwapChain(PVRSRV_DC_SWAPCHAIN *psSwapChain)
 		{
 			psDCInfo->psDCSwapChainShared = psSwapChain->psNext;
 		}
-		else
+		else 
 		{
 			PVRSRV_DC_SWAPCHAIN *psCurrentSwapChain;
-			psCurrentSwapChain = psDCInfo->psDCSwapChainShared;
+			psCurrentSwapChain = psDCInfo->psDCSwapChainShared; 		
 			while( psCurrentSwapChain->psNext )
 			{
-				if( psCurrentSwapChain->psNext != psSwapChain )
+				if( psCurrentSwapChain->psNext != psSwapChain ) 
 				{
 					psCurrentSwapChain = psCurrentSwapChain->psNext;
 					continue;
 				}
 				psCurrentSwapChain->psNext = psSwapChain->psNext;
-				break;
+				break;				
 			}
 		}
 	}
 
-	if (psSwapChain->psQueue)
-	{
-		do
-		{
-			eError = PVRSRVDestroyCommandQueueKM(psSwapChain->psQueue);
-		} while (eError != PVRSRV_OK && (timeout-- > 0));
-		if (eError != PVRSRV_OK)
-		{
-			PVR_DPF((PVR_DBG_ERROR,"DestroyDCSwapChainCallBack: Failed to destroy command queue"));
-		}
-	}
+	/* Destroy command queue before swapchain - it may use the swapchain when commands are flushed. */
+	PVRSRVDestroyCommandQueueKM(psSwapChain->psQueue);
 
 	/* call into the display device driver to destroy a swapchain */
 	eError = psDCInfo->psFuncTable->pfnDestroyDCSwapChain(psDCInfo->hExtDevice,
@@ -1130,12 +1156,17 @@ static PVRSRV_ERROR DestroyDCSwapChain(PVRSRV_DC_SWAPCHAIN *psSwapChain)
 	{
 		if(psSwapChain->asBuffer[i].sDeviceClassBuffer.psKernelSyncInfo)
 		{
-			if (--psSwapChain->asBuffer[i].sDeviceClassBuffer.psKernelSyncInfo->ui32RefCount == 0)
-			{
-				PVRSRVFreeSyncInfoKM(psSwapChain->asBuffer[i].sDeviceClassBuffer.psKernelSyncInfo);
-			}
+			PVRSRVKernelSyncInfoDecRef(psSwapChain->asBuffer[i].sDeviceClassBuffer.psKernelSyncInfo, IMG_NULL);
 		}
 	}
+
+#if !defined(SUPPORT_DC_CMDCOMPLETE_WHEN_NO_LONGER_DISPLAYED)
+	if (psSwapChain->ppsLastSyncInfos)
+	{
+		OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, sizeof(PVRSRV_KERNEL_SYNC_INFO *) * psSwapChain->ui32LastNumSyncInfos,
+					psSwapChain->ppsLastSyncInfos, IMG_NULL);
+	}
+#endif /* !defined(SUPPORT_DC_CMDCOMPLETE_WHEN_NO_LONGER_DISPLAYED) */
 
 	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, sizeof(PVRSRV_DC_SWAPCHAIN), psSwapChain, IMG_NULL);
 	/*not nulling pointer, copy on stack*/
@@ -1144,14 +1175,28 @@ static PVRSRV_ERROR DestroyDCSwapChain(PVRSRV_DC_SWAPCHAIN *psSwapChain)
 }
 
 
-static PVRSRV_ERROR DestroyDCSwapChainRefCallBack(IMG_PVOID pvParam, IMG_UINT32 ui32Param)
+static PVRSRV_ERROR DestroyDCSwapChainRefCallBack(IMG_PVOID pvParam,
+												  IMG_UINT32 ui32Param,
+												  IMG_BOOL bDummy)
 {
 	PVRSRV_DC_SWAPCHAIN_REF *psSwapChainRef = (PVRSRV_DC_SWAPCHAIN_REF *) pvParam;
 	PVRSRV_ERROR eError = PVRSRV_OK;
+	IMG_UINT32 i;
 
 	PVR_UNREFERENCED_PARAMETER(ui32Param);
+	PVR_UNREFERENCED_PARAMETER(bDummy);
 
-	if(--psSwapChainRef->psSwapChain->ui32RefCount == 0)
+	for (i = 0; i < psSwapChainRef->psSwapChain->ui32BufferCount; i++)
+	{
+		if (psSwapChainRef->psSwapChain->asBuffer[i].sDeviceClassBuffer.ui32MemMapRefCount != 0)
+		{
+			PVR_DPF((PVR_DBG_ERROR, "DestroyDCSwapChainRefCallBack: swapchain (0x%p) still mapped (ui32MemMapRefCount = %d)",
+					&psSwapChainRef->psSwapChain->asBuffer[i].sDeviceClassBuffer,
+					psSwapChainRef->psSwapChain->asBuffer[i].sDeviceClassBuffer.ui32MemMapRefCount));
+		}
+	}
+
+	if(--psSwapChainRef->psSwapChain->ui32RefCount == 0) 
 	{
 		eError = DestroyDCSwapChain(psSwapChainRef->psSwapChain);
 	}
@@ -1165,9 +1210,9 @@ static PVRSRV_DC_SWAPCHAIN* PVRSRVFindSharedDCSwapChainKM(PVRSRV_DISPLAYCLASS_IN
 {
 	PVRSRV_DC_SWAPCHAIN *psCurrentSwapChain;
 
-	for(psCurrentSwapChain = psDCInfo->psDCSwapChainShared;
-		psCurrentSwapChain;
-		psCurrentSwapChain = psCurrentSwapChain->psNext)
+	for(psCurrentSwapChain = psDCInfo->psDCSwapChainShared; 
+		psCurrentSwapChain; 
+		psCurrentSwapChain = psCurrentSwapChain->psNext) 
 	{
 		if(psCurrentSwapChain->ui32SwapChainID == ui32SwapChainID)
 			return psCurrentSwapChain;
@@ -1176,7 +1221,7 @@ static PVRSRV_DC_SWAPCHAIN* PVRSRVFindSharedDCSwapChainKM(PVRSRV_DISPLAYCLASS_IN
 }
 
 static PVRSRV_ERROR PVRSRVCreateDCSwapChainRefKM(PVRSRV_PER_PROCESS_DATA	*psPerProc,
-												 PVRSRV_DC_SWAPCHAIN 		*psSwapChain,
+												 PVRSRV_DC_SWAPCHAIN 		*psSwapChain, 
 												 PVRSRV_DC_SWAPCHAIN_REF 	**ppsSwapChainRef)
 {
 	PVRSRV_DC_SWAPCHAIN_REF *psSwapChainRef = IMG_NULL;
@@ -1227,7 +1272,6 @@ PVRSRV_ERROR PVRSRVCreateDCSwapChainKM (PVRSRV_PER_PROCESS_DATA	*psPerProc,
 	PVRSRV_ERROR eError;
 	IMG_UINT32 i;
 	DISPLAY_INFO sDisplayInfo;
-	int timeout = 30;
 
 
 	if(!hDeviceKM
@@ -1246,13 +1290,11 @@ PVRSRV_ERROR PVRSRVCreateDCSwapChainKM (PVRSRV_PER_PROCESS_DATA	*psPerProc,
 		return PVRSRV_ERROR_TOOMANYBUFFERS;
 	}
 
-#if 0 /* Removing limiation  to allow 1 buffer allocations */
 	if (ui32BufferCount < 2)
 	{
 		PVR_DPF((PVR_DBG_ERROR,"PVRSRVCreateDCSwapChainKM: Too few buffers"));
 		return PVRSRV_ERROR_TOO_FEW_BUFFERS;
 	}
-#endif
 
 	psDCInfo = DCDeviceHandleToDCInfo(hDeviceKM);
 
@@ -1260,14 +1302,13 @@ PVRSRV_ERROR PVRSRVCreateDCSwapChainKM (PVRSRV_PER_PROCESS_DATA	*psPerProc,
 	{
 		/* Query - use pui32SwapChainID as input */
 		psSwapChain = PVRSRVFindSharedDCSwapChainKM(psDCInfo, *pui32SwapChainID );
-		if( psSwapChain  )
-		{
-			PVR_DPF((PVR_DBG_MESSAGE,"PVRSRVCreateDCSwapChainKM: found query"));
-
-			eError = PVRSRVCreateDCSwapChainRefKM(psPerProc,
-												  psSwapChain,
+		if( psSwapChain  ) 
+		{	
+			/* Create new reference */		   
+			eError = PVRSRVCreateDCSwapChainRefKM(psPerProc, 
+												  psSwapChain, 
 												  &psSwapChainRef);
-			if( eError != PVRSRV_OK )
+			if( eError != PVRSRV_OK ) 
 			{
 				PVR_DPF((PVR_DBG_ERROR,"PVRSRVCreateDCSwapChainKM: Couldn't create swap chain reference"));
 				return eError;
@@ -1277,7 +1318,7 @@ PVRSRV_ERROR PVRSRVCreateDCSwapChainKM (PVRSRV_PER_PROCESS_DATA	*psPerProc,
 			return PVRSRV_OK;
 		}
 		PVR_DPF((PVR_DBG_ERROR,"PVRSRVCreateDCSwapChainKM: No shared SwapChain found for query"));
-		return PVRSRV_ERROR_FLIP_CHAIN_EXISTS;
+		return PVRSRV_ERROR_FLIP_CHAIN_EXISTS;		
 	}
 
 	/* Allocate swapchain control structure for srvkm */
@@ -1290,31 +1331,20 @@ PVRSRV_ERROR PVRSRVCreateDCSwapChainKM (PVRSRV_PER_PROCESS_DATA	*psPerProc,
 		eError = PVRSRV_ERROR_OUT_OF_MEMORY;
 		goto ErrorExit;
 	}
-
 	OSMemSet (psSwapChain, 0, sizeof(PVRSRV_DC_SWAPCHAIN));
 
-	if (ui32OEMFlags & (PVR2D_CREATE_FLIPCHAIN_OEMDISPLAY |
-				PVR2D_CREATE_FLIPCHAIN_OEMGENERAL |
-				PVR2D_CREATE_FLIPCHAIN_OEMOVERLAY))
+	/* Create a command queue for the swapchain	*/
+	eError = PVRSRVCreateCommandQueueKM(1024, &psQueue);
+	if(eError != PVRSRV_OK)
 	{
-		psQueue = NULL;
-	}
-	else
-	{
-		do
-		{
-			eError = PVRSRVCreateCommandQueueKM(1024, &psQueue);
-		} while (eError != PVRSRV_OK && (timeout-- > 0));
-
-		if(eError != PVRSRV_OK)
-		{
-			PVR_DPF((PVR_DBG_ERROR,"PVRSRVCreateDCSwapChainKM: Failed to create CmdQueue"));
-			goto ErrorExit;
-		}
+		PVR_DPF((PVR_DBG_ERROR,"PVRSRVCreateDCSwapChainKM: Failed to create CmdQueue"));
+		goto ErrorExit;
 	}
 
+	/* store the Queue */
 	psSwapChain->psQueue = psQueue;
 
+	/* Create a Sync Object for each surface in the swapchain */
 	for(i=0; i<ui32BufferCount; i++)
 	{
 		eError = PVRSRVAllocSyncInfoKM(IMG_NULL,
@@ -1326,9 +1356,7 @@ PVRSRV_ERROR PVRSRVCreateDCSwapChainKM (PVRSRV_PER_PROCESS_DATA	*psPerProc,
 			goto ErrorExit;
 		}
 
-		psSwapChain->asBuffer[i].sDeviceClassBuffer.psKernelSyncInfo->ui32RefCount++;
-
-
+		/* setup common device class info */
 		psSwapChain->asBuffer[i].sDeviceClassBuffer.pfnGetBufferAddr = psDCInfo->psFuncTable->pfnGetBufferAddr;
 		psSwapChain->asBuffer[i].sDeviceClassBuffer.hDevMemContext = psDCInfo->hDevMemContext;
 		psSwapChain->asBuffer[i].sDeviceClassBuffer.hExtDevice = psDCInfo->hExtDevice;
@@ -1344,12 +1372,27 @@ PVRSRV_ERROR PVRSRVCreateDCSwapChainKM (PVRSRV_PER_PROCESS_DATA	*psPerProc,
 	psSwapChain->ui32BufferCount = ui32BufferCount;
 	psSwapChain->psDCInfo = psDCInfo;
 
+#if defined(PDUMP)
+	PDUMPCOMMENT("Allocate DC swap chain (SwapChainID == %u, BufferCount == %u)",
+			*pui32SwapChainID,
+			ui32BufferCount);
+	PDUMPCOMMENT("  Src surface dimensions == %u x %u",
+			psSrcSurfAttrib->sDims.ui32Width,
+			psSrcSurfAttrib->sDims.ui32Height);
+	PDUMPCOMMENT("  Dst surface dimensions == %u x %u",
+			psDstSurfAttrib->sDims.ui32Width,
+			psDstSurfAttrib->sDims.ui32Height);
+#endif
+
 	eError = psDCInfo->psFuncTable->pfnGetDCInfo(psDCInfo->hExtDevice, &sDisplayInfo);
 	if (eError != PVRSRV_OK)
 	{
 		PVR_DPF((PVR_DBG_ERROR,"PVRSRVCreateDCSwapChainKM: Failed to get DC info"));
 		return eError;
 	}
+	
+	psSwapChain->ui32MinSwapInterval = sDisplayInfo.ui32MinSwapInterval;
+	psSwapChain->ui32MaxSwapInterval = sDisplayInfo.ui32MaxSwapInterval;
 
 	/* call into the display device driver to create a swapchain */
 	eError =  psDCInfo->psFuncTable->pfnCreateDCSwapChain(psDCInfo->hExtDevice,
@@ -1364,31 +1407,33 @@ PVRSRV_ERROR PVRSRVCreateDCSwapChainKM (PVRSRV_PER_PROCESS_DATA	*psPerProc,
 	if(eError != PVRSRV_OK)
 	{
 		PVR_DPF((PVR_DBG_ERROR,"PVRSRVCreateDCSwapChainKM: Failed to create 3rd party SwapChain"));
+		PDUMPCOMMENT("Swapchain allocation failed.");
 		goto ErrorExit;
 	}
 
-
-	eError = PVRSRVCreateDCSwapChainRefKM(psPerProc,
-										  psSwapChain,
+	/* Create new reference */		   
+	eError = PVRSRVCreateDCSwapChainRefKM(psPerProc, 
+										  psSwapChain, 
 										  &psSwapChainRef);
-	if( eError != PVRSRV_OK )
+	if( eError != PVRSRV_OK ) 
 	{
 		PVR_DPF((PVR_DBG_ERROR,"PVRSRVCreateDCSwapChainKM: Couldn't create swap chain reference"));
+		PDUMPCOMMENT("Swapchain allocation failed.");
 		goto ErrorExit;
 	}
 
 	psSwapChain->ui32RefCount = 1;
 	psSwapChain->ui32Flags = ui32Flags;
 
-	/* Save pointer in DC structure if it's shared struct */
+	/* Save pointer in DC structure if ti's shared struct */
 	if( ui32Flags & PVRSRV_CREATE_SWAPCHAIN_SHARED )
 	{
-		if(! psDCInfo->psDCSwapChainShared )
+   		if(! psDCInfo->psDCSwapChainShared ) 
 		{
 			psDCInfo->psDCSwapChainShared = psSwapChain;
-		}
-		else
-		{
+		} 
+		else 
+		{	
 			PVRSRV_DC_SWAPCHAIN *psOldHead = psDCInfo->psDCSwapChainShared;
 			psDCInfo->psDCSwapChainShared = psSwapChain;
 			psSwapChain->psNext = psOldHead;
@@ -1409,10 +1454,7 @@ ErrorExit:
 	{
 		if(psSwapChain->asBuffer[i].sDeviceClassBuffer.psKernelSyncInfo)
 		{
-			if (--psSwapChain->asBuffer[i].sDeviceClassBuffer.psKernelSyncInfo->ui32RefCount == 0)
-			{
-				PVRSRVFreeSyncInfoKM(psSwapChain->asBuffer[i].sDeviceClassBuffer.psKernelSyncInfo);
-			}
+			PVRSRVKernelSyncInfoDecRef(psSwapChain->asBuffer[i].sDeviceClassBuffer.psKernelSyncInfo, IMG_NULL);
 		}
 	}
 
@@ -1529,7 +1571,8 @@ IMG_EXPORT
 PVRSRV_ERROR PVRSRVGetDCBuffersKM(IMG_HANDLE	hDeviceKM,
 								  IMG_HANDLE	hSwapChainRef,
 								  IMG_UINT32	*pui32BufferCount,
-								  IMG_HANDLE	*phBuffer)
+								  IMG_HANDLE	*phBuffer,
+								  IMG_SYS_PHYADDR *psPhyAddr)
 {
 	PVRSRV_DISPLAYCLASS_INFO *psDCInfo;
 	PVRSRV_DC_SWAPCHAIN *psSwapChain;
@@ -1537,7 +1580,7 @@ PVRSRV_ERROR PVRSRVGetDCBuffersKM(IMG_HANDLE	hDeviceKM,
 	PVRSRV_ERROR eError;
 	IMG_UINT32 i;
 
-	if(!hDeviceKM || !hSwapChainRef || !phBuffer)
+	if(!hDeviceKM || !hSwapChainRef || !phBuffer || !psPhyAddr)
 	{
 		PVR_DPF((PVR_DBG_ERROR,"PVRSRVGetDCBuffersKM: Invalid parameters"));
 		return PVRSRV_ERROR_INVALID_PARAMS;
@@ -1564,6 +1607,32 @@ PVRSRV_ERROR PVRSRVGetDCBuffersKM(IMG_HANDLE	hDeviceKM,
 		phBuffer[i] = (IMG_HANDLE)&psSwapChain->asBuffer[i];
 	}
 
+#if defined(SUPPORT_GET_DC_BUFFERS_SYS_PHYADDRS)
+	for(i = 0; i < *pui32BufferCount; i++)
+	{
+		IMG_UINT32 ui32ByteSize, ui32TilingStride;
+		IMG_SYS_PHYADDR *pPhyAddr;
+		IMG_BOOL bIsContiguous;
+		IMG_HANDLE hOSMapInfo;
+		IMG_VOID *pvVAddr;
+
+		eError = psDCInfo->psFuncTable->pfnGetBufferAddr(psDCInfo->hExtDevice,
+														 ahExtBuffer[i],
+														 &pPhyAddr,
+														 &ui32ByteSize,
+														 &pvVAddr,
+														 &hOSMapInfo,
+														 &bIsContiguous,
+														 &ui32TilingStride);
+		if(eError != PVRSRV_OK)
+		{
+			break;
+		}
+
+		psPhyAddr[i] = *pPhyAddr;
+	}
+#endif /* defined(SUPPORT_GET_DC_BUFFERS_SYS_PHYADDRS) */
+
 	return eError;
 }
 
@@ -1587,6 +1656,7 @@ PVRSRV_ERROR PVRSRVSwapToDCBufferKM(IMG_HANDLE	hDeviceKM,
 	IMG_UINT32 ui32NumSrcSyncs = 1;
 	PVRSRV_KERNEL_SYNC_INFO *apsSrcSync[2];
 	PVRSRV_COMMAND *psCommand;
+	SYS_DATA *psSysData;
 
 	if(!hDeviceKM || !hBuffer || !psClipRect)
 	{
@@ -1594,16 +1664,17 @@ PVRSRV_ERROR PVRSRVSwapToDCBufferKM(IMG_HANDLE	hDeviceKM,
 		return PVRSRV_ERROR_INVALID_PARAMS;
 	}
 
-#if defined(SUPPORT_LMA)
-	eError = PVRSRVPowerLock(KERNEL_ID, IMG_FALSE);
-	if(eError != PVRSRV_OK)
-	{
-		return eError;
-	}
-#endif
-
 	psBuffer = (PVRSRV_DC_BUFFER*)hBuffer;
 	psDCInfo = DCDeviceHandleToDCInfo(hDeviceKM);
+
+	/* Validate swap interval against limits */
+	if(ui32SwapInterval < psBuffer->psSwapChain->ui32MinSwapInterval ||
+		ui32SwapInterval > psBuffer->psSwapChain->ui32MaxSwapInterval)
+	{
+		PVR_DPF((PVR_DBG_ERROR,"PVRSRVSwapToDCBufferKM: Invalid swap interval. Requested %u, Allowed range %u-%u",
+				 ui32SwapInterval, psBuffer->psSwapChain->ui32MinSwapInterval, psBuffer->psSwapChain->ui32MaxSwapInterval));
+		return PVRSRV_ERROR_INVALID_SWAPINTERVAL;
+	}
 
 #if defined(SUPPORT_CUSTOM_SWAP_OPERATIONS)
 
@@ -1611,11 +1682,11 @@ PVRSRV_ERROR PVRSRVSwapToDCBufferKM(IMG_HANDLE	hDeviceKM,
 	{
 		psDCInfo->psFuncTable->pfnQuerySwapCommandID(psDCInfo->hExtDevice,
 													 psBuffer->psSwapChain->hExtSwapChain,
-													 psBuffer->sDeviceClassBuffer.hExtBuffer,
-													 hPrivateTag,
+													 psBuffer->sDeviceClassBuffer.hExtBuffer, 
+													 hPrivateTag, 
 													 &ui16SwapCommandID,
 													 &bAddReferenceToLast);
-
+		
 	}
 
 #endif
@@ -1623,23 +1694,12 @@ PVRSRV_ERROR PVRSRVSwapToDCBufferKM(IMG_HANDLE	hDeviceKM,
 	/* get the queue from the buffer structure */
 	psQueue = psBuffer->psSwapChain->psQueue;
 
-	if (!psQueue)
-	{
-		PVR_DPF((PVR_DBG_ERROR,"PVRSRVSwapToDCBufferKM: Non-flippable swap chain"));
-		goto Exit;
-	}
-
+	/* specify the syncs */
 	apsSrcSync[0] = psBuffer->sDeviceClassBuffer.psKernelSyncInfo;
-
-
-
 	if(bAddReferenceToLast && psBuffer->psSwapChain->psLastFlipBuffer &&
 		psBuffer != psBuffer->psSwapChain->psLastFlipBuffer)
 	{
 		apsSrcSync[1] = psBuffer->psSwapChain->psLastFlipBuffer->sDeviceClassBuffer.psKernelSyncInfo;
-
-
-
 		ui32NumSrcSyncs++;
 	}
 
@@ -1652,7 +1712,9 @@ PVRSRV_ERROR PVRSRVSwapToDCBufferKM(IMG_HANDLE	hDeviceKM,
 									IMG_NULL,
 									ui32NumSrcSyncs,
 									apsSrcSync,
-									sizeof(DISPLAYCLASS_FLIP_COMMAND) + (sizeof(IMG_RECT) * ui32ClipRectCount));
+									sizeof(DISPLAYCLASS_FLIP_COMMAND) + (sizeof(IMG_RECT) * ui32ClipRectCount),
+									IMG_NULL,
+									IMG_NULL);
 	if(eError != PVRSRV_OK)
 	{
 		PVR_DPF((PVR_DBG_ERROR,"PVRSRVSwapToDCBufferKM: Failed to get space in queue"));
@@ -1676,9 +1738,9 @@ PVRSRV_ERROR PVRSRVSwapToDCBufferKM(IMG_HANDLE	hDeviceKM,
 
 	/* setup the clip rects */
 	psFlipCmd->ui32ClipRectCount = ui32ClipRectCount;
-
-	psFlipCmd->psClipRect = (IMG_RECT*)((IMG_UINT8*)psFlipCmd + sizeof(DISPLAYCLASS_FLIP_COMMAND));
-
+	/* cliprect memory appends the command structure */
+	psFlipCmd->psClipRect = (IMG_RECT*)((IMG_UINT8*)psFlipCmd + sizeof(DISPLAYCLASS_FLIP_COMMAND));	// PRQA S 3305
+	/* copy the clip rects */
 	for(i=0; i<ui32ClipRectCount; i++)
 	{
 		psFlipCmd->psClipRect[i] = psClipRect[i];
@@ -1686,6 +1748,8 @@ PVRSRV_ERROR PVRSRVSwapToDCBufferKM(IMG_HANDLE	hDeviceKM,
 
 	/* number of vsyncs between successive flips */
 	psFlipCmd->ui32SwapInterval = ui32SwapInterval;
+
+	SysAcquireData(&psSysData);
 
 	/* Because we might be composing just software surfaces, without
 	 * any SGX renders since the last frame, we won't necessarily
@@ -1696,6 +1760,20 @@ PVRSRV_ERROR PVRSRVSwapToDCBufferKM(IMG_HANDLE	hDeviceKM,
 	 * affected buffers (preventing more SW renders starting) but the
 	 * display won't start to process the buffers until SubmitCommand.
 	 */
+	{
+		if(psSysData->ePendingCacheOpType == PVRSRV_MISC_INFO_CPUCACHEOP_FLUSH)
+		{
+			OSFlushCPUCacheKM();
+		}
+		else if(psSysData->ePendingCacheOpType == PVRSRV_MISC_INFO_CPUCACHEOP_CLEAN)
+		{
+			OSCleanCPUCacheKM();
+		}
+
+		psSysData->ePendingCacheOpType = PVRSRV_MISC_INFO_CPUCACHEOP_NONE;
+	}
+
+	/* submit the command */
 	eError = PVRSRVSubmitCommandKM (psQueue, psCommand);
 	if (eError != PVRSRV_OK)
 	{
@@ -1703,31 +1781,18 @@ PVRSRV_ERROR PVRSRVSwapToDCBufferKM(IMG_HANDLE	hDeviceKM,
 		goto Exit;
 	}
 
+	/*
+		Schedule an MISR to process it
+	*/
+    eError = OSScheduleMISR(psSysData);
 
-
-
-
-
-
-
-
-
-	LOOP_UNTIL_TIMEOUT(MAX_HW_TIME_US)
+	if (eError != PVRSRV_OK)
 	{
-		if(PVRSRVProcessQueues(KERNEL_ID, IMG_FALSE) != PVRSRV_ERROR_PROCESSING_BLOCKED)
-		{
-			goto ProcessedQueues;
-		}
-		OSWaitus(MAX_HW_TIME_US/WAIT_TRY_COUNT);
-	} END_LOOP_UNTIL_TIMEOUT();
+		PVR_DPF((PVR_DBG_ERROR,"PVRSRVSwapToDCBufferKM: Failed to schedule MISR"));
+		goto Exit;
+	}
 
-	PVR_DPF((PVR_DBG_ERROR,"PVRSRVSwapToDCBufferKM: Failed to process queues"));
-
-	eError = PVRSRV_ERROR_GENERIC;
-	goto Exit;
-
-ProcessedQueues:
-
+	/* update the last flip buffer */
 	psBuffer->psSwapChain->psLastFlipBuffer = psBuffer;
 
 Exit:
@@ -1737,9 +1802,288 @@ Exit:
 		eError = PVRSRV_ERROR_RETRY;
 	}
 
-#if defined(SUPPORT_LMA)
-	PVRSRVPowerUnlock(KERNEL_ID);
-#endif
+	return eError;
+}
+
+typedef struct _CALLBACK_DATA_
+{
+	IMG_PVOID	pvPrivData;
+	IMG_UINT32	ui32PrivDataLength;
+	IMG_PVOID	ppvMemInfos;
+	IMG_UINT32	ui32NumMemInfos;
+} CALLBACK_DATA;
+
+static IMG_VOID FreePrivateData(IMG_HANDLE hCallbackData)
+{
+	CALLBACK_DATA *psCallbackData = hCallbackData;
+
+	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, psCallbackData->ui32PrivDataLength,
+			  psCallbackData->pvPrivData, IMG_NULL);
+	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP,
+			  sizeof(IMG_VOID *) * psCallbackData->ui32NumMemInfos,
+			  psCallbackData->ppvMemInfos, IMG_NULL);
+	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, sizeof(CALLBACK_DATA), hCallbackData, IMG_NULL);
+}
+
+IMG_EXPORT
+PVRSRV_ERROR PVRSRVSwapToDCBuffer2KM(IMG_HANDLE	hDeviceKM,
+									 IMG_HANDLE	hSwapChain,
+									 IMG_UINT32	ui32SwapInterval,
+									 PVRSRV_KERNEL_MEM_INFO **ppsMemInfos,
+									 PVRSRV_KERNEL_SYNC_INFO **ppsSyncInfos,
+									 IMG_UINT32	ui32NumMemSyncInfos,
+									 IMG_PVOID	pvPrivData,
+									 IMG_UINT32	ui32PrivDataLength)
+{
+	PVRSRV_KERNEL_SYNC_INFO **ppsCompiledSyncInfos;
+	IMG_UINT32 i, ui32NumCompiledSyncInfos;
+	DISPLAYCLASS_FLIP_COMMAND2 *psFlipCmd;
+	PVRSRV_DISPLAYCLASS_INFO *psDCInfo;
+	PVRSRV_DC_SWAPCHAIN *psSwapChain;
+	PVRSRV_ERROR eError = PVRSRV_OK;
+	CALLBACK_DATA *psCallbackData;
+	PVRSRV_QUEUE_INFO *psQueue;
+	PVRSRV_COMMAND *psCommand;
+	IMG_PVOID *ppvMemInfos;
+	SYS_DATA *psSysData;
+
+	if(!hDeviceKM || !hSwapChain || !ppsMemInfos || !ppsSyncInfos || ui32NumMemSyncInfos < 1)
+	{
+		PVR_DPF((PVR_DBG_ERROR,"PVRSRVSwapToDCBuffer2KM: Invalid parameters"));
+		return PVRSRV_ERROR_INVALID_PARAMS;
+	}
+
+	psSwapChain = ((PVRSRV_DC_SWAPCHAIN_REF*)hSwapChain)->psSwapChain;
+	psDCInfo = DCDeviceHandleToDCInfo(hDeviceKM);
+
+	/* Validate swap interval against limits */
+	if(ui32SwapInterval < psSwapChain->ui32MinSwapInterval ||
+	   ui32SwapInterval > psSwapChain->ui32MaxSwapInterval)
+	{
+		PVR_DPF((PVR_DBG_ERROR,"PVRSRVSwapToDCBuffer2KM: Invalid swap interval. Requested %u, Allowed range %u-%u",
+				 ui32SwapInterval, psSwapChain->ui32MinSwapInterval, psSwapChain->ui32MaxSwapInterval));
+		return PVRSRV_ERROR_INVALID_SWAPINTERVAL;
+	}
+
+	eError = OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
+					  sizeof(CALLBACK_DATA),
+					  (IMG_VOID **)&psCallbackData, IMG_NULL,
+					  "PVRSRVSwapToDCBuffer2KM callback data");
+	if (eError != PVRSRV_OK)
+	{
+		return eError;
+	}
+
+	psCallbackData->pvPrivData = pvPrivData;
+	psCallbackData->ui32PrivDataLength = ui32PrivDataLength;
+
+	if(OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
+				  sizeof(IMG_VOID *) * ui32NumMemSyncInfos,
+				  (IMG_VOID **)&ppvMemInfos, IMG_NULL,
+				  "Swap Command Meminfos") != PVRSRV_OK)
+	{
+		PVR_DPF((PVR_DBG_ERROR,"PVRSRVSwapToDCBuffer2KM: Failed to allocate space for meminfo list"));
+		psCallbackData->ppvMemInfos = IMG_NULL;
+		goto Exit;
+	}
+
+	for(i = 0; i < ui32NumMemSyncInfos; i++)
+	{
+		ppvMemInfos[i] = ppsMemInfos[i];
+	}
+
+	psCallbackData->ppvMemInfos = ppvMemInfos;
+	psCallbackData->ui32NumMemInfos = ui32NumMemSyncInfos;
+
+	/* get the queue from the buffer structure */
+	psQueue = psSwapChain->psQueue;
+
+#if !defined(SUPPORT_DC_CMDCOMPLETE_WHEN_NO_LONGER_DISPLAYED)
+	if(psSwapChain->ppsLastSyncInfos)
+	{
+		IMG_UINT32 ui32NumUniqueSyncInfos = psSwapChain->ui32LastNumSyncInfos;
+		IMG_UINT32 j;
+
+		for(j = 0; j < psSwapChain->ui32LastNumSyncInfos; j++)
+		{
+			for(i = 0; i < ui32NumMemSyncInfos; i++)
+			{
+				if(psSwapChain->ppsLastSyncInfos[j] == ppsSyncInfos[i])
+				{
+					psSwapChain->ppsLastSyncInfos[j] = IMG_NULL;
+					ui32NumUniqueSyncInfos--;
+				}
+			}
+		}
+
+		ui32NumCompiledSyncInfos = ui32NumMemSyncInfos + ui32NumUniqueSyncInfos;
+
+		if(OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
+					  sizeof(PVRSRV_KERNEL_SYNC_INFO *) * ui32NumCompiledSyncInfos,
+					  (IMG_VOID **)&ppsCompiledSyncInfos, IMG_NULL,
+					  "Compiled syncinfos") != PVRSRV_OK)
+		{
+			PVR_DPF((PVR_DBG_ERROR,"PVRSRVSwapToDCBuffer2KM: Failed to allocate space for meminfo list"));
+			goto Exit;
+		}
+				
+		OSMemCopy(ppsCompiledSyncInfos, ppsSyncInfos, sizeof(PVRSRV_KERNEL_SYNC_INFO *) * ui32NumMemSyncInfos);
+		for(j = 0, i = ui32NumMemSyncInfos; j < psSwapChain->ui32LastNumSyncInfos; j++)
+		{
+			if(psSwapChain->ppsLastSyncInfos[j])
+			{
+				ppsCompiledSyncInfos[i] = psSwapChain->ppsLastSyncInfos[j];
+				i++;
+			}
+		}
+	}
+	else
+#endif /* !defined(SUPPORT_DC_CMDCOMPLETE_WHEN_NO_LONGER_DISPLAYED) */
+	{
+		ppsCompiledSyncInfos = ppsSyncInfos;
+		ui32NumCompiledSyncInfos = ui32NumMemSyncInfos;
+	}
+
+	/* insert the command (header) */
+	eError = PVRSRVInsertCommandKM (psQueue,
+									&psCommand,
+									psDCInfo->ui32DeviceID,
+									DC_FLIP_COMMAND,
+									0,
+									IMG_NULL,
+									ui32NumCompiledSyncInfos,
+									ppsCompiledSyncInfos,
+									sizeof(DISPLAYCLASS_FLIP_COMMAND2),
+									FreePrivateData,
+									psCallbackData);
+
+	if (ppsCompiledSyncInfos != ppsSyncInfos)
+	{
+		OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP,
+			  sizeof(PVRSRV_KERNEL_SYNC_INFO *) * ui32NumCompiledSyncInfos,
+			  (IMG_VOID *)ppsCompiledSyncInfos,
+			  IMG_NULL);
+	}
+	if(eError != PVRSRV_OK)
+	{
+		PVR_DPF((PVR_DBG_ERROR,"PVRSRVSwapToDCBuffer2KM: Failed to get space in queue"));
+		goto Exit;
+	}
+
+	/*  setup the flip command */
+	psFlipCmd = (DISPLAYCLASS_FLIP_COMMAND2*)psCommand->pvData;
+
+	/* Ext Device Handle */
+	psFlipCmd->hExtDevice = psDCInfo->hExtDevice;
+
+	/* Ext SwapChain Handle */
+	psFlipCmd->hExtSwapChain = psSwapChain->hExtSwapChain;
+
+	/* number of vsyncs between successive flips */
+	psFlipCmd->ui32SwapInterval = ui32SwapInterval;
+
+	/* Opaque private data, if supplied */
+	psFlipCmd->pvPrivData = pvPrivData;
+	psFlipCmd->ui32PrivDataLength = ui32PrivDataLength;
+
+	psFlipCmd->ppsMemInfos = (PDC_MEM_INFO *)ppvMemInfos;
+	psFlipCmd->ui32NumMemInfos = ui32NumMemSyncInfos;
+
+	/* Even though this is "unused", we have to initialize it,
+	 * as the display controller might NULL-test it.
+	 */
+	psFlipCmd->hUnused = IMG_NULL;
+
+	SysAcquireData(&psSysData);
+
+	/* Because we might be composing just software surfaces, without
+	 * any SGX renders since the last frame, we won't necessarily
+	 * have cleaned/flushed the CPU caches before the buffers need
+	 * to be displayed.
+	 *
+	 * Doing so now is safe because InsertCommand bumped ROP2 on the
+	 * affected buffers (preventing more SW renders starting) but the
+	 * display won't start to process the buffers until SubmitCommand.
+	 */
+	{
+		if(psSysData->ePendingCacheOpType == PVRSRV_MISC_INFO_CPUCACHEOP_FLUSH)
+		{
+			OSFlushCPUCacheKM();
+		}
+		else if(psSysData->ePendingCacheOpType == PVRSRV_MISC_INFO_CPUCACHEOP_CLEAN)
+		{
+			OSCleanCPUCacheKM();
+		}
+
+		psSysData->ePendingCacheOpType = PVRSRV_MISC_INFO_CPUCACHEOP_NONE;
+	}
+
+	/* submit the command */
+	eError = PVRSRVSubmitCommandKM (psQueue, psCommand);
+	if (eError != PVRSRV_OK)
+	{
+		PVR_DPF((PVR_DBG_ERROR,"PVRSRVSwapToDCBuffer2KM: Failed to submit command"));
+		goto Exit;
+	}
+
+	/* The command has been submitted and so psCallbackData will be freed by the callback */
+	psCallbackData = IMG_NULL;
+
+	/*
+		Schedule an MISR to process it
+	*/
+	eError = OSScheduleMISR(psSysData);
+
+	if (eError != PVRSRV_OK)
+	{
+		PVR_DPF((PVR_DBG_ERROR,"PVRSRVSwapToDCBuffer2KM: Failed to schedule MISR"));
+		goto Exit;
+	}
+
+#if !defined(SUPPORT_DC_CMDCOMPLETE_WHEN_NO_LONGER_DISPLAYED)
+	/* Reallocate the syncinfo list if it was too small */
+	if (psSwapChain->ui32LastNumSyncInfos < ui32NumMemSyncInfos)
+	{
+		if (psSwapChain->ppsLastSyncInfos)
+		{
+			OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, sizeof(PVRSRV_KERNEL_SYNC_INFO *) * psSwapChain->ui32LastNumSyncInfos,
+						psSwapChain->ppsLastSyncInfos, IMG_NULL);
+		}
+
+		if(OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
+					  sizeof(PVRSRV_KERNEL_SYNC_INFO *) * ui32NumMemSyncInfos,
+					  (IMG_VOID **)&psSwapChain->ppsLastSyncInfos, IMG_NULL,
+					  "Last syncinfos") != PVRSRV_OK)
+		{
+			PVR_DPF((PVR_DBG_ERROR,"PVRSRVSwapToDCBuffer2KM: Failed to allocate space for meminfo list"));
+			goto Exit;
+		}
+	}
+
+	psSwapChain->ui32LastNumSyncInfos = ui32NumMemSyncInfos;
+
+	for(i = 0; i < ui32NumMemSyncInfos; i++)
+	{
+		psSwapChain->ppsLastSyncInfos[i] = ppsSyncInfos[i];
+	}
+#endif /* !defined(SUPPORT_DC_CMDCOMPLETE_WHEN_NO_LONGER_DISPLAYED) */
+
+Exit:
+	if (psCallbackData)
+	{
+		if(psCallbackData->ppvMemInfos)
+		{
+			OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP,
+					  sizeof(IMG_VOID *) * psCallbackData->ui32NumMemInfos,
+					  psCallbackData->ppvMemInfos, IMG_NULL);
+		}
+		OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, sizeof(CALLBACK_DATA), psCallbackData, IMG_NULL);
+	}
+	if(eError == PVRSRV_ERROR_CANNOT_GET_QUEUE_SPACE)
+	{
+		eError = PVRSRV_ERROR_RETRY;
+	}
+
 	return eError;
 }
 
@@ -1759,6 +2103,7 @@ PVRSRV_ERROR PVRSRVSwapToDCSystemKM(IMG_HANDLE	hDeviceKM,
 	PVRSRV_COMMAND *psCommand;
 	IMG_BOOL bAddReferenceToLast = IMG_TRUE;
 	IMG_UINT16 ui16SwapCommandID = DC_FLIP_COMMAND;
+    SYS_DATA *psSysData;
 
 	if(!hDeviceKM || !hSwapChainRef)
 	{
@@ -1766,26 +2111,21 @@ PVRSRV_ERROR PVRSRVSwapToDCSystemKM(IMG_HANDLE	hDeviceKM,
 		return PVRSRV_ERROR_INVALID_PARAMS;
 	}
 
-#if defined(SUPPORT_LMA)
-	eError = PVRSRVPowerLock(KERNEL_ID, IMG_FALSE);
-	if(eError != PVRSRV_OK)
-	{
-		return eError;
-	}
-#endif
-
 	psDCInfo = DCDeviceHandleToDCInfo(hDeviceKM);
 	psSwapChainRef = (PVRSRV_DC_SWAPCHAIN_REF*)hSwapChainRef;
 	psSwapChain = psSwapChainRef->psSwapChain;
 
-
-	psQueue = psSwapChain->psQueue;
-
-	if (!psQueue)
+	/*
+		If more then 1 reference to the swapchain exist then
+		ignore any request to swap to the system buffer
+	*/
+	if (psSwapChain->ui32RefCount > 1)
 	{
-		PVR_DPF((PVR_DBG_ERROR,"PVRSRVSwapToDCSystemKM: Non-flippable swap chain"));
-		goto Exit;
+		return PVRSRV_OK;
 	}
+
+	/* get the queue from the buffer structure */
+	psQueue = psSwapChain->psQueue;
 
 #if defined(SUPPORT_CUSTOM_SWAP_OPERATIONS)
 
@@ -1793,8 +2133,8 @@ PVRSRV_ERROR PVRSRVSwapToDCSystemKM(IMG_HANDLE	hDeviceKM,
 	{
 		psDCInfo->psFuncTable->pfnQuerySwapCommandID(psDCInfo->hExtDevice,
 													 psSwapChain->hExtSwapChain,
-													 psDCInfo->sSystemBuffer.sDeviceClassBuffer.hExtBuffer,
-													 0,
+													 psDCInfo->sSystemBuffer.sDeviceClassBuffer.hExtBuffer, 
+													 0, 
 													 &ui16SwapCommandID,
 													 &bAddReferenceToLast);
 		
@@ -1823,7 +2163,9 @@ PVRSRV_ERROR PVRSRVSwapToDCSystemKM(IMG_HANDLE	hDeviceKM,
 									IMG_NULL,
 									ui32NumSrcSyncs,
 									apsSrcSync,
-									sizeof(DISPLAYCLASS_FLIP_COMMAND));
+									sizeof(DISPLAYCLASS_FLIP_COMMAND),
+									IMG_NULL,
+									IMG_NULL);
 	if(eError != PVRSRV_OK)
 	{
 		PVR_DPF((PVR_DBG_ERROR,"PVRSRVSwapToDCSystemKM: Failed to get space in queue"));
@@ -1858,30 +2200,17 @@ PVRSRV_ERROR PVRSRVSwapToDCSystemKM(IMG_HANDLE	hDeviceKM,
 		goto Exit;
 	}
 
+	/* Schedule an MISR to process it */
+	SysAcquireData(&psSysData);
+    eError = OSScheduleMISR(psSysData);
 
-
-
-
-
-
-
-
-	LOOP_UNTIL_TIMEOUT(MAX_HW_TIME_US)
+	if (eError != PVRSRV_OK)
 	{
-		if(PVRSRVProcessQueues(KERNEL_ID, IMG_FALSE) != PVRSRV_ERROR_PROCESSING_BLOCKED)
-		{
-			goto ProcessedQueues;
-		}
+		PVR_DPF((PVR_DBG_ERROR,"PVRSRVSwapToDCSystemKM: Failed to schedule MISR"));
+		goto Exit;
+	}
 
-		OSWaitus(MAX_HW_TIME_US/WAIT_TRY_COUNT);
-	} END_LOOP_UNTIL_TIMEOUT();
-
-	PVR_DPF((PVR_DBG_ERROR,"PVRSRVSwapToDCSystemKM: Failed to process queues"));
-	eError = PVRSRV_ERROR_GENERIC;
-	goto Exit;
-
-ProcessedQueues:
-
+	/* update the last flip buffer */
 	psSwapChain->psLastFlipBuffer = &psDCInfo->sSystemBuffer;
 
 	eError = PVRSRV_OK;
@@ -1893,9 +2222,6 @@ Exit:
 		eError = PVRSRV_ERROR_RETRY;
 	}
 
-#if defined(SUPPORT_LMA)
-	PVRSRVPowerUnlock(KERNEL_ID);
-#endif
 	return eError;
 }
 
@@ -1920,6 +2246,7 @@ Exit:
  @Return   PVRSRV_ERROR  :
 
 ******************************************************************************/
+static
 PVRSRV_ERROR PVRSRVRegisterSystemISRHandler (PFN_ISR_HANDLER	pfnISRHandler,
 											 IMG_VOID			*pvISRHandlerData,
 											 IMG_UINT32			ui32ISRSourceMask,
@@ -1935,7 +2262,7 @@ PVRSRV_ERROR PVRSRVRegisterSystemISRHandler (PFN_ISR_HANDLER	pfnISRHandler,
 	/* Find Dev Node (just using the device id, ignore the class) */
 	psDevNode = (PVRSRV_DEVICE_NODE*)
 				List_PVRSRV_DEVICE_NODE_Any_va(psSysData->psDeviceNodeList,
-												MatchDeviceKM_AnyVaCb,
+												&MatchDeviceKM_AnyVaCb,
 												ui32DeviceID,
 												IMG_TRUE);
 
@@ -1943,7 +2270,7 @@ PVRSRV_ERROR PVRSRVRegisterSystemISRHandler (PFN_ISR_HANDLER	pfnISRHandler,
 	{
 		PVR_DPF((PVR_DBG_ERROR,"PVRSRVRegisterSystemISRHandler: Failed to get psDevNode"));
 		PVR_DBG_BREAK;
-		return PVRSRV_ERROR_GENERIC;
+		return PVRSRV_ERROR_NO_DEVICENODE_FOUND;
 	}
 
 	/* set up data before enabling the ISR */
@@ -1969,6 +2296,7 @@ PVRSRV_ERROR PVRSRVRegisterSystemISRHandler (PFN_ISR_HANDLER	pfnISRHandler,
 				ui32State	- the state to be set.
 
 ******************************************************************************/
+static
 IMG_VOID PVRSRVSetDCState_ForEachVaCb(PVRSRV_DEVICE_NODE *psDeviceNode, va_list va)
 {
 	PVRSRV_DISPLAYCLASS_INFO *psDCInfo;
@@ -2000,36 +2328,84 @@ IMG_VOID PVRSRVSetDCState_ForEachVaCb(PVRSRV_DEVICE_NODE *psDeviceNode, va_list 
 ******************************************************************************/
 IMG_VOID IMG_CALLCONV PVRSRVSetDCState(IMG_UINT32 ui32State)
 {
+/*	PVRSRV_DISPLAYCLASS_INFO	*psDCInfo;
+	PVRSRV_DEVICE_NODE			*psDeviceNode; */
 	SYS_DATA					*psSysData;
 
 	SysAcquireData(&psSysData);
 
 	List_PVRSRV_DEVICE_NODE_ForEach_va(psSysData->psDeviceNodeList,
-										PVRSRVSetDCState_ForEachVaCb,
+										&PVRSRVSetDCState_ForEachVaCb,
 										ui32State);
 }
 
+static PVRSRV_ERROR
+PVRSRVDCMemInfoGetCpuVAddr(PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo,
+						   IMG_CPU_VIRTADDR *pVAddr)
+{
+	*pVAddr = psKernelMemInfo->pvLinAddrKM;
+	return PVRSRV_OK;
+}
 
+static PVRSRV_ERROR
+PVRSRVDCMemInfoGetCpuPAddr(PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo,
+						   IMG_SIZE_T uByteOffset, IMG_CPU_PHYADDR *pPAddr)
+{
+	*pPAddr = OSMemHandleToCpuPAddr(psKernelMemInfo->sMemBlk.hOSMemHandle, uByteOffset);
+	return PVRSRV_OK;
+}
+
+static PVRSRV_ERROR
+PVRSRVDCMemInfoGetByteSize(PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo,
+						   IMG_SIZE_T *uByteSize)
+{
+	*uByteSize = psKernelMemInfo->uAllocSize;
+	return PVRSRV_OK;
+}
+
+static IMG_BOOL
+PVRSRVDCMemInfoIsPhysContig(PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo)
+{
+	return OSMemHandleIsPhysContig(psKernelMemInfo->sMemBlk.hOSMemHandle);
+}
+
+/*!
+******************************************************************************
+
+ @Function	PVRGetDisplayClassJTable
+
+ @Description
+
+ Sets up function table for 3rd party Display Class Device to call through
+
+ @Input	   psJTable : pointer to function pointer table memory
+
+ @Return   PVRSRV_ERROR :
+
+******************************************************************************/
 IMG_EXPORT
 IMG_BOOL PVRGetDisplayClassJTable(PVRSRV_DC_DISP2SRV_KMJTABLE *psJTable)
 {
 	psJTable->ui32TableSize = sizeof(PVRSRV_DC_DISP2SRV_KMJTABLE);
-	psJTable->pfnPVRSRVRegisterDCDevice = PVRSRVRegisterDCDeviceKM;
-	psJTable->pfnPVRSRVRemoveDCDevice = PVRSRVRemoveDCDeviceKM;
-	psJTable->pfnPVRSRVOEMFunction = SysOEMFunction;
-	psJTable->pfnPVRSRVRegisterCmdProcList = PVRSRVRegisterCmdProcListKM;
-	psJTable->pfnPVRSRVRemoveCmdProcList = PVRSRVRemoveCmdProcListKM;
+	psJTable->pfnPVRSRVRegisterDCDevice = &PVRSRVRegisterDCDeviceKM;
+	psJTable->pfnPVRSRVRemoveDCDevice = &PVRSRVRemoveDCDeviceKM;
+	psJTable->pfnPVRSRVOEMFunction = &SysOEMFunction;
+	psJTable->pfnPVRSRVRegisterCmdProcList = &PVRSRVRegisterCmdProcListKM;
+	psJTable->pfnPVRSRVRemoveCmdProcList = &PVRSRVRemoveCmdProcListKM;
 #if defined(SUPPORT_MISR_IN_THREAD)
-        psJTable->pfnPVRSRVCmdComplete = OSVSyncMISR;
+        psJTable->pfnPVRSRVCmdComplete = &OSVSyncMISR;
 #else
-        psJTable->pfnPVRSRVCmdComplete = PVRSRVCommandCompleteKM;
+        psJTable->pfnPVRSRVCmdComplete = &PVRSRVCommandCompleteKM;
 #endif
-	psJTable->pfnPVRSRVRegisterSystemISRHandler = PVRSRVRegisterSystemISRHandler;
-	psJTable->pfnPVRSRVRegisterPowerDevice = PVRSRVRegisterPowerDevice;
+	psJTable->pfnPVRSRVRegisterSystemISRHandler = &PVRSRVRegisterSystemISRHandler;
+	psJTable->pfnPVRSRVRegisterPowerDevice = &PVRSRVRegisterPowerDevice;
 #if defined(SUPPORT_CUSTOM_SWAP_OPERATIONS)
 	psJTable->pfnPVRSRVFreeCmdCompletePacket = &PVRSRVFreeCommandCompletePacketKM;
 #endif
-
+	psJTable->pfnPVRSRVDCMemInfoGetCpuVAddr = &PVRSRVDCMemInfoGetCpuVAddr;
+	psJTable->pfnPVRSRVDCMemInfoGetCpuPAddr = &PVRSRVDCMemInfoGetCpuPAddr;
+	psJTable->pfnPVRSRVDCMemInfoGetByteSize = &PVRSRVDCMemInfoGetByteSize;
+	psJTable->pfnPVRSRVDCMemInfoIsPhysContig = &PVRSRVDCMemInfoIsPhysContig;
 	return IMG_TRUE;
 }
 
@@ -2049,64 +2425,72 @@ IMG_BOOL PVRGetDisplayClassJTable(PVRSRV_DC_DISP2SRV_KMJTABLE *psJTable)
 
 ******************************************************************************/
 IMG_EXPORT
-PVRSRV_ERROR PVRSRVCloseBCDeviceKM (IMG_HANDLE	hDeviceKM,
-									IMG_BOOL	bResManCallback)
+PVRSRV_ERROR PVRSRVCloseBCDeviceKM (IMG_HANDLE	hDeviceKM)
 {
 	PVRSRV_ERROR eError;
 	PVRSRV_BUFFERCLASS_PERCONTEXT_INFO *psBCPerContextInfo;
 
-	PVR_UNREFERENCED_PARAMETER(bResManCallback);
-
 	psBCPerContextInfo = (PVRSRV_BUFFERCLASS_PERCONTEXT_INFO *)hDeviceKM;
 
-
-	eError = ResManFreeResByPtr(psBCPerContextInfo->hResItem);
+	/* Remove the item from the resman list and trigger the callback. */
+	eError = ResManFreeResByPtr(psBCPerContextInfo->hResItem, CLEANUP_WITH_POLL);
 
 	return eError;
 }
 
 
-static PVRSRV_ERROR CloseBCDeviceCallBack(IMG_PVOID		pvParam,
-										  IMG_UINT32	ui32Param)
+static PVRSRV_ERROR CloseBCDeviceCallBack(IMG_PVOID  pvParam,
+										  IMG_UINT32 ui32Param,
+										  IMG_BOOL   bDummy)
 {
 	PVRSRV_BUFFERCLASS_PERCONTEXT_INFO *psBCPerContextInfo;
 	PVRSRV_BUFFERCLASS_INFO *psBCInfo;
+	IMG_UINT32 i;
 
 	PVR_UNREFERENCED_PARAMETER(ui32Param);
+	PVR_UNREFERENCED_PARAMETER(bDummy);
 
 	psBCPerContextInfo = (PVRSRV_BUFFERCLASS_PERCONTEXT_INFO *)pvParam;
+
 	psBCInfo = psBCPerContextInfo->psBCInfo;
+
+	for (i = 0; i < psBCInfo->ui32BufferCount; i++)
+	{
+		if (psBCInfo->psBuffer[i].sDeviceClassBuffer.ui32MemMapRefCount != 0)
+		{
+			PVR_DPF((PVR_DBG_ERROR, "CloseBCDeviceCallBack: buffer %d (0x%p) still mapped (ui32MemMapRefCount = %d)",
+					i,
+					&psBCInfo->psBuffer[i].sDeviceClassBuffer,
+					psBCInfo->psBuffer[i].sDeviceClassBuffer.ui32MemMapRefCount));
+			return PVRSRV_ERROR_STILL_MAPPED;
+		}
+	}
 
 	psBCInfo->ui32RefCount--;
 	if(psBCInfo->ui32RefCount == 0)
 	{
-		IMG_UINT32 i;
-
-
+		/* close the external device */
 		psBCInfo->psFuncTable->pfnCloseBCDevice(psBCInfo->ui32DeviceID, psBCInfo->hExtDevice);
 
-
+		/* free syncinfos */
 		for(i=0; i<psBCInfo->ui32BufferCount; i++)
 		{
 			if(psBCInfo->psBuffer[i].sDeviceClassBuffer.psKernelSyncInfo)
 			{
-				if (--psBCInfo->psBuffer[i].sDeviceClassBuffer.psKernelSyncInfo->ui32RefCount == 0)
-				{
-					PVRSRVFreeSyncInfoKM(psBCInfo->psBuffer[i].sDeviceClassBuffer.psKernelSyncInfo);
-				}
+				PVRSRVKernelSyncInfoDecRef(psBCInfo->psBuffer[i].sDeviceClassBuffer.psKernelSyncInfo, IMG_NULL);
 			}
 		}
 
-
+		/* free buffers */
 		if(psBCInfo->psBuffer)
 		{
-			OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, sizeof(PVRSRV_BC_BUFFER), psBCInfo->psBuffer, IMG_NULL);
+			OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, sizeof(PVRSRV_BC_BUFFER) * psBCInfo->ui32BufferCount, psBCInfo->psBuffer, IMG_NULL);
 			psBCInfo->psBuffer = IMG_NULL;
 		}
 	}
 
 	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, sizeof(PVRSRV_BUFFERCLASS_PERCONTEXT_INFO), psBCPerContextInfo, IMG_NULL);
-
+	/*not nulling pointer, copy on stack*/
 
 	return PVRSRV_OK;
 }
@@ -2147,22 +2531,22 @@ PVRSRV_ERROR PVRSRVOpenBCDeviceKM (PVRSRV_PER_PROCESS_DATA	*psPerProc,
 	if(!phDeviceKM || !hDevCookie)
 	{
 		PVR_DPF((PVR_DBG_ERROR,"PVRSRVOpenBCDeviceKM: Invalid params"));
-		return PVRSRV_ERROR_GENERIC;
+		return PVRSRV_ERROR_INVALID_PARAMS;
 	}
 
 	SysAcquireData(&psSysData);
 
-
+	/* find the matching devicenode */
 	psDeviceNode = (PVRSRV_DEVICE_NODE*)
 			List_PVRSRV_DEVICE_NODE_Any_va(psSysData->psDeviceNodeList,
-										   MatchDeviceKM_AnyVaCb,
+										   &MatchDeviceKM_AnyVaCb,
 										   ui32DeviceID,
 										   IMG_FALSE,
 										   PVRSRV_DEVICE_CLASS_BUFFER);
 	if (!psDeviceNode)
 	{
 		PVR_DPF((PVR_DBG_ERROR,"PVRSRVOpenBCDeviceKM: No devnode matching index %d", ui32DeviceID));
-		return PVRSRV_ERROR_GENERIC;
+		return PVRSRV_ERROR_NO_DEVICENODE_FOUND;
 	}
 	psBCInfo = (PVRSRV_BUFFERCLASS_INFO*)psDeviceNode->pvDevice;
 
@@ -2256,6 +2640,7 @@ FoundDevice:
 			psBCInfo->psBuffer[i].sDeviceClassBuffer.pfnGetBufferAddr = psBCInfo->psFuncTable->pfnGetBufferAddr;
 			psBCInfo->psBuffer[i].sDeviceClassBuffer.hDevMemContext = psBCInfo->hDevMemContext;
 			psBCInfo->psBuffer[i].sDeviceClassBuffer.hExtDevice = psBCInfo->hExtDevice;
+			psBCInfo->psBuffer[i].sDeviceClassBuffer.ui32MemMapRefCount = 0;
 		}
 	}
 
@@ -2264,7 +2649,7 @@ FoundDevice:
 													 RESMAN_TYPE_BUFFERCLASS_DEVICE,
 													 psBCPerContextInfo,
 													 0,
-													 CloseBCDeviceCallBack);
+													 &CloseBCDeviceCallBack);
 
 	/* return a reference to the BCPerContextInfo */
 	*phDeviceKM = (IMG_HANDLE)psBCPerContextInfo;
@@ -2278,10 +2663,7 @@ ErrorExit:
 	{
 		if(psBCInfo->psBuffer[i].sDeviceClassBuffer.psKernelSyncInfo)
 		{
-			if (--psBCInfo->psBuffer[i].sDeviceClassBuffer.psKernelSyncInfo->ui32RefCount == 0)
-			{
-				PVRSRVFreeSyncInfoKM(psBCInfo->psBuffer[i].sDeviceClassBuffer.psKernelSyncInfo);
-			}
+			PVRSRVKernelSyncInfoDecRef(psBCInfo->psBuffer[i].sDeviceClassBuffer.psKernelSyncInfo, IMG_NULL);
 		}
 	}
 
@@ -2397,40 +2779,13 @@ PVRSRV_ERROR PVRSRVGetBCBufferKM (IMG_HANDLE hDeviceKM,
 
 ******************************************************************************/
 IMG_EXPORT
-PVRSRV_ERROR PVRSRVGetBCBufferIdFromTagKM(IMG_HANDLE hDeviceKM,
-								  IMG_UINT32 ui32BufferIndex,
-								  IMG_HANDLE pidx)
-{
-	PVRSRV_BUFFERCLASS_INFO *psBCInfo;
-	PVRSRV_ERROR 			eError = PVRSRV_ERROR_INVALID_PARAMS;
-
-	if(NULL == hDeviceKM)
-	{
-		PVR_DPF((PVR_DBG_ERROR,"%s: Invalid parameters", __FUNCTION__));
-		return PVRSRV_ERROR_INVALID_PARAMS;
-	}
-	psBCInfo = BCDeviceHandleToBCInfo(hDeviceKM);
-
-	if (NULL != psBCInfo->psFuncTable->pfnGetBufferIdFromTag) {
-		eError = psBCInfo->psFuncTable->pfnGetBufferIdFromTag(psBCInfo->hExtDevice,
-				ui32BufferIndex,
-				pidx);
-		if(eError != PVRSRV_OK) {
-			PVR_DPF((PVR_DBG_ERROR,"%s : Failed to get BC Buffer Index", __FUNCTION__));
-			return PVRSRV_ERROR_GENERIC;
-		}
-	}
-
-	return PVRSRV_OK;
-}
-
-IMG_EXPORT
 IMG_BOOL PVRGetBufferClassJTable(PVRSRV_BC_BUFFER2SRV_KMJTABLE *psJTable)
 {
 	psJTable->ui32TableSize = sizeof(PVRSRV_BC_BUFFER2SRV_KMJTABLE);
 
-	psJTable->pfnPVRSRVRegisterBCDevice = PVRSRVRegisterBCDeviceKM;
-	psJTable->pfnPVRSRVRemoveBCDevice = PVRSRVRemoveBCDeviceKM;
+	psJTable->pfnPVRSRVRegisterBCDevice = &PVRSRVRegisterBCDeviceKM;
+	psJTable->pfnPVRSRVScheduleDevices = &PVRSRVScheduleDevicesKM;
+	psJTable->pfnPVRSRVRemoveBCDevice = &PVRSRVRemoveBCDeviceKM;
 
 	return IMG_TRUE;
 }

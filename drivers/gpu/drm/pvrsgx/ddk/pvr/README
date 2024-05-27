@@ -1,10 +1,10 @@
 
 SGX Embedded Systems DDK for Linux kernel.
-Copyright (C) 2008 Imagination Technologies Ltd. All rights reserved.
+Copyright (C) Imagination Technologies Ltd. All rights reserved.
 ======================================================================
 
 
-About
+About 
 -------------------------------------------
 
 This is the Imagination Technologies SGX DDK for the Linux kernel.
@@ -13,11 +13,12 @@ This is the Imagination Technologies SGX DDK for the Linux kernel.
 License
 -------------------------------------------
 
-You may use, distribute and copy this software under the terms of
-GNU General Public License version 2.
+You may use, distribute and copy this software under the terms of the MIT
+license.  Details of this license can be found in the file "MIT-COPYING".
 
-The full GNU General Public License version 2 is included in this
-distribution in the file called "COPYING".
+Alternatively, you may use, distribute and copy this software under the terms
+of the GNU General Public License version 2.  The full GNU General Public
+License version 2 can be found in the file "GPL-COPYING".
 
 
 Build and Install Instructions
@@ -35,7 +36,7 @@ The DDK software must be installed by the root user.  Become the root user:
 $ su
 
 Install the DDK software:
-$ make install
+# make install
 
 Become an ordinary user again:
 $ exit

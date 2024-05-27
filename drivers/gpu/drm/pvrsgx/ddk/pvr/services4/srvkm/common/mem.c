@@ -45,15 +45,17 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 static PVRSRV_ERROR
-FreeSharedSysMemCallBack(IMG_PVOID	pvParam,
-						 IMG_UINT32	ui32Param)
+FreeSharedSysMemCallBack(IMG_PVOID  pvParam,
+						 IMG_UINT32 ui32Param,
+						 IMG_BOOL   bDummy)
 {
 	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo = pvParam;
 
 	PVR_UNREFERENCED_PARAMETER(ui32Param);
+	PVR_UNREFERENCED_PARAMETER(bDummy);
 
 	OSFreePages(psKernelMemInfo->ui32Flags,
-				psKernelMemInfo->ui32AllocSize,
+				psKernelMemInfo->uAllocSize,
 				psKernelMemInfo->pvLinAddrKM,
 				psKernelMemInfo->sMemBlk.hOSMemHandle);
 
@@ -70,7 +72,7 @@ FreeSharedSysMemCallBack(IMG_PVOID	pvParam,
 IMG_EXPORT PVRSRV_ERROR
 PVRSRVAllocSharedSysMemoryKM(PVRSRV_PER_PROCESS_DATA	*psPerProc,
 							 IMG_UINT32					ui32Flags,
-							 IMG_SIZE_T 				ui32Size,
+							 IMG_SIZE_T 				uSize,
 							 PVRSRV_KERNEL_MEM_INFO 	**ppsKernelMemInfo)
 {
 	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
@@ -89,11 +91,14 @@ PVRSRVAllocSharedSysMemoryKM(PVRSRV_PER_PROCESS_DATA	*psPerProc,
 	ui32Flags &= ~PVRSRV_HAP_MAPTYPE_MASK;
 	ui32Flags |= PVRSRV_HAP_MULTI_PROCESS;
 	psKernelMemInfo->ui32Flags = ui32Flags;
-	psKernelMemInfo->ui32AllocSize = ui32Size;
+	psKernelMemInfo->uAllocSize = uSize;
 
 	if(OSAllocPages(psKernelMemInfo->ui32Flags,
-					psKernelMemInfo->ui32AllocSize,
-					HOST_PAGESIZE(),
+					psKernelMemInfo->uAllocSize,
+					(IMG_UINT32)HOST_PAGESIZE(),
+					IMG_NULL,
+					0,
+					IMG_NULL,
 					&psKernelMemInfo->pvLinAddrKM,
 					&psKernelMemInfo->sMemBlk.hOSMemHandle)
 		!= PVRSRV_OK)
@@ -112,7 +117,7 @@ PVRSRVAllocSharedSysMemoryKM(PVRSRV_PER_PROCESS_DATA	*psPerProc,
 								  RESMAN_TYPE_SHARED_MEM_INFO,
 								  psKernelMemInfo,
 								  0,
-								  FreeSharedSysMemCallBack);
+								  &FreeSharedSysMemCallBack);
 
 	*ppsKernelMemInfo = psKernelMemInfo;
 
@@ -127,11 +132,11 @@ PVRSRVFreeSharedSysMemoryKM(PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo)
 
 	if(psKernelMemInfo->sMemBlk.hResItem)
 	{
-		eError = ResManFreeResByPtr(psKernelMemInfo->sMemBlk.hResItem);
+		eError = ResManFreeResByPtr(psKernelMemInfo->sMemBlk.hResItem, CLEANUP_WITH_POLL);
 	}
 	else
 	{
-		eError = FreeSharedSysMemCallBack(psKernelMemInfo, 0);
+		eError = FreeSharedSysMemCallBack(psKernelMemInfo, 0, CLEANUP_WITH_POLL);
 	}
 
 	return eError;

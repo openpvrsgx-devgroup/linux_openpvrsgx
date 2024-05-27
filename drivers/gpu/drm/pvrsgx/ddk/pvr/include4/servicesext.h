@@ -1,34 +1,62 @@
-/**********************************************************************
- *
- * Copyright (C) Imagination Technologies Ltd. All rights reserved.
- * 
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- * 
- * This program is distributed in the hope it will be useful but, except 
- * as otherwise stated in writing, without any warranty; without even the 
- * implied warranty of merchantability or fitness for a particular purpose. 
- * See the GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- * 
- * The full GNU General Public License is included in this distribution in
- * the file called "COPYING".
- *
- * Contact Information:
- * Imagination Technologies Ltd. <gpl-support@imgtec.com>
- * Home Park Estate, Kings Langley, Herts, WD4 8LZ, UK 
- *
- ******************************************************************************/
+/*************************************************************************/ /*!
+@Title          Services definitions required by external drivers
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@Description    Provides services data structures, defines and prototypes
+                required by external drivers.
+@License        Dual MIT/GPLv2
+
+The contents of this file are subject to the MIT license as set out below.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/ /**************************************************************************/
 
 #if !defined (__SERVICESEXT_H__)
 #define __SERVICESEXT_H__
 
-#define PVRSRV_LOCKFLG_READONLY     	(1)		
+/*
+ * Lock buffer read/write flags
+ */
+#define PVRSRV_LOCKFLG_READONLY     	(1)		/*!< The locking process will only read the locked surface */
 
+/*!
+ *****************************************************************************
+ * Error values
+ *
+ * NOTE: If you change this, make sure you update the error texts in
+ *   services4/include/pvrsrv_errors.h to match.
+ *
+ *****************************************************************************/
 typedef enum _PVRSRV_ERROR_
 {
 	PVRSRV_OK = 0,
@@ -267,6 +295,10 @@ typedef enum _PVRSRV_ERROR_
 } PVRSRV_ERROR;
 
 
+/*!
+ *****************************************************************************
+ * List of known device classes.
+ *****************************************************************************/
 typedef enum _PVRSRV_DEVICE_CLASS_
 {
 	PVRSRV_DEVICE_CLASS_3D				= 0 ,
@@ -279,14 +311,18 @@ typedef enum _PVRSRV_DEVICE_CLASS_
 } PVRSRV_DEVICE_CLASS;
 
 
+/*!
+ *****************************************************************************
+ *	States for power management
+ *****************************************************************************/
 typedef enum _PVRSRV_SYS_POWER_STATE_
 {
-	PVRSRV_SYS_POWER_STATE_Unspecified		= -1,	
-	PVRSRV_SYS_POWER_STATE_D0				= 0,	
-	PVRSRV_SYS_POWER_STATE_D1				= 1,	
-	PVRSRV_SYS_POWER_STATE_D2				= 2,	
-	PVRSRV_SYS_POWER_STATE_D3				= 3,	
-	PVRSRV_SYS_POWER_STATE_D4				= 4,	
+	PVRSRV_SYS_POWER_STATE_Unspecified		= -1,	/*!< Unspecified : Uninitialised */
+	PVRSRV_SYS_POWER_STATE_D0				= 0,	/*!< On */
+	PVRSRV_SYS_POWER_STATE_D1				= 1,	/*!< User Idle */
+	PVRSRV_SYS_POWER_STATE_D2				= 2,	/*!< System Idle / sleep */
+	PVRSRV_SYS_POWER_STATE_D3				= 3,	/*!< Suspend / Hibernate */
+	PVRSRV_SYS_POWER_STATE_D4				= 4,	/*!< shutdown */
 
 	PVRSRV_SYS_POWER_STATE_FORCE_I32 = 0x7fffffff
 
@@ -295,16 +331,17 @@ typedef enum _PVRSRV_SYS_POWER_STATE_
 
 typedef enum _PVRSRV_DEV_POWER_STATE_
 {
-	PVRSRV_DEV_POWER_STATE_DEFAULT	= -1,	
-	PVRSRV_DEV_POWER_STATE_ON		= 0,	
-	PVRSRV_DEV_POWER_STATE_IDLE		= 1,	
-	PVRSRV_DEV_POWER_STATE_OFF		= 2,	
+	PVRSRV_DEV_POWER_STATE_DEFAULT	= -1,	/*!< Default state for the device */
+	PVRSRV_DEV_POWER_STATE_ON		= 0,	/*!< Running */
+	PVRSRV_DEV_POWER_STATE_IDLE		= 1,	/*!< Powered but operation paused */
+	PVRSRV_DEV_POWER_STATE_OFF		= 2,	/*!< Unpowered */
 
 	PVRSRV_DEV_POWER_STATE_FORCE_I32 = 0x7fffffff
 
-} PVRSRV_DEV_POWER_STATE, *PPVRSRV_DEV_POWER_STATE;	
+} PVRSRV_DEV_POWER_STATE, *PPVRSRV_DEV_POWER_STATE;	/* PRQA S 3205 */
 
 
+/* Power transition handler prototypes */
 typedef PVRSRV_ERROR (*PFN_PRE_POWER) (IMG_HANDLE				hDevHandle,
 									   PVRSRV_DEV_POWER_STATE	eNewPowerState,
 									   PVRSRV_DEV_POWER_STATE	eCurrentPowerState);
@@ -312,6 +349,7 @@ typedef PVRSRV_ERROR (*PFN_POST_POWER) (IMG_HANDLE				hDevHandle,
 										PVRSRV_DEV_POWER_STATE	eNewPowerState,
 										PVRSRV_DEV_POWER_STATE	eCurrentPowerState);
 
+/* Clock speed handler prototypes */
 typedef PVRSRV_ERROR (*PFN_PRE_CLOCKSPEED_CHANGE) (IMG_HANDLE				hDevHandle,
 												   IMG_BOOL					bIdleDevice,
 												   PVRSRV_DEV_POWER_STATE	eCurrentPowerState);
@@ -320,13 +358,23 @@ typedef PVRSRV_ERROR (*PFN_POST_CLOCKSPEED_CHANGE) (IMG_HANDLE				hDevHandle,
 													PVRSRV_DEV_POWER_STATE	eCurrentPowerState);
 
 
+/*****************************************************************************
+ * Enumeration of all possible pixel types. Where applicable, Ordering of name
+ * is in reverse order of memory bytes (i.e. as a word in little endian).
+ * e.g. A8R8G8B8 is in memory as 4 bytes in order: BB GG RR AA
+ *
+ * NOTE: When modifying this structure please update the client driver format
+ *       tables located in %WORKROOT%/eurasia/codegen/pixfmts using the tool
+ *       located in %WORKROOT%/eurasia/tools/intern/TextureFormatParser.
+ *
+ *****************************************************************************/
 typedef enum _PVRSRV_PIXEL_FORMAT_ {
-	
+	/* Basic types */
 	PVRSRV_PIXEL_FORMAT_UNKNOWN				=  0,
 	PVRSRV_PIXEL_FORMAT_RGB565				=  1,
 	PVRSRV_PIXEL_FORMAT_RGB555				=  2,
-	PVRSRV_PIXEL_FORMAT_RGB888				=  3,	
-	PVRSRV_PIXEL_FORMAT_BGR888				=  4,	
+	PVRSRV_PIXEL_FORMAT_RGB888				=  3,	/*!< 24bit */
+	PVRSRV_PIXEL_FORMAT_BGR888				=  4,	/*!< 24bit */
 	PVRSRV_PIXEL_FORMAT_GREY_SCALE			=  8,
 	PVRSRV_PIXEL_FORMAT_PAL12				= 13,
 	PVRSRV_PIXEL_FORMAT_PAL8				= 14,
@@ -345,8 +393,8 @@ typedef enum _PVRSRV_PIXEL_FORMAT_ {
 	PVRSRV_PIXEL_FORMAT_BGRA8888			= 28,
 	PVRSRV_PIXEL_FORMAT_XRGB4444			= 29,
 	PVRSRV_PIXEL_FORMAT_ARGB8332			= 30,
-	PVRSRV_PIXEL_FORMAT_A2RGB10				= 31,	
-	PVRSRV_PIXEL_FORMAT_A2BGR10				= 32,	
+	PVRSRV_PIXEL_FORMAT_A2RGB10				= 31,	/*!< 32bpp, 10 bits for R, G, B, 2 bits for A */
+	PVRSRV_PIXEL_FORMAT_A2BGR10				= 32,	/*!< 32bpp, 10 bits for B, G, R, 2 bits for A */
 	PVRSRV_PIXEL_FORMAT_P8					= 33,
 	PVRSRV_PIXEL_FORMAT_L8					= 34,
 	PVRSRV_PIXEL_FORMAT_A8L8				= 35,
@@ -362,7 +410,7 @@ typedef enum _PVRSRV_PIXEL_FORMAT_ {
 	PVRSRV_PIXEL_FORMAT_D24S8				= 45,
 	PVRSRV_PIXEL_FORMAT_D24X8				= 46,
 
-	
+	/* Added to ensure TQ build */
 	PVRSRV_PIXEL_FORMAT_ABGR16				= 47,
 	PVRSRV_PIXEL_FORMAT_ABGR16F				= 48,
 	PVRSRV_PIXEL_FORMAT_ABGR32				= 49,
@@ -373,22 +421,22 @@ typedef enum _PVRSRV_PIXEL_FORMAT_ {
 	PVRSRV_PIXEL_FORMAT_GR32				= 54,
 	PVRSRV_PIXEL_FORMAT_E5BGR9				= 55,
 
-	
+	/* reserved types */
 	PVRSRV_PIXEL_FORMAT_RESERVED1			= 56,
 	PVRSRV_PIXEL_FORMAT_RESERVED2			= 57,
 	PVRSRV_PIXEL_FORMAT_RESERVED3			= 58,
 	PVRSRV_PIXEL_FORMAT_RESERVED4			= 59,
 	PVRSRV_PIXEL_FORMAT_RESERVED5			= 60,
 
-	
+	/* RGB space packed formats */
 	PVRSRV_PIXEL_FORMAT_R8G8_B8G8			= 61,
 	PVRSRV_PIXEL_FORMAT_G8R8_G8B8			= 62,
 
-	
+	/* YUV space planar formats */
 	PVRSRV_PIXEL_FORMAT_NV11				= 63,
 	PVRSRV_PIXEL_FORMAT_NV12				= 64,
 
-	
+	/* YUV space packed formats */
 	PVRSRV_PIXEL_FORMAT_YUY2				= 65,
 	PVRSRV_PIXEL_FORMAT_YUV420				= 66,
 	PVRSRV_PIXEL_FORMAT_YUV444				= 67,
@@ -398,107 +446,107 @@ typedef enum _PVRSRV_PIXEL_FORMAT_ {
 	PVRSRV_PIXEL_FORMAT_UYVY				= 71,
 	PVRSRV_PIXEL_FORMAT_VYUY				= 72,
 
-	PVRSRV_PIXEL_FORMAT_FOURCC_ORG_UYVY		= 73,	
-	PVRSRV_PIXEL_FORMAT_FOURCC_ORG_YUYV		= 74,	
-	PVRSRV_PIXEL_FORMAT_FOURCC_ORG_YVYU		= 75,	
-	PVRSRV_PIXEL_FORMAT_FOURCC_ORG_VYUY		= 76,	
-	PVRSRV_PIXEL_FORMAT_FOURCC_ORG_AYUV		= 77,	
+	PVRSRV_PIXEL_FORMAT_FOURCC_ORG_UYVY		= 73,	/*!< See http://www.fourcc.org/yuv.php#UYVY */
+	PVRSRV_PIXEL_FORMAT_FOURCC_ORG_YUYV		= 74,	/*!< See http://www.fourcc.org/yuv.php#YUYV */
+	PVRSRV_PIXEL_FORMAT_FOURCC_ORG_YVYU		= 75,	/*!< See http://www.fourcc.org/yuv.php#YVYU */
+	PVRSRV_PIXEL_FORMAT_FOURCC_ORG_VYUY		= 76,	/*!< No fourcc.org link */
+	PVRSRV_PIXEL_FORMAT_FOURCC_ORG_AYUV		= 77,	/*!< See http://www.fourcc.org/yuv.php#AYUV */
 
-	
-	PVRSRV_PIXEL_FORMAT_A32B32G32R32		= 78,	
-	PVRSRV_PIXEL_FORMAT_A32B32G32R32F		= 79,	
-	PVRSRV_PIXEL_FORMAT_A32B32G32R32_UINT	= 80,	
-	PVRSRV_PIXEL_FORMAT_A32B32G32R32_SINT	= 81,	
+	/* 4 component, 32 bits per component types */
+	PVRSRV_PIXEL_FORMAT_A32B32G32R32		= 78,	/*!< type unspecified */
+	PVRSRV_PIXEL_FORMAT_A32B32G32R32F		= 79,	/*!< float type */
+	PVRSRV_PIXEL_FORMAT_A32B32G32R32_UINT	= 80,	/*!< uint type */
+	PVRSRV_PIXEL_FORMAT_A32B32G32R32_SINT	= 81,	/*!< sint type */
 
-	
-	PVRSRV_PIXEL_FORMAT_B32G32R32			= 82,	
-	PVRSRV_PIXEL_FORMAT_B32G32R32F			= 83,	
-	PVRSRV_PIXEL_FORMAT_B32G32R32_UINT		= 84,	
-	PVRSRV_PIXEL_FORMAT_B32G32R32_SINT		= 85,	
+	/* 3 component, 32 bits per component types */
+	PVRSRV_PIXEL_FORMAT_B32G32R32			= 82,	/*!< type unspecified */
+	PVRSRV_PIXEL_FORMAT_B32G32R32F			= 83,	/*!< float data */
+	PVRSRV_PIXEL_FORMAT_B32G32R32_UINT		= 84,	/*!< uint data */
+	PVRSRV_PIXEL_FORMAT_B32G32R32_SINT		= 85,	/*!< signed int data */
 
-	
-	PVRSRV_PIXEL_FORMAT_G32R32				= 86,	
-	PVRSRV_PIXEL_FORMAT_G32R32F				= 87,	
-	PVRSRV_PIXEL_FORMAT_G32R32_UINT			= 88,	
-	PVRSRV_PIXEL_FORMAT_G32R32_SINT			= 89,	
+	/* 2 component, 32 bits per component types */
+	PVRSRV_PIXEL_FORMAT_G32R32				= 86,	/*!< type unspecified */
+	PVRSRV_PIXEL_FORMAT_G32R32F				= 87,	/*!< float */
+	PVRSRV_PIXEL_FORMAT_G32R32_UINT			= 88,	/*!< uint */
+	PVRSRV_PIXEL_FORMAT_G32R32_SINT			= 89,	/*!< signed int */
 
-	
-	PVRSRV_PIXEL_FORMAT_D32F				= 90,	
-	PVRSRV_PIXEL_FORMAT_R32					= 91,	
-	PVRSRV_PIXEL_FORMAT_R32F				= 92,	
-	PVRSRV_PIXEL_FORMAT_R32_UINT			= 93,	
-	PVRSRV_PIXEL_FORMAT_R32_SINT			= 94,	
+	/* 1 component, 32 bits per component types */
+	PVRSRV_PIXEL_FORMAT_D32F				= 90,	/*!< float depth */
+	PVRSRV_PIXEL_FORMAT_R32					= 91,	/*!< type unspecified */
+	PVRSRV_PIXEL_FORMAT_R32F				= 92,	/*!< float type */
+	PVRSRV_PIXEL_FORMAT_R32_UINT			= 93,	/*!< unsigned int type */
+	PVRSRV_PIXEL_FORMAT_R32_SINT			= 94,	/*!< signed int type */
 
-	
-	PVRSRV_PIXEL_FORMAT_A16B16G16R16		= 95,	
-	PVRSRV_PIXEL_FORMAT_A16B16G16R16F		= 96,	
-	PVRSRV_PIXEL_FORMAT_A16B16G16R16_SINT	= 97,	
-	PVRSRV_PIXEL_FORMAT_A16B16G16R16_SNORM	= 98,	
-	PVRSRV_PIXEL_FORMAT_A16B16G16R16_UINT	= 99,	
-	PVRSRV_PIXEL_FORMAT_A16B16G16R16_UNORM	= 100,	
+	/* 4 component, 16 bits per component types */
+	PVRSRV_PIXEL_FORMAT_A16B16G16R16		= 95,	/*!< type unspecified */
+	PVRSRV_PIXEL_FORMAT_A16B16G16R16F		= 96,	/*!< type float */
+	PVRSRV_PIXEL_FORMAT_A16B16G16R16_SINT	= 97,	/*!< signed ints */
+	PVRSRV_PIXEL_FORMAT_A16B16G16R16_SNORM	= 98,	/*!< signed normalised int */
+	PVRSRV_PIXEL_FORMAT_A16B16G16R16_UINT	= 99,	/*!< unsigned ints */
+	PVRSRV_PIXEL_FORMAT_A16B16G16R16_UNORM	= 100,	/*!< normalised unsigned int */
 
-	
-	PVRSRV_PIXEL_FORMAT_G16R16				= 101,	
-	PVRSRV_PIXEL_FORMAT_G16R16F				= 102,	
-	PVRSRV_PIXEL_FORMAT_G16R16_UINT			= 103,	
-	PVRSRV_PIXEL_FORMAT_G16R16_UNORM		= 104,	
-	PVRSRV_PIXEL_FORMAT_G16R16_SINT			= 105,	
-	PVRSRV_PIXEL_FORMAT_G16R16_SNORM		= 106,	
+	/* 2 component, 16 bits per component types */
+	PVRSRV_PIXEL_FORMAT_G16R16				= 101,	/*!< unspecified type */
+	PVRSRV_PIXEL_FORMAT_G16R16F				= 102,	/*!< float type */
+	PVRSRV_PIXEL_FORMAT_G16R16_UINT			= 103,	/*!< unsigned int type */
+	PVRSRV_PIXEL_FORMAT_G16R16_UNORM		= 104,	/*!< unsigned normalised */
+	PVRSRV_PIXEL_FORMAT_G16R16_SINT			= 105,	/*!< signed int  */
+	PVRSRV_PIXEL_FORMAT_G16R16_SNORM		= 106,	/*!< signed normalised */
 
-	
-	PVRSRV_PIXEL_FORMAT_R16					= 107,	
-	PVRSRV_PIXEL_FORMAT_R16F				= 108,	
-	PVRSRV_PIXEL_FORMAT_R16_UINT			= 109,	
-	PVRSRV_PIXEL_FORMAT_R16_UNORM			= 110,	
-	PVRSRV_PIXEL_FORMAT_R16_SINT			= 111,	
-	PVRSRV_PIXEL_FORMAT_R16_SNORM			= 112,	
+	/* 1 component, 16 bits per component types */
+	PVRSRV_PIXEL_FORMAT_R16					= 107,	/*!< type unspecified */
+	PVRSRV_PIXEL_FORMAT_R16F				= 108,	/*!< float type */
+	PVRSRV_PIXEL_FORMAT_R16_UINT			= 109,	/*!< unsigned int type */
+	PVRSRV_PIXEL_FORMAT_R16_UNORM			= 110,	/*!< unsigned normalised int type */
+	PVRSRV_PIXEL_FORMAT_R16_SINT			= 111,	/*!< signed int type */
+	PVRSRV_PIXEL_FORMAT_R16_SNORM			= 112,	/*!< signed normalised int type */
 
-	
-	PVRSRV_PIXEL_FORMAT_X8R8G8B8			= 113,	
-	PVRSRV_PIXEL_FORMAT_X8R8G8B8_UNORM		= 114,	
-	PVRSRV_PIXEL_FORMAT_X8R8G8B8_UNORM_SRGB	= 115,	
+	/* 4 component, 8 bits per component types */
+	PVRSRV_PIXEL_FORMAT_X8R8G8B8			= 113,	/*!< type unspecified */
+	PVRSRV_PIXEL_FORMAT_X8R8G8B8_UNORM		= 114,	/*!< normalised unsigned int */
+	PVRSRV_PIXEL_FORMAT_X8R8G8B8_UNORM_SRGB	= 115,	/*!< normalised uint with sRGB */
 
-	PVRSRV_PIXEL_FORMAT_A8R8G8B8			= 116,	
-	PVRSRV_PIXEL_FORMAT_A8R8G8B8_UNORM		= 117,	
-	PVRSRV_PIXEL_FORMAT_A8R8G8B8_UNORM_SRGB	= 118,	
+	PVRSRV_PIXEL_FORMAT_A8R8G8B8			= 116,	/*!< type unspecified */
+	PVRSRV_PIXEL_FORMAT_A8R8G8B8_UNORM		= 117,	/*!< normalised unsigned int */
+	PVRSRV_PIXEL_FORMAT_A8R8G8B8_UNORM_SRGB	= 118,	/*!< normalised uint with sRGB */
 
-	PVRSRV_PIXEL_FORMAT_A8B8G8R8			= 119,	
-	PVRSRV_PIXEL_FORMAT_A8B8G8R8_UINT		= 120,	
-	PVRSRV_PIXEL_FORMAT_A8B8G8R8_UNORM		= 121,	
-	PVRSRV_PIXEL_FORMAT_A8B8G8R8_UNORM_SRGB	= 122,	
-	PVRSRV_PIXEL_FORMAT_A8B8G8R8_SINT		= 123,	
-	PVRSRV_PIXEL_FORMAT_A8B8G8R8_SNORM		= 124,	
+	PVRSRV_PIXEL_FORMAT_A8B8G8R8			= 119,	/*!< type unspecified */
+	PVRSRV_PIXEL_FORMAT_A8B8G8R8_UINT		= 120,	/*!< unsigned int */
+	PVRSRV_PIXEL_FORMAT_A8B8G8R8_UNORM		= 121,	/*!< normalised unsigned int */
+	PVRSRV_PIXEL_FORMAT_A8B8G8R8_UNORM_SRGB	= 122,	/*!< normalised unsigned int */
+	PVRSRV_PIXEL_FORMAT_A8B8G8R8_SINT		= 123,	/*!< signed int */
+	PVRSRV_PIXEL_FORMAT_A8B8G8R8_SNORM		= 124,	/*!< normalised signed int */
 
-	
-	PVRSRV_PIXEL_FORMAT_G8R8				= 125,	
-	PVRSRV_PIXEL_FORMAT_G8R8_UINT			= 126,	
-	PVRSRV_PIXEL_FORMAT_G8R8_UNORM			= 127,	
-	PVRSRV_PIXEL_FORMAT_G8R8_SINT			= 128,	
-	PVRSRV_PIXEL_FORMAT_G8R8_SNORM			= 129,	
+	/* 2 component, 8 bits per component types */
+	PVRSRV_PIXEL_FORMAT_G8R8				= 125,	/*!< type unspecified */
+	PVRSRV_PIXEL_FORMAT_G8R8_UINT			= 126,	/*!< unsigned int type */
+	PVRSRV_PIXEL_FORMAT_G8R8_UNORM			= 127,	/*!< unsigned int normalised */
+	PVRSRV_PIXEL_FORMAT_G8R8_SINT			= 128,	/*!< signed int type */
+	PVRSRV_PIXEL_FORMAT_G8R8_SNORM			= 129,	/*!< signed int normalised */
 
-	
-	PVRSRV_PIXEL_FORMAT_A8					= 130,	
-	PVRSRV_PIXEL_FORMAT_R8					= 131,	
-	PVRSRV_PIXEL_FORMAT_R8_UINT				= 132,	
-	PVRSRV_PIXEL_FORMAT_R8_UNORM			= 133,	
-	PVRSRV_PIXEL_FORMAT_R8_SINT				= 134,	
-	PVRSRV_PIXEL_FORMAT_R8_SNORM			= 135,	
+	/* 1 component, 8 bits per component types */
+	PVRSRV_PIXEL_FORMAT_A8					= 130,	/*!< type unspecified, alpha channel */
+	PVRSRV_PIXEL_FORMAT_R8					= 131,	/*!< type unspecified */
+	PVRSRV_PIXEL_FORMAT_R8_UINT				= 132,	/*!< unsigned int */
+	PVRSRV_PIXEL_FORMAT_R8_UNORM			= 133,	/*!< unsigned normalised int */
+	PVRSRV_PIXEL_FORMAT_R8_SINT				= 134,	/*!< signed int */
+	PVRSRV_PIXEL_FORMAT_R8_SNORM			= 135,	/*!< signed normalised int */
 
-	
-	PVRSRV_PIXEL_FORMAT_A2B10G10R10			= 136,	
-	PVRSRV_PIXEL_FORMAT_A2B10G10R10_UNORM	= 137,	
-	PVRSRV_PIXEL_FORMAT_A2B10G10R10_UINT	= 138,	
+	/* A2RGB10 types */
+	PVRSRV_PIXEL_FORMAT_A2B10G10R10			= 136,	/*!< Type unspecified */
+	PVRSRV_PIXEL_FORMAT_A2B10G10R10_UNORM	= 137,	/*!< normalised unsigned int */
+	PVRSRV_PIXEL_FORMAT_A2B10G10R10_UINT	= 138,	/*!< unsigned int */
 
-	
-	PVRSRV_PIXEL_FORMAT_B10G11R11			= 139,	
-	PVRSRV_PIXEL_FORMAT_B10G11R11F			= 140,	
+	/* F11F11F10 types */
+	PVRSRV_PIXEL_FORMAT_B10G11R11			= 139,	/*!< type unspecified */
+	PVRSRV_PIXEL_FORMAT_B10G11R11F			= 140,	/*!< float type */
 
-	
-	PVRSRV_PIXEL_FORMAT_X24G8R32			= 141,	
-	PVRSRV_PIXEL_FORMAT_G8R24				= 142,	
+	/* esoteric types */
+	PVRSRV_PIXEL_FORMAT_X24G8R32			= 141,	/*!< 64 bit, type unspecified (Usually typed to D32S8 style) */
+	PVRSRV_PIXEL_FORMAT_G8R24				= 142,	/*!< 32 bit, type unspecified (Usually typed to D24S8 style) */
 	PVRSRV_PIXEL_FORMAT_X8R24				= 143,
-	PVRSRV_PIXEL_FORMAT_E5B9G9R9			= 144,	
-	PVRSRV_PIXEL_FORMAT_R1					= 145,	
+	PVRSRV_PIXEL_FORMAT_E5B9G9R9			= 144,	/*!< 32 bit, shared exponent (RGBE). */
+	PVRSRV_PIXEL_FORMAT_R1					= 145,	/*!< 1 bit monochrome */
 
 	PVRSRV_PIXEL_FORMAT_RESERVED6			= 146,
 	PVRSRV_PIXEL_FORMAT_RESERVED7			= 147,
@@ -516,20 +564,20 @@ typedef enum _PVRSRV_PIXEL_FORMAT_ {
 	PVRSRV_PIXEL_FORMAT_RESERVED19			= 159,
 	PVRSRV_PIXEL_FORMAT_RESERVED20			= 160,
 
-	
-	PVRSRV_PIXEL_FORMAT_UBYTE4				= 161,	
-	PVRSRV_PIXEL_FORMAT_SHORT4				= 162,	
-	PVRSRV_PIXEL_FORMAT_SHORT4N				= 163,	
-	PVRSRV_PIXEL_FORMAT_USHORT4N			= 164,	
-	PVRSRV_PIXEL_FORMAT_SHORT2N				= 165,	
-	PVRSRV_PIXEL_FORMAT_SHORT2				= 166,	
-	PVRSRV_PIXEL_FORMAT_USHORT2N			= 167,	
-	PVRSRV_PIXEL_FORMAT_UDEC3				= 168,	
-	PVRSRV_PIXEL_FORMAT_DEC3N				= 169,	
-	PVRSRV_PIXEL_FORMAT_F16_2				= 170,	
-	PVRSRV_PIXEL_FORMAT_F16_4				= 171,	
+	/* DXLegacy vertex types */
+	PVRSRV_PIXEL_FORMAT_UBYTE4				= 161,	/*!< 4 channels, 1 byte per channel, normalised */
+	PVRSRV_PIXEL_FORMAT_SHORT4				= 162,	/*!< 4 signed channels, 16 bits each, unnormalised */
+	PVRSRV_PIXEL_FORMAT_SHORT4N				= 163,	/*!< 4 signed channels, 16 bits each, normalised */
+	PVRSRV_PIXEL_FORMAT_USHORT4N			= 164,	/*!< 4 unsigned channels, 16 bits each, normalised */
+	PVRSRV_PIXEL_FORMAT_SHORT2N				= 165,	/*!< 2 signed channels, 16 bits each, normalised */
+	PVRSRV_PIXEL_FORMAT_SHORT2				= 166,	/*!< 2 signed channels, 16 bits each, unnormalised */
+	PVRSRV_PIXEL_FORMAT_USHORT2N			= 167,	/*!< 2 unsigned channels, 16 bits each, normalised */
+	PVRSRV_PIXEL_FORMAT_UDEC3				= 168,	/*!< 3 10-bit channels, unnormalised, unsigned*/
+	PVRSRV_PIXEL_FORMAT_DEC3N				= 169,	/*!< 3 10-bit channels, signed normalised */
+	PVRSRV_PIXEL_FORMAT_F16_2				= 170,	/*!< 2 F16 channels */
+	PVRSRV_PIXEL_FORMAT_F16_4				= 171,	/*!< 4 F16 channels */
 
-	
+	/* misc float types */
 	PVRSRV_PIXEL_FORMAT_L_F16				= 172,
 	PVRSRV_PIXEL_FORMAT_L_F16_REP			= 173,
 	PVRSRV_PIXEL_FORMAT_L_F16_A_F16			= 174,
@@ -540,7 +588,7 @@ typedef enum _PVRSRV_PIXEL_FORMAT_ {
 	PVRSRV_PIXEL_FORMAT_A_F32				= 178,
 	PVRSRV_PIXEL_FORMAT_L_F32_A_F32			= 179,
 
-	
+	/* powervr types */
 	PVRSRV_PIXEL_FORMAT_PVRTC2				= 180,
 	PVRSRV_PIXEL_FORMAT_PVRTC4				= 181,
 	PVRSRV_PIXEL_FORMAT_PVRTCII2			= 182,
@@ -557,7 +605,7 @@ typedef enum _PVRSRV_PIXEL_FORMAT_ {
 	PVRSRV_PIXEL_FORMAT_MONO8				= 193,
 	PVRSRV_PIXEL_FORMAT_MONO16				= 194,
 
-	
+	/* additional YUV types */
 	PVRSRV_PIXEL_FORMAT_C0_YUYV				= 195,
 	PVRSRV_PIXEL_FORMAT_C0_UYVY				= 196,
 	PVRSRV_PIXEL_FORMAT_C0_YVYU				= 197,
@@ -567,7 +615,7 @@ typedef enum _PVRSRV_PIXEL_FORMAT_ {
 	PVRSRV_PIXEL_FORMAT_C1_YVYU				= 201,
 	PVRSRV_PIXEL_FORMAT_C1_VYUY				= 202,
 
-	
+	/* planar YUV types */
 	PVRSRV_PIXEL_FORMAT_C0_YUV420_2P_UV		= 203,
 	PVRSRV_PIXEL_FORMAT_C0_YUV420_2P_VU		= 204,
 	PVRSRV_PIXEL_FORMAT_C0_YUV420_3P		= 205,
@@ -583,7 +631,7 @@ typedef enum _PVRSRV_PIXEL_FORMAT_ {
 	PVRSRV_PIXEL_FORMAT_ABGR1555			= 213,
 	PVRSRV_PIXEL_FORMAT_BGR565				= 214,			
 
-	
+	/* 4k aligned planar YUV */
 	PVRSRV_PIXEL_FORMAT_C0_4KYUV420_2P_UV	= 215,
 	PVRSRV_PIXEL_FORMAT_C0_4KYUV420_2P_VU	= 216,
 	PVRSRV_PIXEL_FORMAT_C1_4KYUV420_2P_UV	= 217,
@@ -601,6 +649,10 @@ typedef enum _PVRSRV_PIXEL_FORMAT_ {
 
 } PVRSRV_PIXEL_FORMAT;
 
+/*!
+ *****************************************************************************
+ * Enumeration of possible alpha types.
+ *****************************************************************************/
 typedef enum _PVRSRV_ALPHA_FORMAT_ {
 	PVRSRV_ALPHA_FORMAT_UNKNOWN		=  0x00000000,
 	PVRSRV_ALPHA_FORMAT_PRE			=  0x00000001,
@@ -608,6 +660,10 @@ typedef enum _PVRSRV_ALPHA_FORMAT_ {
 	PVRSRV_ALPHA_FORMAT_MASK		=  0x0000000F,
 } PVRSRV_ALPHA_FORMAT;
 
+/*!
+ *****************************************************************************
+ * Enumeration of possible alpha types.
+ *****************************************************************************/
 typedef enum _PVRSRV_COLOURSPACE_FORMAT_ {
 	PVRSRV_COLOURSPACE_FORMAT_UNKNOWN		=  0x00000000,
 	PVRSRV_COLOURSPACE_FORMAT_LINEAR		=  0x00010000,
@@ -616,6 +672,10 @@ typedef enum _PVRSRV_COLOURSPACE_FORMAT_ {
 } PVRSRV_COLOURSPACE_FORMAT;
 
 
+/*
+ * Drawable orientation (in degrees clockwise).
+ * Opposite sense from WSEGL.
+ */
 typedef enum _PVRSRV_ROTATION_ {
 	PVRSRV_ROTATE_0		=	0,
 	PVRSRV_ROTATE_90	=	1,
@@ -625,55 +685,83 @@ typedef enum _PVRSRV_ROTATION_ {
 
 } PVRSRV_ROTATION;
 
+/*!
+ * Flags for DisplayClassCreateSwapChain.
+ */
 #define PVRSRV_CREATE_SWAPCHAIN_SHARED		(1<<0)
 #define PVRSRV_CREATE_SWAPCHAIN_QUERY		(1<<1)
 #define PVRSRV_CREATE_SWAPCHAIN_OEMOVERLAY	(1<<2)
 
+/*!
+ *****************************************************************************
+ * Structure providing implementation details for serialisation and
+ * synchronisation of operations. This is the fundamental unit on which operations
+ * are synced, and would typically be included in any data structures that require
+ * serialised accesses etc. e.g. MEM_INFO structures
+ *
+ *****************************************************************************/
+/*
+	Sync Data to be shared/mapped between user/kernel
+*/
 typedef struct _PVRSRV_SYNC_DATA_
 {
-	
+	/* CPU accessible WriteOp Info */
 	IMG_UINT32					ui32WriteOpsPending;
 	volatile IMG_UINT32			ui32WriteOpsComplete;
 
-	
+	/* CPU accessible ReadOp Info */
 	IMG_UINT32					ui32ReadOpsPending;
 	volatile IMG_UINT32			ui32ReadOpsComplete;
 
-	
+	/* CPU accessible ReadOp2 Info */
+	IMG_UINT32					ui32ReadOps2Pending;
+	volatile IMG_UINT32			ui32ReadOps2Complete;
+
+	/* pdump specific value */
 	IMG_UINT32					ui32LastOpDumpVal;
 	IMG_UINT32					ui32LastReadOpDumpVal;
 
+	/* Last write oprtation on this sync */
+	IMG_UINT64					ui64LastWrite;
+
 } PVRSRV_SYNC_DATA;
 
+/*
+	Client Sync Info structure
+*/
 typedef struct _PVRSRV_CLIENT_SYNC_INFO_
 {
-	
+	/* mapping of the kernel sync data */
 	PVRSRV_SYNC_DATA		*psSyncData;
 
-	
-
-
-	
+	/* Device accessible WriteOp Info */
 	IMG_DEV_VIRTADDR		sWriteOpsCompleteDevVAddr;
 
-	
+	/* Device accessible ReadOp Info */
 	IMG_DEV_VIRTADDR		sReadOpsCompleteDevVAddr;
 
-	
+	/* Device accessible ReadOp2 Info */
+	IMG_DEV_VIRTADDR		sReadOps2CompleteDevVAddr;
+
+	/* handle to client mapping data (OS specific) */
 #if defined (SUPPORT_SID_INTERFACE)
 	IMG_SID					hMappingInfo;
 
-	
+	/* handle to kernel sync info */
 	IMG_SID					hKernelSyncInfo;
 #else
 	IMG_HANDLE					hMappingInfo;
 
-	
+	/* handle to kernel sync info */
 	IMG_HANDLE					hKernelSyncInfo;
 #endif
 
 } PVRSRV_CLIENT_SYNC_INFO, *PPVRSRV_CLIENT_SYNC_INFO;
 
+/*!
+ *****************************************************************************
+ * Resource locking structure
+ *****************************************************************************/
 typedef struct PVRSRV_RESOURCE_TAG
 {
 	volatile IMG_UINT32 ui32Lock;
@@ -682,13 +770,18 @@ typedef struct PVRSRV_RESOURCE_TAG
 typedef PVRSRV_RESOURCE PVRSRV_RES_HANDLE;
 
 
+/* command complete callback pfn prototype */
 typedef IMG_VOID (*PFN_CMD_COMPLETE) (IMG_HANDLE);
 typedef IMG_VOID (**PPFN_CMD_COMPLETE) (IMG_HANDLE);
 
+/* private command handler prototype */
 typedef IMG_BOOL (*PFN_CMD_PROC) (IMG_HANDLE, IMG_UINT32, IMG_VOID*);
 typedef IMG_BOOL (**PPFN_CMD_PROC) (IMG_HANDLE, IMG_UINT32, IMG_VOID*);
 
 
+/*
+	rectangle structure required by Lock API
+*/
 typedef struct _IMG_RECT_
 {
 	IMG_INT32	x0;
@@ -706,6 +799,7 @@ typedef struct _IMG_RECT_16_
 }IMG_RECT_16;
 
 
+/* common pfn between BC/DC */
 typedef PVRSRV_ERROR (*PFN_GET_BUFFER_ADDR)(IMG_HANDLE,
 											IMG_HANDLE,
 											IMG_SYS_PHYADDR**,
@@ -716,6 +810,9 @@ typedef PVRSRV_ERROR (*PFN_GET_BUFFER_ADDR)(IMG_HANDLE,
 											IMG_UINT32*);
 
 
+/*
+	Display dimension structure definition
+*/
 typedef struct DISPLAY_DIMS_TAG
 {
 	IMG_UINT32	ui32ByteStride;
@@ -724,54 +821,66 @@ typedef struct DISPLAY_DIMS_TAG
 } DISPLAY_DIMS;
 
 
+/*
+	Display format structure definition
+*/
 typedef struct DISPLAY_FORMAT_TAG
 {
-	
+	/* pixel format type */
 	PVRSRV_PIXEL_FORMAT		pixelformat;
 } DISPLAY_FORMAT;
 
+/*
+	Display Surface Attributes structure definition
+*/
 typedef struct DISPLAY_SURF_ATTRIBUTES_TAG
 {
-	
+	/* pixel format type */
 	PVRSRV_PIXEL_FORMAT		pixelformat;
-	
+	/* dimensions information structure array */
 	DISPLAY_DIMS			sDims;
 } DISPLAY_SURF_ATTRIBUTES;
 
 
+/*
+	Display Mode information structure definition
+*/
 typedef struct DISPLAY_MODE_INFO_TAG
 {
-	
+	/* pixel format type */
 	PVRSRV_PIXEL_FORMAT		pixelformat;
-	
+	/* dimensions information structure array */
 	DISPLAY_DIMS			sDims;
-	
+	/* refresh rate of the display */
 	IMG_UINT32				ui32RefreshHZ;
-	
+	/* OEM specific flags */
 	IMG_UINT32				ui32OEMFlags;
 } DISPLAY_MODE_INFO;
 
 
 
-#define MAX_DISPLAY_NAME_SIZE	(50) 
+#define MAX_DISPLAY_NAME_SIZE	(50) /* arbitrary choice! */
 
+/*
+	Display info structure definition
+*/
 typedef struct DISPLAY_INFO_TAG
 {
-	
+	/* max swapchains supported */
 	IMG_UINT32 ui32MaxSwapChains;
-	
+	/* max buffers in a swapchain */
 	IMG_UINT32 ui32MaxSwapChainBuffers;
-	
+	/* min swap interval supported */
 	IMG_UINT32 ui32MinSwapInterval;
-	
+	/* max swap interval supported */
 	IMG_UINT32 ui32MaxSwapInterval;
-	
+	/* physical dimensions of the display required for DPI calc. */
 	IMG_UINT32 ui32PhysicalWidthmm;
 	IMG_UINT32 ui32PhysicalHeightmm;
-	
+	/* display name */
 	IMG_CHAR	szDisplayName[MAX_DISPLAY_NAME_SIZE];
 #if defined(SUPPORT_HW_CURSOR)
-	
+	/* cursor dimensions */
 	IMG_UINT16	ui32CursorWidth;
 	IMG_UINT16	ui32CursorHeight;
 #endif
@@ -781,7 +890,7 @@ typedef struct ACCESS_INFO_TAG
 {
 	IMG_UINT32		ui32Size;
 	IMG_UINT32  	ui32FBPhysBaseAddress;
-	IMG_UINT32		ui32FBMemAvailable;			
+	IMG_UINT32		ui32FBMemAvailable;			/* size of usable FB memory */
 	IMG_UINT32  	ui32SysPhysBaseAddress;
 	IMG_UINT32		ui32SysSize;
 	IMG_UINT32		ui32DevIRQ;
@@ -790,6 +899,8 @@ typedef struct ACCESS_INFO_TAG
 
 
 #if defined(PDUMP_SUSPEND_IS_PER_THREAD)
+/** Present only on WinMobile 6.5 */
+
 typedef struct {
 	IMG_UINT32 threadId;
 	IMG_INT    suspendCount;
@@ -798,9 +909,13 @@ typedef struct {
 #define PVRSRV_PDUMP_SUSPEND_Q_NAME "PVRSRVPDumpSuspendMsgQ"
 #define PVRSRV_PDUMP_SUSPEND_Q_LENGTH 8
 
-#endif 
+#endif /* defined(PDUMP_SUSPEND_IS_PER_THREAD) */
 
 
+/*!
+ *****************************************************************************
+ * This structure is used for OS independent registry (profile) access
+ *****************************************************************************/
 typedef struct _PVRSRV_REGISTRY_INFO_
 {
     IMG_UINT32		ui32DevCookie;
@@ -821,8 +936,9 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVWriteRegistryString (PPVRSRV_REGISTRY_INFO psReg
 #define PVRSRV_BC_FLAGS_YUVCSC_BT601			(0 << 1)
 #define PVRSRV_BC_FLAGS_YUVCSC_BT709			(1 << 1)
 
-#define MAX_BUFFER_DEVICE_NAME_SIZE	(50) 
+#define MAX_BUFFER_DEVICE_NAME_SIZE	(50) /* arbitrary choice! */
 
+/* buffer information structure */
 typedef struct BUFFER_INFO_TAG
 {
 	IMG_UINT32 			ui32BufferCount;
@@ -843,4 +959,7 @@ typedef enum _OVERLAY_DEINTERLACE_MODE_
 	BOB_EVEN_NONINTERLEAVED
 } OVERLAY_DEINTERLACE_MODE;
 
-#endif 
+#endif /* __SERVICESEXT_H__ */
+/*****************************************************************************
+ End of file (servicesext.h)
+*****************************************************************************/

@@ -1,29 +1,44 @@
-/**********************************************************************
- *
- * Copyright (C) Imagination Technologies Ltd. All rights reserved.
- * 
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- * 
- * This program is distributed in the hope it will be useful but, except 
- * as otherwise stated in writing, without any warranty; without even the 
- * implied warranty of merchantability or fitness for a particular purpose. 
- * See the GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- * 
- * The full GNU General Public License is included in this distribution in
- * the file called "COPYING".
- *
- * Contact Information:
- * Imagination Technologies Ltd. <gpl-support@imgtec.com>
- * Home Park Estate, Kings Langley, Herts, WD4 8LZ, UK 
- *
-******************************************************************************/
+/*************************************************************************/ /*!
+@Title          PVR Debug Declarations
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@Description    Provides debug functionality
+@License        Dual MIT/GPLv2
 
+The contents of this file are subject to the MIT license as set out below.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/ /**************************************************************************/
 #ifndef __PVR_DEBUG_H__
 #define __PVR_DEBUG_H__
 
@@ -38,32 +53,16 @@ extern "C" {
 #define PVR_MAX_DEBUG_MESSAGE_LEN	(512)
 
 /* These are privately used by pvr_debug, use the PVR_DBG_ defines instead */
-#define DBGPRIV_FATAL		0x01UL
-#define DBGPRIV_ERROR		0x02UL
-#define DBGPRIV_WARNING		0x04UL
-#define DBGPRIV_MESSAGE		0x08UL
-#define DBGPRIV_VERBOSE		0x10UL
-#define DBGPRIV_CALLTRACE	0x20UL
-#define DBGPRIV_ALLOC		0x40UL
+#define DBGPRIV_FATAL			0x01UL
+#define DBGPRIV_ERROR			0x02UL
+#define DBGPRIV_WARNING			0x04UL
+#define DBGPRIV_MESSAGE			0x08UL
+#define DBGPRIV_VERBOSE			0x10UL
+#define DBGPRIV_CALLTRACE		0x20UL
+#define DBGPRIV_ALLOC			0x40UL
+#define DBGPRIV_DBGDRV_MESSAGE	0x80UL
 
-#define DBGPRIV_DBGDRV_MESSAGE	0x1000UL
-
-#define DBGPRIV_ALLLEVELS	(DBGPRIV_FATAL | DBGPRIV_ERROR | DBGPRIV_WARNING | DBGPRIV_MESSAGE | DBGPRIV_VERBOSE)
-
-
-
-#define PVR_DBG_FATAL		DBGPRIV_FATAL,__FILE__, __LINE__
-#define PVR_DBG_ERROR		DBGPRIV_ERROR,__FILE__, __LINE__
-#define PVR_DBG_WARNING		DBGPRIV_WARNING,__FILE__, __LINE__
-#define PVR_DBG_MESSAGE		DBGPRIV_MESSAGE,__FILE__, __LINE__
-#define PVR_DBG_VERBOSE		DBGPRIV_VERBOSE,__FILE__, __LINE__
-#define PVR_DBG_CALLTRACE	DBGPRIV_CALLTRACE,__FILE__, __LINE__
-#define PVR_DBG_ALLOC		DBGPRIV_ALLOC,__FILE__, __LINE__
-
-/*
- *	Debug driver debugging
- */
-#define PVR_DBGDRIV_MESSAGE		DBGPRIV_DBGDRV_MESSAGE, "", 0
+#define DBGPRIV_DBGLEVEL_COUNT	8
 
 #if !defined(PVRSRV_NEED_PVR_ASSERT) && defined(DEBUG)
 #define PVRSRV_NEED_PVR_ASSERT
@@ -77,20 +76,49 @@ extern "C" {
 #define PVRSRV_NEED_PVR_TRACE
 #endif
 
-
 /* PVR_ASSERT() and PVR_DBG_BREAK handling */
 
 #if defined(PVRSRV_NEED_PVR_ASSERT)
 
-	#define PVR_ASSERT(EXPR) if (!(EXPR)) PVRSRVDebugAssertFail(__FILE__, __LINE__);
+#if defined(LINUX) && defined(__KERNEL__)
+/* In Linux kernel mode, use BUG() directly. This produces the correct
+   filename and line number in the panic message. */
+#define PVR_ASSERT(EXPR) do											\
+	{																\
+		if (!(EXPR))												\
+		{															\
+			PVRSRVDebugPrintf(DBGPRIV_FATAL, __FILE__, __LINE__,	\
+							  "Debug assertion failed!");			\
+			BUG();													\
+		}															\
+	} while (0)
+
+#else /* defined(LINUX) && defined(__KERNEL__) */
 
 IMG_IMPORT IMG_VOID IMG_CALLCONV PVRSRVDebugAssertFail(const IMG_CHAR *pszFile,
 													   IMG_UINT32 ui32Line);
 
-			#if defined(PVR_DBG_BREAK_ASSERT_FAIL)
-				#define PVR_DBG_BREAK	PVRSRVDebugAssertFail("PVR_DBG_BREAK", 0)
+#if defined(LINUX)
+	#define PVR_ASSERT(EXPR) do								\
+		{													\
+			if (!(EXPR))									\
+				PVRSRVDebugAssertFail(__FILE__, __LINE__);	\
+		} while (0)
+#else
+    #if defined (__QNXNTO__)
+	    #define PVR_ASSERT(EXPR) if (!(EXPR)) PVRSRVDebugAssertFail(__FILE__, __LINE__);
+    #else
+	    #define PVR_ASSERT(EXPR) if (!(EXPR)) PVRSRVDebugAssertFail(__FILE__, __LINE__)
+    #endif
+#endif
+
+#endif /* defined(LINUX) && defined(__KERNEL__) */
+
+
+			#if defined(LINUX) && defined(__KERNEL__)
+				#define PVR_DBG_BREAK BUG()
 			#else
-				#define PVR_DBG_BREAK
+				#define PVR_DBG_BREAK PVRSRVDebugAssertFail(__FILE__, __LINE__)
 			#endif
 
 #else  /* defined(PVRSRV_NEED_PVR_ASSERT) */
@@ -105,7 +133,66 @@ IMG_IMPORT IMG_VOID IMG_CALLCONV PVRSRVDebugAssertFail(const IMG_CHAR *pszFile,
 
 #if defined(PVRSRV_NEED_PVR_DPF)
 
-	#define PVR_DPF(X)		PVRSRVDebugPrintf X
+#if defined(PVRSRV_NEW_PVR_DPF)
+
+	/* New logging mechanism */
+	#define PVR_DBG_FATAL		DBGPRIV_FATAL
+	#define PVR_DBG_ERROR		DBGPRIV_ERROR
+	#define PVR_DBG_WARNING		DBGPRIV_WARNING
+	#define PVR_DBG_MESSAGE		DBGPRIV_MESSAGE
+	#define PVR_DBG_VERBOSE		DBGPRIV_VERBOSE
+	#define PVR_DBG_CALLTRACE	DBGPRIV_CALLTRACE
+	#define PVR_DBG_ALLOC		DBGPRIV_ALLOC
+	#define PVR_DBGDRIV_MESSAGE	DBGPRIV_DBGDRV_MESSAGE
+
+	/* These levels are always on with PVRSRV_NEED_PVR_DPF */
+	#define __PVR_DPF_0x01UL(x...) PVRSRVDebugPrintf(DBGPRIV_FATAL, x)
+	#define __PVR_DPF_0x02UL(x...) PVRSRVDebugPrintf(DBGPRIV_ERROR, x)
+
+	/* Some are compiled out completely in release builds */
+#if defined(DEBUG)
+	#define __PVR_DPF_0x04UL(x...) PVRSRVDebugPrintf(DBGPRIV_WARNING, x)
+	#define __PVR_DPF_0x08UL(x...) PVRSRVDebugPrintf(DBGPRIV_MESSAGE, x)
+	#define __PVR_DPF_0x10UL(x...) PVRSRVDebugPrintf(DBGPRIV_VERBOSE, x)
+	#define __PVR_DPF_0x20UL(x...) PVRSRVDebugPrintf(DBGPRIV_CALLTRACE, x)
+	#define __PVR_DPF_0x40UL(x...) PVRSRVDebugPrintf(DBGPRIV_ALLOC, x)
+	#define __PVR_DPF_0x80UL(x...) PVRSRVDebugPrintf(DBGPRIV_DBGDRV_MESSAGE, x)
+#else
+	#define __PVR_DPF_0x04UL(x...)
+	#define __PVR_DPF_0x08UL(x...)
+	#define __PVR_DPF_0x10UL(x...)
+	#define __PVR_DPF_0x20UL(x...)
+	#define __PVR_DPF_0x40UL(x...)
+	#define __PVR_DPF_0x80UL(x...)
+#endif
+
+	/* Translate the different log levels to separate macros
+	 * so they can each be compiled out.
+	 */
+#if defined(DEBUG)
+	#define __PVR_DPF(lvl, x...) __PVR_DPF_ ## lvl (__FILE__, __LINE__, x)
+#else
+	#define __PVR_DPF(lvl, x...) __PVR_DPF_ ## lvl ("", 0, x)
+#endif
+
+	/* Get rid of the double bracketing */
+	#define PVR_DPF(x) __PVR_DPF x
+
+#else /* defined(PVRSRV_NEW_PVR_DPF) */
+
+	/* Old logging mechanism */
+	#define PVR_DBG_FATAL		DBGPRIV_FATAL,__FILE__, __LINE__
+	#define PVR_DBG_ERROR		DBGPRIV_ERROR,__FILE__, __LINE__
+	#define PVR_DBG_WARNING		DBGPRIV_WARNING,__FILE__, __LINE__
+	#define PVR_DBG_MESSAGE		DBGPRIV_MESSAGE,__FILE__, __LINE__
+	#define PVR_DBG_VERBOSE		DBGPRIV_VERBOSE,__FILE__, __LINE__
+	#define PVR_DBG_CALLTRACE	DBGPRIV_CALLTRACE,__FILE__, __LINE__
+	#define PVR_DBG_ALLOC		DBGPRIV_ALLOC,__FILE__, __LINE__
+	#define PVR_DBGDRIV_MESSAGE	DBGPRIV_DBGDRV_MESSAGE, "", 0
+
+	#define PVR_DPF(X)			PVRSRVDebugPrintf X
+
+#endif /* defined(PVRSRV_NEW_PVR_DPF) */
 
 IMG_IMPORT IMG_VOID IMG_CALLCONV PVRSRVDebugPrintf(IMG_UINT32 ui32DebugLevel,
 												   const IMG_CHAR *pszFileName,

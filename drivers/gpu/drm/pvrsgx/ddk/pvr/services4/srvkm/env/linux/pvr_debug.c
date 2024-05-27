@@ -40,6 +40,13 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */ /**************************************************************************/
 
+#include <linux/version.h>
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38))
+#ifndef AUTOCONF_INCLUDED
+#include <linux/config.h>
+#endif
+#endif
 
 #include <asm/io.h>
 #include <asm/uaccess.h>
@@ -47,71 +54,117 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <linux/hardirq.h>
 #include <linux/module.h>
 #include <linux/spinlock.h>
-#include <linux/tty.h>
+#include <linux/string.h>			// strncpy, strlen
 #include <stdarg.h>
 #include "img_types.h"
 #include "servicesext.h"
 #include "pvr_debug.h"
+#include "srvkm.h"
 #include "proc.h"
 #include "mutex.h"
 #include "linkage.h"
+#include "pvr_uaccess.h"
+
+#if !defined(CONFIG_PREEMPT)
+#define	PVR_DEBUG_ALWAYS_USE_SPINLOCK
+#endif
+
+static IMG_BOOL VBAppend(IMG_CHAR *pszBuf, IMG_UINT32 ui32BufSiz,
+						 const IMG_CHAR* pszFormat, va_list VArgs)
+						 IMG_FORMAT_PRINTF(3, 0);
+
 
 #if defined(PVRSRV_NEED_PVR_DPF)
 
 #define PVR_MAX_FILEPATH_LEN 256
 
-static IMG_UINT32 gPVRDebugLevel = DBGPRIV_WARNING;
+static IMG_BOOL BAppend(IMG_CHAR *pszBuf, IMG_UINT32 ui32BufSiz,
+						const IMG_CHAR *pszFormat, ...)
+						IMG_FORMAT_PRINTF(3, 4);
 
-#endif
+/* NOTE: Must NOT be static! Used in module.c.. */
+IMG_UINT32 gPVRDebugLevel =
+	(DBGPRIV_FATAL | DBGPRIV_ERROR | DBGPRIV_WARNING);
+
+#endif /* defined(PVRSRV_NEED_PVR_DPF) || defined(PVRSRV_NEED_PVR_TRACE) */
 
 #define	PVR_MAX_MSG_LEN PVR_MAX_DEBUG_MESSAGE_LEN
 
+#if !defined(PVR_DEBUG_ALWAYS_USE_SPINLOCK)
+/* Message buffer for non-IRQ messages */
 static IMG_CHAR gszBufferNonIRQ[PVR_MAX_MSG_LEN + 1];
+#endif
 
+/* Message buffer for IRQ messages */
 static IMG_CHAR gszBufferIRQ[PVR_MAX_MSG_LEN + 1];
 
-static struct mutex gsDebugMutexNonIRQ;
+#if !defined(PVR_DEBUG_ALWAYS_USE_SPINLOCK)
+/* The lock is used to control access to gszBufferNonIRQ */
+static PVRSRV_LINUX_MUTEX gsDebugMutexNonIRQ;
+#endif
 
-DEFINE_SPINLOCK(gsDebugLockIRQ);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
+/* The lock is used to control access to gszBufferIRQ */
+/* PRQA S 0671,0685 1 */ /* ignore warnings about C99 style initialisation */
+static spinlock_t gsDebugLockIRQ = SPIN_LOCK_UNLOCKED;
+#else
+static DEFINE_SPINLOCK(gsDebugLockIRQ);
+#endif
 
+#if !defined(PVR_DEBUG_ALWAYS_USE_SPINLOCK)
+#if !defined (USE_SPIN_LOCK) /* to keep QAC happy */ 
 #define	USE_SPIN_LOCK (in_interrupt() || !preemptible())
+#endif
+#endif
 
 static inline void GetBufferLock(unsigned long *pulLockFlags)
 {
+#if !defined(PVR_DEBUG_ALWAYS_USE_SPINLOCK)
 	if (USE_SPIN_LOCK)
+#endif
 	{
 		spin_lock_irqsave(&gsDebugLockIRQ, *pulLockFlags);
 	}
+#if !defined(PVR_DEBUG_ALWAYS_USE_SPINLOCK)
 	else
 	{
-		mutex_lock(&gsDebugMutexNonIRQ);
+		LinuxLockMutex(&gsDebugMutexNonIRQ);
 	}
+#endif
 }
 
 static inline void ReleaseBufferLock(unsigned long ulLockFlags)
 {
+#if !defined(PVR_DEBUG_ALWAYS_USE_SPINLOCK)
 	if (USE_SPIN_LOCK)
+#endif
 	{
 		spin_unlock_irqrestore(&gsDebugLockIRQ, ulLockFlags);
 	}
+#if !defined(PVR_DEBUG_ALWAYS_USE_SPINLOCK)
 	else
 	{
-		mutex_unlock(&gsDebugMutexNonIRQ);
+		LinuxUnLockMutex(&gsDebugMutexNonIRQ);
 	}
+#endif
 }
 
 static inline void SelectBuffer(IMG_CHAR **ppszBuf, IMG_UINT32 *pui32BufSiz)
 {
+#if !defined(PVR_DEBUG_ALWAYS_USE_SPINLOCK)
 	if (USE_SPIN_LOCK)
+#endif
 	{
 		*ppszBuf = gszBufferIRQ;
 		*pui32BufSiz = sizeof(gszBufferIRQ);
 	}
+#if !defined(PVR_DEBUG_ALWAYS_USE_SPINLOCK)
 	else
 	{
 		*ppszBuf = gszBufferNonIRQ;
 		*pui32BufSiz = sizeof(gszBufferNonIRQ);
 	}
+#endif
 }
 
 /*
@@ -132,15 +185,17 @@ static IMG_BOOL VBAppend(IMG_CHAR *pszBuf, IMG_UINT32 ui32BufSiz, const IMG_CHAR
 	i32Len = vsnprintf(&pszBuf[ui32Used], ui32Space, pszFormat, VArgs);
 	pszBuf[ui32BufSiz - 1] = 0;
 
-
-	return (i32Len < 0 || i32Len >= ui32Space);
+	/* Return true if string was truncated */
+	return (i32Len < 0 || i32Len >= (IMG_INT32)ui32Space) ? IMG_TRUE : IMG_FALSE;
 }
 
 /* Actually required for ReleasePrintf too */
 
 IMG_VOID PVRDPFInit(IMG_VOID)
 {
-    mutex_init(&gsDebugMutexNonIRQ);
+#if !defined(PVR_DEBUG_ALWAYS_USE_SPINLOCK)
+    LinuxInitMutex(&gsDebugMutexNonIRQ);
+#endif
 }
 
 /*!
@@ -178,16 +233,6 @@ IMG_VOID PVRSRVReleasePrintf(const IMG_CHAR *pszFormat, ...)
 	va_end(vaArgs);
 
 }
-
-#if defined(PVRSRV_NEED_PVR_ASSERT)
-
-IMG_VOID PVRSRVDebugAssertFail(const IMG_CHAR* pszFile, IMG_UINT32 uLine)
-{
-	PVRSRVDebugPrintf(DBGPRIV_FATAL, pszFile, uLine, "Debug assertion failed!");
-	BUG();
-}
-
-#endif
 
 #if defined(PVRSRV_NEED_PVR_TRACE)
 
@@ -239,16 +284,16 @@ IMG_VOID PVRSRVTrace(const IMG_CHAR* pszFormat, ...)
  */
 static IMG_BOOL BAppend(IMG_CHAR *pszBuf, IMG_UINT32 ui32BufSiz, const IMG_CHAR *pszFormat, ...)
 {
-		va_list VArgs;
-		IMG_BOOL bTrunc;
+	va_list VArgs;
+	IMG_BOOL bTrunc;
 
-		va_start (VArgs, pszFormat);
+	va_start (VArgs, pszFormat);
 
-		bTrunc = VBAppend(pszBuf, ui32BufSiz, pszFormat, VArgs);
+	bTrunc = VBAppend(pszBuf, ui32BufSiz, pszFormat, VArgs);
 
-		va_end (VArgs);
+	va_end (VArgs);
 
-		return bTrunc;
+	return bTrunc;
 }
 
 /*!
@@ -270,14 +315,14 @@ IMG_VOID PVRSRVDebugPrintf	(
 						...
 					)
 {
-	IMG_BOOL bTrace, bDebug;
+	IMG_BOOL bTrace;
 	const IMG_CHAR *pszFileName = pszFullFileName;
 	IMG_CHAR *pszLeafName;
 
-	bTrace = gPVRDebugLevel & ui32DebugLevel & DBGPRIV_CALLTRACE;
-	bDebug = ((gPVRDebugLevel & DBGPRIV_ALLLEVELS) >= ui32DebugLevel);
 
-	if (bTrace || bDebug)
+	bTrace = (IMG_BOOL)(ui32DebugLevel & DBGPRIV_CALLTRACE) ? IMG_TRUE : IMG_FALSE;
+
+	if (gPVRDebugLevel & ui32DebugLevel)
 	{
 		va_list vaArgs;
 		unsigned long ulLockFlags = 0;
@@ -290,8 +335,8 @@ IMG_VOID PVRSRVDebugPrintf	(
 
 		GetBufferLock(&ulLockFlags);
 
-
-		if (bDebug)
+		/* Add in the level of warning */
+		if (bTrace == IMG_FALSE)
 		{
 			switch(ui32DebugLevel)
 			{
@@ -338,16 +383,19 @@ IMG_VOID PVRSRVDebugPrintf	(
 		}
 		else
 		{
-
-			if (!bTrace)
+			/* Traces don't need a location */
+			if (bTrace == IMG_FALSE)
 			{
 #ifdef DEBUG_LOG_PATH_TRUNCATE
 				/* Buffer for rewriting filepath in log messages */
 				static IMG_CHAR szFileNameRewrite[PVR_MAX_FILEPATH_LEN];
 
-				IMG_CHAR* pszTruncIter;
+   				IMG_CHAR* pszTruncIter;
 				IMG_CHAR* pszTruncBackInter;
 
+				/* Truncate path (DEBUG_LOG_PATH_TRUNCATE shoud be set to EURASIA env var)*/
+				if (strlen(pszFullFileName) > strlen(DEBUG_LOG_PATH_TRUNCATE)+1)
+					pszFileName = pszFullFileName + strlen(DEBUG_LOG_PATH_TRUNCATE)+1;
 
 				/* Try to find '/../' entries and remove it together with
 				   previous entry. Repeat unit all removed */
@@ -403,7 +451,7 @@ IMG_VOID PVRSRVDebugPrintf	(
 		       	}
 #endif /* __sh__ */
 
-				if (BAppend(pszBuf, ui32BufSiz, " [%lu, %s]", ui32Line, pszFileName))
+				if (BAppend(pszBuf, ui32BufSiz, " [%u, %s]", ui32Line, pszFileName))
 				{
 					printk(KERN_INFO "PVR_K:(Message Truncated): %s\n", pszBuf);
 				}
@@ -428,49 +476,31 @@ IMG_VOID PVRSRVDebugPrintf	(
 
 #if defined(DEBUG)
 
-IMG_VOID PVRDebugSetLevel(IMG_UINT32 uDebugLevel)
-{
-	printk(KERN_INFO "PVR: Setting Debug Level = 0x%x\n",(IMG_UINT)uDebugLevel);
-
-	gPVRDebugLevel = uDebugLevel;
-}
-
 IMG_INT PVRDebugProcSetLevel(struct file *file, const IMG_CHAR *buffer, IMG_UINT32 count, IMG_VOID *data)
 {
-#define	_PROC_SET_BUFFER_SZ		2
+#define	_PROC_SET_BUFFER_SZ		6
 	IMG_CHAR data_buffer[_PROC_SET_BUFFER_SZ];
 
-	if (count != _PROC_SET_BUFFER_SZ)
+	if (count > _PROC_SET_BUFFER_SZ)
 	{
 		return -EINVAL;
 	}
 	else
 	{
-		if (copy_from_user(data_buffer, buffer, count))
+		if (pvr_copy_from_user(data_buffer, buffer, count))
 			return -EINVAL;
 		if (data_buffer[count - 1] != '\n')
 			return -EINVAL;
-		PVRDebugSetLevel(data_buffer[0] - '0');
+		if (sscanf(data_buffer, "%i", &gPVRDebugLevel) == 0)
+			return -EINVAL;
+		gPVRDebugLevel &= (1 << DBGPRIV_DBGLEVEL_COUNT) - 1;
 	}
 	return (count);
 }
 
-#ifdef PVR_PROC_USE_SEQ_FILE
 void ProcSeqShowDebugLevel(struct seq_file *sfile,void* el)
 {
-	seq_printf(sfile, "%lu\n", gPVRDebugLevel);
+	seq_printf(sfile, "%u\n", gPVRDebugLevel);
 }
-
-#else
-IMG_INT PVRDebugProcGetLevel(IMG_CHAR *page, IMG_CHAR **start, off_t off, IMG_INT count, IMG_INT *eof, IMG_VOID *data)
-{
-	if (off == 0) {
-		*start = (IMG_CHAR *)1;
-		return printAppend(page, count, 0, "%lu\n", gPVRDebugLevel);
-	}
-	*eof = 1;
-	return 0;
-}
-#endif
 
 #endif /* defined(DEBUG) */

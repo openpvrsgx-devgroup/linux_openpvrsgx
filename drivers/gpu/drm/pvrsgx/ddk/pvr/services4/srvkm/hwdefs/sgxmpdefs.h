@@ -1,32 +1,48 @@
-/**********************************************************************
- *
- * Copyright (C) Imagination Technologies Ltd. All rights reserved.
- * 
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- * 
- * This program is distributed in the hope it will be useful but, except 
- * as otherwise stated in writing, without any warranty; without even the 
- * implied warranty of merchantability or fitness for a particular purpose. 
- * See the GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- * 
- * The full GNU General Public License is included in this distribution in
- * the file called "COPYING".
- *
- * Contact Information:
- * Imagination Technologies Ltd. <gpl-support@imgtec.com>
- * Home Park Estate, Kings Langley, Herts, WD4 8LZ, UK 
- *
- ******************************************************************************/
+/*************************************************************************/ /*!
+@Title          Hardware defs for SGXMP.
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@License        Dual MIT/GPLv2
 
-#ifndef _SGXMPDEFS_H_
-#define _SGXMPDEFS_H_
+The contents of this file are subject to the MIT license as set out below.
 
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/ /**************************************************************************/
+
+#ifndef _SGXMPDEFS_KM_H_
+#define _SGXMPDEFS_KM_H_
+
+/* Register EUR_CR_MASTER_BIF_CTRL */
 #define EUR_CR_MASTER_BIF_CTRL              0x4C00
 #define EUR_CR_MASTER_BIF_CTRL_NOREORDER_MASK 0x00000001U
 #define EUR_CR_MASTER_BIF_CTRL_NOREORDER_SHIFT 0
@@ -49,6 +65,7 @@
 #define EUR_CR_MASTER_BIF_CTRL_MMU_BYPASS_MASTER_DPM_MASK 0x00080000U
 #define EUR_CR_MASTER_BIF_CTRL_MMU_BYPASS_MASTER_DPM_SHIFT 19
 #define EUR_CR_MASTER_BIF_CTRL_MMU_BYPASS_MASTER_DPM_SIGNED 0
+/* Register EUR_CR_MASTER_BIF_CTRL_INVAL */
 #define EUR_CR_MASTER_BIF_CTRL_INVAL        0x4C34
 #define EUR_CR_MASTER_BIF_CTRL_INVAL_PTE_MASK 0x00000004U
 #define EUR_CR_MASTER_BIF_CTRL_INVAL_PTE_SHIFT 2
@@ -56,6 +73,7 @@
 #define EUR_CR_MASTER_BIF_CTRL_INVAL_ALL_MASK 0x00000008U
 #define EUR_CR_MASTER_BIF_CTRL_INVAL_ALL_SHIFT 3
 #define EUR_CR_MASTER_BIF_CTRL_INVAL_ALL_SIGNED 0
+/* Register EUR_CR_MASTER_BIF_MMU_CTRL */
 #define EUR_CR_MASTER_BIF_MMU_CTRL          0x4CD0
 #define EUR_CR_MASTER_BIF_MMU_CTRL_PREFETCHING_ON_MASK 0x00000001U
 #define EUR_CR_MASTER_BIF_MMU_CTRL_PREFETCHING_ON_SHIFT 0
@@ -66,6 +84,7 @@
 #define EUR_CR_MASTER_BIF_MMU_CTRL_ENABLE_DC_TLB_MASK 0x00000010U
 #define EUR_CR_MASTER_BIF_MMU_CTRL_ENABLE_DC_TLB_SHIFT 4
 #define EUR_CR_MASTER_BIF_MMU_CTRL_ENABLE_DC_TLB_SIGNED 0
+/* Register EUR_CR_MASTER_SLC_CTRL */
 #define EUR_CR_MASTER_SLC_CTRL              0x4D00
 #define EUR_CR_MASTER_SLC_CTRL_DISABLE_REORDERING_MASK 0x00800000U
 #define EUR_CR_MASTER_SLC_CTRL_DISABLE_REORDERING_SHIFT 23
@@ -97,6 +116,7 @@
 #define EUR_CR_MASTER_SLC_CTRL_PAUSE_MASK   0x00000100U
 #define EUR_CR_MASTER_SLC_CTRL_PAUSE_SHIFT  8
 #define EUR_CR_MASTER_SLC_CTRL_PAUSE_SIGNED 0
+/* Register EUR_CR_MASTER_SLC_CTRL_BYPASS */
 #define EUR_CR_MASTER_SLC_CTRL_BYPASS       0x4D04
 #define EUR_CR_MASTER_SLC_CTRL_BYPASS_BYP_CC_N_MASK 0x08000000U
 #define EUR_CR_MASTER_SLC_CTRL_BYPASS_BYP_CC_N_SHIFT 27
@@ -182,10 +202,12 @@
 #define EUR_CR_MASTER_SLC_CTRL_BYPASS_ALL_MASK 0x00000001U
 #define EUR_CR_MASTER_SLC_CTRL_BYPASS_ALL_SHIFT 0
 #define EUR_CR_MASTER_SLC_CTRL_BYPASS_ALL_SIGNED 0
+/* Register EUR_CR_MASTER_SLC_CTRL_USSE_INVAL */
 #define EUR_CR_MASTER_SLC_CTRL_USSE_INVAL   0x4D08
 #define EUR_CR_MASTER_SLC_CTRL_USSE_INVAL_ADDR_MASK 0xFFFFFFFFU
 #define EUR_CR_MASTER_SLC_CTRL_USSE_INVAL_ADDR_SHIFT 0
 #define EUR_CR_MASTER_SLC_CTRL_USSE_INVAL_ADDR_SIGNED 0
+/* Register EUR_CR_MASTER_SLC_CTRL_INVAL */
 #define EUR_CR_MASTER_SLC_CTRL_INVAL        0x4D28
 #define EUR_CR_MASTER_SLC_CTRL_INVAL_DM_EVENT_MASK 0x00000008U
 #define EUR_CR_MASTER_SLC_CTRL_INVAL_DM_EVENT_SHIFT 3
@@ -199,6 +221,7 @@
 #define EUR_CR_MASTER_SLC_CTRL_INVAL_ALL_MASK 0x00000001U
 #define EUR_CR_MASTER_SLC_CTRL_INVAL_ALL_SHIFT 0
 #define EUR_CR_MASTER_SLC_CTRL_INVAL_ALL_SIGNED 0
+/* Register EUR_CR_MASTER_SLC_CTRL_FLUSH */
 #define EUR_CR_MASTER_SLC_CTRL_FLUSH        0x4D2C
 #define EUR_CR_MASTER_SLC_CTRL_FLUSH_DM_EVENT_MASK 0x00000080U
 #define EUR_CR_MASTER_SLC_CTRL_FLUSH_DM_EVENT_SHIFT 7
@@ -212,6 +235,7 @@
 #define EUR_CR_MASTER_SLC_CTRL_FLUSH_ALL_MASK 0x00000010U
 #define EUR_CR_MASTER_SLC_CTRL_FLUSH_ALL_SHIFT 4
 #define EUR_CR_MASTER_SLC_CTRL_FLUSH_ALL_SIGNED 0
+/* Register EUR_CR_MASTER_SLC_CTRL_FLUSH_INV */
 #define EUR_CR_MASTER_SLC_CTRL_FLUSH_INV    0x4D34
 #define EUR_CR_MASTER_SLC_CTRL_FLUSH_INV_DM_EVENT_MASK 0x00000080U
 #define EUR_CR_MASTER_SLC_CTRL_FLUSH_INV_DM_EVENT_SHIFT 7
@@ -225,10 +249,12 @@
 #define EUR_CR_MASTER_SLC_CTRL_FLUSH_INV_ALL_MASK 0x00000010U
 #define EUR_CR_MASTER_SLC_CTRL_FLUSH_INV_ALL_SHIFT 4
 #define EUR_CR_MASTER_SLC_CTRL_FLUSH_INV_ALL_SIGNED 0
+/* Register EUR_CR_MASTER_BREAKPOINT_READ */
 #define EUR_CR_MASTER_BREAKPOINT_READ       0x4F18
 #define EUR_CR_MASTER_BREAKPOINT_READ_ADDRESS_MASK 0xFFFFFFF0U
 #define EUR_CR_MASTER_BREAKPOINT_READ_ADDRESS_SHIFT 4
 #define EUR_CR_MASTER_BREAKPOINT_READ_ADDRESS_SIGNED 0
+/* Register EUR_CR_MASTER_BREAKPOINT_TRAP */
 #define EUR_CR_MASTER_BREAKPOINT_TRAP       0x4F1C
 #define EUR_CR_MASTER_BREAKPOINT_TRAP_CONTINUE_MASK 0x00000002U
 #define EUR_CR_MASTER_BREAKPOINT_TRAP_CONTINUE_SHIFT 1
@@ -236,6 +262,7 @@
 #define EUR_CR_MASTER_BREAKPOINT_TRAP_WRNOTIFY_MASK 0x00000001U
 #define EUR_CR_MASTER_BREAKPOINT_TRAP_WRNOTIFY_SHIFT 0
 #define EUR_CR_MASTER_BREAKPOINT_TRAP_WRNOTIFY_SIGNED 0
+/* Register EUR_CR_MASTER_BREAKPOINT */
 #define EUR_CR_MASTER_BREAKPOINT            0x4F20
 #define EUR_CR_MASTER_BREAKPOINT_ID_MASK    0x00000030U
 #define EUR_CR_MASTER_BREAKPOINT_ID_SHIFT   4
@@ -246,10 +273,12 @@
 #define EUR_CR_MASTER_BREAKPOINT_TRAPPED_MASK 0x00000004U
 #define EUR_CR_MASTER_BREAKPOINT_TRAPPED_SHIFT 2
 #define EUR_CR_MASTER_BREAKPOINT_TRAPPED_SIGNED 0
+/* Register EUR_CR_MASTER_BREAKPOINT_TRAP_INFO0 */
 #define EUR_CR_MASTER_BREAKPOINT_TRAP_INFO0 0x4F24
 #define EUR_CR_MASTER_BREAKPOINT_TRAP_INFO0_ADDRESS_MASK 0xFFFFFFF0U
 #define EUR_CR_MASTER_BREAKPOINT_TRAP_INFO0_ADDRESS_SHIFT 4
 #define EUR_CR_MASTER_BREAKPOINT_TRAP_INFO0_ADDRESS_SIGNED 0
+/* Register EUR_CR_MASTER_BREAKPOINT_TRAP_INFO1 */
 #define EUR_CR_MASTER_BREAKPOINT_TRAP_INFO1 0x4F28
 #define EUR_CR_MASTER_BREAKPOINT_TRAP_INFO1_SIZE_MASK 0x00007C00U
 #define EUR_CR_MASTER_BREAKPOINT_TRAP_INFO1_SIZE_SHIFT 10
@@ -266,10 +295,12 @@
 #define EUR_CR_MASTER_BREAKPOINT_TRAP_INFO1_RNW_MASK 0x00000001U
 #define EUR_CR_MASTER_BREAKPOINT_TRAP_INFO1_RNW_SHIFT 0
 #define EUR_CR_MASTER_BREAKPOINT_TRAP_INFO1_RNW_SIGNED 0
+/* Register EUR_CR_MASTER_CORE */
 #define EUR_CR_MASTER_CORE                  0x4000
 #define EUR_CR_MASTER_CORE_ENABLE_MASK      0x00000003U
 #define EUR_CR_MASTER_CORE_ENABLE_SHIFT     0
 #define EUR_CR_MASTER_CORE_ENABLE_SIGNED    0
+/* Register EUR_CR_MASTER_CORE_ID */
 #define EUR_CR_MASTER_CORE_ID               0x4010
 #define EUR_CR_MASTER_CORE_ID_CONFIG_MULTI_MASK 0x00000001U
 #define EUR_CR_MASTER_CORE_ID_CONFIG_MULTI_SHIFT 0
@@ -289,6 +320,7 @@
 #define EUR_CR_MASTER_CORE_ID_ID_MASK       0xFFFF0000U
 #define EUR_CR_MASTER_CORE_ID_ID_SHIFT      16
 #define EUR_CR_MASTER_CORE_ID_ID_SIGNED     0
+/* Register EUR_CR_MASTER_CORE_REVISION */
 #define EUR_CR_MASTER_CORE_REVISION         0x4014
 #define EUR_CR_MASTER_CORE_REVISION_MAINTENANCE_MASK 0x000000FFU
 #define EUR_CR_MASTER_CORE_REVISION_MAINTENANCE_SHIFT 0
@@ -302,6 +334,7 @@
 #define EUR_CR_MASTER_CORE_REVISION_DESIGNER_MASK 0xFF000000U
 #define EUR_CR_MASTER_CORE_REVISION_DESIGNER_SHIFT 24
 #define EUR_CR_MASTER_CORE_REVISION_DESIGNER_SIGNED 0
+/* Register EUR_CR_MASTER_SOFT_RESET */
 #define EUR_CR_MASTER_SOFT_RESET            0x4080
 #define EUR_CR_MASTER_SOFT_RESET_CORE_RESET_MASK(i) (0x00000001U << (0 + ((i) * 1)))
 #define EUR_CR_MASTER_SOFT_RESET_CORE_RESET_SHIFT(i) (0 + ((i) * 1))
@@ -328,5 +361,5 @@
 #define EUR_CR_MASTER_SOFT_RESET_PTLA_RESET_SHIFT 10
 #define EUR_CR_MASTER_SOFT_RESET_PTLA_RESET_SIGNED 0
 
-#endif 
+#endif /* _SGXMPDEFS_KM_H_ */
 

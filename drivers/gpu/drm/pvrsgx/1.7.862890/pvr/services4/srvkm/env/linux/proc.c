@@ -659,6 +659,7 @@ IMG_VOID RemoveProcEntry(const IMG_CHAR * name)
 }
 
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
 IMG_VOID RemovePerProcessProcEntry(const IMG_CHAR *name)
 {
     PVRSRV_ENV_PER_PROCESS_DATA *psPerProc;
@@ -697,6 +698,12 @@ IMG_VOID RemovePerProcessProcDir(PVRSRV_ENV_PER_PROCESS_DATA *psPerProc)
         RemoveProcEntry(psPerProc->psProcDir->name);
     }
 }
+#else
+IMG_VOID RemovePerProcessProcDir(PVRSRV_ENV_PER_PROCESS_DATA *psPerProc)
+{
+	proc_remove(psPerProc->psProcDir);
+}
+#endif
 
 IMG_VOID RemoveProcEntries(IMG_VOID)
 {

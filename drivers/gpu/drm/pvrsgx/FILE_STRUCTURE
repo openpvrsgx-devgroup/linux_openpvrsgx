@@ -1,0 +1,71 @@
+OpenPVRSGX
+==========
+
+This branch collects different DDK kernel drivers
+into a single branch.
+It therefore resembles some excerpt of the original
+DDK version management system.
+Note that we have not deleted files from earlier
+versions in newer ones, so that some directories
+pile up a mix of different versions.
+
+File Structure
+==============
+ddk/				- main directory where we have collected files
+  License.txt			- some Intel originated license file
+  README.md			- some Intel how to build (from DDK 1.5.15.3226)
+  readme.txt			- another Intel collection of copyright notices
+  RELNOTES.txt			- Intel release notes
+  pvr/				- main tree
+    COPYING, INSTALL, GPL-COPYING, MIT-COPYING, ORIGIN.txt, README, TSPA.txt
+ 				- several copyright and installation notes
+    Kbuild			-
+    Makefile			-
+    eurasiacon/
+    include4/
+      aw/			- Allwinner specific include extensions
+				  IMHO this should not be here but in services4/system/...
+      dbgdrvif.h		- debugging related definitions
+      img_defs.h		- general helper macros
+      img_types.h		- collection of generic type definitions (e.g. IMG_UINT32)
+      ioctldef.h		- definitions of ioctls (unclear if related to PVRSGX)
+      kernel_types.h		- some macros like UINT32_MAX
+      pdumpdefs.h		- some pixel format definitions
+      pvr_debug.h		- helper macros for DEBUG build
+      pvr_sync_user.h		- some more ioctls() apparently for synchronising something
+      pvrmodule.h		- defines MODULE_AUTHOR() and MODULE_LICENSE()
+      pvrversion.h		- this defines the DDK version as numbers and strings
+				  note: this is presented to user space which checks
+				  for a specific version or bails out
+      regpaths.h		- appears to be Windows related
+      reverse_engineering_debugging.h	- a debug helper function
+      services.h		- this is the header to define commands to control the SGX
+				  firmware, mmu and other components
+      servicesext.h		- a lot of extensions like error numbers, pixel codes...
+      sgx_options.h		- macros to build SGX_BUILD_OPTIONS
+      sgxapi_km.h		- SGX command codes
+				  Most likely this is also compiled into the firmware
+				  and partially into user space code and depends
+				  on some configuration flags.
+				  This is the reason why user-space and kernel driver
+				  versions must match exactly (e.g. RELEASE vs. DEBUG)
+      sgxscript.h		- somehow related to initialisation and direct register access
+    kernel/
+      drivers/staging(imgtec/	- something GEM related (unclear)
+    services4/
+      3rdparty/			- display class and buffer class SoC display glue
+      include/			- a lot of command definitions
+        env/linux*/pvr_drm_shared.h	- ?
+      srvkm/			- SGX driver core library (should be mostly OS agnostic)
+        bridged/			- ?
+        common/			- a library for common objects (e.g. devicemem, handles, hash, lists, queues, refcount ... and common tasks
+        devices/sgx/		- low level communication with SGX hardware (and firmware?)
+        env/linux		- functions to glue to Linux environment (depdends on kernel API)
+        hwdefs/			- constants which depend on the SGX version (e.g. 530 vs. 544)
+        includes/		- header files for this library
+      system/			- specific SoC integration dependent code (e.g. power mgmt, clock, timers)
+    tools/
+      intern/debug/		- source for user-space debug driver tool
+      intern/remview/		- some stale makefiles
+
+======

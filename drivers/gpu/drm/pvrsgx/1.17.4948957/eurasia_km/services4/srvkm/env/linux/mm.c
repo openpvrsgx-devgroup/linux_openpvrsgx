@@ -519,38 +519,14 @@ static void *__old_vmalloc_node(unsigned long size, unsigned long align,
 			    gfp_t gfp_mask, pgprot_t prot,
 			    int node, const void *caller)
 {
-#if 0
-/* unfortunately this does no longer work
- * because now kallsyms_lookup_name() itself is no longer
- * exported
- * See: https://lwn.net/Articles/813350/
-*/
-	/* look up a function that is not exported by EXPORT_SYMBOL
-	 * so that we can link a kernel module
-	 * see: https://www.programmersought.com/article/40296591069/
-	 */
-
-	typedef void *ft(unsigned long size, unsigned long align,
-			unsigned long start, unsigned long end, gfp_t gfp_mask,
-			pgprot_t prot, unsigned long vm_flags, int node,
-			const void *caller);
-
-	ft *fp = (ft *) kallsyms_lookup_name("__vmalloc_node_range");
-
-	if (!fp)
-		return NULL;
-
-	return fp(size, align, VMALLOC_START, VMALLOC_END,
-				gfp_mask, prot, 0, node, caller);
-#else
-/* this works
- * if we add EXPORT_SYMBOL(__vmalloc_node_range);
- * to vmalloc.c */
-
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6,10,0))
+/* we need to add EXPORT_SYMBOL(__vmalloc_node_range); to vmalloc.c */
 	return __vmalloc_node_range(size, align, VMALLOC_START, VMALLOC_END,
 				    gfp_mask, prot, 0, node, caller);
-
-
+#else
+/* we need to add EXPORT_SYMBOL(__vmalloc_node_range_noprof); to vmalloc.c */
+	return __vmalloc_node_range_noprof(size, align, VMALLOC_START, VMALLOC_END,
+				    gfp_mask, prot, 0, node, caller);
 #endif
 }
 

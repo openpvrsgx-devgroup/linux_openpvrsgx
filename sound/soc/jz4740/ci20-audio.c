@@ -28,9 +28,8 @@
 #include <sound/jack.h>
 #include <sound/soc.h>
 
-/* FIXME: convert to gpiod */
-static int hp_mute_gpio;
-static int hp_mic_sw_en_gpio;
+static struct gpio_desc *hp_mute_gpiod;
+static struct gpio_desc *hp_mic_sw_en_gpiod;
 
 static struct snd_soc_jack ci20_hp_jack;
 static struct snd_soc_jack ci20_hdmi_jack;
@@ -56,17 +55,17 @@ static int ci20_hp_jack_status_check(void *data)
 {
 	int enable;
 
-	enable = !gpio_get_value_cansleep(ci20_hp_jack_gpio.gpio);
+	enable = !gpiod_get_value_cansleep(ci20_hp_jack_gpio.desc);
 
 	/*
 	 * The headset type detection switch requires a rising edge on its
 	 * enable pin to trigger the detection sequence.
 	 */
 	if (enable) {
-		gpio_set_value_cansleep(hp_mic_sw_en_gpio, 1);
+		gpiod_set_value_cansleep(hp_mic_sw_en_gpiod, 1);
 		return SND_JACK_HEADPHONE;
 	} else {
-		gpio_set_value_cansleep(hp_mic_sw_en_gpio, 0);
+		gpiod_set_value_cansleep(hp_mic_sw_en_gpiod, 0);
 		return 0;
 	}
 }
@@ -74,7 +73,7 @@ static int ci20_hp_jack_status_check(void *data)
 static int ci20_hp_event(struct snd_soc_dapm_widget *widget,
 	struct snd_kcontrol *ctrl, int event)
 {
-	gpio_set_value(hp_mute_gpio, !!SND_SOC_DAPM_EVENT_OFF(event));
+	gpiod_set_value(hp_mute_gpiod, !!SND_SOC_DAPM_EVENT_OFF(event));
 	return 0;
 }
 
@@ -279,14 +278,11 @@ static int ingenic_snd_soc_ci20_probe(struct platform_device *pdev)
 		ci20_dai_link[0].codecs[0].name = NULL;
 	}
 
-/* FIXME: convert to gpiod and add error handling */
-
-	ci20_hp_jack_gpio.gpio = of_get_named_gpio(np, "ingenic,hp-det-gpio", 0);
-	hp_mute_gpio = of_get_named_gpio(np, "ingenic,hp-mute-gpio", 0);
-	hp_mic_sw_en_gpio = of_get_named_gpio(np, "ingenic,mic-detect-gpio", 0);
-
-	gpio_direction_output(hp_mute_gpio, 1);
-	gpio_direction_output(hp_mic_sw_en_gpio, 0);
+	ci20_hp_jack_gpio.desc = devm_gpiod_get(&pdev->dev, "ingenic,hp-det-gpio", 0);
+	hp_mute_gpiod = devm_gpiod_get(&pdev->dev, "ingenic,hp-mute-gpio", 0);
+	hp_mic_sw_en_gpiod = devm_gpiod_get(&pdev->dev, "ingenic,mic-detect-gpio", 0);
+	gpiod_direction_output(hp_mute_gpiod, 1);
+	gpiod_direction_output(hp_mic_sw_en_gpiod, 0);
 
 	ret = devm_snd_soc_register_card(&pdev->dev, card);
 	if ((ret) && (ret != -EPROBE_DEFER))

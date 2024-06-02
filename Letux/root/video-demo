@@ -1,0 +1,26 @@
+#!/bin/bash
+#
+# video demo
+# needs 160 MByte on Flash card!
+#
+
+SCRIPTPATH="$(dirname "$0")"
+
+FILE=$SCRIPTPATH/big_buck_bunny_480p_stereo.ogg
+
+[ -r $FILE ] || wget -O "$FILE" "http://ftp.nc.debian.org/media/films/big_buck_bunny_480p_stereo.ogg"
+
+export XAUTHORITY=/.Xauthority
+
+[ -x /usr/bin/mplayer ] || apt-get install -y mplayer
+
+NUM=$($SCRIPTPATH/findsoundcard "gta04")	# GTA04
+[ "$NUM" ] || NUM=$($SCRIPTPATH/findsoundcard "L15")	# Pyra
+
+amixer -c "$NUM" set HandsfreeL on
+amixer -c "$NUM" set HandsfreeR on
+amixer -c "$NUM" set 'HandsfreeL Mux' AudioL2
+amixer -c "$NUM" set 'HandsfreeR Mux' AudioR2
+
+export DISPLAY=:0.0
+mplayer -vo x11 $FILE

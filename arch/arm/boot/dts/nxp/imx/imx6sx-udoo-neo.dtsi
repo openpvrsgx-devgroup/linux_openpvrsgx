@@ -5,8 +5,32 @@
 
 #include "imx6sx.dtsi"
 
+&cpu0 {
+	operating-points = <
+		/* kHz    uV */
+//		996000  1250000
+		792000  1175000
+		396000  1075000
+		198000	975000
+	>;
+	fsl,soc-operating-points = <
+		/* ARM kHz  SOC uV */
+//		996000      1175000
+		792000      1175000
+		396000      1175000
+		198000	    1175000
+	>;
+};
+
 / {
 	compatible = "fsl,imx6sx";
+
+	aliases {
+		mmc0 = &usdhc2;
+		mmc1 = &usdhc3;
+		/delete-property/ mmc2;
+		/delete-property/ mmc3;
+	};
 
 	chosen {
 		stdout-path = "serial0:115200n8";
@@ -26,6 +50,7 @@
 			label = "udoo-neo:orange:user";
 			gpios = <&gpio4 6 GPIO_ACTIVE_HIGH>;
 			default-state = "keep";
+			linux,default-trigger = "cpu";
 		};
 	};
 
@@ -390,6 +415,32 @@
 	};
 };
 
+&i2c4 {
+	clock-frequency = <100000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c4_1>;
+	status = "okay";
+
+	accelerometer: fxos8700@1e {
+		compatible = "fsl,fxos8700";
+		reg = <0x1e>;
+	};
+
+	gyroscope: fxas2100x@20 {
+		compatible = "fsl,fxas2100x";
+		reg = <0x20>;
+	};
+};
+
+&iomuxc {
+	pinctrl_i2c4_1: i2c4grp-1 {
+		fsl,pins = <
+			MX6SX_PAD_USB_H_DATA__I2C4_SDA			0x4001b8b1
+			MX6SX_PAD_USB_H_STROBE__I2C4_SCL		0x4001b8b1
+		>;
+	};
+};
+
 &uart1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart1>;
@@ -405,7 +456,7 @@
 
 &uart3 { /* Bluetooth - only on Extended/Full versions */
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_uart3>;
+	pinctrl-0 = <&pinctrl_uart3 &pinctrl_bt_reg>;
 	uart-has-rtscts;
 	status = "disabled";
 
@@ -479,4 +530,185 @@
 		ref-clock-frequency = <38400000>;
 		tcxo-clock-frequency = <26000000>;
 	};
+};
+
+/*
+ * HDMI support
+ *
+ * Copyright (C) 2015 Jasbir Matharu
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+#include <dt-bindings/display/tda998x.h>
+
+/ {
+	sound {
+		compatible = "simple-audio-card";
+		simple-audio-card,name = "HDMI Audio";
+
+		/* broken - emits compiler warnings */
+		simple-audio-card,dai-link@0 {		/* I2S - HDMI */
+			reg = <0>;
+			format = "i2s";
+			cpu {
+				sound-dai = <&ssi2 0>;
+			};
+			codec {
+				sound-dai = <&display1 0>;
+			};
+		};
+	};
+
+	/* older stuff - no idea if we need this */
+	codec_hdmi: hdmi-codec {
+		compatible = "udoo,tda19988-codec";
+		status = "okay";
+	};
+
+	sound_hdmi {
+		compatible = "udoo,imx-audio-tda19988";
+		model = "imx6sx-tda19988";
+		cpu-dai = <&ssi2>;
+		audio-codec = <&codec_hdmi>;
+		mux-int-port = <2>;
+		mux-ext-port = <5>;
+		ssi-controller = <&ssi2>;
+		status = "okay";
+	};
+
+	aliases {
+		display0 = &display0;
+		display1 = &display1;
+	};
+};
+
+&i2c3 {
+	clock-frequency = <100000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c3_2>;
+	status = "okay";
+
+	tda19988: tda19988@34 {
+		compatible = "udoo,tda19988";
+		reg = <0x34>;
+		status = "okay";
+	};
+
+	display1: hdmi-encoder {
+		compatible = "nxp,tda998x";
+		reg = <0x34>;
+//		interrupt-parent = <&gpio0>;
+//		interrupts = <27 2>;		/* falling edge */
+//		pinctrl-names = "default";
+//		pinctrl-0 = <&pinctrl_i2c3_2>;
+		video-ports = <0x230145>;
+
+		#sound-dai-cells = <2>;
+			     /*	DAI-format	AP_ENA reg value */
+		audio-ports = <	TDA998x_I2S	0x03>;
+	};
+
+};
+
+&lcdif1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_lcdif_dat_0 &pinctrl_lcdif_ctrl_0>;
+	lcd-supply = <&vgen5_reg>;
+	display = <&display0>;
+	status = "okay";
+
+	display0: display0 {
+		bits-per-pixel = <32>;
+		bus-width = <24>;
+
+		display-timings {
+			native-mode = <&timing0>;
+			timing0: timing0 {
+				clock-frequency = <74250000>;
+				hactive = <1280>;
+				vactive = <720>;
+				hback-porch = <220>;
+				hfront-porch = <110>;
+				vback-porch = <20>;
+				vfront-porch = <5>;
+				hsync-len = <40>;
+				vsync-len = <5>;
+
+				hsync-active = <0>;
+				vsync-active = <1>;
+				de-active = <1>;
+				pixelclk-active = <0>;
+			};
+		};
+	};
+};
+
+&ssi2 {
+	fsl,mode = "i2s-master";
+	status = "okay";
+};
+
+&iomuxc {
+	pinctrl_i2c3_2: i2c3grp-2 {
+		fsl,pins = <
+			MX6SX_PAD_KEY_ROW4__I2C3_SDA            0x4001b8b1
+			MX6SX_PAD_KEY_COL4__I2C3_SCL            0x4001b8b1
+		>;
+	};
+
+	pinctrl_audmux_hdmi: audmuxgrp-hdmi {
+		fsl,pins = <
+			MX6SX_PAD_KEY_COL0__AUDMUX_AUD5_TXC     0x130b0
+			MX6SX_PAD_KEY_COL1__AUDMUX_AUD5_TXFS    0x130b0
+			MX6SX_PAD_KEY_ROW0__AUDMUX_AUD5_TXD     0x120b0
+		>;
+	};
+
+	pinctrl_lcdif_dat_0: lcdifdatgrp {
+		fsl,pins = <
+			MX6SX_PAD_LCD1_DATA00__LCDIF1_DATA_0 0x4001b0b0
+			MX6SX_PAD_LCD1_DATA01__LCDIF1_DATA_1 0x4001b0b0
+			MX6SX_PAD_LCD1_DATA02__LCDIF1_DATA_2 0x4001b0b0
+			MX6SX_PAD_LCD1_DATA03__LCDIF1_DATA_3 0x4001b0b0
+			MX6SX_PAD_LCD1_DATA04__LCDIF1_DATA_4 0x4001b0b0
+			MX6SX_PAD_LCD1_DATA05__LCDIF1_DATA_5 0x4001b0b0
+			MX6SX_PAD_LCD1_DATA06__LCDIF1_DATA_6 0x4001b0b0
+			MX6SX_PAD_LCD1_DATA07__LCDIF1_DATA_7 0x4001b0b0
+			MX6SX_PAD_LCD1_DATA08__LCDIF1_DATA_8 0x4001b0b0
+			MX6SX_PAD_LCD1_DATA09__LCDIF1_DATA_9 0x4001b0b0
+			MX6SX_PAD_LCD1_DATA10__LCDIF1_DATA_10 0x4001b0b0
+			MX6SX_PAD_LCD1_DATA11__LCDIF1_DATA_11 0x4001b0b0
+			MX6SX_PAD_LCD1_DATA12__LCDIF1_DATA_12 0x4001b0b0
+			MX6SX_PAD_LCD1_DATA13__LCDIF1_DATA_13 0x4001b0b0
+			MX6SX_PAD_LCD1_DATA14__LCDIF1_DATA_14 0x4001b0b0
+			MX6SX_PAD_LCD1_DATA15__LCDIF1_DATA_15 0x4001b0b0
+			MX6SX_PAD_LCD1_DATA16__LCDIF1_DATA_16 0x4001b0b0
+			MX6SX_PAD_LCD1_DATA17__LCDIF1_DATA_17 0x4001b0b0
+			MX6SX_PAD_LCD1_DATA18__LCDIF1_DATA_18 0x4001b0b0
+			MX6SX_PAD_LCD1_DATA19__LCDIF1_DATA_19 0x4001b0b0
+			MX6SX_PAD_LCD1_DATA20__LCDIF1_DATA_20 0x4001b0b0
+			MX6SX_PAD_LCD1_DATA21__LCDIF1_DATA_21 0x4001b0b0
+			MX6SX_PAD_LCD1_DATA22__LCDIF1_DATA_22 0x4001b0b0
+			MX6SX_PAD_LCD1_DATA23__LCDIF1_DATA_23 0x4001b0b0
+		>;
+	};
+
+	pinctrl_lcdif_ctrl_0: lcdifctrlgrp {
+		fsl,pins = <
+			MX6SX_PAD_LCD1_CLK__LCDIF1_CLK	0x4001b0b0
+			MX6SX_PAD_LCD1_ENABLE__LCDIF1_ENABLE 0x4001b0b0
+			MX6SX_PAD_LCD1_VSYNC__LCDIF1_VSYNC 0x4001b0b0
+			MX6SX_PAD_LCD1_HSYNC__LCDIF1_HSYNC 0x4001b0b0
+			MX6SX_PAD_LCD1_RESET__GPIO3_IO_27  0x80000000
+		>;
+	};
+};
+
+&audmux {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_audmux_hdmi>;
+	status = "okay";
 };

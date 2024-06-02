@@ -30,6 +30,13 @@
 #include "omap-mcpdm.h"
 #include "sdma-pcm.h"
 
+#if IS_ENABLED(CONFIG_SND_SOC_OMAP_AESS)
+#include "aess/omap-aess.h"
+#endif
+
+#define OMAP_MCPDM_LEGACY_DAI  0
+#define OMAP_MCPDM_ABE_DAI     1
+
 struct mcpdm_link_config {
 	u32 link_mask; /* channel mask for the direction */
 	u32 threshold; /* FIFO threshold */
@@ -58,6 +65,11 @@ struct omap_mcpdm {
 	int pm_active_count;
 
 	struct snd_dmaengine_dai_dma_data dma_data[2];
+
+	int active;
+	int active_dai;
+
+	struct omap_aess *aess;
 };
 
 /*
@@ -250,15 +262,36 @@ static int omap_mcpdm_dai_startup(struct snd_pcm_substream *substream,
 				  struct snd_soc_dai *dai)
 {
 	struct omap_mcpdm *mcpdm = snd_soc_dai_get_drvdata(dai);
+	int ret = 0;
 
 	mutex_lock(&mcpdm->mutex);
 
-	if (!snd_soc_dai_active(dai))
-		omap_mcpdm_open_streams(mcpdm);
+	if (!mcpdm->active++) {
+		mcpdm->active_dai = dai->id;
+
+		/* McPDM FIFO configuration */
+		mcpdm->config[SNDRV_PCM_STREAM_PLAYBACK].threshold = 2;
+		if (dai->id == OMAP_MCPDM_LEGACY_DAI)
+			mcpdm->config[SNDRV_PCM_STREAM_CAPTURE].threshold =
+							MCPDM_UP_THRES_MAX - 3;
+		else
+			mcpdm->config[SNDRV_PCM_STREAM_CAPTURE].threshold = 2;
+
+                omap_mcpdm_open_streams(mcpdm);
+	} else if (mcpdm->active_dai != dai->id) {
+		dev_err(mcpdm->dev, "Trying %s, while McPDM is in %s.\n",
+			dai->id ? "ABE mode" : "Legacy mode",
+			mcpdm->active_dai ? "ABE mode" : "Legacy mode");
+		ret = -EINVAL;
+		mcpdm->active--;
+        }
 
 	mutex_unlock(&mcpdm->mutex);
 
-	return 0;
+	snd_soc_dai_set_dma_data(dai, substream,
+				 &mcpdm->dma_data[substream->stream]);
+
+	return ret;
 }
 
 static void omap_mcpdm_dai_shutdown(struct snd_pcm_substream *substream,
@@ -271,10 +304,34 @@ static void omap_mcpdm_dai_shutdown(struct snd_pcm_substream *substream,
 
 	mutex_lock(&mcpdm->mutex);
 
-	if (!snd_soc_dai_active(dai)) {
+	mcpdm->active--;
+
+	if (!mcpdm->active) {
 		if (omap_mcpdm_active(mcpdm)) {
-			omap_mcpdm_stop(mcpdm);
-			omap_mcpdm_close_streams(mcpdm);
+			if (dai->id == OMAP_MCPDM_LEGACY_DAI) {
+				omap_mcpdm_stop(mcpdm);
+				omap_mcpdm_close_streams(mcpdm);
+			} else {
+#if IS_ENABLED(CONFIG_SND_SOC_OMAP_AESS)
+				if (mcpdm->aess) {
+					omap_aess_port_disable(mcpdm->aess,
+						      OMAP_AESS_BE_PORT_PDM_DL1);
+					omap_aess_port_disable(mcpdm->aess,
+						      OMAP_AESS_BE_PORT_PDM_UL1);
+				}
+#endif
+				usleep_range(250, 300);
+				omap_mcpdm_stop(mcpdm);
+				omap_mcpdm_close_streams(mcpdm);
+#if IS_ENABLED(CONFIG_SND_SOC_OMAP_AESS)
+				if (mcpdm->aess) {
+					/* may be duplicate to omap_aess_pcm_close() */
+					omap_aess_pm_shutdown(mcpdm->aess);
+					omap_aess_pm_put(mcpdm->aess);
+				}
+#endif
+			}
+
 			mcpdm->config[0].link_mask = 0;
 			mcpdm->config[1].link_mask = 0;
 		}
@@ -301,6 +358,18 @@ static int omap_mcpdm_dai_hw_params(struct snd_pcm_substream *substream,
 	u32 threshold;
 	int channels, latency;
 	int link_mask = 0;
+
+	dma_data = snd_soc_dai_get_dma_data(dai, substream);
+
+	/* ABE DAIs have fixed channels */
+	if (dai->id == OMAP_MCPDM_ABE_DAI) {
+		mcpdm->config[SNDRV_PCM_STREAM_PLAYBACK].link_mask =
+					      MCPDM_PDM_DN_MASK | MCPDM_CMD_INT;
+		mcpdm->config[SNDRV_PCM_STREAM_CAPTURE].link_mask =
+				MCPDM_PDM_UPLINK_EN(1) | MCPDM_PDM_UPLINK_EN(2);
+		dma_data->maxburst = 16;
+		return 0;
+	}
 
 	channels = params_channels(params);
 	switch (channels) {
@@ -329,8 +398,6 @@ static int omap_mcpdm_dai_hw_params(struct snd_pcm_substream *substream,
 		/* unsupported number of channels */
 		return -EINVAL;
 	}
-
-	dma_data = snd_soc_dai_get_dma_data(dai, substream);
 
 	threshold = mcpdm->config[stream].threshold;
 	/* Configure McPDM channels, and DMA packet size */
@@ -392,9 +459,42 @@ static int omap_mcpdm_prepare(struct snd_pcm_substream *substream,
 		cpu_latency_qos_add_request(pm_qos_req, latency);
 
 	if (!omap_mcpdm_active(mcpdm)) {
+#if IS_ENABLED(CONFIG_SND_SOC_OMAP_AESS)
+		if (dai->id == OMAP_MCPDM_ABE_DAI) {
+			/* Check if ABE McPDM DL/UL is already started */
+
+			if (!mcpdm->aess)
+				return -EINVAL;	/* not available */
+
+			if (omap_aess_port_is_enabled(mcpdm->aess,
+						      OMAP_AESS_BE_PORT_PDM_DL1))
+				return 0;
+
+			if (omap_aess_port_is_enabled(mcpdm->aess,
+						      OMAP_AESS_BE_PORT_PDM_UL1))
+				return 0;
+
+			omap_aess_pm_get(mcpdm->aess);
+
+			/* start ATC before McPDM IP */
+			omap_aess_port_enable(mcpdm->aess,
+					     OMAP_AESS_BE_PORT_PDM_DL1);
+			omap_aess_port_enable(mcpdm->aess,
+					     OMAP_AESS_BE_PORT_PDM_UL1);
+
+			/* wait 250us for ABE tick */
+			usleep_range(250, 300);
+		}
+#endif
+
 		omap_mcpdm_start(mcpdm);
 		omap_mcpdm_reg_dump(mcpdm);
 	} else if (mcpdm->restart) {
+		if (dai->id != OMAP_MCPDM_LEGACY_DAI) {
+			dev_dbg(mcpdm->dev, "McPDM restart is not supported\n");
+			return 0;
+		}
+
 		omap_mcpdm_stop(mcpdm);
 		omap_mcpdm_start(mcpdm);
 		mcpdm->restart = false;
@@ -408,6 +508,27 @@ static int omap_mcpdm_probe(struct snd_soc_dai *dai)
 {
 	struct omap_mcpdm *mcpdm = snd_soc_dai_get_drvdata(dai);
 	int ret;
+
+	mcpdm->aess = NULL;
+
+#if IS_ENABLED(CONFIG_SND_SOC_OMAP_AESS)
+	mcpdm->aess = omap_aess_get_handle();
+
+	if (mcpdm->aess) {
+		ret = omap_aess_port_open(mcpdm->aess, OMAP_AESS_BE_PORT_PDM_DL1);
+		if (ret) {
+			omap_aess_put_handle(mcpdm->aess);
+			return ret;
+		}
+
+		ret = omap_aess_port_open(mcpdm->aess, OMAP_AESS_BE_PORT_PDM_UL1);
+		if (ret) {
+			omap_aess_port_close(mcpdm->aess, OMAP_AESS_BE_PORT_PDM_DL1);
+			omap_aess_put_handle(mcpdm->aess);
+			return ret;
+		}
+	}
+#endif
 
 	pm_runtime_enable(mcpdm->dev);
 
@@ -423,16 +544,20 @@ static int omap_mcpdm_probe(struct snd_soc_dai *dai)
 	if (ret) {
 		dev_err(mcpdm->dev, "Request for IRQ failed\n");
 		pm_runtime_disable(mcpdm->dev);
+
+#if IS_ENABLED(CONFIG_SND_SOC_OMAP_AESS)
+		if (mcpdm->aess) {
+			omap_aess_port_close(mcpdm->aess, OMAP_AESS_BE_PORT_PDM_DL1);
+			omap_aess_port_close(mcpdm->aess, OMAP_AESS_BE_PORT_PDM_UL1);
+			omap_aess_put_handle(mcpdm->aess);
+		}
+#endif
 	}
 
 	/* Configure McPDM threshold values */
 	mcpdm->config[SNDRV_PCM_STREAM_PLAYBACK].threshold = 2;
 	mcpdm->config[SNDRV_PCM_STREAM_CAPTURE].threshold =
 							MCPDM_UP_THRES_MAX - 3;
-
-	snd_soc_dai_init_dma_data(dai,
-				  &mcpdm->dma_data[SNDRV_PCM_STREAM_PLAYBACK],
-				  &mcpdm->dma_data[SNDRV_PCM_STREAM_CAPTURE]);
 
 	return ret;
 }
@@ -447,10 +572,17 @@ static int omap_mcpdm_remove(struct snd_soc_dai *dai)
 	if (cpu_latency_qos_request_active(&mcpdm->pm_qos_req))
 		cpu_latency_qos_remove_request(&mcpdm->pm_qos_req);
 
+#if IS_ENABLED(CONFIG_SND_SOC_OMAP_AESS)
+	if (mcpdm->aess) {
+		omap_aess_port_close(mcpdm->aess, OMAP_AESS_BE_PORT_PDM_DL1);
+		omap_aess_port_close(mcpdm->aess, OMAP_AESS_BE_PORT_PDM_UL1);
+		omap_aess_put_handle(mcpdm->aess);
+	}
+#endif
 	return 0;
 }
 
-static const struct snd_soc_dai_ops omap_mcpdm_dai_ops = {
+static const struct snd_soc_dai_ops omap_mcpdm_legacy_dai_ops = {
 	.probe		= omap_mcpdm_probe,
 	.remove		= omap_mcpdm_remove,
 	.startup	= omap_mcpdm_dai_startup,
@@ -460,6 +592,17 @@ static const struct snd_soc_dai_ops omap_mcpdm_dai_ops = {
 	.probe_order	= SND_SOC_COMP_ORDER_LATE,
 	.remove_order	= SND_SOC_COMP_ORDER_EARLY,
 };
+
+#if IS_ENABLED(CONFIG_SND_SOC_OMAP_AESS)
+static const struct snd_soc_dai_ops omap_mcpdm_abe_dai_ops = {
+	.startup	= omap_mcpdm_dai_startup,
+	.shutdown	= omap_mcpdm_dai_shutdown,
+	.hw_params	= omap_mcpdm_dai_hw_params,
+	.prepare	= omap_mcpdm_prepare,
+	.probe_order	= SND_SOC_COMP_ORDER_LATE,
+	.remove_order	= SND_SOC_COMP_ORDER_EARLY,
+};
+#endif
 
 #ifdef CONFIG_PM_SLEEP
 static int omap_mcpdm_suspend(struct snd_soc_component *component)
@@ -505,7 +648,10 @@ static int omap_mcpdm_resume(struct snd_soc_component *component)
 #define OMAP_MCPDM_RATES	(SNDRV_PCM_RATE_88200 | SNDRV_PCM_RATE_96000)
 #define OMAP_MCPDM_FORMATS	SNDRV_PCM_FMTBIT_S32_LE
 
-static struct snd_soc_dai_driver omap_mcpdm_dai = {
+static struct snd_soc_dai_driver omap_mcpdm_dai[] = {
+{
+	.name = "mcpdm-legacy",
+	.id     = OMAP_MCPDM_LEGACY_DAI,
 	.playback = {
 		.channels_min = 1,
 		.channels_max = 5,
@@ -520,7 +666,27 @@ static struct snd_soc_dai_driver omap_mcpdm_dai = {
 		.formats = OMAP_MCPDM_FORMATS,
 		.sig_bits = 24,
 	},
-	.ops = &omap_mcpdm_dai_ops,
+	.ops = &omap_mcpdm_legacy_dai_ops,
+},
+#if IS_ENABLED(CONFIG_SND_SOC_OMAP_AESS)
+{
+	.name = "mcpdm-abe",
+	.id     = OMAP_MCPDM_ABE_DAI,
+	.playback = {
+		.channels_min = 1,
+		.channels_max = 2,
+		.rates = OMAP_MCPDM_RATES,
+		.formats = OMAP_MCPDM_FORMATS,
+	},
+	.capture = {
+		.channels_min = 1,
+		.channels_max = 2,
+		.rates = OMAP_MCPDM_RATES,
+		.formats = OMAP_MCPDM_FORMATS,
+	},
+	.ops = &omap_mcpdm_abe_dai_ops,
+},
+#endif
 };
 
 static const struct snd_soc_component_driver omap_mcpdm_component = {
@@ -575,7 +741,7 @@ static int asoc_mcpdm_probe(struct platform_device *pdev)
 
 	ret =  devm_snd_soc_register_component(&pdev->dev,
 					       &omap_mcpdm_component,
-					       &omap_mcpdm_dai, 1);
+					       omap_mcpdm_dai, ARRAY_SIZE(omap_mcpdm_dai));
 	if (ret)
 		return ret;
 

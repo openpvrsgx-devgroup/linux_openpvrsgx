@@ -40,6 +40,7 @@
 #define AXP813_TS_GPIO0_ADC_RATE_HZ(x)		AXP20X_ADC_RATE_HZ(x)
 #define AXP813_V_I_ADC_RATE_HZ(x)		((ilog2((x) / 100) << 4) & AXP813_V_I_ADC_RATE_MASK)
 #define AXP813_ADC_RATE_HZ(x)			(AXP20X_ADC_RATE_HZ(x) | AXP813_V_I_ADC_RATE_HZ(x))
+#define AXP20X_TS_FUNCTION_GPADC		BIT(2)
 
 #define AXP20X_ADC_CHANNEL(_channel, _name, _type, _reg)	\
 	{							\
@@ -673,6 +674,8 @@ static const struct platform_device_id axp20x_adc_id_match[] = {
 };
 MODULE_DEVICE_TABLE(platform, axp20x_adc_id_match);
 
+static struct platform_driver axp20x_adc_driver;
+
 static int axp20x_probe(struct platform_device *pdev)
 {
 	struct axp20x_adc_iio *info;
@@ -704,6 +707,10 @@ static int axp20x_probe(struct platform_device *pdev)
 	}
 
 	indio_dev->name = platform_get_device_id(pdev)->name;
+
+	if (!indio_dev->name)
+		indio_dev->name = axp20x_adc_driver.driver.name;
+
 	indio_dev->info = info->data->iio_info;
 	indio_dev->num_channels = info->data->num_channels;
 	indio_dev->channels = info->data->channels;
@@ -715,6 +722,11 @@ static int axp20x_probe(struct platform_device *pdev)
 		regmap_update_bits(info->regmap, AXP20X_ADC_EN2,
 				   info->data->adc_en2_mask,
 				   info->data->adc_en2_mask);
+
+	if (of_property_read_bool(pdev->dev.of_node, "x-powers,ts-as-gpadc"))
+		regmap_update_bits(info->regmap, AXP20X_ADC_RATE,
+				   AXP20X_TS_FUNCTION_GPADC,
+				   AXP20X_TS_FUNCTION_GPADC);
 
 	/* Configure ADCs rate */
 	info->data->adc_rate(info, 100);

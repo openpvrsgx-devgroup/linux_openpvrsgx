@@ -18,6 +18,7 @@ select:
     compatible:
       contains:
         enum:
+          - ingenic,jz4730-tcu
           - ingenic,jz4740-tcu
           - ingenic,jz4725b-tcu
           - ingenic,jz4760-tcu
@@ -52,6 +53,7 @@ properties:
     oneOf:
       - items:
           - enum:
+              - ingenic,jz4730-tcu
               - ingenic,jz4740-tcu
               - ingenic,jz4725b-tcu
               - ingenic,jz4760-tcu
@@ -120,6 +122,7 @@ patternProperties:
       compatible:
         oneOf:
           - enum:
+              - ingenic,jz4730-watchdog
               - ingenic,jz4740-watchdog
               - ingenic,jz4780-watchdog
           - items:
@@ -154,6 +157,7 @@ patternProperties:
       compatible:
         oneOf:
           - enum:
+              - ingenic,jz4730-pwm
               - ingenic,jz4740-pwm
               - ingenic,jz4725b-pwm
               - ingenic,x1000-pwm

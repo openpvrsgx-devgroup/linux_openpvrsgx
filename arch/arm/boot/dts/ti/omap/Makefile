@@ -17,8 +17,16 @@ dtb-$(CONFIG_ARCH_OMAP3) += \
 	omap3430-sdp.dtb \
 	omap3-beagle.dtb \
 	omap3-beagle-ab4.dtb \
+	omap3-beagle+gta04.dtb \
+	omap3-beagle+gta04b1.dtb \
+	omap3-beagle+gta04b4.dtb \
 	omap3-beagle-xm.dtb \
+	omap3-beagle-xm+gta04.dtb \
+	omap3-beagle-xm+gta04b1.dtb \
+	omap3-beagle-xm+gta04b7.dtb \
 	omap3-beagle-xm-ab.dtb \
+	omap3-beagle-xm-ab+gta04b1.dtb \
+	omap3-beagle-xm-ab+gta04b7.dtb \
 	omap3-cm-t3517.dtb \
 	omap3-cm-t3530.dtb \
 	omap3-cm-t3730.dtb \
@@ -28,10 +36,16 @@ dtb-$(CONFIG_ARCH_OMAP3) += \
 	omap3-echo.dtb \
 	omap3-evm.dtb \
 	omap3-evm-37xx.dtb \
+	omap3-gta04a2.dtb \
 	omap3-gta04a3.dtb \
 	omap3-gta04a4.dtb \
 	omap3-gta04a5.dtb \
 	omap3-gta04a5one.dtb \
+	omap3-gta04a3+b2.dtb \
+	omap3-gta04a4+b2.dtb \
+	omap3-gta04a4+b3.dtb \
+	omap3-gta04+b6.dtb \
+	omap3-gta04+b7.dtb \
 	omap3-ha.dtb \
 	omap3-ha-lcd.dtb \
 	omap3-igep0020.dtb \
@@ -90,6 +104,7 @@ dtb-$(CONFIG_SOC_AM33XX) += \
 	am335x-bone.dtb \
 	am335x-boneblack.dtb \
 	am335x-boneblack-wireless.dtb \
+	am335x-boneblack+letux.dtb \
 	am335x-boneblue.dtb \
 	am335x-bonegreen.dtb \
 	am335x-bonegreen-wireless.dtb \
@@ -99,6 +114,7 @@ dtb-$(CONFIG_SOC_AM33XX) += \
 	am335x-evmsk.dtb \
 	am335x-guardian.dtb \
 	am335x-icev2.dtb \
+	am335x-letux-cortex8.dtb \
 	am335x-lxm.dtb \
 	am335x-moxa-uc-2101.dtb \
 	am335x-moxa-uc-8100-me-t.dtb \
@@ -166,6 +182,11 @@ dtb-$(CONFIG_SOC_OMAP5) += \
 	omap5-cm-t54.dtb \
 	omap5-igep0050.dtb \
 	omap5-sbc-t54.dtb \
+	omap5-letux-cortex15-v5.0.dtb omap5-letux-cortex15-v5.0+pyra-v5.0.dtb omap5-letux-cortex15-v5.1+pyra-v5.0.dtb \
+	omap5-letux-cortex15-v5.1.dtb omap5-letux-cortex15-v5.1+pyra-v5.1.dtb omap5-letux-cortex15-v5.1+pyra-v5.1.2.dtb omap5-letux-cortex15-v5.1+pyra-v5.2.dtb \
+	omap5-letux-cortex15-v5.2.dtb omap5-letux-cortex15-v5.2+pyra-v5.1.2.dtb omap5-letux-cortex15-v5.2+pyra-v5.2.dtb \
+	omap5-letux-cortex15-v5.3.dtb omap5-letux-cortex15-v5.3+pyra-v5.1.2.dtb omap5-letux-cortex15-v5.3+pyra-v5.2.dtb \
+	omap5-letux-cortex15-v5.3+pyra-v5.3.dtb \
 	omap5-uevm.dtb
 dtb-$(CONFIG_SOC_TI81XX) += \
 	am3874-iceboard.dtb \

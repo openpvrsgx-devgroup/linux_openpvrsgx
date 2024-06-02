@@ -1,0 +1,119 @@
+#!/bin/bash
+
+PATH=.:$PATH:/usr/bin/$(echo $MACHTYPE | sed s/unknown-//g)
+
+BASE=0x10010000		# GPIO base
+
+function readw {
+	# prints as 0x with upper case
+	devmem2 $[$1+$2] w | fgrep 'Value at address' | cut -d ' ' -f 6
+}
+
+function strip0x {
+	echo $[$1]
+}
+
+if fgrep -q JZ4780 /proc/cpuinfo
+then	# is jz4780
+
+uname -a
+printf "GPIO num: data DIR PULL FUNC IT IE IM IRQ PIN\n"
+printf "0x%08x %03s: %s\n" 0 "---" "d D P F T E M I PIN"
+for gpio in 0 1 2 3 4 5
+do
+	GPIO=$[BASE+0x100*gpio]	# get base address of gpio block
+	G=P$(echo $gpio | tr '[0-9]' '[A-J]')	# convert to PA...PF
+
+	D=$(readw $GPIO 0)	# PIN pin level
+	INT=$(readw $GPIO 0x10)	# IRQ
+	MASK=$(readw $GPIO 0x20)	# MSK
+	PAT1=$(readw $GPIO 0x30)	# PAT1
+	PAT0=$(readw $GPIO 0x40)	# PAT0
+	PDIS=$(readw $GPIO 0x70)	# PE (pull disable)
+#echo $D $DIR $PE $FSL $FSH $FS
+	for pin in 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
+	do
+		P=$[32*gpio+pin]
+		d=$[D%2]	# data
+		i=$[INT%2]
+		m=$[MASK%2]
+		p0=$[PAT0%2]
+		p1=$[PAT1%2]
+
+		dir=" "  # I, O, ""
+		pull=$([ $[PDIS%2] == 0 ] && echo P || echo -)
+		func=" "	# I, G, 0..3
+		it=" "	# trigger: v ^ 0 1 - or gpio value
+		ie=" "	# interrupt edge or level
+		im=" "	# interrupt masked
+		case "$i$m$p1$p0" in	# table 28.3.1
+			0000 ) func=0;;
+			0001 ) func=1;;
+			0010 ) func=2;;
+			0011 ) func=3;;
+			0100 ) func=G; dir=O; it=0;;
+			0101 ) func=G; dir=O; it=1;;
+			011? ) func=G; dir=I;;
+			1000 ) func=I; ie=L; it=0;;
+			1001 ) func=I; ie=L; it=1;;
+			1010 ) func=I; ie=E; it="v";;
+			1011 ) func=I; ie=E; it="^";;
+			11?? ) func=I; im=M;;
+		esac
+		irq=$([ $[IRQ%2] == 1 ] && echo I || echo -)
+		# gpio value?
+		printf "0x%08x %03d: %s\n" $GPIO $P "$d $dir $pull $func $it $ie $im $irq $G$pin"
+		D=$[D/2]
+		INT=$[INT/2]
+		MASK=$[MASK/2]
+		PAT0=$[PAT0/2]
+		PAT1=$[PAT1/2]
+		PDIS=$[PDIS/2]
+	done
+done
+
+else	# jz4730
+
+printf "GPIO num: data DIR PULL FUNC IT IE IM IRQ PIN\n"
+printf "0x%08x %03s: %s\n" 0 "---" "d D P F T E M I PIN"
+for gpio in 0 1 2 3
+do
+	GPIO=$[BASE+0x30*gpio]	# get base address of gpio block
+	D=$(readw $GPIO 0)
+	DIR=$(readw $GPIO 4)
+	PE=$(readw $GPIO 0xc)
+	FSL=$(readw $GPIO 0x10)
+	FSH=$(readw $GPIO 0x14)
+	ITL=$(readw $GPIO 0x18)
+	ITH=$(readw $GPIO 0x1c)
+	IE=$(readw $GPIO 0x20)
+	IM=$(readw $GPIO 0x24)
+	IRQ=$(readw $GPIO 0x28)
+	FS=$[FSH*0x100000000+FSL]	# bash seems to be able to do 64 bit arithmetic
+	IT=$[ITH*0x100000000+ITL]
+	G=P$(echo $gpio | tr '[0-9]' '[A-J]')	# convert to PA...PF
+#echo $D $DIR $PE $FSL $FSH $FS
+	for pin in 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
+	do
+		P=$[32*gpio+pin]
+		d=$[D%2]
+		dir=$([ $[DIR%2] == 1 ] && echo O || echo I)
+		pull=$([ $[PE%2] == 1 ] && echo P || echo -)
+		func=$[FS%4]
+		it=$[IT%4]
+		ie=$([ $[IE%2] == 1 ] && echo E || echo -)
+		im=$([ $[IM%2] == 1 ] && echo M || echo -)
+		irq=$([ $[IRQ%2] == 1 ] && echo I || echo -)
+		printf "0x%08x %03d: %s\n" $GPIO $P "$d $dir $pull $func $it $ie $im $irq $G$pin"
+		D=$[D/2]
+		DIR=$[DIR/2]
+		PE=$[PE/2]
+		FS=$[FS/4]
+		IT=$[IT/4]
+		IE=$[IE/2]
+		IM=$[IM/2]
+		IRQ=$[IRQ/2]
+	done
+done
+
+fi

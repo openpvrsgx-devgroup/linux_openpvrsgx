@@ -22,6 +22,8 @@
 	backlight: backlight {
 		compatible = "pwm-backlight";
 		pwms = <&r_pwm 0 50000 PWM_POLARITY_INVERTED>;
+		brightness-levels = <0 10 20 30 40 50 60 70 80 90 100>;
+		default-brightness-level = <8>;
 		enable-gpios = <&pio 7 10 GPIO_ACTIVE_HIGH>; /* PH10 */
 		power-supply = <&reg_ps>;
 		/* Backlight configuration differs per PinePhone revision. */
@@ -36,6 +38,20 @@
 		stdout-path = "serial0:115200n8";
 	};
 
+	ec25_codec: ec25-codec {
+		#sound-dai-cells = <0>;
+		compatible = "quectel,ec25";
+	};
+
+	i2c_csi: i2c-csi {
+		compatible = "i2c-gpio";
+		sda-gpios = <&pio 4 13 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>; /* PE13 */
+		scl-gpios = <&pio 4 12 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>; /* PE12 */
+		i2c-gpio,delay-us = <3>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+	};
+
 	leds {
 		compatible = "gpio-leds";
 
@@ -44,6 +60,7 @@
 			color = <LED_COLOR_ID_BLUE>;
 			gpios = <&pio 3 20 GPIO_ACTIVE_HIGH>; /* PD20 */
 			retain-state-suspended;
+			linux,default-trigger = "heartbeat";
 		};
 
 		led1: led-1 {
@@ -76,11 +93,48 @@
 		regulator-boot-on;
 	};
 
+	reg_usb0_vbus: usb0-vbus {
+		compatible = "regulator-fixed";
+		regulator-name = "usb0-vbus";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = <&pio 3 6 GPIO_ACTIVE_HIGH>; /* PD6 */
+		enable-active-high;
+		vin-supply = <&reg_vcc5v0>;
+	};
+
+	reg_vbat_bb: vbat-bb {
+		compatible = "regulator-fixed";
+		regulator-name = "vbat-bb";
+		regulator-min-microvolt = <3500000>;
+		regulator-max-microvolt = <3500000>;
+		gpio = <&r_pio 0 7 GPIO_ACTIVE_HIGH>; /* PL7 */
+		enable-active-high;
+	};
+
 	reg_vbat_wifi: vbat-wifi {
 		compatible = "regulator-fixed";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 		regulator-name = "vbat-wifi";
+	};
+
+	reg_vcc5v0: vcc5v0 {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc5v0";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = <&pio 3 8 GPIO_ACTIVE_HIGH>; /* PD8 */
+		enable-active-high;
+	};
+
+	reg_vconn5v0: vconn5v0 {
+		compatible = "regulator-fixed";
+		regulator-name = "vconn5v0";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = <&pio 3 9 GPIO_ACTIVE_HIGH>; /* PD9 */
+		enable-active-high;
 	};
 
 	sgm3140: led-controller {
@@ -109,7 +163,7 @@
 
 &codec {
 	pinctrl-names = "default";
-	pinctrl-0 = <&aif3_pins>;
+	pinctrl-0 = <&aif2_pins>, <&aif3_pins>;
 	status = "okay";
 };
 
@@ -161,6 +215,8 @@
 };
 
 &ehci0 {
+	/delete-property/ phys;
+	/delete-property/ phy-names;
 	status = "okay";
 };
 
@@ -168,11 +224,59 @@
 	status = "okay";
 };
 
+&csi {
+	pinctrl-0 = <&csi_pins>, <&csi_mclk_pin>;
+	status = "okay";
+
+	port {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		csi_ov5640_ep: endpoint@0 {
+			reg = <0>;
+			remote-endpoint = <&ov5640_ep>;
+			bus-width = <8>;
+			hsync-active = <1>; /* Active high */
+			vsync-active = <0>; /* Active low */
+			data-active = <1>;  /* Active high */
+			pclk-sample = <1>;  /* Rising */
+		};
+	};
+};
+
+&i2c_csi {
+	ov5640: rear-camera@4c {
+		compatible = "ovti,ov5640";
+		reg = <0x4c>;
+		clocks = <&ccu CLK_CSI_MCLK>;
+		clock-names = "xclk";
+
+		AVDD-supply = <&reg_dldo3>;
+		DOVDD-supply = <&reg_aldo1>; /* shared with AFVCC */
+		DVDD-supply = <&reg_eldo3>;
+		reset-gpios = <&pio 3 3 (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>; /* PD3 */
+		powerdown-gpios = <&pio 2 0 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>; /* PC0 */
+
+		port {
+			ov5640_ep: endpoint {
+				remote-endpoint = <&csi_ov5640_ep>;
+				bus-width = <8>;
+				hsync-active = <1>; /* Active high */
+				vsync-active = <0>; /* Active low */
+				data-active = <1>;  /* Active high */
+				pclk-sample = <1>;  /* Rising */
+			};
+		};
+	};
+};
+
 &i2c0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c0_pins>;
 	status = "okay";
 
 	touchscreen@5d {
-		compatible = "goodix,gt917s";
+		compatible = "goodix,gt917s", "goodix,gt911";
 		reg = <0x5d>;
 		interrupt-parent = <&pio>;
 		interrupts = <7 4 IRQ_TYPE_LEVEL_HIGH>; /* PH4 */
@@ -186,6 +290,8 @@
 };
 
 &i2c1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c1_pins>;
 	status = "okay";
 
 	/* Magnetometer */
@@ -217,6 +323,8 @@
 
 /* Connected to pogo pins (external spring based pinheader for user addons) */
 &i2c2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c2_pins>;
 	status = "okay";
 };
 
@@ -238,6 +346,10 @@
 		channel = <0>;
 		voltage = <400000>;
 	};
+};
+
+&mixer1 {
+	status = "okay";
 };
 
 &mmc0 {
@@ -277,6 +389,8 @@
 };
 
 &ohci0 {
+	/delete-property/ phys;
+	/delete-property/ phy-names;
 	status = "okay";
 };
 
@@ -468,6 +582,22 @@
 			"Headset Microphone", "HBIAS",
 			"MIC2", "Headset Microphone";
 
+	simple-audio-card,dai-link@1 {
+		format = "dsp_a";
+		frame-master = <&link1_cpu>;
+		bitclock-master = <&link1_cpu>;
+		bitclock-inversion;
+		codec-to-codec;
+
+		link1_cpu: cpu {
+			sound-dai = <&ec25_codec>;
+		};
+
+		link1_codec: codec {
+			sound-dai = <&codec 1>;
+		};
+	};
+
 	simple-audio-card,dai-link@2 {
 		format = "dsp_a";
 		frame-master = <&link2_codec>;
@@ -502,6 +632,7 @@
 		device-wake-gpios = <&pio 7 6 GPIO_ACTIVE_LOW>; /* PH6 */
 		enable-gpios = <&r_pio 0 4 GPIO_ACTIVE_HIGH>; /* PL4 */
 		host-wake-gpios = <&r_pio 0 5 GPIO_ACTIVE_HIGH>; /* PL5 */
+		firmware-postfix = "pinebook";
 	};
 };
 

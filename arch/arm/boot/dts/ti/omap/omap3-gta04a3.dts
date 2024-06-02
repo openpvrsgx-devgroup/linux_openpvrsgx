@@ -7,7 +7,40 @@
 
 / {
 	model = "Goldelico GTA04A3/Letux 2804";
+
+	gpio-keys-wwan-wakeup {
+		compatible = "gpio-keys";
+
+/* could we write &wwan_wakeup_button { ... } ? */
+
+		wwan-wakeup-button {
+			label = "3G_WOE";
+			linux,code = <240>;
+			gpios = <&gpio6 16 GPIO_ACTIVE_HIGH>;
+			gpio-key,wakeup;
+		};
+	};
+
 };
+
+/* GTA04A3 uses a different GPIO */
+&wwan_wakeup {
+	gpios = <&gpio6 16 GPIO_ACTIVE_HIGH>;
+};
+
+/* GTA04A3 can't control modem power through rfkill */
+
+&modem_en {
+	status = "disabled";
+	on-off-gpio = <0>;	/* overwrite as n/a */
+};
+
+&modem_pins {
+	pinctrl-single,pins = <
+		/* remove entry inherited from omap3-gta04.dtsi */
+	>;
+};
+
 
 &i2c2 {
 
@@ -16,9 +49,9 @@
 		compatible = "st,lis331dlh", "st,lis3lv02d";
 		reg = <0x1d>;
 		interrupt-parent = <&gpio3>;
-		interrupts = <18 (IRQ_TYPE_LEVEL_HIGH | IRQ_TYPE_EDGE_RISING)>;
+		interrupts = <18 (IRQ_TYPE_LEVEL_HIGH | IRQ_TYPE_EDGE_RISING)>;	/* gpio 114 */
 		Vdd-supply = <&vaux2>;
-		Vdd_IO-supply = <&vaux2>;
+		Vdd_IO-supply = <&vaux2>;	/* FIXME: this is hard wired 1.8V from TPS65950 */
 
 		st,click-single-x;
 		st,click-single-y;
@@ -29,12 +62,20 @@
 		st,click-click-time-limit = <9>;
 		st,click-latency = <50>;
 		st,irq1-click;
+		/* st,irq2-click; */
 		st,wakeup-x-lo;
 		st,wakeup-x-hi;
 		st,wakeup-y-lo;
 		st,wakeup-y-hi;
 		st,wakeup-z-lo;
 		st,wakeup-z-hi;
+/* FIXME: */
+#if 0
+		st,axis-x = <0>;
+		st,axis-y = <1>;
+		st,axis-z = <2>;
+#endif		/* FIXME: check values */
+
 		st,min-limit-x = <32>;
 		st,min-limit-y = <3>;
 		st,min-limit-z = <3>;

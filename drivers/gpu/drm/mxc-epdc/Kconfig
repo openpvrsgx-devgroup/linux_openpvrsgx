@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: GPL-2.0
+config DRM_MXC_EPDC
+	tristate "i.MX EPD Controller"
+	depends on DRM && OF
+	depends on (COMPILE_TEST || ARCH_MXC)
+	select DRM_KMS_HELPER
+	select DRM_KMS_CMA_HELPER
+	select DMA_CMA if HAVE_DMA_CONTIGUOUS
+	select CMA if HAVE_DMA_CONTIGUOUS
+	help
+	  Choose this option if you have an i.MX system with an EPDC.
+
+	  If M is selected this module will be called mxc_epdc_drm.

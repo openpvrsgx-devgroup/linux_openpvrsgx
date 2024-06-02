@@ -20,6 +20,7 @@ select:
     compatible:
       contains:
         enum:
+          - ingenic,jz4730-cgu
           - ingenic,jz4740-cgu
           - ingenic,jz4725b-cgu
           - ingenic,jz4755-cgu
@@ -28,6 +29,7 @@ select:
           - ingenic,jz4770-cgu
           - ingenic,jz4780-cgu
           - ingenic,x1000-cgu
+          - ingenic,x1600-cgu
           - ingenic,x1830-cgu
   required:
     - compatible
@@ -58,6 +60,7 @@ properties:
           - ingenic,jz4770-cgu
           - ingenic,jz4780-cgu
           - ingenic,x1000-cgu
+          - ingenic,x1600-cgu
           - ingenic,x1830-cgu
       - const: simple-mfd
     minItems: 1

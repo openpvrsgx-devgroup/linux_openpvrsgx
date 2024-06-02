@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0
-#include <byteswap.h>
+#if defined(__APPLE__)
+# include <libkern/OSByteOrder.h>
+# define bswap_16 OSSwapInt16
+# define bswap_32 OSSwapInt32
+# define bswap_64 OSSwapInt64
+#else
+# include <byteswap.h>
+# include <endian.h>
+#endif
 #include <elf.h>
-#include <endian.h>
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>

@@ -6,6 +6,7 @@
 #include "bcm283x-rpi-led-deprecated.dtsi"
 #include "bcm283x-rpi-usb-host.dtsi"
 #include "bcm283x-rpi-wifi-bt.dtsi"
+#include <dt-bindings/input/input.h>
 
 / {
 	compatible = "raspberrypi,3-model-b-plus", "brcm,bcm2837";
@@ -14,6 +15,11 @@
 	chosen {
 		/* 8250 auxiliary UART instead of pl011 */
 		stdout-path = "serial1:115200n8";
+	};
+
+	aliases {
+		serial0 = &uart1;
+		serial1 = &uart0;
 	};
 
 	memory@0 {
@@ -120,6 +126,7 @@
 
 &led_act {
 	gpios = <&gpio 29 GPIO_ACTIVE_HIGH>;
+	linux,default-trigger = "mmc0";
 };
 
 &leds {

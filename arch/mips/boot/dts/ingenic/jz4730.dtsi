@@ -1,0 +1,373 @@
+// SPDX-License-Identifier: GPL-2.0
+#include <dt-bindings/clock/jz4730-cgu.h>
+
+/ {
+	#address-cells = <1>;
+	#size-cells = <1>;
+	compatible = "ingenic,jz4730";
+
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		cpu0: cpu@0 {
+			device_type = "cpu";
+			compatible = "ingenic,xburst";
+			reg = <0>;
+
+			clocks = <&cgu JZ4730_CLK_CCLK>;
+			clock-names = "cpu";
+		};
+	};
+
+	cpuintc: interrupt-controller {
+		#address-cells = <0>;
+		#interrupt-cells = <1>;
+		interrupt-controller;
+		compatible = "mti,cpu-interrupt-controller";
+	};
+
+	intc: interrupt-controller@10001000 {
+		compatible = "ingenic,jz4730-intc";
+		reg = <0x10001000 0x14>;
+
+		interrupt-controller;
+		#interrupt-cells = <1>;
+
+		interrupt-parent = <&cpuintc>;
+		interrupts = <2>;
+	};
+
+	ext: ext {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+	};
+
+	rtc: rtc {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <32768>;
+	};
+
+	msc16m: msc16m {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <16000000>;
+	};
+
+	msc24m: msc24m {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <24000000>;
+	};
+
+	usb48m: usb48m {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <48000000>;
+	};
+
+	cgu: jz4730-cgu@10000000 {
+		compatible = "ingenic,jz4730-cgu";
+		reg = <0x10000000 0x100>;
+
+		clocks = <&ext>, <&rtc>, <&msc16m>, <&msc24m>, <&usb48m>;
+		clock-names = "ext", "rtc", "msc16m", "msc24m", "usb48m";
+
+		#clock-cells = <1>;
+	};
+
+	tcu: timer@10002000 {
+		compatible = "ingenic,jz4730-tcu";
+		reg = <0x10002000 0x1000>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges = <0x0 0x10002000 0x1000>;
+
+		#clock-cells = <1>;
+
+		clocks = <&cgu JZ4730_CLK_RTC>,
+			 <&cgu JZ4730_CLK_EXT>,
+			 <&cgu JZ4730_CLK_PCLK>,
+			 <&cgu JZ4730_CLK_TCU>;
+		clock-names = "rtc", "ext", "pclk", "tcu";
+
+		interrupt-parent = <&intc>;
+		interrupts = <24 23 22>;
+	};
+
+	watchdog: watchdog@10004000 {
+		compatible = "ingenic,jz4730-watchdog";
+		reg = <0x10004000 0x100>;
+
+		clocks = <&cgu JZ4730_CLK_WDT>;
+		clock_names = "wdt";
+	};
+
+	pwm: pwm@10050000 {
+		compatible = "ingenic,jz4730-pwm";
+		reg = <0x10050000 0x2000>;
+
+		#pwm-cells = <2>;
+
+		clocks = <&ext>;
+		clock-names = "ext";
+	};
+
+	rtc_dev: rtc@10003000 {
+		compatible = "ingenic,jz4740-rtc";
+		reg = <0x10003000 0x10>;
+
+		interrupt-parent = <&intc>;
+		interrupts = <15>;
+
+		clocks = <&cgu JZ4730_CLK_RTC>;
+		clock-names = "rtc";
+	};
+
+	pinctrl: pin-controller@10010000 {
+		compatible = "ingenic,jz4730-pinctrl";
+		reg = <0x10010000 0x400>;
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		gpa: gpio@0 {
+			compatible = "ingenic,jz4730-gpio";
+			reg = <0>;
+
+			gpio-controller;
+			gpio-ranges = <&pinctrl 0 0 32>;
+			#gpio-cells = <2>;
+
+			interrupt-controller;
+			#interrupt-cells = <2>;
+
+			interrupt-parent = <&intc>;
+			interrupts = <28>;
+		};
+
+		gpb: gpio@1 {
+			compatible = "ingenic,jz4730-gpio";
+			reg = <1>;
+
+			gpio-controller;
+			gpio-ranges = <&pinctrl 0 32 32>;
+			#gpio-cells = <2>;
+
+			interrupt-controller;
+			#interrupt-cells = <2>;
+
+			interrupt-parent = <&intc>;
+			interrupts = <27>;
+		};
+
+		gpc: gpio@2 {
+			compatible = "ingenic,jz4730-gpio";
+			reg = <2>;
+
+			gpio-controller;
+			gpio-ranges = <&pinctrl 0 64 32>;
+			#gpio-cells = <2>;
+
+			interrupt-controller;
+			#interrupt-cells = <2>;
+
+			interrupt-parent = <&intc>;
+			interrupts = <26>;
+		};
+
+		gpd: gpio@3 {
+			compatible = "ingenic,jz4730-gpio";
+			reg = <3>;
+
+			gpio-controller;
+			gpio-ranges = <&pinctrl 0 96 32>;
+			#gpio-cells = <2>;
+
+			interrupt-controller;
+			#interrupt-cells = <2>;
+
+			interrupt-parent = <&intc>;
+			interrupts = <25>;
+		};
+	};
+
+	i2s: i2s@10020000 {
+		compatible = "ingenic,jz4730-i2s";
+		reg = <0x10020000 0x38>;
+
+		#sound-dai-cells = <0>;
+
+		interrupt-parent = <&intc>;
+		interrupts = <20>;
+
+		clocks = <&cgu JZ4730_CLK_AIC>,
+			 <&cgu JZ4730_CLK_I2S>,
+			 <&cgu JZ4730_CLK_EXT>,
+			 <&cgu JZ4730_CLK_PLL_HALF>;
+		clock-names = "aic", "i2s", "ext", "pll half";
+
+		dmas = <&dmac 25 0xffffffff>, <&dmac 24 0xffffffff>;
+		dma-names = "rx", "tx";
+	};
+
+	i2c: i2c@10042000 {
+		compatible = "ingenic,jz4730-i2c";
+		reg = <0x10042000 0x10>;
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		interrupt-parent = <&intc>;
+		interrupts = <1>;
+
+		clocks = <&cgu JZ4730_CLK_I2C>;
+		clock-names = "i2c";
+
+		clock-frequency = <100000>;
+	};
+
+	mmc: mmc@10021000 {
+		compatible = "ingenic,jz4740-mmc";
+		reg = <0x10021000 0x100>;
+
+		interrupt-parent = <&intc>;
+		interrupts = <14>;
+
+		clocks = <&cgu JZ4730_CLK_MMC>;
+		clock-names = "mmc";
+
+		dmas = <&dmac 27 0xffffffff>, <&dmac 26 0xffffffff>;
+		dma-names = "rx", "tx";
+
+		cap-sd-highspeed;
+		cap-mmc-highspeed;
+		cap-sdio-irq;
+	};
+
+	uart0: serial@10030000 {
+		compatible = "ingenic,jz4740-uart", "ingenic,jz4780-uart";
+		reg = <0x10030000 0x100>;
+
+		reg-shift = <2>;
+		fifo-size = <16>;
+		tx-threshold = <8>;
+
+		interrupt-parent = <&intc>;
+		interrupts = <9>;
+
+		clocks = <&ext>, <&cgu JZ4730_CLK_UART0>;
+		clock-names = "baud", "module";
+	};
+
+	uart1: serial@10031000 {
+		compatible = "ingenic,jz4740-uart", "ingenic,jz4780-uart";
+		reg = <0x10031000 0x100>;
+
+		reg-shift = <2>;
+		fifo-size = <16>;
+		tx-threshold = <8>;
+
+		interrupt-parent = <&intc>;
+		interrupts = <8>;
+
+		clocks = <&ext>, <&cgu JZ4730_CLK_UART1>;
+		clock-names = "baud", "module";
+	};
+
+	uart2: serial@10032000 {
+		compatible = "ingenic,jz4740-uart", "ingenic,jz4780-uart";
+		reg = <0x10032000 0x100>;
+
+		reg-shift = <2>;
+		fifo-size = <16>;
+		tx-threshold = <8>;
+
+		interrupt-parent = <&intc>;
+		interrupts = <7>;
+
+		clocks = <&ext>, <&cgu JZ4730_CLK_UART2>;
+		clock-names = "baud", "module";
+	};
+
+	uart3: serial@10033000 {
+		compatible = "ingenic,jz4740-uart", "ingenic,jz4780-uart";
+		reg = <0x10033000 0x100>;
+
+		reg-shift = <2>;
+		fifo-size = <16>;
+		tx-threshold = <8>;
+
+		interrupt-parent = <&intc>;
+		interrupts = <6>;
+
+		clocks = <&ext>, <&cgu JZ4730_CLK_UART3>;
+		clock-names = "baud", "module";
+	};
+
+	dmac: dma@13020000 {
+		compatible = "ingenic,jz4730-dma";
+		reg = <0x13020000 0xc0>, <0x130200f8 0x08>;
+
+		interrupt-parent = <&intc>;
+		interrupts = <21>;
+
+		clocks = <&cgu JZ4730_CLK_DMA>;
+		clock-names = "dma";
+
+		#dma-cells = <2>;
+		dma-channels = <6>;
+	};
+
+	emc: memory-controller@13010000 {
+		#address-cells = <0>;
+		#size-cells = <0>;
+		compatible = "ingenic,jz4730-nemc", "simple-mfd";
+		reg = <0x13010000 0xf000>;
+
+		nand: nand-controller {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "ingenic,jz4730-nand";
+		};
+	};
+
+	uhc: uhc@13030000 {
+		compatible = "ingenic,jz4740-ohci", "generic-ohci";
+		reg = <0x13030000 0x1000>;
+
+		clocks = <&cgu JZ4730_CLK_UHC>;
+		assigned-clocks = <&cgu JZ4730_CLK_UHC>;
+		assigned-clock-rates = <48000000>;
+
+		interrupt-parent = <&intc>;
+		interrupts = <13>;
+
+		status = "disabled";
+	};
+
+	ethernet: ethernet@13100000 {
+		compatible = "ingenic,jz4730-ethernet";
+		reg = <0x13100000 0x1000>;
+
+		interrupt-parent = <&intc>;
+		interrupts = <19>;
+
+		mdio: mdio {
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+	};
+
+	lcd: lcd@13050000 {
+		compatible = "ingenic,jz4730-lcd";
+		reg = <0x13050000 0x100>;
+
+		interrupt-parent = <&intc>;
+		interrupts = <30>;
+
+		clocks = <&cgu JZ4730_CLK_LCD>, <&cgu JZ4730_CLK_LCD_PCLK>;
+		clock-names = "lcd", "lcd_pclk";
+	};
+};

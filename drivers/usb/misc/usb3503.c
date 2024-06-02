@@ -15,6 +15,9 @@
 #include <linux/platform_data/usb3503.h>
 #include <linux/regmap.h>
 
+#undef dev_info
+#define dev_info dev_err
+
 #define USB3503_VIDL		0x00
 #define USB3503_VIDM		0x01
 #define USB3503_PIDL		0x02
@@ -57,6 +60,8 @@ static int usb3503_connect(struct usb3503 *hub)
 {
 	struct device *dev = hub->dev;
 	int err;
+
+	dev_info(dev, "usb3503_connect\n");
 
 	if (hub->regmap) {
 		/* SP_ILOCK: set connect_n, config_n for config */
@@ -171,6 +176,8 @@ static int usb3503_probe(struct usb3503 *hub)
 	enum gpiod_flags flags;
 	int len;
 
+	dev_info(dev, "usb3503_probe\n");
+
 	if (pdata) {
 		hub->port_off_mask	= pdata->port_off_mask;
 		hub->mode		= pdata->initial_mode;
@@ -275,6 +282,7 @@ static int usb3503_probe(struct usb3503 *hub)
 		/* Datasheet defines a hardware reset to be at least 100us */
 		usleep_range(100, 10000);
 		gpiod_set_consumer_name(hub->reset, "usb3503 reset");
+		dev_info(hub->dev, "reset gpio state %d\n", gpiod_get_value(hub->reset));
 	}
 
 	if (hub->port_off_mask && !hub->regmap)

@@ -1,0 +1,30 @@
+BOE BTL507212-W677L Panel
+=========================
+
+Required properties:
+- compatible: "boe,btl507212-w677l"
+
+Optional properties:
+- label: a symbolic name for the panel
+- backlight: phandle of the backlight device
+- gpios: a list of gpios connected to the panel
+    [0]: reset
+    [1]: regulator
+
+Required nodes:
+- port: video port for DSI input
+
+Example
+-------
+
+lcd: btl507212-w677l@0 {
+	label = "lcd";
+	backlight = <&backlight>;
+	gpios = <&gpio6 16 0>;	/* goip6_176 = panel reset */
+
+	port {
+		lcd_in: endpoint {
+			remote-endpoint = <&dsi_out_ep>;
+		};
+	};
+};

@@ -55,6 +55,21 @@ static struct idle_statedata omap5_idle_data[] = {
 		.mpu_state = PWRDM_POWER_ON,
 		.mpu_logic_state = PWRDM_POWER_ON,
 	},
+#if 0
+	{
+		.cpu_state = PWRDM_POWER_RET,
+		.mpu_state = PWRDM_POWER_RET,
+		.mpu_logic_state = PWRDM_POWER_RET,
+	},
+#endif
+};
+
+static struct idle_statedata dra7_idle_data[] = {
+	{
+		.cpu_state = PWRDM_POWER_ON,
+		.mpu_state = PWRDM_POWER_ON,
+		.mpu_logic_state = PWRDM_POWER_ON,
+	},
 	{
 		.cpu_state = PWRDM_POWER_RET,
 		.mpu_state = PWRDM_POWER_RET,
@@ -280,6 +295,7 @@ static struct cpuidle_driver omap5_idle_driver = {
 			.name = "C1",
 			.desc = "CPUx WFI, MPUSS ON"
 		},
+#if 0
 		{
 			/* C2 - CPU0 RET + CPU1 RET + MPU CSWR */
 			.exit_latency = 48 + 60,
@@ -290,8 +306,35 @@ static struct cpuidle_driver omap5_idle_driver = {
 			.name = "C2",
 			.desc = "CPUx CSWR, MPUSS CSWR",
 		},
+#endif
 	},
 	.state_count = ARRAY_SIZE(omap5_idle_data),
+	.safe_state_index = 0,
+};
+
+static struct cpuidle_driver dra7_idle_driver = {
+	.name				= "dra7_idle",
+	.owner				= THIS_MODULE,
+	.states = {
+		{
+			/* C1 - CPU0 ON + CPU1 ON + MPU ON */
+			.exit_latency = 2 + 2,
+			.target_residency = 5,
+			.enter = omap_enter_idle_simple,
+			.name = "C1",
+			.desc = "CPUx WFI, MPUSS ON"
+		},
+		{
+			/* C2 - CPU0 RET + CPU1 RET + MPU CSWR */
+			.exit_latency = 48 + 60,
+			.target_residency = 100,
+			.flags = CPUIDLE_FLAG_TIMER_STOP,
+			.enter = omap_enter_idle_smp,
+			.name = "C2",
+			.desc = "CPUx CSWR, MPUSS CSWR",
+		},
+	},
+	.state_count = ARRAY_SIZE(dra7_idle_data),
 	.safe_state_index = 0,
 };
 
@@ -310,6 +353,10 @@ int __init omap4_idle_init(void)
 	if (soc_is_omap54xx()) {
 		state_ptr = &omap5_idle_data[0];
 		idle_driver = &omap5_idle_driver;
+	} else
+	if (soc_is_dra7xx()) {
+		state_ptr = &dra7_idle_data[0];
+		idle_driver = &dra7_idle_driver;
 	} else {
 		state_ptr = &omap4_idle_data[0];
 		idle_driver = &omap4_idle_driver;

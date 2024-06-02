@@ -1,0 +1,13 @@
+[Unit]
+Description=Turn off WWAN on poweroff/reboot
+# make sure that rfkill is active while we run
+After=systemd-rfkill.socket
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+ExecStart=/bin/true
+ExecStop=/root/wwan-off
+
+[Install]
+WantedBy=multi-user.target

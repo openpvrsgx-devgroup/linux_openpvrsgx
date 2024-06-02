@@ -63,7 +63,32 @@
 
 #define JZ_AIC_I2S_STATUS_BUSY		BIT(2)
 
+#define JZ_AIC_CTRL_OUTPUT_SAMPLE_SIZE_OFFSET 19
+#define JZ_AIC_CTRL_INPUT_SAMPLE_SIZE_OFFSET  16
+
+#define JZ_AIC_I2S_FMT_DISABLE_BIT_CLK BIT(12)
+#define JZ_AIC_I2S_FMT_DISABLE_BIT_ICLK BIT(13)
+#define JZ_AIC_I2S_FMT_ENABLE_SYS_CLK BIT(4)
+#define JZ_AIC_I2S_FMT_MSB BIT(0)
+
+#define JZ_AIC_I2S_STATUS_BUSY BIT(2)
+
+#define JZ_AIC_CLK_DIV_MASK 0xf
+#define I2SDIV_DV_SHIFT 0
+#define I2SDIV_DV_MASK (0xf << I2SDIV_DV_SHIFT)
+#define I2SDIV_IDV_SHIFT 8
+#define I2SDIV_IDV_MASK (0xf << I2SDIV_IDV_SHIFT)
+
+enum jz47xx_i2s_version {
+	JZ_I2S_JZ4730,
+	JZ_I2S_JZ4740,
+	JZ_I2S_JZ4760,
+	JZ_I2S_JZ4770,
+	JZ_I2S_JZ4780,
+};
+
 struct i2s_soc_info {
+	enum jz47xx_i2s_version version;
 	struct snd_soc_dai_driver *dai;
 
 	struct reg_field field_rx_fifo_thresh;
@@ -358,6 +383,11 @@ static struct snd_soc_dai_driver jz4740_i2s_dai = {
 	.ops = &jz4740_i2s_dai_ops,
 };
 
+static const struct i2s_soc_info jz4730_i2s_soc_info = {
+	.dai			= &jz4740_i2s_dai,
+	.version		= JZ_I2S_JZ4730,
+};
+
 static const struct i2s_soc_info jz4740_i2s_soc_info = {
 	.dai			= &jz4740_i2s_dai,
 	.field_rx_fifo_thresh	= REG_FIELD(JZ_REG_AIC_CONF, 12, 15),
@@ -365,6 +395,7 @@ static const struct i2s_soc_info jz4740_i2s_soc_info = {
 	.field_i2sdiv_capture	= REG_FIELD(JZ_REG_AIC_CLK_DIV, 0, 3),
 	.field_i2sdiv_playback	= REG_FIELD(JZ_REG_AIC_CLK_DIV, 0, 3),
 	.shared_fifo_flush	= true,
+	.version		= JZ_I2S_JZ4740,
 };
 
 static const struct i2s_soc_info jz4760_i2s_soc_info = {
@@ -373,6 +404,7 @@ static const struct i2s_soc_info jz4760_i2s_soc_info = {
 	.field_tx_fifo_thresh	= REG_FIELD(JZ_REG_AIC_CONF, 16, 20),
 	.field_i2sdiv_capture	= REG_FIELD(JZ_REG_AIC_CLK_DIV, 0, 3),
 	.field_i2sdiv_playback	= REG_FIELD(JZ_REG_AIC_CLK_DIV, 0, 3),
+	.version		= JZ_I2S_JZ4760,
 };
 
 static const struct i2s_soc_info x1000_i2s_soc_info = {
@@ -405,6 +437,7 @@ static const struct i2s_soc_info jz4770_i2s_soc_info = {
 	.field_tx_fifo_thresh	= REG_FIELD(JZ_REG_AIC_CONF, 16, 20),
 	.field_i2sdiv_capture	= REG_FIELD(JZ_REG_AIC_CLK_DIV, 8, 11),
 	.field_i2sdiv_playback	= REG_FIELD(JZ_REG_AIC_CLK_DIV, 0, 3),
+	.version		= JZ_I2S_JZ4770,
 };
 
 static const struct i2s_soc_info jz4780_i2s_soc_info = {
@@ -413,6 +446,7 @@ static const struct i2s_soc_info jz4780_i2s_soc_info = {
 	.field_tx_fifo_thresh	= REG_FIELD(JZ_REG_AIC_CONF, 16, 20),
 	.field_i2sdiv_capture	= REG_FIELD(JZ_REG_AIC_CLK_DIV, 8, 11),
 	.field_i2sdiv_playback	= REG_FIELD(JZ_REG_AIC_CLK_DIV, 0, 3),
+	.version		= JZ_I2S_JZ4780,
 };
 
 static int jz4740_i2s_suspend(struct snd_soc_component *component)
@@ -489,6 +523,7 @@ static const struct snd_soc_component_driver jz4740_i2s_component = {
 };
 
 static const struct of_device_id jz4740_of_matches[] = {
+	{ .compatible = "ingenic,jz4730-i2s", .data = &jz4730_i2s_soc_info },
 	{ .compatible = "ingenic,jz4740-i2s", .data = &jz4740_i2s_soc_info },
 	{ .compatible = "ingenic,jz4760-i2s", .data = &jz4760_i2s_soc_info },
 	{ .compatible = "ingenic,jz4770-i2s", .data = &jz4770_i2s_soc_info },

@@ -1,0 +1,70 @@
+#!/bin/bash
+#
+# set up a WWAN data connection
+#
+# usage: wwan
+#
+
+SCRIPTPATH="$(dirname "$0")"
+APN="$(cat wwan.conf)"
+IF="$($SCRIPTPATH/wwan-on)"
+
+case "$IF" in
+	"" )
+		echo Modem Application interface not found >&2
+		exit 1
+		;;
+
+	/dev/ttyHS* ) # GTA04 with OPTION GTM601W
+		(
+		echo "AT_OPONI=1"; sleep 1	# report current network registration
+		echo "AT_OSQI=1"; sleep 1	# report signal quality in dBm
+		echo "AT_OEANT=1"; sleep 1	# report quality level (0..4 or 5)
+		echo "AT_OCTI=1"; sleep 1	# report GSM/GPRS/EDGE cell data rate
+		echo "AT_OUWCTI=1"; sleep 1	# report available cell data rate
+		echo "AT_OUHCIP=1"; sleep 1	# report HSDPA call in progress
+		echo "AT_OSSYS=1"; sleep 1	# report system (GSM / UTRAN)
+		echo "AT_OPSYS=5,3"; sleep 1	# connect any system
+		echo "AT_OWANCALLUNSOL=1"; sleep 1	# report _OWANCALL: on this tty
+		echo "AT+CGDCONT=1,\"IP\",\"$APN\""; sleep 1	# set APN
+		echo "AT_OWANCALL=1,1,1"; sleep 1	# start call
+		echo "AT_OWANNWERROR?"; sleep 30	# give some time to establish registration
+		echo "AT_OWANDATA?"; sleep 60	# should have connected - ask for network data
+		echo "AT_OWANNWERROR?"; sleep 1	# finally check for error
+		) | $SCRIPTPATH/femtocom $IF | while read MSG C IP GW DNS1 DNS2 NBNS1 NBNS2 SPEED MORE
+			do
+			echo $MSG $C $IP $GW $DNS1 $DNS2 $NBNS1 $NBNS2 $SPEED $MORE
+			# _OWANDATA: 1, 10.152.124.183, 0.0.0.0, 193.189.244.225, 193.189.244.206, 0.0.0.0, 0.0.0.0,144000
+			if [ "$MSG" == "_OWANDATA:" ]
+			then
+				IP=$(expr "$IP" : "\(.*\),")
+				DNS1=$(expr "$DNS1" : "\(.*\),")
+				DNS2=$(expr "$DNS2" : "\(.*\),")
+				ifconfig hso0 $IP netmask 255.255.255.255 up
+				# FIXME: this overwrites the DNS used for e.g. USB connection!
+				echo "nameserver $DNS1" >/etc/resolv.conf
+				echo "nameserver $DNS2" >>/etc/resolv.conf
+				echo "Setup done"
+				# forward all IP traffic (even if it arrives from the USB host) through WWAN
+				route add default dev hso0
+				echo 1 >/proc/sys/net/ipv4/ip_forward
+				iptables -t nat -A POSTROUTING -o hso0 -j MASQUERADE
+				exit
+			fi
+			done
+		echo "Could not set up WWAN connection" >&2
+		exit 1
+		;;
+
+	/dev/ttyACM[0-4] | /dev/ttyUSB[0-4] )	# Neo900 / Pyra with Cinterion PHS8/PLS8
+		(
+		echo "AT^SBV"; sleep 1
+		echo "AT+CGATT=1"; sleep 1	# connect to the network
+		echo "AT+CGDCONT=1,\"IP\",\"$APN\""; sleep 1	# set APN
+		echo "AT^SWWAN=1,1,1"; sleep 1	# connect it to wwan0
+		) | $SCRIPTPATH/femtocom $IF
+		dhclient wwan0
+		# FIXME: make this killed when wwan-off is run
+		;;
+
+esac

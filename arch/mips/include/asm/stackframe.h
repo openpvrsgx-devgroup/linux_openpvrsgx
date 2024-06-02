@@ -427,7 +427,7 @@
 
 		.macro	RESTORE_SP_AND_RET docfi=0
 		RESTORE_SP \docfi
-#if defined(CONFIG_CPU_MIPSR5) || defined(CONFIG_CPU_MIPSR6)
+#ifdef CONFIG_CPU_MIPSR6
 		eretnc
 #else
 		.set	push

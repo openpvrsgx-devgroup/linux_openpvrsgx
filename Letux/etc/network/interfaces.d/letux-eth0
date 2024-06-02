@@ -1,0 +1,24 @@
+#
+# interfaces for Letux supported devices
+# GTA04, BeagleBoard, BeagleBoneBlack, Letux Cortex 8,
+# Letux Cortex15, Pandaboard ES, OMAP5EVM, Pyra, OpenPandora
+#
+# some of them have an Ethernet interface
+# but all of them have an ethernet gadget (usb0)
+#
+
+auto eth0
+iface eth0 inet dhcp
+	up /etc/network/letux-setup-resolv-conf.sh
+
+# Ethernet interface on OMAP5UEVM
+auto enx3a6e630c19cd
+iface enx3a6e630c19cd inherits eth0
+
+# Ethernet interface on RasPi3b+
+auto enxb827ebb03dc9
+iface enxb827ebb03dc9 inherits eth0
+
+# Ethernet interface on Panda ES
+auto enx3a6e630c19ce
+iface enx3a6e630c19ce inherits eth0

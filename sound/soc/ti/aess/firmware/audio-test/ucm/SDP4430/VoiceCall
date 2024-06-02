@@ -1,0 +1,656 @@
+# Use case Configuration for TI SDP4430 RF MODEM Voice Call
+# By Liam Girdwood <lrg@ti.com>
+
+SectionVerb {
+
+	EnableSequence [
+		cdev "hw:SDP4430"
+
+		# Enable ABE sidetone paths at 0dB (needs tuned)
+		cset "name='Sidetone Mixer Capture' 1"
+		cset "name='Sidetone Mixer Playback' 1"
+		cset "name='SDT DL Volume' 120"
+		cset "name='SDT UL Volume' 120"
+
+		# Enable ABE DL1 Voice at 0dB
+		cset "name='DL1 Mixer Voice' 1"
+		cset "name='DL1 Voice Playback Volume' 120"
+
+		# Enable Uplink
+		cset "name='Voice Capture Mixer Capture' 1"
+
+		# Todo - Execute modem startup command if required.
+	]
+
+
+	DisableSequence [
+		cdev "hw:SDP4430"
+
+		# Todo - Execute modem shutdown command if required.
+
+		# Disable ABE sidetone paths and mute (needs tuned)
+		cset "name='Sidetone Mixer Capture' 0"
+		cset "name='Sidetone Mixer Playback' 0"
+		cset "name='SDT DL Volume' 0"
+		cset "name='SDT UL Volume' 0"
+
+		# Disable ABE DL1 Voice and mute
+		cset "name='DL1 Mixer Voice' 0"
+		cset "name='DL1 Voice Playback Volume' 0"
+
+		# Disable Uplink
+		cset "name='Voice Capture Mixer Capture' 0"
+	]
+
+	# QoS and ALSA PCMs
+	Value {
+		TQ "Voice"
+
+		# These PCMs are used by the Call management app to start the link and
+		# cannot be used to play or capture call audio.
+		CapturePCM "hw:SDP4430,2"
+		PlaybackPCM "hw:SDP4430,2"
+	}
+}
+
+###### Headset Devices Options ############
+
+SectionDevice."Headset" {
+	Comment "SDP4430 3.5mm Headset call"
+
+	# Headset is mutually exclusive to some devices
+	ConflictingDevice [
+		"Handset"
+		"Handsfree"
+		"Bluetooth"
+	]
+
+	EnableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:SDP4430"
+
+		# Enable ABE paths to PDM and AMIC
+		cset "name='DL1 PDM Switch' 1"
+		cset "name='MUX_VX0' 11"
+		cset "name='MUX_VX1' 12"
+
+		# set ABE capture gains to 0dB
+		cset "name='AMIC UL Volume' 120"
+
+		# TWL6040 playback path
+		cset "name='Headset Left Playback' 1"
+		cset "name='Headset Right Playback' 1"
+
+		# TWL6040 Capture Path
+		cset "name='Analog Left Capture Route' 0"
+		cset "name='Analog Right Capture Route' 0"
+		cset "name='Capture Preamplifier Volume' 2"
+	]
+
+	DisableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:SDP4430"
+
+		# Enable ABE paths
+		cset "name='DL1 PDM Switch' 0"
+		cset "name='MUX_VX0' 0"
+		cset "name='MUX_VX1' 0"
+
+		# mute ABE capture gains
+		cset "name='AMIC UL Volume' 120"
+
+		# TWL6040 playback path
+		cset "name='Headset Right Playback' 0"
+		cset "name='Headset Left Playback' 0"
+
+		# TWL6040 Capture path
+		cset "name='Analog Left Capture Route' 3"
+		cset "name='Analog Right Capture Route' 3"
+		cset "name='Capture Preamplifier Volume' 0"
+	]
+
+	TransitionSequence."Handset" [
+
+		# Set SDP device for following cset commands
+		cdev "hw:SDP4430"
+
+		# TWL6040 playback path
+		cset "name='Headset Right Playback' 0"
+		cset "name='Headset Left Playback' 0"
+
+		# TWL6040 playback path
+		cset "name='Earphone Playback Switch' 1"
+
+		# TWL6040 Capture Path with Main Mic and Sub Mic
+		cset "name='Analog Left Capture Route' 1"
+		cset "name='Analog Right Capture Route' 1"
+		cset "name='Capture Preamplifier Volume' 2"
+	]
+
+	TransitionSequence."Handsfree" [
+
+		# Set SDP device for following cset commands
+		cdev "hw:SDP4430"
+
+		# TWL6040 playback path
+		cset "name='Headset Right Playback' 0"
+		cset "name='Headset Left Playback' 0"
+
+		# ABE playback path through DL2
+		cset "name='DL2 Mixer Voice' 1"
+		cset "name='DL2 Voice Playback Volume' 120"
+
+		# TWL6040 playback path
+		cset "name='Handsfree Left Playback' 1"
+		cset "name='Handsfree Right Playback' 1"
+
+		# TWL6040 Capture Path with Main Mic and Sub Mic
+		cset "name='Analog Left Capture Route' 1"
+		cset "name='Analog Right Capture Route' 1"
+		cset "name='Capture Preamplifier Volume' 2"
+	]
+
+	Value {
+		# Default ALSA volume gain and mute kcontrols
+		CaptureVolume "name='Capture Volume' 4"
+		PlaybackVolume "name='Headset Playback Volume' 13"
+	}
+}
+
+########### Handset Device Options ################
+
+SectionDevice."Handset" {
+	Comment "Handset call"
+
+	# Handset is mutually exclusive to some devices
+	ConflictingDevice [
+		"Headset"
+		"Handsfree"
+		"Bluetooth"
+	]
+
+	EnableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:SDP4430"
+
+		# Enable ABE paths to PDM and AMIC
+		cset "name='DL1 PDM Switch' 1"
+		cset "name='MUX_VX0' 11"
+		cset "name='MUX_VX1' 12"
+
+		# set ABE capture gains to 0dB
+		cset "name='AMIC UL Volume' 120"
+
+		# TWL6040 playback path
+		cset "name='Earphone Playback Switch' 1"
+
+		# TWL6040 Capture Path with Main Mic and Sub Mic
+		cset "name='Analog Left Capture Route' 1"
+		cset "name='Analog Right Capture Route' 1"
+		cset "name='Capture Preamplifier Volume' 2"
+	]
+
+	DisableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:SDP4430"
+
+		# Disable ABE paths to PDM and AMIC
+		cset "name='DL1 PDM Switch' 0"
+		cset "name='MUX_VX0' 0"
+		cset "name='MUX_VX1' 0"
+
+		# mute ABE capture gains
+		cset "name='AMIC UL Volume' 0"
+
+		# Disable TWL6040 playback path
+		cset "name='Earphone Playback Switch' 0"
+
+		# TWL6040 Capture Path with Main Mic and Sub Mic
+		cset "name='Analog Left Capture Route' 3"
+		cset "name='Analog Right Capture Route' 3"
+		cset "name='Capture Preamplifier Volume' 0"
+	]
+
+	TransitionSequence."Headset" [
+
+		# Set SDP device for following cset commands
+		cdev "hw:SDP4430"
+
+		# Disable TWL6040 playback path
+		cset "name='Earphone Playback Switch' 0"
+
+		# TWL6040 playback path
+		cset "name='Headset Left Playback' 1"
+		cset "name='Headset Right Playback' 1"
+
+		# TWL6040 Capture Path with Main Mic and Sub Mic
+		cset "name='Analog Left Capture Route' 0"
+		cset "name='Analog Right Capture Route' 0"
+		cset "name='Capture Preamplifier Volume' 2"
+	]
+
+	TransitionSequence."Handsfree" [
+
+		# Set SDP device for following cset commands
+		cdev "hw:SDP4430"
+
+		# Disable TWL6040 playback path
+		cset "name='Earphone Playback Switch' 0"
+
+		# ABE playback path through DL2
+		cset "name='DL2 Mixer Voice' 1"
+		cset "name='DL2 Voice Playback Volume' 120"
+
+		# TWL6040 playback path
+		cset "name='Handsfree Left Playback' 1"
+		cset "name='Handsfree Right Playback' 1"
+	]
+
+	Value {
+		# Default ALSA volume gain and mute kcontrols
+		PlaybackVolume "name='Earphone Playback Volume' 13"
+		CaptureVolume "name='Capture Volume' 4"
+	}
+}
+
+########### Handsfree Device Options ################
+
+SectionDevice."Handsfree" {
+	Comment "SDP4430 Handsfree Call"
+
+	# Handsfree is mutually exclusive to some devices
+	ConflictingDevice [
+		"Handset"
+		"Headset"
+		"Bluetooth"
+	]
+
+	EnableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:SDP4430"
+
+		# ABE playback path through DL2
+		cset "name='DL2 Mixer Voice' 1"
+		cset "name='DL2 Voice Playback Volume' 120"
+
+		# TWL6040 playback path
+		cset "name='Handsfree Left Playback' 1"
+		cset "name='Handsfree Right Playback' 1"
+
+		# Enable ABE paths to PDM and AMIC
+		cset "name='MUX_VX0' 11"
+		cset "name='MUX_VX1' 12"
+
+		# set ABE capture gains to 0dB
+		cset "name='AMIC UL Volume' 120"
+
+		# TWL6040 Capture Path with Main Mic and Sub Mic
+		cset "name='Analog Left Capture Route' 1"
+		cset "name='Analog Right Capture Route' 1"
+		cset "name='Capture Preamplifier Volume' 2"
+	]
+
+	DisableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:SDP4430"
+
+		# ABE playback path through DL2
+		cset "name='DL2 Mixer Voice' 0"
+		cset "name='DL2 Voice Playback Volume' 00"
+
+		# TWL6040 playback path
+		cset "name='Handsfree Left Playback' 0"
+		cset "name='Handsfree Right Playback' 0"
+
+		# Enable ABE paths to PDM and AMIC
+		cset "name='MUX_VX0' 0"
+		cset "name='MUX_VX1' 0"
+
+		# set ABE capture gains to 0dB
+		cset "name='AMIC UL Volume' 00"
+
+		# TWL6040 Capture Path with Main Mic and Sub Mic
+		cset "name='Analog Left Capture Route' 3"
+		cset "name='Analog Right Capture Route' 3"
+		cset "name='Capture Preamplifier Volume' 0"
+	]
+
+	TransitionSequence."Headset" [
+
+		# Set SDP device for following cset commands
+		cdev "hw:SDP4430"
+
+		# ABE playback path through DL2
+		cset "name='DL2 Mixer Voice' 0"
+		cset "name='DL2 Voice Playback Volume' 00"
+
+		# TWL6040 playback path
+		cset "name='Handsfree Left Playback' 0"
+		cset "name='Handsfree Right Playback' 0"
+
+		# TWL6040 playback path
+		cset "name='Headset Left Playback' 1"
+		cset "name='Headset Right Playback' 1"
+
+		# TWL6040 Capture Path with Main Mic and Sub Mic
+		cset "name='Analog Left Capture Route' 0"
+		cset "name='Analog Right Capture Route' 0"
+		cset "name='Capture Preamplifier Volume' 2"
+	]
+
+	TransitionSequence."Handset" [
+
+		# Set SDP device for following cset commands
+		cdev "hw:SDP4430"
+
+		# ABE playback path through DL2
+		cset "name='DL2 Mixer Voice' 0"
+		cset "name='DL2 Voice Playback Volume' 00"
+
+		# TWL6040 playback path
+		cset "name='Handsfree Left Playback' 0"
+		cset "name='Handsfree Right Playback' 0"
+
+		# TWL6040 playback path
+		cset "name='Earphone Playback Switch' 1"
+
+		# TWL6040 Capture Path with Main Mic and Sub Mic
+		cset "name='Analog Left Capture Route' 1"
+		cset "name='Analog Right Capture Route' 1"
+		cset "name='Capture Preamplifier Volume' 2"
+	]
+
+	Value {
+		# Default ALSA volume gain and mute kcontrols
+		PlaybackVolume "name='Handsfree Playback Volume' 13"
+		CaptureVolume "name='Capture Volume' 4"
+	}
+}
+
+############ Bluetooth Device #########################
+
+SectionDevice."Bluetooth" {
+	Comment "Bluetooth Call"
+
+	# Bluetooth is mutually exclusive to some devices
+	ConflictingDevice [
+		"Handset"
+		"Handsfree"
+		"Headset"
+	]
+
+	EnableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:SDP4430"
+
+		# enable 0dB ABE path for BT capture via ROUTE_UL
+		cset "name='MUX_UL10' 7"
+		cset "name='MUX_UL11' 8"
+		cset "name='BT UL Volume' 120"
+
+		# enable ABE DL1 BT path
+		cset "name='DL1 BT_VX Switch' 1"
+	]
+
+	DisableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:SDP4430"
+
+		# disable 0dB ABE path for BT capture via ROUTE_UL
+		cset "name='MUX_UL10' 0"
+		cset "name='MUX_UL11' 0"
+		cset "name='BT UL Volume' 0"
+
+		# disable ABE DL1 BT path
+		cset "name='DL1 BT_VX Switch' 0"
+	]
+
+	Value {
+		# Default ALSA volume gain and mute kcontrols
+		TQ "Voice"
+	}
+}
+
+##############  Play Tone Modifier ####################
+#
+# We have 2 PlayTone modifiers. Each one supports different devices as the
+# path configuration is different depending on the device being used when
+# the modifier is enabled.
+#
+
+SectionModifier."PlayTone" {
+	Comment "Play tone or system sound during call"
+
+	# For the following devices we need to set the DL2 path
+	SupportedDevice [
+		"Headset"
+		"Handset"
+		"Bluetooth"
+	]
+
+	EnableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:SDP4430"
+
+		# ABE tone playback path through DL1 & DL2 at 0dB (tune this)
+		cset "name='DL1 Mixer Tones' 1"
+		cset "name='DL1 Tones Playback Volume' 120"
+		cset "name='DL2 Mixer Tones' 1"
+		cset "name='DL2 Tones Playback Volume' 120"
+
+		# TWL6040 playback path
+		cset "name='Handsfree Left Playback' 1"
+		cset "name='Handsfree Right Playback' 1"
+	]
+
+	DisableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:SDP4430"
+
+		# disable ABE tone path
+		cset "name='DL1 Mixer Tones' 0"
+		cset "name='DL1 Tones Playback Volume' 0"
+		cset "name='DL2 Mixer Tones' 0"
+		cset "name='DL2 Tones Playback Volume' 0"
+
+		# TWL6040 playback path
+		cset "name='Handsfree Left Playback' 0"
+		cset "name='Handsfree Right Playback' 0"
+	]
+
+	# QoS, Mixers and ALSA PCMs
+	Value {
+		TQ "Tones"
+		PlaybackPCM "hw:SDP4430,3"
+		PlaybackVolume "name='DL2 Tones Playback Volume' 120"
+		PlaybackVolume "name='DL1 Tones Playback Volume' 120"
+	}
+}
+
+SectionModifier."PlayTone" {
+	Comment "Play a ring tone or system sound"
+
+	# For the following devices we dont need to set the DL2 path
+	SupportedDevice [
+		"Handsfree"
+	]
+
+	EnableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:SDP4430"
+
+		# ABE tone playback path through DL2 at 0dB
+		cset "name='DL2 Mixer Tones' 1"
+		cset "name='DL2 Tones Playback Volume' 120"
+	]
+
+	DisableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:SDP4430"
+
+		# ABE mute tone playback path through DL2
+		cset "name='DL2 Mixer Tones' 0"
+		cset "name='DL2 Tones Playback Volume' 0"
+	]
+
+	# QoS, Mixers and ALSA PCMs
+	Value {
+		TQ "Tones"
+		PlaybackPCM "hw:SDP4430,3"
+		PlaybackVolume "name='DL2 Tones Playback Volume' 120"
+	}
+}
+
+##############  Play Music Modifier ####################
+#
+# We have 2 PlayMusic modifiers. Each one supports different devices as the
+# path configuration is different depending on the device being used when
+# the modifier is enabled.
+#
+
+SectionModifier."PlayMusic" {
+	Comment "Play Music to near and far end during call"
+
+	# For the following devices we need to set the DL2 path
+	SupportedDevice [
+		"Headset"
+		"Handset"
+		"Bluetooth"
+	]
+
+	EnableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:SDP4430"
+
+		# ABE Music playback path through DL1 at 0dB (tune this)
+		cset "name='DL1 Mixer Media' 1"
+		cset "name='DL1 Media Playback Volume' 120"
+
+		# ABE Music to far end at 0dB
+		cset "name='Voice Capture Mixer Media Playback' 1"
+		cset "name='AUDUL Media Volume' 120"
+	]
+
+	DisableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:SDP4430"
+
+		# disable ABE Music path to near end
+		cset "name='DL1 Mixer Tones' 0"
+		cset "name='DL1 Tones Playback Volume' 0"
+
+		# disable ABE Music to far end
+		cset "name='Voice Capture Mixer Media Playback' 0"
+		cset "name='AUDUL Media Volume' 0"
+	]
+
+	# QoS, Mixers and ALSA PCMs
+	Value {
+		TQ "HiFi"
+		PlaybackPCM "hw:SDP4430,0"
+		PlaybackVolume "name='DL1 Media Playback Volume' 120"
+	}
+}
+
+SectionModifier."PlayMusic" {
+	Comment "Play Music to near and far end during call"
+
+	# For the following devices we dont need to set the DL2 path
+	SupportedDevice [
+		"Handsfree"
+	]
+
+	EnableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:SDP4430"
+
+		# ABE Music playback path through DL2 at 0dB
+		cset "name='DL2 Mixer Media' 1"
+		cset "name='DL2 Media Playback Volume' 120"
+
+		# ABE Music to far end at 0dB
+		cset "name='Voice Capture Mixer Media Playback' 1"
+		cset "name='AUDUL Media Volume' 120"
+	]
+
+	DisableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:SDP4430"
+
+		# ABE mute tone playback path through DL2
+		cset "name='DL2 Mixer Tones' 0"
+		cset "name='DL2 Tones Playback Volume' 0"
+
+		# disable ABE Music to far end
+		cset "name='Voice Capture Mixer Media Playback' 0"
+		cset "name='AUDUL Media Volume' 0"
+	]
+
+	# QoS, Mixers and ALSA PCMs
+	Value {
+		TQ "HiFi"
+		PlaybackPCM "hw:SDP4430,0"
+		PlaybackVolume "name='DL2 Media Playback Volume' 120"
+	}
+}
+
+############# Record Phone Call ################################
+
+SectionModifier."CaptureVoice" {
+	Comment "Record Phone Call"
+
+	EnableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:SDP4430"
+
+		# Enable VX_REC for call capture at 0dB
+		cset "name='Capture Mixer Voice Playback' 1"
+		cset "name='Capture Mixer Voice Capture' 1"
+		cset "name='VXREC Voice UL Volume' 120"
+		cset "name='VXREC Voice DL Volume' 120"
+
+		# set ROUTE_UL path
+		cset "name='MUX_UL10' 13"
+		cset "name='MUX_UL11' 14"
+	]
+
+	DisableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:SDP4430"
+
+		# Enable VX_REC for call capture at 0dB
+		cset "name='Capture Mixer Voice Playback' 0"
+		cset "name='Capture Mixer Voice Capture' 0"
+		cset "name='VXREC Voice UL Volume' 0"
+		cset "name='VXREC Voice DL Volume' 0"
+
+		# set ROUTE_UL path
+		cset "name='MUX_UL10' 0"
+		cset "name='MUX_UL11' 0"
+	]
+
+	# QoS, Mixers and ALSA PCMs
+	Value {
+		TQ "Voice"
+		PlaybackPCM "hw:SDP4430,1"
+	}
+}
+

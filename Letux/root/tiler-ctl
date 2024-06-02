@@ -1,0 +1,30 @@
+#!/bin/sh
+#
+# control OMAP5 tiler rotation
+# following the how-to provided by atc@k-n-p.org
+#
+
+case "$1" in
+	0 )	ROTATION=1;;
+	90 )	ROTATION=2;;
+	180 )	ROTATION=4;;
+	270 )	ROTATION=8;;
+	* )
+		echo "usage: $0 0|90|180|270" 2>&1
+		exit 1;;
+esac
+
+echo "$1 -> $ROTATION"
+
+# no idea what this does and why it is needed...
+echo 0 >/sys/class/vtconsole/vtcon1/bind
+
+# unload modules (fails if Xorg is already running)
+modprobe -r omapdrm
+modprobe -r drm_kms_helper
+# load with rotation parameter
+modprobe drm_kms_helper fbdev_rotation=$ROTATION
+modprobe omapdrm
+
+# other strange stuff...
+# cat /dev/dri/card0 > /dev/null &

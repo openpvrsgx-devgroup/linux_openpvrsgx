@@ -1,0 +1,70 @@
+About UCM
+=========
+
+The Alsa Use Case Manager abstracts the numerous mixer controls required by
+sound drivers to configure audio routing, manage volume levels and differentiate
+PCM sink and source devices. In other words, UCM hides all this complexity
+and bespoke sound card knowledge from applications and provides a platform
+independant method for audio device configuration.
+
+UCM can manage multiple sound cards per device by combining all the system
+audio devices into a compound audio device made up of all the audio devices.
+i.e. UCM would manage Bluetooth, HDMI, USB and the device main audio driver as
+one compound virtual sound card.
+
+UCM is part of the main ALSA userspace library (alsa-lib).
+
+
+UCM Configuration Files
+=======================
+
+UCM uses configuration files to configure audio use case configurations for
+each supported device. The configuration files should be stored under the
+directory.
+
+/usr/share/alsa/ucm/CARD_NAME/
+
+Where CARD_NAME is the name of the primary sound card driver for the device.
+
+UCM uses two different types of configuration file :-
+
+1) Master Configuration.
+   This file has the same name as the primary sound card. So for SDP4430 it
+   will is called SDP4430.conf. This files tells UCM about the high level
+   supported use cases for the device and it identifies each use case with a
+   separate use case specific configuration file.
+
+2) Use Case Configurations
+   Use Case Configuration files contain sequences of mixer control settings
+   that are used to manage transitions between use cases (like phone call and
+   hifi), devices (like headset and Handset) and modifiers (like Play a ring
+   tone and capturing a voice call).
+
+
+UCM Command Line Tools
+======================
+
+UCM has a command line tool called alsaucm that ships with the alsa-utils
+package. This tool can be used to manually change the use case, device and
+modifier.
+
+Some example alsaucm commands :-
+
+  alsaucm -c CARD set _verb HiFi
+
+Will change the use to to HiFi
+
+  alsaucm -c CARD set _verb HiFi set _enadev Earphone
+
+Will change the use case to HiFi and enable the Earphone device audio path.
+
+  alsaucm -c CARD set _verb HiFi set _enadev Earphone set _swdev/Earphone Headset
+
+Will do the above and additionally switch the device to Headset from Earphone.
+
+There are many commands supported by alsaucm. Further command detials can be
+found in the alsa UCM header /usr/include/alsa/use-case.h. There is also an
+interactive command line mode that can be enabled by running "alsaucm -i".
+
+Finally there are some simple canned UCM tools in this repository. They
+basically wrap UCM command to aid with testing Panda and SDP4430.

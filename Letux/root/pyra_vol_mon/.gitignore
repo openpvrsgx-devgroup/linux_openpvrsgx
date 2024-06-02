@@ -1,0 +1,5 @@
+pyra_vol_mon
+test_*
+tags
+.deps/
+.objs/

@@ -1,0 +1,19 @@
+#!/bin/bash
+# find regulator by name
+
+LIST=false
+if [ "$1" = "-a" ]
+then
+	LIST=true
+	shift
+fi
+
+for dev in /sys/class/regulator/regulator.*
+do
+	$LIST && { cat $dev/name; continue; }
+	if [ "$(cat $dev/name 2>/dev/null)" = "$1" ]
+		then echo $dev
+		exit 0
+	fi
+done
+$LIST || exit 1

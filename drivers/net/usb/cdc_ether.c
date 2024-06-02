@@ -434,6 +434,7 @@ void usbnet_cdc_status(struct usbnet *dev, struct urb *urb)
 	default:
 		netdev_err(dev->net, "CDC: unexpected notification %02x!\n",
 			   event->bNotificationType);
+	case USB_CDC_NOTIFY_RESPONSE_AVAILABLE:
 		break;
 	}
 }

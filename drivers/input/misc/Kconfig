@@ -531,6 +531,10 @@ config INPUT_TWL6040_VIBRA
 	  To compile this driver as a module, choose M here. The module will
 	  be called twl6040_vibra.
 
+config INPUT_AS5013
+	tristate "AS5013 nub device"
+	depends on I2C
+
 config INPUT_UINPUT
 	tristate "User level driver support"
 	help
@@ -938,5 +942,18 @@ config INPUT_STPMIC1_ONKEY
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called stpmic1_onkey.
+
+config INPUT_VSENSE
+	tristate "VSense Navigation Device"
+
+config INPUT_PANDORA_NUB
+	tristate "Pandora Nub (VSense Navigation Device)"
+	depends on I2C
+	help
+	  Say Y here if you want to support VSense navigation device
+	  (the analog nub on pandora handheld).
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called pandora_nub.
 
 endif

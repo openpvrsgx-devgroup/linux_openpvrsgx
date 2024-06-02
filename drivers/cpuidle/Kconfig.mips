@@ -16,3 +16,11 @@ config MIPS_CPS_CPUIDLE
 	  Processing System (CPS) architecture. In order to make use of
 	  the deepest idle states you will need to ensure that you are
 	  also using the CONFIG_MIPS_CPS SMP implementation.
+
+config MIPS_JZ4780_CPUIDLE
+	bool "CPU Idle driver for Ingenic JZ4780"
+	depends on MACH_JZ4780 && SMP
+	default y
+	help
+	  Select this option to enable CPU idle state management through
+	  cpuidle for Ingenic JZ4780 platforms.

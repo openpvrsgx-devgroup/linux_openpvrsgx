@@ -1,0 +1,30 @@
+#!/bin/bash
+#
+# mictest: demo for twl6040 mic + headset
+#
+
+while [ "$1" ]
+do
+        case "$1" in
+        "-nhf" )
+		FLAGS="$FLAGS $1"
+		;;
+	-* )
+		echo unknown option $1
+		echo "-nhf: no handsfree"
+		exit 1
+		;;
+	* )
+		break
+		;;
+	esac
+	shift
+done
+
+# Main Mic goes to Analog Left
+# Headset Mic goes to Analog Right
+
+# we must delay arecord a little so that the amixer
+# commands by the twl script are already done
+
+(sleep 1; arecord -c 2) | tee /tmp/echo.wav | $SCRIPTPATH/twl $FLAGS -t wav -

@@ -10,6 +10,7 @@ obj-$(CONFIG_JOYSTICK_ADC)		+= adc-joystick.o
 obj-$(CONFIG_JOYSTICK_ADI)		+= adi.o
 obj-$(CONFIG_JOYSTICK_AMIGA)		+= amijoy.o
 obj-$(CONFIG_JOYSTICK_AS5011)		+= as5011.o
+obj-$(CONFIG_JOYSTICK_AS5013)		+= as5013.o
 obj-$(CONFIG_JOYSTICK_ANALOG)		+= analog.o
 obj-$(CONFIG_JOYSTICK_COBRA)		+= cobra.o
 obj-$(CONFIG_JOYSTICK_DB9)		+= db9.o

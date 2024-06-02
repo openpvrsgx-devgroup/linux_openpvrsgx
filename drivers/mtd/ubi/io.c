@@ -179,7 +179,8 @@ retry:
 
 		ubi_err(ubi, "error %d%s while reading %d bytes from PEB %d:%d, read %zd bytes",
 			err, errstr, len, pnum, offset, read);
-		dump_stack();
+//		dump_stack();
+		err = -EIO;	/* this should abort an ubi attach */
 
 		/*
 		 * The driver should never return -EBADMSG if it failed to read

@@ -388,9 +388,13 @@ static int ts3a227e_i2c_probe(struct i2c_client *i2c)
 		return ret;
 
 	/* Enable interrupts except for ADC complete. */
-	regmap_update_bits(ts3a227e->regmap, TS3A227E_REG_INTERRUPT_DISABLE,
+	ret = regmap_update_bits(ts3a227e->regmap, TS3A227E_REG_INTERRUPT_DISABLE,
 			   INTB_DISABLE | ADC_COMPLETE_INT_DISABLE,
 			   ADC_COMPLETE_INT_DISABLE);
+	if (ret) {
+		dev_err(dev, "Cannot enable interrupts (%d)\n", ret);
+		return ret;
+	}
 
 	/* Read jack status because chip might not trigger interrupt at boot. */
 	regmap_read(ts3a227e->regmap, TS3A227E_REG_ACCESSORY_STATUS, &acc_reg);

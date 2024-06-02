@@ -1,0 +1,590 @@
+/dts-v1/;
+
+#include "jz4730.dtsi"
+#include <dt-bindings/clock/ingenic,tcu.h>
+#include <dt-bindings/input/input.h>
+#include <dt-bindings/gpio/gpio.h>
+
+/ {
+	compatible = "skytone,alpha400", "ingenic,jz4730";
+	model = "Skytone Alpha 400";
+
+	aliases {
+		serial0 = &uart0;
+	};
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+
+	wdt-reboot {
+		compatible = "wdt-reboot";
+		wdt = <&watchdog>;
+	};
+
+	vcc: regulator@0 {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc";
+
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+	};
+
+	vmmc_reg: regulator@1 {
+		compatible = "regulator-fixed";
+		regulator-name = "vmmc";
+
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&gpa 21 GPIO_ACTIVE_LOW>;
+	};
+
+	clk_usb: clk-usb {
+		compatible = "gpio-gate-clock";
+		clocks = <&cgu JZ4730_CLK_UHC>;
+		#clock-cells = <0>;
+		enable-gpios = <&gpa 29 GPIO_ACTIVE_HIGH>;
+	};
+
+	keyboard {
+		compatible = "gpio-matrix-keypad";
+
+		col-scan-delay-us = <10>;
+		debounce-delay-ms = <10>;
+		wakeup-source;
+
+		row-gpios = <&gpa 0 0 &gpa 1 0 &gpa 2 0 &gpa 3 0
+			     &gpa 4 0 &gpa 5 0 &gpa 6 0 &gpa 7 0>;
+
+		col-gpios = <&gpd 0 0 &gpd 1 0 &gpd 2 0 &gpd 3 0
+			     &gpd 4 0 &gpd 5 0 &gpd 6 0 &gpd 7 0
+			     &gpd 8 0 &gpd 9 0 &gpd 10 0 &gpd 11 0
+			     &gpd 12 0 &gpd 13 0 &gpd 14 0 &gpd 15 0
+			     &gpd 29 0>;
+		gpio-activelow;
+
+		/* Keymap column-by-column, based on...
+
+		https://web.archive.org/web/20120214204001/http://projects.kwaak.net/twiki/bin/view/Epc700/KeyBoard
+
+		...and subsequently verified. */
+
+		linux,keymap = <
+			MATRIX_KEY(0, 0, KEY_PAUSE)
+			MATRIX_KEY(1, 0, 0)
+			MATRIX_KEY(2, 0, 0)
+			MATRIX_KEY(3, 0, 0)
+			MATRIX_KEY(4, 0, 0)
+			MATRIX_KEY(5, 0, 0)
+			MATRIX_KEY(6, 0, KEY_LEFTCTRL)
+			MATRIX_KEY(7, 0, KEY_F5)
+
+			MATRIX_KEY(0, 1, KEY_Q)
+			MATRIX_KEY(1, 1, KEY_TAB)
+			MATRIX_KEY(2, 1, KEY_A)
+			MATRIX_KEY(3, 1, KEY_ESC)
+			MATRIX_KEY(4, 1, KEY_Z)
+			MATRIX_KEY(5, 1, 0)
+			MATRIX_KEY(6, 1, KEY_GRAVE)
+			MATRIX_KEY(7, 1, KEY_1)
+
+			MATRIX_KEY(0, 2, KEY_W)
+			MATRIX_KEY(1, 2, KEY_CAPSLOCK)
+			MATRIX_KEY(2, 2, KEY_S)
+			MATRIX_KEY(3, 2, KEY_102ND)
+			MATRIX_KEY(4, 2, KEY_X)
+			MATRIX_KEY(5, 2, 0)
+			MATRIX_KEY(6, 2, 0)
+			MATRIX_KEY(7, 2, KEY_2)
+
+			MATRIX_KEY(0, 3, KEY_E)
+			MATRIX_KEY(1, 3, KEY_F3)
+			MATRIX_KEY(2, 3, KEY_D)
+			MATRIX_KEY(3, 3, KEY_F4)
+			MATRIX_KEY(4, 3, KEY_C)
+			MATRIX_KEY(5, 3, 0)
+			MATRIX_KEY(6, 3, 0)
+			MATRIX_KEY(7, 3, KEY_3)
+
+			MATRIX_KEY(0, 4, KEY_R)
+			MATRIX_KEY(1, 4, KEY_T)
+			MATRIX_KEY(2, 4, KEY_F)
+			MATRIX_KEY(3, 4, KEY_G)
+			MATRIX_KEY(4, 4, KEY_V)
+			MATRIX_KEY(5, 4, KEY_B)
+			MATRIX_KEY(6, 4, KEY_5)
+			MATRIX_KEY(7, 4, KEY_4)
+
+			MATRIX_KEY(0, 5, KEY_U)
+			MATRIX_KEY(1, 5, KEY_Y)
+			MATRIX_KEY(2, 5, KEY_J)
+			MATRIX_KEY(3, 5, KEY_H)
+			MATRIX_KEY(4, 5, KEY_M)
+			MATRIX_KEY(5, 5, KEY_N)
+			MATRIX_KEY(6, 5, KEY_6)
+			MATRIX_KEY(7, 5, KEY_7)
+
+			MATRIX_KEY(0, 6, KEY_I)
+			MATRIX_KEY(1, 6, KEY_RIGHTBRACE)
+			MATRIX_KEY(2, 6, KEY_K)
+			MATRIX_KEY(3, 6, KEY_F6)
+			MATRIX_KEY(4, 6, KEY_COMMA)
+			MATRIX_KEY(5, 6, 0)
+			MATRIX_KEY(6, 6, KEY_EQUAL)
+			MATRIX_KEY(7, 6, KEY_8)
+
+			MATRIX_KEY(0, 7, KEY_O)
+			MATRIX_KEY(1, 7, KEY_F7)
+			MATRIX_KEY(2, 7, KEY_L)
+			MATRIX_KEY(3, 7, 0)
+			MATRIX_KEY(4, 7, KEY_DOT)
+			MATRIX_KEY(5, 7, KEY_F19)
+			MATRIX_KEY(6, 7, KEY_F8)
+			MATRIX_KEY(7, 7, KEY_9)
+
+			MATRIX_KEY(0, 8, 0)
+			MATRIX_KEY(1, 8, 0)
+			MATRIX_KEY(2, 8, 0)
+			MATRIX_KEY(3, 8, KEY_SPACE)
+			MATRIX_KEY(4, 8, KEY_NUMLOCK)
+			MATRIX_KEY(5, 8, 0)
+			MATRIX_KEY(6, 8, KEY_DELETE)
+			MATRIX_KEY(7, 8, 0)
+
+			MATRIX_KEY(0, 9, 0)
+			MATRIX_KEY(1, 9, KEY_BACKSPACE)
+			MATRIX_KEY(2, 9, 0)
+			MATRIX_KEY(3, 9, 0)
+			MATRIX_KEY(4, 9, KEY_ENTER)
+			MATRIX_KEY(5, 9, 0)
+			MATRIX_KEY(6, 9, KEY_F9)
+			MATRIX_KEY(7, 9, 0)
+
+			MATRIX_KEY(0, 10, 0)
+			MATRIX_KEY(1, 10, 0)
+			MATRIX_KEY(2, 10, 0)
+			MATRIX_KEY(3, 10, KEY_LEFTALT)
+			MATRIX_KEY(4, 10, 0)
+			MATRIX_KEY(5, 10, 0)
+			MATRIX_KEY(6, 10, 0)
+			MATRIX_KEY(7, 10, KEY_SYSRQ)
+
+			MATRIX_KEY(0, 11, KEY_P)
+			MATRIX_KEY(1, 11, KEY_LEFTBRACE)
+			MATRIX_KEY(2, 11, KEY_SEMICOLON)
+			MATRIX_KEY(3, 11, KEY_APOSTROPHE)
+			MATRIX_KEY(4, 11, KEY_BACKSLASH)
+			MATRIX_KEY(5, 11, KEY_SLASH)
+			MATRIX_KEY(6, 11, KEY_MINUS)
+			MATRIX_KEY(7, 11, KEY_0)
+
+			MATRIX_KEY(0, 12, 0)
+			MATRIX_KEY(1, 12, KEY_DISPLAY_OFF)
+			MATRIX_KEY(2, 12, 0)
+			MATRIX_KEY(3, 12, 0)
+			MATRIX_KEY(4, 12, 0)
+			MATRIX_KEY(5, 12, 0)
+			MATRIX_KEY(6, 12, 0)
+			MATRIX_KEY(7, 12, KEY_F10)
+
+			MATRIX_KEY(0, 13, 0)
+			MATRIX_KEY(1, 13, 0)
+			MATRIX_KEY(2, 13, 0)
+			MATRIX_KEY(3, 13, 0)
+			MATRIX_KEY(4, 13, 0)
+			MATRIX_KEY(5, 13, 0)
+			MATRIX_KEY(6, 13, KEY_F2)
+			MATRIX_KEY(7, 13, 0)
+
+			MATRIX_KEY(0, 14, 0)
+			MATRIX_KEY(1, 14, 0)
+			MATRIX_KEY(2, 14, 0)
+			MATRIX_KEY(3, 14, 0)
+			MATRIX_KEY(4, 14, 0)
+			MATRIX_KEY(5, 14, 0)
+			MATRIX_KEY(6, 14, KEY_INSERT)
+			MATRIX_KEY(7, 14, 0)
+
+			MATRIX_KEY(0, 15, 0)
+			MATRIX_KEY(1, 15, 0)
+			MATRIX_KEY(2, 15, KEY_UP)
+			MATRIX_KEY(3, 15, KEY_DOWN)
+			MATRIX_KEY(4, 15, KEY_LEFT)
+			MATRIX_KEY(5, 15, KEY_RIGHT)
+			MATRIX_KEY(6, 15, 0)
+			MATRIX_KEY(7, 15, 0)
+
+			MATRIX_KEY(0, 16, 0)
+			MATRIX_KEY(1, 16, KEY_LEFTSHIFT)
+			MATRIX_KEY(2, 16, KEY_RIGHTSHIFT)
+			MATRIX_KEY(3, 16, 0)
+			MATRIX_KEY(4, 16, 0)
+			MATRIX_KEY(5, 16, 0)
+			MATRIX_KEY(6, 16, KEY_F1)
+			MATRIX_KEY(7, 16, KEY_FN)
+			>;
+	};
+
+	buttons {
+		compatible = "gpio-keys";
+
+		#address-cells = <7>;
+		#size-cells = <0>;
+
+		left_touchpad {
+			label = "Touchpad Left";
+			wakeup-source;
+			linux,code = <0x110>;	/* BTN_LEFT */
+			gpios = <&gpa 16 GPIO_ACTIVE_HIGH>;
+		};
+
+		right_touchpad {
+			label = "Touchpad Right";
+			wakeup-source;
+			linux,code = <0x111>;	/* BTN_RIGHT */
+			gpios = <&gpa 13 GPIO_ACTIVE_HIGH>;
+		};
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		scroll_lock {
+			label = "scroll_lock";
+			gpios = <&gpa 9 GPIO_ACTIVE_LOW>;
+//			linux,default-trigger = "kbd-scrolllock";
+			linux,default-trigger = "heartbeat";
+			default-state = "off";
+		};
+
+		caps_lock {
+			label = "caps_lock";
+			gpios = <&gpa 27 GPIO_ACTIVE_LOW>;
+//			linux,default-trigger = "kbd-capslock";
+			linux,default-trigger = "cpu";
+			default-state = "off";
+		};
+
+		num_lock {
+			label = "num_lock";
+			gpios = <&gpc 22 GPIO_ACTIVE_LOW>;
+//			linux,default-trigger = "kbd-numlock";
+			linux,default-trigger = "mmc0";
+			default-state = "off";
+		};
+	};
+
+	amp: analog-amplifier {
+		compatible = "simple-audio-amplifier";
+		enable-gpios = <&gpa 24 GPIO_ACTIVE_HIGH>;
+		VCC-supply = <&vcc>;
+		sound-name-prefix = "Speaker Amp";
+	};
+
+	sound: sound {
+		compatible = "simple-audio-card";
+
+		simple-audio-card,name = "Alpha 400";
+		simple-audio-card,format = "i2s";	// "left_j"? see r8a7791 and mach-se/7724?
+
+		simple-audio-card,bitclock-master = <&sndcodec>;
+		simple-audio-card,frame-master = <&sndcodec>;
+
+		simple-audio-card,convert-rate = <48000>;
+
+		simple-audio-card,hp-det-gpio = <&gpa 25 GPIO_ACTIVE_LOW>;
+		simple-audio-card,aux-devs = <&amp>;
+
+		simple-audio-card,prefix = "ak4642";
+
+		/* see https://elinux.org/images/b/b5/Belloni-alsa-asoc.pdf page 19 */
+		simple-audio-card,widgets =
+			/* define board connectors */
+			/* "template-wname", "user-supplied-wname" */
+			/* "template-wname" one of: "Microphone", "Line", "Headphone" and "Speaker" */
+			"Speaker", "Speaker",
+			"Headphone", "Headphones",
+			"Microphone", "Microphone";
+
+		simple-audio-card,routing =
+			/* sink, source ("user-supplied-wname" oder defined by codec + sound-name-prefix) */
+			/* valid names for sources and sinks are the codec's pins, and the jacks on the board */
+			/* SND_SOC_DAPM_OUTPUT: HPOUTL, HPOUTR, LINEOUT */
+			/* SND_SOC_DAPM_INPUT: there is no Mic support in the driver? */
+			/* ak4642.c: It can use headphone output / stereo input only */
+	//		"MIC_IN", "Microphone",
+			"Headphones", "HPOUTL",
+			"Headphones", "HPOUTR",
+			"Speaker Amp INL", "LINEOUT",
+			"Speaker Amp INR", "LINEOUT",
+			"Speaker", "Speaker Amp OUTL",
+			"Speaker", "Speaker Amp OUTR";
+
+		sndcpu: simple-audio-card,cpu {
+			sound-dai = <&i2s>;
+		};
+
+		sndcodec: simple-audio-card,codec {
+			sound-dai = <&ak4642>;
+			system-clock-frequency = <12000000>;
+		};
+	};
+
+	backlight: backlight {
+		compatible = "pwm-backlight";
+
+		pwms = <&pwm 0 3906250>;
+		power-supply = <&vcc>;
+
+		brightness-levels = <150 200 250 300>;
+		default-brightness-level = <2>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&pins_pwm0>;
+	};
+
+	panel: claa070vc01 {
+		compatible = "chunghwa,claa070vc01", "panel-dpi";
+
+		bpc = <8>;
+		bus-format = <0x1017>;	/* MEDIA_BUS_FMT_RGB565_1X16 */
+		connector-type = <17>;	/* DRM_MODE_CONNECTOR_DPI */
+
+		width-mm = <150>;
+		height-mm = <90>;
+
+		backlight = <&backlight>;
+
+		panel-timing {
+			clock-frequency = <26400000>;
+			hactive = <800>;
+			vactive = <480>;
+			hfront-porch = <0>;
+			hback-porch = <0>;
+			hsync-len = <80>;
+			vfront-porch = <0>;
+			vback-porch = <0>;
+			vsync-len = <20>;
+			hsync-active = <0>;
+			vsync-active = <0>;
+			de-active = <1>;
+			pixelclk-active = <1>;
+		};
+
+		port {
+			panel_input: endpoint {
+				remote-endpoint = <&lcd_output>;
+			};
+		};
+	};
+};
+
+&tcu {
+	assigned-clocks = <&tcu TCU_CLK_TIMER0>, <&tcu TCU_CLK_TIMER1>, <&tcu TCU_CLK_TIMER2>;
+	assigned-clock-parents = <&cgu JZ4730_CLK_EXT>, <&cgu JZ4730_CLK_EXT>, <&cgu JZ4730_CLK_EXT>;
+};
+
+&ext {
+	clock-frequency = <3686400>;
+};
+
+&rtc_dev {
+	system-power-controller;
+	/* we have the pcf8563 on i2c */
+	status = "disabled";
+};
+
+&lcd {
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&pins_lcd>;
+
+	port {
+		lcd_output: endpoint {
+			remote-endpoint = <&panel_input>;
+		};
+	};
+};
+
+&mmc {
+	status = "okay";
+
+	bus-width = <4>;
+	cd-gpios = <&gpc 0 GPIO_ACTIVE_LOW>;
+	wp-gpios = <&gpc 2 GPIO_ACTIVE_HIGH>;
+	vmmc-supply = <&vmmc_reg>;
+	vqmmc-supply = <&vmmc_reg>;
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&pins_mmc>;
+};
+
+&nand {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pins_nand>;
+
+	nand0: nand@0 {
+		#address-cells = <0>;
+		#size-cells = <0>;
+		reg = <0>;
+		wp-gpios = <&gpc 23 GPIO_ACTIVE_LOW>;
+
+		partitions {
+			#address-cells = <1>;
+			#size-cells = <1>;
+			compatible = "fixed-partitions";
+
+			bootloader@0 {
+				label = "bootloader";
+				reg = <0x00000000 0x00100000>;
+			};
+
+			kernel@100000 {
+				label = "kernel";
+				reg = <0x00100000 0x00300000>;
+			};
+
+			mac@400000 {
+				label = "mac";
+				reg = <0x00400000 0x00100000>;
+			};
+
+			recovery@500000 {
+				label = "mini rootfs";
+				reg = <0x00500000 0x00500000>;
+			};
+
+			root@a00000 {
+				label = "yaffs2 rootfs";
+				reg = <0x00a00000 0x3f600000>;
+			};
+
+			extend@40000000 {
+				label = "extend 1G flash";
+				reg = <0x40000000 0x40000000>;
+			};
+		};
+	};
+};
+
+
+&uart0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pins_uart0>;
+};
+
+&uart1 { // pins used for HPEN, HPDET
+	status = "disabled";
+};
+
+&uart2 { // pins used for KBC
+	status = "disabled";
+};
+
+&uart3 { // pins used for SD_EN and Touch buttons
+	status = "disabled";
+};
+
+&pinctrl {
+	pins_lcd: lcd0 {
+		function = "lcd";
+		groups = "lcd-8bit", "lcd-16bit", "lcd-special", "lcd-generic";
+	};
+
+	pins_mmc: mmc {
+		mmc {
+			function = "mmc";
+			groups = "mmc-1bit", "mmc-4bit";
+		};
+
+		mmc_ctrl {
+			pins = "PC0", "PC2", "PA21";
+			bias-disable;
+		};
+	};
+
+	pins_nand: pins_nand {
+		function = "nand";
+		groups = "nand-cs3";
+	};
+
+	pins_pwm0: pwm0 {
+		function = "pwm0";
+		groups = "pwm0";
+	};
+
+	pins_pwm1: pwm1 {
+		function = "pwm1";
+		groups = "pwm1";
+	};
+
+	pins_uart0: uart0 {
+		function = "uart0";
+		groups = "uart0-data";
+		bias-disable;
+	};
+
+	pins_usb_clk: usb {
+		pins = "PA29";
+		bias-disable;
+	};
+
+	pins_mac: pins_mac {
+		function = "mii";
+		groups = "mii";
+	};
+
+	pins_i2s: pins_i2s {
+		function = "i2s";
+		groups = "i2s-data", "i2s-master";
+	};
+};
+
+&i2c {
+	power_controller@28 {
+		compatible = "skytone,alpha400-mcu";
+		reg = <0x28>;
+	};
+
+	ak4642: codec@13 {
+		pinctrl-names = "default";
+		pinctrl-0 = <&pins_i2s>;
+		compatible = "asahi-kasei,ak4642";
+		reg = <0x13>;
+		#clock-cells = <0>;
+		clock-frequency = <12000000>;
+		clock-output-names = "ak4643_mcko";
+		#sound-dai-cells = <0>;
+	};
+
+	rtc@51 {
+		compatible = "nxp,pcf8563";
+		reg = <0x51>;
+		#clock-cells = <0>;
+	};
+};
+
+&uhc {
+	status = "okay";
+
+	clocks = <&clk_usb>;
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&pins_usb_clk>;
+};
+
+&ethernet {
+	phy-handle = <&ethphy>;
+	phy-mode = "mii";
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&pins_mac>;
+};
+
+&mdio {
+	ethphy: ethernet-phy@16 {
+		device_type = "ethernet-phy";
+		compatible = "realtek,rtl8201cl", "ethernet-phy-ieee802.3-c22";
+		reg = <16>;
+	};
+};

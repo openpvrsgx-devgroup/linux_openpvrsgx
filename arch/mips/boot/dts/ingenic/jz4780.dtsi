@@ -2,6 +2,8 @@
 #include <dt-bindings/clock/ingenic,jz4780-cgu.h>
 #include <dt-bindings/clock/ingenic,tcu.h>
 #include <dt-bindings/dma/jz4780-dma.h>
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/interrupt-controller/irq.h>
 
 / {
 	#address-cells = <1>;
@@ -60,7 +62,7 @@
 		clock-frequency = <32768>;
 	};
 
-	cgu: jz4780-cgu@10000000 {
+	cgu: clock-controller@10000000 {
 		compatible = "ingenic,jz4780-cgu", "simple-mfd";
 		reg = <0x10000000 0x100>;
 		#address-cells = <1>;
@@ -93,7 +95,7 @@
 
 	tcu: timer@10002000 {
 		compatible = "ingenic,jz4780-tcu",
-			     "ingenic,jz4770-tcu",
+			     "ingenic,jz4760-tcu",
 			     "simple-mfd";
 		reg = <0x10002000 0x1000>;
 		#address-cells = <1>;
@@ -107,6 +109,8 @@
 			 <&cgu JZ4780_CLK_PCLK>;
 		clock-names = "rtc", "ext", "pclk";
 
+		// this is nonsense
+		// but for some reason the ingenic-timer.c driver fails without
 		interrupt-controller;
 		#interrupt-cells = <1>;
 
@@ -136,7 +140,7 @@
 		};
 
 		ost: timer@e0 {
-			compatible = "ingenic,jz4780-ost", "ingenic,jz4770-ost";
+			compatible = "ingenic,jz4780-ost", "ingenic,jz4760b-ost";
 			reg = <0xe0 0x20>;
 
 			clocks = <&tcu TCU_CLK_OST>;
@@ -147,7 +151,8 @@
 	};
 
 	rtc_dev: rtc@10003000 {
-		compatible = "ingenic,jz4780-rtc";
+		compatible = "ingenic,jz4780-rtc",
+			     "ingenic,jz4760-rtc";
 		reg = <0x10003000 0x4c>;
 
 		interrupt-parent = <&intc>;
@@ -274,6 +279,46 @@
 		dma-names = "rx", "tx";
 
 		status = "disabled";
+
+		spidev@0 {
+			/* compatible = "spidev"; */
+			reg = <0>;
+			spi-max-frequency = <1000000>;
+			spi-cs-high;
+		};
+	};
+
+	/* it is not clear if there is an i2s1 - it is mentioned in power control and interrupts
+	   (AIC0 and AIC1) but there is no base address known */
+	i2s0: audio-controller@10020000 {
+		compatible = "ingenic,jz4780-i2s";
+		reg = <0x10020000 0x94>;
+
+		#sound-dai-cells = <0>;
+
+		interrupt-parent = <&intc>;
+		interrupts = <1>;
+
+		clocks = <&cgu JZ4780_CLK_AIC>, <&cgu JZ4780_CLK_I2SPLL>;
+		clock-names = "aic", "i2s";
+
+		dmas = <&dma JZ4780_DMA_I2S0_RX 0xffffffff>, <&dma JZ4780_DMA_I2S0_TX 0xffffffff>;
+		dma-names = "rx", "tx";
+
+	};
+
+	codec: audio-codec@100200a4 {
+		compatible = "ingenic,jz4780-codec";
+		reg = <0x100200a4 0x8>;
+
+		#sound-dai-cells = <0>;
+
+		/* Programming Manual: CODEC shares the interrupt with AIC module. */
+		interrupt-parent = <&intc>;
+		interrupts = <1>;	/* assume AIC0 interrupt */
+
+		clocks = <&cgu JZ4780_CLK_I2SPLL>;
+		clock-names = "i2s";
 	};
 
 	uart0: serial@10030000 {
@@ -460,6 +505,17 @@
 		status = "disabled";
 	};
 
+	gpu: gpu@13040000 {
+		compatible = "ingenic,jz4780-gpu", "img,powervr-sgx540";
+		reg = <0x13040000 0x4000>;
+
+		clocks = <&cgu JZ4780_CLK_GPU>;
+		clock-names = "core";
+
+		interrupt-parent = <&intc>;
+		interrupts = <63>;
+	};
+
 	lcdc0: lcdc0@13050000 {
 		compatible = "ingenic,jz4780-lcd";
 		reg = <0x13050000 0x1800>;
@@ -486,7 +542,7 @@
 		status = "disabled";
 	};
 
-	nemc: nemc@13410000 {
+	nemc: memory-controller@13410000 {
 		compatible = "ingenic,jz4780-nemc", "simple-mfd";
 		reg = <0x13410000 0x10000>;
 		#address-cells = <2>;
@@ -512,7 +568,7 @@
 			#address-cells = <1>;
 			#size-cells = <1>;
 
-			eth0_addr: eth-mac-addr@22 {
+			eth0_addr: eth-mac-addr-cells@22 {
 				reg = <0x22 0x6>;
 			};
 		};
@@ -549,6 +605,23 @@
 		status = "disabled";
 	};
 
+	// FIXME: should be sorted somewhere else
+	// but may lead to merge conflict
+	cim: cim@13060000 {
+		compatible = "ingenic,jz4780-cim";
+		reg = <0x13060000 0x68>;
+		reg-shift = <2>;
+
+		interrupt-parent = <&intc>;
+		interrupts = <30>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&pins_cim>;
+
+		clocks = <&cgu JZ4780_CLK_CIM>, <&cgu JZ4780_CLK_CIMMCLK>;
+		clock-names = "cim", "module";
+	};
+
 	mmc1: mmc@13460000 {
 		compatible = "ingenic,jz4780-mmc";
 		reg = <0x13460000 0x1000>;
@@ -567,6 +640,36 @@
 		dma-names = "rx", "tx";
 
 		status = "disabled";
+	};
+
+	usb_phy: usb_phy {
+		compatible = "usb-nop-xceiv";
+		#phy-cells = <0>;
+	};
+
+	ehci: usb@13490000 {
+		compatible = "ingenic,jz4780-ehci", "generic-ehci";
+		reg = <0x13490000 0x10000>;
+
+		interrupt-parent = <&intc>;
+		interrupts = <20>;
+
+		clocks = <&cgu JZ4780_CLK_UHC>;
+
+		phys = <&usb_phy>;
+	};
+
+	ohci: usb@134a0000 {
+		compatible = "ingenic,jz4780-ohci", "generic-ohci";
+		reg = <0x134a0000 0x10000>;
+
+		interrupt-parent = <&intc>;
+		interrupts = <5>;
+
+		clocks = <&cgu JZ4780_CLK_UHC>;
+		clock-names = "uhc";
+
+		phys = <&usb_phy>;
 	};
 
 	bch: bch@134d0000 {

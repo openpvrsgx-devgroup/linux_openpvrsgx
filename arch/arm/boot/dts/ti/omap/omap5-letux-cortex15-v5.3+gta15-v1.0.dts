@@ -1,0 +1,13 @@
+/*
+ * Copyright (C) 2018 Golden Delicious Computers - http://www.goldelico.com/
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+/* this version is for GTA15 V0.1 with Letux Cortex 15 CPU board V5.3 */
+
+#include "omap5-letux-cortex15-v5.3.dts"
+#include "letux-gta15-v1.0.dtsi"
+#include "pyra-display.dtsi"

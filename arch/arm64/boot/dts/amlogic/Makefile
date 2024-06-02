@@ -87,6 +87,16 @@ dtb-$(CONFIG_ARCH_MESON) += meson-sm1-odroid-hc4.dtb
 dtb-$(CONFIG_ARCH_MESON) += meson-sm1-sei610.dtb
 dtb-$(CONFIG_ARCH_MESON) += meson-sm1-x96-air-gbit.dtb
 dtb-$(CONFIG_ARCH_MESON) += meson-sm1-x96-air.dtb
+dtb-$(CONFIG_ARCH_MESON) += meson-a1-ad401.dtb
+dtb-$(CONFIG_ARCH_MESON) += meson-s4-s805x2-aq222.dtb
+dtb-$(CONFIG_ARCH_MESON) += meson64_odroidc2.dtb
+dtb-$(CONFIG_ARCH_MESON) += meson64_odroidc4.dtb
+dtb-$(CONFIG_ARCH_MESON) += meson64_odroidhc4.dtb
+dtb-$(CONFIG_ARCH_MESON) += meson64_odroidn2.dtb
+dtb-$(CONFIG_ARCH_MESON) += meson64_odroidn2_plus.dtb
+
+subdir-$(CONFIG_ARCH_MESON) += overlays/odroidc4
+subdir-$(CONFIG_ARCH_MESON) += overlays/odroidn2
 
 # Overlays
 meson-g12a-fbx8am-brcm-dtbs	:= meson-g12a-fbx8am.dtb meson-g12a-fbx8am-brcm.dtbo

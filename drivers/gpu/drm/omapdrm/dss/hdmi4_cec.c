@@ -323,10 +323,10 @@ void hdmi4_cec_set_phys_addr(struct hdmi_core_data *core, u16 pa)
 }
 
 int hdmi4_cec_init(struct platform_device *pdev, struct hdmi_core_data *core,
-		  struct hdmi_wp_data *wp)
+		   struct hdmi_wp_data *wp, struct drm_connector *conn)
 {
-	const u32 caps = CEC_CAP_TRANSMIT | CEC_CAP_LOG_ADDRS |
-			 CEC_CAP_PASSTHROUGH | CEC_CAP_RC;
+	const u32 caps = CEC_CAP_DEFAULTS | CEC_CAP_CONNECTOR_INFO;
+	struct cec_connector_info conn_info;
 	int ret;
 
 	core->adap = cec_allocate_adapter(&hdmi_cec_adap_ops, core,
@@ -334,6 +334,8 @@ int hdmi4_cec_init(struct platform_device *pdev, struct hdmi_core_data *core,
 	ret = PTR_ERR_OR_ZERO(core->adap);
 	if (ret < 0)
 		return ret;
+	cec_fill_conn_info_from_drm(&conn_info, conn);
+	cec_s_conn_info(core->adap, &conn_info);
 	core->wp = wp;
 
 	/* Disable clock initially, hdmi_cec_adap_enable() manages it */

@@ -22,6 +22,10 @@ properties:
       - const: panel-dpi
 
   backlight: true
+  bpc: true
+  bus-flags: true	/* See DRM_BUS_FLAG_... defines. */
+  bus-format: true	/* See MEDIA_BUS_FMT_... defines. */
+  connector-type: true	/* See DRM_MODE_CONNECTOR_... defines. */
   enable-gpios: true
   height-mm: true
   label: true

@@ -1,0 +1,135 @@
+#!/bin/bash
+#
+# Author: H. Nikolaus Schaller <hns@goldelico.com>
+#
+# adjust screen size and touch depending on device model
+#
+
+# NOTE: basically we need to map the panel model (and not a board name) to a config
+# but there is no canonical way to find out the panel model name
+# /sys/class/lcd may be empty and panels don't have a 'model' attribute.
+# But they have a compatible attribute!
+# So we have to locate the panel at some well known locations (processor dependent)
+# and get the comptatible record
+# Then we can look for $COMPATIBLE.conf
+# And finally apply some special rules (e.g. run daemons) through a shell script
+# Well, in practice we have to see how to handle the mix with touch screens and different
+# panel mount orientation which we do NOT know through the panel compatible string
+
+DEBUG=false
+[ "$1" == -d ] && DEBUG=true
+
+findpanel() { # search panel compatible string at some well known locations
+
+# use something like
+#   find /proc/device-tree/ -name compatible -exec fgrep td028 {} \; -print
+# to define the search locations
+
+LCDS+=" /proc/device-tree/lcd"
+LCDS+=" /proc/device-tree/panel/display-timings"
+LCDS+=" /proc/device-tree/panel"
+LCDS+=" /proc/device-tree/spi/td028ttec1@0"	# GTA04
+LCDS+=" /proc/device-tree/ocp@68000000/spi@48098000/lcd@1"	# OMAP3
+LCDS+=" /proc/device-tree/ocp/target-module@58000000/dss@0/target-module@4000/encoder@0/lcd@0"	# OMAP5 newer
+LCDS+=" /proc/device-tree/ocp/target-module@58000000/dss@0/target-module@4000/encoder@0/lcd"	# OMAP5
+
+
+for LCD in $LCDS
+do
+$DEBUG && echo $0: try $LCD/compatible >&2
+	if [ -r $LCD/compatible ]
+	then
+		tr '\0' '\n' <$LCD/compatible 2>/dev/null | sed s/omapdss,//
+		return
+	fi
+done
+}
+
+findpanel >/tmp/$$
+
+PANEL=default
+
+while read COMPATIBLE
+do # check all we find for a matching config file
+$DEBUG && echo check "/etc/X11/$COMPATIBLE.conf" >&2
+	if [ -r "/etc/X11/$COMPATIBLE.conf" ]
+	then # found a compatible one
+		PANEL=$COMPATIBLE
+		break
+	fi
+done </tmp/$$
+
+function model_or_compatible {
+	if [ -r /proc/device-tree/model ]
+	then
+		tr -d '\0' </proc/device-tree/model 2>/dev/null
+	elif [ -r /proc/device-tree/compatible ]	# prefix and separate with @
+	then
+		echo @$(tr '\0' '@' </proc/device-tree/compatible 2>/dev/null)
+	else
+		echo "x86"
+	fi
+}
+
+$DEBUG && echo "Model: $(model_or_compatible)"
+
+# special handling - overwrite PANEL if needed
+
+case "$(model_or_compatible)" in
+	*'GTA04 b4'* )
+		PANEL=5.0x640x1024;;	# Letux 5004 (never built)
+	*GTA04b7* | \
+	*'GTA04 b7'* | \
+	*Neo900* )
+		PANEL=3.0-800x480;;	# Neo900
+	*'GTA04 b8'* )
+		PANEL=2.0-320x320;;	# Letux 2204 (never built)
+	*PandaBoard* | \
+	*OMAP5*uEVM* | \
+	*PinePhone* )
+		PANEL=auto;;	# works well with auto-detection
+	*LC15-EVM* )
+		PANEL=5.0-720x1280
+		/root/tvout 0   # seems to initialize something we need for switching to HDMI
+		/root/tvout 1   # choose HDMI video as default
+		;;
+	*Pandora* )
+		# setup keyboard
+		# cp /etc/X11/Xmodmap.pandora /etc/X11/Xmodmap
+		# setup nubs
+		echo mouse > /proc/pandora/nub0/mode	# mouse
+		echo mbuttons > /proc/pandora/nub1/mode	# mouse buttons
+		;;
+	*'UDOO Neo'* )
+		PANEL=auto;;	# works well with auto-detection
+	*'Skytone Alpha 400'* )
+		PANEL=alpha400;;
+	*'Tolino Shine 3'* )
+		PANEL=5.8-1072x1448-epd
+		echo 3 >/sys/class/graphics/fb0/rotate
+		;;
+	*CI20* | \
+	*x86* )
+		PANEL=auto;;	# works well with auto-detection
+esac
+
+$DEBUG && echo "Panel: $PANEL"
+
+if [ $PANEL = default ]
+then
+	echo "$0: unknown motherboard $(model_or_compatible)"
+fi
+
+# symlink to chosen config (if any)
+rm -f /etc/X11/xorg.conf
+if [ -r "/etc/X11/$PANEL.conf" ]
+then
+	ln -s $PANEL.conf /etc/X11/xorg.conf
+	# omap_drv is gone with Stretch
+	[ -r /usr/lib/xorg/modules/drivers/omap_drv.so ] || sed -i.bak 's/"omap"/"fbdev"/' /etc/X11/xorg.conf
+fi
+
+# look for and run shell script $COMPATIBLE.sh if it exists
+[ -x "/etc/X11/$COMPATIBLE.sh" ] && "/etc/X11/$COMPATIBLE.sh"
+
+$DEBUG && ls -l /etc/X11/*.conf

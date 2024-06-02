@@ -1,0 +1,11 @@
+# Usage dai-status
+# e.g. "dai-status card" to display dai status
+
+if [ $# -lt 1 ]; then
+	echo "dai-status card"
+	exit 127
+fi
+   
+echo $1" DAI status dump"
+cat /sys/kernel/debug/asoc/$1/*/state
+echo $1" DAI dump complete"

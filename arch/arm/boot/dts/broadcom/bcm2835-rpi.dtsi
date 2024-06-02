@@ -1,6 +1,29 @@
 #include <dt-bindings/power/raspberrypi-power.h>
+#include <dt-bindings/input/input.h>
 
 / {
+	leds {
+		compatible = "gpio-leds";
+
+		led-act {
+			label = "ACT";
+			default-state = "keep";
+			linux,default-trigger = "heartbeat";
+		};
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+
+		power-button {
+			label = "power";
+			linux,code = <KEY_POWER>;
+			/* pin 5 = "SCL1" as wakeup/power button */
+			gpios = <&gpio 3 GPIO_ACTIVE_LOW>;
+			wakeup-source;
+		};
+	};
+
 	soc {
 		firmware: firmware {
 			compatible = "raspberrypi,bcm2835-firmware", "simple-mfd";

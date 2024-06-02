@@ -1,0 +1,53 @@
+#!/bin/sh
+#
+# Pyra volume control
+#
+# run as: /root/pyra_vol_mon/pyra_vol_mon pyra_vol_ctl
+# $1 is current volume
+# $2 is minimum
+# $3 is maximum
+#
+
+SCRIPTPATH="$(dirname "$0")/.."
+
+WHEEL="${1:-0}"
+MINWHEEL="${2:-0}"
+MAXWHEEL="${3:-1250}"	# gpadc reports 0..1250 mV but leave some margin
+
+CARD="$($SCRIPTPATH/findsoundcard -a | head -1)"	# first channel
+CARD=L15	# this is the sound card...
+
+if [ ! "$CARD" ]
+then
+	echo no sound card found >&2
+	exit
+fi
+NUM=$($SCRIPTPATH/findsoundcard "$CARD")
+if [ ! "$NUM" ]
+then
+	echo sound card "$CARD" not found >&2
+	exit
+fi
+
+# could apply a non-linear scale for more intuitive control
+
+VOL=$(( 100 * ( $WHEEL - $MINWHEEL ) / ( $MAXWHEEL - $MINWHEEL ) ))
+
+# echo $WHEEL $MINWHEEL $MAXWHEEL $VOL
+
+# clamp to 0..100%
+[ "$VOL" -lt 0 ] && VOL=0
+[ "$VOL" -gt 100 ] && VOL=100
+
+if [ "$VOL" = 0 ]
+then # turn off
+	amixer -c "$NUM" -q set "Handsfree Left Playback" "Off" || exit
+	amixer -c "$NUM" -q set "Handsfree Right Playback" "Off" || exit
+else
+	amixer -c "$NUM" -q set "Handsfree Left Playback" "HF DAC" || exit
+	amixer -c "$NUM" -q set "Handsfree Right Playback" "HF DAC" || exit
+	amixer -c "$NUM" -q set "Handsfree" "$VOL%" || exit
+fi
+
+amixer -c "$NUM" -q set "Headset" "$VOL%" || exit
+amixer -c "$NUM" -q set "Earphone" "$VOL%" || exit

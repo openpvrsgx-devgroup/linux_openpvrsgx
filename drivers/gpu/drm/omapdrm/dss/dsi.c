@@ -4411,7 +4411,9 @@ static int omap_dsi_host_detach(struct mipi_dsi_host *host,
 {
 	struct dsi_data *dsi = host_to_omap(host);
 
-	if (WARN_ON(dsi->dsidev != client))
+printk("%s\n", __func__);
+
+	if (!dsi->dsidev || WARN_ON(dsi->dsidev != client))
 		return -EINVAL;
 
 	cancel_delayed_work_sync(&dsi->dsi_disable_work);

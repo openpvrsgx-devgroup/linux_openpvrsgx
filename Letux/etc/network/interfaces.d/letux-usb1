@@ -1,0 +1,10 @@
+#
+# interfaces for Letux supported devices
+# GTA04, BeagleBoard, BeagleBoneBlack, Letux Cortex 8,
+# Letux Cortex15, Pandaboard ES, OMAP5EVM, Pyra, OpenPandora
+#
+# The PLS8 automatically creates an usb1 interface - at least on Pyra
+
+auto usb1
+iface usb1 inet dhcp
+	up /etc/network/letux-setup-resolv-conf.sh

@@ -9176,6 +9176,11 @@ M:	Krzysztof Kozlowski <krzk@kernel.org>
 S:	Maintained
 F:	drivers/reset/reset-gpio.c
 
+GENERIC GPIO PWM DRIVER
+M:	Olliver Schinagl <oliver@schinagl.nl>
+S:	Maintained
+F:	drivers/pwm/pwm-gpio.c
+
 GENERIC HDLC (WAN) DRIVERS
 M:	Krzysztof Halasa <khc@pm.waw.pl>
 S:	Maintained
@@ -16706,6 +16711,15 @@ T:	git git://linuxtv.org/media_tree.git
 F:	Documentation/devicetree/bindings/media/i2c/ov9650.txt
 F:	drivers/media/i2c/ov9650.c
 
+OMNIVISION OV9655 SENSOR DRIVER
+M:	Hugues Fruchet <hugues.fruchet@st.com>
+M:	H. Nikolaus Schaller <hns@goldelico.com>
+L:	linux-media@vger.kernel.org
+T:	git git://linuxtv.org/media_tree.git
+S:	Maintained
+F:	drivers/media/i2c/ov9655.c
+F:	Documentation/devicetree/bindings/media/i2c/ov9655.txt
+
 OMNIVISION OV9734 SENSOR DRIVER
 M:	Tianshu Qiu <tian.shu.qiu@intel.com>
 R:	Bingbu Cao <bingbu.cao@intel.com>
@@ -16907,6 +16921,14 @@ S:	Supported
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/overlayfs/vfs.git
 F:	Documentation/filesystems/overlayfs.rst
 F:	fs/overlayfs/
+
+ORANGEFS FILESYSTEM
+M:	Mike Marshall <hubcap@omnibond.com>
+L:	pvfs2-developers@beowulf-underground.org (subscribers-only)
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/hubcap/linux.git
+S:	Supported
+F:	fs/orangefs/
+F:	Documentation/filesystems/orangefs.txt
 
 P54 WIRELESS DRIVER
 M:	Christian Lamparter <chunkeey@googlemail.com>
@@ -18127,6 +18149,16 @@ L:	linux-wireless@vger.kernel.org
 S:	Supported
 F:	drivers/net/wireless/purelifi/plfxlc/
 
+PVR/SGX DRIVER FOR OMAP
+M:	Adam Ford <adam.ford@logicpd.com>
+M:	Tony Lindgren <tony@atomide.com>
+M:	Nikolaus Schaller <hns@goldelico.com>
+T:	git https://github.com/openpvrsgx-devgroup/linux_openpvrsgx
+L:	openpvrsgx-devgroup@letux.org
+L:	linux-omap@vger.kernel.org
+S:	Supported
+F:	drivers/gpu/drm/pvrsgx/
+
 PVRUSB2 VIDEO4LINUX DRIVER
 M:	Mike Isely <isely@pobox.com>
 L:	pvrusb2@isely.net	(subscribers-only)
@@ -18201,6 +18233,22 @@ F:	drivers/usb/gadget/udc/pxa2*
 F:	include/sound/pxa2xx-lib.h
 F:	sound/arm/pxa*
 F:	sound/soc/pxa/
+
+PXA3xx NAND FLASH DRIVER
+M:	Ezequiel Garcia <ezequiel.garcia@free-electrons.com>
+L:	linux-mtd@lists.infradead.org
+S:	Maintained
+F:	drivers/mtd/nand/pxa3xx_nand.c
+
+PYRA HANDHELD PC
+M:	H. Nikolaus Schaller <hns@goldelico.com>
+M:	Michael Mrozek <EvilDragon@openpandora.org>
+M:	Andrey Utkin <andrey_utkin@fastmail.com>
+L:	kernel@pyra-handheld.com
+L:	letux-kernel@openphoenux.org
+W:	https://pyra-handheld.com
+T:	git://git.openpandora.org/pyra-kernel.git
+S:	Maintained
 
 QAT DRIVER
 M:	Giovanni Cabiddu <giovanni.cabiddu@intel.com>

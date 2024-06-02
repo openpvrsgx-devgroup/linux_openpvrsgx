@@ -1,0 +1,86 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+# Sample debian/rules that uses debhelper.
+# This file was originally written by Joey Hess and Craig Small.
+# As a special exception, when this file is copied by dh-make into a
+# dh-make output file, you may use that output file without restriction.
+# This special exception was added by Craig Small in version 0.37 of dh-make.
+
+# Uncomment this to turn on verbose mode.
+export DH_VERBOSE=1
+
+# include system information
+include /usr/share/dpkg/architecture.mk
+
+KDESTDIR=$(CURDIR)/debian/linux-image-letux
+HDESTDIR=$(CURDIR)/debian/linux-headers-letux
+DDESTDIR=$(CURDIR)/debian/linux-letux-dev
+
+# kernel version information
+BASEVERSION=4.6.0
+LOCALVERSION=-letux
+SCMVERSION=
+
+%:
+	dh $@ --parallel --sourcedirectory=linux --builddirectory=build
+
+override_dh_auto_clean:
+	dh_auto_clean
+	rm -rf build
+	# also make sure source-tree is really clean
+	cd linux; make mrproper
+
+override_dh_auto_configure:
+	mkdir build
+	find config -name "*.conf" | sort | xargs ./linux/scripts/kconfig/merge_config.sh -O build -m linux/arch/arm/configs/letux_defconfig
+	./linux/scripts/config --file build/.config --set-str LOCALVERSION $(LOCALVERSION)
+	./linux/scripts/config --file build/.config --disable LOCALVERSION_AUTO
+	make -C linux O="$(CURDIR)/build" ARCH=arm CROSS_COMPILE=$(DEB_TARGET_GNU_TYPE)- olddefconfig
+
+override_dh_auto_build:
+	dh_auto_build -- ARCH=arm CROSS_COMPILE=$(DEB_TARGET_GNU_TYPE)- LOCALVERSION= LOADADDR=0x80008000 dtbs uImage modules
+
+override_dh_auto_install:
+	# install kernel image
+	mkdir -vp "$(KDESTDIR)/boot"
+	install -v -m755 build/arch/arm/boot/uImage $(KDESTDIR)/boot/uImage-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)
+	install -v -m644 build/System.map $(KDESTDIR)/boot/System.map-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)
+	install -v -m644 build/.config $(KDESTDIR)/boot/config-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)
+
+	# install DTBs
+	mkdir -vp "$(KDESTDIR)/boot/dtb-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)"
+	find build/arch/arm/boot/dts/ -name "*.dtb" -exec install -v -m644 {} "$(KDESTDIR)/boot/dtb-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/" \;
+
+	# install modules
+	make -C build ARCH=arm CROSS_COMPILE=$(DEB_TARGET_GNU_TYPE)- INSTALL_MOD_PATH=$(KDESTDIR) modules_install
+	rm -fv $(KDESTDIR)/lib/modules/$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/source
+	rm -fv $(KDESTDIR)/lib/modules/$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/build
+
+	# install kernel headers
+	sh install_devel_files.sh arm linux build $(HDESTDIR)/usr/src/linux-headers-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)
+
+	# add source and build symlinks
+	mkdir -p $(HDESTDIR)/lib/modules/$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)
+	ln -sfv /usr/src/linux-headers-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION) $(HDESTDIR)/lib/modules/$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/source
+	ln -sfv /usr/src/linux-headers-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION) $(HDESTDIR)/lib/modules/$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/build
+
+	# install the public API headers
+	make -C build ARCH=arm CROSS_COMPILE=$(DEB_TARGET_GNU_TYPE)- INSTALL_HDR_PATH=$(DDESTDIR)/usr/include/kernel-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION) headers_install
+	mv $(DDESTDIR)/usr/include/kernel-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/include/* $(DDESTDIR)/usr/include/kernel-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/
+	rmdir $(DDESTDIR)/usr/include/kernel-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)/include
+	find $(DDESTDIR)/usr/include/kernel-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION) -name "*.cmd" -delete
+
+	# move installed firmware into a kernelbuild-specific subfolder
+	# if no firmware is installed, created an empty folder for it
+	mkdir -p $(KDESTDIR)/lib/firmware
+	mv $(KDESTDIR)/lib/firmware $(KDESTDIR)/lib/firmware-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)
+	mkdir -p $(KDESTDIR)/lib/firmware
+	mv $(KDESTDIR)/lib/firmware-$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION) $(KDESTDIR)/lib/firmware/$(BASEVERSION)$(LOCALVERSION)$(SCMVERSION)
+
+override_dh_auto_test:
+	# don't test
+
+override_dh_strip:
+	# only strip linux-image package
+	# (the headers contain binaries oft eh hot system in scripts folder, they break strip when cross-compiling)
+	dh_strip --package=linux-image-NAME

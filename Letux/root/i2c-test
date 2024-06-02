@@ -1,0 +1,36 @@
+#!/bin/bash
+
+BUS="$1"
+[ "$BUS" ] || BUS=0
+
+function cmd {
+	sleep 0.1
+	echo $@ >&2
+	$@
+	sleep 0.1
+}
+
+echo "read 1 byte"
+cmd i2cget -f -y $BUS 0x28
+echo "write 1 + read 1"
+cmd i2cget -f -y $BUS 0x28 0
+echo "write 1 + read 2"
+cmd i2cget -f -y $BUS 0x28 0 w
+echo "read 2 (no responder)"
+cmd i2cget -f -y $BUS 0x29 0 w
+echo "write 1"
+cmd i2cset -f -y $BUS 0x13 0
+echo "write 2"
+cmd i2cset -f -y $BUS 0x13 0 0x00
+echo "write multi"
+cmd i2cset -f -y $BUS 0x13 0 0x00 0x01 0x02 s
+echo "read 1 at each address"
+cmd i2cdetect -y -r $BUS 0x27 0x29 >/tmp/$$ && cat /tmp/$$
+echo "write 0 bytes at each address"
+cmd i2cdetect -y $BUS 0x27 0x29 >/tmp/$$ && cat /tmp/$$
+echo "read 9 bytes (individually)"
+cmd i2cdump -f -y -r 0-8 0 0x51 b
+echo "read 9 bytes (block)"
+cmd i2cdump -f -y -r 0-8 0 0x51 i
+echo "read 9 bytes (consecutively)"
+cmd i2cdump -f -y -r 0-8 0 0x51 c

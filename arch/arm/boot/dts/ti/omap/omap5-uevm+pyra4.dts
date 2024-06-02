@@ -1,0 +1,993 @@
+/*
+ * Copyright (C) 2014 OpenPandora - http://www.pyra-handheld.com/
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+/*
+ * this version is for DragonFly Mainboard V4(.x) connected to EVM
+ * we start with the omap5-uevm tree since the Pyra is currently a
+ * separate board connected to the EVM expansion connector(s)
+ */
+
+#include "omap5-uevm.dts"
+
+/* overwrite device model */
+
+/ {
+	model = "Pyra-Handheld";
+
+	aliases {
+		display0 = &lcd;
+		display1 = &hdmi0;
+	};
+
+	/* DC/DC converter for LCD panel */
+/* disabled because the r63311 driver can control it */
+/*	dsi1_panel_power: dsi1_panel_power_reg {
+		compatible = "regulator-fixed";
+		regulator-name = "dsi1_panel_power";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = <&gpio6 6 0>;	/ * gpio6_166 = display-enable * /
+		startup-delay-us = <70000>;
+		enable-active-high;
+	}; */
+
+	/* DC/DC converter for USB Host ports, Modem USB and HDMI 5V */
+	modem_vbus_hdmi_power: tps2505_reg {
+		compatible = "regulator-fixed";
+		regulator-name = "modem_vbus_hdmi_power";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = <&gpio99 8 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		startup-delay-us = <70000>;
+//		vin-supply = <&vsys>;
+		regulator-always-on;
+	};
+
+	/* this are the DC/DC converters that supply the
+	   5V to USB devices connected to the Host ports.
+	   They should be under the (software) control
+	   of the USB3503A hub on the CPU board */
+
+	host1_vbus_power:host1_vbus_power_reg {
+		compatible = "regulator-fixed";
+		regulator-name = "host1_vbus_power";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = <&gpio99 9 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		startup-delay-us = <70000>;
+		vin-supply = <&modem_vbus_hdmi_power>;
+		regulator-always-on;
+	};
+
+	host2_vbus_power: host2_vbus_power_reg {
+		compatible = "regulator-fixed";
+		regulator-name = "host2_vbus_power";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = <&gpio99 10 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		startup-delay-us = <70000>;
+		vin-supply = <&modem_vbus_hdmi_power>;
+		regulator-always-on;
+	};
+
+	/* this is the modem power switch (similar to a LDO) */
+	modem_power: modem_power_reg {
+		compatible = "regulator-fixed";
+		regulator-name = "modem_vbus_power";
+		regulator-min-microvolt = <3700000>;
+		regulator-max-microvolt = <3700000>;
+		gpio = <&gpio99 15 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		startup-delay-us = <100000>;
+		/* the real input is vsys but it makes no sense
+		   to power the modem without requesting vbus */
+		vin-supply = <&modem_vbus_hdmi_power>;
+		regulator-always-on;
+	};
+
+	modem_en: modem { /* control modem power through rfkill */
+		compatible = "gemalto,pls8-power";
+		gpio-controller;
+		#gpio-cells = <2>;
+		NIMP-usb-port = <&hsusb2_phy>; 	/* USB phy where we can check the modem status */
+		on-off-gpio = <&gpio3 18 GPIO_ACTIVE_HIGH>;	/* GPIO3_82: trigger to power on modem */
+		on-indicator-gpio = <&gpio3 20 GPIO_ACTIVE_HIGH>;	/* Feedback GPIO */
+		NIMP-modem-supply = <&modem_power>;		/* enable external power regulator */
+		/* VBUS supply should probably be controlled through the USB PHY driver for the modem port */
+		NIMP-vbus-supply = <&modem_vbus_hdmi_power>;	/* apply VBUS to the modem */
+	};
+
+/*	mic_presence {
+/* FIXME: a dedicated TS3A225 driver can reprogram the MIC_PRESENT line through I2C into an INT so we can detect other changes (e.g. mic button pressed) * /
+		compatible = "extcon-gpio";
+		label = "mic_presence";
+		interrupt-parent = <&gpio99>;
+		interrupts = <14 IRQ_TYPE_EDGE_BOTH>;
+		gpios = <&gpio99 14 GPIO_ACTIVE_LOW>;
+		// debounce-delay-ms = <10>; -- not available at tca6424
+		state-on = "present";
+		state-off = "unplugged";
+	}; */
+
+/* FIXME: having both leads to an irq conflict */
+/*	mic_presence_evm { /* move this to omap5-uevm.dts */
+/*		compatible = "extcon-gpio";
+		label = "mic_presence_evm";
+		interrupt-parent = <&gpio9>;
+		interrupts = <14 IRQ_TYPE_EDGE_BOTH>;
+		gpios = <&gpio9 14 GPIO_ACTIVE_LOW>;
+		// debounce-delay-ms = <10>; -- not available at tca6424
+		state-on = "present";
+		state-off = "unplugged";
+	}; */
+
+/*	extcon_test { /* if enabled, disable BTN1 */
+/*		compatible = "extcon-gpio";
+		label = "user_button";
+		interrupt-parent = <&gpio3>;
+		interrupts = <19 2>;
+		gpios = <&gpio3 19 1>;	/* gpio3_83 is BTN1 */
+/*		debounce-delay-ms = <50>;
+		state-on = "status-on";
+		state-off = "status-off";
+	}; */
+
+	backlight {
+		compatible = "pwm-backlight";
+		pwms = <&pwm9 0 12000000 0>;
+		pwm-names = "backlight";
+		brightness-levels = <0 11 20 30 40 50 60 70 80 90 100>;
+		default-brightness-level = <9>;	/* => 90 */
+		pinctrl-names = "default";
+		pinctrl-0 = <&backlight_pins>;
+	};
+
+	pwm9: dmtimer-pwm@9 {
+		compatible = "ti,omap-dmtimer-pwm";
+		ti,timers = <&timer9>;
+		#pwm-cells = <3>;
+	};
+
+	bat: battery {
+		compatible = "simple-battery", "pyra-battery";
+		voltage-min-design-microvolt = <3200000>;
+		energy-full-design-microwatt-hours = <22200000>;
+		charge-full-design-microamp-hours = <6000000>;
+	};
+
+};
+
+&palmas_power_button {
+	ti,palmas-long-press-seconds = <8>;
+	ti,palmas-pwron-debounce-milli-seconds = <15>;
+};
+
+/* Audio routing */
+
+&sound {
+	ti,model = "Pyra-Handheld";
+
+	/* Audio routing */
+	ti,audio-routing =
+		"Headset Stereophone", "HSOL",
+		"Headset Stereophone", "HSOR",
+		"Ext Spk", "HFL",
+		"Ext Spk", "HFR",
+		"Line Out", "AUXL",
+		"Line Out", "AUXR",
+		"AFML", "Line In",
+		"AFMR", "Line In",
+		"HSMIC", "Headset Mic",
+		"Headset Mic", "Headset Mic Bias";
+};
+
+/* LCD panel - MIPI */
+
+&dss {
+	status = "ok";
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&pyra_dsi_a>;
+};
+
+&dsi1 {
+	status = "ok";
+
+	vdd-supply = <&ldo4_reg>;
+
+	port {
+		dsi1_out_ep: endpoint {
+			remote-endpoint = <&lcd_in>;
+			lanes = <
+				0       /* lane0x = clk + */
+				1       /* lane0y = clk - */
+				2       /* lane1x = data1 + */
+				3       /* lane1y = data1 - */
+				4       /* lane2x = data2 + */
+				5       /* lane2y = data2 - */
+				6       /* lane3x = data3 + */
+				7       /* lane3y = data3 - */
+				8       /* lane4x = data4 + */
+				9       /* lane4y = data4 - */
+			>;
+		};
+	};
+
+	lcd: lcd {
+		/* default to be overwritten by specific panel in derived board file
+		   by using the /root/panelselect script */
+		compatible = "mipi,debug";
+		label = "lcd";
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&pyra_display_pins>;
+
+		gpios =
+			<&gpio6 16 0>,	/* goip6_176 = display reset */
+			<&gpio6 6 0>;	/* gpio6_166 = enable DC/DC */
+
+		port {
+			lcd_in: endpoint {
+				remote-endpoint = <&dsi1_out_ep>;
+			};
+		};
+	};
+};
+
+
+/* add overlay pimmux for pyra on 5432evm */
+
+&mcspi3_pins {
+		pinctrl-single,pins = <
+/* allow to reuse as real gpio:	0x78 (PIN_INPUT | MUX_MODE1)	/*  mcspi3_somi = gpio3_84 */
+			0x7a (PIN_INPUT | MUX_MODE1)		/*  mcspi3_cs0 = gpio3_85 */
+			0x7c (PIN_INPUT | MUX_MODE1)		/*  mcspi3_simo = gpio3_86 */
+			0x7e (PIN_INPUT | MUX_MODE1)		/*  mcspi3_clk =gpio3_87 */
+		>;
+	};
+
+&omap5_pmx_core {
+
+	pinctrl-0 = <
+			/* copied from original */
+			&usbhost_pins
+			&led_gpio_pins
+
+			/* new entries */
+			&pyra_button_pins
+			// &pyra_display_pins
+			&pyra_other_pins
+			// &i2c2_pins
+			// &i2c3_pins
+			// &i2c4_pins
+			// &i2c5_pins
+			// &pyra_dsi_a
+	>;
+
+/* this is for DragonFly V4 connected to EVM through a ribbon acable
+// inputs
+#define GPIO_LID 81			// lid close sensor - gpio3-81 - open collector output
+#define GPIO_3G_PWR 84			// modem power indication - gpio3-84
+#define GPIO_WAKEUP -1			// wakeup from modem - n/a
+#define GPIO_PENIRQ 173		// touch screen controller IRQ - gpio6-173
+#define GPIO_LNUB_IRQ 174		// left nub IRQ - n/a
+#define GPIO_RNUB_IRQ 175		// right nub IRQ - n/a
+#define GPIO_KEYIRQ 177		// keyboard controller IRQ - gpio6-177
+#define GPIO_RSH_BOT 179		// right bottom shoulder button - gpio6-179 - closes to GND
+#define GPIO_RSH_TOP 180		// right top shoulder button - gpio6-180 - closes to GND
+#define GPIO_RNUB 181			// right nub center button - gpio6-181 - closes to GND
+#define GPIO_LNUB 182			// left nub center button - gpio6-182 - closes to GND
+#define GPIO_LSH_BOT 183		// left bottom shoulder button - gpio6-183 - closes to GND
+#define GPIO_LSH_TOP 184		// left top shoulder button - gpio6-184 - closes to GND
+#define GPIO_VSYNC 189			// VSYNC input (gpio6_189 in: comes from panel)
+// outputs
+#define GPIO_3G_IGNITE 82		// start modem (active high pulse) - gpio3-82
+#define GPIO_DISPEN 166		// enable TPS65133 or ssd2858 - gpio6_166
+#define GPIO_DISPLAY_RESET 176		// panel reset (active low)/enable - gpio6_176
+#define GPIO_PWM 190			// enable 18V backlight (active high) - timer9/gpio6_190 (out) - or input to track what the panel is doing
+#define GPIO_PERIPHERAL_RESET 230	// device reset (active low)/enable - gpio8_230
+*/
+
+/* to find pinmux register offsets, see section A.7.2 in TRM
+
+   note: offsets in the table are relative to 0x4a00 2800
+   but reg = <0x4a002840 0x01b6> for omap5_pmx_core
+
+   Therefore gpio5_153 with Address Offset 0x1D4
+   translates into 0x194 (0xd0-0x40 => 0x90)
+   and because it has [31:16] we have to add 0x02
+   giving a result of 0x196.
+
+   Definitions for bit patterns:
+   0x0007	MUX_MODE0 .. MUX_MODE7
+   0x0008	enable pull up/down
+   0x0010	select pull up
+   0x0020	disable power for I/O cell
+   0x0100	enable input buffer (there is no explicit "enable output buffer" because that is defined by the GPIO direction)
+   0x4000	enable wakeup detection
+
+   or use the OMAP5_IOPAD() macros to do the conversion. You still have to look
+   up the pin and register address offset in the TRM.
+*/
+
+	pyra_button_pins: pinmux_button_gpio_pins {
+		pinctrl-single,pins = <
+			OMAP5_IOPAD(0x0b2, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x0B0:[31:16] gpio3_81 - lid */
+			OMAP5_IOPAD(0x12e, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x12C:[31:16] gpio6_161 */
+			OMAP5_IOPAD(0x10c, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x10C:[15:0]  gpio6_177 */
+			OMAP5_IOPAD(0x108, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x108:[15:0]  gpio6_179 */
+			OMAP5_IOPAD(0x106, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x104:[31:16] gpio6_180 */
+			OMAP5_IOPAD(0x104, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x104:[15:0]  gpio6_181 */
+			OMAP5_IOPAD(0x130, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x130:[15:0]  gpio6_182 */
+			OMAP5_IOPAD(0x132, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x130:[31:16] gpio6_183 */
+			OMAP5_IOPAD(0x134, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x134:[15:0]  gpio6_184 */
+		>;
+	};
+
+	pyra_display_pins: pinmux_display_gpio_pins {
+		pinctrl-single,pins = <
+			OMAP5_IOPAD(0x122, PIN_OUTPUT_PULLUP | MUX_MODE6)	/* 0x120:[31:16] gpio6_166 - enable panel DC/DC */
+			OMAP5_IOPAD(0x10e, PIN_OUTPUT_PULLDOWN | MUX_MODE6)	/* 0x10c:[31:16] gpio6_176 - panel reset */
+		>;
+	};
+
+	pyra_other_pins: pinmux_other_gpio_pins {
+		pinctrl-single,pins = <
+			OMAP5_IOPAD(0x12c, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x12C:[15:0]  gpio6_160 - TCA6424 active low interrupt */
+			OMAP5_IOPAD(0x0b4, PIN_OUTPUT_PULLDOWN | MUX_MODE6)	/* 0x108:[15:0]  gpio3_82 - start modem */
+			OMAP5_IOPAD(0x0b8, PIN_INPUT | MUX_MODE6)	/* 0x108:[15:0] gpio3_84 - modem power ind */
+			OMAP5_IOPAD(0x114, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x114:[15:0]  gpio6_173 - touch screen */
+			OMAP5_IOPAD(0x178, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x178:[15:0]  gpio8_230 - reset I2C peripherals */
+		>;
+	};
+
+	backlight_pins: pinmux_backlight_pins {
+		pinctrl-single,pins = <
+			/* MUX_MODE0 for PWM_TIMER9, MUX_MODE6 for GPIO, MUX_MODE7 if panel provides the PWM signal */
+			OMAP5_IOPAD(0x0f6, PIN_OUTPUT_PULLDOWN | MUX_MODE0)	/* 0x0F4:[31:16] timer9/gpio6_190 */
+		>;
+	};
+
+/* I2C pinmux */
+
+	i2c2_pins: pinmux_i2c2_pins {
+		pinctrl-single,pins = <
+			OMAP5_IOPAD(0x1b8, PIN_INPUT_PULLUP | MUX_MODE0)		/* i2c2_scl */
+			OMAP5_IOPAD(0x1ba, PIN_INPUT_PULLUP | MUX_MODE0)		/* i2c2_sda */
+		>;
+	};
+
+	i2c3_pins: pinmux_i2c3_pins {
+		pinctrl-single,pins = <
+			OMAP5_IOPAD(0x17a, PIN_INPUT_PULLUP | MUX_MODE0)		/* i2c3_scl */
+			OMAP5_IOPAD(0x17c, PIN_INPUT_PULLUP | MUX_MODE0)		/* i2c3_sda */
+		>;
+	};
+
+	i2c4_pins: pinmux_i2c4_pins {
+		pinctrl-single,pins = <
+			OMAP5_IOPAD(0x0f8, PIN_INPUT_PULLUP | MUX_MODE0)		/* i2c4_scl (gpio7_200) */
+			OMAP5_IOPAD(0x0fa, PIN_INPUT_PULLUP | MUX_MODE0)		/* i2c4_sda (gpio7_201) */
+		>;
+	};
+
+/*	i2c5_pins: pinmux_i2c5_pins {
+		pinctrl-single,pins = <
+// CHECKME: is this 0x186 + 0x188 or 0x184+0x186 as defined in omap5.dtsi?
+			OMAP5_IOPAD(0x1c6, PIN_INPUT | MUX_MODE0)		/* i2c5_scl * /
+			OMAP5_IOPAD(0x1c8, PIN_INPUT | MUX_MODE0)		/* i2c5_sda * /
+		>;
+	}; */
+
+/* enable MIPI pinmux - we may not really need this because the PinMux only has MUX_MODE0 */
+
+	pyra_dsi_a: pinmux_dsi_a_pins {
+		pinctrl-single,pins = <
+			OMAP5_IOPAD(0x0cc, PIN_OUTPUT | MUX_MODE0)	/* 0x0cc:[15:0]  dsiporta_lane0x */
+			OMAP5_IOPAD(0x0ce, PIN_OUTPUT | MUX_MODE0)	/* 0x0cc:[31:16] dsiporta_lane0y */
+			OMAP5_IOPAD(0x0d0, PIN_OUTPUT | MUX_MODE0)	/* 0x0d0:[15:0]  dsiporta_lane1x */
+			OMAP5_IOPAD(0x0d2, PIN_OUTPUT | MUX_MODE0)	/* 0x0d0:[31:16] dsiporta_lane1y */
+			OMAP5_IOPAD(0x0d4, PIN_OUTPUT | MUX_MODE0)	/* 0x0d4:[15:0]  dsiporta_lane2x */
+			OMAP5_IOPAD(0x0d6, PIN_OUTPUT | MUX_MODE0)	/* 0x0d4:[31:16] dsiporta_lane2y */
+			OMAP5_IOPAD(0x0d8, PIN_OUTPUT | MUX_MODE0)	/* 0x0d8:[15:0]  dsiporta_lane3x */
+			OMAP5_IOPAD(0x0da, PIN_OUTPUT | MUX_MODE0)	/* 0x0d8:[31:16] dsiporta_lane3y */
+			OMAP5_IOPAD(0x0dc, PIN_OUTPUT | MUX_MODE0)	/* 0x0dc:[15:0]  dsiporta_lane4x */
+			OMAP5_IOPAD(0x0de, PIN_OUTPUT | MUX_MODE0)	/* 0x0dc:[31:16] dsiporta_lane4y */
+		>;
+	};
+
+	ssd2858_vsync_pins: pinmux_ssd2858_vsync_pins {
+		pinctrl-single,pins = <
+			OMAP5_IOPAD(0x0ca, PIN_INPUT_PULLDOWN | MUX_MODE6)	/* 0x0C8:[31:16] gpio6_189 - VSYNC input */
+		>;
+	};
+
+};
+
+&i2c2 {
+	clock-frequency = <400000>;
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c2_pins>;
+};
+
+&i2c3 {
+	clock-frequency = <400000>;
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c3_pins>;
+};
+
+&i2c4 {
+	clock-frequency = <400000>;
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c4_pins>;
+};
+
+/* register devices connected to Panel-I2C */
+&i2c4 {
+	/* touchscreen */
+	tsc2007@48 {
+		compatible = "ti,tsc2007";
+		reg = <0x48>;
+		pinctrl-names = "default";
+/* FIXME:		pinctrl-0 = <&penirq_pins>; */
+		interrupt-parent = <&gpio6>;
+		interrupts = <13 IRQ_TYPE_EDGE_FALLING>;	/* gpio6_173 falling edge */
+		gpios = <&gpio6 13 GPIO_ACTIVE_LOW>;	/* gpio6_173 active low */
+/* note: overwrite for rotated screen */
+		touchscreen-size-x = <720>;
+		touchscreen-size-y = <1280>;
+		touchscreen-max-pressure = <1000>;
+		touchscreen-fuzz-x = <2>;
+		touchscreen-fuzz-y = <5>;
+		touchscreen-fuzz-pressure = <50>;
+		touchscreen-inverted-y;
+		ti,min-x = <140>;
+		ti,max-x = <3870>;
+		ti,min-y = <50>;
+		ti,max-y = <3970>;
+		ti,max-rt = <2000>;
+		ti,x-plate-ohms = <550>;
+	};
+
+	crtouch@49 {
+		compatible = "freescale,crtouch";
+		reg = <0x49>;
+		interrupt-parent = <&gpio6>;
+		interrupts = <13 IRQ_TYPE_EDGE_FALLING>;	/* gpio6_173 falling edge */
+		gpios = <&gpio6 13 1>;	/* gpio6_173 active low */
+		/* more paramters tbd. */
+	};
+
+	/* leds */
+	is31fl3196@64 {
+		compatible = "issi,is31fl3196";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <0x64>;
+
+		display_led0: red_bottom@0 {
+			label = "logo:red:bottom";
+			reg = <0>;
+			linux,default-trigger = "mmc0";
+		};
+
+		display_led1: green_bottom@1 {
+			label = "logo:green:bottom";
+			reg = <1>;
+			linux,default-trigger = "heartbeat";
+		};
+
+		display_led2: blue_bottom@2 {
+			label = "logo:blue:bottom";
+			reg = <2>;
+			linux,default-trigger = "timer";
+		};
+
+		display_led3: red_top@3 {
+			label = "logo:red:top";
+			reg = <3>;
+			linux,default-trigger = "mmc1";
+		};
+
+		display_led4: green_top@4 {
+			label = "logo:green:top";
+			reg = <4>;
+			linux,default-trigger = "timer";
+		};
+
+		display_led5: blue_top@5 {
+			label = "logo:blue:top";
+			reg = <5>;
+			linux,default-trigger = "default-on";
+		};
+	};
+
+	tca6507@45 {
+		compatible = "ti,tca6507";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <0x45>;
+
+		/* unused */
+		/* gpio-controller;
+		#gpio-cells = <2>; */
+
+		red_aux@0 {
+			label = "display::led-0";
+			reg = <0x0>;
+			linux,default-trigger = "mmc0";
+		};
+
+		green_aux@1 {
+			label = "display::led-1";
+			reg = <0x1>;
+			linux,default-trigger = "heartbeat";
+		};
+
+		blue_aux@2 {
+			label = "display::led-2";
+			reg = <0x2>;
+			linux,default-trigger = "timer";
+		};
+
+		set1@3 {
+			label = "display::led-3";
+			reg = <0x3>;
+			linux,default-trigger = "default-on";
+		};
+
+		set2@4 {
+			label = "display::led-4";
+			reg = <0x4>;
+			linux,default-trigger = "timer";
+		};
+
+		set3@5 {
+			label = "display::led-5";
+			reg = <0x5>;
+			linux,default-trigger = "mmc0";
+		};
+
+		set4@6 {
+			label = "display::led-6";
+			reg = <0x6>;
+			linux,default-trigger = "heartbeat";
+		};
+
+	};
+
+};
+
+/* register devices connected to Peripheral-I2C */
+&i2c2 {
+
+	/* left nub */
+	as5013@40 {
+		compatible = "ams,as5013";
+		reg = <0x40>;
+		// gpios = <&gpio...>, <&gpio>;
+	};
+
+	/* right nub */
+	as5013@41 {
+		compatible = "ams,as5013";
+		reg = <0x41>;
+		// gpios = <&gpio...>, <&gpio>;
+	};
+
+	/* keyboard scanner */
+	tca8418@34 {
+		compatible = "ti,tca8418";	/* this translates into request_module("i2c:tca8418")
+									   so it must be known as a MODULE_ALIAS to modprobe -c */
+		reg = <0x34>;
+		/* the interrupt is specified as:
+			The first cell is the GPIO number.
+			The second cell is used to specify flags:
+			bits[3:0] trigger type and level flags:
+				1 = low-to-high edge triggered.
+				2 = high-to-low edge triggered.
+				4 = active high level-sensitive.
+				8 = active low level-sensitive.
+		 */
+		interrupt-parent = <&gpio6>;
+		interrupts = <17 IRQ_TYPE_EDGE_RISING>;	/* gpio6_177 low-to-high edge */
+		keypad,num-rows = <8>;
+		keypad,num-columns = <10>;
+		linux,keymap = <
+	/* The 32-bit big endian cell is packed as: row << 24 | column << 16 | key-code */
+
+			0x0306003b
+			0x0203003c
+			0x02040057
+			0x01080058
+			0x0102003d
+			0x0701003e
+			0x07030002
+			0x06070003
+			0x06010004
+			0x05050005
+			0x06060006
+			0x04030007
+			0x03070008
+			0x03050009
+			0x0205000a
+			0x0107000b
+			0x0702000e
+			0x0503000f
+			0x06040010
+			0x05080011
+			0x05020012
+			0x04060013
+			0x06020014
+			0x03040015
+			0x02080016
+			0x02020017
+			0x01060018
+			0x00050019
+			0x0004001c
+			0x0400002a
+			0x0506001e
+			0x0401001f
+			0x04040020
+			0x03080021
+			0x03020022
+			0x02060023
+			0x01030024
+			0x01040025
+			0x00080026
+			0x00020036
+			0x07060033
+			0x06030034
+			0x0507002c
+			0x0501002d
+			0x0405002e
+			0x0407002f
+			0x03030030
+			0x02070031
+			0x07040032
+			0x01050039
+			0x00070039
+			0x00000064
+			0x01090069
+			0x0309006a
+			0x00090067
+			0x0209006c
+			0x05090066
+			0x0709006b
+			0x04090068
+			0x0609006d
+			0x03000038
+			0x0200001d
+			0x01000001
+			0x00010036
+			0x0101004e
+			0x03010061
+			0x0201004a
+			0x07000110
+			0x06000111
+		>;
+	};
+
+	/* modem current sensor */
+	ina231@4f {
+		compatible = "ti,ina231";
+		reg = <0x4f>;
+		shunt-resistor = <20000>;	/* 20 mOhm */
+	};
+
+	/* fuel gauge variant 1 */
+/* not installed due to bus speed issue
+	bq27200@55 {
+		compatible = "ti,bq27200";
+		reg = <0x55>;
+		monitored-battery = <&bat>;
+	}; */
+
+	/* fuel gauge variant 2 */
+	bq27421@55 {
+		compatible = "ti,bq27421";
+		reg = <0x55>;
+		monitored-battery = <&bat>;
+	};
+
+	/* charger */
+	bq24297@6b {
+		/* FIXME: driver is quite broken because it is a hack */
+		compatible = "ti,bq24297";
+		reg = <0x6b>;
+		monitored-battery = <&bat>;
+		ti,chg_current = <1000 500 2000>;	// chg_current (max for the battery), usb_input_current, adp_input_current
+		gpios = <&gpio99 11 0>,		// chg_irq_pin
+			<0>;			// dc_det_pin - if 0, charger is switched by driver to 2048mA, otherwise 512mA
+		regulators {
+			vsys_reg: vsys_regulator {
+				/* add information */
+				regulator-compatible = "bq2429x-vsys";
+				regulator-name = "vsys";
+//				regulator-min-microvolt = <3700000>;
+//				regulator-max-microvolt = <3700000>;
+				regulator-always-on;
+				regulator-boot-on;
+			};
+			otg_reg: otg_regulator {
+				/* add information */
+				regulator-compatible = "bq2429x-otg";
+				regulator-name = "otg";
+//				regulator-min-microvolt = <5000000>;
+//				regulator-max-microvolt = <5000000>;
+			};
+		};
+	};
+
+};
+
+/* register devices connected to Sensor-I2C */
+&i2c2 {
+	/* gyroscope sensor */
+	bmg160@69 {
+		compatible = "bosch,bmg160";
+		reg = <0x69>;
+	};
+	/* accelerometer sensor */
+	bmc150@10 {
+		compatible = "bosch,bmc150_accel";
+		reg = <0x10>;
+/*		pinctrl-names = "default";
+		pinctrl-0 = <&bmc150_pins>;
+		interrupt-parent = <&gpio6>;
+		interrupts = <9 (IRQ_TYPE_LEVEL_HIGH | IRQ_TYPE_EDGE_RISING)>;	/* gpio6_169 * /
+*/
+	};
+	/* compass sensor */
+	bmc150@12 {
+		compatible = "bosch,bmc150";
+		reg = <0x12>;
+	};
+	/* barometer sensor */
+	bmp180@77 {
+		compatible = "bosch,bmp180";
+		reg = <0x77>;
+	};
+	/* 9-axis sensor */
+	bno050@29 {
+		compatible = "bosch,bno050";
+		reg = <0x29>;
+	};
+};
+
+/* register devices connected to System-I2C */
+&i2c4 {
+	/* microphone detect */
+	ts3a22x@3b {
+		compatible = "ti,ts3a225e";
+		reg = <0x3b>;
+//		interrupt-parent = <&gpio99>;
+//		interrupts = <x IRQ_TYPE_LEVEL_LOW>;
+		ti,micbias = <0>;	/* 2.1V */
+	};
+
+	/* system/keyboard-led and other controls */
+	gpio99: tca6424@22 {
+		compatible = "ti,tca6424";
+		interrupt-parent = <&gpio6>;
+		interrupts = <0 IRQ_TYPE_LEVEL_LOW>;	/* gpio6_160 */
+		interrupt-controller;
+		#interrupt-cells = <2>;
+		vcc-supply = <&vdds_1v8_main>;
+		reg = <0x22>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		gpio-line-names =
+			"hdmi-ct-hpd", "hdmi.ls-oe", "p02", "p03", "vibra", "fault2", "p06", "p07",
+			"en-usb", "en-host1", "en-host2", "chg-int", "p14", "p15", "mic-int", "en-modem",
+			"shdn-hs-amp", "chg-status+red", "green", "blue", "en-esata", "fault1", "p26", "p27";
+		open-drain-pins = <2 3 5 6 7 12 13 17 18 19 21 22 23>;
+	};
+};
+
+&i2c5 { // should have been defined in omap5-uevm.dts! - but the bus is not connected on the EVM!
+
+	/* usb bridge */
+	usb3503@8 {
+		compatible = "smsc,usb3503a";
+		reg = <0x08>;
+/*
+	//	refclk	// comes from OMAP5 FREF_CLK1_OUT/GPIO1_W K11
+	//	refclk-frequency
+	//	connect-gpios
+		disabled-ports = <3>;
+		intn-gpios = <&gpio9 22 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&gpio3 16 GPIO_ACTIVE_HIGH>;	// might be in conflict with reset-gpios of the ususb2_phy
+		initial-mode = <1>;
+*/
+	};
+};
+
+/ {
+	pyra_leds {
+		compatible = "gpio-leds";
+		led@1 {
+			label = "pyra:red:left";
+			gpios = <&gpio99 5 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+
+		led@2 {
+			label = "pyra:green:left";
+			gpios = <&gpio99 6 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+
+		led@3 {
+			label = "pyra:blue:left";
+			gpios = <&gpio99 7 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+
+		led@4 {
+			label = "pyra:red:mid";
+			gpios = <&gpio99 17 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+
+		led@5 {
+			label = "pyra:green:mid";
+			gpios = <&gpio99 18 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+
+		led@6 {
+			label = "pyra:blue:mid";
+			gpios = <&gpio99 19 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "timer";
+			default-state = "off";
+		};
+
+		led@7 {
+			label = "pyra:red:right";
+			gpios = <&gpio99 21 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+
+		led@8 {
+			label = "pyra:green:right";
+			gpios = <&gpio99 22 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+
+		led@9 {
+			label = "pyra:blue:right";
+			gpios = <&gpio99 23 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+
+	};
+
+	keypad_leds {
+		compatible = "gpio-leds";
+		led@1 {
+			label = "keypad1";
+			gpios = <&gpio99 2 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+
+		led@2 {
+			label = "keypad2";
+			gpios = <&gpio99 3 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+
+		led@3 {
+			label = "keypad3";
+			gpios = <&gpio99 12 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+
+		led@4 {
+			label = "keypad4";
+			gpios = <&gpio99 13 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+	};
+};
+
+/ {
+	gpio-keys-1 {
+		compatible = "gpio-keys";
+
+		#address-cells = <2>;
+		#size-cells = <0>;
+
+		left_shoulder_top {
+			label = "Left-Shoulder-Top";
+			linux,code = <16>;	/* KEY_Q */
+			// CHECKME: polarity may change for next revision!
+			gpios = <&gpio6 24 GPIO_ACTIVE_LOW>;	/* gpio6_184 */
+			gpio-key,wakeup;
+		};
+
+		left_shoulder_bottom {
+			label = "Left-Shoulder-Bottom";
+			linux,code = <44>;	/* KEY_Z */
+			gpios = <&gpio6 23 GPIO_ACTIVE_LOW>;	/* gpio6_183 */
+			gpio-key,wakeup;
+		};
+
+		right_shoulder_top {
+			label = "Right-Shoulder-Top";
+			linux,code = <25>;	/* KEY_P */
+			gpios = <&gpio6 20 GPIO_ACTIVE_LOW>;	/* gpio6_180 */
+			gpio-key,wakeup;
+		};
+
+		right_shoulder_bottom {
+			label = "Right-Shoulder-Bottom";
+			linux,code = <50>;	/* KEY_M */
+			gpios = <&gpio6 19 GPIO_ACTIVE_LOW>;	/* gpio6_179 */
+			gpio-key,wakeup;
+		};
+
+		left_nub {
+			label = "Left-Nub";
+			linux,code = <38>;	/* KEY_L */
+			gpios = <&gpio6 22 GPIO_ACTIVE_LOW>;	/* gpio6_182 */
+			gpio-key,wakeup;
+		};
+
+		right_nub {
+			label = "Right-Nub";
+			linux,code = <19>;	/* KEY_R */
+			gpios = <&gpio6 21 GPIO_ACTIVE_LOW>;	/* gpio6_181 */
+			gpio-key,wakeup;
+		};
+
+	};
+
+	gpio-keys-2 {
+		compatible = "gpio-keys";
+
+		#address-cells = <2>;
+		#size-cells = <0>;
+
+		wwan_wakeup {
+			label = "3G WOE";
+			linux,code = <17>;	/* KEY_W */
+			gpios = <&gpio6 1 GPIO_ACTIVE_HIGH>;	/* gpio6_161 */
+			gpio-key,wakeup;
+			/* debounce-interval */
+		};
+
+		display_lid {
+			label = "Display Lid";
+			linux,input-type = <5>; /* EV_SW */
+			linux,code = <0>; /* SW_LID */
+			gpios = <&gpio3 17 GPIO_ACTIVE_LOW>;	/* gpio3_81 */
+			gpio-key,wakeup;
+		};
+
+	};
+
+};

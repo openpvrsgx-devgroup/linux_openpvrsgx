@@ -1,0 +1,20 @@
+#!/bin/bash
+# find gpiochip by name (label)
+# use $(findgpiochip "name")/base to get the base gpio number
+
+LIST=false
+if [ "$1" = "-a" ]
+then
+	LIST=true
+	shift
+fi
+
+for dev in /sys/class/gpio/gpiochip*
+do
+	$LIST && { cat $dev/label; continue; }
+	if [ "$(cat $dev/label 2>/dev/null)" = "$1" ]
+		then echo $dev
+		exit 0
+	fi
+done
+$LIST || exit 1

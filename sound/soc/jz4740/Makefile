@@ -5,3 +5,4 @@
 snd-soc-jz4740-i2s-y := jz4740-i2s.o
 
 obj-$(CONFIG_SND_JZ4740_SOC_I2S) += snd-soc-jz4740-i2s.o
+obj-$(CONFIG_SND_JZ4780_SOC_CI20)	+= ci20-audio.o

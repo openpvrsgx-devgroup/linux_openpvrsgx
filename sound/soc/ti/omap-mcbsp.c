@@ -1265,7 +1265,12 @@ static int omap_mcbsp_probe(struct snd_soc_dai *dai)
 				  &mcbsp->dma_data[SNDRV_PCM_STREAM_PLAYBACK],
 				  &mcbsp->dma_data[SNDRV_PCM_STREAM_CAPTURE]);
 
-	return 0;
+	dai->driver->playback.stream_name = devm_kasprintf(dai->dev, GFP_KERNEL, "%s %s",
+						dai->name, "Playback");
+	dai->driver->capture.stream_name = devm_kasprintf(dai->dev, GFP_KERNEL, "%s %s",
+						dai->name, "Capture");
+
+	return snd_soc_dapm_new_dai_widgets(snd_soc_component_get_dapm(dai->component), dai);
 }
 
 static int omap_mcbsp_remove(struct snd_soc_dai *dai)

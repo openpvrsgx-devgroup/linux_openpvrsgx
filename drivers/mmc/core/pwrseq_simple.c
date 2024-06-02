@@ -29,6 +29,7 @@ struct mmc_pwrseq_simple {
 	u32 power_off_delay_us;
 	struct clk *ext_clk;
 	struct gpio_descs *reset_gpios;
+	bool power_off_ignore;
 };
 
 #define to_pwrseq_simple(p) container_of(p, struct mmc_pwrseq_simple, pwrseq)
@@ -37,6 +38,8 @@ static void mmc_pwrseq_simple_set_gpios_value(struct mmc_pwrseq_simple *pwrseq,
 					      int value)
 {
 	struct gpio_descs *reset_gpios = pwrseq->reset_gpios;
+
+printk("%s: value=%d\n", __func__, value);
 
 	if (!IS_ERR(reset_gpios)) {
 		unsigned long *values;
@@ -84,7 +87,7 @@ static void mmc_pwrseq_simple_power_off(struct mmc_host *host)
 {
 	struct mmc_pwrseq_simple *pwrseq = to_pwrseq_simple(host->pwrseq);
 
-	mmc_pwrseq_simple_set_gpios_value(pwrseq, 1);
+	mmc_pwrseq_simple_set_gpios_value(pwrseq, pwrseq->power_off_ignore?0:1);
 
 	if (pwrseq->power_off_delay_us)
 		usleep_range(pwrseq->power_off_delay_us,
@@ -133,6 +136,8 @@ static int mmc_pwrseq_simple_probe(struct platform_device *pdev)
 				 &pwrseq->post_power_on_delay_ms);
 	device_property_read_u32(dev, "power-off-delay-us",
 				 &pwrseq->power_off_delay_us);
+	pwrseq->power_off_ignore =
+		device_property_read_bool(dev, "power-off-ignore");
 
 	pwrseq->pwrseq.dev = dev;
 	pwrseq->pwrseq.ops = &mmc_pwrseq_simple_ops;

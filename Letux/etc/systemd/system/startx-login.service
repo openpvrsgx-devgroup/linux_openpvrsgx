@@ -1,0 +1,13 @@
+# based on https://wiki.gentoo.org/wiki/X_without_Display_Manager#Method_2
+# this should not be needed if we have nodm installed (and we usually have)
+
+[Unit]
+Description=Start X in case we have no 'nodm' instaled
+After=systemd-user-sessions.service
+
+[Service]
+# ExecStart=/bin/su username -l -c /usr/bin/xinit -- VT08
+ExecStart=/usr/bin/startx -- vt8
+
+[Install]
+WantedBy=multi-user.target

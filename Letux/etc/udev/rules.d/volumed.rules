@@ -1,0 +1,2 @@
+ACTION=="change", SUBSYSTEM=="sound", KERNEL=="twl6040_sound", ATTR{type}=="USB", RUN+="/etc/udev/rules.d/volumed.sh"
+ACTION=="change", SUBSYSTEM=="iio", KERNEL=="twl6035_gpadc", ATTR{type}=="USB", RUN+="/etc/udev/rules.d/volumed.sh"

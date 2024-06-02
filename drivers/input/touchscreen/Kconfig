@@ -198,6 +198,13 @@ config TOUCHSCREEN_CHIPONE_ICN8505
 	  To compile this driver as a module, choose M here: the
 	  module will be called chipone_icn8505.
 
+config TOUCHSCREEN_CRTOUCH_MT
+	tristate "Freescale CRTouch multitouch driver"
+	depends on I2C
+	help
+	  Say Y here if you have a Freescale CRTouch-based
+	  touchscreen connected via I2C.
+
 config TOUCHSCREEN_CY8CTMA140
 	tristate "cy8ctma140 touchscreen"
 	depends on I2C
@@ -324,6 +331,16 @@ config TOUCHSCREEN_DA9052
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called da9052_tsi.
+
+config TOUCHSCREEN_DWAV_USB_MT
+	tristate "D-WAV Scientific USB MultiTouch"
+	depends on USB_ARCH_HAS_HCD
+	select USB
+	help
+	  Say Y here if you have a D-WAV Scientific USB(HID) based MultiTouch
+	  controller.
+
+	  module will be called dwav-usb-mt.
 
 config TOUCHSCREEN_DYNAPRO
 	tristate "Dynapro serial touchscreen"

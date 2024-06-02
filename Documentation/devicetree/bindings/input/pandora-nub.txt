@@ -1,0 +1,21 @@
+* Pandora Nub (vsense)
+
+Required SoC Specific Properties:
+- compatible: should be one of the following
+   - "pandora,pandora-nub":
+
+Optional Properties specific to linux:
+- vcc-supply: the vcc supply
+- reg: the i2c address (<0x66> or <0x67>)
+- gpios: the interrupt gpio and the (shared) reset gpio
+
+Example:
+	vsense-left@66 {
+		compatible = "pandora,pandora-nub";
+		vcc-supply = <&vaux4>;
+		reg = <0x66>;
+		gpios = <&gpio6 1 GPIO_ACTIVE_LOW>,	/* GPIO_161 */
+			<&gpio5 28 GPIO_ACTIVE_LOW>;	/* GPIO_156 */
+		interrupt-parent = <&gpio6>;
+		interrupts = <1 IRQ_TYPE_EDGE_RISING>;	/* GPIO_161 low-to-high edge */
+	};

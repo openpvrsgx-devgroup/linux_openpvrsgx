@@ -1,0 +1,7 @@
+Test Audio samples, WAVs, MP3, etc.
+
+Filenames should describe rate, channels, duration etc e.g.
+
+997HzSine48kStereo1s16bit.wav would be 1 second of 16bit stereo 997Hz Sine wave at 48kHz rate.
+
+This makes life easier for scripting.

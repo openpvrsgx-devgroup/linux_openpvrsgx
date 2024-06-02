@@ -149,6 +149,9 @@ int btrtl_get_uart_settings(struct hci_dev *hdev,
 			    u32 *device_baudrate, bool *flow_control);
 void btrtl_set_driver_name(struct hci_dev *hdev, const char *driver_name);
 
+void btrtl_apply_quirks(struct hci_dev *hdev,
+			struct btrtl_device_info *btrtl_dev);
+
 #else
 
 static inline struct btrtl_device_info *btrtl_initialize(struct hci_dev *hdev,
@@ -189,6 +192,11 @@ static inline int btrtl_get_uart_settings(struct hci_dev *hdev,
 					  bool *flow_control)
 {
 	return -ENOENT;
+
+static inline void btrtl_apply_quirks(struct hci_dev *hdev,
+			struct btrtl_device_info *btrtl_dev)
+{
+}
 }
 
 static inline void btrtl_set_driver_name(struct hci_dev *hdev, const char *driver_name)

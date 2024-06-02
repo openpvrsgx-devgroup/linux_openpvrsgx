@@ -1,0 +1,5 @@
+# This file is sourced by Xsession(5), not executed.
+
+# install pyra xmodmap if present
+
+[ -r /etc/X11/Xmodmap ] && xmodmap /etc/X11/Xmodmap

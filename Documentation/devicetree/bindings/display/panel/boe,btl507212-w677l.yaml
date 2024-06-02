@@ -1,0 +1,60 @@
+# SPDX-License-Identifier: GPL-2.0
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/display/panel/boe,btl507212-w677l.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: BOE BTL507212-W677L Panel
+
+allOf:
+  - $ref: panel-common.yaml#
+
+maintainers:
+  - H. Nikolaus Schaller <hns@goldelico.com>
+
+description: |+
+  This BOE BTL507212-W677L Panel is a 4 lane DSI panel.
+  Its controller is an Orise OTM1283A.
+  It is used by the Pyra Handheld computer.
+
+properties:
+  compatible:
+    const: boe,btl507212-w677l
+
+  label:
+    items:
+      - description: an optional label
+
+  backlight:
+    items:
+      $ref: /schemas/types.yaml#/definitions/phandle
+
+  gpios:
+    items:
+      - description: the panel reset gpio
+
+  port:
+    items:
+      - description: the port
+
+required:
+  - compatible
+  - port
+
+additionalProperties: false
+
+examples:
+  - |+
+    lcd: btl507212-w677l {
+      label = "lcd";
+      backlight = <&backlight>;
+      gpios = <&gpio6 16 0>;	/* goip6_176 = panel reset */
+
+      port {
+        lcd_in: endpoint {
+          remote-endpoint = <&dsi_out_ep>;
+        };
+      };
+    };
+
+...

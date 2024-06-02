@@ -1,0 +1,79 @@
+#!/bin/bash
+#
+# log system temperatures (omap3 / omap5) and system operation voltage
+#
+SCRIPTPATH="$(dirname "$0")"
+
+TWL4030_MADC=$($SCRIPTPATH/findiio "48070000.i2c:twl@48:madc")        # OMAP3
+TWL6030_GPADC=$($SCRIPTPATH/findiio "48070000.i2c:twl@48:adc")        # OMAP4
+TWL6037_GPADC=$($SCRIPTPATH/findiio "palmas-gpadc")   # OMAP5
+
+#echo $TWL4030_MADC
+#echo $TWL6030_GPADC
+#echo $TWL6037_GPADC
+
+# twl6037 channels
+# 0 battery type (source current 0, 5, 15, 20 uA)
+# 1 battery NTC
+# 2 audio accessory/GP
+# 3 temp with ext. diode
+# 4 GP
+# 5 GP
+# 6 VBAT_SENSE
+# 7 VCC_SENSE
+# 8 Backup Battery
+# 9 external charger (VCHG)
+# 10 VBUS
+# 11 DC-DC current probe (how does this work?)
+# 12 internal die temp
+# 13 internal die temp
+# 14 USB ID line voltage
+# 15 test network
+
+[ -r "$CPU" ] || CPU=$($SCRIPTPATH/findthermal cpu_thermal)/temp
+[ -r "$CPU" ] || CPU=$($SCRIPTPATH/findthermal cpu-thermal)/temp
+[ -r "$CPU" ] || CPU=$($SCRIPTPATH/findthermal soc-thermal)/temp
+[ -r "$CPU" ] || CPU=$($SCRIPTPATH/findthermal cpu)/temp
+[ -r "$CPU" ] || CPU=$($SCRIPTPATH/findhwmon am335x-bandgap)/temp1_input
+[ -r "$CPU" ] || CPU=/dev/null
+
+[ -r "$GPU" ] || GPU=$($SCRIPTPATH/findthermal gpu_thermal)/temp
+[ -r "$GPU" ] || GPU=$($SCRIPTPATH/findthermal gpu-thermal)/temp
+[ -r "$GPU" ] || GPU=/dev/null
+
+[ -r "$CORE" ] || CORE=$($SCRIPTPATH/findthermal core_thermal)/temp
+[ -r "$CORE" ] || CORE=$($SCRIPTPATH/findthermal core-thermal)/temp
+[ -r "$CORE" ] || CORE=/dev/null
+
+[ -r "$BATTERY" ] || BATTERY=$($SCRIPTPATH/findthermal bq27621)/temp
+[ -r "$BATTERY" ] || BATTERY=$($SCRIPTPATH/findthermal bq27421-0)/temp
+[ -r "$BATTERY" ] || BATTERY=$($SCRIPTPATH/findthermal bq27000-battery)/temp
+[ -r "$BATTERY" ] || BATTERY=$($SCRIPTPATH/findthermal bq24297)/temp
+[ -r "$BATTERY" ] || BATTERY=/dev/null
+
+VSYS=/dev/null
+[ -r "$TWL4030_MADC" ] && VSYS="$TWL4030_MADC/in_voltage12_input"
+[ -r "$TWL6030_GPADC" ] && VSYS="$TWL6030_GPADC/in_voltage7_input"
+[ -r "$TWL6037_GPADC" ] && VSYS="$TWL6037_GPADC/in_voltage7_input"
+#echo $VSYS
+
+function fmt { # $1 is file; $2 is units; $3 optional scale
+	VAL=$(cat "$1" 2>/dev/null)
+	if [ "$VAL" ]
+	then
+		# divide by $3 (floating point?)
+		echo $(expr "$VAL" / "$3")$2
+	fi
+}
+
+function temperatures {
+	echo	$(date) \
+		$(fmt $CPU "°" 1000) \
+		$(fmt $GPU "°" 1000) \
+		$(fmt $CORE "°" 1000) \
+		$(fmt $BATTERY "°" 1000) \
+		$(fmt $VSYS "mV" 1) \
+		$(fmt /sys/devices/system/cpu/cpufreq/policy0/scaling_cur_freq "MHz" 1000)
+}
+
+temperatures

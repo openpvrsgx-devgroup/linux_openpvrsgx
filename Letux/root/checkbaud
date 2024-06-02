@@ -1,0 +1,21 @@
+#!/bin/bash
+# usage: checkbaud device
+# find out baud rates supported by driver/device
+
+if [ ! "$1" ]
+then
+	echo "usage: $0 device"
+	exit 1
+fi
+
+BAUD=0
+while [ "$BAUD" -lt 5000000 ]
+do
+	stty -f "$1" $BAUD >/dev/null 2>&1 && echo "$BAUD"
+	if [ "$BAUD" -lt 300 ]
+	then
+		BAUD=$(expr "$BAUD" + 25)
+	else
+		BAUD=$(expr "$BAUD" + 100)
+	fi
+done

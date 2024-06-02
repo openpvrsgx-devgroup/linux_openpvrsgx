@@ -1,0 +1,19 @@
+#!/bin/bash
+# find thermal device by type
+
+LIST=false
+if [ "$1" = "-a" ]
+then
+	LIST=true
+	shift
+fi
+
+for dev in /sys/class/thermal/thermal_zone*
+do
+	$LIST && { cat $dev/type; continue; }
+	if [ "$(cat $dev/type 2>/dev/null)" = "$1" ]
+		then echo $dev
+		exit 0
+	fi
+done
+$LIST || exit 1

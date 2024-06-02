@@ -1,0 +1,47 @@
+# SPDX-License-Identifier: GPL-2.0
+%YAML 1.2
+---
+$id: "http://devicetree.org/schemas/power/supply/alpha400-mcu.yaml#"
+$schema: "http://devicetree.org/meta-schemas/core.yaml#"
+
+title: Skytone Alpha 400 LPC915 MCU driver
+
+maintainers:
+  - Daniel Gloeckner <daniel-gl@gmx.net>
+  - H. Nikolaus Schaller <hns@computer.org>
+
+description: |
+  Support LPC915 MCU found in Skytone Alpha 400 and derivatives
+
+allOf:
+  - $ref: power-supply.yaml#
+
+properties:
+  compatible:
+    enum:
+      - skytone,alpha400-mcu
+
+  reg:
+    maxItems: 1
+    description: integer, I2C address of the MCU.
+
+  power-supplies: true
+
+required:
+  - compatible
+  - reg
+
+additionalProperties: false
+
+examples:
+  - |
+    i2c {
+        #address-cells = <1>;
+        #size-cells = <0>;
+        power_controller@28 {
+            compatible = "skytone,alpha400-mcu";
+            reg = <0x28>;
+        };
+    };
+
+...

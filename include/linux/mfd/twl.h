@@ -759,6 +759,9 @@ int twl4030_sih_setup(struct device *dev, int module, int irq_base);
 #define TWL4030_REG_VUSB1V8	18
 #define TWL4030_REG_VUSB3V1	19
 
+/* digital output signal for enabling external regulators */
+#define TWL4030_REG_REGEN	21
+
 /* TWL6030 SMPS/LDO's */
 /* EXTERNAL dc-to-dc buck convertor controllable via SR */
 #define TWL6030_REG_VDD1	30

@@ -1,0 +1,102 @@
+#!/bin/bash
+#
+# /root/bl: turn on/off backlight power
+# -g: use gpio mode
+# 1: turn on
+# 0: turn off
+#
+# intensity can be controlled in non-gpio mode through
+#    /sys/class/backlight/backlight/brightness
+#
+
+BL=/sys/class/backlight/backlight/bl_power	# just turn completely on/off instead of writing backlight intensity
+ON=0
+OFF=1
+
+[ "$(which devmem2)" ] || apt-get install -y --force-yes devmem2
+
+if [ "$1" = -g ]
+then
+	USEGPIO=true
+	shift
+fi
+
+case "$(tr -d '\0' </proc/device-tree/model)" in
+	Pyra-Handheld* )
+		PADCONF=0x4a0028f6	# OMAP5
+		GPIOMODE=0x011e
+		PWMMODE=0x0118
+		GPIO=190
+		;;
+	*GTA04* )
+		PADCONF=0x480020b8	# OMAP3
+		GPIOMODE=0x011c
+		PWMMODE=0x011b
+		GPIO=57
+		;;
+	*'Alpha 400'* ) # PWM connected to PWM0/GP94 = GPIO bank 2 # 30 mode 1
+		if [ "$1" = 1 ]
+		then
+			devmem2 0x10050000 b 0x8d	# enable PWM
+			devmem2 0x10050004 h 0x3f	# period 0x3f
+			devmem2 0x10050008 h 0x30	# duty 0x30 of 0x3f
+# attempt to get the LCDC manually up
+			# pinmux from 2.6.24-kernel
+			devmem2 0x10010040 w 0x55555550	# pinmux PS2, MSC, LCD_D0-D7
+			devmem2 0x10010044 w 0x556a5555	# pinmux LCD
+			# cgu changes
+			devmem2 0x10000000 w 0x0d523220	# CGU_REG_CFCR LFR LCD clock divider
+			devmem2 0x10000060 h 0x000b	# CGU_REG_CFCR2 PXFR LPCLK divider
+			# lcdc setup
+			devmem2 0x13050000 w 0x00000100 #JZ_REG_LCD_CFG
+			devmem2 0x13050004 w 0x00000014 #JZ_REG_LCD_VSYNC
+			devmem2 0x13050008 w 0x00000050 #JZ_REG_LCD_HSYNC
+			devmem2 0x1305000c w 0x037001f4 #JZ_REG_LCD_VAT
+			devmem2 0x13050010 w 0x00500370 #JZ_REG_LCD_DAH
+			devmem2 0x13050014 w 0x001401f4 #JZ_REG_LCD_DAV
+			# stop and mask all interrupts
+			devmem2 0x13050034 w 0x00000000 #JZ_REG_LCD_STATE
+			devmem2 0x13050030 w 0x24003f8c #JZ_REG_LCD_CTRL
+			devmem2 0x13050034 w 0x00000000 #JZ_REG_LCD_STATE
+			#devmem2 0x13050030 w 0x2400080c #JZ_REG_LCD_CTRL
+# devmem2 0x13050034 w 0x00000030 #JZ_REG_LCD_STATE
+			# this should have been set up by the lcd driver to point into the framebuffer descriptor
+			#devmem2 0x13050040 w 0x07d52400 #JZ_REG_LCD_DA0
+			# the following registers are read-only
+			#devmem2 0x13050044 w 0x07500000 #JZ_REG_LCD_SA0
+			#devmem2 0x13050048 w 0xbeafbeaf #JZ_REG_LCD_FID0
+			# no sof/eof interrupt
+			#devmem2 0x1305004c w 0x00002030 #JZ_REG_LCD_CMD0
+			#devmem2 0x1305004c w 0xc0002030 #JZ_REG_LCD_CMD0
+		else
+			devmem2 0x10050000 b 0x0d	# disable PWM
+		fi
+		exit
+		;;
+	* )
+		USEGPIO=""	# ignore -g
+		GPIO=none	# there is no /sys/class/gpio/gpionone
+		;;
+esac
+
+if [ "$USEGPIO" ]
+then
+	devmem2 $PADCONF h $GPIOMODE >/dev/null	# switch to gpio mode
+	echo $GPIO > /sys/class/gpio/export 2>/dev/null
+	echo out > /sys/class/gpio/gpio$GPIO/direction
+	BL=/sys/class/gpio/gpio$GPIO/value
+	ON=1
+	OFF=0
+elif [ -r /sys/class/gpio/gpio$GPIO ]
+then
+	echo in > /sys/class/gpio/gpio$GPIO/direction
+	echo $GPIO > /sys/class/gpio/unexport 2>/dev/null
+	devmem2 $PADCONF h $PWMMODE >/dev/null	# switch to pwm mode
+fi
+
+if [ "$1" = 1 ]
+then
+	echo $ON >$BL
+else
+	echo $OFF >$BL
+fi

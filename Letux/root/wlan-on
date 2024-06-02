@@ -1,0 +1,48 @@
+#!/bin/bash
+#
+# set up wlan connection
+#
+
+# to avoid wlan0: deauthenticating from c0:25:06:e4:8e:cc by local choice (Reason: 3=DEAUTH_LEAVING)
+# see https://bbs.archlinux.org/viewtopic.php?id=233365
+systemctl disable --now NetworkManager.service wpa_supplicant.service
+
+read -t 5 WLAN OTHER < <(iwconfig 2>&1 | fgrep 'wlan')
+[ "$WLAN" ] || WLAN=wlan0
+
+while [ "$1" ]
+do
+case "$1" in
+	-d ) # set interface
+		shift
+		WLAN="$1"
+		shift
+		;;
+	-a ) # create ad hoc network
+		iwconfig "$WLAN" mode ad-hoc essid Letux enc off channel 6 &&
+		ifconfig "$WLAN" 10.1.1.1
+		exit
+		;;
+	-* )
+		echo "usage: $0 [-d dev] -a | [ssid]"
+		echo "  -d dev: set interface"
+		echo "  -a:     ad hoc mode"
+		echo "  ssid:   SSID to connect to"
+		echo "  :       start wpa_supplicant"
+		exit;
+		;;
+	* ) # simple client
+		SSID="$1"
+		shift
+		;;
+esac
+done
+
+if [ "$SSID" ]
+then
+	ifconfig "$WLAN" up &&
+	iwconfig "$WLAN" essid "$SSID" &&
+	dhclient "$WLAN"
+else
+	wpa_supplicant -B -i "$WLAN" -c /etc/wpa_supplicant/wpa_supplicant.conf
+fi

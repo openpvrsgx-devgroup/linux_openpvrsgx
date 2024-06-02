@@ -874,10 +874,16 @@ enum bq27xxx_dm_reg_id {
 #define bq2751x_dm_regs NULL
 #define bq2752x_dm_regs NULL
 
+/*
+ * current logic for multi-block DM update (where terminate-voltage has a diff
+ * subclass than design-*) does not update both blocks in a single pass on the
+ * 27500, and perhaps not others as well
+ */
+
 #if 0 /* not yet tested */
 static struct bq27xxx_dm_reg bq27500_dm_regs[] = {
 	[BQ27XXX_DM_DESIGN_CAPACITY]   = { 48, 10, 2,    0, 65535 },
-	[BQ27XXX_DM_DESIGN_ENERGY]     = { }, /* missing on chip */
+	[BQ27XXX_DM_DESIGN_ENERGY]     = {  0,  0, 0,    0, 65535 }, /* missing on chip */
 	[BQ27XXX_DM_TERMINATE_VOLTAGE] = { 80, 48, 2, 1000, 32767 },
 };
 #else
@@ -1181,6 +1187,8 @@ static int bq27xxx_battery_seal(struct bq27xxx_device_info *di)
 {
 	int ret;
 
+pr_info("%s\n", __func__);
+
 	ret = bq27xxx_write(di, BQ27XXX_REG_CTRL, BQ27XXX_SEALED, false);
 	if (ret < 0) {
 		dev_err(di->dev, "bus error on seal: %d\n", ret);
@@ -1193,6 +1201,8 @@ static int bq27xxx_battery_seal(struct bq27xxx_device_info *di)
 static int bq27xxx_battery_unseal(struct bq27xxx_device_info *di)
 {
 	int ret;
+
+pr_info("%s\n", __func__);
 
 	if (di->unseal_key == 0) {
 		dev_err(di->dev, "unseal failed due to missing key\n");
@@ -1275,8 +1285,10 @@ static void bq27xxx_battery_update_dm_block(struct bq27xxx_device_info *di,
 	const char *str = bq27xxx_dm_reg_name[reg_id];
 	__be16 *prev = bq27xxx_dm_reg_ptr(buf, reg);
 
+pr_info("%s\n", __func__);
+
 	if (prev == NULL) {
-		dev_warn(di->dev, "buffer does not match %s dm spec\n", str);
+		dev_warn(di->dev, "%s dm spec incompatible with data on flash/NVM\n", str);
 		return;
 	}
 
@@ -1293,9 +1305,13 @@ static void bq27xxx_battery_update_dm_block(struct bq27xxx_device_info *di,
 		return;
 	}
 
+printk("bq27xxx: di->opts=%x\n", di->opts);
+printk("bq27xxx: bq27xxx_dt_to_nvm=%d\n", bq27xxx_dt_to_nvm);
 #ifdef CONFIG_BATTERY_BQ27XXX_DT_UPDATES_NVM
+printk("bq27xxx: CONFIG_BATTERY_BQ27XXX_DT_UPDATES_NVM=y\n");
 	if (!(di->opts & BQ27XXX_O_RAM) && !bq27xxx_dt_to_nvm) {
 #else
+printk("bq27xxx: CONFIG_BATTERY_BQ27XXX_DT_UPDATES_NVM=n\n");
 	if (!(di->opts & BQ27XXX_O_RAM)) {
 #endif
 		/* devicetree and NVM differ; defer to NVM */
@@ -1309,7 +1325,7 @@ static void bq27xxx_battery_update_dm_block(struct bq27xxx_device_info *di,
 		return;
 	}
 
-	dev_info(di->dev, "update %s to %u\n", str, val);
+	dev_info(di->dev, "update %s from %u to %u\n", str, be16_to_cpup(prev), val);
 
 	*prev = cpu_to_be16(val);
 	buf->dirty = true;
@@ -1320,6 +1336,8 @@ static int bq27xxx_battery_cfgupdate_priv(struct bq27xxx_device_info *di, bool a
 	const int limit = 100;
 	u16 cmd = active ? BQ27XXX_SET_CFGUPDATE : BQ27XXX_SOFT_RESET;
 	int ret, try = limit;
+
+pr_info("%s\n", __func__);
 
 	ret = bq27xxx_write(di, BQ27XXX_REG_CTRL, cmd, false);
 	if (ret < 0)
@@ -1432,6 +1450,8 @@ static void bq27xxx_battery_set_config(struct bq27xxx_device_info *di,
 	struct bq27xxx_dm_buf bt = BQ27XXX_DM_BUF(di, BQ27XXX_DM_TERMINATE_VOLTAGE);
 	bool updated;
 
+pr_info("%s\n", __func__);
+
 	if (bq27xxx_battery_unseal(di) < 0)
 		return;
 
@@ -1474,10 +1494,15 @@ static void bq27xxx_battery_settings(struct bq27xxx_device_info *di)
 {
 	struct power_supply_battery_info *info;
 	unsigned int min, max;
+int ret = 0;
 
-	if (power_supply_get_battery_info(di->bat, &info) < 0)
+pr_info("%s\n", __func__);
+
+	if (!di->dev->of_node || (ret=power_supply_get_battery_info(di->bat, &info)) < 0)
+{
+pr_info("%s: power_supply_get_battery_info failed ret=%d\n", __func__, ret);
 		return;
-
+}
 	if (!di->dm_regs) {
 		dev_warn(di->dev, "data memory update not supported for chip\n");
 		return;
@@ -2134,6 +2159,8 @@ int bq27xxx_battery_setup(struct bq27xxx_device_info *di)
 	};
 	int ret;
 
+pr_info("%s\n", __func__);
+
 	INIT_DELAYED_WORK(&di->work, bq27xxx_battery_poll);
 	mutex_init(&di->lock);
 	ret = devm_add_action_or_reset(di->dev, bq27xxx_battery_mutex_destroy,
@@ -2144,6 +2171,9 @@ int bq27xxx_battery_setup(struct bq27xxx_device_info *di)
 	di->regs       = bq27xxx_chip_data[di->chip].regs;
 	di->unseal_key = bq27xxx_chip_data[di->chip].unseal_key;
 	di->dm_regs    = bq27xxx_chip_data[di->chip].dm_regs;
+
+pr_info("%s: dm_regs=%p\n", __func__, di->dm_regs);
+
 	di->opts       = bq27xxx_chip_data[di->chip].opts;
 
 	psy_desc = devm_kzalloc(di->dev, sizeof(*psy_desc), GFP_KERNEL);

@@ -1,0 +1,19 @@
+#!/bin/bash
+# find input event by name
+
+LIST=false
+if [ "$1" = "-a" ]
+then
+	LIST=true
+	shift
+fi
+
+for dev in /sys/class/input/input*
+do
+	$LIST && { cat $dev/name; continue; }
+	if [ "$(cat $dev/name 2>/dev/null)" = "$1" ]
+		then echo /dev/input/$(basename $dev/event*)
+		exit 0
+	fi
+done
+$LIST || exit 1

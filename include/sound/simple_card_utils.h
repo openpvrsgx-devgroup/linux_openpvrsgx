@@ -26,6 +26,9 @@ struct simple_util_dai {
 	const char *name;
 	unsigned int sysclk;
 	int clk_direction;
+	int clk_div_id;
+	int clk_div;
+	bool clk_div_set;
 	int slots;
 	int slot_width;
 	unsigned int tx_slot_mask;

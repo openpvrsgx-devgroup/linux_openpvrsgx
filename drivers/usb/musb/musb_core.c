@@ -856,9 +856,15 @@ static void musb_handle_intr_suspend(struct musb *musb, u8 devctl)
 		if (musb->is_active) {
 			musb_set_state(musb, OTG_STATE_B_WAIT_ACON);
 			musb_dbg(musb, "HNP: Setting timer for b_ase0_brst");
+		/* If trying to switch to b_host without a real
+		 * hnp reset (y-cables and such) the timer might
+		 * be disturbing
+		 */
+#if 0
 			mod_timer(&musb->otg_timer, jiffies
 				+ msecs_to_jiffies(
 						OTG_TIME_B_ASE0_BRST));
+#endif
 		}
 		break;
 	case OTG_STATE_A_WAIT_BCON:
@@ -1870,14 +1876,28 @@ mode_store(struct device *dev, struct device_attribute *attr,
 {
 	struct musb	*musb = dev_to_musb(dev);
 	unsigned long	flags;
-	int		status;
+	int		status = 0;
 
 	spin_lock_irqsave(&musb->lock, flags);
-	if (sysfs_streq(buf, "host"))
-		status = musb_platform_set_mode(musb, MUSB_HOST);
-	else if (sysfs_streq(buf, "peripheral"))
-		status = musb_platform_set_mode(musb, MUSB_PERIPHERAL);
-	else if (sysfs_streq(buf, "otg"))
+	if (sysfs_streq(buf, "host")) {
+		if (musb->ops->set_mode)
+			status = musb_platform_set_mode(musb, MUSB_HOST);
+		else {
+			u8 devctl = musb_readb(musb->mregs, MUSB_DEVCTL);
+			musb_writeb(musb->mregs, MUSB_DEVCTL, devctl | MUSB_DEVCTL_HR);
+			if (musb->g.is_otg)
+				musb->g.b_hnp_enable = 1;
+		}
+	} else if (sysfs_streq(buf, "peripheral")) {
+		if (musb->ops->set_mode)
+			status = musb_platform_set_mode(musb, MUSB_PERIPHERAL);
+		else {
+			u8 devctl = musb_readb(musb->mregs, MUSB_DEVCTL);
+			musb_writeb(musb->mregs, MUSB_DEVCTL, devctl & ~MUSB_DEVCTL_HR);
+			if (musb->g.is_otg)
+				musb->g.b_hnp_enable = 1;
+		}
+	} else if (sysfs_streq(buf, "otg"))
 		status = musb_platform_set_mode(musb, MUSB_OTG);
 	else
 		status = -EINVAL;

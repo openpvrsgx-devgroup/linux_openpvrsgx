@@ -1,0 +1,84 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+/*
+ * Copyright (C) 2017 OpenPandora - http://www.pyra-handheld.com/
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+#include "pyra-mainboard-common.dtsi"
+
+/ {
+	model = "Pyra-Handheld-V5.3";
+
+	pyra_leds { /* alternate LED driver (parallel to is31fl31) */
+		compatible = "gpio-leds";
+		led@1 {
+			label = "pyra-old:red:left";
+			gpios = <&gpio99 5 (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+
+		led@4 {
+			label = "pyra-old:red:mid";
+			gpios = <&gpio99 (1+16) (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+
+		led@7 {
+			label = "pyra-old:red:right";
+			gpios = <&gpio99 (5+16) (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+	};
+
+	/* this is a power switch that connects otg power from bq2429x to the usb socket */
+	otg_path: otg_path {
+		compatible = "regulator-fixed";
+		regulator-name = "otg_path";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		/* does not handle "gpios" property! */
+		gpio = <&gpio99 (3+2*8) (GPIO_ACTIVE_HIGH)>;	/* P23 of pcal6524 */
+		enable-active-high;
+		vin-supply = <&otg_reg>;	/* request otg booster of bq24297 */
+	};
+
+	pyra-lid-wakeup {
+		wwan_wakeup {
+			status = "okay";	/* we have now connected RING0 of PLS8 */
+		};
+	};
+};
+
+&gpio99 {
+	/* replace ti,tca6424 in older revisions */
+	compatible = "nxp,pcal6524";
+	interrupt-parent = <&gpio6>;
+	interrupts = <1 IRQ_TYPE_EDGE_FALLING>;	/* gpio6_161 */
+};
+
+&i2c2 {
+	bq24297@6b {
+		/* interrupts now working with pcal6524 */
+		interrupt-parent = <&gpio99>;
+		interrupts = <(1*8+3) IRQ_TYPE_EDGE_FALLING>;	/* P13 */
+	};
+};
+
+&i2c5 {
+	ts3a227@3b {
+		/* interrupts now working with pcal6524 */
+                interrupt-parent = <&gpio99>;
+		interrupts = <14 IRQ_TYPE_EDGE_RISING>;
+	};
+};
+
+&usb3 {
+	/* use otg_path regulator */
+	vbus-supply = <&otg_path>;
+};

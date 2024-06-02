@@ -1,0 +1,261 @@
+#!/bin/bash
+SCRIPTPATH="$(dirname "$0")"
+TWL4030_MADC=$($SCRIPTPATH/findiio "48070000.i2c:twl@48:madc")	# OMAP3
+TWL6030_GPADC=$($SCRIPTPATH/findiio "48070000.i2c:twl@48:adc")	# OMAP4
+TWL6037_GPADC=$($SCRIPTPATH/findiio "palmas-gpadc")	# OMAP5
+RN5T618_ADC=$($SCRIPTPATH/findiio "rn5t618-adc")	# Kobolino
+INA231=$($SCRIPTPATH/findhwmon ina231)	# Pyra modem monitor
+
+function iio_scale
+{
+	[ "$(which bc)" ] || apt-get install bc
+	echo "$(<$1_raw) * $(<$1_scale)" / 1 | bc
+}
+
+
+function fuel-level { # $1 is mV; $2 is mA charging current; $3 is resistance, return is % [0..100]
+
+#    u = 0.001 * (u + mA * resistance)
+#    u = 0.0387-(1.4523*(3.7835-v))
+#    if u < 0:
+        # Formula above gives 19.66% for 3.756, and refuses to
+        # work below that. Assume 3.3V is empty battery, and provide
+        # linear dependency below that.
+#        u = (v - 3.3) * ((3.756 - 3.3) * 19.66)
+#            return u
+#    u = (0.1966+math.sqrt(u))*100
+#  if u > 100 return 100
+#   return u
+
+	expr \( "$VOLT" - 3300 \) \* 100 / 950
+}
+
+if [ -d "$TWL4030_MADC" ]
+then # OMAP3 with TWL4030 / TPS65950
+
+# see http://www.mjmwired.net/kernel/Documentation/hwmon/twl4030-madc-hwmon for a list of channels
+
+# twl4030 channels
+# 0	Battery type (BTYPE)
+# 1	BCI: Battery temperature (BTEMP)
+# 2	GP analog input
+# 3	GP analog input
+# 4	GP analog input
+# 5	GP analog input
+# 6	GP analog input
+# 7	GP analog input
+# 8	BCI: VBUS voltage (VBUS)
+# 9	Backup Battery voltage (VBKP)
+# 10	BCI: Battery charger current (ICHG)
+# 11	BCI: Battery charger voltage (VCHG)
+# 12	BCI: Main battery voltage (VBAT)
+# 13	Reserved
+# 14	Reserved
+# 15	VRUSB Supply/Speaker left/Speaker right polarization level
+
+echo "TWL4030 System Status"
+echo "====================="
+echo VBUS: $(cat "$TWL4030_MADC/in_voltage8_input")mV
+echo VCHG: $(cat "$TWL4030_MADC/in_voltage11_input")mV
+VOLT=$(cat "$TWL4030_MADC/in_voltage12_input")
+AMP=$(cat "$TWL4030_MADC/in_current10_input")
+# fixme: subtract 400mA from USB current
+echo VBATT: ${VOLT}mV ca. $(fuel-level "$VOLT" "AMP" 0.1)%
+echo IBATT: ${AMP}mA
+echo VBKUP: $(cat "$TWL4030_MADC/in_voltage9_input")mV
+echo temp: $(cat "$TWL4030_MADC/in_temp1_input")°C
+echo type: $(cat "$TWL4030_MADC/in_voltage0_input")mV
+echo micsense: $(cat "$TWL4030_MADC/in_voltage7_input")mV
+echo
+
+fi
+
+if [ -d "$TWL6030_GPADC" ]
+then # OMAP4 with twl6030
+
+# twl6030 channels (twl6030 only - twl6032 has different channels!)
+# 0 battery type
+# 1 battery temp
+# 2 audio/GP
+# 3 GP
+# 4 GP
+# 5 GP
+# 6 GP
+# 7 VBAT_SENSE
+# 8 Backup Battery
+# 9 external charger (VCHG)
+# 10 VBUS
+# 11 VBUS charging current
+# 12 internal die temp
+# 13 internal die temp
+# 14 USB ID line voltage
+# 15 test network
+
+echo "TWL6030 System Status"
+echo "====================="
+echo VSYS: $(cat $TWL6030_GPADC/in_voltage7_input)mV
+echo VBUS: $(cat $TWL6030_GPADC/in_voltage10_input)mV
+echo VCHG: $(cat $TWL6030_GPADC/in_voltage9_input)mV
+VOLT=$(cat $TWL6030_GPADC/in_voltage7_input)
+# NOTE: in_voltage11_input is missing on Pandaboard
+AMP=$(cat $TWL6030_GPADC/in_voltage11_input)
+echo VBATT: ${VOLT}mV ca. $(fuel-level "$VOLT" "$AMP" 0.1)%
+echo VBKUP: $(cat $TWL6030_GPADC/in_voltage8_input)mV
+# echo current: $(cat $TWL6030_GPADC/in_voltage11_input)mA
+echo temp: $(cat $TWL6030_GPADC/in_temp1_raw)mV
+echo type: $(cat $TWL6030_GPADC/in_voltage0_input)mV
+echo audio: $(cat $TWL6030_GPADC/in_voltage2_input)mV
+echo usb id: $(cat $TWL6030_GPADC/in_voltage14_input)mV
+echo
+
+fi
+
+if [ -d "$TWL6037_GPADC" ]
+then # OMAP5 with Palmas (TWL6037)
+
+# twl6037 channels
+# 0 battery type (source current 0, 5, 15, 20 uA)
+# 1 battery NTC
+# 2 audio accessory/GP
+# 3 temp with ext. diode
+# 4 GP
+# 5 GP
+# 6 VBAT_SENSE
+# 7 VCC_SENSE
+# 8 Backup Battery
+# 9 external charger (VCHG)
+# 10 VBUS
+# 11 DC-DC current probe (how does this work?)
+# 12 internal die temp
+# 13 internal die temp
+# 14 USB ID line voltage
+# 15 test network
+
+echo "Palmas System STATUS"
+echo "===================="
+echo VSYS: $(cat $TWL6037_GPADC/in_voltage7_input)mV
+echo VBUS: $(cat $TWL6037_GPADC/in_voltage10_input)mV
+echo VCHG: $(cat $TWL6037_GPADC/in_voltage9_input)mV
+VOLT=$(cat $TWL6037_GPADC/in_voltage6_input)
+AMP=$(cat $TWL6037_GPADC/in_voltage11_input)
+echo VBATT: ${VOLT}mV ca. $(fuel-level "$VOLT" "AMP" 0.1)%
+echo IBATT: ${AMP}mA
+echo VBKUP: $(cat $TWL6037_GPADC/in_voltage8_input)mV
+echo temp: $(cat $TWL6037_GPADC/in_temp1_raw)mV
+echo type: $(cat $TWL6037_GPADC/in_voltage0_input)mV
+echo audio: $(cat $TWL6037_GPADC/in_voltage2_input)mV
+echo usb id: $(cat $TWL6037_GPADC/in_voltage14_input)mV
+if [ "$INA231" ]
+then
+	# echo "shunt resistor: $(cat $INA231/shunt_resistor) uOhm"
+	# echo "across shunt voltage: $(cat $INA231/in0_input) mV"
+	echo "VMODEM: $(cat $INA231/in1_input) mV"
+	echo "IMODEM: $(cat $INA231/curr1_input) mA"
+	echo "PMODEM: $(cat $INA231/power1_input) uW"
+fi
+echo
+
+fi
+
+if [ -d "$RN5T618_ADC" ]
+then # Kobolino with RN5T618
+
+# RN5T618 channels
+# 0	LIMMON
+# 1	VBAT
+# 2	VADP
+# 3	VUSB
+# 4	VSYS
+# 5	VTHM
+# 6	AIN1
+# 7	AIN0
+
+echo "RN5T618 System STATUS"
+echo "====================="
+echo VSYS: $(iio_scale $RN5T618_ADC/in_voltage4 2>/dev/null)mV
+echo VBUS: $(iio_scale $RN5T618_ADC/in_voltage3 2>/dev/null)mV
+echo VCHG: $(iio_scale $RN5T618_ADC/in_voltage2 2>/dev/null)mV
+VOLT=$(iio_scale $RN5T618_ADC/in_voltage1 2>/dev/null)
+AMP=$(iio_scale $RN5T618_ADC/in_current0_input 2>/dev/null)
+echo VBATT: ${VOLT}mV ca. $(fuel-level "$VOLT" "AMP" 0.1)%
+echo temp: $(cat $RN5T618_ADC/in_voltage5_raw)mV
+
+fi
+
+for SUPPLY in /sys/class/power_supply/*
+do
+
+case "$(cat $SUPPLY/type 2>/dev/null)" in
+
+USB )
+echo "USB Charger $SUPPLY"
+echo "==================="
+echo type: $(cat $SUPPLY/type)
+echo online: $(cat $SUPPLY/online 2>/dev/null)
+echo status: $(cat $SUPPLY/status 2>/dev/null)
+echo mode: $(cat $SUPPLY/mode 2>/dev/null)
+echo volt: $(cat $SUPPLY/voltage_now 2>/dev/null)uV
+echo current: $(cat $SUPPLY/current_now 2>/dev/null)uA
+echo max_current: $(cat $SUPPLY/input_current_limit 2>/dev/null)uA
+TEMP=$(cat $SUPPLY/temp 2>/dev/null)
+[ "$TEMP" ] && echo temperature: $(LC_ALL=C LANGUAGE=C perl -e "print ${TEMP}0 / 100")°C
+echo ID: $(cat /dev/usb_id 2>/dev/null)
+echo
+
+# enable higher charging current limit for GTA04 and/or Pyra
+case "$SUPPLY" in
+	*twl4030* ) echo 800000 >$SUPPLY/input_current_limit;;
+	*bq2429* ) echo 2000000 >$SUPPLY/input_current_limit;;
+esac
+;;
+
+Mains )
+echo "AC Charger $SUPPLY"
+echo "=================="
+echo type: $(cat $SUPPLY/type 2>/dev/null)
+echo online: $(cat $SUPPLY/online 2>/dev/null)
+echo status: $(cat $SUPPLY/status 2>/dev/null)
+echo mode: $(cat $SUPPLY/mode 2>/dev/null)
+echo volt: $(cat $SUPPLY/voltage_now 2>/dev/null)uV
+echo current: $(cat $SUPPLY/current_now 2>/dev/null)uA
+echo max_current: $(cat $SUPPLY/input_current_limit 2>/dev/null)uA
+echo
+
+[ -w "$SUPPLY/input_current_limit" ] && echo 800000 >$SUPPLY/input_current_limit
+
+;;
+
+Battery )
+echo "Battery $SUPPLY"
+echo "=================="
+echo type: $(cat $SUPPLY/type 2>/dev/null)
+echo present: $(cat $SUPPLY/present 2>/dev/null)
+echo technology: $(cat $SUPPLY/technology 2>/dev/null)
+echo capacity: $(cat $SUPPLY/capacity 2>/dev/null)%
+echo status: $(cat $SUPPLY/status 2>/dev/null)
+echo level: $(cat $SUPPLY/capacity_level 2>/dev/null)
+echo volt: $(cat $SUPPLY/voltage_now 2>/dev/null)uV
+echo current: $(cat $SUPPLY/current_now 2>/dev/null)uA
+echo temp: $(LC_ALL=C LANGUAGE=C perl -e "print $(cat $SUPPLY/temp 2>/dev/null)0 / 100")°C
+echo charge: $(cat $SUPPLY/charge_now 2>/dev/null)uAh
+echo full: $(cat $SUPPLY/charge_full 2>/dev/null)uAh
+echo design: $(cat $SUPPLY/charge_full_design 2>/dev/null)uAh
+echo energy: "$(cat $SUPPLY/energy 2>/dev/null)J?"
+echo power: "$(cat $SUPPLY/power 2>/dev/null)W?"
+echo cycles: $(cat $SUPPLY/cycle_count 2>/dev/null)
+echo health: $(cat $SUPPLY/health 2>/dev/null)
+echo discharge: $(cat $SUPPLY/time_to_empty_avg 2>/dev/null)s to empty average
+echo remaining: $(cat $SUPPLY/time_to_empty_now 2>/dev/null)s to empty
+echo charging: $(cat $SUPPLY/time_to_full_now 2>/dev/null)s to full
+echo
+;;
+
+* )
+echo "Unknown $SUPPLY"
+echo "================="
+echo type: $(cat $SUPPLY/type 2>/dev/null)
+echo
+;;
+
+esac
+done

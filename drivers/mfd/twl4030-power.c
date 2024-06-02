@@ -68,6 +68,13 @@ static u8 twl4030_start_script_address = 0x2b;
 #define R_CFG_P2_TRANSITION	PHY_TO_OFF_PM_MASTER(0x37)
 #define R_CFG_P3_TRANSITION	PHY_TO_OFF_PM_MASTER(0x38)
 
+#define	STARTON_PWON	BIT(0)	/* power-on button */
+#define	STARTON_CHG	BIT(1)	/* charger inserted */
+#define	STARTON_USB	BIT(2)	/* USB plug-in */
+#define	STARTON_RTC	BIT(3)	/* RTC alarm */
+#define	STARTON_VBAT	BIT(4)	/* Battery plugged in */
+#define	STARTON_VBUS	BIT(5)	/* voltage detection */
+
 #define END_OF_SCRIPT		0x3f
 
 #define R_SEQ_ADD_A2S		PHY_TO_OFF_PM_MASTER(0x55)
@@ -301,7 +308,7 @@ twl4030_config_wakeup12_sequence(const struct twl4030_power_data *pdata,
 				      R_CFG_P1_TRANSITION);
 		if (err)
 			goto out;
-		data &= ~STARTON_CHG;
+		data &= ~(STARTON_CHG|STARTON_VBUS|STARTON_VBAT|STARTON_USB);
 		err = twl_i2c_write_u8(TWL_MODULE_PM_MASTER, data,
 				       R_CFG_P1_TRANSITION);
 		if (err)

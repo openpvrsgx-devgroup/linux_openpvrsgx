@@ -485,6 +485,24 @@ static int omap_modeset_init(struct drm_device *dev)
 		priv->channels[channel] = pipe;
 	}
 
+	dev->mode_config.min_width = 8;
+	dev->mode_config.min_height = 2;
+
+	/*
+	 * Note: these values are used for multiple independent things:
+	 * connector mode filtering, buffer sizes, crtc sizes...
+	 * Use big enough values here to cover all use cases, and do more
+	 * specific checking in the respective code paths.
+	 */
+	dev->mode_config.max_width = 8192;
+	dev->mode_config.max_height = 8192;
+
+	/* We want the zpos to be normalized */
+	dev->mode_config.normalize_zpos = true;
+
+	dev->mode_config.funcs = &omap_mode_config_funcs;
+	dev->mode_config.helper_private = &omap_mode_config_helper_funcs;
+
 	/* Create the connectors and CRTCs. */
 	for (i = 0; i < priv->num_pipes; i++) {
 		struct omap_drm_pipeline *pipe = &priv->pipes[i];
@@ -511,24 +529,6 @@ static int omap_modeset_init(struct drm_device *dev)
 
 	DBG("registered %u planes, %u crtcs/encoders/connectors\n",
 	    priv->num_planes, priv->num_pipes);
-
-	dev->mode_config.min_width = 8;
-	dev->mode_config.min_height = 2;
-
-	/*
-	 * Note: these values are used for multiple independent things:
-	 * connector mode filtering, buffer sizes, crtc sizes...
-	 * Use big enough values here to cover all use cases, and do more
-	 * specific checking in the respective code paths.
-	 */
-	dev->mode_config.max_width = 8192;
-	dev->mode_config.max_height = 8192;
-
-	/* We want the zpos to be normalized */
-	dev->mode_config.normalize_zpos = true;
-
-	dev->mode_config.funcs = &omap_mode_config_funcs;
-	dev->mode_config.helper_private = &omap_mode_config_helper_funcs;
 
 	drm_mode_config_reset(dev);
 

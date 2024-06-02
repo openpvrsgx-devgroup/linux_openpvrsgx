@@ -1,0 +1,5 @@
+linux (4.6.0) stable; urgency=low
+
+  * Initial release
+
+ -- Josua Mayer <josua@linux-k8dt>  Thu, 09 Jun 2016 15:22:22 +0200

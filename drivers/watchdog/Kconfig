@@ -316,6 +316,14 @@ config WM8350_WATCHDOG
 	  Support for the watchdog in the WM8350 AudioPlus PMIC.  When
 	  the watchdog triggers the system will be reset.
 
+config PALMAS_WATCHDOG
+	tristate "Palmas Watchdog"
+	depends on MFD_PALMAS
+	select WATCHDOG_CORE
+	help
+	  Support for the watchdog in the Palmas family of PMICs. When the
+	  watchdog times out system will be reset.
+
 config XILINX_WATCHDOG
 	tristate "Xilinx Watchdog timer"
 	depends on HAS_IOMEM

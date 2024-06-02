@@ -17,36 +17,44 @@
 #include <linux/regulator/consumer.h>
 
 /* OTGPHY register offsets */
-#define REG_USBPCR_OFFSET			0x00
-#define REG_USBRDT_OFFSET			0x04
-#define REG_USBVBFIL_OFFSET			0x08
-#define REG_USBPCR1_OFFSET			0x0c
+#define REG_USBPCR_OFFSET		0x00
+#define REG_USBRDT_OFFSET		0x04
+#define REG_USBVBFIL_OFFSET		0x08
+#define REG_USBPCR1_OFFSET		0x0c
+
+/* X1600 PHY register offsets */
+#define REG_PHY_PREEMPH1		0x30
+#define REG_PHY_PREEMPH2		0x40
+#define REG_PHY_VBUS			0x108
+#define REG_PHY_SESSIONVALID 		0x10c
+#define REG_PHY_SESSIONEND 		0x110
+#define REG_PHY_EYETUNE 		0x124
 
 /* bits within the USBPCR register */
-#define USBPCR_USB_MODE				BIT(31)
-#define USBPCR_AVLD_REG				BIT(30)
-#define USBPCR_COMMONONN			BIT(25)
-#define USBPCR_VBUSVLDEXT			BIT(24)
+#define USBPCR_USB_MODE			BIT(31)
+#define USBPCR_AVLD_REG			BIT(30)
+#define USBPCR_COMMONONN		BIT(25)
+#define USBPCR_VBUSVLDEXT		BIT(24)
 #define USBPCR_VBUSVLDEXTSEL		BIT(23)
-#define USBPCR_POR					BIT(22)
-#define USBPCR_SIDDQ				BIT(21)
-#define USBPCR_OTG_DISABLE			BIT(20)
+#define USBPCR_POR			BIT(22)
+#define USBPCR_SIDDQ			BIT(21)
+#define USBPCR_OTG_DISABLE		BIT(20)
 #define USBPCR_TXPREEMPHTUNE		BIT(6)
 
 #define USBPCR_IDPULLUP_MASK		GENMASK(29, 28)
 #define USBPCR_IDPULLUP_ALWAYS		0x2
 #define USBPCR_IDPULLUP_SUSPEND		0x1
-#define USBPCR_IDPULLUP_OTG			0x0
+#define USBPCR_IDPULLUP_OTG		0x0
 
 #define USBPCR_COMPDISTUNE_MASK		GENMASK(19, 17)
 #define USBPCR_COMPDISTUNE_DFT		0x4
 
-#define USBPCR_OTGTUNE_MASK			GENMASK(16, 14)
-#define USBPCR_OTGTUNE_DFT			0x4
+#define USBPCR_OTGTUNE_MASK		GENMASK(16, 14)
+#define USBPCR_OTGTUNE_DFT		0x4
 
 #define USBPCR_SQRXTUNE_MASK		GENMASK(13, 11)
 #define USBPCR_SQRXTUNE_DCR_20PCT	0x7
-#define USBPCR_SQRXTUNE_DFT			0x3
+#define USBPCR_SQRXTUNE_DFT		0x3
 
 #define USBPCR_TXFSLSTUNE_MASK		GENMASK(10, 7)
 #define USBPCR_TXFSLSTUNE_DCR_50PPT	0xf
@@ -68,20 +76,40 @@
 #define USBPCR_TXVREFTUNE_DFT		0x5
 
 /* bits within the USBRDTR register */
-#define USBRDT_UTMI_RST				BIT(27)
-#define USBRDT_HB_MASK				BIT(26)
-#define USBRDT_VBFIL_LD_EN			BIT(25)
-#define USBRDT_IDDIG_EN				BIT(24)
-#define USBRDT_IDDIG_REG			BIT(23)
-#define USBRDT_VBFIL_EN				BIT(2)
+#define USBRDT_UTMI_RST			BIT(27)
+#define USBRDT_HB_MASK			BIT(26)
+#define USBRDT_VBFIL_LD_EN		BIT(25)
+#define USBRDT_IDDIG_EN			BIT(24)
+#define USBRDT_IDDIG_REG		BIT(23)
+#define USBRDT_VBFIL_EN			BIT(2)
 
 /* bits within the USBPCR1 register */
-#define USBPCR1_BVLD_REG			BIT(31)
-#define USBPCR1_DPPD				BIT(29)
-#define USBPCR1_DMPD				BIT(28)
-#define USBPCR1_USB_SEL				BIT(28)
-#define USBPCR1_PORT_RST			BIT(21)
+#define USBPCR1_BVLD_REG		BIT(31)
+#define USBPCR1_DPPD			BIT(29)
+#define USBPCR1_DMPD			BIT(28)
+#define USBPCR1_USB_SEL			BIT(28)
+#define USBPCR1_PORT_RST		BIT(21)
 #define USBPCR1_WORD_IF_16BIT		BIT(19)
+
+/* bits within the X1600 PHY registers */
+#define PHY_PREEMPH1_ENABLE_ALWAYS	GENMASK(2, 0)
+
+#define PHY_PREEMPH2_STRONGEST		GENMASK(5, 3)
+
+#define PHY_VBUS_VBUSDETPOWERDOWN	BIT(3)
+
+#define PHY_SESSIONVALID_BSEREFTUNE	GENMASK(5, 3)
+#define PHY_SESSIONVALID_BSEREFTUNE_5	BIT(5) | BIT(3)
+#define PHY_SESSIONVALID_ASEREFTUNE	GENMASK(2, 0)
+#define PHY_SESSIONVALID_ASEREFTUNE_5	BIT(2) | BIT(0)
+
+#define PHY_SESSIONEND_VBUSREFTUNE	GENMASK(5, 3)
+#define PHY_SESSIONEND_VBUSREFTUNE_5	BIT(5) | BIT(3)
+#define PHY_SESSIONEND_SEREFTUNE	GENMASK(2, 0)
+#define PHY_SESSIONEND_SEREFTUNE_5	BIT(2) | BIT(0)
+
+#define PHY_EYETUNE_HSEYETUNE		GENMASK(4, 2)
+#define PHY_EYETUNE_HSEYETUNE_1		BIT(2)
 
 struct ingenic_soc_info {
 	void (*usb_phy_init)(struct phy *phy);
@@ -92,6 +120,7 @@ struct ingenic_usb_phy {
 
 	struct phy *phy;
 	void __iomem *base;
+	void __iomem *extra;
 	struct clk *clk;
 	struct regulator *vcc_supply;
 };
@@ -260,6 +289,48 @@ static void x1000_usb_phy_init(struct phy *phy)
 	writel(reg, priv->base + REG_USBPCR_OFFSET);
 }
 
+static void x1600_usb_phy_init(struct phy *phy)
+{
+	struct ingenic_usb_phy *priv = phy_get_drvdata(phy);
+	u32 reg;
+
+	writel(USBPCR1_PORT_RST, priv->base + REG_USBPCR1_OFFSET);
+
+	writel(USBPCR_USB_MODE | USBPCR_POR, priv->base + REG_USBPCR_OFFSET);
+	udelay(500);
+	writel(USBPCR_USB_MODE, priv->base + REG_USBPCR_OFFSET);
+	writel(USBPCR1_DMPD | USBPCR1_DPPD, priv->base + REG_USBPCR1_OFFSET);
+	udelay(500);
+
+	/* Adjustments made in USBPCR in other devices. */
+
+	reg = readl(priv->extra + REG_PHY_PREEMPH1) | PHY_PREEMPH1_ENABLE_ALWAYS;
+	writel(reg, priv->extra + REG_PHY_PREEMPH1);
+
+	reg = readl(priv->extra + REG_PHY_PREEMPH2) | PHY_PREEMPH2_STRONGEST;
+	writel(reg, priv->extra + REG_PHY_PREEMPH2);
+
+	reg = readl(priv->extra + REG_PHY_SESSIONVALID);
+	reg &= (PHY_SESSIONVALID_BSEREFTUNE | PHY_SESSIONVALID_ASEREFTUNE);
+	reg |= (PHY_SESSIONVALID_BSEREFTUNE_5 | PHY_SESSIONVALID_ASEREFTUNE_5);
+	writel(reg, priv->extra + REG_PHY_SESSIONVALID);
+
+	reg = readl(priv->extra + REG_PHY_SESSIONEND);
+	reg &= (PHY_SESSIONEND_VBUSREFTUNE | PHY_SESSIONEND_SEREFTUNE);
+	reg |= (PHY_SESSIONEND_VBUSREFTUNE_5 | PHY_SESSIONEND_SEREFTUNE_5);
+	writel(reg, priv->extra + REG_PHY_SESSIONEND);
+
+#ifdef CONFIG_USB_DWC2_EXT_VBUS_DETECT
+	reg = readl(priv->extra + REG_PHY_VBUS) | PHY_VBUS_VBUSDETPOWERDOWN;
+	writel(reg, priv->extra + REG_PHY_VBUS);
+#endif
+
+	reg = readl(priv->extra + REG_PHY_EYETUNE);
+	reg &= PHY_EYETUNE_HSEYETUNE;
+	reg |= PHY_EYETUNE_HSEYETUNE_1;
+	writel(reg, priv->extra + REG_PHY_EYETUNE);
+}
+
 static void x1830_usb_phy_init(struct phy *phy)
 {
 	struct ingenic_usb_phy *priv = phy_get_drvdata(phy);
@@ -305,6 +376,10 @@ static const struct ingenic_soc_info x1000_soc_info = {
 	.usb_phy_init = x1000_usb_phy_init,
 };
 
+static const struct ingenic_soc_info x1600_soc_info = {
+	.usb_phy_init = x1600_usb_phy_init,
+};
+
 static const struct ingenic_soc_info x1830_soc_info = {
 	.usb_phy_init = x1830_usb_phy_init,
 };
@@ -335,6 +410,9 @@ static int ingenic_usb_phy_probe(struct platform_device *pdev)
 		dev_err(dev, "Failed to map registers\n");
 		return PTR_ERR(priv->base);
 	}
+
+	priv->extra = devm_platform_ioremap_resource(pdev, 1);
+	/* may be missing */
 
 	priv->clk = devm_clk_get(dev, NULL);
 	if (IS_ERR(priv->clk)) {
@@ -368,6 +446,7 @@ static const struct of_device_id ingenic_usb_phy_of_matches[] = {
 	{ .compatible = "ingenic,jz4775-phy", .data = &jz4775_soc_info },
 	{ .compatible = "ingenic,jz4780-phy", .data = &jz4780_soc_info },
 	{ .compatible = "ingenic,x1000-phy", .data = &x1000_soc_info },
+	{ .compatible = "ingenic,x1600-phy", .data = &x1600_soc_info },
 	{ .compatible = "ingenic,x1830-phy", .data = &x1830_soc_info },
 	{ .compatible = "ingenic,x2000-phy", .data = &x2000_soc_info },
 	{ /* sentinel */ }

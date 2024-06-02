@@ -1,0 +1,317 @@
+#!/bin/bash
+#
+# initialize BOE panel directly connected to OMAP5
+# using the panel-mipi-debug driver
+#
+# controller: OTM1283A
+#
+# -n:	don't try to program panel
+# -s:	experiments for address shift register and enable command2
+# -t:	test if we can write single bytes through MIPI (yes we can - if command2 and address shift is already enabled)
+
+SCRIPTPATH="$(dirname "$0")"
+if ! [ "$(tr -d '\0' </proc/device-tree/ocp/dss@58000000/encoder@58004000/lcd/compatible)" = "omapdss,mipi,debug" ]
+then
+	echo this script needs the mipi-debug driver!
+	echo use panelselect to choose the '-n' driver
+	exit 1
+fi
+
+$SCRIPTPATH/bl 1
+
+if [ ! -L dcs ]
+then
+	rm -rf dcs
+	ln -s /sys/devices/platform/44000000.ocp/58000000.dss/58004000.encoder/58004000.encoder:lcd/dcs dcs
+fi
+
+# make sure the panel is active before trying to send commands
+echo nostream >dcs || exit 1	# if it was on before
+echo stop >dcs	# stop if it was already running
+echo nopower >dcs	# enable is unused
+echo reset >dcs	# reset panel
+# reset panel
+echo reset >dcs	# reset panel
+sleep .1
+echo noreset >dcs	# take panel out of reset before starting the clocks
+sleep .2
+
+fbset -g 720 1280 720 1280 32
+
+echo start >dcs	# start MIPI interface
+sleep .2
+
+# show some DCS status
+echo status >dcs || exit 1
+# for i in 05 0a 0b 0c 0d 0e 0f 13 20 52 54 5f 68 a1rrrr da db dc; do echo $i r >dcs; done
+
+# program panel here
+
+if [ "$1" != "-n" ]
+then
+
+# enable command2 and address shift
+if [ "$1" = "-s" ]
+then
+echo g0000 >dcs || exit 1 # write address shift register
+echo gff12 >dcs # write FF00h
+echo g0001 >dcs # write address shift register
+echo gff83 >dcs # write FF01h
+echo g0002 >dcs # write address shift register
+echo gff01 >dcs # write FF02h
+shift
+else
+echo g0000 >dcs || exit 1 # write address shift register
+echo gff128301 >dcs # write FF00h
+fi
+
+# use address shift to specify lower 8 address bits
+echo g0080 >dcs # write address shift register
+# enable orise command 2
+echo gff1283 >dcs # write FF80h
+
+if [ "$1" = "-t" ]
+then	# special test if we can write single bytes through MIPI
+# try to read MIPISET1 for debugging of interface
+echo g0080 >dcs
+echo gb0rrrrr >dcs # read 5 bytes from B080h
+
+echo g00b3 >dcs
+echo gc0 rr >dcs
+cat dcs	# expected: 00 01 00 30 04
+
+echo g00b3 >dcs
+echo gc0aa >dcs	# try to write first byte
+
+echo g00b3 >dcs
+echo gc0 rr >dcs
+cat dcs		# should read aa??
+
+echo g00b4 >dcs
+echo gc0bb >dcs	# try to write second byte
+
+echo g00b3 >dcs
+echo gc0 rr >dcs
+cat dcs		# should read aabb
+
+echo g00b3 >dcs		# Interval Scan Frame: 0 framecolumn inversion
+echo gc00050 >dcs
+
+echo g00b3 >dcs
+echo gc0 rr >dcs
+cat dcs		# should read 0050
+
+shift
+fi
+
+## now really program the panel according to manufacturer's command list
+
+# -------------------- panel setting --------------------
+echo g0080 >dcs             # TCON Setting
+echo gc00064000f1100640f11 >dcs
+
+echo g0090 >dcs             # Panel Timing Setting
+echo gc0005c00010004 >dcs
+
+echo g0087 >dcs
+echo gc418 >dcs
+
+echo g00b3 >dcs             # Interval Scan Frame: 0 framecolumn inversion
+echo gc00050 >dcs
+
+echo g0081 >dcs             # frame rate:60Hz
+echo gc166 >dcs
+
+echo g0081 >dcs
+echo gc48202 >dcs
+
+echo g0090 >dcs
+echo gc449 >dcs
+
+echo g00c6 >dcs
+echo gb003 >dcs
+
+echo g0090 >dcs             # Mode-3
+echo gf502110211 >dcs
+
+echo g0090 >dcs             # 2xVPNL1.5*=002*=503*=a0
+echo gc550 >dcs
+
+echo g0094 >dcs             # Frequency
+echo gc566 >dcs
+
+echo g00b2 >dcs             # VGLO1 setting
+echo gf50000 >dcs
+
+echo g00b4 >dcs             # VGLO1_S setting
+echo gf50000 >dcs
+
+echo g00b6 >dcs             # VGLO2 setting
+echo gf50000 >dcs
+
+echo g00b8 >dcs             # VGLO2_S setting
+echo gf50000 >dcs
+
+echo g0094 >dcs             # VCL ON
+echo gf502 >dcs
+
+echo g00BA >dcs             # VSP ON
+echo gf503 >dcs
+
+echo g00b2 >dcs             # VGHO Option
+echo gc540 >dcs
+
+echo g00b4 >dcs             # VGLO Option
+echo gc5C0 >dcs
+
+# -------------------- power setting --------------------
+echo g00a0 >dcs             # dcdc setting
+echo gc40510060205151005100702051510 >dcs
+
+echo g00b0 >dcs             # clamp voltage setting
+echo gc40000 >dcs
+
+echo g0091 >dcs             # VGH=13VVGL=-12Vpump ratio:VGH=6xVGL=-5x
+echo gc51950 >dcs
+
+echo g0000 >dcs             # GVDD=4.87VNGVDD=-4.87V
+echo gd8bcbc >dcs
+
+echo g0000 >dcs             # VCOMDC=-1.1
+echo gd95a >dcs  # 5d  6f
+
+echo g0000 >dcs
+echo gE101070b0d060d0b0a040710080f110a01 >dcs
+
+echo g0000 >dcs
+echo gE201070b0d060d0b0a040710080f110a01 >dcs
+
+echo g00b0 >dcs             # VDD_18V=1.7VLVDSVDD=1.55V
+echo gc504B8 >dcs
+
+echo g00bb >dcs             # LVD voltage level setting
+echo gc580 >dcs
+
+# 	echo g00c3 >dcs             # Sample / Hold All on
+# 	echo gf581 >dcs
+
+
+
+# -------------------- panel timing state control --------------------
+echo g0080 >dcs             # panel timing state control
+echo gcb0000000000000000000000 >dcs
+
+echo g0090 >dcs             # panel timing state control
+echo gcb000000000000000000000000000000 >dcs
+
+echo g00a0 >dcs             # panel timing state control
+echo gcb000000000000000000000000000000 >dcs
+
+echo g00b0 >dcs             # panel timing state control
+echo gcb000000000000000000000000000000 >dcs
+
+echo g00c0 >dcs             # panel timing state control
+echo gcb050505050505000000000000000000 >dcs
+
+echo g00d0 >dcs             # panel timing state control
+echo gcb000000000005050505050505050000 >dcs
+
+echo g00e0 >dcs             # panel timing state control
+echo gcb0000000000000000000000000505 >dcs
+
+echo g00f0 >dcs             # panel timing state control
+echo gcbffffffffffffffffffffff >dcs
+
+# -------------------- panel pad mapping control --------------------
+echo g0080 >dcs             # panel pad mapping control
+echo gcc0a0c0e100204000000000000000000 >dcs
+
+echo g0090 >dcs             # panel pad mapping control
+echo gcc00000000002e2d090b0d0f01030000 >dcs
+
+echo g00a0 >dcs             # panel pad mapping control
+echo gcc0000000000000000000000002e2d >dcs
+
+echo g00b0 >dcs             # panel pad mapping control
+echo gcc0F0D0B090301000000000000000000 >dcs
+
+echo g00c0 >dcs             # panel pad mapping control
+echo gcc00000000002d2e100E0C0A04020000 >dcs
+
+echo g00d0 >dcs             # panel pad mapping control
+echo gcc0000000000000000000000002d2e >dcs
+
+# -------------------- panel timing setting --------------------
+echo g0080 >dcs             # panel VST setting
+echo gce8D03008C03008B03008A0300 >dcs
+
+echo g0090 >dcs             # panel VEND setting
+echo gce0000000000000000000000000000 >dcs
+
+echo g00a0 >dcs             # panel CLKA1/2 setting
+echo gce380B04FC000000380A04FD000000 >dcs
+
+echo g00b0 >dcs             # panel CLKA3/4 setting
+echo gce380904FE000000380804FF000000 >dcs
+
+echo g00c0 >dcs             # panel CLKb1/2 setting
+echo gce3807050000000038060501000000 >dcs
+
+echo g00d0 >dcs             # panel CLKb3/4 setting
+echo gce3805050200000038040503000000 >dcs
+
+echo g0080 >dcs             # panel CLKc1/2 setting
+echo gcf0000000000000000000000000000 >dcs
+
+echo g0090 >dcs             # panel CLKc3/4 setting
+echo gcf0000000000000000000000000000 >dcs
+
+echo g00a0 >dcs             # panel CLKd1/2 setting
+echo gcf0000000000000000000000000000 >dcs
+
+echo g00b0 >dcs             # panel CLKd3/4 setting
+echo gcf0000000000000000000000000000 >dcs
+
+echo g00c0 >dcs             # panel ECLK setting
+echo gcf0101202000000102000008 >dcs
+
+echo g00b5 >dcs             # TCON_GOA_OUT Setting
+echo gc533f1ff33f1ff >dcs  # normal output with VGH/VGL
+
+echo g00a0 >dcs
+echo gc102 >dcs
+
+echo g00b1 >dcs
+echo gc604 >dcs
+
+echo g0080 >dcs
+echo gb0rrrrr >dcs # read 5 bytes from B080h
+# expected: 00 01 00 30 04
+
+echo g0000 >dcs             # Orise mode disable
+# note: we probably can't send that through the SSD2858
+echo gffffffff >dcs
+
+# should now be locked again
+echo g0080 >dcs
+echo gb0rrrrr >dcs # read 5 bytes from B080h
+# expected: 00 00 00 00 00
+
+fi
+
+# DCS sleep out
+echo 11 >dcs
+sleep 0.120
+
+# enable stream and turn display on
+echo stream >dcs
+sleep 0.020
+echo 29 >dcs
+
+exit
+
+# randomly fill framebuffer
+for i in 1 2 3 4 5
+do
+cat /dev/urandom > /dev/fb0 2>/dev/null
+done

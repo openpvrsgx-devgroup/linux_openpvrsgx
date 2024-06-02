@@ -14,6 +14,10 @@
 #include <dt-bindings/input/input.h>
 
 / {
+	aliases {
+		mmc0 = &usdhc2;
+		mmc1 = &usdhc3;
+	};
 
 	chosen {
 		stdout-path = &uart1;
@@ -62,6 +66,17 @@
 		enable-active-high;
 	};
 
+	thermal-zones {
+		epd-thermal {
+			polling-delay = <10000>;
+			polling-delay-passive = <10000>;
+			thermal-sensors = <&tps6518x>;
+
+			trips {
+			};
+		};
+	};
+
 	wifi_pwrseq: wifi_pwrseq {
 		compatible = "mmc-pwrseq-simple";
 		post-power-on-delay-ms = <20>;
@@ -69,6 +84,38 @@
 	};
 };
 
+&epdc {
+	safe-ticks-turnoff-ep3v3=<800>;
+	V3P3-supply = <&V3P3_reg>;      
+	VCOM-supply = <&VCOM_reg>;      
+	DISPLAY-supply = <&DISPLAY_reg>; 
+	epd-thermal-zone = "epd-thermal";
+
+	vscan-holdoff = <4>;
+	sdoed-width = <10>;
+	sdoed-delay = <20>;
+	sdoez-width = <10>;
+	sdoez-delay = <20>;
+	gdclk-hp-offs = <562>;
+	gdsp-offs = <662>;
+	gdoe-offs = <0>;
+	gdclk-offs = <225>;
+	num-ce = <3>;
+
+	status = "okay";
+
+	timing {
+		clock-frequency = <80000000>;
+		hactive = <1448>;
+		hback-porch = <16>;
+		hfront-porch = <102>;
+		hsync-len = <28>;
+		vactive = <1072>;
+		vback-porch = <4>;
+		vfront-porch = <4>;
+		vsync-len = <2>;
+	};
+};
 
 &i2c1 {
 	clock-frequency = <100000>;
@@ -115,7 +162,53 @@
 		vdd-supply = <&ldo5_reg>;
 	};
 
-	/* TODO: TPS65185 PMIC for E Ink at 0x68 */
+	tps6518x: epdc-pmic@68 {
+		compatible = "ti,tps6518x";
+		reg = <0x68>;
+		/*
+		 * power sequencing for TPS65180/65181
+		 */
+		pwr_seq0 = <0xe1>; /* [Vddh-seq=3 | Vpos-seq=2 | Vee-seq=0 | Vneg-seq=1] */
+		pwr_seq1 = <0x30>; /* [Vneg-dly1=3 |Vee-dly0=0]  mSec */
+		pwr_seq2 = <0x33>; /* [Vddh-dly3=3 | Vpos-dly2=3] mSec */
+
+                /*
+                 * power sequencing for TPS65185/65186
+                 */
+                upseq0 = <0xe1>;
+                upseq1 = <0x00>;
+                dwnseq0 = <0x1e>;
+                dwnseq1 = <0xe0>;
+
+		pwrgood-gpios = <&gpio2 13 0>;
+		vcom-ctrl-gpios = <&gpio2 3 GPIO_ACTIVE_HIGH>;
+		wakeup-gpios = <&gpio2 7 0>;
+		powerup-gpios = <&gpio2 8 GPIO_ACTIVE_HIGH>;
+		intr-gpios = <&gpio2 9 0>;
+
+		/* gpio_pmic_v3p3 = <&gpio2 14 GPIO_ACTIVE_HIGH>; */
+		pwrall-gpios = <&gpio2 14 GPIO_ACTIVE_HIGH>;
+
+		#thermal-sensor-cells = <0>;
+
+		regulators {
+			DISPLAY_reg: DISPLAY {
+				regulator-name = "DISPLAY";
+			};
+
+			VCOM_reg: VCOM {
+				regulator-name = "VCOM";
+				regulator-max-microvolt = <2750000>;
+				regulator-min-microvolt = <300000>;
+			};
+
+			V3P3_reg: V3P3 {
+				regulator-name = "V3P3";
+			};
+
+		};
+	};
+
 
 };
 

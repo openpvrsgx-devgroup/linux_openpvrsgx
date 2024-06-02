@@ -1,0 +1,69 @@
+#!/bin/bash
+### WARNING ###
+#
+# this variant is only for programming a panel with OTM1283A and not for experimentation!
+# it needs special hardware for the OTP programming voltage
+#
+
+SCRIPTPATH="$(dirname "$0")"
+
+if ! [ "$(tr -d '\0' </proc/device-tree/ocp/dss@58000000/encoder@58004000/lcd/compatible)" = "omapdss,mipi,debug" ]
+then
+	echo this script needs the mipi-debug driver!
+	echo use $SCRIPTPATH/panelselect and choose the 'n' driver
+	exit 1
+fi
+
+$SCRIPTPATH/bl 1
+
+if [ ! -L dcs ]
+then
+	rm -rf dcs
+	ln -s /sys/devices/platform/44000000.ocp/58000000.dss/58004000.encoder/58004000.encoder:lcd/dcs dcs
+fi
+
+# make sure to turn off programming power!
+echo nopower >dcs
+sleep .2
+echo nopower >dcs
+sleep .2
+
+# now set up the panel as we want to have it programmed
+$SCRIPTPATH/boe-w677l
+
+read -p "Panel ok (y/n)? " yn
+if [ "$yn" != "y" ]
+then exit
+fi
+
+# prepare for programming
+echo nostream >dcs
+
+echo 28 >dcs
+echo 10 >dcs
+sleep 0.080
+
+# enable command2 and address shift
+echo gff128301 >dcs # write FF00h
+# use address shift to specify lower 8 address bits
+echo g0080 >dcs # write address shift register
+# enable orise command 2
+echo gff1283 >dcs # write FF80h
+
+# try to read MIPISET1 for debugging of interface
+echo g0080 >dcs
+echo gb0rrrrr >dcs # read 5 bytes from B080h
+# expected: 00 01 00 30 04
+
+# do the programming
+echo power >dcs # >enable 7.5V
+echo g0000 >dcs             # NVMIN
+echo geb01 >dcs             # NVMIN
+sleep 0.8	# programming impulse
+echo g0000 >dcs             # NVMIN
+echo geb00 >dcs             # NVMIN
+echo nopower >dcs # turn off 7.5V
+sleep 0.2
+
+# now the panel should have been programmed and come up without special programming sequence
+$SCRIPTPATH/mipi-test

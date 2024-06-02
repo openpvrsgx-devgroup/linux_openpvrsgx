@@ -1,0 +1,116 @@
+/*
+ * Copyright (C) 2014 H. Nikolaus Schaller <hns@goldelico.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+/ {
+	model = "Goldelico GTA04b3/Letux 7004";
+
+	/* add additional regulators etc. */
+
+	/* overwrite panel definitions */
+
+	/delete-node/ spi;
+
+	lcd: lcd {
+		compatible =	"sharp,lq070y3dg3b",
+				"panel-dpi";
+		label = "lcd";
+		enable-gpios = <&gpio1 12 0>;
+
+		backlight = <&backlight>;
+
+		port {
+			lcd_in: endpoint {
+				remote-endpoint = <&dpi_out>;
+			};
+		};
+	};
+};
+
+&omap3_pmx_core2 {
+	/delete-node/ spi_gpio_pinmux;
+};
+
+&bat {
+	battery-name = "Letux-7004-battery";
+	energy-full-design-microwatt-hours = <14430000>;
+	charge-full-design-microamp-hours = <3900000>;
+};
+
+/* FIXME: handle optional USB Host/Ethernet port */
+
+&i2c2 {
+	/* we have a different set of LEDs */
+	tca_gpios: tca6507@45 {
+		compatible = "ti,tca6507";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <0x45>;
+
+		gta04_led0: led@0 {
+			label = "gta04:red:aux";
+			reg = <0x0>;
+		};
+
+		gta04_led1: led@1 {
+			label = "gta04:green:aux";
+			reg = <0x1>;
+		};
+
+		gta04_led2: led@2 {
+			label = "gta04:blue:aux";
+			reg = <0x2>;
+		};
+
+		gta04_led3: led@3 {
+			label = "gta04:red:power";
+			reg = <0x3>;
+			linux,default-trigger = "default-on";
+		};
+
+		gta04_led4: led@4 {
+			label = "gta04:green:power";
+			reg = <0x4>;
+		};
+
+		gta04_led5: led@5 {
+			label = "gta04:blue:power";
+			reg = <0x5>;
+		};
+
+		wifi_reset: led@6 { /* reference as <&tca_gpios 0 0> since it is currently the only GPIO */
+			reg = <0x6>;
+			compatible = "gpio";
+		};
+
+	};
+
+	/* touchscreen */
+	tsc2007@48 {
+		compatible = "ti,tsc2007";
+		reg = <0x48>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&penirq_pins>;
+		interrupt-parent = <&gpio6>;
+		interrupts = <0 IRQ_TYPE_EDGE_FALLING>;
+		gpios = <&gpio6 0 GPIO_ACTIVE_LOW>;	/* gpio160 */
+		ti,x-plate-ohms = <450>;
+		touchscreen-size-x = <480>;
+		touchscreen-size-y = <800>;
+		touchscreen-max-pressure = <1000>;
+		touchscreen-fuzz-x = <2>;
+		touchscreen-fuzz-y = <2>;
+		touchscreen-fuzz-pressure = <10>;
+		touchscreen-swapped-x-y;
+		ti,min-x = <200>;
+		ti,max-x = <4000>;
+		ti,min-y = <200>;
+		ti,max-y = <4000>;
+		ti,max-rt = <1000>;
+	};
+
+};

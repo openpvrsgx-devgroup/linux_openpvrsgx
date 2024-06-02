@@ -1,0 +1,28 @@
+#!/bin/bash
+#
+# start camera demo
+#
+
+SCRIPTPATH="$(dirname "$0")"
+if [ ! "$DISPLAY" ]
+then
+	. $SCRIPTPATH/x	# set DISPLAY
+fi
+
+. $SCRIPTPATH/camera-setup	# load setup script
+
+PATH=$PATH:/usr/bin/arm-linux-gnueabihf
+
+MODE=$1; [ "$MODE" ] || MODE=sxga
+
+setup "$MODE"
+
+echo "### starting mplayer in $MODE mode ###"
+
+[ "$(which mplayer)" ] || yes | apt-get install mplayer
+
+[ -d $HOME/.mplayer ] || mkdir -p $HOME/.mplayer
+[ -r $HOME/.mplayer/input.conf ] || ( echo MOUSE_BTN0 quit ) >$HOME/.mplayer/input.conf
+
+echo mplayer tv:// -vf rotate=2 -tv driver=v4l2:device=$DEVICE:outfmt=$FORMAT:width=$WIDTH:height=$HEIGHT:fps=$FPS -vo x11
+mplayer tv:// -vf rotate=2 -tv driver=v4l2:device=$DEVICE:outfmt=$FORMAT:width=$WIDTH:height=$HEIGHT:fps=$FPS -vo x11

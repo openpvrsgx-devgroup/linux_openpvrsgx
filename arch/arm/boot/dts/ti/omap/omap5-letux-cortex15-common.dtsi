@@ -1,0 +1,479 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+/*
+ * Copyright (C) 2016-19 Golden Delicous Computers - http://www.goldelico.com/
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+/dts-v1/;
+
+#include "omap5-board-common.dtsi"
+
+/ {
+	model = "Letux Cortex 15 OMAP5 module";
+	compatible = "", "goldelico,lc15", "ti,omap5-uevm", "ti,omap5";
+
+	aliases {
+		display0 = &lcd;
+		display1 = &hdmi0;
+	};
+
+	memory@80000000 {
+		device_type = "memory";
+		/* some boards have 4 GB but that is overwritten by U-Boot */
+		reg = <0 0x80000000 0 0x7f000000>; /* 2032 MB */
+	};
+
+	chosen {
+		stdout-path = &uart3;
+	};
+
+	leds {
+		pinctrl-names = "default";
+		pinctrl-0 = <&lc15_wkup_pins>;
+
+		led@1 {
+			label = "lc15:red:usr1";
+		};
+
+		led@2 {
+			label = "lc15:red:usr2";
+			gpios = <&gpio1 4 GPIO_ACTIVE_HIGH>; /* sysboot4 = gpio1_wk4: second LED */
+			linux,default-trigger = "mmc0";
+			default-state = "off";
+		};
+	};
+
+	user-buttons {
+		compatible = "gpio-keys";
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&lc15_button_pins>;
+
+		#address-cells = <7>;
+		#size-cells = <0>;
+
+		BTN1 {
+			label = "BTN1";
+			linux,code = <169>;
+			gpios = <&gpio3 19 GPIO_ACTIVE_LOW>;	/* gpio3_83 is User Button */
+			gpio-key,wakeup;
+			autorepeat;
+			debounce_interval = <50>;
+		};
+
+		BOOTSEL {
+			label = "BOOTSEL";
+			linux,code = <0x161>;
+			gpios = <&gpio1 7 GPIO_ACTIVE_LOW>;	/* gpio1_wk7 is Boot-Select Button */
+			gpio-key,wakeup;
+			autorepeat;
+			debounce_interval = <50>;
+		};
+	};
+};
+
+&cpu0 {
+	operating-points = <
+		/* kHz    uV */
+		250000 750000
+		500000 850000
+		750000 950000
+		1000000 1050000
+		1250000 1100000
+		1500000 1250000
+#if 0	/* potentially overclocking */
+		1700000 1250000
+#endif
+	>;
+};
+
+/* LCD panel - MIPI */
+
+&dsi1 {
+	status = "ok";
+
+	vdd-supply = <&ldo4_reg>;
+
+	port {
+		dsi1_out_ep: endpoint {
+			remote-endpoint = <&lcd_in>;
+			lanes = <
+				1       /* lane0x = clk - */
+				0       /* lane0y = clk + */
+				3       /* lane1x = data1 - */
+				2       /* lane1y = data1 + */
+				5       /* lane2x = data2 - */
+				4       /* lane2y = data2 + */
+				7       /* lane3x = data3 - */
+				6       /* lane3y = data3 + */
+				9       /* lane4x = data4 - */
+				8       /* lane4y = data4 + */
+			>;
+		};
+	};
+
+	lcd: lcd@0 {
+		/* default to be overwritten by specific panel in derived board file */
+
+		label = "lcd";
+
+		reg = <0>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&mipi_display_pins>;
+
+		port {
+			lcd_in: endpoint {
+				remote-endpoint = <&dsi1_out_ep>;
+			};
+		};
+	};
+};
+
+&dss {
+	status = "ok";
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&mipi_dsi_a>;
+};
+
+&hdmi {
+	vdda-supply = <&ldo4_reg>;
+};
+
+&hsusb2_phy {
+	status = "okay";
+	reset-gpios = <0>;	/* don't apply reset! */
+};
+
+&hsusb3_phy {
+	status = "disabled";
+};
+
+&i2c1 {
+	usb3503@8 {
+		/* should be compatible = "smsc,usb3503a" but then driver is not loaded */
+		compatible = "smsc,usb3503";
+		reg = <0x08>;
+		intn-gpios = <&gpio3 14 GPIO_ACTIVE_HIGH>;	// gpio3_78 interrupt
+		reset-gpios = <&gpio3 16 GPIO_ACTIVE_LOW>;	// gpio3_80 reset
+		initial-mode = <1>;
+	};
+
+	eeprom@50 {
+		compatible = "at,24c01";
+		reg = <0x50>;
+	};
+};
+
+&i2c2 {
+	clock-frequency = <400000>;
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c2_pins>;
+};
+
+&i2c3 {
+	clock-frequency = <400000>;
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c3_pins>;
+};
+
+&i2c4 {
+	clock-frequency = <400000>;
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c4_pins>;
+};
+
+&i2c5 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c5_pins>;
+
+	clock-frequency = <400000>;
+};
+
+&ldo2_reg {
+	/* used as vmmc4 */
+	regulator-name = "ldo2";
+	regulator-min-microvolt = <1800000>;
+	regulator-max-microvolt = <3300000>;
+	status = "okay";
+};
+
+&mcbsp1 {
+	#sound-dai-cells = <0>;
+	status ="okay";
+};
+
+&mcbsp2 {
+	#sound-dai-cells = <0>;
+	status ="okay";
+};
+
+&mcbsp3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&mcbsp3_pins>;
+	#sound-dai-cells = <0>;
+	status ="okay";
+};
+
+&mcspi1 {
+	status = "okay";
+};
+
+&mcspi2 {
+	status = "okay";
+};
+
+&mcspi3 { /* pins used for uart2 */
+	status = "disabled";
+};
+
+&mmc2 { /* eMMC / uSD-card */
+	bus-width = <8>;
+	/delete-property/ ti,non-removable;
+	broken-cd;	/* must poll for cards */
+
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	mmcmux: txs02612@0 {
+		reg = <0>;
+
+		compatible = "ti,txs02612";
+		select-gpio = <&gpio3 18 0>;	/* gpio3_82 soft-select */
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		eMMC: port@0 {
+			reg = <0>;
+			compatible = "any,emmc";
+			bus-width = <8>;
+			ti,non-removable;
+		};
+
+		uSD: port@1 {
+			reg = <1>;
+			bus-width = <4>;
+		};
+	};
+};
+
+/* keep this as long as the txs02612 driver does not exist/work as mmc slave driver */
+/ { /* eMMC / uSD-card */
+	txs02612 {
+		compatible = "ti,txs02612";
+		select-gpio = <&gpio3 18 0>;	/* gpio3_82 soft-select */
+	};
+};
+
+&mmc3 { /* WiFi-SDIO */
+	/* has been predefined for a wl1271 in ompa5-common.dtsi */
+};
+
+&mmc4 { /* second (u)SD slot (SDIO capable) */
+	status = "disabled";	/* because we are still using ctl/cmd pins for UART3 FTDI interface */
+	vmmc-supply = <&ldo2_reg>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&mmc4_pins>;
+	bus-width = <4>;
+	cd-gpios = <&gpio3 13 GPIO_ACTIVE_LOW>;	/* gpio3_77 */
+	wp-gpios = <&gpio3 15 GPIO_ACTIVE_HIGH>;	/* gpio3_79 */
+};
+
+&omap5_pmx_core {
+
+	/* i2c1_pins inherited */
+
+	i2c2_pins: pinmux_i2c2_pins {
+		pinctrl-single,pins = <
+			OMAP5_IOPAD(0x1b8, PIN_INPUT_PULLUP | MUX_MODE0)		/* i2c2_scl */
+			OMAP5_IOPAD(0x1ba, PIN_INPUT_PULLUP | MUX_MODE0)		/* i2c2_sda */
+		>;
+	};
+
+	i2c3_pins: pinmux_i2c3_pins {
+		pinctrl-single,pins = <
+			OMAP5_IOPAD(0x17a, PIN_INPUT_PULLUP | MUX_MODE0)		/* i2c3_scl */
+			OMAP5_IOPAD(0x17c, PIN_INPUT_PULLUP | MUX_MODE0)		/* i2c3_sda */
+		>;
+	};
+
+	i2c4_pins: pinmux_i2c4_pins {
+		pinctrl-single,pins = <
+			OMAP5_IOPAD(0x0f8, PIN_INPUT_PULLUP | MUX_MODE0)		/* i2c4_scl (gpio7_200) */
+			OMAP5_IOPAD(0x0fa, PIN_INPUT_PULLUP | MUX_MODE0)		/* i2c4_sda (gpio7_201) */
+		>;
+	};
+
+	i2c5_pins: pinmux_i2c5_pins {
+		pinctrl-single,pins = <
+			OMAP5_IOPAD(0x1c6, PIN_INPUT | MUX_MODE0)		/* i2c5_scl */
+			OMAP5_IOPAD(0x1c8, PIN_INPUT | MUX_MODE0)		/* i2c5_sda */
+		>;
+	};
+
+	lc15_button_pins: pinmux_user_button_gpio_pins {
+		pinctrl-single,pins = <
+			OMAP5_IOPAD(0x0b6, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x0B4:[31:16] user button gpio3_83 */
+		>;
+	};
+
+	mcbsp3_pins: pinmux_mcbsp3_pins {
+		pinctrl-single,pins = <
+			OMAP5_IOPAD(0x188, PIN_INPUT_PULLDOWN | MUX_MODE4)	/* abedmic_din3.abemcbsp3_dr */
+			OMAP5_IOPAD(0x186, PIN_OUTPUT_PULLDOWN | MUX_MODE4)	/* abedmic_din2.abemcbsp3_dx */
+			OMAP5_IOPAD(0x184, PIN_INPUT | MUX_MODE4)		/* abedmic_din1.abemcbsp3_fsx */
+			OMAP5_IOPAD(0x18a, PIN_INPUT | MUX_MODE4)		/* abedmic_clk1.abemcbsp3_clkx */
+		>;
+	};
+
+	mipi_display_pins: pinmux_display_gpio_pins {
+		pinctrl-single,pins = <
+			OMAP5_IOPAD(0x0ca, PIN_INPUT_PULLDOWN | MUX_MODE7)	/* 0x0C8:[31:16] gpio6_189 - VSYNC input */
+			OMAP5_IOPAD(0x0f6, PIN_INPUT_PULLDOWN | MUX_MODE7)	/* 0x0F4:[31:16] gpio6_190 - choose MUX_MODE0 for PWM_TIMER9 - choose MUX_MODE7 if panel outputs the PWM */
+		>;
+	};
+
+	mipi_dsi_a: pinmux_dsi_a_pins {
+		pinctrl-single,pins = <
+			OMAP5_IOPAD(0x0cc, PIN_OUTPUT | MUX_MODE0)	/* 0x0cc:[15:0]  dsiporta_lane0x */
+			OMAP5_IOPAD(0x0ce, PIN_OUTPUT | MUX_MODE0)	/* 0x0cc:[31:16] dsiporta_lane0y */
+			OMAP5_IOPAD(0x0d0, PIN_OUTPUT | MUX_MODE0)	/* 0x0d0:[15:0]  dsiporta_lane1x */
+			OMAP5_IOPAD(0x0d2, PIN_OUTPUT | MUX_MODE0)	/* 0x0d0:[31:16] dsiporta_lane1y */
+			OMAP5_IOPAD(0x0d4, PIN_OUTPUT | MUX_MODE0)	/* 0x0d4:[15:0]  dsiporta_lane2x */
+			OMAP5_IOPAD(0x0d6, PIN_OUTPUT | MUX_MODE0)	/* 0x0d4:[31:16] dsiporta_lane2y */
+			OMAP5_IOPAD(0x0d8, PIN_OUTPUT | MUX_MODE0)	/* 0x0d8:[15:0]  dsiporta_lane3x */
+			OMAP5_IOPAD(0x0da, PIN_OUTPUT | MUX_MODE0)	/* 0x0d8:[31:16] dsiporta_lane3y */
+			OMAP5_IOPAD(0x0dc, PIN_OUTPUT | MUX_MODE0)	/* 0x0dc:[15:0]  dsiporta_lane4x */
+			OMAP5_IOPAD(0x0de, PIN_OUTPUT | MUX_MODE0)	/* 0x0dc:[31:16] dsiporta_lane4y */
+		>;
+	};
+
+	mmc1_pins: pinmux_mmc1_pins {
+		/* provide phandle */
+	};
+
+	/* mmc3_pins inherited */
+
+	mmc4_pins: pinmux_sdio4_pins {
+		pinctrl-single,pins = <
+			OMAP5_IOPAD(0x01da, PIN_INPUT_PULLUP | MUX_MODE4) /* sdio4_clk */
+			OMAP5_IOPAD(0x01dc, PIN_INPUT_PULLUP | MUX_MODE4) /* sdio4_cmd */
+			OMAP5_IOPAD(0x01b4, PIN_INPUT_PULLUP | MUX_MODE4) /* sdio4_data0 */
+			OMAP5_IOPAD(0x01b0, PIN_INPUT_PULLUP | MUX_MODE4) /* sdio4_data1 */
+			OMAP5_IOPAD(0x01b2, PIN_INPUT_PULLUP | MUX_MODE4) /* sdio4_data2 */
+			OMAP5_IOPAD(0x01b6, PIN_INPUT_PULLUP | MUX_MODE4) /* sdio4_data3 */
+			OMAP5_IOPAD(0x00aa, PIN_INPUT_PULLUP | MUX_MODE6) /* gpio3_77 = cd */
+			OMAP5_IOPAD(0x00ae, PIN_INPUT_PULLUP | MUX_MODE6) /* gpio3_79 = wp */
+		>;
+	};
+
+	other_pins: pinmux_other_gpio_pins {
+		pinctrl-single,pins = <
+			OMAP5_IOPAD(0x08e, PIN_INPUT | MUX_MODE6)	/* 0x08C:[31:16]  gpio2_32 - board revision */
+			OMAP5_IOPAD(0x054, PIN_INPUT | MUX_MODE6)	/* 0x054:[15:0]   gpio2_33 - board revision */
+			OMAP5_IOPAD(0x0a8, PIN_INPUT | MUX_MODE6)	/* 0x0A4:[15:0]   gpio3_76 - hard(0) / soft(1) select */
+			OMAP5_IOPAD(0x0b4, PIN_INPUT | MUX_MODE6)	/* 0x0B4:[15:0]   gpio3_82 - eMMC(0) / uSD(1) soft select */
+		>;
+	};
+
+	uart2_pins: pinmux_uart2_pins {
+		pinctrl-single,pins = <
+			OMAP5_IOPAD(0x0b8, PIN_OUTPUT | MUX_MODE0) /* uart2_rts */
+			OMAP5_IOPAD(0x0ba, PIN_INPUT_PULLUP | MUX_MODE0) /* uart2_cts */
+			OMAP5_IOPAD(0x0bc, PIN_INPUT_PULLUP | MUX_MODE0) /* uart2_rx */
+			OMAP5_IOPAD(0x0be, PIN_OUTPUT | MUX_MODE0) /* uart2_tx */
+		>;
+	};
+
+};
+
+&omap5_pmx_wkup {
+	lc15_wkup_pins: pinmux_wkup_pins {
+		pinctrl-single,pins = <
+			OMAP5_IOPAD(0x078, PIN_OUTPUT | MUX_MODE6)	/* 0x078:[15:0]  gpio1_wkout4 - second LED on CPU board */
+			OMAP5_IOPAD(0x046, PIN_INPUT | MUX_MODE6)	/* 0x044:[31:16]  gpio1_wk7 - boot select input */
+		>;
+	};
+};
+
+&palmas_power_button {
+	ti,palmas-long-press-seconds = <8>;
+	ti,palmas-pwron-debounce-milli-seconds = <15>;
+};
+
+&smps6_reg {
+	/*
+	 * 4GB RAM version may need higher voltage setting - should not harm 2GB
+	 * so we do not restrict what U-Boot already did set
+	 */
+	regulator-min-microvolt = <1350000>;
+	regulator-max-microvolt = <1500000>;
+};
+
+&sound {
+	ti,model = "Letux Cortex 15";
+
+	/* extended Audio routing */
+	ti,audio-routing =
+		"Headset Stereophone", "HSOL",
+		"Headset Stereophone", "HSOR",
+		"Ext Spk", "HFL",
+		"Ext Spk", "HFR",
+		"Line Out", "AUXL",
+		"Line Out", "AUXR",
+		"HSMIC", "Headset Mic",
+		"Headset Mic", "Headset Mic Bias",
+		"MAINMIC", "Main Handset Mic",
+		"Main Handset Mic", "Main Mic Bias",
+		"AFML", "Line In",
+		"AFMR", "Line In";
+};
+
+&twl6040_pins {
+	pinctrl-single,pins = <
+		OMAP5_IOPAD(0x0b2, PIN_OUTPUT | MUX_MODE6)	/* 0x0B0:[31:16]  gpio3_81 - redefine twl6040 poweron */
+	>;
+};
+
+&twl6040 {
+	ti,audpwron-gpio = <&gpio3 17 0>;  /* gpio line 3_81 */
+};
+
+&uart1 { /* pins are used as mmc1 cd/wp */
+	status = "disabled";
+};
+
+&uart2 { /* pins shared with mcspi3 */
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart2_pins>;
+};
+
+&uart5 {
+	status = "disabled";
+};
+
+&usbhost_pins {
+	pinctrl-single,pins = <
+		OMAP5_IOPAD(0x0c4, PIN_INPUT | MUX_MODE0) /* usbb2_hsic_strobe */
+		OMAP5_IOPAD(0x0c6, PIN_INPUT | MUX_MODE0) /* usbb2_hsic_data */
+
+		OMAP5_IOPAD(0x1de, PIN_INPUT | MUX_MODE0) /* usbb3_hsic_strobe */
+		OMAP5_IOPAD(0x1e0, PIN_INPUT | MUX_MODE0) /* usbb3_hsic_data */
+
+		OMAP5_IOPAD(0x0ac, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x0AC:[15:0]  gpio3_78 - hub interrupt */
+		OMAP5_IOPAD(0x0b0, PIN_OUTPUT | MUX_MODE6)	/* 0x0B0:[15:0]  gpio3_80 - hub nreset */
+	>;
+};
+
+&wlan_pins {
+	status = "disabled";	/* we use these pins differently */
+};

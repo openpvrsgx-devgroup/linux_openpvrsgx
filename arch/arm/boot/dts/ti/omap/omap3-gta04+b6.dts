@@ -1,0 +1,124 @@
+/*
+ * Copyright (C) 2014 H. Nikolaus Schaller <hns@goldelico.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+/* we start with the omap3-gta04 tree and modify only what is really different */
+
+#include "omap3-gta04.dtsi"
+
+/ {
+
+	/* overwrite device model */
+	model = "Goldelico GTA04b6/Letux 3714";
+
+	/* add additional regulators etc. */
+
+	/* overwrite panel definitions */
+
+	/delete-node/ spi;
+
+	lcd: lcd {
+		compatible =	"ortustech,com37h3m05dtc",
+				"ortustech,com37h3m99dtc",
+				"panel-dpi";
+		label = "lcd";
+		enable-gpios = <&gpio1 20 0>;
+
+		panel-timing {
+			clock-frequency = <22153000>;
+
+			hback-porch = <10>;
+			hactive = <480>;
+			hfront-porch = <8>;
+			hsync-len = <10>;
+
+			vback-porch = <4>;
+			vactive = <640>;
+			vfront-porch = <4>;
+			vsync-len = <3>;
+
+			hsync-active = <0>;
+			vsync-active = <0>;
+			de-active = <1>;
+			pixelclk-active = <1>;
+
+		};
+
+		port {
+			lcd_in: endpoint {
+				remote-endpoint = <&dpi_out>;
+			};
+		};
+	};
+};
+
+/* FIXME: &spi_gpio_pins: { }; */
+
+/* FIXME: add optional TRF7970 */
+
+&battery {
+	compatible = "ti,twl4030-madc-battery";
+	capacity = <3900000>;
+	charging-calibration-data = <4200 100 4100 75 4000 55 3900 25 3800 5 3700 2 3600 1 3300 0>;
+	discharging-calibration-data = <4200 100 4100 95 4000 70 3800 50 3700 10 3600 5 3300 0>;
+};
+
+&i2c2 {
+	/* we have a different set of LEDs */
+	tca_gpios: tca6507@45 {
+		compatible = "ti,tca6507";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <0x45>;
+
+		gta04_led0: led@0 {
+			compatible = "led";
+			label = "gta04:red:aux";
+			reg = <0x0>;
+		};
+
+		gta04_led1: led@1 {
+			compatible = "led";
+			label = "gta04:green:power";
+			linux,default-trigger = "default-on";
+			reg = <0x1>;
+		};
+
+		gta04_led3: led@3 {
+			reg = <7>;
+		};
+
+		gta04_led4: led@4 {
+			reg = <7>;
+		};
+
+		wifi_reset: led@6 { /* reference as <&tca_gpios 0 0> since it is currently the only GPIO */
+			reg = <0x6>;
+			compatible = "gpio";
+		};
+
+	};
+
+	/* touchscreen */
+	tsc2007@48 {
+		compatible = "ti,tsc2007";
+		reg = <0x48>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&penirq_pins>;
+		interrupt-parent = <&gpio6>;
+		interrupts = <0 IRQ_TYPE_EDGE_FALLING>;
+		gpios = <&gpio6 0 GPIO_ACTIVE_LOW>;	/* gpio160 */
+		ti,x-plate-ohms = <600>;
+		ti,min-x = <0x100>;
+		ti,max-x = <0xf00>;
+		ti,min-y = <0xf00>;
+		ti,max-y = <0x100>;
+		ti,min-rt = <0xfff>;
+		ti,max-rt = <0>;
+	};
+
+};

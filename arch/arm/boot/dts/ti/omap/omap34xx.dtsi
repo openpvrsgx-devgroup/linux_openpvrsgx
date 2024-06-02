@@ -70,7 +70,6 @@
 			opp-microvolt = <1350000 1350000 1350000>;
 			/* only high-speed grade omap3530 devices */
 			opp-supported-hw = <0xffffffff 2>;
-			turbo-mode;
 		};
 	};
 
@@ -172,10 +171,6 @@
 				interrupts = <21>;
 			};
 		};
-	};
-
-	thermal_zones: thermal-zones {
-		#include "omap3-cpu-thermal.dtsi"
 	};
 };
 

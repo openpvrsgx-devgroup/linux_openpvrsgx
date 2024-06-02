@@ -436,9 +436,16 @@ static void jz4740_mmc_clock_disable(struct jz4740_mmc_host *host)
 	unsigned int timeout = 1000;
 
 	writew(JZ_MMC_STRPCL_CLOCK_STOP, host->base + JZ_REG_MMC_STRPCL);
+#if 0
+	read_poll_timeout(readl, status, !(status & JZ_MMC_STATUS_CLK_EN),
+			  10, 1000, false,
+			  host->base + JZ_REG_MMC_STRPCL);
+	// report timeout error
+#else
 	do {
 		status = readl(host->base + JZ_REG_MMC_STATUS);
 	} while (status & JZ_MMC_STATUS_CLK_EN && --timeout);
+#endif
 }
 
 static void jz4740_mmc_reset(struct jz4740_mmc_host *host)
@@ -447,10 +454,19 @@ static void jz4740_mmc_reset(struct jz4740_mmc_host *host)
 	unsigned int timeout = 1000;
 
 	writew(JZ_MMC_STRPCL_RESET, host->base + JZ_REG_MMC_STRPCL);
-	udelay(10);
+#if 0
+	read_poll_timeout(readl, status, !(status & JZ_MMC_STATUS_IS_RESETTING),
+			  10, 1000, true,
+			  host->base + JZ_REG_MMC_STRPCL);
+	// report timeout error
+#else
 	do {
+		udelay(10);
 		status = readl(host->base + JZ_REG_MMC_STATUS);
 	} while (status & JZ_MMC_STATUS_IS_RESETTING && --timeout);
+if(!timeout)
+	printk("MSC reset did timeout!!!\n");
+#endif
 }
 
 static void jz4740_mmc_request_done(struct jz4740_mmc_host *host)
@@ -473,6 +489,12 @@ static unsigned int jz4740_mmc_poll_irq(struct jz4740_mmc_host *host,
 	unsigned int timeout = 0x800;
 	uint32_t status;
 
+#if 0
+	read_poll_timeout(jz4740_mmc_read_irq_reg, status, (status & irq),
+			  10, 1000, true,
+			  host);
+	// handle timeout error as below
+#endif
 	do {
 		status = jz4740_mmc_read_irq_reg(host);
 	} while (!(status & irq) && --timeout);
@@ -622,12 +644,19 @@ static bool jz4740_mmc_read_data(struct jz4740_mmc_host *host,
 
 	/* For whatever reason there is sometime one word more in the fifo then
 	 * requested */
+#if 0
+	readl_poll_timeout(host->base + JZ_REG_MMC_STATUS, status,
+			   (status & JZ_MMC_STATUS_DATA_FIFO_EMPTY),
+			   10, 1000);
+	// report timeout error
+#else
 	timeout = 1000;
 	status = readl(host->base + JZ_REG_MMC_STATUS);
 	while (!(status & JZ_MMC_STATUS_DATA_FIFO_EMPTY) && --timeout) {
 		d = readl(fifo_addr);
 		status = readl(host->base + JZ_REG_MMC_STATUS);
 	}
+#endif
 
 	return false;
 
@@ -1130,6 +1159,9 @@ static int jz4740_mmc_probe(struct platform_device* pdev)
 	if (ret == -EPROBE_DEFER)
 		goto err_free_irq;
 	host->use_dma = !ret;
+#if IS_ENABLED(CONFIG_MACH_JZ4730)
+	host->use_dma = false;
+#endif
 
 	platform_set_drvdata(pdev, host);
 	ret = mmc_add_host(mmc);

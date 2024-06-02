@@ -1,0 +1,574 @@
+/*
+ * Copyright (C) 2018 Golden Delicious Computers - http://www.goldelico.com/
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+#include <dt-bindings/input/input.h>
+#include <dt-bindings/power/power.h>
+
+/ {
+	/* overwrite device model */
+	model = "LC15-EVM";
+
+	/* vsys supply */
+	vsys_reg: vsys_reg {
+		compatible = "regulator-fixed";
+		regulator-name = "vsys";
+		regulator-min-microvolt = <3700000>;
+		regulator-max-microvolt = <3700000>;
+		regulator-always-on;
+	};
+
+	/* common DC/DC converter for USB Host ports, Modem USB and HDMI 5V */
+	modem_vbus_hdmi_power: tps2505_reg {
+		compatible = "regulator-fixed";
+		regulator-name = "modem_vbus_hdmi_power";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = <&gpio99 8 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		startup-delay-us = <70000>;
+		vin-supply = <&vsys_reg>;
+		regulator-always-on;
+	};
+
+	/* this are the DC/DC converters that supply the
+	   5V to USB devices connected to the Host ports.
+	   They should be under the (software) control
+	   of the USB3503A hub on the CPU board */
+
+	host1_vbus_power: host1_vbus_power_reg {
+		compatible = "regulator-fixed";
+		regulator-name = "host1_vbus_power";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = <&gpio99 9 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		startup-delay-us = <70000>;
+		vin-supply = <&modem_vbus_hdmi_power>;
+		regulator-always-on;
+	};
+
+	host2_vbus_power: host2_vbus_power_reg {
+		compatible = "regulator-fixed";
+		regulator-name = "host2_vbus_power";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = <&gpio99 10 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		startup-delay-us = <70000>;
+		vin-supply = <&modem_vbus_hdmi_power>;
+		regulator-always-on;
+	};
+
+	bluetooth_power: bt_en {
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&bt_pins>;
+		regulator-name = "bt_power";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		gpio = <&gpio6 4 GPIO_ACTIVE_HIGH>;	/* GPIO6_164 */
+		enable-active-high;
+		startup-delay-us = <70000>;
+		vin-supply = <&vsys_reg>;
+	};
+
+	/* backlight is here as demo code */
+
+#define BACKLIGHT_FREQ_HZ	83
+
+	backlight {
+		compatible = "pwm-backlight";
+		pwms = <&pwm9 0 (1000000000 / BACKLIGHT_FREQ_HZ) 0>;
+		pwm-names = "backlight";
+		brightness-levels = <0 5 7 10 12 14 17 20 25 30 35 40 50 65 80 100>;
+		default-brightness-level = <14>;	/* 80% */
+		pinctrl-names = "default";
+		pinctrl-0 = <&backlight_pins>;
+	};
+
+	pwm9: dmtimer-pwm@9 {
+		compatible = "ti,omap-dmtimer-pwm";
+		ti,timers = <&timer9>;
+		#pwm-cells = <3>;
+	};
+
+	keyboard-backlight {
+		compatible = "pwm-backlight";
+		pwms = <&pwm8 0 12000000 0>;
+		pwm-names = "keyboard";
+		brightness-levels = <0 1 2 5 10 20 40 60 100>;
+		default-brightness-level = <5>;	/* 20% */
+		pinctrl-names = "default";
+		pinctrl-0 = <&keyboard_backlight_pins>;
+	};
+
+	pwm8: dmtimer-pwm@8 {
+		compatible = "ti,omap-dmtimer-pwm";
+		ti,timers = <&timer8>;
+		#pwm-cells = <3>;
+	};
+
+	/* battery is here as demo code */
+	bat: battery {
+		compatible = "simple-battery", "pyra-battery";
+		voltage-min-design-microvolt = <3200000>;
+		energy-full-design-microwatt-hours = <22200000>;
+		charge-full-design-microamp-hours = <6000000>;
+	};
+
+	battery: battery-monitor {
+		compatible = "linux,generic-adc-battery";
+		io-channels = <&gpadc 6>, <&gpadc 11>, <&gpadc 1>;
+		io-channel-names = "voltage", "current", "temperature";
+		monitored-battery = <&bat>;
+		technology = <POWER_SUPPLY_TECHNOLOGY_LION>;
+		battery-name = "pyra-battery";
+		charge_full_design = <6000000>;
+		charge_empty_design = <00>;
+		voltage_min_design = <3200000>;
+		voltage_max_design = <4200000>;
+	};
+
+	/* buttons and LEDs */
+	user-button {
+		/* is bound to gpio1_wk7 which we want to reassign */
+		/delete-node/ BOOTSEL;
+	};
+
+	/* gpios where we could connect buttons to */
+	gpio-keys@1 {
+		compatible = "gpio-keys";
+
+		#address-cells = <7>;
+		#size-cells = <0>;
+
+		left_shoulder_bottom {
+			label = "Left-Shoulder-Bottom";
+			linux,code = <KEY_RIGHTSHIFT>;
+			gpios = <&gpio1 7 GPIO_ACTIVE_LOW>;	/* gpio1_wk7 */
+			gpio-key,wakeup;
+		};
+
+		left_shoulder_top {
+			label = "Left-Shoulder-Top";
+			linux,code = <KEY_RIGHTMETA>;
+			gpios = <&gpio6 23 GPIO_ACTIVE_LOW>;	/* gpio6_183 */
+			gpio-key,wakeup;
+		};
+
+		right_shoulder_bottom {
+			label = "Right-Shoulder-Bottom";
+			linux,code = <KEY_RIGHTCTRL>;
+			gpios = <&gpio6 20 GPIO_ACTIVE_LOW>;	/* gpio6_180 */
+			gpio-key,wakeup;
+		};
+
+		right_shoulder_top {
+			label = "Right-Shoulder-Top";
+			linux,code = <KEY_RIGHTALT>;
+			gpios = <&gpio6 19 GPIO_ACTIVE_LOW>;	/* gpio6_179 */
+			gpio-key,wakeup;
+		};
+
+		left_nub {
+			label = "Left-Nub";
+			linux,code = <BTN_RIGHT>;
+			gpios = <&gpio6 27 GPIO_ACTIVE_LOW>;	/* gpio6_187 */
+			gpio-key,wakeup;
+		};
+
+		right_nub {
+			label = "Right-Nub";
+			linux,code = <BTN_LEFT>;
+			gpios = <&gpio6 21 GPIO_ACTIVE_LOW>;	/* gpio6_181 */
+			gpio-key,wakeup;
+		};
+
+		button_a {
+			label = "A";
+			linux,code = <KEY_HOME>;
+			gpios = <&gpio7 7 GPIO_ACTIVE_LOW>;	/* gpio7_199 */
+			gpio-key,wakeup;
+		};
+
+		button_b {
+			label = "B";
+			linux,code = <KEY_END>;
+			gpios = <&gpio7 4 GPIO_ACTIVE_LOW>;	/* gpio7_196 */
+			gpio-key,wakeup;
+		};
+
+		button_x {
+			label = "X";
+			linux,code = <KEY_PAGEDOWN>;
+			gpios = <&gpio7 6 GPIO_ACTIVE_LOW>;	/* gpio7_198 */
+			gpio-key,wakeup;
+		};
+
+		button_y {
+			label = "Y";
+			linux,code = <KEY_PAGEUP>;
+			gpios = <&gpio7 5 GPIO_ACTIVE_LOW>;	/* gpio7_197 */
+			gpio-key,wakeup;
+		};
+
+		dpad_left {
+			label = "LEFT";
+			linux,code = <KEY_LEFT>;
+			gpios = <&gpio5 13 GPIO_ACTIVE_LOW>;	/* gpio5_141 */
+			gpio-key,wakeup;
+		};
+
+		dpad_up {
+			label = "UP";
+			linux,code = <KEY_UP>;
+			gpios = <&gpio5 12 GPIO_ACTIVE_LOW>;	/* gpio5_140 */
+			gpio-key,wakeup;
+		};
+
+		dpad_right {
+			label = "RIGHT";
+			linux,code = <KEY_RIGHT>;
+			gpios = <&gpio5 15 GPIO_ACTIVE_LOW>;	/* gpio5_143 */
+			gpio-key,wakeup;
+		};
+
+		dpad_down {
+			label = "DOWN";
+			linux,code = <KEY_DOWN>;
+			gpios = <&gpio5 14 GPIO_ACTIVE_LOW>;	/* gpio5_142 */
+			gpio-key,wakeup;
+		};
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		usr@2 { /* FM-EN */
+			label = "lc15evm:red:usr1";
+			gpios = <&gpio6 6 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "heartbeat";
+			default-state = "off";
+		};
+
+		usr2@1 { /* SPEAKER-EN */
+			label = "lc15evm:red:usr2";
+			gpios = <&gpio6 5 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "cpu";
+			default-state = "off";
+		};
+
+		usr3@3r { /* P25 */
+			label = "lc15evm:red:usr3";
+			gpios = <&gpio99 (2*8+5) (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>;
+			linux,default-trigger = "mmc0";
+			default-state = "off";
+		};
+
+		usr@3g { /* P21 */
+			label = "lc15evm:green:usr3";
+			gpios = <&gpio99 (2*8+1) (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>;
+			linux,default-trigger = "mmc1";
+			default-state = "off";
+		};
+
+		usr@3b { /* P05 */
+			label = "lc15evm:blue:usr3";
+			gpios = <&gpio99 (0*8+5) (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>;
+			linux,default-trigger = "mmc2";
+			default-state = "off";
+		};
+	};
+
+};
+
+&omap5_pmx_core {
+
+	pinctrl-0 = <
+			/* copied from original */
+			&usbhost_pins
+			&led_gpio_pins
+
+			/* new entries */
+			&button_pins
+			&other_pins
+	>;
+
+/* to find pinmux register offsets, see section A.7.2 in TRM
+
+   note: offsets in the table are relative to 0x4a00 2800
+   but reg = <0x4a002840 0x01b6> for omap5_pmx_core
+
+   Therefore gpio5_153 with Address Offset 0x1D4
+   translates into 0x194 (0xd0-0x40 => 0x90)
+   and because it has [31:16] we have to add 0x02
+   giving a result of 0x196.
+
+   Definitions for bit patterns:
+   0x0007	MUX_MODE0 .. MUX_MODE7
+   0x0008	enable pull up/down
+   0x0010	select pull up
+   0x0020	disable power for I/O cell
+   0x0100	enable input buffer (there is no explicit "enable output buffer" because that is defined by the GPIO direction)
+   0x4000	enable wakeup detection
+
+   or use the OMAP5_IOPAD() macros to do the conversion. You still have to look
+   up the pin and register address offset in the TRM.
+*/
+
+	button_pins: pinmux_button_gpio_pins {
+		pinctrl-single,pins = <
+			OMAP5_IOPAD(0x1bc, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x1BC:[15:0] gpio5_140 - U */
+			OMAP5_IOPAD(0x1be, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x1BC:[31:16] gpio5_141 - L */
+			OMAP5_IOPAD(0x1c0, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x1C0:[15:0] gpio5_142 - D */
+			OMAP5_IOPAD(0x1c2, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x1C0:[31:16] gpio5_143 - R */
+			OMAP5_IOPAD(0x108, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x108:[15:0]  gpio6_179 - rsh-top */
+			OMAP5_IOPAD(0x106, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x104:[31:16] gpio6_180 - rsh-bot */
+			OMAP5_IOPAD(0x104, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x104:[15:0]  gpio6_181 - right nub */
+			OMAP5_IOPAD(0x132, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x130:[31:16] gpio6_183 - lsh-top */
+			OMAP5_IOPAD(0x13a, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x138:[31:16]  gpio6_187 - left nub */
+			OMAP5_IOPAD(0x102, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x100:[31:16] gpio7_196 - B */
+			OMAP5_IOPAD(0x0fc, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x0FC:[15:0] gpio7_197 - Y */
+			OMAP5_IOPAD(0x0fe, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x0FC:[31:16] gpio7_198 - X */
+			OMAP5_IOPAD(0x100, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x100:[15:0] gpio7_199 - A */
+		>;
+	};
+
+	other_pins: pinmux_other_gpio_pins {
+		pinctrl-single,pins = <
+/* gpio 3_84-87 = BT HCI uart2 */
+/* gpio 4_97-100 = GSM PCM mcbsp3 */
+/* gpio 4_101-104 = BT PCM mcbsp1 */
+/* gpio 4_105-107 = FM/DAC PCM mcbsp2 */
+/* gpio 5_128-133 = mmc3 = wifi dsio */
+/* gpio 5_134-137 = mmc4 = right SD slot */
+			OMAP5_IOPAD(0x1c4, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x1C4:[15:0]  gpio5_144 - reset I2C peripherals */
+/* gpio 5_155-156 = mmc4 = right SD slot / uart3 debug */
+			OMAP5_IOPAD(0x12c, PIN_INPUT | MUX_MODE6)	/* 0x12C:[15:0]  gpio6_160 - revision 1 */
+			OMAP5_IOPAD(0x12e, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x12C:[31:16]  gpio6_161 - TCA6424 active low interrupt */
+
+/* next should be outputs and controlled by some driver (e.g. regulator-fixed) */
+			OMAP5_IOPAD(0x128, PIN_OUTPUT | MUX_MODE6)	/* 0x128:[15:0]  gpio6_165 - Speaker EN */
+			OMAP5_IOPAD(0x122, PIN_OUTPUT | MUX_MODE6)	/* 0x120:[31:15]  gpio6_166 - FM EN */
+
+/* gpio 5_167-168 = uart3 console - is handled by MLO! */
+			OMAP5_IOPAD(0x11c, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x11C:[15:0]  gpio6_169 - Accelerometer interrupt */
+			OMAP5_IOPAD(0x11a, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x118:[31:16]  gpio6_170 - Magnetometer interrupt */
+			OMAP5_IOPAD(0x114, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x114:[15:0]  gpio6_173 - touch screen penirq */
+			OMAP5_IOPAD(0x112, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x110:[31:16]  gpio6_174 - right NUB int */
+			OMAP5_IOPAD(0x110, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x110:[15:0]  gpio6_175 - left NUB int */
+			OMAP5_IOPAD(0x10c, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x10C:[15:0]  gpio6_177 - keyboard int */
+			OMAP5_IOPAD(0x10a, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x108:[31:16]  gpio6_178 - fm int */
+			OMAP5_IOPAD(0x130, PIN_INPUT | MUX_MODE6)	/* 0x130:[15:0]  gpio6_182 - revision 2 */
+			OMAP5_IOPAD(0x136, PIN_INPUT | MUX_MODE6)	/* 0x134:[31:16]  gpio6_185 - revision 3 */
+			OMAP5_IOPAD(0x138, PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x138:[15:0]  gpio6_186 - Gyroscope interrupt */
+/* gpio 8_228-229 = mmc1 = left SD slot WP/CD */
+		>;
+	};
+
+	modem_pins: pinmux_modem_gpio_pins {
+		pinctrl-single,pins = <
+			OMAP5_IOPAD(0x118, PIN_OUTPUT_PULLDOWN | MUX_MODE6)	/* 0x118:[15:0]  gpio6_171 - modem ignite */
+			OMAP5_IOPAD(0x116, PIN_INPUT | MUX_MODE6)	/* 0x114:[31:16]  gpio6_172 - modem power indication */
+		>;
+	};
+
+	backlight_pins: pinmux_backlight_pins {
+		pinctrl-single,pins = <
+			/* MUX_MODE0 for PWM_TIMER9, MUX_MODE6 for GPIO, MUX_MODE7 if panel provides the PWM signal */
+			OMAP5_IOPAD(0x0f6, PIN_OUTPUT_PULLDOWN | MUX_MODE0)	/* 0x0F4:[31:16] timer9/gpio6_190 */
+		>;
+	};
+
+	keyboard_backlight_pins: pinmux_keyboard_backlight_pins {
+		pinctrl-single,pins = <
+			/* MUX_MODE0 for PWM_TIMER8, MUX_MODE6 for GPIO */
+			OMAP5_IOPAD(0x178, PIN_OUTPUT_PULLDOWN | MUX_MODE0)	/* 0x178:[15:0] timer8/gpio8_230 */
+		>;
+	};
+
+};
+
+&omap5_pmx_wkup {
+
+	letux_wkup_pins: pinmux_wkup_pins {
+		pinctrl-single,pins = <
+			OMAP5_IOPAD(0x078, PIN_OUTPUT | MUX_MODE6)	/* 0x078:[15:0]  gpio1_wkout4 - second LED on CPU board */
+			OMAP5_IOPAD(0x046, WAKEUP_EN | PIN_INPUT | MUX_MODE6)	/* 0x044:[31:16]  gpio1_wk7 - boot select input */
+		>;
+	};
+
+	lid_pin: pinmux_lid_pin {
+		pinctrl-single,pins = <
+			OMAP5_IOPAD(0x044, WAKEUP_EN | PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x044:[15:0] gpio1_wk6 - lid */
+		>;
+	};
+
+	wwan_pins: pinmux_wwan_pins {
+		pinctrl-single,pins = <
+			OMAP5_IOPAD(0x042, WAKEUP_EN | PIN_INPUT_PULLUP | MUX_MODE6)	/* 0x040:[31:16] gpio1_wk15 - modem wakeup */
+		>;
+	};
+};
+
+/* register devices connected to Peripheral-I2C */
+&i2c2 {
+
+};
+
+/* register devices connected to Sensor-I2C */
+&i2c3 {
+
+};
+
+/* register devices connected to System-I2C */
+&i2c5 {
+	/* microphone detect */
+	ts3a225@3b {
+		compatible = "ti,ts3a225e";
+		reg = <0x3b>;
+//		interrupt-parent = <&gpio99>;
+//		interrupts = <14 IRQ_TYPE_LEVEL_LOW>;
+		ti,micbias = <0>;	/* 2.1V */
+	};
+
+	/* system/keyboard-led and other controls */
+	gpio99: tca6424@22 {
+//		compatible = "ti,tca6424";
+		compatible = "ti,pcal6524";
+		interrupt-parent = <&gpio6>;
+//		interrupts = <1 IRQ_TYPE_LEVEL_LOW>;	/* gpio6_161 */
+		interrupts = <1 IRQ_TYPE_EDGE_FALLING>;	/* gpio6_161 */
+		interrupt-controller;
+		#interrupt-cells = <2>;
+		vcc-supply = <&vdds_1v8_main>;
+
+		reg = <0x22>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		gpio-line-names =
+			"hdmi-ct-hpd", "hdmi.ls-oe", "p02", "p03", "p04", "fault2", "p06", "p07",
+			"en-usb", "en-host1", "en-host2", "p13", "p14", "p15", "mic-int", "p17",
+			"p20", "p21", "p22", "blue", "p24", "fault1", "p26", "p27";
+	};
+
+	eeprom@50 {
+		compatible = "at,24c01";
+		reg = <0x50>;
+	};
+};
+
+&tpd12s015 {
+	compatible = "ti,tpd12s015";
+	gpios = <&gpio99 0 GPIO_ACTIVE_HIGH>,	/* TCA6424A P01, CT CP HPD */
+		<&gpio99 1 GPIO_ACTIVE_HIGH>,	/* TCA6424A P00, LS OE */
+		<&gpio7 1 GPIO_ACTIVE_HIGH>;	/* GPIO 193, HPD */
+};
+
+/* used in gpio mode for shoulder buttons etc. */
+
+&mcspi1 {
+	status = "disabled";
+};
+
+&mcspi2 {
+	status = "disabled";
+};
+
+/*
+ * configure WLAN/Bluetooth module - http://processors.wiki.ti.com/index.php/WL18xx_Platform_Integration_Guide#For_kernels_with_device_tree_support
+ * and see http://lxr.free-electrons.com/source/Documentation/devicetree/bindings/net/wireless/ti,wlcore.txt
+ */
+
+&wlan_pins {
+	status = "okay";
+	pinctrl-single,pins = <
+		OMAP5_IOPAD(0x126, PIN_OUTPUT | MUX_MODE6)	/* 0x124:[31:16]  gpio6_163 - WLAN EN */
+	>;
+};
+
+&vmmcsdio_fixed {
+	gpio = <&gpio6 3 GPIO_ACTIVE_HIGH>;	/* GPIO6_163 */
+};
+
+&mmc3 { /* we have a WLAN module on mmc3 */
+	status = "okay";
+};
+
+&wlcore {
+	status = "okay";
+	compatible = "ti,wl1835";	/* or "ti,wl1837" */
+};
+
+&mmc4 { /* enable second (µ)SD slot (SDIO capable) */
+	status = "okay";
+};
+
+&omap5_pmx_core {
+	bt_pins: pinmux_bt_pins {
+		pinctrl-single,pins = <
+			OMAP5_IOPAD(0x12a, PIN_OUTPUT | MUX_MODE6)	/* 0x128:[31:16]  gpio6_164 - BT EN */
+		>;
+	};
+
+};
+
+&uart2 {
+	bluetooth: tiwi {
+		/* we can (mis)use the w2cbw power control driver */
+		compatible = "wi2wi,w2cbw003-bluetooth";
+		vdd-supply = <&bluetooth_power>;
+	};
+};
+
+/* rearrange to use gpio6_167/168 for console UART3 instead of sdio4_cmd/clk */
+
+&uart3_pins {
+	pinctrl-single,pins = <
+		OMAP5_IOPAD(0x11e, PIN_OUTPUT | MUX_MODE4) /* uart3_tx_irtx gpio6_168 */
+		OMAP5_IOPAD(0x120, PIN_INPUT_PULLUP | MUX_MODE4) /* uart3_rx_irrx gpio6_167 */
+	>;
+};
+
+&uart3 {
+	interrupts-extended = <&wakeupgen GIC_SPI 74 IRQ_TYPE_LEVEL_HIGH>,
+			      <&omap5_pmx_core 0xe0>;
+};
+
+&twl6040 {
+	vddvibl-supply = <&vsys_reg>;
+	vddvibr-supply = <&vsys_reg>;
+
+	vibra {
+		ti,vibldrv-res = <8>;
+		ti,vibrdrv-res = <3>;
+		ti,viblmotor-res = <32>;
+		ti,vibrmotor-res = <999999>;	/* no motor */
+	};
+};
+
+/* we do use the Palmas OTG step-up converter */
+
+&smps10_out1_reg {
+	/* do not turn on until we have done more tests to be sure that it is safe */
+	status = "disabled";
+};
+
+/* LCD panel - MIPI */
+
+&mipi_display_pins {
+	pinctrl-single,pins = <
+		OMAP5_IOPAD(0x124, PIN_OUTPUT_PULLUP | MUX_MODE6)	/* 0x124:[0:15] gpio6_162 - enable panel DC/DC */
+		OMAP5_IOPAD(0x10e, PIN_OUTPUT_PULLDOWN | MUX_MODE6)	/* 0x10c:[31:16] gpio6_176 - panel reset */
+		>;
+};
+
+&lcd {
+	compatible = "boe,btl507212-w677l";
+	gpios = <&gpio6 16 0>;	/* goip6_176 = panel reset */
+};

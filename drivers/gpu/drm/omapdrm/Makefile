@@ -30,6 +30,7 @@ omapdrm-$(CONFIG_OMAP2_DSS_HDMI_COMMON) += dss/hdmi_common.o dss/hdmi_wp.o \
 omapdrm-$(CONFIG_OMAP4_DSS_HDMI) += dss/hdmi4.o dss/hdmi4_core.o
 omapdrm-$(CONFIG_OMAP4_DSS_HDMI_CEC) += dss/hdmi4_cec.o
 omapdrm-$(CONFIG_OMAP5_DSS_HDMI) += dss/hdmi5.o dss/hdmi5_core.o
+omapdrm-$(CONFIG_OMAP5_DSS_HDMI_CEC) += dss/hdmi5_cec.o
 ccflags-$(CONFIG_OMAP2_DSS_DEBUG) += -DDEBUG
 
 obj-$(CONFIG_DRM_OMAP) += omapdrm.o

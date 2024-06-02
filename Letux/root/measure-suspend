@@ -1,0 +1,75 @@
+#!/bin/bash
+
+# originally by Neil Brown
+# improved by H. Nikolaus Schaller
+
+# disable charging, suspend for 5 minutes and report apparent
+# power usage by monitoring battery.
+
+# should not be run over usb-ethernet-gadget
+
+case $(tr -d '\0' </proc/device-tree/model 2>/dev/null) in
+	*GTA04* )
+		power1=/sys/class/power_supply/twl4030_usb/mode
+		power2=/sys/class/power_supply/twl4030_ac/mode
+		chg=/sys/class/power_supply/bq27000-battery/charge_now
+		rs232=/sys/class/gpio/gpio13/value
+		rs232dir=/sys/class/gpio/gpio13/direction
+		[ -f $rs232 ] || { echo 13 > /sys/class/gpio/export; echo high > $rs232dir;}
+		[ -r /dev/ttyHS_Application ] && MODEM="with modem on"
+		;;
+	*Pandora* )
+		power1=/sys/class/power_supply/twl4030_usb/mode
+		power2=/sys/class/power_supply/twl4030_ac/mode
+		chg=/sys/class/power_supply/bq27500-1-0/charge_now
+		;;
+	*Pyra-Handheld* )
+		# FIXME: disabling charging must be done differently
+	# FIXME: there is no "mode": power1=/sys/class/power_supply/bq24297/mode
+		power3=/sys/class/power_supply/bq24297/input_current_limit
+		chg=/sys/class/power_supply/bq27421-0/charge_now
+		[ -r /dev/ttyACM1 ] && MODEM="with modem on"
+		;;
+	*'Tolino Shine 3'* | *'Kobo Clara'* )
+		chg=/sys/class/power_supply/rn5t618-gauge/charge_now
+		;;
+	* )
+		chg=/dev/null
+		echo "unknown device $(tr -d '\0' </proc/device-tree/model 2>/dev/null)"
+		;;
+esac
+
+delay=${1-300}	# default to 300 seconds (5 minutes)
+
+echo suspending for $delay seconds >&2
+# stop RS232
+stty raw -echo -cread 2>/dev/null
+[ "$rs232" ] && echo 0 > $rs232
+# turn off external power supplies
+[ "$power1" ] && echo off > $power1
+[ "$power2" ] && echo off > $power2
+[ "$power3" ] && echo 0 > $power3
+# turn off all LEDs
+( cd /sys/class/leds; for i in *; do echo "none" >$i/trigger; echo "0" >$i/brightness; done )
+# collect data before suspend
+before=$([ "$chg" ] && cat $chg || echo 0)
+start=$(date '+%s')
+# suspend
+rtcwake -m mem -s $delay
+# collect data after wakeup
+end=$(date '+%s')
+after=$([ "$chg" ] && cat $chg || echo 0)
+# wait a little for system components to awake
+sleep 1
+# restart RS232
+[ "$rs232" ] && echo 1 > $rs232
+stty sane 2>/dev/null
+# print results
+echo did wake up >&2
+echo before: $start $before
+echo after: $end $after
+[ "$power1" ] && echo auto > $power1
+[ "$power2" ] && echo auto > $power2
+[ "$power3" ] && echo 2000000 > $power3
+
+echo average $[(before-after)*3600/(end-start)] uA over $[end-start] seconds $MODEM

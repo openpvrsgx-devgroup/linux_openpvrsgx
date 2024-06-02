@@ -1,0 +1,84 @@
+#!/bin/sh
+#
+# Pyra volume control daemon
+#
+SCRIPTPATH="$(dirname "$0")"
+
+case "$(tr -d '\0' </proc/device-tree/model)" in
+	Pyra-* | LC15-EVM* )	# only Pyra and LC15EVM have a potentiometer connected to the GPADC
+		;;
+	* )
+		exit 1
+		;;
+esac
+
+GPADC=$($SCRIPTPATH/findiio "palmas-gpadc")
+CARD="$($SCRIPTPATH/findsoundcard -a | head -1)"
+
+if [ ! "GPADC" ]
+then
+	echo no volume wheel found >&2
+	exit
+fi
+LASTVOL="unknown"
+MAXWHEEL=1200	# reports 0..1250 mV but leave some margin
+
+while [ "$1" ]
+do
+	case "$1" in
+	"-c" )
+		shift
+		CARD="$1"
+		;;
+	"-q" )
+		QUIET=true
+		;;
+        "-nhf" )
+		NOHANDSFREE=yes
+		;;
+	-* )
+		echo unknown option $1
+		echo "-c dev	device"
+		echo "-q	quiet"
+		exit 1
+		;;
+	* )
+		break
+		;;
+	esac
+	shift
+done
+
+NUM=$($SCRIPTPATH/findsoundcard "$CARD")
+if [ ! "$NUM" ]
+then
+	echo sound card "$CARD" not found >&2
+	exit
+fi
+
+while true	# run as daemon in background
+do
+	WHEEL=$(cat $GPADC/in_voltage2_input 2>/dev/null)
+	# could apply non-linear scale for more intuitive control
+	VOL=$(( 100 * ${WHEEL:-0} / $MAXWHEEL ))
+	[ "$VOL" -lt 0 ] && VOL=0
+	[ "$VOL" -gt 100 ] && VOL=100
+	# should check for abs($VOL-$LASTVOL) > threshold
+	if [ "$VOL" != "$LASTVOL" ]
+	then # update only if changed since amixer -c "$NUM" command needs some resources
+		[ "$QUIET" ] || echo $WHEEL - $VOL%
+		if [ "$NOHANDSFREE" -o "$VOL" = 0 ]
+		then # turn off
+			amixer -c "$NUM" -q set "Handsfree Left Playback" "Off" || exit
+			amixer -c "$NUM" -q set "Handsfree Right Playback" "Off" || exit
+		else
+			amixer -c "$NUM" -q set "Handsfree Left Playback" "HF DAC" || exit
+			amixer -c "$NUM" -q set "Handsfree Right Playback" "HF DAC" || exit
+			amixer -c "$NUM" -q set "Handsfree" "$VOL%" || exit
+		fi
+		amixer -c "$NUM" -q set "Headset" "$VOL%" || exit
+		amixer -c "$NUM" -q set "Earphone" "$VOL%" || exit
+		LASTVOL=$VOL
+	fi
+	sleep 0.1
+done

@@ -1,0 +1,621 @@
+// FIXME: these includes should be consolidated with other Ingenic SoC
+
+#include <dt-bindings/interrupt-controller/x1600-irq.h>
+#include <dt-bindings/clock/ingenic-tcu.h>
+#include <dt-bindings/clock/ingenic-x1600.h>
+#include <dt-bindings/clock/ingenic,x1600-cgu.h>
+#include <dt-bindings/sound/ingenic-baic.h>
+#include <dt-bindings/net/ingenic_gmac.h>
+#include <dt-bindings/dma/x1600-dma.h>
+
+/ {
+	#address-cells = <1>;
+	#size-cells = <1>;
+	compatible = "ingenic,x1600";
+
+	aliases: aliases {
+		i2c0 = &i2c0;
+		i2c1 = &i2c1;
+		uart0 = &uart0;
+		uart1 = &uart1;
+		uart2 = &uart2;
+		uart3 = &uart3;
+		mac0 = &mac0;
+		spi0 = &spi0;
+		spi_slv0 = &spi_slv0;
+		pwm = &pwm;
+		can0 = &can0;
+		can1 = &can1;
+		mmc0 = &mmc0;
+		mmc1 = &mmc1;
+	};
+
+	cpus: cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		cpu0: cpu@0 {
+			device_type = "cpu";
+			compatible = "ingenic,xburst";
+			reg = <0x000>;
+			clock-frequency = <800000000>;
+
+			clocks = <&cgu X1600_CLK_CPU>;
+			clock-names = "cpu";
+		};
+
+	};
+
+	cpufreq: cpufreq-dt {
+		 compatible = "ingenic,x1600-cpufreq";
+		 status = "okay";
+	};
+
+	cpuintc: interrupt-controller {
+		#address-cells = <0>;
+		#interrupt-cells = <1>;
+		interrupt-controller;
+		compatible = "mti,cpu-interrupt-controller";
+
+	};
+
+	core_intc: core-intc@10001000 {
+		compatible = "ingenic,x1600-intc";
+		reg = <0x10001000 0x100>;
+		interrupt-controller;
+		#interrupt-cells = <1>;
+		interrupt-parent = <&cpuintc>;
+		interrupts = <CORE_INTC_IRQ>;
+		interrupt-names ="intc";
+	};
+
+	ost: timer@12000000 {
+		compatible = "ingenic,x1000-ost";
+		reg = <0x12000000 0x3c>;
+
+		interrupt-controller;
+		#interrupt-cells = <1>;
+
+		#clock-cells = <1>;
+
+		clocks = <&cgu X1600_CLK_EXCLK>;
+		clock-names = "ost";
+
+		interrupt-parent = <&cpuintc>;
+		interrupts = <CORE_SYS_OST_IRQ>;
+	};
+
+	ext: ext {
+		compatible = "fixed-clock";
+		clock-output-names ="ext";
+		#clock-cells = <0>;
+		clock-frequency  = <24000000>;
+	};
+
+	rtc: rtc {
+		compatible = "fixed-clock";
+		clock-output-names ="rtc";
+		#clock-cells = <0>;
+		clock-frequency = <32768>;
+	};
+
+	clk12m: clk12m {
+		compatible = "fixed-clock";
+		clock-output-names ="clk12m";
+		#clock-cells = <0>;
+		clock-frequency  = <12000000>;
+	};
+
+	apb {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges = <>;
+
+		cgu: clock-controller@10000000 {
+			compatible = "ingenic,x1600-cgu" /*, "simple-mfd" */;
+			reg = <0x10000000 0x100>;
+			clocks = <&ext>, <&rtc>, <&clk12m>;
+			clock-names = "ext", "rtc", "clk12m";
+			#clock-cells = <1>;
+			little-endian;
+		};
+
+		sadc: sadc@10070000 {
+			compatible = "ingenic,x1600-sadc";
+			reg = <0x10070000 0x32>;
+			interrupt-parent = <&core_intc>;
+			interrupts = <IRQ_SADC>;
+			interrupt-controller;
+			status = "ok";
+		};
+
+		tcu: timer@10002000 {
+			compatible = "ingenic,x1600-tcu",
+				     "simple-mfd";
+			reg = <0x10002000 0x1000>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0x0 0x10002000 0x1000>;
+
+			interrupt-controller;
+			#interrupt-cells = <1>;
+
+			interrupt-parent = <&core_intc>;
+			interrupts = <IRQ_TCU0>, <IRQ_TCU1>, <IRQ_TCU2>;
+
+			#clock-cells = <1>;
+
+			clocks = <&cgu X1600_CLK_EXCLK>;
+			clock-names = "ext";
+
+			status = "ok";
+
+			watchdog: watchdog@0 {
+				compatible = "ingenic,x1600-watchdog", "ingenic,jz4780-watchdog";
+				reg = <0 0x10>;
+
+				clocks = <&cgu X1600_CLK_RTCLK>;
+				clock-names = "wdt";
+
+			// data sheet mentiones a "half interrupt"
+			//	interrupt-parent = <&core_intc>;
+			//	interrupts = <IRQ_TCU0>;
+			};
+
+		};
+
+		rtc_dev: rtc@10003000 {
+			compatible = "ingenic,x1600-rtc", "ingenic,jz4780-rtc";
+			reg = <0x10003000 0x4c>;
+
+			interrupt-parent = <&core_intc>;
+			interrupts = <IRQ_RTC>;
+
+			clocks = <&cgu X1600_CLK_RTCLK>,
+				 <&cgu X1600_CLK_EXCLK>,
+				 <&cgu X1600_CLK_PCLK>;
+			clock-names = "rtc", "ext", "pclk";
+
+			system-power-controller;
+			power-on-press-ms = <1000>;
+			status = "ok";
+		};
+
+		pinctrl: pinctrl@10010000 {
+			compatible = "ingenic,x1600-pinctrl";
+			reg = <0x10010000 0x1000>;
+			ingenic,num-chips = <4>;
+			ingenic,regs-offset = <0x100>;
+
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			gpa: gpio@0 {
+				compatible = "ingenic,x1600-gpio";
+				reg = <0>;
+
+				gpio-controller;
+				gpio-ranges = <&pinctrl 0 0 32>;
+				#gpio-cells = <2>;
+
+//				#ingenic,pincfg-cells = <3>;
+//				#ingenic,pinmux-cells = <2>;
+				interrupts = <IRQ_GPIO0>;
+				interrupt-parent = <&core_intc>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+//				ingenic,pull-bitmap = <0xffffffff>;
+			};
+
+			gpb: gpio@1 {
+				compatible = "ingenic,x1600-gpio";
+				reg = <1>;
+
+				gpio-controller;
+				gpio-ranges = <&pinctrl 0 32 32>;
+				#gpio-cells = <2>;
+
+//				#ingenic,pincfg-cells = <3>;
+//				#ingenic,pinmux-cells = <2>;
+				interrupts = <IRQ_GPIO1>;
+				interrupt-parent = <&core_intc>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+//				ingenic,pull-bitmap = <0xffffffff>;
+			};
+
+			gpc: gpio@2 {
+				compatible = "ingenic,x1600-gpio";
+				reg = <2>;
+
+				gpio-controller;
+				gpio-ranges = <&pinctrl 0 64 32>;
+				#gpio-cells = <2>;
+
+//				#ingenic,pincfg-cells = <3>;
+//				#ingenic,pinmux-cells = <2>;
+				interrupts = <IRQ_GPIO2>;
+				interrupt-parent = <&core_intc>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+//				ingenic,pull-bitmap = <0xffffffff>;
+			};
+
+			gpd: gpio@3 {
+				compatible = "ingenic,x1600-gpio";
+				reg = <3>;
+
+				gpio-controller;
+				gpio-ranges = <&pinctrl 0 96 32>;
+				#gpio-cells = <2>;
+
+//				#ingenic,pincfg-cells = <3>;
+//				#ingenic,pinmux-cells = <2>;
+				interrupts = <IRQ_GPIO3>;
+				interrupt-parent = <&core_intc>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+//				ingenic,pull-bitmap = <0xffffffff>;
+			};
+
+		};
+
+		uart0: serial@10030000 {
+			compatible = "ingenic,x1600-uart";
+			reg = <0x10030000 0x100>;
+			interrupt-parent = <&core_intc>;
+			interrupts = <IRQ_UART0>;
+			clocks = <&ext>, <&cgu X1600_CLK_UART0>;
+			clock-names = "baud", "module";
+			dmas = <&dma X1600_DMA_UART0_TX 0xffffffff>,
+				   <&dma X1600_DMA_UART0_RX 0xffffffff>;
+			dma-names = "tx", "rx";
+		};
+
+		uart1: serial@10031000 {
+			compatible = "ingenic,x1600-uart";
+			reg = <0x10031000 0x100>;
+			interrupt-parent = <&core_intc>;
+			interrupts = <IRQ_UART1>;
+			clocks = <&ext>, <&cgu X1600_CLK_UART1>;
+			clock-names = "baud", "module";
+			dmas = <&dma X1600_DMA_UART1_TX 0xffffffff>,
+				   <&dma X1600_DMA_UART1_RX 0xffffffff>;
+			dma-names = "tx", "rx";
+		};
+
+		uart2: serial@10032000 {
+			compatible = "ingenic,x1600-uart";
+			reg = <0x10032000 0x100>;
+			interrupt-parent = <&core_intc>;
+			interrupts = <IRQ_UART2>;
+			clocks = <&ext>, <&cgu X1600_CLK_UART2>;
+			clock-names = "baud", "module";
+			dmas = <&dma X1600_DMA_UART2_TX 0xffffffff>,
+				   <&dma X1600_DMA_UART2_RX 0xffffffff>;
+			dma-names = "tx", "rx";
+		};
+
+		uart3: serial@10033000 {
+			compatible = "ingenic,x1600-uart";
+			reg = <0x10033000 0x100>;
+			interrupt-parent = <&core_intc>;
+			interrupts = <IRQ_UART3>;
+			clocks = <&ext>, <&cgu X1600_CLK_UART3>;
+			clock-names = "baud", "module";
+			dmas = <&dma X1600_DMA_UART3_TX 0xffffffff>,
+				   <&dma X1600_DMA_UART3_RX 0xffffffff>;
+			dma-names = "tx", "rx";
+		};
+
+		i2c0: i2c@10050000 {
+			compatible = "ingenic,x1000-i2c";
+			reg = <0x10050000 0x1000>;
+
+			clocks = <&cgu X1600_CLK_SMB0>;
+			clock-frequency = <100000>;
+
+			interrupt-parent = <&core_intc>;
+			interrupts = <IRQ_I2C0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c1: i2c@10051000 {
+			compatible = "ingenic,x1000-i2c";
+			reg = <0x10051000 0x1000>;
+
+			clocks = <&cgu X1600_CLK_SMB1>;
+			clock-frequency = <100000>;
+
+			interrupt-parent = <&core_intc>;
+			interrupts = <IRQ_I2C1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		spi0: spi@10043000 {
+			compatible = "ingenic,x1600-spi";
+			reg = <0x10043000 0x1000>;
+
+			clocks = <&cgu X1600_CLK_SSI0>;
+
+			interrupt-parent = <&core_intc>;
+			interrupts = <IRQ_SSI0>;
+			dmas = <&dma X1600_DMA_SSI0_TX 0xffffffff>,
+				   <&dma X1600_DMA_SSI0_RX 0xffffffff>;
+			dma-names = "tx", "rx";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		spi_slv0: slv@10045000 {
+			compatible = "ingenic,slv";
+			reg = <0x10045000 0x1000>;
+			interrupt-parent = <&core_intc>;
+			interrupts = <IRQ_SSI_SLV>;
+			dmas = <&dma X1600_DMA_SSI_SLV_TX 0xffffffff>,
+				   <&dma X1600_DMA_SSI_SLV_RX 0xffffffff>;
+			dma-names = "tx", "rx";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		dtrng: dtrng@10072000 {
+			compatible = "ingenic,dtrng";
+			reg = <0x10072000 0x100>;
+			interrupt-parent = <&core_intc>;
+			interrupts = <IRQ_DTRNG>;
+			status = "disabled";
+		};
+
+		otg_phy: otg_phy@10007800 {
+			compatible = "ingenic,x1600-phy";
+			reg = <0x1000003c 0x10>,
+			      <0x10078000 0x128>;	/* extended register set */
+
+			clocks = <&cgu X1600_CLK_OTGPHY>;
+
+			#phy-cells = <0>;
+
+			status = "disabled";
+		};
+
+		aic: aic@10079000 {
+			compatible = "ingenic,x1600-aic";
+			reg = <0x10079000 0x100>;
+			interrupt-parent = <&core_intc>;
+			interrupts = <IRQ_AUDIO>;
+			dmas = <&dma X1600_DMA_AIC_TX 0xffffffff>,
+				   <&dma X1600_DMA_AIC_RX 0xffffffff>;
+			dma-names = "tx", "rx";
+
+			i2s: i2s {
+				compatible = "ingenic,x1600-i2s";
+				status = "ok";
+			};
+			i2s_tloop: i2s_tloop {
+				compatible = "ingenic,i2s-tloop";
+				dmas = <&dma X1600_DMA_AIC_LOOP 0xffffffff>;
+				dma-names = "rx";
+				status = "ok";
+			};
+		};
+	};
+
+	ahb2 {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges = <>;
+
+		mmc0: mmc@13450000 {
+			compatible = "ingenic,jz4780-mmc";
+			reg = <0x13450000 0x1000>;
+
+			interrupt-parent = <&core_intc>;
+			interrupts = <IRQ_MSC0>;
+
+			clocks = <&cgu X1600_CLK_MSC0>;
+			clock-names = "mmc";
+
+			cap-sd-highspeed;
+			cap-mmc-highspeed;
+			cap-sdio-irq;
+			dmas = <&dma X1600_DMA_MSC0_RX 0xffffffff>,
+			       <&dma X1600_DMA_MSC0_TX 0xffffffff>;
+			dma-names = "rx", "tx";
+
+			status = "disabled";
+		};
+
+		mmc1: mmc@13460000 {
+			compatible = "ingenic,jz4780-mmc";
+			reg = <0x13460000 0x1000>;
+
+			interrupt-parent = <&core_intc>;
+			interrupts = <IRQ_MSC1>;
+
+			clocks = <&cgu X1600_CLK_MSC1>;
+			clock-names = "mmc";
+
+			cap-sd-highspeed;
+			cap-mmc-highspeed;
+			cap-sdio-irq;
+			dmas = <&dma X1600_DMA_MSC1_RX 0xffffffff>,
+			       <&dma X1600_DMA_MSC1_TX 0xffffffff>;
+			dma-names = "rx", "tx";
+
+			status = "disabled";
+		};
+
+		can0: can@13560000 {
+			compatible = "ingenic,x1600-can";
+			reg = <0x13560000 0x10000>;
+			status = "okay";
+			interrupt-parent = <&core_intc>;
+			interrupts = <IRQ_CAN0>;
+			dmas = <&dma X1600_DMA_CAN0_TX 0xffffffff>,
+				   <&dma X1600_DMA_CAN0_RX 0xffffffff>;
+			dma-names = "tx", "rx";
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		can1: can@13570000 {
+			compatible = "ingenic,x1600-can";
+			reg = <0x13570000 0x10000>;
+			status = "okay";
+			interrupt-parent = <&core_intc>;
+			interrupts = <IRQ_CAN1>;
+			dmas = <&dma X1600_DMA_CAN1_TX 0xffffffff>,
+				   <&dma X1600_DMA_CAN1_RX 0xffffffff>;
+			dma-names = "tx", "rx";
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		cdbus: cdbus@13430000 {
+			compatible = "ingenic,x1600-cdbus";
+			reg = <0x13550000 0x10000>;
+			interrupt-parent = <&core_intc>;
+			interrupts = <IRQ_CDBUS>;
+			status = "ok";
+		};
+
+		aes: aes@13430000 {
+			compatible = "ingenic,aes";
+			reg = <0x13430000 0x10000>;
+			interrupt-parent = <&core_intc>;
+			interrupts = <IRQ_AES>;
+			status = "ok";
+		};
+
+		hash: hash@13470000 {
+			compatible = "ingenic,hash";
+			reg = <0x13470000 0x10000>;
+			interrupt-parent = <&core_intc>;
+			interrupts = <IRQ_HASH>;
+			status = "ok";
+		};
+
+		mac0: mac@134b0000 {
+			compatible = "ingenic,x1600-mac";
+			reg = <0x134b0000 0x2000>;
+			interrupt-parent = <&core_intc>;
+			interrupts = <IRQ_GMAC0>;
+			ingenic,rst-ms = <10>;
+		};
+
+		sfc: sfc@13440000 {
+			compatible = "ingenic,x1600-sfc";
+			reg = <0x13440000 0x10000>;
+			interrupt-parent = <&core_intc>;
+			interrupts = <IRQ_SFC>;
+		};
+
+		dma: dma@13420000 {
+			compatible = "ingenic,jz4780-dma";
+			reg = <0x13420000 0x400>, <0x13421000 0x40>;
+			#dma-cells = <2>;
+
+			interrupt-parent = <&core_intc>;
+			interrupts = <IRQ_PDMA>, <IRQ_PDMAD>;
+
+			clocks = <&cgu X1600_CLK_PDMA>;
+
+			ingenic,reserved-channels = <0x3>;
+		};
+
+		mcu: mcu@13420000 {
+			compatible = "ingenic,x1600-mcu";
+			reg = <0x13420000 0x10000>;
+			interrupt-parent = <&core_intc>;
+			interrupt-names = "dmam";
+			interrupts = <IRQ_PDMAM>;
+			ingenic,tcsm_size = <32768>;
+		};
+
+		pwm: pwm@134c0000 {
+			compatible = "ingenic,x1600-pwm";
+			#pwm-cells = <2>;
+			reg = <0x134c0000 0x10000>;
+			interrupt-parent = <&core_intc>;
+			interrupts = <IRQ_PWM>;
+			dmas = <&dma X1600_DMA_PWM0_TX 0xffffffff>,
+				   <&dma X1600_DMA_PWM1_TX 0xffffffff>,
+				   <&dma X1600_DMA_PWM2_TX 0xffffffff>,
+				   <&dma X1600_DMA_PWM3_TX 0xffffffff>,
+				   <&dma X1600_DMA_PWM4_TX 0xffffffff>,
+				   <&dma X1600_DMA_PWM5_TX 0xffffffff>,
+				   <&dma X1600_DMA_PWM6_TX 0xffffffff>,
+				   <&dma X1600_DMA_PWM7_TX 0xffffffff>;
+			dma-names = "0", "1", "2", "3", "4", "5", "6", "7";
+		};
+
+		otg: otg@13500000 {
+			compatible = "ingenic,x1600-otg";
+			reg = <0x13500000 0x40000>;
+
+			interrupt-parent = <&core_intc>;
+			interrupts = <IRQ_OTG>;
+
+			clocks = <&cgu X1600_CLK_OTG0>;
+			clock-names = "otg";
+
+			phys = <&otg_phy>;
+			phy-names = "usb2-phy";
+
+			g-rx-fifo-size = <1096>;
+			g-np-tx-fifo-size = <512>;
+			g-tx-fifo-size = <16 16 16 128 256 256 512 768>;
+
+			status = "disabled";
+		};
+
+		efuse: efuse@13540000 {
+			compatible = "ingenic,x1600-efuse";
+			reg = <0x13540000 0x10000>;
+			status = "okay";
+		};
+	};
+
+	ahb1 {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges = <>;
+
+	};
+
+	ahb0 {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges = <>;
+
+		cim: cim@13060000 {
+			compatible = "ingenic,x1600-cim";
+			reg = <0x13060000 0x10000>;
+			interrupt-parent = <&core_intc>;
+			interrupts = <IRQ_CIM>;
+			clocks = <&cgu CLK_DIV_CIM>, <&cgu CLK_GATE_CIM>, <&cgu CLK_GATE_MIPI_CSI>;
+			clock-names = "div_cim", "gate_cim", "gate_mipi";
+			status = "disable";
+		};
+
+		dpu: dpu@13050000 {
+			compatible = "ingenic,x1600-dpu";
+			reg = <0x13050000 0x10000>;
+			interrupt-parent = <&core_intc>;
+			interrupts = <IRQ_LCD>;
+			status = "disabled";
+		};
+
+	};
+
+};
+

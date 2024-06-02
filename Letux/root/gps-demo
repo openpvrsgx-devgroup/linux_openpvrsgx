@@ -1,0 +1,31 @@
+#!/bin/bash
+#
+# start gps demo
+# see also http://projects.goldelico.com/p/gta04-kernel/page/GPS/
+#
+
+SCRIPTPATH="$(dirname "$0")"
+SERIAL=$($SCRIPTPATH/gps-on)
+
+echo "### starting gpsd $SERIAL ###"
+killall gpsd	# kill any existing
+gpsd $SERIAL
+
+ANTENNA_STATE=$(cd /sys/devices/platform/antenna-detect/input/input*/ && ls -1d event*) 2>/dev/null
+
+if [ "$ANTENNA_STATE" ]
+then
+	(
+	sleep 0.1
+	if evtest --query /dev/input/$ANTENNA_STATE EV_SW 13 2>/dev/null
+	then
+		echo "### internal antenna ###"
+	else
+		echo "### external antenna ###"
+	fi
+	) <$SERIAL	# GTA04: VSIM is only enabled if we open the GPS port
+fi
+
+echo "### starting foxtrot gps ###"
+. $SCRIPTPATH/x
+dbus-launch foxtrotgps

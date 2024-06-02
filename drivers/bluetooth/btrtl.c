@@ -22,6 +22,7 @@
 #define RTL_CHIP_8723CS_XX	5
 #define RTL_EPATCH_SIGNATURE	"Realtech"
 #define RTL_EPATCH_SIGNATURE_V2	"RTBTCore"
+#define RTL_ROM_LMP_3499	0x3499
 #define RTL_ROM_LMP_8703B	0x8703
 #define RTL_ROM_LMP_8723A	0x1200
 #define RTL_ROM_LMP_8723B	0x8723
@@ -1151,6 +1152,12 @@ next:
 		goto check_version;
 	}
 
+	if (rtl_has_chip_type(lmp_subver)) {
+		ret = rtl_read_chip_type(hdev, &chip_type);
+		if (ret)
+			goto err_free;
+	}
+
 	if (!btrtl_dev->ic_info) {
 		rtl_dev_info(hdev, "unknown IC info, lmp subver %04x, hci rev %04x, hci ver %04x",
 			    lmp_subver, hci_rev, hci_ver);
@@ -1478,6 +1485,24 @@ int btrtl_get_uart_settings(struct hci_dev *hdev,
 	return 0;
 }
 EXPORT_SYMBOL_GPL(btrtl_get_uart_settings);
+
+void btrtl_apply_quirks(struct hci_dev *hdev,
+			struct btrtl_device_info *btrtl_dev)
+{
+	switch (btrtl_dev->ic_info->lmp_subver) {
+	case RTL_ROM_LMP_8703B:
+		/* 8723CS reports two pages for local ext features,
+		 * but it doesn't support any features from page 2 -
+		 * it either responds with garbage or with error status
+		 */
+		set_bit(HCI_QUIRK_BROKEN_LOCAL_EXT_FTR_MAX_PAGE,
+			&hdev->quirks);
+		break;
+	default:
+		break;
+	}
+}
+EXPORT_SYMBOL_GPL(btrtl_apply_quirks);
 
 MODULE_AUTHOR("Daniel Drake <drake@endlessm.com>");
 MODULE_DESCRIPTION("Bluetooth support for Realtek devices ver " VERSION);

@@ -322,7 +322,7 @@
 		ti,y-max = /bits/ 16 <3600>;
 		ti,x-plate-ohms = /bits/ 16 <80>;
 		ti,pressure-max = /bits/ 16 <255>;
-		ti,swap-xy;
+		touchscreen-swapped-x-y;
 
 		wakeup-source;
 	};

@@ -1,0 +1,13 @@
+#
+# read EDID
+#
+
+[ "$(which parse-edid)" ] || apt-get install read-edid
+
+DEVICES="$(find /sys -name edid)"
+
+for DEV in $DEVICES
+do
+	echo $DEV:
+	parse-edid <$DEV
+done

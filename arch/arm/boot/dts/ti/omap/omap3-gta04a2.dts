@@ -1,0 +1,25 @@
+/*
+ * Copyright (C) 2014 H. Nikolaus Schaller <marek@goldelico.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+#include "omap3-gta04.dtsi"
+
+/ {
+	model = "Goldelico GTA04A2";
+
+	/* add additional regulators etc. */
+
+};
+
+/* FIXME:
+ * the A2 board has several GPIOs swapped
+ * and needs a very special bitbang driver for I2C1
+ *
+ * since there was only a single board produced
+ * it might not be worth the effort to write a
+ * device tree for it.
+ */

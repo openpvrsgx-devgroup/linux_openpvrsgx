@@ -142,7 +142,7 @@ struct twl4030_bci {
 	unsigned int		usb_cur_target;
 	struct delayed_work	current_worker;
 #define	USB_CUR_STEP	20000	/* 20mA at a time */
-#define	USB_MIN_VOLT	4750000	/* 4.75V */
+#define	USB_MIN_VOLT	4550000	/* 4.55V */
 #define	USB_CUR_DELAY	msecs_to_jiffies(100)
 #define	USB_MAX_CURRENT	1700000 /* TWL4030 caps at 1.7A */
 
@@ -255,7 +255,8 @@ static int twl4030_charger_update_current(struct twl4030_bci *bci)
 	} else {
 		cur = bci->usb_cur;
 		bci->ac_is_active = false;
-		if (cur > bci->usb_cur_target) {
+		if ((cur > bci->usb_cur_target) ||
+		(bci->usb_mode == CHARGE_LINEAR)) {
 			cur = bci->usb_cur_target;
 			bci->usb_cur = cur;
 		}
@@ -395,7 +396,7 @@ static int twl4030_charger_update_current(struct twl4030_bci *bci)
 	return 0;
 }
 
-static int twl4030_charger_get_current(void);
+static int twl4030_charger_get_current(int *value);
 
 static void twl4030_current_worker(struct work_struct *data)
 {
@@ -410,7 +411,8 @@ static void twl4030_current_worker(struct work_struct *data)
 	else
 		/* BCIVBUS uses ADCIN8, 7/1023 V/step */
 		v = res * 6843;
-	curr = twl4030_charger_get_current();
+	curr = 0;
+	twl4030_charger_get_current(&curr);
 
 	dev_dbg(bci->dev, "v=%d cur=%d limit=%d target=%d\n", v, curr,
 		bci->usb_cur, bci->usb_cur_target);
@@ -736,7 +738,7 @@ twl4030_bci_mode_show(struct device *dev,
 static DEVICE_ATTR(mode, 0644, twl4030_bci_mode_show,
 		   twl4030_bci_mode_store);
 
-static int twl4030_charger_get_current(void)
+static int twl4030_charger_get_current(int *value)
 {
 	int curr;
 	int ret;
@@ -750,7 +752,8 @@ static int twl4030_charger_get_current(void)
 	if (ret)
 		return ret;
 
-	return regval2ua(curr, bcictl1 & TWL4030_CGAIN);
+	*value = regval2ua(curr, bcictl1 & TWL4030_CGAIN);
+	return 0;
 }
 
 /*
@@ -845,10 +848,9 @@ static int twl4030_bci_get_property(struct power_supply *psy,
 		if (!is_charging)
 			return -ENODATA;
 		/* current measurement is shared between AC and USB */
-		ret = twl4030_charger_get_current();
+		ret = twl4030_charger_get_current(&val->intval);
 		if (ret < 0)
 			return ret;
-		val->intval = ret;
 		break;
 	case POWER_SUPPLY_PROP_ONLINE:
 		val->intval = is_charging &&

@@ -1,0 +1,75 @@
+TI bq24296/24297 Li-Ion Charger
+===============================
+
+This binding will support the bq24297. It was derived
+from a bq24296 driver but is tested with bq24297 only.
+There are other ICs in the same family but those have
+not been tested. The Monolithic Power Systems mp2624
+is very similar to the bq24297.
+
+Required properties:
+- compatible: Should contain one of the following:
+    * "ti,bq24296"
+    * "ti,bq24297"
+    * "mps,mp2624"
+- reg: integer, i2c address of the device (should be 0x6b).
+
+Optional properties:
+- monitored-battery: phandle of the battery
+  properties used if defined:
+  * voltage-max-design-microvolt (default 4200000)
+  * voltage-min-design-microvolt (default 3200000)
+  * constant-charge-current-max-microamp
+  (default: as defined by boot loader)
+  * precharge-current-microamp (default 128000)
+  * charge-term-current-microamp (default 128000)
+- dc-det: gpio for detecting two different DC sources
+  (default: use usb-input-current-microamp only)
+- ti,usb-input-current-microamp: default current for USB source
+  (default: value as defined by boot loader)
+- ti,adp-input-current-microamp: default current for other source
+  (default: 2048000)
+
+Required nodes:
+- regulators: child node defining exactly two regulators for
+  [0] vsys (battery or usb input -> system output) and
+  [1] otg (battery input -> usb output).
+
+Example:
+-------
+
+bat: battery {
+	compatible = "simple-battery", "pyra-battery";
+	voltage-min-design-microvolt = <3200000>;
+	voltage-max-design-microvolt = <4200000>;
+	energy-full-design-microwatt-hours = <22200000>;
+	charge-full-design-microamp-hours = <6000000>;
+	charge-term-current-microamp = <128000>;
+	constant-charge-current-max-microamp = <1000000>;
+};
+
+bq24297@6b {
+	compatible = "ti,bq24297";
+	reg = <0x6b>;
+	monitored-battery = <&bat>;	/* provides max-voltage-by-design */
+	interrupt-parent = <&gpio99>;
+	interrupts = <(1*8+3) IRQ_TYPE_EDGE_FALLING>;   /* P13 */
+
+	regulators {
+		vsys_reg: vsys_regulator {
+			regulator-compatible = "bq2429x-vsys";
+			regulator-name = "vsys";
+			regulator-min-microvolt = <3500000>;
+			regulator-max-microvolt = <4200000>;
+			regulator-always-on;
+			regulator-boot-on;
+		};
+
+		otg_reg: otg_regulator {
+			regulator-compatible = "bq2429x-otg";
+			regulator-name = "otg";
+			regulator-min-microvolt = <4900000>;
+			regulator-max-microvolt = <5100000>;
+		};
+	};
+};

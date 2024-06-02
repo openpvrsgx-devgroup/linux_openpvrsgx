@@ -55,7 +55,7 @@ void local_flush_tlb_all(void)
 {
 	unsigned long flags;
 	unsigned long old_ctx;
-	int entry, ftlbhighset;
+	int entry;
 
 	local_irq_save(flags);
 	/* Save old context and create impossible VPN2 value */
@@ -71,6 +71,8 @@ void local_flush_tlb_all(void)
 	 * If there are any wired entries, fall back to iterating
 	 */
 	if (cpu_has_tlbinv && !entry) {
+#ifndef CONFIG_MACH_X2000
+		int ftlbhighset;
 		if (current_cpu_data.tlbsizevtlb) {
 			write_c0_index(0);
 			mtc0_tlbw_hazard();
@@ -85,6 +87,9 @@ void local_flush_tlb_all(void)
 			mtc0_tlbw_hazard();
 			tlbinvf();  /* invalidate one FTLB set */
 		}
+#else
+		tlbinvf();  /* invalide FTLB/VTLB set */
+#endif
 	} else {
 		while (entry < current_cpu_data.tlbsize) {
 			/* Make sure all entries differ. */
@@ -98,7 +103,9 @@ void local_flush_tlb_all(void)
 	tlbw_use_hazard();
 	write_c0_entryhi(old_ctx);
 	htw_start();
+#if defined(CONFIG_MACH_LOONGSON2EF) || defined(CONFIG_MACH_LOONGSON64)
 	flush_micro_tlb();
+#endif
 	local_irq_restore(flags);
 }
 EXPORT_SYMBOL(local_flush_tlb_all);
@@ -158,7 +165,9 @@ void local_flush_tlb_range(struct vm_area_struct *vma, unsigned long start,
 		} else {
 			drop_mmu_context(mm);
 		}
+#if defined(CONFIG_MACH_LOONGSON2EF) || defined(CONFIG_MACH_LOONGSON64)
 		flush_micro_tlb();
+#endif
 		local_irq_restore(flags);
 	}
 }
@@ -204,7 +213,9 @@ void local_flush_tlb_kernel_range(unsigned long start, unsigned long end)
 	} else {
 		local_flush_tlb_all();
 	}
+#if defined(CONFIG_MACH_LOONGSON2EF) || defined(CONFIG_MACH_LOONGSON64)
 	flush_micro_tlb();
+#endif
 	local_irq_restore(flags);
 }
 
@@ -247,7 +258,9 @@ void local_flush_tlb_page(struct vm_area_struct *vma, unsigned long page)
 		if (cpu_has_mmid)
 			write_c0_memorymapid(old_mmid);
 		htw_start();
+#if defined(CONFIG_MACH_LOONGSON2EF) || defined(CONFIG_MACH_LOONGSON64)
 		flush_micro_tlb_vm(vma);
+#endif
 		local_irq_restore(flags);
 	}
 }
@@ -281,7 +294,9 @@ void local_flush_tlb_one(unsigned long page)
 	}
 	write_c0_entryhi(oldpid);
 	htw_start();
+#if defined(CONFIG_MACH_LOONGSON2EF) || defined(CONFIG_MACH_LOONGSON64)
 	flush_micro_tlb();
+#endif
 	local_irq_restore(flags);
 }
 
@@ -377,7 +392,9 @@ void __update_tlb(struct vm_area_struct * vma, unsigned long address, pte_t pte)
 	}
 	tlbw_use_hazard();
 	htw_start();
+#if defined(CONFIG_MACH_LOONGSON2EF) || defined(CONFIG_MACH_LOONGSON64)
 	flush_micro_tlb_vm(vma);
+#endif
 
 	if (ptemap)
 		pte_unmap(ptemap);

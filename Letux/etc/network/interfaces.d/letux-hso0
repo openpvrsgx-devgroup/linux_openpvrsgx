@@ -1,0 +1,10 @@
+#
+# interfaces for Letux supported devices
+# GTA04, BeagleBoard, BeagleBoneBlack, Letux Cortex 8,
+# Letux Cortex15, Pandaboard ES, OMAP5EVM, Pyra, OpenPandora
+#
+# the OPTION WWAN driver hso creates a hso0 interface
+
+auto hso0
+iface hso0 inet dhcp
+	up /etc/network/letux-setup-resolv-conf.sh

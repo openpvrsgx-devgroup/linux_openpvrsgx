@@ -213,6 +213,11 @@
 		l4_mpuss: interconnect@4b140000 {
 		};
 
+		bandgap@44e10448 {
+			compatible = "ti,am335x-bandgap";
+			reg = <0x44e10448 0x8>;
+		};
+
 		intc: interrupt-controller@48200000 {
 			compatible = "ti,am33xx-intc";
 			interrupt-controller;
@@ -620,7 +625,7 @@
 			};
 		};
 
-		target-module@56000000 {
+		sgx_module: target-module@56000000 {
 			compatible = "ti,sysc-omap4", "ti,sysc";
 			reg = <0x5600fe00 0x4>,
 			      <0x5600fe10 0x4>;

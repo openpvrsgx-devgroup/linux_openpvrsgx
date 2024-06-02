@@ -1,0 +1,345 @@
+/*
+ * Copyright (C) 2014 H. Nikolaus Schaller <hns@goldelico.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+/dts-v1/;
+
+#include "am335x-boneblack.dts"
+#include <dt-bindings/input/input.h>
+
+// taken from https://github.com/RobertCNelson/dtb-linux-dev/blob/master/src/arm/
+
+#ifndef _DT_BINDINGS_BOARD_AM335X_BBW_BBB_BASE_H
+#define _DT_BINDINGS_BOARD_AM335X_BBW_BBB_BASE_H
+
+#define BONE_P8_03 AM335X_PIN_GPMC_AD6
+#define BONE_P8_04 AM335X_PIN_GPMC_AD7
+
+#define BONE_P8_05 AM335X_PIN_GPMC_AD2
+#define BONE_P8_06 AM335X_PIN_GPMC_AD3
+#define BONE_P8_07 AM335X_PIN_GPMC_ADVN_ALE
+#define BONE_P8_08 AM335X_PIN_GPMC_OEN_REN
+
+#define BONE_P8_09 AM335X_PIN_GPMC_BEN0_CLE
+#define BONE_P8_10 AM335X_PIN_GPMC_WEN
+#define BONE_P8_11 AM335X_PIN_GPMC_AD13
+#define BONE_P8_12 AM335X_PIN_GPMC_AD12
+
+#define BONE_P8_13 AM335X_PIN_GPMC_AD9
+#define BONE_P8_14 AM335X_PIN_GPMC_AD10
+#define BONE_P8_15 AM335X_PIN_GPMC_AD15
+#define BONE_P8_16 AM335X_PIN_GPMC_AD14
+
+#define BONE_P8_17 AM335X_PIN_GPMC_AD11
+#define BONE_P8_18 AM335X_PIN_GPMC_CLK
+#define BONE_P8_19 AM335X_PIN_GPMC_AD8
+#define BONE_P8_20 AM335X_PIN_GPMC_CSN2
+
+#define BONE_P8_21 AM335X_PIN_GPMC_CSN1
+#define BONE_P8_22 AM335X_PIN_GPMC_AD5
+#define BONE_P8_23 AM335X_PIN_GPMC_AD4
+#define BONE_P8_24 AM335X_PIN_GPMC_AD1
+
+#define BONE_P8_25 AM335X_PIN_GPMC_AD0
+#define BONE_P8_26 AM335X_PIN_GPMC_CSN0
+#define BONE_P8_27 AM335X_PIN_LCD_VSYNC
+#define BONE_P8_28 AM335X_PIN_LCD_PCLK
+
+#define BONE_P8_29 AM335X_PIN_LCD_HSYNC
+#define BONE_P8_30 AM335X_PIN_LCD_AC_BIAS_EN
+#define BONE_P8_31 AM335X_PIN_LCD_DATA14
+#define BONE_P8_32 AM335X_PIN_LCD_DATA15
+
+#define BONE_P8_33 AM335X_PIN_LCD_DATA13
+#define BONE_P8_34 AM335X_PIN_LCD_DATA11
+#define BONE_P8_35 AM335X_PIN_LCD_DATA12
+#define BONE_P8_36 AM335X_PIN_LCD_DATA10
+
+#define BONE_P8_37 AM335X_PIN_LCD_DATA8
+#define BONE_P8_38 AM335X_PIN_LCD_DATA9
+#define BONE_P8_39 AM335X_PIN_LCD_DATA6
+#define BONE_P8_40 AM335X_PIN_LCD_DATA7
+
+#define BONE_P8_41 AM335X_PIN_LCD_DATA4
+#define BONE_P8_42 AM335X_PIN_LCD_DATA5
+#define BONE_P8_43 AM335X_PIN_LCD_DATA2
+#define BONE_P8_44 AM335X_PIN_LCD_DATA3
+
+#define BONE_P8_45 AM335X_PIN_LCD_DATA0
+#define BONE_P8_46 AM335X_PIN_LCD_DATA1
+
+#define BONE_P9_11 AM335X_PIN_GPMC_WAIT0
+#define BONE_P9_12 AM335X_PIN_GPMC_BEN1
+
+#define BONE_P9_13 AM335X_PIN_GPMC_WPN
+#define BONE_P9_14 AM335X_PIN_GPMC_A2
+#define BONE_P9_15 AM335X_PIN_GPMC_A0
+#define BONE_P9_16 AM335X_PIN_GPMC_A3
+
+#define BONE_P9_17 AM335X_PIN_SPI0_CS0
+#define BONE_P9_18 AM335X_PIN_SPI0_D1
+#define BONE_P9_19 AM335X_PIN_UART1_RTSN
+#define BONE_P9_20 AM335X_PIN_UART1_CTSN
+
+#define BONE_P9_21 AM335X_PIN_SPI0_D0
+#define BONE_P9_22 AM335X_PIN_SPI0_SCLK
+#define BONE_P9_23 AM335X_PIN_GPMC_A1
+#define BONE_P9_24 AM335X_PIN_UART1_TXD
+
+#define BONE_P9_25 AM335X_PIN_MCASP0_AHCLKX
+#define BONE_P9_26 AM335X_PIN_UART1_RXD
+#define BONE_P9_27 AM335X_PIN_MCASP0_FSR
+#define BONE_P9_28 AM335X_PIN_MCASP0_AHCLKR
+
+#define BONE_P9_29 AM335X_PIN_MCASP0_FSX
+#define BONE_P9_30 AM335X_PIN_MCASP0_AXR0
+#define BONE_P9_31 AM335X_PIN_MCASP0_ACLKX
+
+/* Shared P21 of P11 */
+#define BONE_P9_41A AM335X_PIN_XDMA_EVENT_INTR1
+#define BONE_P9_41B AM335X_PIN_MCASP0_AXR1
+
+/* Shared P22 of P11 */
+#define BONE_P9_42A AM335X_PIN_ECAP0_IN_PWM0_OUT
+#define BONE_P9_42B AM335X_PIN_MCASP0_ACLKR
+
+#endif
+
+
+/ {
+
+	/* overwrite device model */
+	model = "BeagleBone Black + Letux extensions";
+	compatible = "goldelico,am335x-bone-black+letux", "ti,am335x-bone-black", "ti,am335x-bone", "ti,am33xx";
+};
+
+/ {
+/*
+ * we assume a Chipsee BBB-EXP43 with 4.3 inch panel, resistive touch and some LEDs and Buttons
+ * http://www.chipsee.com/index.php/evm/beagleboard/cs-bbb-exp43.html
+ */
+
+/*
+user LED gpio1_28
+buttons: gpio1_16, 1_17, 1_19, 3_16, 0_15  => left/right/up/down/enter
+lcd: 16 bit parallel (using 24 bit per pixel)
+enable: gpio3_19
+backlight: EHRPWM1A
+touch: internal to am335x
+*/
+
+	gpio-leds {
+
+		compatible = "gpio-leds";
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&led_pins>;
+
+		led@user {
+			label = "bbb-exp43::user";
+			gpios = <&gpio1 28 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "heartbeat";
+			default-state = "on";
+		};
+
+		led@backlight {
+			label = "bbb-exp43::backlight";
+			gpios = <&gpio1 18 GPIO_ACTIVE_HIGH>;
+			default-state = "on";
+		};
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&button_pins>;
+
+		left-button {
+			label = "left";
+			linux,code = <KEY_LEFT>;
+			gpios = <&gpio1 16 GPIO_ACTIVE_LOW>;
+			gpio-key,wakeup;
+		};
+
+		right-button {
+			label = "right";
+			linux,code = <KEY_RIGHT>;
+			gpios = <&gpio1 17 GPIO_ACTIVE_LOW>;
+			gpio-key,wakeup;
+		};
+
+		up-button {
+			label = "up";
+			linux,code = <KEY_UP>;
+			gpios = <&gpio1 19 GPIO_ACTIVE_LOW>;
+			gpio-key,wakeup;
+		};
+
+		down-button {
+			label = "down";
+			linux,code = <KEY_DOWN>;
+			gpios = <&gpio3 16 GPIO_ACTIVE_LOW>;
+			gpio-key,wakeup;
+		};
+
+		enter-button {
+			label = "enter";
+			linux,code = <KEY_ENTER>;
+			gpios = <&gpio0 15 GPIO_ACTIVE_LOW>;
+			gpio-key,wakeup;
+		};
+
+	};
+
+	backlight: backlight {
+		compatible = "pwm-backlight";
+		pwms = <&ehrpwm1 0 50000 0>;
+		pwm-names = "backlight";
+		brightness-levels = <0 1 2 5 10 20 40 60 80 100 150 255>;
+		default-brightness-level = <10>;
+	};
+
+	panel {
+		compatible = "innolux,at043tn24";
+		pinctrl-names = "default";
+		pinctrl-0 = <&lcd_24bit_pins>;
+
+		backlight= <&backlight>;
+		enable-gpios = <&gpio3 19 GPIO_ACTIVE_HIGH>;
+
+		port {
+			panel_0: endpoint@0 {
+				remote-endpoint = <&lcdc_0>;
+			};
+		};
+	};
+};
+
+&epwmss1 {
+	status = "okay";
+};
+
+&ehrpwm1 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&bb_lcd_pwm_backlight_pins>;
+};
+
+&lcdc_0 {
+	remote-endpoint = <&panel_0>;
+};
+
+&tda19988 {
+	status = "disabled";
+	/delete-node/ ports;
+};
+
+&tscadc {
+	status = "okay";
+
+	tsc {
+		ti,wires = <4>;
+		ti,x-plate-resistance = <600>;
+		ti,coordinate-readouts = <5>;
+		ti,wire-config = <0x00 0x11 0x22 0x33>;
+	};
+
+	adc {
+		ti,adc-channels = <4 5 6 7>;
+	};
+};
+
+&am33xx_pinmux {
+
+	button_pins: pinmux_button_pins {
+		pinctrl-single,pins = <
+			AM33XX_PADCONF(BONE_P9_15, PIN_INPUT_PULLUP, MUX_MODE7)	/* KEY_LEFT gpmc_a0.gpio1_16 */
+			AM33XX_PADCONF(BONE_P9_23, PIN_INPUT_PULLUP, MUX_MODE7)	/* KEY_RIGHT gpmc_a1.gpio1_17 */
+			AM33XX_PADCONF(BONE_P9_16, PIN_INPUT_PULLUP, MUX_MODE7)	/* KEY_UP gpmc_a3.gpio1_19 */
+			AM33XX_PADCONF(BONE_P9_30, PIN_INPUT_PULLUP, MUX_MODE7)	/* KEY_ENTER gpmc_a2.gpio3_16 */
+			AM33XX_PADCONF(BONE_P9_24, PIN_INPUT_PULLUP, MUX_MODE7)	/* KEY_DOWN uart1_txd.gpio0_15 */
+		>;
+	};
+
+	led_pins: pinmux_led_pins {
+		pinctrl-single,pins = <
+			AM33XX_PADCONF(BONE_P9_12, PIN_OUTPUT, MUX_MODE7)	/* gpmc_ben1.gpio1_28 */
+		>;
+	};
+
+	bb_lcd_pwm_backlight_pins: pinmux_bb_lcd_pwm_backlight_pins {
+		pinctrl-single,pins = <
+			AM33XX_PADCONF(BONE_P9_14, PIN_OUTPUT, MUX_MODE6) /* gpmc_a2.ehrpwm1a */
+		>;
+	};
+
+	lcd_24bit_pins: pinmux_lcd_18bit_pins {
+		pinctrl-single,pins = <
+			/* P8_45: lcd_data0.lcd_data0 */
+			AM33XX_PADCONF(BONE_P8_45, PIN_OUTPUT, MUX_MODE0)
+			/* P8_46: lcd_data1.lcd_data1 */
+			AM33XX_PADCONF(BONE_P8_46, PIN_OUTPUT, MUX_MODE0)
+			/* P8_43: lcd_data2.lcd_data2 */
+			AM33XX_PADCONF(BONE_P8_43, PIN_OUTPUT, MUX_MODE0)
+			/* P8_44: lcd_data3.lcd_data3 */
+			AM33XX_PADCONF(BONE_P8_44, PIN_OUTPUT, MUX_MODE0)
+			/* P8_41: lcd_data4.lcd_data4 */
+			AM33XX_PADCONF(BONE_P8_41, PIN_OUTPUT, MUX_MODE0)
+			/* P8_42: lcd_data5.lcd_data5 */
+			AM33XX_PADCONF(BONE_P8_42, PIN_OUTPUT, MUX_MODE0)
+			/* P8_39: lcd_data6.lcd_data6 */
+			AM33XX_PADCONF(BONE_P8_39, PIN_OUTPUT, MUX_MODE0)
+			/* P8_40: lcd_data7.lcd_data7 */
+			AM33XX_PADCONF(BONE_P8_40, PIN_OUTPUT, MUX_MODE0)
+			/* P8_37: lcd_data8.lcd_data8 */
+			AM33XX_PADCONF(BONE_P8_37, PIN_OUTPUT, MUX_MODE0)
+			/* P8_38: lcd_data9.lcd_data9 */
+			AM33XX_PADCONF(BONE_P8_38, PIN_OUTPUT, MUX_MODE0)
+			/* P8_36: lcd_data10.lcd_data10 */
+			AM33XX_PADCONF(BONE_P8_36, PIN_OUTPUT, MUX_MODE0)
+			/* P8_34: lcd_data11.lcd_data11 */
+			AM33XX_PADCONF(BONE_P8_34, PIN_OUTPUT, MUX_MODE0)
+			/* P8_35: lcd_data12.lcd_data12 */
+			AM33XX_PADCONF(BONE_P8_35, PIN_OUTPUT, MUX_MODE0)
+			/* P8_33: lcd_data13.lcd_data13 */
+			AM33XX_PADCONF(BONE_P8_33, PIN_OUTPUT, MUX_MODE0)
+			/* P8_31: lcd_data14.lcd_data14 */
+			AM33XX_PADCONF(BONE_P8_31, PIN_OUTPUT, MUX_MODE0)
+			/* P8_32: lcd_data15.lcd_data15 */
+			AM33XX_PADCONF(BONE_P8_32, PIN_OUTPUT, MUX_MODE0)
+
+			/* gpmc_ad15.lcd_data16 */
+			AM33XX_PADCONF(BONE_P8_15, PIN_OUTPUT, MUX_MODE1)
+			/* gpmc_ad14.lcd_data17 */
+			AM33XX_PADCONF(BONE_P8_16, PIN_OUTPUT, MUX_MODE1)
+			/* gpmc_ad13.lcd_data18 */
+			AM33XX_PADCONF(BONE_P8_11, PIN_OUTPUT, MUX_MODE1)
+			/* gpmc_ad12.lcd_data19 */
+			AM33XX_PADCONF(BONE_P8_12, PIN_OUTPUT, MUX_MODE1)
+			/* gpmc_ad11.lcd_data20 */
+			AM33XX_PADCONF(BONE_P8_17, PIN_OUTPUT, MUX_MODE1)
+			/* gpmc_ad10.lcd_data21 */
+			AM33XX_PADCONF(BONE_P8_14, PIN_OUTPUT, MUX_MODE1)
+			/* gpmc_ad9.lcd_data22 */
+			AM33XX_PADCONF(BONE_P8_13, PIN_OUTPUT, MUX_MODE1)
+			/* gpmc_ad8.lcd_data23 */
+			AM33XX_PADCONF(BONE_P8_19, PIN_OUTPUT, MUX_MODE1)
+
+			/* P8_27: lcd_vsync.lcd_vsync */
+			AM33XX_PADCONF(BONE_P8_27, PIN_OUTPUT, MUX_MODE0)
+			/* P8_29: lcd_hsync.lcd_hsync */
+			AM33XX_PADCONF(BONE_P8_29, PIN_OUTPUT, MUX_MODE0)
+			/* P8_28: lcd_pclk.lcd_pclk*/
+			AM33XX_PADCONF(BONE_P8_28, PIN_OUTPUT, MUX_MODE0)
+			/* P8_30: lcd_ac_bias_en.lcd_ac_bias_en */
+			AM33XX_PADCONF(BONE_P8_30, PIN_OUTPUT, MUX_MODE0)
+
+			/* P9_27: gpio3_19 */
+			AM33XX_PADCONF(BONE_P9_27, PIN_OUTPUT_PULLUP, MUX_MODE7)
+		>;
+	};
+};

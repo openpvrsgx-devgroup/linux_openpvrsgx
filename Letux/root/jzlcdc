@@ -1,0 +1,88 @@
+#!/bin/bash
+
+PATH=.:$PATH:/usr/bin/$(echo $MACHTYPE | sed s/unknown-//g)
+
+case "$1" in
+	0 ) BASE=13050000 ;;	# LCDC0
+	1 ) BASE=130a0000 ;;	# LCDC1
+	* ) BASE=13050000 ;;	# LCDC0 default
+esac
+
+mount | fgrep -q debugfs || mount -t debugfs none /sys/kernel/debug
+cat /sys/kernel/debug/regmap/$BASE.lcd*/registers
+
+function lcdcregisters {
+
+cat <<END
+/* jz4740 */
+#define JZ_REG_LCD_CFG				0x00
+#define JZ_REG_LCD_VSYNC			0x04
+#define JZ_REG_LCD_HSYNC			0x08
+#define JZ_REG_LCD_VAT				0x0C
+#define JZ_REG_LCD_DAH				0x10
+#define JZ_REG_LCD_DAV				0x14
+#define JZ_REG_LCD_PS				0x18
+#define JZ_REG_LCD_CLS				0x1C
+#define JZ_REG_LCD_SPL				0x20
+#define JZ_REG_LCD_REV				0x24
+#define JZ_REG_LCD_CTRL			0x30
+#define JZ_REG_LCD_STATE			0x34
+#define JZ_REG_LCD_IID				0x38
+#define JZ_REG_LCD_DA0				0x40
+#define JZ_REG_LCD_SA0				0x44
+#define JZ_REG_LCD_FID0			0x48
+#define JZ_REG_LCD_CMD0			0x4C
+#define JZ_REG_LCD_DA1				0x50
+#define JZ_REG_LCD_SA1				0x54
+#define JZ_REG_LCD_FID1			0x58
+#define JZ_REG_LCD_CMD1			0x5C
+
+/* jz4780 */
+
+END
+}
+
+function descregisters {
+
+cat <<END
+	u32 next	0
+	u32 addr	0x04
+	u32 id		0x08
+	u32 cmd		0x0c
+	u32 offsize	0x10
+	u32 pagewidth	0x14
+	u32 cpos	0x18
+	u32 dessize	0x1c
+END
+}
+
+
+lcdcregisters | while read DEFINE REGISTER OFFSET
+do
+	case "$DEFINE" in
+	'#define' )
+		ADDR=$(printf "0x%x" $((0x$BASE + $OFFSET)))
+		VAL=$(devmem2 $ADDR w | fgrep 'Value at address' | cut -d ' ' -f 6)
+		VAL=$(printf %08x $[$VAL])
+		echo $ADDR $VAL $REGISTER
+		;;
+	esac
+done
+
+# print descriptors (DA0, DA1)
+for OFFSET in 0x40 0x50
+do
+		ADDR=$(printf "0x%x" $((0x$BASE + $OFFSET)))
+		VAL=$(devmem2 $ADDR w | fgrep 'Value at address' | cut -d ' ' -f 6)
+		VAL=$(printf %08x $[$VAL])
+		echo $ADDR $VAL:
+		DESC=$VAL
+		
+		descregisters | while read TYPE REGISTER OFFSET
+		do
+			ADDR=$(printf "0x%x" $((0x$DESC + $OFFSET)))
+			VAL=$(devmem2 $ADDR w | fgrep 'Value at address' | cut -d ' ' -f 6)
+			VAL=$(printf %08x $[$VAL])
+			echo $ADDR $VAL $REGISTER
+		done
+done

@@ -64,6 +64,18 @@ config SND_SOC_OMAP_MCPDM
 	  Say Y or M here if you want to have support for McPDM IP found in
 	  OMAP4 and OMAP5.
 
+config SND_SOC_OMAP_AESS
+	tristate "Audio Engine SubSystem (AESS) support"
+	depends on ARCH_OMAP4 || SOC_OMAP5 || COMPILE_TEST
+	select SND_SOC_TOPOLOGY
+	select SND_SOC_DAVINCI_MCASP
+	select SND_SOC_OMAP_MCBSP
+	select SND_DYNAMIC_MINORS
+	select FW_LOADER
+	help
+	  Say Y or M here if you want to have support for AESS IP found in
+	  OMAP4 and OMAP5.
+
 comment "Audio support for boards with Texas Instruments SoCs"
 config SND_SOC_NOKIA_N810
 	tristate "SoC Audio support for Nokia N810"

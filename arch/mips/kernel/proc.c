@@ -181,8 +181,10 @@ static int show_cpuinfo(struct seq_file *m, void *v)
 		seq_puts(m, " 3k_cache");
 	if (cpu_has_4k_cache)
 		seq_puts(m, " 4k_cache");
+#if 0	// raises "BUG: using smp_processor_id() in preemptible [00000000] code: cat/1946" on jz4780/CI20 with SMP
 	if (cpu_has_octeon_cache)
 		seq_puts(m, " octeon_cache");
+#endif
 	if (raw_cpu_has_fpu)
 		seq_puts(m, " fpu");
 	if (cpu_has_32fpr)

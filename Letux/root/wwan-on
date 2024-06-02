@@ -1,0 +1,107 @@
+#!/bin/bash
+#
+# start UMTS modem
+# and provde interface name
+# may block ~30 seconds if no modem can be found
+#
+# usage: wwan-on [Modem | Application]
+#
+
+SCRIPTPATH="$(dirname "$0")"
+while [ "$1" ]
+do
+	case "$1" in
+		-v ) VERBOSE=yes;;
+		-* ) echo unknown flag $1;;
+		*) break;;
+	esac
+	shift
+done
+
+CHANNEL="Modem"
+if [ "$1" ]
+then
+	CHANNEL="$1"
+	shift
+fi
+
+rfkill unblock wwan
+
+(cd $SCRIPTPATH && make femtocom 2>/dev/null >&2)
+
+for wait in 1 2 3 4 5 6 7 8 9 # 9 times 3 seconds
+do
+	# Bus 001 Device 002: ID 0424:3503 Standard Microsystems Corp.
+	while read Bus BUSNUM Device DEVICENUM ID IDENT NAME
+	do
+		[ "$VERBOSE" ] && echo try $IDENT >&2
+		case "$IDENT" in
+		0af0:8800 )
+			MODEM="GTM601W"
+			[ "$VERBOSE" ] && echo found $MODEM on USB >&2
+			for i in $(cd /sys/class/tty/ && echo ttyHS* 2>/dev/null) ""
+			do
+				[ "$VERBOSE" ] && echo "try /sys/class/tty/$i/hsotype => $(cat /sys/class/tty/$i/hsotype 2>/dev/null) = $CHANNEL" >&2
+				if [ "$(cat /sys/class/tty/$i/hsotype 2>/dev/null)" = "$CHANNEL" ]
+				then
+					echo /dev/$i
+					exit
+				fi
+			done
+			;;
+		1e2d:0054 )
+			MODEM="PHS8"
+			[ "$VERBOSE" ] && echo found $MODEM on USB >&2
+			if [ -r /dev/ttyACM0 ]
+			then
+				echo /dev/ttyACM0	# PHS8 in at^sdata=6 mode
+				exit
+			fi
+			if [ -r /dev/ttyUSB3 ]
+			then
+				echo /dev/ttyUSB3	# PHS8 in at^sdata=3/4/5 mode
+				break
+			fi
+			if [ "$wait" = 2 ]
+			then
+				# PHS8 might be in at^sdata=3/4/5 mode (NEVER NEVER SWITCH TO at^sdata=2 or you are in big trouble!)
+				modprobe usbserial
+				echo 1e2d 0053 >/sys/bus/usb-serial/drivers/generic/new_id
+			fi
+			;;
+		1e2d:0061 )
+			MODEM="PLS8"
+			[ "$VERBOSE" ] && echo found $MODEM on USB >&2
+			if [ -r /dev/ttyACM1 ]
+			then
+				[ "$wait" != 1 ] && sleep 2.0	# wait for ^SYSSTART before sending AT commands
+				echo /dev/ttyACM1	# PLS8 - Application port
+				exit
+			fi
+			;;
+		1e2d:0068 | 1e2d:0069 )
+			MODEM="PLSx3"	# PLS83W
+			[ "$VERBOSE" ] && echo found $MODEM on USB >&2
+			if [ -r /dev/ttyACM1 ]
+			then
+				[ "$wait" != 1 ] && sleep 2.0	# wait for ^SYSSTART before sending AT commands
+				echo /dev/ttyACM1	# PLS83W - Application port
+				exit
+			fi
+			;;
+		esac
+		if [ "$VERBOSE" -a "$MODEM" ]
+		then
+			echo found $MODEM but no interface >&2
+		fi
+	done < <(lsusb)
+	sleep 3	# try again
+done
+
+if [ "$MODEM" ]
+then
+	echo $MODEM found but no interface for $CHANNEL >&2
+else
+	echo No Modem found on USB >&2
+fi
+exit 1

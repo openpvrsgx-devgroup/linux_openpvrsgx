@@ -1,0 +1,122 @@
+/*
+ * Copyright (C) 2014 H. Nikolaus Schaller <hns@goldelico.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+/* we start with the omap3-gta04 tree and modify only what is really different */
+
+#include "omap3-gta04.dtsi"
+
+/ {
+
+	/* overwrite device model */
+	model = "Goldelico GTA04b7/Neo900";
+
+	/* add additional regulators etc. */
+
+	/* overwrite panel definitions */
+
+	aliases {
+		display0 = &lcd_neo900;
+		display1 = &tv0;
+	};
+
+	/delete-node/ spi;
+
+};
+
+&mcspi1 {
+
+	num-chipselects = <2>;
+
+	lcd_neo900: lcd {
+		compatible = "sony,acx565akm";
+		reg = <2>;
+		spi-max-frequency = <6000000>;
+		spi-cpol;
+		spi-cpha;
+
+		label = "lcd";
+		reset-gpios = <&gpio3 26 GPIO_ACTIVE_HIGH>; /* 90 */
+
+		port {
+			lcd_neo900_in: endpoint {
+				remote-endpoint = <&sdi_out>;
+			};
+		};
+	};
+};
+
+&dss {
+	pinctrl-names = "default";
+	pinctrl-0 = < &dss_dpi_pins >;
+
+	status = "okay";
+
+	port {
+		sdi_out: endpoint {
+			remote-endpoint = <&lcd_neo900_in>;
+			data-lines = <24>;
+		};
+	};
+};
+
+&battery {
+	compatible = "ti,twl4030-madc-battery";
+	capacity = <1320000>;
+	charging-calibration-data = <4200 100 4100 75 4000 55 3900 25 3800 5 3700 2 3600 1 3300 0>;
+	discharging-calibration-data = <4200 100 4100 95 4000 70 3800 50 3700 10 3600 5 3300 0>;
+};
+
+&i2c2 {
+	/* we have a different set of LEDs */
+	tca_gpios: tca6507@45 {
+		compatible = "ti,tca6507";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <0x45>;
+
+/* FIXME */
+
+		gta04_led0: led@0 {
+			label = "gta04:red:aux";
+			reg = <0x0>;
+		};
+
+		gta04_led1: led@1 {
+			label = "gta04:green:aux";
+			reg = <0x1>;
+		};
+
+		gta04_led3: led@3 {
+			label = "gta04:red:power";
+			reg = <0x3>;
+			linux,default-trigger = "default-on";
+		};
+
+		gta04_led4: led@4 {
+			label = "gta04:green:power";
+			reg = <0x4>;
+		};
+	};
+
+	/* touchscreen */
+	tsc2007@48 {
+		compatible = "ti,tsc2007";
+		reg = <0x48>;
+		interrupt-parent = <&gpio6>;
+		interrupts = <0 IRQ_TYPE_EDGE_FALLING>;
+		gpios = <&gpio6 0 GPIO_ACTIVE_LOW>;	/* gpio160 */
+		ti,x-plate-ohms = <600>;
+		ti,rng_x = <123 456>;
+		ti,rng_y = <123 456>;
+		ti,rng_z = <123 456>;
+		ti,flip_x = <0>;
+		ti,flip_y = <1>;
+		ti,swap_xy = <0>;
+	};
+
+};

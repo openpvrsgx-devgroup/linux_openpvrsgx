@@ -2395,7 +2395,7 @@ struct net_device {
 	struct devlink_port	*devlink_port;
 
 #if IS_ENABLED(CONFIG_DPLL)
-	struct dpll_pin	__rcu	*dpll_pin;
+	void __rcu *dpll_pin;
 #endif
 #if IS_ENABLED(CONFIG_PAGE_POOL)
 	/** @page_pools: page pools created for this netdevice */

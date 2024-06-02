@@ -1,0 +1,125 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+/*
+ * Copyright (C) 2015-2016 OpenPandora - http://www.pyra-handheld.com/
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+/* set to e.g. 8300 if display uses a TPS6116x instead of TPS61040 (which is limited to 500 Hz PWM) */
+#define BACKLIGHT_FREQ_HZ	83
+
+/ {
+	backlight: backlight {
+		compatible = "pwm-backlight";
+		pwms = <&pwm9 0 (1000000000 / BACKLIGHT_FREQ_HZ) 0>;
+		pwm-names = "backlight";
+		brightness-levels = <0 5 7 10 12 14 17 20 25 30 35 40 50 65 80 100>;
+		default-brightness-level = <14>;	/* 80% */
+		pinctrl-names = "default";
+		pinctrl-0 = <&pyra_backlight_pins>;
+	};
+
+	pwm9: dmtimer-pwm@9 {
+		compatible = "ti,omap-dmtimer-pwm";
+		ti,timers = <&timer9>;
+		#pwm-cells = <3>;
+	};
+};
+
+/* LCD panel - MIPI */
+
+&mipi_display_pins {
+	pinctrl-single,pins = <
+		OMAP5_IOPAD(0x124, PIN_OUTPUT_PULLUP | MUX_MODE6)	/* 0x124:[0:15] gpio6_162 - enable panel DC/DC */
+		OMAP5_IOPAD(0x10e, PIN_OUTPUT_PULLDOWN | MUX_MODE6)	/* 0x10c:[31:16] gpio6_176 - panel reset */
+		>;
+};
+
+&lcd {
+	reg = <0>;
+	compatible = "boe,btl507212-w677l";
+	rotation = <90>;
+	reset-gpios = <&gpio6 16 0>;	/* goip6_176 = panel reset */
+	backlight = <&backlight>;
+};
+
+/* devices connected to Panel-I2C */
+&i2c4 {
+	/* touchscreen */
+	touch: tsc2007@48 {
+		compatible = "ti,tsc2007";
+		reg = <0x48>;
+		interrupt-parent = <&gpio6>;
+		interrupts = <13 IRQ_TYPE_EDGE_FALLING>;	/* gpio6_173 falling edge */
+		gpios = <&gpio6 13 GPIO_ACTIVE_LOW>;	/* gpio6_173 active low */
+		pinctrl-names = "default";
+		pinctrl-0 = <&pyra_penirq_pins>;
+		/* rotated screen */
+		touchscreen-size-x = <1280>;
+		touchscreen-size-y = <720>;
+		touchscreen-swapped-x-y;
+		touchscreen-inverted-x;
+		touchscreen-inverted-y;
+		touchscreen-fuzz-x = <5>;
+		touchscreen-fuzz-y = <5>;
+		touchscreen-fuzz-pressure = <50>;
+		touchscreen-max-pressure = <1000>;
+		ti,min-x = <50>;
+		ti,max-x = <3900>;
+		ti,min-y = <50>;
+		ti,max-y = <3900>;
+		ti,max-rt = <2000>;
+		ti,x-plate-ohms = <550>;
+	};
+
+	/* leds */
+	leds-display@64 {
+		compatible = "issi,is31fl3196";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <0x64>;
+
+		display_led1: green_bottom@1 {
+			label = "logo:green:bottom";
+			reg = <1>;
+			linux,default-trigger = "mmc0";
+		};
+
+		display_led2: red_bottom@2 {
+			label = "logo:red:bottom";
+			reg = <2>;
+			linux,default-trigger = "heartbeat";
+		};
+
+		display_led3: blue_bottom@3 {
+			label = "logo:blue:bottom";
+			reg = <3>;
+			linux,default-trigger = "timer";
+		};
+
+		display_led4: green_top@4 {
+			label = "logo:green:top";
+			reg = <4>;
+			linux,default-trigger = "default-on";
+		};
+
+		display_led5: red_top@5 {
+			label = "logo:red:top";
+			reg = <5>;
+			linux,default-trigger = "timer";
+		};
+
+		display_led6: blue_top@6 {
+			label = "logo:blue:top";
+			reg = <6>;
+			linux,default-trigger = "mmc0";
+		};
+	};
+
+	eeprom@50 {
+		compatible = "at,24c01";
+		reg = <0x50>;
+	};
+};

@@ -5,11 +5,22 @@
 
 #include "omap3-gta04.dtsi"
 
+&cpu0_opp_table {
+	/* is unreliable on gta04a5 - enable by echo 1 >/sys/devices/system/cpu/cpufreq/boost */
+	opp1g-1000000000 {
+		turbo-mode;
+	};
+};
+
 / {
 	model = "Goldelico GTA04A5/Letux 2804";
 
 	sound {
 		ti,jack-det-gpio = <&twl_gpio 2 GPIO_ACTIVE_HIGH>;	/* GTA04A5 only */
+	};
+
+	modem_en: modem { /* control modem power through rfkill */
+		on-indicator-gpio = <&twl_gpio 6 GPIO_ACTIVE_HIGH>;	/* GTA04A5 only: reset_out feedback from modem */
 	};
 
 	wlan_en: wlan_en_regulator {
@@ -44,6 +55,12 @@
 	};
 };
 
+#if 0
+&twl_power {
+	compatible = "ti,twl4030-power-idle-osc-off";
+};
+#endif
+
 &omap3_pmx_core {
 	bt_pins: bt-pins {
 		pinctrl-single,pins = <
@@ -75,6 +92,24 @@
 		>;
 	};
 
+	bmc150_pins: pinmux_bmc150_pins {
+		pinctrl-single,pins = <
+			OMAP3_CORE1_IOPAD(0x213a, PIN_INPUT | MUX_MODE4) /* gpin115 */
+		>;
+	};
+
+	bmc150_magn_pins: pinmux_bmc150_magn_pins {
+		pinctrl-single,pins = <
+			OMAP3_CORE1_IOPAD(0x2134, PIN_INPUT | MUX_MODE4) /* gpin112 */
+		>;
+	};
+
+	bmg160_pins: pinmux_bmg160_pins {
+		pinctrl-single,pins = <
+			OMAP3_CORE1_IOPAD(0x20b8, PIN_INPUT | MUX_MODE4) /* gpio56 */
+		>;
+	};
+
 	bno050_pins: pinmux-bno050-pins {
 		pinctrl-single,pins = <
 			OMAP3_CORE1_IOPAD(0x2136, PIN_INPUT | MUX_MODE4) /* gpin113 */
@@ -89,6 +124,7 @@
 
 &wifi_pwrseq {
 	/delete-property/ reset-gpios;
+	/delete-property/ power-off-ignore;
 };
 
 &mmc2 {
@@ -114,6 +150,21 @@
 	};
 };
 
+&uart1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart1_pins &bt_pins>;
+};
+
+&bluetooth {
+	/delete-property/ vdd-supply;
+	compatible = "ti,wl1837-st";
+	enable-gpios = <&gpio5 9 GPIO_ACTIVE_HIGH>;	/* GPIO_137 */
+};
+
+&w2cbw003_codec {
+	compatible = "ti,wl1837-codec";
+};
+
 &i2c2 {
 	/delete-node/ bmp085@77;
 	/delete-node/ bma180@41;
@@ -123,19 +174,31 @@
 	gyrometer@69 {
 		compatible = "bosch,bmg160";
 		reg = <0x69>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&bmg160_pins>;
+		interrupt-parent = <&gpio2>;
+		interrupts = <24 (IRQ_TYPE_LEVEL_HIGH | IRQ_TYPE_EDGE_RISING)>;	/* gpio_56 */
 	};
 
 	accelerometer@10 {
 		compatible = "bosch,bmc150_accel";
 		reg = <0x10>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&bmc150_pins>;
+		interrupt-parent = <&gpio4>;
+		interrupts = <19 (IRQ_TYPE_LEVEL_HIGH | IRQ_TYPE_EDGE_RISING)>;	/* gpin_115 */
 	};
 
 	magnetometer@12 {
 		compatible = "bosch,bmc150_magn";
 		reg = <0x12>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&bmc150_magn_pins>;
+		interrupt-parent = <&gpio4>;
+		interrupts = <16 (IRQ_TYPE_LEVEL_HIGH | IRQ_TYPE_EDGE_RISING)>;	/* gpin_112 */
 	};
 
-	bme280@76 {
+	humidity@76 {
 		compatible = "bosch,bme280";
 		reg = <0x76>;
 		vdda-supply = <&vio>;
@@ -147,6 +210,7 @@
 		reg = <0x29>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&bno050_pins>;
-		/* interrupt at &gpio4 17 */
+		interrupt-parent = <&gpio4>;
+		interrupts = <17 (IRQ_TYPE_LEVEL_HIGH | IRQ_TYPE_EDGE_RISING)>;	/* gpin_113 */
 	};
 };

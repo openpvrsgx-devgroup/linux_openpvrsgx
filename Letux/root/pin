@@ -1,0 +1,22 @@
+#!/bin/bash
+#
+# enable pin
+#
+# usage: pin number
+
+SCRIPTPATH="$(dirname "$0")"
+IF="$($SCRIPTPATH/wwan-on)"
+
+case "$IF" in
+	"" )
+		echo Modem Application interface not found >&2
+		exit 1
+		;;
+
+	* )
+		(
+		echo "AT+CPIN=$1"; sleep 3
+		) | $SCRIPTPATH/femtocom $IF
+		;;
+
+esac

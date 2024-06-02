@@ -18,6 +18,11 @@
 	model = "Tolino Shine 2 HD";
 	compatible = "kobo,tolino-shine2hd", "fsl,imx6sl";
 
+	aliases {
+		mmc0 = &usdhc2;
+		mmc1 = &usdhc3;
+	};
+
 	backlight {
 		compatible = "pwm-backlight";
 		pwms = <&ec 0 50000>;
@@ -103,12 +108,57 @@
 		gpio = <&gpio4 29 GPIO_ACTIVE_LOW>;
 	};
 
+	thermal-zones {
+		epd-thermal {
+			polling-delay = <10000>;
+			polling-delay-passive = <10000>;
+			thermal-sensors = <&tps6518x>;
+
+			trips {
+			};
+		};
+	};
+
 	wifi_pwrseq: wifi_pwrseq {
 		compatible = "mmc-pwrseq-simple";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_wifi_reset>;
 		post-power-on-delay-ms = <20>;
 		reset-gpios = <&gpio5 0 GPIO_ACTIVE_LOW>;
+	};
+};
+
+&epdc {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_epdc0>;
+	safe-ticks-turnoff-ep3v3 = <800>;
+	V3P3-supply = <&V3P3_reg>;
+	VCOM-supply = <&VCOM_reg>;
+	DISPLAY-supply = <&DISPLAY_reg>;
+	epd-thermal-zone = "epd-thermal";
+
+	vscan-holdoff = <4>;
+	sdoed-width = <10>;
+	sdoed-delay = <20>;
+	sdoez-width = <10>;
+	sdoez-delay = <20>;
+	gdclk-hp-offs = <562>;
+	gdsp-offs = <662>;
+	gdoe-offs = <0>;
+	gdclk-offs = <225>;
+	num-ce = <3>;
+	status = "okay";
+
+	timing {
+		clock-frequency = <80000000>;
+		hactive = <1448>;
+		hback-porch = <16>;
+		hfront-porch = <102>;
+		hsync-len = <28>;
+		vactive = <1072>;
+		vback-porch = <4>;
+		vfront-porch = <4>;
+		vsync-len = <2>;
 	};
 };
 
@@ -147,8 +197,55 @@
 		touchscreen-inverted-x;
 	};
 
-	/* TODO: TPS65185 PMIC for E Ink at 0x68 */
+	tps6518x: epdc-pmic@68 {
+		compatible = "ti,tps6518x";
+		pinctrl-names = "default", "sleep";
+		pinctrl-0 = <&pinctrl_tps65185_gpio>;
+		pinctrl-1 = <&pinctrl_tps65185_gpio_sleep>;
+		reg = <0x68>;
+		/*
+		 * power sequencing for TPS65180/65181
+		 */
+		pwr_seq0 = <0xe1>; /* [Vddh-seq=3 | Vpos-seq=2 | Vee-seq=0 | Vneg-seq=1] */
+		pwr_seq1 = <0x30>; /* [Vneg-dly1=3 |Vee-dly0=0]  mSec */
+		pwr_seq2 = <0x33>; /* [Vddh-dly3=3 | Vpos-dly2=3] mSec */
 
+                /*
+                 * power sequencing for TPS65185/65186
+                 */
+                upseq0 = <0xe1>;
+                upseq1 = <0x00>;
+                dwnseq0 = <0x1e>;
+                dwnseq1 = <0xe0>;
+
+		pwrgood-gpios = <&gpio2 13 0>;
+		vcom-ctrl-gpios = <&gpio2 3 GPIO_ACTIVE_HIGH>;
+		wakeup-gpios = <&gpio2 7 0>;
+		powerup-gpios = <&gpio2 8 GPIO_ACTIVE_HIGH>;
+		intr-gpios = <&gpio2 9 0>;
+
+		/* gpio_pmic_v3p3 = <&gpio2 14 GPIO_ACTIVE_HIGH>; */
+		pwrall-gpios = <&gpio2 14 GPIO_ACTIVE_HIGH>;
+
+		#thermal-sensor-cells = <0>;
+
+		regulators {
+			DISPLAY_reg: DISPLAY {
+				regulator-name = "DISPLAY";
+			};
+
+			VCOM_reg: VCOM {
+				regulator-name = "VCOM";
+				regulator-max-microvolt = <2750000>;
+				regulator-min-microvolt = <300000>;
+			};
+
+			V3P3_reg: V3P3 {
+				regulator-name = "V3P3";
+			};
+
+		};
+	};
 };
 
 &i2c3 {
@@ -241,6 +338,7 @@
 			/* IR_3V3 */
 			ldo1_reg: LDO1  {
 				regulator-name = "LDO1";
+				regulator-always-on;
 				regulator-boot-on;
 			};
 
@@ -337,6 +435,36 @@
 		>;
 	};
 
+	pinctrl_epdc0: epdcgrp0 {
+		fsl,pins = <
+			MX6SL_PAD_EPDC_D0__EPDC_DATA00     0x4100b1
+			MX6SL_PAD_EPDC_D1__EPDC_DATA01     0x4100b1
+			MX6SL_PAD_EPDC_D2__EPDC_DATA02     0x4100b1
+			MX6SL_PAD_EPDC_D3__EPDC_DATA03     0x4100b1
+			MX6SL_PAD_EPDC_D4__EPDC_DATA04     0x4100b1
+			MX6SL_PAD_EPDC_D5__EPDC_DATA05     0x4100b1
+			MX6SL_PAD_EPDC_D6__EPDC_DATA06     0x4100b1
+			MX6SL_PAD_EPDC_D7__EPDC_DATA07     0x4100b1
+			MX6SL_PAD_EPDC_D8__EPDC_DATA08     0x4100b1
+			MX6SL_PAD_EPDC_D9__EPDC_DATA09     0x4100b1
+			MX6SL_PAD_EPDC_D10__EPDC_DATA10     0x4100b1
+			MX6SL_PAD_EPDC_D11__EPDC_DATA11     0x4100b1
+			MX6SL_PAD_EPDC_D12__EPDC_DATA12     0x4100b1
+			MX6SL_PAD_EPDC_D13__EPDC_DATA13     0x4100b1
+			MX6SL_PAD_EPDC_D14__EPDC_DATA14     0x4100b1
+			MX6SL_PAD_EPDC_D15__EPDC_DATA15     0x4100b1
+			MX6SL_PAD_EPDC_SDCLK__EPDC_SDCLK_P     0x4100b1
+			MX6SL_PAD_EPDC_SDLE__EPDC_SDLE  0x4100b1
+			MX6SL_PAD_EPDC_SDOE__EPDC_SDOE  0x4100b1
+			MX6SL_PAD_EPDC_SDSHR__EPDC_SDSHR       0x4100b1
+			MX6SL_PAD_EPDC_SDCE0__EPDC_SDCE0       0x4100b1
+			MX6SL_PAD_EPDC_GDCLK__EPDC_GDCLK       0x4100b1
+			MX6SL_PAD_EPDC_GDOE__EPDC_GDOE  0x4100b1
+			MX6SL_PAD_EPDC_GDRL__EPDC_GDRL  0x4100b1
+			MX6SL_PAD_EPDC_GDSP__EPDC_GDSP  0x4100b1
+	       >;
+	};
+
 	pinctrl_hog: hoggrp {
 		fsl,pins = <
 			MX6SL_PAD_LCD_DAT0__GPIO2_IO20	0x79
@@ -422,6 +550,28 @@
 			MX6SL_PAD_SD1_CLK__GPIO5_IO15	0x1b8b1 /* ricoh619 chg */
 			MX6SL_PAD_SD1_DAT0__GPIO5_IO11	0x1b8b1 /* ricoh619 irq */
 			MX6SL_PAD_KEY_COL2__GPIO3_IO28	0x1b8b1 /* ricoh619 bat_low_int */
+		>;
+	};
+
+	pinctrl_tps65185_gpio: tps65185-gpio-grp {
+		fsl,pins = <
+			MX6SL_PAD_EPDC_PWRWAKEUP__GPIO2_IO14        0x40010059 /* EP_PWRALL */
+			MX6SL_PAD_EPDC_VCOM0__GPIO2_IO03            0x40010059 /* VCOM_CTRL0 */
+			MX6SL_PAD_EPDC_PWRCTRL0__GPIO2_IO07            0x40010059 /* EP_PWRCTRL0 WAKEUP */
+			MX6SL_PAD_EPDC_PWRCTRL1__GPIO2_IO08            0x40010059 /* EP_PWRCTRL1 PWRUP */
+			MX6SL_PAD_EPDC_PWRCTRL2__GPIO2_IO09      0x17059 /* EP_PWRCTRL2 EP_INT */
+			MX6SL_PAD_EPDC_PWRSTAT__GPIO2_IO13        0x17059 /* EP_PWRSTAT */
+		>;
+	};
+
+	pinctrl_tps65185_gpio_sleep: tps65185-gpio-sleep-grp {
+		fsl,pins = <
+			MX6SL_PAD_EPDC_PWRWAKEUP__GPIO2_IO14        0x10059 /* EP_PWRALL */
+			MX6SL_PAD_EPDC_VCOM0__GPIO2_IO03                      0x10059 /* VCOM_CTRL0 */
+			MX6SL_PAD_EPDC_PWRCTRL0__GPIO2_IO07      0x10059 /* EP_PWRCTRL0 WAKEUP */
+			MX6SL_PAD_EPDC_PWRCTRL1__GPIO2_IO08      0x10059 /* EP_PWRCTRL1 PWRUP */
+			MX6SL_PAD_EPDC_PWRCTRL2__GPIO2_IO09      0x13059 /* EP_PWRCTRL2 EP_INT */
+			MX6SL_PAD_EPDC_PWRSTAT__GPIO2_IO13        0x13059 /* EP_PWRSTAT */
 		>;
 	};
 

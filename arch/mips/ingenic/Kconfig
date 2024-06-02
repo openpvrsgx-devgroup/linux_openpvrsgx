@@ -3,12 +3,15 @@
 config MACH_INGENIC_GENERIC
 	bool
 	select MACH_INGENIC
+	select MACH_JZ4730
 	select MACH_JZ4740
 	select MACH_JZ4725B
 	select MACH_JZ4770
 	select MACH_JZ4780
 	select MACH_X1000
+	select MACH_X1600
 	select MACH_X1830
+	select MACH_X2000
 
 choice
 	prompt "Machine type"
@@ -18,6 +21,10 @@ choice
 config INGENIC_GENERIC_BOARD
 	bool "Generic board"
 	select MACH_INGENIC_GENERIC
+
+config JZ4730_ALPHA400
+	bool "JZ4730 based small netbook (e.g. Skytone Alpha 400, Razorbook 400, Letux 400)"
+	select MACH_JZ4730
 
 config JZ4740_QI_LB60
 	bool "Qi Hardware Ben NanoNote"
@@ -39,13 +46,25 @@ config X1000_CU1000_NEO
 	bool "YSH & ATIL CU1000 Module with Neo backplane"
 	select MACH_X1000
 
+config X1600_LX16
+	bool "Goldelico X1600 based SBC"
+	select MACH_X1600
+
 config X1830_CU1830_NEO
 	bool "YSH & ATIL CU1830 Module with Neo backplane"
 	select MACH_X1830
 
+config X2000_LX20
+	bool "Goldelico X2000 based SBC"
+	select MACH_X2000
+
 endchoice
 
 config MACH_JZ4725B
+	bool
+	select SYS_HAS_CPU_MIPS32_R1
+
+config MACH_JZ4730
 	bool
 	select SYS_HAS_CPU_MIPS32_R1
 
@@ -55,24 +74,32 @@ config MACH_JZ4740
 
 config MACH_JZ4770
 	bool
-	select MIPS_CPU_SCACHE
 	select SYS_HAS_CPU_MIPS32_R2
 	select SYS_SUPPORTS_HIGHMEM
 
 config MACH_JZ4780
 	bool
-	select MIPS_CPU_SCACHE
+	select GENERIC_CLOCKEVENTS_BROADCAST if SMP
 	select SYS_HAS_CPU_MIPS32_R2
 	select SYS_SUPPORTS_HIGHMEM
+	select SYS_SUPPORTS_SMP
 
 config MACH_X1000
 	bool
-	select MIPS_CPU_SCACHE
+	select SYS_HAS_CPU_MIPS32_R2
+	select SYS_SUPPORTS_HIGHMEM
+
+config MACH_X1600
+	bool
 	select SYS_HAS_CPU_MIPS32_R2
 	select SYS_SUPPORTS_HIGHMEM
 
 config MACH_X1830
 	bool
-	select MIPS_CPU_SCACHE
+	select SYS_HAS_CPU_MIPS32_R2
+	select SYS_SUPPORTS_HIGHMEM
+
+config MACH_X2000
+	bool
 	select SYS_HAS_CPU_MIPS32_R2
 	select SYS_SUPPORTS_HIGHMEM

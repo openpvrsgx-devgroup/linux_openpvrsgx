@@ -22,6 +22,9 @@
 #define CELL	"#sound-dai-cells"
 #define PREFIX	"simple-audio-card,"
 
+static int simple_hw_params(struct snd_pcm_substream *substream,
+			    struct snd_pcm_hw_params *params);
+
 static const struct snd_soc_ops simple_ops = {
 	.startup	= simple_util_startup,
 	.shutdown	= simple_util_shutdown,
@@ -49,6 +52,51 @@ static int simple_parse_platform(struct device_node *node, struct snd_soc_dai_li
 	dlc->of_node = args.np;
 
 	return 0;
+}
+
+static int simple_set_clkdiv(struct snd_soc_dai *dai,
+				  struct simple_util_dai *simple_dai)
+{
+	if (!simple_dai->clk_div_set)
+		return 0;
+
+	return snd_soc_dai_set_clkdiv(dai,
+				      simple_dai->clk_div_id,
+				      simple_dai->clk_div);
+}
+
+static int simple_hw_params(struct snd_pcm_substream *substream,
+			    struct snd_pcm_hw_params *params)
+{
+#if 1	// code below should be fixed
+	return simple_util_hw_params(substream, params);
+#else
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
+	struct simple_priv *priv = snd_soc_card_get_drvdata(rtd->card);
+	struct simple_dai_props *dai_props =
+		simple_priv_to_props(priv, rtd->num);
+	unsigned int mclk, mclk_fs = 0;
+	int ret = 0;
+
+	if (dai_props->mclk_fs)
+		mclk_fs = dai_props->mclk_fs;
+
+	if (mclk_fs) {
+		mclk = params_rate(params) * mclk_fs;
+
+	ret = simple_set_clkdiv(codec_dai, dai_props->codec_dai);
+	if (ret < 0)
+		return ret;
+
+	ret = simple_set_clkdiv(cpu_dai, dai_props->cpu_dai);
+	if (ret < 0)
+		return ret;
+	return 0;
+err:
+	return ret;
+#endif
 }
 
 static int simple_parse_dai(struct device *dev,

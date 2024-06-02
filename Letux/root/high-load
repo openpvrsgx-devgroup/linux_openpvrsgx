@@ -1,0 +1,51 @@
+#!/bin/bash
+#
+# start multiple background processes with 100% CPU load
+#
+
+SCRIPTPATH="$(dirname "$0")"
+function loop {
+	while true
+	do
+		:
+	done
+}
+
+LOOP=loop
+
+if [ "$1" = "-n" ]
+then
+	# neon_loop requests higher CPU load than a bash loop
+	[ neon_loop.S -nt neon_loop ] && gcc -o neon_loop neon_loop.S -mfpu=neon -mcpu=native
+	LOOP=$SCRIPTPATH/neon_loop
+fi
+
+if [ "$1" = "-n2" ]
+then
+	# neon_loop2 requests even higher CPU load
+	[ neon_loop2.S -nt neon_loop2 ] && gcc -o neon_loop2 neon_loop2.S -mfpu=neon -mcpu=native
+	LOOP=$SCRIPTPATH/neon_loop2
+fi
+
+CORES=$(fgrep processor /proc/cpuinfo | wc -l)	# find from /proc/cpuinfo
+
+echo "100% load stress test for $CORES cores running $LOOP"
+
+# run once in this shell so that we define the 'temperatures' function for the loop
+. $SCRIPTPATH/temperatures
+
+# start as many 100% load processes as we have cores
+for i in $(seq 1 $CORES)
+do
+	$LOOP &
+	PIDS="$PIDS $!"
+done
+
+# stop them if we are stopped
+trap "echo kill $PIDS; kill $PIDS" EXIT
+
+while true
+do
+	temperatures
+	sleep 1
+done

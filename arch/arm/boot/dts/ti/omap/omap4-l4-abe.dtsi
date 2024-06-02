@@ -41,12 +41,14 @@
 			 <0x0003d000 0x0003d000 0x001000>,	/* ap 23 */
 			 <0x0003e000 0x0003e000 0x001000>,	/* ap 24 */
 			 <0x0003f000 0x0003f000 0x001000>,	/* ap 25 */
-			 <0x00080000 0x00080000 0x010000>,	/* ap 26 */
-			 <0x00080000 0x00080000 0x001000>,	/* ap 27 */
-			 <0x000a0000 0x000a0000 0x010000>,	/* ap 28 */
-			 <0x000a0000 0x000a0000 0x001000>,	/* ap 29 */
-			 <0x000c0000 0x000c0000 0x010000>,	/* ap 30 */
-			 <0x000c0000 0x000c0000 0x001000>,	/* ap 31 */
+			 <0x00080000 0x00080000 0x010000>,	/* dmem */
+			 <0x00090000 0x00090000 0x001000>,	/* dmem */
+			 <0x000a0000 0x000a0000 0x010000>,	/* cmem */
+			 <0x000b0000 0x000b0000 0x001000>,	/* cmem */
+			 <0x000c0000 0x000c0000 0x010000>,	/* smem */
+			 <0x000d0000 0x000d0000 0x001000>,	/* smem */
+			 <0x000e0000 0x000e0000 0x010000>,	/* pmem */
+			 <0x000f0000 0x000f0000 0x001000>,	/* pmem */
 			 <0x000f1000 0x000f1000 0x001000>,	/* ap 32 */
 			 <0x000f2000 0x000f2000 0x001000>,	/* ap 33 */
 
@@ -77,12 +79,14 @@
 			 <0x4903d000 0x4903d000 0x001000>,	/* ap 23 */
 			 <0x4903e000 0x4903e000 0x001000>,	/* ap 24 */
 			 <0x4903f000 0x4903f000 0x001000>,	/* ap 25 */
-			 <0x49080000 0x49080000 0x010000>,	/* ap 26 */
-			 <0x49080000 0x49080000 0x001000>,	/* ap 27 */
-			 <0x490a0000 0x490a0000 0x010000>,	/* ap 28 */
-			 <0x490a0000 0x490a0000 0x001000>,	/* ap 29 */
-			 <0x490c0000 0x490c0000 0x010000>,	/* ap 30 */
-			 <0x490c0000 0x490c0000 0x001000>,	/* ap 31 */
+			 <0x49080000 0x49080000 0x010000>,	/* dmem */
+			 <0x49090000 0x49090000 0x001000>,	/* dmem */
+			 <0x490a0000 0x490a0000 0x010000>,	/* cmem */
+			 <0x490b0000 0x490b0000 0x001000>,	/* cmem */
+			 <0x490c0000 0x490c0000 0x010000>,	/* smem */
+			 <0x490d0000 0x490d0000 0x001000>,	/* smem */
+			 <0x490e0000 0x490e0000 0x010000>,	/* pmem */
+			 <0x490f0000 0x490f0000 0x001000>,	/* pmem */
 			 <0x490f1000 0x490f1000 0x001000>,	/* ap 32 */
 			 <0x490f2000 0x490f2000 0x001000>;	/* ap 33 */
 
@@ -198,8 +202,7 @@
 			      <0x28004 0x4>;
 			reg-names = "rev", "sysc";
 			ti,sysc-sidle = <SYSC_IDLE_FORCE>,
-					<SYSC_IDLE_NO>,
-					<SYSC_IDLE_SMART>;
+					<SYSC_IDLE_NO>;
 			/* Domains (V, P, C): iva, abe_pwrdm, abe_clkdm */
 			clocks = <&abe_clkctrl OMAP4_MCASP_CLKCTRL 0>;
 			clock-names = "fck";
@@ -485,18 +488,51 @@
 					<SYSC_IDLE_NO>,
 					<SYSC_IDLE_SMART>;
 			/* Domains (V, P, C): iva, abe_pwrdm, abe_clkdm */
-			clocks = <&abe_clkctrl OMAP4_AESS_CLKCTRL 0>;
-			clock-names = "fck";
+			clocks = <&abe_clkctrl OMAP4_AESS_CLKCTRL 0>, <&ocp_abe_iclk>;
+			clock-names = "fck", "ick";
 			#address-cells = <1>;
 			#size-cells = <1>;
-			ranges = <0x0 0xf1000 0x1000>,
-				 <0x490f1000 0x490f1000 0x1000>;
 
-			/*
-			 * No child device binding or driver in mainline.
-			 * See Android tree and related upstreaming efforts
-			 * for the old driver.
-			 */
+			/* CHECKME: OMAP4 and OMAP5 may differ in memory sizes, here we define more than available... */
+			ranges = <0 0xf1000 0x1000>, /* MPU private access */
+				 <0x80000 0x80000 0x10000>, /* DMEM 64KiB - MPU */
+				 <0xa0000 0xa0000 0x10000>, /* CMEM 6KiB - MPU */
+				 <0xc0000 0xc0000 0x10000>, /* SMEM 64KiB - MPU */
+				 <0xe0000 0xe0000 0x10000>, /* PMEM 8KiB - MPU */
+				 <0x490f1000 0x490f1000 0x10000>, /* L3 Interconnect */
+				 <0x49080000 0x49080000 0x10000>, /* DMEM 64KiB - L3 */
+				 <0x490a0000 0x490a0000 0x10000>, /* CMEM 6KiB - L3 */
+				 <0x490ce000 0x490c0000 0x10000>, /* SMEM 64KiB - L3 */
+				 <0x490e0000 0x490e0000 0x10000>; /* PMEM 8KiB - L3 */
+
+			aess: aess {
+				compatible = "ti,omap4-aess";
+				status = "disabled";
+				reg = <0 0xfff>, /* MPU private access */
+				      <0x80000 0xffff>, /* DMEM - MPU */
+				      <0xa0000 0xffff>, /* CMEM - MPU */
+				      <0xc0000 0xffff>, /* SMEM - MPU */
+				      <0xe0000 0xffff>, /* PMEM - MPU */
+				      <0x490f1000 0xfff>, /* L3 Interconnect */
+				      <0x49080000 0xffff>, /* DMEM - L3 */
+				      <0x490a0000 0xffff>, /* CMEM - L3 */
+				      <0x490ce000 0xffff>, /* SMEM - L3 */
+				      <0x490e0000 0xffff>; /* PMEM - L3 */
+				reg-names = "mpu", "dmem", "cmem", "smem", "pmem",
+				      "dma", "dmem_dma", "cmem_dma", "smem_dma",
+				      "pmem_dma";
+				interrupts = <GIC_SPI 99 IRQ_TYPE_LEVEL_HIGH>;
+				dmas = <&sdma 101>,
+				      <&sdma 102>,
+				      <&sdma 103>,
+				      <&sdma 104>,
+				      <&sdma 105>,
+				      <&sdma 106>,
+				      <&sdma 107>,
+				      <&sdma 108>;
+				dma-names = "fifo0", "fifo1", "fifo2", "fifo3", "fifo4",
+				      "fifo5", "fifo6", "fifo7";
+			};
 		};
 	};
 };

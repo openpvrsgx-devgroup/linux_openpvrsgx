@@ -1,0 +1,89 @@
+#!/bin/bash
+#
+# run as telephone answering machine
+#
+# usage: tam
+#
+
+SCRIPTPATH="$(dirname "$0")"
+IF="$($SCRIPTPATH/wwan-on)"
+
+case "$IF" in
+	"" )
+		echo Modem Application interface not found >&2
+		exit 1
+		;;
+
+	/dev/ttyHS* ) # GTA04 with OPTION GTM601W
+		killall arecord
+		trap "killall arecord aplay; (echo "AT+CHUP"; sleep 1) | $SCRIPTPATH/femtocom $IF" EXIT
+		trap "exit 1" SIGHUP SIGINT SIGTERM
+		NUM=$($SCRIPTPATH/findsoundcard "gta04")	# GTA04
+
+		# make sure the PCM goes to the SoC
+		amixer -c "$NUM" set 'Voice PCM Interface' 'inactive'
+		;;
+
+	/dev/ttyACM[0-4] | /dev/ttyUSB[0-4] )	# Neo900 / Pyra
+		echo Not supported on this device >&2
+		NUM=$($SCRIPTPATH/findsoundcard "L15")	# Pyra
+		exit 1
+		;;
+esac
+
+rm -rf /tmp/femtocom
+mkfifo /tmp/femtocom
+
+MESSAGE=/usr/share/sounds/alsa/Front_Center.wav
+
+$SCRIPTPATH/femtocom $IF </tmp/femtocom |
+(
+echo "*** TAM initialized ***"
+( # enable unsolicited messages and extended reporting
+echo "AT+CPIN?"; sleep 1
+echo "AT_OPONI=1"; sleep 1
+echo "AT_OSQI=1"; sleep 1
+echo "AT_OEANT=1"; sleep 1
+echo "AT_OCTI=1"; sleep 1
+echo "AT_OUWCTI=1"; sleep 1
+echo "AT_OUHCIP=1"; sleep 1
+echo "AT_OSSYS=1"; sleep 1
+echo "AT_OPATEMP=1"; sleep 1
+echo "AT+COPS"; sleep 1
+echo "AT+CRC=1"; sleep 1
+echo "AT+CLIP=1"; sleep 1
+echo "AT+CLVL=7"; sleep 1
+echo "AT_ODO=0"; sleep 1
+echo "AT_OPCMENABLE=1"; sleep 1
+echo "AT_OPCMPROF=0"; sleep 1	# handset profile
+echo "AT+VIP=0"; sleep 1	# compatible to S16_LE
+sleep 99999999
+) >/tmp/femtocom &	# send commands by background process
+echo "*** TAM started ***"
+while read MSG ARGS
+do
+	[ "$MSG$ARGS" ] && echo $MSG $ARGS >&2
+	case "$MSG" in
+		AT_OPCMPROF=0 )
+			echo "*** waiting for RING ***"
+			;;
+		+CLIP: )
+			# decode phone number from ARGS
+			;;
+		+CRING: )
+			echo "ATA" >>/tmp/femtocom
+			FILE=/tmp/$(date "+%Y%m%d%H%M%S")
+			echo "*** CALL accepted, now recording to $FILE ***"
+			# arecord -fS16_LE -r8000 | aplay -Ddefault:CARD=Telephony &	# microphone -> modem
+			## FIXME: we may have to reduce the sampling rate to -r8000
+			cat $MESSAGE | aplay -Ddefault:CARD=Telephony &	# play announcement file to modem
+			# arecord -Ddefault:CARD=Telephony -fS16_LE -r8000 | aplay	# modem -> earpiece, speaker, headset
+			arecord -Ddefault:CARD=Telephony -fS16_LE -r8000 >$FILE 2>/dev/null	# modem ->file
+			echo "*** CALL recording ended ***"
+			;;
+	esac
+done
+echo "*** TAM done ***"
+)
+
+exit

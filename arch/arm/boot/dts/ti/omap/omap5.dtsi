@@ -317,6 +317,16 @@
 			};
 		};
 
+		bb2d: bb2d@59000000 {
+			compatible = "vivante,gc";
+			reg = <0x59000000 0x0700>;
+			interrupts = <GIC_SPI 125 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&dss_clkctrl OMAP5_DSS_CORE_CLKCTRL 8>, // bus: DSS_L3_GICLK
+			         <&dpll_core_h24x2_ck>; // core: BB2D_GFCLK
+			clock-names = "bus", "core";
+			ti,hwmods = "bb2d";
+		};
+
 		target-module@4d000000 {
 			compatible = "ti,sysc-omap4-simple", "ti,sysc";
 			reg = <0x4d000000 0x4>;
@@ -642,8 +652,9 @@
 						interrupts = <GIC_SPI 101 IRQ_TYPE_LEVEL_HIGH>;
 						status = "disabled";
 						clocks = <&dss_clkctrl OMAP5_DSS_CORE_CLKCTRL 9>,
-							 <&dss_clkctrl OMAP5_DSS_CORE_CLKCTRL 10>;
-						clock-names = "fck", "sys_clk";
+							 <&dss_clkctrl OMAP5_DSS_CORE_CLKCTRL 10>,
+							 <&dss_clkctrl OMAP5_DSS_CORE_CLKCTRL 11>;
+						clock-names = "fck", "sys_clk", "cec";
 						dmas = <&sdma 76>;
 						dma-names = "audio_tx";
 					};

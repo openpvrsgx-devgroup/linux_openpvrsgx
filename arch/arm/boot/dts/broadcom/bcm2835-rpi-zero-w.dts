@@ -24,6 +24,12 @@
 		/* 8250 auxiliary UART instead of pl011 */
 		stdout-path = "serial1:115200n8";
 	};
+
+	aliases {
+		serial0 = &uart1;
+		serial1 = &uart0;
+	};
+
 };
 
 &bt {
@@ -109,6 +115,7 @@
 
 &led_act {
 	gpios = <&gpio 47 GPIO_ACTIVE_LOW>;
+	linux,default-trigger = "mmc0";
 };
 
 &sdhci {

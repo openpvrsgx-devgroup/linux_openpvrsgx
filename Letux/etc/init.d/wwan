@@ -1,0 +1,49 @@
+#!/bin/sh
+# kFreeBSD do not accept scripts as interpreters, using #!/bin/sh and sourcing.
+if [ true != "$INIT_D_SCRIPT_SOURCED" ] ; then
+    set "$0" "$@"; INIT_D_SCRIPT_SOURCED=true . /lib/init/init-d-script
+fi
+### BEGIN INIT INFO
+# Provides:          wwan
+# Required-Start:
+# Required-Stop:
+# Default-Start:     1 2 3 4 5
+# Default-Stop:      0 6
+# Short-Description: Shutdown WWAN
+# Description:       This script makes sure to turn off WWAN modem on
+#                    'poweroff' or 'halt'
+### END INIT INFO
+
+# Author: H. Nikolaus Schaller <hns@goldelico.com
+
+DESC="wwan"
+DAEMON=/root/wwan-off
+
+do_stop () {
+	$DAEMON
+}
+
+case "$1" in
+  start)
+	log_daemon_msg "Starting $DESC (not really)"
+	# No-op - we don't turn on the modem on boot...
+	exit 0
+	;;
+  restart|reload|force-reload)
+	echo "Error: argument '$1' not supported" >&2
+	exit 3
+	;;
+  stop)
+	log_daemon_msg "Stopping $DESC"
+	do_stop
+	log_progress_msg "disabled."
+	log_end_msg 0
+	exit 0
+	;;
+  *)
+	echo "Usage: $0 start|stop" >&2
+	exit 3
+	;;
+esac
+
+:

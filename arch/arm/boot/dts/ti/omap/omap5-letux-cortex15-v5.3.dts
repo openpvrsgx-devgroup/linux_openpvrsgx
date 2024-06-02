@@ -1,0 +1,37 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+/*
+ * Copyright (C) 2018-19 Golden Delicous Computers - http://www.goldelico.com/
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+/* this version is for the Letux Cortex 15 CPU board (V5.3) */
+
+#include "omap5-letux-cortex15-common.dtsi"
+
+/ {
+	model = "Letux Cortex 15 V5.3";
+	compatible = "goldelico,lc15-v5.3", "goldelico,lc15", "ti,omap5-uevm", "ti,omap5";
+};
+
+/*
+ * the hardware bug of earlier releases has been fixed and
+ * proper external pull-up for gpio8_228 and gpio8_229 is installed.
+ * Hence we can disable pullup/down.
+ */
+
+&mmc1 { /* first SD slot */
+	pinctrl-names = "default";
+	pinctrl-0 = <&mmc1_pins>;
+	cd-gpios = <&gpio8 4 GPIO_ACTIVE_LOW>;	/* gpio8_228 */
+	wp-gpios = <&gpio8 5 GPIO_ACTIVE_HIGH>;	/* gpio8_229 */
+};
+
+&mmc1_pins {
+	pinctrl-single,pins = <
+		OMAP5_IOPAD(0x174, PIN_INPUT | MUX_MODE6)	/* 0x174:[15:0] sdcard_cd/gpio8_228 */
+		OMAP5_IOPAD(0x176, PIN_INPUT | MUX_MODE6)	/* 0x175:[31:16] sdcard_wp/gpio8_229 */
+	>;
+};

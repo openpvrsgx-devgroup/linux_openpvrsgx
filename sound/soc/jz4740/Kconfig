@@ -8,3 +8,10 @@ config SND_JZ4740_SOC_I2S
 	help
 	  Say Y if you want to use I2S protocol and I2S codec on Ingenic JZ4740
 	  based boards.
+
+config SND_JZ4780_SOC_CI20
+	tristate "SoC Audio support for ci20"
+	depends on SND_JZ4740_SOC_I2S
+	select SND_SOC_JZ4780_CODEC
+	help
+	  Say Y if you want to add support for ASoC audio on the ci20.

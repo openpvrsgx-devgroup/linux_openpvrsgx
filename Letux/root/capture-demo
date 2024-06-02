@@ -1,0 +1,19 @@
+#!/bin/bash
+#
+# start capture demo
+# see also http://projects.goldelico.com/p/gta04-kernel/page/Camera/
+#
+
+SCRIPTPATH="$(dirname "$0")"
+. $SCRIPTPATH/camera-setup	# load setup script
+
+PATH=$PATH:/usr/bin/arm-linux-gnueabihf
+
+MODE=$1; [ "$MODE" ] || MODE=sxga
+
+setup "$MODE"
+
+echo "### capturing $CAMERA at $DEVICE ###"
+
+make capture
+$SCRIPTPATH/capture -d $DEVICE # -o snapshot.jpg

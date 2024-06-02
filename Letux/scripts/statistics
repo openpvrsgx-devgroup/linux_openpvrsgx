@@ -1,0 +1,167 @@
+#!/bin/bash
+#
+# Letux/scripts/statistics [ -a ] [ -u ] [ -s ] [ vers.ion ]
+#
+# print git diff statistics for Letux kernel variants
+# the result shows which areas differ from linus/master and need upstreaming work
+#
+# options:
+#  <empty>	current branch (should match a v*.* tag on linus/master)
+#  -a		all v*.* we find
+#  -u		only those areas where upstreaming appears possible
+#  -s		print summary only
+#  -m		show statistics for branches in mergefile
+#  vers.ion	version number instead of current branch
+#
+# Author: <hns@goldelico.com>
+# License: GPL V2
+
+if [ "$1" = "-a" ]
+then # all
+	echo "*** Letux Upstreaming Statistics ***"
+
+	git branch | sed 's/\* //' | while read VERSION
+	do
+		case "$VERSION" in
+			[2-9].*.*-* | [2-9].*-rc*-* )
+				: # has some suffix
+				;;
+			[2-9].[0-9] | [2-9].*.* | [2-9].*-rc* )
+				$0 -s "$VERSION"
+				;;
+		esac
+	done
+	exit 0
+fi
+
+function latestforbranch {
+	# get latest version for branch $1 (optionally passing $2 to git branch)
+	git branch $2 | cut -c 3- | grep "^$1-v[0-9]*$" | perl -e 'print sort{length($a)<=>length($b) or $a cmp $b} <>' | tail -1
+}
+
+function mergestat {
+	FEATURE=$(latestforbranch "$1")
+	[ "$FEATURE" ] || FEATURE="$1"
+	COUNT="$(git log --oneline $BASE..$FEATURE | wc -l)"
+	if [ "$2" ]	# not merged
+	then
+		printf "%d\t%s\n" "$COUNT" "[$FEATURE]"
+	else
+		printf "%d\t%s\n" "$COUNT" "$FEATURE"
+	fi
+}
+
+if [ "$1" = "-m" ]
+then
+	while read FEATURE OTHER
+	do
+		case "$FEATURE" in
+			'' | '#'* )
+				;;
+			'>'* | '<<'* )
+				;; 
+			'<'* )
+				BASE=${FEATURE:1}
+				;;
+			-* )
+				mergestat ${FEATURE:1} -
+				;;
+			* )
+				mergestat $FEATURE
+				;;
+		esac
+	done <Letux/scripts/mergefile
+	exit
+fi
+
+git fetch --tags linus
+
+if [ "$1" = "-u" ]
+then
+	UPSTREAMONLY=yes
+	shift
+fi
+
+if [ "$1" = "-s" ]
+then # summary only
+	shift
+	SUMMARY=yes
+fi
+
+CURRENTBRANCH=$1
+CURRENTLINUS=$2
+
+if ! [ "$1" ]
+then
+# git tag --points-at HEAD?
+	KV="$(make kernelversion | sed 's/\([0-9]*\.[0-9]*\)\.0/\1/')"
+	CURRENTBRANCH=letux-$KV
+	CURRENTLINUS=v$KV
+# echo $KV $CURRENTBRANCH $CURRENTLINUS
+fi
+
+COUNT=0
+
+git diff --stat=9999,9999 $CURRENTBRANCH $CURRENTLINUS | tee slog |
+while read FILE BAR CHANGES PLUSMINUS X1 X2
+do
+# idea: format as HTML so that we can publish it more easily
+	if [ "$BAR" = "=>" ]
+	then # file rename
+		BAR="$PLUSMINUS"
+		CHANGES="$X1"
+		PLUSMINUS="$X2"
+	fi
+	if [ "$BAR" = "|" ]
+	then
+		case $FILE in
+			.* ) continue;;
+			Documentation/devicetree/* ) GROUP="Documentation changes by being ahead"; CNT=no;;
+			Letux/* | GTA04/* ) GROUP="Letux specific user space kernel support";CNT=no;;
+			arch/*/boot/dts/* ) GROUP="Letux specific Device Tree definitions";CNT=yes;;
+			arch/*/configs/* ) GROUP="Letux specific configs";CNT=no;;
+			drivers/gpu/Kconfig | drivers/gpu/Makefile | drivers/gpu/pvr/* ) GROUP="PVR extensions";CNT=no;;
+			drivers/gpu/drm/Kconfig | drivers/gpu/drm/Makefile | drivers/gpu/drm/pvrsgx/* ) GROUP="PVR DRM extensions";CNT=no;;
+			drivers/video/omap2/* ) GROUP="Letux specific Panel drivers";CNT=yes;;
+			scripts/sortextable.c ) GROUP="Make it compile on Darwin gcc";CNT=no;;
+			drivers/staging/* ) GROUP="Staging by others";CNT=no;;
+			sound/soc/* ) GROUP="ALSA Sound";CNT=yes;;
+			* ) GROUP="Other";CNT=yes;;
+		esac
+		if [ "$GROUP" != "$PREVGROUP" ]
+			then
+			if ! [ "$SUMMARY" ]
+			then
+				if [ "$CNT" = yes ]
+				then
+					echo "***"
+					echo $GROUP -- try upstreaming
+					echo "***"
+				elif ! [ "$UPSTREAMONLY" ]
+				then
+					echo "***"
+					echo $GROUP -- upstreaming difficult
+					echo "***"
+				fi
+			fi
+			PREVGROUP="$GROUP"
+		fi
+		if [ $CNT = yes ]
+			then
+			COUNT=$(expr "$COUNT" + 1)
+		fi
+		PCNT=$(expr $(echo $(echo $PLUSMINUS | sed -e 's/-//g' | wc -c)) - 1)
+		MCNT=$(expr $(echo $(echo $PLUSMINUS | sed -e 's/+//g' | wc -c)) - 1)
+		if ! [ "$SUMMARY" ]
+		then
+			if [ "$CNT" = yes ] || ! [ "$UPSTREAMONLY" ]
+			then
+				echo $FILE $BAR $CHANGES $PCNT+ $MCNT-
+			fi
+		fi
+	else
+		[ "$SUMMARY" ] || echo $COUNT $FILE $BAR $CHANGES $PLUSMINUS
+		echo "$CURRENTBRANCH is away from $CURRENTLINUS by $COUNT files with differences to be potentially upstreamed"
+		# " 372 files changed, 139542 insertions(+), 405 deletions(-)"
+	fi
+done

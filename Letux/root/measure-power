@@ -1,0 +1,79 @@
+#!/bin/bash
+#
+# Pyra energy consumption measurement tool
+#
+
+SCRIPTPATH="$(dirname "$0")"
+# disable charger
+echo 0 >/sys/class/power_supply/bq24297/input_current_limit
+
+BQ27=/sys/class/power_supply/bq27621-0
+
+[ "$1" ] && TIME=$1 || TIME=60
+
+function measure
+{
+	before=$(cat $BQ27/charge_now)
+	echo fuel: $before
+	sleep $TIME
+	after=$(cat $BQ27/charge_now)
+	echo fuel: $after
+	echo $(date) $1: $[(before-after)/TIME] mA
+# alternative: average 60 measurements of $BQ27/current_now
+}
+
+# full intensity, turn everything on
+echo 10 >/sys/class/backlight/backlight/brightness
+echo 10 >/sys/class/backlight/keyboard-backlight/brightness
+$SCRIPTPATH/bl 1
+$SCRIPTPATH/kbl 1
+( cd /sys/class/leds; for i in *; do echo "default-on" >$i/trigger; done )
+ifconfig wlan0 up
+measure "full activity"
+
+# turn off all
+$SCRIPTPATH/kbl 0
+$SCRIPTPATH/bl 0
+( cd /sys/class/leds; for i in *; do echo "none" >$i/trigger; done )
+ifconfig wlan0 down
+$SCRIPTPATH/ssd2858 -off >/dev/null
+measure "all off except OMAP"
+
+# add backlight
+$SCRIPTPATH/bl 1
+measure "backlight on"
+
+# add SSD
+$SCRIPTPATH/ssd2858 -r -f 3 -p -s >/dev/null
+measure "ssd on"
+
+# add keyboard
+$SCRIPTPATH/kbl 1
+measure "keyboard on"
+
+# add all LEDs
+measure "all LEDs on"
+( cd /sys/class/leds; for i in *; do echo "default-on" >$i/trigger; done )
+
+# add WLAN
+measure "wlan turned on"	# assumes it was on
+ifconfig wlan0 up
+
+# turn on WWAN (we can't easily turn off)
+WWAN=$($SCRIPTPATH/wwan-on)
+measure "wwan $WWAN turned on"
+# (echo "at^turn off"; sleep 0.5)| $SCRIPTPATH/femtocom $WWAN
+rfkill block wwan
+
+# should try to turn off USB host power...
+R1=$($SCRIPTPATH/findregulator modem_vbus_hdmi_power)
+R2=$($SCRIPTPATH/findregulator host1_vbus_power)
+R3=$($SCRIPTPATH/findregulator host2_vbus_power)
+R4=$($SCRIPTPATH/findregulator modem_vbus_power)
+
+# findregulator + echo 0 >$REG/power ?
+# measure "USB host power off"
+
+# turn on for normal use...
+
+echo 2000000 >/sys/class/power_supply/bq24297/input_current_limit

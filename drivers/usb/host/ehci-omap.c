@@ -171,6 +171,7 @@ static int ehci_hcd_omap_probe(struct platform_device *pdev)
 			usb_phy_set_suspend(omap->phy[i], 0);
 		}
 	}
+	msleep(50);
 
 	pm_runtime_enable(dev);
 	pm_runtime_get_sync(dev);
@@ -255,6 +256,58 @@ static void ehci_hcd_omap_remove(struct platform_device *pdev)
 	pm_runtime_disable(dev);
 }
 
+
+static int __maybe_unused ehci_omap_suspend(struct device *dev)
+{
+	struct usb_hcd *hcd = dev_get_drvdata(dev);
+	struct omap_hcd *omap = (struct omap_hcd *)hcd_to_ehci(hcd)->priv;
+	int ret;
+	int i;
+
+	ret = ehci_suspend(hcd, false);
+	if (ret) {
+		dev_err(dev, "ehci suspend failed: %d\n", ret);
+		return ret;
+	}
+	for (i = 0; i < omap->nports; i++) {
+		if (omap->phy[i])
+			usb_phy_shutdown(omap->phy[i]);
+	}
+        pm_runtime_put_sync(dev);
+	return 0;
+}
+
+static int __maybe_unused ehci_omap_resume(struct device *dev)
+{
+	struct usb_hcd *hcd = dev_get_drvdata(dev);
+	struct omap_hcd *omap = (struct omap_hcd *)hcd_to_ehci(hcd)->priv;
+	int i;
+
+        pm_runtime_get_sync(dev);
+
+	/*
+	 * register contents might get lost, so set them again here
+         * see comment in probe function
+	 */
+	ehci_write(hcd->regs, EHCI_INSNREG04,
+		   EHCI_INSNREG04_DISABLE_UNSUSPEND);
+
+	for (i = 0; i < omap->nports; i++) {
+		if (omap->phy[i]) {
+			usb_phy_init(omap->phy[i]);
+			usb_phy_set_suspend(omap->phy[i], false);
+		}
+	}
+	/*
+	 * some delay to have phy properly awakened
+         * so ehci_resume will be able to talk to it.
+         */
+        msleep(50);
+
+	ehci_resume(hcd, true);
+	return 0;
+}
+
 static const struct of_device_id omap_ehci_dt_ids[] = {
 	{ .compatible = "ti,ehci-omap" },
 	{ }
@@ -262,14 +315,17 @@ static const struct of_device_id omap_ehci_dt_ids[] = {
 
 MODULE_DEVICE_TABLE(of, omap_ehci_dt_ids);
 
+static SIMPLE_DEV_PM_OPS(ehci_omap_pm_ops, ehci_omap_suspend,
+			 ehci_omap_resume);
+
+
 static struct platform_driver ehci_hcd_omap_driver = {
 	.probe			= ehci_hcd_omap_probe,
 	.remove_new		= ehci_hcd_omap_remove,
 	.shutdown		= usb_hcd_platform_shutdown,
-	/*.suspend		= ehci_hcd_omap_suspend, */
-	/*.resume		= ehci_hcd_omap_resume, */
 	.driver = {
 		.name		= hcd_name,
+		.pm		= &ehci_omap_pm_ops,
 		.of_match_table = omap_ehci_dt_ids,
 	}
 };

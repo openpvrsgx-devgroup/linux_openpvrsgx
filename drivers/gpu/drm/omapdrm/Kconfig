@@ -80,6 +80,14 @@ config OMAP5_DSS_HDMI
 	  Definition Multimedia Interface. See http://www.hdmi.org/ for HDMI
 	  specification.
 
+config OMAP5_DSS_HDMI_CEC
+	bool "Enable HDMI CEC support for OMAP5"
+	depends on OMAP5_DSS_HDMI
+	select CEC_CORE
+	default y
+	help
+	  When selected the HDMI transmitter will support the CEC feature.
+
 config OMAP2_DSS_SDI
 	bool "SDI support"
 	default n

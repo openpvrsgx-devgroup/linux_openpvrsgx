@@ -126,6 +126,7 @@ config SND_SOC_ALL_CODECS
 	imply SND_SOC_JZ4725B_CODEC
 	imply SND_SOC_JZ4760_CODEC
 	imply SND_SOC_JZ4770_CODEC
+	imply SND_SOC_JZ4780_CODEC
 	imply SND_SOC_LM4857
 	imply SND_SOC_LM49453
 	imply SND_SOC_LOCHNAGAR_SC
@@ -166,6 +167,7 @@ config SND_SOC_ALL_CODECS
 	imply SND_SOC_NAU8825
 	imply SND_SOC_HDMI_CODEC
 	imply SND_SOC_PCM1681
+	imply SND_SOC_PCM1773
 	imply SND_SOC_PCM1789_I2C
 	imply SND_SOC_PCM179X_I2C
 	imply SND_SOC_PCM179X_SPI
@@ -271,6 +273,7 @@ config SND_SOC_ALL_CODECS
 	imply SND_SOC_TLV320DAC33
 	imply SND_SOC_TSCS42XX
 	imply SND_SOC_TSCS454
+	imply SND_SOC_TS3A225E
 	imply SND_SOC_TS3A227E
 	imply SND_SOC_TWL4030
 	imply SND_SOC_TWL6040
@@ -342,16 +345,14 @@ config SND_SOC_ALL_CODECS
 	imply SND_SOC_WSA883X
 	imply SND_SOC_WSA884X
 	imply SND_SOC_ZL38060
+	imply SND_SOC_GTM601
+	imply SND_SOC_SI47XX if I2C
+	imply SND_SOC_W2CBW003
 	help
 	  Normally ASoC codec drivers are only built if a machine driver which
 	  uses them is also built since they are only usable with a machine
 	  driver.  Selecting this option will allow these drivers to be built
 	  without an explicit machine driver for test and development purposes.
-
-	  Support for the bus types used to access the codecs to be built must
-	  be selected separately.
-
-	  If unsure select "N".
 
 config SND_SOC_88PM860X
 	tristate
@@ -1055,6 +1056,18 @@ config SND_SOC_JZ4770_CODEC
 	  This driver can also be built as a module. If so, the module
 	  will be called snd-soc-jz4770-codec.
 
+config SND_SOC_JZ4780_CODEC
+	depends on MACH_INGENIC || COMPILE_TEST
+	depends on OF
+	select REGMAP
+	tristate "Ingenic JZ4780 internal CODEC"
+	help
+	  Enable support for the internal CODEC found in the JZ4780 SoC
+	  from Ingenic.
+
+	  This driver can also be built as a module. If so, the module
+	  will be called snd-soc-jz4780-codec.
+
 config SND_SOC_DA7210
 	tristate
 	depends on SND_SOC_I2C_AND_SPI
@@ -1137,7 +1150,22 @@ config SND_SOC_FRAMER
 
 
 config SND_SOC_GTM601
-	tristate 'GTM601 UMTS modem audio codec'
+	tristate "Option GTM601 3G Audio Codec"
+	help
+	  PCM interface to a GTM601 UMTS modem chip. Does not control the Modem through USB.
+
+config SND_SOC_SI47XX
+	tristate "Silicon Labs Si47xx FM Audio Codec"
+	help
+	  PCM interface to a Si47xx chip. Needs to enable some I2C or SPI driver.
+
+config SND_SOC_W2CBW003
+	tristate "Wi2Wi W2CBW003 Bluetooth Audio Codec"
+	help
+	  PCM interface to Bluetooth part of W2CBW003. Does not control the bluetooth headset link.
+
+config SND_SOC_EC25
+	tristate 'EC25 LTE module audio codec'
 
 config SND_SOC_HDAC_HDMI
 	tristate
@@ -2031,6 +2059,10 @@ config SND_SOC_TLV320ADCX140
 	  Add support for Texas Instruments tlv320adc3140, tlv320adc5140 and
 	  tlv320adc6140 quad channel ADCs.
 
+config SND_SOC_TS3A225E
+	tristate "TI Headset/Mic detect chip"
+	depends on I2C
+
 config SND_SOC_TS3A227E
 	tristate "TI Headset/Mic detect and keypress chip"
 	depends on I2C
@@ -2407,6 +2439,10 @@ config SND_SOC_ZL38060
 	  which consists of a Digital Signal Processor (DSP), several Digital
 	  Audio Interfaces (DAIs), analog outputs, and a block of 14 GPIOs.
 
+config SND_SOC_PCM1773
+	tristate "TI PCM1773 audio output codec"
+	select GPIOLIB
+
 # Amp
 config SND_SOC_LM4857
 	tristate
@@ -2521,5 +2557,11 @@ config SND_SOC_LPASS_TX_MACRO
 	select REGMAP_MMIO
 	select SND_SOC_LPASS_MACRO_COMMON
 	tristate "Qualcomm TX Macro in LPASS(Low Power Audio SubSystem)"
+
+config SND_SOC_WM2000
+	tristate
+
+config SND_SOC_WM9090
+	tristate
 
 endmenu

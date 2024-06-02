@@ -1,0 +1,35 @@
+ABE Firmware Generation Tool
+=============================
+
+This is a tool that allows users to generate new firmware files for the OMAP4+
+ABE sound drivers. It's intended to be used to generate the generic bespoke
+objects like the firmware text and firmware task configuration.
+
+
+Build Instructions
+==================
+
+After checking out from git :-
+
+./autogen.sh
+./configure --with-linux-dir=/path/to/linux.git --with-hal-dir=/path/to/audio-test.git/hal/dir
+make
+sudo make install
+
+This will install the binary and plugins.
+
+This tool currently requires both th kernel ABE sources and the audio-test.git
+HAL sources. It's intended to reduce duplication between the kernel AESS and
+audio-test.git HAL sources and try and remove non kernel sources if possible.
+It may even be best to merge them in here locally.
+
+
+Usage Instructions
+==================
+
+Use the script abe-toopl.sh in the scripts directory to generate the data files.
+
+i.e. abe-tool.sh 009590
+
+Will generate FW text and data files for version 009590
+

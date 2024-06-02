@@ -1,0 +1,77 @@
+#!/bin/bash
+#
+# print UMTS modem status
+#
+# usage: wwan-status
+#
+
+SCRIPTPATH="$(dirname "$0")"
+IF="$($SCRIPTPATH/wwan-on)"
+
+case "$IF" in
+	"" )
+		echo Modem Application interface not found >&2
+		exit 1
+		;;
+
+	/dev/ttyHS* ) # GTA04 with OPTION GTM601W
+		(
+		echo "AT\$QCVOLT"; sleep 1	# operation voltage
+		echo "AT\$QCSIMSTAT?"; sleep 1	# SIM status
+		echo "AT+CGMI"; sleep 1
+		echo "AT+CGMM"; sleep 1
+		echo "AT+CGMR"; sleep 1
+		echo "AT+CGSN"; sleep 1
+		echo "AT+CIMI"; sleep 1
+		echo "AT+CPIN?"; sleep 1	# PIN status
+		echo "AT+COPS?"; sleep 1	# network name
+		echo "AT+CSQ"; sleep 1		# signal quality
+		echo "AT_OLCC=1"; sleep 1
+		echo "AT_OSQI=1"; sleep 1	# enable _OSIGQ URCs
+		echo "AT_OWANCALL?"; sleep 1
+		echo "AT_OWANDATA?"; sleep 1
+		echo "AT_OWANNWERROR?"; sleep 1
+		echo "AT_ONCI?"; sleep 1
+		sleep 60
+		) | $SCRIPTPATH/femtocom $IF
+		;;
+
+	/dev/ttyACM[0-4] | /dev/ttyUSB[0-4] )	# Neo900 / Pyra with PHS8/PLS8
+		INA231=$($SCRIPTPATH/findhwmon ina231)
+		if [ "$INA231" ]
+		then
+			# echo "shunt resistor: $(cat $INA231/shunt_resistor) uOhm"
+			# echo "across shunt voltage: $(cat $INA231/in0_input) mV"
+			echo "Modem Current: $(cat $INA231/curr1_input) mA"
+			echo "Modem Power: $(cat $INA231/power1_input) uW"
+			echo "VMODEM: $(cat $INA231/in1_input) mV"
+		fi
+
+		(
+		echo "AT^SQPORT?"; sleep 1	# port (Application, Modem, ...)
+		echo "AT^SCKS?"; sleep 1	# SIM status
+		echo "AT+CGMI"; sleep 1
+		echo "AT+CGMM"; sleep 1
+		echo "AT+CGMR"; sleep 1
+		echo "AT+CGSN"; sleep 1
+		echo "AT+CIMI"; sleep 1
+		echo "AT+CPIN?"; sleep 1	# PIN status
+		echo "AT+COPS?"; sleep 1	# network name
+		echo "AT+WS46?"; sleep 1	# network connection
+		echo "AT+CSQ"; sleep 1		# signal quality
+#echo "AT_OLCC=1"; sleep 1
+#echo "AT_OSQI=1"; sleep 1
+#echo "AT_OWANCALL?"; sleep 1
+#echo "AT_OWANDATA?"; sleep 1
+#echo "AT_OWANNWERROR?"; sleep 1
+		echo "AT^SBV"; sleep 1		# battery voltage
+		echo "AT^SCTM=0,1"; sleep 1; echo "AT^SCTM?"; sleep 1	# temperature
+		echo "AT+CCLK?"; sleep 1	# real time clock
+		echo "AT^SGPSC?"; sleep 1	# GPS/GLONASS status
+		echo "AT^SMONI"; sleep 1	# serving cell
+		echo "AT^SMONP"; sleep 1	# neighbour cell
+		sleep 10
+		) | $SCRIPTPATH/femtocom $IF
+		;;
+
+esac

@@ -161,6 +161,11 @@ int lbs_start_iface(struct lbs_private *priv)
 	lbs_update_channel(priv);
 
 	priv->iface_running = true;
+	/* if deep sleep was enabled before
+	 * the interface was brought down, reenable it
+	 */
+	if (priv->is_auto_deep_sleep_enabled)
+		lbs_enter_auto_deep_sleep(priv);
 	return 0;
 
 err:
@@ -223,6 +228,10 @@ int lbs_stop_iface(struct lbs_private *priv)
 
 	cancel_work_sync(&priv->mcast_work);
 	del_timer_sync(&priv->tx_lockup_timer);
+	/* autosleep should not mess with commands
+	 * when the interface is powered down
+	 */
+	del_timer_sync(&priv->auto_deepsleep_timer);
 
 	/* Disable command processing, and wait for all commands to complete */
 	lbs_deb_main("waiting for commands to complete\n");
@@ -788,7 +797,8 @@ static void auto_deepsleep_timer_fn(struct timer_list *t)
 	} else {
 		if (priv->is_auto_deep_sleep_enabled &&
 		    (!priv->wakeup_dev_required) &&
-		    (priv->connect_status != LBS_CONNECTED)) {
+		    (priv->connect_status != LBS_CONNECTED) &&
+		    priv->iface_running) {
 			struct cmd_header cmd;
 
 			lbs_deb_main("Entering auto deep sleep mode...\n");

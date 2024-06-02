@@ -72,7 +72,7 @@
 		buttonS2 {
 			label = "button S2";
 			gpios = <&gpio4 25 GPIO_ACTIVE_LOW>;	/* gpio_121 */
-			linux,code = <BTN_0>;
+			linux,code = <KEY_F13>;
 			wakeup-source;
 		};
 	};
@@ -81,22 +81,31 @@
 		compatible = "ti,abe-twl6040";
 		ti,model = "PandaBoard";
 
-		ti,mclk-freq = <38400000>;
+		ti,mclk-freq = <38400000>;	// CHECKME: 19200000?
 
 		ti,mcpdm = <&mcpdm>;
+		ti,mcbsp1 = <&mcbsp1>;	/* bluetooth */
+		ti,mcbsp2 = <&mcbsp2>;	/* fm radio */
+		ti,mcbsp3 = <&mcbsp3>;	/* modem */
 
 		ti,twl6040 = <&twl6040>;
+		ti,aess = <&aess>;
 
 		/* Audio routing */
 		ti,audio-routing =
 			"Headset Stereophone", "HSOL",
 			"Headset Stereophone", "HSOR",
-			"Ext Spk", "HFL",
-			"Ext Spk", "HFR",
+			"Earphone Spk", "EP",
 			"Line Out", "AUXL",
 			"Line Out", "AUXR",
+			"Vibrator", "VIBRAL",
+			"Vibrator", "VIBRAR",
 			"HSMIC", "Headset Mic",
 			"Headset Mic", "Headset Mic Bias",
+			"MAINMIC", "Main Handset Mic",
+			"Main Handset Mic", "Main Mic Bias",
+			"SUBMIC", "Sub Handset Mic",
+			"Sub Handset Mic", "Main Mic Bias",
 			"AFML", "Line In",
 			"AFMR", "Line In";
 	};
@@ -225,6 +234,10 @@
 			};
 		};
 	};
+};
+
+&aess {
+	status = "okay";
 };
 
 &omap4_pmx_core {
@@ -462,6 +475,18 @@
 	clock-frequency = <400000>;
 };
 
+&mcspi2 {
+	status = "disabled";
+};
+
+&mcspi3 {
+	status = "disabled";
+};
+
+&mcspi4 {
+	status = "disabled";
+};
+
 &mmc1 {
 	vmmc-supply = <&vmmc>;
 	bus-width = <8>;
@@ -518,6 +543,10 @@
 	status = "okay";
 };
 
+&mcbsp2 {
+	status = "okay";
+};
+
 &twl_usb_comparator {
 	usb-supply = <&vusb>;
 };
@@ -561,6 +590,7 @@
 
 		ethernet: ethernet@1 {
 			compatible = "usb424,ec00";
+			mac-address = [ 3a 6e 63 0c 19 ce ];
 			reg = <1>;
 		};
 	};

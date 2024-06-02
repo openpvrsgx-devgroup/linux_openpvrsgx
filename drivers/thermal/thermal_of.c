@@ -131,13 +131,15 @@ static struct thermal_trip *thermal_of_trips_init(struct device_node *np, int *n
 	trips = of_get_child_by_name(np, "trips");
 	if (!trips) {
 		pr_err("Failed to find 'trips' node\n");
+		return NULL;
 		return ERR_PTR(-EINVAL);
 	}
 
 	count = of_get_child_count(trips);
 	if (!count) {
 		pr_err("No trip point defined\n");
-		ret = -EINVAL;
+		*ntrips = 0;
+		ret = 0;
 		goto out_of_node_put;
 	}
 

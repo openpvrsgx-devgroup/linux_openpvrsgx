@@ -1,0 +1,719 @@
+# Use case Configuration for TI PandaES HiFi audio playback and capture
+# By Liam Girdwood <lrg@ti.com>
+# Updated by Sebastien Jan <s-jan@ti.com>
+
+######### Main Verb Config #################
+
+SectionVerb {
+
+	EnableSequence [
+		# Set SDP device for following cset commands
+		cdev "hw:PandaES"
+
+		# Enable ABE playback path through DL1
+		cset "name='DL1 Mixer Multimedia' 1"
+		cset "name='Sidetone Mixer Playback' 1"
+		cset "name='DL1 PDM Switch' 1"
+
+		# set ABE playback gains to 0dB
+		cset "name='DL1 Media Playback Volume' 120"
+		cset "name='DL2 Media Playback Volume' 120"
+		cset "name='SDT DL Volume' 120"
+
+		# Enable ABE PDM-UL Capture path
+		cset "name='MUX_UL10' 11"
+		cset "name='MUX_UL11' 12"
+
+		# set ABE capture gains to 0dB
+		cset "name='AMIC UL Volume' 120"
+	]
+
+	DisableSequence [
+		# Set SDP device for following cset commands
+		cdev "hw:PandaES"
+
+		# Disable ABE playback path through DL1
+		cset "name='DL1 Mixer Multimedia' 0"
+		cset "name='Sidetone Mixer Playback' 0"
+		cset "name='DL1 PDM Switch' 0"
+
+		# mute ABE playback gains
+		cset "name='DL1 Media Playback Volume' 0"
+		cset "name='DL2 Media Playback Volume' 0"
+		cset "name='SDT DL Volume' 0"
+
+		# Disable ABE PDM-UL Capture path
+		cset "name='MUX_UL10' 0"
+		cset "name='MUX_UL11' 0"
+
+		# mute ABE capture gains
+		cset "name='AMIC UL Volume' 0"
+
+	]
+
+	# ALSA PCM
+	Value {
+
+		TQ "HiFi"
+
+		# ALSA PCM device for HiFi
+		PlaybackPCM "hw:PandaES,0"
+		CapturePCM "hw:PandaES,1"
+	}
+}
+
+###### Headset Devices Options ############
+
+SectionDevice."Headset" {
+	Comment "PandaES 3.5mm Headset playback and capture"
+
+	# Headset is mutually exclusive to some devices
+	ConflictingDevice [
+		"HeadsetLP"
+		"Headphones"
+		"HeadphonesLP"
+		"Mainmic"
+		"Submic"
+		"Line"
+		"FMRadio"
+	]
+
+	EnableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:PandaES"
+
+		# TWL6040 playback path
+		cset "name='Headset Left Playback' 1"
+		cset "name='Headset Right Playback' 1"
+
+		# TWL6040 Capture Path
+		cset "name='Analog Left Capture Route' 0"
+		cset "name='Analog Right Capture Route' 0"
+		cset "name='Capture Preamplifier Volume' 2"
+	]
+
+	DisableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:PandaES"
+
+		# TWL6040 playback path
+		cset "name='Headset Right Playback' 0"
+		cset "name='Headset Left Playback' 0"
+
+		# TWL6040 Capture path
+		cset "name='Analog Left Capture Route' 3"
+		cset "name='Analog Right Capture Route' 3"
+		cset "name='Capture Preamplifier Volume' 0"
+	]
+
+	TransitionSequence."Earphone" [
+
+		# Set SDP device for following cset commands
+		cdev "hw:PandaES"
+
+		# TWL6040 playback path
+		cset "name='Headset Right Playback' 0"
+		cset "name='Headset Left Playback' 0"
+
+		# TWL6040 playback path
+		cset "name='Earphone Playback Switch' 1"
+
+		# Disable HS TWL6040 Capture path
+		cset "name='Analog Left Capture Route' 3"
+		cset "name='Analog Right Capture Route' 3"
+		cset "name='Capture Preamplifier Volume' 0"
+	]
+
+	Value {
+		# Default ALSA volume gain and mute kcontrols
+		CaptureVolume "name='Capture Volume' 4"
+		PlaybackVolume "name='Headset Playback Volume' 13"
+		PlaybackChannels "2"
+		CaptureChannels "2"
+	}
+}
+
+SectionDevice."HeadsetLP" {
+	Comment "Low Power PandaES 3.5mm Headset playback and capture"
+
+	# HeadsetLP is mutually exclusive to some devices
+	ConflictingDevice [
+		"Headphones"
+		"HeadphonesLP"
+		"Headset"
+		"Mainmic"
+		"Submic"
+		"Line"
+		"FMRadio"
+	]
+
+	EnableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:PandaES"
+
+		# TWL6040 playback path
+		cset "name='Headset Left Playback' 1"
+		cset "name='Headset Right Playback' 1"
+
+		# TWL6040 Capture Path
+		cset "name='Analog Left Capture Route' 0"
+		cset "name='Analog right Capture Route' 0"
+		cset "name='Capture Preamplifier Volume' 2"
+	]
+
+	DisableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:PandaES"
+
+		# TWL6040 playback path
+		cset "name='Headset Right Playback' 0"
+		cset "name='Headset Left Playback' 0"
+
+		# TWL6040 Capture path
+		cset "name='Analog Left Capture Route' 3"
+		cset "name='Analog Right Capture Route' 3"
+		cset "name='Capture Preamplifier Volume' 0"
+	]
+
+	TransitionSequence."Earphone" [
+
+		# Set SDP device for following cset commands
+		cdev "hw:PandaES"
+
+		# TWL6040 playback path
+		cset "name='Headset Right Playback' 0"
+		cset "name='Headset Left Playback' 0"
+
+		# TWL6040 playback path
+		cset "name='Earphone Playback Switch' 1"
+
+		# Disable HS TWL6040 Capture path
+		cset "name='Analog Left Capture Route' 3"
+		cset "name='Analog Right Capture Route' 3"
+		cset "name='Capture Preamplifier Volume' 0"
+	]
+
+	Value {
+		# Default ALSA volume gain and mute kcontrols
+		CaptureVolume "name='Capture Volume' 4"
+		PlaybackVolume "name='Headset Playback Volume' 13"
+		PlaybackPCM "hw:PandaES,6"
+		PlaybackChannels "2"
+		CaptureChannels "2"
+	}
+}
+
+###### Headphones Devices Options ############
+
+SectionDevice."Headphones" {
+	Comment "PandaES 3.5mm Headphones playback"
+
+	# Headphones is mutually exclusive to some devices
+	ConflictingDevice [
+		"HeadsetLP"
+		"HeadphonesLP"
+		"Headset"
+	]
+
+	EnableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:PandaES"
+
+		# TWL6040 playback path
+		cset "name='Headset Left Playback' 1"
+		cset "name='Headset Right Playback' 1"
+	]
+
+	DisableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:PandaES"
+
+		# TWL6040 playback path
+		cset "name='Headset Right Playback' 0"
+		cset "name='Headset Left Playback' 0"
+	]
+
+	TransitionSequence."Earphone" [
+
+		# Set SDP device for following cset commands
+		cdev "hw:PandaES"
+
+		# TWL6040 playback path
+		cset "name='Headset Right Playback' 0"
+		cset "name='Headset Left Playback' 0"
+
+		# TWL6040 playback path
+		cset "name='Earphone Playback Switch' 1"
+	]
+
+	Value {
+		# Default ALSA volume gain and mute kcontrols
+		PlaybackVolume "name='Headset Playback Volume' 13"
+		PlaybackChannels "2"
+	}
+}
+
+SectionDevice."HeadphonesLP" {
+	Comment "Low Power SDP4430 3.5mm Headphones playback"
+
+	# Headphones is mutually exclusive to some devices
+	ConflictingDevice [
+		"Headset"
+		"HeadsetLP"
+		"Headphones"
+	]
+
+	EnableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:PandaES"
+
+		# TWL6040 playback path
+		cset "name='Headset Left Playback' 1"
+		cset "name='Headset Right Playback' 1"
+	]
+
+	DisableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:PandaES"
+
+		# TWL6040 playback path
+		cset "name='Headset Right Playback' 0"
+		cset "name='Headset Left Playback' 0"
+	]
+
+	TransitionSequence."Earphone" [
+
+		# Set SDP device for following cset commands
+		cdev "hw:PandaES"
+
+		# TWL6040 playback path
+		cset "name='Headset Right Playback' 0"
+		cset "name='Headset Left Playback' 0"
+
+		# TWL6040 playback path
+		cset "name='Earphone Playback Switch' 1"
+	]
+
+	Value {
+		# Default ALSA volume gain and mute kcontrols
+		PlaybackVolume "name='Headset Playback Volume' 13"
+		PlaybackPCM "plughw:PandaES,6"
+		PlaybackChannels "2"
+	}
+}
+
+
+########### Earphone Device Options ################
+
+SectionDevice."Earphone" {
+	Comment "Earphone playback"
+
+	EnableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:PandaES"
+
+		# TWL6040 playback path
+		cset "name='Earphone Playback Switch' 1"
+	]
+
+	DisableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:PandaES"
+
+		# TWL6040 playback path
+		cset "name='Earphone Playback Switch' 0"
+	]
+
+	TransitionSequence."Headset" [
+
+		# Set SDP device for following cset commands
+		cdev "hw:PandaES"
+
+		# TWL6040 playback path
+		cset "name='Earphone Playback Switch' 0"
+
+		# TWL6040 playback path
+		cset "name='Headset Right Playback' 1"
+		cset "name='Headset Left Playback' 1"
+	]
+
+	Value {
+		# Default ALSA volume gain and mute kcontrols
+		PlaybackVolume "name='Earphone Playback Volume' 13"
+		PlaybackChannels "2"
+	}
+}
+
+########### Handsfree Device Options ################
+
+SectionDevice."Handsfree" {
+	Comment "PandaES Handsfree Speaker playback"
+
+	EnableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:PandaES"
+
+		# ABE playback path through DL2
+		cset "name='DL2 Mixer Multimedia' 1"
+
+		# TWL6040 playback path
+		cset "name='Handsfree Left Playback' 1"
+		cset "name='Handsfree Right Playback' 1"
+	]
+
+	DisableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:PandaES"
+
+		# ABE playback path through DL2
+		cset "name='DL2 Mixer Multimedia' 0"
+
+		# TWL6040 playback path
+		cset "name='Handsfree Left Playback' 0"
+		cset "name='Handsfree Right Playback' 0"
+	]
+
+	Value {
+		# Default ALSA volume gain and mute kcontrols
+		PlaybackVolume "name='Handsfree Playback Volume' 13"
+		PlaybackChannels "2"
+	}
+}
+
+############ Main Mic Device #########################
+
+SectionDevice."Mainmic" {
+	Comment "Main Microphone Left Channel Capture"
+
+	ConflictingDevice [
+		"Headset"
+		"HeadsetLP"
+		"Line"
+		"FMRadio"
+	]
+
+	EnableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:PandaES"
+
+		# TWL6040 Capture Path
+		cset "name='Analog Left Capture Route' 0"
+	]
+
+	DisableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:PandaES"
+
+		# TWL6040 Capture path
+		cset "name='Analog Left Capture Route' 3"
+	]
+
+	Value {
+		# Default ALSA volume gain and mute kcontrols
+		CaptureVolume "name='Capture Volume' 4"
+		CaptureChannels "2"
+	}
+}
+
+############ Sub Mic Device #########################
+
+SectionDevice."Submic" {
+	Comment "Sub Microphone Right Channel Capture"
+
+	ConflictingDevice [
+		"Headset"
+		"HeadsetLP"
+		"Line"
+		"FMRadio"
+	]
+
+	EnableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:PandaES"
+
+		# TWL6040 Capture Path
+		cset "name='Analog Right Capture Route' 1"
+	]
+
+	DisableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:PandaES"
+
+		# TWL6040 Capture path
+		cset "name='Analog Right Capture Route' 3"
+	]
+
+	Value {
+		# Default ALSA volume gain and mute kcontrols
+		CaptureVolume "name='Capture Volume' 4"
+		CaptureChannels "2"
+	}
+}
+
+############ Line In Device #########################
+
+SectionDevice."Line" {
+	Comment "Line In Capture"
+
+	ConflictingDevice [
+		"Headset"
+		"HeadsetLP"
+		"Submic"
+		"Mainmic"
+		"FMRadio"
+	]
+
+	EnableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:PandaES"
+
+		# TWL6040 Capture Path
+		cset "name='Analog Right Capture Route' 2"
+		cset "name='Analog Left Capture Route' 2"
+
+		# TWL6040 Line Capture to 0dB
+		cset "name='Aux FM Volume' 3"
+	]
+
+	DisableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:PandaES"
+
+		# TWL6040 Capture path
+		cset "name='Analog Right Capture Route' 3"
+		cset "name='Analog Left Capture Route' 3"
+
+		# TWL6040 Mute Line Capture
+		cset "name='Aux FM Volume' 0"
+	]
+
+	Value {
+		# Default ALSA volume gain and mute kcontrols
+		CaptureVolume "name='Capture Volume' 4"
+		CaptureChannels "2"
+	}
+}
+
+############ FM Analog Radio Device #########################
+
+SectionDevice."FMRadio" {
+	Comment "FM Radio Analog Playback and Capture"
+
+	ConflictingDevice [
+		"Headset"
+		"HeadsetLP"
+		"Submic"
+		"Mainmic"
+		"Line"
+	]
+
+	EnableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:PandaES"
+
+		# enable ABE path for FM playback via DL1
+		cset "name='DL1 Mixer Capture' 1"
+		cset "name='DL1 Capture Playback Volume' 120"
+
+		# TWL6040 Capture Path
+		cset "name='Analog Right Capture Route' 2"
+		cset "name='Analog Left Capture Route' 2"
+
+		# TWL6040 Line Capture to 0dB
+		cset "name='Aux FM Volume' 3"
+	]
+
+	DisableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:PandaES"
+
+		# disable ABE path for FM playback via DL1
+		cset "name='DL1 Mixer Capture' 0"
+		cset "name='DL1 Capture Playback Volume' 0"
+
+		# TWL6040 Capture path
+		cset "name='Analog Right Capture Route' 3"
+		cset "name='Analog Left Capture Route' 3"
+
+		# TWL6040 Mute Line Capture
+		cset "name='Aux FM Volume' 0"
+	]
+
+	Value {
+		# Default ALSA volume gain and mute kcontrols
+		CaptureVolume "name='Capture Volume' 4"
+		CaptureChannels "2"
+	}
+}
+
+############ Bluetooth Device #########################
+
+SectionDevice."Bluetooth" {
+	Comment "Bluetooth Playback and Capture"
+
+	EnableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:PandaES"
+
+		# enable 0dB ABE path for BT capture via ROUTE_UL
+		cset "name='MUX_UL10' 7"
+		cset "name='MUX_UL11' 8"
+		cset "name='BT UL Volume' 120"
+
+		# enable ABE DL1 BT path
+		cset "name='DL1 BT_VX Switch' 1"
+	]
+
+	DisableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:PandaES"
+
+		# Mute ABE path for BT capture via ROUTE_UL
+		cset "name='MUX_UL10' 0"
+		cset "name='MUX_UL11' 0"
+		cset "name='BT UL Volume' 0"
+
+		# enable ABE DL1 BT path
+		cset "name='DL1 BT_VX Switch' 0"
+	]
+
+	Value {
+		# Default ALSA volume gain and mute kcontrols
+		TQ "Voice"
+		PlaybackPriority "150"
+		CapturePriority "150"
+		PlaybackChannels "2"
+		CaptureChannels "2"
+	}
+}
+
+############ HDMI Device #########################
+
+#SectionDevice."HDMI" {
+#	Comment "HDMI Connected Device"
+#
+#	EnableSequence [
+#	]
+#
+#	DisableSequence [
+#	]
+#
+#	Value {
+#		PlaybackPCM "hw:OMAP4HDMI,0"
+#	}
+#}
+
+##############  Play Tone Modifier ####################
+#
+# We have 2 PlayTone modifiers. Each one supports different devices as the
+# path configuration is different depending on the device being used when
+# the modifier is enabled.
+#
+
+SectionModifier."PlayTone" {
+	Comment "Play a ring tone or system sound"
+
+	# For the following devices we need to set the DL2 path
+	SupportedDevice [
+		"Headset"
+		"HeadsetLP"
+		"Headphones"
+		"Earphone"
+	]
+
+	EnableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:PandaES"
+
+		# ABE playback path through DL2
+		cset "name='DL2 Mixer Tones' 1"
+		cset "name='DL2 Tones Playback Volume' 120"
+		cset "name='DL1 Mixer Tones' 1"
+		cset "name='DL1 Tones Playback Volume' 120"
+
+		# TWL6040 playback path
+		cset "name='Handsfree Left Playback' 1"
+		cset "name='Handsfree Right Playback' 1"
+	]
+
+	DisableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:PandaES"
+
+		# ABE playback path through DL2
+		cset "name='DL2 Mixer Tones' 0"
+		cset "name='DL2 Tones Playback Volume' 0"
+		cset "name='DL1 Mixer Tones' 0"
+		cset "name='DL1 Tones Playback Volume' 0"
+
+		# TWL6040 playback path
+		cset "name='Handsfree Left Playback' 0"
+		cset "name='Handsfree Right Playback' 0"
+	]
+
+	# QoS, Mixers and ALSA PCMs
+	Value {
+		TQ "Tones"
+		PlaybackPCM "hw:PandaES,3"
+		PlaybackVolume "name='DL2 Tones Playback Volume' 120"
+	}
+}
+
+SectionModifier."PlayTone" {
+	Comment "Play a ring tone or system sound"
+
+	# For the following devices we dont need to set the DL2 path
+	SupportedDevice [
+		"Handsfree"
+	]
+
+	EnableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:PandaES"
+
+		# ABE playback path through DL2
+		cset "name='DL2 Mixer Tones' 1"
+		cset "name='DL2 Tones Playback Volume' 120"
+	]
+
+	DisableSequence [
+
+		# Set SDP device for following cset commands
+		cdev "hw:PandaES"
+
+		cset "name='DL2 Mixer Tones' 0"
+	]
+
+	# QoS, Mixers and ALSA PCMs
+	Value {
+		TQ "Tones"
+		PlaybackPCM "hw:PandaES,3"
+		PlaybackVolume "name='DL2 Tones Playback Volume' 120"
+	}
+}
+

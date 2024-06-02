@@ -1,0 +1,15 @@
+#!/bin/bash
+#
+# turn on/off keyboard backlight
+#
+
+BL=/sys/class/backlight/keyboard-backlight
+
+# just turn completely on/off instead of writing backlight intensity
+
+if [ "$1" = 1 ]
+then
+	echo 0 >$BL/bl_power
+else
+	echo 1 >$BL/bl_power
+fi

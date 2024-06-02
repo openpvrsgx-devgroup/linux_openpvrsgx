@@ -1,0 +1,3 @@
+# see http://www.reactivated.net/writing_udev_rules.html#sysfsmatch
+SUBSYSTEM=="iio", KERNEL=="iio:device[0-9]*", ATTRS{name}=="itg3200", SYMLINK="iio:gyroscope"
+SUBSYSTEM=="iio", KERNEL=="iio:device[0-9]*", ATTRS{name}=="hmc5843", SYMLINK="iio:magnetometer"

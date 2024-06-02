@@ -51,6 +51,7 @@
 
 	gpio-keys {
 		compatible = "gpio-keys";
+		// FIXME: pinmux
 
 		aux-button {
 			label = "aux";
@@ -62,6 +63,7 @@
 
 	antenna-detect {
 		compatible = "gpio-keys";
+		// FIXME: pinmux
 
 		gps_antenna_button: gps-antenna-button {
 			label = "GPS_EXT_ANT";
@@ -73,6 +75,28 @@
 			debounce-interval = <10>;
 			wakeup-source;
 		};
+	};
+
+	wwan_wakeup: wwan-wakeup {
+		compatible = "gpio-keys";
+		// FIXME: pinmux
+
+		wwan_wakeup_button: wwan-wakeup-button {
+			label = "3G_WOE";
+			linux,code = <KEY_UNKNOWN>;
+			gpios = <&gpio1 10 GPIO_ACTIVE_HIGH>;
+			gpio-key,wakeup;
+		};
+	};
+
+	modem_en: modem { /* control modem power through rfkill */
+		compatible = "option,gtm601-power";
+		/* compatible = "gemalto,phs8-power" for Neo900/GTA04b7 */
+		pinctrl-names = "default";
+		pinctrl-0 = <&modem_pins>;
+		usb-port = <&hsusb2_phy>;
+		on-off-gpio = <&gpio6 26 0>;	/* GPIO_186: trigger to power on modem */
+		on-indicator-gpio = <0>;		/* n/a on GTA04A3/4 but on A5 */
 	};
 
 	sound {
@@ -155,7 +179,8 @@
 
 	hsusb2_phy: hsusb2-phy-pins {
 		compatible = "usb-nop-xceiv";
-		reset-gpios = <&gpio6 14 GPIO_ACTIVE_LOW>;
+		reset-gpios = <&gpio6 14 GPIO_ACTIVE_LOW>; /* GPIO_174 = reset for USB3322 */
+/*		vcc-supply = <&hsusb2_power>; */
 		#phy-cells = <0>;
 	};
 
@@ -197,6 +222,7 @@
 	wifi_pwrseq: wifi_pwrseq {
 		compatible = "mmc-pwrseq-simple";
 		reset-gpios = <&tca6507 0 GPIO_ACTIVE_LOW>;	/* W2CBW003 reset through tca6507 */
+		power-off-ignore;	/* do not reset bluetooth side if only wifi is powered off (shared reset line) */
 	};
 
 	/* devconf0 setup for mcbsp1 clock pins */
@@ -213,7 +239,7 @@
 		pinctrl-0 = <&mcbsp1_devconf0_pins>;
 		mcbsp1_devconf0_pins: mcbsp1-devconf0-pins {
 			/*                   offset bits mask */
-			pinctrl-single,bits = <0x00 0x08 0x1c>;	/* set MCBSP1_CLKR */
+			pinctrl-single,bits = <0x00 0x18 0x1c>;	/* set MCBSP1_CLKR */
 		};
 	};
 
@@ -266,6 +292,7 @@
 		pinctrl-single,pins = <
 			OMAP3_CORE1_IOPAD(0x2182, PIN_INPUT | MUX_MODE0)		/* uart1_rx.uart1_rx */
 			OMAP3_CORE1_IOPAD(0x217c, PIN_OUTPUT | MUX_MODE0)		/* uart1_tx.uart1_tx */
+			/* what about rts/cts? */
 		>;
 	};
 
@@ -273,6 +300,8 @@
 		pinctrl-single,pins = <
 			OMAP3_CORE1_IOPAD(0x217a, PIN_INPUT | MUX_MODE0)		/* uart2_rx.uart2_rx */
 			OMAP3_CORE1_IOPAD(0x2178, PIN_OUTPUT | MUX_MODE0)		/* uart2_tx.uart2_tx */
+/* FIXME: should also define GPIO_145 as output */
+			/* what about rts/cts? */
 		>;
 	};
 
@@ -280,6 +309,8 @@
 		pinctrl-single,pins = <
 			OMAP3_CORE1_IOPAD(0x219e, PIN_INPUT | MUX_MODE0)		/* uart3_rx.uart3_rx */
 			OMAP3_CORE1_IOPAD(0x21a0, PIN_OUTPUT | MUX_MODE0)		/* uart3_tx.uart3_tx */
+			/* what about rts/cts etc.? */
+			/* enable gpio21 as output for DTR */
 		>;
 	};
 
@@ -330,6 +361,12 @@
 			OMAP3_CORE1_IOPAD(0x2106, PIN_OUTPUT | MUX_MODE0)   /* dss_data21.dss_data21 */
 			OMAP3_CORE1_IOPAD(0x2108, PIN_OUTPUT | MUX_MODE0)   /* dss_data22.dss_data22 */
 			OMAP3_CORE1_IOPAD(0x210a, PIN_OUTPUT | MUX_MODE0)   /* dss_data23.dss_data23 */
+		>;
+	};
+
+	modem_pins: modem-pins {
+		pinctrl-single,pins = <
+			OMAP3_CORE1_IOPAD(0x21e2, PIN_OUTPUT | MUX_MODE4) /* gpio186 */
 		>;
 	};
 
@@ -469,6 +506,10 @@
 	};
 };
 
+&aes2 {
+	status = "disabled";
+};
+
 &i2c1 {
 	clock-frequency = <2600000>;
 
@@ -482,7 +523,9 @@
 
 		twl_audio: audio {
 			compatible = "ti,twl4030-audio";
+
 			ti,enable-vibra = <1>;
+
 			codec {
 				ti,ramp_delay_value = <3>;
 			};
@@ -515,12 +558,13 @@
 
 	/* accelerometer */
 	bma180@41 {
+		/* we use the BMA150 Input (CONFIG_INPUT_BMA150) driver */
 		compatible = "bosch,bma180";
 		reg = <0x41>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&bma180_pins>;
 		interrupt-parent = <&gpio4>;
-		interrupts = <19 IRQ_TYPE_LEVEL_HIGH>; /* GPIO_115 */
+		interrupts = <19 (IRQ_TYPE_LEVEL_HIGH | IRQ_TYPE_EDGE_RISING)>; /* GPIO_115 */
 	};
 
 	/* gyroscope */
@@ -590,7 +634,6 @@
 		interrupt-parent = <&gpio6>;
 		interrupts = <0 IRQ_TYPE_EDGE_FALLING>; /* GPIO_160 */
 		gpios = <&gpio6 0 GPIO_ACTIVE_LOW>;	/* GPIO_160 */
-		ti,x-plate-ohms = <600>;
 		touchscreen-size-x = <480>;
 		touchscreen-size-y = <640>;
 		touchscreen-max-pressure = <1000>;
@@ -598,12 +641,46 @@
 		touchscreen-fuzz-y = <8>;
 		touchscreen-fuzz-pressure = <10>;
 		touchscreen-inverted-y;
+		ti,min-x = <0x100>;
+		ti,max-x = <0xf00>;
+		ti,min-y = <0x100>;
+		ti,max-y = <0xf00>;
+		ti,max-rt = <4096>;
+		ti,x-plate-ohms = <550>;
 	};
 
 	/* RFID EEPROM */
 	m24lr64@50 {
 		compatible = "atmel,24c64";
 		reg = <0x50>;
+	};
+
+	/* camera */
+	ov9655@30 {
+		pinctrl-names = "default";
+		pinctrl-0 = <&camera_pins>;
+		compatible = "ovti,ov9655";
+		reg = <0x30>;
+		reset-gpios = <&gpio3 2 GPIO_ACTIVE_LOW>;	/* reset cam_fld = GPIO_98 */
+		powerdown-gpios = <&gpio6 7 GPIO_ACTIVE_HIGH>;	/* pwdn cam_wen = GPIO_167 */
+		avdd-supply = <&vaux3>;
+		clocks = <&isp 0>;	/* cam_clka */
+		assigned-clocks = <&isp 0>;
+		assigned-clock-rates = <24000000>;
+
+		port {
+			ov9655: endpoint {
+				remote-endpoint = <&parallel_ep>;
+				bus-width = <10>;	/* camera has 10 data lines */
+				data-shift = <2>;	/* Lines 9:2 are used */
+				hsync-active = <0>;	/* Active low */
+				vsync-active = <1>;	/* Active high */
+				data-active = <1>;	/* Active high */
+				pclk-sample = <1>;	/* No pclk reverse (rising edge) */
+				pclk-delay = <2>;	/* 4 ns */
+				output-drive = <3>;	/* 4x */
+			};
+		};
 	};
 };
 
@@ -690,6 +767,13 @@
 &uart1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&uart1_pins>;
+
+	bluetooth: bluetooth {
+		compatible = "wi2wi,w2cbw003-bluetooth";
+		speed = <3000000>;
+		flow;
+		vdd-supply = <&vaux4>;
+	};
 };
 
 &uart2 {
@@ -702,6 +786,8 @@
 		sirf,onoff-gpios = <&gpio5 17 GPIO_ACTIVE_HIGH>;
 		lna-supply = <&vsim>;
 		vcc-supply = <&ldo_3v3>;
+		/* GPIO_145: trigger for on/off-impulse for w2sg0004 */
+		enable-gpios = <&gpio5 17 GPIO_ACTIVE_HIGH>;
 	};
 };
 
@@ -709,6 +795,13 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&uart3_pins>;
 	interrupts-extended = <&intc 74 &omap3_pmx_core OMAP3_UART3_RX>;
+
+	rs232: rs232 {
+		status = "disabled";
+		compatible = "ti,trs3386-mctrl";
+		gpios = <0>,		/* ... */
+			<&gpio1 21 0>;	/* DTR: GPIO_21 */
+	};
 };
 
 &charger {
@@ -878,6 +971,7 @@
 		port@0 {
 			reg = <0>;
 			parallel_ep: endpoint {
+				remote-endpoint = <&ov9655>;
 				ti,isp-clock-divisor = <1>;
 				ti,strobe-mode;
 				bus-width = <8>;/* Used data lines */
@@ -891,3 +985,193 @@
 		/* port@1 and port@2 are not used by GTA04 */
 	};
 };
+
+/*
+ * additions not yet upstreamed
+ * and work in progress
+ * as soon as something is stable, it should be casted into a
+ *    patch for code above and upstreamed
+ * as soon as it arrives upstream, we can remove it here
+ */
+
+#include <dt-bindings/power/power.h>
+
+/* battery monitor if no hdq fuel gauge exists */
+
+/ {
+	bat: battery {
+		battery-name = "FIC-HF08-battery";
+		compatible = "simple-battery", "gta04-battery";
+		voltage-min-design-microvolt = <3200000>;
+		energy-full-design-microwatt-hours = <4440000>;
+		charge-full-design-microamp-hours = <1250000>;
+	};
+
+	battery: battery-monitor {
+		compatible = "linux,generic-adc-battery";
+		io-channels = <&twl_madc 12>, <&twl_madc 10>, <&twl_madc 0>;
+		io-channel-names = "voltage", "current", "temperature";
+		monitored-battery = <&bat>;
+		technology = <POWER_SUPPLY_TECHNOLOGY_LION>;
+		battery-name = "gta04-battery";
+		charge_full_design = <1250000>;
+		charge_empty_design = <0>;
+		voltage_min_design = <3200000>;
+		voltage_max_design = <4200000>;
+	};
+};
+
+/* Bluetooth audio */
+
+/ {
+	w2cbw003_codec: headset_codec {
+		compatible = "w2cbw003-codec";
+		#sound-dai-cells = <0>;
+	};
+
+	sound_bluetooth {
+		compatible = "simple-audio-card";
+		simple-audio-card,name = "GTA04 bluetooth";
+		simple-audio-card,bitclock-master = <&bt_link_master>;
+		simple-audio-card,frame-master = <&bt_link_master>;
+		simple-audio-card,format = "i2s";
+
+		simple-audio-card,cpu {
+			sound-dai = <&mcbsp3>;
+		};
+
+		bt_link_master: simple-audio-card,codec {
+			sound-dai = <&w2cbw003_codec>;
+		};
+	};
+};
+
+/* FM Radio (no kernel driver exists) */
+&i2c2 {
+	si4721_codec: si4721@11 {
+		compatible = "silicon-labs,si4721";
+
+		interrupt-parent = <&gpio5>;
+		interrupts = <28 IRQ_TYPE_EDGE_RISING>; /* GPIO_156 */
+
+		#sound-dai-cells = <0>;
+		reg = <0x11>;
+	};
+
+};
+
+/ {
+	sound_fm_radio {
+		compatible = "simple-audio-card";
+		simple-audio-card,name = "GTA04 fm-radio";
+
+		/* FM tuner audio */
+		simple-audio-card,dai-link@0 {
+			format = "i2s";
+			cpu {
+				sound-dai = <&mcbsp1>;
+				clkdiv = <0 37>;
+			};
+			codec {
+				sound-dai = <&si4721_codec>;
+			};
+		};
+	};
+};
+
+/* more pinmux */
+
+&omap3_pmx_core {
+
+	i2c1_pins: pinmux_i2c1_pins {
+		pinctrl-single,pins = <
+			OMAP3_CORE1_IOPAD(0x21ba, PIN_INPUT_PULLUP | MUX_MODE0) /* i2c1_scl.i2c1_scl */
+			OMAP3_CORE1_IOPAD(0x21bc, PIN_INPUT_PULLUP | MUX_MODE0) /* i2c1_sda.i2c1_sda */
+		>;
+	};
+
+	i2c2_pins: pinmux_i2c2_pins {
+		pinctrl-single,pins = <
+			OMAP3_CORE1_IOPAD(0x21be, PIN_INPUT_PULLUP | MUX_MODE0) /* i2c2_scl.i2c2_scl */
+			OMAP3_CORE1_IOPAD(0x21c0, PIN_INPUT_PULLUP | MUX_MODE0) /* i2c2_sda.i2c2_sda */
+		>;
+	};
+
+	i2c3_pins: pinmux_i2c3_pins {
+		pinctrl-single,pins = <
+			OMAP3_CORE1_IOPAD(0x21c2, PIN_INPUT_PULLUP | MUX_MODE0) /* i2c3_scl.i2c3_scl */
+			OMAP3_CORE1_IOPAD(0x21c4, PIN_INPUT_PULLUP | MUX_MODE0) /* i2c3_sda.i2c3_sda */
+		>;
+	};
+
+	headset_pins: headset_pins_pimnux {
+		pinctrl-single,pins = <
+			OMAP3_CORE1_IOPAD(0x20b4, PIN_INPUT_PULLUP | MUX_MODE4)	/* gpio55 */
+		>;
+	};
+
+};
+
+/* audio voice routing options */
+
+&omap3_pmx_core {
+
+	/* if twl4030 voice interface is inactive the omap3 mcbsp4 can drive the dx line */
+	mcbsp4_twl_inactive: pinmux_mcbsp4_twl_inactive {
+		pinctrl-single,pins = <
+			OMAP3_CORE1_IOPAD(0x2188, PIN_OUTPUT | MUX_MODE0)	/* mcbsp4_dx.mcbsp4_dx */
+		>;
+	};
+
+	/* if twl4030 voice interface is active the omap3 mcbsp4 should not drive the dx line */
+	mcbsp4_twl_active: pinmux_mcbsp4_twl_active {
+		pinctrl-single,pins = <
+			OMAP3_CORE1_IOPAD(0x2188, PIN_INPUT_PULLDOWN | MUX_MODE7)	/* mcbsp4_dr.mcbsp4_dx */
+		>;
+	};
+};
+
+&twl_audio {
+	codec {
+		pinctrl-names = "default", "inactive";
+		pinctrl-0 = <&mcbsp4_twl_active>;	/* twl voice is actively driving the DX line */
+		pinctrl-1 = <&mcbsp4_twl_inactive>;	/* twl voice is tristate */
+	};
+};
+
+/* spare LDO */
+
+&vmmc2 {
+	regulator-min-microvolt = <1800000>;
+	regulator-max-microvolt = <1800000>;
+};
+
+/* flash/torch (torch driver not yet available) */
+
+&i2c2 {
+	tps61050@33 {
+		/* segfaults during modprobe */
+		in-compatible = "ti,tps61050";
+		reg = <0x33>;
+
+		flash: regulator@0 {
+			regulator-min-microvolt= <1000000>;
+			regulator-max-microvolt= <3000000>;
+		};
+	};
+};
+
+/* Console and IrDA /dev/ttyO2 */
+
+&uart3 {
+	dtr-gpio = <&gpio1 21 GPIO_ACTIVE_HIGH>;	/* DTR line on external RS232 interface */
+};
+
+/* may configure for bch8 if u-boot supports/makes use */
+#if 0
+&gpmc {
+	nand@0,0 {
+		ti,nand-ecc-opt = "bch8";
+	};
+};
+#endif

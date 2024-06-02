@@ -1,0 +1,159 @@
+#!/bin/bash
+#
+# camera setup for GTA04 (omap3 isp)
+#
+# see also http://projects.goldelico.com/p/gta04-kernel/page/Camera/
+#
+# some background information about what happens here:
+#
+# http://processors.wiki.ti.com/index.php/UserGuideOmap35xCaptureDriver_PSP_04.02.00.07#Software_Design_Interfaces_2
+# http://labs.isee.biz/index.php/How_to_setup_tvp5151_video_decoder#Steps_to_configure_the_ISP_and_TVP5151
+# http://wiki.buglabs.net/index.php/Software:Camera_Module_V4L2_Usage
+# http://git.ideasonboard.org/media-ctl.git/tree
+# http://www.mail-archive.com/linux-media@vger.kernel.org/msg20004.html
+# http://mediawiki.compulab.com/w/index.php5/CM-T3730:_Linux:_Camera#Setting_up_ISP_pipeline
+#
+# Unfortunately there is no good documentation. Except the kernel and media-ctl sources.
+# So be prepared for a lot of trial-and-error if you want to improve anything.
+#
+# For recent kernels we need a modern media-ctl found in the v4l-utils package
+# or built from source: https://git.linuxtv.org/v4l-utils.git
+
+[ "$(which media-ctl)" ] || apt-get install -y v4l-utils
+
+function media-reset {
+	echo media-ctl -r
+	media-ctl -r
+}
+
+function media-link { # $1 = from $2... = to
+	echo media-ctl -l \'"$1 -> $2"\'
+	media-ctl -l "$1 -> $2"
+}
+
+function media-format { # $1 = entity, $2 = format $3 = widthxheight
+	echo media-ctl -V \'"$1 [$2 $3]"\'
+	media-ctl -V "$1 [$2 $3]"
+}
+
+case "$(tr -d '\0' </proc/device-tree/model)" in
+	*GTA04* )
+		;;
+	*PinePhone* )
+		FORMAT=uyvy
+		CCDCFORMAT=UYVY2X8
+		WIDTH=1280
+		HEIGHT=720
+		FPS=30
+		# ? media-link '"gc2145 3-003c":0'  '"sun6i-csi":0[0]'
+		media-ctl -d /dev/media1 --links '"gc2145 3-003c":0->"sun6i-csi":0[0]'
+		# ? media-link '"ov5640 3-004c":0'  '"sun6i-csi":0[0]'
+		media-ctl -d /dev/media1 --links '"ov5640 3-004c":0->"sun6i-csi":0[1]'
+		# ? media-format '"ov5640 3-004c":0' 'UYVY8_2X8 ${WIDTH}x${HEIGHT}'
+		media-ctl -d /dev/media1 --set-v4l2 '"ov5640 3-004c":0[fmt:UYVY8_2X8/1280x720]'
+		DEVICE=/dev/video1
+		exit 0
+		function setup { echo setup for Pinephone ignored; }
+		;;
+esac
+
+CAM="ov9655 1-0030"		# driver name not camera model! use media-ctl -p to find out
+CAMERA='"'$CAM'"'	# sometimes we need quotes in the variable value
+
+CPATH="$(media-ctl -e "$CAM")"
+if [ ! -r "$CPATH" ]
+then
+	echo "Camera $CAM not found!"
+	exit 1
+fi
+
+echo "Camera: $CPATH"
+
+function setup { # -r: choose resizer; $1 = video resolution
+
+echo Setting mode "$@"
+
+media-reset
+
+RESIZER=false	# bypassing OMAP ISP (almost)
+
+while [ "$1" ]
+do
+	case "$1" in
+		-r )
+			RESIZER=true
+			shift
+			;;
+		* )	break;;
+	esac
+done
+
+case "$1" in
+	sxga )
+		FORMAT=uyvy
+		CCDCFORMAT=UYVY2X8
+		WIDTH=1280
+		HEIGHT=1024
+		FPS=15
+		;;
+	vga )
+		FORMAT=uyvy
+		CCDCFORMAT=UYVY2X8
+		WIDTH=640
+		HEIGHT=480
+		FPS=30
+		;;
+	qvga )
+		FORMAT=uyvy
+		CCDCFORMAT=UYVY2X8
+		WIDTH=320
+		HEIGHT=240
+		FPS=30
+		;;
+	qqvga )
+		FORMAT=uyvy
+		CCDCFORMAT=UYVY2X8
+		WIDTH=160
+		HEIGHT=120
+		FPS=30
+		;;
+	cif )
+		FORMAT=uyvy
+		CCDCFORMAT=UYVY2X8
+		WIDTH=352
+		HEIGHT=288
+		FPS=30
+		;;
+	qcif )
+		FORMAT=uyvy
+		CCDCFORMAT=UYVY2X8
+		WIDTH=176
+		HEIGHT=144
+		FPS=30
+		;;
+	* )
+		echo Unknown camera resolution $1
+		echo valid modes: [-r] sxga vga qvga qqvga cif qcif
+		exit 1
+		;;
+esac
+
+media-link "$CAMERA:0" '"OMAP3 ISP CCDC":0[1]'
+media-format "$CAMERA:0" $CCDCFORMAT ${WIDTH}x${HEIGHT}
+media-format '"OMAP3 ISP CCDC":0' $CCDCFORMAT ${WIDTH}x${HEIGHT}
+media-format '"OMAP3 ISP CCDC":1' $CCDCFORMAT ${WIDTH}x${HEIGHT}
+
+if $RESIZER
+then
+	media-link '"OMAP3 ISP CCDC":1' '"OMAP3 ISP resizer":0[1]'
+	media-link '"OMAP3 ISP resizer":1' '"OMAP3 ISP resizer output":0[1]'
+	media-format '"OMAP3 ISP resizer":1' UYVY ${WIDTH}x${HEIGHT}
+	DEVICE=$(media-ctl -e "OMAP3 ISP resizer output")
+else
+	media-link '"OMAP3 ISP CCDC":1' '"OMAP3 ISP CCDC output":0[1]'
+	DEVICE=$(media-ctl -e "OMAP3 ISP CCDC output")
+fi
+
+echo "Device: $DEVICE"
+
+}

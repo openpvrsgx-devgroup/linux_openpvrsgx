@@ -1,0 +1,97 @@
+#!/bin/bash
+#
+# scan for bluetooth clients
+#
+
+DEV="$1"
+[ "$1" ] || DEV=hci0
+
+rfkill unblock bluetooth
+
+modprobe -q st_drv	# load TI Shared Transport driver (if configured into the kernel)
+modprobe -q hci_uart	# load CI20 brcm
+
+if ! hciconfig | fgrep -q $DEV
+then # bluetooth support not configured into kernel or not yet running - needs to start hciattach
+
+	case $(tr -d '\0' </proc/device-tree/model) in
+
+	*Pyra-Handheld* ) # WL183x
+		# enables the 32kHz clock
+		ifconfig wlan0 up
+		# load firmware if needed
+		FIRMWARE=/lib/firmware/ti-connectivity/TIInit_11.8.32.bts
+		[ -r $FIRMWARE ] || wget -O $FIRMWARE https://git.ti.com/ti-bt/service-packs/blobs/raw/5f73abe7c03631bb2596af27e41a94abcc70b009/initscripts/TIInit_12.8.32.bts
+		# set parameters
+		UART=/dev/ttyO1	# uart2
+		BTBAUD=115200	# for firmware download
+		FLAGS=
+		MODE=texas
+		ARGS=
+		;;
+
+	*GTA04A5* | *Neo900* | *GTA04b7* ) # WL183x
+		FIRMWARE=/lib/firmware/ti-connectivity/TIInit_11.8.32.bts
+		[ -r $FIRMWARE ] || wget -O $FIRMWARE https://git.ti.com/ti-bt/service-packs/blobs/raw/5f73abe7c03631bb2596af27e41a94abcc70b009/initscripts/TIInit_12.8.32.bts
+		UART=/dev/ttyO0	# uart1
+		BTBAUD=115200	# for firmware download
+		FLAGS=
+		MODE=texas
+		ARGS=
+		;;
+
+	*'UDOO Neo'* )	# WL1831
+		FIRMWARE=/lib/firmware/ti-connectivity/TIInit_11.8.32.bts
+		[ -r $FIRMWARE ] || wget -O $FIRMWARE https://git.ti.com/ti-bt/service-packs/blobs/raw/5f73abe7c03631bb2596af27e41a94abcc70b009/initscripts/TIInit_12.8.32.bts
+		UART=/dev/ttymxc2	# uart3
+		BTBAUD=115200	# for firmware download
+		FLAGS=
+		MODE=texas
+		ARGS=
+		;;
+
+	*GTA04* ) # W2CBW003
+		UART=/dev/ttyO0	# uart1
+		BTBAUD=3000000
+		FLAGS="-s $BTBAUD"
+		MODE=any
+		ARGS=flow
+		;;
+
+	* )
+		echo "unknown model $(tr -d '\0' </proc/device-tree/model)"
+		exit 1
+		;;
+	esac
+
+	# override if wi2wi,w2cbw003-bluetooth driver is loaded
+	[ -r /dev/ttyBT0 ] && UART=/dev/ttyBT0
+
+	if ! ps -ef | fgrep hciattach | fgrep -v -q grep
+	then	# hciattach is not yet running
+		# note we should never kill hciattach or a reattach will fail
+echo starting: hciattach $FLAGS $UART $MODE $BTBAUD $ARGS
+		if ! hciattach $FLAGS $UART $MODE $BTBAUD $ARGS </dev/null
+		then
+			echo hciattach failed
+			exit 1
+		fi
+	fi
+fi
+
+if ! hciconfig $DEV up
+then
+	echo hciconfig $DEV up failed
+	exit 1
+fi
+
+# hcitool scan no longer reports anything
+# timeout --foreground -k 3 30 hcitool scan --info
+
+# timeout --foreground -k 3 30 hcitool lescan
+
+# reports in a different format (more detailled, multiple lines per device)
+# timeout --foreground -k 3 30 bt-adapter -d
+
+# this seems to be the most modern variant
+(echo "scan on"; sleep 10; echo quit) | bluetoothctl | fgrep Device

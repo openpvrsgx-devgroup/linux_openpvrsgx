@@ -1,0 +1,14 @@
+# Usage dapm-diff card [reset]
+# e.g. "dapm-diff card reset" to store new dapm status
+# e.g. "dapm-diff card" to diff current dapm state against reset value
+
+if [ $# -lt 2 ]; then
+	echo $1 "DAPM difference is"
+   
+	cat /sys/kernel/debug/asoc/$1/*/dapm/* > dapm.current
+	diff -U 0 dapm.reset dapm.current  | grep bit | grep +
+else
+	echo "Storing DAPM status for "$1
+	cat /sys/kernel/debug/asoc/$1/*/dapm/* > dapm.reset
+fi
+

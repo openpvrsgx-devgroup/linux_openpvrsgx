@@ -1,0 +1,109 @@
+#!/bin/bash
+# switch on/off TVout on the GTA04 or BeagleBoard or HDMI on Pyra or OMAP5EVM
+#
+# on GTA04 or OpenPandora the TVout is called "SVIDEO-1"
+# on Pyra the HDMI interface is called "HDMI-1"
+# LCDs are currently called "Unknown-16" or similar
+#
+
+SCRIPTPATH="$(dirname "$0")"
+. $SCRIPTPATH/x >/dev/null
+
+if ! [ "$DISPLAY" ]
+then
+	echo "X11 must be running"
+	exit
+fi
+
+if [ "$1" = "-d" ]
+then
+	DEBUG=true
+	shift
+fi
+
+# see also:
+# ls -l /sys/devices/platform/omapdrm.0/drm/card0/card0-*
+# warning: card names do not always match what xrandr -q reports!
+
+while read DEVICE INFO
+do
+	[ "$DEBUG" ] && echo "$DEVICE $INFO"
+	case "$DEVICE" in
+		Screen )
+			continue
+			;;
+		*x* )	# dimensions
+			continue
+			;;
+		Composite* | SVIDEO-* | HDMI-* )	# external monitor out
+			TV="$DEVICE"
+			;;
+		Unknown-* | Unknown* | default )	# assume this is the LCD
+			LCD="$DEVICE"
+			;;
+	esac
+done < <(xrandr -q 2>/dev/null)
+
+[ "$DEBUG" ] && echo LCD=$LCD TV=$TV
+
+function lcdon {
+	if [ "$LCD" ]
+	then
+[ "$DEBUG" ] && echo "xrandr --output $LCD --off"
+		xrandr --output "$LCD" --off 2>/dev/null
+[ "$DEBUG" ] && echo "xrandr --output $LCD --auto"
+		xrandr --output "$LCD" --auto 2>/dev/null
+		case "$(tr -d '\0' </proc/device-tree/model 2>/dev/null)" in
+			*Pyra-Handheld* )
+[ "$DEBUG" ] && echo "xrandr --orientation 3"
+				xrandr --orientation 3 2>/dev/null
+				;;
+		esac
+
+	else
+		echo no LCD found
+	fi
+}
+
+function lcdoff {
+	if [ "$LCD" ]
+	then
+[ "$DEBUG" ] && echo "xrandr --output $LCD --off"
+		xrandr --output "$LCD" --off 2>/dev/null
+	fi
+}
+
+function tvon {
+	if [ "$TV" ]
+	then
+[ "$DEBUG" ] && echo "xrandr --output $TV --off"
+		xrandr --output "$TV" --off 2>/dev/null
+[ "$DEBUG" ] && echo "xrandr --output $TV --auto"
+		xrandr --output "$TV" --auto 2>/dev/null
+	else
+		echo no TV found
+	fi
+}
+
+function tvoff {
+	if [ "$TV" ]
+	then
+[ "$DEBUG" ] && echo "xrandr --output $TV --off"
+		xrandr --output "$TV" --off 2>/dev/null
+	fi
+}
+
+case "$1" in
+	2)	# both
+		tvon
+		lcdon
+		;;
+	1)	# TV only
+		lcdoff
+		tvon
+		;;
+	* )	# LCD only
+		tvoff
+		lcdon
+		;;
+esac

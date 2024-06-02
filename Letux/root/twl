@@ -1,0 +1,284 @@
+#!/bin/bash
+#
+# twl: demo and player sound without significant ALSA or PulseAudio setup
+#
+
+SCRIPTPATH="$(dirname "$0")"
+trap "exit 1" SIGHUP SIGINT SIGTERM
+
+[ -x /usr/bin/sox ] || apt-get install sox libsox-fmt-mp3
+
+for C in GTA04 PandaBoardES omap5uevm Pyra L15
+do
+	CARD=$(./findsoundcard $C)
+	[ "$CARD" ] && break
+done
+
+AESS=false
+if [ -r "/sys/bus/platform/drivers/omap-abe-twl6040/sound/OMAP ABE Media1" ]
+then
+	AESS=true	# assume aess has been loaded and is up and running
+fi
+
+MONO=false
+HANDSFREE=yes
+
+while [ "$1" ]
+do
+        case "$1" in
+        "-a" )
+		AESS=true
+		;;
+        "-noa" )
+		AESS=false
+		;;
+        "-c" )
+		shift
+		CARD="$1"
+		;;
+	"-H" )
+		CARD=$(./findsoundcard H58040000encode)
+		;;
+        "-D" )
+		shift
+		DEV="$1"
+		;;
+        "-d" )
+		DEMO=yes
+		;;
+        "-t" )
+		shift
+		FORMAT="$1";
+		;;
+        "-lp" )
+		LPMODE=yes
+		;;
+        "-hf" )
+		HANDSFREE=yes
+		;;
+        "-nohf" )
+		HANDSFREE=
+		;;
+	"-m" )
+		MONO=true
+		;;
+	"-" | "-stdin" )
+		FILE="-"
+		;;
+	-s )
+		STRACE=strace
+		;;
+	-* )
+		echo unknown option $1
+		echo "-c card	card"
+		echo "-D dev	subdevice"
+		echo "-d	demo"
+		echo "-H	HDMI sound card"
+		echo "-m	file is mono (1 channel) or take first channel only"
+		echo "-lp	low power mode"
+		echo "-nhf	keep handsfree off"
+		echo "-t fmt	define format"
+		echo "-		play data from stdin (use with -t)"
+		echo "file...	play files"
+		exit 1
+		;;
+	* )
+		break
+		;;
+	esac
+	shift
+done
+
+if [ ! "$CARD" ]
+then
+	echo Unknown Sound Card
+	exit 1
+fi
+
+if [ ! "$DEV" ]
+then
+	$AESS && DEV=11 || DEV=0	# default with AESS to legacy
+fi
+
+AUDIOCARDDEV="hw:CARD=$CARD,DEV=$DEV"
+
+# FIXME: make this all depend on presence of amixer controls
+# e.g.
+# root@letux:~# amixer scontrols
+# Simple mixer control 'Master',0
+# Simple mixer control 'Headphone',0
+# Simple mixer control 'Mic',0
+# Simple mixer control 'ADC',0
+
+if [ "$(cat /proc/asound/card$CARD/id)" == H58040000encode ]	# card is HDMI
+then
+
+	: has no mixers
+
+elif [ -r /sys/firmware/devicetree/base/sound/ti,twl6040 ]
+then
+
+if $AESS
+then
+
+echo "TWL6040+AESS found (Pandaboard, OMAP5432EVM, Pyra, ...)"
+
+amixer -c $CARD -q cset name='Headset Left Playback' 1 || exit
+amixer -c $CARD -q cset name='Headset Right Playback' 1 || exit
+amixer -c $CARD -q cset name='Headset Playback Volume' 12 || exit
+amixer -c $CARD -q cset name='DL1 PDM Switch' 1 || exit
+amixer -c $CARD -q cset name='Sidetone Mixer Playback' 1 || exit
+amixer -c $CARD -q cset name='SDT DL Volume' 120 || exit
+amixer -c $CARD -q cset name='DL1 Mixer Multimedia' 1 || exit
+amixer -c $CARD -q cset name='DL1 Media Playback Volume' 110 || exit
+amixer -c $CARD -q set 'AUDUL Media',0 149 || exit
+amixer -c $CARD -q set 'MUX_UL00,0' AMic0 || exit
+amixer -c $CARD -q set 'MUX_UL01,0' AMic1 || exit
+amixer -c $CARD -q set 'AMIC UL',0 120 || exit
+else
+
+echo "TWL6040 found (Pandaboard, OMAP5432EVM, Pyra, ...)"
+
+fi
+
+amixer -c $CARD -q set "Aux FM" 0% || exit
+amixer -c $CARD -q set "Capture" 100% || exit
+amixer -c $CARD -q set "Capture Preamplifier" 100% || exit
+amixer -c $CARD -q set "AUXL" "off" || exit
+amixer -c $CARD -q set "AUXR" "off" || exit
+amixer -c $CARD -q set "Analog Left" "Main Mic" || exit
+amixer -c $CARD -q set "Analog Right" "Headset Mic" || exit
+
+# set defaults if we have no volumed
+amixer -c $CARD -q set "Headset" 100% || exit
+amixer -c $CARD -q set "Earphone" 100% || exit
+amixer -c $CARD -q set "Handsfree" 100% || exit
+
+if [ "$HANDSFREE" ] # handsfree on/off
+then
+	amixer -c $CARD -q set "Handsfree Left Playback" "HF DAC" || exit
+	amixer -c $CARD -q set "Handsfree Right Playback" "HF DAC" || exit
+else
+	amixer -c $CARD -q set "Handsfree Left Playback" "Off" || exit
+	amixer -c $CARD -q set "Handsfree Right Playback" "Off" || exit
+fi
+
+amixer -c $CARD -q set "Headset Left Playback" "HS DAC" || exit
+amixer -c $CARD -q set "Headset Right Playback" "HS DAC" || exit
+amixer -c $CARD -q set "Analog Left" "Main Mic" || exit
+
+if [ "$LPMODE" ] # low power mode
+then
+	amixer -c $CARD -q set "Headset Power Mode" "Low-Power" || exit
+	amixer -c $CARD -q set "PLL Selection" "Low-Power" || exit
+else
+	amixer -c $CARD -q set "Headset Power Mode" "High-Performance" || exit
+	amixer -c $CARD -q set "PLL Selection" "High-Performance" || exit
+fi
+
+amixer -c $CARD -q set "Vibra Left Playback" "Input FF" || exit
+amixer -c $CARD -q set "Vibra Right Playback" "Input FF" || exit
+
+: amixer -c $CARD -q set "Vibra Left Playback" "Audio PDM" || exit
+: amixer -c $CARD -q set "Vibra Right Playback" "Audio PDM" || exit
+
+REMIX_MONO="remix 1 1 1 1"
+REMIX_STEREO="remix 1 2 1 2"
+
+elif [ -r /sys/firmware/devicetree/base/sound/ti,twl6040 ]
+then
+
+echo "TWL4030 found (GTA04, ...)"
+
+amixer -c $CARD -q set "AVADC Clock Priority" "HiFi high priority" || exit
+amixer -c $CARD -q set "DAC1 Analog" off || exit
+amixer -c $CARD -q set "DAC2 Analog" on || exit
+amixer -c $CARD -q set "DAC2 Analog" 5 || exit        # so that total gain is < 1
+amixer -c $CARD -q set "Codec Operation Mode" "Option 2 (voice/audio)" || exit
+
+amixer -c $CARD -q set "Earpiece" 100% || exit
+amixer -c $CARD -q set "Earpiece Mixer AudioL1" off || exit
+amixer -c $CARD -q set "Earpiece Mixer AudioL2" on || exit
+amixer -c $CARD -q set "Earpiece Mixer AudioR1" off || exit
+amixer -c $CARD -q set "Earpiece Mixer Voice" off || exit
+
+amixer -c $CARD -q set 'Headset' 2 || exit
+amixer -c $CARD -q set 'HeadsetL Mixer AudioL1' off || exit
+amixer -c $CARD -q set 'HeadsetL Mixer AudioL2' on || exit
+amixer -c $CARD -q set 'HeadsetL Mixer Voice' off || exit
+amixer -c $CARD -q set 'HeadsetR Mixer AudioR1' off || exit
+amixer -c $CARD -q set 'HeadsetR Mixer AudioR2' on || exit
+amixer -c $CARD -q set 'HeadsetR Mixer Voice' off || exit
+
+amixer -c $CARD -q set "TX1" "Analog" || exit
+amixer -c $CARD -q set "TX1 Digital" 12 || exit
+
+amixer -c $CARD -q set "Analog Left AUXL" nocap || exit
+amixer -c $CARD -q set "Analog Right AUXR" nocap || exit
+amixer -c $CARD -q set "Analog Left Main Mic" cap || exit
+amixer -c $CARD -q set "Analog Left Headset Mic" nocap || exit
+
+if [ "$NOHANDSFREE" ] # handsfree on/off
+then
+amixer -c $CARD -q set HandsfreeL off || exit
+amixer -c $CARD -q set HandsfreeR off || exit
+else
+amixer -c $CARD -q set HandsfreeL on || exit
+amixer -c $CARD -q set HandsfreeR on || exit
+fi
+amixer -c $CARD -q set "Analog" 5 || exit
+amixer -c $CARD -q set "HandsfreeL Mux" AudioL2 || exit
+amixer -c $CARD -q set "HandsfreeR Mux" AudioR2 || exit
+
+REMIX_MONO=""
+REMIX_STEREO=""
+
+elif false
+then
+
+echo "CI20 or simplesoundcard found"
+
+amixer -c $CARD -q set "Master" 100%
+amixer -c $CARD -q set "Headphone" 100%
+amixer -c $CARD -q set "Mic" 100%
+amixer -c $CARD -q set "ADC" "AIP2"
+
+REMIX_MONO=""
+REMIX_STEREO=""
+
+fi
+
+echo using $AUDIOCARDDEV
+
+if [ "$DEMO" ] # demo
+then
+	echo "play default sounds (Front Center etc.)"
+	aplay -c $CARD -D"$AUDIOCARDDEV" -q /usr/share/sounds/alsa/*.wav
+	echo "play chirp sound on all channels"
+	sox -c 4 -n -t wav - synth 10 sine 10-100 | aplay -c $CARD -D"$AUDIOCARDDEV"
+	echo "remix for Pandaboard/OMAP5 stereo"
+	AUDIODEV=hw:$CARD,$DEV play /usr/share/sounds/alsa/Front_Center.wav $REMIX_MONO
+	if [ "$FILE" ]
+	then
+		echo play $FILE
+		AUDIODEV=hw:$CARD,$DEV play $FILE
+	fi
+	exit 0
+fi
+
+# play mono/stereo on headset and main speakers
+$MONO && REMIX="$REMIX_MONO" || REMIX="$REMIX_STEREO"
+
+if [ "$1" ]
+then
+	for FILE in "$@"
+	do
+		if [ "$STRACE" ]
+		then
+			AUDIODEV=hw:$CARD,$DEV strace play ${FORMAT:+-t} ${FORMAT:+$FORMAT} -v 0.98 $FILE $REMIX 2>$DEV.out
+		else
+			AUDIODEV=hw:$CARD,$DEV play ${FORMAT:+-t} ${FORMAT:+$FORMAT} -v 0.98 $FILE $REMIX
+		fi
+	done
+fi
+exit 0

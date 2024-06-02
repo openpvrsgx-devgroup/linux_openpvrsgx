@@ -16,6 +16,10 @@
 #include <linux/interrupt.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/of.h>
+#include <linux/of_platform.h>
+#include <linux/of_gpio.h>
+#include <linux/of_irq.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/workqueue.h>
@@ -57,6 +61,9 @@ static irqreturn_t gpio_irq_handler(int irq, void *dev_id)
 {
 	struct gpio_extcon_data *data = dev_id;
 
+#ifdef DEBUG
+	printk("extcon gpio_irq_handler\n");
+#endif
 	queue_delayed_work(system_power_efficient_wq, &data->work,
 			      data->debounce_jiffies);
 	return IRQ_HANDLED;
@@ -66,14 +73,31 @@ static int gpio_extcon_probe(struct platform_device *pdev)
 {
 	struct gpio_extcon_data *data;
 	struct device *dev = &pdev->dev;
+	struct device_node *node = pdev->dev.of_node;
 	unsigned long irq_flags;
 	int irq;
 	int ret;
 
+#ifdef DEBUG
+	printk("gpio_extcon_probe\n");
+#endif
 	data = devm_kzalloc(dev, sizeof(struct gpio_extcon_data), GFP_KERNEL);
 	if (!data)
 		return -ENOMEM;
 
+	if (node) {
+		u32 value;
+
+		data->debounce_jiffies = 0;
+
+		data->check_on_resume = of_property_read_bool(node, "check-on-resume");
+		if(!of_property_read_u32(node, "debounce-delay-ms", &value))
+			data->debounce_jiffies = value;
+#ifdef DEBUG
+		printk("extcon gpio %p\n", data->gpiod);
+		printk("extcon debounce %lu\n", data->debounce_jiffies);
+#endif
+	}
 	/*
 	 * FIXME: extcon_id represents the unique identifier of external
 	 * connectors such as EXTCON_USB, EXTCON_DISP_HDMI and so on. extcon_id
@@ -150,11 +174,19 @@ static int gpio_extcon_resume(struct device *dev)
 
 static SIMPLE_DEV_PM_OPS(gpio_extcon_pm_ops, NULL, gpio_extcon_resume);
 
+static const struct of_device_id of_extcon_match_tbl[] = {
+	{ .compatible = "extcon-gpio", },
+	{ /* end */ }
+};
+
+MODULE_DEVICE_TABLE(of, of_extcon_match_tbl);
+
 static struct platform_driver gpio_extcon_driver = {
 	.probe		= gpio_extcon_probe,
 	.driver		= {
 		.name	= "extcon-gpio",
 		.pm	= &gpio_extcon_pm_ops,
+		.of_match_table = of_match_ptr(of_extcon_match_tbl),
 	},
 };
 
@@ -163,3 +195,4 @@ module_platform_driver(gpio_extcon_driver);
 MODULE_AUTHOR("Mike Lockwood <lockwood@android.com>");
 MODULE_DESCRIPTION("GPIO extcon driver");
 MODULE_LICENSE("GPL");
+MODULE_ALIAS("platform:extcon-gpio");

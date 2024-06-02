@@ -98,6 +98,7 @@ struct h5 {
 	const struct h5_vnd *vnd;
 	const char *id;
 
+	struct gpio_desc *reset_gpio;
 	struct gpio_desc *enable_gpio;
 	struct gpio_desc *device_wake_gpio;
 };
@@ -821,6 +822,7 @@ static int h5_serdev_probe(struct serdev_device *serdev)
 	struct device *dev = &serdev->dev;
 	struct h5 *h5;
 	const struct h5_device_data *data;
+	int err;
 
 	h5 = devm_kzalloc(dev, sizeof(*h5), GFP_KERNEL);
 	if (!h5)
@@ -850,6 +852,9 @@ static int h5_serdev_probe(struct serdev_device *serdev)
 			return -ENODEV;
 
 		h5->vnd = data->vnd;
+
+		of_property_read_string(serdev->dev.of_node,
+					"firmware-postfix", &h5->id);
 	}
 
 	if (data->driver_info & H5_INFO_WAKEUP_DISABLE)
@@ -864,8 +869,19 @@ static int h5_serdev_probe(struct serdev_device *serdev)
 	if (IS_ERR(h5->device_wake_gpio))
 		return PTR_ERR(h5->device_wake_gpio);
 
-	return hci_uart_register_device_priv(&h5->serdev_hu, &h5p,
+	err = hci_uart_register_device_priv(&h5->serdev_hu, &h5p,
 					     h5->vnd->sizeof_priv);
+	if (err)
+		return err;
+
+	if (data->driver_info & H5_INFO_WAKEUP_DISABLE)
+		set_bit(H5_WAKEUP_DISABLE, &h5->flags);
+
+	h5->reset_gpio = devm_gpiod_get_optional(dev, "reset", GPIOD_OUT_HIGH);
+	if (IS_ERR(h5->reset_gpio))
+		return PTR_ERR(h5->reset_gpio);
+
+	return hci_uart_register_device(&h5->serdev_hu, &h5p);
 }
 
 static void h5_serdev_remove(struct serdev_device *serdev)
@@ -943,6 +959,8 @@ static int h5_btrtl_setup(struct h5 *h5)
 	if (err)
 		goto out_free;
 
+	btrtl_apply_quirks(h5->hu->hdev, btrtl_dev);
+
 	btrtl_set_quirks(h5->hu->hdev, btrtl_dev);
 
 out_free:
@@ -981,6 +999,9 @@ static void h5_btrtl_open(struct h5 *h5)
 
 	/* The controller needs up to 500ms to wakeup */
 	gpiod_set_value_cansleep(h5->enable_gpio, 1);
+	/* Take it out of reset */
+	gpiod_set_value_cansleep(h5->reset_gpio, 0);
+	msleep(100);
 	gpiod_set_value_cansleep(h5->device_wake_gpio, 1);
 	msleep(500);
 }
@@ -991,6 +1012,7 @@ static void h5_btrtl_close(struct h5 *h5)
 		pm_runtime_disable(&h5->hu->serdev->dev);
 
 	gpiod_set_value_cansleep(h5->device_wake_gpio, 0);
+	gpiod_set_value_cansleep(h5->reset_gpio, 1);
 	gpiod_set_value_cansleep(h5->enable_gpio, 0);
 }
 
@@ -1103,6 +1125,8 @@ static const struct dev_pm_ops h5_serdev_pm_ops = {
 
 static const struct of_device_id rtl_bluetooth_of_match[] = {
 #ifdef CONFIG_BT_HCIUART_RTL
+	{ .compatible = "realtek,rtl8822bs-bt",
+	  .data = (const void *)&rtl_vnd },
 	{ .compatible = "realtek,rtl8822cs-bt",
 	  .data = (const void *)&h5_data_rtl8822cs },
 	{ .compatible = "realtek,rtl8723bs-bt",

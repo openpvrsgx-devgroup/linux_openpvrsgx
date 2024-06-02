@@ -1,0 +1,23 @@
+#
+# allow access to local X server
+#
+# since the X server is being started with varying DISPLAY name and
+# different -auth parameter we have to grep the X command from ps -ef
+# and extract these values.
+# Since we need to set the current shell environment, we must source
+# this script.
+#
+# usage: . x
+#
+
+# on Jessie we have:
+# root      3008  3007  0 12:38 tty2     00:00:01 /usr/bin/X :7 -auth /tmp/serverauth.YPgDh8JPcm
+# on Stretch we see (with nodm):
+# root      2512  2503  0 17:17 tty7     00:00:04 /usr/lib/xorg/Xorg :0 -nolisten tcp vt7
+
+read REPLY REPLY REPLY REPLY REPLY REPLY REPLY REPLY DISPLAY REPLY XAUTHORITY REPLY < <(ps -ef | grep "/usr/lib/xorg/Xorg\|/usr/bin/X\|/opt/X11/bin/Xquartz" | grep -v -- "--" | grep -v grep)
+
+export DISPLAY XAUTHORITY
+
+echo DISPLAY=$DISPLAY
+echo XAUTHORITY=$XAUTHORITY

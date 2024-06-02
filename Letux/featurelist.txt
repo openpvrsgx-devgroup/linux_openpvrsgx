@@ -1,0 +1,70 @@
+Description of entries in featurelist.tsv
+=========================================
+
+A) Format
+
+This is a Tab Separated Values file: https://en.wikipedia.org/wiki/Tab-separated_values
+
+First Line are the column headers.
+
+First value must be "Feature". The others are device/board names.
+
+All other lines represent table contents.
+
+B) First column is the feature name
+
+It can contain records in the format [[Page]] which will be translated into
+a link to the Letux Kernel Wiki page.
+
+Example:
+
+	[[USB]] -> http://projects.goldelico.com/p/gta04-kernel/page/USB/
+
+C) other columns represent Feature Status
+
+Values can be any string but several patterns are decoded and translated into a background color:
+
+	Pattern		Color	Meaning
+	linux		green	in Linux mainline (www.kernel.org) - works with default config
+	linux-$$$	green	in Linux mainline (www.kernel.org) since v$$$ - works with default config
+	letux		yellow	works in letux but not in mainline - needs letux_defconfig
+	letux-$$$	yellow	works in letux-$$$ but not in mainline - needs letux_defconfig
+	wip		orange	work-in-progress in LetuxOS but not working (well)
+	nok		red	not yet supported (neither LetuxOS nor mainline)
+	n/a		grey	Hardware does not provide this feature
+	impossible	black	Seems impossible although hardware supports feature (e.g. lack of documentation, project, non-free code)
+	unknown		white	Status is unknown
+
+All other strings stand for themselves and are treated like the "unknown"
+
+Each pattern can contains a "#issue" suffix creates a link to the issue with the
+given number in the kernel project issue list. This is stripped of for display.
+
+There are aliases and shortcut patterns which are displayed differently from what
+is written in this table:
+
+	Pattern		translated Pattern
+	+		-> linux
+	mainline	-> linux
+	ok		-> linux
+	v$$$		-> linux-v$$$
+	l$$$		-> letux-$$$
+	-		-> nok
+	no		-> nok
+	!		-> impossible
+	?		-> unknown
+
+The sequence of processing is
+1. strip off #issue
+2. translate aliases
+3. determine color
+
+Examples:
+
+	l5.4-rc7	-> "letux-5.4-rc7" in yellow
+	wip#849		-> "wip" in orange with link to http://projects.goldelico.com/p/gta04-kernel/issues/849/
+
+Note: we have though about auto-detecting status from the issue list
+but it is too complex to get good heuristics and would require to
+list everything in the issues. Mapping to features/devices is also
+non-trivial.

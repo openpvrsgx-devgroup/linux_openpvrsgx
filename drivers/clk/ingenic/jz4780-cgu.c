@@ -102,6 +102,34 @@
 
 static struct ingenic_cgu *cgu;
 
+static int jz4780_usb_phy_enable(struct clk_hw *hw)
+{
+	void __iomem *reg_opcr		= cgu->base + CGU_REG_OPCR;
+
+	writel(readl(reg_opcr) | OPCR_SPENDN1, reg_opcr);
+	return 0;
+}
+
+static void jz4780_usb_phy_disable(struct clk_hw *hw)
+{
+	void __iomem *reg_opcr		= cgu->base + CGU_REG_OPCR;
+
+	writel(readl(reg_opcr) & ~OPCR_SPENDN1, reg_opcr);
+}
+
+static int jz4780_usb_phy_is_enabled(struct clk_hw *hw)
+{
+	void __iomem *reg_opcr		= cgu->base + CGU_REG_OPCR;
+
+	return (readl(reg_opcr) & OPCR_SPENDN1) != 0;
+}
+
+static const struct clk_ops jz4780_usb_phy_ops = {
+	.enable		= jz4780_usb_phy_enable,
+	.disable	= jz4780_usb_phy_disable,
+	.is_enabled	= jz4780_usb_phy_is_enabled,
+};
+
 static unsigned long jz4780_otg_phy_recalc_rate(struct clk_hw *hw,
 						unsigned long parent_rate)
 {
@@ -188,6 +216,10 @@ static int jz4780_otg_phy_enable(struct clk_hw *hw)
 
 	writel(readl(reg_opcr) | OPCR_SPENDN0, reg_opcr);
 	writel(readl(reg_usbpcr) & ~USBPCR_OTG_DISABLE & ~USBPCR_SIDDQ, reg_usbpcr);
+
+/* assume we also need the HOST port */
+jz4780_usb_phy_ops.enable(hw);
+
 	return 0;
 }
 
@@ -472,6 +504,8 @@ static const struct ingenic_cgu_clk_info jz4780_cgu_clocks[] = {
 		.mux = { CGU_REG_UHCCDR, 30, 2 },
 		.div = { CGU_REG_UHCCDR, 0, 1, 8, 29, 28, 27 },
 		.gate = { CGU_REG_CLKGR0, 24 },
+// ends in kernel panic during boot
+//		.custom = { &jz4780_usb_phy_ops },
 	},
 
 	[JZ4780_CLK_SSIPLL] = {

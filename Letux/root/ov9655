@@ -1,0 +1,59 @@
+#!/bin/bash
+FORMAT=sxga
+BUS=1
+ADDR=0x30
+
+SCRIPTPATH="$(dirname "$0")"
+# send mplayer output to host
+
+if [ ! "$DISPLAY" ]
+then
+	rm -f /tmp/client	# silently remove
+	echo $SSH_CONNECTION >/tmp/client
+	read HOST OTHER </tmp/client
+	[ "$HOST" ] && export DISPLAY=$HOST:0.0
+fi
+
+function isrunning {
+	ps -ef|fgrep mplayer|fgrep -q device=/dev/video2
+}
+
+function start {
+	if ! isrunning
+	then
+		$SCRIPTPATH/camera-demo $FORMAT >/dev/null 2>&1 &
+		sleep 8
+	fi
+}
+
+function stop {
+	if isrunning
+	then
+		killall mplayer
+		sleep 5
+	fi
+}
+
+function read {
+	i2cget -f -y $BUS $ADDR 0x$1 b
+#	echo a$1 r >/sys/bus/i2c/devices/1-0030/i2c
+#	cat /sys/bus/i2c/devices/1-0030/i2c
+}
+
+function write {
+	i2cset -f -y $BUS $ADDR 0x$1 0x$2 b
+#	echo a$1 w$2 r >/sys/bus/i2c/devices/1-0030/i2c
+}
+
+case "$1" in
+	-r )	start; echo $(read $2);;
+	-w )	start; write $2 $3;;
+	-l )	start; i2cdump -f -y $BUS $ADDR b;;
+	-s )	stop;;
+	-sxga )	stop; FORMAT=sxga; start;;
+	-vga )	stop; FORMAT=vga; start;;
+	-qvga )	stop; FORMAT=qvga; start;;
+	-qqvga )	stop; FORMAT=qqvga; start;;
+	-cif )	stop; FORMAT=cif; start;;
+	*)	echo unknown command $1; exit 1;;
+esac

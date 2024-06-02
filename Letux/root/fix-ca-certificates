@@ -1,0 +1,20 @@
+# fix SSL certificates for Let's encrypt
+# https://download.goldelico.com is encrypted through Let's encrypt certificates
+# on Sept 30, 2021 the root certificate used so far did expire
+# after that date wget and apt-get did fail on Jessie and Stretch
+# we can fix that by disabling (yes!) DST_Root_CA_X3.crt
+
+case "$(cat /etc/debian_version)" in
+	7.* | 8.* | 9.* ) sed -i.bak 's|^mozilla/DST_Root_CA_X3.crt|!mozilla/DST_Root_CA_X3.crt|' /etc/ca-certificates.conf && update-ca-certificates;;
+esac
+
+# Debian Jessie archive.debian.org has an issue with the GPG key
+# sometimes we see:
+#   apt-get update
+#   ..
+#   W: GPG error: http://archive.debian.org jessie Release: The following signatures were invalid: KEYEXPIRED 1587841717
+#   this can be solved by...
+
+case "$(cat /etc/debian_version)" in
+	8.* ) sed -i.bak 's|deb http://archive.debian.org/debian jessie main|deb http://httpredir.debian.org/debian jessie main|g' /etc/apt/sources.list;;
+esac

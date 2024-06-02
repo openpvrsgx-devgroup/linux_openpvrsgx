@@ -1142,6 +1142,11 @@ static int ubifs_parse_options(struct ubifs_info *c, char *options,
 			unsigned long flag;
 			struct super_block *sb = c->vfs_sb;
 
+			if (true && !strcmp(p, "errors=remount-ro")) {
+				printk("UBIFS: ignore option \"%s\"\n", p);
+				break;
+			}
+
 			flag = parse_standard_option(p);
 			if (!flag) {
 				ubifs_err(c, "unrecognized mount option \"%s\" or missing value",

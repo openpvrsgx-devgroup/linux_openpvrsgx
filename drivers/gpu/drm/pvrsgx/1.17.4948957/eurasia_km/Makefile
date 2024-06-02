@@ -54,7 +54,7 @@ ccflags-y += \
 	-I$(srctree)/$(src)/services4/srvkm/env/linux \
 	-I$(srctree)/$(src)/services4/srvkm/hwdefs \
 	-I$(srctree)/$(src)/services4/srvkm/include \
-	-I$(srctree)/$(src)/services4/3rdparty/bufferclass_ti \
+	-I$(srctree)/$(src)/services4/3rdparty/bufferclass_example \
 	-I$(srctree)/include/linux
 
 # choose SoC integration variant to choose the right source subtree

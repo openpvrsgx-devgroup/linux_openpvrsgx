@@ -3543,7 +3543,11 @@ static IMG_BOOL CPUVAddrToPFN(struct vm_area_struct *psVMArea, IMG_UINTPTR_T uCP
 	if (!(psVMArea->vm_flags & (VM_IO | VM_PFNMAP)))
 		return IMG_FALSE;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6,10,0))
 	ret = follow_pte(psVMArea->vm_mm, uCPUVAddr, &ptep, &ptl);
+#else
+	ret = follow_pte(psVMArea, uCPUVAddr, &ptep, &ptl);
+#endif
 	if (ret < 0)
 		return IMG_FALSE;
 

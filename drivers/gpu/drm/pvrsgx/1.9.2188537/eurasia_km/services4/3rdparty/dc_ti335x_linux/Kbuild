@@ -1,0 +1,32 @@
+SYS_USING_INTERRUPTS = 1
+SUPPORT_OMAP3430_OMAPFB3 =1
+SUPPORT_TI_DSS_FW = 0
+PVR_LINUX_USING_WORKQUEUES = 1
+
+SYS_CFLAGS.$(SYS_USING_INTERRUPTS)                      += -DSYS_USING_INTERRUPTS
+SYS_CFLAGS.$(SUPPORT_OMAP3430_OMAPFB3)                         += -DSUPPORT_OMAP3430_OMAPFB3
+SYS_CFLAGS.$(SUPPORT_TI_DSS_FW)                         += -DSUPPORT_TI_DSS_FW
+SYS_CFLAGS.$(PVR_LINUX_USING_WORKQUEUES)             += -DPVR_LINUX_USING_WORKQUEUES
+SYS_CFLAGS += -DDISPLAY_CONTROLLER=omaplfb
+
+EXTRA_CFLAGS =	-DLINUX \
+		-DCONFIG_OMAP2_DSS \
+		-I$(PVR_BUILD_DIR)/include4 \
+		-I$(PVR_BUILD_DIR)/services4/include \
+		-I$(PVR_BUILD_DIR)/services4/system/$(PVR_SYSTEM) \
+		-I$(KERNELDIR)/drivers/video/omap2 \
+		-I$(PVR_BUILD_DIR)/services4/system/include \
+		$(SYS_CFLAGS.1) \
+
+ifneq ($(FBDEV),no)
+EXTRA_CFLAGS += -DFBDEV_PRESENT
+endif
+
+ifeq ($(SUPPORT_XORG),1)
+EXTRA_CFLAGS += -DSUPPORT_DRI_DRM
+EXTRA_CFLAGS += -DPVR_DISPLAY_CONTROLLER_DRM_IOCTL
+endif
+
+
+obj-m := omaplfb.o
+omaplfb-y := omaplfb_displayclass.o omaplfb_linux.o

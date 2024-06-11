@@ -1,0 +1,11 @@
+EXTRA_CFLAGS =	-DLINUX \
+               -I$(PVR_BUILD_DIR)/include4 \
+               -I$(PVR_BUILD_DIR)/services4/include
+
+ifeq ($(TI_PLATFORM),ti81xx)
+EXTRA_CFLAGS += -DPLAT_TI81xx
+endif
+
+obj-m :=  bufferclass_ti.o
+bufferclass_ti-y := bc_cat.o
+

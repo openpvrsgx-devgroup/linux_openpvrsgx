@@ -1,0 +1,51 @@
+#
+# Drm device configuration
+#
+# This driver provides support for the
+# Direct Rendering Infrastructure (DRI) in XFree86 4.1.0 and higher.
+#
+
+config DRM_INTEL_CDV
+	tristate "Intel CDV (load along with IMG driver)"
+	depends on DRM && PCI && !DRM_PSB_CDV
+	select FB_CFB_COPYAREA
+        select FB_CFB_FILLRECT
+        select FB_CFB_IMAGEBLIT
+        select DRM_KMS_HELPER
+        select DRM_TTM
+	select ACPI_VIDEO if ACPI
+	help
+          Choose this option if you have a Cedarview platform.
+          If M is selected the module will be called cedarview_gfx.
+
+choice 
+	prompt "Build IMG kernel service as "
+	depends on DRM_INTEL_CDV
+	default DRM_CDV_RELEASE
+
+config DRM_CDV_RELEASE
+	bool "Release"
+	depends on DRM_INTEL_CDV
+	help
+	  Build IMG kernel services as release version.
+
+config DRM_CDV_DEBUG
+	bool "Debug"
+	depends on DRM_INTEL_CDV
+	help
+	  Build IMG kernel services as debug version.	
+endchoice
+
+if DRM_CDV_DEBUG
+
+config DRM_PVR_PDUMP
+ 	bool "Enable PDump Debug"
+ 	help
+ 	  Build the PVR driver with PDUMP feature. At most cases it should be N.
+
+config DRM_PVR_TRACE
+	bool "Enable PVR Service Trace"
+	help
+	  Enable PVR service call trace. If unsure, it should be N.
+
+endif

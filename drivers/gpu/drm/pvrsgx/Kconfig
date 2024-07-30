@@ -94,7 +94,7 @@ config SGX_JZ4780
 	tristate "PowerVR SGX inside JZ4780 SoC"
 	depends on SGX && MACH_JZ4780
 	help
-	  Support for the PowerVR SGX 3D core inside OMAP SoC.
+	  Support for the PowerVR SGX 3D core inside INGENIC JZ4780 SoC.
 
 config SGX_SUNXI
 	tristate "PowerVR SGX inside SUNXI SoC"

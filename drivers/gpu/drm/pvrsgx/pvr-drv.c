@@ -479,7 +479,7 @@ out_err_idle:
 	return error;
 }
 
-static int pvr_remove(struct platform_device *pdev)
+static void pvr_remove(struct platform_device *pdev)
 {
 	drm_put_dev(gpsPVRDRMDev);
 	pvr_drm_unload(gpsPVRDRMDev);
@@ -487,8 +487,6 @@ static int pvr_remove(struct platform_device *pdev)
 
 	pm_runtime_put_sync(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
-
-	return 0;
 }
 
 static struct platform_driver pvr_driver = {

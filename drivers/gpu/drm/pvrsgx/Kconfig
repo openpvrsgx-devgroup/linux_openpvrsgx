@@ -23,7 +23,7 @@ config PVRSGX_1_8_869593
 	  This version should work on OMAP4430, 4460, 4470, OMAP5
 
 config PVRSGX_1_9_2188537
-	bool "DDK 1.9.2253347 (TI)"
+	bool "DDK 1.9.2188537 (TI)"
 	help
 	  This version should work on OMAP3530, AM3517
 

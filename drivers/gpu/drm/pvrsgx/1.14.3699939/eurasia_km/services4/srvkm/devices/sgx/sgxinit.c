@@ -2980,10 +2980,10 @@ PVRSRV_ERROR SGXGetMiscInfoKM(PVRSRV_SGXDEV_INFO	*psDevInfo,
 {
 	PVRSRV_ERROR eError;
 	PPVRSRV_KERNEL_MEM_INFO	psMemInfo = psDevInfo->psKernelSGXMiscMemInfo;
+#if defined(SUPPORT_SGX_EDM_MEMORY_DEBUG)
 	IMG_UINT32	*pui32MiscInfoFlags;
 	pui32MiscInfoFlags = &((PVRSRV_SGX_MISCINFO_INFO*)(psMemInfo->pvLinAddrKM))->ui32MiscInfoFlags;
-
-#if !defined(SUPPORT_SGX_EDM_MEMORY_DEBUG)
+#else
 	PVR_UNREFERENCED_PARAMETER(hDevMemContext);
 #endif
 

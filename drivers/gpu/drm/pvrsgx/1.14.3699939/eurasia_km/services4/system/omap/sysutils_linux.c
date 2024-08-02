@@ -150,6 +150,7 @@ IMG_VOID UnwrapSystemPowerChange(SYS_SPECIFIC_DATA *psSysSpecData)
 {
 }
 
+#if defined(SGX_DYNAMIC_TIMING_INFO)
 /*
  * Return SGX timining information to caller.
  */
@@ -180,6 +181,7 @@ IMG_VOID SysGetSGXTimingInformation(SGX_TIMING_INFORMATION *psTimingInfo)
 #endif /* SUPPORT_ACTIVE_POWER_MANAGEMENT */
 	psTimingInfo->ui32ActivePowManLatencyms = SYS_SGX_ACTIVE_POWER_LATENCY_MS;
 }
+#endif
 
 /*!
 ******************************************************************************
@@ -531,15 +533,14 @@ Exit:
 ******************************************************************************/
 static void ReleaseGPTimer(SYS_SPECIFIC_DATA *psSysSpecData)
 {
+#if defined(PVR_OMAP_TIMER_BASE_IN_SYS_SPEC_DATA) || (AM_VERSION == 5)
 	IMG_HANDLE hTimerDisable;
 	IMG_UINT32 *pui32TimerDisable;
 
-#if defined(PVR_OMAP_TIMER_BASE_IN_SYS_SPEC_DATA) || (AM_VERSION == 5)
 	if (psSysSpecData->sTimerRegPhysBase.uiAddr == 0)
 	{
 		return;
 	}
-#endif
 	/* Disable the timer */
 	pui32TimerDisable = OSMapPhysToLin(psSysSpecData->sTimerRegPhysBase,
 				4,
@@ -559,7 +560,6 @@ static void ReleaseGPTimer(SYS_SPECIFIC_DATA *psSysSpecData)
 				PVRSRV_HAP_KERNEL_ONLY|PVRSRV_HAP_UNCACHED,
 				hTimerDisable);
 	}
-#if defined(PVR_OMAP_TIMER_BASE_IN_SYS_SPEC_DATA) || (AM_VERSION == 5)
 	psSysSpecData->sTimerRegPhysBase.uiAddr = 0;
 #endif
 #if defined(PVR_OMAP4_TIMING_PRCM)

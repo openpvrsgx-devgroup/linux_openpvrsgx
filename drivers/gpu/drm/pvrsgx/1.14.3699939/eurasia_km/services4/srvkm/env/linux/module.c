@@ -923,7 +923,9 @@ static int PVRSRVRelease(struct inode unref__ * pInode, struct file *pFile)
 #endif
 {
 	PVRSRV_FILE_PRIVATE_DATA *psPrivateData;
+#if !defined(SUPPORT_DRI_DRM)
 	int err = 0;
+#endif
 
 	LinuxLockMutexNested(&gPVRSRVLock, PVRSRV_LOCK_CLASS_BRIDGE);
 
@@ -949,7 +951,9 @@ static int PVRSRVRelease(struct inode unref__ * pInode, struct file *pFile)
 								  PVRSRV_HANDLE_TYPE_MEM_INFO) != PVRSRV_OK)
 			{
 				PVR_DPF((PVR_DBG_ERROR, "%s: Failed to look up export handle", __FUNCTION__));
+#if !defined(SUPPORT_DRI_DRM)
 				err = -EFAULT;
+#endif
 				goto err_unlock;
 			}
 
@@ -964,7 +968,9 @@ static int PVRSRVRelease(struct inode unref__ * pInode, struct file *pFile)
 									 PVRSRV_FREE_CALLBACK_ORIGIN_EXTERNAL) != PVRSRV_OK)
 			{
 				PVR_DPF((PVR_DBG_ERROR, "%s: FreeMemCallBackCommon failed", __FUNCTION__));
+#if !defined(SUPPORT_DRI_DRM)
 				err = -EFAULT;
+#endif
 				goto err_unlock;
 			}
 		}

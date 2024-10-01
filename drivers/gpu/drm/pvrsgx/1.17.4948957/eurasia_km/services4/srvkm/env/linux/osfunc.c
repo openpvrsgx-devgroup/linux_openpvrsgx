@@ -3536,8 +3536,10 @@ static IMG_BOOL CPUVAddrToPFN(struct vm_area_struct *psVMArea, IMG_UINTPTR_T uCP
     return IMG_FALSE;
 #endif
 #else	/* #if (LINUX_VERSION_CODE < KERNEL_VERSION(6,6,0)) */
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6,12,0))
 	spinlock_t *ptl;
 	pte_t *ptep;
+#endif
 	int ret;
 
 	if (!(psVMArea->vm_flags & (VM_IO | VM_PFNMAP)))
@@ -3545,20 +3547,30 @@ static IMG_BOOL CPUVAddrToPFN(struct vm_area_struct *psVMArea, IMG_UINTPTR_T uCP
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(6,10,0))
 	ret = follow_pte(psVMArea->vm_mm, uCPUVAddr, &ptep, &ptl);
-#else
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(6,12,0))
 	ret = follow_pte(psVMArea, uCPUVAddr, &ptep, &ptl);
+#else
+	struct follow_pfnmap_args args = { .vma = psVMArea, .address = uCPUVAddr };	// issues a warning
+	ret = follow_pfnmap_start(&args);
 #endif
 	if (ret < 0)
 		return IMG_FALSE;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6,12,0))
 	*pui32PFN = pte_pfn(ptep_get(ptep));
+#else
+	*pui32PFN = args.pfn;
+#endif
 	if (!pfn_valid(*pui32PFN))
 		return IMG_FALSE;
 
 	*ppsPage = pfn_to_page(*pui32PFN);
 	get_page(*ppsPage);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6,12,0))
 	pte_unmap_unlock(ptep, ptl);
-
+#else
+	follow_pfnmap_end(&args);
+#endif
 	return IMG_TRUE;
 #endif
 }

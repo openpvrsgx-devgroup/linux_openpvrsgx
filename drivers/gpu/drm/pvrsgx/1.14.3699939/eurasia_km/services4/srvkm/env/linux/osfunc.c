@@ -124,6 +124,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #error "A preemptible Linux kernel is required when using workqueues"
 #endif
 
+/* should have been defined by #include "services_headers.h" or #include <linux/minmax.h> but isn't */
+#define MAX(a,b) 					(((a) > (b)) ? (a) : (b))
+#define MIN(a,b) 					(((a) < (b)) ? (a) : (b))
+
 #if defined(EMULATOR)
 #define EVENT_OBJECT_TIMEOUT_MS		(2000)
 #else

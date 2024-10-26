@@ -49,6 +49,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #pragma optimize( "", off )
 #define DEBUG		1
 #endif
+#if defined(__linux__) && defined(__KERNEL__)
+#undef MIN
+#undef MAX
+#include <linux/minmax.h>
+#endif
 
 #include "img_defs.h"
 #include "services.h"

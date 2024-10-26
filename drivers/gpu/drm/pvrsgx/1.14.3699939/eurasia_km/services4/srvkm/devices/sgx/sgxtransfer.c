@@ -58,6 +58,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "sgxutils.h"
 #include "ttrace.h"
 
+/* should have been defined by #include "services_headers.h" or #include <linux/minmax.h> but isn't */
+#define MAX(a,b) 					(((a) > (b)) ? (a) : (b))
+#define MIN(a,b) 					(((a) < (b)) ? (a) : (b))
+
 #if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
 #include "pvr_sync.h"
 #endif

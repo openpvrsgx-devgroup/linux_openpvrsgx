@@ -42,12 +42,15 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */ /**************************************************************************/
 
 #include "services_headers.h"
-
 #include "sysconfig.h"
 #include "hash.h"
 #include "ra.h"
 #include "pdump_km.h"
 #include "lists.h"
+
+/* should have been defined by #include "services_headers.h" or #include <linux/minmax.h> but isn't */
+#define MAX(a,b) 					(((a) > (b)) ? (a) : (b))
+#define MIN(a,b) 					(((a) < (b)) ? (a) : (b))
 
 static IMG_BOOL
 ZeroBuf(BM_BUF *pBuf, BM_MAPPING *pMapping, IMG_SIZE_T uBytes, IMG_UINT32 ui32Flags);

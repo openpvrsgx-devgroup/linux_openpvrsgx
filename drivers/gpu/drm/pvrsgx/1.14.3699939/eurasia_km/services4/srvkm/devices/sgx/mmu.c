@@ -55,6 +55,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "sgx_bridge_km.h"
 #include "pdump_osfunc.h"
 
+/* should have been defined by #include "services_headers.h" or #include <linux/minmax.h> but isn't */
+#define MAX(a,b) 					(((a) > (b)) ? (a) : (b))
+#define MIN(a,b) 					(((a) < (b)) ? (a) : (b))
+
 #define UINT32_MAX_VALUE	0xFFFFFFFFUL
 
 /*

@@ -52,6 +52,11 @@ extern "C" {
 #endif
 
 #if defined(__linux__) && defined(__KERNEL__)
+#if defined(MIN) && defined(MAX)
+#undef MIN
+#undef MAX
+#include <linux/minmax.h>
+#endif
 #include <linux/hardirq.h>
 #include <linux/string.h>
 #if defined(__arm__)

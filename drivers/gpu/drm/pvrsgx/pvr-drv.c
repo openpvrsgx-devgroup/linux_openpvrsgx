@@ -192,6 +192,7 @@ static const struct file_operations pvr_fops = {
 	.poll = drm_poll,
 	.read = drm_read,
 	.llseek = noop_llseek,
+	.fop_flags = FOP_UNSIGNED_OFFSET,
 };
 
 static struct drm_driver pvr_drm_driver = {

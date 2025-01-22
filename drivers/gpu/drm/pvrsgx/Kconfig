@@ -92,7 +92,7 @@ config SGX_POULSBO
 
 config SGX_JZ4780
 	tristate "PowerVR SGX inside JZ4780 SoC"
-	depends on SGX && MACH_JZ4780
+	depends on SGX && DRM_INGENIC
 	help
 	  Support for the PowerVR SGX 3D core inside INGENIC JZ4780 SoC.
 

@@ -1844,7 +1844,6 @@ static struct drm_driver driver = {
 		 },
 	.name = DRIVER_NAME,
 	.desc = DRIVER_DESC,
-	.date = PSB_DRM_DRIVER_DATE,
 	.major = PSB_DRM_DRIVER_MAJOR,
 	.minor = PSB_DRM_DRIVER_MINOR,
 	.patchlevel = PSB_DRM_DRIVER_PATCHLEVEL

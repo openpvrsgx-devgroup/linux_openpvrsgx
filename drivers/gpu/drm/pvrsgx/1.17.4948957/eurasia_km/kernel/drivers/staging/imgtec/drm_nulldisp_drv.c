@@ -1524,7 +1524,6 @@ static struct drm_driver nulldisp_drm_driver = {
 
 	.name				= DRIVER_NAME,
 	.desc				= DRIVER_DESC,
-	.date				= DRIVER_DATE,
 	.major				= PVRVERSION_MAJ,
 	.minor				= PVRVERSION_MIN,
 	.patchlevel			= PVRVERSION_BUILD,

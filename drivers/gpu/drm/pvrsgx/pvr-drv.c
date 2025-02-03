@@ -204,7 +204,6 @@ static struct drm_driver pvr_drm_driver = {
 	.fops = &pvr_fops,
 	.name = "pvr",
 	.desc = PVR_DRM_DESC,
-	.date = PVR_DRM_DATE,
 	.major = PVRVERSION_MAJ,
 	.minor = PVRVERSION_MIN,
 	.patchlevel = PVRVERSION_BUILD,

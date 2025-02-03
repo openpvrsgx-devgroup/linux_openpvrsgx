@@ -558,7 +558,6 @@ static struct drm_driver sPVRDrmDriver =
 #endif
 	.name = PVR_DRM_NAME,
 	.desc = PVR_DRM_DESC,
-	.date = PVR_DRM_DATE,
 	.major = PVRVERSION_MAJ,
 	.minor = PVRVERSION_MIN,
 	.patchlevel = PVRVERSION_BUILD,

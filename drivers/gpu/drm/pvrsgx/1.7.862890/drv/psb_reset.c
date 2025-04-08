@@ -138,7 +138,7 @@ void psb_watchdog_takedown(struct drm_psb_private *dev_priv)
 	spin_lock_irqsave(&dev_priv->watchdog_lock, irq_flags);
 	dev_priv->timer_available = 0;
 	spin_unlock_irqrestore(&dev_priv->watchdog_lock, irq_flags);
-	(void) del_timer_sync(&dev_priv->watchdog_timer);
+	(void) timer_delete_sync(&dev_priv->watchdog_timer);
 }
 
 

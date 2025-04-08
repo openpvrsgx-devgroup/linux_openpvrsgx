@@ -1835,7 +1835,7 @@ void psb_intel_modeset_cleanup(struct drm_device *dev)
 {
 	struct drm_psb_private *dev_priv = dev->dev_private;
 
-	del_timer_sync(&dev_priv->flip_timer);
+	timer_delete_sync(&dev_priv->flip_timer);
 
 	drm_mode_config_cleanup(dev);
 }

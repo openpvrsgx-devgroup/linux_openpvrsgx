@@ -2917,7 +2917,7 @@ PVRSRV_ERROR OSDisableTimer (IMG_HANDLE hTimer)
 #endif
 
     /* remove timer */
-    del_timer_sync(&psTimerCBData->sTimer);	
+    timer_delete_sync(&psTimerCBData->sTimer);	
     
 #if defined(PVR_LINUX_TIMERS_USING_WORKQUEUES)
     /*

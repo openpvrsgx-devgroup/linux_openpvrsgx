@@ -515,3 +515,7 @@ static void __exit pvr_exit(void)
 
 module_init(pvr_init);
 module_exit(pvr_exit);
+
+MODULE_AUTHOR("Tony Lindgren <tony@atomide.com>");
+MODULE_DESCRIPTION(PVR_DRM_DESC);
+MODULE_LICENSE("GPL v2");

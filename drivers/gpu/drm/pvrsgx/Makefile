@@ -64,6 +64,7 @@ SOURCE=$(obj)/$(SUBPATH)
 
 $(obj)/pvr:
 	@rm -f $(obj)/modules.order
+	@touch $(obj)/modules.order
 ifneq ($(CONFIG_SGX_CEDARVIEW),)
 	@$(kecho) "  MAKE    $(obj): cedarview"
 	$(Q)SOC_VENDOR=intel SOC_FAMILY=cedarview_linux SOC=gma3600 SGX=sgx545 SGX_FLAG=SGX545 SGX_REV=10141 TARGET_TYPE=$(CONFIG_SGX_CEDARVIEW) $(MAKE) $(build)=$(SOURCE)

@@ -2799,7 +2799,12 @@ static void OSTimerCallbackBody(TIMER_CALLBACK_DATA *psTimerCBData)
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,15,0))
 static IMG_VOID OSTimerCallbackWrapper(struct timer_list *t)
 {
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6,16,0))
+    TIMER_CALLBACK_DATA	*psTimerCBData = timer_container_of(psTimerCBData, t, sTimer);
+#else
     TIMER_CALLBACK_DATA	*psTimerCBData = from_timer(psTimerCBData, t, sTimer);
+#endif
+
 #else
 static IMG_VOID OSTimerCallbackWrapper(IMG_UINTPTR_T uiData)
 {

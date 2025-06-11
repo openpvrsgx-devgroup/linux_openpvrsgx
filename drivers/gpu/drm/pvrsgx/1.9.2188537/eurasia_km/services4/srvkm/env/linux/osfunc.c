@@ -2689,8 +2689,12 @@ static void OSTimerCallbackBody(TIMER_CALLBACK_DATA *psTimerCBData)
 ******************************************************************************/
 static IMG_VOID OSTimerCallbackWrapper(struct timer_list *t)
 {
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6,16,0))
+    TIMER_CALLBACK_DATA	*psTimerCBData = timer_container_of(psTimerCBData, t, sTimer);
+#else
     TIMER_CALLBACK_DATA	*psTimerCBData = from_timer(psTimerCBData, t, sTimer);
-    
+#endif
+
 #if defined(PVR_LINUX_TIMERS_USING_WORKQUEUES) || defined(PVR_LINUX_TIMERS_USING_SHARED_WORKQUEUE)
     int res;
 

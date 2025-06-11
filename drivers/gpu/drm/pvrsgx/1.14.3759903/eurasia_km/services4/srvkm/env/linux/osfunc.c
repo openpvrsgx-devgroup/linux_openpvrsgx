@@ -2820,7 +2820,12 @@ static void OSTimerCallbackBody(TIMER_CALLBACK_DATA *psTimerCBData)
 */ /**************************************************************************/
 static void OSTimerCallbackWrapper(struct timer_list *psTimer)
 {
-	TIMER_CALLBACK_DATA *psTimerCBData = from_timer(psTimerCBData, psTimer, sTimer);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6,16,0))
+    TIMER_CALLBACK_DATA	*psTimerCBData = timer_container_of(psTimerCBData, psTimer, sTimer);
+#else
+    TIMER_CALLBACK_DATA	*psTimerCBData = from_timer(psTimerCBData, psTimer, sTimer);
+#endif
+
 #else
 /*!
 ******************************************************************************

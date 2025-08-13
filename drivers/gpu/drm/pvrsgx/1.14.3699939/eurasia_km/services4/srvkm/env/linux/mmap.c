@@ -48,7 +48,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 
 #include <linux/mm.h>
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6,17,0))
 #include <linux/pfn_t.h>
+#endif
 #include <linux/module.h>
 #include <linux/vmalloc.h>
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0))
@@ -801,14 +803,16 @@ DoMapToUser(LinuxMemArea *psLinuxMemArea,
 		    if (bMixedMap)
 		    {
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,20,0))
-			result = vmf_insert_mixed(ps_vma, ulVMAPos, pfn_to_pfn_t(pfn));
+			pfn_t pfns = { pfn };
+			result = vmf_insert_mixed(ps_vma, ulVMAPos, pfns);
 			if (result & VM_FAULT_ERROR)
 			{
 				PVR_DPF((PVR_DBG_ERROR,"%s: Error - vmf_insert_mixed failed (%x)", __FUNCTION__, result));
 				return IMG_FALSE;
 			}
 #else
-			result = vm_insert_mixed(ps_vma, ulVMAPos, pfn_to_pfn_t(pfn));
+			pfn_t pfns = { pfn };
+			result = vm_insert_mixed(ps_vma, ulVMAPos, pfns);
 	                if(result != 0)
 	                {
 	                    PVR_DPF((PVR_DBG_ERROR,"%s: Error - vm_insert_mixed failed (%d)", __FUNCTION__, result));

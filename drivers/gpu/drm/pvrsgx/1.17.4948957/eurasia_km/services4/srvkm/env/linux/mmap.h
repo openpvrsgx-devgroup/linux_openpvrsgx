@@ -58,6 +58,22 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "perproc.h"
 #include "mm.h"
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6,17,0))
+/* there is no pfn_t any more and it can be replaced by unsigned long */
+typedef struct {
+	u64 val;
+} pfn_t;
+#define pfn_t_to_page(pfn) pfn_to_page(pfn.val)
+#define phys_to_pfn_t(ADDR, FLAGS) { .val = PHYS_PFN(ADDR) }
+/* wrapper for original function */
+static inline vm_fault_t __vmf_insert_mixed(struct vm_area_struct *vma, unsigned long addr, pfn_t pfn)
+{
+	return vmf_insert_mixed(vma, addr, pfn.val);
+};
+/* this is how our code calls vmf_insert_mixed */
+#define vmf_insert_mixed(VMA, ADDR, PFN_T) __vmf_insert_mixed(VMA, ADDR, PFN_T)
+#endif
+
 /*
  * This structure represents the relationship between an mmap2 file
  * offset and a LinuxMemArea for a given process.

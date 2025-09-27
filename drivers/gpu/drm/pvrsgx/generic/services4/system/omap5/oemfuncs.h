@@ -1,8 +1,6 @@
 /*************************************************************************/ /*!
-@Title          OMAP Linux display driver shared DRM structures
+@Title          SGX kernel/client driver interface structures and prototypes
 @Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
-@Description    OMAP Linux display driver DRM structures shared between
-                kernel and user space.
 @License        Dual MIT/GPLv2
 
 The contents of this file are subject to the MIT license as set out below.
@@ -39,26 +37,41 @@ PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
 COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 */ /**************************************************************************/
-#ifndef __3RDPARTY_DC_DRM_SHARED_H__
-#define __3RDPARTY_DC_DRM_SHARED_H__
-#if defined(SUPPORT_DRI_DRM)
 
-#define PVR_DRM_DISP_CMD_ENTER_VT 1
-#define PVR_DRM_DISP_CMD_LEAVE_VT 2
+#if !defined(__OEMFUNCS_H__)
+#define __OEMFUNCS_H__
 
-#define PVR_DRM_DISP_CMD_ON 3
-#define PVR_DRM_DISP_CMD_STANDBY 4
-#define PVR_DRM_DISP_CMD_SUSPEND 5
-#define PVR_DRM_DISP_CMD_OFF 6
+#if defined(__cplusplus)
+extern "C" {
+#endif
 
-#define PVR_DRM_DISP_ARG_CMD 0
-#define PVR_DRM_DISP_ARG_DEV 1
-#define PVR_DRM_DISP_NUM_ARGS 2
+/* function in/out data structures: */
+typedef IMG_UINT32 (*PFN_SRV_BRIDGEDISPATCH)(IMG_UINT32 Ioctl, IMG_BYTE *pInBuf,
+	     IMG_UINT32 InBufLen,
+	     IMG_BYTE *pOutBuf,
+	     IMG_UINT32 OutBufLen,
+	     IMG_UINT32 *pdwBytesTransferred);
+/*
+	Function table for kernel 3rd party driver to kernel services
+*/
+typedef struct PVRSRV_DC_OEM_JTABLE_TAG {
+	PFN_SRV_BRIDGEDISPATCH pfnOEMBridgeDispatch;
+	IMG_PVOID pvDummy1;
+	IMG_PVOID pvDummy2;
+	IMG_PVOID pvDummy3;
 
-#endif /* defined(SUPPORT_DRI_DRM) */
-#endif /* __3RDPARTY_DC_DRM_SHARED_H__ */
+} PVRSRV_DC_OEM_JTABLE;
 
-/******************************************************************************
- End of file (3rdparty_dc_drm_shared.h)
-******************************************************************************/
+#define OEM_GET_EXT_FUNCS (1 << 1)
+
+#if defined(__cplusplus)
+}
+#endif
+
+#endif /* __OEMFUNCS_H__ */
+
+/*****************************************************************************
+ End of file (oemfuncs.h)
+*****************************************************************************/

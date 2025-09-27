@@ -41,7 +41,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <stddef.h>
 
-#include "reverse_engineering_debugging.h"
 #include "sgxdefs.h"
 #include "sgxmmu.h"
 #include "services_headers.h"
@@ -69,7 +68,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "srvkm.h"
 #include "ttrace.h"
 
-#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE)
+#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE) && defined(EUR_CR_TIMER)
 #include "systrace.h"
 #endif
 
@@ -356,13 +355,9 @@ static PVRSRV_ERROR SGXRunScript(PVRSRV_SGXDEV_INFO *psDevInfo,
 	     psComm->sWriteHWReg.ui32Offset,
 	     psComm->sWriteHWReg.ui32Value);
 	PDUMPCOMMENT("SGXRunScript: Write HW reg operation");
-	RVDBGCOMMENT("SGXRunScript: Write HW reg operation");
 	PDUMPREG(SGX_PDUMPREG_NAME,
 	 psComm->sWriteHWReg.ui32Offset,
 	 psComm->sWriteHWReg.ui32Value);
-	DEBUG_REG_W(SGX_PDUMPREG_NAME,
-	    psComm->sWriteHWReg.ui32Offset,
-	    psComm->sWriteHWReg.ui32Value);
 	break;
 	}
 	case SGX_INIT_OP_READ_HW_REG: {
@@ -371,12 +366,9 @@ static PVRSRV_ERROR SGXRunScript(PVRSRV_SGXDEV_INFO *psDevInfo,
 	    psComm->sReadHWReg.ui32Offset);
 #if defined(PDUMP)
 	PDUMPCOMMENT("SGXRunScript: Read HW reg operation");
-	RVDBGCOMMENT("SGXRunScript: Read HW reg operation");
 	PDumpRegRead(SGX_PDUMPREG_NAME,
 	     psComm->sReadHWReg.ui32Offset,
 	     PDUMP_FLAGS_CONTINUOUS);
-	DEBUG_REG_R(SGX_PDUMPREG_NAME,
-	    psComm->sReadHWReg.ui32Offset);
 #endif
 	break;
 	}
@@ -387,16 +379,13 @@ static PVRSRV_ERROR SGXRunScript(PVRSRV_SGXDEV_INFO *psDevInfo,
 	PVR_LOG(("\t(SGXREG) 0x%08X : 0x%08X",
 	 psComm->sReadHWReg.ui32Offset,
 	 psComm->sReadHWReg.ui32Value));
-	DBG_LOG("\t(SGXREG) 0x%08X : 0x%08X",
-	psComm->sReadHWReg.ui32Offset,
-	psComm->sReadHWReg.ui32Value);
+
 	break;
 	}
 
 #if defined(PDUMP)
 	case SGX_INIT_OP_PDUMP_HW_REG: {
 	PDUMPCOMMENT("SGXRunScript: Dump HW reg operation");
-	RVDBGCOMMENT("SGXRunScript: Dump HW reg operation");
 	PDUMPREG(SGX_PDUMPREG_NAME,
 	 psComm->sPDumpHWReg.ui32Offset,
 	 psComm->sPDumpHWReg.ui32Value);
@@ -444,8 +433,6 @@ static PVRSRV_ERROR SGXRunScriptOnCore(PVRSRV_SGXDEV_INFO *psDevInfo,
 	     psComm->sWriteHWReg.ui32Value);
 	PDUMPCOMMENT(
 	"SGXRunScriptOnCore: Write HW reg operation");
-	RVDBGCOMMENT(
-	"SGXRunScriptOnCore: Write HW reg operation");
 	PDUMPREG(SGX_PDUMPREG_NAME,
 	 SGX_MP_CORE_SELECT(
 	 psComm->sWriteHWReg.ui32Offset,
@@ -460,8 +447,6 @@ static PVRSRV_ERROR SGXRunScriptOnCore(PVRSRV_SGXDEV_INFO *psDevInfo,
 	   ui32CoreNum));
 #if defined(PDUMP)
 	PDUMPCOMMENT(
-	"SGXRunScriptOnCore: Read HW reg operation");
-	RVDBGCOMMENT(
 	"SGXRunScriptOnCore: Read HW reg operation");
 	PDumpRegRead(SGX_PDUMPREG_NAME,
 	     SGX_MP_CORE_SELECT(
@@ -481,19 +466,13 @@ static PVRSRV_ERROR SGXRunScriptOnCore(PVRSRV_SGXDEV_INFO *psDevInfo,
 	 psComm->sReadHWReg.ui32Offset,
 	 ui32CoreNum),
 	 psComm->sReadHWReg.ui32Value));
-	DBG_LOG(KERN_ALERT
-	"##PVR_RV_DBG - LOG: \t(SGXREG) 0x%08X : 0x%08X",
-	SGX_MP_CORE_SELECT(psComm->sReadHWReg.ui32Offset,
-	   ui32CoreNum),
-	psComm->sReadHWReg.ui32Value);
 
 	break;
 	}
+
 #if defined(PDUMP)
 	case SGX_INIT_OP_PDUMP_HW_REG: {
 	PDUMPCOMMENT(
-	"SGXRunScriptOnCore: Dump HW reg operation");
-	RVDBGCOMMENT(
 	"SGXRunScriptOnCore: Dump HW reg operation");
 	PDUMPREG(SGX_PDUMPREG_NAME,
 	 SGX_MP_CORE_SELECT(
@@ -640,7 +619,6 @@ PVRSRV_ERROR SGXInitialise(PVRSRV_SGXDEV_INFO *psDevInfo,
 	*/
 	PDUMPCOMMENTWITHFLAGS(PDUMP_FLAGS_CONTINUOUS,
 	      "SGX initialisation script part 1\n");
-	RVDBGCOMMENT("SGX initialisation script part 1");
 	eError = SGXRunScript(psDevInfo,
 	      psDevInfo->sScripts.asInitCommandsPart1,
 	      SGX_MAX_INIT_COMMANDS);
@@ -652,7 +630,6 @@ PVRSRV_ERROR SGXInitialise(PVRSRV_SGXDEV_INFO *psDevInfo,
 	}
 	PDUMPCOMMENTWITHFLAGS(PDUMP_FLAGS_CONTINUOUS,
 	      "End of SGX initialisation script part 1\n");
-	RVDBGCOMMENT("End of SGX initialisation script part 1");
 
 	/* Reset the chip */
 	psDevInfo->ui32NumResets++;
@@ -733,7 +710,6 @@ PVRSRV_ERROR SGXInitialise(PVRSRV_SGXDEV_INFO *psDevInfo,
 	*/
 	PDUMPCOMMENTWITHFLAGS(PDUMP_FLAGS_CONTINUOUS,
 	      "SGX initialisation script part 2\n");
-	RVDBGCOMMENT("SGX initialisation script part 2");
 	eError = SGXRunScript(psDevInfo,
 	      psDevInfo->sScripts.asInitCommandsPart2,
 	      SGX_MAX_INIT_COMMANDS);
@@ -745,7 +721,6 @@ PVRSRV_ERROR SGXInitialise(PVRSRV_SGXDEV_INFO *psDevInfo,
 	}
 	PDUMPCOMMENTWITHFLAGS(PDUMP_FLAGS_CONTINUOUS,
 	      "End of SGX initialisation script part 2\n");
-	RVDBGCOMMENT("End of SGX initialisation script part 2");
 
 	/* Record the system timestamp for the microkernel */
 	psSGXHostCtl->ui32HostClock = OSClockus();
@@ -755,13 +730,11 @@ PVRSRV_ERROR SGXInitialise(PVRSRV_SGXDEV_INFO *psDevInfo,
 	PDUMPCOMMENTWITHFLAGS(
 	PDUMP_FLAGS_CONTINUOUS,
 	"Reset the SGX microkernel initialisation status\n");
-	RVDBGCOMMENT("Reset the SGX microkernel initialisation status");
 	PDUMPMEM(IMG_NULL, psSGXHostCtlMemInfo,
 	 offsetof(SGXMKIF_HOST_CTL, ui32InitStatus), sizeof(IMG_UINT32),
 	 PDUMP_FLAGS_CONTINUOUS, MAKEUNIQUETAG(psSGXHostCtlMemInfo));
 	PDUMPCOMMENTWITHFLAGS(PDUMP_FLAGS_CONTINUOUS,
 	      "Initialise the microkernel\n");
-	RVDBGCOMMENT("Initialise the microkernel");
 #endif /* PDUMP */
 
 #if defined(SGX_FEATURE_MULTI_EVENT_KICK)
@@ -794,7 +767,6 @@ PVRSRV_ERROR SGXInitialise(PVRSRV_SGXDEV_INFO *psDevInfo,
 	PDUMPCOMMENTWITHFLAGS(
 	PDUMP_FLAGS_CONTINUOUS,
 	"First increment of the SGX event kicker value\n");
-	RVDBGCOMMENT("First increment of the SGX event kicker value");
 	PDUMPMEM(&psDevInfo->ui32KernelCCBEventKickerDumpVal,
 	 psDevInfo->psKernelCCBEventKickerMemInfo, 0,
 	 sizeof(IMG_UINT32), PDUMP_FLAGS_CONTINUOUS,
@@ -831,7 +803,6 @@ PVRSRV_ERROR SGXInitialise(PVRSRV_SGXDEV_INFO *psDevInfo,
 	PDUMPCOMMENTWITHFLAGS(
 	PDUMP_FLAGS_CONTINUOUS,
 	"Wait for the SGX microkernel initialisation to complete");
-	RVDBGCOMMENT("Wait for the SGX microkernel initialisation to complete");
 	PDUMPMEMPOL(psSGXHostCtlMemInfo,
 	    offsetof(SGXMKIF_HOST_CTL, ui32InitStatus),
 	    PVRSRV_USSE_EDM_INIT_COMPLETE,
@@ -912,19 +883,13 @@ static PVRSRV_ERROR DevInitSGXPart1(IMG_VOID *pvDeviceNode)
 	/* pdump info about the core */
 	PDUMPCOMMENT("SGX Core Version Information: %s",
 	     SGX_CORE_FRIENDLY_NAME);
-	RVDBGCOMMENT("SGX Core Version Information: %s",
-	     SGX_CORE_FRIENDLY_NAME);
+
 #if defined(SGX_FEATURE_MP)
 #if !defined(SGX_FEATURE_MP_PLUS)
 	PDUMPCOMMENT("SGX Multi-processor: %d cores",
 	     SGX_FEATURE_MP_CORE_COUNT);
-	RVDBGCOMMENT("SGX Multi-processor: %d cores",
-	     SGX_FEATURE_MP_CORE_COUNT);
 #else
 	PDUMPCOMMENT("SGX Multi-processor: %d TA cores, %d 3D cores",
-	     SGX_FEATURE_MP_CORE_COUNT_TA,
-	     SGX_FEATURE_MP_CORE_COUNT_3D);
-	RVDBGCOMMENT("SGX Multi-processor: %d TA cores, %d 3D cores",
 	     SGX_FEATURE_MP_CORE_COUNT_TA,
 	     SGX_FEATURE_MP_CORE_COUNT_3D);
 #endif
@@ -932,23 +897,18 @@ static PVRSRV_ERROR DevInitSGXPart1(IMG_VOID *pvDeviceNode)
 
 #if (SGX_CORE_REV == 0)
 	PDUMPCOMMENT("SGX Core Revision Information: head RTL");
-	RVDBGCOMMENT("SGX Core Revision Information: head RTL");
 #else
 	PDUMPCOMMENT("SGX Core Revision Information: %d", SGX_CORE_REV);
-	RVDBGCOMMENT("SGX Core Revision Information: %d", SGX_CORE_REV);
 #endif
 
 #if defined(SGX_FEATURE_SYSTEM_CACHE)
 	PDUMPCOMMENT("SGX System Level Cache is present\r\n");
-	RVDBGCOMMENT("SGX System Level Cache is present\r\n");
 #if defined(SGX_BYPASS_SYSTEM_CACHE)
 	PDUMPCOMMENT("SGX System Level Cache is bypassed\r\n");
-	RVDBGCOMMENT("SGX System Level Cache is bypassed\r\n");
 #endif /* SGX_BYPASS_SYSTEM_CACHE */
 #endif /* SGX_FEATURE_SYSTEM_CACHE */
 
 	PDUMPCOMMENT("SGX Initialisation Part 1");
-	RVDBGCOMMENT("SGX Initialisation Part 1");
 
 	/* Allocate device control block */
 	if (OSAllocMem(PVRSRV_OS_NON_PAGEABLE_HEAP, sizeof(PVRSRV_SGXDEV_INFO),
@@ -964,6 +924,9 @@ static PVRSRV_ERROR DevInitSGXPart1(IMG_VOID *pvDeviceNode)
 	/* setup info from jdisplayconfig.h (variations controlled by build) */
 	psDevInfo->eDeviceType = DEV_DEVICE_TYPE;
 	psDevInfo->eDeviceClass = DEV_DEVICE_CLASS;
+
+	/* Initialize SGX idle status */
+	psDevInfo->bSGXIdle = IMG_TRUE;
 
 	/* Store the devinfo as its needed by dynamically enumerated systems called from BM */
 	psDeviceNode->pvDevice = (IMG_PVOID)psDevInfo;
@@ -1046,7 +1009,6 @@ PVRSRV_ERROR SGXGetInfoForSrvinitKM(IMG_HANDLE hDevHandle,
 	PVRSRV_ERROR eError;
 
 	PDUMPCOMMENT("SGXGetInfoForSrvinit");
-	RVDBGCOMMENT("SGXGetInfoForSrvinit");
 
 	psDeviceNode = (PVRSRV_DEVICE_NODE *)hDevHandle;
 	psDevInfo = (PVRSRV_SGXDEV_INFO *)psDeviceNode->pvDevice;
@@ -1092,7 +1054,6 @@ PVRSRV_ERROR DevInitSGXPart2KM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 	PVRSRV_DEV_POWER_STATE eDefaultPowerState;
 
 	PDUMPCOMMENT("SGX Initialisation Part 2");
-	RVDBGCOMMENT("SGX Initialisation Part 2");
 
 	psDeviceNode = (PVRSRV_DEVICE_NODE *)hDevHandle;
 	psDevInfo = (PVRSRV_SGXDEV_INFO *)psDeviceNode->pvDevice;
@@ -1199,17 +1160,14 @@ PVRSRV_ERROR DevInitSGXPart2KM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 	OSMemSet(psDevInfo->pui32KernelCCBEventKicker, 0,
 	 sizeof(*psDevInfo->pui32KernelCCBEventKicker));
 	PDUMPCOMMENT("Initialise Kernel CCB");
-	RVDBGCOMMENT("Initialise Kernel CCB");
 	PDUMPMEM(IMG_NULL, psDevInfo->psKernelCCBMemInfo, 0,
 	 sizeof(PVRSRV_SGX_KERNEL_CCB), PDUMP_FLAGS_CONTINUOUS,
 	 MAKEUNIQUETAG(psDevInfo->psKernelCCBMemInfo));
 	PDUMPCOMMENT("Initialise Kernel CCB Control");
-	RVDBGCOMMENT("Initialise Kernel CCB Control");
 	PDUMPMEM(IMG_NULL, psDevInfo->psKernelCCBCtlMemInfo, 0,
 	 sizeof(PVRSRV_SGX_CCB_CTL), PDUMP_FLAGS_CONTINUOUS,
 	 MAKEUNIQUETAG(psDevInfo->psKernelCCBCtlMemInfo));
 	PDUMPCOMMENT("Initialise Kernel CCB Event Kicker");
-	RVDBGCOMMENT("Initialise Kernel CCB Event Kicker");
 	PDUMPMEM(IMG_NULL, psDevInfo->psKernelCCBEventKickerMemInfo, 0,
 	 sizeof(*psDevInfo->pui32KernelCCBEventKicker),
 	 PDUMP_FLAGS_CONTINUOUS,
@@ -1390,7 +1348,6 @@ static IMG_VOID SGXDumpDebugReg(PVRSRV_SGXDEV_INFO *psDevInfo,
 	ui32RegVal = OSReadHWReg(psDevInfo->pvRegsBaseKM,
 	 SGX_MP_CORE_SELECT(ui32RegAddr, ui32CoreNum));
 	PVR_LOG(("(P%u) %s%08X", ui32CoreNum, pszName, ui32RegVal));
-	DBG_LOG("(P%u) %s%08X", ui32CoreNum, pszName, ui32RegVal);
 }
 
 #if defined(SGX_FEATURE_MULTIPLE_MEM_CONTEXTS) || defined(FIX_HW_BRN_31620)
@@ -1472,7 +1429,6 @@ IMG_VOID SGXDumpDebugInfo(PVRSRV_SGXDEV_INFO *psDevInfo, IMG_BOOL bDumpSGXRegs)
 	IMG_UINT32 ui32CoreNum;
 
 	PVR_LOG(("SGX debug (%s)", PVRVERSION_STRING));
-	DBG_LOG("SGX debug (%s)", PVRVERSION_STRING);
 
 	if (bDumpSGXRegs) {
 	PVR_DPF((PVR_DBG_ERROR,
@@ -1484,11 +1440,9 @@ IMG_VOID SGXDumpDebugInfo(PVRSRV_SGXDEV_INFO *psDevInfo, IMG_BOOL bDumpSGXRegs)
 
 	/* Run SGXREGDebug Scripts */
 	PVR_LOG(("Running SGXREG Debug Scripts:"));
-	DBG_LOG("Running SGXREG Debug Scripts:");
 	RunSGXREGDebugScripts(psDevInfo);
 
 	PVR_LOG(("SGX Register Dump:"));
-	DBG_LOG("SGX Register Dump:");
 	SGXDumpDebugReg(psDevInfo, 0,
 	"EUR_CR_CORE_ID:          ", EUR_CR_CORE_ID);
 	SGXDumpDebugReg(psDevInfo, 0, "EUR_CR_CORE_REVISION:    ",
@@ -1598,9 +1552,6 @@ IMG_VOID SGXDumpDebugInfo(PVRSRV_SGXDEV_INFO *psDevInfo, IMG_BOOL bDumpSGXRegs)
 	"Checking EDM memory context (index = %d, PD = 0x%08x)",
 	ui32DirListIndex,
 	ui32PDDevPAddr));
-	DBG_LOG("Checking EDM memory context (index = %d, PD = 0x%08x)",
-	ui32DirListIndex,
-	ui32PDDevPAddr);
 	MMU_CheckFaultAddr(psDevInfo,
 	   ui32PDDevPAddr,
 	   ui32FaultAddress);
@@ -1618,9 +1569,6 @@ IMG_VOID SGXDumpDebugInfo(PVRSRV_SGXDEV_INFO *psDevInfo, IMG_BOOL bDumpSGXRegs)
 	"Checking TA memory context (index = %d, PD = 0x%08x)",
 	ui32DirListIndex,
 	ui32PDDevPAddr));
-	DBG_LOG("Checking TA memory context (index = %d, PD = 0x%08x)",
-	ui32DirListIndex,
-	ui32PDDevPAddr);
 	MMU_CheckFaultAddr(psDevInfo,
 	   ui32PDDevPAddr,
 	   ui32FaultAddress);
@@ -1638,9 +1586,6 @@ IMG_VOID SGXDumpDebugInfo(PVRSRV_SGXDEV_INFO *psDevInfo, IMG_BOOL bDumpSGXRegs)
 	"Checking 3D memory context (index = %d, PD = 0x%08x)",
 	ui32DirListIndex,
 	ui32PDDevPAddr));
-	DBG_LOG("Checking 3D memory context (index = %d, PD = 0x%08x)",
-	ui32DirListIndex,
-	ui32PDDevPAddr);
 	MMU_CheckFaultAddr(psDevInfo,
 	   ui32PDDevPAddr,
 	   ui32FaultAddress);
@@ -1659,9 +1604,6 @@ IMG_VOID SGXDumpDebugInfo(PVRSRV_SGXDEV_INFO *psDevInfo, IMG_BOOL bDumpSGXRegs)
 	"Checking 2D memory context (index = %d, PD = 0x%08x)",
 	ui32DirListIndex,
 	ui32PDDevPAddr));
-	DBG_LOG("Checking 2D memory context (index = %d, PD = 0x%08x)",
-	ui32DirListIndex,
-	ui32PDDevPAddr);
 	MMU_CheckFaultAddr(psDevInfo,
 	   ui32PDDevPAddr,
 	   ui32FaultAddress);
@@ -1681,9 +1623,6 @@ IMG_VOID SGXDumpDebugInfo(PVRSRV_SGXDEV_INFO *psDevInfo, IMG_BOOL bDumpSGXRegs)
 	"Checking PTLA memory context (index = %d, PD = 0x%08x)",
 	ui32DirListIndex,
 	ui32PDDevPAddr));
-	DBG_LOG("Checking PTLA memory context (index = %d, PD = 0x%08x)",
-	ui32DirListIndex,
-	ui32PDDevPAddr);
 	MMU_CheckFaultAddr(psDevInfo,
 	   ui32PDDevPAddr,
 	   ui32FaultAddress);
@@ -1703,7 +1642,6 @@ IMG_VOID SGXDumpDebugInfo(PVRSRV_SGXDEV_INFO *psDevInfo, IMG_BOOL bDumpSGXRegs)
 	"Checking Host memory context (index = %d, PD = 0x%08x)",
 	ui32DirListIndex,
 	ui32PDDevPAddr));
-	DBG_LOG();
 	MMU_CheckFaultAddr(psDevInfo,
 	   ui32PDDevPAddr,
 	   ui32FaultAddress);
@@ -2399,7 +2337,7 @@ IMG_BOOL SGX_ISRHandler(IMG_VOID *pvData)
 /*
 	SGX Systrace Handler
 */
-#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE)
+#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE) && defined(EUR_CR_TIMER)
 static IMG_VOID SGXSystraceHandler(PVRSRV_DEVICE_NODE *psDeviceNode)
 {
 	PVRSRV_SGXDEV_INFO *psDevInfo =
@@ -2407,10 +2345,10 @@ static IMG_VOID SGXSystraceHandler(PVRSRV_DEVICE_NODE *psDeviceNode)
 	IMG_UINT32 ui32SgxClockSpeed, ui32DataCount, ui32HostTimestamp;
 
 	/* NOTE: Not thread safe. MISR should only run in one thread */
-	static PVRSRV_SGX_HWPERF_CB_ENTRY asSGXHWPerf[8];
+	static PVRSRV_SGX_HWPERF_CB_ENTRY asSGXHWPerf[16];
 
 	if (SystraceIsCapturingHWData() && psDevInfo->bSystraceInitialised) {
-	SGXReadHWPerfCBKM((IMG_HANDLE)psDeviceNode, 8, asSGXHWPerf,
+	SGXReadHWPerfCBKM((IMG_HANDLE)psDeviceNode, 16, asSGXHWPerf,
 	  (IMG_UINT32 *)&ui32DataCount,
 	  (IMG_UINT32 *)&ui32SgxClockSpeed,
 	  (IMG_UINT32 *)&ui32HostTimestamp);
@@ -2447,6 +2385,9 @@ static IMG_VOID SGXSystraceHandler(PVRSRV_DEVICE_NODE *psDeviceNode)
 
 	/* Initialize the first context to be 1 (0 is idle)*/
 	psDevInfo->psSystraceData->ui32CurrentCtxID = 1;
+
+	/* Initialize current GPU ticks and Host Time */
+	SystraceInitializeTimeCorr(psDevInfo);
 	} else if (psDevInfo->bSystraceInitialised) {
 	SGX_MISC_INFO sSGXMiscInfo;
 
@@ -2488,7 +2429,7 @@ static IMG_VOID SGX_MISRHandler(IMG_VOID *pvData)
 
 	SGXTestActivePowerEvent(psDeviceNode, ISR_ID);
 
-#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE)
+#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE) && defined(EUR_CR_TIMER)
 	SGXSystraceHandler(psDeviceNode);
 #endif
 }
@@ -3047,7 +2988,6 @@ PVRSRV_ERROR SGXGetClientInfoKM(IMG_HANDLE hDevCookie,
 IMG_VOID SGXPanic(PVRSRV_SGXDEV_INFO *psDevInfo)
 {
 	PVR_LOG(("SGX panic"));
-	DBG_LOG("SGX panic");
 	SGXDumpDebugInfo(psDevInfo, IMG_FALSE);
 	OSPanic();
 }
@@ -3092,7 +3032,6 @@ PVRSRV_ERROR SGXDevInitCompatCheck(PVRSRV_DEVICE_NODE *psDeviceNode)
 	/* Ensure it's a SGX device */
 	if (psDeviceNode->sDevId.eDeviceType != PVRSRV_DEVICE_TYPE_SGX) {
 	PVR_LOG(("(FAIL) SGXInit: Device not of type SGX"));
-	DBG_LOG("(FAIL) SGXInit: Device not of type SGX");
 	eError = PVRSRV_ERROR_INVALID_PARAMS;
 	goto chk_exit;
 	}
@@ -3324,7 +3263,6 @@ static PVRSRV_ERROR SGXGetMiscInfoUkernel(PVRSRV_SGXDEV_INFO *psDevInfo,
 	psMemInfo->sDevVAddr.uiAddr; /* device V addr of output buffer */
 
 	PDUMPCOMMENT("Microkernel kick for SGXGetMiscInfo");
-	RVDBGCOMMENT("Microkernel kick for SGXGetMiscInfo");
 	eError = SGXScheduleCCBCommandKM(psDeviceNode, SGXMKIF_CMD_GETMISCINFO,
 	 &sCommandData, KERNEL_ID, 0,
 	 hDevMemContext, IMG_FALSE);
@@ -3463,7 +3401,6 @@ PVRSRV_ERROR SGXGetMiscInfoKM(PVRSRV_SGXDEV_INFO *psDevInfo,
 	psDevInfo->psSGXHostCtl->ui32BPSetClearSignal = 0;
 
 	PDUMPCOMMENT("Microkernel kick for setting a data breakpoint");
-	RVDBGCOMMENT("Microkernel kick for setting a data breakpoint");
 	eError = SGXScheduleCCBCommandKM(psDeviceNode,
 	 SGXMKIF_CMD_DATABREAKPOINT,
 	 &sCommandData, KERNEL_ID, 0,
@@ -4092,7 +4029,7 @@ PVRSRV_ERROR SGXGetMiscInfoKM(PVRSRV_SGXDEV_INFO *psDevInfo,
 
 	case SGX_MISC_INFO_DUMP_DEBUG_INFO: {
 	PVR_LOG(("User requested SGX debug info"));
-	DBG_LOG("User requested SGX debug info");
+
 	/* Dump SGX debug data to the kernel log. */
 	SGXDumpDebugInfo(psDeviceNode->pvDevice, IMG_FALSE);
 
@@ -4109,7 +4046,6 @@ PVRSRV_ERROR SGXGetMiscInfoKM(PVRSRV_SGXDEV_INFO *psDevInfo,
 	}
 
 	PVR_LOG(("User requested SGX debug info"));
-	DBG_LOG("User requested SGX debug info");
 
 	/* Dump SGX debug data to the kernel log. */
 	SGXDumpDebugInfo(psDeviceNode->pvDevice, IMG_TRUE);
@@ -4121,7 +4057,6 @@ PVRSRV_ERROR SGXGetMiscInfoKM(PVRSRV_SGXDEV_INFO *psDevInfo,
 	/* Don't allow user-mode to reboot the device in production drivers */
 	case SGX_MISC_INFO_PANIC: {
 	PVR_LOG(("User requested SGX panic"));
-	DBG_LOG("User requested SGX panic");
 
 	SGXPanic(psDeviceNode->pvDevice);
 
@@ -4172,6 +4107,11 @@ PVRSRV_ERROR SGXReadHWPerfCBKM(IMG_HANDLE hDevHandle, IMG_UINT32 ui32ArraySize,
 	OSMemCopy(&psClientHWPerfEntry[i].ui32MiscCounters[0][0],
 	  &psMKPerfEntry->ui32MiscCounters[0][0],
 	  sizeof(psMKPerfEntry->ui32MiscCounters));
+
+#if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE) && defined(EUR_CR_TIMER)
+	psClientHWPerfEntry[i].ui32SystraceIndex =
+	psMKPerfEntry->ui32SystraceIndex;
+#endif
 
 	psHWPerfCB->ui32Roff = (psHWPerfCB->ui32Roff + 1) &
 	       (SGXMKIF_HWPERF_CB_SIZE - 1);

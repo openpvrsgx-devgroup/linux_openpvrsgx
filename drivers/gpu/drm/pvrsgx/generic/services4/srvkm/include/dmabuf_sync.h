@@ -54,17 +54,11 @@ typedef struct _PVRSRV_DMABUF_SYNC_INFO_ {
 } PVRSRV_DMABUF_SYNC_INFO;
 
 PVRSRV_ERROR
-PVRSRVDmaBufSyncAcquire(IMG_HANDLE hUnique, IMG_HANDLE hDevCookie,
-	IMG_HANDLE hDevMemContext,
+PVRSRVDmaBufSyncAcquire(IMG_HANDLE hUnique, IMG_HANDLE hPriv,
+	IMG_HANDLE hDevCookie, IMG_HANDLE hDevMemContext,
 	PVRSRV_DMABUF_SYNC_INFO **ppsDmaBufSyncInfo);
 
 IMG_VOID PVRSRVDmaBufSyncRelease(PVRSRV_DMABUF_SYNC_INFO *psDmaBufSyncInfo);
-
-static INLINE PVRSRV_KERNEL_SYNC_INFO *
-DmaBufSyncGetKernelSyncInfo(PVRSRV_DMABUF_SYNC_INFO *psDmaBufSyncInfo)
-{
-	return psDmaBufSyncInfo->psSyncInfo;
-}
 
 static INLINE IMG_UINT64
 DmaBufSyncGetStamp(PVRSRV_DMABUF_SYNC_INFO *psDmaBufSyncInfo)

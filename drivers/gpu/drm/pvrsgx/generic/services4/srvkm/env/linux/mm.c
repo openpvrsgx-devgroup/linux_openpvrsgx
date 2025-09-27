@@ -91,7 +91,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /* Decide whether or not DevMem allocs need __GFP_DMA32 */
 #ifndef SGX_FEATURE_36BIT_MMU
-#ifdef CONFIG_ZONE_DMA
+#ifdef CONFIG_ZONE_DMA32
 #if defined CONFIG_X86_PAE || defined CONFIG_ARM_LPAE || defined CONFIG_64BIT
 #define PVR_USE_DMA32_FOR_DEVMEM_ALLOCS
 #endif
@@ -489,11 +489,9 @@ IMG_VOID *_VMallocWrapper(IMG_SIZE_T uiBytes, IMG_UINT32 ui32AllocFlags,
 #endif
 
 	/* Allocate virtually contiguous pages */
-//printk("%s: PGProtFlags = %0lx\n", __func__, (long) PGProtFlags);
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 8, 0))
 	pvRet = __vmalloc(uiBytes, gfp_mask, PGProtFlags);
 #else
-	// if(PGProtFlags != PAGE_KERNEL) printk("%s: PGProtFlags != PAGE_KERNEL\n", __func__);
 	pvRet = __old_vmalloc(uiBytes, gfp_mask, PGProtFlags);
 #endif
 

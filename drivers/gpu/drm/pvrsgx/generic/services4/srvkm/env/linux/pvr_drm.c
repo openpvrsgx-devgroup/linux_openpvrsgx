@@ -49,13 +49,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 #endif
 
-#undef AM_VERSION
-#define AM_VERSION 5
-
-#if (AM_VERSION != 5)
-#include <linux/platform_data/sgx-omap.h>
-#endif
-
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -63,9 +56,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <linux/proc_fs.h>
 #include <linux/sched.h>
 #include <asm/ioctl.h>
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 5, 0))
 #include <drm/drmP.h>
-#endif
 #include <drm/drm.h>
 
 #include "img_defs.h"
@@ -217,7 +208,7 @@ DRI_DRM_STATIC int PVRSRVDrmLoad(struct drm_device *dev, unsigned long flags)
 	gpsPVRDRMDev = dev;
 #if !defined(PVR_DRI_DRM_NOT_PCI) && !defined(SUPPORT_DRI_DRM_PLUGIN)
 #if defined(PVR_DRI_DRM_PLATFORM_DEV)
-	gpsPVRLDMDev = to_platform_device(dev->dev);
+	gpsPVRLDMDev = dev->platformdev;
 #else
 	gpsPVRLDMDev = dev->pdev;
 #endif
@@ -411,7 +402,6 @@ static int PVRDRM_Display_ioctl(struct drm_device *dev, void *arg,
 }
 #endif
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 3, 0))
 #if defined(SUPPORT_DRM_MODESET)
 static int PVRSRVPciProbe(struct pci_dev *dev, const struct pci_device_id *id)
 {
@@ -433,7 +423,6 @@ static void PVRSRVPciRemove(struct pci_dev *dev)
 	psDrmDev = pci_get_drvdata(dev);
 	drm_put_dev(psDrmDev);
 }
-#endif
 #endif
 
 /*
@@ -527,19 +516,15 @@ static struct drm_driver sPVRDrmDriver =
 #endif
 	,
 	.dev_priv_size = 0,
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 12, 0))
 	.load = PVRSRVDrmLoad,
 	.unload = PVRSRVDrmUnload,
-#endif
 	.open = PVRSRVDrmOpen,
 #if defined(PVR_DRI_DRM_USE_POST_CLOSE)
 	.postclose = PVRSRVDrmPostClose,
 #endif
 #if !defined(PVR_DRI_DRM_PLATFORM_DEV) && !defined(SUPPORT_DRM_MODESET)
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 8, 0))
 	.suspend = PVRSRVDriverSuspend,
 	.resume = PVRSRVDriverResume,
-#endif
 #endif
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 37))
 	.get_map_ofs = drm_core_get_map_ofs,
@@ -591,6 +576,18 @@ static struct drm_driver sPVRDrmDriver =
 	.resume = PVRSRVDriverResume,
 #endif
 	},
+#endif
+#endif
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 18, 0))
+#if defined(LDM_PLATFORM)
+	.set_busid = drm_platform_set_busid,
+#else
+#if defined(LDM_PCI)
+	.set_busid = drm_pci_set_busid,
+#else
+#error "LDM_PLATFORM or LDM_PCI must be set"
+#endif
 #endif
 #endif
 	.name = "pvr",
@@ -653,49 +650,12 @@ static struct platform_driver sPVRPlatDriver =
 	!defined(SUPPORT_DRI_DRM_PLUGIN)
 static int PVRSRVDrmProbe(struct platform_device *pDevice)
 {
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0))
-	struct drm_device *ddev;
-#endif
-	int ret = 0;
-#if (AM_VERSION != 5)
-	struct device *dev = &pDevice->dev;
-	struct gfx_sgx_platform_data *pdata = dev->platform_data;
-#endif
-
 	PVR_TRACE(("PVRSRVDrmProbe"));
 
-#if (AM_VERSION != 5)
-	if (pdata && pdata->deassert_reset) {
-	ret = pdata->deassert_reset(pDevice, pdata->reset_name);
-	if (ret) {
-	dev_err(dev, "Unable to reset SGX!\n");
-	}
-	}
-#endif
-
 #if defined(PVR_NEW_STYLE_DRM_PLATFORM_DEV)
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0))
-	ddev = drm_dev_alloc(&sPVRDrmDriver, &pDevice->dev);
-	if (IS_ERR(ddev))
-	return PTR_ERR(ddev);
-
-	ret = PVRSRVDrmLoad(ddev, 0);
-	if (!ret)
-	ret = drm_dev_register(ddev, 0);
-
-	if (ret)
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0))
-	drm_dev_put(ddev);
-#else
-	drm_dev_unref(ddev);
-#endif
-	else
 	gpsPVRLDMDev = pDevice;
-	return ret;
-#else
-	gpsPVRLDMDev = pDevice;
+
 	return drm_platform_init(&sPVRDrmDriver, gpsPVRLDMDev);
-#endif
 #else
 	return drm_get_platform_dev(pDevice, &sPVRDrmDriver);
 #endif
@@ -703,36 +663,14 @@ static int PVRSRVDrmProbe(struct platform_device *pDevice)
 
 static int PVRSRVDrmRemove(struct platform_device *pDevice)
 {
-#if (AM_VERSION != 5)
-	int ret;
-	struct device *dev = &pDevice->dev;
-	struct gfx_sgx_platform_data *pdata = dev->platform_data;
-#endif
-
 	PVR_TRACE(("PVRSRVDrmRemove"));
 
 #if defined(PVR_NEW_STYLE_DRM_PLATFORM_DEV) && \
 	(LINUX_VERSION_CODE < KERNEL_VERSION(3, 14, 0))
 	drm_platform_exit(&sPVRDrmDriver, gpsPVRLDMDev);
 #else
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0))
-	PVRSRVDrmUnload(gpsPVRDRMDev);
-#endif
 	drm_put_dev(gpsPVRDRMDev);
 #endif
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0))
-	gpsPVRDRMDev = NULL;
-#endif
-
-#if (AM_VERSION != 5)
-	if (pdata && pdata->assert_reset) {
-	ret = pdata->assert_reset(pDevice, pdata->reset_name);
-	if (ret) {
-	dev_err(dev, "Unable to reset SGX!\n");
-	}
-	}
-#endif
-
 	return 0;
 }
 #endif

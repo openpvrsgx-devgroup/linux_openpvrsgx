@@ -48,9 +48,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 
 #include <linux/mm.h>
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 17, 0))
-#include <linux/pfn_t.h>
-#endif
 #include <linux/module.h>
 #include <linux/vmalloc.h>
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 0))
@@ -75,9 +72,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <linux/platform_device.h>
 #endif
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 18, 0))
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 8, 0))
 #include <drm/drm_legacy.h>
-#endif
 #endif
 #endif
 
@@ -110,13 +105,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if defined(SUPPORT_DRI_DRM) && (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 18, 0))
 static inline int drm_mmap(struct file *filp, struct vm_area_struct *vma)
 {
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 8, 0))
 	return drm_legacy_mmap(filp, vma);
-#else
-	/* FIXME if necessary and/or possible */
-	pr_err("call to drm_legacy_mmap has been removed in v6.8-rc1\n");
-	return -EINVAL;
-#endif
 }
 #endif
 
@@ -778,7 +767,7 @@ static IMG_BOOL DoMapToUser(LinuxMemArea *psLinuxMemArea,
 
 #if defined(PVR_MAKE_ALL_PFNS_SPECIAL)
 	if (bMixedMap) {
-	vm_flags_set(ps_vma, VM_MIXEDMAP);
+	ps_vma->vm_flags |= VM_MIXEDMAP;
 	}
 #endif
 	/* Second pass, get the page structures and insert the pages */
@@ -805,19 +794,22 @@ static IMG_BOOL DoMapToUser(LinuxMemArea *psLinuxMemArea,
 	if (bMixedMap) {
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 20, 0))
 	pfn_t pfns = { pfn };
-	result = vmf_insert_mixed(
-	ps_vma, ulVMAPos, pfns);
-	if (result & VM_FAULT_ERROR) {
-	PVR_DPF((
-	PVR_DBG_ERROR,
-	"%s: Error - vmf_insert_mixed failed (%x)",
-	__FUNCTION__, result));
-	return IMG_FALSE;
-	}
-#else
+	vm_fault_t vmf;
+
+	vmf = vmf_insert_mixed(ps_vma, ulVMAPos,
+	       pfns);
+	if (vmf & VM_FAULT_ERROR)
+	result = vm_fault_to_errno(vmf,
+	   0);
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 5, 0))
 	pfn_t pfns = { pfn };
+
 	result = vm_insert_mixed(
 	ps_vma, ulVMAPos, pfns);
+#else
+	result = vm_insert_mixed(ps_vma,
+	 ulVMAPos, pfn);
+#endif
 	if (result != 0) {
 	PVR_DPF((
 	PVR_DBG_ERROR,
@@ -825,7 +817,6 @@ static IMG_BOOL DoMapToUser(LinuxMemArea *psLinuxMemArea,
 	__FUNCTION__, result));
 	return IMG_FALSE;
 	}
-#endif
 	} else
 #endif
 	{
@@ -1096,20 +1087,18 @@ int PVRMMap(struct file *pFile, struct vm_area_struct *ps_vma)
 	/* This is probably superfluous and implied by VM_IO */
 	ps_vma->vm_flags |= VM_RESERVED;
 #else
-	vm_flags_set(ps_vma, VM_DONTDUMP);
+	ps_vma->vm_flags |= VM_DONTDUMP;
 #endif
-	vm_flags_set(ps_vma, VM_IO);
+	ps_vma->vm_flags |= VM_IO;
 
 	/*
      * Disable mremap because our nopage handler assumes all
      * page requests have already been validated.
      */
-	/* NOTE: probably deprecated - nowhere used in the kernel any more! */
-	vm_flags_set(ps_vma, VM_DONTEXPAND);
+	ps_vma->vm_flags |= VM_DONTEXPAND;
 
 	/* Don't allow mapping to be inherited across a process fork */
-	/* NOTE: probably deprecated - nowhere used in the kernel any more! */
-	vm_flags_set(ps_vma, VM_DONTCOPY);
+	ps_vma->vm_flags |= VM_DONTCOPY;
 
 	ps_vma->vm_private_data = (void *)psOffsetStruct;
 

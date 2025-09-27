@@ -1495,9 +1495,10 @@ static IMG_INT PVRSRVMapDmaBufBW(IMG_UINT32 ui32BridgeID,
 
 	psMapDmaBufOUT->eError = PVRSRVMapDmaBufKM(
 	psPerProc, psMapDmaBufIN->hDevCookie,
-	psMapDmaBufIN->hDevMemHeap, psMapDmaBufIN->i32DmaBufFD,
-	psMapDmaBufIN->ui32Attribs, &psMapDmaBufOUT->uiDmaBufSize,
-	&psKernelMemInfo, &ui64Stamp);
+	psMapDmaBufIN->hDevMemHeap, psMapDmaBufIN->ui32Attribs,
+	psMapDmaBufIN->i32FD, psMapDmaBufIN->uiOffset,
+	psMapDmaBufIN->uiSize, &psKernelMemInfo,
+	&psMapDmaBufOUT->uiSize, &psMapDmaBufOUT->uiOffset, &ui64Stamp);
 	if (psMapDmaBufOUT->eError != PVRSRV_OK) {
 	PVR_DPF((PVR_DBG_ERROR, "%s: Failed to map dma-buf handle",
 	 __FUNCTION__));
@@ -2919,7 +2920,8 @@ static IMG_INT PVRSRVSwapToDCBuffer2BW(
 	}
 
 	if (psSwapDispClassBufferIN->ui32PrivDataLength > 0) {
-	if (OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
+	if (OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP |
+	       PVRSRV_SWAP_BUFFER_ALLOCATION,
 	       psSwapDispClassBufferIN->ui32PrivDataLength,
 	       (IMG_VOID **)&pvPrivData, IMG_NULL,
 	       "Swap Command Private Data") != PVRSRV_OK) {
@@ -2937,7 +2939,8 @@ static IMG_INT PVRSRVSwapToDCBuffer2BW(
 	PVR_DPF((
 	PVR_DBG_ERROR,
 	"PVRSRVSwapToDCBuffer2BW: Failed to copy private data"));
-	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP,
+	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP |
+	  PVRSRV_SWAP_BUFFER_ALLOCATION,
 	  psSwapDispClassBufferIN->ui32PrivDataLength,
 	  pvPrivData, IMG_NULL);
 	return -EFAULT;

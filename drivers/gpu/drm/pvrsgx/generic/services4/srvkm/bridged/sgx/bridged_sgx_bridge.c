@@ -243,59 +243,6 @@ static IMG_INT SGXDoKickBW(IMG_UINT32 ui32BridgeID,
 	}
 	}
 
-#if defined(SUPPORT_SGX_GENERALISED_SYNCOBJECTS)
-	/* SRC and DST sync details */
-	if (psDoKickIN->sCCBKick.ui32NumTASrcSyncs > SGX_MAX_TA_SRC_SYNCS) {
-	psRetOUT->eError = PVRSRV_ERROR_INVALID_PARAMS;
-	return 0;
-	}
-
-	for (i = 0; i < psDoKickIN->sCCBKick.ui32NumTASrcSyncs; i++) {
-	psRetOUT->eError = PVRSRVLookupHandle(
-	psPerProc->psHandleBase,
-	&psDoKickIN->sCCBKick.ahTASrcKernelSyncInfo[i],
-	psDoKickIN->sCCBKick.ahTASrcKernelSyncInfo[i],
-	PVRSRV_HANDLE_TYPE_SYNC_INFO);
-
-	if (psRetOUT->eError != PVRSRV_OK) {
-	return 0;
-	}
-	}
-
-	if (psDoKickIN->sCCBKick.ui32NumTADstSyncs > SGX_MAX_TA_DST_SYNCS) {
-	psRetOUT->eError = PVRSRV_ERROR_INVALID_PARAMS;
-	return 0;
-	}
-
-	for (i = 0; i < psDoKickIN->sCCBKick.ui32NumTADstSyncs; i++) {
-	psRetOUT->eError = PVRSRVLookupHandle(
-	psPerProc->psHandleBase,
-	&psDoKickIN->sCCBKick.ahTADstKernelSyncInfo[i],
-	psDoKickIN->sCCBKick.ahTADstKernelSyncInfo[i],
-	PVRSRV_HANDLE_TYPE_SYNC_INFO);
-
-	if (psRetOUT->eError != PVRSRV_OK) {
-	return 0;
-	}
-	}
-
-	if (psDoKickIN->sCCBKick.ui32Num3DSrcSyncs > SGX_MAX_3D_SRC_SYNCS) {
-	psRetOUT->eError = PVRSRV_ERROR_INVALID_PARAMS;
-	return 0;
-	}
-
-	for (i = 0; i < psDoKickIN->sCCBKick.ui32Num3DSrcSyncs; i++) {
-	psRetOUT->eError = PVRSRVLookupHandle(
-	psPerProc->psHandleBase,
-	&psDoKickIN->sCCBKick.ah3DSrcKernelSyncInfo[i],
-	psDoKickIN->sCCBKick.ah3DSrcKernelSyncInfo[i],
-	PVRSRV_HANDLE_TYPE_SYNC_INFO);
-
-	if (psRetOUT->eError != PVRSRV_OK) {
-	return 0;
-	}
-	}
-#else /* #if defined(SUPPORT_SGX_GENERALISED_SYNCOBJECTS) */
 	/* texture dependency details */
 	if (psDoKickIN->sCCBKick.ui32NumSrcSyncs > SGX_MAX_SRC_SYNCS_TA) {
 	psRetOUT->eError = PVRSRV_ERROR_INVALID_PARAMS;
@@ -315,7 +262,6 @@ static IMG_INT SGXDoKickBW(IMG_UINT32 ui32BridgeID,
 	}
 	}
 #endif /* !defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC) */
-#endif /* defined(SUPPORT_SGX_GENERALISED_SYNCOBJECTS) */
 
 	if (psDoKickIN->sCCBKick.ui32NumTAStatusVals > SGX_MAX_TA_STATUS_VALS) {
 	psRetOUT->eError = PVRSRV_ERROR_INVALID_PARAMS;

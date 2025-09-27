@@ -606,15 +606,15 @@ skip:
 #if defined(SUPPORT_DMABUF)
 PVRSRV_ERROR
 PVRSRVDmaBufSyncInfoIncRef2(const IMG_CHAR *pszFile, IMG_INT iLine,
-	    IMG_HANDLE hUnique, IMG_HANDLE hDevCookie,
-	    IMG_HANDLE hDevMemContext,
+	    IMG_HANDLE hUnique, IMG_HANDLE hPriv,
+	    IMG_HANDLE hDevCookie, IMG_HANDLE hDevMemContext,
 	    PVRSRV_DMABUF_SYNC_INFO **ppsDmaBufSyncInfo,
 	    PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo)
 {
 	PVRSRV_ERROR eError;
 
-	eError = PVRSRVDmaBufSyncAcquire(hUnique, hDevCookie, hDevMemContext,
-	 ppsDmaBufSyncInfo);
+	eError = PVRSRVDmaBufSyncAcquire(hUnique, hPriv, hDevCookie,
+	 hDevMemContext, ppsDmaBufSyncInfo);
 
 	if (eError == PVRSRV_OK) {
 	if (!(guiDebugMask & PVRSRV_REFCOUNT_CCB_DEBUG_DMABUF_SYNC))

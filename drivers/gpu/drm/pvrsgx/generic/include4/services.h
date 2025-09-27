@@ -668,7 +668,7 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVGetDeviceMemHeapInfo(
 	    "," #ui32Attribs "," #ui32Size "," #ui32Alignment         \
 	    "," #ppsMemInfo ")"                                       \
 	    ": " logStr " (size = 0x%lx)",                            \
-	    ui32Size)),                                               \
+	    (unsigned long)ui32Size)),                                \
 	 PVRSRVAllocDeviceMem(psDevData, hDevMemHeap, ui32Attribs, ui32Size,  \
 	      ui32Alignment, ppsMemInfo))
 #else
@@ -769,6 +769,18 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVMapDeviceMemory2(
 	IMG_HANDLE hDstDevMemHeap, PVRSRV_CLIENT_MEM_INFO **ppsDstMemInfo);
 #endif /* defined(LINUX) */
 
+#if defined(SUPPORT_TEXTURE_ALLOC_NOMAP)
+IMG_IMPORT
+PVRSRV_ERROR IMG_CALLCONV
+PVRSRVMapDeviceMem(IMG_CONST PVRSRV_DEV_DATA *psDevData,
+	   PVRSRV_CLIENT_MEM_INFO *psMemInfo, void **ppvLinAddr);
+
+IMG_IMPORT
+void IMG_CALLCONV PVRSRVUnmapDeviceMem(IMG_CONST PVRSRV_DEV_DATA *psDevData,
+	       PVRSRV_CLIENT_MEM_INFO *psMemInfo,
+	       void **ppvLinAddr);
+#endif /* defined(SUPPORT_TEXTURE_ALLOC_NOMAP) */
+
 #if defined(SUPPORT_ION)
 PVRSRV_ERROR PVRSRVMapIonHandle(const PVRSRV_DEV_DATA *psDevData,
 	IMG_HANDLE hDevMemHeap, IMG_UINT32 ui32NumFDs,
@@ -784,10 +796,19 @@ PVRSRV_ERROR PVRSRVUnmapIonHandle(const PVRSRV_DEV_DATA *psDevData,
 
 #if defined(SUPPORT_DMABUF)
 IMG_IMPORT
-PVRSRV_ERROR PVRSRVMapDmaBuf(const PVRSRV_DEV_DATA *psDevData,
-	     IMG_HANDLE hDevMemHeap, IMG_INT iDmaBufFD,
-	     IMG_UINT32 ui32Attribs,
-	     PVRSRV_CLIENT_MEM_INFO **ppsMemInfo);
+PVRSRV_ERROR
+PVRSRVMapDmaBuf(const PVRSRV_DEV_DATA *psDevData, const IMG_HANDLE hDevMemHeap,
+	const IMG_UINT32 ui32Attribs, const IMG_INT iDmaBufFD,
+	const IMG_SIZE_T uiDmaBufOffset, const IMG_SIZE_T uiDmaBufSize,
+	PVRSRV_CLIENT_MEM_INFO **ppsMemInfo,
+	IMG_SIZE_T *puiMemInfoOffset);
+
+IMG_IMPORT
+PVRSRV_ERROR PVRSRVMapFullDmaBuf(const PVRSRV_DEV_DATA *psDevData,
+	 const IMG_HANDLE hDevMemHeap,
+	 const IMG_UINT32 ui32Attribs,
+	 const IMG_INT iDmaBufFD,
+	 PVRSRV_CLIENT_MEM_INFO **ppsMemInfo);
 
 IMG_IMPORT
 PVRSRV_ERROR PVRSRVUnmapDmaBuf(const PVRSRV_DEV_DATA *psDevData,

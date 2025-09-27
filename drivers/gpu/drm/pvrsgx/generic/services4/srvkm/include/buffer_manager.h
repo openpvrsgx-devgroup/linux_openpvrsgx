@@ -69,7 +69,7 @@ struct _BM_MAPPING_ {
 	hm_wrapped_virtaddr, /*!< wrapped user supplied contiguous with virtual address*/
 	hm_wrapped_scatter_virtaddr, /*!< wrapped user supplied scattered with virtual address*/
 	hm_env, /*!< obtained from environment */
-	hm_contiguous /*!< contigous arena */
+	hm_contiguous /*!< contiguous arena */
 	} eCpuMemoryOrigin;
 
 	BM_HEAP *pBMHeap; /* which BM heap */
@@ -268,7 +268,7 @@ BM_DestroyHeap(IMG_HANDLE hDevMemHeap);
  *  @Description
  *
  *  Reinitialises the buffer manager after a power event. Calling this
- *  function will reprogram MMU registers and renable the MMU.
+ *  function will reprogram MMU registers and re-enable the MMU.
  *
  *  @Input None
  *  @Return None
@@ -286,7 +286,7 @@ BM_Reinitialise(PVRSRV_DEVICE_NODE *psDeviceNode);
  *  maps.
  *
  *  @Input uSize - require size in bytes of the buffer.
- *  @Input/Output pui32Flags - bit mask of buffer property flags + recieves heap flags.
+ *  @Input/Output pui32Flags - bit mask of buffer property flags + receives heap flags.
  *  @Input uDevVAddrAlignment - required alignment in bytes, or 0.
  *  @Input pvPrivData - private data passed to OS allocator
  *  @Input ui32PrivDataLength - length of private data
@@ -412,7 +412,7 @@ BM_HandleToOSMemHandle(BM_HANDLE hBuf);
  *
  *  @Description
  *
- *  Retreive physical address backing dev V address
+ *  Retrieve physical address backing dev V address
  *
  *  @Input psMemInfo
  *  @Input sDevVPageAddr
@@ -539,8 +539,8 @@ IMG_UINT32 BM_GetVirtualSize(IMG_HANDLE hBMHandle);
 ******************************************************************************
  @Function	BM_MapPageAtOffset
 
- @Description	utility function check if the specificed offset in a BM mapping
-                is a page that needs tp be mapped
+ @Description	utility function check if the specified offset in a BM mapping
+                is a page that needs to be mapped
 
  @Input     hBMHandle - Handle to BM mapping
 
@@ -552,10 +552,10 @@ IMG_BOOL BM_MapPageAtOffset(IMG_HANDLE hBMHandle, IMG_UINT32 ui32Offset);
 
 /*!
 ******************************************************************************
- @Function	BM_VirtOffsetToPhyscial
+ @Function	BM_VirtOffsetToPhysical
 
  @Description	utility function find of physical offset of a sparse allocation
-                from it's virtual offset.
+                from its virtual offset.
 
  @Input     hBMHandle - Handle to BM mapping
 

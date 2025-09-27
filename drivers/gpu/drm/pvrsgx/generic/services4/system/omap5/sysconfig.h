@@ -1,8 +1,7 @@
 /*************************************************************************/ /*!
-@Title          OMAP Linux display driver shared DRM structures
+@Title          System Description Header
 @Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
-@Description    OMAP Linux display driver DRM structures shared between
-                kernel and user space.
+@Description    This header provides system-specific declarations and macros
 @License        Dual MIT/GPLv2
 
 The contents of this file are subject to the MIT license as set out below.
@@ -39,26 +38,63 @@ PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
 COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 */ /**************************************************************************/
-#ifndef __3RDPARTY_DC_DRM_SHARED_H__
-#define __3RDPARTY_DC_DRM_SHARED_H__
-#if defined(SUPPORT_DRI_DRM)
 
-#define PVR_DRM_DISP_CMD_ENTER_VT 1
-#define PVR_DRM_DISP_CMD_LEAVE_VT 2
+#if !defined(__SOCCONFIG_H__)
+#define __SOCCONFIG_H__
 
-#define PVR_DRM_DISP_CMD_ON 3
-#define PVR_DRM_DISP_CMD_STANDBY 4
-#define PVR_DRM_DISP_CMD_SUSPEND 5
-#define PVR_DRM_DISP_CMD_OFF 6
+#define VS_PRODUCT_NAME "OMAP5"
 
-#define PVR_DRM_DISP_ARG_CMD 0
-#define PVR_DRM_DISP_ARG_DEV 1
-#define PVR_DRM_DISP_NUM_ARGS 2
+#if defined(SGX544) && (SGX_CORE_REV == 105)
+#define SYS_SGX_CLOCK_SPEED 426000000
+#else
+#define SYS_SGX_CLOCK_SPEED 532000000
+#endif
 
-#endif /* defined(SUPPORT_DRI_DRM) */
-#endif /* __3RDPARTY_DC_DRM_SHARED_H__ */
+#define SYS_SGX_HWRECOVERY_TIMEOUT_FREQ (100) // 10ms (100hz)
+#define SYS_SGX_PDS_TIMER_FREQ (1000) // 1ms (1000hz)
 
-/******************************************************************************
- End of file (3rdparty_dc_drm_shared.h)
-******************************************************************************/
+/* Allow the AP latency to be overridden in the build config */
+#if !defined(SYS_SGX_ACTIVE_POWER_LATENCY_MS)
+#define SYS_SGX_ACTIVE_POWER_LATENCY_MS (2)
+#endif
+
+#define SYS_OMAP5430_SGX_REGS_SYS_PHYS_BASE 0x56000000
+#define SYS_OMAP5430_SGX_REGS_SIZE 0xFFFF
+
+#define SYS_OMAP5430_SGX_IRQ 53 /* OMAP5 IRQ's are offset by 32 */
+
+#define SYS_OMAP5430_DSS_REGS_SYS_PHYS_BASE 0x58000000
+#define SYS_OMAP5430_DSS_REGS_SIZE 0x7000
+
+#define SYS_OMAP5430_DSS_HDMI_INTERRUPT_STATUS_REG 0x6028
+#define SYS_OMAP5430_DSS_HDMI_INTERRUPT_ENABLE_REG 0x602c
+
+#define SYS_OMAP5430_DSS_HDMI_INTERRUPT_VSYNC_ENABLE_MASK 0x10000
+#define SYS_OMAP5430_DSS_HDMI_INTERRUPT_VSYNC_STATUS_MASK 0x10000
+
+#define SYS_OMAP5430_DSS_LCD_INTERRUPT_STATUS_REG 0x1018
+#define SYS_OMAP5430_DSS_LCD_INTERRUPT_ENABLE_REG 0x101c
+
+#define SYS_OMAP5430_DSS_LCD_INTERRUPT_VSYNC_ENABLE_MASK 0x40002
+#define SYS_OMAP5430_DSS_LCD_INTERRUPT_VSYNC_STATUS_MASK 0x40002
+
+#define SYS_OMAP5430_GP11TIMER_ENABLE_SYS_PHYS_BASE 0x48088038
+#define SYS_OMAP5430_GP11TIMER_REGS_SYS_PHYS_BASE 0x4808803C
+#define SYS_OMAP5430_GP11TIMER_TSICR_SYS_PHYS_BASE 0x48088054
+
+/* Interrupt bits */
+#define DEVICE_SGX_INTERRUPT (1 << 0)
+#define DEVICE_MSVDX_INTERRUPT (1 << 1)
+#define DEVICE_DISP_INTERRUPT (1 << 2)
+
+#if defined(__linux__)
+#define SYS_SGX_DEV_NAME "omapdrm_pvr"
+#endif
+
+/*****************************************************************************
+ * system specific data structures
+ *****************************************************************************/
+
+#endif /* __SYSCONFIG_H__ */

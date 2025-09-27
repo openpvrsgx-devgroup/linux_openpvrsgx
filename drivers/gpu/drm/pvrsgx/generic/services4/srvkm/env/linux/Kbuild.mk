@@ -38,7 +38,7 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ### ###########################################################################
 
-pvrsrvkm-y += \
+$(PVRSRV_MODNAME)-y += \
 	services4/srvkm/env/linux/osfunc.o \
 	services4/srvkm/env/linux/mutils.o \
 	services4/srvkm/env/linux/mmap.o \
@@ -74,16 +74,16 @@ pvrsrvkm-y += \
 	services4/system/$(PVR_SYSTEM)/sysconfig.o \
 	services4/system/$(PVR_SYSTEM)/sysutils.o
 
-pvrsrvkm-$(CONFIG_ION_OMAP) += \
+$(PVRSRV_MODNAME)-$(CONFIG_ION_OMAP) += \
 	services4/srvkm/env/linux/ion.o
 
 ifeq ($(SUPPORT_ION),1)
-pvrsrvkm-y += \
+$(PVRSRV_MODNAME)-y += \
 	services4/srvkm/env/linux/ion.o
 endif
 
 ifeq ($(TTRACE),1)
-pvrsrvkm-y += \
+$(PVRSRV_MODNAME)-y += \
 	services4/srvkm/common/ttrace.o
 endif
 
@@ -124,7 +124,7 @@ endif
 
 # SUPPORT_SGX==1 only
 
-pvrsrvkm-y += \
+$(PVRSRV_MODNAME)-y += \
 	services4/srvkm/bridged/sgx/bridged_sgx_bridge.o \
 	services4/srvkm/devices/sgx/sgxinit.o \
 	services4/srvkm/devices/sgx/sgxpower.o \
@@ -149,11 +149,14 @@ endif
 
 ifeq ($(SUPPORT_DRI_DRM),1)
 
-pvrsrvkm-y += \
+$(PVRSRV_MODNAME)-y += \
  services4/srvkm/env/linux/pvr_drm.o
 
 ccflags-y += \
  -I$(KERNELDIR)/include/drm \
+ -I$(KERNELDIR)/include/linux/platform_data \
+ -I$(KERNELDIR)/drivers/gpu/drm/omapdrm \
+ -I$(KERNELDIR)/include/linux \
  -I$(TOP)/services4/include/env/linux \
 
 ifeq ($(PVR_DRI_DRM_NOT_PCI),1)

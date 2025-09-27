@@ -295,7 +295,8 @@ typedef struct _PVRSRV_COMMAND {
 	pfnCommandComplete; /*!< Command complete callback */
 	IMG_HANDLE hCallbackData; /*!< Command complete callback data */
 
-#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
+#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC) || \
+	defined(PVR_ANDROID_NATIVE_WINDOW_HAS_FENCE)
 	IMG_VOID *pvCleanupFence; /*!< Sync fence to 'put' after timeline inc() */
 	IMG_VOID *pvTimeline; /*!< Android sync timeline to inc() */
 #endif
@@ -357,6 +358,10 @@ typedef struct _PVRSRV_QUEUE_INFO_ {
 	IMG_UINT32
 	ui32FenceValue; /*!< 'Target' timeline value when fence signals */
 	IMG_VOID *pvTimeline; /*!< Android struct sync_timeline object */
+#elif defined(PVR_ANDROID_NATIVE_WINDOW_HAS_FENCE)
+	IMG_UINT32
+	ui32FenceValue; /*!< 'Target' timeline value when fence signals */
+	IMG_INT32 i32TimelineFd; /*!< Fd for time line */
 #endif
 
 	struct _PVRSRV_QUEUE_INFO_ *psNextKM; /*!< The next queue in the system */
@@ -473,6 +478,10 @@ typedef struct PVRSRV_DEVICECLASS_BUFFER_TAG {
 typedef struct PVRSRV_CLIENT_DEVICECLASS_INFO_TAG {
 	IMG_HANDLE hDeviceKM;
 	IMG_HANDLE hServices;
+#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_FENCE)
+	IMG_INT32 i32TimelineFd;
+	IMG_INT32 i32Unused;
+#endif
 } PVRSRV_CLIENT_DEVICECLASS_INFO;
 
 typedef enum {

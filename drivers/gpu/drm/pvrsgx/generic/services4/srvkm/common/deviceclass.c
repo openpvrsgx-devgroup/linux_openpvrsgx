@@ -51,8 +51,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "lists.h"
 
-#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
-#include "pvr_sync.h"
+#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC) || \
+	defined(PVR_ANDROID_NATIVE_WINDOW_HAS_FENCE)
+#include "pvr_sync_common.h"
 #endif
 
 PVRSRV_ERROR AllocateDeviceID(SYS_DATA *psSysData, IMG_UINT32 *pui32DevID);
@@ -1296,7 +1297,12 @@ PVRSRV_ERROR PVRSRVCreateDCSwapChainKM(
 	IMG_UINT32 ui32Flags, DISPLAY_SURF_ATTRIBUTES *psDstSurfAttrib,
 	DISPLAY_SURF_ATTRIBUTES *psSrcSurfAttrib, IMG_UINT32 ui32BufferCount,
 	IMG_UINT32 ui32OEMFlags, IMG_HANDLE *phSwapChainRef,
-	IMG_UINT32 *pui32SwapChainID)
+	IMG_UINT32 *pui32SwapChainID
+#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_FENCE)
+	,
+	IMG_INT32 i32TimelineFd
+#endif
+)
 {
 	PVRSRV_DISPLAYCLASS_INFO *psDCInfo;
 	PVRSRV_DC_SWAPCHAIN *psSwapChain = IMG_NULL;
@@ -1368,6 +1374,10 @@ PVRSRV_ERROR PVRSRVCreateDCSwapChainKM(
 	"PVRSRVCreateDCSwapChainKM: Failed to create CmdQueue"));
 	goto ErrorExit;
 	}
+
+#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_FENCE)
+	psQueue->i32TimelineFd = i32TimelineFd;
+#endif
 
 	/* store the Queue */
 	psSwapChain->psQueue = psQueue;
@@ -1826,6 +1836,8 @@ PVRSRVSwapToDCBuffer2KM(IMG_HANDLE hDeviceKM, IMG_HANDLE hSwapChain,
 	SYS_DATA *psSysData;
 #if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
 	struct sync_fence *apsFence[SGX_MAX_SRC_SYNCS_TA] = {};
+#elif defined(PVR_ANDROID_NATIVE_WINDOW_HAS_FENCE)
+	struct fence *apsFence[SGX_MAX_SRC_SYNCS_TA] = {};
 #endif /* defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC) */
 
 	if (!hDeviceKM || !hSwapChain || !ppsMemInfos || !ppsSyncInfos ||
@@ -1877,7 +1889,8 @@ PVRSRVSwapToDCBuffer2KM(IMG_HANDLE hDeviceKM, IMG_HANDLE hSwapChain,
 	psCallbackData->ppvMemInfos = ppvMemInfos;
 	psCallbackData->ui32NumMemInfos = ui32NumMemInfos;
 
-#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
+#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC) || \
+	defined(PVR_ANDROID_NATIVE_WINDOW_HAS_FENCE)
 	eError = PVRSyncFencesToSyncInfos(ppsSyncInfos, &ui32NumSyncInfos,
 	  apsFence);
 	if (eError != PVRSRV_OK) {
@@ -1942,6 +1955,10 @@ PVRSRVSwapToDCBuffer2KM(IMG_HANDLE hDeviceKM, IMG_HANDLE hSwapChain,
 	for (i = 0; i < SGX_MAX_SRC_SYNCS_TA && apsFence[i];
 	     i++)
 	sync_fence_put(apsFence[i]);
+#elif defined(PVR_ANDROID_NATIVE_WINDOW_HAS_FENCE)
+	for (i = 0; i < SGX_MAX_SRC_SYNCS_TA && apsFence[i];
+	     i++)
+	fence_put(apsFence[i]);
 #endif
 	goto Exit;
 	}
@@ -2003,6 +2020,11 @@ PVRSRVSwapToDCBuffer2KM(IMG_HANDLE hDeviceKM, IMG_HANDLE hSwapChain,
 	     i < SGX_MAX_SRC_SYNCS_TA && apsFence[i];
 	     i++)
 	sync_fence_put(apsFence[i]);
+#elif defined(PVR_ANDROID_NATIVE_WINDOW_HAS_FENCE)
+	for (i = 0;
+	     i < SGX_MAX_SRC_SYNCS_TA && apsFence[i];
+	     i++)
+	fence_put(apsFence[i]);
 #endif
 	goto Exit;
 	}
@@ -2080,6 +2102,9 @@ PVRSRVSwapToDCBuffer2KM(IMG_HANDLE hDeviceKM, IMG_HANDLE hSwapChain,
 	 */
 	for (i = 0; i < SGX_MAX_SRC_SYNCS_TA && apsFence[i]; i++)
 	sync_fence_put(apsFence[i]);
+#elif defined(PVR_ANDROID_NATIVE_WINDOW_HAS_FENCE)
+	for (i = 0; i < SGX_MAX_SRC_SYNCS_TA && apsFence[i]; i++)
+	fence_put(apsFence[i]);
 #endif
 
 	if (ppsCompiledSyncInfos != ppsSyncInfos) {
@@ -2144,17 +2169,7 @@ PVRSRVSwapToDCBuffer2KM(IMG_HANDLE hDeviceKM, IMG_HANDLE hSwapChain,
 	}
 
 	/* submit the command */
-	eError = PVRSRVSubmitCommandKM(psQueue, psCommand);
-	if (eError != PVRSRV_OK) {
-	PVR_DPF((PVR_DBG_ERROR,
-	 "PVRSRVSwapToDCBuffer2KM: Failed to submit command"));
-#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
-	sync_fence_put(psCommand->pvCleanupFence);
-	sync_fence_put(*phFence);
-	*phFence = IMG_NULL;
-#endif
-	goto Exit;
-	}
+	PVRSRVSubmitCommandKM(psQueue, psCommand);
 
 	/* The command has been submitted and so psCallbackData will be freed by the callback */
 	psCallbackData = IMG_NULL;
@@ -2162,17 +2177,7 @@ PVRSRVSwapToDCBuffer2KM(IMG_HANDLE hDeviceKM, IMG_HANDLE hSwapChain,
 	/*
 	Schedule an MISR to process it
 	*/
-	eError = OSScheduleMISR(psSysData);
-
-	if (eError != PVRSRV_OK) {
-	PVR_DPF((PVR_DBG_ERROR,
-	 "PVRSRVSwapToDCBuffer2KM: Failed to schedule MISR"));
-#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
-	sync_fence_put(*phFence);
-	*phFence = IMG_NULL;
-#endif
-	goto Exit;
-	}
+	OSScheduleMISR(psSysData);
 
 #if !defined(SUPPORT_DC_CMDCOMPLETE_WHEN_NO_LONGER_DISPLAYED)
 	/* Reallocate the syncinfo list if it was too small */
@@ -2204,6 +2209,9 @@ PVRSRVSwapToDCBuffer2KM(IMG_HANDLE hDeviceKM, IMG_HANDLE hSwapChain,
 	"PVRSRVSwapToDCBuffer2KM: Failed to allocate space for meminfo list"));
 #if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
 	sync_fence_put(*phFence);
+	*phFence = IMG_NULL;
+#elif defined(PVR_ANDROID_NATIVE_WINDOW_HAS_FENCE)
+	fence_put(*phFence);
 	*phFence = IMG_NULL;
 #endif
 	goto Exit;

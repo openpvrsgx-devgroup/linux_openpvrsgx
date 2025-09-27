@@ -266,19 +266,12 @@ PVRSRVDevicePostPowerStateKM(IMG_BOOL bAllDevices, IMG_UINT32 ui32DeviceIndex,
 
 IMG_EXPORT
 PVRSRV_ERROR PVRSRVSetDevicePowerStateKM(IMG_UINT32 ui32DeviceIndex,
-	 PVRSRV_DEV_POWER_STATE eNewPowerState,
-	 IMG_UINT32 ui32CallerID,
-	 IMG_BOOL bRetainMutex)
+	 PVRSRV_DEV_POWER_STATE eNewPowerState)
 {
 	PVRSRV_ERROR eError;
 	SYS_DATA *psSysData;
 
 	SysAcquireData(&psSysData);
-
-	eError = PVRSRVPowerLock(ui32CallerID, IMG_FALSE);
-	if (eError != PVRSRV_OK) {
-	return eError;
-	}
 
 #if defined(PDUMP)
 	if (eNewPowerState == PVRSRV_DEV_POWER_STATE_DEFAULT) {
@@ -322,10 +315,6 @@ Exit:
 	PVR_DBG_ERROR,
 	"PVRSRVSetDevicePowerStateKM : Transition to %d FAILED 0x%x",
 	eNewPowerState, eError));
-	}
-
-	if (!bRetainMutex || (eError != PVRSRV_OK)) {
-	PVRSRVPowerUnlock(ui32CallerID);
 	}
 
 	return eError;

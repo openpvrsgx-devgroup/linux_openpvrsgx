@@ -54,6 +54,8 @@ struct _RA_STATISTICS_ {
 	IMG_SIZE_T uImportCount;
 
 	IMG_SIZE_T uExportCount;
+
+	IMG_SIZE_T uFailedAllocCount;
 };
 typedef struct _RA_STATISTICS_ RA_STATISTICS;
 
@@ -69,7 +71,9 @@ RA_ARENA *RA_Create(
 	BM_MAPPING *psMapping, IMG_SIZE_T uQuantum,
 	IMG_BOOL (*imp_alloc)(IMG_VOID *_h, IMG_SIZE_T uSize,
 	      IMG_SIZE_T *pActualSize, BM_MAPPING **ppsMapping,
-	      IMG_UINT32 uFlags, IMG_UINTPTR_T *pBase),
+	      IMG_UINT32 uFlags, IMG_PVOID pvPrivData,
+	      IMG_UINT32 ui32PrivDataLength,
+	      IMG_UINTPTR_T *pBase),
 	IMG_VOID (*imp_free)(IMG_VOID *, IMG_UINTPTR_T, BM_MAPPING *),
 	IMG_VOID (*backingstore_free)(IMG_VOID *, IMG_SIZE_T, IMG_SIZE_T,
 	      IMG_HANDLE),
@@ -87,7 +91,8 @@ RA_Add(RA_ARENA *pArena, IMG_UINTPTR_T base, IMG_SIZE_T uSize);
 IMG_BOOL
 RA_Alloc(RA_ARENA *pArena, IMG_SIZE_T uSize, IMG_SIZE_T *pActualSize,
 	 BM_MAPPING **ppsMapping, IMG_UINT32 uFlags, IMG_UINT32 uAlignment,
-	 IMG_UINT32 uAlignmentOffset, IMG_UINTPTR_T *pBase);
+	 IMG_UINT32 uAlignmentOffset, IMG_PVOID pvPrivData,
+	 IMG_UINT32 ui32PrivDataLength, IMG_UINTPTR_T *pBase);
 
 IMG_VOID
 RA_Free(RA_ARENA *pArena, IMG_UINTPTR_T base, IMG_BOOL bFreeBackingStore);

@@ -281,6 +281,9 @@ PVRSRV_ERROR SGXDoKickKM(IMG_HANDLE hDevHandle, SGX_CCB_KICK *psCCBKick)
 	psHWDeviceSyncList->asSyncData[i]
 	.sReadOpsCompleteDevVAddr =
 	psSyncInfo->sReadOpsCompleteDevVAddr;
+	psHWDeviceSyncList->asSyncData[i]
+	.sReadOps2CompleteDevVAddr =
+	psSyncInfo->sReadOps2CompleteDevVAddr;
 
 	psHWDeviceSyncList->asSyncData[i]
 	.ui32ReadOpsPendingVal =
@@ -290,6 +293,10 @@ PVRSRV_ERROR SGXDoKickKM(IMG_HANDLE hDevHandle, SGX_CCB_KICK *psCCBKick)
 	.ui32WriteOpsPendingVal =
 	psSyncInfo->psSyncData
 	->ui32WriteOpsPending++;
+	psHWDeviceSyncList->asSyncData[i]
+	.ui32ReadOps2PendingVal =
+	psSyncInfo->psSyncData
+	->ui32ReadOps2Pending;
 
 #if defined(PDUMP)
 	if (PDumpIsCaptureFrameKM()) {
@@ -310,6 +317,11 @@ PVRSRV_ERROR SGXDoKickKM(IMG_HANDLE hDevHandle, SGX_CCB_KICK *psCCBKick)
 	offsetof(
 	PVRSRV_DEVICE_SYNC_OBJECT,
 	ui32ReadOpsPendingVal);
+	IMG_UINT32 ui32ROps2Offset =
+	ui32SyncOffset +
+	offsetof(
+	PVRSRV_DEVICE_SYNC_OBJECT,
+	ui32ReadOps2PendingVal);
 
 	PDUMPCOMMENT(
 	"HWDeviceSyncObject for RT: %i\r\n",
@@ -400,6 +412,17 @@ PVRSRV_ERROR SGXDoKickKM(IMG_HANDLE hDevHandle, SGX_CCB_KICK *psCCBKick)
 	sizeof(IMG_UINT32), 0,
 	MAKEUNIQUETAG(
 	psHWDstSyncListMemInfo));
+
+	PDUMPCOMMENT(
+	"Modify RT %d ROps2PendingVal in HWDevSyncList\r\n",
+	i);
+	PDUMPMEM(
+	&ui32ModifiedValue,
+	psHWDstSyncListMemInfo,
+	ui32ROps2Offset,
+	sizeof(IMG_UINT32), 0,
+	MAKEUNIQUETAG(
+	psHWDstSyncListMemInfo));
 	}
 #endif
 	} else {
@@ -407,9 +430,13 @@ PVRSRV_ERROR SGXDoKickKM(IMG_HANDLE hDevHandle, SGX_CCB_KICK *psCCBKick)
 	.sWriteOpsCompleteDevVAddr.uiAddr = 0;
 	psHWDeviceSyncList->asSyncData[i]
 	.sReadOpsCompleteDevVAddr.uiAddr = 0;
+	psHWDeviceSyncList->asSyncData[i]
+	.sReadOps2CompleteDevVAddr.uiAddr = 0;
 
 	psHWDeviceSyncList->asSyncData[i]
 	.ui32ReadOpsPendingVal = 0;
+	psHWDeviceSyncList->asSyncData[i]
+	.ui32ReadOps2PendingVal = 0;
 	psHWDeviceSyncList->asSyncData[i]
 	.ui32WriteOpsPendingVal = 0;
 	}
@@ -682,6 +709,20 @@ PVRSRV_ERROR SGXDoKickKM(IMG_HANDLE hDevHandle, SGX_CCB_KICK *psCCBKick)
 	 ui32WriteOpsComplete),
 	sizeof(psSyncInfo->psSyncData
 	       ->ui32WriteOpsComplete),
+	0,
+	MAKEUNIQUETAG(
+	psSyncInfo
+	->psSyncDataMemInfoKM));
+
+	PDUMPCOMMENT("Init RT WOpsComplete\r\n");
+	PDUMPMEM(
+	&psSyncInfo->psSyncData
+	 ->ui32LastReadOpDumpVal,
+	psSyncInfo->psSyncDataMemInfoKM,
+	offsetof(PVRSRV_SYNC_DATA,
+	 ui32ReadOps2Complete),
+	sizeof(psSyncInfo->psSyncData
+	       ->ui32ReadOps2Complete),
 	0,
 	MAKEUNIQUETAG(
 	psSyncInfo

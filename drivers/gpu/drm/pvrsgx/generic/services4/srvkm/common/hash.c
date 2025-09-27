@@ -180,9 +180,6 @@ static IMG_BOOL _Resize(HASH_TABLE *pHash, IMG_UINT32 uNewSize)
 
 	if (_Rehash(pHash, pHash->ppBucketTable, pHash->uSize,
 	    ppNewTable, uNewSize) != PVRSRV_OK) {
-	OSFreeMem(PVRSRV_PAGEABLE_SELECT,
-	  sizeof(BUCKET *) * uNewSize, ppNewTable,
-	  IMG_NULL);
 	return IMG_FALSE;
 	}
 
@@ -334,8 +331,7 @@ HASH_Remove_Extended(HASH_TABLE *pHash, IMG_VOID *pKey)
 
 	uIndex = KEY_TO_INDEX(pHash, pKey, pHash->uSize);
 
-	for (ppBucket = &(pHash->ppBucketTable[uIndex]);
-	     ppBucket && *ppBucket != IMG_NULL;
+	for (ppBucket = &(pHash->ppBucketTable[uIndex]); *ppBucket != IMG_NULL;
 	     ppBucket = &((*ppBucket)->pNext)) {
 	if (KEY_COMPARE(pHash, (*ppBucket)->k, pKey)) {
 	BUCKET *pBucket = *ppBucket;

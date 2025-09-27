@@ -68,10 +68,11 @@ IMG_EXPORT PVRSRV_ERROR PVRSRVAllocSharedSysMemoryKM(
 	psKernelMemInfo->ui32Flags = ui32Flags;
 	psKernelMemInfo->uAllocSize = uSize;
 
-	if (OSAllocPages(
-	    psKernelMemInfo->ui32Flags, psKernelMemInfo->uAllocSize,
-	    (IMG_UINT32)HOST_PAGESIZE(), &psKernelMemInfo->pvLinAddrKM,
-	    &psKernelMemInfo->sMemBlk.hOSMemHandle) != PVRSRV_OK) {
+	if (OSAllocPages(psKernelMemInfo->ui32Flags,
+	 psKernelMemInfo->uAllocSize,
+	 (IMG_UINT32)HOST_PAGESIZE(), IMG_NULL, 0,
+	 &psKernelMemInfo->pvLinAddrKM,
+	 &psKernelMemInfo->sMemBlk.hOSMemHandle) != PVRSRV_OK) {
 	PVR_DPF((
 	PVR_DBG_ERROR,
 	"PVRSRVAllocSharedSysMemoryKM: Failed to alloc memory for block"));

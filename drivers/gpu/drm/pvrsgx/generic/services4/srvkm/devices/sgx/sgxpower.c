@@ -182,6 +182,7 @@ static IMG_VOID SGXPollForClockGating(PVRSRV_SGXDEV_INFO *psDevInfo,
 	    MAX_HW_TIME_US / WAIT_TRY_COUNT, IMG_FALSE) != PVRSRV_OK) {
 	PVR_DPF((PVR_DBG_ERROR, "SGXPollForClockGating: %s failed.",
 	 pszComment));
+	SGXDumpDebugInfo(psDevInfo, IMG_FALSE);
 	PVR_DBG_BREAK;
 	}
 #endif
@@ -248,6 +249,7 @@ PVRSRV_ERROR SGXPrePowerState(IMG_HANDLE hDevHandle,
 	PVR_DPF((
 	PVR_DBG_ERROR,
 	"SGXPrePowerState: Wait for SGX ukernel power transition failed."));
+	SGXDumpDebugInfo(psDevInfo, IMG_FALSE);
 	PVR_DBG_BREAK;
 	}
 #endif

@@ -22,8 +22,8 @@
  * Imagination Technologies Ltd. <gpl-support@imgtec.com>
  * Home Park Estate, Kings Langley, Herts, WD4 8LZ, UK
  *
- ******************************************************************************/
 
+*****************************************************************************/
 #ifndef _DBGDRVIF_
 #define _DBGDRVIF_
 
@@ -42,6 +42,9 @@
 
 #endif
 
+/*****************************************************************************
+ Stream mode stuff.
+*****************************************************************************/
 #define DEBUG_CAPMODE_FRAMED 0x00000001UL
 #define DEBUG_CAPMODE_CONTINUOUS 0x00000002UL
 #define DEBUG_CAPMODE_HOTKEY 0x00000004UL
@@ -60,6 +63,10 @@
 
 #define DEBUG_FLAGS_TEXTSTREAM 0x80000000UL
 
+/*****************************************************************************
+ Debug level control. Only bothered with the first 12 levels, I suspect you
+ get the idea...
+*****************************************************************************/
 #define DEBUG_LEVEL_0 0x00000001UL
 #define DEBUG_LEVEL_1 0x00000003UL
 #define DEBUG_LEVEL_2 0x00000007UL
@@ -86,6 +93,9 @@
 #define DEBUG_LEVEL_SEL10 0x00000400UL
 #define DEBUG_LEVEL_SEL11 0x00000800UL
 
+/*****************************************************************************
+ IOCTL values.
+*****************************************************************************/
 #define DEBUG_SERVICE_IOCTL_BASE 0x800UL
 #define DEBUG_SERVICE_CREATESTREAM                                     \
 	CTL_CODE(FILE_DEVICE_UNKNOWN, DEBUG_SERVICE_IOCTL_BASE + 0x01, \
@@ -165,6 +175,9 @@
 
 typedef enum _DBG_EVENT_ { DBG_EVENT_STREAM_DATA = 1 } DBG_EVENT;
 
+/*****************************************************************************
+ In/Out Structures
+*****************************************************************************/
 typedef struct _DBG_IN_CREATESTREAM_ {
 	union {
 	IMG_CHAR *pszName;
@@ -270,22 +283,32 @@ typedef struct _DBG_IN_WRITE_LF_ {
 	IMG_UINT32 ui32BufferSize;
 } DBG_IN_WRITE_LF, *PDBG_IN_WRITE_LF;
 
+/*
+	Flags for above struct
+*/
 #define WRITELF_FLAGS_RESETBUF 0x00000001UL
 
+/*
+	Common control structure (don't duplicate control in main stream
+	and init phase stream).
+*/
 typedef struct _DBG_STREAM_CONTROL_ {
-	IMG_BOOL bInitPhaseComplete;
-	IMG_UINT32 ui32Flags;
+	IMG_BOOL bInitPhaseComplete; /*!< init phase has finished */
+	IMG_UINT32 ui32Flags; /*!< flags (see DEBUG_FLAGS above) */
 
-	IMG_UINT32 ui32CapMode;
-	IMG_UINT32 ui32OutMode;
+	IMG_UINT32 ui32CapMode; /*!< capturing mode framed/hot key */
+	IMG_UINT32 ui32OutMode; /*!< output mode, e.g. files */
 	IMG_UINT32 ui32DebugLevel;
 	IMG_UINT32 ui32DefaultMode;
-	IMG_UINT32 ui32Start;
-	IMG_UINT32 ui32End;
-	IMG_UINT32 ui32Current;
-	IMG_UINT32 ui32SampleRate;
+	IMG_UINT32 ui32Start; /*!< first capture frame */
+	IMG_UINT32 ui32End; /*!< last frame */
+	IMG_UINT32 ui32Current; /*!< current frame */
+	IMG_UINT32 ui32SampleRate; /*!< capture frequency */
 	IMG_UINT32 ui32Reserved;
 } DBG_STREAM_CONTROL, *PDBG_STREAM_CONTROL;
+/*
+	Per-buffer control structure.
+*/
 typedef struct _DBG_STREAM_ {
 	struct _DBG_STREAM_ *psNext;
 	struct _DBG_STREAM_ *psInitStream;
@@ -296,16 +319,24 @@ typedef struct _DBG_STREAM_ {
 	IMG_UINT32 ui32RPtr;
 	IMG_UINT32 ui32WPtr;
 	IMG_UINT32 ui32DataWritten;
-	IMG_UINT32 ui32Marker;
-	IMG_UINT32 ui32InitPhaseWOff;
-
-	IMG_CHAR szName[30];
+	IMG_UINT32 ui32Marker; /*!< marker for file splitting */
+	IMG_UINT32
+	ui32InitPhaseWOff; /*!< snapshot offset for init phase end for follow-on pdump */
+	IMG_CHAR szName[30]; /* Give this a size, some compilers don't like [] */
 } DBG_STREAM, *PDBG_STREAM;
 
+/*
+ * Allows dbgdrv to notify services when events happen, e.g. pdump.exe starts.
+ * (better than resetting psDevInfo->psKernelCCBInfo->ui32CCBDumpWOff = 0
+ * in SGXGetClientInfoKM.)
+ */
 typedef struct _DBGKM_CONNECT_NOTIFIER_ {
 	IMG_VOID(IMG_CALLCONV *pfnConnectNotifier)(IMG_VOID);
 } DBGKM_CONNECT_NOTIFIER, *PDBGKM_CONNECT_NOTIFIER;
 
+/*****************************************************************************
+ Kernel mode service table
+*****************************************************************************/
 typedef struct _DBGKM_SERVICE_TABLE_ {
 	IMG_UINT32 ui32Size;
 	IMG_VOID *(IMG_CALLCONV *pfnCreateStream)(IMG_CHAR *pszName,
@@ -385,3 +416,6 @@ typedef struct _DBGKM_SERVICE_TABLE_ {
 } DBGKM_SERVICE_TABLE, *PDBGKM_SERVICE_TABLE;
 
 #endif
+/*****************************************************************************
+ End of file (DBGDRVIF.H)
+*****************************************************************************/

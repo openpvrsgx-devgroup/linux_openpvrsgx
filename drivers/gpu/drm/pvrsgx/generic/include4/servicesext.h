@@ -259,8 +259,6 @@ typedef enum _PVRSRV_ERROR_ {
 
 	PVRSRV_ERROR_CACHEOP_FAILED,
 
-	PVRSRV_ERROR_CACHE_INVALIDATE_FAILED,
-
 	PVRSRV_ERROR_FORCE_I32 = 0x7fffffff
 
 } PVRSRV_ERROR;
@@ -604,6 +602,9 @@ typedef struct _PVRSRV_SYNC_DATA_ {
 	IMG_UINT32 ui32ReadOpsPending;
 	volatile IMG_UINT32 ui32ReadOpsComplete;
 
+	IMG_UINT32 ui32ReadOps2Pending;
+	volatile IMG_UINT32 ui32ReadOps2Complete;
+
 	IMG_UINT32 ui32LastOpDumpVal;
 	IMG_UINT32 ui32LastReadOpDumpVal;
 
@@ -615,6 +616,8 @@ typedef struct _PVRSRV_CLIENT_SYNC_INFO_ {
 	IMG_DEV_VIRTADDR sWriteOpsCompleteDevVAddr;
 
 	IMG_DEV_VIRTADDR sReadOpsCompleteDevVAddr;
+
+	IMG_DEV_VIRTADDR sReadOps2CompleteDevVAddr;
 
 #if defined(SUPPORT_SID_INTERFACE)
 	IMG_SID hMappingInfo;

@@ -48,6 +48,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "sgxutils.h"
 #include "pdump_km.h"
 
+extern IMG_UINT32 g_ui32HostIRQCountSample;
+
 #if defined(SUPPORT_HW_RECOVERY)
 static PVRSRV_ERROR SGXAddTimer(PVRSRV_DEVICE_NODE *psDeviceNode,
 	SGX_TIMING_INFORMATION *psSGXTimingInfo,
@@ -361,6 +363,21 @@ PVRSRV_ERROR SGXPrePowerState(IMG_HANDLE hDevHandle,
 	PDUMP_POLL_OPERATOR_EQUAL, 0,
 	MAKEUNIQUETAG(psDevInfo->psKernelSGXHostCtlMemInfo));
 #endif /* PDUMP */
+
+/* Wait for the pending ukernel to host interrupts to come back. */
+#if !defined(NO_HARDWARE)
+	if (PollForValueKM(&g_ui32HostIRQCountSample,
+	   psDevInfo->psSGXHostCtl->ui32InterruptCount,
+	   0xffffffff, MAX_HW_TIME_US,
+	   MAX_HW_TIME_US / WAIT_TRY_COUNT,
+	   IMG_FALSE) != PVRSRV_OK) {
+	PVR_DPF((
+	PVR_DBG_ERROR,
+	"SGXPrePowerState: Wait for pending interrupts failed."));
+	SGXDumpDebugInfo(psDevInfo, IMG_FALSE);
+	PVR_DBG_BREAK;
+	}
+#endif /* NO_HARDWARE */
 
 #if defined(SGX_FEATURE_MP)
 	ui32CoresEnabled = ((OSReadHWReg(psDevInfo->pvRegsBaseKM,

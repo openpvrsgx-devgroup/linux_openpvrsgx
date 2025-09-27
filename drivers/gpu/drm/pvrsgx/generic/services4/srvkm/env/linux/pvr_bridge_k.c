@@ -264,6 +264,19 @@ long PVRSRV_BridgeDispatchKM(struct file *pFile, unsigned int unref__ ioctlCmd,
 
 	cmd = psBridgePackageKM->ui32BridgeID;
 
+#if defined(MTK_DEBUG)
+	switch (cmd) {
+	case PVRSRV_BRIDGE_INITSRV_CONNECT:
+	MTKDebugEnable3DMemInfo(psBridgePackageKM->acDebugMsg[0] ==
+	'1');
+	break;
+	case PVRSRV_BRIDGE_ALLOC_DEVICEMEM:
+	MTKDebugSetInfo(psBridgePackageKM->acDebugMsg,
+	sizeof(psBridgePackageKM->acDebugMsg));
+	break;
+	}
+#endif
+
 	if (cmd != PVRSRV_BRIDGE_CONNECT_SERVICES) {
 	PVRSRV_ERROR eError;
 

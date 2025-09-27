@@ -117,7 +117,8 @@ IMG_VOID *MatchDeviceKM_AnyVaCb(PVRSRV_DEVICE_NODE *psDeviceNode, va_list va)
 	}
 
 	if ((bIgnoreClass || psDeviceNode->sDevId.eDeviceClass == eDevClass) &&
-	    psDeviceNode->sDevId.ui32DeviceIndex == ui32DevIndex) {
+	    (ui32DevIndex == -1 ||
+	     psDeviceNode->sDevId.ui32DeviceIndex == ui32DevIndex)) {
 	return psDeviceNode;
 	}
 	return IMG_NULL;

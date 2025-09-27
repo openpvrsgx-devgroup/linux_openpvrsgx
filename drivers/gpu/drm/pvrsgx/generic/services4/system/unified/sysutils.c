@@ -1,6 +1,6 @@
 /**********************************************************************
  *
- * Copyright (C) Imagination Technologies Ltd. All rights reserved.
+ * Copyright(c) 2008 Imagination Technologies Ltd. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -24,32 +24,6 @@
  *
  ******************************************************************************/
 
-#ifndef __LINKAGE_H__
-#define __LINKAGE_H__
-
-#if !defined(SUPPORT_DRI_DRM)
-long PVRSRV_BridgeDispatchKM(struct file *file, unsigned int cmd,
-	     unsigned long arg);
-#endif
-
-IMG_VOID PVRDPFInit(IMG_VOID);
-PVRSRV_ERROR PVROSFuncInit(IMG_VOID);
-IMG_VOID PVROSFuncDeInit(IMG_VOID);
-
-#ifdef DEBUG
-
-IMG_INT PVRDebugProcSetLevel(struct file *file, const IMG_CHAR *buffer,
-	     IMG_UINT32 count, IMG_VOID *data);
-void ProcSeqShowDebugLevel(struct seq_file *sfile, void *el);
-
-#ifdef PVR_MANUAL_POWER_CONTROL
-IMG_INT PVRProcSetPowerLevel(struct file *file, const IMG_CHAR *buffer,
-	     IMG_UINT32 count, IMG_VOID *data);
-
-void ProcSeqShowPowerLevel(struct seq_file *sfile, void *el);
-
-#endif
-
-#endif
-
-#endif
+#include "services_headers.h"
+#include "cdv_sysinfo.h"
+#include "syslocal.h"

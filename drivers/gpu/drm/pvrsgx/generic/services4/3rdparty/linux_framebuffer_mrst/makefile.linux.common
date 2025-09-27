@@ -24,16 +24,14 @@
 #
 #
 
-DBGDRV_SOURCES_ROOT = $(KBUILDROOT)/../tools/intern/debug/dbgdriv
+DISPLAY_CONTROLLER_SOURCES_ROOT = $(KBUILDROOT)/$(DISPLAY_CONTROLLER_DIR)
 
 INCLUDES +=	-I$(EURASIAROOT)/include4 \
-	-I$(EURASIAROOT)/tools/intern/debug \
-	-I$(EURASIAROOT)/tools/intern/debug/dbgdriv/common \
-	-I$(EURASIAROOT)/tools/intern/debug/client
+	-I$(EURASIAROOT)/services4/include \
+	-I$(EURASIAROOT)/services4/system/$(PVR_SYSTEM) \
+	-I$(EURASIAROOT)/services4/system/include \
+	-I$(EURASIAROOT)/services4/srvkm/env/linux/mrst
 
-SOURCES	+=	$(DBGDRV_SOURCES_ROOT)/linux/main.c \
-	$(DBGDRV_SOURCES_ROOT)/common/dbgdriv.c \
-	$(DBGDRV_SOURCES_ROOT)/common/ioctl.c \
-	$(DBGDRV_SOURCES_ROOT)/common/handle.c \
-	$(DBGDRV_SOURCES_ROOT)/linux/hostfunc.c \
-	$(DBGDRV_SOURCES_ROOT)/common/hotkey.c
+SOURCES	+=	$(DISPLAY_CONTROLLER_SOURCES_ROOT)/mrstlfb_displayclass.c \
+	$(DISPLAY_CONTROLLER_SOURCES_ROOT)/mrstlfb_linux.c
+MODULE_CFLAGS += -DPVR_MRST_FB_SET_PAR_ON_INIT

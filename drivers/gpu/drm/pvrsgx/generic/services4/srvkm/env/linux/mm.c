@@ -91,10 +91,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /* Decide whether or not DevMem allocs need __GFP_DMA32 */
 #ifndef SGX_FEATURE_36BIT_MMU
-#ifdef CONFIG_ZONE_DMA32
-#if defined CONFIG_X86_PAE || defined CONFIG_ARM_LPAE || defined CONFIG_64BIT
+#if defined CONFIG_X86_PAE || defined CONFIG_ARM_LPAE || defined CONFIG_XPA || \
+	defined CONFIG_64BIT
 #define PVR_USE_DMA32_FOR_DEVMEM_ALLOCS
-#endif
 #endif
 #endif
 
@@ -117,6 +116,7 @@ typedef enum {
 #if defined(PVR_LINUX_MEM_AREA_USE_VMAP)
 	DEBUG_MEM_ALLOC_TYPE_VMAP,
 #endif
+	DEBUG_MEM_ALLOC_TYPE_SWAP,
 	DEBUG_MEM_ALLOC_TYPE_COUNT
 } DEBUG_MEM_ALLOC_TYPE;
 
@@ -139,6 +139,7 @@ static IMPLEMENT_LIST_ANY_VA_2(DEBUG_MEM_ALLOC_REC, IMG_BOOL, IMG_FALSE) static 
 	DEBUG_MEM_ALLOC_REC) static IMPLEMENT_LIST_INSERT(DEBUG_MEM_ALLOC_REC) static IMPLEMENT_LIST_REMOVE(DEBUG_MEM_ALLOC_REC)
 
 	static DEBUG_MEM_ALLOC_REC *g_MemoryRecords;
+static DEBUG_MEM_ALLOC_REC *g_SwapMemoryRecords;
 
 static IMG_UINT32 g_WaterMarkData[DEBUG_MEM_ALLOC_TYPE_COUNT];
 static IMG_UINT32 g_HighWaterMarkData[DEBUG_MEM_ALLOC_TYPE_COUNT];
@@ -150,7 +151,8 @@ static IMG_UINT32 g_SysRAMHighWaterMark; /* *DOES* include page pool */
 static inline IMG_UINT32 SysRAMTrueWaterMark(void)
 {
 	return g_SysRAMWaterMark +
-	       PAGES_TO_BYTES(atomic_read(&g_sPagePoolEntryCount));
+	       PAGES_TO_BYTES(atomic_read(&g_sPagePoolEntryCount)) +
+	       g_WaterMarkData[DEBUG_MEM_ALLOC_TYPE_SWAP];
 }
 
 /* ioremap + io */
@@ -207,6 +209,7 @@ static void *ProcSeqOff2ElementMemArea(struct seq_file *sfile, loff_t off);
 
 #if defined(DEBUG_LINUX_MEM_AREAS) || defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
 static PVRSRV_LINUX_MUTEX g_sDebugMutex;
+static PVRSRV_LINUX_MUTEX g_sSwapDebugMutex;
 #endif
 
 #if (defined(DEBUG_LINUX_MEM_AREAS) || defined(DEBUG_LINUX_MEMORY_ALLOCATIONS))
@@ -254,7 +257,8 @@ static inline IMG_BOOL CanFreeToPool(LinuxMemArea *psLinuxMemArea)
 }
 
 IMG_VOID *_KMallocWrapper(IMG_SIZE_T uiByteSize, gfp_t uFlags,
-	  IMG_CHAR *pszFileName, IMG_UINT32 ui32Line)
+	  IMG_CHAR *pszFileName, IMG_UINT32 ui32Line,
+	  IMG_BOOL bSwapAlloc)
 {
 	IMG_VOID *pvRet;
 	pvRet = kmalloc(uiByteSize, uFlags);
@@ -263,27 +267,32 @@ IMG_VOID *_KMallocWrapper(IMG_SIZE_T uiByteSize, gfp_t uFlags,
 	IMG_CPU_PHYADDR sCpuPAddr;
 	sCpuPAddr.uiAddr = 0;
 
-	DebugMemAllocRecordAdd(DEBUG_MEM_ALLOC_TYPE_KMALLOC,
+	DebugMemAllocRecordAdd(bSwapAlloc ?
+	       DEBUG_MEM_ALLOC_TYPE_SWAP :
+	       DEBUG_MEM_ALLOC_TYPE_KMALLOC,
 	       (IMG_UINTPTR_T)pvRet, pvRet, sCpuPAddr,
 	       NULL, uiByteSize, pszFileName, ui32Line);
 	}
 #else
 	PVR_UNREFERENCED_PARAMETER(pszFileName);
 	PVR_UNREFERENCED_PARAMETER(ui32Line);
+	PVR_UNREFERENCED_PARAMETER(bSwapAlloc);
 #endif
 	return pvRet;
 }
 
-IMG_VOID
-_KFreeWrapper(IMG_VOID *pvCpuVAddr, IMG_CHAR *pszFileName, IMG_UINT32 ui32Line)
+void _KFreeWrapper(void *pvCpuVAddr, IMG_CHAR *pszFileName, IMG_UINT32 ui32Line,
+	   IMG_BOOL bSwapAlloc)
 {
 #if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
-	DebugMemAllocRecordRemove(DEBUG_MEM_ALLOC_TYPE_KMALLOC,
+	DebugMemAllocRecordRemove(bSwapAlloc ? DEBUG_MEM_ALLOC_TYPE_SWAP :
+	       DEBUG_MEM_ALLOC_TYPE_KMALLOC,
 	  (IMG_UINTPTR_T)pvCpuVAddr, pszFileName,
 	  ui32Line);
 #else
 	PVR_UNREFERENCED_PARAMETER(pszFileName);
 	PVR_UNREFERENCED_PARAMETER(ui32Line);
+	PVR_UNREFERENCED_PARAMETER(bSwapAlloc);
 #endif
 	kfree(pvCpuVAddr);
 }
@@ -297,8 +306,6 @@ DebugMemAllocRecordAdd(DEBUG_MEM_ALLOC_TYPE eAllocType, IMG_UINTPTR_T uiKey,
 {
 	DEBUG_MEM_ALLOC_REC *psRecord;
 
-	LinuxLockMutexNested(&g_sDebugMutex, PVRSRV_LOCK_CLASS_MM_DEBUG);
-
 	psRecord = kmalloc(sizeof(DEBUG_MEM_ALLOC_REC), GFP_KERNEL);
 
 	psRecord->eAllocType = eAllocType;
@@ -311,6 +318,24 @@ DebugMemAllocRecordAdd(DEBUG_MEM_ALLOC_TYPE eAllocType, IMG_UINTPTR_T uiKey,
 	psRecord->pszFileName = pszFileName;
 	psRecord->ui32Line = ui32Line;
 
+	if (eAllocType == DEBUG_MEM_ALLOC_TYPE_SWAP) {
+	LinuxLockMutexNested(&g_sSwapDebugMutex,
+	     PVRSRV_LOCK_CLASS_MM_DEBUG);
+
+	List_DEBUG_MEM_ALLOC_REC_Insert(&g_SwapMemoryRecords, psRecord);
+
+	g_WaterMarkData[eAllocType] += uiBytes;
+	if (g_WaterMarkData[eAllocType] >
+	    g_HighWaterMarkData[eAllocType]) {
+	g_HighWaterMarkData[eAllocType] =
+	g_WaterMarkData[eAllocType];
+	}
+
+	LinuxUnLockMutex(&g_sSwapDebugMutex);
+	return;
+	}
+
+	LinuxLockMutexNested(&g_sDebugMutex, PVRSRV_LOCK_CLASS_MM_DEBUG);
 	List_DEBUG_MEM_ALLOC_REC_Insert(&g_MemoryRecords, psRecord);
 
 	g_WaterMarkData[eAllocType] += uiBytes;
@@ -353,7 +378,6 @@ DebugMemAllocRecordRemove_AnyVaCb(DEBUG_MEM_ALLOC_REC *psCurrentRecord,
 
 	if (psCurrentRecord->eAllocType == eAllocType &&
 	    psCurrentRecord->uiKey == uiKey) {
-	eAllocType = psCurrentRecord->eAllocType;
 	g_WaterMarkData[eAllocType] -= psCurrentRecord->uiBytes;
 
 	if (eAllocType == DEBUG_MEM_ALLOC_TYPE_KMALLOC ||
@@ -382,12 +406,17 @@ static IMG_VOID DebugMemAllocRecordRemove(DEBUG_MEM_ALLOC_TYPE eAllocType,
 {
 	/*    DEBUG_MEM_ALLOC_REC **ppsCurrentRecord;*/
 
-	LinuxLockMutexNested(&g_sDebugMutex, PVRSRV_LOCK_CLASS_MM_DEBUG);
+	LinuxLockMutexNested(eAllocType == DEBUG_MEM_ALLOC_TYPE_SWAP ?
+	     &g_sSwapDebugMutex :
+	     &g_sDebugMutex,
+	     PVRSRV_LOCK_CLASS_MM_DEBUG);
 
 	/* Locate the corresponding allocation entry */
 	if (!List_DEBUG_MEM_ALLOC_REC_IMG_BOOL_Any_va(
-	    g_MemoryRecords, DebugMemAllocRecordRemove_AnyVaCb,
-	    eAllocType, uiKey)) {
+	    eAllocType == DEBUG_MEM_ALLOC_TYPE_SWAP ?
+	    g_SwapMemoryRecords :
+	    g_MemoryRecords,
+	    DebugMemAllocRecordRemove_AnyVaCb, eAllocType, uiKey)) {
 	PVR_DPF((PVR_DBG_ERROR,
 	 "%s: couldn't find an entry for type=%s with uiKey=" UINTPTR_FMT
 	 " (called from %s, line %d\n",
@@ -396,18 +425,21 @@ static IMG_VOID DebugMemAllocRecordRemove(DEBUG_MEM_ALLOC_TYPE eAllocType,
 	 pszFileName, ui32Line));
 	}
 
-	LinuxUnLockMutex(&g_sDebugMutex);
+	LinuxUnLockMutex(eAllocType == DEBUG_MEM_ALLOC_TYPE_SWAP ?
+	 &g_sSwapDebugMutex :
+	 &g_sDebugMutex);
 }
 
 static IMG_CHAR *
 DebugMemAllocRecordTypeToString(DEBUG_MEM_ALLOC_TYPE eAllocType)
 {
 	IMG_CHAR *apszDebugMemoryRecordTypes[] = {
-	"KMALLOC", "VMALLOC",	       "ALLOC_PAGES", "IOREMAP",
-	"IO",	   "KMEM_CACHE_ALLOC", "ION",
+	"KMALLOC",   "VMALLOC",	 "ALLOC_PAGES", "IOREMAP",
+	"IO",	     "KMEM_CACHE_ALLOC", "ION",
 #if defined(PVR_LINUX_MEM_AREA_USE_VMAP)
 	"VMAP",
 #endif
+	"SWAPALLOC",
 	};
 	return apszDebugMemoryRecordTypes[eAllocType];
 }
@@ -454,7 +486,11 @@ IMG_VOID *_VMallocWrapper(IMG_SIZE_T uiBytes, IMG_UINT32 ui32AllocFlags,
 	gfp_mask = GFP_KERNEL;
 
 #if defined(PVR_USE_DMA32_FOR_DEVMEM_ALLOCS)
+#ifdef CONFIG_ZONE_DMA32
 	gfp_mask |= __GFP_DMA32;
+#else
+	gfp_mask |= __GFP_DMA;
+#endif
 #else
 	gfp_mask |= __GFP_HIGHMEM;
 #endif
@@ -601,12 +637,21 @@ static struct page *AllocPageFromLinux(void)
 	gfp_mask = GFP_KERNEL;
 
 #if defined(PVR_USE_DMA32_FOR_DEVMEM_ALLOCS)
+#ifdef CONFIG_ZONE_DMA32
 	gfp_mask |= __GFP_DMA32;
+#else
+	gfp_mask |= __GFP_DMA;
+#endif
 #else
 	gfp_mask |= __GFP_HIGHMEM;
 #endif
 
+	/* PF_DUMPCORE is treated by the VM as if the OOM killer was disabled */
+	WARN_ON(current->flags & PF_DUMPCORE);
+	current->flags |= PF_DUMPCORE;
+
 	psPage = alloc_pages(gfp_mask, 0);
+	current->flags &= ~PF_DUMPCORE;
 	if (!psPage) {
 	return NULL;
 	}
@@ -786,25 +831,33 @@ static IMG_VOID FreePagePool(IMG_VOID)
 static struct shrinker g_sShrinker;
 #endif
 
-static int ShrinkPagePool(struct shrinker *psShrinker,
-	  struct shrink_control *psShrinkControl)
+static unsigned long
+CountObjectsInPagePool(struct shrinker *psShrinker,
+	       struct shrink_control *psShrinkControl)
+{
+	PVR_ASSERT(psShrinker == &g_sShrinker);
+	(void)psShrinker;
+	(void)psShrinkControl;
+
+	return atomic_read(&g_sPagePoolEntryCount);
+}
+
+static unsigned long
+ScanObjectsInPagePool(struct shrinker *psShrinker,
+	      struct shrink_control *psShrinkControl)
 {
 	unsigned long uNumToScan = psShrinkControl->nr_to_scan;
+	LinuxPagePoolEntry *psPagePoolEntry, *psTempPoolEntry;
 
 	PVR_ASSERT(psShrinker == &g_sShrinker);
 	(void)psShrinker;
 
-	if (uNumToScan != 0) {
-	LinuxPagePoolEntry *psPagePoolEntry, *psTempPoolEntry;
-
-	PVR_TRACE(
-	("%s: Number to scan: %ld", __FUNCTION__, uNumToScan));
+	PVR_TRACE(("%s: Number to scan: %ld", __FUNCTION__, uNumToScan));
 	PVR_TRACE(("%s: Pages in pool before scan: %d", __FUNCTION__,
 	   atomic_read(&g_sPagePoolEntryCount)));
 
 	if (!PagePoolTrylock()) {
-	PVR_TRACE(("%s: Couldn't get page pool lock",
-	   __FUNCTION__));
+	PVR_TRACE(("%s: Couldn't get page pool lock", __FUNCTION__));
 	return -1;
 	}
 
@@ -828,11 +881,10 @@ static int ShrinkPagePool(struct shrinker *psShrinker,
 
 	PVR_TRACE(("%s: Pages in pool after scan: %d", __FUNCTION__,
 	   atomic_read(&g_sPagePoolEntryCount)));
-	}
 
 	return atomic_read(&g_sPagePoolEntryCount);
 }
-#endif
+#endif /* defined(PVR_LINUX_MEM_AREA_POOL_ALLOW_SHRINK) */
 
 static IMG_BOOL AllocPages(IMG_UINT32 ui32AreaFlags,
 	   struct page ***pppsPageList,
@@ -1498,6 +1550,7 @@ LinuxMemArea *NewSubLinuxMemArea(LinuxMemArea *psParentLinuxMemArea,
 	DEBUG_LINUX_MEM_AREA_REC *psParentRecord;
 	psParentRecord =
 	DebugLinuxMemAreaRecordFind(psParentLinuxMemArea);
+	PVR_ASSERT(psParentRecord != IMG_NULL);
 	DebugLinuxMemAreaRecordAdd(psLinuxMemArea,
 	   psParentRecord->ui32Flags);
 	}
@@ -1981,10 +2034,13 @@ static void ProcSeqShowMemoryRecords(struct seq_file *sfile, void *el)
 
 	seq_printf(sfile, "%-60s: %d bytes\n",
 	   "Current Water Mark of bytes allocated via kmalloc",
-	   g_WaterMarkData[DEBUG_MEM_ALLOC_TYPE_KMALLOC]);
-	seq_printf(sfile, "%-60s: %d bytes\n",
-	   "Highest Water Mark of bytes allocated via kmalloc",
-	   g_HighWaterMarkData[DEBUG_MEM_ALLOC_TYPE_KMALLOC]);
+	   g_WaterMarkData[DEBUG_MEM_ALLOC_TYPE_KMALLOC] +
+	   g_WaterMarkData[DEBUG_MEM_ALLOC_TYPE_SWAP]);
+	seq_printf(
+	sfile, "%-60s: %d bytes\n",
+	"Highest Water Mark of bytes allocated via kmalloc",
+	g_HighWaterMarkData[DEBUG_MEM_ALLOC_TYPE_KMALLOC] +
+	g_HighWaterMarkData[DEBUG_MEM_ALLOC_TYPE_SWAP]);
 	seq_printf(sfile, "%-60s: %d bytes\n",
 	   "Current Water Mark of bytes allocated via vmalloc",
 	   g_WaterMarkData[DEBUG_MEM_ALLOC_TYPE_VMALLOC]);
@@ -2070,11 +2126,13 @@ static void ProcSeqShowMemoryRecords(struct seq_file *sfile, void *el)
 	seq_printf(
 	sfile,
 	"<watermark key=\"mr0\" description=\"kmalloc_current\" bytes=\"%d\"/>\n",
-	g_WaterMarkData[DEBUG_MEM_ALLOC_TYPE_KMALLOC]);
+	g_WaterMarkData[DEBUG_MEM_ALLOC_TYPE_KMALLOC] +
+	g_WaterMarkData[DEBUG_MEM_ALLOC_TYPE_SWAP]);
 	seq_printf(
 	sfile,
 	"<watermark key=\"mr1\" description=\"kmalloc_high\" bytes=\"%d\"/>\n",
-	g_HighWaterMarkData[DEBUG_MEM_ALLOC_TYPE_KMALLOC]);
+	g_HighWaterMarkData[DEBUG_MEM_ALLOC_TYPE_KMALLOC] +
+	g_HighWaterMarkData[DEBUG_MEM_ALLOC_TYPE_SWAP]);
 	seq_printf(
 	sfile,
 	"<watermark key=\"mr2\" description=\"vmalloc_current\" bytes=\"%d\"/>\n",
@@ -2303,6 +2361,10 @@ LinuxMMCleanup_MemRecords_ForEachVa(DEBUG_MEM_ALLOC_REC *psCurrentRecord)
 	 psCurrentRecord->pvCpuVAddr, psCurrentRecord->sCpuPAddr.uiAddr,
 	 psCurrentRecord->pszFileName, psCurrentRecord->ui32Line));
 	switch (psCurrentRecord->eAllocType) {
+	case DEBUG_MEM_ALLOC_TYPE_SWAP:
+	_KFreeWrapper(psCurrentRecord->pvCpuVAddr, __FILE__, __LINE__,
+	      IMG_TRUE);
+	break;
 	case DEBUG_MEM_ALLOC_TYPE_KMALLOC:
 	KFreeWrapper(psCurrentRecord->pvCpuVAddr);
 	break;
@@ -2339,8 +2401,25 @@ LinuxMMCleanup_MemRecords_ForEachVa(DEBUG_MEM_ALLOC_REC *psCurrentRecord)
 #endif
 
 #if defined(PVR_LINUX_MEM_AREA_POOL_ALLOW_SHRINK)
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 12, 0))
+static int ShrinkPagePool(struct shrinker *psShrinker,
+	  struct shrink_control *psShrinkControl)
+{
+	if (psShrinkControl->nr_to_scan != 0) {
+	return ScanObjectsInPagePool(psShrinker, psShrinkControl);
+	} else {
+	/* No pages are being reclaimed so just return the page count. */
+	return CountObjectsInPagePool(psShrinker, psShrinkControl);
+	}
+}
+
 static struct shrinker g_sShrinker = { .shrink = ShrinkPagePool,
 	       .seeks = DEFAULT_SEEKS };
+#else
+static struct shrinker g_sShrinker = { .count_objects = CountObjectsInPagePool,
+	       .scan_objects = ScanObjectsInPagePool,
+	       .seeks = DEFAULT_SEEKS };
+#endif
 
 static IMG_BOOL g_bShrinkerRegistered;
 #endif
@@ -2388,6 +2467,9 @@ LinuxMMCleanup(IMG_VOID)
 	 */
 	List_DEBUG_MEM_ALLOC_REC_ForEach(
 	g_MemoryRecords, LinuxMMCleanup_MemRecords_ForEachVa);
+	List_DEBUG_MEM_ALLOC_REC_ForEach(
+	g_SwapMemoryRecords,
+	LinuxMMCleanup_MemRecords_ForEachVa);
 
 	if (g_SeqFileMemoryRecords) {
 	RemoveProcEntrySeq(g_SeqFileMemoryRecords);
@@ -2409,6 +2491,7 @@ LinuxMMInit(IMG_VOID)
 {
 #if defined(DEBUG_LINUX_MEM_AREAS) || defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
 	LinuxInitMutex(&g_sDebugMutex);
+	LinuxInitMutex(&g_sSwapDebugMutex);
 #endif
 
 #if defined(DEBUG_LINUX_MEM_AREAS)

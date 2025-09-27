@@ -234,13 +234,13 @@ IMG_VOID LinuxMMCleanup(IMG_VOID);
  ******************************************************************************/
 #if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
 #define KMallocWrapper(uByteSize, uFlags) \
-	_KMallocWrapper(uByteSize, uFlags, __FILE__, __LINE__)
+	_KMallocWrapper(uByteSize, uFlags, __FILE__, __LINE__, IMG_FALSE)
 #else
 #define KMallocWrapper(uByteSize, uFlags) \
-	_KMallocWrapper(uByteSize, uFlags, NULL, 0)
+	_KMallocWrapper(uByteSize, uFlags, NULL, 0, IMG_FALSE)
 #endif
-IMG_VOID *_KMallocWrapper(IMG_SIZE_T uByteSize, gfp_t uFlags,
-	  IMG_CHAR *szFileName, IMG_UINT32 ui32Line);
+void *_KMallocWrapper(IMG_SIZE_T uByteSize, gfp_t uFlags, IMG_CHAR *szFileName,
+	      IMG_UINT32 ui32Line, IMG_BOOL bSwapAlloc);
 
 /*!
  *******************************************************************************
@@ -251,12 +251,13 @@ IMG_VOID *_KMallocWrapper(IMG_SIZE_T uByteSize, gfp_t uFlags,
  * @return
  ******************************************************************************/
 #if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
-#define KFreeWrapper(pvCpuVAddr) _KFreeWrapper(pvCpuVAddr, __FILE__, __LINE__)
+#define KFreeWrapper(pvCpuVAddr) \
+	_KFreeWrapper(pvCpuVAddr, __FILE__, __LINE__, IMG_FALSE)
 #else
-#define KFreeWrapper(pvCpuVAddr) _KFreeWrapper(pvCpuVAddr, NULL, 0)
+#define KFreeWrapper(pvCpuVAddr) _KFreeWrapper(pvCpuVAddr, NULL, 0, IMG_FALSE)
 #endif
-IMG_VOID _KFreeWrapper(IMG_VOID *pvCpuVAddr, IMG_CHAR *pszFileName,
-	       IMG_UINT32 ui32Line);
+void _KFreeWrapper(void *pvCpuVAddr, IMG_CHAR *pszFileName, IMG_UINT32 ui32Line,
+	   IMG_BOOL bSwapAlloc);
 
 /*!
  *******************************************************************************

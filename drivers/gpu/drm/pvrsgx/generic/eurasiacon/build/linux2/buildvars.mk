@@ -76,7 +76,7 @@ COMMON_USER_FLAGS += -fno-strict-aliasing
 # We always enable debugging. Either the release binaries are stripped
 # and the symbols put in the symbolpackage, or we're building debug.
 #
-COMMON_USER_FLAGS += -g
+COMMON_USER_FLAGS += -g $(ANDROID_FPGA_FORCE_32BIT)
 
 # User C and User C++ warning flags
 #
@@ -167,6 +167,7 @@ TESTED_KBUILD_FLAGS := \
  $(call kernel-cc-option,-Wno-pointer-arith) \
  $(call kernel-cc-option,-Wno-aggregate-return) \
  $(call kernel-cc-option,-Wno-unused-but-set-variable) \
+ $(call kernel-cc-option,-Wno-ignored-qualifiers) \
  $(call kernel-cc-option,-Wno-old-style-declaration) \
  $(call kernel-cc-optional-warning,-Wbad-function-cast) \
  $(call kernel-cc-optional-warning,-Wcast-qual) \
@@ -248,6 +249,14 @@ endif
 
 ALL_LDFLAGS += $(SYS_LDFLAGS)
 
+# Optional security hardening features.
+# Roughly matches Android's default security build options.
+ifneq ($(FORTIFY),)
+ALL_CFLAGS   += -fstack-protector -Wa,--noexecstack -D_FORTIFY_SOURCE=2
+ALL_CXXFLAGS += -fstack-protector -Wa,--noexecstack -D_FORTIFY_SOURCE=2
+ALL_LDFLAGS  += -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now
+endif
+
 # This variable contains a list of all modules built by kbuild
 ALL_KBUILD_MODULES :=
 
@@ -255,4 +264,4 @@ ALL_KBUILD_MODULES :=
 ALL_CXX_MODULES :=
 
 # Toolchain triple for cross environment
-CROSS_TRIPLE := $(patsubst %-,%,$(CROSS_COMPILE))
+CROSS_TRIPLE := $(patsubst %-,%,$(notdir $(CROSS_COMPILE)))

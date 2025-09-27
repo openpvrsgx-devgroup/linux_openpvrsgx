@@ -61,4 +61,3 @@ $(eval $(call TunableKernelConfigC,PVR_DRI_DRM_PLATFORM_DEV,))
 
 
 
-

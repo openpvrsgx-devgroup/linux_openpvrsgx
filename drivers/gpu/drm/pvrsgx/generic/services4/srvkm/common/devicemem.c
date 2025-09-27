@@ -1083,6 +1083,7 @@ PVRSRV_ERROR FreeMemCallBackCommon(PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 	case PVRSRV_MEMTYPE_ION:
 	case PVRSRV_MEMTYPE_DMABUF:
 	freeExternal(psMemInfo);
+	fallthrough;
 	case PVRSRV_MEMTYPE_DEVICE:
 	case PVRSRV_MEMTYPE_DEVICECLASS:
 #if defined(SUPPORT_ION)
@@ -1585,6 +1586,9 @@ PVRSRV_ERROR PVRSRVMapIonHandleKM(
 	mapped virtually continuous so we need to create a new array of
 	addresses based on this chunk data for the actual wrap
 	*/
+	/* OSAllocMem() must be provided non-zero value for size argument */
+	PVR_ASSERT(sizeof(IMG_SYS_PHYADDR) *
+	   (uiMapSize / HOST_PAGESIZE() != 0));
 	if (OSAllocMem(PVRSRV_PAGEABLE_SELECT,
 	       sizeof(IMG_SYS_PHYADDR) * (uiMapSize / HOST_PAGESIZE()),
 	       (IMG_VOID **)&pasAdjustedSysPhysAddr, IMG_NULL,
@@ -1754,10 +1758,8 @@ PVRSRVDmaBufSyncAcquire(IMG_HANDLE hUnique, IMG_HANDLE hPriv,
 	 * If the import has a unique handle, check the hash to see if we
 	 * already have a sync for the buffer.
 	 */
-	psDmaBufSyncInfo =
-	hUnique ? (PVRSRV_DMABUF_SYNC_INFO *)HASH_Retrieve(
-	  g_psDmaBufSyncHash, (IMG_UINTPTR_T)hUnique) :
-	  NULL;
+	psDmaBufSyncInfo = (PVRSRV_DMABUF_SYNC_INFO *)HASH_Retrieve(
+	g_psDmaBufSyncHash, (IMG_UINTPTR_T)hUnique);
 	if (!psDmaBufSyncInfo) {
 	/* Create the syncinfo for the import */
 	eError = OSAllocMem(PVRSRV_PAGEABLE_SELECT,
@@ -1789,14 +1791,11 @@ PVRSRVDmaBufSyncAcquire(IMG_HANDLE hUnique, IMG_HANDLE hPriv,
 	goto ErrorCreateFenceContext;
 	}
 
-	if (hUnique) {
-	bRet = HASH_Insert(g_psDmaBufSyncHash,
-	   (IMG_UINTPTR_T)hUnique,
+	bRet = HASH_Insert(g_psDmaBufSyncHash, (IMG_UINTPTR_T)hUnique,
 	   (IMG_UINTPTR_T)psDmaBufSyncInfo);
 	if (!bRet) {
 	eError = PVRSRV_ERROR_OUT_OF_MEMORY;
 	goto ErrorHashInsert;
-	}
 	}
 	}
 
@@ -1821,19 +1820,19 @@ IMG_VOID PVRSRVDmaBufSyncRelease(PVRSRV_DMABUF_SYNC_INFO *psDmaBufSyncInfo)
 	psDmaBufSyncInfo->ui32RefCount--;
 
 	if (psDmaBufSyncInfo->ui32RefCount == 0) {
+	PVRSRV_DMABUF_SYNC_INFO *psLookup;
+
 	/*
 	If we're holding the last reference to the syncinfo
 	then free it
 	*/
-	if (psDmaBufSyncInfo->hUnique) {
-	PVRSRV_DMABUF_SYNC_INFO *psLookup =
-	(PVRSRV_DMABUF_SYNC_INFO *)HASH_Remove(
+
+	psLookup = (PVRSRV_DMABUF_SYNC_INFO *)HASH_Remove(
 	g_psDmaBufSyncHash,
-	(IMG_UINTPTR_T)
-	psDmaBufSyncInfo->hUnique);
-	(void)psLookup;
+	(IMG_UINTPTR_T)psDmaBufSyncInfo->hUnique);
 	PVR_ASSERT(psLookup == psDmaBufSyncInfo);
-	}
+	(void)psLookup;
+
 	PVRLinuxFenceContextDestroy(
 	psDmaBufSyncInfo->psSyncInfo->hFenceContext);
 	PVRSRVKernelSyncInfoDecRef(psDmaBufSyncInfo->psSyncInfo,

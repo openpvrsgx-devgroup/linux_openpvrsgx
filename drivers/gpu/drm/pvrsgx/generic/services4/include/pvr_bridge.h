@@ -444,10 +444,9 @@ extern "C" {
 /******************************************************************************
  *	bridge return structure
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_RETURN_TAG {
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_RETURN_TAG {
 	PVRSRV_ERROR eError;
-	IMG_VOID *pvData;
-
+	IMG_HANDLE hData;
 } PVRSRV_BRIDGE_RETURN;
 
 /******************************************************************************
@@ -456,9 +455,9 @@ typedef struct PVRSRV_BRIDGE_RETURN_TAG {
 typedef struct PVRSRV_BRIDGE_PACKAGE_TAG {
 	IMG_UINT32 ui32BridgeID; /*!< ioctl/drvesc index */
 	IMG_UINT32 ui32Size; /*!< size of structure */
-	IMG_VOID *pvParamIn; /*!< input data buffer */
+	IMG_HANDLE hParamIn; /*!< input data buffer */
+	IMG_HANDLE hParamOut; /*!< output data buffer */
 	IMG_UINT32 ui32InBufferSize; /*!< size of input data buffer */
-	IMG_VOID *pvParamOut; /*!< output data buffer */
 	IMG_UINT32 ui32OutBufferSize; /*!< size of output data buffer */
 
 	IMG_HANDLE hKernelServices; /*!< kernel servcies handle */
@@ -471,34 +470,29 @@ typedef struct PVRSRV_BRIDGE_PACKAGE_TAG {
 /******************************************************************************
  *	'bridge in' connect to services
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_IN_CONNECT_SERVICES_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_CONNECT_SERVICES_TAG {
 	IMG_UINT32 ui32Flags;
 } PVRSRV_BRIDGE_IN_CONNECT_SERVICES;
 
 /******************************************************************************
  *	'bridge in' acquire device info
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_IN_ACQUIRE_DEVICEINFO_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_ACQUIRE_DEVICEINFO_TAG {
 	IMG_UINT32 uiDevIndex;
 	PVRSRV_DEVICE_TYPE eDeviceType;
-
 } PVRSRV_BRIDGE_IN_ACQUIRE_DEVICEINFO;
 
 /******************************************************************************
  *	'bridge in' enum class
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_IN_ENUMCLASS_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
-	PVRSRV_DEVICE_CLASS sDeviceClass;
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_ENUMCLASS_TAG {
+	PVRSRV_DEVICE_CLASS eDeviceClass;
 } PVRSRV_BRIDGE_IN_ENUMCLASS;
 
 /******************************************************************************
  *	'bridge in' close display class device
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_CLOSE_DISPCLASS_DEVICE_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hDeviceKM;
 } PVRSRV_BRIDGE_IN_CLOSE_DISPCLASS_DEVICE;
 
@@ -506,7 +500,6 @@ typedef struct PVRSRV_BRIDGE_IN_CLOSE_DISPCLASS_DEVICE_TAG {
  *	'bridge in' enum display class formats
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_ENUM_DISPCLASS_FORMATS_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hDeviceKM;
 } PVRSRV_BRIDGE_IN_ENUM_DISPCLASS_FORMATS;
 
@@ -514,7 +507,6 @@ typedef struct PVRSRV_BRIDGE_IN_ENUM_DISPCLASS_FORMATS_TAG {
  *	'bridge in' get display class sysbuffer
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_GET_DISPCLASS_SYSBUFFER_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hDeviceKM;
 } PVRSRV_BRIDGE_IN_GET_DISPCLASS_SYSBUFFER;
 
@@ -522,7 +514,6 @@ typedef struct PVRSRV_BRIDGE_IN_GET_DISPCLASS_SYSBUFFER_TAG {
  *	'bridge in' display class info
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_GET_DISPCLASS_INFO_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hDeviceKM;
 } PVRSRV_BRIDGE_IN_GET_DISPCLASS_INFO;
 
@@ -530,7 +521,6 @@ typedef struct PVRSRV_BRIDGE_IN_GET_DISPCLASS_INFO_TAG {
  *	'bridge in' close buffer class device
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_CLOSE_BUFFERCLASS_DEVICE_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hDeviceKM;
 } PVRSRV_BRIDGE_IN_CLOSE_BUFFERCLASS_DEVICE;
 
@@ -538,116 +528,66 @@ typedef struct PVRSRV_BRIDGE_IN_CLOSE_BUFFERCLASS_DEVICE_TAG {
  *	'bridge in' close buffer class device
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_GET_BUFFERCLASS_INFO_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hDeviceKM;
 } PVRSRV_BRIDGE_IN_GET_BUFFERCLASS_INFO;
-
-/******************************************************************************
- *	'bridge out' acquire device info
- *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_IN_RELEASE_DEVICEINFO_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
-	IMG_HANDLE hDevCookie;
-
-} PVRSRV_BRIDGE_IN_RELEASE_DEVICEINFO;
-
-/******************************************************************************
- *	'bridge in' free class devices info.
- *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_IN_FREE_CLASSDEVICEINFO_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
-	PVRSRV_DEVICE_CLASS DeviceClass;
-	IMG_VOID *pvDevInfo;
-
-} PVRSRV_BRIDGE_IN_FREE_CLASSDEVICEINFO;
 
 /******************************************************************************
  *	'bridge in' get device memory heap info
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_GET_DEVMEM_HEAPINFO_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hDevCookie;
 	IMG_HANDLE hDevMemContext;
-
 } PVRSRV_BRIDGE_IN_GET_DEVMEM_HEAPINFO;
 
 /******************************************************************************
  *	'bridge in' create device memory context
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_CREATE_DEVMEMCONTEXT_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hDevCookie;
-
 } PVRSRV_BRIDGE_IN_CREATE_DEVMEMCONTEXT;
 
 /******************************************************************************
  *	'bridge in' destroy device memory context
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_DESTROY_DEVMEMCONTEXT_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hDevCookie;
 	IMG_HANDLE hDevMemContext;
-
 } PVRSRV_BRIDGE_IN_DESTROY_DEVMEMCONTEXT;
 
 /******************************************************************************
  *	'bridge in' alloc device memory
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_IN_ALLOCDEVICEMEM_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_ALLOCDEVICEMEM_TAG {
 	IMG_HANDLE hDevCookie;
 	IMG_HANDLE hDevMemHeap;
+
+	IMG_HANDLE hPrivData;
+	IMG_UINT32 ui32PrivDataLength;
 	IMG_UINT32 ui32Attribs;
+
 	IMG_SIZE_T uSize;
 	IMG_SIZE_T uAlignment;
-	IMG_PVOID pvPrivData;
-	IMG_UINT32 ui32PrivDataLength;
 
 	IMG_UINT32 ui32ChunkSize;
 	IMG_UINT32 ui32NumVirtChunks;
 	IMG_UINT32 ui32NumPhysChunks;
-	IMG_BOOL *pabMapChunk;
+	IMG_HANDLE hMapChunk;
 } PVRSRV_BRIDGE_IN_ALLOCDEVICEMEM;
-
-/******************************************************************************
- *	'bridge in' map meminfo to user mode
- *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_IN_MAPMEMINFOTOUSER_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
-	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
-
-} PVRSRV_BRIDGE_IN_MAPMEMINFOTOUSER;
-
-/******************************************************************************
- *	'bridge in' unmap meminfo from user mode
- *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_IN_UNMAPMEMINFOFROMUSER_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
-	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
-	IMG_PVOID pvLinAddr;
-	IMG_HANDLE hMappingInfo;
-
-} PVRSRV_BRIDGE_IN_UNMAPMEMINFOFROMUSER;
 
 /******************************************************************************
  *	'bridge in' free device memory
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_FREEDEVICEMEM_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hDevCookie;
-	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
-	PVRSRV_CLIENT_MEM_INFO sClientMemInfo;
-
+	IMG_HANDLE hKernelMemInfo;
 } PVRSRV_BRIDGE_IN_FREEDEVICEMEM;
 
 /******************************************************************************
  *	'bridge in' export device memory
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_EXPORTDEVICEMEM_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hDevCookie;
-	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
-
+	IMG_HANDLE hKernelMemInfo;
 } PVRSRV_BRIDGE_IN_EXPORTDEVICEMEM;
 
 /******************************************************************************
@@ -656,7 +596,6 @@ typedef struct PVRSRV_BRIDGE_IN_EXPORTDEVICEMEM_TAG {
 #define ION_IMPORT_MAX_FDS 3
 #define ION_IMPORT_MAX_CHUNK_COUNT 3
 typedef struct _PVRSRV_BRIDGE_IN_MAP_ION_HANDLE_ {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_UINT32 ui32NumFDs;
 	IMG_INT32 ai32BufferFDs[ION_IMPORT_MAX_FDS];
 	IMG_UINT32 ui32Attribs;
@@ -671,8 +610,7 @@ typedef struct _PVRSRV_BRIDGE_IN_MAP_ION_HANDLE_ {
  *	'bridge in' unmap ion handle
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_UNMAP_ION_HANDLE_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
-	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
+	IMG_HANDLE hKernelMemInfo;
 } PVRSRV_BRIDGE_IN_UNMAP_ION_HANDLE;
 
 /******************************************************************************
@@ -691,45 +629,38 @@ typedef struct _PVRSRV_BRIDGE_IN_MAP_DMABUF_ {
 /******************************************************************************
  *	'bridge in' unmap dmabuf
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_IN_UNMAP_DMABUF_TAG {
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_UNMAP_DMABUF_TAG {
 	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
-	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
+	IMG_HANDLE hKernelMemInfo;
 } PVRSRV_BRIDGE_IN_UNMAP_DMABUF;
 
 /******************************************************************************
  *	'bridge in' get free device memory
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_IN_GETFREEDEVICEMEM_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_GETFREEDEVICEMEM_TAG {
 	IMG_UINT32 ui32Flags;
-
 } PVRSRV_BRIDGE_IN_GETFREEDEVICEMEM;
 
 /******************************************************************************
  *	'bridge in' create Cmd Q
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_IN_CREATECOMMANDQUEUE_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_CREATECOMMANDQUEUE_TAG {
 	IMG_HANDLE hDevCookie;
 	IMG_SIZE_T uQueueSize;
-
 } PVRSRV_BRIDGE_IN_CREATECOMMANDQUEUE;
 
 /******************************************************************************
  *	'bridge in' destroy Cmd Q
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_DESTROYCOMMANDQUEUE_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hDevCookie;
 	PVRSRV_QUEUE_INFO *psQueueInfo;
-
 } PVRSRV_BRIDGE_IN_DESTROYCOMMANDQUEUE;
 
 /******************************************************************************
  *	'bridge in' get full map data
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_MHANDLE_TO_MMAP_DATA_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE
 	hMHandle; /* Handle associated with the memory that needs to be mapped */
 } PVRSRV_BRIDGE_IN_MHANDLE_TO_MMAP_DATA;
@@ -738,7 +669,6 @@ typedef struct PVRSRV_BRIDGE_IN_MHANDLE_TO_MMAP_DATA_TAG {
  *	'bridge in' get full map data
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_RELEASE_MMAP_DATA_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE
 	hMHandle; /* Handle associated with the memory that needs to be mapped */
 } PVRSRV_BRIDGE_IN_RELEASE_MMAP_DATA;
@@ -747,12 +677,10 @@ typedef struct PVRSRV_BRIDGE_IN_RELEASE_MMAP_DATA_TAG {
  *	'bridge in' reserve vm
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_RESERVE_DEV_VIRTMEM_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hDevMemHeap;
 	IMG_DEV_VIRTADDR *psDevVAddr;
 	IMG_SIZE_T uSize;
 	IMG_SIZE_T uAlignment;
-
 } PVRSRV_BRIDGE_IN_RESERVE_DEV_VIRTMEM;
 
 /******************************************************************************
@@ -760,7 +688,8 @@ typedef struct PVRSRV_BRIDGE_IN_RESERVE_DEV_VIRTMEM_TAG {
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_OUT_CONNECT_SERVICES_TAG {
 	PVRSRV_ERROR eError;
-	IMG_HANDLE hKernelServices;
+	IMG_UINT8 ui8KernelArch;
+	IMG_UINT64 hKernelServices; /* actually a IMG_HANDLE retrurnd from KM */
 } PVRSRV_BRIDGE_OUT_CONNECT_SERVICES;
 
 /******************************************************************************
@@ -768,8 +697,8 @@ typedef struct PVRSRV_BRIDGE_OUT_CONNECT_SERVICES_TAG {
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_OUT_RESERVE_DEV_VIRTMEM_TAG {
 	PVRSRV_ERROR eError;
-	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
-	PVRSRV_KERNEL_SYNC_INFO *psKernelSyncInfo;
+	IMG_HANDLE hKernelMemInfo;
+	IMG_HANDLE hKernelSyncInfo;
 	PVRSRV_CLIENT_MEM_INFO sClientMemInfo;
 	PVRSRV_CLIENT_SYNC_INFO sClientSyncInfo;
 
@@ -779,54 +708,42 @@ typedef struct PVRSRV_BRIDGE_OUT_RESERVE_DEV_VIRTMEM_TAG {
  *	'bridge in' free vm
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_FREE_DEV_VIRTMEM_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
-	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
+	IMG_HANDLE hKernelMemInfo;
 	PVRSRV_CLIENT_MEM_INFO sClientMemInfo;
 	PVRSRV_CLIENT_SYNC_INFO sClientSyncInfo;
-
 } PVRSRV_BRIDGE_IN_FREE_DEV_VIRTMEM;
 
 /******************************************************************************
  *	'bridge in' map dev memory allocation to another heap
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_MAP_DEV_MEMORY_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hKernelMemInfo;
 	IMG_HANDLE hDstDevMemHeap;
-
 } PVRSRV_BRIDGE_IN_MAP_DEV_MEMORY;
 
 /******************************************************************************
  *	'bridge out' map dev memory allocation to another heap
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_OUT_MAP_DEV_MEMORY_TAG {
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_OUT_MAP_DEV_MEMORY_TAG {
 	PVRSRV_ERROR eError;
-	PVRSRV_KERNEL_MEM_INFO *psDstKernelMemInfo;
 	PVRSRV_CLIENT_MEM_INFO sDstClientMemInfo;
 	PVRSRV_CLIENT_SYNC_INFO sDstClientSyncInfo;
-
 } PVRSRV_BRIDGE_OUT_MAP_DEV_MEMORY;
 
 /******************************************************************************
  *	'bridge in' unmap dev memory allocation
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_UNMAP_DEV_MEMORY_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
-	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
-	PVRSRV_CLIENT_MEM_INFO sClientMemInfo;
-	PVRSRV_CLIENT_SYNC_INFO sClientSyncInfo;
-
+	IMG_HANDLE hKernelMemInfo;
 } PVRSRV_BRIDGE_IN_UNMAP_DEV_MEMORY;
 
 /******************************************************************************
  *	'bridge in' map pages
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_MAP_EXT_MEMORY_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
-	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
+	IMG_HANDLE hKernelMemInfo;
 	IMG_SYS_PHYADDR *psSysPAddr;
 	IMG_UINT32 ui32Flags;
-
 } PVRSRV_BRIDGE_IN_MAP_EXT_MEMORY;
 
 /******************************************************************************
@@ -837,112 +754,93 @@ typedef struct PVRSRV_BRIDGE_IN_UNMAP_EXT_MEMORY_TAG {
 	PVRSRV_CLIENT_MEM_INFO sClientMemInfo;
 	PVRSRV_CLIENT_SYNC_INFO sClientSyncInfo;
 	IMG_UINT32 ui32Flags;
-
 } PVRSRV_BRIDGE_IN_UNMAP_EXT_MEMORY;
 
 /******************************************************************************
  *	'bridge in' map device class buffer pages
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_MAP_DEVICECLASS_MEMORY_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hDeviceClassBuffer;
 	IMG_HANDLE hDevMemContext;
-
 } PVRSRV_BRIDGE_IN_MAP_DEVICECLASS_MEMORY;
 
 /******************************************************************************
  *	'bridge out' map device class buffer pages
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_OUT_MAP_DEVICECLASS_MEMORY_TAG {
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_OUT_MAP_DEVICECLASS_MEMORY_TAG {
 	PVRSRV_ERROR eError;
 	PVRSRV_CLIENT_MEM_INFO sClientMemInfo;
 	PVRSRV_CLIENT_SYNC_INFO sClientSyncInfo;
-	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
+	IMG_HANDLE hKernelMemInfo;
 	IMG_HANDLE hMappingInfo;
-
 } PVRSRV_BRIDGE_OUT_MAP_DEVICECLASS_MEMORY;
 
 /******************************************************************************
  *	'bridge in' unmap device class buffer pages
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_UNMAP_DEVICECLASS_MEMORY_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
-	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
-	PVRSRV_CLIENT_MEM_INFO sClientMemInfo;
-	PVRSRV_CLIENT_SYNC_INFO sClientSyncInfo;
-
+	IMG_HANDLE hKernelMemInfo;
 } PVRSRV_BRIDGE_IN_UNMAP_DEVICECLASS_MEMORY;
 
 /******************************************************************************
  *	'bridge in' pdump memory poll
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_IN_PDUMP_MEMPOL_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
-	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_PDUMP_MEMPOL_TAG {
+	IMG_HANDLE hKernelMemInfo;
 	IMG_UINT32 ui32Offset;
 	IMG_UINT32 ui32Value;
 	IMG_UINT32 ui32Mask;
 	PDUMP_POLL_OPERATOR eOperator;
 	IMG_UINT32 ui32Flags;
-
 } PVRSRV_BRIDGE_IN_PDUMP_MEMPOL;
 
 /******************************************************************************
  *	'bridge in' pdump sync poll
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_IN_PDUMP_SYNCPOL_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
-	PVRSRV_KERNEL_SYNC_INFO *psKernelSyncInfo;
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_PDUMP_SYNCPOL_TAG {
+	IMG_HANDLE hKernelSyncInfo;
 	IMG_BOOL bIsRead;
 	IMG_BOOL bUseLastOpDumpVal;
 	IMG_UINT32 ui32Value;
 	IMG_UINT32 ui32Mask;
-
 } PVRSRV_BRIDGE_IN_PDUMP_SYNCPOL;
 
 /******************************************************************************
  *	'bridge in' pdump dump memory
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_IN_PDUMP_DUMPMEM_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
-	IMG_PVOID pvLinAddr;
-	IMG_PVOID pvAltLinAddr;
-	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_PDUMP_DUMPMEM_TAG {
+	IMG_HANDLE hLinAddr;
+	IMG_HANDLE hAltLinAddr;
+	IMG_HANDLE hKernelMemInfo;
 	IMG_UINT32 ui32Offset;
 	IMG_UINT32 ui32Bytes;
 	IMG_UINT32 ui32Flags;
-
 } PVRSRV_BRIDGE_IN_PDUMP_DUMPMEM;
 
 /******************************************************************************
  *	'bridge in' pdump dump sync
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_IN_PDUMP_DUMPSYNC_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
-	IMG_PVOID pvAltLinAddr;
-	PVRSRV_KERNEL_SYNC_INFO *psKernelSyncInfo;
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_PDUMP_DUMPSYNC_TAG {
+	IMG_HANDLE hAltLinAddr;
+	IMG_HANDLE hKernelSyncInfo;
 	IMG_UINT32 ui32Offset;
 	IMG_UINT32 ui32Bytes;
-
 } PVRSRV_BRIDGE_IN_PDUMP_DUMPSYNC;
 
 /******************************************************************************
  *	'bridge in' pdump dump reg
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_IN_PDUMP_DUMPREG_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_PDUMP_DUMPREG_TAG {
 	IMG_HANDLE hDevCookie;
 	PVRSRV_HWREG sHWReg;
 	IMG_UINT32 ui32Flags;
 	IMG_CHAR szRegRegion[32];
-
 } PVRSRV_BRIDGE_IN_PDUMP_DUMPREG;
 
 /******************************************************************************
  *	'bridge in' pdump dump reg
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_IN_PDUMP_REGPOL_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_PDUMP_REGPOL_TAG {
 	IMG_HANDLE hDevCookie;
 	PVRSRV_HWREG sHWReg;
 	IMG_UINT32 ui32Mask;
@@ -954,17 +852,14 @@ typedef struct PVRSRV_BRIDGE_IN_PDUMP_REGPOL_TAG {
  *	'bridge in' pdump dump PD reg
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_PDUMP_DUMPPDREG_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	PVRSRV_HWREG sHWReg;
 	IMG_UINT32 ui32Flags;
-
 } PVRSRV_BRIDGE_IN_PDUMP_DUMPPDREG;
 
 /******************************************************************************
  *	'bridge in' pdump dump mem pages
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_IN_PDUMP_MEMPAGES_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_PDUMP_MEMPAGES_TAG {
 	IMG_HANDLE hDevCookie;
 	IMG_HANDLE hKernelMemInfo;
 	IMG_DEV_PHYADDR *pPages;
@@ -973,34 +868,28 @@ typedef struct PVRSRV_BRIDGE_IN_PDUMP_MEMPAGES_TAG {
 	IMG_UINT32 ui32Start;
 	IMG_UINT32 ui32Length;
 	IMG_UINT32 ui32Flags;
-
 } PVRSRV_BRIDGE_IN_PDUMP_MEMPAGES;
 
 /******************************************************************************
  *	'bridge in' pdump dump comment
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_IN_PDUMP_COMMENT_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_PDUMP_COMMENT_TAG {
 	IMG_CHAR szComment[PVRSRV_PDUMP_MAX_COMMENT_SIZE];
 	IMG_UINT32 ui32Flags;
-
 } PVRSRV_BRIDGE_IN_PDUMP_COMMENT;
 
 /******************************************************************************
  *	'bridge in' pdump set frame
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_IN_PDUMP_SETFRAME_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_PDUMP_SETFRAME_TAG {
 	IMG_UINT32 ui32Frame;
-
 } PVRSRV_BRIDGE_IN_PDUMP_SETFRAME;
 
 /******************************************************************************
  *	'bridge in' pdump dump bitmap
  *****************************************************************************/
 
-typedef struct PVRSRV_BRIDGE_IN_PDUMP_BITMAP_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_PDUMP_BITMAP_TAG {
 	IMG_HANDLE hDevCookie;
 	IMG_CHAR szFileName[PVRSRV_PDUMP_MAX_FILENAME_SIZE];
 	IMG_UINT32 ui32FileOffset;
@@ -1013,14 +902,12 @@ typedef struct PVRSRV_BRIDGE_IN_PDUMP_BITMAP_TAG {
 	PDUMP_PIXEL_FORMAT ePixelFormat;
 	PDUMP_MEM_FORMAT eMemFormat;
 	IMG_UINT32 ui32Flags;
-
 } PVRSRV_BRIDGE_IN_PDUMP_BITMAP;
 
 /******************************************************************************
  *	'bridge in' pdump dump read reg
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_IN_PDUMP_READREG_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_PDUMP_READREG_TAG {
 	IMG_HANDLE hDevCookie;
 	IMG_CHAR szFileName[PVRSRV_PDUMP_MAX_FILENAME_SIZE];
 	IMG_UINT32 ui32FileOffset;
@@ -1028,21 +915,17 @@ typedef struct PVRSRV_BRIDGE_IN_PDUMP_READREG_TAG {
 	IMG_UINT32 ui32Size;
 	IMG_UINT32 ui32Flags;
 	IMG_CHAR szRegRegion[32];
-
 } PVRSRV_BRIDGE_IN_PDUMP_READREG;
 
 /******************************************************************************
  *	'bridge in' pdump dump driver-info
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_IN_PDUMP_DRIVERINFO_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_PDUMP_DRIVERINFO_TAG {
 	IMG_CHAR szString[PVRSRV_PDUMP_MAX_COMMENT_SIZE];
 	IMG_BOOL bContinuous;
-
 } PVRSRV_BRIDGE_IN_PDUMP_DRIVERINFO;
 
-typedef struct PVRSRV_BRIDGE_IN_PDUMP_DUMPPDDEVPADDR_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_PDUMP_DUMPPDDEVPADDR_TAG {
 	IMG_HANDLE hKernelMemInfo;
 	IMG_UINT32 ui32Offset;
 	IMG_DEV_PHYADDR sPDDevPAddr;
@@ -1051,8 +934,7 @@ typedef struct PVRSRV_BRIDGE_IN_PDUMP_DUMPPDDEVPADDR_TAG {
 /******************************************************************************
  *	'bridge in' pdump cycle count register read
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_PDUM_IN_CYCLE_COUNT_REG_READ_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_PDUM_IN_CYCLE_COUNT_REG_READ_TAG {
 	IMG_HANDLE hDevCookie;
 	IMG_UINT32 ui32RegOffset;
 	IMG_BOOL bLastFrame;
@@ -1069,16 +951,14 @@ typedef struct PVRSRV_BRIDGE_OUT_ENUMDEVICE_TAG {
 	PVRSRV_ERROR eError;
 	IMG_UINT32 ui32NumDevices;
 	PVRSRV_DEVICE_IDENTIFIER asDeviceIdentifier[PVRSRV_MAX_DEVICES];
-
 } PVRSRV_BRIDGE_OUT_ENUMDEVICE;
 
 /******************************************************************************
  *	'bridge out' acquire device info
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_OUT_ACQUIRE_DEVICEINFO_TAG {
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_OUT_ACQUIRE_DEVICEINFO_TAG {
 	PVRSRV_ERROR eError;
 	IMG_HANDLE hDevCookie;
-
 } PVRSRV_BRIDGE_OUT_ACQUIRE_DEVICEINFO;
 
 /******************************************************************************
@@ -1088,33 +968,28 @@ typedef struct PVRSRV_BRIDGE_OUT_ENUMCLASS_TAG {
 	PVRSRV_ERROR eError;
 	IMG_UINT32 ui32NumDevices;
 	IMG_UINT32 ui32DevID[PVRSRV_MAX_DEVICES];
-
 } PVRSRV_BRIDGE_OUT_ENUMCLASS;
 
 /******************************************************************************
  *	'bridge in' open display class devices
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_IN_OPEN_DISPCLASS_DEVICE_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_OPEN_DISPCLASS_DEVICE_TAG {
 	IMG_UINT32 ui32DeviceID;
 	IMG_HANDLE hDevCookie;
-
 } PVRSRV_BRIDGE_IN_OPEN_DISPCLASS_DEVICE;
 
 /******************************************************************************
  *	'bridge out' open display class devices
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_OUT_OPEN_DISPCLASS_DEVICE_TAG {
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_OUT_OPEN_DISPCLASS_DEVICE_TAG {
 	PVRSRV_ERROR eError;
 	IMG_HANDLE hDeviceKM;
-
 } PVRSRV_BRIDGE_OUT_OPEN_DISPCLASS_DEVICE;
 
 /******************************************************************************
  *	'bridge in' wrap pages
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_WRAP_EXT_MEMORY_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hDevCookie;
 	IMG_HANDLE hDevMemContext;
 	IMG_VOID *pvLinAddr;
@@ -1124,28 +999,22 @@ typedef struct PVRSRV_BRIDGE_IN_WRAP_EXT_MEMORY_TAG {
 	IMG_UINT32 ui32NumPageTableEntries;
 	IMG_SYS_PHYADDR *psSysPAddr;
 	IMG_UINT32 ui32Flags;
-
 } PVRSRV_BRIDGE_IN_WRAP_EXT_MEMORY;
 
 /******************************************************************************
  *	'bridge out' wrap pages
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_OUT_WRAP_EXT_MEMORY_TAG {
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_OUT_WRAP_EXT_MEMORY_TAG {
 	PVRSRV_ERROR eError;
 	PVRSRV_CLIENT_MEM_INFO sClientMemInfo;
 	PVRSRV_CLIENT_SYNC_INFO sClientSyncInfo;
-
 } PVRSRV_BRIDGE_OUT_WRAP_EXT_MEMORY;
 
 /******************************************************************************
  *	'bridge in' unwrap pages
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_UNWRAP_EXT_MEMORY_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hKernelMemInfo;
-	PVRSRV_CLIENT_MEM_INFO sClientMemInfo;
-	PVRSRV_CLIENT_SYNC_INFO sClientSyncInfo;
-
 } PVRSRV_BRIDGE_IN_UNWRAP_EXT_MEMORY;
 
 #define PVRSRV_MAX_DC_DISPLAY_FORMATS 10
@@ -1156,21 +1025,18 @@ typedef struct PVRSRV_BRIDGE_IN_UNWRAP_EXT_MEMORY_TAG {
 /******************************************************************************
  *	'bridge out' enum display class formats
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_OUT_ENUM_DISPCLASS_FORMATS_TAG {
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_OUT_ENUM_DISPCLASS_FORMATS_TAG {
 	PVRSRV_ERROR eError;
 	IMG_UINT32 ui32Count;
 	DISPLAY_FORMAT asFormat[PVRSRV_MAX_DC_DISPLAY_FORMATS];
-
 } PVRSRV_BRIDGE_OUT_ENUM_DISPCLASS_FORMATS;
 
 /******************************************************************************
  *	'bridge in' enum display class dims
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_ENUM_DISPCLASS_DIMS_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hDeviceKM;
 	DISPLAY_FORMAT sFormat;
-
 } PVRSRV_BRIDGE_IN_ENUM_DISPCLASS_DIMS;
 
 /******************************************************************************
@@ -1180,7 +1046,6 @@ typedef struct PVRSRV_BRIDGE_OUT_ENUM_DISPCLASS_DIMS_TAG {
 	PVRSRV_ERROR eError;
 	IMG_UINT32 ui32Count;
 	DISPLAY_DIMS asDim[PVRSRV_MAX_DC_DISPLAY_DIMENSIONS];
-
 } PVRSRV_BRIDGE_OUT_ENUM_DISPCLASS_DIMS;
 
 /******************************************************************************
@@ -1189,83 +1054,74 @@ typedef struct PVRSRV_BRIDGE_OUT_ENUM_DISPCLASS_DIMS_TAG {
 typedef struct PVRSRV_BRIDGE_OUT_GET_DISPCLASS_INFO_TAG {
 	PVRSRV_ERROR eError;
 	DISPLAY_INFO sDisplayInfo;
-
 } PVRSRV_BRIDGE_OUT_GET_DISPCLASS_INFO;
 
 /******************************************************************************
  *	'bridge out' get display class system buffer
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_OUT_GET_DISPCLASS_SYSBUFFER_TAG {
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_OUT_GET_DISPCLASS_SYSBUFFER_TAG {
 	PVRSRV_ERROR eError;
 	IMG_HANDLE hBuffer;
-
 } PVRSRV_BRIDGE_OUT_GET_DISPCLASS_SYSBUFFER;
 
 /******************************************************************************
  *	'bridge in' create swap chain
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_IN_CREATE_DISPCLASS_SWAPCHAIN_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_CREATE_DISPCLASS_SWAPCHAIN_TAG {
 	IMG_HANDLE hDeviceKM;
-	IMG_UINT32 ui32Flags;
 	DISPLAY_SURF_ATTRIBUTES sDstSurfAttrib;
 	DISPLAY_SURF_ATTRIBUTES sSrcSurfAttrib;
+	IMG_UINT32 ui32Flags;
 	IMG_UINT32 ui32BufferCount;
 	IMG_UINT32 ui32OEMFlags;
 	IMG_UINT32 ui32SwapChainID;
-
+#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_FENCE)
+	IMG_INT32 i32TimelineFd;
+	IMG_INT32 i32Unused;
+#endif /* defined(PVR_ANDROID_NATIVE_WINDOW_HAS_FENCE) */
 } PVRSRV_BRIDGE_IN_CREATE_DISPCLASS_SWAPCHAIN;
 
 /******************************************************************************
  *	'bridge out' create swap chain
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_OUT_CREATE_DISPCLASS_SWAPCHAIN_TAG {
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_OUT_CREATE_DISPCLASS_SWAPCHAIN_TAG {
 	PVRSRV_ERROR eError;
-	IMG_HANDLE hSwapChain;
 	IMG_UINT32 ui32SwapChainID;
-
+	IMG_HANDLE hSwapChain;
 } PVRSRV_BRIDGE_OUT_CREATE_DISPCLASS_SWAPCHAIN;
 
 /******************************************************************************
  *	'bridge in' destroy swap chain
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_DESTROY_DISPCLASS_SWAPCHAIN_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hDeviceKM;
 	IMG_HANDLE hSwapChain;
-
 } PVRSRV_BRIDGE_IN_DESTROY_DISPCLASS_SWAPCHAIN;
 
 /******************************************************************************
  *	'bridge in' set DST/SRC rect
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_SET_DISPCLASS_RECT_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hDeviceKM;
 	IMG_HANDLE hSwapChain;
 	IMG_RECT sRect;
-
 } PVRSRV_BRIDGE_IN_SET_DISPCLASS_RECT;
 
 /******************************************************************************
  *	'bridge in' set DST/SRC colourkey
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_IN_SET_DISPCLASS_COLOURKEY_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_SET_DISPCLASS_COLOURKEY_TAG {
 	IMG_HANDLE hDeviceKM;
 	IMG_HANDLE hSwapChain;
 	IMG_UINT32 ui32CKColour;
-
 } PVRSRV_BRIDGE_IN_SET_DISPCLASS_COLOURKEY;
 
 /******************************************************************************
  *	'bridge in' get buffers (from swapchain)
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_GET_DISPCLASS_BUFFERS_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hDeviceKM;
 	IMG_HANDLE hSwapChain;
-
 } PVRSRV_BRIDGE_IN_GET_DISPCLASS_BUFFERS;
 
 /******************************************************************************
@@ -1282,98 +1138,83 @@ typedef struct PVRSRV_BRIDGE_OUT_GET_DISPCLASS_BUFFERS_TAG {
  *	'bridge in' swap to buffer
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_SWAP_DISPCLASS_TO_BUFFER_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hDeviceKM;
 	IMG_HANDLE hBuffer;
-	IMG_UINT32 ui32SwapInterval;
 	IMG_HANDLE hPrivateTag;
+	IMG_UINT32 ui32SwapInterval;
 	IMG_UINT32 ui32ClipRectCount;
 	IMG_RECT sClipRect[PVRSRV_MAX_DC_CLIP_RECTS];
-
 } PVRSRV_BRIDGE_IN_SWAP_DISPCLASS_TO_BUFFER;
 
 /******************************************************************************
  *	'bridge in' swap to buffer 2
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_SWAP_DISPCLASS_TO_BUFFER2_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hDeviceKM;
 	IMG_HANDLE hSwapChain;
+
 	IMG_UINT32 ui32SwapInterval;
-
 	IMG_UINT32 ui32NumMemInfos;
-	PVRSRV_KERNEL_MEM_INFO **ppsKernelMemInfos;
-	PVRSRV_KERNEL_SYNC_INFO **ppsKernelSyncInfos;
-
+	IMG_HANDLE hKernelMemInfos;
+	IMG_HANDLE hKernelSyncInfos;
 	IMG_UINT32 ui32PrivDataLength;
-	IMG_PVOID pvPrivData;
-
+	IMG_HANDLE hPrivData;
 } PVRSRV_BRIDGE_IN_SWAP_DISPCLASS_TO_BUFFER2;
 
 /******************************************************************************
  *	'bridge out' swap to buffer 2
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_OUT_SWAP_DISPCLASS_TO_BUFFER2_TAG {
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_OUT_SWAP_DISPCLASS_TO_BUFFER2_TAG {
 	PVRSRV_ERROR eError;
 	IMG_HANDLE hFence;
-
 } PVRSRV_BRIDGE_OUT_SWAP_DISPCLASS_TO_BUFFER2;
 
 /******************************************************************************
  *	'bridge in' swap to system buffer (primary)
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_SWAP_DISPCLASS_TO_SYSTEM_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hDeviceKM;
 	IMG_HANDLE hSwapChain;
-
 } PVRSRV_BRIDGE_IN_SWAP_DISPCLASS_TO_SYSTEM;
 
 /******************************************************************************
  *	'bridge in' open buffer class device
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_IN_OPEN_BUFFERCLASS_DEVICE_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_OPEN_BUFFERCLASS_DEVICE_TAG {
 	IMG_UINT32 ui32DeviceID;
 	IMG_HANDLE hDevCookie;
-
 } PVRSRV_BRIDGE_IN_OPEN_BUFFERCLASS_DEVICE;
 
 /******************************************************************************
  *	'bridge out' open buffer class device
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_OUT_OPEN_BUFFERCLASS_DEVICE_TAG {
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_OUT_OPEN_BUFFERCLASS_DEVICE_TAG {
 	PVRSRV_ERROR eError;
 	IMG_HANDLE hDeviceKM;
-
 } PVRSRV_BRIDGE_OUT_OPEN_BUFFERCLASS_DEVICE;
 
 /******************************************************************************
  *	'bridge out' get buffer class info
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_OUT_GET_BUFFERCLASS_INFO_TAG {
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_OUT_GET_BUFFERCLASS_INFO_TAG {
 	PVRSRV_ERROR eError;
 	BUFFER_INFO sBufferInfo;
-
 } PVRSRV_BRIDGE_OUT_GET_BUFFERCLASS_INFO;
 
 /******************************************************************************
  *	'bridge in' get buffer class buffer
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_IN_GET_BUFFERCLASS_BUFFER_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_GET_BUFFERCLASS_BUFFER_TAG {
 	IMG_HANDLE hDeviceKM;
 	IMG_UINT32 ui32BufferIndex;
-
 } PVRSRV_BRIDGE_IN_GET_BUFFERCLASS_BUFFER;
 
 /******************************************************************************
  *	'bridge out' get buffer class buffer
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_OUT_GET_BUFFERCLASS_BUFFER_TAG {
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_OUT_GET_BUFFERCLASS_BUFFER_TAG {
 	PVRSRV_ERROR eError;
 	IMG_HANDLE hBuffer;
-
 } PVRSRV_BRIDGE_OUT_GET_BUFFERCLASS_BUFFER;
 
 /******************************************************************************
@@ -1383,7 +1224,6 @@ typedef struct PVRSRV_BRIDGE_OUT_GET_DEVMEM_HEAPINFO_TAG {
 	PVRSRV_ERROR eError;
 	IMG_UINT32 ui32ClientHeapCount;
 	PVRSRV_HEAP_INFO sHeapInfo[PVRSRV_MAX_CLIENT_HEAPS];
-
 } PVRSRV_BRIDGE_OUT_GET_DEVMEM_HEAPINFO;
 
 /******************************************************************************
@@ -1391,30 +1231,26 @@ typedef struct PVRSRV_BRIDGE_OUT_GET_DEVMEM_HEAPINFO_TAG {
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_OUT_CREATE_DEVMEMCONTEXT_TAG {
 	PVRSRV_ERROR eError;
-	IMG_HANDLE hDevMemContext;
 	IMG_UINT32 ui32ClientHeapCount;
+	IMG_HANDLE hDevMemContext;
 	PVRSRV_HEAP_INFO sHeapInfo[PVRSRV_MAX_CLIENT_HEAPS];
-
 } PVRSRV_BRIDGE_OUT_CREATE_DEVMEMCONTEXT;
 
 /******************************************************************************
  *	'bridge out' create device memory context
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_OUT_CREATE_DEVMEMHEAP_TAG {
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_OUT_CREATE_DEVMEMHEAP_TAG {
 	PVRSRV_ERROR eError;
 	IMG_HANDLE hDevMemHeap;
-
 } PVRSRV_BRIDGE_OUT_CREATE_DEVMEMHEAP;
 
 /******************************************************************************
  *	'bridge out' alloc device memory
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_OUT_ALLOCDEVICEMEM_TAG {
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_OUT_ALLOCDEVICEMEM_TAG {
 	PVRSRV_ERROR eError;
-	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
 	PVRSRV_CLIENT_MEM_INFO sClientMemInfo;
 	PVRSRV_CLIENT_SYNC_INFO sClientSyncInfo;
-
 } PVRSRV_BRIDGE_OUT_ALLOCDEVICEMEM;
 
 /******************************************************************************
@@ -1431,33 +1267,30 @@ typedef struct PVRSRV_BRIDGE_OUT_FREEDEVICEMEM_TAG {
 /******************************************************************************
  *	'bridge out' export device memory
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_OUT_EXPORTDEVICEMEM_TAG {
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_OUT_EXPORTDEVICEMEM_TAG {
 	PVRSRV_ERROR eError;
 	IMG_HANDLE hMemInfo;
 #if defined(SUPPORT_MEMINFO_IDS)
 	IMG_UINT64 ui64Stamp;
 #endif
-
 } PVRSRV_BRIDGE_OUT_EXPORTDEVICEMEM;
 
 /******************************************************************************
  *	'bridge out' map ion handle
  *****************************************************************************/
-typedef struct _PVRSRV_BRIDGE_OUT_MAP_ION_HANDLE_ {
+typedef struct IMG_COMPAT _PVRSRV_BRIDGE_OUT_MAP_ION_HANDLE_ {
 	PVRSRV_ERROR eError;
-	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
 	PVRSRV_CLIENT_MEM_INFO sClientMemInfo;
 	PVRSRV_CLIENT_SYNC_INFO sClientSyncInfo;
 	IMG_SIZE_T uiIonBufferSize;
-
 } PVRSRV_BRIDGE_OUT_MAP_ION_HANDLE;
 
 /******************************************************************************
  *	'bridge out' map dmabuf
  *****************************************************************************/
-typedef struct _PVRSRV_BRIDGE_OUT_MAP_DMABUF_ {
+typedef struct IMG_COMPAT _PVRSRV_BRIDGE_OUT_MAP_DMABUF_ {
 	PVRSRV_ERROR eError;
-	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
+	IMG_HANDLE hKernelMemInfo;
 	PVRSRV_CLIENT_MEM_INFO sClientMemInfo;
 	PVRSRV_CLIENT_SYNC_INFO sClientSyncInfo;
 	IMG_SIZE_T uiSize;
@@ -1471,18 +1304,16 @@ typedef struct PVRSRV_BRIDGE_OUT_MAPMEMINFOTOUSER_TAG {
 	PVRSRV_ERROR eError;
 	IMG_PVOID pvLinAddr;
 	IMG_HANDLE hMappingInfo;
-
 } PVRSRV_BRIDGE_OUT_MAPMEMINFOTOUSER;
 
 /******************************************************************************
  *	'bridge out' get free device memory
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_OUT_GETFREEDEVICEMEM_TAG {
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_OUT_GETFREEDEVICEMEM_TAG {
 	PVRSRV_ERROR eError;
 	IMG_SIZE_T uTotal;
 	IMG_SIZE_T uFree;
 	IMG_SIZE_T uLargestBlock;
-
 } PVRSRV_BRIDGE_OUT_GETFREEDEVICEMEM;
 
 //#ifdef LINUX
@@ -1490,7 +1321,7 @@ typedef struct PVRSRV_BRIDGE_OUT_GETFREEDEVICEMEM_TAG {
  *	'bridge out' get full map data
  *****************************************************************************/
 #include "pvrmmap.h"
-typedef struct PVRSRV_BRIDGE_OUT_MHANDLE_TO_MMAP_DATA_TAG {
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_OUT_MHANDLE_TO_MMAP_DATA_TAG {
 	PVRSRV_ERROR eError;
 
 	/* This is a the offset you should pass to mmap(2) so that
@@ -1526,37 +1357,30 @@ typedef struct PVRSRV_BRIDGE_OUT_RELEASE_MMAP_DATA_TAG {
 //#endif
 
 typedef struct PVRSRV_BRIDGE_IN_COMPAT_CHECK {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_UINT32 ui32DDKVersion;
 	IMG_UINT32 ui32DDKBuild;
-
 } PVRSRV_BRIDGE_IN_COMPAT_CHECK;
 
 /******************************************************************************
  *	'bridge in' get misc info
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_IN_GET_MISC_INFO_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_GET_MISC_INFO_TAG {
 	PVRSRV_MISC_INFO sMiscInfo;
-
 } PVRSRV_BRIDGE_IN_GET_MISC_INFO;
 
 /******************************************************************************
  *	'bridge out' get misc info
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_OUT_GET_MISC_INFO_TAG {
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_OUT_GET_MISC_INFO_TAG {
 	PVRSRV_ERROR eError;
 	PVRSRV_MISC_INFO sMiscInfo;
-
 } PVRSRV_BRIDGE_OUT_GET_MISC_INFO;
 
 /******************************************************************************
  *	'bridge in' get misc info
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_RELEASE_MISC_INFO_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	PVRSRV_MISC_INFO sMiscInfo;
-
 } PVRSRV_BRIDGE_IN_RELEASE_MISC_INFO;
 
 /******************************************************************************
@@ -1565,7 +1389,6 @@ typedef struct PVRSRV_BRIDGE_IN_RELEASE_MISC_INFO_TAG {
 typedef struct PVRSRV_BRIDGE_OUT_RELEASE_MISC_INFO_TAG {
 	PVRSRV_ERROR eError;
 	PVRSRV_MISC_INFO sMiscInfo;
-
 } PVRSRV_BRIDGE_OUT_RELEASE_MISC_INFO;
 
 /******************************************************************************
@@ -1575,28 +1398,23 @@ typedef struct PVRSRV_BRIDGE_OUT_RELEASE_MISC_INFO_TAG {
 typedef struct PVRSRV_BRIDGE_OUT_PDUMP_ISCAPTURING_TAG {
 	PVRSRV_ERROR eError;
 	IMG_BOOL bIsCapturing;
-
 } PVRSRV_BRIDGE_OUT_PDUMP_ISCAPTURING;
 
 /******************************************************************************
  *	'bridge in' get FB mem stats
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_GET_FB_STATS_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_SIZE_T uTotal;
 	IMG_SIZE_T uAvailable;
-
 } PVRSRV_BRIDGE_IN_GET_FB_STATS;
 
 /******************************************************************************
  *	'bridge in' Map CPU Physical to User Space
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_MAPPHYSTOUSERSPACE_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hDevCookie;
 	IMG_SYS_PHYADDR sSysPhysAddr;
 	IMG_UINT32 uiSizeInBytes;
-
 } PVRSRV_BRIDGE_IN_MAPPHYSTOUSERSPACE;
 
 /******************************************************************************
@@ -1606,18 +1424,15 @@ typedef struct PVRSRV_BRIDGE_OUT_MAPPHYSTOUSERSPACE_TAG {
 	IMG_PVOID pvUserAddr;
 	IMG_UINT32 uiActualSize;
 	IMG_PVOID pvProcess;
-
 } PVRSRV_BRIDGE_OUT_MAPPHYSTOUSERSPACE;
 
 /******************************************************************************
  *	'bridge in' Unmap CPU Physical to User Space
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_UNMAPPHYSTOUSERSPACE_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hDevCookie;
 	IMG_PVOID pvUserAddr;
 	IMG_PVOID pvProcess;
-
 } PVRSRV_BRIDGE_IN_UNMAPPHYSTOUSERSPACE;
 
 /******************************************************************************
@@ -1626,17 +1441,14 @@ typedef struct PVRSRV_BRIDGE_IN_UNMAPPHYSTOUSERSPACE_TAG {
 typedef struct PVRSRV_BRIDGE_OUT_GETPHYSTOUSERSPACEMAP_TAG {
 	IMG_PVOID *ppvTbl;
 	IMG_UINT32 uiTblSize;
-
 } PVRSRV_BRIDGE_OUT_GETPHYSTOUSERSPACEMAP;
 
 /******************************************************************************
  *	'bridge in' Register RTSIM process thread
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_REGISTER_SIM_PROCESS_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hDevCookie;
 	IMG_PVOID pvProcess;
-
 } PVRSRV_BRIDGE_IN_REGISTER_SIM_PROCESS;
 
 /******************************************************************************
@@ -1649,14 +1461,12 @@ typedef struct PVRSRV_BRIDGE_OUT_REGISTER_SIM_PROCESS_TAG {
 	IMG_PVOID pvProcess;
 	IMG_UINT32 ulNoOfEntries;
 	IMG_PVOID pvTblLinAddr;
-
 } PVRSRV_BRIDGE_OUT_REGISTER_SIM_PROCESS;
 
 /******************************************************************************
  *	'bridge in' Unregister RTSIM process thread
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_UNREGISTER_SIM_PROCESS_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hDevCookie;
 	IMG_PVOID pvProcess;
 	IMG_VOID *pvRegsBase; /*!< User mode linear address of SGX device registers */
@@ -1667,36 +1477,31 @@ typedef struct PVRSRV_BRIDGE_IN_UNREGISTER_SIM_PROCESS_TAG {
  *	'bridge in' process simulator ISR event
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_PROCESS_SIMISR_EVENT_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hDevCookie;
 	IMG_UINT32 ui32StatusAndMask;
 	PVRSRV_ERROR eError;
-
 } PVRSRV_BRIDGE_IN_PROCESS_SIMISR_EVENT;
 
 /******************************************************************************
  *	'bridge in' initialisation server disconnect
  *****************************************************************************/
-typedef struct PVRSRV_BRIDGE_IN_INITSRV_DISCONNECT_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_INITSRV_DISCONNECT_TAG {
 	IMG_BOOL bInitSuccesful;
 } PVRSRV_BRIDGE_IN_INITSRV_DISCONNECT;
 
 typedef struct PVRSRV_BRIDGE_IN_ALLOC_SHARED_SYS_MEM_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_UINT32 ui32Flags;
 	IMG_SIZE_T uSize;
 } PVRSRV_BRIDGE_IN_ALLOC_SHARED_SYS_MEM;
 
 typedef struct PVRSRV_BRIDGE_OUT_ALLOC_SHARED_SYS_MEM_TAG {
 	PVRSRV_ERROR eError;
-	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
+	IMG_HANDLE hKernelMemInfo;
 	PVRSRV_CLIENT_MEM_INFO sClientMemInfo;
 } PVRSRV_BRIDGE_OUT_ALLOC_SHARED_SYS_MEM;
 
 typedef struct PVRSRV_BRIDGE_IN_FREE_SHARED_SYS_MEM_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
-	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
+	IMG_HANDLE hKernelMemInfo;
 	PVRSRV_CLIENT_MEM_INFO sClientMemInfo;
 } PVRSRV_BRIDGE_IN_FREE_SHARED_SYS_MEM;
 
@@ -1705,19 +1510,17 @@ typedef struct PVRSRV_BRIDGE_OUT_FREE_SHARED_SYS_MEM_TAG {
 } PVRSRV_BRIDGE_OUT_FREE_SHARED_SYS_MEM;
 
 typedef struct PVRSRV_BRIDGE_IN_MAP_MEMINFO_MEM_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hKernelMemInfo;
 } PVRSRV_BRIDGE_IN_MAP_MEMINFO_MEM;
 
 typedef struct PVRSRV_BRIDGE_OUT_MAP_MEMINFO_MEM_TAG {
 	PVRSRV_CLIENT_MEM_INFO sClientMemInfo;
 	PVRSRV_CLIENT_SYNC_INFO sClientSyncInfo;
-	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
+	IMG_HANDLE hKernelMemInfo;
 	PVRSRV_ERROR eError;
 } PVRSRV_BRIDGE_OUT_MAP_MEMINFO_MEM;
 
 typedef struct PVRSRV_BRIDGE_IN_UNMAP_MEMINFO_MEM_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	PVRSRV_CLIENT_MEM_INFO sClientMemInfo;
 } PVRSRV_BRIDGE_IN_UNMAP_MEMINFO_MEM;
 
@@ -1726,7 +1529,6 @@ typedef struct PVRSRV_BRIDGE_OUT_UNMAP_MEMINFO_MEM_TAG {
 } PVRSRV_BRIDGE_OUT_UNMAP_MEMINFO_MEM;
 
 typedef struct PVRSRV_BRIDGE_IN_EVENT_OBJECT_WAI_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hOSEventKM;
 } PVRSRV_BRIDGE_IN_EVENT_OBJECT_WAIT;
 
@@ -1734,7 +1536,7 @@ typedef struct PVRSRV_BRIDGE_IN_EVENT_OBJECT_OPEN_TAG {
 	PVRSRV_EVENTOBJECT sEventObject;
 } PVRSRV_BRIDGE_IN_EVENT_OBJECT_OPEN;
 
-typedef struct PVRSRV_BRIDGE_OUT_EVENT_OBJECT_OPEN_TAG {
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_OUT_EVENT_OBJECT_OPEN_TAG {
 	IMG_HANDLE hOSEvent;
 	PVRSRV_ERROR eError;
 } PVRSRV_BRIDGE_OUT_EVENT_OBJECT_OPEN;
@@ -1744,58 +1546,45 @@ typedef struct PVRSRV_BRIDGE_IN_EVENT_OBJECT_CLOSE_TAG {
 	IMG_HANDLE hOSEventKM;
 } PVRSRV_BRIDGE_IN_EVENT_OBJECT_CLOSE;
 
-typedef struct PVRSRV_BRIDGE_OUT_CREATE_SYNC_INFO_MOD_OBJ_TAG {
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_OUT_CREATE_SYNC_INFO_MOD_OBJ_TAG {
 	PVRSRV_ERROR eError;
-
 	IMG_HANDLE hKernelSyncInfoModObj;
-
 } PVRSRV_BRIDGE_OUT_CREATE_SYNC_INFO_MOD_OBJ;
 
 typedef struct PVRSRV_BRIDGE_IN_DESTROY_SYNC_INFO_MOD_OBJ {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hKernelSyncInfoModObj;
 } PVRSRV_BRIDGE_IN_DESTROY_SYNC_INFO_MOD_OBJ;
 
-typedef struct PVRSRV_BRIDGE_IN_MODIFY_PENDING_SYNC_OPS_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_MODIFY_PENDING_SYNC_OPS_TAG {
 	IMG_HANDLE hKernelSyncInfoModObj;
 	IMG_HANDLE hKernelSyncInfo;
 	IMG_UINT32 ui32ModifyFlags;
-
 } PVRSRV_BRIDGE_IN_MODIFY_PENDING_SYNC_OPS;
 
 typedef struct PVRSRV_BRIDGE_IN_MODIFY_COMPLETE_SYNC_OPS_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hKernelSyncInfoModObj;
 } PVRSRV_BRIDGE_IN_MODIFY_COMPLETE_SYNC_OPS;
 
 typedef struct PVRSRV_BRIDGE_OUT_MODIFY_PENDING_SYNC_OPS_TAG {
 	PVRSRV_ERROR eError;
-
 	/* The following variable are used to return the PRE-INCREMENTED op vals */
 	IMG_UINT32 ui32ReadOpsPending;
 	IMG_UINT32 ui32WriteOpsPending;
 	IMG_UINT32 ui32ReadOps2Pending;
-
 } PVRSRV_BRIDGE_OUT_MODIFY_PENDING_SYNC_OPS;
 
 typedef struct PVRSRV_BRIDGE_IN_SYNC_OPS_TAKE_TOKEN_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hKernelSyncInfo;
-
 } PVRSRV_BRIDGE_IN_SYNC_OPS_TAKE_TOKEN;
 
 typedef struct PVRSRV_BRIDGE_OUT_SYNC_OPS_TAKE_TOKEN_TAG {
 	PVRSRV_ERROR eError;
-
 	IMG_UINT32 ui32ReadOpsPending;
 	IMG_UINT32 ui32WriteOpsPending;
 	IMG_UINT32 ui32ReadOps2Pending;
-
 } PVRSRV_BRIDGE_OUT_SYNC_OPS_TAKE_TOKEN;
 
-typedef struct PVRSRV_BRIDGE_IN_SYNC_OPS_FLUSH_TO_TOKEN_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_SYNC_OPS_FLUSH_TO_TOKEN_TAG {
 	IMG_HANDLE hKernelSyncInfo;
 	IMG_UINT32 ui32ReadOpsPendingSnapshot;
 	IMG_UINT32 ui32WriteOpsPendingSnapshot;
@@ -1803,35 +1592,28 @@ typedef struct PVRSRV_BRIDGE_IN_SYNC_OPS_FLUSH_TO_TOKEN_TAG {
 } PVRSRV_BRIDGE_IN_SYNC_OPS_FLUSH_TO_TOKEN;
 
 typedef struct PVRSRV_BRIDGE_IN_SYNC_OPS_FLUSH_TO_MOD_OBJ_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
 	IMG_HANDLE hKernelSyncInfoModObj;
 } PVRSRV_BRIDGE_IN_SYNC_OPS_FLUSH_TO_MOD_OBJ;
 
-typedef struct PVRSRV_BRIDGE_IN_SYNC_OPS_FLUSH_TO_DELTA_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_SYNC_OPS_FLUSH_TO_DELTA_TAG {
 	IMG_HANDLE hKernelSyncInfo;
 	IMG_UINT32 ui32Delta;
 } PVRSRV_BRIDGE_IN_SYNC_OPS_FLUSH_TO_DELTA;
 
 typedef struct PVRSRV_BRIDGE_IN_ALLOC_SYNC_INFO_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
-
 	IMG_HANDLE hDevCookie;
 } PVRSRV_BRIDGE_IN_ALLOC_SYNC_INFO;
 
-typedef struct PVRSRV_BRIDGE_OUT_ALLOC_SYNC_INFO_TAG {
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_OUT_ALLOC_SYNC_INFO_TAG {
 	PVRSRV_ERROR eError;
-
 	IMG_HANDLE hKernelSyncInfo;
 } PVRSRV_BRIDGE_OUT_ALLOC_SYNC_INFO;
 
 typedef struct PVRSRV_BRIDGE_IN_FREE_SYNC_INFO_TAG {
-	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
-
 	IMG_HANDLE hKernelSyncInfo;
 } PVRSRV_BRIDGE_IN_FREE_SYNC_INFO;
 
-typedef struct PVRSRV_BRIDGE_IN_CHG_DEV_MEM_ATTRIBS_TAG {
+typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_CHG_DEV_MEM_ATTRIBS_TAG {
 	IMG_SID hKernelMemInfo;
 	IMG_UINT32 ui32Attribs;
 } PVRSRV_BRIDGE_IN_CHG_DEV_MEM_ATTRIBS;

@@ -1,28 +1,70 @@
-/**********************************************************************
- *
- * Copyright (C) Imagination Technologies Ltd. All rights reserved.
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- *
- * This program is distributed in the hope it will be useful but, except
- * as otherwise stated in writing, without any warranty; without even the
- * implied warranty of merchantability or fitness for a particular purpose.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * The full GNU General Public License is included in this distribution in
- * the file called "COPYING".
- *
- * Contact Information:
- * Imagination Technologies Ltd. <gpl-support@imgtec.com>
- * Home Park Estate, Kings Langley, Herts, WD4 8LZ, UK
- *
- ******************************************************************************/
+/*************************************************************************/ /*!
+@Title          NOHW display driver display-specific functions
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@License        Dual MIT/GPLv2
+
+The contents of this file are subject to the MIT license as set out below.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/ /**************************************************************************/
+
+/**************************************************************************
+ The 3rd party driver is a specification of an API to integrate the IMG POWERVR
+ Services driver with 3rd Party display hardware.  It is NOT a specification for
+ a display controller driver, rather a specification to extend the API for a
+ pre-existing driver for the display hardware.
+
+ The 3rd party driver interface provides IMG POWERVR client drivers (e.g. PVR2D)
+ with an API abstraction of the system's underlying display hardware, allowing
+ the client drivers to indirectly control the display hardware and access its
+ associated memory.
+
+ Functions of the API include
+ - query primary surface attributes (width, height, stride, pixel format, CPU
+     physical and virtual address)
+ - swap/flip chain creation and subsequent query of surface attributes
+ - asynchronous display surface flipping, taking account of asynchronous read
+ (flip) and write (render) operations to the display surface
+
+ Note: having queried surface attributes the client drivers are able to map the
+ display memory to any IMG POWERVR Services device by calling
+ PVRSRVMapDeviceClassMemory with the display surface handle.
+
+ This code is intended to be an example of how a pre-existing display driver may
+ be extended to support the 3rd Party Display interface to POWERVR Services
+ - IMG is not providing a display driver implementation.
+ **************************************************************************/
 
 #if defined(__linux__)
 #include <linux/string.h>
@@ -30,6 +72,7 @@
 #include <string.h>
 #endif
 
+/* IMG services headers */
 #include "img_defs.h"
 #include "servicesext.h"
 #include "kerneldisplay.h"
@@ -40,14 +83,25 @@
 
 #define DC_NOHW_COMMAND_COUNT 1
 
+/* top level 'hook ptr' */
 static void *gpvAnchor = 0;
 static PFN_DC_GET_PVRJTABLE pfnGetPVRJTable = 0;
 
+/*
+	Kernel services is a kernel module and must be loaded first.
+	The display controller driver is also a kernel module and must be loaded after the pvr services module.
+	The display controller driver should be able to retrieve the
+	address of the services PVRGetDisplayClassJTable from (the already loaded)
+	kernel services module.
+*/
+
+/* returns anchor pointer */
 static DC_NOHW_DEVINFO *GetAnchorPtr(void)
 {
 	return (DC_NOHW_DEVINFO *)gpvAnchor;
 }
 
+/* sets anchor pointer */
 static void SetAnchorPtr(DC_NOHW_DEVINFO *psDevInfo)
 {
 	gpvAnchor = (void *)psDevInfo;
@@ -58,6 +112,8 @@ IMG_SYS_PHYADDR CpuPAddrToSysPAddr(IMG_CPU_PHYADDR cpu_paddr)
 {
 	IMG_SYS_PHYADDR sys_paddr;
 
+	/* This would only be an inequality if the CPU's MMU did not point to sys address 0,
+	   ie. multi CPU system */
 	sys_paddr.uiAddr = cpu_paddr.uiAddr;
 	return sys_paddr;
 }
@@ -66,6 +122,8 @@ IMG_CPU_PHYADDR SysPAddrToCpuPAddr(IMG_SYS_PHYADDR sys_paddr)
 {
 	IMG_CPU_PHYADDR cpu_paddr;
 
+	/* This would only be an inequality if the CPU's MMU did not point to sys address 0,
+	   ie. multi CPU system */
 	cpu_paddr.uiAddr = sys_paddr.uiAddr;
 	return cpu_paddr;
 }
@@ -85,8 +143,10 @@ static PVRSRV_ERROR OpenDCDevice(IMG_UINT32 ui32DeviceID, IMG_HANDLE *phDevice,
 	}
 #endif
 
+	/* store the system surface sync data */
 	psDevInfo->asBackBuffers[0].psSyncData = psSystemBufferSyncData;
 
+	/* return handle to the devinfo */
 	*phDevice = (IMG_HANDLE)psDevInfo;
 
 #if defined(USE_BASE_VIDEO_FRAMEBUFFER)
@@ -144,6 +204,8 @@ static PVRSRV_ERROR EnumDCDims(IMG_HANDLE hDevice, DISPLAY_FORMAT *psFormat,
 	psDevInfo = (DC_NOHW_DEVINFO *)hDevice;
 
 	*pui32NumDims = (IMG_UINT32)psDevInfo->ulNumDims;
+
+	/* given psFormat return the available Dims */
 
 	if (psDim != IMG_NULL) {
 	unsigned long i;
@@ -224,25 +286,29 @@ GetDCBufferAddr(IMG_HANDLE hDevice, IMG_HANDLE hBuffer,
 	psDevInfo->asDisplayDimList[0].ui32ByteStride;
 	IMG_UINT32 ui32NumBits = 0, ui32StrideTopBit, n;
 
+	// How many bits for x?
 	for (n = 0; n < 32; n++) {
 	if (ui32Stride & (1 << n)) {
 	ui32NumBits = n + 1;
 	}
 	}
 
+	// clamp to the minimum..
 	if (ui32NumBits < 10) {
 	ui32NumBits = 10;
 	}
 
+	// Subtract one to make this a range limit..
 	ui32StrideTopBit = ui32NumBits - 1;
 
+	// Subtract 9 to prepare it for the HW..
 	ui32StrideTopBit -= 9;
 
 	*pui32TilingStride = ui32StrideTopBit;
 	}
 #else
 	UNREFERENCED_PARAMETER(pui32TilingStride);
-#endif
+#endif /* defined(SUPPORT_MEMORY_TILING) */
 
 	return (PVRSRV_OK);
 }
@@ -264,6 +330,7 @@ static PVRSRV_ERROR CreateDCSwapChain(IMG_HANDLE hDevice, IMG_UINT32 ui32Flags,
 	UNREFERENCED_PARAMETER(ui32OEMFlags);
 	UNREFERENCED_PARAMETER(pui32SwapChainID);
 
+	/* check parameters */
 	if (!hDevice || !psDstSurfAttrib || !psSrcSurfAttrib || !ppsSyncData ||
 	    !phSwapChain) {
 	return (PVRSRV_ERROR_INVALID_PARAMS);
@@ -271,75 +338,104 @@ static PVRSRV_ERROR CreateDCSwapChain(IMG_HANDLE hDevice, IMG_UINT32 ui32Flags,
 
 	psDevInfo = (DC_NOHW_DEVINFO *)hDevice;
 
+	/* the dc_nohw only supports a single swapchain */
 	if (psDevInfo->psSwapChain) {
 	return (PVRSRV_ERROR_FLIP_CHAIN_EXISTS);
 	}
 
-	if (ui32BufferCount > DC_NOHW_MAX_BACKBUFFERS) {
-	return (PVRSRV_ERROR_TOOMANYBUFFERS);
-	}
-
-	if (psDstSurfAttrib->pixelformat != psDevInfo->sSysFormat.pixelformat ||
-	    psDstSurfAttrib->sDims.ui32ByteStride !=
-	    psDevInfo->sSysDims.ui32ByteStride ||
-	    psDstSurfAttrib->sDims.ui32Width != psDevInfo->sSysDims.ui32Width ||
-	    psDstSurfAttrib->sDims.ui32Height !=
-	    psDevInfo->sSysDims.ui32Height) {
-	return (PVRSRV_ERROR_INVALID_PARAMS);
-	}
-
-	if (psDstSurfAttrib->pixelformat != psSrcSurfAttrib->pixelformat ||
-	    psDstSurfAttrib->sDims.ui32ByteStride !=
-	    psSrcSurfAttrib->sDims.ui32ByteStride ||
-	    psDstSurfAttrib->sDims.ui32Width !=
-	    psSrcSurfAttrib->sDims.ui32Width ||
-	    psDstSurfAttrib->sDims.ui32Height !=
-	    psSrcSurfAttrib->sDims.ui32Height) {
-	return (PVRSRV_ERROR_INVALID_PARAMS);
-	}
-
-	UNREFERENCED_PARAMETER(ui32Flags);
-
+	/* create a swapchain structure */
 	psSwapChain =
 	(DC_NOHW_SWAPCHAIN *)AllocKernelMem(sizeof(DC_NOHW_SWAPCHAIN));
 	if (!psSwapChain) {
 	return (PVRSRV_ERROR_OUT_OF_MEMORY);
 	}
 
-	psBuffer = (DC_NOHW_BUFFER *)AllocKernelMem(sizeof(DC_NOHW_BUFFER) *
-	    ui32BufferCount);
+	memset(psSwapChain, 0, sizeof(DC_NOHW_SWAPCHAIN));
+
+	if (ui32BufferCount) {
+	/* check the buffer count */
+	if (ui32BufferCount > DC_NOHW_MAX_BACKBUFFERS) {
+	return (PVRSRV_ERROR_TOOMANYBUFFERS);
+	}
+
+	/*
+	verify the DST/SRC attributes
+	- SRC/DST must match the current display mode config
+	*/
+	if (psDstSurfAttrib->pixelformat !=
+	    psDevInfo->sSysFormat.pixelformat ||
+	    psDstSurfAttrib->sDims.ui32ByteStride !=
+	    psDevInfo->sSysDims.ui32ByteStride ||
+	    psDstSurfAttrib->sDims.ui32Width !=
+	    psDevInfo->sSysDims.ui32Width ||
+	    psDstSurfAttrib->sDims.ui32Height !=
+	    psDevInfo->sSysDims.ui32Height) {
+	/* DST doesn't match the current mode */
+	return (PVRSRV_ERROR_INVALID_PARAMS);
+	}
+
+	if (psDstSurfAttrib->pixelformat !=
+	    psSrcSurfAttrib->pixelformat ||
+	    psDstSurfAttrib->sDims.ui32ByteStride !=
+	    psSrcSurfAttrib->sDims.ui32ByteStride ||
+	    psDstSurfAttrib->sDims.ui32Width !=
+	    psSrcSurfAttrib->sDims.ui32Width ||
+	    psDstSurfAttrib->sDims.ui32Height !=
+	    psSrcSurfAttrib->sDims.ui32Height) {
+	/* DST doesn't match the SRC */
+	return (PVRSRV_ERROR_INVALID_PARAMS);
+	}
+
+	/* INTEGRATION_POINT: check the flags */
+	UNREFERENCED_PARAMETER(ui32Flags);
+
+	psBuffer = (DC_NOHW_BUFFER *)AllocKernelMem(
+	sizeof(DC_NOHW_BUFFER) * ui32BufferCount);
 	if (!psBuffer) {
 	FreeKernelMem(psSwapChain);
 	return (PVRSRV_ERROR_OUT_OF_MEMORY);
 	}
 
-	memset(psSwapChain, 0, sizeof(DC_NOHW_SWAPCHAIN));
+	/* initialise allocations */
 	memset(psBuffer, 0, sizeof(DC_NOHW_BUFFER) * ui32BufferCount);
 
 	psSwapChain->ulBufferCount = (unsigned long)ui32BufferCount;
 	psSwapChain->psBuffer = psBuffer;
 
+	/* link the buffers */
 	for (i = 0; i < ui32BufferCount - 1; i++) {
 	psBuffer[i].psNext = &psBuffer[i + 1];
 	}
-
+	/* and link last to first */
 	psBuffer[i].psNext = &psBuffer[0];
 
+	/* populate the buffers */
 	for (i = 0; i < ui32BufferCount; i++) {
 	psBuffer[i].psSyncData = ppsSyncData[i];
 #if defined(DC_NOHW_DISCONTIG_BUFFERS)
-	psBuffer[i].psSysAddr = psDevInfo->asBackBuffers[i].psSysAddr;
+	psBuffer[i].psSysAddr =
+	psDevInfo->asBackBuffers[i].psSysAddr;
 #else
-	psBuffer[i].sSysAddr = psDevInfo->asBackBuffers[i].sSysAddr;
+	psBuffer[i].sSysAddr =
+	psDevInfo->asBackBuffers[i].sSysAddr;
 #endif
-	psBuffer[i].sDevVAddr = psDevInfo->asBackBuffers[i].sDevVAddr;
-	psBuffer[i].sCPUVAddr = psDevInfo->asBackBuffers[i].sCPUVAddr;
+	psBuffer[i].sDevVAddr =
+	psDevInfo->asBackBuffers[i].sDevVAddr;
+	psBuffer[i].sCPUVAddr =
+	psDevInfo->asBackBuffers[i].sCPUVAddr;
 	psBuffer[i].hSwapChain = (DC_HANDLE)psSwapChain;
 	}
+	} else {
+	psSwapChain->psBuffer = NULL;
+	}
 
+	/* mark swapchain's existence */
 	psDevInfo->psSwapChain = psSwapChain;
 
+	/* return swapchain handle */
 	*phSwapChain = (IMG_HANDLE)psSwapChain;
+
+	/* INTEGRATION_POINT: enable Vsync ISR */
 
 	return (PVRSRV_OK);
 }
@@ -350,6 +446,7 @@ static PVRSRV_ERROR DestroyDCSwapChain(IMG_HANDLE hDevice,
 	DC_NOHW_DEVINFO *psDevInfo;
 	DC_NOHW_SWAPCHAIN *psSwapChain;
 
+	/* check parameters */
 	if (!hDevice || !hSwapChain) {
 	return (PVRSRV_ERROR_INVALID_PARAMS);
 	}
@@ -357,10 +454,16 @@ static PVRSRV_ERROR DestroyDCSwapChain(IMG_HANDLE hDevice,
 	psDevInfo = (DC_NOHW_DEVINFO *)hDevice;
 	psSwapChain = (DC_NOHW_SWAPCHAIN *)hSwapChain;
 
+	/* free resources */
+	if (psSwapChain->psBuffer) {
 	FreeKernelMem(psSwapChain->psBuffer);
+	}
 	FreeKernelMem(psSwapChain);
 
+	/* mark swapchain as not existing */
 	psDevInfo->psSwapChain = 0;
+
+	/* INTEGRATION_POINT: disable Vsync ISR */
 
 	return (PVRSRV_OK);
 }
@@ -409,17 +512,22 @@ static PVRSRV_ERROR GetDCBuffers(IMG_HANDLE hDevice, IMG_HANDLE hSwapChain,
 	 IMG_UINT32 *pui32BufferCount,
 	 IMG_HANDLE *phBuffer)
 {
+	/*	DC_NOHW_DEVINFO	*psDevInfo; */
 	DC_NOHW_SWAPCHAIN *psSwapChain;
 	unsigned long i;
 
+	/* check parameters */
 	if (!hDevice || !hSwapChain || !pui32BufferCount || !phBuffer) {
 	return (PVRSRV_ERROR_INVALID_PARAMS);
 	}
 
+	/*	psDevInfo = (DC_NOHW_DEVINFO*)hDevice; */
 	psSwapChain = (DC_NOHW_SWAPCHAIN *)hSwapChain;
 
+	/* return the buffer count */
 	*pui32BufferCount = (IMG_UINT32)psSwapChain->ulBufferCount;
 
+	/* return the buffers */
 	for (i = 0; i < psSwapChain->ulBufferCount; i++) {
 	phBuffer[i] = (IMG_HANDLE)&psSwapChain->psBuffer[i];
 	}
@@ -441,23 +549,18 @@ static PVRSRV_ERROR SwapToDCBuffer(IMG_HANDLE hDevice, IMG_HANDLE hBuffer,
 	return (PVRSRV_ERROR_INVALID_PARAMS);
 	}
 
-	return (PVRSRV_OK);
-}
-
-static PVRSRV_ERROR SwapToDCSystem(IMG_HANDLE hDevice, IMG_HANDLE hSwapChain)
-{
-	if (!hDevice || !hSwapChain) {
-	return (PVRSRV_ERROR_INVALID_PARAMS);
-	}
-
+	/* nothing to do for no hw */
 	return (PVRSRV_OK);
 }
 
 static DC_ERROR Flip(DC_NOHW_DEVINFO *psDevInfo, DC_NOHW_BUFFER *psBuffer)
 {
-	if (!psDevInfo || !psBuffer) {
+	UNREFERENCED_PARAMETER(psBuffer);
+	/* check parameters */
+	if (!psDevInfo) {
 	return (DC_ERROR_INVALID_PARAMS);
 	}
+	/* to be implemented */
 
 	return (DC_OK);
 }
@@ -470,25 +573,33 @@ static IMG_BOOL ProcessFlip(IMG_HANDLE hCmdCookie, IMG_UINT32 ui32DataSize,
 	DC_NOHW_DEVINFO *psDevInfo;
 	DC_NOHW_BUFFER *psBuffer;
 
+	UNREFERENCED_PARAMETER(ui32DataSize);
+
+	/* check parameters */
 	if (!hCmdCookie) {
 	return (IMG_FALSE);
 	}
 
+	/* validate data packet */
 	psFlipCmd = (DISPLAYCLASS_FLIP_COMMAND *)pvData;
-	if (psFlipCmd == IMG_NULL ||
-	    sizeof(DISPLAYCLASS_FLIP_COMMAND) != ui32DataSize) {
+	/* Under android, this may be a DISPLAYCLASS_FLIP_COMMAND2, but the structs
+	 * are compatable for everything used by dc_nohw so it makes no difference */
+	if (psFlipCmd == IMG_NULL) {
 	return (IMG_FALSE);
 	}
 
+	/* setup some useful pointers */
 	psDevInfo = (DC_NOHW_DEVINFO *)psFlipCmd->hExtDevice;
 
 	psBuffer = (DC_NOHW_BUFFER *)psFlipCmd->hExtBuffer;
 
+	/* flip the display */
 	eError = Flip(psDevInfo, psBuffer);
 	if (eError != DC_OK) {
 	return (IMG_FALSE);
 	}
 
+	/* call command complete Callback */
 	psDevInfo->sPVRJTable.pfnPVRSRVCmdComplete(hCmdCookie, IMG_FALSE);
 
 	return (IMG_TRUE);
@@ -500,25 +611,43 @@ DC_ERROR Init(void)
 	DC_ERROR eError;
 	unsigned long ulBBuf;
 	unsigned long ulNBBuf;
+	/*
+	- connect to services
+	- register with services
+	- allocate and setup private data structure
+	*/
 
+	/*
+	in kernel driver, data structures must be anchored to something for subsequent retrieval
+	this may be a single global pointer or TLS or something else - up to you
+	call API to retrieve this ptr
+	*/
+
+	/*
+	get the anchor pointer
+	*/
 	psDevInfo = GetAnchorPtr();
 
 	if (psDevInfo == 0) {
 	PFN_CMD_PROC pfnCmdProcList[DC_NOHW_COMMAND_COUNT];
 	IMG_UINT32 aui32SyncCountList[DC_NOHW_COMMAND_COUNT][2];
 
+	/* allocate device info. structure */
 	psDevInfo =
 	(DC_NOHW_DEVINFO *)AllocKernelMem(sizeof(*psDevInfo));
 
 	if (!psDevInfo) {
-	eError = DC_ERROR_OUT_OF_MEMORY;
+	eError = DC_ERROR_OUT_OF_MEMORY; /* failure */
 	goto ExitError;
 	}
 
+	/* initialise allocation */
 	memset(psDevInfo, 0, sizeof(*psDevInfo));
 
+	/* set the top-level anchor */
 	SetAnchorPtr((void *)psDevInfo);
 
+	/* set ref count */
 	psDevInfo->ulRefCount = 0UL;
 
 	if (OpenPVRServices(&psDevInfo->hPVRServices) != DC_OK) {
@@ -532,11 +661,15 @@ DC_ERROR Init(void)
 	goto ExitCloseServices;
 	}
 
+	/* got the kernel services function table */
 	if ((*pfnGetPVRJTable)(&psDevInfo->sPVRJTable) == IMG_FALSE) {
 	eError = DC_ERROR_INIT_FAILURE;
 	goto ExitCloseServices;
 	}
 
+	/*
+	Setup the devinfo
+	*/
 	psDevInfo->psSwapChain = 0;
 	psDevInfo->sDisplayInfo.ui32MinSwapInterval = 0UL;
 	psDevInfo->sDisplayInfo.ui32MaxSwapInterval = 1UL;
@@ -559,9 +692,9 @@ DC_ERROR Init(void)
 	eError = DC_ERROR_INIT_FAILURE;
 	goto ExitCloseServices;
 	}
-#else
+#else /* defined(DC_NOHW_GET_BUFFER_DIMENSIONS) */
 #if defined(ENABLE_DISPLAY_MODE_TRACKING)
-
+	// Set sizes to zero to force re-alloc on display mode change.
 	psDevInfo->asDisplayFormatList[0].pixelformat =
 	DC_NOHW_BUFFER_PIXEL_FORMAT;
 	psDevInfo->asDisplayDimList[0].ui32Width = 0;
@@ -576,7 +709,7 @@ DC_ERROR Init(void)
 	psDevInfo->asDisplayDimList[0].ui32ByteStride =
 	DC_NOHW_BUFFER_BYTE_STRIDE;
 #endif
-#endif
+#endif /* defined(DC_NOHW_GET_BUFFER_DIMENSIONS) */
 
 	psDevInfo->sSysFormat = psDevInfo->asDisplayFormatList[0];
 	psDevInfo->sSysDims.ui32Width =
@@ -588,6 +721,7 @@ DC_ERROR Init(void)
 	psDevInfo->ui32BufferSize = psDevInfo->sSysDims.ui32Height *
 	    psDevInfo->sSysDims.ui32ByteStride;
 
+	/* setup swapchain details */
 	for (ulBBuf = 0; ulBBuf < DC_NOHW_MAX_BACKBUFFERS; ulBBuf++) {
 #if defined(USE_BASE_VIDEO_FRAMEBUFFER) || defined(ENABLE_DISPLAY_MODE_TRACKING)
 	psDevInfo->asBackBuffers[ulBBuf].sSysAddr.uiAddr =
@@ -619,14 +753,17 @@ DC_ERROR Init(void)
 	psDevInfo->asBackBuffers[ulBBuf].sSysAddr =
 	CpuPAddrToSysPAddr(sBufferCPUPAddr);
 #endif
-#endif
-
+#endif /* #if defined(USE_BASE_VIDEO_FRAMEBUFFER) */
+	/* sDevVAddr not meaningful for nohw */
 	psDevInfo->asBackBuffers[ulBBuf].sDevVAddr.uiAddr = 0UL;
 	psDevInfo->asBackBuffers[ulBBuf].hSwapChain = 0;
 	psDevInfo->asBackBuffers[ulBBuf].psSyncData = 0;
 	psDevInfo->asBackBuffers[ulBBuf].psNext = 0;
 	}
 
+	/*
+	setup the DC Jtable so SRVKM can call into this driver
+	*/
 	psDevInfo->sDCJTable.ui32TableSize =
 	sizeof(PVRSRV_DC_SRV2DISP_KMJTABLE);
 	psDevInfo->sDCJTable.pfnOpenDCDevice = OpenDCDevice;
@@ -644,9 +781,9 @@ DC_ERROR Init(void)
 	psDevInfo->sDCJTable.pfnSetDCSrcColourKey = SetDCSrcColourKey;
 	psDevInfo->sDCJTable.pfnGetDCBuffers = GetDCBuffers;
 	psDevInfo->sDCJTable.pfnSwapToDCBuffer = SwapToDCBuffer;
-	psDevInfo->sDCJTable.pfnSwapToDCSystem = SwapToDCSystem;
 	psDevInfo->sDCJTable.pfnSetDCState = IMG_NULL;
 
+	/* register device with services and retrieve device index */
 	if (psDevInfo->sPVRJTable.pfnPVRSRVRegisterDCDevice(
 	    &psDevInfo->sDCJTable, &psDevInfo->uiDeviceID) !=
 	    PVRSRV_OK) {
@@ -654,11 +791,23 @@ DC_ERROR Init(void)
 	goto ExitFreeMem;
 	}
 
+	/*
+	setup private command processing function table
+	*/
 	pfnCmdProcList[DC_FLIP_COMMAND] = ProcessFlip;
 
-	aui32SyncCountList[DC_FLIP_COMMAND][0] = 0UL;
-	aui32SyncCountList[DC_FLIP_COMMAND][1] = 2UL;
+	/*
+	and associated sync count(s)
+	*/
+	aui32SyncCountList[DC_FLIP_COMMAND][0] = 0UL; /* no writes */
+	aui32SyncCountList[DC_FLIP_COMMAND][1] =
+	2UL; /* 2 reads: To / From */
 
+	/*
+	register private command processing functions with
+	the Command Queue Manager and setup the general
+	command complete function in the devinfo
+	*/
 	if (psDevInfo->sPVRJTable.pfnPVRSRVRegisterCmdProcList(
 	    psDevInfo->uiDeviceID, &pfnCmdProcList[0],
 	    aui32SyncCountList,
@@ -668,8 +817,10 @@ DC_ERROR Init(void)
 	}
 	}
 
+	/* increment the ref count */
 	psDevInfo->ulRefCount++;
 
+	/* return success */
 	return (DC_OK);
 
 ExitRemoveDevice:
@@ -694,8 +845,8 @@ ExitFreeMem:
 	SysPAddrToCpuPAddr(
 	psDevInfo->asBackBuffers[ulBBuf].sSysAddr));
 
-#endif
-#endif
+#endif /* #if defined(USE_BASE_VIDEO_FRAMEBUFFER) */
+#endif /* #if defined(DC_NOHW_DISCONTIG_BUFFERS) */
 	}
 
 ExitCloseServices:
@@ -709,6 +860,9 @@ ExitError:
 	return eError;
 }
 
+/*
+ *	Deinit
+ */
 DC_ERROR Deinit(void)
 {
 	DC_NOHW_DEVINFO *psDevInfo, *psDevFirst;
@@ -719,29 +873,33 @@ DC_ERROR Deinit(void)
 	psDevFirst = GetAnchorPtr();
 	psDevInfo = psDevFirst;
 
+	/* check DevInfo has been setup */
 	if (psDevInfo == 0) {
-	return (DC_ERROR_GENERIC);
+	return (DC_ERROR_GENERIC); /* failure */
 	}
 
+	/* decrement ref count */
 	psDevInfo->ulRefCount--;
 
 	if (psDevInfo->ulRefCount == 0UL) {
+	/* all references gone - de-init device information */
 	PVRSRV_DC_DISP2SRV_KMJTABLE *psJTable = &psDevInfo->sPVRJTable;
 
+	/* Remove display class device from kernel services device register */
 	if (psJTable->pfnPVRSRVRemoveDCDevice(
 	    (IMG_UINT32)psDevInfo->uiDeviceID) != PVRSRV_OK) {
-	return (DC_ERROR_GENERIC);
+	return (DC_ERROR_GENERIC); /* failure */
 	}
 
 	if (psDevInfo->sPVRJTable.pfnPVRSRVRemoveCmdProcList(
 	    psDevInfo->uiDeviceID, DC_NOHW_COMMAND_COUNT) !=
 	    PVRSRV_OK) {
-	return (DC_ERROR_GENERIC);
+	return (DC_ERROR_GENERIC); /* failure */
 	}
 
 	if (ClosePVRServices(psDevInfo->hPVRServices) != DC_OK) {
 	psDevInfo->hPVRServices = 0;
-	return (DC_ERROR_GENERIC);
+	return (DC_ERROR_GENERIC); /* failure */
 	}
 
 #if !defined(USE_BASE_VIDEO_FRAMEBUFFER)
@@ -765,16 +923,22 @@ DC_ERROR Deinit(void)
 #endif
 	}
 	}
-#endif
+#endif /* #if !defined(USE_BASE_VIDEO_FRAMEBUFFER) */
 
+	/* de-allocate data structure */
 	FreeKernelMem(psDevInfo);
 	}
 
 #if defined(ENABLE_DISPLAY_MODE_TRACKING)
 	CloseMiniport();
 #endif
-
+	/* clear the top-level anchor */
 	SetAnchorPtr(0);
 
+	/* return success */
 	return (DC_OK);
 }
+
+/******************************************************************************
+ End of file (dc_nohw_displayclass.c)
+******************************************************************************/

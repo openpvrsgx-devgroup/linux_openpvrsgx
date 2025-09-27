@@ -44,6 +44,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "img_types.h"
 
+#ifdef MTK_DEBUG
+#include "mtk_debug.h"
+#endif
+
 #if defined(__cplusplus)
 extern "C" {
 #endif

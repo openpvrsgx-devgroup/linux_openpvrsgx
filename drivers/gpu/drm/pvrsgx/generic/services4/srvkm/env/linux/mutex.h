@@ -68,7 +68,11 @@ typedef struct {
 
 #endif
 
+#if defined(CONFIG_PROVE_LOCKING)
+#define LinuxInitMutex(l) mutex_init((l))
+#else
 extern IMG_VOID LinuxInitMutex(PVRSRV_LINUX_MUTEX *psPVRSRVMutex);
+#endif
 
 extern IMG_VOID LinuxLockMutex(PVRSRV_LINUX_MUTEX *psPVRSRVMutex);
 

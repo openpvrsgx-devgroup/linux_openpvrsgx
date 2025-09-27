@@ -103,7 +103,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if defined(PVR_LDM_DEVICE_CLASS)
 #include <linux/device.h>
 #endif /* PVR_LDM_DEVICE_CLASS */
-#include <linux/clk.h>
+
 #if defined(DEBUG) && defined(PVR_MANUAL_POWER_CONTROL)
 #include <asm/uaccess.h>
 #endif
@@ -138,8 +138,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  * DEVNAME is the name we use to register actual device nodes.
  */
 #if defined(PVR_LDM_MODULE)
-//#define	DRVNAME	PVR_LDM_DRIVER_REGISTRATION_NAME
-#define DRVNAME PVRSRV_MODNAME
+#define DRVNAME PVR_LDM_DRIVER_REGISTRATION_NAME
 #endif
 #define DEVNAME PVRSRV_MODNAME
 
@@ -152,6 +151,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 /*
  * This is all module configuration stuff required by the linux kernel.
  */
+MODULE_SUPPORTED_DEVICE(DEVNAME);
 
 #if defined(PVRSRV_NEED_PVR_DPF)
 #include <linux/moduleparam.h>
@@ -168,6 +168,14 @@ extern struct ion_device *omap_ion_device;
 struct ion_client *gpsIONClient;
 EXPORT_SYMBOL(gpsIONClient);
 #endif /* defined(CONFIG_ION_OMAP) */
+
+#if defined(CONFIG_ION_MTK)
+#include <linux/ion.h>
+#include <linux/ion_drv.h>
+//extern struct ion_device *g_ion_device;
+struct ion_client *gpsIONClient;
+EXPORT_SYMBOL(gpsIONClient);
+#endif /* defined(CONFIG_ION_MTK) */
 
 /* PRQA S 3207 2 */ /* ignore 'not used' warning */
 EXPORT_SYMBOL(PVRGetDisplayClassJTable);
@@ -288,20 +296,15 @@ LDM_DEV *gpsPVRLDMDev;
 
 #if defined(MODULE) && defined(PVR_LDM_PLATFORM_MODULE) && \
 	!defined(PVR_USE_PRE_REGISTERED_PLATFORM_DEV)
-
-#if !defined(PM_RUNTIME_SUPPORT)
 static void PVRSRVDeviceRelease(struct device unref__ *pDevice)
 {
 }
-#endif
 
-#if !defined(PM_RUNTIME_SUPPORT)
 static struct platform_device powervr_device = {
 	.name = DEVNAME,
 	.id = -1,
 	.dev = { .release = PVRSRVDeviceRelease }
 };
-#endif
 #endif
 
 /*!
@@ -367,15 +370,24 @@ static int PVRSRVDriverProbe(LDM_DEV *pDevice)
 	}
 #endif /* defined(CONFIG_ION_OMAP) */
 
+#if defined(CONFIG_ION_MTK)
+	PVR_DPF((PVR_DBG_WARNING, "PVRSRVDriverProbe: ion_client_create 1:%x",
+	 (unsigned int)g_ion_device));
+	//     PVR_DPF((PVR_DBG_WARNING, "PVRSRVDriverProbe: ion_client_create 2:%x", (unsigned int)g_ion_device->lock));
+
+	gpsIONClient = ion_client_create(g_ion_device, -1, "pvr");
+	PVR_DPF((PVR_DBG_WARNING,
+	 "PVRSRVDriverProbe: ion_client_create gpsIONClient...%x.",
+	 (unsigned int)gpsIONClient));
+	if (IS_ERR_OR_NULL(gpsIONClient)) {
+	PVR_DPF((PVR_DBG_ERROR,
+	 "PVRSRVDriverProbe: Couldn't create ion client"));
+	return PTR_ERR(gpsIONClient);
+	}
+#endif /* defined(CONFIG_ION_MTK) */
+
 	return 0;
 }
-
-void __bad_xchg(volatile void *ptr, int size)
-{
-	printk(KERN_ERR "%s: ptr %p size %u\n", __FUNCTION__, ptr, size);
-	BUG();
-}
-EXPORT_SYMBOL(__bad_xchg);
 
 /*!
 ******************************************************************************
@@ -408,6 +420,10 @@ static int PVRSRVDriverRemove(LDM_DEV *pDevice)
 	PVR_TRACE(("PVRSRVDriverRemove(pDevice=%p)", pDevice));
 
 #if defined(CONFIG_ION_OMAP)
+	ion_client_destroy(gpsIONClient);
+	gpsIONClient = IMG_NULL;
+#endif
+#if defined(CONFIG_ION_MTK)
 	ion_client_destroy(gpsIONClient);
 	gpsIONClient = IMG_NULL;
 #endif
@@ -727,8 +743,6 @@ static int PVRSRVOpen(struct inode unref__ *pInode, struct file *pFile)
 
 	LinuxLockMutex(&gPVRSRVLock);
 
-	pFile->f_mode |= FMODE_UNSIGNED_OFFSET;
-
 	ui32PID = OSGetCurrentProcessIDKM();
 
 	if (PVRSRVProcessConnect(ui32PID, 0) != PVRSRV_OK)
@@ -939,6 +953,10 @@ static int __init PVRCore_Init(void)
 	return error;
 	}
 
+#if defined(MTK_DEBUG)
+	MTKDebugInit();
+#endif
+
 	if (PVROSFuncInit() != PVRSRV_OK) {
 	error = -ENOMEM;
 	goto init_failed;
@@ -967,7 +985,6 @@ static int __init PVRCore_Init(void)
 	}
 
 #if defined(MODULE) && !defined(PVR_USE_PRE_REGISTERED_PLATFORM_DEV)
-#if !defined(PM_RUNTIME_SUPPORT)
 	if ((error = platform_device_register(&powervr_device)) != 0) {
 	platform_driver_unregister(&powervr_driver);
 
@@ -977,7 +994,6 @@ static int __init PVRCore_Init(void)
 
 	goto init_failed;
 	}
-#endif
 #endif
 #endif /* PVR_LDM_PLATFORM_MODULE */
 
@@ -1069,9 +1085,7 @@ sys_deinit:
 
 #if defined(PVR_LDM_PLATFORM_MODULE)
 #if defined(MODULE) && !defined(PVR_USE_PRE_REGISTERED_PLATFORM_DEV)
-#if !defined(PM_RUNTIME_SUPPORT)
 	platform_device_unregister(&powervr_device);
-#endif
 #endif
 	platform_driver_unregister(&powervr_driver);
 #endif
@@ -1169,9 +1183,7 @@ static void __exit PVRCore_Cleanup(void)
 
 #if defined(PVR_LDM_PLATFORM_MODULE)
 #if defined(MODULE) && !defined(PVR_USE_PRE_REGISTERED_PLATFORM_DEV)
-#if !defined(PM_RUNTIME_SUPPORT)
 	platform_device_unregister(&powervr_device);
-#endif
 #endif
 	platform_driver_unregister(&powervr_driver);
 #endif
@@ -1196,6 +1208,10 @@ static void __exit PVRCore_Cleanup(void)
 	LinuxBridgeDeInit();
 
 	PVROSFuncDeInit();
+
+#if defined(MTK_DEBUG)
+	MTKDebugDeinit();
+#endif
 
 	RemoveProcEntries();
 

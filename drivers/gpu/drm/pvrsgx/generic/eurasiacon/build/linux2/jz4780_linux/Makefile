@@ -99,6 +99,11 @@ else
  endif
 endif
 
+ifeq ($(PVR_LWS_NODC),1)
+ # Disable legacy displayclass support, we will use DRM
+ override SUPPORT_PVRSRV_DEVICE_CLASS := 0
+endif
+
 PVR_DRI_DRM_PLATFORM_DEV := 1
 PVR_DRM_MODESET_DRIVER_NAME := jz4780
 PVR_DRM_MODESET_MODULE_NAME := dumb

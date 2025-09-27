@@ -76,30 +76,13 @@ IMG_UINT32 PVRSRV_BridgeDispatchKM(IMG_UINT32 Ioctl, IMG_BYTE *pInBuf,
 	   IMG_UINT32 *pdwBytesTransferred);
 
 #if defined(SGX_OCP_REGS_ENABLED)
-
 static IMG_CPU_VIRTADDR gpvOCPRegsLinAddr;
-
-static PVRSRV_ERROR EnableSGXClocksWrap(SYS_DATA *psSysData)
-{
-	PVRSRV_ERROR eError = EnableSGXClocks(psSysData);
-
-#if !defined(SGX_OCP_NO_INT_BYPASS)
-	if (eError == PVRSRV_OK) {
-	OSWriteHWReg(gpvOCPRegsLinAddr, EUR_CR_OCP_DEBUG_CONFIG,
-	     EUR_CR_OCP_DEBUG_CONFIG_THALIA_INT_BYPASS_MASK);
-	}
 #endif
-	return eError;
-}
-
-#else /* defined(SGX_OCP_REGS_ENABLED) */
 
 static INLINE PVRSRV_ERROR EnableSGXClocksWrap(SYS_DATA *psSysData)
 {
 	return EnableSGXClocks(psSysData);
 }
-
-#endif /* defined(SGX_OCP_REGS_ENABLED) */
 
 static INLINE PVRSRV_ERROR EnableSystemClocksWrap(SYS_DATA *psSysData)
 {
@@ -203,23 +186,14 @@ static PVRSRV_ERROR SysLocateDevices(SYS_DATA *psSysData)
 	return PVRSRV_ERROR_INVALID_DEVICE;
 	}
 
-#if (VS_PRODUCT_VERSION == 5)
-	gsSGXDeviceMap.sRegsSysPBase.uiAddr = SYS_OMAP_SGX_REGS_SYS_PHYS_BASE;
-#else
 	gsSGXDeviceMap.sRegsSysPBase.uiAddr = dev_res->start;
-#endif
 	gsSGXDeviceMap.sRegsCpuPBase =
 	SysSysPAddrToCpuPAddr(gsSGXDeviceMap.sRegsSysPBase);
 	PVR_TRACE(("SGX register base: 0x%lx",
 	   (unsigned long)gsSGXDeviceMap.sRegsCpuPBase.uiAddr));
 
-#if defined(SGX544) && defined(SGX_FEATURE_MP)
-	/* FIXME: Workaround due to HWMOD change. Otherwise this region is too small. */
-	gsSGXDeviceMap.ui32RegsSize = SYS_OMAP_SGX_REGS_SIZE;
-#else
 	gsSGXDeviceMap.ui32RegsSize =
 	(unsigned int)(dev_res->end - dev_res->start);
-#endif
 	PVR_TRACE(("SGX register size: %d", gsSGXDeviceMap.ui32RegsSize));
 
 	gsSGXDeviceMap.ui32IRQ = dev_irq;
@@ -574,9 +548,6 @@ PVRSRV_ERROR SysFinalise(IMG_VOID)
 	}
 	SYS_SPECIFIC_DATA_SET(&gsSysSpecificData,
 	      SYS_SPECIFIC_DATA_ENABLE_LISR);
-#if !defined(SUPPORT_ACTIVE_POWER_MANAGEMENT)
-	SysEnableSGXInterrupts(gpsSysData);
-#endif
 #endif /* defined(SYS_USING_INTERRUPTS) */
 #if defined(__linux__) || defined(__QNXNTO__)
 	/* Create a human readable version string for this system */
@@ -979,60 +950,6 @@ IMG_VOID SysClearInterrupts(SYS_DATA *psSysData, IMG_UINT32 ui32ClearBits)
 	EUR_CR_EVENT_HOST_CLEAR);
 #endif /* defined(NO_HARDWARE) */
 }
-
-#if defined(SGX_OCP_NO_INT_BYPASS)
-/*!
-******************************************************************************
- @Function        SysEnableSGXInterrupts
-
- @Description     Enables SGX interrupts
-
- @Input           psSysData
-
- @Return        IMG_VOID
-
-******************************************************************************/
-IMG_VOID SysEnableSGXInterrupts(SYS_DATA *psSysData)
-{
-	SYS_SPECIFIC_DATA *psSysSpecData =
-	(SYS_SPECIFIC_DATA *)psSysData->pvSysSpecificData;
-	if (SYS_SPECIFIC_DATA_TEST(psSysSpecData,
-	   SYS_SPECIFIC_DATA_ENABLE_LISR) &&
-	    !SYS_SPECIFIC_DATA_TEST(psSysSpecData,
-	    SYS_SPECIFIC_DATA_IRQ_ENABLED)) {
-	OSWriteHWReg(gpvOCPRegsLinAddr, EUR_CR_OCP_IRQSTATUS_2, 0x1);
-	OSWriteHWReg(gpvOCPRegsLinAddr, EUR_CR_OCP_IRQENABLE_SET_2,
-	     0x1);
-	SYS_SPECIFIC_DATA_SET(psSysSpecData,
-	      SYS_SPECIFIC_DATA_IRQ_ENABLED);
-	}
-}
-
-/*!
-******************************************************************************
- @Function        SysDisableSGXInterrupts
-
- @Description     Disables SGX interrupts
-
- @Input           psSysData
-
- @Return        IMG_VOID
-
-******************************************************************************/
-IMG_VOID SysDisableSGXInterrupts(SYS_DATA *psSysData)
-{
-	SYS_SPECIFIC_DATA *psSysSpecData =
-	(SYS_SPECIFIC_DATA *)psSysData->pvSysSpecificData;
-
-	if (SYS_SPECIFIC_DATA_TEST(psSysSpecData,
-	   SYS_SPECIFIC_DATA_IRQ_ENABLED)) {
-	OSWriteHWReg(gpvOCPRegsLinAddr, EUR_CR_OCP_IRQENABLE_CLR_2,
-	     0x1);
-	SYS_SPECIFIC_DATA_CLEAR(psSysSpecData,
-	SYS_SPECIFIC_DATA_IRQ_ENABLED);
-	}
-}
-#endif /* defined(SGX_OCP_NO_INT_BYPASS) */
 
 /*!
 ******************************************************************************

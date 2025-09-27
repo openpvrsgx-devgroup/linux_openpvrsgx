@@ -87,15 +87,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <plat/gpu.h>
 #endif
 #if !defined(PVR_NO_OMAP_TIMER)
-#if (VS_PRODUCT_VERSION == 5)
+#if (AM_VERSION == 5) || (AM_VERSION == 6)
 #define PVR_OMAP_USE_DM_TIMER_API
-#include <plat/dmtimer.h>
 #endif
 #endif
 #endif
 
 #if !defined(PVR_NO_OMAP_TIMER)
-#if (VS_PRODUCT_VERSION == 5)
+#if (AM_VERSION == 5) || (AM_VERSION == 6)
 #define PVR_OMAP_TIMER_BASE_IN_SYS_SPEC_DATA
 #endif
 #endif
@@ -109,7 +108,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if defined(SGX_OCP_REGS_ENABLED)
 /* FIXME: Temporary workaround for OMAP4470 and active power off in 4430 */
 #if !defined(SGX544) && defined(SUPPORT_ACTIVE_POWER_MANAGEMENT)
-#if (VS_PRODUCT_VERSION == 5)
+#if (AM_VERSION == 5) || (AM_VERSION == 6)
 #define SGX_OCP_NO_INT_BYPASS
 #endif
 #endif
@@ -199,14 +198,6 @@ typedef struct _SYS_SPECIFIC_DATA_TAG_ {
 } SYS_SPECIFIC_DATA;
 
 extern SYS_SPECIFIC_DATA *gpsSysSpecificData;
-
-#if defined(SGX_OCP_REGS_ENABLED) && defined(SGX_OCP_NO_INT_BYPASS)
-IMG_VOID SysEnableSGXInterrupts(SYS_DATA *psSysData);
-IMG_VOID SysDisableSGXInterrupts(SYS_DATA *psSysData);
-#else
-#define SysEnableSGXInterrupts(psSysData)
-#define SysDisableSGXInterrupts(psSysData)
-#endif
 
 #if defined(SYS_CUSTOM_POWERLOCK_WRAP)
 IMG_BOOL WrapSystemPowerChange(SYS_SPECIFIC_DATA *psSysSpecData);

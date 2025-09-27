@@ -71,7 +71,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "poulsbo_linux.h"
 
 #include <linux/module.h>
-#include <linux/vmalloc.h>
 
 #if defined(SUPPORT_DRI_DRM)
 #include "pvr_drm.h"
@@ -254,6 +253,7 @@ static const struct GTF_TIMINGS_DEF gsGtfTimings[] = {
 #define VMALLOC_TO_PAGE_PHYS(addr) page_to_phys(vmalloc_to_page(addr))
 
 #if !defined(SUPPORT_DRI_DRM)
+MODULE_SUPPORTED_DEVICE(DRVNAME);
 #endif
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 19, 0))

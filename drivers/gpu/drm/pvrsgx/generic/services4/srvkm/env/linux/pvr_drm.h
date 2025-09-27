@@ -42,6 +42,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if !defined(__PVR_DRM_H__)
 #define __PVR_DRM_H__
 
+#include <drm/drm_device.h>
+#include <linux/platform_device.h>
+
 #if defined(PDUMP)
 #include "linuxsrv.h"
 #endif
@@ -84,6 +87,8 @@ int PVRSRVDriverResume(struct drm_device *pDevice);
 
 int PVRSRV_BridgeDispatchKM(struct drm_device *dev, void *arg,
 	    struct drm_file *pFile);
+int PVRSRV_BridgeCompatDispatchKM(struct drm_device *dev, void *arg,
+	  struct drm_file *pFile);
 
 #if defined(SUPPORT_DRI_DRM_EXT)
 #define DRI_DRM_STATIC

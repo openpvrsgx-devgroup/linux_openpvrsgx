@@ -46,6 +46,9 @@
 # COMMON_CFLAGS or COMMON_USER_FLAGS. These flags are shared between
 # host and target, which might use compilers with different capabilities.
 
+# ANOTHER NOTE: All flags here must be architecture-independent (i.e. no
+# -march or toolchain include paths)
+
 # These flags are used for kernel, User C and User C++
 #
 COMMON_FLAGS := -W -Wall
@@ -76,7 +79,7 @@ COMMON_USER_FLAGS += -fno-strict-aliasing
 # We always enable debugging. Either the release binaries are stripped
 # and the symbols put in the symbolpackage, or we're building debug.
 #
-COMMON_USER_FLAGS += -g $(ANDROID_FPGA_FORCE_32BIT)
+COMMON_USER_FLAGS += -g
 
 # User C and User C++ warning flags
 #
@@ -88,14 +91,10 @@ COMMON_USER_FLAGS += \
 #
 TESTED_TARGET_USER_FLAGS := \
  $(call cc-option,-Wno-missing-field-initializers) \
- $(call cc-option,-fdiagnostics-show-option) \
- $(call cc-option,-Wno-self-assign) \
- $(call cc-option,-Wno-parentheses-equality)
+ $(call cc-option,-fdiagnostics-show-option)
 TESTED_HOST_USER_FLAGS := \
  $(call host-cc-option,-Wno-missing-field-initializers) \
- $(call host-cc-option,-fdiagnostics-show-option) \
- $(call host-cc-option,-Wno-self-assign) \
- $(call host-cc-option,-Wno-parentheses-equality)
+ $(call host-cc-option,-fdiagnostics-show-option)
 
 # These flags are clang-specific.
 # -Wno-unused-command-line-argument works around a buggy interaction
@@ -230,27 +229,12 @@ ALL_KBUILD_CFLAGS := $(COMMON_CFLAGS) $(KBUILD_FLAGS) $(TESTED_KBUILD_FLAGS)
 # For the same reason (Darwin 'ld') don't bother checking for text
 # relocations in host binaries.
 #
-ALL_HOST_LDFLAGS := -L$(HOST_OUT)
-ALL_LDFLAGS := \
- -Wl,--warn-shared-textrel \
- -L$(TARGET_OUT) -Xlinker -rpath-link=$(TARGET_OUT)
-
-ifneq ($(strip $(TOOLCHAIN)),)
-ALL_LDFLAGS += -L$(TOOLCHAIN)/lib -Xlinker -rpath-link=$(TOOLCHAIN)/lib
-endif
-
-ifneq ($(strip $(TOOLCHAIN2)),)
-ALL_LDFLAGS += -L$(TOOLCHAIN2)/lib -Xlinker -rpath-link=$(TOOLCHAIN2)/lib
-endif
-
-ifneq ($(strip $(LINKER_RPATH)),)
-ALL_LDFLAGS += $(addprefix -Xlinker -rpath=,$(LINKER_RPATH))
-endif
+ALL_HOST_LDFLAGS :=
+ALL_LDFLAGS := -Wl,--warn-shared-textrel
 
 ALL_LDFLAGS += $(SYS_LDFLAGS)
 
 # Optional security hardening features.
-# Roughly matches Android's default security build options.
 ifneq ($(FORTIFY),)
 ALL_CFLAGS   += -fstack-protector -Wa,--noexecstack -D_FORTIFY_SOURCE=2
 ALL_CXXFLAGS += -fstack-protector -Wa,--noexecstack -D_FORTIFY_SOURCE=2
@@ -265,3 +249,10 @@ ALL_CXX_MODULES :=
 
 # Toolchain triple for cross environment
 CROSS_TRIPLE := $(patsubst %-,%,$(notdir $(CROSS_COMPILE)))
+
+ifneq ($(TOOLCHAIN),)
+$(warning **********************************************)
+$(warning  The TOOLCHAIN option has been removed, but)
+$(warning  you have it set (via $(origin TOOLCHAIN)))
+$(warning **********************************************)
+endif

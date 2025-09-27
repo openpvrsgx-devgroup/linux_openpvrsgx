@@ -52,16 +52,22 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "ttrace.h"
 #endif
 #include "perfkm.h"
+#include "devicemem.h"
 
 #include "pvrversion.h"
 
 #include "lists.h"
+
+#ifdef SUPPORT_DRI_DRM_EXTERNAL
+#include <drm/omap_drm.h>
+#endif
 
 IMG_UINT32 g_ui32InitFlags;
 
 /* mark which parts of Services were initialised */
 #define INIT_DATA_ENABLE_PDUMPINIT 0x1U
 #define INIT_DATA_ENABLE_TTARCE 0x2U
+#define INIT_DATA_ENABLE_DEVMEM 0x4U
 
 /*!
 ******************************************************************************
@@ -198,8 +204,8 @@ IMG_EXPORT
 IMG_VOID WriteHWReg(IMG_PVOID pvLinRegBaseAddr, IMG_UINT32 ui32Offset,
 	    IMG_UINT32 ui32Value)
 {
-	PVR_DPF((PVR_DBG_MESSAGE, "WriteHWReg Base:%x, Offset: %x, Value %x",
-	 (IMG_UINTPTR_T)pvLinRegBaseAddr, ui32Offset, ui32Value));
+	PVR_DPF((PVR_DBG_MESSAGE, "WriteHWReg Base:%p, Offset: %x, Value %x",
+	 pvLinRegBaseAddr, ui32Offset, ui32Value));
 
 	*(IMG_UINT32 *)((IMG_UINTPTR_T)pvLinRegBaseAddr + ui32Offset) =
 	ui32Value;
@@ -410,6 +416,13 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVInit(PSYS_DATA psSysData)
 	PDUMPINIT();
 	g_ui32InitFlags |= INIT_DATA_ENABLE_PDUMPINIT;
 
+#if defined(SUPPORT_ION)
+	eError = PVRSRVInitDeviceMem();
+	if (eError != PVRSRV_OK)
+	goto Error;
+	g_ui32InitFlags |= INIT_DATA_ENABLE_DEVMEM;
+#endif
+
 	PERFINIT();
 	return eError;
 
@@ -444,6 +457,12 @@ IMG_VOID IMG_CALLCONV PVRSRVDeInit(PSYS_DATA psSysData)
 	}
 
 	PERFDEINIT();
+
+#if defined(SUPPORT_ION)
+	if ((g_ui32InitFlags & INIT_DATA_ENABLE_DEVMEM) > 0) {
+	PVRSRVDeInitDeviceMem();
+	}
+#endif
 
 #if defined(TTRACE)
 	/* deinitialise ttrace */
@@ -1106,11 +1125,7 @@ PVRSRVGetMiscInfoKM_Device_AnyVaCb(PVRSRV_DEVICE_NODE *psDeviceNode, va_list va)
 
 ******************************************************************************/
 IMG_EXPORT
-#if defined(SUPPORT_SID_INTERFACE)
-PVRSRV_ERROR IMG_CALLCONV PVRSRVGetMiscInfoKM(PVRSRV_MISC_INFO_KM *psMiscInfo)
-#else
 PVRSRV_ERROR IMG_CALLCONV PVRSRVGetMiscInfoKM(PVRSRV_MISC_INFO *psMiscInfo)
-#endif
 {
 	SYS_DATA *psSysData;
 
@@ -1298,18 +1313,10 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVGetMiscInfoKM(PVRSRV_MISC_INFO *psMiscInfo)
 	psSysData->ePendingCacheOpType =
 	psMiscInfo->sCacheOpCtl.eCacheOpType;
 	} else {
-#if defined(SUPPORT_SID_INTERFACE)
-	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo =
-	psMiscInfo->sCacheOpCtl.psKernelMemInfo;
-
-	if (!psMiscInfo->sCacheOpCtl.psKernelMemInfo)
-#else
 	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
 	PVRSRV_PER_PROCESS_DATA *psPerProc;
 
-	if (!psMiscInfo->sCacheOpCtl.u.psKernelMemInfo)
-#endif
-	{
+	if (!psMiscInfo->sCacheOpCtl.u.psKernelMemInfo) {
 	PVR_DPF((
 	PVR_DBG_WARNING,
 	"PVRSRVGetMiscInfoKM: "
@@ -1326,9 +1333,6 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVGetMiscInfoKM(PVRSRV_MISC_INFO *psMiscInfo)
 	"to combine deferred cache ops with immediate ones"));
 	}
 
-#if defined(SUPPORT_SID_INTERFACE)
-	PVR_DBG_BREAK
-#else
 	psPerProc = PVRSRVFindPerProcessData();
 
 	if (PVRSRVLookupHandle(
@@ -1341,7 +1345,6 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVGetMiscInfoKM(PVRSRV_MISC_INFO *psMiscInfo)
 	 "Can't find kernel meminfo"));
 	return PVRSRV_ERROR_INVALID_PARAMS;
 	}
-#endif
 
 	if (psMiscInfo->sCacheOpCtl.eCacheOpType ==
 	    PVRSRV_MISC_INFO_CPUCACHEOP_FLUSH) {
@@ -1355,13 +1358,17 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVGetMiscInfoKM(PVRSRV_MISC_INFO *psMiscInfo)
 	}
 	} else if (psMiscInfo->sCacheOpCtl.eCacheOpType ==
 	   PVRSRV_MISC_INFO_CPUCACHEOP_CLEAN) {
+	if (psMiscInfo->sCacheOpCtl.ui32Length != 0) {
 	if (!OSCleanCPUCacheRangeKM(
 	    psKernelMemInfo->sMemBlk
 	    .hOSMemHandle,
 	    0,
-	    psMiscInfo->sCacheOpCtl.pvBaseVAddr,
-	    psMiscInfo->sCacheOpCtl.ui32Length)) {
+	    psMiscInfo->sCacheOpCtl
+	    .pvBaseVAddr,
+	    psMiscInfo->sCacheOpCtl
+	    .ui32Length)) {
 	return PVRSRV_ERROR_CACHEOP_FAILED;
+	}
 	}
 	}
 	}
@@ -1369,17 +1376,12 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVGetMiscInfoKM(PVRSRV_MISC_INFO *psMiscInfo)
 
 	if ((psMiscInfo->ui32StateRequest &
 	     PVRSRV_MISC_INFO_GET_REF_COUNT_PRESENT) != 0UL) {
-#if !defined(SUPPORT_SID_INTERFACE)
 	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
 	PVRSRV_PER_PROCESS_DATA *psPerProc;
-#endif
 
 	psMiscInfo->ui32StatePresent |=
 	PVRSRV_MISC_INFO_GET_REF_COUNT_PRESENT;
 
-#if defined(SUPPORT_SID_INTERFACE)
-	PVR_DBG_BREAK
-#else
 	psPerProc = PVRSRVFindPerProcessData();
 
 	if (PVRSRVLookupHandle(
@@ -1394,7 +1396,6 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVGetMiscInfoKM(PVRSRV_MISC_INFO *psMiscInfo)
 
 	psMiscInfo->sGetRefCountCtl.ui32RefCount =
 	psKernelMemInfo->ui32RefCount;
-#endif
 	}
 
 	if ((psMiscInfo->ui32StateRequest &
@@ -1555,6 +1556,10 @@ IMG_VOID IMG_CALLCONV PVRSRVMISR(IMG_VOID *pvSysData)
 	SYS_DATA *psSysData = pvSysData;
 	/*	PVRSRV_DEVICE_NODE	*psDeviceNode; */
 
+#ifdef SUPPORT_DRI_DRM_EXTERNAL
+	omap_gem_op_update();
+#endif
+
 	if (!psSysData) {
 	PVR_DPF((PVR_DBG_ERROR, "PVRSRVMISR: Invalid params\n"));
 	return;
@@ -1659,11 +1664,11 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVSaveRestoreLiveSegments(IMG_HANDLE hArena,
 	return (PVRSRV_ERROR_OUT_OF_MEMORY);
 	}
 
-	PVR_DPF((
-	PVR_DBG_MESSAGE,
-	"PVRSRVSaveRestoreLiveSegments: Base %08x size %08x",
-	sSegDetails.sCpuPhyAddr.uiAddr,
-	sSegDetails.uiSize));
+	PVR_DPF((PVR_DBG_MESSAGE,
+	 "PVRSRVSaveRestoreLiveSegments: Base " CPUPADDR_FMT
+	 " size %" SIZE_T_FMT_LEN "x",
+	 sSegDetails.sCpuPhyAddr.uiAddr,
+	 sSegDetails.uiSize));
 
 	/* Map the device's local memory area onto the host. */
 	pvLocalMemCPUVAddr = OSMapPhysToLin(

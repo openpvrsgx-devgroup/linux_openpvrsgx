@@ -204,8 +204,8 @@ static IMG_VOID SGXResetSetupBIFContexts(PVRSRV_SGXDEV_INFO *psDevInfo,
 	    4 * (SGX_BIF_DIR_LIST_INDEX_EDM - 1);
 #endif /* SGX_BIF_DIR_LIST_INDEX_EDM */
 
-	ui32RegVal = psDevInfo->sKernelPDDevPAddr.uiAddr >>
-	     SGX_MMU_PDE_ADDR_ALIGNSHIFT;
+	ui32RegVal = (IMG_UINT32)(psDevInfo->sKernelPDDevPAddr.uiAddr >>
+	  SGX_MMU_PDE_ADDR_ALIGNSHIFT);
 
 #if defined(FIX_HW_BRN_28011)
 	OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_BIF_DIR_LIST_BASE0,
@@ -535,6 +535,12 @@ IMG_VOID SGXReset(PVRSRV_SGXDEV_INFO *psDevInfo, IMG_BOOL bHardwareRecovery,
 	PDUMPREGWITHFLAGS(SGX_PDUMPREG_NAME, EUR_CR_BIF_36BIT_ADDRESSING,
 	  EUR_CR_BIF_36BIT_ADDRESSING_ENABLE_MASK,
 	  ui32PDUMPFlags);
+#else
+#if defined(EUR_CR_BIF_36BIT_ADDRESSING)
+	OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_BIF_36BIT_ADDRESSING, 0);
+	PDUMPREGWITHFLAGS(SGX_PDUMPREG_NAME, EUR_CR_BIF_36BIT_ADDRESSING, 0,
+	  ui32PDUMPFlags);
+#endif
 #endif
 
 	SGXResetInitBIFContexts(psDevInfo, ui32PDUMPFlags);
@@ -627,12 +633,14 @@ IMG_VOID SGXReset(PVRSRV_SGXDEV_INFO *psDevInfo, IMG_BOOL bHardwareRecovery,
 
 	/* Map in the dummy page. */
 	psDevInfo->pui32BIFResetPD[ui32PDIndex] =
-	(psDevInfo->sBIFResetPTDevPAddr.uiAddr >>
-	 SGX_MMU_PDE_ADDR_ALIGNSHIFT) |
+	(IMG_UINT32)(psDevInfo->sBIFResetPTDevPAddr
+	     .uiAddr >>
+	     SGX_MMU_PDE_ADDR_ALIGNSHIFT) |
 	SGX_MMU_PDE_PAGE_SIZE_4K | SGX_MMU_PDE_VALID;
 	psDevInfo->pui32BIFResetPT[ui32PTIndex] =
-	(psDevInfo->sBIFResetPageDevPAddr.uiAddr >>
-	 SGX_MMU_PTE_ADDR_ALIGNSHIFT) |
+	(IMG_UINT32)(psDevInfo->sBIFResetPageDevPAddr
+	     .uiAddr >>
+	     SGX_MMU_PTE_ADDR_ALIGNSHIFT) |
 	SGX_MMU_PTE_VALID;
 
 	/* Clear outstanding events. */

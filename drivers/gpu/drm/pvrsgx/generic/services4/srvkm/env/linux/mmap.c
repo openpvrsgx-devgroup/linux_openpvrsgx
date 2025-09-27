@@ -66,11 +66,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <asm/current.h>
 #endif
 #if defined(SUPPORT_DRI_DRM)
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 5, 0))
 #include <drm/drmP.h>
-#else
-#include <linux/platform_device.h>
-#endif
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 18, 0))
 #include <drm/drm_legacy.h>
 #endif
@@ -792,24 +788,8 @@ static IMG_BOOL DoMapToUser(LinuxMemArea *psLinuxMemArea,
 
 #if defined(PVR_MAKE_ALL_PFNS_SPECIAL)
 	if (bMixedMap) {
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 20, 0))
-	pfn_t pfns = { pfn };
-	vm_fault_t vmf;
-
-	vmf = vmf_insert_mixed(ps_vma, ulVMAPos,
-	       pfns);
-	if (vmf & VM_FAULT_ERROR)
-	result = vm_fault_to_errno(vmf,
-	   0);
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 5, 0))
-	pfn_t pfns = { pfn };
-
-	result = vm_insert_mixed(
-	ps_vma, ulVMAPos, pfns);
-#else
 	result = vm_insert_mixed(ps_vma,
 	 ulVMAPos, pfn);
-#endif
 	if (result != 0) {
 	PVR_DPF((
 	PVR_DBG_ERROR,

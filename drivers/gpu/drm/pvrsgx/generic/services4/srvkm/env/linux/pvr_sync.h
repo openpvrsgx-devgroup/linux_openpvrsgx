@@ -1,6 +1,9 @@
 /*************************************************************************/ /*!
-@Title          Utility functions for user space access
+@File           pvr_sync.c
+@Title          Kernel sync driver
 @Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@Description    Version numbers and strings for PVR Consumer services
+	components.
 @License        Dual MIT/GPLv2
 
 The contents of this file are subject to the MIT license as set out below.
@@ -38,50 +41,40 @@ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */ /**************************************************************************/
-#ifndef __PVR_UACCESS_H__
-#define __PVR_UACCESS_H__
 
+#ifndef _PVR_SYNC_H
+#define _PVR_SYNC_H
+
+#include <linux/seq_file.h>
 #include <linux/version.h>
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 38))
-#ifndef AUTOCONF_INCLUDED
-#include <linux/config.h>
-#endif
-#endif
-
-#include <asm/uaccess.h>
-
-static inline unsigned long
-pvr_copy_to_user(void __user *pvTo, const void *pvFrom, unsigned long ulBytes)
-{
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 33))
-	if (access_ok(VERIFY_WRITE, pvTo, ulBytes)) {
-	return __copy_to_user(pvTo, pvFrom, ulBytes);
-	}
-	return ulBytes;
+#if !defined(__KERNEL__) || (LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0))
+#include <linux/sync.h>
 #else
-	return copy_to_user(pvTo, pvFrom, ulBytes);
+#include <../drivers/staging/android/sync.h>
 #endif
-}
 
-static inline unsigned long
-pvr_copy_from_user(void *pvTo, const void __user *pvFrom, unsigned long ulBytes)
-{
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 33))
-	/*
-     * The compile time correctness checking introduced for copy_from_user in
-     * Linux 2.6.33 isn't fully comaptible with our usage of the function.
-     */
-	if (access_ok(VERIFY_READ, pvFrom, ulBytes)) {
-	return __copy_from_user(pvTo, pvFrom, ulBytes);
-	}
-	return ulBytes;
-#else
-	return copy_from_user(pvTo, pvFrom, ulBytes);
-#endif
-}
+#include "pvr_sync_user.h"
+#include "servicesint.h" // PVRSRV_DEVICE_SYNC_OBJECT
 
-#define pvr_put_user put_user
-#define pvr_get_user get_user
+/* services4 internal interface */
 
-#endif /* __PVR_UACCESS_H__ */
+int PVRSyncDeviceInit(void);
+void PVRSyncDeviceDeInit(void);
+void PVRSyncUpdateAllSyncs(void);
+PVRSRV_ERROR
+PVRSyncPatchCCBKickSyncInfos(
+	IMG_HANDLE ahSyncs[SGX_MAX_SRC_SYNCS_TA],
+	PVRSRV_DEVICE_SYNC_OBJECT asDevSyncs[SGX_MAX_SRC_SYNCS_TA],
+	IMG_UINT32 *pui32NumSrcSyncs);
+PVRSRV_ERROR
+PVRSyncPatchTransferSyncInfos(
+	IMG_HANDLE ahSyncs[SGX_MAX_SRC_SYNCS_TA],
+	PVRSRV_DEVICE_SYNC_OBJECT asDevSyncs[SGX_MAX_SRC_SYNCS_TA],
+	IMG_UINT32 *pui32NumSrcSyncs);
+PVRSRV_ERROR
+PVRSyncFencesToSyncInfos(PVRSRV_KERNEL_SYNC_INFO *apsSyncs[],
+	 IMG_UINT32 *pui32NumSyncs,
+	 struct sync_fence *apsFence[SGX_MAX_SRC_SYNCS_TA]);
+
+#endif /* _PVR_SYNC_H */

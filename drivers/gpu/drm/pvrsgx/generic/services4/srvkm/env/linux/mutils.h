@@ -63,13 +63,14 @@ pgprot_t pvr_pgprot_writecombine(pgprot_t prot);
 #else
 #if defined(__arm__) || defined(__sh__)
 #define PGPROT_WC(pv) pgprot_writecombine(pv)
-#else
-#if defined(__i386__) || defined(__mips__)
+#elif defined(__mips__)
+#define PGPROT_WC(pv) pgprot_writecombine(pv)
+#elif defined(__i386__) || defined(__x86_64)
+/* PAT support supersedes this */
 #define PGPROT_WC(pv) pgprot_noncached(pv)
 #else
 #define PGPROT_WC(pv) pgprot_noncached(pv)
 #error Unsupported architecture!
-#endif
 #endif
 #endif
 

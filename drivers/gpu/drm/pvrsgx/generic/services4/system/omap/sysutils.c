@@ -45,3 +45,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if defined(__linux__)
 #include "sysutils_linux.c"
 #endif
+
+#if defined(__QNXNTO__)
+#include "sysutils_nto.c"
+#endif

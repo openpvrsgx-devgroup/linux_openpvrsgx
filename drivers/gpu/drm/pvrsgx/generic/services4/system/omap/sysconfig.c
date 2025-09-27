@@ -575,7 +575,7 @@ PVRSRV_ERROR SysFinalise(IMG_VOID)
 	SysEnableSGXInterrupts(gpsSysData);
 #endif
 #endif /* defined(SYS_USING_INTERRUPTS) */
-#if defined(__linux__)
+#if defined(__linux__) || defined(__QNXNTO__)
 	/* Create a human readable version string for this system */
 	gpsSysData->pszVersionString = SysCreateVersionString();
 	if (!gpsSysData->pszVersionString) {
@@ -1275,6 +1275,7 @@ PVRSRV_ERROR SysOEMFunction(IMG_UINT32 ui32ID, IMG_VOID *pvIn,
 	PVR_UNREFERENCED_PARAMETER(pvOut);
 	PVR_UNREFERENCED_PARAMETER(ulOutSize);
 
+#if !defined(__QNXNTO__)
 	if ((ui32ID == OEM_GET_EXT_FUNCS) &&
 	    (ulOutSize == sizeof(PVRSRV_DC_OEM_JTABLE))) {
 	PVRSRV_DC_OEM_JTABLE *psOEMJTable =
@@ -1282,6 +1283,7 @@ PVRSRV_ERROR SysOEMFunction(IMG_UINT32 ui32ID, IMG_VOID *pvIn,
 	psOEMJTable->pfnOEMBridgeDispatch = &PVRSRV_BridgeDispatchKM;
 	return PVRSRV_OK;
 	}
+#endif
 
 	return PVRSRV_ERROR_INVALID_PARAMS;
 }

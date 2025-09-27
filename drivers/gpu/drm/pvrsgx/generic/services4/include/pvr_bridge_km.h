@@ -56,6 +56,11 @@ extern "C" {
 #if defined(__linux__)
 PVRSRV_ERROR LinuxBridgeInit(IMG_VOID);
 IMG_VOID LinuxBridgeDeInit(IMG_VOID);
+
+#if defined(SUPPORT_MEMINFO_IDS)
+extern IMG_UINT64 g_ui64MemInfoID;
+#endif
+
 #endif
 
 IMG_IMPORT
@@ -69,7 +74,7 @@ PVRSRVAcquireDeviceDataKM(IMG_UINT32 uiDevIndex, PVRSRV_DEVICE_TYPE eDeviceType,
 
 IMG_IMPORT
 PVRSRV_ERROR IMG_CALLCONV PVRSRVCreateCommandQueueKM(
-	IMG_SIZE_T ui32QueueSize, PVRSRV_QUEUE_INFO **ppsQueueInfo);
+	IMG_SIZE_T uQueueSize, PVRSRV_QUEUE_INFO **ppsQueueInfo);
 
 IMG_IMPORT
 PVRSRV_ERROR IMG_CALLCONV
@@ -77,23 +82,13 @@ PVRSRVDestroyCommandQueueKM(PVRSRV_QUEUE_INFO *psQueueInfo);
 
 IMG_IMPORT
 PVRSRV_ERROR IMG_CALLCONV
-PVRSRVGetDeviceMemHeapsKM(IMG_HANDLE hDevCookie,
-#if defined(SUPPORT_SID_INTERFACE)
-	  PVRSRV_HEAP_INFO_KM *psHeapInfo);
-#else
-	  PVRSRV_HEAP_INFO *psHeapInfo);
-#endif
+PVRSRVGetDeviceMemHeapsKM(IMG_HANDLE hDevCookie, PVRSRV_HEAP_INFO *psHeapInfo);
 
 IMG_IMPORT
 PVRSRV_ERROR IMG_CALLCONV PVRSRVCreateDeviceMemContextKM(
 	IMG_HANDLE hDevCookie, PVRSRV_PER_PROCESS_DATA *psPerProc,
 	IMG_HANDLE *phDevMemContext, IMG_UINT32 *pui32ClientHeapCount,
-#if defined(SUPPORT_SID_INTERFACE)
-	PVRSRV_HEAP_INFO_KM *psHeapInfo,
-#else
-	PVRSRV_HEAP_INFO *psHeapInfo,
-#endif
-	IMG_BOOL *pbCreated, IMG_BOOL *pbShared);
+	PVRSRV_HEAP_INFO *psHeapInfo, IMG_BOOL *pbCreated, IMG_BOOL *pbShared);
 
 IMG_IMPORT
 PVRSRV_ERROR IMG_CALLCONV PVRSRVDestroyDeviceMemContextKM(
@@ -104,12 +99,7 @@ IMG_IMPORT
 PVRSRV_ERROR IMG_CALLCONV
 PVRSRVGetDeviceMemHeapInfoKM(IMG_HANDLE hDevCookie, IMG_HANDLE hDevMemContext,
 	     IMG_UINT32 *pui32ClientHeapCount,
-#if defined(SUPPORT_SID_INTERFACE)
-	     PVRSRV_HEAP_INFO_KM *psHeapInfo,
-#else
-	     PVRSRV_HEAP_INFO *psHeapInfo,
-#endif
-	     IMG_BOOL *pbShared);
+	     PVRSRV_HEAP_INFO *psHeapInfo, IMG_BOOL *pbShared);
 
 IMG_IMPORT
 PVRSRV_ERROR IMG_CALLCONV _PVRSRVAllocDeviceMemKM(
@@ -148,21 +138,16 @@ IMG_IMPORT
 PVRSRV_ERROR IMG_CALLCONV
 PVRSRVFreeDeviceMemKM(IMG_HANDLE hDevCookie, PVRSRV_KERNEL_MEM_INFO *psMemInfo);
 
-IMG_EXPORT
-PVRSRV_ERROR IMG_CALLCONV PVRSRVRemapToDevKM(IMG_HANDLE hDevCookie,
-	     PVRSRV_KERNEL_MEM_INFO *psMemInfo,
-	     IMG_DEV_VIRTADDR *psDevVAddr);
-
-IMG_EXPORT
-PVRSRV_ERROR IMG_CALLCONV
-PVRSRVUnmapFromDevKM(IMG_HANDLE hDevCookie, PVRSRV_KERNEL_MEM_INFO *psMemInfo);
 #if defined(SUPPORT_ION)
 IMG_IMPORT
-PVRSRV_ERROR PVRSRVMapIonHandleKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
-	  IMG_HANDLE hDevCookie,
-	  IMG_HANDLE hDevMemContext, IMG_HANDLE hIon,
-	  IMG_UINT32 ui32Flags, IMG_UINT32 ui32Size,
-	  PVRSRV_KERNEL_MEM_INFO **ppsKernelMemInfo);
+PVRSRV_ERROR
+PVRSRVMapIonHandleKM(PVRSRV_PER_PROCESS_DATA *psPerProc, IMG_HANDLE hDevCookie,
+	     IMG_HANDLE hDevMemHeap, IMG_UINT32 ui32NumFDs,
+	     IMG_INT32 *pai32BufferFDs, IMG_UINT32 ui32Flags,
+	     IMG_UINT32 ui32ChunkCount, IMG_SIZE_T *pauiOffset,
+	     IMG_SIZE_T *pauiSize, IMG_SIZE_T *puiIonBufferSize,
+	     PVRSRV_KERNEL_MEM_INFO **ppsKernelMemInfo,
+	     IMG_UINT64 *pui64Stamp);
 
 IMG_IMPORT
 PVRSRV_ERROR IMG_CALLCONV
@@ -189,16 +174,9 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVMapDeviceMemoryKM(
 	PVRSRV_KERNEL_MEM_INFO *psSrcMemInfo, IMG_HANDLE hDstDevMemHeap,
 	PVRSRV_KERNEL_MEM_INFO **ppsDstMemInfo);
 
-#if defined(SUPPORT_DRI_DRM_EXTERNAL)
 IMG_IMPORT
 PVRSRV_ERROR IMG_CALLCONV
-PVRSRVImportGEMKM(PVRSRV_PER_PROCESS_DATA *psPerProc, IMG_HANDLE hDstDevMemHeap,
-	  IMG_UINT32 bo, PVRSRV_KERNEL_MEM_INFO **ppsDstMemInfo);
-#endif /* SUPPORT_DRI_DRM_EXTERNAL */
-
-IMG_IMPORT
-PVRSRV_ERROR IMG_CALLCONV PVRSRVUnmapDeviceMemoryKM(
-	PVRSRV_KERNEL_MEM_INFO *psMemInfo, PVRSRV_PER_PROCESS_DATA *psPerProc);
+PVRSRVUnmapDeviceMemoryKM(PVRSRV_KERNEL_MEM_INFO *psMemInfo);
 
 IMG_IMPORT
 PVRSRV_ERROR IMG_CALLCONV PVRSRVWrapExtMemoryKM(
@@ -282,7 +260,8 @@ PVRSRV_ERROR PVRSRVSwapToDCBuffer2KM(IMG_HANDLE hDeviceKM, IMG_HANDLE hBuffer,
 	     PVRSRV_KERNEL_SYNC_INFO **ppsSyncInfos,
 	     IMG_UINT32 ui32NumMemSyncInfos,
 	     IMG_PVOID pvPrivData,
-	     IMG_UINT32 ui32PrivDataLength);
+	     IMG_UINT32 ui32PrivDataLength,
+	     IMG_HANDLE *phFence);
 IMG_IMPORT
 PVRSRV_ERROR PVRSRVSwapToDCSystemKM(IMG_HANDLE hDeviceKM,
 	    IMG_HANDLE hSwapChain);
@@ -332,11 +311,7 @@ IMG_VOID IMG_CALLCONV
 PVRSRVReleaseSyncInfoKM(PVRSRV_KERNEL_SYNC_INFO *psKernelSyncInfo);
 
 IMG_IMPORT
-#if defined(SUPPORT_SID_INTERFACE)
-PVRSRV_ERROR IMG_CALLCONV PVRSRVGetMiscInfoKM(PVRSRV_MISC_INFO_KM *psMiscInfo);
-#else
 PVRSRV_ERROR IMG_CALLCONV PVRSRVGetMiscInfoKM(PVRSRV_MISC_INFO *psMiscInfo);
-#endif
 
 /*!
  * *****************************************************************************

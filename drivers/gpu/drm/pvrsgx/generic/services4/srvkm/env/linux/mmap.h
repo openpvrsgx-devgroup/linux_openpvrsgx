@@ -76,9 +76,9 @@ typedef struct KV_OFFSET_STRUCT_TAG {
      * contiguous), or it may represent the secure handle associated
      * with the area.
      */
-	IMG_UINTPTR_T uiMMapOffset;
+	IMG_UINT32 ui32MMapOffset;
 
-	IMG_SIZE_T uiRealByteSize;
+	IMG_UINT32 ui32RealByteSize;
 
 	/* Memory area associated with this offset structure */
 	LinuxMemArea *psLinuxMemArea;
@@ -106,7 +106,7 @@ typedef struct KV_OFFSET_STRUCT_TAG {
      * User mode address of start of mapping.  This is not necessarily the
      * first user mode address of the memory area.
      */
-	IMG_UINTPTR_T uiUserVAddr;
+	IMG_UINT32 ui32UserVAddr;
 
 	/* Extra entries to support proc filesystem debug info */
 #if defined(DEBUG_LINUX_MMAP_AREAS)
@@ -180,11 +180,15 @@ PVRSRV_ERROR PVRMMapRemoveRegisteredArea(LinuxMemArea *psLinuxMemArea);
  * @Return PVRSRV_ERROR
  ******************************************************************************/
 PVRSRV_ERROR PVRMMapOSMemHandleToMMapData(PVRSRV_PER_PROCESS_DATA *psPerProc,
+#if defined(SUPPORT_SID_INTERFACE)
+	  IMG_SID hMHandle,
+#else
 	  IMG_HANDLE hMHandle,
-	  IMG_UINTPTR_T *puiMMapOffset,
-	  IMG_UINTPTR_T *puiByteOffset,
-	  IMG_SIZE_T *puiRealByteSize,
-	  IMG_UINTPTR_T *puiUserVAddr);
+#endif
+	  IMG_UINT32 *pui32MMapOffset,
+	  IMG_UINT32 *pui32ByteOffset,
+	  IMG_UINT32 *pui32RealByteSize,
+	  IMG_UINT32 *pui32UserVAddr);
 
 /*!
  *******************************************************************************
@@ -202,9 +206,14 @@ PVRSRV_ERROR PVRMMapOSMemHandleToMMapData(PVRSRV_PER_PROCESS_DATA *psPerProc,
  @Return PVRSRV_ERROR
  ******************************************************************************/
 PVRSRV_ERROR
-PVRMMapReleaseMMapData(PVRSRV_PER_PROCESS_DATA *psPerProc, IMG_HANDLE hMHandle,
-	       IMG_BOOL *pbMUnmap, IMG_SIZE_T *puiRealByteSize,
-	       IMG_UINTPTR_T *puiUserVAddr);
+PVRMMapReleaseMMapData(PVRSRV_PER_PROCESS_DATA *psPerProc,
+#if defined(SUPPORT_SID_INTERFACE)
+	       IMG_SID hMHandle,
+#else
+	       IMG_HANDLE hMHandle,
+#endif
+	       IMG_BOOL *pbMUnmap, IMG_UINT32 *pui32RealByteSize,
+	       IMG_UINT32 *pui32UserVAddr);
 
 /*!
  *******************************************************************************

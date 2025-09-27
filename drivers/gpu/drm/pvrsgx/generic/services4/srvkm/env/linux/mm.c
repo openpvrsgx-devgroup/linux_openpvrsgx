@@ -64,6 +64,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <linux/slab.h>
 #include <linux/highmem.h>
 #include <linux/sched.h>
+#include <linux/platform_device.h>
+#include <linux/dma-mapping.h>
+#include <linux/dma-direct.h>
 
 #if defined(PVR_LINUX_MEM_AREA_POOL_ALLOW_SHRINK)
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 1, 0))
@@ -97,12 +100,16 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 #endif
 
+extern struct platform_device *gpsPVRLDMDev;
+
 /*
  * The page pool entry count is an atomic int so that the shrinker function
  * can return it even when we can't take the lock that protects the page pool
  * list.
  */
 static atomic_t g_sPagePoolEntryCount = ATOMIC_INIT(0);
+
+static IMG_BOOL bCmaAllocation = IMG_FALSE;
 
 #if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
 typedef enum {
@@ -472,6 +479,35 @@ static IMG_BOOL AllocFlagsToPGProt(pgprot_t *pPGProtFlags,
 	return IMG_TRUE;
 }
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 8, 0))
+#else
+/* provide pre-5.8 __vmalloc() with 3 parameters */
+
+#include <linux/kallsyms.h>
+
+static void *__old_vmalloc_node(unsigned long size, unsigned long align,
+	gfp_t gfp_mask, pgprot_t prot, int node,
+	const void *caller)
+{
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 10, 0))
+	/* we need to add EXPORT_SYMBOL(__vmalloc_node_range); to vmalloc.c */
+	return __vmalloc_node_range(size, align, VMALLOC_START, VMALLOC_END,
+	    gfp_mask, prot, 0, node, caller);
+#else
+	/* we need to add EXPORT_SYMBOL(__vmalloc_node_range_noprof); to vmalloc.c */
+	return __vmalloc_node_range_noprof(size, align, VMALLOC_START,
+	   VMALLOC_END, gfp_mask, prot, 0, node,
+	   caller);
+#endif
+}
+
+static void *__old_vmalloc(unsigned long size, gfp_t gfp_mask, pgprot_t prot)
+{
+	return __old_vmalloc_node(size, 1, gfp_mask, prot, NUMA_NO_NODE,
+	  __builtin_return_address(0));
+}
+#endif
+
 IMG_VOID *_VMallocWrapper(IMG_SIZE_T uiBytes, IMG_UINT32 ui32AllocFlags,
 	  IMG_CHAR *pszFileName, IMG_UINT32 ui32Line)
 {
@@ -496,7 +532,11 @@ IMG_VOID *_VMallocWrapper(IMG_SIZE_T uiBytes, IMG_UINT32 ui32AllocFlags,
 #endif
 
 	/* Allocate virtually contiguous pages */
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 8, 0))
 	pvRet = __vmalloc(uiBytes, gfp_mask, PGProtFlags);
+#else
+	pvRet = __old_vmalloc(uiBytes, gfp_mask, PGProtFlags);
+#endif
 
 #if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
 	if (pvRet) {
@@ -1372,6 +1412,50 @@ FreeIOLinuxMemArea(LinuxMemArea *psLinuxMemArea)
 	LinuxMemAreaStructFree(psLinuxMemArea);
 }
 
+LinuxMemArea *NewAllocCmaLinuxMemArea(IMG_SIZE_T uBytes,
+	      IMG_UINT32 ui32AreaFlags)
+{
+	LinuxMemArea *psLinuxMemArea;
+	unsigned long dmaAttrs = DMA_ATTR_NO_KERNEL_MAPPING;
+	dma_addr_t phys;
+	void *cookie;
+
+	/* return if there is no device specific cma pool */
+	if (!bCmaAllocation)
+	return NULL;
+
+	psLinuxMemArea = LinuxMemAreaStructAlloc();
+	if (!psLinuxMemArea) {
+	goto failed_area_alloc;
+	}
+
+	cookie = dma_alloc_attrs(&gpsPVRLDMDev->dev, uBytes, &phys, GFP_KERNEL,
+	 dmaAttrs);
+	if (cookie == NULL)
+	goto failed_cma_alloc;
+
+	psLinuxMemArea->eAreaType = LINUX_MEM_AREA_CMA;
+	psLinuxMemArea->uData.sCmaRegion.hCookie = cookie;
+	psLinuxMemArea->uData.sCmaRegion.dmaHandle = phys;
+	psLinuxMemArea->uiByteSize = uBytes;
+	psLinuxMemArea->ui32AreaFlags = ui32AreaFlags;
+	INIT_LIST_HEAD(&psLinuxMemArea->sMMapOffsetStructList);
+
+#if defined(DEBUG_LINUX_MEM_AREAS)
+	dev_err(&gpsPVRLDMDev->dev, "Allocating %d bytes from cma: 0x%llx\n",
+	uBytes, psLinuxMemArea->uData.sCmaRegion.dmaHandle);
+#endif
+
+	return psLinuxMemArea;
+
+failed_cma_alloc:
+	LinuxMemAreaStructFree(psLinuxMemArea);
+failed_area_alloc:
+	PVR_DPF((PVR_DBG_ERROR, "%s: failed", __FUNCTION__));
+
+	return NULL;
+}
+
 LinuxMemArea *NewAllocPagesLinuxMemArea(IMG_SIZE_T uBytes,
 	IMG_UINT32 ui32AreaFlags)
 {
@@ -1416,6 +1500,25 @@ failed_area_alloc:
 	PVR_DPF((PVR_DBG_ERROR, "%s: failed", __FUNCTION__));
 
 	return NULL;
+}
+
+IMG_VOID
+FreeAllocCmaLinuxMemArea(LinuxMemArea *psLinuxMemArea)
+{
+	PVR_ASSERT(psLinuxMemArea);
+	PVR_ASSERT(psLinuxMemArea->eAreaType == LINUX_MEM_AREA_CMA);
+
+	dma_free_attrs(&gpsPVRLDMDev->dev, psLinuxMemArea->uiByteSize,
+	       psLinuxMemArea->uData.sCmaRegion.hCookie,
+	       psLinuxMemArea->uData.sCmaRegion.dmaHandle,
+	       DMA_ATTR_NO_KERNEL_MAPPING);
+
+#if defined(DEBUG_LINUX_MEM_AREAS)
+	dev_err(&gpsPVRLDMDev->dev, "Freed %d bytes from CMA region\n",
+	psLinuxMemArea->uiByteSize);
+#endif
+
+	LinuxMemAreaStructFree(psLinuxMemArea);
 }
 
 IMG_VOID
@@ -1615,6 +1718,9 @@ LinuxMemAreaDeepFree(LinuxMemArea *psLinuxMemArea)
 	case LINUX_MEM_AREA_SUB_ALLOC:
 	FreeSubLinuxMemArea(psLinuxMemArea);
 	break;
+	case LINUX_MEM_AREA_CMA:
+	FreeAllocCmaLinuxMemArea(psLinuxMemArea);
+	break;
 	default:
 	PVR_DPF((PVR_DBG_ERROR, "%s: Unknown are type (%d)\n",
 	 __FUNCTION__, psLinuxMemArea->eAreaType));
@@ -1793,6 +1899,13 @@ LinuxMemAreaToCpuPAddr(LinuxMemArea *psLinuxMemArea, IMG_UINTPTR_T uiByteOffset)
 	CpuPAddr.uiAddr = VMallocToPhys(pCpuVAddr);
 	break;
 	}
+	case LINUX_MEM_AREA_CMA: {
+	CpuPAddr.uiAddr =
+	dma_to_phys(&gpsPVRLDMDev->dev,
+	    psLinuxMemArea->uData.sCmaRegion.dmaHandle);
+	CpuPAddr.uiAddr += uiByteOffset;
+	break;
+	}
 	case LINUX_MEM_AREA_ALLOC_PAGES: {
 	struct page *page;
 	IMG_UINTPTR_T uiPageIndex = PHYS_TO_PFN(uiByteOffset);
@@ -1825,6 +1938,7 @@ LinuxMemAreaPhysIsContig(LinuxMemArea *psLinuxMemArea)
 	switch (psLinuxMemArea->eAreaType) {
 	case LINUX_MEM_AREA_IOREMAP:
 	case LINUX_MEM_AREA_IO:
+	case LINUX_MEM_AREA_CMA:
 	return IMG_TRUE;
 
 	case LINUX_MEM_AREA_EXTERNAL_KV:
@@ -1865,6 +1979,8 @@ const IMG_CHAR *LinuxMemAreaTypeToString(LINUX_MEM_AREA_TYPE eMemAreaType)
 	return "LINUX_MEM_AREA_SUB_ALLOC";
 	case LINUX_MEM_AREA_ALLOC_PAGES:
 	return "LINUX_MEM_AREA_ALLOC_PAGES";
+	case LINUX_MEM_AREA_CMA:
+	return "LINUX_MEM_AREA_CMA";
 	default:
 	PVR_ASSERT(0);
 	}
@@ -2559,4 +2675,13 @@ LinuxMMInit(IMG_VOID)
 failed:
 	LinuxMMCleanup();
 	return PVRSRV_ERROR_OUT_OF_MEMORY;
+}
+
+IMG_VOID LinuxSetCMARegion(IMG_BOOL bCma)
+{
+	bCmaAllocation = bCma;
+
+	if (bCma) {
+	PVR_TRACE(("%s:, CMA pool is setup for GPU\n", __FUNCTION__));
+	}
 }

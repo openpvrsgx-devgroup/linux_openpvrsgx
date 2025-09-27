@@ -2,42 +2,7 @@ divert(-1)
 ########################################################################### ###
 ##@Title         Target common m4 macros.
 ##@Copyright     Copyright (c) Imagination Technologies Ltd. All Rights Reserved
-##@License       Dual MIT/GPLv2
-##
-## The contents of this file are subject to the MIT license as set out below.
-##
-## Permission is hereby granted, free of charge, to any person obtaining a copy
-## of this software and associated documentation files (the "Software"), to deal
-## in the Software without restriction, including without limitation the rights
-## to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-## copies of the Software, and to permit persons to whom the Software is
-## furnished to do so, subject to the following conditions:
-##
-## The above copyright notice and this permission notice shall be included in
-## all copies or substantial portions of the Software.
-##
-## Alternatively, the contents of this file may be used under the terms of
-## the GNU General Public License Version 2 ("GPL") in which case the provisions
-## of GPL are applicable instead of those above.
-##
-## If you wish to allow use of your version of this file only under the terms of
-## GPL, and not to allow others to use your version of this file under the terms
-## of the MIT license, indicate your decision by deleting the provisions above
-## and replace them with the notice and other provisions required by GPL as set
-## out in the file called "GPL-COPYING" included in this distribution. If you do
-## not delete the provisions above, a recipient may use your version of this file
-## under the terms of either the MIT license or GPL.
-##
-## This License is also included in this distribution in the file called
-## "MIT-COPYING".
-##
-## EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
-## PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
-## BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
-## PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
-## COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-## IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-## CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+##@License       Strictly Confidential.
 ### ###########################################################################
 
 # Define how we quote things.
@@ -47,13 +12,13 @@ changequote([[, ]])
 # Define how we comment things.  We don't define a comment end delimiter here so
 # the end-of-line serves that function.  Why change the comment starter?  We do
 # this so we that we can have macro replacement in text intended as comments in
-# the output stream.  The default starter is '#'; "dnl" is also unusable.  Note
+# the output stream.  The default starter is '#'; "dnl" is also usuable.  Note
 # that the way we've set up the diversion discipline means that only comments
 # inside pushdivert...popdivert pairs will be copied anyway.
 #
 changecom([[##]])
 
-#! Some macros to handle diversions conveniently.
+#! Some macros to handle diversions conviently.
 #!
 define([[_current_divert]],	[[-1]])
 define([[pushdivert]],	[[pushdef([[_current_divert]],$1)divert($1)]])
@@ -129,6 +94,8 @@ define([[FALSE]],	[[0]])
 ##
 ###############################################################################
 define([[RC_DESTDIR]],	[[/etc/init.d]])
+define([[MOD_ROOTDIR]],	[[/lib/modules/KERNEL_ID]])
+define([[MOD_DESTDIR]],	[[MOD_ROOTDIR/extra]])
 define([[MODULES_DEP]],	[[${DISCIMAGE}MOD_ROOTDIR/modules.dep]])
 define([[MODULES_TMP]],	[[/tmp/modules.$$.tmp]])
 define([[MODULES_CONF]],	[[${DISCIMAGE}/etc/modules.conf]])
@@ -196,6 +163,7 @@ define([[DISPLAY_CONTROLLER]],	[[define([[_DISPLAY_CONTROLLER_]], $1),
 
 define([[BUFFER_CLASS_DEVICE]],	[[define([[_BUFFER_CLASS_DEVICE_]], $1),
 	  define([[_BUFFER_CLASS_DEVICE_FAILED_]], $1_failed)]])
+
 
 
 ###############################################################################
@@ -415,6 +383,9 @@ ifelse(SUPPORT_RSCOMPUTE,1,[[SHARED_LIBRARY([[libPVRRS.LIB_SUFFIX]],[[SOLIB_VERS
 ifelse(SUPPORT_RSCOMPUTE,1,[[SHARED_LIBRARY([[librsccompiler.LIB_SUFFIX]],[[SOLIB_VERSION]])]])dnl
 ifelse(SUPPORT_RSCOMPUTE,1,[[SHARED_LIBRARY([[librsccore.bc]],[[SOLIB_VERSION]])]])dnl
 
+ifelse(PVR_REMOTE,1,
+	ifelse(SUPPORT_ANDROID_PLATFORM,1,[[SHARED_LIBRARY([[libvncserver.so]],[[SOLIB_VERSION]])]]))dnl
+
 SHARED_LIBRARY([[libIMGegl.LIB_SUFFIX]],[[SOLIB_VERSION]])dnl
 ifelse(SUPPORT_LIBEGL,1,[[SHARED_LIBRARY_DESTDIR([[EGL_MODULE]],[[SOLIB_VERSION]],[[EGL_DESTDIR]])]])dnl
 ifelse(SUPPORT_LIBPVR2D,1,[[SHARED_LIBRARY([[libpvr2d.LIB_SUFFIX]],[[SOLIB_VERSION]])]],
@@ -423,10 +394,13 @@ ifelse(SUPPORT_LIBPVR2D,1,[[SHARED_LIBRARY([[libpvr2d.LIB_SUFFIX]],[[SOLIB_VERSI
 ifelse(SUPPORT_NULL_PVR2D_BLIT,1,[[SHARED_LIBRARY([[libpvrPVR2D_BLITWSEGL.LIB_SUFFIX]],[[SOLIB_VERSION]])]])dnl
 ifelse(SUPPORT_NULL_PVR2D_FLIP,1,[[SHARED_LIBRARY([[libpvrPVR2D_FLIPWSEGL.LIB_SUFFIX]],[[SOLIB_VERSION]])]])dnl
 ifelse(SUPPORT_NULL_PVR2D_FRONT,1,[[SHARED_LIBRARY([[libpvrPVR2D_FRONTWSEGL.LIB_SUFFIX]],[[SOLIB_VERSION]])]])dnl
+ifelse(SUPPORT_NULL_PVR2D_REMOTE,1,[[SHARED_LIBRARY([[libpvrPVR2D_REMWSEGL.LIB_SUFFIX]],[[SOLIB_VERSION]])]])dnl
 ifelse(SUPPORT_NULL_PVR2D_LINUXFB,1,[[SHARED_LIBRARY([[libpvrPVR2D_LINUXFBWSEGL.LIB_SUFFIX]],[[SOLIB_VERSION]])]])dnl
 ifelse(SUPPORT_NULL_DRM_WS,1,[[SHARED_LIBRARY([[libpvrDRMWSEGL.LIB_SUFFIX]],[[SOLIB_VERSION]])]])dnl
 
 ifelse(SUPPORT_EWS,1,[[SHARED_LIBRARY([[libpvrEWS_WSEGL.LIB_SUFFIX]],[[SOLIB_VERSION]])]])dnl
+ifelse(SUPPORT_EWS_REMOTE,1,[[SHARED_LIBRARY([[libpvrEWS_REMWSEGL.LIB_SUFFIX]],[[SOLIB_VERSION]])]])dnl
+ifelse(SUPPORT_DRI_DRM,1,[[SHARED_LIBRARY([[libpvrPVR2D_DRIWSEGL.LIB_SUFFIX]],[[SOLIB_VERSION]])]])dnl
 
 SHARED_LIBRARY([[libdbm.LIB_SUFFIX]],[[SOLIB_VERSION]])dnl
 
@@ -480,7 +454,8 @@ define([[STANDARD_EXECUTABLES]], [[pushdivert(52)dnl
 ifelse(SUPPORT_SRVINIT,1,[[INITBINARY(pvrsrvctl)]])dnl
 ifelse(SUPPORT_SRVINIT,1,[[UNITTEST(sgx_init_test)]])dnl
 
-ifelse(PVR_REMVIEW,1,[[EXECUTABLE(pvrremview)]])dnl
+ifelse(PVR_REMOTE,1,[[EXECUTABLE(pvrvncsrv)]])dnl
+ifelse(PVR_REMOTE,1,[[EXECUTABLE(pvrvncinput)]])dnl
 ifelse(PDUMP,1,[[UNITTEST(pdump)]])dnl
 
 ifelse(SUPPORT_EWS,1,[[EXECUTABLE(ews_server)]])dnl
@@ -583,7 +558,6 @@ ifelse(SUPPORT_OPENGLES1,1,[[
 GLES1UNITTEST(xgles1test1)dnl
 GLES1UNITTEST(xmultiegltest)dnl
 GLES1UNITTEST(xgles1_texture_stream)dnl
-GLES2UNITTEST(xgles1image)dnl
 GLES1UNITTEST(xgles1image_external)dnl
 ]])dnl
 ifelse(SUPPORT_OPENGLES2,1,[[
@@ -595,9 +569,6 @@ GLES2UNITTEST_SHADER(xgles2image_fragshaderA.txt)dnl
 GLES2UNITTEST_SHADER(xgles2image_fragshaderB.txt)dnl
 GLES2UNITTEST_SHADER(xgles2image_vertshaderW.txt)dnl
 GLES2UNITTEST_SHADER(xgles2image_fragshaderW.txt)dnl
-GLES2UNITTEST(xgles2image_external)dnl
-GLES2UNITTEST_SHADER(xgles2image_external_vertshader.txt)dnl
-GLES2UNITTEST_SHADER(xgles2image_external_fragshader.txt)dnl
 ]])dnl
 ifelse(SUPPORT_OPENGL,1,[[
 UNITTEST(xgltest1)dnl
@@ -678,7 +649,7 @@ popdivert()]])
 ###############################################################################
 ##
 ## STANDARD_KERNEL_MODULES
-## Install all regular kernel modules - the PVR services module (includes the
+## Install all regular kernel modules - the PVR serviecs module (includes the
 ## SGX driver) and the display driver, if one is defined.  We also do a run of
 ## depmod(8) if the mode requires.
 ##
@@ -768,15 +739,21 @@ popdivert()dnl
 pushdivert(55)dnl
 ifelse(LWS_INSTALL_TREE,1,[[dnl
 	[ -d usr ] &&
-	install_tree usr/local/XSGX /usr/local/XSGX "Linux window system executables and libraries"
+	install_tree usr/local/XSGX XORG_DEST/usr/local/XSGX "Linux window system executables and libraries"
 ]])dnl
 ifelse(SUPPORT_XORG,1,[[dnl
 	[ -f pvr_drv.so ] &&
 	install_file pvr_drv.so PVR_DDX_DESTDIR/pvr_drv.so "X.Org PVR DDX video module" 0755 0:0
+	[ -f pvrinp_drv.so ] &&
+	install_file pvrinp_drv.so PVR_DDX_INPUT_DESTDIR/pvrinp_drv.so "X.Org PVR DDX input module" 0755 0:0
  ifelse(SUPPORT_XORG_CONF,1,[[dnl
 	[ -f xorg.conf ] &&
 	install_file xorg.conf XORG_DIR/etc/xorg.conf "X.Org configuration file" 0644 0:0
  ]])dnl
+]])dnl
+ifelse(SUPPORT_MESA,1,[[dnl
+	[ -f PVR_DRI_CLIENT_MODULE ] &&
+	install_file PVR_DRI_CLIENT_MODULE PVR_DRI_DESTDIR/PVR_DRI_CLIENT_MODULE "X.Org PVR DRI module" 0755 0:0
 ]])dnl
 popdivert()dnl
 pushdivert(56)dnl

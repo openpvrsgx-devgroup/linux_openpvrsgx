@@ -1001,11 +1001,9 @@ static PVRSRV_ERROR SGXCleanupHWRenderContextCallback(IMG_PVOID pvParam,
 	PVR_DBG_ERROR,
 	"SGXCleanupHWRenderContextCallback: PollingTimeOut"));
 
-	MDWP_REGISTER;
 	SGXDumpDebugInfo(
 	psCleanup->psDeviceNode->pvDevice,
 	IMG_TRUE);
-	MDWP_UNREGISTER;
 #endif
 	eError = PVRSRV_ERROR_TIMEOUT_POLLING_FOR_VALUE;
 	psCleanup->bCleanupTimerRunning = IMG_FALSE;

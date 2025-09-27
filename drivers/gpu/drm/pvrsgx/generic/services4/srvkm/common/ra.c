@@ -1506,9 +1506,19 @@ RA_Alloc(RA_ARENA *pArena, IMG_SIZE_T uRequestSize, IMG_SIZE_T *pActualSize,
 	}
 	}
 	}
+#if defined PVRSRV_DEVMEM_TIME_STATS
+	else {
+	/* If sub-allocation succeeded, the allocation was already mapped to Device MMU. So change timing to '0' */
+	if (ppsMapping) {
+	(*ppsMapping)->ui32TimeToDevMap = 0;
+	}
+	}
+#endif
+
 #ifdef RA_STATS
-	if (bResult)
+	if (bResult) {
 	pArena->sStatistics.uCumulativeAllocs++;
+	}
 #endif
 
 	PVR_DPF((PVR_DBG_MESSAGE,

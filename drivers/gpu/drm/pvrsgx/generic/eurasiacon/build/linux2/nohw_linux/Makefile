@@ -51,11 +51,11 @@ ifeq ($(PVR_LWS_NOBC),)
 endif
 
 ifeq ($(PVR_LWS_NODC),)
- DISPLAY_CONTROLLER := dcnohw
+ DISPLAY_CONTROLLER := dc_nohw
  ifeq ($(SUPPORT_DRI_DRM),1)
-  EXTRA_PVRSRVKM_COMPONENTS += dc_nohw
+  EXTRA_PVRSRVKM_COMPONENTS += $(DISPLAY_CONTROLLER)
  else
-  KERNEL_COMPONENTS += dc_nohw
+  KERNEL_COMPONENTS += $(DISPLAY_CONTROLLER)
  endif
  DC_NOHW_WIDTH ?= 640
  DC_NOHW_HEIGHT ?= 480
@@ -99,6 +99,8 @@ ifeq ($(SUPPORT_DRI_DRM),1)
  endif
 endif
 endif # KERNELDIR
+
+include ../common/xorg_test.mk
 
 # Should be last
 include ../config/core.mk

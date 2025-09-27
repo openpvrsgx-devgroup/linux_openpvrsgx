@@ -1,5 +1,4 @@
 /*************************************************************************/ /*!
-@Title          SGX kernel/client driver interface structures and prototypes
 @Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
 @License        Dual MIT/GPLv2
 
@@ -37,7 +36,6 @@ PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
 COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
 */ /**************************************************************************/
 
 #if !defined(__OEMFUNCS_H__)
@@ -69,15 +67,6 @@ typedef struct PVRSRV_DC_OEM_JTABLE_TAG {
 #if defined(__cplusplus)
 }
 #endif
-
-#ifndef AWDEBUG
-#ifdef DEBUG
-#include <linux/kernel.h>
-#define AWDEBUG(fmt, args...) printk("ALLWINNER:" fmt "\n", args)
-#else //DEBUG
-#define AWDEBUG(fmt, args...)
-#endif
-#endif //AWDEBUG
 
 #endif /* __OEMFUNCS_H__ */
 

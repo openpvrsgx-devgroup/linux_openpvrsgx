@@ -1,7 +1,5 @@
 /*************************************************************************/ /*!
-@Title          Local system definitions
 @Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
-@Description    This header provides local system declarations and macros
 @License        Dual MIT/GPLv2
 
 The contents of this file are subject to the MIT license as set out below.
@@ -38,7 +36,6 @@ PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
 COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
 */ /**************************************************************************/
 
 #if !defined(__SYSLOCAL_H__)
@@ -48,30 +45,21 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <linux/version.h>
 #include <linux/clk.h>
-#if defined(PVR_LINUX_USING_WORKQUEUES)
 #include <linux/mutex.h>
-#else
-#include <linux/spinlock.h>
-#endif
 #include <asm/atomic.h>
 
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 26))
 #include <linux/semaphore.h>
 #include <linux/resource.h>
-#else /* (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,26)) */
-#include <asm/semaphore.h>
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 22))
-#include <asm/arch/resource.h>
-#endif /* (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,22)) */
-#endif /* (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,26)) */
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 35))
+#if defined(PVR_LINUX_DYNAMIC_SGX_RESOURCE_INFO)
+#include <linux/platform_device.h>
+#endif
+
 #if !defined(LDM_PLATFORM)
 #error "LDM_PLATFORM must be set"
 #endif
-#if defined PVR_LINUX_DYNAMIC_SGX_RESOURCE_INFO
-#include <linux/platform_device.h>
-#endif
+#if !defined(PVR_LINUX_USING_WORKQUEUES)
+#error "PVR_LINUX_USING_WORKQUEUES must be set"
 #endif
 
 #endif /* defined(__linux__) */
@@ -92,7 +80,7 @@ IMG_VOID DisableSystemClocks(SYS_DATA *psSysData);
 PVRSRV_ERROR EnableSystemClocks(SYS_DATA *psSysData);
 
 IMG_VOID DisableSGXClocks(SYS_DATA *psSysData);
-PVRSRV_ERROR EnableSGXClocks(SYS_DATA *psSysData);
+PVRSRV_ERROR EnableSGXClocks(SYS_DATA *psSysData, IMG_BOOL bNoDev);
 
 /*
  * Various flags to indicate what has been initialised, and what
@@ -135,23 +123,8 @@ typedef struct _SYS_SPECIFIC_DATA_TAG_ {
 #if defined(__linux__)
 	IMG_BOOL bSysClocksOneTimeInit;
 	atomic_t sSGXClocksEnabled;
-#if defined(PVR_LINUX_USING_WORKQUEUES)
 	struct mutex sPowerLock;
-#else
-	IMG_BOOL bConstraintNotificationsEnabled;
-	spinlock_t sPowerLock;
-	atomic_t sPowerLockCPU;
-	spinlock_t sNotifyLock;
-	atomic_t sNotifyLockCPU;
-	IMG_BOOL bCallVDD2PostFunc;
-#endif
-#if defined(DEBUG) || defined(TIMING)
-	struct clk *psGPT11_FCK;
-	struct clk *psGPT11_ICK;
-#endif
-	IMG_UINT32 ui32SGXFreqListSize;
-	IMG_UINT32 *pui32SGXFreqList;
-	IMG_UINT32 ui32SGXFreqListIndex;
+	IMG_BOOL bPMRuntimeGetSync;
 #endif /* defined(__linux__) */
 } SYS_SPECIFIC_DATA;
 

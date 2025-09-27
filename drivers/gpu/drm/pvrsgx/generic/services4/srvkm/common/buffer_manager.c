@@ -49,9 +49,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "pdump_km.h"
 #include "lists.h"
 
-#include "buffer_manager.h"
-#include "mtk_debug.h"
-
 static IMG_BOOL ZeroBuf(BM_BUF *pBuf, BM_MAPPING *pMapping,
 	IMG_SIZE_T ui32Bytes, IMG_UINT32 ui32Flags);
 static IMG_VOID BM_FreeMemory(IMG_VOID *pH, IMG_UINTPTR_T base,
@@ -123,7 +120,18 @@ static IMG_BOOL AllocMemory(BM_CONTEXT *pBMContext, BM_HEAP *psBMHeap,
 	what to do depends on combination of DevVaddr generation
 	and backing RAM requirement
 	*/
-	if (uFlags & PVRSRV_MEM_RAM_BACKED_ALLOCATION) {
+	if (uFlags & PVRSRV_HAP_GPU_PAGEABLE) {
+	/* in case of a pageable buffer, we must bypass RA which could
+	 * combine/split individual mappings between buffers:
+	 */
+	if (!BM_ImportMemory(
+	    psBMHeap, uSize, IMG_NULL, &pMapping, uFlags, NULL,
+	    0, (IMG_UINTPTR_T *)&(pBuf->DevVAddr.uiAddr))) {
+	PVR_DPF((PVR_DBG_ERROR, "AllocMemory: failed"));
+	return IMG_FALSE;
+	}
+	pBuf->hOSMemHandle = pMapping->hOSMemHandle;
+	} else if (uFlags & PVRSRV_MEM_RAM_BACKED_ALLOCATION) {
 	if (uFlags & PVRSRV_MEM_USER_SUPPLIED_DEVVADDR) {
 	/* user supplied DevVAddr, RAM backing */
 	PVR_DPF((
@@ -318,6 +326,8 @@ static IMG_BOOL AllocMemory(BM_CONTEXT *pBMContext, BM_HEAP *psBMHeap,
 
 	/* Record the arena pointer in the mapping. */
 	pMapping->pArena = pArena;
+	pMapping->ui32DevVAddrAlignment = uDevVAddrAlignment;
+	pMapping->bUnmapped = IMG_FALSE;
 
 	/* record the heap */
 	pMapping->pBMHeap = psBMHeap;
@@ -401,6 +411,7 @@ static IMG_BOOL WrapMemory(BM_HEAP *psBMHeap, IMG_SIZE_T uSize,
 	pMapping->uSize = uSize;
 	pMapping->uSizeVM = uSize;
 	pMapping->pBMHeap = psBMHeap;
+	pMapping->bUnmapped = IMG_FALSE;
 
 	if (pvCPUVAddr) {
 	pMapping->CpuVAddr = pvCPUVAddr;
@@ -708,7 +719,18 @@ static IMG_VOID FreeBuf(BM_BUF *pBuf, IMG_UINT32 ui32Flags,
 	      ui32Flags);
 	}
 	}
-	if (ui32Flags & PVRSRV_MEM_RAM_BACKED_ALLOCATION) {
+	if (ui32Flags & PVRSRV_HAP_GPU_PAGEABLE) {
+	/* see comment below */
+	if ((pBuf->ui32ExportCount == 0) &&
+	    (pBuf->ui32RefCount == 0)) {
+	PVR_ASSERT(pBuf->ui32ExportCount == 0);
+	BM_FreeMemory(pMapping->pBMHeap, 0, pMapping);
+	}
+	} else if (ui32Flags & PVRSRV_MEM_RAM_BACKED_ALLOCATION) {
+	/* note: if below if() condition changes, we probably also
+	 * need to change the one above in PVRSRV_HAP_GPU_PAGEABLE
+	 * case..  see comments in unstripped driver
+	 */
 	/* Submemhandle is required by exported mappings */
 	if ((pBuf->ui32ExportCount == 0) &&
 	    (pBuf->ui32RefCount == 0)) {
@@ -1855,6 +1877,22 @@ BM_Free(BM_HANDLE hBuf, IMG_UINT32 ui32Flags)
 	}
 }
 
+#if defined(SUPPORT_DRI_DRM_EXTERNAL)
+IMG_VOID
+BM_SetGEM(BM_HANDLE hBuf, IMG_HANDLE buf)
+{
+	BM_BUF *pBuf = (BM_BUF *)hBuf;
+	OSMemHandleSetGEM(pBuf->hOSMemHandle, buf);
+}
+
+IMG_HANDLE
+BM_GetGEM(BM_HANDLE hBuf)
+{
+	BM_BUF *pBuf = (BM_BUF *)hBuf;
+	return OSMemHandleGetGEM(pBuf->hOSMemHandle);
+}
+#endif /* SUPPORT_DRI_DRM_EXTERNAL */
+
 /*!
 ******************************************************************************
 
@@ -1975,6 +2013,107 @@ BM_HandleToOSMemHandle(BM_HANDLE hBuf)
 	return pBuf->hOSMemHandle;
 }
 
+/*----------------------------------------------------------------------------
+<function>
+	FUNCTION:   BM_UnmapFromDev
+
+	PURPOSE:	Unmaps a buffer from GPU virtual address space, but otherwise
+	leaves buffer intact (ie. not changing any CPU virtual space
+	mappings, etc).  This in conjunction with BM_RemapToDev() can
+	be used to migrate buffers in and out of GPU virtual address
+	space to deal with fragmentation and/or limited size of GPU
+	MMU.
+
+	PARAMETERS: In:  hBuf - buffer handle.
+	RETURNS:	IMG_TRUE - Success
+	IMG_FALSE - Failure
+</function>
+-----------------------------------------------------------------------------*/
+IMG_BOOL
+BM_UnmapFromDev(BM_HANDLE hBuf)
+{
+	BM_BUF *pBuf = (BM_BUF *)hBuf;
+	BM_MAPPING *pMapping;
+
+	PVR_ASSERT(pBuf != IMG_NULL);
+
+	if (pBuf == IMG_NULL) {
+	PVR_DPF((PVR_DBG_ERROR, "BM_UnmapFromDev: invalid parameter"));
+	return IMG_FALSE;
+	}
+
+	pMapping = pBuf->pMapping;
+
+	if ((pMapping->ui32Flags & PVRSRV_HAP_GPU_PAGEABLE) == 0) {
+	PVR_DPF((PVR_DBG_ERROR,
+	 "BM_UnmapFromDev: cannot unmap non-pageable buffer"));
+	return IMG_FALSE;
+	}
+
+	if (pMapping->bUnmapped == IMG_TRUE) {
+	PVR_DPF((PVR_DBG_WARNING, "BM_UnmapFromDev: already unmapped"));
+	return IMG_FALSE;
+	}
+
+	DevMemoryFree(pMapping);
+
+	return pMapping->bUnmapped;
+}
+
+/*----------------------------------------------------------------------------
+<function>
+	FUNCTION:   BM_RemapToDev
+
+	PURPOSE:	Maps a buffer back into GPU virtual address space, after it
+	has been BM_UnmapFromDev()'d.  After this operation, the GPU
+	virtual address may have changed, so BM_HandleToDevVaddr()
+	should be called to get the new address.
+
+	PARAMETERS: In:  hBuf - buffer handle.
+	RETURNS:	IMG_TRUE - Success
+	IMG_FALSE - Failure
+</function>
+-----------------------------------------------------------------------------*/
+IMG_BOOL
+BM_RemapToDev(BM_HANDLE hBuf)
+{
+	BM_BUF *pBuf = (BM_BUF *)hBuf;
+	BM_MAPPING *pMapping;
+
+	PVR_ASSERT(pBuf != IMG_NULL);
+
+	if (pBuf == IMG_NULL) {
+	PVR_DPF((PVR_DBG_ERROR, "BM_RemapToDev: invalid parameter"));
+	return IMG_FALSE;
+	}
+
+	pMapping = pBuf->pMapping;
+
+	if ((pMapping->ui32Flags & PVRSRV_HAP_GPU_PAGEABLE) == 0) {
+	PVR_DPF((PVR_DBG_ERROR,
+	 "BM_RemapToDev: cannot remap non-pageable buffer"));
+	return IMG_FALSE;
+	}
+
+	if (pMapping->bUnmapped == IMG_FALSE) {
+	PVR_DPF((PVR_DBG_WARNING, "BM_RemapToDev: already mapped"));
+	return IMG_FALSE;
+	}
+
+	if (!DevMemoryAlloc(pMapping->pBMHeap->pBMContext, pMapping, IMG_NULL,
+	    pMapping->ui32Flags,
+	    pMapping->ui32DevVAddrAlignment,
+	    &pMapping->DevVAddr)) {
+	PVR_DPF((PVR_DBG_WARNING,
+	 "BM_RemapToDev: failed to allocate device memory"));
+	return IMG_FALSE;
+	}
+
+	pBuf->DevVAddr = pMapping->DevVAddr;
+
+	return IMG_TRUE;
+}
+
 /*!
 ******************************************************************************
 
@@ -2014,8 +2153,13 @@ static IMG_BOOL DevMemoryAlloc(BM_CONTEXT *pBMContext, BM_MAPPING *pMapping,
 
 	psDeviceNode = pBMContext->psDeviceNode;
 
+	pMapping->ui32DevVAddrAlignment = dev_vaddr_alignment;
+
 	if (uFlags & PVRSRV_MEM_INTERLEAVED) {
-	/* double the size */
+	/* don't continue to alter the size each time a buffer is remapped..
+	 * we only want to do this the first time
+	 */
+	if (pMapping->bUnmapped == IMG_FALSE)
 	pMapping->uSize *= 2;
 	}
 
@@ -2119,13 +2263,11 @@ static IMG_BOOL DevMemoryAlloc(BM_CONTEXT *pBMContext, BM_MAPPING *pMapping,
 	return IMG_FALSE;
 	}
 
+	pMapping->bUnmapped = IMG_FALSE;
+
 #ifdef SUPPORT_SGX_MMU_BYPASS
 	DisableHostAccess(pBMContext->psMMUContext);
 #endif
-
-	MTKPP_LOG(MTK_PP_R_DEVMEM, "pid=%u dev=%p size=%u alloc",
-	  OSGetCurrentProcessIDKM(), (void *)pMapping->DevVAddr.uiAddr,
-	  pMapping->uSize);
 
 	return IMG_TRUE;
 }
@@ -2137,6 +2279,11 @@ static IMG_VOID DevMemoryFree(BM_MAPPING *pMapping)
 #ifdef PDUMP
 	IMG_UINT32 ui32PSize;
 #endif
+
+	if (pMapping->bUnmapped == IMG_TRUE) {
+	/* already unmapped from GPU.. bail */
+	return;
+	}
 
 	psDeviceNode = pMapping->pBMHeap->pBMContext->psDeviceNode;
 	sDevPAddr = psDeviceNode->pfnMMUGetPhysPageAddr(
@@ -2169,9 +2316,7 @@ static IMG_VOID DevMemoryFree(BM_MAPPING *pMapping)
 	 pMapping->DevVAddr,
 	 IMG_CAST_TO_DEVVADDR_UINT(pMapping->uSizeVM));
 
-	MTKPP_LOG(MTK_PP_R_DEVMEM, "pid=%u dev=%p size=%u free",
-	  OSGetCurrentProcessIDKM(), (void *)pMapping->DevVAddr.uiAddr,
-	  pMapping->uSize);
+	pMapping->bUnmapped = IMG_TRUE;
 }
 
 /* If this array grows larger, it might be preferable to use a hashtable rather than an array. */
@@ -2599,6 +2744,7 @@ static IMG_BOOL BM_ImportMemory(IMG_VOID *pH, IMG_SIZE_T uRequestSize,
 	}
 	pMapping->pBMHeap = pBMHeap;
 	pMapping->ui32Flags = uFlags;
+	pMapping->bUnmapped = IMG_FALSE;
 
 	/*
 	 * If anyone want's to know, pass back the actual size of our allocation.

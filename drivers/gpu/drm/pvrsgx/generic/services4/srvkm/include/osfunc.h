@@ -54,7 +54,6 @@ extern "C" {
 #if defined(__linux__) && defined(__KERNEL__)
 #include <linux/hardirq.h>
 #include <linux/string.h>
-#include <asm/system.h>
 #if defined(__arm__)
 #include <asm/memory.h>
 #endif
@@ -479,6 +478,11 @@ PVRSRV_ERROR OSFreeMem_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size,
 	 blockAlloc, file, line) \
 	OSFreeMem_Impl(flags, size, addr, blockAlloc)
 #endif
+
+#if defined(SUPPORT_DRI_DRM_EXTERNAL)
+IMG_VOID OSMemHandleSetGEM(IMG_VOID *hOSMemHandle, IMG_HANDLE buf);
+IMG_HANDLE OSMemHandleGetGEM(IMG_VOID *hOSMemHandle);
+#endif /* SUPPORT_DRI_DRM_EXTERNAL */
 
 #if defined(__linux__) || defined(__QNXNTO__)
 IMG_CPU_PHYADDR OSMemHandleToCpuPAddr(IMG_VOID *hOSMemHandle,

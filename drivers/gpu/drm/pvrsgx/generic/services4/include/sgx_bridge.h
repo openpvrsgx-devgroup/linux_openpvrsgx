@@ -139,15 +139,10 @@ extern "C" {
 	PVRSRV_IOWR(PVRSRV_BRIDGE_SGX_CMD_BASE + 37)
 #endif
 
-#define PVRSRV_BRIDGE_MTK_SET_FREQ_INFO \
-	PVRSRV_IOWR(PVRSRV_BRIDGE_SGX_CMD_BASE + 38)
-#define PVRSRV_BRIDGE_MTK_GET_POWER_INFO \
-	PVRSRV_IOWR(PVRSRV_BRIDGE_SGX_CMD_BASE + 39)
-
 /* *REMEMBER* to update PVRSRV_BRIDGE_LAST_SGX_CMD if you add/remove a command!
  * You need to ensure all PVRSRV_BRIDGE_SGX_CMD_BASE+ offsets are sequential!
  */
-#define PVRSRV_BRIDGE_LAST_SGX_CMD (PVRSRV_BRIDGE_SGX_CMD_BASE + 39)
+#define PVRSRV_BRIDGE_LAST_SGX_CMD (PVRSRV_BRIDGE_SGX_CMD_BASE + 37)
 
 /*****************************************************************************
  * Input structures for IOCTL/DRVESC

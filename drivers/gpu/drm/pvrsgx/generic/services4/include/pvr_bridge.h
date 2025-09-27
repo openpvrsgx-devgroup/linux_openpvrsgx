@@ -163,14 +163,20 @@ extern "C" {
 	PVRSRV_IOWR(PVRSRV_BRIDGE_CORE_CMD_FIRST + 29)
 #define PVRSRV_BRIDGE_EXPORT_DEVICEMEM_2 \
 	PVRSRV_IOWR(PVRSRV_BRIDGE_CORE_CMD_FIRST + 30)
+#define PVRSRV_BRIDGE_REMAP_TO_DEV \
+	PVRSRV_IOWR(PVRSRV_BRIDGE_CORE_CMD_FIRST + 31)
+#define PVRSRV_BRIDGE_UNMAP_FROM_DEV \
+	PVRSRV_IOWR(PVRSRV_BRIDGE_CORE_CMD_FIRST + 32)
+#define PVRSRV_BRIDGE_IMPORT_GEM PVRSRV_IOWR(PVRSRV_BRIDGE_CORE_CMD_FIRST + 33)
+
 #if defined(SUPPORT_ION)
 #define PVRSRV_BRIDGE_MAP_ION_HANDLE \
-	PVRSRV_IOWR(PVRSRV_BRIDGE_CORE_CMD_FIRST + 31)
+	PVRSRV_IOWR(PVRSRV_BRIDGE_CORE_CMD_FIRST + 34)
 #define PVRSRV_BRIDGE_UNMAP_ION_HANDLE \
-	PVRSRV_IOWR(PVRSRV_BRIDGE_CORE_CMD_FIRST + 32)
-#define PVRSRV_BRIDGE_CORE_CMD_LAST (PVRSRV_BRIDGE_CORE_CMD_FIRST + 32)
+	PVRSRV_IOWR(PVRSRV_BRIDGE_CORE_CMD_FIRST + 35)
+#define PVRSRV_BRIDGE_CORE_CMD_LAST (PVRSRV_BRIDGE_CORE_CMD_FIRST + 36)
 #else
-#define PVRSRV_BRIDGE_CORE_CMD_LAST (PVRSRV_BRIDGE_CORE_CMD_FIRST + 30)
+#define PVRSRV_BRIDGE_CORE_CMD_LAST (PVRSRV_BRIDGE_CORE_CMD_FIRST + 34)
 #endif
 /* SIM */
 #define PVRSRV_BRIDGE_SIM_CMD_FIRST (PVRSRV_BRIDGE_CORE_CMD_LAST + 1)
@@ -451,9 +457,6 @@ typedef struct PVRSRV_BRIDGE_PACKAGE_TAG {
 #else
 	IMG_HANDLE hKernelServices; /*!< kernel servcies handle */
 #endif
-#if defined(MTK_DEBUG)
-	IMG_CHAR acDebugMsg[MTK_DEBUG_MSG_LENGTH];
-#endif
 } PVRSRV_BRIDGE_PACKAGE;
 
 /******************************************************************************
@@ -696,6 +699,30 @@ typedef struct PVRSRV_BRIDGE_IN_FREEDEVICEMEM_TAG {
 
 } PVRSRV_BRIDGE_IN_FREEDEVICEMEM;
 
+typedef struct PVRSRV_BRIDGE_IN_REMAP_TO_DEV_TAG {
+	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDevCookie;
+	IMG_SID hKernelMemInfo;
+#else
+	IMG_HANDLE hDevCookie;
+	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
+#endif
+
+} PVRSRV_BRIDGE_IN_REMAP_TO_DEV;
+
+typedef struct PVRSRV_BRIDGE_IN_UNMAP_FROM_DEV_TAG {
+	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDevCookie;
+	IMG_SID hKernelMemInfo;
+#else
+	IMG_HANDLE hDevCookie;
+	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
+#endif
+
+} PVRSRV_BRIDGE_IN_UNMAP_FROM_DEV;
+
 /******************************************************************************
  *	'bridge in' export device memory
  *****************************************************************************/
@@ -907,6 +934,37 @@ typedef struct PVRSRV_BRIDGE_IN_UNMAP_DEV_MEMORY_TAG {
 	PVRSRV_CLIENT_SYNC_INFO sClientSyncInfo;
 
 } PVRSRV_BRIDGE_IN_UNMAP_DEV_MEMORY;
+
+#if defined(SUPPORT_DRI_DRM_EXTERNAL)
+/******************************************************************************
+ *	'bridge in' import GEM buffer object
+ *****************************************************************************/
+typedef struct PVRSRV_BRIDGE_IN_IMPORT_GEM_TAG {
+	IMG_UINT32 ui32BridgeFlags; /* Must be first member of structure */
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDstDevMemHeap;
+#else
+	IMG_HANDLE hDstDevMemHeap;
+	IMG_UINT32 bo;
+#endif
+
+} PVRSRV_BRIDGE_IN_IMPORT_GEM;
+
+/******************************************************************************
+ *	'bridge out' import GEM buffer object
+ *****************************************************************************/
+typedef struct PVRSRV_BRIDGE_OUT_IMPORT_GEM_TAG {
+	PVRSRV_ERROR eError;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDstKernelMemInfo;
+#else
+	PVRSRV_KERNEL_MEM_INFO *psDstKernelMemInfo;
+#endif
+	PVRSRV_CLIENT_MEM_INFO sDstClientMemInfo;
+	PVRSRV_CLIENT_SYNC_INFO sDstClientSyncInfo;
+
+} PVRSRV_BRIDGE_OUT_IMPORT_GEM;
+#endif /* SUPPORT_DRI_DRM_EXTERNAL */
 
 /******************************************************************************
  *	'bridge in' map pages
@@ -1672,6 +1730,12 @@ typedef struct PVRSRV_BRIDGE_OUT_ALLOCDEVICEMEM_TAG {
 	PVRSRV_CLIENT_SYNC_INFO sClientSyncInfo;
 
 } PVRSRV_BRIDGE_OUT_ALLOCDEVICEMEM;
+
+typedef struct PVRSRV_BRIDGE_OUT_REMAP_TO_DEV_TAG {
+	PVRSRV_ERROR eError;
+	IMG_DEV_VIRTADDR sDevVAddr;
+
+} PVRSRV_BRIDGE_OUT_REMAP_TO_DEV;
 
 /******************************************************************************
  *	'bridge out' export device memory

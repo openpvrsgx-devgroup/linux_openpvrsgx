@@ -1,4 +1,5 @@
 /*************************************************************************/ /*!
+@File
 @Title          Device class services functions
 @Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
 @Description    Kernel services functions for device class devices
@@ -392,9 +393,8 @@ PVRSRVRegisterDCDeviceKM(PVRSRV_DC_SRV2DISP_KMJTABLE *psFuncTable,
 	if (AllocateDeviceID(psSysData,
 	     &psDeviceNode->sDevId.ui32DeviceIndex) !=
 	    PVRSRV_OK) {
-	PVR_DPF((
-	PVR_DBG_ERROR,
-	"PVRSRVRegisterBCDeviceKM: Failed to allocate Device ID"));
+	PVR_DPF((PVR_DBG_ERROR, "PVRSRVRegisterDCDeviceKM: "
+	"Failed to allocate Device ID"));
 	goto ErrorExit;
 	}
 	psDCInfo->ui32DeviceID = psDeviceNode->sDevId.ui32DeviceIndex;
@@ -1431,7 +1431,7 @@ PVRSRV_ERROR PVRSRVCreateDCSwapChainKM(
 	psSwapChain->ui32RefCount = 1;
 	psSwapChain->ui32Flags = ui32Flags;
 
-	/* Save pointer in DC structure if ti's shared struct */
+	/* Save pointer in DC structure if it's shared struct */
 	if (ui32Flags & PVRSRV_CREATE_SWAPCHAIN_SHARED) {
 	if (!psDCInfo->psDCSwapChainShared) {
 	psDCInfo->psDCSwapChainShared = psSwapChain;
@@ -1597,8 +1597,7 @@ PVRSRV_ERROR PVRSRVGetDCBuffersKM(IMG_HANDLE hDeviceKM,
 	phBuffer[i] = (IMG_HANDLE)&psSwapChain->asBuffer[i];
 	}
 
-#if defined(SUPPORT_GET_DC_BUFFERS_SYS_PHYADDRS) || \
-	defined(MTK_GET_BUFFER_PHYADDR)
+#if defined(SUPPORT_GET_DC_BUFFERS_SYS_PHYADDRS)
 	for (i = 0; i < *pui32BufferCount; i++) {
 	IMG_UINT32 ui32ByteSize, ui32TilingStride;
 	IMG_SYS_PHYADDR *pPhyAddr;
@@ -2424,7 +2423,9 @@ static PVRSRV_ERROR CloseBCDeviceCallBack(IMG_PVOID pvParam,
 	i, &psBCInfo->psBuffer[i].sDeviceClassBuffer,
 	psBCInfo->psBuffer[i]
 	.sDeviceClassBuffer.ui32MemMapRefCount));
+#if 0
 	return PVRSRV_ERROR_STILL_MAPPED;
+#endif
 	}
 	}
 

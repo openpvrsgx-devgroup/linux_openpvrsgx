@@ -1,28 +1,45 @@
-/**********************************************************************
- *
- * Copyright (C) Imagination Technologies Ltd. All rights reserved.
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- *
- * This program is distributed in the hope it will be useful but, except
- * as otherwise stated in writing, without any warranty; without even the
- * implied warranty of merchantability or fitness for a particular purpose.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * The full GNU General Public License is included in this distribution in
- * the file called "COPYING".
- *
- * Contact Information:
- * Imagination Technologies Ltd. <gpl-support@imgtec.com>
- * Home Park Estate, Kings Langley, Herts, WD4 8LZ, UK
- *
- ******************************************************************************/
+/*************************************************************************/ /*!
+@Title          Memory debugging routines.
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@Description    Adds extra memory to the allocations to trace the memory bounds
+                and other runtime information.
+@License        Dual MIT/GPLv2
+
+The contents of this file are subject to the MIT license as set out below.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/ /**************************************************************************/
 
 #ifndef MEM_DEBUG_C
 #define MEM_DEBUG_C
@@ -38,6 +55,18 @@ extern "C" {
 
 #define STOP_ON_ERROR 0
 
+/*
+	 Allocated Memory Layout:
+
+	 ---------                     \
+	 Status    [OSMEM_DEBUG_INFO]   |- TEST_BUFFER_PADDING_STATUS
+	 ---------                     <
+	 [0xBB]*   [raw bytes]          |- ui32Size
+	 ---------                     <
+	 [0xB2]*   [raw bytes]          |- TEST_BUFFER_PADDING_AFTER
+	 ---------                     /
+	*/
+
 IMG_BOOL MemCheck(const IMG_PVOID pvAddr, const IMG_UINT8 ui8Pattern,
 	  IMG_SIZE_T uSize)
 {
@@ -50,6 +79,9 @@ IMG_BOOL MemCheck(const IMG_PVOID pvAddr, const IMG_UINT8 ui8Pattern,
 	return IMG_TRUE;
 }
 
+/*
+	This function expects the pointer to the user data, not the debug data.
+	*/
 IMG_VOID OSCheckMemDebug(IMG_PVOID pvCpuVAddr, IMG_SIZE_T uSize,
 	 const IMG_CHAR *pszFileName, const IMG_UINT32 uLine)
 {
@@ -57,6 +89,7 @@ IMG_VOID OSCheckMemDebug(IMG_PVOID pvCpuVAddr, IMG_SIZE_T uSize,
 	(OSMEM_DEBUG_INFO *)((IMG_UINT32)pvCpuVAddr -
 	     TEST_BUFFER_PADDING_STATUS);
 
+	/* invalid pointer */
 	if (pvCpuVAddr == IMG_NULL) {
 	PVR_DPF((PVR_DBG_ERROR,
 	 "Pointer 0x%X : null pointer"
@@ -67,6 +100,7 @@ IMG_VOID OSCheckMemDebug(IMG_PVOID pvCpuVAddr, IMG_SIZE_T uSize,
 	;
 	}
 
+	/* align */
 	if (((IMG_UINT32)pvCpuVAddr & 3) != 0) {
 	PVR_DPF((PVR_DBG_ERROR,
 	 "Pointer 0x%X : invalid alignment"
@@ -77,6 +111,7 @@ IMG_VOID OSCheckMemDebug(IMG_PVOID pvCpuVAddr, IMG_SIZE_T uSize,
 	;
 	}
 
+	/*check guard region before*/
 	if (!MemCheck((IMG_PVOID)psInfo->sGuardRegionBefore, 0xB1,
 	      sizeof(psInfo->sGuardRegionBefore))) {
 	PVR_DPF((PVR_DBG_ERROR,
@@ -88,6 +123,7 @@ IMG_VOID OSCheckMemDebug(IMG_PVOID pvCpuVAddr, IMG_SIZE_T uSize,
 	;
 	}
 
+	/*check size*/
 	if (uSize != psInfo->uSize) {
 	PVR_DPF((PVR_DBG_WARNING,
 	 "Pointer 0x%X : supplied size was different to stored size (0x%X != 0x%X)"
@@ -98,6 +134,7 @@ IMG_VOID OSCheckMemDebug(IMG_PVOID pvCpuVAddr, IMG_SIZE_T uSize,
 	;
 	}
 
+	/*check size parity*/
 	if ((0x01234567 ^ psInfo->uSizeParityCheck) != psInfo->uSize) {
 	PVR_DPF((PVR_DBG_WARNING,
 	 "Pointer 0x%X : stored size parity error (0x%X != 0x%X)"
@@ -108,9 +145,11 @@ IMG_VOID OSCheckMemDebug(IMG_PVOID pvCpuVAddr, IMG_SIZE_T uSize,
 	while (STOP_ON_ERROR)
 	;
 	} else {
+	/*the stored size is ok, so we use it instead the supplied uSize*/
 	uSize = psInfo->uSize;
 	}
 
+	/*check padding after*/
 	if (uSize) {
 	if (!MemCheck((IMG_VOID *)((IMG_UINT32)pvCpuVAddr + uSize),
 	      0xB2, TEST_BUFFER_PADDING_AFTER)) {
@@ -123,6 +162,7 @@ IMG_VOID OSCheckMemDebug(IMG_PVOID pvCpuVAddr, IMG_SIZE_T uSize,
 	}
 	}
 
+	/* allocated... */
 	if (psInfo->eValid != isAllocated) {
 	PVR_DPF((PVR_DBG_ERROR,
 	 "Pointer 0x%X : not allocated (freed? %d)"
@@ -138,7 +178,8 @@ IMG_VOID debug_strcpy(IMG_CHAR *pDest, const IMG_CHAR *pSrc)
 {
 	IMG_SIZE_T i = 0;
 
-	for (; i < 128; i++) {
+	for (; i < 128; i++) /*changed to 128 to match the filename array size*/
+	{
 	*pDest = *pSrc;
 	if (*pSrc == '\0')
 	break;
@@ -171,6 +212,7 @@ PVRSRV_ERROR OSAllocMem_Debug_Wrapper(IMG_UINT32 ui32Flags, IMG_UINT32 ui32Size,
 	 TEST_BUFFER_PADDING_STATUS,
 	 0xB2, TEST_BUFFER_PADDING_AFTER);
 
+	/*fill the dbg info struct*/
 	psInfo = (OSMEM_DEBUG_INFO *)(*ppvCpuVAddr);
 
 	OSMemSet(psInfo->sGuardRegionBefore, 0xB1,
@@ -181,11 +223,13 @@ PVRSRV_ERROR OSAllocMem_Debug_Wrapper(IMG_UINT32 ui32Flags, IMG_UINT32 ui32Size,
 	psInfo->uSize = ui32Size;
 	psInfo->uSizeParityCheck = 0x01234567 ^ ui32Size;
 
+	/*point to the user data section*/
 	*ppvCpuVAddr = (IMG_PVOID)((IMG_UINT32)*ppvCpuVAddr) +
 	       TEST_BUFFER_PADDING_STATUS;
 
 #ifdef PVRSRV_LOG_MEMORY_ALLOCS
-
+	/*this is here to simplify the surounding logging macro, that is a expression
+	maybe the macro should be an expression */
 	PVR_TRACE(("Allocated pointer (after debug info): 0x%X from %s:%d",
 	   *ppvCpuVAddr, pszFilename, ui32Line));
 #endif
@@ -200,13 +244,17 @@ PVRSRV_ERROR OSFreeMem_Debug_Wrapper(IMG_UINT32 ui32Flags, IMG_UINT32 ui32Size,
 {
 	OSMEM_DEBUG_INFO *psInfo;
 
+	/*check dbginfo (arg pointing to user memory)*/
 	OSCheckMemDebug(pvCpuVAddr, ui32Size, pszFilename, ui32Line);
 
+	/*mark memory as freed*/
 	OSMemSet(pvCpuVAddr, 0xBF, ui32Size + TEST_BUFFER_PADDING_AFTER);
 
+	/*point to the starting address of the total allocated memory*/
 	psInfo = (OSMEM_DEBUG_INFO *)((IMG_UINT32)pvCpuVAddr -
 	      TEST_BUFFER_PADDING_STATUS);
 
+	/*update dbg info struct*/
 	psInfo->uSize = 0;
 	psInfo->uSizeParityCheck = 0;
 	psInfo->eValid = isFree;
@@ -222,6 +270,6 @@ PVRSRV_ERROR OSFreeMem_Debug_Wrapper(IMG_UINT32 ui32Flags, IMG_UINT32 ui32Size,
 }
 #endif
 
-#endif
+#endif /* PVRSRV_DEBUG_OS_MEMORY */
 
-#endif
+#endif /* MEM_DEBUG_C */

@@ -1,28 +1,43 @@
-/**********************************************************************
- *
- * Copyright (C) Imagination Technologies Ltd. All rights reserved.
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- *
- * This program is distributed in the hope it will be useful but, except
- * as otherwise stated in writing, without any warranty; without even the
- * implied warranty of merchantability or fitness for a particular purpose.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * The full GNU General Public License is included in this distribution in
- * the file called "COPYING".
- *
- * Contact Information:
- * Imagination Technologies Ltd. <gpl-support@imgtec.com>
- * Home Park Estate, Kings Langley, Herts, WD4 8LZ, UK
- *
- ******************************************************************************/
+/*************************************************************************/ /*!
+@Title          Device specific power routines
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@License        Dual MIT/GPLv2
+
+The contents of this file are subject to the MIT license as set out below.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/ /**************************************************************************/
 
 #include <stddef.h>
 
@@ -38,6 +53,10 @@ static PVRSRV_ERROR SGXAddTimer(PVRSRV_DEVICE_NODE *psDeviceNode,
 	SGX_TIMING_INFORMATION *psSGXTimingInfo,
 	IMG_HANDLE *phTimer)
 {
+	/*
+	Install timer callback for HW recovery at 50 times lower
+	frequency than the microkernel timer.
+	*/
 	*phTimer = OSAddTimer(SGXOSTimer, psDeviceNode,
 	      1000 * 50 / psSGXTimingInfo->ui32uKernelFreq);
 	if (*phTimer == IMG_NULL) {
@@ -49,8 +68,22 @@ static PVRSRV_ERROR SGXAddTimer(PVRSRV_DEVICE_NODE *psDeviceNode,
 
 	return PVRSRV_OK;
 }
-#endif
+#endif /* SUPPORT_HW_RECOVERY*/
 
+/*!
+******************************************************************************
+
+ @Function	SGXUpdateTimingInfo
+
+ @Description
+
+	Derives the microkernel timing info from the system-supplied values
+
+ @Input	   psDeviceNode : SGX Device node
+
+ @Return   PVRSRV_ERROR :
+
+******************************************************************************/
 static PVRSRV_ERROR SGXUpdateTimingInfo(PVRSRV_DEVICE_NODE *psDeviceNode)
 {
 	PVRSRV_SGXDEV_INFO *psDevInfo = psDeviceNode->pvDevice;
@@ -81,6 +114,9 @@ static PVRSRV_ERROR SGXUpdateTimingInfo(PVRSRV_DEVICE_NODE *psDeviceNode)
 	     psDevInfo->ui32uKernelTimerClock;
 	if (ui32OlduKernelFreq !=
 	    psSGXTimingInfo->ui32uKernelFreq) {
+	/*
+	The ukernel timer frequency has changed.
+	*/
 	IMG_HANDLE hNewTimer;
 
 	eError = SGXAddTimer(psDeviceNode,
@@ -96,6 +132,7 @@ static PVRSRV_ERROR SGXUpdateTimingInfo(PVRSRV_DEVICE_NODE *psDeviceNode)
 	}
 	psDevInfo->hTimer = hNewTimer;
 	} else {
+	/* Failed to allocate the new timer, leave the old one. */
 	}
 	}
 	} else {
@@ -110,12 +147,14 @@ static PVRSRV_ERROR SGXUpdateTimingInfo(PVRSRV_DEVICE_NODE *psDeviceNode)
 	psSGXTimingInfo->ui32uKernelFreq /
 	psSGXTimingInfo->ui32HWRecoveryFreq;
 	}
-#endif
+#endif /* SUPPORT_HW_RECOVERY*/
 
+	/* Copy the SGX clock speed for use in the kernel */
 	psDevInfo->ui32CoreClockSpeed = psSGXTimingInfo->ui32CoreClockSpeed;
 	psDevInfo->ui32uKernelTimerClock = psSGXTimingInfo->ui32CoreClockSpeed /
 	   psSGXTimingInfo->ui32uKernelFreq;
 
+	/* FIXME: no need to duplicate - remove it from psDevInfo */
 	psDevInfo->psSGXHostCtl->ui32uKernelTimerClock =
 	psDevInfo->ui32uKernelTimerClock;
 #if defined(PDUMP)
@@ -124,13 +163,20 @@ static PVRSRV_ERROR SGXUpdateTimingInfo(PVRSRV_DEVICE_NODE *psDeviceNode)
 	 offsetof(SGXMKIF_HOST_CTL, ui32uKernelTimerClock),
 	 sizeof(IMG_UINT32), PDUMP_FLAGS_CONTINUOUS,
 	 MAKEUNIQUETAG(psDevInfo->psKernelSGXHostCtlMemInfo));
-#endif
+#endif /* PDUMP */
 
 	if (psSGXTimingInfo->bEnableActivePM) {
 	ui32ActivePowManSampleRate =
 	psSGXTimingInfo->ui32uKernelFreq *
 	psSGXTimingInfo->ui32ActivePowManLatencyms / 1000;
-
+	/*
+	ui32ActivePowerCounter has the value 0 when SGX is not idle.
+	When SGX becomes idle, the value of ui32ActivePowerCounter is changed from 0 to ui32ActivePowManSampleRate.
+	The ukernel timer routine decrements the value of ui32ActivePowerCounter if it is not 0.
+	When the ukernel timer decrements ui32ActivePowerCounter from 1 to 0, the ukernel timer will
+	request power down.
+	Therefore the minimum value of ui32ActivePowManSampleRate is 1.
+	*/
 	ui32ActivePowManSampleRate += 1;
 	} else {
 	ui32ActivePowManSampleRate = 0;
@@ -143,11 +189,25 @@ static PVRSRV_ERROR SGXUpdateTimingInfo(PVRSRV_DEVICE_NODE *psDeviceNode)
 	 offsetof(SGXMKIF_HOST_CTL, ui32ActivePowManSampleRate),
 	 sizeof(IMG_UINT32), PDUMP_FLAGS_CONTINUOUS,
 	 MAKEUNIQUETAG(psDevInfo->psKernelSGXHostCtlMemInfo));
-#endif
+#endif /* PDUMP */
 
 	return PVRSRV_OK;
 }
 
+/*!
+******************************************************************************
+
+ @Function	SGXStartTimer
+
+ @Description
+
+	Start the microkernel timer
+
+ @Input	   psDevInfo : SGX Device Info
+
+ @Return   IMG_VOID :
+
+******************************************************************************/
 static IMG_VOID SGXStartTimer(PVRSRV_SGXDEV_INFO *psDevInfo)
 {
 #if defined(SUPPORT_HW_RECOVERY)
@@ -160,9 +220,26 @@ static IMG_VOID SGXStartTimer(PVRSRV_SGXDEV_INFO *psDevInfo)
 	}
 #else
 	PVR_UNREFERENCED_PARAMETER(psDevInfo);
-#endif
+#endif /* SUPPORT_HW_RECOVERY */
 }
 
+/*!
+******************************************************************************
+
+ @Function	SGXPollForClockGating
+
+ @Description
+
+	Wait until the SGX core clocks have gated.
+
+ @Input	   psDevInfo : SGX Device Info
+ @Input	   ui32Register : Offset of register to poll
+ @Input	   ui32Register : Value of register to poll for
+ @Input	   pszComment : Description of poll
+
+ @Return   IMG_VOID :
+
+******************************************************************************/
 static IMG_VOID SGXPollForClockGating(PVRSRV_SGXDEV_INFO *psDevInfo,
 	      IMG_UINT32 ui32Register,
 	      IMG_UINT32 ui32RegisterValue,
@@ -176,6 +253,7 @@ static IMG_VOID SGXPollForClockGating(PVRSRV_SGXDEV_INFO *psDevInfo,
 #if !defined(NO_HARDWARE)
 	PVR_ASSERT(psDevInfo != IMG_NULL);
 
+	/* PRQA S 0505 1 */ /* QAC does not like assert() */
 	if (PollForValueKM(
 	    (IMG_UINT32 *)psDevInfo->pvRegsBaseKM + (ui32Register >> 2),
 	    0, ui32RegisterValue, MAX_HW_TIME_US,
@@ -185,13 +263,29 @@ static IMG_VOID SGXPollForClockGating(PVRSRV_SGXDEV_INFO *psDevInfo,
 	SGXDumpDebugInfo(psDevInfo, IMG_FALSE);
 	PVR_DBG_BREAK;
 	}
-#endif
+#endif /* NO_HARDWARE */
 
 	PDUMPCOMMENT("%s", pszComment);
 	PDUMPREGPOL(SGX_PDUMPREG_NAME, ui32Register, 0, ui32RegisterValue,
 	    PDUMP_POLL_OPERATOR_EQUAL);
 }
 
+/*!
+******************************************************************************
+
+ @Function	SGXPrePowerState
+
+ @Description
+
+ does necessary preparation before power state transition
+
+ @Input	   hDevHandle : SGX Device Node
+ @Input	   eNewPowerState : New power state
+ @Input	   eCurrentPowerState : Current power state
+
+ @Return   PVRSRV_ERROR :
+
+******************************************************************************/
 PVRSRV_ERROR SGXPrePowerState(IMG_HANDLE hDevHandle,
 	      PVRSRV_DEV_POWER_STATE eNewPowerState,
 	      PVRSRV_DEV_POWER_STATE eCurrentPowerState)
@@ -207,21 +301,23 @@ PVRSRV_ERROR SGXPrePowerState(IMG_HANDLE hDevHandle,
 	IMG_UINT32 ui32CoresEnabled;
 
 #if defined(SUPPORT_HW_RECOVERY)
-
+	/* Disable timer callback for HW recovery */
 	eError = OSDisableTimer(psDevInfo->hTimer);
 	if (eError != PVRSRV_OK) {
 	PVR_DPF((PVR_DBG_ERROR,
 	 "SGXPrePowerState: Failed to disable timer"));
 	return eError;
 	}
-#endif
+#endif /* SUPPORT_HW_RECOVERY */
 
 	if (eNewPowerState == PVRSRV_DEV_POWER_STATE_OFF) {
+	/* Request the ukernel to idle SGX and save its state. */
 	ui32PowerCmd = PVRSRV_POWERCMD_POWEROFF;
 	ui32CompleteStatus =
 	PVRSRV_USSE_EDM_POWMAN_POWEROFF_COMPLETE;
 	PDUMPCOMMENT("SGX power off request");
 	} else {
+	/* Request the ukernel to idle SGX. */
 	ui32PowerCmd = PVRSRV_POWERCMD_IDLE;
 	ui32CompleteStatus =
 	PVRSRV_USSE_EDM_POWMAN_IDLE_COMPLETE;
@@ -240,6 +336,7 @@ PVRSRV_ERROR SGXPrePowerState(IMG_HANDLE hDevHandle,
 	return eError;
 	}
 
+/* Wait for the ukernel to complete processing. */
 #if !defined(NO_HARDWARE)
 	if (PollForValueKM(&psDevInfo->psSGXHostCtl->ui32PowerStatus,
 	   ui32CompleteStatus, ui32CompleteStatus,
@@ -252,7 +349,7 @@ PVRSRV_ERROR SGXPrePowerState(IMG_HANDLE hDevHandle,
 	SGXDumpDebugInfo(psDevInfo, IMG_FALSE);
 	PVR_DBG_BREAK;
 	}
-#endif
+#endif /* NO_HARDWARE */
 
 #if defined(PDUMP)
 	PDUMPCOMMENT(
@@ -263,7 +360,7 @@ PVRSRV_ERROR SGXPrePowerState(IMG_HANDLE hDevHandle,
 	ui32CompleteStatus, ui32CompleteStatus,
 	PDUMP_POLL_OPERATOR_EQUAL, 0,
 	MAKEUNIQUETAG(psDevInfo->psKernelSGXHostCtlMemInfo));
-#endif
+#endif /* PDUMP */
 
 #if defined(SGX_FEATURE_MP)
 	ui32CoresEnabled = ((OSReadHWReg(psDevInfo->pvRegsBaseKM,
@@ -276,6 +373,7 @@ PVRSRV_ERROR SGXPrePowerState(IMG_HANDLE hDevHandle,
 #endif
 
 	for (ui32Core = 0; ui32Core < ui32CoresEnabled; ui32Core++) {
+	/* Wait for SGX clock gating. */
 	SGXPollForClockGating(
 	psDevInfo,
 	SGX_MP_CORE_SELECT(
@@ -286,7 +384,7 @@ PVRSRV_ERROR SGXPrePowerState(IMG_HANDLE hDevHandle,
 	}
 
 #if defined(SGX_FEATURE_MP)
-
+	/* Wait for SGX master clock gating. */
 	SGXPollForClockGating(psDevInfo,
 	      psDevInfo->ui32MasterClkGateStatusReg,
 	      psDevInfo->ui32MasterClkGateStatusMask,
@@ -296,9 +394,10 @@ PVRSRV_ERROR SGXPrePowerState(IMG_HANDLE hDevHandle,
 	      psDevInfo->ui32MasterClkGateStatus2Reg,
 	      psDevInfo->ui32MasterClkGateStatus2Mask,
 	      "Wait for SGX master clock gating (2)");
-#endif
+#endif /* SGX_FEATURE_MP */
 
 	if (eNewPowerState == PVRSRV_DEV_POWER_STATE_OFF) {
+	/* Finally, de-initialise some registers. */
 	eError = SGXDeinitialise(psDevInfo);
 	if (eError != PVRSRV_OK) {
 	PVR_DPF((
@@ -313,6 +412,22 @@ PVRSRV_ERROR SGXPrePowerState(IMG_HANDLE hDevHandle,
 	return PVRSRV_OK;
 }
 
+/*!
+******************************************************************************
+
+ @Function	SGXPostPowerState
+
+ @Description
+
+ does necessary preparation after power state transition
+
+ @Input	   hDevHandle : SGX Device Node
+ @Input	   eNewPowerState : New power state
+ @Input	   eCurrentPowerState : Current power state
+
+ @Return   PVRSRV_ERROR :
+
+******************************************************************************/
 PVRSRV_ERROR SGXPostPowerState(IMG_HANDLE hDevHandle,
 	       PVRSRV_DEV_POWER_STATE eNewPowerState,
 	       PVRSRV_DEV_POWER_STATE eCurrentPowerState)
@@ -324,6 +439,7 @@ PVRSRV_ERROR SGXPostPowerState(IMG_HANDLE hDevHandle,
 	PVRSRV_SGXDEV_INFO *psDevInfo = psDeviceNode->pvDevice;
 	SGXMKIF_HOST_CTL *psSGXHostCtl = psDevInfo->psSGXHostCtl;
 
+	/* Reset the power manager flags. */
 	psSGXHostCtl->ui32PowerStatus = 0;
 #if defined(PDUMP)
 	PDUMPCOMMENT("Host Control - Reset power status");
@@ -331,9 +447,16 @@ PVRSRV_ERROR SGXPostPowerState(IMG_HANDLE hDevHandle,
 	 offsetof(SGXMKIF_HOST_CTL, ui32PowerStatus),
 	 sizeof(IMG_UINT32), PDUMP_FLAGS_CONTINUOUS,
 	 MAKEUNIQUETAG(psDevInfo->psKernelSGXHostCtlMemInfo));
-#endif
+#endif /* PDUMP */
 
 	if (eCurrentPowerState == PVRSRV_DEV_POWER_STATE_OFF) {
+	/*
+	Coming up from off, re-initialise SGX.
+	*/
+
+	/*
+	Re-generate the timing data required by SGX.
+	*/
 	eError = SGXUpdateTimingInfo(psDeviceNode);
 	if (eError != PVRSRV_OK) {
 	PVR_DPF((
@@ -342,6 +465,9 @@ PVRSRV_ERROR SGXPostPowerState(IMG_HANDLE hDevHandle,
 	return eError;
 	}
 
+	/*
+	Run the SGX init script.
+	*/
 	eError = SGXInitialise(psDevInfo, IMG_FALSE);
 	if (eError != PVRSRV_OK) {
 	PVR_DPF((
@@ -350,6 +476,9 @@ PVRSRV_ERROR SGXPostPowerState(IMG_HANDLE hDevHandle,
 	return eError;
 	}
 	} else {
+	/*
+	Coming up from idle, restart the ukernel.
+	*/
 	SGXMKIF_COMMAND sCommand = { 0 };
 
 	sCommand.ui32Data[1] = PVRSRV_POWERCMD_RESUME;
@@ -372,6 +501,22 @@ PVRSRV_ERROR SGXPostPowerState(IMG_HANDLE hDevHandle,
 	return PVRSRV_OK;
 }
 
+/*!
+******************************************************************************
+
+ @Function	SGXPreClockSpeedChange
+
+ @Description
+
+	Does processing required before an SGX clock speed change.
+
+ @Input	   hDevHandle : SGX Device Node
+ @Input	   bIdleDevice : Whether the microkernel needs to be idled
+ @Input	   eCurrentPowerState : Power state of the device
+
+ @Return   PVRSRV_ERROR :
+
+******************************************************************************/
 PVRSRV_ERROR SGXPreClockSpeedChange(IMG_HANDLE hDevHandle, IMG_BOOL bIdleDevice,
 	    PVRSRV_DEV_POWER_STATE eCurrentPowerState)
 {
@@ -383,6 +528,9 @@ PVRSRV_ERROR SGXPreClockSpeedChange(IMG_HANDLE hDevHandle, IMG_BOOL bIdleDevice,
 
 	if (eCurrentPowerState == PVRSRV_DEV_POWER_STATE_ON) {
 	if (bIdleDevice) {
+	/*
+	 * Idle SGX.
+	 */
 	PDUMPSUSPEND();
 
 	eError = SGXPrePowerState(hDevHandle,
@@ -403,6 +551,22 @@ PVRSRV_ERROR SGXPreClockSpeedChange(IMG_HANDLE hDevHandle, IMG_BOOL bIdleDevice,
 	return PVRSRV_OK;
 }
 
+/*!
+******************************************************************************
+
+ @Function	SGXPostClockSpeedChange
+
+ @Description
+
+	Does processing required after an SGX clock speed change.
+
+ @Input	   hDevHandle : SGX Device Node
+ @Input	   bIdleDevice : Whether the microkernel had been idled previously
+ @Input	   eCurrentPowerState : Power state of the device
+
+ @Return   PVRSRV_ERROR :
+
+******************************************************************************/
 PVRSRV_ERROR SGXPostClockSpeedChange(IMG_HANDLE hDevHandle,
 	     IMG_BOOL bIdleDevice,
 	     PVRSRV_DEV_POWER_STATE eCurrentPowerState)
@@ -416,6 +580,9 @@ PVRSRV_ERROR SGXPostClockSpeedChange(IMG_HANDLE hDevHandle,
 	if (eCurrentPowerState == PVRSRV_DEV_POWER_STATE_ON) {
 	PVRSRV_ERROR eError;
 
+	/*
+	Re-generate the timing data required by SGX.
+	*/
 	eError = SGXUpdateTimingInfo(psDeviceNode);
 	if (eError != PVRSRV_OK) {
 	PVR_DPF((
@@ -425,6 +592,9 @@ PVRSRV_ERROR SGXPostClockSpeedChange(IMG_HANDLE hDevHandle,
 	}
 
 	if (bIdleDevice) {
+	/*
+	 * Resume SGX.
+	 */
 	eError = SGXPostPowerState(hDevHandle,
 	   PVRSRV_DEV_POWER_STATE_ON,
 	   PVRSRV_DEV_POWER_STATE_IDLE);
@@ -446,3 +616,7 @@ PVRSRV_ERROR SGXPostClockSpeedChange(IMG_HANDLE hDevHandle,
 
 	return PVRSRV_OK;
 }
+
+/******************************************************************************
+ End of file (sgxpower.c)
+******************************************************************************/

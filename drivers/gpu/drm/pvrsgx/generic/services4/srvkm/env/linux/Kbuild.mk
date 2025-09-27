@@ -83,6 +83,11 @@ pvrsrvkm-y += \
 	services4/srvkm/env/linux/ion.o
 endif
 
+ifeq ($(SUPPORT_DMABUF),1)
+pvrsrvkm-y += \
+	services4/srvkm/env/linux/dmabuf.o
+endif
+
 ifeq ($(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC),1)
 pvrsrvkm-y += \
 	services4/srvkm/env/linux/pvr_sync.o

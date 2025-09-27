@@ -57,8 +57,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 #endif
 
-/* this conversions could/should have been done since KERNEL_VERSION(4,3,0) */
-
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0))
 #define ioremap_nocache ioremap
 // #define ioremap_cache(physaddr, size) memremap((physaddr), (size), MEMREMAP_WB)

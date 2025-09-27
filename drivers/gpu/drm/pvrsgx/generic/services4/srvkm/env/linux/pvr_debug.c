@@ -47,6 +47,11 @@
 #include "proc.h"
 #include "mutex.h"
 #include "linkage.h"
+#include "pvr_uaccess.h"
+
+#if !defined(CONFIG_PREEMPT)
+#define PVR_DEBUG_ALWAYS_USE_SPINLOCK
+#endif
 
 static IMG_BOOL VBAppend(IMG_CHAR *pszBuf, IMG_UINT32 ui32BufSiz,
 	 const IMG_CHAR *pszFormat, va_list VArgs)
@@ -65,45 +70,74 @@ IMG_UINT32 gPVRDebugLevel = (DBGPRIV_FATAL | DBGPRIV_ERROR | DBGPRIV_WARNING);
 
 #define PVR_MAX_MSG_LEN PVR_MAX_DEBUG_MESSAGE_LEN
 
+#if !defined(PVR_DEBUG_ALWAYS_USE_SPINLOCK)
 static IMG_CHAR gszBufferNonIRQ[PVR_MAX_MSG_LEN + 1];
+#endif
 
 static IMG_CHAR gszBufferIRQ[PVR_MAX_MSG_LEN + 1];
 
+#if !defined(PVR_DEBUG_ALWAYS_USE_SPINLOCK)
 static PVRSRV_LINUX_MUTEX gsDebugMutexNonIRQ;
+#endif
 
-static spinlock_t gsDebugLockIRQ = __SPIN_LOCK_UNLOCKED(gsDebugLockIRQ);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 39))
 
+static spinlock_t gsDebugLockIRQ = SPIN_LOCK_UNLOCKED;
+#else
+static DEFINE_SPINLOCK(gsDebugLockIRQ);
+#endif
+
+#if !defined(PVR_DEBUG_ALWAYS_USE_SPINLOCK)
 #if !defined(USE_SPIN_LOCK)
 #define USE_SPIN_LOCK (in_interrupt() || !preemptible())
+#endif
 #endif
 
 static inline void GetBufferLock(unsigned long *pulLockFlags)
 {
-	if (USE_SPIN_LOCK) {
+#if !defined(PVR_DEBUG_ALWAYS_USE_SPINLOCK)
+	if (USE_SPIN_LOCK)
+#endif
+	{
 	spin_lock_irqsave(&gsDebugLockIRQ, *pulLockFlags);
-	} else {
+	}
+#if !defined(PVR_DEBUG_ALWAYS_USE_SPINLOCK)
+	else {
 	LinuxLockMutex(&gsDebugMutexNonIRQ);
 	}
+#endif
 }
 
 static inline void ReleaseBufferLock(unsigned long ulLockFlags)
 {
-	if (USE_SPIN_LOCK) {
+#if !defined(PVR_DEBUG_ALWAYS_USE_SPINLOCK)
+	if (USE_SPIN_LOCK)
+#endif
+	{
 	spin_unlock_irqrestore(&gsDebugLockIRQ, ulLockFlags);
-	} else {
+	}
+#if !defined(PVR_DEBUG_ALWAYS_USE_SPINLOCK)
+	else {
 	LinuxUnLockMutex(&gsDebugMutexNonIRQ);
 	}
+#endif
 }
 
 static inline void SelectBuffer(IMG_CHAR **ppszBuf, IMG_UINT32 *pui32BufSiz)
 {
-	if (USE_SPIN_LOCK) {
+#if !defined(PVR_DEBUG_ALWAYS_USE_SPINLOCK)
+	if (USE_SPIN_LOCK)
+#endif
+	{
 	*ppszBuf = gszBufferIRQ;
 	*pui32BufSiz = sizeof(gszBufferIRQ);
-	} else {
+	}
+#if !defined(PVR_DEBUG_ALWAYS_USE_SPINLOCK)
+	else {
 	*ppszBuf = gszBufferNonIRQ;
 	*pui32BufSiz = sizeof(gszBufferNonIRQ);
 	}
+#endif
 }
 
 static IMG_BOOL VBAppend(IMG_CHAR *pszBuf, IMG_UINT32 ui32BufSiz,
@@ -126,7 +160,9 @@ static IMG_BOOL VBAppend(IMG_CHAR *pszBuf, IMG_UINT32 ui32BufSiz,
 
 IMG_VOID PVRDPFInit(IMG_VOID)
 {
+#if !defined(PVR_DEBUG_ALWAYS_USE_SPINLOCK)
 	LinuxInitMutex(&gsDebugMutexNonIRQ);
+#endif
 }
 
 IMG_VOID PVRSRVReleasePrintf(const IMG_CHAR *pszFormat, ...)
@@ -381,7 +417,7 @@ IMG_INT PVRDebugProcSetLevel(struct file *file, const IMG_CHAR *buffer,
 	if (count != _PROC_SET_BUFFER_SZ) {
 	return -EINVAL;
 	} else {
-	if (copy_from_user(data_buffer, buffer, count))
+	if (pvr_copy_from_user(data_buffer, buffer, count))
 	return -EINVAL;
 	if (data_buffer[count - 1] != '\n')
 	return -EINVAL;

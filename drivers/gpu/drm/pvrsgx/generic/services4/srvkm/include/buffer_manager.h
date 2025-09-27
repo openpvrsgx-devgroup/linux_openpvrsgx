@@ -57,6 +57,17 @@ struct _BM_MAPPING_ {
 	IMG_SIZE_T uSize;
 	IMG_HANDLE hOSMemHandle;
 	IMG_UINT32 ui32Flags;
+
+	/* GPU mapping reference count
+	 * When goes down to 0 GPU mapping
+	 * gets removed */
+	IMG_UINT32 ui32MappingCount;
+
+	/* need to track the original required alignment to make sure
+	 * that an unmapped buffer which is later remapped to device
+	 * is remapped with the original alignment restrictions.
+	 */
+	IMG_UINT32 ui32DevVAddrAlignment;
 };
 
 typedef struct _BM_BUF_ {
@@ -82,6 +93,8 @@ struct _BM_HEAP_ {
 
 	struct _BM_HEAP_ *psNext;
 	struct _BM_HEAP_ **ppsThis;
+
+	IMG_UINT32 ui32XTileStride;
 };
 
 struct _BM_CONTEXT_ {
@@ -132,7 +145,7 @@ BM_Reinitialise(PVRSRV_DEVICE_NODE *psDeviceNode);
 IMG_BOOL
 BM_Alloc(IMG_HANDLE hDevMemHeap, IMG_DEV_VIRTADDR *psDevVAddr, IMG_SIZE_T uSize,
 	 IMG_UINT32 *pui32Flags, IMG_UINT32 uDevVAddrAlignment,
-	 BM_HANDLE *phBuf);
+	 IMG_PVOID pvPrivData, IMG_UINT32 ui32PrivDataLength, BM_HANDLE *phBuf);
 
 IMG_BOOL
 BM_Wrap(IMG_HANDLE hDevMemHeap, IMG_SIZE_T ui32Size, IMG_SIZE_T ui32Offset,
@@ -153,6 +166,12 @@ BM_HandleToSysPaddr(BM_HANDLE hBuf);
 
 IMG_HANDLE
 BM_HandleToOSMemHandle(BM_HANDLE hBuf);
+
+IMG_INT32
+BM_RemapToDev(BM_HANDLE hBuf);
+
+IMG_INT32
+BM_UnmapFromDev(BM_HANDLE hBuf);
 
 IMG_VOID BM_GetPhysPageAddr(PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 	    IMG_DEV_VIRTADDR sDevVPageAddr,
@@ -176,11 +195,26 @@ PVRSRV_ERROR BM_XProcWorkaroundSetShareIndex(IMG_UINT32 ui32Index);
 PVRSRV_ERROR BM_XProcWorkaroundUnsetShareIndex(IMG_UINT32 ui32Index);
 PVRSRV_ERROR
 BM_XProcWorkaroundFindNewBufferAndSetShareIndex(IMG_UINT32 *pui32Index);
+IMG_INT32 BM_XProcGetShareDataRefCount(IMG_UINT32 ui32Index);
 
-PVRSRV_ERROR BM_XProcWorkaroundShareInit(void);
-void BM_XProcWorkaroundShareDestroy(void);
-
-IMG_UINT32 BM_XProcWorkaroundGetRefCount(IMG_UINT32 ui32Index);
+static INLINE IMG_CHAR *_BMMappingType(IMG_INT eCpuMemoryOrigin)
+{
+	switch (eCpuMemoryOrigin) {
+	case hm_wrapped:
+	return "hm_wrapped";
+	case hm_wrapped_scatter:
+	return "hm_wrapped_scatter";
+	case hm_wrapped_virtaddr:
+	return "hm_wrapped_virtaddr";
+	case hm_wrapped_scatter_virtaddr:
+	return "hm_wrapped_scatter_virtaddr";
+	case hm_env:
+	return "hm_env";
+	case hm_contiguous:
+	return "hm_contiguous";
+	}
+	return "junk";
+}
 
 #if defined(__cplusplus)
 }

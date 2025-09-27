@@ -594,6 +594,9 @@ IMG_VOID SGXReset(PVRSRV_SGXDEV_INFO *psDevInfo, IMG_BOOL bHardwareRecovery,
 #if defined(PVR_SLC_8KB_ADDRESS_MODE)
 	     (4 << EUR_CR_MASTER_SLC_CTRL_ADDR_DECODE_MODE_SHIFT) |
 #endif
+#if defined(FIX_HW_BRN_33809)
+	     (2 << EUR_CR_MASTER_SLC_CTRL_ADDR_DECODE_MODE_SHIFT) |
+#endif
 	     (0xC << EUR_CR_MASTER_SLC_CTRL_ARB_PAGE_SIZE_SHIFT);
 	OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_MASTER_SLC_CTRL,
 	     ui32RegVal);

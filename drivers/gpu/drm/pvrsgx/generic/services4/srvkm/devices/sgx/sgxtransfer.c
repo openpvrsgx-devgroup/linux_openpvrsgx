@@ -263,6 +263,10 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmitTransferKM(IMG_HANDLE hDevHandle,
 	.ui32ReadOpsPendingVal =
 	psSyncInfo->psSyncData
 	->ui32ReadOpsPending;
+	psSharedTransferCmd->asDstSyncs[i]
+	.ui32ReadOps2PendingVal =
+	psSyncInfo->psSyncData
+	->ui32ReadOps2Pending;
 
 	psSharedTransferCmd->asDstSyncs[i]
 	.sWriteOpsCompleteDevVAddr =
@@ -270,6 +274,9 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmitTransferKM(IMG_HANDLE hDevHandle,
 	psSharedTransferCmd->asDstSyncs[i]
 	.sReadOpsCompleteDevVAddr =
 	psSyncInfo->sReadOpsCompleteDevVAddr;
+	psSharedTransferCmd->asDstSyncs[i]
+	.sReadOps2CompleteDevVAddr =
+	psSyncInfo->sReadOps2CompleteDevVAddr;
 	i++;
 	}
 	}
@@ -355,6 +362,7 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmitTransferKM(IMG_HANDLE hDevHandle,
 	i = 0;
 	for (loop = 0; loop < psKick->ui32NumDstSync; loop++) {
 	if (abDstSyncEnable[i]) {
+	IMG_UINT32 ui32PDumpReadOp2 = 0;
 	psSyncInfo =
 	psKick->ahDstSyncInfo[loop];
 
@@ -393,6 +401,22 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmitTransferKM(IMG_HANDLE hDevHandle,
 	     ui32ReadOpsPendingVal)),
 	sizeof(psSyncInfo->psSyncData
 	       ->ui32LastReadOpDumpVal),
+	psKick->ui32PDumpFlags,
+	MAKEUNIQUETAG(psCCBMemInfo));
+
+	PDUMPCOMMENT(
+	"Hack dest surface read op2 in transfer cmd\r\n");
+	PDUMPMEM(
+	&ui32PDumpReadOp2, psCCBMemInfo,
+	psKick->ui32CCBDumpWOff +
+	(IMG_UINT32)(offsetof(
+	     SGXMKIF_TRANSFERCMD_SHARED,
+	     asDstSyncs) +
+	     i * sizeof(PVRSRV_DEVICE_SYNC_OBJECT) +
+	     offsetof(
+	     PVRSRV_DEVICE_SYNC_OBJECT,
+	     ui32ReadOps2PendingVal)),
+	sizeof(ui32PDumpReadOp2),
 	psKick->ui32PDumpFlags,
 	MAKEUNIQUETAG(psCCBMemInfo));
 	i++;
@@ -672,11 +696,15 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmit2DKM(IMG_HANDLE hDevHandle,
 	psSyncInfo->psSyncData->ui32WriteOpsPending;
 	ps2DCmd->sDstSyncData.ui32ReadOpsPendingVal =
 	psSyncInfo->psSyncData->ui32ReadOpsPending;
+	ps2DCmd->sDstSyncData.ui32ReadOps2PendingVal =
+	psSyncInfo->psSyncData->ui32ReadOps2Pending;
 
 	ps2DCmd->sDstSyncData.sWriteOpsCompleteDevVAddr =
 	psSyncInfo->sWriteOpsCompleteDevVAddr;
 	ps2DCmd->sDstSyncData.sReadOpsCompleteDevVAddr =
 	psSyncInfo->sReadOpsCompleteDevVAddr;
+	ps2DCmd->sDstSyncData.sReadOps2CompleteDevVAddr =
+	psSyncInfo->sReadOps2CompleteDevVAddr;
 	}
 
 	for (i = 0; i < psKick->ui32NumSrcSync; i++) {
@@ -731,6 +759,7 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmit2DKM(IMG_HANDLE hDevHandle,
 	}
 
 	if (psKick->hDstSyncInfo != IMG_NULL) {
+	IMG_UINT32 ui32PDumpReadOp2 = 0;
 	psSyncInfo = psKick->hDstSyncInfo;
 
 	PDUMPCOMMENT(
@@ -759,6 +788,18 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmit2DKM(IMG_HANDLE hDevHandle,
 	.ui32ReadOpsPendingVal),
 	sizeof(psSyncInfo->psSyncData
 	       ->ui32LastReadOpDumpVal),
+	psKick->ui32PDumpFlags,
+	MAKEUNIQUETAG(psCCBMemInfo));
+	PDUMPCOMMENT(
+	"Hack dest surface read op2 in 2D cmd\r\n");
+	PDUMPMEM(
+	&ui32PDumpReadOp2, psCCBMemInfo,
+	psKick->ui32CCBDumpWOff +
+	(IMG_UINT32)offsetof(
+	SGXMKIF_2DCMD_SHARED,
+	sDstSyncData
+	.ui32ReadOps2PendingVal),
+	sizeof(ui32PDumpReadOp2),
 	psKick->ui32PDumpFlags,
 	MAKEUNIQUETAG(psCCBMemInfo));
 	}

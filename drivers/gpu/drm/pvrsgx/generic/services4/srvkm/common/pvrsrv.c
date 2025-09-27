@@ -58,10 +58,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "lists.h"
 
-#ifdef SUPPORT_DRI_DRM_EXTERNAL
-#include <drm/omap_drm.h>
-#endif
-
 IMG_UINT32 g_ui32InitFlags;
 
 /* mark which parts of Services were initialised */
@@ -1555,10 +1551,6 @@ IMG_VOID IMG_CALLCONV PVRSRVMISR(IMG_VOID *pvSysData)
 {
 	SYS_DATA *psSysData = pvSysData;
 	/*	PVRSRV_DEVICE_NODE	*psDeviceNode; */
-
-#ifdef SUPPORT_DRI_DRM_EXTERNAL
-	omap_gem_op_update();
-#endif
 
 	if (!psSysData) {
 	PVR_DPF((PVR_DBG_ERROR, "PVRSRVMISR: Invalid params\n"));

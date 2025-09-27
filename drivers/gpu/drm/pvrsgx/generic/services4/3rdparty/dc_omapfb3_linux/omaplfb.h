@@ -1,29 +1,44 @@
-/**********************************************************************
- *
- * Copyright (C) Imagination Technologies Ltd. All rights reserved.
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- *
- * This program is distributed in the hope it will be useful but, except
- * as otherwise stated in writing, without any warranty; without even the
- * implied warranty of merchantability or fitness for a particular purpose.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * The full GNU General Public License is included in this distribution in
- * the file called "COPYING".
- *
- * Contact Information:
- * Imagination Technologies Ltd. <gpl-support@imgtec.com>
- * Home Park Estate, Kings Langley, Herts, WD4 8LZ, UK
- *
- ******************************************************************************/
+/*************************************************************************/ /*!
+@Title          OMAP Linux display driver structures and prototypes
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@License        Dual MIT/GPLv2
 
+The contents of this file are subject to the MIT license as set out below.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+*/ /**************************************************************************/
 #ifndef __OMAPLFB_H__
 #define __OMAPLFB_H__
 
@@ -63,14 +78,18 @@ typedef atomic_t OMAPLFB_ATOMIC_BOOL;
 
 typedef atomic_t OMAPLFB_ATOMIC_INT;
 
+/* OMAPLFB buffer structure */
 typedef struct OMAPLFB_BUFFER_TAG {
 	struct OMAPLFB_BUFFER_TAG *psNext;
 	struct OMAPLFB_DEVINFO_TAG *psDevInfo;
 
 	struct work_struct sWork;
 
+	/* Position of this buffer in the virtual framebuffer */
 	unsigned long ulYOffset;
 
+	/* IMG structures used, to minimise API function code */
+	/* replace with own structures where necessary */
 	IMG_SYS_PHYADDR sSysAddr;
 	IMG_CPU_VIRTADDR sCPUVAddr;
 	PVRSRV_SYNC_DATA *psSyncData;
@@ -79,19 +98,33 @@ typedef struct OMAPLFB_BUFFER_TAG {
 	unsigned long ulSwapInterval;
 } OMAPLFB_BUFFER;
 
+/* OMAPLFB swapchain structure */
 typedef struct OMAPLFB_SWAPCHAIN_TAG {
+	/* Swap chain ID */
 	unsigned int uiSwapChainID;
 
+	/* number of buffers in swapchain */
 	unsigned long ulBufferCount;
 
+	/* list of buffers in the swapchain */
 	OMAPLFB_BUFFER *psBuffer;
 
+	/* Swap chain work queue */
 	struct workqueue_struct *psWorkQueue;
 
+	/*
+	 * Set if we didn't manage to wait for VSync on last swap,
+	 * or if we think we need to wait for VSync on the next flip.
+	 * The flag helps to avoid jitter when the screen is
+	 * unblanked, by forcing an extended wait for VSync before
+	 * attempting the next flip.
+	 */
 	OMAPLFB_BOOL bNotVSynced;
 
+	/* Previous number of blank events */
 	int iBlankEvents;
 
+	/* Framebuffer Device ID for messages (e.g. printk) */
 	unsigned int uiFBDevID;
 } OMAPLFB_SWAPCHAIN;
 
@@ -105,9 +138,12 @@ typedef struct OMAPLFB_FBINFO_TAG {
 	unsigned long ulPhysicalWidthmm;
 	unsigned long ulPhysicalHeightmm;
 
-	IMG_SYS_PHYADDR sSysAddr;
+	/* IMG structures used, to minimise API function code */
+	/* replace with own structures where necessary */
+	IMG_SYS_PHYADDR sSysAddr; //system physical address
 	IMG_CPU_VIRTADDR sCPUVAddr;
 
+	/* pixelformat of system/primary surface */
 	PVRSRV_PIXEL_FORMAT ePixelFormat;
 
 #if defined(CONFIG_DSSCOMP)
@@ -118,45 +154,66 @@ typedef struct OMAPLFB_FBINFO_TAG {
 #endif
 } OMAPLFB_FBINFO;
 
+/* kernel device information structure */
 typedef struct OMAPLFB_DEVINFO_TAG {
+	/* Framebuffer Device ID */
 	unsigned int uiFBDevID;
 
+	/* PVR Device ID */
 	unsigned int uiPVRDevID;
 
+	/* Swapchain create/destroy mutex */
 	struct mutex sCreateSwapChainMutex;
 
+	/* system surface info */
 	OMAPLFB_BUFFER sSystemBuffer;
 
+	/* jump table into PVR services */
 	PVRSRV_DC_DISP2SRV_KMJTABLE sPVRJTable;
 
+	/* jump table into DC */
 	PVRSRV_DC_SRV2DISP_KMJTABLE sDCJTable;
 
+	/* fb info structure */
 	OMAPLFB_FBINFO sFBInfo;
 
+	/* Only one swapchain supported by this device so hang it here */
 	OMAPLFB_SWAPCHAIN *psSwapChain;
 
+	/* Swap chain ID */
 	unsigned int uiSwapChainID;
 
+	/* True if PVR Services is flushing its command queues */
 	OMAPLFB_ATOMIC_BOOL sFlushCommands;
 
+	/* pointer to linux frame buffer information structure */
 	struct fb_info *psLINFBInfo;
 
+	/* Linux Framebuffer event notification block */
 	struct notifier_block sLINNotifBlock;
 
+	/* IMG structures used, to minimise API function code */
+	/* replace with own structures where necessary */
+
+	/* Address of the surface being displayed */
 	IMG_DEV_VIRTADDR sDisplayDevVAddr;
 
 	DISPLAY_INFO sDisplayInfo;
 
+	/* Display format */
 	DISPLAY_FORMAT sDisplayFormat;
 
+	/* Display dimensions */
 	DISPLAY_DIMS sDisplayDim;
 
+	/* True if screen is blanked */
 	OMAPLFB_ATOMIC_BOOL sBlanked;
 
+	/* Number of blank/unblank events */
 	OMAPLFB_ATOMIC_INT sBlankEvents;
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
-
+	/* Set by early suspend */
 	OMAPLFB_ATOMIC_BOOL sEarlySuspendFlag;
 
 	struct early_suspend sEarlySuspend;
@@ -170,6 +227,7 @@ typedef struct OMAPLFB_DEVINFO_TAG {
 
 #define OMAPLFB_PAGE_SIZE 4096
 
+/* DEBUG only printk */
 #ifdef DEBUG
 #define DEBUG_PRINTK(x) printk x
 #else
@@ -181,6 +239,10 @@ typedef struct OMAPLFB_DEVINFO_TAG {
 #define DEVNAME DRVNAME
 #define DRIVER_PREFIX DRVNAME
 
+/*!
+ *****************************************************************************
+ * Error values
+ *****************************************************************************/
 typedef enum _OMAPLFB_ERROR_ {
 	OMAPLFB_OK = 0,
 	OMAPLFB_ERROR_GENERIC = 1,
@@ -208,6 +270,7 @@ typedef enum _OMAPLFB_UPDATE_MODE_ {
 OMAPLFB_ERROR OMAPLFBInit(void);
 OMAPLFB_ERROR OMAPLFBDeInit(void);
 
+/* OS Specific APIs */
 OMAPLFB_DEVINFO *OMAPLFBGetDevInfoPtr(unsigned uiFBDevID);
 unsigned OMAPLFBMaxFBDevIDPlusOne(void);
 void *OMAPLFBAllocKernelMem(unsigned long ulSize);
@@ -250,4 +313,8 @@ void OMAPLFBPrintInfo(OMAPLFB_DEVINFO *psDevInfo);
 #define OMAPLFBPrintInfo(psDevInfo)
 #endif
 
-#endif
+#endif /* __OMAPLFB_H__ */
+
+/******************************************************************************
+ End of file (omaplfb.h)
+******************************************************************************/

@@ -1,28 +1,44 @@
-/**********************************************************************
- *
- * Copyright (C) Imagination Technologies Ltd. All rights reserved.
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- *
- * This program is distributed in the hope it will be useful but, except
- * as otherwise stated in writing, without any warranty; without even the
- * implied warranty of merchantability or fitness for a particular purpose.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * The full GNU General Public License is included in this distribution in
- * the file called "COPYING".
- *
- * Contact Information:
- * Imagination Technologies Ltd. <gpl-support@imgtec.com>
- * Home Park Estate, Kings Langley, Herts, WD4 8LZ, UK
- *
- ******************************************************************************/
+/*************************************************************************/ /*!
+@Title          Debug Functionality
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@Description    Provides kernel side Debug Functionality
+@License        Dual MIT/GPLv2
+
+The contents of this file are subject to the MIT license as set out below.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/ /**************************************************************************/
 
 #include <linux/version.h>
 
@@ -38,7 +54,7 @@
 #include <linux/hardirq.h>
 #include <linux/module.h>
 #include <linux/spinlock.h>
-#include <linux/string.h>
+#include <linux/string.h> // strncpy, strlen
 #include <stdarg.h>
 #include "img_types.h"
 #include "servicesext.h"
@@ -64,31 +80,36 @@ static IMG_BOOL VBAppend(IMG_CHAR *pszBuf, IMG_UINT32 ui32BufSiz,
 static IMG_BOOL BAppend(IMG_CHAR *pszBuf, IMG_UINT32 ui32BufSiz,
 	const IMG_CHAR *pszFormat, ...) IMG_FORMAT_PRINTF(3, 4);
 
+/* NOTE: Must NOT be static! Used in module.c.. */
 IMG_UINT32 gPVRDebugLevel = (DBGPRIV_FATAL | DBGPRIV_ERROR | DBGPRIV_WARNING);
 
-#endif
+#endif /* defined(PVRSRV_NEED_PVR_DPF) || defined(PVRSRV_NEED_PVR_TRACE) */
 
 #define PVR_MAX_MSG_LEN PVR_MAX_DEBUG_MESSAGE_LEN
 
 #if !defined(PVR_DEBUG_ALWAYS_USE_SPINLOCK)
+/* Message buffer for non-IRQ messages */
 static IMG_CHAR gszBufferNonIRQ[PVR_MAX_MSG_LEN + 1];
 #endif
 
+/* Message buffer for IRQ messages */
 static IMG_CHAR gszBufferIRQ[PVR_MAX_MSG_LEN + 1];
 
 #if !defined(PVR_DEBUG_ALWAYS_USE_SPINLOCK)
+/* The lock is used to control access to gszBufferNonIRQ */
 static PVRSRV_LINUX_MUTEX gsDebugMutexNonIRQ;
 #endif
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 39))
-
+/* The lock is used to control access to gszBufferIRQ */
+/* PRQA S 0671,0685 1 */ /* ignore warnings about C99 style initialisation */
 static spinlock_t gsDebugLockIRQ = SPIN_LOCK_UNLOCKED;
 #else
 static DEFINE_SPINLOCK(gsDebugLockIRQ);
 #endif
 
 #if !defined(PVR_DEBUG_ALWAYS_USE_SPINLOCK)
-#if !defined(USE_SPIN_LOCK)
+#if !defined(USE_SPIN_LOCK) /* to keep QAC happy */
 #define USE_SPIN_LOCK (in_interrupt() || !preemptible())
 #endif
 #endif
@@ -140,6 +161,11 @@ static inline void SelectBuffer(IMG_CHAR **ppszBuf, IMG_UINT32 *pui32BufSiz)
 #endif
 }
 
+/*
+ * Append a string to a buffer using formatted conversion.
+ * The function takes a variable number of arguments, pointed
+ * to by the var args list.
+ */
 static IMG_BOOL VBAppend(IMG_CHAR *pszBuf, IMG_UINT32 ui32BufSiz,
 	 const IMG_CHAR *pszFormat, va_list VArgs)
 {
@@ -154,9 +180,12 @@ static IMG_BOOL VBAppend(IMG_CHAR *pszBuf, IMG_UINT32 ui32BufSiz,
 	i32Len = vsnprintf(&pszBuf[ui32Used], ui32Space, pszFormat, VArgs);
 	pszBuf[ui32BufSiz - 1] = 0;
 
+	/* Return true if string was truncated */
 	return (i32Len < 0 || i32Len >= (IMG_INT32)ui32Space) ? IMG_TRUE :
 	IMG_FALSE;
 }
+
+/* Actually required for ReleasePrintf too */
 
 IMG_VOID PVRDPFInit(IMG_VOID)
 {
@@ -165,6 +194,14 @@ IMG_VOID PVRDPFInit(IMG_VOID)
 #endif
 }
 
+/*!
+******************************************************************************
+	@Function    PVRSRVReleasePrintf
+	@Description To output an important message to the user in release builds
+	@Input       pszFormat - The message format string
+	@Input       ... - Zero or more arguments for use by the format string
+	@Return      None
+ ******************************************************************************/
 IMG_VOID PVRSRVReleasePrintf(const IMG_CHAR *pszFormat, ...)
 {
 	va_list vaArgs;
@@ -189,19 +226,16 @@ IMG_VOID PVRSRVReleasePrintf(const IMG_CHAR *pszFormat, ...)
 	va_end(vaArgs);
 }
 
-#if defined(PVRSRV_NEED_PVR_ASSERT)
-
-IMG_VOID PVRSRVDebugAssertFail(const IMG_CHAR *pszFile, IMG_UINT32 uLine)
-{
-	PVRSRVDebugPrintf(DBGPRIV_FATAL, pszFile, uLine,
-	  "Debug assertion failed!");
-	BUG();
-}
-
-#endif
-
 #if defined(PVRSRV_NEED_PVR_TRACE)
 
+/*!
+******************************************************************************
+	@Function    PVRTrace
+	@Description To output a debug message to the user
+	@Input       pszFormat - The message format string
+	@Input       ... - Zero or more arguments for use by the format string
+	@Return      None
+ ******************************************************************************/
 IMG_VOID PVRSRVTrace(const IMG_CHAR *pszFormat, ...)
 {
 	va_list VArgs;
@@ -228,10 +262,15 @@ IMG_VOID PVRSRVTrace(const IMG_CHAR *pszFormat, ...)
 	va_end(VArgs);
 }
 
-#endif
+#endif /* defined(PVRSRV_NEED_PVR_TRACE) */
 
 #if defined(PVRSRV_NEED_PVR_DPF)
 
+/*
+ * Append a string to a buffer using formatted conversion.
+ * The function takes a variable number of arguments, calling
+ * VBAppend to do the actual work.
+ */
 static IMG_BOOL BAppend(IMG_CHAR *pszBuf, IMG_UINT32 ui32BufSiz,
 	const IMG_CHAR *pszFormat, ...)
 {
@@ -247,6 +286,17 @@ static IMG_BOOL BAppend(IMG_CHAR *pszBuf, IMG_UINT32 ui32BufSiz,
 	return bTrunc;
 }
 
+/*!
+******************************************************************************
+	@Function    PVRSRVDebugPrintf
+	@Description To output a debug message to the user
+	@Input       uDebugLevel - The current debug level
+	@Input       pszFile - The source file generating the message
+	@Input       uLine - The line of the source file
+	@Input       pszFormat - The message format string
+	@Input       ... - Zero or more arguments for use by the format string
+	@Return      None
+ ******************************************************************************/
 IMG_VOID PVRSRVDebugPrintf(IMG_UINT32 ui32DebugLevel,
 	   const IMG_CHAR *pszFullFileName, IMG_UINT32 ui32Line,
 	   const IMG_CHAR *pszFormat, ...)
@@ -270,6 +320,7 @@ IMG_VOID PVRSRVDebugPrintf(IMG_UINT32 ui32DebugLevel,
 
 	GetBufferLock(&ulLockFlags);
 
+	/* Add in the level of warning */
 	if (bTrace == IMG_FALSE) {
 	switch (ui32DebugLevel) {
 	case DBGPRIV_FATAL: {
@@ -311,15 +362,17 @@ IMG_VOID PVRSRVDebugPrintf(IMG_UINT32 ui32DebugLevel,
 	printk(KERN_INFO "PVR_K:(Message Truncated): %s\n",
 	       pszBuf);
 	} else {
+	/* Traces don't need a location */
 	if (bTrace == IMG_FALSE) {
 #ifdef DEBUG_LOG_PATH_TRUNCATE
-
+	/* Buffer for rewriting filepath in log messages */
 	static IMG_CHAR
 	szFileNameRewrite[PVR_MAX_FILEPATH_LEN];
 
 	IMG_CHAR *pszTruncIter;
 	IMG_CHAR *pszTruncBackInter;
 
+	/* Truncate path (DEBUG_LOG_PATH_TRUNCATE shoud be set to EURASIA env var)*/
 	if (strlen(pszFullFileName) >
 	    strlen(DEBUG_LOG_PATH_TRUNCATE) + 1)
 	pszFileName =
@@ -327,6 +380,8 @@ IMG_VOID PVRSRVDebugPrintf(IMG_UINT32 ui32DebugLevel,
 	strlen(DEBUG_LOG_PATH_TRUNCATE) +
 	1;
 
+	/* Try to find '/../' entries and remove it together with
+	   previous entry. Repeat unit all removed */
 	strncpy(szFileNameRewrite, pszFileName,
 	PVR_MAX_FILEPATH_LEN);
 
@@ -344,7 +399,7 @@ IMG_VOID PVRSRVDebugPrintf(IMG_UINT32 ui32DebugLevel,
 	pszTruncIter = szFileNameRewrite;
 	while (*pszTruncIter++ != 0) {
 	IMG_CHAR *pszNextStartPoint;
-
+	/* Find '/../' pattern */
 	if (!((*pszTruncIter == '/' &&
 	       (pszTruncIter - 4 >=
 	szFileNameRewrite)) &&
@@ -353,6 +408,7 @@ IMG_VOID PVRSRVDebugPrintf(IMG_UINT32 ui32DebugLevel,
 	      (*(pszTruncIter - 3) == '/')))
 	continue;
 
+	/* Find previous '/' */
 	pszTruncBackInter = pszTruncIter - 3;
 	while (*(--pszTruncBackInter) != '/') {
 	if (pszTruncBackInter <=
@@ -361,17 +417,19 @@ IMG_VOID PVRSRVDebugPrintf(IMG_UINT32 ui32DebugLevel,
 	}
 	pszNextStartPoint = pszTruncBackInter;
 
+	/* Remove found region */
 	while (*pszTruncIter != 0) {
 	*pszTruncBackInter++ =
 	*pszTruncIter++;
 	}
 	*pszTruncBackInter = 0;
 
+	/* Start again */
 	pszTruncIter = pszNextStartPoint;
 	}
 
 	pszFileName = szFileNameRewrite;
-
+	/* Remove first '/' if exist (it's always relative path */
 	if (*pszFileName == '/')
 	pszFileName++;
 #endif
@@ -383,7 +441,7 @@ IMG_VOID PVRSRVDebugPrintf(IMG_UINT32 ui32DebugLevel,
 	if (pszLeafName) {
 	pszFileName = pszLeafName;
 	}
-#endif
+#endif /* __sh__ */
 
 	if (BAppend(pszBuf, ui32BufSiz, " [%u, %s]",
 	    ui32Line, pszFileName)) {
@@ -404,24 +462,26 @@ IMG_VOID PVRSRVDebugPrintf(IMG_UINT32 ui32DebugLevel,
 	}
 }
 
-#endif
+#endif /* PVRSRV_NEED_PVR_DPF */
 
 #if defined(DEBUG)
 
 IMG_INT PVRDebugProcSetLevel(struct file *file, const IMG_CHAR *buffer,
 	     IMG_UINT32 count, IMG_VOID *data)
 {
-#define _PROC_SET_BUFFER_SZ 2
+#define _PROC_SET_BUFFER_SZ 6
 	IMG_CHAR data_buffer[_PROC_SET_BUFFER_SZ];
 
-	if (count != _PROC_SET_BUFFER_SZ) {
+	if (count > _PROC_SET_BUFFER_SZ) {
 	return -EINVAL;
 	} else {
 	if (pvr_copy_from_user(data_buffer, buffer, count))
 	return -EINVAL;
 	if (data_buffer[count - 1] != '\n')
 	return -EINVAL;
-	gPVRDebugLevel = data_buffer[0] - '0';
+	if (sscanf(data_buffer, "%i", &gPVRDebugLevel) == 0)
+	return -EINVAL;
+	gPVRDebugLevel &= (1 << DBGPRIV_DBGLEVEL_COUNT) - 1;
 	}
 	return (count);
 }
@@ -431,4 +491,4 @@ void ProcSeqShowDebugLevel(struct seq_file *sfile, void *el)
 	seq_printf(sfile, "%u\n", gPVRDebugLevel);
 }
 
-#endif
+#endif /* defined(DEBUG) */

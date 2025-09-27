@@ -1,29 +1,43 @@
+########################################################################### ###
+#@Title         Useful special targets which don't build anything
+#@Copyright     Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+#@License       Dual MIT/GPLv2
 #
-# Copyright (C) Imagination Technologies Ltd. All rights reserved.
+# The contents of this file are subject to the MIT license as set out below.
 #
-# This program is free software; you can redistribute it and/or modify it
-# under the terms and conditions of the GNU General Public License,
-# version 2, as published by the Free Software Foundation.
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
 #
-# This program is distributed in the hope it will be useful but, except
-# as otherwise stated in writing, without any warranty; without even the
-# implied warranty of merchantability or fitness for a particular purpose.
-# See the GNU General Public License for more details.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
-# You should have received a copy of the GNU General Public License along with
-# this program; if not, write to the Free Software Foundation, Inc.,
-# 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+# Alternatively, the contents of this file may be used under the terms of
+# the GNU General Public License Version 2 ("GPL") in which case the provisions
+# of GPL are applicable instead of those above.
 #
-# The full GNU General Public License is included in this distribution in
-# the file called "COPYING".
+# If you wish to allow use of your version of this file only under the terms of
+# GPL, and not to allow others to use your version of this file under the terms
+# of the MIT license, indicate your decision by deleting the provisions above
+# and replace them with the notice and other provisions required by GPL as set
+# out in the file called "GPL-COPYING" included in this distribution. If you do
+# not delete the provisions above, a recipient may use your version of this file
+# under the terms of either the MIT license or GPL.
 #
-# Contact Information:
-# Imagination Technologies Ltd. <gpl-support@imgtec.com>
-# Home Park Estate, Kings Langley, Herts, WD4 8LZ, UK
+# This License is also included in this distribution in the file called
+# "MIT-COPYING".
 #
-#
-
-# Useful special targets which don't build anything
+# EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+# PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+# BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+# PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+# COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+# IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+# CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+### ###########################################################################
 
 ifneq ($(filter dumpvar-%,$(MAKECMDGOALS)),)
 dumpvar-%: ;
@@ -41,10 +55,8 @@ whatis-$(RELATIVE_OUT)/host/%: ;
 $(foreach _file_to_find,$(patsubst whatis-%,%,$(filter whatis-%,$(MAKECMDGOALS))),$(info $(strip $(foreach _m,$(ALL_MODULES),$(if $(filter $(_file_to_find),$(INTERNAL_TARGETS_FOR_$(_m))),$(_file_to_find) is in $(_m) which is defined in $(INTERNAL_MAKEFILE_FOR_MODULE_$(_m)),)))))
 endif
 
-.PHONY: ls-modules ls-modules-v
+.PHONY: ls-modules
 ls-modules:
-	@: $(foreach _m,$(ALL_MODULES),$(info $(_m)))
-ls-modules-v:
 	@: $(foreach _m,$(ALL_MODULES),$(info $($(_m)_type) $(_m) $(patsubst $(TOP)/%,%,$(INTERNAL_MAKEFILE_FOR_MODULE_$(_m)))))
 
 ifeq ($(strip $(MAKECMDGOALS)),visualise)
@@ -64,18 +76,20 @@ endif
 .PHONY: help
 help:
 	@echo 'Build targets'
-	@echo '  make, make build       Build the UM/KM components of the build and scripts'
-	@echo '  make components        Build only the UM components'
-	@echo '  make kbuild            Build only the KM components'
-	@echo '  make scripts           Build only the scripts (rc.pvr and install.sh)'
-	@echo '  make MODULE            Build the module MODULE and all its dependencies'
+	@echo '  make, make build       Build all components of the build'
+	@echo '  make components        Build only the user-mode components'
+	@echo '  make kbuild            Build only the kernel-mode components'
+	@echo '  make MODULE            Build the module MODULE and all of its dependencies'
 	@echo '  make eurasiacon/binary2_.../target/libsomething.so'
 	@echo '                         Build a particular file (including intermediates)'
 	@echo 'Variables'
 	@echo '  make V=1 ...           Print the commands that are executed'
+	@echo '  make W=1 ...           Enable extra compiler warnings'
+	@echo '  make D=opt ...         Set build system debug option (D=help for a list)'
 	@echo '  make OUT=dir ...       Place output+intermediates in specified directory'
-	@echo '  make SOMEOPTION=1 ...  Set configuration options (see Makefile.config)'
-	@echo ''
+	@echo '  EXCLUDED_APIS=...      List of APIs to remove from the build'
+	@echo '  make SOMEOPTION=1 ...  Set configuration options (see config/core.mk)'
+	@echo '                         Defaults are set by $(PVR_BUILD_DIR)/Makefile'
 	@echo 'Clean targets'
 	@echo '  make clean             Remove only intermediates for the current build'
 	@echo '  make clobber           As "make clean", but remove output files too'
@@ -84,4 +98,15 @@ help:
 	@echo 'Special targets'
 	@echo '  make whereis-MODULE    Show the path to the Linux.mk defining MODULE'
 	@echo '  make whatis-FILE       Show which module builds an output FILE'
-	@echo '  make ls-modules[-v]    List all modules [with type+makefile]'
+	@echo '  make ls-modules        List all modules defined by makefiles'
+
+ifneq ($(filter help,$(D)),)
+empty :=
+space := $(empty) $(empty)
+$(info Debug options)
+$(info $(space)D=modules                  dump module info)
+$(info $(space)D=freeze-config            prevent config changes)
+$(info $(space)D=config-changes           dump diffs when config changes)
+$(info Options may be combined: make D=freeze-config,config-changes)
+$(error D=help given)
+endif

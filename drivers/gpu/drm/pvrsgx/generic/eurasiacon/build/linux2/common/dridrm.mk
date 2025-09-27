@@ -59,5 +59,3 @@ $(eval $(call TunableBothConfigMake,PVR_DRI_DRM_NOT_PCI))
 
 $(eval $(call TunableKernelConfigC,PVR_DRI_DRM_PLATFORM_DEV,))
 
-
-export EXTERNAL_3PDD_TARBALL

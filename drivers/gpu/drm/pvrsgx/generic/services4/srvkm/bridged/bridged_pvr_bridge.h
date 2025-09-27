@@ -142,8 +142,6 @@ typedef IMG_INT (*BridgeWrapperFunction)(IMG_UINT32 ui32BridgeID,
 
 typedef struct _PVRSRV_BRIDGE_DISPATCH_TABLE_ENTRY {
 	BridgeWrapperFunction pfFunction;
-	size_t in_size;
-	size_t out_size;
 #if defined(DEBUG_BRIDGE_KM)
 	const IMG_CHAR *pszIOCName;
 	const IMG_CHAR *pszFunctionName;
@@ -178,29 +176,11 @@ extern PVRSRV_BRIDGE_DISPATCH_TABLE_ENTRY
 IMG_VOID
 _SetDispatchTableEntry(IMG_UINT32 ui32Index, const IMG_CHAR *pszIOCName,
 	       BridgeWrapperFunction pfFunction,
-	       const IMG_CHAR *pszFunctionName, size_t in_size,
-	       size_t out_size);
+	       const IMG_CHAR *pszFunctionName);
 
-#define __set_table(id, fn, in_size, out_size)                          \
-	_SetDispatchTableEntry(PVRSRV_GET_BRIDGE_ID(id), #id,           \
-	       (BridgeWrapperFunction)fn, #fn, in_size, \
-	       out_size)
-
-#define PVR_IO_RW(id, fn)                                                  \
-	__set_table(PVRSRV_BRIDGE_##id, fn, sizeof(PVRSRV_BRIDGE_IN_##id), \
-	    sizeof(PVRSRV_BRIDGE_OUT_##id))
-
-#define PVR_IO_R(id, fn) \
-	__set_table(PVRSRV_BRIDGE_##id, fn, 0, sizeof(PVRSRV_BRIDGE_OUT_##id))
-
-#define PVR_IO_W(id, fn)                                                   \
-	__set_table(PVRSRV_BRIDGE_##id, fn, sizeof(PVRSRV_BRIDGE_IN_##id), \
-	    sizeof(PVRSRV_BRIDGE_RETURN))
-
-#define PVR_IO_NSTD(id, fn, in_size, out_size) \
-	__set_table(PVRSRV_BRIDGE_##id, fn, in_size, out_size)
-
-#define PVR_IO_INV(id) __set_table(PVRSRV_BRIDGE_##id, DummyBW, 0, 0)
+#define SetDispatchTableEntry(ui32Index, pfFunction)                        \
+	_SetDispatchTableEntry(PVRSRV_GET_BRIDGE_ID(ui32Index), #ui32Index, \
+	       (BridgeWrapperFunction)pfFunction, #pfFunction)
 
 #define DISPATCH_TABLE_GAP_THRESHOLD 5
 

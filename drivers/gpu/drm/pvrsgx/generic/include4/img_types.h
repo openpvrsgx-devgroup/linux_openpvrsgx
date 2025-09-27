@@ -22,15 +22,18 @@
  * Imagination Technologies Ltd. <gpl-support@imgtec.com>
  * Home Park Estate, Kings Langley, Herts, WD4 8LZ, UK
  *
- ******************************************************************************/
+******************************************************************************/
 
 #ifndef __IMG_TYPES_H__
 #define __IMG_TYPES_H__
 
+/* define all address space bit depths: */
+/* CPU virtual address space defaults to 32bits */
 #if !defined(IMG_ADDRSPACE_CPUVADDR_BITS)
 #define IMG_ADDRSPACE_CPUVADDR_BITS 32
 #endif
 
+/* Physical address space defaults to 32bits */
 #if !defined(IMG_ADDRSPACE_PHYSADDR_BITS)
 #define IMG_ADDRSPACE_PHYSADDR_BITS 32
 #endif
@@ -62,7 +65,7 @@ typedef unsigned __int64 IMG_UINT64, *IMG_PUINT64;
 typedef __int64 IMG_INT64, *IMG_PINT64;
 
 #else
-#if ((defined(LINUX) || defined(__METAG)) || defined(__QNXNTO__))
+#if (defined(LINUX) || defined(__METAG))
 typedef unsigned long long IMG_UINT64, *IMG_PUINT64;
 typedef long long IMG_INT64, *IMG_PINT64;
 #else
@@ -71,6 +74,7 @@ typedef long long IMG_INT64, *IMG_PINT64;
 #endif
 
 #if !(defined(LINUX) && defined(__KERNEL__))
+/* Linux kernel mode does not use floating point */
 typedef float IMG_FLOAT, *IMG_PFLOAT;
 typedef double IMG_DOUBLE, *IMG_PDOUBLE;
 #endif
@@ -101,19 +105,64 @@ typedef void **IMG_HVOID, *IMG_PHVOID;
 
 #define IMG_NULL 0
 
+/* services/stream ID */
 typedef IMG_UINT32 IMG_SID;
 
 typedef IMG_UINT32 IMG_EVENTSID;
 
+/* Which of IMG_HANDLE/IMG_SID depends on SUPPORT_SID_INTERFACE */
 #if defined(SUPPORT_SID_INTERFACE)
 typedef IMG_SID IMG_S_HANDLE;
 #else
 typedef IMG_HANDLE IMG_S_HANDLE;
 #endif
 
+/*
+ * Address types.
+ * All types used to refer to a block of memory are wrapped in structures
+ * to enforce some degree of type safety, i.e. a IMG_DEV_VIRTADDR cannot
+ * be assigned to a variable of type IMG_DEV_PHYADDR because they are not the
+ * same thing.
+ *
+ * There is an assumption that the system contains at most one non-cpu mmu,
+ * and a memory block is only mapped by the MMU once.
+ *
+ * Different devices could have offset views of the physical address space.
+ *
+ */
+
+/*
+ *
+ * +------------+    +------------+      +------------+        +------------+
+ * |    CPU     |    |    DEV     |      |    DEV     |        |    DEV     |
+ * +------------+    +------------+      +------------+        +------------+
+ *       |                 |                   |                     |
+ *       | PVOID           |IMG_DEV_VIRTADDR   |IMG_DEV_VIRTADDR     |
+ *       |                 \-------------------/                     |
+ *       |                          |                                |
+ * +------------+             +------------+                         |
+ * |    MMU     |             |    MMU     |                         |
+ * +------------+             +------------+                         |
+ *       |                          |                                |
+ *       |                          |                                |
+ *       |                          |                                |
+ *   +--------+                +---------+                      +--------+
+ *   | Offset |                | (Offset)|                      | Offset |
+ *   +--------+                +---------+                      +--------+
+ *       |                          |                IMG_DEV_PHYADDR |
+ *       |                          |                                |
+ *       |                          | IMG_DEV_PHYADDR                |
+ * +---------------------------------------------------------------------+
+ * |                         System Address bus                          |
+ * +---------------------------------------------------------------------+
+ *
+ */
+
 typedef IMG_PVOID IMG_CPU_VIRTADDR;
 
+/* device virtual address */
 typedef struct _IMG_DEV_VIRTADDR {
+	/* device virtual addresses are 32bit for now */
 	IMG_UINT32 uiAddr;
 #define IMG_CAST_TO_DEVVADDR_UINT(var) (IMG_UINT32)(var)
 
@@ -121,13 +170,16 @@ typedef struct _IMG_DEV_VIRTADDR {
 
 typedef IMG_UINT32 IMG_DEVMEM_SIZE_T;
 
+/* cpu physical address */
 typedef struct _IMG_CPU_PHYADDR {
+	/* variable sized type (32,64) */
 	IMG_UINTPTR_T uiAddr;
 } IMG_CPU_PHYADDR;
 
+/* device physical address */
 typedef struct _IMG_DEV_PHYADDR {
 #if IMG_ADDRSPACE_PHYSADDR_BITS == 32
-
+	/* variable sized type (32,64) */
 	IMG_UINTPTR_T uiAddr;
 #else
 	IMG_UINT32 uiAddr;
@@ -135,10 +187,15 @@ typedef struct _IMG_DEV_PHYADDR {
 #endif
 } IMG_DEV_PHYADDR;
 
+/* system physical address */
 typedef struct _IMG_SYS_PHYADDR {
+	/* variable sized type (32,64) */
 	IMG_UINTPTR_T uiAddr;
 } IMG_SYS_PHYADDR;
 
 #include "img_defs.h"
 
-#endif
+#endif /* __IMG_TYPES_H__ */
+/******************************************************************************
+ End of file (img_types.h)
+******************************************************************************/

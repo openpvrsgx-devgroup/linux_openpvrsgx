@@ -1739,6 +1739,7 @@ PVRSRV_ERROR PDumpMemUM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 	 "PDumpMemUM: PDumpMemKM failed (%d)",
 	 eError));
 	}
+	PVR_ASSERT(ui32BytesDumped == 0);
 	return eError;
 	}
 

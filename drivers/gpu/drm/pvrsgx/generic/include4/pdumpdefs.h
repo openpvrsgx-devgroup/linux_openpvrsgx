@@ -22,7 +22,7 @@
  * Imagination Technologies Ltd. <gpl-support@imgtec.com>
  * Home Park Estate, Kings Langley, Herts, WD4 8LZ, UK
  *
- ******************************************************************************/
+*****************************************************************************/
 
 #if !defined(__PDUMPDEFS_H__)
 #define __PDUMPDEFS_H__
@@ -100,4 +100,8 @@ typedef enum _PDUMP_POLL_OPERATOR {
 	PDUMP_POLL_OPERATOR_NOTEQUAL = 5,
 } PDUMP_POLL_OPERATOR;
 
-#endif
+#endif /* __PDUMPDEFS_H__ */
+
+/*****************************************************************************
+ End of file (pdumpdefs.h)
+*****************************************************************************/

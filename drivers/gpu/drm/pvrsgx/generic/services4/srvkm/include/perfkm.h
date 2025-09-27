@@ -24,26 +24,12 @@
  *
  ******************************************************************************/
 
-#ifndef SERVICES_HEADERS_H
-#define SERVICES_HEADERS_H
+#ifndef _PERFKM_H_
+#define _PERFKM_H_
 
-#ifdef DEBUG_RELEASE_BUILD
-#pragma optimize("", off)
-#define DEBUG 1
-#endif
+#include "img_types.h"
 
-#include "img_defs.h"
-#include "services.h"
-#include "servicesint.h"
-#include "power.h"
-#include "resman.h"
-#include "queue.h"
-#include "srvkm.h"
-#include "kerneldisplay.h"
-#include "syscommon.h"
-#include "pvr_debug.h"
-#include "metrics.h"
-#include "osfunc.h"
-#include "refcount.h"
+#define PERFINIT()
+#define PERFDEINIT()
 
 #endif

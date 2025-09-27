@@ -44,10 +44,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef __SERVICES_PROC_H__
 #define __SERVICES_PROC_H__
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 2, 0))
+#include <asm/system.h> // va_list etc
+#endif
 #include <linux/proc_fs.h> // read_proc_t etc
-#include <linux/seq_file.h> // seq_file
-
-#define END_OF_FILE (off_t) - 1
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0))
 typedef int(read_proc_t)(char *page, char **start, off_t off, int count,
@@ -55,6 +55,10 @@ typedef int(read_proc_t)(char *page, char **start, off_t off, int count,
 typedef int(write_proc_t)(struct file *file, const char __user *buffer,
 	  unsigned long count, void *data);
 #endif
+
+#include <linux/seq_file.h> // seq_file
+
+#define END_OF_FILE (off_t) - 1
 
 typedef off_t(pvr_read_proc_t)(IMG_CHAR *, size_t, off_t);
 

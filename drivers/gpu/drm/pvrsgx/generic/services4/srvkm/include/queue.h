@@ -77,7 +77,8 @@ typedef struct _COMMAND_COMPLETE_DATA_ {
 	pfnCommandComplete; /*!< Command complete callback */
 	IMG_HANDLE hCallbackData; /*!< Command complete callback data */
 
-#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
+#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC) || \
+	defined(PVR_ANDROID_NATIVE_WINDOW_HAS_FENCE)
 	IMG_VOID *pvCleanupFence; /*!< Sync fence to 'put' after timeline inc() */
 	IMG_VOID *pvTimeline; /*!< Android sync timeline to inc() */
 #endif

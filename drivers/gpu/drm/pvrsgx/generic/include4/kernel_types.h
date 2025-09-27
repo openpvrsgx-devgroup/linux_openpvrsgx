@@ -1,9 +1,6 @@
 /*************************************************************************/ /*!
-@File
-@Title          Version numbers and strings.
+@Title          C99-compatible types and definitions for Linux kernel code
 @Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
-@Description    Version numbers and strings for PVR Consumer services
-                components.
 @License        Dual MIT/GPLv2
 
 The contents of this file are subject to the MIT license as set out below.
@@ -42,31 +39,98 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */ /**************************************************************************/
 
-#ifndef _PVRVERSION_H_
-#define _PVRVERSION_H_
+#include <linux/kernel.h>
 
-#define PVR_STR(X) #X
-#define PVR_STR2(X) PVR_STR(X)
+/* Limits of specified-width integer types */
 
-#define PVRVERSION_MAJ 1
-#define PVRVERSION_MIN 17
+/* S8_MIN, etc were added in kernel version 3.14. The other versions are for
+ * earlier kernels. They can be removed once older kernels don't need to be
+ * supported.
+ */
+#ifdef S8_MIN
+#define INT8_MIN S8_MIN
+#else
+#define INT8_MIN (-128)
+#endif
 
-#define PVRVERSION_FAMILY "sgxddk"
-#define PVRVERSION_BRANCHNAME "1.17"
-#define PVRVERSION_BUILD 4948957
-#define PVRVERSION_BSCONTROL "SGX_DDK"
+#ifdef S8_MAX
+#define INT8_MAX S8_MAX
+#else
+#define INT8_MAX 127
+#endif
 
-#define PVRVERSION_STRING "SGX_DDK sgxddk 1.17@" PVR_STR2(PVRVERSION_BUILD)
-#define PVRVERSION_STRING_SHORT "1.17@" PVR_STR2(PVRVERSION_BUILD) ""
+#ifdef U8_MAX
+#define UINT8_MAX U8_MAX
+#else
+#define UINT8_MAX 0xFF
+#endif
 
-#define COPYRIGHT_TXT \
-	"Copyright (c) Imagination Technologies Ltd. All Rights Reserved."
+#ifdef S16_MIN
+#define INT16_MIN S16_MIN
+#else
+#define INT16_MIN (-32768)
+#endif
 
-#define PVRVERSION_BUILD_HI 494
-#define PVRVERSION_BUILD_LO 8957
-#define PVRVERSION_STRING_NUMERIC                  \
-	PVR_STR2(PVRVERSION_MAJ)                   \
-	"." PVR_STR2(PVRVERSION_MIN) "." PVR_STR2( \
-	PVRVERSION_BUILD_HI) "." PVR_STR2(PVRVERSION_BUILD_LO)
+#ifdef S16_MAX
+#define INT16_MAX S16_MAX
+#else
+#define INT16_MAX 32767
+#endif
 
-#endif /* _PVRVERSION_H_ */
+#ifdef U16_MAX
+#define UINT16_MAX U16_MAX
+#else
+#define UINT16_MAX 0xFFFF
+#endif
+
+#ifdef S32_MIN
+#define INT32_MIN S32_MIN
+#else
+#define INT32_MIN (-2147483647 - 1)
+#endif
+
+#ifdef S32_MAX
+#define INT32_MAX S32_MAX
+#else
+#define INT32_MAX 2147483647
+#endif
+
+#ifdef U32_MAX
+#define UINT32_MAX U32_MAX
+#else
+#define UINT32_MAX 0xFFFFFFFF
+#endif
+
+#ifdef S64_MIN
+#define INT64_MIN S64_MIN
+#else
+#define INT64_MIN (-9223372036854775807LL)
+#endif
+
+#ifdef S64_MAX
+#define INT64_MAX S64_MAX
+#else
+#define INT64_MAX 9223372036854775807LL
+#endif
+
+#ifdef U64_MAX
+#define UINT64_MAX U64_MAX
+#else
+#define UINT64_MAX 0xFFFFFFFFFFFFFFFFULL
+#endif
+
+/* Macros for integer constants */
+#define INT8_C S8_C
+#define UINT8_C U8_C
+#define INT16_C S16_C
+#define UINT16_C U16_C
+#define INT32_C S32_C
+#define UINT32_C U32_C
+#define INT64_C S64_C
+#define UINT64_C U64_C
+
+/* Format conversion of integer types <inttypes.h> */
+/* Only define PRIX64 for the moment, as this is the only format macro that
+ * img_types.h needs.
+ */
+#define PRIX64 "llX"

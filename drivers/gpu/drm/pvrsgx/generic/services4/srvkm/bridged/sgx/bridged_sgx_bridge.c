@@ -173,6 +173,7 @@ static IMG_INT SGXDoKickBW(IMG_UINT32 ui32BridgeID,
 	IMG_INT ret = 0;
 	IMG_UINT32 ui32NumDstSyncs;
 	IMG_HANDLE *phKernelSyncInfoHandles = IMG_NULL;
+	IMG_HANDLE *pahDstSyncHandles;
 
 	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID, PVRSRV_BRIDGE_SGX_DOKICK);
 
@@ -249,7 +250,8 @@ static IMG_INT SGXDoKickBW(IMG_UINT32 ui32BridgeID,
 	return 0;
 	}
 
-#if !defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
+#if !(defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC) || \
+      defined(PVR_ANDROID_NATIVE_WINDOW_HAS_FENCE))
 	for (i = 0; i < psDoKickIN->sCCBKick.ui32NumSrcSyncs; i++) {
 	psRetOUT->eError = PVRSRVLookupHandle(
 	psPerProc->psHandleBase,
@@ -321,9 +323,10 @@ static IMG_INT SGXDoKickBW(IMG_UINT32 ui32BridgeID,
 	ui32NumDstSyncs = psDoKickIN->sCCBKick.ui32NumDstSyncObjects;
 
 	if (ui32NumDstSyncs > 0) {
-	if (!OSAccessOK(PVR_VERIFY_READ,
-	psDoKickIN->sCCBKick.pahDstSyncHandles,
-	ui32NumDstSyncs * sizeof(IMG_HANDLE))) {
+	if (!OSAccessOK(
+	    PVR_VERIFY_READ,
+	    (IMG_HANDLE *)psDoKickIN->sCCBKick.hDstSyncHandles,
+	    ui32NumDstSyncs * sizeof(IMG_HANDLE))) {
 	PVR_DPF((PVR_DBG_ERROR,
 	 "%s: SGXDoKickBW:"
 	 " Invalid pasDstSyncHandles pointer",
@@ -340,24 +343,23 @@ static IMG_INT SGXDoKickBW(IMG_UINT32 ui32BridgeID,
 	return 0;
 	}
 
-	if (CopyFromUserWrapper(psPerProc, ui32BridgeID,
-	phKernelSyncInfoHandles,
-	psDoKickIN->sCCBKick.pahDstSyncHandles,
-	ui32NumDstSyncs * sizeof(IMG_HANDLE)) !=
+	if (CopyFromUserWrapper(
+	    psPerProc, ui32BridgeID, phKernelSyncInfoHandles,
+	    (IMG_HANDLE *)psDoKickIN->sCCBKick.hDstSyncHandles,
+	    ui32NumDstSyncs * sizeof(IMG_HANDLE)) !=
 	    PVRSRV_OK) {
 	ret = -EFAULT;
 	goto PVRSRV_BRIDGE_SGX_DOKICK_RETURN_RESULT;
 	}
 
-	/* Set sCCBKick.pahDstSyncHandles to point to the local memory */
-	psDoKickIN->sCCBKick.pahDstSyncHandles =
-	phKernelSyncInfoHandles;
-
+	/* Set sCCBKick.hDstSyncHandles to point to the local memory */
+	psDoKickIN->sCCBKick.hDstSyncHandles =
+	(IMG_HANDLE)phKernelSyncInfoHandles;
+	pahDstSyncHandles = psDoKickIN->sCCBKick.hDstSyncHandles;
 	for (i = 0; i < ui32NumDstSyncs; i++) {
 	psRetOUT->eError = PVRSRVLookupHandle(
-	psPerProc->psHandleBase,
-	&psDoKickIN->sCCBKick.pahDstSyncHandles[i],
-	psDoKickIN->sCCBKick.pahDstSyncHandles[i],
+	psPerProc->psHandleBase, &pahDstSyncHandles[i],
+	pahDstSyncHandles[i],
 	PVRSRV_HANDLE_TYPE_SYNC_INFO);
 
 	if (psRetOUT->eError != PVRSRV_OK) {
@@ -698,11 +700,12 @@ SGXGetMiscInfoBW(IMG_UINT32 ui32BridgeID,
 
 #if defined(SUPPORT_SGX_EDM_MEMORY_DEBUG)
 	/* Lookup handle for dev mem context */
-	if (psSGXGetMiscInfoIN->psMiscInfo->eRequest ==
+	if (((SGX_MISC_INFO *)psSGXGetMiscInfoIN->hMiscInfo)->eRequest ==
 	    SGX_MISC_INFO_REQUEST_MEMREAD) {
 	psRetOUT->eError = PVRSRVLookupHandle(
 	psPerProc->psHandleBase, &hDevMemContextInt,
-	psSGXGetMiscInfoIN->psMiscInfo->hDevMemContext,
+	((SGX_MISC_INFO *)psSGXGetMiscInfoIN->hMiscInfo)
+	->hDevMemContext,
 	PVRSRV_HANDLE_TYPE_DEV_MEM_CONTEXT);
 
 	if (psRetOUT->eError != PVRSRV_OK) {
@@ -720,10 +723,10 @@ SGXGetMiscInfoBW(IMG_UINT32 ui32BridgeID,
 	psDevInfo = psDeviceNode->pvDevice;
 
 	/* Copy psMiscInfo to kernel space */
-	psRetOUT->eError = CopyFromUserWrapper(psPerProc, ui32BridgeID,
-	       &sMiscInfo,
-	       psSGXGetMiscInfoIN->psMiscInfo,
-	       sizeof(SGX_MISC_INFO));
+	psRetOUT->eError = CopyFromUserWrapper(
+	psPerProc, ui32BridgeID, &sMiscInfo,
+	(SGX_MISC_INFO *)psSGXGetMiscInfoIN->hMiscInfo,
+	sizeof(SGX_MISC_INFO));
 	if (psRetOUT->eError != PVRSRV_OK) {
 	return -EFAULT;
 	}
@@ -738,9 +741,10 @@ SGXGetMiscInfoBW(IMG_UINT32 ui32BridgeID,
 	}
 
 	/* Copy back misc info to user address space */
-	psRetOUT->eError = CopyToUserWrapper(psPerProc, ui32BridgeID,
-	     psSGXGetMiscInfoIN->psMiscInfo,
-	     &sMiscInfo, sizeof(SGX_MISC_INFO));
+	psRetOUT->eError = CopyToUserWrapper(
+	psPerProc, ui32BridgeID,
+	(SGX_MISC_INFO *)psSGXGetMiscInfoIN->hMiscInfo, &sMiscInfo,
+	sizeof(SGX_MISC_INFO));
 	if (psRetOUT->eError != PVRSRV_OK) {
 	return -EFAULT;
 	}
@@ -754,7 +758,7 @@ SGXReadHWPerfCBBW(IMG_UINT32 ui32BridgeID,
 	  PVRSRV_PER_PROCESS_DATA *psPerProc)
 {
 	IMG_HANDLE hDevCookieInt;
-	PVRSRV_SGX_HWPERF_CB_ENTRY *psAllocated;
+	PVRSRV_SGX_HWPERF_CB_ENTRY *psAllocated, *psHWPerfCBData;
 	IMG_HANDLE hAllocatedHandle;
 	IMG_UINT32 ui32AllocatedSize;
 
@@ -768,9 +772,10 @@ SGXReadHWPerfCBBW(IMG_UINT32 ui32BridgeID,
 	if (psSGXReadHWPerfCBOUT->eError != PVRSRV_OK) {
 	return 0;
 	}
-
-	ui32AllocatedSize = psSGXReadHWPerfCBIN->ui32ArraySize *
-	    sizeof(psSGXReadHWPerfCBIN->psHWPerfCBData[0]);
+	psHWPerfCBData = (PVRSRV_SGX_HWPERF_CB_ENTRY *)
+	 psSGXReadHWPerfCBIN->hHWPerfCBData;
+	ui32AllocatedSize =
+	psSGXReadHWPerfCBIN->ui32ArraySize * sizeof(psHWPerfCBData[0]);
 	ASSIGN_AND_EXIT_ON_ERROR(
 	psSGXReadHWPerfCBOUT->eError,
 	OSAllocMem(
@@ -784,10 +789,9 @@ SGXReadHWPerfCBBW(IMG_UINT32 ui32BridgeID,
 	&psSGXReadHWPerfCBOUT->ui32ClockSpeed,
 	&psSGXReadHWPerfCBOUT->ui32HostTimeStamp);
 	if (psSGXReadHWPerfCBOUT->eError == PVRSRV_OK) {
-	psSGXReadHWPerfCBOUT->eError =
-	CopyToUserWrapper(psPerProc, ui32BridgeID,
-	  psSGXReadHWPerfCBIN->psHWPerfCBData,
-	  psAllocated, ui32AllocatedSize);
+	psSGXReadHWPerfCBOUT->eError = CopyToUserWrapper(
+	psPerProc, ui32BridgeID, psHWPerfCBData, psAllocated,
+	ui32AllocatedSize);
 	}
 
 	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, ui32AllocatedSize, psAllocated,
@@ -1660,7 +1664,8 @@ static IMG_INT SGXRegisterHW2DContextBW(
 	}
 
 	hHW2DContextInt = SGXRegisterHW2DContextKM(
-	hDevCookieInt, psSGXRegHW2DContextIN->pHW2DContextCpuVAddr,
+	hDevCookieInt,
+	(IMG_CPU_VIRTADDR *)psSGXRegHW2DContextIN->hHW2DContextCpuVAddr,
 	psSGXRegHW2DContextIN->ui32HW2DContextSize,
 	psSGXRegHW2DContextIN->ui32OffsetToPDDevPAddr,
 	psSGXRegHW2DContextIN->hDevMemContext,
@@ -2232,7 +2237,7 @@ static IMG_VOID DumpBufferArray(PVRSRV_PER_PROCESS_DATA *psPerProc,
 	IMG_UINT32 ui32Offset;
 
 	psBuffer = &psBufferArray[i];
-	pszName = psBuffer->pszName;
+	pszName = (IMG_CHAR *)psBuffer->hName;
 	if (!pszName) {
 	pszName = "Nameless buffer";
 	}
@@ -2264,7 +2269,7 @@ static IMG_VOID DumpBufferArray(PVRSRV_PER_PROCESS_DATA *psPerProc,
 	}
 
 	PDUMPCOMMENTWITHFLAGS(0, "%s\r\n", pszName);
-	PDUMPMEMUM(psPerProc, IMG_NULL, psBuffer->pvLinAddr,
+	PDUMPMEMUM(psPerProc, IMG_NULL, psBuffer->hLinAddr,
 	   (PVRSRV_KERNEL_MEM_INFO *)
 	   psBuffer->hKernelMemInfo,
 	   psBuffer->ui32Start,
@@ -2285,7 +2290,7 @@ static IMG_VOID DumpBufferArray(PVRSRV_PER_PROCESS_DATA *psPerProc,
 	 MAKEUNIQUETAG(psCtrlMemInfoKM));
 	}
 	PDUMPCOMMENTWITHFLAGS(0, "%s (part 1)\r\n", pszName);
-	PDUMPMEMUM(psPerProc, IMG_NULL, psBuffer->pvLinAddr,
+	PDUMPMEMUM(psPerProc, IMG_NULL, psBuffer->hLinAddr,
 	   (PVRSRV_KERNEL_MEM_INFO *)
 	   psBuffer->hKernelMemInfo,
 	   psBuffer->ui32Start,
@@ -2305,7 +2310,7 @@ static IMG_VOID DumpBufferArray(PVRSRV_PER_PROCESS_DATA *psPerProc,
 	 MAKEUNIQUETAG(psCtrlMemInfoKM));
 	}
 	PDUMPCOMMENTWITHFLAGS(0, "%s (part 2)\r\n", pszName);
-	PDUMPMEMUM(psPerProc, IMG_NULL, psBuffer->pvLinAddr,
+	PDUMPMEMUM(psPerProc, IMG_NULL, psBuffer->hLinAddr,
 	   (PVRSRV_KERNEL_MEM_INFO *)
 	   psBuffer->hKernelMemInfo,
 	   0, psBuffer->ui32End, 0, hUniqueTag);
@@ -2343,7 +2348,7 @@ SGXPDumpBufferArrayBW(IMG_UINT32 ui32BridgeID,
 	}
 
 	if (CopyFromUserWrapper(psPerProc, ui32BridgeID, psKickTADumpBuffer,
-	psPDumpBufferArrayIN->psBufferArray,
+	psPDumpBufferArrayIN->hBufferArray,
 	ui32BufferArraySize) != PVRSRV_OK) {
 	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, ui32BufferArraySize,
 	  psKickTADumpBuffer, 0);
@@ -2365,7 +2370,7 @@ SGXPDumpBufferArrayBW(IMG_UINT32 ui32BridgeID,
 	pszName = pszNameBuffer;
 
 	for (i = 0; i < ui32BufferArrayLength; i++) {
-	if (psKickTADumpBuffer[i].pszName) {
+	if (psKickTADumpBuffer[i].hName) {
 	ui32NameLength = psKickTADumpBuffer[i].ui32NameLength;
 	if (ui32NameLength >= NAME_BUFFER_SIZE) {
 	ui32NameLength = NAME_BUFFER_SIZE - 1;
@@ -2374,15 +2379,16 @@ SGXPDumpBufferArrayBW(IMG_UINT32 ui32BridgeID,
 	if (ui32NameLength &&
 	    (CopyFromUserWrapper(
 	     psPerProc, ui32BridgeID, pszName,
-	     psKickTADumpBuffer[i].pszName,
+	     psKickTADumpBuffer[i].hName,
 	     ui32NameLength + 1) == PVRSRV_OK)) {
 	pszName[NAME_BUFFER_SIZE - 1] = 0;
-	psKickTADumpBuffer[i].pszName = pszName;
+	psKickTADumpBuffer[i].hName =
+	(IMG_HANDLE)pszName;
 	pszName += NAME_BUFFER_SIZE;
 	} else {
 	PVR_DPF((PVR_DBG_WARNING,
 	 "Failed to read PDUMP buffer name"));
-	psKickTADumpBuffer[i].pszName = 0;
+	psKickTADumpBuffer[i].hName = 0;
 	}
 	}
 	}
@@ -2506,7 +2512,7 @@ SGXPDump3DSignatureRegistersBW(IMG_UINT32 ui32BridgeID,
 	}
 
 	if (CopyFromUserWrapper(psPerProc, ui32BridgeID, pui32Registers,
-	psPDump3DSignatureRegistersIN->pui32Registers,
+	psPDump3DSignatureRegistersIN->hRegisters,
 	ui32RegisterArraySize) != PVRSRV_OK) {
 	PVR_DPF((
 	PVR_DBG_ERROR,
@@ -2612,7 +2618,7 @@ static IMG_INT SGXPDumpCounterRegistersBW(
 	}
 
 	if (CopyFromUserWrapper(psPerProc, ui32BridgeID, pui32Registers,
-	psPDumpCounterRegistersIN->pui32Registers,
+	psPDumpCounterRegistersIN->hRegisters,
 	ui32RegisterArraySize) != PVRSRV_OK) {
 	PVR_DPF((PVR_DBG_ERROR,
 	 "PDumpCounterRegistersBW: CopyFromUserWrapper failed"));
@@ -2703,7 +2709,7 @@ SGXPDumpTASignatureRegistersBW(IMG_UINT32 ui32BridgeID,
 	}
 
 	if (CopyFromUserWrapper(psPerProc, ui32BridgeID, pui32Registers,
-	psPDumpTASignatureRegistersIN->pui32Registers,
+	psPDumpTASignatureRegistersIN->hRegisters,
 	ui32RegisterArraySize) != PVRSRV_OK) {
 	PVR_DPF((
 	PVR_DBG_ERROR,

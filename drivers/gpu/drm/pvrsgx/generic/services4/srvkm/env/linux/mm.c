@@ -68,7 +68,8 @@ typedef enum {
 	DEBUG_MEM_ALLOC_TYPE_IOREMAP,
 	DEBUG_MEM_ALLOC_TYPE_IO,
 	DEBUG_MEM_ALLOC_TYPE_KMEM_CACHE,
-	DEBUG_MEM_ALLOC_TYPE_COUNT
+	DEBUG_MEM_ALLOC_TYPE_COUNT,
+	DEBUG_MEM_ALLOC_TYPE_ION
 } DEBUG_MEM_ALLOC_TYPE;
 
 typedef struct _DEBUG_MEM_ALLOC_REC {
@@ -360,18 +361,8 @@ DebugMemAllocRecordAdd(DEBUG_MEM_ALLOC_TYPE eAllocType, IMG_VOID *pvKey,
 	DEBUG_MEM_ALLOC_REC *psRecord;
 
 	LinuxLockMutex(&g_sDebugMutex);
-	psRecord = kzalloc(sizeof(DEBUG_MEM_ALLOC_REC), GFP_KERNEL);
-	if (psRecord == NULL) {
-	/* If it can't allocate memory, it means that we can't
-	 * record the usage of memory. So skip it as
-	 * it is harmless.
-	 */
-	LinuxUnLockMutex(&g_sDebugMutex);
-	PVR_DPF((PVR_DBG_ERROR,
-	 "%s: failed to allocate linux memory record.",
-	 __func__));
-	return;
-	}
+
+	psRecord = kmalloc(sizeof(DEBUG_MEM_ALLOC_REC), GFP_KERNEL);
 
 	psRecord->eAllocType = eAllocType;
 	psRecord->pvKey = pvKey;
@@ -499,8 +490,7 @@ IMG_VOID *_VMallocWrapper(IMG_UINT32 ui32Bytes, IMG_UINT32 ui32AllocFlags,
 	return NULL;
 	}
 
-	pvRet = __vmalloc(ui32Bytes, GFP_KERNEL | __GFP_HIGHMEM | __GFP_ZERO,
-	  PGProtFlags);
+	pvRet = __vmalloc(ui32Bytes, GFP_KERNEL | __GFP_HIGHMEM, PGProtFlags);
 
 #if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
 	if (pvRet) {
@@ -884,8 +874,7 @@ LinuxMemArea *NewAllocPagesLinuxMemArea(IMG_UINT32 ui32Bytes,
 	}
 
 	for (i = 0; i < (IMG_INT32)ui32PageCount; i++) {
-	pvPageList[i] =
-	alloc_pages(GFP_KERNEL | __GFP_HIGHMEM | __GFP_ZERO, 0);
+	pvPageList[i] = alloc_pages(GFP_KERNEL | __GFP_HIGHMEM, 0);
 	if (!pvPageList[i]) {
 	goto failed_alloc_pages;
 	}
@@ -978,6 +967,220 @@ FreeAllocPagesLinuxMemArea(LinuxMemArea *psLinuxMemArea)
 	LinuxMemAreaStructFree(psLinuxMemArea);
 }
 
+#if defined(CONFIG_ION_OMAP)
+
+#include "env_perproc.h"
+
+#include <linux/ion.h>
+#include <linux/omap_ion.h>
+
+#define TILER_ENABLE_CO_ALIGNED_BUFFER_ALLOCATIONS 1
+
+extern struct ion_client *gpsIONClient;
+
+LinuxMemArea *NewIONLinuxMemArea(IMG_UINT32 ui32Bytes, IMG_UINT32 ui32AreaFlags,
+	 IMG_PVOID pvPrivData,
+	 IMG_UINT32 ui32PrivDataLength)
+{
+	const IMG_UINT32 ui32AllocDataLen =
+	offsetof(struct omap_ion_tiler_alloc_data, handle);
+	struct omap_ion_tiler_alloc_data
+	asAllocData[PVRSRV_MAX_NUMBER_OF_MM_BUFFER_PLANES] = {};
+	u32 *pu32PageAddrs[PVRSRV_MAX_NUMBER_OF_MM_BUFFER_PLANES] = { NULL,
+	      NULL };
+	IMG_UINT32 i, ui32NumHandlesPerFd;
+	IMG_BYTE *pbPrivData = pvPrivData;
+	IMG_CPU_PHYADDR *pCPUPhysAddrs;
+	int iNumPages[PVRSRV_MAX_NUMBER_OF_MM_BUFFER_PLANES] = { 0, 0 };
+	LinuxMemArea *psLinuxMemArea;
+	IMG_UINT32 ui32ProcID;
+	IMG_UINT32 ui32TotalPagesSizeInBytes = 0;
+
+	psLinuxMemArea = LinuxMemAreaStructAlloc();
+	if (!psLinuxMemArea) {
+	PVR_DPF((PVR_DBG_ERROR,
+	 "%s: Failed to allocate LinuxMemArea struct",
+	 __func__));
+	goto err_out;
+	}
+
+	BUG_ON(ui32PrivDataLength != ui32AllocDataLen &&
+	       ui32PrivDataLength != ui32AllocDataLen * 2);
+	/* This is bad !- change this logic to pass in the size or
+     * use uniformed API */
+	ui32NumHandlesPerFd = ui32PrivDataLength / ui32AllocDataLen;
+
+	ui32ProcID = OSGetCurrentProcessIDKM();
+
+	/* We do not care about what the first (Y) buffer offset would be,
+     * but we do care for the UV buffers to be co-aligned with Y
+     * This for SGX to find the UV offset solely based on the height
+     * and stride of the YUV buffer.This is very important for OMAP4470
+     * and later chipsets, where SGX version is 544. 544 and later use
+     * non-shader based YUV to RGB conversion unit that require
+     * contiguous GPU virtual space */
+	for (i = 0; i < ui32NumHandlesPerFd; i++) {
+	memcpy(&asAllocData[i], &pbPrivData[i * ui32AllocDataLen],
+	       ui32AllocDataLen);
+	asAllocData[i].token = ui32ProcID;
+
+	if ((i == 0) || (!TILER_ENABLE_CO_ALIGNED_BUFFER_ALLOCATIONS)) {
+	/* Tiler API says:
+             * Allocate first buffer with the required alignment
+             * and an offset of 0 ... */
+	asAllocData[i].out_align = CONFIG_TILER_GRANULARITY;
+	asAllocData[i].offset = 0;
+	} else { /*  .. Then for the second buffer, use the offset from the first
+            * buffer with alignment of PAGE_SIZE */
+	asAllocData[i].out_align = PAGE_SIZE;
+	asAllocData[i].offset = asAllocData[0].offset;
+	}
+
+	if (omap_ion_tiler_alloc(gpsIONClient, &asAllocData[i]) < 0) {
+	PVR_DPF((PVR_DBG_ERROR,
+	 "%s: Failed to allocate via ion_tiler",
+	 __func__));
+	goto err_free;
+	}
+
+	if (omap_tiler_pages(gpsIONClient, asAllocData[i].handle,
+	     &iNumPages[i], &pu32PageAddrs[i]) < 0) {
+	PVR_DPF((PVR_DBG_ERROR,
+	 "%s: Failed to compute tiler pages",
+	 __func__));
+	goto err_free;
+	}
+	}
+
+	BUG_ON(ui32Bytes != (iNumPages[0] + iNumPages[1]) * PAGE_SIZE);
+	BUG_ON(sizeof(IMG_CPU_PHYADDR) != sizeof(int));
+
+	pCPUPhysAddrs = vmalloc(sizeof(IMG_CPU_PHYADDR) *
+	(iNumPages[0] + iNumPages[1]));
+	if (!pCPUPhysAddrs) {
+	PVR_DPF((PVR_DBG_ERROR, "%s: Failed to allocate page list",
+	 __func__));
+	goto err_free;
+	}
+	for (i = 0; i < iNumPages[0]; i++)
+	pCPUPhysAddrs[i].uiAddr = pu32PageAddrs[0][i];
+	for (i = 0; i < iNumPages[1]; i++)
+	pCPUPhysAddrs[iNumPages[0] + i].uiAddr = pu32PageAddrs[1][i];
+
+#if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
+	DebugMemAllocRecordAdd(DEBUG_MEM_ALLOC_TYPE_ION, asAllocData[0].handle,
+	       0, 0, NULL, PAGE_ALIGN(ui32Bytes), "unknown", 0);
+#endif
+
+	if ((asAllocData[0].offset != asAllocData[1].offset) &&
+	    TILER_ENABLE_CO_ALIGNED_BUFFER_ALLOCATIONS) {
+	pr_err("%s: Y and UV offsets do not match for tiler handles "
+	       "%p,%p: %d != %d \n "
+	       "Expect issues with OMAP4470 (SGX544) and later chipsets\n",
+	       __func__, asAllocData[0].handle, asAllocData[1].handle,
+	       (int)asAllocData[0].offset, (int)asAllocData[1].offset);
+	}
+
+	for (i = 0; i < PVRSRV_MAX_NUMBER_OF_MM_BUFFER_PLANES; i++) {
+	psLinuxMemArea->uData.sIONTilerAlloc.psIONHandle[i] =
+	asAllocData[i].handle;
+	psLinuxMemArea->uData.sIONTilerAlloc.planeOffsets[i] =
+	ui32TotalPagesSizeInBytes + asAllocData[i].offset;
+	/* Add the number of pages this plane consists of */
+	ui32TotalPagesSizeInBytes += (iNumPages[i] * PAGE_SIZE);
+	}
+
+	psLinuxMemArea->eAreaType = LINUX_MEM_AREA_ION;
+	psLinuxMemArea->uData.sIONTilerAlloc.pCPUPhysAddrs = pCPUPhysAddrs;
+	psLinuxMemArea->uData.sIONTilerAlloc.ui32NumValidPlanes =
+	ui32NumHandlesPerFd;
+	psLinuxMemArea->ui32ByteSize = ui32TotalPagesSizeInBytes;
+	psLinuxMemArea->ui32AreaFlags = ui32AreaFlags;
+	INIT_LIST_HEAD(&psLinuxMemArea->sMMapOffsetStructList);
+
+	if (ui32AreaFlags & (PVRSRV_HAP_WRITECOMBINE | PVRSRV_HAP_UNCACHED))
+	psLinuxMemArea->bNeedsCacheInvalidate = IMG_TRUE;
+
+#if defined(DEBUG_LINUX_MEM_AREAS)
+	DebugLinuxMemAreaRecordAdd(psLinuxMemArea, ui32AreaFlags);
+#endif
+
+err_out:
+	return psLinuxMemArea;
+
+err_free:
+	LinuxMemAreaStructFree(psLinuxMemArea);
+	psLinuxMemArea = IMG_NULL;
+	goto err_out;
+}
+
+IMG_INT32
+GetIONLinuxMemAreaInfo(LinuxMemArea *psLinuxMemArea,
+	       IMG_UINT32 *pui32AddressOffsets,
+	       IMG_UINT32 *ui32NumAddrOffsets)
+{
+	IMG_UINT32 i;
+
+	if (!ui32NumAddrOffsets)
+	return -1;
+
+	if (*ui32NumAddrOffsets <
+	    psLinuxMemArea->uData.sIONTilerAlloc.ui32NumValidPlanes) {
+	*ui32NumAddrOffsets =
+	psLinuxMemArea->uData.sIONTilerAlloc.ui32NumValidPlanes;
+	return -1;
+	}
+
+	if (!pui32AddressOffsets)
+	return -1;
+
+	for (i = 0; i < psLinuxMemArea->uData.sIONTilerAlloc.ui32NumValidPlanes;
+	     i++) {
+	if (psLinuxMemArea->uData.sIONTilerAlloc.psIONHandle[i])
+	pui32AddressOffsets[i] =
+	psLinuxMemArea->uData.sIONTilerAlloc
+	.planeOffsets[i];
+	}
+
+	*ui32NumAddrOffsets =
+	psLinuxMemArea->uData.sIONTilerAlloc.ui32NumValidPlanes;
+
+	return psLinuxMemArea->ui32ByteSize;
+}
+
+IMG_VOID
+FreeIONLinuxMemArea(LinuxMemArea *psLinuxMemArea)
+{
+	IMG_UINT32 i;
+
+#if defined(DEBUG_LINUX_MEM_AREAS)
+	DebugLinuxMemAreaRecordRemove(psLinuxMemArea);
+#endif
+
+#if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
+	DebugMemAllocRecordRemove(
+	DEBUG_MEM_ALLOC_TYPE_ION,
+	psLinuxMemArea->uData.sIONTilerAlloc.psIONHandle[0], __FILE__,
+	__LINE__);
+#endif
+
+	for (i = 0; i < psLinuxMemArea->uData.sIONTilerAlloc.ui32NumValidPlanes;
+	     i++) {
+	if (!psLinuxMemArea->uData.sIONTilerAlloc.psIONHandle[i])
+	break;
+	ion_free(gpsIONClient,
+	 psLinuxMemArea->uData.sIONTilerAlloc.psIONHandle[i]);
+	psLinuxMemArea->uData.sIONTilerAlloc.psIONHandle[i] = IMG_NULL;
+	}
+
+	vfree(psLinuxMemArea->uData.sIONTilerAlloc.pCPUPhysAddrs);
+	psLinuxMemArea->uData.sIONTilerAlloc.pCPUPhysAddrs = IMG_NULL;
+
+	LinuxMemAreaStructFree(psLinuxMemArea);
+}
+
+#endif
+
 struct page *LinuxMemAreaOffsetToPage(LinuxMemArea *psLinuxMemArea,
 	      IMG_UINT32 ui32ByteOffset)
 {
@@ -1043,10 +1246,8 @@ IMG_VOID *_KMemCacheAllocWrapper(LinuxKMemCache *psCache,
 	pvRet = kmem_cache_zalloc(psCache, Flags);
 
 #if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
-	if (pvRet)
-	DebugMemAllocRecordAdd(DEBUG_MEM_ALLOC_TYPE_KMEM_CACHE, pvRet,
-	       pvRet, 0, psCache,
-	       kmem_cache_size(psCache), pszFileName,
+	DebugMemAllocRecordAdd(DEBUG_MEM_ALLOC_TYPE_KMEM_CACHE, pvRet, pvRet, 0,
+	       psCache, kmem_cache_size(psCache), pszFileName,
 	       ui32Line);
 #else
 	PVR_UNREFERENCED_PARAMETER(pszFileName);
@@ -1165,6 +1366,9 @@ LinuxMemAreaDeepFree(LinuxMemArea *psLinuxMemArea)
 	break;
 	case LINUX_MEM_AREA_SUB_ALLOC:
 	FreeSubLinuxMemArea(psLinuxMemArea);
+	break;
+	case LINUX_MEM_AREA_ION:
+	FreeIONLinuxMemArea(psLinuxMemArea);
 	break;
 	default:
 	PVR_DPF((PVR_DBG_ERROR, "%s: Unknown are type (%d)\n",
@@ -1336,6 +1540,13 @@ LinuxMemAreaToCpuPAddr(LinuxMemArea *psLinuxMemArea, IMG_UINT32 ui32ByteOffset)
 	CpuPAddr.uiAddr = VMallocToPhys(pCpuVAddr);
 	break;
 	}
+	case LINUX_MEM_AREA_ION: {
+	IMG_UINT32 ui32PageIndex = PHYS_TO_PFN(ui32ByteOffset);
+	CpuPAddr = psLinuxMemArea->uData.sIONTilerAlloc
+	   .pCPUPhysAddrs[ui32PageIndex];
+	CpuPAddr.uiAddr += ADDR_TO_PAGE_OFFSET(ui32ByteOffset);
+	break;
+	}
 	case LINUX_MEM_AREA_ALLOC_PAGES: {
 	struct page *page;
 	IMG_UINT32 ui32PageIndex = PHYS_TO_PFN(ui32ByteOffset);
@@ -1352,8 +1563,9 @@ LinuxMemAreaToCpuPAddr(LinuxMemArea *psLinuxMemArea, IMG_UINT32 ui32ByteOffset)
 	break;
 	}
 	default: {
-	PVR_DPF((PVR_DBG_ERROR, "%s: Unknown LinuxMemArea type (%d)\n",
+	PVR_DPF((PVR_DBG_ERROR, "%s: Unknown LinuxMemArea type (%d)",
 	 __FUNCTION__, psLinuxMemArea->eAreaType));
+	dump_stack();
 	PVR_ASSERT(CpuPAddr.uiAddr);
 	break;
 	}
@@ -1373,6 +1585,7 @@ LinuxMemAreaPhysIsContig(LinuxMemArea *psLinuxMemArea)
 	case LINUX_MEM_AREA_EXTERNAL_KV:
 	return psLinuxMemArea->uData.sExternalKV.bPhysContig;
 
+	case LINUX_MEM_AREA_ION:
 	case LINUX_MEM_AREA_VMALLOC:
 	case LINUX_MEM_AREA_ALLOC_PAGES:
 	return IMG_FALSE;
@@ -1383,7 +1596,7 @@ LinuxMemAreaPhysIsContig(LinuxMemArea *psLinuxMemArea)
 	psLinuxMemArea->uData.sSubAlloc.psParentLinuxMemArea);
 
 	default:
-	PVR_DPF((PVR_DBG_ERROR, "%s: Unknown LinuxMemArea type (%d)\n",
+	PVR_DPF((PVR_DBG_ERROR, "%s: Unknown LinuxMemArea type (%d)",
 	 __FUNCTION__, psLinuxMemArea->eAreaType));
 	break;
 	}
@@ -1405,6 +1618,8 @@ const IMG_CHAR *LinuxMemAreaTypeToString(LINUX_MEM_AREA_TYPE eMemAreaType)
 	return "LINUX_MEM_AREA_SUB_ALLOC";
 	case LINUX_MEM_AREA_ALLOC_PAGES:
 	return "LINUX_MEM_AREA_ALLOC_PAGES";
+	case LINUX_MEM_AREA_ION:
+	return "LINUX_MEM_AREA_ION";
 	default:
 	PVR_ASSERT(0);
 	}

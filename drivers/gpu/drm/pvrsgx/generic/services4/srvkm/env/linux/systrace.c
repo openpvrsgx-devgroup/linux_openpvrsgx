@@ -155,10 +155,6 @@ void SystraceCreateFS(void)
 	capture_sgx_hwperfdata_ret = debugfs_create_bool(
 	"gpu_tracing_on", S_IFREG | S_IRUGO | S_IWUSR, pvrdir_ret,
 	&capture_hwperfdata);
-
-#if defined(MTK_DEBUG)
-	capture_hwperfdata = 1;
-#endif
 }
 
 void SystraceDestroyFS(void)

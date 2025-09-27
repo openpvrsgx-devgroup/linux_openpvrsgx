@@ -91,7 +91,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /* Decide whether or not DevMem allocs need __GFP_DMA32 */
 #ifndef SGX_FEATURE_36BIT_MMU
-#ifdef CONFIG_ZONE_DMA32
+#ifdef CONFIG_ZONE_DMA
 #if defined CONFIG_X86_PAE || defined CONFIG_ARM_LPAE || defined CONFIG_64BIT
 #define PVR_USE_DMA32_FOR_DEVMEM_ALLOCS
 #endif
@@ -440,6 +440,35 @@ static IMG_BOOL AllocFlagsToPGProt(pgprot_t *pPGProtFlags,
 	return IMG_TRUE;
 }
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 8, 0))
+#else
+/* provide pre-5.8 __vmalloc() with 3 parameters */
+
+#include <linux/kallsyms.h>
+
+static void *__old_vmalloc_node(unsigned long size, unsigned long align,
+	gfp_t gfp_mask, pgprot_t prot, int node,
+	const void *caller)
+{
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 10, 0))
+	/* we need to add EXPORT_SYMBOL(__vmalloc_node_range); to vmalloc.c */
+	return __vmalloc_node_range(size, align, VMALLOC_START, VMALLOC_END,
+	    gfp_mask, prot, 0, node, caller);
+#else
+	/* we need to add EXPORT_SYMBOL(__vmalloc_node_range_noprof); to vmalloc.c */
+	return __vmalloc_node_range_noprof(size, align, VMALLOC_START,
+	   VMALLOC_END, gfp_mask, prot, 0, node,
+	   caller);
+#endif
+}
+
+static void *__old_vmalloc(unsigned long size, gfp_t gfp_mask, pgprot_t prot)
+{
+	return __old_vmalloc_node(size, 1, gfp_mask, prot, NUMA_NO_NODE,
+	  __builtin_return_address(0));
+}
+#endif
+
 IMG_VOID *_VMallocWrapper(IMG_SIZE_T uiBytes, IMG_UINT32 ui32AllocFlags,
 	  IMG_CHAR *pszFileName, IMG_UINT32 ui32Line)
 {
@@ -460,7 +489,13 @@ IMG_VOID *_VMallocWrapper(IMG_SIZE_T uiBytes, IMG_UINT32 ui32AllocFlags,
 #endif
 
 	/* Allocate virtually contiguous pages */
+//printk("%s: PGProtFlags = %0lx\n", __func__, (long) PGProtFlags);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 8, 0))
 	pvRet = __vmalloc(uiBytes, gfp_mask, PGProtFlags);
+#else
+	// if(PGProtFlags != PAGE_KERNEL) printk("%s: PGProtFlags != PAGE_KERNEL\n", __func__);
+	pvRet = __old_vmalloc(uiBytes, gfp_mask, PGProtFlags);
+#endif
 
 #if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
 	if (pvRet) {

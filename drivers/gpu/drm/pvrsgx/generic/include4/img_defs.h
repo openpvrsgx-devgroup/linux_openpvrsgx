@@ -22,8 +22,7 @@
  * Imagination Technologies Ltd. <gpl-support@imgtec.com>
  * Home Park Estate, Kings Langley, Herts, WD4 8LZ, UK
  *
- ******************************************************************************/
-
+*******************************************************************************/
 #if !defined(__IMG_DEFS_H__)
 #define __IMG_DEFS_H__
 
@@ -56,26 +55,35 @@ typedef enum img_tag_TriStateSwitch {
 #endif
 #endif
 
+/* Use this in any file, or use attributes under GCC - see below */
 #ifndef PVR_UNREFERENCED_PARAMETER
 #define PVR_UNREFERENCED_PARAMETER(param) (param) = (param)
 #endif
 
+/* The best way to supress unused parameter warnings using GCC is to use a
+ * variable attribute.  Place the unref__ between the type and name of an
+ * unused parameter in a function parameter list, eg `int unref__ var'. This
+ * should only be used in GCC build environments, for example, in files that
+ * compile only on Linux. Other files should use UNREFERENCED_PARAMETER */
 #ifdef __GNUC__
 #define unref__ __attribute__((unused))
 #else
 #define unref__
 #endif
 
+/*
+	Wide character definitions
+*/
 #ifndef _TCHAR_DEFINED
 #if defined(UNICODE)
 typedef unsigned short TCHAR, *PTCHAR, *PTSTR;
-#else
+#else /* #if defined(UNICODE) */
 typedef char TCHAR, *PTCHAR, *PTSTR;
-#endif
+#endif /* #if defined(UNICODE) */
 #define _TCHAR_DEFINED
-#endif
+#endif /* #ifndef _TCHAR_DEFINED */
 
-#if defined(__linux__) || defined(__QNXNTO__) || defined(__METAG)
+#if defined(__linux__) || defined(__METAG)
 
 #define IMG_CALLCONV
 #define IMG_INTERNAL __attribute__((visibility("hidden")))
@@ -87,6 +95,7 @@ typedef char TCHAR, *PTCHAR, *PTSTR;
 #error("define an OS")
 #endif
 
+// Use default definition if not overridden
 #ifndef IMG_ABORT
 #define IMG_ABORT() abort()
 #endif
@@ -107,6 +116,9 @@ typedef char TCHAR, *PTCHAR, *PTSTR;
 #define IMG_FORMAT_PRINTF(x, y)
 #endif
 
+/*
+ * Cleanup request defines
+  */
 #define CLEANUP_WITH_POLL IMG_FALSE
 #define FORCE_CLEANUP IMG_TRUE
 
@@ -116,4 +128,7 @@ typedef char TCHAR, *PTCHAR, *PTSTR;
 #define IMG_UNDEF (~0UL)
 #endif
 
-#endif
+#endif /* #if !defined (__IMG_DEFS_H__) */
+/*****************************************************************************
+ End of file (IMG_DEFS.H)
+*****************************************************************************/

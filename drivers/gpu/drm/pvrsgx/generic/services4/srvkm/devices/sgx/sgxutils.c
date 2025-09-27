@@ -733,6 +733,8 @@ PVRSRV_ERROR SGXScheduleCCBCommandKM(PVRSRV_DEVICE_NODE *psDeviceNode,
 	 "SGXScheduleCCBCommandKM failed to acquire lock - "
 	 "ui32CallerID:%d eError:%u",
 	 ui32CallerID, eError));
+	//[MTK]should add here.
+	PVRSRVPowerUnlock(ui32CallerID);
 	return eError;
 	}
 
@@ -994,6 +996,15 @@ static PVRSRV_ERROR SGXCleanupHWRenderContextCallback(IMG_PVOID pvParam,
 	psCleanup->bCleanupTimerRunning = IMG_TRUE;
 	} else {
 	if (OSTimeHasTimePassed(psCleanup->pvTimeData)) {
+#ifdef MTK_DEBUG
+	PVR_DPF((
+	PVR_DBG_ERROR,
+	"SGXCleanupHWRenderContextCallback: PollingTimeOut"));
+
+	SGXDumpDebugInfo(
+	psCleanup->psDeviceNode->pvDevice,
+	IMG_TRUE);
+#endif
 	eError = PVRSRV_ERROR_TIMEOUT_POLLING_FOR_VALUE;
 	psCleanup->bCleanupTimerRunning = IMG_FALSE;
 	OSTimeDestroy(psCleanup->pvTimeData);
@@ -1051,6 +1062,11 @@ static PVRSRV_ERROR SGXCleanupHWTransferContextCallback(IMG_PVOID pvParam,
 	psCleanup->bCleanupTimerRunning = IMG_TRUE;
 	} else {
 	if (OSTimeHasTimePassed(psCleanup->pvTimeData)) {
+#ifdef MTK_DEBUG
+	PVR_DPF((
+	PVR_DBG_ERROR,
+	"SGXCleanupHWTransferContextCallback: PollingTimeOut"));
+#endif
 	eError = PVRSRV_ERROR_TIMEOUT_POLLING_FOR_VALUE;
 	psCleanup->bCleanupTimerRunning = IMG_FALSE;
 	OSTimeDestroy(psCleanup->pvTimeData);

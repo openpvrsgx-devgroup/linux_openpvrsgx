@@ -62,7 +62,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 
 #if defined(SUPPORT_DRI_DRM_PLUGIN)
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 5, 0))
 #include <drm/drmP.h>
+#else
+#include <drm/drm_file.h>
+#endif
 #include <drm/drm.h>
 
 #include <linux/omap_gpu.h>
@@ -273,12 +277,13 @@ PVRSRV_ERROR EnableSGXClocks(SYS_DATA *psSysData)
 ******************************************************************************/
 IMG_VOID DisableSGXClocks(SYS_DATA *psSysData)
 {
+#if 0
 #if !defined(NO_HARDWARE)
-	SYS_SPECIFIC_DATA *psSysSpecData =
-	(SYS_SPECIFIC_DATA *)psSysData->pvSysSpecificData;
+	SYS_SPECIFIC_DATA *psSysSpecData = (SYS_SPECIFIC_DATA *) psSysData->pvSysSpecificData;
 
 	/* SGX clocks already disabled? */
-	if (atomic_read(&psSysSpecData->sSGXClocksEnabled) == 0) {
+	if (atomic_read(&psSysSpecData->sSGXClocksEnabled) == 0)
+	{
 	return;
 	}
 
@@ -289,11 +294,9 @@ IMG_VOID DisableSGXClocks(SYS_DATA *psSysData)
 #if defined(LDM_PLATFORM) && !defined(PVR_DRI_DRM_NOT_PCI)
 	{
 	int res = pm_runtime_put_sync(&gpsPVRLDMDev->dev);
-	if (res < 0) {
-	PVR_DPF((
-	PVR_DBG_ERROR,
-	"DisableSGXClocks: pm_runtime_put_sync failed (%d)",
-	-res));
+	if (res < 0)
+	{
+	PVR_DPF((PVR_DBG_ERROR, "DisableSGXClocks: pm_runtime_put_sync failed (%d)", -res));
 	}
 	}
 #if defined(SYS_OMAP4_HAS_DVFS_FRAMEWORK)
@@ -301,8 +304,7 @@ IMG_VOID DisableSGXClocks(SYS_DATA *psSysData)
 	struct gpu_platform_data *pdata;
 	int res;
 
-	pdata = (struct gpu_platform_data *)
-	gpsPVRLDMDev->dev.platform_data;
+	pdata = (struct gpu_platform_data *)gpsPVRLDMDev->dev.platform_data;
 
 	/*
 	 * Request minimum frequency (list index 0) from DVFS layer if not already
@@ -310,26 +312,25 @@ IMG_VOID DisableSGXClocks(SYS_DATA *psSysData)
 	 * are considered serious. Upon any error we proceed assuming our safe frequency
 	 * value to be in use as indicated by the "unknown" index.
 	 */
-	if (psSysSpecData->ui32SGXFreqListIndex != 0) {
+	if (psSysSpecData->ui32SGXFreqListIndex != 0)
+	{
 	PVR_ASSERT(pdata->device_scale != IMG_NULL);
-	res = pdata->device_scale(
-	&gpsPVRLDMDev->dev, &gpsPVRLDMDev->dev,
-	psSysSpecData->pui32SGXFreqList[0]);
-	if (res == 0) {
+	res = pdata->device_scale(&gpsPVRLDMDev->dev,
+	  &gpsPVRLDMDev->dev,
+	  psSysSpecData->pui32SGXFreqList[0]);
+	if (res == 0)
+	{
 	psSysSpecData->ui32SGXFreqListIndex = 0;
-	} else if (res == -EBUSY) {
-	PVR_DPF((
-	PVR_DBG_WARNING,
-	"DisableSGXClocks: Unable to scale SGX frequency (EBUSY)"));
-	psSysSpecData->ui32SGXFreqListIndex =
-	psSysSpecData->ui32SGXFreqListSize - 1;
-	} else if (res < 0) {
-	PVR_DPF((
-	PVR_DBG_ERROR,
-	"DisableSGXClocks: Unable to scale SGX frequency (%d)",
-	res));
-	psSysSpecData->ui32SGXFreqListIndex =
-	psSysSpecData->ui32SGXFreqListSize - 1;
+	}
+	else if (res == -EBUSY)
+	{
+	PVR_DPF((PVR_DBG_WARNING, "DisableSGXClocks: Unable to scale SGX frequency (EBUSY)"));
+	psSysSpecData->ui32SGXFreqListIndex = psSysSpecData->ui32SGXFreqListSize - 1;
+	}
+	else if (res < 0)
+	{
+	PVR_DPF((PVR_DBG_ERROR, "DisableSGXClocks: Unable to scale SGX frequency (%d)", res));
+	psSysSpecData->ui32SGXFreqListIndex = psSysSpecData->ui32SGXFreqListSize - 1;
 	}
 	}
 	}
@@ -342,6 +343,7 @@ IMG_VOID DisableSGXClocks(SYS_DATA *psSysData)
 #else /* !defined(NO_HARDWARE) */
 	PVR_UNREFERENCED_PARAMETER(psSysData);
 #endif /* !defined(NO_HARDWARE) */
+#endif
 }
 
 #if (defined(DEBUG) || defined(TIMING)) && !defined(PVR_NO_OMAP_TIMER)
@@ -685,7 +687,8 @@ IMG_VOID DisableSystemClocks(SYS_DATA *psSysData)
 PVRSRV_ERROR SysPMRuntimeRegister(void)
 {
 #if defined(LDM_PLATFORM) && !defined(PVR_DRI_DRM_NOT_PCI)
-	pm_runtime_enable(&gpsPVRLDMDev->dev);
+	/* Done, see top level pvr-drv.c */
+	//pm_runtime_enable(&gpsPVRLDMDev->dev);
 #endif
 	return PVRSRV_OK;
 }
@@ -693,7 +696,8 @@ PVRSRV_ERROR SysPMRuntimeRegister(void)
 PVRSRV_ERROR SysPMRuntimeUnregister(void)
 {
 #if defined(LDM_PLATFORM) && !defined(PVR_DRI_DRM_NOT_PCI)
-	pm_runtime_disable(&gpsPVRLDMDev->dev);
+	/* Done, see top level pvr-drv.c */
+	//pm_runtime_disable(&gpsPVRLDMDev->dev);
 #endif
 	return PVRSRV_OK;
 }

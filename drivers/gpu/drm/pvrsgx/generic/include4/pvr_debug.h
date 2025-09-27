@@ -43,25 +43,7 @@ extern "C" {
 #define DBGPRIV_VERBOSE 0x10UL
 #define DBGPRIV_CALLTRACE 0x20UL
 #define DBGPRIV_ALLOC 0x40UL
-
-#define DBGPRIV_DBGDRV_MESSAGE 0x1000UL
-
-#define DBGPRIV_ALLLEVELS                                                    \
-	(DBGPRIV_FATAL | DBGPRIV_ERROR | DBGPRIV_WARNING | DBGPRIV_MESSAGE | \
-	 DBGPRIV_VERBOSE)
-
-#define PVR_DBG_FATAL DBGPRIV_FATAL, __FILE__, __LINE__
-#define PVR_DBG_ERROR DBGPRIV_ERROR, __FILE__, __LINE__
-#define PVR_DBG_WARNING DBGPRIV_WARNING, __FILE__, __LINE__
-#define PVR_DBG_MESSAGE DBGPRIV_MESSAGE, __FILE__, __LINE__
-#define PVR_DBG_VERBOSE DBGPRIV_VERBOSE, __FILE__, __LINE__
-#define PVR_DBG_CALLTRACE DBGPRIV_CALLTRACE, __FILE__, __LINE__
-#define PVR_DBG_ALLOC DBGPRIV_ALLOC, __FILE__, __LINE__
-
-/*
- *	Debug driver debugging
- */
-#define PVR_DBGDRIV_MESSAGE DBGPRIV_DBGDRV_MESSAGE, "", 0
+#define DBGPRIV_DBGDRV_MESSAGE 0x80UL
 
 #if !defined(PVRSRV_NEED_PVR_ASSERT) && defined(DEBUG)
 #define PVRSRV_NEED_PVR_ASSERT
@@ -86,11 +68,7 @@ extern "C" {
 IMG_IMPORT IMG_VOID IMG_CALLCONV PVRSRVDebugAssertFail(const IMG_CHAR *pszFile,
 	       IMG_UINT32 ui32Line);
 
-#if defined(PVR_DBG_BREAK_ASSERT_FAIL)
-#define PVR_DBG_BREAK PVRSRVDebugAssertFail("PVR_DBG_BREAK", 0)
-#else
-#define PVR_DBG_BREAK
-#endif
+#define PVR_DBG_BREAK PVRSRVDebugAssertFail(__FILE__, __LINE__)
 
 #else /* defined(PVRSRV_NEED_PVR_ASSERT) */
 
@@ -103,7 +81,66 @@ IMG_IMPORT IMG_VOID IMG_CALLCONV PVRSRVDebugAssertFail(const IMG_CHAR *pszFile,
 
 #if defined(PVRSRV_NEED_PVR_DPF)
 
+#if defined(PVRSRV_NEW_PVR_DPF)
+
+/* New logging mechanism */
+#define PVR_DBG_FATAL DBGPRIV_FATAL
+#define PVR_DBG_ERROR DBGPRIV_ERROR
+#define PVR_DBG_WARNING DBGPRIV_WARNING
+#define PVR_DBG_MESSAGE DBGPRIV_MESSAGE
+#define PVR_DBG_VERBOSE DBGPRIV_VERBOSE
+#define PVR_DBG_CALLTRACE DBGPRIV_CALLTRACE
+#define PVR_DBG_ALLOC DBGPRIV_ALLOC
+#define PVR_DBGDRIV_MESSAGE DBGPRIV_DBGDRV_MESSAGE
+
+/* These levels are always on with PVRSRV_NEED_PVR_DPF */
+#define __PVR_DPF_0x01UL(x...) PVRSRVDebugPrintf(DBGPRIV_FATAL, x)
+#define __PVR_DPF_0x02UL(x...) PVRSRVDebugPrintf(DBGPRIV_ERROR, x)
+
+/* Some are compiled out completely in release builds */
+#if defined(DEBUG)
+#define __PVR_DPF_0x04UL(x...) PVRSRVDebugPrintf(DBGPRIV_WARNING, x)
+#define __PVR_DPF_0x08UL(x...) PVRSRVDebugPrintf(DBGPRIV_MESSAGE, x)
+#define __PVR_DPF_0x10UL(x...) PVRSRVDebugPrintf(DBGPRIV_VERBOSE, x)
+#define __PVR_DPF_0x20UL(x...) PVRSRVDebugPrintf(DBGPRIV_CALLTRACE, x)
+#define __PVR_DPF_0x40UL(x...) PVRSRVDebugPrintf(DBGPRIV_ALLOC, x)
+#define __PVR_DPF_0x80UL(x...) PVRSRVDebugPrintf(DBGPRIV_DBGDRV_MESSAGE, x)
+#else
+#define __PVR_DPF_0x04UL(x...)
+#define __PVR_DPF_0x08UL(x...)
+#define __PVR_DPF_0x10UL(x...)
+#define __PVR_DPF_0x20UL(x...)
+#define __PVR_DPF_0x40UL(x...)
+#define __PVR_DPF_0x80UL(x...)
+#endif
+
+/* Translate the different log levels to separate macros
+	 * so they can each be compiled out.
+	 */
+#if defined(DEBUG)
+#define __PVR_DPF(lvl, x...) __PVR_DPF_##lvl(__FILE__, __LINE__, x)
+#else
+#define __PVR_DPF(lvl, x...) __PVR_DPF_##lvl("", 0, x)
+#endif
+
+/* Get rid of the double bracketing */
+#define PVR_DPF(x) __PVR_DPF x
+
+#else /* defined(PVRSRV_NEW_PVR_DPF) */
+
+/* Old logging mechanism */
+#define PVR_DBG_FATAL DBGPRIV_FATAL, __FILE__, __LINE__
+#define PVR_DBG_ERROR DBGPRIV_ERROR, __FILE__, __LINE__
+#define PVR_DBG_WARNING DBGPRIV_WARNING, __FILE__, __LINE__
+#define PVR_DBG_MESSAGE DBGPRIV_MESSAGE, __FILE__, __LINE__
+#define PVR_DBG_VERBOSE DBGPRIV_VERBOSE, __FILE__, __LINE__
+#define PVR_DBG_CALLTRACE DBGPRIV_CALLTRACE, __FILE__, __LINE__
+#define PVR_DBG_ALLOC DBGPRIV_ALLOC, __FILE__, __LINE__
+#define PVR_DBGDRIV_MESSAGE DBGPRIV_DBGDRV_MESSAGE, "", 0
+
 #define PVR_DPF(X) PVRSRVDebugPrintf X
+
+#endif /* defined(PVRSRV_NEW_PVR_DPF) */
 
 IMG_IMPORT IMG_VOID IMG_CALLCONV PVRSRVDebugPrintf(IMG_UINT32 ui32DebugLevel,
 	   const IMG_CHAR *pszFileName,

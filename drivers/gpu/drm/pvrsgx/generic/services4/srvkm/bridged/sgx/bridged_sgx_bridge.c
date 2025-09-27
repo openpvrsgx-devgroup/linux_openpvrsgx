@@ -1234,7 +1234,7 @@ SGXDevInitPart2BW(IMG_UINT32 ui32BridgeID,
 	}
 #endif
 
-#if defined(FIX_HW_BRN_31542)
+#if defined(FIX_HW_BRN_31542) || defined(FIX_HW_BRN_36513)
 	eError = PVRSRVLookupHandle(psPerProc->psHandleBase, &hDummy,
 	    psSGXDevInitPart2IN->sInitInfo
 	    .hKernelClearClipWAVDMStreamMemInfo,
@@ -1546,7 +1546,7 @@ SGXDevInitPart2BW(IMG_UINT32 ui32BridgeID,
 	}
 #endif
 
-#if defined(FIX_HW_BRN_31542)
+#if defined(FIX_HW_BRN_31542) || defined(FIX_HW_BRN_36513)
 	eError = PVRSRVLookupAndReleaseHandle(
 	psPerProc->psHandleBase,
 #if defined(SUPPORT_SID_INTERFACE)
@@ -1906,7 +1906,7 @@ SGXDevInitPart2BW(IMG_UINT32 ui32BridgeID,
 #endif
 #endif
 
-#if defined(FIX_HW_BRN_31542)
+#if defined(FIX_HW_BRN_31542) || defined(FIX_HW_BRN_36513)
 #if defined(SUPPORT_SID_INTERFACE)
 	eError = PVRSRVDissociateDeviceMemKM(
 	hDevCookieInt, asInitInfoKM.hKernelClearClipWAVDMStreamMemInfo);
@@ -3037,12 +3037,6 @@ SGXPDumpBufferArrayBW(IMG_UINT32 ui32BridgeID,
 	ui32BufferArrayLength * sizeof(SGX_KICKTA_DUMP_BUFFER);
 	PVRSRV_ERROR eError = PVRSRV_ERROR_TOO_FEW_BUFFERS;
 
-#if defined(__QNXNTO__)
-	const IMG_UINT32 MAX_BUFFER_NAME_SIZE = 30;
-	IMG_PCHAR pszNamesBuffer, pszName;
-	IMG_UINT32 ui32NameBufferArraySize;
-#endif
-
 	PVR_UNREFERENCED_PARAMETER(psBridgeOut);
 
 	PVRSRV_BRIDGE_ASSERT_CMD(ui32BridgeID,
@@ -3071,33 +3065,6 @@ SGXPDumpBufferArrayBW(IMG_UINT32 ui32BridgeID,
 	  psKickTADumpBuffer, 0);
 
 	return -EFAULT;
-	}
-#endif
-
-#if defined(__QNXNTO__)
-	ui32NameBufferArraySize = ui32BufferArrayLength * MAX_BUFFER_NAME_SIZE;
-	if (OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP, ui32NameBufferArraySize,
-	       (IMG_PVOID *)&pszNamesBuffer, 0,
-	       "Kick Tile Accelerator Dump Buffer names") !=
-	    PVRSRV_OK) {
-	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, ui32BufferArraySize,
-	  psKickTADumpBuffer, 0);
-	return -ENOMEM;
-	}
-
-	pszName = pszNamesBuffer;
-	for (i = 0; i < ui32BufferArrayLength; i++) {
-	if (CopyFromUserWrapper(psPerProc, ui32BridgeID, pszName,
-	psKickTADumpBuffer[i].pszName,
-	MAX_BUFFER_NAME_SIZE) != PVRSRV_OK) {
-	PVR_DPF((PVR_DBG_WARNING,
-	 "Failed to read pdump buffer name"));
-	psKickTADumpBuffer[i].pszName = 0;
-	} else {
-	pszName[MAX_BUFFER_NAME_SIZE - 1] = 0;
-	psKickTADumpBuffer[i].pszName = pszName;
-	}
-	pszName += MAX_BUFFER_NAME_SIZE;
 	}
 #endif
 
@@ -3185,11 +3152,6 @@ SGXPDumpBufferArrayBW(IMG_UINT32 ui32BridgeID,
 #else
 	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, ui32BufferArraySize,
 	  psKickTADumpBuffer, 0);
-#endif
-
-#if defined(__QNXNTO__)
-	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, ui32NameBufferArraySize,
-	  pszNamesBuffer, 0);
 #endif
 
 	return 0;
@@ -3599,99 +3561,76 @@ static IMG_INT SGXPDumpSaveMemBW(IMG_UINT32 ui32BridgeID,
 
 IMG_VOID SetSGXDispatchTableEntry(IMG_VOID)
 {
-	PVR_IO_NSTD(SGX_GETCLIENTINFO, SGXGetClientInfoBW,
-	    sizeof(PVRSRV_BRIDGE_IN_GETCLIENTINFO),
-	    sizeof(PVRSRV_BRIDGE_OUT_GETCLIENTINFO));
-	PVR_IO_NSTD(SGX_RELEASECLIENTINFO, SGXReleaseClientInfoBW,
-	    sizeof(PVRSRV_BRIDGE_IN_RELEASECLIENTINFO),
-	    sizeof(PVRSRV_BRIDGE_RETURN));
-	PVR_IO_NSTD(SGX_GETINTERNALDEVINFO, SGXGetInternalDevInfoBW,
-	    sizeof(PVRSRV_BRIDGE_IN_GETINTERNALDEVINFO),
-	    sizeof(PVRSRV_BRIDGE_OUT_GETINTERNALDEVINFO));
+	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_GETCLIENTINFO,
+	      SGXGetClientInfoBW);
+	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_RELEASECLIENTINFO,
+	      SGXReleaseClientInfoBW);
+	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_GETINTERNALDEVINFO,
+	      SGXGetInternalDevInfoBW);
+	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_DOKICK, SGXDoKickBW);
+	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_GETPHYSPAGEADDR, DummyBW);
+	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_READREGISTRYDWORD, DummyBW);
 
-	PVR_IO_NSTD(SGX_DOKICK, SGXDoKickBW, sizeof(PVRSRV_BRIDGE_IN_DOKICK),
-	    sizeof(PVRSRV_BRIDGE_RETURN));
-	PVR_IO_NSTD(SGX_GETPHYSPAGEADDR, DummyBW,
-	    sizeof(PVRSRV_BRIDGE_IN_GETPHYSPAGEADDR),
-	    sizeof(PVRSRV_BRIDGE_OUT_GETPHYSPAGEADDR));
-	PVR_IO_INV(SGX_READREGISTRYDWORD);
-	PVR_IO_NSTD(SGX_2DQUERYBLTSCOMPLETE, SGX2DQueryBlitsCompleteBW,
-	    sizeof(PVRSRV_BRIDGE_IN_2DQUERYBLTSCOMPLETE),
-	    sizeof(PVRSRV_BRIDGE_RETURN));
+	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_2DQUERYBLTSCOMPLETE,
+	      SGX2DQueryBlitsCompleteBW);
 
 #if defined(TRANSFER_QUEUE)
-	PVR_IO_NSTD(SGX_SUBMITTRANSFER, SGXSubmitTransferBW,
-	    sizeof(PVRSRV_BRIDGE_IN_SUBMITTRANSFER),
-	    sizeof(PVRSRV_BRIDGE_RETURN));
+	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_SUBMITTRANSFER,
+	      SGXSubmitTransferBW);
 #endif
-	PVR_IO_NSTD(SGX_GETMISCINFO, SGXGetMiscInfoBW,
-	    sizeof(PVRSRV_BRIDGE_IN_SGXGETMISCINFO),
-	    sizeof(PVRSRV_BRIDGE_RETURN));
-	PVR_IO_NSTD(SGXINFO_FOR_SRVINIT, SGXGetInfoForSrvinitBW,
-	    sizeof(PVRSRV_BRIDGE_IN_SGXINFO_FOR_SRVINIT),
-	    sizeof(PVRSRV_BRIDGE_OUT_SGXINFO_FOR_SRVINIT));
-	PVR_IO_NSTD(SGX_DEVINITPART2, SGXDevInitPart2BW,
-	    sizeof(PVRSRV_BRIDGE_IN_SGXDEVINITPART2),
-	    sizeof(PVRSRV_BRIDGE_RETURN));
-	PVR_IO_NSTD(SGX_FINDSHAREDPBDESC, SGXFindSharedPBDescBW,
-	    sizeof(PVRSRV_BRIDGE_IN_SGXFINDSHAREDPBDESC),
-	    sizeof(PVRSRV_BRIDGE_OUT_SGXFINDSHAREDPBDESC));
-	PVR_IO_NSTD(SGX_UNREFSHAREDPBDESC, SGXUnrefSharedPBDescBW,
-	    sizeof(PVRSRV_BRIDGE_IN_SGXUNREFSHAREDPBDESC),
-	    sizeof(PVRSRV_BRIDGE_OUT_SGXUNREFSHAREDPBDESC));
-	PVR_IO_NSTD(SGX_ADDSHAREDPBDESC, SGXAddSharedPBDescBW,
-	    sizeof(PVRSRV_BRIDGE_IN_SGXADDSHAREDPBDESC),
-	    sizeof(PVRSRV_BRIDGE_OUT_SGXADDSHAREDPBDESC));
-	PVR_IO_RW(SGX_REGISTER_HW_RENDER_CONTEXT, SGXRegisterHWRenderContextBW);
-	PVR_IO_W(SGX_FLUSH_HW_RENDER_TARGET, SGXFlushHWRenderTargetBW);
-	PVR_IO_W(SGX_UNREGISTER_HW_RENDER_CONTEXT,
-	 SGXUnregisterHWRenderContextBW);
-#if defined(SGX_FEATURE_2D_HARDWARE)
-	PVR_IO_NSTD(SGX_SUBMIT2D, SGXSubmit2DBW,
-	    sizeof(PVRSRV_BRIDGE_IN_SUBMIT2D),
-	    sizeof(PVRSRV_BRIDGE_RETURN));
-	PVR_IO_NSTD(SGX_REGISTER_HW_2D_CONTEXT, SGXRegisterHW2DContextBW,
-	    sizeof(PVRSRV_BRIDGE_IN_SGX_REGISTER_HW_2D_CONTEXT),
-	    sizeof(PVRSRV_BRIDGE_OUT_SGX_REGISTER_HW_2D_CONTEXT));
-	PVR_IO_NSTD(SGX_UNREGISTER_HW_2D_CONTEXT, SGXUnregisterHW2DContextBW,
-	    sizeof(PVRSRV_BRIDGE_IN_SGX_UNREGISTER_HW_2D_CONTEXT),
-	    sizeof(PVRSRV_BRIDGE_RETURN));
-#endif
-	PVR_IO_RW(SGX_REGISTER_HW_TRANSFER_CONTEXT,
-	  SGXRegisterHWTransferContextBW);
-	PVR_IO_W(SGX_UNREGISTER_HW_TRANSFER_CONTEXT,
-	 SGXUnregisterHWTransferContextBW);
-	PVR_IO_W(SGX_SCHEDULE_PROCESS_QUEUES, SGXScheduleProcessQueuesBW);
-	PVR_IO_RW(SGX_READ_HWPERF_CB, SGXReadHWPerfCBBW);
+	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_GETMISCINFO, SGXGetMiscInfoBW);
+	SetDispatchTableEntry(PVRSRV_BRIDGE_SGXINFO_FOR_SRVINIT,
+	      SGXGetInfoForSrvinitBW);
+	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_DEVINITPART2,
+	      SGXDevInitPart2BW);
 
-	PVR_IO_NSTD(SGX_SET_RENDER_CONTEXT_PRIORITY,
-	    SGXSetRenderContextPriorityBW,
-	    sizeof(PVRSRV_BRIDGE_IN_SGX_SET_RENDER_CONTEXT_PRIORITY),
-	    sizeof(PVRSRV_BRIDGE_RETURN));
-	PVR_IO_NSTD(SGX_SET_TRANSFER_CONTEXT_PRIORITY,
-	    SGXSetTransferContextPriorityBW,
-	    sizeof(PVRSRV_BRIDGE_IN_SGX_SET_TRANSFER_CONTEXT_PRIORITY),
-	    sizeof(PVRSRV_BRIDGE_RETURN));
+	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_FINDSHAREDPBDESC,
+	      SGXFindSharedPBDescBW);
+	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_UNREFSHAREDPBDESC,
+	      SGXUnrefSharedPBDescBW);
+	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_ADDSHAREDPBDESC,
+	      SGXAddSharedPBDescBW);
+	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_REGISTER_HW_RENDER_CONTEXT,
+	      SGXRegisterHWRenderContextBW);
+	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_FLUSH_HW_RENDER_TARGET,
+	      SGXFlushHWRenderTargetBW);
+	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_UNREGISTER_HW_RENDER_CONTEXT,
+	      SGXUnregisterHWRenderContextBW);
+#if defined(SGX_FEATURE_2D_HARDWARE)
+	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_SUBMIT2D, SGXSubmit2DBW);
+	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_REGISTER_HW_2D_CONTEXT,
+	      SGXRegisterHW2DContextBW);
+	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_UNREGISTER_HW_2D_CONTEXT,
+	      SGXUnregisterHW2DContextBW);
+#endif
+	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_REGISTER_HW_TRANSFER_CONTEXT,
+	      SGXRegisterHWTransferContextBW);
+	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_UNREGISTER_HW_TRANSFER_CONTEXT,
+	      SGXUnregisterHWTransferContextBW);
+
+	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_SCHEDULE_PROCESS_QUEUES,
+	      SGXScheduleProcessQueuesBW);
+
+	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_READ_HWPERF_CB,
+	      SGXReadHWPerfCBBW);
+	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_SET_RENDER_CONTEXT_PRIORITY,
+	      SGXSetRenderContextPriorityBW);
+	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_SET_TRANSFER_CONTEXT_PRIORITY,
+	      SGXSetTransferContextPriorityBW);
 
 #if defined(PDUMP)
-	PVR_IO_NSTD(SGX_PDUMP_BUFFER_ARRAY, SGXPDumpBufferArrayBW,
-	    sizeof(PVRSRV_BRIDGE_IN_PDUMP_BUFFER_ARRAY), 0);
-	PVR_IO_NSTD(SGX_PDUMP_3D_SIGNATURE_REGISTERS,
-	    SGXPDump3DSignatureRegistersBW,
-	    sizeof(PVRSRV_BRIDGE_IN_PDUMP_3D_SIGNATURE_REGISTERS),
-	    sizeof(PVRSRV_BRIDGE_RETURN));
-	PVR_IO_NSTD(SGX_PDUMP_COUNTER_REGISTERS, SGXPDumpCounterRegistersBW,
-	    sizeof(PVRSRV_BRIDGE_IN_PDUMP_COUNTER_REGISTERS), 0);
-	PVR_IO_NSTD(SGX_PDUMP_TA_SIGNATURE_REGISTERS,
-	    SGXPDumpTASignatureRegistersBW,
-	    sizeof(PVRSRV_BRIDGE_IN_PDUMP_TA_SIGNATURE_REGISTERS),
-	    sizeof(PVRSRV_BRIDGE_RETURN));
-	PVR_IO_NSTD(SGX_PDUMP_HWPERFCB, SGXPDumpHWPerfCBBW,
-	    sizeof(PVRSRV_BRIDGE_IN_PDUMP_HWPERFCB),
-	    sizeof(PVRSRV_BRIDGE_RETURN));
-	PVR_IO_NSTD(SGX_PDUMP_SAVEMEM, SGXPDumpSaveMemBW,
-	    sizeof(PVRSRV_BRIDGE_IN_PDUMP_SAVEMEM),
-	    sizeof(PVRSRV_BRIDGE_RETURN));
+	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_PDUMP_BUFFER_ARRAY,
+	      SGXPDumpBufferArrayBW);
+	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_PDUMP_3D_SIGNATURE_REGISTERS,
+	      SGXPDump3DSignatureRegistersBW);
+	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_PDUMP_COUNTER_REGISTERS,
+	      SGXPDumpCounterRegistersBW);
+	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_PDUMP_TA_SIGNATURE_REGISTERS,
+	      SGXPDumpTASignatureRegistersBW);
+	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_PDUMP_HWPERFCB,
+	      SGXPDumpHWPerfCBBW);
+	SetDispatchTableEntry(PVRSRV_BRIDGE_SGX_PDUMP_SAVEMEM,
+	      SGXPDumpSaveMemBW);
 #endif
 }
 

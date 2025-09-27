@@ -31,7 +31,7 @@
 extern "C" {
 #endif
 
-#if defined(__linux__) || defined(__QNXNTO__)
+#if defined(__linux__)
 PVRSRV_ERROR OSPerProcessPrivateDataInit(IMG_HANDLE *phOsPrivateData);
 PVRSRV_ERROR OSPerProcessPrivateDataDeInit(IMG_HANDLE hOsPrivateData);
 

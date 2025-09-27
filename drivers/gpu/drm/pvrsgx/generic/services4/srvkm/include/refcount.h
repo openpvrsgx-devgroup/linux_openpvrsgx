@@ -136,8 +136,8 @@ void PVRSRVIonBufferSyncInfoDecRef2(const IMG_CHAR *pszFile, IMG_INT iLine,
 
 PVRSRV_ERROR
 PVRSRVDmaBufSyncInfoIncRef2(const IMG_CHAR *pszFile, IMG_INT iLine,
-	    IMG_HANDLE hUnique, IMG_HANDLE hDevCookie,
-	    IMG_HANDLE hDevMemContext,
+	    IMG_HANDLE hUnique, IMG_HANDLE hPriv,
+	    IMG_HANDLE hDevCookie, IMG_HANDLE hDevMemContext,
 	    PVRSRV_DMABUF_SYNC_INFO **ppsDmaBufSyncInfo,
 	    PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo);
 
@@ -260,14 +260,14 @@ PVRSRVIonBufferSyncInfoDecRef(PVRSRV_ION_SYNC_INFO *psIonSyncInfo,
 
 #if defined(SUPPORT_DMABUF)
 static INLINE PVRSRV_ERROR PVRSRVDmaBufSyncInfoIncRef(
-	IMG_HANDLE hUnique, IMG_HANDLE hDevCookie, IMG_HANDLE hDevMemContext,
-	PVRSRV_DMABUF_SYNC_INFO **ppsDmaBufSyncInfo,
+	IMG_HANDLE hUnique, IMG_HANDLE hPriv, IMG_HANDLE hDevCookie,
+	IMG_HANDLE hDevMemContext, PVRSRV_DMABUF_SYNC_INFO **ppsDmaBufSyncInfo,
 	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo)
 {
 	PVR_UNREFERENCED_PARAMETER(psKernelMemInfo);
 
-	return PVRSRVDmaBufSyncAcquire(hUnique, hDevCookie, hDevMemContext,
-	       ppsDmaBufSyncInfo);
+	return PVRSRVDmaBufSyncAcquire(hUnique, hPriv, hDevCookie,
+	       hDevMemContext, ppsDmaBufSyncInfo);
 }
 
 static INLINE void

@@ -62,6 +62,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "pvr_sync.h"
 #endif
 
+#if defined(SUPPORT_DMABUF)
+#include "pvr_linux_fence.h"
+#endif
+
 IMG_EXPORT PVRSRV_ERROR SGXSubmitTransferKM(IMG_HANDLE hDevHandle,
 	    PVRSRV_TRANSFER_SGX_KICK *psKick)
 {
@@ -77,6 +81,12 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmitTransferKM(IMG_HANDLE hDevHandle,
 	IMG_UINT32 ui32RealSrcSyncNum = 0;
 	IMG_BOOL abDstSyncEnable[SGX_MAX_TRANSFER_SYNC_OPS];
 	IMG_UINT32 ui32RealDstSyncNum = 0;
+
+#if defined(SUPPORT_DMABUF)
+	IMG_UINT32 ui32FenceTag = 0;
+	IMG_UINT32 ui32NumResvObjs = 0;
+	IMG_BOOL bBlockingFences = IMG_FALSE;
+#endif
 
 #if defined(FIX_HW_BRN_31620)
 	hDevMemContext = psKick->hDevMemContext;
@@ -217,6 +227,28 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmitTransferKM(IMG_HANDLE hDevHandle,
 	if ((psKick->ui32Flags & SGXMKIF_TQFLAGS_KEEPPENDING) == 0UL) {
 	IMG_UINT32 i = 0;
 
+#if defined(SUPPORT_DMABUF)
+	ui32NumResvObjs = PVRLinuxFenceNumResvObjs(
+	&bBlockingFences, psKick->ui32NumSrcSync,
+	psKick->ahSrcSyncInfo, abSrcSyncEnable,
+	psKick->ui32NumDstSync, psKick->ahDstSyncInfo,
+	abDstSyncEnable);
+	/*
+	 * If there are no blocking fences, the GPU need not wait
+	 * whilst the reservation objects are being processed. They
+	 * can be processed later, after the kick.
+	 */
+	if (ui32NumResvObjs && bBlockingFences) {
+	eError = PVRLinuxFenceProcess(
+	&ui32FenceTag, ui32NumResvObjs, bBlockingFences,
+	psKick->ui32NumSrcSync, psKick->ahSrcSyncInfo,
+	abSrcSyncEnable, psKick->ui32NumDstSync,
+	psKick->ahDstSyncInfo, abDstSyncEnable);
+	if (eError != PVRSRV_OK) {
+	return eError;
+	}
+	}
+#endif
 	for (loop = 0; loop < psKick->ui32NumSrcSync; loop++) {
 	if (abSrcSyncEnable[loop]) {
 	psSyncInfo =
@@ -708,6 +740,15 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmitTransferKM(IMG_HANDLE hDevHandle,
 	if (eError == PVRSRV_ERROR_RETRY) {
 	/* Client will retry, so undo the sync ops pending increment(s) done above. */
 	if ((psKick->ui32Flags & SGXMKIF_TQFLAGS_KEEPPENDING) == 0UL) {
+#if defined(SUPPORT_DMABUF)
+	if (ui32NumResvObjs && bBlockingFences) {
+	PVRLinuxFenceRelease(
+	ui32FenceTag, psKick->ui32NumSrcSync,
+	psKick->ahSrcSyncInfo, abSrcSyncEnable,
+	psKick->ui32NumDstSync,
+	psKick->ahDstSyncInfo, abDstSyncEnable);
+	}
+#endif
 	for (loop = 0; loop < psKick->ui32NumSrcSync; loop++) {
 	if (abSrcSyncEnable[loop]) {
 	psSyncInfo =
@@ -758,17 +799,30 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmitTransferKM(IMG_HANDLE hDevHandle,
 	(PVRSRV_KERNEL_SYNC_INFO *)psKick->h3DSyncInfo;
 	SyncRollBackWriteOp(psSyncInfo, SYNC_OP_CLASS_TQ_3D);
 	}
-	}
-
-	else if (PVRSRV_OK != eError) {
+	} else if (PVRSRV_OK != eError) {
 	PVR_DPF((
 	PVR_DBG_ERROR,
 	"SGXSubmitTransferKM: SGXScheduleCCBCommandKM failed."));
 	PVR_TTRACE(PVRSRV_TRACE_GROUP_TRANSFER,
 	   PVRSRV_TRACE_CLASS_FUNCTION_EXIT,
 	   TRANSFER_TOKEN_SUBMIT);
+#if defined(SUPPORT_DMABUF) && defined(NO_HARDWARE)
+	PVRLinuxFenceCheckAll();
+#endif
 	return eError;
 	}
+#if defined(SUPPORT_DMABUF)
+	else if (ui32NumResvObjs && !bBlockingFences) {
+	eError = PVRLinuxFenceProcess(
+	&ui32FenceTag, ui32NumResvObjs, bBlockingFences,
+	psKick->ui32NumSrcSync, psKick->ahSrcSyncInfo,
+	abSrcSyncEnable, psKick->ui32NumDstSync,
+	psKick->ahDstSyncInfo, abDstSyncEnable);
+	if (eError != PVRSRV_OK) {
+	return eError;
+	}
+	}
+#endif
 
 #if defined(NO_HARDWARE)
 	if ((psKick->ui32Flags & SGXMKIF_TQFLAGS_NOSYNCUPDATE) == 0) {
@@ -1128,6 +1182,9 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmit2DKM(IMG_HANDLE hDevHandle,
 	psSyncInfo->psSyncData->ui32WriteOpsComplete =
 	psSyncInfo->psSyncData->ui32WriteOpsPending;
 	}
+#if defined(SUPPORT_DMABUF)
+	PVRLinuxFenceCheckAll();
+#endif
 #endif
 
 	return eError;

@@ -395,7 +395,7 @@ HASH_Delete(HASH_TABLE *pHash)
 	 "HASH_Delete: leak detected in hash table!"));
 	PVR_DPF((
 	PVR_DBG_ERROR,
-	"Likely Cause: client drivers not freeing alocations before destroying devmemcontext"));
+	"Likely Cause: client drivers not freeing allocations before destroying devmemcontext"));
 	}
 	OSFreeMem(PVRSRV_PAGEABLE_SELECT,
 	  sizeof(BUCKET *) * pHash->uSize, pHash->ppBucketTable,

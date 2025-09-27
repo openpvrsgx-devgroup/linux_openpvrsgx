@@ -52,11 +52,6 @@ extern "C" {
 #endif
 
 #if defined(__linux__) && defined(__KERNEL__)
-#if defined(MIN) && defined(MAX)
-#undef MIN
-#undef MAX
-#include <linux/minmax.h>
-#endif
 #include <linux/hardirq.h>
 #include <linux/string.h>
 #if defined(__arm__)
@@ -87,6 +82,9 @@ extern "C" {
 #define PVRSRV_OS_PAGEABLE_HEAP 0x1 /* allocation pageable */
 #define PVRSRV_OS_NON_PAGEABLE_HEAP 0x2 /* allocation non pageable */
 
+#if defined(PVRSRV_DEVMEM_TIME_STATS)
+IMG_UINT64 OSClockMonotonicus(IMG_VOID);
+#endif
 IMG_UINT32 OSClockus(IMG_VOID);
 IMG_UINT32 OSGetPageSize(IMG_VOID);
 PVRSRV_ERROR OSInstallDeviceLISR(IMG_VOID *pvSysData, IMG_UINT32 ui32Irq,

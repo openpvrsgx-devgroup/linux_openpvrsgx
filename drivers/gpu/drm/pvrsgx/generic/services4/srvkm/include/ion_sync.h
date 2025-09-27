@@ -1,5 +1,5 @@
 /*************************************************************************/ /*!
-@Title          Main include file for PVRMMAP library.
+@Title          Services Ion synchronisation integration
 @Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
 @License        Dual MIT/GPLv2
 
@@ -38,48 +38,38 @@ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */ /**************************************************************************/
-#ifndef __PVRMMAP_H__
-#define __PVRMMAP_H__
 
-/*!
- **************************************************************************
- @brief         map kernel memory into user memory.
+#include "img_defs.h"
+#include "img_types.h"
+#include "servicesint.h"
 
- @param	hModule - a handle to the device supplying the kernel memory
- @param	ppvLinAddr - pointer to where the user mode address should be placed
- @param	pvLinAddrKM - the base of kernel address range to map
- @param	phMappingInfo - pointer to mapping information handle
- @param	hMHandle - handle associated with memory to be mapped
+#ifndef __ION_SYNC_H__
+#define __ION_SYNC_H__
 
- @return	PVRSRV_OK, or error code.
- ***************************************************************************/
+typedef struct _PVRSRV_ION_SYNC_INFO_ {
+	PVRSRV_KERNEL_SYNC_INFO *psSyncInfo;
+	IMG_HANDLE hUnique;
+	IMG_UINT32 ui32RefCount;
+	IMG_UINT64 ui64Stamp;
+} PVRSRV_ION_SYNC_INFO;
 
-#if defined(SUPPORT_SID_INTERFACE)
-PVRSRV_ERROR PVRPMapKMem(IMG_HANDLE hModule, IMG_VOID **ppvLinAddr,
-	 IMG_VOID *pvLinAddrKM, IMG_SID *phMappingInfo,
-	 IMG_SID hMHandle);
-#else
-PVRSRV_ERROR PVRPMapKMem(IMG_HANDLE hModule, IMG_VOID **ppvLinAddr,
-	 IMG_VOID *pvLinAddrKM, IMG_HANDLE *phMappingInfo,
-	 IMG_HANDLE hMHandle);
-#endif
+PVRSRV_ERROR PVRSRVIonBufferSyncAcquire(IMG_HANDLE hUnique,
+	IMG_HANDLE hDevCookie,
+	IMG_HANDLE hDevMemContext,
+	PVRSRV_ION_SYNC_INFO **ppsIonSyncInfo);
 
-/*!
- **************************************************************************
- @brief	        Removes a kernel to userspace memory mapping.
+IMG_VOID PVRSRVIonBufferSyncRelease(PVRSRV_ION_SYNC_INFO *psIonSyncInfo);
 
- @param	hModule - a handle to the device supplying the kernel memory
- @param	hMappingInfo - mapping information handle
- @param	hMHandle - handle associated with memory to be mapped
+static INLINE PVRSRV_KERNEL_SYNC_INFO *
+IonBufferSyncGetKernelSyncInfo(PVRSRV_ION_SYNC_INFO *psIonSyncInfo)
+{
+	return psIonSyncInfo->psSyncInfo;
+}
 
- @return	IMG_BOOL indicating success or otherwise.
- ***************************************************************************/
-#if defined(SUPPORT_SID_INTERFACE)
-IMG_BOOL PVRUnMapKMem(IMG_HANDLE hModule, IMG_SID hMappingInfo,
-	      IMG_SID hMHandle);
-#else
-IMG_BOOL PVRUnMapKMem(IMG_HANDLE hModule, IMG_HANDLE hMappingInfo,
-	      IMG_HANDLE hMHandle);
-#endif
+static INLINE IMG_UINT64
+IonBufferSyncGetStamp(PVRSRV_ION_SYNC_INFO *psIonSyncInfo)
+{
+	return psIonSyncInfo->ui64Stamp;
+}
 
-#endif /* _PVRMMAP_H_ */
+#endif /* __ION_SYNC_H__ */

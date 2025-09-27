@@ -1,6 +1,9 @@
 /*************************************************************************/ /*!
-@Title          Main include file for PVRMMAP library.
+@File           pvr_sync_user.h
+@Title          Userspace definitions to use the kernel sync driver
 @Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@Description    Version numbers and strings for PVR Consumer services
+	components.
 @License        Dual MIT/GPLv2
 
 The contents of this file are subject to the MIT license as set out below.
@@ -38,48 +41,78 @@ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */ /**************************************************************************/
-#ifndef __PVRMMAP_H__
-#define __PVRMMAP_H__
 
-/*!
- **************************************************************************
- @brief         map kernel memory into user memory.
+#ifndef _PVR_SYNC_USER_H_
+#define _PVR_SYNC_USER_H_
 
- @param	hModule - a handle to the device supplying the kernel memory
- @param	ppvLinAddr - pointer to where the user mode address should be placed
- @param	pvLinAddrKM - the base of kernel address range to map
- @param	phMappingInfo - pointer to mapping information handle
- @param	hMHandle - handle associated with memory to be mapped
+#include <linux/ioctl.h>
 
- @return	PVRSRV_OK, or error code.
- ***************************************************************************/
-
-#if defined(SUPPORT_SID_INTERFACE)
-PVRSRV_ERROR PVRPMapKMem(IMG_HANDLE hModule, IMG_VOID **ppvLinAddr,
-	 IMG_VOID *pvLinAddrKM, IMG_SID *phMappingInfo,
-	 IMG_SID hMHandle);
+#ifdef __KERNEL__
+#include "sgxapi_km.h"
 #else
-PVRSRV_ERROR PVRPMapKMem(IMG_HANDLE hModule, IMG_VOID **ppvLinAddr,
-	 IMG_VOID *pvLinAddrKM, IMG_HANDLE *phMappingInfo,
-	 IMG_HANDLE hMHandle);
+#include "sgxapi.h"
 #endif
 
-/*!
- **************************************************************************
- @brief	        Removes a kernel to userspace memory mapping.
+#include "servicesext.h" // PVRSRV_SYNC_DATA
+#include "img_types.h"
 
- @param	hModule - a handle to the device supplying the kernel memory
- @param	hMappingInfo - mapping information handle
- @param	hMHandle - handle associated with memory to be mapped
+/* This matches the sw_sync create ioctl data */
+struct PVR_SYNC_CREATE_IOCTL_DATA {
+	/* Input: Name of this sync pt. Passed to base sync driver. */
+	char name[32];
 
- @return	IMG_BOOL indicating success or otherwise.
- ***************************************************************************/
-#if defined(SUPPORT_SID_INTERFACE)
-IMG_BOOL PVRUnMapKMem(IMG_HANDLE hModule, IMG_SID hMappingInfo,
-	      IMG_SID hMHandle);
-#else
-IMG_BOOL PVRUnMapKMem(IMG_HANDLE hModule, IMG_HANDLE hMappingInfo,
-	      IMG_HANDLE hMHandle);
-#endif
+	/* Input: An fd from a previous call to ALLOC ioctl. Cannot be <0. */
+	__s32 allocdSyncInfo;
 
-#endif /* _PVRMMAP_H_ */
+	/* Output: An fd returned from the CREATE ioctl. */
+	__s32 fence;
+};
+
+struct PVR_SYNC_ALLOC_IOCTL_DATA {
+	/* Output: An fd returned from the ALLOC ioctl */
+	__s32 fence;
+
+	/* Output: IMG_TRUE if the timeline looked idle at alloc time */
+	__u32 bTimelineIdle;
+};
+
+#define PVR_SYNC_DEBUG_MAX_POINTS 3
+
+typedef struct {
+	/* Output: A globally unique stamp/ID for the sync */
+	IMG_UINT64 ui64Stamp;
+
+	/* Output: The WOP snapshot for the sync */
+	IMG_UINT32 ui32WriteOpsPendingSnapshot;
+} PVR_SYNC_DEBUG;
+
+struct PVR_SYNC_DEBUG_IOCTL_DATA {
+	/* Input: Fence to acquire debug for */
+	int iFenceFD;
+
+	/* Output: Number of points merged into this fence */
+	IMG_UINT32 ui32NumPoints;
+
+	struct {
+	/* Output: Metadata for sync point */
+	PVR_SYNC_DEBUG sMetaData;
+
+	/* Output: 'Live' sync information. */
+	PVRSRV_SYNC_DATA sSyncData;
+	} sSync[PVR_SYNC_DEBUG_MAX_POINTS];
+};
+
+#define PVR_SYNC_IOC_MAGIC 'W'
+
+#define PVR_SYNC_IOC_CREATE_FENCE \
+	_IOWR(PVR_SYNC_IOC_MAGIC, 0, struct PVR_SYNC_CREATE_IOCTL_DATA)
+
+#define PVR_SYNC_IOC_DEBUG_FENCE \
+	_IOWR(PVR_SYNC_IOC_MAGIC, 1, struct PVR_SYNC_DEBUG_IOCTL_DATA)
+
+#define PVR_SYNC_IOC_ALLOC_FENCE \
+	_IOWR(PVR_SYNC_IOC_MAGIC, 2, struct PVR_SYNC_ALLOC_IOCTL_DATA)
+
+#define PVRSYNC_MODNAME "pvr_sync"
+
+#endif /* _PVR_SYNC_USER_H_ */

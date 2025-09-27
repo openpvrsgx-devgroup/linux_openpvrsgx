@@ -1,33 +1,48 @@
-/**********************************************************************
- *
- * Copyright (C) Imagination Technologies Ltd. All rights reserved.
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- *
- * This program is distributed in the hope it will be useful but, except
- * as otherwise stated in writing, without any warranty; without even the
- * implied warranty of merchantability or fitness for a particular purpose.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * The full GNU General Public License is included in this distribution in
- * the file called "COPYING".
- *
- * Contact Information:
- * Imagination Technologies Ltd. <gpl-support@imgtec.com>
- * Home Park Estate, Kings Langley, Herts, WD4 8LZ, UK
- *
- ******************************************************************************/
+/*************************************************************************/ /*!
+@Title          IOCTL implementations for debug device.
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@License        Dual MIT/GPLv2
+
+The contents of this file are subject to the MIT license as set out below.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/ /**************************************************************************/
 
 #ifdef LINUX
 #include <asm/uaccess.h>
 #include "pvr_uaccess.h"
-#endif
+#endif /* LINUX */
 
 #include "img_types.h"
 #include "dbgdrvif.h"
@@ -35,6 +50,19 @@
 #include "hotkey.h"
 #include "dbgdriv_ioctl.h"
 
+/*****************************************************************************
+ Code
+*****************************************************************************/
+
+/*****************************************************************************
+ FUNCTION	:	DBGDrivCreateStream
+
+ PURPOSE	:
+
+ PARAMETERS	:
+
+ RETURNS	:
+*****************************************************************************/
 static IMG_UINT32 DBGDIOCDrivCreateStream(IMG_VOID *pvInBuffer,
 	  IMG_VOID *pvOutBuffer)
 {
@@ -66,6 +94,15 @@ static IMG_UINT32 DBGDIOCDrivCreateStream(IMG_VOID *pvInBuffer,
 	return (IMG_TRUE);
 }
 
+/*****************************************************************************
+ FUNCTION	:	DBGDrivDestroyStream
+
+ PURPOSE	:
+
+ PARAMETERS	:
+
+ RETURNS	:
+*****************************************************************************/
 static IMG_UINT32 DBGDIOCDrivDestroyStream(IMG_VOID *pvInBuffer,
 	   IMG_VOID *pvOutBuffer)
 {
@@ -82,6 +119,15 @@ static IMG_UINT32 DBGDIOCDrivDestroyStream(IMG_VOID *pvInBuffer,
 	return (IMG_TRUE);
 }
 
+/*****************************************************************************
+ FUNCTION	:	DBGDrivGetStream
+
+ PURPOSE	:
+
+ PARAMETERS	:
+
+ RETURNS	:
+*****************************************************************************/
 static IMG_UINT32 DBGDIOCDrivGetStream(IMG_VOID *pvInBuffer,
 	       IMG_VOID *pvOutBuffer)
 {
@@ -97,6 +143,15 @@ static IMG_UINT32 DBGDIOCDrivGetStream(IMG_VOID *pvInBuffer,
 	return (IMG_TRUE);
 }
 
+/*****************************************************************************
+ FUNCTION	:	DBGDrivWriteString
+
+ PURPOSE	:
+
+ PARAMETERS	:
+
+ RETURNS	:
+*****************************************************************************/
 static IMG_UINT32 DBGDIOCDrivWriteString(IMG_VOID *pvInBuffer,
 	 IMG_VOID *pvOutBuffer)
 {
@@ -113,11 +168,21 @@ static IMG_UINT32 DBGDIOCDrivWriteString(IMG_VOID *pvInBuffer,
 	psStream, psParams->u.pszString, psParams->ui32Level);
 	return (IMG_TRUE);
 	} else {
+	/* invalid SID */
 	*pui32OutLen = 0;
 	return (IMG_FALSE);
 	}
 }
 
+/*****************************************************************************
+ FUNCTION	:	DBGDrivWriteStringCM
+
+ PURPOSE	:	Same as DBGDrivWriteString, but takes notice of capture mode.
+
+ PARAMETERS	:
+
+ RETURNS	:
+*****************************************************************************/
 static IMG_UINT32 DBGDIOCDrivWriteStringCM(IMG_VOID *pvInBuffer,
 	   IMG_VOID *pvOutBuffer)
 {
@@ -134,11 +199,21 @@ static IMG_UINT32 DBGDIOCDrivWriteStringCM(IMG_VOID *pvInBuffer,
 	psStream, psParams->u.pszString, psParams->ui32Level);
 	return (IMG_TRUE);
 	} else {
+	/* invalid SID */
 	*pui32OutLen = 0;
 	return (IMG_FALSE);
 	}
 }
 
+/*****************************************************************************
+ FUNCTION	:	DBGDrivReadString
+
+ PURPOSE	:
+
+ PARAMETERS	:
+
+ RETURNS	:
+*****************************************************************************/
 static IMG_UINT32 DBGDIOCDrivReadString(IMG_VOID *pvInBuffer,
 	IMG_VOID *pvOutBuffer)
 {
@@ -156,11 +231,21 @@ static IMG_UINT32 DBGDIOCDrivReadString(IMG_VOID *pvInBuffer,
 	    psParams->ui32StringLen);
 	return (IMG_TRUE);
 	} else {
+	/* invalid SID */
 	*pui32OutLen = 0;
 	return (IMG_FALSE);
 	}
 }
 
+/*****************************************************************************
+ FUNCTION	:	DBGDrivWrite
+
+ PURPOSE	:
+
+ PARAMETERS	:
+
+ RETURNS	:
+*****************************************************************************/
 static IMG_UINT32 DBGDIOCDrivWrite(IMG_VOID *pvInBuffer, IMG_VOID *pvOutBuffer)
 {
 	IMG_UINT32 *pui32BytesCopied;
@@ -177,11 +262,21 @@ static IMG_UINT32 DBGDIOCDrivWrite(IMG_VOID *pvInBuffer, IMG_VOID *pvOutBuffer)
 	psInParams->ui32TransferSize, psInParams->ui32Level);
 	return (IMG_TRUE);
 	} else {
+	/* invalid SID */
 	*pui32BytesCopied = 0;
 	return (IMG_FALSE);
 	}
 }
 
+/*****************************************************************************
+ FUNCTION	:	DBGDrivWrite2
+
+ PURPOSE	:
+
+ PARAMETERS	:
+
+ RETURNS	:
+*****************************************************************************/
 static IMG_UINT32 DBGDIOCDrivWrite2(IMG_VOID *pvInBuffer, IMG_VOID *pvOutBuffer)
 {
 	IMG_UINT32 *pui32BytesCopied;
@@ -198,11 +293,21 @@ static IMG_UINT32 DBGDIOCDrivWrite2(IMG_VOID *pvInBuffer, IMG_VOID *pvOutBuffer)
 	psInParams->ui32TransferSize, psInParams->ui32Level);
 	return (IMG_TRUE);
 	} else {
+	/* invalid SID */
 	*pui32BytesCopied = 0;
 	return (IMG_FALSE);
 	}
 }
 
+/*****************************************************************************
+ FUNCTION	:	DBGDrivWriteCM
+
+ PURPOSE	:	Same as DBGDIOCDrivWrite2, but takes notice of capture mode.
+
+ PARAMETERS	:
+
+ RETURNS	:
+*****************************************************************************/
 static IMG_UINT32 DBGDIOCDrivWriteCM(IMG_VOID *pvInBuffer,
 	     IMG_VOID *pvOutBuffer)
 {
@@ -220,11 +325,21 @@ static IMG_UINT32 DBGDIOCDrivWriteCM(IMG_VOID *pvInBuffer,
 	psInParams->ui32TransferSize, psInParams->ui32Level);
 	return (IMG_TRUE);
 	} else {
+	/* invalid SID */
 	*pui32BytesCopied = 0;
 	return (IMG_FALSE);
 	}
 }
 
+/*****************************************************************************
+ FUNCTION	:	DBGDrivRead
+
+ PURPOSE	:
+
+ PARAMETERS	:
+
+ RETURNS	:
+*****************************************************************************/
 static IMG_UINT32 DBGDIOCDrivRead(IMG_VOID *pvInBuffer, IMG_VOID *pvOutBuffer)
 {
 	IMG_UINT32 *pui32BytesCopied;
@@ -242,11 +357,21 @@ static IMG_UINT32 DBGDIOCDrivRead(IMG_VOID *pvInBuffer, IMG_VOID *pvOutBuffer)
 	       psInParams->u.pui8OutBuffer);
 	return (IMG_TRUE);
 	} else {
+	/* invalid SID */
 	*pui32BytesCopied = 0;
 	return (IMG_FALSE);
 	}
 }
 
+/*****************************************************************************
+ FUNCTION	:	DBGDIOCDrivSetCaptureMode
+
+ PURPOSE	:
+
+ PARAMETERS	:
+
+ RETURNS	:
+*****************************************************************************/
 static IMG_UINT32 DBGDIOCDrivSetCaptureMode(IMG_VOID *pvInBuffer,
 	    IMG_VOID *pvOutBuffer)
 {
@@ -263,10 +388,20 @@ static IMG_UINT32 DBGDIOCDrivSetCaptureMode(IMG_VOID *pvInBuffer,
 	 psParams->ui32SampleRate);
 	return (IMG_TRUE);
 	} else {
+	/* invalid SID */
 	return (IMG_FALSE);
 	}
 }
 
+/*****************************************************************************
+ FUNCTION	:	DBGDIOCDrivSetOutMode
+
+ PURPOSE	:
+
+ PARAMETERS	:
+
+ RETURNS	:
+*****************************************************************************/
 static IMG_UINT32 DBGDIOCDrivSetOutMode(IMG_VOID *pvInBuffer,
 	IMG_VOID *pvOutBuffer)
 {
@@ -281,10 +416,20 @@ static IMG_UINT32 DBGDIOCDrivSetOutMode(IMG_VOID *pvInBuffer,
 	ExtDBGDrivSetOutputMode(psStream, psParams->ui32Mode);
 	return (IMG_TRUE);
 	} else {
+	/* invalid SID */
 	return (IMG_FALSE);
 	}
 }
 
+/*****************************************************************************
+ FUNCTION	:	DBGDIOCDrivSetDebugLevel
+
+ PURPOSE	:
+
+ PARAMETERS	:
+
+ RETURNS	:
+*****************************************************************************/
 static IMG_UINT32 DBGDIOCDrivSetDebugLevel(IMG_VOID *pvInBuffer,
 	   IMG_VOID *pvOutBuffer)
 {
@@ -299,10 +444,20 @@ static IMG_UINT32 DBGDIOCDrivSetDebugLevel(IMG_VOID *pvInBuffer,
 	ExtDBGDrivSetDebugLevel(psStream, psParams->ui32Level);
 	return (IMG_TRUE);
 	} else {
+	/* invalid SID */
 	return (IMG_FALSE);
 	}
 }
 
+/*****************************************************************************
+ FUNCTION	:	DBGDrivSetFrame
+
+ PURPOSE	:
+
+ PARAMETERS	:
+
+ RETURNS	:
+*****************************************************************************/
 static IMG_UINT32 DBGDIOCDrivSetFrame(IMG_VOID *pvInBuffer,
 	      IMG_VOID *pvOutBuffer)
 {
@@ -317,10 +472,20 @@ static IMG_UINT32 DBGDIOCDrivSetFrame(IMG_VOID *pvInBuffer,
 	ExtDBGDrivSetFrame(psStream, psParams->ui32Frame);
 	return (IMG_TRUE);
 	} else {
+	/* invalid SID */
 	return (IMG_FALSE);
 	}
 }
 
+/*****************************************************************************
+ FUNCTION	:	DBGDrivGetFrame
+
+ PURPOSE	:
+
+ PARAMETERS	:
+
+ RETURNS	:
+*****************************************************************************/
 static IMG_UINT32 DBGDIOCDrivGetFrame(IMG_VOID *pvInBuffer,
 	      IMG_VOID *pvOutBuffer)
 {
@@ -334,11 +499,21 @@ static IMG_UINT32 DBGDIOCDrivGetFrame(IMG_VOID *pvInBuffer,
 	*pui32Current = ExtDBGDrivGetFrame(psStream);
 	return (IMG_TRUE);
 	} else {
+	/* invalid SID */
 	*pui32Current = 0;
 	return (IMG_FALSE);
 	}
 }
 
+/*****************************************************************************
+ FUNCTION	:	DBGDIOCDrivIsCaptureFrame
+
+ PURPOSE	:	Determines if this frame is a capture frame
+
+ PARAMETERS	:
+
+ RETURNS	:	IMG_TRUE if current frame is to be captured
+*****************************************************************************/
 static IMG_UINT32 DBGDIOCDrivIsCaptureFrame(IMG_VOID *pvInBuffer,
 	    IMG_VOID *pvOutBuffer)
 {
@@ -355,11 +530,21 @@ static IMG_UINT32 DBGDIOCDrivIsCaptureFrame(IMG_VOID *pvInBuffer,
 	psStream, psParams->bCheckPreviousFrame);
 	return (IMG_TRUE);
 	} else {
+	/* invalid SID */
 	*pui32Current = 0;
 	return (IMG_FALSE);
 	}
 }
 
+/*****************************************************************************
+ FUNCTION	:	DBGDrivOverrideMode
+
+ PURPOSE	:
+
+ PARAMETERS	:
+
+ RETURNS	:
+*****************************************************************************/
 static IMG_UINT32 DBGDIOCDrivOverrideMode(IMG_VOID *pvInBuffer,
 	  IMG_VOID *pvOutBuffer)
 {
@@ -374,10 +559,20 @@ static IMG_UINT32 DBGDIOCDrivOverrideMode(IMG_VOID *pvInBuffer,
 	ExtDBGDrivOverrideMode(psStream, psParams->ui32Mode);
 	return (IMG_TRUE);
 	} else {
+	/* invalid SID */
 	return (IMG_FALSE);
 	}
 }
 
+/*****************************************************************************
+ FUNCTION	:	DBGDrivDefaultMode
+
+ PURPOSE	:
+
+ PARAMETERS	:
+
+ RETURNS	:
+*****************************************************************************/
 static IMG_UINT32 DBGDIOCDrivDefaultMode(IMG_VOID *pvInBuffer,
 	 IMG_VOID *pvOutBuffer)
 {
@@ -390,10 +585,20 @@ static IMG_UINT32 DBGDIOCDrivDefaultMode(IMG_VOID *pvInBuffer,
 	ExtDBGDrivDefaultMode(psStream);
 	return (IMG_TRUE);
 	} else {
+	/* invalid SID */
 	return (IMG_FALSE);
 	}
 }
 
+/*****************************************************************************
+ FUNCTION	: DBGDIOCDrivSetMarker
+
+ PURPOSE	: Sets the marker in the stream to split output files
+
+ PARAMETERS	: pvInBuffer, pvOutBuffer
+
+ RETURNS	: success
+*****************************************************************************/
 static IMG_UINT32 DBGDIOCDrivSetMarker(IMG_VOID *pvInBuffer,
 	       IMG_VOID *pvOutBuffer)
 {
@@ -408,10 +613,20 @@ static IMG_UINT32 DBGDIOCDrivSetMarker(IMG_VOID *pvInBuffer,
 	ExtDBGDrivSetMarker(psStream, psParams->ui32Marker);
 	return (IMG_TRUE);
 	} else {
+	/* invalid SID */
 	return (IMG_FALSE);
 	}
 }
 
+/*****************************************************************************
+ FUNCTION	: DBGDIOCDrivGetMarker
+
+ PURPOSE	: Gets the marker in the stream to split output files
+
+ PARAMETERS	: pvInBuffer, pvOutBuffer
+
+ RETURNS	: success
+*****************************************************************************/
 static IMG_UINT32 DBGDIOCDrivGetMarker(IMG_VOID *pvInBuffer,
 	       IMG_VOID *pvOutBuffer)
 {
@@ -425,11 +640,21 @@ static IMG_UINT32 DBGDIOCDrivGetMarker(IMG_VOID *pvInBuffer,
 	*pui32Current = ExtDBGDrivGetMarker(psStream);
 	return (IMG_TRUE);
 	} else {
+	/* invalid SID */
 	*pui32Current = 0;
 	return (IMG_FALSE);
 	}
 }
 
+/*****************************************************************************
+ FUNCTION	:	DBGDrivGetServiceTable
+
+ PURPOSE	:
+
+ PARAMETERS	:
+
+ RETURNS	:
+*****************************************************************************/
 static IMG_UINT32 DBGDIOCDrivGetServiceTable(IMG_VOID *pvInBuffer,
 	     IMG_VOID *pvOutBuffer)
 {
@@ -443,6 +668,15 @@ static IMG_UINT32 DBGDIOCDrivGetServiceTable(IMG_VOID *pvInBuffer,
 	return (IMG_TRUE);
 }
 
+/*****************************************************************************
+ FUNCTION	:	DBGDIOCDrivWriteLF
+
+ PURPOSE	:
+
+ PARAMETERS	:
+
+ RETURNS	:
+*****************************************************************************/
 static IMG_UINT32 DBGDIOCDrivWriteLF(IMG_VOID *pvInBuffer,
 	     IMG_VOID *pvOutBuffer)
 {
@@ -461,10 +695,20 @@ static IMG_UINT32 DBGDIOCDrivWriteLF(IMG_VOID *pvInBuffer,
 	psInParams->ui32Flags);
 	return (IMG_TRUE);
 	} else {
+	/* invalid SID */
 	return (IMG_FALSE);
 	}
 }
 
+/*****************************************************************************
+ FUNCTION	:	DBGDIOCDrivReadLF
+
+ PURPOSE	:
+
+ PARAMETERS	:
+
+ RETURNS	:
+*****************************************************************************/
 static IMG_UINT32 DBGDIOCDrivReadLF(IMG_VOID *pvInBuffer, IMG_VOID *pvOutBuffer)
 {
 	IMG_UINT32 *pui32BytesCopied;
@@ -481,11 +725,21 @@ static IMG_UINT32 DBGDIOCDrivReadLF(IMG_VOID *pvInBuffer, IMG_VOID *pvOutBuffer)
 	psInParams->u.pui8OutBuffer);
 	return (IMG_TRUE);
 	} else {
+	/* invalid SID */
 	*pui32BytesCopied = 0;
 	return (IMG_FALSE);
 	}
 }
 
+/*****************************************************************************
+ FUNCTION	:	DBGDIOCDrivWaitForEvent
+
+ PURPOSE	:
+
+ PARAMETERS	:
+
+ RETURNS	:
+*****************************************************************************/
 static IMG_UINT32 DBGDIOCDrivWaitForEvent(IMG_VOID *pvInBuffer,
 	  IMG_VOID *pvOutBuffer)
 {
@@ -498,6 +752,9 @@ static IMG_UINT32 DBGDIOCDrivWaitForEvent(IMG_VOID *pvInBuffer,
 	return (IMG_TRUE);
 }
 
+/*
+	VxD DIOC interface jump table.
+*/
 IMG_UINT32 (*g_DBGDrivProc[25])(IMG_VOID *,
 	IMG_VOID *) = { DBGDIOCDrivCreateStream,
 	DBGDIOCDrivDestroyStream,
@@ -523,3 +780,7 @@ IMG_UINT32 (*g_DBGDrivProc[25])(IMG_VOID *,
 	DBGDIOCDrivWriteLF,
 	DBGDIOCDrivReadLF,
 	DBGDIOCDrivWaitForEvent };
+
+/*****************************************************************************
+ End of file (IOCTL.C)
+*****************************************************************************/

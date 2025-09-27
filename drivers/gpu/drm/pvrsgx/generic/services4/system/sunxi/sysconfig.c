@@ -1,5 +1,7 @@
 /*************************************************************************/ /*!
+@Title          System Configuration
 @Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@Description    System Configuration functions
 @License        Dual MIT/GPLv2
 
 The contents of this file are subject to the MIT license as set out below.
@@ -36,6 +38,7 @@ PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
 COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 */ /**************************************************************************/
 
 #include "sysconfig.h"
@@ -45,6 +48,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "sgxinfo.h"
 #include "sgxinfokm.h"
 #include "syslocal.h"
+
+#include "ocpdefs.h"
 
 /* top level system data anchor point*/
 SYS_DATA *gpsSysData = (SYS_DATA *)IMG_NULL;
@@ -72,7 +77,7 @@ IMG_UINT32 PVRSRV_BridgeDispatchKM(IMG_UINT32 Ioctl, IMG_BYTE *pInBuf,
 
 static INLINE PVRSRV_ERROR EnableSGXClocksWrap(SYS_DATA *psSysData)
 {
-	return EnableSGXClocks(psSysData, IMG_FALSE);
+	return EnableSGXClocks(psSysData);
 }
 
 static INLINE PVRSRV_ERROR EnableSystemClocksWrap(SYS_DATA *psSysData)
@@ -275,7 +280,9 @@ PVRSRV_ERROR SysInitialise(IMG_VOID)
 #if !defined(SGX_DYNAMIC_TIMING_INFO)
 	SGX_TIMING_INFORMATION *psTimingInfo;
 #endif
-
+	pr_debug(
+	"GPU: rc2, module  release--move power off gating to cpus, move reset to system 1223 = %d\n",
+	SYS_SGX_CORE_CLOCK_SPEED);
 	gpsSysData = &gsSysData;
 	OSMemSet(gpsSysData, 0, sizeof(SYS_DATA));
 
@@ -472,6 +479,7 @@ PVRSRV_ERROR SysInitialise(IMG_VOID)
 	DisableSGXClocks(gpsSysData);
 #endif /* SUPPORT_ACTIVE_POWER_MANAGEMENT */
 
+	AWDEBUG("%s return ok \n", __func__);
 	return PVRSRV_OK;
 }
 
@@ -592,11 +600,12 @@ PVRSRV_ERROR SysDeinitialise(SYS_DATA *psSysData)
 	if (SYS_SPECIFIC_DATA_TEST(gpsSysSpecificData,
 	   SYS_SPECIFIC_DATA_ENABLE_INITDEV)) {
 #if defined(SUPPORT_ACTIVE_POWER_MANAGEMENT)
+#error sunxi-linux for ubuntu14.04 should not enable active power management since some code bugs has not been fixed.
 	PVR_ASSERT(SYS_SPECIFIC_DATA_TEST(
 	gpsSysSpecificData,
 	SYS_SPECIFIC_DATA_ENABLE_SYSCLOCKS));
-	/* Re-enable SGX clocks whilst SGX is being de-initialised */
-	eError = EnableSGXClocks(gpsSysData, IMG_TRUE);
+	/* Reenable SGX clocks whilst SGX is being deinitialised. */
+	eError = EnableSGXClocksWrap(gpsSysData);
 	if (eError != PVRSRV_OK) {
 	PVR_DPF((PVR_DBG_ERROR,
 	 "SysDeinitialise: EnableSGXClocks failed"));
@@ -728,7 +737,7 @@ IMG_DEV_PHYADDR SysCpuPAddrToDevPAddr(PVRSRV_DEVICE_TYPE eDeviceType,
 	PVR_UNREFERENCED_PARAMETER(eDeviceType);
 
 	/* Note: for UMA system we assume DevP == CpuP */
-	DevPAddr.uiAddr = CpuPAddr.uiAddr - 0x40000000;
+	DevPAddr.uiAddr = CpuPAddr.uiAddr;
 
 	return DevPAddr;
 }
@@ -800,7 +809,7 @@ IMG_DEV_PHYADDR SysSysPAddrToDevPAddr(PVRSRV_DEVICE_TYPE eDeviceType,
 	PVR_UNREFERENCED_PARAMETER(eDeviceType);
 
 	/* Note: for UMA system we assume DevP == CpuP */
-	DevPAddr.uiAddr = SysPAddr.uiAddr - 0x40000000;
+	DevPAddr.uiAddr = SysPAddr.uiAddr;
 
 	return DevPAddr;
 }
@@ -828,7 +837,7 @@ IMG_SYS_PHYADDR SysDevPAddrToSysPAddr(PVRSRV_DEVICE_TYPE eDeviceType,
 	PVR_UNREFERENCED_PARAMETER(eDeviceType);
 
 	/* Note: for UMA system we assume DevP == SysP */
-	SysPAddr.uiAddr = DevPAddr.uiAddr + 0x40000000;
+	SysPAddr.uiAddr = DevPAddr.uiAddr;
 
 	return SysPAddr;
 }

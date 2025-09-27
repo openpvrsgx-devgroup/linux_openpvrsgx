@@ -1,44 +1,28 @@
-/*************************************************************************/ /*!
-@Title          PVR Bridge Functionality
-@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
-@Description    Header for the PVR Bridge code
-@License        Dual MIT/GPLv2
-
-The contents of this file are subject to the MIT license as set out below.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-Alternatively, the contents of this file may be used under the terms of
-the GNU General Public License Version 2 ("GPL") in which case the provisions
-of GPL are applicable instead of those above.
-
-If you wish to allow use of your version of this file only under the terms of
-GPL, and not to allow others to use your version of this file under the terms
-of the MIT license, indicate your decision by deleting the provisions above
-and replace them with the notice and other provisions required by GPL as set
-out in the file called "GPL-COPYING" included in this distribution. If you do
-not delete the provisions above, a recipient may use your version of this file
-under the terms of either the MIT license or GPL.
-
-This License is also included in this distribution in the file called
-"MIT-COPYING".
-
-EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
-PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
-BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
-PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*/ /**************************************************************************/
+/**********************************************************************
+ *
+ * Copyright (C) Imagination Technologies Ltd. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful but, except
+ * as otherwise stated in writing, without any warranty; without even the
+ * implied warranty of merchantability or fitness for a particular purpose.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * The full GNU General Public License is included in this distribution in
+ * the file called "COPYING".
+ *
+ * Contact Information:
+ * Imagination Technologies Ltd. <gpl-support@imgtec.com>
+ * Home Park Estate, Kings Langley, Herts, WD4 8LZ, UK
+ *
+ ******************************************************************************/
 
 #ifndef __PVR_BRIDGE_H__
 #define __PVR_BRIDGE_H__
@@ -48,10 +32,6 @@ extern "C" {
 #endif
 
 #include "servicesint.h"
-
-/*
- * Bridge Cmd Ids
- */
 
 #ifdef __linux__
 
@@ -65,20 +45,19 @@ extern "C" {
 
 #else
 
+#if defined(__QNXNTO__)
+#define PVRSRV_IOC_GID (0x0UL)
+#else
 #error Unknown platform: Cannot define ioctls
+#endif
 
-#define PVRSRV_IO(INDEX) (PVRSRV_IOC_GID + INDEX)
-#define PVRSRV_IOW(INDEX) (PVRSRV_IOC_GID + INDEX)
-#define PVRSRV_IOR(INDEX) (PVRSRV_IOC_GID + INDEX)
-#define PVRSRV_IOWR(INDEX) (PVRSRV_IOC_GID + INDEX)
+#define PVRSRV_IO(INDEX) (PVRSRV_IOC_GID + (INDEX))
+#define PVRSRV_IOW(INDEX) (PVRSRV_IOC_GID + (INDEX))
+#define PVRSRV_IOR(INDEX) (PVRSRV_IOC_GID + (INDEX))
+#define PVRSRV_IOWR(INDEX) (PVRSRV_IOC_GID + (INDEX))
 
 #define PVRSRV_BRIDGE_BASE PVRSRV_IOC_GID
 #endif
-
-/*
- * Note *REMEMBER* to update PVRSRV_BRIDGE_LAST_CMD (below) if you add any new
- * bridge commands!
- */
 
 #define PVRSRV_BRIDGE_CORE_CMD_FIRST 0UL
 #define PVRSRV_BRIDGE_ENUM_DEVICES PVRSRV_IOWR(PVRSRV_BRIDGE_CORE_CMD_FIRST + 0)
@@ -136,7 +115,13 @@ extern "C" {
 	PVRSRV_IOWR(PVRSRV_BRIDGE_CORE_CMD_FIRST + 26)
 #define PVRSRV_BRIDGE_RELEASE_MMAP_DATA \
 	PVRSRV_IOWR(PVRSRV_BRIDGE_CORE_CMD_FIRST + 27)
-#define PVRSRV_BRIDGE_CORE_CMD_LAST (PVRSRV_BRIDGE_CORE_CMD_FIRST + 27)
+#define PVRSRV_BRIDGE_CHG_DEV_MEM_ATTRIBS \
+	PVRSRV_IOWR(PVRSRV_BRIDGE_CORE_CMD_FIRST + 28)
+#define PVRSRV_BRIDGE_MAP_DEV_MEMORY_2 \
+	PVRSRV_IOWR(PVRSRV_BRIDGE_CORE_CMD_FIRST + 29)
+#define PVRSRV_BRIDGE_EXPORT_DEVICEMEM_2 \
+	PVRSRV_IOWR(PVRSRV_BRIDGE_CORE_CMD_FIRST + 30)
+#define PVRSRV_BRIDGE_CORE_CMD_LAST (PVRSRV_BRIDGE_CORE_CMD_FIRST + 30)
 
 #define PVRSRV_BRIDGE_SIM_CMD_FIRST (PVRSRV_BRIDGE_CORE_CMD_LAST + 1)
 #define PVRSRV_BRIDGE_PROCESS_SIMISR_EVENT \
@@ -147,7 +132,6 @@ extern "C" {
 	PVRSRV_IOWR(PVRSRV_BRIDGE_SIM_CMD_FIRST + 2)
 #define PVRSRV_BRIDGE_SIM_CMD_LAST (PVRSRV_BRIDGE_SIM_CMD_FIRST + 2)
 
-/* User Mapping */
 #define PVRSRV_BRIDGE_MAPPING_CMD_FIRST (PVRSRV_BRIDGE_SIM_CMD_LAST + 1)
 #define PVRSRV_BRIDGE_MAPPHYSTOUSERSPACE \
 	PVRSRV_IOWR(PVRSRV_BRIDGE_MAPPING_CMD_FIRST + 0)
@@ -162,7 +146,6 @@ extern "C" {
 	PVRSRV_IOWR(PVRSRV_BRIDGE_STATS_CMD_FIRST + 0)
 #define PVRSRV_BRIDGE_STATS_CMD_LAST (PVRSRV_BRIDGE_STATS_CMD_FIRST + 0)
 
-/* API to retrieve misc. info. from services */
 #define PVRSRV_BRIDGE_MISC_CMD_FIRST (PVRSRV_BRIDGE_STATS_CMD_LAST + 1)
 #define PVRSRV_BRIDGE_GET_MISC_INFO \
 	PVRSRV_IOWR(PVRSRV_BRIDGE_MISC_CMD_FIRST + 0)
@@ -170,20 +153,19 @@ extern "C" {
 	PVRSRV_IOWR(PVRSRV_BRIDGE_MISC_CMD_FIRST + 1)
 #define PVRSRV_BRIDGE_MISC_CMD_LAST (PVRSRV_BRIDGE_MISC_CMD_FIRST + 1)
 
-/* Overlay ioctls */
-
-#define PVRSRV_BRIDGE_OVERLAY_CMD_FIRST (PVRSRV_BRIDGE_MISC_CMD_LAST + 1)
 #if defined(SUPPORT_OVERLAY_ROTATE_BLIT)
+#define PVRSRV_BRIDGE_OVERLAY_CMD_FIRST (PVRSRV_BRIDGE_MISC_CMD_LAST + 1)
 #define PVRSRV_BRIDGE_INIT_3D_OVL_BLT_RES \
 	PVRSRV_IOWR(PVRSRV_BRIDGE_OVERLAY_CMD_FIRST + 0)
 #define PVRSRV_BRIDGE_DEINIT_3D_OVL_BLT_RES \
 	PVRSRV_IOWR(PVRSRV_BRIDGE_OVERLAY_CMD_FIRST + 1)
-#endif
 #define PVRSRV_BRIDGE_OVERLAY_CMD_LAST (PVRSRV_BRIDGE_OVERLAY_CMD_FIRST + 1)
+#else
+#define PVRSRV_BRIDGE_OVERLAY_CMD_LAST PVRSRV_BRIDGE_MISC_CMD_LAST
+#endif
 
-/* PDUMP */
 #if defined(PDUMP)
-#define PVRSRV_BRIDGE_PDUMP_CMD_FIRST (PVRSRV_BRIDGE_OVERLAY_CMD_FIRST + 1)
+#define PVRSRV_BRIDGE_PDUMP_CMD_FIRST (PVRSRV_BRIDGE_OVERLAY_CMD_LAST + 1)
 #define PVRSRV_BRIDGE_PDUMP_INIT PVRSRV_IOWR(PVRSRV_BRIDGE_PDUMP_CMD_FIRST + 0)
 #define PVRSRV_BRIDGE_PDUMP_MEMPOL \
 	PVRSRV_IOWR(PVRSRV_BRIDGE_PDUMP_CMD_FIRST + 1)
@@ -210,8 +192,6 @@ extern "C" {
 	PVRSRV_IOWR(PVRSRV_BRIDGE_PDUMP_CMD_FIRST + 12)
 #define PVRSRV_BRIDGE_PDUMP_DRIVERINFO \
 	PVRSRV_IOWR(PVRSRV_BRIDGE_PDUMP_CMD_FIRST + 13)
-#define PVRSRV_BRIDGE_PDUMP_PDREG \
-	PVRSRV_IOWR(PVRSRV_BRIDGE_PDUMP_CMD_FIRST + 14)
 #define PVRSRV_BRIDGE_PDUMP_DUMPPDDEVPADDR \
 	PVRSRV_IOWR(PVRSRV_BRIDGE_PDUMP_CMD_FIRST + 15)
 #define PVRSRV_BRIDGE_PDUMP_CYCLE_COUNT_REG_READ \
@@ -222,24 +202,18 @@ extern "C" {
 	PVRSRV_IOWR(PVRSRV_BRIDGE_PDUMP_CMD_FIRST + 18)
 #define PVRSRV_BRIDGE_PDUMP_CMD_LAST (PVRSRV_BRIDGE_PDUMP_CMD_FIRST + 18)
 #else
-/* Note we are carefull here not to leave a large gap in the ioctl numbers.
- * (Some ports may use these values to index into an array where large gaps can
- * waste memory) */
 #define PVRSRV_BRIDGE_PDUMP_CMD_LAST PVRSRV_BRIDGE_OVERLAY_CMD_LAST
 #endif
 
-/* DisplayClass APIs */
 #define PVRSRV_BRIDGE_OEM_CMD_FIRST (PVRSRV_BRIDGE_PDUMP_CMD_LAST + 1)
 #define PVRSRV_BRIDGE_GET_OEMJTABLE PVRSRV_IOWR(PVRSRV_BRIDGE_OEM_CMD_FIRST + 0)
 #define PVRSRV_BRIDGE_OEM_CMD_LAST (PVRSRV_BRIDGE_OEM_CMD_FIRST + 0)
 
-/* device class enum */
 #define PVRSRV_BRIDGE_DEVCLASS_CMD_FIRST (PVRSRV_BRIDGE_OEM_CMD_LAST + 1)
 #define PVRSRV_BRIDGE_ENUM_CLASS \
 	PVRSRV_IOWR(PVRSRV_BRIDGE_DEVCLASS_CMD_FIRST + 0)
 #define PVRSRV_BRIDGE_DEVCLASS_CMD_LAST (PVRSRV_BRIDGE_DEVCLASS_CMD_FIRST + 0)
 
-/* display class API */
 #define PVRSRV_BRIDGE_DISPCLASS_CMD_FIRST (PVRSRV_BRIDGE_DEVCLASS_CMD_LAST + 1)
 #define PVRSRV_BRIDGE_OPEN_DISPCLASS_DEVICE \
 	PVRSRV_IOWR(PVRSRV_BRIDGE_DISPCLASS_CMD_FIRST + 0)
@@ -283,9 +257,7 @@ extern "C" {
 	PVRSRV_IOWR(PVRSRV_BRIDGE_BUFCLASS_CMD_FIRST + 2)
 #define PVRSRV_BRIDGE_GET_BUFFERCLASS_BUFFER \
 	PVRSRV_IOWR(PVRSRV_BRIDGE_BUFCLASS_CMD_FIRST + 3)
-#define PVRSRV_BRIDGE_GET_BUFFERCLASS_BUFFER_ID_FROM_TAG \
-	PVRSRV_IOWR(PVRSRV_BRIDGE_BUFCLASS_CMD_FIRST + 4)
-#define PVRSRV_BRIDGE_BUFCLASS_CMD_LAST (PVRSRV_BRIDGE_BUFCLASS_CMD_FIRST + 4)
+#define PVRSRV_BRIDGE_BUFCLASS_CMD_LAST (PVRSRV_BRIDGE_BUFCLASS_CMD_FIRST + 3)
 
 #define PVRSRV_BRIDGE_WRAP_CMD_FIRST (PVRSRV_BRIDGE_BUFCLASS_CMD_LAST + 1)
 #define PVRSRV_BRIDGE_WRAP_EXT_MEMORY \
@@ -305,15 +277,7 @@ extern "C" {
 	PVRSRV_IOWR(PVRSRV_BRIDGE_SHAREDMEM_CMD_FIRST + 3)
 #define PVRSRV_BRIDGE_SHAREDMEM_CMD_LAST (PVRSRV_BRIDGE_SHAREDMEM_CMD_FIRST + 3)
 
-#define PVRSRV_BRIDGE_SERVICES4_TMP_CMD_FIRST \
-	(PVRSRV_BRIDGE_SHAREDMEM_CMD_LAST + 1)
-#define PVRSRV_BRIDGE_GETMMU_PD_DEVPADDR \
-	PVRSRV_IOWR(PVRSRV_BRIDGE_SERVICES4_TMP_CMD_FIRST + 0)
-#define PVRSRV_BRIDGE_SERVICES4_TMP_CMD_LAST \
-	(PVRSRV_BRIDGE_SERVICES4_TMP_CMD_FIRST + 0)
-
-#define PVRSRV_BRIDGE_INITSRV_CMD_FIRST \
-	(PVRSRV_BRIDGE_SERVICES4_TMP_CMD_LAST + 1)
+#define PVRSRV_BRIDGE_INITSRV_CMD_FIRST (PVRSRV_BRIDGE_SHAREDMEM_CMD_LAST + 1)
 #define PVRSRV_BRIDGE_INITSRV_CONNECT \
 	PVRSRV_IOWR(PVRSRV_BRIDGE_INITSRV_CMD_FIRST + 0)
 #define PVRSRV_BRIDGE_INITSRV_DISCONNECT \
@@ -333,11 +297,27 @@ extern "C" {
 
 #define PVRSRV_BRIDGE_SYNC_OPS_CMD_FIRST \
 	(PVRSRV_BRIDGE_EVENT_OBJECT_CMD_LAST + 1)
-#define PVRSRV_BRIDGE_MODIFY_PENDING_SYNC_OPS \
+#define PVRSRV_BRIDGE_CREATE_SYNC_INFO_MOD_OBJ \
 	PVRSRV_IOWR(PVRSRV_BRIDGE_SYNC_OPS_CMD_FIRST + 0)
-#define PVRSRV_BRIDGE_MODIFY_COMPLETE_SYNC_OPS \
+#define PVRSRV_BRIDGE_DESTROY_SYNC_INFO_MOD_OBJ \
 	PVRSRV_IOWR(PVRSRV_BRIDGE_SYNC_OPS_CMD_FIRST + 1)
-#define PVRSRV_BRIDGE_SYNC_OPS_CMD_LAST (PVRSRV_BRIDGE_SYNC_OPS_CMD_FIRST + 1)
+#define PVRSRV_BRIDGE_MODIFY_PENDING_SYNC_OPS \
+	PVRSRV_IOWR(PVRSRV_BRIDGE_SYNC_OPS_CMD_FIRST + 2)
+#define PVRSRV_BRIDGE_MODIFY_COMPLETE_SYNC_OPS \
+	PVRSRV_IOWR(PVRSRV_BRIDGE_SYNC_OPS_CMD_FIRST + 3)
+#define PVRSRV_BRIDGE_SYNC_OPS_TAKE_TOKEN \
+	PVRSRV_IOWR(PVRSRV_BRIDGE_SYNC_OPS_CMD_FIRST + 4)
+#define PVRSRV_BRIDGE_SYNC_OPS_FLUSH_TO_TOKEN \
+	PVRSRV_IOWR(PVRSRV_BRIDGE_SYNC_OPS_CMD_FIRST + 5)
+#define PVRSRV_BRIDGE_SYNC_OPS_FLUSH_TO_MOD_OBJ \
+	PVRSRV_IOWR(PVRSRV_BRIDGE_SYNC_OPS_CMD_FIRST + 6)
+#define PVRSRV_BRIDGE_SYNC_OPS_FLUSH_TO_DELTA \
+	PVRSRV_IOWR(PVRSRV_BRIDGE_SYNC_OPS_CMD_FIRST + 7)
+#define PVRSRV_BRIDGE_ALLOC_SYNC_INFO \
+	PVRSRV_IOWR(PVRSRV_BRIDGE_SYNC_OPS_CMD_FIRST + 8)
+#define PVRSRV_BRIDGE_FREE_SYNC_INFO \
+	PVRSRV_IOWR(PVRSRV_BRIDGE_SYNC_OPS_CMD_FIRST + 9)
+#define PVRSRV_BRIDGE_SYNC_OPS_CMD_LAST (PVRSRV_BRIDGE_SYNC_OPS_CMD_FIRST + 9)
 
 #define PVRSRV_BRIDGE_LAST_NON_DEVICE_CMD (PVRSRV_BRIDGE_SYNC_OPS_CMD_LAST + 1)
 
@@ -357,8 +337,17 @@ typedef struct PVRSRV_BRIDGE_PACKAGE_TAG {
 	IMG_VOID *pvParamOut;
 	IMG_UINT32 ui32OutBufferSize;
 
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hKernelServices;
+#else
 	IMG_HANDLE hKernelServices;
+#endif
 } PVRSRV_BRIDGE_PACKAGE;
+
+typedef struct PVRSRV_BRIDGE_IN_CONNECT_SERVICES_TAG {
+	IMG_UINT32 ui32BridgeFlags;
+	IMG_UINT32 ui32Flags;
+} PVRSRV_BRIDGE_IN_CONNECT_SERVICES;
 
 typedef struct PVRSRV_BRIDGE_IN_ACQUIRE_DEVICEINFO_TAG {
 	IMG_UINT32 ui32BridgeFlags;
@@ -374,37 +363,65 @@ typedef struct PVRSRV_BRIDGE_IN_ENUMCLASS_TAG {
 
 typedef struct PVRSRV_BRIDGE_IN_CLOSE_DISPCLASS_DEVICE_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDeviceKM;
+#else
 	IMG_HANDLE hDeviceKM;
+#endif
 } PVRSRV_BRIDGE_IN_CLOSE_DISPCLASS_DEVICE;
 
 typedef struct PVRSRV_BRIDGE_IN_ENUM_DISPCLASS_FORMATS_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDeviceKM;
+#else
 	IMG_HANDLE hDeviceKM;
+#endif
 } PVRSRV_BRIDGE_IN_ENUM_DISPCLASS_FORMATS;
 
 typedef struct PVRSRV_BRIDGE_IN_GET_DISPCLASS_SYSBUFFER_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDeviceKM;
+#else
 	IMG_HANDLE hDeviceKM;
+#endif
 } PVRSRV_BRIDGE_IN_GET_DISPCLASS_SYSBUFFER;
 
 typedef struct PVRSRV_BRIDGE_IN_GET_DISPCLASS_INFO_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDeviceKM;
+#else
 	IMG_HANDLE hDeviceKM;
+#endif
 } PVRSRV_BRIDGE_IN_GET_DISPCLASS_INFO;
 
 typedef struct PVRSRV_BRIDGE_IN_CLOSE_BUFFERCLASS_DEVICE_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDeviceKM;
+#else
 	IMG_HANDLE hDeviceKM;
+#endif
 } PVRSRV_BRIDGE_IN_CLOSE_BUFFERCLASS_DEVICE;
 
 typedef struct PVRSRV_BRIDGE_IN_GET_BUFFERCLASS_INFO_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDeviceKM;
+#else
 	IMG_HANDLE hDeviceKM;
+#endif
 } PVRSRV_BRIDGE_IN_GET_BUFFERCLASS_INFO;
 
 typedef struct PVRSRV_BRIDGE_IN_RELEASE_DEVICEINFO_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDevCookie;
+#else
 	IMG_HANDLE hDevCookie;
+#endif
 
 } PVRSRV_BRIDGE_IN_RELEASE_DEVICEINFO;
 
@@ -417,28 +434,47 @@ typedef struct PVRSRV_BRIDGE_IN_FREE_CLASSDEVICEINFO_TAG {
 
 typedef struct PVRSRV_BRIDGE_IN_GET_DEVMEM_HEAPINFO_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDevCookie;
+	IMG_SID hDevMemContext;
+#else
 	IMG_HANDLE hDevCookie;
 	IMG_HANDLE hDevMemContext;
+#endif
 
 } PVRSRV_BRIDGE_IN_GET_DEVMEM_HEAPINFO;
 
 typedef struct PVRSRV_BRIDGE_IN_CREATE_DEVMEMCONTEXT_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDevCookie;
+#else
 	IMG_HANDLE hDevCookie;
+#endif
 
 } PVRSRV_BRIDGE_IN_CREATE_DEVMEMCONTEXT;
 
 typedef struct PVRSRV_BRIDGE_IN_DESTROY_DEVMEMCONTEXT_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDevCookie;
+	IMG_SID hDevMemContext;
+#else
 	IMG_HANDLE hDevCookie;
 	IMG_HANDLE hDevMemContext;
+#endif
 
 } PVRSRV_BRIDGE_IN_DESTROY_DEVMEMCONTEXT;
 
 typedef struct PVRSRV_BRIDGE_IN_ALLOCDEVICEMEM_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDevCookie;
+	IMG_SID hDevMemHeap;
+#else
 	IMG_HANDLE hDevCookie;
 	IMG_HANDLE hDevMemHeap;
+#endif
 	IMG_UINT32 ui32Attribs;
 	IMG_SIZE_T ui32Size;
 	IMG_SIZE_T ui32Alignment;
@@ -447,30 +483,52 @@ typedef struct PVRSRV_BRIDGE_IN_ALLOCDEVICEMEM_TAG {
 
 typedef struct PVRSRV_BRIDGE_IN_MAPMEMINFOTOUSER_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hKernelMemInfo;
+#else
 	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
+#endif
 
 } PVRSRV_BRIDGE_IN_MAPMEMINFOTOUSER;
 
 typedef struct PVRSRV_BRIDGE_IN_UNMAPMEMINFOFROMUSER_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hKernelMemInfo;
+#else
 	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
+#endif
 	IMG_PVOID pvLinAddr;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hMappingInfo;
+#else
 	IMG_HANDLE hMappingInfo;
+#endif
 
 } PVRSRV_BRIDGE_IN_UNMAPMEMINFOFROMUSER;
 
 typedef struct PVRSRV_BRIDGE_IN_FREEDEVICEMEM_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDevCookie;
+	IMG_SID hKernelMemInfo;
+#else
 	IMG_HANDLE hDevCookie;
 	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
+#endif
 	PVRSRV_CLIENT_MEM_INFO sClientMemInfo;
 
 } PVRSRV_BRIDGE_IN_FREEDEVICEMEM;
 
 typedef struct PVRSRV_BRIDGE_IN_EXPORTDEVICEMEM_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDevCookie;
+	IMG_SID hKernelMemInfo;
+#else
 	IMG_HANDLE hDevCookie;
 	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
+#endif
 
 } PVRSRV_BRIDGE_IN_EXPORTDEVICEMEM;
 
@@ -482,31 +540,51 @@ typedef struct PVRSRV_BRIDGE_IN_GETFREEDEVICEMEM_TAG {
 
 typedef struct PVRSRV_BRIDGE_IN_CREATECOMMANDQUEUE_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDevCookie;
+#else
 	IMG_HANDLE hDevCookie;
+#endif
 	IMG_SIZE_T ui32QueueSize;
 
 } PVRSRV_BRIDGE_IN_CREATECOMMANDQUEUE;
 
 typedef struct PVRSRV_BRIDGE_IN_DESTROYCOMMANDQUEUE_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDevCookie;
+#else
 	IMG_HANDLE hDevCookie;
+#endif
 	PVRSRV_QUEUE_INFO *psQueueInfo;
 
 } PVRSRV_BRIDGE_IN_DESTROYCOMMANDQUEUE;
 
 typedef struct PVRSRV_BRIDGE_IN_MHANDLE_TO_MMAP_DATA_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hMHandle;
+#else
 	IMG_HANDLE hMHandle;
+#endif
 } PVRSRV_BRIDGE_IN_MHANDLE_TO_MMAP_DATA;
 
 typedef struct PVRSRV_BRIDGE_IN_RELEASE_MMAP_DATA_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hMHandle;
+#else
 	IMG_HANDLE hMHandle;
+#endif
 } PVRSRV_BRIDGE_IN_RELEASE_MMAP_DATA;
 
 typedef struct PVRSRV_BRIDGE_IN_RESERVE_DEV_VIRTMEM_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDevMemHeap;
+#else
 	IMG_HANDLE hDevMemHeap;
+#endif
 	IMG_DEV_VIRTADDR *psDevVAddr;
 	IMG_SIZE_T ui32Size;
 	IMG_SIZE_T ui32Alignment;
@@ -515,13 +593,22 @@ typedef struct PVRSRV_BRIDGE_IN_RESERVE_DEV_VIRTMEM_TAG {
 
 typedef struct PVRSRV_BRIDGE_OUT_CONNECT_SERVICES_TAG {
 	PVRSRV_ERROR eError;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hKernelServices;
+#else
 	IMG_HANDLE hKernelServices;
+#endif
 } PVRSRV_BRIDGE_OUT_CONNECT_SERVICES;
 
 typedef struct PVRSRV_BRIDGE_OUT_RESERVE_DEV_VIRTMEM_TAG {
 	PVRSRV_ERROR eError;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hKernelMemInfo;
+	IMG_SID hKernelSyncInfo;
+#else
 	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
 	PVRSRV_KERNEL_SYNC_INFO *psKernelSyncInfo;
+#endif
 	PVRSRV_CLIENT_MEM_INFO sClientMemInfo;
 	PVRSRV_CLIENT_SYNC_INFO sClientSyncInfo;
 
@@ -529,7 +616,11 @@ typedef struct PVRSRV_BRIDGE_OUT_RESERVE_DEV_VIRTMEM_TAG {
 
 typedef struct PVRSRV_BRIDGE_IN_FREE_DEV_VIRTMEM_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hKernelMemInfo;
+#else
 	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
+#endif
 	PVRSRV_CLIENT_MEM_INFO sClientMemInfo;
 	PVRSRV_CLIENT_SYNC_INFO sClientSyncInfo;
 
@@ -537,15 +628,23 @@ typedef struct PVRSRV_BRIDGE_IN_FREE_DEV_VIRTMEM_TAG {
 
 typedef struct PVRSRV_BRIDGE_IN_MAP_DEV_MEMORY_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hKernelMemInfo;
+	IMG_SID hDstDevMemHeap;
+#else
 	IMG_HANDLE hKernelMemInfo;
 	IMG_HANDLE hDstDevMemHeap;
+#endif
 
 } PVRSRV_BRIDGE_IN_MAP_DEV_MEMORY;
 
 typedef struct PVRSRV_BRIDGE_OUT_MAP_DEV_MEMORY_TAG {
 	PVRSRV_ERROR eError;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDstKernelMemInfo;
+#else
 	PVRSRV_KERNEL_MEM_INFO *psDstKernelMemInfo;
-	PVRSRV_KERNEL_SYNC_INFO *psDstKernelSyncInfo;
+#endif
 	PVRSRV_CLIENT_MEM_INFO sDstClientMemInfo;
 	PVRSRV_CLIENT_SYNC_INFO sDstClientSyncInfo;
 
@@ -553,7 +652,11 @@ typedef struct PVRSRV_BRIDGE_OUT_MAP_DEV_MEMORY_TAG {
 
 typedef struct PVRSRV_BRIDGE_IN_UNMAP_DEV_MEMORY_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hKernelMemInfo;
+#else
 	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
+#endif
 	PVRSRV_CLIENT_MEM_INFO sClientMemInfo;
 	PVRSRV_CLIENT_SYNC_INFO sClientSyncInfo;
 
@@ -561,7 +664,11 @@ typedef struct PVRSRV_BRIDGE_IN_UNMAP_DEV_MEMORY_TAG {
 
 typedef struct PVRSRV_BRIDGE_IN_MAP_EXT_MEMORY_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hKernelMemInfo;
+#else
 	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
+#endif
 	IMG_SYS_PHYADDR *psSysPAddr;
 	IMG_UINT32 ui32Flags;
 
@@ -577,8 +684,13 @@ typedef struct PVRSRV_BRIDGE_IN_UNMAP_EXT_MEMORY_TAG {
 
 typedef struct PVRSRV_BRIDGE_IN_MAP_DEVICECLASS_MEMORY_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDeviceClassBuffer;
+	IMG_SID hDevMemContext;
+#else
 	IMG_HANDLE hDeviceClassBuffer;
 	IMG_HANDLE hDevMemContext;
+#endif
 
 } PVRSRV_BRIDGE_IN_MAP_DEVICECLASS_MEMORY;
 
@@ -586,15 +698,23 @@ typedef struct PVRSRV_BRIDGE_OUT_MAP_DEVICECLASS_MEMORY_TAG {
 	PVRSRV_ERROR eError;
 	PVRSRV_CLIENT_MEM_INFO sClientMemInfo;
 	PVRSRV_CLIENT_SYNC_INFO sClientSyncInfo;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hKernelMemInfo;
+	IMG_SID hMappingInfo;
+#else
 	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
-	PVRSRV_KERNEL_SYNC_INFO *psKernelSyncInfo;
 	IMG_HANDLE hMappingInfo;
+#endif
 
 } PVRSRV_BRIDGE_OUT_MAP_DEVICECLASS_MEMORY;
 
 typedef struct PVRSRV_BRIDGE_IN_UNMAP_DEVICECLASS_MEMORY_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hKernelMemInfo;
+#else
 	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
+#endif
 	PVRSRV_CLIENT_MEM_INFO sClientMemInfo;
 	PVRSRV_CLIENT_SYNC_INFO sClientSyncInfo;
 
@@ -602,18 +722,28 @@ typedef struct PVRSRV_BRIDGE_IN_UNMAP_DEVICECLASS_MEMORY_TAG {
 
 typedef struct PVRSRV_BRIDGE_IN_PDUMP_MEMPOL_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hKernelMemInfo;
+#else
 	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
+#endif
 	IMG_UINT32 ui32Offset;
 	IMG_UINT32 ui32Value;
 	IMG_UINT32 ui32Mask;
+	PDUMP_POLL_OPERATOR eOperator;
 	IMG_UINT32 ui32Flags;
 
 } PVRSRV_BRIDGE_IN_PDUMP_MEMPOL;
 
 typedef struct PVRSRV_BRIDGE_IN_PDUMP_SYNCPOL_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hKernelSyncInfo;
+#else
 	PVRSRV_KERNEL_SYNC_INFO *psKernelSyncInfo;
+#endif
 	IMG_BOOL bIsRead;
+	IMG_BOOL bUseLastOpDumpVal;
 	IMG_UINT32 ui32Value;
 	IMG_UINT32 ui32Mask;
 
@@ -623,7 +753,11 @@ typedef struct PVRSRV_BRIDGE_IN_PDUMP_DUMPMEM_TAG {
 	IMG_UINT32 ui32BridgeFlags;
 	IMG_PVOID pvLinAddr;
 	IMG_PVOID pvAltLinAddr;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hKernelMemInfo;
+#else
 	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
+#endif
 	IMG_UINT32 ui32Offset;
 	IMG_UINT32 ui32Bytes;
 	IMG_UINT32 ui32Flags;
@@ -633,7 +767,11 @@ typedef struct PVRSRV_BRIDGE_IN_PDUMP_DUMPMEM_TAG {
 typedef struct PVRSRV_BRIDGE_IN_PDUMP_DUMPSYNC_TAG {
 	IMG_UINT32 ui32BridgeFlags;
 	IMG_PVOID pvAltLinAddr;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hKernelSyncInfo;
+#else
 	PVRSRV_KERNEL_SYNC_INFO *psKernelSyncInfo;
+#endif
 	IMG_UINT32 ui32Offset;
 	IMG_UINT32 ui32Bytes;
 
@@ -641,16 +779,28 @@ typedef struct PVRSRV_BRIDGE_IN_PDUMP_DUMPSYNC_TAG {
 
 typedef struct PVRSRV_BRIDGE_IN_PDUMP_DUMPREG_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDevCookie;
+#else
+	IMG_HANDLE hDevCookie;
+#endif
 	PVRSRV_HWREG sHWReg;
 	IMG_UINT32 ui32Flags;
+	IMG_CHAR szRegRegion[32];
 
 } PVRSRV_BRIDGE_IN_PDUMP_DUMPREG;
 
 typedef struct PVRSRV_BRIDGE_IN_PDUMP_REGPOL_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDevCookie;
+#else
+	IMG_HANDLE hDevCookie;
+#endif
 	PVRSRV_HWREG sHWReg;
 	IMG_UINT32 ui32Mask;
 	IMG_UINT32 ui32Flags;
+	IMG_CHAR szRegRegion[32];
 } PVRSRV_BRIDGE_IN_PDUMP_REGPOL;
 
 typedef struct PVRSRV_BRIDGE_IN_PDUMP_DUMPPDREG_TAG {
@@ -662,13 +812,19 @@ typedef struct PVRSRV_BRIDGE_IN_PDUMP_DUMPPDREG_TAG {
 
 typedef struct PVRSRV_BRIDGE_IN_PDUMP_MEMPAGES_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDevCookie;
+	IMG_SID hKernelMemInfo;
+#else
+	IMG_HANDLE hDevCookie;
 	IMG_HANDLE hKernelMemInfo;
+#endif
 	IMG_DEV_PHYADDR *pPages;
 	IMG_UINT32 ui32NumPages;
-	IMG_DEV_VIRTADDR sDevAddr;
+	IMG_DEV_VIRTADDR sDevVAddr;
 	IMG_UINT32 ui32Start;
 	IMG_UINT32 ui32Length;
-	IMG_BOOL bContinuous;
+	IMG_UINT32 ui32Flags;
 
 } PVRSRV_BRIDGE_IN_PDUMP_MEMPAGES;
 
@@ -687,12 +843,22 @@ typedef struct PVRSRV_BRIDGE_IN_PDUMP_SETFRAME_TAG {
 
 typedef struct PVRSRV_BRIDGE_IN_PDUMP_BITMAP_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDevCookie;
+#else
+	IMG_HANDLE hDevCookie;
+#endif
 	IMG_CHAR szFileName[PVRSRV_PDUMP_MAX_FILENAME_SIZE];
 	IMG_UINT32 ui32FileOffset;
 	IMG_UINT32 ui32Width;
 	IMG_UINT32 ui32Height;
 	IMG_UINT32 ui32StrideInBytes;
 	IMG_DEV_VIRTADDR sDevBaseAddr;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDevMemContext;
+#else
+	IMG_HANDLE hDevMemContext;
+#endif
 	IMG_UINT32 ui32Size;
 	PDUMP_PIXEL_FORMAT ePixelFormat;
 	PDUMP_MEM_FORMAT eMemFormat;
@@ -702,11 +868,17 @@ typedef struct PVRSRV_BRIDGE_IN_PDUMP_BITMAP_TAG {
 
 typedef struct PVRSRV_BRIDGE_IN_PDUMP_READREG_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDevCookie;
+#else
+	IMG_HANDLE hDevCookie;
+#endif
 	IMG_CHAR szFileName[PVRSRV_PDUMP_MAX_FILENAME_SIZE];
 	IMG_UINT32 ui32FileOffset;
 	IMG_UINT32 ui32Address;
 	IMG_UINT32 ui32Size;
 	IMG_UINT32 ui32Flags;
+	IMG_CHAR szRegRegion[32];
 
 } PVRSRV_BRIDGE_IN_PDUMP_READREG;
 
@@ -719,13 +891,22 @@ typedef struct PVRSRV_BRIDGE_IN_PDUMP_DRIVERINFO_TAG {
 
 typedef struct PVRSRV_BRIDGE_IN_PDUMP_DUMPPDDEVPADDR_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hKernelMemInfo;
+#else
 	IMG_HANDLE hKernelMemInfo;
+#endif
 	IMG_UINT32 ui32Offset;
 	IMG_DEV_PHYADDR sPDDevPAddr;
 } PVRSRV_BRIDGE_IN_PDUMP_DUMPPDDEVPADDR;
 
 typedef struct PVRSRV_BRIDGE_PDUM_IN_CYCLE_COUNT_REG_READ_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDevCookie;
+#else
+	IMG_HANDLE hDevCookie;
+#endif
 	IMG_UINT32 ui32RegOffset;
 	IMG_BOOL bLastFrame;
 } PVRSRV_BRIDGE_IN_PDUMP_CYCLE_COUNT_REG_READ;
@@ -739,7 +920,11 @@ typedef struct PVRSRV_BRIDGE_OUT_ENUMDEVICE_TAG {
 
 typedef struct PVRSRV_BRIDGE_OUT_ACQUIRE_DEVICEINFO_TAG {
 	PVRSRV_ERROR eError;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDevCookie;
+#else
 	IMG_HANDLE hDevCookie;
+#endif
 
 } PVRSRV_BRIDGE_OUT_ACQUIRE_DEVICEINFO;
 
@@ -753,20 +938,33 @@ typedef struct PVRSRV_BRIDGE_OUT_ENUMCLASS_TAG {
 typedef struct PVRSRV_BRIDGE_IN_OPEN_DISPCLASS_DEVICE_TAG {
 	IMG_UINT32 ui32BridgeFlags;
 	IMG_UINT32 ui32DeviceID;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDevCookie;
+#else
 	IMG_HANDLE hDevCookie;
+#endif
 
 } PVRSRV_BRIDGE_IN_OPEN_DISPCLASS_DEVICE;
 
 typedef struct PVRSRV_BRIDGE_OUT_OPEN_DISPCLASS_DEVICE_TAG {
 	PVRSRV_ERROR eError;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDeviceKM;
+#else
 	IMG_HANDLE hDeviceKM;
+#endif
 
 } PVRSRV_BRIDGE_OUT_OPEN_DISPCLASS_DEVICE;
 
 typedef struct PVRSRV_BRIDGE_IN_WRAP_EXT_MEMORY_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDevCookie;
+	IMG_SID hDevMemContext;
+#else
 	IMG_HANDLE hDevCookie;
 	IMG_HANDLE hDevMemContext;
+#endif
 	IMG_VOID *pvLinAddr;
 	IMG_SIZE_T ui32ByteSize;
 	IMG_SIZE_T ui32PageOffset;
@@ -786,7 +984,11 @@ typedef struct PVRSRV_BRIDGE_OUT_WRAP_EXT_MEMORY_TAG {
 
 typedef struct PVRSRV_BRIDGE_IN_UNWRAP_EXT_MEMORY_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hKernelMemInfo;
+#else
 	IMG_HANDLE hKernelMemInfo;
+#endif
 	PVRSRV_CLIENT_MEM_INFO sClientMemInfo;
 	PVRSRV_CLIENT_SYNC_INFO sClientSyncInfo;
 
@@ -794,7 +996,7 @@ typedef struct PVRSRV_BRIDGE_IN_UNWRAP_EXT_MEMORY_TAG {
 
 #define PVRSRV_MAX_DC_DISPLAY_FORMATS 10
 #define PVRSRV_MAX_DC_DISPLAY_DIMENSIONS 10
-#define PVRSRV_MAX_DC_SWAPCHAIN_BUFFERS 4
+#define PVRSRV_MAX_DC_SWAPCHAIN_BUFFERS 9
 #define PVRSRV_MAX_DC_CLIP_RECTS 32
 
 typedef struct PVRSRV_BRIDGE_OUT_ENUM_DISPCLASS_FORMATS_TAG {
@@ -806,7 +1008,11 @@ typedef struct PVRSRV_BRIDGE_OUT_ENUM_DISPCLASS_FORMATS_TAG {
 
 typedef struct PVRSRV_BRIDGE_IN_ENUM_DISPCLASS_DIMS_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDeviceKM;
+#else
 	IMG_HANDLE hDeviceKM;
+#endif
 	DISPLAY_FORMAT sFormat;
 
 } PVRSRV_BRIDGE_IN_ENUM_DISPCLASS_DIMS;
@@ -826,13 +1032,21 @@ typedef struct PVRSRV_BRIDGE_OUT_GET_DISPCLASS_INFO_TAG {
 
 typedef struct PVRSRV_BRIDGE_OUT_GET_DISPCLASS_SYSBUFFER_TAG {
 	PVRSRV_ERROR eError;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hBuffer;
+#else
 	IMG_HANDLE hBuffer;
+#endif
 
 } PVRSRV_BRIDGE_OUT_GET_DISPCLASS_SYSBUFFER;
 
 typedef struct PVRSRV_BRIDGE_IN_CREATE_DISPCLASS_SWAPCHAIN_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDeviceKM;
+#else
 	IMG_HANDLE hDeviceKM;
+#endif
 	IMG_UINT32 ui32Flags;
 	DISPLAY_SURF_ATTRIBUTES sDstSurfAttrib;
 	DISPLAY_SURF_ATTRIBUTES sSrcSurfAttrib;
@@ -844,54 +1058,91 @@ typedef struct PVRSRV_BRIDGE_IN_CREATE_DISPCLASS_SWAPCHAIN_TAG {
 
 typedef struct PVRSRV_BRIDGE_OUT_CREATE_DISPCLASS_SWAPCHAIN_TAG {
 	PVRSRV_ERROR eError;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hSwapChain;
+#else
 	IMG_HANDLE hSwapChain;
+#endif
 	IMG_UINT32 ui32SwapChainID;
 
 } PVRSRV_BRIDGE_OUT_CREATE_DISPCLASS_SWAPCHAIN;
 
 typedef struct PVRSRV_BRIDGE_IN_DESTROY_DISPCLASS_SWAPCHAIN_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDeviceKM;
+	IMG_SID hSwapChain;
+#else
 	IMG_HANDLE hDeviceKM;
 	IMG_HANDLE hSwapChain;
+#endif
 
 } PVRSRV_BRIDGE_IN_DESTROY_DISPCLASS_SWAPCHAIN;
 
 typedef struct PVRSRV_BRIDGE_IN_SET_DISPCLASS_RECT_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDeviceKM;
+	IMG_SID hSwapChain;
+#else
 	IMG_HANDLE hDeviceKM;
 	IMG_HANDLE hSwapChain;
+#endif
 	IMG_RECT sRect;
 
 } PVRSRV_BRIDGE_IN_SET_DISPCLASS_RECT;
 
 typedef struct PVRSRV_BRIDGE_IN_SET_DISPCLASS_COLOURKEY_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDeviceKM;
+	IMG_SID hSwapChain;
+#else
 	IMG_HANDLE hDeviceKM;
 	IMG_HANDLE hSwapChain;
+#endif
 	IMG_UINT32 ui32CKColour;
 
 } PVRSRV_BRIDGE_IN_SET_DISPCLASS_COLOURKEY;
 
 typedef struct PVRSRV_BRIDGE_IN_GET_DISPCLASS_BUFFERS_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDeviceKM;
+	IMG_SID hSwapChain;
+#else
 	IMG_HANDLE hDeviceKM;
 	IMG_HANDLE hSwapChain;
+#endif
 
 } PVRSRV_BRIDGE_IN_GET_DISPCLASS_BUFFERS;
 
 typedef struct PVRSRV_BRIDGE_OUT_GET_DISPCLASS_BUFFERS_TAG {
 	PVRSRV_ERROR eError;
 	IMG_UINT32 ui32BufferCount;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID ahBuffer[PVRSRV_MAX_DC_SWAPCHAIN_BUFFERS];
+#else
 	IMG_HANDLE ahBuffer[PVRSRV_MAX_DC_SWAPCHAIN_BUFFERS];
+#endif
 
 } PVRSRV_BRIDGE_OUT_GET_DISPCLASS_BUFFERS;
 
 typedef struct PVRSRV_BRIDGE_IN_SWAP_DISPCLASS_TO_BUFFER_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDeviceKM;
+	IMG_SID hBuffer;
+#else
 	IMG_HANDLE hDeviceKM;
 	IMG_HANDLE hBuffer;
+#endif
 	IMG_UINT32 ui32SwapInterval;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hPrivateTag;
+#else
 	IMG_HANDLE hPrivateTag;
+#endif
 	IMG_UINT32 ui32ClipRectCount;
 	IMG_RECT sClipRect[PVRSRV_MAX_DC_CLIP_RECTS];
 
@@ -899,21 +1150,34 @@ typedef struct PVRSRV_BRIDGE_IN_SWAP_DISPCLASS_TO_BUFFER_TAG {
 
 typedef struct PVRSRV_BRIDGE_IN_SWAP_DISPCLASS_TO_SYSTEM_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDeviceKM;
+	IMG_SID hSwapChain;
+#else
 	IMG_HANDLE hDeviceKM;
 	IMG_HANDLE hSwapChain;
+#endif
 
 } PVRSRV_BRIDGE_IN_SWAP_DISPCLASS_TO_SYSTEM;
 
 typedef struct PVRSRV_BRIDGE_IN_OPEN_BUFFERCLASS_DEVICE_TAG {
 	IMG_UINT32 ui32BridgeFlags;
 	IMG_UINT32 ui32DeviceID;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDevCookie;
+#else
 	IMG_HANDLE hDevCookie;
+#endif
 
 } PVRSRV_BRIDGE_IN_OPEN_BUFFERCLASS_DEVICE;
 
 typedef struct PVRSRV_BRIDGE_OUT_OPEN_BUFFERCLASS_DEVICE_TAG {
 	PVRSRV_ERROR eError;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDeviceKM;
+#else
 	IMG_HANDLE hDeviceKM;
+#endif
 
 } PVRSRV_BRIDGE_OUT_OPEN_BUFFERCLASS_DEVICE;
 
@@ -925,14 +1189,22 @@ typedef struct PVRSRV_BRIDGE_OUT_GET_BUFFERCLASS_INFO_TAG {
 
 typedef struct PVRSRV_BRIDGE_IN_GET_BUFFERCLASS_BUFFER_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDeviceKM;
+#else
 	IMG_HANDLE hDeviceKM;
+#endif
 	IMG_UINT32 ui32BufferIndex;
 
 } PVRSRV_BRIDGE_IN_GET_BUFFERCLASS_BUFFER;
 
 typedef struct PVRSRV_BRIDGE_OUT_GET_BUFFERCLASS_BUFFER_TAG {
 	PVRSRV_ERROR eError;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hBuffer;
+#else
 	IMG_HANDLE hBuffer;
+#endif
 
 } PVRSRV_BRIDGE_OUT_GET_BUFFERCLASS_BUFFER;
 
@@ -945,7 +1217,11 @@ typedef struct PVRSRV_BRIDGE_OUT_GET_DEVMEM_HEAPINFO_TAG {
 
 typedef struct PVRSRV_BRIDGE_OUT_CREATE_DEVMEMCONTEXT_TAG {
 	PVRSRV_ERROR eError;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDevMemContext;
+#else
 	IMG_HANDLE hDevMemContext;
+#endif
 	IMG_UINT32 ui32ClientHeapCount;
 	PVRSRV_HEAP_INFO sHeapInfo[PVRSRV_MAX_CLIENT_HEAPS];
 
@@ -953,14 +1229,21 @@ typedef struct PVRSRV_BRIDGE_OUT_CREATE_DEVMEMCONTEXT_TAG {
 
 typedef struct PVRSRV_BRIDGE_OUT_CREATE_DEVMEMHEAP_TAG {
 	PVRSRV_ERROR eError;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDevMemHeap;
+#else
 	IMG_HANDLE hDevMemHeap;
+#endif
 
 } PVRSRV_BRIDGE_OUT_CREATE_DEVMEMHEAP;
 
 typedef struct PVRSRV_BRIDGE_OUT_ALLOCDEVICEMEM_TAG {
 	PVRSRV_ERROR eError;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hKernelMemInfo;
+#else
 	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
-	PVRSRV_KERNEL_SYNC_INFO *psKernelSyncInfo;
+#endif
 	PVRSRV_CLIENT_MEM_INFO sClientMemInfo;
 	PVRSRV_CLIENT_SYNC_INFO sClientSyncInfo;
 
@@ -968,7 +1251,11 @@ typedef struct PVRSRV_BRIDGE_OUT_ALLOCDEVICEMEM_TAG {
 
 typedef struct PVRSRV_BRIDGE_OUT_EXPORTDEVICEMEM_TAG {
 	PVRSRV_ERROR eError;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hMemInfo;
+#else
 	IMG_HANDLE hMemInfo;
+#endif
 #if defined(SUPPORT_MEMINFO_IDS)
 	IMG_UINT64 ui64Stamp;
 #endif
@@ -978,7 +1265,11 @@ typedef struct PVRSRV_BRIDGE_OUT_EXPORTDEVICEMEM_TAG {
 typedef struct PVRSRV_BRIDGE_OUT_MAPMEMINFOTOUSER_TAG {
 	PVRSRV_ERROR eError;
 	IMG_PVOID pvLinAddr;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hMappingInfo;
+#else
 	IMG_HANDLE hMappingInfo;
+#endif
 
 } PVRSRV_BRIDGE_OUT_MAPMEMINFOTOUSER;
 
@@ -1013,7 +1304,6 @@ typedef struct PVRSRV_BRIDGE_OUT_RELEASE_MMAP_DATA_TAG {
 
 	IMG_UINT32 ui32RealByteSize;
 } PVRSRV_BRIDGE_OUT_RELEASE_MMAP_DATA;
-
 typedef struct PVRSRV_BRIDGE_IN_GET_MISC_INFO_TAG {
 	IMG_UINT32 ui32BridgeFlags;
 	PVRSRV_MISC_INFO sMiscInfo;
@@ -1053,7 +1343,11 @@ typedef struct PVRSRV_BRIDGE_IN_GET_FB_STATS_TAG {
 
 typedef struct PVRSRV_BRIDGE_IN_MAPPHYSTOUSERSPACE_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDevCookie;
+#else
 	IMG_HANDLE hDevCookie;
+#endif
 	IMG_SYS_PHYADDR sSysPhysAddr;
 	IMG_UINT32 uiSizeInBytes;
 
@@ -1068,7 +1362,11 @@ typedef struct PVRSRV_BRIDGE_OUT_MAPPHYSTOUSERSPACE_TAG {
 
 typedef struct PVRSRV_BRIDGE_IN_UNMAPPHYSTOUSERSPACE_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDevCookie;
+#else
 	IMG_HANDLE hDevCookie;
+#endif
 	IMG_PVOID pvUserAddr;
 	IMG_PVOID pvProcess;
 
@@ -1080,6 +1378,7 @@ typedef struct PVRSRV_BRIDGE_OUT_GETPHYSTOUSERSPACEMAP_TAG {
 
 } PVRSRV_BRIDGE_OUT_GETPHYSTOUSERSPACEMAP;
 
+#if !defined(SUPPORT_SID_INTERFACE)
 typedef struct PVRSRV_BRIDGE_IN_REGISTER_SIM_PROCESS_TAG {
 	IMG_UINT32 ui32BridgeFlags;
 	IMG_HANDLE hDevCookie;
@@ -1111,6 +1410,7 @@ typedef struct PVRSRV_BRIDGE_IN_PROCESS_SIMISR_EVENT_TAG {
 	PVRSRV_ERROR eError;
 
 } PVRSRV_BRIDGE_IN_PROCESS_SIMISR_EVENT;
+#endif
 
 typedef struct PVRSRV_BRIDGE_IN_INITSRV_DISCONNECT_TAG {
 	IMG_UINT32 ui32BridgeFlags;
@@ -1125,13 +1425,21 @@ typedef struct PVRSRV_BRIDGE_IN_ALLOC_SHARED_SYS_MEM_TAG {
 
 typedef struct PVRSRV_BRIDGE_OUT_ALLOC_SHARED_SYS_MEM_TAG {
 	PVRSRV_ERROR eError;
+#if defined(SUPPORT_SID_INTERFACE)
+#else
 	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
+#endif
 	PVRSRV_CLIENT_MEM_INFO sClientMemInfo;
 } PVRSRV_BRIDGE_OUT_ALLOC_SHARED_SYS_MEM;
 
 typedef struct PVRSRV_BRIDGE_IN_FREE_SHARED_SYS_MEM_TAG {
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hKernelMemInfo;
+	IMG_SID hMappingInfo;
+#else
 	IMG_UINT32 ui32BridgeFlags;
 	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
+#endif
 	PVRSRV_CLIENT_MEM_INFO sClientMemInfo;
 } PVRSRV_BRIDGE_IN_FREE_SHARED_SYS_MEM;
 
@@ -1141,14 +1449,21 @@ typedef struct PVRSRV_BRIDGE_OUT_FREE_SHARED_SYS_MEM_TAG {
 
 typedef struct PVRSRV_BRIDGE_IN_MAP_MEMINFO_MEM_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hKernelMemInfo;
+#else
 	IMG_HANDLE hKernelMemInfo;
+#endif
 } PVRSRV_BRIDGE_IN_MAP_MEMINFO_MEM;
 
 typedef struct PVRSRV_BRIDGE_OUT_MAP_MEMINFO_MEM_TAG {
 	PVRSRV_CLIENT_MEM_INFO sClientMemInfo;
 	PVRSRV_CLIENT_SYNC_INFO sClientSyncInfo;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hKernelMemInfo;
+#else
 	PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
-	PVRSRV_KERNEL_SYNC_INFO *psKernelSyncInfo;
+#endif
 	PVRSRV_ERROR eError;
 } PVRSRV_BRIDGE_OUT_MAP_MEMINFO_MEM;
 
@@ -1161,19 +1476,13 @@ typedef struct PVRSRV_BRIDGE_OUT_UNMAP_MEMINFO_MEM_TAG {
 	PVRSRV_ERROR eError;
 } PVRSRV_BRIDGE_OUT_UNMAP_MEMINFO_MEM;
 
-typedef struct PVRSRV_BRIDGE_IN_GETMMU_PD_DEVPADDR_TAG {
-	IMG_UINT32 ui32BridgeFlags;
-	IMG_HANDLE hDevMemContext;
-} PVRSRV_BRIDGE_IN_GETMMU_PD_DEVPADDR;
-
-typedef struct PVRSRV_BRIDGE_OUT_GETMMU_PD_DEVPADDR_TAG {
-	IMG_DEV_PHYADDR sPDDevPAddr;
-	PVRSRV_ERROR eError;
-} PVRSRV_BRIDGE_OUT_GETMMU_PD_DEVPADDR;
-
 typedef struct PVRSRV_BRIDGE_IN_EVENT_OBJECT_WAI_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hOSEventKM;
+#else
 	IMG_HANDLE hOSEventKM;
+#endif
 } PVRSRV_BRIDGE_IN_EVENT_OBJECT_WAIT;
 
 typedef struct PVRSRV_BRIDGE_IN_EVENT_OBJECT_OPEN_TAG {
@@ -1181,27 +1490,63 @@ typedef struct PVRSRV_BRIDGE_IN_EVENT_OBJECT_OPEN_TAG {
 } PVRSRV_BRIDGE_IN_EVENT_OBJECT_OPEN;
 
 typedef struct PVRSRV_BRIDGE_OUT_EVENT_OBJECT_OPEN_TAG {
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_UINT32 hOSEvent;
+#else
 	IMG_HANDLE hOSEvent;
+#endif
 	PVRSRV_ERROR eError;
 } PVRSRV_BRIDGE_OUT_EVENT_OBJECT_OPEN;
 
 typedef struct PVRSRV_BRIDGE_IN_EVENT_OBJECT_CLOSE_TAG {
 	PVRSRV_EVENTOBJECT sEventObject;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hOSEventKM;
+#else
 	IMG_HANDLE hOSEventKM;
+#endif
 } PVRSRV_BRIDGE_IN_EVENT_OBJECT_CLOSE;
+
+typedef struct PVRSRV_BRIDGE_OUT_CREATE_SYNC_INFO_MOD_OBJ_TAG {
+	PVRSRV_ERROR eError;
+
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hKernelSyncInfoModObj;
+#else
+	IMG_HANDLE hKernelSyncInfoModObj;
+#endif
+
+} PVRSRV_BRIDGE_OUT_CREATE_SYNC_INFO_MOD_OBJ;
+
+typedef struct PVRSRV_BRIDGE_IN_DESTROY_SYNC_INFO_MOD_OBJ {
+	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hKernelSyncInfoModObj;
+#else
+	IMG_HANDLE hKernelSyncInfoModObj;
+#endif
+} PVRSRV_BRIDGE_IN_DESTROY_SYNC_INFO_MOD_OBJ;
 
 typedef struct PVRSRV_BRIDGE_IN_MODIFY_PENDING_SYNC_OPS_TAG {
 	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hKernelSyncInfoModObj;
+	IMG_SID hKernelSyncInfo;
+#else
+	IMG_HANDLE hKernelSyncInfoModObj;
 	IMG_HANDLE hKernelSyncInfo;
+#endif
 	IMG_UINT32 ui32ModifyFlags;
 
 } PVRSRV_BRIDGE_IN_MODIFY_PENDING_SYNC_OPS;
 
 typedef struct PVRSRV_BRIDGE_IN_MODIFY_COMPLETE_SYNC_OPS_TAG {
 	IMG_UINT32 ui32BridgeFlags;
-	IMG_HANDLE hKernelSyncInfo;
-	IMG_UINT32 ui32ModifyFlags;
-
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hKernelSyncInfoModObj;
+#else
+	IMG_HANDLE hKernelSyncInfoModObj;
+#endif
 } PVRSRV_BRIDGE_IN_MODIFY_COMPLETE_SYNC_OPS;
 
 typedef struct PVRSRV_BRIDGE_OUT_MODIFY_PENDING_SYNC_OPS_TAG {
@@ -1211,6 +1556,89 @@ typedef struct PVRSRV_BRIDGE_OUT_MODIFY_PENDING_SYNC_OPS_TAG {
 	IMG_UINT32 ui32WriteOpsPending;
 
 } PVRSRV_BRIDGE_OUT_MODIFY_PENDING_SYNC_OPS;
+
+typedef struct PVRSRV_BRIDGE_IN_SYNC_OPS_TAKE_TOKEN_TAG {
+	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hKernelSyncInfo;
+#else
+	IMG_HANDLE hKernelSyncInfo;
+#endif
+
+} PVRSRV_BRIDGE_IN_SYNC_OPS_TAKE_TOKEN;
+
+typedef struct PVRSRV_BRIDGE_OUT_SYNC_OPS_TAKE_TOKEN_TAG {
+	PVRSRV_ERROR eError;
+
+	IMG_UINT32 ui32ReadOpsPending;
+	IMG_UINT32 ui32WriteOpsPending;
+
+} PVRSRV_BRIDGE_OUT_SYNC_OPS_TAKE_TOKEN;
+
+typedef struct PVRSRV_BRIDGE_IN_SYNC_OPS_FLUSH_TO_TOKEN_TAG {
+	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hKernelSyncInfo;
+#else
+	IMG_HANDLE hKernelSyncInfo;
+#endif
+	IMG_UINT32 ui32ReadOpsPendingSnapshot;
+	IMG_UINT32 ui32WriteOpsPendingSnapshot;
+} PVRSRV_BRIDGE_IN_SYNC_OPS_FLUSH_TO_TOKEN;
+
+typedef struct PVRSRV_BRIDGE_IN_SYNC_OPS_FLUSH_TO_MOD_OBJ_TAG {
+	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hKernelSyncInfoModObj;
+#else
+	IMG_HANDLE hKernelSyncInfoModObj;
+#endif
+} PVRSRV_BRIDGE_IN_SYNC_OPS_FLUSH_TO_MOD_OBJ;
+
+typedef struct PVRSRV_BRIDGE_IN_SYNC_OPS_FLUSH_TO_DELTA_TAG {
+	IMG_UINT32 ui32BridgeFlags;
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hKernelSyncInfo;
+#else
+	IMG_HANDLE hKernelSyncInfo;
+#endif
+	IMG_UINT32 ui32Delta;
+} PVRSRV_BRIDGE_IN_SYNC_OPS_FLUSH_TO_DELTA;
+
+typedef struct PVRSRV_BRIDGE_IN_ALLOC_SYNC_INFO_TAG {
+	IMG_UINT32 ui32BridgeFlags;
+
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hDevCookie;
+#else
+	IMG_HANDLE hDevCookie;
+#endif
+} PVRSRV_BRIDGE_IN_ALLOC_SYNC_INFO;
+
+typedef struct PVRSRV_BRIDGE_OUT_ALLOC_SYNC_INFO_TAG {
+	PVRSRV_ERROR eError;
+
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hKernelSyncInfo;
+#else
+	IMG_HANDLE hKernelSyncInfo;
+#endif
+} PVRSRV_BRIDGE_OUT_ALLOC_SYNC_INFO;
+
+typedef struct PVRSRV_BRIDGE_IN_FREE_SYNC_INFO_TAG {
+	IMG_UINT32 ui32BridgeFlags;
+
+#if defined(SUPPORT_SID_INTERFACE)
+	IMG_SID hKernelSyncInfo;
+#else
+	IMG_HANDLE hKernelSyncInfo;
+#endif
+} PVRSRV_BRIDGE_IN_FREE_SYNC_INFO;
+
+typedef struct PVRSRV_BRIDGE_IN_CHG_DEV_MEM_ATTRIBS_TAG {
+	IMG_SID hKernelMemInfo;
+	IMG_UINT32 ui32Attribs;
+} PVRSRV_BRIDGE_IN_CHG_DEV_MEM_ATTRIBS;
 
 #if defined(__cplusplus)
 }

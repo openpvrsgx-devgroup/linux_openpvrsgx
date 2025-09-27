@@ -31,12 +31,14 @@
 #include "pdump_km.h"
 #include "pvr_bridge_km.h"
 #include "osfunc.h"
+#if defined(CONFIG_GCBV)
+#include "gc_bvmapping.h"
+#endif
 
-static PVRSRV_ERROR AllocDeviceMem(IMG_HANDLE hDevCookie,
-	   IMG_HANDLE hDevMemHeap, IMG_UINT32 ui32Flags,
-	   IMG_SIZE_T ui32Size,
-	   IMG_SIZE_T ui32Alignment,
-	   PVRSRV_KERNEL_MEM_INFO **ppsMemInfo);
+static PVRSRV_ERROR AllocDeviceMem(
+	IMG_HANDLE hDevCookie, IMG_HANDLE hDevMemHeap, IMG_UINT32 ui32Flags,
+	IMG_SIZE_T ui32Size, IMG_SIZE_T ui32Alignment, IMG_PVOID pvPrivData,
+	IMG_UINT32 ui32PrivDataLength, PVRSRV_KERNEL_MEM_INFO **ppsMemInfo);
 
 typedef struct _RESMAN_MAP_DEVICE_MEM_DATA_ {
 	PVRSRV_KERNEL_MEM_INFO *psMemInfo;
@@ -90,6 +92,9 @@ PVRSRVGetDeviceMemHeapsKM(IMG_HANDLE hDevCookie,
 	psHeapInfo[i].ui32HeapByteSize =
 	psDeviceMemoryHeap[i].ui32HeapSize;
 	psHeapInfo[i].ui32Attribs = psDeviceMemoryHeap[i].ui32Attribs;
+
+	psHeapInfo[i].ui32XTileStride =
+	psDeviceMemoryHeap[i].ui32XTileStride;
 	}
 
 	for (; i < PVRSRV_MAX_CLIENT_HEAPS; i++) {
@@ -159,6 +164,13 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVCreateDeviceMemContextKM(
 	psDeviceMemoryHeap[i].ui32HeapSize;
 	psHeapInfo[ui32ClientHeapCount].ui32Attribs =
 	psDeviceMemoryHeap[i].ui32Attribs;
+#if defined(SUPPORT_MEMORY_TILING)
+	psHeapInfo[ui32ClientHeapCount].ui32XTileStride =
+	psDeviceMemoryHeap[i].ui32XTileStride;
+#else
+	psHeapInfo[ui32ClientHeapCount].ui32XTileStride = 0;
+#endif
+
 #if defined(PVR_SECURE_HANDLES) || defined(SUPPORT_SID_INTERFACE)
 	pbShared[ui32ClientHeapCount] = IMG_TRUE;
 #endif
@@ -188,6 +200,12 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVCreateDeviceMemContextKM(
 	psDeviceMemoryHeap[i].ui32HeapSize;
 	psHeapInfo[ui32ClientHeapCount].ui32Attribs =
 	psDeviceMemoryHeap[i].ui32Attribs;
+#if defined(SUPPORT_MEMORY_TILING)
+	psHeapInfo[ui32ClientHeapCount].ui32XTileStride =
+	psDeviceMemoryHeap[i].ui32XTileStride;
+#else
+	psHeapInfo[ui32ClientHeapCount].ui32XTileStride = 0;
+#endif
 #if defined(PVR_SECURE_HANDLES) || defined(SUPPORT_SID_INTERFACE)
 	pbShared[ui32ClientHeapCount] = IMG_FALSE;
 #endif
@@ -261,6 +279,8 @@ PVRSRVGetDeviceMemHeapInfoKM(IMG_HANDLE hDevCookie, IMG_HANDLE hDevMemContext,
 	psDeviceMemoryHeap[i].ui32HeapSize;
 	psHeapInfo[ui32ClientHeapCount].ui32Attribs =
 	psDeviceMemoryHeap[i].ui32Attribs;
+	psHeapInfo[ui32ClientHeapCount].ui32XTileStride =
+	psDeviceMemoryHeap[i].ui32XTileStride;
 #if defined(PVR_SECURE_HANDLES) || defined(SUPPORT_SID_INTERFACE)
 	pbShared[ui32ClientHeapCount] = IMG_TRUE;
 #endif
@@ -289,6 +309,8 @@ PVRSRVGetDeviceMemHeapInfoKM(IMG_HANDLE hDevCookie, IMG_HANDLE hDevMemContext,
 	psDeviceMemoryHeap[i].ui32HeapSize;
 	psHeapInfo[ui32ClientHeapCount].ui32Attribs =
 	psDeviceMemoryHeap[i].ui32Attribs;
+	psHeapInfo[ui32ClientHeapCount].ui32XTileStride =
+	psDeviceMemoryHeap[i].ui32XTileStride;
 #if defined(PVR_SECURE_HANDLES) || defined(SUPPORT_SID_INTERFACE)
 	pbShared[ui32ClientHeapCount] = IMG_FALSE;
 #endif
@@ -304,11 +326,41 @@ PVRSRVGetDeviceMemHeapInfoKM(IMG_HANDLE hDevCookie, IMG_HANDLE hDevMemContext,
 	return PVRSRV_OK;
 }
 
-static PVRSRV_ERROR AllocDeviceMem(IMG_HANDLE hDevCookie,
-	   IMG_HANDLE hDevMemHeap, IMG_UINT32 ui32Flags,
-	   IMG_SIZE_T ui32Size,
-	   IMG_SIZE_T ui32Alignment,
-	   PVRSRV_KERNEL_MEM_INFO **ppsMemInfo)
+static PVRSRV_ERROR
+UpdateDeviceMemoryPlaneOffsets(PVRSRV_KERNEL_MEM_INFO *psMemInfo)
+{
+	if (psMemInfo->ui32Flags & PVRSRV_MEM_ION) {
+	PVRSRV_MEMBLK *psMemBlock = &(psMemInfo->sMemBlk);
+	IMG_UINT32
+	ui32AddressOffsets[PVRSRV_MAX_NUMBER_OF_MM_BUFFER_PLANES];
+	IMG_UINT32 ui32NumAddrOffsets =
+	PVRSRV_MAX_NUMBER_OF_MM_BUFFER_PLANES;
+
+	IMG_INT32 retSize = OSGetMemMultiPlaneInfo(
+	psMemBlock->hOSMemHandle, ui32AddressOffsets,
+	&ui32NumAddrOffsets);
+
+	if ((retSize > 0) && ui32NumAddrOffsets) {
+	int i;
+	for (i = 0; i < PVRSRV_MAX_NUMBER_OF_MM_BUFFER_PLANES;
+	     i++) {
+	if (i < ui32NumAddrOffsets)
+	psMemInfo->planeOffsets[i] =
+	ui32AddressOffsets[i];
+	else
+	psMemInfo->planeOffsets[i] =
+	(IMG_INT32)-1;
+	}
+	}
+	}
+
+	return PVRSRV_OK;
+}
+
+static PVRSRV_ERROR AllocDeviceMem(
+	IMG_HANDLE hDevCookie, IMG_HANDLE hDevMemHeap, IMG_UINT32 ui32Flags,
+	IMG_SIZE_T ui32Size, IMG_SIZE_T ui32Alignment, IMG_PVOID pvPrivData,
+	IMG_UINT32 ui32PrivDataLength, PVRSRV_KERNEL_MEM_INFO **ppsMemInfo)
 {
 	PVRSRV_KERNEL_MEM_INFO *psMemInfo;
 	BM_HANDLE hBuffer;
@@ -332,11 +384,16 @@ static PVRSRV_ERROR AllocDeviceMem(IMG_HANDLE hDevCookie,
 
 	psMemBlock = &(psMemInfo->sMemBlk);
 
+	if (ui32Flags & PVRSRV_MEM_ION) {
+	psMemInfo->ui32Flags = ui32Flags | PVRSRV_HAP_GPU_PAGEABLE;
+	}
+
 	psMemInfo->ui32Flags = ui32Flags | PVRSRV_MEM_RAM_BACKED_ALLOCATION;
 
 	bBMError = BM_Alloc(hDevMemHeap, IMG_NULL, ui32Size,
 	    &psMemInfo->ui32Flags,
-	    IMG_CAST_TO_DEVVADDR_UINT(ui32Alignment), &hBuffer);
+	    IMG_CAST_TO_DEVVADDR_UINT(ui32Alignment),
+	    pvPrivData, ui32PrivDataLength, &hBuffer);
 
 	if (!bBMError) {
 	PVR_DPF((PVR_DBG_ERROR, "AllocDeviceMem: BM_Alloc Failed"));
@@ -359,13 +416,15 @@ static PVRSRV_ERROR AllocDeviceMem(IMG_HANDLE hDevCookie,
 
 	psMemInfo->pvSysBackupBuffer = IMG_NULL;
 
+	UpdateDeviceMemoryPlaneOffsets(psMemInfo);
+
 	*ppsMemInfo = psMemInfo;
 
 	return (PVRSRV_OK);
 }
 
 static PVRSRV_ERROR FreeDeviceMem2(PVRSRV_KERNEL_MEM_INFO *psMemInfo,
-	   IMG_BOOL bFromAllocator)
+	   PVRSRV_FREE_CALLBACK_ORIGIN eCallbackOrigin)
 {
 	BM_HANDLE hBuffer;
 
@@ -375,12 +434,19 @@ static PVRSRV_ERROR FreeDeviceMem2(PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 
 	hBuffer = psMemInfo->sMemBlk.hBuffer;
 
-	if (bFromAllocator)
+	switch (eCallbackOrigin) {
+	case PVRSRV_FREE_CALLBACK_ORIGIN_ALLOCATOR:
 	BM_Free(hBuffer, psMemInfo->ui32Flags);
-	else
+	break;
+	case PVRSRV_FREE_CALLBACK_ORIGIN_IMPORTER:
 	BM_FreeExport(hBuffer, psMemInfo->ui32Flags);
+	break;
+	default:
+	break;
+	}
 
-	if ((psMemInfo->pvSysBackupBuffer) && bFromAllocator) {
+	if (psMemInfo->pvSysBackupBuffer &&
+	    eCallbackOrigin == PVRSRV_FREE_CALLBACK_ORIGIN_ALLOCATOR) {
 	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, psMemInfo->uAllocSize,
 	  psMemInfo->pvSysBackupBuffer, IMG_NULL);
 	psMemInfo->pvSysBackupBuffer = IMG_NULL;
@@ -439,7 +505,15 @@ PVRSRVAllocSyncInfoKM(IMG_HANDLE hDevCookie, IMG_HANDLE hDevMemContext,
 	return PVRSRV_ERROR_OUT_OF_MEMORY;
 	}
 
-	psKernelSyncInfo->ui32RefCount = 0;
+	eError = OSAtomicAlloc(&psKernelSyncInfo->pvRefCount);
+	if (eError != PVRSRV_OK) {
+	PVR_DPF((PVR_DBG_ERROR,
+	 "PVRSRVAllocSyncInfoKM: Failed to allocate atomic"));
+	OSFreeMem(PVRSRV_PAGEABLE_SELECT,
+	  sizeof(PVRSRV_KERNEL_SYNC_INFO), psKernelSyncInfo,
+	  IMG_NULL);
+	return PVRSRV_ERROR_OUT_OF_MEMORY;
+	}
 
 	pBMContext = (BM_CONTEXT *)hDevMemContext;
 	psDevMemoryInfo = &pBMContext->psDeviceNode->sDevMemoryInfo;
@@ -452,11 +526,13 @@ PVRSRVAllocSyncInfoKM(IMG_HANDLE hDevCookie, IMG_HANDLE hDevMemContext,
 	eError = AllocDeviceMem(hDevCookie, hSyncDevMemHeap,
 	PVRSRV_MEM_CACHE_CONSISTENT,
 	sizeof(PVRSRV_SYNC_DATA), sizeof(IMG_UINT32),
+	IMG_NULL, 0,
 	&psKernelSyncInfo->psSyncDataMemInfoKM);
 
 	if (eError != PVRSRV_OK) {
 	PVR_DPF((PVR_DBG_ERROR,
 	 "PVRSRVAllocSyncInfoKM: Failed to alloc memory"));
+	OSAtomicFree(psKernelSyncInfo->pvRefCount);
 	OSFreeMem(PVRSRV_PAGEABLE_SELECT,
 	  sizeof(PVRSRV_KERNEL_SYNC_INFO), psKernelSyncInfo,
 	  IMG_NULL);
@@ -472,6 +548,8 @@ PVRSRVAllocSyncInfoKM(IMG_HANDLE hDevCookie, IMG_HANDLE hDevMemContext,
 	psSyncData->ui32WriteOpsComplete = 0;
 	psSyncData->ui32ReadOpsPending = 0;
 	psSyncData->ui32ReadOpsComplete = 0;
+	psSyncData->ui32ReadOps2Pending = 0;
+	psSyncData->ui32ReadOps2Complete = 0;
 	psSyncData->ui32LastOpDumpVal = 0;
 	psSyncData->ui32LastReadOpDumpVal = 0;
 
@@ -490,9 +568,14 @@ PVRSRVAllocSyncInfoKM(IMG_HANDLE hDevCookie, IMG_HANDLE hDevMemContext,
 	psKernelSyncInfo->sReadOpsCompleteDevVAddr.uiAddr =
 	psKernelSyncInfo->psSyncDataMemInfoKM->sDevVAddr.uiAddr +
 	offsetof(PVRSRV_SYNC_DATA, ui32ReadOpsComplete);
+	psKernelSyncInfo->sReadOps2CompleteDevVAddr.uiAddr =
+	psKernelSyncInfo->psSyncDataMemInfoKM->sDevVAddr.uiAddr +
+	offsetof(PVRSRV_SYNC_DATA, ui32ReadOps2Complete);
 	psKernelSyncInfo->ui32UID = g_ui32SyncUID++;
 
 	psKernelSyncInfo->psSyncDataMemInfoKM->psKernelSyncInfo = IMG_NULL;
+
+	OSAtomicInc(psKernelSyncInfo->pvRefCount);
 
 	*ppsKernelSyncInfo = psKernelSyncInfo;
 
@@ -500,24 +583,25 @@ PVRSRVAllocSyncInfoKM(IMG_HANDLE hDevCookie, IMG_HANDLE hDevMemContext,
 }
 
 IMG_EXPORT
-PVRSRV_ERROR IMG_CALLCONV
-PVRSRVFreeSyncInfoKM(PVRSRV_KERNEL_SYNC_INFO *psKernelSyncInfo)
+IMG_VOID PVRSRVAcquireSyncInfoKM(PVRSRV_KERNEL_SYNC_INFO *psKernelSyncInfo)
 {
-	PVRSRV_ERROR eError;
+	OSAtomicInc(psKernelSyncInfo->pvRefCount);
+}
 
-	if (psKernelSyncInfo->ui32RefCount != 0) {
-	PVR_DPF((PVR_DBG_ERROR,
-	 "oops: sync info ref count not zero at destruction"));
+IMG_EXPORT
+IMG_VOID IMG_CALLCONV
+PVRSRVReleaseSyncInfoKM(PVRSRV_KERNEL_SYNC_INFO *psKernelSyncInfo)
+{
+	if (OSAtomicDecAndTest(psKernelSyncInfo->pvRefCount)) {
+	FreeDeviceMem(psKernelSyncInfo->psSyncDataMemInfoKM);
 
-	return PVRSRV_ERROR_OUT_OF_MEMORY;
-	}
-
-	eError = FreeDeviceMem(psKernelSyncInfo->psSyncDataMemInfoKM);
+	psKernelSyncInfo->psSyncDataMemInfoKM = IMG_NULL;
+	psKernelSyncInfo->psSyncData = IMG_NULL;
+	OSAtomicFree(psKernelSyncInfo->pvRefCount);
 	(IMG_VOID) OSFreeMem(PVRSRV_PAGEABLE_SELECT,
-	     sizeof(PVRSRV_KERNEL_SYNC_INFO), psKernelSyncInfo,
-	     IMG_NULL);
-
-	return eError;
+	     sizeof(PVRSRV_KERNEL_SYNC_INFO),
+	     psKernelSyncInfo, IMG_NULL);
+	}
 }
 
 static IMG_VOID freeWrapped(PVRSRV_KERNEL_MEM_INFO *psMemInfo)
@@ -628,18 +712,19 @@ static PVRSRV_ERROR FlushKernelOps(PVRSRV_SYNC_DATA *psSyncData)
 }
 #endif
 
-static PVRSRV_ERROR FreeMemCallBackCommon(PVRSRV_KERNEL_MEM_INFO *psMemInfo,
-	  IMG_UINT32 ui32Param,
-	  IMG_BOOL bFromAllocator)
+IMG_EXPORT
+PVRSRV_ERROR FreeMemCallBackCommon(PVRSRV_KERNEL_MEM_INFO *psMemInfo,
+	   IMG_UINT32 ui32Param,
+	   PVRSRV_FREE_CALLBACK_ORIGIN eCallbackOrigin)
 {
 	PVRSRV_ERROR eError = PVRSRV_OK;
 
 	PVR_UNREFERENCED_PARAMETER(ui32Param);
 
-	psMemInfo->ui32RefCount--;
+	PVRSRVKernelMemInfoDecRef(psMemInfo);
 
 	if (psMemInfo->ui32RefCount == 0) {
-	if (psMemInfo->ui32Flags & PVRSRV_MEM_EXPORTED) {
+	if ((psMemInfo->ui32Flags & PVRSRV_MEM_EXPORTED) != 0) {
 #if defined(SUPPORT_SID_INTERFACE)
 	IMG_SID hMemInfo = 0;
 #else
@@ -669,35 +754,21 @@ static PVRSRV_ERROR FreeMemCallBackCommon(PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 
 #if defined(PVRSRV_FLUSH_KERNEL_OPS_LAST_ONLY)
 	if (psMemInfo->psKernelSyncInfo) {
-	if (psMemInfo->sShareMemWorkaround.bInUse) {
-	if (BM_XProcWorkaroundGetRefCount(
-	    psMemInfo->sShareMemWorkaround
-	    .ui32ShareIndex) == 1) {
-	FlushKernelOps(
-	psMemInfo->psKernelSyncInfo
-	->psSyncData);
-	}
-	} else {
+	if (psMemInfo->psKernelSyncInfo->ui32RefCount == 1) {
 	FlushKernelOps(
 	psMemInfo->psKernelSyncInfo->psSyncData);
 	}
 	}
 #endif
-
 	switch (psMemInfo->memType) {
 	case PVRSRV_MEMTYPE_WRAPPED:
 	freeWrapped(psMemInfo);
 	case PVRSRV_MEMTYPE_DEVICE:
-	if (psMemInfo->psKernelSyncInfo) {
-	psMemInfo->psKernelSyncInfo->ui32RefCount--;
-
-	if (psMemInfo->psKernelSyncInfo->ui32RefCount ==
-	    0) {
-	eError = PVRSRVFreeSyncInfoKM(
-	psMemInfo->psKernelSyncInfo);
-	}
-	}
 	case PVRSRV_MEMTYPE_DEVICECLASS:
+	if (psMemInfo->psKernelSyncInfo) {
+	PVRSRVKernelSyncInfoDecRef(
+	psMemInfo->psKernelSyncInfo, psMemInfo);
+	}
 	break;
 	default:
 	PVR_DPF((PVR_DBG_ERROR,
@@ -706,8 +777,13 @@ static PVRSRV_ERROR FreeMemCallBackCommon(PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 	}
 	}
 
+#if defined(CONFIG_GCBV)
+	if (psMemInfo->ui32Flags & PVRSRV_MAP_GC_MMU)
+	gc_bvunmap_meminfo(psMemInfo);
+#endif
+
 	if (eError == PVRSRV_OK) {
-	eError = FreeDeviceMem2(psMemInfo, bFromAllocator);
+	eError = FreeDeviceMem2(psMemInfo, eCallbackOrigin);
 	}
 
 	return eError;
@@ -720,7 +796,8 @@ static PVRSRV_ERROR FreeDeviceMemCallBack(IMG_PVOID pvParam,
 
 	PVR_UNREFERENCED_PARAMETER(bDummy);
 
-	return FreeMemCallBackCommon(psMemInfo, ui32Param, IMG_TRUE);
+	return FreeMemCallBackCommon(psMemInfo, ui32Param,
+	     PVRSRV_FREE_CALLBACK_ORIGIN_ALLOCATOR);
 }
 
 IMG_EXPORT
@@ -745,11 +822,107 @@ PVRSRVFreeDeviceMemKM(IMG_HANDLE hDevCookie, PVRSRV_KERNEL_MEM_INFO *psMemInfo)
 	return eError;
 }
 
+/*!
+******************************************************************************
+
+ @Function	PVRSRVRemapToDevKM
+
+ @Description
+
+ Remaps buffer to GPU virtual address space
+
+ @Input    psMemInfo
+
+ @Return   PVRSRV_ERROR : 0 means the memory is still unmapped - ERROR,
+ *                        bigger than 0 (mapping reference count) - success mapping
+ *                        smaller than 0 - PVRSRV error
+******************************************************************************/
+IMG_EXPORT
+IMG_INT32 IMG_CALLCONV PVRSRVRemapToDevKM(IMG_HANDLE hDevCookie,
+	  PVRSRV_KERNEL_MEM_INFO *psMemInfo,
+	  IMG_DEV_VIRTADDR *psDevVAddr)
+{
+	PVRSRV_MEMBLK *psMemBlock;
+	IMG_INT32 result;
+
+	PVR_UNREFERENCED_PARAMETER(hDevCookie);
+
+	if (!psMemInfo) {
+	PVR_DPF((PVR_DBG_ERROR,
+	 "PVRSRVRemapToDevKM: invalid parameters"));
+	return PVRSRV_ERROR_INVALID_PARAMS;
+	}
+
+	psMemBlock = &(psMemInfo->sMemBlk);
+
+	result = BM_RemapToDev(psMemBlock->hBuffer);
+
+	if (result <= 0) {
+	PVR_DPF((PVR_DBG_ERROR, "PVRSRVRemapToDevKM: could not remap"));
+	}
+
+	*psDevVAddr = psMemInfo->sDevVAddr = psMemBlock->sDevVirtAddr =
+	BM_HandleToDevVaddr(psMemBlock->hBuffer);
+
+	UpdateDeviceMemoryPlaneOffsets(psMemInfo);
+
+	return result;
+}
+
+/*!
+******************************************************************************
+
+ @Function	PVRSRVUnmapFromDevKM
+
+ @Description
+
+ Unmaps buffer from GPU virtual address space
+
+ @Input    psMemInfo
+
+ @Return   PVRSRV_ERROR : 0 means the memory is unmapped,
+ *                        bigger than 0 (mapping reference count) still mapped
+ *                        smaller than 0 - PVRSRV error
+******************************************************************************/
+IMG_EXPORT
+IMG_INT32 IMG_CALLCONV PVRSRVUnmapFromDevKM(IMG_HANDLE hDevCookie,
+	    PVRSRV_KERNEL_MEM_INFO *psMemInfo)
+{
+	PVRSRV_MEMBLK *psMemBlock;
+	IMG_INT32 result;
+
+	PVR_UNREFERENCED_PARAMETER(hDevCookie);
+
+	if (!psMemInfo) {
+	PVR_DPF((PVR_DBG_ERROR,
+	 "PVRSRVUnmapFromDevKM: invalid parameters"));
+	return PVRSRV_ERROR_INVALID_PARAMS;
+	}
+
+	psMemBlock = &(psMemInfo->sMemBlk);
+
+	result = BM_UnmapFromDev(psMemBlock->hBuffer);
+	/* 0 means the memory is unmapped,
+	 * bigger than 0 (mapping ref count) still mapped
+	 * smaller than 0 PVRSRV error
+	*/
+	if (result < 0) {
+	PVR_DPF((PVR_DBG_ERROR,
+	 "PVRSRVUnmapFromDevKM: could not unmap"));
+	}
+
+	psMemInfo->sDevVAddr = psMemBlock->sDevVirtAddr =
+	BM_HandleToDevVaddr(psMemBlock->hBuffer);
+
+	return result;
+}
+
 IMG_EXPORT
 PVRSRV_ERROR IMG_CALLCONV _PVRSRVAllocDeviceMemKM(
 	IMG_HANDLE hDevCookie, PVRSRV_PER_PROCESS_DATA *psPerProc,
 	IMG_HANDLE hDevMemHeap, IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size,
-	IMG_SIZE_T ui32Alignment, PVRSRV_KERNEL_MEM_INFO **ppsMemInfo)
+	IMG_SIZE_T ui32Alignment, IMG_PVOID pvPrivData,
+	IMG_UINT32 ui32PrivDataLength, PVRSRV_KERNEL_MEM_INFO **ppsMemInfo)
 {
 	PVRSRV_KERNEL_MEM_INFO *psMemInfo;
 	PVRSRV_ERROR eError;
@@ -768,11 +941,17 @@ PVRSRV_ERROR IMG_CALLCONV _PVRSRVAllocDeviceMemKM(
 	}
 
 	eError = AllocDeviceMem(hDevCookie, hDevMemHeap, ui32Flags, ui32Size,
-	ui32Alignment, &psMemInfo);
+	ui32Alignment, pvPrivData, ui32PrivDataLength,
+	&psMemInfo);
 
 	if (eError != PVRSRV_OK) {
 	return eError;
 	}
+
+#if defined(CONFIG_GCBV)
+	if (ui32Flags & PVRSRV_MAP_GC_MMU)
+	gc_bvmap_meminfo(psMemInfo);
+#endif
 
 	if (ui32Flags & PVRSRV_MEM_NO_SYNCOBJ) {
 	psMemInfo->psKernelSyncInfo = IMG_NULL;
@@ -784,7 +963,6 @@ PVRSRV_ERROR IMG_CALLCONV _PVRSRVAllocDeviceMemKM(
 	if (eError != PVRSRV_OK) {
 	goto free_mainalloc;
 	}
-	psMemInfo->psKernelSyncInfo->ui32RefCount++;
 	}
 
 	*ppsMemInfo = psMemInfo;
@@ -802,13 +980,17 @@ PVRSRV_ERROR IMG_CALLCONV _PVRSRVAllocDeviceMemKM(
 	}
 	}
 
-	psMemInfo->ui32RefCount++;
+	PVRSRVKernelMemInfoIncRef(psMemInfo);
 
 	psMemInfo->memType = PVRSRV_MEMTYPE_DEVICE;
 
 	return (PVRSRV_OK);
 
 free_mainalloc:
+	if (psMemInfo->psKernelSyncInfo) {
+	PVRSRVKernelSyncInfoDecRef(psMemInfo->psKernelSyncInfo,
+	   psMemInfo);
+	}
 	FreeDeviceMem(psMemInfo);
 
 	return eError;
@@ -868,7 +1050,8 @@ static PVRSRV_ERROR UnwrapExtMemoryCallBack(IMG_PVOID pvParam,
 
 	PVR_UNREFERENCED_PARAMETER(bDummy);
 
-	return FreeMemCallBackCommon(psMemInfo, ui32Param, IMG_TRUE);
+	return FreeMemCallBackCommon(psMemInfo, ui32Param,
+	     PVRSRV_FREE_CALLBACK_ORIGIN_ALLOCATOR);
 }
 
 IMG_EXPORT
@@ -1017,9 +1200,7 @@ PVRSRVWrapExtMemoryKM(IMG_HANDLE hDevCookie, PVRSRV_PER_PROCESS_DATA *psPerProc,
 	goto ErrorExitPhase4;
 	}
 
-	psMemInfo->psKernelSyncInfo->ui32RefCount++;
-
-	psMemInfo->ui32RefCount++;
+	PVRSRVKernelMemInfoIncRef(psMemInfo);
 
 	psMemInfo->memType = PVRSRV_MEMTYPE_WRAPPED;
 
@@ -1089,17 +1270,9 @@ static PVRSRV_ERROR UnmapDeviceMemoryCallBack(IMG_PVOID pvParam,
 	}
 
 	if (psMapData->psMemInfo->psKernelSyncInfo) {
-	psMapData->psMemInfo->psKernelSyncInfo->ui32RefCount--;
-	if (psMapData->psMemInfo->psKernelSyncInfo->ui32RefCount == 0) {
-	eError = PVRSRVFreeSyncInfoKM(
-	psMapData->psMemInfo->psKernelSyncInfo);
-	if (eError != PVRSRV_OK) {
-	PVR_DPF((
-	PVR_DBG_ERROR,
-	"UnmapDeviceMemoryCallBack: Failed to free sync info"));
-	return eError;
-	}
-	}
+	PVRSRVKernelSyncInfoDecRef(
+	psMapData->psMemInfo->psKernelSyncInfo,
+	psMapData->psMemInfo);
 	}
 
 	eError = FreeDeviceMem(psMapData->psMemInfo);
@@ -1110,7 +1283,8 @@ static PVRSRV_ERROR UnmapDeviceMemoryCallBack(IMG_PVOID pvParam,
 	return eError;
 	}
 
-	eError = FreeMemCallBackCommon(psMapData->psSrcMemInfo, 0, IMG_FALSE);
+	eError = FreeMemCallBackCommon(psMapData->psSrcMemInfo, 0,
+	       PVRSRV_FREE_CALLBACK_ORIGIN_IMPORTER);
 
 	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, sizeof(RESMAN_MAP_DEVICE_MEM_DATA),
 	  psMapData, IMG_NULL);
@@ -1232,14 +1406,15 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVMapDeviceMemoryKM(
 	psMemInfo->psKernelSyncInfo = psSrcMemInfo->psKernelSyncInfo;
 
 	if (psMemInfo->psKernelSyncInfo) {
-	psMemInfo->psKernelSyncInfo->ui32RefCount++;
+	PVRSRVKernelSyncInfoIncRef(psMemInfo->psKernelSyncInfo,
+	   psMemInfo);
 	}
 
 	psMemInfo->pvSysBackupBuffer = IMG_NULL;
 
-	psMemInfo->ui32RefCount++;
+	PVRSRVKernelMemInfoIncRef(psMemInfo);
 
-	psSrcMemInfo->ui32RefCount++;
+	PVRSRVKernelMemInfoIncRef(psSrcMemInfo);
 
 	BM_Export(psSrcMemInfo->sMemBlk.hBuffer);
 
@@ -1320,7 +1495,8 @@ static PVRSRV_ERROR UnmapDeviceClassMemoryCallBack(IMG_PVOID pvParam,
 	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, sizeof(PVRSRV_DC_MAPINFO),
 	  psDCMapInfo, IMG_NULL);
 
-	return FreeMemCallBackCommon(psMemInfo, ui32Param, IMG_TRUE);
+	return FreeMemCallBackCommon(psMemInfo, ui32Param,
+	     PVRSRV_FREE_CALLBACK_ORIGIN_ALLOCATOR);
 }
 
 IMG_EXPORT
@@ -1455,6 +1631,12 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVMapDeviceClassMemoryKM(
 	psMemInfo->uAllocSize = uByteSize;
 	psMemInfo->psKernelSyncInfo = psDeviceClassBuffer->psKernelSyncInfo;
 
+	PVR_ASSERT(psMemInfo->psKernelSyncInfo != IMG_NULL);
+	if (psMemInfo->psKernelSyncInfo) {
+	PVRSRVKernelSyncInfoIncRef(psMemInfo->psKernelSyncInfo,
+	   psMemInfo);
+	}
+
 	psMemInfo->pvSysBackupBuffer = IMG_NULL;
 
 	psDCMapInfo->psMemInfo = psMemInfo;
@@ -1481,7 +1663,7 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVMapDeviceClassMemoryKM(
 	psDCMapInfo, 0, &UnmapDeviceClassMemoryCallBack);
 
 	(psDeviceClassBuffer->ui32MemMapRefCount)++;
-	psMemInfo->ui32RefCount++;
+	PVRSRVKernelMemInfoIncRef(psMemInfo);
 
 	psMemInfo->memType = PVRSRV_MEMTYPE_DEVICECLASS;
 
@@ -1489,16 +1671,23 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVMapDeviceClassMemoryKM(
 
 #if defined(SUPPORT_PDUMP_MULTI_PROCESS)
 
+	if (psMemInfo->pvLinAddrKM) {
 	PDUMPCOMMENT("Dump display surface");
 	PDUMPMEM(IMG_NULL, psMemInfo, ui32Offset, psMemInfo->uAllocSize,
 	 PDUMP_FLAGS_CONTINUOUS,
 	 ((BM_BUF *)psMemInfo->sMemBlk.hBuffer)->pMapping);
+	}
 #endif
 	return PVRSRV_OK;
 
 #if defined(SUPPORT_MEMORY_TILING)
 ErrorExitPhase3:
 	if (psMemInfo) {
+	if (psMemInfo->psKernelSyncInfo) {
+	PVRSRVKernelSyncInfoDecRef(psMemInfo->psKernelSyncInfo,
+	   psMemInfo);
+	}
+
 	FreeDeviceMem(psMemInfo);
 
 	psMemInfo = IMG_NULL;

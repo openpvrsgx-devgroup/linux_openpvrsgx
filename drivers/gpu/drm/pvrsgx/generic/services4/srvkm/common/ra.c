@@ -32,7 +32,9 @@
 
 #ifdef __linux__
 #include <linux/kernel.h>
+#include "pvr_uaccess.h"
 #include "proc.h"
+#include <linux/sched.h>
 #endif
 
 #ifdef USE_BM_FREESPACE_CHECK
@@ -97,6 +99,8 @@ struct _RA_ARENA_ {
 	IMG_BOOL (*pImportAlloc)(IMG_VOID *, IMG_SIZE_T uSize,
 	 IMG_SIZE_T *pActualSize,
 	 BM_MAPPING **ppsMapping, IMG_UINT32 uFlags,
+	 IMG_PVOID pvPrivData,
+	 IMG_UINT32 ui32PrivDataLength,
 	 IMG_UINTPTR_T *pBase);
 	IMG_VOID (*pImportFree)(IMG_VOID *, IMG_UINTPTR_T,
 	BM_MAPPING *psMapping);
@@ -118,20 +122,46 @@ struct _RA_ARENA_ {
 	RA_STATISTICS sStatistics;
 #endif
 
-#if defined(CONFIG_PROC_FS) && defined(DEBUG)
+#if defined(CONFIG_PROC_FS) && defined(CONFIG_PVR_PROC_FS)
 #define PROC_NAME_SIZE 64
 
 	struct proc_dir_entry *pProcInfo;
 	struct proc_dir_entry *pProcSegs;
 
 	IMG_BOOL bInitProcEntry;
+
+#if defined(CONFIG_PVR_PROC_FS_HEAP_ALLOC_DEBUG)
+	struct proc_dir_entry *pProcAllocFailThreshold;
+
+	IMG_BOOL bFailAllocationOnce;
+	IMG_BOOL bFailAllocationPersist;
+	IMG_SIZE_T uAllocFailThreshold;
+	IMG_UINT32 uAllocFailMask;
+#endif //defined(CONFIG_PVR_PROC_FS_HEAP_ALLOC_DEBUG)
+
 #endif
 };
 #if defined(ENABLE_RA_DUMP)
 IMG_VOID RA_Dump(RA_ARENA *pArena);
 #endif
 
-#if defined(CONFIG_PROC_FS) && defined(DEBUG)
+static INLINE IMG_BOOL RA_TestAllocationFail(RA_ARENA *pArena, IMG_SIZE_T size,
+	     IMG_UINT32 buff_type)
+{
+#if defined(CONFIG_PVR_PROC_FS_HEAP_ALLOC_DEBUG)
+	if (pArena->bFailAllocationOnce == IMG_TRUE) {
+	if ((size > pArena->uAllocFailThreshold) &&
+	    (pArena->uAllocFailMask & buff_type)) {
+	if (pArena->bFailAllocationPersist == IMG_FALSE)
+	pArena->bFailAllocationOnce = IMG_FALSE;
+	return IMG_TRUE;
+	}
+	}
+#endif //CONFIG_PVR_PROC_FS_HEAP_ALLOC_DEBUG
+	return IMG_FALSE;
+}
+
+#if defined(CONFIG_PROC_FS) && defined(CONFIG_PVR_PROC_FS)
 
 static void RA_ProcSeqShowInfo(struct seq_file *sfile, void *el);
 static void *RA_ProcSeqOff2ElementInfo(struct seq_file *sfile, loff_t off);
@@ -139,13 +169,25 @@ static void *RA_ProcSeqOff2ElementInfo(struct seq_file *sfile, loff_t off);
 static void RA_ProcSeqShowRegs(struct seq_file *sfile, void *el);
 static void *RA_ProcSeqOff2ElementRegs(struct seq_file *sfile, loff_t off);
 
+#if defined(CONFIG_PVR_PROC_FS_HEAP_ALLOC_DEBUG)
+static int RA_ProcSetAllocFailThreshold(struct file *file,
+	const char __user *buffer,
+	unsigned long count, void *data);
+static void *RA_ProcSeqOff2AllocFailThreshold(struct seq_file *sfile,
+	      loff_t off);
+static void RA_ProcSeqShowAllocFailThreshold(struct seq_file *sfile, void *el);
+#endif //defined(CONFIG_PVR_PROC_FS_HEAP_ALLOC_DEBUG)
+
 #endif
+
+static PVRSRV_ERROR RA_DumpHeapInfo(RA_ARENA *pArena,
+	    IMG_UINT32 ui32DebugLevel);
 
 #ifdef USE_BM_FREESPACE_CHECK
 IMG_VOID CheckBMFreespace(IMG_VOID);
 #endif
 
-#if defined(CONFIG_PROC_FS) && defined(DEBUG)
+#if defined(CONFIG_PROC_FS) && defined(CONFIG_PVR_PROC_FS)
 static IMG_CHAR *ReplaceSpaces(IMG_CHAR *const pS)
 {
 	IMG_CHAR *pT;
@@ -163,6 +205,8 @@ static IMG_CHAR *ReplaceSpaces(IMG_CHAR *const pS)
 static IMG_BOOL _RequestAllocFail(IMG_VOID *_h, IMG_SIZE_T _uSize,
 	  IMG_SIZE_T *_pActualSize,
 	  BM_MAPPING **_ppsMapping, IMG_UINT32 _uFlags,
+	  IMG_PVOID _pvPrivData,
+	  IMG_UINT32 _ui32PrivDataLength,
 	  IMG_UINTPTR_T *_pBase)
 {
 	PVR_UNREFERENCED_PARAMETER(_h);
@@ -171,6 +215,8 @@ static IMG_BOOL _RequestAllocFail(IMG_VOID *_h, IMG_SIZE_T _uSize,
 	PVR_UNREFERENCED_PARAMETER(_ppsMapping);
 	PVR_UNREFERENCED_PARAMETER(_uFlags);
 	PVR_UNREFERENCED_PARAMETER(_pBase);
+	PVR_UNREFERENCED_PARAMETER(_pvPrivData);
+	PVR_UNREFERENCED_PARAMETER(_ui32PrivDataLength);
 
 	return IMG_FALSE;
 }
@@ -799,7 +845,9 @@ RA_ARENA *RA_Create(
 	BM_MAPPING *psMapping, IMG_SIZE_T uQuantum,
 	IMG_BOOL (*imp_alloc)(IMG_VOID *, IMG_SIZE_T uSize,
 	      IMG_SIZE_T *pActualSize, BM_MAPPING **ppsMapping,
-	      IMG_UINT32 _flags, IMG_UINTPTR_T *pBase),
+	      IMG_UINT32 _flags, IMG_PVOID pvPrivData,
+	      IMG_UINT32 ui32PrivDataLength,
+	      IMG_UINTPTR_T *pBase),
 	IMG_VOID (*imp_free)(IMG_VOID *, IMG_UINTPTR_T, BM_MAPPING *),
 	IMG_VOID (*backingstore_free)(IMG_VOID *, IMG_SIZE_T, IMG_SIZE_T,
 	      IMG_HANDLE),
@@ -834,18 +882,10 @@ RA_ARENA *RA_Create(
 	pArena->uQuantum = uQuantum;
 
 #ifdef RA_STATS
-	pArena->sStatistics.uSpanCount = 0;
-	pArena->sStatistics.uLiveSegmentCount = 0;
-	pArena->sStatistics.uFreeSegmentCount = 0;
-	pArena->sStatistics.uFreeResourceCount = 0;
-	pArena->sStatistics.uTotalResourceCount = 0;
-	pArena->sStatistics.uCumulativeAllocs = 0;
-	pArena->sStatistics.uCumulativeFrees = 0;
-	pArena->sStatistics.uImportCount = 0;
-	pArena->sStatistics.uExportCount = 0;
+	OSMemSet(&pArena->sStatistics, 0x00, sizeof(pArena->sStatistics));
 #endif
 
-#if defined(CONFIG_PROC_FS) && defined(DEBUG)
+#if defined(CONFIG_PROC_FS) && defined(CONFIG_PVR_PROC_FS)
 	if (strcmp(pArena->name, "") != 0) {
 	IMG_INT ret;
 	IMG_CHAR szProcInfoName[PROC_NAME_SIZE];
@@ -879,7 +919,7 @@ RA_ARENA *RA_Create(
 
 	ret = snprintf(szProcSegsName, sizeof(szProcSegsName),
 	       "ra_segs_%s", pArena->name);
-	if (ret > 0 && ret < sizeof(szProcInfoName)) {
+	if (ret > 0 && ret < sizeof(szProcSegsName)) {
 	pArena->pProcSegs = pfnCreateProcEntrySeq(
 	ReplaceSpaces(szProcSegsName), pArena, NULL,
 	RA_ProcSeqShowRegs, RA_ProcSeqOff2ElementRegs,
@@ -891,8 +931,31 @@ RA_ARENA *RA_Create(
 	"RA_Create: couldn't create ra_segs proc entry for arena %s",
 	pArena->name));
 	}
+
+#if defined(CONFIG_PVR_PROC_FS_HEAP_ALLOC_DEBUG)
+	pArena->uAllocFailThreshold = ~0;
+	pArena->uAllocFailMask = ~0;
+	pArena->bFailAllocationOnce = IMG_FALSE;
+	pArena->bFailAllocationPersist = IMG_FALSE;
+
+	ret = snprintf(szProcSegsName, sizeof(szProcSegsName),
+	       "ra_fail_alloc_thld_%s", pArena->name);
+	if (ret > 0 && ret < sizeof(szProcSegsName)) {
+	pArena->pProcAllocFailThreshold = pfnCreateProcEntrySeq(
+	ReplaceSpaces(szProcSegsName), pArena, NULL,
+	RA_ProcSeqShowAllocFailThreshold,
+	RA_ProcSeqOff2AllocFailThreshold, NULL,
+	RA_ProcSetAllocFailThreshold);
+	} else {
+	pArena->pProcAllocFailThreshold = 0;
+	PVR_DPF((
+	PVR_DBG_ERROR,
+	"RA_Create: couldn't create ra_fail_alloc_thld proc entry for arena %s",
+	pArena->name));
 	}
-#endif
+#endif //defined(CONFIG_PVR_PROC_FS_HEAP_ALLOC_DEBUG)
+	}
+#endif //defined(CONFIG_PROC_FS) && defined(CONFIG_PVR_PROC_FS)
 
 	pArena->pSegmentHash = HASH_Create(MINIMUM_HASH_SIZE);
 	if (pArena->pSegmentHash == IMG_NULL) {
@@ -944,7 +1007,7 @@ RA_Delete(RA_ARENA *pArena)
 	"RA_Delete: allocations still exist in the arena that is being destroyed"));
 	PVR_DPF((
 	PVR_DBG_ERROR,
-	"Likely Cause: client drivers not freeing alocations before destroying devmemcontext"));
+	"Likely Cause: client drivers not freeing allocations before destroying devmemcontext"));
 	PVR_DPF((PVR_DBG_ERROR,
 	 "RA_Delete: base = 0x%x size=0x%x", pBT->base,
 	 pBT->uSize));
@@ -957,7 +1020,7 @@ RA_Delete(RA_ARENA *pArena)
 	pArena->sStatistics.uSpanCount--;
 #endif
 	}
-#if defined(CONFIG_PROC_FS) && defined(DEBUG)
+#if defined(CONFIG_PROC_FS) && defined(CONFIG_PVR_PROC_FS)
 	{
 	IMG_VOID (*pfnRemoveProcEntrySeq)(struct proc_dir_entry *);
 
@@ -972,6 +1035,12 @@ RA_Delete(RA_ARENA *pArena)
 	if (pArena->pProcSegs != 0) {
 	pfnRemoveProcEntrySeq(pArena->pProcSegs);
 	}
+
+#if defined(CONFIG_PVR_PROC_FS_HEAP_ALLOC_DEBUG)
+	if (pArena->pProcAllocFailThreshold != 0) {
+	pfnRemoveProcEntrySeq(pArena->pProcAllocFailThreshold);
+	}
+#endif //defined(CONFIG_PVR_PROC_FS_HEAP_ALLOC_DEBUG)
 	}
 #endif
 	HASH_Delete(pArena->pSegmentHash);
@@ -1022,9 +1091,11 @@ RA_Add(RA_ARENA *pArena, IMG_UINTPTR_T base, IMG_SIZE_T uSize)
 IMG_BOOL
 RA_Alloc(RA_ARENA *pArena, IMG_SIZE_T uRequestSize, IMG_SIZE_T *pActualSize,
 	 BM_MAPPING **ppsMapping, IMG_UINT32 uFlags, IMG_UINT32 uAlignment,
-	 IMG_UINT32 uAlignmentOffset, IMG_UINTPTR_T *base)
+	 IMG_UINT32 uAlignmentOffset, IMG_PVOID pvPrivData,
+	 IMG_UINT32 ui32PrivDataLength, IMG_UINTPTR_T *base)
 {
-	IMG_BOOL bResult;
+	IMG_BOOL bResult = IMG_FALSE;
+	IMG_BOOL bTestAllocFail = IMG_FALSE;
 	IMG_SIZE_T uSize = uRequestSize;
 
 	PVR_ASSERT(pArena != IMG_NULL);
@@ -1053,9 +1124,13 @@ RA_Alloc(RA_ARENA *pArena, IMG_SIZE_T uRequestSize, IMG_SIZE_T *pActualSize,
 	pArena->name, uSize, uRequestSize, uAlignment,
 	uAlignmentOffset));
 
-	bResult = _AttemptAllocAligned(pArena, uSize, ppsMapping, uFlags,
-	       uAlignment, uAlignmentOffset, base);
-	if (!bResult) {
+	bTestAllocFail = RA_TestAllocationFail(pArena, uSize, ~0);
+	if (!bTestAllocFail) {
+	bResult = _AttemptAllocAligned(pArena, uSize, ppsMapping,
+	       uFlags, uAlignment,
+	       uAlignmentOffset, base);
+
+	if (!bResult && !bTestAllocFail) {
 	BM_MAPPING *psImportMapping;
 	IMG_UINTPTR_T import_base;
 	IMG_SIZE_T uImportSize = uSize;
@@ -1068,54 +1143,69 @@ RA_Alloc(RA_ARENA *pArena, IMG_SIZE_T uRequestSize, IMG_SIZE_T *pActualSize,
 	       pArena->uQuantum) *
 	      pArena->uQuantum;
 
-	bResult = pArena->pImportAlloc(pArena->pImportHandle,
-	       uImportSize, &uImportSize,
-	       &psImportMapping, uFlags,
-	       &import_base);
+	bResult = pArena->pImportAlloc(
+	pArena->pImportHandle, uImportSize,
+	&uImportSize, &psImportMapping, uFlags,
+	pvPrivData, ui32PrivDataLength, &import_base);
 	if (bResult) {
 	BT *pBT;
 	pBT = _InsertResourceSpan(pArena, import_base,
 	  uImportSize);
 
 	if (pBT == IMG_NULL) {
-	pArena->pImportFree(pArena->pImportHandle,
-	    import_base,
-	    psImportMapping);
+	pArena->pImportFree(
+	pArena->pImportHandle,
+	import_base, psImportMapping);
 	PVR_DPF((
-	PVR_DBG_MESSAGE,
+	PVR_DBG_ERROR,
 	"RA_Alloc: name='%s', size=0x%x failed!",
 	pArena->name, uSize));
 
-	return IMG_FALSE;
-	}
+	bResult = IMG_FALSE;
+	} else {
 	pBT->psMapping = psImportMapping;
 #ifdef RA_STATS
 	pArena->sStatistics.uFreeSegmentCount++;
-	pArena->sStatistics.uFreeResourceCount += uImportSize;
+	pArena->sStatistics.uFreeResourceCount +=
+	uImportSize;
 	pArena->sStatistics.uImportCount++;
 	pArena->sStatistics.uSpanCount++;
 #endif
-	bResult = _AttemptAllocAligned(pArena, uSize,
-	       ppsMapping, uFlags,
-	       uAlignment,
-	       uAlignmentOffset, base);
+	bResult = _AttemptAllocAligned(
+	pArena, uSize, ppsMapping,
+	uFlags, uAlignment,
+	uAlignmentOffset, base);
 	if (!bResult) {
 	PVR_DPF((
-	PVR_DBG_MESSAGE,
+	PVR_DBG_ERROR,
 	"RA_Alloc: name='%s' uAlignment failed!",
 	pArena->name));
+	}
 	}
 	}
 	}
 #ifdef RA_STATS
 	if (bResult)
 	pArena->sStatistics.uCumulativeAllocs++;
+	else
+	pArena->sStatistics.uFailedAllocCount++;
 #endif
+	}
 
 	PVR_DPF((PVR_DBG_MESSAGE,
-	 "RA_Alloc: name='%s', size=0x%x, *base=0x%x = %d",
-	 pArena->name, uSize, *base, bResult));
+	 "RA_Alloc: arena=%s, size=0x%x(0x%x), alignment=0x%x, "
+	 "offset=0x%x, result=%d",
+	 pArena->name, uSize, uRequestSize, uAlignment,
+	 uAlignmentOffset, bResult));
 
+	if (!bResult) {
+	PVR_LOG(("RA_Alloc %s %s: arena=%s, size=0x%x(0x%x), "
+	 "alignment=0x%x, offset=0x%x",
+	 (bResult ? "SUCCESS" : "FAILED"),
+	 (bTestAllocFail ? "in TEST_MODE!" : " "), pArena->name,
+	 uSize, uRequestSize, uAlignment, uAlignmentOffset));
+	RA_DumpHeapInfo(pArena, ~0);
+	}
 #if defined(VALIDATE_ARENA_TEST)
 	ValidateArena(pArena);
 #endif
@@ -1454,7 +1544,8 @@ IMG_VOID CheckBMFreespace(IMG_VOID)
 }
 #endif
 
-#if (defined(CONFIG_PROC_FS) && defined(DEBUG)) || defined(RA_STATS)
+#if (defined(CONFIG_PROC_FS) && defined(CONFIG_PVR_PROC_FS)) || \
+	defined(RA_STATS)
 static IMG_CHAR *_BTType(IMG_INT eType)
 {
 	switch (eType) {
@@ -1504,7 +1595,238 @@ RA_Dump(RA_ARENA *pArena)
 }
 #endif
 
-#if defined(CONFIG_PROC_FS) && defined(DEBUG)
+static PVRSRV_ERROR RA_DumpHeapInfo(RA_ARENA *pArena, IMG_UINT32 ui32DebugLevel)
+{
+	BT *pBT;
+
+	{
+	IMG_UINT32 ui32PID = OSGetCurrentProcessIDKM();
+	IMG_CHAR dirname_buffer[256];
+	IMG_CHAR dirname[256];
+	const IMG_CHAR *proc_basename = dirname_buffer;
+	dirname_buffer[255] = dirname[255] = '\0';
+
+	OSGetProcCmdline(ui32PID, dirname_buffer,
+	 sizeof(dirname_buffer));
+	PVR_LOG((
+	"\nCommand Line of the current process with ID %u is %s",
+	ui32PID, dirname_buffer));
+
+	proc_basename = OSGetPathBaseName(dirname_buffer,
+	  sizeof(dirname_buffer));
+	PVR_LOG(("Base Name of the current process with ID %u is %s",
+	 ui32PID, proc_basename));
+	}
+
+	PVR_LOG(("Arena '%s':", pArena->name));
+
+	PVR_LOG(("  allocCB=%p freeCB=%p handle=%p quantum=%d",
+	 pArena->pImportAlloc, pArena->pImportFree,
+	 pArena->pImportHandle, pArena->uQuantum));
+
+	PVR_LOG(("span count\t\t%u", pArena->sStatistics.uSpanCount));
+
+	PVR_LOG(("live segment count\t%u",
+	 pArena->sStatistics.uLiveSegmentCount));
+
+	PVR_LOG(("free segment count\t%u",
+	 pArena->sStatistics.uFreeSegmentCount));
+
+	PVR_LOG(("free resource count\t%u (0x%x)",
+	 pArena->sStatistics.uFreeResourceCount,
+	 (IMG_UINT)pArena->sStatistics.uFreeResourceCount));
+
+	PVR_LOG(("total allocs\t\t%u", pArena->sStatistics.uCumulativeAllocs));
+
+	PVR_LOG(("total failed allocs\t%u",
+	 pArena->sStatistics.uFailedAllocCount));
+
+	PVR_LOG(("total frees\t\t%u", pArena->sStatistics.uCumulativeFrees));
+
+	PVR_LOG(("import count\t\t%u", pArena->sStatistics.uImportCount));
+
+	PVR_LOG(("export count\t\t%u", pArena->sStatistics.uExportCount));
+
+	PVR_LOG(("  segment Chain:"));
+
+	if (pArena->pHeadSegment != IMG_NULL &&
+	    pArena->pHeadSegment->pPrevSegment != IMG_NULL) {
+	PVR_LOG((
+	"  error: head boundary tag has invalid pPrevSegment"));
+	}
+
+	if (pArena->pTailSegment != IMG_NULL &&
+	    pArena->pTailSegment->pNextSegment != IMG_NULL) {
+	PVR_LOG((
+	"  error: tail boundary tag has invalid pNextSegment"));
+	}
+
+	for (pBT = pArena->pHeadSegment; pBT != IMG_NULL;
+	     pBT = pBT->pNextSegment) {
+	PVR_LOG(("%s base=0x%08x size=%08d(0x%08x) type=%s ref=%p",
+	 ((pBT->type == btt_span) ? "\t\t" : "\t"),
+	 (IMG_UINT32)pBT->base, pBT->uSize, pBT->uSize,
+	 _BTType(pBT->type), pBT->psMapping));
+	if (pBT->psMapping) {
+	BM_MAPPING *psImportMapping = pBT->psMapping;
+	PVR_LOG((
+	"\t %p: mapping type %s, mapping count=%d, size=%08d(0x%08x), flags=0x%08x, align=0x%04x",
+	psImportMapping,
+	_BMMappingType(
+	psImportMapping->eCpuMemoryOrigin),
+	psImportMapping->ui32MappingCount,
+	psImportMapping->uSize, psImportMapping->uSize,
+	psImportMapping->ui32Flags,
+	psImportMapping->ui32DevVAddrAlignment));
+	}
+	}
+
+	return PVRSRV_OK;
+}
+
+#if defined(CONFIG_PROC_FS) && defined(CONFIG_PVR_PROC_FS)
+
+#if defined(CONFIG_PVR_PROC_FS_HEAP_ALLOC_DEBUG)
+#define _PROC_SET_ALLOC_TH_BUFFER_SZ 32
+static int RA_ProcSetAllocFailThreshold(struct file *file,
+	const char __user *buffer,
+	unsigned long count, void *data)
+{
+	PVR_PROC_SEQ_HANDLERS *handlers = (PVR_PROC_SEQ_HANDLERS *)data;
+	RA_ARENA *pArena;
+	IMG_CHAR data_buffer[_PROC_SET_ALLOC_TH_BUFFER_SZ];
+	IMG_INT32 value = ~0;
+	IMG_UINT32 mask = ~0;
+	IMG_INT32 format_ret;
+
+	if ((handlers == NULL) || (handlers->data == NULL) ||
+	    (count > sizeof(data_buffer))) {
+	return -EINVAL;
+	}
+
+	pArena = (RA_ARENA *)handlers->data;
+
+	count = MIN(count, sizeof(data_buffer));
+
+	if (pvr_copy_from_user(data_buffer, buffer, count))
+	return -EINVAL;
+
+	if (data_buffer[count - 1] != '\n')
+	return -EINVAL;
+
+	data_buffer[(sizeof(data_buffer) - 1)] = '\0';
+	if ((sizeof(data_buffer) - 1) <= count)
+	data_buffer[count] = '\0';
+
+	PVR_LOG(("Buffer from the user is %s\n", data_buffer));
+	format_ret = sscanf(data_buffer, "%i:0x%x", &value, &mask);
+	PVR_LOG(("Value set is %i, type is %x, format %i\n", value, mask,
+	 format_ret));
+	if (format_ret <= 0)
+	return -EINVAL;
+
+	/*
+	Heap Allocation Buffer Threshold Setting - for testing purposes only
+	Causes allocation of a GFX buffer of type MASK for the respective heap to
+	fail.
+	Format is <threshold value number>:<buffer type mask hex value>
+	for example: 1000:0x01.
+	Value of -1 disables the allocation fail test
+	Value bigger than and eq. to 0 enables the allocation fail test for
+	the first buffer only.
+	Value smaller than -1 enables the buffer allocation failure for this
+	heap until the test disables it.
+*/
+	if (value < 0) {
+	if (value == -1) {
+	pArena->bFailAllocationPersist =
+	pArena->bFailAllocationOnce = IMG_FALSE;
+	} else if (value == -2) {
+	RA_DumpHeapInfo(pArena, ~0);
+	} else {
+	pArena->bFailAllocationPersist =
+	pArena->bFailAllocationOnce = IMG_TRUE;
+	pArena->uAllocFailThreshold = -value;
+	}
+	} else {
+	pArena->bFailAllocationPersist = 0;
+	pArena->bFailAllocationOnce = 1;
+	pArena->uAllocFailThreshold = value;
+	}
+
+	if (format_ret > 1) {
+	if ((pArena->bFailAllocationOnce == IMG_TRUE) && (mask == 0))
+	pArena->uAllocFailMask = ~0;
+	else
+	pArena->uAllocFailMask = mask;
+	}
+	PVR_LOG((
+	"*************** User Fail Heap Allocation Settings for %s *******************************\n",
+	pArena->name));
+	PVR_LOG(("Fail Heap Allocation is %s in %s mode\n",
+	 (pArena->bFailAllocationOnce ? "Enabled" : "Disabled"),
+	 (pArena->bFailAllocationPersist ? "Persistent" : "One-Shot")));
+	PVR_LOG((
+	"Fail Heap Allocation Buffer Size Threshold is %u with a Mask of 0x%x\n",
+	pArena->uAllocFailThreshold, pArena->uAllocFailMask));
+	PVR_LOG((
+	"*******************************************************************************************\n"));
+	return (count);
+}
+
+static void *RA_ProcSeqOff2AllocFailThreshold(struct seq_file *sfile,
+	      loff_t off)
+{
+	if (off <= 1)
+	return (void *)(IMG_INT)(off + 1);
+
+	return 0;
+}
+
+static void RA_ProcSeqShowAllocFailThreshold(struct seq_file *sfile, void *el)
+{
+	PVR_PROC_SEQ_HANDLERS *handlers =
+	(PVR_PROC_SEQ_HANDLERS *)sfile->private;
+	RA_ARENA *pArena = (RA_ARENA *)handlers->data;
+	IMG_INT off = (IMG_INT)el;
+
+	switch (off) {
+	case 1:
+	seq_printf(
+	sfile,
+	"Heap Allocation Buffer Threshold Setting - for testing purposes only\n");
+	seq_printf(
+	sfile,
+	"Format is <threshold value number>:<buffer type mask hex value> for example: 1000:0x01\n");
+	seq_printf(sfile,
+	   "Value of -1 disables the allocation fail test\n");
+	seq_printf(
+	sfile,
+	"Value of -2 dumps the heap entries to the kernel log\n");
+	seq_printf(
+	sfile,
+	"Value => 0 enables the allocation fail test for the first buffer with the met threshold only\n");
+	seq_printf(
+	sfile,
+	"Value < -2 enables the buffer allocation failure for this heap until the test disables it\n");
+	break;
+	case 2:
+	seq_printf(
+	sfile,
+	"*********** Current Settings: ********************\n");
+	seq_printf(sfile, "Fail Heap Allocation is %s in %s mode\n",
+	   (pArena->bFailAllocationOnce ? "Enabled" :
+	  "Disabled"),
+	   (pArena->bFailAllocationPersist ? "Persistent" :
+	     "One-Shot"));
+	seq_printf(
+	sfile,
+	"Fail Heap Allocation Buffer Size Threshold is %u with a Mask of 0x%x\n",
+	pArena->uAllocFailThreshold, pArena->uAllocFailMask);
+	break;
+	}
+}
+#endif //defined(CONFIG_PVR_PROC_FS_HEAP_ALLOC_DEBUG)
 
 static void RA_ProcSeqShowInfo(struct seq_file *sfile, void *el)
 {

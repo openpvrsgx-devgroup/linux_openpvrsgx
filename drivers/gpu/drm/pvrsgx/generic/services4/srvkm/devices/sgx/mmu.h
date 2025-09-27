@@ -126,6 +126,9 @@ IMG_VOID MMU_GetPDPhysAddr(MMU_CONTEXT *pMMUContext,
 
 #endif
 
+IMG_VOID MMU_CheckFaultAddr(PVRSRV_SGXDEV_INFO *psDevInfo,
+	    IMG_UINT32 ui32PDDevPAddr, IMG_UINT32 ui32RegVal);
+
 #if defined(PDUMP)
 IMG_UINT32 MMU_GetPDumpContextID(IMG_HANDLE hDevMemContext);
 #endif

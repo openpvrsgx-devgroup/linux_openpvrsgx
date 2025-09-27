@@ -1,5 +1,5 @@
 /*************************************************************************/ /*!
-@Title          Utility functions for user space access
+@Title          Systrace related functions
 @Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
 @License        Dual MIT/GPLv2
 
@@ -38,50 +38,33 @@ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */ /**************************************************************************/
-#ifndef __PVR_UACCESS_H__
-#define __PVR_UACCESS_H__
 
-#include <linux/version.h>
+#ifndef _SYSTRACE_
+#define _SYSTRACE_
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 38))
-#ifndef AUTOCONF_INCLUDED
-#include <linux/config.h>
-#endif
-#endif
+#include "img_defs.h"
+#include "img_types.h"
 
-#include <asm/uaccess.h>
+#include "services_headers.h"
+#include "sgxapi_km.h"
+#include "sgxinfo.h"
+#include "sgxinfokm.h"
 
-static inline unsigned long
-pvr_copy_to_user(void __user *pvTo, const void *pvFrom, unsigned long ulBytes)
-{
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 33))
-	if (access_ok(VERIFY_WRITE, pvTo, ulBytes)) {
-	return __copy_to_user(pvTo, pvFrom, ulBytes);
-	}
-	return ulBytes;
-#else
-	return copy_to_user(pvTo, pvFrom, ulBytes);
-#endif
-}
+typedef enum {
+	PVRSRV_SYSTRACE_OK = 0x00,
+	PVRSRV_SYSTRACE_NOT_INITIALISED,
+	PVRSRV_SYSTRACE_JOB_NOT_FOUND
+} PVRSRV_SYSTRACE_ERROR;
 
-static inline unsigned long
-pvr_copy_from_user(void *pvTo, const void __user *pvFrom, unsigned long ulBytes)
-{
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 33))
-	/*
-     * The compile time correctness checking introduced for copy_from_user in
-     * Linux 2.6.33 isn't fully comaptible with our usage of the function.
-     */
-	if (access_ok(VERIFY_READ, pvFrom, ulBytes)) {
-	return __copy_from_user(pvTo, pvFrom, ulBytes);
-	}
-	return ulBytes;
-#else
-	return copy_from_user(pvTo, pvFrom, ulBytes);
-#endif
-}
+void SystraceHWPerfPackets(PVRSRV_SGXDEV_INFO *psDevInfo,
+	   PVRSRV_SGX_HWPERF_CB_ENTRY *psSGXHWPerf,
+	   IMG_UINT32 ui32DataCount,
+	   IMG_UINT32 ui32SgxClockspeed);
+void SystraceTAKick(PVRSRV_SGXDEV_INFO *psDevInfo, IMG_UINT32 ui32FrameNum,
+	    IMG_UINT32 ui32RTData, IMG_BOOL bIsFirstKick);
 
-#define pvr_put_user put_user
-#define pvr_get_user get_user
+void SystraceCreateFS(void);
+void SystraceDestroyFS(void);
+IMG_BOOL SystraceIsCapturingHWData(void);
 
-#endif /* __PVR_UACCESS_H__ */
+#endif /* _SYSTRACE_ */

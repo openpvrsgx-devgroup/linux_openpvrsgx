@@ -1,47 +1,33 @@
-/*************************************************************************/ /*!
-@Title          Parameter Buffer management functions
-@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
-@License        Dual MIT/GPLv2
-
-The contents of this file are subject to the MIT license as set out below.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-Alternatively, the contents of this file may be used under the terms of
-the GNU General Public License Version 2 ("GPL") in which case the provisions
-of GPL are applicable instead of those above.
-
-If you wish to allow use of your version of this file only under the terms of
-GPL, and not to allow others to use your version of this file under the terms
-of the MIT license, indicate your decision by deleting the provisions above
-and replace them with the notice and other provisions required by GPL as set
-out in the file called "GPL-COPYING" included in this distribution. If you do
-not delete the provisions above, a recipient may use your version of this file
-under the terms of either the MIT license or GPL.
-
-This License is also included in this distribution in the file called
-"MIT-COPYING".
-
-EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
-PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
-BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
-PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*/ /**************************************************************************/
+/**********************************************************************
+ *
+ * Copyright (C) Imagination Technologies Ltd. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful but, except
+ * as otherwise stated in writing, without any warranty; without even the
+ * implied warranty of merchantability or fitness for a particular purpose.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * The full GNU General Public License is included in this distribution in
+ * the file called "COPYING".
+ *
+ * Contact Information:
+ * Imagination Technologies Ltd. <gpl-support@imgtec.com>
+ * Home Park Estate, Kings Langley, Herts, WD4 8LZ, UK
+ *
+ ******************************************************************************/
 
 #include <stddef.h>
 
 #include "services_headers.h"
+#include "sgx_bridge_km.h"
 #include "sgxapi_km.h"
 #include "sgxinfo.h"
 #include "sgxinfokm.h"
@@ -62,13 +48,12 @@ static IMPLEMENT_LIST_INSERT(PVRSRV_STUB_PBDESC) static IMPLEMENT_LIST_REMOVE(
 static PVRSRV_PER_PROCESS_DATA *psPerProcCreateSharedPB = IMG_NULL;
 
 static PVRSRV_ERROR SGXCleanupSharedPBDescCallback(IMG_PVOID pvParam,
-	   IMG_UINT32 ui32Param);
+	   IMG_UINT32 ui32Param,
+	   IMG_BOOL bDummy);
 static PVRSRV_ERROR
 SGXCleanupSharedPBDescCreateLockCallback(IMG_PVOID pvParam,
-	 IMG_UINT32 ui32Param);
+	 IMG_UINT32 ui32Param, IMG_BOOL bDummy);
 
-/* override level pointer indirection */
-/* PRQA S 5102 12 */
 IMG_EXPORT PVRSRV_ERROR SGXFindSharedPBDescKM(
 	PVRSRV_PER_PROCESS_DATA *psPerProc, IMG_HANDLE hDevCookie,
 	IMG_BOOL bLockOnFailure, IMG_UINT32 ui32TotalPBSize,
@@ -124,13 +109,12 @@ IMG_EXPORT PVRSRV_ERROR SGXFindSharedPBDescKM(
 	sizeof(PVRSRV_KERNEL_MEM_INFO *) *
 	psStubPBDesc->ui32SubKernelMemInfosCount,
 	ppsSharedPBDescSubKernelMemInfos, 0);
-	/*not nulling pointer, out of scope*/
 
 	PVR_DPF((
 	PVR_DBG_ERROR,
 	"SGXFindSharedPBDescKM: ResManRegisterRes failed"));
 
-	eError = PVRSRV_ERROR_GENERIC;
+	eError = PVRSRV_ERROR_UNABLE_TO_REGISTER_RESOURCE;
 	goto ExitNotFound;
 	}
 
@@ -171,7 +155,8 @@ IMG_EXPORT PVRSRV_ERROR SGXFindSharedPBDescKM(
 	PVR_DBG_ERROR,
 	"SGXFindSharedPBDescKM: ResManRegisterRes failed"));
 
-	eError = PVRSRV_ERROR_GENERIC;
+	eError =
+	PVRSRV_ERROR_UNABLE_TO_REGISTER_RESOURCE;
 	goto ExitNotFound;
 	}
 	PVR_ASSERT(psPerProcCreateSharedPB == IMG_NULL);
@@ -188,7 +173,6 @@ ExitNotFound:
 
 static PVRSRV_ERROR SGXCleanupSharedPBDescKM(PVRSRV_STUB_PBDESC *psStubPBDescIn)
 {
-	/*PVRSRV_STUB_PBDESC **ppsStubPBDesc;*/
 	IMG_UINT32 i;
 	PVRSRV_DEVICE_NODE *psDeviceNode;
 
@@ -196,6 +180,8 @@ static PVRSRV_ERROR SGXCleanupSharedPBDescKM(PVRSRV_STUB_PBDESC *psStubPBDescIn)
 
 	psStubPBDescIn->ui32RefCount--;
 	if (psStubPBDescIn->ui32RefCount == 0) {
+	IMG_DEV_VIRTADDR sHWPBDescDevVAddr =
+	psStubPBDescIn->sHWPBDescDevVAddr;
 	List_PVRSRV_STUB_PBDESC_Remove(psStubPBDescIn);
 	for (i = 0; i < psStubPBDescIn->ui32SubKernelMemInfosCount;
 	     i++) {
@@ -224,28 +210,28 @@ static PVRSRV_ERROR SGXCleanupSharedPBDescKM(PVRSRV_STUB_PBDESC *psStubPBDescIn)
 
 	OSFreeMem(PVRSRV_OS_NON_PAGEABLE_HEAP,
 	  sizeof(PVRSRV_STUB_PBDESC), psStubPBDescIn, 0);
-	/*not nulling pointer, copy on stack*/
 
-	/* signal the microkernel to clear its sTAHWPBDesc and s3DHWPBDesc values in sTA3DCtl */
-	SGXCleanupRequest(psDeviceNode, IMG_NULL, PVRSRV_CLEANUPCMD_PB);
+	SGXCleanupRequest(psDeviceNode, &sHWPBDescDevVAddr,
+	  PVRSRV_CLEANUPCMD_PB, CLEANUP_WITH_POLL);
 	}
 	return PVRSRV_OK;
-	/*return PVRSRV_ERROR_INVALID_PARAMS;*/
 }
 
 static PVRSRV_ERROR SGXCleanupSharedPBDescCallback(IMG_PVOID pvParam,
-	   IMG_UINT32 ui32Param)
+	   IMG_UINT32 ui32Param,
+	   IMG_BOOL bDummy)
 {
 	PVRSRV_STUB_PBDESC *psStubPBDesc = (PVRSRV_STUB_PBDESC *)pvParam;
 
 	PVR_UNREFERENCED_PARAMETER(ui32Param);
+	PVR_UNREFERENCED_PARAMETER(bDummy);
 
 	return SGXCleanupSharedPBDescKM(psStubPBDesc);
 }
 
 static PVRSRV_ERROR
 SGXCleanupSharedPBDescCreateLockCallback(IMG_PVOID pvParam,
-	 IMG_UINT32 ui32Param)
+	 IMG_UINT32 ui32Param, IMG_BOOL bDummy)
 {
 #ifdef DEBUG
 	PVRSRV_PER_PROCESS_DATA *psPerProc = (PVRSRV_PER_PROCESS_DATA *)pvParam;
@@ -255,6 +241,7 @@ SGXCleanupSharedPBDescCreateLockCallback(IMG_PVOID pvParam,
 #endif
 
 	PVR_UNREFERENCED_PARAMETER(ui32Param);
+	PVR_UNREFERENCED_PARAMETER(bDummy);
 
 	psPerProcCreateSharedPB = IMG_NULL;
 	psResItemCreateSharedPB = IMG_NULL;
@@ -266,7 +253,7 @@ IMG_EXPORT PVRSRV_ERROR SGXUnrefSharedPBDescKM(IMG_HANDLE hSharedPBDesc)
 {
 	PVR_ASSERT(hSharedPBDesc != IMG_NULL);
 
-	return ResManFreeResByPtr(hSharedPBDesc);
+	return ResManFreeResByPtr(hSharedPBDesc, CLEANUP_WITH_POLL);
 }
 
 IMG_EXPORT PVRSRV_ERROR
@@ -277,24 +264,21 @@ SGXAddSharedPBDescKM(PVRSRV_PER_PROCESS_DATA *psPerProc, IMG_HANDLE hDevCookie,
 	     PVRSRV_KERNEL_MEM_INFO *psHWBlockKernelMemInfo,
 	     IMG_UINT32 ui32TotalPBSize, IMG_HANDLE *phSharedPBDesc,
 	     PVRSRV_KERNEL_MEM_INFO **ppsSharedPBDescSubKernelMemInfos,
-	     IMG_UINT32 ui32SharedPBDescSubKernelMemInfosCount)
+	     IMG_UINT32 ui32SharedPBDescSubKernelMemInfosCount,
+	     IMG_DEV_VIRTADDR sHWPBDescDevVAddr)
 {
 	PVRSRV_STUB_PBDESC *psStubPBDesc = IMG_NULL;
-	PVRSRV_ERROR eRet = PVRSRV_ERROR_GENERIC;
+	PVRSRV_ERROR eRet = PVRSRV_ERROR_INVALID_PERPROC;
 	IMG_UINT32 i;
 	PVRSRV_SGXDEV_INFO *psSGXDevInfo;
 	PRESMAN_ITEM psResItem;
 
-	/*
-	 * The caller must have previously called SGXFindSharedPBDesc with
-	 * bLockOnFailure set, and not managed to find a suitable shared PB.
-	 */
 	if (psPerProcCreateSharedPB != psPerProc) {
 	goto NoAdd;
 	} else {
 	PVR_ASSERT(psResItemCreateSharedPB != IMG_NULL);
 
-	ResManFreeResByPtr(psResItemCreateSharedPB);
+	ResManFreeResByPtr(psResItemCreateSharedPB, CLEANUP_WITH_POLL);
 
 	PVR_ASSERT(psResItemCreateSharedPB == IMG_NULL);
 	PVR_ASSERT(psPerProcCreateSharedPB == IMG_NULL);
@@ -313,11 +297,6 @@ SGXAddSharedPBDescKM(PVRSRV_PER_PROCESS_DATA *psPerProc, IMG_HANDLE hDevCookie,
 	psStubPBDesc->ui32TotalPBSize));
 	}
 
-	/*
-	 * We make the caller think the add was successful,
-	 * but return the existing shared PB desc rather than
-	 * a new one.
-	 */
 	psResItem = ResManRegisterRes(psPerProc->hResManContext,
 	      RESMAN_TYPE_SHARED_PB_DESC,
 	      psStubPBDesc, 0,
@@ -330,10 +309,6 @@ SGXAddSharedPBDescKM(PVRSRV_PER_PROCESS_DATA *psPerProc, IMG_HANDLE hDevCookie,
 	goto NoAddKeepPB;
 	}
 
-	/*
-	 * The caller will unreference the PB desc after
-	 * a successful add, so up the reference count.
-	 */
 	psStubPBDesc->ui32RefCount++;
 
 	*phSharedPBDesc = (IMG_HANDLE)psResItem;
@@ -406,6 +381,8 @@ SGXAddSharedPBDescKM(PVRSRV_PER_PROCESS_DATA *psPerProc, IMG_HANDLE hDevCookie,
 	}
 	}
 
+	psStubPBDesc->sHWPBDescDevVAddr = sHWPBDescDevVAddr;
+
 	psResItem = ResManRegisterRes(psPerProc->hResManContext,
 	      RESMAN_TYPE_SHARED_PB_DESC, psStubPBDesc,
 	      0, &SGXCleanupSharedPBDescCallback);
@@ -417,8 +394,6 @@ SGXAddSharedPBDescKM(PVRSRV_PER_PROCESS_DATA *psPerProc, IMG_HANDLE hDevCookie,
 	}
 	psStubPBDesc->hDevCookie = hDevCookie;
 
-	/* Finally everything was prepared successfully so link the new
-	 * PB in to place. */
 	List_PVRSRV_STUB_PBDESC_Insert(&(psSGXDevInfo->psStubPBDescListKM),
 	       psStubPBDesc);
 
@@ -438,7 +413,6 @@ NoAdd:
 	}
 	OSFreeMem(PVRSRV_OS_NON_PAGEABLE_HEAP,
 	  sizeof(PVRSRV_STUB_PBDESC), psStubPBDesc, 0);
-	/*not nulling pointer, out of scope*/
 	}
 
 NoAddKeepPB:
@@ -455,7 +429,3 @@ NoAddKeepPB:
 
 	return eRet;
 }
-
-/******************************************************************************
- End of file (pb.c)
-******************************************************************************/

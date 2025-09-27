@@ -1,6 +1,8 @@
 /*************************************************************************/ /*!
-@Title          Utility functions for user space access
+@Title          OMAP Linux display driver shared DRM structures
 @Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@Description    OMAP Linux display driver DRM structures shared between
+                kernel and user space.
 @License        Dual MIT/GPLv2
 
 The contents of this file are subject to the MIT license as set out below.
@@ -38,50 +40,26 @@ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */ /**************************************************************************/
-#ifndef __PVR_UACCESS_H__
-#define __PVR_UACCESS_H__
+#ifndef __3RDPARTY_DC_DRM_SHARED_H__
+#define __3RDPARTY_DC_DRM_SHARED_H__
+#if defined(SUPPORT_DRI_DRM)
 
-#include <linux/version.h>
+typedef struct drm_pvr_display_cmd_tag {
+	uint32_t cmd;
+	uint32_t dev;
+} drm_pvr_display_cmd;
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 38))
-#ifndef AUTOCONF_INCLUDED
-#include <linux/config.h>
-#endif
-#endif
+#define PVR_DRM_DISP_CMD_ENTER_VT 1
+#define PVR_DRM_DISP_CMD_LEAVE_VT 2
 
-#include <asm/uaccess.h>
+#define PVR_DRM_DISP_CMD_ON 3
+#define PVR_DRM_DISP_CMD_STANDBY 4
+#define PVR_DRM_DISP_CMD_SUSPEND 5
+#define PVR_DRM_DISP_CMD_OFF 6
 
-static inline unsigned long
-pvr_copy_to_user(void __user *pvTo, const void *pvFrom, unsigned long ulBytes)
-{
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 33))
-	if (access_ok(VERIFY_WRITE, pvTo, ulBytes)) {
-	return __copy_to_user(pvTo, pvFrom, ulBytes);
-	}
-	return ulBytes;
-#else
-	return copy_to_user(pvTo, pvFrom, ulBytes);
-#endif
-}
+#endif /* defined(SUPPORT_DRI_DRM) */
+#endif /* __3RDPARTY_DC_DRM_SHARED_H__ */
 
-static inline unsigned long
-pvr_copy_from_user(void *pvTo, const void __user *pvFrom, unsigned long ulBytes)
-{
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 33))
-	/*
-     * The compile time correctness checking introduced for copy_from_user in
-     * Linux 2.6.33 isn't fully comaptible with our usage of the function.
-     */
-	if (access_ok(VERIFY_READ, pvFrom, ulBytes)) {
-	return __copy_from_user(pvTo, pvFrom, ulBytes);
-	}
-	return ulBytes;
-#else
-	return copy_from_user(pvTo, pvFrom, ulBytes);
-#endif
-}
-
-#define pvr_put_user put_user
-#define pvr_get_user get_user
-
-#endif /* __PVR_UACCESS_H__ */
+/******************************************************************************
+ End of file (3rdparty_dc_drm_shared.h)
+******************************************************************************/

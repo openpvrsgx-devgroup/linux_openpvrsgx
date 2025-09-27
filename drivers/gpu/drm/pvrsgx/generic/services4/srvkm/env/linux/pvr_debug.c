@@ -124,8 +124,7 @@ static inline void GetBufferLock(unsigned long *pulLockFlags)
 	}
 #if !defined(PVR_DEBUG_ALWAYS_USE_SPINLOCK)
 	else {
-	LinuxLockMutexNested(&gsDebugMutexNonIRQ,
-	     PVRSRV_LOCK_CLASS_PVR_DEBUG);
+	LinuxLockMutex(&gsDebugMutexNonIRQ);
 	}
 #endif
 }
@@ -218,9 +217,9 @@ IMG_VOID PVRSRVReleasePrintf(const IMG_CHAR *pszFormat, ...)
 	strncpy(pszBuf, "PVR_K: ", (ui32BufSiz - 1));
 
 	if (VBAppend(pszBuf, ui32BufSiz, pszFormat, vaArgs)) {
-	printk(KERN_INFO "PVR_K:(Message Truncated): %s\n", pszBuf);
+	printk(KERN_ERR "PVR_K:(Message Truncated): %s\n", pszBuf);
 	} else {
-	printk(KERN_INFO "%s\n", pszBuf);
+	printk(KERN_ERR "%s\n", pszBuf);
 	}
 
 	ReleaseBufferLock(ulLockFlags);
@@ -253,9 +252,9 @@ IMG_VOID PVRSRVTrace(const IMG_CHAR *pszFormat, ...)
 	strncpy(pszBuf, "PVR: ", (ui32BufSiz - 1));
 
 	if (VBAppend(pszBuf, ui32BufSiz, pszFormat, VArgs)) {
-	printk(KERN_INFO "PVR_K:(Message Truncated): %s\n", pszBuf);
+	printk(KERN_ERR "PVR_K:(Message Truncated): %s\n", pszBuf);
 	} else {
-	printk(KERN_INFO "%s\n", pszBuf);
+	printk(KERN_ERR "%s\n", pszBuf);
 	}
 
 	ReleaseBufferLock(ulLockFlags);
@@ -360,7 +359,7 @@ IMG_VOID PVRSRVDebugPrintf(IMG_UINT32 ui32DebugLevel,
 	}
 
 	if (VBAppend(pszBuf, ui32BufSiz, pszFormat, vaArgs)) {
-	printk(KERN_INFO "PVR_K:(Message Truncated): %s\n",
+	printk(KERN_ERR "PVR_K:(Message Truncated): %s\n",
 	       pszBuf);
 	} else {
 	/* Traces don't need a location */
@@ -446,14 +445,14 @@ IMG_VOID PVRSRVDebugPrintf(IMG_UINT32 ui32DebugLevel,
 
 	if (BAppend(pszBuf, ui32BufSiz, " [%u, %s]",
 	    ui32Line, pszFileName)) {
-	printk(KERN_INFO
+	printk(KERN_ERR
 	       "PVR_K:(Message Truncated): %s\n",
 	       pszBuf);
 	} else {
-	printk(KERN_INFO "%s\n", pszBuf);
+	printk(KERN_ERR "%s\n", pszBuf);
 	}
 	} else {
-	printk(KERN_INFO "%s\n", pszBuf);
+	printk(KERN_ERR "%s\n", pszBuf);
 	}
 	}
 

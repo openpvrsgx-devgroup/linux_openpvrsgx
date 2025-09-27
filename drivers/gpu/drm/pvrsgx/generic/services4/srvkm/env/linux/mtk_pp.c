@@ -6,7 +6,7 @@
 
 #include "mtk_pp.h"
 
-//#define ENABLE_AEE_WHEN_LOCKUP
+#define ENABLE_AEE_WHEN_LOCKUP
 
 #if defined(ENABLE_AEE_WHEN_LOCKUP)
 #include <linux/workqueue.h>
@@ -387,12 +387,10 @@ static int MTKPP_ProcOpen(struct inode *inode, struct file *file)
 	return seq_open(file, &g_MTKPP_seq_ops);
 }
 
-static struct file_operations g_MTKPP_proc_ops = {
-	.open = MTKPP_ProcOpen,
-	.read = seq_read, // system
-	.llseek = seq_lseek, // system
-	.release = seq_release // system
-};
+static struct file_operations g_MTKPP_proc_ops = { .open = MTKPP_ProcOpen,
+	   .read = seq_read,
+	   .llseek = seq_lseek,
+	   .release = seq_release };
 
 #if defined(ENABLE_AEE_WHEN_LOCKUP)
 
@@ -401,7 +399,7 @@ static IMG_VOID MTKPP_WORKR_Handle(struct work_struct *_psWork)
 	struct MTKPP_WORKQUEUE_WORKER_t *psWork =
 	container_of(_psWork, MTKPP_WORKQUEUE_WORKER, sWork);
 
-	// avoid the build warnning
+	/* avoid the build warnning */
 	psWork = psWork;
 
 	aee_kernel_exception("gpulog", "aee dump gpulog");
@@ -423,8 +421,8 @@ void MTKPP_Init(void)
 	  0 },
 	{ MTKPP_ID_DEVMEM, MTKPP_BUFFERTYPE_RINGBUFFER, 1024 * 1024 * 2,
 	  1024 * 64 },
-	{ MTKPP_ID_SYNC, MTKPP_BUFFERTYPE_RINGBUFFER, 1024 * 1024 * 2,
-	  1024 * 64 },
+	{ MTKPP_ID_SYNC, MTKPP_BUFFERTYPE_RINGBUFFER, 1024 * 8, 128 },
+	{ MTKPP_ID_MUTEX, MTKPP_BUFFERTYPE_RINGBUFFER, 1024 * 32, 512 },
 	};
 
 	for (i = 0; i < MTKPP_ID_SIZE; ++i) {

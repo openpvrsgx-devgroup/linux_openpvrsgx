@@ -70,6 +70,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "lists.h"
 
+#include "mtk_version.h"
+
 // The proc entry for our /proc/pvr directory
 static struct proc_dir_entry *dir;
 
@@ -1226,6 +1228,10 @@ static void ProcSeqShowVersion(struct seq_file *sfile, void *el)
 
 	seq_printf(sfile, "System Version String: %s\n",
 	   pszSystemVersionString);
+
+#ifdef MTK_DEBUG
+	seq_printf(sfile, "MTK %s\n", MTK_DEBUG_VERSION_STR);
+#endif
 }
 
 /*!

@@ -50,7 +50,6 @@ static IMG_UINT32 MTKGetGpuLoading(IMG_VOID)
 {
 	return 0;
 }
-//extern unsigned int MTKGetSysRAMStats(IMG_VOID);
 
 static IMG_UINT32 MTKGetGpuMemoryStatics(IMG_VOID)
 {

@@ -121,7 +121,9 @@ typedef struct _DEBUG_MEM_ALLOC_REC {
 	pid_t pid;
 	IMG_CHAR *pszFileName;
 	IMG_UINT32 ui32Line;
-
+#if defined(MTK_DEBUG)
+	IMG_CHAR acDebugMsg[MTK_DEBUG_MSG_LENGTH];
+#endif
 	struct _DEBUG_MEM_ALLOC_REC *psNext;
 	struct _DEBUG_MEM_ALLOC_REC **ppsThis;
 } DEBUG_MEM_ALLOC_REC;
@@ -285,6 +287,12 @@ DebugMemAllocRecordAdd(DEBUG_MEM_ALLOC_TYPE eAllocType, IMG_VOID *pvKey,
 {
 	DEBUG_MEM_ALLOC_REC *psRecord;
 
+#ifdef MTK_DEBUG
+	if (!MTKDebugIsEnable3DMemInfo()) {
+	return;
+	}
+#endif
+
 	LinuxLockMutex(&g_sDebugMutex);
 
 	psRecord = kmalloc(sizeof(DEBUG_MEM_ALLOC_REC), GFP_KERNEL);
@@ -298,6 +306,9 @@ DebugMemAllocRecordAdd(DEBUG_MEM_ALLOC_TYPE eAllocType, IMG_VOID *pvKey,
 	psRecord->ui32Bytes = ui32Bytes;
 	psRecord->pszFileName = pszFileName;
 	psRecord->ui32Line = ui32Line;
+#if defined(MTK_DEBUG)
+	MTKDebugGetInfo(psRecord->acDebugMsg, sizeof(psRecord->acDebugMsg));
+#endif
 
 	List_DEBUG_MEM_ALLOC_REC_Insert(&g_MemoryRecords, psRecord);
 
@@ -369,6 +380,12 @@ static IMG_VOID DebugMemAllocRecordRemove(DEBUG_MEM_ALLOC_TYPE eAllocType,
 	  IMG_UINT32 ui32Line)
 {
 	/*    DEBUG_MEM_ALLOC_REC **ppsCurrentRecord;*/
+
+#ifdef MTK_DEBUG
+	if (!MTKDebugIsEnable3DMemInfo()) {
+	return;
+	}
+#endif
 
 	LinuxLockMutex(&g_sDebugMutex);
 
@@ -1491,6 +1508,154 @@ FreeIONLinuxMemArea(LinuxMemArea *psLinuxMemArea)
 
 #endif /* defined(CONFIG_ION_OMAP) */
 
+#if defined(CONFIG_ION_MTK)
+
+#include "env_perproc.h"
+
+#include <linux/ion.h>
+#include <linux/ion_drv.h>
+#include <linux/scatterlist.h>
+extern struct ion_client *gpsIONClient;
+
+LinuxMemArea *NewIONLinuxMemArea(IMG_UINT32 ui32Bytes, IMG_UINT32 ui32AreaFlags,
+	 IMG_PVOID pvPrivData,
+	 IMG_UINT32 ui32PrivDataLength)
+{
+	//const IMG_UINT32 ui32AllocDataLen =
+	//    offsetof(struct omap_ion_tiler_alloc_data, handle);
+	// struct omap_ion_tiler_alloc_data asAllocData[2] = {};
+	// u32 *pu32PageAddrs[2] = { NULL, NULL };
+	IMG_UINT32 i, ui32NumHandlesPerFd;
+	//    IMG_BYTE *pbPrivData = pvPrivData;
+	IMG_CPU_PHYADDR *pCPUPhysAddrs;
+	int iNumPages[2] = { 0, 0 };
+	int j = 0;
+	struct sg_table *table;
+
+	//    void* phy_addr;
+	struct scatterlist *sg;
+	LinuxMemArea *psLinuxMemArea;
+	struct ion_handle *handle[2] = { 0, 0 };
+
+	psLinuxMemArea = LinuxMemAreaStructAlloc();
+	if (!psLinuxMemArea) {
+	PVR_DPF((PVR_DBG_ERROR,
+	 "%s: Failed to allocate LinuxMemArea struct",
+	 __func__));
+	goto err_out;
+	}
+
+	/* Depending on the UM config, userspace might give us info for
+     * one or two ION allocations. Divide the total size of data we
+     * were given by this ui32AllocDataLen, and check it's 1 or 2.
+     * Otherwise abort.
+     */
+	//BUG_ON(ui32PrivDataLength != ui32AllocDataLen &&
+	//       ui32PrivDataLength != ui32AllocDataLen * 2);
+	//ui32NumHandlesPerFd = ui32PrivDataLength / ui32AllocDataLen;
+	ui32NumHandlesPerFd = 1;
+
+	/* Shuffle the alloc data into separate Y & UV bits and
+     * make two separate allocations via the tiler.
+     */
+
+	iNumPages[0] = RANGE_TO_PAGES(ui32Bytes);
+
+	/* Glue the page lists together */
+	pCPUPhysAddrs = vmalloc(sizeof(IMG_CPU_PHYADDR) *
+	(iNumPages[0] + iNumPages[1]));
+
+	if (!pCPUPhysAddrs) {
+	PVR_DPF((PVR_DBG_ERROR, "%s: Failed to allocate page list",
+	 __func__));
+	goto err_free;
+	}
+	for (i = 0; i < ui32NumHandlesPerFd; i++) {
+	//  memcpy(&asAllocData[i], &pbPrivData[i * ui32AllocDataLen], ui32AllocDataLen);
+
+	iNumPages[i] = RANGE_TO_PAGES(ui32Bytes);
+	handle[i] = ion_alloc(gpsIONClient, ui32Bytes, 4,
+	      ION_HEAP_MULTIMEDIA_MASK, 0);
+
+	table = ion_sg_table(gpsIONClient, handle[i]);
+
+	for_each_sg(table->sgl, sg, table->nents, j) {
+	// pPage = sg_page(sg); // This is page struct pointer
+	// phy_addr = (void*) sg_phys(sg);
+	pCPUPhysAddrs[i * iNumPages[0] + j].uiAddr =
+	(IMG_UINTPTR_T)(void *)sg_phys(sg);
+	}
+	}
+
+	/* Assume the user-allocator has already done the tiler math and that the
+     * number of tiler pages allocated matches any other allocation type.
+     */
+	BUG_ON(ui32Bytes != (iNumPages[0] + iNumPages[1]) * PAGE_SIZE);
+	BUG_ON(sizeof(IMG_CPU_PHYADDR) != sizeof(int));
+
+#if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
+	DebugMemAllocRecordAdd(DEBUG_MEM_ALLOC_TYPE_ION, handle[0], 0, 0, NULL,
+	       PAGE_ALIGN(ui32Bytes), "unknown", 0);
+#endif
+
+	for (i = 0; i < 2; i++)
+	psLinuxMemArea->uData.sIONTilerAlloc.psIONHandle[i] = handle[i];
+
+	psLinuxMemArea->eAreaType = LINUX_MEM_AREA_ION;
+	psLinuxMemArea->uData.sIONTilerAlloc.pCPUPhysAddrs = pCPUPhysAddrs;
+	psLinuxMemArea->ui32ByteSize = ui32Bytes;
+	psLinuxMemArea->ui32AreaFlags = ui32AreaFlags;
+	INIT_LIST_HEAD(&psLinuxMemArea->sMMapOffsetStructList);
+
+	/* We defer the cache flush to the first user mapping of this memory */
+	psLinuxMemArea->bNeedsCacheInvalidate = AreaIsUncached(ui32AreaFlags);
+
+#if defined(DEBUG_LINUX_MEM_AREAS)
+	DebugLinuxMemAreaRecordAdd(psLinuxMemArea, ui32AreaFlags);
+#endif
+
+err_out:
+	return psLinuxMemArea;
+
+err_free:
+	LinuxMemAreaStructFree(psLinuxMemArea);
+	psLinuxMemArea = IMG_NULL;
+	goto err_out;
+}
+
+IMG_VOID
+FreeIONLinuxMemArea(LinuxMemArea *psLinuxMemArea)
+{
+	IMG_UINT32 i;
+
+#if defined(DEBUG_LINUX_MEM_AREAS)
+	DebugLinuxMemAreaRecordRemove(psLinuxMemArea);
+#endif
+
+#if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
+	DebugMemAllocRecordRemove(
+	DEBUG_MEM_ALLOC_TYPE_ION,
+	psLinuxMemArea->uData.sIONTilerAlloc.psIONHandle[0], __FILE__,
+	__LINE__);
+#endif
+
+	for (i = 0; i < 2; i++) {
+	if (!psLinuxMemArea->uData.sIONTilerAlloc.psIONHandle[i])
+	break;
+	ion_free(gpsIONClient,
+	 psLinuxMemArea->uData.sIONTilerAlloc.psIONHandle[i]);
+	psLinuxMemArea->uData.sIONTilerAlloc.psIONHandle[i] = IMG_NULL;
+	}
+
+	/* free copy of page list, originals are freed by ion_free */
+	vfree(psLinuxMemArea->uData.sIONTilerAlloc.pCPUPhysAddrs);
+	psLinuxMemArea->uData.sIONTilerAlloc.pCPUPhysAddrs = IMG_NULL;
+
+	LinuxMemAreaStructFree(psLinuxMemArea);
+}
+
+#endif /* defined(CONFIG_ION_OMAP) */
+
 struct page *LinuxMemAreaOffsetToPage(LinuxMemArea *psLinuxMemArea,
 	      IMG_UINT32 ui32ByteOffset)
 {
@@ -1597,8 +1762,10 @@ LinuxMemArea *NewSubLinuxMemArea(LinuxMemArea *psParentLinuxMemArea,
 	DEBUG_LINUX_MEM_AREA_REC *psParentRecord;
 	psParentRecord =
 	DebugLinuxMemAreaRecordFind(psParentLinuxMemArea);
+	if (psParentRecord) {
 	DebugLinuxMemAreaRecordAdd(psLinuxMemArea,
 	   psParentRecord->ui32Flags);
+	}
 	}
 #endif
 
@@ -1678,6 +1845,12 @@ static IMG_VOID DebugLinuxMemAreaRecordAdd(LinuxMemArea *psLinuxMemArea,
 	DEBUG_LINUX_MEM_AREA_REC *psNewRecord;
 	const IMG_CHAR *pi8FlagsString;
 
+#ifdef MTK_DEBUG
+	if (!MTKDebugIsEnable3DMemInfo()) {
+	return;
+	}
+#endif
+
 	LinuxLockMutex(&g_sDebugMutex);
 
 	if (psLinuxMemArea->eAreaType != LINUX_MEM_AREA_SUB_ALLOC) {
@@ -1735,6 +1908,12 @@ DebugLinuxMemAreaRecordFind(LinuxMemArea *psLinuxMemArea)
 {
 	DEBUG_LINUX_MEM_AREA_REC *psCurrentRecord;
 
+#ifdef MTK_DEBUG
+	if (!MTKDebugIsEnable3DMemInfo()) {
+	return NULL;
+	}
+#endif
+
 	LinuxLockMutex(&g_sDebugMutex);
 	psCurrentRecord = List_DEBUG_LINUX_MEM_AREA_REC_Any_va(
 	g_LinuxMemAreaRecords, MatchLinuxMemArea_AnyVaCb,
@@ -1749,6 +1928,12 @@ DebugLinuxMemAreaRecordFind(LinuxMemArea *psLinuxMemArea)
 static IMG_VOID DebugLinuxMemAreaRecordRemove(LinuxMemArea *psLinuxMemArea)
 {
 	DEBUG_LINUX_MEM_AREA_REC *psCurrentRecord;
+
+#ifdef MTK_DEBUG
+	if (!MTKDebugIsEnable3DMemInfo()) {
+	return;
+	}
+#endif
 
 	LinuxLockMutex(&g_sDebugMutex);
 
@@ -2286,7 +2471,12 @@ static void ProcSeqShowMemoryRecords(struct seq_file *sfile, void *el)
 	DebugMemAllocRecordTypeToString(psRecord->eAllocType),
 	psRecord->pvCpuVAddr, psRecord->ulCpuPAddr,
 	psRecord->ui32Bytes, psRecord->pid, "NULL",
-	psRecord->pszFileName, psRecord->ui32Line);
+#if defined(MTK_DEBUG)
+	strrchr(psRecord->pszFileName, '/'),
+#else
+	psRecord->pszFileName,
+#endif
+	psRecord->ui32Line);
 	} else {
 	seq_printf(
 	sfile,
@@ -2308,8 +2498,25 @@ static void ProcSeqShowMemoryRecords(struct seq_file *sfile, void *el)
 	psRecord->pvCpuVAddr, psRecord->ulCpuPAddr,
 	psRecord->ui32Bytes, psRecord->pid,
 	KMemCacheNameWrapper(psRecord->pvPrivateData),
-	psRecord->pszFileName, psRecord->ui32Line);
+#if defined(MTK_DEBUG)
+	strrchr(psRecord->pszFileName, '/'),
+#else
+	psRecord->pszFileName,
+#endif
+	psRecord->ui32Line);
 	}
+
+#if defined(MTK_DEBUG)
+	seq_printf(sfile,
+#if !defined(DEBUG_LINUX_XML_PROC_FILES)
+	   "%s\n",
+#else
+	   "<user_space_info>\n"
+	   "\t<msg>%s</msg>\n"
+	   "</user_space_info>\n",
+#endif
+	   psRecord->acDebugMsg);
+#endif
 }
 
 #endif /*  defined(DEBUG_LINUX_MEMORY_ALLOCATIONS) */

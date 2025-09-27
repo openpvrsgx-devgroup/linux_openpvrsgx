@@ -67,7 +67,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <linux/timer.h>
 #include <linux/capability.h>
 #include <linux/sched.h>
-#include <linux/uaccess.h>
 #include <asm/uaccess.h>
 
 #include "img_types.h"

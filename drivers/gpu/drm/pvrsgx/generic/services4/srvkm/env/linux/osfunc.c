@@ -41,6 +41,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <linux/version.h>
 
+#define dma_sync_single_for_device(A, B, C, D)
+
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 38))
 #ifndef AUTOCONF_INCLUDED
 #include <linux/config.h>
@@ -53,29 +55,33 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 	(LINUX_VERSION_CODE < KERNEL_VERSION(3, 2, 0))
 #include <asm/system.h>
 #endif
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 19, 0))
 #include <asm/cacheflush.h>
+#endif
 #include <linux/mm.h>
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 8, 0))
 #else
 #define mmap_sem mmap_lock // has been renamed by v5.8-rc1
 #endif
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0))
-#else
-#include <linux/dma-map-ops.h>
-#endif
+
 #include <linux/pagemap.h>
 #include <linux/hugetlb.h>
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
 #include <linux/delay.h>
 #include <linux/pci.h>
+#include <linux/platform_device.h>
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0))
+#else
+#include <linux/dma-map-ops.h>
+#endif
 
 #include <linux/string.h>
 #include <linux/sched.h>
 #include <linux/interrupt.h>
 #include <asm/hardirq.h>
 #include <linux/timer.h>
-#if defined(MEM_TRACK_INFO_DEBUG)
+#if defined(MEM_TRACK_INFO_DEBUG) || defined(PVRSRV_DEVMEM_TIME_STATS)
 #include <linux/time.h>
 #endif
 #include <linux/capability.h>
@@ -114,8 +120,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define ON_EACH_CPU(func, info, wait) on_each_cpu(func, info, 0, wait)
 #endif
 
-#if defined(PVR_LINUX_USING_WORKQUEUES) && !defined(CONFIG_PREEMPT) && \
-	!defined(CONFIG_PREEMPT_VOLUNTARY)
+#if defined(PVR_LINUX_USING_WORKQUEUES) && !defined(CONFIG_PREEMPT)
 /*
  * Services spins at certain points waiting for events (e.g. swap
  * chain destrucion).  If those events rely on workqueues running,
@@ -125,10 +130,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 #error "A preemptible Linux kernel is required when using workqueues"
 #endif
-
-/* should have been defined by #include "services_headers.h" or #include <linux/minmax.h> but isn't */
-#define MAX(a, b) (((a) > (b)) ? (a) : (b))
-#define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
 #if defined(EMULATOR)
 #define EVENT_OBJECT_TIMEOUT_MS (2000)
@@ -697,6 +698,31 @@ IMG_VOID OSReleaseThreadQuanta(IMG_VOID)
 {
 	schedule();
 }
+
+#if defined(PVRSRV_DEVMEM_TIME_STATS)
+/*!
+******************************************************************************
+
+ @Function OSClockMonotonicus
+
+ @Description	This function returns the raw monotonic clock time in microseconds
+	(i.e. un-affected by NTP or similar changes)
+
+ @Input void
+
+ @Return - monotonic clock time in (us)
+
+******************************************************************************/
+IMG_UINT64 OSClockMonotonicus(IMG_VOID)
+{
+	struct timespec ts;
+
+	getrawmonotonic(&ts);
+
+	return ((unsigned long)ts.tv_sec * 1000000ul +
+	(unsigned long)ts.tv_nsec / 1000ul);
+}
+#endif
 
 /*!
 ******************************************************************************
@@ -2763,35 +2789,44 @@ static void OSTimerCallbackBody(TIMER_CALLBACK_DATA *psTimerCBData)
 	mod_timer(&psTimerCBData->sTimer, psTimerCBData->ui32Delay + jiffies);
 }
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0))
+/*!
+ ******************************************************************************
+
+ @Function      OSTimerCallbackWrapper
+
+ @Description   OS specific timer callback wrapper function
+
+ @Input         psTimer    Timer list structure
+
+*/ /**************************************************************************/
+static void OSTimerCallbackWrapper(struct timer_list *psTimer)
+{
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 16, 0))
+	TIMER_CALLBACK_DATA *psTimerCBData =
+	timer_container_of(psTimerCBData, psTimer, sTimer);
+#else
+	TIMER_CALLBACK_DATA *psTimerCBData =
+	from_timer(psTimerCBData, psTimer, sTimer);
+#endif
+
+#else
 /*!
 ******************************************************************************
 
  @Function	OSTimerCallbackWrapper
 
- @Description
-
- OS specific timer callback wrapper function
+ @Description	OS specific timer callback wrapper function
 
  @Input    ui32Data : timer callback data
 
  @Return   NONE
 
 ******************************************************************************/
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0))
-static IMG_VOID OSTimerCallbackWrapper(struct timer_list *t)
-{
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 16, 0))
-	TIMER_CALLBACK_DATA *psTimerCBData =
-	timer_container_of(psTimerCBData, t, sTimer);
-#else
-	TIMER_CALLBACK_DATA *psTimerCBData =
-	from_timer(psTimerCBData, t, sTimer);
-#endif
-
-#else
 static IMG_VOID OSTimerCallbackWrapper(IMG_UINTPTR_T uiData)
 {
 	TIMER_CALLBACK_DATA *psTimerCBData = (TIMER_CALLBACK_DATA *)uiData;
+
 #endif
 
 #if defined(PVR_LINUX_TIMERS_USING_WORKQUEUES) || \
@@ -2894,18 +2929,17 @@ IMG_HANDLE OSAddTimer(PFN_TIMER_FUNC pfnTimerFunc, IMG_VOID *pvData,
 	psTimerCBData->ui32Delay = ((HZ * ui32MsTimeout) < 1000) ?
 	   1 :
 	   ((HZ * ui32MsTimeout) / 1000);
-	/* initialise object */
-
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0))
 	timer_setup(&psTimerCBData->sTimer, OSTimerCallbackWrapper, 0);
 #else
+	/* initialise object */
 	init_timer(&psTimerCBData->sTimer);
+
 	/* setup timer object */
 	/* PRQA S 0307,0563 1 */ /* ignore warning about inconpartible ptr casting */
 	psTimerCBData->sTimer.function = (IMG_VOID *)OSTimerCallbackWrapper;
 	psTimerCBData->sTimer.data = (IMG_UINTPTR_T)psTimerCBData;
 #endif
-
 	return (IMG_HANDLE)(ui + 1);
 }
 
@@ -2969,7 +3003,12 @@ PVRSRV_ERROR OSEnableTimer(IMG_HANDLE hTimer)
 	/* Start timer arming */
 	psTimerCBData->bActive = IMG_TRUE;
 
-	mod_timer(&psTimerCBData->sTimer, psTimerCBData->ui32Delay + jiffies);
+	/* set the expire time */
+	psTimerCBData->sTimer.expires = psTimerCBData->ui32Delay + jiffies;
+
+	/* Add the timer to the list */
+	add_timer(&psTimerCBData->sTimer);
+
 	return PVRSRV_OK;
 }
 
@@ -3345,20 +3384,8 @@ PVRSRV_ERROR OSCopyFromUser(IMG_PVOID pvProcess, IMG_VOID *pvDest,
 IMG_BOOL OSAccessOK(IMG_VERIFY_TEST eVerification, IMG_VOID *pvUserPtr,
 	    IMG_SIZE_T uiBytes)
 {
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0))
+	(void)eVerification; /* unused */
 	return access_ok(pvUserPtr, uiBytes);
-#else
-	IMG_INT linuxType;
-
-	if (eVerification == PVR_VERIFY_READ) {
-	linuxType = VERIFY_READ;
-	} else {
-	PVR_ASSERT(eVerification == PVR_VERIFY_WRITE);
-	linuxType = VERIFY_WRITE;
-	}
-
-	return access_ok(linuxType, pvUserPtr, uiBytes);
-#endif
 }
 
 typedef enum _eWrapMemType_ {
@@ -3407,15 +3434,14 @@ static IMG_BOOL CPUVAddrToPFN(struct vm_area_struct *psVMArea,
 	      IMG_UINTPTR_T uCPUVAddr, IMG_UINT32 *pui32PFN,
 	      struct page **ppsPage)
 {
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 6, 0))
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 10))
 	pgd_t *psPGD;
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 12, 0))
-	p4d_t *psP4D;
-#endif
 	pud_t *psPUD;
 	pmd_t *psPMD;
 	pte_t *psPTE;
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 12, 0))
+	p4d_t *psP4D;
+#endif
 	struct mm_struct *psMM = psVMArea->vm_mm;
 	spinlock_t *psPTLock;
 	IMG_BOOL bRet = IMG_FALSE;
@@ -3429,8 +3455,9 @@ static IMG_BOOL CPUVAddrToPFN(struct vm_area_struct *psVMArea,
 
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 12, 0))
 	psP4D = p4d_offset(psPGD, uCPUVAddr);
-	if (p4d_none(*psP4D))
+	if (p4d_none(*psP4D) || unlikely(p4d_bad(*psP4D)))
 	return bRet;
+
 	psPUD = pud_offset(psP4D, uCPUVAddr);
 #else
 	psPUD = pud_offset(psPGD, uCPUVAddr);
@@ -3461,45 +3488,6 @@ static IMG_BOOL CPUVAddrToPFN(struct vm_area_struct *psVMArea,
 	return bRet;
 #else
 	return IMG_FALSE;
-#endif
-#else /* #if (LINUX_VERSION_CODE < KERNEL_VERSION(6,6,0)) */
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 12, 0))
-	spinlock_t *ptl;
-	pte_t *ptep;
-#endif
-	int ret;
-
-	if (!(psVMArea->vm_flags & (VM_IO | VM_PFNMAP)))
-	return IMG_FALSE;
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 12, 0))
-	ret = follow_pte(psVMArea, uCPUVAddr, &ptep, &ptl);
-#else
-	struct follow_pfnmap_args args = {
-	.vma = psVMArea, .address = uCPUVAddr
-	}; // issues a warning
-	ret = follow_pfnmap_start(&args);
-#endif
-
-	if (ret < 0)
-	return IMG_FALSE;
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 12, 0))
-	*pui32PFN = pte_pfn(ptep_get(ptep));
-#else
-	*pui32PFN = args.pfn;
-#endif
-	if (!pfn_valid(*pui32PFN))
-	return IMG_FALSE;
-
-	*ppsPage = pfn_to_page(*pui32PFN);
-	get_page(*ppsPage);
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 12, 0))
-	pte_unmap_unlock(ptep, ptl);
-#else
-	follow_pfnmap_end(&args);
-#endif
-	return IMG_TRUE;
 #endif
 }
 
@@ -3552,7 +3540,11 @@ PVRSRV_ERROR OSReleasePhysPageAddr(IMG_HANDLE hOSWrapMem)
 	SetPageDirty(psPage);
 	}
 	}
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 6, 0))
+	page_cache_release(psPage);
+#else
 	put_page(psPage);
+#endif
 	}
 	break;
 	}
@@ -3732,23 +3724,16 @@ PVRSRV_ERROR OSAcquirePhysPageAddr(IMG_VOID *pvCPUVAddr, IMG_SIZE_T uiBytes,
 	bMMapSemHeld = IMG_TRUE;
 
 	/* Get page list */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 5, 0))
-	psInfo->iNumPagesMapped = get_user_pages_remote(current->mm, uStartAddr,
-	psInfo->iNumPages,
-	FOLL_WRITE,
-	psInfo->ppsPages, NULL);
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0))
-	psInfo->iNumPagesMapped = get_user_pages_remote(
-	current->mm, uStartAddr, psInfo->iNumPages, FOLL_WRITE,
-	psInfo->ppsPages, NULL, NULL);
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0))
-	psInfo->iNumPagesMapped = get_user_pages_remote(
-	current, current->mm, uStartAddr, psInfo->iNumPages, FOLL_WRITE,
-	psInfo->ppsPages, NULL, NULL);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 6, 0))
+	psInfo->iNumPagesMapped = get_user_pages(current, current->mm,
+	 uStartAddr, psInfo->iNumPages,
+	 1, 0, psInfo->ppsPages, NULL);
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0))
+	psInfo->iNumPagesMapped = get_user_pages(uStartAddr, psInfo->iNumPages,
+	 1, 0, psInfo->ppsPages, NULL);
 #else
-	psInfo->iNumPagesMapped = get_user_pages_remote(
-	current, current->mm, uStartAddr, psInfo->iNumPages, FOLL_WRITE,
-	psInfo->ppsPages, NULL);
+	psInfo->iNumPagesMapped = get_user_pages(uStartAddr, psInfo->iNumPages,
+	 1, psInfo->ppsPages, NULL);
 #endif
 	if (psInfo->iNumPagesMapped >= 0) {
 	/* See if we got all the pages we wanted */
@@ -4489,38 +4474,22 @@ static void pvr_dmac_clean_range(const void *pvStart, const void *pvEnd)
 
 static void pvr_flush_range(phys_addr_t pStart, phys_addr_t pEnd)
 {
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0))
-	struct device *dev = PVRLDMGetDevice();
-	dma_sync_single_for_device(dev, pStart, pEnd - pStart, DMA_TO_DEVICE);
-	dma_sync_single_for_cpu(dev, pStart, pEnd - pStart, DMA_FROM_DEVICE);
-#else
 	arm_dma_ops.sync_single_for_device(NULL, pStart, pEnd - pStart,
 	   DMA_TO_DEVICE);
 	arm_dma_ops.sync_single_for_cpu(NULL, pStart, pEnd - pStart,
 	DMA_FROM_DEVICE);
-#endif
 }
 
 static void pvr_clean_range(phys_addr_t pStart, phys_addr_t pEnd)
 {
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0))
-	struct device *dev = PVRLDMGetDevice();
-	dma_sync_single_for_device(dev, pStart, pEnd - pStart, DMA_TO_DEVICE);
-#else
 	arm_dma_ops.sync_single_for_device(NULL, pStart, pEnd - pStart,
 	   DMA_TO_DEVICE);
-#endif
 }
 
 static void pvr_invalidate_range(phys_addr_t pStart, phys_addr_t pEnd)
 {
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0))
-	struct device *dev = PVRLDMGetDevice();
-	dma_sync_single_for_cpu(dev, pStart, pEnd - pStart, DMA_FROM_DEVICE);
-#else
 	arm_dma_ops.sync_single_for_cpu(NULL, pStart, pEnd - pStart,
 	DMA_FROM_DEVICE);
-#endif
 }
 
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0) */

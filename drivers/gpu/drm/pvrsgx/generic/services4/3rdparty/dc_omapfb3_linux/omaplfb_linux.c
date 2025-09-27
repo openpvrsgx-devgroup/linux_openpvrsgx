@@ -1,28 +1,71 @@
-/**********************************************************************
- *
- * Copyright (C) Imagination Technologies Ltd. All rights reserved.
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- *
- * This program is distributed in the hope it will be useful but, except
- * as otherwise stated in writing, without any warranty; without even the
- * implied warranty of merchantability or fitness for a particular purpose.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * The full GNU General Public License is included in this distribution in
- * the file called "COPYING".
- *
- * Contact Information:
- * Imagination Technologies Ltd. <gpl-support@imgtec.com>
- * Home Park Estate, Kings Langley, Herts, WD4 8LZ, UK
- *
- ******************************************************************************/
+/*************************************************************************/ /*!
+@Title          OMAP linux display driver components
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@License        Dual MIT/GPLv2
+
+The contents of this file are subject to the MIT license as set out below.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+*/ /**************************************************************************/
+
+/**************************************************************************
+ The 3rd party driver is a specification of an API to integrate the IMG POWERVR
+ Services driver with 3rd Party display hardware.  It is NOT a specification for
+ a display controller driver, rather a specification to extend the API for a
+ pre-existing driver for the display hardware.
+
+ The 3rd party driver interface provides IMG POWERVR client drivers (e.g. PVR2D)
+ with an API abstraction of the system's underlying display hardware, allowing
+ the client drivers to indirectly control the display hardware and access its
+ associated memory.
+
+ Functions of the API include
+ - query primary surface attributes (width, height, stride, pixel format, CPU
+     physical and virtual address)
+ - swap/flip chain creation and subsequent query of surface attributes
+ - asynchronous display surface flipping, taking account of asynchronous read
+ (flip) and write (render) operations to the display surface
+
+ Note: having queried surface attributes the client drivers are able to map the
+ display memory to any IMG POWERVR Services device by calling
+ PVRSRVMapDeviceClassMemory with the display surface handle.
+
+ This code is intended to be an example of how a pre-existing display driver may
+ be extended to support the 3rd Party Display interface to POWERVR Services
+ - IMG is not providing a display driver implementation.
+ **************************************************************************/
 
 #include <linux/version.h>
 
@@ -53,13 +96,23 @@
 #if defined(PVR_OMAPLFB_DRM_FB)
 #include <plat/display.h>
 #include <linux/omap_gpu.h>
-#else
+#else /* defined(PVR_OMAPLFB_DRM_FB) */
+/* OmapZoom.org OMAP3 2.6.29 kernel tree	- Needs mach/vrfb.h
+ * OmapZoom.org OMAP3 2.6.32 kernel tree	- No additional header required
+ * OmapZoom.org OMAP4 2.6.33 kernel tree	- No additional header required
+ * OmapZoom.org OMAP4 2.6.34 kernel tree	- Needs plat/vrfb.h
+ * Sholes 2.6.32 kernel tree	- Needs plat/vrfb.h
+ */
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 34))
 #define PVR_OMAPFB3_NEEDS_PLAT_VRFB_H
 #endif
 
 #if defined(PVR_OMAPFB3_NEEDS_PLAT_VRFB_H)
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 8, 0))
 #include <plat/vrfb.h>
+#else
+#include <video/omapvrfb.h>
+#endif
 #else
 #if defined(PVR_OMAPFB3_NEEDS_MACH_VRFB_H)
 #include <mach/vrfb.h>
@@ -70,7 +123,7 @@
 #define PVR_DEBUG DEBUG
 #undef DEBUG
 #endif
-#include <drivers/video/omap2/omapfb/omapfb.h>
+#include <omapfb/omapfb.h>
 #if defined(DEBUG)
 #undef DEBUG
 #endif
@@ -78,13 +131,13 @@
 #define DEBUG PVR_DEBUG
 #undef PVR_DEBUG
 #endif
-#endif
+#endif /* defined(PVR_OMAPLFB_DRM_FB) */
 
 #if defined(CONFIG_DSSCOMP)
 #include <mach/tiler.h>
 #include <video/dsscomp.h>
 #include <plat/dsscomp.h>
-#endif
+#endif /* defined(CONFIG_DSSCOMP) */
 
 #include "img_defs.h"
 #include "servicesext.h"
@@ -100,21 +153,25 @@
 #error "PVR_LINUX_USING_WORKQUEUES must be defined"
 #endif
 
-MODULE_SUPPORTED_DEVICE(DEVNAME);
-
 #if !defined(PVR_OMAPLFB_DRM_FB)
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 34))
 #define OMAP_DSS_DRIVER(drv, dev) \
 	struct omap_dss_driver *drv = (dev) != NULL ? (dev)->driver : NULL
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 7, 0))
 #define OMAP_DSS_MANAGER(man, dev) \
 	struct omap_overlay_manager *man = (dev) != NULL ? (dev)->manager : NULL
+#else
+#define OMAP_DSS_MANAGER(man, dev)         \
+	struct omap_overlay_manager *man = \
+	(dev) != NULL ? (dev)->src->manager : NULL
+#endif
 #define WAIT_FOR_VSYNC(man) ((man)->wait_for_vsync)
 #else
 #define OMAP_DSS_DRIVER(drv, dev) struct omap_dss_device *drv = (dev)
 #define OMAP_DSS_MANAGER(man, dev) struct omap_dss_device *man = (dev)
 #define WAIT_FOR_VSYNC(man) ((man)->wait_vsync)
 #endif
-#endif
+#endif /* !defined(PVR_OMAPLFB_DRM_FB) */
 
 void *OMAPLFBAllocKernelMem(unsigned long ulSize)
 {
@@ -196,11 +253,13 @@ OMAPLFB_ERROR OMAPLFBGetLibFuncAddr(char *szFunctionName,
 	return (OMAPLFB_ERROR_INVALID_PARAMS);
 	}
 
+	/* Nothing to do - should be exported from pvrsrv.ko */
 	*ppfnFuncTable = PVRGetDisplayClassJTable;
 
 	return (OMAPLFB_OK);
 }
 
+/* Inset a swap buffer into the swap chain work queue */
 void OMAPLFBQueueBufferForSwap(OMAPLFB_SWAPCHAIN *psSwapChain,
 	       OMAPLFB_BUFFER *psBuffer)
 {
@@ -213,6 +272,7 @@ void OMAPLFBQueueBufferForSwap(OMAPLFB_SWAPCHAIN *psSwapChain,
 	}
 }
 
+/* Process an item on a swap chain work queue */
 static void WorkQueueHandler(struct work_struct *psWork)
 {
 	OMAPLFB_BUFFER *psBuffer = container_of(psWork, OMAPLFB_BUFFER, sWork);
@@ -220,17 +280,38 @@ static void WorkQueueHandler(struct work_struct *psWork)
 	OMAPLFBSwapHandler(psBuffer);
 }
 
+/* Create a swap chain work queue */
 OMAPLFB_ERROR OMAPLFBCreateSwapQueue(OMAPLFB_SWAPCHAIN *psSwapChain)
 {
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 37))
-
+	/*
+	 * Calling alloc_ordered_workqueue with the WQ_FREEZABLE and
+	 * WQ_MEM_RECLAIM flags set, (currently) has the same effect as
+	 * calling create_freezable_workqueue. None of the other WQ
+	 * flags are valid. Setting WQ_MEM_RECLAIM should allow the
+	 * workqueue to continue to service the swap chain in low memory
+	 * conditions, preventing the driver from holding on to
+	 * resources longer than it needs to.
+	 */
+#if (LINUX_VERSION_CODE == KERNEL_VERSION(2, 6, 37))
+	psSwapChain->psWorkQueue = alloc_ordered_workqueue(
+	DEVNAME, WQ_FREEZEABLE | WQ_MEM_RECLAIM);
+#else
 	psSwapChain->psWorkQueue =
 	alloc_ordered_workqueue(DEVNAME, WQ_FREEZABLE | WQ_MEM_RECLAIM);
+#endif
+
 #else
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 36))
 	psSwapChain->psWorkQueue = create_freezable_workqueue(DEVNAME);
 #else
-
+	/*
+	 * Create a single-threaded, freezable, rt-prio workqueue.
+	 * Such workqueues are frozen with user threads when a system
+	 * suspends, before driver suspend entry points are called.
+	 * This ensures this driver will not call into the Linux
+	 * framebuffer driver after the latter is suspended.
+	 */
 	psSwapChain->psWorkQueue = __create_workqueue(DEVNAME, 1, 1, 1);
 #endif
 #endif
@@ -245,16 +326,19 @@ OMAPLFB_ERROR OMAPLFBCreateSwapQueue(OMAPLFB_SWAPCHAIN *psSwapChain)
 	return (OMAPLFB_OK);
 }
 
+/* Prepare buffer for insertion into a swap chain work queue */
 void OMAPLFBInitBufferForSwap(OMAPLFB_BUFFER *psBuffer)
 {
 	INIT_WORK(&psBuffer->sWork, WorkQueueHandler);
 }
 
+/* Destroy a swap chain work queue */
 void OMAPLFBDestroySwapQueue(OMAPLFB_SWAPCHAIN *psSwapChain)
 {
 	destroy_workqueue(psSwapChain->psWorkQueue);
 }
 
+/* Flip display to given buffer */
 void OMAPLFBFlip(OMAPLFB_DEVINFO *psDevInfo, OMAPLFB_BUFFER *psBuffer)
 {
 	struct fb_var_screeninfo sFBVar;
@@ -272,6 +356,13 @@ void OMAPLFBFlip(OMAPLFB_DEVINFO *psDevInfo, OMAPLFB_BUFFER *psBuffer)
 
 #if defined(CONFIG_DSSCOMP)
 	{
+	/*
+	 * If using DSSCOMP, we need to use dsscomp queuing for normal
+	 * framebuffer updates, so that previously used overlays get
+	 * automatically disabled, and manager gets dirtied.  We can
+	 * do that because DSSCOMP takes ownership of all pipelines on
+	 * a manager.
+	 */
 	struct fb_fix_screeninfo sFBFix = psDevInfo->psLINFBInfo->fix;
 	struct dsscomp_setup_dispc_data d =
 	{
@@ -297,6 +388,7 @@ void OMAPLFBFlip(OMAPLFB_DEVINFO *psDevInfo, OMAPLFB_BUFFER *psBuffer)
 	},
 	};
 
+	/* do not map buffer into TILER1D as it is contiguous */
 	struct tiler_pa_info *pas[] = { NULL };
 
 	d.ovls[0].ba = sFBFix.smem_start;
@@ -304,13 +396,21 @@ void OMAPLFBFlip(OMAPLFB_DEVINFO *psDevInfo, OMAPLFB_BUFFER *psBuffer)
 
 	res = dsscomp_gralloc_queue(&d, pas, true, NULL, NULL);
 	}
-#else
-
+#else /* defined(CONFIG_DSSCOMP) */
+	/*
+	 * PVR_OMAPLFB_DONT_USE_FB_PAN_DISPLAY should be defined to work
+	 * around flipping problems seen with the Taal LCDs on Blaze.
+	 * The work around is safe to use with other types of screen on Blaze
+	 * (e.g. HDMI) and on other platforms (e.g. Panda board).
+	 */
 #if !defined(PVR_OMAPLFB_DONT_USE_FB_PAN_DISPLAY)
-
+	/*
+	 * Attempt to change the virtual screen resolution if it is too
+	 * small.  Note that fb_set_var also pans the display.
+	 */
 	if (sFBVar.xres_virtual != sFBVar.xres ||
 	    sFBVar.yres_virtual < ulYResVirtual)
-#endif
+#endif /* !defined(PVR_OMAPLFB_DONT_USE_FB_PAN_DISPLAY) */
 	{
 	sFBVar.xres_virtual = sFBVar.xres;
 	sFBVar.yres_virtual = ulYResVirtual;
@@ -335,12 +435,12 @@ void OMAPLFBFlip(OMAPLFB_DEVINFO *psDevInfo, OMAPLFB_BUFFER *psBuffer)
 	       psBuffer->ulYOffset, res);
 	}
 	}
-#endif
-#endif
+#endif /* !defined(PVR_OMAPLFB_DONT_USE_FB_PAN_DISPLAY) */
+#endif /* defined(CONFIG_DSSCOMP) */
 
 	OMAPLFB_CONSOLE_UNLOCK();
 }
-
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 1, 0)
 #if !defined(PVR_OMAPLFB_DRM_FB) || defined(DEBUG)
 static OMAPLFB_BOOL
 OMAPLFBValidateDSSUpdateMode(enum omap_dss_update_mode eMode)
@@ -406,7 +506,9 @@ OMAPLFBToDSSUpdateMode(OMAPLFB_UPDATE_MODE eMode)
 	return -1;
 }
 
+#endif
 #if defined(DEBUG)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 1, 0)
 static const char *OMAPLFBUpdateModeToString(OMAPLFB_UPDATE_MODE eMode)
 {
 	switch (eMode) {
@@ -433,7 +535,7 @@ static const char *OMAPLFBDSSUpdateModeToString(enum omap_dss_update_mode eMode)
 
 	return OMAPLFBUpdateModeToString(OMAPLFBFromDSSUpdateMode(eMode));
 }
-
+#endif
 void OMAPLFBPrintInfo(OMAPLFB_DEVINFO *psDevInfo)
 {
 #if defined(PVR_OMAPLFB_DRM_FB)
@@ -470,25 +572,34 @@ void OMAPLFBPrintInfo(OMAPLFB_DEVINFO *psDevInfo)
 	      psDevInfo->uiFBDevID, uConnector,
 	      OMAPLFBDSSUpdateModeToString(eMode), (int)eMode));
 	}
-#else
+#else /* defined(PVR_OMAPLFB_DRM_FB) */
 	OMAPLFB_UPDATE_MODE eMode = OMAPLFBGetUpdateMode(psDevInfo);
 
 	DEBUG_PRINTK((KERN_INFO DRIVER_PREFIX
 	      ": Device %u: non-DRM framebuffer\n",
 	      psDevInfo->uiFBDevID));
 
-	DEBUG_PRINTK((KERN_INFO DRIVER_PREFIX ": Device %u: %s\n",
-	      psDevInfo->uiFBDevID, OMAPLFBUpdateModeToString(eMode)));
-#endif
+//	DEBUG_PRINTK((KERN_INFO DRIVER_PREFIX ": Device %u: %s\n", psDevInfo->uiFBDevID, OMAPLFBUpdateModeToString(eMode)));
+#endif /* defined(PVR_OMAPLFB_DRM_FB) */
 }
-#endif
+#endif /* defined(DEBUG) */
 
+/*
+ * Get display update mode.
+ * If the mode is AUTO, we can wait for VSync, if desired.
+ */
 OMAPLFB_UPDATE_MODE OMAPLFBGetUpdateMode(OMAPLFB_DEVINFO *psDevInfo)
 {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 1, 0)
 #if defined(PVR_OMAPLFB_DRM_FB)
 	struct drm_connector *psConnector;
 	OMAPLFB_UPDATE_MODE eMode = OMAPLFB_UPDATE_MODE_UNDEFINED;
 
+	/*
+	 * There may be multiple displays connected. If at least one
+	 * display is manual update mode, report all screens as being
+	 * in that mode.
+	 */
 	for (psConnector = NULL;
 	     (psConnector = omap_fbdev_get_next_connector(
 	      psDevInfo->psLINFBInfo, psConnector)) != NULL;) {
@@ -502,9 +613,9 @@ OMAPLFB_UPDATE_MODE OMAPLFBGetUpdateMode(OMAPLFB_DEVINFO *psDevInfo)
 	}
 	break;
 	case OMAP_DSS_UPDATE_AUTO:
-
+	/* Fall through to default case */
 	default:
-
+	/* Asssume auto update is possible */
 	if (eMode != OMAPLFB_UPDATE_MODE_MANUAL) {
 	eMode = OMAPLFB_UPDATE_MODE_AUTO;
 	}
@@ -513,7 +624,7 @@ OMAPLFB_UPDATE_MODE OMAPLFBGetUpdateMode(OMAPLFB_DEVINFO *psDevInfo)
 	}
 
 	return eMode;
-#else
+#else /* defined(PVR_OMAPLFB_DRM_FB) */
 	struct omap_dss_device *psDSSDev = fb2display(psDevInfo->psLINFBInfo);
 	OMAP_DSS_DRIVER(psDSSDrv, psDSSDev);
 
@@ -530,10 +641,9 @@ OMAPLFB_UPDATE_MODE OMAPLFBGetUpdateMode(OMAPLFB_DEVINFO *psDevInfo)
 	if (strcmp(psDSSDev->name, "hdmi") == 0) {
 	return OMAPLFB_UPDATE_MODE_AUTO;
 	}
-	DEBUG_PRINTK((KERN_WARNING DRIVER_PREFIX
-	      ": %s: Device %u: No get_update_mode function\n",
-	      __FUNCTION__, psDevInfo->uiFBDevID));
-	return OMAPLFB_UPDATE_MODE_UNDEFINED;
+	//	DEBUG_PRINTK((KERN_WARNING DRIVER_PREFIX ": %s: Device %u: No get_update_mode function\n", __FUNCTION__, psDevInfo->uiFBDevID));
+	//	return OMAPLFB_UPDATE_MODE_UNDEFINED;
+	return OMAPLFB_UPDATE_MODE_AUTO;
 	}
 
 	eMode = psDSSDrv->get_update_mode(psDSSDev);
@@ -544,12 +654,17 @@ OMAPLFB_UPDATE_MODE OMAPLFBGetUpdateMode(OMAPLFB_DEVINFO *psDevInfo)
 	}
 
 	return OMAPLFBFromDSSUpdateMode(eMode);
+#endif /* defined(PVR_OMAPLFB_DRM_FB) */
+#else
+	return OMAPLFB_UPDATE_MODE_AUTO;
 #endif
 }
 
+/* Set display update mode */
 OMAPLFB_BOOL OMAPLFBSetUpdateMode(OMAPLFB_DEVINFO *psDevInfo,
 	  OMAPLFB_UPDATE_MODE eMode)
 {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 1, 0)
 #if defined(PVR_OMAPLFB_DRM_FB)
 	struct drm_connector *psConnector;
 	enum omap_dss_update_mode eDSSMode;
@@ -609,7 +724,7 @@ OMAPLFB_BOOL OMAPLFBSetUpdateMode(OMAPLFB_DEVINFO *psDevInfo,
 	      OMAPLFBUpdateModeToString(eMode)));
 
 	return OMAPLFB_TRUE;
-#else
+#else /* defined(PVR_OMAPLFB_DRM_FB) */
 	struct omap_dss_device *psDSSDev = fb2display(psDevInfo->psLINFBInfo);
 	OMAP_DSS_DRIVER(psDSSDrv, psDSSDev);
 	enum omap_dss_update_mode eDSSMode;
@@ -640,9 +755,13 @@ OMAPLFB_BOOL OMAPLFBSetUpdateMode(OMAPLFB_DEVINFO *psDevInfo,
 	}
 
 	return (res == 0);
+#endif /* defined(PVR_OMAPLFB_DRM_FB) */
+#else
+	return 1;
 #endif
 }
 
+/* Wait for VSync */
 OMAPLFB_BOOL OMAPLFBWaitForVSync(OMAPLFB_DEVINFO *psDevInfo)
 {
 #if defined(PVR_OMAPLFB_DRM_FB)
@@ -655,7 +774,7 @@ OMAPLFB_BOOL OMAPLFBWaitForVSync(OMAPLFB_DEVINFO *psDevInfo)
 	}
 
 	return OMAPLFB_TRUE;
-#else
+#else /* defined(PVR_OMAPLFB_DRM_FB) */
 	struct omap_dss_device *psDSSDev = fb2display(psDevInfo->psLINFBInfo);
 	OMAP_DSS_MANAGER(psDSSMan, psDSSDev);
 
@@ -671,41 +790,54 @@ OMAPLFB_BOOL OMAPLFBWaitForVSync(OMAPLFB_DEVINFO *psDevInfo)
 	}
 
 	return OMAPLFB_TRUE;
-#endif
+#endif /* defined(PVR_OMAPLFB_DRM_FB) */
 }
 
+/*
+ * Wait for screen to update.  If the screen is in manual or auto update
+ * mode, we can call this function to wait for the screen to update.
+ */
 OMAPLFB_BOOL OMAPLFBManualSync(OMAPLFB_DEVINFO *psDevInfo)
 {
+#if 0
 #if defined(PVR_OMAPLFB_DRM_FB)
 	struct drm_connector *psConnector;
 
 	for (psConnector = NULL;
-	     (psConnector = omap_fbdev_get_next_connector(
-	      psDevInfo->psLINFBInfo, psConnector)) != NULL;) {
-	if (omap_connector_sync(psConnector) != 0) {
-	(void)omap_encoder_wait_for_vsync(psConnector->encoder);
+	(psConnector = omap_fbdev_get_next_connector(psDevInfo->psLINFBInfo, psConnector)) != NULL; )
+	{
+	/* Try manual sync first, then try wait for vsync */
+	if (omap_connector_sync(psConnector) != 0)
+	{
+	(void) omap_encoder_wait_for_vsync(psConnector->encoder);
 	}
 	}
 
 	return OMAPLFB_TRUE;
-#else
+#else /* defined(PVR_OMAPLFB_DRM_FB) */
 	struct omap_dss_device *psDSSDev = fb2display(psDevInfo->psLINFBInfo);
 	OMAP_DSS_DRIVER(psDSSDrv, psDSSDev);
 
-	if (psDSSDrv != NULL && psDSSDrv->sync != NULL) {
+	if (psDSSDrv != NULL && psDSSDrv->sync != NULL)
+	{
 	int res = psDSSDrv->sync(psDSSDev);
-	if (res != 0) {
-	printk(KERN_ERR DRIVER_PREFIX
-	       ": %s: Device %u: Sync failed (%d)\n",
-	       __FUNCTION__, psDevInfo->uiFBDevID, res);
+	if (res != 0)
+	{
+	printk(KERN_ERR DRIVER_PREFIX ": %s: Device %u: Sync failed (%d)\n", __FUNCTION__, psDevInfo->uiFBDevID, res);
 	return OMAPLFB_FALSE;
 	}
 	}
 
 	return OMAPLFB_TRUE;
+#endif /* defined(PVR_OMAPLFB_DRM_FB) */
 #endif
+	return OMAPLFB_TRUE;
 }
 
+/*
+ * If the screen is manual or auto update mode, wait for the screen to
+ * update.
+ */
 OMAPLFB_BOOL OMAPLFBCheckModeAndSync(OMAPLFB_DEVINFO *psDevInfo)
 {
 	OMAPLFB_UPDATE_MODE eMode = OMAPLFBGetUpdateMode(psDevInfo);
@@ -721,6 +853,7 @@ OMAPLFB_BOOL OMAPLFBCheckModeAndSync(OMAPLFB_DEVINFO *psDevInfo)
 	return OMAPLFB_TRUE;
 }
 
+/* Linux Framebuffer event notification handler */
 static int OMAPLFBFrameBufferEvents(struct notifier_block *psNotif,
 	    unsigned long event, void *data)
 {
@@ -729,6 +862,7 @@ static int OMAPLFBFrameBufferEvents(struct notifier_block *psNotif,
 	struct fb_info *psFBInfo = psFBEvent->info;
 	OMAPLFB_BOOL bBlanked;
 
+	/* Only interested in blanking events */
 	if (event != FB_EVENT_BLANK) {
 	return 0;
 	}
@@ -764,6 +898,7 @@ static int OMAPLFBFrameBufferEvents(struct notifier_block *psNotif,
 	return 0;
 }
 
+/* Unblank the screen */
 OMAPLFB_ERROR OMAPLFBUnblankDisplay(OMAPLFB_DEVINFO *psDevInfo)
 {
 	int res;
@@ -783,6 +918,7 @@ OMAPLFB_ERROR OMAPLFBUnblankDisplay(OMAPLFB_DEVINFO *psDevInfo)
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 
+/* Blank the screen */
 static void OMAPLFBBlankDisplay(OMAPLFB_DEVINFO *psDevInfo)
 {
 	OMAPLFB_CONSOLE_LOCK();
@@ -822,13 +958,15 @@ static void OMAPLFBEarlyResumeHandler(struct early_suspend *h)
 	}
 }
 
-#endif
+#endif /* CONFIG_HAS_EARLYSUSPEND */
 
+/* Set up Linux Framebuffer event notification */
 OMAPLFB_ERROR OMAPLFBEnableLFBEventNotification(OMAPLFB_DEVINFO *psDevInfo)
 {
 	int res;
 	OMAPLFB_ERROR eError;
 
+	/* Set up Linux Framebuffer event notification */
 	memset(&psDevInfo->sLINNotifBlock, 0,
 	       sizeof(psDevInfo->sLINNotifBlock));
 
@@ -864,6 +1002,7 @@ OMAPLFB_ERROR OMAPLFBEnableLFBEventNotification(OMAPLFB_DEVINFO *psDevInfo)
 	return (OMAPLFB_OK);
 }
 
+/* Disable Linux Framebuffer event notification */
 OMAPLFB_ERROR OMAPLFBDisableLFBEventNotification(OMAPLFB_DEVINFO *psDevInfo)
 {
 	int res;
@@ -872,6 +1011,7 @@ OMAPLFB_ERROR OMAPLFBDisableLFBEventNotification(OMAPLFB_DEVINFO *psDevInfo)
 	unregister_early_suspend(&psDevInfo->sEarlySuspend);
 #endif
 
+	/* Unregister for Framebuffer events */
 	res = fb_unregister_client(&psDevInfo->sLINNotifBlock);
 	if (res != 0) {
 	printk(KERN_ERR DRIVER_PREFIX
@@ -1026,6 +1166,7 @@ int PVR_DRM_MAKENAME(DISPLAY_CONTROLLER, _Ioctl)(struct drm_device unref__ *dev,
 }
 #endif
 
+/* Insert the driver into the kernel */
 #if defined(SUPPORT_DRI_DRM)
 int PVR_DRM_MAKENAME(DISPLAY_CONTROLLER, _Init)(struct drm_device unref__ *dev)
 #else
@@ -1041,6 +1182,7 @@ static int __init OMAPLFB_Init(void)
 	return 0;
 }
 
+/* Remove the driver from the kernel */
 #if defined(SUPPORT_DRI_DRM)
 void PVR_DRM_MAKENAME(DISPLAY_CONTROLLER,
 	      _Cleanup)(struct drm_device unref__ *dev)
@@ -1055,6 +1197,12 @@ static void __exit OMAPLFB_Cleanup(void)
 }
 
 #if !defined(SUPPORT_DRI_DRM)
+/*
+ These macro calls define the initialisation and removal functions of the
+ driver.  Although they are prefixed `module_', they apply when compiling
+ statically as well; in both cases they define the function the kernel will
+ run to start/stop the driver.
+*/
 late_initcall(OMAPLFB_Init);
 module_exit(OMAPLFB_Cleanup);
 #endif

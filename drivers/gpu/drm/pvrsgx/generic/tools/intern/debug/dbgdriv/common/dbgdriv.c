@@ -27,9 +27,6 @@
 #ifdef LINUX
 #include <linux/string.h>
 #endif
-#ifdef __QNXNTO__
-#include <string.h>
-#endif
 
 #include "img_types.h"
 #include "pvr_debug.h"

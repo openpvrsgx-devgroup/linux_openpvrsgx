@@ -78,7 +78,7 @@
 #endif
 #endif
 
-static inline IMG_UINTPTR_T VMallocToPhys(IMG_VOID *pCpuVAddr)
+static inline IMG_UINT32 VMallocToPhys(IMG_VOID *pCpuVAddr)
 {
 	return (page_to_phys(vmalloc_to_page(pCpuVAddr)) +
 	ADDR_TO_PAGE_OFFSET(pCpuVAddr));
@@ -91,88 +91,61 @@ typedef enum {
 	LINUX_MEM_AREA_VMALLOC,
 	LINUX_MEM_AREA_ALLOC_PAGES,
 	LINUX_MEM_AREA_SUB_ALLOC,
-#if defined(PVR_LINUX_MEM_AREA_USE_VMAP)
-	LINUX_MEM_AREA_VMAP,
-#endif
-	LINUX_MEM_AREA_CMA,
-	LINUX_MEM_AREA_TYPE_COUNT
+	LINUX_MEM_AREA_TYPE_COUNT,
+	LINUX_MEM_AREA_ION,
 } LINUX_MEM_AREA_TYPE;
 
 typedef struct _LinuxMemArea LinuxMemArea;
 
-/* FIXME - describe this structure. */
 struct _LinuxMemArea {
 	LINUX_MEM_AREA_TYPE eAreaType;
 	union _uData {
 	struct _sIORemap {
-	/* Note: The memory this represents is _not_ implicitly
-             * page aligned, neither is its size */
 	IMG_CPU_PHYADDR CPUPhysAddr;
 	IMG_VOID *pvIORemapCookie;
 	} sIORemap;
 	struct _sExternalKV {
-	/* Note: The memory this represents is _not_ implicitly
-             * page aligned, neither is its size */
 	IMG_BOOL bPhysContig;
 	union {
-	/*
-	     * SYSPhysAddr is valid if bPhysContig is true, else
-	     * pSysPhysAddr is valid
-	     */
 	IMG_SYS_PHYADDR SysPhysAddr;
 	IMG_SYS_PHYADDR *pSysPhysAddr;
 	} uPhysAddr;
 	IMG_VOID *pvExternalKV;
 	} sExternalKV;
 	struct _sIO {
-	/* Note: The memory this represents is _not_ implicitly
-             * page aligned, neither is its size */
 	IMG_CPU_PHYADDR CPUPhysAddr;
 	} sIO;
 	struct _sVmalloc {
-	/* Note the memory this represents _is_ implicitly
-             * page aligned _and_ so is its size */
 	IMG_VOID *pvVmallocAddress;
-#if defined(PVR_LINUX_MEM_AREA_USE_VMAP)
-	struct page **ppsPageList;
-	IMG_HANDLE hBlockPageList;
-#endif
 	} sVmalloc;
 	struct _sPageList {
-	/* Note the memory this represents _is_ implicitly
-             * page aligned _and_ so is its size */
 	struct page **pvPageList;
 	IMG_HANDLE hBlockPageList;
 	} sPageList;
+	struct _sIONTilerAlloc {
+	IMG_CPU_PHYADDR *pCPUPhysAddrs;
+	IMG_UINT32 ui32NumValidPlanes;
+	struct ion_handle *psIONHandle
+	[PVRSRV_MAX_NUMBER_OF_MM_BUFFER_PLANES];
+	IMG_UINT32 planeOffsets
+	[PVRSRV_MAX_NUMBER_OF_MM_BUFFER_PLANES];
+	} sIONTilerAlloc;
 	struct _sSubAlloc {
-	/* Note: The memory this represents is _not_ implicitly
-             * page aligned, neither is its size */
 	LinuxMemArea *psParentLinuxMemArea;
-	IMG_UINTPTR_T uiByteOffset;
+	IMG_UINT32 ui32ByteOffset;
 	} sSubAlloc;
-	struct _sCmaRegion {
-	IMG_VOID *hCookie;
-	dma_addr_t dmaHandle;
-	} sCmaRegion;
 	} uData;
 
-	IMG_SIZE_T uiByteSize; /* Size of memory area */
+	IMG_UINT32 ui32ByteSize;
 
-	IMG_UINT32 ui32AreaFlags; /* Flags passed at creation time */
+	IMG_UINT32 ui32AreaFlags;
 
-	IMG_BOOL bMMapRegistered; /* Registered with mmap code */
+	IMG_BOOL bMMapRegistered;
 
-	IMG_BOOL bNeedsCacheInvalidate; /* Cache should be invalidated on first map? */
+	IMG_BOOL bNeedsCacheInvalidate;
 
-	IMG_HANDLE hBMHandle; /* Handle back to BM for this allocation */
-
-	/* List entry for global list of areas registered for mmap */
 	struct list_head sMMapItem;
 
-	/*
-     * Head of list of all mmap offset structures associated with this
-     * memory area.
-     */
 	struct list_head sMMapOffsetStructList;
 };
 
@@ -187,33 +160,31 @@ PVRSRV_ERROR LinuxMMInit(IMG_VOID);
 IMG_VOID LinuxMMCleanup(IMG_VOID);
 
 #if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
-#define KMallocWrapper(uByteSize, uFlags) \
-	_KMallocWrapper(uByteSize, uFlags, __FILE__, __LINE__, IMG_FALSE)
+#define KMallocWrapper(ui32ByteSize, uFlags) \
+	_KMallocWrapper(ui32ByteSize, uFlags, __FILE__, __LINE__)
 #else
-#define KMallocWrapper(uByteSize, uFlags) \
-	_KMallocWrapper(uByteSize, uFlags, NULL, 0, IMG_FALSE)
+#define KMallocWrapper(ui32ByteSize, uFlags) \
+	_KMallocWrapper(ui32ByteSize, uFlags, NULL, 0)
 #endif
-IMG_VOID *_KMallocWrapper(IMG_SIZE_T uiByteSize, gfp_t uFlags,
-	  IMG_CHAR *szFileName, IMG_UINT32 ui32Line,
-	  IMG_BOOL bSwapAlloc);
+IMG_VOID *_KMallocWrapper(IMG_UINT32 ui32ByteSize, gfp_t uFlags,
+	  IMG_CHAR *szFileName, IMG_UINT32 ui32Line);
 
 #if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
-#define KFreeWrapper(pvCpuVAddr) \
-	_KFreeWrapper(pvCpuVAddr, __FILE__, __LINE__, IMG_FALSE)
+#define KFreeWrapper(pvCpuVAddr) _KFreeWrapper(pvCpuVAddr, __FILE__, __LINE__)
 #else
-#define KFreeWrapper(pvCpuVAddr) _KFreeWrapper(pvCpuVAddr, NULL, 0, IMG_FALSE)
+#define KFreeWrapper(pvCpuVAddr) _KFreeWrapper(pvCpuVAddr, NULL, 0)
 #endif
 IMG_VOID _KFreeWrapper(IMG_VOID *pvCpuVAddr, IMG_CHAR *pszFileName,
-	       IMG_UINT32 ui32Line, IMG_BOOL bSwapAlloc);
+	       IMG_UINT32 ui32Line);
 
 #if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
-#define VMallocWrapper(uiBytes, ui32AllocFlags) \
-	_VMallocWrapper(uiBytes, ui32AllocFlags, __FILE__, __LINE__)
+#define VMallocWrapper(ui32Bytes, ui32AllocFlags) \
+	_VMallocWrapper(ui32Bytes, ui32AllocFlags, __FILE__, __LINE__)
 #else
-#define VMallocWrapper(uiBytes, ui32AllocFlags) \
-	_VMallocWrapper(uiBytes, ui32AllocFlags, NULL, 0)
+#define VMallocWrapper(ui32Bytes, ui32AllocFlags) \
+	_VMallocWrapper(ui32Bytes, ui32AllocFlags, NULL, 0)
 #endif
-IMG_VOID *_VMallocWrapper(IMG_SIZE_T uiBytes, IMG_UINT32 ui32AllocFlags,
+IMG_VOID *_VMallocWrapper(IMG_UINT32 ui32Bytes, IMG_UINT32 ui32AllocFlags,
 	  IMG_CHAR *pszFileName, IMG_UINT32 ui32Line);
 
 #if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
@@ -224,31 +195,32 @@ IMG_VOID *_VMallocWrapper(IMG_SIZE_T uiBytes, IMG_UINT32 ui32AllocFlags,
 IMG_VOID _VFreeWrapper(IMG_VOID *pvCpuVAddr, IMG_CHAR *pszFileName,
 	       IMG_UINT32 ui32Line);
 
-LinuxMemArea *NewVMallocLinuxMemArea(IMG_SIZE_T uBytes,
+LinuxMemArea *NewVMallocLinuxMemArea(IMG_UINT32 ui32Bytes,
 	     IMG_UINT32 ui32AreaFlags);
 
 IMG_VOID FreeVMallocLinuxMemArea(LinuxMemArea *psLinuxMemArea);
 
 #if defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
-#define IORemapWrapper(BasePAddr, uiBytes, ui32MappingFlags)            \
-	_IORemapWrapper(BasePAddr, uiBytes, ui32MappingFlags, __FILE__, \
+#define IORemapWrapper(BasePAddr, ui32Bytes, ui32MappingFlags)            \
+	_IORemapWrapper(BasePAddr, ui32Bytes, ui32MappingFlags, __FILE__, \
 	__LINE__)
 #else
-#define IORemapWrapper(BasePAddr, uiBytes, ui32MappingFlags) \
-	_IORemapWrapper(BasePAddr, uiBytes, ui32MappingFlags, NULL, 0)
+#define IORemapWrapper(BasePAddr, ui32Bytes, ui32MappingFlags) \
+	_IORemapWrapper(BasePAddr, ui32Bytes, ui32MappingFlags, NULL, 0)
 #endif
-IMG_VOID *_IORemapWrapper(IMG_CPU_PHYADDR BasePAddr, IMG_SIZE_T uiBytes,
+IMG_VOID *_IORemapWrapper(IMG_CPU_PHYADDR BasePAddr, IMG_UINT32 ui32Bytes,
 	  IMG_UINT32 ui32MappingFlags, IMG_CHAR *pszFileName,
 	  IMG_UINT32 ui32Line);
 
 LinuxMemArea *NewIORemapLinuxMemArea(IMG_CPU_PHYADDR BasePAddr,
-	     IMG_SIZE_T uiBytes,
+	     IMG_UINT32 ui32Bytes,
 	     IMG_UINT32 ui32AreaFlags);
 
 IMG_VOID FreeIORemapLinuxMemArea(LinuxMemArea *psLinuxMemArea);
 
 LinuxMemArea *NewExternalKVLinuxMemArea(IMG_SYS_PHYADDR *pBasePAddr,
-	IMG_VOID *pvCPUVAddr, IMG_SIZE_T uBytes,
+	IMG_VOID *pvCPUVAddr,
+	IMG_UINT32 ui32Bytes,
 	IMG_BOOL bPhysContig,
 	IMG_UINT32 ui32AreaFlags);
 
@@ -300,18 +272,65 @@ IMG_VOID _KMemCacheFreeWrapper(LinuxKMemCache *psCache, IMG_VOID *pvObject,
 
 const IMG_CHAR *KMemCacheNameWrapper(LinuxKMemCache *psCache);
 
-LinuxMemArea *NewIOLinuxMemArea(IMG_CPU_PHYADDR BasePAddr, IMG_SIZE_T uiBytes,
+LinuxMemArea *NewIOLinuxMemArea(IMG_CPU_PHYADDR BasePAddr, IMG_UINT32 ui32Bytes,
 	IMG_UINT32 ui32AreaFlags);
 
 IMG_VOID FreeIOLinuxMemArea(LinuxMemArea *psLinuxMemArea);
 
-LinuxMemArea *NewAllocPagesLinuxMemArea(IMG_SIZE_T uiBytes,
+LinuxMemArea *NewAllocPagesLinuxMemArea(IMG_UINT32 ui32Bytes,
 	IMG_UINT32 ui32AreaFlags);
 
 IMG_VOID FreeAllocPagesLinuxMemArea(LinuxMemArea *psLinuxMemArea);
 
+#if defined(CONFIG_ION_OMAP)
+
+LinuxMemArea *NewIONLinuxMemArea(IMG_UINT32 ui32Bytes, IMG_UINT32 ui32AreaFlags,
+	 IMG_PVOID pvPrivData,
+	 IMG_UINT32 ui32PrivDataLength);
+
+IMG_VOID FreeIONLinuxMemArea(LinuxMemArea *psLinuxMemArea);
+
+IMG_INT32
+GetIONLinuxMemAreaInfo(LinuxMemArea *psLinuxMemArea,
+	       IMG_UINT32 *ui32AddressOffsets, IMG_UINT32 *ui32NumAddr);
+
+#else
+
+static inline LinuxMemArea *NewIONLinuxMemArea(IMG_UINT32 ui32Bytes,
+	       IMG_UINT32 ui32AreaFlags,
+	       IMG_PVOID pvPrivData,
+	       IMG_UINT32 ui32PrivDataLength)
+{
+	PVR_UNREFERENCED_PARAMETER(ui32Bytes);
+	PVR_UNREFERENCED_PARAMETER(ui32AreaFlags);
+	PVR_UNREFERENCED_PARAMETER(pvPrivData);
+	PVR_UNREFERENCED_PARAMETER(ui32PrivDataLength);
+	BUG();
+	return IMG_NULL;
+}
+
+static inline IMG_VOID FreeIONLinuxMemArea(LinuxMemArea *psLinuxMemArea)
+{
+	PVR_UNREFERENCED_PARAMETER(psLinuxMemArea);
+	BUG();
+}
+
+static inline IMG_INT32 GetIONLinuxMemAreaInfo(LinuxMemArea *psLinuxMemArea,
+	       IMG_UINT32 *ui32AddressOffsets,
+	       IMG_UINT32 *ui32NumAddr);
+{
+	PVR_UNREFERENCED_PARAMETER(psLinuxMemArea);
+	PVR_UNREFERENCED_PARAMETER(ui32AddressOffsets);
+	PVR_UNREFERENCED_PARAMETER(ui32NumAddr);
+	BUG();
+	return -1;
+}
+
+#endif
+
 LinuxMemArea *NewSubLinuxMemArea(LinuxMemArea *psParentLinuxMemArea,
-	 IMG_UINTPTR_T uByteOffset, IMG_SIZE_T uBytes);
+	 IMG_UINT32 ui32ByteOffset,
+	 IMG_UINT32 ui32Bytes);
 
 IMG_VOID LinuxMemAreaDeepFree(LinuxMemArea *psLinuxMemArea);
 
@@ -324,10 +343,11 @@ IMG_VOID LinuxMemAreaRegister(LinuxMemArea *psLinuxMemArea);
 IMG_VOID *LinuxMemAreaToCpuVAddr(LinuxMemArea *psLinuxMemArea);
 
 IMG_CPU_PHYADDR LinuxMemAreaToCpuPAddr(LinuxMemArea *psLinuxMemArea,
-	       IMG_UINTPTR_T uByteOffset);
+	       IMG_UINT32 ui32ByteOffset);
 
-#define LinuxMemAreaToCpuPFN(psLinuxMemArea, uByteOffset) \
-	PHYS_TO_PFN(LinuxMemAreaToCpuPAddr(psLinuxMemArea, uByteOffset).uiAddr)
+#define LinuxMemAreaToCpuPFN(psLinuxMemArea, ui32ByteOffset) \
+	PHYS_TO_PFN(                                         \
+	LinuxMemAreaToCpuPAddr(psLinuxMemArea, ui32ByteOffset).uiAddr)
 
 IMG_BOOL LinuxMemAreaPhysIsContig(LinuxMemArea *psLinuxMemArea);
 

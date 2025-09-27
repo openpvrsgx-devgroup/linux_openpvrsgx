@@ -782,6 +782,9 @@ typedef struct _PVRSRV_CLIENT_SYNC_INFO_ {
 typedef struct PVRSRV_RESOURCE_TAG {
 	volatile IMG_UINT32 ui32Lock;
 	IMG_UINT32 ui32ID;
+#if !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__)
+	IMG_VOID *pOSSyncPrimitive;
+#endif /* !defined(PVR_LINUX_USING_WORKQUEUES) && defined(__linux__) */
 } PVRSRV_RESOURCE;
 typedef PVRSRV_RESOURCE PVRSRV_RES_HANDLE;
 

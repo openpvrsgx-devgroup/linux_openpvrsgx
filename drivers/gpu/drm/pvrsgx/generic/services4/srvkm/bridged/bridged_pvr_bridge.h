@@ -91,7 +91,7 @@ CopyToUserWrapper(PVRSRV_PER_PROCESS_DATA *pProcData, IMG_UINT32 ui32BridgeID,
 #define ASSIGN_AND_EXIT_ON_ERROR(error, src) \
 	ASSIGN_AND_RETURN_ON_ERROR(error, src, 0)
 
-#if defined(PVR_SECURE_HANDLES)
+#if defined(PVR_SECURE_HANDLES) || defined(SUPPORT_SID_INTERFACE)
 #ifdef INLINE_IS_PRAGMA
 #pragma inline(NewHandleBatch)
 #endif

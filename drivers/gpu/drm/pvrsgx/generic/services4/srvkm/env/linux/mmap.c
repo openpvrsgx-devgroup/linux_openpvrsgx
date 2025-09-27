@@ -49,7 +49,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <linux/mm.h>
 #include <linux/module.h>
-#include <linux/pfn_t.h>
 #include <linux/vmalloc.h>
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 0))
 #include <linux/wrapper.h>
@@ -805,13 +804,12 @@ static IMG_BOOL DoMapToUser(LinuxMemArea *psLinuxMemArea,
 
 #if defined(PVR_MAKE_ALL_PFNS_SPECIAL)
 	if (bMixedMap) {
-	result = vmf_insert_mixed(
-	ps_vma, ulVMAPos,
-	pfn_to_pfn_t(pfn));
-	if (result & VM_FAULT_ERROR) {
+	result = vm_insert_mixed(ps_vma,
+	 ulVMAPos, pfn);
+	if (result != 0) {
 	PVR_DPF((
 	PVR_DBG_ERROR,
-	"%s: Error - vmf_insert_mixed failed (%x)",
+	"%s: Error - vm_insert_mixed failed (%d)",
 	__FUNCTION__, result));
 	return IMG_FALSE;
 	}
@@ -1081,12 +1079,7 @@ int PVRMMap(struct file *pFile, struct vm_area_struct *ps_vma)
 	PVR_DPF((PVR_DBG_MESSAGE, "%s: Mapped psLinuxMemArea 0x%p\n",
 	 __FUNCTION__, psOffsetStruct->psLinuxMemArea));
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 7, 0))
 	ps_vma->vm_flags |= VM_RESERVED;
-#else
-	ps_vma->vm_flags |= VM_DONTEXPAND | VM_DONTDUMP; /* Don't swap */
-#endif
-
 	ps_vma->vm_flags |= VM_IO;
 
 	/*

@@ -79,7 +79,7 @@ pgprot_t pvr_pgprot_writecombine(pgprot_t prot);
 #define IOREMAP(pa, bytes) ioremap_cache(pa, bytes)
 #else
 #if defined(__arm__) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0))
-#define IOREMAP(pa, bytes) ioremap_cache(pa, bytes)
+#define IOREMAP(pa, bytes) ioremap_cached(pa, bytes)
 #else
 #define IOREMAP(pa, bytes) ioremap(pa, bytes)
 #endif

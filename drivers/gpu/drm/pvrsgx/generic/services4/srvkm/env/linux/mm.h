@@ -548,7 +548,7 @@ LinuxMemArea *NewAllocPagesLinuxMemArea(IMG_UINT32 ui32Bytes,
  ******************************************************************************/
 IMG_VOID FreeAllocPagesLinuxMemArea(LinuxMemArea *psLinuxMemArea);
 
-#if defined(CONFIG_ION_OMAP)
+#if defined(CONFIG_ION_OMAP) || defined(CONFIG_ION_MTK)
 
 /*!
  *******************************************************************************

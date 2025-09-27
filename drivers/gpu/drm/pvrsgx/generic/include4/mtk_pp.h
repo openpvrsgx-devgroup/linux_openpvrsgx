@@ -1,8 +1,8 @@
 #ifndef __MTK_PP_H__
 #define __MTK_PP_H__
 
-#include <linux/mutex.h> // spinlock
-#include "pvr_debug.h" // PVR_DPF
+#include <linux/mutex.h>
+#include "pvr_debug.h"
 
 #if defined(MTK_DEBUG) && defined(MTK_DEBUG_PROC_PRINT)
 
@@ -15,11 +15,10 @@
 #endif
 
 typedef enum MTKPP_ID_TAG {
-	// for SGXDumpDebugInfo +
 	MTKPP_ID_SGXDumpDebugInfo,
-	// for SGXDumpDebugInfo -
 	MTKPP_ID_DEVMEM,
 	MTKPP_ID_SYNC,
+	MTKPP_ID_MUTEX,
 
 	MTKPP_ID_SIZE
 } MTKPP_ID;
@@ -61,7 +60,6 @@ MTK_PROC_PRINT_DATA *MTKPP_GetData(MTKPP_ID id);
 	}                                                       \
 	} while (0);
 
-// for SGXDumpDebugInfo +
 void MTKPP_4_SGXDumpDebugInfo_Aquire(void);
 void MTKPP_4_SGXDumpDebugInfo_Release(void);
 
@@ -91,7 +89,6 @@ MTK_PROC_PRINT_DATA *MTKPP_4_SGXDumpDebugInfo_GetData(void);
 
 #define PVR_DPF_MTKPP(x) _PVR_DPF_MTKPP x
 #define PVR_LOG_MTKPP(x) _PVR_LOG_MTKPP x
-// for SGXDumpDebugInfo -
 
 #endif
 
@@ -99,12 +96,10 @@ MTK_PROC_PRINT_DATA *MTKPP_4_SGXDumpDebugInfo_GetData(void);
 
 #define MTKPP_LOG(...)
 
-// for SGXDumpDebugInfo +
 #define MTKPP_4_SGXDumpDebugInfo_Aquire()
 #define MTKPP_4_SGXDumpDebugInfo_Release()
 #define PVR_DPF_MTKPP(x) PVR_DPF(x)
 #define PVR_LOG_MTKPP(x) PVR_LOG(x)
-// for SGXDumpDebugInfo -
 
 #endif
 

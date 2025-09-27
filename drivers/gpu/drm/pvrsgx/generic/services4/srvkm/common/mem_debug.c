@@ -86,13 +86,13 @@ IMG_VOID OSCheckMemDebug(IMG_PVOID pvCpuVAddr, IMG_SIZE_T uSize,
 	 const IMG_CHAR *pszFileName, const IMG_UINT32 uLine)
 {
 	OSMEM_DEBUG_INFO const *psInfo =
-	(OSMEM_DEBUG_INFO *)((IMG_UINTPTR_T)pvCpuVAddr -
+	(OSMEM_DEBUG_INFO *)((IMG_UINT32)pvCpuVAddr -
 	     TEST_BUFFER_PADDING_STATUS);
 
 	/* invalid pointer */
 	if (pvCpuVAddr == IMG_NULL) {
 	PVR_DPF((PVR_DBG_ERROR,
-	 "Pointer 0x%p : null pointer"
+	 "Pointer 0x%X : null pointer"
 	 " - referenced %s:%d - allocated %s:%d",
 	 pvCpuVAddr, pszFileName, uLine, psInfo->sFileName,
 	 psInfo->uLineNo));
@@ -103,7 +103,7 @@ IMG_VOID OSCheckMemDebug(IMG_PVOID pvCpuVAddr, IMG_SIZE_T uSize,
 	/* align */
 	if (((IMG_UINT32)pvCpuVAddr & 3) != 0) {
 	PVR_DPF((PVR_DBG_ERROR,
-	 "Pointer 0x%p : invalid alignment"
+	 "Pointer 0x%X : invalid alignment"
 	 " - referenced %s:%d - allocated %s:%d",
 	 pvCpuVAddr, pszFileName, uLine, psInfo->sFileName,
 	 psInfo->uLineNo));
@@ -115,7 +115,7 @@ IMG_VOID OSCheckMemDebug(IMG_PVOID pvCpuVAddr, IMG_SIZE_T uSize,
 	if (!MemCheck((IMG_PVOID)psInfo->sGuardRegionBefore, 0xB1,
 	      sizeof(psInfo->sGuardRegionBefore))) {
 	PVR_DPF((PVR_DBG_ERROR,
-	 "Pointer 0x%p : guard region before overwritten"
+	 "Pointer 0x%X : guard region before overwritten"
 	 " - referenced %s:%d - allocated %s:%d",
 	 pvCpuVAddr, pszFileName, uLine, psInfo->sFileName,
 	 psInfo->uLineNo));
@@ -125,13 +125,11 @@ IMG_VOID OSCheckMemDebug(IMG_PVOID pvCpuVAddr, IMG_SIZE_T uSize,
 
 	/*check size*/
 	if (uSize != psInfo->uSize) {
-	PVR_DPF((
-	PVR_DBG_WARNING,
-	"Pointer 0x%p : supplied size was different to stored size (0x%" SIZE_T_FMT_LEN
-	"X != 0x%" SIZE_T_FMT_LEN "X)"
-	" - referenced %s:%d - allocated %s:%d",
-	pvCpuVAddr, uSize, psInfo->uSize, pszFileName, uLine,
-	psInfo->sFileName, psInfo->uLineNo));
+	PVR_DPF((PVR_DBG_WARNING,
+	 "Pointer 0x%X : supplied size was different to stored size (0x%X != 0x%X)"
+	 " - referenced %s:%d - allocated %s:%d",
+	 pvCpuVAddr, uSize, psInfo->uSize, pszFileName, uLine,
+	 psInfo->sFileName, psInfo->uLineNo));
 	while (STOP_ON_ERROR)
 	;
 	}
@@ -139,8 +137,7 @@ IMG_VOID OSCheckMemDebug(IMG_PVOID pvCpuVAddr, IMG_SIZE_T uSize,
 	/*check size parity*/
 	if ((0x01234567 ^ psInfo->uSizeParityCheck) != psInfo->uSize) {
 	PVR_DPF((PVR_DBG_WARNING,
-	 "Pointer 0x%p : stored size parity error (0x%" SIZE_T_FMT_LEN
-	 "X != 0x%" SIZE_T_FMT_LEN "X)"
+	 "Pointer 0x%X : stored size parity error (0x%X != 0x%X)"
 	 " - referenced %s:%d - allocated %s:%d",
 	 pvCpuVAddr, psInfo->uSize,
 	 0x01234567 ^ psInfo->uSizeParityCheck, pszFileName,
@@ -154,11 +151,11 @@ IMG_VOID OSCheckMemDebug(IMG_PVOID pvCpuVAddr, IMG_SIZE_T uSize,
 
 	/*check padding after*/
 	if (uSize) {
-	if (!MemCheck((IMG_VOID *)((IMG_UINTPTR_T)pvCpuVAddr + uSize),
+	if (!MemCheck((IMG_VOID *)((IMG_UINT32)pvCpuVAddr + uSize),
 	      0xB2, TEST_BUFFER_PADDING_AFTER)) {
 	PVR_DPF((
 	PVR_DBG_ERROR,
-	"Pointer 0x%p : guard region after overwritten"
+	"Pointer 0x%X : guard region after overwritten"
 	" - referenced from %s:%d - allocated from %s:%d",
 	pvCpuVAddr, pszFileName, uLine,
 	psInfo->sFileName, psInfo->uLineNo));
@@ -168,7 +165,7 @@ IMG_VOID OSCheckMemDebug(IMG_PVOID pvCpuVAddr, IMG_SIZE_T uSize,
 	/* allocated... */
 	if (psInfo->eValid != isAllocated) {
 	PVR_DPF((PVR_DBG_ERROR,
-	 "Pointer 0x%p : not allocated (freed? %d)"
+	 "Pointer 0x%X : not allocated (freed? %d)"
 	 " - referenced %s:%d - freed %s:%d",
 	 pvCpuVAddr, psInfo->eValid == isFree, pszFileName,
 	 uLine, psInfo->sFileName, psInfo->uLineNo));
@@ -227,13 +224,13 @@ PVRSRV_ERROR OSAllocMem_Debug_Wrapper(IMG_UINT32 ui32Flags, IMG_UINT32 ui32Size,
 	psInfo->uSizeParityCheck = 0x01234567 ^ ui32Size;
 
 	/*point to the user data section*/
-	*ppvCpuVAddr = (IMG_PVOID)((IMG_UINTPTR_T)*ppvCpuVAddr) +
+	*ppvCpuVAddr = (IMG_PVOID)((IMG_UINT32)*ppvCpuVAddr) +
 	       TEST_BUFFER_PADDING_STATUS;
 
 #ifdef PVRSRV_LOG_MEMORY_ALLOCS
 	/*this is here to simplify the surounding logging macro, that is a expression
 	maybe the macro should be an expression */
-	PVR_TRACE(("Allocated pointer (after debug info): 0x%p from %s:%d",
+	PVR_TRACE(("Allocated pointer (after debug info): 0x%X from %s:%d",
 	   *ppvCpuVAddr, pszFilename, ui32Line));
 #endif
 
@@ -254,7 +251,7 @@ PVRSRV_ERROR OSFreeMem_Debug_Wrapper(IMG_UINT32 ui32Flags, IMG_UINT32 ui32Size,
 	OSMemSet(pvCpuVAddr, 0xBF, ui32Size + TEST_BUFFER_PADDING_AFTER);
 
 	/*point to the starting address of the total allocated memory*/
-	psInfo = (OSMEM_DEBUG_INFO *)((IMG_UINTPTR_T)pvCpuVAddr -
+	psInfo = (OSMEM_DEBUG_INFO *)((IMG_UINT32)pvCpuVAddr -
 	      TEST_BUFFER_PADDING_STATUS);
 
 	/*update dbg info struct*/

@@ -50,9 +50,9 @@ extern "C" {
 /*!
  * Macro to Read Offset in given command queue
  */
-#define UPDATE_QUEUE_ROFF(psQueue, uSize)                             \
-	(psQueue)->uReadOffset = ((psQueue)->uReadOffset + (uSize)) & \
-	 ((psQueue)->uQueueSize - 1);
+#define UPDATE_QUEUE_ROFF(psQueue, ui32Size)                                   \
+	(psQueue)->ui32ReadOffset = ((psQueue)->ui32ReadOffset + (ui32Size)) & \
+	    ((psQueue)->ui32QueueSize - 1);
 
 /*!
 	generic cmd complete structure.
@@ -74,11 +74,6 @@ typedef struct _COMMAND_COMPLETE_DATA_ {
 	PFN_QUEUE_COMMAND_COMPLETE
 	pfnCommandComplete; /*!< Command complete callback */
 	IMG_HANDLE hCallbackData; /*!< Command complete callback data */
-
-#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
-	IMG_VOID *pvCleanupFence; /*!< Sync fence to 'put' after timeline inc() */
-	IMG_VOID *pvTimeline; /*!< Android sync timeline to inc() */
-#endif
 } COMMAND_COMPLETE_DATA, *PCOMMAND_COMPLETE_DATA;
 
 #if !defined(USE_CODE)
@@ -96,7 +91,7 @@ void ProcSeqShowQueue(struct seq_file *sfile, void *el);
 
 IMG_IMPORT
 PVRSRV_ERROR IMG_CALLCONV PVRSRVCreateCommandQueueKM(
-	IMG_SIZE_T uQueueSize, PVRSRV_QUEUE_INFO **ppsQueueInfo);
+	IMG_SIZE_T ui32QueueSize, PVRSRV_QUEUE_INFO **ppsQueueInfo);
 IMG_IMPORT
 PVRSRV_ERROR IMG_CALLCONV
 PVRSRVDestroyCommandQueueKM(PVRSRV_QUEUE_INFO *psQueueInfo);
@@ -108,12 +103,12 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVInsertCommandKM(
 	IMG_UINT32 ui32DstSyncCount, PVRSRV_KERNEL_SYNC_INFO *apsDstSync[],
 	IMG_UINT32 ui32SrcSyncCount, PVRSRV_KERNEL_SYNC_INFO *apsSrcSync[],
 	IMG_SIZE_T ui32DataByteSize,
-	PFN_QUEUE_COMMAND_COMPLETE pfnCommandComplete, IMG_HANDLE hCallbackData,
-	IMG_HANDLE *phFence);
+	PFN_QUEUE_COMMAND_COMPLETE pfnCommandComplete,
+	IMG_HANDLE hCallbackData);
 
 IMG_IMPORT
 PVRSRV_ERROR IMG_CALLCONV PVRSRVGetQueueSpaceKM(PVRSRV_QUEUE_INFO *psQueue,
-	IMG_SIZE_T uParamSize,
+	IMG_SIZE_T ui32ParamSize,
 	IMG_VOID **ppvSpace);
 
 IMG_IMPORT

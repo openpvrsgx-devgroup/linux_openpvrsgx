@@ -51,6 +51,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "lists.h"
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0))
+#else
+#include <linux/dma-map-ops.h>
+#endif
+
 #if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
 #include "pvr_sync.h"
 #endif
@@ -871,8 +876,7 @@ PVRSRV_ERROR PVRSRVOpenDCDeviceKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 	PVR_DPF((
 	PVR_DBG_ERROR,
 	"PVRSRVOpenDCDeviceKM: Failed sync info alloc"));
-	psDCInfo->ui32RefCount--;
-	return eError;
+	goto ErrorExit;
 	}
 
 	/* open the external device */
@@ -885,12 +889,7 @@ PVRSRV_ERROR PVRSRVOpenDCDeviceKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 	PVR_DPF((
 	PVR_DBG_ERROR,
 	"PVRSRVOpenDCDeviceKM: Failed to open external DC device"));
-	psDCInfo->ui32RefCount--;
-	PVRSRVKernelSyncInfoDecRef(
-	psDCInfo->sSystemBuffer.sDeviceClassBuffer
-	.psKernelSyncInfo,
-	IMG_NULL);
-	return eError;
+	goto ErrorExitSyncInfo;
 	}
 
 	psDCPerContextInfo->psDCInfo = psDCInfo;
@@ -900,12 +899,7 @@ PVRSRV_ERROR PVRSRVOpenDCDeviceKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 	PVR_DPF((
 	PVR_DBG_ERROR,
 	"PVRSRVOpenDCDeviceKM: Failed to get system buffer"));
-	psDCInfo->ui32RefCount--;
-	PVRSRVKernelSyncInfoDecRef(
-	psDCInfo->sSystemBuffer.sDeviceClassBuffer
-	.psKernelSyncInfo,
-	IMG_NULL);
-	return eError;
+	goto ErrorExitCloseDevice;
 	}
 	psDCInfo->sSystemBuffer.sDeviceClassBuffer.ui32MemMapRefCount =
 	0;
@@ -921,6 +915,21 @@ PVRSRV_ERROR PVRSRVOpenDCDeviceKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 	*phDeviceKM = (IMG_HANDLE)psDCPerContextInfo;
 
 	return PVRSRV_OK;
+
+ErrorExitCloseDevice:
+	psDCInfo->psFuncTable->pfnCloseDCDevice(psDCInfo->hExtDevice);
+
+ErrorExitSyncInfo:
+	PVRSRVKernelSyncInfoDecRef(
+	psDCInfo->sSystemBuffer.sDeviceClassBuffer.psKernelSyncInfo,
+	IMG_NULL);
+
+ErrorExit:
+	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP,
+	  sizeof(PVRSRV_DISPLAYCLASS_PERCONTEXT_INFO),
+	  psDCPerContextInfo, IMG_NULL);
+	psDCInfo->ui32RefCount = 0;
+	return eError;
 }
 
 /*!
@@ -2710,7 +2719,7 @@ FoundDevice:
 	PVR_DPF((
 	PVR_DBG_ERROR,
 	"PVRSRVOpenBCDeviceKM: Failed to open external BC device"));
-	return eError;
+	goto ErrorExit;
 	}
 
 	/* get information about the buffers */
@@ -2720,7 +2729,7 @@ FoundDevice:
 	PVR_DPF((
 	PVR_DBG_ERROR,
 	"PVRSRVOpenBCDeviceKM : Failed to get BC Info"));
-	return eError;
+	goto ErrorExitCloseDevice;
 	}
 
 	/* interpret and store info */
@@ -2736,7 +2745,7 @@ FoundDevice:
 	PVR_DPF((
 	PVR_DBG_ERROR,
 	"PVRSRVOpenBCDeviceKM: Failed to allocate BC buffers"));
-	return eError;
+	goto ErrorExitCloseDevice;
 	}
 	OSMemSet(psBCInfo->psBuffer, 0,
 	 sizeof(PVRSRV_BC_BUFFER) *
@@ -2752,7 +2761,7 @@ FoundDevice:
 	PVR_DPF((
 	PVR_DBG_ERROR,
 	"PVRSRVOpenBCDeviceKM: Failed sync info alloc"));
-	goto ErrorExit;
+	goto ErrorExitBuffers;
 	}
 
 	/*
@@ -2770,7 +2779,7 @@ FoundDevice:
 	PVR_DPF((
 	PVR_DBG_ERROR,
 	"PVRSRVOpenBCDeviceKM: Failed to get BC buffers"));
-	goto ErrorExit;
+	goto ErrorExitBuffers;
 	}
 
 	/* setup common device class info */
@@ -2796,8 +2805,7 @@ FoundDevice:
 
 	return PVRSRV_OK;
 
-ErrorExit:
-
+ErrorExitBuffers:
 	/* free syncinfos */
 	for (i = 0; i < psBCInfo->ui32BufferCount; i++) {
 	if (psBCInfo->psBuffer[i].sDeviceClassBuffer.psKernelSyncInfo) {
@@ -2809,12 +2817,19 @@ ErrorExit:
 	}
 
 	/* free buffers */
-	if (psBCInfo->psBuffer) {
 	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, sizeof(PVRSRV_BC_BUFFER),
 	  psBCInfo->psBuffer, IMG_NULL);
 	psBCInfo->psBuffer = IMG_NULL;
-	}
 
+ErrorExitCloseDevice:
+	psBCInfo->psFuncTable->pfnCloseBCDevice(psBCInfo->ui32DeviceID,
+	psBCInfo->hExtDevice);
+
+ErrorExit:
+	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP,
+	  sizeof(PVRSRV_BUFFERCLASS_PERCONTEXT_INFO),
+	  psBCPerContextInfo, IMG_NULL);
+	psBCInfo->ui32RefCount = 0;
 	return eError;
 }
 

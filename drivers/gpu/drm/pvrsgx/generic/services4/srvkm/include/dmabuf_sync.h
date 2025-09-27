@@ -1,5 +1,5 @@
 /*************************************************************************/ /*!
-@Title          SGX hw definitions
+@Title          Services dma_buf synchronisation integration
 @Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
 @License        Dual MIT/GPLv2
 
@@ -39,78 +39,37 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */ /**************************************************************************/
 
-#ifndef _SGXDEFS_H_
-#define _SGXDEFS_H_
+#include "img_defs.h"
+#include "img_types.h"
+#include "servicesint.h"
 
-#include "sgxerrata.h"
-#include "sgxfeaturedefs.h"
+#ifndef __DMABUF_SYNC_H__
+#define __DMABUF_SYNC_H__
 
-#if defined(SGX520)
-#include "sgx520defs.h"
-#else
-#if defined(SGX5300)
-#include "sgx5300defs.h"
-#else
-#if defined(SGX530)
-#include "sgx530defs.h"
-#else
-#if defined(SGX535)
-#include "sgx535defs.h"
-#else
-#if defined(SGX535_V1_1)
-#include "sgx535defs.h"
-#else
-#if defined(SGX540)
-#include "sgx540defs.h"
-#else
-#if defined(SGX543)
-#if defined(FIX_HW_BRN_29954)
-#include "sgx543_v1.164defs.h"
-#else
-#include "sgx543defs.h"
-#endif
-#else
-#if defined(SGX544)
-#include "sgx544defs.h"
-#else
-#if defined(SGX545)
-#include "sgx545defs.h"
-#else
-#if defined(SGX531)
-#include "sgx531defs.h"
-#else
-#if defined(SGX554)
-#include "sgx554defs.h"
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
+typedef struct _PVRSRV_DMABUF_SYNC_INFO_ {
+	PVRSRV_KERNEL_SYNC_INFO *psSyncInfo;
+	IMG_HANDLE hUnique;
+	IMG_UINT32 ui32RefCount;
+	IMG_UINT64 ui64Stamp;
+} PVRSRV_DMABUF_SYNC_INFO;
 
-#if defined(SGX_FEATURE_MP)
-#if defined(SGX554)
-#include "sgxmpplusdefs.h"
-#else
-#include "sgxmpdefs.h"
-#endif /* SGX554 */
-#else /* SGX_FEATURE_MP */
-#if defined(SGX_FEATURE_SYSTEM_CACHE)
-#include "mnemedefs.h"
-#endif
-#endif /* SGX_FEATURE_MP */
+PVRSRV_ERROR
+PVRSRVDmaBufSyncAcquire(IMG_HANDLE hUnique, IMG_HANDLE hDevCookie,
+	IMG_HANDLE hDevMemContext,
+	PVRSRV_DMABUF_SYNC_INFO **ppsDmaBufSyncInfo);
 
-/*****************************************************************************
- Core specific defines.
-*****************************************************************************/
+IMG_VOID PVRSRVDmaBufSyncRelease(PVRSRV_DMABUF_SYNC_INFO *psDmaBufSyncInfo);
 
-#endif /* _SGXDEFS_H_ */
+static INLINE PVRSRV_KERNEL_SYNC_INFO *
+DmaBufSyncGetKernelSyncInfo(PVRSRV_DMABUF_SYNC_INFO *psDmaBufSyncInfo)
+{
+	return psDmaBufSyncInfo->psSyncInfo;
+}
 
-/*****************************************************************************
- End of file (sgxdefs.h)
-*****************************************************************************/
+static INLINE IMG_UINT64
+DmaBufSyncGetStamp(PVRSRV_DMABUF_SYNC_INFO *psDmaBufSyncInfo)
+{
+	return psDmaBufSyncInfo->ui64Stamp;
+}
+
+#endif /* __DMABUF_SYNC_H__ */

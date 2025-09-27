@@ -61,7 +61,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #if defined(SUPPORT_DRI_DRM)
 #include "drmP.h"
-#include "drm.h"
 #endif
 
 #include "img_types.h"
@@ -83,7 +82,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #else /* defined(SUPPORT_DRI_DRM) */
 
 #define DRVNAME "dbgdrv"
-MODULE_SUPPORTED_DEVICE(DRVNAME);
 
 #if (defined(LDM_PLATFORM) || defined(LDM_PCI)) && !defined(SUPPORT_DRI_DRM)
 static struct class *psDbgDrvClass;

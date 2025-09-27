@@ -55,6 +55,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "sgx_bridge_km.h"
 #include "pdump_osfunc.h"
 
+/* should have been defined by #include "services_headers.h" or #include <linux/minmax.h> but isn't */
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+
 #define UINT32_MAX_VALUE 0xFFFFFFFFUL
 
 /*
@@ -2581,32 +2585,41 @@ MMU_Finalise(MMU_CONTEXT *psMMUContext)
 	SysAcquireData(&psSysData);
 
 #if defined(PDUMP)
+	{
+	IMG_UINT32 ui32Flags = PDUMP_FLAGS_CONTINUOUS;
 	/* pdump the MMU context clear */
 	PDUMPCOMMENT("Clear MMU context (MMU Context ID == %u)",
 	     psMMUContext->ui32PDumpMMUContextID);
-	PDUMPCLEARMMUCONTEXT(PVRSRV_DEVICE_TYPE_SGX,
-	     psMMUContext->psDeviceNode->sDevId.pszPDumpDevName,
-	     psMMUContext->ui32PDumpMMUContextID, 2);
+	PDUMPCLEARMMUCONTEXT(
+	PVRSRV_DEVICE_TYPE_SGX,
+	psMMUContext->psDeviceNode->sDevId.pszPDumpDevName,
+	psMMUContext->ui32PDumpMMUContextID, 2);
 
 	/* pdump the PD free */
-	PDUMPCOMMENT("Free page directory (PDDevPAddr == 0x" DEVPADDR_FMT ")",
-	     psMMUContext->sPDDevPAddr.uiAddr);
-#endif /* PDUMP */
+	PDUMPCOMMENT(
+	"Free page directory (PDDevPAddr == 0x" DEVPADDR_FMT
+	")",
+	psMMUContext->sPDDevPAddr.uiAddr);
 
 	PDUMPFREEPAGETABLE(&psMMUContext->psDeviceNode->sDevId,
 	   psMMUContext->hPDOSMemHandle,
-	   psMMUContext->pvPDCpuVAddr, SGX_MMU_PAGE_SIZE, 0,
+	   psMMUContext->pvPDCpuVAddr,
+	   SGX_MMU_PAGE_SIZE, ui32Flags,
 	   PDUMP_PT_UNIQUETAG);
 #if defined(SUPPORT_SGX_MMU_DUMMY_PAGE)
 	PDUMPFREEPAGETABLE(&psMMUContext->psDeviceNode->sDevId,
 	   psDevInfo->hDummyPTPageOSMemHandle,
-	   psDevInfo->pvDummyPTPageCpuVAddr, SGX_MMU_PAGE_SIZE,
-	   0, PDUMP_PT_UNIQUETAG);
+	   psDevInfo->pvDummyPTPageCpuVAddr,
+	   SGX_MMU_PAGE_SIZE, ui32Flags,
+	   PDUMP_PT_UNIQUETAG);
 	PDUMPFREEPAGETABLE(&psMMUContext->psDeviceNode->sDevId,
 	   psDevInfo->hDummyDataPageOSMemHandle,
 	   psDevInfo->pvDummyDataPageCpuVAddr,
-	   SGX_MMU_PAGE_SIZE, 0, PDUMP_PT_UNIQUETAG);
+	   SGX_MMU_PAGE_SIZE, ui32Flags,
+	   PDUMP_PT_UNIQUETAG);
 #endif
+	}
+#endif /* PDUMP */
 
 	pui32Tmp = (IMG_UINT32 *)psMMUContext->pvPDCpuVAddr;
 

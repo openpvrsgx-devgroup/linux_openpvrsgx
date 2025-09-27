@@ -42,12 +42,15 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */ /**************************************************************************/
 
 #include "services_headers.h"
-
 #include "sysconfig.h"
 #include "hash.h"
 #include "ra.h"
 #include "pdump_km.h"
 #include "lists.h"
+
+/* should have been defined by #include "services_headers.h" or #include <linux/minmax.h> but isn't */
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
 static IMG_BOOL ZeroBuf(BM_BUF *pBuf, BM_MAPPING *pMapping, IMG_SIZE_T uBytes,
 	IMG_UINT32 ui32Flags);
@@ -520,7 +523,7 @@ static IMG_BOOL WrapMemory(BM_HEAP *psBMHeap, IMG_SIZE_T uSize,
 
 	if (ui32Flags & PVRSRV_MEM_ZERO) {
 	if (!ZeroBuf(pBuf, pMapping, uSize, ui32Flags)) {
-	return IMG_FALSE;
+	goto fail_cleanup;
 	}
 	}
 
@@ -543,7 +546,8 @@ fail_cleanup:
 	OSReleaseSubMemHandle(pBuf->hOSMemHandle, ui32Attribs);
 	}
 
-	if (pMapping && (pMapping->CpuVAddr || pMapping->hOSMemHandle)) {
+	/* pMapping must be valid: if the allocation failed, we'd have returned */
+	if (pMapping->CpuVAddr || pMapping->hOSMemHandle) {
 	switch (pMapping->eCpuMemoryOrigin) {
 	case hm_wrapped:
 	OSUnReservePhys(pMapping->CpuVAddr, pMapping->uSize,
@@ -2889,7 +2893,8 @@ static IMG_BOOL BM_ImportMemory(IMG_VOID *pH, IMG_SIZE_T uRequestSize,
 	return IMG_TRUE;
 
 fail_dev_mem_alloc:
-	if (pMapping && (pMapping->CpuVAddr || pMapping->hOSMemHandle)) {
+	/* pMapping must be valid: if the allocation failed, we'd have jumped to fail_exit */
+	if (pMapping->CpuVAddr || pMapping->hOSMemHandle) {
 	/* the size is double the actual size for interleaved allocations */
 	if (pMapping->ui32Flags & PVRSRV_MEM_INTERLEAVED) {
 	pMapping->uSize /= 2;

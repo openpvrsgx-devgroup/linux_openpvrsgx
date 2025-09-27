@@ -376,6 +376,11 @@ IMG_VOID PVRSRVResManDisconnect(PRESMAN_CONTEXT psResManContext,
 	       RESMAN_TYPE_DEVICEMEM_ION, 0, 0,
 	       IMG_TRUE);
 #endif
+#if defined(SUPPORT_DMABUF)
+	FreeResourceByCriteria(psResManContext, RESMAN_CRITERIA_RESTYPE,
+	       RESMAN_TYPE_DEVICEMEM_DMABUF, 0, 0,
+	       IMG_TRUE);
+#endif
 	FreeResourceByCriteria(psResManContext, RESMAN_CRITERIA_RESTYPE,
 	       RESMAN_TYPE_DEVICEMEM_CONTEXT, 0, 0,
 	       IMG_TRUE);

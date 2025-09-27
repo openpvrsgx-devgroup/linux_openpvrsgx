@@ -324,6 +324,9 @@ static PVRSRV_ERROR InitDevInfo(PVRSRV_PER_PROCESS_DATA *psPerProc,
 	psDevInfo->ui32MasterClkGateStatus2Mask =
 	psInitInfo->ui32MasterClkGateStatus2Mask;
 #endif /* SGX_FEATURE_MP */
+#if defined(SGX_FEATURE_AUTOCLOCKGATING)
+	psDevInfo->bDisableClockGating = psInitInfo->bDisableClockGating;
+#endif
 
 	/* Initialise Dev Data */
 	OSMemCopy(&psDevInfo->asSGXDevData, &psInitInfo->asInitDevData,
@@ -922,6 +925,9 @@ static PVRSRV_ERROR DevInitSGXPart1(IMG_VOID *pvDeviceNode)
 	psDevInfo->eDeviceType = DEV_DEVICE_TYPE;
 	psDevInfo->eDeviceClass = DEV_DEVICE_CLASS;
 
+	/* Initialize SGX idle status */
+	psDevInfo->bSGXIdle = IMG_TRUE;
+
 	/* Store the devinfo as its needed by dynamically enumerated systems called from BM */
 	psDeviceNode->pvDevice = (IMG_PVOID)psDevInfo;
 
@@ -1489,7 +1495,12 @@ IMG_VOID SGXDumpDebugInfo(PVRSRV_SGXDEV_INFO *psDevInfo, IMG_BOOL bDumpSGXRegs)
 	*/
 	ui32RegVal = OSReadHWReg(psDevInfo->pvRegsBaseKM,
 	 EUR_CR_BIF_INT_STAT);
-	if (ui32RegVal & EUR_CR_BIF_INT_STAT_PF_N_RW_MASK) {
+#if defined(EUR_CR_BIF_INT_STAT_PF_N_RW_MASK)
+	if (ui32RegVal & EUR_CR_BIF_INT_STAT_PF_N_RW_MASK)
+#else
+	if (ui32RegVal & EUR_CR_BIF_INT_STAT_FAULT_TYPE_MASK)
+#endif
+	{
 	ui32RegVal =
 	OSReadHWReg(psDevInfo->pvRegsBaseKM,
 	    EUR_CR_BIF_FAULT);
@@ -2617,13 +2628,38 @@ PVRSRV_ERROR SGXRegisterDevice(PVRSRV_DEVICE_NODE *psDeviceNode)
 	psDeviceMemoryHeap->DevMemHeapType = DEVICE_MEMORY_HEAP_PERCONTEXT;
 	/* set the default (4k). System can override these as required */
 	psDeviceMemoryHeap->ui32DataPageSize = SGX_MMU_PAGE_SIZE;
-#if !defined(SUPPORT_SGX_GENERAL_MAPPING_HEAP)
+#if !defined(SUPPORT_SGX_GENERAL_MAPPING_HEAP) && !defined(SGX5300)
 	/* specify the mapping heap ID for this device */
 	psDevMemoryInfo->ui32MappingHeapID =
 	(IMG_UINT32)(psDeviceMemoryHeap -
 	     psDevMemoryInfo->psDeviceMemoryHeap);
 #endif
 	psDeviceMemoryHeap++; /* advance to the next heap */
+
+#if defined(SGX_FEATURE_ADDRESS_SPACE_EXTENSION)
+	/************* Texture Heap ***************/
+	psDeviceMemoryHeap->ui32HeapID =
+	HEAP_ID(PVRSRV_DEVICE_TYPE_SGX, SGX_TEXTURE_HEAP_ID);
+	psDeviceMemoryHeap->sDevVAddrBase.uiAddr = SGX_TEXTURE_HEAP_BASE;
+	psDeviceMemoryHeap->ui32HeapSize = SGX_TEXTURE_HEAP_SIZE;
+	psDeviceMemoryHeap->ui32Attribs = PVRSRV_HAP_WRITECOMBINE |
+	  PVRSRV_MEM_RAM_BACKED_ALLOCATION |
+	  PVRSRV_HAP_SINGLE_PROCESS;
+
+	psDeviceMemoryHeap->pszName = "Texture";
+	psDeviceMemoryHeap->pszBSName = "Texture BS";
+	psDeviceMemoryHeap->DevMemHeapType = DEVICE_MEMORY_HEAP_PERCONTEXT;
+	/* set the default (4k). System can override these as required */
+	psDeviceMemoryHeap->ui32DataPageSize = SGX_MMU_PAGE_SIZE;
+	/* The mapping heap ID should be texture heap for SGX5300 */
+#if !defined(SUPPORT_SGX_GENERAL_MAPPING_HEAP) && defined(SGX5300)
+	/* specify the mapping heap ID for this device */
+	psDevMemoryInfo->ui32MappingHeapID =
+	(IMG_UINT32)(psDeviceMemoryHeap -
+	     psDevMemoryInfo->psDeviceMemoryHeap);
+#endif
+	psDeviceMemoryHeap++; /* advance to the next heap */
+#endif
 
 #if defined(SUPPORT_MEMORY_TILING)
 	/************* VPB tiling ***************/
@@ -3289,12 +3325,12 @@ PVRSRV_ERROR SGXGetMiscInfoKM(PVRSRV_SGXDEV_INFO *psDevInfo,
 {
 	PVRSRV_ERROR eError;
 	PPVRSRV_KERNEL_MEM_INFO psMemInfo = psDevInfo->psKernelSGXMiscMemInfo;
+#if defined(SUPPORT_SGX_EDM_MEMORY_DEBUG)
 	IMG_UINT32 *pui32MiscInfoFlags;
 	pui32MiscInfoFlags =
 	&((PVRSRV_SGX_MISCINFO_INFO *)(psMemInfo->pvLinAddrKM))
 	 ->ui32MiscInfoFlags;
-
-#if !defined(SUPPORT_SGX_EDM_MEMORY_DEBUG)
+#else
 	PVR_UNREFERENCED_PARAMETER(hDevMemContext);
 #endif
 

@@ -1,6 +1,6 @@
 /**********************************************************************
  *
- * Copyright (C) Imagination Technologies Ltd. All rights reserved.
+ * Copyright(c) 2008 Imagination Technologies Ltd. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -24,32 +24,43 @@
  *
  ******************************************************************************/
 
-#ifndef __LINKAGE_H__
-#define __LINKAGE_H__
+#if !defined(__OEMFUNCS_H__)
+#define __OEMFUNCS_H__
 
-#if !defined(SUPPORT_DRI_DRM)
-long PVRSRV_BridgeDispatchKM(struct file *file, unsigned int cmd,
-	     unsigned long arg);
+#if defined(__cplusplus)
+extern "C" {
 #endif
 
-IMG_VOID PVRDPFInit(IMG_VOID);
-PVRSRV_ERROR PVROSFuncInit(IMG_VOID);
-IMG_VOID PVROSFuncDeInit(IMG_VOID);
+#define OEM_EXCHANGE_POWER_STATE (1 << 0)
+#define OEM_DEVICE_MEMORY_POWER (1 << 1)
+#define OEM_DISPLAY_POWER (1 << 2)
+#define OEM_GET_EXT_FUNCS (1 << 3)
 
-#ifdef DEBUG
+typedef struct OEM_ACCESS_INFO_TAG {
+	IMG_UINT32 ui32Size;
+	IMG_UINT32 ui32FBPhysBaseAddress;
+	IMG_UINT32 ui32FBMemAvailable;
+	IMG_UINT32 ui32SysPhysBaseAddress;
+	IMG_UINT32 ui32SysSize;
+	IMG_UINT32 ui32DevIRQ;
+} OEM_ACCESS_INFO, *POEM_ACCESS_INFO;
 
-IMG_INT PVRDebugProcSetLevel(struct file *file, const IMG_CHAR *buffer,
-	     IMG_UINT32 count, IMG_VOID *data);
-void ProcSeqShowDebugLevel(struct seq_file *sfile, void *el);
+typedef IMG_UINT32 (*PFN_SRV_BRIDGEDISPATCH)(IMG_UINT32 Ioctl, IMG_BYTE *pInBuf,
+	     IMG_UINT32 InBufLen,
+	     IMG_BYTE *pOutBuf,
+	     IMG_UINT32 OutBufLen,
+	     IMG_UINT32 *pdwBytesTransferred);
 
-#ifdef PVR_MANUAL_POWER_CONTROL
-IMG_INT PVRProcSetPowerLevel(struct file *file, const IMG_CHAR *buffer,
-	     IMG_UINT32 count, IMG_VOID *data);
+typedef PVRSRV_ERROR (*PFN_SRV_READREGSTRING)(PPVRSRV_REGISTRY_INFO psRegInfo);
 
-void ProcSeqShowPowerLevel(struct seq_file *sfile, void *el);
+typedef struct PVRSRV_DC_OEM_JTABLE_TAG {
+	PFN_SRV_BRIDGEDISPATCH pfnOEMBridgeDispatch;
+	PFN_SRV_READREGSTRING pfnOEMReadRegistryString;
+	PFN_SRV_READREGSTRING pfnOEMWriteRegistryString;
 
-#endif
-
+} PVRSRV_DC_OEM_JTABLE;
+#if defined(__cplusplus)
+}
 #endif
 
 #endif

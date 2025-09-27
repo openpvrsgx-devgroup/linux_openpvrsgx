@@ -45,8 +45,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "lists.h"
 #include "ttrace.h"
 
-#include "mtk_debug.h"
-
 /*
  * The number of commands of each type which can be in flight at once.
  */
@@ -278,7 +276,7 @@ static IMG_VOID QueueDumpCmdComplete(COMMAND_COMPLETE_DATA *psCmdCompleteData,
 	psCmdCompleteData->psDstSync;
 
 	if (psCmdCompleteData->bInUse) {
-	PVR_LOG_MDWP((
+	PVR_LOG((
 	"\t%s %u: ROC DevVAddr:0x%X ROP:0x%x ROC:0x%x, WOC DevVAddr:0x%X WOP:0x%x WOC:0x%x",
 	bIsSrc ? "SRC" : "DEST", i,
 	psSyncObject[i]
@@ -300,8 +298,7 @@ static IMG_VOID QueueDumpCmdComplete(COMMAND_COMPLETE_DATA *psCmdCompleteData,
 	.psKernelSyncInfoKM->psSyncData
 	->ui32WriteOpsComplete))
 	} else {
-	PVR_LOG_MDWP(
-	("\t%s %u: (Not in use)", bIsSrc ? "SRC" : "DEST", i))
+	PVR_LOG(("\t%s %u: (Not in use)", bIsSrc ? "SRC" : "DEST", i))
 	}
 }
 
@@ -328,7 +325,7 @@ static IMG_VOID QueueDumpDebugInfo_ForEachCb(PVRSRV_DEVICE_NODE *psDeviceNode)
 	.apsCmdCompleteData
 	[ui32CmdCounter];
 
-	PVR_LOG_MDWP((
+	PVR_LOG((
 	"Flip Command Complete Data %u for display device %u:",
 	ui32CmdCounter,
 	psDeviceNode->sDevId.ui32DeviceIndex))
@@ -352,7 +349,7 @@ static IMG_VOID QueueDumpDebugInfo_ForEachCb(PVRSRV_DEVICE_NODE *psDeviceNode)
 	}
 	}
 	} else {
-	PVR_LOG_MDWP((
+	PVR_LOG((
 	"There is no Command Complete Data for display device %u",
 	psDeviceNode->sDevId.ui32DeviceIndex))
 	}
@@ -1146,11 +1143,13 @@ static PVRSRV_ERROR PVRSRVProcessCommand(SYS_DATA *psSysData,
 	*/
 	psCmdCompleteData->bInUse = IMG_FALSE;
 	eError = PVRSRV_ERROR_CMD_NOT_PROCESSED;
-	}
-
+	PVR_LOG((
+	"Failed to submit command from queue processor, this could cause sync wedge!"));
+	} else {
 	/* Increment the CCB offset */
 	psDeviceCommandData[psCommand->CommandType].ui32CCBOffset =
 	(ui32CCBOffset + 1) % DC_NUM_COMMANDS_PER_TYPE;
+	}
 
 	return eError;
 }

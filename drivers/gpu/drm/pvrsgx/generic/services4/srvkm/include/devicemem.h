@@ -1,5 +1,5 @@
 /*************************************************************************/ /*!
-@Title          PowerVR drm driver shared definitions
+@Title          KM internal device memory functions
 @Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
 @License        Dual MIT/GPLv2
 
@@ -38,31 +38,15 @@ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */ /**************************************************************************/
-#if !defined(__PVR_DRM_SHARED_H__)
-#define __PVR_DRM_SHARED_H__
 
-#if defined(SUPPORT_DRI_DRM)
+#include "img_defs.h"
+#include "img_types.h"
+#include "servicesext.h"
 
-/* DRM command numbers, relative to DRM_COMMAND_BASE */
-#if defined(SUPPORT_DRI_DRM_EXT)
-#define DRM_PVR_SRVKM DRM_PVR_RESERVED1
-#define DRM_PVR_DISP DRM_PVR_RESERVED2
-#define DRM_PVR_BC DRM_PVR_RESERVED3
-#define DRM_PVR_IS_MASTER DRM_PVR_RESERVED4
-#define DRM_PVR_UNPRIV DRM_PVR_RESERVED5
-#define DRM_PVR_DBGDRV DRM_PVR_RESERVED6
-#else /* defined(SUPPORT_DRI_DRM_EXT) */
-#define DRM_PVR_SRVKM 0x00
-#define DRM_PVR_DISP 0x01
-#define DRM_PVR_BC 0x02
-#define DRM_PVR_IS_MASTER 0x03
-#define DRM_PVR_UNPRIV 0x04
-#define DRM_PVR_DBGDRV 0x05
-#endif /* defined(SUPPORT_DRI_DRM_EXT) */
+#ifndef __DEVICEMEM_H__
+#define __DEVICEMEM_H__
 
-/* Subcommands of PVR_DRM_UNPRIV_CMD */
-#define PVR_DRM_UNPRIV_INIT_SUCCESFUL 0 /* PVR Services init succesful */
+PVRSRV_ERROR IMG_CALLCONV PVRSRVInitDeviceMem(IMG_VOID);
+IMG_VOID IMG_CALLCONV PVRSRVDeInitDeviceMem(IMG_VOID);
 
-#endif
-
-#endif /* defined(__PVR_DRM_SHARED_H__) */
+#endif /* __DEVICEMEM_H__ */

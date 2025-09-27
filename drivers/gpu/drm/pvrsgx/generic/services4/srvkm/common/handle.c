@@ -2419,6 +2419,7 @@ static PVRSRV_ERROR PVRSRVHandleBatchCommitOrRelease(PVRSRV_HANDLE_BASE *psBase,
 {
 	IMG_UINT32 ui32IndexPlusOne;
 	IMG_BOOL bCommitBatch = bCommit;
+	PVRSRV_ERROR eError;
 
 	if (!HANDLES_BATCHED(psBase)) {
 	PVR_DPF((
@@ -2452,8 +2453,6 @@ static PVRSRV_ERROR PVRSRVHandleBatchCommitOrRelease(PVRSRV_HANDLE_BASE *psBase,
 	psHandle->ui32NextIndexPlusOne = 0;
 
 	if (!bCommitBatch || BATCHED_HANDLE_PARTIALLY_FREE(psHandle)) {
-	PVRSRV_ERROR eError;
-
 	/*
 	 * We need a complete free here.  If the handle
 	 * is not partially free, set the handle as
@@ -2497,18 +2496,20 @@ static PVRSRV_ERROR PVRSRVHandleBatchCommitOrRelease(PVRSRV_HANDLE_BASE *psBase,
 	}
 #endif
 
+	eError = PVRSRV_OK;
+
+	if (psBase->ui32BatchHandAllocFailures != 0 && bCommit) {
+	PVR_ASSERT(!bCommitBatch);
+
+	eError = PVRSRV_ERROR_HANDLE_BATCH_COMMIT_FAILURE;
+	}
+
 	psBase->ui32HandBatchSize = 0;
 	psBase->ui32FirstBatchIndexPlusOne = 0;
 	psBase->ui32TotalHandCountPreBatch = 0;
 	psBase->ui32BatchHandAllocFailures = 0;
 
-	if (psBase->ui32BatchHandAllocFailures != 0 && bCommit) {
-	PVR_ASSERT(!bCommitBatch);
-
-	return PVRSRV_ERROR_HANDLE_BATCH_COMMIT_FAILURE;
-	}
-
-	return PVRSRV_OK;
+	return eError;
 }
 
 /*!

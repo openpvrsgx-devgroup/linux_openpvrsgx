@@ -1597,7 +1597,8 @@ PVRSRV_ERROR PVRSRVGetDCBuffersKM(IMG_HANDLE hDeviceKM,
 	phBuffer[i] = (IMG_HANDLE)&psSwapChain->asBuffer[i];
 	}
 
-#if defined(SUPPORT_GET_DC_BUFFERS_SYS_PHYADDRS)
+#if defined(SUPPORT_GET_DC_BUFFERS_SYS_PHYADDRS) || \
+	defined(MTK_GET_BUFFER_PHYADDR)
 	for (i = 0; i < *pui32BufferCount; i++) {
 	IMG_UINT32 ui32ByteSize, ui32TilingStride;
 	IMG_SYS_PHYADDR *pPhyAddr;

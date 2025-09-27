@@ -443,6 +443,9 @@ typedef struct _PVRSRV_CLIENT_MEM_INFO_ {
 	IMG_UINT32 dummy2;
 #endif /* !defined(USE_CODE) */
 #endif /* defined(SUPPORT_MEMINFO_IDS) */
+#if 1 //#if defined (CONFIG_ION_MTK)
+	int share_ionFd;
+#endif
 
 	/*
 	ptr to next mem info

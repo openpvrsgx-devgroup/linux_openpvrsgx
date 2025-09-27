@@ -49,9 +49,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <asm/io.h>
 #include <asm/page.h>
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 22))
-#include <asm/system.h>
-#endif
 #include <asm/cacheflush.h>
 #include <linux/mm.h>
 #include <linux/pagemap.h>
@@ -61,6 +58,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <linux/delay.h>
 #include <linux/pci.h>
 
+#include <linux/types.h>
 #include <linux/string.h>
 #include <linux/sched.h>
 #include <linux/interrupt.h>
@@ -76,8 +74,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 	defined(PVR_LINUX_USING_WORKQUEUES)
 #include <linux/workqueue.h>
 #endif
-
-#include <mach/sync_write.h>
 
 #include "img_types.h"
 #include "services_headers.h"
@@ -106,7 +102,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define ON_EACH_CPU(func, info, wait) on_each_cpu(func, info, 0, wait)
 #endif
 
-#if defined(PVR_LINUX_USING_WORKQUEUES) && !defined(CONFIG_PREEMPT)
+#if defined(PVR_LINUX_USING_WORKQUEUES) && !defined(CONFIG_PREEMPT) && \
+	!defined(CONFIG_PREEMPT_VOLUNTARY)
 /*
  * Services spins at certain points waiting for events (e.g. swap
  * chain destrucion).  If those events rely on workqueues running,
@@ -399,6 +396,22 @@ OSReleaseSubMemHandle(IMG_VOID *hOSMemHandle, IMG_UINT32 ui32Flags)
 
 	return PVRSRV_OK;
 }
+
+#if defined(SUPPORT_DRI_DRM_EXTERNAL)
+IMG_VOID
+OSMemHandleSetGEM(IMG_VOID *hOSMemHandle, IMG_HANDLE buf)
+{
+	LinuxMemArea *psLinuxMemArea = hOSMemHandle;
+	psLinuxMemArea->buf = buf;
+}
+
+IMG_HANDLE
+OSMemHandleGetGEM(IMG_VOID *hOSMemHandle)
+{
+	LinuxMemArea *psLinuxMemArea = hOSMemHandle;
+	return psLinuxMemArea->buf;
+}
+#endif /* SUPPORT_DRI_DRM_EXTERNAL */
 
 IMG_CPU_PHYADDR
 OSMemHandleToCpuPAddr(IMG_VOID *hOSMemHandle, IMG_UINT32 ui32ByteOffset)
@@ -936,7 +949,7 @@ PVRSRV_ERROR OSInstallDeviceLISR(IMG_VOID *pvSysData, IMG_UINT32 ui32Irq,
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 22))
 	SA_SHIRQ
 #else
-	IRQF_TRIGGER_LOW
+	IRQF_SHARED
 #endif
 	,
 	pszISRName, pvDeviceNode)) {
@@ -2060,9 +2073,7 @@ IMG_VOID OSWriteHWReg(IMG_PVOID pvLinRegBaseAddr, IMG_UINT32 ui32Offset,
 	      IMG_UINT32 ui32Value)
 {
 #if !defined(NO_HARDWARE)
-	//    writel(ui32Value, (IMG_PBYTE)pvLinRegBaseAddr+ui32Offset);
-	mt65xx_reg_sync_writel(ui32Value,
-	       (IMG_PBYTE)pvLinRegBaseAddr + ui32Offset);
+	writel(ui32Value, (IMG_PBYTE)pvLinRegBaseAddr + ui32Offset);
 #else
 	*(IMG_UINT32 *)((IMG_PBYTE)pvLinRegBaseAddr + ui32Offset) = ui32Value;
 #endif
@@ -2883,7 +2894,7 @@ PVRSRV_ERROR OSDisableTimer(IMG_HANDLE hTimer)
 #endif
 
 	/* remove timer */
-	del_timer_sync(&psTimerCBData->sTimer);
+	timer_delete_sync(&psTimerCBData->sTimer);
 
 #if defined(PVR_LINUX_TIMERS_USING_WORKQUEUES)
 	/*
@@ -3665,8 +3676,14 @@ PVRSRV_ERROR OSAcquirePhysPageAddr(IMG_VOID *pvCPUVAddr, IMG_UINT32 ui32Bytes,
 	}
 
 	/* Does the region represent memory mapped I/O? */
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(3, 6, 0))
+	if ((psVMArea->vm_flags & (VM_IO | VM_DONTEXPAND | VM_DONTDUMP)) !=
+	    (VM_IO | VM_DONTEXPAND | VM_DONTDUMP))
+#else
 	if ((psVMArea->vm_flags & (VM_IO | VM_RESERVED)) !=
-	    (VM_IO | VM_RESERVED)) {
+	    (VM_IO | VM_RESERVED))
+#endif
+	{
 	PVR_DPF((
 	PVR_DBG_ERROR,
 	"OSAcquirePhysPageAddr: Memory region does not represent memory mapped I/O (VMA flags: 0x%lx)",
@@ -3966,7 +3983,7 @@ static IMG_BOOL CheckExecuteCacheOp(IMG_HANDLE hOSMemHandle,
 
 	PVR_ASSERT(psLinuxMemArea != IMG_NULL);
 
-	LinuxLockMutex(&g_sMMapMutex);
+	LinuxLockMutexNested(&g_sMMapMutex, PVRSRV_LOCK_CLASS_MMAP);
 
 	psMMapOffsetStructList = &psLinuxMemArea->sMMapOffsetStructList;
 	ui32AreaLength = psLinuxMemArea->ui32ByteSize;
@@ -4328,9 +4345,19 @@ IMG_BOOL OSCleanCPUCacheRangeKM(IMG_HANDLE hOSMemHandle,
 	IMG_VOID *pvRangeAddrStart,
 	IMG_UINT32 ui32Length)
 {
-	return CheckExecuteCacheOp(hOSMemHandle, ui32ByteOffset,
-	   pvRangeAddrStart, ui32Length,
-	   pvr_dmac_clean_range, outer_clean_range);
+	IMG_BOOL retval = IMG_TRUE;
+#if defined(CONFIG_OUTER_CACHE) && !defined(PVR_NO_FULL_CACHE_OPS)
+	if (ui32Length > PVR_FULL_CACHE_OP_THRESHOLD)
+	OSCleanCPUCacheKM();
+	else
+#endif
+	{
+	retval = CheckExecuteCacheOp(hOSMemHandle, ui32ByteOffset,
+	     pvRangeAddrStart, ui32Length,
+	     pvr_dmac_clean_range,
+	     outer_clean_range);
+	}
+	return retval;
 }
 
 IMG_BOOL OSInvalidateCPUCacheRangeKM(IMG_HANDLE hOSMemHandle,
@@ -4500,7 +4527,7 @@ IMG_VOID OSReleaseBridgeLock(IMG_VOID)
 
 IMG_VOID OSReacquireBridgeLock(IMG_VOID)
 {
-	LinuxLockMutex(&gPVRSRVLock);
+	LinuxLockMutexNested(&gPVRSRVLock, PVRSRV_LOCK_CLASS_BRIDGE);
 }
 
 typedef struct _OSTime {
@@ -4516,8 +4543,7 @@ PVRSRV_ERROR OSTimeCreateWithUSOffset(IMG_PVOID *pvRet, IMG_UINT32 ui32USOffset)
 	return PVRSRV_ERROR_OUT_OF_MEMORY;
 	}
 
-	psOSTime->ulTime =
-	usecs_to_jiffies(jiffies_to_usecs(jiffies) + ui32USOffset);
+	psOSTime->ulTime = jiffies + usecs_to_jiffies(ui32USOffset);
 	*pvRet = psOSTime;
 	return PVRSRV_OK;
 }

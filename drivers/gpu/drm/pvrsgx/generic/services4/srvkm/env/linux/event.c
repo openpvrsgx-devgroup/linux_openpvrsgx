@@ -49,9 +49,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <asm/io.h>
 #include <asm/page.h>
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 22))
-#include <asm/system.h>
-#endif
 #include <linux/mm.h>
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
@@ -410,7 +407,7 @@ PVRSRV_ERROR LinuxEventObjectWait(IMG_HANDLE hOSEventObject,
 	ui32TimeOutJiffies = (IMG_UINT32)schedule_timeout(
 	(IMG_INT32)ui32TimeOutJiffies);
 
-	LinuxLockMutex(&gPVRSRVLock);
+	LinuxLockMutexNested(&gPVRSRVLock, PVRSRV_LOCK_CLASS_BRIDGE);
 #if defined(DEBUG)
 	psLinuxEventObject->ui32Stats++;
 #endif

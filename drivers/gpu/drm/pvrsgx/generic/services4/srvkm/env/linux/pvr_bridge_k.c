@@ -41,6 +41,8 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */ /**************************************************************************/
 
+#include <linux/fs.h>
+
 #include "img_defs.h"
 #include "services.h"
 #include "pvr_bridge.h"
@@ -84,7 +86,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #if defined(DEBUG_BRIDGE_KM)
 
-static struct proc_dir_entry *g_ProcBridgeStats = 0;
+static struct pvr_proc_dir_entry *g_ProcBridgeStats = 0;
 static void *ProcSeqNextBridgeStats(struct seq_file *sfile, void *el,
 	    loff_t off);
 static void ProcSeqShowBridgeStats(struct seq_file *sfile, void *el);
@@ -96,7 +98,7 @@ static void ProcSeqStartstopBridgeStats(struct seq_file *sfile, IMG_BOOL start);
 extern PVRSRV_LINUX_MUTEX gPVRSRVLock;
 
 #if defined(SUPPORT_MEMINFO_IDS)
-static IMG_UINT64 ui64Stamp;
+IMG_UINT64 g_ui64MemInfoID;
 #endif /* defined(SUPPORT_MEMINFO_IDS) */
 
 PVRSRV_ERROR
@@ -136,7 +138,7 @@ LinuxBridgeDeInit(IMG_VOID)
 static void ProcSeqStartstopBridgeStats(struct seq_file *sfile, IMG_BOOL start)
 {
 	if (start) {
-	LinuxLockMutex(&gPVRSRVLock);
+	LinuxLockMutexNested(&gPVRSRVLock, PVRSRV_LOCK_CLASS_BRIDGE);
 	} else {
 	LinuxUnLockMutex(&gPVRSRVLock);
 	}
@@ -215,7 +217,6 @@ static void ProcSeqShowBridgeStats(struct seq_file *sfile, void *el)
 	   psEntry->ui32CallCount, psEntry->ui32CopyFromUserTotalBytes,
 	   psEntry->ui32CopyToUserTotalBytes);
 }
-
 #endif /* DEBUG_BRIDGE_KM */
 
 #if defined(SUPPORT_DRI_DRM)
@@ -236,7 +237,7 @@ long PVRSRV_BridgeDispatchKM(struct file *pFile, unsigned int unref__ ioctlCmd,
 	PVRSRV_PER_PROCESS_DATA *psPerProc;
 	IMG_INT err = -EFAULT;
 
-	LinuxLockMutex(&gPVRSRVLock);
+	LinuxLockMutexNested(&gPVRSRVLock, PVRSRV_LOCK_CLASS_BRIDGE);
 
 #if defined(SUPPORT_DRI_DRM)
 	psBridgePackageKM = (PVRSRV_BRIDGE_PACKAGE *)arg;
@@ -263,19 +264,6 @@ long PVRSRV_BridgeDispatchKM(struct file *pFile, unsigned int unref__ ioctlCmd,
 #endif
 
 	cmd = psBridgePackageKM->ui32BridgeID;
-
-#if defined(MTK_DEBUG)
-	switch (cmd) {
-	case PVRSRV_BRIDGE_INITSRV_CONNECT:
-	MTKDebugEnable3DMemInfo(psBridgePackageKM->acDebugMsg[0] ==
-	'1');
-	break;
-	case PVRSRV_BRIDGE_ALLOC_DEVICEMEM:
-	MTKDebugSetInfo(psBridgePackageKM->acDebugMsg,
-	sizeof(psBridgePackageKM->acDebugMsg));
-	break;
-	}
-#endif
 
 	if (cmd != PVRSRV_BRIDGE_CONNECT_SERVICES) {
 	PVRSRV_ERROR eError;
@@ -465,7 +453,7 @@ long PVRSRV_BridgeDispatchKM(struct file *pFile, unsigned int unref__ ioctlCmd,
 
 	psPrivateData->hKernelMemInfo = hMemInfo;
 #if defined(SUPPORT_MEMINFO_IDS)
-	psPrivateData->ui64Stamp = ++ui64Stamp;
+	psPrivateData->ui64Stamp = ++g_ui64MemInfoID;
 
 	psKernelMemInfo->ui64Stamp = psPrivateData->ui64Stamp;
 	if (pvr_put_user(psPrivateData->ui64Stamp,
@@ -497,7 +485,7 @@ long PVRSRV_BridgeDispatchKM(struct file *pFile, unsigned int unref__ ioctlCmd,
 	PVRSRV_BRIDGE_OUT_MAP_DEVICECLASS_MEMORY *psDeviceClassMemoryOUT =
 	(PVRSRV_BRIDGE_OUT_MAP_DEVICECLASS_MEMORY *)
 	psBridgePackageKM->pvParamOut;
-	if (pvr_put_user(++ui64Stamp,
+	if (pvr_put_user(++g_ui64MemInfoID,
 	 &psDeviceClassMemoryOUT->sClientMemInfo
 	  .ui64Stamp) != 0) {
 	err = -EFAULT;

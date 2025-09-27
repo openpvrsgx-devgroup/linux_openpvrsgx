@@ -55,16 +55,20 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 15))
 
-#if !defined(CONFIG_PROVE_LOCKING)
 IMG_VOID LinuxInitMutex(PVRSRV_LINUX_MUTEX *psPVRSRVMutex)
 {
 	mutex_init(psPVRSRVMutex);
 }
-#endif
 
 IMG_VOID LinuxLockMutex(PVRSRV_LINUX_MUTEX *psPVRSRVMutex)
 {
 	mutex_lock(psPVRSRVMutex);
+}
+
+IMG_VOID LinuxLockMutexNested(PVRSRV_LINUX_MUTEX *psPVRSRVMutex,
+	      unsigned int uiLockClass)
+{
+	mutex_lock_nested(psPVRSRVMutex, uiLockClass);
 }
 
 PVRSRV_ERROR LinuxLockMutexInterruptible(PVRSRV_LINUX_MUTEX *psPVRSRVMutex)
@@ -105,6 +109,12 @@ IMG_VOID LinuxLockMutex(PVRSRV_LINUX_MUTEX *psPVRSRVMutex)
 	atomic_dec(&psPVRSRVMutex->Count);
 }
 
+IMG_VOID LinuxLockMutexNested(PVRSRV_LINUX_MUTEX *psPVRSRVMutex,
+	      unsigned int uiLockClass)
+{
+	LinuxLockMutex(psPVRSRVMutex);
+}
+
 PVRSRV_ERROR LinuxLockMutexInterruptible(PVRSRV_LINUX_MUTEX *psPVRSRVMutex)
 {
 	if (down_interruptible(&psPVRSRVMutex->sSemaphore) == -EINTR) {
@@ -125,7 +135,7 @@ IMG_INT32 LinuxTryLockMutex(PVRSRV_LINUX_MUTEX *psPVRSRVMutex)
 	atomic_dec(&psPVRSRVMutex->Count);
 	}
 
-	return Status;
+	return Status == 0;
 }
 
 IMG_VOID LinuxUnLockMutex(PVRSRV_LINUX_MUTEX *psPVRSRVMutex)

@@ -951,8 +951,8 @@ static IMG_UINT32 WriteExpandingBuffer(PDBG_STREAM psStream,
 	*/
 	if ((psStream->psCtrl->ui32OutMode & DEBUG_OUTMODE_STREAMENABLE) == 0) {
 	PVR_DPF((PVR_DBG_ERROR,
-	 "WriteExpandingBuffer: buffer %x is disabled",
-	 (IMG_UINTPTR_T)psStream));
+	 "WriteExpandingBuffer: buffer %p is disabled",
+	 psStream));
 	return (0);
 	}
 
@@ -967,8 +967,8 @@ static IMG_UINT32 WriteExpandingBuffer(PDBG_STREAM psStream,
 	if (ui32Space < 32) {
 	PVR_DPF((
 	PVR_DBG_ERROR,
-	"WriteExpandingBuffer: buffer %x is full and isn't expandable",
-	(IMG_UINTPTR_T)psStream));
+	"WriteExpandingBuffer: buffer %p is full and isn't expandable",
+	psStream));
 	return (0);
 	}
 	} else {
@@ -999,8 +999,7 @@ static IMG_UINT32 WriteExpandingBuffer(PDBG_STREAM psStream,
 	/* out of memory */
 	PVR_DPF((
 	PVR_DBG_ERROR,
-	"WriteExpandingBuffer: Unable to expand %x. Out of memory.",
-	(IMG_UINTPTR_T)
+	"WriteExpandingBuffer: Unable to expand %p. Out of memory.",
 	psStream));
 	InvalidateAllStreams();
 	return (0xFFFFFFFFUL);
@@ -1762,14 +1761,14 @@ IMG_UINT32 IMG_CALLCONV DBGDrivWrite(PDBG_STREAM psMainStream,
 	Don't copy anything if we don't have space or buffers not enabled.
 	*/
 	if ((psStream->psCtrl->ui32OutMode & DEBUG_OUTMODE_STREAMENABLE) == 0) {
-	PVR_DPF((PVR_DBG_ERROR, "DBGDrivWrite: buffer %x is disabled",
-	 (IMG_UINTPTR_T)psStream));
+	PVR_DPF((PVR_DBG_ERROR, "DBGDrivWrite: buffer %p is disabled",
+	 psStream));
 	return (0);
 	}
 
 	if (ui32Space < 8) {
-	PVR_DPF((PVR_DBG_ERROR, "DBGDrivWrite: buffer %x is full",
-	 (IMG_UINTPTR_T)psStream));
+	PVR_DPF((PVR_DBG_ERROR, "DBGDrivWrite: buffer %p is full",
+	 psStream));
 	return (0);
 	}
 
@@ -1945,8 +1944,8 @@ IMG_UINT32 IMG_CALLCONV DBGDrivRead(PDBG_STREAM psMainStream,
 	Validate buffer.
 	*/
 	if (!StreamValidForRead(psMainStream)) {
-	PVR_DPF((PVR_DBG_ERROR, "DBGDrivRead: buffer %x is invalid",
-	 (IMG_UINTPTR_T)psMainStream));
+	PVR_DPF((PVR_DBG_ERROR, "DBGDrivRead: buffer %p is invalid",
+	 psMainStream));
 	return (0);
 	}
 

@@ -65,7 +65,6 @@ $(OUT)/target/kbuild/%.c: $(TOP)/%.c
 	@if [ ! -h $@ ]; then ln -sf $< $@; fi
 
 ccflags-y += -D__linux__ -include $(OUT)/config_kernel.h \
- -DDEBUG_LOG_PATH_TRUNCATE="\"$(OUT)/target/kbuild\"" \
  -I$(OUT)/include \
  -I$(TOP)/include4 \
  -I$(TOP)/services4/include \

@@ -104,6 +104,10 @@ define cc-is-64bit
 $(call cc-check,$(1),$(OUT),--64)
 endef
 
+define cc-is-clang
+$(call cc-check,$(patsubst @%,%,$(CC)),$(OUT),--clang)
+endef
+
 define cc-option
 $(call cc-check,$(patsubst @%,%,$(CC)),$(OUT),$(1))
 endef
@@ -114,6 +118,10 @@ endef
 
 define host-cc-option
 $(call cc-check,$(patsubst @%,%,$(HOST_CC)),$(OUT),$(1))
+endef
+
+define host-cxx-option
+$(call cc-check,$(patsubst @%,%,$(HOST_CXX)),$(OUT),$(1))
 endef
 
 define kernel-cc-option

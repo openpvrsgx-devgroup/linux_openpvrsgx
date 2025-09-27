@@ -72,14 +72,12 @@ IMG_VOID SGXInitClocks(PVRSRV_SGXDEV_INFO *psDevInfo, IMG_UINT32 ui32PDUMPFlags)
 
 	ui32RegVal = psDevInfo->ui32ClkGateCtl;
 	OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_CLKGATECTL, ui32RegVal);
-	OSReadHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_CLKGATECTL);
 	PDUMPREGWITHFLAGS(SGX_PDUMPREG_NAME, EUR_CR_CLKGATECTL, ui32RegVal,
 	  ui32PDUMPFlags);
 
 #if defined(EUR_CR_CLKGATECTL2)
 	ui32RegVal = psDevInfo->ui32ClkGateCtl2;
 	OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_CLKGATECTL2, ui32RegVal);
-	OSReadHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_CLKGATECTL2);
 	PDUMPREGWITHFLAGS(SGX_PDUMPREG_NAME, EUR_CR_CLKGATECTL2, ui32RegVal,
 	  ui32PDUMPFlags);
 #endif
@@ -109,7 +107,6 @@ static IMG_VOID SGXResetInitBIFContexts(PVRSRV_SGXDEV_INFO *psDevInfo,
 
 	ui32RegVal = 0;
 	OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_BIF_CTRL, ui32RegVal);
-	OSReadHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_BIF_CTRL);
 	PDUMPREGWITHFLAGS(SGX_PDUMPREG_NAME, EUR_CR_BIF_CTRL, ui32RegVal,
 	  ui32PDUMPFlags);
 
@@ -117,11 +114,9 @@ static IMG_VOID SGXResetInitBIFContexts(PVRSRV_SGXDEV_INFO *psDevInfo,
 	PDUMPCOMMENTWITHFLAGS(ui32PDUMPFlags,
 	      "Initialise the BIF bank settings\r\n");
 	OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_BIF_BANK_SET, ui32RegVal);
-	OSReadHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_BIF_BANK_SET);
 	PDUMPREGWITHFLAGS(SGX_PDUMPREG_NAME, EUR_CR_BIF_BANK_SET, ui32RegVal,
 	  ui32PDUMPFlags);
 	OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_BIF_BANK0, ui32RegVal);
-	OSReadHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_BIF_BANK0);
 	PDUMPREGWITHFLAGS(SGX_PDUMPREG_NAME, EUR_CR_BIF_BANK0, ui32RegVal,
 	  ui32PDUMPFlags);
 #endif /* SGX_FEATURE_MULTIPLE_MEM_CONTEXTS */
@@ -130,7 +125,6 @@ static IMG_VOID SGXResetInitBIFContexts(PVRSRV_SGXDEV_INFO *psDevInfo,
 	      "Initialise the BIF directory list\r\n");
 	OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_BIF_DIR_LIST_BASE0,
 	     ui32RegVal);
-	OSReadHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_BIF_DIR_LIST_BASE0);
 	PDUMPREGWITHFLAGS(SGX_PDUMPREG_NAME, EUR_CR_BIF_DIR_LIST_BASE0,
 	  ui32RegVal, ui32PDUMPFlags);
 
@@ -145,7 +139,6 @@ static IMG_VOID SGXResetInitBIFContexts(PVRSRV_SGXDEV_INFO *psDevInfo,
 	 4 * (ui32DirList - 1);
 	OSWriteHWReg(psDevInfo->pvRegsBaseKM, ui32DirListReg,
 	     ui32RegVal);
-	OSReadHWReg(psDevInfo->pvRegsBaseKM, ui32DirListReg);
 	PDUMPREGWITHFLAGS(SGX_PDUMPREG_NAME, ui32DirListReg,
 	  ui32RegVal, ui32PDUMPFlags);
 	}
@@ -193,7 +186,6 @@ static IMG_VOID SGXResetSetupBIFContexts(PVRSRV_SGXDEV_INFO *psDevInfo,
 #endif /* FIX_HW_BRN_23410 */
 
 	OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_BIF_BANK0, ui32RegVal);
-	OSReadHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_BIF_BANK0);
 	PDUMPCOMMENTWITHFLAGS(ui32PDUMPFlags,
 	      "Set up EDM requestor page table in BIF\r\n");
 	PDUMPREGWITHFLAGS(SGX_PDUMPREG_NAME, EUR_CR_BIF_BANK0, ui32RegVal,
@@ -212,13 +204,12 @@ static IMG_VOID SGXResetSetupBIFContexts(PVRSRV_SGXDEV_INFO *psDevInfo,
 	    4 * (SGX_BIF_DIR_LIST_INDEX_EDM - 1);
 #endif /* SGX_BIF_DIR_LIST_INDEX_EDM */
 
-	ui32RegVal = psDevInfo->sKernelPDDevPAddr.uiAddr >>
-	     SGX_MMU_PDE_ADDR_ALIGNSHIFT;
+	ui32RegVal = (IMG_UINT32)(psDevInfo->sKernelPDDevPAddr.uiAddr >>
+	  SGX_MMU_PDE_ADDR_ALIGNSHIFT);
 
 #if defined(FIX_HW_BRN_28011)
 	OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_BIF_DIR_LIST_BASE0,
 	     ui32RegVal);
-	OSReadHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_BIF_DIR_LIST_BASE0);
 	PDUMPPDREGWITHFLAGS(&psDevInfo->sMMUAttrib,
 	    EUR_CR_BIF_DIR_LIST_BASE0, ui32RegVal,
 	    ui32PDUMPFlags, PDUMP_PD_UNIQUETAG);
@@ -226,7 +217,6 @@ static IMG_VOID SGXResetSetupBIFContexts(PVRSRV_SGXDEV_INFO *psDevInfo,
 
 	OSWriteHWReg(psDevInfo->pvRegsBaseKM, ui32EDMDirListReg,
 	     ui32RegVal);
-	OSReadHWReg(psDevInfo->pvRegsBaseKM, ui32EDMDirListReg);
 	PDUMPCOMMENTWITHFLAGS(
 	ui32PDUMPFlags,
 	"Initialise the EDM's directory list base\r\n");
@@ -545,6 +535,12 @@ IMG_VOID SGXReset(PVRSRV_SGXDEV_INFO *psDevInfo, IMG_BOOL bHardwareRecovery,
 	PDUMPREGWITHFLAGS(SGX_PDUMPREG_NAME, EUR_CR_BIF_36BIT_ADDRESSING,
 	  EUR_CR_BIF_36BIT_ADDRESSING_ENABLE_MASK,
 	  ui32PDUMPFlags);
+#else
+#if defined(EUR_CR_BIF_36BIT_ADDRESSING)
+	OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_BIF_36BIT_ADDRESSING, 0);
+	PDUMPREGWITHFLAGS(SGX_PDUMPREG_NAME, EUR_CR_BIF_36BIT_ADDRESSING, 0,
+	  ui32PDUMPFlags);
+#endif
 #endif
 
 	SGXResetInitBIFContexts(psDevInfo, ui32PDUMPFlags);
@@ -637,12 +633,14 @@ IMG_VOID SGXReset(PVRSRV_SGXDEV_INFO *psDevInfo, IMG_BOOL bHardwareRecovery,
 
 	/* Map in the dummy page. */
 	psDevInfo->pui32BIFResetPD[ui32PDIndex] =
-	(psDevInfo->sBIFResetPTDevPAddr.uiAddr >>
-	 SGX_MMU_PDE_ADDR_ALIGNSHIFT) |
+	(IMG_UINT32)(psDevInfo->sBIFResetPTDevPAddr
+	     .uiAddr >>
+	     SGX_MMU_PDE_ADDR_ALIGNSHIFT) |
 	SGX_MMU_PDE_PAGE_SIZE_4K | SGX_MMU_PDE_VALID;
 	psDevInfo->pui32BIFResetPT[ui32PTIndex] =
-	(psDevInfo->sBIFResetPageDevPAddr.uiAddr >>
-	 SGX_MMU_PTE_ADDR_ALIGNSHIFT) |
+	(IMG_UINT32)(psDevInfo->sBIFResetPageDevPAddr
+	     .uiAddr >>
+	     SGX_MMU_PTE_ADDR_ALIGNSHIFT) |
 	SGX_MMU_PTE_VALID;
 
 	/* Clear outstanding events. */
@@ -749,7 +747,6 @@ IMG_VOID SGXReset(PVRSRV_SGXDEV_INFO *psDevInfo, IMG_BOOL bHardwareRecovery,
 
 	OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_MASTER_SOFT_RESET,
 	     ui32RegVal);
-	OSReadHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_MASTER_SOFT_RESET);
 	PDUMPCOMMENTWITHFLAGS(
 	ui32PDUMPFlags,
 	"Soft reset hydra partition, hard reset the cores\r\n");
@@ -761,7 +758,6 @@ IMG_VOID SGXReset(PVRSRV_SGXDEV_INFO *psDevInfo, IMG_BOOL bHardwareRecovery,
 	ui32RegVal = 0;
 	OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_MASTER_BIF_CTRL,
 	     ui32RegVal);
-	OSReadHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_MASTER_BIF_CTRL);
 	PDUMPCOMMENTWITHFLAGS(ui32PDUMPFlags,
 	      "Initialise the hydra BIF control\r\n");
 	PDUMPREGWITHFLAGS(SGX_PDUMPREG_NAME, EUR_CR_MASTER_BIF_CTRL, ui32RegVal,
@@ -779,12 +775,11 @@ IMG_VOID SGXReset(PVRSRV_SGXDEV_INFO *psDevInfo, IMG_BOOL bHardwareRecovery,
 	     (4 << EUR_CR_MASTER_SLC_CTRL_ADDR_DECODE_MODE_SHIFT) |
 #endif
 #if defined(FIX_HW_BRN_33809)
-	     (2 << EUR_CR_MASTER_SLC_CTRL_ADDR_DECODE_MODE_SHIFT) |
+	     (1 << EUR_CR_MASTER_SLC_CTRL_ADDR_DECODE_MODE_SHIFT) |
 #endif
 	     (0xC << EUR_CR_MASTER_SLC_CTRL_ARB_PAGE_SIZE_SHIFT);
 	OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_MASTER_SLC_CTRL,
 	     ui32RegVal);
-	OSReadHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_MASTER_SLC_CTRL);
 	PDUMPCOMMENTWITHFLAGS(ui32PDUMPFlags,
 	      "Initialise the hydra SLC control\r\n");
 	PDUMPREG(SGX_PDUMPREG_NAME, EUR_CR_MASTER_SLC_CTRL, ui32RegVal);
@@ -803,7 +798,6 @@ IMG_VOID SGXReset(PVRSRV_SGXDEV_INFO *psDevInfo, IMG_BOOL bHardwareRecovery,
 #endif /* SGX_BYPASS_SYSTEM_CACHE */
 	OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_MASTER_SLC_CTRL_BYPASS,
 	     ui32RegVal);
-	OSReadHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_MASTER_SLC_CTRL_BYPASS);
 	PDUMPCOMMENTWITHFLAGS(ui32PDUMPFlags,
 	      "Initialise the hydra SLC bypass control\r\n");
 	PDUMPREG(SGX_PDUMPREG_NAME, EUR_CR_MASTER_SLC_CTRL_BYPASS, ui32RegVal);
@@ -815,7 +809,6 @@ IMG_VOID SGXReset(PVRSRV_SGXDEV_INFO *psDevInfo, IMG_BOOL bHardwareRecovery,
 	ui32RegVal = 0;
 	OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_MASTER_SOFT_RESET,
 	     ui32RegVal);
-	OSReadHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_MASTER_SOFT_RESET);
 	PDUMPCOMMENTWITHFLAGS(ui32PDUMPFlags,
 	      "Remove the resets from all of SGX\r\n");
 	PDUMPREGWITHFLAGS(SGX_PDUMPREG_NAME, EUR_CR_MASTER_SOFT_RESET,
@@ -848,7 +841,6 @@ IMG_VOID SGXReset(PVRSRV_SGXDEV_INFO *psDevInfo, IMG_BOOL bHardwareRecovery,
 	/* Master bank */
 	OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_MASTER_BIF_MMU_CTRL,
 	     ui32RegVal);
-	OSReadHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_MASTER_BIF_MMU_CTRL);
 	PDUMPREGWITHFLAGS(SGX_PDUMPREG_NAME, EUR_CR_MASTER_BIF_MMU_CTRL,
 	  ui32RegVal, ui32PDUMPFlags);
 
@@ -874,9 +866,6 @@ IMG_VOID SGXReset(PVRSRV_SGXDEV_INFO *psDevInfo, IMG_BOOL bHardwareRecovery,
 	     SGX_MP_CORE_SELECT(EUR_CR_BIF_MMU_CTRL,
 	ui32Core),
 	     ui32RegVal);
-	OSReadHWReg(psDevInfo->pvRegsBaseKM,
-	    SGX_MP_CORE_SELECT(EUR_CR_BIF_MMU_CTRL,
-	       ui32Core));
 	PDUMPREGWITHFLAGS(
 	SGX_PDUMPREG_NAME,
 	SGX_MP_CORE_SELECT(EUR_CR_BIF_MMU_CTRL,

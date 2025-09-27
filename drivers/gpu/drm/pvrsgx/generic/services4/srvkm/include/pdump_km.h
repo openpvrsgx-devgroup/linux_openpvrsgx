@@ -76,6 +76,10 @@ extern IMG_UINT32 g_ui32EveryLineCounter;
 #define MAKEUNIQUETAG(hMemInfo) (0)
 #endif
 
+IMG_BOOL _PDumpIsProcessActive(IMG_VOID);
+
+IMG_BOOL PDumpWillCapture(IMG_UINT32 ui32Flags);
+
 #ifdef PDUMP
 
 #define MAKEUNIQUETAG(hMemInfo)                                                \
@@ -231,8 +235,8 @@ PVRSRV_ERROR PDumpMallocPages(PVRSRV_DEVICE_IDENTIFIER *psDevID,
 	      IMG_UINT32 ui32DevVAddr,
 	      IMG_CPU_VIRTADDR pvLinAddr,
 	      IMG_HANDLE hOSMemHandle, IMG_UINT32 ui32NumBytes,
-	      IMG_UINT32 ui32PageSize, IMG_BOOL bShared,
-	      IMG_HANDLE hUniqueTag);
+	      IMG_UINT32 ui32PageSize, IMG_HANDLE hUniqueTag,
+	      IMG_UINT32 ui32Flags);
 PVRSRV_ERROR PDumpMallocPageTable(PVRSRV_DEVICE_IDENTIFIER *psDevId,
 	  IMG_HANDLE hOSMemHandle,
 	  IMG_UINT32 ui32Offset,
@@ -242,7 +246,8 @@ PVRSRV_ERROR PDumpMallocPageTable(PVRSRV_DEVICE_IDENTIFIER *psDevId,
 PVRSRV_ERROR PDumpFreePages(struct _BM_HEAP_ *psBMHeap,
 	    IMG_DEV_VIRTADDR sDevVAddr, IMG_UINT32 ui32NumBytes,
 	    IMG_UINT32 ui32PageSize, IMG_HANDLE hUniqueTag,
-	    IMG_BOOL bInterleaved, IMG_BOOL bSparse);
+	    IMG_BOOL bInterleaved, IMG_BOOL bSparse,
+	    IMG_UINT32 ui32Flags);
 PVRSRV_ERROR PDumpFreePageTable(PVRSRV_DEVICE_IDENTIFIER *psDevID,
 	IMG_HANDLE hOSMemHandle,
 	IMG_CPU_VIRTADDR pvLinAddr,

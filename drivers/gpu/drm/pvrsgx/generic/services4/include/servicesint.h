@@ -86,8 +86,27 @@ typedef enum _PVRSRV_MEMTYPE_ {
 	PVRSRV_MEMTYPE_WRAPPED = 3,
 	PVRSRV_MEMTYPE_MAPPED = 4,
 	PVRSRV_MEMTYPE_ION = 5,
+	PVRSRV_MEMTYPE_ALLOC = 6,
+	PVRSRV_MEMTYPE_FREE = 7
 } PVRSRV_MEMTYPE;
 
+#if defined(MEM_TRACK_INFO_DEBUG)
+/* Threshold on number of latest operations to track*/
+#define MAX_MEM_TRACK_OPS 512
+typedef struct _PVRSRV_MEM_TRACK_INFO_ {
+	IMG_DEV_VIRTADDR sDevVAddr;
+	IMG_SIZE_T uSize;
+	IMG_UINT32 ui32Pid;
+	IMG_UINT32 ui32RefCount;
+	PVRSRV_MEMTYPE eOp;
+	IMG_UINT32 ui32TimeStampUSecs;
+	IMG_CHAR asTaskName[128];
+	IMG_CHAR heapId[128];
+	struct _PVRSRV_MEM_TRACK_INFO_ *next;
+	struct _PVRSRV_MEM_TRACK_INFO_ *prev;
+
+} PVRSRV_MEM_TRACK_INFO;
+#endif
 /*
 	Kernel Memory Information structure
 */
@@ -129,6 +148,8 @@ typedef struct _PVRSRV_KERNEL_MEM_INFO_ {
 	/* ptr to associated kernel sync info - NULL if no sync */
 	struct _PVRSRV_KERNEL_SYNC_INFO_ *psKernelSyncInfo;
 
+	IMG_HANDLE hIonSyncInfo;
+
 	PVRSRV_MEMTYPE memType;
 
 	/*
@@ -158,8 +179,8 @@ typedef struct _PVRSRV_KERNEL_MEM_INFO_ {
 	IMG_UINT32 ui32OrigReqSize;
 	IMG_UINT32 ui32OrigReqAlignment;
 	} sShareMemWorkaround;
-#if 1 //#if defined (CONFIG_ION_MTK)
-	int share_ionFd;
+#if defined(MEM_TRACK_INFO_DEBUG)
+	IMG_CHAR heapId[128];
 #endif
 } PVRSRV_KERNEL_MEM_INFO;
 
@@ -192,6 +213,21 @@ typedef struct _PVRSRV_KERNEL_SYNC_INFO_ {
 
 	/* Unique ID of the sync object */
 	IMG_UINT32 ui32UID;
+
+	/* Pointer for list manager */
+	struct _PVRSRV_KERNEL_SYNC_INFO_ *psNext;
+	struct _PVRSRV_KERNEL_SYNC_INFO_ **ppsThis;
+
+#if defined(SUPPORT_PER_SYNC_DEBUG)
+#define PER_SYNC_HISTORY 10
+	IMG_UINT32 ui32OperationMask;
+	IMG_UINT32 aui32OpInfo[PER_SYNC_HISTORY];
+	IMG_UINT32 aui32ReadOpSample[PER_SYNC_HISTORY];
+	IMG_UINT32 aui32WriteOpSample[PER_SYNC_HISTORY];
+	IMG_UINT32 aui32ReadOp2Sample[PER_SYNC_HISTORY];
+	IMG_UINT32 ui32HistoryIndex;
+#endif
+
 } PVRSRV_KERNEL_SYNC_INFO;
 
 /*!
@@ -245,6 +281,11 @@ typedef struct _PVRSRV_COMMAND {
 	PFN_QUEUE_COMMAND_COMPLETE
 	pfnCommandComplete; /*!< Command complete callback */
 	IMG_HANDLE hCallbackData; /*!< Command complete callback data */
+
+#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
+	IMG_VOID *pvCleanupFence; /*!< Sync fence to 'put' after timeline inc() */
+	IMG_VOID *pvTimeline; /*!< Android sync timeline to inc() */
+#endif
 } PVRSRV_COMMAND, *PPVRSRV_COMMAND;
 
 /*!
@@ -279,11 +320,11 @@ typedef struct _PVRSRV_QUEUE_INFO_ {
 	 address space */
 
 	volatile IMG_SIZE_T
-	ui32ReadOffset; /*!< Index into the buffer at which commands are being
+	uReadOffset; /*!< Index into the buffer at which commands are being
 	 consumed */
 
 	volatile IMG_SIZE_T
-	ui32WriteOffset; /*!< Index into the buffer at which commands are being
+	uWriteOffset; /*!< Index into the buffer at which commands are being
 	 added */
 
 	IMG_UINT32 *pui32KickerAddrKM; /*!< kicker address in the kernel's
@@ -293,11 +334,17 @@ typedef struct _PVRSRV_QUEUE_INFO_ {
 	 address space */
 
 	IMG_SIZE_T
-	ui32QueueSize; /*!< Size in bytes of the buffer - excluding the safety allocation */
+	uQueueSize; /*!< Size in bytes of the buffer - excluding the safety allocation */
 
 	IMG_UINT32 ui32ProcessID; /*!< Process ID required by resource locking */
 
 	IMG_HANDLE hMemBlock[2];
+
+#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
+	IMG_UINT32
+	ui32FenceValue; /*!< 'Target' timeline value when fence signals */
+	IMG_VOID *pvTimeline; /*!< Android struct sync_timeline object */
+#endif
 
 	struct _PVRSRV_QUEUE_INFO_ *psNextKM; /*!< The next queue in the system */
 } PVRSRV_QUEUE_INFO;
@@ -411,11 +458,7 @@ typedef struct PVRSRV_DEVICECLASS_BUFFER_TAG {
 	Common Device Class client services information structure
 */
 typedef struct PVRSRV_CLIENT_DEVICECLASS_INFO_TAG {
-#if defined(SUPPORT_SID_INTERFACE)
-	IMG_SID hDeviceKM;
-#else
 	IMG_HANDLE hDeviceKM;
-#endif
 	IMG_HANDLE hServices;
 } PVRSRV_CLIENT_DEVICECLASS_INFO;
 
@@ -452,7 +495,7 @@ PVRSRV_ERROR PVRSRVQueueCommand(IMG_HANDLE hQueueInfo,
  ********************************************************************************/
 IMG_IMPORT PVRSRV_ERROR IMG_CALLCONV PVRSRVAllocSharedSysMem(
 	const PVRSRV_CONNECTION *psConnection, IMG_UINT32 ui32Flags,
-	IMG_SIZE_T ui32Size, PVRSRV_CLIENT_MEM_INFO **ppsClientMemInfo);
+	IMG_SIZE_T uSize, PVRSRV_CLIENT_MEM_INFO **ppsClientMemInfo);
 
 /*!
  * *****************************************************************************
@@ -505,14 +548,14 @@ PVRSRVUnrefSharedSysMem(const PVRSRV_CONNECTION *psConnection,
  *
  * @Return PVRSRV_ERROR
  ********************************************************************************/
-IMG_IMPORT PVRSRV_ERROR IMG_CALLCONV
-PVRSRVMapMemInfoMem(const PVRSRV_CONNECTION *psConnection,
-#if defined(SUPPORT_SID_INTERFACE)
-	    IMG_SID hKernelMemInfo,
-#else
-	    IMG_HANDLE hKernelMemInfo,
+IMG_IMPORT PVRSRV_ERROR IMG_CALLCONV PVRSRVMapMemInfoMem(
+	const PVRSRV_CONNECTION *psConnection, IMG_HANDLE hKernelMemInfo,
+	PVRSRV_CLIENT_MEM_INFO **ppsClientMemInfo);
+#if defined(MEM_TRACK_INFO_DEBUG)
+IMG_IMPORT IMG_VOID PVRSRVPrintMemTrackInfo(IMG_UINT32 ui32FaultAddr);
+IMG_IMPORT IMG_VOID PVRSRVAddMemTrackInfo(PVRSRV_MEM_TRACK_INFO *psMemTrackInfo);
+IMG_IMPORT IMG_VOID PVRSRVFreeMemOps(IMG_VOID);
 #endif
-	    PVRSRV_CLIENT_MEM_INFO **ppsClientMemInfo);
 
 #if defined(__cplusplus)
 }

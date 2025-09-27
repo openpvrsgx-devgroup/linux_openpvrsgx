@@ -34,9 +34,11 @@
 
 #include <linux/init.h>
 #include <linux/module.h>
+#include <linux/mm.h>
 #include <linux/fs.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
+#include <linux/sched.h>
 
 #include "services_headers.h"
 
@@ -52,29 +54,18 @@
 
 #include "lists.h"
 
-struct pvr_proc_dir_entry {
-	struct proc_dir_entry *pde;
-
-	pvr_next_proc_seq_t *next;
-	pvr_show_proc_seq_t *show;
-	pvr_off2element_proc_seq_t *off2element;
-	pvr_startstop_proc_seq_t *startstop;
-
-	pvr_proc_write_t *write;
-
-	IMG_VOID *data;
-};
-
-// The proc entry for our /proc/pvr directory
 static struct proc_dir_entry *dir;
 
 static const IMG_CHAR PVRProcDirRoot[] = "pvr";
 
 static IMG_INT pvr_proc_open(struct inode *inode, struct file *file);
+static void *pvr_proc_seq_start(struct seq_file *m, loff_t *pos);
+static void pvr_proc_seq_stop(struct seq_file *m, void *v);
+static void *pvr_proc_seq_next(struct seq_file *m, void *v, loff_t *pos);
+static int pvr_proc_seq_show(struct seq_file *m, void *v);
 static ssize_t pvr_proc_write(struct file *file, const char __user *buffer,
 	      size_t count, loff_t *ppos);
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 6, 0))
 static struct file_operations pvr_proc_operations = {
 	.open = pvr_proc_open,
 	.read = seq_read,
@@ -82,20 +73,6 @@ static struct file_operations pvr_proc_operations = {
 	.llseek = seq_lseek,
 	.release = seq_release,
 };
-#else
-static struct proc_ops pvr_proc_operations = {
-	.proc_open = pvr_proc_open,
-	.proc_read = seq_read,
-	.proc_write = pvr_proc_write,
-	.proc_lseek = seq_lseek,
-	.proc_release = seq_release,
-};
-#endif
-
-static void *pvr_proc_seq_start(struct seq_file *m, loff_t *pos);
-static void pvr_proc_seq_stop(struct seq_file *m, void *v);
-static void *pvr_proc_seq_next(struct seq_file *m, void *v, loff_t *pos);
-static int pvr_proc_seq_show(struct seq_file *m, void *v);
 
 static struct seq_operations pvr_proc_seq_operations = {
 	.start = pvr_proc_seq_start,
@@ -104,32 +81,22 @@ static struct seq_operations pvr_proc_seq_operations = {
 	.show = pvr_proc_seq_show,
 };
 
-#if defined(SUPPORT_PVRSRV_DEVICE_CLASS)
-static struct pvr_proc_dir_entry *g_pProcQueue;
-#endif
-static struct pvr_proc_dir_entry *g_pProcVersion;
-static struct pvr_proc_dir_entry *g_pProcSysNodes;
+static struct proc_dir_entry *g_pProcQueue;
+static struct proc_dir_entry *g_pProcVersion;
+static struct proc_dir_entry *g_pProcSysNodes;
 
 #ifdef DEBUG
-static struct pvr_proc_dir_entry *g_pProcDebugLevel;
+static struct proc_dir_entry *g_pProcDebugLevel;
 #endif
 
 #ifdef PVR_MANUAL_POWER_CONTROL
-static struct pvr_proc_dir_entry *g_pProcPowerLevel;
+static struct proc_dir_entry *g_pProcPowerLevel;
 #endif
 
 static void ProcSeqShowVersion(struct seq_file *sfile, void *el);
 
 static void ProcSeqShowSysNodes(struct seq_file *sfile, void *el);
 static void *ProcSeqOff2ElementSysNodes(struct seq_file *sfile, loff_t off);
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0)
-#define PDE_DATA(x) PDE(x)->data;
-#elif (LINUX_VERSION_CODE < KERNEL_VERSION(5, 16, 0))
-// defined in proc_fs.h
-#else
-#define PDE_DATA pde_data // renamed to lower case
-#endif
 
 off_t printAppend(IMG_CHAR *buffer, size_t size, off_t off,
 	  const IMG_CHAR *format, ...)
@@ -180,10 +147,9 @@ static IMG_INT pvr_proc_open(struct inode *inode, struct file *file)
 	IMG_INT ret = seq_open(file, &pvr_proc_seq_operations);
 
 	struct seq_file *seq = (struct seq_file *)file->private_data;
-	struct pvr_proc_dir_entry *ppde = PDE_DATA(inode);
+	struct proc_dir_entry *pvr_proc_entry = PDE(inode);
 
-	/* Add pointer to handlers to seq_file structure */
-	seq->private = ppde;
+	seq->private = pvr_proc_entry->data;
 	return ret;
 }
 
@@ -191,62 +157,62 @@ static ssize_t pvr_proc_write(struct file *file, const char __user *buffer,
 	      size_t count, loff_t *ppos)
 {
 	struct inode *inode = file->f_path.dentry->d_inode;
-	struct pvr_proc_dir_entry *ppde;
+	struct proc_dir_entry *dp;
 
 	PVR_UNREFERENCED_PARAMETER(ppos);
-	ppde = PDE_DATA(inode);
+	dp = PDE(inode);
 
-	if (!ppde->write)
+	if (!dp->write_proc)
 	return -EIO;
 
-	return ppde->write(file, buffer, count, ppde->data);
+	return dp->write_proc(file, buffer, count, dp->data);
 }
 
 static void *pvr_proc_seq_start(struct seq_file *proc_seq_file, loff_t *pos)
 {
-	struct pvr_proc_dir_entry *ppde =
-	(struct pvr_proc_dir_entry *)proc_seq_file->private;
-	if (ppde->startstop != NULL)
-	ppde->startstop(proc_seq_file, IMG_TRUE);
-	return ppde->off2element(proc_seq_file, *pos);
+	PVR_PROC_SEQ_HANDLERS *handlers =
+	(PVR_PROC_SEQ_HANDLERS *)proc_seq_file->private;
+	if (handlers->startstop != NULL)
+	handlers->startstop(proc_seq_file, IMG_TRUE);
+	return handlers->off2element(proc_seq_file, *pos);
 }
 
 static void pvr_proc_seq_stop(struct seq_file *proc_seq_file, void *v)
 {
-	struct pvr_proc_dir_entry *ppde =
-	(struct pvr_proc_dir_entry *)proc_seq_file->private;
+	PVR_PROC_SEQ_HANDLERS *handlers =
+	(PVR_PROC_SEQ_HANDLERS *)proc_seq_file->private;
 	PVR_UNREFERENCED_PARAMETER(v);
 
-	if (ppde->startstop != NULL)
-	ppde->startstop(proc_seq_file, IMG_FALSE);
+	if (handlers->startstop != NULL)
+	handlers->startstop(proc_seq_file, IMG_FALSE);
 }
 
 static void *pvr_proc_seq_next(struct seq_file *proc_seq_file, void *v,
 	       loff_t *pos)
 {
-	struct pvr_proc_dir_entry *ppde =
-	(struct pvr_proc_dir_entry *)proc_seq_file->private;
+	PVR_PROC_SEQ_HANDLERS *handlers =
+	(PVR_PROC_SEQ_HANDLERS *)proc_seq_file->private;
 	(*pos)++;
-	if (ppde->next != NULL)
-	return ppde->next(proc_seq_file, v, *pos);
-	return ppde->off2element(proc_seq_file, *pos);
+	if (handlers->next != NULL)
+	return handlers->next(proc_seq_file, v, *pos);
+	return handlers->off2element(proc_seq_file, *pos);
 }
 
 static int pvr_proc_seq_show(struct seq_file *proc_seq_file, void *v)
 {
-	struct pvr_proc_dir_entry *ppde =
-	(struct pvr_proc_dir_entry *)proc_seq_file->private;
-	ppde->show(proc_seq_file, v);
+	PVR_PROC_SEQ_HANDLERS *handlers =
+	(PVR_PROC_SEQ_HANDLERS *)proc_seq_file->private;
+	handlers->show(proc_seq_file, v);
 	return 0;
 }
 
-static struct pvr_proc_dir_entry *CreateProcEntryInDirSeq(
+static struct proc_dir_entry *CreateProcEntryInDirSeq(
 	struct proc_dir_entry *pdir, const IMG_CHAR *name, IMG_VOID *data,
 	pvr_next_proc_seq_t next_handler, pvr_show_proc_seq_t show_handler,
 	pvr_off2element_proc_seq_t off2element_handler,
-	pvr_startstop_proc_seq_t startstop_handler, pvr_proc_write_t whandler)
+	pvr_startstop_proc_seq_t startstop_handler, write_proc_t whandler)
 {
-	struct pvr_proc_dir_entry *ppde;
+	struct proc_dir_entry *file;
 	mode_t mode;
 
 	if (!dir) {
@@ -267,21 +233,39 @@ static struct pvr_proc_dir_entry *CreateProcEntryInDirSeq(
 	mode |= S_IWUSR;
 	}
 
-	ppde->pde =
-	proc_create_data(name, mode, pdir, &pvr_proc_operations, ppde);
+	file = create_proc_entry(name, mode, pdir);
 
-	if (!ppde->pde) {
+	if (file) {
+	PVR_PROC_SEQ_HANDLERS *seq_handlers;
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 30))
+	file->owner = THIS_MODULE;
+#endif
+
+	file->proc_fops = &pvr_proc_operations;
+	file->write_proc = whandler;
+
+	file->data = kmalloc(sizeof(PVR_PROC_SEQ_HANDLERS), GFP_KERNEL);
+	if (file->data) {
+	seq_handlers = (PVR_PROC_SEQ_HANDLERS *)file->data;
+	seq_handlers->next = next_handler;
+	seq_handlers->show = show_handler;
+	seq_handlers->off2element = off2element_handler;
+	seq_handlers->startstop = startstop_handler;
+	seq_handlers->data = data;
+
+	return file;
+	}
+	}
+
 	PVR_DPF((
 	PVR_DBG_ERROR,
-	"CreateProcEntryInDirSeq: cannot make proc entry /proc/%s/%s: proc_create_data failed",
+	"CreateProcEntryInDirSeq: cannot make proc entry /proc/%s/%s: no memory",
 	PVRProcDirRoot, name));
-	kfree(ppde);
 	return NULL;
-	}
-	return ppde;
 }
 
-struct pvr_proc_dir_entry *
+struct proc_dir_entry *
 CreateProcReadEntrySeq(const IMG_CHAR *name, IMG_VOID *data,
 	       pvr_next_proc_seq_t next_handler,
 	       pvr_show_proc_seq_t show_handler,
@@ -292,22 +276,22 @@ CreateProcReadEntrySeq(const IMG_CHAR *name, IMG_VOID *data,
 	  off2element_handler, startstop_handler, NULL);
 }
 
-struct pvr_proc_dir_entry *CreateProcEntrySeq(
+struct proc_dir_entry *CreateProcEntrySeq(
 	const IMG_CHAR *name, IMG_VOID *data, pvr_next_proc_seq_t next_handler,
 	pvr_show_proc_seq_t show_handler,
 	pvr_off2element_proc_seq_t off2element_handler,
-	pvr_startstop_proc_seq_t startstop_handler, pvr_proc_write_t whandler)
+	pvr_startstop_proc_seq_t startstop_handler, write_proc_t whandler)
 {
 	return CreateProcEntryInDirSeq(dir, name, data, next_handler,
 	       show_handler, off2element_handler,
 	       startstop_handler, whandler);
 }
 
-struct pvr_proc_dir_entry *CreatePerProcessProcEntrySeq(
+struct proc_dir_entry *CreatePerProcessProcEntrySeq(
 	const IMG_CHAR *name, IMG_VOID *data, pvr_next_proc_seq_t next_handler,
 	pvr_show_proc_seq_t show_handler,
 	pvr_off2element_proc_seq_t off2element_handler,
-	pvr_startstop_proc_seq_t startstop_handler, pvr_proc_write_t whandler)
+	pvr_startstop_proc_seq_t startstop_handler, write_proc_t whandler)
 {
 	PVRSRV_ENV_PER_PROCESS_DATA *psPerProc;
 	IMG_UINT32 ui32PID;
@@ -330,10 +314,29 @@ struct pvr_proc_dir_entry *CreatePerProcessProcEntrySeq(
 	}
 
 	if (!psPerProc->psProcDir) {
-	IMG_CHAR dirname[16];
+	IMG_CHAR dirname_buffer[256];
+	IMG_CHAR dirname[256];
 	IMG_INT ret;
+	const IMG_CHAR *proc_basename = dirname_buffer;
+	dirname_buffer[255] = dirname[255] = '\0';
 
-	ret = snprintf(dirname, sizeof(dirname), "%u", ui32PID);
+	OSGetProcCmdline(ui32PID, dirname_buffer,
+	 sizeof(dirname_buffer));
+	PVR_DPF((PVR_DBG_MESSAGE,
+	 "Command Line of the process with ID %u is %s",
+	 ui32PID, dirname_buffer));
+
+	proc_basename = OSGetPathBaseName(dirname_buffer,
+	  sizeof(dirname_buffer));
+	PVR_DPF((PVR_DBG_MESSAGE,
+	 "Base Name of the process with ID %u is %s\n", ui32PID,
+	 proc_basename));
+
+	ret = snprintf(dirname, sizeof(dirname), "%u-%s", ui32PID,
+	       proc_basename);
+	PVR_DPF((PVR_DBG_MESSAGE,
+	 "Creating a new process entry for %s with ID %u\n",
+	 proc_basename, ui32PID));
 
 	if (ret <= 0 || ret >= (IMG_INT)sizeof(dirname)) {
 	PVR_DPF((
@@ -359,17 +362,20 @@ struct pvr_proc_dir_entry *CreatePerProcessProcEntrySeq(
 	       whandler);
 }
 
-IMG_VOID RemoveProcEntrySeq(struct pvr_proc_dir_entry *ppde)
+IMG_VOID RemoveProcEntrySeq(struct proc_dir_entry *proc_entry)
 {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0)
-	remove_proc_entry(ppde->pde->name, dir);
-#else
-	proc_remove(ppde->pde);
-#endif
-	kfree(ppde);
+	if (dir) {
+	void *data = proc_entry->data;
+	PVR_DPF((PVR_DBG_MESSAGE, "Removing /proc/%s/%s",
+	 PVRProcDirRoot, proc_entry->name));
+
+	remove_proc_entry(proc_entry->name, dir);
+	if (data)
+	kfree(data);
+	}
 }
 
-IMG_VOID RemovePerProcessProcEntrySeq(struct pvr_proc_dir_entry *ppde)
+IMG_VOID RemovePerProcessProcEntrySeq(struct proc_dir_entry *proc_entry)
 {
 	PVRSRV_ENV_PER_PROCESS_DATA *psPerProc;
 
@@ -377,21 +383,22 @@ IMG_VOID RemovePerProcessProcEntrySeq(struct pvr_proc_dir_entry *ppde)
 	if (!psPerProc) {
 	psPerProc = PVRSRVFindPerProcessPrivateData();
 	if (!psPerProc) {
-	PVR_DPF((
-	PVR_DBG_ERROR,
-	"CreatePerProcessProcEntries: can't remove proc entry, no per process data"));
+	PVR_DPF((PVR_DBG_ERROR,
+	 "CreatePerProcessProcEntries: can't "
+	 "remove %s, no per process data",
+	 proc_entry->name));
 	return;
 	}
 	}
 
 	if (psPerProc->psProcDir) {
-	PVR_DPF((PVR_DBG_MESSAGE, "Removing per-process proc entry"));
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0)
-	remove_proc_entry(ppde->pde->name, psPerProc->psProcDir);
-#else
-	proc_remove(ppde->pde);
-#endif
-	kfree(ppde);
+	void *data = proc_entry->data;
+	PVR_DPF((PVR_DBG_MESSAGE, "Removing proc entry %s from %s",
+	 proc_entry->name, psPerProc->psProcDir->name));
+
+	remove_proc_entry(proc_entry->name, psPerProc->psProcDir);
+	if (data)
+	kfree(data);
 	}
 }
 
@@ -414,138 +421,144 @@ static IMG_INT pvr_read_proc(IMG_CHAR *page, IMG_CHAR **start, off_t off,
 	return len;
 }
 
-/*
-static IMG_INT CreateProcEntryInDir(struct proc_dir_entry *pdir, const IMG_CHAR * name, read_proc_t rhandler, pvr_proc_write_t whandler, IMG_VOID *data)
+static IMG_INT CreateProcEntryInDir(struct proc_dir_entry *pdir,
+	    const IMG_CHAR *name, read_proc_t rhandler,
+	    write_proc_t whandler, IMG_VOID *data)
 {
-    struct pvr_proc_dir_entry * ppde;
-    mode_t mode;
+	struct proc_dir_entry *file;
+	mode_t mode;
 
-    if (!pdir)
-    {
-        PVR_DPF((PVR_DBG_ERROR, "CreateProcEntryInDir: parent directory doesn't exist"));
+	if (!pdir) {
+	PVR_DPF((
+	PVR_DBG_ERROR,
+	"CreateProcEntryInDir: parent directory doesn't exist"));
 
-        return -ENOMEM;
-    }
+	return -ENOMEM;
+	}
 
-    mode = S_IFREG;
+	mode = S_IFREG;
 
-    if (rhandler)
-    {
+	if (rhandler) {
 	mode |= S_IRUGO;
-    }
+	}
 
-    if (whandler)
-    {
+	if (whandler) {
 	mode |= S_IWUSR;
-    }
-
-	ppde = kmalloc(sizeof(struct pvr_proc_dir_entry), GFP_KERNEL);
-	if (!ppde)
-	{
-	PVR_DPF((PVR_DBG_ERROR, "CreateProcEntryInDirSeq: cannot make proc entry /proc/%s/%s: no memory", PVRProcDirRoot, name));
-	return NULL;
 	}
 
-	ppde->next        = next_handler;
-	ppde->show        = show_handler;
-	ppde->off2element = off2element_handler;
-	ppde->startstop   = startstop_handler;
-	ppde->write       = whandler;
-	ppde->data        = data;
+	file = create_proc_entry(name, mode, pdir);
 
-	ppde->pde=proc_create_data(name, mode, pdir, &pvr_proc_operations, ppde);
-        return 0;
-    }
-
-    PVR_DPF((PVR_DBG_ERROR, "CreateProcEntry: cannot create proc entry %s in %s", name, pdir->name));
-
-    return -ENOMEM;
-}
-
-IMG_INT CreateProcEntry(const IMG_CHAR * name, read_proc_t rhandler, write_proc_t whandler, IMG_VOID *data)
-{
-    return CreateProcEntryInDir(dir, name, rhandler, whandler, data);
-}
-
-
-IMG_INT CreatePerProcessProcEntry(const IMG_CHAR * name, read_proc_t rhandler, write_proc_t whandler, IMG_VOID *data)
-{
-    PVRSRV_ENV_PER_PROCESS_DATA *psPerProc;
-    IMG_UINT32 ui32PID;
-
-    if (!dir)
-    {
-        PVR_DPF((PVR_DBG_ERROR, "CreatePerProcessProcEntries: /proc/%s doesn't exist", PVRProcDirRoot));
-
-        return -ENOMEM;
-    }
-
-    ui32PID = OSGetCurrentProcessIDKM();
-
-    psPerProc = PVRSRVPerProcessPrivateData(ui32PID);
-    if (!psPerProc)
-    {
-        PVR_DPF((PVR_DBG_ERROR, "CreatePerProcessProcEntries: no per process data"));
-
-        return -ENOMEM;
-    }
-
-    if (!psPerProc->psProcDir)
-    {
-        IMG_CHAR dirname[16];
-        IMG_INT ret;
-
-        ret = snprintf(dirname, sizeof(dirname), "%u", ui32PID);
-
-	if (ret <=0 || ret >= (IMG_INT)sizeof(dirname))
-	{
-	PVR_DPF((PVR_DBG_ERROR, "CreatePerProcessProcEntries: couldn't generate per process proc directory name \"%u\"", ui32PID));
-
-	return -ENOMEM;
-	}
-	else
-	{
-	psPerProc->psProcDir = proc_mkdir(dirname, dir);
-	if (!psPerProc->psProcDir)
-	{
-	PVR_DPF((PVR_DBG_ERROR, "CreatePerProcessProcEntries: couldn't create per process proc directory /proc/%s/%u", PVRProcDirRoot, ui32PID));
-
-	return -ENOMEM;
-	}
-	}
-    }
-
-    return CreateProcEntryInDir(psPerProc->psProcDir, name, rhandler, whandler, data);
-}
-
-
-IMG_INT CreateProcReadEntry(const IMG_CHAR * name, pvr_read_proc_t handler)
-{
-    struct proc_dir_entry * file;
-
-    if (!dir)
-    {
-        PVR_DPF((PVR_DBG_ERROR, "CreateProcReadEntry: cannot make proc entry /proc/%s/%s: no parent", PVRProcDirRoot, name));
-
-        return -ENOMEM;
-    }
-
-
-    file = create_proc_read_entry (name, S_IFREG | S_IRUGO, dir, pvr_read_proc, (IMG_VOID *)handler);
-
-    if (file)
-    {
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,30))
-        file->owner = THIS_MODULE;
+	if (file) {
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 30))
+	file->owner = THIS_MODULE;
 #endif
-        return 0;
-    }
+	file->read_proc = rhandler;
+	file->write_proc = whandler;
+	file->data = data;
 
-    PVR_DPF((PVR_DBG_ERROR, "CreateProcReadEntry: cannot make proc entry /proc/%s/%s: no memory", PVRProcDirRoot, name));
+	PVR_DPF((PVR_DBG_MESSAGE, "Created proc entry %s in %s", name,
+	 pdir->name));
 
-    return -ENOMEM;
+	return 0;
+	}
+
+	PVR_DPF((PVR_DBG_ERROR,
+	 "CreateProcEntry: cannot create proc entry %s in %s", name,
+	 pdir->name));
+
+	return -ENOMEM;
 }
-*/
+
+IMG_INT CreateProcEntry(const IMG_CHAR *name, read_proc_t rhandler,
+	write_proc_t whandler, IMG_VOID *data)
+{
+	return CreateProcEntryInDir(dir, name, rhandler, whandler, data);
+}
+
+IMG_INT CreatePerProcessProcEntry(const IMG_CHAR *name, read_proc_t rhandler,
+	  write_proc_t whandler, IMG_VOID *data)
+{
+	PVRSRV_ENV_PER_PROCESS_DATA *psPerProc;
+	IMG_UINT32 ui32PID;
+
+	if (!dir) {
+	PVR_DPF((PVR_DBG_ERROR,
+	 "CreatePerProcessProcEntries: /proc/%s doesn't exist",
+	 PVRProcDirRoot));
+
+	return -ENOMEM;
+	}
+
+	ui32PID = OSGetCurrentProcessIDKM();
+
+	psPerProc = PVRSRVPerProcessPrivateData(ui32PID);
+	if (!psPerProc) {
+	PVR_DPF((PVR_DBG_ERROR,
+	 "CreatePerProcessProcEntries: no per process data"));
+
+	return -ENOMEM;
+	}
+
+	if (!psPerProc->psProcDir) {
+	IMG_CHAR dirname[16];
+	IMG_INT ret;
+
+	ret = snprintf(dirname, sizeof(dirname), "%u", ui32PID);
+
+	if (ret <= 0 || ret >= (IMG_INT)sizeof(dirname)) {
+	PVR_DPF((
+	PVR_DBG_ERROR,
+	"CreatePerProcessProcEntries: couldn't generate per process proc directory name \"%u\"",
+	ui32PID));
+
+	return -ENOMEM;
+	} else {
+	psPerProc->psProcDir = proc_mkdir(dirname, dir);
+	if (!psPerProc->psProcDir) {
+	PVR_DPF((
+	PVR_DBG_ERROR,
+	"CreatePerProcessProcEntries: couldn't create per process proc directory /proc/%s/%u",
+	PVRProcDirRoot, ui32PID));
+
+	return -ENOMEM;
+	}
+	}
+	}
+
+	return CreateProcEntryInDir(psPerProc->psProcDir, name, rhandler,
+	    whandler, data);
+}
+
+IMG_INT CreateProcReadEntry(const IMG_CHAR *name, pvr_read_proc_t handler)
+{
+	struct proc_dir_entry *file;
+
+	if (!dir) {
+	PVR_DPF((
+	PVR_DBG_ERROR,
+	"CreateProcReadEntry: cannot make proc entry /proc/%s/%s: no parent",
+	PVRProcDirRoot, name));
+
+	return -ENOMEM;
+	}
+
+	file = create_proc_read_entry(name, S_IFREG | S_IRUGO, dir,
+	      pvr_read_proc, (IMG_VOID *)handler);
+
+	if (file) {
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 30))
+	file->owner = THIS_MODULE;
+#endif
+	return 0;
+	}
+
+	PVR_DPF((
+	PVR_DBG_ERROR,
+	"CreateProcReadEntry: cannot make proc entry /proc/%s/%s: no memory",
+	PVRProcDirRoot, name));
+
+	return -ENOMEM;
+}
 
 IMG_INT CreateProcEntries(IMG_VOID)
 {
@@ -559,11 +572,9 @@ IMG_INT CreateProcEntries(IMG_VOID)
 	return -ENOMEM;
 	}
 
-#if defined(SUPPORT_PVRSRV_DEVICE_CLASS)
 	g_pProcQueue = CreateProcReadEntrySeq("queue", NULL, NULL,
 	      ProcSeqShowQueue,
 	      ProcSeqOff2ElementQueue, NULL);
-#endif
 	g_pProcVersion = CreateProcReadEntrySeq(
 	"version", NULL, NULL, ProcSeqShowVersion,
 	ProcSeq1ElementHeaderOff2Element, NULL);
@@ -571,11 +582,7 @@ IMG_INT CreateProcEntries(IMG_VOID)
 	CreateProcReadEntrySeq("nodes", NULL, NULL, ProcSeqShowSysNodes,
 	       ProcSeqOff2ElementSysNodes, NULL);
 
-	if (!g_pProcVersion || !g_pProcSysNodes
-#if defined(SUPPORT_PVRSRV_DEVICE_CLASS)
-	    || !g_pProcQueue
-#endif
-	) {
+	if (!g_pProcQueue || !g_pProcVersion || !g_pProcSysNodes) {
 	PVR_DPF((PVR_DBG_ERROR,
 	 "CreateProcEntries: couldn't make /proc/%s files",
 	 PVRProcDirRoot));
@@ -625,7 +632,6 @@ IMG_VOID RemoveProcEntry(const IMG_CHAR *name)
 	}
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0)
 IMG_VOID RemovePerProcessProcEntry(const IMG_CHAR *name)
 {
 	PVRSRV_ENV_PER_PROCESS_DATA *psPerProc;
@@ -664,12 +670,6 @@ IMG_VOID RemovePerProcessProcDir(PVRSRV_ENV_PER_PROCESS_DATA *psPerProc)
 	RemoveProcEntry(psPerProc->psProcDir->name);
 	}
 }
-#else
-IMG_VOID RemovePerProcessProcDir(PVRSRV_ENV_PER_PROCESS_DATA *psPerProc)
-{
-	proc_remove(psPerProc->psProcDir);
-}
-#endif
 
 IMG_VOID RemoveProcEntries(IMG_VOID)
 {
@@ -680,23 +680,18 @@ IMG_VOID RemoveProcEntries(IMG_VOID)
 #endif
 #endif
 
-#if defined(SUPPORT_PVRSRV_DEVICE_CLASS)
 	RemoveProcEntrySeq(g_pProcQueue);
-#endif
 	RemoveProcEntrySeq(g_pProcVersion);
 	RemoveProcEntrySeq(g_pProcSysNodes);
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0)
 	while (dir->subdir) {
 	PVR_DPF((PVR_DBG_WARNING, "Belatedly removing /proc/%s/%s",
 	 PVRProcDirRoot, dir->subdir->name));
 
 	RemoveProcEntry(dir->subdir->name);
 	}
+
 	remove_proc_entry(PVRProcDirRoot, NULL);
-#else
-	proc_remove(dir);
-#endif
 }
 
 static void ProcSeqShowVersion(struct seq_file *sfile, void *el)

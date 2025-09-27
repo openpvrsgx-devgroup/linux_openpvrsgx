@@ -40,9 +40,9 @@ ccflags-y += -D$(SOC_VENDOR)_$(SOC)_$(SGX)_$(SGX_REV)
 ccflags-y += -DSGX_CORE_REV=$(SGX_REV)
 
 ccflags-y += \
-	-I$(srctree)/include \
-	-I$(srctree)/arch/arm/mach-omap2 \
-	-I$(srctree)/drivers/video/fbdev/omap2 \
+	-Iinclude \
+	-Iarch/arm/mach-omap2 \
+	-Idrivers/video/fbdev/omap2 \
 	-I$(src)/ \
 	-I$(src)/include4 \
 	-I$(src)/services4/include \
@@ -54,8 +54,7 @@ ccflags-y += \
 	-I$(src)/services4/srvkm/env/linux \
 	-I$(src)/services4/srvkm/hwdefs \
 	-I$(src)/services4/srvkm/include \
-	-I$(src)/services4/3rdparty/bufferclass_ti \
-	-I$(srctree)/include/linux
+	-I$(src)/services4/3rdparty/bufferclass_ti
 
 # choose SoC integration variant to choose the right source subtree
 
@@ -220,16 +219,10 @@ ccflags-y += -DAMVERSION=5
 # PVR_OMAPLFB_DRM_FB	:= 0
 endif
 
-ifeq ($(SOC_FAMILY),sgx_jz4780)
-ccflags-y += -DSGX_FAST_DPM_INIT
-ccflags-y += -DSGX_FEATURE_SYSTEM_CACHE
-ccflags-y += -DSUPPORT_ACTIVE_POWER_MANAGEMENT
-endif
-
 # gives duplicate export of drm_pvr_dev_add etc.
 # $(TARGET) += services4/3rdparty/linux_drm/pvr_drm_stubs.o
 
-ccflags-y += -I$(srctree)/include/drm \
+ccflags-y += -Iinclude/drm \
 	-I$(src)/services4/3rdparty/linux_drm
 
 ccflags-y += -DSUPPORT_HW_RECOVERY

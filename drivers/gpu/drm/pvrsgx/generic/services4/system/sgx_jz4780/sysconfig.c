@@ -1,28 +1,44 @@
-/**********************************************************************
- *
- * Copyright (C) Imagination Technologies Ltd. All rights reserved.
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- *
- * This program is distributed in the hope it will be useful but, except
- * as otherwise stated in writing, without any warranty; without even the
- * implied warranty of merchantability or fitness for a particular purpose.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * The full GNU General Public License is included in this distribution in
- * the file called "COPYING".
- *
- * Contact Information:
- * Imagination Technologies Ltd. <gpl-support@imgtec.com>
- * Home Park Estate, Kings Langley, Herts, WD4 8LZ, UK
- *
- ******************************************************************************/
+/*************************************************************************/ /*!
+@Title          System Configuration
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@Description    System Configuration functions
+@License        Dual MIT/GPLv2
+
+The contents of this file are subject to the MIT license as set out below.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/ /**************************************************************************/
 
 #include "sysconfig.h"
 #include "services_headers.h"
@@ -36,8 +52,6 @@
 
 #include <linux/clk.h>
 #include <linux/err.h>
-#include <mach/jzcpm_pwc.h>
-#include <soc/irq.h>
 
 SYS_DATA *gpsSysData = (SYS_DATA *)IMG_NULL;
 SYS_DATA gsSysData;
@@ -62,9 +76,7 @@ extern struct drm_device *gpsPVRDRMDev;
 /* extern struct pci_dev *gpsPVRLDMDev; */
 /* #endif */
 
-#if defined(PVR_LINUX_DYNAMIC_SGX_RESOURCE_INFO)
 extern struct platform_device *gpsPVRLDMDev;
-#endif
 
 IMG_UINT32 PVRSRV_BridgeDispatchKM(IMG_UINT32 Ioctl, IMG_BYTE *pInBuf,
 	   IMG_UINT32 InBufLen, IMG_BYTE *pOutBuf,
@@ -120,10 +132,8 @@ static PVRSRV_ERROR SysLocateDevices(SYS_DATA *psSysData)
 	PVRSRV_ERROR eError;
 	IMG_CPU_PHYADDR sCpuPAddr;
 #else
-#if defined(PVR_LINUX_DYNAMIC_SGX_RESOURCE_INFO)
 	struct resource *dev_res;
 	int dev_irq;
-#endif
 #endif
 
 	PVR_UNREFERENCED_PARAMETER(psSysData);
@@ -131,8 +141,7 @@ static PVRSRV_ERROR SysLocateDevices(SYS_DATA *psSysData)
 	gsSGXDeviceMap.ui32Flags = 0x0;
 
 #if defined(NO_HARDWARE)
-
-	gsSGXDeviceMap.ui32RegsSize = SYS_XB4780_SGX_REGS_SIZE;
+	gsSGXDeviceMap.ui32RegsSize = SGX_REG_SIZE;
 
 	eError = OSBaseAllocContigMemory(gsSGXDeviceMap.ui32RegsSize,
 	 &gsSGXRegsCPUVAddr, &sCpuPAddr);
@@ -142,21 +151,13 @@ static PVRSRV_ERROR SysLocateDevices(SYS_DATA *psSysData)
 	gsSGXDeviceMap.sRegsCpuPBase = sCpuPAddr;
 	gsSGXDeviceMap.sRegsSysPBase =
 	SysCpuPAddrToSysPAddr(gsSGXDeviceMap.sRegsCpuPBase);
-#if defined(__linux__)
-
 	gsSGXDeviceMap.pvRegsCpuVBase = gsSGXRegsCPUVAddr;
-#else
-
-	gsSGXDeviceMap.pvRegsCpuVBase = IMG_NULL;
-#endif
 
 	OSMemSet(gsSGXRegsCPUVAddr, 0, gsSGXDeviceMap.ui32RegsSize);
 
 	gsSGXDeviceMap.ui32IRQ = 0;
 
 #else
-#if defined(PVR_LINUX_DYNAMIC_SGX_RESOURCE_INFO)
-
 	dev_res = platform_get_resource(gpsPVRLDMDev, IORESOURCE_MEM, 0);
 	if (dev_res == NULL) {
 	PVR_DPF((PVR_DBG_ERROR, "%s: platform_get_resource failed",
@@ -178,20 +179,12 @@ static PVRSRV_ERROR SysLocateDevices(SYS_DATA *psSysData)
 	   (unsigned long)gsSGXDeviceMap.sRegsCpuPBase.uiAddr));
 
 	gsSGXDeviceMap.ui32RegsSize =
-	(unsigned int)(dev_res->end - dev_res->start);
+	(unsigned int)(dev_res->end - dev_res->start + 1);
 	PVR_TRACE(("SGX register size: %d", gsSGXDeviceMap.ui32RegsSize));
 
 	gsSGXDeviceMap.ui32IRQ = dev_irq;
 	PVR_TRACE(("SGX IRQ: %d", gsSGXDeviceMap.ui32IRQ));
-#else
-	gsSGXDeviceMap.sRegsSysPBase.uiAddr = SYS_JZ4780_SGX_REG_BASE;
-	gsSGXDeviceMap.sRegsCpuPBase =
-	SysSysPAddrToCpuPAddr(gsSGXDeviceMap.sRegsSysPBase);
-	gsSGXDeviceMap.ui32RegsSize = SGX_REG_SIZE;
 
-	gsSGXDeviceMap.ui32IRQ = SYS_JZ4780_SGX_IRQ;
-
-#endif
 #if defined(SGX_OCP_REGS_ENABLED)
 	gsSGXRegsCPUVAddr = OSMapPhysToLin(
 	gsSGXDeviceMap.sRegsCpuPBase, gsSGXDeviceMap.ui32RegsSize,
@@ -255,11 +248,10 @@ static IMG_CHAR *SysCreateVersionString(void)
 	      EUR_CR_CORE_REVISION_MAINTENANCE_SHIFT));
 
 #if !defined(NO_HARDWARE)
-	OSUnMapPhysToLin(pvRegsLinAddr, SGX_REG_SIZE,
+	OSUnMapPhysToLin(pvRegsLinAddr, gsSGXDeviceMap.ui32RegsSize,
 	 PVRSRV_HAP_UNCACHED | PVRSRV_HAP_KERNEL_ONLY,
 	 IMG_NULL);
 #endif
-
 	if (i32Count == -1) {
 	return IMG_NULL;
 	}
@@ -287,16 +279,18 @@ PVRSRV_ERROR SysInitialise(IMG_VOID)
 	atomic_set(&gpsSysSpecificData->sSGXClocksEnabled, 0);
 
 	gpsSysSpecificData->pCPMHandle = cpm_pwc_get(PWC_GPU);
-	if (!gpsSysSpecificData->pCPMHandle)
+	if (!gpsSysSpecificData->pCPMHandle) {
+	PVR_DPF((PVR_DBG_ERROR,
+	 "SysInitialise: Failed to get GPU power handle"));
 	return PVRSRV_ERROR_UNKNOWN_POWER_STATE;
+	}
 
-	gpsSysSpecificData->psSGXClockGate = clk_get(NULL, "gpu");
-	if (IS_ERR(gpsSysSpecificData->psSGXClockGate))
+	gpsSysSpecificData->psSGXClock = clk_get(NULL, "gpu");
+	if (IS_ERR(gpsSysSpecificData->psSGXClock)) {
+	PVR_DPF((PVR_DBG_ERROR,
+	 "SysInitialise: Failed to get GPU clock"));
 	return PVRSRV_ERROR_CLOCK_REQUEST_FAILED;
-
-	gpsSysSpecificData->psSGXClock = clk_get(NULL, "cgu_gpu");
-	if (IS_ERR(gpsSysSpecificData->psSGXClock))
-	return PVRSRV_ERROR_CLOCK_REQUEST_FAILED;
+	}
 
 	/* #if defined(SUPPORT_DRI_DRM) */
 	/*	/\* Save the pci_dev structure pointer from module.c *\/ */
@@ -566,7 +560,6 @@ PVRSRV_ERROR SysDeinitialise(SYS_DATA *psSysData)
 	return eError;
 	}
 #endif
-
 	eError = PVRSRVDeinitialiseDevice(gui32SGXDeviceID);
 	if (eError != PVRSRV_OK) {
 	PVR_DPF((
@@ -609,8 +602,7 @@ PVRSRV_ERROR SysDeinitialise(SYS_DATA *psSysData)
 	if (gsSGXRegsCPUVAddr != IMG_NULL) {
 #if defined(NO_HARDWARE)
 
-	OSBaseFreeContigMemory(SYS_XB4780_SGX_REGS_SIZE,
-	       gsSGXRegsCPUVAddr,
+	OSBaseFreeContigMemory(SGX_REG_SIZE, gsSGXRegsCPUVAddr,
 	       gsSGXDeviceMap.sRegsCpuPBase);
 #else
 #if defined(SGX_OCP_REGS_ENABLED)
@@ -630,7 +622,6 @@ PVRSRV_ERROR SysDeinitialise(SYS_DATA *psSysData)
 	gpsSysSpecificData->bSGXInitComplete = IMG_FALSE;
 
 	clk_put(gpsSysSpecificData->psSGXClock);
-	clk_put(gpsSysSpecificData->psSGXClockGate);
 	cpm_pwc_put(gpsSysSpecificData->pCPMHandle);
 
 	gpsSysData = IMG_NULL;
@@ -722,10 +713,8 @@ IMG_UINT32 SysGetInterruptSource(SYS_DATA *psSysData,
 {
 	PVR_UNREFERENCED_PARAMETER(psSysData);
 #if defined(NO_HARDWARE)
-
 	return 0xFFFFFFFF;
 #else
-
 	return psDeviceNode->ui32SOCInterruptBit;
 #endif
 }
@@ -738,7 +727,6 @@ IMG_VOID SysClearInterrupts(SYS_DATA *psSysData, IMG_UINT32 ui32ClearBits)
 #if defined(SGX_OCP_NO_INT_BYPASS)
 	OSWriteHWReg(gpvOCPRegsLinAddr, EUR_CR_OCP_IRQSTATUS_2, 0x1);
 #endif
-
 	OSReadHWReg(
 	((PVRSRV_SGXDEV_INFO *)gpsSGXDevNode->pvDevice)->pvRegsBaseKM,
 	EUR_CR_EVENT_HOST_CLEAR);
@@ -811,7 +799,6 @@ PVRSRV_ERROR SysSystemPrePowerState(PVRSRV_SYS_POWER_STATE eNewPowerState)
 	SYS_SPECIFIC_DATA_ENABLE_LISR);
 	}
 #endif
-
 	if (SYS_SPECIFIC_DATA_TEST(&gsSysSpecificData,
 	   SYS_SPECIFIC_DATA_ENABLE_SYSCLOCKS)) {
 	DisableSystemClocks(gpsSysData);
@@ -862,7 +849,6 @@ PVRSRV_ERROR SysSystemPostPowerState(PVRSRV_SYS_POWER_STATE eNewPowerState)
 	IMG_BOOL bWrapped =
 	WrapSystemPowerChange(&gsSysSpecificData);
 #endif
-
 	eError = OSInstallDeviceLISR(gpsSysData,
 	     gsSGXDeviceMap.ui32IRQ,
 	     "SGX ISR", gpsSGXDevNode);

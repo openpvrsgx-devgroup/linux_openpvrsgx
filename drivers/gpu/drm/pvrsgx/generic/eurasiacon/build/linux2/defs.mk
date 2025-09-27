@@ -146,3 +146,8 @@ endef
 define module-info-line
 $(if $(filter modules,$(D)),$(info $(1)),)
 endef
+
+# $(call if-exists,A,B) => A if A is a file which exists, otherwise B
+define if-exists
+$(if $(wildcard $(1)),$(1),$(2))
+endef

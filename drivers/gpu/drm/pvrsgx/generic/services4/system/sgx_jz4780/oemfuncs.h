@@ -1,6 +1,7 @@
 /*************************************************************************/ /*!
 @Title          SGX kernel/client driver interface structures and prototypes
 @Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@Description    OEM specific functions.
 @License        Dual MIT/GPLv2
 
 The contents of this file are subject to the MIT license as set out below.

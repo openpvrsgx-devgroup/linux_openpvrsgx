@@ -68,6 +68,9 @@ else ifneq ($(FPGA),)
   SGXCORE := 531
   SGX_CORE_REV := 110
   SUPPORT_DYNAMIC_GTF_TIMING := 0
+ else ifeq ($(FPGA),5300)
+  SGXCORE := 5300
+  SGX_CORE_REV := 112
  else
   $(error Unknown FPGA: $(FPGA))
  endif

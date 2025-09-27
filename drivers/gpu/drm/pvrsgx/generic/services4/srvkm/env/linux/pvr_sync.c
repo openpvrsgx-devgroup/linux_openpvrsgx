@@ -218,10 +218,6 @@ struct PVR_SYNC_FENCE_WAITER {
 
 	/* Optimizes lookup of fence for defer-put operation */
 	struct PVR_SYNC_FENCE *psSyncFence;
-
-#ifdef MTK_DEBUG_PROC_PRINT
-	int iFenceFd;
-#endif
 };
 
 /* Global data relating to PVR services connection */
@@ -658,18 +654,11 @@ err_free_timeline:
 static int PVRSyncOpen(struct inode *inode, struct file *file)
 {
 	struct PVR_SYNC_TIMELINE *psTimeline;
-#if 0
-	IMG_CHAR task_comm[TASK_COMM_LEN+1];
+	IMG_CHAR task_comm[TASK_COMM_LEN + 1];
 
 	get_task_comm(task_comm, current);
-    psTimeline = PVRSyncCreateTimeline(task_comm);
-#else
-	IMG_CHAR name[32];
 
-	snprintf(name, 32, "pvr-%u", current->tgid);
-	psTimeline = PVRSyncCreateTimeline(name);
-#endif
-
+	psTimeline = PVRSyncCreateTimeline(task_comm);
 	if (!psTimeline)
 	return -ENOMEM;
 
@@ -837,13 +826,6 @@ static long PVRSyncIOCTLDebug(struct PVR_SYNC_TIMELINE *psObj,
 	/* Don't dump foreign points */
 	if (psPt->pt.parent->ops != &gsTimelineOps)
 	continue;
-
-	// MTK: yu-fu, to aviod KE
-	if (((int)psPt->psSyncData) < 0x10000) {
-	PVR_DPF((PVR_DBG_ERROR, "%s: psPt->psSyncData = %p",
-	 __func__, psPt->psSyncData));
-	continue;
-	}
 
 	psTimeline = (struct PVR_SYNC_TIMELINE *)psPt->pt.parent;
 	psKernelSyncInfo = psPt->psSyncData->psSyncInfo->psBase;
@@ -1260,9 +1242,6 @@ static void ForeignSyncPtSignaled(struct sync_fence *fence,
 
 	PVRSyncSWCompleteOp(psWaiter->psSyncInfo->psBase);
 
-	MTKPP_LOG(MTKPP_ID_SYNC, "sigl tid:%d fenceFD: %d",
-	  OSGetCurrentProcessIDKM(), psWaiter->iFenceFd);
-
 	DPF("R(f): WOCVA=0x%.8X ROCVA=0x%.8X RO2CVA=0x%.8X "
 	    "WOP/C=0x%x/0x%x ROP/C=0x%x/0x%x RO2P/C=0x%x/0x%x",
 	    psWaiter->psSyncInfo->psBase->sWriteOpsCompleteDevVAddr.uiAddr,
@@ -1357,10 +1336,6 @@ static PVRSRV_KERNEL_SYNC_INFO *ForeignSyncPointToSyncInfo(int iFenceFd)
 	psSyncFence->psBase = psFence;
 	psWaiter->psSyncFence = psSyncFence;
 
-#ifdef MTK_DEBUG_PROC_PRINT
-	psWaiter->iFenceFd = iFenceFd;
-#endif
-
 	/* Allocate a "shadow" SYNCINFO for this sync_pt and set it up to be
 	 * completed by the callback.
 	 */
@@ -1381,21 +1356,12 @@ static PVRSRV_KERNEL_SYNC_INFO *ForeignSyncPointToSyncInfo(int iFenceFd)
 	sync_fence_waiter_init(&psWaiter->sWaiter, ForeignSyncPtSignaled);
 	psWaiter->psSyncInfo->psBase = psKernelSyncInfo;
 
-	MTKPP_LOG(MTKPP_ID_SYNC, "wait tid:%d fenceFD: %d",
-	  OSGetCurrentProcessIDKM(), iFenceFd);
-
 	err = sync_fence_wait_async(psFence, &psWaiter->sWaiter);
 	if (err) {
 	if (err < 0) {
-	MTKPP_LOG(MTKPP_ID_SYNC,
-	  "erro tid:%d fenceFD: %d, err %d",
-	  OSGetCurrentProcessIDKM(), iFenceFd, err);
 	PVR_DPF((PVR_DBG_ERROR, "%s: Fence was in error state",
 	 __func__));
 	/* Fall-thru */
-	} else {
-	MTKPP_LOG(MTKPP_ID_SYNC, "sigled tid:%d fenceFD: %d",
-	  OSGetCurrentProcessIDKM(), iFenceFd);
 	}
 
 	/* -1 means the fence was broken, 1 means the fence already

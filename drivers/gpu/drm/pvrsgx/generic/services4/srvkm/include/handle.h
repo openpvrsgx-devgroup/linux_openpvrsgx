@@ -228,11 +228,47 @@ typedef enum {
 struct _PVRSRV_HANDLE_BASE_;
 typedef struct _PVRSRV_HANDLE_BASE_ PVRSRV_HANDLE_BASE;
 
-#if defined(PVR_SECURE_HANDLES)
+#if defined(PVR_SECURE_HANDLES) || defined(SUPPORT_SID_INTERFACE)
 extern PVRSRV_HANDLE_BASE *gpsKernelHandleBase;
 
 #define KERNEL_HANDLE_BASE (gpsKernelHandleBase)
 
+#if defined(SUPPORT_SID_INTERFACE)
+PVRSRV_ERROR PVRSRVAllocHandle(PVRSRV_HANDLE_BASE *psBase, IMG_SID *phHandle,
+	       IMG_VOID *pvData, PVRSRV_HANDLE_TYPE eType,
+	       PVRSRV_HANDLE_ALLOC_FLAG eFlag);
+
+PVRSRV_ERROR PVRSRVAllocSubHandle(PVRSRV_HANDLE_BASE *psBase, IMG_SID *phHandle,
+	  IMG_VOID *pvData, PVRSRV_HANDLE_TYPE eType,
+	  PVRSRV_HANDLE_ALLOC_FLAG eFlag,
+	  IMG_SID hParent);
+
+PVRSRV_ERROR PVRSRVFindHandle(PVRSRV_HANDLE_BASE *psBase, IMG_SID *phHandle,
+	      IMG_VOID *pvData, PVRSRV_HANDLE_TYPE eType);
+
+PVRSRV_ERROR PVRSRVLookupHandleAnyType(PVRSRV_HANDLE_BASE *psBase,
+	       IMG_PVOID *ppvData,
+	       PVRSRV_HANDLE_TYPE *peType,
+	       IMG_SID hHandle);
+
+PVRSRV_ERROR PVRSRVLookupHandle(PVRSRV_HANDLE_BASE *psBase, IMG_PVOID *ppvData,
+	IMG_SID hHandle, PVRSRV_HANDLE_TYPE eType);
+
+PVRSRV_ERROR PVRSRVLookupSubHandle(PVRSRV_HANDLE_BASE *psBase,
+	   IMG_PVOID *ppvData, IMG_SID hHandle,
+	   PVRSRV_HANDLE_TYPE eType, IMG_SID hAncestor);
+
+PVRSRV_ERROR PVRSRVGetParentHandle(PVRSRV_HANDLE_BASE *psBase,
+	   IMG_SID *phParent, IMG_SID hHandle,
+	   PVRSRV_HANDLE_TYPE eType);
+
+PVRSRV_ERROR PVRSRVLookupAndReleaseHandle(PVRSRV_HANDLE_BASE *psBase,
+	  IMG_PVOID *ppvData, IMG_SID hHandle,
+	  PVRSRV_HANDLE_TYPE eType);
+
+PVRSRV_ERROR PVRSRVReleaseHandle(PVRSRV_HANDLE_BASE *psBase, IMG_SID hHandle,
+	 PVRSRV_HANDLE_TYPE eType);
+#else
 PVRSRV_ERROR PVRSRVAllocHandle(PVRSRV_HANDLE_BASE *psBase, IMG_HANDLE *phHandle,
 	       IMG_VOID *pvData, PVRSRV_HANDLE_TYPE eType,
 	       PVRSRV_HANDLE_ALLOC_FLAG eFlag);
@@ -270,6 +306,7 @@ PVRSRV_ERROR PVRSRVLookupAndReleaseHandle(PVRSRV_HANDLE_BASE *psBase,
 
 PVRSRV_ERROR PVRSRVReleaseHandle(PVRSRV_HANDLE_BASE *psBase, IMG_HANDLE hHandle,
 	 PVRSRV_HANDLE_TYPE eType);
+#endif /* #if defined (SUPPORT_SID_INTERFACE) */
 
 PVRSRV_ERROR PVRSRVNewHandleBatch(PVRSRV_HANDLE_BASE *psBase,
 	  IMG_UINT32 ui32BatchSize);
@@ -295,7 +332,7 @@ PVRSRV_ERROR PVRSRVHandleInit(IMG_VOID);
 
 PVRSRV_ERROR PVRSRVHandleDeInit(IMG_VOID);
 
-#else /* #if defined (PVR_SECURE_HANDLES) */
+#else /* #if defined (PVR_SECURE_HANDLES) || defined (SUPPORT_SID_INTERFACE)*/
 
 #define KERNEL_HANDLE_BASE IMG_NULL
 
@@ -554,7 +591,7 @@ static INLINE PVRSRV_ERROR PVRSRVHandleDeInit(IMG_VOID)
 	return PVRSRV_OK;
 }
 
-#endif /* #if defined (PVR_SECURE_HANDLES) */
+#endif /* #if defined (PVR_SECURE_HANDLES) || defined (SUPPORT_SID_INTERFACE)*/
 
 /*
  * Versions of PVRSRVAllocHandle and PVRSRVAllocSubHandle with no return

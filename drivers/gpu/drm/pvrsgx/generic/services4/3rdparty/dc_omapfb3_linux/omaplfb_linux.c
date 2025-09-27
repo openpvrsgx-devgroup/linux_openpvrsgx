@@ -173,6 +173,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #error "PVR_LINUX_USING_WORKQUEUES must be defined"
 #endif
 
+MODULE_SUPPORTED_DEVICE(DEVNAME);
+
 #if !defined(PVR_OMAPLFB_DRM_FB)
 #if defined(PVR_OMAPFB3_OMAP5_UEVM)
 #define OMAP_DSS_DRIVER(drv, dev) struct omap_dss_driver *drv = (dev)->driver

@@ -59,6 +59,7 @@
 #include "hotkey.h"
 #include "pvr_debug.h"
 #include "pvrmodule.h"
+#include "pvr_uaccess.h"
 
 #if defined(SUPPORT_DRI_DRM)
 
@@ -233,7 +234,8 @@ long dbgdrv_ioctl(struct file *file, unsigned int ioctlCmd, unsigned long arg)
 	in = buffer;
 	out = buffer + (PAGE_SIZE >> 1);
 
-	if (copy_from_user(in, pIP->pInBuffer, pIP->ui32InBufferSize) != 0) {
+	if (pvr_copy_from_user(in, pIP->pInBuffer, pIP->ui32InBufferSize) !=
+	    0) {
 	goto init_failed;
 	}
 
@@ -260,8 +262,8 @@ long dbgdrv_ioctl(struct file *file, unsigned int ioctlCmd, unsigned long arg)
 	psStream, psReadInParams->bReadInitBuffer,
 	psReadInParams->ui32OutBufferSize, ui8Tmp);
 
-	if (copy_to_user(psReadInParams->u.pui8OutBuffer, ui8Tmp,
-	 *pui32BytesCopied) != 0) {
+	if (pvr_copy_to_user(psReadInParams->u.pui8OutBuffer, ui8Tmp,
+	     *pui32BytesCopied) != 0) {
 	vfree(ui8Tmp);
 	goto init_failed;
 	}

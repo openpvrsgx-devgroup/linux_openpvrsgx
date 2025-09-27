@@ -26,6 +26,7 @@
 
 #ifdef LINUX
 #include <asm/uaccess.h>
+#include "pvr_uaccess.h"
 #endif
 
 #include "img_types.h"
@@ -48,7 +49,7 @@ static IMG_UINT32 DBGDIOCDrivCreateStream(IMG_VOID *pvInBuffer,
 
 #ifdef LINUX
 
-	if (copy_from_user(name, psIn->u.pszName, 32) != 0) {
+	if (pvr_copy_from_user(name, psIn->u.pszName, 32) != 0) {
 	return IMG_FALSE;
 	}
 

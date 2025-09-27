@@ -49,39 +49,17 @@ typedef struct {
 
 #endif
 
-static inline IMG_VOID LinuxInitMutex(PVRSRV_LINUX_MUTEX *psPVRSRVMutex)
-{
-	mutex_init(psPVRSRVMutex);
-}
+extern IMG_VOID LinuxInitMutex(PVRSRV_LINUX_MUTEX *psPVRSRVMutex);
 
-static inline IMG_VOID LinuxLockMutex(PVRSRV_LINUX_MUTEX *psPVRSRVMutex)
-{
-	mutex_lock(psPVRSRVMutex);
-}
+extern IMG_VOID LinuxLockMutex(PVRSRV_LINUX_MUTEX *psPVRSRVMutex);
 
-static inline PVRSRV_ERROR
-LinuxLockMutexInterruptible(PVRSRV_LINUX_MUTEX *psPVRSRVMutex)
-{
-	if (mutex_lock_interruptible(psPVRSRVMutex) == -EINTR) {
-	return PVRSRV_ERROR_MUTEX_INTERRUPTIBLE_ERROR;
-	} else {
-	return PVRSRV_OK;
-	}
-}
+extern PVRSRV_ERROR
+LinuxLockMutexInterruptible(PVRSRV_LINUX_MUTEX *psPVRSRVMutex);
 
-static inline IMG_INT32 LinuxTryLockMutex(PVRSRV_LINUX_MUTEX *psPVRSRVMutex)
-{
-	return mutex_trylock(psPVRSRVMutex);
-}
+extern IMG_INT32 LinuxTryLockMutex(PVRSRV_LINUX_MUTEX *psPVRSRVMutex);
 
-static inline IMG_VOID LinuxUnLockMutex(PVRSRV_LINUX_MUTEX *psPVRSRVMutex)
-{
-	mutex_unlock(psPVRSRVMutex);
-}
+extern IMG_VOID LinuxUnLockMutex(PVRSRV_LINUX_MUTEX *psPVRSRVMutex);
 
-static inline IMG_BOOL LinuxIsLockedMutex(PVRSRV_LINUX_MUTEX *psPVRSRVMutex)
-{
-	return (mutex_is_locked(psPVRSRVMutex)) ? IMG_TRUE : IMG_FALSE;
-}
+extern IMG_BOOL LinuxIsLockedMutex(PVRSRV_LINUX_MUTEX *psPVRSRVMutex);
 
 #endif

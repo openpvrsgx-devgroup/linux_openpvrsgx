@@ -158,6 +158,9 @@ typedef struct _PVRSRV_KERNEL_MEM_INFO_ {
 	IMG_UINT32 ui32OrigReqSize;
 	IMG_UINT32 ui32OrigReqAlignment;
 	} sShareMemWorkaround;
+#if 1 //#if defined (CONFIG_ION_MTK)
+	int share_ionFd;
+#endif
 } PVRSRV_KERNEL_MEM_INFO;
 
 /*

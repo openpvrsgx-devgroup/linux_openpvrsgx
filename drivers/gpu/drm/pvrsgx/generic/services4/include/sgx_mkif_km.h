@@ -155,6 +155,7 @@ typedef struct _SGXMKIF_HOST_CTL_ {
 
 	IMG_UINT32
 	ui32OpenCLDelayCount; /* Counter to keep track OpenCL task completion time in units of regular task time out events */
+	IMG_UINT32 ui32InterruptCount;
 } SGXMKIF_HOST_CTL;
 
 /*

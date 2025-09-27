@@ -787,7 +787,19 @@ static PVRSRV_ERROR FreeResourceByPtr(RESMAN_ITEM *psItem,
 	if ((eError != PVRSRV_OK) && (eError != PVRSRV_ERROR_RETRY)) {
 	PVR_DPF((
 	PVR_DBG_ERROR,
-	"FreeResourceByPtr: ERROR calling FreeResource function"));
+	"FreeResourceByPtr: ERROR calling FreeResource function err(%d)",
+	eError));
+#ifdef MTK_DEBUG
+	PVR_DPF((
+	PVR_DBG_ERROR,
+	"FreeResourceByPtr: Type 0x%x, Addr 0x%x, "
+	"Param 0x%x, FnCall %08X, Flags 0x%x ForceCleanup %d",
+	psItem->ui32ResType,
+	(IMG_UINTPTR_T)psItem->pvParam,
+	psItem->ui32Param,
+	(IMG_UINTPTR_T)psItem->pfnFreeResource,
+	psItem->ui32Flags, bForceCleanup));
+#endif
 	}
 	}
 

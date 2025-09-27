@@ -55,6 +55,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "sgx_bridge_km.h"
 #include "pdump_osfunc.h"
 
+#include "mtk_debug.h"
+
 #define UINT32_MAX_VALUE 0xFFFFFFFFUL
 
 /*
@@ -4540,10 +4542,10 @@ IMG_VOID MMU_CheckFaultAddr(PVRSRV_SGXDEV_INFO *psDevInfo,
 	IMG_UINT32 ui32PTIndex;
 	IMG_UINT32 ui32PDIndex;
 
-	PVR_LOG(("Found MMU context for page fault 0x%08x",
-	 ui32FaultAddr));
-	PVR_LOG(("GPU memory context is for PID=%d (%s)",
-	 psMMUContext->ui32PID, psMMUContext->szName));
+	PVR_LOG_MDWP(("Found MMU context for page fault 0x%08x",
+	      ui32FaultAddr));
+	PVR_LOG_MDWP(("GPU memory context is for PID=%d (%s)",
+	      psMMUContext->ui32PID, psMMUContext->szName));
 
 	ui32PTIndex = (ui32FaultAddr & SGX_MMU_PT_MASK) >>
 	      SGX_MMU_PAGE_SHIFT;
@@ -4558,7 +4560,7 @@ IMG_VOID MMU_CheckFaultAddr(PVRSRV_SGXDEV_INFO *psDevInfo,
 	->PTPageCpuVAddr;
 	IMG_UINT32 ui32PTE = pui32Ptr[ui32PTIndex];
 
-	PVR_LOG((
+	PVR_LOG_MDWP((
 	"PDE valid: PTE = 0x%08x (PhysAddr = 0x%08x, %s)",
 	ui32PTE,
 	ui32PTE & SGX_MMU_PTE_ADDR_MASK,
@@ -4566,10 +4568,11 @@ IMG_VOID MMU_CheckFaultAddr(PVRSRV_SGXDEV_INFO *psDevInfo,
 	"valid" :
 	"Invalid"));
 	} else {
-	PVR_LOG(("Found PT info but no CPU address"));
+	PVR_LOG_MDWP(
+	("Found PT info but no CPU address"));
 	}
 	} else {
-	PVR_LOG(("No PDE found"));
+	PVR_LOG_MDWP(("No PDE found"));
 	}
 	}
 }

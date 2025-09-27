@@ -49,6 +49,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "pdump_km.h"
 #include "lists.h"
 
+#include "buffer_manager.h"
+#include "mtk_debug.h"
+
 static IMG_BOOL ZeroBuf(BM_BUF *pBuf, BM_MAPPING *pMapping,
 	IMG_SIZE_T ui32Bytes, IMG_UINT32 ui32Flags);
 static IMG_VOID BM_FreeMemory(IMG_VOID *pH, IMG_UINTPTR_T base,
@@ -2120,6 +2123,10 @@ static IMG_BOOL DevMemoryAlloc(BM_CONTEXT *pBMContext, BM_MAPPING *pMapping,
 	DisableHostAccess(pBMContext->psMMUContext);
 #endif
 
+	MTKPP_LOG(MTK_PP_R_DEVMEM, "pid=%u dev=%p size=%u alloc",
+	  OSGetCurrentProcessIDKM(), (void *)pMapping->DevVAddr.uiAddr,
+	  pMapping->uSize);
+
 	return IMG_TRUE;
 }
 
@@ -2161,6 +2168,10 @@ static IMG_VOID DevMemoryFree(BM_MAPPING *pMapping)
 	psDeviceNode->pfnMMUFree(pMapping->pBMHeap->pMMUHeap,
 	 pMapping->DevVAddr,
 	 IMG_CAST_TO_DEVVADDR_UINT(pMapping->uSizeVM));
+
+	MTKPP_LOG(MTK_PP_R_DEVMEM, "pid=%u dev=%p size=%u free",
+	  OSGetCurrentProcessIDKM(), (void *)pMapping->DevVAddr.uiAddr,
+	  pMapping->uSize);
 }
 
 /* If this array grows larger, it might be preferable to use a hashtable rather than an array. */

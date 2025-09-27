@@ -123,9 +123,22 @@ MODULE_GENERATED_HEADERS := $(addprefix $(MODULE_OUT)/intermediates/,$($(THIS_MO
 #    -lfoo.
 MODULE_LIBRARY_FLAGS := $(addprefix -l, $($(THIS_MODULE)_staticlibs)) $(addprefix -l,$($(THIS_MODULE)_libs)) $(foreach _lib,$($(THIS_MODULE)_extlibs),$(if $(filter undefined,$(origin lib$(_lib)_ldflags)),-l$(_lib),$(lib$(_lib)_ldflags)))
 
+ifeq ($(MODULE_HOST_BUILD),)
+ ifneq ($(SYSROOT),)
+  ifneq ($(SYSROOT),/)
+
+   # Restrict pkg-config to looking only in the SYSROOT
+   PKG_CONFIG_LIBDIR := ${SYSROOT}/usr/local/lib/pkgconfig:${SYSROOT}/usr/lib/${MULTIARCH_DIR}/pkgconfig:${SYSROOT}/usr/lib/pkgconfig:${SYSROOT}/usr/share/pkgconfig
+
+   # SYSROOT doesn't always do the right thing.  So explicitly add necessary paths to the link path
+   MODULE_LDFLAGS += -Xlinker -rpath-link=${SYSROOT}/usr/lib/${MULTIARCH_DIR} -Xlinker -rpath-link=${SYSROOT}/lib/${MULTIARCH_DIR} -Xlinker -rpath-link=${SYSROOT}/usr/lib/
+  endif
+ endif
+endif
+
 # pkg-config integration; primarily used by X.Org
 # FIXME: We don't support arbitrary CFLAGS yet (just includes)
 $(foreach _package,$($(THIS_MODULE)_packages),\
- $(eval MODULE_INCLUDE_FLAGS     += `pkg-config --cflags-only-I $(_package)`)\
- $(eval MODULE_LIBRARY_FLAGS     += `pkg-config --libs-only-l $(_package)`)\
- $(eval MODULE_LIBRARY_DIR_FLAGS += `pkg-config --libs-only-L $(_package)`))
+ $(eval MODULE_INCLUDE_FLAGS     += `$(PKG_CONFIG) --cflags-only-I $(_package)`)\
+ $(eval MODULE_LIBRARY_FLAGS     += `$(PKG_CONFIG) --libs-only-l $(_package)`)\
+ $(eval MODULE_LIBRARY_DIR_FLAGS += `$(PKG_CONFIG) --libs-only-L $(_package)`))

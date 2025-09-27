@@ -201,6 +201,7 @@ JAR ?= jar
 JAVA ?= java
 JAVAC ?= javac
 ZIP ?= zip
+PKG_CONFIG ?= pkg-config
 
 ifeq ($(USE_CCACHE),1)
 CCACHE ?= ccache
@@ -248,6 +249,7 @@ override INSTALL	:= $(if $(V),,@)install
 override JAR	:= $(if $(V),,@)$(JAR)
 override JAVA	:= $(if $(V),,@)$(JAVA)
 override JAVAC	:= $(if $(V),,@)$(JAVAC)
+override LN	:= $(if $(V),,@)ln -f
 override M4	:= $(if $(V),,@)m4
 override MKDIR	:= $(if $(V),,@)mkdir
 override MV	:= $(if $(V),,@)mv

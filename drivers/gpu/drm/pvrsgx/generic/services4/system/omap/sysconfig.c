@@ -85,7 +85,6 @@ static PVRSRV_ERROR EnableSGXClocksWrap(SYS_DATA *psSysData)
 
 #if !defined(SGX_OCP_NO_INT_BYPASS)
 	if (eError == PVRSRV_OK) {
-	OSWriteHWReg(gpvOCPRegsLinAddr, EUR_CR_OCP_SYSCONFIG, 0x14);
 	OSWriteHWReg(gpvOCPRegsLinAddr, EUR_CR_OCP_DEBUG_CONFIG,
 	     EUR_CR_OCP_DEBUG_CONFIG_THALIA_INT_BYPASS_MASK);
 	}
@@ -204,7 +203,11 @@ static PVRSRV_ERROR SysLocateDevices(SYS_DATA *psSysData)
 	return PVRSRV_ERROR_INVALID_DEVICE;
 	}
 
+#if (VS_PRODUCT_VERSION == 5)
+	gsSGXDeviceMap.sRegsSysPBase.uiAddr = SYS_OMAP_SGX_REGS_SYS_PHYS_BASE;
+#else
 	gsSGXDeviceMap.sRegsSysPBase.uiAddr = dev_res->start;
+#endif
 	gsSGXDeviceMap.sRegsCpuPBase =
 	SysSysPAddrToCpuPAddr(gsSGXDeviceMap.sRegsSysPBase);
 	PVR_TRACE(("SGX register base: 0x%lx",
@@ -513,7 +516,7 @@ PVRSRV_ERROR SysInitialise(IMG_VOID)
 #if defined(PVR_OMAP_TIMER_BASE_IN_SYS_SPEC_DATA)
 	TimerRegPhysBase = gsSysSpecificData.sTimerRegPhysBase;
 #else
-	TimerRegPhysBase.uiAddr = SYS_OMAP_GP11TIMER_REGS_SYS_PHYS_BASE;
+	TimerRegPhysBase.uiAddr = SYS_OMAP_GPTIMER_REGS_SYS_PHYS_BASE;
 #endif
 	gpsSysData->pvSOCTimerRegisterKM = IMG_NULL;
 	gpsSysData->hSOCTimerRegisterOSMemHandle = 0;
@@ -1243,16 +1246,6 @@ PVRSRV_ERROR SysDevicePostPowerState(IMG_UINT32 ui32DeviceIndex,
 
 	return eError;
 }
-
-#if defined(SYS_SUPPORTS_SGX_IDLE_CALLBACK)
-
-IMG_VOID SysSGXIdleTransition(IMG_BOOL bSGXIdle)
-{
-	PVR_DPF((PVR_DBG_MESSAGE, "SysSGXIdleTransition switch to %u",
-	 bSGXIdle));
-}
-
-#endif /* defined(SYS_SUPPORTS_SGX_IDLE_CALLBACK) */
 
 /*****************************************************************************
  @Function        SysOEMFunction

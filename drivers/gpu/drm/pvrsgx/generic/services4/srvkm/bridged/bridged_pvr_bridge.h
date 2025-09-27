@@ -53,7 +53,7 @@ extern "C" {
 #define PVRSRV_GET_BRIDGE_ID(X) _IOC_NR(X)
 #else
 #define PVRSRV_GET_BRIDGE_ID(X) \
-	((X) - PVRSRV_IOWR(PVRSRV_BRIDGE_CORE_CMD_FIRST))
+	((X) - PVRSRV_IOWR(PVRSRV_BRIDGE_UMKM_CMD_FIRST))
 #endif
 
 #ifndef ENOMEM
@@ -91,7 +91,7 @@ CopyToUserWrapper(PVRSRV_PER_PROCESS_DATA *pProcData, IMG_UINT32 ui32BridgeID,
 #define ASSIGN_AND_EXIT_ON_ERROR(error, src) \
 	ASSIGN_AND_RETURN_ON_ERROR(error, src, 0)
 
-#if defined(PVR_SECURE_HANDLES) || defined(SUPPORT_SID_INTERFACE)
+#if defined(PVR_SECURE_HANDLES)
 #ifdef INLINE_IS_PRAGMA
 #pragma inline(NewHandleBatch)
 #endif

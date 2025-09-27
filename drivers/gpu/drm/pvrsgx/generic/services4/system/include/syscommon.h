@@ -56,8 +56,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "pvr_debug.h"
 #include "services.h"
 
-#include <mach/sync_write.h>
-
 #if defined(NO_HARDWARE) && defined(__linux__) && defined(__KERNEL__)
 #include <asm/io.h>
 #endif
@@ -126,11 +124,7 @@ typedef struct _SYS_DATA_TAG_ {
 	[SYS_MAX_LOCAL_DEVMEM_ARENAS]; /*!< RA Arenas for local device memory heap management */
 
 	IMG_CHAR *pszVersionString; /*!< Human readable string showing relevent system version info */
-#if defined(SUPPORT_SID_INTERFACE)
-	PVRSRV_EVENTOBJECT_KM *psGlobalEventObject; /*!< OS Global Event Object */
-#else
 	PVRSRV_EVENTOBJECT *psGlobalEventObject; /*!< OS Global Event Object */
-#endif
 
 	PVRSRV_MISC_INFO_CPUCACHEOP_TYPE
 	ePendingCacheOpType; /*!< Deferred CPU cache op control */
@@ -361,8 +355,7 @@ static inline IMG_VOID SysWriteHWReg(IMG_PVOID pvLinRegBaseAddr,
 	     IMG_UINT32 ui32Offset,
 	     IMG_UINT32 ui32Value)
 {
-	//	writel(ui32Value, pvLinRegBaseAddr + ui32Offset);
-	mt65xx_reg_sync_writel(ui32Value, pvLinRegBaseAddr + ui32Offset);
+	writel(ui32Value, pvLinRegBaseAddr + ui32Offset);
 }
 #endif /* !(defined(NO_HARDWARE) && defined(__linux__)) */
 

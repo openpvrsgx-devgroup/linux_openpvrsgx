@@ -1,4 +1,5 @@
 /*************************************************************************/ /*!
+@File
 @Title          Device class services functions
 @Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
 @Description    Kernel services functions for device class devices
@@ -50,17 +51,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "lists.h"
 
+#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
+#include "pvr_sync.h"
+#endif
+
 PVRSRV_ERROR AllocateDeviceID(SYS_DATA *psSysData, IMG_UINT32 *pui32DevID);
 PVRSRV_ERROR FreeDeviceID(SYS_DATA *psSysData, IMG_UINT32 ui32DevID);
 
-#if defined(SUPPORT_MISR_IN_THREAD)
-void OSVSyncMISR(IMG_HANDLE, IMG_BOOL);
-#endif
-
-#if defined(SUPPORT_CUSTOM_SWAP_OPERATIONS)
-IMG_VOID PVRSRVFreeCommandCompletePacketKM(IMG_HANDLE hCmdCookie,
-	   IMG_BOOL bScheduleMISR);
-#endif
 /***********************************************************************
 	Local Display Class Structures
 ************************************************************************/
@@ -320,7 +317,7 @@ PVRSRVRegisterDCDeviceKM(PVRSRV_DC_SRV2DISP_KMJTABLE *psFuncTable,
 	 IMG_UINT32 *pui32DeviceID)
 {
 	PVRSRV_DISPLAYCLASS_INFO *psDCInfo = IMG_NULL;
-	PVRSRV_DEVICE_NODE *psDeviceNode;
+	PVRSRV_DEVICE_NODE *psDeviceNode = IMG_NULL;
 	SYS_DATA *psSysData;
 
 	/*
@@ -423,6 +420,11 @@ ErrorExit:
 	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, sizeof(PVRSRV_DISPLAYCLASS_INFO),
 	  psDCInfo, IMG_NULL);
 	/*not nulling pointer, out of scope*/
+
+	if (psDeviceNode) {
+	OSFreeMem(PVRSRV_OS_NON_PAGEABLE_HEAP,
+	  sizeof(PVRSRV_DEVICE_NODE), psDeviceNode, IMG_NULL);
+	}
 
 	return PVRSRV_ERROR_OUT_OF_MEMORY;
 }
@@ -527,7 +529,7 @@ PVRSRVRegisterBCDeviceKM(PVRSRV_BC_SRV2BUFFER_KMJTABLE *psFuncTable,
 	 IMG_UINT32 *pui32DeviceID)
 {
 	PVRSRV_BUFFERCLASS_INFO *psBCInfo = IMG_NULL;
-	PVRSRV_DEVICE_NODE *psDeviceNode;
+	PVRSRV_DEVICE_NODE *psDeviceNode = IMG_NULL;
 	SYS_DATA *psSysData;
 	/*
 	IN:
@@ -618,7 +620,7 @@ ErrorExit:
 
 	if (psBCInfo->psFuncTable) {
 	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP,
-	  sizeof(PPVRSRV_BC_SRV2BUFFER_KMJTABLE),
+	  sizeof(PVRSRV_BC_SRV2BUFFER_KMJTABLE),
 	  psBCInfo->psFuncTable, IMG_NULL);
 	psBCInfo->psFuncTable = IMG_NULL;
 	}
@@ -626,6 +628,11 @@ ErrorExit:
 	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, sizeof(PVRSRV_BUFFERCLASS_INFO),
 	  psBCInfo, IMG_NULL);
 	/*not nulling shared pointer, wasn't allocated to this point*/
+
+	if (psDeviceNode) {
+	OSFreeMem(PVRSRV_OS_NON_PAGEABLE_HEAP,
+	  sizeof(PVRSRV_DEVICE_NODE), psDeviceNode, IMG_NULL);
+	}
 
 	return PVRSRV_ERROR_OUT_OF_MEMORY;
 }
@@ -1167,6 +1174,14 @@ static PVRSRV_ERROR DestroyDCSwapChain(PVRSRV_DC_SWAPCHAIN *psSwapChain)
 
 #if !defined(SUPPORT_DC_CMDCOMPLETE_WHEN_NO_LONGER_DISPLAYED)
 	if (psSwapChain->ppsLastSyncInfos) {
+	for (i = 0; i < psSwapChain->ui32LastNumSyncInfos; i++) {
+	if (psSwapChain->ppsLastSyncInfos[i]) {
+	PVRSRVKernelSyncInfoDecRef(
+	psSwapChain->ppsLastSyncInfos[i],
+	IMG_NULL);
+	psSwapChain->ppsLastSyncInfos[i] = IMG_NULL;
+	}
+	}
 	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP,
 	  sizeof(PVRSRV_KERNEL_SYNC_INFO *) *
 	  psSwapChain->ui32LastNumSyncInfos,
@@ -1257,6 +1272,15 @@ PVRSRVCreateDCSwapChainRefKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 	psPerProc->hResManContext,
 	RESMAN_TYPE_DISPLAYCLASS_SWAPCHAIN_REF, psSwapChainRef, 0,
 	&DestroyDCSwapChainRefCallBack);
+	if (psSwapChainRef->hResItem == IMG_NULL) {
+	PVR_DPF((
+	PVR_DBG_ERROR,
+	"PVRSRVCreateDCSwapChainRefKM: ResManRegisterRes failed"));
+	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP,
+	  sizeof(PVRSRV_DC_SWAPCHAIN_REF), psSwapChainRef,
+	  IMG_NULL);
+	return PVRSRV_ERROR_INVALID_PARAMS;
+	}
 	*ppsSwapChainRef = psSwapChainRef;
 
 	return PVRSRV_OK;
@@ -1286,16 +1310,13 @@ PVRSRV_ERROR PVRSRVCreateDCSwapChainKM(
 	return PVRSRV_ERROR_INVALID_PARAMS;
 	}
 
+	OSMemSet(apsSyncData, 0,
+	 sizeof(PVRSRV_SYNC_DATA *) * PVRSRV_MAX_DC_SWAPCHAIN_BUFFERS);
+
 	if (ui32BufferCount > PVRSRV_MAX_DC_SWAPCHAIN_BUFFERS) {
 	PVR_DPF((PVR_DBG_ERROR,
 	 "PVRSRVCreateDCSwapChainKM: Too many buffers"));
 	return PVRSRV_ERROR_TOOMANYBUFFERS;
-	}
-
-	if (ui32BufferCount < 2) {
-	PVR_DPF((PVR_DBG_ERROR,
-	 "PVRSRVCreateDCSwapChainKM: Too few buffers"));
-	return PVRSRV_ERROR_TOO_FEW_BUFFERS;
 	}
 
 	psDCInfo = DCDeviceHandleToDCInfo(hDeviceKM);
@@ -1431,7 +1452,7 @@ PVRSRV_ERROR PVRSRVCreateDCSwapChainKM(
 	psSwapChain->ui32RefCount = 1;
 	psSwapChain->ui32Flags = ui32Flags;
 
-	/* Save pointer in DC structure if ti's shared struct */
+	/* Save pointer in DC structure if it's shared struct */
 	if (ui32Flags & PVRSRV_CREATE_SWAPCHAIN_SHARED) {
 	if (!psDCInfo->psDCSwapChainShared) {
 	psDCInfo->psDCSwapChainShared = psSwapChain;
@@ -1597,27 +1618,6 @@ PVRSRV_ERROR PVRSRVGetDCBuffersKM(IMG_HANDLE hDeviceKM,
 	phBuffer[i] = (IMG_HANDLE)&psSwapChain->asBuffer[i];
 	}
 
-#if defined(SUPPORT_GET_DC_BUFFERS_SYS_PHYADDRS) || \
-	defined(MTK_GET_BUFFER_PHYADDR)
-	for (i = 0; i < *pui32BufferCount; i++) {
-	IMG_UINT32 ui32ByteSize, ui32TilingStride;
-	IMG_SYS_PHYADDR *pPhyAddr;
-	IMG_BOOL bIsContiguous;
-	IMG_HANDLE hOSMapInfo;
-	IMG_VOID *pvVAddr;
-
-	eError = psDCInfo->psFuncTable->pfnGetBufferAddr(
-	psDCInfo->hExtDevice, ahExtBuffer[i], &pPhyAddr,
-	&ui32ByteSize, &pvVAddr, &hOSMapInfo, &bIsContiguous,
-	&ui32TilingStride);
-	if (eError != PVRSRV_OK) {
-	break;
-	}
-
-	psPhyAddr[i] = *pPhyAddr;
-	}
-#endif /* defined(SUPPORT_GET_DC_BUFFERS_SYS_PHYADDRS) */
-
 	return eError;
 }
 
@@ -1662,18 +1662,6 @@ PVRSRV_ERROR PVRSRVSwapToDCBufferKM(IMG_HANDLE hDeviceKM, IMG_HANDLE hBuffer,
 	return PVRSRV_ERROR_INVALID_SWAPINTERVAL;
 	}
 
-#if defined(SUPPORT_CUSTOM_SWAP_OPERATIONS)
-
-	if (psDCInfo->psFuncTable->pfnQuerySwapCommandID != IMG_NULL) {
-	psDCInfo->psFuncTable->pfnQuerySwapCommandID(
-	psDCInfo->hExtDevice,
-	psBuffer->psSwapChain->hExtSwapChain,
-	psBuffer->sDeviceClassBuffer.hExtBuffer, hPrivateTag,
-	&ui16SwapCommandID, &bAddReferenceToLast);
-	}
-
-#endif
-
 	/* get the queue from the buffer structure */
 	psQueue = psBuffer->psSwapChain->psQueue;
 
@@ -1692,7 +1680,7 @@ PVRSRV_ERROR PVRSRVSwapToDCBufferKM(IMG_HANDLE hDeviceKM, IMG_HANDLE hBuffer,
 	0, IMG_NULL, ui32NumSrcSyncs, apsSrcSync,
 	sizeof(DISPLAYCLASS_FLIP_COMMAND) +
 	(sizeof(IMG_RECT) * ui32ClipRectCount),
-	IMG_NULL, IMG_NULL);
+	IMG_NULL, IMG_NULL, IMG_NULL);
 	if (eError != PVRSRV_OK) {
 	PVR_DPF((
 	PVR_DBG_ERROR,
@@ -1795,8 +1783,12 @@ static IMG_VOID FreePrivateData(IMG_HANDLE hCallbackData)
 {
 	CALLBACK_DATA *psCallbackData = hCallbackData;
 
-	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP, psCallbackData->ui32PrivDataLength,
+	if (psCallbackData->ui32PrivDataLength) {
+	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP,
+	  psCallbackData->ui32PrivDataLength,
 	  psCallbackData->pvPrivData, IMG_NULL);
+	}
+
 	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP,
 	  sizeof(IMG_VOID *) * psCallbackData->ui32NumMemInfos,
 	  psCallbackData->ppvMemInfos, IMG_NULL);
@@ -1805,23 +1797,31 @@ static IMG_VOID FreePrivateData(IMG_HANDLE hCallbackData)
 }
 
 IMG_EXPORT
-PVRSRV_ERROR PVRSRVSwapToDCBuffer2KM(
-	IMG_HANDLE hDeviceKM, IMG_HANDLE hSwapChain,
-	IMG_UINT32 ui32SwapInterval, PVRSRV_KERNEL_MEM_INFO **ppsMemInfos,
-	PVRSRV_KERNEL_SYNC_INFO **ppsSyncInfos, IMG_UINT32 ui32NumMemSyncInfos,
-	IMG_PVOID pvPrivData, IMG_UINT32 ui32PrivDataLength)
+PVRSRV_ERROR
+PVRSRVSwapToDCBuffer2KM(IMG_HANDLE hDeviceKM, IMG_HANDLE hSwapChain,
+	IMG_UINT32 ui32SwapInterval,
+	PVRSRV_KERNEL_MEM_INFO **ppsMemInfos,
+	PVRSRV_KERNEL_SYNC_INFO **ppsSyncInfos,
+	IMG_UINT32 ui32NumMemSyncInfos, IMG_PVOID pvPrivData,
+	IMG_UINT32 ui32PrivDataLength, IMG_HANDLE *phFence)
 {
+	IMG_UINT32 ui32NumSyncInfos = ui32NumMemSyncInfos;
+	IMG_UINT32 ui32NumMemInfos = ui32NumMemSyncInfos;
 	PVRSRV_KERNEL_SYNC_INFO **ppsCompiledSyncInfos;
 	IMG_UINT32 i, ui32NumCompiledSyncInfos;
 	DISPLAYCLASS_FLIP_COMMAND2 *psFlipCmd;
 	PVRSRV_DISPLAYCLASS_INFO *psDCInfo;
 	PVRSRV_DC_SWAPCHAIN *psSwapChain;
-	PVRSRV_ERROR eError = PVRSRV_OK;
 	CALLBACK_DATA *psCallbackData;
 	PVRSRV_QUEUE_INFO *psQueue;
 	PVRSRV_COMMAND *psCommand;
 	IMG_PVOID *ppvMemInfos;
+	PVRSRV_ERROR eError;
 	SYS_DATA *psSysData;
+
+#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
+	struct sync_fence *apsFence[SGX_MAX_SRC_SYNCS_TA] = {};
+#endif /* defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC) */
 
 	if (!hDeviceKM || !hSwapChain || !ppsMemInfos || !ppsSyncInfos ||
 	    ui32NumMemSyncInfos < 1) {
@@ -1855,7 +1855,7 @@ PVRSRV_ERROR PVRSRVSwapToDCBuffer2KM(
 	psCallbackData->ui32PrivDataLength = ui32PrivDataLength;
 
 	if (OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
-	       sizeof(IMG_VOID *) * ui32NumMemSyncInfos,
+	       sizeof(IMG_VOID *) * ui32NumMemInfos,
 	       (IMG_VOID **)&ppvMemInfos, IMG_NULL,
 	       "Swap Command Meminfos") != PVRSRV_OK) {
 	PVR_DPF((
@@ -1865,12 +1865,23 @@ PVRSRV_ERROR PVRSRVSwapToDCBuffer2KM(
 	goto Exit;
 	}
 
-	for (i = 0; i < ui32NumMemSyncInfos; i++) {
+	for (i = 0; i < ui32NumMemInfos; i++) {
 	ppvMemInfos[i] = ppsMemInfos[i];
 	}
 
 	psCallbackData->ppvMemInfos = ppvMemInfos;
-	psCallbackData->ui32NumMemInfos = ui32NumMemSyncInfos;
+	psCallbackData->ui32NumMemInfos = ui32NumMemInfos;
+
+#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
+	eError = PVRSyncFencesToSyncInfos(ppsSyncInfos, &ui32NumSyncInfos,
+	  apsFence);
+	if (eError != PVRSRV_OK) {
+	PVR_DPF((
+	PVR_DBG_ERROR,
+	"PVRSRVSwapToDCBuffer2KM: PVRSyncFencesToSyncInfos failed"));
+	goto Exit;
+	}
+#endif /* defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC) */
 
 	/* get the queue from the buffer structure */
 	psQueue = psSwapChain->psQueue;
@@ -1879,21 +1890,36 @@ PVRSRV_ERROR PVRSRVSwapToDCBuffer2KM(
 	if (psSwapChain->ppsLastSyncInfos) {
 	IMG_UINT32 ui32NumUniqueSyncInfos =
 	psSwapChain->ui32LastNumSyncInfos;
+	IMG_BOOL *abUnique;
 	IMG_UINT32 j;
 
+	if (OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
+	       sizeof(IMG_BOOL) *
+	       psSwapChain->ui32LastNumSyncInfos,
+	       (IMG_VOID **)&abUnique, IMG_NULL,
+	       "Unique booleans") != PVRSRV_OK) {
+	PVR_DPF((
+	PVR_DBG_ERROR,
+	"PVRSRVSwapToDCBuffer2KM: Failed to allocate space for unique booleans"));
+	goto Exit;
+	}
+
 	for (j = 0; j < psSwapChain->ui32LastNumSyncInfos; j++) {
-	for (i = 0; i < ui32NumMemSyncInfos; i++) {
+	abUnique[j] = IMG_TRUE;
+	for (i = 0; i < ui32NumSyncInfos; i++) {
+	PVR_ASSERT(psSwapChain->ppsLastSyncInfos[j]);
+	PVR_ASSERT(ppsSyncInfos[i]);
 	if (psSwapChain->ppsLastSyncInfos[j] ==
 	    ppsSyncInfos[i]) {
-	psSwapChain->ppsLastSyncInfos[j] =
-	IMG_NULL;
+	abUnique[j] = IMG_FALSE;
 	ui32NumUniqueSyncInfos--;
+	break;
 	}
 	}
 	}
 
 	ui32NumCompiledSyncInfos =
-	ui32NumMemSyncInfos + ui32NumUniqueSyncInfos;
+	ui32NumSyncInfos + ui32NumUniqueSyncInfos;
 
 	if (OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
 	       sizeof(PVRSRV_KERNEL_SYNC_INFO *) *
@@ -1903,34 +1929,153 @@ PVRSRV_ERROR PVRSRVSwapToDCBuffer2KM(
 	PVR_DPF((
 	PVR_DBG_ERROR,
 	"PVRSRVSwapToDCBuffer2KM: Failed to allocate space for meminfo list"));
+	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP,
+	  sizeof(IMG_BOOL) *
+	  psSwapChain->ui32LastNumSyncInfos,
+	  (IMG_VOID *)abUnique, IMG_NULL);
+#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
+	for (i = 0; i < SGX_MAX_SRC_SYNCS_TA && apsFence[i];
+	     i++)
+	sync_fence_put(apsFence[i]);
+#endif
 	goto Exit;
 	}
 
 	OSMemCopy(ppsCompiledSyncInfos, ppsSyncInfos,
-	  sizeof(PVRSRV_KERNEL_SYNC_INFO *) *
-	  ui32NumMemSyncInfos);
-	for (j = 0, i = ui32NumMemSyncInfos;
+	  sizeof(PVRSRV_KERNEL_SYNC_INFO *) * ui32NumSyncInfos);
+	for (j = 0, i = ui32NumSyncInfos;
 	     j < psSwapChain->ui32LastNumSyncInfos; j++) {
-	if (psSwapChain->ppsLastSyncInfos[j]) {
+	if (abUnique[j]) {
 	ppsCompiledSyncInfos[i] =
 	psSwapChain->ppsLastSyncInfos[j];
 	i++;
 	}
 	}
+
+	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP,
+	  sizeof(IMG_BOOL) * psSwapChain->ui32LastNumSyncInfos,
+	  (IMG_VOID *)abUnique, IMG_NULL);
 	} else
 #endif /* !defined(SUPPORT_DC_CMDCOMPLETE_WHEN_NO_LONGER_DISPLAYED) */
 	{
+	IMG_UINT32 j, ui32Missing = 0;
+
+	/* Older synchronization schemes would just pass down the syncinfos
+	 * hanging off of the meminfos. So we would expect identical lists.
+	 * However, newer drivers may send down additional synchronization
+	 * i.e. for TQ fence operations. In such a case we need to allocate
+	 * more space for the compiled syncinfos to ensure everything is
+	 * ROP2 synchronized.
+	 */
+	for (i = 0; i < ui32NumMemInfos; i++) {
+	for (j = 0; j < ui32NumSyncInfos; j++) {
+	if (ppsSyncInfos[j] ==
+	    ppsMemInfos[i]->psKernelSyncInfo)
+	break;
+	}
+
+	if (j == ui32NumSyncInfos)
+	ui32Missing++;
+	}
+
+	if (ui32Missing) {
+	IMG_UINT32 k;
+
+	ui32NumCompiledSyncInfos =
+	ui32NumSyncInfos + ui32Missing;
+
+	if (OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
+	       sizeof(PVRSRV_KERNEL_SYNC_INFO *) *
+	       ui32NumCompiledSyncInfos,
+	       (IMG_VOID **)&ppsCompiledSyncInfos,
+	       IMG_NULL,
+	       "Compiled syncinfos") != PVRSRV_OK) {
+	PVR_DPF((
+	PVR_DBG_ERROR,
+	"PVRSRVSwapToDCBuffer2KM: Failed to allocate space for meminfo list"));
+#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
+	for (i = 0;
+	     i < SGX_MAX_SRC_SYNCS_TA && apsFence[i];
+	     i++)
+	sync_fence_put(apsFence[i]);
+#endif
+	goto Exit;
+	}
+
+	for (i = 0; i < ui32NumSyncInfos; i++) {
+	ppsCompiledSyncInfos[i] = ppsSyncInfos[i];
+	}
+
+	k = i;
+	for (i = 0; i < ui32NumMemInfos; i++) {
+	for (j = 0; j < ui32NumSyncInfos; j++) {
+	if (ppsSyncInfos[j] ==
+	    ppsMemInfos[i]->psKernelSyncInfo)
+	break;
+	}
+
+	if (j == ui32NumSyncInfos) {
+	/* Insert the unique one */
+	PVR_ASSERT(k <
+	   ui32NumCompiledSyncInfos);
+	ppsCompiledSyncInfos[k] =
+	ppsMemInfos[i]->psKernelSyncInfo;
+	k++;
+	}
+	}
+
+	PVR_ASSERT(k == ui32NumCompiledSyncInfos);
+
+	/* As a further complication, if we have multiple displays, we
+	 * might see the same layer/meminfo submitted twice. This is
+	 * valid, as the layer might be needed by two separate pipes,
+	 * but we should not use the meminfo's synchronization twice
+	 * because this will deadlock the queue processor.
+	 *
+	 * For now, work over the meminfo end of the compiled syncs
+	 * list and collapse any duplicates. We can assume the fence
+	 * sync part of the array has already been de-duplicated.
+	 */
+	k = ui32NumSyncInfos;
+	for (i = ui32NumSyncInfos; i < ui32NumCompiledSyncInfos;
+	     i++) {
+	/* Compare the i'th entry with all that follow */
+	for (j = i + 1; j < ui32NumCompiledSyncInfos;
+	     j++) {
+	if (ppsCompiledSyncInfos[i] ==
+	    ppsCompiledSyncInfos[j])
+	break;
+	}
+
+	if (j == ui32NumCompiledSyncInfos) {
+	/* No duplicate found. Use this entry */
+	ppsCompiledSyncInfos[k] =
+	ppsCompiledSyncInfos[i];
+	k++;
+	}
+	}
+	ui32NumCompiledSyncInfos = k;
+	} else {
 	ppsCompiledSyncInfos = ppsSyncInfos;
-	ui32NumCompiledSyncInfos = ui32NumMemSyncInfos;
+	ui32NumCompiledSyncInfos = ui32NumSyncInfos;
+	}
 	}
 
 	/* insert the command (header) */
-	eError = PVRSRVInsertCommandKM(psQueue, &psCommand,
-	       psDCInfo->ui32DeviceID, DC_FLIP_COMMAND,
-	       0, IMG_NULL, ui32NumCompiledSyncInfos,
-	       ppsCompiledSyncInfos,
-	       sizeof(DISPLAYCLASS_FLIP_COMMAND2),
-	       FreePrivateData, psCallbackData);
+	eError = PVRSRVInsertCommandKM(
+	psQueue, &psCommand, psDCInfo->ui32DeviceID, DC_FLIP_COMMAND, 0,
+	IMG_NULL, ui32NumCompiledSyncInfos, ppsCompiledSyncInfos,
+	sizeof(DISPLAYCLASS_FLIP_COMMAND2), FreePrivateData,
+	psCallbackData, phFence);
+
+#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
+	/* InsertCommand bumped the refcount on the raw sync objects, so we
+	 * can put the fences now. Even if the fences are deleted, the syncs
+	 * will persist.
+	 */
+	for (i = 0; i < SGX_MAX_SRC_SYNCS_TA && apsFence[i]; i++)
+	sync_fence_put(apsFence[i]);
+#endif
 
 	if (ppsCompiledSyncInfos != ppsSyncInfos) {
 	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP,
@@ -1962,7 +2107,7 @@ PVRSRV_ERROR PVRSRVSwapToDCBuffer2KM(
 	psFlipCmd->ui32PrivDataLength = ui32PrivDataLength;
 
 	psFlipCmd->ppsMemInfos = (PDC_MEM_INFO *)ppvMemInfos;
-	psFlipCmd->ui32NumMemInfos = ui32NumMemSyncInfos;
+	psFlipCmd->ui32NumMemInfos = ui32NumMemInfos;
 
 	/* Even though this is "unused", we have to initialize it,
 	 * as the display controller might NULL-test it.
@@ -1998,6 +2143,11 @@ PVRSRV_ERROR PVRSRVSwapToDCBuffer2KM(
 	if (eError != PVRSRV_OK) {
 	PVR_DPF((PVR_DBG_ERROR,
 	 "PVRSRVSwapToDCBuffer2KM: Failed to submit command"));
+#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
+	sync_fence_put(psCommand->pvCleanupFence);
+	sync_fence_put(*phFence);
+	*phFence = IMG_NULL;
+#endif
 	goto Exit;
 	}
 
@@ -2012,13 +2162,27 @@ PVRSRV_ERROR PVRSRVSwapToDCBuffer2KM(
 	if (eError != PVRSRV_OK) {
 	PVR_DPF((PVR_DBG_ERROR,
 	 "PVRSRVSwapToDCBuffer2KM: Failed to schedule MISR"));
+#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
+	sync_fence_put(*phFence);
+	*phFence = IMG_NULL;
+#endif
 	goto Exit;
 	}
 
 #if !defined(SUPPORT_DC_CMDCOMPLETE_WHEN_NO_LONGER_DISPLAYED)
 	/* Reallocate the syncinfo list if it was too small */
-	if (psSwapChain->ui32LastNumSyncInfos < ui32NumMemSyncInfos) {
+	if (psSwapChain->ui32LastNumSyncInfos < ui32NumSyncInfos) {
 	if (psSwapChain->ppsLastSyncInfos) {
+	for (i = 0; i < psSwapChain->ui32LastNumSyncInfos;
+	     i++) {
+	if (psSwapChain->ppsLastSyncInfos[i]) {
+	PVRSRVKernelSyncInfoDecRef(
+	psSwapChain->ppsLastSyncInfos[i],
+	IMG_NULL);
+	psSwapChain->ppsLastSyncInfos[i] =
+	IMG_NULL;
+	}
+	}
 	OSFreeMem(PVRSRV_OS_PAGEABLE_HEAP,
 	  sizeof(PVRSRV_KERNEL_SYNC_INFO *) *
 	  psSwapChain->ui32LastNumSyncInfos,
@@ -2027,20 +2191,34 @@ PVRSRV_ERROR PVRSRVSwapToDCBuffer2KM(
 
 	if (OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
 	       sizeof(PVRSRV_KERNEL_SYNC_INFO *) *
-	       ui32NumMemSyncInfos,
+	       ui32NumSyncInfos,
 	       (IMG_VOID **)&psSwapChain->ppsLastSyncInfos,
 	       IMG_NULL, "Last syncinfos") != PVRSRV_OK) {
 	PVR_DPF((
 	PVR_DBG_ERROR,
 	"PVRSRVSwapToDCBuffer2KM: Failed to allocate space for meminfo list"));
+#if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
+	sync_fence_put(*phFence);
+	*phFence = IMG_NULL;
+#endif
 	goto Exit;
 	}
 	}
 
-	psSwapChain->ui32LastNumSyncInfos = ui32NumMemSyncInfos;
+	for (i = 0; i < psSwapChain->ui32LastNumSyncInfos; i++) {
+	if (psSwapChain->ppsLastSyncInfos[i]) {
+	PVRSRVKernelSyncInfoDecRef(
+	psSwapChain->ppsLastSyncInfos[i], IMG_NULL);
+	psSwapChain->ppsLastSyncInfos[i] = IMG_NULL;
+	}
+	}
 
-	for (i = 0; i < ui32NumMemSyncInfos; i++) {
+	psSwapChain->ui32LastNumSyncInfos = ui32NumSyncInfos;
+
+	for (i = 0; i < ui32NumSyncInfos; i++) {
 	psSwapChain->ppsLastSyncInfos[i] = ppsSyncInfos[i];
+	PVRSRVKernelSyncInfoIncRef(psSwapChain->ppsLastSyncInfos[i],
+	   IMG_NULL);
 	}
 #endif /* !defined(SUPPORT_DC_CMDCOMPLETE_WHEN_NO_LONGER_DISPLAYED) */
 
@@ -2090,7 +2268,7 @@ PVRSRV_ERROR PVRSRVSwapToDCSystemKM(IMG_HANDLE hDeviceKM,
 	psSwapChain = psSwapChainRef->psSwapChain;
 
 	/*
-	If more then 1 reference to the swapchain exist then
+	If more than 1 reference to the swapchain exists then
 	ignore any request to swap to the system buffer
 	*/
 	if (psSwapChain->ui32RefCount > 1) {
@@ -2099,17 +2277,6 @@ PVRSRV_ERROR PVRSRVSwapToDCSystemKM(IMG_HANDLE hDeviceKM,
 
 	/* get the queue from the buffer structure */
 	psQueue = psSwapChain->psQueue;
-
-#if defined(SUPPORT_CUSTOM_SWAP_OPERATIONS)
-
-	if (psDCInfo->psFuncTable->pfnQuerySwapCommandID != IMG_NULL) {
-	psDCInfo->psFuncTable->pfnQuerySwapCommandID(
-	psDCInfo->hExtDevice, psSwapChain->hExtSwapChain,
-	psDCInfo->sSystemBuffer.sDeviceClassBuffer.hExtBuffer,
-	0, &ui16SwapCommandID, &bAddReferenceToLast);
-	}
-
-#endif
 
 	/* specify the syncs */
 	apsSrcSync[0] =
@@ -2127,10 +2294,12 @@ PVRSRV_ERROR PVRSRVSwapToDCSystemKM(IMG_HANDLE hDeviceKM,
 	}
 
 	/* insert the command (header) */
-	eError = PVRSRVInsertCommandKM(
-	psQueue, &psCommand, psDCInfo->ui32DeviceID, ui16SwapCommandID,
-	0, IMG_NULL, ui32NumSrcSyncs, apsSrcSync,
-	sizeof(DISPLAYCLASS_FLIP_COMMAND), IMG_NULL, IMG_NULL);
+	eError = PVRSRVInsertCommandKM(psQueue, &psCommand,
+	       psDCInfo->ui32DeviceID,
+	       ui16SwapCommandID, 0, IMG_NULL,
+	       ui32NumSrcSyncs, apsSrcSync,
+	       sizeof(DISPLAYCLASS_FLIP_COMMAND),
+	       IMG_NULL, IMG_NULL, IMG_NULL);
 	if (eError != PVRSRV_OK) {
 	PVR_DPF((
 	PVR_DBG_ERROR,
@@ -2354,18 +2523,10 @@ IMG_BOOL PVRGetDisplayClassJTable(PVRSRV_DC_DISP2SRV_KMJTABLE *psJTable)
 	psJTable->pfnPVRSRVOEMFunction = &SysOEMFunction;
 	psJTable->pfnPVRSRVRegisterCmdProcList = &PVRSRVRegisterCmdProcListKM;
 	psJTable->pfnPVRSRVRemoveCmdProcList = &PVRSRVRemoveCmdProcListKM;
-#if defined(SUPPORT_MISR_IN_THREAD)
-	psJTable->pfnPVRSRVCmdComplete = &OSVSyncMISR;
-#else
 	psJTable->pfnPVRSRVCmdComplete = &PVRSRVCommandCompleteKM;
-#endif
 	psJTable->pfnPVRSRVRegisterSystemISRHandler =
 	&PVRSRVRegisterSystemISRHandler;
 	psJTable->pfnPVRSRVRegisterPowerDevice = &PVRSRVRegisterPowerDevice;
-#if defined(SUPPORT_CUSTOM_SWAP_OPERATIONS)
-	psJTable->pfnPVRSRVFreeCmdCompletePacket =
-	&PVRSRVFreeCommandCompletePacketKM;
-#endif
 	psJTable->pfnPVRSRVDCMemInfoGetCpuVAddr = &PVRSRVDCMemInfoGetCpuVAddr;
 	psJTable->pfnPVRSRVDCMemInfoGetCpuPAddr = &PVRSRVDCMemInfoGetCpuPAddr;
 	psJTable->pfnPVRSRVDCMemInfoGetByteSize = &PVRSRVDCMemInfoGetByteSize;

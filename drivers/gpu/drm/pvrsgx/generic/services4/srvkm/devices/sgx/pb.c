@@ -102,7 +102,7 @@ IMG_EXPORT PVRSRV_ERROR SGXFindSharedPBDescKM(
 	psStubPBDesc->ui32TotalPBSize));
 	}
 
-	if (OSAllocMem(PVRSRV_OS_PAGEABLE_HEAP,
+	if (OSAllocMem(PVRSRV_OS_NON_PAGEABLE_HEAP,
 	       sizeof(PVRSRV_KERNEL_MEM_INFO *) *
 	       psStubPBDesc->ui32SubKernelMemInfosCount,
 	       (IMG_VOID **)&ppsSharedPBDescSubKernelMemInfos,

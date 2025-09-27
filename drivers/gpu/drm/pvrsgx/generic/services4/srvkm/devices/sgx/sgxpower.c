@@ -365,7 +365,7 @@ PVRSRV_ERROR SGXPrePowerState(IMG_HANDLE hDevHandle,
 #endif /* PDUMP */
 
 /* Wait for the pending ukernel to host interrupts to come back. */
-#if !defined(NO_HARDWARE)
+#if !defined(NO_HARDWARE) && defined(SUPPORT_LISR_MISR_SYNC)
 	if (PollForValueKM(&g_ui32HostIRQCountSample,
 	   psDevInfo->psSGXHostCtl->ui32InterruptCount,
 	   0xffffffff, MAX_HW_TIME_US,
@@ -377,8 +377,7 @@ PVRSRV_ERROR SGXPrePowerState(IMG_HANDLE hDevHandle,
 	SGXDumpDebugInfo(psDevInfo, IMG_FALSE);
 	PVR_DBG_BREAK;
 	}
-#endif /* NO_HARDWARE */
-
+#endif /* NO_HARDWARE && SUPPORT_LISR_MISR_SYNC*/
 #if defined(SGX_FEATURE_MP)
 	ui32CoresEnabled = ((OSReadHWReg(psDevInfo->pvRegsBaseKM,
 	 EUR_CR_MASTER_CORE) &
@@ -558,6 +557,17 @@ PVRSRV_ERROR SGXPreClockSpeedChange(IMG_HANDLE hDevHandle, IMG_BOOL bIdleDevice,
 	PDUMPRESUME();
 	return eError;
 	}
+	} else {
+#if defined(SUPPORT_HW_RECOVERY)
+	PVRSRV_ERROR eError;
+
+	eError = OSDisableTimer(psDevInfo->hTimer);
+	if (eError != PVRSRV_OK) {
+	PVR_DPF((
+	PVR_DBG_ERROR,
+	"SGXStartTimer : Failed to enable host timer"));
+	}
+#endif /* SUPPORT_HW_RECOVERY */
 	}
 	}
 

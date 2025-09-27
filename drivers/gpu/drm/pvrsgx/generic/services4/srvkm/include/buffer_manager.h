@@ -316,7 +316,7 @@ BM_Alloc(IMG_HANDLE hDevMemHeap, IMG_DEV_VIRTADDR *psDevVAddr, IMG_SIZE_T uSize,
  *  @Return IMG_TRUE - Success, IMG_FALSE - Failed
  */
 IMG_BOOL
-BM_Wrap(IMG_HANDLE hDevMemHeap, IMG_SIZE_T ui32Size, IMG_SIZE_T ui32Offset,
+BM_Wrap(IMG_HANDLE hDevMemHeap, IMG_SIZE_T uSize, IMG_SIZE_T uOffset,
 	IMG_BOOL bPhysContig, IMG_SYS_PHYADDR *psSysAddr, IMG_VOID *pvCPUVAddr,
 	IMG_UINT32 *pui32Flags, BM_HANDLE *phBuf);
 

@@ -1,28 +1,44 @@
-/**********************************************************************
- *
- * Copyright (C) Imagination Technologies Ltd. All rights reserved.
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- *
- * This program is distributed in the hope it will be useful but, except
- * as otherwise stated in writing, without any warranty; without even the
- * implied warranty of merchantability or fitness for a particular purpose.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * The full GNU General Public License is included in this distribution in
- * the file called "COPYING".
- *
- * Contact Information:
- * Imagination Technologies Ltd. <gpl-support@imgtec.com>
- * Home Park Estate, Kings Langley, Herts, WD4 8LZ, UK
- *
-******************************************************************************/
+/*************************************************************************/ /*!
+@Title          SGX KM API Header
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@Description    Exported SGX API details
+@License        Dual MIT/GPLv2
+
+The contents of this file are subject to the MIT license as set out below.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/ /**************************************************************************/
 
 #ifndef __SGXAPI_KM_H__
 #define __SGXAPI_KM_H__
@@ -33,7 +49,7 @@ extern "C" {
 
 #include "sgxdefs.h"
 
-#if defined(__linux__) && !defined(USE_CODE)
+#if (defined(__linux__) || defined(__QNXNTO__)) && !defined(USE_CODE)
 #if defined(__KERNEL__)
 #include <asm/unistd.h>
 #else
@@ -63,16 +79,15 @@ extern "C" {
 #endif
 #if defined(SGX_FEATURE_2D_HARDWARE)
 #define SGX_2D_HEAP_ID 12
-#else
-#if defined(FIX_HW_BRN_26915)
-#define SGX_CGBUFFER_HEAP_ID 13
-#endif
 #endif
 #if defined(SUPPORT_MEMORY_TILING)
 #define SGX_VPB_TILED_HEAP_ID 14
 #endif
+#if defined(SUPPORT_ION)
+#define SGX_ION_HEAP_ID 15
+#endif
 
-#define SGX_MAX_HEAP_ID 15
+#define SGX_MAX_HEAP_ID 16
 
 /*
  * Keep SGX_3DPARAMETERS_HEAP_ID as TQ full custom
@@ -102,9 +117,11 @@ extern "C" {
 /* note: there is implicitly 1 3D Dst Sync */
 #else
 /* sync info structure array size */
-#define SGX_MAX_SRC_SYNCS 8
-#define SGX_MAX_DST_SYNCS 1
+#define SGX_MAX_SRC_SYNCS_TA 32
+#define SGX_MAX_DST_SYNCS_TA 1
 /* note: there is implicitly 1 3D Dst Sync */
+#define SGX_MAX_SRC_SYNCS_TQ 8
+#define SGX_MAX_DST_SYNCS_TQ 1
 #endif
 
 #if defined(SGX_FEATURE_EXTENDED_PERF_COUNTERS)
@@ -258,6 +275,7 @@ typedef enum _SGX_MISC_INFO_REQUEST_ {
 	SGX_MISC_INFO_REQUEST_RESUME_BREAKPOINT,
 #endif /* SGX_FEATURE_DATA_BREAKPOINTS */
 	SGX_MISC_INFO_DUMP_DEBUG_INFO,
+	SGX_MISC_INFO_DUMP_DEBUG_INFO_FORCE_REGS,
 	SGX_MISC_INFO_PANIC,
 	SGX_MISC_INFO_REQUEST_SPM,
 	SGX_MISC_INFO_REQUEST_ACTIVEPOWER,
@@ -360,6 +378,10 @@ typedef struct _PVRSRV_SGX_MISCINFO_SET_HWPERF_STATUS {
 	IMG_UINT32 aui32PerfGroup[PVRSRV_SGX_HWPERF_NUM_COUNTERS];
 	/* Specifies the HW's active bit selectors */
 	IMG_UINT32 aui32PerfBit[PVRSRV_SGX_HWPERF_NUM_COUNTERS];
+	/* Specifies the HW's counter bit selectors */
+	IMG_UINT32 ui32PerfCounterBitSelect;
+	/* Specifies the HW's sum_mux selectors */
+	IMG_UINT32 ui32PerfSumMux;
 #else
 	/* Specifies the HW's active group */
 	IMG_UINT32 ui32PerfGroup;
@@ -464,6 +486,10 @@ typedef struct _SGX_KICKTA_DUMP_BUFFER_
 	control structure to be checked */
 #endif
 	IMG_PCHAR pszName; /*< Name of buffer */
+
+#if defined(__QNXNTO__)
+	IMG_UINT32 ui32NameLength; /*< Number of characters in buffer name */
+#endif
 #if defined(SUPPORT_SID_INTERFACE)
 } SGX_KICKTA_DUMP_BUFFER_KM, *PSGX_KICKTA_DUMP_BUFFER_KM;
 #else

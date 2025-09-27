@@ -1,27 +1,42 @@
-/**********************************************************************
- *
- * Copyright (C) Imagination Technologies Ltd. All rights reserved.
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- *
- * This program is distributed in the hope it will be useful but, except
- * as otherwise stated in writing, without any warranty; without even the
- * implied warranty of merchantability or fitness for a particular purpose.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * The full GNU General Public License is included in this distribution in
- * the file called "COPYING".
- *
- * Contact Information:
- * Imagination Technologies Ltd. <gpl-support@imgtec.com>
- * Home Park Estate, Kings Langley, Herts, WD4 8LZ, UK
- *
+/*************************************************************************/ /*!
+@Title          Services reference count debugging
+@Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
+@License        Dual MIT/GPLv2
+
+The contents of this file are subject to the MIT license as set out below.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Alternatively, the contents of this file may be used under the terms of
+the GNU General Public License Version 2 ("GPL") in which case the provisions
+of GPL are applicable instead of those above.
+
+If you wish to allow use of your version of this file only under the terms of
+GPL, and not to allow others to use your version of this file under the terms
+of the MIT license, indicate your decision by deleting the provisions above
+and replace them with the notice and other provisions required by GPL as set
+out in the file called "GPL-COPYING" included in this distribution. If you do
+not delete the provisions above, a recipient may use your version of this file
+under the terms of either the MIT license or GPL.
+
+This License is also included in this distribution in the file called
+"MIT-COPYING".
+
+EXCEPT AS OTHERWISE STATED IN A NEGOTIATED AGREEMENT: (A) THE SOFTWARE IS
+PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */ /**************************************************************************/
 
 #if defined(PVRSRV_REFCOUNT_DEBUG)
@@ -33,10 +48,15 @@
 #define PVRSRV_LOCK_CCB()
 #define PVRSRV_UNLOCK_CCB()
 #else /* __linux__ */
-#include <linux/mutex.h>
-static DEFINE_MUTEX(gsCCBLock);
-#define PVRSRV_LOCK_CCB() mutex_lock(&gsCCBLock)
-#define PVRSRV_UNLOCK_CCB() mutex_unlock(&gsCCBLock)
+#include <linux/spinlock.h>
+static DEFINE_SPINLOCK(gsCCBLock);
+#define PVRSRV_LOCK_CCB()            \
+	{                            \
+	unsigned long flags; \
+	spin_lock_irqsave(&gsCCBLock, flags);
+#define PVRSRV_UNLOCK_CCB()                        \
+	spin_unlock_irqrestore(&gsCCBLock, flags); \
+	}
 #endif /* __linux__ */
 
 #define PVRSRV_REFCOUNT_CCB_MAX 512
@@ -46,10 +66,11 @@ static DEFINE_MUTEX(gsCCBLock);
 #define PVRSRV_REFCOUNT_CCB_DEBUG_MEMINFO (1U << 1)
 #define PVRSRV_REFCOUNT_CCB_DEBUG_BM_BUF (1U << 2)
 #define PVRSRV_REFCOUNT_CCB_DEBUG_BM_BUF2 (1U << 3)
+#define PVRSRV_REFCOUNT_CCB_DEBUG_BM_XPROC (1U << 4)
 
 #if defined(__linux__)
-#define PVRSRV_REFCOUNT_CCB_DEBUG_MMAP (1U << 4)
-#define PVRSRV_REFCOUNT_CCB_DEBUG_MMAP2 (1U << 5)
+#define PVRSRV_REFCOUNT_CCB_DEBUG_MMAP (1U << 16)
+#define PVRSRV_REFCOUNT_CCB_DEBUG_MMAP2 (1U << 17)
 #else
 #define PVRSRV_REFCOUNT_CCB_DEBUG_MMAP 0
 #define PVRSRV_REFCOUNT_CCB_DEBUG_MMAP2 0
@@ -330,6 +351,64 @@ void PVRSRVBMBufDecExport2(const IMG_CHAR *pszFile, IMG_INT iLine, BM_BUF *pBuf)
 
 skip:
 	pBuf->ui32ExportCount--;
+}
+
+IMG_INTERNAL
+void PVRSRVBMXProcIncRef2(const IMG_CHAR *pszFile, IMG_INT iLine,
+	  IMG_UINT32 ui32Index)
+{
+	if (!(guiDebugMask & PVRSRV_REFCOUNT_CCB_DEBUG_BM_XPROC))
+	goto skip;
+
+	PVRSRV_LOCK_CCB();
+
+	gsRefCountCCB[giOffset].pszFile = pszFile;
+	gsRefCountCCB[giOffset].iLine = iLine;
+	gsRefCountCCB[giOffset].ui32PID = OSGetCurrentProcessIDKM();
+	snprintf(gsRefCountCCB[giOffset].pcMesg,
+	 PVRSRV_REFCOUNT_CCB_MESG_MAX - 1,
+	 PVRSRV_REFCOUNT_CCB_FMT_STRING, "BM_XPROC", NULL, NULL,
+	 gXProcWorkaroundShareData[ui32Index].hOSMemHandle,
+	 (IMG_VOID *)ui32Index,
+	 gXProcWorkaroundShareData[ui32Index].ui32RefCount,
+	 gXProcWorkaroundShareData[ui32Index].ui32RefCount + 1,
+	 gXProcWorkaroundShareData[ui32Index].ui32Size);
+	gsRefCountCCB[giOffset].pcMesg[PVRSRV_REFCOUNT_CCB_MESG_MAX - 1] = 0;
+	giOffset = (giOffset + 1) % PVRSRV_REFCOUNT_CCB_MAX;
+
+	PVRSRV_UNLOCK_CCB();
+
+skip:
+	gXProcWorkaroundShareData[ui32Index].ui32RefCount++;
+}
+
+IMG_INTERNAL
+void PVRSRVBMXProcDecRef2(const IMG_CHAR *pszFile, IMG_INT iLine,
+	  IMG_UINT32 ui32Index)
+{
+	if (!(guiDebugMask & PVRSRV_REFCOUNT_CCB_DEBUG_BM_XPROC))
+	goto skip;
+
+	PVRSRV_LOCK_CCB();
+
+	gsRefCountCCB[giOffset].pszFile = pszFile;
+	gsRefCountCCB[giOffset].iLine = iLine;
+	gsRefCountCCB[giOffset].ui32PID = OSGetCurrentProcessIDKM();
+	snprintf(gsRefCountCCB[giOffset].pcMesg,
+	 PVRSRV_REFCOUNT_CCB_MESG_MAX - 1,
+	 PVRSRV_REFCOUNT_CCB_FMT_STRING, "BM_XPROC", NULL, NULL,
+	 gXProcWorkaroundShareData[ui32Index].hOSMemHandle,
+	 (IMG_VOID *)ui32Index,
+	 gXProcWorkaroundShareData[ui32Index].ui32RefCount,
+	 gXProcWorkaroundShareData[ui32Index].ui32RefCount - 1,
+	 gXProcWorkaroundShareData[ui32Index].ui32Size);
+	gsRefCountCCB[giOffset].pcMesg[PVRSRV_REFCOUNT_CCB_MESG_MAX - 1] = 0;
+	giOffset = (giOffset + 1) % PVRSRV_REFCOUNT_CCB_MAX;
+
+	PVRSRV_UNLOCK_CCB();
+
+skip:
+	gXProcWorkaroundShareData[ui32Index].ui32RefCount--;
 }
 
 #if defined(__linux__)

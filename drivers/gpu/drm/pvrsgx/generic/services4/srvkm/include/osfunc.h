@@ -81,6 +81,11 @@ extern "C" {
 #define PVRSRV_OS_HEAP_MASK 0xf /* host heap flags mask */
 #define PVRSRV_OS_PAGEABLE_HEAP 0x1 /* allocation pageable */
 #define PVRSRV_OS_NON_PAGEABLE_HEAP 0x2 /* allocation non pageable */
+#if defined(__linux__) && defined(DEBUG_LINUX_MEMORY_ALLOCATIONS)
+#define PVRSRV_SWAP_BUFFER_ALLOCATION 0x4 /* allocation for swap buffer */
+#else
+#define PVRSRV_SWAP_BUFFER_ALLOCATION 0x0
+#endif
 
 #if defined(PVRSRV_DEVMEM_TIME_STATS)
 IMG_UINT64 OSClockMonotonicus(IMG_VOID);
@@ -392,21 +397,21 @@ h(x) = ...
 #define OSAllocMem(flags, size, linAddr, blockAlloc, logStr)                  \
 	(PVR_TRACE(("OSAllocMem(" #flags ", " #size ", " #linAddr             \
 	    ", " #blockAlloc "): " logStr " (size = 0x%lx)",          \
-	    size)),                                                   \
+	    (unsigned long)size)),                                    \
 	 OSAllocMem_Debug_Wrapper(flags, size, linAddr, blockAlloc, __FILE__, \
 	  __LINE__))
 
-#define OSAllocPages(flags, size, pageSize, privdata, privdatalength,  \
-	     bmhandle, linAddr, pageAlloc)                     \
-	(PVR_TRACE(("OSAllocPages(" #flags ", " #size ", " #pageSize   \
-	    ", " #linAddr ", " #pageAlloc "): (size = 0x%lx)", \
-	    size)),                                            \
-	 OSAllocPages_Impl(flags, size, pageSize, linAddr, privdata,   \
-	   privdatalength, bmhandle, pageAlloc))
+#define OSAllocPages(flags, size, pageSize, privdata, privdatalength,       \
+	     bmhandle, linAddr, pageAlloc)                          \
+	(PVR_TRACE(("OSAllocPages(" #flags ", " #size ", " #pageSize        \
+	    ", " #linAddr ", " #pageAlloc "): (size = 0x%lx)",      \
+	    (unsigned long)size)),                                  \
+	 OSAllocPages_Impl(flags, size, pageSize, privdata, privdatalength, \
+	   bmhandle, linAddr, pageAlloc))
 
 #define OSFreeMem(flags, size, linAddr, blockAlloc)                          \
 	(PVR_TRACE(("OSFreeMem(" #flags ", " #size ", " #linAddr             \
-	    ", " #blockAlloc "): (pointer = 0x%X)",                  \
+	    ", " #blockAlloc "): (pointer = 0x%p)",                  \
 	    linAddr)),                                               \
 	 OSFreeMem_Debug_Wrapper(flags, size, linAddr, blockAlloc, __FILE__, \
 	 __LINE__))

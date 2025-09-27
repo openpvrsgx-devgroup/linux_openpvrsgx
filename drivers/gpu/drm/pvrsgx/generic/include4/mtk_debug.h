@@ -1,6 +1,8 @@
 #ifndef __MTK_DEBUG_H__
 #define __MTK_DEBUG_H__
 
+#include "mtk_version.h"
+
 #include "img_types.h"
 
 #include <linux/workqueue.h>

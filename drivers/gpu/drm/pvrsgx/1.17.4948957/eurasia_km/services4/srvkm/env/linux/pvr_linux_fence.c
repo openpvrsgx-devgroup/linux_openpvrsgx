@@ -539,7 +539,7 @@ static int update_dma_resv_fences_dst(struct pvr_fence_frame *pvr_fence_frame,
 	return update_reservation_return_value(ret, false);
 #else // (LINUX_VERSION_CODE < KERNEL_VERSION(5,19,0))
 	struct dma_fence *fence_to_signal;
-	unsigned blocking_fence_count;
+	unsigned blocking_fence_count = 0;
 	int ret;
 
 	struct dma_resv_iter cursor;

@@ -85,6 +85,176 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif /* defined(SUPPORT_DRI_DRM) */
 
 #include <linux/delay.h>
+#include <linux/vmalloc.h>
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,8,0))
+#define __old_vmalloc __vmalloc
+#else
+/* provide pre-5.8 __vmalloc() with 3 parameters */
+
+#include <linux/kallsyms.h>
+
+static void *__old_vmalloc_node(unsigned long size, unsigned long align,
+			    gfp_t gfp_mask, pgprot_t prot,
+			    int node, const void *caller)
+{
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6,10,0))
+/* we need to add EXPORT_SYMBOL(__vmalloc_node_range); to vmalloc.c */
+	return __vmalloc_node_range(size, align, VMALLOC_START, VMALLOC_END,
+				    gfp_mask, prot, 0, node, caller);
+#else
+/* we need to add EXPORT_SYMBOL(__vmalloc_node_range_noprof); to vmalloc.c */
+	return __vmalloc_node_range_noprof(size, align, VMALLOC_START, VMALLOC_END,
+				    gfp_mask, prot, 0, node, caller);
+#endif
+}
+
+static void *__old_vmalloc(unsigned long size, gfp_t gfp_mask, pgprot_t prot)
+{
+	return __old_vmalloc_node(size, 1, gfp_mask, prot, NUMA_NO_NODE,
+				__builtin_return_address(0));
+}
+#endif
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0))
+static ssize_t strscpy(char *dst, const char *src, size_t n)
+{
+	size_t ret = strlcpy(dst, src, n);
+	return ret > n ? -E2BIG : ret;
+}
+#endif
+
+/******************************************************************************
+ * Cedarview PLL ranges
+ *****************************************************************************/
+const PVRPSB_PLL_RANGE sCdvSingleLvdsPllRange = 
+{
+	.eDevice		= PSB_CEDARVIEW,
+	.ui32DotClockMin	= 20000,
+	.ui32DotClockMax	= 115500,
+	.ui32RefFreq		= 96000,
+	.ui32NMin		= 2,
+	.ui32NMax		= 6,
+	.ui32MMin		= 60,
+	.ui32MMax		= 160,
+	.ui32M1Min		= 0,
+	.ui32M1Max		= 0,
+	.ui32M2Min		= 58,
+	.ui32M2Max		= 158,
+	.ui32PMin		= 28,
+	.ui32PMax		= 140,
+	.ui32P1Min		= 2,
+	.ui32P1Max		= 10,
+	.ui32P2Divide		= 200000,
+	.ui32P2Lo		= 14,
+	.ui32P2Hi		= 14,
+	.ui32VcoMin		= 1800000,
+	.ui32VcoMax		= 3600000,
+};
+
+const PVRPSB_PLL_RANGE sCdvNonLvds27PllRange = 
+{
+	.eDevice		= PSB_CEDARVIEW,
+	.ui32DotClockMin	= 20000,
+	.ui32DotClockMax	= 400000,
+	.ui32RefFreq		= 27000,
+	.ui32NMin		= 1,
+	.ui32NMax		= 1,
+	.ui32MMin		= 67,
+	.ui32MMax		= 132,
+	.ui32M1Min		= 0,
+	.ui32M1Max		= 0,
+	.ui32M2Min		= 65,
+	.ui32M2Max		= 130,
+	.ui32PMin		= 5,
+	.ui32PMax		= 90,
+	.ui32P1Min		= 1,
+	.ui32P1Max		= 9,
+	.ui32P2Divide		= 225000,
+	.ui32P2Lo		= 5,
+	.ui32P2Hi		= 10,
+	.ui32VcoMin		= 1809000,
+	.ui32VcoMax		= 3564000,
+};
+
+const PVRPSB_PLL_RANGE sCdvNonLvds96PllRange = 
+{
+	.eDevice		= PSB_CEDARVIEW,
+	.ui32DotClockMin	= 20000,
+	.ui32DotClockMax	= 400000,
+	.ui32RefFreq		= 96000,
+	.ui32NMin		= 2,
+	.ui32NMax		= 6,
+	.ui32MMin		= 60,
+	.ui32MMax		= 160,
+	.ui32M1Min		= 0,
+	.ui32M1Max		= 0,
+	.ui32M2Min		= 58,
+	.ui32M2Max		= 158,
+	.ui32PMin		= 5,
+	.ui32PMax		= 100,
+	.ui32P1Min		= 1,
+	.ui32P1Max		= 10,
+	.ui32P2Divide		= 225000,
+	.ui32P2Lo		= 5,
+	.ui32P2Hi		= 10,
+	.ui32VcoMin		= 1800000,
+	.ui32VcoMax		= 3600000,
+};
+
+
+/******************************************************************************
+ * Poulsbo PLL ranges
+ *****************************************************************************/
+const PVRPSB_PLL_RANGE sPsbSingleLvdsPllRange = 
+{
+	.eDevice		= PSB_POULSBO,
+	.ui32DotClockMin	= 20000,
+	.ui32DotClockMax	= 112000,
+	.ui32RefFreq		= 96000,
+	.ui32NMin		= 2,		/* The documentation says this value should be 3 but this can give the wrong vrefresh */
+	.ui32NMax		= 8,
+	.ui32MMin		= 70,
+	.ui32MMax		= 120,
+	.ui32M1Min		= 10,
+	.ui32M1Max		= 20,
+	.ui32M2Min		= 5,
+	.ui32M2Max		= 9,
+	.ui32PMin		= 7,
+	.ui32PMax		= 98,
+	.ui32P1Min		= 1,
+	.ui32P1Max		= 8,
+	.ui32P2Divide		= 112000,
+	.ui32P2Lo		= 7,
+	.ui32P2Hi		= 14,
+	.ui32VcoMin		= 1400000,
+	.ui32VcoMax		= 2800000,
+};
+
+const PVRPSB_PLL_RANGE sPsbNonLvdsPllRange = 
+{
+	.eDevice		= PSB_POULSBO,
+	.ui32DotClockMin	= 100000,
+	.ui32DotClockMax	= 270000,
+	.ui32RefFreq		= 96000,
+	.ui32NMin		= 2,		/* The documentation says this value should be 3 but this can give the wrong vrefresh */
+	.ui32NMax		= 8,
+	.ui32MMin		= 70,
+	.ui32MMax		= 120,
+	.ui32M1Min		= 10,
+	.ui32M1Max		= 20,
+	.ui32M2Min		= 5,
+	.ui32M2Max		= 9,
+	.ui32PMin		= 5,
+	.ui32PMax		= 80,
+	.ui32P1Min		= 1,
+	.ui32P1Max		= 8,
+	.ui32P2Divide		= 200000,
+	.ui32P2Lo		= 5,
+	.ui32P2Hi		= 10,
+	.ui32VcoMin		= 1400000,
+	.ui32VcoMax		= 2800000,
+};
 
 #if !defined(SUPPORT_DRI_DRM)
 struct GTF_TIMINGS_DEF
@@ -322,7 +492,7 @@ struct i2c_adapter *PVRI2CAdapterCreate(PVRPSB_DEVINFO *psDevInfo, const char *p
 		   we extract by setting up a temporary I2C adapter. */
 		sTempAdapter.owner = THIS_MODULE;
 		sTempAdapter.algo_data	= psAlgoData;
-		strlcpy(sTempAdapter.name, "PSB Temp I2C Adapter (SDVO)", sizeof(sTempAdapter.name));
+		strscpy(sTempAdapter.name, "PSB Temp I2C Adapter (SDVO)", sizeof(sTempAdapter.name));
 
 		if (i2c_bit_add_bus(&sTempAdapter))
 		{
@@ -337,13 +507,13 @@ struct i2c_adapter *PVRI2CAdapterCreate(PVRPSB_DEVINFO *psDevInfo, const char *p
 		i2c_del_adapter(&sTempAdapter);
 
 		psAdapter->algo	= &sPSBI2CAlgorithm;
-		strlcpy(psAdapter->name, pszName ? pszName : "PSB I2C Adapter", sizeof(psAdapter->name));
+		strscpy(psAdapter->name, pszName ? pszName : "PSB I2C Adapter", sizeof(psAdapter->name));
 
 		iError = i2c_add_adapter(psAdapter);
 	}
 	else
 	{
-		strlcpy(psAdapter->name, pszName ? pszName : "PSB I2C Adapter", sizeof(psAdapter->name));
+		strscpy(psAdapter->name, pszName ? pszName : "PSB I2C Adapter", sizeof(psAdapter->name));
 
 		iError = i2c_bit_add_bus(psAdapter);
 	}
@@ -381,10 +551,13 @@ struct drm_connector *PVRGetConnectorForEncoder(struct drm_encoder *psEncoder)
 {
 	struct drm_connector *psConnector;
 	struct drm_connector *psConnectorTemp;
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0))
 	int i;
+#endif
 
 	list_for_each_entry_safe(psConnector, psConnectorTemp, &psEncoder->dev->mode_config.connector_list, head)
 	{
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0))
 		for (i = 0; i < DRM_CONNECTOR_MAX_ENCODER; i++)
 		{
 			if (psConnector->encoder_ids[i] == psEncoder->base.id)
@@ -392,6 +565,10 @@ struct drm_connector *PVRGetConnectorForEncoder(struct drm_encoder *psEncoder)
 				return psConnector;
 			}
 		}
+#else
+		if (drm_connector_has_possible_encoder(psConnector, psEncoder))
+			return psConnector;
+#endif
 	}
 
 	return NULL;
@@ -403,8 +580,10 @@ struct drm_connector *PVRGetConnectorForEncoder(struct drm_encoder *psEncoder)
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0))
 static struct drm_framebuffer *ModeConfigUserFbCreate(struct drm_device *psDrmDev, struct drm_file *psFile, struct drm_mode_fb_cmd *psModeCommand)
-#else
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(6,17,0))
 static struct drm_framebuffer *ModeConfigUserFbCreate(struct drm_device *psDrmDev, struct drm_file *psFile, struct drm_mode_fb_cmd2 *psModeCommand)
+#else
+static struct drm_framebuffer *ModeConfigUserFbCreate(struct drm_device *psDrmDev, struct drm_file *psFile, const struct drm_format_info *info, const struct drm_mode_fb_cmd2 *psModeCommand)
 #endif
 {
 	PVR_UNREFERENCED_PARAMETER(psDrmDev);
@@ -609,7 +788,6 @@ static int CrtcHelperModeSet(struct drm_crtc *psCrtc, struct drm_display_mode *p
 	ui32RegVal = PVRPSB_HSYNC_START_SET(ui32RegVal, psAdjustedMode->hsync_start);
 	PVROSWriteMMIOReg(psDevInfo, ui32HSyncReg, ui32RegVal);
 
-
 	ui32RegVal = 0;
 	ui32RegVal = PVRPSB_VTOTAL_TOTAL_SET(ui32RegVal, psAdjustedMode->vtotal);
 	ui32RegVal = PVRPSB_VTOTAL_ACTIVE_SET(ui32RegVal, drm_mode_height(psAdjustedMode));
@@ -654,7 +832,6 @@ static int CrtcHelperModeSet(struct drm_crtc *psCrtc, struct drm_display_mode *p
 #endif
 	PVROSWriteMMIOReg(psDevInfo, ui32DspStride, ui32RegVal);
 
-
 	if (crtc_to_fb(psCrtc))
 	{
 		PVRPSB_FRAMEBUFFER *psPVRFramebuffer = to_pvr_framebuffer(crtc_to_fb(psCrtc));
@@ -669,10 +846,12 @@ static int CrtcHelperModeSet(struct drm_crtc *psCrtc, struct drm_display_mode *p
 	return 0;
 }
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,14,0))
 static void CrtcHelperLoadLut(struct drm_crtc *psCrtc)
 {
 	PVR_UNREFERENCED_PARAMETER(psCrtc);
 }
+#endif
 
 static const struct drm_crtc_helper_funcs sCrtcHelperFuncs = 
 {
@@ -682,7 +861,9 @@ static const struct drm_crtc_helper_funcs sCrtcHelperFuncs =
 	.mode_fixup	= CrtcHelperModeFixup, 
 	.mode_set	= CrtcHelperModeSet, 
 	.mode_set_base	= NULL, 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,14,0))
 	.load_lut	= CrtcHelperLoadLut, 
+#endif
 };
 
 static void CrtcSave(struct drm_crtc *psCrtc)
@@ -842,6 +1023,7 @@ static int CrtcCursorMove(struct drm_crtc *psCrtc, int iX, int iY)
 	return 0;
 }
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,12,0))
 static void CrtcGammaSet(struct drm_crtc *psCrtc, u16 *pu16R, u16 *pu16G, u16 *pu16B, uint32_t ui32Start, uint32_t ui32Size)
 {
 	PVR_UNREFERENCED_PARAMETER(psCrtc);
@@ -851,6 +1033,7 @@ static void CrtcGammaSet(struct drm_crtc *psCrtc, u16 *pu16R, u16 *pu16G, u16 *p
 	PVR_UNREFERENCED_PARAMETER(ui32Start);
 	PVR_UNREFERENCED_PARAMETER(ui32Size);
 }
+#endif
 
 static void CrtcDestroy(struct drm_crtc *psCrtc)
 {
@@ -860,10 +1043,17 @@ static void CrtcDestroy(struct drm_crtc *psCrtc)
 	PVROSFreeKernelMem(psPVRCrtc);
 }
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0))
 static int CrtcSetConfig(struct drm_mode_set *psModeSet)
 {
 	return drm_crtc_helper_set_config(psModeSet);
 }
+#else
+static int CrtcSetConfig(struct drm_mode_set *psModeSet, struct drm_modeset_acquire_ctx *ctx)
+{
+	return drm_crtc_helper_set_config(psModeSet, ctx);
+}
+#endif
 
 static int CursorLoad(PVRPSB_DEVINFO *psDevInfo, char __user *pvCursorData, uint32_t ui32ByteSize)
 {
@@ -894,11 +1084,15 @@ static int CursorLoad(PVRPSB_DEVINFO *psDevInfo, char __user *pvCursorData, uint
 
 static const struct drm_crtc_funcs sCrtcFuncs = 
 {
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,5,0))
 	.save		= CrtcSave,
 	.restore	= CrtcRestore,
+#endif
 	.cursor_set	= CrtcCursorSet, 
 	.cursor_move	= CrtcCursorMove, 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,12,0))
 	.gamma_set	= CrtcGammaSet, 
+#endif
 	.destroy	= CrtcDestroy, 
 	.set_config	= CrtcSetConfig, 
 };
@@ -926,6 +1120,11 @@ static PVRPSB_CRTC *CrtcCreate(PVRPSB_DEVINFO *psDevInfo, PVRPSB_PIPE ePipe)
 static struct fb_ops sFbOps = 
 {
 	.owner		= THIS_MODULE,
+#if 0
+	__FB_DEFAULT_IOMEM_OPS_RDWR,
+	DRM_FB_HELPER_DEFAULT_OPS,
+	__FB_DEFAULT_IOMEM_OPS_DRAW,
+#else
 	.fb_check_var	= drm_fb_helper_check_var,
 	.fb_set_par	= drm_fb_helper_set_par,
 	.fb_fillrect	= cfb_fillrect,
@@ -934,8 +1133,11 @@ static struct fb_ops sFbOps =
 	.fb_pan_display	= drm_fb_helper_pan_display,
 	.fb_blank	= drm_fb_helper_blank,
 	.fb_setcmap	= drm_fb_helper_setcmap,
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(7,0,0))
 	.fb_debug_enter	= drm_fb_helper_debug_enter,
 	.fb_debug_leave	= drm_fb_helper_debug_leave,
+#endif
+#endif
 };
 
 static void FramebufferDestroy(struct drm_framebuffer *psFramebuffer)
@@ -974,7 +1176,13 @@ static PVRPSB_FRAMEBUFFER *FramebufferCreate(struct drm_device *psDrmDev, struct
 	{
 		drm_framebuffer_init(psDrmDev, &psPVRFramebuffer->sFramebuffer, &sFramebufferFuncs);
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,11,0))
 		drm_helper_mode_fill_fb_struct(&psPVRFramebuffer->sFramebuffer, psFbCommand);
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(6,17,0))
+		drm_helper_mode_fill_fb_struct(psDrmDev, &psPVRFramebuffer->sFramebuffer, psFbCommand);
+#else
+		drm_helper_mode_fill_fb_struct(psDrmDev, &psPVRFramebuffer->sFramebuffer, drm_format_info(psFbCommand->pixel_format), psFbCommand);
+#endif
 
 		psPVRFramebuffer->psBuffer = psBuffer;
 	}
@@ -982,7 +1190,12 @@ static PVRPSB_FRAMEBUFFER *FramebufferCreate(struct drm_device *psDrmDev, struct
 	return psPVRFramebuffer;
 }
 
+static struct drm_fb_helper_funcs sFbHelperFuncs;
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6,13,0))
 static int FbHelperProbe(struct drm_fb_helper *psFbHelper, struct drm_fb_helper_surface_size *psSizes)
+#else
+int PVR_DRM_MAKENAME(DISPLAY_CONTROLLER, _FbProbe)(struct drm_fb_helper *psFbHelper, struct drm_fb_helper_surface_size *psSizes)
+#endif
 {
 	PVRPSB_DEVINFO *psDevInfo = (PVRPSB_DEVINFO *)psFbHelper->dev->dev_private;
 	PVRPSB_FRAMEBUFFER *psPVRFramebuffer;
@@ -1000,8 +1213,11 @@ static int FbHelperProbe(struct drm_fb_helper *psFbHelper, struct drm_fb_helper_
 		return 0;
 	}
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6,18,0)) // was probably never needed
 	mutex_lock(&psFbHelper->dev->struct_mutex);
+#endif
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6,19,0))
 	/* Create a Linux framebuffer */
 	psFbInfo = framebuffer_alloc(0, &psFbHelper->dev->pdev->dev);
 	if (psFbInfo == NULL)
@@ -1011,6 +1227,9 @@ static int FbHelperProbe(struct drm_fb_helper *psFbHelper, struct drm_fb_helper_
 		iResult = -ENOMEM;
 		goto ExitDeviceMutexUnlock;
 	}
+#else
+	psFbInfo = psFbHelper->info;
+#endif
 
 	/* Create a PVR framebuffer */
 	sFbCommand.width	= psSizes->surface_width;
@@ -1063,12 +1282,26 @@ static int FbHelperProbe(struct drm_fb_helper *psFbHelper, struct drm_fb_helper_
 
 	/* Fill out the Linux framebuffer info */
 	psFbHelper->fb		= &psPVRFramebuffer->sFramebuffer;
-	psFbHelper->fbdev	= psFbInfo;
+	/* Yes, this empty struct is absolutely required here as of 7.0... */
+	psFbHelper->funcs	= &sFbHelperFuncs;
 
-	psFbInfo->par		= psFbHelper;
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,14,0))
 	psFbInfo->flags		= FBINFO_DEFAULT | FBINFO_HWACCEL_DISABLED | FBINFO_CAN_FORCE_OUTPUT;
+#else
+	psFbInfo->flags		= FBINFO_HWACCEL_DISABLED;
+#endif
 	psFbInfo->fbops		= &sFbOps;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6,2,0))
+	psFbHelper->fbdev	= psFbInfo;
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(6,19,0))
+	psFbHelper->info	= psFbInfo;
+#endif
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,2,0))
+	drm_fb_helper_fill_info(psFbInfo, psFbHelper, psSizes);
+#else
+	psFbInfo->par		= psFbHelper;
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0))
 	drm_fb_helper_fill_fix(psFbInfo, psFbHelper->fb->pitch, psFbHelper->fb->depth);
 #else
@@ -1076,13 +1309,15 @@ static int FbHelperProbe(struct drm_fb_helper *psFbHelper, struct drm_fb_helper_
 #endif
 	drm_fb_helper_fill_var(psFbInfo, psFbHelper, psFbHelper->fb->width, psFbHelper->fb->height);
 
-	strlcpy(psFbInfo->fix.id, DRVNAME, sizeof(psFbInfo->fix.id));
+	strscpy(psFbInfo->fix.id, DRVNAME, sizeof(psFbInfo->fix.id));
+#endif
 	psFbInfo->fix.smem_start	= psDevInfo->psSystemBuffer->sDevVAddr.uiAddr;
 	psFbInfo->fix.smem_len		= ui32BufferSize;
 		
 	psFbInfo->screen_base		= psDevInfo->psSystemBuffer->pvCPUVAddr;
 	psFbInfo->screen_size		= ui32BufferSize;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6,19,0))
 	iResult = fb_alloc_cmap(&psFbInfo->cmap, 256, 0);
 	if (iResult != 0)
 	{
@@ -1090,7 +1325,9 @@ static int FbHelperProbe(struct drm_fb_helper *psFbHelper, struct drm_fb_helper_
 
 		goto ExitFramebufferDestroy;
 	}
+#endif
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6,3,0))
 	psFbInfo->apertures = alloc_apertures(1);
 	if (psFbInfo->apertures == NULL)
 	{
@@ -1101,33 +1338,49 @@ static int FbHelperProbe(struct drm_fb_helper *psFbHelper, struct drm_fb_helper_
 	}
 	psFbInfo->apertures->ranges[0].base = psDevInfo->sGTTInfo.sGMemDevVAddr.uiAddr;
 	psFbInfo->apertures->ranges[0].size = psDevInfo->sGTTInfo.ui32GMemSizeInPages << PVRPSB_PAGE_SHIFT;
+#endif
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6,18,0))
 	mutex_unlock(&psFbHelper->dev->struct_mutex);
+#endif
 
 	return 1;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6,3,0))
 ExitDeallocCmap:
 	fb_dealloc_cmap(&psFbInfo->cmap);
+#endif
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6,19,0))
 ExitFramebufferDestroy:
 	FramebufferDestroy(&psPVRFramebuffer->sFramebuffer);
+#endif
 
 ExitDestroyBuffer:
 	PVRPSBDestroyBuffer(psDevInfo->psSystemBuffer);
 	psDevInfo->psSystemBuffer = NULL;
 
 ExitFramebufferRelease:
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6,19,0))
 	framebuffer_release(psFbInfo);
+#endif
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6,19,0))
 ExitDeviceMutexUnlock:
+#endif
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6,18,0))
 	mutex_unlock(&psFbHelper->dev->struct_mutex);
+#endif
 
 	return iResult;
 }
 
 static struct drm_fb_helper_funcs sFbHelperFuncs =
 {
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6,13,0))
 	.fb_probe = FbHelperProbe,
+#endif
+	0
 };
 
 /*******************************************************************************
@@ -1139,7 +1392,9 @@ PSB_ERROR PVROSModeSetInit(PVRPSB_DEVINFO *psDevInfo)
 	struct drm_device *psDrmDev = psDevInfo->psDrmDev;
 	PVRPSB_CRTC *psPVRCrtc;
 	PSB_ERROR eReturn;
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6,13,0))
 	int iResult;
+#endif
 
 	drm_mode_config_init(psDrmDev);
 
@@ -1202,8 +1457,8 @@ PSB_ERROR PVROSModeSetInit(PVRPSB_DEVINFO *psDevInfo)
 		goto ExitConfigCleanup;
 	}
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6,13,0))
 	mutex_lock(&psDrmDev->mode_config.mutex);
-
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,17,0))
 	drm_fb_helper_prepare(psDrmDev, &psDevInfo->sDrmFbHelper, &sFbHelperFuncs);
 #else
@@ -1247,9 +1502,11 @@ PSB_ERROR PVROSModeSetInit(PVRPSB_DEVINFO *psDevInfo)
 	   the console then fbcon won't call the fb_set_par function that we provided. We call this 
 	   function here to get around the problem. This isn't a problem in the none X case. */
 	drm_fb_helper_set_par(psDevInfo->sDrmFbHelper.fbdev);
+#endif
 
 	return PSB_OK;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6,13,0))
 ExitFbHelperFini:
 	if (psDevInfo->sDrmFbHelper.fbdev)
 	{
@@ -1261,7 +1518,7 @@ ExitFbHelperFini:
 
 ExitModeConfigMutexUnlock:
 	mutex_unlock(&psDrmDev->mode_config.mutex);
-
+#endif
 ExitConfigCleanup:
 	drm_mode_config_cleanup(psDevInfo->psDrmDev);
 
@@ -1775,6 +2032,7 @@ PSB_ERROR PVROSModeSetInit(PVRPSB_DEVINFO *psDevInfo)
 IMG_VOID PVROSModeSetDeinit(PVRPSB_DEVINFO *psDevInfo)
 {
 #if defined(SUPPORT_DRI_DRM)
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,12,0))
 	if (psDevInfo->sDrmFbHelper.fbdev)
 	{
 		struct fb_info *psFbInfo = psDevInfo->sDrmFbHelper.fbdev;
@@ -1785,6 +2043,7 @@ IMG_VOID PVROSModeSetDeinit(PVRPSB_DEVINFO *psDevInfo)
 
 		framebuffer_release(psFbInfo);
 	}
+#endif
 
 	drm_fb_helper_fini(&psDevInfo->sDrmFbHelper);
 	drm_framebuffer_cleanup(psDevInfo->sDrmFbHelper.fb);
@@ -1804,8 +2063,6 @@ void PVROSSaveState(PVRPSB_DEVINFO *psDevInfo)
 	PVRPSB_STATE *psState = &psDevInfo->sSuspendState;
 	struct drm_crtc *psCrtc;
 	struct drm_crtc *psCrtcTemp;
-	struct drm_connector *psConnector;
-	struct drm_connector *psConnectorTemp;
 
 	/* Save some non-standard PCI config state. Services will save off the standard PCI config state */
 	psState->sPciRegisters.ui16GraphicsControl	= PVROSPciReadWord(psDevInfo, PVRPSB_PCIREG_GC);
@@ -1840,14 +2097,13 @@ void PVROSSaveState(PVRPSB_DEVINFO *psDevInfo)
 	psState->sDevRegisters.ui32OGamC1	= PVROSReadMMIOReg(psDevInfo, PVRPSB_OGAMC1);
 	psState->sDevRegisters.ui32OGamC0	= PVROSReadMMIOReg(psDevInfo, PVRPSB_OGAMC0);
 
-	list_for_each_entry_safe(psConnector, psConnectorTemp, &psDevInfo->psDrmDev->mode_config.connector_list, head)
-	{
-		psConnector->funcs->save(psConnector);
-	}
-
 	list_for_each_entry_safe(psCrtc, psCrtcTemp, &psDevInfo->psDrmDev->mode_config.crtc_list, head)
 	{
-		psCrtc->funcs->restore(psCrtc);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,5,0))
+		psCrtc->funcs->save(psCrtc);
+#else
+		CrtcSave(psCrtc);
+#endif
 	}
 #endif /* #if defined(SUPPORT_DRI_DRM) */
 }
@@ -1858,8 +2114,6 @@ void PVROSRestoreState(PVRPSB_DEVINFO *psDevInfo)
 	PVRPSB_STATE *psState = &psDevInfo->sSuspendState;
 	struct drm_crtc *psCrtc;
 	struct drm_crtc *psCrtcTemp;
-	struct drm_connector *psConnector;
-	struct drm_connector *psConnectorTemp;
 
 	/* Restore some PCI config state */
 	PVROSPciWriteWord(psDevInfo, PVRPSB_PCIREG_GC, psState->sPciRegisters.ui16GraphicsControl);
@@ -1897,12 +2151,11 @@ void PVROSRestoreState(PVRPSB_DEVINFO *psDevInfo)
 
 	list_for_each_entry_safe(psCrtc, psCrtcTemp, &psDevInfo->psDrmDev->mode_config.crtc_list, head)
 	{
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,5,0))
 		psCrtc->funcs->restore(psCrtc);
-	}
-
-	list_for_each_entry_safe(psConnector, psConnectorTemp, &psDevInfo->psDrmDev->mode_config.connector_list, head)
-	{
-		psConnector->funcs->restore(psConnector);
+#else
+		CrtcRestore(psCrtc);
+#endif
 	}
 #endif /* #if defined(SUPPORT_DRI_DRM) */
 }
@@ -1938,7 +2191,7 @@ IMG_CPU_VIRTADDR PVROSAllocKernelMemForBuffer(unsigned long ulSize, IMG_SYS_PHYA
 	IMG_CPU_VIRTADDR pvCPUVAddr;
 	IMG_UINT32 ui32PageNum;
 
-	pvCPUVAddr = __vmalloc(ulSize, 
+	pvCPUVAddr = __old_vmalloc(ulSize, 
 			       GFP_KERNEL | __GFP_HIGHMEM, 
 			       __pgprot((pgprot_val(PAGE_KERNEL) & ~_PAGE_CACHE_MASK) | _PAGE_CACHE_WC));
 
@@ -1975,12 +2228,23 @@ void PVROSUnMapPhysAddr(void *pvAddr)
 	iounmap(pvAddr);
 }
 
+#if defined(SUPPORT_DRI_DRM)
+static struct pci_dev *DrmPciDev(struct drm_device *psDrmDev)
+{
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,14,0))
+	return psDrmDev->pdev;
+#else
+	return to_pci_dev(psDrmDev->dev);
+#endif
+}
+#endif
+
 IMG_UINT32 PVROSPciReadDWord(PVRPSB_DEVINFO *psDevInfo, IMG_UINT32 ui32Reg)
 {
 	IMG_UINT32 ui32RetVal = 0;
 
 #if defined(SUPPORT_DRI_DRM)
-	pci_read_config_dword(psDevInfo->psDrmDev->pdev, ui32Reg, &ui32RetVal);
+	pci_read_config_dword(DrmPciDev(psDevInfo->psDrmDev), ui32Reg, &ui32RetVal);
 #else
 	pci_read_config_dword(psDevInfo->psPciDev, ui32Reg, &ui32RetVal);
 #endif
@@ -1991,7 +2255,7 @@ IMG_UINT32 PVROSPciReadDWord(PVRPSB_DEVINFO *psDevInfo, IMG_UINT32 ui32Reg)
 IMG_VOID PVROSPciWriteDWord(PVRPSB_DEVINFO *psDevInfo, IMG_UINT32 ui32Reg, IMG_UINT32 ui32Value)
 {
 #if defined(SUPPORT_DRI_DRM)
-	pci_write_config_dword(psDevInfo->psDrmDev->pdev, ui32Reg, ui32Value);
+	pci_write_config_dword(DrmPciDev(psDevInfo->psDrmDev), ui32Reg, ui32Value);
 #else
 	pci_write_config_dword(psDevInfo->psPciDev, ui32Reg, ui32Value);
 #endif
@@ -2002,7 +2266,7 @@ IMG_UINT16 PVROSPciReadWord(PVRPSB_DEVINFO *psDevInfo, IMG_UINT32 ui32Reg)
 	IMG_UINT16 ui16RetVal = 0;
 
 #if defined(SUPPORT_DRI_DRM)
-	pci_read_config_word(psDevInfo->psDrmDev->pdev, ui32Reg, &ui16RetVal);
+	pci_read_config_word(DrmPciDev(psDevInfo->psDrmDev), ui32Reg, &ui16RetVal);
 #else
 	pci_read_config_word(psDevInfo->psPciDev, ui32Reg, &ui16RetVal);
 #endif
@@ -2013,7 +2277,7 @@ IMG_UINT16 PVROSPciReadWord(PVRPSB_DEVINFO *psDevInfo, IMG_UINT32 ui32Reg)
 IMG_VOID PVROSPciWriteWord(PVRPSB_DEVINFO *psDevInfo, IMG_UINT32 ui32Reg, IMG_UINT16 ui16Value)
 {
 #if defined(SUPPORT_DRI_DRM)
-	pci_write_config_word(psDevInfo->psDrmDev->pdev, ui32Reg, ui16Value);
+	pci_write_config_word(DrmPciDev(psDevInfo->psDrmDev), ui32Reg, ui16Value);
 #else
 	pci_write_config_word(psDevInfo->psPciDev, ui32Reg, ui16Value);
 #endif
@@ -2024,7 +2288,7 @@ IMG_UINT8 PVROSPciReadByte(PVRPSB_DEVINFO *psDevInfo, IMG_UINT32 ui32Reg)
 	IMG_UINT8 ui8RetVal = 0;
 
 #if defined(SUPPORT_DRI_DRM)
-	pci_read_config_byte(psDevInfo->psDrmDev->pdev, ui32Reg, &ui8RetVal);
+	pci_read_config_byte(DrmPciDev(psDevInfo->psDrmDev), ui32Reg, &ui8RetVal);
 #else
 	pci_read_config_byte(psDevInfo->psPciDev, ui32Reg, &ui8RetVal);
 #endif
@@ -2035,7 +2299,7 @@ IMG_UINT8 PVROSPciReadByte(PVRPSB_DEVINFO *psDevInfo, IMG_UINT32 ui32Reg)
 IMG_VOID PVROSPciWriteByte(PVRPSB_DEVINFO *psDevInfo, IMG_UINT32 ui32Reg, IMG_UINT8 ui8Value)
 {
 #if defined(SUPPORT_DRI_DRM)
-	pci_write_config_byte(psDevInfo->psDrmDev->pdev, ui32Reg, ui8Value);
+	pci_write_config_byte(DrmPciDev(psDevInfo->psDrmDev), ui32Reg, ui8Value);
 #else
 	pci_write_config_byte(psDevInfo->psPciDev, ui32Reg, ui8Value);
 #endif
@@ -2207,7 +2471,11 @@ static int __init PVRPSB_Init(void)
 		int iReturn;
 
 		/* Get and enable the PCI device so that we can poke registers */
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,17,0))
 		psPciDev = pci_get_bus_and_slot(PVRPSB_BUS_ID, PCI_DEVFN(PVRPSB_DEV_ID, PVRPSB_FUNC));
+#else
+		psPciDev = pci_get_domain_bus_and_slot(0, PVRPSB_BUS_ID, PCI_DEVFN(PVRPSB_DEV_ID, PVRPSB_FUNC));
+#endif
 		if (psPciDev == NULL)
 		{
 			printk(KERN_ERR DRVNAME " - %s: pci_get_device failed\n", __FUNCTION__);

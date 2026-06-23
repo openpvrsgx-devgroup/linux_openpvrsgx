@@ -1946,7 +1946,6 @@ PVRSRV_ERROR PVRSRVMapDmaBufKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 								  IMG_SIZE_T *puiMemInfoOffset,
 								  IMG_UINT64 *pui64Stamp)
 {
-	PVRSRV_DEVICE_NODE *psDeviceNode; 
 	PVRSRV_KERNEL_MEM_INFO *psNewKernelMemInfo;
 	IMG_SYS_PHYADDR *pasSysPhysAddr;
 	PVRSRV_MEMBLK *psMemBlock;
@@ -1964,8 +1963,6 @@ PVRSRV_ERROR PVRSRVMapDmaBufKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 		PVR_DPF((PVR_DBG_ERROR, "%s: Invalid params", __FUNCTION__));
 		return PVRSRV_ERROR_INVALID_PARAMS;
 	}
-
-	psDeviceNode = (PVRSRV_DEVICE_NODE *)hDevCookie;
 
 	if (OSAllocMem(PVRSRV_PAGEABLE_SELECT,
 					sizeof(PVRSRV_KERNEL_MEM_INFO),

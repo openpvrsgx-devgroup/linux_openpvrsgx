@@ -381,7 +381,7 @@ static int SDVOConnectorHelperGetModes(struct drm_connector *psConnector)
 	return drm_add_edid_modes(psConnector, psEdid);
 }
 
-static int SDVOConnectorHelperModeValid(struct drm_connector *psConnector, struct drm_display_mode *psMode)
+static int SDVOConnectorHelperModeValid(struct drm_connector *psConnector, const struct drm_display_mode *psMode)
 {
 	PVRPSB_DEVINFO *psDevInfo		= (PVRPSB_DEVINFO *)psConnector->dev->dev_private;
 	const PVRPSB_PLL_RANGE *psPllRange	= NULL;
@@ -437,6 +437,7 @@ static int SDVOConnectorHelperModeValid(struct drm_connector *psConnector, struc
 
 static struct drm_encoder *SDVOConnectorHelperBestEncoder(struct drm_connector *psConnector)
 {
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0))
 	struct drm_mode_object *psObject;
 
 	/* Pick the first encoder we find */
@@ -448,6 +449,11 @@ static struct drm_encoder *SDVOConnectorHelperBestEncoder(struct drm_connector *
 			return obj_to_encoder(psObject);
 		}		
 	}
+#else
+	struct drm_encoder *psEncoder;
+	drm_connector_for_each_possible_encoder(psConnector, psEncoder)
+		return psEncoder;
+#endif
 
 	return NULL;
 }
@@ -459,6 +465,7 @@ static struct drm_connector_helper_funcs sSDVOConnectorHelperFuncs =
 	.best_encoder	= SDVOConnectorHelperBestEncoder, 
 };
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,5,0))
 static void SDVOConnectorSave(struct drm_connector *psConnector)
 {
 	/* Rely on doing a modeset as part of the CRTC restore. */
@@ -468,6 +475,7 @@ static void SDVOConnectorRestore(struct drm_connector *psConnector)
 {
 	/* Rely on doing a modeset as part of the CRTC restore. */
 }
+#endif
 
 static enum drm_connector_status SDVOConnectorDetect(struct drm_connector *psConnector, bool force)
 {
@@ -517,8 +525,10 @@ static void SDVOConnectorForce(struct drm_connector *psConnector)
 static const struct drm_connector_funcs sSDVOConnectorFuncs = 
 {
 	.dpms		= drm_helper_connector_dpms, 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,5,0))
 	.save		= SDVOConnectorSave, 
 	.restore	= SDVOConnectorRestore, 
+#endif
 	.detect		= SDVOConnectorDetect, 
 	.fill_modes	= drm_helper_probe_single_connector_modes, 
 	.set_property	= SDVOConnectorSetProperty, 
@@ -867,13 +877,10 @@ static void SDVOEncoderHelperModeSet(struct drm_encoder *psEncoder, struct drm_d
 static const struct drm_encoder_helper_funcs sSDVOEncoderHelperFuncs = 
 {
 	.dpms		= SDVOEncoderHelperDpms, 
-	.save		= NULL, 
-	.restore	= NULL, 
 	.mode_fixup	= SDVOEncoderHelperModeFixup, 
 	.prepare	= SDVOEncoderHelperPrepare, 
 	.commit		= SDVOEncoderHelperCommit, 
 	.mode_set	= SDVOEncoderHelperModeSet, 
-	.get_crtc	= NULL, 
 	.detect		= NULL, 
 	.disable	= NULL, 
 };

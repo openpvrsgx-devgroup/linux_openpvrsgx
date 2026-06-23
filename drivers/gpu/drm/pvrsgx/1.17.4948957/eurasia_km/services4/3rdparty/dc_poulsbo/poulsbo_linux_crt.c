@@ -112,9 +112,10 @@ static PSB_BOOL WriteDPIOReg(PVRPSB_DEVINFO *psDevInfo, IMG_UINT32 ui32Reg, IMG_
 
 #define RETURN_ON_FALSE(returnVal) if (returnVal == PSB_FALSE) return
 
-#if defined(SUPPORT_DRI_DRM)
+#if defined(SUPPORT_DRI_DRM) && 0
 static void CRTProgramPLL(PVRPSB_DEVINFO *psDevInfo, PLL_FREQ *psPllFreqInfo, PVRPSB_PIPE ePipe)
 #else
+void CRTProgramPLL(PVRPSB_DEVINFO *psDevInfo, PLL_FREQ *psPllFreqInfo, PVRPSB_PIPE ePipe);
 void CRTProgramPLL(PVRPSB_DEVINFO *psDevInfo, PLL_FREQ *psPllFreqInfo, PVRPSB_PIPE ePipe)
 #endif
 {
@@ -229,7 +230,7 @@ static int CRTConnectorHelperGetModes(struct drm_connector *psConnector)
 	return drm_add_edid_modes(psConnector, psEdid);
 }
 
-static int CRTConnectorHelperModeValid(struct drm_connector *psConnector, struct drm_display_mode *psMode)
+static int CRTConnectorHelperModeValid(struct drm_connector *psConnector, const struct drm_display_mode *psMode)
 {
 	PVRPSB_DEVINFO *psDevInfo		= (PVRPSB_DEVINFO *)psConnector->dev->dev_private;
 	const PVRPSB_PLL_RANGE *psPllRange	= NULL;
@@ -285,6 +286,7 @@ static int CRTConnectorHelperModeValid(struct drm_connector *psConnector, struct
 
 static struct drm_encoder *CRTConnectorHelperBestEncoder(struct drm_connector *psConnector)
 {
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0))
 	struct drm_mode_object *psObject;
 
 	/* Pick the first encoder we find */
@@ -296,6 +298,11 @@ static struct drm_encoder *CRTConnectorHelperBestEncoder(struct drm_connector *p
 			return obj_to_encoder(psObject);
 		}		
 	}
+#else
+	struct drm_encoder *psEncoder;
+	drm_connector_for_each_possible_encoder(psConnector, psEncoder)
+		return psEncoder;
+#endif
 
 	return NULL;
 }
@@ -307,6 +314,7 @@ static struct drm_connector_helper_funcs sCRTConnectorHelperFuncs =
 	.best_encoder	= CRTConnectorHelperBestEncoder, 
 };
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,5,0))
 static void CRTConnectorSave(struct drm_connector *psConnector)
 {
 }
@@ -314,6 +322,7 @@ static void CRTConnectorSave(struct drm_connector *psConnector)
 static void CRTConnectorRestore(struct drm_connector *psConnector)
 {
 }
+#endif
 
 static enum drm_connector_status CRTConnectorDetect(struct drm_connector *psConnector, bool force)
 {
@@ -399,8 +408,10 @@ static void CRTConnectorForce(struct drm_connector *psConnector)
 static const struct drm_connector_funcs sCRTConnectorFuncs = 
 {
 	.dpms		= drm_helper_connector_dpms, 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,5,0))
 	.save		= CRTConnectorSave, 
 	.restore	= CRTConnectorRestore, 
+#endif
 	.detect		= CRTConnectorDetect, 
 	.fill_modes	= drm_helper_probe_single_connector_modes, 
 	.set_property	= CRTConnectorSetProperty, 
@@ -613,13 +624,10 @@ static void CRTEncoderHelperModeSet(struct drm_encoder *psEncoder, struct drm_di
 static const struct drm_encoder_helper_funcs sCRTEncoderHelperFuncs = 
 {
 	.dpms		= CRTEncoderHelperDpms, 
-	.save		= NULL, 
-	.restore	= NULL, 
 	.mode_fixup	= CRTEncoderHelperModeFixup, 
 	.prepare	= CRTEncoderHelperPrepare, 
 	.commit		= CRTEncoderHelperCommit, 
 	.mode_set	= CRTEncoderHelperModeSet, 
-	.get_crtc	= NULL, 
 	.detect		= NULL, 
 	.disable	= NULL, 
 };

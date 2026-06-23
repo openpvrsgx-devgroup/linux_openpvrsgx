@@ -114,6 +114,8 @@ extern int PVR_DRM_MAKENAME(DISPLAY_CONTROLLER, _Resume)(struct drm_device *);
 #if defined(PVR_DISPLAY_CONTROLLER_DRM_IOCTL)
 extern int PVR_DRM_MAKENAME(DISPLAY_CONTROLLER, _Ioctl)(struct drm_device *dev, void *arg, struct drm_file *pFile);
 #endif
+struct drm_fb_helper_surface_size;
+extern int PVR_DRM_MAKENAME(DISPLAY_CONTROLLER, _FbProbe)(struct drm_fb_helper *psFbHelper, struct drm_fb_helper_surface_size *psSizes);
 #endif
 
 #if defined(PDUMP)

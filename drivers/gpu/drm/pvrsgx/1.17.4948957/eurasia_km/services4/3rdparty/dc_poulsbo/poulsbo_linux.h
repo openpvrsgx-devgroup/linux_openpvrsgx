@@ -48,10 +48,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if defined(SUPPORT_DRI_DRM)
 #include <linux/version.h>
 #include <linux/kernel.h>
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0))
 #include <drm/drmP.h>
+#endif
 #include <drm/drm_crtc.h>
 #include <drm/drm_crtc_helper.h>
 #include <drm/drm_fb_helper.h>
+#include <drm/drm_edid.h>
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,15,0))
 #include <drm/drm_modes.h>
 #endif

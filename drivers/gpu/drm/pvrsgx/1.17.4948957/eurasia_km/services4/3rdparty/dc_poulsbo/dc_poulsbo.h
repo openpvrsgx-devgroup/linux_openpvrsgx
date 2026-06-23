@@ -50,11 +50,28 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if defined(SUPPORT_DRI_DRM)
 #include <linux/version.h>
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0))
 #include <drm/drmP.h>
+#else
+#include <drm/drm_encoder.h>
+#include <drm/drm_connector.h>
+#include <drm/drm_framebuffer.h>
+#include <drm/drm_probe_helper.h>
+#include <drm/drm_modeset_helper.h>
+#include <drm/drm_modeset_helper_vtables.h>
+#endif
 #include <drm/drm_crtc.h>
 #include <drm/drm_crtc_helper.h>
 #include <drm/drm_fb_helper.h>
 #endif /* defined(SUPPORT_DRI_DRM) */
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,5,0))
+#define drm_encoder_init(...) drm_encoder_init(__VA_ARGS__, NULL)
+#endif
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,19,0))
+#define drm_mode_connector_attach_encoder drm_connector_attach_encoder
+#define drm_mode_connector_update_edid_property drm_connector_update_edid_property
+#endif
 
 #include <linux/pci.h>
 
@@ -562,134 +579,14 @@ typedef struct PVRPSB_PLL_RANGE_TAG
 /******************************************************************************
  * Cedarview PLL ranges
  *****************************************************************************/
-static const PVRPSB_PLL_RANGE sCdvSingleLvdsPllRange = 
-{
-	.eDevice		= PSB_CEDARVIEW,
-	.ui32DotClockMin	= 20000,
-	.ui32DotClockMax	= 115500,
-	.ui32RefFreq		= 96000,
-	.ui32NMin		= 2,
-	.ui32NMax		= 6,
-	.ui32MMin		= 60,
-	.ui32MMax		= 160,
-	.ui32M1Min		= 0,
-	.ui32M1Max		= 0,
-	.ui32M2Min		= 58,
-	.ui32M2Max		= 158,
-	.ui32PMin		= 28,
-	.ui32PMax		= 140,
-	.ui32P1Min		= 2,
-	.ui32P1Max		= 10,
-	.ui32P2Divide		= 200000,
-	.ui32P2Lo		= 14,
-	.ui32P2Hi		= 14,
-	.ui32VcoMin		= 1800000,
-	.ui32VcoMax		= 3600000,
-};
-
-static const PVRPSB_PLL_RANGE sCdvNonLvds27PllRange = 
-{
-	.eDevice		= PSB_CEDARVIEW,
-	.ui32DotClockMin	= 20000,
-	.ui32DotClockMax	= 400000,
-	.ui32RefFreq		= 27000,
-	.ui32NMin		= 1,
-	.ui32NMax		= 1,
-	.ui32MMin		= 67,
-	.ui32MMax		= 132,
-	.ui32M1Min		= 0,
-	.ui32M1Max		= 0,
-	.ui32M2Min		= 65,
-	.ui32M2Max		= 130,
-	.ui32PMin		= 5,
-	.ui32PMax		= 90,
-	.ui32P1Min		= 1,
-	.ui32P1Max		= 9,
-	.ui32P2Divide		= 225000,
-	.ui32P2Lo		= 5,
-	.ui32P2Hi		= 10,
-	.ui32VcoMin		= 1809000,
-	.ui32VcoMax		= 3564000,
-};
-
-static const PVRPSB_PLL_RANGE sCdvNonLvds96PllRange = 
-{
-	.eDevice		= PSB_CEDARVIEW,
-	.ui32DotClockMin	= 20000,
-	.ui32DotClockMax	= 400000,
-	.ui32RefFreq		= 96000,
-	.ui32NMin		= 2,
-	.ui32NMax		= 6,
-	.ui32MMin		= 60,
-	.ui32MMax		= 160,
-	.ui32M1Min		= 0,
-	.ui32M1Max		= 0,
-	.ui32M2Min		= 58,
-	.ui32M2Max		= 158,
-	.ui32PMin		= 5,
-	.ui32PMax		= 100,
-	.ui32P1Min		= 1,
-	.ui32P1Max		= 10,
-	.ui32P2Divide		= 225000,
-	.ui32P2Lo		= 5,
-	.ui32P2Hi		= 10,
-	.ui32VcoMin		= 1800000,
-	.ui32VcoMax		= 3600000,
-};
+extern const PVRPSB_PLL_RANGE sCdvSingleLvdsPllRange;
+extern const PVRPSB_PLL_RANGE sCdvNonLvds27PllRange, sCdvNonLvds96PllRange;
 
 
 /******************************************************************************
  * Poulsbo PLL ranges
  *****************************************************************************/
-static const PVRPSB_PLL_RANGE sPsbSingleLvdsPllRange = 
-{
-	.eDevice		= PSB_POULSBO,
-	.ui32DotClockMin	= 20000,
-	.ui32DotClockMax	= 112000,
-	.ui32RefFreq		= 96000,
-	.ui32NMin		= 2,		/* The documentation says this value should be 3 but this can give the wrong vrefresh */
-	.ui32NMax		= 8,
-	.ui32MMin		= 70,
-	.ui32MMax		= 120,
-	.ui32M1Min		= 10,
-	.ui32M1Max		= 20,
-	.ui32M2Min		= 5,
-	.ui32M2Max		= 9,
-	.ui32PMin		= 7,
-	.ui32PMax		= 98,
-	.ui32P1Min		= 1,
-	.ui32P1Max		= 8,
-	.ui32P2Divide		= 112000,
-	.ui32P2Lo		= 7,
-	.ui32P2Hi		= 14,
-	.ui32VcoMin		= 1400000,
-	.ui32VcoMax		= 2800000,
-};
-
-static const PVRPSB_PLL_RANGE sPsbNonLvdsPllRange = 
-{
-	.eDevice		= PSB_POULSBO,
-	.ui32DotClockMin	= 100000,
-	.ui32DotClockMax	= 270000,
-	.ui32RefFreq		= 96000,
-	.ui32NMin		= 2,		/* The documentation says this value should be 3 but this can give the wrong vrefresh */
-	.ui32NMax		= 8,
-	.ui32MMin		= 70,
-	.ui32MMax		= 120,
-	.ui32M1Min		= 10,
-	.ui32M1Max		= 20,
-	.ui32M2Min		= 5,
-	.ui32M2Max		= 9,
-	.ui32PMin		= 5,
-	.ui32PMax		= 80,
-	.ui32P1Min		= 1,
-	.ui32P1Max		= 8,
-	.ui32P2Divide		= 200000,
-	.ui32P2Lo		= 5,
-	.ui32P2Hi		= 10,
-	.ui32VcoMin		= 1400000,
-	.ui32VcoMax		= 2800000,
-};
+extern const PVRPSB_PLL_RANGE sPsbSingleLvdsPllRange, sPsbNonLvdsPllRange;
 
 
 /*******************************************************************************

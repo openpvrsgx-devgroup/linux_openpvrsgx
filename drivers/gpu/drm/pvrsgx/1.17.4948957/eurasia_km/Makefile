@@ -131,10 +131,6 @@ ccflags-y += \
 	-DSYS_USING_INTERRUPTS \
 	-DSUPPORT_ACTIVE_POWER_MANAGEMENT
 
-# new for ddk 1.14 tree
-ccflags-y += \
-	-DPVR_LDM_DEVICE_TREE
-
 ifeq ($(CONFIG_SGX_DEBUG),)
 ccflags-y += \
 	-DPVR_BUILD_TYPE="\"release\"" \
@@ -156,8 +152,11 @@ ccflags-y += \
 endif
 
 # Add rewritten driver components here for now
-$(TARGET) += \
-	../../pvr-drv.o \
+ifeq ($(SOC_VENDOR),intel)
+$(TARGET) += services4/srvkm/env/linux/pvr_drm.o
+else
+$(TARGET) += ../../pvr-drv.o
+endif
 
 # Keep Imagination SDK components here
 $(TARGET) += \
@@ -237,9 +236,8 @@ ccflags-y += -I$(srctree)/include/drm \
 ccflags-y += -DSUPPORT_HW_RECOVERY
 ccflags-y += -DPVR_LINUX_USING_WORKQUEUES
 ccflags-y += -DSUPPORT_DRI_DRM
-ccflags-y += -DPVR_DRI_DRM_PLATFORM_DEV
 ccflags-y += -DPVRSRV_NEED_PVR_DPF
-ccflags-y += -DMODULE	# this disables some code in AcquireGPTimer in sysutils_linux.c
+#ccflags-y += -DMODULE	# this disables some code in AcquireGPTimer in sysutils_linux.c
 ccflags-y += -DSUPPORT_DMABUF
 
 # these must not be set or we can't compile successfully for omap
@@ -256,6 +254,25 @@ ccflags-n += -DSUPPORT_DRM_MODESET	# compiles, but fails with NULL deref in drm_
 ccflags-n += -DODD	# there is code that seems to export PVRGetBufferClassJTable twice
 ccflags-y += -DSUPPORT_PVRSRV_DEVICE_CLASS
 $(TARGET) += services4/srvkm/common/deviceclass.o
+
+ifeq ($(SOC_VENDOR),intel)
+ccflags-y += \
+	-I$(src)/services4/3rdparty/dc_poulsbo \
+	-DDISPLAY_CONTROLLER=dc_poulsbo \
+	-DSUPPORT_DRM_MODESET \
+	-DPVR_DISPLAY_CONTROLLER_DRM_IOCTL
+$(TARGET) += \
+	services4/3rdparty/dc_poulsbo/poulsbo_displayclass.o \
+	services4/3rdparty/dc_poulsbo/poulsbo_linux.o \
+	services4/3rdparty/dc_poulsbo/poulsbo_linux_sdvo.o \
+	services4/3rdparty/dc_poulsbo/poulsbo_linux_lvds.o \
+	services4/3rdparty/dc_poulsbo/poulsbo_linux_crt.o
+else
+ccflags-y += -DPVR_DRI_DRM_PLATFORM_DEV
+# new for ddk 1.14 tree
+ccflags-y += \
+	-DPVR_LDM_DEVICE_TREE
+endif
 
 else
 

@@ -64,7 +64,7 @@ static int LVDSConnectorHelperGetModes(struct drm_connector *psConnector)
 	return drm_add_edid_modes(psConnector, psEdid);
 }
 
-static int LVDSConnectorHelperModeValid(struct drm_connector *psConnector, struct drm_display_mode *psMode)
+static int LVDSConnectorHelperModeValid(struct drm_connector *psConnector, const struct drm_display_mode *psMode)
 {
 	PVRPSB_DEVINFO *psDevInfo		= (PVRPSB_DEVINFO *)psConnector->dev->dev_private;
 	const PVRPSB_PLL_RANGE *psPllRange	= NULL;
@@ -120,6 +120,7 @@ static int LVDSConnectorHelperModeValid(struct drm_connector *psConnector, struc
 
 static struct drm_encoder *LVDSConnectorHelperBestEncoder(struct drm_connector *psConnector)
 {
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,19,0))
 	struct drm_mode_object *psObject;
 
 	/* Pick the first encoder we find */
@@ -131,6 +132,11 @@ static struct drm_encoder *LVDSConnectorHelperBestEncoder(struct drm_connector *
 			return obj_to_encoder(psObject);
 		}		
 	}
+#else
+	struct drm_encoder *psEncoder;
+	drm_connector_for_each_possible_encoder(psConnector, psEncoder)
+		return psEncoder;
+#endif
 
 	return NULL;
 }
@@ -142,6 +148,7 @@ static struct drm_connector_helper_funcs sLVDSConnectorHelperFuncs =
 	.best_encoder	= LVDSConnectorHelperBestEncoder, 
 };
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,5,0))
 static void LVDSConnectorSave(struct drm_connector *psConnector)
 {
 }
@@ -149,6 +156,7 @@ static void LVDSConnectorSave(struct drm_connector *psConnector)
 static void LVDSConnectorRestore(struct drm_connector *psConnector)
 {
 }
+#endif
 
 static enum drm_connector_status LVDSConnectorDetect(struct drm_connector *psConnector, bool force)
 {
@@ -180,8 +188,10 @@ static void LVDSConnectorForce(struct drm_connector *psConnector)
 static const struct drm_connector_funcs sLVDSConnectorFuncs = 
 {
 	.dpms		= drm_helper_connector_dpms, 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,5,0))
 	.save		= LVDSConnectorSave, 
 	.restore	= LVDSConnectorRestore, 
+#endif
 	.detect		= LVDSConnectorDetect, 
 	.fill_modes	= drm_helper_probe_single_connector_modes, 
 	.set_property	= LVDSConnectorSetProperty, 
@@ -252,13 +262,10 @@ static void LVDSEncoderHelperModeSet(struct drm_encoder *psEncoder, struct drm_d
 static const struct drm_encoder_helper_funcs sLVDSEncoderHelperFuncs = 
 {
 	.dpms		= LVDSEncoderHelperDpms, 
-	.save		= NULL, 
-	.restore	= NULL, 
 	.mode_fixup	= LVDSEncoderHelperModeFixup, 
 	.prepare	= LVDSEncoderHelperPrepare, 
 	.commit		= LVDSEncoderHelperCommit, 
 	.mode_set	= LVDSEncoderHelperModeSet, 
-	.get_crtc	= NULL, 
 	.detect		= NULL, 
 	.disable	= NULL, 
 };

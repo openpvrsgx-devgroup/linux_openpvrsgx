@@ -418,7 +418,6 @@ static PVRSRV_ERROR GetDCBufferAddr(IMG_HANDLE		hDevice,
 				    IMG_BOOL		*pbIsContiguous,
 				    IMG_UINT32		*pui32TilingStride)
 {
-	PVRPSB_DEVINFO	*psDevInfo;
 	PVRPSB_BUFFER	*psBuffer;
 
 	PVR_UNREFERENCED_PARAMETER(pui32TilingStride);
@@ -428,7 +427,6 @@ static PVRSRV_ERROR GetDCBufferAddr(IMG_HANDLE		hDevice,
 		return PVRSRV_ERROR_INVALID_PARAMS;
 	}
 
-	psDevInfo = (PVRPSB_DEVINFO *)hDevice;
 	psBuffer = (PVRPSB_BUFFER *)hBuffer;
 
 	*pui32ByteSize = psBuffer->ui32Size;
@@ -768,7 +766,7 @@ static IMG_BOOL VSyncISR(IMG_VOID *pvDevInfo)
 #if defined(PVR_DISPLAY_CONTROLLER_DRM_IOCTL)
 	if (psDevInfo->bLeaveVT == PSB_TRUE)
 	{
-		return PSB_TRUE;
+		return IMG_TRUE;
 	}
 #endif
 
@@ -1557,7 +1555,7 @@ PSB_ERROR PVRPSBInit(PVRPSB_DEVINFO *psDevInfo)
 	PSB_ERROR eReturn;
 
 #if defined(SUPPORT_DRI_DRM)
-	psPciDev = psDevInfo->psDrmDev->pdev;
+	psPciDev = to_pci_dev(psDevInfo->psDrmDev->dev);
 #else
 	psPciDev = psDevInfo->psPciDev;
 #endif

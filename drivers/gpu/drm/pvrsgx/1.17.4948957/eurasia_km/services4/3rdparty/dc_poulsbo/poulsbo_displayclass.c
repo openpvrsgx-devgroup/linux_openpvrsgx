@@ -559,6 +559,7 @@ static PVRSRV_ERROR CreateDCSwapChain(IMG_HANDLE		hDevice,
 	ui32BufferNum = 0;
 #endif
 
+#if !defined(SUPPORT_DRI_DRM)
 	/* Populate the buffers with the preallocated buffers */
 	for (ui32BackBufferNum = 0; ui32BufferNum < ui32BufferCount; ui32BufferNum++, ui32BackBufferNum++)
 	{
@@ -569,10 +570,31 @@ static PVRSRV_ERROR CreateDCSwapChain(IMG_HANDLE		hDevice,
 		psBuffer[ui32BufferNum].pvCPUVAddr		= psDevInfo->apsBackBuffers[ui32BackBufferNum]->pvCPUVAddr;
 		psBuffer[ui32BufferNum].psSyncData 		= ppsSyncData[ui32BufferNum];
 	}
+#else
+	for (ui32BackBufferNum = 0; ui32BufferNum < ui32BufferCount; ui32BufferNum++, ui32BackBufferNum++)
+	{
+		psDevInfo->apsBackBuffers[ui32BackBufferNum]	= PVRPSBCreateBuffer(psDevInfo, psDevInfo->psSystemBuffer->ui32Size);
+		if (!psDevInfo->apsBackBuffers[ui32BackBufferNum])
+			goto ErrorCreateBuffer;
+		psBuffer[ui32BufferNum].ui32Size		= psDevInfo->apsBackBuffers[ui32BackBufferNum]->ui32Size;
+		psBuffer[ui32BufferNum].bIsContiguous		= psDevInfo->apsBackBuffers[ui32BackBufferNum]->bIsContiguous;
+		psBuffer[ui32BufferNum].uSysAddr		= psDevInfo->apsBackBuffers[ui32BackBufferNum]->uSysAddr;
+		psBuffer[ui32BufferNum].sDevVAddr		= psDevInfo->apsBackBuffers[ui32BackBufferNum]->sDevVAddr;
+		psBuffer[ui32BufferNum].pvCPUVAddr		= psDevInfo->apsBackBuffers[ui32BackBufferNum]->pvCPUVAddr;
+		psBuffer[ui32BufferNum].psSyncData 		= ppsSyncData[ui32BufferNum];
+		psDevInfo->ui32TotalBackBuffers++;
+	}
+#endif
 
 	psSwapChain->psVSyncFlipItems = (PVRPSB_VSYNC_FLIP_ITEM *)PVROSAllocKernelMem(sizeof(PVRPSB_VSYNC_FLIP_ITEM) * ui32BufferCount);
 	if (psSwapChain->psVSyncFlipItems == NULL)
 	{
+#ifdef SUPPORT_DRI_DRM
+	ErrorCreateBuffer:
+		for (ui32BackBufferNum = 0; ui32BackBufferNum < psDevInfo->ui32TotalBackBuffers; ui32BackBufferNum++)
+			PVRPSBDestroyBuffer(psDevInfo->apsBackBuffers[ui32BackBufferNum]);
+		psDevInfo->ui32TotalBackBuffers = 0;
+#endif
 		PVROSFreeKernelMem(psSwapChain->psBuffer);
 		PVROSFreeKernelMem(psSwapChain);
 
@@ -617,6 +639,12 @@ static PVRSRV_ERROR DestroyDCSwapChain(IMG_HANDLE hDevice, IMG_HANDLE hSwapChain
 	{
 		return PVRSRV_ERROR_FLIP_FAILED;
 	}
+
+#ifdef SUPPORT_DRI_DRM
+	for (IMG_UINT32 ui32BackBufferNum = 0; ui32BackBufferNum < psDevInfo->ui32TotalBackBuffers; ui32BackBufferNum++)
+		PVRPSBDestroyBuffer(psDevInfo->apsBackBuffers[ui32BackBufferNum]);
+	psDevInfo->ui32TotalBackBuffers = 0;
+#endif
 
 	PVROSFreeKernelMem(psSwapChain->psVSyncFlipItems);
 	PVROSFreeKernelMem(psSwapChain->psBuffer);
@@ -1339,10 +1367,10 @@ void PVRPSBDestroyBuffer(PVRPSB_BUFFER *psBuffer)
 
 static PSB_ERROR BuffersInit(PVRPSB_DEVINFO *psDevInfo)
 {
+#if !defined(SUPPORT_DRI_DRM)
 	IMG_UINT32 ui32BufferSize = psDevInfo->sDisplayDims.ui32ByteStride * psDevInfo->sDisplayDims.ui32Height;
 	IMG_UINT32 ui32BufferNum;
 
-#if !defined(SUPPORT_DRI_DRM)
 	psDevInfo->psSystemBuffer = PVRPSBCreateBuffer(psDevInfo, ui32BufferSize);
 	if (psDevInfo->psSystemBuffer == NULL)
 	{
@@ -1366,7 +1394,6 @@ static PSB_ERROR BuffersInit(PVRPSB_DEVINFO *psDevInfo)
 		/* Clear the system buffer to black */
 		PVROSSetIOMem(psDevInfo->psSystemBuffer->pvCPUVAddr, 0, psDevInfo->psSystemBuffer->ui32Size);
 	}
-#endif /* #if !defined(SUPPORT_DRI_DRM) */	
 
 	for (ui32BufferNum = 0; ui32BufferNum < PVRPSB_MAX_BACKBUFFERS; ui32BufferNum++)
 	{
@@ -1377,12 +1404,14 @@ static PSB_ERROR BuffersInit(PVRPSB_DEVINFO *psDevInfo)
 		}
 	}
 	psDevInfo->ui32TotalBackBuffers = ui32BufferNum;
+#endif /* #if !defined(SUPPORT_DRI_DRM) */
 
 	return PSB_OK;
 }
 
 static void BufferDeinit(PVRPSB_DEVINFO *psDevInfo)
 {
+#if !defined(SUPPORT_DRI_DRM)
 	IMG_UINT32 ui32BufferNum;
 
 	for (ui32BufferNum = 0; ui32BufferNum < psDevInfo->ui32TotalBackBuffers; ui32BufferNum++)
@@ -1392,12 +1421,15 @@ static void BufferDeinit(PVRPSB_DEVINFO *psDevInfo)
 	}
 	psDevInfo->ui32TotalBackBuffers = 0;
 
-#if !defined(SUPPORT_DRI_DRM)
 	/* Clear the system buffer to black so we know the driver has unloaded */
 	PVROSSetIOMem(psDevInfo->psSystemBuffer->pvCPUVAddr, 0, psDevInfo->psSystemBuffer->ui32Size);
 
 	PVRPSBDestroyBuffer(psDevInfo->psSystemBuffer);
 	psDevInfo->psSystemBuffer = IMG_NULL;
+#else
+	/* Possible use after free? */
+	if (psDevInfo->psSwapChain)
+		DestroyDCSwapChain(psDevInfo, psDevInfo->psSwapChain);
 #endif
 }
 
@@ -1670,10 +1702,14 @@ PSB_ERROR PVRPSBInit(PVRPSB_DEVINFO *psDevInfo)
 	psDevInfo->sDisplayInfo.ui32MaxSwapInterval	= PVRPSB_MAX_SWAP_INTERVAL;
 	psDevInfo->sDisplayInfo.ui32MaxSwapChains	= PVRPSB_MAX_SWAPCHAINS;
 
-#if defined(USE_PRIMARY_SURFACE_IN_FLIP_CHAIN)
-	psDevInfo->sDisplayInfo.ui32MaxSwapChainBuffers	= psDevInfo->ui32TotalBackBuffers + 1;
-#else
+#if !defined(SUPPORT_DRI_DRM)
 	psDevInfo->sDisplayInfo.ui32MaxSwapChainBuffers	= psDevInfo->ui32TotalBackBuffers;
+#else
+	psDevInfo->sDisplayInfo.ui32MaxSwapChainBuffers	= PVRPSB_MAX_BACKBUFFERS;
+#endif
+
+#if defined(USE_PRIMARY_SURFACE_IN_FLIP_CHAIN)
+	psDevInfo->sDisplayInfo.ui32MaxSwapChainBuffers++;
 #endif
 
 	psDevInfo->ui32NumFormats			= PVRPSB_MAX_FORMATS;

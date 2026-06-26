@@ -66,6 +66,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  - IMG is not providing a display driver implementation.
  **************************************************************************/
 
+#include "pvr_debug.h"
 #include "dc_poulsbo.h"
 
 #include <linux/string.h>
@@ -1132,6 +1133,10 @@ static PSB_ERROR GTTInit(PVRPSB_DEVINFO *psDevInfo, PVRPSB_GTT_INFO *psGTTInfo)
 		return PSB_ERROR_OUT_OF_MEMORY;
 	}
 #endif /* #if defined(SUPPORT_DRI_DRM) */
+	psGTTInfo->sRegion.name = "Graphics Translation Table";
+	psGTTInfo->sRegion.flags = IORESOURCE_MEM;
+	psGTTInfo->sRegion.start = psGTTInfo->sGMemDevVAddr.uiAddr;
+	psGTTInfo->sRegion.end = psGTTInfo->sRegion.start + psGTTInfo->ui32GTTSize - 1;
 
 	return PSB_OK;
 }
@@ -1168,6 +1173,7 @@ static IMG_VOID GTTAllocStolenPages(PVRPSB_GTT_INFO *psGTTInfo, IMG_UINT32 ui32S
 	}
 }
 
+#if 0
 static IMG_BOOL GTTInsertPages(PVRPSB_DEVINFO *psDevInfo, IMG_SYS_PHYADDR *psSysAddr, IMG_UINT32 ui32NumPages, IMG_BOOL bContiguous, IMG_DEV_VIRTADDR *psDevVAddr)
 {
 	PVRPSB_GTT_INFO *psGTTInfo = &(psDevInfo->sGTTInfo);
@@ -1198,11 +1204,52 @@ static IMG_BOOL GTTInsertPages(PVRPSB_DEVINFO *psDevInfo, IMG_SYS_PHYADDR *psSys
 
 	return IMG_TRUE;
 }
+#endif
 
 
 /*******************************************************************************
  * Buffer functions
  ******************************************************************************/
+static IMG_BOOL PVRPSBBindBuffer(PVRPSB_DEVINFO *psDevInfo, PVRPSB_BUFFER *psBuffer)
+{
+	PVRPSB_GTT_INFO *psGTTInfo = &(psDevInfo->sGTTInfo);
+	struct resource *psGtt = &psGTTInfo->sRegion;
+	struct resource *psRegion = &psBuffer->sRegion;
+	IMG_SYS_PHYADDR *psSysAddr = psBuffer->bIsContiguous ? &psBuffer->uSysAddr.sCont : psBuffer->uSysAddr.psNonCont;
+	IMG_DEV_VIRTADDR *psDevVAddr = &psBuffer->sDevVAddr;
+	IMG_UINT32 ui32NumPages = psBuffer->ui32Size >> PVRPSB_PAGE_SHIFT;
+	IMG_UINT32 ui32PageAddr;
+	IMG_UINT32 ui32PageNum;
+	int iReturn;
+	*psRegion = (struct resource){ 0 }; // somehow necessary
+	iReturn = allocate_resource(psGtt, psRegion, ui32NumPages << 2, psGtt->start, psGtt->end, 4, NULL, NULL);
+	if (iReturn)
+	{
+		PVR_DPF((PVR_DBG_ERROR, "Failed to reserve %u pages in GTT", ui32NumPages));
+		return IMG_FALSE;
+	}
+	psDevVAddr->uiAddr = psGTTInfo->sGMemDevVAddr.uiAddr + ((psRegion->start - psGtt->start) << 10);
+	for (ui32PageNum = 0; ui32PageNum < ui32NumPages; ui32PageNum++)
+	{
+		if (psBuffer->bIsContiguous)
+		{
+			ui32PageAddr = psSysAddr->uiAddr + (ui32PageNum << PVRPSB_PAGE_SHIFT);
+		}
+		else
+		{
+			ui32PageAddr = psSysAddr[ui32PageNum].uiAddr;
+		}
+
+		PVROSWriteIOMem(psGTTInfo->pvGTTCPUVAddr + (psRegion->start - psGtt->start) + (ui32PageNum << 2), ui32PageAddr | 0x1);
+	}
+	if (psBuffer->bIsContiguous)
+		PVR_DPF((PVR_DBG_VERBOSE, "Mapped [%x:%x) into GTT at %#x (GPU address %#x)", psSysAddr->uiAddr, psSysAddr->uiAddr + (ui32NumPages << PVRPSB_PAGE_SHIFT), psRegion->start - psGtt->start, psDevVAddr->uiAddr));
+	else
+		PVR_DPF((PVR_DBG_VERBOSE, "Mapped [*%p:*%p) into GTT at %#x (GPU address %#x)", psBuffer->pvCPUVAddr, psBuffer->pvCPUVAddr + (ui32NumPages << PVRPSB_PAGE_SHIFT), psRegion->start - psGtt->start, psDevVAddr->uiAddr));
+	return IMG_TRUE;
+}
+
+
 PVRPSB_BUFFER *PVRPSBCreateBuffer(PVRPSB_DEVINFO *psDevInfo, IMG_UINT32 ui32BufferSize)
 {
 	PVRPSB_BUFFER *psBuffer;
@@ -1215,22 +1262,28 @@ PVRPSB_BUFFER *PVRPSBCreateBuffer(PVRPSB_DEVINFO *psDevInfo, IMG_UINT32 ui32Buff
 
 		ui32BufferSize		= PVRPSB_PAGE_ALIGN(ui32BufferSize);
 		ui32BufferSizeInPages	= ui32BufferSize >> PVRPSB_PAGE_SHIFT;
+		psBuffer->ui32Size	= ui32BufferSize;
 
 		/* Try to use stolen memory and if this fails fall back to using system memory */
 		GTTAllocStolenPages(psGTTInfo, ui32BufferSizeInPages, &(psBuffer->uSysAddr.sCont));
 
 		if (psBuffer->uSysAddr.sCont.uiAddr != 0)
 		{
+			psBuffer->bIsContiguous	= PSB_TRUE;
+#if 0
 			if (GTTInsertPages(psDevInfo, &(psBuffer->uSysAddr.sCont), ui32BufferSizeInPages, IMG_TRUE, &(psBuffer->sDevVAddr)) == IMG_FALSE)
+#else
+			if (!PVRPSBBindBuffer(psDevInfo, psBuffer))
+#endif
 			{
 				goto ErrorFreeBuffer;
 			}
 
-			psBuffer->pvCPUVAddr	= PVROSMapPhysAddrWC(psBuffer->uSysAddr.sCont, ui32BufferSize);	
-			psBuffer->bIsContiguous	= PSB_TRUE;
+			psBuffer->pvCPUVAddr	= PVROSMapPhysAddrWC(psBuffer->uSysAddr.sCont, ui32BufferSize);
 		}
 		else
 		{
+			psBuffer->bIsContiguous	= PSB_FALSE;
 			psBuffer->uSysAddr.psNonCont = (IMG_SYS_PHYADDR *)PVROSAllocKernelMem(sizeof(IMG_SYS_PHYADDR) * ui32BufferSizeInPages);
 			if (psBuffer->uSysAddr.psNonCont == NULL)
 			{
@@ -1243,14 +1296,15 @@ PVRPSB_BUFFER *PVRPSBCreateBuffer(PVRPSB_DEVINFO *psDevInfo, IMG_UINT32 ui32Buff
 				goto ErrorFreePageBuffer;
 			}
 
+#if 0
 			if (GTTInsertPages(psDevInfo, psBuffer->uSysAddr.psNonCont, ui32BufferSizeInPages, IMG_FALSE, &(psBuffer->sDevVAddr)) == IMG_FALSE)
+#else
+			if (!PVRPSBBindBuffer(psDevInfo, psBuffer))
+#endif
 			{
 				goto ErrorFreeBufferMem;
 			}
-			
-			psBuffer->bIsContiguous	= PSB_FALSE;
 		}
-		psBuffer->ui32Size = ui32BufferSize;
 	}
 
 	return psBuffer;
@@ -1278,6 +1332,7 @@ void PVRPSBDestroyBuffer(PVRPSB_BUFFER *psBuffer)
 		PVROSFreeKernelMem(psBuffer->uSysAddr.psNonCont);
 		PVROSFreeKernelMemForBuffer(psBuffer->pvCPUVAddr);
 	}
+	release_resource(&psBuffer->sRegion);
 
 	PVROSFreeKernelMem(psBuffer);
 }

@@ -384,6 +384,7 @@ typedef struct PVRPSB_STATE_TAG
 
 typedef struct PVRPSB_BUFFER_TAG
 {
+	struct resource		sRegion;
 	IMG_UINT32		ui32Size;
 	PSB_BOOL		bIsContiguous;
 
@@ -456,6 +457,7 @@ typedef struct PVRPSB_SWAPCHAIN_TAG
 
 typedef struct PVRPSB_GTT_INFO_TAG
 {
+	struct resource		sRegion;
 	IMG_SYS_PHYADDR		sGTTSysAddr;
 	IMG_CPU_VIRTADDR	pvGTTCPUVAddr;
 	IMG_UINT32		ui32GTTSize;

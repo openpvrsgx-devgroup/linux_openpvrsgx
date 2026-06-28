@@ -580,6 +580,9 @@ static const struct file_operations sPVRFileOps =
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,12,0))
 	.fasync = drm_fasync,
 #endif
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6,12,0))
+	.fop_flags = FOP_UNSIGNED_OFFSET,
+#endif
 };
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)) */
 

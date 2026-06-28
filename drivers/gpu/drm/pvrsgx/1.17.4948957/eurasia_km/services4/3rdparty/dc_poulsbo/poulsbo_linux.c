@@ -74,7 +74,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #if defined(SUPPORT_DRI_DRM)
 #include "pvr_drm.h"
+#include "servicesint.h"
+#include "perproc.h"
+#include "pvr_debug.h"
 #include "3rdparty_dc_drm_shared.h"
+#include <drm/drm_file.h>
 #include <drm/drm_mode.h>
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0))
 #include <drm/drm_plane_helper.h>
@@ -573,31 +577,6 @@ struct drm_connector *PVRGetConnectorForEncoder(struct drm_encoder *psEncoder)
 
 	return NULL;
 }
-
-/*******************************************************************************
- * DRM mode config functions
- ******************************************************************************/
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0))
-static struct drm_framebuffer *ModeConfigUserFbCreate(struct drm_device *psDrmDev, struct drm_file *psFile, struct drm_mode_fb_cmd *psModeCommand)
-#elif (LINUX_VERSION_CODE < KERNEL_VERSION(6,17,0))
-static struct drm_framebuffer *ModeConfigUserFbCreate(struct drm_device *psDrmDev, struct drm_file *psFile, struct drm_mode_fb_cmd2 *psModeCommand)
-#else
-static struct drm_framebuffer *ModeConfigUserFbCreate(struct drm_device *psDrmDev, struct drm_file *psFile, const struct drm_format_info *info, const struct drm_mode_fb_cmd2 *psModeCommand)
-#endif
-{
-	PVR_UNREFERENCED_PARAMETER(psDrmDev);
-	PVR_UNREFERENCED_PARAMETER(psFile);
-	PVR_UNREFERENCED_PARAMETER(psModeCommand);
-
-	/* Not supported */
-	return NULL;
-}
-
-static const struct drm_mode_config_funcs sModeConfigFuncs = 
-{
-	.fb_create	= ModeConfigUserFbCreate, 
-};
 
 /******************************************************************************
  * CRTC functions
@@ -1164,9 +1143,9 @@ static const struct drm_framebuffer_funcs sFramebufferFuncs =
 };
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0))
-static PVRPSB_FRAMEBUFFER *FramebufferCreate(struct drm_device *psDrmDev, struct drm_mode_fb_cmd *psFbCommand, PVRPSB_BUFFER *psBuffer)
+static PVRPSB_FRAMEBUFFER *FramebufferCreate(struct drm_device *psDrmDev, const struct drm_mode_fb_cmd *psFbCommand, PVRPSB_BUFFER *psBuffer)
 #else
-static PVRPSB_FRAMEBUFFER *FramebufferCreate(struct drm_device *psDrmDev, struct drm_mode_fb_cmd2 *psFbCommand, PVRPSB_BUFFER *psBuffer)
+static PVRPSB_FRAMEBUFFER *FramebufferCreate(struct drm_device *psDrmDev, const struct drm_mode_fb_cmd2 *psFbCommand, PVRPSB_BUFFER *psBuffer)
 #endif
 {
 	PVRPSB_FRAMEBUFFER *psPVRFramebuffer;
@@ -1193,6 +1172,42 @@ static PVRPSB_FRAMEBUFFER *FramebufferCreate(struct drm_device *psDrmDev, struct
 
 	return psPVRFramebuffer;
 }
+
+/*******************************************************************************
+ * DRM mode config functions
+ ******************************************************************************/
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0))
+static struct drm_framebuffer *ModeConfigUserFbCreate(struct drm_device *psDrmDev, struct drm_file *psFile, struct drm_mode_fb_cmd *psModeCommand)
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(6,17,0))
+static struct drm_framebuffer *ModeConfigUserFbCreate(struct drm_device *psDrmDev, struct drm_file *psFile, struct drm_mode_fb_cmd2 *psModeCommand)
+#else
+static struct drm_framebuffer *ModeConfigUserFbCreate(struct drm_device *psDrmDev, struct drm_file *psFile, const struct drm_format_info *info, const struct drm_mode_fb_cmd2 *psModeCommand)
+#endif
+{
+#if 0
+	PVRPSB_BUFFER *psBuffer = idr_find(psFile->idr, psModeCommand->handles[0]);
+	PVRPSB_FRAMEBUFFER *psFb = FramebufferCreate(psDrmDev, psModeCommand, psBuffer);
+#else
+	PVRSRV_PER_PROCESS_DATA *psPerProc = PVRSRVPerProcessData(pid_nr(psFile->pid));
+	PVRPSB_FRAMEBUFFER *psFramebuffer;
+	PVRSRV_DEVICECLASS_BUFFER *psBuffer;
+	if (PVRSRVLookupHandle(psPerProc->psHandleBase, (IMG_PVOID *)&psBuffer, (IMG_HANDLE)psModeCommand->handles[0], PVRSRV_HANDLE_TYPE_DISP_BUFFER) != PVRSRV_OK)
+		return NULL;
+	if ((psFramebuffer = FramebufferCreate(psDrmDev, psModeCommand, psBuffer->hExtBuffer)))
+	{
+		PVR_DPF((PVR_DBG_VERBOSE, "Allocated FBO #%u backed by %p", psFramebuffer->sFramebuffer.base.id, psBuffer->hExtBuffer));
+		return &psFramebuffer->sFramebuffer;
+	}
+
+	return NULL;
+#endif
+}
+
+static const struct drm_mode_config_funcs sModeConfigFuncs = 
+{
+	.fb_create	= ModeConfigUserFbCreate, 
+};
 
 static struct drm_fb_helper_funcs sFbHelperFuncs;
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(6,13,0))

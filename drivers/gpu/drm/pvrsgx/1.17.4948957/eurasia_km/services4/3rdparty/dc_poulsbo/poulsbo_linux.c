@@ -1256,6 +1256,7 @@ int PVR_DRM_MAKENAME(DISPLAY_CONTROLLER, _FbProbe)(struct drm_fb_helper *psFbHel
 		iResult = -ENOMEM;
 		goto ExitFramebufferRelease;
 	}
+	psDevInfo->psSystemBuffer->psSwapChain = NULL;
 
 	/* Clear the system buffer to black */
 	PVROSSetIOMem(psDevInfo->psSystemBuffer->pvCPUVAddr, 0, psDevInfo->psSystemBuffer->ui32Size);

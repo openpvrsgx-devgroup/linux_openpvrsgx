@@ -1174,7 +1174,6 @@ static PVRPSB_FRAMEBUFFER *FramebufferCreate(struct drm_device *psDrmDev, struct
 	psPVRFramebuffer = (PVRPSB_FRAMEBUFFER *)kzalloc(sizeof(PVRPSB_FRAMEBUFFER), GFP_KERNEL);
 	if (psPVRFramebuffer != NULL)
 	{
-		drm_framebuffer_init(psDrmDev, &psPVRFramebuffer->sFramebuffer, &sFramebufferFuncs);
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4,11,0))
 		drm_helper_mode_fill_fb_struct(&psPVRFramebuffer->sFramebuffer, psFbCommand);
@@ -1183,6 +1182,11 @@ static PVRPSB_FRAMEBUFFER *FramebufferCreate(struct drm_device *psDrmDev, struct
 #else
 		drm_helper_mode_fill_fb_struct(psDrmDev, &psPVRFramebuffer->sFramebuffer, drm_format_info(psFbCommand->pixel_format), psFbCommand);
 #endif
+		if (drm_framebuffer_init(psDrmDev, &psPVRFramebuffer->sFramebuffer, &sFramebufferFuncs) != 0)
+		{
+			kfree(psPVRFramebuffer);
+			return NULL;
+		}
 
 		psPVRFramebuffer->psBuffer = psBuffer;
 	}

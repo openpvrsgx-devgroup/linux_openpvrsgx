@@ -1,0 +1,6 @@
+bin_pc_i686*
+tmp_pc_i686*
+host_pc_i686*
+binary_pc_i686*
+*.o
+*.o.cmd

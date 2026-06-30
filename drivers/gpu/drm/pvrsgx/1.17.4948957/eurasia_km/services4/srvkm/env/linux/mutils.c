@@ -114,7 +114,11 @@ PVRLinuxX86PATProbe(IMG_VOID)
 		 * approach, and see if the PAT MSR contains a write combining
 		 * entry.
 		 */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(7,2,0))
+		rdmsrq(MSR_IA32_CR_PAT, pat);
+#else
 		rdmsrl(MSR_IA32_CR_PAT, pat);
+#endif
 		PVR_TRACE(("%s: Top 32 bits of PAT: 0x%.8x", __FUNCTION__, (IMG_UINT)(pat >> 32)));
 		PVR_TRACE(("%s: Bottom 32 bits of PAT: 0x%.8x", __FUNCTION__, (IMG_UINT)(pat)));
 

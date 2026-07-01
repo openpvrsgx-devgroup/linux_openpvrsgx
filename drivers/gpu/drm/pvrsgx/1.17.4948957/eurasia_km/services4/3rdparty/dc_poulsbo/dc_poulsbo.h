@@ -408,6 +408,10 @@ typedef struct PVRPSB_BUFFER_TAG
 	PVRSRV_SYNC_DATA	*psSyncData;
 	/* Swapchain this buffer belongs to, NULL for dumb buffers */
 	struct PVRPSB_SWAPCHAIN_TAG *psSwapChain;
+#ifdef SUPPORT_DRM_DUMB_BUFFERS
+	/* GEM object for this buffer, NULL for swapchain buffers. */
+	void *pvGEMObj;
+#endif
 } PVRPSB_BUFFER;
 
 typedef struct PVRPSB_CURSOR_INFO_TAG

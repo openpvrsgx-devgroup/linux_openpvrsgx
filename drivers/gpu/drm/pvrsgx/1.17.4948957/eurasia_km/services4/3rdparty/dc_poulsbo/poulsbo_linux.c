@@ -83,6 +83,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0))
 #include <drm/drm_plane_helper.h>
 #endif
+#if defined(SUPPORT_DRM_DUMB_BUFFERS)
+#include "mmap.h"
+#include <drm/drm_gem.h>
+#endif
 #else
 #include "pvrmodule.h"
 #include <linux/fb.h>
@@ -1124,6 +1128,12 @@ static void FramebufferDestroy(struct drm_framebuffer *psFramebuffer)
 	PVRPSB_FRAMEBUFFER *psPVRFramebuffer = to_pvr_framebuffer(psFramebuffer);
 
 	drm_framebuffer_cleanup(psFramebuffer);
+
+#ifdef SUPPORT_DRM_DUMB_BUFFERS
+	if (psPVRFramebuffer->psBuffer->pvGEMObj)
+		drm_gem_object_put(psPVRFramebuffer->psBuffer->pvGEMObj);
+#endif
+
 	kfree(psPVRFramebuffer);
 }
 
@@ -1173,9 +1183,142 @@ static PVRPSB_FRAMEBUFFER *FramebufferCreate(struct drm_device *psDrmDev, const 
 	return psPVRFramebuffer;
 }
 
+#ifdef SUPPORT_DRM_DUMB_BUFFERS
+/*******************************************************************************
+ * DRM dumb buffer support
+ ******************************************************************************/
+
+typedef struct PVRPSB_GEM_BUFFER_TAG
+{
+	struct drm_gem_object sSuper;
+        struct drm_file *psFile;
+	PVRPSB_BUFFER sBuffer;
+	IMG_HANDLE psMemArea;
+	IMG_HANDLE psHandle;
+} PVRPSB_GEM_BUFFER;
+
+static void PVRPSBDestroyGEMBuffer(struct drm_gem_object *psSuper)
+{
+	PVRPSB_GEM_BUFFER *psGEMBuffer = (void *)psSuper;
+	PVRSRV_PER_PROCESS_DATA *psPerProc = PVRSRVPerProcessData(pid_nr(psGEMBuffer->psFile->pid));
+	PVR_DPF((PVR_DBG_VERBOSE, "Freeing dumb buffer"));
+
+	PVRPSBDestroyBufferInPlace(&psGEMBuffer->sBuffer);
+	PVRSRVReleaseHandle(psPerProc->psHandleBase, psGEMBuffer->psHandle, PVRSRV_HANDLE_TYPE_SOC_TIMER);
+	OSUnRegisterMem(NULL, 0, PVRSRV_HAP_WRITECOMBINE|PVRSRV_HAP_SINGLE_PROCESS, psGEMBuffer->psMemArea);
+
+	drm_gem_object_release(psSuper);
+
+	kfree(psGEMBuffer);
+}
+
+static const struct drm_gem_object_funcs sGEMBufferFuncs = 
+{
+	.free = PVRPSBDestroyGEMBuffer
+};
+
+int PVR_DRM_MAKENAME(DISPLAY_CONTROLLER, _DumbCreate)(struct drm_file *psFile, struct drm_device *psDev, struct drm_mode_create_dumb *psMode)
+{
+	PVRSRV_ERROR eError;
+	int iReturn = -ENOMEM;
+	PVRPSB_BUFFER *psBuffer;
+	PVRPSB_GEM_BUFFER *psGEMBuffer;
+	PVRPSB_DEVINFO *psDevInfo = (PVRPSB_DEVINFO *)psDev->dev_private;
+	PVRSRV_PER_PROCESS_DATA *psPerProc = PVRSRVPerProcessData(pid_nr(psFile->pid));
+
+	/* For now only one format is supported for framebuffers.
+	   Dumb buffers are otherwise useless. */
+	if (psMode->bpp != 32)
+		return -EINVAL;
+
+	psGEMBuffer = kzalloc(sizeof *psGEMBuffer, GFP_KERNEL);
+	if (!psGEMBuffer)
+		return -ENOMEM;
+	psBuffer = &psGEMBuffer->sBuffer;
+	psMode->pitch = psMode->width << 2;
+	psMode->size = psMode->pitch * psMode->height;
+
+	if (!PVRPSBCreateBufferInPlace(psDevInfo, psMode->size, psBuffer))
+		goto ExitFree;
+
+	if (psBuffer->bIsContiguous)
+		eError = OSRegisterMem((IMG_CPU_PHYADDR){ psBuffer->uSysAddr.sCont.uiAddr }, psBuffer->pvCPUVAddr, psBuffer->ui32Size, PVRSRV_HAP_WRITECOMBINE|PVRSRV_HAP_SINGLE_PROCESS, &psGEMBuffer->psMemArea);
+	else
+		eError = OSRegisterDiscontigMem(psBuffer->uSysAddr.psNonCont, psBuffer->pvCPUVAddr, psBuffer->ui32Size, PVRSRV_HAP_WRITECOMBINE|PVRSRV_HAP_SINGLE_PROCESS, &psGEMBuffer->psMemArea);
+	if (eError != PVRSRV_OK)
+	{
+		iReturn = -EINVAL;
+		goto ExitDestroyBuffer;
+	}
+
+	/* Reserve a handle to prevent swapchain buffers from claiming the same offset.
+	   SOC_TIMER happens to be the "opaque" memory handle type. */
+	if (PVRSRVAllocHandle(psPerProc->psHandleBase, &psGEMBuffer->psHandle, psGEMBuffer->psMemArea, PVRSRV_HANDLE_TYPE_SOC_TIMER, PVRSRV_HANDLE_ALLOC_FLAG_SHARED) != PVRSRV_OK)
+		goto ExitUnregisterMem;
+
+	psGEMBuffer->psFile = psFile;
+	psGEMBuffer->sSuper.funcs = &sGEMBufferFuncs;
+
+	drm_gem_private_object_init(psDev, (void *)psGEMBuffer, PAGE_ALIGN(psMode->size));
+	iReturn = drm_gem_handle_create(psFile, (void *)psGEMBuffer, &psMode->handle);
+
+	psBuffer->psSwapChain = NULL;
+	psBuffer->pvGEMObj = psGEMBuffer;
+	drm_gem_object_put(psBuffer->pvGEMObj);
+
+	return iReturn;
+
+ExitUnregisterMem:
+	OSUnRegisterMem(psBuffer->pvCPUVAddr, psBuffer->ui32Size, PVRSRV_HAP_SINGLE_PROCESS, psGEMBuffer->psMemArea);
+
+ExitDestroyBuffer:
+	PVRPSBDestroyBufferInPlace(psBuffer);
+
+ExitFree:
+	kfree(psGEMBuffer);
+
+        return iReturn;
+}
+
+int PVR_DRM_MAKENAME(DISPLAY_CONTROLLER, _DumbMap)(struct drm_file *psFile, struct drm_device *psDev, IMG_UINT32 ui32Handle, IMG_UINT64 *ui64Offset)
+{
+        IMG_UINTPTR_T uOffset;
+	PVRPSB_GEM_BUFFER *psGEMBuffer = (void *)drm_gem_object_lookup(psFile, ui32Handle);
+
+	if (!psGEMBuffer)
+		return -ENOENT;
+
+	if (PVRMMapOSMemHandleToMMapData(PVRSRVPerProcessData(pid_nr(psFile->pid)), psGEMBuffer->psHandle, &uOffset, &(IMG_UINTPTR_T){ 0 }, &(IMG_SIZE_T){ 0 }, &(IMG_UINTPTR_T){ 0 }) != PVRSRV_OK)
+	{
+		drm_gem_object_put((void *)psGEMBuffer);
+		return -EFAULT;
+	}
+	*ui64Offset = (IMG_UINT64)uOffset << 12;
+	drm_gem_object_put((void *)psGEMBuffer);
+	return 0;
+}
+
+#endif
+
 /*******************************************************************************
  * DRM mode config functions
  ******************************************************************************/
+
+static PVRPSB_BUFFER *FindBuffer(struct drm_file *psFile, IMG_UINT32 ui32Handle)
+{
+	PVRSRV_PER_PROCESS_DATA *psPerProc = PVRSRVPerProcessData(pid_nr(psFile->pid));
+	PVRSRV_DEVICECLASS_BUFFER *psBuffer;
+
+#ifdef SUPPORT_DRM_DUMB_BUFFERS
+	PVRPSB_GEM_BUFFER *psGEMBuffer;
+	if ((psGEMBuffer = (void *)drm_gem_object_lookup(psFile, ui32Handle)))
+		return &psGEMBuffer->sBuffer;
+#endif
+
+	if (PVRSRVLookupHandle(psPerProc->psHandleBase, (IMG_PVOID *)&psBuffer, (IMG_HANDLE)ui32Handle, PVRSRV_HANDLE_TYPE_DISP_BUFFER) == PVRSRV_OK)
+		return psBuffer->hExtBuffer;
+	return NULL;
+}
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0))
 static struct drm_framebuffer *ModeConfigUserFbCreate(struct drm_device *psDrmDev, struct drm_file *psFile, struct drm_mode_fb_cmd *psModeCommand)
@@ -1185,23 +1328,15 @@ static struct drm_framebuffer *ModeConfigUserFbCreate(struct drm_device *psDrmDe
 static struct drm_framebuffer *ModeConfigUserFbCreate(struct drm_device *psDrmDev, struct drm_file *psFile, const struct drm_format_info *info, const struct drm_mode_fb_cmd2 *psModeCommand)
 #endif
 {
-#if 0
-	PVRPSB_BUFFER *psBuffer = idr_find(psFile->idr, psModeCommand->handles[0]);
-	PVRPSB_FRAMEBUFFER *psFb = FramebufferCreate(psDrmDev, psModeCommand, psBuffer);
-#else
-	PVRSRV_PER_PROCESS_DATA *psPerProc = PVRSRVPerProcessData(pid_nr(psFile->pid));
 	PVRPSB_FRAMEBUFFER *psFramebuffer;
-	PVRSRV_DEVICECLASS_BUFFER *psBuffer;
-	if (PVRSRVLookupHandle(psPerProc->psHandleBase, (IMG_PVOID *)&psBuffer, (IMG_HANDLE)psModeCommand->handles[0], PVRSRV_HANDLE_TYPE_DISP_BUFFER) != PVRSRV_OK)
-		return NULL;
-	if ((psFramebuffer = FramebufferCreate(psDrmDev, psModeCommand, psBuffer->hExtBuffer)))
+	PVRPSB_BUFFER *psBuffer = FindBuffer(psFile, psModeCommand->handles[0]);
+	if (psBuffer && (psFramebuffer = FramebufferCreate(psDrmDev, psModeCommand, psBuffer)))
 	{
-		PVR_DPF((PVR_DBG_VERBOSE, "Allocated FBO #%u backed by %p", psFramebuffer->sFramebuffer.base.id, psBuffer->hExtBuffer));
+		PVR_DPF((PVR_DBG_VERBOSE, "Allocated FBO #%u backed by %p", psFramebuffer->sFramebuffer.base.id, psBuffer));
 		return &psFramebuffer->sFramebuffer;
 	}
 
 	return NULL;
-#endif
 }
 
 static const struct drm_mode_config_funcs sModeConfigFuncs = 

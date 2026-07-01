@@ -112,15 +112,20 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #define PVRPSB_MAX_FORMATS			(1)
 #define PVRPSB_MAX_DIMS				(1)
-#define PVRPSB_MAX_SWAPCHAINS			(1)
+#define PVRPSB_MAX_SWAPCHAINS			(-1)
+#define PVRPSB_SWAPCHAIN_PRIVATE		(-1)
 
 #define PVRPSB_MIN_SWAP_INTERVAL		(0)
 #define PVRPSB_MAX_SWAP_INTERVAL		(10) /* Arbitary choice */
 
+#if !defined(SUPPORT_DRI_DRM)
 #if defined(USE_PRIMARY_SURFACE_IN_FLIP_CHAIN)
 #define PVRPSB_MAX_BACKBUFFERS			(2)
 #else
 #define PVRPSB_MAX_BACKBUFFERS			(3)
+#endif
+#else
+#define PVRPSB_MAX_BACKBUFFERS			(-1)
 #endif
 
 #define PVRPSB_FB_WIDTH_MIN			(0)
@@ -384,6 +389,7 @@ typedef struct PVRPSB_STATE_TAG
 
 typedef struct PVRPSB_BUFFER_TAG
 {
+	struct resource		sRegion;
 	IMG_UINT32		ui32Size;
 	PSB_BOOL		bIsContiguous;
 
@@ -400,6 +406,12 @@ typedef struct PVRPSB_BUFFER_TAG
 	IMG_CPU_VIRTADDR	pvCPUVAddr;
 
 	PVRSRV_SYNC_DATA	*psSyncData;
+	/* Swapchain this buffer belongs to, NULL for dumb buffers */
+	struct PVRPSB_SWAPCHAIN_TAG *psSwapChain;
+#ifdef SUPPORT_DRM_DUMB_BUFFERS
+	/* GEM object for this buffer, NULL for swapchain buffers. */
+	void *pvGEMObj;
+#endif
 } PVRPSB_BUFFER;
 
 typedef struct PVRPSB_CURSOR_INFO_TAG
@@ -456,6 +468,7 @@ typedef struct PVRPSB_SWAPCHAIN_TAG
 
 typedef struct PVRPSB_GTT_INFO_TAG
 {
+	struct resource		sRegion;
 	IMG_SYS_PHYADDR		sGTTSysAddr;
 	IMG_CPU_VIRTADDR	pvGTTCPUVAddr;
 	IMG_UINT32		ui32GTTSize;
@@ -518,12 +531,10 @@ typedef struct PVRPSB_DEVINFO_TAG
 
 	PVRPSB_PIPE			eActivePipe;
 
-	/* Back buffer info */
-	IMG_UINT32			ui32TotalBackBuffers;
-	PVRPSB_BUFFER			*apsBackBuffers[PVRPSB_MAX_BACKBUFFERS];
-
-	/* Only one swapchain supported by this device so hang it here */
+	/* Active swapchain */
 	PVRPSB_SWAPCHAIN		*psSwapChain;
+	/* ID of the next shared swapchain */
+	IMG_UINT32			ui32NextUID;
 
 	/* True if PVR is flushing its command queues */
 	PSB_BOOL			bFlushCommands;
@@ -599,7 +610,9 @@ PVRPSB_DEVINFO *PVRPSBGetDevInfo(IMG_VOID);
 IMG_VOID PVRPSBSetDevInfo(PVRPSB_DEVINFO *psDevInfo);
 
 PVRPSB_BUFFER *PVRPSBCreateBuffer(PVRPSB_DEVINFO *psDevInfo, IMG_UINT32 ui32BufferSize);
+IMG_BOOL PVRPSBCreateBufferInPlace(PVRPSB_DEVINFO *psDevInfo, IMG_UINT32 ui32BufferSize, PVRPSB_BUFFER *psBuffer);
 void PVRPSBDestroyBuffer(PVRPSB_BUFFER *psBuffer);
+void PVRPSBDestroyBufferInPlace(PVRPSB_BUFFER *psBuffer);
 
 IMG_UINT32 PVRPSBGetBpp(PVRSRV_PIXEL_FORMAT ePixelFormat);
 

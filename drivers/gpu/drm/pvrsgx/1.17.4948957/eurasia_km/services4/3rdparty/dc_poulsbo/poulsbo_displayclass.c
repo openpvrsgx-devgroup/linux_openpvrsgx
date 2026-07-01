@@ -66,6 +66,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  - IMG is not providing a display driver implementation.
  **************************************************************************/
 
+#include "pvr_debug.h"
 #include "dc_poulsbo.h"
 
 #include <linux/string.h>
@@ -144,6 +145,9 @@ PSB_ERROR PVRPSBFlip(PVRPSB_DEVINFO *psDevInfo, PVRPSB_BUFFER *psBuffer)
 {
 	if (psDevInfo != NULL)
 	{
+		if (psBuffer->ui32Size < psDevInfo->sDisplayDims.ui32ByteStride * psDevInfo->sDisplayDims.ui32Height)
+			/* Modeset required */
+			return PSB_ERROR_INVALID_PARAMS;
 #if defined(PVR_DISPLAY_CONTROLLER_DRM_IOCTL)
 		if (psDevInfo->bLeaveVT == PSB_FALSE)
 #endif
@@ -160,6 +164,7 @@ PSB_ERROR PVRPSBFlip(PVRPSB_DEVINFO *psDevInfo, PVRPSB_BUFFER *psBuffer)
 			}
 
 			psDevInfo->psCurrentBuffer = psBuffer;
+			psDevInfo->psSwapChain = psBuffer->psSwapChain;
 		}
 
 		return PSB_OK;
@@ -497,25 +502,9 @@ static PVRSRV_ERROR CreateDCSwapChain(IMG_HANDLE		hDevice,
 
 	psDevInfo = (PVRPSB_DEVINFO *)hDevice;
 
-	/* This Poulsbo driver only supports a single swapchain */
-	if (psDevInfo->psSwapChain)
-	{
-		return PVRSRV_ERROR_FLIP_CHAIN_EXISTS;
-	}
-
 	if (ui32BufferCount > psDevInfo->sDisplayInfo.ui32MaxSwapChainBuffers)
 	{
 		return PVRSRV_ERROR_TOOMANYBUFFERS;
-	}
-
-	/* SRC/DST must match the current display mode config */
-	if (psDstSurfAttrib->pixelformat != psDevInfo->sDisplayFormat.pixelformat ||
-	    psDstSurfAttrib->sDims.ui32ByteStride != psDevInfo->sDisplayDims.ui32ByteStride ||
-	    psDstSurfAttrib->sDims.ui32Width != psDevInfo->sDisplayDims.ui32Width ||
-	    psDstSurfAttrib->sDims.ui32Height != psDevInfo->sDisplayDims.ui32Height)
-	{
-		/* DST doesn't match the current mode */
-		return PVRSRV_ERROR_INVALID_PARAMS;
 	}
 
 	if (psDstSurfAttrib->pixelformat != psSrcSurfAttrib->pixelformat ||
@@ -533,8 +522,18 @@ static PVRSRV_ERROR CreateDCSwapChain(IMG_HANDLE		hDevice,
 		return PVRSRV_ERROR_OUT_OF_MEMORY;
 	}
 
-	psSwapChain->ui32ID		= 1;
+	/* This is used for global swapchains all clients have access to.
+	   Ideally they would never repeat, so try and postpone reuse for
+	   as long as possible. */
+	if (psDevInfo->ui32NextUID == PVRPSB_SWAPCHAIN_PRIVATE)
+		psDevInfo->ui32NextUID++;
 
+	if (ui32Flags & PVRSRV_CREATE_SWAPCHAIN_SHARED)
+		psSwapChain->ui32ID		= psDevInfo->ui32NextUID++;
+	else
+		psSwapChain->ui32ID		= PVRPSB_SWAPCHAIN_PRIVATE;
+
+	PVR_DPF((PVR_DBG_VERBOSE, "Allocating swap chain with %u buffers", ui32BufferCount));
 	psBuffer = (PVRPSB_BUFFER *)PVROSAllocKernelMem(sizeof(PVRPSB_BUFFER) * ui32BufferCount);
 	if (psBuffer == NULL)
 	{
@@ -545,7 +544,7 @@ static PVRSRV_ERROR CreateDCSwapChain(IMG_HANDLE		hDevice,
 	psSwapChain->ui32BufferCount	= ui32BufferCount;
 	psSwapChain->psBuffer		= psBuffer;
 
-#if defined(USE_PRIMARY_SURFACE_IN_FLIP_CHAIN)
+#if !defined(SUPPORT_DRI_DRM) && defined(USE_PRIMARY_SURFACE_IN_FLIP_CHAIN)
 	/* The primary surface becomes psBuffer[0] in the swapchain buffer array. */
 	psBuffer[0].ui32Size		= psDevInfo->psSystemBuffer->ui32Size;
 	psBuffer[0].bIsContiguous	= psDevInfo->psSystemBuffer->bIsContiguous;
@@ -558,6 +557,7 @@ static PVRSRV_ERROR CreateDCSwapChain(IMG_HANDLE		hDevice,
 	ui32BufferNum = 0;
 #endif
 
+#if !defined(SUPPORT_DRI_DRM)
 	/* Populate the buffers with the preallocated buffers */
 	for (ui32BackBufferNum = 0; ui32BufferNum < ui32BufferCount; ui32BufferNum++, ui32BackBufferNum++)
 	{
@@ -568,10 +568,28 @@ static PVRSRV_ERROR CreateDCSwapChain(IMG_HANDLE		hDevice,
 		psBuffer[ui32BufferNum].pvCPUVAddr		= psDevInfo->apsBackBuffers[ui32BackBufferNum]->pvCPUVAddr;
 		psBuffer[ui32BufferNum].psSyncData 		= ppsSyncData[ui32BufferNum];
 	}
+#else
+	for (ui32BackBufferNum = 0; ui32BufferNum < ui32BufferCount; ui32BufferNum++, ui32BackBufferNum++)
+	{
+		if (!PVRPSBCreateBufferInPlace(psDevInfo, psDstSurfAttrib->sDims.ui32ByteStride * psDstSurfAttrib->sDims.ui32Height, &psBuffer[ui32BufferNum]))
+			goto ErrorCreateBuffer;
+
+		psBuffer[ui32BufferNum].psSyncData = ppsSyncData[ui32BufferNum];
+		psBuffer[ui32BufferNum].psSwapChain = psSwapChain;
+#ifdef SUPPORT_DRM_DUMB_BUFFERS
+		psBuffer->pvGEMObj = NULL;
+#endif
+	}
+#endif
 
 	psSwapChain->psVSyncFlipItems = (PVRPSB_VSYNC_FLIP_ITEM *)PVROSAllocKernelMem(sizeof(PVRPSB_VSYNC_FLIP_ITEM) * ui32BufferCount);
 	if (psSwapChain->psVSyncFlipItems == NULL)
 	{
+#ifdef SUPPORT_DRI_DRM
+	ErrorCreateBuffer:
+	        while (ui32BufferNum)
+			PVRPSBDestroyBufferInPlace(&psSwapChain->psBuffer[--ui32BufferNum]);
+#endif
 		PVROSFreeKernelMem(psSwapChain->psBuffer);
 		PVROSFreeKernelMem(psSwapChain);
 
@@ -581,7 +599,6 @@ static PVRSRV_ERROR CreateDCSwapChain(IMG_HANDLE		hDevice,
 	ResetVSyncFlipItems(psSwapChain);
 
 	/* Store the swapchain and return it */
-	psDevInfo->psSwapChain	= psSwapChain;
 	*phSwapChain		= (IMG_HANDLE)psSwapChain;
 	*pui32SwapChainID	= psSwapChain->ui32ID;
 
@@ -607,27 +624,32 @@ static PVRSRV_ERROR DestroyDCSwapChain(IMG_HANDLE hDevice, IMG_HANDLE hSwapChain
 	psDevInfo	= (PVRPSB_DEVINFO *)hDevice;
 	psSwapChain	= (PVRPSB_SWAPCHAIN *)hSwapChain;
 
-	/* Flush the vsync flip queue */
-	PVRPSBFlushInternalVSyncQueue(psDevInfo);
-	
-	/* Swap to primary */
-	eError = PVRPSBFlip(psDevInfo, psDevInfo->psSystemBuffer);
-	if (eError != PSB_OK)
+	if (psDevInfo->psSwapChain == psSwapChain)
 	{
-		return PVRSRV_ERROR_FLIP_FAILED;
+		/* Flush the vsync flip queue */
+		PVRPSBFlushInternalVSyncQueue(psDevInfo);
+#if defined(SYS_USING_INTERRUPTS)
+		/* This should be done at the start of the function but PVRPSBFlushInternalVSyncQueue 
+		   will reenable the vsync interrupts so disable it here instead */
+		PVRPSBDisableVSyncInterrupt(psDevInfo);
+#endif
+		/* Swap to primary */
+		eError = PVRPSBFlip(psDevInfo, psDevInfo->psSystemBuffer);
+		if (eError != PSB_OK)
+		{
+			return PVRSRV_ERROR_FLIP_FAILED;
+		}
+		psDevInfo->psSwapChain = IMG_NULL;
 	}
+
+#ifdef SUPPORT_DRI_DRM
+	for (IMG_UINT32 ui32BufferNum = 0; ui32BufferNum < psSwapChain->ui32BufferCount; ui32BufferNum++)
+		PVRPSBDestroyBufferInPlace(&psSwapChain->psBuffer[ui32BufferNum]);
+#endif
 
 	PVROSFreeKernelMem(psSwapChain->psVSyncFlipItems);
 	PVROSFreeKernelMem(psSwapChain->psBuffer);
 	PVROSFreeKernelMem(psSwapChain);
-
-	psDevInfo->psSwapChain = IMG_NULL;
-
-#if defined(SYS_USING_INTERRUPTS)
-	/* This should be done at the start of the function but PVRPSBFlushInternalVSyncQueue 
-	   will reenable the vsync interrupts so disable it here instead */
-	PVRPSBDisableVSyncInterrupt(psDevInfo);
-#endif
 
 	return PVRSRV_OK;
 }
@@ -914,6 +936,14 @@ static IMG_BOOL ProcessFlip(IMG_HANDLE	hCmdCookie,
 	psBuffer	= (PVRPSB_BUFFER *)psFlipCmd->hExtBuffer; /* This is the buffer we are flipping to */
 	psSwapChain	= psDevInfo->psSwapChain;
 
+	if (psSwapChain != psBuffer->psSwapChain)
+	{
+		/* Switching to another swapchain */
+		PVRPSBFlushInternalVSyncQueue(psDevInfo);
+		PVRPSBFlip(psDevInfo, psBuffer);
+		return IMG_TRUE;
+	}
+
 	if (psDevInfo->bFlushCommands)
 	{
 		/* PVR is flushing its queues so no need to flip.
@@ -1132,6 +1162,10 @@ static PSB_ERROR GTTInit(PVRPSB_DEVINFO *psDevInfo, PVRPSB_GTT_INFO *psGTTInfo)
 		return PSB_ERROR_OUT_OF_MEMORY;
 	}
 #endif /* #if defined(SUPPORT_DRI_DRM) */
+	psGTTInfo->sRegion.name = "Graphics Translation Table";
+	psGTTInfo->sRegion.flags = IORESOURCE_MEM;
+	psGTTInfo->sRegion.start = psGTTInfo->sGMemDevVAddr.uiAddr;
+	psGTTInfo->sRegion.end = psGTTInfo->sRegion.start + psGTTInfo->ui32GTTSize - 1;
 
 	return PSB_OK;
 }
@@ -1168,6 +1202,7 @@ static IMG_VOID GTTAllocStolenPages(PVRPSB_GTT_INFO *psGTTInfo, IMG_UINT32 ui32S
 	}
 }
 
+#if 0
 static IMG_BOOL GTTInsertPages(PVRPSB_DEVINFO *psDevInfo, IMG_SYS_PHYADDR *psSysAddr, IMG_UINT32 ui32NumPages, IMG_BOOL bContiguous, IMG_DEV_VIRTADDR *psDevVAddr)
 {
 	PVRPSB_GTT_INFO *psGTTInfo = &(psDevInfo->sGTTInfo);
@@ -1198,62 +1233,99 @@ static IMG_BOOL GTTInsertPages(PVRPSB_DEVINFO *psDevInfo, IMG_SYS_PHYADDR *psSys
 
 	return IMG_TRUE;
 }
+#endif
 
 
 /*******************************************************************************
  * Buffer functions
  ******************************************************************************/
-PVRPSB_BUFFER *PVRPSBCreateBuffer(PVRPSB_DEVINFO *psDevInfo, IMG_UINT32 ui32BufferSize)
+static IMG_BOOL PVRPSBBindBuffer(PVRPSB_DEVINFO *psDevInfo, PVRPSB_BUFFER *psBuffer)
 {
-	PVRPSB_BUFFER *psBuffer;
-
-	psBuffer = (PVRPSB_BUFFER *)PVROSAllocKernelMem(sizeof(PVRPSB_BUFFER));
-	if (psBuffer != NULL)
+	PVRPSB_GTT_INFO *psGTTInfo = &(psDevInfo->sGTTInfo);
+	struct resource *psGtt = &psGTTInfo->sRegion;
+	struct resource *psRegion = &psBuffer->sRegion;
+	IMG_SYS_PHYADDR *psSysAddr = psBuffer->bIsContiguous ? &psBuffer->uSysAddr.sCont : psBuffer->uSysAddr.psNonCont;
+	IMG_DEV_VIRTADDR *psDevVAddr = &psBuffer->sDevVAddr;
+	IMG_UINT32 ui32NumPages = psBuffer->ui32Size >> PVRPSB_PAGE_SHIFT;
+	IMG_UINT32 ui32PageAddr;
+	IMG_UINT32 ui32PageNum;
+	int iReturn;
+	*psRegion = (struct resource){ 0 }; // somehow necessary
+	iReturn = allocate_resource(psGtt, psRegion, ui32NumPages << 2, psGtt->start, psGtt->end, 4, NULL, NULL);
+	if (iReturn)
 	{
-		PVRPSB_GTT_INFO *psGTTInfo = &(psDevInfo->sGTTInfo);
-		IMG_UINT32 ui32BufferSizeInPages;
-
-		ui32BufferSize		= PVRPSB_PAGE_ALIGN(ui32BufferSize);
-		ui32BufferSizeInPages	= ui32BufferSize >> PVRPSB_PAGE_SHIFT;
-
-		/* Try to use stolen memory and if this fails fall back to using system memory */
-		GTTAllocStolenPages(psGTTInfo, ui32BufferSizeInPages, &(psBuffer->uSysAddr.sCont));
-
-		if (psBuffer->uSysAddr.sCont.uiAddr != 0)
+		PVR_DPF((PVR_DBG_ERROR, "Failed to reserve %u pages in GTT", ui32NumPages));
+		return IMG_FALSE;
+	}
+	psDevVAddr->uiAddr = psGTTInfo->sGMemDevVAddr.uiAddr + ((psRegion->start - psGtt->start) << 10);
+	for (ui32PageNum = 0; ui32PageNum < ui32NumPages; ui32PageNum++)
+	{
+		if (psBuffer->bIsContiguous)
 		{
-			if (GTTInsertPages(psDevInfo, &(psBuffer->uSysAddr.sCont), ui32BufferSizeInPages, IMG_TRUE, &(psBuffer->sDevVAddr)) == IMG_FALSE)
-			{
-				goto ErrorFreeBuffer;
-			}
-
-			psBuffer->pvCPUVAddr	= PVROSMapPhysAddrWC(psBuffer->uSysAddr.sCont, ui32BufferSize);	
-			psBuffer->bIsContiguous	= PSB_TRUE;
+			ui32PageAddr = psSysAddr->uiAddr + (ui32PageNum << PVRPSB_PAGE_SHIFT);
 		}
 		else
 		{
-			psBuffer->uSysAddr.psNonCont = (IMG_SYS_PHYADDR *)PVROSAllocKernelMem(sizeof(IMG_SYS_PHYADDR) * ui32BufferSizeInPages);
-			if (psBuffer->uSysAddr.psNonCont == NULL)
-			{
-				goto ErrorFreeBuffer;
-			}
-			
-			psBuffer->pvCPUVAddr = PVROSAllocKernelMemForBuffer(ui32BufferSize, psBuffer->uSysAddr.psNonCont);
-			if (psBuffer->pvCPUVAddr == NULL)
-			{
-				goto ErrorFreePageBuffer;
-			}
-
-			if (GTTInsertPages(psDevInfo, psBuffer->uSysAddr.psNonCont, ui32BufferSizeInPages, IMG_FALSE, &(psBuffer->sDevVAddr)) == IMG_FALSE)
-			{
-				goto ErrorFreeBufferMem;
-			}
-			
-			psBuffer->bIsContiguous	= PSB_FALSE;
+			ui32PageAddr = psSysAddr[ui32PageNum].uiAddr;
 		}
-		psBuffer->ui32Size = ui32BufferSize;
+
+		PVROSWriteIOMem(psGTTInfo->pvGTTCPUVAddr + (psRegion->start - psGtt->start) + (ui32PageNum << 2), ui32PageAddr | 0x1);
+	}
+	if (psBuffer->bIsContiguous)
+		PVR_DPF((PVR_DBG_VERBOSE, "Mapped [%x:%x) into GTT at %#x (GPU address %#x)", psSysAddr->uiAddr, psSysAddr->uiAddr + (ui32NumPages << PVRPSB_PAGE_SHIFT), psRegion->start - psGtt->start, psDevVAddr->uiAddr));
+	else
+		PVR_DPF((PVR_DBG_VERBOSE, "Mapped [*%p:*%p) into GTT at %#x (GPU address %#x)", psBuffer->pvCPUVAddr, psBuffer->pvCPUVAddr + (ui32NumPages << PVRPSB_PAGE_SHIFT), psRegion->start - psGtt->start, psDevVAddr->uiAddr));
+	return IMG_TRUE;
+}
+
+IMG_BOOL PVRPSBCreateBufferInPlace(PVRPSB_DEVINFO *psDevInfo, IMG_UINT32 ui32BufferSize, PVRPSB_BUFFER *psBuffer)
+{
+	PVRPSB_GTT_INFO *psGTTInfo = &(psDevInfo->sGTTInfo);
+	IMG_UINT32 ui32BufferSizeInPages;
+
+	ui32BufferSize		= PVRPSB_PAGE_ALIGN(ui32BufferSize);
+	ui32BufferSizeInPages	= ui32BufferSize >> PVRPSB_PAGE_SHIFT;
+	psBuffer->ui32Size	= ui32BufferSize;
+
+	/* Try to use stolen memory and if this fails fall back to using system memory */
+	GTTAllocStolenPages(psGTTInfo, ui32BufferSizeInPages, &(psBuffer->uSysAddr.sCont));
+
+	if (psBuffer->uSysAddr.sCont.uiAddr != 0)
+	{
+		psBuffer->bIsContiguous	= PSB_TRUE;
+#if 0
+		if (GTTInsertPages(psDevInfo, &(psBuffer->uSysAddr.sCont), ui32BufferSizeInPages, IMG_TRUE, &(psBuffer->sDevVAddr)) == IMG_FALSE)
+#else
+		if (!PVRPSBBindBuffer(psDevInfo, psBuffer))
+#endif
+			return IMG_FALSE;
+
+		psBuffer->pvCPUVAddr	= PVROSMapPhysAddrWC(psBuffer->uSysAddr.sCont, ui32BufferSize);
+	}
+	else
+	{
+		psBuffer->bIsContiguous	= PSB_FALSE;
+		psBuffer->uSysAddr.psNonCont = (IMG_SYS_PHYADDR *)PVROSAllocKernelMem(sizeof(IMG_SYS_PHYADDR) * ui32BufferSizeInPages);
+		if (psBuffer->uSysAddr.psNonCont == NULL)
+			return IMG_FALSE;
+
+		psBuffer->pvCPUVAddr = PVROSAllocKernelMemForBuffer(ui32BufferSize, psBuffer->uSysAddr.psNonCont);
+		if (psBuffer->pvCPUVAddr == NULL)
+		{
+			goto ErrorFreePageBuffer;
+		}
+
+#if 0
+		if (GTTInsertPages(psDevInfo, psBuffer->uSysAddr.psNonCont, ui32BufferSizeInPages, IMG_FALSE, &(psBuffer->sDevVAddr)) == IMG_FALSE)
+#else
+		if (!PVRPSBBindBuffer(psDevInfo, psBuffer))
+#endif
+		{
+			goto ErrorFreeBufferMem;
+		}
 	}
 
-	return psBuffer;
+	return IMG_TRUE;
 
 ErrorFreeBufferMem:
 	PVROSFreeKernelMemForBuffer(psBuffer->pvCPUVAddr);
@@ -1261,13 +1333,25 @@ ErrorFreeBufferMem:
 ErrorFreePageBuffer:
 	PVROSFreeKernelMem(psBuffer->uSysAddr.psNonCont);
 
-ErrorFreeBuffer:
-	PVROSFreeKernelMem(psBuffer);
+	return IMG_FALSE;
+}
+
+PVRPSB_BUFFER *PVRPSBCreateBuffer(PVRPSB_DEVINFO *psDevInfo, IMG_UINT32 ui32BufferSize)
+{
+	PVRPSB_BUFFER *psBuffer;
+
+	psBuffer = (PVRPSB_BUFFER *)PVROSAllocKernelMem(sizeof(PVRPSB_BUFFER));
+	if (psBuffer)
+	{
+		if (PVRPSBCreateBufferInPlace(psDevInfo, ui32BufferSize, psBuffer))
+			return psBuffer;
+		PVROSFreeKernelMem(psBuffer);
+	}
 
 	return NULL;
 }
 
-void PVRPSBDestroyBuffer(PVRPSB_BUFFER *psBuffer)
+void PVRPSBDestroyBufferInPlace(PVRPSB_BUFFER *psBuffer)
 {
 	if (psBuffer->bIsContiguous == PSB_TRUE)
 	{
@@ -1278,16 +1362,21 @@ void PVRPSBDestroyBuffer(PVRPSB_BUFFER *psBuffer)
 		PVROSFreeKernelMem(psBuffer->uSysAddr.psNonCont);
 		PVROSFreeKernelMemForBuffer(psBuffer->pvCPUVAddr);
 	}
+	release_resource(&psBuffer->sRegion);
+}
 
+void PVRPSBDestroyBuffer(PVRPSB_BUFFER *psBuffer)
+{
+	PVRPSBDestroyBufferInPlace(psBuffer);
 	PVROSFreeKernelMem(psBuffer);
 }
 
 static PSB_ERROR BuffersInit(PVRPSB_DEVINFO *psDevInfo)
 {
+#if !defined(SUPPORT_DRI_DRM)
 	IMG_UINT32 ui32BufferSize = psDevInfo->sDisplayDims.ui32ByteStride * psDevInfo->sDisplayDims.ui32Height;
 	IMG_UINT32 ui32BufferNum;
 
-#if !defined(SUPPORT_DRI_DRM)
 	psDevInfo->psSystemBuffer = PVRPSBCreateBuffer(psDevInfo, ui32BufferSize);
 	if (psDevInfo->psSystemBuffer == NULL)
 	{
@@ -1311,7 +1400,6 @@ static PSB_ERROR BuffersInit(PVRPSB_DEVINFO *psDevInfo)
 		/* Clear the system buffer to black */
 		PVROSSetIOMem(psDevInfo->psSystemBuffer->pvCPUVAddr, 0, psDevInfo->psSystemBuffer->ui32Size);
 	}
-#endif /* #if !defined(SUPPORT_DRI_DRM) */	
 
 	for (ui32BufferNum = 0; ui32BufferNum < PVRPSB_MAX_BACKBUFFERS; ui32BufferNum++)
 	{
@@ -1322,27 +1410,25 @@ static PSB_ERROR BuffersInit(PVRPSB_DEVINFO *psDevInfo)
 		}
 	}
 	psDevInfo->ui32TotalBackBuffers = ui32BufferNum;
+#endif /* #if !defined(SUPPORT_DRI_DRM) */
 
 	return PSB_OK;
 }
 
 static void BufferDeinit(PVRPSB_DEVINFO *psDevInfo)
 {
+#if !defined(SUPPORT_DRI_DRM)
 	IMG_UINT32 ui32BufferNum;
 
-	for (ui32BufferNum = 0; ui32BufferNum < psDevInfo->ui32TotalBackBuffers; ui32BufferNum++)
-	{
-		PVRPSBDestroyBuffer(psDevInfo->apsBackBuffers[ui32BufferNum]);
-		psDevInfo->apsBackBuffers[ui32BufferNum] = IMG_NULL;
-	}
-	psDevInfo->ui32TotalBackBuffers = 0;
-
-#if !defined(SUPPORT_DRI_DRM)
 	/* Clear the system buffer to black so we know the driver has unloaded */
 	PVROSSetIOMem(psDevInfo->psSystemBuffer->pvCPUVAddr, 0, psDevInfo->psSystemBuffer->ui32Size);
 
 	PVRPSBDestroyBuffer(psDevInfo->psSystemBuffer);
 	psDevInfo->psSystemBuffer = IMG_NULL;
+#else
+	/* Possible use after free? */
+	if (psDevInfo->psSwapChain)
+		DestroyDCSwapChain(psDevInfo, psDevInfo->psSwapChain);
 #endif
 }
 
@@ -1615,10 +1701,14 @@ PSB_ERROR PVRPSBInit(PVRPSB_DEVINFO *psDevInfo)
 	psDevInfo->sDisplayInfo.ui32MaxSwapInterval	= PVRPSB_MAX_SWAP_INTERVAL;
 	psDevInfo->sDisplayInfo.ui32MaxSwapChains	= PVRPSB_MAX_SWAPCHAINS;
 
-#if defined(USE_PRIMARY_SURFACE_IN_FLIP_CHAIN)
-	psDevInfo->sDisplayInfo.ui32MaxSwapChainBuffers	= psDevInfo->ui32TotalBackBuffers + 1;
-#else
+#if !defined(SUPPORT_DRI_DRM)
 	psDevInfo->sDisplayInfo.ui32MaxSwapChainBuffers	= psDevInfo->ui32TotalBackBuffers;
+#else
+	psDevInfo->sDisplayInfo.ui32MaxSwapChainBuffers	= PVRPSB_MAX_BACKBUFFERS;
+#endif
+
+#if !defined(SUPPORT_DRI_DRM) && defined(USE_PRIMARY_SURFACE_IN_FLIP_CHAIN)
+	psDevInfo->sDisplayInfo.ui32MaxSwapChainBuffers++;
 #endif
 
 	psDevInfo->ui32NumFormats			= PVRPSB_MAX_FORMATS;

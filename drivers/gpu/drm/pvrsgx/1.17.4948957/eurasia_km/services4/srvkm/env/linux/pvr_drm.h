@@ -42,6 +42,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if !defined(__PVR_DRM_H__)
 #define __PVR_DRM_H__
 
+#include <drm/drm_mode.h>
 #include <drm/drm_device.h>
 #include <linux/platform_device.h>
 
@@ -116,6 +117,10 @@ extern int PVR_DRM_MAKENAME(DISPLAY_CONTROLLER, _Ioctl)(struct drm_device *dev, 
 #endif
 struct drm_fb_helper_surface_size;
 extern int PVR_DRM_MAKENAME(DISPLAY_CONTROLLER, _FbProbe)(struct drm_fb_helper *psFbHelper, struct drm_fb_helper_surface_size *psSizes);
+#ifdef SUPPORT_DRM_DUMB_BUFFERS
+extern int PVR_DRM_MAKENAME(DISPLAY_CONTROLLER, _DumbCreate)(struct drm_file *, struct drm_device *, struct drm_mode_create_dumb *);
+extern int PVR_DRM_MAKENAME(DISPLAY_CONTROLLER, _DumbMap)(struct drm_file *, struct drm_device *, uint32_t, uint64_t *);
+#endif
 #endif
 
 #if defined(PDUMP)

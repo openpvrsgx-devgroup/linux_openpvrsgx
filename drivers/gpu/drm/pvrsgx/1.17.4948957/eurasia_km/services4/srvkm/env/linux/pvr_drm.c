@@ -589,6 +589,9 @@ static const struct file_operations sPVRFileOps =
 static struct drm_driver sPVRDrmDriver = 
 {
 	.driver_features = PVR_DRM_DRIVER_RENDER
+#if defined(SUPPORT_DRM_DUMB_BUFFERS)
+		| DRIVER_GEM
+#endif
 #if defined(PVR_OLD_STYLE_DRM_PLATFORM_DEV)
 		| DRIVER_USE_PLATFORM_DEVICE
 #endif
@@ -628,7 +631,12 @@ static struct drm_driver sPVRDrmDriver =
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)) */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6,13,0) && defined(CONFIG_DRM_FBDEV_EMULATION)
 	.fbdev_probe = PVR_DRM_MAKENAME(DISPLAY_CONTROLLER, _FbProbe),
+#ifdef SUPPORT_DRM_DUMB_BUFFERS
+	.dumb_create = PVR_DRM_MAKENAME(DISPLAY_CONTROLLER, _DumbCreate),
+	.dumb_map_offset = PVR_DRM_MAKENAME(DISPLAY_CONTROLLER, _DumbMap),
+#else
 	.dumb_create = (void *)-1,
+#endif
 #endif
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
 #if defined(PVR_OLD_STYLE_DRM_PLATFORM_DEV)

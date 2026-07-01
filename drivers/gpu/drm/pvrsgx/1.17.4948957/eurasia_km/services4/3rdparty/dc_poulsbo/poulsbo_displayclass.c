@@ -576,6 +576,9 @@ static PVRSRV_ERROR CreateDCSwapChain(IMG_HANDLE		hDevice,
 
 		psBuffer[ui32BufferNum].psSyncData = ppsSyncData[ui32BufferNum];
 		psBuffer[ui32BufferNum].psSwapChain = psSwapChain;
+#ifdef SUPPORT_DRM_DUMB_BUFFERS
+		psBuffer->pvGEMObj = NULL;
+#endif
 	}
 #endif
 

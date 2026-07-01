@@ -260,6 +260,7 @@ ccflags-y += \
 	-I$(src)/services4/3rdparty/dc_poulsbo \
 	-DDISPLAY_CONTROLLER=dc_poulsbo \
 	-DSUPPORT_DRM_MODESET \
+	-DSUPPORT_DRM_DUMB_BUFFERS \
 	-DPVR_DISPLAY_CONTROLLER_DRM_IOCTL
 $(TARGET) += \
 	services4/3rdparty/dc_poulsbo/poulsbo_displayclass.o \

@@ -67,6 +67,10 @@ config SGX_DRM
 	bool "PowerVR SGX build with DRM support"
 	depends on SGX
 	select DRM_LEGACY
+	select DRM_CLIENT_SELECTION if SGX_CEDARVIEW
+	select DRM_FBDEV_EMULATION if SGX_CEDARVIEW
+	select FB_IOMEM_HELPERS if DRM_FBDEV_EMULATION
+	select I2C_ALGOBIT if SGX_CEDARVIEW
 	help
 	  Build for using DRM infrastructure.
 	  Note: this selectes DRM_LEGACY with all its issues.

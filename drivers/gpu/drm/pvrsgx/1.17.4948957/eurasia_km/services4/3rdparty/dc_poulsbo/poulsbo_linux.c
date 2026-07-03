@@ -1328,12 +1328,19 @@ static struct drm_framebuffer *ModeConfigUserFbCreate(struct drm_device *psDrmDe
 static struct drm_framebuffer *ModeConfigUserFbCreate(struct drm_device *psDrmDev, struct drm_file *psFile, const struct drm_format_info *info, const struct drm_mode_fb_cmd2 *psModeCommand)
 #endif
 {
-	PVRPSB_FRAMEBUFFER *psFramebuffer;
 	PVRPSB_BUFFER *psBuffer = FindBuffer(psFile, psModeCommand->handles[0]);
-	if (psBuffer && (psFramebuffer = FramebufferCreate(psDrmDev, psModeCommand, psBuffer)))
+	if (psBuffer)
 	{
-		PVR_DPF((PVR_DBG_VERBOSE, "Allocated FBO #%u backed by %p", psFramebuffer->sFramebuffer.base.id, psBuffer));
-		return &psFramebuffer->sFramebuffer;
+		PVRPSB_FRAMEBUFFER *psFramebuffer = FramebufferCreate(psDrmDev, psModeCommand, psBuffer);
+		if (psFramebuffer)
+		{
+			PVR_DPF((PVR_DBG_VERBOSE, "Allocated FBO #%u backed by %p", psFramebuffer->sFramebuffer.base.id, psBuffer));
+			return &psFramebuffer->sFramebuffer;
+		}
+#ifdef SUPPORT_DRM_DUMB_BUFFERS
+		if (psBuffer->pvGEMObj)
+			drm_gem_object_put(psBuffer->pvGEMObj);
+#endif
 	}
 
 	return NULL;

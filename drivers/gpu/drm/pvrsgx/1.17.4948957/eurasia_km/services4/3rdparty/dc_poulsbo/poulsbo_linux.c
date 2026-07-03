@@ -1104,15 +1104,15 @@ static struct fb_ops sFbOps =
 {
 	.owner		= THIS_MODULE,
 #if 0
-	__FB_DEFAULT_IOMEM_OPS_RDWR,
+	__FB_DEFAULT_SYSMEM_OPS_RDWR,
 	DRM_FB_HELPER_DEFAULT_OPS,
-	__FB_DEFAULT_IOMEM_OPS_DRAW,
+	__FB_DEFAULT_SYSMEM_OPS_DRAW,
 #else
 	.fb_check_var	= drm_fb_helper_check_var,
 	.fb_set_par	= drm_fb_helper_set_par,
-	.fb_fillrect	= cfb_fillrect,
-	.fb_copyarea	= cfb_copyarea,
-	.fb_imageblit	= cfb_imageblit,
+	.fb_fillrect	= sys_fillrect,
+	.fb_copyarea	= sys_copyarea,
+	.fb_imageblit	= sys_imageblit,
 	.fb_pan_display	= drm_fb_helper_pan_display,
 	.fb_blank	= drm_fb_helper_blank,
 	.fb_setcmap	= drm_fb_helper_setcmap,

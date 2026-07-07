@@ -333,15 +333,17 @@ static PVRSRV_ERROR EnumDCFormats(IMG_HANDLE		hDevice,
 
 	psDevInfo = (PVRPSB_DEVINFO *)hDevice;
 
-	*pui32NumFormats = (IMG_UINT32)psDevInfo->ui32NumFormats;
+	*pui32NumFormats = (IMG_UINT32)psDevInfo->ui32NumFormats + 1;
 
 	if (psFormat != IMG_NULL)
 	{
 		IMG_UINT32 ui32I;
 
+		psFormat[0] = psDevInfo->sDisplayFormat;
+
 		for (ui32I = 0; ui32I < psDevInfo->ui32NumFormats; ui32I++)
 		{
-			psFormat[ui32I] = psDevInfo->asDisplayFormatList[ui32I];
+			psFormat[ui32I + 1] = psDevInfo->asDisplayFormatList[ui32I];
 		}
 	}
 
@@ -364,16 +366,18 @@ static PVRSRV_ERROR EnumDCDims(IMG_HANDLE	hDevice,
 
 	psDevInfo = (PVRPSB_DEVINFO *)hDevice;
 
-	*pui32NumDims = (IMG_UINT32)psDevInfo->ui32NumDims;
+	*pui32NumDims = (IMG_UINT32)psDevInfo->ui32NumDims + 1;
 
 	/* We have only one format so there's no need to check psFormat */
 	if (psDim != IMG_NULL)
 	{
 		IMG_UINT32 ui32I;
 
+		psDim[0] = psDevInfo->sDisplayDims;
+
 		for (ui32I = 0; ui32I < psDevInfo->ui32NumDims; ui32I++)
 		{
-			psDim[ui32I] = psDevInfo->asDisplayDimList[ui32I];
+			psDim[ui32I + 1] = psDevInfo->asDisplayDimList[ui32I];
 		}
 	}
 
@@ -1710,14 +1714,6 @@ PSB_ERROR PVRPSBInit(PVRPSB_DEVINFO *psDevInfo)
 #if !defined(SUPPORT_DRI_DRM) && defined(USE_PRIMARY_SURFACE_IN_FLIP_CHAIN)
 	psDevInfo->sDisplayInfo.ui32MaxSwapChainBuffers++;
 #endif
-
-	psDevInfo->ui32NumFormats			= PVRPSB_MAX_FORMATS;
-	psDevInfo->asDisplayFormatList[0].pixelformat	= psDevInfo->sDisplayFormat.pixelformat;
-
-	psDevInfo->ui32NumDims				= PVRPSB_MAX_DIMS;
-	psDevInfo->asDisplayDimList[0].ui32ByteStride	= psDevInfo->sDisplayDims.ui32ByteStride;
-	psDevInfo->asDisplayDimList[0].ui32Width	= psDevInfo->sDisplayDims.ui32Width;
-	psDevInfo->asDisplayDimList[0].ui32Height	= psDevInfo->sDisplayDims.ui32Height;
 
 #if defined(PVR_DISPLAY_CONTROLLER_DRM_IOCTL)
 	psDevInfo->bLeaveVT 				= PSB_FALSE;

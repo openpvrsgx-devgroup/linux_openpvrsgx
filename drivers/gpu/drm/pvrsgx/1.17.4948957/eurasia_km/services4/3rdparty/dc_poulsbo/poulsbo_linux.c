@@ -1104,15 +1104,15 @@ static struct fb_ops sFbOps =
 {
 	.owner		= THIS_MODULE,
 #if 0
-	__FB_DEFAULT_IOMEM_OPS_RDWR,
+	__FB_DEFAULT_SYSMEM_OPS_RDWR,
 	DRM_FB_HELPER_DEFAULT_OPS,
-	__FB_DEFAULT_IOMEM_OPS_DRAW,
+	__FB_DEFAULT_SYSMEM_OPS_DRAW,
 #else
 	.fb_check_var	= drm_fb_helper_check_var,
 	.fb_set_par	= drm_fb_helper_set_par,
-	.fb_fillrect	= cfb_fillrect,
-	.fb_copyarea	= cfb_copyarea,
-	.fb_imageblit	= cfb_imageblit,
+	.fb_fillrect	= sys_fillrect,
+	.fb_copyarea	= sys_copyarea,
+	.fb_imageblit	= sys_imageblit,
 	.fb_pan_display	= drm_fb_helper_pan_display,
 	.fb_blank	= drm_fb_helper_blank,
 	.fb_setcmap	= drm_fb_helper_setcmap,
@@ -1328,12 +1328,19 @@ static struct drm_framebuffer *ModeConfigUserFbCreate(struct drm_device *psDrmDe
 static struct drm_framebuffer *ModeConfigUserFbCreate(struct drm_device *psDrmDev, struct drm_file *psFile, const struct drm_format_info *info, const struct drm_mode_fb_cmd2 *psModeCommand)
 #endif
 {
-	PVRPSB_FRAMEBUFFER *psFramebuffer;
 	PVRPSB_BUFFER *psBuffer = FindBuffer(psFile, psModeCommand->handles[0]);
-	if (psBuffer && (psFramebuffer = FramebufferCreate(psDrmDev, psModeCommand, psBuffer)))
+	if (psBuffer)
 	{
-		PVR_DPF((PVR_DBG_VERBOSE, "Allocated FBO #%u backed by %p", psFramebuffer->sFramebuffer.base.id, psBuffer));
-		return &psFramebuffer->sFramebuffer;
+		PVRPSB_FRAMEBUFFER *psFramebuffer = FramebufferCreate(psDrmDev, psModeCommand, psBuffer);
+		if (psFramebuffer)
+		{
+			PVR_DPF((PVR_DBG_VERBOSE, "Allocated FBO #%u backed by %p", psFramebuffer->sFramebuffer.base.id, psBuffer));
+			return &psFramebuffer->sFramebuffer;
+		}
+#ifdef SUPPORT_DRM_DUMB_BUFFERS
+		if (psBuffer->pvGEMObj)
+			drm_gem_object_put(psBuffer->pvGEMObj);
+#endif
 	}
 
 	return NULL;

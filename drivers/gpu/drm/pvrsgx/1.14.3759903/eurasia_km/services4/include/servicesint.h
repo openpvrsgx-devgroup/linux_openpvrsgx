@@ -47,6 +47,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 extern "C" {
 #endif
 
+#if defined(__linux__) && defined(__KERNEL__)
+#include <linux/version.h>
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,11,0)
+#include <linux/minmax.h>
+#endif
+#endif
+
 #include "services.h"
 #include "sysinfo.h"
 

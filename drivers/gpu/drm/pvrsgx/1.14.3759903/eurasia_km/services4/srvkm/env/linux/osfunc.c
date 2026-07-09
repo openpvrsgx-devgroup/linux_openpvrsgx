@@ -41,8 +41,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <linux/version.h>
 
-#define dma_sync_single_for_device(A, B, C, D) 
-
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38))
 #ifndef AUTOCONF_INCLUDED
 #include <linux/config.h>
@@ -3500,7 +3498,15 @@ static IMG_BOOL CPUVAddrToPFN(struct vm_area_struct *psVMArea, IMG_UINTPTR_T uCP
     if (pmd_none(*psPMD) || pmd_bad(*psPMD))
         return bRet;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,5,0)
+	psPTLock = pte_lockptr(psMM, psPMD);
+	if (psPTLock) {
+		spin_lock(psPTLock);
+	}
+	psPTE = (pte_t *)pte_offset_kernel(psPMD, uCPUVAddr);
+#else
     psPTE = (pte_t *)pte_offset_map_lock(psMM, psPMD, uCPUVAddr, &psPTLock);
+#endif
 
     if ((pte_none(*psPTE) == 0) && (pte_present(*psPTE) != 0) && (pte_write(*psPTE) != 0))
     {
@@ -3515,7 +3521,13 @@ static IMG_BOOL CPUVAddrToPFN(struct vm_area_struct *psVMArea, IMG_UINTPTR_T uCP
         }
     }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,5,0)
+	if (psPTLock) {
+		spin_unlock(psPTLock);
+	}
+#else
     pte_unmap_unlock(psPTE, psPTLock);
+#endif
 
     return bRet;
 #else
@@ -3771,9 +3783,12 @@ PVRSRV_ERROR OSAcquirePhysPageAddr(IMG_VOID *pvCPUVAddr,
 #elif (LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0))
     psInfo->iNumPagesMapped = get_user_pages(
 		uStartAddr, psInfo->iNumPages, 1, 0, psInfo->ppsPages, NULL);
-#else
+#elif (LINUX_VERSION_CODE < KERNEL_VERSION(6,5,0))
     psInfo->iNumPagesMapped = get_user_pages(
 		uStartAddr, psInfo->iNumPages, 1, psInfo->ppsPages, NULL);
+#else
+    psInfo->iNumPagesMapped = get_user_pages(
+		uStartAddr, psInfo->iNumPages, 1, psInfo->ppsPages);
 #endif
     if (psInfo->iNumPagesMapped >= 0)
     {
@@ -4588,42 +4603,42 @@ static inline size_t pvr_dma_range_len(const void *pvStart, const void *pvEnd)
 
 static void pvr_dma_cache_wback_inv(const void *pvStart, const void *pvEnd)
 {
-	size_t uLength = pvr_dma_range_len(pvStart, pvEnd);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,5,0)
-	struct device *dev = PVRLDMGetDevice();
-	dma_sync_single_for_device(dev, (dma_addr_t)pvStart, uLength, DMA_BIDIRECTIONAL);
+	flush_icache_range((unsigned long)pvStart, (unsigned long)pvEnd);
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)
+	size_t uLength = pvr_dma_range_len(pvStart, pvEnd);
 	struct device *dev = PVRLDMGetDevice();
 	dma_cache_sync(dev, (void *)pvStart, uLength, DMA_BIDIRECTIONAL);
 #else
+	size_t uLength = pvr_dma_range_len(pvStart, pvEnd);
 	dma_cache_wback_inv((unsigned long)pvStart, uLength);
 #endif
 }
 
 static void pvr_dma_cache_wback(const void *pvStart, const void *pvEnd)
 {
-	size_t uLength = pvr_dma_range_len(pvStart, pvEnd);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,5,0)
-	struct device *dev = PVRLDMGetDevice();
-	dma_sync_single_for_device(dev, (dma_addr_t)pvStart, uLength, DMA_TO_DEVICE);
+	flush_icache_range((unsigned long)pvStart, (unsigned long)pvEnd);
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)
+	size_t uLength = pvr_dma_range_len(pvStart, pvEnd);
 	struct device *dev = PVRLDMGetDevice();
 	dma_cache_sync(dev, (void *)pvStart, uLength, DMA_TO_DEVICE);
 #else
+	size_t uLength = pvr_dma_range_len(pvStart, pvEnd);
 	dma_cache_wback((unsigned long)pvStart, uLength);
 #endif
 }
 
 static void pvr_dma_cache_inv(const void *pvStart, const void *pvEnd)
 {
-	size_t uLength = pvr_dma_range_len(pvStart, pvEnd);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,5,0)
-	struct device *dev = PVRLDMGetDevice();
-	dma_sync_single_for_device(dev, (dma_addr_t)pvStart, uLength, DMA_FROM_DEVICE);
+	flush_icache_range((unsigned long)pvStart, (unsigned long)pvEnd);
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)
+	size_t uLength = pvr_dma_range_len(pvStart, pvEnd);
 	struct device *dev = PVRLDMGetDevice();
 	dma_cache_sync(dev, (void *)pvStart, uLength, DMA_FROM_DEVICE);
 #else
+	size_t uLength = pvr_dma_range_len(pvStart, pvEnd);
 	dma_cache_inv((unsigned long)pvStart, uLength);
 #endif
 }

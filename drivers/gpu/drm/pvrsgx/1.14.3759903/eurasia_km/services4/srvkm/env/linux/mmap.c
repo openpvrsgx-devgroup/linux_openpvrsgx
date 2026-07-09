@@ -70,13 +70,17 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <drm/drmP.h>
 #else
 #include <linux/platform_device.h>
+#include <drm/drm_gem.h>
 #endif
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,0)) && (LINUX_VERSION_CODE < KERNEL_VERSION(6,8,0))
 #include <drm/drm_legacy.h>
 #endif
 #endif
-
-
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6,3,0)
+static inline void vm_flags_set(struct vm_area_struct *vma, unsigned long flags) {
+    vma->vm_flags |= flags;
+}
+#endif
 
 #ifdef CONFIG_ARCH_OMAP5
 #ifdef CONFIG_DSSCOMP
@@ -107,7 +111,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if defined(SUPPORT_DRI_DRM) && (LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,0))
 static inline int drm_mmap(struct file *filp, struct vm_area_struct *vma)
 {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,8,0)
+	return drm_gem_mmap(filp, vma);
+#else
 	return drm_legacy_mmap(filp, vma);
+#endif
 }
 #endif
 
@@ -765,7 +773,7 @@ DoMapToUser(LinuxMemArea *psLinuxMemArea,
 #if defined(PVR_MAKE_ALL_PFNS_SPECIAL)
 		if (bMixedMap)
 		{
-		        ps_vma->vm_flags |= VM_MIXEDMAP;
+		        vm_flags_set(ps_vma, VM_MIXEDMAP);
 		}
 #endif
 	/* Second pass, get the page structures and insert the pages */
@@ -794,7 +802,11 @@ DoMapToUser(LinuxMemArea *psLinuxMemArea,
 		    if (bMixedMap)
 		    {
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,20,0))
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,11,0)
+			unsigned long pfns = pfn;
+#else
 			pfn_t pfns = { pfn };
+#endif
 			vm_fault_t vmf;
 
 			vmf = vmf_insert_mixed(ps_vma, ulVMAPos, pfns);
@@ -1091,20 +1103,20 @@ PVRMMap(struct file* pFile, struct vm_area_struct* ps_vma)
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0))
     /* This is probably superfluous and implied by VM_IO */
-    ps_vma->vm_flags |= VM_RESERVED;
+    vm_flags_set(ps_vma, VM_RESERVED);
 #else
-    ps_vma->vm_flags |= VM_DONTDUMP;
+    vm_flags_set(ps_vma, VM_DONTDUMP);
 #endif
-    ps_vma->vm_flags |= VM_IO;
+    vm_flags_set(ps_vma, VM_IO);
 
     /*
      * Disable mremap because our nopage handler assumes all
      * page requests have already been validated.
      */
-    ps_vma->vm_flags |= VM_DONTEXPAND;
+    vm_flags_set(ps_vma, VM_DONTEXPAND);
     
     /* Don't allow mapping to be inherited across a process fork */
-    ps_vma->vm_flags |= VM_DONTCOPY;
+    vm_flags_set(ps_vma, VM_DONTCOPY);
 
     ps_vma->vm_private_data = (void *)psOffsetStruct;
     

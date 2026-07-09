@@ -54,7 +54,6 @@ ccflags-y += \
 	-I$(src)/services4/srvkm/env/linux \
 	-I$(src)/services4/srvkm/hwdefs \
 	-I$(src)/services4/srvkm/include \
-	-I$(src)/services4/3rdparty/bufferclass_ti \
 	-I$(srctree)/include/linux
 
 # choose SoC integration variant to choose the right source subtree
@@ -229,8 +228,7 @@ endif
 # gives duplicate export of drm_pvr_dev_add etc.
 # $(TARGET) += services4/3rdparty/linux_drm/pvr_drm_stubs.o
 
-ccflags-y += -I$(srctree)/include/drm \
-	-I$(src)/services4/3rdparty/linux_drm
+ccflags-y += -I$(srctree)/include/drm
 
 ccflags-y += -DSUPPORT_HW_RECOVERY
 ccflags-y += -DPVR_LINUX_USING_WORKQUEUES

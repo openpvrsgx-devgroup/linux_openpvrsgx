@@ -4705,6 +4705,8 @@ IMG_BOOL OSInvalidateCPUCacheRangeKM(IMG_HANDLE hOSMemHandle,
  * 
  */
 
+#include <asm/cacheflush.h>
+
 static inline size_t pvr_dma_range_len(const void *pvStart, const void *pvEnd)
 {
 	return (size_t)((char *)pvEnd - (char *)pvStart);
@@ -4712,42 +4714,42 @@ static inline size_t pvr_dma_range_len(const void *pvStart, const void *pvEnd)
 
 static void pvr_dma_cache_wback_inv(const void *pvStart, const void *pvEnd)
 {
-	size_t uLength = pvr_dma_range_len(pvStart, pvEnd);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,5,0)
-	struct device *dev = PVRLDMGetDevice();
-	dma_sync_single_for_device(dev, (dma_addr_t)pvStart, uLength, DMA_BIDIRECTIONAL);
+	flush_icache_range((unsigned long)pvStart, (unsigned long)pvEnd);
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)
+	size_t uLength = pvr_dma_range_len(pvStart, pvEnd);
 	struct device *dev = PVRLDMGetDevice();
 	dma_cache_sync(dev, (void *)pvStart, uLength, DMA_BIDIRECTIONAL);
 #else
+	size_t uLength = pvr_dma_range_len(pvStart, pvEnd);
 	dma_cache_wback_inv((unsigned long)pvStart, uLength);
 #endif
 }
 
 static void pvr_dma_cache_wback(const void *pvStart, const void *pvEnd)
 {
-	size_t uLength = pvr_dma_range_len(pvStart, pvEnd);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,5,0)
-	struct device *dev = PVRLDMGetDevice();
-	dma_sync_single_for_device(dev, (dma_addr_t)pvStart, uLength, DMA_TO_DEVICE);
+	flush_icache_range((unsigned long)pvStart, (unsigned long)pvEnd);
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)
+	size_t uLength = pvr_dma_range_len(pvStart, pvEnd);
 	struct device *dev = PVRLDMGetDevice();
 	dma_cache_sync(dev, (void *)pvStart, uLength, DMA_TO_DEVICE);
 #else
+	size_t uLength = pvr_dma_range_len(pvStart, pvEnd);
 	dma_cache_wback((unsigned long)pvStart, uLength);
 #endif
 }
 
 static void pvr_dma_cache_inv(const void *pvStart, const void *pvEnd)
 {
-	size_t uLength = pvr_dma_range_len(pvStart, pvEnd);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,5,0)
-	struct device *dev = PVRLDMGetDevice();
-	dma_sync_single_for_device(dev, (dma_addr_t)pvStart, uLength, DMA_FROM_DEVICE);
+	flush_icache_range((unsigned long)pvStart, (unsigned long)pvEnd);
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)
+	size_t uLength = pvr_dma_range_len(pvStart, pvEnd);
 	struct device *dev = PVRLDMGetDevice();
 	dma_cache_sync(dev, (void *)pvStart, uLength, DMA_FROM_DEVICE);
 #else
+	size_t uLength = pvr_dma_range_len(pvStart, pvEnd);
 	dma_cache_inv((unsigned long)pvStart, uLength);
 #endif
 }

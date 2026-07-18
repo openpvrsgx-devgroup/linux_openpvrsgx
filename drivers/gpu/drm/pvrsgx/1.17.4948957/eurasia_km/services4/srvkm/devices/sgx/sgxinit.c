@@ -2711,9 +2711,9 @@ PVRSRV_ERROR SGXDevInitCompatCheck(PVRSRV_DEVICE_NODE *psDeviceNode)
 	 */
 
 	ui32BuildOptions = (SGX_BUILD_OPTIONS);
-	if (ui32BuildOptions != psDevInfo->ui32ClientBuildOptions)
+	if ((ui32BuildOptions ^ psDevInfo->ui32ClientBuildOptions) & SGX_BUILD_OPTION_MASK)
 	{
-		ui32BuildOptionsMismatch = ui32BuildOptions ^ psDevInfo->ui32ClientBuildOptions;
+		ui32BuildOptionsMismatch = (ui32BuildOptions ^ psDevInfo->ui32ClientBuildOptions) & SGX_BUILD_OPTION_MASK;
 		if ( (psDevInfo->ui32ClientBuildOptions & ui32BuildOptionsMismatch) != 0)
 		{
 			PVR_LOG(("(FAIL) SGXInit: Mismatch in client-side and KM driver build options."));
@@ -2838,9 +2838,9 @@ PVRSRV_ERROR SGXDevInitCompatCheck(PVRSRV_DEVICE_NODE *psDeviceNode)
 	 */
 
 	ui32BuildOptions = psSGXFeatures->ui32BuildOptions;
-	if (ui32BuildOptions != (SGX_BUILD_OPTIONS))
+	if ((ui32BuildOptions ^ (SGX_BUILD_OPTIONS)) & SGX_BUILD_OPTION_MASK)
 	{
-		ui32BuildOptionsMismatch = ui32BuildOptions ^ (SGX_BUILD_OPTIONS);
+		ui32BuildOptionsMismatch = (ui32BuildOptions ^ (SGX_BUILD_OPTIONS)) & SGX_BUILD_OPTION_MASK;
 		if ( ((SGX_BUILD_OPTIONS) & ui32BuildOptionsMismatch) != 0)
 		{
 			PVR_LOG(("(FAIL) SGXInit: Mismatch in driver and microkernel build options; "
@@ -3352,19 +3352,13 @@ PVRSRV_ERROR SGXGetMiscInfoKM(PVRSRV_SGXDEV_INFO	*psDevInfo,
 
 			psSGXFeatures = &((PVRSRV_SGX_MISCINFO_INFO*)(psMemInfo->pvLinAddrKM))->sSGXFeatures;
 
-			/* Reset the misc information to prevent
-			 * confusion with values returned from the ukernel
+			/* We only need to fill in the DDK version, build
+			 * options will come from the firmware.
 			 */
-			OSMemSet(psMemInfo->pvLinAddrKM, 0,
-					sizeof(PVRSRV_SGX_MISCINFO_INFO));
-
 			psSGXFeatures->ui32DDKVersion =
 				(PVRVERSION_MAJ << 16) |
 				(PVRVERSION_MIN << 8);
 			psSGXFeatures->ui32DDKBuild = PVRVERSION_BUILD;
-
-			/* Also report the kernel module build options -- used in SGXConnectionCheck() */
-			psSGXFeatures->ui32BuildOptions = (SGX_BUILD_OPTIONS);
 
 			/* Copy SGX features into misc info struct, to return to client */
 			psMiscInfo->uData.sSGXFeatures = *psSGXFeatures;

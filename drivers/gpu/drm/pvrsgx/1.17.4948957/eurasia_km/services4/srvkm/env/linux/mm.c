@@ -83,6 +83,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "pvrmmap.h"
 #include "mmap.h"
 #include "osfunc.h"
+#include "env_data.h"
 #include "pvr_debug.h"
 #include "proc.h"
 #include "mutex.h"
@@ -98,8 +99,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 		#define PVR_USE_DMA32_FOR_DEVMEM_ALLOCS
 	#endif
 #endif
-
-extern struct platform_device *gpsPVRLDMDev;
 
 /*
  * The page pool entry count is an atomic int so that the shrinker function

@@ -134,8 +134,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #error "A preemptible Linux kernel is required when using workqueues"
 #endif
 
-extern struct platform_device *gpsPVRLDMDev;
-
 #if defined(EMULATOR)
 #define EVENT_OBJECT_TIMEOUT_MS		(2000)
 #else

@@ -87,6 +87,12 @@ typedef struct _ENV_DATA_TAG
 #endif
 } ENV_DATA;
 
+#if !defined(SUPPORT_DRI_DRM) || defined(PVR_DRI_DRM_PLATFORM_DEV)
+extern struct platform_device *gpsPVRLDMDev;
+#else
+extern struct pci_dev *gpsPVRLDMDev;
+#endif
+
 #endif /* _ENV_DATA_ */
 /*****************************************************************************
  End of file (env_data.h)

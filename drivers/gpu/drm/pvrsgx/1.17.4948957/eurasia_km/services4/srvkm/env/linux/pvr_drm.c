@@ -90,6 +90,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "lock.h"
 #include "linkage.h"
 #include "pvr_drm.h"
+#include "env_data.h"
 
 #if defined(PVR_DRI_DRM_NOT_PCI)
 #include "pvr_drm_mod.h"

@@ -236,3 +236,15 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 	OPTIONS_BIT21 |\
 	OPTIONS_HIGHBYTE
 
+/* These options do not affect the kernel module ABI
+ * and should be ignored for sanity checking purposes. */
+#define SGX_BUILD_OPTION_MASK ~(0xa0379 | SGX_BUILD_OPTIONS_SCHED_MASK)
+
+#if defined(SGX543) || defined(SGX544) || defined(SGX554)
+/* On Series5XT these bits may affect the ABI if
+ * SUPPORT_SECURE_33657_FIX (which is what should
+ * have been exposed as an option bit) is defined. */
+#define SGX_BUILD_OPTIONS_SCHED_MASK 0
+#else
+#define SGX_BUILD_OPTIONS_SCHED_MASK 0x300000
+#endif

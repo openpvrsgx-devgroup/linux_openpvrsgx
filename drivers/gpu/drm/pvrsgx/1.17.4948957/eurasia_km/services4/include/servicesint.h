@@ -259,8 +259,10 @@ typedef struct _PVRSRV_DEVICE_SYNC_OBJECT_
 	IMG_DEV_VIRTADDR	sReadOpsCompleteDevVAddr;
 	IMG_UINT32			ui32WriteOpsPendingVal;
 	IMG_DEV_VIRTADDR	sWriteOpsCompleteDevVAddr;
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) > PVR_ABI_VERSION(1,7,862890)
 	IMG_UINT32			ui32ReadOps2PendingVal;
 	IMG_DEV_VIRTADDR	sReadOps2CompleteDevVAddr;
+#endif
 } PVRSRV_DEVICE_SYNC_OBJECT;
 
 /*!
@@ -272,7 +274,9 @@ typedef struct _PVRSRV_SYNC_OBJECT
 {
 	PVRSRV_KERNEL_SYNC_INFO *psKernelSyncInfoKM;
 	IMG_UINT32				ui32WriteOpsPending;
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) > PVR_ABI_VERSION(1,7,862890)
 	IMG_UINT32				ui32ReadOpsPending;
+#endif
 	IMG_UINT32				ui32ReadOps2Pending;
 
 }PVRSRV_SYNC_OBJECT, *PPVRSRV_SYNC_OBJECT;

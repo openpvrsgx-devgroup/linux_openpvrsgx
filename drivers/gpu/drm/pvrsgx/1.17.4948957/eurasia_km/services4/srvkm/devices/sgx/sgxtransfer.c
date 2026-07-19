@@ -272,11 +272,13 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmitTransferKM(IMG_HANDLE hDevHandle, PVRSRV_TRANSF
 
 				psSharedTransferCmd->asDstSyncs[i].ui32WriteOpsPendingVal = psSyncInfo->psSyncData->ui32WriteOpsPending;
 				psSharedTransferCmd->asDstSyncs[i].ui32ReadOpsPendingVal = psSyncInfo->psSyncData->ui32ReadOpsPending;
-				psSharedTransferCmd->asDstSyncs[i].ui32ReadOps2PendingVal = psSyncInfo->psSyncData->ui32ReadOps2Pending;
 
 				psSharedTransferCmd->asDstSyncs[i].sWriteOpsCompleteDevVAddr = psSyncInfo->sWriteOpsCompleteDevVAddr;
 				psSharedTransferCmd->asDstSyncs[i].sReadOpsCompleteDevVAddr = psSyncInfo->sReadOpsCompleteDevVAddr;
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) > PVR_ABI_VERSION(1,7,862890)
+				psSharedTransferCmd->asDstSyncs[i].ui32ReadOps2PendingVal = psSyncInfo->psSyncData->ui32ReadOps2Pending;
 				psSharedTransferCmd->asDstSyncs[i].sReadOps2CompleteDevVAddr = psSyncInfo->sReadOps2CompleteDevVAddr;
+#endif
 				i++;
 			}
 		}
@@ -404,7 +406,9 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmitTransferKM(IMG_HANDLE hDevHandle, PVRSRV_TRANSF
 			{
 				if (abSrcSyncEnable[loop])
 				{
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) > PVR_ABI_VERSION(1,7,862890)
 					IMG_UINT32 ui32PDumpReadOp2 = 0;
+#endif
 					psSyncInfo = psKick->ahSrcSyncInfo[loop];
 
 					PDUMPCOMMENT("Tweak src surface write op in transfer cmd\r\n");
@@ -428,6 +432,7 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmitTransferKM(IMG_HANDLE hDevHandle, PVRSRV_TRANSF
 							psKick->ui32PDumpFlags,
 							MAKEUNIQUETAG(psCCBMemInfo));
 
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) > PVR_ABI_VERSION(1,7,862890)
 					PDUMPCOMMENT("Tweak srv surface read op2 in transfer cmd\r\n");
 					PDUMPMEM(&ui32PDumpReadOp2,
 							psCCBMemInfo,
@@ -435,6 +440,7 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmitTransferKM(IMG_HANDLE hDevHandle, PVRSRV_TRANSF
 							sizeof(ui32PDumpReadOp2),
 							psKick->ui32PDumpFlags,
 							MAKEUNIQUETAG(psCCBMemInfo));
+#endif
 					i++;
 				}
 			}
@@ -444,7 +450,9 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmitTransferKM(IMG_HANDLE hDevHandle, PVRSRV_TRANSF
 			{
 				if (abDstSyncEnable[i])
 				{
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) > PVR_ABI_VERSION(1,7,862890)
 					IMG_UINT32 ui32PDumpReadOp2 = 0;
+#endif
 					psSyncInfo = psKick->ahDstSyncInfo[loop];
 
 					PDUMPCOMMENT("Tweak dest surface write op in transfer cmd\r\n");
@@ -468,6 +476,7 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmitTransferKM(IMG_HANDLE hDevHandle, PVRSRV_TRANSF
 							psKick->ui32PDumpFlags,
 							MAKEUNIQUETAG(psCCBMemInfo));
 
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) > PVR_ABI_VERSION(1,7,862890)
 					PDUMPCOMMENT("Tweak dest surface read op2 in transfer cmd\r\n");
 					PDUMPMEM(&ui32PDumpReadOp2,
 							psCCBMemInfo,
@@ -475,6 +484,7 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmitTransferKM(IMG_HANDLE hDevHandle, PVRSRV_TRANSF
 							sizeof(ui32PDumpReadOp2),
 							psKick->ui32PDumpFlags,
 							MAKEUNIQUETAG(psCCBMemInfo));
+#endif
 					i++;
 				}
 			}
@@ -798,11 +808,13 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmit2DKM(IMG_HANDLE hDevHandle, PVRSRV_2D_SGX_KICK 
 
 		ps2DCmd->sDstSyncData.ui32WriteOpsPendingVal = psSyncInfo->psSyncData->ui32WriteOpsPending;
 		ps2DCmd->sDstSyncData.ui32ReadOpsPendingVal = psSyncInfo->psSyncData->ui32ReadOpsPending;
-		ps2DCmd->sDstSyncData.ui32ReadOps2PendingVal = psSyncInfo->psSyncData->ui32ReadOps2Pending;
 
 		ps2DCmd->sDstSyncData.sWriteOpsCompleteDevVAddr = psSyncInfo->sWriteOpsCompleteDevVAddr;
 		ps2DCmd->sDstSyncData.sReadOpsCompleteDevVAddr = psSyncInfo->sReadOpsCompleteDevVAddr;
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) > PVR_ABI_VERSION(1,7,862890)
+		ps2DCmd->sDstSyncData.ui32ReadOps2PendingVal = psSyncInfo->psSyncData->ui32ReadOps2Pending;
 		ps2DCmd->sDstSyncData.sReadOps2CompleteDevVAddr = psSyncInfo->sReadOps2CompleteDevVAddr;
+#endif
 
 		/* We can do this immediately as we only have one */
 		SyncTakeWriteOp(psSyncInfo, SYNC_OP_CLASS_TQ_2D);
@@ -856,7 +868,9 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmit2DKM(IMG_HANDLE hDevHandle, PVRSRV_2D_SGX_KICK 
 
 		if (psKick->hDstSyncInfo != IMG_NULL)
 		{
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) > PVR_ABI_VERSION(1,7,862890)
 			IMG_UINT32 ui32PDumpReadOp2 = 0;
+#endif
 			psSyncInfo = psKick->hDstSyncInfo;
 
 			PDUMPCOMMENT("Tweak dest surface write op in 2D cmd\r\n");
@@ -874,6 +888,7 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmit2DKM(IMG_HANDLE hDevHandle, PVRSRV_2D_SGX_KICK 
 					sizeof(psSyncInfo->psSyncData->ui32LastReadOpDumpVal),
 					psKick->ui32PDumpFlags,
 					MAKEUNIQUETAG(psCCBMemInfo));
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) > PVR_ABI_VERSION(1,7,862890)
 			PDUMPCOMMENT("Tweak dest surface read op2 in 2D cmd\r\n");
 			PDUMPMEM(&ui32PDumpReadOp2,
 					psCCBMemInfo,
@@ -881,6 +896,7 @@ IMG_EXPORT PVRSRV_ERROR SGXSubmit2DKM(IMG_HANDLE hDevHandle, PVRSRV_2D_SGX_KICK 
 					sizeof(ui32PDumpReadOp2),
 					psKick->ui32PDumpFlags,
 					MAKEUNIQUETAG(psCCBMemInfo));
+#endif
 		}
 
 		/* Read/Write ops pending updates, delayed from above */

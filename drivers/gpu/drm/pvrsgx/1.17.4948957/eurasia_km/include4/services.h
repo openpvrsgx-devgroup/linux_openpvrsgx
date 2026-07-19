@@ -73,7 +73,11 @@ extern "C" {
 
 #define PVRSRV_MAX_DEVICES		16	/*!< Largest supported number of devices on the system */
 
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) >= PVR_ABI_VERSION(1,17,4948957)
 #define EVENTOBJNAME_MAXLENGTH (64)
+#else
+#define EVENTOBJNAME_MAXLENGTH (50)
+#endif
 
 /*
 	Flags associated with memory allocation
@@ -437,6 +441,10 @@ typedef struct _PVRSRV_CLIENT_MEM_INFO_
 	/* Device Virtual Address */
 	IMG_DEV_VIRTADDR		sDevVAddr;
 
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) <= PVR_ABI_VERSION(1,8,869593)
+	IMG_CPU_PHYADDR			sCpuPAddr;
+#endif
+
 	/* allocation flags */
 	IMG_UINT32				ui32Flags;
 
@@ -468,6 +476,7 @@ typedef struct _PVRSRV_CLIENT_MEM_INFO_
 	IMG_UINT32							dummy2;
 	#endif /* !defined(USE_CODE) */
 #endif /* defined(SUPPORT_MEMINFO_IDS) */
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) > PVR_ABI_VERSION(1,7,862890)
 #if defined(SUPPORT_ION)
 	IMG_SIZE_T							uiIonBufferSize;
 #endif /* defined(SUPPORT_ION) */
@@ -477,6 +486,7 @@ typedef struct _PVRSRV_CLIENT_MEM_INFO_
 
 #if defined (PVRSRV_DEVMEM_TIME_STATS)
 	PVRSRV_DEVMEM_TIMING_STATS			sDevMemTimingStats;
+#endif
 #endif
 
 	/*
@@ -591,6 +601,7 @@ typedef struct _PVRSRV_MISC_INFO_
 		IMG_UINT32	ui32Length;
 	} sCacheOpCtl;
 
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) > PVR_ABI_VERSION(1,7,862890)
 	/*!< Meminfo refcount controls: */
 	struct
 	{
@@ -610,8 +621,11 @@ typedef struct _PVRSRV_MISC_INFO_
 		/*!< Resulting refcount */
 		IMG_UINT32 ui32RefCount;
 	} sGetRefCountCtl;
+#endif
 
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) > PVR_ABI_VERSION(1,8,869593)
 	IMG_UINT32 ui32PageSize;
+#endif
 } PVRSRV_MISC_INFO;
 
 /*!

@@ -123,6 +123,9 @@ extern "C" {
  *****************************************************************************/ 
 typedef struct PVRSRV_BRIDGE_IN_GETPHYSPAGEADDR
 {
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) <= PVR_ABI_VERSION(1,7,862890)
+	IMG_UINT32 ui32BridgeFlags;
+#endif
 	IMG_HANDLE hDevMemHeap;
 	IMG_DEV_VIRTADDR sDevVAddr;
 }PVRSRV_BRIDGE_IN_GETPHYSPAGEADDR;
@@ -144,6 +147,9 @@ typedef struct PVRSRV_BRIDGE_OUT_GETPHYSPAGEADDR
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_SGX_SET_TRANSFER_CONTEXT_PRIORITY_TAG
  {
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) <= PVR_ABI_VERSION(1,7,862890)
+	IMG_UINT32			ui32BridgeFlags;
+#endif
 	IMG_HANDLE			hDevCookie;
 	IMG_HANDLE			hHWTransferContext;
 	IMG_UINT32			ui32Priority;
@@ -156,6 +162,9 @@ typedef struct PVRSRV_BRIDGE_IN_SGX_SET_TRANSFER_CONTEXT_PRIORITY_TAG
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_SGX_SET_RENDER_CONTEXT_PRIORITY_TAG
 {
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) <= PVR_ABI_VERSION(1,7,862890)
+	IMG_UINT32			ui32BridgeFlags;
+#endif
 	IMG_HANDLE			hDevCookie;
 	IMG_HANDLE			hHWRenderContext;
 	IMG_UINT32			ui32Priority;
@@ -168,6 +177,9 @@ typedef struct PVRSRV_BRIDGE_IN_SGX_SET_RENDER_CONTEXT_PRIORITY_TAG
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_GETCLIENTINFO_TAG
 {
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) <= PVR_ABI_VERSION(1,7,862890)
+	IMG_UINT32			ui32BridgeFlags;
+#endif
 	IMG_HANDLE			hDevCookie;
 }PVRSRV_BRIDGE_IN_GETCLIENTINFO;
 
@@ -187,6 +199,9 @@ typedef struct IMG_COMPAT PVRSRV_BRIDGE_OUT_GETINTERNALDEVINFO_TAG
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_GETINTERNALDEVINFO_TAG
 {
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) <= PVR_ABI_VERSION(1,7,862890)
+	IMG_UINT32			ui32BridgeFlags;
+#endif
 	IMG_HANDLE			hDevCookie;
 }PVRSRV_BRIDGE_IN_GETINTERNALDEVINFO;
 
@@ -206,6 +221,9 @@ typedef struct PVRSRV_BRIDGE_OUT_GETCLIENTINFO_TAG
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_RELEASECLIENTINFO_TAG
 {
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) <= PVR_ABI_VERSION(1,7,862890)
+	IMG_UINT32		ui32BridgeFlags;
+#endif
 	IMG_HANDLE		hDevCookie;
 }PVRSRV_BRIDGE_IN_RELEASECLIENTINFO;
 
@@ -215,6 +233,9 @@ typedef struct PVRSRV_BRIDGE_IN_RELEASECLIENTINFO_TAG
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_ISPBREAKPOLL_TAG
 {
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) <= PVR_ABI_VERSION(1,7,862890)
+	IMG_UINT32		ui32BridgeFlags;
+#endif
 	IMG_HANDLE		hDevCookie;
 }PVRSRV_BRIDGE_IN_ISPBREAKPOLL;
 
@@ -224,6 +245,9 @@ typedef struct PVRSRV_BRIDGE_IN_ISPBREAKPOLL_TAG
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_DOKICK_TAG
 {
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) <= PVR_ABI_VERSION(1,7,862890)
+	IMG_UINT32			ui32BridgeFlags;
+#endif
 	IMG_HANDLE			hDevCookie;
 	SGX_CCB_KICK		sCCBKick;
 }PVRSRV_BRIDGE_IN_DOKICK;
@@ -234,6 +258,9 @@ typedef struct PVRSRV_BRIDGE_IN_DOKICK_TAG
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_SGX_SCHEDULE_PROCESS_QUEUES_TAG
 {
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) <= PVR_ABI_VERSION(1,7,862890)
+	IMG_UINT32		ui32BridgeFlags;
+#endif
 	IMG_HANDLE		hDevCookie;
 }PVRSRV_BRIDGE_IN_SGX_SCHEDULE_PROCESS_QUEUES;
 
@@ -245,6 +272,9 @@ typedef struct PVRSRV_BRIDGE_IN_SGX_SCHEDULE_PROCESS_QUEUES_TAG
  *****************************************************************************/
 typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_SUBMITTRANSFER_TAG
 {
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) <= PVR_ABI_VERSION(1,7,862890)
+	IMG_UINT32			ui32BridgeFlags;
+#endif
 	IMG_HANDLE					hDevCookie;
 	PVRSRV_TRANSFER_SGX_KICK	sKick;
 }PVRSRV_BRIDGE_IN_SUBMITTRANSFER;
@@ -269,6 +299,9 @@ typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_SUBMIT2D_TAG
  *****************************************************************************/ 
 typedef struct PVRSRV_BRIDGE_IN_READREGDWORD_TAG
 {
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) <= PVR_ABI_VERSION(1,7,862890)
+	IMG_UINT32			ui32BridgeFlags;
+#endif
 	IMG_HANDLE			hDevCookie;
 	IMG_PCHAR			pszKey;
     	IMG_PCHAR			pszValue;
@@ -291,6 +324,9 @@ typedef struct PVRSRV_BRIDGE_OUT_READREGDWORD_TAG
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_SGXGETMISCINFO_TAG
 {
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) <= PVR_ABI_VERSION(1,7,862890)
+	IMG_UINT32			ui32BridgeFlags;
+#endif
 	IMG_HANDLE			hDevCookie;
 	IMG_HANDLE			hMiscInfo;
 }PVRSRV_BRIDGE_IN_SGXGETMISCINFO;
@@ -301,6 +337,9 @@ typedef struct PVRSRV_BRIDGE_IN_SGXGETMISCINFO_TAG
  *****************************************************************************/
 typedef struct PVRSRV_BRIDGE_IN_SGXINFO_FOR_SRVINIT_TAG
 {
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) <= PVR_ABI_VERSION(1,7,862890)
+	IMG_UINT32			ui32BridgeFlags;
+#endif
 	IMG_HANDLE			hDevCookie;
 }PVRSRV_BRIDGE_IN_SGXINFO_FOR_SRVINIT;
 
@@ -320,6 +359,9 @@ typedef struct IMG_COMPAT PVRSRV_BRIDGE_OUT_SGXINFO_FOR_SRVINIT_TAG
  *****************************************************************************/
 typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_SGXDEVINITPART2_TAG
 {
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) <= PVR_ABI_VERSION(1,7,862890)
+	IMG_UINT32		ui32BridgeFlags;
+#endif
 	IMG_HANDLE              hDevCookie;
 	SGX_BRIDGE_INIT_INFO	sInitInfo;
 }PVRSRV_BRIDGE_IN_SGXDEVINITPART2;
@@ -340,6 +382,9 @@ typedef struct PVRSRV_BRIDGE_OUT_SGXDEVINITPART2_TAG
  *****************************************************************************/
 typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_2DQUERYBLTSCOMPLETE_TAG
 {
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) <= PVR_ABI_VERSION(1,7,862890)
+	IMG_UINT32			ui32BridgeFlags;
+#endif
 	IMG_HANDLE			hDevCookie;
 	IMG_HANDLE			hKernSyncInfo;
 	IMG_BOOL			bWaitForComplete;
@@ -350,6 +395,9 @@ typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_2DQUERYBLTSCOMPLETE_TAG
 
 typedef struct PVRSRV_BRIDGE_IN_SGXFINDSHAREDPBDESC_TAG
 {
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) <= PVR_ABI_VERSION(1,7,862890)
+	IMG_UINT32 ui32BridgeFlags;
+#endif
 	IMG_HANDLE hDevCookie;
 	IMG_BOOL   bLockOnFailure;
 	IMG_UINT32 ui32TotalPBSize;
@@ -370,6 +418,9 @@ typedef struct PVRSRV_BRIDGE_OUT_SGXFINDSHAREDPBDESC_TAG
 
 typedef struct PVRSRV_BRIDGE_IN_SGXUNREFSHAREDPBDESC_TAG
 {
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) <= PVR_ABI_VERSION(1,7,862890)
+	IMG_UINT32 ui32BridgeFlags;
+#endif
 	IMG_HANDLE hSharedPBDesc;
 }PVRSRV_BRIDGE_IN_SGXUNREFSHAREDPBDESC;
 
@@ -381,6 +432,9 @@ typedef struct PVRSRV_BRIDGE_OUT_SGXUNREFSHAREDPBDESC_TAG
 
 typedef struct PVRSRV_BRIDGE_IN_SGXADDSHAREDPBDESC_TAG
 {
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) <= PVR_ABI_VERSION(1,7,862890)
+	IMG_UINT32 ui32BridgeFlags;
+#endif
 	IMG_UINT32 ui32TotalPBSize;
 	IMG_HANDLE hDevCookie;
 	IMG_HANDLE hSharedPBDescKernelMemInfo;
@@ -402,6 +456,9 @@ typedef struct PVRSRV_BRIDGE_OUT_SGXADDSHAREDPBDESC_TAG
 #ifdef	PDUMP
 typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_PDUMP_BUFFER_ARRAY_TAG
 {
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) <= PVR_ABI_VERSION(1,7,862890)
+	IMG_UINT32				ui32BridgeFlags;
+#endif
 	IMG_HANDLE 				hBufferArray;
 	IMG_UINT32				ui32BufferArrayLength;
 	IMG_BOOL				bDumpPolls;
@@ -409,6 +466,9 @@ typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_PDUMP_BUFFER_ARRAY_TAG
 
 typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_PDUMP_3D_SIGNATURE_REGISTERS_TAG
 {
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) <= PVR_ABI_VERSION(1,7,862890)
+	IMG_UINT32			ui32BridgeFlags;
+#endif
 	IMG_HANDLE			hDevCookie;
 	IMG_HANDLE			hDevMemContext;
 	IMG_UINT32			ui32DumpFrameNum;
@@ -419,6 +479,9 @@ typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_PDUMP_3D_SIGNATURE_REGISTERS_TAG
 
 typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_PDUMPCOUNTER_REGISTERS_TAG
 {
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) <= PVR_ABI_VERSION(1,7,862890)
+	IMG_UINT32			ui32BridgeFlags;
+#endif
 	IMG_HANDLE			hDevCookie;
 	IMG_UINT32			ui32DumpFrameNum;
 	IMG_BOOL			bLastFrame;
@@ -428,6 +491,9 @@ typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_PDUMPCOUNTER_REGISTERS_TAG
 
 typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_PDUMP_TA_SIGNATURE_REGISTERS_TAG
 {
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) <= PVR_ABI_VERSION(1,7,862890)
+	IMG_UINT32			ui32BridgeFlags;
+#endif
 	IMG_HANDLE			hDevCookie;
 	IMG_UINT32			ui32DumpFrameNum;
 	IMG_UINT32			ui32TAKickCount;
@@ -438,6 +504,9 @@ typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_PDUMP_TA_SIGNATURE_REGISTERS_TAG
 
 typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_PDUMP_HWPERFCB_TAG
 {
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) <= PVR_ABI_VERSION(1,7,862890)
+	IMG_UINT32			ui32BridgeFlags;
+#endif
 	IMG_HANDLE			hDevCookie;
 	IMG_HANDLE			hDevMemContext;
 	IMG_CHAR			szFileName[PVRSRV_PDUMP_MAX_FILENAME_SIZE];
@@ -448,6 +517,9 @@ typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_PDUMP_HWPERFCB_TAG
 
 typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_PDUMP_SAVEMEM
 {
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) <= PVR_ABI_VERSION(1,7,862890)
+	IMG_UINT32			ui32BridgeFlags;
+#endif
 	IMG_HANDLE			hDevCookie;
 	IMG_CHAR			szFileName[PVRSRV_PDUMP_MAX_FILENAME_SIZE];
 	IMG_UINT32			ui32FileOffset;
@@ -462,6 +534,9 @@ typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_PDUMP_SAVEMEM
 
 typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_SGX_REGISTER_HW_RENDER_CONTEXT_TAG
 {
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) <= PVR_ABI_VERSION(1,7,862890)
+	IMG_UINT32			ui32BridgeFlags;
+#endif
 	IMG_HANDLE			hDevCookie;
 	IMG_HANDLE			pHWRenderContextCpuVAddr;
 	IMG_UINT32			ui32HWRenderContextSize;
@@ -472,12 +547,20 @@ typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_SGX_REGISTER_HW_RENDER_CONTEXT_TAG
 typedef struct PVRSRV_BRIDGE_OUT_SGX_REGISTER_HW_RENDER_CONTEXT_TAG
 {
 	PVRSRV_ERROR		eError;
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) > PVR_ABI_VERSION(1,7,862890)
 	IMG_DEV_VIRTADDR	sHWRenderContextDevVAddr;
 	IMG_HANDLE			hHWRenderContext;
+#else
+	IMG_HANDLE			hHWRenderContext;
+	IMG_DEV_VIRTADDR	sHWRenderContextDevVAddr;
+#endif
 }PVRSRV_BRIDGE_OUT_SGX_REGISTER_HW_RENDER_CONTEXT;
 
 typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_SGX_UNREGISTER_HW_RENDER_CONTEXT_TAG
 {
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) <= PVR_ABI_VERSION(1,7,862890)
+	IMG_UINT32			ui32BridgeFlags;
+#endif
 	IMG_BOOL			bForceCleanup;
 	IMG_HANDLE			hDevCookie;
 	IMG_HANDLE			hHWRenderContext;
@@ -485,6 +568,9 @@ typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_SGX_UNREGISTER_HW_RENDER_CONTEXT_TAG
 
 typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_SGX_REGISTER_HW_TRANSFER_CONTEXT_TAG
 {
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) <= PVR_ABI_VERSION(1,7,862890)
+	IMG_UINT32			ui32BridgeFlags;
+#endif
 	IMG_HANDLE			hDevCookie;
 	IMG_HANDLE			pHWTransferContextCpuVAddr;
 	IMG_UINT32			ui32HWTransferContextSize;
@@ -495,12 +581,20 @@ typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_SGX_REGISTER_HW_TRANSFER_CONTEXT_TAG
 typedef struct PVRSRV_BRIDGE_OUT_SGX_REGISTER_HW_TRANSFER_CONTEXT_TAG
 {
 	PVRSRV_ERROR		eError;
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) > PVR_ABI_VERSION(1,7,862890)
 	IMG_DEV_VIRTADDR	sHWTransferContextDevVAddr;
 	IMG_HANDLE			hHWTransferContext;
+#else
+	IMG_HANDLE			hHWTransferContext;
+	IMG_DEV_VIRTADDR	sHWTransferContextDevVAddr;
+#endif
 }PVRSRV_BRIDGE_OUT_SGX_REGISTER_HW_TRANSFER_CONTEXT;
 
 typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_SGX_UNREGISTER_HW_TRANSFER_CONTEXT_TAG
 {
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) <= PVR_ABI_VERSION(1,7,862890)
+	IMG_UINT32			ui32BridgeFlags;
+#endif
 	IMG_BOOL			bForceCleanup;
 	IMG_HANDLE			hDevCookie;
 	IMG_HANDLE			hHWTransferContext;
@@ -508,6 +602,9 @@ typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_SGX_UNREGISTER_HW_TRANSFER_CONTEXT_TA
 
 typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_SGX_FLUSH_HW_RENDER_TARGET_TAG
 {
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) <= PVR_ABI_VERSION(1,7,862890)
+	IMG_UINT32			ui32BridgeFlags;
+#endif
 	IMG_HANDLE			hDevCookie;
 	IMG_DEV_VIRTADDR	sHWRTDataSetDevVAddr;
 }PVRSRV_BRIDGE_IN_SGX_FLUSH_HW_RENDER_TARGET;
@@ -552,6 +649,9 @@ typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_SGX_UNREGISTER_HW_2D_CONTEXT_TAG
  *****************************************************************************/
 typedef struct IMG_COMPAT PVRSRV_BRIDGE_IN_SGX_READ_HWPERF_CB_TAG
 {
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) <= PVR_ABI_VERSION(1,7,862890)
+	IMG_UINT32			ui32BridgeFlags;
+#endif
 	IMG_HANDLE			hDevCookie;
 	IMG_UINT32			ui32ArraySize;
 	IMG_HANDLE			hHWPerfCBData;		/* PVRSRV_SGX_HWPERF_CB_ENTRY* */

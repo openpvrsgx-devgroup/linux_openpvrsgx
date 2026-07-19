@@ -57,6 +57,65 @@ config PVRSGX_1_17_4948957
 
 endchoice
 
+if SGX && PVRSGX_1_17_4948957
+menuconfig SGX_ABI
+	bool "PowerVR ABI options"
+	help
+	  These options must match your usermode libraries and
+	  firmware in order for anything to work. If disabled,
+	  a known OEM configuration will be assumed.
+
+choice
+	prompt "ABI version" if SGX_ABI
+	default PVRSGX_1_17_4948957_ABI if !SGX_CEDARVIEW
+
+config PVRSGX_1_7_862890_ABI
+	bool "1.7.862890"
+
+config PVRSGX_1_17_4948957_ABI
+	bool "1.17.4948957"
+endchoice
+
+config SGX_IOCTL_ALIAS
+	int "Offset to mirror ioctls at" if SGX_ABI
+	range 0 90
+	default 18 if SGX_CEDARVIEW
+
+config SGX_PDUMP
+	bool "PDump support" if SGX_ABI
+
+config SGX_HW_PROFILING
+	bool "Hardware profiling" if SGX_ABI
+
+config SGX_USSE_EDM_STATUS_DEBUG
+	bool "Hardware status debug trace" if SGX_ABI
+
+config SGX_HW_PERF
+	bool "Hardware performance counters" if SGX_ABI
+	default y
+
+choice
+	prompt "Parameter buffer allocation" if SGX_ABI
+
+config SGX_PB_PER_CONTEXT
+	bool "Per-context"
+
+config SGX_PB_SHARED
+	bool "Shared"
+
+config SGX_PB_HYBRID
+	bool "Hybrid"
+	help
+	  Seems to be compatible with CONFIG_SGX_PB_PER_CONTEXT.
+endchoice
+
+config SGX_HW_RECOVERY
+	bool "PowerVR SGX watchdog timer"
+	default y
+	help
+	  Detect and remedy SGX lockups.
+endif
+
 config SGX_DEBUG
 	bool "PowerVR SGX build with DEBUG enabled"
 	depends on SGX

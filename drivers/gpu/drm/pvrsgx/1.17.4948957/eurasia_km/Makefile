@@ -31,6 +31,9 @@ TARGET := $(MODULE)-$(TARGET_TYPE)
 obj-$(TARGET_TYPE) += $(MODULE).o
 ccflags-y += -DPVR_BUILD_DATE="\"$(shell date "+%Y%m%d" )\""
 
+ccflags-$(CONFIG_PVRSGX_1_7_862890_ABI) += -DPVR_ABI_COMPAT=1,7,862890
+ccflags-$(CONFIG_PVRSGX_1_17_4948957_ABI) += -DPVR_ABI_COMPAT=1,17,4948957
+
 # this defines the compatible string which must be present in the DTB of the board
 ccflags-y += -DSYS_SGX_DEV_NAME="\"$(SOC_VENDOR),$(SOC)-$(SGX)-$(SGX_REV)\""
 
@@ -106,19 +109,16 @@ ccflags-y += \
 	-DDEBUG_LOG_PATH_TRUNCATE="\"\"" \
 	-DSUPPORT_SRVINIT \
 	-DSUPPORT_SGX \
-	-DSUPPORT_PERCONTEXT_PB \
 	-DDISABLE_SGX_PB_GROW_SHRINK \
 	-DSUPPORT_PVRSRV_GET_DC_SYSTEM_BUFFER \
 	-DSUPPORT_LINUX_X86_WRITECOMBINE \
 	-DTRANSFER_QUEUE \
-	-DSUPPORT_HW_RECOVERY \
 	-DPVR_SECURE_HANDLES \
 	-DPVR_SECURE_DRM_AUTH_EXPORT \
 	-DUSE_PTHREADS \
 	-DLDM_PLATFORM \
 	-DSUPPORT_SGX_EVENT_OBJECT \
 	-DPVR2D_ALT_2DHW \
-	-DSUPPORT_SGX_HWPERF \
 	-DSUPPORT_SGX_LOW_LATENCY_SCHEDULING \
 	-DSUPPORT_LINUX_X86_PAT \
 	-DPVR_LINUX_USING_WORKQUEUES \
@@ -146,6 +146,7 @@ ccflags-y += \
 	-DDEBUG_LINUX_MEM_AREAS \
 	-DDEBUG_LINUX_MMAP_AREAS \
 	-DDEBUG_BRIDGE_KM \
+	-DDEBUG_TRACE_BRIDGE_KM \
 	-g -O0 \
 	-DDLL_METRIC=1 \
 	-fno-strict-aliasing -Wno-pointer-arith -Wno-sign-conversion
@@ -233,9 +234,19 @@ endif
 ccflags-y += -I$(srctree)/include/drm \
 	-I$(src)/services4/3rdparty/linux_drm
 
-ccflags-y += -DSUPPORT_HW_RECOVERY
+ccflags-$(CONFIG_SGX_HW_PERF) += -DSUPPORT_SGX_HWPERF
+ccflags-$(CONFIG_SGX_HW_RECOVERY) += -DSUPPORT_HW_RECOVERY
+ccflags-$(CONFIG_SGX_HW_PROFILING) += -DSGX_SUPPORT_HWPROFILING
+ccflags-$(CONFIG_SGX_PDUMP) += -I$(src)/tools/intern/debug/client -DPDUMP
+ccflags-$(CONFIG_SGX_USSE_EDM_STATUS_DEBUG) += -DPVRSRV_USSE_EDM_STATUS_DEBUG
+
+ccflags-$(CONFIG_SGX_PB_SHARED) += -DSUPPORT_SHARED_PB
+ccflags-$(CONFIG_SGX_PB_HYBRID) += -DSUPPORT_HYBRID_PB
+ccflags-$(CONFIG_SGX_PB_PER_CONTEXT) += -DSUPPORT_PERCONTEXT_PB
+
 ccflags-y += -DPVR_LINUX_USING_WORKQUEUES
 ccflags-y += -DSUPPORT_DRI_DRM
+ccflags-y += -DDRM_PVR_RESERVED1=$(CONFIG_SGX_IOCTL_ALIAS)
 ccflags-y += -DPVRSRV_NEED_PVR_DPF
 #ccflags-y += -DMODULE	# this disables some code in AcquireGPTimer in sysutils_linux.c
 ccflags-y += -DSUPPORT_DMABUF
@@ -323,5 +334,4 @@ ccflags-n += \
 
 ccflags-n += \
 	-DDEBUG_BRIDGE_KM_DISPATCH_TABLE \
-	-DPVRSRV_USSE_EDM_STATUS_DEBUG \
 	-DPVRSRV_DUMP_MK_TRACE

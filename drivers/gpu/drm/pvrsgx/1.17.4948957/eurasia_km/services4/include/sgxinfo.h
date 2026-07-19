@@ -92,10 +92,15 @@ typedef struct IMG_COMPAT _SGX_BRIDGE_INIT_INFO_
 	IMG_HANDLE	hKernelSGXMiscMemInfo;
 
 	IMG_UINT32	aui32HostKickAddr[SGXMKIF_CMD_MAX];
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) >= PVR_ABI_VERSION(1,17,4948957)
 	IMG_UINT32	ui32ClientBuildOptions;
 
 	SGX_INIT_SCRIPTS sScripts;
+#else
+	SGX_INIT_SCRIPTS sScripts;
 
+	IMG_UINT32	ui32ClientBuildOptions;
+#endif
 	SGX_MISCINFO_STRUCT_SIZES	sSGXStructSizes;
 
 #if defined(SGX_SUPPORT_HWPROFILING)
@@ -141,10 +146,12 @@ typedef struct IMG_COMPAT _SGX_BRIDGE_INIT_INFO_
 	IMG_UINT32 ui32MasterClkGateStatus2Mask;
 #endif /* SGX_FEATURE_MP */
 
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) > PVR_ABI_VERSION(1,13,3341330)
 #if defined(SGX_FEATURE_AUTOCLOCKGATING)
 	IMG_BOOL bDisableClockGating;
 #elif defined(USE_64BIT_COMPAT)
 	IMG_UINT32  ui32Padding;
+#endif
 #endif
 	IMG_UINT32 ui32CacheControl;
 
@@ -249,6 +256,10 @@ typedef struct IMG_COMPAT _SGX_CCB_KICK_
 typedef struct IMG_COMPAT _SGX_CLIENT_INFO_
 {
 	IMG_UINT32					ui32ProcessID;			/*!< ID of process controlling SGX device */
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) < PVR_ABI_VERSION(1,17,4948957)
+	IMG_VOID					*pvProcess;
+	PVRSRV_MISC_INFO				sMiscInfo;
+#endif
 	IMG_UINT32					asDevData[SGX_MAX_DEV_DATA];
 } SGX_CLIENT_INFO;
 
@@ -258,6 +269,9 @@ typedef struct IMG_COMPAT _SGX_CLIENT_INFO_
  *****************************************************************************/
 typedef struct IMG_COMPAT _SGX_INTERNAL_DEVINFO_
 {
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) <= PVR_ABI_VERSION(1,13,3341330)
+	IMG_UINT32			u32Flags;
+#endif
 	IMG_HANDLE			hHostCtlKernelMemInfoHandle;
 	IMG_BOOL			bForcePTOff;
 } SGX_INTERNAL_DEVINFO;

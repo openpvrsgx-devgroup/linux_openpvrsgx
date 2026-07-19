@@ -44,6 +44,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if !defined (__SERVICESEXT_H__)
 #define __SERVICESEXT_H__
 
+#include "pvrversion.h"
+
 /*
  * Lock buffer read/write flags
  */
@@ -750,8 +752,10 @@ typedef struct _PVRSRV_CLIENT_SYNC_INFO_
 	/* Device accessible ReadOp Info */
 	IMG_DEV_VIRTADDR		sReadOpsCompleteDevVAddr;
 
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) > PVR_ABI_VERSION(1,7,862890)
 	/* Device accessible ReadOp2 Info */
 	IMG_DEV_VIRTADDR		sReadOps2CompleteDevVAddr;
+#endif
 
 	/* handle to client mapping data (OS specific) */
 	IMG_HANDLE					hMappingInfo;

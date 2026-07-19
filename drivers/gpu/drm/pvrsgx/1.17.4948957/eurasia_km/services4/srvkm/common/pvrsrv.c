@@ -1449,6 +1449,7 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVGetMiscInfoKM(PVRSRV_MISC_INFO *psMiscInfo)
 		}
 	}
 
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) > PVR_ABI_VERSION(1,7,862890)
 	if((psMiscInfo->ui32StateRequest & PVRSRV_MISC_INFO_GET_REF_COUNT_PRESENT) != 0UL)
 	{
 		PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo;
@@ -1470,12 +1471,15 @@ PVRSRV_ERROR IMG_CALLCONV PVRSRVGetMiscInfoKM(PVRSRV_MISC_INFO *psMiscInfo)
 
 		psMiscInfo->sGetRefCountCtl.ui32RefCount = psKernelMemInfo->ui32RefCount;
 	}
+#endif
 
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) > PVR_ABI_VERSION(1,8,869593)
 	if ((psMiscInfo->ui32StateRequest & PVRSRV_MISC_INFO_GET_PAGE_SIZE_PRESENT) != 0UL)
 	{
 		psMiscInfo->ui32PageSize = HOST_PAGESIZE();
 		psMiscInfo->ui32StatePresent |= PVRSRV_MISC_INFO_GET_PAGE_SIZE_PRESENT;
 	}
+#endif
 
 #if defined(PVRSRV_RESET_ON_HWTIMEOUT)
 	if((psMiscInfo->ui32StateRequest & PVRSRV_MISC_INFO_RESET_PRESENT) != 0UL)

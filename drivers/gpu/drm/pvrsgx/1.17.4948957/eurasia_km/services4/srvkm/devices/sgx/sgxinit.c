@@ -298,7 +298,7 @@ static PVRSRV_ERROR InitDevInfo(PVRSRV_PER_PROCESS_DATA *psPerProc,
 	psDevInfo->ui32MasterClkGateStatus2Reg = psInitInfo->ui32MasterClkGateStatus2Reg;
 	psDevInfo->ui32MasterClkGateStatus2Mask = psInitInfo->ui32MasterClkGateStatus2Mask;
 #endif /* SGX_FEATURE_MP */
-#if defined(SGX_FEATURE_AUTOCLOCKGATING)
+#if defined(SGX_FEATURE_AUTOCLOCKGATING) && PVR_ABI_VERSION(PVR_ABI_COMPAT) > PVR_ABI_VERSION(1,13,3341330)
 	psDevInfo->bDisableClockGating = psInitInfo->bDisableClockGating;
 #endif
 
@@ -335,6 +335,7 @@ static PVRSRV_ERROR SGXRunScript(PVRSRV_SGXDEV_INFO *psDevInfo, SGX_INIT_COMMAND
 				PDUMPREG(SGX_PDUMPREG_NAME, psComm->sWriteHWReg.ui32Offset, psComm->sWriteHWReg.ui32Value);
 				break;
 			}
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) > PVR_ABI_VERSION(1,8,869593)
 			case SGX_INIT_OP_READ_HW_REG:
 			{
 				psComm->sReadHWReg.ui32Value = OSReadHWReg(psDevInfo->pvRegsBaseKM, psComm->sReadHWReg.ui32Offset);
@@ -344,6 +345,8 @@ static PVRSRV_ERROR SGXRunScript(PVRSRV_SGXDEV_INFO *psDevInfo, SGX_INIT_COMMAND
 #endif
 				break;
 			}
+#endif
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) > PVR_ABI_VERSION(1,9,2253347)
 			case SGX_INIT_OP_PRINT_HW_REG:
 			{
 				psComm->sReadHWReg.ui32Value = OSReadHWReg(psDevInfo->pvRegsBaseKM, psComm->sReadHWReg.ui32Offset);
@@ -351,6 +354,7 @@ static PVRSRV_ERROR SGXRunScript(PVRSRV_SGXDEV_INFO *psDevInfo, SGX_INIT_COMMAND
 
 				break;
 			}
+#endif
 
 #if defined(PDUMP)
 			case SGX_INIT_OP_PDUMP_HW_REG:
@@ -378,6 +382,7 @@ static PVRSRV_ERROR SGXRunScript(PVRSRV_SGXDEV_INFO *psDevInfo, SGX_INIT_COMMAND
 	return PVRSRV_ERROR_UNKNOWN_SCRIPT_OPERATION;
 }
 
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) > PVR_ABI_VERSION(1,10,2359475)
 /* Run scripts on given core */
 static PVRSRV_ERROR SGXRunScriptOnCore(PVRSRV_SGXDEV_INFO *psDevInfo, SGX_INIT_COMMAND *psScript, IMG_UINT32 ui32NumInitCommands, IMG_UINT32 ui32CoreNum)
 {
@@ -443,6 +448,7 @@ static PVRSRV_ERROR SGXRunScriptOnCore(PVRSRV_SGXDEV_INFO *psDevInfo, SGX_INIT_C
 
 	return PVRSRV_ERROR_UNKNOWN_SCRIPT_OPERATION;
 }
+#endif
 
 #if defined(SUPPORT_MEMORY_TILING)
 static PVRSRV_ERROR SGX_AllocMemTilingRangeInt(PVRSRV_SGXDEV_INFO *psDevInfo,
@@ -1290,6 +1296,7 @@ static INLINE IMG_UINT32 GetDirListBaseReg(IMG_UINT32 ui32Index)
 
 IMG_VOID RunSGXREGDebugScripts (PVRSRV_SGXDEV_INFO	*psDevInfo)
 {
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) > PVR_ABI_VERSION(1,10,2359475)
 	IMG_UINT32	ui32Core;
 	PVRSRV_ERROR		eError;
 
@@ -1314,6 +1321,7 @@ IMG_VOID RunSGXREGDebugScripts (PVRSRV_SGXDEV_INFO	*psDevInfo)
 		}
 	}
 	/* Scripts end */
+#endif
 }
 
 
@@ -1611,12 +1619,7 @@ IMG_VOID SGXDumpDebugInfo (PVRSRV_SGXDEV_INFO	*psDevInfo,
 	#if defined(PVRSRV_USSE_EDM_STATUS_DEBUG)
 	{
 		IMG_UINT32	*pui32MKTraceBuffer = psDevInfo->psKernelEDMStatusBufferMemInfo->pvLinAddrKM;
-		IMG_UINT32	ui32LastStatusCode, ui32WriteOffset;
-
-		ui32LastStatusCode = *pui32MKTraceBuffer;
-		pui32MKTraceBuffer++;
-		ui32WriteOffset = *pui32MKTraceBuffer;
-		pui32MKTraceBuffer++;
+		IMG_UINT32	ui32LastStatusCode = *pui32MKTraceBuffer++;
 
 		PVR_LOG(("Last SGX microkernel status code: %08X %s",
 				 ui32LastStatusCode, SGXUKernelStatusString(ui32LastStatusCode)));
@@ -1626,6 +1629,7 @@ IMG_VOID SGXDumpDebugInfo (PVRSRV_SGXDEV_INFO	*psDevInfo,
 			Dump the raw microkernel trace buffer to the log.
 		*/
 		{
+			IMG_UINT32	ui32WriteOffset = *pui32MKTraceBuffer++;
 			IMG_UINT32	ui32LoopCounter;
 
 			for (ui32LoopCounter = 0;
@@ -2017,11 +2021,13 @@ IMG_BOOL SGX_ISRHandler (IMG_VOID *pvData)
 			OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_EVENT_HOST_CLEAR, ui32EventClear);
 			OSWriteHWReg(psDevInfo->pvRegsBaseKM, EUR_CR_EVENT_HOST_CLEAR2, ui32EventClear2);
 
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) > PVR_ABI_VERSION(1,8,869593)
 			/*
 				Sample the current count from the uKernel _after_ we've cleared the
 				interrupt.
 			*/
 			g_ui32HostIRQCountSample = psDevInfo->psSGXHostCtl->ui32InterruptCount;
+#endif
 		}
 	}
 
@@ -2711,9 +2717,9 @@ PVRSRV_ERROR SGXDevInitCompatCheck(PVRSRV_DEVICE_NODE *psDeviceNode)
 	 */
 
 	ui32BuildOptions = (SGX_BUILD_OPTIONS);
-	if (ui32BuildOptions != psDevInfo->ui32ClientBuildOptions)
+	if ((ui32BuildOptions ^ psDevInfo->ui32ClientBuildOptions) & SGX_BUILD_OPTION_MASK)
 	{
-		ui32BuildOptionsMismatch = ui32BuildOptions ^ psDevInfo->ui32ClientBuildOptions;
+		ui32BuildOptionsMismatch = (ui32BuildOptions ^ psDevInfo->ui32ClientBuildOptions) & SGX_BUILD_OPTION_MASK;
 		if ( (psDevInfo->ui32ClientBuildOptions & ui32BuildOptionsMismatch) != 0)
 		{
 			PVR_LOG(("(FAIL) SGXInit: Mismatch in client-side and KM driver build options."));
@@ -2838,9 +2844,9 @@ PVRSRV_ERROR SGXDevInitCompatCheck(PVRSRV_DEVICE_NODE *psDeviceNode)
 	 */
 
 	ui32BuildOptions = psSGXFeatures->ui32BuildOptions;
-	if (ui32BuildOptions != (SGX_BUILD_OPTIONS))
+	if ((ui32BuildOptions ^ (SGX_BUILD_OPTIONS)) & SGX_BUILD_OPTION_MASK)
 	{
-		ui32BuildOptionsMismatch = ui32BuildOptions ^ (SGX_BUILD_OPTIONS);
+		ui32BuildOptionsMismatch = (ui32BuildOptions ^ (SGX_BUILD_OPTIONS)) & SGX_BUILD_OPTION_MASK;
 		if ( ((SGX_BUILD_OPTIONS) & ui32BuildOptionsMismatch) != 0)
 		{
 			PVR_LOG(("(FAIL) SGXInit: Mismatch in driver and microkernel build options; "
@@ -3281,6 +3287,7 @@ PVRSRV_ERROR SGXGetMiscInfoKM(PVRSRV_SGXDEV_INFO	*psDevInfo,
 			return PVRSRV_OK;
 		}
 
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) > PVR_ABI_VERSION(1,9,2253347)
 		case SGX_MISC_INFO_REQUEST_CLOCKSPEED_SLCSIZE:
 		{
 			psMiscInfo->uData.sQueryClockSpeedSLCSize.ui32SGXClockSpeed = SYS_SGX_CLOCK_SPEED;
@@ -3291,6 +3298,7 @@ PVRSRV_ERROR SGXGetMiscInfoKM(PVRSRV_SGXDEV_INFO	*psDevInfo,
 #endif /* defined(SGX_FEATURE_SYSTEM_CACHE) && defined(SYS_SGX_SLC_SIZE) */
 			return PVRSRV_OK;
 		}
+#endif
 
 		case SGX_MISC_INFO_REQUEST_ACTIVEPOWER:
 		{
@@ -3352,19 +3360,14 @@ PVRSRV_ERROR SGXGetMiscInfoKM(PVRSRV_SGXDEV_INFO	*psDevInfo,
 
 			psSGXFeatures = &((PVRSRV_SGX_MISCINFO_INFO*)(psMemInfo->pvLinAddrKM))->sSGXFeatures;
 
-			/* Reset the misc information to prevent
-			 * confusion with values returned from the ukernel
+			/* We only need to fill in the DDK version, build
+			 * options will come from the firmware.
 			 */
-			OSMemSet(psMemInfo->pvLinAddrKM, 0,
-					sizeof(PVRSRV_SGX_MISCINFO_INFO));
-
 			psSGXFeatures->ui32DDKVersion =
+				PVRVERSION_BRANCH |
 				(PVRVERSION_MAJ << 16) |
 				(PVRVERSION_MIN << 8);
 			psSGXFeatures->ui32DDKBuild = PVRVERSION_BUILD;
-
-			/* Also report the kernel module build options -- used in SGXConnectionCheck() */
-			psSGXFeatures->ui32BuildOptions = (SGX_BUILD_OPTIONS);
 
 			/* Copy SGX features into misc info struct, to return to client */
 			psMiscInfo->uData.sSGXFeatures = *psSGXFeatures;
@@ -3546,6 +3549,7 @@ PVRSRV_ERROR SGXGetMiscInfoKM(PVRSRV_SGXDEV_INFO	*psDevInfo,
 			return PVRSRV_OK;
 		}
 
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) > PVR_ABI_VERSION(1,8,869593)
 		case SGX_MISC_INFO_DUMP_DEBUG_INFO_FORCE_REGS:
 		{
 			if(!OSProcHasPrivSrvInit())
@@ -3563,6 +3567,7 @@ PVRSRV_ERROR SGXGetMiscInfoKM(PVRSRV_SGXDEV_INFO	*psDevInfo,
 
 			return PVRSRV_OK;
 		}
+#endif
 
 #if defined(DEBUG)
 		/* Don't allow user-mode to reboot the device in production drivers */

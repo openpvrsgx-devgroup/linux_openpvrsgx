@@ -341,11 +341,13 @@ PVRSRV_ERROR SGXDoKickKM(IMG_HANDLE hDevHandle, SGX_CCB_KICK *psCCBKick)
 
 				psHWDeviceSyncList->asSyncData[i].sWriteOpsCompleteDevVAddr = psSyncInfo->sWriteOpsCompleteDevVAddr;
 				psHWDeviceSyncList->asSyncData[i].sReadOpsCompleteDevVAddr = psSyncInfo->sReadOpsCompleteDevVAddr;
-				psHWDeviceSyncList->asSyncData[i].sReadOps2CompleteDevVAddr = psSyncInfo->sReadOps2CompleteDevVAddr;
 
 				psHWDeviceSyncList->asSyncData[i].ui32ReadOpsPendingVal = psSyncInfo->psSyncData->ui32ReadOpsPending;
 				psHWDeviceSyncList->asSyncData[i].ui32WriteOpsPendingVal = SyncTakeWriteOp(psSyncInfo, SYNC_OP_CLASS_KICKTA);
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) > PVR_ABI_VERSION(1,7,862890)
+				psHWDeviceSyncList->asSyncData[i].sReadOps2CompleteDevVAddr = psSyncInfo->sReadOps2CompleteDevVAddr;
 				psHWDeviceSyncList->asSyncData[i].ui32ReadOps2PendingVal = psSyncInfo->psSyncData->ui32ReadOps2Pending;
+#endif
 
 	#if defined(PDUMP)
 				if (PDumpIsCaptureFrameKM())
@@ -357,8 +359,10 @@ PVRSRV_ERROR SGXDoKickKM(IMG_HANDLE hDevHandle, SGX_CCB_KICK *psCCBKick)
 												+ offsetof(PVRSRV_DEVICE_SYNC_OBJECT, ui32WriteOpsPendingVal);
 					IMG_UINT32 ui32ROpsOffset = ui32SyncOffset
 												+ offsetof(PVRSRV_DEVICE_SYNC_OBJECT, ui32ReadOpsPendingVal);
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) > PVR_ABI_VERSION(1,7,862890)
 					IMG_UINT32 ui32ROps2Offset = ui32SyncOffset
 												+ offsetof(PVRSRV_DEVICE_SYNC_OBJECT, ui32ReadOps2PendingVal);
+#endif
 
 					PDUMPCOMMENT("HWDeviceSyncObject for RT: %i\r\n", i);
 
@@ -397,6 +401,7 @@ PVRSRV_ERROR SGXDoKickKM(IMG_HANDLE hDevHandle, SGX_CCB_KICK *psCCBKick)
 						 0,
 						MAKEUNIQUETAG(psHWDstSyncListMemInfo));
 
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) > PVR_ABI_VERSION(1,7,862890)
 					/*
 					* Force the ROps2Complete value to 0.
 					*/
@@ -407,6 +412,7 @@ PVRSRV_ERROR SGXDoKickKM(IMG_HANDLE hDevHandle, SGX_CCB_KICK *psCCBKick)
 						sizeof(IMG_UINT32),
 						0,
 						MAKEUNIQUETAG(psHWDstSyncListMemInfo));
+#endif
 #if defined(SUPPORT_PDUMP_SYNC_DEBUG)
 					PDUMPCOMMENTWITHFLAGS(PDUMP_FLAGS_PERSISTENT, "TA Dst: PDump sync update: uiAddr = 0x%08x, ui32LastOpDumpVal = 0x%08x\r\n",
 											psSyncInfo->sWriteOpsCompleteDevVAddr.uiAddr,
@@ -419,11 +425,13 @@ PVRSRV_ERROR SGXDoKickKM(IMG_HANDLE hDevHandle, SGX_CCB_KICK *psCCBKick)
 			{
 				psHWDeviceSyncList->asSyncData[i].sWriteOpsCompleteDevVAddr.uiAddr = 0;
 				psHWDeviceSyncList->asSyncData[i].sReadOpsCompleteDevVAddr.uiAddr = 0;
-				psHWDeviceSyncList->asSyncData[i].sReadOps2CompleteDevVAddr.uiAddr = 0;
 
 				psHWDeviceSyncList->asSyncData[i].ui32ReadOpsPendingVal = 0;
-				psHWDeviceSyncList->asSyncData[i].ui32ReadOps2PendingVal = 0;
 				psHWDeviceSyncList->asSyncData[i].ui32WriteOpsPendingVal = 0;
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) > PVR_ABI_VERSION(1,7,862890)
+				psHWDeviceSyncList->asSyncData[i].sReadOps2CompleteDevVAddr.uiAddr = 0;
+				psHWDeviceSyncList->asSyncData[i].ui32ReadOps2PendingVal = 0;
+#endif
 			}
 		}
 	}

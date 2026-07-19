@@ -140,11 +140,13 @@ typedef struct _SGXMKIF_HOST_CTL_
 #endif /* SGX_FEATURE_EXTENDED_PERF_COUNTERS */
 
 	IMG_UINT32				ui32OpenCLDelayCount;			/* Counter to keep track OpenCL task completion time in units of regular task time out events */
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) > PVR_ABI_VERSION(1,8,869593)
 	IMG_UINT32				ui32InterruptCount;
 #if defined(SUPPORT_PVRSRV_ANDROID_SYSTRACE) && defined(EUR_CR_TIMER)
 	volatile IMG_UINT32		ui32SystraceIndex;			/*!< Current index for systrace */
 	volatile IMG_UINT32		ui32SGXPoweredOn;			/*!< if SGX is powered on */
 	volatile IMG_UINT32		ui32TicksAtPowerUp;		/*!< if SGX is powered on */
+#endif
 #endif
 } SGXMKIF_HOST_CTL;
 
@@ -179,12 +181,17 @@ typedef struct _SGXMKIF_CMDTA_SHARED_
 	IMG_UINT32			ui323DTQSyncReadOpsPendingVal;
 	IMG_DEV_VIRTADDR	s3DTQSyncReadOpsCompleteDevVAddr;
 
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) > PVR_ABI_VERSION(1,8,869593)
 	/* sync criteria used for TA/3D dependency synchronisation */
 	PVRSRV_DEVICE_SYNC_OBJECT	sTA3DDependency;
+#endif
 
 	/* source dependency details */
 	IMG_UINT32			ui32NumSrcSyncs;
 	PVRSRV_DEVICE_SYNC_OBJECT	asSrcSyncs[SGX_MAX_SRC_SYNCS_TA];
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) <= PVR_ABI_VERSION(1,8,869593)
+	PVRSRV_DEVICE_SYNC_OBJECT	sTA3DDependency;
+#endif
 
 	CTL_STATUS			sCtlTAStatusInfo[SGX_MAX_TA_STATUS_VALS];
 	CTL_STATUS			sCtl3DStatusInfo[SGX_MAX_3D_STATUS_VALS];

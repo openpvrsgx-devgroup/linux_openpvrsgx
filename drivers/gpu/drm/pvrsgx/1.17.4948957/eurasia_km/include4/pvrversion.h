@@ -45,15 +45,28 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef _PVRVERSION_H_
 #define _PVRVERSION_H_
 
+#define INVOKE(F, ...) F(__VA_ARGS__)
+#define CONCAT(X, Y) X##Y
 #define PVR_STR(X) #X
 #define PVR_STR2(X) PVR_STR(X)
 
+/* 0 means the highest supported version. */
+#define PVR_ABI_IMPL2(major, minor, build) ((minor << 24 | build) - 1)
+#define PVR_ABI_IMPL(major, minor, build, ...) (INVOKE(PVR_ABI_IMPL2, CONCAT(major, U), CONCAT(minor, U), CONCAT(build, U)))
+#define PVR_ABI_VERSION(...) PVR_ABI_IMPL(__VA_ARGS__, 0, 0)
+
 #define PVRVERSION_MAJ               1
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) == PVR_ABI_VERSION(1,7,862890)
+#define PVRVERSION_MIN               7
+#define PVRVERSION_BRANCH            17
+#else
 #define PVRVERSION_MIN               17
+#define PVRVERSION_BRANCH            0
+#endif
 
 #define PVRVERSION_FAMILY           "sgxddk"
 #define PVRVERSION_BRANCHNAME       "1.17"
-#define PVRVERSION_BUILD             4948957
+#define PVRVERSION_BUILD            INVOKE(CONCAT, PVRVERSION_BUILD_HI, PVRVERSION_BUILD_LO)
 #define PVRVERSION_BSCONTROL        "SGX_DDK"
 
 #define PVRVERSION_STRING           "SGX_DDK sgxddk 1.17@" PVR_STR2(PVRVERSION_BUILD)
@@ -61,8 +74,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #define COPYRIGHT_TXT               "Copyright (c) Imagination Technologies Ltd. All Rights Reserved."
 
+#if PVR_ABI_VERSION(PVR_ABI_COMPAT) == PVR_ABI_VERSION(1,7,862890)
+#define PVRVERSION_BUILD_HI          86
+#define PVRVERSION_BUILD_LO          2890
+#else
 #define PVRVERSION_BUILD_HI          494
 #define PVRVERSION_BUILD_LO          8957
+#endif
 #define PVRVERSION_STRING_NUMERIC    PVR_STR2(PVRVERSION_MAJ) "." PVR_STR2(PVRVERSION_MIN) "." PVR_STR2(PVRVERSION_BUILD_HI) "." PVR_STR2(PVRVERSION_BUILD_LO)
 
 #endif /* _PVRVERSION_H_ */

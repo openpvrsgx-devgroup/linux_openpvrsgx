@@ -802,7 +802,7 @@ DoMapToUser(LinuxMemArea *psLinuxMemArea,
 		    if (bMixedMap)
 		    {
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,20,0))
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,11,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,17,0)
 			unsigned long pfns = pfn;
 #else
 			pfn_t pfns = { pfn };

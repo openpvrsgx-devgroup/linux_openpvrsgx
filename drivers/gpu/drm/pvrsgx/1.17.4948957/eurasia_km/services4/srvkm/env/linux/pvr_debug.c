@@ -318,7 +318,7 @@ IMG_VOID PVRSRVReleasePrintf(const IMG_CHAR *pszFormat, ...)
 	va_start(vaArgs, pszFormat);
 
 	GetBufferLock(&ulLockFlags);
-	strncpy (pszBuf, "PVR_K: ", (ui32BufSiz -1));
+	strscpy(pszBuf, "PVR_K: ", ui32BufSiz);
 
 	if (VBAppend(pszBuf, ui32BufSiz, pszFormat, vaArgs))
 	{
@@ -356,7 +356,7 @@ IMG_VOID PVRSRVTrace(const IMG_CHAR* pszFormat, ...)
 
 	GetBufferLock(&ulLockFlags);
 
-	strncpy(pszBuf, "PVR: ", (ui32BufSiz -1));
+	strscpy(pszBuf, "PVR: ", ui32BufSiz);
 
 	if (VBAppend(pszBuf, ui32BufSiz, pszFormat, VArgs))
 	{
@@ -420,44 +420,44 @@ IMG_VOID PVRSRVDebugPrintf	(
 			{
 				case DBGPRIV_FATAL:
 				{
-					strncpy (pszBuf, "PVR_K:(Fatal): ", (ui32BufSiz -1));
+					strscpy(pszBuf, "PVR_K:(Fatal): ", ui32BufSiz);
 					break;
 				}
 				case DBGPRIV_ERROR:
 				{
-					strncpy (pszBuf, "PVR_K:(Error): ", (ui32BufSiz -1));
+					strscpy(pszBuf, "PVR_K:(Error): ", ui32BufSiz);
 					break;
 				}
 				case DBGPRIV_WARNING:
 				{
-					strncpy (pszBuf, "PVR_K:(Warning): ", (ui32BufSiz -1));
+					strscpy(pszBuf, "PVR_K:(Warning): ", ui32BufSiz);
 					break;
 				}
 				case DBGPRIV_MESSAGE:
 				{
-					strncpy (pszBuf, "PVR_K:(Message): ", (ui32BufSiz -1));
+					strscpy(pszBuf, "PVR_K:(Message): ", ui32BufSiz);
 					break;
 				}
 				case DBGPRIV_VERBOSE:
 				{
-					strncpy (pszBuf, "PVR_K:(Verbose): ", (ui32BufSiz -1));
+					strscpy(pszBuf, "PVR_K:(Verbose): ", ui32BufSiz);
 					break;
 				}
 				case DBGPRIV_BUFFERED:
 				{
-					strncpy (pszBuf, "PVR_K: ", (ui32BufSiz -1));
+					strscpy(pszBuf, "PVR_K: ", ui32BufSiz);
 					break;
 				}
 				default:
 				{
-					strncpy (pszBuf, "PVR_K:(Unknown message level): ", (ui32BufSiz -1));
+					strscpy(pszBuf, "PVR_K:(Unknown message level): ", ui32BufSiz);
 					break;
 				}
 			}
 		}
 		else
 		{
-			strncpy (pszBuf, "PVR_K: ", (ui32BufSiz -1));
+			strscpy(pszBuf, "PVR_K: ", ui32BufSiz);
 		}
 
 		if (VBAppend(pszBuf, ui32BufSiz, pszFormat, vaArgs))

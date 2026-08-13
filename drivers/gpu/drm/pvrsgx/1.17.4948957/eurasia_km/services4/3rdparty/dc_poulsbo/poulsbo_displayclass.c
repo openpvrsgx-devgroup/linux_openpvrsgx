@@ -1275,10 +1275,17 @@ static IMG_BOOL PVRPSBBindBuffer(PVRPSB_DEVINFO *psDevInfo, PVRPSB_BUFFER *psBuf
 
 		PVROSWriteIOMem(psGTTInfo->pvGTTCPUVAddr + (psRegion->start - psGtt->start) + (ui32PageNum << 2), ui32PageAddr | 0x1);
 	}
+#ifdef CONFIG_PHYS_ADDR_T_64BIT
+	if (psBuffer->bIsContiguous)
+		PVR_DPF((PVR_DBG_VERBOSE, "Mapped [%x:%x) into GTT at %#llx (GPU address %#x)", psSysAddr->uiAddr, psSysAddr->uiAddr + (ui32NumPages << PVRPSB_PAGE_SHIFT), psRegion->start - psGtt->start, psDevVAddr->uiAddr));
+	else
+		PVR_DPF((PVR_DBG_VERBOSE, "Mapped [*%p:*%p) into GTT at %#llx (GPU address %#x)", psBuffer->pvCPUVAddr, psBuffer->pvCPUVAddr + (ui32NumPages << PVRPSB_PAGE_SHIFT), psRegion->start - psGtt->start, psDevVAddr->uiAddr));
+#else
 	if (psBuffer->bIsContiguous)
 		PVR_DPF((PVR_DBG_VERBOSE, "Mapped [%x:%x) into GTT at %#x (GPU address %#x)", psSysAddr->uiAddr, psSysAddr->uiAddr + (ui32NumPages << PVRPSB_PAGE_SHIFT), psRegion->start - psGtt->start, psDevVAddr->uiAddr));
 	else
 		PVR_DPF((PVR_DBG_VERBOSE, "Mapped [*%p:*%p) into GTT at %#x (GPU address %#x)", psBuffer->pvCPUVAddr, psBuffer->pvCPUVAddr + (ui32NumPages << PVRPSB_PAGE_SHIFT), psRegion->start - psGtt->start, psDevVAddr->uiAddr));
+#endif
 	return IMG_TRUE;
 }
 

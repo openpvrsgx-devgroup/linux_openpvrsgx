@@ -3106,7 +3106,7 @@ PVRSRV_ERROR OSEventObjectCreateKM(const IMG_CHAR *pszName, PVRSRV_EVENTOBJECT *
         if(pszName)
         {
             /* copy over the event object name */
-            strncpy(psEventObject->szName, pszName, EVENTOBJNAME_MAXLENGTH);
+            strscpy(psEventObject->szName, pszName, EVENTOBJNAME_MAXLENGTH);
         }
         else
         {
@@ -4803,7 +4803,7 @@ IMG_VOID OSTimeDestroy(IMG_PVOID pvData)
 
 IMG_VOID OSGetCurrentProcessNameKM(IMG_CHAR *pszName, IMG_UINT32 ui32Size)
 {
-	strncpy(pszName, current->comm, MIN(ui32Size,TASK_COMM_LEN));
+	strscpy(pszName, current->comm, ui32Size);
 }
 
 /* One time osfunc initialisation */

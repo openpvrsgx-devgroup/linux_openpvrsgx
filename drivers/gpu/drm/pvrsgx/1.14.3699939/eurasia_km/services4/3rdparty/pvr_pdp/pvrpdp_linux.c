@@ -679,7 +679,7 @@ PDP_ERROR OSRegisterDevice(PVRPDP_DEVINFO *psDevInfo)
 
     psFBInfo->pseudo_palette = (u32 *) (psPar->ulPseudoPalette);
 
-    strncpy(&psFBInfo->fix.id[0], DRVNAME, sizeof(psFBInfo->fix.id));
+    strscpy(&psFBInfo->fix.id[0], DRVNAME, sizeof(psFBInfo->fix.id));
 
     psFBInfo->fix.mmio_start = (IMG_UINT32) psDevInfo->sFBInfo.sRegSysAddr.uiAddr;
     psFBInfo->fix.mmio_len = PVRPDP_REG_SIZE;

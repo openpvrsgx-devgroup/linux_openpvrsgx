@@ -294,7 +294,7 @@ BCE_ERROR BC_Example_Register(void)
 		psDevInfo->sBufferInfo.ui32Flags          = 0;
 		psDevInfo->sBufferInfo.ui32BufferCount    = (IMG_UINT32)psDevInfo->ulNumBuffers;
 		
-		strncpy(psDevInfo->sBufferInfo.szDeviceName, BUFFERCLASS_DEVICE_NAME, MAX_BUFFER_DEVICE_NAME_SIZE);
+		strscpy(psDevInfo->sBufferInfo.szDeviceName, BUFFERCLASS_DEVICE_NAME, MAX_BUFFER_DEVICE_NAME_SIZE);
 
 		/*
 			Bsetup the BC Jtable so SRVKM can call into this driver

@@ -747,7 +747,7 @@ DC_ERROR Init(void)
 		psDevInfo->sDisplayInfo.ui32MaxSwapInterval = 1UL;
 		psDevInfo->sDisplayInfo.ui32MaxSwapChains = 1UL;
 		psDevInfo->sDisplayInfo.ui32MaxSwapChainBuffers = DC_NOHW_MAX_BACKBUFFERS;
-		strncpy(psDevInfo->sDisplayInfo.szDisplayName, DISPLAY_DEVICE_NAME, MAX_DISPLAY_NAME_SIZE);
+		strscpy(psDevInfo->sDisplayInfo.szDisplayName, DISPLAY_DEVICE_NAME, MAX_DISPLAY_NAME_SIZE);
 
 		psDevInfo->ulNumFormats = 1UL;
 

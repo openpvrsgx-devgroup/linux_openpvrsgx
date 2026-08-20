@@ -1664,7 +1664,7 @@ PSB_ERROR PVRPSBInit(PVRPSB_DEVINFO *psDevInfo)
 		return PSB_ERROR_INVALID_DEVICE;
 	}
 
-	strncpy(psDevInfo->sDisplayInfo.szDisplayName, DISPLAY_DEVICE_NAME, MAX_DISPLAY_NAME_SIZE);
+	strscpy(psDevInfo->sDisplayInfo.szDisplayName, DISPLAY_DEVICE_NAME, MAX_DISPLAY_NAME_SIZE);
 	psDevInfo->bFlushCommands	= PSB_FALSE;
 	psDevInfo->psSwapChain		= IMG_NULL;
 

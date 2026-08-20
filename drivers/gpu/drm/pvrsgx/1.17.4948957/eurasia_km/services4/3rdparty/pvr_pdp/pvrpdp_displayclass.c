@@ -1091,7 +1091,7 @@ PDP_ERROR Init(void)
 #else
 		psDevInfo->sDisplayInfo.ui32MaxSwapChainBuffers = PVRPDP_MAX_BACKBUFFERS;
 #endif
-		strncpy(psDevInfo->sDisplayInfo.szDisplayName, DISPLAY_DEVICE_NAME, MAX_DISPLAY_NAME_SIZE);
+		strscpy(psDevInfo->sDisplayInfo.szDisplayName, DISPLAY_DEVICE_NAME, MAX_DISPLAY_NAME_SIZE);
 		
 		psDevInfo->sDisplayInfo.ui32PhysicalWidthmm = PDP_DISPLAY_WIDTH_MM;
 		psDevInfo->sDisplayInfo.ui32PhysicalHeightmm = PDP_DISPLAY_HEIGHT_MM;

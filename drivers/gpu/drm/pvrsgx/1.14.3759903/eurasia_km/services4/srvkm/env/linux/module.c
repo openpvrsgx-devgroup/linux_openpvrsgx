@@ -838,8 +838,7 @@ static int PVRSRVRelease(struct inode unref__ * pInode, struct file *pFile)
 #endif
 {
 	PVRSRV_FILE_PRIVATE_DATA *psPrivateData;
-	int err = 0;
-
+	__maybe_unused int err = 0;
 	LinuxLockMutexNested(&gPVRSRVLock, PVRSRV_LOCK_CLASS_BRIDGE);
 
 #if defined(SUPPORT_DRI_DRM)

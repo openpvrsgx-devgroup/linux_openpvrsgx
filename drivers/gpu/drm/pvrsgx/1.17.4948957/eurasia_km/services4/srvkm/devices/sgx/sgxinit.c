@@ -543,7 +543,9 @@ PVRSRV_ERROR SGXInitialise(PVRSRV_SGXDEV_INFO	*psDevInfo,
 	PVRSRV_ERROR			eError;
 	PVRSRV_KERNEL_MEM_INFO	*psSGXHostCtlMemInfo = psDevInfo->psKernelSGXHostCtlMemInfo;
 	SGXMKIF_HOST_CTL		*psSGXHostCtl = psSGXHostCtlMemInfo->pvLinAddrKM;
+#if !defined(SGX_FEATURE_MP)
 	static IMG_BOOL			bFirstTime = IMG_TRUE;
+#endif
 #if defined(PDUMP)
 	IMG_BOOL				bPDumpIsSuspended = PDumpIsSuspended();
 #endif /* PDUMP */
@@ -735,7 +737,9 @@ PVRSRV_ERROR SGXInitialise(PVRSRV_SGXDEV_INFO	*psDevInfo,
 
 	PVR_ASSERT(psDevInfo->psKernelCCBCtl->ui32ReadOffset == psDevInfo->psKernelCCBCtl->ui32WriteOffset);
 
+#if !defined(SGX_FEATURE_MP)
 	bFirstTime = IMG_FALSE;
+#endif
 	
 	return PVRSRV_OK;
 }

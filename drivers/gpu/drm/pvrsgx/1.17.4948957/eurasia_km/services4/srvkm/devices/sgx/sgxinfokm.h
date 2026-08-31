@@ -596,9 +596,9 @@ IMG_VOID SGXDumpDebugInfo (PVRSRV_SGXDEV_INFO	*psDevInfo,
 
 PVRSRV_ERROR SGXDevInitCompatCheck(PVRSRV_DEVICE_NODE *psDeviceNode);
 
-#if defined(SGX_DYNAMIC_TIMING_INFO)
+// #if defined(SGX_DYNAMIC_TIMING_INFO)
 IMG_VOID SysGetSGXTimingInformation(SGX_TIMING_INFORMATION *psSGXTimingInfo);
-#endif
+// #endif
 
 /****************************************************************************/
 /* kernel only functions: 													*/

@@ -43,6 +43,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define	_PVRMODULE_H_
 
 MODULE_AUTHOR("Imagination Technologies Ltd. <gpl-support@imgtec.com>");
+MODULE_DESCRIPTION("DRM driver for PVR SGX");
 MODULE_LICENSE("Dual MIT/GPL");
 
 #endif	/* _PVRMODULE_H_ */

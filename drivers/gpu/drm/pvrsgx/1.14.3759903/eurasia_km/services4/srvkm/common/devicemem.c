@@ -1083,6 +1083,7 @@ PVRSRV_ERROR FreeMemCallBackCommon(PVRSRV_KERNEL_MEM_INFO *psMemInfo,
 			case PVRSRV_MEMTYPE_ION:
 			case PVRSRV_MEMTYPE_DMABUF:
 				freeExternal(psMemInfo);
+				fallthrough;
 			case PVRSRV_MEMTYPE_DEVICE:
 			case PVRSRV_MEMTYPE_DEVICECLASS:
 #if defined(SUPPORT_ION)
@@ -1870,7 +1871,7 @@ IMG_VOID PVRSRVDmaBufSyncRelease(PVRSRV_DMABUF_SYNC_INFO *psDmaBufSyncInfo)
 
 	if (psDmaBufSyncInfo->ui32RefCount == 0)
 	{
-		PVRSRV_DMABUF_SYNC_INFO *psLookup;
+		__maybe_unused PVRSRV_DMABUF_SYNC_INFO *psLookup;
 		/*
 			If we're holding the last reference to the syncinfo
 			then free it
@@ -1915,7 +1916,7 @@ PVRSRV_ERROR PVRSRVMapDmaBufKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 								  PVRSRV_KERNEL_MEM_INFO **ppsKernelMemInfo,
 								  IMG_UINT64 *pui64Stamp)
 {
-	PVRSRV_DEVICE_NODE *psDeviceNode; 
+	__maybe_unused PVRSRV_DEVICE_NODE *psDeviceNode; 
 	PVRSRV_KERNEL_MEM_INFO *psNewKernelMemInfo;
 	IMG_SYS_PHYADDR *pasSysPhysAddr;
 	PVRSRV_MEMBLK *psMemBlock;

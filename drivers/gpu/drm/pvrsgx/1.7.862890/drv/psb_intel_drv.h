@@ -23,7 +23,7 @@
 #include <linux/i2c-algo-bit.h>
 #include <drm/drm_crtc.h>
 #include <drm/drm_crtc_helper.h>
-#include <linux/gpio.h>
+#include <linux/gpio/consumer.h>
 
 /*
  * Display related stuff

@@ -25,7 +25,11 @@
 #include <linux/version.h>
 #include <drm/drmP.h>
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(7,4,0))
+#include <drm/clients/drm_fbdev_helper.h>
+#else
 #include <drm/drm_fb_helper.h>
+#endif
 
 #include "psb_drv.h"
 

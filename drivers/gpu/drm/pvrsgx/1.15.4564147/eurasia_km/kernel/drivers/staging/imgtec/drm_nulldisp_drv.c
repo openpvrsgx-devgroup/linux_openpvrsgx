@@ -58,7 +58,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <drm/drmP.h>
 #include <drm/drm_crtc.h>
 #include <drm/drm_crtc_helper.h>
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(7,4,0))
+#include <drm/clients/drm_fbdev_helper.h>
+#else
 #include <drm/drm_fb_helper.h>
+#endif
 #include <drm/drm_plane_helper.h>
 
 #include <pvrversion.h>

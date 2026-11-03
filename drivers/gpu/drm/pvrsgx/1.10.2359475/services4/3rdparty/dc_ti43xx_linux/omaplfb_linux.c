@@ -95,7 +95,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if defined(CONFIG_DRM_OMAP) && (LINUX_VERSION_CODE > KERNEL_VERSION(3,14,0))
 #include "drm/drmP.h"
 #include "drm/drm_crtc.h"
-#include "drm/drm_fb_helper.h"
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(7,4,0))
+#include <drm/clients/drm_fbdev_helper.h>
+#else
+#include <drm/drm_fb_helper.h>
+#endif
 #endif
 
 #if defined(PVR_OMAPLFB_DRM_FB)
